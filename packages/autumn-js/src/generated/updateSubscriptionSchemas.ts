@@ -390,6 +390,7 @@ export const billingUpdateUsageLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
+	anchor: z.union([z.string(), z.undefined()]).optional(),
 	filter: z
 		.union([billingUpdateFilterOutboundSchema, z.undefined()])
 		.optional(),
@@ -864,11 +865,14 @@ export const billingUpdateSpendLimitSchema = z.object({
 
 export const billingUpdateUsageLimitIntervalSchema = closedEnumSchema;
 
+export const billingUpdateAnchorSchema = closedEnumSchema;
+
 export const billingUpdateUsageLimitSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: billingUpdateUsageLimitIntervalSchema,
+	anchor: z.union([billingUpdateAnchorSchema, z.undefined()]).optional(),
 	filter: z.union([billingUpdateFilterSchema, z.undefined()]).optional(),
 });
 

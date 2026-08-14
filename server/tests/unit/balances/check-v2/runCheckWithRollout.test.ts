@@ -36,6 +36,7 @@ await mockModuleWithRestore("@/internal/balances/check/runCheckV2.js", () => ({
 
 import { ApiVersionClass, LATEST_VERSION } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
+import { getCheckFailOpenFallback } from "@/internal/api/check/checkUtils/getCheckFailOpenFallback.js";
 import { runCheckWithRollout } from "@/internal/balances/check/runCheckWithRollout.js";
 
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
@@ -69,6 +70,24 @@ const rolloutCtx = {
 } as never;
 
 describe("runCheckWithRollout", () => {
+	test("logs the route timeout reason explicitly", () => {
+		getCheckFailOpenFallback({
+			ctx: rolloutCtx,
+			body: { customer_id: "cus_123", feature_id: "messages" } as never,
+			requiredBalance: 1,
+			error: new Error("blanket timeout"),
+			reason: "route_timeout",
+		});
+
+		expect(mockState.warnCalls).toContainEqual([
+			"[check] Returning fail-open fallback response",
+			expect.objectContaining({
+				type: "check_fail_open_fallback",
+				fail_open_reason: "route_timeout",
+			}),
+		]);
+	});
+
 	test("uses the v2 flow", async () => {
 		const result = await runCheckWithRollout({
 			ctx: {
@@ -159,6 +178,7 @@ describe("runCheckWithRollout", () => {
 			"[check] Returning fail-open fallback response",
 			expect.objectContaining({
 				type: "check_fail_open_fallback",
+				fail_open_reason: "dependency_error",
 				feature_id: "messages",
 				required_balance: 1,
 			}),

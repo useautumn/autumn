@@ -1,5 +1,5 @@
 import type { Feature, FeatureOptions, ProductItem } from "@autumn/shared";
-import { featureToOptions, UsageModel } from "@autumn/shared";
+import { featureToOptions, itemsAreSame, UsageModel } from "@autumn/shared";
 import { motion } from "motion/react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
@@ -49,23 +49,7 @@ export function hasItemChanged({
 	originalItem: ProductItem;
 	updatedItem: ProductItem;
 }): boolean {
-	if (originalItem.price !== updatedItem.price) return true;
-	if (originalItem.included_usage !== updatedItem.included_usage) return true;
-	if (originalItem.billing_units !== updatedItem.billing_units) return true;
-	if (originalItem.usage_model !== updatedItem.usage_model) return true;
-
-	const oldTiers = originalItem.tiers ?? [];
-	const newTiers = updatedItem.tiers ?? [];
-	if (oldTiers.length !== newTiers.length) return true;
-	for (let i = 0; i < oldTiers.length; i++) {
-		if (
-			oldTiers[i].amount !== newTiers[i].amount ||
-			oldTiers[i].to !== newTiers[i].to
-		)
-			return true;
-	}
-
-	return false;
+	return !itemsAreSame({ item1: originalItem, item2: updatedItem }).same;
 }
 
 export function PlanItemRow({
@@ -105,6 +89,7 @@ export function PlanItemRow({
 				featureId,
 				prepaidOptions,
 				initialPrepaidOptions,
+				existingOptions,
 				features,
 			})
 		: undefined;

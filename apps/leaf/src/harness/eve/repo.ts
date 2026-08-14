@@ -29,6 +29,7 @@ const rowToSession = ({
 	if (!state) return undefined;
 	return {
 		env,
+		newSession: false,
 		sessionId: row.session_id,
 		state,
 		threadKey,
@@ -134,6 +135,33 @@ export const upsertEveSession = async ({
 				updated_at: Date.now(),
 			},
 		});
+};
+
+/** Forgets a session id eve no longer streams anything for. The row is the only
+ * pointer to it, so keeping it replays the same dead resume on every message. */
+export const deleteEveSession = async ({
+	db,
+	env,
+	orgId,
+	sessionId,
+	threadKey,
+}: {
+	db: ChatDb;
+	env: AppEnv;
+	orgId: string;
+	sessionId: string;
+	threadKey: string;
+}) => {
+	await db
+		.delete(harnessSessions)
+		.where(
+			and(
+				eq(harnessSessions.org_id, orgId),
+				eq(harnessSessions.env, env),
+				eq(harnessSessions.thread_key, threadKey),
+				eq(harnessSessions.session_id, sessionId),
+			),
+		);
 };
 
 export const listHarnessSessions = async ({

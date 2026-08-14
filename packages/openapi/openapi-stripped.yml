@@ -174,6 +174,13 @@ components:
                       - year
                     type: string
                     description: Interval for the cap, aligned to the customer's billing cycle.
+                  anchor:
+                    enum:
+                      - billing_cycle
+                      - utc
+                    type: string
+                    description: Window alignment. 'billing_cycle' phases the interval to the
+                      customer's renewal time; 'utc' aligns to the UTC calendar.
                   filter:
                     type: object
                     properties:
@@ -494,6 +501,13 @@ components:
                       - year
                     type: string
                     description: Interval for the cap, aligned to the customer's billing cycle.
+                  anchor:
+                    enum:
+                      - billing_cycle
+                      - utc
+                    type: string
+                    description: Window alignment. 'billing_cycle' phases the interval to the
+                      customer's renewal time; 'utc' aligns to the UTC calendar.
                   filter:
                     type: object
                     properties:
@@ -2213,6 +2227,14 @@ components:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          anchor:
+                            enum:
+                              - billing_cycle
+                              - utc
+                            type: string
+                            description: Window alignment. 'billing_cycle' phases the interval to the
+                              customer's renewal time; 'utc' aligns to the UTC
+                              calendar.
                           filter:
                             type: object
                             properties:
@@ -2413,6 +2435,13 @@ components:
                       - year
                     type: string
                     description: Interval for the cap, aligned to the customer's billing cycle.
+                  anchor:
+                    enum:
+                      - billing_cycle
+                      - utc
+                    type: string
+                    description: Window alignment. 'billing_cycle' phases the interval to the
+                      customer's renewal time; 'utc' aligns to the UTC calendar.
                   filter:
                     type: object
                     properties:
@@ -3059,6 +3088,14 @@ paths:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          anchor:
+                            enum:
+                              - billing_cycle
+                              - utc
+                            type: string
+                            description: Window alignment. 'billing_cycle' phases the interval to the
+                              customer's renewal time; 'utc' aligns to the UTC
+                              calendar.
                           filter:
                             type: object
                             properties:
@@ -3445,6 +3482,14 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            anchor:
+                              enum:
+                                - billing_cycle
+                                - utc
+                              type: string
+                              description: Window alignment. 'billing_cycle' phases the interval to the
+                                customer's renewal time; 'utc' aligns to the UTC
+                                calendar.
                             filter:
                               type: object
                               properties:
@@ -4627,6 +4672,14 @@ paths:
                                       - year
                                     type: string
                                     description: Interval for the cap, aligned to the customer's billing cycle.
+                                  anchor:
+                                    enum:
+                                      - billing_cycle
+                                      - utc
+                                    type: string
+                                    description: Window alignment. 'billing_cycle' phases the interval to the
+                                      customer's renewal time; 'utc' aligns to
+                                      the UTC calendar.
                                   filter:
                                     type: object
                                     properties:
@@ -5429,6 +5482,14 @@ paths:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          anchor:
+                            enum:
+                              - billing_cycle
+                              - utc
+                            type: string
+                            description: Window alignment. 'billing_cycle' phases the interval to the
+                              customer's renewal time; 'utc' aligns to the UTC
+                              calendar.
                           filter:
                             type: object
                             properties:
@@ -5752,6 +5813,14 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            anchor:
+                              enum:
+                                - billing_cycle
+                                - utc
+                              type: string
+                              description: Window alignment. 'billing_cycle' phases the interval to the
+                                customer's renewal time; 'utc' aligns to the UTC
+                                calendar.
                             filter:
                               type: object
                               properties:
@@ -7112,6 +7181,14 @@ paths:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          anchor:
+                            enum:
+                              - billing_cycle
+                              - utc
+                            type: string
+                            description: Window alignment. 'billing_cycle' phases the interval to the
+                              customer's renewal time; 'utc' aligns to the UTC
+                              calendar.
                           filter:
                             type: object
                             properties:
@@ -8123,6 +8200,14 @@ paths:
                                         - year
                                       type: string
                                       description: Interval for the cap, aligned to the customer's billing cycle.
+                                    anchor:
+                                      enum:
+                                        - billing_cycle
+                                        - utc
+                                      type: string
+                                      description: Window alignment. 'billing_cycle' phases the interval to the
+                                        customer's renewal time; 'utc' aligns to
+                                        the UTC calendar.
                                     filter:
                                       type: object
                                       properties:
@@ -8326,6 +8411,14 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            anchor:
+                              enum:
+                                - billing_cycle
+                                - utc
+                              type: string
+                              description: Window alignment. 'billing_cycle' phases the interval to the
+                                customer's renewal time; 'utc' aligns to the UTC
+                                calendar.
                             filter:
                               type: object
                               properties:
@@ -9425,6 +9518,14 @@ paths:
                                         - year
                                       type: string
                                       description: Interval for the cap, aligned to the customer's billing cycle.
+                                    anchor:
+                                      enum:
+                                        - billing_cycle
+                                        - utc
+                                      type: string
+                                      description: Window alignment. 'billing_cycle' phases the interval to the
+                                        customer's renewal time; 'utc' aligns to
+                                        the UTC calendar.
                                     filter:
                                       type: object
                                       properties:
@@ -9628,6 +9729,14 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            anchor:
+                              enum:
+                                - billing_cycle
+                                - utc
+                              type: string
+                              description: Window alignment. 'billing_cycle' phases the interval to the
+                                customer's renewal time; 'utc' aligns to the UTC
+                                calendar.
                             filter:
                               type: object
                               properties:
@@ -10733,6 +10842,14 @@ paths:
                                               - year
                                             type: string
                                             description: Interval for the cap, aligned to the customer's billing cycle.
+                                          anchor:
+                                            enum:
+                                              - billing_cycle
+                                              - utc
+                                            type: string
+                                            description: Window alignment. 'billing_cycle' phases the interval to the
+                                              customer's renewal time; 'utc'
+                                              aligns to the UTC calendar.
                                           filter:
                                             type: object
                                             properties:
@@ -10937,6 +11054,14 @@ paths:
                                       - year
                                     type: string
                                     description: Interval for the cap, aligned to the customer's billing cycle.
+                                  anchor:
+                                    enum:
+                                      - billing_cycle
+                                      - utc
+                                    type: string
+                                    description: Window alignment. 'billing_cycle' phases the interval to the
+                                      customer's renewal time; 'utc' aligns to
+                                      the UTC calendar.
                                   filter:
                                     type: object
                                     properties:
@@ -11889,6 +12014,14 @@ paths:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          anchor:
+                            enum:
+                              - billing_cycle
+                              - utc
+                            type: string
+                            description: Window alignment. 'billing_cycle' phases the interval to the
+                              customer's renewal time; 'utc' aligns to the UTC
+                              calendar.
                           filter:
                             type: object
                             properties:
@@ -12500,6 +12633,14 @@ paths:
                                             - year
                                           type: string
                                           description: Interval for the cap, aligned to the customer's billing cycle.
+                                        anchor:
+                                          enum:
+                                            - billing_cycle
+                                            - utc
+                                          type: string
+                                          description: Window alignment. 'billing_cycle' phases the interval to the
+                                            customer's renewal time; 'utc'
+                                            aligns to the UTC calendar.
                                         filter:
                                           type: object
                                           properties:
@@ -13503,6 +13644,14 @@ paths:
                                         - year
                                       type: string
                                       description: Interval for the cap, aligned to the customer's billing cycle.
+                                    anchor:
+                                      enum:
+                                        - billing_cycle
+                                        - utc
+                                      type: string
+                                      description: Window alignment. 'billing_cycle' phases the interval to the
+                                        customer's renewal time; 'utc' aligns to
+                                        the UTC calendar.
                                     filter:
                                       type: object
                                       properties:
@@ -13706,6 +13855,14 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            anchor:
+                              enum:
+                                - billing_cycle
+                                - utc
+                              type: string
+                              description: Window alignment. 'billing_cycle' phases the interval to the
+                                customer's renewal time; 'utc' aligns to the UTC
+                                calendar.
                             filter:
                               type: object
                               properties:
@@ -15548,6 +15705,14 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              anchor:
+                                enum:
+                                  - billing_cycle
+                                  - utc
+                                type: string
+                                description: Window alignment. 'billing_cycle' phases the interval to the
+                                  customer's renewal time; 'utc' aligns to the
+                                  UTC calendar.
                               filter:
                                 type: object
                                 properties:
@@ -16404,6 +16569,9 @@ paths:
                   type: string
                   description: Whether to prorate the immediate phase. 'none' skips proration
                     charges and credits.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, skips any billing changes for the schedule.
                 billing_cycle_anchor:
                   const: now
                   description: Pass 'now' to reset the billing cycle anchor of the immediate phase
@@ -17065,6 +17233,14 @@ paths:
                                         - year
                                       type: string
                                       description: Interval for the cap, aligned to the customer's billing cycle.
+                                    anchor:
+                                      enum:
+                                        - billing_cycle
+                                        - utc
+                                      type: string
+                                      description: Window alignment. 'billing_cycle' phases the interval to the
+                                        customer's renewal time; 'utc' aligns to
+                                        the UTC calendar.
                                     filter:
                                       type: object
                                       properties:
@@ -17794,6 +17970,14 @@ paths:
                                                 - year
                                               type: string
                                               description: Interval for the cap, aligned to the customer's billing cycle.
+                                            anchor:
+                                              enum:
+                                                - billing_cycle
+                                                - utc
+                                              type: string
+                                              description: Window alignment. 'billing_cycle' phases the interval to the
+                                                customer's renewal time; 'utc'
+                                                aligns to the UTC calendar.
                                             filter:
                                               type: object
                                               properties:
@@ -18519,6 +18703,14 @@ paths:
                                               - year
                                             type: string
                                             description: Interval for the cap, aligned to the customer's billing cycle.
+                                          anchor:
+                                            enum:
+                                              - billing_cycle
+                                              - utc
+                                            type: string
+                                            description: Window alignment. 'billing_cycle' phases the interval to the
+                                              customer's renewal time; 'utc'
+                                              aligns to the UTC calendar.
                                           filter:
                                             type: object
                                             properties:
@@ -19281,6 +19473,14 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              anchor:
+                                enum:
+                                  - billing_cycle
+                                  - utc
+                                type: string
+                                description: Window alignment. 'billing_cycle' phases the interval to the
+                                  customer's renewal time; 'utc' aligns to the
+                                  UTC calendar.
                               filter:
                                 type: object
                                 properties:
@@ -20172,6 +20372,14 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              anchor:
+                                enum:
+                                  - billing_cycle
+                                  - utc
+                                type: string
+                                description: Window alignment. 'billing_cycle' phases the interval to the
+                                  customer's renewal time; 'utc' aligns to the
+                                  UTC calendar.
                               filter:
                                 type: object
                                 properties:
@@ -21728,6 +21936,14 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              anchor:
+                                enum:
+                                  - billing_cycle
+                                  - utc
+                                type: string
+                                description: Window alignment. 'billing_cycle' phases the interval to the
+                                  customer's renewal time; 'utc' aligns to the
+                                  UTC calendar.
                               filter:
                                 type: object
                                 properties:
@@ -22940,6 +23156,14 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              anchor:
+                                enum:
+                                  - billing_cycle
+                                  - utc
+                                type: string
+                                description: Window alignment. 'billing_cycle' phases the interval to the
+                                  customer's renewal time; 'utc' aligns to the
+                                  UTC calendar.
                               filter:
                                 type: object
                                 properties:
@@ -24289,6 +24513,14 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              anchor:
+                                enum:
+                                  - billing_cycle
+                                  - utc
+                                type: string
+                                description: Window alignment. 'billing_cycle' phases the interval to the
+                                  customer's renewal time; 'utc' aligns to the
+                                  UTC calendar.
                               filter:
                                 type: object
                                 properties:
@@ -26650,6 +26882,14 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              anchor:
+                                enum:
+                                  - billing_cycle
+                                  - utc
+                                type: string
+                                description: Window alignment. 'billing_cycle' phases the interval to the
+                                  customer's renewal time; 'utc' aligns to the
+                                  UTC calendar.
                               filter:
                                 type: object
                                 properties:
@@ -28627,6 +28867,14 @@ paths:
                                           - year
                                         type: string
                                         description: Interval for the cap, aligned to the customer's billing cycle.
+                                      anchor:
+                                        enum:
+                                          - billing_cycle
+                                          - utc
+                                        type: string
+                                        description: Window alignment. 'billing_cycle' phases the interval to the
+                                          customer's renewal time; 'utc' aligns
+                                          to the UTC calendar.
                                       filter:
                                         type: object
                                         properties:
@@ -29404,6 +29652,14 @@ paths:
                                           - year
                                         type: string
                                         description: Interval for the cap, aligned to the customer's billing cycle.
+                                      anchor:
+                                        enum:
+                                          - billing_cycle
+                                          - utc
+                                        type: string
+                                        description: Window alignment. 'billing_cycle' phases the interval to the
+                                          customer's renewal time; 'utc' aligns
+                                          to the UTC calendar.
                                       filter:
                                         type: object
                                         properties:
@@ -30804,7 +31060,9 @@ paths:
                     using group_by. Remaining values are bundled into an 'Other'
                     bucket. Defaults to 9
                 aggregate_on:
-                  const: deducted
+                  enum:
+                    - deducted
+                  type: string
                   description: 'Set to "deducted" to additionally return a per-balance breakdown
                     of what each event consumed, under `deductions`. Purely
                     additive: `list` and `total` are unchanged. Requires
@@ -31781,6 +32039,14 @@ paths:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          anchor:
+                            enum:
+                              - billing_cycle
+                              - utc
+                            type: string
+                            description: Window alignment. 'billing_cycle' phases the interval to the
+                              customer's renewal time; 'utc' aligns to the UTC
+                              calendar.
                           filter:
                             type: object
                             properties:
@@ -32258,6 +32524,14 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            anchor:
+                              enum:
+                                - billing_cycle
+                                - utc
+                              type: string
+                              description: Window alignment. 'billing_cycle' phases the interval to the
+                                customer's renewal time; 'utc' aligns to the UTC
+                                calendar.
                             filter:
                               type: object
                               properties:
@@ -32871,6 +33145,14 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            anchor:
+                              enum:
+                                - billing_cycle
+                                - utc
+                              type: string
+                              description: Window alignment. 'billing_cycle' phases the interval to the
+                                customer's renewal time; 'utc' aligns to the UTC
+                                calendar.
                             filter:
                               type: object
                               properties:
@@ -33539,6 +33821,14 @@ paths:
                                       - year
                                     type: string
                                     description: Interval for the cap, aligned to the customer's billing cycle.
+                                  anchor:
+                                    enum:
+                                      - billing_cycle
+                                      - utc
+                                    type: string
+                                    description: Window alignment. 'billing_cycle' phases the interval to the
+                                      customer's renewal time; 'utc' aligns to
+                                      the UTC calendar.
                                   filter:
                                     type: object
                                     properties:
@@ -33842,6 +34132,14 @@ paths:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          anchor:
+                            enum:
+                              - billing_cycle
+                              - utc
+                            type: string
+                            description: Window alignment. 'billing_cycle' phases the interval to the
+                              customer's renewal time; 'utc' aligns to the UTC
+                              calendar.
                           filter:
                             type: object
                             properties:
@@ -34311,6 +34609,14 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            anchor:
+                              enum:
+                                - billing_cycle
+                                - utc
+                              type: string
+                              description: Window alignment. 'billing_cycle' phases the interval to the
+                                customer's renewal time; 'utc' aligns to the UTC
+                                calendar.
                             filter:
                               type: object
                               properties:
@@ -39095,6 +39401,15 @@ webhooks:
                                                         - week
                                                         - month
                                                         - year
+                                                    anchor:
+                                                      description: Window alignment. 'billing_cycle' phases the interval to the
+                                                        customer's renewal time;
+                                                        'utc' aligns to the UTC
+                                                        calendar.
+                                                      type: string
+                                                      enum:
+                                                        - billing_cycle
+                                                        - utc
                                                     filter:
                                                       description: When set, only usage from events whose properties match counts
                                                         toward this cap. Omit to
@@ -39318,6 +39633,14 @@ webhooks:
                                                 - week
                                                 - month
                                                 - year
+                                            anchor:
+                                              description: Window alignment. 'billing_cycle' phases the interval to the
+                                                customer's renewal time; 'utc'
+                                                aligns to the UTC calendar.
+                                              type: string
+                                              enum:
+                                                - billing_cycle
+                                                - utc
                                             filter:
                                               description: When set, only usage from events whose properties match counts
                                                 toward this cap. Omit to count
@@ -39683,6 +40006,15 @@ webhooks:
                                                         - week
                                                         - month
                                                         - year
+                                                    anchor:
+                                                      description: Window alignment. 'billing_cycle' phases the interval to the
+                                                        customer's renewal time;
+                                                        'utc' aligns to the UTC
+                                                        calendar.
+                                                      type: string
+                                                      enum:
+                                                        - billing_cycle
+                                                        - utc
                                                     filter:
                                                       description: When set, only usage from events whose properties match counts
                                                         toward this cap. Omit to

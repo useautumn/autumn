@@ -21,7 +21,10 @@ import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
 } from "../../utils/fetchApprovalPreview.js";
-import { getRequest, publicToolArgs } from "../../utils/toolArgs.js";
+import {
+	publicToolArgs,
+	toolRequestFromArgs,
+} from "../../utils/toolRequest.js";
 import { approvalCardItems } from "./cardItems.js";
 
 /** Posts the card for approvals that already exist (chained writes surfaced by
@@ -88,7 +91,7 @@ const withBackfilledPreview = async ({
 		const preview = await fetchApprovalPreview({
 			env: request.env,
 			logger,
-			request: getRequest(publicToolArgs(request.toolArgs)),
+			request: toolRequestFromArgs(publicToolArgs(request.toolArgs)),
 			token,
 			toolName: request.toolName,
 		});

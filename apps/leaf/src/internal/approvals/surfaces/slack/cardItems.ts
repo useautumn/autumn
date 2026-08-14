@@ -1,6 +1,6 @@
 import type { ChatApproval } from "@autumn/shared";
 import type { ApprovalCardItem } from "../../../../ui/blocks.js";
-import { publicToolArgs } from "../../utils/toolArgs.js";
+import { publicToolArgs } from "../../utils/toolRequest.js";
 
 const toolArgsOf = (approval: ChatApproval) =>
 	approval.tool_args && typeof approval.tool_args === "object"

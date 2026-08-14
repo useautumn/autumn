@@ -642,6 +642,16 @@ GetEntityInterval = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+GetEntityAnchor = Union[
+    Literal[
+        "billing_cycle",
+        "utc",
+    ],
+    UnrecognizedStr,
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 class GetEntityFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -673,6 +683,8 @@ class GetEntityUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[GetEntityAnchor]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[GetEntityFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
@@ -694,6 +706,9 @@ class GetEntityUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[GetEntityAnchor] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[Optional[GetEntityFilter], pydantic.Field(alias="filter")] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -705,7 +720,7 @@ class GetEntityUsageLimit(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter", "usage", "source"])
+        optional_fields = set(["enabled", "anchor", "filter", "usage", "source"])
         serialized = handler(self)
         m = {}
 

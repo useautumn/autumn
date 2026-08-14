@@ -355,6 +355,18 @@ export const GetEntityInterval = {
 export type GetEntityInterval = OpenEnum<typeof GetEntityInterval>;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const GetEntityAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type GetEntityAnchor = OpenEnum<typeof GetEntityAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type GetEntityFilter = {
@@ -392,6 +404,10 @@ export type GetEntityUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: GetEntityInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: GetEntityAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -962,6 +978,12 @@ export const GetEntityInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(GetEntityInterval);
 
 /** @internal */
+export const GetEntityAnchor$inboundSchema: z.ZodMiniType<
+  GetEntityAnchor,
+  unknown
+> = openEnums.inboundSchema(GetEntityAnchor);
+
+/** @internal */
 export const GetEntityFilter$inboundSchema: z.ZodMiniType<
   GetEntityFilter,
   unknown
@@ -995,6 +1017,7 @@ export const GetEntityUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: GetEntityInterval$inboundSchema,
+    anchor: types.optional(GetEntityAnchor$inboundSchema),
     filter: types.optional(z.lazy(() => GetEntityFilter$inboundSchema)),
     usage: types.optional(types.number()),
     source: types.optional(GetEntityUsageLimitSource$inboundSchema),

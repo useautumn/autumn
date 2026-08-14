@@ -14,7 +14,8 @@ import {
 	Modal,
 } from "chat";
 import { normalizeToolName, toolLabel } from "../agent/tools/toolPolicy.js";
-import { getRequest } from "../internal/approvals/utils/toolArgs.js";
+import { toolRequestFromArgs } from "../internal/approvals/utils/toolRequest.js";
+import { ACTION_FAILED_MESSAGE } from "./messages.js";
 import { parsePreviewPayload, previewElements } from "./previewContent.js";
 
 export type ApprovalCardStatus =
@@ -140,7 +141,7 @@ const actionPhrases = ({
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }): ActionPhrases => {
-	const request = getRequest(toolArgs) ?? {};
+	const request = toolRequestFromArgs(toolArgs) ?? {};
 	const customer = getString(request.customer_id);
 	const plan = getString(request.plan_id);
 	const entity = getString(request.entity_id);
@@ -265,7 +266,7 @@ const moneyFields = ({
 		);
 	}
 
-	const request = getRequest(toolArgs) ?? {};
+	const request = toolRequestFromArgs(toolArgs) ?? {};
 	const price = getRecord(getRecord(request.customize).price);
 	const priceAmount = getNumber(price.amount);
 	if (priceAmount !== null) {
@@ -367,7 +368,7 @@ const ITEM_LINES_MAX = 8;
 // Tier 4: PATCH-style plan customizations, set off by a divider so the added /
 // removed groups read as a distinct "what changes" block under the money facts.
 const itemChangeBlocks = (toolArgs?: Record<string, unknown>): CardChild[] => {
-	const customize = getRecord(getRequest(toolArgs)?.customize);
+	const customize = getRecord(toolRequestFromArgs(toolArgs)?.customize);
 	const addItems = Array.isArray(customize.add_items)
 		? customize.add_items
 		: [];
@@ -408,7 +409,7 @@ const nextCycleNote = (preview: unknown) => {
 
 // Tier 5: modifiers render only when they deviate from defaults, in muted text.
 const modifierPhrases = (toolArgs?: Record<string, unknown>) => {
-	const request = getRequest(toolArgs);
+	const request = toolRequestFromArgs(toolArgs);
 	if (!request) return [];
 	const invoiceMode = getRecord(request.invoice_mode);
 	const startsAt = getNumber(request.starts_at);
@@ -597,7 +598,7 @@ const compactValue = (value: unknown): string | null => {
 const requestSummaryFields = (
 	toolArgs?: Record<string, unknown>,
 ): FieldElement[] => {
-	const request = getRequest(toolArgs) ?? {};
+	const request = toolRequestFromArgs(toolArgs) ?? {};
 	const fields: FieldElement[] = [];
 	for (const [key, value] of Object.entries(request)) {
 		if (HIDDEN_REQUEST_KEYS.has(key) || key.startsWith("_")) continue;
@@ -654,7 +655,7 @@ const approvalPreviewBlocks = ({
 		return blocks;
 	}
 
-	const request = getRequest(toolArgs);
+	const request = toolRequestFromArgs(toolArgs);
 	const display = buildBillingPreviewDisplay({
 		params: request ?? null,
 		preview: parsePreviewPayload(preview),
@@ -792,7 +793,7 @@ const MAX_DETAILED_ITEMS = 8;
 const billingDisplayFor = (item: ApprovalCardItem) =>
 	BILLING_ACTION_TOOLS.has(normalizeToolName(item.toolName))
 		? buildBillingPreviewDisplay({
-				params: getRequest(item.toolArgs) ?? null,
+				params: toolRequestFromArgs(item.toolArgs) ?? null,
 				preview: parsePreviewPayload(item.preview),
 			})
 		: null;
@@ -1026,9 +1027,9 @@ export const approvalPayloadModal = ({
 	const [only] = items;
 	const payload =
 		items.length === 1 && only
-			? (getRequest(only.toolArgs) ?? {})
+			? toolRequestFromArgs(only.toolArgs)
 			: items.map((item) => ({
-					request: getRequest(item.toolArgs) ?? {},
+					request: toolRequestFromArgs(item.toolArgs),
 					tool: item.toolName,
 				}));
 	const json = JSON.stringify(payload, null, 2);
@@ -1131,7 +1132,7 @@ export const approvalStatusCard = ({
 	const customerLinkInSentence = (item?: ApprovalCardItem) =>
 		Boolean(
 			autumnCustomerLink({
-				customerId: getString(getRequest(item?.toolArgs)?.customer_id),
+				customerId: getString(toolRequestFromArgs(item?.toolArgs)?.customer_id),
 				env,
 			}),
 		);
@@ -1157,7 +1158,7 @@ export const approvalStatusCard = ({
 			result: failure,
 		}).lines;
 		const lines = [...failureLines, ...outcomeLines];
-		if (lines.length === 0) lines.push("The action failed.");
+		if (lines.length === 0) lines.push(ACTION_FAILED_MESSAGE);
 		return Card({
 			title: cardTitle(items),
 			subtitle: resolvedSubtitle,

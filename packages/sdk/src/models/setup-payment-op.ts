@@ -874,6 +874,18 @@ export type SetupPaymentUsageLimitInterval = ClosedEnum<
   typeof SetupPaymentUsageLimitInterval
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const SetupPaymentAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type SetupPaymentAnchor = ClosedEnum<typeof SetupPaymentAnchor>;
+
 export type SetupPaymentProperties = string | number | boolean;
 
 /**
@@ -900,6 +912,10 @@ export type SetupPaymentUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: SetupPaymentUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: SetupPaymentAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -2682,6 +2698,11 @@ export const SetupPaymentUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(SetupPaymentUsageLimitInterval);
 
 /** @internal */
+export const SetupPaymentAnchor$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentAnchor
+> = z.enum(SetupPaymentAnchor);
+
+/** @internal */
 export type SetupPaymentProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -2728,6 +2749,7 @@ export type SetupPaymentUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: SetupPaymentFilter$Outbound | undefined;
 };
 
@@ -2741,6 +2763,7 @@ export const SetupPaymentUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: SetupPaymentUsageLimitInterval$outboundSchema,
+    anchor: z.optional(SetupPaymentAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => SetupPaymentFilter$outboundSchema)),
   }),
   z.transform((v) => {

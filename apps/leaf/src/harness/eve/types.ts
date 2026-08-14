@@ -15,6 +15,7 @@ export type EveSessionState = z.infer<typeof eveSessionStateSchema>;
 
 export type EveSessionRef = {
 	env: AppEnv;
+	newSession: boolean;
 	sessionId: string;
 	state: EveSessionState;
 	threadKey: string;

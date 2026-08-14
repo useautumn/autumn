@@ -486,6 +486,16 @@ ListCustomersUsageLimitInterval = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+ListCustomersAnchor = Union[
+    Literal[
+        "billing_cycle",
+        "utc",
+    ],
+    UnrecognizedStr,
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 class ListCustomersFilterTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -517,6 +527,8 @@ class ListCustomersUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[ListCustomersAnchor]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[ListCustomersFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
@@ -538,6 +550,9 @@ class ListCustomersUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[ListCustomersAnchor] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[
         Optional[ListCustomersFilter], pydantic.Field(alias="filter")
     ] = None
@@ -551,7 +566,7 @@ class ListCustomersUsageLimit(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter", "usage", "source"])
+        optional_fields = set(["enabled", "anchor", "filter", "usage", "source"])
         serialized = handler(self)
         m = {}
 

@@ -250,6 +250,7 @@ class Events(BaseSDK):
         ] = None,
         filter_by: Optional[Dict[str, str]] = None,
         max_groups: Optional[int] = None,
+        aggregate_on: Optional[models.AggregateOn] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -266,6 +267,7 @@ class Events(BaseSDK):
         :param custom_range: Custom time range to aggregate events for. If provided, range must not be provided
         :param filter_by: Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters.
         :param max_groups: Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
+        :param aggregate_on: Set to \"deducted\" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -293,6 +295,7 @@ class Events(BaseSDK):
             ),
             filter_by=filter_by,
             max_groups=max_groups,
+            aggregate_on=aggregate_on,
         )
 
         req = self._build_request(
@@ -373,6 +376,7 @@ class Events(BaseSDK):
         ] = None,
         filter_by: Optional[Dict[str, str]] = None,
         max_groups: Optional[int] = None,
+        aggregate_on: Optional[models.AggregateOn] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -389,6 +393,7 @@ class Events(BaseSDK):
         :param custom_range: Custom time range to aggregate events for. If provided, range must not be provided
         :param filter_by: Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters.
         :param max_groups: Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
+        :param aggregate_on: Set to \"deducted\" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -416,6 +421,7 @@ class Events(BaseSDK):
             ),
             filter_by=filter_by,
             max_groups=max_groups,
+            aggregate_on=aggregate_on,
         )
 
         req = self._build_request_async(

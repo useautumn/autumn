@@ -1,0 +1,265 @@
+import type { AutumnLogger } from "@autumn/logging";
+import type { AppEnv } from "@autumn/shared";
+import type { ActiveRun } from "../../internal/runs/runRegistry.js";
+import { AGENT_UNREACHABLE_MESSAGE } from "../../ui/messages.js";
+import {
+	applyEveEvent,
+	closeReasoningStream,
+	type EveEventContext,
+	type EveTurnOutcome,
+	eveTurnProducedOutput,
+} from "./applyEveEvent.js";
+import {
+	EveStreamDisconnectedError,
+	EveStreamIdleTimeoutError,
+	resyncEveStreamIndex,
+	streamEveEvents,
+} from "./client.js";
+import { saveEveSessionState } from "./sessionState.js";
+import type { EveAuthContext, EveSessionRef } from "./types.js";
+
+/** ~10s of reconnects (doubled once by the silent-cursor resync below): eve
+ * resumes turns asynchronously, so the first stream after a post can
+ * legitimately close empty a few times. */
+const MAX_IDLE_RETRIES = 20;
+const STREAM_RETRY_DELAY_MS = 500;
+const MAX_STREAM_DISCONNECT_RETRIES = 5;
+const PERSIST_CURSOR_EVERY_EVENTS = 10;
+
+/** Everything one turn needs, accumulated in `progress` and `session` as
+ * events arrive. */
+type EveTurnContext = Omit<EveEventContext, "event"> & { auth: EveAuthContext };
+
+/** What one pass over the stream produced. The stream's error is returned
+ * rather than thrown so a pass that yielded events before dying still reports
+ * them — otherwise a dropped connection looks like a silent turn. */
+type EveStreamPass = {
+	error?: unknown;
+	outcome?: EveTurnOutcome;
+	sawEvent: boolean;
+};
+
+const streamPassEvents = async ({
+	abandonForStop,
+	run,
+	signal,
+	turn,
+}: {
+	abandonForStop: (
+		stop: NonNullable<ActiveRun["stop"]>,
+	) => Promise<EveTurnOutcome>;
+	run?: ActiveRun;
+	signal: AbortSignal;
+	turn: EveTurnContext;
+}): Promise<EveStreamPass> => {
+	const { auth, orgId, session } = turn;
+	let sawEvent = false;
+	try {
+		for await (const event of streamEveEvents({ auth, session, signal })) {
+			sawEvent = true;
+			session.state.streamIndex += 1;
+			session.state.lastEventAt = Date.now();
+
+			if (run?.stop)
+				return { outcome: await abandonForStop(run.stop), sawEvent };
+
+			const outcome = await applyEveEvent({ ...turn, event });
+			if (outcome) return { outcome, sawEvent };
+
+			if (session.state.streamIndex % PERSIST_CURSOR_EVERY_EVENTS === 0) {
+				await saveEveSessionState({ orgId, session });
+			}
+		}
+	} catch (error) {
+		return { error, sawEvent };
+	}
+	return { sawEvent };
+};
+
+/** Silence this long means the cursor drifted past eve's replay buffer or the
+ * turn died without a terminal event — heal the cursor and fail visibly rather
+ * than spin forever. */
+const recoverFromIdleStream = async ({
+	logger,
+	turn,
+}: {
+	logger: AutumnLogger;
+	turn: EveTurnContext;
+}): Promise<EveTurnOutcome> => {
+	const { auth, onReasoning, orgId, progress, session } = turn;
+	logger.warn("Eve stream went idle; resyncing cursor", {
+		event: "leaf.eve_stream_idle_timeout",
+		data: {
+			session_id: session.sessionId,
+			stream_index: session.state.streamIndex,
+		},
+	});
+	await resyncEveStreamIndex({ auth, session });
+	await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
+	const partialText = progress.finalText || progress.pendingText;
+	if (!partialText) throw new Error(AGENT_UNREACHABLE_MESSAGE);
+	closeReasoningStream({ onReasoning, progress });
+	return { kind: "answered", text: partialText };
+};
+
+/** Persisted right away: a turn that later throws would otherwise leave the
+ * drifted cursor in the row and repeat this cycle next message. */
+const healSilentCursor = async ({
+	logger,
+	turn,
+}: {
+	logger: AutumnLogger;
+	turn: EveTurnContext;
+}) => {
+	const { auth, orgId, session } = turn;
+	logger.warn("Eve stream produced nothing; resyncing cursor", {
+		event: "leaf.eve_stream_silent_resync",
+		data: {
+			session_id: session.sessionId,
+			stream_index: session.state.streamIndex,
+		},
+	});
+	await resyncEveStreamIndex({ auth, session });
+	await saveEveSessionState({ orgId, session });
+};
+
+/** The retry budget ran out before any terminal event: keep whatever the model
+ * managed to say, otherwise report how empty the turn really was. */
+const outcomeForExhaustedRetries = async ({
+	streamedAnyEvent,
+	turn,
+}: {
+	streamedAnyEvent: boolean;
+	turn: EveTurnContext;
+}): Promise<EveTurnOutcome> => {
+	const { onReasoning, orgId, progress, session } = turn;
+	if (progress.pendingText) progress.finalText = progress.pendingText;
+	if (!eveTurnProducedOutput({ text: progress.finalText })) {
+		return streamedAnyEvent ? { kind: "silent" } : { kind: "unreachable" };
+	}
+	closeReasoningStream({ onReasoning, progress });
+	await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
+	return { kind: "answered", text: progress.finalText };
+};
+
+/**
+ * Streams one eve turn to its end. Reconnects through eve's async resume
+ * window and heals a drifted cursor; throws only when the turn failed or the
+ * stream died with nothing to show for it.
+ */
+export const consumeEveTurn = async ({
+	auth,
+	env,
+	logger,
+	onAction,
+	onReasoning,
+	onThinking,
+	orgId,
+	run,
+	session,
+	token,
+}: {
+	auth: EveAuthContext;
+	env: AppEnv;
+	logger: AutumnLogger;
+	onAction?: EveEventContext["onAction"];
+	onReasoning?: EveEventContext["onReasoning"];
+	onThinking?: EveEventContext["onThinking"];
+	orgId: string;
+	run?: ActiveRun;
+	session: EveSessionRef;
+	token: string;
+}): Promise<EveTurnOutcome> => {
+	const abortController = new AbortController();
+	const turn: EveTurnContext = {
+		auth,
+		env,
+		onAction,
+		onReasoning,
+		onThinking,
+		orgId,
+		progress: {
+			finalText: "",
+			pendingText: "",
+			toolInputs: new Map(),
+			toolLabels: new Map(),
+			turnStarted: false,
+		},
+		session,
+		token,
+	};
+
+	const abandonForStop = async (
+		stop: NonNullable<ActiveRun["stop"]>,
+	): Promise<EveTurnOutcome> => {
+		abortController.abort();
+		await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
+		return {
+			kind: "stopped",
+			stopReason: stop.reason,
+			text: turn.progress.finalText,
+		};
+	};
+
+	let streamedAnyEvent = false;
+	let healedSilentCursor = false;
+	let idleRetries = 0;
+	let disconnectRetries = 0;
+
+	try {
+		while (idleRetries < MAX_IDLE_RETRIES) {
+			// Eve is never interrupted server-side, so a stop is only honored where
+			// the harness looks: here, and on the next streamed event.
+			if (run?.stop) return await abandonForStop(run.stop);
+
+			const pass = await streamPassEvents({
+				abandonForStop,
+				run,
+				signal: abortController.signal,
+				turn,
+			});
+			streamedAnyEvent ||= pass.sawEvent;
+			if (pass.outcome) return pass.outcome;
+
+			if (pass.error instanceof EveStreamDisconnectedError) {
+				disconnectRetries += 1;
+				logger.warn("Eve stream disconnected; reconnecting", {
+					event: "leaf.eve_stream_disconnected",
+					data: {
+						attempt: disconnectRetries,
+						error: pass.error.message,
+						session_id: session.sessionId,
+						stream_index: session.state.streamIndex,
+					},
+				});
+				if (disconnectRetries >= MAX_STREAM_DISCONNECT_RETRIES)
+					throw pass.error;
+				continue;
+			}
+			if (pass.error instanceof EveStreamIdleTimeoutError) {
+				return await recoverFromIdleStream({ logger, turn });
+			}
+			if (pass.error !== undefined) throw pass.error;
+
+			idleRetries = pass.sawEvent ? 0 : idleRetries + 1;
+			// Nothing at all came back, so the cursor may have drifted past eve's
+			// replay buffer: heal it once and re-arm the budget.
+			const silentlyExhausted =
+				idleRetries >= MAX_IDLE_RETRIES &&
+				!(streamedAnyEvent || healedSilentCursor);
+			if (silentlyExhausted) {
+				healedSilentCursor = true;
+				await healSilentCursor({ logger, turn });
+				idleRetries = 0;
+				continue;
+			}
+			await new Promise((resolve) =>
+				setTimeout(resolve, STREAM_RETRY_DELAY_MS),
+			);
+		}
+	} finally {
+		abortController.abort();
+	}
+
+	return await outcomeForExhaustedRetries({ streamedAnyEvent, turn });
+};

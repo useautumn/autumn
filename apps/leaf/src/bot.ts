@@ -73,6 +73,18 @@ import {
 	questionCard,
 } from "./ui/eveCards.js";
 import {
+	GENERIC_FAILURE_MESSAGE,
+	genericFailureWithDetail,
+	NO_REPLY_MESSAGE,
+	POST_FORMATTING_FAILED_MESSAGE,
+	QUESTION_ANSWER_FAILED_MESSAGE,
+	questionAnswerFailedWithDetail,
+	RUN_STOPPED_FOR_TIME_MESSAGE,
+	RUN_TIMED_OUT_MESSAGE,
+	runStoppedByUserNotice,
+	STARTUP_FAILED_STATUS,
+} from "./ui/messages.js";
+import {
 	finishLoading,
 	type LoadingState,
 	type ReplyTarget,
@@ -204,16 +216,10 @@ const ERROR_NOTICE_MAX = 160;
 /** One clean, human line about what failed — never a stack or a shrug. */
 const errorNotice = (error: unknown) => {
 	const message = error instanceof Error ? error.message : String(error);
-	if (/invalid_blocks/i.test(message)) {
-		return "I hit a formatting error posting that reply — the run itself may have succeeded. Ask me to summarize where things stand.";
-	}
-	if (/timed out|timeout/i.test(message)) {
-		return "That run took too long and was stopped. Send your message again to continue.";
-	}
+	if (/invalid_blocks/i.test(message)) return POST_FORMATTING_FAILED_MESSAGE;
+	if (/timed out|timeout/i.test(message)) return RUN_TIMED_OUT_MESSAGE;
 	const detail = message.replace(/\s+/g, " ").trim().slice(0, ERROR_NOTICE_MAX);
-	return detail
-		? `Something went wrong: ${detail} — please try again.`
-		: "Something went wrong — please try again.";
+	return detail ? genericFailureWithDetail(detail) : GENERIC_FAILURE_MESSAGE;
 };
 
 type RunAndReplyInput = {
@@ -397,11 +403,10 @@ const runAndReply = async ({
 			// Slack's post-triggered clear and it sticks forever.
 			ticker.stop();
 			await finishLoading(target, loading, "Stopped.");
-			const stoppedBy = run.stop?.byUserId;
 			const notice =
 				output.stopReason === "timeout"
-					? "_I stopped because the run was taking too long. Send a new message to continue._"
-					: `_Stopped${stoppedBy ? ` by <@${stoppedBy}>` : ""}. Nothing further was run._`;
+					? RUN_STOPPED_FOR_TIME_MESSAGE
+					: runStoppedByUserNotice(run.stop?.byUserId);
 			await target.post({
 				markdown: [output.text, notice]
 					.filter((part): part is string => Boolean(part?.trim()))
@@ -559,13 +564,27 @@ const runAndReply = async ({
 		});
 		if (postedApproval) return;
 
+		// Empty output with nothing to show is a failed run, not a silent success.
+		if (!output.text?.trim()) {
+			await finishLoading(target, loading, "No reply produced.");
+			await target.post({ markdown: `:warning: ${NO_REPLY_MESSAGE}` });
+			logger.warn("Agent produced no reply", {
+				event: "leaf.slack_empty_response",
+				data: {
+					finish_reason: output.finishReason,
+					run_id: output.runId,
+				},
+			});
+			return;
+		}
+
 		await finishLoading(target, loading, "Done.");
 
-		await target.post({ markdown: output.text || "Done." });
+		await target.post({ markdown: output.text });
 		logger.info("Posted Slack response", {
 			event: "leaf.slack_response_posted",
 			data: {
-				has_text: Boolean(output.text),
+				has_text: true,
 			},
 		});
 	} catch (error) {
@@ -576,7 +595,7 @@ const runAndReply = async ({
 		// "Thinking…" over the cleared status after the error message lands.
 		ticker.stop();
 		await reactSafely({ action: "add", emoji: "x" });
-		await finishLoading(target, bootstrapLoading, "Couldn't start Autumn.");
+		await finishLoading(target, bootstrapLoading, STARTUP_FAILED_STATUS);
 		await finishLoading(target, loading, "Request failed.");
 		await target.post({
 			markdown: `:warning: ${errorNotice(error)}`,
@@ -739,7 +758,7 @@ bot.onAction(indexedActionIds(ANSWER_QUESTION_ACTION), async (event) => {
 		});
 		if ("error" in result) {
 			await event.thread?.post({
-				markdown: `I couldn't record that answer (${result.message}). Reply in the thread instead.`,
+				markdown: questionAnswerFailedWithDetail(result.message),
 			});
 			return;
 		}
@@ -774,10 +793,7 @@ bot.onAction(indexedActionIds(ANSWER_QUESTION_ACTION), async (event) => {
 		rootLogger.error("[chat] Question answer failed", error, {
 			event: "leaf.eve_question_answer_failed",
 		});
-		await event.thread?.post({
-			markdown:
-				"I couldn't record that answer — it may already be resolved. Reply in the thread instead.",
-		});
+		await event.thread?.post({ markdown: QUESTION_ANSWER_FAILED_MESSAGE });
 	}
 });
 

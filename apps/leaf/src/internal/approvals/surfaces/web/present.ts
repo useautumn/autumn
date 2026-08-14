@@ -13,7 +13,10 @@ import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
 } from "../../utils/fetchApprovalPreview.js";
-import { getRequest, publicToolArgs } from "../../utils/toolArgs.js";
+import {
+	publicToolArgs,
+	toolRequestFromArgs,
+} from "../../utils/toolRequest.js";
 
 const withBackfilledPreview = async ({
 	logger,
@@ -33,12 +36,10 @@ const withBackfilledPreview = async ({
 		return request;
 	}
 	try {
-		const body = getRequest(publicToolArgs(request.toolArgs));
-		if (!body) return request;
 		const preview = await fetchApprovalPreview({
 			env: request.env,
 			logger,
-			request: body,
+			request: toolRequestFromArgs(publicToolArgs(request.toolArgs)),
 			token,
 			toolName: request.toolName,
 		});
@@ -132,7 +133,7 @@ export const presentWebApproval = async ({
 
 	return previewed.map((request, index) => ({
 		approvalId: ids[index],
-		params: getRequest(publicToolArgs(request.toolArgs)),
+		params: toolRequestFromArgs(publicToolArgs(request.toolArgs)),
 		preview: request.preview,
 		toolName: request.toolName,
 	}));

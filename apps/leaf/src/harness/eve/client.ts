@@ -106,6 +106,11 @@ export const postEveMessage = async ({
 	return parseSessionResponse({ existing: session, response });
 };
 
+/** Written to the model, not the user: the siblings are denied for a procedural
+ * reason, and without saying so the model reads six denials as six rejections. */
+export const SIBLING_WITHHELD_NOTE =
+	"(The other pending write approvals in this batch were withheld, not rejected on their merits — they were not part of the card the user decided. Re-issue each withheld write as its own separate step so the user can approve it individually.)";
+
 /** Answers every parked request in one POST. Answering them one at a time would
  * resume the turn while its siblings are still parked. */
 export const postEveInputResponses = async ({
@@ -113,6 +118,7 @@ export const postEveInputResponses = async ({
 	note,
 	responses,
 	session,
+	siblingRequestIds,
 }: {
 	auth: EveAuthContext;
 	/** Context sent with the answer — a gate-deny and a user-discard are
@@ -120,18 +126,47 @@ export const postEveInputResponses = async ({
 	note?: string;
 	responses: { optionId: string; requestId: string }[];
 	session: EveSessionRef;
+	/** The rest of the parked batch this answer belongs to. */
+	siblingRequestIds?: string[];
 }) => {
+	// Eve defers every delivery while ANY request in the parked batch is
+	// unanswered: leaving one open wedges the session on empty turns forever, so
+	// siblings this answer did not cover are denied here rather than left open.
+	const answered = new Set(responses.map(({ requestId }) => requestId));
+	const withheld = [...new Set(siblingRequestIds ?? [])].filter(
+		(requestId) => requestId && !answered.has(requestId),
+	);
 	const response = await fetch(eveUrl(`/eve/v1/session/${session.sessionId}`), {
 		method: "POST",
 		headers: eveHeaders(auth, { "content-type": "application/json" }),
 		body: JSON.stringify({
 			continuationToken: session.state.continuationToken,
-			inputResponses: responses,
-			message: note,
+			inputResponses: [
+				...responses,
+				...withheld.map((requestId) => ({ optionId: "deny", requestId })),
+			],
+			message: withheld.length
+				? [note, SIBLING_WITHHELD_NOTE].filter(Boolean).join("\n\n")
+				: note,
 		}),
 	});
 	return parseSessionResponse({ existing: session, response });
 };
+
+/** The superseded-approval and chained-gate paths each decide exactly one
+ * parked request. */
+export const postEveInputResponse = ({
+	optionId,
+	requestId,
+	...rest
+}: {
+	auth: EveAuthContext;
+	note?: string;
+	optionId: string;
+	requestId: string;
+	session: EveSessionRef;
+	siblingRequestIds?: string[];
+}) => postEveInputResponses({ ...rest, responses: [{ optionId, requestId }] });
 
 /** Longest observed gap between events on a healthy turn is ~60s (model
  * latency on a large context), so anything past this reads as a dead stream. */

@@ -398,6 +398,13 @@ export const featurePriceItemsAreSame = ({
 			condition: item1.price == item2.price,
 			message: `Price different: ${item1.price} != ${item2.price}`,
 		},
+		additional_currencies: {
+			condition: additionalCurrenciesAreSame(
+				item1.additional_currencies,
+				item2.additional_currencies,
+			),
+			message: `Additional currencies different`,
+		},
 		tiers: {
 			condition: tiersAreSame(item1.tiers || null, item2.tiers || null),
 			message: `Tiers different`,

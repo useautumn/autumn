@@ -931,6 +931,20 @@ export type UpdatePlanUsageLimitIntervalRequestBody = ClosedEnum<
   typeof UpdatePlanUsageLimitIntervalRequestBody
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const UpdatePlanAnchorRequestBody = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type UpdatePlanAnchorRequestBody = ClosedEnum<
+  typeof UpdatePlanAnchorRequestBody
+>;
+
 export type UpdatePlanProperties = string | number | boolean;
 
 /**
@@ -957,6 +971,10 @@ export type UpdatePlanUsageLimitRequestBody = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdatePlanUsageLimitIntervalRequestBody;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: UpdatePlanAnchorRequestBody | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1585,6 +1603,18 @@ export type VariantUsageLimitInterval = ClosedEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const VariantAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type VariantAnchor = ClosedEnum<typeof VariantAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type VariantFilter = {
@@ -1608,6 +1638,10 @@ export type VariantUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: VariantUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: VariantAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -2834,6 +2868,20 @@ export type UpdatePlanVariantDetailsUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const UpdatePlanVariantDetailsAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type UpdatePlanVariantDetailsAnchor = OpenEnum<
+  typeof UpdatePlanVariantDetailsAnchor
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type UpdatePlanVariantDetailsFilter = {
@@ -2857,6 +2905,10 @@ export type UpdatePlanVariantDetailsUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdatePlanVariantDetailsUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: UpdatePlanVariantDetailsAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -3104,6 +3156,20 @@ export type UpdatePlanUsageLimitIntervalResponse = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const UpdatePlanAnchorResponse = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type UpdatePlanAnchorResponse = OpenEnum<
+  typeof UpdatePlanAnchorResponse
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type UpdatePlanFilterResponse = {
@@ -3127,6 +3193,10 @@ export type UpdatePlanUsageLimitResponse = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdatePlanUsageLimitIntervalResponse;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: UpdatePlanAnchorResponse | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -4590,6 +4660,11 @@ export const UpdatePlanUsageLimitIntervalRequestBody$outboundSchema:
   );
 
 /** @internal */
+export const UpdatePlanAnchorRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanAnchorRequestBody
+> = z.enum(UpdatePlanAnchorRequestBody);
+
+/** @internal */
 export type UpdatePlanProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -4638,6 +4713,7 @@ export type UpdatePlanUsageLimitRequestBody$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: UpdatePlanFilterRequestBody$Outbound | undefined;
 };
 
@@ -4651,6 +4727,7 @@ export const UpdatePlanUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: UpdatePlanUsageLimitIntervalRequestBody$outboundSchema,
+    anchor: z.optional(UpdatePlanAnchorRequestBody$outboundSchema),
     filter: z.optional(
       z.lazy(() => UpdatePlanFilterRequestBody$outboundSchema),
     ),
@@ -5464,6 +5541,10 @@ export const VariantUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(VariantUsageLimitInterval);
 
 /** @internal */
+export const VariantAnchor$outboundSchema: z.ZodMiniEnum<typeof VariantAnchor> =
+  z.enum(VariantAnchor);
+
+/** @internal */
 export type VariantFilter$Outbound = {
   properties: { [k: string]: any };
 };
@@ -5486,6 +5567,7 @@ export type VariantUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: VariantFilter$Outbound | undefined;
 };
 
@@ -5499,6 +5581,7 @@ export const VariantUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: VariantUsageLimitInterval$outboundSchema,
+    anchor: z.optional(VariantAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => VariantFilter$outboundSchema)),
   }),
   z.transform((v) => {
@@ -6997,6 +7080,12 @@ export const UpdatePlanVariantDetailsUsageLimitInterval$inboundSchema:
     .inboundSchema(UpdatePlanVariantDetailsUsageLimitInterval);
 
 /** @internal */
+export const UpdatePlanVariantDetailsAnchor$inboundSchema: z.ZodMiniType<
+  UpdatePlanVariantDetailsAnchor,
+  unknown
+> = openEnums.inboundSchema(UpdatePlanVariantDetailsAnchor);
+
+/** @internal */
 export const UpdatePlanVariantDetailsFilter$inboundSchema: z.ZodMiniType<
   UpdatePlanVariantDetailsFilter,
   unknown
@@ -7024,6 +7113,7 @@ export const UpdatePlanVariantDetailsUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: UpdatePlanVariantDetailsUsageLimitInterval$inboundSchema,
+    anchor: types.optional(UpdatePlanVariantDetailsAnchor$inboundSchema),
     filter: types.optional(
       z.lazy(() => UpdatePlanVariantDetailsFilter$inboundSchema),
     ),
@@ -7361,6 +7451,12 @@ export const UpdatePlanUsageLimitIntervalResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdatePlanUsageLimitIntervalResponse);
 
 /** @internal */
+export const UpdatePlanAnchorResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanAnchorResponse,
+  unknown
+> = openEnums.inboundSchema(UpdatePlanAnchorResponse);
+
+/** @internal */
 export const UpdatePlanFilterResponse$inboundSchema: z.ZodMiniType<
   UpdatePlanFilterResponse,
   unknown
@@ -7388,6 +7484,7 @@ export const UpdatePlanUsageLimitResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: UpdatePlanUsageLimitIntervalResponse$inboundSchema,
+    anchor: types.optional(UpdatePlanAnchorResponse$inboundSchema),
     filter: types.optional(
       z.lazy(() => UpdatePlanFilterResponse$inboundSchema),
     ),

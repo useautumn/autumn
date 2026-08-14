@@ -117,6 +117,13 @@ CreateEntityIntervalRequestBody = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+CreateEntityAnchorRequestBody = Literal[
+    "billing_cycle",
+    "utc",
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 CreateEntityPropertiesTypedDict = TypeAliasType(
     "CreateEntityPropertiesTypedDict", Union[str, float, bool]
 )
@@ -148,6 +155,8 @@ class CreateEntityUsageLimitRequestBodyTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[CreateEntityAnchorRequestBody]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[CreateEntityFilterRequestBodyTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -165,6 +174,9 @@ class CreateEntityUsageLimitRequestBody(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[CreateEntityAnchorRequestBody] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[
         Optional[CreateEntityFilterRequestBody], pydantic.Field(alias="filter")
     ] = None
@@ -172,7 +184,7 @@ class CreateEntityUsageLimitRequestBody(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -945,6 +957,16 @@ CreateEntityIntervalResponse = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+CreateEntityAnchorResponse = Union[
+    Literal[
+        "billing_cycle",
+        "utc",
+    ],
+    UnrecognizedStr,
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 class CreateEntityFilterResponseTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -976,6 +998,8 @@ class CreateEntityUsageLimitResponseTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[CreateEntityAnchorResponse]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[CreateEntityFilterResponseTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
@@ -997,6 +1021,9 @@ class CreateEntityUsageLimitResponse(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[CreateEntityAnchorResponse] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[
         Optional[CreateEntityFilterResponse], pydantic.Field(alias="filter")
     ] = None
@@ -1010,7 +1037,7 @@ class CreateEntityUsageLimitResponse(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter", "usage", "source"])
+        optional_fields = set(["enabled", "anchor", "filter", "usage", "source"])
         serialized = handler(self)
         m = {}
 

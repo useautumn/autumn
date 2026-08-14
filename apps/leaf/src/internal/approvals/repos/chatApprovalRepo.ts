@@ -7,6 +7,7 @@ import { insertChatApprovalGroup } from "./insertChatApprovalGroup.js";
 import { listChatApprovalsForChannel } from "./listChatApprovalsForChannel.js";
 import { listPendingChatApprovalsForOrg } from "./listPendingChatApprovalsForOrg.js";
 import { listPendingChatApprovalsForRun } from "./listPendingChatApprovalsForRun.js";
+import { moveChatApprovalToRun } from "./moveChatApprovalToRun.js";
 import { releaseChatApprovalGroup } from "./releaseChatApprovalGroup.js";
 import { setChatApprovalMessageTs } from "./setChatApprovalMessageTs.js";
 
@@ -20,6 +21,7 @@ export const chatApprovalRepo = {
 	listForChannel: listChatApprovalsForChannel,
 	listPendingForOrg: listPendingChatApprovalsForOrg,
 	listPendingForRun: listPendingChatApprovalsForRun,
+	moveToRun: moveChatApprovalToRun,
 	releaseGroup: releaseChatApprovalGroup,
 	setMessageTs: setChatApprovalMessageTs,
 } as const;

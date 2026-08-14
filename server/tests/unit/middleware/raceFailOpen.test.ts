@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { Scopes } from "@autumn/shared";
 import { Hono } from "hono";
 import { createRoute, raceFailOpen } from "@/honoMiddlewares/routeHandler.js";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
 const response = (label: string) => new Response(label);
 
@@ -92,9 +93,23 @@ describe("raceFailOpen", () => {
 
 describe("createRoute failOpen skip", () => {
 	// Mounted under /webhooks/ so the scope-check middleware self-bypasses and
-	// no request ctx is needed.
-	const buildApp = ({ skip }: { skip: () => boolean }) => {
-		const app = new Hono();
+	// only the request timestamp is needed in ctx.
+	const buildApp = ({
+		skip,
+		requestStartedAt = Date.now(),
+		handlerDelayMs = 60,
+	}: {
+		skip: () => boolean;
+		requestStartedAt?: number;
+		handlerDelayMs?: number;
+	}) => {
+		const app = new Hono<HonoEnv>();
+		app.use("*", async (c, next) => {
+			c.set("ctx", {
+				timestamp: requestStartedAt,
+			} as HonoEnv["Variables"]["ctx"]);
+			await next();
+		});
 		app.post(
 			"/webhooks/fail-open-test",
 			...createRoute({
@@ -105,7 +120,7 @@ describe("createRoute failOpen skip", () => {
 					respond: () => response("fail-open"),
 				},
 				handler: async () => {
-					await Bun.sleep(60);
+					await Bun.sleep(handlerDelayMs);
 					return response("handler");
 				},
 			}),
@@ -123,6 +138,18 @@ describe("createRoute failOpen skip", () => {
 
 	it("skip=false still races and fails open when the handler is slow", async () => {
 		const app = buildApp({ skip: () => false });
+		const result = await app.request("/webhooks/fail-open-test", {
+			method: "POST",
+		});
+		expect(await result.text()).toBe("fail-open");
+	});
+
+	it("counts time elapsed before the handler against the timeout", async () => {
+		const app = buildApp({
+			skip: () => false,
+			requestStartedAt: Date.now() - 100,
+			handlerDelayMs: 0,
+		});
 		const result = await app.request("/webhooks/fail-open-test", {
 			method: "POST",
 		});

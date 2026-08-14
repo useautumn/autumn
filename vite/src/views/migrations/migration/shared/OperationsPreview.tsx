@@ -10,6 +10,7 @@ import { CurrencyCircleDollarIcon, GitBranchIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
 import { ItemStatusDot } from "@/components/v2/ItemStatusDot";
+import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { FeatureIconCluster } from "@/components/v2/PlanItemLabel";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -43,7 +44,9 @@ function EditedRow({
 				<p className="whitespace-nowrap truncate min-w-0 text-body">{text}</p>
 				{hint}
 			</div>
-			<span className="size-2 rounded-full shrink-0 bg-amber-500" />
+			<div className="flex items-center shrink-0">
+				<ItemStatusDot state="updated" />
+			</div>
 		</div>
 	);
 }
@@ -53,16 +56,30 @@ function EditedRow({
 function RemovedFilterRow({ filter }: { filter: ItemFilter }) {
 	const { features } = useFeaturesQuery();
 	return (
-		<div className="flex items-center gap-2">
-			<div className="flex items-center flex-1 min-w-0 gap-2 py-1 opacity-50">
-				<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
-					<FeatureIconCluster item={filterToProductItem(filter)} />
-					<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body">
-						{getFilterSummary(filter, features)}
-					</p>
-				</div>
+		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2">
+			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden opacity-50">
+				<FeatureIconCluster item={filterToProductItem(filter)} />
+				<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body">
+					{getFilterSummary(filter, features)}
+				</p>
+			</div>
+			<div className="flex items-center shrink-0">
 				<ItemStatusDot state="removed" />
 			</div>
+		</div>
+	);
+}
+
+/** SubscriptionItemRow draws its own bare row, so the card lives here to match
+ * the edited and removed rows beside it. */
+function AddedItemRow({
+	item,
+}: {
+	item: Parameters<typeof SubscriptionItemRow>[0]["item"];
+}) {
+	return (
+		<div className="flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2 [&>div]:flex-1 [&>div]:min-w-0">
+			<SubscriptionItemRow item={item} isCreated />
 		</div>
 	);
 }
@@ -82,7 +99,7 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 	return (
 		<div className="flex flex-col gap-3 min-w-0">
 			<Separator />
-			<div className="flex flex-col gap-3 min-w-0 max-h-72 overflow-y-auto">
+			<div className="flex flex-col gap-3 min-w-0 max-h-72 overflow-y-auto overflow-x-hidden">
 				{ops.map((op, index) => {
 					if (op.type === "add_plan") {
 						const addOp = op as AddPlanOp;
@@ -103,6 +120,7 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 					const customize = updateOp.customize;
 					const addItems = customize?.add_items ?? [];
 					const removeItems = customize?.remove_items ?? [];
+					const upsertLicenses = customize?.upsert_licenses ?? [];
 
 					const priceCurrencies = customize?.price?.additional_currencies ?? [];
 					const previousCurrencies =
@@ -191,11 +209,63 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 							)}
 
 							{addItems.map((item, idx) => (
-								<SubscriptionItemRow
+								<AddedItemRow
 									key={`add-${idx}`}
 									item={migrationItemToProductItem(item, features)}
-									isCreated
 								/>
+							))}
+
+							{upsertLicenses.map((license) => (
+								<div
+									className="flex flex-col gap-1"
+									key={`license-${license.license_plan_id}`}
+								>
+									<span className="flex items-center gap-1.5 text-xs text-subtle min-w-0">
+										<LicenseIcon size={12} className="shrink-0" />
+										<span className="truncate min-w-0">
+											{license.license_plan_id}
+										</span>
+									</span>
+									<div className="flex flex-col gap-1 border-l border-border pl-3 ml-1.5">
+										{license.customize?.price !== undefined && (
+											<EditedRow
+												icon={
+													<CurrencyCircleDollarIcon
+														size={16}
+														weight="duotone"
+														className="text-yellow-500 shrink-0"
+													/>
+												}
+												text={`${formatAmount({
+													currency,
+													amount: license.customize.price?.amount ?? 0,
+													amountFormatOptions: {
+														style: "currency",
+														currencyDisplay: "narrowSymbol",
+													},
+												})} ${formatInterval({
+													interval:
+														license.customize.price?.interval ?? "month",
+													intervalCount: 1,
+												})}`}
+											/>
+										)}
+										{(license.customize?.add_items ?? []).map((item, idx) => (
+											<AddedItemRow
+												key={`license-add-${idx}`}
+												item={migrationItemToProductItem(item, features)}
+											/>
+										))}
+										{(license.customize?.remove_items ?? []).map(
+											(item, idx) => (
+												<RemovedFilterRow
+													filter={item as ItemFilter}
+													key={`license-remove-${idx}`}
+												/>
+											),
+										)}
+									</div>
+								</div>
 							))}
 
 							{removeItems.map((item, idx) => (
