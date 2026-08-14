@@ -33,6 +33,7 @@ export const expireAndActivateWithTracking = async ({
 			ctx,
 			customerProduct,
 			fullCustomer,
+			activatedAt: eventContext.nowMs,
 		});
 
 	// Track expired product (UPDATE)

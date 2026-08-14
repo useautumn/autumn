@@ -79,6 +79,7 @@ export const activateScheduledCustomerProducts = async ({
 			fullCustomer,
 			subscriptionIds,
 			scheduledIds,
+			activatedAt: nowMs,
 		});
 
 		trackCustomerProductUpdate({
