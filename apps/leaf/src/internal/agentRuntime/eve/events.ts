@@ -1,36 +1,12 @@
-import { normalizeToolName, toolGerund } from "../../../agent/tools/toolPolicy.js";
-
-export type EveAction = {
-	callId?: string;
-	description?: string;
-	input?: unknown;
-	kind?: string;
-	name?: string;
-	subagentName?: string;
-	toolName?: string;
-};
-
-export type EveActionResult = {
-	callId?: string;
-	kind?: string;
-	name?: string;
-	output?: unknown;
-	subagentName?: string;
-	toolName?: string;
-};
-
-export type EveInputRequest = {
-	action?: {
-		callId?: string;
-		input?: Record<string, unknown>;
-		kind?: string;
-		toolName?: string;
-	};
-	display?: string;
-	options?: Array<{ label?: string; id?: string }>;
-	prompt?: string;
-	requestId?: string;
-};
+import {
+	normalizeToolName,
+	toolGerund,
+} from "../../../agent/tools/toolPolicy.js";
+import type {
+	EveAction,
+	EveActionResult,
+	EveInputRequest,
+} from "./eveEventSchemas.js";
 
 const labelForAction = (action?: EveAction) =>
 	action?.toolName ??

@@ -14,15 +14,9 @@ import {
 	type PendingQuestion,
 	siblingRequestIdsFromToolArgs,
 } from "./classifyParkedInput.js";
-import {
-	postEveInputResponse,
-	streamEveEvents,
-} from "./client.js";
-import { approvalOptionIds, type EveInputRequest } from "./events.js";
-import {
-	denyOptionFromApproval,
-	drainParkedEveTurn,
-} from "./parkedTurn.js";
+import { postEveInputResponse, streamEveEvents } from "./client.js";
+import { approvalOptionIds } from "./events.js";
+import { denyOptionFromApproval, drainParkedEveTurn } from "./parkedTurn.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
@@ -87,7 +81,7 @@ const collectText = async ({
 			// The resumed turn parks where nobody streams — every shape has to be
 			// captured here or the request is orphaned and the thread wedges.
 			const parkedInput = classifyParkedEveInput({
-				requests: (event.data?.requests ?? []) as EveInputRequest[],
+				requests: event.requests,
 				skipRequestId,
 			});
 			if (parkedInput?.kind === "gated") {
@@ -109,15 +103,15 @@ const collectText = async ({
 			}
 		} else if (event.type === "message.appended" && turnStarted) {
 			sawTurnActivity = true;
-			const messageSoFar = event.data?.messageSoFar;
+			const messageSoFar = event.messageSoFar;
 			pendingText =
 				typeof messageSoFar === "string"
 					? messageSoFar
-					: `${pendingText}${String(event.data?.messageDelta ?? "")}`;
+					: `${pendingText}${event.messageDelta}`;
 		} else if (event.type === "message.completed" && turnStarted) {
 			sawTurnActivity = true;
-			if (event.data?.finishReason !== "tool-calls") {
-				text = String(event.data?.message ?? pendingText);
+			if (event.finishReason !== "tool-calls") {
+				text = event.message || pendingText;
 			}
 			pendingText = "";
 		} else if (
@@ -132,7 +126,7 @@ const collectText = async ({
 			(event.type === "turn.failed" || event.type === "session.failed")
 		) {
 			session.state.status = "failed";
-			throw new Error(String(event.data?.message ?? "Eve failed"));
+			throw new Error(event.message);
 		}
 	}
 	// Nothing was read, so nothing advanced — never persist a cursor the turn

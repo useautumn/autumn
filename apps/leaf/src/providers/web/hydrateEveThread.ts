@@ -5,9 +5,6 @@ import { catalogPlanNeedingDecision } from "../../internal/agentRuntime/eve/cata
 import { streamEveEvents } from "../../internal/agentRuntime/eve/client.js";
 import {
 	displayEveToolLabel,
-	type EveAction,
-	type EveActionResult,
-	type EveInputRequest,
 	isPreviewToolName,
 	labelForResult,
 	textForInputRequests,
@@ -114,9 +111,9 @@ const eveEventsToUiMessages = async ({
 	};
 
 	for (const event of await collectEveEvents({ auth, session })) {
-		const ts = eventTs(event.meta?.at);
+		const ts = eventTs(event.at);
 		if (event.type === "message.received") {
-			const text = extractUserMessageText(String(event.data?.message ?? ""));
+			const text = extractUserMessageText(event.message);
 			// Eve holds a follow-up sent during a pending approval and replays it
 			// once resolved — the replay is a second message.received with the same
 			// text, so a repeated consecutive user message is an echo, not a send.
@@ -129,7 +126,7 @@ const eveEventsToUiMessages = async ({
 			if (text.trim() && !isEcho) {
 				timeline.push({
 					msg: {
-						id: `eve-user-${String(event.data?.turnId ?? crypto.randomUUID())}`,
+						id: `eve-user-${event.turnId ?? crypto.randomUUID()}`,
 						parts: [{ text, type: "text" }],
 						role: "user",
 					},
@@ -140,8 +137,7 @@ const eveEventsToUiMessages = async ({
 				pendingDecision = undefined;
 			}
 		} else if (event.type === "actions.requested") {
-			const actions = (event.data?.actions ?? []) as EveAction[];
-			for (const action of actions) {
+			for (const action of event.actions) {
 				if (action.callId)
 					toolCalls.set(action.callId, {
 						label: displayEveToolLabel(action),
@@ -149,24 +145,24 @@ const eveEventsToUiMessages = async ({
 					});
 			}
 		} else if (event.type === "action.result") {
-			const result = event.data?.result as EveActionResult | undefined;
+			const result = event.result;
 			const callId = result?.callId;
 			const toolCall = callId ? toolCalls.get(callId) : undefined;
 			const label =
 				toolCall?.label ?? displayEveToolLabel(labelForResult(result));
-			assistantForTurn(event.data?.turnId, ts).msg.parts.push({
+			assistantForTurn(event.turnId, ts).msg.parts.push({
 				data: {
 					finishedAt: ts,
 					label,
 					startedAt: toolCall?.startedAt ?? ts,
-					status: event.data?.status === "failed" ? "error" : "done",
+					status: event.status === "failed" ? "error" : "done",
 				},
 				id: callId ?? crypto.randomUUID(),
 				type: "data-step",
 			});
 			if (callId) toolCalls.delete(callId);
 			if (
-				event.data?.status === "completed" &&
+				event.status === "completed" &&
 				result?.toolName &&
 				isPreviewToolName(result.toolName)
 			) {
@@ -174,11 +170,11 @@ const eveEventsToUiMessages = async ({
 					parsePreviewPayload(result.output) ?? result.output,
 				);
 				pendingDecision = plan
-					? { message: assistantForTurn(event.data?.turnId, ts), plan }
+					? { message: assistantForTurn(event.turnId, ts), plan }
 					: undefined;
 			}
 		} else if (event.type === "input.requested") {
-			const requests = (event.data?.requests ?? []) as EveInputRequest[];
+			const requests = event.requests;
 			// Approval-shaped requests re-render from chat_approvals, not replay.
 			const isApproval = requests.some(
 				(request) =>
@@ -187,7 +183,7 @@ const eveEventsToUiMessages = async ({
 					normalizeToolName(request.action.toolName) !== "ask_question",
 			);
 			if (!isApproval) {
-				const assistant = assistantForTurn(event.data?.turnId, ts);
+				const assistant = assistantForTurn(event.turnId, ts);
 				const optioned = requests.find(
 					(request) =>
 						request.prompt &&
@@ -215,19 +211,19 @@ const eveEventsToUiMessages = async ({
 				}
 			}
 		} else if (event.type === "reasoning.completed") {
-			const text = String(event.data?.reasoning ?? "");
+			const text = event.reasoning;
 			if (text.trim()) {
-				assistantForTurn(event.data?.turnId, ts).msg.parts.push({
+				assistantForTurn(event.turnId, ts).msg.parts.push({
 					data: { text },
 					id: crypto.randomUUID(),
 					type: "data-reasoning",
 				});
 			}
 		} else if (event.type === "message.completed") {
-			const text = String(event.data?.message ?? "");
+			const text = event.message;
 			if (!text.trim()) continue;
-			const assistant = assistantForTurn(event.data?.turnId, ts);
-			if (event.data?.finishReason === "tool-calls") {
+			const assistant = assistantForTurn(event.turnId, ts);
+			if (event.finishReason === "tool-calls") {
 				assistant.msg.parts.push({
 					data: { text },
 					id: crypto.randomUUID(),

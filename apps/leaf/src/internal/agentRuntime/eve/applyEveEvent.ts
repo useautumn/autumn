@@ -18,13 +18,10 @@ import {
 	classifyParkedEveInput,
 	type PendingQuestion,
 } from "./classifyParkedInput.js";
-import type { EveEvent } from "./client.js";
+import type { EveEvent } from "./eveEventSchemas.js";
 import {
 	approvalOptionIds,
 	displayEveToolLabel,
-	type EveAction,
-	type EveActionResult,
-	type EveInputRequest,
 	isPreviewToolName,
 	labelForResult,
 	textForInputRequests,
@@ -70,9 +67,12 @@ export type EveTurnProgress = {
 	turnStarted: boolean;
 };
 
-export type EveEventContext = {
+type EveEventType = EveEvent["type"];
+type EveEventOf<T extends EveEventType> = Extract<EveEvent, { type: T }>;
+
+export type EveEventContext<T extends EveEventType = EveEventType> = {
 	env: AppEnv;
-	event: EveEvent;
+	event: EveEventOf<T>;
 	onAction?: (message: string) => Promise<void> | void;
 	onReasoning?: (input: { id: string; text: string }) => void;
 	onThinking?: () => void;
@@ -86,8 +86,8 @@ const announceRequestedActions = async ({
 	event,
 	onAction,
 	progress,
-}: EveEventContext) => {
-	const actions = (event.data?.actions ?? []) as EveAction[];
+}: EveEventContext<"actions.requested">) => {
+	const actions = event.actions;
 	for (const action of actions) {
 		const label = displayEveToolLabel(action);
 		// Utility tools (date converters) aren't worth a status blip.
@@ -95,12 +95,7 @@ const announceRequestedActions = async ({
 		if (progress.turnStarted && !silent) await onAction?.(label);
 		if (!action.callId) continue;
 		progress.toolLabels.set(action.callId, label);
-		if (action.input && typeof action.input === "object") {
-			progress.toolInputs.set(
-				action.callId,
-				action.input as Record<string, unknown>,
-			);
-		}
+		if (action.input) progress.toolInputs.set(action.callId, action.input);
 	}
 };
 
@@ -134,8 +129,8 @@ const absorbActionResult = async ({
 	onAction,
 	progress,
 	token,
-}: EveEventContext) => {
-	const result = event.data?.result as EveActionResult | undefined;
+}: EveEventContext<"action.result">) => {
+	const result = event.result;
 	if (result?.toolName && isPreviewToolName(result.toolName)) {
 		const input = result.callId
 			? progress.toolInputs.get(result.callId)
@@ -143,7 +138,7 @@ const absorbActionResult = async ({
 		// A failed preview leaves nothing to show, so it must also retire the one
 		// before it — the write is about to be previewed, not re-described.
 		progress.lastPreview =
-			event.data?.status === "completed"
+			event.status === "completed"
 				? await capturePreviewResult({
 						env,
 						input,
@@ -166,12 +161,12 @@ const appendMessageDelta = ({
 	event,
 	onReasoning,
 	progress,
-}: EveEventContext) => {
-	const messageSoFar = event.data?.messageSoFar;
+}: EveEventContext<"message.appended">) => {
+	const messageSoFar = event.messageSoFar;
 	progress.pendingText =
 		typeof messageSoFar === "string"
 			? messageSoFar
-			: `${progress.pendingText}${String(event.data?.messageDelta ?? "")}`;
+			: `${progress.pendingText}${event.messageDelta}`;
 	progress.reasoningStreamId ??= crypto.randomUUID();
 	onReasoning?.({ id: progress.reasoningStreamId, text: progress.pendingText });
 };
@@ -191,10 +186,14 @@ export const closeReasoningStream = ({
 	progress.reasoningStreamId = undefined;
 };
 
-const completeMessage = ({ event, onReasoning, progress }: EveEventContext) => {
-	const message = String(event.data?.message ?? progress.pendingText);
+const completeMessage = ({
+	event,
+	onReasoning,
+	progress,
+}: EveEventContext<"message.completed">) => {
+	const message = event.message || progress.pendingText;
 	progress.pendingText = "";
-	if (event.data?.finishReason === "tool-calls") {
+	if (event.finishReason === "tool-calls") {
 		// Reasoning that preceded a tool call stays on screen as a step.
 		progress.reasoningStreamId ??= crypto.randomUUID();
 		onReasoning?.({ id: progress.reasoningStreamId, text: message });
@@ -239,8 +238,8 @@ const parkOnInputRequest = async ({
 	orgId,
 	progress,
 	session,
-}: EveEventContext): Promise<EveTurnOutcome> => {
-	const requests = (event.data?.requests ?? []) as EveInputRequest[];
+}: EveEventContext<"input.requested">): Promise<EveTurnOutcome> => {
+	const requests = event.requests;
 	const parked = classifyParkedEveInput({ requests });
 	await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
 
@@ -318,24 +317,24 @@ export const applyEveEvent = async (
 			return undefined;
 
 		case "actions.requested":
-			await announceRequestedActions(context);
+			await announceRequestedActions({ ...context, event });
 			return undefined;
 
 		case "action.result":
-			await absorbActionResult(context);
+			await absorbActionResult({ ...context, event });
 			return undefined;
 
 		case "message.appended":
-			if (progress.turnStarted) appendMessageDelta(context);
+			if (progress.turnStarted) appendMessageDelta({ ...context, event });
 			return undefined;
 
 		case "message.completed":
-			if (progress.turnStarted) completeMessage(context);
+			if (progress.turnStarted) completeMessage({ ...context, event });
 			return undefined;
 
 		case "input.requested":
 			if (!progress.turnStarted) return undefined;
-			return await parkOnInputRequest(context);
+			return await parkOnInputRequest({ ...context, event });
 
 		case "turn.failed":
 		case "session.failed":
@@ -345,7 +344,7 @@ export const applyEveEvent = async (
 				session,
 				state: { status: "failed" },
 			});
-			throw new Error(String(event.data?.message ?? "Eve failed"));
+			throw new Error(event.message);
 
 		case "session.waiting":
 		case "session.completed":

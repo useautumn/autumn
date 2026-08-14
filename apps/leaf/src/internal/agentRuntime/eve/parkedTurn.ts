@@ -11,7 +11,7 @@ import {
 	resyncEveStreamIndex,
 	streamEveEvents,
 } from "./client.js";
-import { approvalOptionIds, type EveInputRequest } from "./events.js";
+import { approvalOptionIds } from "./events.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
@@ -52,7 +52,7 @@ export const drainParkedEveTurn = async ({
 					turnStarted = true;
 				} else if (event.type === "input.requested") {
 					const parked = classifyParkedEveInput({
-						requests: (event.data?.requests ?? []) as EveInputRequest[],
+						requests: event.requests,
 					});
 					if (parked?.kind === "gated" && denies < MAX_DRAIN_DENIES) {
 						denies += 1;

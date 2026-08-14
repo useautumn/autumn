@@ -1,6 +1,7 @@
 import { normalizeToolName } from "../../../agent/tools/toolPolicy.js";
 import { WAITING_FOR_INPUT_MESSAGE } from "../../../ui/messages.js";
-import { type EveInputRequest, textForInputRequests } from "./events.js";
+import type { EveInputRequest } from "./eveEventSchemas.js";
+import { textForInputRequests } from "./events.js";
 
 /** A gated write the resumed turn parked on after the answered one. */
 export type ChainedPendingRequest = {

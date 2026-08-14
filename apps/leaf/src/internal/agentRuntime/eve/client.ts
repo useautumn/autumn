@@ -1,12 +1,7 @@
 import { env } from "../../../lib/env.js";
+import { type EveEvent, parseEveEvent } from "./eveEventSchemas.js";
 import { isRetryableEveStreamError } from "./streamErrors.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
-
-export type EveEvent = {
-	data?: Record<string, unknown>;
-	meta?: { at?: string };
-	type?: string;
-};
 
 const eveUrl = (path: string) => new URL(path, env.EVE_SERVER_URL).href;
 
@@ -219,7 +214,7 @@ export async function* streamEveEvents({
 				const line = buffer.slice(0, newlineIndex).trim();
 				buffer = buffer.slice(newlineIndex + 1);
 				newlineIndex = buffer.indexOf("\n");
-				if (line) yield JSON.parse(line) as EveEvent;
+				if (line) yield parseEveEvent(JSON.parse(line));
 			}
 		}
 	} catch (error) {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
-import type { EveEvent } from "../../../src/internal/agentRuntime/eve/client.js";
+import type { EveEvent } from "../../../src/internal/agentRuntime/eve/eveEventSchemas.js";
 import type { EveSessionRef } from "../../../src/internal/agentRuntime/eve/types.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
@@ -149,7 +149,7 @@ describe("resumeEveApproval", () => {
 			{ type: "turn.started" },
 			{ type: "step.started" },
 			{
-				data: { message: "Updated the subscription." },
+				message: "Updated the subscription.",
 				type: "message.completed",
 			},
 			{ type: "session.waiting" },
@@ -169,7 +169,7 @@ describe("resumeEveApproval", () => {
 		streamedEvents = [
 			{ type: "turn.started" },
 			{ type: "step.started" },
-			{ data: { result: { callId: "c1" } }, type: "action.result" },
+			{ result: { callId: "c1" }, type: "action.result" },
 			{ type: "session.waiting" },
 		];
 
