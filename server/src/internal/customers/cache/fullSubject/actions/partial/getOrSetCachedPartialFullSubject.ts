@@ -6,7 +6,6 @@ import {
 import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
-import { buildFullSubjectBalanceGenerationKey } from "../../builders/buildFullSubjectBalanceGenerationKey.js";
 import { filterDrainedLooseEntitlements } from "../../filterDrainedLooseEntitlements.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
 import { isReplicaSourced } from "../../subjectProvenance.js";
@@ -80,18 +79,6 @@ export const getOrSetCachedPartialFullSubject = async ({
 
 	// Replica-sourced hydrations must never fill Redis — serve them as-is.
 	if (useRedis && !isReplicaSourced(normalized)) {
-		const rawBalanceGeneration = await ctx.redisV2.get(
-			buildFullSubjectBalanceGenerationKey({
-				orgId: ctx.org.id,
-				env: ctx.env,
-				customerId,
-			}),
-		);
-		const balanceGeneration = Number(rawBalanceGeneration ?? 0);
-		normalized.balanceGeneration = Number.isSafeInteger(balanceGeneration)
-			? balanceGeneration
-			: 0;
-		fullSubject.balanceGeneration = normalized.balanceGeneration;
 		await setCachedFullSubject({
 			ctx,
 			normalized,

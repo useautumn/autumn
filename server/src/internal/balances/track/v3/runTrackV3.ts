@@ -11,10 +11,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackQueueIdempotencyKey } from "@/internal/balances/idempotency/trackQueueIdempotency.js";
-import {
-	RedisDeductionError,
-	RedisDeductionErrorCode,
-} from "@/internal/balances/utils/types/redisDeductionError.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
@@ -63,36 +59,21 @@ export const runTrackV3 = async ({
 		});
 	}
 
-	let fullSubject = await getTrackFullSubject({
+	const fullSubject = await getTrackFullSubject({
 		ctx,
 		body,
 	});
 
 	const redisIdempotencyKey = getTrackQueueIdempotencyKey({ ctx });
-	const runWithCurrentSubject = () =>
-		runRedisTrackV3({
-			ctx,
-			fullSubject,
-			featureDeductions,
-			overageBehavior: body.overage_behavior || "cap",
-			body,
-			idempotencyKey: redisIdempotencyKey,
-		});
 
-	let response: TrackResponseV3;
-	try {
-		response = await runWithCurrentSubject();
-	} catch (error) {
-		if (
-			!(error instanceof RedisDeductionError) ||
-			error.code !== RedisDeductionErrorCode.BalanceGenerationChanged
-		) {
-			throw error;
-		}
-
-		fullSubject = await getTrackFullSubject({ ctx, body });
-		response = await runWithCurrentSubject();
-	}
+	const response: TrackResponseV3 = await runRedisTrackV3({
+		ctx,
+		fullSubject,
+		featureDeductions,
+		overageBehavior: body.overage_behavior || "cap",
+		body,
+		idempotencyKey: redisIdempotencyKey,
+	});
 
 	return applyResponseVersionChanges<TrackResponseV3>({
 		input: response,

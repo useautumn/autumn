@@ -74,7 +74,6 @@ export const syncItemV5 = async ({
 
 	await syncItemV4({
 		ctx,
-		redis,
 		payload: {
 			customerId: payload.customerId,
 			entityId: claimed.entityId,

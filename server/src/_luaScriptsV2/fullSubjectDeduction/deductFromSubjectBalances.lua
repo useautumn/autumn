@@ -18,11 +18,10 @@
     - getTotalBalance.lua
 
   KEYS[1] = shared balance routing key (used for cluster slot routing)
-  KEYS[2] = customer balance-generation key
-  KEYS[3] = lock receipt key, or "" when no lock is in play
-  KEYS[4] = idempotency key, or "" when the request is not idempotent
-  KEYS[5..N] = per-feature shared balance hash keys; params.balance_key_index_by_feature_id
-              maps feature_id → the index (5..N) of the key for that feature
+  KEYS[2] = lock receipt key, or "" when no lock is in play
+  KEYS[3] = idempotency key, or "" when the request is not idempotent
+  KEYS[4..N] = per-feature shared balance hash keys; params.balance_key_index_by_feature_id
+              maps feature_id → the index (4..N) of the key for that feature
 
   All Redis keys the script touches MUST be declared in KEYS[] so Upstash (and
   Redis Cluster) can apply key-based locking / slot routing. Do not reconstruct
@@ -33,7 +32,6 @@
       org_id: string,
       env: string,
       customer_id: string,
-      expected_balance_generation: number,
       customer_entitlement_deductions: [{ customer_entitlement_id, credit_cost, feature_id, entity_feature_id, usage_allowed, min_balance, max_balance }],
       balance_key_index_by_feature_id: { [feature_id]: number },
       spend_limit_by_feature_id: { [feature_id]: { feature_id, enabled, overage_limit } } | null,
@@ -88,12 +86,11 @@ local params = cjson.decode(ARGV[1])
 
 -- Resolve keys from KEYS[] (never from ARGV) so every key the script touches
 -- is declared for key-based locking.
-local balance_generation_key = KEYS[2]
-local lock_receipt_key_from_keys = KEYS[3]
+local lock_receipt_key_from_keys = KEYS[2]
 if lock_receipt_key_from_keys == '' then
   lock_receipt_key_from_keys = nil
 end
-local idempotency_key = KEYS[4]
+local idempotency_key = KEYS[3]
 if idempotency_key == '' then
   idempotency_key = nil
 end
@@ -137,23 +134,6 @@ local usage_window_limits = params.usage_window_limits
 local usage_window_now = params.usage_window_now
 local usage_window_ttl_seconds = params.usage_window_ttl_seconds
 local is_consumption = params.is_consumption
-
--- Attach advances this generation when it replaces the subject's balances.
--- Check it before idempotency or any balance read so a stale request cannot
--- claim an idempotency key or mutate a retired entitlement.
-local current_balance_generation = redis.call('GET', balance_generation_key)
-if current_balance_generation == false
-    or tonumber(current_balance_generation) ~= tonumber(params.expected_balance_generation) then
-  return cjson.encode({
-    error = 'BALANCE_GENERATION_CHANGED',
-    updates = {},
-    rollover_updates = {},
-    modified_customer_entitlement_ids = new_empty_array(),
-    mutation_logs = new_empty_array(),
-    remaining = 0,
-    logs = new_empty_array(),
-  })
-end
 
 if not is_nil(idempotency_key) then
   if redis.call('EXISTS', idempotency_key) == 1 then

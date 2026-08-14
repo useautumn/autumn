@@ -1,17 +1,8 @@
 import { type AppEnv, type SubjectBalance, tryCatch } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-import type { Redis } from "ioredis";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
-import {
-	buildFullSubjectBalanceGenerationKey,
-	buildFullSubjectBalanceHandoffLockKey,
-} from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectBalanceGenerationKey.js";
-import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
-import { USAGE_WINDOWS_FIELD } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
-import { roundSubjectBalance } from "@/internal/customers/cache/fullSubject/roundCacheBalance.js";
-import { sanitizeCachedSubjectBalance } from "@/internal/customers/cache/fullSubject/sanitize/index.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { globalRefreshEntityAggregateBatchingManager } from "../refreshEntityAggregate/RefreshEntityAggregateBatchingManager";
 import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
@@ -28,142 +19,17 @@ export type {
 	SyncEntry,
 } from "./flushSubjectBalancesToDb.js";
 
-const SYNC_INVALIDATION_LOCK_TTL_MS = 60_000;
-
-export class RetryableBalanceSyncError extends Error {
-	constructor({ reason }: { reason: string }) {
-		super(`Balance sync is not safe to acknowledge: ${reason}`);
-		this.name = "RetryableBalanceSyncError";
-	}
-}
-
-const throwRetryableSync = ({ reason }: { reason: string }): never => {
-	throw new RetryableBalanceSyncError({ reason });
-};
-
-const readCurrentBalanceGeneration = async ({
-	redis,
-	orgId,
-	env,
-	customerId,
-}: {
-	redis: Redis;
-	orgId: string;
-	env: AppEnv;
-	customerId: string;
-}): Promise<number> => {
-	const currentGenerationValue = await redis.get(
-		buildFullSubjectBalanceGenerationKey({ orgId, env, customerId }),
-	);
-	if (currentGenerationValue === null) return 0;
-	const currentGeneration = Number(currentGenerationValue);
-	return Number.isSafeInteger(currentGeneration) && currentGeneration >= 0
-		? currentGeneration
-		: 0;
-};
-
-const readCurrentBalances = async ({
-	redis,
-	orgId,
-	env,
-	customerId,
-	featureId,
-	customerEntitlementIds,
-}: {
-	redis: Redis;
-	orgId: string;
-	env: AppEnv;
-	customerId: string;
-	featureId: string;
-	customerEntitlementIds: string[];
-}): Promise<SubjectBalance[]> => {
-	if (customerEntitlementIds.length === 0) return [];
-	const values = await redis.hmget(
-		buildSharedFullSubjectBalanceKey({
-			orgId,
-			env,
-			customerId,
-			featureId,
-		}),
-		...customerEntitlementIds,
-	);
-	const balances: SubjectBalance[] = [];
-	for (const rawBalance of values) {
-		if (!rawBalance) continue;
-		try {
-			balances.push(
-				roundSubjectBalance({
-					subjectBalance: sanitizeCachedSubjectBalance({
-						subjectBalance: JSON.parse(rawBalance),
-					}),
-				}),
-			);
-		} catch {
-			// Match the existing cache-miss behavior for an unreadable field.
-		}
-	}
-	return balances;
-};
-
-const readCurrentUsageWindowUpdates = async ({
-	redis,
-	orgId,
-	env,
-	customerId,
-	updates,
-}: {
-	redis: Redis;
-	orgId: string;
-	env: AppEnv;
-	customerId: string;
-	updates: UsageWindowUpdate[];
-}): Promise<UsageWindowUpdate[]> => {
-	const refreshed = await Promise.all(
-		updates.map(async (update): Promise<UsageWindowUpdate | undefined> => {
-			const rawUsageWindows = await redis.hget(
-				buildSharedFullSubjectBalanceKey({
-					orgId,
-					env,
-					customerId,
-					featureId: update.feature_id,
-				}),
-				USAGE_WINDOWS_FIELD,
-			);
-			if (!rawUsageWindows) return undefined;
-			try {
-				const usageWindows = JSON.parse(rawUsageWindows);
-				return Array.isArray(usageWindows)
-					? { ...update, usage_windows: usageWindows }
-					: undefined;
-			} catch {
-				return undefined;
-			}
-		}),
-	);
-	return refreshed.filter(
-		(update): update is UsageWindowUpdate => update !== undefined,
-	);
-};
-
 const handleSyncPostgresError = async ({
 	error,
 	customerId,
-	observedGeneration,
 	entityId,
-	orgId,
-	env,
-	redis,
 	ctx,
 }: {
 	error: Error;
 	customerId: string;
-	observedGeneration: number;
 	entityId?: string;
-	orgId: string;
-	env: AppEnv;
-	redis: Redis;
 	ctx: AutumnContext;
-}): Promise<void> => {
+}): Promise<boolean> => {
 	const message = error.message || "";
 	const isConflict =
 		message.includes(SYNC_CONFLICT_CODES.ResetAtMismatch) ||
@@ -181,47 +47,18 @@ const handleSyncPostgresError = async ({
 	const cusEntMatch = message.match(/cus_ent_id:(\S+)/);
 	const cusEntId = cusEntMatch?.[1];
 
-	const lockKey = buildFullSubjectBalanceHandoffLockKey({
-		orgId,
-		env,
-		customerId,
-	});
-	const lockToken = crypto.randomUUID();
-	const acquired = await redis.set(
-		lockKey,
-		JSON.stringify({ owner: "sync", token: lockToken }),
-		"PX",
-		SYNC_INVALIDATION_LOCK_TTL_MS,
-		"NX",
+	ctx.logger.warn(
+		`[SYNC V4] (${customerId}) Sync conflict detected: ${code}, cus_ent: ${cusEntId}. Invalidating cache.`,
 	);
-	if (acquired !== "OK") {
-		throwRetryableSync({ reason: "attach_handoff_in_progress" });
-	}
 
-	try {
-		const currentGeneration = await readCurrentBalanceGeneration({
-			redis,
-			orgId,
-			env,
-			customerId,
-		});
-		if (currentGeneration !== observedGeneration) {
-			throwRetryableSync({ reason: "generation_changed_during_sync" });
-		}
+	await deleteCachedFullCustomer({
+		ctx,
+		customerId,
+		entityId,
+		source: `sync-conflict-${code}`,
+	});
 
-		ctx.logger.warn(
-			`[SYNC V4] (${customerId}) Sync conflict detected: ${code}, cus_ent: ${cusEntId}. Invalidating cache.`,
-		);
-
-		await deleteCachedFullCustomer({
-			ctx,
-			customerId,
-			entityId,
-			source: `sync-conflict-${code}`,
-		});
-	} finally {
-		await redis.deleteOwnedLock(lockKey, lockToken).catch(() => undefined);
-	}
+	return true;
 };
 
 interface SyncItemV4 {
@@ -242,48 +79,24 @@ interface SyncItemV4 {
 export const syncItemV4 = async ({
 	ctx,
 	payload,
-	redis = ctx.redisV2,
 }: {
 	ctx: AutumnContext;
 	payload: SyncItemV4;
-	redis?: Redis;
 }): Promise<void> => {
 	const {
 		customerId,
 		entityId,
-		orgId,
-		env,
 		rolloverIds,
 		modifiedCusEntIdsByFeatureId,
 		usageWindowUpdates,
 	} = payload;
 	const { db } = ctx;
-	const observedGeneration = await readCurrentBalanceGeneration({
-		redis,
-		orgId,
-		env,
-		customerId,
-	});
-	const shouldRefreshFromRedis = observedGeneration > 0;
 
 	// Read targeted balance hashes
 	let allSubjectBalances: SubjectBalance[] = [];
 	for (const [featureId, customerEntitlementIds] of Object.entries(
 		modifiedCusEntIdsByFeatureId,
 	)) {
-		if (shouldRefreshFromRedis) {
-			allSubjectBalances.push(
-				...(await readCurrentBalances({
-					redis,
-					orgId,
-					env,
-					customerId,
-					featureId,
-					customerEntitlementIds,
-				})),
-			);
-			continue;
-		}
 		const outcome = await getCachedFeatureBalance({
 			ctx,
 			customerId,
@@ -338,26 +151,10 @@ export const syncItemV4 = async ({
 		}
 	}
 
-	const usageWindowEntries: UsageWindowUpdate[] = shouldRefreshFromRedis
-		? await readCurrentUsageWindowUpdates({
-				redis,
-				orgId,
-				env,
-				customerId,
-				updates: usageWindowUpdates ?? [],
-			})
-		: (usageWindowUpdates ?? []);
-	if (shouldRefreshFromRedis) {
-		const generationAfterRead = await readCurrentBalanceGeneration({
-			redis,
-			orgId,
-			env,
-			customerId,
-		});
-		if (generationAfterRead !== observedGeneration) {
-			throwRetryableSync({ reason: "generation_changed_during_read" });
-		}
-	}
+	// Customer-scoped usage-window counters arrive pre-built from the deduction
+	// result (same atomic Lua execution that incremented them) -- no Redis
+	// re-read here. Full-replaced per (customer, feature) by the SQL function.
+	const usageWindowEntries: UsageWindowUpdate[] = usageWindowUpdates ?? [];
 
 	if (
 		entries.length === 0 &&
@@ -382,11 +179,7 @@ export const syncItemV4 = async ({
 		await handleSyncPostgresError({
 			error,
 			customerId,
-			observedGeneration,
 			entityId,
-			orgId,
-			env,
-			redis,
 			ctx,
 		});
 		return;

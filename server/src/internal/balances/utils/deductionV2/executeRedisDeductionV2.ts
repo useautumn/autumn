@@ -108,7 +108,6 @@ export const executeRedisDeductionV2 = async ({
 	// Keyed by feature id: each Lua result carries the COMPLETE post-deduction
 	// counter array per capped feature, so last write wins across deductions.
 	const allUsageWindowUpdates: Record<string, UsageWindowUpdate> = {};
-	const expectedBalanceGeneration = fullSubject.balanceGeneration ?? 0;
 
 	const customerId = fullSubject.customerId;
 	const routingKey = buildFullSubjectKey({
@@ -152,10 +151,29 @@ export const executeRedisDeductionV2 = async ({
 			now: usageWindowNow,
 		});
 
-		const isUnlimited = unlimitedFeatureIds.length > 0;
-		const redisCustomerEntitlementDeductions = isUnlimited
-			? []
-			: customerEntitlementDeductions;
+		if (unlimitedFeatureIds.length > 0) {
+			if (preparedLock?.enabled) {
+				await saveLockReceiptV2({
+					lock: preparedLock,
+					customerId,
+					featureId: feature.id,
+					entityId,
+					items: [],
+					overrideLockValue: toDeduct,
+					redisInstance: redisInstance ?? ctx.redisV2,
+				});
+			}
+			const unlimitedPlanLog = buildUnlimitedPlanMutationLog({
+				unlimitedCusEnt,
+				toDeduct,
+				fallbackDeduction: deduction.deduction,
+				entityId,
+			});
+			if (unlimitedPlanLog) {
+				allMutationLogs.push(unlimitedPlanLog);
+			}
+			continue;
+		}
 
 		const idempotencyRedisKey = idempotencyKey
 			? getRedisTrackFeatureIdempotencyKey({
@@ -173,15 +191,14 @@ export const executeRedisDeductionV2 = async ({
 				routingKey,
 				lockReceiptKey: preparedLock?.redis_receipt_key ?? lockReceiptKey,
 				idempotencyKey: idempotencyRedisKey,
-				customerEntitlementDeductions: redisCustomerEntitlementDeductions,
+				customerEntitlementDeductions,
 				fallbackFeatureId: feature.id,
-				usageWindowFeatureIds: isUnlimited ? [] : usageWindowFeatureIds,
+				usageWindowFeatureIds,
 			});
 
 		// Usage windows are enforced/incremented only for real positive
 		// consumption, never for target_balance set-downs or granted-balance edits.
 		const isConsumption =
-			!isUnlimited &&
 			notNullish(toDeduct) &&
 			(toDeduct as number) > 0 &&
 			!notNullish(targetBalance) &&
@@ -191,8 +208,7 @@ export const executeRedisDeductionV2 = async ({
 			org_id: org.id,
 			env,
 			customer_id: customerId,
-			expected_balance_generation: expectedBalanceGeneration,
-			customer_entitlement_deductions: redisCustomerEntitlementDeductions,
+			customer_entitlement_deductions: customerEntitlementDeductions,
 			balance_key_index_by_feature_id: balanceKeyIndexByFeatureId,
 			spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
 			usage_based_cus_ent_ids_by_feature_id:
@@ -266,30 +282,6 @@ export const executeRedisDeductionV2 = async ({
 				code: resultJson.error as RedisDeductionErrorCode,
 				featureId: resultJson.feature_id,
 			});
-		}
-
-		if (isUnlimited) {
-			if (preparedLock?.enabled) {
-				await saveLockReceiptV2({
-					lock: preparedLock,
-					customerId,
-					featureId: feature.id,
-					entityId,
-					items: [],
-					overrideLockValue: toDeduct,
-					redisInstance: redisInstance ?? ctx.redisV2,
-				});
-			}
-			const unlimitedPlanLog = buildUnlimitedPlanMutationLog({
-				unlimitedCusEnt,
-				toDeduct,
-				fallbackDeduction: deduction.deduction,
-				entityId,
-			});
-			if (unlimitedPlanLog) {
-				allMutationLogs.push(unlimitedPlanLog);
-			}
-			continue;
 		}
 
 		const { updates, rollover_updates } = resultJson;

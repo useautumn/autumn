@@ -1,11 +1,6 @@
 import type { NormalizedFullSubject } from "@autumn/shared";
-import { BalanceHandoffInProgressError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
-import {
-	buildFullSubjectBalanceGenerationKey,
-	buildFullSubjectBalanceHandoffLockKey,
-} from "../../builders/buildFullSubjectBalanceGenerationKey.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
 import {
@@ -48,16 +43,6 @@ export const setCachedFullSubject = async ({
 		env,
 		customerId,
 	});
-	const generationKey = buildFullSubjectBalanceGenerationKey({
-		orgId: org.id,
-		env,
-		customerId,
-	});
-	const handoffLockKey = buildFullSubjectBalanceHandoffLockKey({
-		orgId: org.id,
-		env,
-		customerId,
-	});
 
 	const balanceWrites = buildSharedBalanceWrites({
 		orgId: org.id,
@@ -70,7 +55,7 @@ export const setCachedFullSubject = async ({
 		usageWindowFeatureIds: cached.usageWindowFeatureIds,
 	});
 
-	const keys: string[] = [subjectKey, epochKey, generationKey, handoffLockKey];
+	const keys: string[] = [subjectKey, epochKey];
 	for (const { balanceKey } of balanceWrites) {
 		keys.push(balanceKey);
 	}
@@ -80,7 +65,6 @@ export const setCachedFullSubject = async ({
 		String(FULL_SUBJECT_CACHE_TTL_SECONDS),
 		String(FULL_SUBJECT_EPOCH_TTL_SECONDS),
 		JSON.stringify(cached),
-		String(cached.balanceGeneration),
 		String(balanceWrites.length),
 	];
 
@@ -96,14 +80,11 @@ export const setCachedFullSubject = async ({
 		() => redisV2.setCachedFullSubject(keys.length, ...keys, ...argv),
 		redisV2,
 	);
-	if (result === "HANDOFF_IN_PROGRESS") {
-		throw new BalanceHandoffInProgressError();
-	}
 
 	const subjectLabel = entityId ? `${customerId}:${entityId}` : customerId;
 	logger.info(
 		`[setCachedFullSubject] ${subjectLabel}: ${result ?? "FAILED"}, balances=${cached.meteredFeatures.length}`,
 	);
 
-	return (result as SetCachedFullSubjectResult | null) ?? "FAILED";
+	return result ?? "FAILED";
 };

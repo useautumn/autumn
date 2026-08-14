@@ -18,6 +18,7 @@ import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils";
 import { updateCheckoutDbAndCache } from "./updateDbAndCache";
 
@@ -188,6 +189,18 @@ export const confirmCheckout = async ({
 				newCheckoutStatus === CheckoutStatus.Completed ? Date.now() : null,
 		},
 	});
+
+	if (
+		newCheckoutStatus === CheckoutStatus.Completed &&
+		billingResult?.stripe.deferred !== true
+	) {
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId: checkout.customer_id,
+			entityId: "entity_id" in params ? params.entity_id : undefined,
+			source: "confirmCheckout",
+		});
+	}
 
 	return buildConfirmCheckoutResponse({
 		checkout,

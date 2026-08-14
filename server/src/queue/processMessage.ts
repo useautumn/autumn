@@ -21,10 +21,7 @@ import { runQueuedFinalizeLock } from "@/internal/balances/finalizeLock/runQueue
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
-import {
-	RetryableBalanceSyncError,
-	syncItemV4,
-} from "@/internal/balances/utils/sync/syncItemV4.js";
+import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
 import { syncItemV5 } from "@/internal/balances/utils/sync/syncItemV5.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
@@ -79,21 +76,11 @@ export const shouldRetrySqsJobError = ({
 		case JobName.CustomerCreationRecovery:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
 		case JobName.SyncBalanceBatchV4:
-			return (
-				isTransientDbError({ error }) ||
-				isTransientRedisError({ error }) ||
-				error instanceof RetryableBalanceSyncError
-			);
 		case JobName.RefreshEntityAggregate:
 			return isTransientDbError({ error });
 		// Signal jobs are meaningless without Redis: an unreachable Redis must
 		// leave the message in SQS for redelivery, not swallow-and-ack.
 		case JobName.SyncCustomerDirty:
-			return (
-				isTransientDbError({ error }) ||
-				isTransientRedisError({ error }) ||
-				error instanceof RetryableBalanceSyncError
-			);
 		case JobName.Track:
 		case JobName.UpdateBalance:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });

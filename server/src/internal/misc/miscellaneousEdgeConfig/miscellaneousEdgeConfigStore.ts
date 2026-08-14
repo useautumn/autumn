@@ -3,8 +3,8 @@ import { ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY } from "@/external/aws/s3/adminS3Co
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
 import {
-	type MiscellaneousEdgeConfig,
-	MiscellaneousEdgeConfigSchema,
+    type MiscellaneousEdgeConfig,
+    MiscellaneousEdgeConfigSchema,
 } from "./miscellaneousEdgeConfigSchemas.js";
 
 const store = createEdgeConfigStore<MiscellaneousEdgeConfig>({
@@ -55,10 +55,6 @@ export const _setMiscellaneousEdgeConfigForTesting = ({
 
 /** Global sync-coalescing gate (balance syncs via Redis dirty state). */
 export const isSyncCoalesceEnabled = (): boolean => store.get().syncCoalesce;
-
-/** Global gate for the guarded attach A-to-B balance handoff. */
-export const isBalanceGenerationHandoffEnabled = (): boolean =>
-	store.get().balanceGenerationHandoff;
 
 /** Global gate: serve subject lookups from Postgres instead of the cache. */
 export const isSubjectLookupDbOnlyEnabled = (): boolean =>

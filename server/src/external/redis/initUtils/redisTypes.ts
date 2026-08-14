@@ -14,11 +14,7 @@ declare module "ioredis" {
 		setCachedFullSubject(
 			numKeys: number,
 			...args: string[]
-		): Promise<"OK" | "CACHE_EXISTS" | "HANDOFF_IN_PROGRESS" | "STALE_WRITE">;
-		switchFullSubjectBalanceGeneration(
-			numKeys: number,
-			...args: string[]
-		): Promise<"OK" | "CACHE_MISSING" | "CONFLICT">;
+		): Promise<"OK" | "CACHE_EXISTS" | "STALE_WRITE">;
 		adjustSubjectBalance(
 			balanceKey: string,
 			paramsJson: string,

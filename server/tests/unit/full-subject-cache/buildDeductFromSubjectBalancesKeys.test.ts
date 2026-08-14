@@ -3,7 +3,7 @@ import { AppEnv } from "@autumn/shared";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 
 describe("buildDeductFromSubjectBalancesKeys", () => {
-	test("declares the balance generation and idempotency keys before balance keys", () => {
+	test("declares the idempotency key before balance keys", () => {
 		const { keys, balanceKeyIndexByFeatureId } =
 			buildDeductFromSubjectBalancesKeys({
 				orgId: "org_123",
@@ -20,12 +20,9 @@ describe("buildDeductFromSubjectBalancesKeys", () => {
 			});
 
 		expect(keys[0]).toBe("routing-key");
-		expect(keys[1]).toBe(
-			"{cus_123}:org_123:sandbox:full_subject:balance_generation",
-		);
-		expect(keys[2]).toBe("lock-key");
-		expect(keys[3]).toBe("idem-key");
-		expect(balanceKeyIndexByFeatureId.messages).toBe(5);
-		expect(balanceKeyIndexByFeatureId.emails).toBe(6);
+		expect(keys[1]).toBe("lock-key");
+		expect(keys[2]).toBe("idem-key");
+		expect(balanceKeyIndexByFeatureId.messages).toBe(4);
+		expect(balanceKeyIndexByFeatureId.emails).toBe(5);
 	});
 });

@@ -9,7 +9,6 @@ export enum RedisDeductionErrorCode {
 	SkipCache = "SKIP_CACHE",
 	LockAlreadyExists = "LOCK_ALREADY_EXISTS",
 	DuplicateIdempotencyKey = "DUPLICATE_IDEMPOTENCY_KEY",
-	BalanceGenerationChanged = "BALANCE_GENERATION_CHANGED",
 }
 
 /** Errors that should trigger a fallback to Postgres */

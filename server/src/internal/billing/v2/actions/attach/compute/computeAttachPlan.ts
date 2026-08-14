@@ -8,10 +8,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { computeAttachPooledBalancePlan } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalancePlan";
-import { pooledBalancePlanHasChanges } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan.js";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
-import { isBalanceGenerationHandoffEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachRemovals } from "./computeAttachRemovals";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
@@ -118,43 +116,6 @@ export const computeAttachPlan = ({
 			newCustomerProduct,
 		});
 
-	const legacyConsumableFeatureIdsToCarry =
-		carryOverSourceCustomerProduct?.customer_entitlements
-			.filter((customerEntitlement) =>
-				Boolean(customerEntitlement.entitlement.carry_from_previous),
-			)
-			.map(
-				(customerEntitlement) => customerEntitlement.entitlement.feature.id,
-			) ?? [];
-	const explicitCarryOverUsages = params.carry_over_usages;
-	const sourceHasRollovers =
-		carryOverSourceCustomerProduct?.customer_entitlements.some(
-			(customerEntitlement) => customerEntitlement.rollovers.length > 0,
-		) ?? false;
-	const attachBalanceHandoff =
-		planTiming === "immediate" &&
-		isBalanceGenerationHandoffEnabled() &&
-		carryOverSourceCustomerProduct &&
-		!pooledBalancePlanHasChanges({ pooledBalancePlan }) &&
-		carriedOverCustomerEntitlements.length === 0 &&
-		oneOffPrepaidCarryOvers.customerEntitlements.length === 0 &&
-		!sourceHasRollovers
-			? {
-					entityId:
-						attachBillingContext.fullCustomer.entity?.id ??
-						attachBillingContext.fullCustomer.entity?.internal_id,
-					sourceCustomerProductId: carryOverSourceCustomerProduct.id,
-					targetCustomerProductId: preparedNewCustomerProduct.id,
-					carryAllConsumableFeatures:
-						explicitCarryOverUsages?.enabled === true &&
-						explicitCarryOverUsages.feature_ids === undefined,
-					consumableFeatureIdsToCarry:
-						explicitCarryOverUsages?.enabled === true
-							? (explicitCarryOverUsages.feature_ids ?? [])
-							: legacyConsumableFeatureIdsToCarry,
-				}
-			: undefined;
-
 	// Lock the customer's currency on the first paid attach (only when they have
 	// none yet). Free attaches don't commit a currency. Applied conditionally at execute.
 	const {
@@ -175,7 +136,6 @@ export const computeAttachPlan = ({
 	let plan: AutumnBillingPlan = {
 		customerId: attachBillingContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [preparedNewCustomerProduct],
-		attachBalanceHandoff,
 		lockCustomerCurrency,
 		updateCustomerProduct,
 		updateCustomerProducts: removeCustomerProducts,
