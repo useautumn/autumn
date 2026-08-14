@@ -29,10 +29,14 @@ if [ -n "${INFISICAL_CLIENT_ID:-}" ] && [ -z "${INFISICAL_UNIVERSAL_AUTH_CLIENT_
 fi
 if token="$(bash "$ROOT/scripts/setup/cursor-cloud/infisical-machine-login.sh")"; then
 	export INFISICAL_TOKEN="$token"
+	mkdir -p "${HOME}/.cache"
+	printf '%s' "$token" > "${HOME}/.cache/autumn-infisical-token"
+	chmod 600 "${HOME}/.cache/autumn-infisical-token"
 	echo "[cursor-cloud-start] Infisical machine identity: token ready"
 else
-	echo "[cursor-cloud-start] Infisical machine identity not configured (INFISICAL_CLIENT_ID/SECRET unset)"
-	echo "[cursor-cloud-start] Add them as Runtime Secrets on the environment page — do not paste into chat."
+	echo "[cursor-cloud-start] Infisical machine identity not configured (INFISICAL_CLIENT_ID/SECRET unset in start)"
+	echo "[cursor-cloud-start] Add them as Environment Runtime Secrets — do not paste into chat."
+	echo "[cursor-cloud-start] bun dw will fail until start can mint INFISICAL_TOKEN."
 fi
 
 cat > "$env_sh" <<ENVSH
@@ -43,7 +47,11 @@ if [ -n "\${INFISICAL_CLIENT_ID:-}" ]; then
   export INFISICAL_UNIVERSAL_AUTH_CLIENT_ID="\${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:-\$INFISICAL_CLIENT_ID}"
   export INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET="\${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET:-\${INFISICAL_CLIENT_SECRET:-}}"
 fi
-if [ -z "\${INFISICAL_TOKEN:-}" ] && [ -n "\${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:-}\${INFISICAL_CLIENT_ID:-}" ]; then
+if [ -z "\${INFISICAL_TOKEN:-}" ] && [ -s "\${HOME}/.cache/autumn-infisical-token" ]; then
+  INFISICAL_TOKEN="\$(cat "\${HOME}/.cache/autumn-infisical-token")"
+  export INFISICAL_TOKEN
+fi
+if [ -z "\${INFISICAL_TOKEN:-}" ]; then
   INFISICAL_TOKEN="\$("${ROOT}/scripts/setup/cursor-cloud/infisical-machine-login.sh" 2>/dev/null || true)"
   [ -n "\$INFISICAL_TOKEN" ] && export INFISICAL_TOKEN
 fi

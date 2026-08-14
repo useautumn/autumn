@@ -1,14 +1,10 @@
 #!/usr/bin/env bash
-# Cloud-only adapter: bun dw is still stock `infisical run`, and Infisical CLI
-# 0.43.116 will not exchange INFISICAL_CLIENT_ID/SECRET (or even its own
-# INFISICAL_UNIVERSAL_AUTH_CLIENT_* vars) for a token on `run`. It prompts
-# "No valid login session found" instead. Infisical/cli#201 would fix that;
-# it is not in this CLI version.
+# Cloud-only adapter: bun dw is still stock `infisical run`. Infisical CLI 0.43.116
+# will not exchange client credentials for a token on `run` (Infisical/cli#201).
 #
-# Cursor injects Runtime Secrets into every process, including agent shells
-# that never source bashrc. This shim is what actually turns those credentials
-# into INFISICAL_TOKEN before exec'ing the real CLI. Laptop installs are
-# untouched — this only runs from Cloud install/start.
+# Cursor agent terminals often do not inherit start's env and may not see Runtime
+# Secrets. This shim mints or reuses ~/.cache/autumn-infisical-token, then execs
+# the real CLI. Laptop installs are untouched — Cloud install/start only.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 BIN="${ROOT}/node_modules/.bin/infisical"
@@ -28,17 +24,23 @@ cat > "$BIN" <<EOF
 set -euo pipefail
 REAL="${REAL}"
 LOGIN="${LOGIN}"
+CACHE="\${HOME}/.cache/autumn-infisical-token"
 export DW_HEADLESS="\${DW_HEADLESS:-1}"
 if [ -n "\${INFISICAL_CLIENT_ID:-}" ]; then
 	export INFISICAL_UNIVERSAL_AUTH_CLIENT_ID="\${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:-\$INFISICAL_CLIENT_ID}"
 	export INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET="\${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET:-\${INFISICAL_CLIENT_SECRET:-}}"
 fi
+if [ -z "\${INFISICAL_TOKEN:-}" ] && [ -s "\$CACHE" ]; then
+	export INFISICAL_TOKEN="\$(cat "\$CACHE")"
+fi
 if [ -z "\${INFISICAL_TOKEN:-}" ] && [ -x "\$LOGIN" ]; then
-	tok="\$("\$LOGIN" 2>/dev/null || true)"
+	tok=""
+	tok="\$("\$LOGIN")" || true
 	[ -n "\$tok" ] && export INFISICAL_TOKEN="\$tok"
 fi
 if [ -z "\${INFISICAL_TOKEN:-}" ]; then
-	echo "infisical: no machine-identity token. Add INFISICAL_CLIENT_ID/SECRET as Cursor Runtime Secrets." >&2
+	echo "infisical: no INFISICAL_TOKEN in this process and no cached token from start." >&2
+	echo "infisical: Runtime Secrets must be Environment-scoped (INFISICAL_CLIENT_ID/SECRET)." >&2
 	exit 1
 fi
 exec "\$REAL" "\$@"

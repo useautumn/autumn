@@ -102,9 +102,13 @@ Secrets → add:
 | `INFISICAL_CLIENT_ID` | Runtime Secret | Machine identity (universal-auth) |
 | `INFISICAL_CLIENT_SECRET` | Runtime Secret | Machine identity |
 
-That is the only pair you need (same names as Autumn's Node SDK). Do **not**
-expect `infisical run` to pick them up by itself — Infisical's docs still
-require exchanging them for `INFISICAL_TOKEN` first
+That is the only durable pair you need (same names as Autumn's Node SDK).
+`start` exchanges them for `INFISICAL_TOKEN` and writes
+`~/.cache/autumn-infisical-token`. Agent terminals often do not see Runtime
+Secrets; `bun dw` reuses that cache. An `INFISICAL_TOKEN` Runtime Secret also
+works until it expires (default 2 hours) — prefer client id/secret.
+
+Do **not** expect `infisical run` to pick client credentials up by itself
 (https://infisical.com/docs/cli/commands/run). Existing `package.json`
 scripts (`bun dw`, `bun d`, `bun t`, …) then work as on a laptop.
 
