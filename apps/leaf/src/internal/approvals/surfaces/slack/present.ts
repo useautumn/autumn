@@ -1,14 +1,13 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval, ChatInstallation } from "@autumn/shared";
 import { toolLabel } from "../../../../agent/tools/toolPolicy.js";
+import type { AgentApprovalTurn } from "../../../agentRuntime/domain/agentTurn.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
-import type { AgentOutput } from "../../../../types.js";
 import { approvalCard } from "../../../../ui/blocks.js";
 import type { ReplyTarget } from "../../../../ui/progress.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
-import { approvalRequestFromOutput } from "../../utils/approvalRequest.js";
 import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
@@ -18,9 +17,6 @@ import {
 	toolRequestFromArgs,
 } from "../../utils/toolRequest.js";
 
-/** Posts the card for an approval row that already exists (a chained write
- * surfaced by an approve/answer resume, which never flows through
- * `presentApproval`). */
 export const postApprovalCardForRow = async ({
 	approval,
 	logger = rootLogger,
@@ -60,64 +56,61 @@ export const postApprovalCardForRow = async ({
 	}
 };
 
-/** Posts an approval card when the agent output suspended on a destructive tool. */
 export const presentApproval = async ({
 	channelId,
 	installation,
 	logAction,
 	logger = rootLogger,
 	orgId,
-	output,
+	env,
 	providerUserId,
 	target,
+	turn,
 }: {
 	channelId: string;
+	env: ChatApproval["env"];
 	installation: ChatInstallation;
 	logAction: (message: string) => Promise<void> | void;
 	logger?: AutumnLogger;
 	orgId: string;
-	output: AgentOutput;
 	providerUserId: string;
 	target: ReplyTarget;
+	turn: AgentApprovalTurn;
 }) => {
-	const approval = approvalRequestFromOutput(output);
-	if (!approval) return false;
+	const approval = turn.approval;
+	let preview = approval.preview;
 
-	// resolveApproval can only confirm a suspended session tool, so a card missing
-	// either id would always fail at approval time — fall back to plain text.
-	if (!approval.runId || !approval.toolCallId) {
+	if (!approval.toolCallId) {
 		logger.warn("Skipped unexecutable approval request", {
 			event: "leaf.approval_unexecutable_skipped",
-			context: { env: approval.env, org_id: orgId },
+			context: { env, org_id: orgId },
 			tool: approval.toolName,
 		});
 		return false;
 	}
 
-	// Catalog decisions change write args, so refresh against the exact request;
-	// other writes only backfill when their preview is absent.
 	if (
 		shouldRefreshApprovalPreview({
-			preview: approval.preview,
+			preview,
 			toolName: approval.toolName,
 		})
 	) {
 		try {
 			const token = await getInstallationOAuthAccessToken({
 				installation,
-				env: approval.env,
+				env,
 				orgId,
 			});
 			const request = toolRequestFromArgs(publicToolArgs(approval.toolArgs));
 			if (request) {
-				const preview = await fetchApprovalPreview({
-					env: approval.env,
+				const fetchedPreview = await fetchApprovalPreview({
+					env,
 					logger,
 					request,
 					token,
 					toolName: approval.toolName,
 				});
-				if (preview) approval.preview = preview;
+				if (fetchedPreview) preview = fetchedPreview;
 			}
 		} catch (error) {
 			logger.warn("Could not backfill approval preview", {
@@ -136,10 +129,10 @@ export const presentApproval = async ({
 			workspaceId: installation.workspace_id,
 			channelId,
 			providerUserId,
-			env: approval.env,
+			env,
 			harness: "eve",
-			preview: approval.preview,
-			runId: approval.runId,
+			preview,
+			runId: turn.sessionId,
 			toolArgs: approval.toolArgs,
 			toolCallId: approval.toolCallId,
 			toolName: approval.toolName,
@@ -150,26 +143,24 @@ export const presentApproval = async ({
 	logger.info("Created approval request", {
 		event: "leaf.approval_created",
 		context: {
-			env: approval.env,
+			env,
 			org_id: orgId,
 		},
 		approval_id: approvalId,
 		tool: approval.toolName,
 	});
-	// One message: the agent's preview prose rides inside the card.
 	const sent = await target.post(
 		approvalCard({
 			id: approvalId,
-			env: approval.env,
-			preview: approval.preview,
+			env,
+			preview,
 			requesterId: providerUserId,
-			summary: output.text,
+			summary: turn.text,
 			toolArgs: publicToolArgs(approval.toolArgs),
 			toolName: approval.toolName,
 		}),
 	);
 
-	// Stored so a later turn can replace the card if it goes stale.
 	try {
 		await chatApprovalRepo.setMessageTs({
 			approvalId,

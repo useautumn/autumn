@@ -3,10 +3,10 @@ import {
 	isSilentTool,
 	normalizeToolName,
 } from "../../../agent/tools/toolPolicy.js";
+import type { AgentApprovalRequest } from "../domain/agentTurn.js";
 import { toolRequestFromArgs } from "../../approvals/utils/toolRequest.js";
 import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
 import type { RunStopReason } from "../../runs/runRegistry.js";
-import type { Suspension } from "../../../types.js";
 import { WAITING_FOR_INPUT_MESSAGE } from "../../../ui/messages.js";
 import { parsePreviewPayload } from "../../../ui/previewContent.js";
 import {
@@ -33,14 +33,12 @@ import {
 import { saveEveSessionState } from "./sessionState.js";
 import type { EveSessionRef } from "./types.js";
 
-/** How a turn ended. Every terminal shape is a `kind` so the caller decides
- * once, instead of the stream loop returning from six places. */
 export type EveTurnOutcome =
 	| { kind: "answered"; catalogDecision?: CatalogPlanPreview; text: string }
 	| { kind: "parked"; question?: PendingQuestion; text: string }
 	| { kind: "silent" }
 	| { kind: "stopped"; stopReason: RunStopReason; text: string }
-	| { kind: "suspended"; suspension: Suspension; text: string }
+	| { approval: AgentApprovalRequest; kind: "suspended"; text: string }
 	| { kind: "unreachable" };
 
 /** Whether a finished turn left the user anything. Eve can end a turn cleanly
@@ -204,9 +202,7 @@ const completeMessage = ({
 	progress.finalText = message;
 };
 
-/** The approval card's payload: the write's own args plus the option ids the
- * resume path answers eve with, and the preview if this turn took one. */
-const suspensionForGatedWrite = ({
+const approvalForGatedWrite = ({
 	chained,
 	progress,
 	siblingRequestIds,
@@ -214,7 +210,7 @@ const suspensionForGatedWrite = ({
 	chained: ChainedPendingRequest;
 	progress: EveTurnProgress;
 	siblingRequestIds: string[];
-}): Suspension => {
+}): AgentApprovalRequest => {
 	const options = approvalOptionIds({ options: chained.options });
 	return {
 		toolCallId: chained.requestId,
@@ -245,12 +241,12 @@ const parkOnInputRequest = async ({
 
 	if (parked?.kind === "gated") {
 		return {
-			kind: "suspended",
-			suspension: suspensionForGatedWrite({
+			approval: approvalForGatedWrite({
 				chained: parked.chained,
 				progress,
 				siblingRequestIds: parked.siblingRequestIds,
 			}),
+			kind: "suspended",
 			text: progress.finalText,
 		};
 	}

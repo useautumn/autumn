@@ -174,13 +174,14 @@ const main = async () => {
 		throw new Error(`No slack installation for workspace ${WORKSPACE_ID}`);
 	}
 	SLACK_USER_ID ||= installation.installed_by_provider_user_id ?? "";
-	if (!SLACK_USER_ID) throw new Error("No Slack user configured for the E2E run");
+	if (!SLACK_USER_ID)
+		throw new Error("No Slack user configured for the E2E run");
 	console.log(`Installation org=${installation.org_id}`);
 
 	if (process.env.E2E_ONLY !== "web") {
 		console.log("--- slack surface");
 		const slack = await runSlackImageTurn({ installation });
-		const slackText = slack.output.text ?? "";
+		const slackText = slack.output.kind === "empty" ? "" : slack.output.text;
 		check(
 			"slack: model saw the image",
 			/red/i.test(slackText),

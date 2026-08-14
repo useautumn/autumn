@@ -73,7 +73,7 @@ export const questionCard = ({
 	sessionId,
 }: {
 	env: AppEnv;
-	options: { id?: string; label?: string }[];
+	options: ReadonlyArray<Readonly<{ id?: string; label?: string }>>;
 	orgId: string;
 	prompt: string;
 	requestId: string;

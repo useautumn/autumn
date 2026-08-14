@@ -344,12 +344,10 @@ const runAndReply = async ({
 			threadId,
 		});
 
-		if (output.finishReason === "stopped") {
-			// Stop before posting, or a pending tick re-renders the status after
-			// Slack's post-triggered clear and it sticks forever.
+		if (output.kind === "stopped") {
 			ticker.stop();
 			const notice =
-				output.stopReason === "timeout"
+				output.reason === "timeout"
 					? RUN_STOPPED_FOR_TIME_MESSAGE
 					: runStoppedByUserNotice(run.stop?.byUserId);
 			await target.post({
@@ -359,13 +357,15 @@ const runAndReply = async ({
 			});
 			logger.info("Posted stopped run notice", {
 				event: "leaf.slack_run_stopped",
-				data: { stop_reason: output.stopReason ?? "user" },
+				data: { stop_reason: output.reason },
 			});
 			return;
 		}
 
-		const outputInstallation = output.installation ?? installation;
-		const orgId = output.org?.id ?? outputInstallation.org_id;
+		const outputInstallation =
+			output.kind === "blocked" ? installation : output.installation;
+		const orgId =
+			output.kind === "blocked" ? outputInstallation.org_id : output.org.id;
 
 		if (titlePromise) {
 			void persistThreadTitle({
@@ -382,12 +382,15 @@ const runAndReply = async ({
 				titlePromise,
 			});
 		}
+		if (output.kind === "blocked") {
+			ticker.stop();
+			await target.post({ markdown: output.text });
+			return;
+		}
+		const outputText = output.kind === "empty" ? "" : output.text;
 
-		// A newer message is already queued behind this run — fold this reply
-		// into the next turn instead of posting two bot responses back-to-back.
-		// A parked write is withdrawn silently (its card was never shown).
 		if (hasQueuedThreadMessage(runKey)) {
-			if (output.suspension && output.runId) {
+			if (output.kind === "approval") {
 				try {
 					await withdrawEveSuspension({
 						auth: {
@@ -400,8 +403,8 @@ const runAndReply = async ({
 							workspaceId: outputInstallation.workspace_id,
 						},
 						orgId,
-						runId: output.runId,
-						suspension: output.suspension,
+						runId: output.sessionId,
+						suspension: output.approval,
 					});
 				} catch (error) {
 					logger.warn("Could not withdraw suspension for queued message", {
@@ -412,16 +415,13 @@ const runAndReply = async ({
 			}
 			logger.info("Suppressed reply; newer message queued", {
 				event: "leaf.slack_reply_suppressed",
-				data: { had_suspension: Boolean(output.suspension) },
+				data: { had_suspension: output.kind === "approval" },
 			});
 			return;
 		}
 
-		// updateCatalog is the chokepoint the model can't skip: when the parked
-		// write still needs versioning/variant/migration choices, deny it and
-		// render the decision card instead of an approval card.
 		let decisionPlan: CatalogPlanPreview | undefined;
-		if (output.suspension) {
+		if (output.kind === "approval") {
 			try {
 				logAction("Reviewing versioning impact");
 				const token = await getInstallationOAuthAccessToken({
@@ -435,8 +435,8 @@ const runAndReply = async ({
 					logger,
 					orgId,
 					providerUserId,
-					runId: output.runId,
-					suspension: output.suspension,
+					runId: output.sessionId,
+					suspension: output.approval,
 					thread: {
 						channelId,
 						provider: outputInstallation.provider,
@@ -452,22 +452,19 @@ const runAndReply = async ({
 				});
 			}
 		}
-		// The model stopped after a decision-needing preview without a write call.
 		if (
 			!decisionPlan &&
-			output.catalogDecision &&
+			output.kind === "catalog_decision" &&
 			!clientContext?.catalogDecision
 		) {
-			decisionPlan = output.catalogDecision.plan as CatalogPlanPreview;
+			decisionPlan = output.plan;
 		}
 
-		// Every branch below posts a terminal message/card — stop the status loop
-		// first so no pending tick re-renders after the post clears it.
 		ticker.stop();
 
 		if (decisionPlan) {
-			if (output.text?.trim()) {
-				await target.post({ markdown: output.text });
+			if (outputText.trim()) {
+				await target.post({ markdown: outputText });
 			}
 			await target.post(
 				catalogDecisionCard({
@@ -480,7 +477,7 @@ const runAndReply = async ({
 			return;
 		}
 
-		if (output.question && output.runId) {
+		if (output.kind === "question") {
 			await target.post(
 				questionCard({
 					env: output.env,
@@ -488,38 +485,40 @@ const runAndReply = async ({
 					orgId,
 					prompt: output.question.prompt,
 					requestId: output.question.requestId,
-					sessionId: output.runId,
+					sessionId: output.sessionId,
 				}),
 			);
 			return;
 		}
 
-		const postedApproval = await presentApproval({
-			channelId,
-			installation: outputInstallation,
-			logAction,
-			logger,
-			orgId,
-			output,
-			providerUserId,
-			target,
-		});
-		if (postedApproval) return;
+		if (output.kind === "approval") {
+			const postedApproval = await presentApproval({
+				channelId,
+				env: output.env,
+				installation: outputInstallation,
+				logAction,
+				logger,
+				orgId,
+				providerUserId,
+				target,
+				turn: output,
+			});
+			if (postedApproval) return;
+		}
 
-		// Empty output with nothing to show is a failed run, not a silent success.
-		if (!output.text?.trim()) {
+		if (!outputText.trim()) {
 			await target.post({ markdown: `:warning: ${NO_REPLY_MESSAGE}` });
 			logger.warn("Agent produced no reply", {
 				event: "leaf.slack_empty_response",
 				data: {
-					finish_reason: output.finishReason,
-					run_id: output.runId,
+					kind: output.kind,
+					run_id: output.sessionId,
 				},
 			});
 			return;
 		}
 
-		await target.post({ markdown: output.text });
+		await target.post({ markdown: outputText });
 		logger.info("Posted Slack response", {
 			event: "leaf.slack_response_posted",
 			data: {

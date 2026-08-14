@@ -1,10 +1,9 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { ChatProvider } from "@autumn/shared";
+import type { AppEnv, ChatProvider } from "@autumn/shared";
+import type { AgentApprovalTurn } from "../../../agentRuntime/domain/agentTurn.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
-import type { AgentOutput } from "../../../../types.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
-import { approvalRequestFromOutput } from "../../utils/approvalRequest.js";
 import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
@@ -14,41 +13,36 @@ import {
 	toolRequestFromArgs,
 } from "../../utils/toolRequest.js";
 
-/**
- * Record an approval for a suspended web turn. The dashboard fetches it via
- * `/agent/interactions` and renders the captured preview + approve/reject; there
- * is no card to post (the web stream is text-only). Returns the approval id, or
- * undefined when the suspension can't be resumed (so the caller can fall back to
- * plain text).
- */
 export const presentWebApproval = async ({
 	channelId,
+	env,
 	logger = rootLogger,
 	orgId,
-	output,
 	provider,
 	providerUserId,
 	token,
+	turn,
 	workspaceId,
 }: {
 	channelId: string;
+	env: AppEnv;
 	logger?: AutumnLogger;
 	orgId: string;
-	output: AgentOutput;
 	provider: ChatProvider;
 	providerUserId: string;
 	token: string;
+	turn: AgentApprovalTurn;
 	workspaceId: string;
 }): Promise<
 	| { approvalId: string; params: unknown; preview: unknown; toolName: string }
 	| undefined
 > => {
-	const approval = approvalRequestFromOutput(output);
-	if (!approval) return undefined;
-	if (!(approval.runId && approval.toolCallId)) {
+	const approval = turn.approval;
+	let preview = approval.preview;
+	if (!approval.toolCallId) {
 		logger.warn("Skipped unexecutable web approval request", {
 			event: "leaf.approval_unexecutable_skipped",
-			context: { env: approval.env, org_id: orgId },
+			context: { env, org_id: orgId },
 			tool: approval.toolName,
 		});
 		return undefined;
@@ -56,21 +50,21 @@ export const presentWebApproval = async ({
 
 	if (
 		shouldRefreshApprovalPreview({
-			preview: approval.preview,
+			preview,
 			toolName: approval.toolName,
 		})
 	) {
 		try {
 			const request = toolRequestFromArgs(publicToolArgs(approval.toolArgs));
 			if (request) {
-				const preview = await fetchApprovalPreview({
-					env: approval.env,
+				const fetchedPreview = await fetchApprovalPreview({
+					env,
 					logger,
 					request,
 					token,
 					toolName: approval.toolName,
 				});
-				if (preview) approval.preview = preview;
+				if (fetchedPreview) preview = fetchedPreview;
 			}
 		} catch (error) {
 			logger.warn("Could not backfill web approval preview", {
@@ -89,10 +83,10 @@ export const presentWebApproval = async ({
 			workspaceId,
 			channelId,
 			providerUserId,
-			env: approval.env,
+			env,
 			harness: "eve",
-			preview: approval.preview,
-			runId: approval.runId,
+			preview,
+			runId: turn.sessionId,
 			toolArgs: approval.toolArgs,
 			toolCallId: approval.toolCallId,
 			toolName: approval.toolName,
@@ -101,7 +95,7 @@ export const presentWebApproval = async ({
 
 	logger.info("Created web approval request", {
 		event: "leaf.approval_created",
-		context: { env: approval.env, org_id: orgId },
+		context: { env, org_id: orgId },
 		approval_id: approvalId,
 		tool: approval.toolName,
 	});
@@ -109,7 +103,7 @@ export const presentWebApproval = async ({
 	return {
 		approvalId,
 		params: toolRequestFromArgs(publicToolArgs(approval.toolArgs)),
-		preview: approval.preview,
+		preview,
 		toolName: approval.toolName,
 	};
 };

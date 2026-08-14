@@ -6,13 +6,13 @@ import type {
 } from "@autumn/shared";
 import type { ThreadRef } from "../../../agent/runMessage/types.js";
 import { normalizeToolName } from "../../../agent/tools/toolPolicy.js";
+import type { AgentApprovalRequest } from "../domain/agentTurn.js";
 import { fetchApprovalPreview } from "../../approvals/utils/fetchApprovalPreview.js";
 import {
 	publicToolArgs,
 	toolRequestFromArgs,
 } from "../../approvals/utils/toolRequest.js";
 import { db } from "../../../lib/db.js";
-import type { Suspension } from "../../../types.js";
 import { parsePreviewPayload } from "../../../ui/previewContent.js";
 import { adoptPostedEveSession } from "./adoptPostedSession.js";
 import { siblingRequestIdsFromToolArgs } from "./classifyParkedInput.js";
@@ -117,7 +117,7 @@ const hasExplicitVersioning = (request: Record<string, unknown>) => {
 	);
 };
 
-const requestFromSuspension = (suspension: Suspension) =>
+const requestFromSuspension = (suspension: AgentApprovalRequest) =>
 	toolRequestFromArgs(publicToolArgs(suspension.toolArgs)) ?? {};
 
 /** The one chokepoint the model can't skip: an `updateCatalog` suspension.
@@ -141,7 +141,7 @@ export const redirectCatalogSuspensionToDecision = async ({
 	orgId: string;
 	providerUserId: string;
 	runId?: string;
-	suspension: Suspension;
+	suspension: AgentApprovalRequest;
 	thread: ThreadRef;
 	token: string;
 }): Promise<CatalogPlanPreview | undefined> => {

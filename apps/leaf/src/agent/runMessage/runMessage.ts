@@ -1,11 +1,12 @@
-import type { ChatInstallation } from "@autumn/shared";
+import type { AppEnv, ChatInstallation } from "@autumn/shared";
+import type { AgentTurnResult } from "../../internal/agentRuntime/domain/agentTurn.js";
 import { runEveMessage } from "../../internal/agentRuntime/eve/engine.js";
 import { findEveSessionForThread } from "../../internal/agentRuntime/eve/repo.js";
 import { getInstallationOAuthAccessToken } from "../../internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { MESSAGE_TIMEOUT_MS } from "../../lib/chatAgentConfig.js";
 import { db } from "../../lib/db.js";
 import { logger as rootLogger } from "../../lib/logger.js";
-import type { AgentOutput, BotMessage } from "../../types.js";
+import type { BotMessage } from "../../types.js";
 import { prepareAttachmentMessage } from "./setup/prepareAttachments.js";
 import { resolveSlackAdminOrgContext } from "./setup/resolveSlackAdminOrg.js";
 import { resolveSlackCallerAuth } from "./setup/resolveSlackCallerAuth.js";
@@ -23,12 +24,15 @@ const withTimeout = <T>(promise: Promise<T>, ms: number) =>
 
 const TIMEOUT_BACKSTOP_GRACE_MS = 20_000;
 
-type RunMessageOutput = AgentOutput & {
-	installation?: ChatInstallation;
-	org?: { id: string; slug?: string };
-};
+type RunMessageOutput =
+	| Readonly<{ env: AppEnv; kind: "blocked"; text: string }>
+	| (AgentTurnResult &
+			Readonly<{
+				env: AppEnv;
+				installation: ChatInstallation;
+				org: { id: string; slug?: string };
+			}>);
 
-/** Entry point for one chat message: staged ctx build, then engine dispatch. */
 export const runMessage = async ({
 	agentRunId,
 	attachmentFetchFallback,
@@ -65,7 +69,11 @@ export const runMessage = async ({
 				thread,
 			});
 			if ("blockedText" in orgContext) {
-				return { env: getDefaultChatEnv(), text: orgContext.blockedText };
+				return {
+					env: getDefaultChatEnv(),
+					kind: "blocked",
+					text: orgContext.blockedText,
+				};
 			}
 			const effectiveInstallation = orgContext.installation;
 			const { org } = orgContext;
@@ -88,6 +96,7 @@ export const runMessage = async ({
 				if (callerAuth.usePerUser && !callerAuth.ok) {
 					return {
 						env: getDefaultChatEnv(),
+						kind: "blocked",
 						text: callerAuth.text,
 					};
 				}
@@ -138,7 +147,7 @@ export const runMessage = async ({
 					provider: effectiveInstallation.provider,
 				},
 				data: {
-						source: existingSession ? "existing_session" : "selector",
+					source: existingSession ? "existing_session" : "selector",
 				},
 			});
 
@@ -177,7 +186,12 @@ export const runMessage = async ({
 			};
 
 			const output = await runEveMessage({ ctx, params });
-			return { ...output, installation: effectiveInstallation, org };
+			return {
+				...output,
+				env,
+				installation: effectiveInstallation,
+				org,
+			};
 		})(),
 		deadlineAt - Date.now() + TIMEOUT_BACKSTOP_GRACE_MS,
 	);

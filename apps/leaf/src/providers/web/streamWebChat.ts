@@ -226,18 +226,15 @@ export const streamWebChat = async ({
 			}
 
 			finishLastStep();
-			// updateCatalog is the chokepoint the model can't skip: if the change
-			// needs versioning/variant/migration decisions and none were given,
-			// deny the parked call and render the decision card instead.
-			if (output.suspension) {
+			if (output.kind === "approval") {
 				const decisionPlan = await redirectCatalogSuspensionToDecision({
 					decisionProvided: Boolean(clientContext?.catalogDecision),
 					env,
 					logger,
 					orgId,
 					providerUserId: userId,
-					runId: output.runId,
-					suspension: output.suspension,
+					runId: output.sessionId,
+					suspension: output.approval,
 					thread,
 					token: accessToken,
 				});
@@ -250,67 +247,61 @@ export const streamWebChat = async ({
 					});
 					return;
 				}
-			}
-			// The model stopped after a decision-needing preview (no write call):
-			// render the decision card directly. Skip when this very turn carried
-			// the user's decision — the model is about to apply it.
-			if (output.catalogDecision && !clientContext?.catalogDecision) {
-				const plan = output.catalogDecision.plan as { plan_id: string };
-				writer.write({
-					data: { plan, status: "pending" },
-					id: plan.plan_id,
-					type: "data-catalog-decision",
+				if (output.text) writeText(output.text);
+				const approval = await presentWebApproval({
+					channelId: thread.channelId,
+					env,
+					logger,
+					orgId,
+					provider: WEB_CHAT_PROVIDER as ChatProvider,
+					providerUserId: userId,
+					token: accessToken,
+					turn: output,
+					workspaceId: orgId,
 				});
+				if (!approval) return;
+				writer.write({
+					data: {
+						approvalId: approval.approvalId,
+						params: approval.params,
+						preview: parsePreviewPayload(approval.preview),
+						status: "pending",
+						toolName: approval.toolName,
+					},
+					id: approval.approvalId,
+					type: "data-approval",
+				});
+				return;
 			}
-			if (output.question) {
-				// The prompt as normal prose + a data part with the answer options —
-				// richer than output.text's flat "Options: A / B" fallback.
+
+			if (output.kind === "catalog_decision") {
+				if (!clientContext?.catalogDecision) {
+					writer.write({
+						data: { plan: output.plan, status: "pending" },
+						id: output.plan.plan_id,
+						type: "data-catalog-decision",
+					});
+				}
+				if (output.text) writeText(output.text);
+				return;
+			}
+
+			if (output.kind === "question") {
 				writeText(output.question.prompt);
 				writer.write({
 					data: {
-						options: output.question.options,
+						options: [...output.question.options],
 						requestId: output.question.requestId,
 						status: "pending",
 					},
 					id: crypto.randomUUID(),
 					type: "data-question",
 				});
-			} else if (output.text) {
-				writeText(output.text);
-			} else if (!(output.catalogDecision || output.suspension)) {
-				// Nothing to render at all — say so rather than ending the stream
-				// on an empty assistant bubble.
-				writeText(NO_REPLY_MESSAGE);
+				return;
 			}
 
-			if (output.suspension) {
-				// presentWebApproval backfills the preview (the agent may write
-				// without a preceding preview call), so use its returned preview —
-				// not output.suspension.preview, which can be empty.
-				const approval = await presentWebApproval({
-					channelId: thread.channelId,
-					logger,
-					orgId,
-					output,
-					provider: WEB_CHAT_PROVIDER as ChatProvider,
-					providerUserId: userId,
-					token: accessToken,
-					workspaceId: orgId,
-				});
-				if (approval) {
-					writer.write({
-						data: {
-							approvalId: approval.approvalId,
-							params: approval.params,
-							preview: parsePreviewPayload(approval.preview),
-							status: "pending",
-							toolName: approval.toolName,
-						},
-						id: approval.approvalId,
-						type: "data-approval",
-					});
-				}
-			}
+			if (output.kind === "empty") writeText(NO_REPLY_MESSAGE);
+			else if (output.text) writeText(output.text);
 		},
 		onError: (error) => {
 			logger.error("Web chat stream failed", {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { AutumnLogger } from "@autumn/logging";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, type CatalogPlanPreview } from "@autumn/shared";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 // Stubbed first and left stubbed: `env` parses leaf's whole schema at import and
@@ -58,57 +58,72 @@ describe("resolveEveTurnOutcome", () => {
 		const output = await resolve({ kind: "unreachable" });
 
 		expect(deletedSessionIds).toEqual(["eve_session_1"]);
-		expect(output.text).toBe("");
-		expect(output.runId).toBe("eve_session_1");
+		expect(output).toEqual({ kind: "empty", sessionId: "eve_session_1" });
 	});
 
 	test("keeps the session when a turn ran and simply said nothing", async () => {
 		const output = await resolve({ kind: "silent" });
 
 		expect(deletedSessionIds).toEqual([]);
-		expect(output.text).toBe("");
+		expect(output).toEqual({ kind: "empty", sessionId: "eve_session_1" });
 	});
 
 	test("carries a catalog decision through as a plan", async () => {
-		const plan = { plan_id: "pro" };
+		const plan = { plan_id: "pro" } as CatalogPlanPreview;
 		const output = await resolve({
 			kind: "answered",
 			catalogDecision: plan as never,
 			text: "Here's the change.",
 		});
 
-		expect(output.catalogDecision).toEqual({ plan });
-		expect(output.text).toBe("Here's the change.");
+		expect(output).toEqual({
+			kind: "catalog_decision",
+			plan,
+			sessionId: "eve_session_1",
+			text: "Here's the change.",
+		});
 	});
 
 	test("a plain answer carries no decision card", async () => {
 		const output = await resolve({ kind: "answered", text: "Attached pro." });
 
-		expect(output.catalogDecision).toBeUndefined();
+		expect(output).toEqual({
+			kind: "reply",
+			sessionId: "eve_session_1",
+			text: "Attached pro.",
+		});
 	});
 
 	test("surfaces a gated write as a suspension", async () => {
-		const suspension = {
+		const approval = {
 			toolCallId: "req_1",
 			toolName: "autumn__attach",
 			toolArgs: { plan_id: "pro" },
 			preview: undefined,
 		};
-		const output = await resolve({ kind: "suspended", suspension, text: "" });
+		const output = await resolve({ approval, kind: "suspended", text: "" });
 
-		expect(output.suspension).toEqual(suspension);
+		expect(output).toEqual({
+			approval,
+			kind: "approval",
+			sessionId: "eve_session_1",
+			text: "",
+		});
 		expect(deletedSessionIds).toEqual([]);
 	});
 
-	test("a user stop reports the reason and claims no run", async () => {
+	test("a user stop reports the reason", async () => {
 		const output = await resolve({
 			kind: "stopped",
 			stopReason: "user",
 			text: "partial",
 		});
 
-		expect(output.finishReason).toBe("stopped");
-		expect(output.stopReason).toBe("user");
-		expect(output.runId).toBeUndefined();
+		expect(output).toEqual({
+			kind: "stopped",
+			reason: "user",
+			sessionId: "eve_session_1",
+			text: "partial",
+		});
 	});
 });

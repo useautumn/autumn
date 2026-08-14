@@ -3,8 +3,6 @@ import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
 import type { ActionEvent } from "chat";
 import { approvalErrorResult } from "../../../src/internal/approvals/utils/approvalErrors.js";
-import { approvalRequestFromOutput } from "../../../src/internal/approvals/utils/approvalRequest.js";
-import type { AgentOutput } from "../../../src/types.js";
 
 const setLeafTestEnv = () => {
 	process.env.DATABASE_URL ??= "postgres://postgres:postgres@localhost:5432/db";
@@ -24,61 +22,6 @@ const testLogger = {
 } as unknown as AutumnLogger;
 
 describe("approval flow", () => {
-	test("maps a suspended write to a pending approval request", () => {
-		const request = approvalRequestFromOutput({
-			env: AppEnv.Sandbox,
-			finishReason: "suspended",
-			runId: "run_1",
-			suspension: {
-				toolCallId: "call_1",
-				toolName: "attach",
-				toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-				preview: { total: 20 },
-			},
-			text: "Preview ready.",
-		} satisfies AgentOutput);
-
-		expect(request).toEqual({
-			env: AppEnv.Sandbox,
-			runId: "run_1",
-			toolCallId: "call_1",
-			toolName: "attach",
-			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-			preview: { total: 20 },
-		});
-	});
-
-	test("maps a suspended write whose preview wasn't captured (card backfills later)", () => {
-		const request = approvalRequestFromOutput({
-			env: AppEnv.Live,
-			finishReason: "suspended",
-			runId: "run_2",
-			suspension: {
-				toolCallId: "call_2",
-				toolName: "updateSubscription",
-				toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-			},
-		} satisfies AgentOutput);
-
-		expect(request).toEqual({
-			env: AppEnv.Live,
-			runId: "run_2",
-			toolCallId: "call_2",
-			toolName: "updateSubscription",
-			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-			preview: undefined,
-		});
-	});
-
-	test("returns nothing when the turn did not suspend", () => {
-		expect(
-			approvalRequestFromOutput({
-				env: AppEnv.Sandbox,
-				text: "Done.",
-			} satisfies AgentOutput),
-		).toBeUndefined();
-	});
-
 	test("formats Autumn API errors for Slack approval cards", () => {
 		const result = approvalErrorResult(
 			new Error(
