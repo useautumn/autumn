@@ -1,6 +1,6 @@
 import { verifyDashboardSession } from "@autumn/auth";
 import { buildCatalogDecisionModel } from "@autumn/render";
-import type { AppEnv, CatalogPlanPreview } from "@autumn/shared";
+import type { AppEnv } from "@autumn/shared";
 import { createSlackAdapter } from "@chat-adapter/slack";
 import { verifySlackSignature } from "@chat-adapter/slack/webhook";
 import { createPostgresState } from "@chat-adapter/state-pg";
@@ -8,7 +8,7 @@ import { createWebAdapter } from "@chat-adapter/web";
 import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
 import { answerAgentQuestion } from "./internal/agentRuntime/actions/answerAgentQuestion/answerAgentQuestion.js";
-import { resolveCatalogDecision } from "./internal/agentRuntime/actions/resolveCatalogDecision/resolveCatalogDecision.js";
+import { resolveAgentCatalogDecision } from "./internal/agentRuntime/actions/resolveCatalogDecision/resolveAgentCatalogDecision.js";
 import { withdrawAgentTurnApproval } from "./internal/agentRuntime/actions/withdrawAgentTurnApproval/withdrawAgentTurnApproval.js";
 import type { AgentContextMessage } from "./internal/agentRuntime/domain/agentTurnContext.js";
 import { chatApprovalRepo } from "./internal/approvals/repos/chatApprovalRepo.js";
@@ -396,58 +396,53 @@ const runAndReply = async ({
 			return;
 		}
 
-		let decisionPlan: CatalogPlanPreview | undefined;
-		if (output.kind === "approval") {
+		const resolveCatalogDecisionSafely = async () => {
 			try {
-				logAction("Reviewing versioning impact");
-				const token = await getInstallationOAuthAccessToken({
-					installation: outputInstallation,
-					env: output.env,
-					orgId,
-				});
-				decisionPlan = await resolveCatalogDecision({
+				if (output.kind === "approval") {
+					logAction("Reviewing versioning impact");
+				}
+				return await resolveAgentCatalogDecision({
 					decisionProvided: Boolean(clientContext?.catalogDecision),
 					env: output.env,
+					getToken: () =>
+						getInstallationOAuthAccessToken({
+							installation: outputInstallation,
+							env: output.env,
+							orgId,
+						}),
 					logger,
 					orgId,
 					providerUserId,
-					runId: output.sessionId,
-					suspension: output.approval,
 					thread: {
 						channelId,
 						provider: outputInstallation.provider,
 						threadId,
 						workspaceId: outputInstallation.workspace_id,
 					},
-					token,
+					turn: output,
 				});
 			} catch (error) {
 				logger.warn("Could not evaluate catalog decision redirect", {
 					event: "leaf.eve_catalog_redirect_failed",
 					error,
 				});
+				return undefined;
 			}
-		}
-		if (
-			!decisionPlan &&
-			output.kind === "catalog_decision" &&
-			!clientContext?.catalogDecision
-		) {
-			decisionPlan = output.plan;
-		}
+		};
+		const catalogDecision = await resolveCatalogDecisionSafely();
 
 		ticker.stop();
 
-		if (decisionPlan) {
+		if (catalogDecision) {
 			if (outputText.trim()) {
 				await target.post({ markdown: outputText });
 			}
 			await target.post(
 				catalogDecisionCard({
 					env: output.env,
-					model: buildCatalogDecisionModel({ plan: decisionPlan }),
+					model: buildCatalogDecisionModel({ plan: catalogDecision.plan }),
 					orgId,
-					plan: decisionPlan,
+					plan: catalogDecision.plan,
 				}),
 			);
 			return;

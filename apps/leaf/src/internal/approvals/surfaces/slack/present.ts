@@ -7,15 +7,9 @@ import { logger as rootLogger } from "../../../../lib/logger.js";
 import { approvalCard } from "../../../../ui/blocks.js";
 import type { ReplyTarget } from "../../../../ui/progress.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
+import { createApproval } from "../../actions/createApproval.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
-import {
-	fetchApprovalPreview,
-	shouldRefreshApprovalPreview,
-} from "../../utils/fetchApprovalPreview.js";
-import {
-	publicToolArgs,
-	toolRequestFromArgs,
-} from "../../utils/toolRequest.js";
+import { publicToolArgs } from "../../utils/toolRequest.js";
 
 export const postApprovalCardForRow = async ({
 	approval,
@@ -77,100 +71,43 @@ export const presentApproval = async ({
 	target: ReplyTarget;
 	turn: AgentApprovalTurn;
 }) => {
-	const approval = turn.approval;
-	let preview = approval.preview;
-
-	if (!approval.toolCallId) {
-		logger.warn("Skipped unexecutable approval request", {
-			event: "leaf.approval_unexecutable_skipped",
-			context: { env, org_id: orgId },
-			tool: approval.toolName,
-		});
-		return false;
-	}
-
-	if (
-		shouldRefreshApprovalPreview({
-			preview,
-			toolName: approval.toolName,
-		})
-	) {
-		try {
-			const token = await getInstallationOAuthAccessToken({
-				installation,
-				env,
-				orgId,
-			});
-			const request = toolRequestFromArgs(publicToolArgs(approval.toolArgs));
-			if (request) {
-				const fetchedPreview = await fetchApprovalPreview({
-					env,
-					logger,
-					request,
-					token,
-					toolName: approval.toolName,
-				});
-				if (fetchedPreview) preview = fetchedPreview;
-			}
-		} catch (error) {
-			logger.warn("Could not backfill approval preview", {
-				event: "leaf.approval_preview_backfill_failed",
-				tool: approval.toolName,
-				error,
-			});
-		}
-	}
-
-	const approvalId = await chatApprovalRepo.insert({
-		db,
-		data: {
-			orgId,
-			provider: installation.provider,
-			workspaceId: installation.workspace_id,
-			channelId,
-			providerUserId,
-			env,
-			harness: "eve",
-			preview,
-			runId: turn.sessionId,
-			toolArgs: approval.toolArgs,
-			toolCallId: approval.toolCallId,
-			toolName: approval.toolName,
-		},
+	const created = await createApproval({
+		channelId,
+		env,
+		getToken: () =>
+			getInstallationOAuthAccessToken({ installation, env, orgId }),
+		logger,
+		orgId,
+		provider: installation.provider,
+		providerUserId,
+		turn,
+		workspaceId: installation.workspace_id,
 	});
+	if (!created) return false;
 
-	await logAction(`Waiting for approval: ${toolLabel(approval.toolName)}`);
-	logger.info("Created approval request", {
-		event: "leaf.approval_created",
-		context: {
-			env,
-			org_id: orgId,
-		},
-		approval_id: approvalId,
-		tool: approval.toolName,
-	});
+	await logAction(`Waiting for approval: ${toolLabel(created.toolName)}`);
 	const sent = await target.post(
 		approvalCard({
-			id: approvalId,
+			id: created.approvalId,
 			env,
-			preview,
+			preview: created.preview,
 			requesterId: providerUserId,
 			summary: turn.text,
-			toolArgs: publicToolArgs(approval.toolArgs),
-			toolName: approval.toolName,
+			toolArgs: created.toolArgs,
+			toolName: created.toolName,
 		}),
 	);
 
 	try {
 		await chatApprovalRepo.setMessageTs({
-			approvalId,
+			approvalId: created.approvalId,
 			db,
 			messageTs: sent.id,
 		});
 	} catch (error) {
 		logger.warn("Could not store approval message id", {
 			event: "leaf.approval_message_ts_failed",
-			approval_id: approvalId,
+			approval_id: created.approvalId,
 			error,
 		});
 	}

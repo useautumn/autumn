@@ -609,6 +609,7 @@ const main = async () => {
 			plan = await resolveCatalogDecision({
 				decisionProvided: false,
 				env: AppEnv.Sandbox,
+				getToken: async () => token,
 				logger,
 				orgId: installation.org_id,
 				providerUserId: USER_A,
@@ -620,7 +621,6 @@ const main = async () => {
 					threadId,
 					workspaceId: installation.workspace_id,
 				},
-				token,
 			});
 		}
 		// Ground truth: does a flag-forced preview say this plan needs decisions?

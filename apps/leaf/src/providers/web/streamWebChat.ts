@@ -5,13 +5,13 @@ import {
 	createUIMessageStreamResponse,
 	type UIMessage,
 } from "ai";
-import { resolveCatalogDecision } from "../../internal/agentRuntime/actions/resolveCatalogDecision/resolveCatalogDecision.js";
+import { resolveAgentCatalogDecision } from "../../internal/agentRuntime/actions/resolveCatalogDecision/resolveAgentCatalogDecision.js";
 import { runAgentTurn } from "../../internal/agentRuntime/actions/runAgentTurn/runAgentTurn.js";
 import type {
 	AgentTurnAttachment,
 	AgentTurnContext,
 } from "../../internal/agentRuntime/domain/agentTurnContext.js";
-import { presentWebApproval } from "../../internal/approvals/surfaces/web/present.js";
+import { createApproval } from "../../internal/approvals/actions/createApproval.js";
 import {
 	ensureWebChatAuth,
 	WEB_CHAT_PROVIDER,
@@ -202,36 +202,41 @@ export const streamWebChat = async ({
 			});
 
 			finishLastStep();
-			if (output.kind === "approval") {
-				const decisionPlan = await resolveCatalogDecision({
-					decisionProvided: Boolean(clientContext?.catalogDecision),
-					env,
-					logger,
-					orgId,
-					providerUserId: userId,
-					runId: output.sessionId,
-					suspension: output.approval,
-					thread,
-					token: accessToken,
-				});
-				if (decisionPlan) {
+			const catalogDecision = await resolveAgentCatalogDecision({
+				decisionProvided: Boolean(clientContext?.catalogDecision),
+				env,
+				getToken: async () => accessToken,
+				logger,
+				orgId,
+				providerUserId: userId,
+				thread,
+				turn: output,
+			});
+			if (catalogDecision) {
+				if (catalogDecision.source === "approval_redirect") {
 					writeText(CATALOG_DECISION_NEEDED_MESSAGE);
-					writer.write({
-						data: { plan: decisionPlan, status: "pending" },
-						id: decisionPlan.plan_id,
-						type: "data-catalog-decision",
-					});
-					return;
 				}
+				writer.write({
+					data: { plan: catalogDecision.plan, status: "pending" },
+					id: catalogDecision.plan.plan_id,
+					type: "data-catalog-decision",
+				});
+				if (catalogDecision.source === "turn" && catalogDecision.text) {
+					writeText(catalogDecision.text);
+				}
+				return;
+			}
+
+			if (output.kind === "approval") {
 				if (output.text) writeText(output.text);
-				const approval = await presentWebApproval({
+				const approval = await createApproval({
 					channelId: thread.channelId,
 					env,
+					getToken: async () => accessToken,
 					logger,
 					orgId,
 					provider: WEB_CHAT_PROVIDER as ChatProvider,
 					providerUserId: userId,
-					token: accessToken,
 					turn: output,
 					workspaceId: orgId,
 				});
@@ -251,13 +256,6 @@ export const streamWebChat = async ({
 			}
 
 			if (output.kind === "catalog_decision") {
-				if (!clientContext?.catalogDecision) {
-					writer.write({
-						data: { plan: output.plan, status: "pending" },
-						id: output.plan.plan_id,
-						type: "data-catalog-decision",
-					});
-				}
 				if (output.text) writeText(output.text);
 				return;
 			}

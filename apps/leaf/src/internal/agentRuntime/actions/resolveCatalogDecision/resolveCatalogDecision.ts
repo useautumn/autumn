@@ -37,23 +37,23 @@ const requestFromSuspension = (suspension: AgentApprovalRequest) =>
 export const resolveCatalogDecision = async ({
 	decisionProvided,
 	env,
+	getToken,
 	logger,
 	orgId,
 	providerUserId,
 	runId,
 	suspension,
 	thread,
-	token,
 }: {
 	decisionProvided: boolean;
 	env: AppEnv;
+	getToken: () => Promise<string>;
 	logger: AutumnLogger;
 	orgId: string;
 	providerUserId: string;
 	runId?: string;
 	suspension: AgentApprovalRequest;
 	thread: AgentThreadRef;
-	token: string;
 }): Promise<CatalogPlanPreview | undefined> => {
 	if (normalizeToolName(suspension.toolName) !== "updateCatalog") {
 		return undefined;
@@ -66,7 +66,7 @@ export const resolveCatalogDecision = async ({
 		env,
 		logger,
 		request,
-		token,
+		token: await getToken(),
 		toolName: "updateCatalog",
 	});
 	const plan = catalogPlanNeedingDecision(
