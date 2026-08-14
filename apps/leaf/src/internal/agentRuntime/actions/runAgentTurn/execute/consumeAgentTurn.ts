@@ -1,14 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { type AppEnv, ms } from "@autumn/shared";
-import type { ActiveRun } from "../../../../runs/runRegistry.js";
 import { AGENT_UNREACHABLE_MESSAGE } from "../../../../../ui/messages.js";
-import {
-	applyEveEvent,
-	closeReasoningStream,
-	type EveEventContext,
-	eveTurnProducedOutput,
-	type EveTurnOutcome,
-} from "./applyEveEvent.js";
+import type { ActiveRun } from "../../../../runs/runRegistry.js";
 import {
 	EveStreamDisconnectedError,
 	EveStreamIdleTimeoutError,
@@ -17,6 +10,13 @@ import {
 } from "../../../eve/client.js";
 import { saveEveSessionState } from "../../../eve/sessionState.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
+import { applyEveEvent, type EveEventContext } from "./applyEveEvent.js";
+import {
+	createEveTurnProgress,
+	type EveTurnOutcome,
+	type EveTurnProgress,
+	eveTurnProducedOutput,
+} from "./eveTurnReducer.js";
 
 // Eve can close empty while asynchronously resuming a turn.
 const MAX_IDLE_RETRIES = 20;
@@ -30,7 +30,20 @@ type EveTurnContext = Omit<EveEventContext, "event"> & { auth: EveAuthContext };
 type EveStreamPass = {
 	error?: unknown;
 	outcome?: EveTurnOutcome;
+	progress: EveTurnProgress;
 	sawEvent: boolean;
+};
+
+const closeReasoningOutput = ({
+	onReasoning,
+	progress,
+}: {
+	onReasoning?: EveEventContext["onReasoning"];
+	progress: EveTurnProgress;
+}) => {
+	if (progress.reasoningStreamId) {
+		onReasoning?.({ id: progress.reasoningStreamId, text: "" });
+	}
 };
 
 const streamPassEvents = async ({
@@ -39,14 +52,16 @@ const streamPassEvents = async ({
 	signal,
 	turn,
 }: {
-	abandonForStop: (
-		stop: NonNullable<ActiveRun["stop"]>,
-	) => Promise<EveTurnOutcome>;
+	abandonForStop: (input: {
+		progress: EveTurnProgress;
+		stop: NonNullable<ActiveRun["stop"]>;
+	}) => Promise<EveTurnOutcome>;
 	run?: ActiveRun;
 	signal: AbortSignal;
 	turn: EveTurnContext;
 }): Promise<EveStreamPass> => {
 	const { auth, orgId, session } = turn;
+	let progress = turn.progress;
 	let sawEvent = false;
 	try {
 		for await (const event of streamEveEvents({ auth, session, signal })) {
@@ -54,20 +69,28 @@ const streamPassEvents = async ({
 			session.state.streamIndex += 1;
 			session.state.lastEventAt = Date.now();
 
-			if (run?.stop)
-				return { outcome: await abandonForStop(run.stop), sawEvent };
+			if (run?.stop) {
+				return {
+					outcome: await abandonForStop({ progress, stop: run.stop }),
+					progress,
+					sawEvent,
+				};
+			}
 
-			const outcome = await applyEveEvent({ ...turn, event });
-			if (outcome) return { outcome, sawEvent };
+			const result = await applyEveEvent({ ...turn, event, progress });
+			progress = result.progress;
+			if (result.outcome) {
+				return { outcome: result.outcome, progress, sawEvent };
+			}
 
 			if (session.state.streamIndex % PERSIST_CURSOR_EVERY_EVENTS === 0) {
 				await saveEveSessionState({ orgId, session });
 			}
 		}
 	} catch (error) {
-		return { error, sawEvent };
+		return { error, progress, sawEvent };
 	}
-	return { sawEvent };
+	return { progress, sawEvent };
 };
 
 const recoverFromIdleStream = async ({
@@ -89,7 +112,7 @@ const recoverFromIdleStream = async ({
 	await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
 	const partialText = progress.finalText || progress.pendingText;
 	if (!partialText) throw new Error(AGENT_UNREACHABLE_MESSAGE);
-	closeReasoningStream({ onReasoning, progress });
+	closeReasoningOutput({ onReasoning, progress });
 	return { kind: "answered", text: partialText };
 };
 
@@ -120,13 +143,13 @@ const outcomeForExhaustedRetries = async ({
 	turn: EveTurnContext;
 }): Promise<EveTurnOutcome> => {
 	const { onReasoning, orgId, progress, session } = turn;
-	if (progress.pendingText) progress.finalText = progress.pendingText;
-	if (!eveTurnProducedOutput({ text: progress.finalText })) {
+	const finalText = progress.pendingText || progress.finalText;
+	if (!eveTurnProducedOutput({ text: finalText })) {
 		return streamedAnyEvent ? { kind: "silent" } : { kind: "unreachable" };
 	}
-	closeReasoningStream({ onReasoning, progress });
+	closeReasoningOutput({ onReasoning, progress });
 	await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
-	return { kind: "answered", text: progress.finalText };
+	return { kind: "answered", text: finalText };
 };
 
 export const consumeAgentTurn = async ({
@@ -153,33 +176,31 @@ export const consumeAgentTurn = async ({
 	token: string;
 }): Promise<EveTurnOutcome> => {
 	const abortController = new AbortController();
-	const turn: EveTurnContext = {
+	let turn: EveTurnContext = {
 		auth,
 		env,
 		onAction,
 		onReasoning,
 		onThinking,
 		orgId,
-		progress: {
-			finalText: "",
-			pendingText: "",
-			toolInputs: new Map(),
-			toolLabels: new Map(),
-			turnStarted: false,
-		},
+		progress: createEveTurnProgress(),
 		session,
 		token,
 	};
 
-	const abandonForStop = async (
-		stop: NonNullable<ActiveRun["stop"]>,
-	): Promise<EveTurnOutcome> => {
+	const abandonForStop = async ({
+		progress,
+		stop,
+	}: {
+		progress: EveTurnProgress;
+		stop: NonNullable<ActiveRun["stop"]>;
+	}): Promise<EveTurnOutcome> => {
 		abortController.abort();
 		await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
 		return {
 			kind: "stopped",
 			stopReason: stop.reason,
-			text: turn.progress.finalText,
+			text: progress.finalText,
 		};
 	};
 
@@ -191,7 +212,12 @@ export const consumeAgentTurn = async ({
 	try {
 		while (idleRetries < MAX_IDLE_RETRIES) {
 			// Eve cannot be interrupted server-side.
-			if (run?.stop) return await abandonForStop(run.stop);
+			if (run?.stop) {
+				return await abandonForStop({
+					progress: turn.progress,
+					stop: run.stop,
+				});
+			}
 
 			const pass = await streamPassEvents({
 				abandonForStop,
@@ -199,6 +225,7 @@ export const consumeAgentTurn = async ({
 				signal: abortController.signal,
 				turn,
 			});
+			turn = { ...turn, progress: pass.progress };
 			streamedAnyEvent ||= pass.sawEvent;
 			if (pass.outcome) return pass.outcome;
 

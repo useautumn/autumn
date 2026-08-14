@@ -2,9 +2,9 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
 import { db } from "../../../../../lib/db.js";
 import type { AgentTurnResult } from "../../../domain/agentTurn.js";
-import type { EveTurnOutcome } from "../execute/applyEveEvent.js";
 import { deleteEveSession } from "../../../eve/repo.js";
 import type { EveSessionRef } from "../../../eve/types.js";
+import type { EveTurnOutcome } from "../execute/eveTurnReducer.js";
 
 // Deleting the session also removes the dashboard thread.
 export const resolveAgentTurnOutcome = async ({

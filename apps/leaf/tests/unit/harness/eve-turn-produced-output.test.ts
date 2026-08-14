@@ -1,11 +1,7 @@
-import { describe, expect, mock, test } from "bun:test";
-
-// The predicate's module reaches the MCP client, whose `env` parses leaf's whole
-// schema at import; nothing here calls it.
-mock.module("../../../src/lib/env.js", () => ({ env: {} }));
+import { describe, expect, test } from "bun:test";
 
 const { eveTurnProducedOutput } = await import(
-	"../../../src/internal/agentRuntime/actions/runAgentTurn/execute/applyEveEvent.js"
+	"../../../src/internal/agentRuntime/actions/runAgentTurn/execute/eveTurnReducer.js"
 );
 
 // This predicate decides whether a finished turn is posted to the user or
