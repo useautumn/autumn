@@ -6,8 +6,7 @@ import {
 	type InsertCustomerProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
-import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
+import { dispatchCustomerProductUpdatedWebhooks } from "@/internal/customers/cusProducts/actions/dispatchCustomerProductUpdatedWebhooks";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
@@ -29,8 +28,6 @@ export const uncancelCustomerProduct = async ({
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
 }): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
-	const { org, env } = ctx;
-
 	const originalFullCustomer = structuredClone(fullCustomer);
 
 	// 1. Uncancel the product
@@ -59,20 +56,13 @@ export const uncancelCustomerProduct = async ({
 	);
 
 	// 3. Send webhooks
-	await addProductsUpdatedWebhookTask({
+	await dispatchCustomerProductUpdatedWebhooks({
 		ctx,
-		internalCustomerId: customerProduct.internal_customer_id,
-		org,
-		env,
-		customerId: fullCustomer.id || "",
-		scenario: AttachScenario.Renew,
-		cusProduct: customerProduct,
-	});
-
-	emitCustomerProductBillingUpdated({
-		ctx,
+		customerProduct,
+		fullCustomer,
 		originalFullCustomer,
-		updateCustomerProducts: [{ customerProduct, updates }],
+		scenario: AttachScenario.Renew,
+		updates,
 	});
 
 	return { updates };
