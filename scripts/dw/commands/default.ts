@@ -3,6 +3,7 @@ import { getCurrentWorktree } from "../helpers/git.ts";
 import { loadRegistry } from "../helpers/registry.ts";
 import { isProvisioned } from "../helpers/entry.ts";
 import { fatal } from "../helpers/shell.ts";
+import { ensureHeadlessNgrok } from "../helpers/ensureHeadlessNgrok.ts";
 import { startDev } from "../helpers/start.ts";
 
 export async function cmdDefault(): Promise<void> {
@@ -14,10 +15,14 @@ export async function cmdDefault(): Promise<void> {
 			fatal("run 'bun dw setup' first to provision this worktree");
 		}
 		killOwnPorts(entry.worktreeNum);
-		startDev(entry);
+		startDev(ensureHeadlessNgrok(entry));
 		return;
 	}
 
-	killOwnPorts(1);
-	startDev({ path: cwd, worktreeNum: 1, createdAt: Date.now() });
+	killOwnPorts(entry?.worktreeNum ?? 1);
+	startDev(
+		ensureHeadlessNgrok(
+			entry ?? { path: cwd, worktreeNum: 1, createdAt: Date.now() },
+		),
+	);
 }

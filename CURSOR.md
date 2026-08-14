@@ -190,12 +190,12 @@ Three ways to click around the running app:
    `DW_HEADLESS=1` so preview hostnames do not 403.
 2. **Remote desktop** on the agent page — take control, open Chrome with
    `--no-sandbox`, go to `http://localhost:3000`. Most reliable if Ports is empty.
-3. **ngrok** — a `ngrok` terminal starts `scripts/setup/cursor-cloud/ngrok.sh`
-   when `NGROK_AUTHTOKEN` is set (Team Runtime Secret, or Infisical `dev`).
-   Random `*.ngrok.app` URLs for `:3000` and `:8080` go to stdout and
-   `~/.autumn-agent/public-urls.txt`. `bun dw identify` on Cloud reads that
-   file. Canonical worktree #1 never starts laptop Docker ngrok (`NGROK_API_KEY`
-   is withheld so reserved domains do not collide across VMs).
+3. **ngrok** — on Cloud, `bun dw setup` / `bun dw` / `bun dw run` always
+   start a public tunnel when `NGROK_AUTHTOKEN` is in Infisical (random
+   `*.ngrok.app` for `:3000` and `:8080`). A `ngrok` terminal does the same
+   on boot. URLs go to `~/.autumn-agent/public-urls.txt` and `bun dw identify`.
+   Canonical laptop worktree #1 still skips Docker ngrok (reserved domains).
+   Cloud withholds `NGROK_API_KEY` so those names do not collide across VMs.
 
 The `access` terminal reprints these instructions on every boot. It does not
 start the app.

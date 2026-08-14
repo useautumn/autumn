@@ -49,7 +49,7 @@ export function cmdIdentify(): void {
 			: ngrokViteUrl
 				? "(none — vite tunnel below)"
 				: isHeadless()
-					? "(canonical — no ngrok; Cloud needs NGROK_AUTHTOKEN)"
+					? "(canonical — no ngrok; bun dw setup starts the Cloud tunnel)"
 					: "(canonical — no ngrok)");
 
 	const branchLabel =

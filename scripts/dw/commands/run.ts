@@ -4,6 +4,7 @@ import { isHeadless } from "../helpers/headless.ts";
 import { loadRegistry } from "../helpers/registry.ts";
 import { killOwnPorts } from "../helpers/ports.ts";
 import { startDev } from "../helpers/start.ts";
+import { ensureHeadlessNgrok } from "../helpers/ensureHeadlessNgrok.ts";
 
 export async function cmdRun(): Promise<void> {
 	if (process.env.NODE_ENV === "production") {
@@ -23,5 +24,5 @@ export async function cmdRun(): Promise<void> {
 	}
 
 	killOwnPorts(entry.worktreeNum);
-	startDev(entry, { allowTmux: false });
+	startDev(ensureHeadlessNgrok(entry), { allowTmux: false });
 }

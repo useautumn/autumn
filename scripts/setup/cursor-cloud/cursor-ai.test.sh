@@ -147,4 +147,14 @@ console.log("ok");
 [[ "$got" == "ok" ]] || fail "parseCloudPublicUrls, got $got"
 pass "identify Cloud public-urls parser"
 
+# ngrok-up without a token must not hang (bun dw setup calls this)
+timeout 8 bash "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" >/tmp/ngrok-up.out 2>&1 || true
+if grep -q "no NGROK_AUTHTOKEN or ngrok binary" /tmp/ngrok-up.out \
+	|| grep -q "already running" /tmp/ngrok-up.out \
+	|| grep -q "starting tunnels" /tmp/ngrok-up.out; then
+	pass "ngrok-up.sh returns quickly without hanging"
+else
+	fail "ngrok-up.sh unexpected output: $(head -c 400 /tmp/ngrok-up.out)"
+fi
+
 echo "all cursor_ai.py tests passed"
