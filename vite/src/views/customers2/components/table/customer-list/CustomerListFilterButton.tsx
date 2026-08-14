@@ -10,6 +10,7 @@ import { FunnelSimpleIcon } from "@phosphor-icons/react";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { BalanceFilterSubMenu } from "@/views/customers/components/filter-dropdown/BalanceFilterSubMenu";
 import { FilterStatusSubMenu } from "@/views/customers/components/filter-dropdown/FilterStatusSubMenu";
 import { IntervalSubMenu } from "@/views/customers/components/filter-dropdown/IntervalSubMenu";
 import { JoinedDateSubMenu } from "@/views/customers/components/filter-dropdown/JoinedDateSubMenu";
@@ -59,6 +60,10 @@ export function CustomerListFilterButton({
 			none: false,
 			processor: [],
 			interval: [],
+			balanceFeature: "",
+			balanceOp: ">",
+			balanceValue: "",
+			balanceBasis: "remaining",
 			joinedFrom: null,
 			joinedTo: null,
 		});
@@ -98,6 +103,7 @@ export function CustomerListFilterButton({
 					<ProductsSubMenu onChange={onFilterChange} />
 					{!hideInterval && <IntervalSubMenu onChange={onFilterChange} />}
 					<ProcessorSubMenu onChange={onFilterChange} />
+					<BalanceFilterSubMenu onChange={onFilterChange} />
 					{!hideCreatedAt && <JoinedDateSubMenu onChange={onFilterChange} />}
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator className="m-0" />

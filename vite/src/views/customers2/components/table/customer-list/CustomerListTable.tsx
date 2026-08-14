@@ -12,6 +12,8 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import {
+	balanceFilterQueryKey,
+	featureSortQueryKey,
 	hasActiveCustomerFilters,
 	useCustomerFilters,
 } from "@/views/customers/hooks/useCustomerFilters";
@@ -64,6 +66,8 @@ export function CustomerListTable({
 			queryStates.joinedTo,
 			queryStates.sort,
 			queryStates.sortBy,
+			featureSortQueryKey(queryStates),
+			balanceFilterQueryKey(queryStates),
 			queryStates.q,
 		]),
 		queryFn: () => Promise.resolve({ fullCustomers: [], next_cursor: null }),
@@ -128,7 +132,7 @@ export function CustomerListTable({
 
 	const sorting = useMemo<SortingState>(
 		() =>
-			queryStates.sortBy === "base_price"
+			queryStates.sortBy !== "created_at"
 				? []
 				: [{ id: "created_at", desc: queryStates.sort !== "asc" }],
 		[queryStates.sort, queryStates.sortBy],
@@ -143,6 +147,8 @@ export function CustomerListTable({
 			setFilters({
 				sort: createdAtSort && !createdAtSort.desc ? "asc" : "desc",
 				sortBy: "created_at",
+				sortFeature: "",
+				sortBasis: "remaining",
 			});
 		},
 		[sorting, setFilters],
@@ -173,7 +179,11 @@ export function CustomerListTable({
 	const hasRows = table.getRowModel().rows.length > 0;
 	const hasSearchQuery = Boolean(queryStates.q?.trim());
 	const hasFilters = hasActiveCustomerFilters(queryStates);
-	const hasActiveFiltersOrSearch = hasSearchQuery || hasFilters;
+	// A non-default sort must not fall through to the onboarding empty state
+	// (e.g. balance sort erroring/empty in an env without MotherDuck).
+	const hasNonDefaultSort = queryStates.sortBy !== "created_at";
+	const hasActiveFiltersOrSearch =
+		hasSearchQuery || hasFilters || hasNonDefaultSort;
 
 	if (!hasRows && !hasActiveFiltersOrSearch && !isFetchingUncached) {
 		return (

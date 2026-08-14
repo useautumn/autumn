@@ -1,6 +1,10 @@
 import {
+	type BalanceFilterOp,
+	BalanceFilterOpSchema,
 	type CustomerListSortBy,
 	CustomerListSortBySchema,
+	type FeatureBalanceSortBasis,
+	FeatureBalanceSortBasisSchema,
 	type SortOrder,
 	SortOrderSchema,
 } from "@autumn/shared";
@@ -37,6 +41,12 @@ const FILTER_PARAM_KEYS = [
 	"pageSize",
 	"sort",
 	"sortBy",
+	"sortFeature",
+	"sortBasis",
+	"balanceFeature",
+	"balanceOp",
+	"balanceValue",
+	"balanceBasis",
 	"joinedFrom",
 	"joinedTo",
 ] as const;
@@ -50,6 +60,12 @@ type PersistedCustomerFilters = {
 	pageSize: number;
 	sort?: SortOrder;
 	sortBy?: CustomerListSortBy;
+	sortFeature?: string;
+	sortBasis?: FeatureBalanceSortBasis;
+	balanceFeature?: string;
+	balanceOp?: BalanceFilterOp;
+	balanceValue?: string;
+	balanceBasis?: FeatureBalanceSortBasis;
 	joinedFrom?: number | null;
 	joinedTo?: number | null;
 };
@@ -90,7 +106,22 @@ function buildRestoredState({
 				? filters.pageSize
 				: null,
 		sort: filters?.sort === "asc" ? filters.sort : null,
-		sortBy: filters?.sortBy === "base_price" ? filters.sortBy : null,
+		sortBy:
+			filters?.sortBy && filters.sortBy !== "created_at"
+				? filters.sortBy
+				: null,
+		sortFeature: filters?.sortFeature || null,
+		sortBasis:
+			filters?.sortBasis && filters.sortBasis !== "remaining"
+				? filters.sortBasis
+				: null,
+		balanceFeature: filters?.balanceFeature || null,
+		balanceOp: filters?.balanceOp === "<" ? filters.balanceOp : null,
+		balanceValue: filters?.balanceValue || null,
+		balanceBasis:
+			filters?.balanceBasis && filters.balanceBasis !== "remaining"
+				? filters.balanceBasis
+				: null,
 		joinedFrom: filters?.joinedFrom ?? null,
 		joinedTo: filters?.joinedTo ?? null,
 	};
@@ -108,11 +139,67 @@ const queryStatesConfig = {
 	sortBy: parseAsStringLiteral(CustomerListSortBySchema.options).withDefault(
 		"created_at",
 	),
+	sortFeature: parseAsString.withDefault(""),
+	sortBasis: parseAsStringLiteral(
+		FeatureBalanceSortBasisSchema.options,
+	).withDefault("remaining"),
+	balanceFeature: parseAsString.withDefault(""),
+	balanceOp: parseAsStringLiteral(BalanceFilterOpSchema.options).withDefault(
+		">",
+	),
+	// Raw string in the URL; coerced to a number only when the payload is built.
+	balanceValue: parseAsString.withDefault(""),
+	balanceBasis: parseAsStringLiteral(
+		FeatureBalanceSortBasisSchema.options,
+	).withDefault("remaining"),
 	joinedFrom: parseAsInteger,
 	joinedTo: parseAsInteger,
 };
 
 type QueryStates = ReturnType<typeof useQueryStates<typeof queryStatesConfig>>;
+
+const BALANCE_VALUE_MULTIPLIERS: Record<string, number> = {
+	k: 1e3,
+	m: 1e6,
+	b: 1e9,
+	bn: 1e9,
+};
+
+/** Accepts comma-grouped digits and k/M/B/bn shorthand ("10,000", "1.5M");
+ * null when the text isn't a number. */
+export function parseBalanceValueInput(raw: string): number | null {
+	const match = /^(-?[\d,]*\.?\d+)\s*(bn|k|m|b)?$/i.exec(raw.trim());
+	if (!match) return null;
+	const numeric = Number(match[1].replace(/,/g, ""));
+	if (!Number.isFinite(numeric)) return null;
+	const suffix = match[2]?.toLowerCase();
+	return numeric * (suffix ? BALANCE_VALUE_MULTIPLIERS[suffix] : 1);
+}
+
+export function hasActiveBalanceFilter(queryStates: QueryStates[0]) {
+	return (
+		queryStates.balanceFeature !== "" &&
+		parseBalanceValueInput(queryStates.balanceValue) !== null
+	);
+}
+
+/** Query-key contribution of the balance filter: null while the filter is
+ * incomplete so editing op/feature/value doesn't refetch identical results. */
+export function balanceFilterQueryKey(queryStates: QueryStates[0]) {
+	if (!hasActiveBalanceFilter(queryStates)) return null;
+	return `${queryStates.balanceFeature}:${queryStates.balanceBasis}${queryStates.balanceOp}${parseBalanceValueInput(queryStates.balanceValue)}`;
+}
+
+/** Query-key contribution of the feature sort: null unless a feature sort is
+ * active so basis edits without a sorted feature don't refetch. */
+export function featureSortQueryKey(queryStates: QueryStates[0]) {
+	if (
+		queryStates.sortBy !== "feature_balance" ||
+		queryStates.sortFeature === ""
+	)
+		return null;
+	return `${queryStates.sortFeature}:${queryStates.sortBasis}`;
+}
 
 export function hasActiveCustomerFilters(queryStates: QueryStates[0]) {
 	return (
@@ -122,7 +209,8 @@ export function hasActiveCustomerFilters(queryStates: QueryStates[0]) {
 		queryStates.processor.length > 0 ||
 		queryStates.interval.length > 0 ||
 		queryStates.joinedFrom !== null ||
-		queryStates.joinedTo !== null
+		queryStates.joinedTo !== null ||
+		hasActiveBalanceFilter(queryStates)
 	);
 }
 
@@ -140,6 +228,14 @@ export function buildCustomerFilterPayload(queryStates: QueryStates[0]) {
 			created_at_range: {
 				start: joinedFrom ?? undefined,
 				end: joinedTo ?? undefined,
+			},
+		}),
+		...(hasActiveBalanceFilter(queryStates) && {
+			balance: {
+				feature_id: queryStates.balanceFeature,
+				op: queryStates.balanceOp,
+				value: parseBalanceValueInput(queryStates.balanceValue) ?? 0,
+				basis: queryStates.balanceBasis,
 			},
 		}),
 	};
@@ -241,6 +337,12 @@ export function CustomerFiltersProvider({ children }: { children: ReactNode }) {
 					pageSize: queryStates.pageSize,
 					sort: queryStates.sort,
 					sortBy: queryStates.sortBy,
+					sortFeature: queryStates.sortFeature,
+					sortBasis: queryStates.sortBasis,
+					balanceFeature: queryStates.balanceFeature,
+					balanceOp: queryStates.balanceOp,
+					balanceValue: queryStates.balanceValue,
+					balanceBasis: queryStates.balanceBasis,
 					joinedFrom: queryStates.joinedFrom,
 					joinedTo: queryStates.joinedTo,
 				}),
@@ -258,6 +360,12 @@ export function CustomerFiltersProvider({ children }: { children: ReactNode }) {
 		queryStates.pageSize,
 		queryStates.sort,
 		queryStates.sortBy,
+		queryStates.sortFeature,
+		queryStates.sortBasis,
+		queryStates.balanceFeature,
+		queryStates.balanceOp,
+		queryStates.balanceValue,
+		queryStates.balanceBasis,
 		queryStates.joinedFrom,
 		queryStates.joinedTo,
 	]);
