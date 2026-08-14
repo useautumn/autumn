@@ -21,6 +21,8 @@ export const FullSubjectSchema = z.object({
 
 	customerId: z.string(),
 	internalCustomerId: z.string(),
+	// Redis-owned balance handoff fence; Postgres-only reads omit it.
+	balanceGeneration: z.number().int().optional(),
 	entityId: z.string().optional(),
 	internalEntityId: z.string().optional(),
 

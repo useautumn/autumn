@@ -6,6 +6,7 @@ import {
 	type TrackParams,
 } from "@autumn/shared";
 import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
+import { BalanceHandoffInProgressError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
 import { updateCustomerData } from "@/internal/customers/actions/updateCustomerData.js";
@@ -43,10 +44,10 @@ export const getOrCreateCachedFullSubject = async ({
 	let normalizedResult: Awaited<ReturnType<typeof getFullSubjectNormalized>>;
 	let setCache = true;
 	let fetchedSubjectViewEpoch = 0;
+	let fetchedBalanceGeneration = 0;
 
 	if (customerId && useRedis) {
-		// Pipeline inside getCachedFullSubject already fetches the epoch,
-		// so we reuse it on miss instead of a second round trip.
+		// Reuse the epoch and generation fetched with the cache miss.
 		const cachedResult = await getCachedFullSubject({
 			ctx,
 			customerId,
@@ -55,6 +56,7 @@ export const getOrCreateCachedFullSubject = async ({
 		});
 		fullSubject = cachedResult.fullSubject;
 		fetchedSubjectViewEpoch = cachedResult.subjectViewEpoch;
+		fetchedBalanceGeneration = cachedResult.balanceGeneration;
 
 		if (fullSubject) {
 			logger.debug(`[getOrCreateCachedFullSubject] Cache hit: ${customerId}`);
@@ -141,13 +143,18 @@ export const getOrCreateCachedFullSubject = async ({
 		if (normalizedResult) {
 			// Replica-sourced hydrations must never fill Redis — serve them as-is.
 			if (!isReplicaSourced(normalizedResult.normalized)) {
+				normalizedResult.normalized.balanceGeneration =
+					fetchedBalanceGeneration;
+				normalizedResult.fullSubject.balanceGeneration =
+					fetchedBalanceGeneration;
 				await setCachedFullSubject({
 					ctx,
 					normalized: normalizedResult.normalized,
 					fetchedSubjectViewEpoch,
-				}).catch((error) =>
-					logger.error(`Failed to set full subject cache: ${error}`),
-				);
+				}).catch((error) => {
+					if (error instanceof BalanceHandoffInProgressError) throw error;
+					logger.error(`Failed to set full subject cache: ${error}`);
+				});
 			}
 			fullSubject = normalizedResult.fullSubject;
 		}

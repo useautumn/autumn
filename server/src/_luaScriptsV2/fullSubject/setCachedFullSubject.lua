@@ -5,31 +5,46 @@
 
   KEYS[1] = subjectKey (existence check + subject view write)
   KEYS[2] = epochKey (staleness check)
-  KEYS[3..N] = balance hash keys (one per metered feature)
+  KEYS[3] = customer balance-generation key
+  KEYS[4] = attach handoff lock
+  KEYS[5..N] = balance hash keys (one per metered feature)
 
   ARGV[1] = expected epoch value
   ARGV[2] = TTL seconds (applies to subject key and all balance keys)
   ARGV[3] = epoch TTL seconds (applied to epoch key)
   ARGV[4] = subject view JSON string
-  ARGV[5] = number of balance keys (N - 2)
-  ARGV[6..M] = for each balance key: field_count, then field_count pairs of (field_name, field_value_json)
+  ARGV[5] = expected balance generation
+  ARGV[6] = number of balance keys (N - 4)
+  ARGV[7..M] = for each balance key: field_count, then field_count pairs of (field_name, field_value_json)
 
   Returns:
     "OK" = all keys written
     "CACHE_EXISTS" = subject key already exists, nothing written
-    "STALE_WRITE" = epoch mismatch, nothing written
+    "HANDOFF_IN_PROGRESS" = an attach owns the missing customer view
+    "STALE_WRITE" = epoch or generation mismatch, nothing written
 ]]
 
 local subject_key = KEYS[1]
 local epoch_key = KEYS[2]
+local generation_key = KEYS[3]
+local handoff_lock_key = KEYS[4]
 local expected_epoch = ARGV[1]
 local ttl = tonumber(ARGV[2])
 local epoch_ttl = tonumber(ARGV[3])
 local subject_view_json = ARGV[4]
-local num_balance_keys = tonumber(ARGV[5])
+local expected_generation = ARGV[5]
+local num_balance_keys = tonumber(ARGV[6])
 
 if redis.call('EXISTS', subject_key) == 1 then
   return 'CACHE_EXISTS'
+end
+
+local raw_handoff_lock = redis.call('GET', handoff_lock_key)
+if raw_handoff_lock ~= false then
+  local lock_ok, handoff_lock = pcall(cjson.decode, raw_handoff_lock)
+  if lock_ok and type(handoff_lock) == 'table' and handoff_lock.owner == 'attach' then
+    return 'HANDOFF_IN_PROGRESS'
+  end
 end
 
 local current_epoch = redis.call('GET', epoch_key)
@@ -37,10 +52,15 @@ if current_epoch ~= false and current_epoch ~= expected_epoch then
   return 'STALE_WRITE'
 end
 
-local argv_index = 6
+redis.call('SETNX', generation_key, '0')
+if redis.call('GET', generation_key) ~= expected_generation then
+  return 'STALE_WRITE'
+end
+
+local argv_index = 7
 
 for i = 1, num_balance_keys do
-  local balance_key = KEYS[2 + i]
+  local balance_key = KEYS[4 + i]
   local field_count = tonumber(ARGV[argv_index])
   argv_index = argv_index + 1
 
@@ -48,7 +68,7 @@ for i = 1, num_balance_keys do
     for j = 1, field_count do
       local field_name = ARGV[argv_index]
       local field_value = ARGV[argv_index + 1]
-      redis.call('HSET', balance_key, field_name, field_value)
+      redis.call('HSETNX', balance_key, field_name, field_value)
       argv_index = argv_index + 2
     end
   end

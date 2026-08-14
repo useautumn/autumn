@@ -24,6 +24,7 @@ export type CachedFullSubject = Omit<
 	NormalizedFullSubject,
 	"customer_entitlements" | "usage_windows"
 > & {
+	balanceGeneration: number;
 	_schemaVersion: number;
 	_cachedAt: number;
 	meteredFeatures: string[];
@@ -78,6 +79,7 @@ export const CachedFullSubjectSchema = z.object({
 	subjectType: z.enum(["customer", "entity"]),
 	customerId: z.string(),
 	internalCustomerId: z.string(),
+	balanceGeneration: z.number().int().default(0),
 	entityId: z.string().optional(),
 	internalEntityId: z.string().optional(),
 
@@ -153,6 +155,7 @@ export const normalizedToCachedFullSubject = ({
 		subjectType: normalized.subjectType,
 		customerId: normalized.customerId,
 		internalCustomerId: normalized.internalCustomerId,
+		balanceGeneration: normalized.balanceGeneration ?? 0,
 		entityId: normalized.entityId,
 		internalEntityId: normalized.internalEntityId,
 		customer: normalized.customer,
@@ -189,6 +192,7 @@ export const cachedFullSubjectToNormalized = ({
 		subjectType: cached.subjectType,
 		customerId: cached.customerId,
 		internalCustomerId: cached.internalCustomerId,
+		balanceGeneration: cached.balanceGeneration,
 		entityId: cached.entityId,
 		internalEntityId: cached.internalEntityId,
 		customer: cached.customer,

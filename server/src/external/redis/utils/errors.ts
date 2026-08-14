@@ -24,3 +24,12 @@ export class RedisUnavailableError extends Error {
 		if (cause !== undefined) (this as { cause?: unknown }).cause = cause;
 	}
 }
+
+/** Retryable cache-fill rejection while attach owns the customer's old view. */
+export class BalanceHandoffInProgressError extends RedisUnavailableError {
+	constructor() {
+		super({ source: "fullSubjectCacheFill", reason: "not_ready" });
+		this.name = "BalanceHandoffInProgressError";
+		this.message = "A balance handoff is in progress";
+	}
+}

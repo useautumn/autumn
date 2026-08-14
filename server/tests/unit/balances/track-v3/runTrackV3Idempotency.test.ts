@@ -8,16 +8,24 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { FeatureDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
+import {
+	RedisDeductionError,
+	RedisDeductionErrorCode,
+} from "@/internal/balances/utils/types/redisDeductionError.js";
 
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const mockState = {
 	runRedisTrackV3Calls: [] as Record<string, unknown>[],
+	getFullSubjectCalls: 0,
+	fullSubjects: [] as FullSubject[],
+	runRedisTrackV3Errors: [] as Error[],
 };
 
-const fullSubject = {
+const oldFullSubject = {
 	customerId: "cus_123",
 	internalCustomerId: "cus_int_123",
+	balanceGeneration: 4,
 	customer: {} as never,
 	customer_products: [],
 	extra_customer_entitlements: [],
@@ -26,17 +34,27 @@ const fullSubject = {
 	subjectType: "customer",
 } as FullSubject;
 
+const currentFullSubject = {
+	...oldFullSubject,
+	balanceGeneration: 5,
+} as FullSubject;
+
+const getNextFullSubject = async () => {
+	mockState.getFullSubjectCalls += 1;
+	return mockState.fullSubjects.shift() ?? currentFullSubject;
+};
+
 await mockModuleWithRestore(
 	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
 	() => ({
-		getOrSetCachedFullSubject: async () => fullSubject,
+		getOrSetCachedFullSubject: getNextFullSubject,
 	}),
 );
 
 await mockModuleWithRestore(
 	"@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js",
 	() => ({
-		getOrCreateCachedFullSubject: async () => fullSubject,
+		getOrCreateCachedFullSubject: getNextFullSubject,
 	}),
 );
 
@@ -55,6 +73,8 @@ await mockModuleWithRestore(
 			args: Record<string, unknown>,
 		): Promise<TrackResponseV3> => {
 			mockState.runRedisTrackV3Calls.push(args);
+			const error = mockState.runRedisTrackV3Errors.shift();
+			if (error) throw error;
 			return {
 				customer_id: "cus_123",
 				value: 1,
@@ -87,6 +107,9 @@ const buildFeatureDeduction = (featureId: string): FeatureDeduction =>
 describe("runTrackV3 idempotency routing", () => {
 	beforeEach(() => {
 		mockState.runRedisTrackV3Calls = [];
+		mockState.getFullSubjectCalls = 0;
+		mockState.fullSubjects = [oldFullSubject];
+		mockState.runRedisTrackV3Errors = [];
 	});
 
 	test("uses the same request-level key for multi-feature requests", async () => {
@@ -146,6 +169,39 @@ describe("runTrackV3 idempotency routing", () => {
 		expect(mockState.runRedisTrackV3Calls[0]?.idempotencyKey).toBe(
 			"track:req_123",
 		);
+	});
+
+	test("reloads the current balance generation and retries in the same request", async () => {
+		mockState.fullSubjects = [oldFullSubject, currentFullSubject];
+		mockState.runRedisTrackV3Errors = [
+			new RedisDeductionError({
+				message: "balance generation changed",
+				code: RedisDeductionErrorCode.BalanceGenerationChanged,
+			}),
+		];
+
+		await expect(
+			runTrackV3({
+				ctx,
+				body: {
+					customer_id: "cus_123",
+					feature_id: "messages",
+					value: 1,
+				},
+				featureDeductions: [buildFeatureDeduction("messages")],
+				apiVersion: ApiVersion.V2_1,
+			}),
+		).resolves.toMatchObject({ customer_id: "cus_123" });
+
+		expect(mockState.getFullSubjectCalls).toBe(2);
+		expect(mockState.runRedisTrackV3Calls).toHaveLength(2);
+		expect(mockState.runRedisTrackV3Calls[0]?.fullSubject).toBe(oldFullSubject);
+		expect(mockState.runRedisTrackV3Calls[1]?.fullSubject).toBe(
+			currentFullSubject,
+		);
+		expect(
+			mockState.runRedisTrackV3Calls.map((call) => call.idempotencyKey),
+		).toEqual(["track:req_123", "track:req_123"]);
 	});
 });
 

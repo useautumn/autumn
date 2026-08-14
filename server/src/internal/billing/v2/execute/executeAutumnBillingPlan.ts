@@ -3,6 +3,8 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
+import { executeAttachBalanceHandoff } from "@/internal/billing/v2/execute/attachBalanceHandoff/executeAttachBalanceHandoff.js";
+import { prepareAttachBalanceHandoff } from "@/internal/billing/v2/execute/attachBalanceHandoff/prepareAttachBalanceHandoff.js";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
 import { executeCustomerLicenseTransitions } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseTransitions";
 import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseUpdates";
@@ -52,6 +54,12 @@ export const executeAutumnBillingPlan = async ({
 		autumnBillingPlan,
 	});
 	const deleteCustomerProducts = getDeleteCustomerProducts({
+		autumnBillingPlan,
+	});
+	// Cache A before lifecycle rows change and remember its Redis generation.
+	// Runtime writes keep flowing against A while the existing billing plan runs.
+	const preparedAttachBalanceHandoff = await prepareAttachBalanceHandoff({
+		ctx,
 		autumnBillingPlan,
 	});
 
@@ -215,6 +223,12 @@ export const executeAutumnBillingPlan = async ({
 			invoice: autumnBillingPlan.upsertInvoice,
 		});
 	}
+
+	await executeAttachBalanceHandoff({
+		ctx,
+		autumnBillingPlan,
+		prepared: preparedAttachBalanceHandoff,
+	});
 
 	// 9. Trigger workflow to store invoice line items (async via SQS)
 	if (autumnInvoice && stripeInvoice) {

@@ -186,6 +186,7 @@ describe("fullSubject cache model", () => {
 		});
 		expect(cached._schemaVersion).toBe(FULL_SUBJECT_CACHE_SCHEMA_VERSION);
 		expect(cached._cachedAt).toBeTypeOf("number");
+		expect(cached.balanceGeneration).toBe(0);
 	});
 
 	test("sanitizes cached customer config without disable_overage_billing", () => {
@@ -237,6 +238,7 @@ describe("fullSubject cache model", () => {
 
 	test("reconstructs normalized data from cached subject and balances", () => {
 		const normalized = buildNormalized();
+		normalized.balanceGeneration = 7;
 		const cached = normalizedToCachedFullSubject({
 			normalized,
 			subjectViewEpoch: 0,
@@ -254,6 +256,11 @@ describe("fullSubject cache model", () => {
 			normalized.customer_entitlements,
 		);
 		expect(reconstructed.customer_prices).toEqual([]);
+		expect(cached.balanceGeneration).toBe(7);
+		expect(reconstructed.balanceGeneration).toBe(7);
+		expect(
+			normalizedToFullSubject({ normalized: reconstructed }).balanceGeneration,
+		).toBe(7);
 	});
 
 	test("reconstructs pooled customer entitlements from a legacy cached subject", () => {

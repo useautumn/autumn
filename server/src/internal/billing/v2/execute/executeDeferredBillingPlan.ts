@@ -101,9 +101,11 @@ export const executeDeferredBillingPlan = async ({
 		});
 	}
 
-	await deleteCachedFullCustomer({
-		ctx,
-		customerId: billingContext.fullCustomer.id ?? "",
-		source: "executeInvoiceDeferredBillingPlan",
-	});
+	if (!ctx.preserveFullSubjectCache) {
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId: billingContext.fullCustomer.id ?? "",
+			source: "executeInvoiceDeferredBillingPlan",
+		});
+	}
 };

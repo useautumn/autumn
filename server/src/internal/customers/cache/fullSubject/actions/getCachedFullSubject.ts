@@ -16,6 +16,7 @@ import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { applyLiveAggregatedBalances } from "../balances/applyLiveAggregatedBalances.js";
 import { applyLiveUsageWindows } from "../balances/applyLiveUsageWindows.js";
 import { getCachedFeatureBalancesBatch } from "../balances/getCachedFeatureBalances.js";
+import { buildFullSubjectBalanceGenerationKey } from "../builders/buildFullSubjectBalanceGenerationKey.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../builders/buildFullSubjectViewEpochKey.js";
 import {
@@ -31,6 +32,7 @@ import { shouldWarmCache } from "./warmFullSubjectCache.js";
 export type GetCachedFullSubjectResult = {
 	fullSubject: FullSubject | undefined;
 	subjectViewEpoch: number;
+	balanceGeneration: number;
 };
 
 export const getCachedFullSubject = async ({
@@ -60,15 +62,26 @@ export const getCachedFullSubject = async ({
 		env,
 		customerId,
 	});
+	const generationKey = buildFullSubjectBalanceGenerationKey({
+		orgId: org.id,
+		env,
+		customerId,
+	});
 
-	// Subject + epoch keys share the `{customerId}` hash tag and live on the
-	// same Redis slot, so a single pipeline fetches both in one round trip.
+	// Subject, epoch, and generation keys share one customer slot, so a single
+	// pipeline fetches all three in one round trip.
+
 	// Read-only GETs — epoch TTL is refreshed on writes (setCachedFullSubject
 	// Lua) and on invalidations, not on reads, to avoid write amplification.
 	const pipelineResults = await runRedisOp({
 		operation: async (redis) =>
 			throwOnPipelineConnectionError(
-				await redis.pipeline().get(subjectKey).get(epochKey).exec(),
+				await redis
+					.pipeline()
+					.get(subjectKey)
+					.get(epochKey)
+					.get(generationKey)
+					.exec(),
 			),
 		source: "getCachedFullSubject:pipeline",
 		redisInstance: redisV2,
@@ -76,25 +89,32 @@ export const getCachedFullSubject = async ({
 		useReadPool: true,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
 	});
-
 	const subjectEntry = pipelineResults?.[0];
 	const epochEntry = pipelineResults?.[1];
+	const generationEntry = pipelineResults?.[2];
 	if (subjectEntry?.[0]) throw subjectEntry[0];
 	if (epochEntry?.[0]) throw epochEntry[0];
+	if (generationEntry?.[0]) throw generationEntry[0];
 
 	const cachedRaw = (subjectEntry?.[1] ?? null) as string | null;
 	const epochRaw = (epochEntry?.[1] ?? null) as string | null;
+	const generationRaw = (generationEntry?.[1] ?? null) as string | null;
 
 	// Missing epoch key is treated as 0; the next invalidation will INCR it
 	// from missing to 1, which mismatches any cached subject written at 0.
 	const parsedEpoch =
 		epochRaw !== null ? Number.parseInt(epochRaw, 10) : Number.NaN;
 	const currentSubjectViewEpoch = Number.isNaN(parsedEpoch) ? 0 : parsedEpoch;
-
+	const parsedBalanceGeneration =
+		generationRaw !== null ? Number.parseInt(generationRaw, 10) : Number.NaN;
+	const currentBalanceGeneration = Number.isNaN(parsedBalanceGeneration)
+		? 0
+		: parsedBalanceGeneration;
 	if (!cachedRaw) {
 		return {
 			fullSubject: undefined,
 			subjectViewEpoch: currentSubjectViewEpoch,
+			balanceGeneration: currentBalanceGeneration,
 		};
 	}
 
@@ -117,6 +137,7 @@ export const getCachedFullSubject = async ({
 		return {
 			fullSubject: undefined,
 			subjectViewEpoch: currentSubjectViewEpoch,
+			balanceGeneration: currentBalanceGeneration,
 		};
 	}
 
@@ -141,8 +162,30 @@ export const getCachedFullSubject = async ({
 			return {
 				fullSubject: undefined,
 				subjectViewEpoch: currentSubjectViewEpoch,
+				balanceGeneration: currentBalanceGeneration,
 			};
 		}
+	}
+
+	if (
+		generationRaw === null ||
+		Number.isNaN(parsedBalanceGeneration) ||
+		cached.balanceGeneration !== currentBalanceGeneration
+	) {
+		logger.warn(
+			`[getCachedFullSubject] Stale balance generation for ${customerId}${entityId ? `:${entityId}` : ""}, cached=${cached.balanceGeneration}, current=${generationRaw ?? "missing"}, source: ${source}`,
+		);
+		await invalidateCachedFullSubjectExact({
+			ctx,
+			customerId,
+			entityId,
+			source: "stale-balance-generation",
+		});
+		return {
+			fullSubject: undefined,
+			subjectViewEpoch: currentSubjectViewEpoch,
+			balanceGeneration: currentBalanceGeneration,
+		};
 	}
 
 	if (cached._schemaVersion !== FULL_SUBJECT_CACHE_SCHEMA_VERSION) {
@@ -158,6 +201,7 @@ export const getCachedFullSubject = async ({
 		return {
 			fullSubject: undefined,
 			subjectViewEpoch: currentSubjectViewEpoch,
+			balanceGeneration: currentBalanceGeneration,
 		};
 	}
 
@@ -181,6 +225,7 @@ export const getCachedFullSubject = async ({
 		return {
 			fullSubject: undefined,
 			subjectViewEpoch: currentSubjectViewEpoch,
+			balanceGeneration: currentBalanceGeneration,
 		};
 	}
 
@@ -203,6 +248,7 @@ export const getCachedFullSubject = async ({
 		return {
 			fullSubject: undefined,
 			subjectViewEpoch: currentSubjectViewEpoch,
+			balanceGeneration: currentBalanceGeneration,
 		};
 	}
 
@@ -235,6 +281,7 @@ export const getCachedFullSubject = async ({
 		return {
 			fullSubject: undefined,
 			subjectViewEpoch: currentSubjectViewEpoch,
+			balanceGeneration: currentBalanceGeneration,
 		};
 	}
 
@@ -252,6 +299,7 @@ export const getCachedFullSubject = async ({
 		return {
 			fullSubject: undefined,
 			subjectViewEpoch: currentSubjectViewEpoch,
+			balanceGeneration: currentBalanceGeneration,
 		};
 	}
 
@@ -283,7 +331,11 @@ export const getCachedFullSubject = async ({
 			});
 		}
 
-		return { fullSubject, subjectViewEpoch: currentSubjectViewEpoch };
+		return {
+			fullSubject,
+			subjectViewEpoch: currentSubjectViewEpoch,
+			balanceGeneration: currentBalanceGeneration,
+		};
 	} catch (error) {
 		logger.warn(
 			`[getCachedFullSubject] Failed to hydrate cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,
@@ -297,6 +349,7 @@ export const getCachedFullSubject = async ({
 		return {
 			fullSubject: undefined,
 			subjectViewEpoch: currentSubjectViewEpoch,
+			balanceGeneration: currentBalanceGeneration,
 		};
 	}
 };

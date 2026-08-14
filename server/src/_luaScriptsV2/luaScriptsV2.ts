@@ -15,6 +15,7 @@ import LUA_UTILS from "./luaUtils.lua";
 import adjustSubjectBalanceMainScript from "./fullSubject/adjustSubjectBalance.lua";
 import getDelSharedBalanceFieldsScript from "./fullSubject/getDelSharedBalanceFields.lua";
 import setCachedFullSubjectScript from "./fullSubject/setCachedFullSubject.lua";
+import switchFullSubjectBalanceGenerationScript from "./fullSubject/switchFullSubjectBalanceGeneration.lua";
 import updateCachedInvoiceV2Script from "./fullSubject/updateCachedInvoice.lua";
 import updateCustomerDataV2Script from "./fullSubject/updateCustomerDataV2.lua";
 import updateCustomerProductOptionsScript from "./fullSubject/updateCustomerProduct/updateCustomerProductOptions.lua";
@@ -47,6 +48,9 @@ import UPDATE_SUBJECT_BALANCES_MAIN from "./fullSubject/updateSubjectBalances/up
 
 /** Atomically set a FullSubject cache: subject view + all balance hashes. */
 export const SET_CACHED_FULL_SUBJECT_SCRIPT = `${setCachedFullSubjectScript}`;
+
+/** Atomically replace one complete runtime balance generation with another. */
+export const SWITCH_FULL_SUBJECT_BALANCE_GENERATION_SCRIPT = `${switchFullSubjectBalanceGenerationScript}`;
 
 /** Atomically update top-level customer fields in the cached FullSubject. */
 export const UPDATE_CUSTOMER_DATA_V2_SCRIPT = `${updateCustomerDataV2Script}`;

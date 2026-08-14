@@ -82,11 +82,20 @@ export const PatchCustomerProductSchema = z.object({
 	deleteCustomerPrices: z.array(FullCustomerPriceSchema),
 });
 
+export const AttachBalanceHandoffSchema = z.object({
+	entityId: z.string().optional(),
+	sourceCustomerProductId: z.string(),
+	targetCustomerProductId: z.string(),
+	carryAllConsumableFeatures: z.boolean().optional(),
+	consumableFeatureIdsToCarry: z.array(z.string()).optional(),
+});
+
 export const AutumnBillingPlanSchema = z.object({
 	customerId: z.string(),
 	// Inserted before customer products — provisioned rows may reference them.
 	insertEntities: z.array(EntitySchema).optional(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
+	attachBalanceHandoff: AttachBalanceHandoffSchema.optional(),
 
 	updateCustomerProduct: CustomerProductUpdateSchema.optional(),
 	updateCustomerProducts: z.array(CustomerProductUpdateSchema).optional(),

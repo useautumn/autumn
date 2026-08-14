@@ -33,20 +33,24 @@ export const getOrSetCachedFullSubject = async ({
 	const useRedis = !skipCache;
 
 	let fetchedSubjectViewEpoch = 0;
+	let fetchedBalanceGeneration = 0;
 
 	if (useRedis) {
-		// The pipeline inside getCachedFullSubject already fetches + refreshes
-		// the epoch, so we reuse it on miss instead of a second round trip.
-		const { fullSubject: cached, subjectViewEpoch } =
-			await getCachedFullSubject({
-				ctx,
-				customerId,
-				entityId,
-				source,
-				staleWhileRevalidate,
-				runLazyResets,
-			});
+		// Reuse the epoch and generation fetched with the cache miss.
+		const {
+			fullSubject: cached,
+			subjectViewEpoch,
+			balanceGeneration,
+		} = await getCachedFullSubject({
+			ctx,
+			customerId,
+			entityId,
+			source,
+			staleWhileRevalidate,
+			runLazyResets,
+		});
 		fetchedSubjectViewEpoch = subjectViewEpoch;
+		fetchedBalanceGeneration = balanceGeneration;
 
 		if (cached) {
 			logger.debug(
@@ -79,11 +83,27 @@ export const getOrSetCachedFullSubject = async ({
 
 	// Replica-sourced hydrations must never fill Redis — serve them as-is.
 	if (useRedis && !isReplicaSourced(normalized)) {
-		await setCachedFullSubject({
+		normalized.balanceGeneration = fetchedBalanceGeneration;
+		fullSubject.balanceGeneration = fetchedBalanceGeneration;
+		const cacheWriteResult = await setCachedFullSubject({
 			ctx,
 			normalized,
 			fetchedSubjectViewEpoch,
 		});
+		if (cacheWriteResult !== "OK") {
+			const { fullSubject: winningFullSubject } = await getCachedFullSubject({
+				ctx,
+				customerId,
+				entityId,
+				source: `${source ?? "unknown"}:cache-fill-winner`,
+				staleWhileRevalidate: false,
+				runLazyResets,
+			});
+			return filterDrainedLooseEntitlements({
+				fullSubject: winningFullSubject ?? fullSubject,
+			});
+		}
+
 		logger.info(
 			{
 				type: "subject_miss_fill",

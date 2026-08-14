@@ -423,6 +423,7 @@ export const normalizedToFullSubject = ({
 		subjectType: normalized.subjectType as SubjectType,
 		customerId: normalized.customerId,
 		internalCustomerId: normalized.internalCustomerId,
+		balanceGeneration: normalized.balanceGeneration,
 		...(normalized.entity
 			? {
 					entityId: normalized.entityId,

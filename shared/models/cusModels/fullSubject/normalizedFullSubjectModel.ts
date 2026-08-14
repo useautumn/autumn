@@ -158,6 +158,8 @@ export type NormalizedFullSubject = {
 	subjectType: SubjectType;
 	customerId: string;
 	internalCustomerId: string;
+	/** Redis-owned balance handoff fence; absent on Postgres-only reads. */
+	balanceGeneration?: number;
 	entityId?: string;
 	internalEntityId?: string;
 

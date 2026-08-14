@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
+import {
+	BalanceHandoffInProgressError,
+	RedisUnavailableError,
+} from "@/external/redis/utils/errors.js";
+import { RetryableBalanceSyncError } from "@/internal/balances/utils/sync/syncItemV4.js";
 import { JobName } from "@/queue/JobName.js";
 import { shouldRetrySqsJobError } from "@/queue/processMessage.js";
 
@@ -44,6 +48,40 @@ describe("shouldRetrySqsJobError", () => {
 					source: "runTrackV3",
 					reason: "timeout",
 				}),
+			}),
+		).toBe(true);
+	});
+
+	test("retries balance sync jobs when the generation preflight cannot read Redis", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.SyncBalanceBatchV4,
+				error: new RedisUnavailableError({
+					source: "syncItemV4",
+					reason: "timeout",
+				}),
+			}),
+		).toBe(true);
+	});
+
+	test("retries direct and coalesced sync jobs during a balance handoff", () => {
+		const error = new RetryableBalanceSyncError({
+			reason: "postgres_conflict",
+		});
+
+		for (const jobName of [
+			JobName.SyncBalanceBatchV4,
+			JobName.SyncCustomerDirty,
+		]) {
+			expect(shouldRetrySqsJobError({ jobName, error })).toBe(true);
+		}
+	});
+
+	test("retries a queued track while attach owns a cold cache fill", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.Track,
+				error: new BalanceHandoffInProgressError(),
 			}),
 		).toBe(true);
 	});

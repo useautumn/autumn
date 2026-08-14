@@ -1,16 +1,19 @@
 import type { AppEnv } from "@autumn/shared";
+import { buildFullSubjectBalanceGenerationKey } from "./buildFullSubjectBalanceGenerationKey.js";
 import { buildSharedFullSubjectBalanceKey } from "./buildSharedFullSubjectBalanceKey.js";
 
 // Upstash key-based locking requires every key the Lua script touches to be
 // declared via KEYS[]. Layout the deductFromSubjectBalances script expects:
 //   KEYS[1]  = routing key
-//   KEYS[2]  = lock receipt key ("" when no lock)
-//   KEYS[3]  = idempotency key ("" when request is not idempotent)
-//   KEYS[4+] = per-feature balance hash keys
+//   KEYS[2]  = customer balance-generation key
+//   KEYS[3]  = lock receipt key ("" when no lock)
+//   KEYS[4]  = idempotency key ("" when request is not idempotent)
+//   KEYS[5+] = per-feature balance hash keys
 const ROUTING_KEY_INDEX = 1;
-const LOCK_RECEIPT_KEY_INDEX = 2;
-const IDEMPOTENCY_KEY_INDEX = 3;
-const BALANCE_KEYS_START_INDEX = 4;
+const BALANCE_GENERATION_KEY_INDEX = 2;
+const LOCK_RECEIPT_KEY_INDEX = 3;
+const IDEMPOTENCY_KEY_INDEX = 4;
+const BALANCE_KEYS_START_INDEX = 5;
 
 export const buildDeductFromSubjectBalancesKeys = ({
 	orgId,
@@ -64,6 +67,9 @@ export const buildDeductFromSubjectBalancesKeys = ({
 		BALANCE_KEYS_START_INDEX - 1 + balanceFeatureIds.length,
 	);
 	keys[ROUTING_KEY_INDEX - 1] = routingKey;
+	keys[BALANCE_GENERATION_KEY_INDEX - 1] = buildFullSubjectBalanceGenerationKey(
+		{ orgId, env, customerId },
+	);
 	keys[LOCK_RECEIPT_KEY_INDEX - 1] = lockReceiptKey ?? "";
 	keys[IDEMPOTENCY_KEY_INDEX - 1] = idempotencyKey ?? "";
 	for (let i = 0; i < balanceFeatureIds.length; i++) {
