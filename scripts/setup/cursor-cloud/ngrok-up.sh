@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Idempotent: start Cloud ngrok tunnels if needed, write public-urls.txt, exit.
+# Idempotent: start one Cloud ngrok tunnel for the dashboard, write public-urls.txt, exit.
 # bun dw identify / setup / run call this. The ngrok terminal then stays attached.
-# Random domains — reserved NGROK_API_KEY names collide across Cloud VMs.
+# One tunnel: ngrok free allows a single endpoint. Stripe webhooks use `stripe listen`.
+# Random domain — reserved NGROK_API_KEY names collide across Cloud VMs.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
@@ -10,6 +11,7 @@ export PATH="$ROOT/node_modules/.bin:/usr/local/bin:$HOME/.bun/bin:$PATH"
 AGENT_DIR="${HOME}/.autumn-agent"
 URLS="${AGENT_DIR}/public-urls.txt"
 PIDFILE="${AGENT_DIR}/ngrok.pid"
+LOG="${AGENT_DIR}/ngrok.log"
 CFG="${AGENT_DIR}/ngrok.yml"
 mkdir -p "$AGENT_DIR"
 
@@ -26,7 +28,7 @@ if [ -z "${NGROK_AUTHTOKEN:-}" ] && [ -n "${INFISICAL_TOKEN:-}" ]; then
 fi
 
 # Infisical also injects NGROK_API_KEY (reserved domains). Those names collide
-# across Cloud VMs — this config uses random *.ngrok.app instead.
+# across Cloud VMs — this config uses a random *.ngrok.app instead.
 unset NGROK_API_KEY
 
 write_tunnels() {
@@ -51,6 +53,13 @@ open(out, "w").write(text)
 PY
 }
 
+dump_log() {
+	if [ -f "$LOG" ]; then
+		echo "[cursor-cloud-ngrok] ngrok.log:" >&2
+		tail -n 40 "$LOG" >&2
+	fi
+}
+
 if curl -sf http://127.0.0.1:4040/api/tunnels >/dev/null 2>&1; then
 	echo "[cursor-cloud-ngrok] already running"
 	write_tunnels
@@ -70,22 +79,24 @@ fi
 cat > "$CFG" <<EOF
 version: "2"
 authtoken: ${NGROK_AUTHTOKEN}
+web_addr: 127.0.0.1:4040
 tunnels:
-  api:
-    addr: 8080
-    proto: http
   vite:
     addr: 3000
     proto: http
 EOF
 chmod 600 "$CFG"
-echo "[cursor-cloud-ngrok] starting tunnels → :8080 (api) and :3000 (dashboard)"
-nohup ngrok start --all --config "$CFG" --log=stdout \
-	>"${AGENT_DIR}/ngrok.log" 2>&1 &
+echo "[cursor-cloud-ngrok] starting dashboard tunnel → :3000"
+nohup ngrok start vite --config "$CFG" --log=stdout \
+	>"$LOG" 2>&1 &
 echo $! >"$PIDFILE"
 
 wrote=0
-for _ in $(seq 1 30); do
+for _ in $(seq 1 60); do
+	if [ -f "$PIDFILE" ] && ! kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+		echo "[cursor-cloud-ngrok] ngrok process exited" >&2
+		break
+	fi
 	if curl -sf http://127.0.0.1:4040/api/tunnels >/dev/null 2>&1; then
 		write_tunnels
 		wrote=1
@@ -95,6 +106,10 @@ for _ in $(seq 1 30); do
 done
 if [ "$wrote" -eq 0 ]; then
 	echo "[cursor-cloud-ngrok] inspector :4040 never came up" >&2
+	dump_log
+	if [ -f "$PIDFILE" ]; then
+		kill "$(cat "$PIDFILE")" 2>/dev/null || true
+	fi
 	echo "ngrok started but inspector :4040 did not respond" >"$URLS"
 	exit 1
 fi

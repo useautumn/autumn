@@ -47,8 +47,8 @@ export function cmdIdentify(): void {
 			? "(canonical worktree — not in tmux)"
 			: "(inline dev)");
 	const cloud = cloudPublicUrls();
-	const ngrokUrl = entry.ngrokUrl ?? cloud.api ?? "";
 	const ngrokViteUrl = entry.ngrokViteUrl ?? cloud.vite;
+	const ngrokUrl = entry.ngrokUrl ?? cloud.api ?? ngrokViteUrl ?? "";
 	const ngrokHuman =
 		ngrokUrl ||
 		(isProvisioned(entry)

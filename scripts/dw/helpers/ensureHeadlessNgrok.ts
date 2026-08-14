@@ -37,11 +37,15 @@ export function ensureHeadlessNgrok(entry: RegistryEntry): RegistryEntry {
 		log(`ngrok-up.sh exited ${code} — continuing without a public URL`);
 	}
 	const urls = urlsFromDisk();
+	const dashboard = urls.vite ?? urls.api;
 	const next: RegistryEntry = {
 		...entry,
-		...(urls.api && { ngrokUrl: urls.api }),
+		...(dashboard && { ngrokUrl: urls.api ?? dashboard }),
 		...(urls.vite && { ngrokViteUrl: urls.vite }),
 	};
+	if (!next.ngrokUrl && next.ngrokViteUrl) {
+		next.ngrokUrl = next.ngrokViteUrl;
+	}
 	const registry = loadRegistry();
 	registry[entry.path] = { ...(registry[entry.path] ?? next), ...next };
 	saveRegistry(registry);
