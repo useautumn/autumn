@@ -50,7 +50,8 @@ Axiom/PlanetScale OAuth servers.
 
 Boot does **not** start `bun dw`. Run it when the task needs the app. Infisical,
 ports, and stripe listen notes live in `CURSOR.md` (not auto-loaded — this
-section is).
+section is). The in-IDE Browser tab stays blank (Cursor bug, any URL) — open
+`http://localhost:3000` from Ports in Chrome/Safari, or the ngrok URL.
 
 {AGENTS_END}
 """.lstrip()

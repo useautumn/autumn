@@ -181,13 +181,16 @@ If the CLI is present but the sandbox key is missing, `DW_HEADLESS=1` skips
 ## Opening the dashboard from your laptop
 
 There is no SSH into this VM, so a manual `ssh -L` port-forward is not an option.
-Three ways to click around the running app:
+
+The in-IDE **Browser** tab stays blank even when Vite is up — Cursor bug, any
+URL, not Autumn. Each agent is its own VM, so another chat's Browser is a
+different `localhost:3000`. Use one of:
 
 1. **Cursor port forwarding** (closest to SSH `-L`). `.cursor/environment.json`
    declares `ports` 8080 / 3000 / 3001. In the agent editor, open the plug /
    Ports panel — Cursor forwards them to **localhost on your laptop**. Then
-   open `http://localhost:3000`. Vite `allowedHosts` is wide open when
-   `DW_HEADLESS=1` so preview hostnames do not 403.
+   open `http://localhost:3000` in Chrome or Safari. Vite `allowedHosts` is
+   wide open when `DW_HEADLESS=1` so preview hostnames do not 403.
 2. **Remote desktop** on the agent page — take control, open Chrome with
    `--no-sandbox`, go to `http://localhost:3000`. Most reliable if Ports is empty.
 3. **ngrok** — on Cloud, `bun dw setup` / `bun dw` / `bun dw run` always

@@ -26,7 +26,8 @@ else
 fi
 echo
 echo "Open the dashboard from your laptop (best first):"
-echo "  1. Cursor port forwarding — plug / Ports in the agent editor → http://localhost:3000"
+echo "  Skip the in-IDE Browser tab — it stays blank (Cursor bug, any URL)."
+echo "  1. Cursor port forwarding — plug / Ports in the agent editor → http://localhost:3000 in Chrome/Safari"
 echo "  2. Remote desktop on the agent page → Chrome --no-sandbox → http://localhost:3000"
 echo "  3. Public URL — ngrok terminal (needs Team Runtime Secret NGROK_AUTHTOKEN)"
 if [ -s "${HOME}/.autumn-agent/public-urls.txt" ]; then

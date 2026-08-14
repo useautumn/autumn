@@ -11,6 +11,13 @@ import tsconfigPaths from "vite-tsconfig-paths";
 process.env.VITE_BACKEND_URL ||= "http://localhost:8080";
 process.env.VITE_FRONTEND_URL ||= "http://localhost:3000";
 
+const isDwHeadless =
+	process.env.DW_HEADLESS === "1" || process.env.DW_HEADLESS === "true";
+
+const vitePort = process.env.VITE_PORT
+	? Number.parseInt(process.env.VITE_PORT, 10)
+	: 3000;
+
 function printPortlessUrl(): Plugin {
 	return {
 		name: "print-portless-url",
@@ -124,36 +131,34 @@ export default defineConfig({
 
 	server: {
 		host: "0.0.0.0", // Required for Docker
-		port: process.env.VITE_PORT
-			? Number.parseInt(process.env.VITE_PORT, 10)
-			: 3000,
+		port: vitePort,
 		strictPort: false, // Allow fallback to next available port
-		// Make the printed "Local:" URL reflect portless when available.
-		...(process.env.VITE_FRONTEND_URL && {
-			origin: process.env.VITE_FRONTEND_URL,
-		}),
-		allowedHosts:
-			process.env.DW_HEADLESS === "1" || process.env.DW_HEADLESS === "true"
-				? true
-				: [
-						"dev.useautumn.com",
-						"client.dev.useautumn.com",
-						"localhost",
-						".localhost",
-						// Cloud sandboxes reach the dashboard through a per-worktree ngrok
-						// tunnel; without this Vite answers 403 "This host is not allowed".
-						".ngrok.app",
-						".ngrok-free.app",
-					],
+		// Laptop portless preview needs an absolute origin. Cloud already
+		// allows any Host (`allowedHosts: true`); pin origin/HMR the same way
+		// so Ports / ngrok use the request host instead of localhost:3000.
+		...(!isDwHeadless &&
+			process.env.VITE_FRONTEND_URL && {
+				origin: process.env.VITE_FRONTEND_URL,
+			}),
+		allowedHosts: isDwHeadless
+			? true
+			: [
+					"dev.useautumn.com",
+					"client.dev.useautumn.com",
+					"localhost",
+					".localhost",
+					// Cloud sandboxes reach the dashboard through a per-worktree ngrok
+					// tunnel; without this Vite answers 403 "This host is not allowed".
+					".ngrok.app",
+					".ngrok-free.app",
+				],
 		watch: {
 			usePolling: true, // Required for file watching in Docker on Windows
 			interval: 1000,
 		},
-		hmr: {
-			port: process.env.VITE_PORT
-				? Number.parseInt(process.env.VITE_PORT)
-				: 3000,
-		},
+		...(!isDwHeadless && {
+			hmr: { port: vitePort },
+		}),
 		fs: {
 			// Allow serving files from workspace root (monorepo support)
 			allow: [".."],
