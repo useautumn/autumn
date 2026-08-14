@@ -57,6 +57,29 @@ export const executeBatchMigrationPage = async ({
 	const repointedIds = new Set<string>();
 
 	for (const patch of plan.patches) {
+		// Removes run first: an add landing before its sibling remove would be
+		// dropped again by a filter matching the same feature.
+		for (const remove of patch.removeEntitlementOps) {
+			const result = await removeCustomerEntitlementsForPage({
+				db: ctx.db,
+				scope: patch.scope,
+				internalCustomerIds: pageInternalIds,
+				fromProduct: patch.fromProduct,
+				remove,
+				phases,
+			});
+			removedItems.push(...result.removedItems);
+			ctx.logger.debug("batch-migration: remove operation", {
+				data: {
+					opIndex: patch.opIndex,
+					planId: patch.fromProduct.id,
+					featureId: remove.entitlement.feature.id,
+					candidateCount: result.candidateCount,
+					affected: result.affected,
+				},
+			});
+		}
+
 		for (const add of patch.addEntitlementOps) {
 			const result = await addCustomerEntitlementsForPage({
 				db: ctx.db,
@@ -79,27 +102,6 @@ export const executeBatchMigrationPage = async ({
 					candidateCount: result.candidateCount,
 					affected: result.affected,
 					excluded: result.excludedInternalCustomerIds.length,
-				},
-			});
-		}
-
-		for (const remove of patch.removeEntitlementOps) {
-			const result = await removeCustomerEntitlementsForPage({
-				db: ctx.db,
-				scope: patch.scope,
-				internalCustomerIds: pageInternalIds,
-				fromProduct: patch.fromProduct,
-				remove,
-				phases,
-			});
-			removedItems.push(...result.removedItems);
-			ctx.logger.debug("batch-migration: remove operation", {
-				data: {
-					opIndex: patch.opIndex,
-					planId: patch.fromProduct.id,
-					featureId: remove.entitlement.feature.id,
-					candidateCount: result.candidateCount,
-					affected: result.affected,
 				},
 			});
 		}
