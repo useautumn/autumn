@@ -25,10 +25,12 @@ const messagesEnt = ({
 	id,
 	allowance,
 	interval,
+	intervalCount = 1,
 }: {
 	id: string;
 	allowance: number;
 	interval: EntInterval | null;
+	intervalCount?: number;
 }): EntitlementWithFeature =>
 	({
 		id,
@@ -39,7 +41,7 @@ const messagesEnt = ({
 		allowance_type: AllowanceType.Fixed,
 		allowance,
 		interval,
-		interval_count: 1,
+		interval_count: intervalCount,
 		feature: messagesFeature,
 	}) as unknown as EntitlementWithFeature;
 
@@ -123,6 +125,31 @@ describe("computeLicenseProductTransitions", () => {
 		expect(result.transitions[0]?.toEntitlementPrice.entitlement.id).toBe(
 			"ent_monthly",
 		);
+	});
+
+	test("a different interval_count on the same feature is added, not a transition", () => {
+		const monthly = messagesEnt({
+			id: "ent_monthly",
+			allowance: 100,
+			interval: EntInterval.Month,
+		});
+		const quarterly = messagesEnt({
+			id: "ent_quarterly",
+			allowance: 300,
+			interval: EntInterval.Month,
+			intervalCount: 3,
+		});
+
+		const result = computeLicenseProductTransitions({
+			fromLicenseProduct: licenseProduct({ entitlements: [monthly] }),
+			mintedEntitlements: [quarterly],
+		});
+
+		expect(result.added.map((price) => price.entitlement.id)).toEqual([
+			"ent_quarterly",
+		]);
+		expect(result.transitions).toHaveLength(0);
+		expect(result.deleted).toHaveLength(0);
 	});
 
 	test("a brand-new feature is added", () => {
