@@ -1,10 +1,9 @@
 import type { AppEnv, ChatProvider } from "@autumn/shared";
-import { db } from "../../../../lib/db.js";
-import { parsePreviewPayload } from "../../../../ui/previewContent.js";
-import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
+import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
+import { db } from "../../../lib/db.js";
+import { parsePreviewPayload } from "../../../ui/previewContent.js";
 
-/** A pending approval, shaped for the dashboard to render (preview + the write's args). */
-export type WebApproval = {
+type WebApproval = {
 	id: string;
 	tool_name: string;
 	tool_args: unknown;
@@ -12,7 +11,6 @@ export type WebApproval = {
 	created_at: number;
 };
 
-/** Pending approvals for a web chat thread, newest first. */
 export const listWebApprovals = async ({
 	channelId,
 	env,

@@ -1,4 +1,4 @@
-import type { AppEnv, ChatProvider } from "@autumn/shared";
+import type { AppEnv } from "@autumn/shared";
 import type { AgentThreadRef } from "../../internal/agentRuntime/domain/agentTurnContext.js";
 import {
 	deleteHarnessSessionsByPrefix,
@@ -7,8 +7,8 @@ import {
 import { WEB_CHAT_PROVIDER } from "../../internal/installations/actions/ensureWebChatAuth.js";
 import type { ChatDb } from "../../lib/db.js";
 
-/** The chat-sdk thread id for a dashboard conversation. `getUser` encodes the
- * org into the user id with `~`; the conversation id is the dashboard route id. */
+const DEFAULT_WEB_THREAD_LIMIT = 10;
+
 export const buildWebChatThreadId = ({
 	conversationId,
 	orgId,
@@ -25,8 +25,6 @@ export type WebThreadSummary = {
 	updatedAt: number;
 };
 
-/** thread_key prefix (provider:workspace:channel…) covering one user's
- * dashboard conversations; the conversation id is the segment after it. */
 const webThreadKeyPrefix = ({
 	orgId,
 	userId,
@@ -35,13 +33,10 @@ const webThreadKeyPrefix = ({
 	userId: string;
 }) => `${WEB_CHAT_PROVIDER}:${orgId}:web:${userId}~${orgId}:`;
 
-/** Recent dashboard conversations for one user, newest first. Sessions are
- * keyed by thread_key (provider:workspace:channel:thread:env), so the user's
- * threads are a key-prefix scan within org+env. */
 export const listWebThreads = async ({
 	db,
 	env,
-	limit = 10,
+	limit = DEFAULT_WEB_THREAD_LIMIT,
 	orgId,
 	userId,
 }: {
@@ -99,7 +94,7 @@ export const webThreadRef = ({
 	orgId: string;
 }): AgentThreadRef => ({
 	channelId: chatThreadId,
-	provider: WEB_CHAT_PROVIDER as ChatProvider,
+	provider: WEB_CHAT_PROVIDER,
 	threadId: chatThreadId,
 	workspaceId: orgId,
 });

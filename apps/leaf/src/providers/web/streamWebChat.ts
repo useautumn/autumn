@@ -1,16 +1,8 @@
 import crypto from "node:crypto";
-import type { ChatProvider } from "@autumn/shared";
-import {
-	createUIMessageStream,
-	createUIMessageStreamResponse,
-	type UIMessage,
-} from "ai";
+import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { resolveAgentCatalogDecision } from "../../internal/agentRuntime/actions/resolveCatalogDecision/resolveAgentCatalogDecision.js";
 import { runAgentTurn } from "../../internal/agentRuntime/actions/runAgentTurn/runAgentTurn.js";
-import type {
-	AgentTurnAttachment,
-	AgentTurnContext,
-} from "../../internal/agentRuntime/domain/agentTurnContext.js";
+import type { AgentTurnContext } from "../../internal/agentRuntime/domain/agentTurnContext.js";
 import { createApproval } from "../../internal/approvals/actions/createApproval.js";
 import {
 	ensureWebChatAuth,
@@ -24,60 +16,11 @@ import {
 	NO_REPLY_MESSAGE,
 } from "../../ui/messages.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
+import type { DashboardAuth } from "./authDashboard.js";
 import { resolveDashboardEnv } from "./dashboardEnv.js";
+import { parseWebChatRequest } from "./parseWebChatRequest.js";
 import type { LeafUiMessage } from "./types.js";
 import { buildWebChatThreadId, webThreadRef } from "./webThread.js";
-
-const DATA_URL_REGEX = /^data:([^;]+);base64,(.*)$/s;
-
-const dataUrlToAttachment = (
-	url: string,
-	name?: string,
-): AgentTurnAttachment | null => {
-	const match = DATA_URL_REGEX.exec(url);
-	return match
-		? { data: Buffer.from(match[2], "base64"), mimeType: match[1], name }
-		: null;
-};
-
-const parseRequest = (body: { id?: string; messages?: UIMessage[] }) => {
-	const userMessages = (body.messages ?? []).filter(
-		(message) => message.role === "user",
-	);
-	const lastUser = userMessages.at(-1);
-	const parts = lastUser?.parts ?? [];
-	const text = parts
-		.filter((part) => part.type === "text")
-		.map((part) => part.text)
-		.join("");
-	const attachments = parts.flatMap((part) =>
-		part.type === "file" && part.url
-			? ([dataUrlToAttachment(part.url, part.filename)].filter(
-					Boolean,
-				) as AgentTurnAttachment[])
-			: [],
-	);
-	// Structured, one-turn-only context (e.g. a submitted CatalogDecisionCard
-	// choice or a clicked question chip), sent as AI SDK message `metadata`
-	// alongside the readable text.
-	const metadata = lastUser?.metadata as
-		| {
-				catalogDecision?: Record<string, unknown>;
-				questionResponse?: { optionId: string; requestId: string };
-		  }
-		| undefined;
-	const clientContext = metadata?.catalogDecision
-		? { catalogDecision: metadata.catalogDecision }
-		: undefined;
-	return {
-		attachments,
-		clientContext,
-		conversationId: body.id,
-		isFirstUserMessage: userMessages.length <= 1,
-		questionResponse: metadata?.questionResponse,
-		text,
-	};
-};
 
 const withCors = (response: Response, origin?: string) => {
 	if (!origin) return response;
@@ -98,14 +41,13 @@ export const streamWebChat = async ({
 	origin,
 	request,
 }: {
-	auth: { orgId: string; userId: string; scopes: string[] };
+	auth: DashboardAuth;
 	origin?: string;
 	request: Request;
 }): Promise<Response> => {
-	const body = (await request.json()) as {
-		id?: string;
-		messages?: UIMessage[];
-	};
+	const body = (await request.json()) as Parameters<
+		typeof parseWebChatRequest
+	>[0];
 	const {
 		attachments,
 		clientContext,
@@ -113,7 +55,7 @@ export const streamWebChat = async ({
 		isFirstUserMessage,
 		questionResponse,
 		text,
-	} = parseRequest(body);
+	} = parseWebChatRequest(body);
 	if (!conversationId) {
 		return new Response("Missing conversation id", { status: 400 });
 	}
@@ -132,7 +74,7 @@ export const streamWebChat = async ({
 			const { accessToken } = await getOrgInstallationToken({
 				env,
 				orgId,
-				provider: WEB_CHAT_PROVIDER as ChatProvider,
+				provider: WEB_CHAT_PROVIDER,
 				workspaceId: orgId,
 				userId,
 			});
@@ -235,7 +177,7 @@ export const streamWebChat = async ({
 					getToken: async () => accessToken,
 					logger,
 					orgId,
-					provider: WEB_CHAT_PROVIDER as ChatProvider,
+					provider: WEB_CHAT_PROVIDER,
 					providerUserId: userId,
 					turn: output,
 					workspaceId: orgId,

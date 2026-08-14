@@ -1,22 +1,23 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { type AppEnv, cmaSessions, type ChatProvider } from "@autumn/shared";
+import { type AppEnv, type ChatProvider, cmaSessions } from "@autumn/shared";
+import { getTime, isValid, parseISO } from "date-fns";
 import { and, eq } from "drizzle-orm";
-import type { AgentThreadRef } from "../../internal/agentRuntime/domain/agentTurnContext.js";
+import type { AgentThreadRef } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
+import { extractUserMessageText } from "../../../internal/agentRuntime/messages/agentMessageText.js";
+import { buildAgentThreadKey } from "../../../internal/agentRuntime/sessions/agentThreadKey.js";
 import {
 	isSilentTool,
 	sandboxToolLabel,
 	toolLabel,
-} from "../../internal/agentRuntime/tools/toolPolicy.js";
-import { extractUserMessageText } from "../../internal/agentRuntime/messages/agentMessageText.js";
-import { buildAgentThreadKey } from "../../internal/agentRuntime/sessions/agentThreadKey.js";
-import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
-import type { ChatDb } from "../../lib/db.js";
-import { parsePreviewPayload } from "../../ui/previewContent.js";
+} from "../../../internal/agentRuntime/tools/toolPolicy.js";
+import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
+import type { ChatDb } from "../../../lib/db.js";
+import { parsePreviewPayload } from "../../../ui/previewContent.js";
 import type {
 	LeafApprovalStatus,
 	LeafUiMessage,
 	TimestampedMessage,
-} from "./types.js";
+} from "../types.js";
 
 const client = new Anthropic();
 
@@ -44,8 +45,8 @@ const replaySession = async (sessionId: string) => {
 
 	for await (const event of client.beta.sessions.events.list(sessionId)) {
 		if ("processed_at" in event && typeof event.processed_at === "string") {
-			const parsed = Date.parse(event.processed_at);
-			if (Number.isFinite(parsed)) lastTs = parsed;
+			const parsed = parseISO(event.processed_at);
+			if (isValid(parsed)) lastTs = getTime(parsed);
 		}
 		if (event.type === "user.message") {
 			flush();

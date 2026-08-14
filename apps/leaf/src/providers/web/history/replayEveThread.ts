@@ -1,41 +1,25 @@
-import type { AppEnv, CatalogPlanPreview, ChatProvider } from "@autumn/shared";
-import { catalogPlanNeedingDecision } from "../../internal/agentRuntime/actions/resolveCatalogDecision/catalogDecisionPolicy.js";
-import { streamEveEvents } from "../../internal/agentRuntime/eve/client.js";
+import type { CatalogPlanPreview } from "@autumn/shared";
+import { getTime, isValid, parseISO } from "date-fns";
+import { catalogPlanNeedingDecision } from "../../../internal/agentRuntime/actions/resolveCatalogDecision/catalogDecisionPolicy.js";
+import { streamEveEvents } from "../../../internal/agentRuntime/eve/client.js";
 import {
 	displayEveToolLabel,
 	isPreviewToolName,
 	labelForResult,
 	textForInputRequests,
-} from "../../internal/agentRuntime/eve/events.js";
+} from "../../../internal/agentRuntime/eve/events.js";
 import type {
 	EveAuthContext,
 	EveSessionRef,
-} from "../../internal/agentRuntime/eve/types.js";
-import { extractUserMessageText } from "../../internal/agentRuntime/messages/agentMessageText.js";
-import { normalizeToolName } from "../../internal/agentRuntime/tools/toolPolicy.js";
-import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
-import type { ChatDb } from "../../lib/db.js";
-import { parsePreviewPayload } from "../../ui/previewContent.js";
-import type {
-	LeafApprovalStatus,
-	LeafUiMessage,
-	TimestampedMessage,
-} from "./types.js";
-
-const unwrapRequest = (args: unknown) =>
-	args && typeof args === "object" && "request" in args
-		? (args as { request: unknown }).request
-		: args;
-
-const toApprovalStatus = (status: string): LeafApprovalStatus => {
-	if (status === "approved") return "approved";
-	if (status === "pending" || status === "running") return "pending";
-	return "rejected";
-};
+} from "../../../internal/agentRuntime/eve/types.js";
+import { extractUserMessageText } from "../../../internal/agentRuntime/messages/agentMessageText.js";
+import { normalizeToolName } from "../../../internal/agentRuntime/tools/toolPolicy.js";
+import { parsePreviewPayload } from "../../../ui/previewContent.js";
+import type { TimestampedMessage } from "../types.js";
 
 const eventTs = (at?: string) => {
-	const parsed = at ? Date.parse(at) : NaN;
-	return Number.isFinite(parsed) ? parsed : Date.now();
+	const parsed = at ? parseISO(at) : undefined;
+	return parsed && isValid(parsed) ? getTime(parsed) : Date.now();
 };
 
 const collectEveEvents = async ({
@@ -75,7 +59,7 @@ const collectEveEvents = async ({
 	return events;
 };
 
-const eveEventsToUiMessages = async ({
+export const replayEveThread = async ({
 	auth,
 	session,
 }: {
@@ -89,8 +73,6 @@ const eveEventsToUiMessages = async ({
 		data: { status: "answered" | "pending" };
 		ts: number;
 	}> = [];
-	// The one live part not replayable from a single event: a preview that needs
-	// versioning/variant decisions renders a card when its turn ends unanswered.
 	let pendingDecision:
 		| { message: TimestampedMessage; plan: CatalogPlanPreview }
 		| undefined;
@@ -114,9 +96,6 @@ const eveEventsToUiMessages = async ({
 		const ts = eventTs(event.at);
 		if (event.type === "message.received") {
 			const text = extractUserMessageText(event.message);
-			// Eve holds a follow-up sent during a pending approval and replays it
-			// once resolved — the replay is a second message.received with the same
-			// text, so a repeated consecutive user message is an echo, not a send.
 			const lastUser = [...timeline]
 				.reverse()
 				.find((item) => item.msg.role === "user");
@@ -132,17 +111,16 @@ const eveEventsToUiMessages = async ({
 					},
 					ts,
 				});
-				// The user moved on — a decision card is only re-rendered when it's
-				// still the thread's trailing state.
 				pendingDecision = undefined;
 			}
 		} else if (event.type === "actions.requested") {
 			for (const action of event.actions) {
-				if (action.callId)
+				if (action.callId) {
 					toolCalls.set(action.callId, {
 						label: displayEveToolLabel(action),
 						startedAt: ts,
 					});
+				}
 			}
 		} else if (event.type === "action.result") {
 			const result = event.result;
@@ -175,7 +153,6 @@ const eveEventsToUiMessages = async ({
 			}
 		} else if (event.type === "input.requested") {
 			const requests = event.requests;
-			// Approval-shaped requests re-render from chat_approvals, not replay.
 			const isApproval = requests.some(
 				(request) =>
 					request.requestId &&
@@ -252,86 +229,4 @@ const eveEventsToUiMessages = async ({
 	}
 
 	return timeline.filter((item) => item.msg.parts.length > 0);
-};
-
-export const buildEveWebHistory = async ({
-	auth,
-	channelId,
-	db,
-	env,
-	orgId,
-	provider,
-	session,
-	workspaceId,
-}: {
-	auth: EveAuthContext;
-	channelId: string;
-	db: ChatDb;
-	env: AppEnv;
-	orgId: string;
-	provider: ChatProvider;
-	session: EveSessionRef;
-	workspaceId: string;
-}): Promise<LeafUiMessage[]> => {
-	const [timeline, approvals] = await Promise.all([
-		eveEventsToUiMessages({ auth, session }),
-		chatApprovalRepo.listForChannel({
-			channelId,
-			db,
-			env,
-			orgId,
-			provider,
-			workspaceId,
-		}),
-	]);
-
-	const ordered = [...timeline].sort((a, b) => a.ts - b.ts);
-	// A live pending approval owns the thread's trailing state — the replayed
-	// preview must not also render a decision card beside it.
-	const hasPendingApproval = approvals.some(
-		(approval) => toApprovalStatus(approval.status) === "pending",
-	);
-	if (hasPendingApproval) {
-		for (const item of ordered) {
-			item.msg.parts = item.msg.parts.filter(
-				(part) => part.type !== "data-catalog-decision",
-			);
-		}
-	}
-	const standalones: TimestampedMessage[] = [];
-	for (const approval of approvals) {
-		const part = {
-			data: {
-				approvalId: approval.id,
-				params: unwrapRequest(approval.tool_args),
-				preview: parsePreviewPayload(approval.preview),
-				status: toApprovalStatus(approval.status),
-				toolName: approval.tool_name,
-			},
-			id: approval.id,
-			type: "data-approval" as const,
-		};
-		const owner = [...ordered]
-			.reverse()
-			.find(
-				(item) =>
-					item.msg.role === "assistant" && item.ts <= approval.created_at,
-			);
-		if (owner) {
-			owner.msg.parts.push(part);
-		} else {
-			standalones.push({
-				msg: {
-					id: `approval-${approval.id}`,
-					parts: [part],
-					role: "assistant",
-				},
-				ts: approval.created_at,
-			});
-		}
-	}
-
-	return [...ordered, ...standalones]
-		.sort((a, b) => a.ts - b.ts)
-		.map((item) => item.msg);
 };

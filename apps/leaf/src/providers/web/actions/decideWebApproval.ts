@@ -1,19 +1,14 @@
-import { discardApproval } from "../../actions/discardApproval.js";
-import { db } from "../../../../lib/db.js";
-import { logger } from "../../../../lib/logger.js";
-import { resolveApproval } from "../../actions/resolveApproval.js";
-import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
+import { discardApproval } from "../../../internal/approvals/actions/discardApproval.js";
+import { resolveApproval } from "../../../internal/approvals/actions/resolveApproval.js";
+import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
+import { db } from "../../../lib/db.js";
+import { logger } from "../../../lib/logger.js";
 
-export type WebApprovalDecision =
+type WebApprovalDecision =
 	| { status: "approved"; text: string }
 	| { status: "rejected"; text?: string }
 	| { error: string };
 
-/**
- * Resolve a web approval. Approve resumes the suspended turn (the write runs)
- * and returns its continuation text for the dashboard to append; reject cancels
- * the pending row.
- */
 export const decideWebApproval = async ({
 	action,
 	approvalId,
@@ -34,13 +29,10 @@ export const decideWebApproval = async ({
 	}
 
 	if (action === "reject") {
-		// Eve parks the whole turn on the approval — deny it in the session too,
-		// or it keeps waiting, holds the user's next message behind the stale
-		// approval, and the discarded write can still run later.
+		// Deny Eve remotely so discarded writes cannot resume later.
 		let text: string | undefined;
 		if (approval.harness === "eve") {
-			// The local cancel below must run even if the remote deny throws, or
-			// the approval stays pending and the dashboard keeps showing it.
+			// Always cancel locally even if the remote denial fails.
 			try {
 				const denied = await discardApproval({ approval, providerUserId });
 				if ("error" in denied && denied.error) {
