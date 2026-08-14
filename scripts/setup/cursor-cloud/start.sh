@@ -51,8 +51,12 @@ if [ -z "\${INFISICAL_TOKEN:-}" ] && [ -s "\${HOME}/.cache/autumn-infisical-toke
   INFISICAL_TOKEN="\$(cat "\${HOME}/.cache/autumn-infisical-token")"
   export INFISICAL_TOKEN
 fi
-if [ -z "\${INFISICAL_TOKEN:-}" ]; then
+# Guard: BASH_ENV sources this file for every bash child. Without it,
+# login.sh → BASH_ENV → this file → login.sh forks until the VM hangs.
+if [ -z "\${INFISICAL_TOKEN:-}" ] && [ -z "\${AUTUMN_INFISICAL_LOGIN_RUNNING:-}" ]; then
+  export AUTUMN_INFISICAL_LOGIN_RUNNING=1
   INFISICAL_TOKEN="\$("${ROOT}/scripts/setup/cursor-cloud/infisical-machine-login.sh" 2>/dev/null || true)"
+  unset AUTUMN_INFISICAL_LOGIN_RUNNING
   [ -n "\$INFISICAL_TOKEN" ] && export INFISICAL_TOKEN
 fi
 if [ -f "${ROOT}/scripts/setup/cursor-cloud/isolation.env" ]; then

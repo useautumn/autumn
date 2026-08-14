@@ -12,6 +12,10 @@
 #
 # Always talks to the real CLI binary (not the PATH shim). Prints the token to stdout.
 set -euo pipefail
+# env.sh is BASH_ENV; this flag stops env.sh from re-invoking this script.
+export AUTUMN_INFISICAL_LOGIN_RUNNING=1
+# Do not inherit BASH_ENV into the real CLI or further bash children.
+unset BASH_ENV
 CACHE="${HOME}/.cache/autumn-infisical-token"
 mkdir -p "${HOME}/.cache"
 
