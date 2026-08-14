@@ -1,3 +1,4 @@
+import { ms } from "@autumn/shared";
 import { env } from "../../../lib/env.js";
 import { type EveEvent, parseEveEvent } from "./eveEventSchemas.js";
 import { isRetryableEveStreamError } from "./streamErrors.js";
@@ -152,7 +153,7 @@ export const postEveInputResponse = async ({
 
 /** Longest observed gap between events on a healthy turn is ~60s (model
  * latency on a large context), so anything past this reads as a dead stream. */
-const STREAM_IDLE_TIMEOUT_MS = 120_000;
+const STREAM_IDLE_TIMEOUT_MS = ms.minutes(2);
 
 export class EveStreamIdleTimeoutError extends Error {
 	constructor(sessionId: string) {
@@ -229,7 +230,7 @@ export async function* streamEveEvents({
 	}
 }
 
-const REPLAY_QUIET_GAP_MS = 2000;
+const REPLAY_QUIET_GAP_MS = ms.seconds(2);
 
 const countEveReplayableEvents = async ({
 	auth,
