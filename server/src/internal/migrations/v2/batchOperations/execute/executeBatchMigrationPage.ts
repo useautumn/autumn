@@ -62,6 +62,7 @@ export const executeBatchMigrationPage = async ({
 		for (const remove of patch.removeEntitlementOps) {
 			const result = await removeCustomerEntitlementsForPage({
 				db: ctx.db,
+				features: ctx.features,
 				scope: patch.scope,
 				internalCustomerIds: pageInternalIds,
 				fromProduct: patch.fromProduct,

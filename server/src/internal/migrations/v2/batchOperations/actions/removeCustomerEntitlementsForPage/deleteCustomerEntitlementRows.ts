@@ -6,8 +6,7 @@ import {
 	operationScopeSql,
 } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 
-/** Matches by definition id so a custom or grandfathered row stays out of
- * reach, and re-asserts scope because the select took its own snapshot.
+/** Re-asserts scope because the select took its own snapshot.
  *
  * Pooled and rollover state is checked against the rows, not just the catalog:
  * both outlive a flag being turned off, and the FKs cascade, so a row that
@@ -15,15 +14,15 @@ import {
 export const deleteCustomerEntitlementRows = async ({
 	db,
 	customerProductIds,
-	entitlementId,
+	entitlementIds,
 	scope,
 }: {
 	db: DrizzleCli;
 	customerProductIds: string[];
-	entitlementId: string;
+	entitlementIds: string[];
 	scope: OperationScope;
 }): Promise<string[]> => {
-	if (customerProductIds.length === 0) return [];
+	if (customerProductIds.length === 0 || entitlementIds.length === 0) return [];
 
 	const deleted = await db.execute<{ customer_product_id: string }>(sql`
 		WITH dropped AS (
@@ -33,7 +32,7 @@ export const deleteCustomerEntitlementRows = async ({
 				AND definition.id = target.entitlement_id
 				AND ${operationScopeSql({ scope })}
 				AND target.customer_product_id IN (${sqlList({ values: customerProductIds })})
-				AND target.entitlement_id = ${entitlementId}
+				AND target.entitlement_id IN (${sqlList({ values: entitlementIds })})
 				AND definition.pooled IS NOT TRUE
 				AND NOT target.is_pooled_balance
 				AND target.pooled_contribution_id IS NULL

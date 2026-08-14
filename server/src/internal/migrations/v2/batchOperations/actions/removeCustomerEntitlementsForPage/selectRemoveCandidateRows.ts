@@ -2,6 +2,7 @@ import { CusProductStatus } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
 import {
 	type OperationScope,
 	operationScopeSql,
@@ -35,17 +36,19 @@ export const selectRemoveCandidateRows = async ({
 	db,
 	internalCustomerIds,
 	scope,
-	entitlementId,
+	entitlementIds,
 	afterCustomerProductId,
 	limit,
 }: {
 	db: DrizzleCli;
 	internalCustomerIds: string[];
 	scope: OperationScope;
-	entitlementId: string;
+	entitlementIds: string[];
 	afterCustomerProductId?: string;
 	limit?: number;
 }): Promise<RemoveCandidateRow[]> => {
+	if (entitlementIds.length === 0) return [];
+
 	const rows = await db.execute(sql`
 		SELECT
 			cp.id AS customer_product_id,
@@ -68,7 +71,7 @@ export const selectRemoveCandidateRows = async ({
 				INNER JOIN entitlements AS definition
 					ON definition.id = existing.entitlement_id
 				WHERE existing.customer_product_id = cp.id
-					AND existing.entitlement_id = ${entitlementId}
+					AND existing.entitlement_id IN (${sqlList({ values: entitlementIds })})
 					AND definition.pooled IS NOT TRUE
 					AND NOT existing.is_pooled_balance
 					AND existing.pooled_contribution_id IS NULL
