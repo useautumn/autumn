@@ -18,6 +18,12 @@ export const batchMigrationPlanToExecutionPlan = ({
 				entitlement: operation.entitlementPrice.entitlement,
 				initialState: operation.initialState,
 			})),
+			removeEntitlementOps: patch.operations.removeEntitlements.map(
+				(operation) => ({
+					entitlement: operation.entitlementPrice.entitlement,
+					entitlementIds: [operation.entitlementPrice.entitlement.id],
+				}),
+			),
 			licenseEntitlementOps: patch.operations.licenseEntitlements,
 		};
 	}),
