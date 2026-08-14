@@ -51,6 +51,9 @@ export type CursorPaginatedFullCusQueryArgs = {
 	customerId?: string;
 	/** Emit products_page / products_total_count. Dashboard only. */
 	withProductsPage?: boolean;
+	/** Products holding cusEnts for these features bypass the cusProductLimit
+	 * preview cap, so displayed balances sum every live row. */
+	balanceFeatureInternalIds?: string[];
 	sortOrder?: SortOrder;
 };
 
@@ -101,9 +104,21 @@ export const getCursorPaginatedFullCusQuery = ({
 	cusProductLimit,
 	customerId,
 	withProductsPage = false,
+	balanceFeatureInternalIds,
 	sortOrder = "desc",
 }: CursorPaginatedFullCusQueryArgs) => {
 	const cpStatusFilter = cpStatusInClause(inStatuses);
+
+	const holdsBalanceFeatureExpr = balanceFeatureInternalIds?.length
+		? sql`EXISTS (
+				SELECT 1 FROM customer_entitlements fce
+				WHERE fce.customer_product_id = cp.id
+					AND fce.internal_feature_id IN (${sql.join(
+						balanceFeatureInternalIds.map((id) => sql`${id}`),
+						sql`, `,
+					)})
+			)`
+		: sql`false`;
 
 	// products_page / products_total_count are only rendered by the dashboard.
 	// The public API path never reads them, and building them costs two extra
@@ -242,6 +257,7 @@ export const getCursorPaginatedFullCusQuery = ({
 				row_to_json(cp) AS cp_json,
 				prod.is_add_on AS prod_is_add_on,
 				row_to_json(prod) AS prod_json,
+				${holdsBalanceFeatureExpr} AS holds_balance_feature,
 				ROW_NUMBER() OVER (
 					PARTITION BY cp.internal_customer_id
 					ORDER BY prod.is_add_on ASC, cp.created_at DESC
@@ -261,7 +277,7 @@ export const getCursorPaginatedFullCusQuery = ({
 				cp.subscription_ids,
 				(cp.cp_json::jsonb || jsonb_build_object('product', cp.prod_json::jsonb))::json AS row_json
 			FROM cp_ranked_raw cp
-			WHERE cp.rn <= ${cusProductLimit}
+			WHERE cp.rn <= ${cusProductLimit} OR cp.holds_balance_feature
 		),
 		cp_counts AS MATERIALIZED (
 			SELECT internal_customer_id, COUNT(*)::int AS n
