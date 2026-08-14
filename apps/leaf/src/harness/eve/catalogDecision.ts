@@ -7,9 +7,15 @@ import type {
 import type { ThreadRef } from "../../agent/runMessage/types.js";
 import { normalizeToolName } from "../../agent/tools/toolPolicy.js";
 import { fetchApprovalPreview } from "../../internal/approvals/utils/fetchApprovalPreview.js";
+import {
+	publicToolArgs,
+	toolRequestFromArgs,
+} from "../../internal/approvals/utils/toolRequest.js";
 import { db } from "../../lib/db.js";
 import type { Suspension } from "../../types.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
+import { adoptPostedEveSession } from "./adoptPostedSession.js";
+import { siblingRequestIdsFromToolArgs } from "./classifyParkedInput.js";
 import { postEveInputResponse } from "./client.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
 import type { EveAuthContext } from "./types.js";
@@ -64,10 +70,7 @@ export const enrichCatalogPreview = async ({
 	preview: unknown;
 }): Promise<unknown> => {
 	if (!isCatalogPreviewShape(preview)) return preview;
-	const request =
-		input && typeof input.request === "object"
-			? (input.request as Record<string, unknown>)
-			: input;
+	const request = toolRequestFromArgs(input);
 	const plans = Array.isArray(request?.plans)
 		? (request.plans as Record<string, unknown>[])
 		: undefined;
@@ -114,16 +117,8 @@ const hasExplicitVersioning = (request: Record<string, unknown>) => {
 	);
 };
 
-const requestFromSuspension = (suspension: Suspension) => {
-	const {
-		_eveApproveOptionId: _approve,
-		_eveDenyOptionId: _deny,
-		...rest
-	} = suspension.toolArgs;
-	return rest.request && typeof rest.request === "object"
-		? (rest.request as Record<string, unknown>)
-		: rest;
-};
+const requestFromSuspension = (suspension: Suspension) =>
+	toolRequestFromArgs(publicToolArgs(suspension.toolArgs)) ?? {};
 
 /** The one chokepoint the model can't skip: an `updateCatalog` suspension.
  * When the (flag-forced) preview shows the plan needs versioning/variant/
@@ -195,10 +190,9 @@ export const redirectCatalogSuspensionToDecision = async ({
 			optionId: denyOptionId,
 			requestId: suspension.toolCallId,
 			session,
+			siblingRequestIds: siblingRequestIdsFromToolArgs(suspension.toolArgs),
 		});
-		session.sessionId = posted.sessionId;
-		session.state.continuationToken = posted.continuationToken;
-		session.state.status = "waiting";
+		adoptPostedEveSession({ posted, session, status: "waiting" });
 		await upsertEveSession({
 			db,
 			env: session.env,

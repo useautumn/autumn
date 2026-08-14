@@ -18,16 +18,10 @@ import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
 } from "../../utils/fetchApprovalPreview.js";
-
-const getRequest = (args?: Record<string, unknown>) =>
-	args?.request && typeof args.request === "object"
-		? (args.request as Record<string, unknown>)
-		: args;
-
-const publicToolArgs = (args: Record<string, unknown>) =>
-	Object.fromEntries(
-		Object.entries(args).filter(([key]) => !key.startsWith("_eve")),
-	);
+import {
+	publicToolArgs,
+	toolRequestFromArgs,
+} from "../../utils/toolRequest.js";
 
 /** Posts the card for an approval row that already exists (a chained write
  * surfaced by an approve/answer resume, which never flows through
@@ -121,7 +115,7 @@ export const presentApproval = async ({
 				env: approval.env,
 				orgId,
 			});
-			const request = getRequest(publicToolArgs(approval.toolArgs));
+			const request = toolRequestFromArgs(publicToolArgs(approval.toolArgs));
 			if (request) {
 				const preview = await fetchApprovalPreview({
 					env: approval.env,

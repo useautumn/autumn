@@ -10,16 +10,10 @@ import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
 } from "../../utils/fetchApprovalPreview.js";
-
-const getRequest = (args?: Record<string, unknown>) =>
-	args?.request && typeof args.request === "object"
-		? (args.request as Record<string, unknown>)
-		: args;
-
-const publicToolArgs = (args: Record<string, unknown>) =>
-	Object.fromEntries(
-		Object.entries(args).filter(([key]) => !key.startsWith("_eve")),
-	);
+import {
+	publicToolArgs,
+	toolRequestFromArgs,
+} from "../../utils/toolRequest.js";
 
 /**
  * Record an approval for a suspended web turn. The dashboard fetches it via
@@ -70,7 +64,7 @@ export const presentWebApproval = async ({
 		})
 	) {
 		try {
-			const request = getRequest(publicToolArgs(approval.toolArgs));
+			const request = toolRequestFromArgs(publicToolArgs(approval.toolArgs));
 			if (request) {
 				const preview = await fetchApprovalPreview({
 					env: approval.env,
@@ -117,9 +111,7 @@ export const presentWebApproval = async ({
 
 	return {
 		approvalId,
-		params:
-			getRequest(publicToolArgs(approval.toolArgs)) ??
-			publicToolArgs(approval.toolArgs),
+		params: toolRequestFromArgs(publicToolArgs(approval.toolArgs)),
 		preview: approval.preview,
 		toolName: approval.toolName,
 	};

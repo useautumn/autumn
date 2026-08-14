@@ -106,12 +106,18 @@ export const postEveMessage = async ({
 	return parseSessionResponse({ existing: session, response });
 };
 
+/** Written to the model, not the user: the siblings are denied for a procedural
+ * reason, and without saying so the model reads six denials as six rejections. */
+export const SIBLING_WITHHELD_NOTE =
+	"(The other pending write approvals in this batch were withheld, not rejected on their merits — approvals are shown to the user one at a time. Re-issue each withheld write as its own separate step so the user can approve it individually.)";
+
 export const postEveInputResponse = async ({
 	auth,
 	note,
 	optionId,
 	requestId,
 	session,
+	siblingRequestIds,
 }: {
 	auth: EveAuthContext;
 	/** Context sent with the answer — a gate-deny and a user-discard are
@@ -120,14 +126,30 @@ export const postEveInputResponse = async ({
 	optionId: string;
 	requestId: string;
 	session: EveSessionRef;
+	/** The rest of the parked batch this answer belongs to. */
+	siblingRequestIds?: string[];
 }) => {
+	// Eve defers every delivery while ANY request in the parked batch is
+	// unanswered: answering only the carded one wedges the session on empty
+	// turns forever, so the siblings are denied here rather than left open.
+	const siblings = [...new Set(siblingRequestIds ?? [])].filter(
+		(siblingRequestId) => siblingRequestId && siblingRequestId !== requestId,
+	);
 	const response = await fetch(eveUrl(`/eve/v1/session/${session.sessionId}`), {
 		method: "POST",
 		headers: eveHeaders(auth, { "content-type": "application/json" }),
 		body: JSON.stringify({
 			continuationToken: session.state.continuationToken,
-			inputResponses: [{ optionId, requestId }],
-			message: note,
+			inputResponses: [
+				{ optionId, requestId },
+				...siblings.map((siblingRequestId) => ({
+					optionId: "deny",
+					requestId: siblingRequestId,
+				})),
+			],
+			message: siblings.length
+				? [note, SIBLING_WITHHELD_NOTE].filter(Boolean).join("\n\n")
+				: note,
 		}),
 	});
 	return parseSessionResponse({ existing: session, response });
