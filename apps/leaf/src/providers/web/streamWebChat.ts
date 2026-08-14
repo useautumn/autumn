@@ -5,12 +5,12 @@ import {
 	createUIMessageStreamResponse,
 	type UIMessage,
 } from "ai";
+import { resolveCatalogDecision } from "../../internal/agentRuntime/actions/resolveCatalogDecision/resolveCatalogDecision.js";
+import { runAgentTurn } from "../../internal/agentRuntime/actions/runAgentTurn/runAgentTurn.js";
 import type {
 	AgentTurnAttachment,
 	AgentTurnContext,
 } from "../../internal/agentRuntime/domain/agentTurnContext.js";
-import { redirectCatalogSuspensionToDecision } from "../../internal/agentRuntime/eve/catalogDecision.js";
-import { runAgentTurn } from "../../internal/agentRuntime/actions/runAgentTurn/runAgentTurn.js";
 import { presentWebApproval } from "../../internal/approvals/surfaces/web/present.js";
 import {
 	ensureWebChatAuth,
@@ -203,7 +203,7 @@ export const streamWebChat = async ({
 
 			finishLastStep();
 			if (output.kind === "approval") {
-				const decisionPlan = await redirectCatalogSuspensionToDecision({
+				const decisionPlan = await resolveCatalogDecision({
 					decisionProvided: Boolean(clientContext?.catalogDecision),
 					env,
 					logger,

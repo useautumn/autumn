@@ -1,33 +1,22 @@
-import type { ChatApproval } from "@autumn/shared";
-import { db } from "../../../lib/db.js";
-import { adoptPostedEveSession } from "./adoptPostedSession.js";
-import {
-	classifyParkedEveInput,
-	siblingRequestIdsFromToolArgs,
-} from "./classifyParkedInput.js";
+import { ms } from "@autumn/shared";
+import { db } from "../../../../lib/db.js";
+import { adoptPostedEveSession } from "../../eve/adoptPostedSession.js";
 import {
 	EveStreamIdleTimeoutError,
 	postEveInputResponse,
 	resyncEveStreamIndex,
 	streamEveEvents,
-} from "./client.js";
-import { approvalOptionIds } from "./events.js";
-import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
-import type { EveAuthContext, EveSessionRef } from "./types.js";
+} from "../../eve/client.js";
+import { approvalOptionIds } from "../../eve/events.js";
+import { classifyParkedEveInput } from "../../eve/parkedInput.js";
+import { upsertEveSession } from "../../eve/repo.js";
+import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
+import { QUEUED_TURN_WITHDRAWAL_NOTE } from "./agentInputNotes.js";
 
-const DRAIN_DENY_NOTE =
-	"(The user sent a newer message before this was shown, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; act on the user's next message instead.)";
 const MAX_DRAIN_DENIES = 3;
-const DRAIN_IDLE_TIMEOUT_MS = 60_000;
+const DRAIN_IDLE_TIMEOUT_MS = ms.minutes(1);
 
-export const denyOptionFromApproval = (approval: ChatApproval) => {
-	const args = approval.tool_args as Record<string, unknown>;
-	return typeof args._eveDenyOptionId === "string"
-		? args._eveDenyOptionId
-		: "deny";
-};
-
-export const drainParkedEveTurn = async ({
+export const drainParkedAgentTurn = async ({
 	auth,
 	orgId,
 	session,
@@ -61,7 +50,7 @@ export const drainParkedEveTurn = async ({
 						});
 						const posted = await postEveInputResponse({
 							auth,
-							note: DRAIN_DENY_NOTE,
+							note: QUEUED_TURN_WITHDRAWAL_NOTE,
 							optionId: options.deny,
 							requestId: parked.chained.requestId,
 							session,
@@ -100,39 +89,4 @@ export const drainParkedEveTurn = async ({
 		state: session.state,
 		threadKey: session.threadKey,
 	});
-};
-
-export const withdrawEveSuspension = async ({
-	auth,
-	orgId,
-	runId,
-	suspension,
-}: {
-	auth: EveAuthContext;
-	orgId: string;
-	runId: string;
-	suspension: { toolArgs: Record<string, unknown>; toolCallId?: string };
-}) => {
-	if (!suspension.toolCallId) return false;
-	const session = await getEveSessionBySessionId({
-		db,
-		orgId,
-		sessionId: runId,
-	});
-	if (!session) return false;
-	const denyOptionId =
-		typeof suspension.toolArgs._eveDenyOptionId === "string"
-			? suspension.toolArgs._eveDenyOptionId
-			: "deny";
-	const posted = await postEveInputResponse({
-		auth,
-		note: DRAIN_DENY_NOTE,
-		optionId: denyOptionId,
-		requestId: suspension.toolCallId,
-		session,
-		siblingRequestIds: siblingRequestIdsFromToolArgs(suspension.toolArgs),
-	});
-	adoptPostedEveSession({ posted, session, status: "running" });
-	await drainParkedEveTurn({ auth, orgId, session });
-	return true;
 };

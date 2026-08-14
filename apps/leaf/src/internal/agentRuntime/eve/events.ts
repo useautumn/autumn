@@ -40,7 +40,9 @@ export const displayEveToolLabel = (actionOrLabel: EveAction | string) => {
 export const isPreviewToolName = (toolName: string) =>
 	/^preview/i.test(normalizeToolName(toolName));
 
-export const approvalOptionIds = (request: EveInputRequest) => {
+export const approvalOptionIds = (request: {
+	options?: ReadonlyArray<Readonly<{ id?: string; label?: string }>>;
+}) => {
 	const options = request.options ?? [];
 	const optionText = (option: { id?: string; label?: string }) =>
 		`${option.id ?? ""} ${option.label ?? ""}`.toLowerCase();
@@ -59,7 +61,9 @@ export const approvalOptionIds = (request: EveInputRequest) => {
 	return { approve, deny };
 };
 
-export const textForInputRequests = (requests: EveInputRequest[]) =>
+export const textForInputRequests = (
+	requests: ReadonlyArray<EveInputRequest>,
+) =>
 	requests
 		.map((request) => {
 			const options = request.options

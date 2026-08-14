@@ -1,7 +1,5 @@
 import type { AppEnv, CatalogPlanPreview, ChatProvider } from "@autumn/shared";
-import { normalizeToolName } from "../../internal/agentRuntime/tools/toolPolicy.js";
-import { extractUserMessageText } from "../../internal/agentRuntime/messages/agentMessageText.js";
-import { catalogPlanNeedingDecision } from "../../internal/agentRuntime/eve/catalogDecision.js";
+import { catalogPlanNeedingDecision } from "../../internal/agentRuntime/actions/resolveCatalogDecision/catalogDecisionPolicy.js";
 import { streamEveEvents } from "../../internal/agentRuntime/eve/client.js";
 import {
 	displayEveToolLabel,
@@ -13,6 +11,8 @@ import type {
 	EveAuthContext,
 	EveSessionRef,
 } from "../../internal/agentRuntime/eve/types.js";
+import { extractUserMessageText } from "../../internal/agentRuntime/messages/agentMessageText.js";
+import { normalizeToolName } from "../../internal/agentRuntime/tools/toolPolicy.js";
 import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
 import type { ChatDb } from "../../lib/db.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";

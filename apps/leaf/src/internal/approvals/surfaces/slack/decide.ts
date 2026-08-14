@@ -8,7 +8,7 @@ import type { ActionEvent } from "chat";
 import { differenceInMilliseconds } from "date-fns";
 import { and, eq } from "drizzle-orm";
 import { resolveSlackCallerAuth } from "../../../../providers/slack/setup/resolveSlackCallerAuth.js";
-import { denyEveApproval } from "../../../agentRuntime/eve/approval.js";
+import { discardApproval } from "../../actions/discardApproval.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";
@@ -202,7 +202,7 @@ export const handleApprovalActionWithDeps = async ({
 			// or it keeps waiting, holds the next message behind the stale approval,
 			// and the discarded write can still run later.
 			if (approval.harness === "eve" && approval.status === "pending") {
-				const denied = await denyEveApproval({ approval, providerUserId });
+				const denied = await discardApproval({ approval, providerUserId });
 				if ("error" in denied && denied.error) {
 					deps.logger.warn("Could not deny Eve approval on dismiss", {
 						event: "leaf.eve_dismiss_deny_failed",

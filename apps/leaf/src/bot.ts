@@ -7,10 +7,10 @@ import { createPostgresState } from "@chat-adapter/state-pg";
 import { createWebAdapter } from "@chat-adapter/web";
 import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
+import { answerAgentQuestion } from "./internal/agentRuntime/actions/answerAgentQuestion/answerAgentQuestion.js";
+import { resolveCatalogDecision } from "./internal/agentRuntime/actions/resolveCatalogDecision/resolveCatalogDecision.js";
+import { withdrawAgentTurnApproval } from "./internal/agentRuntime/actions/withdrawAgentTurnApproval/withdrawAgentTurnApproval.js";
 import type { AgentContextMessage } from "./internal/agentRuntime/domain/agentTurnContext.js";
-import { answerEveQuestion } from "./internal/agentRuntime/eve/approval.js";
-import { redirectCatalogSuspensionToDecision } from "./internal/agentRuntime/eve/catalogDecision.js";
-import { withdrawEveSuspension } from "./internal/agentRuntime/eve/parkedTurn.js";
 import { chatApprovalRepo } from "./internal/approvals/repos/chatApprovalRepo.js";
 import { handleApprovalAction } from "./internal/approvals/surfaces/slack/decide.js";
 import {
@@ -41,6 +41,7 @@ import {
 	createLeafSessionContext,
 	logger as rootLogger,
 } from "./lib/logger.js";
+import { runSlackAgentTurn } from "./providers/slack/actions/runSlackAgentTurn.js";
 import { getSlackWorkspaceId } from "./providers/slack/context.js";
 import {
 	getSlackEventWorkspaceId,
@@ -53,7 +54,6 @@ import {
 } from "./providers/slack/files.js";
 import { findInstallationWithOrg } from "./providers/slack/installations.js";
 import { getRecentMessages } from "./providers/slack/threadContext.js";
-import { runSlackAgentTurn } from "./providers/slack/actions/runSlackAgentTurn.js";
 import {
 	ANSWER_QUESTION_ACTION,
 	CATALOG_DECISION_ACTION,
@@ -73,8 +73,8 @@ import {
 	QUESTION_ANSWER_FAILED_MESSAGE,
 	questionAnswerFailedWithDetail,
 	RUN_STOPPED_FOR_TIME_MESSAGE,
-	runStoppedByUserNotice,
 	RUN_TIMED_OUT_MESSAGE,
+	runStoppedByUserNotice,
 } from "./ui/messages.js";
 import type { ReplyTarget } from "./ui/progress.js";
 import { createStatusTicker } from "./ui/statusTicker.js";
@@ -368,7 +368,8 @@ const runAndReply = async ({
 		if (hasQueuedThreadMessage(runKey)) {
 			if (output.kind === "approval") {
 				try {
-					await withdrawEveSuspension({
+					await withdrawAgentTurnApproval({
+						approval: output.approval,
 						auth: {
 							appEnv: output.env,
 							channelId,
@@ -379,8 +380,7 @@ const runAndReply = async ({
 							workspaceId: outputInstallation.workspace_id,
 						},
 						orgId,
-						runId: output.sessionId,
-						suspension: output.approval,
+						sessionId: output.sessionId,
 					});
 				} catch (error) {
 					logger.warn("Could not withdraw suspension for queued message", {
@@ -405,7 +405,7 @@ const runAndReply = async ({
 					env: output.env,
 					orgId,
 				});
-				decisionPlan = await redirectCatalogSuspensionToDecision({
+				decisionPlan = await resolveCatalogDecision({
 					decisionProvided: Boolean(clientContext?.catalogDecision),
 					env: output.env,
 					logger,
@@ -647,7 +647,7 @@ bot.onAction(indexedActionIds(ANSWER_QUESTION_ACTION), async (event) => {
 	}
 
 	try {
-		const result = await answerEveQuestion({
+		const result = await answerAgentQuestion({
 			auth: {
 				appEnv: payload.e as AppEnv,
 				channelId: event.thread?.channelId ?? event.threadId,

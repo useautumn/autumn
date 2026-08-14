@@ -9,12 +9,9 @@
 import { buildCatalogDecisionModel, parsePreviewPayload } from "@autumn/render";
 import type { ChatApproval } from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
-import { runSlackAgentTurn } from "../../src/providers/slack/actions/runSlackAgentTurn.js";
-import {
-	answerEveQuestion,
-	denyEveApproval,
-} from "../../src/internal/agentRuntime/eve/approval.js";
-import { redirectCatalogSuspensionToDecision } from "../../src/internal/agentRuntime/eve/catalogDecision.js";
+import { answerAgentQuestion } from "../../src/internal/agentRuntime/actions/answerAgentQuestion/answerAgentQuestion.js";
+import { resolveCatalogDecision } from "../../src/internal/agentRuntime/actions/resolveCatalogDecision/resolveCatalogDecision.js";
+import { discardApproval } from "../../src/internal/approvals/actions/discardApproval.js";
 import { resolveApproval } from "../../src/internal/approvals/actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../src/internal/approvals/repos/chatApprovalRepo.js";
 import { presentApproval } from "../../src/internal/approvals/surfaces/slack/present.js";
@@ -22,9 +19,10 @@ import { executeAutumnMcpTool } from "../../src/internal/autumnMcp/client.js";
 import { getInstallationOAuthAccessToken } from "../../src/internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { db } from "../../src/lib/db.js";
 import { logger } from "../../src/lib/logger.js";
+import { runSlackAgentTurn } from "../../src/providers/slack/actions/runSlackAgentTurn.js";
+import type { SlackChatInstallation } from "../../src/providers/slack/domain/slackAgentTurn.js";
 import { createEveSlackPresenter } from "../../src/providers/slack/evePresenter.js";
 import { findInstallationWithOrg } from "../../src/providers/slack/installations.js";
-import type { SlackChatInstallation } from "../../src/providers/slack/domain/slackAgentTurn.js";
 import { catalogDecisionCard } from "../../src/ui/eveCards.js";
 import { createStatusTicker } from "../../src/ui/statusTicker.js";
 
@@ -469,7 +467,7 @@ const main = async () => {
 				: undefined;
 		check("S4 approval row exists", Boolean(approval));
 		if (approval) {
-			const denied = await denyEveApproval({
+			const denied = await discardApproval({
 				approval,
 				providerUserId: USER_A,
 			});
@@ -516,7 +514,7 @@ const main = async () => {
 		);
 		if (turn.output.kind === "question") {
 			const option = turn.output.question.options[0];
-			const answer = await answerEveQuestion({
+			const answer = await answerAgentQuestion({
 				auth: {
 					appEnv: AppEnv.Sandbox,
 					channelId: threadId,
@@ -608,7 +606,7 @@ const main = async () => {
 		let plan =
 			turn.output.kind === "catalog_decision" ? turn.output.plan : undefined;
 		if (!plan && turn.output.kind === "approval") {
-			plan = await redirectCatalogSuspensionToDecision({
+			plan = await resolveCatalogDecision({
 				decisionProvided: false,
 				env: AppEnv.Sandbox,
 				logger,
@@ -697,7 +695,7 @@ const main = async () => {
 				runId: turn.output.sessionId,
 			});
 			if (approval) {
-				await denyEveApproval({ approval, providerUserId: USER_A });
+				await discardApproval({ approval, providerUserId: USER_A });
 				await chatApprovalRepo.cancel({
 					approvalId: approval.id,
 					db,
@@ -811,7 +809,7 @@ const main = async () => {
 					runId: turn.output.sessionId,
 				});
 				if (approval) {
-					await denyEveApproval({ approval, providerUserId: USER_A });
+					await discardApproval({ approval, providerUserId: USER_A });
 					await chatApprovalRepo.cancel({
 						approvalId: approval.id,
 						db,

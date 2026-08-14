@@ -20,7 +20,7 @@ export type ApprovalRunResult =
 			/** The resumed turn parked on an ask_question — rich surfaces render
 			 * the options as buttons. */
 			question?: {
-				options: { id?: string; label?: string }[];
+				options: ReadonlyArray<Readonly<{ id?: string; label?: string }>>;
 				prompt: string;
 				requestId: string;
 				sessionId: string;

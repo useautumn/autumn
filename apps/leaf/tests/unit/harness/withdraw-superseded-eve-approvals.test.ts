@@ -75,10 +75,10 @@ await mockLeafModule({
 
 const drainedSessionIds: string[] = [];
 await mockLeafModule({
-	specifier: "../../../src/internal/agentRuntime/eve/parkedTurn.js",
+	specifier:
+		"../../../src/internal/agentRuntime/actions/submitAgentInput/drainParkedAgentTurn.js",
 	factory: () => ({
-		denyOptionFromApproval: () => "deny",
-		drainParkedEveTurn: async ({ session }: { session: EveSessionRef }) => {
+		drainParkedAgentTurn: async ({ session }: { session: EveSessionRef }) => {
 			drainedSessionIds.push(session.sessionId);
 		},
 	}),
@@ -94,8 +94,8 @@ await mockLeafModule({
 	}),
 });
 
-const { withdrawSupersededEveApprovals } = await import(
-	"../../../src/internal/agentRuntime/eve/supersededApprovals.js"
+const { withdrawSupersededApprovals } = await import(
+	"../../../src/internal/approvals/actions/withdrawSupersededApprovals.js"
 );
 
 const approval = (id: string, toolCallId?: string) =>
@@ -129,7 +129,7 @@ let session: EveSessionRef;
 let supersededBatches: ChatApproval[][];
 
 const withdraw = () =>
-	withdrawSupersededEveApprovals({
+	withdrawSupersededApprovals({
 		auth,
 		logger,
 		onApprovalsSuperseded: async (approvals) => {
@@ -141,7 +141,7 @@ const withdraw = () =>
 		thread,
 	});
 
-describe("withdrawSupersededEveApprovals", () => {
+describe("withdrawSupersededApprovals", () => {
 	beforeEach(() => {
 		pendingApprovals = [];
 		failingRequestIds.clear();

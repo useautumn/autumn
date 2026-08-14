@@ -2,7 +2,7 @@ import { autumnOrgContextService } from "../../../../autumnMcp/orgContextService
 import { db } from "../../../../../lib/db.js";
 import type { AgentTurnContext } from "../../../domain/agentTurnContext.js";
 import { getEveSession } from "../../../eve/repo.js";
-import { withdrawSupersededEveApprovals } from "../../../eve/supersededApprovals.js";
+import { withdrawSupersededApprovals } from "../../../../approvals/actions/withdrawSupersededApprovals.js";
 import type { EveAuthContext } from "../../../eve/types.js";
 
 export const prepareAgentTurn = async ({
@@ -34,7 +34,7 @@ export const prepareAgentTurn = async ({
 		} as const;
 	}
 
-	await withdrawSupersededEveApprovals({
+	await withdrawSupersededApprovals({
 		auth,
 		logger,
 		onApprovalsSuperseded,

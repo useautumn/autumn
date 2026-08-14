@@ -122,7 +122,7 @@ export const postEveInputResponse = async ({
 	requestId: string;
 	session: EveSessionRef;
 	/** The rest of the parked batch this answer belongs to. */
-	siblingRequestIds?: string[];
+	siblingRequestIds?: ReadonlyArray<string>;
 }) => {
 	// Eve defers every delivery while ANY request in the parked batch is
 	// unanswered: answering only the carded one wedges the session on empty

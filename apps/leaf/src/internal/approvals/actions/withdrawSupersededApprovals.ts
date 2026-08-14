@@ -1,21 +1,23 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval } from "@autumn/shared";
-import { chatApprovalRepo } from "../../approvals/repos/chatApprovalRepo.js";
 import { db } from "../../../lib/db.js";
 import { APPROVAL_STILL_OPEN_MESSAGE } from "../../../ui/messages.js";
-import { adoptPostedEveSession } from "./adoptPostedSession.js";
-import { siblingRequestIdsFromToolArgs } from "./classifyParkedInput.js";
-import { postEveInputResponse } from "./client.js";
-import { denyOptionFromApproval, drainParkedEveTurn } from "./parkedTurn.js";
-import { saveEveSessionState } from "./sessionState.js";
-import type { EveAuthContext, EveSessionRef } from "./types.js";
-import type { AgentThreadRef } from "../domain/agentTurnContext.js";
+import { drainParkedAgentTurn } from "../../agentRuntime/actions/submitAgentInput/drainParkedAgentTurn.js";
+import type { AgentThreadRef } from "../../agentRuntime/domain/agentTurnContext.js";
+import { adoptPostedEveSession } from "../../agentRuntime/eve/adoptPostedSession.js";
+import { postEveInputResponse } from "../../agentRuntime/eve/client.js";
+import { siblingRequestIdsFromToolArgs } from "../../agentRuntime/eve/parkedInput.js";
+import { saveEveSessionState } from "../../agentRuntime/eve/sessionState.js";
+import type {
+	EveAuthContext,
+	EveSessionRef,
+} from "../../agentRuntime/eve/types.js";
+import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
+import { denyOptionFromApproval } from "./approvalOptions.js";
 
 const WITHDRAWN_NOTE =
 	"(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; their new message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one.)";
 
-/** Whether eve let go of this card. A refusal leaves the row pending, so the
- * card stays decidable and the next message retries the withdrawal. */
 const withdrewInEve = async ({
 	approval,
 	auth,
@@ -29,7 +31,6 @@ const withdrewInEve = async ({
 	orgId: string;
 	session: EveSessionRef;
 }) => {
-	// A card eve never registered has nothing to withdraw.
 	if (!approval.tool_call_id) return true;
 	try {
 		const posted = await postEveInputResponse({
@@ -41,10 +42,7 @@ const withdrewInEve = async ({
 			siblingRequestIds: siblingRequestIdsFromToolArgs(approval.tool_args),
 		});
 		adoptPostedEveSession({ posted, session, status: "running" });
-		// Discard the withdrawal turn's reply — without this, its text would end
-		// THIS run and the user's actual message would be processed with nobody
-		// streaming.
-		await drainParkedEveTurn({ auth, orgId, session });
+		await drainParkedAgentTurn({ auth, orgId, session });
 		return true;
 	} catch (error) {
 		logger.warn("Could not deny superseded Eve approval", {
@@ -56,8 +54,6 @@ const withdrewInEve = async ({
 	}
 };
 
-/** Moves cards left pending onto the session id eve re-homed the run to, so
- * they stay findable once the new id is persisted over the old one. */
 const rehomeUndecidedApprovals = async ({
 	approvals,
 	sessionId,
@@ -66,7 +62,6 @@ const rehomeUndecidedApprovals = async ({
 	sessionId: string;
 }) => {
 	for (const approval of approvals) {
-		// Listed by run_id, so a row without one already moved on.
 		if (!approval.run_id || approval.run_id === sessionId) continue;
 		await chatApprovalRepo.moveToRun({
 			approvalId: approval.id,
@@ -77,10 +72,7 @@ const rehomeUndecidedApprovals = async ({
 	}
 };
 
-/** Cancels the approval cards the user answered with a new message rather than
- * a decision, in eve as well as locally, so this turn streams from a clean
- * park instead of queueing behind a request nobody will decide. */
-export const withdrawSupersededEveApprovals = async ({
+export const withdrawSupersededApprovals = async ({
 	auth,
 	logger,
 	onApprovalsSuperseded,
@@ -128,8 +120,6 @@ export const withdrawSupersededEveApprovals = async ({
 	}
 	if (undecidedApprovals.length === 0) return;
 
-	// A partial withdrawal may already have re-homed eve onto a new session id —
-	// persist it, but move the surviving cards first or they orphan on the old one.
 	await rehomeUndecidedApprovals({
 		approvals: undecidedApprovals,
 		sessionId: session.sessionId,

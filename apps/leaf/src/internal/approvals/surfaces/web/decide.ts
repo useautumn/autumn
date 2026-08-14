@@ -1,4 +1,4 @@
-import { denyEveApproval } from "../../../agentRuntime/eve/approval.js";
+import { discardApproval } from "../../actions/discardApproval.js";
 import { db } from "../../../../lib/db.js";
 import { logger } from "../../../../lib/logger.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
@@ -42,7 +42,7 @@ export const decideWebApproval = async ({
 			// The local cancel below must run even if the remote deny throws, or
 			// the approval stays pending and the dashboard keeps showing it.
 			try {
-				const denied = await denyEveApproval({ approval, providerUserId });
+				const denied = await discardApproval({ approval, providerUserId });
 				if ("error" in denied && denied.error) {
 					logger.warn("Could not deny Eve approval on reject", {
 						event: "leaf.eve_reject_deny_failed",

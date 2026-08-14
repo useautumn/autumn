@@ -68,8 +68,11 @@ await mockLeafModule({
 	}),
 });
 
-const { denyEveApproval, resumeEveApproval } = await import(
-	"../../../src/internal/agentRuntime/eve/approval.js"
+const { discardApproval } = await import(
+	"../../../src/internal/approvals/actions/discardApproval.js"
+);
+const { resumeApproval } = await import(
+	"../../../src/internal/approvals/actions/resumeApproval.js"
 );
 
 const approval = (toolArgs: Record<string, unknown> = {}) =>
@@ -92,7 +95,7 @@ const EMPTY_TURN: EveEvent[] = [
 	{ type: "session.waiting" },
 ];
 
-describe("resumeEveApproval", () => {
+describe("resumeApproval", () => {
 	beforeEach(() => {
 		streamedEvents = EMPTY_TURN;
 		postedResponses.length = 0;
@@ -113,7 +116,7 @@ describe("resumeEveApproval", () => {
 	});
 
 	test("answers the whole batch the card was parked with", async () => {
-		await resumeEveApproval({
+		await resumeApproval({
 			approval: approval({ _eveSiblingRequestIds: ["req_2", "req_3"] }),
 			providerUserId: "U1",
 		});
@@ -130,7 +133,7 @@ describe("resumeEveApproval", () => {
 	// A turn that opens and closes without a step, a word, or a park means eve
 	// deferred the delivery — the write never ran, so the card must not say done.
 	test("fails the approval when the resumed turn did nothing at all", async () => {
-		const result = await resumeEveApproval({
+		const result = await resumeApproval({
 			approval: approval(),
 			providerUserId: "U1",
 		});
@@ -155,7 +158,7 @@ describe("resumeEveApproval", () => {
 			{ type: "session.waiting" },
 		];
 
-		const result = await resumeEveApproval({
+		const result = await resumeApproval({
 			approval: approval(),
 			providerUserId: "U1",
 		});
@@ -173,7 +176,7 @@ describe("resumeEveApproval", () => {
 			{ type: "session.waiting" },
 		];
 
-		const result = await resumeEveApproval({
+		const result = await resumeApproval({
 			approval: approval(),
 			providerUserId: "U1",
 		});
@@ -185,7 +188,7 @@ describe("resumeEveApproval", () => {
 	// The guard is for approvals only: a discard has nothing to execute, so an
 	// empty turn after one is the expected outcome, not a failure.
 	test("leaves a discard alone when its turn says nothing", async () => {
-		const result = await denyEveApproval({
+		const result = await discardApproval({
 			approval: approval(),
 			providerUserId: "U1",
 		});

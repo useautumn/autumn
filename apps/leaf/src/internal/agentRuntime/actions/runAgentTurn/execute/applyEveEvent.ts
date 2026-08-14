@@ -9,12 +9,12 @@ import { parsePreviewPayload } from "../../../../../ui/previewContent.js";
 import {
 	catalogPlanNeedingDecision,
 	enrichCatalogPreview,
-} from "../../../eve/catalogDecision.js";
+} from "../../resolveCatalogDecision/catalogDecisionPolicy.js";
 import {
 	type ChainedPendingRequest,
 	classifyParkedEveInput,
 	type PendingQuestion,
-} from "../../../eve/classifyParkedInput.js";
+} from "../../../eve/parkedInput.js";
 import type { EveEvent } from "../../../eve/eveEventSchemas.js";
 import {
 	approvalOptionIds,
@@ -194,7 +194,7 @@ const approvalForGatedWrite = ({
 }: {
 	chained: ChainedPendingRequest;
 	progress: EveTurnProgress;
-	siblingRequestIds: string[];
+	siblingRequestIds: ReadonlyArray<string>;
 }): AgentApprovalRequest => {
 	const options = approvalOptionIds({ options: chained.options });
 	return {

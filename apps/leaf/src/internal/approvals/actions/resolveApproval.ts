@@ -1,14 +1,13 @@
 import type { ChatApproval } from "@autumn/shared";
-import { resumeEveApproval } from "../../agentRuntime/eve/approval.js";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import type { ApprovalRunResult } from "../types.js";
 import { approvalErrorResult } from "../utils/approvalErrors.js";
+import { resumeApproval } from "./resumeApproval.js";
 
 export const resolveApproval = async ({
 	approval,
-	onProgress,
 	providerUserId,
 }: {
 	approval: ChatApproval;
@@ -28,9 +27,8 @@ export const resolveApproval = async ({
 
 	let result: ApprovalRunResult;
 	try {
-		result = await resumeEveApproval({
+		result = await resumeApproval({
 			approval,
-			onProgress,
 			providerUserId,
 		});
 	} catch (error) {
