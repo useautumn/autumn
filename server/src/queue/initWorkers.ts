@@ -1,6 +1,6 @@
 import "../sentry.js";
 
-import { ms } from "@autumn/shared";
+import { ms, withTimeout } from "@autumn/shared";
 import {
 	DeleteMessageBatchCommand,
 	DeleteMessageCommand,
@@ -22,7 +22,6 @@ import {
 	JOB_QUEUE_IDS,
 } from "@/internal/misc/jobQueues/jobQueueStore.js";
 import { generateId } from "@/utils/genUtils.js";
-import { withTimeout } from "@/utils/withTimeout.js";
 import { hatchet } from "../external/hatchet/initHatchet.js";
 import { isActiveSlot } from "./blueGreen/blueGreenGate.js";
 import {

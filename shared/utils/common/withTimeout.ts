@@ -1,16 +1,15 @@
 export const withTimeout = async <T>({
-	timeoutMs,
 	fn,
-	timeoutMessage,
 	onTimeout,
+	timeoutMessage,
+	timeoutMs,
 }: {
-	timeoutMs: number;
 	fn: () => Promise<T>;
+	onTimeout?: () => Promise<void> | void;
 	timeoutMessage?: string;
-	onTimeout?: () => void | Promise<void>;
+	timeoutMs: number;
 }): Promise<T> => {
 	let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
 	try {
 		return await Promise.race([
 			fn(),

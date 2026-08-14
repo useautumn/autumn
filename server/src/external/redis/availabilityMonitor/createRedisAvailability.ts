@@ -1,7 +1,7 @@
 import { monitorEventLoopDelay } from "node:perf_hooks";
+import { withTimeout } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { withTimeout } from "@/utils/withTimeout.js";
 import { waitForRedisReady } from "../initUtils/redisWarmup.js";
 import { describeRedisConnections } from "../initUtils/createStandbyRedisRouter.js";
 

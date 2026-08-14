@@ -1,5 +1,5 @@
+import { withTimeout } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-import { withTimeout } from "@/utils/withTimeout.js";
 import type { DrizzleCli } from "../initDrizzle.js";
 
 /** Hard bound so a saturated pool or half-open connection fails the probe

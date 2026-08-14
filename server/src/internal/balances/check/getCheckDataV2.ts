@@ -6,6 +6,7 @@ import {
 	findFeatureById,
 	fullSubjectToFullCustomer,
 	getFeatureToUseForCheck,
+	withTimeout,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
@@ -14,7 +15,6 @@ import {
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
-import { withTimeout } from "@/utils/withTimeout.js";
 import { triggerAutoTopUp } from "../autoTopUp/triggerAutoTopUp.js";
 import { buildEvaluationSubject } from "./buildEvaluationSubject.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";

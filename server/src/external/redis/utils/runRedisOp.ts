@@ -1,6 +1,6 @@
+import { withTimeout } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { withTimeout } from "@/utils/withTimeout.js";
 import { acquireRedisReadLane } from "../initUtils/createRedisReadPool.js";
 import { getStandbyRedisRouter } from "../initUtils/createStandbyRedisRouter.js";
 import { RedisUnavailableError } from "./errors.js";
