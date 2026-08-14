@@ -1,11 +1,9 @@
-import type { MessageParams } from "../../agent/runMessage/types.js";
-import type { AutumnOrgContext } from "../../internal/autumnMcp/orgContextService.js";
+import type { AutumnOrgContext } from "../../autumnMcp/orgContextService.js";
+import type { AgentTurnParams } from "../domain/agentTurnContext.js";
 
 const USER_MESSAGE_OPEN = "<user_message>";
 const USER_MESSAGE_CLOSE = "</user_message>";
 
-/** The user's actual text, stripped of the injected env/org-context preamble.
- * Used when replaying history so the preamble stays hidden from the dashboard. */
 export const extractUserMessageText = (text: string): string => {
 	const start = text.lastIndexOf(USER_MESSAGE_OPEN);
 	const end = text.lastIndexOf(USER_MESSAGE_CLOSE);
@@ -13,7 +11,7 @@ export const extractUserMessageText = (text: string): string => {
 	return text.slice(start + USER_MESSAGE_OPEN.length, end).trim();
 };
 
-export const buildHarnessMessageText = ({
+export const buildAgentMessageText = ({
 	env,
 	newSession,
 	orgContext,
@@ -22,11 +20,9 @@ export const buildHarnessMessageText = ({
 	env: string;
 	newSession: boolean;
 	orgContext?: AutumnOrgContext;
-	params: MessageParams;
+	params: AgentTurnParams;
 }) => {
 	const preamble = [
-		// The env is fixed for the life of the session, so state it once on the
-		// first message rather than re-prepending it to every turn.
 		newSession
 			? `Current Autumn environment: ${env}. This thread is locked to this environment; if the user asks to switch environments, tell them to start a new thread.`
 			: null,
@@ -43,8 +39,6 @@ export const buildHarnessMessageText = ({
 	]
 		.filter((section): section is string => Boolean(section))
 		.join("\n\n");
-	// Wrap the user's text so history replay can strip the preamble cleanly (and
-	// the agent gets an unambiguous boundary between context and the request).
 	const wrapped = `${USER_MESSAGE_OPEN}\n${params.text}\n${USER_MESSAGE_CLOSE}`;
 	return preamble ? `${preamble}\n\n${wrapped}` : wrapped;
 };

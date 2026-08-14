@@ -1,9 +1,9 @@
 import type { AppEnv } from "@autumn/shared";
 import type {
-	MessageParams,
-	ThreadRef,
-} from "../../../../../agent/runMessage/types.js";
-import { buildThreadKey } from "../../../../../harness/common/threadKey.js";
+	AgentThreadRef,
+	AgentTurnParams,
+} from "../../../domain/agentTurnContext.js";
+import { buildAgentThreadKey } from "../../../sessions/agentThreadKey.js";
 import { adoptPostedEveSession } from "../../../eve/adoptPostedSession.js";
 import { type EveMessageContent, postEveMessage } from "../../../eve/client.js";
 import {
@@ -25,9 +25,9 @@ export const startAgentTurn = async ({
 	env: AppEnv;
 	message: EveMessageContent;
 	orgId: string;
-	params: MessageParams;
+	params: AgentTurnParams;
 	session?: EveSessionRef;
-	thread: ThreadRef;
+	thread: AgentThreadRef;
 }): Promise<EveSessionRef> => {
 	// Sending chip answers as messages would replay them as a second user turn.
 	const inputResponses =
@@ -47,7 +47,7 @@ export const startAgentTurn = async ({
 		newSession: true,
 		sessionId: posted.sessionId,
 		state: initialEveSessionState(posted.continuationToken),
-		threadKey: buildThreadKey({ env, thread }),
+		threadKey: buildAgentThreadKey({ env, thread }),
 	};
 	await saveEveSessionState({ orgId, session: started });
 	return started;

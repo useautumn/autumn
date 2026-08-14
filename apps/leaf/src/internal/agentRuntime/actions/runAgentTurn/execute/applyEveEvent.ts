@@ -1,8 +1,5 @@
 import type { AppEnv, CatalogPlanPreview } from "@autumn/shared";
-import {
-	isSilentTool,
-	normalizeToolName,
-} from "../../../../../agent/tools/toolPolicy.js";
+import { isSilentTool, normalizeToolName } from "../../../tools/toolPolicy.js";
 import type { AgentApprovalRequest } from "../../../domain/agentTurn.js";
 import { toolRequestFromArgs } from "../../../../approvals/utils/toolRequest.js";
 import { executeAutumnMcpTool } from "../../../../autumnMcp/client.js";

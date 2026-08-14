@@ -1,7 +1,4 @@
-import {
-	normalizeToolName,
-	toolGerund,
-} from "../../../agent/tools/toolPolicy.js";
+import { normalizeToolName, toolGerund } from "../tools/toolPolicy.js";
 import type {
 	EveAction,
 	EveActionResult,

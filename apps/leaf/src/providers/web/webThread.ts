@@ -1,5 +1,5 @@
 import type { AppEnv, ChatProvider } from "@autumn/shared";
-import type { ThreadRef } from "../../agent/runMessage/types.js";
+import type { AgentThreadRef } from "../../internal/agentRuntime/domain/agentTurnContext.js";
 import {
 	deleteHarnessSessionsByPrefix,
 	listHarnessSessions,
@@ -19,8 +19,6 @@ export const buildWebChatThreadId = ({
 	userId: string;
 }) => `web:${userId}~${orgId}:${conversationId}`;
 
-/** ThreadRef for a web conversation, built one way so the CMA `threadKey` matches
- * between a live turn and history hydration. */
 export type WebThreadSummary = {
 	id: string;
 	title: string | null;
@@ -99,7 +97,7 @@ export const webThreadRef = ({
 }: {
 	chatThreadId: string;
 	orgId: string;
-}): ThreadRef => ({
+}): AgentThreadRef => ({
 	channelId: chatThreadId,
 	provider: WEB_CHAT_PROVIDER as ChatProvider,
 	threadId: chatThreadId,

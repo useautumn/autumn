@@ -1,14 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { type AppEnv, cmaSessions, type ChatProvider } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
-import type { ThreadRef } from "../../agent/runMessage/types.js";
+import type { AgentThreadRef } from "../../internal/agentRuntime/domain/agentTurnContext.js";
 import {
 	isSilentTool,
 	sandboxToolLabel,
 	toolLabel,
-} from "../../agent/tools/toolPolicy.js";
-import { extractUserMessageText } from "../../harness/common/messageText.js";
-import { buildThreadKey } from "../../harness/common/threadKey.js";
+} from "../../internal/agentRuntime/tools/toolPolicy.js";
+import { extractUserMessageText } from "../../internal/agentRuntime/messages/agentMessageText.js";
+import { buildAgentThreadKey } from "../../internal/agentRuntime/sessions/agentThreadKey.js";
 import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
 import type { ChatDb } from "../../lib/db.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
@@ -111,14 +111,14 @@ export const buildLegacyClaudeHistory = async ({
 	env: AppEnv;
 	orgId: string;
 	provider: ChatProvider;
-	thread: ThreadRef;
+	thread: AgentThreadRef;
 	workspaceId: string;
 }): Promise<LeafUiMessage[] | undefined> => {
 	const session = await db.query.cmaSessions.findFirst({
 		where: and(
 			eq(cmaSessions.org_id, orgId),
 			eq(cmaSessions.env, env),
-			eq(cmaSessions.thread_key, buildThreadKey({ env, thread })),
+			eq(cmaSessions.thread_key, buildAgentThreadKey({ env, thread })),
 		),
 	});
 	if (!session) return undefined;

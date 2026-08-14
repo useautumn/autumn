@@ -1,10 +1,10 @@
 import type { Message, Thread } from "chat";
-import type { ChatContextMessage } from "../../types.js";
+import type { AgentContextMessage } from "../../internal/agentRuntime/domain/agentTurnContext.js";
 
 export const getRecentMessages = async (
 	thread: Thread,
 	currentMessage: Message,
-): Promise<ChatContextMessage[]> => {
+): Promise<AgentContextMessage[]> => {
 	try {
 		await thread.refresh();
 	} catch (error) {

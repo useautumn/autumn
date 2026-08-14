@@ -4,7 +4,7 @@ import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUse
 import { sql } from "drizzle-orm";
 import { ensureChatUserCredential } from "../../../internal/installations/actions/ensureChatUserCredential.js";
 import { db } from "../../../lib/db.js";
-import { fetchSlackUserEmailCached } from "../../../providers/slack/users.js";
+import { fetchSlackUserEmailCached } from "../users.js";
 import {
 	DENY_TEXT,
 	OAUTH_CEILING,
@@ -37,10 +37,6 @@ const resolveAutumnUserIdByEmail = async (
 	return { kind: "single", userId: matches[0].id };
 };
 
-/**
- * Resolves a Slack sender to an Autumn user, enforces that user's scope ceiling,
- * and ensures matching chat OAuth credentials exist for the installation.
- */
 export const resolveSlackUserAuth = async ({
 	botToken,
 	installation,

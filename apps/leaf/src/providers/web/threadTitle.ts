@@ -2,8 +2,8 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
 import { Agent } from "@mastra/core/agent";
 import { z } from "zod";
-import type { ThreadRef } from "../../agent/runMessage/types.js";
-import { buildThreadKey } from "../../harness/common/threadKey.js";
+import type { AgentThreadRef } from "../../internal/agentRuntime/domain/agentTurnContext.js";
+import { buildAgentThreadKey } from "../../internal/agentRuntime/sessions/agentThreadKey.js";
 import { setHarnessSessionTitleIfEmpty } from "../../internal/agentRuntime/eve/repo.js";
 import { DEFAULT_CHAT_ENV_MODEL } from "../../lib/chatAgentConfig.js";
 import type { ChatDb } from "../../lib/db.js";
@@ -55,7 +55,7 @@ export const persistThreadTitle = async ({
 	env: AppEnv;
 	logger: AutumnLogger;
 	orgId: string;
-	thread: ThreadRef;
+	thread: AgentThreadRef;
 	titlePromise: Promise<string | undefined>;
 }) => {
 	const title = await titlePromise;
@@ -65,7 +65,7 @@ export const persistThreadTitle = async ({
 			db,
 			env,
 			orgId,
-			threadKey: buildThreadKey({ env, thread }),
+			threadKey: buildAgentThreadKey({ env, thread }),
 			title,
 		});
 	} catch (error) {

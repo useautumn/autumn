@@ -13,8 +13,6 @@ const SUPPORTED_MIME_TYPES = new Set([
 	"image/webp",
 ]);
 
-// Code/text uploads (Slack snippets arrive as text/*) are inlined into the
-// message body instead of riding as model file parts.
 const INLINE_TEXT_MIME_TYPES = new Set([
 	"application/javascript",
 	"application/json",
@@ -77,7 +75,7 @@ export const prepareAttachmentMessage = async ({
 	logger = rootLogger,
 	text,
 }: {
-	attachments?: Attachment[];
+	attachments?: ReadonlyArray<Attachment>;
 	fetchFallback?: AttachmentFetchFallback;
 	logger?: AutumnLogger;
 	text: string;

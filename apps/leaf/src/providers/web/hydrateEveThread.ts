@@ -1,6 +1,6 @@
 import type { AppEnv, CatalogPlanPreview, ChatProvider } from "@autumn/shared";
-import { normalizeToolName } from "../../agent/tools/toolPolicy.js";
-import { extractUserMessageText } from "../../harness/common/messageText.js";
+import { normalizeToolName } from "../../internal/agentRuntime/tools/toolPolicy.js";
+import { extractUserMessageText } from "../../internal/agentRuntime/messages/agentMessageText.js";
 import { catalogPlanNeedingDecision } from "../../internal/agentRuntime/eve/catalogDecision.js";
 import { streamEveEvents } from "../../internal/agentRuntime/eve/client.js";
 import {

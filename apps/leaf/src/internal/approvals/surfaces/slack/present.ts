@@ -1,6 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval, ChatInstallation } from "@autumn/shared";
-import { toolLabel } from "../../../../agent/tools/toolPolicy.js";
+import { toolLabel } from "../../../agentRuntime/tools/toolPolicy.js";
 import type { AgentApprovalTurn } from "../../../agentRuntime/domain/agentTurn.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";

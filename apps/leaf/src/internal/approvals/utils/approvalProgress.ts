@@ -1,8 +1,9 @@
+import { differenceInSeconds } from "date-fns";
 import {
 	isToolErrorResult,
 	normalizeToolName,
 	toolLabel,
-} from "../../../agent/tools/toolPolicy.js";
+} from "../../agentRuntime/tools/toolPolicy.js";
 import { approvalErrorResult } from "./approvalErrors.js";
 
 const STATUS_LINE_MAX_LENGTH = 120;
@@ -31,7 +32,7 @@ export const errorStatusLine = (output: unknown) => {
 };
 
 export const formatElapsed = (startedAt: number) => {
-	const seconds = Math.floor((Date.now() - startedAt) / 1000);
+	const seconds = differenceInSeconds(Date.now(), startedAt);
 	if (seconds < 60) return `${seconds}s`;
 	return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 };

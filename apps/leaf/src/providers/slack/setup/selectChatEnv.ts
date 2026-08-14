@@ -4,11 +4,11 @@ import { Agent } from "@mastra/core/agent";
 import { z } from "zod";
 import { DEFAULT_CHAT_ENV_MODEL } from "../../../lib/chatAgentConfig.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
-import type { ChatContextMessage } from "../../../types.js";
+import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import {
 	chatEnvSelectorInstructions,
 	chatEnvSelectorOutputInstructions,
-} from "../../prompts/selectorPrompts.js";
+} from "./selectorPrompts.js";
 
 const envSelectionSchema = z.strictObject({
 	env: z.nativeEnum(AppEnv),
@@ -17,7 +17,9 @@ const envSelectionSchema = z.strictObject({
 export const getDefaultChatEnv = () =>
 	process.env.NODE_ENV === "production" ? AppEnv.Live : AppEnv.Sandbox;
 
-export const recentMessageContext = (messages: ChatContextMessage[] = []) =>
+export const recentMessageContext = (
+	messages: ReadonlyArray<AgentContextMessage> = [],
+) =>
 	messages.map((message) => ({
 		role: message.isBot === true ? ("assistant" as const) : ("user" as const),
 		content: `${message.author}${message.isBot === true ? " (bot)" : ""}: ${message.text}`,
@@ -31,7 +33,7 @@ export const selectChatEnv = async ({
 }: {
 	logger?: AutumnLogger;
 	message: string;
-	recentMessages?: ChatContextMessage[];
+	recentMessages?: ReadonlyArray<AgentContextMessage>;
 	select?: () => Promise<unknown> | unknown;
 }) => {
 	if (select) {

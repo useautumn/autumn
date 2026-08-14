@@ -1,8 +1,5 @@
 import type { AppEnv } from "@autumn/shared";
 
-/** Prompts for the small routing classifiers (env + org selection). Kept beside
- * the agent's other prompts; the selectors themselves hold only the logic. */
-
 export const chatEnvSelectorInstructions = (defaultEnv: AppEnv): string =>
 	`Choose the Autumn environment for the latest user request. Default to ${defaultEnv}. Use the other environment only when the user clearly asks for it.`;
 

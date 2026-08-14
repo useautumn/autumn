@@ -1,6 +1,6 @@
-import type { MessageContext } from "../../../../../agent/runMessage/types.js";
 import { autumnOrgContextService } from "../../../../autumnMcp/orgContextService.js";
 import { db } from "../../../../../lib/db.js";
+import type { AgentTurnContext } from "../../../domain/agentTurnContext.js";
 import { getEveSession } from "../../../eve/repo.js";
 import { withdrawSupersededEveApprovals } from "../../../eve/supersededApprovals.js";
 import type { EveAuthContext } from "../../../eve/types.js";
@@ -10,7 +10,7 @@ export const prepareAgentTurn = async ({
 	context,
 }: {
 	auth: EveAuthContext;
-	context: MessageContext;
+	context: AgentTurnContext;
 }) => {
 	const {
 		env,

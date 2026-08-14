@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { type AppEnv, type ChatProvider, chatApprovals } from "@autumn/shared";
 import { addMinutes } from "date-fns";
-import { normalizeToolName } from "../../../agent/tools/toolPolicy.js";
+import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import type { ChatDb } from "../../../lib/db.js";
 
 const APPROVAL_TTL_MINUTES = 15;

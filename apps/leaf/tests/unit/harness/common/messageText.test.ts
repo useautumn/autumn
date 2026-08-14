@@ -7,13 +7,13 @@ process.env.SLACK_CLIENT_ID ??= "test";
 process.env.SLACK_CLIENT_SECRET ??= "test";
 process.env.SLACK_SIGNING_SECRET ??= "test";
 
-const { buildHarnessMessageText, extractUserMessageText } = await import(
-	"../../../../src/harness/common/messageText.js"
+const { buildAgentMessageText, extractUserMessageText } = await import(
+	"../../../../src/internal/agentRuntime/messages/agentMessageText.js"
 );
 
 describe("Harness message text", () => {
 	test("injects org context on a new session", () => {
-		const text = buildHarnessMessageText({
+		const text = buildAgentMessageText({
 			env: "sandbox",
 			newSession: true,
 			orgContext: { text: "Plans:\n- pro | Pro" },
@@ -30,7 +30,7 @@ describe("Harness message text", () => {
 	});
 
 	test("does not inject org context on resumed sessions", () => {
-		const text = buildHarnessMessageText({
+		const text = buildAgentMessageText({
 			env: "sandbox",
 			newSession: false,
 			orgContext: { text: "Plans:\n- pro | Pro" },

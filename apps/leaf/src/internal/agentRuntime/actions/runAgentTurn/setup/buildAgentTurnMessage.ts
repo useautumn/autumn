@@ -1,7 +1,7 @@
-import type { MessageParams } from "../../../../../agent/runMessage/types.js";
 import type { AutumnOrgContext } from "../../../../autumnMcp/orgContextService.js";
 import { env as leafEnv } from "../../../../../lib/env.js";
-import { buildHarnessMessageText } from "../../../../../harness/common/messageText.js";
+import type { AgentTurnParams } from "../../../domain/agentTurnContext.js";
+import { buildAgentMessageText } from "../../../messages/agentMessageText.js";
 import type { EveMessageContent } from "../../../eve/client.js";
 
 export const buildAgentTurnMessage = ({
@@ -13,10 +13,10 @@ export const buildAgentTurnMessage = ({
 	env: string;
 	newSession: boolean;
 	orgContext?: AutumnOrgContext;
-	params: MessageParams;
+	params: AgentTurnParams;
 }): EveMessageContent => {
 	const attachments = params.attachments ?? [];
-	const messageText = buildHarnessMessageText({
+	const messageText = buildAgentMessageText({
 		env,
 		newSession,
 		orgContext,

@@ -1,6 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval } from "@autumn/shared";
-import type { ThreadRef } from "../../../agent/runMessage/types.js";
 import { chatApprovalRepo } from "../../approvals/repos/chatApprovalRepo.js";
 import { db } from "../../../lib/db.js";
 import { APPROVAL_STILL_OPEN_MESSAGE } from "../../../ui/messages.js";
@@ -10,6 +9,7 @@ import { postEveInputResponse } from "./client.js";
 import { denyOptionFromApproval, drainParkedEveTurn } from "./parkedTurn.js";
 import { saveEveSessionState } from "./sessionState.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
+import type { AgentThreadRef } from "../domain/agentTurnContext.js";
 
 const WITHDRAWN_NOTE =
 	"(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; their new message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one.)";
@@ -95,7 +95,7 @@ export const withdrawSupersededEveApprovals = async ({
 	orgId: string;
 	providerUserId: string;
 	session: EveSessionRef;
-	thread: ThreadRef;
+	thread: AgentThreadRef;
 }) => {
 	const pendingApprovals = await chatApprovalRepo.listPendingForRun({
 		db,

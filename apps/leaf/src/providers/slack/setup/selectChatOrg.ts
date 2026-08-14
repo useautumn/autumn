@@ -3,11 +3,11 @@ import { Agent } from "@mastra/core/agent";
 import { z } from "zod";
 import { DEFAULT_CHAT_ORG_MODEL } from "../../../lib/chatAgentConfig.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
-import type { ChatContextMessage } from "../../../types.js";
+import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import {
 	chatOrgSelectorInstructions,
 	chatOrgSelectorOutputInstructions,
-} from "../../prompts/selectorPrompts.js";
+} from "./selectorPrompts.js";
 import { recentMessageContext } from "./selectChatEnv.js";
 
 const orgSelectionSchema = z.strictObject({
@@ -22,7 +22,7 @@ export const selectChatOrg = async ({
 }: {
 	logger?: AutumnLogger;
 	message: string;
-	recentMessages?: ChatContextMessage[];
+	recentMessages?: ReadonlyArray<AgentContextMessage>;
 	select?: () => Promise<unknown> | unknown;
 }) => {
 	if (select) {

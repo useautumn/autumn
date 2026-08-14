@@ -1,14 +1,13 @@
 import type { AppEnv } from "@autumn/shared";
-import type { ThreadRef } from "../../agent/runMessage/types.js";
+import type { AgentThreadRef } from "../domain/agentTurnContext.js";
 
-/** Stable per-thread, per-env key used to scope persisted harness sessions. */
-export const buildThreadKey = ({
+export const buildAgentThreadKey = ({
 	env,
 	thread,
 	userId,
 }: {
 	env: AppEnv;
-	thread: ThreadRef;
+	thread: AgentThreadRef;
 	userId?: string;
 }) =>
 	[

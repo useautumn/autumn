@@ -1,5 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { AppEnv } from "@autumn/shared";
+import { type AppEnv, ms } from "@autumn/shared";
 import type { ActiveRun } from "../../../../runs/runRegistry.js";
 import { AGENT_UNREACHABLE_MESSAGE } from "../../../../../ui/messages.js";
 import {
@@ -20,7 +20,7 @@ import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 
 // Eve can close empty while asynchronously resuming a turn.
 const MAX_IDLE_RETRIES = 20;
-const STREAM_RETRY_DELAY_MS = 500;
+const STREAM_RETRY_DELAY_MS = ms.seconds(0.5);
 const MAX_STREAM_DISCONNECT_RETRIES = 5;
 const PERSIST_CURSOR_EVERY_EVENTS = 10;
 

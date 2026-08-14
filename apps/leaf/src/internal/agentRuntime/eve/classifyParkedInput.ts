@@ -1,4 +1,4 @@
-import { normalizeToolName } from "../../../agent/tools/toolPolicy.js";
+import { normalizeToolName } from "../tools/toolPolicy.js";
 import { WAITING_FOR_INPUT_MESSAGE } from "../../../ui/messages.js";
 import type { EveInputRequest } from "./eveEventSchemas.js";
 import { textForInputRequests } from "./events.js";

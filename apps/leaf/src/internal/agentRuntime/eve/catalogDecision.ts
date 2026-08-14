@@ -4,9 +4,9 @@ import type {
 	CatalogPlanPreview,
 	CatalogPreviewUpdateResponse,
 } from "@autumn/shared";
-import type { ThreadRef } from "../../../agent/runMessage/types.js";
-import { normalizeToolName } from "../../../agent/tools/toolPolicy.js";
 import type { AgentApprovalRequest } from "../domain/agentTurn.js";
+import type { AgentThreadRef } from "../domain/agentTurnContext.js";
+import { normalizeToolName } from "../tools/toolPolicy.js";
 import { fetchApprovalPreview } from "../../approvals/utils/fetchApprovalPreview.js";
 import {
 	publicToolArgs,
@@ -142,7 +142,7 @@ export const redirectCatalogSuspensionToDecision = async ({
 	providerUserId: string;
 	runId?: string;
 	suspension: AgentApprovalRequest;
-	thread: ThreadRef;
+	thread: AgentThreadRef;
 	token: string;
 }): Promise<CatalogPlanPreview | undefined> => {
 	if (normalizeToolName(suspension.toolName) !== "updateCatalog") {

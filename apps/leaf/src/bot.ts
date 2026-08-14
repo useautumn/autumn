@@ -7,7 +7,7 @@ import { createPostgresState } from "@chat-adapter/state-pg";
 import { createWebAdapter } from "@chat-adapter/web";
 import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
-import { runMessage } from "./agent/runMessage/runMessage.js";
+import type { AgentContextMessage } from "./internal/agentRuntime/domain/agentTurnContext.js";
 import { answerEveQuestion } from "./internal/agentRuntime/eve/approval.js";
 import { redirectCatalogSuspensionToDecision } from "./internal/agentRuntime/eve/catalogDecision.js";
 import { withdrawEveSuspension } from "./internal/agentRuntime/eve/parkedTurn.js";
@@ -57,7 +57,7 @@ import {
 	generateThreadTitle,
 	persistThreadTitle,
 } from "./providers/web/threadTitle.js";
-import type { ChatContextMessage } from "./types.js";
+import { runSlackAgentTurn } from "./providers/slack/actions/runSlackAgentTurn.js";
 import {
 	ANSWER_QUESTION_ACTION,
 	CATALOG_DECISION_ACTION,
@@ -220,7 +220,7 @@ type RunAndReplyInput = {
 	raw: unknown;
 	/** Reacts to the triggering message (👀 while working, ❌ on failure). */
 	react?: (input: { action: "add" | "remove"; emoji: string }) => Promise<void>;
-	recentMessages?: ChatContextMessage[];
+	recentMessages?: AgentContextMessage[];
 	runKey: string;
 	target: ReplyTarget;
 	text: string;
@@ -243,7 +243,9 @@ const runAndReply = async ({
 	/** A thunk defers the Slack history fetch to run start (queued messages
 	 * must see turns that finished before them) while still overlapping it
 	 * with the installation lookup. */
-	recentMessages?: ChatContextMessage[] | (() => Promise<ChatContextMessage[]>);
+	recentMessages?:
+		| AgentContextMessage[]
+		| (() => Promise<AgentContextMessage[]>);
 }) => {
 	let logger = rootLogger;
 	let run: ActiveRun | undefined;
@@ -319,7 +321,7 @@ const runAndReply = async ({
 		const rawFiles = getSlackFilesFromRaw({ raw });
 		const botToken = decrypt(installation.bot_access_token);
 
-		const output = await runMessage({
+		const output = await runSlackAgentTurn({
 			agentRunId: session.agentRunId,
 			attachmentFetchFallback: ({ attachment }) =>
 				fetchSlackAttachmentFallback({

@@ -1,9 +1,9 @@
 import { AppEnv, harnessSessions } from "@autumn/shared";
 import { all } from "better-all";
 import { and, desc, eq, isNull, like } from "drizzle-orm";
-import type { ThreadRef } from "../../../agent/runMessage/types.js";
 import type { ChatDb } from "../../../lib/db.js";
-import { buildThreadKey } from "../../../harness/common/threadKey.js";
+import type { AgentThreadRef } from "../domain/agentTurnContext.js";
+import { buildAgentThreadKey } from "../sessions/agentThreadKey.js";
 import {
 	type EveSessionRef,
 	type EveSessionState,
@@ -45,9 +45,9 @@ export const getEveSession = async ({
 	db: ChatDb;
 	env: AppEnv;
 	orgId: string;
-	thread: ThreadRef;
+	thread: AgentThreadRef;
 }) => {
-	const threadKey = buildThreadKey({ env, thread });
+	const threadKey = buildAgentThreadKey({ env, thread });
 	const row = await db.query.harnessSessions.findFirst({
 		where: and(
 			eq(harnessSessions.org_id, orgId),
@@ -65,7 +65,7 @@ export const findEveSessionForThread = async ({
 }: {
 	db: ChatDb;
 	orgId: string;
-	thread: ThreadRef;
+	thread: AgentThreadRef;
 }) => {
 	const sessions = await all({
 		async live() {

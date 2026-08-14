@@ -13,10 +13,10 @@ const { leafSystemPrompt, leafSkills } = await import(
 );
 const autumnChatInstructions = leafSystemPrompt("slack");
 const { getDefaultChatEnv, selectChatEnv } = await import(
-	"../../../src/agent/runMessage/setup/selectChatEnv.js"
+	"../../../src/providers/slack/setup/selectChatEnv.js"
 );
 const { selectChatOrg } = await import(
-	"../../../src/agent/runMessage/setup/selectChatOrg.js"
+	"../../../src/providers/slack/setup/selectChatOrg.js"
 );
 const {
 	orgIdentifierVariants,

@@ -10,7 +10,7 @@ process.env.SLACK_CLIENT_SECRET ??= "test";
 process.env.SLACK_SIGNING_SECRET ??= "test";
 
 const { resolveSlackAdminOrgContext } = await import(
-	"../../../src/agent/runMessage/setup/resolveSlackAdminOrg.js"
+	"../../../src/providers/slack/setup/resolveSlackAdminOrg.js"
 );
 
 const logger = {

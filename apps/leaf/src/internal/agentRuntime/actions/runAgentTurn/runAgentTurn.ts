@@ -1,7 +1,7 @@
 import type {
-	MessageContext,
-	MessageParams,
-} from "../../../../agent/runMessage/types.js";
+	AgentTurnContext,
+	AgentTurnParams,
+} from "../../domain/agentTurnContext.js";
 import { consumeAgentTurn } from "./execute/consumeAgentTurn.js";
 import { resolveAgentTurnOutcome } from "./finalize/resolveAgentTurnOutcome.js";
 import { prepareAgentTurn } from "./setup/prepareAgentTurn.js";
@@ -13,8 +13,8 @@ export const runAgentTurn = async ({
 	ctx,
 	params,
 }: {
-	ctx: MessageContext;
-	params: MessageParams;
+	ctx: AgentTurnContext;
+	params: AgentTurnParams;
 }) => {
 	const {
 		env,

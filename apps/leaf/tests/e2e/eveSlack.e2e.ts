@@ -9,7 +9,7 @@
 import { buildCatalogDecisionModel, parsePreviewPayload } from "@autumn/render";
 import type { ChatApproval } from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
-import { runMessage } from "../../src/agent/runMessage/runMessage.js";
+import { runSlackAgentTurn } from "../../src/providers/slack/actions/runSlackAgentTurn.js";
 import {
 	answerEveQuestion,
 	denyEveApproval,
@@ -24,7 +24,7 @@ import { db } from "../../src/lib/db.js";
 import { logger } from "../../src/lib/logger.js";
 import { createEveSlackPresenter } from "../../src/providers/slack/evePresenter.js";
 import { findInstallationWithOrg } from "../../src/providers/slack/installations.js";
-import type { LeafChatInstallation } from "../../src/types.js";
+import type { SlackChatInstallation } from "../../src/providers/slack/domain/slackAgentTurn.js";
 import { catalogDecisionCard } from "../../src/ui/eveCards.js";
 import { createStatusTicker } from "../../src/ui/statusTicker.js";
 
@@ -91,7 +91,7 @@ const runTurn = async ({
 }: {
 	attachments?: { data: Buffer; mimeType: string; name?: string }[];
 	clientContext?: Record<string, unknown>;
-	installation: LeafChatInstallation;
+	installation: SlackChatInstallation;
 	providerUserId?: string;
 	recentMessages?: { author: string; isBot: boolean; text: string }[];
 	text: string;
@@ -101,7 +101,7 @@ const runTurn = async ({
 	const ticker = createStatusTicker(target as never);
 	const presenter = createEveSlackPresenter({ ticker });
 	const superseded: ChatApproval[] = [];
-	const output = await runMessage({
+	const output = await runSlackAgentTurn({
 		attachments: attachments?.map((attachment) => ({
 			data: attachment.data,
 			mimeType: attachment.mimeType,
@@ -152,7 +152,7 @@ const pendingApprovalForRun = async ({
 	runId,
 }: {
 	channelId: string;
-	installation: LeafChatInstallation;
+	installation: SlackChatInstallation;
 	runId: string;
 }) =>
 	(
@@ -172,7 +172,7 @@ const main = async () => {
 	const installation = (await findInstallationWithOrg(
 		"slack",
 		WORKSPACE_ID,
-	)) as LeafChatInstallation | null;
+	)) as SlackChatInstallation | null;
 	if (!installation) {
 		throw new Error(`No slack installation for workspace ${WORKSPACE_ID}`);
 	}

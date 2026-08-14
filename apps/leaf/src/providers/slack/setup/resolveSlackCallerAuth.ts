@@ -2,11 +2,11 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { ChatInstallation } from "@autumn/shared";
 import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { decrypt } from "../../../lib/crypto.js";
-import { resolveInstallationAuthMode } from "../../../providers/slack/users.js";
+import { resolveInstallationAuthMode } from "../users.js";
 import { resolveSlackUserAuth } from "./resolveSlackUserAuth.js";
 import type { SlackUserAuthResult } from "./slackUserAuthTypes.js";
 
-export type SlackCallerAuthResult =
+type SlackCallerAuthResult =
 	| { usePerUser: false }
 	| {
 			usePerUser: true;
@@ -35,7 +35,6 @@ const toCallerAuthResult = (
 	};
 };
 
-/** Shared per-user auth seam for the message and approval-click paths. */
 export const resolveSlackCallerAuth = async ({
 	installation,
 	logger,

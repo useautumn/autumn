@@ -6,9 +6,9 @@ import {
 	type UIMessage,
 } from "ai";
 import type {
-	MessageAttachment,
-	MessageContext,
-} from "../../agent/runMessage/types.js";
+	AgentTurnAttachment,
+	AgentTurnContext,
+} from "../../internal/agentRuntime/domain/agentTurnContext.js";
 import { redirectCatalogSuspensionToDecision } from "../../internal/agentRuntime/eve/catalogDecision.js";
 import { runAgentTurn } from "../../internal/agentRuntime/actions/runAgentTurn/runAgentTurn.js";
 import { presentWebApproval } from "../../internal/approvals/surfaces/web/present.js";
@@ -35,7 +35,7 @@ const DATA_URL_REGEX = /^data:([^;]+);base64,(.*)$/s;
 const dataUrlToAttachment = (
 	url: string,
 	name?: string,
-): MessageAttachment | null => {
+): AgentTurnAttachment | null => {
 	const match = DATA_URL_REGEX.exec(url);
 	return match
 		? { data: Buffer.from(match[2], "base64"), mimeType: match[1], name }
@@ -56,7 +56,7 @@ const parseRequest = (body: { id?: string; messages?: UIMessage[] }) => {
 		part.type === "file" && part.url
 			? ([dataUrlToAttachment(part.url, part.filename)].filter(
 					Boolean,
-				) as MessageAttachment[])
+				) as AgentTurnAttachment[])
 			: [],
 	);
 	// Structured, one-turn-only context (e.g. a submitted CatalogDecisionCard
@@ -172,7 +172,7 @@ export const streamWebChat = async ({
 				writer.write({ id, type: "text-end" });
 			};
 
-			const ctx: MessageContext = {
+			const ctx: AgentTurnContext = {
 				env,
 				id: crypto.randomUUID(),
 				logger,

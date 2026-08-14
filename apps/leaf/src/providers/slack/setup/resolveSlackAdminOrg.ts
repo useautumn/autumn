@@ -1,9 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
-import {
-	type ChatInstallation,
-	chatInstallations,
-	organizations,
-} from "@autumn/shared";
+import { chatInstallations, organizations } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import {
 	type ChatThreadContextRecord,
@@ -15,8 +11,9 @@ import {
 	validateSlackAdminAccess,
 } from "../../../internal/slackAdmin/access.js";
 import { isInternalAutumnSlackInstallation } from "../../../internal/slackAdmin/provider.js";
+import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { db } from "../../../lib/db.js";
-import type { ChatContextMessage } from "../../../types.js";
+import type { SlackChatInstallation } from "../domain/slackAgentTurn.js";
 import { selectChatOrg } from "./selectChatOrg.js";
 
 type Thread = {
@@ -30,8 +27,6 @@ type OrgContext = {
 	slug?: string;
 };
 
-type InstallationContext = ChatInstallation & { org_slug?: string };
-
 type ResolveSlackAdminOrgDeps = {
 	getContextByChannelThread: (
 		thread: Pick<ChatThreadRef, "channelId" | "threadId">,
@@ -43,7 +38,7 @@ type ResolveSlackAdminOrgDeps = {
 		chatInstallationId,
 	}: {
 		chatInstallationId: string;
-	}) => Promise<InstallationContext | null>;
+	}) => Promise<SlackChatInstallation | null>;
 	resolveOrg: ({
 		identifier,
 	}: {
@@ -57,12 +52,12 @@ type ResolveSlackAdminOrgDeps = {
 type ResolveSlackAdminOrgResult =
 	| {
 			admin: false;
-			installation: InstallationContext;
+			installation: SlackChatInstallation;
 			org: OrgContext;
 	  }
 	| {
 			admin: true;
-			installation: InstallationContext;
+			installation: SlackChatInstallation;
 			org: OrgContext;
 	  }
 	| {
@@ -85,20 +80,20 @@ const firstUserMessageText = ({
 	recentMessages,
 	text,
 }: {
-	recentMessages?: ChatContextMessage[];
+	recentMessages?: ReadonlyArray<AgentContextMessage>;
 	text: string;
 }) => recentMessages?.find((message) => message.isBot !== true)?.text ?? text;
 
 const hasPriorBotTurn = ({
 	recentMessages,
 }: {
-	recentMessages?: ChatContextMessage[];
+	recentMessages?: ReadonlyArray<AgentContextMessage>;
 }) => recentMessages?.some((message) => message.isBot === true) ?? false;
 
 const isFirstThreadTurn = ({
 	recentMessages,
 }: {
-	recentMessages?: ChatContextMessage[];
+	recentMessages?: ReadonlyArray<AgentContextMessage>;
 }) => (recentMessages?.length ?? 0) <= 1;
 
 const selectAndResolveAdminOrg = async ({
@@ -109,7 +104,7 @@ const selectAndResolveAdminOrg = async ({
 }: {
 	deps: ResolveSlackAdminOrgDeps;
 	logger: AutumnLogger;
-	recentMessages?: ChatContextMessage[];
+	recentMessages?: ReadonlyArray<AgentContextMessage>;
 	text: string;
 }): Promise<SelectedAdminOrgResult> => {
 	const targetIdentifier = await deps.selectOrg({
@@ -148,7 +143,7 @@ const defaultGetInstallationWithOrg = async ({
 	chatInstallationId,
 }: {
 	chatInstallationId: string;
-}): Promise<InstallationContext | null> => {
+}): Promise<SlackChatInstallation | null> => {
 	const [row] = await db
 		.select({
 			installation: chatInstallations,
@@ -194,10 +189,10 @@ export const resolveSlackAdminOrgContext = async ({
 	thread,
 }: {
 	deps?: ResolveSlackAdminOrgDeps;
-	installation: InstallationContext;
+	installation: SlackChatInstallation;
 	logger: AutumnLogger;
 	providerUserId: string;
-	recentMessages?: ChatContextMessage[];
+	recentMessages?: ReadonlyArray<AgentContextMessage>;
 	text: string;
 	thread: Thread;
 }): Promise<ResolveSlackAdminOrgResult> => {

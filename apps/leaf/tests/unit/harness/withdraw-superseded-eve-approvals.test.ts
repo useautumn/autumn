@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
-import type { ThreadRef } from "../../../src/agent/runMessage/types.js";
+import type { AgentThreadRef } from "../../../src/internal/agentRuntime/domain/agentTurnContext.js";
 import type {
 	EveAuthContext,
 	EveSessionRef,
@@ -20,8 +20,7 @@ const mockLeafModule = ({
 }: {
 	factory: () => Record<string, unknown>;
 	specifier: string;
-}) =>
-	mockModuleWithRestore({ baseUrl: import.meta.url, factory, specifier });
+}) => mockModuleWithRestore({ baseUrl: import.meta.url, factory, specifier });
 
 let pendingApprovals: ChatApproval[] = [];
 const cancelledApprovalIds: string[] = [];
@@ -122,7 +121,7 @@ const thread = {
 	provider: "slack",
 	threadId: "thread_1",
 	workspaceId: "T1",
-} as ThreadRef;
+} as AgentThreadRef;
 
 const logger = { warn: () => {} } as unknown as AutumnLogger;
 
