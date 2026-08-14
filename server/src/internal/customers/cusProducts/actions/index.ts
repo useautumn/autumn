@@ -11,6 +11,7 @@ import {
 import { markCustomerProductActive } from "./markCustomerProductActive";
 import { markCustomerProductPastDue } from "./markCustomerProductPastDue";
 import { preserveOneOffPrepaidCarryOvers } from "./preserveOneOffPrepaidCarryOvers";
+import { renewCustomerProduct } from "./renewCustomerProduct";
 import { uncancelCustomerProduct } from "./uncancelCustomerProduct";
 import { updateCustomerProductDbAndCache } from "./updateDbAndCache";
 
@@ -29,6 +30,9 @@ export const customerProductActions = {
 
 	/** Uncancels a customer product and sends a Renew webhook */
 	uncancel: uncancelCustomerProduct,
+
+	/** Sends the Renew webhooks for an already-active customer product (no DB write) */
+	renew: renewCustomerProduct,
 
 	/** Marks a customer product as past due and sends a PastDue webhook */
 	markPastDue: markCustomerProductPastDue,
