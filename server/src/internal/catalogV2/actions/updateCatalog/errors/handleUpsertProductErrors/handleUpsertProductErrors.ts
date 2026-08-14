@@ -1,5 +1,6 @@
 import { handleDefaultFlagErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleDefaultFlagErrors";
 import { handleFreeTrialErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleFreeTrialErrors";
+import { handlePlanLicenseErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handlePlanLicenseErrors";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
@@ -21,5 +22,8 @@ export const handleUpsertProductErrors = ({
 
 		// 2. Default flag errors (historical version; paid default)
 		handleDefaultFlagErrors({ nextFullProduct, latestExistingVersion });
+
+		// 3. Declared plan_license link guards
+		handlePlanLicenseErrors({ upsert });
 	}
 };

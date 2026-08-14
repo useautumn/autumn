@@ -1,4 +1,11 @@
 export type { FreeTrialPlan } from "./freeTrialPlan";
+export type {
+	PlanLicenseOp,
+	PlanLicensePlan,
+	PlanLicensePricesAndEntitlements,
+	PlanLicenseRowPlan,
+	PlanLicenseRowWrite,
+} from "./planLicensePlan";
 export type { ProductDetailsPlan } from "./productDetailsPlan";
 export type {
 	ProductUpsertIntent,

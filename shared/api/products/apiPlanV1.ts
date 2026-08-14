@@ -1,14 +1,9 @@
 import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
-import { LicenseCustomizeSchema } from "@models/licenseModels/licenseModels.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { z } from "zod/v4";
-import {
-	CustomizePlanV1BaseSchema,
-	refineCustomizePlanV1Schema,
-} from "../billing/common/customizePlan/customizePlanV1.js";
 import { AdditionalCurrencyPriceArraySchema } from "./components/additionalCurrencies.js";
 import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
 import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
@@ -18,6 +13,21 @@ import {
 	API_PLAN_ITEM_USAGE_BASED_EXAMPLE,
 	ApiPlanItemV1Schema,
 } from "./items/apiPlanItemV1.js";
+import { ApiPlanLicenseV1Schema } from "./apiPlanLicenseV1.js";
+import {
+	ApiPlanVariantV1Schema,
+	VariantCustomizeSchema,
+} from "./apiPlanVariantV1.js";
+
+export {
+	ApiPlanLicenseV1Schema,
+	type ApiPlanLicenseV1,
+} from "./apiPlanLicenseV1.js";
+export {
+	ApiPlanVariantV1Schema,
+	type ApiPlanVariantV1,
+	VariantCustomizeSchema,
+} from "./apiPlanVariantV1.js";
 
 export {
 	AttachAction,
@@ -54,39 +64,9 @@ export const API_PLAN_V1_EXAMPLE = {
 	metadata: {},
 };
 
-export const VariantCustomizeSchema = refineCustomizePlanV1Schema(
-	CustomizePlanV1BaseSchema.omit({
-		items: true,
-		upsert_licenses: true,
-	}).strict(),
-	{ includeItems: false, includeLicenses: false },
-);
-
-export const ApiPlanLicenseV1Schema = z.object({
-	license_plan_id: z.string().meta({
-		description: "The plan offered as a license under this plan.",
-	}),
-	version: z.number().int().min(1).meta({
-		description: "The exact license-plan version pinned by this link.",
-	}),
-	included: z.number().meta({
-		description:
-			"Number of license assignments included with this plan for free.",
-	}),
-	prepaid_only: z.boolean().meta({
-		internal: true,
-		description:
-			"Assignments are capped at the included quantity. Must be true for now; overflow billing (false) is not yet available.",
-	}),
-	customize: LicenseCustomizeSchema.optional().meta({
-		internal: true,
-		description: "The item and price diff applied to this parent-plan link.",
-	}),
-});
-
-export type ApiPlanLicenseV1 = z.infer<typeof ApiPlanLicenseV1Schema>;
-
+/** Core plan — no license/variant graph. Nested `license.plan` / `variant.plan` use this. */
 export const ApiPlanV1Schema = z.object({
+	// Identity
 	id: z.string().meta({
 		description: "Unique identifier for the plan.",
 	}),
@@ -101,6 +81,7 @@ export const ApiPlanV1Schema = z.object({
 			"Group identifier for organizing related plans. Plans in the same group are mutually exclusive.",
 	}),
 
+	// Flags
 	version: z.number().meta({
 		description:
 			"Version number of the plan. Incremented when plan configuration changes.",
@@ -114,6 +95,7 @@ export const ApiPlanV1Schema = z.object({
 			"If true, this plan is automatically attached when a customer is created. Used for free plans.",
 	}),
 
+	// Pricing
 	price: z
 		.object({
 			amount: z.number().meta({
@@ -146,21 +128,16 @@ export const ApiPlanV1Schema = z.object({
 			description:
 				"Base recurring price for the plan. Null for free plans or usage-only plans.",
 		}),
-
 	items: z.array(ApiPlanItemV1Schema).meta({
 		description:
 			"Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.",
-	}),
-	licenses: z.array(ApiPlanLicenseV1Schema).optional().meta({
-		internal: true,
-		description:
-			"Plans offered as assignable licenses under this plan. Omitted when the plan has none.",
 	}),
 	free_trial: ApiFreeTrialV2Schema.optional().meta({
 		description:
 			"Free trial configuration. If set, new customers can try this plan before being charged.",
 	}),
 
+	// Meta
 	created_at: z.number().meta({
 		description: "Unix timestamp (ms) when the plan was created.",
 	}),
@@ -171,6 +148,19 @@ export const ApiPlanV1Schema = z.object({
 		description:
 			"Whether the plan is archived. Archived plans cannot be attached to new customers.",
 	}),
+	config: ProductConfigSchema.meta({
+		description: "Miscellaneous plan-level configuration flags.",
+	}),
+	billing_controls: CustomerBillingControlsSchema.optional().meta({
+		description: "Plan-level billing controls used as customer defaults.",
+	}),
+	metadata: ProductMetadataSchema.meta({
+		description:
+			"Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.",
+	}),
+	customer_eligibility: CustomerEligibilitySchema.optional(),
+
+	// Variant identity — this plan as a variant of a base
 	base_variant_id: z.string().nullable().meta({
 		description:
 			"Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from.",
@@ -191,20 +181,6 @@ export const ApiPlanV1Schema = z.object({
 			description:
 				"Details about how this variant relates to its latest base plan.",
 		}),
-
-	config: ProductConfigSchema.meta({
-		description: "Miscellaneous plan-level configuration flags.",
-	}),
-	billing_controls: CustomerBillingControlsSchema.optional().meta({
-		description: "Plan-level billing controls used as customer defaults.",
-	}),
-
-	metadata: ProductMetadataSchema.meta({
-		description:
-			"Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.",
-	}),
-
-	customer_eligibility: CustomerEligibilitySchema.optional(),
 });
 
 export type ApiPlanV1 = z.infer<typeof ApiPlanV1Schema>;
@@ -216,43 +192,12 @@ export const ApiPlanV1WithMeta = ApiPlanV1Schema.meta({
 	example: API_PLAN_V1_EXAMPLE,
 });
 
-export const ApiPlanLicenseWithPlanV1Schema = ApiPlanLicenseV1Schema.extend({
-	plan: ApiPlanV1Schema.optional().meta({
-		description:
-			"The effective plan for this license link — the pinned version, with the link's customize applied. Present when license plans are expanded.",
-	}),
-});
-
-export type ApiPlanLicenseWithPlanV1 = z.infer<
-	typeof ApiPlanLicenseWithPlanV1Schema
->;
-
-/** A base plan's down-link to a variant derived from it. */
-export const ApiPlanVariantV1Schema = z.object({
-	variant_plan_id: z.string().meta({
-		description: "The plan ID of the variant derived from this base plan.",
-	}),
-	name: z.string().meta({
-		description: "Display name of the variant plan.",
-	}),
-	customize: VariantCustomizeSchema.optional().meta({
-		description:
-			"The variant's declared divergence from its base plan — exactly what you would re-submit to recreate it.",
-	}),
-	plan: ApiPlanV1Schema.omit({ variant_details: true }).optional().meta({
-		description:
-			"The variant's fully resolved plan (base + customize applied). Present when variants are expanded.",
-	}),
-});
-
-export type ApiPlanVariantV1 = z.infer<typeof ApiPlanVariantV1Schema>;
-
-/** ApiPlanV1 with its graph edges expanded: license plans and nested variants. */
+/** ApiPlanV1 plus its license and variant edges. */
 export const ApiPlanExpandedV1Schema = ApiPlanV1Schema.extend({
-	licenses: z.array(ApiPlanLicenseWithPlanV1Schema).optional().meta({
+	licenses: z.array(ApiPlanLicenseV1Schema).optional().meta({
 		internal: true,
 		description:
-			"Plans offered as assignable licenses under this plan, each with its resolved plan. Omitted when the plan has none.",
+			"Plans offered as assignable licenses under this plan. Omitted when the plan has none.",
 	}),
 	variants: z.array(ApiPlanVariantV1Schema).optional().meta({
 		description:

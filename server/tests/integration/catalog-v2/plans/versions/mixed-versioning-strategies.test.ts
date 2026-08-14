@@ -20,7 +20,6 @@ import {
 } from "../utils/expectCatalogPlans.js";
 import {
 	expectPlanPreviewRowCorrect,
-	expectPlanPreviewRowsCorrect,
 	parsePlanPreview,
 } from "../preview/utils/expectPlanPreview.js";
 
@@ -245,32 +244,26 @@ test.concurrent(
 					},
 				},
 			});
-			expectPlanPreviewRowsCorrect({
+			expectPlanPreviewRowCorrect({
 				preview,
-				expected: [
-					{
-						planId: planB,
-						currentVersion: 1,
-						action: "update",
-						versioning: {
-							current_version: 1,
-							new_version: null,
-							resolved: "all_versions",
-							options: ["all_versions"],
-						},
+				expected: {
+					planId: planB,
+					currentVersion: 2,
+					action: "update",
+					versioning: {
+						current_version: 2,
+						new_version: null,
+						resolved: "all_versions",
+						options: ["all_versions"],
 					},
-					{
-						planId: planB,
-						currentVersion: 2,
-						action: "update",
-						versioning: {
-							current_version: 2,
-							new_version: null,
-							resolved: "all_versions",
-							options: ["all_versions"],
+					siblingVersions: [
+						{
+							version: 1,
+							selected: true,
+							hasPlanChange: true,
 						},
-					},
-				],
+					],
+				},
 			});
 			expectPlanPreviewRowCorrect({
 				preview,

@@ -6,6 +6,7 @@ import type { CatalogAppliedResult } from "@/internal/catalogV2/execute/executeU
 import { ProductService } from "@/internal/products/ProductService.js";
 import { applyEntitlementPricesPlan } from "./applyEntitlementPricesPlan";
 import { applyFreeTrialPlan } from "./applyFreeTrialPlan";
+import { executePlanLicensesPlan } from "./executePlanLicensesPlan";
 import { applyProductDetailsUpdate } from "./applyProductDetailsUpdate";
 import { clearDefaultFlagFromOtherVersions } from "./clearDefaultFlagFromOtherVersions";
 
@@ -37,7 +38,7 @@ const upsertOpToAction = ({
 	return "none";
 };
 
-/** Persist upsertProducts — product row + per-facet apply steps. */
+/** Persist upsertProducts — product rows first, then plan_license writes. */
 export const executeUpsertProducts = async ({
 	ctx,
 	updateCatalogPlan,
@@ -47,12 +48,18 @@ export const executeUpsertProducts = async ({
 }): Promise<CatalogAppliedResult[]> => {
 	const results: CatalogAppliedResult[] = [];
 
+	// Pass 1: write product rows (details, items, trial).
 	for (const upsert of updateCatalogPlan.upsertProducts) {
 		await executeUpsertProduct({ ctx, upsert });
 		results.push({
 			id: upsert.row.planId,
 			action: upsertOpToAction({ op: upsert.row.op }),
 		});
+	}
+
+	// Pass 2: replay plan_license writes after every child row exists.
+	for (const upsert of updateCatalogPlan.upsertProducts) {
+		await executePlanLicensesPlan({ ctx, upsert });
 	}
 
 	return results;

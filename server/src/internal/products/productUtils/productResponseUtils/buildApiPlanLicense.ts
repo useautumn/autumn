@@ -1,6 +1,5 @@
 import type {
 	ApiPlanLicenseV1,
-	ApiPlanLicenseWithPlanV1,
 	Feature,
 	FullPlanLicense,
 } from "@autumn/shared";
@@ -21,12 +20,6 @@ type BuildApiPlanLicenseArgs = {
  * Render a license link edge: thin entry + customize diff, with the link's
  * effective plan attached when expandPlan is set. Each plan renders exactly once.
  */
-export async function buildApiPlanLicense(
-	args: BuildApiPlanLicenseArgs & { expandPlan: true },
-): Promise<ApiPlanLicenseWithPlanV1>;
-export async function buildApiPlanLicense(
-	args: BuildApiPlanLicenseArgs & { expandPlan?: false },
-): Promise<ApiPlanLicenseV1>;
 export async function buildApiPlanLicense({
 	ctx,
 	license,
@@ -34,9 +27,7 @@ export async function buildApiPlanLicense({
 	expand,
 	currency,
 	expandPlan = false,
-}: BuildApiPlanLicenseArgs & { expandPlan?: boolean }): Promise<
-	ApiPlanLicenseV1 | ApiPlanLicenseWithPlanV1
-> {
+}: BuildApiPlanLicenseArgs & { expandPlan?: boolean }): Promise<ApiPlanLicenseV1> {
 	const entry = toApiPlanLicenses([license])[0];
 
 	const isCustomized = Boolean(license.customized && license.base_product);

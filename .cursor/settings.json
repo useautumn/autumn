@@ -2,6 +2,9 @@
   "plugins": {
     "planetscale": {
       "enabled": true
+    },
+    "redis-development": {
+      "enabled": true
     }
   }
 }

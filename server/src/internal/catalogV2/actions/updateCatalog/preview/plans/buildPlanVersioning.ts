@@ -25,10 +25,7 @@ export const buildPlanVersioning = ({
 	const latestVersion = versionsForPlan[0]?.version;
 	const isLatestUpdate =
 		latestVersion !== undefined && latestVersion === upsert.row.version;
-	if (
-		upsert.state.hasCustomers &&
-		(isNewVersionMint || isLatestUpdate)
-	) {
+	if (upsert.state.hasCustomers && (isNewVersionMint || isLatestUpdate)) {
 		options.push("new_version");
 	}
 	if (versionsForPlan.length > 1) options.push("all_versions");

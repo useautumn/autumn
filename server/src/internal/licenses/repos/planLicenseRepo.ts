@@ -67,6 +67,52 @@ const upsert = async ({
 	return planLicense;
 };
 
+/** Pure write: persist a pre-decided catalog link row by its id. */
+const upsertById = async ({
+	db,
+	id,
+	parentInternalProductId,
+	licenseInternalProductId,
+	included,
+	prepaidOnly,
+	metadata,
+	customized,
+}: {
+	db: DrizzleCli;
+	id: string;
+	parentInternalProductId: string;
+	licenseInternalProductId: string;
+	included: number;
+	prepaidOnly: boolean;
+	metadata?: Record<string, unknown>;
+	customized: boolean;
+}): Promise<void> => {
+	await db
+		.insert(planLicenses)
+		.values({
+			id,
+			parent_internal_product_id: parentInternalProductId,
+			license_internal_product_id: licenseInternalProductId,
+			is_custom: false,
+			included,
+			prepaid_only: prepaidOnly,
+			customized,
+			metadata: metadata ?? {},
+			created_at: Date.now(),
+			updated_at: Date.now(),
+		})
+		.onConflictDoUpdate({
+			target: [planLicenses.id],
+			set: {
+				included,
+				prepaid_only: prepaidOnly,
+				customized,
+				...(metadata !== undefined ? { metadata } : {}),
+				updated_at: Date.now(),
+			},
+		});
+};
+
 const getCatalogByParentAndLicense = async ({
 	db,
 	parentInternalProductId,
@@ -256,6 +302,7 @@ const deleteByIds = async ({ db, ids }: { db: DrizzleCli; ids: string[] }) => {
 
 export const planLicenseRepo = {
 	upsert,
+	upsertById,
 	getCatalogByParentAndLicense,
 	retireCatalogById,
 	listCatalogByParentInternalProductIds,

@@ -1,6 +1,8 @@
 import type { PreviewUpdateCatalogResponse } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
+import { buildLicensesPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicensesPreview";
 import { buildPlanVersioning } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildPlanVersioning";
+import { buildSiblingVersionsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildSiblingVersionsPreview";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
@@ -17,15 +19,19 @@ const upsertOpToAction = ({
 	return "none";
 };
 
-/** Pure map: upsertProducts → preview plan rows. */
+/** Pure map: direct upsertProducts → preview plan rows. Derived rows nest. */
 export const buildPlansPreview = ({
 	updateCatalogPlan,
 	productStatesContext,
 }: {
 	updateCatalogPlan: UpdateCatalogPlan;
 	productStatesContext: ProductStatesContext;
-}): PreviewUpdateCatalogResponse["plans"] =>
-	updateCatalogPlan.upsertProducts.map((upsert) => {
+}): PreviewUpdateCatalogResponse["plans"] => {
+	const { upsertProducts } = updateCatalogPlan;
+
+	return upsertProducts.flatMap((upsert) => {
+		if (upsert.row.source !== "direct") return [];
+
 		const planChange = buildPlanChangeFromFullProducts({
 			from:
 				upsert.row.baseFullProduct ??
@@ -33,20 +39,33 @@ export const buildPlansPreview = ({
 				undefined,
 			to: upsert.row.nextFullProduct,
 		});
+		const siblingVersions = buildSiblingVersionsPreview({
+			directUpsert: upsert,
+			upsertProducts,
+			productStatesContext,
+		});
+		const licenses = buildLicensesPreview({ upsert });
 
-		return {
-			plan_id: upsert.row.planId,
-			name: upsert.row.nextFullProduct.name,
-			action: upsertOpToAction({ op: upsert.row.op }),
-			state: {
-				has_customers: upsert.state.hasCustomers,
-				will_archive: false,
+		return [
+			{
+				plan_id: upsert.row.planId,
+				name: upsert.row.nextFullProduct.name,
+				action: upsertOpToAction({ op: upsert.row.op }),
+				state: {
+					has_customers: upsert.state.hasCustomers,
+					will_archive: false,
+				},
+				versioning: buildPlanVersioning({
+					upsert,
+					versionsForPlan:
+						productStatesContext.versionsByPlanId[upsert.row.planId] ?? [],
+				}),
+				...(planChange ? { plan_change: planChange } : {}),
+				...(siblingVersions.length > 0
+					? { sibling_versions: siblingVersions }
+					: {}),
+				...(licenses.length > 0 ? { licenses } : {}),
 			},
-			versioning: buildPlanVersioning({
-				upsert,
-				versionsForPlan:
-					productStatesContext.versionsByPlanId[upsert.row.planId] ?? [],
-			}),
-			...(planChange ? { plan_change: planChange } : {}),
-		};
+		];
 	});
+};

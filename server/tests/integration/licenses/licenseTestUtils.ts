@@ -1,6 +1,6 @@
 import {
 	type ApiCustomerLicenseV0,
-	type ApiPlanV1,
+	type ApiPlanExpandedV1,
 	customerLicenses,
 	customerProducts,
 	customers,
@@ -86,7 +86,7 @@ export const listLicenseLinks = async ({
 }) => {
 	const plan = (await autumn.post("/plans.get", {
 		plan_id: parentPlanId,
-	})) as ApiPlanV1;
+	})) as ApiPlanExpandedV1;
 	return plan.licenses ?? [];
 };
 

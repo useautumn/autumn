@@ -185,7 +185,6 @@ export async function getPlanResponse({
 
 		price: basePrice,
 		items: planItems ?? [],
-		licenses: apiLicenses,
 		free_trial: freeTrial,
 
 		created_at: product.created_at ?? 0,
@@ -230,11 +229,12 @@ export async function getPlanResponse({
 
 	const planResponse = {
 		...plan,
+		...(apiLicenses ? { licenses: apiLicenses } : {}),
 		...(variantDetails ? { variant_details: variantDetails } : {}),
 		...(variants ? { variants } : {}),
 	};
 
-	return expandLicensePlans || expandVariants
+	return expandLicensePlans || expandVariants || apiLicenses
 		? ApiPlanExpandedV1Schema.parse(planResponse)
 		: ApiPlanV1Schema.parse(planResponse);
 }

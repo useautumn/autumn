@@ -1,4 +1,6 @@
 export type { FeatureState } from "./featureState";
+export type { LicenseStatesContext } from "./licenseStatesContext";
+export { emptyLicenseStatesContext } from "./licenseStatesContext";
 export type {
 	PersistedFeatureUsage,
 	PreviewCatalogContext,

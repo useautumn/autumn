@@ -1,4 +1,5 @@
 import {
+	applyPlanItemParamsDiff,
 	type CreatePlanItemParamsV1,
 	enrichCtxWithFeatures,
 	ErrCode,
@@ -82,18 +83,6 @@ export const resolveEntitlementPricesCustomize = ({
 		});
 	}
 
-	if (
-		customize.add_items !== undefined ||
-		customize.remove_items !== undefined
-	) {
-		throw new RecaseError({
-			message:
-				"customize.add_items / remove_items are not implemented for computeEntitlementPricesPlan yet",
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
-
 	// ctx.features may be projected (removed or renamed this call). Current
 	// rows still reference the old public ids, so union those in by id.
 	const currentRowFeatures = withCurrentRowFeatures({
@@ -117,7 +106,11 @@ export const resolveEntitlementPricesCustomize = ({
 	const planItems =
 		customize.items !== undefined
 			? customize.items
-			: (currentAsCustomize.items ?? []);
+			: applyPlanItemParamsDiff({
+					items: currentAsCustomize.items ?? [],
+					add_items: customize.add_items,
+					remove_items: customize.remove_items,
+				});
 
 	return { basePrice, planItems };
 };

@@ -3,7 +3,7 @@ import { CatalogFeatureUpdatePreviewSchema } from "./components/catalogFeatureUp
 import { CatalogMigrationUpdatePreviewSchema } from "./components/catalogMigration.js";
 import { CatalogPlanUpdatePreviewSchema } from "./components/catalogPlanUpdatePreview/catalogPlanUpdatePreview.js";
 
-/** Total preview: every affected plan/feature is always included — no include_* flags. */
+/** Preview of a catalog update. `plans[]` mirrors the request's direct entries; related versions nest under each row. */
 export const PreviewUpdateCatalogResponseSchema = z.object({
 	plans: z.array(CatalogPlanUpdatePreviewSchema),
 	features: z.array(CatalogFeatureUpdatePreviewSchema),
