@@ -57,6 +57,13 @@ if [ -f ai/package.json ]; then
 	# Must run from the autumn root: `cd ai && bun sync` on a headless box
 	# writes into ai/.cursor because findRepoRoot has no TTY to pick the parent.
 	"$BUN" ai/src/cli.ts sync
+	# ai-sync writes gitignored **symlinks**. Cursor Cloud slash commands do
+	# not follow those (same reason Devin gets copies). Materialize real dirs
+	# and ~/.cursor/skills. Do not inject EXECUTOR_API_KEY here — Runtime
+	# Secrets are not available at build/install time.
+	python3 scripts/setup/cursor-cloud/cursor_ai.py materialize
+	python3 scripts/setup/cursor-cloud/cursor_ai.py mcp-template
+	python3 scripts/setup/cursor-cloud/cursor_ai.py agents-md
 fi
 
 log "install complete"

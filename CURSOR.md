@@ -54,14 +54,45 @@ Started every boot by `scripts/setup/cursor-cloud/start.sh` → `agent-services.
 
 If they are down: `bash scripts/setup/agent-services.sh`.
 
-## Skills (`tdd`, etc.)
+## Skills (`tdd`, `/autumn-tdd-test`, etc.)
 
-Skills live in the private `ai` submodule (`github.com/useautumn/ai`). Install
-runs `git submodule update --init --recursive` then `bun ai/src/cli.ts sync`,
-which writes into `.cursor/skills`. After a boot you should see `tdd` and the
-rest under `.cursor/skills/`.
+Skills live in the private `ai` submodule (`github.com/useautumn/ai`). `bun ai
+sync` **does** run on Cloud install — that is not enough by itself.
 
-To refresh: `(cd ai && bun install) && bun ai/src/cli.ts sync`.
+ai-sync writes **symlinks** from `.cursor/skills/<name>` into
+`ai/config/skills/**`. `.cursor/skills` is gitignored (source of truth is `ai/`).
+Cursor Cloud slash commands index real files, not gitignored symlinks — the
+same reason Devin gets `bun sync devin` copies instead of links. So install
+(and start) run `cursor_ai.py materialize`, which replaces each symlink with a
+real directory and mirrors into `~/.cursor/skills`. After a boot you should
+have `/tdd` and `/autumn-tdd-test`. `tdd` supersedes `autumn-tdd-test`; both
+are installed during the transition.
+
+`AGENTS.md` is also gitignored/generated. Cursor Cloud auto-loads it (it does
+**not** auto-load this file). Install appends a "Cursor Cloud specific
+instructions" section so the agent still knows to read the skill files.
+
+To refresh: `(cd ai && bun install) && bun ai/src/cli.ts sync && python3 scripts/setup/cursor-cloud/cursor_ai.py materialize`.
+
+Agents started from the **saved team environment** (`install: bun install`
+only, no `start`) never run this path — start a new agent from this branch so
+`.cursor/environment.json` is used.
+
+## Executor MCP
+
+`ai/config/mcps.json` authenticates Executor with
+`Authorization: Bearer ${env:EXECUTOR_API_KEY}` (the key lives in Infisical
+`dev` as `EXECUTOR_API_KEY`). ai-sync **drops** that header when the env var
+is unset so laptop OAuth still works. Cloud cannot complete OAuth.
+
+`start` pulls just that one secret via `infisical run -- printenv EXECUTOR_API_KEY`
+(same pattern as ngrok) and writes the Bearer header into gitignored
+`.cursor/mcp.json` and `~/.cursor/mcp.json`. It also `export`s the var in
+`~/.autumn-agent/env.sh`. The key is never committed or logged.
+
+Optional belt-and-suspenders: a Team Runtime Secret named `EXECUTOR_API_KEY`
+(same rules as Infisical client id — Team scope, Runtime Secret type). If it
+is already in the process environment, Infisical is not queried for it.
 
 ## Reviewing in the Cursor IDE (not Agents Window)
 
