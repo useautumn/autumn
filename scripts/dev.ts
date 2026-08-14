@@ -293,17 +293,23 @@ async function startDev() {
 					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
 			);
 
-			names.push("eve", "leaf");
-			colors.push("white", "gray");
 			const skipEve =
 				process.env.DW_HEADLESS === "1" ||
 				process.env.DW_HEADLESS === "true";
-			cmds.push(
-				isWindows
-					? `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`
-					: skipEve
-						? `"echo DW_HEADLESS=1 — skipping eve (npx eve EOVERRIDE / drizzle-orm catalog)"`
+			if (!skipEve) {
+				names.push("eve");
+				colors.push("white");
+				cmds.push(
+					isWindows
+						? `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`
 						: `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`,
+				);
+			} else {
+				console.error("DW_HEADLESS=1 — skipping eve\n");
+			}
+			names.push("leaf");
+			colors.push("gray");
+			cmds.push(
 				// Harness defaults live in apps/leaf/src/lib/chatAgentConfig.ts.
 				isWindows
 					? `"cd apps/leaf && set PORT=${CHAT_PORT} && bun dev"`

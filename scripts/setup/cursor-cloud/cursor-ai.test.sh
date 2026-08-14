@@ -124,4 +124,12 @@ sqs="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" printenv SQS_QU
 [[ "$sqs" == *localhost:9324* ]] || fail "SQS overlay, got $sqs"
 pass "with-isolation.sh overlays Infisical laptop Redis/SQS"
 
+if grep -E '^AWS_ACCESS_KEY_ID=x' "$ROOT/scripts/setup/cursor-cloud/isolation.env"; then
+	fail "isolation.env must not pin dummy AWS_ACCESS_KEY_ID=x (breaks S3)"
+fi
+if grep -q 'skipping eve (npx' "$ROOT/scripts/dev.ts"; then
+	fail "eve skip must not be an echo-with-parens concurrently command"
+fi
+pass "isolation.env has no dummy AWS keys; eve skip is not a concurrently echo"
+
 echo "all cursor_ai.py tests passed"

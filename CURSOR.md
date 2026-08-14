@@ -34,7 +34,12 @@ on `:6380` and Dragonfly Cloud. Cloud `infisical` is wrapped so **after** vault
 injection it sources `isolation.env` (localhost `:6379` / `:9324` / Postgres).
 `bun dw run` also applies that overlay in headless mode even when the worktree
 is not Neon-provisioned. `server/.env` must not pin a random `ENCRYPTION_*` —
-that cannot decrypt vault/DB Dragonfly backups (BAD_DECRYPT).
+that cannot decrypt vault/DB Dragonfly backups (BAD_DECRYPT). Do not pin dummy
+`AWS_ACCESS_KEY_ID=x` either — ElasticMQ is fine with Infisical keys;
+dummy keys make S3 edge-config fail (`Access Key Id does not exist`).
+`agent-services.sh` CreateQueue-s `autumn.fifo`, `autumn-track.fifo`,
+`autumn-track-async`, and `autumn-stripe-webhook.fifo` (snapshot conf may
+only have `autumn.fifo`).
 
 ```sh
 bun dw          # provision-if-needed is a no-op without Neon; starts the app

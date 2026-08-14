@@ -63,9 +63,6 @@ const ISOLATION: Record<string, string> = {
 	STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 	NODE_ENV: "development",
 	INFISICAL_ENVIRONMENT: "dev",
-	AWS_REGION: "us-east-1",
-	AWS_ACCESS_KEY_ID: "x",
-	AWS_SECRET_ACCESS_KEY: "x",
 };
 
 const HEADER = `# -----------------------------------------------------------------------
@@ -99,6 +96,13 @@ function upsertIsolation(contents: string): string {
 		const key = m[1];
 		const value = m[2];
 		if (STRIP_PINNED_SECRETS.has(key)) continue;
+		// Dummy ElasticMQ keys (`x`) clobber Infisical and break S3 edge-config.
+		if (
+			(key === "AWS_ACCESS_KEY_ID" || key === "AWS_SECRET_ACCESS_KEY") &&
+			value === "x"
+		) {
+			continue;
+		}
 		if (dropEmpty.has(key) && value === "") continue;
 		if (key in ISOLATION) {
 			kept.push(`${key}=${ISOLATION[key]}`);
