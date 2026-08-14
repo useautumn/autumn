@@ -1,23 +1,31 @@
 import {
-	EntInterval,
 	type FullCusProduct,
+	type ProductItemInterval,
+	billingToItemInterval,
+	entToItemInterval,
 	findCustomerEntitlementByFeature,
 	findFeatureById,
 	isBooleanFeature,
+	resetIntvToItemIntv,
 } from "@autumn/shared";
 import type { CreatePlanItemParamsV1 } from "@autumn/shared/api/products/items/crud/createPlanItemParamsV1.js";
 import type { PlanItemFilter } from "@autumn/shared/api/products/items/filter/planItemFilter.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { handleCustomizeDeleteItems } from "@/internal/billing/v2/setup/patch/handleCustomizeDeleteItems.js";
 
-const getAddItemEntitlementInterval = ({
+const addItemToPlanItemInterval = ({
 	item,
 }: {
 	item: CreatePlanItemParamsV1;
-}): EntInterval =>
-	(item.reset?.interval ??
-		item.price?.interval ??
-		EntInterval.Lifetime) as EntInterval;
+}): ProductItemInterval | null => {
+	if (item.reset?.interval !== undefined)
+		return resetIntvToItemIntv(item.reset.interval);
+	if (item.price?.interval !== undefined)
+		return billingToItemInterval({
+			billingInterval: item.price.interval,
+		});
+	return null;
+};
 
 export const itemAlreadyExists = ({
 	ctx,
@@ -59,13 +67,13 @@ export const itemAlreadyExists = ({
 		);
 	}
 
-	const itemInterval = getAddItemEntitlementInterval({ item });
+	const itemInterval = addItemToPlanItemInterval({ item });
 
 	return remainingCustomerProduct.customer_entitlements.some(
 		(customerEntitlement) =>
 			customerEntitlement.feature_id === item.feature_id &&
-			String(
-				customerEntitlement.entitlement.interval ?? EntInterval.Lifetime,
-			) === String(itemInterval),
+			entToItemInterval({
+				entInterval: customerEntitlement.entitlement.interval,
+			}) === itemInterval,
 	);
 };
