@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Idempotent: start one Cloud ngrok tunnel for the dashboard, write public-urls.txt, exit.
 # bun dw identify / setup / run call this. The ngrok terminal then stays attached.
-# One tunnel: ngrok free allows a single endpoint. Stripe webhooks use `stripe listen`.
-# Random domain — reserved NGROK_API_KEY names collide across Cloud VMs.
+# Paid Infisical NGROK_AUTHTOKEN: --url=https:// gives each VM a unique *.ngrok.app.
+# Free token: ngrok assigns one static *.ngrok-free.dev for the whole account.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
@@ -98,45 +98,62 @@ cat > "$CFG" <<EOF
 version: "2"
 authtoken: ${NGROK_AUTHTOKEN}
 web_addr: 127.0.0.1:4040
-tunnels:
-  vite:
-    addr: 3000
-    proto: http
-    pooling_enabled: true
 EOF
 chmod 600 "$CFG"
-echo "[cursor-cloud-ngrok] starting dashboard tunnel → :3000"
-nohup ngrok start vite --config "$CFG" --log=stdout \
-	>"$LOG" 2>&1 &
-echo $! >"$PIDFILE"
 
-wrote=0
-for _ in $(seq 1 60); do
-	if [ -f "$PIDFILE" ] && ! kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-		echo "[cursor-cloud-ngrok] ngrok process exited" >&2
-		break
-	fi
-	if curl -sf http://127.0.0.1:4040/api/tunnels >/dev/null 2>&1; then
-		write_tunnels
-		wrote=1
-		break
-	fi
-	sleep 0.5
-done
-if [ "$wrote" -eq 0 ]; then
-	held="$(already_online_url || true)"
-	if [ -n "${held:-}" ]; then
-		echo "[cursor-cloud-ngrok] free endpoint already online: ${held}" >&2
-		echo "[cursor-cloud-ngrok] that hostname is shared by this Infisical authtoken — another agent or leftover session owns it. This VM is not serving it." >&2
-		echo "vite (http://localhost:3000): ${held}" >"$URLS"
-		exit 0
-	fi
-	echo "[cursor-cloud-ngrok] inspector :4040 never came up" >&2
-	dump_log
+start_ngrok() {
+	: >"$LOG"
+	# shellcheck disable=SC2086
+	nohup ngrok http 3000 --config "$CFG" --log=stdout "$@" \
+		>"$LOG" 2>&1 &
+	echo $! >"$PIDFILE"
+}
+
+wait_for_inspector() {
+	local i
+	for i in $(seq 1 40); do
+		if [ -f "$PIDFILE" ] && ! kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+			return 1
+		fi
+		if curl -sf http://127.0.0.1:4040/api/tunnels >/dev/null 2>&1; then
+			write_tunnels
+			return 0
+		fi
+		sleep 0.5
+	done
+	return 1
+}
+
+stop_ngrok() {
 	if [ -f "$PIDFILE" ]; then
 		kill "$(cat "$PIDFILE")" 2>/dev/null || true
+		rm -f "$PIDFILE"
 	fi
-	echo "ngrok started but inspector :4040 did not respond" >"$URLS"
-	exit 1
+}
+
+echo "[cursor-cloud-ngrok] starting unique dashboard tunnel → :3000 (--url https://)"
+# Paid plans: each VM gets its own *.ngrok.app. Free plans reject this.
+start_ngrok --url 'https://'
+if wait_for_inspector; then
+	exit 0
 fi
-exit 0
+echo "[cursor-cloud-ngrok] random URL rejected (needs a paid NGROK_AUTHTOKEN); trying the account's static hostname" >&2
+stop_ngrok
+
+start_ngrok --pooling-enabled
+if wait_for_inspector; then
+	exit 0
+fi
+
+held="$(already_online_url || true)"
+if [ -n "${held:-}" ]; then
+	echo "[cursor-cloud-ngrok] free endpoint already online: ${held}" >&2
+	echo "[cursor-cloud-ngrok] Infisical NGROK_AUTHTOKEN is a free ngrok account — one hostname for every Cloud agent. Put a paid authtoken in Infisical dev for a unique URL per VM." >&2
+	echo "vite (http://localhost:3000): ${held}" >"$URLS"
+	exit 0
+fi
+echo "[cursor-cloud-ngrok] inspector :4040 never came up" >&2
+dump_log
+stop_ngrok
+echo "ngrok started but inspector :4040 did not respond" >"$URLS"
+exit 1

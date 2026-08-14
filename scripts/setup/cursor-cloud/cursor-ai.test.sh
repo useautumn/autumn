@@ -158,7 +158,7 @@ pass "bun dw identify starts Cloud ngrok"
 timeout 8 bash "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" >/tmp/ngrok-up.out 2>&1 || true
 if grep -q "no NGROK_AUTHTOKEN or ngrok binary" /tmp/ngrok-up.out \
 	|| grep -q "already running" /tmp/ngrok-up.out \
-	|| grep -q "starting dashboard tunnel" /tmp/ngrok-up.out; then
+	|| grep -q "starting unique dashboard tunnel" /tmp/ngrok-up.out; then
 	pass "ngrok-up.sh returns quickly without hanging"
 else
 	fail "ngrok-up.sh unexpected output: $(head -c 400 /tmp/ngrok-up.out)"
@@ -168,8 +168,10 @@ grep -q 'addr: 3000' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
 if grep -q 'addr: 8080' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh"; then
 	fail "Cloud ngrok must not start a second :8080 tunnel (free plan is one endpoint)"
 fi
-grep -q 'pooling_enabled: true' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
-	|| fail "Cloud ngrok should enable pooling for the shared free endpoint"
-pass "Cloud ngrok is a single dashboard tunnel"
+grep -q -- "--url 'https://'" "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
+	|| fail "Cloud ngrok must try a unique --url https:// hostname first"
+grep -q -- '--pooling-enabled' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
+	|| fail "Cloud ngrok should fall back to pooling on the shared free endpoint"
+pass "Cloud ngrok tries a unique URL, then the free-plan hostname"
 
 echo "all cursor_ai.py tests passed"

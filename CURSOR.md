@@ -193,12 +193,17 @@ different `localhost:3000`. Use one of:
    wide open when `DW_HEADLESS=1` so preview hostnames do not 403.
 2. **Remote desktop** on the agent page — take control, open Chrome with
    `--no-sandbox`, go to `http://localhost:3000`. Most reliable if Ports is empty.
-3. **ngrok** — on Cloud, `bun dw setup` / `bun dw` / `bun dw run` always
-   start a public tunnel when `NGROK_AUTHTOKEN` is in Infisical (random
-   `*.ngrok.app` for `:3000` and `:8080`). A `ngrok` terminal does the same
-   on boot. URLs go to `~/.autumn-agent/public-urls.txt` and `bun dw identify`.
-   Canonical laptop worktree #1 still skips Docker ngrok (reserved domains).
-   Cloud withholds `NGROK_API_KEY` so those names do not collide across VMs.
+3. **ngrok** — on Cloud, `bun dw identify` / `setup` / `run` start one
+   dashboard tunnel to `:3000` when `NGROK_AUTHTOKEN` is in Infisical `dev`.
+   Each Cloud Agent is its own VM and should get its own public hostname:
+   the script first runs `ngrok http 3000 --url 'https://'` (unique
+   `*.ngrok.app` per VM). That flag is **paid-only**. A free token always
+   maps to one static `*.ngrok-free.dev` for the whole account, so a second
+   agent hits `ERR_NGROK_334`. Put a paid authtoken in Infisical `dev` to
+   run concurrent agents with unique URLs. The free-token fallback still
+   prints the shared hostname so `identify` is not blank. Stripe webhooks
+   stay on `stripe listen`. Cloud unsets `NGROK_API_KEY` so laptop reserved
+   domains (`autumn-wt1-<hash>.ngrok.app`) do not collide across VMs.
 
 The `access` terminal reprints these instructions on every boot. It does not
 start the app.
