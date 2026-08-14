@@ -90,27 +90,24 @@ Email OTP login. With no `RESEND_API_KEY`, the code is printed to the server log
 ## Secrets (Infisical machine identity)
 
 **Do not paste client IDs or secrets into chat.** They would land in the
-transcript. Add them as **Runtime Secrets** (redacted from the model and
-commits) on the environment:
+transcript.
 
-[https://cursor.com/dashboard/cloud-agents/environments/e/401b82fb-73ca-11f1-a8a0-cafc5ef88358](https://cursor.com/dashboard/cloud-agents/environments/e/401b82fb-73ca-11f1-a8a0-cafc5ef88358)
+This repo has `.cursor/environment.json`, so Cloud Agents use **repository
+config**, not the saved team environment. Secrets whose scope is
+**Environment** on that dashboard page are **not injected** (the agent’s
+`environmentPublicId` is null). Add them as **Team** (or User) **Runtime
+Secrets** on [Cloud Agents → Secrets](https://cursor.com/dashboard/cloud-agents)
+— Apply to this repo / all repos. Type stays Runtime Secret.
 
-Secrets → add:
-
-| Name | Type | Why |
+| Name | Type | Scope |
 |---|---|---|
-| `INFISICAL_CLIENT_ID` | Runtime Secret | Machine identity (universal-auth) |
-| `INFISICAL_CLIENT_SECRET` | Runtime Secret | Machine identity |
+| `INFISICAL_CLIENT_ID` | Runtime Secret | **Team** (not Environment) |
+| `INFISICAL_CLIENT_SECRET` | Runtime Secret | **Team** (not Environment) |
 
-That is the only durable pair you need (same names as Autumn's Node SDK).
-`start` exchanges them for `INFISICAL_TOKEN` and writes
-`~/.cache/autumn-infisical-token`. Agent terminals often do not see Runtime
-Secrets; `bun dw` reuses that cache. An `INFISICAL_TOKEN` Runtime Secret also
-works until it expires (default 2 hours) — prefer client id/secret.
-
-Do **not** expect `infisical run` to pick client credentials up by itself
-(https://infisical.com/docs/cli/commands/run). Existing `package.json`
-scripts (`bun dw`, `bun d`, `bun t`, …) then work as on a laptop.
+That is the durable pair (same names as Autumn's Node SDK). `start` exchanges
+them for `INFISICAL_TOKEN` and writes `~/.cache/autumn-infisical-token`.
+`INFISICAL_TOKEN` as a Cursor secret is optional and expires (service tokens
+on a date; machine-identity access tokens in ~2 hours).
 
 `server/.env` and `scripts/setup/cursor-cloud/isolation.env` are an **overlay**,
 not the vault: they pin `DATABASE_URL` / Redis / SQS to localhost so this VM

@@ -40,7 +40,7 @@ if [ -z "\${INFISICAL_TOKEN:-}" ] && [ -x "\$LOGIN" ]; then
 fi
 if [ -z "\${INFISICAL_TOKEN:-}" ]; then
 	echo "infisical: no INFISICAL_TOKEN in this process and no cached token from start." >&2
-	echo "infisical: Runtime Secrets must be Environment-scoped (INFISICAL_CLIENT_ID/SECRET)." >&2
+	echo "infisical: Runtime Secrets must be Team-scoped (not Environment). Repo environment.json does not inherit the dashboard environment's secrets." >&2
 	exit 1
 fi
 exec "\$REAL" "\$@"

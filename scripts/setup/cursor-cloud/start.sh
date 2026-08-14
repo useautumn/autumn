@@ -35,7 +35,7 @@ if token="$(bash "$ROOT/scripts/setup/cursor-cloud/infisical-machine-login.sh")"
 	echo "[cursor-cloud-start] Infisical machine identity: token ready"
 else
 	echo "[cursor-cloud-start] Infisical machine identity not configured (INFISICAL_CLIENT_ID/SECRET unset in start)"
-	echo "[cursor-cloud-start] Add them as Environment Runtime Secrets — do not paste into chat."
+	echo "[cursor-cloud-start] Repo .cursor/environment.json wins over the team env — use Team-scoped Runtime Secrets, not Environment-scoped."
 	echo "[cursor-cloud-start] bun dw will fail until start can mint INFISICAL_TOKEN."
 fi
 
