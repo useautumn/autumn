@@ -55,7 +55,6 @@ export const overlayAttachRuntimeBalances = async ({
 		entityId,
 		source: "setupAttachBillingContext",
 		runLazyResets: false,
-		readMaster: true,
 	});
 	if (!fullSubject) return fullCustomer;
 

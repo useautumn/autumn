@@ -151,7 +151,6 @@ export const getCachedFeatureBalancesBatch = async ({
 	customerEntitlementIdsByFeatureId,
 	includeAggregated = false,
 	usageWindowFeatureIds,
-	readMaster = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -161,9 +160,6 @@ export const getCachedFeatureBalancesBatch = async ({
 	/** Features with an armed windowed cap: their `_usage_windows` field is
 	 *  read too. A missing field fails open (reads as an empty counter set). */
 	usageWindowFeatureIds?: Set<string>;
-	/** Require same-primary ordering for lifecycle calculations that must see
-	 * every accepted runtime mutation before constructing replacement state. */
-	readMaster?: boolean;
 }): Promise<FeatureBalancesBatchOutcome> => {
 	if (featureIds.length === 0) return { kind: "ok", value: [] };
 
@@ -193,8 +189,8 @@ export const getCachedFeatureBalancesBatch = async ({
 		},
 		source: "getCachedFeatureBalancesBatch",
 		redisInstance: redisV2,
-		retryOnStandby: !readMaster,
-		useReadPool: !readMaster,
+		retryOnStandby: true,
+		useReadPool: true,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalancesBatch,
 	});
 

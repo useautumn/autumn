@@ -63,14 +63,14 @@ describe("attach runtime balance overlay", () => {
 		expect(result.cache_version).toBe(7);
 	});
 
-	test("reads live balances from the Redis primary for attach calculations", async () => {
+	test("reads live Redis balances for attach calculations", async () => {
 		const postgresCustomerEntitlement = customerEntitlements.create({
-			id: "cus_ent_primary_read",
+			id: "cus_ent_runtime_read",
 			featureId: "messages",
 			featureName: "Messages",
 			allowance: 100,
 			balance: 100,
-			customerProductId: "product_primary_read",
+			customerProductId: "product_runtime_read",
 		});
 		const runtimeCustomerEntitlement = structuredClone(
 			postgresCustomerEntitlement,
@@ -79,7 +79,7 @@ describe("attach runtime balance overlay", () => {
 		const postgresFullCustomer = customers.create({
 			customerProducts: [
 				customerProducts.create({
-					id: "product_primary_read",
+					id: "product_runtime_read",
 					customerEntitlements: [postgresCustomerEntitlement],
 				}),
 			],
@@ -87,7 +87,7 @@ describe("attach runtime balance overlay", () => {
 		runtimeFullCustomer = customers.create({
 			customerProducts: [
 				customerProducts.create({
-					id: "product_primary_read",
+					id: "product_runtime_read",
 					customerEntitlements: [runtimeCustomerEntitlement],
 				}),
 			],
@@ -99,7 +99,8 @@ describe("attach runtime balance overlay", () => {
 		});
 
 		expect(cachedSubjectCalls[cachedSubjectCalls.length - 1]).toMatchObject({
-			readMaster: true,
+			runLazyResets: false,
+			source: "setupAttachBillingContext",
 		});
 		expect(result.customer_products[0]?.customer_entitlements[0]?.balance).toBe(
 			95,
