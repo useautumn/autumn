@@ -2,19 +2,29 @@ import {
 	AffectedResource,
 	type ApiCustomerV5,
 	applyResponseVersionChanges,
+	type BalanceFilter,
+	BasePriceCursor,
 	type CusProductStatus,
 	CustomerExpand,
 	type CustomerLegacyData,
 	type CustomerListFilters,
+	type CustomerListSortBy,
+	ErrCode,
+	FeatureBalanceCursor,
+	type FeatureBalanceCursorFields,
+	type FeatureBalanceSortBasis,
 	type FullCustomer,
+	findFeatureById,
 	type ListCustomersV2_3Params,
 	type ListCustomersV2Params,
 	RELEVANT_STATUSES,
+	RecaseError,
 	type SortOrder,
 	StandardCursor,
 	type StandardCursorFields,
 } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
+import { isMotherDuckConfigured } from "@/external/motherduck/initMotherDuck.js";
 import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
 import {
 	getOrgCusProductLimit,
@@ -35,8 +45,13 @@ import {
 	type FlattenedCustomerRow,
 	reassembleFlattenedCustomer,
 } from "./reassembleFlattenedCustomer/index.js";
+import { resolveInternalIdsByBalanceFilter } from "./resolveByBalanceFilter.js";
+import { resolveInternalIdsByBasePriceSort } from "./resolveByBasePriceSort.js";
+import { resolveInternalIdsByFeatureBalanceSort } from "./resolveByFeatureBalanceSort.js";
 
 const DASHBOARD_LIST_PRODUCT_PREVIEW_LIMIT = 3;
+/** Balance-mode pages are verify-bounded: nominations + exact PG re-rank. */
+const FEATURE_BALANCE_PAGE_CAP = 250;
 
 export class CusBatchService {
 	static async getByInternalIds({
@@ -320,6 +335,11 @@ export class CusBatchService {
 		search,
 		filters,
 		cursor,
+		basePriceCursor,
+		featureBalanceCursor,
+		sortBy = "created_at",
+		sortFeatureId,
+		sortBasis,
 		limit,
 		sortOrder,
 	}: {
@@ -327,6 +347,11 @@ export class CusBatchService {
 		search: string;
 		filters?: CustomerListFilters;
 		cursor: { t: number; id: string } | null;
+		basePriceCursor?: { p: number; id: string } | null;
+		featureBalanceCursor?: FeatureBalanceCursorFields | null;
+		sortBy?: CustomerListSortBy;
+		sortFeatureId?: string;
+		sortBasis?: FeatureBalanceSortBasis;
 		limit: number;
 		sortOrder?: SortOrder;
 	}): Promise<{
@@ -338,6 +363,57 @@ export class CusBatchService {
 			orgId: ctx.org.id,
 			orgSlug: ctx.org.slug,
 		});
+
+		if (sortBy === "feature_balance") {
+			return await CusBatchService.getFeatureBalanceSortedPage({
+				ctx,
+				search,
+				filters,
+				sortFeatureId,
+				sortBasis,
+				cursor: featureBalanceCursor ?? null,
+				limit,
+				sortOrder,
+				cusProductLimit,
+				entitiesLimit,
+			});
+		}
+
+		if (filters?.balance && sortBy !== "created_at") {
+			throw new RecaseError({
+				message:
+					"Balance filter requires the created_at sort (or sorting by the same feature's balance)",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		if (sortBy === "base_price") {
+			return await CusBatchService.getBasePriceSortedPage({
+				ctx,
+				search,
+				filters,
+				cursor: basePriceCursor ?? null,
+				limit,
+				sortOrder,
+				cusProductLimit,
+				entitiesLimit,
+			});
+		}
+
+		if (filters?.balance) {
+			return await CusBatchService.getBalanceFilteredPage({
+				ctx,
+				search,
+				filters,
+				balance: filters.balance,
+				cursor,
+				limit,
+				sortOrder,
+				cusProductLimit,
+				entitiesLimit,
+			});
+		}
 
 		const statusFilters = parseDashboardStatusFilter(filters?.status);
 
@@ -462,6 +538,357 @@ export class CusBatchService {
 				Sentry.captureException(err);
 			},
 		);
+
+		return { fullCustomers, next_cursor: nextCursor };
+	}
+
+	/** Balance-threshold filter page (created_at sort): adaptive lake/dense
+	 * resolver, then the standard id-list hydration. */
+	private static async getBalanceFilteredPage({
+		ctx,
+		search,
+		filters,
+		balance,
+		cursor,
+		limit,
+		sortOrder,
+		cusProductLimit,
+		entitiesLimit,
+	}: {
+		ctx: RequestContext;
+		search: string;
+		filters?: CustomerListFilters;
+		balance: BalanceFilter;
+		cursor: { t: number; id: string } | null;
+		limit: number;
+		sortOrder?: SortOrder;
+		cusProductLimit: number;
+		entitiesLimit: number;
+	}): Promise<{
+		fullCustomers: FullCustomer[];
+		next_cursor: string | null;
+	}> {
+		const feature = findFeatureById({
+			features: ctx.features,
+			featureId: balance.feature_id,
+			errorOnNotFound: true,
+		});
+
+		const tResolveStart = performance.now();
+		const { internalIds, hasMore } = await resolveInternalIdsByBalanceFilter({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			search,
+			filters,
+			balance,
+			internalFeatureId: feature.internal_id,
+			cursor,
+			limit,
+			sortOrder,
+		});
+		const tResolveEnd = performance.now();
+
+		if (internalIds.length === 0) {
+			ctx.logger.info(
+				`[CusBatchService.getBalanceFilteredPage] feature=${balance.feature_id} op=${balance.op} rows=0 resolve=${(tResolveEnd - tResolveStart).toFixed(0)}ms`,
+			);
+			return { fullCustomers: [], next_cursor: null };
+		}
+
+		const fullCustomers = await CusBatchService.hydrateResolvedPage({
+			ctx,
+			internalIds,
+			cusProductLimit,
+			entitiesLimit,
+			balanceFeatureInternalIds: [feature.internal_id],
+		});
+
+		ctx.logger.info(
+			`[CusBatchService.getBalanceFilteredPage] feature=${balance.feature_id} op=${balance.op} value=${balance.value} rows=${fullCustomers.length} resolve=${(tResolveEnd - tResolveStart).toFixed(0)}ms total=${(performance.now() - tResolveStart).toFixed(0)}ms`,
+		);
+
+		triggerBatchResetCustomerEntitlements({ ctx, fullCustomers }).catch(
+			(err) => {
+				ctx.logger.error(
+					"[CusBatchService.getBalanceFilteredPage] batch reset failed:",
+					err,
+				);
+				Sentry.captureException(err);
+			},
+		);
+
+		const lastCustomer = fullCustomers[fullCustomers.length - 1];
+		const nextCursor =
+			hasMore && lastCustomer?.id
+				? StandardCursor.encode({
+						id: lastCustomer.id,
+						t: lastCustomer.created_at,
+					})
+				: null;
+
+		return { fullCustomers, next_cursor: nextCursor };
+	}
+
+	/** Hydrate an already-ordered id list via the dashboard-shaped full-customer
+	 * query, restoring the resolver's order (hydration sorts by created_at). */
+	private static async hydrateResolvedPage({
+		ctx,
+		internalIds,
+		cusProductLimit,
+		entitiesLimit,
+		balanceFeatureInternalIds,
+	}: {
+		ctx: RequestContext;
+		internalIds: string[];
+		cusProductLimit: number;
+		entitiesLimit: number;
+		balanceFeatureInternalIds?: string[];
+	}): Promise<FullCustomer[]> {
+		const sqlQuery = getCursorPaginatedFullCusQuery({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			inStatuses: RELEVANT_STATUSES,
+			withSubs: true,
+			withEntities: true,
+			includeInvoices: true,
+			withProductsPage: true,
+			entitiesLimit,
+			limit: internalIds.length,
+			internalCustomerIds: internalIds,
+			cusProductLimit,
+			balanceFeatureInternalIds,
+		});
+
+		const sqlRows = (await ctx.db.execute(sqlQuery)) as unknown as Record<
+			string,
+			unknown
+		>[];
+		const flat = (sqlRows[0] ?? {
+			customers: [],
+			customer_products: [],
+			customer_entitlements: [],
+			extra_customer_entitlements: [],
+			pooled_customer_entitlements: [],
+			customer_prices: [],
+			entitlements: [],
+			rollovers: [],
+			replaceables: [],
+			free_trials: [],
+			subscriptions: [],
+			entities: [],
+			invoices: [],
+		}) as unknown as FlattenedCustomerRow;
+
+		const fullCustomers = reassembleFlattenedCustomer(flat);
+		const orderIndex = new Map(internalIds.map((id, index) => [id, index]));
+		fullCustomers.sort(
+			(a, b) =>
+				(orderIndex.get(a.internal_id) ?? Number.MAX_SAFE_INTEGER) -
+				(orderIndex.get(b.internal_id) ?? Number.MAX_SAFE_INTEGER),
+		);
+		return fullCustomers;
+	}
+
+	/** Feature-balance sort page: MotherDuck nominates from the cached totals,
+	 * PG verifies exact sums and re-ranks (approximate membership/order by
+	 * design — see resolveByFeatureBalanceSort). */
+	private static async getFeatureBalanceSortedPage({
+		ctx,
+		search,
+		filters,
+		sortFeatureId,
+		sortBasis,
+		cursor,
+		limit,
+		sortOrder,
+		cusProductLimit,
+		entitiesLimit,
+	}: {
+		ctx: RequestContext;
+		search: string;
+		filters?: CustomerListFilters;
+		sortFeatureId?: string;
+		sortBasis?: FeatureBalanceSortBasis;
+		cursor: FeatureBalanceCursorFields | null;
+		limit: number;
+		sortOrder?: SortOrder;
+		cusProductLimit: number;
+		entitiesLimit: number;
+	}): Promise<{
+		fullCustomers: FullCustomer[];
+		next_cursor: string | null;
+	}> {
+		if (!isMotherDuckConfigured()) {
+			throw new RecaseError({
+				message: "Balance sort is not available in this environment",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+		if (!sortFeatureId) {
+			throw new RecaseError({
+				message: "sort_feature_id is required for feature_balance sort",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+		const feature = findFeatureById({
+			features: ctx.features,
+			featureId: sortFeatureId,
+			errorOnNotFound: true,
+		});
+
+		// The verify pass computes remaining for the sorted feature, so the
+		// threshold rides along only when it targets that same feature.
+		if (filters?.balance && filters.balance.feature_id !== sortFeatureId) {
+			throw new RecaseError({
+				message:
+					"Balance filter must target the sorted feature (or use the created_at sort)",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		const cappedLimit = Math.min(limit, FEATURE_BALANCE_PAGE_CAP);
+
+		const tResolveStart = performance.now();
+		const { rows, hasMore } = await resolveInternalIdsByFeatureBalanceSort({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			search,
+			filters,
+			internalFeatureId: feature.internal_id,
+			cursor,
+			limit: cappedLimit,
+			sortOrder,
+			basis: sortBasis,
+			remainingFilter: filters?.balance
+				? {
+						op: filters.balance.op,
+						value: filters.balance.value,
+						basis: filters.balance.basis,
+					}
+				: undefined,
+		});
+		const tResolveEnd = performance.now();
+
+		if (rows.length === 0) {
+			ctx.logger.info(
+				`[CusBatchService.getFeatureBalanceSortedPage] limit=${cappedLimit} cursor=${cursor ? "yes" : "no"} rows=0 resolve=${(tResolveEnd - tResolveStart).toFixed(0)}ms`,
+			);
+			return { fullCustomers: [], next_cursor: null };
+		}
+
+		const internalIds = rows.map((row) => row.internalId);
+		const fullCustomers = await CusBatchService.hydrateResolvedPage({
+			ctx,
+			internalIds,
+			cusProductLimit,
+			entitiesLimit,
+			balanceFeatureInternalIds: [feature.internal_id],
+		});
+
+		ctx.logger.info(
+			`[CusBatchService.getFeatureBalanceSortedPage] feature=${sortFeatureId} limit=${cappedLimit} cursor=${cursor ? "yes" : "no"} rows=${fullCustomers.length} resolve=${(tResolveEnd - tResolveStart).toFixed(0)}ms total=${(performance.now() - tResolveStart).toFixed(0)}ms`,
+		);
+
+		triggerBatchResetCustomerEntitlements({ ctx, fullCustomers }).catch(
+			(err) => {
+				ctx.logger.error(
+					"[CusBatchService.getFeatureBalanceSortedPage] batch reset failed:",
+					err,
+				);
+				Sentry.captureException(err);
+			},
+		);
+
+		const lastRow = rows[rows.length - 1];
+		const nextCursor =
+			hasMore && lastRow
+				? FeatureBalanceCursor.encode({
+						id: lastRow.internalId,
+						b: lastRow.total,
+						u: lastRow.isUnlimited,
+					})
+				: null;
+
+		return { fullCustomers, next_cursor: nextCursor };
+	}
+
+	/** Base-price sort page: resolve ids ordered by monthly base-price total,
+	 * hydrate via the id-list path, then restore the resolver's order (the
+	 * hydration query internally orders by created_at). */
+	private static async getBasePriceSortedPage({
+		ctx,
+		search,
+		filters,
+		cursor,
+		limit,
+		sortOrder,
+		cusProductLimit,
+		entitiesLimit,
+	}: {
+		ctx: RequestContext;
+		search: string;
+		filters?: CustomerListFilters;
+		cursor: { p: number; id: string } | null;
+		limit: number;
+		sortOrder?: SortOrder;
+		cusProductLimit: number;
+		entitiesLimit: number;
+	}): Promise<{
+		fullCustomers: FullCustomer[];
+		next_cursor: string | null;
+	}> {
+		const tResolveStart = performance.now();
+		const { rows, hasMore } = await resolveInternalIdsByBasePriceSort({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			search,
+			filters,
+			cursor,
+			limit,
+			sortOrder,
+		});
+		const tResolveEnd = performance.now();
+
+		if (rows.length === 0) {
+			ctx.logger.info(
+				`[CusBatchService.getBasePriceSortedPage] limit=${limit} cursor=${cursor ? "yes" : "no"} rows=0 resolve=${(tResolveEnd - tResolveStart).toFixed(0)}ms`,
+			);
+			return { fullCustomers: [], next_cursor: null };
+		}
+
+		const internalIds = rows.map((row) => row.internalId);
+		const fullCustomers = await CusBatchService.hydrateResolvedPage({
+			ctx,
+			internalIds,
+			cusProductLimit,
+			entitiesLimit,
+		});
+
+		ctx.logger.info(
+			`[CusBatchService.getBasePriceSortedPage] limit=${limit} cursor=${cursor ? "yes" : "no"} rows=${fullCustomers.length} resolve=${(tResolveEnd - tResolveStart).toFixed(0)}ms total=${(performance.now() - tResolveStart).toFixed(0)}ms`,
+		);
+
+		triggerBatchResetCustomerEntitlements({ ctx, fullCustomers }).catch(
+			(err) => {
+				ctx.logger.error(
+					"[CusBatchService.getBasePriceSortedPage] batch reset failed:",
+					err,
+				);
+				Sentry.captureException(err);
+			},
+		);
+
+		const lastRow = rows[rows.length - 1];
+		const nextCursor =
+			hasMore && lastRow
+				? BasePriceCursor.encode({ id: lastRow.internalId, p: lastRow.total })
+				: null;
 
 		return { fullCustomers, next_cursor: nextCursor };
 	}

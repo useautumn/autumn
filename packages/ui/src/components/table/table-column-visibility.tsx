@@ -119,6 +119,7 @@ export function TableColumnVisibility() {
 				{columnVisibilityInToolbar ? (
 					<IconButton
 						variant="secondary"
+						aria-label="Display"
 						className={cn(isOpen && "btn-secondary-active")}
 						icon={
 							<FadersHorizontalIcon
@@ -126,9 +127,7 @@ export function TableColumnVisibility() {
 								className="text-tertiary-foreground"
 							/>
 						}
-					>
-						Display
-					</IconButton>
+					/>
 				) : (
 					<Button
 						variant="skeleton"

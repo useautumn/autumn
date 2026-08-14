@@ -1,5 +1,9 @@
 import {
+	BasePriceCursor,
 	CustomerListFiltersSchema,
+	CustomerListSortBySchema,
+	FeatureBalanceCursor,
+	FeatureBalanceSortBasisSchema,
 	type FullCusProduct,
 	Scopes,
 	SortOrderSchema,
@@ -16,13 +20,31 @@ export const handleSearchCustomers = createRoute({
 		limit: z.number().int().min(1).max(1000).optional().default(50),
 		cursor: z.string().optional().default(""),
 		filters: CustomerListFiltersSchema.optional(),
+		sort_by: CustomerListSortBySchema.optional(),
+		sort_feature_id: z.string().optional(),
+		sort_basis: FeatureBalanceSortBasisSchema.optional(),
 		sort_order: SortOrderSchema.optional(),
 	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { search, limit, cursor, filters, sort_order } = c.req.valid("json");
+		const {
+			search,
+			limit,
+			cursor,
+			filters,
+			sort_by,
+			sort_feature_id,
+			sort_basis,
+			sort_order,
+		} = c.req.valid("json");
 
-		const decoded = StandardCursor.decode(cursor);
+		const sortBy = sort_by ?? "created_at";
+		const decoded =
+			sortBy === "created_at" ? StandardCursor.decode(cursor) : null;
+		const decodedBasePrice =
+			sortBy === "base_price" ? BasePriceCursor.decode(cursor) : null;
+		const decodedFeatureBalance =
+			sortBy === "feature_balance" ? FeatureBalanceCursor.decode(cursor) : null;
 
 		const { fullCustomers, next_cursor } =
 			await CusBatchService.getDashboardCursorPage({
@@ -30,6 +52,13 @@ export const handleSearchCustomers = createRoute({
 				search: search ?? "",
 				filters,
 				cursor: decoded ? { t: decoded.t, id: decoded.id } : null,
+				basePriceCursor: decodedBasePrice
+					? { p: decodedBasePrice.p, id: decodedBasePrice.id }
+					: null,
+				featureBalanceCursor: decodedFeatureBalance,
+				sortBy,
+				sortFeatureId: sort_feature_id,
+				sortBasis: sort_basis,
 				limit,
 				sortOrder: sort_order,
 			});

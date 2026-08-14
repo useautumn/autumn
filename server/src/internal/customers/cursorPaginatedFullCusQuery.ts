@@ -11,6 +11,7 @@ import {
 } from "@autumn/shared";
 import { type Column, type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { activeStatusListSql, monthlyBasePriceExpr } from "./basePriceSql.js";
 import {
 	cpStatusInClause,
 	customerProductsSeedCte,
@@ -50,6 +51,9 @@ export type CursorPaginatedFullCusQueryArgs = {
 	customerId?: string;
 	/** Emit products_page / products_total_count. Dashboard only. */
 	withProductsPage?: boolean;
+	/** Products holding cusEnts for these features bypass the cusProductLimit
+	 * preview cap, so displayed balances sum every live row. */
+	balanceFeatureInternalIds?: string[];
 	sortOrder?: SortOrder;
 };
 
@@ -100,9 +104,21 @@ export const getCursorPaginatedFullCusQuery = ({
 	cusProductLimit,
 	customerId,
 	withProductsPage = false,
+	balanceFeatureInternalIds,
 	sortOrder = "desc",
 }: CursorPaginatedFullCusQueryArgs) => {
 	const cpStatusFilter = cpStatusInClause(inStatuses);
+
+	const holdsBalanceFeatureExpr = balanceFeatureInternalIds?.length
+		? sql`EXISTS (
+				SELECT 1 FROM customer_entitlements fce
+				WHERE fce.customer_product_id = cp.id
+					AND fce.internal_feature_id IN (${sql.join(
+						balanceFeatureInternalIds.map((id) => sql`${id}`),
+						sql`, `,
+					)})
+			)`
+		: sql`false`;
 
 	// products_page / products_total_count are only rendered by the dashboard.
 	// The public API path never reads them, and building them costs two extra
@@ -116,6 +132,25 @@ export const getCursorPaginatedFullCusQuery = ({
 
 	const productsSeedSelect = withProductsPage
 		? sql`, ${customerProductsSeedSelect}`
+		: sql``;
+
+	// Full-total per page customer, unaffected by the cusProductLimit preview
+	// cap. Mirrors resolveByBasePriceSort so the displayed value matches the
+	// base_price sort key. Dashboard only.
+	const basePriceTotalsSelect = withProductsPage
+		? sql`, (
+			SELECT COALESCE(json_object_agg(bp.internal_customer_id, bp.total), '{}'::json)
+			FROM (
+				SELECT cp.internal_customer_id, SUM(${monthlyBasePriceExpr()}) AS total
+				FROM cr
+				JOIN customer_products cp ON cp.internal_customer_id = cr.internal_id
+				JOIN customer_prices cpr ON cpr.customer_product_id = cp.id
+				JOIN prices p ON p.id = cpr.price_id
+				WHERE cp.status IN (${activeStatusListSql()})
+					AND p.config->>'amount' IS NOT NULL
+				GROUP BY cp.internal_customer_id
+			) bp
+		) AS base_price_totals`
 		: sql``;
 
 	const customerListFilterSql = getCustomerListFilterSql({
@@ -222,6 +257,7 @@ export const getCursorPaginatedFullCusQuery = ({
 				row_to_json(cp) AS cp_json,
 				prod.is_add_on AS prod_is_add_on,
 				row_to_json(prod) AS prod_json,
+				${holdsBalanceFeatureExpr} AS holds_balance_feature,
 				ROW_NUMBER() OVER (
 					PARTITION BY cp.internal_customer_id
 					ORDER BY prod.is_add_on ASC, cp.created_at DESC
@@ -241,7 +277,7 @@ export const getCursorPaginatedFullCusQuery = ({
 				cp.subscription_ids,
 				(cp.cp_json::jsonb || jsonb_build_object('product', cp.prod_json::jsonb))::json AS row_json
 			FROM cp_ranked_raw cp
-			WHERE cp.rn <= ${cusProductLimit}
+			WHERE cp.rn <= ${cusProductLimit} OR cp.holds_balance_feature
 		),
 		cp_counts AS MATERIALIZED (
 			SELECT internal_customer_id, COUNT(*)::int AS n
@@ -324,7 +360,8 @@ export const getCursorPaginatedFullCusQuery = ({
 		SELECT
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cr) AS customers,
 			(SELECT COALESCE(json_object_agg(internal_customer_id, n), '{}'::json) FROM cp_counts) AS product_counts
-			${productsSeedSelect},
+			${productsSeedSelect}
+			${basePriceTotalsSelect},
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cps_ranked) AS customer_products,
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM ces_bound) AS customer_entitlements,
 			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_loose) AS extra_customer_entitlements,
