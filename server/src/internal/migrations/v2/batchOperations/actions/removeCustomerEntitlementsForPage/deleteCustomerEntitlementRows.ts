@@ -6,8 +6,8 @@ import {
 	operationScopeSql,
 } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 
-/** Pooled rows are excluded: the anchor FK is RESTRICT, so deleting one would
- * abort the whole page. */
+/** Scope is re-asserted here because the select took its own snapshot. Pooled
+ * rows are excluded: the anchor FK is RESTRICT and would abort the page. */
 export const deleteCustomerEntitlementRows = async ({
 	db,
 	customerProductIds,
@@ -25,8 +25,6 @@ export const deleteCustomerEntitlementRows = async ({
 		WITH dropped AS (
 			DELETE FROM customer_entitlements AS target
 			USING customer_products AS cp
-			-- Re-assert scope at delete time: rows whose customer product
-			-- changed since the select (canceled, customized) drop out.
 			WHERE cp.id = target.customer_product_id
 				AND ${operationScopeSql({ scope })}
 				AND target.customer_product_id IN (${sqlList({ values: customerProductIds })})

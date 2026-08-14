@@ -7,12 +7,9 @@ import {
 	type ProductTransitions,
 } from "./computeProductTransitions";
 
-/** Diffs a product against an add/remove patch of itself. The projected
- * to-product is synthetic — it exists only for transition computation.
- *
- * Removals are diffed on their own: the successor matcher falls back to
- * feature-only precision, so a removed entitlement left in the from-product
- * would claim a surviving same-feature sibling and report a transition. */
+/** Diffs a product against an add/remove patch of itself. Removals diff
+ * separately: the successor matcher falls back to feature-only precision, so
+ * one left in the from-product would claim a surviving sibling. */
 export const computePatchProductTransitions = ({
 	fromProduct,
 	addEntitlements,

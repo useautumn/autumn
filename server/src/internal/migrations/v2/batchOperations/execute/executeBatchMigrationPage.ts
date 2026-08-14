@@ -142,10 +142,6 @@ export const executeBatchMigrationPage = async ({
 		...removedItems.map((item) => item.internalCustomerId),
 		...repointedIds,
 	]);
-	// An excluded customer stays skipped even when a delete landed for it: the
-	// per-customer lane still owes it the refused add, and re-running a delete
-	// that already converged is a no-op. The cost is a missed cache bust, which
-	// the lane already accepts for any skipped customer.
 	for (const id of excludedIds) succeeded.delete(id);
 	const skippedIds = pageInternalIds.filter((id) => !succeeded.has(id));
 
