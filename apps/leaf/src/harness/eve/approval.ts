@@ -6,11 +6,13 @@ import { toolRequestFromArgs } from "../../internal/approvals/utils/toolRequest.
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
 import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
+import { APPROVAL_NOT_EXECUTED_MESSAGE } from "../../ui/messages.js";
 import { adoptPostedEveSession } from "./adoptPostedSession.js";
 import {
 	type ChainedPendingRequest,
 	classifyParkedEveInput,
 	type PendingQuestion,
+	siblingRequestIdsFromToolArgs,
 } from "./classifyParkedInput.js";
 import {
 	EveStreamIdleTimeoutError,
@@ -99,6 +101,7 @@ export const drainParkedEveTurn = async ({
 							optionId: options.deny,
 							requestId: parked.chained.requestId,
 							session,
+							siblingRequestIds: parked.siblingRequestIds,
 						});
 						adoptPostedEveSession({ posted, session });
 						parkedAgain = true;
@@ -169,6 +172,7 @@ export const withdrawEveSuspension = async ({
 		optionId: denyOptionId,
 		requestId: suspension.toolCallId,
 		session,
+		siblingRequestIds: siblingRequestIdsFromToolArgs(suspension.toolArgs),
 	});
 	adoptPostedEveSession({ posted, session, status: "running" });
 	await drainParkedEveTurn({ auth, orgId, session });
@@ -189,8 +193,12 @@ const collectText = async ({
 	let text = "";
 	let pendingText = "";
 	let chained: ChainedPendingRequest | undefined;
+	let chainedSiblingRequestIds: string[] = [];
 	let question: PendingQuestion | undefined;
 	let sawEvent = false;
+	// Anything beyond the turn's own lifecycle events: a step, a tool, a token
+	// of message, a park. Eve's deferred-delivery turns have none of it.
+	let sawTurnActivity = false;
 	// Stale tail events from the parked turn replay first (see engine.ts) —
 	// only honor terminal events once the resumed turn's turn.started arrives.
 	let turnStarted = false;
@@ -198,6 +206,14 @@ const collectText = async ({
 		sawEvent = true;
 		session.state.streamIndex += 1;
 		session.state.lastEventAt = Date.now();
+		if (
+			event.type === "step.started" ||
+			event.type === "actions.requested" ||
+			event.type === "action.result" ||
+			event.type === "input.requested"
+		) {
+			sawTurnActivity = true;
+		}
 		if (event.type === "turn.started") {
 			turnStarted = true;
 		} else if (event.type === "input.requested") {
@@ -209,6 +225,7 @@ const collectText = async ({
 			});
 			if (parkedInput?.kind === "gated") {
 				chained = parkedInput.chained;
+				chainedSiblingRequestIds = parkedInput.siblingRequestIds;
 				break;
 			}
 			if (parkedInput?.kind === "question") {
@@ -224,12 +241,14 @@ const collectText = async ({
 				break;
 			}
 		} else if (event.type === "message.appended" && turnStarted) {
+			sawTurnActivity = true;
 			const messageSoFar = event.data?.messageSoFar;
 			pendingText =
 				typeof messageSoFar === "string"
 					? messageSoFar
 					: `${pendingText}${String(event.data?.messageDelta ?? "")}`;
 		} else if (event.type === "message.completed" && turnStarted) {
+			sawTurnActivity = true;
 			if (event.data?.finishReason !== "tool-calls") {
 				text = String(event.data?.message ?? pendingText);
 			}
@@ -261,7 +280,15 @@ const collectText = async ({
 			threadKey: session.threadKey,
 		});
 	}
-	return { chained, question, text: text || pendingText };
+	return {
+		chained,
+		chainedSiblingRequestIds,
+		// Eve's tell for a delivery it deferred: the turn opened and closed
+		// without running, saying, or asking anything.
+		deferredEmptyTurn: turnStarted && !(sawTurnActivity || text || pendingText),
+		question,
+		text: text || pendingText,
+	};
 };
 
 /** Answers a parked request and consumes the turn it resumes, surfacing any
@@ -274,6 +301,7 @@ const answerParkedRequest = async ({
 	providerUserId,
 	requestId,
 	session,
+	siblingRequestIds,
 }: {
 	auth: EveAuthContext;
 	note?: string;
@@ -282,6 +310,7 @@ const answerParkedRequest = async ({
 	providerUserId: string;
 	requestId: string;
 	session: EveSessionRef;
+	siblingRequestIds?: string[];
 }) => {
 	const posted = await postEveInputResponse({
 		auth,
@@ -289,6 +318,7 @@ const answerParkedRequest = async ({
 		optionId,
 		requestId,
 		session,
+		siblingRequestIds,
 	});
 	adoptPostedEveSession({ posted, session, status: "running" });
 	await upsertEveSession({
@@ -299,7 +329,13 @@ const answerParkedRequest = async ({
 		state: session.state,
 		threadKey: session.threadKey,
 	});
-	const { chained, question, text } = await collectText({
+	const {
+		chained,
+		chainedSiblingRequestIds,
+		deferredEmptyTurn,
+		question,
+		text,
+	} = await collectText({
 		auth,
 		orgId,
 		session,
@@ -311,18 +347,23 @@ const answerParkedRequest = async ({
 				chained,
 				providerUserId,
 				sessionId: session.sessionId,
+				siblingRequestIds: chainedSiblingRequestIds,
 			})
 		: undefined;
-	return { chainedApprovalId, question, text };
+	return { chainedApprovalId, deferredEmptyTurn, question, text };
 };
 
 const answerEveApproval = async ({
 	approval,
+	expectExecution,
 	note,
 	optionId,
 	providerUserId,
 }: {
 	approval: ChatApproval;
+	/** Set when the answer was an approval: the resumed turn is then expected to
+	 * actually run the write, and a turn that does nothing is a failure. */
+	expectExecution?: boolean;
 	note?: string;
 	optionId: string;
 	providerUserId: string;
@@ -346,15 +387,29 @@ const answerEveApproval = async ({
 			retryable: true,
 		};
 	}
-	const { chainedApprovalId, question, text } = await answerParkedRequest({
-		auth: authFromApproval(approval, providerUserId),
-		note,
-		optionId,
-		orgId: approval.org_id,
-		providerUserId,
-		requestId: approval.tool_call_id,
-		session,
-	});
+	const { chainedApprovalId, deferredEmptyTurn, question, text } =
+		await answerParkedRequest({
+			auth: authFromApproval(approval, providerUserId),
+			note,
+			optionId,
+			orgId: approval.org_id,
+			providerUserId,
+			requestId: approval.tool_call_id,
+			session,
+			siblingRequestIds: siblingRequestIdsFromToolArgs(approval.tool_args),
+		});
+	if (expectExecution && deferredEmptyTurn) {
+		logger.error("Approved Eve action was not executed", undefined, {
+			event: "leaf.eve_approval_not_executed",
+			approval_id: approval.id,
+			data: { session_id: session.sessionId, tool: approval.tool_name },
+		});
+		return {
+			error: true,
+			message: APPROVAL_NOT_EXECUTED_MESSAGE,
+			retryable: true,
+		};
+	}
 	return {
 		chainedApprovalId,
 		question: question
@@ -375,11 +430,13 @@ const insertChainedApproval = async ({
 	chained,
 	providerUserId,
 	sessionId,
+	siblingRequestIds,
 }: {
 	auth: EveAuthContext;
 	chained: ChainedPendingRequest;
 	providerUserId: string;
 	sessionId: string;
+	siblingRequestIds: string[];
 }) => {
 	const env = auth.appEnv as ChatApproval["env"];
 	const provider = auth.provider as ChatApproval["provider"];
@@ -428,6 +485,7 @@ const insertChainedApproval = async ({
 				...(chained.input ?? {}),
 				_eveApproveOptionId: options.approve,
 				_eveDenyOptionId: options.deny,
+				_eveSiblingRequestIds: siblingRequestIds,
 			},
 			toolCallId: chained.requestId,
 			toolName: chained.toolName,
@@ -482,6 +540,7 @@ export const resumeEveApproval = async ({
 }): Promise<ApprovalRunResult> =>
 	answerEveApproval({
 		approval,
+		expectExecution: true,
 		optionId: approveOptionFromApproval(approval),
 		providerUserId,
 	});

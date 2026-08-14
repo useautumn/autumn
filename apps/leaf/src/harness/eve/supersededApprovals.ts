@@ -3,17 +3,16 @@ import type { ChatApproval } from "@autumn/shared";
 import type { ThreadRef } from "../../agent/runMessage/types.js";
 import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
 import { db } from "../../lib/db.js";
+import { APPROVAL_STILL_OPEN_MESSAGE } from "../../ui/messages.js";
 import { adoptPostedEveSession } from "./adoptPostedSession.js";
 import { denyOptionFromApproval, drainParkedEveTurn } from "./approval.js";
+import { siblingRequestIdsFromToolArgs } from "./classifyParkedInput.js";
 import { postEveInputResponse } from "./client.js";
 import { saveEveSessionState } from "./sessionState.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
 const WITHDRAWN_NOTE =
 	"(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; their new message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one.)";
-
-const STILL_PARKED_MESSAGE =
-	"there's still an open approval card on this thread — approve or discard it before sending a new message";
 
 /** Whether eve let go of this card. A refusal leaves the row pending, so the
  * card stays decidable and the next message retries the withdrawal. */
@@ -39,6 +38,7 @@ const withdrewInEve = async ({
 			optionId: denyOptionFromApproval(approval),
 			requestId: approval.tool_call_id,
 			session,
+			siblingRequestIds: siblingRequestIdsFromToolArgs(approval.tool_args),
 		});
 		adoptPostedEveSession({ posted, session, status: "running" });
 		// Discard the withdrawal turn's reply — without this, its text would end
@@ -135,5 +135,5 @@ export const withdrawSupersededEveApprovals = async ({
 		sessionId: session.sessionId,
 	});
 	await saveEveSessionState({ orgId, session });
-	throw new Error(STILL_PARKED_MESSAGE);
+	throw new Error(APPROVAL_STILL_OPEN_MESSAGE);
 };

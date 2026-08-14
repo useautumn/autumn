@@ -7,6 +7,7 @@ import { toolRequestFromArgs } from "../../internal/approvals/utils/toolRequest.
 import { executeAutumnMcpTool } from "../../internal/autumnMcp/client.js";
 import type { RunStopReason } from "../../internal/runs/runRegistry.js";
 import type { Suspension } from "../../types.js";
+import { WAITING_FOR_INPUT_MESSAGE } from "../../ui/messages.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
 import {
 	catalogPlanNeedingDecision,
@@ -16,7 +17,6 @@ import {
 	type ChainedPendingRequest,
 	classifyParkedEveInput,
 	type PendingQuestion,
-	WAITING_FALLBACK_TEXT,
 } from "./classifyParkedInput.js";
 import type { EveEvent } from "./client.js";
 import {
@@ -34,7 +34,6 @@ import {
 	previewForParkedWrite,
 } from "./parkedWritePreview.js";
 import { saveEveSessionState } from "./sessionState.js";
-import { eveTurnProducedOutput } from "./turnOutput.js";
 import type { EveSessionRef } from "./types.js";
 
 /** How a turn ended. Every terminal shape is a `kind` so the caller decides
@@ -46,6 +45,16 @@ export type EveTurnOutcome =
 	| { kind: "stopped"; stopReason: RunStopReason; text: string }
 	| { kind: "suspended"; suspension: Suspension; text: string }
 	| { kind: "unreachable" };
+
+/** Whether a finished turn left the user anything. Eve can end a turn cleanly
+ * while parked, so a caller that trusts "ended" alone wedges the thread. */
+export const eveTurnProducedOutput = ({
+	catalogDecision,
+	text,
+}: {
+	catalogDecision?: unknown;
+	text?: string;
+}) => Boolean(text?.trim() || catalogDecision);
 
 /** What the turn has accumulated so far, mutated as events arrive. */
 export type EveTurnProgress = {
@@ -201,9 +210,11 @@ const completeMessage = ({ event, onReasoning, progress }: EveEventContext) => {
 const suspensionForGatedWrite = ({
 	chained,
 	progress,
+	siblingRequestIds,
 }: {
 	chained: ChainedPendingRequest;
 	progress: EveTurnProgress;
+	siblingRequestIds: string[];
 }): Suspension => {
 	const options = approvalOptionIds({ options: chained.options });
 	return {
@@ -213,6 +224,7 @@ const suspensionForGatedWrite = ({
 			...(chained.input ?? {}),
 			_eveApproveOptionId: options.approve,
 			_eveDenyOptionId: options.deny,
+			_eveSiblingRequestIds: siblingRequestIds,
 		},
 		preview: previewForParkedWrite({
 			captured: progress.lastPreview,
@@ -238,6 +250,7 @@ const parkOnInputRequest = async ({
 			suspension: suspensionForGatedWrite({
 				chained: parked.chained,
 				progress,
+				siblingRequestIds: parked.siblingRequestIds,
 			}),
 			text: progress.finalText,
 		};
@@ -248,7 +261,7 @@ const parkOnInputRequest = async ({
 	if (progress.pendingText) progress.finalText = progress.pendingText;
 	if (!eveTurnProducedOutput({ text: progress.finalText })) {
 		progress.finalText =
-			textForInputRequests(requests) || WAITING_FALLBACK_TEXT;
+			textForInputRequests(requests) || WAITING_FOR_INPUT_MESSAGE;
 	}
 	// An optioned question also rides structurally so rich surfaces can render
 	// answer buttons; `text` keeps the flat fallback.

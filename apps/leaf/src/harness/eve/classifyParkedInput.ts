@@ -1,4 +1,5 @@
 import { normalizeToolName } from "../../agent/tools/toolPolicy.js";
+import { WAITING_FOR_INPUT_MESSAGE } from "../../ui/messages.js";
 import { type EveInputRequest, textForInputRequests } from "./events.js";
 
 /** A gated write the resumed turn parked on after the answered one. */
@@ -17,11 +18,39 @@ export type PendingQuestion = {
 };
 
 export type ParkedEveInput =
-	| { chained: ChainedPendingRequest; kind: "gated" }
+	| {
+			chained: ChainedPendingRequest;
+			kind: "gated";
+			/** The other approval-gated requests eve parked in the same batch. */
+			siblingRequestIds: string[];
+	  }
 	| { kind: "question"; question: PendingQuestion }
 	| { kind: "waiting"; text: string };
 
-export const WAITING_FALLBACK_TEXT = "Eve is waiting for input.";
+type ApprovalShapedRequest = EveInputRequest & {
+	action: { toolName: string };
+	requestId: string;
+};
+
+// Eve's built-in `ask_question` also carries a populated `action.toolName`
+// (its own), so exclude it — only a real approval-gated tool call is a write.
+const isApprovalShaped = (
+	request: EveInputRequest,
+): request is ApprovalShapedRequest =>
+	Boolean(request.requestId) &&
+	Boolean(request.action?.toolName) &&
+	normalizeToolName(request.action?.toolName ?? "") !== "ask_question";
+
+const SIBLING_REQUEST_IDS_KEY = "_eveSiblingRequestIds";
+
+/** The batch siblings a park stashed on its stored tool args. Rows written
+ * before the key existed simply have none. */
+export const siblingRequestIdsFromToolArgs = (toolArgs: unknown): string[] => {
+	if (!toolArgs || typeof toolArgs !== "object") return [];
+	const stored = (toolArgs as Record<string, unknown>)[SIBLING_REQUEST_IDS_KEY];
+	if (!Array.isArray(stored)) return [];
+	return stored.filter((id): id is string => typeof id === "string");
+};
 
 /**
  * What a resumed turn is parked on, ignoring the request just answered. A park
@@ -42,15 +71,8 @@ export const classifyParkedEveInput = ({
 		: requests;
 	if (pending.length === 0) return undefined;
 
-	// Eve's built-in `ask_question` also carries a populated `action.toolName`
-	// (its own), so exclude it — only a real approval-gated tool call is a write.
-	const gated = pending.find(
-		(request) =>
-			request.requestId &&
-			request.action?.toolName &&
-			normalizeToolName(request.action.toolName) !== "ask_question",
-	);
-	if (gated?.requestId && gated.action?.toolName) {
+	const [gated, ...siblings] = pending.filter(isApprovalShaped);
+	if (gated) {
 		return {
 			chained: {
 				input: gated.action.input,
@@ -59,6 +81,7 @@ export const classifyParkedEveInput = ({
 				toolName: gated.action.toolName,
 			},
 			kind: "gated",
+			siblingRequestIds: siblings.map((request) => request.requestId),
 		};
 	}
 
@@ -78,6 +101,6 @@ export const classifyParkedEveInput = ({
 
 	return {
 		kind: "waiting",
-		text: textForInputRequests(pending) || WAITING_FALLBACK_TEXT,
+		text: textForInputRequests(pending) || WAITING_FOR_INPUT_MESSAGE,
 	};
 };

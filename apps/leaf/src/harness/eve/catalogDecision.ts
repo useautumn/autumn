@@ -15,6 +15,7 @@ import { db } from "../../lib/db.js";
 import type { Suspension } from "../../types.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
 import { adoptPostedEveSession } from "./adoptPostedSession.js";
+import { siblingRequestIdsFromToolArgs } from "./classifyParkedInput.js";
 import { postEveInputResponse } from "./client.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
 import type { EveAuthContext } from "./types.js";
@@ -189,6 +190,7 @@ export const redirectCatalogSuspensionToDecision = async ({
 			optionId: denyOptionId,
 			requestId: suspension.toolCallId,
 			session,
+			siblingRequestIds: siblingRequestIdsFromToolArgs(suspension.toolArgs),
 		});
 		adoptPostedEveSession({ posted, session, status: "waiting" });
 		await upsertEveSession({

@@ -6,12 +6,22 @@ import type {
 	EveAuthContext,
 	EveSessionRef,
 } from "../../../src/harness/eve/types.js";
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
-// The real modules reach for a Postgres pool and eve's HTTP API; the withdrawal
-// decision under test only cares about which of them succeeded. They stay mocked
-// for the rest of the process — the real namespaces cannot be captured first,
-// because importing them parses leaf's full env schema.
+// Stubbed first and left stubbed: `env` parses leaf's whole schema at import and
+// `db` opens a Postgres pool, so neither has a real namespace to restore — and
+// stubbing them is what makes every module below importable, hence restorable.
+mock.module("../../../src/lib/env.js", () => ({ env: {} }));
 mock.module("../../../src/lib/db.js", () => ({ db: {} }));
+
+const mockLeafModule = ({
+	factory,
+	specifier,
+}: {
+	factory: () => Record<string, unknown>;
+	specifier: string;
+}) =>
+	mockModuleWithRestore({ baseUrl: import.meta.url, factory, specifier });
 
 let pendingApprovals: ChatApproval[] = [];
 const cancelledApprovalIds: string[] = [];
@@ -20,9 +30,9 @@ const rehomedRuns: Array<{
 	fromRunId: string;
 	toRunId: string;
 }> = [];
-mock.module(
-	"../../../src/internal/approvals/repos/chatApprovalRepo.js",
-	() => ({
+await mockLeafModule({
+	specifier: "../../../src/internal/approvals/repos/chatApprovalRepo.js",
+	factory: () => ({
 		chatApprovalRepo: {
 			cancel: async ({ approvalId }: { approvalId: string }) => {
 				cancelledApprovalIds.push(approvalId);
@@ -42,39 +52,48 @@ mock.module(
 			},
 		},
 	}),
-);
+});
 
 const failingRequestIds = new Set<string>();
 const postedRequestIds: string[] = [];
-mock.module("../../../src/harness/eve/client.js", () => ({
-	postEveInputResponse: async ({ requestId }: { requestId: string }) => {
-		postedRequestIds.push(requestId);
-		if (failingRequestIds.has(requestId)) {
-			throw new Error("Eve session request failed: 503");
-		}
-		// Eve re-homes on every post here, so a persisted session id proves the
-		// caller saved the ref rather than dropping it.
-		return {
-			continuationToken: `token_${requestId}`,
-			sessionId: `eve_rehomed_${requestId}`,
-		};
-	},
-}));
+await mockLeafModule({
+	specifier: "../../../src/harness/eve/client.js",
+	factory: () => ({
+		postEveInputResponse: async ({ requestId }: { requestId: string }) => {
+			postedRequestIds.push(requestId);
+			if (failingRequestIds.has(requestId)) {
+				throw new Error("Eve session request failed: 503");
+			}
+			// Eve re-homes on every post here, so a persisted session id proves the
+			// caller saved the ref rather than dropping it.
+			return {
+				continuationToken: `token_${requestId}`,
+				sessionId: `eve_rehomed_${requestId}`,
+			};
+		},
+	}),
+});
 
 const drainedSessionIds: string[] = [];
-mock.module("../../../src/harness/eve/approval.js", () => ({
-	denyOptionFromApproval: () => "deny",
-	drainParkedEveTurn: async ({ session }: { session: EveSessionRef }) => {
-		drainedSessionIds.push(session.sessionId);
-	},
-}));
+await mockLeafModule({
+	specifier: "../../../src/harness/eve/approval.js",
+	factory: () => ({
+		denyOptionFromApproval: () => "deny",
+		drainParkedEveTurn: async ({ session }: { session: EveSessionRef }) => {
+			drainedSessionIds.push(session.sessionId);
+		},
+	}),
+});
 
 const savedSessionIds: string[] = [];
-mock.module("../../../src/harness/eve/sessionState.js", () => ({
-	saveEveSessionState: async ({ session }: { session: EveSessionRef }) => {
-		savedSessionIds.push(session.sessionId);
-	},
-}));
+await mockLeafModule({
+	specifier: "../../../src/harness/eve/sessionState.js",
+	factory: () => ({
+		saveEveSessionState: async ({ session }: { session: EveSessionRef }) => {
+			savedSessionIds.push(session.sessionId);
+		},
+	}),
+});
 
 const { withdrawSupersededEveApprovals } = await import(
 	"../../../src/harness/eve/supersededApprovals.js"
