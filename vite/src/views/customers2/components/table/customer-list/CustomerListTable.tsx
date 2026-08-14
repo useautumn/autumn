@@ -27,6 +27,7 @@ import {
 	CustomerListPagination,
 } from "./CustomerListPagination";
 import { CustomerListSearchBar } from "./CustomerListSearchBar";
+import { CustomerListSortButton } from "./CustomerListSortButton";
 
 export function CustomerListTable({
 	customers,
@@ -62,6 +63,7 @@ export function CustomerListTable({
 			queryStates.joinedFrom,
 			queryStates.joinedTo,
 			queryStates.sort,
+			queryStates.sortBy,
 			queryStates.q,
 		]),
 		queryFn: () => Promise.resolve({ fullCustomers: [], next_cursor: null }),
@@ -125,17 +127,22 @@ export function CustomerListTable({
 	});
 
 	const sorting = useMemo<SortingState>(
-		() => [{ id: "created_at", desc: queryStates.sort !== "asc" }],
-		[queryStates.sort],
+		() =>
+			queryStates.sortBy === "base_price"
+				? []
+				: [{ id: "created_at", desc: queryStates.sort !== "asc" }],
+		[queryStates.sort, queryStates.sortBy],
 	);
 
 	// setFilters resets the cursor stack, so a sort toggle lands back on page 1.
+	// A header click always sorts by created_at, replacing any popover sort.
 	const onSortingChange = useCallback<OnChangeFn<SortingState>>(
 		(updater) => {
 			const next = typeof updater === "function" ? updater(sorting) : updater;
 			const createdAtSort = next.find((sort) => sort.id === "created_at");
 			setFilters({
 				sort: createdAtSort && !createdAtSort.desc ? "asc" : "desc",
+				sortBy: "created_at",
 			});
 		},
 		[sorting, setFilters],
@@ -235,10 +242,13 @@ export function CustomerListTable({
 					<div className="order-3 md:order-2">
 						<Table.ColumnVisibility />
 					</div>
-					<div className="order-1 w-full md:order-3 md:w-auto md:flex-1 md:min-w-0">
+					<div className="order-4 md:order-3">
+						<CustomerListSortButton />
+					</div>
+					<div className="order-1 w-full md:order-4 md:w-auto md:flex-1 md:min-w-0">
 						<CustomerListSearchBar />
 					</div>
-					<div className="order-4 ml-auto flex items-center gap-2 shrink-0">
+					<div className="order-5 ml-auto flex items-center gap-2 shrink-0">
 						<CustomerListPagination />
 						<CustomerListPageSizeSelector />
 					</div>

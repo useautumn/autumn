@@ -31,6 +31,10 @@ export const CreatedAtRangeSchema = z
 
 export type CreatedAtRange = z.infer<typeof CreatedAtRangeSchema>;
 
+export const CustomerListSortBySchema = z.enum(["created_at", "base_price"]);
+
+export type CustomerListSortBy = z.infer<typeof CustomerListSortBySchema>;
+
 export const CustomerListFiltersSchema = z.object({
 	status: FilterValuesSchema.optional(),
 	version: FilterValuesSchema.optional(),

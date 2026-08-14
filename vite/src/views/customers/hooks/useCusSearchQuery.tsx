@@ -22,6 +22,7 @@ export const useCusSearchQuery = () => {
 			cursor: currentCursor,
 			limit: queryStates.pageSize,
 			filters: buildCustomerFilterPayload(queryStates),
+			sort_by: queryStates.sortBy,
 			sort_order: queryStates.sort,
 		});
 		return {
@@ -52,6 +53,7 @@ export const useCusSearchQuery = () => {
 			queryStates.joinedFrom,
 			queryStates.joinedTo,
 			queryStates.sort,
+			queryStates.sortBy,
 			trimmedSearch,
 		]),
 		queryFn: fetcher,

@@ -3,6 +3,7 @@ import type { CustomerProductsSeedRow } from "../cusUtils/buildCustomerProductsS
 export type FlattenedCustomerRow = {
 	customers: any[];
 	product_counts?: Record<string, number>;
+	base_price_totals?: Record<string, number | string>;
 	products_seed?: Record<string, CustomerProductsSeedRow[]>;
 	customer_products: any[];
 	customer_entitlements: any[];

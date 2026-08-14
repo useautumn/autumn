@@ -11,6 +11,7 @@ import {
 } from "@autumn/shared";
 import { type Column, type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { activeStatusListSql, monthlyBasePriceExpr } from "./basePriceSql.js";
 import {
 	cpStatusInClause,
 	customerProductsSeedCte,
@@ -116,6 +117,25 @@ export const getCursorPaginatedFullCusQuery = ({
 
 	const productsSeedSelect = withProductsPage
 		? sql`, ${customerProductsSeedSelect}`
+		: sql``;
+
+	// Full-total per page customer, unaffected by the cusProductLimit preview
+	// cap. Mirrors resolveByBasePriceSort so the displayed value matches the
+	// base_price sort key. Dashboard only.
+	const basePriceTotalsSelect = withProductsPage
+		? sql`, (
+			SELECT COALESCE(json_object_agg(bp.internal_customer_id, bp.total), '{}'::json)
+			FROM (
+				SELECT cp.internal_customer_id, SUM(${monthlyBasePriceExpr()}) AS total
+				FROM cr
+				JOIN customer_products cp ON cp.internal_customer_id = cr.internal_id
+				JOIN customer_prices cpr ON cpr.customer_product_id = cp.id
+				JOIN prices p ON p.id = cpr.price_id
+				WHERE cp.status IN (${activeStatusListSql()})
+					AND p.config->>'amount' IS NOT NULL
+				GROUP BY cp.internal_customer_id
+			) bp
+		) AS base_price_totals`
 		: sql``;
 
 	const customerListFilterSql = getCustomerListFilterSql({
@@ -324,7 +344,8 @@ export const getCursorPaginatedFullCusQuery = ({
 		SELECT
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cr) AS customers,
 			(SELECT COALESCE(json_object_agg(internal_customer_id, n), '{}'::json) FROM cp_counts) AS product_counts
-			${productsSeedSelect},
+			${productsSeedSelect}
+			${basePriceTotalsSelect},
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cps_ranked) AS customer_products,
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM ces_bound) AS customer_entitlements,
 			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_loose) AS extra_customer_entitlements,

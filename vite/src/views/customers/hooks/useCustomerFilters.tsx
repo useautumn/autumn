@@ -1,4 +1,9 @@
-import { type SortOrder, SortOrderSchema } from "@autumn/shared";
+import {
+	type CustomerListSortBy,
+	CustomerListSortBySchema,
+	type SortOrder,
+	SortOrderSchema,
+} from "@autumn/shared";
 import {
 	parseAsArrayOf,
 	parseAsBoolean,
@@ -31,6 +36,7 @@ const FILTER_PARAM_KEYS = [
 	"interval",
 	"pageSize",
 	"sort",
+	"sortBy",
 	"joinedFrom",
 	"joinedTo",
 ] as const;
@@ -43,6 +49,7 @@ type PersistedCustomerFilters = {
 	interval: string[];
 	pageSize: number;
 	sort?: SortOrder;
+	sortBy?: CustomerListSortBy;
 	joinedFrom?: number | null;
 	joinedTo?: number | null;
 };
@@ -83,6 +90,7 @@ function buildRestoredState({
 				? filters.pageSize
 				: null,
 		sort: filters?.sort === "asc" ? filters.sort : null,
+		sortBy: filters?.sortBy === "base_price" ? filters.sortBy : null,
 		joinedFrom: filters?.joinedFrom ?? null,
 		joinedTo: filters?.joinedTo ?? null,
 	};
@@ -97,6 +105,9 @@ const queryStatesConfig = {
 	interval: parseAsArrayOf(parseAsString).withDefault([]),
 	pageSize: parseAsInteger.withDefault(DEFAULT_CUSTOMER_LIST_PAGE_SIZE),
 	sort: parseAsStringLiteral(SortOrderSchema.options).withDefault("desc"),
+	sortBy: parseAsStringLiteral(CustomerListSortBySchema.options).withDefault(
+		"created_at",
+	),
 	joinedFrom: parseAsInteger,
 	joinedTo: parseAsInteger,
 };
@@ -229,6 +240,7 @@ export function CustomerFiltersProvider({ children }: { children: ReactNode }) {
 					interval: queryStates.interval,
 					pageSize: queryStates.pageSize,
 					sort: queryStates.sort,
+					sortBy: queryStates.sortBy,
 					joinedFrom: queryStates.joinedFrom,
 					joinedTo: queryStates.joinedTo,
 				}),
@@ -245,6 +257,7 @@ export function CustomerFiltersProvider({ children }: { children: ReactNode }) {
 		queryStates.interval,
 		queryStates.pageSize,
 		queryStates.sort,
+		queryStates.sortBy,
 		queryStates.joinedFrom,
 		queryStates.joinedTo,
 	]);

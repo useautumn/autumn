@@ -78,13 +78,12 @@ export function CustomerListFilterButton({
 			>
 				<IconButton
 					variant="secondary"
-					className={cn("gap-2", open && "btn-secondary-active")}
+					aria-label="Filter"
+					className={cn(open && "btn-secondary-active")}
 					icon={
 						<FunnelSimpleIcon size={14} className="text-tertiary-foreground" />
 					}
-				>
-					Filter
-				</IconButton>
+				/>
 				{hasActiveFilters && (
 					<span className="absolute top-0 right-0 h-2.5 w-2.5 translate-x-1/3 -translate-y-1/3 rounded-full bg-primary" />
 				)}

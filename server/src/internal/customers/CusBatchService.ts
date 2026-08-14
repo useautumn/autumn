@@ -2,10 +2,12 @@ import {
 	AffectedResource,
 	type ApiCustomerV5,
 	applyResponseVersionChanges,
+	BasePriceCursor,
 	type CusProductStatus,
 	CustomerExpand,
 	type CustomerLegacyData,
 	type CustomerListFilters,
+	type CustomerListSortBy,
 	type FullCustomer,
 	type ListCustomersV2_3Params,
 	type ListCustomersV2Params,
@@ -35,6 +37,7 @@ import {
 	type FlattenedCustomerRow,
 	reassembleFlattenedCustomer,
 } from "./reassembleFlattenedCustomer/index.js";
+import { resolveInternalIdsByBasePriceSort } from "./resolveByBasePriceSort.js";
 
 const DASHBOARD_LIST_PRODUCT_PREVIEW_LIMIT = 3;
 
@@ -320,6 +323,8 @@ export class CusBatchService {
 		search,
 		filters,
 		cursor,
+		basePriceCursor,
+		sortBy = "created_at",
 		limit,
 		sortOrder,
 	}: {
@@ -327,6 +332,8 @@ export class CusBatchService {
 		search: string;
 		filters?: CustomerListFilters;
 		cursor: { t: number; id: string } | null;
+		basePriceCursor?: { p: number; id: string } | null;
+		sortBy?: CustomerListSortBy;
 		limit: number;
 		sortOrder?: SortOrder;
 	}): Promise<{
@@ -338,6 +345,19 @@ export class CusBatchService {
 			orgId: ctx.org.id,
 			orgSlug: ctx.org.slug,
 		});
+
+		if (sortBy === "base_price") {
+			return await CusBatchService.getBasePriceSortedPage({
+				ctx,
+				search,
+				filters,
+				cursor: basePriceCursor ?? null,
+				limit,
+				sortOrder,
+				cusProductLimit,
+				entitiesLimit,
+			});
+		}
 
 		const statusFilters = parseDashboardStatusFilter(filters?.status);
 
@@ -462,6 +482,119 @@ export class CusBatchService {
 				Sentry.captureException(err);
 			},
 		);
+
+		return { fullCustomers, next_cursor: nextCursor };
+	}
+
+	/** Base-price sort page: resolve ids ordered by monthly base-price total,
+	 * hydrate via the id-list path, then restore the resolver's order (the
+	 * hydration query internally orders by created_at). */
+	private static async getBasePriceSortedPage({
+		ctx,
+		search,
+		filters,
+		cursor,
+		limit,
+		sortOrder,
+		cusProductLimit,
+		entitiesLimit,
+	}: {
+		ctx: RequestContext;
+		search: string;
+		filters?: CustomerListFilters;
+		cursor: { p: number; id: string } | null;
+		limit: number;
+		sortOrder?: SortOrder;
+		cusProductLimit: number;
+		entitiesLimit: number;
+	}): Promise<{
+		fullCustomers: FullCustomer[];
+		next_cursor: string | null;
+	}> {
+		const tResolveStart = performance.now();
+		const { rows, hasMore } = await resolveInternalIdsByBasePriceSort({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			search,
+			filters,
+			cursor,
+			limit,
+			sortOrder,
+		});
+		const tResolveEnd = performance.now();
+
+		if (rows.length === 0) {
+			ctx.logger.info(
+				`[CusBatchService.getBasePriceSortedPage] limit=${limit} cursor=${cursor ? "yes" : "no"} rows=0 resolve=${(tResolveEnd - tResolveStart).toFixed(0)}ms`,
+			);
+			return { fullCustomers: [], next_cursor: null };
+		}
+
+		const internalIds = rows.map((row) => row.internalId);
+		const sqlQuery = getCursorPaginatedFullCusQuery({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			inStatuses: RELEVANT_STATUSES,
+			withSubs: true,
+			withEntities: true,
+			includeInvoices: true,
+			withProductsPage: true,
+			entitiesLimit,
+			limit: internalIds.length,
+			internalCustomerIds: internalIds,
+			cusProductLimit,
+		});
+
+		const tSqlStart = performance.now();
+		const sqlRows = (await ctx.db.execute(sqlQuery)) as unknown as Record<
+			string,
+			unknown
+		>[];
+		const tSqlEnd = performance.now();
+		const flat = (sqlRows[0] ?? {
+			customers: [],
+			customer_products: [],
+			customer_entitlements: [],
+			extra_customer_entitlements: [],
+			pooled_customer_entitlements: [],
+			customer_prices: [],
+			entitlements: [],
+			rollovers: [],
+			replaceables: [],
+			free_trials: [],
+			subscriptions: [],
+			entities: [],
+			invoices: [],
+		}) as unknown as FlattenedCustomerRow;
+
+		const fullCustomers = reassembleFlattenedCustomer(flat);
+		const orderIndex = new Map(internalIds.map((id, index) => [id, index]));
+		fullCustomers.sort(
+			(a, b) =>
+				(orderIndex.get(a.internal_id) ?? Number.MAX_SAFE_INTEGER) -
+				(orderIndex.get(b.internal_id) ?? Number.MAX_SAFE_INTEGER),
+		);
+
+		ctx.logger.info(
+			`[CusBatchService.getBasePriceSortedPage] limit=${limit} cursor=${cursor ? "yes" : "no"} rows=${fullCustomers.length} resolve=${(tResolveEnd - tResolveStart).toFixed(0)}ms sql=${(tSqlEnd - tSqlStart).toFixed(0)}ms total=${(tSqlEnd - tResolveStart).toFixed(0)}ms`,
+		);
+
+		triggerBatchResetCustomerEntitlements({ ctx, fullCustomers }).catch(
+			(err) => {
+				ctx.logger.error(
+					"[CusBatchService.getBasePriceSortedPage] batch reset failed:",
+					err,
+				);
+				Sentry.captureException(err);
+			},
+		);
+
+		const lastRow = rows[rows.length - 1];
+		const nextCursor =
+			hasMore && lastRow
+				? BasePriceCursor.encode({ id: lastRow.internalId, p: lastRow.total })
+				: null;
 
 		return { fullCustomers, next_cursor: nextCursor };
 	}

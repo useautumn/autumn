@@ -126,6 +126,19 @@ export const StandardCursor = defineCursor({
 	fieldsSchema: StandardCursorFieldsSchema,
 });
 
+const BasePriceCursorFieldsSchema = z.object({
+	v: z.literal(CURRENT_CURSOR_VERSION),
+	id: z.string().min(1),
+	// Monthly-normalized base price total; fractional (e.g. yearly / 12).
+	p: z.number().nonnegative(),
+});
+
+export type BasePriceCursorFields = z.infer<typeof BasePriceCursorFieldsSchema>;
+
+export const BasePriceCursor = defineCursor({
+	fieldsSchema: BasePriceCursorFieldsSchema,
+});
+
 export const SortOrderSchema = z.enum(["asc", "desc"]);
 
 export type SortOrder = z.infer<typeof SortOrderSchema>;
