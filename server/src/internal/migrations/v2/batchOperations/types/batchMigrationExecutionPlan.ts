@@ -17,11 +17,8 @@ export const BatchMigrationExecutionAddSchema = z.object({
 	initialState: BatchMigrationInitialStateSchema,
 });
 
-/** The catalog entitlement ids the guard classified. The executor deletes only
- * these, so a custom or grandfathered row the guard never saw is out of reach. */
 export const BatchMigrationExecutionRemoveSchema = z.object({
 	entitlement: EntitlementWithFeatureSchema,
-	entitlementIds: z.array(z.string()),
 });
 
 const BatchMigrationLicenseOpBaseSchema = z.object({

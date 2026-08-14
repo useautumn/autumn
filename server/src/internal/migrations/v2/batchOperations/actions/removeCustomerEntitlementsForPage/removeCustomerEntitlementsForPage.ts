@@ -56,7 +56,7 @@ export const removeCustomerEntitlementsForPage = async ({
 						db: transaction,
 						internalCustomerIds,
 						scope,
-						entitlementIds: remove.entitlementIds,
+						entitlementId: remove.entitlement.id,
 						afterCustomerProductId,
 						limit,
 					}),
@@ -73,7 +73,7 @@ export const removeCustomerEntitlementsForPage = async ({
 						customerProductIds: candidates.map(
 							(candidate) => candidate.customerProductId,
 						),
-						entitlementIds: remove.entitlementIds,
+						entitlementId: remove.entitlement.id,
 						scope,
 					}),
 			});

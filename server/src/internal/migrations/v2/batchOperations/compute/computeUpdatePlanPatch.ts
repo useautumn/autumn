@@ -83,11 +83,11 @@ export const computeUpdatePlanPatch = ({
 		fromProduct,
 		productTransitions,
 		licenseLinks,
-		operations: operations.entitlements,
+		operations: operations.addEntitlements,
 	});
 	if (rejections.length > 0) return { rejections };
 	if (
-		operations.entitlements.length === 0 &&
+		operations.addEntitlements.length === 0 &&
 		operations.removeEntitlements.length === 0 &&
 		operations.licenseEntitlements.length === 0
 	) {
