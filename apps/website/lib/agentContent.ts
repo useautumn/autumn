@@ -199,7 +199,7 @@ export function buildTermsMarkdown(): string {
 	const lines: string[] = [
 		"# Terms of Service",
 		"",
-		`Autumn (Rebase, Inc.) — Effective Date: ${TERMS_EFFECTIVE_DATE}`,
+		`Autumn (Recase, Inc.) — Effective Date: ${TERMS_EFFECTIVE_DATE}`,
 		"",
 	];
 
@@ -216,7 +216,7 @@ export function buildPrivacyMarkdown(): string {
 	const lines: string[] = [
 		"# Privacy Policy",
 		"",
-		`Autumn (Rebase, Inc.) — Effective Date: ${PRIVACY_EFFECTIVE_DATE}`,
+		`Autumn (Recase, Inc.) — Effective Date: ${PRIVACY_EFFECTIVE_DATE}`,
 		"",
 	];
 
