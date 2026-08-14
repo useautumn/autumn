@@ -4,6 +4,7 @@ import {
 	BillingMethod,
 	FeatureType,
 	FeatureUsageType,
+	getProductItemDisplay,
 	ProductItemInterval,
 	TierBehavior,
 	UsageModel,
@@ -32,6 +33,49 @@ const features: Feature[] = [
 ];
 
 describe("migrationItemUtils", () => {
+	test("displays items without a reset interval as one-off", () => {
+		const productItem = migrationItemToProductItem(
+			{ feature_id: "credits", included: 2000 },
+			features,
+		);
+
+		expect(
+			getProductItemDisplay({ item: productItem, features, fullDisplay: true })
+				.secondary_text,
+		).toBe("one-off");
+	});
+
+	test("preserves explicit reset intervals", () => {
+		const migrationItem = {
+			feature_id: "credits",
+			included: 2000,
+			reset: { interval: ProductItemInterval.Month },
+		};
+		const productItem = migrationItemToProductItem(migrationItem, features);
+
+		expect(productItem.interval).toBe(ProductItemInterval.Month);
+		expect(productItemToMigrationItem(productItem)).toMatchObject(migrationItem);
+	});
+
+	test("round-trips one-off price intervals", () => {
+		const productItem = migrationItemToProductItem(
+			{
+				feature_id: "credits",
+				price: {
+					amount: 25,
+					interval: "one_off",
+					billing_method: BillingMethod.Prepaid,
+				},
+			},
+			features,
+		);
+
+		expect(productItem.interval).toBeNull();
+		expect(productItemToMigrationItem(productItem).price).toMatchObject({
+			interval: "one_off",
+		});
+	});
+
 	test("round-trips tiered usage prices", () => {
 		const migrationItem = {
 			feature_id: "credits",

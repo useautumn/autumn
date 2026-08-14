@@ -93,10 +93,8 @@ export function migrationItemToProductItem(
 			price.max_purchase == null ? null : included + price.max_purchase;
 	} else {
 		const reset = migItem.reset as Record<string, unknown> | undefined;
-		if (reset?.interval) {
-			base.interval = reset.interval as ProductItemInterval;
-			base.interval_count = reset.interval_count as number | undefined;
-		}
+		base.interval = (reset?.interval as ProductItemInterval) ?? null;
+		base.interval_count = reset?.interval_count as number | undefined;
 	}
 	return base;
 }
