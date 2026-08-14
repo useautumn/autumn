@@ -1,51 +1,30 @@
 import {
-	EntInterval,
 	type FullCusProduct,
+	type ProductItemInterval,
+	billingToItemInterval,
+	entToItemInterval,
 	findCustomerEntitlementByFeature,
 	findFeatureById,
 	isBooleanFeature,
+	resetIntvToItemIntv,
 } from "@autumn/shared";
 import type { CreatePlanItemParamsV1 } from "@autumn/shared/api/products/items/crud/createPlanItemParamsV1.js";
 import type { PlanItemFilter } from "@autumn/shared/api/products/items/filter/planItemFilter.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { handleCustomizeDeleteItems } from "@/internal/billing/v2/setup/patch/handleCustomizeDeleteItems.js";
 
-const getAddItemEntitlementInterval = ({
+const addItemToPlanItemInterval = ({
 	item,
 }: {
 	item: CreatePlanItemParamsV1;
-}): EntInterval =>
-	(item.reset?.interval ??
-		item.price?.interval ??
-		EntInterval.Lifetime) as EntInterval;
-
-const itemWillReplaceRemovedItem = ({
-	item,
-	removeItems,
-}: {
-	item: CreatePlanItemParamsV1;
-	removeItems?: PlanItemFilter[];
-}) => {
-	if (!removeItems?.length) return false;
-
-	const itemInterval = getAddItemEntitlementInterval({ item });
-
-	return removeItems.some((removeItem) => {
-		if (
-			removeItem.feature_id !== undefined &&
-			removeItem.feature_id !== item.feature_id
-		) {
-			return false;
-		}
-
-		if (
-			removeItem.interval !== undefined &&
-			String(removeItem.interval) !== String(itemInterval)
-		) {
-			return false;
-		}
-
-		return true;
-	});
+}): ProductItemInterval | null => {
+	if (item.reset?.interval !== undefined)
+		return resetIntvToItemIntv(item.reset.interval);
+	if (item.price?.interval !== undefined)
+		return billingToItemInterval({
+			billingInterval: item.price.interval,
+		});
+	return null;
 };
 
 export const itemAlreadyExists = ({
@@ -59,7 +38,19 @@ export const itemAlreadyExists = ({
 	item: CreatePlanItemParamsV1;
 	removeItems?: PlanItemFilter[];
 }): boolean => {
-	if (itemWillReplaceRemovedItem({ item, removeItems })) return false;
+	const remainingCustomerProduct = removeItems?.length
+		? {
+				...customerProduct,
+				customer_prices: [...customerProduct.customer_prices],
+				customer_entitlements: [...customerProduct.customer_entitlements],
+			}
+		: customerProduct;
+	if (removeItems?.length) {
+		handleCustomizeDeleteItems({
+			customize: { remove_items: removeItems },
+			targetCustomerProduct: remainingCustomerProduct,
+		});
+	}
 
 	const feature = findFeatureById({
 		features: ctx.features,
@@ -70,19 +61,19 @@ export const itemAlreadyExists = ({
 	if (isBooleanFeature({ feature })) {
 		return Boolean(
 			findCustomerEntitlementByFeature({
-				cusEnts: customerProduct.customer_entitlements,
+				cusEnts: remainingCustomerProduct.customer_entitlements,
 				featureId: item.feature_id,
 			}),
 		);
 	}
 
-	const itemInterval = getAddItemEntitlementInterval({ item });
+	const itemInterval = addItemToPlanItemInterval({ item });
 
-	return customerProduct.customer_entitlements.some(
+	return remainingCustomerProduct.customer_entitlements.some(
 		(customerEntitlement) =>
 			customerEntitlement.feature_id === item.feature_id &&
-			String(
-				customerEntitlement.entitlement.interval ?? EntInterval.Lifetime,
-			) === String(itemInterval),
+			entToItemInterval({
+				entInterval: customerEntitlement.entitlement.interval,
+			}) === itemInterval,
 	);
 };

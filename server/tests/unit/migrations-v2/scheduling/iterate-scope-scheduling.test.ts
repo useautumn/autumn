@@ -1,4 +1,4 @@
-// Contract: scheduled scopes run one customer at a time and finish the task only between customers.
+// Contract: scheduled scopes honor concurrency and finish the task only between items.
 // Exhausting the source on the final customer must not request an unnecessary continuation.
 import { describe, expect, test } from "bun:test";
 import { iterateScope } from "@/internal/migrations/v2/run/orchestrators/iterateScope.js";
@@ -17,7 +17,7 @@ const iterateItems = (items: RunScopeItem[]) =>
 	};
 
 describe("iterateScope migration scheduling", () => {
-	test("forces sequential customer execution when a scheduler is present", async () => {
+	test("honors concurrency when a scheduler is present", async () => {
 		let active = 0;
 		let maxActive = 0;
 		const scheduler: MigrationRunScheduler = {
@@ -43,7 +43,44 @@ describe("iterateScope migration scheduling", () => {
 			},
 		});
 
-		expect(maxActive).toBe(1);
+		expect(maxActive).toBe(3);
+	});
+
+	test("ends a parallel slice after the time budget without exceeding concurrency", async () => {
+		let nowMs = 0;
+		let active = 0;
+		let maxActive = 0;
+		const scheduler: MigrationRunScheduler = {
+			batchSize: 100,
+			sliceDurationMs: 10,
+			now: () => nowMs,
+		};
+
+		const summary = await iterateScope({
+			iterate: iterateItems([
+				customerItem("customer_1"),
+				customerItem("customer_2"),
+				customerItem("customer_3"),
+				customerItem("customer_4"),
+				customerItem("customer_5"),
+				customerItem("customer_6"),
+			]),
+			concurrency: 3,
+			scheduler,
+			perItem: async () => {
+				active++;
+				maxActive = Math.max(maxActive, active);
+				await Promise.resolve();
+				nowMs += 6;
+				active--;
+				return undefined;
+			},
+		});
+
+		expect(maxActive).toBe(3);
+		expect(summary.completion).toBe("slice_complete");
+		expect(summary.processed).toBeGreaterThanOrEqual(3);
+		expect(summary.processed).toBeLessThan(6);
 	});
 
 	test("ends a slice between customers after the time budget", async () => {
