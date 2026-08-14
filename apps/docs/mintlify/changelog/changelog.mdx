@@ -4,6 +4,52 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="August 14th 2026">
+  ## Deduction aggregations on events.aggregate
+
+  [`events.aggregate`](/api-reference/events/aggregateEvents) now accepts `aggregate_on: "deducted"` alongside a `customer_id` and returns a per-balance breakdown of what each tracked feature actually consumed from each balance. Existing usage totals are unchanged, `group_by` and `max_groups` still apply (overflow rolls up as `Other`), and the customer analytics view has a new toggle to chart the breakdown directly.
+
+  ## UTC-anchored usage limits
+
+  Usage limits can now reset on the UTC calendar instead of the customer's billing cycle. Set `anchor: "utc"` on any limit (or flip **Anchor to UTC time** in the plan editor or customer usage-limit sheet) and the window uses calendar bounds, doesn't refill on plan changes, and takes precedence when two same-rate limits tie. Existing limits keep the `billing_cycle` behavior with no migration required.
+
+  ## Expire plans during an attach
+
+  [`billing.attach`](/api-reference/billing/attach) accepts a new `remove_plan_ids` array so you can expire one or more active plans in the same call that adds a new one. Removals respect the attach's entity scope, run in a single reconciliation with Stripe, and can act as the carry-over source for usage and balances when there is no same-group predecessor. The attach sheet in the dashboard has a matching **Remove a product** picker next to **Add another product**, with inline greying for plans already being replaced or queued for removal.
+
+  ## Choose payment methods on Autumn invoices
+
+  Organizations on invoice mode (`send_invoice`) can now pick which payment methods appear on the Stripe invoices Autumn generates. **Settings → Invoices → Payment methods** exposes a multi-select for card, bank transfer, ACH, SEPA, Bacs, Canadian pre-authorized debit, and Link. The selection is applied via `payment_settings.payment_method_types` on every invoice the subscription generates. Leaving the setting untouched preserves your Stripe account defaults exactly as before.
+
+  ## Stripe sync verification in the dashboard
+
+  Customer pages now auto-run `billing.verify` in the background and surface a header warning icon only when drift is detected. Clicking it opens a **Verify Stripe** sheet with an **In sync / Warning / Mismatched** badge per subscription and a compact table of the exact fields that differ. The sheet also flags an account-level warning when more than one Autumn customer points at the same Stripe customer and lists the colliding IDs. You can also now clear a customer's Stripe ID by passing `null` or `""` through [`customers.update`](/api-reference/customers/updateCustomer).
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - `rollovers[].granted` is now returned on balance responses across check, track, `trackTokens`, import, customer, and entity endpoints so you can see the original rolled-over amount before consumption — [#2671](https://github.com/useautumn/autumn/pull/2671)
+      - Customer expand now supports `invoice_previews`, returning preview line items and discounts inline — [#2671](https://github.com/useautumn/autumn/pull/2671)
+      - Create-schedule accepts `unscheduled_plans` (`preserve_add_ons` is deprecated and ignored) — [#2671](https://github.com/useautumn/autumn/pull/2671)
+      - Feature grants now accept `0` explicitly; only negative amounts are rejected, and boolean features skip allowance entirely — [#2671](https://github.com/useautumn/autumn/pull/2671)
+      - [`customers.list`](/api-reference/customers/listCustomers) now accepts `sort_order`, and the dashboard customers table exposes created-at sorting — [#2662](https://github.com/useautumn/autumn/pull/2662)
+      - Customer balance sheet adds a **Pooling** criteria filter so you can slice per-entity vs pooled balances — [#2810](https://github.com/useautumn/autumn/pull/2810)
+      - Flags now render as a plain section label when a customer has no catalog features, and the Flags/Full Catalog tabs only appear when there is catalog to switch to — [#2690](https://github.com/useautumn/autumn/pull/2690)
+      - Customer export menu and the created-date filter chip are re-aligned to shared list-action styling, with a clearer active-range label — [#2693](https://github.com/useautumn/autumn/pull/2693)
+      - Check requests are more resilient under load: the fail-open budget now counts middleware time, and slow primary-pool hydrations race a delayed backup read on the general pool so a single slow lookup no longer trips the timeout — [#2800](https://github.com/useautumn/autumn/pull/2800), [#2721](https://github.com/useautumn/autumn/pull/2721)
+      - Failed-check fallbacks now log an explicit reason (`route_timeout`, `org_rate_limit`, or `dependency_error`) so you can tell why a check failed open — [#2800](https://github.com/useautumn/autumn/pull/2800)
+      - SQS workers wait for Redis warmup and settle in-flight requests before shutdown, eliminating spurious `SQS batch accumulator is shutting down` rejections around deploys and recycles — [#2691](https://github.com/useautumn/autumn/pull/2691), [#2695](https://github.com/useautumn/autumn/pull/2695), [#2702](https://github.com/useautumn/autumn/pull/2702)
+    </Accordion>
+    <Accordion title="Fixes">
+      - Retained entitlements now reset their cycle anchor when a subscription update resets the billing cycle, and reinitialize usage from the final plan when `carry_over_usages.enabled` is `false`; scheduled cancellations are preserved — [#2804](https://github.com/useautumn/autumn/pull/2804)
+      - `additional_currencies` is now included on feature price items so multi-currency prices round-trip through types and comparators correctly — [#2799](https://github.com/useautumn/autumn/pull/2799)
+      - Customer balance cells no longer render `0 used` for empty entitlements or `+0 overage` for fully spent prepaid packs; only genuinely negative balances enter the used / overage label — [#2719](https://github.com/useautumn/autumn/pull/2719)
+      - `atmn` CLI login (1.1.20+) no longer fails with `invalid_scope` when requesting the new `rewards:read` / `rewards:write` scopes — [#2796](https://github.com/useautumn/autumn/pull/2796)
+      - Variant base plan links are preserved when copying between environments so pulled catalogs stay linked — [#2640](https://github.com/useautumn/autumn/pull/2640)
+      - `atmn pull` now preserves an explicit variant removal filter `intervalCount: 1` so the generated config round-trips cleanly through `atmn push` — [#2689](https://github.com/useautumn/autumn/pull/2689)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="July 31st 2026">
   ## Pooled balances
 
