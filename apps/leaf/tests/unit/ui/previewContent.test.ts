@@ -102,9 +102,13 @@ describe("approvalCard with structured previews", () => {
 	test("summarizes structured billing previews in the approval card", () => {
 		const card = approvalCard({
 			id: "approval_1",
-			toolName: "attach",
-			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-			preview: attachPreview,
+			items: [
+				{
+					preview: attachPreview,
+					toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
+					toolName: "attach",
+				},
+			],
 		});
 		const json = JSON.stringify(card);
 
@@ -120,16 +124,20 @@ describe("approvalCard with structured previews", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			env: "sandbox" as never,
-			toolName: "attach",
-			toolArgs: {
-				request: {
-					customer_id: "cus_1",
-					plan_id: "pro",
-					redirect_mode: "if_required",
-					invoice_mode: { enabled: true, finalize: false },
+			items: [
+				{
+					preview: attachPreview,
+					toolArgs: {
+						request: {
+							customer_id: "cus_1",
+							plan_id: "pro",
+							redirect_mode: "if_required",
+							invoice_mode: { enabled: true, finalize: false },
+						},
+					},
+					toolName: "attach",
 				},
-			},
-			preview: attachPreview,
+			],
 		});
 
 		expect(card.subtitle).toContain("Sandbox");
@@ -147,15 +155,19 @@ describe("approvalCard with structured previews", () => {
 	test("shows schedule start dates from tool args", () => {
 		const card = approvalCard({
 			id: "approval_2",
-			toolName: "createSchedule",
-			toolArgs: {
-				request: {
-					customer_id: "cus_1",
-					plan_id: "pro",
-					starts_at: 1812731225000,
+			items: [
+				{
+					preview: attachPreview,
+					toolArgs: {
+						request: {
+							customer_id: "cus_1",
+							plan_id: "pro",
+							starts_at: 1812731225000,
+						},
+					},
+					toolName: "createSchedule",
 				},
-			},
-			preview: attachPreview,
+			],
 		});
 		expect(JSON.stringify(card)).toContain("Starts");
 	});

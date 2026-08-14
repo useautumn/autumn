@@ -61,6 +61,9 @@ export const chatApprovals = pgTable(
 	"chat_approvals",
 	{
 		id: text().primaryKey().notNull(),
+		// Approvals the user decides together on one card; null = pre-column rows,
+		// which are their own group of one.
+		group_id: text("group_id"),
 		org_id: text("org_id").notNull(),
 		provider: text("provider").$type<ChatProvider>().notNull(),
 		workspace_id: text("workspace_id").notNull(),

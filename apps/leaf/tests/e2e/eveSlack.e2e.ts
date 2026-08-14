@@ -12,10 +12,10 @@ import { AppEnv } from "@autumn/shared";
 import { runMessage } from "../../src/agent/runMessage/runMessage.js";
 import {
 	answerEveQuestion,
-	denyEveApproval,
+	denyEveApprovalGroup,
 } from "../../src/harness/eve/approval.js";
 import { redirectCatalogSuspensionToDecision } from "../../src/harness/eve/catalogDecision.js";
-import { resolveApproval } from "../../src/internal/approvals/actions/resolveApproval.js";
+import { resolveApprovalGroup } from "../../src/internal/approvals/actions/resolveApprovalGroup.js";
 import { chatApprovalRepo } from "../../src/internal/approvals/repos/chatApprovalRepo.js";
 import { presentApproval } from "../../src/internal/approvals/surfaces/slack/present.js";
 import { executeAutumnMcpTool } from "../../src/internal/autumnMcp/client.js";
@@ -287,11 +287,11 @@ const main = async () => {
 		});
 		check(
 			"S2 suspended on a gated write",
-			Boolean(turn.output.suspension),
-			turn.output.suspension?.toolName ??
+			Boolean(turn.output.suspensions?.[0]),
+			turn.output.suspensions?.[0].toolName ??
 				`text: ${turn.output.text?.slice(0, 160)}`,
 		);
-		if (turn.output.suspension) {
+		if (turn.output.suspensions?.[0]) {
 			const target = makeTarget();
 			const posted = await presentApproval({
 				channelId: s2ThreadId,
@@ -320,14 +320,14 @@ const main = async () => {
 			});
 			check("S2 approval row exists", Boolean(approval));
 			if (approval) {
-				const claimed = await chatApprovalRepo.claim({
-					approvalId: approval.id,
+				const claimed = await chatApprovalRepo.claimGroup({
+					approvals: [approval],
 					db,
 					providerUserId: USER_B,
 				});
-				check("S2 another user can claim/approve", Boolean(claimed));
-				const result = await resolveApproval({
-					approval: claimed ?? approval,
+				check("S2 another user can claim/approve", claimed.length === 1);
+				const result = await resolveApprovalGroup({
+					approvals: claimed.length ? claimed : [approval],
 					providerUserId: USER_B,
 				});
 				const failed = "error" in result && result.error === true;
@@ -366,13 +366,13 @@ const main = async () => {
 		});
 		check(
 			"S3 first turn suspended",
-			Boolean(first.output.suspension),
-			first.output.suspension?.toolName ??
+			Boolean(first.output.suspensions?.[0]),
+			first.output.suspensions?.[0].toolName ??
 				`text: ${first.output.text?.slice(0, 160)}`,
 		);
 		// The real bot flow always inserts the approval row via presentApproval
 		// before the next message can supersede it.
-		if (first.output.suspension) {
+		if (first.output.suspensions?.[0]) {
 			const cardTarget = makeTarget();
 			await presentApproval({
 				channelId: threadId,
@@ -405,10 +405,10 @@ const main = async () => {
 			Boolean(
 				second.output.text?.trim() ||
 					second.output.question ||
-					second.output.suspension,
+					second.output.suspensions?.[0],
 			),
-			second.output.suspension
-				? `rebuilt write: ${second.output.suspension.toolName}`
+			second.output.suspensions?.[0]
+				? `rebuilt write: ${second.output.suspensions?.[0].toolName}`
 				: (second.output.text?.slice(0, 120) ??
 						second.output.question?.prompt?.slice(0, 120)),
 		);
@@ -425,11 +425,11 @@ const main = async () => {
 		});
 		check(
 			"S4 first turn suspended",
-			Boolean(first.output.suspension),
-			first.output.suspension?.toolName ??
+			Boolean(first.output.suspensions?.[0]),
+			first.output.suspensions?.[0].toolName ??
 				`text: ${first.output.text?.slice(0, 160)}`,
 		);
-		if (first.output.suspension) {
+		if (first.output.suspensions?.[0]) {
 			const cardTarget = makeTarget();
 			await presentApproval({
 				channelId: threadId,
@@ -452,8 +452,8 @@ const main = async () => {
 			: undefined;
 		check("S4 approval row exists", Boolean(approval));
 		if (approval) {
-			const denied = await denyEveApproval({
-				approval,
+			const denied = await denyEveApprovalGroup({
+				approvals: [approval],
 				providerUserId: USER_A,
 			});
 			check(
@@ -573,18 +573,18 @@ const main = async () => {
 			threadId,
 		});
 		const hasGate = Boolean(
-			turn.output.suspension || turn.output.catalogDecision,
+			turn.output.suspensions?.[0] || turn.output.catalogDecision,
 		);
 		check(
 			"S8 catalog change gated (suspension or decision)",
 			hasGate,
-			turn.output.suspension?.toolName ??
+			turn.output.suspensions?.[0].toolName ??
 				(turn.output.catalogDecision ? "catalogDecision" : "none"),
 		);
 		let plan = turn.output.catalogDecision?.plan as
 			| Parameters<typeof buildCatalogDecisionModel>[0]["plan"]
 			| undefined;
-		if (!plan && turn.output.suspension) {
+		if (!plan && turn.output.suspensions?.[0]) {
 			plan = await redirectCatalogSuspensionToDecision({
 				decisionProvided: false,
 				env: AppEnv.Sandbox,
@@ -592,7 +592,7 @@ const main = async () => {
 				orgId: installation.org_id,
 				providerUserId: USER_A,
 				runId: turn.output.runId,
-				suspension: turn.output.suspension,
+				suspensions: turn.output.suspensions ?? [],
 				thread: {
 					channelId: threadId,
 					provider: installation.provider as never,
@@ -606,8 +606,8 @@ const main = async () => {
 		// (Earlier scenarios may have moved the customer off the fixture plan, in
 		// which case NOT redirecting is the correct outcome.)
 		let groundTruthNeedsDecision = false;
-		if (!plan && turn.output.suspension) {
-			const args = turn.output.suspension.toolArgs as {
+		if (!plan && turn.output.suspensions?.[0]) {
+			const args = turn.output.suspensions?.[0].toolArgs as {
 				request?: { plans?: Record<string, unknown>[] };
 			};
 			const request = args.request ?? {};
@@ -653,7 +653,7 @@ const main = async () => {
 				cardJson.includes("Create new version") &&
 					cardJson.includes("Update current version"),
 			);
-		} else if (turn.output.suspension) {
+		} else if (turn.output.suspensions?.[0]) {
 			// No decision needed → the real flow posts an approval card; dismiss it
 			// so the parked write is denied and nothing is applied.
 			const cardTarget = makeTarget();
@@ -676,7 +676,10 @@ const main = async () => {
 					})
 				: undefined;
 			if (approval) {
-				await denyEveApproval({ approval, providerUserId: USER_A });
+				await denyEveApprovalGroup({
+					approvals: [approval],
+					providerUserId: USER_A,
+				});
 				await chatApprovalRepo.cancel({
 					approvalId: approval.id,
 					db,
@@ -731,7 +734,7 @@ const main = async () => {
 				text: `In sandbox: attach the plan "${prepaidPlanId}" to customer "${customerId}" and put them on 4,500 ${prepaidFeatureId}.`,
 				threadId,
 			});
-			const args = (turn.output.suspension?.toolArgs ?? {}) as {
+			const args = (turn.output.suspensions?.[0]?.toolArgs ?? {}) as {
 				request?: {
 					customize?: { add_items?: unknown[]; remove_items?: unknown[] };
 					feature_quantities?: { feature_id?: string; quantity?: number }[];
@@ -753,12 +756,12 @@ const main = async () => {
 			check(
 				"S9 bare amount handled as prepaid quantity (or clarified)",
 				(setCorrectly && !editedItemInstead) || askedInstead,
-				turn.output.suspension
+				turn.output.suspensions?.[0]
 					? `feature_quantities=${JSON.stringify(quantities)} customize=${JSON.stringify(args.request?.customize ?? null).slice(0, 120)}`
 					: (turn.output.question?.prompt?.slice(0, 120) ??
 							turn.output.text?.slice(0, 120)),
 			);
-			if (turn.output.suspension && turn.output.runId) {
+			if (turn.output.suspensions?.[0] && turn.output.runId) {
 				// Card safety net: the quantity (or its absence) must be visible.
 				const target = makeTarget();
 				await presentApproval({
@@ -785,7 +788,10 @@ const main = async () => {
 					runId: turn.output.runId,
 				});
 				if (approval) {
-					await denyEveApproval({ approval, providerUserId: USER_A });
+					await denyEveApprovalGroup({
+						approvals: [approval],
+						providerUserId: USER_A,
+					});
 					await chatApprovalRepo.cancel({
 						approvalId: approval.id,
 						db,

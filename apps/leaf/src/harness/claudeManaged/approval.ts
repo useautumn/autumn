@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ChatApproval } from "@autumn/shared";
-import type { ApprovalRunResult } from "../../internal/approvals/types.js";
+import type { ApprovalGroupRunResult } from "../../internal/approvals/types.js";
 import {
 	approvalErrorResult,
 	isErrorResult,
@@ -17,15 +17,15 @@ import { findSessionToolResult } from "./session/findSessionToolResult.js";
 
 const client = new Anthropic();
 
-/** Keeps the asker's suspended session usable after an out-of-band approval. */
-const notifySuspendedToolDenied = async ({
+/** Keeps the asker's suspended session usable after out-of-band approvals. */
+const notifySuspendedToolsDenied = async ({
 	providerUserId,
 	sessionId,
-	toolUseId,
+	toolUseIds,
 }: {
 	providerUserId: string;
 	sessionId: string;
-	toolUseId: string;
+	toolUseIds: string[];
 }) => {
 	try {
 		await driveSessionTurn({
@@ -33,24 +33,22 @@ const notifySuspendedToolDenied = async ({
 			client,
 			kickoff: () =>
 				client.beta.sessions.events.send(sessionId, {
-					events: [
-						{
-							deny_message:
-								"This approval was applied using the approver's Autumn permissions.",
-							result: "deny",
-							tool_use_id: toolUseId,
-							type: "user.tool_confirmation",
-						},
-					],
+					events: toolUseIds.map((toolUseId) => ({
+						deny_message:
+							"This approval was applied using the approver's Autumn permissions.",
+						result: "deny" as const,
+						tool_use_id: toolUseId,
+						type: "user.tool_confirmation" as const,
+					})),
 				}),
 			sessionId,
 		});
 	} catch (error) {
-		logger.warn("Could not notify suspended Claude Managed tool", {
+		logger.warn("Could not notify suspended Claude Managed tools", {
 			event: "leaf.approval_clear_suspended_tool_failed",
 			data: {
 				session_id: sessionId,
-				tool_use_id: toolUseId,
+				tool_use_ids: toolUseIds,
 				provider_user_id: providerUserId,
 			},
 			error,
@@ -61,12 +59,12 @@ const notifySuspendedToolDenied = async ({
 const defaultResumeDeps = {
 	executeTool: executeAutumnMcpTool,
 	findSessionToolResult,
-	notifySuspendedToolDenied,
+	notifySuspendedToolsDenied,
 	driveSessionTurn,
 };
 
 type ResumeClaudeManagedApprovalInput = {
-	approval: ChatApproval;
+	approvals: ChatApproval[];
 	deps?: typeof defaultResumeDeps;
 	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
@@ -74,73 +72,85 @@ type ResumeClaudeManagedApprovalInput = {
 };
 
 type ResumeBranchInput = Required<
-	Pick<ResumeClaudeManagedApprovalInput, "approval" | "deps" | "providerUserId">
+	Pick<
+		ResumeClaudeManagedApprovalInput,
+		"approvals" | "deps" | "providerUserId"
+	>
 > & {
 	onProgress?: (statusLine: string) => void;
 	sessionId: string;
-	toolUseId: string;
+	toolUseIds: string[];
 };
 
 /**
- * Runs the tool under the approver's own token, then releases the asker's
- * suspended session via a deny so it stays usable.
+ * Runs each tool under the approver's own token, then releases the asker's
+ * suspended session via a deny so it stays usable. Stops at the first failure
+ * so a bad state can't compound across the rest of the group.
  */
-const runOutOfBandApproval = async ({
-	approval,
+const runOutOfBandApprovals = async ({
+	approvals,
 	approverToken,
 	deps,
 	onProgress,
 	providerUserId,
 	sessionId,
-	toolUseId,
+	toolUseIds,
 }: ResumeBranchInput & {
 	approverToken: string;
-}): Promise<ApprovalRunResult> => {
-	onProgress?.(toolStatusLine(approval.tool_name));
-	try {
-		const result = await deps.executeTool({
-			env: approval.env,
-			token: approverToken,
-			toolName: approval.tool_name,
-			args: approval.tool_args,
-		});
-		const runResult = isErrorResult(result)
-			? approvalErrorResult(result)
-			: { result, text: "", toolName: approval.tool_name };
-		await deps.notifySuspendedToolDenied({
-			providerUserId,
-			sessionId,
-			toolUseId,
-		});
-		return runResult;
-	} catch (error) {
-		return approvalErrorResult(error);
+}): Promise<ApprovalGroupRunResult> => {
+	const results: Record<string, unknown> = {};
+	let failure: ApprovalGroupRunResult | undefined;
+	for (const approval of approvals) {
+		onProgress?.(toolStatusLine(approval.tool_name));
+		try {
+			const result = await deps.executeTool({
+				env: approval.env,
+				token: approverToken,
+				toolName: approval.tool_name,
+				args: approval.tool_args,
+			});
+			if (isErrorResult(result)) {
+				failure = approvalErrorResult(result);
+				break;
+			}
+			results[approval.id] = result;
+		} catch (error) {
+			failure = approvalErrorResult(error);
+			break;
+		}
 	}
+	await deps.notifySuspendedToolsDenied({
+		providerUserId,
+		sessionId,
+		toolUseIds,
+	});
+	return failure ?? { results, text: "" };
 };
 
-/** Replays the approver's allow into the asker's own suspended session. */
-const resumeSuspendedApproval = async ({
-	approval,
+/** Replays the approver's allows into the asker's own suspended session. */
+const resumeSuspendedApprovals = async ({
+	approvals,
 	deps,
 	onProgress,
 	sessionId,
-	toolUseId,
-}: ResumeBranchInput): Promise<ApprovalRunResult> => {
+	toolUseIds,
+}: ResumeBranchInput): Promise<ApprovalGroupRunResult> => {
 	const outcome = await deps.driveSessionTurn({
 		autumnMcpServerName: claudeManagedConfig.autumnMcpServerName,
 		client,
-		// The tool_use was emitted in the suspended turn, so seed it here to
-		// capture its result in this resume turn.
-		expectedToolResult: { toolName: approval.tool_name, toolUseId },
+		// The tool_uses were emitted in the suspended turn, so seed them here to
+		// capture their results in this resume turn.
+		expectedToolResults: approvals.map((approval) => ({
+			toolName: approval.tool_name,
+			toolUseId: approval.tool_call_id as string,
+		})),
 		kickoff: () =>
 			client.beta.sessions.events.send(sessionId, {
-				events: [
-					{
-						result: "allow",
-						tool_use_id: toolUseId,
-						type: "user.tool_confirmation",
-					},
-				],
+				events: toolUseIds.map((toolUseId) => ({
+					result: "allow" as const,
+					tool_use_id: toolUseId,
+					type: "user.tool_confirmation" as const,
+				})),
 			}),
 		onAutumnTool: ({ name }) => {
 			onProgress?.(toolStatusLine(name));
@@ -152,37 +162,45 @@ const resumeSuspendedApproval = async ({
 		sessionId,
 	});
 	const text = outcome.textParts.join("\n\n");
-	// Match by toolUseId — a bare `.at(-1)` could bind another tool's output.
-	let writeResult = outcome.toolResults?.find(
-		(result) => result.id === toolUseId,
-	);
 
-	// Recover from session history so a crash after the write isn't misreported
+	const results: Record<string, unknown> = {};
+	const missing: ChatApproval[] = [];
+	for (const approval of approvals) {
+		// Match by toolUseId — a bare `.at(-1)` could bind another tool's output.
+		const writeResult = outcome.toolResults?.find(
+			(result) => result.id === approval.tool_call_id,
+		);
+		if (writeResult) {
+			if (isErrorResult(writeResult.output)) {
+				return approvalErrorResult(writeResult.output);
+			}
+			results[approval.id] = writeResult.output;
+			continue;
+		}
+		missing.push(approval);
+	}
+
+	// Recover from session history so a crash after a write isn't misreported
 	// as a failure and retried into a double-write.
-	if (!writeResult) {
+	for (const approval of missing) {
 		const recovered = await deps.findSessionToolResult({
 			client,
 			sessionId,
-			toolUseId,
+			toolUseId: approval.tool_call_id as string,
 		});
-		if (recovered) {
-			writeResult = {
-				id: toolUseId,
-				name: approval.tool_name,
-				output: recovered.output,
-			};
+		if (!recovered) continue;
+		if (isErrorResult(recovered.output)) {
+			return approvalErrorResult(recovered.output);
 		}
+		results[approval.id] = recovered.output;
 	}
 
-	// The captured write result is the source of truth, even if the session
-	// crashed after the write (that's just noise).
-	if (writeResult) {
-		if (isErrorResult(writeResult.output)) {
-			return approvalErrorResult(writeResult.output);
-		}
-		return { result: writeResult.output, text, toolName: writeResult.name };
+	// The captured write results are the source of truth, even if the session
+	// crashed after the writes (that's just noise).
+	if (Object.keys(results).length === approvals.length) {
+		return { results, text };
 	}
-	// No result anywhere — the write never ran, so the approval stays retryable.
+	// A write is missing everywhere — it never ran, so the group stays retryable.
 	if (outcome.errorMessage) {
 		return approvalErrorResult(outcome.errorMessage, { retryable: true });
 	}
@@ -192,28 +210,29 @@ const resumeSuspendedApproval = async ({
 	);
 };
 
-/** Resumes an approved Claude Managed write; finalization stays in resolveApproval. */
-export const resumeClaudeManagedApproval = async ({
-	approval,
+/** Resumes an approved Claude Managed group; finalization stays in
+ * resolveApprovalGroup. */
+export const resumeClaudeManagedApprovalGroup = async ({
+	approvals,
 	deps = defaultResumeDeps,
 	onProgress,
 	providerUserId,
 	approverToken,
-}: ResumeClaudeManagedApprovalInput): Promise<ApprovalRunResult> => {
-	const sessionId = approval.run_id;
-	const toolUseId = approval.tool_call_id;
-	if (!(sessionId && toolUseId)) {
+}: ResumeClaudeManagedApprovalInput): Promise<ApprovalGroupRunResult> => {
+	const sessionId = approvals[0]?.run_id;
+	const toolUseIds = approvals.map((approval) => approval.tool_call_id);
+	if (!sessionId || toolUseIds.some((toolUseId) => !toolUseId)) {
 		throw new Error("Approval is missing the session or tool-call id");
 	}
 	const branchInput = {
-		approval,
+		approvals,
 		deps,
 		onProgress,
 		providerUserId,
 		sessionId,
-		toolUseId,
+		toolUseIds: toolUseIds as string[],
 	};
 	return approverToken
-		? runOutOfBandApproval({ ...branchInput, approverToken })
-		: resumeSuspendedApproval(branchInput);
+		? runOutOfBandApprovals({ ...branchInput, approverToken })
+		: resumeSuspendedApprovals(branchInput);
 };

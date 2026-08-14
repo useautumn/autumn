@@ -1,9 +1,5 @@
-import type { ChatApproval } from "@autumn/shared";
 import type { AgentEngine } from "../../agent/runMessage/types.js";
-import {
-	isSilentTool,
-	normalizeToolName,
-} from "../../agent/tools/toolPolicy.js";
+import { isSilentTool } from "../../agent/tools/toolPolicy.js";
 import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
 import { executeAutumnMcpTool } from "../../internal/autumnMcp/client.js";
 import { autumnOrgContextService } from "../../internal/autumnMcp/orgContextService.js";
@@ -21,7 +17,7 @@ import {
 	type EveMessageContent,
 	EveStreamDisconnectedError,
 	EveStreamIdleTimeoutError,
-	postEveInputResponse,
+	postEveInputResponses,
 	postEveMessage,
 	resyncEveStreamIndex,
 	streamEveEvents,
@@ -32,6 +28,7 @@ import {
 	type EveAction,
 	type EveActionResult,
 	type EveInputRequest,
+	isGatedRequest,
 	isPreviewToolName,
 	labelForResult,
 	textForInputRequests,
@@ -121,46 +118,51 @@ export const eveEngine: AgentEngine = {
 				workspaceId: thread.workspaceId,
 			});
 			if (pendingApprovals.length > 0) {
-				const cancelledApprovals: ChatApproval[] = [];
-				for (const approval of pendingApprovals) {
-					if (approval.tool_call_id) {
-						try {
-							const posted = await postEveInputResponse({
-								auth,
-								note: "(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; their new message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one.)",
+				// One POST for the whole parked set — denying them one at a time
+				// resumes the turn while its siblings are still parked.
+				const parked = pendingApprovals.filter(
+					(approval) => approval.tool_call_id,
+				);
+				if (parked.length > 0) {
+					try {
+						const posted = await postEveInputResponses({
+							auth,
+							note: "(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; their new message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one.)",
+							responses: parked.map((approval) => ({
 								optionId: denyOptionFromApproval(approval),
-								requestId: approval.tool_call_id,
-								session,
-							});
-							session.sessionId = posted.sessionId;
-							session.state = {
-								...session.state,
-								continuationToken: posted.continuationToken,
-								status: "running",
-								lastEventAt: Date.now(),
-							};
-							// Discard the withdrawal turn's reply — without this, its
-							// text would end THIS run and the user's actual message
-							// would be processed with nobody streaming.
-							await drainParkedEveTurn({ auth, orgId: org.id, session });
-						} catch (error) {
-							logger.warn("Could not deny superseded Eve approval", {
-								event: "leaf.eve_superseded_approval_deny_failed",
-								approval_id: approval.id,
-								data: {
-									error: error instanceof Error ? error.message : String(error),
-								},
-							});
-						}
+								requestId: approval.tool_call_id as string,
+							})),
+							session,
+						});
+						session.sessionId = posted.sessionId;
+						session.state = {
+							...session.state,
+							continuationToken: posted.continuationToken,
+							status: "running",
+							lastEventAt: Date.now(),
+						};
+						// Discard the withdrawal turn's reply — without this, its
+						// text would end THIS run and the user's actual message
+						// would be processed with nobody streaming.
+						await drainParkedEveTurn({ auth, orgId: org.id, session });
+					} catch (error) {
+						logger.warn("Could not deny superseded Eve approvals", {
+							event: "leaf.eve_superseded_approval_deny_failed",
+							data: {
+								approval_ids: parked.map((approval) => approval.id),
+								error: error instanceof Error ? error.message : String(error),
+							},
+						});
 					}
-					const cancelled = await chatApprovalRepo.cancel({
-						approvalId: approval.id,
-						db,
-						providerUserId,
-					});
-					cancelledApprovals.push(cancelled ?? approval);
 				}
-				await onApprovalsSuperseded?.(cancelledApprovals);
+				const cancelled = await chatApprovalRepo.cancelGroup({
+					approvals: pendingApprovals,
+					db,
+					providerUserId,
+				});
+				await onApprovalsSuperseded?.(
+					cancelled.length ? cancelled : pendingApprovals,
+				);
 			}
 		}
 
@@ -208,7 +210,6 @@ export const eveEngine: AgentEngine = {
 		if (!session) {
 			session = {
 				env,
-				newSession: true,
 				sessionId: posted.sessionId,
 				state: initialState(posted.continuationToken),
 				threadKey: buildThreadKey({ env, thread }),
@@ -358,36 +359,49 @@ export const eveEngine: AgentEngine = {
 						} else if (event.type === "input.requested" && turnStarted) {
 							const requests = (event.data?.requests ??
 								[]) as EveInputRequest[];
-							// Eve's built-in `ask_question` also carries a populated
-							// `action.toolName` (its own), so exclude it — only a real
-							// approval-gated tool call should render as an approval card.
-							const approval = requests.find(
-								(request) =>
-									request.requestId &&
-									request.action?.toolName &&
-									normalizeToolName(request.action.toolName) !== "ask_question",
-							);
-							if (approval?.requestId && approval.action?.toolName) {
+							// Keep every gated request: dropping the siblings would strand them
+							// parked in the session forever.
+							const approvals = requests.filter(isGatedRequest);
+							if (approvals.length > 0) {
 								await updateState({
 									orgId: org.id,
 									session,
 									state: { status: "waiting" },
 								});
-								const options = approvalOptionIds(approval);
+								logger.info("Eve parked on gated writes", {
+									event: "leaf.eve_gated_requests_parked",
+									context: { env, org_id: org.id },
+									data: {
+										count: approvals.length,
+										session_id: session.sessionId,
+										tools: approvals.map(
+											(approval) => approval.action?.toolName,
+										),
+									},
+								});
 								return {
 									env,
 									runId: session.sessionId,
 									text: finalText,
-									suspension: {
-										toolCallId: approval.requestId,
-										toolName: approval.action.toolName,
-										toolArgs: {
-											...(approval.action.input ?? {}),
-											_eveApproveOptionId: options.approve,
-											_eveDenyOptionId: options.deny,
-										},
-										preview: parsePreviewPayload(lastPreview),
-									},
+									suspensions: approvals.map((approval) => {
+										const options = approvalOptionIds(approval);
+										return {
+											// Filtered above, so both are present.
+											toolCallId: approval.requestId as string,
+											toolName: approval.action?.toolName as string,
+											toolArgs: {
+												...(approval.action?.input ?? {}),
+												_eveApproveOptionId: options.approve,
+												_eveDenyOptionId: options.deny,
+											},
+											// The turn captures a single preview, so it can only be
+											// trusted for a lone write; a group backfills per item.
+											preview:
+												approvals.length === 1
+													? parsePreviewPayload(lastPreview)
+													: undefined,
+										};
+									}),
 								};
 							}
 							finalText =

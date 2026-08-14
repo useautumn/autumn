@@ -137,12 +137,16 @@ export const runEngineLoop = async ({
 		text: rawFinalText,
 	});
 	const stopped = isCancelled();
-	const suspended = stopped ? undefined : outcome.suspendedQueue?.[0];
-	if (outcome.errorMessage && !finalText && !suspended && !stopped) {
+	const suspended = stopped ? [] : (outcome.suspendedQueue ?? []);
+	if (outcome.errorMessage && !finalText && !suspended.length && !stopped) {
 		throw new Error(`Agent failed: ${outcome.errorMessage}`);
 	}
 
-	const finishReason = stopped ? "stopped" : suspended ? "suspended" : "stop";
+	const finishReason = stopped
+		? "stopped"
+		: suspended.length
+			? "suspended"
+			: "stop";
 	logger.info("Completed agent", {
 		event: "leaf.agent_completed",
 		context: { env },
@@ -159,13 +163,13 @@ export const runEngineLoop = async ({
 		finishReason,
 		stopReason: stopped ? (timedOut ? "timeout" : "user") : undefined,
 		runId: sessionId,
-		suspension: suspended
-			? {
-					preview: suspended.preview,
-					toolArgs: suspended.args,
-					toolCallId: suspended.toolCallId,
-					toolName: suspended.toolName,
-				}
+		suspensions: suspended.length
+			? suspended.map((call) => ({
+					preview: call.preview,
+					toolArgs: call.args,
+					toolCallId: call.toolCallId,
+					toolName: call.toolName,
+				}))
 			: undefined,
 		text: finalText,
 	};

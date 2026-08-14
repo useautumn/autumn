@@ -14,6 +14,7 @@ import {
 	Modal,
 } from "chat";
 import { normalizeToolName, toolLabel } from "../agent/tools/toolPolicy.js";
+import { getRequest } from "../internal/approvals/utils/toolArgs.js";
 import { parsePreviewPayload, previewElements } from "./previewContent.js";
 
 export type ApprovalCardStatus =
@@ -23,11 +24,6 @@ export type ApprovalCardStatus =
 	| "failed"
 	| "running"
 	| "superseded";
-
-const getRequest = (args?: Record<string, unknown>) =>
-	(args?.request && typeof args.request === "object" ? args.request : args) as
-		| Record<string, unknown>
-		| undefined;
 
 const getRecord = (value: unknown) =>
 	value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -780,6 +776,117 @@ const approvalPreviewBlocks = ({
 	return blocks;
 };
 
+/** One gated call on an approval card. A card carries several when the agent
+ * gated the same operation across many customers. */
+export type ApprovalCardItem = {
+	preview?: unknown;
+	toolArgs?: Record<string, unknown>;
+	toolName: string;
+};
+
+// Slack caps a message at 50 blocks, so past this many items each one becomes a
+// single line instead of a full preview. The list itself is never truncated —
+// an approver has to see every call they are approving.
+const MAX_DETAILED_ITEMS = 8;
+
+const billingDisplayFor = (item: ApprovalCardItem) =>
+	BILLING_ACTION_TOOLS.has(normalizeToolName(item.toolName))
+		? buildBillingPreviewDisplay({
+				params: getRequest(item.toolArgs) ?? null,
+				preview: parsePreviewPayload(item.preview),
+			})
+		: null;
+
+/** What the group charges today, or null when the items don't share a currency
+ * — summing across currencies would be a lie. */
+const groupDueNowText = (items: ApprovalCardItem[]) => {
+	const charges = items.flatMap((item) => {
+		const display = billingDisplayFor(item);
+		// Currency casing varies by preview source, so compare normalized.
+		return display?.dueNow
+			? [
+					{
+						amount: display.dueNow.amount,
+						currency: display.currency?.toLowerCase(),
+					},
+				]
+			: [];
+	});
+	if (charges.length < 2) return null;
+	// A total that silently omits items whose preview never arrived would
+	// understate what the click actually costs.
+	if (charges.length !== items.length) return null;
+	const [first] = charges;
+	if (charges.some((charge) => charge.currency !== first.currency)) return null;
+	return formatMoney({
+		amount: charges.reduce((sum, charge) => sum + charge.amount, 0),
+		currency: first.currency,
+	});
+};
+
+const itemSentence = ({
+	env,
+	index,
+	item,
+	phrase,
+}: {
+	env?: AppEnv;
+	index: number;
+	item: ApprovalCardItem;
+	phrase: keyof ActionPhrases;
+}) =>
+	`${index + 1}. ${actionPhrases({ env, toolArgs: item.toolArgs, toolName: item.toolName })[phrase]}`;
+
+/** The card body: one write renders exactly as it always has; several render as
+ * a numbered list, each with its own money facts, plus the group total. */
+const approvalBodyBlocks = ({
+	env,
+	items,
+	phrase,
+}: {
+	env?: AppEnv;
+	items: ApprovalCardItem[];
+	phrase: keyof ActionPhrases;
+}): CardChild[] => {
+	const [only] = items;
+	if (items.length <= 1) {
+		return only
+			? approvalPreviewBlocks({
+					preview: only.preview,
+					toolArgs: only.toolArgs,
+					toolName: only.toolName,
+				})
+			: [];
+	}
+
+	const blocks: CardChild[] =
+		items.length <= MAX_DETAILED_ITEMS
+			? items.flatMap((item, index) => [
+					Divider(),
+					CardText(itemSentence({ env, index, item, phrase })),
+					...approvalPreviewBlocks({
+						preview: item.preview,
+						toolArgs: item.toolArgs,
+						toolName: item.toolName,
+					}),
+				])
+			: items.map((item, index) => {
+					const dueNow = billingDisplayFor(item)?.dueNow;
+					const cost = dueNow ? ` — ${dueNow.text}` : "";
+					return CardText(
+						`${itemSentence({ env, index, item, phrase })}${cost}`,
+					);
+				});
+
+	const total = groupDueNowText(items);
+	if (!total) return blocks;
+	return [
+		...blocks,
+		Divider(),
+		CardText(`${bold("Total due now")}  ${bold(total)}`),
+	];
+};
+
 const SUMMARY_MAX_LENGTH = 1500;
 
 // Agent prose arrives as markdown; mrkdwn sections have no list syntax.
@@ -793,59 +900,85 @@ const formatSummary = (summary: string) => {
 		: cleaned;
 };
 
+const cardTitle = (items: ApprovalCardItem[]) => {
+	const [only] = items;
+	if (only && items.length === 1) return toolLabel(only.toolName);
+	// No rows left to describe (the group was deleted out from under a click).
+	return items.length === 0 ? "Billing action" : `${items.length} changes`;
+};
+
+/** The sentence for the card as a whole — one write keeps its own wording, a
+ * group speaks for all of them at once. */
+const cardPhrases = ({
+	env,
+	items,
+}: {
+	env?: AppEnv;
+	items: ApprovalCardItem[];
+}): ActionPhrases => {
+	const [only] = items;
+	if (items.length <= 1 && only) {
+		return actionPhrases({
+			env,
+			toolArgs: only.toolArgs,
+			toolName: only.toolName,
+		});
+	}
+	const count =
+		items.length === 0 ? "this billing action" : `all ${items.length} changes`;
+	return {
+		done: `Applied ${count}`,
+		failed: `Couldn't apply ${count}`,
+		pending: `Apply ${count}`,
+		running: `Applying ${count}`,
+	};
+};
+
 // Settled terminal states (dismissed/superseded) keep the full pending body so
 // the in-place edit doesn't collapse; the button row becomes a status line.
 // Slack can't disable buttons, so a section line is used instead of a fake one.
 const settledStatusCard = ({
 	env,
-	preview,
+	items,
 	statusLabel,
-	toolArgs,
-	toolName,
 }: {
 	env?: AppEnv;
-	preview?: unknown;
+	items: ApprovalCardItem[];
 	statusLabel: string;
-	toolArgs?: Record<string, unknown>;
-	toolName: string;
-}) => {
-	const phrases = actionPhrases({ env, toolArgs, toolName });
-	return Card({
-		title: toolLabel(toolName),
+}) =>
+	Card({
+		title: cardTitle(items),
 		subtitle: envLine(env) || undefined,
 		children: [
-			CardText(`${phrases.pending}?`),
-			...approvalPreviewBlocks({ preview, toolArgs, toolName }),
+			CardText(`${cardPhrases({ env, items }).pending}?`),
+			...approvalBodyBlocks({ env, items, phrase: "pending" }),
 			CardText(statusLabel),
 		],
 	});
-};
 
 export const approvalCard = ({
 	env,
 	id,
-	preview,
+	items,
 	requesterId,
 	summary,
-	toolArgs,
-	toolName,
 }: {
 	env?: AppEnv;
 	id: string;
-	preview?: unknown;
+	items: ApprovalCardItem[];
 	requesterId?: string;
 	/** The agent's preview prose — rendered inside the card so the approval is one message. */
 	summary?: string;
-	toolArgs?: Record<string, unknown>;
-	toolName: string;
 }) => {
-	const phrases = actionPhrases({ env, toolArgs, toolName });
 	const requester = mention(requesterId);
 	const live = env === "live";
 	const summaryText = summary?.trim() ? formatSummary(summary) : null;
+	const approveLabel = `${items.length > 1 ? `Approve all ${items.length}` : "Approve"}${
+		live ? " in Live" : ""
+	}`;
 
 	return Card({
-		title: toolLabel(toolName),
+		title: cardTitle(items),
 		subtitle:
 			contextLine([
 				envLine(env),
@@ -853,12 +986,12 @@ export const approvalCard = ({
 			]) || undefined,
 		children: [
 			// The agent's narrative replaces the canned sentence when present.
-			CardText(summaryText ?? `${phrases.pending}?`),
-			...approvalPreviewBlocks({ preview, toolArgs, toolName }),
+			CardText(summaryText ?? `${cardPhrases({ env, items }).pending}?`),
+			...approvalBodyBlocks({ env, items, phrase: "pending" }),
 			Actions([
 				Button({
 					id: "approve_billing_action",
-					label: live ? "Approve in Live" : "Approve",
+					label: approveLabel,
 					style: "primary",
 					value: id,
 				}),
@@ -883,20 +1016,27 @@ const MODAL_JSON_MAX_LENGTH = 2800;
 
 export const approvalPayloadModal = ({
 	env,
-	toolArgs,
-	toolName,
+	items,
 }: {
 	env?: AppEnv;
-	toolArgs?: Record<string, unknown>;
-	toolName: string;
+	items: ApprovalCardItem[];
 }) => {
-	// Only the request body matters to the reviewer — not wrapper fields
+	// Only the request bodies matter to the reviewer — not wrapper fields
 	// like the agent's `intent` note.
-	const json = JSON.stringify(getRequest(toolArgs) ?? {}, null, 2);
+	const [only] = items;
+	const payload =
+		items.length === 1 && only
+			? (getRequest(only.toolArgs) ?? {})
+			: items.map((item) => ({
+					request: getRequest(item.toolArgs) ?? {},
+					tool: item.toolName,
+				}));
+	const json = JSON.stringify(payload, null, 2);
 	const truncated =
 		json.length > MODAL_JSON_MAX_LENGTH
 			? `${json.slice(0, MODAL_JSON_MAX_LENGTH)}\n… (truncated)`
 			: json;
+	const toolNames = [...new Set(items.map((item) => item.toolName))].join(", ");
 
 	return Modal({
 		callbackId: "approval_payload_modal",
@@ -904,9 +1044,15 @@ export const approvalPayloadModal = ({
 		submitLabel: "Done",
 		title: "Tool payload",
 		children: [
-			CardText(contextLine([`\`${toolName}\` request`, envLine(env)]), {
-				style: "muted",
-			}),
+			CardText(
+				contextLine([
+					items.length > 1
+						? `${items.length} \`${toolNames}\` requests`
+						: `\`${toolNames}\` request`,
+					envLine(env),
+				]),
+				{ style: "muted" },
+			),
 			CardText(`\`\`\`\n${truncated}\n\`\`\``),
 		],
 	});
@@ -915,23 +1061,25 @@ export const approvalPayloadModal = ({
 export const approvalStatusCard = ({
 	actorId,
 	env,
-	preview,
-	result,
+	failure,
+	items,
+	results,
 	status,
 	statusLine,
-	toolArgs,
-	toolName,
 }: {
 	actorId?: string;
 	env?: AppEnv;
-	preview?: unknown;
-	result?: unknown;
+	/** What went wrong with the group as a whole — a failure belongs to the
+	 * decision, not to any one write in it. */
+	failure?: unknown;
+	items: ApprovalCardItem[];
+	/** Tool output per item, positionally. Harnesses that resume the whole turn
+	 * rather than running each write report through the thread instead. */
+	results?: unknown[];
 	status: ApprovalCardStatus;
 	statusLine?: string;
-	toolArgs?: Record<string, unknown>;
-	toolName: string;
 }) => {
-	const phrases = actionPhrases({ env, toolArgs, toolName });
+	const phrases = cardPhrases({ env, items });
 	const actor = mention(actorId);
 	const where = envLine(env);
 	const mutedContext = (parts: Array<string | null | undefined>) => {
@@ -943,13 +1091,13 @@ export const approvalStatusCard = ({
 	// only appears once the action reports concrete progress.
 	if (status === "running") {
 		return Card({
-			title: toolLabel(toolName),
+			title: cardTitle(items),
 			subtitle:
 				contextLine([where, actor ? `approved by ${actor}` : null]) ||
 				undefined,
 			children: [
 				CardText(`${phrases.running}…`),
-				...approvalPreviewBlocks({ preview, toolArgs, toolName }),
+				...approvalBodyBlocks({ env, items, phrase: "running" }),
 				...(statusLine
 					? [CardText(`▸ ${statusLine}`, { style: "muted" })]
 					: []),
@@ -960,21 +1108,13 @@ export const approvalStatusCard = ({
 	if (status === "cancelled") {
 		return settledStatusCard({
 			env,
-			preview,
+			items,
 			statusLabel: `Dismissed${actor ? ` by ${actor}` : ""}`,
-			toolArgs,
-			toolName,
 		});
 	}
 
 	if (status === "superseded") {
-		return settledStatusCard({
-			env,
-			preview,
-			statusLabel: "Superseded",
-			toolArgs,
-			toolName,
-		});
+		return settledStatusCard({ env, items, statusLabel: "Superseded" });
 	}
 
 	if (status === "expired") {
@@ -988,44 +1128,59 @@ export const approvalStatusCard = ({
 		});
 	}
 
-	const customerLinkInSentence = Boolean(
-		autumnCustomerLink({
-			customerId: getString(getRequest(toolArgs)?.customer_id),
+	const customerLinkInSentence = (item?: ApprovalCardItem) =>
+		Boolean(
+			autumnCustomerLink({
+				customerId: getString(getRequest(item?.toolArgs)?.customer_id),
+				env,
+			}),
+		);
+	const outcomes = items.map((item, index) =>
+		outcomeFromResult({
+			customerLinkInSentence: customerLinkInSentence(item),
 			env,
+			result: results?.[index],
 		}),
 	);
-	const outcome = outcomeFromResult({ customerLinkInSentence, env, result });
+	const outcomeLines = outcomes.flatMap((outcome) => outcome.lines);
+	const outcomeLinks = outcomes.flatMap((outcome) => outcome.links);
 
 	// Resolved cards keep the pending body (sentence, money facts, changes) so the
 	// edit-in-place doesn't collapse; only the buttons become the outcome row.
 	const resolvedSubtitle =
 		contextLine([where, actor ? `approved by ${actor}` : null]) || undefined;
-	const resolvedBody = approvalPreviewBlocks({ preview, toolArgs, toolName });
 
 	if (status === "failed") {
-		const lines = outcome.lines.length ? outcome.lines : ["The action failed."];
+		const failureLines = outcomeFromResult({
+			customerLinkInSentence: customerLinkInSentence(items[0]),
+			env,
+			result: failure,
+		}).lines;
+		const lines = [...failureLines, ...outcomeLines];
+		if (lines.length === 0) lines.push("The action failed.");
 		return Card({
-			title: toolLabel(toolName),
+			title: cardTitle(items),
 			subtitle: resolvedSubtitle,
 			children: [
 				CardText(`⚠️ ${phrases.failed}`),
-				...resolvedBody,
+				// Past tense would claim these ran; the group failed.
+				...approvalBodyBlocks({ env, items, phrase: "pending" }),
 				CardText(lines.join("\n")),
 			],
 		});
 	}
 
 	return Card({
-		title: toolLabel(toolName),
+		title: cardTitle(items),
 		subtitle: resolvedSubtitle,
 		children: [
 			CardText(`✅ ${phrases.done}`),
-			...resolvedBody,
-			...(outcome.lines.length ? [CardText(outcome.lines.join("\n"))] : []),
-			...(outcome.links.length
+			...approvalBodyBlocks({ env, items, phrase: "done" }),
+			...(outcomeLines.length ? [CardText(outcomeLines.join("\n"))] : []),
+			...(outcomeLinks.length
 				? [
 						Actions(
-							outcome.links.map((link) =>
+							outcomeLinks.map((link) =>
 								LinkButton({ label: link.label, url: link.url }),
 							),
 						),

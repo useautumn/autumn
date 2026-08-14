@@ -7,10 +7,15 @@ import type {
 import type { ThreadRef } from "../../agent/runMessage/types.js";
 import { normalizeToolName } from "../../agent/tools/toolPolicy.js";
 import { fetchApprovalPreview } from "../../internal/approvals/utils/fetchApprovalPreview.js";
+import {
+	getRequest,
+	publicToolArgs,
+} from "../../internal/approvals/utils/toolArgs.js";
 import { db } from "../../lib/db.js";
 import type { Suspension } from "../../types.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
-import { postEveInputResponse } from "./client.js";
+import { postEveInputResponses } from "./client.js";
+import { storedOptionIds } from "./events.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
 import type { EveAuthContext } from "./types.js";
 
@@ -114,21 +119,14 @@ const hasExplicitVersioning = (request: Record<string, unknown>) => {
 	);
 };
 
-const requestFromSuspension = (suspension: Suspension) => {
-	const {
-		_eveApproveOptionId: _approve,
-		_eveDenyOptionId: _deny,
-		...rest
-	} = suspension.toolArgs;
-	return rest.request && typeof rest.request === "object"
-		? (rest.request as Record<string, unknown>)
-		: rest;
-};
+const requestFromSuspension = (suspension: Suspension) =>
+	getRequest(publicToolArgs(suspension.toolArgs));
 
 /** The one chokepoint the model can't skip: an `updateCatalog` suspension.
  * When the (flag-forced) preview shows the plan needs versioning/variant/
- * migration decisions and none were given, deny the parked call and hand the
- * decision to the dashboard instead of rendering an approval card. */
+ * migration decisions and none were given, deny the parked calls and hand the
+ * decision to the dashboard instead of rendering an approval card. Siblings
+ * parked alongside it are denied too — leaving them would strand the session. */
 export const redirectCatalogSuspensionToDecision = async ({
 	decisionProvided,
 	env,
@@ -136,7 +134,7 @@ export const redirectCatalogSuspensionToDecision = async ({
 	orgId,
 	providerUserId,
 	runId,
-	suspension,
+	suspensions,
 	thread,
 	token,
 }: {
@@ -146,13 +144,14 @@ export const redirectCatalogSuspensionToDecision = async ({
 	orgId: string;
 	providerUserId: string;
 	runId?: string;
-	suspension: Suspension;
+	suspensions: Suspension[];
 	thread: ThreadRef;
 	token: string;
 }): Promise<CatalogPlanPreview | undefined> => {
-	if (normalizeToolName(suspension.toolName) !== "updateCatalog") {
-		return undefined;
-	}
+	const suspension = suspensions.find(
+		(candidate) => normalizeToolName(candidate.toolName) === "updateCatalog",
+	);
+	if (!suspension) return undefined;
 	if (decisionProvided) return undefined;
 	const request = requestFromSuspension(suspension);
 	if (hasExplicitVersioning(request)) return undefined;
@@ -177,11 +176,7 @@ export const redirectCatalogSuspensionToDecision = async ({
 	});
 	if (!session) return undefined;
 	try {
-		const denyOptionId =
-			typeof suspension.toolArgs._eveDenyOptionId === "string"
-				? suspension.toolArgs._eveDenyOptionId
-				: "deny";
-		const posted = await postEveInputResponse({
+		const posted = await postEveInputResponses({
 			note: "(Dashboard: this change needs versioning/variant/migration choices — a decision card is already shown to the user with explanatory text. Do NOT reply; end your turn silently and wait for their selection.)",
 			auth: {
 				appEnv: env,
@@ -192,8 +187,12 @@ export const redirectCatalogSuspensionToDecision = async ({
 				threadId: thread.threadId,
 				workspaceId: thread.workspaceId,
 			} satisfies EveAuthContext,
-			optionId: denyOptionId,
-			requestId: suspension.toolCallId,
+			responses: suspensions
+				.filter((candidate) => candidate.toolCallId)
+				.map((candidate) => ({
+					optionId: storedOptionIds(candidate.toolArgs).deny,
+					requestId: candidate.toolCallId as string,
+				})),
 			session,
 		});
 		session.sessionId = posted.sessionId;

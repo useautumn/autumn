@@ -13,7 +13,7 @@ export type {
 export const driveSessionTurn = async ({
 	autumnMcpServerName,
 	client,
-	expectedToolResult,
+	expectedToolResults,
 	kickoff,
 	onAutumnTool,
 	onAutumnToolResult,
@@ -27,9 +27,9 @@ export const driveSessionTurn = async ({
 }: {
 	autumnMcpServerName: string;
 	client: Anthropic;
-	/** A tool whose `mcp_tool_use` happened in an earlier turn (e.g. an approval
-	 * being resumed) — seed its id+name so this turn captures its result. */
-	expectedToolResult?: { toolName: string; toolUseId: string };
+	/** Tools whose `mcp_tool_use` happened in an earlier turn (e.g. approvals
+	 * being resumed) — seed their ids+names so this turn captures their results. */
+	expectedToolResults?: { toolName: string; toolUseId: string }[];
 	kickoff: () => Promise<unknown>;
 	/** Label for the turn-latency log (e.g. "first", "resume"). */
 	perfLabel?: string;
@@ -76,13 +76,10 @@ export const driveSessionTurn = async ({
 	>();
 	const autumnToolNames = new Map<string, string>();
 	const mcpToolNames = new Map<string, string>();
-	if (expectedToolResult) {
-		autumnToolNames.set(
-			expectedToolResult.toolUseId,
-			expectedToolResult.toolName,
-		);
+	for (const expected of expectedToolResults ?? []) {
+		autumnToolNames.set(expected.toolUseId, expected.toolName);
 		// Also seed mcpToolNames so a resumed tool's error keeps its name.
-		mcpToolNames.set(expectedToolResult.toolUseId, expectedToolResult.toolName);
+		mcpToolNames.set(expected.toolUseId, expected.toolName);
 	}
 
 	// Time-to-first milestones, relative to turn kickoff — surfaces where the

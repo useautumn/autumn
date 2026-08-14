@@ -1,0 +1,1 @@
+ALTER TABLE "chat_approvals" ADD COLUMN "group_id" text;

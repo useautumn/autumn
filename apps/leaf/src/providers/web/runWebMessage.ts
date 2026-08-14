@@ -77,9 +77,9 @@ export const runWebMessage = async ({
 		await thread.post(output.text);
 	}
 
-	// A destructive write suspended the turn — record an approval the dashboard
+	// Destructive writes suspended the turn — record approvals the dashboard
 	// fetches + resolves via /agent/interactions (the web stream is text-only).
-	if (output.suspension) {
+	if (output.suspensions?.length) {
 		await presentWebApproval({
 			channelId: thread.id,
 			harness,

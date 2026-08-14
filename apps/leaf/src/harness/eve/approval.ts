@@ -1,22 +1,26 @@
 import type { ChatApproval } from "@autumn/shared";
-import { normalizeToolName } from "../../agent/tools/toolPolicy.js";
 import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
-import type { ApprovalRunResult } from "../../internal/approvals/types.js";
+import type { ApprovalGroupRunResult } from "../../internal/approvals/types.js";
 import { fetchApprovalPreview } from "../../internal/approvals/utils/fetchApprovalPreview.js";
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
 import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
 import {
 	EveStreamIdleTimeoutError,
-	postEveInputResponse,
+	postEveInputResponses,
 	resyncEveStreamIndex,
 	streamEveEvents,
 } from "./client.js";
-import { approvalOptionIds, type EveInputRequest } from "./events.js";
+import {
+	approvalOptionIds,
+	type EveInputRequest,
+	isGatedRequest,
+	storedOptionIds,
+} from "./events.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
-/** A gated write the resumed turn parked on after the answered one. */
+/** A gated write the resumed turn parked on after the answered ones. */
 export type ChainedPendingRequest = {
 	input?: Record<string, unknown>;
 	options?: { id?: string; label?: string }[];
@@ -24,19 +28,11 @@ export type ChainedPendingRequest = {
 	toolName: string;
 };
 
-export const approveOptionFromApproval = (approval: ChatApproval) => {
-	const args = approval.tool_args as Record<string, unknown>;
-	return typeof args._eveApproveOptionId === "string"
-		? args._eveApproveOptionId
-		: "approve";
-};
+export const approveOptionFromApproval = (approval: ChatApproval) =>
+	storedOptionIds(approval.tool_args as Record<string, unknown>).approve;
 
-export const denyOptionFromApproval = (approval: ChatApproval) => {
-	const args = approval.tool_args as Record<string, unknown>;
-	return typeof args._eveDenyOptionId === "string"
-		? args._eveDenyOptionId
-		: "deny";
-};
+export const denyOptionFromApproval = (approval: ChatApproval) =>
+	storedOptionIds(approval.tool_args as Record<string, unknown>).deny;
 
 const authFromApproval = (
 	approval: ChatApproval,
@@ -50,6 +46,26 @@ const authFromApproval = (
 	threadId: approval.channel_id,
 	workspaceId: approval.workspace_id,
 });
+
+const gatedRequestsFrom = ({
+	event,
+	skipRequestIds,
+}: {
+	event: { data?: Record<string, unknown> };
+	skipRequestIds?: Set<string>;
+}): ChainedPendingRequest[] =>
+	((event.data?.requests ?? []) as EveInputRequest[])
+		.filter(
+			(request) =>
+				isGatedRequest(request) &&
+				!skipRequestIds?.has(request.requestId ?? ""),
+		)
+		.map((request) => ({
+			input: request.action?.input,
+			options: request.options,
+			requestId: request.requestId as string,
+			toolName: request.action?.toolName as string,
+		}));
 
 const DRAIN_DENY_NOTE =
 	"(The user sent a newer message before this was shown, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; act on the user's next message instead.)";
@@ -87,21 +103,16 @@ export const drainParkedEveTurn = async ({
 				if (event.type === "turn.started") {
 					turnStarted = true;
 				} else if (event.type === "input.requested") {
-					const requests = (event.data?.requests ?? []) as EveInputRequest[];
-					const gated = requests.find(
-						(request) =>
-							request.requestId &&
-							request.action?.toolName &&
-							normalizeToolName(request.action.toolName) !== "ask_question",
-					);
-					if (gated?.requestId && denies < MAX_DRAIN_DENIES) {
+					const gated = gatedRequestsFrom({ event });
+					if (gated.length > 0 && denies < MAX_DRAIN_DENIES) {
 						denies += 1;
-						const options = approvalOptionIds(gated);
-						const posted = await postEveInputResponse({
+						const posted = await postEveInputResponses({
 							auth,
 							note: DRAIN_DENY_NOTE,
-							optionId: options.deny,
-							requestId: gated.requestId,
+							responses: gated.map((request) => ({
+								optionId: approvalOptionIds({ options: request.options }).deny,
+								requestId: request.requestId,
+							})),
 							session,
 						});
 						session.sessionId = posted.sessionId;
@@ -143,36 +154,35 @@ export const drainParkedEveTurn = async ({
 	});
 };
 
-/** Withdraws a parked gated write silently (no card was ever shown) and
- * drains the resumed turn — used when a newer user message is already queued,
- * so the thread gets exactly one response. */
-export const withdrawEveSuspension = async ({
+/** Withdraws parked gated writes silently (no card was ever shown) and drains
+ * the resumed turn — used when a newer user message is already queued, so the
+ * thread gets exactly one response. */
+export const withdrawEveSuspensions = async ({
 	auth,
 	orgId,
 	runId,
-	suspension,
+	suspensions,
 }: {
 	auth: EveAuthContext;
 	orgId: string;
 	runId: string;
-	suspension: { toolArgs: Record<string, unknown>; toolCallId?: string };
+	suspensions: { toolArgs: Record<string, unknown>; toolCallId?: string }[];
 }) => {
-	if (!suspension.toolCallId) return false;
+	const parked = suspensions.filter((suspension) => suspension.toolCallId);
+	if (parked.length === 0) return false;
 	const session = await getEveSessionBySessionId({
 		db,
 		orgId,
 		sessionId: runId,
 	});
 	if (!session) return false;
-	const denyOptionId =
-		typeof suspension.toolArgs._eveDenyOptionId === "string"
-			? suspension.toolArgs._eveDenyOptionId
-			: "deny";
-	const posted = await postEveInputResponse({
+	const posted = await postEveInputResponses({
 		auth,
 		note: DRAIN_DENY_NOTE,
-		optionId: denyOptionId,
-		requestId: suspension.toolCallId,
+		responses: parked.map((suspension) => ({
+			optionId: storedOptionIds(suspension.toolArgs).deny,
+			requestId: suspension.toolCallId as string,
+		})),
 		session,
 	});
 	session.sessionId = posted.sessionId;
@@ -193,16 +203,16 @@ const collectText = async ({
 	auth,
 	orgId,
 	session,
-	skipRequestId,
+	skipRequestIds,
 }: {
 	auth: EveAuthContext;
 	orgId: string;
 	session: EveSessionRef;
-	skipRequestId?: string;
+	skipRequestIds?: Set<string>;
 }) => {
 	let text = "";
 	let pendingText = "";
-	let chained: ChainedPendingRequest | undefined;
+	let chained: ChainedPendingRequest[] = [];
 	let question: PendingQuestion | undefined;
 	// Stale tail events from the parked turn replay first (see engine.ts) —
 	// only honor terminal events once the resumed turn's turn.started arrives.
@@ -213,30 +223,18 @@ const collectText = async ({
 		if (event.type === "turn.started") {
 			turnStarted = true;
 		} else if (event.type === "input.requested") {
-			// The resumed turn can chain straight into another gated write, parked
-			// where nobody streams. Capture it so a fresh approval row exists.
-			const requests = (event.data?.requests ?? []) as EveInputRequest[];
-			const found = requests.find(
-				(request) =>
-					request.requestId &&
-					request.requestId !== skipRequestId &&
-					request.action?.toolName &&
-					normalizeToolName(request.action.toolName) !== "ask_question",
-			);
-			if (found?.requestId && found.action?.toolName) {
-				chained = {
-					input: found.action.input,
-					options: found.options,
-					requestId: found.requestId,
-					toolName: found.action.toolName,
-				};
+			// The resumed turn can chain straight into more gated writes, parked
+			// where nobody streams. Capture them so fresh approval rows exist.
+			const found = gatedRequestsFrom({ event, skipRequestIds });
+			if (found.length > 0) {
+				chained = found;
 				break;
 			}
 			// An optioned ask_question also parks the session — capture it so
 			// button-driven surfaces can render answer chips instead of dead text.
-			const optioned = requests.find(
+			const optioned = ((event.data?.requests ?? []) as EveInputRequest[]).find(
 				(request) =>
-					request.requestId !== skipRequestId &&
+					!skipRequestIds?.has(request.requestId ?? "") &&
 					request.prompt &&
 					(request.options?.length ?? 0) > 0,
 			);
@@ -286,18 +284,28 @@ const collectText = async ({
 	return { chained, question, text: text || pendingText };
 };
 
-const answerEveApproval = async ({
-	approval,
+/** Answers every approval in the group in one POST — answering them one at a
+ * time would resume the turn while its siblings are still parked. */
+const answerEveApprovals = async ({
+	approvals,
 	note,
-	optionId,
+	optionIdFor,
 	providerUserId,
 }: {
-	approval: ChatApproval;
+	approvals: ChatApproval[];
 	note?: string;
-	optionId: string;
+	optionIdFor: (approval: ChatApproval) => string;
 	providerUserId: string;
-}): Promise<ApprovalRunResult> => {
-	if (!approval.run_id || !approval.tool_call_id) {
+}): Promise<ApprovalGroupRunResult> => {
+	const [first] = approvals;
+	if (!first) {
+		return {
+			error: true,
+			message: "No approvals to resolve.",
+			retryable: false,
+		};
+	}
+	if (!first.run_id || approvals.some((approval) => !approval.tool_call_id)) {
 		return {
 			error: true,
 			message: "Eve approval is missing session state.",
@@ -306,8 +314,8 @@ const answerEveApproval = async ({
 	}
 	const session = await getEveSessionBySessionId({
 		db,
-		orgId: approval.org_id,
-		sessionId: approval.run_id,
+		orgId: first.org_id,
+		sessionId: first.run_id,
 	});
 	if (!session) {
 		return {
@@ -316,12 +324,14 @@ const answerEveApproval = async ({
 			retryable: true,
 		};
 	}
-	const auth = authFromApproval(approval, providerUserId);
-	const posted = await postEveInputResponse({
+	const auth = authFromApproval(first, providerUserId);
+	const posted = await postEveInputResponses({
 		auth,
 		note,
-		optionId,
-		requestId: approval.tool_call_id,
+		responses: approvals.map((approval) => ({
+			optionId: optionIdFor(approval),
+			requestId: approval.tool_call_id as string,
+		})),
 		session,
 	});
 	session.sessionId = posted.sessionId;
@@ -330,19 +340,21 @@ const answerEveApproval = async ({
 	await upsertEveSession({
 		db,
 		env: session.env,
-		orgId: approval.org_id,
+		orgId: first.org_id,
 		sessionId: session.sessionId,
 		state: session.state,
 		threadKey: session.threadKey,
 	});
 	const { chained, question, text } = await collectText({
 		auth,
-		orgId: approval.org_id,
+		orgId: first.org_id,
 		session,
-		skipRequestId: approval.tool_call_id,
+		skipRequestIds: new Set(
+			approvals.map((approval) => approval.tool_call_id as string),
+		),
 	});
-	const chainedApprovalId = chained
-		? await insertChainedApproval({
+	const chainedGroupId = chained.length
+		? await insertChainedApprovalGroup({
 				auth,
 				chained,
 				providerUserId,
@@ -350,89 +362,98 @@ const answerEveApproval = async ({
 			})
 		: undefined;
 	return {
-		chainedApprovalId,
+		chainedGroupId,
 		question: question
 			? { ...question, sessionId: session.sessionId }
 			: undefined,
-		result: {},
 		text,
-		toolName: approval.tool_name,
 	};
 };
 
-/** Surfaces a chained gated write as a fresh approval row; the dashboard's
- * interactions poll (or the Slack handler) renders it as a new card. The
- * preview must be backfilled here too — this path never goes through
- * presentWebApproval, and a card without a preview renders bare. */
-const insertChainedApproval = async ({
+/** Surfaces chained gated writes as a fresh approval group; the dashboard's
+ * interactions poll (or the Slack handler) renders it as a new card. Previews
+ * must be backfilled here too — this path never goes through presentApproval,
+ * and a card without a preview renders bare. */
+const insertChainedApprovalGroup = async ({
 	auth,
 	chained,
 	providerUserId,
 	sessionId,
 }: {
 	auth: EveAuthContext;
-	chained: ChainedPendingRequest;
+	chained: ChainedPendingRequest[];
 	providerUserId: string;
 	sessionId: string;
 }) => {
 	const env = auth.appEnv as ChatApproval["env"];
 	const provider = auth.provider as ChatApproval["provider"];
-	const options = approvalOptionIds({ options: chained.options });
-	let preview: unknown;
+	let accessToken: string | undefined;
 	try {
 		// Credentials are keyed by Autumn user id: web principals carry it as
 		// providerUserId; Slack falls back to the installer credential when unset.
 		const credentialUserId =
 			provider === "web" ? providerUserId : auth.autumnUserId;
-		const { accessToken } = await getOrgInstallationToken({
+		({ accessToken } = await getOrgInstallationToken({
 			env,
 			orgId: auth.orgId,
 			provider,
 			userId: credentialUserId,
 			workspaceId: auth.workspaceId,
-		});
-		const input = chained.input ?? {};
-		const request =
-			input.request && typeof input.request === "object"
-				? (input.request as Record<string, unknown>)
-				: input;
-		preview = await fetchApprovalPreview({
-			env,
-			logger,
-			request,
-			token: accessToken,
-			toolName: chained.toolName,
-		});
+		}));
 	} catch (error) {
-		logger.warn("Could not backfill chained approval preview", {
+		logger.warn("Could not load token for chained approval previews", {
 			event: "leaf.eve_chained_preview_backfill_failed",
-			tool: chained.toolName,
 			data: {
 				error: error instanceof Error ? error.message : String(error),
 			},
 		});
 	}
-	return await chatApprovalRepo.insert({
+
+	const previews = await Promise.all(
+		chained.map(async (request) => {
+			if (!accessToken) return undefined;
+			const input = request.input ?? {};
+			const body =
+				input.request && typeof input.request === "object"
+					? (input.request as Record<string, unknown>)
+					: input;
+			return await fetchApprovalPreview({
+				env,
+				logger,
+				request: body,
+				token: accessToken,
+				toolName: request.toolName,
+			});
+		}),
+	);
+
+	const { groupId } = await chatApprovalRepo.insertGroup({
 		db,
-		data: {
+		items: chained.map((request, index) => {
+			const options = approvalOptionIds({ options: request.options });
+			return {
+				preview: previews[index],
+				toolArgs: {
+					...(request.input ?? {}),
+					_eveApproveOptionId: options.approve,
+					_eveDenyOptionId: options.deny,
+				},
+				toolCallId: request.requestId,
+				toolName: request.toolName,
+			};
+		}),
+		shared: {
 			channelId: auth.channelId,
 			env,
 			harness: "eve",
 			orgId: auth.orgId,
-			preview,
 			provider,
 			providerUserId,
 			runId: sessionId,
-			toolArgs: {
-				...(chained.input ?? {}),
-				_eveApproveOptionId: options.approve,
-				_eveDenyOptionId: options.deny,
-			},
-			toolCallId: chained.requestId,
-			toolName: chained.toolName,
 			workspaceId: auth.workspaceId,
 		},
 	});
+	return groupId;
 };
 
 /** Answers a parked ask_question via structured inputResponses and drains the
@@ -452,7 +473,7 @@ export const answerEveQuestion = async ({
 }): Promise<
 	| { error: true; message: string }
 	| {
-			chainedApprovalId?: string;
+			chainedGroupId?: string;
 			question?: PendingQuestion;
 			sessionId: string;
 			text: string;
@@ -460,10 +481,9 @@ export const answerEveQuestion = async ({
 > => {
 	const session = await getEveSessionBySessionId({ db, orgId, sessionId });
 	if (!session) return { error: true, message: "Eve session not found." };
-	const posted = await postEveInputResponse({
+	const posted = await postEveInputResponses({
 		auth,
-		optionId,
-		requestId,
+		responses: [{ optionId, requestId }],
 		session,
 	});
 	session.sessionId = posted.sessionId;
@@ -481,47 +501,47 @@ export const answerEveQuestion = async ({
 		auth,
 		orgId,
 		session,
-		skipRequestId: requestId,
+		skipRequestIds: new Set([requestId]),
 	});
-	// An answered question can chain straight into a gated write.
-	const chainedApprovalId = chained
-		? await insertChainedApproval({
+	// An answered question can chain straight into gated writes.
+	const chainedGroupId = chained.length
+		? await insertChainedApprovalGroup({
 				auth,
 				chained,
 				providerUserId: auth.providerUserId,
 				sessionId: session.sessionId,
 			})
 		: undefined;
-	return { chainedApprovalId, question, sessionId: session.sessionId, text };
+	return { chainedGroupId, question, sessionId: session.sessionId, text };
 };
 
-export const resumeEveApproval = async ({
-	approval,
+export const resumeEveApprovalGroup = async ({
+	approvals,
 	providerUserId,
 }: {
-	approval: ChatApproval;
+	approvals: ChatApproval[];
 	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
-}): Promise<ApprovalRunResult> =>
-	answerEveApproval({
-		approval,
-		optionId: approveOptionFromApproval(approval),
+}): Promise<ApprovalGroupRunResult> =>
+	answerEveApprovals({
+		approvals,
+		optionIdFor: approveOptionFromApproval,
 		providerUserId,
 	});
 
-/** Deny the parked tool call in Eve, not just locally. Without this the
- * session stays waiting on the stale approval: Eve holds the user's next
- * message behind it, and the discarded write can still execute later. */
-export const denyEveApproval = async ({
-	approval,
+/** Deny the parked tool calls in Eve, not just locally. Without this the
+ * session stays waiting on the stale approvals: Eve holds the user's next
+ * message behind them, and the discarded writes can still execute later. */
+export const denyEveApprovalGroup = async ({
+	approvals,
 	providerUserId,
 }: {
-	approval: ChatApproval;
+	approvals: ChatApproval[];
 	providerUserId: string;
-}): Promise<ApprovalRunResult> =>
-	answerEveApproval({
-		approval,
+}): Promise<ApprovalGroupRunResult> =>
+	answerEveApprovals({
+		approvals,
 		note: "(Dashboard: the user clicked Discard on this change. Acknowledge briefly and ask what they'd like different — they are NOT waiting on any further approval.)",
-		optionId: denyOptionFromApproval(approval),
+		optionIdFor: denyOptionFromApproval,
 		providerUserId,
 	});

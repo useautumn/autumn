@@ -106,19 +106,19 @@ export const postEveMessage = async ({
 	return parseSessionResponse({ existing: session, response });
 };
 
-export const postEveInputResponse = async ({
+/** Answers every parked request in one POST. Answering them one at a time would
+ * resume the turn while its siblings are still parked. */
+export const postEveInputResponses = async ({
 	auth,
 	note,
-	optionId,
-	requestId,
+	responses,
 	session,
 }: {
 	auth: EveAuthContext;
 	/** Context sent with the answer — a gate-deny and a user-discard are
 	 * indistinguishable to the model without it. */
 	note?: string;
-	optionId: string;
-	requestId: string;
+	responses: { optionId: string; requestId: string }[];
 	session: EveSessionRef;
 }) => {
 	const response = await fetch(eveUrl(`/eve/v1/session/${session.sessionId}`), {
@@ -126,7 +126,7 @@ export const postEveInputResponse = async ({
 		headers: eveHeaders(auth, { "content-type": "application/json" }),
 		body: JSON.stringify({
 			continuationToken: session.state.continuationToken,
-			inputResponses: [{ optionId, requestId }],
+			inputResponses: responses,
 			message: note,
 		}),
 	});
