@@ -40,6 +40,7 @@ export const getCachedFullSubject = async ({
 	source,
 	staleWhileRevalidate = false,
 	runLazyResets = true,
+	readMaster = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -47,6 +48,7 @@ export const getCachedFullSubject = async ({
 	source?: string;
 	staleWhileRevalidate?: boolean;
 	runLazyResets?: boolean;
+	readMaster?: boolean;
 }): Promise<GetCachedFullSubjectResult> => {
 	const { org, env, logger, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
@@ -72,8 +74,8 @@ export const getCachedFullSubject = async ({
 			),
 		source: "getCachedFullSubject:pipeline",
 		redisInstance: redisV2,
-		retryOnStandby: true,
-		useReadPool: true,
+		retryOnStandby: !readMaster,
+		useReadPool: !readMaster,
 		timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
 	});
 
@@ -220,6 +222,7 @@ export const getCachedFullSubject = async ({
 		customerEntitlementIdsByFeatureId: cached.customerEntitlementIdsByFeatureId,
 		includeAggregated: isCustomerSubject,
 		usageWindowFeatureIds,
+		readMaster,
 	});
 
 	if (balancesOutcome.kind === "missing") {

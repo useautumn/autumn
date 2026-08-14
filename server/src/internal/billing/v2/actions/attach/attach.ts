@@ -127,6 +127,9 @@ export async function attach({
 		!skipAutumnCheckout;
 
 	if (shouldCreateLongLivedCheckout) {
+		// Creating a checkout changes no Autumn balance state. Keep any accepted
+		// Redis-only tracks for the later confirmation request to consume.
+		ctx.preserveFullSubjectCache = true;
 		return createAutumnCheckout<AttachBillingContext>({
 			ctx,
 			action: CheckoutAction.Attach,
@@ -151,13 +154,17 @@ export async function attach({
 			existingLock: checkoutReservation,
 		});
 
-		if (cachedResult) return cachedResult;
+		if (cachedResult) {
+			ctx.preserveFullSubjectCache = true;
+			return cachedResult;
+		}
 	}
 
 	if (
 		billingContext.checkoutMode === "autumn_checkout" &&
 		!skipAutumnCheckout
 	) {
+		ctx.preserveFullSubjectCache = true;
 		return createAutumnCheckout<AttachBillingContext>({
 			ctx,
 			action: CheckoutAction.Attach,
@@ -176,6 +183,9 @@ export async function attach({
 			? hashJson({ value: autumnCheckoutParams })
 			: undefined,
 	});
+	if (billingResult.stripe.deferred) {
+		ctx.preserveFullSubjectCache = true;
+	}
 
 	logStripeBillingResult({ ctx, result: billingResult.stripe });
 
