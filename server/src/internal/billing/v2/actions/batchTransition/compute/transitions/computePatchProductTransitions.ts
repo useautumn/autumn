@@ -1,15 +1,17 @@
-import type {
-	EntitlementWithFeature,
-	FullProductWithoutLicenses,
+import {
+	type EntitlementWithFeature,
+	type FullProductWithoutLicenses,
+	productToEntitlementPrices,
 } from "@autumn/shared";
 import {
 	computeProductTransitions,
 	type ProductTransitions,
 } from "./computeProductTransitions";
 
-/** Diffs a product against an add/remove patch of itself. Removals diff
- * separately: the successor matcher falls back to feature-only precision, so
- * one left in the from-product would claim a surviving sibling. */
+/** Diffs a product against an add/remove patch of itself. Removals are dropped
+ * from both sides and reported directly: left in the from-product, the
+ * successor matcher's feature-only rung would pair one with a surviving
+ * sibling and call it a transition. */
 export const computePatchProductTransitions = ({
 	fromProduct,
 	addEntitlements,
@@ -20,34 +22,33 @@ export const computePatchProductTransitions = ({
 	removeEntitlementIds?: string[];
 }): ProductTransitions => {
 	const removed = new Set(removeEntitlementIds);
-	const surviving = fromProduct.entitlements.filter(
-		(entitlement) => !removed.has(entitlement.id),
-	);
+	const survivingProduct = {
+		...fromProduct,
+		entitlements: fromProduct.entitlements.filter(
+			(entitlement) => !removed.has(entitlement.id),
+		),
+	};
 
 	const transitions = computeProductTransitions({
-		fromProduct: { ...fromProduct, entitlements: surviving },
+		fromProduct: survivingProduct,
 		toProduct: {
-			...fromProduct,
-			entitlements: [...surviving, ...addEntitlements],
+			...survivingProduct,
+			entitlements: [...survivingProduct.entitlements, ...addEntitlements],
 		},
-	});
-	if (removed.size === 0) return transitions;
-
-	const deleted = computeProductTransitions({
-		fromProduct: {
-			...fromProduct,
-			entitlements: fromProduct.entitlements.filter((entitlement) =>
-				removed.has(entitlement.id),
-			),
-		},
-		toProduct: { ...fromProduct, entitlements: [] },
 	});
 
 	return {
 		...transitions,
 		entitlementPrices: {
 			...transitions.entitlementPrices,
-			deleted: deleted.entitlementPrices.deleted,
+			deleted: productToEntitlementPrices({
+				product: {
+					...fromProduct,
+					entitlements: fromProduct.entitlements.filter((entitlement) =>
+						removed.has(entitlement.id),
+					),
+				},
+			}),
 		},
 	};
 };
