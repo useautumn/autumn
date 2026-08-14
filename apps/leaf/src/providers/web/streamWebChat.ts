@@ -21,7 +21,11 @@ import { getOrgInstallationToken } from "../../internal/installations/actions/ge
 import { db } from "../../lib/db.js";
 import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
-import { NO_REPLY_MESSAGE } from "../../ui/messages.js";
+import {
+	CATALOG_DECISION_NEEDED_MESSAGE,
+	GENERIC_FAILURE_MESSAGE,
+	NO_REPLY_MESSAGE,
+} from "../../ui/messages.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
 import { resolveDashboardEnv } from "./dashboardEnv.js";
 import { generateThreadTitle, persistThreadTitle } from "./threadTitle.js";
@@ -270,9 +274,7 @@ export const streamWebChat = async ({
 					token: accessToken,
 				});
 				if (decisionPlan) {
-					writeText(
-						"A couple of decisions are needed before this can be applied:",
-					);
+					writeText(CATALOG_DECISION_NEEDED_MESSAGE);
 					writer.write({
 						data: { plan: decisionPlan, status: "pending" },
 						id: decisionPlan.plan_id,
@@ -348,7 +350,7 @@ export const streamWebChat = async ({
 				event: "leaf.web_chat_stream_failed",
 				data: { error: String(error) },
 			});
-			return "Something went wrong. Please try again.";
+			return GENERIC_FAILURE_MESSAGE;
 		},
 	});
 

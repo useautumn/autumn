@@ -1,5 +1,6 @@
 import type { ActionEvent } from "chat";
 import { logger } from "../../lib/logger.js";
+import { RUN_ALREADY_FINISHED_MESSAGE } from "../../ui/messages.js";
 import type { ActionMessageContent } from "../approvals/types.js";
 import { getRun } from "./runRegistry.js";
 
@@ -20,7 +21,7 @@ export const handleStopAction = async (event: ActionEvent) => {
 
 	const run = getRun(runKey);
 	if (!run) {
-		await editStopMessage("_This run already finished._");
+		await editStopMessage(RUN_ALREADY_FINISHED_MESSAGE);
 		return;
 	}
 

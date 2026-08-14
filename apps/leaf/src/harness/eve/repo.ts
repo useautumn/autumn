@@ -137,8 +137,8 @@ export const upsertEveSession = async ({
 		});
 };
 
-/** Drops a thread's session so the next message opens a brand-new eve run.
- * Matched on session_id so an overlapping turn's newer session survives. */
+/** Forgets a session id eve no longer streams anything for. The row is the only
+ * pointer to it, so keeping it replays the same dead resume on every message. */
 export const deleteEveSession = async ({
 	db,
 	env,

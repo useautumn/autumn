@@ -1,10 +1,12 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
 import type { ActiveRun } from "../../internal/runs/runRegistry.js";
+import { AGENT_UNREACHABLE_MESSAGE } from "../../ui/messages.js";
 import {
 	applyEveEvent,
 	closeReasoningStream,
 	type EveEventContext,
+	eveTurnProducedOutput,
 	type EveTurnOutcome,
 } from "./applyEveEvent.js";
 import {
@@ -14,7 +16,6 @@ import {
 	streamEveEvents,
 } from "./client.js";
 import { saveEveSessionState } from "./sessionState.js";
-import { eveTurnProducedOutput } from "./turnOutput.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
 /** ~10s of reconnects (doubled once by the silent-cursor resync below): eve
@@ -96,11 +97,7 @@ const recoverFromIdleStream = async ({
 	await resyncEveStreamIndex({ auth, session });
 	await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
 	const partialText = progress.finalText || progress.pendingText;
-	if (!partialText) {
-		throw new Error(
-			"Eve stopped responding mid-turn — please send your message again.",
-		);
-	}
+	if (!partialText) throw new Error(AGENT_UNREACHABLE_MESSAGE);
 	closeReasoningStream({ onReasoning, progress });
 	return { kind: "answered", text: partialText };
 };

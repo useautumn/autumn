@@ -6,11 +6,8 @@ import type { EveTurnOutcome } from "./applyEveEvent.js";
 import { deleteEveSession } from "./repo.js";
 import type { EveSessionRef } from "./types.js";
 
-/**
- * Shapes a finished turn into the harness's output. Only a turn whose stream
- * produced nothing at all drops the session row — that is the one state where
- * eve is genuinely unreachable, and the row is the thread's whole transcript.
- */
+/** Shapes a finished turn into the harness's output. Dropping the session row
+ * also drops the thread from the dashboard, so only `unreachable` earns it. */
 export const resolveEveTurnOutcome = async ({
 	env,
 	logger,

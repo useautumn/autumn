@@ -1,17 +1,23 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv } from "@autumn/shared";
+import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
-// The real client would open a Postgres pool from env config this suite has no
-// business loading; the outcome mapping never touches it.
+// Stubbed first and left stubbed: `env` parses leaf's whole schema at import and
+// `db` opens a Postgres pool, so neither has a real namespace to restore.
+mock.module("../../../src/lib/env.js", () => ({ env: {} }));
 mock.module("../../../src/lib/db.js", () => ({ db: {} }));
 
 const deletedSessionIds: string[] = [];
-mock.module("../../../src/harness/eve/repo.js", () => ({
-	deleteEveSession: async ({ sessionId }: { sessionId: string }) => {
-		deletedSessionIds.push(sessionId);
-	},
-}));
+await mockModuleWithRestore({
+	baseUrl: import.meta.url,
+	specifier: "../../../src/harness/eve/repo.js",
+	factory: () => ({
+		deleteEveSession: async ({ sessionId }: { sessionId: string }) => {
+			deletedSessionIds.push(sessionId);
+		},
+	}),
+});
 
 const { resolveEveTurnOutcome } = await import(
 	"../../../src/harness/eve/resolveTurnOutcome.js"

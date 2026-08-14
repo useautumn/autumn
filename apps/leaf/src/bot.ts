@@ -72,7 +72,18 @@ import {
 	questionAnsweredCard,
 	questionCard,
 } from "./ui/eveCards.js";
-import { NO_REPLY_MESSAGE } from "./ui/messages.js";
+import {
+	GENERIC_FAILURE_MESSAGE,
+	genericFailureWithDetail,
+	NO_REPLY_MESSAGE,
+	POST_FORMATTING_FAILED_MESSAGE,
+	QUESTION_ANSWER_FAILED_MESSAGE,
+	questionAnswerFailedWithDetail,
+	RUN_STOPPED_FOR_TIME_MESSAGE,
+	runStoppedByUserNotice,
+	RUN_TIMED_OUT_MESSAGE,
+	STARTUP_FAILED_STATUS,
+} from "./ui/messages.js";
 import {
 	finishLoading,
 	type LoadingState,
@@ -205,16 +216,10 @@ const ERROR_NOTICE_MAX = 160;
 /** One clean, human line about what failed — never a stack or a shrug. */
 const errorNotice = (error: unknown) => {
 	const message = error instanceof Error ? error.message : String(error);
-	if (/invalid_blocks/i.test(message)) {
-		return "I hit a formatting error posting that reply — the run itself may have succeeded. Ask me to summarize where things stand.";
-	}
-	if (/timed out|timeout/i.test(message)) {
-		return "That run took too long and was stopped. Send your message again to continue.";
-	}
+	if (/invalid_blocks/i.test(message)) return POST_FORMATTING_FAILED_MESSAGE;
+	if (/timed out|timeout/i.test(message)) return RUN_TIMED_OUT_MESSAGE;
 	const detail = message.replace(/\s+/g, " ").trim().slice(0, ERROR_NOTICE_MAX);
-	return detail
-		? `Something went wrong: ${detail} — please try again.`
-		: "Something went wrong — please try again.";
+	return detail ? genericFailureWithDetail(detail) : GENERIC_FAILURE_MESSAGE;
 };
 
 type RunAndReplyInput = {
@@ -398,11 +403,10 @@ const runAndReply = async ({
 			// Slack's post-triggered clear and it sticks forever.
 			ticker.stop();
 			await finishLoading(target, loading, "Stopped.");
-			const stoppedBy = run.stop?.byUserId;
 			const notice =
 				output.stopReason === "timeout"
-					? "_I stopped because the run was taking too long. Send a new message to continue._"
-					: `_Stopped${stoppedBy ? ` by <@${stoppedBy}>` : ""}. Nothing further was run._`;
+					? RUN_STOPPED_FOR_TIME_MESSAGE
+					: runStoppedByUserNotice(run.stop?.byUserId);
 			await target.post({
 				markdown: [output.text, notice]
 					.filter((part): part is string => Boolean(part?.trim()))
@@ -591,7 +595,7 @@ const runAndReply = async ({
 		// "Thinking…" over the cleared status after the error message lands.
 		ticker.stop();
 		await reactSafely({ action: "add", emoji: "x" });
-		await finishLoading(target, bootstrapLoading, "Couldn't start Autumn.");
+		await finishLoading(target, bootstrapLoading, STARTUP_FAILED_STATUS);
 		await finishLoading(target, loading, "Request failed.");
 		await target.post({
 			markdown: `:warning: ${errorNotice(error)}`,
@@ -754,7 +758,7 @@ bot.onAction(indexedActionIds(ANSWER_QUESTION_ACTION), async (event) => {
 		});
 		if ("error" in result) {
 			await event.thread?.post({
-				markdown: `I couldn't record that answer (${result.message}). Reply in the thread instead.`,
+				markdown: questionAnswerFailedWithDetail(result.message),
 			});
 			return;
 		}
@@ -789,10 +793,7 @@ bot.onAction(indexedActionIds(ANSWER_QUESTION_ACTION), async (event) => {
 		rootLogger.error("[chat] Question answer failed", error, {
 			event: "leaf.eve_question_answer_failed",
 		});
-		await event.thread?.post({
-			markdown:
-				"I couldn't record that answer — it may already be resolved. Reply in the thread instead.",
-		});
+		await event.thread?.post({ markdown: QUESTION_ANSWER_FAILED_MESSAGE });
 	}
 });
 
