@@ -215,6 +215,29 @@ describe("plain plan item removal lowering", () => {
 		).toEqual(["ent_quarterly"]);
 	});
 
+	test("removing one of two same-feature siblings does not claim the survivor", () => {
+		const monthly = messagesEnt({ id: "ent_monthly" });
+		const quarterly = messagesEnt({ id: "ent_quarterly", intervalCount: 3 });
+
+		const { operations, rejections } = lower({
+			fromProduct: proProduct({ entitlements: [monthly, quarterly] }),
+			op: removeOp([
+				{
+					feature_id: "messages",
+					interval: ResetInterval.Month,
+					interval_count: 1,
+				},
+			]),
+		});
+
+		expect(rejections).toHaveLength(0);
+		expect(
+			operations.removeEntitlements.map(
+				(operation) => operation.entitlementPrice.entitlement.id,
+			),
+		).toEqual(["ent_monthly"]);
+	});
+
 	test("a feature-less filter is rejected rather than silently matching none", () => {
 		const rejections = checkUpdatePlanOpEligibility({
 			op: removeOp([{ interval: ResetInterval.Month }]),

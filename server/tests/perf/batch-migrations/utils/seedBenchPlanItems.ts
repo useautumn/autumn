@@ -60,7 +60,13 @@ export const ensureBenchPlanDeleteProduct = async ({
 	const [existingEntitlement] = await db
 		.select()
 		.from(entitlements)
-		.where(eq(entitlements.internal_product_id, internalProductId))
+		.where(
+			and(
+				eq(entitlements.internal_product_id, internalProductId),
+				eq(entitlements.org_id, orgId),
+				eq(entitlements.internal_feature_id, internalFeatureId),
+			),
+		)
 		.limit(1);
 
 	const entitlementId = existingEntitlement?.id ?? generateId("ent");

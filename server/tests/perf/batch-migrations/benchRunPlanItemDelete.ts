@@ -254,16 +254,24 @@ const main = async () => {
 			`bench:   phases: ${phases.map(([phase, ms]) => `${phase}=${ms}ms`).join(" ")}`,
 		);
 	}
+	// A --pages bound stops mid-dataset by design, so rows legitimately remain.
+	const ranToCompletion = pages === Number.POSITIVE_INFINITY;
 	console.log("");
-	console.log(`bench: deleted ${TestFeature.Messages} from every customer`);
+	console.log(
+		ranToCompletion
+			? `bench: deleted ${TestFeature.Messages} from every customer`
+			: `bench: partial run (--pages ${pages}) — remaining rows expected`,
+	);
 	console.log(`bench: holders ${counts.holders} (expected ${customers})`);
-	console.log(`bench: remaining rows ${counts.remaining} (expected 0)`);
+	console.log(
+		`bench: remaining rows ${counts.remaining}${ranToCompletion ? " (expected 0)" : ""}`,
+	);
 	console.log(
 		`bench: shared dataset rows ${counts.shared} (expected ${sharedBefore}, untouched)`,
 	);
 
 	const correct =
-		Number(counts.remaining) === 0 &&
+		(!ranToCompletion || Number(counts.remaining) === 0) &&
 		Number(counts.holders) === customers &&
 		Number(counts.shared) === sharedBefore;
 	console.log(correct ? "bench: CORRECT" : "bench: INCORRECT");

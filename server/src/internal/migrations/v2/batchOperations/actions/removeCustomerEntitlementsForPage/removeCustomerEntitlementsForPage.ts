@@ -74,6 +74,7 @@ export const removeCustomerEntitlementsForPage = async ({
 							(candidate) => candidate.customerProductId,
 						),
 						entitlementIds: remove.entitlementIds,
+						scope,
 					}),
 			});
 
