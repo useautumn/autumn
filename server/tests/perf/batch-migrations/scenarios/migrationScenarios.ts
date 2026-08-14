@@ -119,6 +119,23 @@ export const MIGRATION_SCENARIOS: MigrationScenario[] = [
 		},
 		expect: { lane: "per_customer", rejections: ["unsupported_remove_items"] },
 	},
+	{
+		name: "plan-edit-lowered-refused",
+		description:
+			"Lowering an allowance is still a modify-in-place; the row keeps its balance.",
+		planItems: [monthly(TestFeature.Messages, 100)],
+		op: {
+			verb: "edit",
+			target: "plan",
+			from: monthly(TestFeature.Messages, 100),
+			to: monthly(TestFeature.Messages, 50),
+		},
+		expect: {
+			lane: "per_customer",
+			rejections: ["unsupported_remove_items"],
+			untouched: [TestFeature.Messages],
+		},
+	},
 
 	// ── License items: all three verbs are batch-lowered ──────────────
 	{

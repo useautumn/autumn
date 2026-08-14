@@ -1,4 +1,4 @@
-import type { FullProductWithoutLicenses } from "@autumn/shared";
+import type { Feature, FullProductWithoutLicenses } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { iterateCustomerProductPages } from "@/internal/migrations/v2/batchOperations/execute/customerProductPagination/index.js";
 import type { BatchMigrationRemovedItem } from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
@@ -10,6 +10,7 @@ import {
 import type { OperationScope } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import type { BatchMigrationExecutionRemove } from "@/internal/migrations/v2/batchOperations/types/index.js";
 import { deleteCustomerEntitlementRows } from "./deleteCustomerEntitlementRows.js";
+import { resolveRemovableEntitlementIds } from "./resolveRemovableEntitlementIds.js";
 import { selectRemoveCandidateRows } from "./selectRemoveCandidateRows.js";
 
 export type RemoveCustomerEntitlementsForPageResult = {
@@ -22,6 +23,7 @@ export type RemoveCustomerEntitlementsForPageResult = {
  * customer products never balloons a statement or a transaction. */
 export const removeCustomerEntitlementsForPage = async ({
 	db,
+	features,
 	scope,
 	internalCustomerIds,
 	fromProduct,
@@ -30,6 +32,7 @@ export const removeCustomerEntitlementsForPage = async ({
 	candidateRowBatchSize = BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
 }: {
 	db: DrizzleCli;
+	features: Feature[];
 	scope: OperationScope;
 	internalCustomerIds: string[];
 	fromProduct: FullProductWithoutLicenses;
@@ -38,6 +41,16 @@ export const removeCustomerEntitlementsForPage = async ({
 	candidateRowBatchSize?: number;
 }): Promise<RemoveCustomerEntitlementsForPageResult> => {
 	const removedItems: BatchMigrationRemovedItem[] = [];
+
+	// Resolved once per page: a customer can hold a custom or older-version
+	// definition of the same item, which the catalog id alone would miss.
+	const entitlementIds = await resolveRemovableEntitlementIds({
+		db,
+		features,
+		internalCustomerIds,
+		scope,
+		entitlement: remove.entitlement,
+	});
 
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
@@ -56,7 +69,7 @@ export const removeCustomerEntitlementsForPage = async ({
 						db: transaction,
 						internalCustomerIds,
 						scope,
-						entitlementId: remove.entitlement.id,
+						entitlementIds,
 						afterCustomerProductId,
 						limit,
 					}),
@@ -73,7 +86,7 @@ export const removeCustomerEntitlementsForPage = async ({
 						customerProductIds: candidates.map(
 							(candidate) => candidate.customerProductId,
 						),
-						entitlementId: remove.entitlement.id,
+						entitlementIds,
 						scope,
 					}),
 			});
