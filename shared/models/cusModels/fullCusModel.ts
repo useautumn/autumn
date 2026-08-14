@@ -79,6 +79,8 @@ export type FullCustomerSchedule = Schedule & { phases: SchedulePhase[] };
 export type FullCustomer = Customer & {
 	customer_products: FullCusProduct[];
 	products_total_count?: number;
+	/** Monthly-normalized base price total; dashboard list hydration only. */
+	base_price_total?: number;
 	products_page?: CustomerProductsPage;
 	entities: Entity[];
 	entity?: Entity;

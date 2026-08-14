@@ -258,7 +258,8 @@ const buildProductsWithPreparedRows = ({
 
 export const ensurePricesAndEntitlements: PrepareModule<
 	EnsurePricesAndEntitlementsInput,
-	EnsurePricesAndEntitlementsResult
+	EnsurePricesAndEntitlementsResult,
+	"ensure_prices_and_entitlements"
 > = {
 	kind: "ensure_prices_and_entitlements",
 

@@ -12,6 +12,8 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import {
+	balanceFilterQueryKey,
+	featureSortQueryKey,
 	hasActiveCustomerFilters,
 	useCustomerFilters,
 } from "@/views/customers/hooks/useCustomerFilters";
@@ -27,6 +29,7 @@ import {
 	CustomerListPagination,
 } from "./CustomerListPagination";
 import { CustomerListSearchBar } from "./CustomerListSearchBar";
+import { CustomerListSortButton } from "./CustomerListSortButton";
 
 export function CustomerListTable({
 	customers,
@@ -62,6 +65,9 @@ export function CustomerListTable({
 			queryStates.joinedFrom,
 			queryStates.joinedTo,
 			queryStates.sort,
+			queryStates.sortBy,
+			featureSortQueryKey(queryStates),
+			balanceFilterQueryKey(queryStates),
 			queryStates.q,
 		]),
 		queryFn: () => Promise.resolve({ fullCustomers: [], next_cursor: null }),
@@ -125,17 +131,24 @@ export function CustomerListTable({
 	});
 
 	const sorting = useMemo<SortingState>(
-		() => [{ id: "created_at", desc: queryStates.sort !== "asc" }],
-		[queryStates.sort],
+		() =>
+			queryStates.sortBy !== "created_at"
+				? []
+				: [{ id: "created_at", desc: queryStates.sort !== "asc" }],
+		[queryStates.sort, queryStates.sortBy],
 	);
 
 	// setFilters resets the cursor stack, so a sort toggle lands back on page 1.
+	// A header click always sorts by created_at, replacing any popover sort.
 	const onSortingChange = useCallback<OnChangeFn<SortingState>>(
 		(updater) => {
 			const next = typeof updater === "function" ? updater(sorting) : updater;
 			const createdAtSort = next.find((sort) => sort.id === "created_at");
 			setFilters({
 				sort: createdAtSort && !createdAtSort.desc ? "asc" : "desc",
+				sortBy: "created_at",
+				sortFeature: "",
+				sortBasis: "remaining",
 			});
 		},
 		[sorting, setFilters],
@@ -166,7 +179,11 @@ export function CustomerListTable({
 	const hasRows = table.getRowModel().rows.length > 0;
 	const hasSearchQuery = Boolean(queryStates.q?.trim());
 	const hasFilters = hasActiveCustomerFilters(queryStates);
-	const hasActiveFiltersOrSearch = hasSearchQuery || hasFilters;
+	// A non-default sort must not fall through to the onboarding empty state
+	// (e.g. balance sort erroring/empty in an env without MotherDuck).
+	const hasNonDefaultSort = queryStates.sortBy !== "created_at";
+	const hasActiveFiltersOrSearch =
+		hasSearchQuery || hasFilters || hasNonDefaultSort;
 
 	if (!hasRows && !hasActiveFiltersOrSearch && !isFetchingUncached) {
 		return (
@@ -235,10 +252,13 @@ export function CustomerListTable({
 					<div className="order-3 md:order-2">
 						<Table.ColumnVisibility />
 					</div>
-					<div className="order-1 w-full md:order-3 md:w-auto md:flex-1 md:min-w-0">
+					<div className="order-4 md:order-3">
+						<CustomerListSortButton />
+					</div>
+					<div className="order-1 w-full md:order-4 md:w-auto md:flex-1 md:min-w-0">
 						<CustomerListSearchBar />
 					</div>
-					<div className="order-4 ml-auto flex items-center gap-2 shrink-0">
+					<div className="order-5 ml-auto flex items-center gap-2 shrink-0">
 						<CustomerListPagination />
 						<CustomerListPageSizeSelector />
 					</div>

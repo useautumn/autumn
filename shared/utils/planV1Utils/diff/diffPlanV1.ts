@@ -9,19 +9,24 @@ import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 import type { BasePriceParams } from "@api/products/components/basePrice/basePrice.js";
 import type { CreatePlanItemParamsV1 } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import type { PlanItemFilter } from "@api/products/items/filter/planItemFilter.js";
+import type { CustomizePlanLicense } from "@models/licenseModels/licenseModels.js";
 import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
 import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import type { z } from "zod/v4";
+import { diffPlanLicenses } from "./diffPlanLicenses.js";
 
+// A versioned license customize diffs into `upsert_licenses`, so the key has
+// to survive validation — omitting it made every preview of such a plan 500.
 export const DiffedCustomizePlanV1Schema = refineCustomizePlanV1Schema(
-	CustomizePlanV1BaseSchema.omit({
-		items: true,
-		upsert_licenses: true,
-	}).strict(),
-	{ includeItems: false, includeLicenses: false },
+	CustomizePlanV1BaseSchema.omit({ items: true }).strict(),
+	{ includeItems: false, includeLicenses: true },
 );
 
-export type DiffedCustomizePlanV1 = z.infer<typeof DiffedCustomizePlanV1Schema>;
+export type DiffedCustomizePlanV1 = z.infer<
+	typeof DiffedCustomizePlanV1Schema
+> & {
+	upsert_licenses?: CustomizePlanLicense[];
+};
 
 type ApiPlanItem = ApiPlanV1["items"][number];
 type PlanItemInput = ApiPlanItem | CreatePlanItemParamsV1;
@@ -414,6 +419,13 @@ export const diffPlanV1 = ({
 			diff.free_trial = on_end == null ? rest : { ...rest, on_end };
 		}
 	}
+
+	const upsertLicenses = diffPlanLicenses({
+		from,
+		to,
+		customizeEqual: customizePlanV1DiffsEqual,
+	});
+	if (upsertLicenses.length > 0) diff.upsert_licenses = upsertLicenses;
 
 	return diff;
 };

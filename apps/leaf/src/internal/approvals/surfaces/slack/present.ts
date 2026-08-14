@@ -2,15 +2,10 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval, ChatInstallation } from "@autumn/shared";
 import { toolLabel } from "../../../../agent/tools/toolPolicy.js";
 import { db } from "../../../../lib/db.js";
-import { env as chatEnv } from "../../../../lib/env.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import type { AgentOutput } from "../../../../types.js";
 import { approvalCard } from "../../../../ui/blocks.js";
-import {
-	finishLoading,
-	type LoadingState,
-	type ReplyTarget,
-} from "../../../../ui/progress.js";
+import type { ReplyTarget } from "../../../../ui/progress.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import { approvalRequestFromOutput } from "../../utils/approvalRequest.js";
@@ -18,16 +13,10 @@ import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
 } from "../../utils/fetchApprovalPreview.js";
-
-const getRequest = (args?: Record<string, unknown>) =>
-	args?.request && typeof args.request === "object"
-		? (args.request as Record<string, unknown>)
-		: args;
-
-const publicToolArgs = (args: Record<string, unknown>) =>
-	Object.fromEntries(
-		Object.entries(args).filter(([key]) => !key.startsWith("_eve")),
-	);
+import {
+	publicToolArgs,
+	toolRequestFromArgs,
+} from "../../utils/toolRequest.js";
 
 /** Posts the card for an approval row that already exists (a chained write
  * surfaced by an approve/answer resume, which never flows through
@@ -75,7 +64,6 @@ export const postApprovalCardForRow = async ({
 export const presentApproval = async ({
 	channelId,
 	installation,
-	loading,
 	logAction,
 	logger = rootLogger,
 	orgId,
@@ -85,7 +73,6 @@ export const presentApproval = async ({
 }: {
 	channelId: string;
 	installation: ChatInstallation;
-	loading: LoadingState;
 	logAction: (message: string) => Promise<void> | void;
 	logger?: AutumnLogger;
 	orgId: string;
@@ -121,7 +108,7 @@ export const presentApproval = async ({
 				env: approval.env,
 				orgId,
 			});
-			const request = getRequest(publicToolArgs(approval.toolArgs));
+			const request = toolRequestFromArgs(publicToolArgs(approval.toolArgs));
 			if (request) {
 				const preview = await fetchApprovalPreview({
 					env: approval.env,
@@ -150,7 +137,7 @@ export const presentApproval = async ({
 			channelId,
 			providerUserId,
 			env: approval.env,
-			harness: chatEnv.SLACK_AGENT_HARNESS,
+			harness: "eve",
 			preview: approval.preview,
 			runId: approval.runId,
 			toolArgs: approval.toolArgs,
@@ -169,8 +156,6 @@ export const presentApproval = async ({
 		approval_id: approvalId,
 		tool: approval.toolName,
 	});
-	await finishLoading(target, loading, "Preview ready.");
-
 	// One message: the agent's preview prose rides inside the card.
 	const sent = await target.post(
 		approvalCard({

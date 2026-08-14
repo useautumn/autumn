@@ -1,7 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "../../lib/logger.js";
-
-const client = new Anthropic();
 
 const SESSION_RESOLVE_TIMEOUT_MS = 15_000;
 
@@ -43,22 +40,9 @@ export const runKeyForThread = ({
 	workspaceId: string;
 }) => [provider, workspaceId, channelId, threadId].join(":");
 
-const defaultSendInterrupt = async (sessionId: string) => {
-	await client.beta.sessions.events.send(sessionId, {
-		events: [{ type: "user.interrupt" }],
-	});
-};
-
-const defaultSendUserMessage = async ({
-	sessionId,
-	text,
-}: {
-	sessionId: string;
-	text: string;
-}) => {
-	await client.beta.sessions.events.send(sessionId, {
-		events: [{ content: [{ text, type: "text" }], type: "user.message" }],
-	});
+const defaultSendInterrupt = async () => {};
+const defaultSendUserMessage = async () => {
+	throw new Error("Eve follow-up injection is queued after the active run");
 };
 
 export const registerRun = ({
@@ -77,19 +61,27 @@ export const registerRun = ({
 		text: string;
 	}) => Promise<void>;
 }): ActiveRun => {
-	let resolveSessionId!: (sessionId: string) => void;
+	let resolveFirstSessionId!: (sessionId: string) => void;
 	const sessionId = new Promise<string>((resolve) => {
-		resolveSessionId = resolve;
+		resolveFirstSessionId = resolve;
 	});
 	let interruptSent = false;
+	// A harness can re-home a run onto a new session mid-flight, and the promise
+	// only ever resolves once — so interrupts read the latest id, not the first.
+	let latestSessionId: string | undefined;
+	const resolveSessionId = (id: string) => {
+		latestSessionId = id;
+		resolveFirstSessionId(id);
+	};
 
-	const resolveSessionIdOrNull = () =>
-		Promise.race([
+	const resolveSessionIdOrNull = async () =>
+		latestSessionId ??
+		(await Promise.race([
 			sessionId,
 			new Promise<null>((resolve) =>
 				setTimeout(() => resolve(null), SESSION_RESOLVE_TIMEOUT_MS),
 			),
-		]);
+		]));
 
 	const run: ActiveRun = {
 		key,

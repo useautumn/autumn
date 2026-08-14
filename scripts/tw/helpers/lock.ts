@@ -15,6 +15,11 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
+const gitEnv = Object.fromEntries(
+	Object.entries(process.env).filter(
+		([key]) => key !== "GITHUB_TOKEN" && key !== "GH_TOKEN",
+	),
+);
 
 const LOCK_BREAK_AFTER_MS = 5 * 60 * 1000;
 const LOCK_POLL_MS = 3000;
@@ -27,7 +32,7 @@ export type LockMeta = { owner: string; startedAt: number; runId: string };
 const lockRef = (name: string): string => `refs/tw/locks/${name}`;
 
 const git = async (args: string[]): Promise<string> => {
-	const { stdout } = await run("git", args, { timeout: 30_000 });
+	const { stdout } = await run("git", args, { timeout: 30_000, env: gitEnv });
 	return stdout.trim();
 };
 

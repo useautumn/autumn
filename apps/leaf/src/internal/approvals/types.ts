@@ -31,7 +31,7 @@ export type ApprovalRunResult =
 	  };
 
 export type ApprovalAuthorization =
-	| { allowed: true; approverToken?: string }
+	| { allowed: true }
 	| { allowed: false; text: string };
 
 export type ApprovalActionDeps = {
@@ -39,7 +39,6 @@ export type ApprovalActionDeps = {
 		approval: ChatApproval;
 		onProgress?: (statusLine: string) => void;
 		providerUserId: string;
-		approverToken?: string;
 	}) => Promise<ApprovalRunResult>;
 	cancelApproval: (input: {
 		approvalId: string;

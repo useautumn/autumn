@@ -1,11 +1,19 @@
 import type { ChatApproval } from "@autumn/shared";
-import { normalizeToolName } from "../../agent/tools/toolPolicy.js";
 import { chatApprovalRepo } from "../../internal/approvals/repos/chatApprovalRepo.js";
 import type { ApprovalRunResult } from "../../internal/approvals/types.js";
 import { fetchApprovalPreview } from "../../internal/approvals/utils/fetchApprovalPreview.js";
+import { toolRequestFromArgs } from "../../internal/approvals/utils/toolRequest.js";
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
 import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
+import { APPROVAL_NOT_EXECUTED_MESSAGE } from "../../ui/messages.js";
+import { adoptPostedEveSession } from "./adoptPostedSession.js";
+import {
+	type ChainedPendingRequest,
+	classifyParkedEveInput,
+	type PendingQuestion,
+	siblingRequestIdsFromToolArgs,
+} from "./classifyParkedInput.js";
 import {
 	EveStreamIdleTimeoutError,
 	postEveInputResponse,
@@ -15,14 +23,6 @@ import {
 import { approvalOptionIds, type EveInputRequest } from "./events.js";
 import { getEveSessionBySessionId, upsertEveSession } from "./repo.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
-
-/** A gated write the resumed turn parked on after the answered one. */
-export type ChainedPendingRequest = {
-	input?: Record<string, unknown>;
-	options?: { id?: string; label?: string }[];
-	requestId: string;
-	toolName: string;
-};
 
 export const approveOptionFromApproval = (approval: ChatApproval) => {
 	const args = approval.tool_args as Record<string, unknown>;
@@ -87,25 +87,23 @@ export const drainParkedEveTurn = async ({
 				if (event.type === "turn.started") {
 					turnStarted = true;
 				} else if (event.type === "input.requested") {
-					const requests = (event.data?.requests ?? []) as EveInputRequest[];
-					const gated = requests.find(
-						(request) =>
-							request.requestId &&
-							request.action?.toolName &&
-							normalizeToolName(request.action.toolName) !== "ask_question",
-					);
-					if (gated?.requestId && denies < MAX_DRAIN_DENIES) {
+					const parked = classifyParkedEveInput({
+						requests: (event.data?.requests ?? []) as EveInputRequest[],
+					});
+					if (parked?.kind === "gated" && denies < MAX_DRAIN_DENIES) {
 						denies += 1;
-						const options = approvalOptionIds(gated);
+						const options = approvalOptionIds({
+							options: parked.chained.options,
+						});
 						const posted = await postEveInputResponse({
 							auth,
 							note: DRAIN_DENY_NOTE,
 							optionId: options.deny,
-							requestId: gated.requestId,
+							requestId: parked.chained.requestId,
 							session,
+							siblingRequestIds: parked.siblingRequestIds,
 						});
-						session.sessionId = posted.sessionId;
-						session.state.continuationToken = posted.continuationToken;
+						adoptPostedEveSession({ posted, session });
 						parkedAgain = true;
 						break;
 					}
@@ -174,19 +172,11 @@ export const withdrawEveSuspension = async ({
 		optionId: denyOptionId,
 		requestId: suspension.toolCallId,
 		session,
+		siblingRequestIds: siblingRequestIdsFromToolArgs(suspension.toolArgs),
 	});
-	session.sessionId = posted.sessionId;
-	session.state.continuationToken = posted.continuationToken;
-	session.state.status = "running";
+	adoptPostedEveSession({ posted, session, status: "running" });
 	await drainParkedEveTurn({ auth, orgId, session });
 	return true;
-};
-
-/** An optioned ask_question the resumed turn parked on. */
-export type PendingQuestion = {
-	options: { id?: string; label?: string }[];
-	prompt: string;
-	requestId: string;
 };
 
 const collectText = async ({
@@ -203,59 +193,62 @@ const collectText = async ({
 	let text = "";
 	let pendingText = "";
 	let chained: ChainedPendingRequest | undefined;
+	let chainedSiblingRequestIds: string[] = [];
 	let question: PendingQuestion | undefined;
+	let sawEvent = false;
+	// Anything beyond the turn's own lifecycle events: a step, a tool, a token
+	// of message, a park. Eve's deferred-delivery turns have none of it.
+	let sawTurnActivity = false;
 	// Stale tail events from the parked turn replay first (see engine.ts) —
 	// only honor terminal events once the resumed turn's turn.started arrives.
 	let turnStarted = false;
 	for await (const event of streamEveEvents({ auth, session })) {
+		sawEvent = true;
 		session.state.streamIndex += 1;
 		session.state.lastEventAt = Date.now();
+		if (
+			event.type === "step.started" ||
+			event.type === "actions.requested" ||
+			event.type === "action.result" ||
+			event.type === "input.requested"
+		) {
+			sawTurnActivity = true;
+		}
 		if (event.type === "turn.started") {
 			turnStarted = true;
 		} else if (event.type === "input.requested") {
-			// The resumed turn can chain straight into another gated write, parked
-			// where nobody streams. Capture it so a fresh approval row exists.
-			const requests = (event.data?.requests ?? []) as EveInputRequest[];
-			const found = requests.find(
-				(request) =>
-					request.requestId &&
-					request.requestId !== skipRequestId &&
-					request.action?.toolName &&
-					normalizeToolName(request.action.toolName) !== "ask_question",
-			);
-			if (found?.requestId && found.action?.toolName) {
-				chained = {
-					input: found.action.input,
-					options: found.options,
-					requestId: found.requestId,
-					toolName: found.action.toolName,
-				};
+			// The resumed turn parks where nobody streams — every shape has to be
+			// captured here or the request is orphaned and the thread wedges.
+			const parkedInput = classifyParkedEveInput({
+				requests: (event.data?.requests ?? []) as EveInputRequest[],
+				skipRequestId,
+			});
+			if (parkedInput?.kind === "gated") {
+				chained = parkedInput.chained;
+				chainedSiblingRequestIds = parkedInput.siblingRequestIds;
 				break;
 			}
-			// An optioned ask_question also parks the session — capture it so
-			// button-driven surfaces can render answer chips instead of dead text.
-			const optioned = requests.find(
-				(request) =>
-					request.requestId !== skipRequestId &&
-					request.prompt &&
-					(request.options?.length ?? 0) > 0,
-			);
-			if (optioned?.requestId && optioned.prompt) {
-				question = {
-					options: optioned.options ?? [],
-					prompt: optioned.prompt,
-					requestId: optioned.requestId,
-				};
+			if (parkedInput?.kind === "question") {
+				question = parkedInput.question;
+				session.state.status = "waiting";
+				break;
+			}
+			if (parkedInput) {
+				// Only when the turn said nothing — the model's own reply beats a
+				// generic "waiting for input" line.
+				if (!(text || pendingText)) text = parkedInput.text;
 				session.state.status = "waiting";
 				break;
 			}
 		} else if (event.type === "message.appended" && turnStarted) {
+			sawTurnActivity = true;
 			const messageSoFar = event.data?.messageSoFar;
 			pendingText =
 				typeof messageSoFar === "string"
 					? messageSoFar
 					: `${pendingText}${String(event.data?.messageDelta ?? "")}`;
 		} else if (event.type === "message.completed" && turnStarted) {
+			sawTurnActivity = true;
 			if (event.data?.finishReason !== "tool-calls") {
 				text = String(event.data?.message ?? pendingText);
 			}
@@ -275,6 +268,59 @@ const collectText = async ({
 			throw new Error(String(event.data?.message ?? "Eve failed"));
 		}
 	}
+	// Nothing was read, so nothing advanced — never persist a cursor the turn
+	// did not actually reach.
+	if (sawEvent) {
+		await upsertEveSession({
+			db,
+			env: session.env,
+			orgId,
+			sessionId: session.sessionId,
+			state: session.state,
+			threadKey: session.threadKey,
+		});
+	}
+	return {
+		chained,
+		chainedSiblingRequestIds,
+		// Eve's tell for a delivery it deferred: the turn opened and closed
+		// without running, saying, or asking anything.
+		deferredEmptyTurn: turnStarted && !(sawTurnActivity || text || pendingText),
+		question,
+		text: text || pendingText,
+	};
+};
+
+/** Answers a parked request and consumes the turn it resumes, surfacing any
+ * gated write that turn chained into as a fresh card. */
+const answerParkedRequest = async ({
+	auth,
+	note,
+	optionId,
+	orgId,
+	providerUserId,
+	requestId,
+	session,
+	siblingRequestIds,
+}: {
+	auth: EveAuthContext;
+	note?: string;
+	optionId: string;
+	orgId: string;
+	providerUserId: string;
+	requestId: string;
+	session: EveSessionRef;
+	siblingRequestIds?: string[];
+}) => {
+	const posted = await postEveInputResponse({
+		auth,
+		note,
+		optionId,
+		requestId,
+		session,
+		siblingRequestIds,
+	});
+	adoptPostedEveSession({ posted, session, status: "running" });
 	await upsertEveSession({
 		db,
 		env: session.env,
@@ -283,21 +329,46 @@ const collectText = async ({
 		state: session.state,
 		threadKey: session.threadKey,
 	});
-	return { chained, question, text: text || pendingText };
+	const {
+		chained,
+		chainedSiblingRequestIds,
+		deferredEmptyTurn,
+		question,
+		text,
+	} = await collectText({
+		auth,
+		orgId,
+		session,
+		skipRequestId: requestId,
+	});
+	const chainedApprovalId = chained
+		? await insertChainedApproval({
+				auth,
+				chained,
+				providerUserId,
+				sessionId: session.sessionId,
+				siblingRequestIds: chainedSiblingRequestIds,
+			})
+		: undefined;
+	return { chainedApprovalId, deferredEmptyTurn, question, text };
 };
 
 const answerEveApproval = async ({
 	approval,
+	expectExecution,
 	note,
 	optionId,
 	providerUserId,
 }: {
 	approval: ChatApproval;
+	/** Set when the answer was an approval: the resumed turn is then expected to
+	 * actually run the write, and a turn that does nothing is a failure. */
+	expectExecution?: boolean;
 	note?: string;
 	optionId: string;
 	providerUserId: string;
 }): Promise<ApprovalRunResult> => {
-	if (!approval.run_id || !approval.tool_call_id) {
+	if (!(approval.run_id && approval.tool_call_id)) {
 		return {
 			error: true,
 			message: "Eve approval is missing session state.",
@@ -316,39 +387,29 @@ const answerEveApproval = async ({
 			retryable: true,
 		};
 	}
-	const auth = authFromApproval(approval, providerUserId);
-	const posted = await postEveInputResponse({
-		auth,
-		note,
-		optionId,
-		requestId: approval.tool_call_id,
-		session,
-	});
-	session.sessionId = posted.sessionId;
-	session.state.continuationToken = posted.continuationToken;
-	session.state.status = "running";
-	await upsertEveSession({
-		db,
-		env: session.env,
-		orgId: approval.org_id,
-		sessionId: session.sessionId,
-		state: session.state,
-		threadKey: session.threadKey,
-	});
-	const { chained, question, text } = await collectText({
-		auth,
-		orgId: approval.org_id,
-		session,
-		skipRequestId: approval.tool_call_id,
-	});
-	const chainedApprovalId = chained
-		? await insertChainedApproval({
-				auth,
-				chained,
-				providerUserId,
-				sessionId: session.sessionId,
-			})
-		: undefined;
+	const { chainedApprovalId, deferredEmptyTurn, question, text } =
+		await answerParkedRequest({
+			auth: authFromApproval(approval, providerUserId),
+			note,
+			optionId,
+			orgId: approval.org_id,
+			providerUserId,
+			requestId: approval.tool_call_id,
+			session,
+			siblingRequestIds: siblingRequestIdsFromToolArgs(approval.tool_args),
+		});
+	if (expectExecution && deferredEmptyTurn) {
+		logger.error("Approved Eve action was not executed", undefined, {
+			event: "leaf.eve_approval_not_executed",
+			approval_id: approval.id,
+			data: { session_id: session.sessionId, tool: approval.tool_name },
+		});
+		return {
+			error: true,
+			message: APPROVAL_NOT_EXECUTED_MESSAGE,
+			retryable: true,
+		};
+	}
 	return {
 		chainedApprovalId,
 		question: question
@@ -369,11 +430,13 @@ const insertChainedApproval = async ({
 	chained,
 	providerUserId,
 	sessionId,
+	siblingRequestIds,
 }: {
 	auth: EveAuthContext;
 	chained: ChainedPendingRequest;
 	providerUserId: string;
 	sessionId: string;
+	siblingRequestIds: string[];
 }) => {
 	const env = auth.appEnv as ChatApproval["env"];
 	const provider = auth.provider as ChatApproval["provider"];
@@ -391,15 +454,10 @@ const insertChainedApproval = async ({
 			userId: credentialUserId,
 			workspaceId: auth.workspaceId,
 		});
-		const input = chained.input ?? {};
-		const request =
-			input.request && typeof input.request === "object"
-				? (input.request as Record<string, unknown>)
-				: input;
 		preview = await fetchApprovalPreview({
 			env,
 			logger,
-			request,
+			request: toolRequestFromArgs(chained.input) ?? {},
 			token: accessToken,
 			toolName: chained.toolName,
 		});
@@ -427,6 +485,7 @@ const insertChainedApproval = async ({
 				...(chained.input ?? {}),
 				_eveApproveOptionId: options.approve,
 				_eveDenyOptionId: options.deny,
+				_eveSiblingRequestIds: siblingRequestIds,
 			},
 			toolCallId: chained.requestId,
 			toolName: chained.toolName,
@@ -460,38 +519,14 @@ export const answerEveQuestion = async ({
 > => {
 	const session = await getEveSessionBySessionId({ db, orgId, sessionId });
 	if (!session) return { error: true, message: "Eve session not found." };
-	const posted = await postEveInputResponse({
+	const { chainedApprovalId, question, text } = await answerParkedRequest({
 		auth,
 		optionId,
+		orgId,
+		providerUserId: auth.providerUserId,
 		requestId,
 		session,
 	});
-	session.sessionId = posted.sessionId;
-	session.state.continuationToken = posted.continuationToken;
-	session.state.status = "running";
-	await upsertEveSession({
-		db,
-		env: session.env,
-		orgId,
-		sessionId: session.sessionId,
-		state: session.state,
-		threadKey: session.threadKey,
-	});
-	const { chained, question, text } = await collectText({
-		auth,
-		orgId,
-		session,
-		skipRequestId: requestId,
-	});
-	// An answered question can chain straight into a gated write.
-	const chainedApprovalId = chained
-		? await insertChainedApproval({
-				auth,
-				chained,
-				providerUserId: auth.providerUserId,
-				sessionId: session.sessionId,
-			})
-		: undefined;
 	return { chainedApprovalId, question, sessionId: session.sessionId, text };
 };
 
@@ -505,6 +540,7 @@ export const resumeEveApproval = async ({
 }): Promise<ApprovalRunResult> =>
 	answerEveApproval({
 		approval,
+		expectExecution: true,
 		optionId: approveOptionFromApproval(approval),
 		providerUserId,
 	});

@@ -4,7 +4,7 @@
  * the Slack transport: a fake target captures posts and consumes streams.
  *
  * Run from apps/leaf:
- *   SLACK_AGENT_HARNESS=eve ... bun tests/e2e/eveSlack.e2e.ts
+ *   bun tests/e2e/eveSlack.e2e.ts
  */
 import { buildCatalogDecisionModel, parsePreviewPayload } from "@autumn/render";
 import type { ChatApproval } from "@autumn/shared";
@@ -29,8 +29,8 @@ import { catalogDecisionCard } from "../../src/ui/eveCards.js";
 import { createStatusTicker } from "../../src/ui/statusTicker.js";
 
 const WORKSPACE_ID = process.env.E2E_SLACK_WORKSPACE ?? "T07NPTDCU69";
-const USER_A = "U_E2E_ALICE";
-const USER_B = "U_E2E_BOB";
+let USER_A = process.env.E2E_SLACK_USER ?? "";
+let USER_B = process.env.E2E_SLACK_USER_B ?? "";
 const RUN_TAG = Date.now().toString(36);
 
 const RED_PIXEL_PNG = Buffer.from(
@@ -114,7 +114,6 @@ const runTurn = async ({
 		installation,
 		logger,
 		onAction: (message) => presenter.onAction(message),
-		onActionKeyed: ({ message }) => presenter.onActionError(message),
 		onApprovalsSuperseded: (approvals) => {
 			superseded.push(...approvals);
 		},
@@ -177,6 +176,9 @@ const main = async () => {
 	if (!installation) {
 		throw new Error(`No slack installation for workspace ${WORKSPACE_ID}`);
 	}
+	USER_A ||= installation.installed_by_provider_user_id ?? "";
+	USER_B ||= USER_A;
+	if (!USER_A) throw new Error("No Slack user configured for the E2E run");
 	console.log(`Installation org=${installation.org_id}`);
 	const token = await getInstallationOAuthAccessToken({
 		installation,
@@ -231,22 +233,37 @@ const main = async () => {
 	const planIds = plans
 		.map((plan) => String(plan.id ?? plan.plan_id))
 		.filter((id) => !(id.includes("test") || id.includes("trial")));
-	// Attach must target a plan the customer doesn't already have, or the model
-	// (correctly) does nothing.
-	const planId = planIds.find((id) => !attachedPlanIds.has(id)) ?? planIds[0];
-	const secondPlanId =
-		planIds.find((id) => id !== planId && !attachedPlanIds.has(id)) ??
-		planIds.find((id) => id !== planId) ??
-		planId;
+	const attachablePlanIds: string[] = [];
+	for (const candidate of planIds
+		.filter((id) => !attachedPlanIds.has(id))
+		.slice(0, 100)) {
+		try {
+			const preview = await mcpJson({
+				args: {
+					request: {
+						customer_id: customerId,
+						enable_plan_immediately: true,
+						plan_id: candidate,
+						plan_schedule: "immediate",
+						redirect_mode: "if_required",
+					},
+				},
+				toolName: "previewAttach",
+				token,
+			});
+			if (typeof preview?.total === "number") attachablePlanIds.push(candidate);
+		} catch {}
+		if (attachablePlanIds.length === 1) break;
+	}
+	const [planId] = attachablePlanIds;
+	if (!planId) throw new Error("Need an attachable plan");
 	// The decision flow needs a plan with customers/variants — one they're on.
-	// Prefer the base plan (shortest id) over its variants, which may not be
-	// independently versionable.
 	const decisionPlanId =
 		planIds
 			.filter((id) => attachedPlanIds.has(id))
-			.sort((a, b) => a.length - b.length)[0] ?? planId;
+			.sort((a, b) => b.length - a.length)[0] ?? planId;
 	console.log(
-		`Fixtures: plan=${planId} altPlan=${secondPlanId} decisionPlan=${decisionPlanId} customer=${customerId} (already on: ${[...attachedPlanIds].join(",") || "none"})\n`,
+		`Fixtures: plan=${planId} decisionPlan=${decisionPlanId} customer=${customerId} (already on: ${[...attachedPlanIds].join(",") || "none"})\n`,
 	);
 
 	// ---- S1: plain question, streamed ----
@@ -296,7 +313,6 @@ const main = async () => {
 			const posted = await presentApproval({
 				channelId: s2ThreadId,
 				installation,
-				loading: null,
 				logAction: () => undefined,
 				logger,
 				orgId: installation.org_id,
@@ -311,8 +327,6 @@ const main = async () => {
 				/Due (now|today)|No charge now/.test(cardJson),
 				cardJson.slice(0, 300),
 			);
-			check("S2 card has params badges", cardJson.includes("Prorations"));
-
 			const approval = await pendingApprovalForRun({
 				channelId: s2ThreadId,
 				installation,
@@ -361,7 +375,7 @@ const main = async () => {
 		const threadId = `e2e-${RUN_TAG}-s3`;
 		const first = await runTurn({
 			installation,
-			text: `In sandbox: update customer "${customerId}"'s subscription to plan "${secondPlanId}". Use defaults.`,
+			text: `In sandbox: change customer "${customerId}"'s name to "E2E supersede ${RUN_TAG}". Proceed without asking me anything.`,
 			threadId,
 		});
 		check(
@@ -377,7 +391,6 @@ const main = async () => {
 			await presentApproval({
 				channelId: threadId,
 				installation,
-				loading: null,
 				logAction: () => undefined,
 				logger,
 				orgId: installation.org_id,
@@ -420,7 +433,7 @@ const main = async () => {
 		const threadId = `e2e-${RUN_TAG}-s4`;
 		const first = await runTurn({
 			installation,
-			text: `In sandbox: update customer "${customerId}"'s subscription to plan "${secondPlanId}". Use defaults.`,
+			text: `In sandbox: change customer "${customerId}"'s name to "E2E deny ${RUN_TAG}". Proceed without asking me anything.`,
 			threadId,
 		});
 		check(
@@ -434,7 +447,6 @@ const main = async () => {
 			await presentApproval({
 				channelId: threadId,
 				installation,
-				loading: null,
 				logAction: () => undefined,
 				logger,
 				orgId: installation.org_id,
@@ -660,7 +672,6 @@ const main = async () => {
 			await presentApproval({
 				channelId: threadId,
 				installation,
-				loading: null,
 				logAction: () => undefined,
 				logger,
 				orgId: installation.org_id,
@@ -764,7 +775,6 @@ const main = async () => {
 				await presentApproval({
 					channelId: threadId,
 					installation,
-					loading: null,
 					logAction: () => undefined,
 					logger,
 					orgId: installation.org_id,

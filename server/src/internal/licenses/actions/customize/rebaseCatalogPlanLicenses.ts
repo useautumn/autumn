@@ -32,6 +32,49 @@ type PreparedLinkRebase = {
 
 export type PreparedCatalogPlanLicenseRebases = PreparedLinkRebase[];
 
+/** A customized link keeps its own item set, but the rows it inherited from the
+ * catalog are only spared from deletion while some link still references them. */
+const pinCatalogRefsForCustomizedLink = async ({
+	db,
+	planLicenseId,
+	catalogItems,
+	existingRows,
+}: {
+	db: DrizzleCli;
+	planLicenseId: string;
+	catalogItems: ReturnType<typeof derivePlanLicenseItemRefs>;
+	existingRows: Awaited<
+		ReturnType<typeof licenseItemRepo.listByPlanLicenseIds>
+	>;
+}) => {
+	const held = existingRows.entitlements
+		.filter((row) => row.plan_license_id === planLicenseId)
+		.map((row) => row.id);
+	const heldPrices = existingRows.prices
+		.filter((row) => row.plan_license_id === planLicenseId)
+		.map((row) => row.id);
+	const missing = catalogItems.filter(
+		(item) =>
+			(item.entitlementId !== undefined &&
+				!held.includes(item.entitlementId)) ||
+			("priceId" in item &&
+				item.priceId !== undefined &&
+				!heldPrices.includes(item.priceId)),
+	);
+	if (missing.length === 0) return;
+
+	const retained = [
+		...held.map((entitlementId) => ({ entitlementId })),
+		...heldPrices.map((priceId) => ({ priceId })),
+	];
+	await licenseItemRepo.replaceItems({
+		db,
+		planLicenseId,
+		items: [...retained, ...missing],
+		customized: true,
+	});
+};
+
 export const materializeCustomerPlanLicenseSnapshots = async ({
 	db,
 	baseProduct,
@@ -45,9 +88,21 @@ export const materializeCustomerPlanLicenseSnapshots = async ({
 			licenseInternalProductIds: [baseProduct.internal_id],
 		});
 	const items = derivePlanLicenseItemRefs(baseProduct);
+	const existingRows = await licenseItemRepo.listByPlanLicenseIds({
+		db,
+		planLicenseIds: referenced.map((planLicense) => planLicense.id),
+	});
 	let materialized = false;
 	for (const planLicense of referenced) {
-		if (planLicense.customized) continue;
+		if (planLicense.customized) {
+			await pinCatalogRefsForCustomizedLink({
+				db,
+				planLicenseId: planLicense.id,
+				catalogItems: items,
+				existingRows,
+			});
+			continue;
+		}
 		await licenseItemRepo.replaceItems({
 			db,
 			planLicenseId: planLicense.id,
@@ -190,19 +245,26 @@ const hasLicenseCustomize = (customize: DiffedCustomizePlanV1) =>
 	customize.add_items !== undefined ||
 	customize.remove_items !== undefined;
 
+/** A customize names the shape it wants, not the rows behind it, so ids come
+ * from the saved plan first — the previous snapshot's rows may have just been
+ * replaced by the same save. */
 const resolveTargetItemRefs = ({
 	targetPlan,
+	newBasePlan,
 	previousEffectivePlan,
 }: {
 	targetPlan: ApiPlanV1;
+	newBasePlan: ApiPlanV1;
 	previousEffectivePlan: ApiPlanV1;
 }) => {
 	const refs: { entitlementId?: string; priceId?: string }[] = [];
-	const previousItems = [...previousEffectivePlan.items];
+	const candidateItems = [...newBasePlan.items, ...previousEffectivePlan.items];
 
 	if (targetPlan.price) {
 		const priceId =
-			targetPlan.price.price_id ?? previousEffectivePlan.price?.price_id;
+			targetPlan.price.price_id ??
+			newBasePlan.price?.price_id ??
+			previousEffectivePlan.price?.price_id;
 		if (!priceId) {
 			throw new InternalError({
 				message: "Failed to resolve license base price",
@@ -215,14 +277,11 @@ const resolveTargetItemRefs = ({
 		let entitlementId = item.entitlement_id;
 		let priceId = item.price_id;
 		if (!entitlementId || (item.price && !priceId)) {
-			const previousIndex = previousItems.findIndex((candidate) =>
+			const match = candidateItems.find((candidate) =>
 				itemsEqual(item, candidate),
 			);
-			if (previousIndex >= 0) {
-				const [previousItem] = previousItems.splice(previousIndex, 1);
-				entitlementId ??= previousItem.entitlement_id;
-				priceId ??= previousItem.price_id;
-			}
+			entitlementId ??= match?.entitlement_id;
+			priceId ??= match?.price_id;
 		}
 
 		if (!entitlementId || (item.price && !priceId)) {
@@ -283,6 +342,7 @@ export const applyCatalogPlanLicenseRebases = async ({
 					planLicenseId: link.id,
 					items: resolveTargetItemRefs({
 						targetPlan: canonicalTargetPlan,
+						newBasePlan,
 						previousEffectivePlan,
 					}),
 					customized: true,

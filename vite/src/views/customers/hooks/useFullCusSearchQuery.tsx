@@ -3,7 +3,9 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import {
+	balanceFilterQueryKey,
 	buildCustomerFilterPayload,
+	featureSortQueryKey,
 	useCustomerFilters,
 } from "./useCustomerFilters";
 
@@ -30,6 +32,9 @@ export const useFullCusSearchQuery = () => {
 			queryStates.joinedFrom,
 			queryStates.joinedTo,
 			queryStates.sort,
+			queryStates.sortBy,
+			featureSortQueryKey(queryStates),
+			balanceFilterQueryKey(queryStates),
 			queryStates.q,
 		]),
 		queryFn: async ({ signal }) => {
@@ -40,6 +45,15 @@ export const useFullCusSearchQuery = () => {
 					cursor: currentCursor,
 					limit: queryStates.pageSize,
 					filters: buildCustomerFilterPayload(queryStates),
+					sort_by: queryStates.sortBy,
+					sort_feature_id:
+						queryStates.sortBy === "feature_balance"
+							? queryStates.sortFeature || undefined
+							: undefined,
+					sort_basis:
+						queryStates.sortBy === "feature_balance"
+							? queryStates.sortBasis
+							: undefined,
 					sort_order: queryStates.sort,
 				},
 				{ signal },

@@ -15,13 +15,17 @@ export type BatchMigrationRejectionCode =
 	| "unsupported_remove_items"
 	| "base_price_customize"
 	| "priced_add_item"
+	| "priced_remove_item"
+	| "rollover_remove_item"
+	| "unsupported_upsert_licenses"
 	| "unsupported_plan_filter"
 	// Group-level (compute output guards)
 	| "no_matched_products"
 	| "missing_prepared_state"
 	| "base_price_transition"
 	| "paid_entitlement_transition"
-	| "entity_scoped_entitlement_add"
+	| "entity_scoped_entitlement"
+	| "pooled_add_item"
 	| "non_add_operation"
 	| "overlapping_operations";
 
