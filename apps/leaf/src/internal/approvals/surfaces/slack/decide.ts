@@ -12,7 +12,6 @@ import { logger as rootLogger } from "../../../../lib/logger.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";
 import { questionCard } from "../../../../ui/eveCards.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
-import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
@@ -105,14 +104,7 @@ const authorizeSlackApprovalClicker = async ({
 		};
 	}
 
-	const approverToken = await getInstallationOAuthAccessToken({
-		installation,
-		env: approval.env,
-		orgId: approval.org_id,
-		userId: callerAuth.userId,
-	});
-
-	return { allowed: true, approverToken };
+	return { allowed: true };
 };
 
 const defaultApprovalActionDeps: ApprovalActionDeps = {
@@ -326,9 +318,6 @@ export const handleApprovalActionWithDeps = async ({
 					editor.requestEdit();
 				},
 				providerUserId,
-				approverToken: authorization?.allowed
-					? authorization.approverToken
-					: undefined,
 			});
 		} finally {
 			clearInterval(heartbeat);

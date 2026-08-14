@@ -1,6 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatProvider } from "@autumn/shared";
-import type { AgentHarnessName } from "../../../../lib/chatAgentConfig.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import type { AgentOutput } from "../../../../types.js";
@@ -24,7 +23,6 @@ import {
  */
 export const presentWebApproval = async ({
 	channelId,
-	harness,
 	logger = rootLogger,
 	orgId,
 	output,
@@ -34,7 +32,6 @@ export const presentWebApproval = async ({
 	workspaceId,
 }: {
 	channelId: string;
-	harness: AgentHarnessName;
 	logger?: AutumnLogger;
 	orgId: string;
 	output: AgentOutput;
@@ -93,7 +90,7 @@ export const presentWebApproval = async ({
 			channelId,
 			providerUserId,
 			env: approval.env,
-			harness,
+			harness: "eve",
 			preview: approval.preview,
 			runId: approval.runId,
 			toolArgs: approval.toolArgs,

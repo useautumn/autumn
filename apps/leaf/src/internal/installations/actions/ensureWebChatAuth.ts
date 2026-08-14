@@ -12,8 +12,7 @@ export const WEB_CHAT_PROVIDER = "web" as const;
 
 /**
  * Web chat has no Slack-style install, so we synthesize one "web" installation
- * per org (placeholder bot token; never used) to carry an MCP OAuth credential —
- * which the claude-managed vault then refreshes, exactly like Slack.
+ * per org (placeholder bot token; never used) to carry an MCP OAuth credential.
  */
 const ensureWebInstallation = async ({
 	orgId,

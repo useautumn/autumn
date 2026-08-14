@@ -6,7 +6,6 @@ process.env.ENCRYPTION_PASSWORD ??= "test";
 process.env.SLACK_CLIENT_ID ??= "test";
 process.env.SLACK_CLIENT_SECRET ??= "test";
 process.env.SLACK_SIGNING_SECRET ??= "test";
-process.env.FIRECRAWL_API_KEY ??= "fc_test";
 
 const { buildHarnessMessageText, extractUserMessageText } = await import(
 	"../../../../src/harness/common/messageText.js"

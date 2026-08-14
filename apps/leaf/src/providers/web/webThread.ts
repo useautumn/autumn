@@ -20,7 +20,7 @@ export const buildWebChatThreadId = ({
 }) => `web:${userId}~${orgId}:${conversationId}`;
 
 /** ThreadRef for a web conversation, built one way so the CMA `threadKey` matches
- * between a live turn (runWebMessage) and history hydration. */
+ * between a live turn and history hydration. */
 export type WebThreadSummary = {
 	id: string;
 	title: string | null;

@@ -55,7 +55,6 @@ import {
 } from "./providers/slack/files.js";
 import { findInstallationWithOrg } from "./providers/slack/installations.js";
 import { getRecentMessages } from "./providers/slack/threadContext.js";
-import { runWebMessage } from "./providers/web/runWebMessage.js";
 import {
 	generateThreadTitle,
 	persistThreadTitle,
@@ -82,14 +81,8 @@ import {
 	RUN_STOPPED_FOR_TIME_MESSAGE,
 	runStoppedByUserNotice,
 	RUN_TIMED_OUT_MESSAGE,
-	STARTUP_FAILED_STATUS,
 } from "./ui/messages.js";
-import {
-	finishLoading,
-	type LoadingState,
-	type ReplyTarget,
-	startLoading,
-} from "./ui/progress.js";
+import type { ReplyTarget } from "./ui/progress.js";
 import { createStatusTicker } from "./ui/statusTicker.js";
 
 export const chatAdapterNames = ["slack", "web"];
@@ -178,9 +171,7 @@ export const bot = new Chat({
 					userId: session.userId,
 					userScopes: session.scopes,
 				});
-				// Encode the server-resolved org into the user id (WebUser carries no
-				// org field); runWebMessage decodes it. `~` avoids the `:` used in
-				// chat-sdk thread ids.
+				// Preserve the legacy web adapter's user-id format for old history.
 				return { id: `${session.userId}~${session.activeOrganizationId}` };
 			},
 		}),
@@ -256,20 +247,15 @@ const runAndReply = async ({
 	 * with the installation lookup. */
 	recentMessages?: ChatContextMessage[] | (() => Promise<ChatContextMessage[]>);
 }) => {
-	const loading: LoadingState = null;
-	let bootstrapLoading: LoadingState = null;
 	let logger = rootLogger;
 	let run: ActiveRun | undefined;
 	const ticker = createStatusTicker(target);
-	const evePresenter =
-		env.SLACK_AGENT_HARNESS === "eve"
-			? createEveSlackPresenter({ ticker })
-			: null;
+	const evePresenter = createEveSlackPresenter({ ticker });
 	// Reactions are best-effort acknowledgment; never fail the run on them.
 	const reactSafely = (input: { action: "add" | "remove"; emoji: string }) =>
 		react?.(input).catch(() => undefined);
 	// Status starts before any lookups so the thread never sits silent.
-	if (evePresenter) ticker.thinking();
+	ticker.thinking();
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
 		// The Slack history fetch (recentMessages) overlaps the DB lookup.
@@ -317,41 +303,11 @@ const runAndReply = async ({
 		}
 
 		const isFollowUp = recentMessages?.some((m) => m.isBot) ?? false;
-		// First message in a thread shows a one-time "Starting Autumn" card that
-		// stays pending until the managed agent reports ready; follow-ups skip it.
-		// Eve acknowledges via reaction + status line instead — no cards.
-		bootstrapLoading =
-			isFollowUp || evePresenter
-				? null
-				: await startLoading(target, { showPlan: true });
-		// The live status ticker only starts cycling once the bootstrap card
-		// resolves, so the two loading states never show at the same time.
-		const completeBootstrap = async () => {
-			if (!bootstrapLoading) return;
-			const card = bootstrapLoading;
-			bootstrapLoading = null;
-			await finishLoading(target, card, "Autumn started.");
-			ticker.thinking();
-		};
 		run = registerRun({
 			key: runKey,
 			kind: "message",
 			ownerProviderUserId: providerUserId,
-			...(env.SLACK_AGENT_HARNESS === "eve"
-				? {
-						sendInterrupt: async () => undefined,
-						sendUserMessage: async () => {
-							throw new Error(
-								"Eve follow-up injection is queued after the active run",
-							);
-						},
-					}
-				: {}),
 		});
-		// Follow-ups have no bootstrap card, so the status starts right away.
-		if (isFollowUp || evePresenter) {
-			ticker.thinking();
-		}
 		// Label the thread off its opening message, in parallel with the run;
 		// persisted fire-and-forget below so the reply is never delayed.
 		const titlePromise =
@@ -359,9 +315,6 @@ const runAndReply = async ({
 				? generateThreadTitle({ logger, text })
 				: undefined;
 		const logAction = (message: string) => {
-			ticker.activity(message);
-		};
-		const logKeyed = ({ message }: { key: string; message: string }) => {
 			ticker.activity(message);
 		};
 		run.logAction = logAction;
@@ -381,15 +334,10 @@ const runAndReply = async ({
 			installation,
 			logger,
 			onAction: logAction,
-			onActionKeyed: logKeyed,
-			onAgentReady: completeBootstrap,
 			onApprovalsSuperseded: (approvals) =>
 				editSupersededApprovalCards({ approvals, logger, target }),
-			onReasoning: evePresenter?.onReasoning,
+			onReasoning: evePresenter.onReasoning,
 			onThinking: ticker.thinking,
-			onTurnComplete: async (turnText) => {
-				await target.post({ markdown: turnText });
-			},
 			providerUserId,
 			recentMessages,
 			run,
@@ -402,7 +350,6 @@ const runAndReply = async ({
 			// Stop before posting, or a pending tick re-renders the status after
 			// Slack's post-triggered clear and it sticks forever.
 			ticker.stop();
-			await finishLoading(target, loading, "Stopped.");
 			const notice =
 				output.stopReason === "timeout"
 					? RUN_STOPPED_FOR_TIME_MESSAGE
@@ -441,7 +388,7 @@ const runAndReply = async ({
 		// A newer message is already queued behind this run — fold this reply
 		// into the next turn instead of posting two bot responses back-to-back.
 		// A parked write is withdrawn silently (its card was never shown).
-		if (evePresenter && hasQueuedThreadMessage(runKey)) {
+		if (hasQueuedThreadMessage(runKey)) {
 			if (output.suspension && output.runId) {
 				try {
 					await withdrawEveSuspension({
@@ -476,7 +423,7 @@ const runAndReply = async ({
 		// write still needs versioning/variant/migration choices, deny it and
 		// render the decision card instead of an approval card.
 		let decisionPlan: CatalogPlanPreview | undefined;
-		if (evePresenter && output.suspension) {
+		if (output.suspension) {
 			try {
 				logAction("Reviewing versioning impact");
 				const token = await getInstallationOAuthAccessToken({
@@ -521,7 +468,6 @@ const runAndReply = async ({
 		ticker.stop();
 
 		if (decisionPlan) {
-			await finishLoading(target, loading, "Decision needed.");
 			if (output.text?.trim()) {
 				await target.post({ markdown: output.text });
 			}
@@ -536,8 +482,7 @@ const runAndReply = async ({
 			return;
 		}
 
-		if (evePresenter && output.question && output.runId) {
-			await finishLoading(target, loading, "Question for you.");
+		if (output.question && output.runId) {
 			await target.post(
 				questionCard({
 					env: output.env,
@@ -554,7 +499,6 @@ const runAndReply = async ({
 		const postedApproval = await presentApproval({
 			channelId,
 			installation: outputInstallation,
-			loading,
 			logAction,
 			logger,
 			orgId,
@@ -566,7 +510,6 @@ const runAndReply = async ({
 
 		// Empty output with nothing to show is a failed run, not a silent success.
 		if (!output.text?.trim()) {
-			await finishLoading(target, loading, "No reply produced.");
 			await target.post({ markdown: `:warning: ${NO_REPLY_MESSAGE}` });
 			logger.warn("Agent produced no reply", {
 				event: "leaf.slack_empty_response",
@@ -577,8 +520,6 @@ const runAndReply = async ({
 			});
 			return;
 		}
-
-		await finishLoading(target, loading, "Done.");
 
 		await target.post({ markdown: output.text });
 		logger.info("Posted Slack response", {
@@ -595,8 +536,6 @@ const runAndReply = async ({
 		// "Thinking…" over the cleared status after the error message lands.
 		ticker.stop();
 		await reactSafely({ action: "add", emoji: "x" });
-		await finishLoading(target, bootstrapLoading, STARTUP_FAILED_STATUS);
-		await finishLoading(target, loading, "Request failed.");
 		await target.post({
 			markdown: `:warning: ${errorNotice(error)}`,
 		});
@@ -615,12 +554,6 @@ const handleMessage = async (thread: Thread, message: Message) => {
 			event: "leaf.slack_message_skipped",
 			data: { reason: "bot_author" },
 		});
-		return;
-	}
-	// Web (dashboard) messages run Leaf's core without a Slack installation.
-	// Web thread ids follow the `web:{userId}:{conversationId}` pattern.
-	if (thread.id.startsWith("web:")) {
-		await runWebMessage({ message, thread });
 		return;
 	}
 	const runKey = slackRunKey({

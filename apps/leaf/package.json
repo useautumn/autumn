@@ -5,15 +5,14 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun --watch src/index.ts",
-		"eval": "zsh -lc 'braintrust eval tests/evals/**/*.eval.ts --external-packages @mastra/mcp @mastra/core @mastra/braintrust @mastra/observability @anthropic-ai/claude-agent-sdk @anthropic-ai/sdk @ngrok/ngrok \"$@\"' --",
-		"eval:mcp": "zsh -lc 'braintrust eval tests/evals/mcp/**/*.eval.ts --external-packages @mastra/mcp @mastra/core @mastra/braintrust @mastra/observability @anthropic-ai/claude-agent-sdk @anthropic-ai/sdk @ngrok/ngrok \"$@\"' --",
+		"eval": "zsh -lc 'braintrust eval tests/evals/**/*.eval.ts --external-packages @mastra/mcp @mastra/core @mastra/braintrust @mastra/observability \"$@\"' --",
+		"eval:mcp": "zsh -lc 'braintrust eval tests/evals/mcp/**/*.eval.ts --external-packages @mastra/mcp @mastra/core @mastra/braintrust @mastra/observability \"$@\"' --",
 		"start": "bun src/index.ts",
-		"test": "AUTUMN_API_URL=http://localhost:8080 AUTUMN_PUBLIC_API_URL=http://localhost:8080 bun test tests/unit",
+		"test": "AUTUMN_API_URL=http://localhost:8080 AUTUMN_PUBLIC_API_URL=http://localhost:8080 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres ENCRYPTION_PASSWORD=test SLACK_CLIENT_ID=test SLACK_CLIENT_SECRET=test SLACK_SIGNING_SECRET=test bun test --isolate tests/unit",
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@ai-sdk/anthropic": "^4.0.8",
-		"@anthropic-ai/claude-agent-sdk": "^0.3.168",
 		"@anthropic-ai/sdk": "^0.102.0",
 		"@autumn/agent-docs": "workspace:*",
 		"@autumn/auth": "workspace:*",
@@ -30,7 +29,6 @@
 		"@mastra/core": "^1.36.0",
 		"@mastra/mcp": "^1.8.0",
 		"@mastra/observability": "^1.14.1",
-		"@mendable/firecrawl-js": "^4.25.1",
 		"@workflow/world-postgres": "5.0.0-beta.19",
 		"ai": "7.0.9",
 		"autoevals": "^0.0.132",
@@ -46,7 +44,6 @@
 		"zod": "3.25.76"
 	},
 	"devDependencies": {
-		"@ngrok/ngrok": "^1.7.0",
 		"@types/bun": "^1.3.1",
 		"@types/node": "^25.0.7",
 		"just-bash": "^3.0.2",

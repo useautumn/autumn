@@ -57,5 +57,3 @@ export const GENERIC_FAILURE_MESSAGE =
 
 export const genericFailureWithDetail = (detail: string) =>
 	`Something went wrong: ${detail} — please try again.`;
-
-export const STARTUP_FAILED_STATUS = "Couldn't start Autumn.";
