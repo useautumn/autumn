@@ -14,6 +14,7 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 BIN="${ROOT}/node_modules/.bin/infisical"
 REAL="${ROOT}/node_modules/@infisical/cli/bin/infisical"
 LOGIN="${ROOT}/scripts/setup/cursor-cloud/infisical-machine-login.sh"
+WITH_ISOL="${ROOT}/scripts/setup/cursor-cloud/with-isolation.sh"
 
 if [ ! -x "$REAL" ]; then
 	echo "[wrap-infisical] skip: ${REAL} not installed"
@@ -28,6 +29,11 @@ cat > "$BIN" <<EOF
 set -euo pipefail
 REAL="${REAL}"
 LOGIN="${LOGIN}"
+WITH_ISOL="${WITH_ISOL}"
+# Husky runs \`infisical scan\` — that must not require a machine-identity token.
+if [ "\$1" != "run" ]; then
+	exec "\$REAL" "\$@"
+fi
 CACHE="\${HOME}/.cache/autumn-infisical-token"
 export DW_HEADLESS="\${DW_HEADLESS:-1}"
 if [ -n "\${INFISICAL_CLIENT_ID:-}" ]; then
@@ -54,6 +60,19 @@ fi
 if [ -z "\${INFISICAL_PROJECT_ID:-}" ]; then
 	echo "infisical: machine identity requires INFISICAL_PROJECT_ID (workspaceId in .infisical.json)." >&2
 	exit 1
+fi
+# infisical run injects vault secrets into the child. Re-apply localhost
+# isolation after that so laptop Redis :6380 / shared SQS cannot leak.
+if [ -x "\$WITH_ISOL" ]; then
+	before=()
+	while [ \$# -gt 0 ]; do
+		if [ "\$1" = "--" ]; then
+			shift
+			exec "\$REAL" "\${before[@]}" -- "\$WITH_ISOL" "\$@"
+		fi
+		before+=("\$1")
+		shift
+	done
 fi
 exec "\$REAL" "\$@"
 EOF

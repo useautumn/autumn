@@ -70,6 +70,7 @@ if [ -f "${ROOT}/scripts/setup/cursor-cloud/isolation.env" ]; then
   set +a
 fi
 unset NEON_WORKTREE_API_KEY
+unset MISC_CACHE_DRAGONFLY_PRIVATE_URL
 ENVSH
 chmod 600 "$env_sh"
 

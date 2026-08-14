@@ -7,10 +7,32 @@ import { isProvisioned } from "./entry.ts";
 import { provisionedInfraEnv } from "./env-files.ts";
 import { isHeadless } from "./headless.ts";
 import { registerPortlessAliases } from "./portless.ts";
-import { portlessHttpsUrl } from "./ports.ts";
+import { portlessHttpsUrl, serverPortFor } from "./ports.ts";
 import { fatal, log } from "./shell.ts";
 import { spawnDevInTmux, tmuxSessionName } from "./tmux.ts";
 import { rewriteDbEnv } from "./url.ts";
+
+const LOCAL_DATABASE_URL =
+	"postgresql://postgres:postgres@localhost:5432/autumn";
+
+const HEADLESS_UNSET = [
+	"NEON_WORKTREE_API_KEY",
+	"MISC_CACHE_DRAGONFLY_PRIVATE_URL",
+] as const;
+
+function applyLocalInfra(
+	env: Record<string, string>,
+	worktreeNum: number,
+): Record<string, string> {
+	const next = { ...env };
+	const infra = provisionedInfraEnv(worktreeNum);
+	Object.assign(next, infra);
+	for (const key of Object.keys(next)) {
+		if (key.includes("SQS_QUEUE_URL") && !(key in infra)) delete next[key];
+	}
+	for (const key of HEADLESS_UNSET) delete next[key];
+	return next;
+}
 
 function applyProvisionedDevEnv(
 	entry: RegistryEntry,
@@ -19,13 +41,7 @@ function applyProvisionedDevEnv(
 	const { worktreeNum, databaseUrl } = entry;
 	if (!databaseUrl) fatal("worktree missing databaseUrl");
 
-	const next = rewriteDbEnv(env, databaseUrl);
-	const infra = provisionedInfraEnv(worktreeNum);
-	Object.assign(next, infra);
-	// Unmapped queue vars must not leak the shared AWS queues into this worktree.
-	for (const key of Object.keys(next)) {
-		if (key.includes("SQS_QUEUE_URL") && !(key in infra)) delete next[key];
-	}
+	const next = applyLocalInfra(rewriteDbEnv(env, databaseUrl), worktreeNum);
 	if (!next.EMULATE_GOOGLE_URL) {
 		next.EMULATE_GOOGLE_URL = portlessHttpsUrl("google.emulate.localhost");
 	}
@@ -44,10 +60,29 @@ function applyProvisionedDevEnv(
 		next.VITE_FRONTEND_URL = aliases.viteUrl;
 	}
 	if (isHeadless()) {
-		const apiUrl = `http://localhost:${8080 + (worktreeNum - 1) * 100}`;
+		const apiUrl = `http://localhost:${serverPortFor(worktreeNum)}`;
 		next.AUTUMN_API_URL = apiUrl;
 		next.AUTUMN_PUBLIC_API_URL = entry.ngrokUrl ?? apiUrl;
+		next.CLIENT_URL = `http://localhost:${3000 + (worktreeNum - 1) * 100}`;
+		next.DATABASE_URL = LOCAL_DATABASE_URL;
+		next.DATABASE_CRITICAL_URL = LOCAL_DATABASE_URL;
 	}
+	return next;
+}
+
+function applyHeadlessDevEnv(
+	entry: RegistryEntry,
+	env: Record<string, string>,
+): Record<string, string> {
+	const { worktreeNum } = entry;
+	const next = applyLocalInfra({ ...env }, worktreeNum);
+	const apiUrl = `http://localhost:${serverPortFor(worktreeNum)}`;
+	next.DATABASE_URL = LOCAL_DATABASE_URL;
+	next.DATABASE_CRITICAL_URL = LOCAL_DATABASE_URL;
+	next.AUTUMN_API_URL = apiUrl;
+	next.AUTUMN_PUBLIC_API_URL = entry.ngrokUrl ?? apiUrl;
+	next.CLIENT_URL = `http://localhost:${3000 + (worktreeNum - 1) * 100}`;
+	next.STRIPE_WEBHOOK_SKIP_VERIFY = "true";
 	return next;
 }
 
@@ -59,7 +94,9 @@ export function buildDevEnvAndArgs(entry: RegistryEntry): {
 	let env: Record<string, string> = {
 		...(process.env as Record<string, string>),
 	};
-	if (isProvisioned(entry)) {
+	if (isHeadless()) {
+		env = applyHeadlessDevEnv(entry, env);
+	} else if (isProvisioned(entry)) {
 		env = applyProvisionedDevEnv(entry, env);
 	}
 

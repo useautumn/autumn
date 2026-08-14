@@ -295,10 +295,15 @@ async function startDev() {
 
 			names.push("eve", "leaf");
 			colors.push("white", "gray");
+			const skipEve =
+				process.env.DW_HEADLESS === "1" ||
+				process.env.DW_HEADLESS === "true";
 			cmds.push(
 				isWindows
 					? `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`
-					: `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`,
+					: skipEve
+						? `"echo DW_HEADLESS=1 — skipping eve (npx eve EOVERRIDE / drizzle-orm catalog)"`
+						: `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`,
 				// Harness defaults live in apps/leaf/src/lib/chatAgentConfig.ts.
 				isWindows
 					? `"cd apps/leaf && set PORT=${CHAT_PORT} && bun dev"`
@@ -372,9 +377,7 @@ async function startDev() {
 			];
 		}
 
-		const concurrentlyProc = Bun.spawn(shellArgs, {
-			cwd: projectRoot,
-			env: {
+		const spawnEnv: Record<string, string> = {
 				...process.env,
 				TRIGGER_DEV_BRANCH: triggerDevBranch,
 				// Sandbox key only. `stripe listen` reads STRIPE_API_KEY, so no
@@ -417,6 +420,9 @@ async function startDev() {
 				}),
 				...(useLocalMiscCache && {
 					MISC_CACHE_DRAGONFLY_PUBLIC_URL: LOCAL_MISC_CACHE_URL,
+					CACHE_V2_DRAGONFLY_URL: LOCAL_MISC_CACHE_URL,
+					CACHE_V2_DRAGONFLY_PUBLIC_URL: LOCAL_MISC_CACHE_URL,
+					REDIS_URL: LOCAL_MISC_CACHE_URL,
 				}),
 				...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
 				...(worktreeNum > 1 && {
@@ -434,7 +440,14 @@ async function startDev() {
 						"https://google.emulate.localhost",
 					STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 				}),
-			},
+			};
+			if (useLocalMiscCache) {
+				delete spawnEnv.MISC_CACHE_DRAGONFLY_PRIVATE_URL;
+			}
+
+		const concurrentlyProc = Bun.spawn(shellArgs, {
+			cwd: projectRoot,
+			env: spawnEnv,
 			stdout: "inherit",
 			stderr: "inherit",
 			onExit(

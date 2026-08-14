@@ -29,6 +29,13 @@ works without auto-running the app. It does **not** start the app. Run
 daemon, and Neon (even if Infisical has `NEON_WORKTREE_API_KEY`). Worktree #1
 uses the local Postgres/Redis/ElasticMQ from `agent-services.sh`.
 
+`infisical run` injects the shared `dev` vault, including laptop Docker Redis
+on `:6380` and Dragonfly Cloud. Cloud `infisical` is wrapped so **after** vault
+injection it sources `isolation.env` (localhost `:6379` / `:9324` / Postgres).
+`bun dw run` also applies that overlay in headless mode even when the worktree
+is not Neon-provisioned. `server/.env` must not pin a random `ENCRYPTION_*` —
+that cannot decrypt vault/DB Dragonfly backups (BAD_DECRYPT).
+
 ```sh
 bun dw          # provision-if-needed is a no-op without Neon; starts the app
 bun dw run      # same stack; stripe listen attaches when STRIPE_SANDBOX_SECRET_KEY is present
@@ -37,6 +44,7 @@ bun dw identify # URLs / ports
 ```
 
 Stack: server `:8080`, vite `:3000`, checkout `:3001`, workers, leaf `:3099`.
+`eve` is skipped under `DW_HEADLESS=1` (`npx eve` hits `EOVERRIDE` / drizzle catalog).
 
 Non-blocking noise: `trigger` waits for a login; `leaf` may crash without
 `SLACK_*` / `FIRECRAWL_API_KEY`.

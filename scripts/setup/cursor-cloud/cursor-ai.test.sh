@@ -108,4 +108,20 @@ count="$(grep -c '^export EXECUTOR_API_KEY=' "$tmp/env.sh" || true)"
 [[ "$count" == "1" ]] || fail "expected 1 EXECUTOR_API_KEY export, got $count"
 pass "configure-executor-mcp.sh writes env.sh + mcp.json"
 
+# --- isolation overlay wins over laptop Redis :6380 -------------------------
+export CACHE_V2_DRAGONFLY_URL="redis://localhost:6380"
+export MISC_CACHE_DRAGONFLY_PRIVATE_URL="rediss://dragonfly.example:6385"
+export NEON_WORKTREE_API_KEY="should-unset"
+got="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" printenv CACHE_V2_DRAGONFLY_URL)"
+[[ "$got" == "redis://localhost:6379" ]] || fail "CACHE_V2_DRAGONFLY_URL overlay, got $got"
+if bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" printenv MISC_CACHE_DRAGONFLY_PRIVATE_URL >/dev/null 2>&1; then
+	val="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" printenv MISC_CACHE_DRAGONFLY_PRIVATE_URL || true)"
+	[[ -z "$val" ]] || fail "private dragonfly URL should be unset, got $val"
+fi
+neon="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" bash -c 'printf %s "${NEON_WORKTREE_API_KEY-}"')"
+[[ -z "$neon" ]] || fail "NEON_WORKTREE_API_KEY should be unset"
+sqs="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" printenv SQS_QUEUE_URL)"
+[[ "$sqs" == *localhost:9324* ]] || fail "SQS overlay, got $sqs"
+pass "with-isolation.sh overlays Infisical laptop Redis/SQS"
+
 echo "all cursor_ai.py tests passed"
