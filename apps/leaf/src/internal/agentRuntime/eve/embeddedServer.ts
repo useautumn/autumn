@@ -7,7 +7,7 @@ const CHAT_PORT = process.env.CHAT_PORT ?? process.env.PORT ?? "3099";
 /** Runs eve inside the leaf task: leaf reaches it over loopback, matching
  * EVE_SERVER_URL's default, so prod needs no extra service or domain. */
 export const startEmbeddedEveServer = async () => {
-	const leafRoot = new URL("../../../", import.meta.url).pathname;
+	const leafRoot = new URL("../../../../", import.meta.url).pathname;
 	// Session journals go to the chat DB (namespaced schemas) so they survive
 	// redeploys; unset both vars and sessions fall back to ephemeral local files.
 	const workflowPostgresUrl =
