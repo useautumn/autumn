@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Idempotent: start Cloud ngrok tunnels if needed, write public-urls.txt, exit.
-# bun dw setup/run calls this. The ngrok terminal then stays attached.
+# bun dw identify / setup / run call this. The ngrok terminal then stays attached.
 # Random domains — reserved NGROK_API_KEY names collide across Cloud VMs.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
@@ -24,6 +24,10 @@ if [ -z "${NGROK_AUTHTOKEN:-}" ] && [ -n "${INFISICAL_TOKEN:-}" ]; then
 	NGROK_AUTHTOKEN="${NGROK_AUTHTOKEN%%$'\n'*}"
 	export NGROK_AUTHTOKEN
 fi
+
+# Infisical also injects NGROK_API_KEY (reserved domains). Those names collide
+# across Cloud VMs — this config uses random *.ngrok.app instead.
+unset NGROK_API_KEY
 
 write_tunnels() {
 	python3 - "$URLS" <<'PY'

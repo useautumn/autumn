@@ -1,4 +1,5 @@
 import { cloudPublicUrls } from "../helpers/cloudPublicUrls.ts";
+import { ensureHeadlessNgrok } from "../helpers/ensureHeadlessNgrok.ts";
 import { isPlainCanonical, isProvisioned } from "../helpers/entry.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
 import { isHeadless } from "../helpers/headless.ts";
@@ -9,11 +10,17 @@ import { tmuxSessionName } from "../helpers/tmux.ts";
 export function cmdIdentify(): void {
 	const cwd = getCurrentWorktree();
 	const registry = loadRegistry();
-	const entry = registry[cwd];
+	let entry = registry[cwd];
 	if (!entry) {
 		console.error(`[dw] no registered worktree at ${cwd}`);
 		console.error(`     run 'bun dw' here first to provision one`);
 		process.exit(1);
+	}
+
+	// Cloud: identify is how you ask for the public URL. Start the tunnel
+	// here so `bun dw identify` does not depend on a prior setup/run.
+	if (isHeadless()) {
+		entry = ensureHeadlessNgrok(entry);
 	}
 
 	const { worktreeNum, branchName, gitBranch } = entry;
@@ -49,7 +56,7 @@ export function cmdIdentify(): void {
 			: ngrokViteUrl
 				? "(none — vite tunnel below)"
 				: isHeadless()
-					? "(canonical — no ngrok; bun dw setup starts the Cloud tunnel)"
+					? "(no public tunnel — NGROK_AUTHTOKEN missing from Infisical dev)"
 					: "(canonical — no ngrok)");
 
 	const branchLabel =

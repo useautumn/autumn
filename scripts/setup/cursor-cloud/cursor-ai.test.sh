@@ -147,6 +147,10 @@ console.log("ok");
 [[ "$got" == "ok" ]] || fail "parseCloudPublicUrls, got $got"
 pass "identify Cloud public-urls parser"
 
+grep -q 'ensureHeadlessNgrok(entry)' "$ROOT/scripts/dw/commands/identify.ts" \
+	|| fail "identify must start the Cloud tunnel"
+pass "bun dw identify starts Cloud ngrok"
+
 # ngrok-up without a token must not hang (bun dw setup calls this)
 timeout 8 bash "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" >/tmp/ngrok-up.out 2>&1 || true
 if grep -q "no NGROK_AUTHTOKEN or ngrok binary" /tmp/ngrok-up.out \
