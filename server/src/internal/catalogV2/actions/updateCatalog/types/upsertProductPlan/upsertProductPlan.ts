@@ -4,6 +4,7 @@ import type {
 } from "@autumn/shared";
 import type { EntitlementPricesPlan } from "@/internal/products/actions/computeEntitlementPricesPlan";
 import type { FreeTrialPlan } from "./freeTrialPlan";
+import type { PlanLicensePlan } from "./planLicensePlan";
 import type { ProductDetailsPlan } from "./productDetailsPlan";
 
 export type UpsertProductOp = "create" | "update" | "none";
@@ -47,6 +48,8 @@ export type UpsertProductPlan = {
 	entitlementPricesPlan?: EntitlementPricesPlan;
 	/** Absent = free-trial facet unchanged (or omitted). */
 	freeTrialPlan?: FreeTrialPlan;
+	/** Absent = plan_license links untouched. Present (incl. []) = full-set replace. */
+	planLicenses?: PlanLicensePlan[];
 
 	state: { hasCustomers: boolean };
 };

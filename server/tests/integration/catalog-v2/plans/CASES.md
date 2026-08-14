@@ -438,7 +438,9 @@ customers **and** latest.
 | Latest + customers + multi-version → `options: [existing, new_version, all_versions]` | ✓ |
 | **Pinned `version: 1` (not latest) + customers → `options` has `existing`+`all_versions`, never `new_version`** | ✓ |
 | `versioning: "new_version"` preview → `create` row, `resolved: new_version`, `plan_change` from base | ✓ |
-| `all_versions` → one preview row per version; each `resolved: all_versions` | ✓ |
+| `all_versions` → one direct preview row; other versions nest under `sibling_versions` selected:true with `plan_change` | ✓ |
+| 2-version plan, update latest without `all_versions` → `sibling_versions` has v1 selected:false, no `plan_change` | ✓ |
+| Two direct entries pinning v1 and v2 → both rows omit `sibling_versions` | ✓ |
 
 ## 14. Free trials — `update/update-plan-free-trial.test.ts` + `validation/free-trial-validation.test.ts`
 
@@ -620,6 +622,20 @@ targeted versions cover every customer-bearing version. Ops bucket by customize 
 | Case |
 |---|
 | `all_versions` + direct per-version override ordering |
-| Variants / licenses in catalog params |
+| Variants in catalog params |
 | `create_in_stripe` behavior (currently unused) |
 | In-place `updated` EP bucket (never populated today) |
+| License parent propagation / `parent_license_plans` lane / child→parent conflicts |
+
+## 17. Plan licenses (declared links) — `licenses/plan-licenses*.test.ts`
+
+Direct parent `licenses[]` only. Omit = leave links unchanged; present = full-set replace.
+
+| Case | Status |
+|---|---|
+| Create parent + child in one batch with `licenses:[child]` → link exists; preview lane shows it | ✓ |
+| Update parent adding a license with customize (add_items/price) → `customized:true`, effective ents reflect customize | ✓ |
+| Parent declares `licenses: []` → links removed | ✓ |
+| Declared `license_plan_id` that doesn't exist → 4xx (`product_not_found`) | ✓ |
+| Licensed plan cannot offer its own licenses | ✓ |
+| Preview: declared `licenses[]` shows planned set; omitted key echoes current links | ✓ |

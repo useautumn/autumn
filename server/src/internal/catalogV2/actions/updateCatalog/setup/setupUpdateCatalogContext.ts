@@ -2,6 +2,7 @@ import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupPreviewCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/setup/preview/setupPreviewCatalogContext";
 import { setupFeatureStatesContext } from "@/internal/catalogV2/actions/updateCatalog/setup/setupFeatureStatesContext";
+import { setupLicenseStatesContext } from "@/internal/catalogV2/actions/updateCatalog/setup/setupLicenseStatesContext";
 import { setupProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/setup/setupProductStatesContext";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 
@@ -21,5 +22,17 @@ export const setupUpdateCatalogContext = async ({
 			preview ? setupPreviewCatalogContext({ ctx, params }) : undefined,
 		]);
 
-	return { featureStatesContext, productStatesContext, previewContext };
+	// Needs the loaded parents' current links, so it runs after product states.
+	const licenseStatesContext = await setupLicenseStatesContext({
+		ctx,
+		params,
+		productStatesContext,
+	});
+
+	return {
+		featureStatesContext,
+		productStatesContext,
+		licenseStatesContext,
+		previewContext,
+	};
 };

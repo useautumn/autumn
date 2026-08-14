@@ -120,6 +120,50 @@ const sweepUnreferencedCustomRows = async ({
 	}
 };
 
+/** Pure write: replace a link's junction rows with the given ref sets. */
+const setItems = async ({
+	db,
+	planLicenseId,
+	entitlementIds,
+	priceIds,
+}: {
+	db: DrizzleCli;
+	planLicenseId: string;
+	entitlementIds: string[];
+	priceIds: string[];
+}) => {
+	const now = Date.now();
+	await db
+		.delete(licenseEntitlements)
+		.where(eq(licenseEntitlements.plan_license_id, planLicenseId));
+	await db
+		.delete(licensePrices)
+		.where(eq(licensePrices.plan_license_id, planLicenseId));
+
+	const uniqueEntitlementIds = [...new Set(entitlementIds)];
+	const uniquePriceIds = [...new Set(priceIds)];
+	if (uniqueEntitlementIds.length > 0) {
+		await db.insert(licenseEntitlements).values(
+			uniqueEntitlementIds.map((entitlementId) => ({
+				id: generateId("lic_ent"),
+				plan_license_id: planLicenseId,
+				entitlement_id: entitlementId,
+				created_at: now,
+			})),
+		);
+	}
+	if (uniquePriceIds.length > 0) {
+		await db.insert(licensePrices).values(
+			uniquePriceIds.map((priceId) => ({
+				id: generateId("lic_pr"),
+				plan_license_id: planLicenseId,
+				price_id: priceId,
+				created_at: now,
+			})),
+		);
+	}
+};
+
 /**
  * Replace-set a link's items: new rows in, old rows out, then
  * formerly-referenced is_custom rows are swept when nothing (no link, no
@@ -283,6 +327,7 @@ const cloneItems = async ({
 
 export const licenseItemRepo = {
 	listByPlanLicenseIds,
+	setItems,
 	replaceItems,
 	cloneItems,
 	listReferencedEntitlementIds,

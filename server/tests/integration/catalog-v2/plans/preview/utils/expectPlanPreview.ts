@@ -1,14 +1,26 @@
 import { expect } from "bun:test";
-import type { PreviewUpdateCatalogResponse } from "@autumn/shared";
+import type {
+	ApiPlanLicenseV1,
+	CatalogSiblingVersionPreview,
+	PreviewUpdateCatalogResponse,
+} from "@autumn/shared";
 import { PreviewUpdateCatalogResponseSchema } from "@autumn/shared";
 
 type PlanPreviewRow = PreviewUpdateCatalogResponse["plans"][number];
 type PlanPreviewChange = NonNullable<PlanPreviewRow["plan_change"]>;
 type PlanPreviewVersioning = NonNullable<PlanPreviewRow["versioning"]>;
 
+type ExpectedSiblingVersion = {
+	version: number;
+	selected: boolean;
+	hasCustomers?: boolean;
+	/** true = plan_change present; false/null = absent. */
+	hasPlanChange?: boolean;
+};
+
 type ExpectedPlanPreviewRow = {
 	planId: string;
-	/** Disambiguate when all_versions emits one preview row per version. */
+	/** Disambiguate when multiple direct entries share a plan_id. */
 	currentVersion?: number;
 	action?: PlanPreviewRow["action"];
 	name?: string;
@@ -25,6 +37,10 @@ type ExpectedPlanPreviewRow = {
 	priceChange?: PlanPreviewChange["price_change"] | null;
 	freeTrialChange?: PlanPreviewChange["free_trial_change"] | null;
 	itemChanges?: PlanPreviewChange["item_changes"];
+	/** Containment over sibling_versions; pass `null` to assert the lane is omitted. */
+	siblingVersions?: ExpectedSiblingVersion[] | null;
+	/** Containment over licenses; pass `null` to assert the lane is omitted. */
+	licenses?: ApiPlanLicenseV1[] | null;
 };
 
 const expectAbsent = (value: unknown) => {
@@ -55,9 +71,7 @@ export const findPlanPreviewRow = ({
 				candidate.versioning?.current_version === currentVersion),
 	);
 	const label =
-		currentVersion === undefined
-			? planId
-			: `${planId} v${currentVersion}`;
+		currentVersion === undefined ? planId : `${planId} v${currentVersion}`;
 	expect(row, `missing preview row for plan ${label}`).toBeDefined();
 	if (!row) throw new Error(`missing preview row for plan ${label}`);
 	return row;
@@ -142,6 +156,43 @@ export const expectPlanPreviewRowCorrect = ({
 	}
 	if (expected.itemChanges !== undefined) {
 		expect(row.plan_change?.item_changes ?? []).toEqual(expected.itemChanges);
+	}
+	if (expected.siblingVersions !== undefined) {
+		if (expected.siblingVersions === null) {
+			expect(row.sibling_versions).toBeUndefined();
+		} else {
+			expect(row.sibling_versions).toHaveLength(
+				expected.siblingVersions.length,
+			);
+			for (const expectedSibling of expected.siblingVersions) {
+				const sibling = row.sibling_versions?.find(
+					(candidate: CatalogSiblingVersionPreview) =>
+						candidate.version === expectedSibling.version,
+				);
+				expect(
+					sibling,
+					`missing sibling_versions entry for v${expectedSibling.version}`,
+				).toBeDefined();
+				expect(sibling?.selected).toBe(expectedSibling.selected);
+				if (expectedSibling.hasCustomers !== undefined) {
+					expect(sibling?.state.has_customers).toBe(
+						expectedSibling.hasCustomers,
+					);
+				}
+				if (expectedSibling.hasPlanChange === true) {
+					expectPresent(sibling?.plan_change);
+				} else if (expectedSibling.hasPlanChange === false) {
+					expectAbsent(sibling?.plan_change);
+				}
+			}
+		}
+	}
+	if (expected.licenses !== undefined) {
+		if (expected.licenses === null) {
+			expect(row.licenses).toBeUndefined();
+		} else {
+			expect(row.licenses).toEqual(expected.licenses);
+		}
 	}
 };
 

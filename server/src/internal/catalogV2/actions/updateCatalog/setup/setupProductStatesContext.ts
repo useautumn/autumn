@@ -12,9 +12,9 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 
 /**
- * Batch-load every plan_id (and new_plan_id) in the payload: all versions as
- * FullProduct, per-row customer usage + versionable row refs, and reward
- * programs for rename gates. Row targeting happens in compute's expand step.
+ * Batch-load every plan_id (and new_plan_id) in the payload plus declared
+ * license children: all versions as FullProduct, per-row customer usage +
+ * versionable row refs, and reward programs for rename gates.
  */
 export const setupProductStatesContext = async ({
 	ctx,
@@ -29,11 +29,11 @@ export const setupProductStatesContext = async ({
 
 	const allPlanIds = [
 		...new Set(
-			planEntries.flatMap((entry) =>
-				entry.new_plan_id
-					? [entry.plan_id, entry.new_plan_id]
-					: [entry.plan_id],
-			),
+			planEntries.flatMap((entry) => [
+				entry.plan_id,
+				...(entry.new_plan_id ? [entry.new_plan_id] : []),
+				...(entry.licenses?.map((license) => license.license_plan_id) ?? []),
+			]),
 		),
 	];
 

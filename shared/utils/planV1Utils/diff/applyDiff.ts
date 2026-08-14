@@ -25,7 +25,7 @@ const applyPrice = (
 };
 
 const itemMatchesFilter = (
-	item: ApiPlanItem,
+	item: ApiPlanItem | CreatePlanItemParamsV1,
 	filter: PlanItemFilter,
 ): boolean => {
 	if (filter.feature_id !== undefined && item.feature_id !== filter.feature_id)
@@ -122,6 +122,39 @@ const applyItems = (
 		}
 	}
 	return items;
+};
+
+/** applyItems in CreatePlanItemParams space — same remove/add semantics,
+ * without ApiPlan normalization. */
+export const applyPlanItemParamsDiff = ({
+	items,
+	add_items,
+	remove_items,
+}: {
+	items: CreatePlanItemParamsV1[];
+	add_items?: CreatePlanItemParamsV1[];
+	remove_items?: PlanItemFilter[];
+}): CreatePlanItemParamsV1[] => {
+	let next = [...items];
+	if (remove_items) {
+		next = next.filter(
+			(item) => !remove_items.some((filter) => itemMatchesFilter(item, filter)),
+		);
+	}
+	if (add_items) {
+		const entitlementKeys = new Set(
+			next.filter(isFreeNonResetEntitlement).map(composeMatchKey),
+		);
+		for (const addItem of add_items) {
+			if (isFreeNonResetEntitlement(addItem)) {
+				const key = composeMatchKey(addItem);
+				if (entitlementKeys.has(key)) continue;
+				entitlementKeys.add(key);
+			}
+			next.push(addItem);
+		}
+	}
+	return next;
 };
 
 const applyFreeTrial = (

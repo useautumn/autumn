@@ -7,14 +7,21 @@ export const resolveUpsertOp = ({
 	detailsChanged,
 	entitlementPricesPlan,
 	freeTrialChanged,
+	planLicensesChanged = false,
 }: {
 	currentFullProduct: FullProduct | null;
 	detailsChanged: boolean;
 	entitlementPricesPlan?: EntitlementPricesPlan;
 	freeTrialChanged: boolean;
+	planLicensesChanged?: boolean;
 }): UpsertProductOp => {
 	if (!currentFullProduct) return "create";
-	if (detailsChanged || entitlementPricesPlan || freeTrialChanged)
+	if (
+		detailsChanged ||
+		entitlementPricesPlan ||
+		freeTrialChanged ||
+		planLicensesChanged
+	)
 		return "update";
 	return "none";
 };

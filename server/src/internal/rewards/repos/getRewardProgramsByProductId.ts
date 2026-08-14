@@ -3,10 +3,10 @@ import {
 	RewardTriggerEvent,
 	rewardPrograms,
 } from "@autumn/shared";
-import { and, arrayContains, eq } from "drizzle-orm";
+import { and, arrayOverlaps, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Find checkout-triggered reward programs matching product IDs */
+/** Find checkout-triggered reward programs referencing ANY of the product IDs. */
 export const getRewardProgramsByProductId = async ({
 	db,
 	productIds,
@@ -23,7 +23,7 @@ export const getRewardProgramsByProductId = async ({
 			eq(rewardPrograms.org_id, orgId),
 			eq(rewardPrograms.env, env),
 			eq(rewardPrograms.when, RewardTriggerEvent.Checkout),
-			arrayContains(rewardPrograms.product_ids, productIds),
+			arrayOverlaps(rewardPrograms.product_ids, productIds),
 		),
 	});
 

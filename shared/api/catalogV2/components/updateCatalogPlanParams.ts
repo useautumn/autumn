@@ -1,5 +1,6 @@
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1.js";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
+import { PlanLicenseParamsSchema } from "@api/products/crud/licenses/planLicenseParams.js";
 import { MigrationParamsSchema } from "@api/products/crud/migrationParams.js";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
@@ -16,7 +17,7 @@ export const CatalogPlanVersioningStrategySchema = z.enum([
 
 /**
  * CatalogV2 plan entry — create/update fields only.
- * Variants and licenses are rejected until those slices land.
+ * Variants stay out until that slice lands.
  */
 export const UpdateCatalogPlanParamsSchema = z.object({
 	plan_id: z.string().nonempty().regex(idRegex).meta({
@@ -63,6 +64,11 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 	}),
 	items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
 		description: "Feature configurations for this plan.",
+	}),
+	licenses: z.array(PlanLicenseParamsSchema).optional().meta({
+		internal: true,
+		description:
+			"Plans offered as assignable licenses under this plan. Omit to leave links unchanged.",
 	}),
 	free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
 		description: "Free trial. Omit to leave unchanged; null removes it.",

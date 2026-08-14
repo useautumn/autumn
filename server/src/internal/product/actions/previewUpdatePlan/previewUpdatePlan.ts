@@ -1,4 +1,5 @@
 import {
+	type ApiPlanExpandedV1,
 	diffPlanV1,
 	type FullProduct,
 	type PlanUpdatePreview,
@@ -50,20 +51,21 @@ export const buildPlanUpdatePreview = async ({
 		product: incomingProductV2,
 	});
 
-	const [currentPlan, previewPlan] = await Promise.all([
-		getPlanResponse({
-			ctx,
-			product: currentFullProduct,
-			features: ctx.features,
-			currency,
-		}),
-		getPlanResponse({
-			ctx,
-			product: incomingFullProduct,
-			features: ctx.features,
-			currency,
-		}),
-	]);
+	const [currentPlan, previewPlan]: [ApiPlanExpandedV1, ApiPlanExpandedV1] =
+		await Promise.all([
+			getPlanResponse({
+				ctx,
+				product: currentFullProduct,
+				features: ctx.features,
+				currency,
+			}),
+			getPlanResponse({
+				ctx,
+				product: incomingFullProduct,
+				features: ctx.features,
+				currency,
+			}),
+		]);
 
 	const versionable = planWouldVersion({
 		ctx,

@@ -376,7 +376,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 preview-versioning: all_versions → one row per version")}`,
+	`${chalk.yellowBright("catalogV2 preview-versioning: all_versions → one direct row, siblings selected")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_pv_all");
@@ -403,14 +403,121 @@ test.concurrent(
 			PreviewUpdateCatalogResponseSchema.parse(preview);
 
 			const rows = preview.plans.filter((p) => p.plan_id === planId);
-			expect(rows.length).toBeGreaterThanOrEqual(2);
-			const versions = rows.map((r) => r.versioning?.current_version).sort();
-			expect(versions).toEqual([1, 2]);
-			for (const row of rows) {
-				expect(row.versioning?.resolved).toBe("all_versions");
-				expect(row.versioning?.new_version).toBeNull();
-				expect(row.versioning?.options).toEqual(["all_versions"]);
-			}
+			expect(rows).toHaveLength(1);
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId,
+					action: "update",
+					versioning: {
+						current_version: 2,
+						new_version: null,
+						resolved: "all_versions",
+						options: ["all_versions"],
+					},
+					siblingVersions: [
+						{
+							version: 1,
+							selected: true,
+							hasCustomers: false,
+							hasPlanChange: true,
+						},
+					],
+				},
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 preview-versioning: 2-version latest without all_versions → sibling unselected")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_pv_sib");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, name: "V1" }],
+			});
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, version: 2, name: "V2" }],
+			});
+
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [{ plan_id: planId, name: "V2 Renamed" }],
+				}),
+			);
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId,
+					action: "update",
+					versioning: {
+						current_version: 2,
+						new_version: null,
+						resolved: "existing",
+						options: ["all_versions"],
+					},
+					siblingVersions: [
+						{
+							version: 1,
+							selected: false,
+							hasCustomers: false,
+							hasPlanChange: false,
+						},
+					],
+				},
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 preview-versioning: two direct entries for same plan → no sibling_versions")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_pv_multi");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, name: "V1" }],
+			});
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, version: 2, name: "V2" }],
+			});
+
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [
+						{ plan_id: planId, version: 1, name: "V1 Edited" },
+						{ plan_id: planId, version: 2, name: "V2 Edited" },
+					],
+				}),
+			);
+			expect(preview.plans.filter((p) => p.plan_id === planId)).toHaveLength(2);
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId,
+					currentVersion: 1,
+					action: "update",
+					siblingVersions: null,
+				},
+			});
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId,
+					currentVersion: 2,
+					action: "update",
+					siblingVersions: null,
+				},
+			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
