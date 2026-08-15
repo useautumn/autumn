@@ -18,6 +18,7 @@ import {
 } from "@/external/motherduck/initMotherDuck.js";
 import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
+import { withActiveSpan } from "@/utils/otel/withActiveSpan.js";
 import { buildSearchPredicates } from "./CusSearchService.js";
 
 /** `total` is the value of the REQUESTED basis (remaining/granted/usage) —
@@ -238,30 +239,53 @@ export const getDeflationExceptionRows = async ({
 	env: AppEnv;
 	internalFeatureId: string;
 	basis: FeatureBalanceSortBasis;
-}): Promise<FeatureBalanceSortRow[]> => {
-	const miscRedis = getMiscRedis();
-	const cacheKey = deflationSetCacheKey({ internalFeatureId, basis });
+}): Promise<FeatureBalanceSortRow[]> =>
+	withActiveSpan({
+		name: "customer.balance_sort.deflation",
+		attributes: {
+			"customer.balance_sort.feature_internal_id": internalFeatureId,
+			"customer.balance_sort.basis": basis,
+		},
+		fn: async (span) => {
+			const miscRedis = getMiscRedis();
+			const cacheKey = deflationSetCacheKey({ internalFeatureId, basis });
 
-	const cached = await tryRedisOp({
-		operation: () => miscRedis.get(cacheKey),
-		source: "balance-sort:deflation-set:get",
-		redisInstance: miscRedis,
-	});
-	if (cached) {
-		return (JSON.parse(cached) as [string, boolean, number][]).map(
-			([internalId, isUnlimited, total]) => ({
-				internalId,
-				isUnlimited,
-				total,
-			}),
-		);
-	}
+			const cached = await withActiveSpan({
+				name: "customer.balance_sort.deflation.cache_lookup",
+				fn: async (cacheSpan) => {
+					const result = await tryRedisOp({
+						operation: () => miscRedis.get(cacheKey),
+						source: "balance-sort:deflation-set:get",
+						redisInstance: miscRedis,
+					});
+					cacheSpan.setAttribute("cache.hit", Boolean(result));
+					return result;
+				},
+			});
+			if (cached) {
+				const rows = (JSON.parse(cached) as [string, boolean, number][]).map(
+					([internalId, isUnlimited, total]) => ({
+						internalId,
+						isUnlimited,
+						total,
+					}),
+				);
+				span.setAttributes({
+					"customer.balance_sort.cache_hit": true,
+					"customer.balance_sort.deflation_rows": rows.length,
+				});
+				return rows;
+			}
+			span.setAttribute("customer.balance_sort.cache_hit", false);
 
-	// Deflation sources = negative rows the lake counts but the live definition
-	// excludes: pooled contributions, and rows bound to non-active products
-	// (status-based — the lazily-backfilled `expired` flag misses churned rows).
-	const tStart = performance.now();
-	const idRows = await db.execute<{ internal_customer_id: string }>(sql`
+			// Deflation sources = negative rows the lake counts but the live definition
+			// excludes: pooled contributions, and rows bound to non-active products
+			// (status-based — the lazily-backfilled `expired` flag misses churned rows).
+			const tStart = performance.now();
+			const idRows = await withActiveSpan({
+				name: "customer.balance_sort.deflation.scan",
+				fn: async (scanSpan) => {
+					const result = await db.execute<{ internal_customer_id: string }>(sql`
 		SELECT DISTINCT ce.internal_customer_id
 		FROM customer_entitlements ce
 		LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
@@ -277,45 +301,83 @@ export const getDeflationExceptionRows = async ({
 		LIMIT ${DEFLATION_SET_CAP}
 		${planetScaleTag({ query: "balanceSortDeflationSet" })}
 	`);
-	if (idRows.length >= DEFLATION_SET_CAP) {
-		logger.warn(
-			`[balanceSort] deflation set hit cap (${DEFLATION_SET_CAP}) for feature ${internalFeatureId} — under-ranked customers beyond the cap can be missed`,
-		);
-	}
+					scanSpan.setAttribute(
+						"customer.balance_sort.candidate_rows",
+						result.length,
+					);
+					return result;
+				},
+			});
+			span.setAttribute(
+				"customer.balance_sort.deflation_candidate_rows",
+				idRows.length,
+			);
+			if (idRows.length >= DEFLATION_SET_CAP) {
+				logger.warn(
+					`[balanceSort] deflation set hit cap (${DEFLATION_SET_CAP}) for feature ${internalFeatureId} — under-ranked customers beyond the cap can be missed`,
+				);
+			}
 
-	// Exact values computed without search/filters: the set is feature-scoped
-	// and reused across requests; per-request predicates apply at merge time.
-	const rows =
-		idRows.length === 0
-			? []
-			: await verifyExactBalances({
-					db,
-					orgId,
-					env,
-					search: "",
-					filters: undefined,
-					internalFeatureId,
-					internalCustomerIds: idRows.map((row) => row.internal_customer_id),
-					basis,
-				});
+			// Exact values computed without search/filters: the set is feature-scoped
+			// and reused across requests; per-request predicates apply at merge time.
+			const rows = await withActiveSpan({
+				name: "customer.balance_sort.deflation.verify",
+				attributes: {
+					"customer.balance_sort.candidate_rows": idRows.length,
+				},
+				fn: async (verifySpan) => {
+					const result =
+						idRows.length === 0
+							? []
+							: await verifyExactBalances({
+									db,
+									orgId,
+									env,
+									search: "",
+									filters: undefined,
+									internalFeatureId,
+									internalCustomerIds: idRows.map(
+										(row) => row.internal_customer_id,
+									),
+									basis,
+								});
+					verifySpan.setAttribute(
+						"customer.balance_sort.verified_rows",
+						result.length,
+					);
+					return result;
+				},
+			});
 
-	logger.info(
-		`[balanceSort] deflation set for ${internalFeatureId}: ${rows.length} customers in ${(performance.now() - tStart).toFixed(0)}ms`,
-	);
+			logger.info(
+				`[balanceSort] deflation set for ${internalFeatureId}: ${rows.length} customers in ${(performance.now() - tStart).toFixed(0)}ms`,
+			);
 
-	await tryRedisOp({
-		operation: () =>
-			miscRedis.set(
-				cacheKey,
-				JSON.stringify(rows.map((r) => [r.internalId, r.isUnlimited, r.total])),
-				"EX",
-				DEFLATION_SET_TTL_SECONDS,
-			),
-		source: "balance-sort:deflation-set:set",
-		redisInstance: miscRedis,
+			await withActiveSpan({
+				name: "customer.balance_sort.deflation.cache_write",
+				attributes: {
+					"customer.balance_sort.deflation_rows": rows.length,
+					"cache.ttl_seconds": DEFLATION_SET_TTL_SECONDS,
+				},
+				fn: async () =>
+					await tryRedisOp({
+						operation: () =>
+							miscRedis.set(
+								cacheKey,
+								JSON.stringify(
+									rows.map((r) => [r.internalId, r.isUnlimited, r.total]),
+								),
+								"EX",
+								DEFLATION_SET_TTL_SECONDS,
+							),
+						source: "balance-sort:deflation-set:set",
+						redisInstance: miscRedis,
+					}),
+			});
+			span.setAttribute("customer.balance_sort.deflation_rows", rows.length);
+			return rows;
+		},
 	});
-	return rows;
-};
 
 /** Desc ranks unlimited first then largest totals; asc is the exact mirror. */
 const compareRows = (
@@ -424,117 +486,208 @@ export const resolveInternalIdsByFeatureBalanceSort = async ({
 	sortOrder?: SortOrder;
 	basis?: FeatureBalanceSortBasis;
 	remainingFilter?: BalanceThresholdFilter;
-}): Promise<{ rows: FeatureBalanceSortRow[]; hasMore: boolean }> => {
-	const md = await getMotherDuckResolverDb();
+}): Promise<{ rows: FeatureBalanceSortRow[]; hasMore: boolean }> =>
+	withActiveSpan({
+		name: "customer.balance_sort.resolve",
+		attributes: {
+			"customer.balance_sort.feature_internal_id": internalFeatureId,
+			"customer.balance_sort.basis": basis,
+			"customer.balance_sort.order": sortOrder,
+			"customer.balance_sort.limit": limit,
+			"customer.balance_sort.has_cursor": Boolean(cursor),
+			"customer.balance_sort.has_search": Boolean(search.trim()),
+			"customer.balance_sort.has_filters": Boolean(filters),
+			"customer.balance_sort.has_threshold": Boolean(remainingFilter),
+		},
+		fn: async (span) => {
+			const md = await getMotherDuckResolverDb();
 
-	const verifiedById = new Map<string, FeatureBalanceSortRow>();
+			const verifiedById = new Map<string, FeatureBalanceSortRow>();
+			let iterationCount = 0;
+			let nominationCount = 0;
+			let verifiedCount = 0;
 
-	// Deflation exceptions ride along from page one: their lake rank is wrong
-	// by construction, so only their (cached-exact) values can place them.
-	const exceptionRows = await getDeflationExceptionRows({
-		db,
-		orgId,
-		env,
-		internalFeatureId,
-		basis,
-	});
-	const exceptionIds = new Set(exceptionRows.map((row) => row.internalId));
+			// Deflation exceptions ride along from page one: their lake rank is wrong
+			// by construction, so only their (cached-exact) values can place them.
+			const exceptionRows = await getDeflationExceptionRows({
+				db,
+				orgId,
+				env,
+				internalFeatureId,
+				basis,
+			});
+			const exceptionIds = new Set(exceptionRows.map((row) => row.internalId));
 
-	let nominationAfter: NominationCursor | null = cursor
-		? { u: cursor.u, b: cursor.b, id: cursor.id }
-		: null;
-	let nominationsExhausted = false;
+			let nominationAfter: NominationCursor | null = cursor
+				? { u: cursor.u, b: cursor.b, id: cursor.id }
+				: null;
+			let nominationsExhausted = false;
 
-	for (let iteration = 0; iteration < MAX_TOPUP_ITERATIONS; iteration++) {
-		const nominationRows = (await runMdWithTimeout({
-			label: "balance-sort nomination",
-			run: () =>
-				md.execute(
-					nominationQuery({
-						internalFeatureId,
-						after: nominationAfter,
-						sortOrder,
-						basis,
-						remainingFilter,
-					}),
-				),
-		})) as unknown as {
-			internal_customer_id: string;
-			is_unlimited: boolean;
-			total: number | string;
-		}[];
+			for (let iteration = 0; iteration < MAX_TOPUP_ITERATIONS; iteration++) {
+				iterationCount = iteration + 1;
+				const nominationRows = await withActiveSpan({
+					name: "customer.balance_sort.nominate",
+					attributes: {
+						"customer.balance_sort.iteration": iteration,
+						"customer.balance_sort.has_nomination_cursor":
+							Boolean(nominationAfter),
+					},
+					fn: async (nominationSpan) => {
+						const result = (await runMdWithTimeout({
+							label: "balance-sort nomination",
+							run: () =>
+								md.execute(
+									nominationQuery({
+										internalFeatureId,
+										after: nominationAfter,
+										sortOrder,
+										basis,
+										remainingFilter,
+									}),
+								),
+						})) as unknown as {
+							internal_customer_id: string;
+							is_unlimited: boolean;
+							total: number | string;
+						}[];
+						nominationSpan.setAttribute(
+							"customer.balance_sort.nomination_rows",
+							result.length,
+						);
+						return result;
+					},
+				});
+				nominationCount += nominationRows.length;
 
-		if (nominationRows.length < NOMINATION_BATCH_SIZE) {
-			nominationsExhausted = true;
-		}
+				if (nominationRows.length < NOMINATION_BATCH_SIZE) {
+					nominationsExhausted = true;
+				}
 
-		const freshIds = nominationRows
-			.map((row) => row.internal_customer_id)
-			.filter((id) => !verifiedById.has(id) && !exceptionIds.has(id));
+				const freshIds = nominationRows
+					.map((row) => row.internal_customer_id)
+					.filter((id) => !verifiedById.has(id) && !exceptionIds.has(id));
 
-		const verified = await verifyExactBalances({
-			db,
-			orgId,
-			env,
-			search,
-			filters,
-			internalFeatureId,
-			internalCustomerIds: freshIds,
-			basis,
-			remainingFilter,
-		});
-		for (const row of verified) verifiedById.set(row.internalId, row);
+				const verified = await withActiveSpan({
+					name: "customer.balance_sort.verify",
+					attributes: {
+						"customer.balance_sort.iteration": iteration,
+						"customer.balance_sort.verify_source": "nomination",
+						"customer.balance_sort.candidate_rows": freshIds.length,
+					},
+					fn: async (verifySpan) => {
+						const result = await verifyExactBalances({
+							db,
+							orgId,
+							env,
+							search,
+							filters,
+							internalFeatureId,
+							internalCustomerIds: freshIds,
+							basis,
+							remainingFilter,
+						});
+						verifySpan.setAttribute(
+							"customer.balance_sort.verified_rows",
+							result.length,
+						);
+						return result;
+					},
+				});
+				verifiedCount += verified.length;
+				for (const row of verified) verifiedById.set(row.internalId, row);
 
-		if (iteration === 0) {
-			// Exceptions get per-request predicates applied via a verify pass too;
-			// cached values only pre-place them when no search/filters narrow the set.
-			const hasRequestPredicates = Boolean(
-				search.trim() ||
-					(filters && Object.values(filters).some((v) => v !== undefined)) ||
-					remainingFilter,
+				if (iteration === 0) {
+					// Exceptions get per-request predicates applied via a verify pass too;
+					// cached values only pre-place them when no search/filters narrow the set.
+					const hasRequestPredicates = Boolean(
+						search.trim() ||
+							(filters &&
+								Object.values(filters).some((v) => v !== undefined)) ||
+							remainingFilter,
+					);
+					const placedExceptions = hasRequestPredicates
+						? await withActiveSpan({
+								name: "customer.balance_sort.verify",
+								attributes: {
+									"customer.balance_sort.iteration": iteration,
+									"customer.balance_sort.verify_source": "deflation",
+									"customer.balance_sort.candidate_rows": exceptionRows.length,
+								},
+								fn: async (verifySpan) => {
+									const result = await verifyExactBalances({
+										db,
+										orgId,
+										env,
+										search,
+										filters,
+										internalFeatureId,
+										internalCustomerIds: exceptionRows.map(
+											(row) => row.internalId,
+										),
+										basis,
+										remainingFilter,
+									});
+									verifySpan.setAttribute(
+										"customer.balance_sort.verified_rows",
+										result.length,
+									);
+									return result;
+								},
+							})
+						: exceptionRows;
+					verifiedCount += placedExceptions.length;
+					for (const row of placedExceptions)
+						verifiedById.set(row.internalId, row);
+				}
+
+				const pageCandidates = [...verifiedById.values()]
+					.filter((row) => !cursor || isAfterCursor(row, cursor, sortOrder))
+					.sort((a, b) => compareRows(a, b, sortOrder));
+
+				if (pageCandidates.length > limit || nominationsExhausted) {
+					span.setAttributes({
+						"customer.balance_sort.iterations": iterationCount,
+						"customer.balance_sort.nomination_rows": nominationCount,
+						"customer.balance_sort.verified_rows": verifiedCount,
+						"customer.balance_sort.result_rows": Math.min(
+							pageCandidates.length,
+							limit,
+						),
+						"customer.balance_sort.nominations_exhausted": nominationsExhausted,
+					});
+					return {
+						rows: pageCandidates.slice(0, limit),
+						hasMore: pageCandidates.length > limit || !nominationsExhausted,
+					};
+				}
+
+				const lastNomination = nominationRows[nominationRows.length - 1];
+				nominationAfter = {
+					u: Boolean(lastNomination.is_unlimited),
+					b: Number(lastNomination.total),
+					id: lastNomination.internal_customer_id,
+				};
+			}
+
+			// Top-up budget exhausted with a page unfilled: heavy filter attrition.
+			// Return what verified; more may exist past the nomination horizon.
+			const pageCandidates = [...verifiedById.values()]
+				.filter((row) => !cursor || isAfterCursor(row, cursor, sortOrder))
+				.sort((a, b) => compareRows(a, b, sortOrder));
+			logger.warn(
+				`[balanceSort] top-up budget exhausted for feature ${internalFeatureId}: ${pageCandidates.length}/${limit} rows after ${MAX_TOPUP_ITERATIONS} batches`,
 			);
-			const placedExceptions = hasRequestPredicates
-				? await verifyExactBalances({
-						db,
-						orgId,
-						env,
-						search,
-						filters,
-						internalFeatureId,
-						internalCustomerIds: exceptionRows.map((r) => r.internalId),
-						basis,
-						remainingFilter,
-					})
-				: exceptionRows;
-			for (const row of placedExceptions) verifiedById.set(row.internalId, row);
-		}
-
-		const pageCandidates = [...verifiedById.values()]
-			.filter((row) => !cursor || isAfterCursor(row, cursor, sortOrder))
-			.sort((a, b) => compareRows(a, b, sortOrder));
-
-		if (pageCandidates.length > limit || nominationsExhausted) {
-			return {
-				rows: pageCandidates.slice(0, limit),
-				hasMore: pageCandidates.length > limit || !nominationsExhausted,
-			};
-		}
-
-		const lastNomination = nominationRows[nominationRows.length - 1];
-		nominationAfter = {
-			u: Boolean(lastNomination.is_unlimited),
-			b: Number(lastNomination.total),
-			id: lastNomination.internal_customer_id,
-		};
-	}
-
-	// Top-up budget exhausted with a page unfilled: heavy filter attrition.
-	// Return what verified; more may exist past the nomination horizon.
-	const pageCandidates = [...verifiedById.values()]
-		.filter((row) => !cursor || isAfterCursor(row, cursor, sortOrder))
-		.sort((a, b) => compareRows(a, b, sortOrder));
-	logger.warn(
-		`[balanceSort] top-up budget exhausted for feature ${internalFeatureId}: ${pageCandidates.length}/${limit} rows after ${MAX_TOPUP_ITERATIONS} batches`,
-	);
-	return { rows: pageCandidates.slice(0, limit), hasMore: true };
-};
+			span.setAttributes({
+				"customer.balance_sort.iterations": iterationCount,
+				"customer.balance_sort.nomination_rows": nominationCount,
+				"customer.balance_sort.verified_rows": verifiedCount,
+				"customer.balance_sort.result_rows": Math.min(
+					pageCandidates.length,
+					limit,
+				),
+				"customer.balance_sort.nominations_exhausted": nominationsExhausted,
+				"customer.balance_sort.topup_budget_exhausted": true,
+			});
+			return { rows: pageCandidates.slice(0, limit), hasMore: true };
+		},
+	});

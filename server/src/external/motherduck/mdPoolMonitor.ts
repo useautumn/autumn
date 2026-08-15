@@ -1,4 +1,5 @@
 import type { DuckDBConnectionPool } from "@duckdbfan/drizzle-duckdb";
+import { SpanKind } from "@opentelemetry/api";
 import {
 	type AcquireStats,
 	computeUtilization,
@@ -7,6 +8,7 @@ import {
 	percentileOf,
 	reservoirInsert,
 } from "@/db/pgPoolMonitor.js";
+import { withActiveSpan } from "@/utils/otel/withActiveSpan.js";
 import { logger } from "../logtail/logtailUtils.js";
 
 type RegisteredMdPool = {
@@ -74,23 +76,45 @@ const timeAcquires = ({ entry }: { entry: RegisteredMdPool }): void => {
 	pool.acquire = (() => {
 		const startedAt = performance.now();
 		entry.waitingCount++;
-		return originalAcquire().then(
-			(connection) => {
-				entry.waitingCount--;
-				entry.busyCount++;
-				recordAcquire({ name, durationMs: performance.now() - startedAt });
-				return connection;
+		return withActiveSpan({
+			name: "motherduck.pool.acquire",
+			kind: SpanKind.CLIENT,
+			attributes: {
+				"motherduck.pool.name": name,
+				"motherduck.pool.max": entry.max,
+				"motherduck.pool.busy_before": entry.busyCount,
+				"motherduck.pool.waiting_before": entry.waitingCount - 1,
 			},
-			(error: Error) => {
-				entry.waitingCount--;
-				recordAcquire({
-					name,
-					durationMs: performance.now() - startedAt,
-					error,
-				});
-				throw error;
+			fn: async (span) => {
+				try {
+					const connection = await originalAcquire();
+					const durationMs = performance.now() - startedAt;
+					entry.waitingCount--;
+					entry.busyCount++;
+					recordAcquire({ name, durationMs });
+					span.setAttributes({
+						"motherduck.pool.acquire_ms": durationMs,
+						"motherduck.pool.busy_after": entry.busyCount,
+						"motherduck.pool.waiting_after": entry.waitingCount,
+					});
+					return connection;
+				} catch (error) {
+					const durationMs = performance.now() - startedAt;
+					entry.waitingCount--;
+					recordAcquire({
+						name,
+						durationMs,
+						error: error as Error,
+					});
+					span.setAttributes({
+						"motherduck.pool.acquire_ms": durationMs,
+						"motherduck.pool.busy_after": entry.busyCount,
+						"motherduck.pool.waiting_after": entry.waitingCount,
+					});
+					throw error;
+				}
 			},
-		);
+		});
 	}) as DuckDBConnectionPool["acquire"];
 
 	pool.release = ((connection) => {
