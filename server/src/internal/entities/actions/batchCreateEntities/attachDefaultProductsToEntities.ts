@@ -8,6 +8,8 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct";
+import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
+import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { setupDefaultProductsContext } from "@/internal/customers/actions/createWithDefaults/setup/setupDefaultProductsContext";
 
 export const attachDefaultProductsToEntities = async ({
@@ -35,26 +37,40 @@ export const attachDefaultProductsToEntities = async ({
 
 	const currentEpochMs = Date.now();
 	for (const entity of entities) {
+		const entityFullCustomer = {
+			...fullCustomer,
+			entity,
+		};
 		const insertCustomerProducts = freeDefaultProducts.map((product) =>
 			initFullCustomerProductFromProduct({
 				ctx,
 				initContext: {
-					fullCustomer: {
-						...fullCustomer,
-						entity: entity,
-					},
+					fullCustomer: entityFullCustomer,
 					fullProduct: product,
 					currentEpochMs,
 				},
 			}),
 		);
+		const autumnBillingPlan = {
+			customerId: fullCustomer.id ?? "",
+			insertCustomerProducts,
+		};
 
 		await executeAutumnBillingPlan({
 			ctx,
-			autumnBillingPlan: {
-				customerId: fullCustomer.id ?? "",
-				insertCustomerProducts,
-			},
+			autumnBillingPlan,
+		});
+
+		await billingPlanToSendProductsUpdated({
+			ctx,
+			autumnBillingPlan,
+			billingContext: { fullCustomer: entityFullCustomer },
+		});
+
+		void sendBillingUpdatedWebhook({
+			ctx,
+			autumnBillingPlan,
+			originalFullCustomer: entityFullCustomer,
 		});
 	}
 };
