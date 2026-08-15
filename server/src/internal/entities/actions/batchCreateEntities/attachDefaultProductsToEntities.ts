@@ -39,6 +39,7 @@ export const attachDefaultProductsToEntities = async ({
 	for (const entity of entities) {
 		const entityFullCustomer = {
 			...fullCustomer,
+			customer_products: [...fullCustomer.customer_products],
 			entity,
 		};
 		const insertCustomerProducts = freeDefaultProducts.map((product) =>
@@ -72,5 +73,10 @@ export const attachDefaultProductsToEntities = async ({
 			autumnBillingPlan,
 			originalFullCustomer: entityFullCustomer,
 		});
+
+		fullCustomer.customer_products = [
+			...fullCustomer.customer_products,
+			...insertCustomerProducts,
+		];
 	}
 };

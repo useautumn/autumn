@@ -67,12 +67,13 @@ beforeEach(() => {
 	calls.length = 0;
 });
 
-describe("entity default product webhooks", () => {
-	test("emits both webhooks after attaching the default product", async () => {
+describe("entity default products", () => {
+	test("emits both webhooks and updates the create response state", async () => {
 		const entity = { id: "entity_1" };
 		const fullCustomer = {
 			id: "customer_1",
 			internal_id: "internal_customer_1",
+			customer_products: [] as (typeof customerProduct)[],
 		};
 		const ctx = {
 			org: { config: { default_applies_to_entities: true } },
@@ -94,14 +95,28 @@ describe("entity default product webhooks", () => {
 			customerId: "customer_1",
 			insertCustomerProducts: [customerProduct],
 		};
+		const webhookCustomer = {
+			id: "customer_1",
+			internal_id: "internal_customer_1",
+			customer_products: [],
+			entity,
+		};
 		expect(calls[0]?.args.autumnBillingPlan).toEqual(autumnBillingPlan);
 		expect(calls[1]?.args).toMatchObject({
 			autumnBillingPlan,
-			billingContext: { fullCustomer: { ...fullCustomer, entity } },
+			billingContext: { fullCustomer: webhookCustomer },
 		});
 		expect(calls[2]?.args).toMatchObject({
 			autumnBillingPlan,
-			originalFullCustomer: { ...fullCustomer, entity },
+			originalFullCustomer: webhookCustomer,
 		});
+		expect(
+			(
+				calls[2]?.args.originalFullCustomer as {
+					customer_products: unknown[];
+				}
+			).customer_products,
+		).toEqual([]);
+		expect(fullCustomer.customer_products).toEqual([customerProduct]);
 	});
 });
