@@ -56,9 +56,9 @@ const get = (path: string) =>
 
 describe("dev-proxy", () => {
 	test("routes /dashboard /backend /leaf /checkout /emulate", async () => {
-		expect(await (await get("/dashboard/")).text()).toBe("vite:/dashboard/");
+		expect(await (await get("/dashboard/")).text()).toBe("vite:/");
 		expect(await (await get("/dashboard/customers")).text()).toBe(
-			"vite:/dashboard/customers",
+			"vite:/customers",
 		);
 		expect(await (await get("/backend/v1/customers")).text()).toBe(
 			"api:/v1/customers",
@@ -74,7 +74,7 @@ describe("dev-proxy", () => {
 		expect((await get("/checkout")).headers.get("location")).toBe(
 			`http://127.0.0.1:${proxy.port}/checkout/`,
 		);
-		expect(await (await get("/checkout/")).text()).toBe("checkout:/checkout/");
+		expect(await (await get("/checkout/")).text()).toBe("checkout:/");
 		expect((await get("/")).status).toBe(302);
 		expect((await get("/")).headers.get("location")).toBe(
 			`http://127.0.0.1:${proxy.port}/dashboard/`,
@@ -84,5 +84,13 @@ describe("dev-proxy", () => {
 			`http://127.0.0.1:${proxy.port}/dashboard/`,
 		);
 		expect(await (await get("/__dev-proxy")).text()).toBe("ok");
+		expect(await (await get("/src/main.tsx")).text()).toBe("vite:/src/main.tsx");
+		expect(
+			await (
+				await fetch(`http://127.0.0.1:${proxy.port}/@vite/client`, {
+					headers: { referer: `http://127.0.0.1:${proxy.port}/checkout/` },
+				})
+			).text(),
+		).toBe("checkout:/@vite/client");
 	});
 });

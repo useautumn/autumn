@@ -1,10 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import { appHref, appOriginHref, stripAppBase } from "@/utils/appBase";
+import { appBase, appHref, appOriginHref, stripAppBase } from "@/utils/appBase";
 
 const dashboardBase = "/dashboard/";
 
 describe("appBase helpers", () => {
-	test("public base prefixes hard navigations", () => {
+	test("reads the public folder from the address bar", () => {
+		expect(appBase(undefined, "/dashboard/products")).toBe("/dashboard");
+		expect(appBase(undefined, "/products")).toBe("");
+	});
+
+	test("public folder prefixes hard navigations", () => {
 		expect(appHref("/", dashboardBase)).toBe("/dashboard/");
 		expect(appHref("/sign-in", dashboardBase)).toBe("/dashboard/sign-in");
 		expect(appHref("https://example.com", dashboardBase)).toBe(
@@ -15,7 +20,7 @@ describe("appBase helpers", () => {
 		);
 	});
 
-	test("public base is stripped from window pathnames", () => {
+	test("public folder is stripped from window pathnames", () => {
 		expect(stripAppBase("/dashboard", dashboardBase)).toBe("/");
 		expect(stripAppBase("/dashboard/products", dashboardBase)).toBe(
 			"/products",
@@ -25,8 +30,9 @@ describe("appBase helpers", () => {
 		);
 	});
 
-	test("root base is a no-op", () => {
+	test("root is a no-op", () => {
 		expect(appHref("/sign-in", "/")).toBe("/sign-in");
+		expect(appHref("/sign-in", "")).toBe("/sign-in");
 		expect(stripAppBase("/products", "/")).toBe("/products");
 	});
 

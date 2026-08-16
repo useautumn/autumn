@@ -26,8 +26,12 @@ const queryClient = new QueryClient({
 	},
 });
 
+const checkoutMount = "/checkout";
+const checkoutPath = window.location.pathname;
 const routerBasename =
-	(import.meta.env.BASE_URL || "/").replace(/\/$/, "") || "/";
+	checkoutPath === checkoutMount || checkoutPath.startsWith(`${checkoutMount}/`)
+		? checkoutMount
+		: "/";
 
 createRoot(document.getElementById("root")!).render(
 	<ThemeProvider defaultTheme="system" storageKey="checkout-theme">

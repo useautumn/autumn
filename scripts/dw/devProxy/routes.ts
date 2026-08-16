@@ -22,12 +22,27 @@ export const DEV_PROXY_PREFIXES = {
 } as const;
 
 export const DEV_PROXY_ROUTES: DevProxyRoute[] = [
-	{ prefix: DEV_PROXY_PREFIXES.dashboard, service: "vite" },
+	{ prefix: DEV_PROXY_PREFIXES.dashboard, service: "vite", stripPrefix: true },
 	{ prefix: DEV_PROXY_PREFIXES.api, service: "api", stripPrefix: true },
 	{ prefix: DEV_PROXY_PREFIXES.leaf, service: "leaf", stripPrefix: true },
-	{ prefix: DEV_PROXY_PREFIXES.checkout, service: "checkout" },
+	{
+		prefix: DEV_PROXY_PREFIXES.checkout,
+		service: "checkout",
+		stripPrefix: true,
+	},
 	{ prefix: DEV_PROXY_PREFIXES.emulate, service: "emulate", stripPrefix: true },
 ];
+
+/** Vite/checkout emit these at origin root when `base` is `/`. */
+const VITE_DEV_PREFIXES = [
+	"/@vite",
+	"/@fs",
+	"/@id",
+	"/@react-refresh",
+	"/src",
+	"/node_modules",
+	"/assets",
+] as const;
 
 export function originServiceUrls({ origin }: { origin: string }): {
 	dashboard: string;
@@ -49,20 +64,50 @@ export function originServiceUrls({ origin }: { origin: string }): {
 export function matchDevProxyRoute({
 	pathname,
 	ports,
+	referer,
+	websocket,
 }: {
 	pathname: string;
 	ports: Record<DevProxyService, number>;
+	referer?: string;
+	websocket?: boolean;
 }): { service: DevProxyService; port: number; path: string } | null {
 	const route = DEV_PROXY_ROUTES.filter((candidate) =>
 		pathMatchesPrefix({ pathname, prefix: candidate.prefix }),
 	).sort((a, b) => b.prefix.length - a.prefix.length)[0];
 
-	if (!route) return null;
+	if (route) {
+		const path = route.stripPrefix
+			? stripPrefix({ pathname, prefix: route.prefix })
+			: pathname;
+		return { service: route.service, port: ports[route.service], path };
+	}
 
-	const path = route.stripPrefix
-		? stripPrefix({ pathname, prefix: route.prefix })
-		: pathname;
-	return { service: route.service, port: ports[route.service], path };
+	if (isViteDevPath(pathname) || (websocket && pathname === "/")) {
+		const service = viteServiceFromReferer(referer);
+		return { service, port: ports[service], path: pathname };
+	}
+
+	return null;
+}
+
+function isViteDevPath(pathname: string): boolean {
+	return VITE_DEV_PREFIXES.some(
+		(prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+	);
+}
+
+function viteServiceFromReferer(referer?: string): "vite" | "checkout" {
+	if (!referer) return "vite";
+	try {
+		const path = new URL(referer).pathname;
+		if (pathMatchesPrefix({ pathname: path, prefix: DEV_PROXY_PREFIXES.checkout })) {
+			return "checkout";
+		}
+	} catch {
+		// invalid Referer
+	}
+	return "vite";
 }
 
 function pathMatchesPrefix({

@@ -135,7 +135,9 @@ export function startDevProxy({
 			if (url.pathname === "/__dev-proxy") {
 				return new Response("ok");
 			}
-			if (url.pathname === "/") {
+			const isWebsocket =
+				req.headers.get("upgrade")?.toLowerCase() === "websocket";
+			if (url.pathname === "/" && !isWebsocket) {
 				return Response.redirect(
 					new URL(`${DEV_PROXY_PREFIXES.dashboard}/`, url),
 					302,
@@ -144,7 +146,12 @@ export function startDevProxy({
 			if (TRAILING_SLASH_PREFIXES.has(url.pathname)) {
 				return Response.redirect(new URL(`${url.pathname}/`, url), 302);
 			}
-			const matched = matchDevProxyRoute({ pathname: url.pathname, ports });
+			const matched = matchDevProxyRoute({
+				pathname: url.pathname,
+				ports,
+				referer: req.headers.get("referer") ?? undefined,
+				websocket: isWebsocket,
+			});
 			if (!matched) {
 				return new Response("dev-proxy: no route", { status: 404 });
 			}

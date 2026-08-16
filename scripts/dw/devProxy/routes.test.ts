@@ -14,7 +14,7 @@ const match = (pathname: string) => matchDevProxyRoute({ pathname, ports });
 describe("matchDevProxyRoute", () => {
 	test("maps the public prefixes", () => {
 		expect(match("/dashboard/customers")).toEqual({
-			path: "/dashboard/customers",
+			path: "/customers",
 			port: 3000,
 			service: "vite",
 		});
@@ -34,7 +34,12 @@ describe("matchDevProxyRoute", () => {
 			service: "leaf",
 		});
 		expect(match("/checkout")).toEqual({
-			path: "/checkout",
+			path: "/",
+			port: 3001,
+			service: "checkout",
+		});
+		expect(match("/checkout/c/abc")).toEqual({
+			path: "/c/abc",
 			port: 3001,
 			service: "checkout",
 		});
@@ -42,6 +47,25 @@ describe("matchDevProxyRoute", () => {
 			path: "/o/oauth2/v2/auth",
 			port: 4000,
 			service: "emulate",
+		});
+	});
+
+	test("sends Vite root assets to dashboard, or checkout by Referer", () => {
+		expect(match("/src/main.tsx")).toEqual({
+			path: "/src/main.tsx",
+			port: 3000,
+			service: "vite",
+		});
+		expect(
+			matchDevProxyRoute({
+				pathname: "/@vite/client",
+				ports,
+				referer: "https://abc.ngrok.app/checkout/",
+			}),
+		).toEqual({
+			path: "/@vite/client",
+			port: 3001,
+			service: "checkout",
 		});
 	});
 

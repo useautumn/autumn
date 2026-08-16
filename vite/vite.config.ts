@@ -1,6 +1,5 @@
 import path from "node:path";
 import { isDwHeadless } from "@autumn/env/dw";
-import { publicPathBase } from "@autumn/env/paths";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -62,7 +61,7 @@ function ignoreProxyDisconnects(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-	base: publicPathBase(process.env.VITE_FRONTEND_URL),
+	base: "/",
 	define: {
 		__APP_ENV__: JSON.stringify(process.env.VITE_APP_ENV || ""),
 	},

@@ -1,13 +1,26 @@
-/** Vite `base` without a trailing slash. Empty when the app is served at `/`. */
-export const appBase = (baseUrl = import.meta.env.BASE_URL || "/"): string =>
-	baseUrl.replace(/\/$/, "");
+/** Public folder on the shared ngrok host. Empty on localhost / prod. */
+export const PUBLIC_MOUNT = "/dashboard";
 
-/** Drop the Vite public base so route helpers see `/products`, etc. */
+export const appBase = (
+	baseUrl?: string,
+	pathname?: string,
+): string => {
+	if (baseUrl !== undefined) return baseUrl.replace(/\/$/, "");
+	const path =
+		pathname ??
+		(typeof window === "undefined" ? "/" : window.location.pathname);
+	if (path === PUBLIC_MOUNT || path.startsWith(`${PUBLIC_MOUNT}/`)) {
+		return PUBLIC_MOUNT;
+	}
+	return "";
+};
+
+/** Drop the public folder so route helpers see `/products`, etc. */
 export const stripAppBase = (
 	pathname: string,
 	baseUrl?: string,
 ): string => {
-	const base = appBase(baseUrl);
+	const base = appBase(baseUrl, pathname);
 	if (!base) return pathname;
 	if (pathname === base) return "/";
 	if (pathname.startsWith(`${base}/`)) {
@@ -16,7 +29,7 @@ export const stripAppBase = (
 	return pathname;
 };
 
-/** Prefix a dashboard path with Vite `base` for `window.location` assigns. */
+/** Prefix a dashboard path when the address bar is under the public folder. */
 export const appHref = (path: string, baseUrl?: string): string => {
 	const base = appBase(baseUrl);
 	if (!base || !path.startsWith("/") || path.startsWith("//")) return path;
@@ -25,7 +38,7 @@ export const appHref = (path: string, baseUrl?: string): string => {
 	return `${base}${path}`;
 };
 
-/** Same-origin absolute URL for OAuth callbacks (ngrok vs port-forward). */
+/** Same-origin absolute URL for OAuth callbacks (ngrok vs localhost). */
 export const appOriginHref = (
 	path: string,
 	baseUrl?: string,

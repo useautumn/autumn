@@ -1,7 +1,6 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { isDwHeadless } from "@autumn/env/dw";
-import { publicPathBase } from "@autumn/env/paths";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
@@ -17,7 +16,7 @@ const serverPort = process.env.SERVER_PORT
 	: 8080;
 
 export default defineConfig({
-	base: publicPathBase(process.env.VITE_CHECKOUT_URL),
+	base: "/",
 	plugins: [react(), tsconfigPaths(), tailwindcss()],
 	resolve: {
 		dedupe: ["react", "react-dom"],
