@@ -113,32 +113,13 @@ export async function deleteReservedDomain(id: string): Promise<void> {
 const NGROK_UP = join(PROJECT_ROOT, "scripts/setup/cursor-cloud/ngrok-up.sh");
 const PUBLIC_URLS_FILE = join(homedir(), ".autumn-agent", "public-urls.txt");
 
-export type NgrokPublicUrls = {
-	api?: string;
-	vite?: string;
-};
-
-/** Parse `~/.autumn-agent/public-urls.txt` from Cloud `ngrok-up.sh`. */
-export function parseNgrokPublicUrls(text: string): NgrokPublicUrls {
-	const out: NgrokPublicUrls = {};
-	for (const line of text.split(/\r?\n/)) {
-		const https = line.match(/https:\/\/\S+/);
-		if (!https) continue;
-		const url = https[0].replace(/[.,;]+$/, "");
-		if (/\bproxy\b/i.test(line) || line.includes(":3080")) {
-			out.vite = url;
-			out.api = url;
-		} else if (/\bvite\b/i.test(line) || line.includes(":3000")) out.vite = url;
-		else if (/\bapi\b/i.test(line) || line.includes(":8080")) out.api = url;
-		else out.vite ??= url;
-	}
-	return out;
+export function firstHttpsUrl(text: string): string | undefined {
+	return text.match(/https:\/\/[^\s.,;]+/)?.[0];
 }
 
-export function readNgrokPublicUrls(): NgrokPublicUrls {
-	if (!isHeadless()) return {};
-	if (!existsSync(PUBLIC_URLS_FILE)) return {};
-	return parseNgrokPublicUrls(readFileSync(PUBLIC_URLS_FILE, "utf8"));
+function readNgrokPublicOrigin(): string | undefined {
+	if (!isHeadless() || !existsSync(PUBLIC_URLS_FILE)) return undefined;
+	return firstHttpsUrl(readFileSync(PUBLIC_URLS_FILE, "utf8"));
 }
 
 /** One hostname for the path proxy. Laptop reserved domains stay on the entry. */
@@ -148,9 +129,8 @@ export function headlessPublicOrigin({
 	entry: RegistryEntry;
 }): string | undefined {
 	if (!isHeadless()) return undefined;
-	const disk = readNgrokPublicUrls();
-	const ngrok = entry.ngrokUrl ?? disk.api ?? disk.vite;
-	if (ngrok) return ngrok.replace(/\/$/, "");
+	const origin = entry.ngrokUrl ?? readNgrokPublicOrigin();
+	if (origin) return origin.replace(/\/$/, "");
 	return `http://localhost:${devProxyPortFor(entry.worktreeNum)}`;
 }
 
@@ -172,22 +152,14 @@ export function ensureNgrok(
 	if (code !== 0 && !opts.quiet) {
 		log(`ngrok-up.sh exited ${code} — continuing without a public URL`);
 	}
-	const urls = readNgrokPublicUrls();
-	const dashboard = urls.vite ?? urls.api;
+	const origin = readNgrokPublicOrigin();
 	const next: RegistryEntry = {
 		...entry,
-		...(dashboard && { ngrokUrl: urls.api ?? dashboard }),
-		...(urls.vite && { ngrokViteUrl: urls.vite }),
+		...(origin && { ngrokUrl: origin, ngrokViteUrl: origin }),
 	};
-	if (!next.ngrokUrl && next.ngrokViteUrl) {
-		next.ngrokUrl = next.ngrokViteUrl;
-	}
 	const registry = loadRegistry();
 	registry[entry.path] = { ...(registry[entry.path] ?? next), ...next };
 	saveRegistry(registry);
-	if (!opts.quiet) {
-		if (next.ngrokUrl) log(`ngrok api  ${next.ngrokUrl}`);
-		if (next.ngrokViteUrl) log(`ngrok vite ${next.ngrokViteUrl}`);
-	}
+	if (!opts.quiet && next.ngrokUrl) log(`ngrok ${next.ngrokUrl}`);
 	return next;
 }

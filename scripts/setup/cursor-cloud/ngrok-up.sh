@@ -41,15 +41,13 @@ try:
 except Exception as e:
     sys.stderr.write(f"[cursor-cloud-ngrok] could not read tunnel list: {e}\n")
     sys.exit(0)
-lines = []
+urls = []
 for t in data.get("tunnels", []):
     pub = t.get("public_url") or ""
-    addr = (t.get("config") or {}).get("addr", "")
-    name = t.get("name", "")
-    if pub:
-        lines.append(f"{name} ({addr}): {pub}")
-        print(f"[cursor-cloud-ngrok] {name} ({addr}): {pub}")
-text = "\n".join(lines) + ("\n" if lines else "ngrok up but no tunnels yet\n")
+    if pub.startswith("https://"):
+        urls.append(pub.rstrip("/"))
+        print(f"[cursor-cloud-ngrok] {pub}")
+text = (urls[0] + "\n") if urls else "ngrok up but no tunnels yet\n"
 open(out, "w").write(text)
 PY
 }
@@ -161,7 +159,7 @@ held="$(already_online_url || true)"
 if [ -n "${held:-}" ]; then
 	echo "[cursor-cloud-ngrok] free endpoint already online: ${held}" >&2
 	echo "[cursor-cloud-ngrok] Infisical NGROK_AUTHTOKEN is a free ngrok account — one hostname for every Cloud agent. Put a paid authtoken in Infisical dev for a unique URL per VM." >&2
-	echo "proxy (http://localhost:${PROXY_PORT}): ${held}" >"$URLS"
+	echo "${held}" >"$URLS"
 	exit 0
 fi
 echo "[cursor-cloud-ngrok] inspector :4040 never came up" >&2
