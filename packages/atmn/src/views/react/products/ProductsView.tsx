@@ -1,6 +1,7 @@
 import { Text, useApp, useInput } from "ink";
 import open from "open";
 import { useCallback, useEffect, useMemo } from "react";
+import { formatAmount } from "@autumn/shared";
 import type { ApiPlan } from "../../../lib/api/types/index.js";
 import { AppEnv } from "../../../lib/env/detect.js";
 import { APP_VERSION } from "../../../lib/version.js";
@@ -53,7 +54,14 @@ const columns: Column<ApiPlan>[] = [
 		render: (p) =>
 			!p.price
 				? "Free"
-				: `$${(p.price.amount / 100).toFixed(2)}/${p.price.interval}`,
+				: `${formatAmount({
+						amount: p.price.amount,
+						currency: "USD",
+						amountFormatOptions: {
+							currencyDisplay: "narrowSymbol",
+							maximumFractionDigits: 2,
+						},
+				  })}/${p.price.interval}`,
 		minWidth: 12,
 	},
 	{

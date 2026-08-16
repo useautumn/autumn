@@ -7,6 +7,7 @@ import { AppEnv } from "../../lib/env/detect.js";
 import { getKey } from "../../lib/env/keys.js";
 import { fetchPlans } from "../../lib/api/endpoints/plans.js";
 import type { ApiPlan } from "../../lib/api/types/index.js";
+import { formatAmount } from "@autumn/shared";
 import { formatError } from "../../lib/api/client.js";
 
 export interface HeadlessProductsOptions {
@@ -297,12 +298,23 @@ function outputSingleProduct(
 /**
  * Format a price amount and interval for display
  */
-function formatPrice(amount: number, interval?: string): string {
-	const dollars = (amount / 100).toFixed(2);
+export function formatPrice(
+	amount: number,
+	interval?: string,
+	currency = "USD",
+): string {
+	const formatted = formatAmount({
+		amount,
+		currency,
+		amountFormatOptions: {
+			currencyDisplay: "narrowSymbol",
+			maximumFractionDigits: 2,
+		},
+	});
 	if (interval) {
-		return `$${dollars}/${interval}`;
+		return `${formatted}/${interval}`;
 	}
-	return `$${dollars}`;
+	return formatted;
 }
 
 /**
