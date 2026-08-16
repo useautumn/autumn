@@ -91,32 +91,17 @@ if grep -q 'infisical-machine-login' "$ROOT/scripts/setup/cursor-cloud/install.s
 fi
 pass "install/start use bun ai sync --copy and cursorCloud.ts"
 
-# --- isolation overlay wins over laptop Redis :6380 -------------------------
-export CACHE_V2_DRAGONFLY_URL="redis://localhost:6380"
-export MISC_CACHE_DRAGONFLY_PRIVATE_URL="rediss://dragonfly.example:6385"
-export NEON_WORKTREE_API_KEY="should-unset"
-got="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" printenv CACHE_V2_DRAGONFLY_URL)"
-[[ "$got" == "redis://localhost:6379" ]] || fail "CACHE_V2_DRAGONFLY_URL overlay, got $got"
-if bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" printenv MISC_CACHE_DRAGONFLY_PRIVATE_URL >/dev/null 2>&1; then
-	val="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" printenv MISC_CACHE_DRAGONFLY_PRIVATE_URL || true)"
-	[[ -z "$val" ]] || fail "private dragonfly URL should be unset, got $val"
+if [[ -f "$ROOT/scripts/setup/cursor-cloud/isolation.env" ]] \
+	|| [[ -f "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" ]]; then
+	fail "isolation overlay must be deleted; bun dw headless owns localhost"
 fi
-neon="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" bash -c 'printf %s "${NEON_WORKTREE_API_KEY-}"')"
-[[ -z "$neon" ]] || fail "NEON_WORKTREE_API_KEY should be unset"
-export CACHE_BACKUP_URL="rediss://example.dragonflydb.cloud:6385"
-backup="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" bash -c 'printf %s "${CACHE_BACKUP_URL-}"')"
-[[ -z "$backup" ]] || fail "CACHE_BACKUP_URL should be unset, got $backup"
-sqs="$(bash "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" printenv SQS_QUEUE_URL)"
-[[ "$sqs" == *localhost:9324* ]] || fail "SQS overlay, got $sqs"
-pass "with-isolation.sh overlays Infisical laptop Redis/SQS"
-
-if grep -E '^AWS_ACCESS_KEY_ID=x' "$ROOT/scripts/setup/cursor-cloud/isolation.env"; then
-	fail "isolation.env must not pin dummy AWS_ACCESS_KEY_ID=x (breaks S3)"
+if grep -q 'isolation.env' "$ROOT/scripts/setup/cursor-cloud/start.sh"; then
+	fail "start must not source isolation.env"
 fi
 if grep -q 'skipping eve (npx' "$ROOT/scripts/dev.ts"; then
 	fail "eve skip must not be an echo-with-parens concurrently command"
 fi
-pass "isolation.env has no dummy AWS keys; eve skip is not a concurrently echo"
+pass "no isolation.env overlay; eve skip is not a concurrently echo"
 
 # --- Cloud public-urls.txt parser used by bun dw identify -------------------
 got="$(cd "$ROOT" && bun -e '

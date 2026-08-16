@@ -45,15 +45,6 @@ if [ -z "\${INFISICAL_PROJECT_ID:-}" ] && [ -f "${ROOT}/.infisical.json" ]; then
   INFISICAL_PROJECT_ID="\$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("workspaceId") or "")' "${ROOT}/.infisical.json" 2>/dev/null || true)"
   [ -n "\$INFISICAL_PROJECT_ID" ] && export INFISICAL_PROJECT_ID
 fi
-if [ -f "${ROOT}/scripts/setup/cursor-cloud/isolation.env" ]; then
-  set -a
-  # shellcheck disable=SC1091
-  . "${ROOT}/scripts/setup/cursor-cloud/isolation.env"
-  set +a
-fi
-unset NEON_WORKTREE_API_KEY
-unset MISC_CACHE_DRAGONFLY_PRIVATE_URL
-unset CACHE_BACKUP_URL
 ENVSH
 chmod 600 "$env_sh"
 

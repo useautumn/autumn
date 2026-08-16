@@ -20,6 +20,7 @@ const LOCAL_DATABASE_URL =
 const HEADLESS_UNSET = [
 	"NEON_WORKTREE_API_KEY",
 	"MISC_CACHE_DRAGONFLY_PRIVATE_URL",
+	"CACHE_BACKUP_URL",
 ] as const;
 
 function applyLocalInfra(

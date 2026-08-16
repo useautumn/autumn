@@ -23,13 +23,13 @@ No `infisical login`. The stock `node_modules/.bin/infisical` is not replaced.
 daemon, and Neon (even if Infisical has `NEON_WORKTREE_API_KEY`). Worktree #1
 uses the local Postgres/Redis/ElasticMQ from `agent-services.sh`.
 
-`infisical run` injects the shared `dev` vault, including laptop Docker Redis
-on `:6380` and Dragonfly Cloud. `bun dw` headless overlays localhost via
-`.env.local` / `applyHeadlessDevEnv`. `isolation.env` is still sourced into
-Cloud shells; we will revisit that overlay separately. `server/.env` must not pin a random `ENCRYPTION_*` —
-that cannot decrypt vault/DB Dragonfly backups (BAD_DECRYPT). Do not pin dummy
-`AWS_ACCESS_KEY_ID=x` either — ElasticMQ is fine with Infisical keys;
-dummy keys make S3 edge-config fail (`Access Key Id does not exist`).
+`infisical run` injects the shared `dev` vault (laptop Docker Redis `:6380`,
+Dragonfly Cloud, Neon, AWS SQS). `bun dw` / `bun dw run` re-pins localhost
+via `applyHeadlessDevEnv` (Postgres `:5432`, one Redis `:6379`, ElasticMQ
+`:9324`). There is no `isolation.env`. `server/.env` must not pin a random
+`ENCRYPTION_*` — that cannot decrypt vault/DB Dragonfly backups (BAD_DECRYPT).
+Do not pin dummy `AWS_ACCESS_KEY_ID=x` either — ElasticMQ is fine with
+Infisical keys; dummy keys make S3 edge-config fail.
 `agent-services.sh` CreateQueue-s `autumn.fifo`, `autumn-track.fifo`,
 `autumn-track-async`, and `autumn-stripe-webhook.fifo` (snapshot conf may
 only have `autumn.fifo`).
@@ -146,10 +146,8 @@ Secrets** on [Cloud Agents → Secrets](https://cursor.com/dashboard/cloud-agent
 Create Token). `infisical run` uses it directly. Client id/secret are unused
 on Cloud. Do not overwrite `node_modules/.bin/infisical`.
 
-`server/.env` and `scripts/setup/cursor-cloud/isolation.env` are an **overlay**,
-not the vault: they pin `DATABASE_URL` / Redis / SQS to localhost so this VM
-does not share the team Neon DB or AWS queue. Empty `STRIPE_*=` lines are
-stripped so they cannot clobber Infisical. The vault is **not** dumped to disk.
+Localhost DB/Redis/SQS come from `bun dw` headless, not a Cloud overlay file.
+The vault is **not** dumped to disk.
 
 ## Stripe webhooks
 
@@ -158,7 +156,7 @@ when the Stripe CLI is installed and `STRIPE_SANDBOX_SECRET_KEY` is present (fro
 Stripe's CLI opens an outbound tunnel — **no public URL / ngrok / port-forward
 required** for webhooks. This is attached by `bun dw` / `bun dw run`.
 
-`STRIPE_WEBHOOK_SKIP_VERIFY=true` is set in the isolation overlay because the
+`STRIPE_WEBHOOK_SKIP_VERIFY=true` is set by `applyHeadlessDevEnv` because the
 CLI's `whsec_` is not the Infisical dashboard endpoint secret. Signature skip is
 localhost-only.
 
