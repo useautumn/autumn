@@ -1,4 +1,4 @@
-import { type DiffedCustomizePlanV1, customizeToKey } from "@autumn/shared";
+import { customizeToKey, type DiffedCustomizePlanV1 } from "@autumn/shared";
 import { toMigratableCustomize } from "./toMigratableCustomize";
 import type { MigrationTarget } from "./types";
 

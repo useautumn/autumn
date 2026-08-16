@@ -1,44 +1,15 @@
-import {
-	type CatalogMigration,
-	productToProductKey,
-	type UpdateCatalogParams,
-} from "@autumn/shared";
+import type { CatalogMigration, UpdateCatalogParams } from "@autumn/shared";
 import { buildMigrationDraft } from "@/internal/catalogV2/actions/buildMigrationDraft/buildMigrationDraft";
 import type { MigrationTarget } from "@/internal/catalogV2/actions/buildMigrationDraft/types";
-import {
-	includeCustomForMigrationDraft,
-	isEligibleForMigrationDraft,
-} from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/isEligibleForMigrationDraft";
-import { resolveMigrationTarget } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/resolveMigrationTarget";
+import { resolveLicenseMigrationTarget } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/resolveLicenseMigrationTarget/resolveLicenseMigrationTarget";
+import { resolveOwnMigrationTarget } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/resolveOwnMigrationTarget";
+import { versionsWithCustomersByPlanId } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/versionsWithCustomersByPlanId";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
-import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
-
-const versionsWithCustomersByPlanId = ({
-	productStatesContext,
-}: {
-	productStatesContext: ProductStatesContext;
-}): Record<string, number[]> => {
-	const result: Record<string, number[]> = {};
-	for (const [planId, versions] of Object.entries(
-		productStatesContext.versionsByPlanId,
-	)) {
-		result[planId] = versions
-			.filter(
-				(product) =>
-					productKeyToState({
-						productKey: productToProductKey({ product }),
-						productStatesContext,
-					}).customerUsage.hasVersionableCustomerProducts,
-			)
-			.map((product) => product.version);
-	}
-	return result;
-};
 
 /**
- * One draft covering every requesting (planId, version) row that has
- * versionable customers. Empty diffs / mints never become targets.
+ * One draft covering this row's own plan diff plus its license-link diffs.
+ * Empty diffs / mints never become targets.
  */
 export const computeMigrationDraftPlans = ({
 	upsertProductPlans,
@@ -52,17 +23,20 @@ export const computeMigrationDraftPlans = ({
 	const targets: MigrationTarget[] = [];
 
 	for (const upsertProductPlan of upsertProductPlans) {
-		if (!isEligibleForMigrationDraft({ upsertProductPlan, params })) continue;
-
-		const target = resolveMigrationTarget({
+		const own = resolveOwnMigrationTarget({
 			upsertProductPlan,
+			params,
 			productStatesContext,
-			includeCustom: includeCustomForMigrationDraft({
-				upsertProductPlan,
-				params,
-			}),
 		});
-		if (target) targets.push(target);
+		if (own) targets.push(own);
+
+		const license = resolveLicenseMigrationTarget({
+			upsertProductPlan,
+			upsertProductPlans,
+			params,
+			productStatesContext,
+		});
+		if (license) targets.push(license);
 	}
 
 	const draft = buildMigrationDraft({
