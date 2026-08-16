@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Cursor Cloud `start` — per-boot. Starts local Postgres/Redis/ClickHouse/ElasticMQ,
-# mints Infisical token from machine identity, writes server/.env isolation overlay.
+# Cursor Cloud `start` — per-boot. Local infra via bun dw setup, Infisical
+# token persist (Token Auth), isolation overlay for later shells.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
@@ -20,9 +20,9 @@ append_once "${HOME}/.bashrc" 'export DW_HEADLESS=1'
 env_sh="${HOME}/.autumn-agent/env.sh"
 mkdir -p "${HOME}/.autumn-agent"
 
-# Cursor injects INFISICAL_CLIENT_ID/SECRET into every process. Infisical CLI
-# `run` still needs INFISICAL_TOKEN (see infisical-machine-login.sh). Mint once
-# here so start's own children have it; the node_modules/.bin shim covers bun dw.
+# Preferred: INFISICAL_TOKEN already injected (Token Auth). Persist it so
+# later shells that miss Runtime Secrets can still `infisical run`.
+# Fallback: mint from INFISICAL_CLIENT_ID/SECRET (CLI run will not exchange them).
 if [ -n "${INFISICAL_CLIENT_ID:-}" ] && [ -z "${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:-}" ]; then
 	export INFISICAL_UNIVERSAL_AUTH_CLIENT_ID="$INFISICAL_CLIENT_ID"
 	export INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET="${INFISICAL_CLIENT_SECRET:-}"
@@ -32,11 +32,11 @@ if token="$(bash "$ROOT/scripts/setup/cursor-cloud/infisical-machine-login.sh")"
 	mkdir -p "${HOME}/.cache"
 	printf '%s' "$token" > "${HOME}/.cache/autumn-infisical-token"
 	chmod 600 "${HOME}/.cache/autumn-infisical-token"
-	echo "[cursor-cloud-start] Infisical machine identity: token ready"
+	echo "[cursor-cloud-start] Infisical token ready"
 else
-	echo "[cursor-cloud-start] Infisical machine identity not configured (INFISICAL_CLIENT_ID/SECRET unset in start)"
-	echo "[cursor-cloud-start] Repo .cursor/environment.json wins over the team env — use Team-scoped Runtime Secrets, not Environment-scoped."
-	echo "[cursor-cloud-start] bun dw will fail until start can mint INFISICAL_TOKEN."
+	echo "[cursor-cloud-start] Infisical not configured: set Team Runtime Secret INFISICAL_TOKEN"
+	echo "[cursor-cloud-start] (machine identity → Token Auth → Create Token). CLIENT_ID/SECRET is optional fallback."
+	echo "[cursor-cloud-start] Repo .cursor/environment.json wins over the team env — Team-scoped secrets, not Environment."
 fi
 
 cat > "$env_sh" <<ENVSH

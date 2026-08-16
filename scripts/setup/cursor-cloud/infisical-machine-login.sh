@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
-# Infisical's documented CI path (https://infisical.com/docs/cli/commands/run):
+# Resolve INFISICAL_TOKEN for `infisical run` (CLI 0.43.116).
 #
-#   export INFISICAL_TOKEN=$(infisical login --method=universal-auth --plain --silent)
-#   infisical run …
+# Preferred: a Token Auth access token already in INFISICAL_TOKEN (Cursor
+# Runtime Secret, or the cache start wrote for shells that do not get secrets).
+# `run` accepts that token as-is — no login.
 #
-# `infisical run` (CLI 0.43.116) does NOT read client id/secret. GetInfisicalToken()
-# only checks --token, INFISICAL_UNIVERSAL_AUTH_ACCESS_TOKEN, and INFISICAL_TOKEN.
+# Fallback: Universal Auth client id/secret. `run` will not exchange those
+# (Infisical/cli#201 is still open); this script calls
+# `login --method=universal-auth --plain --silent` and prints the JWT.
 #
-# Cursor Runtime Secrets often land in `start` but not in later agent terminals.
-# So: reuse a token file minted at boot before requiring CLIENT_ID in this process.
-#
-# Always talks to the real CLI binary (not the PATH shim). Prints the token to stdout.
+# Always talks to the real CLI binary (not the PATH shim). Prints the token.
 set -euo pipefail
 # env.sh is BASH_ENV; this flag stops env.sh from re-invoking this script.
 export AUTUMN_INFISICAL_LOGIN_RUNNING=1
-# Do not inherit BASH_ENV into the real CLI or further bash children.
 unset BASH_ENV
 CACHE="${HOME}/.cache/autumn-infisical-token"
 mkdir -p "${HOME}/.cache"
@@ -24,8 +22,8 @@ if [ -n "${INFISICAL_TOKEN:-}" ]; then
 	exit 0
 fi
 
-# Cache before credentials: bun dw may not see Runtime Secrets even when start did.
-if [ -s "$CACHE" ] && [ -n "$(find "$CACHE" -mmin -90 2>/dev/null)" ]; then
+# No TTL. Token Auth tokens last weeks; a 90-minute window discarded them.
+if [ -s "$CACHE" ]; then
 	cat "$CACHE"
 	exit 0
 fi
@@ -34,7 +32,7 @@ export INFISICAL_UNIVERSAL_AUTH_CLIENT_ID="${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:
 export INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET="${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET:-${INFISICAL_CLIENT_SECRET:-}}"
 
 if [ -z "${INFISICAL_UNIVERSAL_AUTH_CLIENT_ID}" ] || [ -z "${INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET}" ]; then
-	echo "infisical-machine-login: no INFISICAL_TOKEN cache and no INFISICAL_CLIENT_ID/SECRET in this process" >&2
+	echo "infisical-machine-login: no INFISICAL_TOKEN (or cache) and no INFISICAL_CLIENT_ID/SECRET" >&2
 	exit 1
 fi
 

@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Cloud-only adapter: bun dw is still stock `infisical run`. Infisical CLI 0.43.116
-# will not exchange client credentials for a token on `run` (Infisical/cli#201).
-#
-# Cursor agent terminals often do not inherit start's env and may not see Runtime
-# Secrets. This shim mints or reuses ~/.cache/autumn-infisical-token, then execs
-# the real CLI. Laptop installs are untouched — Cloud install/start only.
+# Cloud-only adapter: bun dw is still stock `infisical run`.
+# Prefer INFISICAL_TOKEN (Token Auth access token). Fall back to the cached
+# copy start wrote, then to universal-auth login if only client id/secret exist.
+# `run` will not exchange client credentials (Infisical/cli#201 still open).
+# Laptop installs are untouched — Cloud install/start only.
 #
 # Machine-identity `run` also requires INFISICAL_PROJECT_ID (CLI 0.43.116 does
 # not read .infisical.json workspaceId for this auth mode). Load it from the
@@ -50,7 +49,8 @@ if [ -z "\${INFISICAL_TOKEN:-}" ] && [ -x "\$LOGIN" ]; then
 fi
 if [ -z "\${INFISICAL_TOKEN:-}" ]; then
 	echo "infisical: no INFISICAL_TOKEN in this process and no cached token from start." >&2
-	echo "infisical: Runtime Secrets must be Team-scoped (not Environment). Repo environment.json does not inherit the dashboard environment's secrets." >&2
+	echo "infisical: set Team Runtime Secret INFISICAL_TOKEN (machine-identity Token Auth → Create Token)." >&2
+	echo "infisical: INFISICAL_CLIENT_ID/SECRET is only a fallback — CLI run will not exchange them." >&2
 	exit 1
 fi
 if [ -z "\${INFISICAL_PROJECT_ID:-}" ] && [ -f "${ROOT}/.infisical.json" ]; then

@@ -77,6 +77,38 @@ if grep -q 'configure-executor-mcp.sh' "$ROOT/scripts/setup/cursor-cloud/start.s
 fi
 pass "install/start use bun ai sync --copy and cursorCloud.ts"
 
+# --- Infisical: Token Auth INFISICAL_TOKEN is enough; no mint ---------------
+LOGIN="$ROOT/scripts/setup/cursor-cloud/infisical-machine-login.sh"
+cache_dir="$tmp/infisical-home"
+mkdir -p "$cache_dir/.cache"
+got="$(
+	HOME="$cache_dir" \
+	INFISICAL_TOKEN="test-token-auth-not-real" \
+	env -u INFISICAL_CLIENT_ID -u INFISICAL_CLIENT_SECRET \
+		-u INFISICAL_UNIVERSAL_AUTH_CLIENT_ID -u INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET \
+		bash "$LOGIN"
+)"
+[[ "$got" == "test-token-auth-not-real" ]] || fail "login should pass through INFISICAL_TOKEN, got $got"
+[[ ! -s "$cache_dir/.cache/autumn-infisical-token" ]] || fail "passthrough must not mint/write cache"
+printf '%s' "cached-token-auth" >"$cache_dir/.cache/autumn-infisical-token"
+# Older than 90 minutes: Token Auth must still win (no 90-min TTL).
+touch -d "2 hours ago" "$cache_dir/.cache/autumn-infisical-token"
+got="$(
+	HOME="$cache_dir" \
+	env -u INFISICAL_TOKEN -u INFISICAL_CLIENT_ID -u INFISICAL_CLIENT_SECRET \
+		-u INFISICAL_UNIVERSAL_AUTH_CLIENT_ID -u INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET \
+		bash "$LOGIN"
+)"
+[[ "$got" == "cached-token-auth" ]] || fail "cache should be reused without TTL, got $got"
+if HOME="$tmp/empty-home" \
+	env -u INFISICAL_TOKEN -u INFISICAL_CLIENT_ID -u INFISICAL_CLIENT_SECRET \
+		-u INFISICAL_UNIVERSAL_AUTH_CLIENT_ID -u INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET \
+		bash "$LOGIN" >/dev/null 2>"$tmp/login.err"; then
+	fail "login should fail without token, cache, or client creds"
+fi
+grep -q "no INFISICAL_TOKEN" "$tmp/login.err" || fail "missing-creds error should mention INFISICAL_TOKEN"
+pass "infisical-machine-login prefers Token Auth / cache over mint"
+
 # --- isolation overlay wins over laptop Redis :6380 -------------------------
 export CACHE_V2_DRAGONFLY_URL="redis://localhost:6380"
 export MISC_CACHE_DRAGONFLY_PRIVATE_URL="rediss://dragonfly.example:6385"

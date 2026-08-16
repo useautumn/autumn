@@ -12,18 +12,15 @@ snapshot already has Postgres 18, Redis Stack, ClickHouse, JRE, and ElasticMQ.
 `package.json` is unchanged from laptop: `bun dw` is still
 `infisical run --env=dev --recursive -- bun scripts/dw/index.ts`.
 
-Infisical CLI **does not** treat `INFISICAL_CLIENT_ID` / `INFISICAL_CLIENT_SECRET`
-as a session for `infisical run`. Those credentials are for `infisical login`
-(Infisical's own names: `INFISICAL_UNIVERSAL_AUTH_CLIENT_ID` / `_SECRET`).
-`run` only accepts a minted `INFISICAL_TOKEN` (or `--token`). Cloud `start`
-aliases Cursor's Runtime Secrets to Infisical's names, runs the documented
-`login --method=universal-auth --plain --silent`, and shims
-`node_modules/.bin/infisical` so agent shells that never source bashrc still
-get a token. Machine-identity `run` also needs `INFISICAL_PROJECT_ID`; the
-shim reads it from `.infisical.json` `workspaceId` (not a Cursor secret).
-Start seeds `~/.autumn-worktrees.json` as worktree #1 so `bun dw identify`
-works without auto-running the app. It does **not** start the app. Run
-`bun dw` yourself when the task needs server/vite.
+`infisical run` (CLI 0.43.116) accepts `INFISICAL_TOKEN` / `--token` only. It
+will **not** exchange `INFISICAL_CLIENT_ID` / `SECRET` (Infisical/cli#201 still
+open). Put a machine-identity **Token Auth** access token in Cursor as
+`INFISICAL_TOKEN` (Identity → Authentication → Token Auth → Create Token).
+`start` copies it to `~/.cache/autumn-infisical-token` for shells that miss
+Runtime Secrets. Client id/secret is an optional fallback that mints a JWT
+via `login --method=universal-auth`. Machine-identity `run` also needs
+`INFISICAL_PROJECT_ID`; the shim reads `.infisical.json` `workspaceId`.
+Start does **not** start the app. Run `bun dw` when the task needs it.
 
 `DW_HEADLESS=1` is set on start. That skips portless HTTPS aliases, the emulate
 daemon, and Neon (even if Infisical has `NEON_WORKTREE_API_KEY`). Worktree #1
@@ -145,15 +142,19 @@ Secrets** on [Cloud Agents → Secrets](https://cursor.com/dashboard/cloud-agent
 
 | Name | Type | Scope |
 |---|---|---|
-| `INFISICAL_CLIENT_ID` | Runtime Secret | **Team** (not Environment) |
-| `INFISICAL_CLIENT_SECRET` | Runtime Secret | **Team** (not Environment) |
+| `INFISICAL_TOKEN` | Runtime Secret | **Team** (not Environment) |
+| `INFISICAL_CLIENT_ID` | Runtime Secret | **Team** (optional fallback) |
+| `INFISICAL_CLIENT_SECRET` | Runtime Secret | **Team** (optional fallback) |
 | `EXECUTOR_API_KEY` | Runtime Secret | **Team** (optional; also in Infisical `dev`) |
 | `NGROK_AUTHTOKEN` | Runtime Secret | **Team** (optional; public dashboard/API URL) |
 
-That is the durable pair (same names as Autumn's Node SDK). `start` exchanges
-them for `INFISICAL_TOKEN` and writes `~/.cache/autumn-infisical-token`.
-`INFISICAL_TOKEN` as a Cursor secret is optional and expires (service tokens
-on a date; machine-identity access tokens in ~2 hours).
+`INFISICAL_TOKEN` is the Token Auth access token from the machine identity
+(Create Token in Infisical). `infisical run` uses it directly — no login.
+`start` only persists it to `~/.cache/autumn-infisical-token`. Client id/secret
+is the Universal Auth pair (same names as Autumn's Node SDK); use it only if
+the Token Auth token is missing. Do not put a short-lived Universal Auth JWT
+in Cursor — those expire in hours. Token Auth tokens expire on the TTL you
+set in Infisical (often weeks); rotate the Cursor secret before that.
 
 `server/.env` and `scripts/setup/cursor-cloud/isolation.env` are an **overlay**,
 not the vault: they pin `DATABASE_URL` / Redis / SQS to localhost so this VM
