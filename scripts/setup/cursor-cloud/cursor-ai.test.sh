@@ -137,24 +137,24 @@ pass "isolation.env has no dummy AWS keys; eve skip is not a concurrently echo"
 
 # --- Cloud public-urls.txt parser used by bun dw identify -------------------
 got="$(cd "$ROOT" && DW_HEADLESS=1 bun -e '
-import { parseCloudPublicUrls } from "./scripts/dw/helpers/cloudPublicUrls.ts";
+import { parseNgrokPublicUrls } from "./scripts/dw/helpers/ngrok.ts";
 const t = "api (http://localhost:8080): https://api.example.ngrok.app\nvite (http://localhost:3000): https://vite.example.ngrok.app\n";
-const u = parseCloudPublicUrls(t);
+const u = parseNgrokPublicUrls(t);
 if (u.api !== "https://api.example.ngrok.app") throw new Error("api "+u.api);
 if (u.vite !== "https://vite.example.ngrok.app") throw new Error("vite "+u.vite);
 const t2 = "vite (http://localhost:3000): https://may-waspy-marquis.ngrok-free.dev\n";
-const u2 = parseCloudPublicUrls(t2);
+const u2 = parseNgrokPublicUrls(t2);
 if (u2.vite !== "https://may-waspy-marquis.ngrok-free.dev") throw new Error("334 url "+u2.vite);
 const t3 = "proxy (http://localhost:3080): https://abc.ngrok.app\n";
-const u3 = parseCloudPublicUrls(t3);
+const u3 = parseNgrokPublicUrls(t3);
 if (u3.vite !== "https://abc.ngrok.app") throw new Error("proxy vite "+u3.vite);
 if (u3.api !== "https://abc.ngrok.app") throw new Error("proxy api "+u3.api);
 console.log("ok");
 ')"
-[[ "$got" == "ok" ]] || fail "parseCloudPublicUrls, got $got"
+[[ "$got" == "ok" ]] || fail "parseNgrokPublicUrls, got $got"
 pass "identify Cloud public-urls parser"
 
-grep -q 'ensureHeadlessNgrok(entry)' "$ROOT/scripts/dw/commands/identify.ts" \
+grep -q 'ensureNgrok(entry' "$ROOT/scripts/dw/commands/identify.ts" \
 	|| fail "identify must start the Cloud tunnel"
 pass "bun dw identify starts Cloud ngrok"
 

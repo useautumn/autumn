@@ -1,5 +1,12 @@
-import { shortHash } from "./registry.ts";
-import { log } from "./shell.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { PROJECT_ROOT } from "../constants.ts";
+import type { RegistryEntry } from "../types.ts";
+import { isHeadless } from "./headless.ts";
+import { devProxyPortFor } from "./ports.ts";
+import { loadRegistry, saveRegistry, shortHash } from "./registry.ts";
+import { log, sh, shInherit } from "./shell.ts";
 
 const NGROK_API = "https://api.ngrok.com";
 
@@ -101,4 +108,86 @@ export async function deleteReservedDomain(id: string): Promise<void> {
 	log(
 		`ngrok delete reserved domain ${id} failed: ${response.status} ${await response.text()}`,
 	);
+}
+
+const NGROK_UP = join(PROJECT_ROOT, "scripts/setup/cursor-cloud/ngrok-up.sh");
+const PUBLIC_URLS_FILE = join(homedir(), ".autumn-agent", "public-urls.txt");
+
+export type NgrokPublicUrls = {
+	api?: string;
+	vite?: string;
+};
+
+/** Parse `~/.autumn-agent/public-urls.txt` from Cloud `ngrok-up.sh`. */
+export function parseNgrokPublicUrls(text: string): NgrokPublicUrls {
+	const out: NgrokPublicUrls = {};
+	for (const line of text.split(/\r?\n/)) {
+		const https = line.match(/https:\/\/\S+/);
+		if (!https) continue;
+		const url = https[0].replace(/[.,;]+$/, "");
+		if (/\bproxy\b/i.test(line) || line.includes(":3080")) {
+			out.vite = url;
+			out.api = url;
+		} else if (/\bvite\b/i.test(line) || line.includes(":3000")) out.vite = url;
+		else if (/\bapi\b/i.test(line) || line.includes(":8080")) out.api = url;
+		else out.vite ??= url;
+	}
+	return out;
+}
+
+export function readNgrokPublicUrls(): NgrokPublicUrls {
+	if (!isHeadless()) return {};
+	if (!existsSync(PUBLIC_URLS_FILE)) return {};
+	return parseNgrokPublicUrls(readFileSync(PUBLIC_URLS_FILE, "utf8"));
+}
+
+/** One hostname for the path proxy. Laptop reserved domains stay on the entry. */
+export function headlessPublicOrigin({
+	entry,
+}: {
+	entry: RegistryEntry;
+}): string | undefined {
+	if (!isHeadless()) return undefined;
+	const disk = readNgrokPublicUrls();
+	const ngrok = entry.ngrokUrl ?? disk.api ?? disk.vite;
+	if (ngrok) return ngrok.replace(/\/$/, "");
+	return `http://localhost:${devProxyPortFor(entry.worktreeNum)}`;
+}
+
+/** Cloud: start the one-hostname tunnel. Laptop: no-op (reserved domains + compose). */
+export function ensureNgrok(
+	entry: RegistryEntry,
+	opts: { quiet?: boolean } = {},
+): RegistryEntry {
+	if (!isHeadless()) return entry;
+	if (!existsSync(NGROK_UP)) {
+		if (!opts.quiet) log("ngrok-up.sh missing — skip public tunnel");
+		return entry;
+	}
+	if (!opts.quiet)
+		log("ensuring Cloud ngrok tunnel (one hostname → path proxy)");
+	const code = opts.quiet
+		? sh("bash", [NGROK_UP]).code
+		: shInherit("bash", [NGROK_UP]);
+	if (code !== 0 && !opts.quiet) {
+		log(`ngrok-up.sh exited ${code} — continuing without a public URL`);
+	}
+	const urls = readNgrokPublicUrls();
+	const dashboard = urls.vite ?? urls.api;
+	const next: RegistryEntry = {
+		...entry,
+		...(dashboard && { ngrokUrl: urls.api ?? dashboard }),
+		...(urls.vite && { ngrokViteUrl: urls.vite }),
+	};
+	if (!next.ngrokUrl && next.ngrokViteUrl) {
+		next.ngrokUrl = next.ngrokViteUrl;
+	}
+	const registry = loadRegistry();
+	registry[entry.path] = { ...(registry[entry.path] ?? next), ...next };
+	saveRegistry(registry);
+	if (!opts.quiet) {
+		if (next.ngrokUrl) log(`ngrok api  ${next.ngrokUrl}`);
+		if (next.ngrokViteUrl) log(`ngrok vite ${next.ngrokViteUrl}`);
+	}
+	return next;
 }

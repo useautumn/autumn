@@ -6,8 +6,8 @@ import {
 	getCurrentWorktree,
 	getDefaultBranch,
 } from "../helpers/git.ts";
-import { ensureHeadlessNgrok } from "../helpers/ensureHeadlessNgrok.ts";
 import { isHeadless } from "../helpers/headless.ts";
+import { ensureNgrok } from "../helpers/ngrok.ts";
 import { withNeonContext } from "../helpers/neonContext.ts";
 import {
 	parseRegionArg,
@@ -150,7 +150,7 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 	} else if (isHeadless()) {
 		// Cloud canonical worktree has no Neon/Docker ngrok. Still open a
 		// public tunnel so identify / the dashboard are reachable.
-		entry = ensureHeadlessNgrok(entry);
+		entry = ensureNgrok(entry);
 		registry[cwd] = entry;
 		saveRegistry(registry);
 	}

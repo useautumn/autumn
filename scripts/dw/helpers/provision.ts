@@ -3,10 +3,13 @@ import type { Registry, RegistryEntry } from "../types.ts";
 import { ensureComposeStack, readNgrokTunnelUrl } from "./compose.ts";
 import { ensureEmulateRunning } from "./emulate.ts";
 import { writeEnvLocalFiles } from "./env-files.ts";
-import { ensureHeadlessNgrok } from "./ensureHeadlessNgrok.ts";
 import { isHeadless } from "./headless.ts";
 import { ensureChatDatabase } from "./neon.ts";
-import { ensureReservedDomain, ngrokApiAvailable } from "./ngrok.ts";
+import {
+	ensureNgrok,
+	ensureReservedDomain,
+	ngrokApiAvailable,
+} from "./ngrok.ts";
 import { saveRegistry } from "./registry.ts";
 import {
 	autoEnsureTestOrgSecretKey,
@@ -31,7 +34,11 @@ export async function provisionWorktree({
 
 	let reservedDomain: string | undefined;
 	let reservedViteDomain: string | undefined;
-	if (!isHeadless() && ngrokApiAvailable() && process.env.NGROK_AUTHTOKEN) {
+	if (isHeadless()) {
+		current = ensureNgrok(current);
+		registry[cwd] = current;
+		saveRegistry(registry);
+	} else if (ngrokApiAvailable() && process.env.NGROK_AUTHTOKEN) {
 		const reserved = await ensureReservedDomain(
 			current.worktreeNum,
 			current.path,
@@ -71,11 +78,6 @@ export async function provisionWorktree({
 	}
 
 	writeEnvLocalFiles(current);
-	if (isHeadless()) {
-		current = ensureHeadlessNgrok(current);
-		registry[cwd] = current;
-		saveRegistry(registry);
-	}
 	if (!isHeadless()) ensureEmulateRunning();
 
 	if (created) {

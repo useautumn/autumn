@@ -7,8 +7,9 @@ import type { RegistryEntry } from "../types.ts";
 import { isProvisioned } from "./entry.ts";
 import { provisionedInfraEnv } from "./env-files.ts";
 import { isHeadless } from "./headless.ts";
+import { ensureNgrok, headlessPublicOrigin } from "./ngrok.ts";
 import { registerPortlessAliases } from "./portless.ts";
-import { devProxyPortFor, portlessHttpsUrl, serverPortFor } from "./ports.ts";
+import { portlessHttpsUrl, serverPortFor } from "./ports.ts";
 import { fatal, log } from "./shell.ts";
 import { spawnDevInTmux, tmuxSessionName } from "./tmux.ts";
 import { rewriteDbEnv } from "./url.ts";
@@ -31,31 +32,38 @@ function applyLocalInfra(
 	for (const key of Object.keys(next)) {
 		if (key.includes("SQS_QUEUE_URL") && !(key in infra)) delete next[key];
 	}
-	for (const key of HEADLESS_UNSET) delete next[key];
 	return next;
 }
 
-function applyHeadlessPublicUrls({
+function applyPublicUrls({
 	entry,
 	env,
-	worktreeNum,
 }: {
 	entry: RegistryEntry;
 	env: Record<string, string>;
-	worktreeNum: number;
 }): void {
-	const apiUrl = `http://localhost:${serverPortFor(worktreeNum)}`;
-	const frontDoor =
-		entry.ngrokUrl ?? `http://localhost:${devProxyPortFor(worktreeNum)}`;
-	const urls = originServiceUrls({ origin: frontDoor });
-	env.AUTUMN_API_URL = apiUrl;
-	env.AUTUMN_PUBLIC_API_URL = urls.api;
-	env.CLIENT_URL = urls.dashboard;
-	env.VITE_BACKEND_URL = "/api";
-	env.VITE_FRONTEND_URL = urls.dashboard;
-	env.VITE_API_URL = "/api";
-	env.CHAT_URL = urls.leaf;
-	env.SLACK_BOT_URL = urls.leaf;
+	if (isHeadless()) {
+		const origin =
+			headlessPublicOrigin({ entry }) ??
+			`http://localhost:${serverPortFor(entry.worktreeNum)}`;
+		const urls = originServiceUrls({ origin });
+		env.AUTUMN_API_URL = `http://localhost:${serverPortFor(entry.worktreeNum)}`;
+		env.AUTUMN_PUBLIC_API_URL = urls.api;
+		env.CLIENT_URL = urls.dashboard;
+		env.VITE_BACKEND_URL = "/api";
+		env.VITE_FRONTEND_URL = urls.dashboard;
+		env.VITE_API_URL = "/api";
+		env.CHAT_URL = urls.leaf;
+		env.SLACK_BOT_URL = urls.leaf;
+		return;
+	}
+	if (!isProvisioned(entry)) return;
+	const aliases = registerPortlessAliases(entry.worktreeNum);
+	env.AUTUMN_API_URL = aliases.apiUrl;
+	env.AUTUMN_PUBLIC_API_URL = entry.ngrokUrl ?? aliases.apiUrl;
+	env.CLIENT_URL = aliases.viteUrl;
+	env.VITE_BACKEND_URL = aliases.apiUrl;
+	env.VITE_FRONTEND_URL = aliases.viteUrl;
 }
 
 function applyProvisionedDevEnv(
@@ -73,21 +81,7 @@ function applyProvisionedDevEnv(
 	if (existsSync(portlessCa) && !next.NODE_EXTRA_CA_CERTS) {
 		next.NODE_EXTRA_CA_CERTS = portlessCa;
 	}
-	// Headless boxes have no portless binary and nothing resolves *.localhost;
-	// .env.local already carries plain localhost URLs there.
-	if (!isHeadless()) {
-		const aliases = registerPortlessAliases(worktreeNum);
-		next.AUTUMN_API_URL = aliases.apiUrl;
-		next.AUTUMN_PUBLIC_API_URL = entry.ngrokUrl ?? aliases.apiUrl;
-		next.CLIENT_URL = aliases.viteUrl;
-		next.VITE_BACKEND_URL = aliases.apiUrl;
-		next.VITE_FRONTEND_URL = aliases.viteUrl;
-	}
-	if (isHeadless()) {
-		applyHeadlessPublicUrls({ entry, env: next, worktreeNum });
-		next.DATABASE_URL = LOCAL_DATABASE_URL;
-		next.DATABASE_CRITICAL_URL = LOCAL_DATABASE_URL;
-	}
+	applyPublicUrls({ entry, env: next });
 	return next;
 }
 
@@ -95,9 +89,9 @@ function applyHeadlessDevEnv(
 	entry: RegistryEntry,
 	env: Record<string, string>,
 ): Record<string, string> {
-	const { worktreeNum } = entry;
-	const next = applyLocalInfra({ ...env }, worktreeNum);
-	applyHeadlessPublicUrls({ entry, env: next, worktreeNum });
+	const next = applyLocalInfra({ ...env }, entry.worktreeNum);
+	for (const key of HEADLESS_UNSET) delete next[key];
+	applyPublicUrls({ entry, env: next });
 	next.DATABASE_URL = LOCAL_DATABASE_URL;
 	next.DATABASE_CRITICAL_URL = LOCAL_DATABASE_URL;
 	next.STRIPE_WEBHOOK_SKIP_VERIFY = "true";
@@ -132,8 +126,9 @@ export function startDev(
 	entry: RegistryEntry,
 	opts?: { allowTmux?: boolean },
 ): never {
-	const { worktreeNum, branchName } = entry;
-	const { env, args } = buildDevEnvAndArgs(entry);
+	const current = ensureNgrok(entry);
+	const { worktreeNum, branchName } = current;
+	const { env, args } = buildDevEnvAndArgs(current);
 
 	const useTmux =
 		(opts?.allowTmux ?? true) && worktreeNum > 1 && !process.stdout.isTTY;

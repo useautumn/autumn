@@ -1,13 +1,11 @@
 import { originServiceUrls } from "../devProxy/routes.ts";
-import { cloudPublicUrls } from "../helpers/cloudPublicUrls.ts";
-import { ensureHeadlessNgrok } from "../helpers/ensureHeadlessNgrok.ts";
 import { isPlainCanonical, isProvisioned } from "../helpers/entry.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
 import { isHeadless } from "../helpers/headless.ts";
+import { ensureNgrok, headlessPublicOrigin } from "../helpers/ngrok.ts";
 import {
 	aliasesFor,
 	checkoutPortFor,
-	devProxyPortFor,
 	leafPortFor,
 	serverPortFor,
 	vitePortFor,
@@ -39,14 +37,6 @@ function localServiceUrls({
 	};
 }
 
-function publicOrigin({ entry }: { entry: RegistryEntry }): string | undefined {
-	if (!isHeadless()) return undefined;
-	const cloud = cloudPublicUrls();
-	const ngrok = entry.ngrokUrl ?? cloud.api ?? cloud.vite;
-	if (ngrok) return ngrok.replace(/\/$/, "");
-	return `http://localhost:${devProxyPortFor(entry.worktreeNum)}`;
-}
-
 export function cmdIdentify(): void {
 	const cwd = getCurrentWorktree();
 	const registry = loadRegistry();
@@ -57,11 +47,9 @@ export function cmdIdentify(): void {
 		process.exit(1);
 	}
 
-	if (isHeadless()) {
-		entry = ensureHeadlessNgrok(entry, { quiet: true });
-	}
+	entry = ensureNgrok(entry, { quiet: true });
 
-	const origin = publicOrigin({ entry });
+	const origin = headlessPublicOrigin({ entry });
 	const urls = origin
 		? originServiceUrls({ origin })
 		: localServiceUrls({ entry });
