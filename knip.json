@@ -89,6 +89,10 @@
 			"entry": ["tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
+		"apps/mcp": {
+			"entry": ["src/index.ts", "tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
+		},
 		"packages/gateway": {
 			"entry": ["tests/**/*.test.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]

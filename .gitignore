@@ -24,7 +24,9 @@ tests/
 !packages/mcp/tests
 !packages/gateway/tests
 !apps/leaf/tests
+!apps/mcp/tests
 !vite/tests
+**/.mcp-use/
 .secrets
 
 # **/.npmrc
