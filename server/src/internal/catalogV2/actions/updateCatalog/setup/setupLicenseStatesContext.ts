@@ -1,4 +1,3 @@
-import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	emptyLicenseStatesContext,
@@ -7,33 +6,31 @@ import {
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo.js";
 
+const planLicenseIdsInContext = ({
+	productStatesContext,
+}: {
+	productStatesContext: ProductStatesContext;
+}): string[] =>
+	Object.values(productStatesContext.versionsByPlanId).flatMap((versions) =>
+		versions.flatMap((version) => [
+			...(version.licenses ?? []).map((link) => link.id),
+			...(version.parent_plan_licenses ?? []).map((link) => link.id),
+		]),
+	);
+
 /**
- * Customer references for current links of every parent declaring licenses[].
- * Compute uses this to retire vs update a row in place.
+ * Customer references for every loaded link — declared licenses[] parents
+ * and reverse license-parents of touched children.
  */
 export const setupLicenseStatesContext = async ({
 	ctx,
-	params,
 	productStatesContext,
 }: {
 	ctx: AutumnContext;
-	params: UpdateCatalogParams;
 	productStatesContext: ProductStatesContext;
 }): Promise<LicenseStatesContext> => {
-	const declaringPlanIds = [
-		...new Set(
-			params.plans
-				.filter((entry) => entry.licenses !== undefined)
-				.map((entry) => entry.plan_id),
-		),
-	];
-	if (declaringPlanIds.length === 0) return emptyLicenseStatesContext();
-
-	const planLicenseIds = declaringPlanIds.flatMap((planId) =>
-		(productStatesContext.versionsByPlanId[planId] ?? []).flatMap((version) =>
-			(version.licenses ?? []).map((link) => link.id),
-		),
-	);
+	const planLicenseIds = planLicenseIdsInContext({ productStatesContext });
+	if (planLicenseIds.length === 0) return emptyLicenseStatesContext();
 
 	return {
 		referencedPlanLicenseIds:

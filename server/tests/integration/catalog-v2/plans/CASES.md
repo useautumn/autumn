@@ -50,6 +50,17 @@ plans/
     existing-drafts.test.ts
     versioning-drafts.test.ts
     draft-guards.test.ts
+    licenses/
+      utils/expectLicenseMigrationDrafts.ts
+      utils/seedLicenseDraftPlans.ts
+      propagated/propagate-shared-parent-drafts.test.ts
+      propagated/propagate-seats-direct-and-overlay-drafts.test.ts
+      propagated/propagate-two-children-collapse-drafts.test.ts
+      pinned/pin-omits-parent-drafts.test.ts
+      mix/declared-compose-parent-drafts.test.ts
+      versioning/child-versioning-drafts.test.ts
+      versioning/parent-propagate-versioning-drafts.test.ts
+      versioning/child-and-parent-versioning-drafts.test.ts
   validation/
     default-flag.test.ts
     free-trial-validation.test.ts
@@ -627,15 +638,213 @@ targeted versions cover every customer-bearing version. Ops bucket by customize 
 | In-place `updated` EP bucket (never populated today) |
 | License parent propagation / `parent_license_plans` lane / child→parent conflicts |
 
-## 17. Plan licenses (declared links) — `licenses/plan-licenses*.test.ts`
+## 17. Plan licenses (declared) — `licenses/declared/`
 
 Direct parent `licenses[]` only. Omit = leave links unchanged; present = full-set replace.
 
 | Case | Status |
 |---|---|
-| Create parent + child in one batch with `licenses:[child]` → link exists; preview lane shows it | ✓ |
-| Update parent adding a license with customize (add_items/price) → `customized:true`, effective ents reflect customize | ✓ |
-| Parent declares `licenses: []` → links removed | ✓ |
-| Declared `license_plan_id` that doesn't exist → 4xx (`product_not_found`) | ✓ |
-| Licensed plan cannot offer its own licenses | ✓ |
-| Preview: declared `licenses[]` shows planned set; omitted key echoes current links | ✓ |
+| Create parent + child in one batch with `licenses:[child]` → link exists | ✓ `create-and-update.test.ts` |
+| Update parent adding a license with customize (add_items/price) → `customized:true` | ✓ `create-and-update.test.ts` |
+| Parent declares `licenses: []` → links removed | ✓ `create-and-update.test.ts` |
+| Declared `license_plan_id` that doesn't exist → 4xx (`product_not_found`) | ✓ `declared-license-errors.test.ts` |
+| Licensed plan cannot offer its own licenses | ✓ `declared-license-errors.test.ts` |
+| Replace child A with child B in one declared set | ✓ `set-replace.test.ts` |
+| Two licenses; drop one, keep the other | ✓ `set-replace.test.ts` |
+| `customize: null` clears overlay | ✓ `set-fields.test.ts` |
+| included / prepaid_only / metadata-only (no customize) | ✓ `set-fields.test.ts` |
+| Child already has v2; `licenses:[child]` links latest | ✓ `set-replace.test.ts` |
+| Duplicate `license_plan_id` in `licenses[]` → 400 | ✓ `declared-license-errors.test.ts` |
+| Self-link → 400 | ✓ `declared-license-guards.test.ts` |
+| Archived child → 400 | ✓ `declared-license-guards.test.ts` |
+| Pooled item on child, or pooled in customize `add_items` → 400 | ✓ `declared-license-pooled.test.ts` |
+| `prepaid_only: false` → 400 | ✓ `declared-license-guards.test.ts` |
+| Create feature + parent customize `add_items` that feature | ✓ `set-fields.test.ts` |
+
+## 18. Plan licenses — pin / follow / compose — `licenses/`
+
+Follow is `child.propagate.license_parents[].versioning` (`existing` | `new_version` |
+`all_versions`). Team in `plans[]` is declared content, not follow. Omit from
+propagate = pin (freeze).
+
+### pinned/ — parent not listed in child's propagate
+
+| Case | Status |
+|---|---|
+| In-batch parent without propagate freezes uncustomized child item change | ✓ `pin-in-place-item-change.test.ts` |
+| Absent parent (not in `plans[]`) is derived and pinned | ✓ `pin-in-place-item-change.test.ts` |
+| Child `new_version` re-points absent parent to v2 (pin freeze) | ✓ `pin-on-child-new-version.test.ts` |
+| Child 10→200 **and** add Words; parent not in propagate → overlay msgs=10, **no Words** | ✓ `pin-freeze-items.test.ts` |
+| Pin leak: overlay messages ent id ≠ child's stock e1 | ✓ `pin-freeze-items.test.ts` |
+| Overlay already 500; child 10→200 + Words; no propagate → skip; still 500; no Words | ✓ `pin-freeze-items.test.ts` |
+| Overlay 500; child `new_version` 200+Words; no propagate → re-point to v2, keep 500, no Words | ✓ `pin-freeze-items.test.ts` |
+| After a pin, child 200→10 → stay `customized:true` (no collapse) | ✓ `pin-freeze-items.test.ts` |
+| Child name-only → no pin; link stays uncustomized sharing stock | ✓ `pin-freeze-items.test.ts` |
+| Parent v1+v2, child bump, **no** propagate → **both** versions pin | ✓ `pin-freeze-items.test.ts` |
+
+### propagated/ — `child.propagate.license_parents`
+
+| Case | Status |
+|---|---|
+| In-batch parent listed in propagate follows uncustomized child item change | ✓ `follow-in-place-item-change.test.ts` |
+| Customized adopt keeps override, inherits new items, collapses, re-points | ✓ `follow-customized-override.test.ts` |
+| Omit / `existing` → latest follows, historical frozen | ✓ `follow-latest-or-explicit-version.test.ts` |
+| `{ version: 1 }` → that version follows, latest frozen | ✓ `follow-latest-or-explicit-version.test.ts` |
+| `all_versions` → every existing parent version follows | ✓ `follow-all-parent-versions.test.ts` |
+| `new_version` + customers on latest → mint, follow mint, freeze old | ✓ `follow-new-parent-version.test.ts` |
+| `new_version` + no customers → fall back to existing (no mint) | ✓ `follow-new-parent-version.test.ts` |
+| v1 customized 500, v2 stock; child propagate `all_versions` + Words → v1 rebase 500+Words; v2 stock 200+Words | ✓ `follow-version-overlays.test.ts` |
+| Latest customized 500; propagate `new_version` + customers → mint follows rebased 500+Words; old latest pins (500, no Words) | ✓ `follow-version-overlays.test.ts` |
+| Customers on parent **v1** only; latest empty; propagate `new_version` → no mint; latest follows in place; v1 pins | ✓ `follow-version-overlays.test.ts` |
+| Customers on v1; propagate `all_versions` → both follow in place; v1 customers see 200 | ✓ `follow-version-overlays.test.ts` |
+
+### customer_licenses retire — assigned seats, not `cus_product` on Team
+
+Seed via DB `customer_licenses.plan_license_id`. `seedVersionableCustomer` is the wrong customer kind.
+
+| Case | Status |
+|---|---|
+| Uncustomized link, customer on `plan_license`; child 10→200, pin → retire old row; catalog successor overlay=10; customer id unchanged (still 10) | ✓ `assigned-seat-pin.test.ts` |
+| Same customer; child propagate → no plan_license write; customer **sees 200** (shares stock) | ✓ `assigned-seat-follow.test.ts` |
+| Same customer; parent `licenses[]` customize 300 → retire+mint successor at 300; customer stays on retired row | ✓ `assigned-seat-declared.test.ts` |
+| Same customer; `licenses: []` → retire, **not** hard-delete | ✓ `assigned-seat-declared.test.ts` |
+| Customer on plan_license; child `new_version` + pin → catalog link on a new plan_license; customer remains on retired v1-era row | ✓ `assigned-seat-pin.test.ts` |
+
+### mix/ — declared × follow, guards
+
+| Case | Status |
+|---|---|
+| Team `existing` + child `all_versions` → latest is Team content; historical follows links-only | ✓ `compose-parent-plans.test.ts` |
+| Team `all_versions` + child `all_versions` → every version is Team content and follows | ✓ `compose-parent-plans.test.ts` |
+| Team `new_version` + child `existing` → one mint follows, old frozen | ✓ `compose-parent-plans.test.ts` |
+| Two parents both `new_version`: customered mints, other stays in place | ✓ `two-parents-split-new-version.test.ts` |
+| Child adds boolean + parent declares license base price → both land on the license | ✓ `declared-customize-and-child-items.test.ts` |
+| Child and parent both change messages → declared customize wins; child keeps its own | ✓ `declared-customize-and-child-items.test.ts` |
+| `new_version` / `all_versions` + explicit `version` → 400 | ✓ `propagate-versioning-errors.test.ts` |
+| `new_version` on missing parent → 400 | ✓ `propagate-versioning-errors.test.ts` |
+| Seed overlay 500; child 10→200 + **propagate** + parent `licenses[]` customize 300 → 300; pin/propagate do not run | ✓ `declared-exclusive-vs-propagate.test.ts` |
+| Child 10→200 + propagate + parent `licenses: []` → link gone; propagate does **not** resurrect | ✓ `declared-exclusive-vs-propagate.test.ts` |
+| Parent offers Seat+Pack; declare only Seat; Pack child in propagate → Pack **removed**, not followed | ✓ `declared-exclusive-vs-propagate.test.ts` |
+| Parent `licenses:[child]` no customize; child 10→200 + propagate → uncustomized 200 via declared re-link | ✓ `declared-exclusive-vs-propagate.test.ts` |
+| Child `new_version` + parent `licenses[]` customize 300 → declared links **latest** (v2) at 300 | ✓ `declared-exclusive-vs-propagate.test.ts` |
+| M-excl / pin+Words, parent-then-child vs child-then-parent → identical | ✓ `declared-exclusive-vs-propagate.test.ts` |
+| Team offers Seat+Pack; Seat not in propagate, Pack is; both 10→200 → Seat overlay 10; Pack stock 200 | ✓ `concat-pin-and-follow.test.ts` |
+| One Seat; Team not in propagate, Org is → Team 10; Org 200 | ✓ `concat-pin-and-follow.test.ts` |
+| Seat already 500, Pack uncustomized; same split → Seat skip 500; Pack 200 | ✓ `concat-pin-and-follow.test.ts` |
+| Child 10→200; parent `all_versions`; **no** propagate, no `licenses[]` → pin **every** sibling | ✓ `versioning-collisions.test.ts` |
+| v1 overlay 500; parent `all_versions` + `licenses[]`=300 → both catalog links 300 | ✓ `versioning-collisions.test.ts` |
+| Same + child 10→200 (+ optional propagate) → still 300; child-edit conflict does not surface | ✓ `versioning-collisions.test.ts` |
+| Child propagate `new_version`; parent also `plans[]` `versioning: new_version` → one mint (direct claim wins); that mint follows; older frozen | ✓ `versioning-collisions.test.ts` |
+| Child propagate `new_version`; parent `plans[]` name-only (`existing`) → at most one mint; name lands on the intended row; other versions pin | ✓ `versioning-collisions.test.ts` |
+| `propagate.license_parents` `new_version` on a plan with customers but **no link** → must **not** mint (400 or no-op) | ✓ `versioning-collisions.test.ts` |
+| Child `all_versions` while offered as a license → 400, or pin/follow per child version the link actually points at | ✓ `versioning-collisions.test.ts` |
+| Parent `new_version`, omit `licenses` → lock whether v2 copies links (§15 currently says not copied) | ✓ `versioning-collisions.test.ts` |
+
+## 19. Plan licenses preview — `licenses/preview/`
+
+`preview_update` for license catalog changes. `license_changes` is the diff;
+`licenses` is the after-set. Nested `plan_change` on a license row is core-only.
+
+| Case | Status |
+|---|---|
+| Declared `licenses[]` shows planned set; omitted key echoes current links | ✓ `declared-licenses-lane.test.ts` |
+| Declared swap → `plan_change.license_changes` create+remove | ✓ `declared-licenses-lane.test.ts` |
+| Create parent + child shows licenses lane; no `plan_change` (no from) | ✓ `declared-licenses-lane.test.ts` |
+| `licenses: []` → removed + `remove_licenses` | ✓ `license-changes-declared.test.ts` |
+| Included-only → updated, `previous_attributes.included`, no nested `plan_change` | ✓ `license-changes-declared.test.ts` |
+| Identical `licenses[]` re-declare → no `license_changes` | ✓ `license-changes-declared.test.ts` |
+| Customize existing link → updated + nested core `plan_change` | ✓ `license-changes-customize.test.ts` |
+| New customized link → created, no nested `plan_change` | ✓ `license-changes-customize.test.ts` |
+| Name + included compose on one `plan_change` | ✓ `license-changes-customize.test.ts` |
+| In-batch pin → updated freeze, no nested `plan_change` | ✓ `license-changes-follow.test.ts` |
+| In-batch propagate → updated + nested item `plan_change` | ✓ `license-changes-follow.test.ts` |
+| Child `new_version` + pin → `previous_attributes.version` | ✓ `license-changes-follow.test.ts` |
+| Child `versioning.options` unions reverse-link parents (no propagate yet) | ✓ `child-versioning-options-union.test.ts` |
+| Same options when propagate is later filled (must not shrink) | ✓ `child-versioning-options-union.test.ts` |
+| Child `license_parents`: declared item override → `explicit` + final customize (declared wins; child-only items still flow) | ✓ `license-parents-lane.test.ts` |
+| Child `license_parents`: propagate-only → `propagated` | ✓ `license-parents-lane.test.ts` |
+| Child `license_parents`: pin (no propagate) → `unchanged` | ✓ `license-parents-lane.test.ts` |
+| In-batch follow of customized 500 + Words → nested `license_changes[].plan_change` shows Words add; messages not a child-won slot | ✓ `license-changes-rebase.test.ts` |
+| Overlay 500, child 200, propagate, **no** `licenses[]` → `license_parents[].conflicts: [value_divergence messages]`, `license_action: "propagated"` | ✓ `conflicts/customize-override.test.ts` |
+| Declared+propagate (overlay 500 → customize 300) → `license_action: "explicit"`, `conflicts` omitted (declared swallowed the child-edit conflict) | ✓ `license-changes-rebase.test.ts` |
+| Child-only pin (absent parent) → `license_parents[]` row, `license_action: "unchanged"`, no conflict if uncustomized | ✓ `license-parents-lane.test.ts` |
+| Parent `all_versions` + license write → sibling `license_changes` do not drift from the direct row | ✓ `license-changes-siblings.test.ts` |
+
+Deferred (need absent-parent fan-out or are invalid):
+
+| Case | Why |
+|---|---|
+| Absent-parent pin / propagate on the child row | parent not in `plans[]`; builder not started |
+| `prepaid_only: false` | 400, not a preview lane |
+
+## 20. License migration drafts — `migrations/licenses/`
+
+One catalog update → at most one draft. Child item changes and parent license
+changes are separate ops when customize differs. Parent customize is
+`upsert_licenses: [{ license_plan_id, customize: effective delta }]`.
+`new_version` never drafts. Seat assignment CPs are not child customers.
+Declared `licenses[]` is the final composed parent op.
+
+CatalogV2 multi-plan filters are `$or` of `{ plan_id, version }` branches
+(not V1 `plan_id: { $in }`).
+
+### propagated/
+
+| Case | Status |
+|---|---|
+| A1 Team+Scale propagate, same 10→200, both have parent customers, child has none → 1 op, `$or`, upsert_licenses only | ✓ `propagated/propagate-shared-parent-drafts.test.ts` |
+| A2 Scale has no customers → Team only | ✓ `propagated/propagate-shared-parent-drafts.test.ts` |
+| A3 Seat price 10→20; Team follows, Ent already `$15` → Team only, nested price 20, `no_billing_changes: false` | ✓ `propagated/propagate-shared-parent-drafts.test.ts` |
+| B1 Assigned seats (+ assignment CP on child) → Team op; child plan_id never in any `plan_filter` | ✓ `propagated/propagate-seats-direct-and-overlay-drafts.test.ts` |
+| B2 Direct child attach + Team customers → 1 draft, 2 disjoint ops, outer `$or` | ✓ `propagated/propagate-seats-direct-and-overlay-drafts.test.ts` |
+| B3 Team overlay 900, Scale stock, child 500→1000 → Scale only | ✓ `propagated/propagate-seats-direct-and-overlay-drafts.test.ts` |
+| H1 Two children add the same boolean; Team+Scale each offer both → 1 child `$or` + 1 parent `$or` with two upserts | ✓ `propagated/propagate-two-children-collapse-drafts.test.ts` |
+| H2 Two children replace Messages with Words (same remove+add) → same collapse | ✓ `propagated/propagate-two-children-collapse-drafts.test.ts` |
+| H3 Same child delta; Team offers Seat only, Scale offers Pack only → child ops collapse, parent ops stay split | ✓ `propagated/propagate-two-children-collapse-drafts.test.ts` |
+
+### pinned/
+
+| Case | Status |
+|---|---|
+| C1 Team in `plans[]` but not in propagate, Team has customers, child has none → no draft | ✓ `pinned/pin-omits-parent-drafts.test.ts` |
+| C2 Team absent from `plans[]` (derived pin) → no draft | ✓ `pinned/pin-omits-parent-drafts.test.ts` |
+| C3 Child `new_version` + pin, no `draft` flag → no draft (`new_version` + `draft` is 400 in `plan-errors.test.ts`) | ✓ `pinned/pin-omits-parent-drafts.test.ts` |
+
+### mix/
+
+| Case | Status |
+|---|---|
+| D1 Child adds Dashboard + Team declares `$20` → one Team op with both | ✓ `mix/declared-compose-parent-drafts.test.ts` |
+| D2 Team declares `$20`, Scale only propagates → two parent ops (must not share) | ✓ `mix/declared-compose-parent-drafts.test.ts` |
+| D3 Child 10→200, Team declares 300 → Team op is 300 | ✓ `mix/declared-compose-parent-drafts.test.ts` |
+
+### versioning/
+
+| Case | Status |
+|---|---|
+| E1 Child `existing` (latest), customers only on v1, link on latest → no child op; parent op if Team's link is latest | ✓ `versioning/child-versioning-drafts.test.ts` |
+| E2 Child `all_versions`, customers on v1 only → child op pinned to v1 + parent op | ✓ `versioning/child-versioning-drafts.test.ts` |
+| E3 Child `all_versions`, customers on v1+v2, identical delta → child op collapses + parent op | ✓ `versioning/child-versioning-drafts.test.ts` |
+| E4 Child `new_version` without `draft`, Team propagates, Team has customers → no draft | ✓ `versioning/child-versioning-drafts.test.ts` |
+| F1 Propagate latest; Team v1+v2, customers only on v1 → no parent op | ✓ `versioning/parent-propagate-versioning-drafts.test.ts` |
+| F2 Propagate `{ version: 1 }`, customers on v1 → parent op pinned to 1 | ✓ `versioning/parent-propagate-versioning-drafts.test.ts` |
+| F3 Propagate `all_versions`: customers on v1 only → pin v1; v1+v2 same delta → collapse | ✓ `versioning/parent-propagate-versioning-drafts.test.ts` |
+| F4 Propagate `new_version`, customers on latest → no parent op (child op if seat has direct customers) | ✓ `versioning/parent-propagate-versioning-drafts.test.ts` |
+| G1 Child `all_versions` + Team `existing`: child v1+v2; parent latest only; parent keeps version pin | ✓ `versioning/child-and-parent-versioning-drafts.test.ts` |
+| G2 Child `all_versions` + Team `all_versions`: child v1, parent v2 | ✓ `versioning/child-and-parent-versioning-drafts.test.ts` |
+| G3 Team `plans[]` `all_versions` rename + propagate `all_versions` → license-only parent op | ✓ `versioning/child-and-parent-versioning-drafts.test.ts` |
+| G4 Child `new_version` + Team `all_versions`, no `draft` → no draft | ✓ `versioning/child-and-parent-versioning-drafts.test.ts` |
+| G5 Child `existing` + `draft` + Team `plans[]` `new_version` + propagate latest → child op only | ✓ `versioning/child-and-parent-versioning-drafts.test.ts` |
+| G6 Preview of G1 equals the update draft minus `id`; preview persists nothing | ✓ `versioning/child-and-parent-versioning-drafts.test.ts` |
+
+### run/
+
+Catalog update only writes the draft. Run = migrations-v2 confirm/execute
+applies the `update_plan` ops. Combined drafts must be runnable.
+
+| Case | Status |
+|---|---|
+| upsert_licenses-only parent op updates the attached parent's license pool | ✓ `run/run-license-drafts.test.ts` |
+| combined child + parent draft applies both ops | ✓ `run/run-license-drafts.test.ts` |
+| assignment CPs (`customer_license_link_id` set) are not child matches | ✓ `run/run-license-drafts.test.ts` |
+

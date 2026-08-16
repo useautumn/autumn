@@ -1,4 +1,5 @@
 import {
+	type DiffedCustomizePlanV1,
 	type ProductKey,
 	productKeyToString,
 	type UpdateCatalogPlanParams,
@@ -16,6 +17,8 @@ export type ProductUpsertIntent = {
 	productKey: ProductKey;
 	planParams: ResolvedPlanParams;
 	source: UpsertProductSource;
+	/** A propagated intent carries the direct edit as a diff; when present, content comes from it, not from planParams. */
+	editDiff?: DiffedCustomizePlanV1;
 };
 
 export const claimProductKeys = ({

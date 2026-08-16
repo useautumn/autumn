@@ -104,6 +104,8 @@ const upsertById = async ({
 		.onConflictDoUpdate({
 			target: [planLicenses.id],
 			set: {
+				parent_internal_product_id: parentInternalProductId,
+				license_internal_product_id: licenseInternalProductId,
 				included,
 				prepaid_only: prepaidOnly,
 				customized,

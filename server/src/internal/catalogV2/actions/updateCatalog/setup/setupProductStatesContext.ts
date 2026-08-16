@@ -1,4 +1,4 @@
-import type { UpdateCatalogParams } from "@autumn/shared";
+import type { FullProduct, UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	emptyProductStatesContext,
@@ -11,10 +11,37 @@ import { getVersioningUsage } from "@/internal/customers/cusProducts/repos/getVe
 import { ProductService } from "@/internal/products/ProductService.js";
 import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 
+const payloadPlanIds = ({
+	planEntries,
+}: {
+	planEntries: UpdateCatalogParams["plans"];
+}): string[] => [
+	...new Set(
+		planEntries.flatMap((entry) => [
+			entry.plan_id,
+			...(entry.new_plan_id ? [entry.new_plan_id] : []),
+			...(entry.licenses?.map((license) => license.license_plan_id) ?? []),
+		]),
+	),
+];
+
+const licenseParentPlanIds = ({
+	products,
+	loadedPlanIds,
+}: {
+	products: FullProduct[];
+	loadedPlanIds: string[];
+}): string[] => [
+	...new Set(
+		products.flatMap((product) =>
+			(product.parent_plan_licenses ?? []).map((link) => link.product.id),
+		),
+	),
+].filter((planId) => !loadedPlanIds.includes(planId));
+
 /**
- * Batch-load every plan_id (and new_plan_id) in the payload plus declared
- * license children: all versions as FullProduct, per-row customer usage +
- * versionable row refs, and reward programs for rename gates.
+ * Batch-load every plan_id (and new_plan_id) in the payload, declared license
+ * children, and reverse license-parent plans of touched children.
  */
 export const setupProductStatesContext = async ({
 	ctx,
@@ -27,24 +54,28 @@ export const setupProductStatesContext = async ({
 	const planEntries = params.plans;
 	if (planEntries.length === 0) return emptyProductStatesContext();
 
-	const allPlanIds = [
-		...new Set(
-			planEntries.flatMap((entry) => [
-				entry.plan_id,
-				...(entry.new_plan_id ? [entry.new_plan_id] : []),
-				...(entry.licenses?.map((license) => license.license_plan_id) ?? []),
-			]),
-		),
-	];
+	const listAllVersions = async ({ planIds }: { planIds: string[] }) => {
+		if (planIds.length === 0) return [];
+		return ProductService.listFull({
+			db,
+			orgId: org.id,
+			env,
+			inIds: planIds,
+			returnAll: true,
+			skipCache: true,
+		});
+	};
 
-	const allVersions = await ProductService.listFull({
-		db,
-		orgId: org.id,
-		env,
-		inIds: allPlanIds,
-		returnAll: true,
-		skipCache: true,
+	const loadedPlanIds = payloadPlanIds({ planEntries });
+	const payloadVersions = await listAllVersions({ planIds: loadedPlanIds });
+	const parentPlanIds = licenseParentPlanIds({
+		products: payloadVersions,
+		loadedPlanIds,
 	});
+	const parentVersions = await listAllVersions({ planIds: parentPlanIds });
+
+	const allPlanIds = [...loadedPlanIds, ...parentPlanIds];
+	const allVersions = [...payloadVersions, ...parentVersions];
 
 	const [usageByInternalId, rewardPrograms] = await Promise.all([
 		getVersioningUsage({

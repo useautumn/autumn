@@ -1,6 +1,8 @@
 import type {
 	CatalogPlanVersioningStrategy,
+	CatalogPropagateParams,
 	FullProduct,
+	PlanLicenseParams,
 } from "@autumn/shared";
 import type { EntitlementPricesPlan } from "@/internal/products/actions/computeEntitlementPricesPlan";
 import type { FreeTrialPlan } from "./freeTrialPlan";
@@ -48,6 +50,10 @@ export type UpsertProductPlan = {
 	entitlementPricesPlan?: EntitlementPricesPlan;
 	/** Absent = free-trial facet unchanged (or omitted). */
 	freeTrialPlan?: FreeTrialPlan;
+	/** licenses[] as declared — input for computePlanLicensesPlan, which runs after all plans. */
+	declaredLicenses?: PlanLicenseParams[];
+	/** Who follows this row's content change. Copied from planParams so pass 2 can read it. */
+	propagate?: CatalogPropagateParams;
 	/** Absent = plan_license links untouched. Present (incl. []) = full-set replace. */
 	planLicenses?: PlanLicensePlan[];
 

@@ -25,7 +25,6 @@ export const setupUpdateCatalogContext = async ({
 	// Needs the loaded parents' current links, so it runs after product states.
 	const licenseStatesContext = await setupLicenseStatesContext({
 		ctx,
-		params,
 		productStatesContext,
 	});
 

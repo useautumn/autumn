@@ -1,6 +1,7 @@
 import type { CatalogSiblingVersionPreview, FullProduct } from "@autumn/shared";
 import { productToProductKey } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
+import { withCatalogConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withCatalogConflicts";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
@@ -12,38 +13,61 @@ const byVersionAscending = (
 
 const selectedSiblingFromUpsert = ({
 	sibling,
+	editedCurrent,
+	editedNext,
 }: {
 	sibling: UpsertProductPlan;
+	editedCurrent: FullProduct | null;
+	editedNext: FullProduct;
 }): CatalogSiblingVersionPreview => {
 	const planChange = buildPlanChangeFromFullProducts({
 		from: sibling.row.currentFullProduct ?? undefined,
 		to: sibling.row.nextFullProduct,
 	});
 
-	return {
-		version: sibling.row.version,
-		selected: true,
-		state: { has_customers: sibling.state.hasCustomers },
-		...(planChange ? { plan_change: planChange } : {}),
-	};
+	return withCatalogConflicts({
+		preview: {
+			plan_id: sibling.row.planId,
+			version: sibling.row.version,
+			state: {
+				has_customers: sibling.state.hasCustomers,
+				will_archive: false,
+			},
+			...(planChange ? { plan_change: planChange } : {}),
+		},
+		current: editedCurrent,
+		next: editedNext,
+		relative: sibling.row.currentFullProduct,
+	});
 };
 
 const unselectedSiblingFromVersion = ({
 	product,
 	productStatesContext,
+	editedCurrent,
+	editedNext,
 }: {
 	product: FullProduct;
 	productStatesContext: ProductStatesContext;
-}): CatalogSiblingVersionPreview => ({
-	version: product.version,
-	selected: false,
-	state: {
-		has_customers: productKeyToState({
-			productKey: productToProductKey({ product }),
-			productStatesContext,
-		}).customerUsage.hasVersionableCustomerProducts,
-	},
-});
+	editedCurrent: FullProduct | null;
+	editedNext: FullProduct;
+}): CatalogSiblingVersionPreview =>
+	withCatalogConflicts({
+		preview: {
+			plan_id: product.id,
+			version: product.version,
+			state: {
+				has_customers: productKeyToState({
+					productKey: productToProductKey({ product }),
+					productStatesContext,
+				}).customerUsage.hasVersionableCustomerProducts,
+				will_archive: false,
+			},
+		},
+		current: editedCurrent,
+		next: editedNext,
+		relative: product,
+	});
 
 const isDirectForPlan = ({
 	upsert,
@@ -77,17 +101,31 @@ export const buildSiblingVersionsPreview = ({
 			.length === 1;
 	if (!hasExactlyOneDirectEntry) return [];
 
+	const editedCurrent = directUpsert.row.currentFullProduct;
+	const editedNext = directUpsert.row.nextFullProduct;
+
 	if (versioning === "all_versions") {
 		return upsertProducts
 			.filter((upsert) => isAllVersionsSiblingForPlan({ upsert, planId }))
-			.map((sibling) => selectedSiblingFromUpsert({ sibling }))
+			.map((sibling) =>
+				selectedSiblingFromUpsert({
+					sibling,
+					editedCurrent,
+					editedNext,
+				}),
+			)
 			.sort(byVersionAscending);
 	}
 
 	return (productStatesContext.versionsByPlanId[planId] ?? [])
 		.filter((product) => product.version !== version)
 		.map((product) =>
-			unselectedSiblingFromVersion({ product, productStatesContext }),
+			unselectedSiblingFromVersion({
+				product,
+				productStatesContext,
+				editedCurrent,
+				editedNext,
+			}),
 		)
 		.sort(byVersionAscending);
 };

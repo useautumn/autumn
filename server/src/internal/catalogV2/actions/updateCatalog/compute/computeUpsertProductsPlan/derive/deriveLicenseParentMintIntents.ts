@@ -1,0 +1,64 @@
+import { productToProductKey } from "@autumn/shared";
+import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import type {
+	ProductUpsertIntent,
+	UpsertProductPlan,
+} from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
+
+/** Mint max+1 when latest has customers; otherwise skip (follow latest in place). */
+const licenseParentMintIntent = ({
+	planId,
+	productStatesContext,
+}: {
+	planId: string;
+	productStatesContext: ProductStatesContext;
+}): ProductUpsertIntent | undefined => {
+	const latest = productStatesContext.versionsByPlanId[planId]?.[0];
+	if (!latest) return undefined;
+
+	const hasCustomers = productKeyToState({
+		productKey: productToProductKey({ product: latest }),
+		productStatesContext,
+	}).customerUsage.hasVersionableCustomerProducts;
+	if (!hasCustomers) return undefined;
+
+	const version = latest.version + 1;
+	return {
+		productKey: { planId, version },
+		planParams: {
+			plan_id: planId,
+			version,
+			versioning: "new_version",
+		},
+		source: "license_adopt",
+	};
+};
+
+/** `propagate.license_parents` `new_version` → mint the parent. Direct claims win. */
+export const deriveLicenseParentMintIntents = ({
+	upsert,
+	productStatesContext,
+}: {
+	upsert: UpsertProductPlan;
+	productStatesContext: ProductStatesContext;
+}): ProductUpsertIntent[] => {
+	const mintedPlanIds = new Set<string>();
+	const intents: ProductUpsertIntent[] = [];
+
+	for (const target of upsert.propagate?.license_parents ?? []) {
+		if (target.versioning !== "new_version") continue;
+		if (mintedPlanIds.has(target.plan_id)) continue;
+
+		const mintIntent = licenseParentMintIntent({
+			planId: target.plan_id,
+			productStatesContext,
+		});
+		if (!mintIntent) continue;
+
+		mintedPlanIds.add(target.plan_id);
+		intents.push(mintIntent);
+	}
+
+	return intents;
+};

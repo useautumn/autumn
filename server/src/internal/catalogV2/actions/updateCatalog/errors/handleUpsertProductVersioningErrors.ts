@@ -1,5 +1,49 @@
-import { ErrCode, RecaseError, type UpdateCatalogParams } from "@autumn/shared";
+import {
+	type CatalogPlanVersioningStrategy,
+	ErrCode,
+	RecaseError,
+	type UpdateCatalogParams,
+} from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+
+const rejectStrategyPlusExplicitVersion = ({
+	planId,
+	versioning,
+	version,
+}: {
+	planId: string;
+	versioning: CatalogPlanVersioningStrategy | undefined;
+	version: number | undefined;
+}): void => {
+	if (
+		(versioning === "all_versions" || versioning === "new_version") &&
+		version !== undefined
+	) {
+		throw new RecaseError({
+			message: `versioning "${versioning}" cannot be combined with an explicit version (plan_id=${planId}). Omit version to target latest.`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+};
+
+const rejectNewVersionOnMissingPlan = ({
+	planId,
+	versioning,
+	existingVersionCount,
+}: {
+	planId: string;
+	versioning: CatalogPlanVersioningStrategy | undefined;
+	existingVersionCount: number;
+}): void => {
+	if (versioning === "new_version" && existingVersionCount === 0) {
+		throw new RecaseError({
+			message: `versioning "new_version" requires an existing plan (plan_id=${planId})`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+};
 
 /** Reject unsupported versioning and invalid batch planParams shape. */
 export const handleUpsertProductVersioningErrors = ({
@@ -14,17 +58,11 @@ export const handleUpsertProductVersioningErrors = ({
 	const creatingPlanIds = new Set<string>();
 
 	for (const planParams of params.plans) {
-		if (
-			(planParams.versioning === "all_versions" ||
-				planParams.versioning === "new_version") &&
-			planParams.version !== undefined
-		) {
-			throw new RecaseError({
-				message: `versioning "${planParams.versioning}" cannot be combined with an explicit version (plan_id=${planParams.plan_id}). Omit version to target latest.`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
+		rejectStrategyPlusExplicitVersion({
+			planId: planParams.plan_id,
+			versioning: planParams.versioning,
+			version: planParams.version,
+		});
 
 		const existingVersions =
 			productStatesContext.versionsByPlanId[planParams.plan_id] ?? [];
@@ -51,14 +89,24 @@ export const handleUpsertProductVersioningErrors = ({
 			});
 		}
 
-		if (
-			planParams.versioning === "new_version" &&
-			existingVersions.length === 0
-		) {
-			throw new RecaseError({
-				message: `versioning "new_version" requires an existing plan (plan_id=${planParams.plan_id})`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
+		rejectNewVersionOnMissingPlan({
+			planId: planParams.plan_id,
+			versioning: planParams.versioning,
+			existingVersionCount: existingVersions.length,
+		});
+
+		for (const target of planParams.propagate?.license_parents ?? []) {
+			rejectStrategyPlusExplicitVersion({
+				planId: target.plan_id,
+				versioning: target.versioning,
+				version: target.version,
+			});
+			rejectNewVersionOnMissingPlan({
+				planId: target.plan_id,
+				versioning: target.versioning,
+				existingVersionCount: (
+					productStatesContext.versionsByPlanId[target.plan_id] ?? []
+				).length,
 			});
 		}
 

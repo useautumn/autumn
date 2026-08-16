@@ -1,14 +1,20 @@
 import type {
+	ApiPlanLicenseV1,
 	ApiPlanV1,
 	CreatePlanItemParamsV1,
 	PlanItemFilter,
 } from "@autumn/shared";
-import { composeMatchKey, type DiffedCustomizePlanV1 } from "./diffPlanV1.js";
+import {
+	composeMatchKey,
+	type DiffablePlanV1,
+	type DiffedCustomizePlanV1,
+} from "./diffPlanV1.js";
 
 export type ApplyDiffOutput = {
 	price: ApiPlanV1["price"];
 	items: ApiPlanV1["items"];
 	free_trial: ApiPlanV1["free_trial"];
+	licenses?: ApiPlanLicenseV1[];
 };
 
 type ApiPlanItem = ApiPlanV1["items"][number];
@@ -166,14 +172,87 @@ const applyFreeTrial = (
 	return { ...diff } as ApiPlanV1["free_trial"];
 };
 
+const applyLicenseUpsert = ({
+	existing,
+	upsert,
+}: {
+	existing?: ApiPlanLicenseV1;
+	upsert: NonNullable<DiffedCustomizePlanV1["upsert_licenses"]>[number];
+}): ApiPlanLicenseV1 => {
+	const customize =
+		upsert.customize === null
+			? undefined
+			: (upsert.customize ?? existing?.customize);
+
+	return {
+		license_plan_id: upsert.license_plan_id,
+		version: existing?.version ?? 1,
+		included: upsert.included ?? existing?.included ?? 0,
+		prepaid_only: upsert.prepaid_only ?? existing?.prepaid_only ?? false,
+		...(customize !== undefined ? { customize } : {}),
+		...(existing?.plan !== undefined ? { plan: existing.plan } : {}),
+	};
+};
+
+/** Only emit `licenses` when the diff has a license lane — content-only
+ * round-trips must not grow a licenses key. */
+const applyLicenses = ({
+	base,
+	diff,
+}: {
+	base: DiffablePlanV1;
+	diff: DiffedCustomizePlanV1;
+}): ApiPlanLicenseV1[] | undefined => {
+	if (
+		diff.upsert_licenses === undefined &&
+		diff.remove_licenses === undefined
+	) {
+		return undefined;
+	}
+
+	const removed = new Set(
+		(diff.remove_licenses ?? []).map((entry) => entry.license_plan_id),
+	);
+	const pending = new Map(
+		(diff.upsert_licenses ?? []).map((entry) => [
+			entry.license_plan_id,
+			entry,
+		]),
+	);
+
+	const next: ApiPlanLicenseV1[] = [];
+	for (const license of base.licenses ?? []) {
+		if (removed.has(license.license_plan_id)) continue;
+		const upsert = pending.get(license.license_plan_id);
+		if (upsert) {
+			next.push(applyLicenseUpsert({ existing: license, upsert }));
+			pending.delete(license.license_plan_id);
+			continue;
+		}
+		next.push(license);
+	}
+
+	for (const upsert of diff.upsert_licenses ?? []) {
+		if (!pending.has(upsert.license_plan_id)) continue;
+		next.push(applyLicenseUpsert({ upsert }));
+	}
+
+	return next;
+};
+
 export const applyDiff = ({
 	base,
 	diff,
 }: {
-	base: ApiPlanV1;
+	base: DiffablePlanV1;
 	diff: DiffedCustomizePlanV1;
-}): ApplyDiffOutput => ({
-	price: applyPrice(base.price, diff.price),
-	items: applyItems(base.items, diff),
-	free_trial: applyFreeTrial(base.free_trial, diff.free_trial),
-});
+}): ApplyDiffOutput => {
+	const output: ApplyDiffOutput = {
+		price: applyPrice(base.price, diff.price),
+		items: applyItems(base.items, diff),
+		free_trial: applyFreeTrial(base.free_trial, diff.free_trial),
+	};
+	const licenses = applyLicenses({ base, diff });
+	if (licenses === undefined) return output;
+	return { ...output, licenses };
+};

@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 import { CatalogFeatureUpdatePreviewSchema } from "./components/catalogFeatureUpdatePreview/catalogFeatureUpdatePreview.js";
 import { CatalogMigrationUpdatePreviewSchema } from "./components/catalogMigration.js";
-import { CatalogPlanUpdatePreviewSchema } from "./components/catalogPlanUpdatePreview/catalogPlanUpdatePreview.js";
+import { CatalogPlanUpdatePreviewSchema } from "./planUpdate/preview/catalogPlanPreview.js";
 
 /** Preview of a catalog update. `plans[]` mirrors the request's direct entries; related versions nest under each row. */
 export const PreviewUpdateCatalogResponseSchema = z.object({

@@ -1,3 +1,4 @@
+import type { CustomizePlanLicense } from "@models/licenseModels/licenseModels";
 import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums";
 import { basePriceToKey } from "@utils/planV1Utils/convertCustomize/basePriceToKey";
 import { createPlanItemToKey } from "@utils/planV1Utils/convertPlanItem/createPlanItemToKey";
@@ -42,7 +43,19 @@ const freeTrialSegment = ({
 	return freeTrialToKey({ freeTrial });
 };
 
-/** Stable identity of a customize payload: `price:…|add_items:…|remove_items:…|free_trial:…`. */
+const upsertLicenseToKey = ({
+	license,
+}: {
+	license: CustomizePlanLicense;
+}): string =>
+	[
+		license.license_plan_id,
+		customizeToKey({ customize: license.customize ?? {} }),
+		`included:${license.included ?? ""}`,
+		`prepaid_only:${license.prepaid_only ?? ""}`,
+	].join(":");
+
+/** Stable identity of a customize payload: `price:…|add_items:…|remove_items:…|free_trial:…|upsert_licenses:…|remove_licenses:…`. */
 export const customizeToKey = ({
 	customize,
 }: {
@@ -53,4 +66,6 @@ export const customizeToKey = ({
 		`add_items:${sortedJoin((customize.add_items ?? []).map((item) => createPlanItemToKey({ item })))}`,
 		`remove_items:${sortedJoin((customize.remove_items ?? []).map(planItemFilterMatchKey))}`,
 		`free_trial:${freeTrialSegment({ freeTrial: customize.free_trial })}`,
+		`upsert_licenses:${sortedJoin((customize.upsert_licenses ?? []).map((license) => upsertLicenseToKey({ license })))}`,
+		`remove_licenses:${sortedJoin((customize.remove_licenses ?? []).map((entry) => entry.license_plan_id))}`,
 	].join("|");

@@ -4,14 +4,10 @@ import type {
 	ProductState,
 	ProductStatesContext,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
-import type { CustomerProductVersioningUsage } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
-
-const emptyCustomerUsage = (): CustomerProductVersioningUsage => ({
-	hasAnyCustomerProducts: false,
-	hasVersionableCustomerProducts: false,
-	versionableCustomerCount: 0,
-	hasVersionableRowRefs: false,
-});
+import {
+	type CustomerProductVersioningUsage,
+	emptyVersioningUsage,
+} from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
 
 /** One ProductState per existing productKey, plus plan-scoped indexes. */
 export const buildProductStatesContext = ({
@@ -43,7 +39,7 @@ export const buildProductStatesContext = ({
 				currentFullProduct,
 				customerUsage:
 					usageByInternalId.get(currentFullProduct.internal_id) ??
-					emptyCustomerUsage(),
+					emptyVersioningUsage(),
 			};
 		}
 	}

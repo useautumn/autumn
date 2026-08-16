@@ -86,7 +86,7 @@ export type FullProductWithoutLicenses = z.infer<
 
 export type FullProduct = FullProductWithoutLicenses & {
 	licenses?: FullPlanLicense[];
-	/** Catalog links where THIS product is the license; product = parent plan. */
+	/** Reverse links (this product is the license). Every parent version, not latest-only — `deriveLicenseParentIntents` pins from this. */
 	parent_plan_licenses?: ParentPlanLicense[];
 	/** Parent base plan via `base_internal_product_id`; null if not a variant. */
 	base_product?: FullProduct | null;
