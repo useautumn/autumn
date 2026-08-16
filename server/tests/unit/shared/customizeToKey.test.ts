@@ -418,6 +418,60 @@ describe("customizeToKey", () => {
 		});
 	});
 
+	describe("upsert_licenses", () => {
+		test("omitted and empty are same; different license_plan_ids differ", () => {
+			expectSame(customize(), customize({ upsert_licenses: [] }), true);
+			expectSame(
+				customize({
+					upsert_licenses: [{ license_plan_id: "seat", customize: { add_items: [messages] } }],
+				}),
+				customize({
+					upsert_licenses: [{ license_plan_id: "pack", customize: { add_items: [messages] } }],
+				}),
+				false,
+			);
+		});
+
+		test("order of licenses does not matter", () => {
+			const seat = { license_plan_id: "seat", customize: { add_items: [messages] } };
+			const pack = { license_plan_id: "pack", customize: { add_items: [seats] } };
+			expectSame(
+				customize({ upsert_licenses: [seat, pack] }),
+				customize({ upsert_licenses: [pack, seat] }),
+				true,
+			);
+		});
+	});
+
+	describe("remove_licenses", () => {
+		test("omitted and empty are same; order does not matter", () => {
+			expectSame(customize(), customize({ remove_licenses: [] }), true);
+			expectSame(
+				customize({
+					remove_licenses: [
+						{ license_plan_id: "seat" },
+						{ license_plan_id: "pack" },
+					],
+				}),
+				customize({
+					remove_licenses: [
+						{ license_plan_id: "pack" },
+						{ license_plan_id: "seat" },
+					],
+				}),
+				true,
+			);
+		});
+
+		test("upsert vs remove of the same id differ", () => {
+			expectSame(
+				customize({ upsert_licenses: [{ license_plan_id: "seat" }] }),
+				customize({ remove_licenses: [{ license_plan_id: "seat" }] }),
+				false,
+			);
+		});
+	});
+
 	describe("non-migratable fields (ignored)", () => {
 		test("billing_controls / update_items do not affect the key", () => {
 			expectSame(

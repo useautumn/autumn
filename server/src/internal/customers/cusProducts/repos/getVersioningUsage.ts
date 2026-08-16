@@ -12,17 +12,22 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 export type CustomerProductVersioningUsage = {
 	hasAnyCustomerProducts: boolean;
 	hasVersionableCustomerProducts: boolean;
+	/** Versionable CPs that are not seat assignments (`customer_license_link_id` null). */
+	hasVersionableDirectCustomerProducts: boolean;
 	versionableCustomerCount: number;
 	/** This version's ent/price ids are referenced by a versionable cus_ent/cus_price. */
 	hasVersionableRowRefs: boolean;
 };
 
-const emptyUsage = (): CustomerProductVersioningUsage => ({
+export const emptyVersioningUsage = (): CustomerProductVersioningUsage => ({
 	hasAnyCustomerProducts: false,
 	hasVersionableCustomerProducts: false,
+	hasVersionableDirectCustomerProducts: false,
 	versionableCustomerCount: 0,
 	hasVersionableRowRefs: false,
 });
+
+const emptyUsage = emptyVersioningUsage;
 
 const hasVersionableEntitlementRef = async ({
 	db,
@@ -129,6 +134,9 @@ export const getVersioningUsage = async ({
 				versionableCount: countDistinct(
 					sql`CASE WHEN ${inArray(customerProducts.status, VERSIONABLE_CUSTOMER_STATUSES)} THEN ${customerProducts.id} END`,
 				).as("versionable_count"),
+				versionableDirectCount: countDistinct(
+					sql`CASE WHEN ${inArray(customerProducts.status, VERSIONABLE_CUSTOMER_STATUSES)} AND ${isNull(customerProducts.customer_license_link_id)} THEN ${customerProducts.id} END`,
+				).as("versionable_direct_count"),
 			})
 			.from(customerProducts)
 			.where(
@@ -147,6 +155,8 @@ export const getVersioningUsage = async ({
 		usage.set(row.internalProductId, {
 			hasAnyCustomerProducts: Number(row.anyCount) > 0,
 			hasVersionableCustomerProducts: Number(row.versionableCount) > 0,
+			hasVersionableDirectCustomerProducts:
+				Number(row.versionableDirectCount) > 0,
 			versionableCustomerCount: Number(row.versionableCount),
 			hasVersionableRowRefs: rowRefIds.has(row.internalProductId),
 		});

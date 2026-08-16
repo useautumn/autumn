@@ -47,8 +47,8 @@ const composeNestedVariantProduct = () => ({
 export const composeFullProductQuery = () => ({
 	...composeProductItems(),
 	...composeLicenseSide(),
-	// Reverse direction: links where this product IS the license. Indexed by
-	// idx_plan_license_license — an empty probe for non-license products.
+	// Reverse links where this product IS the license. Keep every parent version —
+	// catalogV2 `deriveLicenseParentIntents` pins from this list (not latest-only).
 	parent_plan_licenses: {
 		where: eq(planLicenses.is_custom, false),
 		with: {

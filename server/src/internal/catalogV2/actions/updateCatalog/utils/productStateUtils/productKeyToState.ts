@@ -4,14 +4,10 @@ import {
 	productKeyToString,
 } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
-import type { CustomerProductVersioningUsage } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
-
-const emptyCustomerUsage = (): CustomerProductVersioningUsage => ({
-	hasAnyCustomerProducts: false,
-	hasVersionableCustomerProducts: false,
-	versionableCustomerCount: 0,
-	hasVersionableRowRefs: false,
-});
+import {
+	type CustomerProductVersioningUsage,
+	emptyVersioningUsage,
+} from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
 
 export type ProductKeyState = {
 	currentFullProduct: FullProduct | null;
@@ -34,7 +30,7 @@ export const productKeyToState = ({
 	if (!state) {
 		return {
 			currentFullProduct: null,
-			customerUsage: emptyCustomerUsage(),
+			customerUsage: emptyVersioningUsage(),
 		};
 	}
 

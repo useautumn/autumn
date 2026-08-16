@@ -1,58 +1,50 @@
+import {
+	CustomizePlanLicenseSchema,
+	RemovePlanLicenseSchema,
+} from "@models/licenseModels/licenseModels.js";
 import { DiffedCustomizePlanV1Schema } from "@utils/planV1Utils/diff/diffPlanV1.js";
 import { z } from "zod/v4";
-import { ApiPlanV1Schema } from "../../apiPlanV1.js";
-import { ApiFreeTrialV2Schema } from "../apiFreeTrialV2.js";
-import { PlanItemChangeV0Schema } from "./planItemChangeV0.js";
-import { PlanPreviousAttributesV0Schema } from "./planPreviousAttributesV0.js";
+import {
+	PlanChangeCoreV0Schema,
+	PlanFreeTrialChangeV0Schema,
+	PlanPriceChangeV0Schema,
+} from "./planChangeCoreV0.js";
+import { PlanLicenseChangeV0Schema } from "./planLicenseChangeV0.js";
 
-/** Before/after for the plan's price. Absent when the price is unchanged. */
-export const PlanPriceChangeV0Schema = z.object({
-	previous: ApiPlanV1Schema.shape.price.meta({
-		description: "The plan's price before the change.",
-	}),
-	current: ApiPlanV1Schema.shape.price.meta({
-		description: "The plan's price after the change.",
-	}),
-});
+export {
+	type PlanChangeCoreV0,
+	PlanChangeCoreV0Schema,
+	type PlanFreeTrialChangeV0,
+	PlanFreeTrialChangeV0Schema,
+	type PlanPriceChangeV0,
+	PlanPriceChangeV0Schema,
+} from "./planChangeCoreV0.js";
 
-/** Before/after for the plan's free trial. Absent when the trial is unchanged. */
-export const PlanFreeTrialChangeV0Schema = z.object({
-	previous: ApiFreeTrialV2Schema.nullable().meta({
-		description: "The plan's free trial before the change. Null when none.",
+/** Core customize plus the license call. Zod content schema stays license-free. */
+export const PlanChangeCustomizeV0Schema = DiffedCustomizePlanV1Schema.extend({
+	upsert_licenses: z.array(CustomizePlanLicenseSchema).optional().meta({
+		description:
+			"planLicenses created or overridden. Same shape as customize.upsert_licenses / licenses[] entries.",
 	}),
-	current: ApiFreeTrialV2Schema.nullable().meta({
-		description: "The plan's free trial after the change. Null when none.",
+	remove_licenses: z.array(RemovePlanLicenseSchema).optional().meta({
+		description: "planLicenses dropped from this plan.",
 	}),
 });
 
 /**
- * Content-level change to a plan definition.
+ * Change to a plan definition (core content + one-layer licenses).
  * Shared kernel for catalog preview and (nested under) customer plan changes.
  */
-export const PlanChangeV0Schema = z.object({
-	plan: ApiPlanV1Schema.optional().meta({
+export const PlanChangeV0Schema = PlanChangeCoreV0Schema.extend({
+	license_changes: z.array(PlanLicenseChangeV0Schema).optional().meta({
 		description:
-			"The plan after the change. Omitted unless the caller expands it.",
+			"planLicenses created, updated, or removed on this plan. Omitted when none. Nested plan_change is core-only.",
 	}),
-	previous_attributes: PlanPreviousAttributesV0Schema.nullable().meta({
+	customize: PlanChangeCustomizeV0Schema.optional().meta({
 		description:
-			"Sparse map of scalar plan fields that changed, holding their previous values. Null when the plan is new.",
-	}),
-	price_change: PlanPriceChangeV0Schema.optional().meta({
-		description: "Present when the plan's price changed.",
-	}),
-	free_trial_change: PlanFreeTrialChangeV0Schema.optional().meta({
-		description: "Present when the plan's free trial changed.",
-	}),
-	item_changes: z.array(PlanItemChangeV0Schema).default([]).meta({
-		description: "Feature items added to or removed from the plan.",
-	}),
-	customize: DiffedCustomizePlanV1Schema.optional().meta({
-		description:
-			"Params that would transform the previous plan into the current one. Omitted when nothing customizable changed.",
+			"Params that would transform the previous plan into the current one, including license upserts/removes.",
 	}),
 });
 
-export type PlanPriceChangeV0 = z.infer<typeof PlanPriceChangeV0Schema>;
-export type PlanFreeTrialChangeV0 = z.infer<typeof PlanFreeTrialChangeV0Schema>;
+export type PlanChangeCustomizeV0 = z.infer<typeof PlanChangeCustomizeV0Schema>;
 export type PlanChangeV0 = z.infer<typeof PlanChangeV0Schema>;

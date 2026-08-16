@@ -1,5 +1,6 @@
 import type { PreviewUpdateCatalogResponse } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
+import { buildLicenseParentsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicenseParentsPreview";
 import { buildLicensesPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicensesPreview";
 import { buildPlanVersioning } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildPlanVersioning";
 import { buildSiblingVersionsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildSiblingVersionsPreview";
@@ -44,11 +45,17 @@ export const buildPlansPreview = ({
 			upsertProducts,
 			productStatesContext,
 		});
+		const licenseParents = buildLicenseParentsPreview({
+			directUpsert: upsert,
+			upsertProducts,
+			productStatesContext,
+		});
 		const licenses = buildLicensesPreview({ upsert });
 
 		return [
 			{
 				plan_id: upsert.row.planId,
+				version: upsert.row.version,
 				name: upsert.row.nextFullProduct.name,
 				action: upsertOpToAction({ op: upsert.row.op }),
 				state: {
@@ -59,10 +66,14 @@ export const buildPlansPreview = ({
 					upsert,
 					versionsForPlan:
 						productStatesContext.versionsByPlanId[upsert.row.planId] ?? [],
+					productStatesContext,
 				}),
 				...(planChange ? { plan_change: planChange } : {}),
 				...(siblingVersions.length > 0
 					? { sibling_versions: siblingVersions }
+					: {}),
+				...(licenseParents.length > 0
+					? { license_parents: licenseParents }
 					: {}),
 				...(licenses.length > 0 ? { licenses } : {}),
 			},

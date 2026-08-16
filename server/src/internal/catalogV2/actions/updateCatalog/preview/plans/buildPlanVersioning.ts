@@ -1,34 +1,28 @@
-import type {
-	CatalogPlanVersioning,
-	CatalogPlanVersioningStrategy,
-	FullProduct,
-} from "@autumn/shared";
+import type { CatalogPlanVersioning, FullProduct } from "@autumn/shared";
+import { computeVersioningOptions } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/versioningOptions/computeVersioningOptions";
+import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
 /** Pickable strategies for this update row. */
 export const buildPlanVersioning = ({
 	upsert,
 	versionsForPlan,
+	productStatesContext,
 }: {
 	upsert: UpsertProductPlan;
 	versionsForPlan: FullProduct[];
+	productStatesContext: ProductStatesContext;
 }): CatalogPlanVersioning | null => {
 	const isNewVersionMint =
 		upsert.row.op === "create" && upsert.row.versioning === "new_version";
 
 	if (upsert.row.op !== "update" && !isNewVersionMint) return null;
 
-	const options: CatalogPlanVersioningStrategy[] = [];
-	if (upsert.state.hasCustomers) options.push("existing");
-
-	// Mint only from latest (or when this row is the resolved mint).
-	const latestVersion = versionsForPlan[0]?.version;
-	const isLatestUpdate =
-		latestVersion !== undefined && latestVersion === upsert.row.version;
-	if (upsert.state.hasCustomers && (isNewVersionMint || isLatestUpdate)) {
-		options.push("new_version");
-	}
-	if (versionsForPlan.length > 1) options.push("all_versions");
+	const options = computeVersioningOptions({
+		upsert,
+		versionsForPlan,
+		productStatesContext,
+	});
 
 	if (isNewVersionMint) {
 		const baseVersion =

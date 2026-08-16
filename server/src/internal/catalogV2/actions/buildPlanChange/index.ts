@@ -1,4 +1,6 @@
 export { buildPlanChange } from "./buildPlanChange.js";
+export { buildPlanChangeCore } from "./buildPlanChangeCore/buildPlanChangeCore.js";
+export { buildPlanLicenseChanges } from "./buildPlanLicenseChanges/buildPlanLicenseChanges.js";
 export {
 	buildPlanChangeFromFullProducts,
 	fullProductToApiPlanV1Sync,
@@ -6,5 +8,5 @@ export {
 export {
 	buildPlanItemChangesFromDiff,
 	buildPlanItemChangesFromLists,
-} from "./buildPlanItemChanges.js";
-export { buildPlanPreviousAttributes } from "./buildPlanPreviousAttributes.js";
+} from "./buildPlanChangeCore/buildPlanItemChanges.js";
+export { buildPlanPreviousAttributes } from "./buildPlanChangeCore/buildPlanPreviousAttributes.js";

@@ -13,6 +13,7 @@ const usage = (
 	hasAnyCustomerProducts: false,
 	hasVersionableCustomerProducts: false,
 	versionableCustomerCount: 0,
+	hasVersionableDirectCustomerProducts: false,
 	hasVersionableRowRefs: false,
 	...overrides,
 });

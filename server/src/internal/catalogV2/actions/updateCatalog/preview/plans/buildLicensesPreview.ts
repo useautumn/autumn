@@ -1,14 +1,10 @@
 import type { ApiPlanLicenseV1 } from "@autumn/shared";
+import { upsertProductPlanToLicenses } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
 import type {
 	PlanLicensePlan,
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { toApiPlanLicenses } from "@/internal/licenses/licenseUtils";
-
-const currentLicensesForUpsert = ({ upsert }: { upsert: UpsertProductPlan }) =>
-	upsert.row.currentFullProduct?.licenses ??
-	upsert.row.baseFullProduct?.licenses ??
-	[];
 
 const plannedLicensesPreview = ({
 	planLicenses,
@@ -37,5 +33,5 @@ export const buildLicensesPreview = ({
 	if (upsert.planLicenses) {
 		return plannedLicensesPreview({ planLicenses: upsert.planLicenses });
 	}
-	return toApiPlanLicenses(currentLicensesForUpsert({ upsert }));
+	return toApiPlanLicenses(upsertProductPlanToLicenses({ upsert }));
 };

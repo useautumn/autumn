@@ -17,11 +17,13 @@ export const deriveIntents = ({
 	upsert,
 	projectedProductStatesContext,
 	claimedProductKeys,
+	allVersionsPlanIds,
 }: {
 	intent: ProductUpsertIntent;
 	upsert: UpsertProductPlan;
 	projectedProductStatesContext: ProductStatesContext;
 	claimedProductKeys: Set<string>;
+	allVersionsPlanIds: Set<string>;
 }): ProductUpsertIntent[] =>
 	claimNewIntents({
 		intents: [
@@ -38,6 +40,7 @@ export const deriveIntents = ({
 				intent,
 				upsert,
 				projectedProductStatesContext,
+				allVersionsPlanIds,
 			}),
 		],
 		claimedProductKeys,

@@ -14,7 +14,7 @@ import { createProductStatesFold } from "@/internal/catalogV2/actions/updateCata
 
 /**
  * Derive direct intents → fold each → deriveIntents onto the same pending list.
- * First claim wins. planLicenses is a second pass against the fully folded set.
+ * First claim wins. planLicenses compute last, once all plan content is final.
  */
 export const computeUpsertProductsPlan = ({
 	ctx,
@@ -32,11 +32,16 @@ export const computeUpsertProductsPlan = ({
 		productStatesContext,
 	});
 	const claimedProductKeys = claimProductKeys({ intents: pendingIntents });
+	const allVersionsPlanIds = new Set(
+		pendingIntents
+			.filter((intent) => intent.planParams.versioning === "all_versions")
+			.map((intent) => intent.productKey.planId),
+	);
 
 	const fold = createProductStatesFold({ original: productStatesContext });
 	const upsertProducts: UpsertProductPlan[] = [];
 
-	// Pass 1: content fold: direct intents + derived version siblings.
+	// Apply each plan's own changes: direct entries plus derived versions/variants.
 	for (const intent of pendingIntents) {
 		const upsert = computeUpsertProductPlan({
 			ctx,
@@ -44,6 +49,7 @@ export const computeUpsertProductsPlan = ({
 			planParams: intent.planParams,
 			source: intent.source,
 			productStatesContext: fold.projected,
+			editDiff: intent.editDiff,
 		});
 
 		upsertProducts.push(upsert);
@@ -55,29 +61,18 @@ export const computeUpsertProductsPlan = ({
 				upsert,
 				projectedProductStatesContext: fold.projected,
 				claimedProductKeys,
+				allVersionsPlanIds,
 			}),
 		);
 	}
 
-	// Pass 2: resolve declared license links against the fully folded content.
-	const upsertProductsWithPlanLicenses: UpsertProductPlan[] = [];
-	for (const [index, upsert] of upsertProducts.entries()) {
-		const intent = pendingIntents[index];
-		if (intent?.source !== "direct" || intent.planParams.licenses === undefined) {
-			upsertProductsWithPlanLicenses.push(upsert);
-			continue;
-		}
-
-		upsertProductsWithPlanLicenses.push(
-			computePlanLicensesPlan({
-				ctx,
-				upsert,
-				declared: intent.planParams.licenses,
-				productStatesContext: fold.projected,
-				licenseStatesContext: catalogContext.licenseStatesContext,
-			}),
-		);
-	}
+	// planLicenses read other plans' results, so they compute once every plan has.
+	const upsertProductsWithPlanLicenses = computePlanLicensesPlan({
+		ctx,
+		upsertProducts,
+		productStatesContext: fold.projected,
+		licenseStatesContext: catalogContext.licenseStatesContext,
+	});
 
 	return { upsertProducts: upsertProductsWithPlanLicenses };
 };

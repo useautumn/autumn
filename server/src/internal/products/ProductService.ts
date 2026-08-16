@@ -6,6 +6,7 @@ import {
 	entitlements,
 	type FullProduct,
 	freeTrials,
+	planLicenses,
 	type Product,
 	ProductNotFoundError,
 	prices,
@@ -742,6 +743,16 @@ export class ProductService {
 				statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
+
+		// license_entitlements/license_prices RESTRICT item rows; drop plan_license first.
+		await db
+			.delete(planLicenses)
+			.where(
+				or(
+					inArray(planLicenses.parent_internal_product_id, internalIds),
+					inArray(planLicenses.license_internal_product_id, internalIds),
+				),
+			);
 
 		await db.delete(products).where(inArray(products.internal_id, internalIds));
 	}

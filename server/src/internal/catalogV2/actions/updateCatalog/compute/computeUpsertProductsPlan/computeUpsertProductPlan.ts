@@ -1,4 +1,5 @@
 import {
+	type DiffedCustomizePlanV1,
 	type FullProduct,
 	type ProductKey,
 	productToProductKey,
@@ -55,6 +56,7 @@ export const computeUpsertProductPlan = ({
 	planParams: UpdateCatalogPlanParams;
 	source: UpsertProductSource;
 	productStatesContext: ProductStatesContext;
+	editDiff?: DiffedCustomizePlanV1;
 }): UpsertProductPlan => {
 	const versioning = resolveUpsertVersioning({ planParams, source });
 	const { currentFullProduct, customerUsage } = productKeyToState({
@@ -128,6 +130,14 @@ export const computeUpsertProductPlan = ({
 		...(details.changed ? { details } : {}),
 		...(entitlementPricesPlan ? { entitlementPricesPlan } : {}),
 		...(freeTrialPlan.changed ? { freeTrialPlan } : {}),
+		// all_versions siblings reuse the direct licenses[] write.
+		...((source === "direct" || source === "all_versions") &&
+		planParams.licenses !== undefined
+			? { declaredLicenses: planParams.licenses }
+			: {}),
+		...(source === "direct" && planParams.propagate !== undefined
+			? { propagate: planParams.propagate }
+			: {}),
 		state: {
 			hasCustomers:
 				versioning === "new_version"
