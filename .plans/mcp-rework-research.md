@@ -15,6 +15,7 @@
 |---|---|---|
 | Split MCP out of Leaf? | **Yes — extract the hosted runtime, keep `@autumn/mcp` as a library.** Do not do this first. Evals do not require the bundle. | Medium, mechanical |
 | Code mode as the public MCP design? | **No.** Code mode is a *client* pattern. Cursor / Claude / Codex will not use Autumn's executor. 32 tools / ~6k tokens is not the bottleneck. | n/a |
+| Collapse to one / few tools? | **Group leftover CRUD the GitHub way (`method: list\|get\|upsert`). Keep attach / updateSubscription / createSchedule as separate intents. Do not ship `autumn_api_execute`.** Target ~10–16 named tools, not 3. | Small–medium |
 | mcp-use v2? | **Yes, if rewriting the server layer anyway.** Biggest wins: official SDK v2 / stateless HTTP, first-class Better Auth provider, Skills-over-MCP. Tool *logic* can port; the Mastra host layer is what you replace. | Medium rewrite |
 | Manufact? | **Optional hosting DX for an extracted `apps/mcp`, not a prerequisite.** Custom domain + branch previews + inspector are real. You already have `mcp.useautumn.com`. Don't put Leaf/Slack on Manufact. | Easy once extracted |
 | Auth? | **Better Auth already has the OAuth 2.1 / RFC 9728 / JWT-verify path. Most of the cooked-ness is Autumn wrappers.** Keep org+env consent and the scope model. Delete custom DCR, the dual token fork, and Leaf pass-through. | Medium-hard, mostly deletion + BA 1.7 |
@@ -115,7 +116,7 @@ The teams that shipped real remote MCPs (GitHub, Stripe, Linear, Notion) converg
 
 1. **Do not 1:1 wrap the REST API.** GitHub shipped 100+ endpoint-shaped tools; agents loaded all of them; selection collapsed. They walked it back to *toolsets* (issues, repos, PRs) that match how people think about the product.
 2. **Design for intent, not resources.** A good tool is "preview then attach this plan with these defaults," not `POST /v1/attach`. Push deterministic orchestration (preview pairing, invoice defaults, org agent-rules) into the server. Leave judgment in skills/resources.
-3. **Keep the always-loaded tool surface small.** Anthropic tool-search: 77k → 8.7k tokens (85%). Cloudflare/Anthropic code execution: ~98.7%. These matter at 50+ tools or multi-server setups. Autumn is at **32 tools / ~23.8k chars / ~6k tokens** (`measureMcpTools.ts`). That is fine.
+3. **Keep the always-loaded tool surface small.** Anthropic tool-search: 77k → 8.7k tokens (85%). Cloudflare/Anthropic code execution: ~98.7%. These matter at 50+ tools or multi-server setups. Autumn is at **32 tools / ~23.8k chars / ~6k tokens** (`measureMcpTools.ts`). Fine for tokens; still worth GitHub-style grouping of leftover CRUD (see below), not a generic execute tool.
 4. **MCP + Skills are complementary.** MCP = authenticated capability. Skills / resources = playbooks. This is already the agent-docs plan.
 5. **Remote + OAuth is the default.** Stdio is for local disk. Hosted Streamable HTTP + OAuth (with secret-key fallback for CI) is what Stripe/GitHub/Vercel ship. You already do this.
 6. **2026-07-28 is stateless.** No `initialize` session, no sticky `Mcp-Session-Id`. Any replica can serve any request. This is the hosting reason to leave Mastra's older session assumptions if you rewrite.
@@ -145,6 +146,80 @@ Gaps worth considering later (not blockers):
 - Unused second toolset (`createAgentAutumnOperationTools` + Redis pending actions) — dead weight
 - Three approval lists that don't match (`destructiveHint` vs Eve hardcoded names vs `APPROVAL_GATED_TOOL_NAMES`)
 
+### "One tool" / grouping endpoints — the pattern people are actually shipping
+
+This is real, but it is **three different patterns** that get collapsed into one slogan. Production servers are not converging on a single `execute` tool.
+
+#### Pattern A — Intent / macro tools (best pattern)
+
+One tool = one user outcome. The server chains the REST calls.
+
+Sentry: setting up a project is 4 REST endpoints (create project, link repo, list keys, create key). MCP exposes `create_project(...)` and does the chain. Docker's catalog advice: treat tools as macros, not endpoints. Notion: `notion-create-pages` takes an array instead of one page per call.
+
+This is **not** "one tool for the whole product." The useful boundary is an outcome the agent can sensibly choose. Merging "attach a plan" with "search request logs" into one tool is the opposite of this.
+
+Autumn already does some of this: `getOrCreateCustomer` is an upsert; `previewUpdateCatalog` / `updateCatalog` is a batch catalog change, not plan-row CRUD.
+
+#### Pattern B — Discriminated domain tools (what GitHub is doing)
+
+Closely related operations that **share a schema** become one tool with a `method` parameter.
+
+GitHub changelog (Oct 2025), explicit strategy: "merging more related tools into unified, multifunctional ones."
+
+- `issue_write(method: create | update)` — was `create_issue` + `update_issue`
+- `issue_read(method: get | get_comments | get_labels | get_sub_issues)`
+- `pull_request_review_write(method: …)`
+
+They did **not** merge "create issue" with "merge PR." Those are different intents. They still ship ~40 tools and added **toolsets** (`issues`, `repos`, `pull_requests`) plus `X-MCP-Toolsets` so clients don't load all of them. Their own data: 3–10 tools instead of all defaults = 60–90% less context.
+
+This is the pattern that matches "grouping several endpoints into one tool."
+
+It only works when the fields mostly overlap. GitHub's create/update issue share ~13 fields; a `method` param avoids pasting that schema twice and stops the model from flip-flopping between two near-identical tools. Autumn's `attach` vs `createSchedule` do **not** share a schema. Multiplexing those produces a fat union the model fills in wrong.
+
+#### Pattern C — Meta-tools / generic execute (Stripe-sized APIs only)
+
+2–4 tools that can hit the entire API:
+
+```
+stripe_api_search  → find the method
+stripe_api_details → load its parameters
+stripe_api_read / stripe_api_write → execute it
+```
+
+Official Stripe MCP still also ships **named** tools (`create_refund`, `get_stripe_account_info`, `search_stripe_documentation`, `stripe_implementation_planner`). The generic pair exists because Stripe has hundreds of REST methods; a 1:1 wrap would not fit in context (mcp-curate: raw Stripe OpenAPI ≈ 587 tools / 445k tokens).
+
+The same design write-up that uses Stripe as the example says: **"Five clear tools do not need a meta-tool in front of them."**
+
+Block's Linear experiment went v1 (30+ GraphQL mirrors) → v2 (grouped reads) → v3 (`execute_readonly_query` + `execute_mutation_query`). Official Linear in 2026 did **not** ship that. They kept named tools and *added more* (initiatives, milestones, updates).
+
+#### What the "2–4 tools max" take actually is
+
+A widely-circulated blog (Sopyła / Schmid / Docker) argues 2–4 capabilities per server and split by domain if you need more. The author labels it **controversial**. Benchmarks that scare people (accuracy drop from 25 → 150 tools) are about **cross-server confusion at 100+**, not 32 well-named tools on one server. OpenAI hard-caps at 128 tools.
+
+Autumn is at **32 tools / ~6k tokens**. That is GitHub-after-consolidation territory, not Stripe-raw-OpenAPI territory. Token pressure is not why you would collapse.
+
+#### What I would actually group in Autumn
+
+Do Pattern A + light Pattern B. Do not do Pattern C.
+
+| Keep as its own tool (different intent / schema) | Group (shared schema or leftover CRUD) |
+|---|---|
+| `previewUpdateCatalog` / `updateCatalog` | Retire `createPlan`, `updatePlan`, `hasCustomers` into catalog |
+| `previewAttach` / `attach` | `listPlans` + `getPlan` → `plan(method: list \| get)` |
+| `previewUpdateSubscription` / `updateSubscription` | `listCustomers` + `getCustomer` + `getOrCreateCustomer` + `updateCustomer` → `customer(method: list \| get \| upsert \| update)` |
+| `previewCreateSchedule` / `createSchedule` | `listEntities` + `getEntity` + `createEntity` → `entity(method: …)` |
+| `previewCreateBalance` / `createBalance` | `listRewards` + `createReward` → `reward(method: list \| create)` |
+| `queryRequestLogs` + `searchRequestLogs` (two-pass is the skill) | `getCurrentOrganization` + `getAgentRules` + `updateAgentRules` → `org(method: …)` |
+| `listFeatures` | Drop the two date-conversion utilities or make them server-side |
+
+That is roughly **32 → 14–16**, or **~10** if you also fold preview into the write tool as `dry_run: true`.
+
+**Do not fold preview into write** without a plan for approvals. `destructiveHint` on a combined tool makes every call look destructive; Slack/Cursor confirmation UX depends on a safe preview. GitHub-style `method: preview | apply` can work if the server sets annotations from the method, but most clients treat annotations as static per tool name. Safer: keep the preview/write pair, or one tool that *always* previews and a separate `confirm` (you already built this for the unused agent toolset).
+
+**Do not ship `autumn_api_execute`.** It throws away preview-first, per-tool scopes, destructive annotations, and the skill checklists (`getAgentRules` then attach, two-pass logs). That is wrapping the API, which is the thing you said you don't want.
+
+Rough rule: group when two tools share most fields or the agent cannot tell them apart (`createPlan` vs `updateCatalog`). Keep separate when the user intent is different (`attach` vs `createSchedule` vs `searchRequestLogs`).
+
 ### Code mode — should we use it?
 
 **Code mode / "code execution with MCP"** (Anthropic Nov 2025, Cloudflare "Code Mode"): the *client* presents MCP servers as a filesystem/SDK and the model writes code that calls tools in a sandbox. Benefits: progressive disclosure, filter huge results before they hit context, loops/conditionals without N round-trips, PII never entering the model.
@@ -157,7 +232,7 @@ mcp-use implements this on the **client** (`@mcp-use/client` `{ codeMode: true }
 
 **What to do instead of code mode for the public server:**
 
-1. Keep the tool count roughly where it is. Collapse only the obvious dups (`createPlan`/`updatePlan` vs catalog batch, `hasCustomers`).
+1. Tighten the tool surface with Pattern A/B (see above): retire leftover plan CRUD into catalog, multiplex list/get/upsert *within* a domain. Do not collapse to a generic execute tool. Target ~10–16 named tools, not 3.
 2. Finish agent-docs so resources/skills carry judgment; tools stay verbs.
 3. Adopt **Skills-over-MCP** (SEP-2640, shipping in mcp-use 2.1): serve `autumn-billing` etc. as `skill://…` resources on the same connection. This is the highest-leverage design change. External agents that can't `atmn init` finally get the playbooks.
 4. If a client supports toolsets (GitHub-style), expose `catalog` / `billing` / `investigate` groups. Don't wait on it.
@@ -411,10 +486,12 @@ Custom domain `mcp.useautumn.com`, watch-paths on `apps/mcp` + `packages/mcp` + 
 ### Phase E — Tool surface (ongoing, not a rewrite)
 
 - Unify approval lists
+- Group leftover CRUD (plan list/get, customer list/get/upsert) the GitHub way; keep attach / updateSubscription / createSchedule as separate intents
 - Retire `hasCustomers` / prefer catalog over plan CRUD
 - Add tools only when a skill workflow is blocked (not when an API route exists)
 - Resource URI cleanup (`plan-management` → `catalog`)
 - Code mode only if Eve needs it
+- Do not ship `autumn_api_execute`
 
 ---
 
