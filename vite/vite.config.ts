@@ -1,4 +1,9 @@
 import path from "node:path";
+import {
+	DEV_PATH_PREFIXES,
+	isDwHeadless,
+	usesPathProxy,
+} from "@autumn/env/paths";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -11,12 +16,8 @@ import tsconfigPaths from "vite-tsconfig-paths";
 process.env.VITE_BACKEND_URL ||= "http://localhost:8080";
 process.env.VITE_FRONTEND_URL ||= "http://localhost:3000";
 
-const isDwHeadless =
-	process.env.DW_HEADLESS === "1" || process.env.DW_HEADLESS === "true";
-const usePathProxy =
-	isDwHeadless ||
-	process.env.DW_PATH_PROXY === "1" ||
-	process.env.DW_PATH_PROXY === "true";
+const headless = isDwHeadless();
+const pathProxy = usesPathProxy();
 
 const vitePort = process.env.VITE_PORT
 	? Number.parseInt(process.env.VITE_PORT, 10)
@@ -62,7 +63,7 @@ function ignoreProxyDisconnects(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-	base: usePathProxy ? "/dashboard/" : "/",
+	base: pathProxy ? `${DEV_PATH_PREFIXES.dashboard}/` : "/",
 	define: {
 		__APP_ENV__: JSON.stringify(process.env.VITE_APP_ENV || ""),
 	},
@@ -161,11 +162,11 @@ export default defineConfig({
 		// Laptop portless preview needs an absolute origin. Cloud already
 		// allows any Host (`allowedHosts: true`); pin origin/HMR the same way
 		// so Ports / ngrok use the request host instead of localhost:3000.
-		...(!isDwHeadless &&
+		...(!headless &&
 			process.env.VITE_FRONTEND_URL && {
 				origin: process.env.VITE_FRONTEND_URL,
 			}),
-		allowedHosts: isDwHeadless
+		allowedHosts: headless
 			? true
 			: [
 					"dev.useautumn.com",
@@ -181,18 +182,19 @@ export default defineConfig({
 			usePolling: true, // Required for file watching in Docker on Windows
 			interval: 1000,
 		},
-		...(!isDwHeadless && {
+		...(!headless && {
 			hmr: { port: vitePort },
 		}),
 		fs: {
 			// Allow serving files from workspace root (monorepo support)
 			allow: [".."],
 		},
-		...(usePathProxy && {
+		...(pathProxy && {
 			proxy: {
-				"/backend": {
+				[DEV_PATH_PREFIXES.backend]: {
 					changeOrigin: true,
-					rewrite: (path: string) => path.replace(/^\/backend/, "") || "/",
+					rewrite: (path: string) =>
+						path.slice(DEV_PATH_PREFIXES.backend.length) || "/",
 					target: `http://127.0.0.1:${serverPort}`,
 				},
 			},

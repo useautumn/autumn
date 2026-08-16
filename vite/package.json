@@ -21,6 +21,7 @@
 	"license": "Apache-2.0",
 	"dependencies": {
 		"@ai-sdk/react": "^3.0.25",
+		"@autumn/env": "workspace:*",
 		"@autumn/shared": "workspace:*",
 		"@autumn/ui": "workspace:*",
 		"@base-ui/react": "^1.4.1",

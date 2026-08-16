@@ -1,3 +1,5 @@
+import { isCrossAppDevPath } from "@autumn/env/paths";
+
 /** Vite `base` without a trailing slash. Empty when the app is served at `/`. */
 export const appBase = (baseUrl = import.meta.env.BASE_URL || "/"): string =>
 	baseUrl.replace(/\/$/, "");
@@ -20,14 +22,7 @@ export const stripAppBase = (
 export const appHref = (path: string, baseUrl?: string): string => {
 	const base = appBase(baseUrl);
 	if (!base || !path.startsWith("/") || path.startsWith("//")) return path;
-	if (
-		path.startsWith("/api") ||
-		path.startsWith("/backend") ||
-		path.startsWith("/leaf") ||
-		path.startsWith("/checkout")
-	) {
-		return path;
-	}
+	if (path.startsWith("/api") || isCrossAppDevPath(path)) return path;
 	if (path === base || path.startsWith(`${base}/`)) return path;
 	if (path === "/") return `${base}/`;
 	return `${base}${path}`;
