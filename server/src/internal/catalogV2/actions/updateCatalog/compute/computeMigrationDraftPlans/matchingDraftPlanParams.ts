@@ -4,19 +4,6 @@ import type {
 } from "@autumn/shared";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-const matchingDraftPlanParams = ({
-	upsertProductPlan,
-	params,
-}: {
-	upsertProductPlan: UpsertProductPlan;
-	params: UpdateCatalogParams;
-}): UpdateCatalogPlanParams | undefined =>
-	params.plans.find(
-		(planParams) =>
-			planParams.migration?.draft &&
-			upsertMatchesDraftEntry({ upsertProductPlan, planParams }),
-	);
-
 const upsertMatchesDraftEntry = ({
 	upsertProductPlan,
 	planParams,
@@ -34,16 +21,27 @@ const upsertMatchesDraftEntry = ({
 	return upsertProductPlan.row.source === "direct";
 };
 
-/** This `(planId, version)` row asked for a draft and has versionable customers. */
-export const isEligibleForMigrationDraft = ({
+/** The params entry whose `migration.draft` claims this upsert row. */
+export const matchingDraftPlanParams = ({
 	upsertProductPlan,
 	params,
 }: {
 	upsertProductPlan: UpsertProductPlan;
 	params: UpdateCatalogParams;
-}): boolean =>
-	matchingDraftPlanParams({ upsertProductPlan, params }) != null &&
-	upsertProductPlan.state.hasCustomers;
+}): UpdateCatalogPlanParams | undefined =>
+	params.plans.find(
+		(planParams) =>
+			planParams.migration?.draft &&
+			upsertMatchesDraftEntry({ upsertProductPlan, planParams }),
+	);
+
+export const upsertClaimsMigrationDraft = ({
+	upsertProductPlan,
+	params,
+}: {
+	upsertProductPlan: UpsertProductPlan;
+	params: UpdateCatalogParams;
+}): boolean => matchingDraftPlanParams({ upsertProductPlan, params }) != null;
 
 export const includeCustomForMigrationDraft = ({
 	upsertProductPlan,

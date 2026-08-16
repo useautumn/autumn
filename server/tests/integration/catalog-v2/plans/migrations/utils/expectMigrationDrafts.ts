@@ -1,5 +1,9 @@
 import { expect } from "bun:test";
 import type { Migration, UpdateCatalogResponse } from "@autumn/shared";
+import {
+	collectCustomerPlanIds,
+	collectPlanFilterPlanIds,
+} from "@autumn/shared/api/products/utils/compare/planFiltersAreSame.js";
 import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -28,8 +32,10 @@ export const expectUpdateMigrations = ({
 					migration.plans.some(
 						(plan) =>
 							plan.plan_id === expected.plan_id &&
-							JSON.stringify(plan.versions) ===
-								JSON.stringify(expected.versions),
+							plan.versions.length === expected.versions.length &&
+							plan.versions.every(
+								(version, index) => version === expected.versions[index],
+							),
 					),
 				),
 		);
@@ -52,13 +58,20 @@ export const expectMigrationDraftsCorrect = ({
 	const remaining = [...migrations];
 	for (const expectedDraft of expected) {
 		const index = remaining.findIndex((migration) => {
-			const serialized = JSON.stringify({
-				filter: migration.filter,
-				operations: migration.operations,
-			});
-			return expectedDraft.planIds.every((planId) =>
-				serialized.includes(planId),
-			);
+			const planIds = [
+				...collectCustomerPlanIds({
+					plan: migration.filter?.customer?.plan,
+				}),
+				...(migration.operations?.customer ?? []).flatMap((operation) =>
+					collectPlanFilterPlanIds({
+						planFilter:
+							operation.type === "update_plan"
+								? operation.plan_filter
+								: undefined,
+					}),
+				),
+			];
+			return expectedDraft.planIds.every((planId) => planIds.includes(planId));
 		});
 		expect(index).toBeGreaterThanOrEqual(0);
 

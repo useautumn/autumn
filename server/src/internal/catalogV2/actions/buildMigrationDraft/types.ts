@@ -6,7 +6,7 @@ type PreviousPrice = ReturnType<typeof toBasePriceParams> | null;
 export type MigrationTarget = {
 	planId: string;
 	version: number;
-	/** Migratable keys only (`price` / `add_items` / `remove_items`). */
+	/** Migratable keys only (`price` / `add_items` / `remove_items` / `upsert_licenses`). */
 	customize: DiffedCustomizePlanV1;
 	previousPrice: PreviousPrice;
 	hasBillingChanges: boolean;

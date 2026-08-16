@@ -1,7 +1,8 @@
-import type {
-	DiffedCustomizePlanV1,
-	MigrationUpdatePlanCustomize,
-	PlanFilter,
+import {
+	basePriceToKey,
+	type DiffedCustomizePlanV1,
+	type MigrationUpdatePlanCustomize,
+	type PlanFilter,
 } from "@autumn/shared";
 import type { MigrationTarget } from "./types";
 
@@ -34,7 +35,10 @@ const previousPriceKey = ({
 	previousPrice,
 }: {
 	previousPrice: MigrationTarget["previousPrice"];
-}) => JSON.stringify(previousPrice);
+}) =>
+	previousPrice === null
+		? "null"
+		: basePriceToKey({ price: previousPrice });
 
 /** Stamp previous_price only when every target shares one base price — one op can't carry mixed previous prices. */
 export const stampPreviousPrice = ({
