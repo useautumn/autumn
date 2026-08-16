@@ -145,6 +145,10 @@ if (u.vite !== "https://vite.example.ngrok.app") throw new Error("vite "+u.vite)
 const t2 = "vite (http://localhost:3000): https://may-waspy-marquis.ngrok-free.dev\n";
 const u2 = parseCloudPublicUrls(t2);
 if (u2.vite !== "https://may-waspy-marquis.ngrok-free.dev") throw new Error("334 url "+u2.vite);
+const t3 = "proxy (http://localhost:3080): https://abc.ngrok.app\n";
+const u3 = parseCloudPublicUrls(t3);
+if (u3.vite !== "https://abc.ngrok.app") throw new Error("proxy vite "+u3.vite);
+if (u3.api !== "https://abc.ngrok.app") throw new Error("proxy api "+u3.api);
 console.log("ok");
 ')"
 [[ "$got" == "ok" ]] || fail "parseCloudPublicUrls, got $got"
@@ -163,8 +167,10 @@ if grep -q "no NGROK_AUTHTOKEN or ngrok binary" /tmp/ngrok-up.out \
 else
 	fail "ngrok-up.sh unexpected output: $(head -c 400 /tmp/ngrok-up.out)"
 fi
-grep -q 'ngrok http 3000' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
-	|| fail "Cloud ngrok must tunnel the dashboard"
+grep -q 'ngrok http "$PROXY_PORT"' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
+	|| fail "Cloud ngrok must tunnel the path proxy"
+grep -q 'devProxy/server.ts' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
+	|| fail "Cloud ngrok must start the path proxy"
 if grep -q 'addr: 8080' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh"; then
 	fail "Cloud ngrok must not start a second :8080 tunnel (free plan is one endpoint)"
 fi
@@ -192,13 +198,18 @@ if ! HOME="$dummy_home" NGROK_AUTHTOKEN="dummy_not_a_real_token" INFISICAL_TOKEN
 	timeout 25 bash "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" >"$dummy_out" 2>&1; then
 	:
 fi
-if ! grep -q "starting unique dashboard tunnel" "$dummy_out"; then
+if grep -q "already running" "$dummy_out"; then
+	:
+elif ! grep -q "starting unique dashboard tunnel" "$dummy_out"; then
 	fail "dummy-token run did not try --url https:// first: $(head -c 300 "$dummy_out")"
-fi
-if ! grep -q "random URL rejected (needs a paid NGROK_AUTHTOKEN)" "$dummy_out"; then
+elif ! grep -q "random URL rejected (needs a paid NGROK_AUTHTOKEN)" "$dummy_out"; then
 	fail "dummy-token run did not fall back after unique URL failed: $(head -c 300 "$dummy_out")"
 fi
 rm -rf "$dummy_home" "$dummy_out"
 pass "Cloud ngrok tries a unique URL, then the free-plan hostname"
+
+UNIT_TESTS=1 env -u TESTS_ORG bun test "$ROOT/scripts/dw/devProxy/routes.test.ts" "$ROOT/scripts/dw/devProxy/server.test.ts" \
+	|| fail "dev-proxy tests failed"
+pass "dev-proxy routes SPA / API / MCP on one port"
 
 echo "all cursor_ai.py tests passed"

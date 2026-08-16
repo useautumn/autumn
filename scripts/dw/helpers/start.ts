@@ -7,7 +7,7 @@ import { isProvisioned } from "./entry.ts";
 import { provisionedInfraEnv } from "./env-files.ts";
 import { isHeadless } from "./headless.ts";
 import { registerPortlessAliases } from "./portless.ts";
-import { portlessHttpsUrl, serverPortFor } from "./ports.ts";
+import { devProxyPortFor, portlessHttpsUrl, serverPortFor } from "./ports.ts";
 import { fatal, log } from "./shell.ts";
 import { spawnDevInTmux, tmuxSessionName } from "./tmux.ts";
 import { rewriteDbEnv } from "./url.ts";
@@ -32,6 +32,25 @@ function applyLocalInfra(
 	}
 	for (const key of HEADLESS_UNSET) delete next[key];
 	return next;
+}
+
+function applyHeadlessPublicUrls({
+	entry,
+	env,
+	worktreeNum,
+}: {
+	entry: RegistryEntry;
+	env: Record<string, string>;
+	worktreeNum: number;
+}): void {
+	const apiUrl = `http://localhost:${serverPortFor(worktreeNum)}`;
+	const frontDoor =
+		entry.ngrokUrl ?? `http://localhost:${devProxyPortFor(worktreeNum)}`;
+	env.AUTUMN_API_URL = apiUrl;
+	env.AUTUMN_PUBLIC_API_URL = frontDoor;
+	env.CLIENT_URL = frontDoor;
+	env.VITE_BACKEND_URL = "/backend";
+	env.VITE_FRONTEND_URL = frontDoor;
 }
 
 function applyProvisionedDevEnv(
@@ -60,10 +79,7 @@ function applyProvisionedDevEnv(
 		next.VITE_FRONTEND_URL = aliases.viteUrl;
 	}
 	if (isHeadless()) {
-		const apiUrl = `http://localhost:${serverPortFor(worktreeNum)}`;
-		next.AUTUMN_API_URL = apiUrl;
-		next.AUTUMN_PUBLIC_API_URL = entry.ngrokUrl ?? apiUrl;
-		next.CLIENT_URL = `http://localhost:${3000 + (worktreeNum - 1) * 100}`;
+		applyHeadlessPublicUrls({ entry, env: next, worktreeNum });
 		next.DATABASE_URL = LOCAL_DATABASE_URL;
 		next.DATABASE_CRITICAL_URL = LOCAL_DATABASE_URL;
 	}
@@ -76,12 +92,9 @@ function applyHeadlessDevEnv(
 ): Record<string, string> {
 	const { worktreeNum } = entry;
 	const next = applyLocalInfra({ ...env }, worktreeNum);
-	const apiUrl = `http://localhost:${serverPortFor(worktreeNum)}`;
+	applyHeadlessPublicUrls({ entry, env: next, worktreeNum });
 	next.DATABASE_URL = LOCAL_DATABASE_URL;
 	next.DATABASE_CRITICAL_URL = LOCAL_DATABASE_URL;
-	next.AUTUMN_API_URL = apiUrl;
-	next.AUTUMN_PUBLIC_API_URL = entry.ngrokUrl ?? apiUrl;
-	next.CLIENT_URL = `http://localhost:${3000 + (worktreeNum - 1) * 100}`;
 	next.STRIPE_WEBHOOK_SKIP_VERIFY = "true";
 	return next;
 }

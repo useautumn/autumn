@@ -31,7 +31,7 @@ export function ensureHeadlessNgrok(entry: RegistryEntry): RegistryEntry {
 		log("ngrok-up.sh missing — skip public tunnel");
 		return entry;
 	}
-	log("ensuring Cloud ngrok tunnel (random *.ngrok.app)");
+	log("ensuring Cloud ngrok tunnel (one hostname → path proxy)");
 	const code = shInherit("bash", [NGROK_UP]);
 	if (code !== 0) {
 		log(`ngrok-up.sh exited ${code} — continuing without a public URL`);

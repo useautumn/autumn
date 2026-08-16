@@ -27,9 +27,9 @@ fi
 echo
 echo "Open the dashboard from your laptop (best first):"
 echo "  Skip the in-IDE Browser tab — it stays blank (Cursor bug, any URL)."
-echo "  1. Cursor port forwarding — plug / Ports in the agent editor → http://localhost:3000 in Chrome/Safari"
-echo "  2. Remote desktop on the agent page → Chrome --no-sandbox → http://localhost:3000"
-echo "  3. Public URL — bun dw identify (NGROK_AUTHTOKEN in Infisical dev; paid token = unique URL per VM)"
+echo "  1. Cursor port forwarding — plug / Ports → http://localhost:3080 (path proxy: / Vite, /v1 /mcp /backend API)"
+echo "  2. Remote desktop on the agent page → Chrome --no-sandbox → http://localhost:3080"
+echo "  3. Public URL — bun dw identify (one ngrok hostname; paid token = unique URL per VM)"
 if [ -s "${HOME}/.autumn-agent/public-urls.txt" ]; then
 	echo
 	echo "Public URLs:"

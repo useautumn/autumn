@@ -15,7 +15,10 @@ export function parseCloudPublicUrls(text: string): CloudPublicUrls {
 		const https = line.match(/https:\/\/\S+/);
 		if (!https) continue;
 		const url = https[0].replace(/[.,;]+$/, "");
-		if (/\bvite\b/i.test(line) || line.includes(":3000")) out.vite = url;
+		if (/\bproxy\b/i.test(line) || line.includes(":3080")) {
+			out.vite = url;
+			out.api = url;
+		} else if (/\bvite\b/i.test(line) || line.includes(":3000")) out.vite = url;
 		else if (/\bapi\b/i.test(line) || line.includes(":8080")) out.api = url;
 		else out.vite ??= url;
 	}

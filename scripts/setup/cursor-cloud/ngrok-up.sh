@@ -3,6 +3,7 @@
 # bun dw identify / setup / run call this. The ngrok terminal then stays attached.
 # Paid Infisical NGROK_AUTHTOKEN: --url=https:// gives each VM a unique *.ngrok.app.
 # Free token: ngrok assigns one static *.ngrok-free.dev for the whole account.
+# The tunnel targets the path proxy (:3080), not Vite or the API directly.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
@@ -101,10 +102,15 @@ web_addr: 127.0.0.1:4040
 EOF
 chmod 600 "$CFG"
 
+PROXY_PORT="${DEV_PROXY_PORT:-3080}"
+if [ -f "${AGENT_DIR}/dev-proxy.port" ]; then
+	PROXY_PORT="$(tr -d '[:space:]' <"${AGENT_DIR}/dev-proxy.port")"
+fi
+
 start_ngrok() {
 	: >"$LOG"
 	# shellcheck disable=SC2086
-	nohup ngrok http 3000 --config "$CFG" --log=stdout "$@" \
+	nohup ngrok http "$PROXY_PORT" --config "$CFG" --log=stdout "$@" \
 		>"$LOG" 2>&1 &
 	echo $! >"$PIDFILE"
 }
@@ -131,7 +137,13 @@ stop_ngrok() {
 	fi
 }
 
-echo "[cursor-cloud-ngrok] starting unique dashboard tunnel → :3000 (--url https://)"
+echo "[cursor-cloud-ngrok] ensuring path proxy"
+bun "$ROOT/scripts/dw/devProxy/server.ts" --ensure
+if [ -f "${AGENT_DIR}/dev-proxy.port" ]; then
+	PROXY_PORT="$(tr -d '[:space:]' <"${AGENT_DIR}/dev-proxy.port")"
+fi
+
+echo "[cursor-cloud-ngrok] starting unique dashboard tunnel → :${PROXY_PORT} (--url https://)"
 # Paid plans: each VM gets its own *.ngrok.app. Free plans reject this.
 start_ngrok --url 'https://'
 if wait_for_inspector; then
@@ -149,7 +161,7 @@ held="$(already_online_url || true)"
 if [ -n "${held:-}" ]; then
 	echo "[cursor-cloud-ngrok] free endpoint already online: ${held}" >&2
 	echo "[cursor-cloud-ngrok] Infisical NGROK_AUTHTOKEN is a free ngrok account — one hostname for every Cloud agent. Put a paid authtoken in Infisical dev for a unique URL per VM." >&2
-	echo "vite (http://localhost:3000): ${held}" >"$URLS"
+	echo "proxy (http://localhost:${PROXY_PORT}): ${held}" >"$URLS"
 	exit 0
 fi
 echo "[cursor-cloud-ngrok] inspector :4040 never came up" >&2

@@ -11,10 +11,11 @@
 		{
 			"name": "ngrok",
 			"command": "bash scripts/setup/cursor-cloud/ngrok.sh",
-			"description": "Public *.ngrok.app tunnels for :3000 and :8080 when NGROK_AUTHTOKEN is set. Cursor Ports also forwards localhost."
+			"description": "One public hostname for the path proxy (:3080 → Vite / API / MCP) when NGROK_AUTHTOKEN is set."
 		}
 	],
 	"ports": [
+		{ "name": "App", "port": 3080 },
 		{ "name": "API", "port": 8080 },
 		{ "name": "Vite", "port": 3000 },
 		{ "name": "Checkout", "port": 3001 }
