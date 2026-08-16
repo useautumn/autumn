@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { authClient, useSession } from "@/lib/auth-client";
+import { appHref } from "@/utils/appBase";
 import { emailRegex } from "../SignIn";
 
 export const PasswordSignIn = () => {
@@ -18,7 +19,7 @@ export const PasswordSignIn = () => {
 
 	useEffect(() => {
 		if (session?.user) {
-			window.location.href = "/";
+			window.location.href = appHref("/");
 		}
 	}, [session]);
 
@@ -39,7 +40,7 @@ export const PasswordSignIn = () => {
 			if (error) {
 				toast.error(error.message || "Something went wrong. Please try again.");
 			} else {
-				window.location.href = "/";
+				window.location.href = appHref("/");
 			}
 		} catch (error) {
 			toast.error("Something went wrong. Please try again.");

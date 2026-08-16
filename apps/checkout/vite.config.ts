@@ -13,6 +13,9 @@ const usePathProxy =
 	isDwHeadless ||
 	process.env.DW_PATH_PROXY === "1" ||
 	process.env.DW_PATH_PROXY === "true";
+const serverPort = process.env.SERVER_PORT
+	? Number.parseInt(process.env.SERVER_PORT, 10)
+	: 8080;
 
 export default defineConfig({
 	base: usePathProxy ? "/checkout/" : "/",
@@ -49,9 +52,20 @@ export default defineConfig({
 	server: {
 		host: "0.0.0.0",
 		port: Number.parseInt(process.env.VITE_PORT || "3001", 10),
-		allowedHosts: isDwHeadless ? true : undefined,
+		allowedHosts: isDwHeadless
+			? true
+			: [".ngrok.app", ".ngrok-free.app", "localhost", ".localhost"],
 		fs: {
 			allow: [".."],
 		},
+		...(usePathProxy && {
+			proxy: {
+				"/backend": {
+					changeOrigin: true,
+					rewrite: (path: string) => path.replace(/^\/backend/, "") || "/",
+					target: `http://127.0.0.1:${serverPort}`,
+				},
+			},
+		}),
 	},
 });

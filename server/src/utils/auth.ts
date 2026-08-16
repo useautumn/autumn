@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { getAutumnEnv } from "@autumn/env";
+import { getAutumnEnv, joinPublicUrl } from "@autumn/env";
 import {
 	ALL_SCOPES,
 	ac,
@@ -113,7 +113,7 @@ const mcpResourceBases = [authBaseUrl, mcpServerUrl, chatServerUrl].filter(
 const mcpResourceUrls = [
 	...new Set([
 		...mcpResourceBases.flatMap((base) =>
-			mcpResourcePaths.map((path) => new URL(path, base).href),
+			mcpResourcePaths.map((path) => joinPublicUrl({ base, path })),
 		),
 		...(process.env.MCP_RESOURCE_URLS?.split(",")
 			.map(parseMcpResourceUrl)
@@ -132,8 +132,17 @@ const mcpResourceUrls = [
  * - origin: full URL with scheme. Multiple origins may be supplied for envs
  *   that need to accept both Portless and direct localhost.
  */
+const originOf = (value: string): string | undefined => {
+	try {
+		return new URL(value).origin;
+	} catch {
+		return undefined;
+	}
+};
+
 const passkeyFrontendUrl = process.env.CLIENT_URL ?? "http://localhost:3000";
-const passkeyOrigins: string[] = [passkeyFrontendUrl];
+const passkeyOrigin = originOf(passkeyFrontendUrl) ?? "http://localhost:3000";
+const passkeyOrigins: string[] = [passkeyOrigin];
 const passkeyRpID = (() => {
 	try {
 		return new URL(passkeyFrontendUrl).hostname;
@@ -146,13 +155,9 @@ if (
 	process.env.VITE_FRONTEND_URL &&
 	process.env.VITE_FRONTEND_URL !== passkeyFrontendUrl
 ) {
-	try {
-		const viteOrigin = new URL(process.env.VITE_FRONTEND_URL);
-		if (viteOrigin.hostname === passkeyRpID) {
-			passkeyOrigins.push(process.env.VITE_FRONTEND_URL);
-		}
-	} catch {
-		// Invalid URL, ignore
+	const viteOrigin = originOf(process.env.VITE_FRONTEND_URL);
+	if (viteOrigin && new URL(viteOrigin).hostname === passkeyRpID) {
+		passkeyOrigins.push(viteOrigin);
 	}
 }
 
@@ -233,7 +238,11 @@ const options = {
 		) {
 			origins.push(origin);
 		}
-		if (process.env.CLIENT_URL) origins.push(process.env.CLIENT_URL);
+		if (process.env.CLIENT_URL) {
+			origins.push(process.env.CLIENT_URL);
+			const clientOrigin = originOf(process.env.CLIENT_URL);
+			if (clientOrigin) origins.push(clientOrigin);
+		}
 		if (authBaseUrl) origins.push(authBaseUrl);
 		return origins;
 	},

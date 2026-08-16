@@ -10,7 +10,7 @@ export type DevProxyRoute = {
 /** Public paths on the one hostname. Edit here — identify prints these. */
 export const DEV_PROXY_PREFIXES = {
 	dashboard: "/dashboard",
-	api: "/api",
+	api: "/backend",
 	leaf: "/leaf",
 	checkout: "/checkout",
 } as const;

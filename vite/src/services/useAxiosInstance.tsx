@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { authClient } from "@/lib/auth-client";
 import { setActiveOrg } from "@/lib/orgSync";
+import { appHref } from "@/utils/appBase";
 import { useEnv } from "@/utils/envUtils";
 
 const defaultParams = {
@@ -69,14 +70,14 @@ export function useAxiosInstance(params?: {
 							);
 							if (nextOrg) {
 								await setActiveOrg(nextOrg.id);
-								window.location.href = "/";
+								window.location.href = appHref("/");
 								return Promise.reject(
 									new Error("Redirecting to available organization"),
 								);
 							}
 						} else {
 							// User has no organizations left, redirect to safe fallback
-							window.location.href = "/sign-in";
+							window.location.href = appHref("/sign-in");
 							return Promise.reject(
 								new Error("No organizations available, redirecting to sign-in"),
 							);
@@ -87,7 +88,7 @@ export function useAxiosInstance(params?: {
 							redirectError,
 						);
 						// Fallback to sign-in if redirect fails
-						window.location.href = "/sign-in";
+						window.location.href = appHref("/sign-in");
 					}
 				}
 

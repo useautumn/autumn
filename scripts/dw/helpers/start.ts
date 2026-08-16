@@ -2,7 +2,6 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { PROJECT_ROOT } from "../constants.ts";
-import { originServiceUrls } from "../devProxy/routes.ts";
 import type { RegistryEntry } from "../types.ts";
 import { isProvisioned } from "./entry.ts";
 import { provisionedInfraEnv } from "./env-files.ts";
@@ -10,6 +9,7 @@ import { isHeadless } from "./headless.ts";
 import { ensureNgrok, publicOrigin } from "./ngrok.ts";
 import { registerPortlessAliases } from "./portless.ts";
 import { portlessHttpsUrl, serverPortFor } from "./ports.ts";
+import { pathProxyPublicEnv } from "./publicUrls.ts";
 import { fatal, log } from "./shell.ts";
 import { spawnDevInTmux, tmuxSessionName } from "./tmux.ts";
 import { rewriteDbEnv } from "./url.ts";
@@ -44,16 +44,10 @@ function applyPublicUrls({
 }): void {
 	const origin = publicOrigin({ entry });
 	if (origin?.startsWith("https://")) {
-		const urls = originServiceUrls({ origin });
-		env.AUTUMN_API_URL = `http://localhost:${serverPortFor(entry.worktreeNum)}`;
-		env.AUTUMN_PUBLIC_API_URL = urls.api;
-		env.CLIENT_URL = urls.dashboard;
-		env.VITE_BACKEND_URL = "/api";
-		env.VITE_FRONTEND_URL = urls.dashboard;
-		env.VITE_API_URL = "/api";
-		env.CHAT_URL = urls.leaf;
-		env.SLACK_BOT_URL = urls.leaf;
-		env.DW_PATH_PROXY = "1";
+		Object.assign(
+			env,
+			pathProxyPublicEnv({ origin, worktreeNum: entry.worktreeNum }),
+		);
 		return;
 	}
 	if (isHeadless() || !isProvisioned(entry)) {

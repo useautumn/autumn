@@ -13,6 +13,7 @@ import {
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
+import { appHref } from "@/utils/appBase";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { Step1ConnectStripe } from "../../deploy-dialog/Step1ConnectStripe";
 import { Step2CopyProducts } from "../../deploy-dialog/Step2CopyProducts";
@@ -40,7 +41,7 @@ export const DeployToProdDialog = ({
 
 			await mutateOrg();
 
-			window.location.href = "/products?tab=products";
+			window.location.href = appHref("/products?tab=products");
 		} catch (error) {
 			console.error("Failed to deploy to production:", error);
 		} finally {

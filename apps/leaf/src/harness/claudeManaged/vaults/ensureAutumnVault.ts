@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { joinPublicUrl } from "@autumn/env";
 import type { AppEnv } from "@autumn/shared";
 import { getOrgInstallationToken } from "../../../internal/installations/actions/getOrgInstallationToken.js";
 import { getChatOAuthCredentialByInstallationEnv } from "../../../internal/installations/repos/chatOAuthCredentialsRepo.js";
@@ -8,10 +9,10 @@ import { env as chatEnv } from "../../../lib/env.js";
 import { cmaRepo } from "../repos/claudeManagedRepo.js";
 
 const tokenEndpoint = () => {
-	const endpoint = new URL(
-		"/api/auth/oauth2/token",
-		chatEnv.AUTUMN_PUBLIC_API_URL,
-	).href;
+	const endpoint = joinPublicUrl({
+		base: chatEnv.AUTUMN_PUBLIC_API_URL,
+		path: "/api/auth/oauth2/token",
+	});
 	if (new URL(endpoint).protocol !== "https:") {
 		throw new Error(
 			`The CMA vault OAuth token_endpoint must be HTTPS, but resolved to "${endpoint}". Set AUTUMN_PUBLIC_API_URL to the public HTTPS API origin.`,
@@ -150,7 +151,10 @@ export const ensureAutumnVault = async ({
 		throw new Error(`Missing ${env} Autumn OAuth credential for vault`);
 	}
 
-	const mcpServerUrl = new URL("/mcp", chatEnv.MCP_SERVER_URL).toString();
+	const mcpServerUrl = joinPublicUrl({
+		base: chatEnv.MCP_SERVER_URL,
+		path: "/mcp",
+	});
 	const existing = await cmaRepo.getVault({
 		chatInstallationId: installation.id,
 		db,

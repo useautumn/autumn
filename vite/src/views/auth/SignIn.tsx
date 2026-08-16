@@ -11,6 +11,7 @@ import { isSafeSsoRedirectUrl } from "@/lib/sso/ssoCallback";
 import { getSsoHint } from "@/lib/sso/ssoHint";
 import { resolveSso } from "@/lib/sso/ssoResolve";
 import type { SsoOrgHint } from "@/lib/sso/ssoTypes";
+import { appOriginHref } from "@/utils/appBase";
 import { getBackendErr, getSafeNextPath } from "@/utils/genUtils";
 import { AuthBackground } from "./components/AuthBackground";
 import { AutumnWordmark } from "./components/AutumnWordmark";
@@ -135,11 +136,8 @@ export const SignIn = () => {
 	const handleGoogleSignIn = async () => {
 		setGoogleLoading(true);
 		try {
-			const frontendUrl = import.meta.env.VITE_FRONTEND_URL;
-			const googleCallbackUrl =
-				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
-			const googleNewUserUrl =
-				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
+			const googleCallbackUrl = oauthRedirectUrl || appOriginHref(defaultPath);
+			const googleNewUserUrl = oauthRedirectUrl || appOriginHref(defaultPath);
 			const { error } = await signIn.social({
 				provider: "google",
 				callbackURL: googleCallbackUrl,

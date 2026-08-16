@@ -21,6 +21,9 @@ const usePathProxy =
 const vitePort = process.env.VITE_PORT
 	? Number.parseInt(process.env.VITE_PORT, 10)
 	: 3000;
+const serverPort = process.env.SERVER_PORT
+	? Number.parseInt(process.env.SERVER_PORT, 10)
+	: 8080;
 
 function printPortlessUrl(): Plugin {
 	return {
@@ -35,6 +38,23 @@ function printPortlessUrl(): Plugin {
 				server.config.logger.info(
 					`  \x1b[32m➜\x1b[0m  \x1b[1mPortless\x1b[0m: \x1b[36m${portlessUrl}/\x1b[0m`,
 				);
+			};
+		},
+	};
+}
+
+/** ngrok/dev-proxy dropping a socket during dep-reload used to crash Vite. */
+function ignoreProxyDisconnects(): Plugin {
+	return {
+		name: "ignore-proxy-disconnects",
+		apply: "serve",
+		configureServer(server) {
+			return () => {
+				server.httpServer?.on("connection", (socket) => {
+					socket.on("error", (err: NodeJS.ErrnoException) => {
+						if (err.code === "ECONNRESET" || err.code === "EPIPE") return;
+					});
+				});
 			};
 		},
 	};
@@ -59,6 +79,7 @@ export default defineConfig({
 			telemetry: false,
 		}),
 		printPortlessUrl(),
+		ignoreProxyDisconnects(),
 	],
 
 	resolve: {
@@ -167,6 +188,15 @@ export default defineConfig({
 			// Allow serving files from workspace root (monorepo support)
 			allow: [".."],
 		},
+		...(usePathProxy && {
+			proxy: {
+				"/backend": {
+					changeOrigin: true,
+					rewrite: (path: string) => path.replace(/^\/backend/, "") || "/",
+					target: `http://127.0.0.1:${serverPort}`,
+				},
+			},
+		}),
 	},
 
 	build: {

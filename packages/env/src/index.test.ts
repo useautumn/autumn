@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createAutumnEnv } from "./index.js";
+import { createAutumnEnv, joinPublicUrl } from "./index.js";
 
 const validEnv = {
 	AUTUMN_API_URL: "https://api.example.com",
@@ -65,6 +65,15 @@ describe("Autumn environment", () => {
 		).toThrow("AUTUMN_API_URL");
 	});
 
+	test("keeps a path prefix on AUTUMN_PUBLIC_API_URL", () => {
+		const env = createAutumnEnv({
+			AUTUMN_API_URL: validEnv.AUTUMN_API_URL,
+			AUTUMN_PUBLIC_API_URL: "https://abc.ngrok.app/backend/",
+		});
+
+		expect(env.AUTUMN_PUBLIC_API_URL).toBe("https://abc.ngrok.app/backend");
+	});
+
 	test("does not use a legacy webhook URL when AUTUMN_PUBLIC_API_URL is missing", () => {
 		const env = createAutumnEnv({
 			AUTUMN_API_URL: validEnv.AUTUMN_API_URL,
@@ -76,5 +85,31 @@ describe("Autumn environment", () => {
 			AUTUMN_API_URL: validEnv.AUTUMN_API_URL,
 			AUTUMN_PUBLIC_API_URL: validEnv.AUTUMN_API_URL,
 		});
+	});
+});
+
+describe("joinPublicUrl", () => {
+	test("appends to an origin", () => {
+		expect(
+			joinPublicUrl({
+				base: "https://abc.ngrok.app",
+				path: "/webhooks/stripe",
+			}),
+		).toBe("https://abc.ngrok.app/webhooks/stripe");
+	});
+
+	test("keeps a /backend prefix", () => {
+		expect(
+			joinPublicUrl({
+				base: "https://abc.ngrok.app/backend",
+				path: "/api/auth/oauth2/token",
+			}),
+		).toBe("https://abc.ngrok.app/backend/api/auth/oauth2/token");
+		expect(
+			joinPublicUrl({
+				base: "https://abc.ngrok.app/backend",
+				path: "/mcp",
+			}),
+		).toBe("https://abc.ngrok.app/backend/mcp");
 	});
 });

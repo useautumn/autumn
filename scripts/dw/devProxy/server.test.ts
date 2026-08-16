@@ -47,16 +47,31 @@ const get = (path: string) =>
 	fetch(`http://127.0.0.1:${proxy.port}${path}`, { redirect: "manual" });
 
 describe("dev-proxy", () => {
-	test("routes /dashboard /api /leaf /checkout", async () => {
+	test("routes /dashboard /backend /leaf /checkout", async () => {
+		expect(await (await get("/dashboard/")).text()).toBe("vite:/dashboard/");
 		expect(await (await get("/dashboard/customers")).text()).toBe(
 			"vite:/dashboard/customers",
 		);
-		expect(await (await get("/api/v1/customers")).text()).toBe(
+		expect(await (await get("/backend/v1/customers")).text()).toBe(
 			"api:/v1/customers",
 		);
+		expect(await (await get("/backend/api/auth/get-session")).text()).toBe(
+			"api:/api/auth/get-session",
+		);
 		expect(await (await get("/leaf/mcp")).text()).toBe("leaf:/mcp");
-		expect(await (await get("/checkout")).text()).toBe("checkout:/checkout");
+		expect((await get("/checkout")).status).toBe(302);
+		expect((await get("/checkout")).headers.get("location")).toBe(
+			`http://127.0.0.1:${proxy.port}/checkout/`,
+		);
+		expect(await (await get("/checkout/")).text()).toBe("checkout:/checkout/");
 		expect((await get("/")).status).toBe(302);
+		expect((await get("/")).headers.get("location")).toBe(
+			`http://127.0.0.1:${proxy.port}/dashboard/`,
+		);
+		expect((await get("/dashboard")).status).toBe(302);
+		expect((await get("/dashboard")).headers.get("location")).toBe(
+			`http://127.0.0.1:${proxy.port}/dashboard/`,
+		);
 		expect(await (await get("/__dev-proxy")).text()).toBe("ok");
 	});
 });

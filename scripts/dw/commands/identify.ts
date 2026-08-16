@@ -55,7 +55,7 @@ export async function cmdIdentify(): Promise<void> {
 	console.log(`#${n}  ${entry.path}`);
 	console.log();
 	console.log(`dashboard  ${urls.dashboard}`);
-	console.log(`api        ${urls.api}`);
+	console.log(`backend    ${urls.api}`);
 	console.log(`leaf       ${urls.leaf}`);
 	console.log(`checkout   ${urls.checkout}`);
 	console.log();
