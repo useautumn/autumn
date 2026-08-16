@@ -73,19 +73,16 @@ Skills live in the private `ai` submodule (`github.com/useautumn/ai`). `bun ai
 sync` **does** run on Cloud install — that is not enough by itself.
 
 ai-sync writes **symlinks** from `.cursor/skills/<name>` into
-`ai/config/skills/**`. `.cursor/skills` is gitignored (source of truth is `ai/`).
-Cursor Cloud slash commands index real files, not gitignored symlinks — the
-same reason Devin gets `bun sync devin` copies instead of links. So install
-(and start) run `cursor_ai.py materialize`, which replaces each symlink with a
-real directory and mirrors into `~/.cursor/skills`. After a boot you should
-have `/tdd` and `/autumn-tdd-test`. `tdd` supersedes `autumn-tdd-test`; both
-are installed during the transition.
+`ai/config/skills/**`. Cloud agents read `~/.cursor/skills`, so
+`bun ai sync --copy` (or `DW_HEADLESS=1`) also copies real skill dirs there.
+After a boot you should have `/tdd` and `/autumn-tdd-test`. `tdd` supersedes
+`autumn-tdd-test`; both are installed during the transition.
 
 `AGENTS.md` is also gitignored/generated. Cursor Cloud auto-loads it (it does
 **not** auto-load this file). Install appends a "Cursor Cloud specific
 instructions" section so the agent still knows to read the skill files.
 
-To refresh: `(cd ai && bun install) && bun ai/src/cli.ts sync && python3 scripts/setup/cursor-cloud/cursor_ai.py materialize`.
+To refresh: `(cd ai && bun install) && bun ai/src/cli.ts sync --copy`.
 
 Agents started from the **saved team environment** (`install: bun install`
 only, no `start`) never run this path — start a new agent from this branch so

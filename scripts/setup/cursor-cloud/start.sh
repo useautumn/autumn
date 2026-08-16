@@ -88,25 +88,37 @@ export BASH_ENV="$env_sh"
 # shellcheck disable=SC1090
 . "$env_sh"
 
-# Skills: re-sync if install was the dashboard `bun install` only, then copy
-# symlinks so /tdd and /autumn-tdd-test exist as real SKILL.md files.
 BUN="${HOME}/.bun/bin/bun"
 if [ ! -x "$BUN" ]; then
 	BUN="$(command -v bun || true)"
 fi
-if [ -f ai/package.json ]; then
-	if [ ! -f .cursor/skills/tdd/SKILL.md ] && [ -n "$BUN" ]; then
-		echo "[cursor-cloud-start] .cursor/skills missing — running bun ai sync"
-		"$BUN" ai/src/cli.ts sync || echo "[cursor-cloud-start] bun ai sync failed (skills may be missing)"
+if [ -f ai/package.json ] && [ -n "$BUN" ]; then
+	if [ ! -f "${HOME}/.cursor/skills/tdd/SKILL.md" ]; then
+		echo "[cursor-cloud-start] ~/.cursor/skills missing — running bun ai sync --copy"
+		"$BUN" ai/src/cli.ts sync --copy || echo "[cursor-cloud-start] bun ai sync failed (skills may be missing)"
 	fi
-	python3 "$ROOT/scripts/setup/cursor-cloud/cursor_ai.py" materialize || true
-	python3 "$ROOT/scripts/setup/cursor-cloud/cursor_ai.py" agents-md || true
+	"$BUN" "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" agents-md || true
 fi
-# Executor MCP needs EXECUTOR_API_KEY in the agent/MCP process, not only inside
-# `infisical run` for bun dw. Pull from Infisical and write gitignored mcp.json.
-bash "$ROOT/scripts/setup/cursor-cloud/configure-executor-mcp.sh" || \
-	echo "[cursor-cloud-start] executor MCP configure failed (non-fatal)"
-# configure may have appended EXECUTOR_API_KEY to env.sh
+if [ -z "${EXECUTOR_API_KEY:-}" ] && command -v infisical >/dev/null 2>&1; then
+	set +e
+	pulled="$(infisical run --env=dev --recursive --silent -- printenv EXECUTOR_API_KEY 2>/dev/null)"
+	st=$?
+	set -e
+	if [ "$st" -eq 0 ]; then
+		pulled="${pulled%%$'\n'*}"
+		[ -n "$pulled" ] && export EXECUTOR_API_KEY="$pulled"
+	fi
+fi
+if [ -n "${EXECUTOR_API_KEY:-}" ]; then
+	grep -v '^export EXECUTOR_API_KEY=' "$env_sh" >"${env_sh}.tmp" || true
+	mv "${env_sh}.tmp" "$env_sh"
+	printf 'export EXECUTOR_API_KEY=%q\n' "$EXECUTOR_API_KEY" >>"$env_sh"
+	chmod 600 "$env_sh"
+fi
+if [ -n "$BUN" ]; then
+	"$BUN" "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" mcp || \
+		echo "[cursor-cloud-start] executor MCP configure failed (non-fatal)"
+fi
 # shellcheck disable=SC1090
 . "$env_sh"
 

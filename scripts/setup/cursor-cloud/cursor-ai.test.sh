@@ -1,42 +1,20 @@
 #!/usr/bin/env bash
-# Unit tests for cursor_ai.py — no Infisical, no network.
+# Unit tests for Cursor Cloud boot helpers — no Infisical, no network.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-PY="$ROOT/scripts/setup/cursor-cloud/cursor_ai.py"
+CLOUD="$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 pass() { echo "ok: $*"; }
 
-# --- materialize replaces a skill symlink with a real directory -------------
-src="$tmp/ai/config/skills/general/autumn-tdd-test"
-mkdir -p "$src"
-printf '%s\n' '---' 'name: autumn-tdd-test' 'description: test' '---' '# hi' >"$src/SKILL.md"
-mkdir -p "$tmp/repo/.cursor/skills"
-ln -s "$src" "$tmp/repo/.cursor/skills/autumn-tdd-test"
-mkdir -p "$tmp/repo/.cursor/skills"
-src_tdd="$tmp/ai/config/skills/general/tdd"
-mkdir -p "$src_tdd"
-printf '%s\n' '---' 'name: tdd' 'description: test' '---' '# tdd' >"$src_tdd/SKILL.md"
-ln -s "$src_tdd" "$tmp/repo/.cursor/skills/tdd"
+# --- bun ai sync --copy keeps repo symlinks and copies ~/.cursor/skills ------
+(cd "$ROOT/ai" && bun test src/syncSkills.test.ts)
+pass "ai-sync copy mode keeps repo symlinks"
 
-python3 "$PY" --root "$tmp/repo" --user-skills "$tmp/user-skills" materialize
-
-[[ -f "$tmp/repo/.cursor/skills/autumn-tdd-test/SKILL.md" ]] || fail "copied SKILL.md missing"
-[[ ! -L "$tmp/repo/.cursor/skills/autumn-tdd-test" ]] || fail "autumn-tdd-test still a symlink"
-[[ -f "$tmp/user-skills/tdd/SKILL.md" ]] || fail "user skills tdd missing"
-[[ ! -L "$tmp/user-skills/autumn-tdd-test" ]] || fail "user skill still a symlink"
-grep -q '# hi' "$tmp/repo/.cursor/skills/autumn-tdd-test/SKILL.md" || fail "skill body missing"
-pass "materialize copies skill symlinks"
-
-# second run is idempotent (already-real dirs)
-python3 "$PY" --root "$tmp/repo" --user-skills "$tmp/user-skills" materialize
-[[ -f "$tmp/repo/.cursor/skills/tdd/SKILL.md" ]] || fail "tdd disappeared on second materialize"
-pass "materialize is idempotent"
-
-# --- mcp-template writes interpolation, never a secret ----------------------
-python3 "$PY" --root "$tmp/repo" --user-mcp "$tmp/user-mcp.json" mcp-template
+# --- mcp without a key writes interpolation ---------------------------------
+env -u EXECUTOR_API_KEY bun "$CLOUD" --root "$tmp/repo" --user-mcp "$tmp/user-mcp.json" mcp
 python3 - "$tmp/repo/.cursor/mcp.json" "$tmp/user-mcp.json" <<'PY'
 import json, sys
 for path in sys.argv[1:]:
@@ -47,11 +25,11 @@ for path in sys.argv[1:]:
     assert "oauth" not in ex, path
 print("mcp-template json ok")
 PY
-pass "mcp-template uses env interpolation"
+pass "mcp without a key uses env interpolation"
 
-# --- mcp-inject writes the bearer from env, not argv ------------------------
+# --- mcp with a key writes the bearer from env ------------------------------
 export EXECUTOR_API_KEY="test-executor-key-not-real"
-python3 "$PY" --root "$tmp/repo" --user-mcp "$tmp/user-mcp.json" mcp-inject
+bun "$CLOUD" --root "$tmp/repo" --user-mcp "$tmp/user-mcp.json" mcp
 python3 - "$tmp/repo/.cursor/mcp.json" <<'PY'
 import json, sys
 data = json.load(open(sys.argv[1]))
@@ -60,7 +38,6 @@ assert auth == "Bearer test-executor-key-not-real", auth
 assert "${env:" not in auth
 print("mcp-inject json ok")
 PY
-# rewrite with an extra server then inject
 python3 - "$tmp/repo/.cursor/mcp.json" <<'PY'
 import json, sys
 path = sys.argv[1]
@@ -68,7 +45,7 @@ data = json.load(open(path))
 data["mcpServers"]["axiom"] = {"url": "https://mcp.axiom.co/mcp"}
 open(path, "w").write(json.dumps(data, indent="\t") + "\n")
 PY
-python3 "$PY" --root "$tmp/repo" --user-mcp "$tmp/user-mcp.json" mcp-inject
+bun "$CLOUD" --root "$tmp/repo" --user-mcp "$tmp/user-mcp.json" mcp
 python3 - "$tmp/repo/.cursor/mcp.json" <<'PY'
 import json, sys
 data = json.load(open(sys.argv[1]))
@@ -76,37 +53,29 @@ assert data["mcpServers"]["axiom"]["url"] == "https://mcp.axiom.co/mcp"
 assert data["mcpServers"]["executor"]["headers"]["Authorization"] == "Bearer test-executor-key-not-real"
 print("mcp-inject preserves other servers")
 PY
-pass "mcp-inject writes bearer and keeps other servers"
+pass "mcp writes bearer and keeps other servers"
 
 # --- AGENTS.md section is idempotent ----------------------------------------
 printf '%s\n' '# Existing agents' >"$tmp/repo/AGENTS.md"
-python3 "$PY" --root "$tmp/repo" agents-md
-python3 "$PY" --root "$tmp/repo" agents-md
+printf '%s\n' 'trailing note' >>"$tmp/repo/AGENTS.md"
+bun "$CLOUD" --root "$tmp/repo" agents-md
+# Put a trailer after the section so the second write must preserve it.
+printf '%s\n' 'after-section' >>"$tmp/repo/AGENTS.md"
+bun "$CLOUD" --root "$tmp/repo" agents-md
 count="$(grep -c 'Cursor Cloud specific instructions' "$tmp/repo/AGENTS.md" || true)"
 [[ "$count" == "1" ]] || fail "expected 1 cloud section, got $count"
 grep -q 'Existing agents' "$tmp/repo/AGENTS.md" || fail "preamble lost"
+grep -q 'after-section' "$tmp/repo/AGENTS.md" || fail "trailer after cloud section lost"
 pass "AGENTS.md cloud section is idempotent"
 
-# --- configure-executor-mcp.sh with a pre-set key (no Infisical) ------------
-unset AUTUMN_ROOT AUTUMN_AGENT_ENV_SH AUTUMN_USER_MCP
-export AUTUMN_ROOT="$tmp/repo"
-export AUTUMN_AGENT_ENV_SH="$tmp/env.sh"
-export AUTUMN_USER_MCP="$tmp/user-mcp.json"
-printf '%s\n' '# env' >"$tmp/env.sh"
-export EXECUTOR_API_KEY="test-executor-key-not-real"
-bash "$ROOT/scripts/setup/cursor-cloud/configure-executor-mcp.sh"
-grep -q 'export EXECUTOR_API_KEY=' "$tmp/env.sh" || fail "env.sh missing EXECUTOR_API_KEY export"
-python3 - "$tmp/repo/.cursor/mcp.json" <<'PY'
-import json, sys
-auth = json.load(open(sys.argv[1]))["mcpServers"]["executor"]["headers"]["Authorization"]
-assert auth == "Bearer test-executor-key-not-real", auth
-print("configure-executor-mcp json ok")
-PY
-# re-run does not stack export lines
-bash "$ROOT/scripts/setup/cursor-cloud/configure-executor-mcp.sh"
-count="$(grep -c '^export EXECUTOR_API_KEY=' "$tmp/env.sh" || true)"
-[[ "$count" == "1" ]] || fail "expected 1 EXECUTOR_API_KEY export, got $count"
-pass "configure-executor-mcp.sh writes env.sh + mcp.json"
+if grep -q 'cursor_ai.py' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	"$ROOT/scripts/setup/cursor-cloud/start.sh"; then
+	fail "install/start must not call cursor_ai.py"
+fi
+if grep -q 'configure-executor-mcp.sh' "$ROOT/scripts/setup/cursor-cloud/start.sh"; then
+	fail "start must not call configure-executor-mcp.sh"
+fi
+pass "install/start use bun ai sync --copy and cursorCloud.ts"
 
 # --- isolation overlay wins over laptop Redis :6380 -------------------------
 export CACHE_V2_DRAGONFLY_URL="redis://localhost:6380"
@@ -206,4 +175,4 @@ UNIT_TESTS=1 env -u TESTS_ORG bun test "$ROOT/scripts/dw/devProxy/routes.test.ts
 	|| fail "dev-proxy tests failed"
 pass "dev-proxy routes /dashboard /api /leaf /checkout"
 
-echo "all cursor_ai.py tests passed"
+echo "all cursor-cloud boot tests passed"
