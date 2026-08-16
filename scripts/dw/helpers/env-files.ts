@@ -22,9 +22,10 @@ import {
 	dragonflyPortFor,
 	dynamoDbPortFor,
 	elasticMqPortFor,
+	checkoutPortFor,
 	serverPortFor,
 } from "./ports.ts";
-import { pathProxyPublicEnv } from "./publicUrls.ts";
+import { publicDevEnv } from "./publicUrls.ts";
 import { log } from "./shell.ts";
 import { forceSslVerifyFull } from "./url.ts";
 
@@ -106,16 +107,19 @@ export function provisionedInfraEnv(
 function urlsForEntry(entry: RegistryEntry): {
 	apiUrl: string;
 	browserApiUrl: string;
+	checkoutUrl: string;
 	publicApiUrl: string;
 	viteUrl: string;
 } {
 	const serverPort = serverPortFor(entry.worktreeNum);
 	const loopbackApi = `http://localhost:${serverPort}`;
+	const loopbackCheckout = `http://localhost:${checkoutPortFor(entry.worktreeNum)}`;
 	if (entry.ngrokUrl?.startsWith("https://")) {
 		const urls = originServiceUrls({ origin: entry.ngrokUrl });
 		return {
 			apiUrl: loopbackApi,
 			browserApiUrl: DEV_PROXY_PREFIXES.api,
+			checkoutUrl: urls.checkout,
 			publicApiUrl: urls.api,
 			viteUrl: urls.dashboard,
 		};
@@ -125,6 +129,7 @@ function urlsForEntry(entry: RegistryEntry): {
 		return {
 			apiUrl: aliases.apiUrl,
 			browserApiUrl: aliases.apiUrl,
+			checkoutUrl: loopbackCheckout,
 			publicApiUrl: entry.ngrokUrl ?? aliases.apiUrl,
 			viteUrl: aliases.viteUrl,
 		};
@@ -133,6 +138,7 @@ function urlsForEntry(entry: RegistryEntry): {
 	return {
 		apiUrl: loopbackApi,
 		browserApiUrl: loopbackApi,
+		checkoutUrl: loopbackCheckout,
 		publicApiUrl: loopbackApi,
 		viteUrl: `http://localhost:${vitePort}`,
 	};
@@ -144,7 +150,8 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		log("writeEnvLocalFiles: entry missing databaseUrl, skipping");
 		return;
 	}
-	const { apiUrl, browserApiUrl, publicApiUrl, viteUrl } = urlsForEntry(entry);
+	const { apiUrl, browserApiUrl, checkoutUrl, publicApiUrl, viteUrl } =
+		urlsForEntry(entry);
 	const serverPort = serverPortFor(worktreeNum);
 	const portlessCa = join(homedir(), ".portless", "ca.pem");
 
@@ -163,7 +170,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	if (entry.ngrokUrl?.startsWith("https://")) {
 		Object.assign(
 			serverEnv,
-			pathProxyPublicEnv({
+			publicDevEnv({
 				origin: entry.ngrokUrl,
 				worktreeNum,
 			}),
@@ -184,6 +191,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 
 	const checkoutEnv: Record<string, string> = {
 		VITE_API_URL: browserApiUrl,
+		VITE_CHECKOUT_URL: checkoutUrl,
 	};
 
 	const writeOne = (relPath: string, managed: Record<string, string>) => {

@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { pathProxyPublicEnv } from "./publicUrls.ts";
+import { publicDevEnv } from "./publicUrls.ts";
 
-describe("pathProxyPublicEnv", () => {
-	test("stamps private loopback and public /backend /dashboard", () => {
+describe("publicDevEnv", () => {
+	test("stamps private loopback and public folder URLs", () => {
 		expect(
-			pathProxyPublicEnv({
+			publicDevEnv({
 				origin: "https://abc.ngrok.app",
 				worktreeNum: 1,
 			}),
@@ -13,13 +13,13 @@ describe("pathProxyPublicEnv", () => {
 			AUTUMN_PUBLIC_API_URL: "https://abc.ngrok.app/backend",
 			CHAT_SERVER_URL: "http://localhost:3099",
 			CLIENT_URL: "https://abc.ngrok.app/dashboard",
-			DW_PATH_PROXY: "1",
 			EMULATE_GOOGLE_FETCH_URL: "http://127.0.0.1:4000",
 			EMULATE_GOOGLE_URL: "https://abc.ngrok.app/emulate",
 			MCP_SERVER_URL: "https://abc.ngrok.app/backend",
 			SLACK_REDIRECT_URI: "https://abc.ngrok.app/backend/slack/oauth/callback",
 			VITE_API_URL: "/backend",
 			VITE_BACKEND_URL: "/backend",
+			VITE_CHECKOUT_URL: "https://abc.ngrok.app/checkout",
 			VITE_FRONTEND_URL: "https://abc.ngrok.app/dashboard",
 		});
 	});

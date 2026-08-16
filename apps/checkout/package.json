@@ -10,6 +10,7 @@
 		"ts": "bunx tsgo --build --noEmit"
 	},
 	"dependencies": {
+		"@autumn/env": "workspace:*",
 		"@autumn/shared": "workspace:*",
 		"@base-ui/react": "^1.1.0",
 		"@orpc/client": "catalog:",

@@ -2,8 +2,8 @@ import { DEV_PROXY_PREFIXES, originServiceUrls } from "../devProxy/routes.ts";
 import { emulateGoogleUrl } from "./emulate.ts";
 import { EMULATE_PORT, leafPortFor, serverPortFor } from "./ports.ts";
 
-/** Env stamps when one ngrok host fronts dashboard / backend / checkout. */
-export function pathProxyPublicEnv({
+/** Private loopback + public folder URLs for one ngrok origin. */
+export function publicDevEnv({
 	origin,
 	worktreeNum,
 }: {
@@ -17,7 +17,6 @@ export function pathProxyPublicEnv({
 		AUTUMN_PUBLIC_API_URL: urls.api,
 		CHAT_SERVER_URL: `http://localhost:${leafPortFor(worktreeNum)}`,
 		CLIENT_URL: urls.dashboard,
-		DW_PATH_PROXY: "1",
 		// Browser hits the public /emulate path; server token exchange stays on loopback.
 		EMULATE_GOOGLE_FETCH_URL: `http://127.0.0.1:${EMULATE_PORT}`,
 		EMULATE_GOOGLE_URL: emulateGoogleUrl({ origin }),
@@ -25,6 +24,7 @@ export function pathProxyPublicEnv({
 		SLACK_REDIRECT_URI: `${urls.api}/slack/oauth/callback`,
 		VITE_API_URL: DEV_PROXY_PREFIXES.api,
 		VITE_BACKEND_URL: DEV_PROXY_PREFIXES.api,
+		VITE_CHECKOUT_URL: urls.checkout,
 		VITE_FRONTEND_URL: urls.dashboard,
 	};
 }

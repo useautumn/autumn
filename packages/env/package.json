@@ -14,6 +14,11 @@
 			"types": "./src/paths.ts",
 			"import": "./src/paths.ts",
 			"default": "./src/paths.ts"
+		},
+		"./dw": {
+			"types": "./src/dw.ts",
+			"import": "./src/dw.ts",
+			"default": "./src/dw.ts"
 		}
 	},
 	"scripts": {

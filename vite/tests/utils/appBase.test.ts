@@ -1,26 +1,26 @@
 import { describe, expect, test } from "bun:test";
 import { appHref, appOriginHref, stripAppBase } from "@/utils/appBase";
 
-const proxyBase = "/dashboard/";
+const dashboardBase = "/dashboard/";
 
 describe("appBase helpers", () => {
-	test("path-proxy base prefixes hard navigations", () => {
-		expect(appHref("/", proxyBase)).toBe("/dashboard/");
-		expect(appHref("/sign-in", proxyBase)).toBe("/dashboard/sign-in");
-		expect(appHref("https://example.com", proxyBase)).toBe(
+	test("public base prefixes hard navigations", () => {
+		expect(appHref("/", dashboardBase)).toBe("/dashboard/");
+		expect(appHref("/sign-in", dashboardBase)).toBe("/dashboard/sign-in");
+		expect(appHref("https://example.com", dashboardBase)).toBe(
 			"https://example.com",
 		);
-		expect(appHref("/api/auth/ok", proxyBase)).toBe("/api/auth/ok");
-		expect(appHref("/backend/v1/customers", proxyBase)).toBe(
-			"/backend/v1/customers",
+		expect(appHref("/dashboard/sign-in", dashboardBase)).toBe(
+			"/dashboard/sign-in",
 		);
-		expect(appHref("/dashboard/sign-in", proxyBase)).toBe("/dashboard/sign-in");
 	});
 
-	test("path-proxy base is stripped from window pathnames", () => {
-		expect(stripAppBase("/dashboard", proxyBase)).toBe("/");
-		expect(stripAppBase("/dashboard/products", proxyBase)).toBe("/products");
-		expect(stripAppBase("/dashboard/sandbox/products", proxyBase)).toBe(
+	test("public base is stripped from window pathnames", () => {
+		expect(stripAppBase("/dashboard", dashboardBase)).toBe("/");
+		expect(stripAppBase("/dashboard/products", dashboardBase)).toBe(
+			"/products",
+		);
+		expect(stripAppBase("/dashboard/sandbox/products", dashboardBase)).toBe(
 			"/sandbox/products",
 		);
 	});
@@ -31,9 +31,9 @@ describe("appBase helpers", () => {
 	});
 
 	test("appOriginHref uses the page origin", () => {
-		expect(appOriginHref("/sign-in", proxyBase, "https://abc.ngrok.app")).toBe(
-			"https://abc.ngrok.app/dashboard/sign-in",
-		);
+		expect(
+			appOriginHref("/sign-in", dashboardBase, "https://abc.ngrok.app"),
+		).toBe("https://abc.ngrok.app/dashboard/sign-in");
 		expect(appOriginHref("/close", "/", "http://localhost:3000")).toBe(
 			"http://localhost:3000/close",
 		);

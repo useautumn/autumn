@@ -11,7 +11,7 @@ import { isSafeSsoRedirectUrl } from "@/lib/sso/ssoCallback";
 import { getSsoHint } from "@/lib/sso/ssoHint";
 import { resolveSso } from "@/lib/sso/ssoResolve";
 import type { SsoOrgHint } from "@/lib/sso/ssoTypes";
-import { appOriginHref } from "@/utils/appBase";
+import { appHref, appOriginHref } from "@/utils/appBase";
 import { getBackendErr, getSafeNextPath } from "@/utils/genUtils";
 import { AuthBackground } from "./components/AuthBackground";
 import { AutumnWordmark } from "./components/AutumnWordmark";
@@ -53,8 +53,7 @@ export const SignIn = () => {
 	);
 
 	const defaultPath = getSafeNextPath(searchParams);
-	const newPath = oauthRedirectUrl || defaultPath;
-	const callbackPath = oauthRedirectUrl || defaultPath;
+	const postAuthHref = oauthRedirectUrl || appHref(defaultPath);
 
 	useEffect(() => {
 		if (oauthRedirectUrl) return;
@@ -168,8 +167,8 @@ export const SignIn = () => {
 				{otpSent ? (
 					<OTPSignIn
 						email={email}
-						newPath={newPath}
-						callbackPath={callbackPath}
+						newPath={postAuthHref}
+						callbackPath={postAuthHref}
 					/>
 				) : ssoHint && !emailFallback ? (
 					<RememberedSsoSignIn

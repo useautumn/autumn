@@ -10,7 +10,7 @@ import { isHeadless } from "./headless.ts";
 import { ensureNgrok, publicOrigin } from "./ngrok.ts";
 import { registerPortlessAliases } from "./portless.ts";
 import { serverPortFor } from "./ports.ts";
-import { pathProxyPublicEnv } from "./publicUrls.ts";
+import { publicDevEnv } from "./publicUrls.ts";
 import { fatal, log } from "./shell.ts";
 import { spawnDevInTmux, tmuxSessionName } from "./tmux.ts";
 import { rewriteDbEnv } from "./url.ts";
@@ -48,7 +48,7 @@ function applyPublicUrls({
 	if (origin?.startsWith("https://")) {
 		Object.assign(
 			env,
-			pathProxyPublicEnv({ origin, worktreeNum: entry.worktreeNum }),
+			publicDevEnv({ origin, worktreeNum: entry.worktreeNum }),
 		);
 		return;
 	}

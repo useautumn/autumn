@@ -2,7 +2,7 @@
 export const appBase = (baseUrl = import.meta.env.BASE_URL || "/"): string =>
 	baseUrl.replace(/\/$/, "");
 
-/** Drop `/dashboard` (path-proxy base) so route helpers see `/products`, etc. */
+/** Drop the Vite public base so route helpers see `/products`, etc. */
 export const stripAppBase = (
 	pathname: string,
 	baseUrl?: string,
@@ -16,18 +16,10 @@ export const stripAppBase = (
 	return pathname;
 };
 
-/** Prefix a same-origin path with Vite `base` for `window.location` assigns. */
+/** Prefix a dashboard path with Vite `base` for `window.location` assigns. */
 export const appHref = (path: string, baseUrl?: string): string => {
 	const base = appBase(baseUrl);
 	if (!base || !path.startsWith("/") || path.startsWith("//")) return path;
-	if (
-		path.startsWith("/api") ||
-		path.startsWith("/backend") ||
-		path.startsWith("/leaf") ||
-		path.startsWith("/checkout")
-	) {
-		return path;
-	}
 	if (path === base || path.startsWith(`${base}/`)) return path;
 	if (path === "/") return `${base}/`;
 	return `${base}${path}`;

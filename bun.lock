@@ -38,6 +38,7 @@
       "name": "checkout",
       "version": "0.0.0",
       "dependencies": {
+        "@autumn/env": "workspace:*",
         "@autumn/shared": "workspace:*",
         "@base-ui/react": "^1.1.0",
         "@orpc/client": "catalog:",
@@ -765,6 +766,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@ai-sdk/react": "^3.0.25",
+        "@autumn/env": "workspace:*",
         "@autumn/shared": "workspace:*",
         "@autumn/ui": "workspace:*",
         "@base-ui/react": "^1.4.1",
