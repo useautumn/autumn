@@ -1,12 +1,8 @@
 import { NEON_PROJECT_ID, PROJECT_ROOT } from "../constants.ts";
 import { isProvisioned } from "../helpers/entry.ts";
-import {
-	getCanonicalWorktree,
-	getCurrentBranch,
-	getCurrentWorktree,
-	getDefaultBranch,
-} from "../helpers/git.ts";
+import { getCurrentWorktree } from "../helpers/git.ts";
 import { isHeadless } from "../helpers/headless.ts";
+import { ensureLocalInfra } from "../helpers/localInfra.ts";
 import { ensureNgrok } from "../helpers/ngrok.ts";
 import { withNeonContext } from "../helpers/neonContext.ts";
 import {
@@ -15,14 +11,9 @@ import {
 } from "../helpers/neonRegion.ts";
 import { provisionWorktree } from "../helpers/provision.ts";
 import {
-	allocateWorktreeNumber,
-	deriveBranchName,
-	deriveCanonicalBranchName,
 	loadRegistry,
-	reconcile,
-	refreshCanonicalEntry,
+	registerCurrentWorktree,
 	saveRegistry,
-	wantsCanonicalProvision,
 } from "../helpers/registry.ts";
 import { fatal, log, shInherit } from "../helpers/shell.ts";
 import type { RegistryEntry } from "../types.ts";
@@ -82,47 +73,9 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 
 	ensureAiSubmoduleSynced();
 
-	const canonical = getCanonicalWorktree();
 	const cwd = getCurrentWorktree();
-	const gitBranch = getCurrentBranch();
-	const defaultBranch = getDefaultBranch();
+	let entry = registerCurrentWorktree();
 	let registry = loadRegistry();
-	registry = reconcile(registry);
-
-	let entry = registry[cwd];
-	if (!entry) {
-		const worktreeNum = allocateWorktreeNumber(cwd, registry, canonical);
-		const onFeatureBranch = wantsCanonicalProvision(
-			cwd,
-			canonical,
-			gitBranch,
-			defaultBranch,
-		);
-		const branchName =
-			worktreeNum === 1
-				? onFeatureBranch
-					? deriveCanonicalBranchName(cwd, gitBranch)
-					: undefined
-				: deriveBranchName(cwd, worktreeNum);
-		entry = {
-			path: cwd,
-			worktreeNum,
-			createdAt: Date.now(),
-			...(onFeatureBranch && { gitBranch }),
-			...(branchName && { branchName }),
-		};
-		registry[cwd] = entry;
-		saveRegistry(registry);
-		log(`registered ${cwd} as worktree ${worktreeNum}`);
-	} else if (entry.worktreeNum === 1) {
-		entry = refreshCanonicalEntry(entry, cwd, canonical);
-		registry[cwd] = entry;
-		saveRegistry(registry);
-	} else {
-		entry.lastUsedAt = Date.now();
-		registry[cwd] = entry;
-		saveRegistry(registry);
-	}
 
 	log(
 		`resuming worktree ${entry.worktreeNum}${entry.branchName ? ` (${entry.branchName})` : ""}`,
@@ -148,11 +101,12 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 		registry[cwd] = entry;
 		saveRegistry(registry);
 	} else if (isHeadless()) {
-		// Cloud canonical worktree has no Neon/Docker ngrok. Still open a
-		// public tunnel so identify / the dashboard are reachable.
-		entry = ensureNgrok(entry);
+		ensureLocalInfra();
+		entry = await ensureNgrok(entry);
 		registry[cwd] = entry;
 		saveRegistry(registry);
+	} else {
+		entry = await ensureNgrok(entry);
 	}
 
 	return entry;

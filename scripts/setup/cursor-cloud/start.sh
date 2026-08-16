@@ -142,33 +142,13 @@ if [ -n "${NGROK_AUTHTOKEN:-}" ]; then
 	chmod 600 "$env_sh"
 	echo "[cursor-cloud-start] NGROK_AUTHTOKEN ready (len=${#NGROK_AUTHTOKEN})"
 else
-	echo "[cursor-cloud-start] NGROK_AUTHTOKEN unset — ngrok terminal will idle. Add a Team Runtime Secret of that name (or Infisical dev)."
+	echo "[cursor-cloud-start] NGROK_AUTHTOKEN unset — bun dw setup will skip the public tunnel."
 fi
 # shellcheck disable=SC1090
 . "$env_sh"
 
-# bun dw identify reads ~/.autumn-worktrees.json. Cloud start does not run bun dw
-# (app is opt-in), so seed canonical worktree #1 against local agent-services.
-reg="${HOME}/.autumn-worktrees.json"
-if [ ! -s "$reg" ]; then
-	python3 - "$ROOT" "$reg" <<'PY'
-import json, sys, time
-root, path = sys.argv[1], sys.argv[2]
-with open(path, "w") as f:
-	json.dump(
-		{
-			root: {
-				"path": root,
-				"worktreeNum": 1,
-				"createdAt": int(time.time() * 1000),
-			}
-		},
-		f,
-		indent=2,
-	)
-	f.write("\n")
-PY
-	echo "[cursor-cloud-start] registered canonical worktree #1 for bun dw identify"
+# Infra + one ngrok hostname. Does not start the app.
+if [ -n "$BUN" ]; then
+	echo "[cursor-cloud-start] bun dw setup (local infra + public URL)"
+	"$BUN" dw setup || echo "[cursor-cloud-start] bun dw setup failed (non-fatal)"
 fi
-
-bash scripts/setup/agent-services.sh

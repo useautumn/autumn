@@ -189,12 +189,11 @@ different `localhost:3000`. Use one of:
    wide open when `DW_HEADLESS=1` so preview hostnames do not 403.
 2. **Remote desktop** on the agent page — take control, open Chrome with
    `--no-sandbox`, go to `http://localhost:3000`. Most reliable if Ports is empty.
-3. **ngrok** — one public hostname per VM, pointed at the path proxy
-   (`:3080`). Paths: `/dashboard` Vite, `/api` server, `/leaf` chat/MCP,
-   `/checkout` checkout. Edit `scripts/dw/devProxy/routes.ts`.
-   `bun dw identify` prints those four URLs. Unique `*.ngrok.app` needs
-   a paid token. A free token shares one `*.ngrok-free.dev`. Stripe
-   webhooks stay on `stripe listen`.
+3. **ngrok** — `bun dw setup` reserves one hostname via `NGROK_API_KEY`
+   (salted with `~/.autumn-agent/machine-id` so Cloud VMs do not collide)
+   and points it at the path proxy (`:3080`). Paths: `/dashboard` Vite,
+   `/api` server, `/leaf` chat/MCP, `/checkout` checkout. Edit
+   `scripts/dw/devProxy/routes.ts`. `bun dw identify` prints those URLs.
 
 The `access` terminal reprints these instructions on every boot. It does not
 start the app.

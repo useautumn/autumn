@@ -12,6 +12,7 @@ import {
 	ENV_LOCAL_TARGETS,
 	PROJECT_ROOT,
 } from "../constants.ts";
+import { originServiceUrls } from "../devProxy/routes.ts";
 import type { RegistryEntry } from "../types.ts";
 import { isProvisioned } from "./entry.ts";
 import { isHeadless } from "./headless.ts";
@@ -105,6 +106,10 @@ function urlsForEntry(entry: RegistryEntry): {
 	apiUrl: string;
 	viteUrl: string;
 } {
+	if (entry.ngrokUrl?.startsWith("https://")) {
+		const urls = originServiceUrls({ origin: entry.ngrokUrl });
+		return { apiUrl: urls.api, viteUrl: urls.dashboard };
+	}
 	if (isProvisioned(entry) && !isHeadless()) {
 		const aliases = aliasesFor(entry.worktreeNum);
 		return { apiUrl: aliases.apiUrl, viteUrl: aliases.viteUrl };

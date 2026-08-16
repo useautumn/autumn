@@ -1,27 +1,14 @@
-import { getCurrentWorktree } from "../helpers/git.ts";
-import { isHeadless } from "../helpers/headless.ts";
 import { killOwnPorts } from "../helpers/ports.ts";
-import { loadRegistry } from "../helpers/registry.ts";
 import { fatal } from "../helpers/shell.ts";
 import { startDev } from "../helpers/start.ts";
+import { cmdSetup } from "./setup.ts";
 
 export async function cmdRun(): Promise<void> {
 	if (process.env.NODE_ENV === "production") {
 		fatal("bun dw is disabled in production");
 	}
 
-	const cwd = getCurrentWorktree();
-	const registry = loadRegistry();
-	const entry = registry[cwd] ??
-		(isHeadless()
-			? { path: cwd, worktreeNum: 1, createdAt: Date.now() }
-			: undefined);
-	if (!entry) {
-		fatal(
-			`no provisioned worktree at ${cwd}. Run 'bun dw setup' first (or 'bun dw' to do both).`,
-		);
-	}
-
+	const entry = await cmdSetup();
 	killOwnPorts(entry.worktreeNum);
-	startDev(entry, { allowTmux: false });
+	await startDev(entry, { allowTmux: false });
 }

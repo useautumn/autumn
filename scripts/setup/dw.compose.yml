@@ -1,9 +1,6 @@
 # Per-worktree infra stack for `bun dw`.
 # Project name is set per-worktree via COMPOSE_PROJECT_NAME (e.g. autumn-wt-8).
-# Ports are substituted from env vars (DRAGONFLY_PORT, ELASTICMQ_PORT).
-# The ngrok service is gated behind the `ngrok` profile so it only starts when
-# `bun dw setup` finds an NGROK_AUTHTOKEN; env vars carry `:-` defaults so
-# `docker compose down` (teardown) never warns about unset values.
+# Public URLs are a host ngrok tunnel to the path proxy, not compose services.
 
 services:
   dragonfly:
@@ -25,63 +22,10 @@ services:
     command: ["-Dconfig.file=/opt/elasticmq.conf"]
     restart: unless-stopped
 
-  # DynamoDB emulator (idempotency keys). Official multi-arch image; -inMemory
-  # because the data is ephemeral by design (24h TTL) and -sharedDb so all
-  # credential/region pairs see the same database file. The server auto-creates
-  # the table on first use (ensureLocalDynamoTable.ts), so no config volume.
   dynamodb:
     image: amazon/dynamodb-local:latest
     container_name: ${COMPOSE_PROJECT_NAME}-dynamodb
     ports:
       - "${DYNAMODB_PORT}:8000"
     command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
-    restart: unless-stopped
-
-  # Public tunnel so Anthropic's cloud (Claude Managed Agents) + Slack can reach
-  # this worktree's /mcp + /slack/*. Forwards to the host's server port, which
-  # proxies to leaf. The container lives in the compose stack, so it outlives
-  # `bun d` restarts (the tunnel stays up) and is removed on `bun dw teardown`.
-  #
-  # NGROK_DOMAIN (a *reserved* domain) => stable URL via ${NGROK_DOMAIN_FLAG}, so
-  # Slack/CMA never need re-pointing and the eval's random tunnel can't steal it.
-  # Unset => ngrok assigns a random domain (dw reads it back from :${NGROK_API_PORT}).
-  # --pooling-enabled lets a restarting agent take over its own domain instead of
-  # crashing with ERR_NGROK_334 ("endpoint already online"). sh -c so the --url
-  # flag can be omitted cleanly when no reserved domain is configured.
-  ngrok:
-    image: ngrok/ngrok:latest
-    container_name: ${COMPOSE_PROJECT_NAME}-ngrok
-    profiles:
-      - ngrok
-    environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
-    entrypoint:
-      - /bin/sh
-      - -c
-    command:
-      - "ngrok http host.docker.internal:${SERVER_PORT:-8080} --pooling-enabled --log=stdout ${NGROK_DOMAIN_FLAG:-}"
-    ports:
-      - "${NGROK_API_PORT:-4040}:4040"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
-
-  # Second tunnel for the dashboard. One ngrok agent forwards to one port, so
-  # exposing vite as well needs its own container and its own reserved domain.
-  ngrok-vite:
-    image: ngrok/ngrok:latest
-    container_name: ${COMPOSE_PROJECT_NAME}-ngrok-vite
-    profiles:
-      - ngrok
-    environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
-    entrypoint:
-      - /bin/sh
-      - -c
-    command:
-      - "ngrok http host.docker.internal:${VITE_PORT:-3000} --pooling-enabled --log=stdout ${NGROK_VITE_URL_FLAG:-}"
-    ports:
-      - "${NGROK_VITE_API_PORT:-4140}:4040"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     restart: unless-stopped

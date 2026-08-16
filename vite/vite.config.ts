@@ -13,6 +13,10 @@ process.env.VITE_FRONTEND_URL ||= "http://localhost:3000";
 
 const isDwHeadless =
 	process.env.DW_HEADLESS === "1" || process.env.DW_HEADLESS === "true";
+const usePathProxy =
+	isDwHeadless ||
+	process.env.DW_PATH_PROXY === "1" ||
+	process.env.DW_PATH_PROXY === "true";
 
 const vitePort = process.env.VITE_PORT
 	? Number.parseInt(process.env.VITE_PORT, 10)
@@ -38,7 +42,7 @@ function printPortlessUrl(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-	base: isDwHeadless ? "/dashboard/" : "/",
+	base: usePathProxy ? "/dashboard/" : "/",
 	define: {
 		__APP_ENV__: JSON.stringify(process.env.VITE_APP_ENV || ""),
 	},

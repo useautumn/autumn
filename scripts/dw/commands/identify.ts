@@ -1,8 +1,6 @@
 import { originServiceUrls } from "../devProxy/routes.ts";
 import { isPlainCanonical, isProvisioned } from "../helpers/entry.ts";
-import { getCurrentWorktree } from "../helpers/git.ts";
-import { isHeadless } from "../helpers/headless.ts";
-import { ensureNgrok, headlessPublicOrigin } from "../helpers/ngrok.ts";
+import { ensureNgrok, publicOrigin } from "../helpers/ngrok.ts";
 import {
 	aliasesFor,
 	checkoutPortFor,
@@ -10,7 +8,7 @@ import {
 	serverPortFor,
 	vitePortFor,
 } from "../helpers/ports.ts";
-import { loadRegistry } from "../helpers/registry.ts";
+import { registerCurrentWorktree } from "../helpers/registry.ts";
 import { tmuxSessionName } from "../helpers/tmux.ts";
 import type { RegistryEntry } from "../types.ts";
 
@@ -20,7 +18,7 @@ function localServiceUrls({
 	entry: RegistryEntry;
 }): ReturnType<typeof originServiceUrls> {
 	const n = entry.worktreeNum;
-	if (isProvisioned(entry) && !isHeadless()) {
+	if (isProvisioned(entry)) {
 		const aliases = aliasesFor(n);
 		return {
 			api: aliases.apiUrl,
@@ -37,19 +35,11 @@ function localServiceUrls({
 	};
 }
 
-export function cmdIdentify(): void {
-	const cwd = getCurrentWorktree();
-	const registry = loadRegistry();
-	let entry = registry[cwd];
-	if (!entry) {
-		console.error(`[dw] no registered worktree at ${cwd}`);
-		console.error(`     run 'bun dw' here first to provision one`);
-		process.exit(1);
-	}
+export async function cmdIdentify(): Promise<void> {
+	let entry = registerCurrentWorktree();
+	entry = await ensureNgrok(entry, { quiet: true });
 
-	entry = ensureNgrok(entry, { quiet: true });
-
-	const origin = headlessPublicOrigin({ entry });
+	const origin = publicOrigin({ entry });
 	const urls = origin
 		? originServiceUrls({ origin })
 		: localServiceUrls({ entry });

@@ -7,7 +7,7 @@ import type { RegistryEntry } from "../types.ts";
 import { isProvisioned } from "./entry.ts";
 import { provisionedInfraEnv } from "./env-files.ts";
 import { isHeadless } from "./headless.ts";
-import { ensureNgrok, headlessPublicOrigin } from "./ngrok.ts";
+import { ensureNgrok, publicOrigin } from "./ngrok.ts";
 import { registerPortlessAliases } from "./portless.ts";
 import { portlessHttpsUrl, serverPortFor } from "./ports.ts";
 import { fatal, log } from "./shell.ts";
@@ -42,10 +42,8 @@ function applyPublicUrls({
 	entry: RegistryEntry;
 	env: Record<string, string>;
 }): void {
-	if (isHeadless()) {
-		const origin =
-			headlessPublicOrigin({ entry }) ??
-			`http://localhost:${serverPortFor(entry.worktreeNum)}`;
+	const origin = publicOrigin({ entry });
+	if (origin?.startsWith("https://")) {
 		const urls = originServiceUrls({ origin });
 		env.AUTUMN_API_URL = `http://localhost:${serverPortFor(entry.worktreeNum)}`;
 		env.AUTUMN_PUBLIC_API_URL = urls.api;
@@ -55,9 +53,13 @@ function applyPublicUrls({
 		env.VITE_API_URL = "/api";
 		env.CHAT_URL = urls.leaf;
 		env.SLACK_BOT_URL = urls.leaf;
+		env.DW_PATH_PROXY = "1";
 		return;
 	}
-	if (!isProvisioned(entry)) return;
+	if (isHeadless() || !isProvisioned(entry)) {
+		env.AUTUMN_API_URL = `http://localhost:${serverPortFor(entry.worktreeNum)}`;
+		return;
+	}
 	const aliases = registerPortlessAliases(entry.worktreeNum);
 	env.AUTUMN_API_URL = aliases.apiUrl;
 	env.AUTUMN_PUBLIC_API_URL = entry.ngrokUrl ?? aliases.apiUrl;
@@ -122,11 +124,11 @@ export function buildDevEnvAndArgs(entry: RegistryEntry): {
 	return { env, args };
 }
 
-export function startDev(
+export async function startDev(
 	entry: RegistryEntry,
 	opts?: { allowTmux?: boolean },
-): never {
-	const current = ensureNgrok(entry);
+): Promise<never> {
+	const current = await ensureNgrok(entry);
 	const { worktreeNum, branchName } = current;
 	const { env, args } = buildDevEnvAndArgs(current);
 

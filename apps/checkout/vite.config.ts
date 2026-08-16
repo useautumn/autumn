@@ -9,9 +9,13 @@ const require = createRequire(import.meta.url);
 
 const isDwHeadless =
 	process.env.DW_HEADLESS === "1" || process.env.DW_HEADLESS === "true";
+const usePathProxy =
+	isDwHeadless ||
+	process.env.DW_PATH_PROXY === "1" ||
+	process.env.DW_PATH_PROXY === "true";
 
 export default defineConfig({
-	base: isDwHeadless ? "/checkout/" : "/",
+	base: usePathProxy ? "/checkout/" : "/",
 	plugins: [react(), tsconfigPaths(), tailwindcss()],
 	resolve: {
 		dedupe: ["react", "react-dom"],

@@ -1,37 +1,36 @@
-import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
-import { PROJECT_ROOT } from "../constants.ts";
+import { ensureDevProxy } from "../devProxy/server.ts";
 import type { RegistryEntry } from "../types.ts";
-import { isHeadless } from "./headless.ts";
-import { devProxyPortFor } from "./ports.ts";
+import { agentDir, machineId } from "./machineId.ts";
+import { devProxyPortFor, ngrokApiPortFor } from "./ports.ts";
 import { loadRegistry, saveRegistry, shortHash } from "./registry.ts";
-import { log, sh, shInherit } from "./shell.ts";
+import { log, sh } from "./shell.ts";
 
 const NGROK_API = "https://api.ngrok.com";
 
 export type ReservedDomain = { id: string; domain: string };
 
-// Domain reservation/deletion is the ngrok *management* API (api.ngrok.com),
-// which needs an NGROK_API_KEY — distinct from the agent NGROK_AUTHTOKEN that
-// binds to a domain via --url. Both live in Infisical for `bun dw`.
 export function ngrokApiAvailable(): boolean {
 	return Boolean(process.env.NGROK_API_KEY);
 }
 
-// Deterministic per-worktree domain so the public URL is stable across `bun d`
-// restarts AND teardown→setup cycles (we re-reserve the same name). The path hash
-// matches the one used for branch names, keeping it globally unique-ish.
-export function reservedDomainName(worktreeNum: number, path: string): string {
-	return `autumn-wt${worktreeNum}-${shortHash(path)}.ngrok.app`;
-}
-
-/** Dashboard tunnel. The API domain forwards to the server port, so vite needs its own. */
-export function reservedViteDomainName(
-	worktreeNum: number,
-	path: string,
-): string {
-	return `autumn-wt${worktreeNum}-${shortHash(path)}-app.ngrok.app`;
+export function reservedDomainName({
+	machineId: id,
+	path,
+	worktreeNum,
+}: {
+	machineId: string;
+	path: string;
+	worktreeNum: number;
+}): string {
+	return `autumn-wt${worktreeNum}-${shortHash(`${id}:${path}`)}.ngrok.app`;
 }
 
 function ngrokHeaders(): Record<string, string> {
@@ -65,16 +64,18 @@ async function findReservedDomain(
 	return undefined;
 }
 
-// Find-or-create: reuse the reservation if a prior setup left it behind (e.g.
-// teardown didn't run), otherwise reserve it fresh.
-export async function ensureReservedDomain(
-	worktreeNum: number,
-	path: string,
-	opts: { vite?: boolean } = {},
-): Promise<ReservedDomain> {
-	const name = opts.vite
-		? reservedViteDomainName(worktreeNum, path)
-		: reservedDomainName(worktreeNum, path);
+export async function ensureReservedDomain({
+	path,
+	worktreeNum,
+}: {
+	path: string;
+	worktreeNum: number;
+}): Promise<ReservedDomain> {
+	const name = reservedDomainName({
+		machineId: machineId(),
+		path,
+		worktreeNum,
+	});
 	const existing = await findReservedDomain(name);
 	if (existing) {
 		log(`ngrok reserved domain ${existing.domain} (reused ${existing.id})`);
@@ -100,7 +101,6 @@ export async function deleteReservedDomain(id: string): Promise<void> {
 		headers: ngrokHeaders(),
 		method: "DELETE",
 	});
-	// 404 = already gone; treat as success so teardown is idempotent.
 	if (response.status === 204 || response.status === 404) {
 		log(`ngrok reserved domain ${id} released`);
 		return;
@@ -110,56 +110,147 @@ export async function deleteReservedDomain(id: string): Promise<void> {
 	);
 }
 
-const NGROK_UP = join(PROJECT_ROOT, "scripts/setup/cursor-cloud/ngrok-up.sh");
-const PUBLIC_URLS_FILE = join(homedir(), ".autumn-agent", "public-urls.txt");
-
 export function firstHttpsUrl(text: string): string | undefined {
 	return text.match(/https:\/\/\S+/)?.[0]?.replace(/[.,;]+$/, "");
 }
 
-function readNgrokPublicOrigin(): string | undefined {
-	if (!isHeadless() || !existsSync(PUBLIC_URLS_FILE)) return undefined;
-	return firstHttpsUrl(readFileSync(PUBLIC_URLS_FILE, "utf8"));
+function publicUrlsFile(): string {
+	return join(agentDir(), "public-urls.txt");
 }
 
-/** One hostname for the path proxy. Laptop reserved domains stay on the entry. */
-export function headlessPublicOrigin({
+function writePublicUrls(origin: string): void {
+	mkdirSync(agentDir(), { recursive: true });
+	writeFileSync(publicUrlsFile(), `${origin.replace(/\/$/, "")}\n`);
+}
+
+function readPublicOrigin(): string | undefined {
+	if (!existsSync(publicUrlsFile())) return undefined;
+	return firstHttpsUrl(readFileSync(publicUrlsFile(), "utf8"));
+}
+
+export function publicOrigin({
 	entry,
 }: {
 	entry: RegistryEntry;
 }): string | undefined {
-	if (!isHeadless()) return undefined;
-	const origin = entry.ngrokUrl ?? readNgrokPublicOrigin();
+	const origin = entry.ngrokUrl ?? readPublicOrigin();
 	if (origin) return origin.replace(/\/$/, "");
 	return `http://localhost:${devProxyPortFor(entry.worktreeNum)}`;
 }
 
-/** Cloud: start the one-hostname tunnel. Laptop: no-op (reserved domains + compose). */
-export function ensureNgrok(
+function ngrokBinary(): string | undefined {
+	const found = sh("bash", ["-lc", "command -v ngrok"]).stdout.trim();
+	return found || undefined;
+}
+
+function inspectorUrl(worktreeNum: number): string {
+	return `http://127.0.0.1:${ngrokApiPortFor(worktreeNum)}/api/tunnels`;
+}
+
+function inspectorUp(worktreeNum: number): boolean {
+	return sh("curl", ["-sf", "--max-time", "1", inspectorUrl(worktreeNum)])
+		.code === 0;
+}
+
+function waitForInspector(worktreeNum: number): boolean {
+	for (let i = 0; i < 40; i++) {
+		if (inspectorUp(worktreeNum)) return true;
+		Bun.sleepSync(250);
+	}
+	return false;
+}
+
+function startHostNgrok({
+	authtoken,
+	domain,
+	proxyPort,
+	worktreeNum,
+}: {
+	authtoken: string;
+	domain: string;
+	proxyPort: number;
+	worktreeNum: number;
+}): void {
+	if (inspectorUp(worktreeNum)) return;
+
+	const dir = agentDir();
+	mkdirSync(dir, { recursive: true });
+	const cfg = join(dir, `ngrok-${worktreeNum}.yml`);
+	const logFile = join(dir, `ngrok-${worktreeNum}.log`);
+	writeFileSync(
+		cfg,
+		`version: "2"\nauthtoken: ${authtoken}\nweb_addr: 127.0.0.1:${ngrokApiPortFor(worktreeNum)}\n`,
+	);
+	chmodSync(cfg, 0o600);
+
+	const started = Bun.spawnSync(
+		[
+			"bash",
+			"-c",
+			`nohup ngrok http ${proxyPort} --config "${cfg}" --url "https://${domain}" --log=stdout >"${logFile}" 2>&1 & echo $!`,
+		],
+		{ cwd: process.cwd() },
+	);
+	const pid = new TextDecoder().decode(started.stdout).trim();
+	if (pid) writeFileSync(join(dir, `ngrok-${worktreeNum}.pid`), `${pid}\n`);
+	if (!waitForInspector(worktreeNum)) {
+		log(`ngrok inspector :${ngrokApiPortFor(worktreeNum)} did not come up`);
+	}
+}
+
+function persistEntry(entry: RegistryEntry): RegistryEntry {
+	const registry = loadRegistry();
+	registry[entry.path] = { ...(registry[entry.path] ?? entry), ...entry };
+	saveRegistry(registry);
+	return entry;
+}
+
+/** Path proxy + one reserved hostname. Same path on laptop and Cloud. */
+export async function ensureNgrok(
 	entry: RegistryEntry,
 	opts: { quiet?: boolean } = {},
-): RegistryEntry {
-	if (!isHeadless()) return entry;
-	if (!existsSync(NGROK_UP)) {
-		if (!opts.quiet) log("ngrok-up.sh missing — skip public tunnel");
-		return entry;
+): Promise<RegistryEntry> {
+	const proxyPort = ensureDevProxy({ worktreeNum: entry.worktreeNum });
+	let origin = entry.ngrokUrl;
+	let reservedDomainId = entry.reservedDomainId;
+
+	if (ngrokApiAvailable()) {
+		try {
+			const reserved = await ensureReservedDomain({
+				path: entry.path,
+				worktreeNum: entry.worktreeNum,
+			});
+			origin = `https://${reserved.domain}`;
+			reservedDomainId = reserved.id;
+		} catch (err) {
+			if (!opts.quiet) {
+				log(
+					`ngrok reserve failed: ${err instanceof Error ? err.message : String(err)}`,
+				);
+			}
+		}
 	}
-	if (!opts.quiet)
-		log("ensuring Cloud ngrok tunnel (one hostname → path proxy)");
-	const code = opts.quiet
-		? sh("bash", [NGROK_UP]).code
-		: shInherit("bash", [NGROK_UP]);
-	if (code !== 0 && !opts.quiet) {
-		log(`ngrok-up.sh exited ${code} — continuing without a public URL`);
+
+	const authtoken = process.env.NGROK_AUTHTOKEN;
+	if (authtoken && origin && ngrokBinary()) {
+		if (!opts.quiet) log(`ensuring ngrok ${origin} → :${proxyPort}`);
+		startHostNgrok({
+			authtoken,
+			domain: new URL(origin).host,
+			proxyPort,
+			worktreeNum: entry.worktreeNum,
+		});
+	} else if (!origin) {
+		origin = `http://localhost:${proxyPort}`;
 	}
-	const origin = readNgrokPublicOrigin();
+
+	if (origin) writePublicUrls(origin);
 	const next: RegistryEntry = {
 		...entry,
 		...(origin && { ngrokUrl: origin, ngrokViteUrl: origin }),
+		...(reservedDomainId && { reservedDomainId }),
 	};
-	const registry = loadRegistry();
-	registry[entry.path] = { ...(registry[entry.path] ?? next), ...next };
-	saveRegistry(registry);
+	persistEntry(next);
 	if (!opts.quiet && next.ngrokUrl) log(`ngrok ${next.ngrokUrl}`);
 	return next;
 }

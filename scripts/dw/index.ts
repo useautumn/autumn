@@ -45,7 +45,7 @@ async function main(): Promise<void> {
 			cmdAttach();
 			break;
 		case "identify":
-			cmdIdentify();
+			await cmdIdentify();
 			break;
 		case "enable":
 			cmdEnable();

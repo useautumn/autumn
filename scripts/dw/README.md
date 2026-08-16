@@ -6,8 +6,8 @@ Run isolated, parallel Autumn dev stacks per git worktree. Each agent gets its o
 
 | You are                                  | Run                       |
 |------------------------------------------|---------------------------|
-| In the canonical (main) worktree         | `bun dev`                 |
-| In a parallel agent worktree (direct)    | `bun dw`                  |
+| Any Autumn checkout (laptop or Cloud)    | `bun dw`                  |
+| Shared Infisical / EventBridge, etc.     | `bun dw disable` then `bun d` |
 | Spawned by Conductor/Superset            | already done — `bun dw identify` to find your stack |
 
 ## Prerequisites
@@ -160,7 +160,7 @@ Full cleanup of the current worktree: deletes Neon branch, unregisters portless 
 bun dw teardown
 ```
 
-**Refuses to teardown worktree #1 (canonical).**
+**Refuses to teardown a plain (unprovisioned) worktree #1.** A provisioned canonical stack (Neon/compose) can be torn down; the git checkout stays.
 
 ### `bun dw teardown --all`
 Same as above, but for **every** registered agent worktree. Leaves worktree #1 untouched.

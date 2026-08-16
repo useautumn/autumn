@@ -2,10 +2,11 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { log, fatal } from "./shell.ts";
 import {
-	getWorktreeList,
-	getCurrentWorktree,
+	getCanonicalWorktree,
 	getCurrentBranch,
+	getCurrentWorktree,
 	getDefaultBranch,
+	getWorktreeList,
 } from "./git.ts";
 import { isHeadless } from "./headless.ts";
 import { deleteBranch } from "./neon.ts";
@@ -67,16 +68,13 @@ export function deriveCanonicalBranchName(
 export function wantsCanonicalProvision(
 	cwd: string,
 	canonical: string,
-	gitBranch: string,
-	defaultBranch: string,
+	_gitBranch?: string,
+	_defaultBranch?: string,
 ): boolean {
-	// Cursor Cloud / Devin / CI: no Docker and no neonctl browser login.
-	// Stay on the local Postgres from agent-services. Never honor
-	// NEON_WORKTREE_API_KEY here even if Infisical injects it.
 	if (isHeadless()) {
 		return false;
 	}
-	return cwd === canonical && gitBranch !== defaultBranch;
+	return cwd === canonical;
 }
 
 /** Keep canonical registry in sync with the current git branch. */
@@ -157,6 +155,46 @@ export function hasOtherActiveWorktrees(
 	return Object.entries(registry).some(
 		([p, e]) => p !== currentPath && e.worktreeNum > 1,
 	);
+}
+
+export function registerCurrentWorktree(): RegistryEntry {
+	const canonical = getCanonicalWorktree();
+	const cwd = getCurrentWorktree();
+	const gitBranch = getCurrentBranch();
+	const defaultBranch = getDefaultBranch();
+	let registry = reconcile(loadRegistry());
+
+	let entry = registry[cwd];
+	if (!entry) {
+		const worktreeNum = allocateWorktreeNumber(cwd, registry, canonical);
+		const onCanonical = wantsCanonicalProvision(
+			cwd,
+			canonical,
+			gitBranch,
+			defaultBranch,
+		);
+		const branchName =
+			worktreeNum === 1
+				? onCanonical
+					? deriveCanonicalBranchName(cwd, gitBranch)
+					: undefined
+				: deriveBranchName(cwd, worktreeNum);
+		entry = {
+			path: cwd,
+			worktreeNum,
+			createdAt: Date.now(),
+			...(onCanonical && { gitBranch }),
+			...(branchName && { branchName }),
+		};
+		log(`registered ${cwd} as worktree ${worktreeNum}`);
+	} else if (entry.worktreeNum === 1) {
+		entry = refreshCanonicalEntry(entry, cwd, canonical);
+	} else {
+		entry = { ...entry, lastUsedAt: Date.now() };
+	}
+	registry[cwd] = entry;
+	saveRegistry(registry);
+	return entry;
 }
 
 export function resolveAgentEntryOrFatal(action: string): RegistryEntry {

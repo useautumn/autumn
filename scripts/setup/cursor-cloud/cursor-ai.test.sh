@@ -118,61 +118,24 @@ console.log("ok");
 pass "identify reads the first https origin"
 
 grep -q 'ensureNgrok(entry' "$ROOT/scripts/dw/commands/identify.ts" \
-	|| fail "identify must start the Cloud tunnel"
-pass "bun dw identify starts Cloud ngrok"
+	|| fail "identify must start the ngrok tunnel"
+if [[ -f "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" ]] \
+	|| [[ -f "$ROOT/scripts/setup/cursor-cloud/ngrok.sh" ]]; then
+	fail "Cloud ngrok shells must be deleted; dw ensureNgrok owns the tunnel"
+fi
+if rg -n 'unset NGROK_API_KEY' "$ROOT/scripts/dw" "$ROOT/scripts/setup/cursor-cloud" \
+	-g '!cursor-ai.test.sh'; then
+	fail "must not unset NGROK_API_KEY"
+fi
+pass "identify uses ensureNgrok; no Cloud ngrok shells"
 
-# ngrok-up without a token must not hang (bun dw setup calls this)
-timeout 8 bash "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" >/tmp/ngrok-up.out 2>&1 || true
-if grep -q "no NGROK_AUTHTOKEN or ngrok binary" /tmp/ngrok-up.out \
-	|| grep -q "already running" /tmp/ngrok-up.out \
-	|| grep -q "starting unique dashboard tunnel" /tmp/ngrok-up.out; then
-	pass "ngrok-up.sh returns quickly without hanging"
-else
-	fail "ngrok-up.sh unexpected output: $(head -c 400 /tmp/ngrok-up.out)"
-fi
-grep -q 'ngrok http "$PROXY_PORT"' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
-	|| fail "Cloud ngrok must tunnel the path proxy"
-grep -q 'devProxy/server.ts' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
-	|| fail "Cloud ngrok must start the path proxy"
-if grep -q 'addr: 8080' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh"; then
-	fail "Cloud ngrok must not start a second :8080 tunnel (free plan is one endpoint)"
-fi
-grep -q -- "--url 'https://'" "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
-	|| fail "Cloud ngrok must try a unique --url https:// hostname first"
-grep -q -- '--pooling-enabled' "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" \
-	|| fail "Cloud ngrok should fall back to pooling on the shared free endpoint"
-# ERR_NGROK_334 log must still yield the shared hostname for identify
-held="$(python3 - <<'PY'
-import re
-from pathlib import Path
-text = """t=err ERR_NGROK_334 The endpoint 'https://may-waspy-marquis.ngrok-free.dev' is already online.\n"""
-if "ERR_NGROK_334" not in text:
-    raise SystemExit("missing 334")
-m = re.search(r"https://[a-zA-Z0-9.-]+\.ngrok(?:-free)?\.(?:dev|app)", text)
-print(m.group(0) if m else "")
-PY
-)"
-[[ "$held" == "https://may-waspy-marquis.ngrok-free.dev" ]] \
-	|| fail "334 hostname parse, got $held"
-# Isolated HOME + dummy token: unique-URL attempt first, then fallback, no hang.
-dummy_home="$(mktemp -d)"
-dummy_out="$(mktemp)"
-if ! HOME="$dummy_home" NGROK_AUTHTOKEN="dummy_not_a_real_token" INFISICAL_TOKEN="" \
-	timeout 25 bash "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" >"$dummy_out" 2>&1; then
-	:
-fi
-if grep -q "already running" "$dummy_out"; then
-	:
-elif ! grep -q "starting unique dashboard tunnel" "$dummy_out"; then
-	fail "dummy-token run did not try --url https:// first: $(head -c 300 "$dummy_out")"
-elif ! grep -q "random URL rejected (needs a paid NGROK_AUTHTOKEN)" "$dummy_out"; then
-	fail "dummy-token run did not fall back after unique URL failed: $(head -c 300 "$dummy_out")"
-fi
-rm -rf "$dummy_home" "$dummy_out"
-pass "Cloud ngrok tries a unique URL, then the free-plan hostname"
-
-UNIT_TESTS=1 env -u TESTS_ORG bun test "$ROOT/scripts/dw/devProxy/routes.test.ts" "$ROOT/scripts/dw/devProxy/server.test.ts" \
-	|| fail "dev-proxy tests failed"
-pass "dev-proxy routes /dashboard /api /leaf /checkout"
+UNIT_TESTS=1 env -u TESTS_ORG bun test \
+	"$ROOT/scripts/dw/helpers/ngrok.test.ts" \
+	"$ROOT/scripts/dw/helpers/machineId.test.ts" \
+	"$ROOT/scripts/dw/helpers/registry.test.ts" \
+	"$ROOT/scripts/dw/devProxy/routes.test.ts" \
+	"$ROOT/scripts/dw/devProxy/server.test.ts" \
+	|| fail "dw unit tests failed"
+pass "dw reserved names, machine-id, path proxy"
 
 echo "all cursor-cloud boot tests passed"
