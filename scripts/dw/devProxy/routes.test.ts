@@ -1,12 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { matchDevProxyRoute, originServiceUrls } from "./routes.ts";
 
-const ports = { api: 8080, checkout: 3001, leaf: 3099, vite: 3000 };
+const ports = {
+	api: 8080,
+	checkout: 3001,
+	emulate: 4000,
+	leaf: 3099,
+	vite: 3000,
+};
 
 const match = (pathname: string) => matchDevProxyRoute({ pathname, ports });
 
 describe("matchDevProxyRoute", () => {
-	test("maps the four public prefixes", () => {
+	test("maps the public prefixes", () => {
 		expect(match("/dashboard/customers")).toEqual({
 			path: "/dashboard/customers",
 			port: 3000,
@@ -32,6 +38,11 @@ describe("matchDevProxyRoute", () => {
 			port: 3001,
 			service: "checkout",
 		});
+		expect(match("/emulate/o/oauth2/v2/auth")).toEqual({
+			path: "/o/oauth2/v2/auth",
+			port: 4000,
+			service: "emulate",
+		});
 	});
 
 	test("does not steal neighboring paths", () => {
@@ -47,6 +58,7 @@ describe("originServiceUrls", () => {
 			api: "https://abc.ngrok.app/backend",
 			checkout: "https://abc.ngrok.app/checkout",
 			dashboard: "https://abc.ngrok.app/dashboard",
+			emulate: "https://abc.ngrok.app/emulate",
 			leaf: "https://abc.ngrok.app/leaf",
 		});
 	});

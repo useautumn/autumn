@@ -1,5 +1,5 @@
-// Devin VMs and CI have no portless proxy and no browser, so HTTPS aliases
-// resolve to nothing and the emulate daemon has nothing to serve.
+// Devin / Cloud: no portless HTTPS aliases. Emulate runs on loopback and is
+// exposed via the path proxy at /emulate when ngrok is up.
 export function isHeadless(): boolean {
 	const flag = process.env.DW_HEADLESS;
 	return flag === "1" || flag === "true";

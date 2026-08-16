@@ -14,6 +14,8 @@ describe("pathProxyPublicEnv", () => {
 			CHAT_SERVER_URL: "http://localhost:3099",
 			CLIENT_URL: "https://abc.ngrok.app/dashboard",
 			DW_PATH_PROXY: "1",
+			EMULATE_GOOGLE_FETCH_URL: "http://127.0.0.1:4000",
+			EMULATE_GOOGLE_URL: "https://abc.ngrok.app/emulate",
 			MCP_SERVER_URL: "https://abc.ngrok.app/backend",
 			SLACK_REDIRECT_URI: "https://abc.ngrok.app/backend/slack/oauth/callback",
 			VITE_API_URL: "/backend",

@@ -25,11 +25,18 @@ const checkout = Bun.serve({
 		return new Response(`checkout:${new URL(req.url).pathname}`);
 	},
 });
+const emulate = Bun.serve({
+	port: 0,
+	fetch(req) {
+		return new Response(`emulate:${new URL(req.url).pathname}`);
+	},
+});
 const proxy = startDevProxy({
 	port: 0,
 	ports: {
 		api: api.port,
 		checkout: checkout.port,
+		emulate: emulate.port,
 		leaf: leaf.port,
 		vite: vite.port,
 	},
@@ -41,13 +48,14 @@ afterAll(() => {
 	vite.stop();
 	leaf.stop();
 	checkout.stop();
+	emulate.stop();
 });
 
 const get = (path: string) =>
 	fetch(`http://127.0.0.1:${proxy.port}${path}`, { redirect: "manual" });
 
 describe("dev-proxy", () => {
-	test("routes /dashboard /backend /leaf /checkout", async () => {
+	test("routes /dashboard /backend /leaf /checkout /emulate", async () => {
 		expect(await (await get("/dashboard/")).text()).toBe("vite:/dashboard/");
 		expect(await (await get("/dashboard/customers")).text()).toBe(
 			"vite:/dashboard/customers",
@@ -59,6 +67,9 @@ describe("dev-proxy", () => {
 			"api:/api/auth/get-session",
 		);
 		expect(await (await get("/leaf/mcp")).text()).toBe("leaf:/mcp");
+		expect(await (await get("/emulate/o/oauth2/v2/auth")).text()).toBe(
+			"emulate:/o/oauth2/v2/auth",
+		);
 		expect((await get("/checkout")).status).toBe(302);
 		expect((await get("/checkout")).headers.get("location")).toBe(
 			`http://127.0.0.1:${proxy.port}/checkout/`,

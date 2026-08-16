@@ -3,12 +3,13 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
+import { emulateGoogleUrl } from "./emulate.ts";
 import { isProvisioned } from "./entry.ts";
 import { provisionedInfraEnv } from "./env-files.ts";
 import { isHeadless } from "./headless.ts";
 import { ensureNgrok, publicOrigin } from "./ngrok.ts";
 import { registerPortlessAliases } from "./portless.ts";
-import { portlessHttpsUrl, serverPortFor } from "./ports.ts";
+import { serverPortFor } from "./ports.ts";
 import { pathProxyPublicEnv } from "./publicUrls.ts";
 import { fatal, log } from "./shell.ts";
 import { spawnDevInTmux, tmuxSessionName } from "./tmux.ts";
@@ -71,7 +72,9 @@ function applyProvisionedDevEnv(
 
 	const next = applyLocalInfra(rewriteDbEnv(env, databaseUrl), worktreeNum);
 	if (!next.EMULATE_GOOGLE_URL) {
-		next.EMULATE_GOOGLE_URL = portlessHttpsUrl("google.emulate.localhost");
+		next.EMULATE_GOOGLE_URL = emulateGoogleUrl({
+			origin: entry.ngrokUrl ?? publicOrigin({ entry }),
+		});
 	}
 	const portlessCa = join(homedir(), ".portless", "ca.pem");
 	if (existsSync(portlessCa) && !next.NODE_EXTRA_CA_CERTS) {
@@ -88,6 +91,11 @@ function applyHeadlessDevEnv(
 	const next = applyLocalInfra({ ...env }, entry.worktreeNum);
 	for (const key of HEADLESS_UNSET) delete next[key];
 	applyPublicUrls({ entry, env: next });
+	if (!next.EMULATE_GOOGLE_URL) {
+		next.EMULATE_GOOGLE_URL = emulateGoogleUrl({
+			origin: entry.ngrokUrl ?? publicOrigin({ entry }),
+		});
+	}
 	next.DATABASE_URL = LOCAL_DATABASE_URL;
 	next.DATABASE_CRITICAL_URL = LOCAL_DATABASE_URL;
 	next.STRIPE_WEBHOOK_SKIP_VERIFY = "true";

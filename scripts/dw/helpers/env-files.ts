@@ -15,13 +15,13 @@ import {
 import { DEV_PROXY_PREFIXES, originServiceUrls } from "../devProxy/routes.ts";
 import type { RegistryEntry } from "../types.ts";
 import { isProvisioned } from "./entry.ts";
+import { emulateGoogleUrl } from "./emulate.ts";
 import { isHeadless } from "./headless.ts";
 import {
 	aliasesFor,
 	dragonflyPortFor,
 	dynamoDbPortFor,
 	elasticMqPortFor,
-	portlessHttpsUrl,
 	serverPortFor,
 } from "./ports.ts";
 import { pathProxyPublicEnv } from "./publicUrls.ts";
@@ -155,7 +155,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		AUTUMN_API_URL: apiUrl,
 		AUTUMN_PUBLIC_API_URL: publicApiUrl,
 		CLIENT_URL: viteUrl,
-		EMULATE_GOOGLE_URL: portlessHttpsUrl("google.emulate.localhost"),
+		EMULATE_GOOGLE_URL: emulateGoogleUrl({ origin: entry.ngrokUrl }),
 		AUTUMN_TEST_BASE_URL: `http://localhost:${serverPort}`,
 		AUTUMN_TEST_VITE_URL: viteUrl,
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",

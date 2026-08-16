@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
 	checkoutPortFor,
 	devProxyPortFor,
+	EMULATE_PORT,
 	leafPortFor,
 	serverPortFor,
 	vitePortFor,
@@ -19,6 +20,7 @@ type UpstreamPorts = {
 	vite: number;
 	leaf: number;
 	checkout: number;
+	emulate: number;
 };
 
 type WsData = {
@@ -39,6 +41,7 @@ function upstreamPorts({
 	return {
 		api: serverPortFor(worktreeNum),
 		checkout: checkoutPortFor(worktreeNum),
+		emulate: EMULATE_PORT,
 		leaf: leafPortFor(worktreeNum),
 		vite: vitePortFor(worktreeNum),
 	};
