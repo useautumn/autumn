@@ -7,7 +7,11 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 const require = createRequire(import.meta.url);
 
+const isDwHeadless =
+	process.env.DW_HEADLESS === "1" || process.env.DW_HEADLESS === "true";
+
 export default defineConfig({
+	base: isDwHeadless ? "/checkout/" : "/",
 	plugins: [react(), tsconfigPaths(), tailwindcss()],
 	resolve: {
 		dedupe: ["react", "react-dom"],
@@ -41,6 +45,7 @@ export default defineConfig({
 	server: {
 		host: "0.0.0.0",
 		port: Number.parseInt(process.env.VITE_PORT || "3001", 10),
+		allowedHosts: isDwHeadless ? true : undefined,
 		fs: {
 			allow: [".."],
 		},

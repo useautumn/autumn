@@ -1,51 +1,47 @@
 import { describe, expect, test } from "bun:test";
-import { matchDevProxyRoute } from "./routes.ts";
+import { matchDevProxyRoute, originServiceUrls } from "./routes.ts";
 
-const ports = { api: 8080, vite: 3000, checkout: 3001 };
+const ports = { api: 8080, checkout: 3001, leaf: 3099, vite: 3000 };
 
 const match = (pathname: string) => matchDevProxyRoute({ pathname, ports });
 
 describe("matchDevProxyRoute", () => {
-	test("sends the SPA to vite", () => {
-		expect(match("/")).toEqual({
-			service: "vite",
+	test("maps the four public prefixes", () => {
+		expect(match("/dashboard/customers")).toEqual({
+			path: "/dashboard/customers",
 			port: 3000,
-			path: "/",
-		});
-		expect(match("/customers")).toEqual({
 			service: "vite",
-			port: 3000,
-			path: "/customers",
 		});
-	});
-
-	test("keeps public API / MCP / Slack / agent on the server", () => {
-		expect(match("/v1/customers").service).toBe("api");
-		expect(match("/mcp").path).toBe("/mcp");
-		expect(match("/slack/events").port).toBe(8080);
-		expect(match("/agent/chat").service).toBe("api");
-		expect(match("/webhooks/connect/sandbox").service).toBe("api");
-	});
-
-	test("strips /backend so the dashboard can share one origin", () => {
-		expect(match("/backend/organization")).toEqual({
-			service: "api",
+		expect(match("/api/v1/customers")).toEqual({
+			path: "/v1/customers",
 			port: 8080,
-			path: "/organization",
-		});
-		expect(match("/backend")).toEqual({
 			service: "api",
-			port: 8080,
-			path: "/",
+		});
+		expect(match("/leaf/mcp")).toEqual({
+			path: "/mcp",
+			port: 3099,
+			service: "leaf",
+		});
+		expect(match("/checkout")).toEqual({
+			path: "/checkout",
+			port: 3001,
+			service: "checkout",
 		});
 	});
 
-	test("does not treat /backending as /backend", () => {
-		expect(match("/backending").service).toBe("vite");
+	test("does not steal neighboring paths", () => {
+		expect(match("/customers")).toBeNull();
+		expect(match("/apiv2")).toBeNull();
 	});
+});
 
-	test("prefers the longest prefix", () => {
-		expect(match("/slack-unfurl/events").path).toBe("/slack-unfurl/events");
-		expect(match("/slack-unfurl/events").service).toBe("api");
+describe("originServiceUrls", () => {
+	test("prints one path per service", () => {
+		expect(originServiceUrls({ origin: "https://abc.ngrok.app" })).toEqual({
+			api: "https://abc.ngrok.app/api",
+			checkout: "https://abc.ngrok.app/checkout",
+			dashboard: "https://abc.ngrok.app/dashboard",
+			leaf: "https://abc.ngrok.app/leaf",
+		});
 	});
 });

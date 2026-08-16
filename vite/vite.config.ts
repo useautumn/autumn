@@ -38,6 +38,7 @@ function printPortlessUrl(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
+	base: isDwHeadless ? "/dashboard/" : "/",
 	define: {
 		__APP_ENV__: JSON.stringify(process.env.VITE_APP_ENV || ""),
 	},
@@ -76,7 +77,6 @@ export default defineConfig({
 				__dirname,
 				"../packages/atmn/src/prompts/skills/index.ts",
 			),
-
 		},
 	},
 

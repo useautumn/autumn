@@ -210,6 +210,6 @@ pass "Cloud ngrok tries a unique URL, then the free-plan hostname"
 
 UNIT_TESTS=1 env -u TESTS_ORG bun test "$ROOT/scripts/dw/devProxy/routes.test.ts" "$ROOT/scripts/dw/devProxy/server.test.ts" \
 	|| fail "dev-proxy tests failed"
-pass "dev-proxy routes SPA / API / MCP on one port"
+pass "dev-proxy routes /dashboard /api /leaf /checkout"
 
 echo "all cursor_ai.py tests passed"

@@ -194,13 +194,11 @@ different `localhost:3000`. Use one of:
 2. **Remote desktop** on the agent page — take control, open Chrome with
    `--no-sandbox`, go to `http://localhost:3000`. Most reliable if Ports is empty.
 3. **ngrok** — one public hostname per VM, pointed at the path proxy
-   (`:3080`). Edit `scripts/dw/devProxy/routes.ts` to add a service.
-   `/` is Vite, `/v1` `/mcp` `/slack` `/agent` are the API, `/backend/*`
-   is the dashboard API (same origin; Vite and the API both own
-   `/customers`). `bun dw identify` / `setup` / `run` start the proxy and
-   the tunnel when `NGROK_AUTHTOKEN` is in Infisical `dev`. Unique
-   `*.ngrok.app` needs a paid token (`--url 'https://'`). A free token
-   shares one `*.ngrok-free.dev`. Stripe webhooks stay on `stripe listen`.
+   (`:3080`). Paths: `/dashboard` Vite, `/api` server, `/leaf` chat/MCP,
+   `/checkout` checkout. Edit `scripts/dw/devProxy/routes.ts`.
+   `bun dw identify` prints those four URLs. Unique `*.ngrok.app` needs
+   a paid token. A free token shares one `*.ngrok-free.dev`. Stripe
+   webhooks stay on `stripe listen`.
 
 The `access` terminal reprints these instructions on every boot. It does not
 start the app.

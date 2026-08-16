@@ -4,10 +4,11 @@ import { join } from "node:path";
 import {
 	checkoutPortFor,
 	devProxyPortFor,
+	leafPortFor,
 	serverPortFor,
 	vitePortFor,
 } from "../helpers/ports.ts";
-import { matchDevProxyRoute } from "./routes.ts";
+import { DEV_PROXY_PREFIXES, matchDevProxyRoute } from "./routes.ts";
 
 const AGENT_DIR = join(homedir(), ".autumn-agent");
 const PIDFILE = join(AGENT_DIR, "dev-proxy.pid");
@@ -16,6 +17,7 @@ const PORTFILE = join(AGENT_DIR, "dev-proxy.port");
 type UpstreamPorts = {
 	api: number;
 	vite: number;
+	leaf: number;
 	checkout: number;
 };
 
@@ -36,8 +38,9 @@ function upstreamPorts({
 }): UpstreamPorts {
 	return {
 		api: serverPortFor(worktreeNum),
-		vite: vitePortFor(worktreeNum),
 		checkout: checkoutPortFor(worktreeNum),
+		leaf: leafPortFor(worktreeNum),
+		vite: vitePortFor(worktreeNum),
 	};
 }
 
@@ -100,7 +103,16 @@ export function startDevProxy({
 			if (url.pathname === "/__dev-proxy") {
 				return new Response("ok");
 			}
+			if (url.pathname === "/") {
+				return Response.redirect(
+					new URL(DEV_PROXY_PREFIXES.dashboard, url),
+					302,
+				);
+			}
 			const matched = matchDevProxyRoute({ pathname: url.pathname, ports });
+			if (!matched) {
+				return new Response("dev-proxy: no route", { status: 404 });
+			}
 			if (req.headers.get("upgrade")?.toLowerCase() === "websocket") {
 				const dest = `ws://127.0.0.1:${matched.port}${matched.path}${url.search}`;
 				const upstream = new WebSocket(dest);
@@ -211,7 +223,7 @@ if (import.meta.main) {
 		writeFileSync(PORTFILE, `${port}\n`);
 		startDevProxy({ port, ports });
 		console.log(
-			`[dev-proxy] :${port} → vite :${ports.vite}, api :${ports.api}, checkout :${ports.checkout}`,
+			`[dev-proxy] :${port} → /dashboard :${ports.vite} /api :${ports.api} /leaf :${ports.leaf} /checkout :${ports.checkout}`,
 		);
 	}
 }

@@ -1,41 +1,41 @@
-export type DevProxyService = "api" | "vite" | "checkout";
+export type DevProxyService = "api" | "vite" | "leaf" | "checkout";
 
 export type DevProxyRoute = {
 	prefix: string;
 	service: DevProxyService;
-	/** Drop the prefix before forwarding (dashboard calls `/backend/organization`). */
+	/** Drop the prefix before forwarding so the process sees its normal paths. */
 	stripPrefix?: boolean;
 };
 
-/**
- * One public hostname → local ports. Longest prefix wins.
- * Edit this table to expose another service. `/` is the Vite SPA.
- *
- * `/backend` exists because the dashboard and the API both own `/customers`.
- * Slack / Anthropic / `/v1` keep their real server paths (no prefix).
- * Checkout is omitted until `apps/checkout` has `base: "/checkout/"`.
- */
+/** Public paths on the one hostname. Edit here — identify prints these. */
+export const DEV_PROXY_PREFIXES = {
+	dashboard: "/dashboard",
+	api: "/api",
+	leaf: "/leaf",
+	checkout: "/checkout",
+} as const;
+
 export const DEV_PROXY_ROUTES: DevProxyRoute[] = [
-	{ prefix: "/backend", service: "api", stripPrefix: true },
-	{ prefix: "/.well-known", service: "api" },
-	{ prefix: "/slack-unfurl", service: "api" },
-	{ prefix: "/webhooks", service: "api" },
-	{ prefix: "/checkouts", service: "api" },
-	{ prefix: "/pricing-agent", service: "api" },
-	{ prefix: "/revenuecat", service: "api" },
-	{ prefix: "/consents", service: "api" },
-	{ prefix: "/stripe", service: "api" },
-	{ prefix: "/oauth", service: "api" },
-	{ prefix: "/agent", service: "api" },
-	{ prefix: "/slack", service: "api" },
-	{ prefix: "/ready", service: "api" },
-	{ prefix: "/auth", service: "api" },
-	{ prefix: "/cli", service: "api" },
-	{ prefix: "/mcp", service: "api" },
-	{ prefix: "/api", service: "api" },
-	{ prefix: "/v1", service: "api" },
-	{ prefix: "/", service: "vite" },
+	{ prefix: DEV_PROXY_PREFIXES.dashboard, service: "vite" },
+	{ prefix: DEV_PROXY_PREFIXES.api, service: "api", stripPrefix: true },
+	{ prefix: DEV_PROXY_PREFIXES.leaf, service: "leaf", stripPrefix: true },
+	{ prefix: DEV_PROXY_PREFIXES.checkout, service: "checkout" },
 ];
+
+export function originServiceUrls({ origin }: { origin: string }): {
+	dashboard: string;
+	api: string;
+	leaf: string;
+	checkout: string;
+} {
+	const base = origin.replace(/\/$/, "");
+	return {
+		dashboard: `${base}${DEV_PROXY_PREFIXES.dashboard}`,
+		api: `${base}${DEV_PROXY_PREFIXES.api}`,
+		leaf: `${base}${DEV_PROXY_PREFIXES.leaf}`,
+		checkout: `${base}${DEV_PROXY_PREFIXES.checkout}`,
+	};
+}
 
 export function matchDevProxyRoute({
 	pathname,
@@ -43,14 +43,12 @@ export function matchDevProxyRoute({
 }: {
 	pathname: string;
 	ports: Record<DevProxyService, number>;
-}): { service: DevProxyService; port: number; path: string } {
+}): { service: DevProxyService; port: number; path: string } | null {
 	const route = DEV_PROXY_ROUTES.filter((candidate) =>
 		pathMatchesPrefix({ pathname, prefix: candidate.prefix }),
 	).sort((a, b) => b.prefix.length - a.prefix.length)[0];
 
-	if (!route) {
-		return { service: "vite", port: ports.vite, path: pathname };
-	}
+	if (!route) return null;
 
 	const path = route.stripPrefix
 		? stripPrefix({ pathname, prefix: route.prefix })
@@ -65,7 +63,6 @@ function pathMatchesPrefix({
 	pathname: string;
 	prefix: string;
 }): boolean {
-	if (prefix === "/") return true;
 	return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 

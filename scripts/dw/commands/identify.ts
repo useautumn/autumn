@@ -1,11 +1,51 @@
+import { originServiceUrls } from "../devProxy/routes.ts";
 import { cloudPublicUrls } from "../helpers/cloudPublicUrls.ts";
 import { ensureHeadlessNgrok } from "../helpers/ensureHeadlessNgrok.ts";
 import { isPlainCanonical, isProvisioned } from "../helpers/entry.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
 import { isHeadless } from "../helpers/headless.ts";
-import { aliasesFor } from "../helpers/ports.ts";
+import {
+	aliasesFor,
+	checkoutPortFor,
+	devProxyPortFor,
+	leafPortFor,
+	serverPortFor,
+	vitePortFor,
+} from "../helpers/ports.ts";
 import { loadRegistry } from "../helpers/registry.ts";
 import { tmuxSessionName } from "../helpers/tmux.ts";
+import type { RegistryEntry } from "../types.ts";
+
+function localServiceUrls({
+	entry,
+}: {
+	entry: RegistryEntry;
+}): ReturnType<typeof originServiceUrls> {
+	const n = entry.worktreeNum;
+	if (isProvisioned(entry) && !isHeadless()) {
+		const aliases = aliasesFor(n);
+		return {
+			api: aliases.apiUrl,
+			checkout: `http://localhost:${checkoutPortFor(n)}`,
+			dashboard: aliases.viteUrl,
+			leaf: `http://localhost:${leafPortFor(n)}`,
+		};
+	}
+	return {
+		api: `http://localhost:${serverPortFor(n)}`,
+		checkout: `http://localhost:${checkoutPortFor(n)}`,
+		dashboard: `http://localhost:${vitePortFor(n)}`,
+		leaf: `http://localhost:${leafPortFor(n)}`,
+	};
+}
+
+function publicOrigin({ entry }: { entry: RegistryEntry }): string | undefined {
+	if (!isHeadless()) return undefined;
+	const cloud = cloudPublicUrls();
+	const ngrok = entry.ngrokUrl ?? cloud.api ?? cloud.vite;
+	if (ngrok) return ngrok.replace(/\/$/, "");
+	return `http://localhost:${devProxyPortFor(entry.worktreeNum)}`;
+}
 
 export function cmdIdentify(): void {
 	const cwd = getCurrentWorktree();
@@ -17,69 +57,39 @@ export function cmdIdentify(): void {
 		process.exit(1);
 	}
 
-	// Cloud: identify is how you ask for the public URL. Start the tunnel
-	// here so `bun dw identify` does not depend on a prior setup/run.
 	if (isHeadless()) {
-		entry = ensureHeadlessNgrok(entry);
+		entry = ensureHeadlessNgrok(entry, { quiet: true });
 	}
 
-	const { worktreeNum, branchName, gitBranch } = entry;
-	const offset = (worktreeNum - 1) * 100;
-	const serverPort = 8080 + offset;
-	const vitePort = 3000 + offset;
+	const origin = publicOrigin({ entry });
+	const urls = origin
+		? originServiceUrls({ origin })
+		: localServiceUrls({ entry });
 
-	let serverUrl: string;
-	let viteUrl: string;
-	let tmux = "";
-	if (isProvisioned(entry)) {
-		const aliases = aliasesFor(worktreeNum);
-		serverUrl = aliases.apiUrl;
-		viteUrl = aliases.viteUrl;
-		if (worktreeNum > 1) tmux = tmuxSessionName(worktreeNum);
-	} else {
-		serverUrl = `http://localhost:${serverPort}`;
-		viteUrl = `http://localhost:${vitePort}`;
-	}
+	const n = entry.worktreeNum;
+	const tmux =
+		isProvisioned(entry) && n > 1
+			? tmuxSessionName(n)
+			: isPlainCanonical(entry)
+				? ""
+				: "";
 
-	const tmuxHuman =
-		tmux ||
-		(isPlainCanonical(entry)
-			? "(canonical worktree — not in tmux)"
-			: "(inline dev)");
-	const cloud = cloudPublicUrls();
-	const ngrokViteUrl = entry.ngrokViteUrl ?? cloud.vite;
-	const ngrokUrl = entry.ngrokUrl ?? cloud.api ?? ngrokViteUrl ?? "";
-	const ngrokHuman =
-		ngrokUrl ||
-		(isProvisioned(entry)
-			? "(no public tunnel — run 'bun dw setup')"
-			: ngrokViteUrl
-				? "(none — vite tunnel below)"
-				: isHeadless()
-					? "(no public tunnel — ngrok failed; see log above)"
-					: "(canonical — no ngrok)");
-
-	const branchLabel =
-		gitBranch && worktreeNum === 1
-			? `${gitBranch} (neon: ${branchName})`
-			: (branchName ?? "(canonical)");
-
-	console.log(`Worktree #${worktreeNum}  (${entry.path})`);
-	console.log(`  Branch:        ${branchLabel}`);
-	console.log(`  Server URL:    ${serverUrl}`);
-	console.log(`  Vite URL:      ${viteUrl}`);
-	console.log(`  Ngrok URL:     ${ngrokHuman}`);
-	console.log(`  Ngrok Vite:    ${ngrokViteUrl ?? "(none)"}`);
-	console.log(`  Tmux session:  ${tmuxHuman}`);
-	console.log(`  Server port:   ${serverPort}`);
-	console.log(`  Vite port:     ${vitePort}`);
+	console.log(`#${n}  ${entry.path}`);
 	console.log();
-	console.log(`DW_WORKTREE_NUM=${worktreeNum}`);
-	console.log(`DW_API_URL=${serverUrl}`);
-	console.log(`DW_VITE_URL=${viteUrl}`);
-	console.log(`DW_PUBLIC_API_URL=${ngrokUrl}`);
-	console.log(`DW_NGROK_VITE_URL=${ngrokViteUrl ?? ""}`);
+	console.log(`dashboard  ${urls.dashboard}`);
+	console.log(`api        ${urls.api}`);
+	console.log(`leaf       ${urls.leaf}`);
+	console.log(`checkout   ${urls.checkout}`);
+	console.log();
+	console.log(`DW_WORKTREE_NUM=${n}`);
+	console.log(`DW_DASHBOARD_URL=${urls.dashboard}`);
+	console.log(`DW_API_URL=${urls.api}`);
+	console.log(`DW_VITE_URL=${urls.dashboard}`);
+	console.log(`DW_LEAF_URL=${urls.leaf}`);
+	console.log(`DW_CHECKOUT_URL=${urls.checkout}`);
+	console.log(`DW_PUBLIC_API_URL=${urls.api}`);
+	console.log(`DW_NGROK_VITE_URL=${origin ? urls.dashboard : ""}`);
 	console.log(`DW_TMUX_SESSION=${tmux}`);
-	console.log(`DW_SERVER_PORT=${serverPort}`);
-	console.log(`DW_VITE_PORT=${vitePort}`);
+	console.log(`DW_SERVER_PORT=${serverPortFor(n)}`);
+	console.log(`DW_VITE_PORT=${vitePortFor(n)}`);
 }

@@ -38,6 +38,10 @@ export function checkoutPortFor(worktreeNum: number): number {
 	return 3001 + (worktreeNum - 1) * 100;
 }
 
+export function leafPortFor(worktreeNum: number): number {
+	return 3099 + (worktreeNum - 1) * 100;
+}
+
 /** Front door for the one-hostname path proxy (ngrok / Cloud). */
 export function devProxyPortFor(worktreeNum: number): number {
 	return 3080 + (worktreeNum - 1) * 100;
@@ -84,7 +88,13 @@ export function currentPortlessProxyPort(): number | undefined {
 
 export function killOwnPorts(worktreeNum: number): void {
 	const offset = (worktreeNum - 1) * 100;
-	const ports = [8080 + offset, 3000 + offset, 3001 + offset, 3080 + offset];
+	const ports = [
+		8080 + offset,
+		3000 + offset,
+		3001 + offset,
+		3080 + offset,
+		3099 + offset,
+	];
 	if (process.platform === "win32") return;
 	const lsof = sh(
 		"lsof",

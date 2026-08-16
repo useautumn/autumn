@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { PROJECT_ROOT } from "../constants.ts";
+import { originServiceUrls } from "../devProxy/routes.ts";
 import type { RegistryEntry } from "../types.ts";
 import { isProvisioned } from "./entry.ts";
 import { provisionedInfraEnv } from "./env-files.ts";
@@ -46,11 +47,15 @@ function applyHeadlessPublicUrls({
 	const apiUrl = `http://localhost:${serverPortFor(worktreeNum)}`;
 	const frontDoor =
 		entry.ngrokUrl ?? `http://localhost:${devProxyPortFor(worktreeNum)}`;
+	const urls = originServiceUrls({ origin: frontDoor });
 	env.AUTUMN_API_URL = apiUrl;
-	env.AUTUMN_PUBLIC_API_URL = frontDoor;
-	env.CLIENT_URL = frontDoor;
-	env.VITE_BACKEND_URL = "/backend";
-	env.VITE_FRONTEND_URL = frontDoor;
+	env.AUTUMN_PUBLIC_API_URL = urls.api;
+	env.CLIENT_URL = urls.dashboard;
+	env.VITE_BACKEND_URL = "/api";
+	env.VITE_FRONTEND_URL = urls.dashboard;
+	env.VITE_API_URL = "/api";
+	env.CHAT_URL = urls.leaf;
+	env.SLACK_BOT_URL = urls.leaf;
 }
 
 function applyProvisionedDevEnv(

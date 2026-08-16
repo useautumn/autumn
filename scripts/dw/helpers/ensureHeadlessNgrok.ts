@@ -9,12 +9,9 @@ import {
 } from "./cloudPublicUrls.ts";
 import { isHeadless } from "./headless.ts";
 import { loadRegistry, saveRegistry } from "./registry.ts";
-import { log, shInherit } from "./shell.ts";
+import { log, sh, shInherit } from "./shell.ts";
 
-const NGROK_UP = join(
-	PROJECT_ROOT,
-	"scripts/setup/cursor-cloud/ngrok-up.sh",
-);
+const NGROK_UP = join(PROJECT_ROOT, "scripts/setup/cursor-cloud/ngrok-up.sh");
 
 function urlsFromDisk(): CloudPublicUrls {
 	const file = join(homedir(), ".autumn-agent", "public-urls.txt");
@@ -25,15 +22,21 @@ function urlsFromDisk(): CloudPublicUrls {
 /** Cloud / DW_HEADLESS: always start a public ngrok tunnel when the authtoken
  *  is available. Does not use Docker compose or reserved domains (those
  *  collide across concurrent Cloud VMs). Laptop `bun dw setup` is unchanged. */
-export function ensureHeadlessNgrok(entry: RegistryEntry): RegistryEntry {
+export function ensureHeadlessNgrok(
+	entry: RegistryEntry,
+	opts: { quiet?: boolean } = {},
+): RegistryEntry {
 	if (!isHeadless()) return entry;
 	if (!existsSync(NGROK_UP)) {
-		log("ngrok-up.sh missing — skip public tunnel");
+		if (!opts.quiet) log("ngrok-up.sh missing — skip public tunnel");
 		return entry;
 	}
-	log("ensuring Cloud ngrok tunnel (one hostname → path proxy)");
-	const code = shInherit("bash", [NGROK_UP]);
-	if (code !== 0) {
+	if (!opts.quiet)
+		log("ensuring Cloud ngrok tunnel (one hostname → path proxy)");
+	const code = opts.quiet
+		? sh("bash", [NGROK_UP]).code
+		: shInherit("bash", [NGROK_UP]);
+	if (code !== 0 && !opts.quiet) {
 		log(`ngrok-up.sh exited ${code} — continuing without a public URL`);
 	}
 	const urls = urlsFromDisk();
@@ -49,7 +52,9 @@ export function ensureHeadlessNgrok(entry: RegistryEntry): RegistryEntry {
 	const registry = loadRegistry();
 	registry[entry.path] = { ...(registry[entry.path] ?? next), ...next };
 	saveRegistry(registry);
-	if (next.ngrokUrl) log(`ngrok api  ${next.ngrokUrl}`);
-	if (next.ngrokViteUrl) log(`ngrok vite ${next.ngrokViteUrl}`);
+	if (!opts.quiet) {
+		if (next.ngrokUrl) log(`ngrok api  ${next.ngrokUrl}`);
+		if (next.ngrokViteUrl) log(`ngrok vite ${next.ngrokViteUrl}`);
+	}
 	return next;
 }

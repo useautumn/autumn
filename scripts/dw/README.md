@@ -69,18 +69,20 @@ bun dw run
 Prints your stack's URLs and tmux session. Example output:
 
 ```
-Worktree #3  (/Users/amianthus/Documents/Code/Autumn OSS/sirtenzin-autumn)
-  Branch:        dw-wt-3-a1b2c3d
-  Server URL:    https://wt3-api.localhost
-  Vite URL:      https://wt3.localhost
-  Tmux session:  dw-wt-3
-  Server port:   8280
-  Vite port:     3200
+#3  /Users/amianthus/Documents/Code/Autumn OSS/sirtenzin-autumn
+
+dashboard  https://wt3.localhost
+api        https://wt3-api.localhost
+leaf       http://localhost:3299
+checkout   http://localhost:3201
 
 DW_WORKTREE_NUM=3
+DW_DASHBOARD_URL=https://wt3.localhost
 DW_API_URL=https://wt3-api.localhost
 DW_VITE_URL=https://wt3.localhost
-DW_PUBLIC_API_URL=https://wt3.ngrok.app
+DW_LEAF_URL=http://localhost:3299
+DW_CHECKOUT_URL=http://localhost:3201
+DW_PUBLIC_API_URL=https://wt3-api.localhost
 DW_TMUX_SESSION=dw-wt-3
 DW_SERVER_PORT=8280
 DW_VITE_PORT=3200
