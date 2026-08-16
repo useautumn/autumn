@@ -1,5 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { joinPublicUrl } from "@autumn/env";
+import { joinPublicUrl } from "@autumn/env/paths";
 import type { AppEnv } from "@autumn/shared";
 import { getOrgInstallationToken } from "../../../internal/installations/actions/getOrgInstallationToken.js";
 import { getChatOAuthCredentialByInstallationEnv } from "../../../internal/installations/repos/chatOAuthCredentialsRepo.js";

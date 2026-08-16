@@ -9,6 +9,11 @@
 			"types": "./src/index.ts",
 			"import": "./src/index.ts",
 			"default": "./src/index.ts"
+		},
+		"./paths": {
+			"types": "./src/paths.ts",
+			"import": "./src/paths.ts",
+			"default": "./src/paths.ts"
 		}
 	},
 	"scripts": {

@@ -1,5 +1,5 @@
 import { verifyDashboardSession } from "@autumn/auth";
-import { joinPublicUrl } from "@autumn/env";
+import { joinPublicUrl } from "@autumn/env/paths";
 import type { ChatProvider } from "@autumn/shared";
 import type { HttpBindings } from "@hono/node-server";
 import { serve } from "@hono/node-server";

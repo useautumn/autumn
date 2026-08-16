@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { getAutumnEnv, joinPublicUrl } from "@autumn/env";
+import { getAutumnEnv } from "@autumn/env";
+import { joinPublicUrl } from "@autumn/env/paths";
 import {
 	ALL_SCOPES,
 	ac,

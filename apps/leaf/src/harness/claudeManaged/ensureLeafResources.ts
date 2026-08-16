@@ -1,6 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { type LeafSurface, leafSystemPrompt } from "@autumn/agent-docs/agent";
-import { joinPublicUrl } from "@autumn/env";
+import { joinPublicUrl } from "@autumn/env/paths";
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
 import { setupAgentToolContext } from "../../agent/runMessage/setup/setupAgentToolContext.js";
