@@ -12,19 +12,12 @@ snapshot already has Postgres 18, Redis Stack, ClickHouse, JRE, and ElasticMQ.
 `package.json` is unchanged from laptop: `bun dw` is still
 `infisical run --env=dev --recursive -- bun scripts/dw/index.ts`.
 
-`infisical run` only accepts `INFISICAL_TOKEN` (see Infisical's
-[run docs](https://infisical.com/docs/cli/commands/run#infisical-run:infisical-token)):
-
-```sh
-export INFISICAL_TOKEN=$(infisical login --method=universal-auth \
-  --client-id=… --client-secret=… --silent --plain)
-infisical run --env=dev --recursive -- bun scripts/dw/index.ts
-```
-
-Cloud `start` does that export once and writes it to `~/.autumn-agent/env.sh`
-(`BASH_ENV` / bashrc), same pattern as Conductor. The stock
-`node_modules/.bin/infisical` is not replaced. `INFISICAL_PROJECT_ID` comes
-from `.infisical.json` `workspaceId`. Start does **not** start the app.
+`infisical run` uses Cursor's `INFISICAL_TOKEN` (machine-identity Token Auth
+access token). Cloud `start` copies it to `~/.cache/autumn-infisical-token`
+and `~/.autumn-agent/env.sh` (`BASH_ENV`) so later shells still have it.
+No `infisical login`. The stock `node_modules/.bin/infisical` is not replaced.
+`INFISICAL_PROJECT_ID` comes from `.infisical.json` `workspaceId`. Start does
+**not** start the app.
 
 `DW_HEADLESS=1` is set on start. That skips portless HTTPS aliases, the emulate
 daemon, and Neon (even if Infisical has `NEON_WORKTREE_API_KEY`). Worktree #1
@@ -145,16 +138,13 @@ Secrets** on [Cloud Agents → Secrets](https://cursor.com/dashboard/cloud-agent
 
 | Name | Type | Scope |
 |---|---|---|
-| `INFISICAL_CLIENT_ID` | Runtime Secret | **Team** (not Environment) |
-| `INFISICAL_CLIENT_SECRET` | Runtime Secret | **Team** (not Environment) |
-| `INFISICAL_TOKEN` | Runtime Secret | **Team** (optional; skip login if set) |
+| `INFISICAL_TOKEN` | Runtime Secret | **Team** (not Environment) |
 | `EXECUTOR_API_KEY` | Runtime Secret | **Team** (optional; also in Infisical `dev`) |
 | `NGROK_AUTHTOKEN` | Runtime Secret | **Team** (optional; public dashboard/API URL) |
 
-Client id/secret are the Universal Auth pair. `start` runs the documented
-`login --method=universal-auth --silent --plain` and exports `INFISICAL_TOKEN`
-for every later shell. If you already put a Token Auth access token in Cursor
-as `INFISICAL_TOKEN`, login is skipped. Do not overwrite `node_modules/.bin/infisical`.
+`INFISICAL_TOKEN` is the Token Auth access token (identity → Token Auth →
+Create Token). `infisical run` uses it directly. Client id/secret are unused
+on Cloud. Do not overwrite `node_modules/.bin/infisical`.
 
 `server/.env` and `scripts/setup/cursor-cloud/isolation.env` are an **overlay**,
 not the vault: they pin `DATABASE_URL` / Redis / SQS to localhost so this VM
