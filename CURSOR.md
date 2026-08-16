@@ -12,25 +12,28 @@ snapshot already has Postgres 18, Redis Stack, ClickHouse, JRE, and ElasticMQ.
 `package.json` is unchanged from laptop: `bun dw` is still
 `infisical run --env=dev --recursive -- bun scripts/dw/index.ts`.
 
-`infisical run` (CLI 0.43.116) accepts `INFISICAL_TOKEN` / `--token` only. It
-will **not** exchange `INFISICAL_CLIENT_ID` / `SECRET` (Infisical/cli#201 still
-open). Put a machine-identity **Token Auth** access token in Cursor as
-`INFISICAL_TOKEN` (Identity → Authentication → Token Auth → Create Token).
-`start` copies it to `~/.cache/autumn-infisical-token` for shells that miss
-Runtime Secrets. Client id/secret is an optional fallback that mints a JWT
-via `login --method=universal-auth`. Machine-identity `run` also needs
-`INFISICAL_PROJECT_ID`; the shim reads `.infisical.json` `workspaceId`.
-Start does **not** start the app. Run `bun dw` when the task needs it.
+`infisical run` only accepts `INFISICAL_TOKEN` (see Infisical's
+[run docs](https://infisical.com/docs/cli/commands/run#infisical-run:infisical-token)):
+
+```sh
+export INFISICAL_TOKEN=$(infisical login --method=universal-auth \
+  --client-id=… --client-secret=… --silent --plain)
+infisical run --env=dev --recursive -- bun scripts/dw/index.ts
+```
+
+Cloud `start` does that export once and writes it to `~/.autumn-agent/env.sh`
+(`BASH_ENV` / bashrc), same pattern as Conductor. The stock
+`node_modules/.bin/infisical` is not replaced. `INFISICAL_PROJECT_ID` comes
+from `.infisical.json` `workspaceId`. Start does **not** start the app.
 
 `DW_HEADLESS=1` is set on start. That skips portless HTTPS aliases, the emulate
 daemon, and Neon (even if Infisical has `NEON_WORKTREE_API_KEY`). Worktree #1
 uses the local Postgres/Redis/ElasticMQ from `agent-services.sh`.
 
 `infisical run` injects the shared `dev` vault, including laptop Docker Redis
-on `:6380` and Dragonfly Cloud. Cloud `infisical` is wrapped so **after** vault
-injection it sources `isolation.env` (localhost `:6379` / `:9324` / Postgres).
-`bun dw run` also applies that overlay in headless mode even when the worktree
-is not Neon-provisioned. `server/.env` must not pin a random `ENCRYPTION_*` —
+on `:6380` and Dragonfly Cloud. `bun dw` headless overlays localhost via
+`.env.local` / `applyHeadlessDevEnv`. `isolation.env` is still sourced into
+Cloud shells; we will revisit that overlay separately. `server/.env` must not pin a random `ENCRYPTION_*` —
 that cannot decrypt vault/DB Dragonfly backups (BAD_DECRYPT). Do not pin dummy
 `AWS_ACCESS_KEY_ID=x` either — ElasticMQ is fine with Infisical keys;
 dummy keys make S3 edge-config fail (`Access Key Id does not exist`).
@@ -142,19 +145,16 @@ Secrets** on [Cloud Agents → Secrets](https://cursor.com/dashboard/cloud-agent
 
 | Name | Type | Scope |
 |---|---|---|
-| `INFISICAL_TOKEN` | Runtime Secret | **Team** (not Environment) |
-| `INFISICAL_CLIENT_ID` | Runtime Secret | **Team** (optional fallback) |
-| `INFISICAL_CLIENT_SECRET` | Runtime Secret | **Team** (optional fallback) |
+| `INFISICAL_CLIENT_ID` | Runtime Secret | **Team** (not Environment) |
+| `INFISICAL_CLIENT_SECRET` | Runtime Secret | **Team** (not Environment) |
+| `INFISICAL_TOKEN` | Runtime Secret | **Team** (optional; skip login if set) |
 | `EXECUTOR_API_KEY` | Runtime Secret | **Team** (optional; also in Infisical `dev`) |
 | `NGROK_AUTHTOKEN` | Runtime Secret | **Team** (optional; public dashboard/API URL) |
 
-`INFISICAL_TOKEN` is the Token Auth access token from the machine identity
-(Create Token in Infisical). `infisical run` uses it directly — no login.
-`start` only persists it to `~/.cache/autumn-infisical-token`. Client id/secret
-is the Universal Auth pair (same names as Autumn's Node SDK); use it only if
-the Token Auth token is missing. Do not put a short-lived Universal Auth JWT
-in Cursor — those expire in hours. Token Auth tokens expire on the TTL you
-set in Infisical (often weeks); rotate the Cursor secret before that.
+Client id/secret are the Universal Auth pair. `start` runs the documented
+`login --method=universal-auth --silent --plain` and exports `INFISICAL_TOKEN`
+for every later shell. If you already put a Token Auth access token in Cursor
+as `INFISICAL_TOKEN`, login is skipped. Do not overwrite `node_modules/.bin/infisical`.
 
 `server/.env` and `scripts/setup/cursor-cloud/isolation.env` are an **overlay**,
 not the vault: they pin `DATABASE_URL` / Redis / SQS to localhost so this VM

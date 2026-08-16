@@ -75,6 +75,13 @@ fi
 if grep -q 'configure-executor-mcp.sh' "$ROOT/scripts/setup/cursor-cloud/start.sh"; then
 	fail "start must not call configure-executor-mcp.sh"
 fi
+if [[ -f "$ROOT/scripts/setup/cursor-cloud/wrap-infisical-bin.sh" ]]; then
+	fail "must not wrap node_modules/.bin/infisical — export INFISICAL_TOKEN instead"
+fi
+if grep -q 'wrap-infisical-bin' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	"$ROOT/scripts/setup/cursor-cloud/start.sh"; then
+	fail "install/start must not wrap the infisical bin"
+fi
 pass "install/start use bun ai sync --copy and cursorCloud.ts"
 
 # --- Infisical: Token Auth INFISICAL_TOKEN is enough; no mint ---------------

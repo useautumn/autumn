@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Cursor Cloud `start` — per-boot. Local infra via bun dw setup, Infisical
-# token persist (Token Auth), isolation overlay for later shells.
+# Cursor Cloud `start` — per-boot. Local infra via bun dw setup.
+# Infisical: documented `export INFISICAL_TOKEN=$(infisical login …)` into
+# ~/.autumn-agent/env.sh (BASH_ENV). Does not wrap node_modules/.bin/infisical.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
 export PATH="$ROOT/node_modules/.bin:/usr/local/bin:$HOME/.bun/bin:$PATH"
-bash "$ROOT/scripts/setup/cursor-cloud/wrap-infisical-bin.sh"
 
 export DW_HEADLESS=1
 append_once() {

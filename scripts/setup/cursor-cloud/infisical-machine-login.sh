@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
-# Resolve INFISICAL_TOKEN for `infisical run` (CLI 0.43.116).
+# Infisical's documented `run` auth
+# (https://infisical.com/docs/cli/commands/run#infisical-run:infisical-token):
 #
-# Preferred: a Token Auth access token already in INFISICAL_TOKEN (Cursor
-# Runtime Secret, or the cache start wrote for shells that do not get secrets).
-# `run` accepts that token as-is — no login.
+#   export INFISICAL_TOKEN=$(infisical login --method=universal-auth \
+#     --client-id=… --client-secret=… --silent --plain)
+#   infisical run …
 #
-# Fallback: Universal Auth client id/secret. `run` will not exchange those
-# (Infisical/cli#201 is still open); this script calls
-# `login --method=universal-auth --plain --silent` and prints the JWT.
-#
-# Always talks to the real CLI binary (not the PATH shim). Prints the token.
+# This script is that login. If INFISICAL_TOKEN is already set (Token Auth
+# access token, or a previous login), print it and skip. Otherwise mint.
+# Always talks to the real CLI binary. Prints the token to stdout.
 set -euo pipefail
 # env.sh is BASH_ENV; this flag stops env.sh from re-invoking this script.
 export AUTUMN_INFISICAL_LOGIN_RUNNING=1
