@@ -11,7 +11,6 @@ import { isSafeSsoRedirectUrl } from "@/lib/sso/ssoCallback";
 import { getSsoHint } from "@/lib/sso/ssoHint";
 import { resolveSso } from "@/lib/sso/ssoResolve";
 import type { SsoOrgHint } from "@/lib/sso/ssoTypes";
-import { appHref, appOriginHref } from "@/utils/appBase";
 import { getBackendErr, getSafeNextPath } from "@/utils/genUtils";
 import { AuthBackground } from "./components/AuthBackground";
 import { AutumnWordmark } from "./components/AutumnWordmark";
@@ -53,7 +52,8 @@ export const SignIn = () => {
 	);
 
 	const defaultPath = getSafeNextPath(searchParams);
-	const postAuthHref = oauthRedirectUrl || appHref(defaultPath);
+	const newPath = oauthRedirectUrl || defaultPath;
+	const callbackPath = oauthRedirectUrl || defaultPath;
 
 	useEffect(() => {
 		if (oauthRedirectUrl) return;
@@ -135,8 +135,11 @@ export const SignIn = () => {
 	const handleGoogleSignIn = async () => {
 		setGoogleLoading(true);
 		try {
-			const googleCallbackUrl = oauthRedirectUrl || appOriginHref(defaultPath);
-			const googleNewUserUrl = oauthRedirectUrl || appOriginHref(defaultPath);
+			const frontendUrl = import.meta.env.VITE_FRONTEND_URL;
+			const googleCallbackUrl =
+				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
+			const googleNewUserUrl =
+				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
 			const { error } = await signIn.social({
 				provider: "google",
 				callbackURL: googleCallbackUrl,
@@ -167,8 +170,8 @@ export const SignIn = () => {
 				{otpSent ? (
 					<OTPSignIn
 						email={email}
-						newPath={postAuthHref}
-						callbackPath={postAuthHref}
+						newPath={newPath}
+						callbackPath={callbackPath}
 					/>
 				) : ssoHint && !emailFallback ? (
 					<RememberedSsoSignIn

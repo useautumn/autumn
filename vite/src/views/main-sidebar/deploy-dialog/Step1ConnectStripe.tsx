@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { appOriginHref } from "@/utils/appBase";
 import { getBackendErr } from "@/utils/genUtils";
 import { SectionHeader } from "@/views/onboarding3/components/integration-step/SectionHeader";
 
@@ -62,7 +61,7 @@ export const Step1ConnectStripe = ({
 				`/v1/organization/stripe/oauth_url`,
 				{
 					params: {
-						redirect_url: appOriginHref("/close"),
+						redirect_url: `${import.meta.env.VITE_FRONTEND_URL}/close`,
 					},
 				},
 			);

@@ -6,7 +6,6 @@ import {
 	sandboxBasePath,
 	stripSandboxPrefix,
 } from "@/hooks/sandbox/sandboxUrl";
-import { stripAppBase } from "@/utils/appBase";
 
 const compareStatus = (statusA: string, statusB: string) => {
 	const statusOrder = ["scheduled", "active", "past_due", "expired"];
@@ -47,8 +46,7 @@ const getBackendErrObj = (error: AxiosError) => {
 };
 
 export const getEnvFromPath = (path: string) => {
-	const bare = stripAppBase(path);
-	if (bare === "/sandbox" || bare.startsWith("/sandbox/")) {
+	if (path === "/sandbox" || path.startsWith("/sandbox/")) {
 		return AppEnv.Sandbox;
 	}
 	return AppEnv.Live;

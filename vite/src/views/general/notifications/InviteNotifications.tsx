@@ -9,7 +9,6 @@ import { Badge } from "@autumn/ui";
 import { useSwitchActiveOrg } from "@/hooks/common/useOrg";
 import { useInvitesQuery } from "@/hooks/queries/useInvitesQuery";
 import { authClient } from "@/lib/auth-client";
-import { appHref } from "@/utils/appBase";
 
 export const InviteNotifications = () => {
 	const switchActiveOrg = useSwitchActiveOrg();
@@ -34,7 +33,7 @@ export const InviteNotifications = () => {
 				if (error) throw error;
 
 				await switchActiveOrg(invite.organization.id);
-				window.location.href = appHref("/");
+				window.location.href = "/";
 			} else {
 				await authClient.organization.rejectInvitation({
 					invitationId: invite.id,

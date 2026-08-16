@@ -2,7 +2,6 @@ import { LogOut } from "lucide-react";
 import React from "react";
 import { DropdownMenuItem } from "@autumn/ui";
 import { authClient } from "@/lib/auth-client";
-import { appHref } from "@/utils/appBase";
 
 export const LogOutItem = () => {
 	return (
@@ -14,7 +13,7 @@ export const LogOutItem = () => {
 					} catch (error) {
 						console.error("Error signing out:", error);
 					} finally {
-						window.location.href = appHref("/sign-in");
+						window.location.href = "/sign-in";
 					}
 				}}
 			>

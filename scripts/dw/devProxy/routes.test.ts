@@ -12,9 +12,9 @@ const ports = {
 const match = (pathname: string) => matchDevProxyRoute({ pathname, ports });
 
 describe("matchDevProxyRoute", () => {
-	test("maps the public prefixes", () => {
-		expect(match("/dashboard/customers")).toEqual({
-			path: "/customers",
+	test("strips public folders and sends the rest to Vite", () => {
+		expect(match("/sign-in")).toEqual({
+			path: "/sign-in",
 			port: 3000,
 			service: "vite",
 		});
@@ -68,20 +68,14 @@ describe("matchDevProxyRoute", () => {
 			service: "checkout",
 		});
 	});
-
-	test("does not steal neighboring paths", () => {
-		expect(match("/customers")).toBeNull();
-		expect(match("/apiv2")).toBeNull();
-		expect(match("/api/v1/customers")).toBeNull();
-	});
 });
 
 describe("originServiceUrls", () => {
-	test("prints one path per service", () => {
+	test("dashboard is the origin; others are folders", () => {
 		expect(originServiceUrls({ origin: "https://abc.ngrok.app" })).toEqual({
 			api: "https://abc.ngrok.app/backend",
 			checkout: "https://abc.ngrok.app/checkout",
-			dashboard: "https://abc.ngrok.app/dashboard",
+			dashboard: "https://abc.ngrok.app",
 			emulate: "https://abc.ngrok.app/emulate",
 			leaf: "https://abc.ngrok.app/leaf",
 		});

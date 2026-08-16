@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { joinPublicUrl, publicPathBase } from "./paths.js";
+import { joinPublicUrl } from "./paths.js";
 
 describe("joinPublicUrl", () => {
 	test("appends to an origin", () => {
@@ -24,23 +24,5 @@ describe("joinPublicUrl", () => {
 				path: "/mcp",
 			}),
 		).toBe("https://abc.ngrok.app/backend/mcp");
-	});
-});
-
-describe("publicPathBase", () => {
-	test("uses the public pathname as a Vite base", () => {
-		expect(publicPathBase("https://abc.ngrok.app/dashboard")).toBe(
-			"/dashboard/",
-		);
-		expect(publicPathBase("https://abc.ngrok.app/checkout/")).toBe(
-			"/checkout/",
-		);
-	});
-
-	test("root public URLs stay at /", () => {
-		expect(publicPathBase("https://app.useautumn.com")).toBe("/");
-		expect(publicPathBase("http://localhost:3000")).toBe("/");
-		expect(publicPathBase(undefined)).toBe("/");
-		expect(publicPathBase("not-a-url")).toBe("/");
 	});
 });

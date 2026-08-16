@@ -48,7 +48,6 @@ function upstreamPorts({
 }
 
 const TRAILING_SLASH_PREFIXES = new Set<string>([
-	DEV_PROXY_PREFIXES.dashboard,
 	DEV_PROXY_PREFIXES.checkout,
 ]);
 
@@ -137,11 +136,12 @@ export function startDevProxy({
 			}
 			const isWebsocket =
 				req.headers.get("upgrade")?.toLowerCase() === "websocket";
-			if (url.pathname === "/" && !isWebsocket) {
-				return Response.redirect(
-					new URL(`${DEV_PROXY_PREFIXES.dashboard}/`, url),
-					302,
-				);
+			if (
+				url.pathname === "/dashboard" ||
+				url.pathname.startsWith("/dashboard/")
+			) {
+				const rest = url.pathname.slice("/dashboard".length) || "/";
+				return Response.redirect(new URL(rest, url), 302);
 			}
 			if (TRAILING_SLASH_PREFIXES.has(url.pathname)) {
 				return Response.redirect(new URL(`${url.pathname}/`, url), 302);
@@ -273,7 +273,7 @@ if (import.meta.main) {
 		writeFileSync(PORTFILE, `${port}\n`);
 		startDevProxy({ port, ports });
 		console.log(
-			`[dev-proxy] :${port} → /dashboard :${ports.vite} /backend :${ports.api} /leaf :${ports.leaf} /checkout :${ports.checkout}`,
+			`[dev-proxy] :${port} → / :${ports.vite} /backend :${ports.api} /leaf :${ports.leaf} /checkout :${ports.checkout}`,
 		);
 	}
 }

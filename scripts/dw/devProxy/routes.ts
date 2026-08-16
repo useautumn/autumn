@@ -12,9 +12,8 @@ export type DevProxyRoute = {
 	stripPrefix?: boolean;
 };
 
-/** Public paths on the one hostname. Edit here — identify prints these. */
+/** Public paths on the one hostname. Dashboard is the origin itself. */
 export const DEV_PROXY_PREFIXES = {
-	dashboard: "/dashboard",
 	api: "/backend",
 	leaf: "/leaf",
 	checkout: "/checkout",
@@ -22,7 +21,6 @@ export const DEV_PROXY_PREFIXES = {
 } as const;
 
 export const DEV_PROXY_ROUTES: DevProxyRoute[] = [
-	{ prefix: DEV_PROXY_PREFIXES.dashboard, service: "vite", stripPrefix: true },
 	{ prefix: DEV_PROXY_PREFIXES.api, service: "api", stripPrefix: true },
 	{ prefix: DEV_PROXY_PREFIXES.leaf, service: "leaf", stripPrefix: true },
 	{
@@ -53,7 +51,7 @@ export function originServiceUrls({ origin }: { origin: string }): {
 } {
 	const base = origin.replace(/\/$/, "");
 	return {
-		dashboard: `${base}${DEV_PROXY_PREFIXES.dashboard}`,
+		dashboard: base,
 		api: `${base}${DEV_PROXY_PREFIXES.api}`,
 		leaf: `${base}${DEV_PROXY_PREFIXES.leaf}`,
 		checkout: `${base}${DEV_PROXY_PREFIXES.checkout}`,
@@ -88,7 +86,7 @@ export function matchDevProxyRoute({
 		return { service, port: ports[service], path: pathname };
 	}
 
-	return null;
+	return { service: "vite", port: ports.vite, path: pathname };
 }
 
 function isViteDevPath(pathname: string): boolean {
@@ -101,7 +99,12 @@ function viteServiceFromReferer(referer?: string): "vite" | "checkout" {
 	if (!referer) return "vite";
 	try {
 		const path = new URL(referer).pathname;
-		if (pathMatchesPrefix({ pathname: path, prefix: DEV_PROXY_PREFIXES.checkout })) {
+		if (
+			pathMatchesPrefix({
+				pathname: path,
+				prefix: DEV_PROXY_PREFIXES.checkout,
+			})
+		) {
 			return "checkout";
 		}
 	} catch {

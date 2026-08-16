@@ -14,7 +14,6 @@ import {
 	setLastSwitchedOrgId,
 } from "@/lib/orgSync";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { appHref } from "@/utils/appBase";
 import { useEnv } from "@/utils/envUtils";
 
 export {
@@ -88,7 +87,7 @@ export const useOrg = (params?: { env?: AppEnv; skipSandbox?: boolean }) => {
 		const handleNoActiveOrg = async () => {
 			if (!orgList || orgList.length === 0) {
 				await authClient.signOut();
-				window.location.href = appHref("/sign-in");
+				window.location.href = "/sign-in";
 				return;
 			}
 

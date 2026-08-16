@@ -9,7 +9,6 @@ import { MainLayout } from "./app/layout";
 import { OnboardingLayout } from "./app/OnboardingLayout";
 import { useSession } from "./lib/auth-client";
 import { SSO_CALLBACK_PATH } from "./lib/sso/ssoCallback";
-import { appBase } from "./utils/appBase";
 import { identifyUser } from "./utils/posthogTracking";
 import { AdminView } from "./views/admin/AdminView";
 import { EdgeConfigView } from "./views/admin/edge-config/EdgeConfigView";
@@ -86,10 +85,8 @@ export default function App() {
 		}
 	}, [data]);
 
-	const routerBasename = appBase() || "/";
-
 	return (
-		<BrowserRouter basename={routerBasename}>
+		<BrowserRouter>
 			<Routes>
 				<Route path="/sign-in" element={<SignIn />} />
 				<Route path="/pw-sign-in" element={<PasswordSignIn />} />

@@ -12,7 +12,7 @@ describe("publicDevEnv", () => {
 			AUTUMN_API_URL: "http://localhost:8080",
 			AUTUMN_PUBLIC_API_URL: "https://abc.ngrok.app/backend",
 			CHAT_SERVER_URL: "http://localhost:3099",
-			CLIENT_URL: "https://abc.ngrok.app/dashboard",
+			CLIENT_URL: "https://abc.ngrok.app",
 			EMULATE_GOOGLE_FETCH_URL: "http://127.0.0.1:4000",
 			EMULATE_GOOGLE_URL: "https://abc.ngrok.app/emulate",
 			MCP_SERVER_URL: "https://abc.ngrok.app/backend",
@@ -20,7 +20,7 @@ describe("publicDevEnv", () => {
 			VITE_API_URL: "/backend",
 			VITE_BACKEND_URL: "/backend",
 			VITE_CHECKOUT_URL: "https://abc.ngrok.app/checkout",
-			VITE_FRONTEND_URL: "https://abc.ngrok.app/dashboard",
+			VITE_FRONTEND_URL: "https://abc.ngrok.app",
 		});
 	});
 });
