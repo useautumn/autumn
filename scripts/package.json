@@ -10,7 +10,6 @@
 		"ts": "bunx tsgo --build --noEmit"
 	},
 	"dependencies": {
-		"@autumn/env": "workspace:*",
 		"@autumn/shared": "workspace:*",
 		"@aws-sdk/client-dynamodb": "^3.1095.0",
 		"@aws-sdk/client-s3": "^3.1017.0",

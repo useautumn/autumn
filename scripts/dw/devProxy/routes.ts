@@ -1,5 +1,3 @@
-import { DEV_PATH_PREFIXES } from "@autumn/env/paths";
-
 export type DevProxyService = "api" | "vite" | "leaf" | "checkout";
 
 export type DevProxyRoute = {
@@ -9,12 +7,12 @@ export type DevProxyRoute = {
 	stripPrefix?: boolean;
 };
 
-/** Public paths on the one hostname. Edit `@autumn/env` `DEV_PATH_PREFIXES`. */
+/** Public paths on the one hostname. Edit here — identify prints these. */
 export const DEV_PROXY_PREFIXES = {
-	dashboard: DEV_PATH_PREFIXES.dashboard,
-	api: DEV_PATH_PREFIXES.backend,
-	leaf: DEV_PATH_PREFIXES.leaf,
-	checkout: DEV_PATH_PREFIXES.checkout,
+	dashboard: "/dashboard",
+	api: "/backend",
+	leaf: "/leaf",
+	checkout: "/checkout",
 } as const;
 
 export const DEV_PROXY_ROUTES: DevProxyRoute[] = [

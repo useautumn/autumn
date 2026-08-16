@@ -1,10 +1,5 @@
 import { createRequire } from "node:module";
 import path from "node:path";
-import {
-	DEV_PATH_PREFIXES,
-	isDwHeadless,
-	usesPathProxy,
-} from "@autumn/env/paths";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
@@ -12,14 +7,18 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 const require = createRequire(import.meta.url);
 
-const headless = isDwHeadless();
-const pathProxy = usesPathProxy();
+const isDwHeadless =
+	process.env.DW_HEADLESS === "1" || process.env.DW_HEADLESS === "true";
+const usePathProxy =
+	isDwHeadless ||
+	process.env.DW_PATH_PROXY === "1" ||
+	process.env.DW_PATH_PROXY === "true";
 const serverPort = process.env.SERVER_PORT
 	? Number.parseInt(process.env.SERVER_PORT, 10)
 	: 8080;
 
 export default defineConfig({
-	base: pathProxy ? `${DEV_PATH_PREFIXES.checkout}/` : "/",
+	base: usePathProxy ? "/checkout/" : "/",
 	plugins: [react(), tsconfigPaths(), tailwindcss()],
 	resolve: {
 		dedupe: ["react", "react-dom"],
@@ -53,18 +52,17 @@ export default defineConfig({
 	server: {
 		host: "0.0.0.0",
 		port: Number.parseInt(process.env.VITE_PORT || "3001", 10),
-		allowedHosts: headless
+		allowedHosts: isDwHeadless
 			? true
 			: [".ngrok.app", ".ngrok-free.app", "localhost", ".localhost"],
 		fs: {
 			allow: [".."],
 		},
-		...(pathProxy && {
+		...(usePathProxy && {
 			proxy: {
-				[DEV_PATH_PREFIXES.backend]: {
+				"/backend": {
 					changeOrigin: true,
-					rewrite: (path: string) =>
-						path.slice(DEV_PATH_PREFIXES.backend.length) || "/",
+					rewrite: (path: string) => path.replace(/^\/backend/, "") || "/",
 					target: `http://127.0.0.1:${serverPort}`,
 				},
 			},
