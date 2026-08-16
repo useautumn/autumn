@@ -47,6 +47,9 @@ export function devProxyPortFor(worktreeNum: number): number {
 	return 3080 + (worktreeNum - 1) * 100;
 }
 
+/** Host-wide Google OAuth emulator (headless / Cloud; no portless). */
+export const EMULATE_PORT = 4000;
+
 // Base 4140 keeps the dashboard tunnel's web API clear of the api tunnel's
 // 4040 + k*100 series.
 export function ngrokViteApiPortFor(worktreeNum: number): number {

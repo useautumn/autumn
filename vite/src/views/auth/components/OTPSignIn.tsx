@@ -11,6 +11,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { appHref } from "@/utils/appBase";
 
 export const OTPSignIn = ({
 	email,
@@ -51,9 +52,9 @@ export const OTPSignIn = ({
 			const diffSeconds = differenceInSeconds(nowUTC, userCreatedAtUTC);
 			const createdRecently = diffSeconds < 20;
 			if (createdRecently) {
-				window.location.href = newPath;
+				window.location.href = appHref(newPath);
 			} else {
-				window.location.href = callbackPath;
+				window.location.href = appHref(callbackPath);
 			}
 		} catch {
 			toast.error("Failed to verify code");

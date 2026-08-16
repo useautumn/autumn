@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
 	checkoutPortFor,
 	devProxyPortFor,
+	EMULATE_PORT,
 	leafPortFor,
 	serverPortFor,
 	vitePortFor,
@@ -19,6 +20,7 @@ type UpstreamPorts = {
 	vite: number;
 	leaf: number;
 	checkout: number;
+	emulate: number;
 };
 
 type WsData = {
@@ -39,10 +41,16 @@ function upstreamPorts({
 	return {
 		api: serverPortFor(worktreeNum),
 		checkout: checkoutPortFor(worktreeNum),
+		emulate: EMULATE_PORT,
 		leaf: leafPortFor(worktreeNum),
 		vite: vitePortFor(worktreeNum),
 	};
 }
+
+const TRAILING_SLASH_PREFIXES = new Set<string>([
+	DEV_PROXY_PREFIXES.dashboard,
+	DEV_PROXY_PREFIXES.checkout,
+]);
 
 function hopByHopHeaders(): Set<string> {
 	return new Set([
@@ -56,6 +64,21 @@ function hopByHopHeaders(): Set<string> {
 		"upgrade",
 		"host",
 	]);
+}
+
+function websocketProtocols(req: Request): string[] {
+	return (
+		req.headers
+			.get("sec-websocket-protocol")
+			?.split(",")
+			.map((p) => p.trim())
+			.filter(Boolean) ?? []
+	);
+}
+
+function upstreamWsPath(path: string): string {
+	if (TRAILING_SLASH_PREFIXES.has(path)) return `${path}/`;
+	return path;
 }
 
 async function proxyHttp({
@@ -74,6 +97,15 @@ async function proxyHttp({
 	req.headers.forEach((value, key) => {
 		if (!skip.has(key.toLowerCase())) headers.set(key, value);
 	});
+	const incomingHost = req.headers.get("host");
+	if (incomingHost) {
+		headers.set("host", incomingHost);
+		headers.set("x-forwarded-host", incomingHost);
+	}
+	headers.set(
+		"x-forwarded-proto",
+		incoming.protocol === "https:" ? "https" : "http",
+	);
 
 	try {
 		return await fetch(dest, {
@@ -105,19 +137,30 @@ export function startDevProxy({
 			}
 			if (url.pathname === "/") {
 				return Response.redirect(
-					new URL(DEV_PROXY_PREFIXES.dashboard, url),
+					new URL(`${DEV_PROXY_PREFIXES.dashboard}/`, url),
 					302,
 				);
+			}
+			if (TRAILING_SLASH_PREFIXES.has(url.pathname)) {
+				return Response.redirect(new URL(`${url.pathname}/`, url), 302);
 			}
 			const matched = matchDevProxyRoute({ pathname: url.pathname, ports });
 			if (!matched) {
 				return new Response("dev-proxy: no route", { status: 404 });
 			}
 			if (req.headers.get("upgrade")?.toLowerCase() === "websocket") {
-				const dest = `ws://127.0.0.1:${matched.port}${matched.path}${url.search}`;
-				const upstream = new WebSocket(dest);
+				const path = upstreamWsPath(matched.path);
+				const dest = `ws://127.0.0.1:${matched.port}${path}${url.search}`;
+				const protocols = websocketProtocols(req);
+				const upstream = protocols.length
+					? new WebSocket(dest, protocols)
+					: new WebSocket(dest);
+				upstream.addEventListener("error", () => {});
 				const upgraded = server.upgrade(req, {
 					data: { pending: [], upstream } satisfies WsData,
+					headers: protocols.length
+						? { "Sec-WebSocket-Protocol": protocols[0] }
+						: undefined,
 				});
 				if (!upgraded) {
 					upstream.close();
@@ -223,7 +266,7 @@ if (import.meta.main) {
 		writeFileSync(PORTFILE, `${port}\n`);
 		startDevProxy({ port, ports });
 		console.log(
-			`[dev-proxy] :${port} → /dashboard :${ports.vite} /api :${ports.api} /leaf :${ports.leaf} /checkout :${ports.checkout}`,
+			`[dev-proxy] :${port} → /dashboard :${ports.vite} /backend :${ports.api} /leaf :${ports.leaf} /checkout :${ports.checkout}`,
 		);
 	}
 }

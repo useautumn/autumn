@@ -27,6 +27,9 @@ describe("isAllowedOrigin", () => {
 			process.env.NODE_ENV = "production";
 			expect(isAllowedOrigin("https://evil.com")).toBeUndefined();
 			expect(isAllowedOrigin("https://fake.useautumn.com")).toBeUndefined();
+			expect(
+				isAllowedOrigin("https://autumn-wt1-c27c45.ngrok.app"),
+			).toBeUndefined();
 		});
 	});
 
@@ -64,10 +67,21 @@ describe("isAllowedOrigin", () => {
 			);
 		});
 
+		test("allows ngrok app hosts", () => {
+			process.env.NODE_ENV = "development";
+			expect(isAllowedOrigin("https://autumn-wt1-c27c45.ngrok.app")).toBe(
+				"https://autumn-wt1-c27c45.ngrok.app",
+			);
+			expect(isAllowedOrigin("https://foo.ngrok-free.app")).toBe(
+				"https://foo.ngrok-free.app",
+			);
+		});
+
 		test("rejects external origins", () => {
 			process.env.NODE_ENV = "development";
 			expect(isAllowedOrigin("https://evil.com")).toBeUndefined();
 			expect(isAllowedOrigin("http://evil.com:3000")).toBeUndefined();
+			expect(isAllowedOrigin("https://evil.ngrok.app.evil.com")).toBeUndefined();
 		});
 
 		test("rejects localhost with path or query", () => {

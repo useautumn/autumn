@@ -1,4 +1,5 @@
 import { verifyDashboardSession } from "@autumn/auth";
+import { joinPublicUrl } from "@autumn/env/paths";
 import type { ChatProvider } from "@autumn/shared";
 import type { HttpBindings } from "@hono/node-server";
 import { serve } from "@hono/node-server";
@@ -81,7 +82,10 @@ app.route(
 		"oauth-environment": env.MCP_OAUTH_ENVIRONMENT,
 		"server-url": env.AUTUMN_API_URL,
 		logger,
-		resourceUrl: new URL("/mcp", env.MCP_SERVER_URL).href,
+		resourceUrl: joinPublicUrl({
+			base: env.MCP_SERVER_URL,
+			path: "/mcp",
+		}),
 	}),
 );
 

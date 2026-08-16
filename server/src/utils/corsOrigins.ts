@@ -20,11 +20,17 @@ export const ALLOWED_ORIGINS = [
 /** Allow any *.localhost or localhost origin in dev for multi-worktree support */
 export const isAllowedOrigin = (origin: string): string | undefined => {
 	if (ALLOWED_ORIGINS.includes(origin)) return origin;
-	if (
-		process.env.NODE_ENV !== "production" &&
-		/^https?:\/\/(?:[a-zA-Z0-9-]+\.)*localhost(?::\d+)?$/.test(origin)
-	) {
+	if (process.env.NODE_ENV === "production") return undefined;
+	if (/^https?:\/\/(?:[a-zA-Z0-9-]+\.)*localhost(?::\d+)?$/.test(origin)) {
 		return origin;
+	}
+	try {
+		const hostname = new URL(origin).hostname;
+		if (hostname.endsWith(".ngrok.app") || hostname.endsWith(".ngrok-free.app")) {
+			return origin;
+		}
+	} catch {
+		return undefined;
 	}
 	return undefined;
 };

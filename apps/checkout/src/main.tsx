@@ -26,11 +26,14 @@ const queryClient = new QueryClient({
 	},
 });
 
+const routerBasename =
+	(import.meta.env.BASE_URL || "/").replace(/\/$/, "") || "/";
+
 createRoot(document.getElementById("root")!).render(
 	<ThemeProvider defaultTheme="system" storageKey="checkout-theme">
 		<DevTools />
 		<QueryClientProvider client={queryClient}>
-			<BrowserRouter>
+			<BrowserRouter basename={routerBasename}>
 				<Routes>
 					<Route
 						path={`/${ATTACH_CHECKOUT_PATH}/:checkoutId`}

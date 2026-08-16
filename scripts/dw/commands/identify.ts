@@ -1,4 +1,5 @@
 import { originServiceUrls } from "../devProxy/routes.ts";
+import { emulateGoogleUrl } from "../helpers/emulate.ts";
 import { isPlainCanonical, isProvisioned } from "../helpers/entry.ts";
 import { ensureNgrok, publicOrigin } from "../helpers/ngrok.ts";
 import {
@@ -24,6 +25,7 @@ function localServiceUrls({
 			api: aliases.apiUrl,
 			checkout: `http://localhost:${checkoutPortFor(n)}`,
 			dashboard: aliases.viteUrl,
+			emulate: emulateGoogleUrl({}),
 			leaf: `http://localhost:${leafPortFor(n)}`,
 		};
 	}
@@ -31,6 +33,7 @@ function localServiceUrls({
 		api: `http://localhost:${serverPortFor(n)}`,
 		checkout: `http://localhost:${checkoutPortFor(n)}`,
 		dashboard: `http://localhost:${vitePortFor(n)}`,
+		emulate: emulateGoogleUrl({}),
 		leaf: `http://localhost:${leafPortFor(n)}`,
 	};
 }
@@ -55,9 +58,10 @@ export async function cmdIdentify(): Promise<void> {
 	console.log(`#${n}  ${entry.path}`);
 	console.log();
 	console.log(`dashboard  ${urls.dashboard}`);
-	console.log(`api        ${urls.api}`);
+	console.log(`backend    ${urls.api}`);
 	console.log(`leaf       ${urls.leaf}`);
 	console.log(`checkout   ${urls.checkout}`);
+	console.log(`emulate    ${urls.emulate}`);
 	console.log();
 	console.log(`DW_WORKTREE_NUM=${n}`);
 	console.log(`DW_DASHBOARD_URL=${urls.dashboard}`);
@@ -65,6 +69,7 @@ export async function cmdIdentify(): Promise<void> {
 	console.log(`DW_VITE_URL=${urls.dashboard}`);
 	console.log(`DW_LEAF_URL=${urls.leaf}`);
 	console.log(`DW_CHECKOUT_URL=${urls.checkout}`);
+	console.log(`DW_EMULATE_URL=${urls.emulate}`);
 	console.log(`DW_PUBLIC_API_URL=${urls.api}`);
 	console.log(`DW_NGROK_VITE_URL=${origin ? urls.dashboard : ""}`);
 	console.log(`DW_TMUX_SESSION=${tmux}`);

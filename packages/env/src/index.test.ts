@@ -65,6 +65,15 @@ describe("Autumn environment", () => {
 		).toThrow("AUTUMN_API_URL");
 	});
 
+	test("keeps a path prefix on AUTUMN_PUBLIC_API_URL", () => {
+		const env = createAutumnEnv({
+			AUTUMN_API_URL: validEnv.AUTUMN_API_URL,
+			AUTUMN_PUBLIC_API_URL: "https://abc.ngrok.app/backend/",
+		});
+
+		expect(env.AUTUMN_PUBLIC_API_URL).toBe("https://abc.ngrok.app/backend");
+	});
+
 	test("does not use a legacy webhook URL when AUTUMN_PUBLIC_API_URL is missing", () => {
 		const env = createAutumnEnv({
 			AUTUMN_API_URL: validEnv.AUTUMN_API_URL,

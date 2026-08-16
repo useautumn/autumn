@@ -1,9 +1,11 @@
 import { RESERVED_SANDBOX_SLUGS, sandboxSlug } from "@autumn/shared";
+import { stripAppBase } from "@/utils/appBase";
 import { getActiveSandbox } from "./useActiveSandbox";
 
 export const SANDBOX_PREFIX = "/sandbox";
 
 export const getSandboxSlugFromPath = (pathname: string): string | null => {
+	pathname = stripAppBase(pathname);
 	if (!pathname.startsWith(`${SANDBOX_PREFIX}/`)) {
 		return null;
 	}
@@ -25,6 +27,7 @@ export const sandboxBasePath = (): string => {
 };
 
 export const stripSandboxPrefix = (pathname: string): string => {
+	pathname = stripAppBase(pathname);
 	if (
 		pathname !== SANDBOX_PREFIX &&
 		!pathname.startsWith(`${SANDBOX_PREFIX}/`)

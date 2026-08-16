@@ -85,8 +85,11 @@ export default function App() {
 		}
 	}, [data]);
 
+	const routerBasename =
+		import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
+
 	return (
-		<BrowserRouter>
+		<BrowserRouter basename={routerBasename}>
 			<Routes>
 				<Route path="/sign-in" element={<SignIn />} />
 				<Route path="/pw-sign-in" element={<PasswordSignIn />} />

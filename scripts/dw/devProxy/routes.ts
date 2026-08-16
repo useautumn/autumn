@@ -1,4 +1,9 @@
-export type DevProxyService = "api" | "vite" | "leaf" | "checkout";
+export type DevProxyService =
+	| "api"
+	| "vite"
+	| "leaf"
+	| "checkout"
+	| "emulate";
 
 export type DevProxyRoute = {
 	prefix: string;
@@ -10,9 +15,10 @@ export type DevProxyRoute = {
 /** Public paths on the one hostname. Edit here — identify prints these. */
 export const DEV_PROXY_PREFIXES = {
 	dashboard: "/dashboard",
-	api: "/api",
+	api: "/backend",
 	leaf: "/leaf",
 	checkout: "/checkout",
+	emulate: "/emulate",
 } as const;
 
 export const DEV_PROXY_ROUTES: DevProxyRoute[] = [
@@ -20,6 +26,7 @@ export const DEV_PROXY_ROUTES: DevProxyRoute[] = [
 	{ prefix: DEV_PROXY_PREFIXES.api, service: "api", stripPrefix: true },
 	{ prefix: DEV_PROXY_PREFIXES.leaf, service: "leaf", stripPrefix: true },
 	{ prefix: DEV_PROXY_PREFIXES.checkout, service: "checkout" },
+	{ prefix: DEV_PROXY_PREFIXES.emulate, service: "emulate", stripPrefix: true },
 ];
 
 export function originServiceUrls({ origin }: { origin: string }): {
@@ -27,6 +34,7 @@ export function originServiceUrls({ origin }: { origin: string }): {
 	api: string;
 	leaf: string;
 	checkout: string;
+	emulate: string;
 } {
 	const base = origin.replace(/\/$/, "");
 	return {
@@ -34,6 +42,7 @@ export function originServiceUrls({ origin }: { origin: string }): {
 		api: `${base}${DEV_PROXY_PREFIXES.api}`,
 		leaf: `${base}${DEV_PROXY_PREFIXES.leaf}`,
 		checkout: `${base}${DEV_PROXY_PREFIXES.checkout}`,
+		emulate: `${base}${DEV_PROXY_PREFIXES.emulate}`,
 	};
 }
 

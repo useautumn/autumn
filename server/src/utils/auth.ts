@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { getAutumnEnv } from "@autumn/env";
+import { joinPublicUrl } from "@autumn/env/paths";
 import {
 	ALL_SCOPES,
 	ac,
@@ -44,7 +45,9 @@ import { ADMIN_USER_IDs } from "./constants.js";
 // can use any redirect URI without registering it in the real Google console.
 // Real Google's oauth2.googleapis.com/token maps to emulate's /oauth2/token path.
 if (process.env.EMULATE_GOOGLE_URL && process.env.NODE_ENV !== "production") {
-	const emulate = process.env.EMULATE_GOOGLE_URL.replace(/\/$/, "");
+	const emulate = (
+		process.env.EMULATE_GOOGLE_FETCH_URL || process.env.EMULATE_GOOGLE_URL
+	).replace(/\/$/, "");
 	const originalFetch = globalThis.fetch;
 	globalThis.fetch = ((input: any, init?: any) => {
 		const url =
@@ -79,6 +82,7 @@ const emulateGoogleUrl =
 // state cookie must be SameSite=None+Secure to survive the round trip.
 const isProductionAuth = process.env.NODE_ENV === "production";
 export const authBaseUrl = getAutumnEnv().AUTUMN_API_URL;
+const publicAuthBaseUrl = getAutumnEnv().AUTUMN_PUBLIC_API_URL;
 const isHttpsBaseUrl = authBaseUrl?.startsWith("https://");
 
 const parseMcpResourceUrl = (rawUrl: string) => {
@@ -113,7 +117,7 @@ const mcpResourceBases = [authBaseUrl, mcpServerUrl, chatServerUrl].filter(
 const mcpResourceUrls = [
 	...new Set([
 		...mcpResourceBases.flatMap((base) =>
-			mcpResourcePaths.map((path) => new URL(path, base).href),
+			mcpResourcePaths.map((path) => joinPublicUrl({ base, path })),
 		),
 		...(process.env.MCP_RESOURCE_URLS?.split(",")
 			.map(parseMcpResourceUrl)
@@ -132,8 +136,17 @@ const mcpResourceUrls = [
  * - origin: full URL with scheme. Multiple origins may be supplied for envs
  *   that need to accept both Portless and direct localhost.
  */
+const originOf = (value: string): string | undefined => {
+	try {
+		return new URL(value).origin;
+	} catch {
+		return undefined;
+	}
+};
+
 const passkeyFrontendUrl = process.env.CLIENT_URL ?? "http://localhost:3000";
-const passkeyOrigins: string[] = [passkeyFrontendUrl];
+const passkeyOrigin = originOf(passkeyFrontendUrl) ?? "http://localhost:3000";
+const passkeyOrigins: string[] = [passkeyOrigin];
 const passkeyRpID = (() => {
 	try {
 		return new URL(passkeyFrontendUrl).hostname;
@@ -146,13 +159,9 @@ if (
 	process.env.VITE_FRONTEND_URL &&
 	process.env.VITE_FRONTEND_URL !== passkeyFrontendUrl
 ) {
-	try {
-		const viteOrigin = new URL(process.env.VITE_FRONTEND_URL);
-		if (viteOrigin.hostname === passkeyRpID) {
-			passkeyOrigins.push(process.env.VITE_FRONTEND_URL);
-		}
-	} catch {
-		// Invalid URL, ignore
+	const viteOrigin = originOf(process.env.VITE_FRONTEND_URL);
+	if (viteOrigin && new URL(viteOrigin).hostname === passkeyRpID) {
+		passkeyOrigins.push(viteOrigin);
 	}
 }
 
@@ -233,7 +242,11 @@ const options = {
 		) {
 			origins.push(origin);
 		}
-		if (process.env.CLIENT_URL) origins.push(process.env.CLIENT_URL);
+		if (process.env.CLIENT_URL) {
+			origins.push(process.env.CLIENT_URL);
+			const clientOrigin = originOf(process.env.CLIENT_URL);
+			if (clientOrigin) origins.push(clientOrigin);
+		}
 		if (authBaseUrl) origins.push(authBaseUrl);
 		return origins;
 	},
@@ -251,8 +264,12 @@ const options = {
 		google: {
 			clientId: process.env.GOOGLE_CLIENT_ID!,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-			redirectURI: authBaseUrl
-				? `${authBaseUrl}/api/auth/callback/google`
+			// Browser return URL — must be the public host (/backend on path-proxy).
+			redirectURI: publicAuthBaseUrl
+				? joinPublicUrl({
+						base: publicAuthBaseUrl,
+						path: "/api/auth/callback/google",
+					})
 				: undefined,
 			...(emulateGoogleUrl
 				? {

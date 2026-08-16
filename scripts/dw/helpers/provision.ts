@@ -3,7 +3,6 @@ import type { Registry, RegistryEntry } from "../types.ts";
 import { ensureComposeStack } from "./compose.ts";
 import { ensureEmulateRunning } from "./emulate.ts";
 import { writeEnvLocalFiles } from "./env-files.ts";
-import { isHeadless } from "./headless.ts";
 import { ensureChatDatabase } from "./neon.ts";
 import { ensureNgrok } from "./ngrok.ts";
 import { saveRegistry } from "./registry.ts";
@@ -34,7 +33,7 @@ export async function provisionWorktree({
 	saveRegistry(registry);
 
 	writeEnvLocalFiles(current);
-	if (!isHeadless()) ensureEmulateRunning();
+	ensureEmulateRunning({ origin: current.ngrokUrl });
 
 	if (created) {
 		log("first provision — seeding test org");
