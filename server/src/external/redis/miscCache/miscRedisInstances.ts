@@ -36,30 +36,12 @@ type CachedBackupClient = {
 };
 let cachedBackup: CachedBackupClient | null = null;
 let lastDecryptFailureKey: string | null = null;
-let loggedHeadlessBackupSkip = false;
-
-const isHeadlessDw = (): boolean => {
-	const flag = process.env.DW_HEADLESS;
-	return flag === "1" || flag === "true";
-};
 
 /** The "backup" misc-cache instance, from the misc-redis edge config.
  *  Lazy + hot-swappable: a changed or rotated connection disconnects the old
  *  client on the next call. ECS prefers the private endpoint when set;
- *  everything else uses the public one. Null while no backup is configured.
- *  Cursor Cloud (`DW_HEADLESS`) must not open the team Dragonfly backup. */
+ *  everything else uses the public one. Null while no backup is configured. */
 export const getMiscBackupRedis = (): Redis | null => {
-	if (isHeadlessDw()) {
-		closeMiscBackupClient();
-		if (!loggedHeadlessBackupSkip) {
-			loggedHeadlessBackupSkip = true;
-			logger.info(
-				"[miscRedis] DW_HEADLESS=1 — skipping edge-config backup Redis",
-			);
-		}
-		return null;
-	}
-
 	const backup = getMiscRedisConfig().backup;
 	if (!backup) {
 		closeMiscBackupClient();
