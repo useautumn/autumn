@@ -138,7 +138,7 @@ pass "isolation.env has no dummy AWS keys; eve skip is not a concurrently echo"
 # --- Cloud public-urls.txt parser used by bun dw identify -------------------
 got="$(cd "$ROOT" && bun -e '
 import { firstHttpsUrl } from "./scripts/dw/helpers/ngrok.ts";
-const a = firstHttpsUrl("https://abc.ngrok.app\n");
+const a = firstHttpsUrl("https://abc.ngrok.app.\n");
 if (a !== "https://abc.ngrok.app") throw new Error("plain "+a);
 const b = firstHttpsUrl("proxy (http://localhost:3080): https://may-waspy-marquis.ngrok-free.dev\n");
 if (b !== "https://may-waspy-marquis.ngrok-free.dev") throw new Error("labeled "+b);

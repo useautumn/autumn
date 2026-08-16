@@ -114,7 +114,7 @@ const NGROK_UP = join(PROJECT_ROOT, "scripts/setup/cursor-cloud/ngrok-up.sh");
 const PUBLIC_URLS_FILE = join(homedir(), ".autumn-agent", "public-urls.txt");
 
 export function firstHttpsUrl(text: string): string | undefined {
-	return text.match(/https:\/\/[^\s.,;]+/)?.[0];
+	return text.match(/https:\/\/\S+/)?.[0]?.replace(/[.,;]+$/, "");
 }
 
 function readNgrokPublicOrigin(): string | undefined {
