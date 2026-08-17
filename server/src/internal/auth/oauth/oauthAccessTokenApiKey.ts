@@ -121,6 +121,10 @@ export const getOAuthAccessTokenRecord = async ({
 	};
 };
 
+export type OAuthAccessTokenRecord = Awaited<
+	ReturnType<typeof getOAuthAccessTokenRecord>
+>;
+
 const getTokenConsentId = ({
 	oauthConsentId,
 }: {

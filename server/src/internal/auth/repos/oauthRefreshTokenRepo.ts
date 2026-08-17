@@ -66,9 +66,24 @@ export const updateOAuthRefreshTokenConsent = async ({
 		.set({ oauthConsentId })
 		.where(eq(oauthRefreshToken.id, id));
 
+export const updateOAuthRefreshTokenResource = async ({
+	db,
+	id,
+	resource,
+}: {
+	db: DrizzleCli;
+	id: string;
+	resource: string;
+}) =>
+	db
+		.update(oauthRefreshToken)
+		.set({ resource })
+		.where(eq(oauthRefreshToken.id, id));
+
 export const oauthRefreshTokenRepo = {
 	deleteByClientAndReference: deleteOAuthRefreshTokensByClientAndReference,
 	updateScopes: updateOAuthRefreshTokenScopes,
 	getByTokenValues: getOAuthRefreshTokenByTokenValues,
 	updateConsent: updateOAuthRefreshTokenConsent,
+	updateResource: updateOAuthRefreshTokenResource,
 };

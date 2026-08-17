@@ -1,219 +1,45 @@
 import { prefixOAuthToken } from "@autumn/auth";
 import {
-	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
 	getOAuthResourceScopes,
-	getResourceFromOAuthTokenRequest,
 	returnsOAuthAccessTokenForClientId,
-	UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND,
 } from "@autumn/auth/oauth";
 import { ErrCode, RecaseError } from "@autumn/shared";
-import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
-import {
-	getOAuthStringField,
-	parseOAuthRequestFields,
-	rebuildOAuthRequest,
-} from "@autumn/shared/utils/auth/oauthRequestBody";
-import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
+import { getOAuthStringField } from "@autumn/shared/utils/auth/oauthRequestBody";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import {
-	buildOAuthRefreshReplayKey,
 	claimOAuthRefreshReplay,
 	storeOAuthRefreshReplay,
 } from "@/external/redis/actions/oauthRefreshReplay/oauthRefreshReplay.js";
 import { auth } from "@/utils/auth.js";
-import { oauthAccessTokenRepo } from "../repos/oauthAccessTokenRepo.js";
-import { oauthConsentRepo } from "../repos/oauthConsentRepo.js";
-import { oauthRefreshTokenRepo } from "../repos/oauthRefreshTokenRepo.js";
 import { isMcpOAuthClient } from "./mcpOAuthScopes.js";
 import {
 	getExternalOAuthApiKeyForToken,
 	getOAuthAccessTokenRecord,
 	scopesFromOAuthScopeString,
 } from "./oauthAccessTokenApiKey.js";
-import { getOAuthConsentScopeGrant } from "./oauthConsentScopes.js";
-import { getRefreshTokenForConsentLookup } from "./tokenRequestFields.js";
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-	typeof value === "object" && value !== null && !Array.isArray(value);
-
-const getTokenPayload = (body: Record<string, unknown>) => {
-	const response = body.response;
-	if (isRecord(response)) return response;
-	return body;
-};
-
-// better-auth nests the token payload under `response` on some routes and
-// returns it flat on others; rewrite whichever shape we received.
-const rewriteTokenResponseBody = ({
-	token,
-	body,
-	scopes,
-}: {
-	token: string;
-	body: Record<string, unknown>;
-	scopes: string[];
-}) => {
-	const response = body.response;
-	if (isRecord(response)) {
-		return {
-			...body,
-			response: {
-				...response,
-				access_token: token,
-				scope: scopes.join(" "),
-			},
-		};
-	}
-
-	return {
-		...body,
-		access_token: token,
-		scope: scopes.join(" "),
-	};
-};
-
-const tokenResponseHeaders = (response?: Response) => {
-	const headers = new Headers(response?.headers);
-	headers.set("Content-Type", "application/json");
-	headers.set("Cache-Control", "no-store");
-	headers.set("Pragma", "no-cache");
-	headers.delete("Content-Length");
-	return headers;
-};
-
-const jsonTokenResponse = ({
-	body,
-	response,
-	status,
-}: {
-	body: unknown;
-	response?: Response;
-	status: number;
-}) =>
-	new Response(JSON.stringify(body), {
-		status,
-		headers: tokenResponseHeaders(response),
-	});
-
-const getRefreshTokenRecord = async (request: Request) => {
-	const refreshToken = await getRefreshTokenForConsentLookup(request);
-	if (!refreshToken) return null;
-
-	const hashedToken = await hashOAuthToken(refreshToken);
-	const tokenValues = [...new Set([hashedToken, refreshToken])];
-	return oauthRefreshTokenRepo.getByTokenValues({
-		db,
-		tokenValues,
-	});
-};
-
-const getUniqueOAuthConsentId = async ({
-	clientId,
-	referenceId,
-	userId,
-}: {
-	clientId: string;
-	referenceId: string;
-	userId: string;
-}) => {
-	const consents = await oauthConsentRepo.listForClientUserOrg({
-		db,
-		clientId,
-		referenceId,
-		userId,
-	});
-	return consents.length === 1 ? consents[0]!.id : null;
-};
-
-const isUnrestrictedChatOAuthConsentMetadata = (metadata: unknown) =>
-	!!metadata &&
-	typeof metadata === "object" &&
-	!Array.isArray(metadata) &&
-	(metadata as Record<string, unknown>).kind ===
-		UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND;
-
-/**
- * Scope-less chat tokens are valid only for Leaf-created unrestricted consents.
- * Empty scopes bypass route checks, so callers must also require an MCP client.
- */
-const allowsScopeLessOAuthToken = async ({
-	oauthConsentId,
-}: {
-	oauthConsentId: string | null;
-}) => {
-	if (!oauthConsentId) return false;
-	const metadata = await oauthConsentRepo.getMetadataById({
-		db,
-		consentId: oauthConsentId,
-	});
-	return isUnrestrictedChatOAuthConsentMetadata(metadata);
-};
-
-// Resource tokens are JWTs this handler cannot link to consent.
-// MCP refreshes may only re-request scopes from the original grant.
-const constrainScope = ({
-	scope,
-	grantedScopes,
-}: {
-	scope: string;
-	grantedScopes: string[];
-}) => {
-	const granted = new Set(grantedScopes);
-	const constrained = splitOAuthScopeString(scope).filter((value) =>
-		granted.has(value),
-	);
-	return constrained.length > 0 ? constrained.join(" ") : scope;
-};
-
-const normalizeTokenRequest = async ({
-	request,
-	grantedScopes,
-}: {
-	request: Request;
-	grantedScopes?: string[];
-}): Promise<Request> => {
-	const { fields, isJson, rawBody } = await parseOAuthRequestFields(request);
-	if (!rawBody) return request;
-	if (isJson && Object.keys(fields).length === 0) {
-		return new Request(request, { body: rawBody });
-	}
-
-	delete fields.resource;
-	if (grantedScopes && typeof fields.scope === "string") {
-		fields.scope = constrainScope({ scope: fields.scope, grantedScopes });
-	}
-
-	return rebuildOAuthRequest({ fields, isJson, request, sortKeys: true });
-};
+import {
+	getOAuthTokenPayload,
+	jsonOAuthTokenResponse,
+	parseOAuthTokenResponseBody,
+	rewriteOAuthTokenResponseBody,
+} from "./token/oauthTokenResponse.js";
+import { persistOAuthTokenGrant } from "./token/persistOAuthTokenGrant.js";
+import { resolveIssuedOAuthScopes } from "./token/resolveIssuedOAuthScopes.js";
+import { resolveOAuthTokenConsentId } from "./token/resolveOAuthTokenConsentId.js";
+import { resolveOAuthTokenResource } from "./token/resolveOAuthTokenResource.js";
+import { setupOAuthTokenRequest } from "./token/setupOAuthTokenRequest.js";
 
 export const handleOAuthTokenWithApiKey = async (c: Context) => {
-	const resource = await getResourceFromOAuthTokenRequest(c.req.raw.clone());
-	const refreshTokenRecord = await getRefreshTokenRecord(c.req.raw.clone());
-	const refreshScopes =
-		refreshTokenRecord &&
-		(await isMcpOAuthClient({
-			clientId: refreshTokenRecord.clientId,
-			db,
-			resource: resource ?? undefined,
-		}))
-			? refreshTokenRecord.scopes
-			: undefined;
-	const normalizedRequest = await normalizeTokenRequest({
-		request: c.req.raw.clone(),
-		grantedScopes: refreshScopes,
-	});
-	const refreshReplayKey = refreshScopes
-		? buildOAuthRefreshReplayKey(
-				await hashOAuthToken(
-					`${resource ?? ""}\n${normalizedRequest.headers.get("authorization") ?? ""}\n${await normalizedRequest.clone().text()}`,
-				),
-			)
-		: null;
-	if (refreshReplayKey) {
-		const replay = await claimOAuthRefreshReplay(refreshReplayKey);
+	// 1. Setup
+	const tokenRequest = await setupOAuthTokenRequest({ db, request: c.req.raw });
+
+	// 2. Single-flight guard: refresh tokens are single-use and rotated, so
+	// concurrent replays of one token must share the winner's response.
+	if (tokenRequest.refreshReplayKey) {
+		const replay = await claimOAuthRefreshReplay(tokenRequest.refreshReplayKey);
 		if (!replay) {
-			return jsonTokenResponse({
+			return jsonOAuthTokenResponse({
 				body: {
 					error: "temporarily_unavailable",
 					error_description: "Refresh request coordination unavailable",
@@ -222,103 +48,64 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			});
 		}
 		if (replay.body) {
-			return jsonTokenResponse({
-				body: replay.body,
-				status: 200,
-			});
+			return jsonOAuthTokenResponse({ body: replay.body, status: 200 });
 		}
 	}
 
-	const response = await auth.handler(normalizedRequest);
+	// 3. better-auth mints the token
+	const response = await auth.handler(tokenRequest.normalizedRequest);
 	if (!response.ok) return response;
 
-	let body: Record<string, unknown>;
-	try {
-		body = (await response.clone().json()) as Record<string, unknown>;
-	} catch {
-		return response;
-	}
+	const body = await parseOAuthTokenResponseBody(response);
+	if (!body) return response;
 
-	const tokenPayload = getTokenPayload(body);
+	const tokenPayload = getOAuthTokenPayload(body);
 	const accessToken = getOAuthStringField(tokenPayload.access_token);
 	if (!accessToken) return response;
 
-	const parsedRequestedScopes = scopesFromOAuthScopeString(tokenPayload.scope);
-	const requestedScopes = parsedRequestedScopes
-		? getOAuthResourceScopes(parsedRequestedScopes)
+	const requestedScopes = scopesFromOAuthScopeString(tokenPayload.scope);
+	const requestedResourceScopes = requestedScopes
+		? getOAuthResourceScopes(requestedScopes)
 		: null;
-	let apiKeyResult: Awaited<ReturnType<typeof getExternalOAuthApiKeyForToken>>;
+
 	try {
+		// 4. Bind the minted token to its consent and to the scopes that consent still backs
 		const tokenRecord = await getOAuthAccessTokenRecord({
 			db,
 			accessToken,
-			resource,
-			requestedScopes,
+			resource: tokenRequest.resource,
+			requestedScopes: requestedResourceScopes,
 		});
-		const oauthConsentId =
-			tokenRecord.oauthConsentId ??
-			refreshTokenRecord?.oauthConsentId ??
-			(await getUniqueOAuthConsentId({
-				clientId: tokenRecord.clientId,
-				referenceId: tokenRecord.referenceId,
-				userId: tokenRecord.userId,
-			}));
-		tokenRecord.oauthConsentId = oauthConsentId;
+		tokenRecord.oauthConsentId = await resolveOAuthTokenConsentId({
+			db,
+			refreshTokenRecord: tokenRequest.refreshTokenRecord,
+			tokenRecord,
+		});
+
 		const isMcpClient = await isMcpOAuthClient({
 			clientId: tokenRecord.clientId,
 			db,
-			resource: resource ?? undefined,
+			resource: tokenRequest.resource ?? undefined,
 		});
-		const isScopeLessChatToken =
-			tokenRecord.scopes.length === 0 &&
-			isMcpClient &&
-			(await allowsScopeLessOAuthToken({ oauthConsentId }));
-		if (tokenRecord.scopes.length === 0 && !isScopeLessChatToken) {
-			throw new RecaseError({
-				message: "OAuth token has no scopes",
-				code: ErrCode.InvalidRequest,
-				statusCode: 401,
-			});
-		}
-		const issuedScopes = isScopeLessChatToken
-			? []
-			: tokenRecord.clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID
-				? (parsedRequestedScopes ?? tokenRecord.scopes)
-				: await getOAuthConsentScopeGrant({
-						db,
-						organizationId: tokenRecord.referenceId,
-						requestedScopes: parsedRequestedScopes ?? tokenRecord.scopes,
-						userId: tokenRecord.userId,
-					});
-		tokenRecord.scopes = issuedScopes;
-		if (tokenRecord.id) {
-			await oauthAccessTokenRepo.updateScopes({
-				db,
-				id: tokenRecord.id,
-				scopes: tokenRecord.scopes,
-			});
-			if (oauthConsentId) {
-				await oauthAccessTokenRepo.updateConsent({
-					db,
-					id: tokenRecord.id,
-					oauthConsentId,
-				});
-			}
-		}
-		if (tokenRecord.refreshId) {
-			await oauthRefreshTokenRepo.updateScopes({
-				db,
-				id: tokenRecord.refreshId,
-				scopes: issuedScopes,
-			});
-			if (oauthConsentId) {
-				await oauthRefreshTokenRepo.updateConsent({
-					db,
-					id: tokenRecord.refreshId,
-					oauthConsentId,
-				});
-			}
-		}
+		tokenRecord.scopes = await resolveIssuedOAuthScopes({
+			db,
+			isMcpClient,
+			requestedScopes,
+			tokenRecord,
+		});
+
+		await persistOAuthTokenGrant({
+			accessTokenId: tokenRecord.id,
+			db,
+			oauthConsentId: tokenRecord.oauthConsentId,
+			refreshTokenId: tokenRecord.refreshId,
+			resource: resolveOAuthTokenResource({
+				refreshTokenRecord: tokenRequest.refreshTokenRecord,
+				requestResource: tokenRequest.resource,
+			}),
+			scopes: tokenRecord.scopes,
+		});
+
 		if (isMcpClient && !tokenRecord.oauthConsentId) {
 			throw new RecaseError({
 				message: "OAuth token consent is ambiguous",
@@ -326,35 +113,51 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				statusCode: 401,
 			});
 		}
+
+		// 5. MCP and reserved clients keep the opaque OAuth token
 		if (
 			isMcpClient ||
 			returnsOAuthAccessTokenForClientId({ clientId: tokenRecord.clientId })
 		) {
-			const responseBody = rewriteTokenResponseBody({
-				token: prefixOAuthToken({ token: accessToken }),
+			const responseBody = rewriteOAuthTokenResponseBody({
 				body,
 				scopes: tokenRecord.scopes,
+				token: prefixOAuthToken({ token: accessToken }),
 			});
-			if (refreshReplayKey) {
+			if (tokenRequest.refreshReplayKey) {
 				await storeOAuthRefreshReplay({
 					body: responseBody,
-					key: refreshReplayKey,
+					key: tokenRequest.refreshReplayKey,
 				});
 			}
-			return jsonTokenResponse({
+
+			return jsonOAuthTokenResponse({
 				body: responseBody,
 				response,
 				status: response.status,
 			});
 		}
-		apiKeyResult = await getExternalOAuthApiKeyForToken({
+
+		// 6. Everyone else exchanges the token for a scoped api key
+		const apiKeyResult = await getExternalOAuthApiKeyForToken({
 			db,
 			tokenRecord,
-			requestedScopes,
+			requestedScopes: requestedResourceScopes,
+		});
+		if (!apiKeyResult) return response;
+
+		return jsonOAuthTokenResponse({
+			body: rewriteOAuthTokenResponseBody({
+				body,
+				scopes: apiKeyResult.scopes,
+				token: apiKeyResult.apiKey,
+			}),
+			response,
+			status: response.status,
 		});
 	} catch (error) {
 		if (error instanceof RecaseError) {
-			return jsonTokenResponse({
+			return jsonOAuthTokenResponse({
 				body: {
 					error: "invalid_grant",
 					error_description: error.message,
@@ -364,15 +167,4 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		}
 		throw error;
 	}
-	if (!apiKeyResult) return response;
-
-	return jsonTokenResponse({
-		body: rewriteTokenResponseBody({
-			token: apiKeyResult.apiKey,
-			body,
-			scopes: apiKeyResult.scopes,
-		}),
-		response,
-		status: response.status,
-	});
 };
