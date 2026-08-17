@@ -6,6 +6,7 @@ export const DEFAULT_EVAL_CHAT_MODEL = "anthropic/claude-sonnet-4-6";
 // need a frontier model.
 export const DEFAULT_CHAT_ENV_MODEL = "anthropic/claude-haiku-4-5";
 export const DEFAULT_CHAT_ORG_MODEL = "anthropic/claude-sonnet-4-6";
+export const DEFAULT_SLACK_ROUTER_MODEL = "claude-haiku-4-5";
 
 export const leafChatAgentDefaults = {
 	maxSteps: 8,

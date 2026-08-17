@@ -75,7 +75,9 @@ const runAndReply = async ({
 	target,
 	text,
 	threadId,
-}: DispatchSlackAgentMessageInput & { runKey: string }) => {
+}: DispatchSlackAgentMessageInput & {
+	runKey: string;
+}): Promise<"close" | "keep"> => {
 	let logger = rootLogger;
 	let run: ActiveRun | undefined;
 	const ticker = createStatusTicker(target);
@@ -97,7 +99,7 @@ const runAndReply = async ({
 			logger.warn("Slack installation not found", {
 				event: "leaf.slack_installation_missing",
 			});
-			return;
+			return "close";
 		}
 
 		const session = createLeafSessionContext({
@@ -125,7 +127,7 @@ const runAndReply = async ({
 				event: "leaf.slack_message_skipped",
 				data: { reason: "empty" },
 			});
-			return;
+			return "close";
 		}
 
 		run = registerRun({
@@ -176,7 +178,7 @@ const runAndReply = async ({
 				event: "leaf.slack_run_stopped",
 				data: { stop_reason: output.reason },
 			});
-			return;
+			return "close";
 		}
 
 		const outputInstallation =
@@ -186,7 +188,7 @@ const runAndReply = async ({
 		if (output.kind === "blocked") {
 			ticker.stop();
 			await target.post({ markdown: output.text });
-			return;
+			return "close";
 		}
 
 		if (hasQueuedThreadMessage(runKey)) {
@@ -217,7 +219,7 @@ const runAndReply = async ({
 				event: "leaf.slack_reply_suppressed",
 				data: { had_suspension: output.kind === "approval" },
 			});
-			return;
+			return "keep";
 		}
 
 		await presentSlackAgentTurn({
@@ -231,6 +233,7 @@ const runAndReply = async ({
 			threadId,
 			turn: output,
 		});
+		return "keep";
 	} catch (error) {
 		logger.error("[chat] Message failed", error, {
 			event: "leaf.slack_message_failed",
@@ -240,6 +243,7 @@ const runAndReply = async ({
 		await target.post({
 			markdown: `:warning: ${errorNotice(error)}`,
 		});
+		return "close";
 	} finally {
 		ticker.stop();
 		await reactSafely({ action: "remove", emoji: "eyes" });
@@ -256,11 +260,13 @@ export const dispatchSlackAgentMessage = async (
 		threadId: input.threadId,
 		workspaceId: getSlackWorkspaceId(input.raw),
 	});
-	await dispatchThreadMessage({
-		hasAttachments: Boolean(input.attachments?.length),
-		providerUserId: input.providerUserId,
-		runKey,
-		runNewMessage: () => runAndReply({ ...input, runKey }),
-		text: input.text,
-	});
+	return (
+		(await dispatchThreadMessage({
+			hasAttachments: Boolean(input.attachments?.length),
+			providerUserId: input.providerUserId,
+			runKey,
+			runNewMessage: () => runAndReply({ ...input, runKey }),
+			text: input.text,
+		})) ?? "keep"
+	);
 };

@@ -16,7 +16,10 @@ import {
 	normalizeSlackEventsBody,
 } from "./providers/slack/events.js";
 import { handleSlackCatalogDecision } from "./providers/slack/handlers/handleSlackCatalogDecision.js";
-import { handleSlackMessage } from "./providers/slack/handlers/handleSlackMessage.js";
+import {
+	handleSlackMessage,
+	handleSubscribedSlackMessage,
+} from "./providers/slack/handlers/handleSlackMessage.js";
 import { handleSlackQuestionAnswer } from "./providers/slack/handlers/handleSlackQuestionAnswer.js";
 import { handleSlackSlashCommand } from "./providers/slack/handlers/handleSlackSlashCommand.js";
 import { findSlackInstallationForWorkspace } from "./providers/slack/installations.js";
@@ -98,7 +101,7 @@ bot.onNewMention(async (thread, message) => {
 	await thread.subscribe();
 	await handleSlackMessage(thread, message);
 });
-bot.onSubscribedMessage(handleSlackMessage);
+bot.onSubscribedMessage(handleSubscribedSlackMessage);
 bot.onSlashCommand(handleSlackSlashCommand);
 bot.onAction(
 	["approve_billing_action", "cancel_billing_action"],
