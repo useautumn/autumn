@@ -848,3 +848,133 @@ applies the `update_plan` ops. Combined drafts must be runnable.
 | combined child + parent draft applies both ops | ✓ `run/run-license-drafts.test.ts` |
 | assignment CPs (`customer_license_link_id` set) are not child matches | ✓ `run/run-license-drafts.test.ts` |
 
+## 21. Variants — `variants/`
+
+Same one-home split as licenses: `variants[]` declare, `propagate.variants` follow.
+`base_internal_product_id` points at the latest base row.
+
+### create/
+
+| Case | Status |
+|---|---|
+| Existing base + `variants[{ id, name }]` → variant v1, pointer set, items match base, `is_default: false` | ✓ `create/create-variant.test.ts` |
+| Same call: create base + variant → both exist, pointer set | ✓ `create/create-variant.test.ts` |
+| `variants[]` customize on create → clone + overlay | ✓ `create/create-variant.test.ts` |
+| Variant of a variant → 400 `nested_variant_not_allowed` | ✓ `create/create-variant-errors.test.ts` |
+| Id already exists (not this base's variant) → 400 `product_id_already_exists` | ✓ `create/create-variant-errors.test.ts` |
+| Missing `name` on a new id → 400 | ✓ `create/create-variant-errors.test.ts` |
+| `is_default: true` on a variant → 400 `variant_cannot_be_default` | ✓ `create/create-variant-errors.test.ts` |
+| `variant_plan_id === plan_id` → 400 | `create/create-variant-errors.test.ts` |
+| Duplicate `variant_plan_id` in `variants[]` → 400 | `create/create-variant-errors.test.ts` |
+
+### follow/ — pin / follow / declare / conflict (Unit 2)
+
+| Case | Status |
+|---|---|
+| Team 100, Team-EU 200; add Dashboard + propagate → 200 + Dashboard | ✓ `follow/follow.test.ts` |
+| Same, omit from propagate → still 200, no Dashboard | ✓ `follow/follow.test.ts` |
+| Follow only, overlapping slot 100→150 vs 200 → 150 | ✓ `follow/follow.test.ts` |
+| Declare customize 300, no propagate → 300, no new base items | ✓ `follow/declare.test.ts` |
+| Follow + declare 300 (same slot) → new base items + 300; no 400 | ✓ `follow/declare.test.ts` |
+| Follow + declare different booleans → both apply | ✓ `follow/declare.test.ts` |
+| Direct `plans[]` on Team-EU + base follows it → direct wins | ✓ `follow/direct-wins.test.ts` |
+| Skipped Dashboard add is not replayed on a later follow | `follow/fanout-edges.test.ts` |
+| Concat: follow EU, pin UK | `follow/fanout-edges.test.ts` |
+| OOTO-IWTN: stripped Words re-added at 10 | `follow/fanout-edges.test.ts` |
+
+### settings/ — always-on details + billing_controls (Unit 3)
+
+Independent of `propagate.variants`. Latest version only. Name never copies.
+
+| Case | Status |
+|---|---|
+| billing_controls fan out with no propagate; items stay 200 | ✓ `settings/billing-controls.test.ts` |
+| sparse merge then clear spend_limits; other lanes stay | ✓ `settings/billing-controls.test.ts` |
+| two variants, neither listed → both get billing_controls | ✓ `settings/billing-controls.test.ts` |
+| variant v1 frozen, latest v2 gets billing_controls | ✓ `settings/billing-controls.test.ts` |
+| description / group / add_on / config / metadata fan out; name stays | ✓ `settings/details.test.ts` |
+| base rename only → variant name unchanged, no variant write | ✓ `settings/details.test.ts` |
+| follow items + billing_controls in one call | ✓ `settings/details.test.ts` |
+
+### pointer/ — base mint re-points latest (Unit 4)
+
+| Case | Status |
+|---|---|
+| Base `new_version`, variant pinned → latest pointer moves; items stay 200 | ✓ `pointer/pointer-on-base-mint.test.ts` |
+| Base `new_version` + propagate → pointer + Dashboard | ✓ `pointer/pointer-on-base-mint.test.ts` |
+| Historical variant v1 stays on the old base row | ✓ `pointer/pointer-on-base-mint.test.ts` |
+
+### versioning/ — variants inherit parent `plans[]` versioning (Unit 5)
+
+No `variants[].versioning`. Width follows the parent row. `propagate.variants[].versioning` is ignored.
+
+| Case | Status |
+|---|---|
+| Parent `existing` (default), customers on v1 → latest only | ✓ `versioning/propagate-versioning.test.ts` |
+| Parent `all_versions` → v1 + latest get the DIFF | ✓ `versioning/propagate-versioning.test.ts` |
+| Parent `new_version` + customers on latest → mint max+1 | ✓ `versioning/propagate-versioning.test.ts` |
+| Parent `new_version` + no customers → edit latest in place | ✓ `versioning/propagate-versioning.test.ts` |
+| Parent `existing` ignores `propagate.variants[].versioning` | ✓ `versioning/propagate-versioning.test.ts` |
+| strategy + explicit version / missing plan / draft+new_version → 400 | ✓ `versioning/propagate-versioning-errors.test.ts` |
+| Base `new_version`: customered EU mints, UK in-place | `versioning/mixed-customers.test.ts` |
+| Preview nest after mint is variant version 2 | `versioning/mixed-customers.test.ts` |
+
+### preview/ — `variants[]` nest (Unit 6)
+
+| Case | Status |
+|---|---|
+| Two variants, one listed → both rows; only listed has `plan_change` | ✓ `preview/variants-preview.test.ts` |
+| Propagated overlapping slot → `value_divergence`; not 400 | ✓ `preview/variants-preview.test.ts` |
+| Parent `versioning.options` unions all child variants (none listed) | ✓ `preview/parent-versioning-options-union.test.ts` |
+| Same options when `variants[]` is later filled (must not shrink) | ✓ `preview/parent-versioning-options-union.test.ts` |
+| Propagated + declared → `variant_action: explicit`, conflicts omitted | ✓ `preview/variants-preview.test.ts` |
+| preview_update writes nothing | ✓ `preview/variants-preview.test.ts` |
+| Pinned base v1 + customered variant → no `new_version` | `preview/parent-versioning-options-pinned.test.ts` |
+| Base `has_customers` stays false when only the variant has customers | `preview/parent-versioning-options-pinned.test.ts` |
+| Follow add Dashboard nests created Dashboard, not messages | `preview/license-changes.test.ts` |
+| Follow 100→150 nests Seat messages 200→150 | `preview/license-changes.test.ts` |
+| Pin license edit has no `license_changes` | `preview/license-changes.test.ts` |
+| License-only 100→150 vs EU 200 lists `value_divergence` + `license_plan_id` (follow + pin) | ✓ `preview/conflicts/license-override.test.ts` |
+| Follow + declare 300 swallows the license conflict | ✓ `preview/conflicts/license-override.test.ts` |
+| License price $20→$30 vs $50 is `base_price_divergence` + `license_plan_id` | ✓ `preview/conflicts/license-override.test.ts` |
+| Plan-only vs license-only isolation (Seat vs plan items) | ✓ `preview/conflicts/license-vs-plan.test.ts` |
+| Plan + license both diverge → two conflict objects, only the Seat one has `license_plan_id` | ✓ `preview/conflicts/license-vs-plan.test.ts` |
+
+### licenses/ — child→variant parents + base license DIFF (Units 7–8)
+
+| Case | Status |
+|---|---|
+| Seat 10→200, both parents follow | ✓ `licenses/child-to-variant-parents.test.ts` |
+| Seat 10→200, only Team-EU listed → Team frozen | ✓ `licenses/child-to-variant-parents.test.ts` |
+| Add boolean on Team license + propagate → Team-EU keeps 200, gains boolean | ✓ `licenses/base-license-to-variant.test.ts` |
+| Team declares a new license + propagate → Team-EU gains that link | ✓ `licenses/base-license-to-variant.test.ts` |
+| Team license change, Team-EU omitted → unchanged | ✓ `licenses/base-license-to-variant.test.ts` |
+| Same-slot: Team messages 100→150, Team-EU 200 → 150 | ✓ `licenses/base-license-to-variant.test.ts` |
+| Follow add Dashboard keeps EU 200 — not Team's 100 | `licenses/base-license-rebase.test.ts` |
+| Follow price $20→$30 overwrites EU $50 | `licenses/base-license-rebase.test.ts` |
+| Team `licenses: []` + follow does not unlink EU Seat | `licenses/base-license-rebase.test.ts` |
+| Items-only follow leaves Seat overlay at 200 | `licenses/base-license-compose.test.ts` |
+| Follow + declare `upsert_licenses` 300 wins messages, Dashboard lands | `licenses/base-license-compose.test.ts` |
+| Declare-only 300 does not take Dashboard | `licenses/base-license-compose.test.ts` |
+| Unknown / self / Seat→EU via `propagate.variants` → 400 | `errors/propagate-targets.test.ts` |
+
+### migrations/variants/ — drafts (Unit 9)
+
+`new_version` + `draft` is 400. Conflicts never block a draft — the op is the
+applied customize. Same customize `$or`s; different customize stays split.
+
+| Case | Status |
+|---|---|
+| Propagated items + customers on both → one draft (collapsed op) | ✓ `migrations/variants/variant-drafts.test.ts` |
+| Pin variant → no variant op | ✓ `migrations/variants/variant-drafts.test.ts` |
+| `variants[]` declare inherits parent `migration.draft` | ✓ `migrations/variants/variant-drafts.test.ts` |
+| License DIFF + Team-EU customers → `upsert_licenses` | ✓ `migrations/variants/variant-drafts.test.ts` |
+| Follow EU / pin UK → UK omitted | `migrations/variants/variant-drafts.test.ts` |
+| Parent `existing`: customered historical variant is omitted | `migrations/variants/versioning-drafts.test.ts` |
+| Parent `all_versions`: customers on v1 only → pin; v1+v2 → collapse | `migrations/variants/versioning-drafts.test.ts` |
+| Parent `new_version` + draft → 400 | `migrations/variants/versioning-drafts.test.ts` |
+| `propagate.variants[].versioning: new_version` + draft → 400 | ✓ `versioning/propagate-versioning-errors.test.ts` |
+| Follow 100→150 vs 200 lists `value_divergence`; draft is 150 | `migrations/variants/conflict-drafts.test.ts` |
+| Follow + declare 300 → two ops (150 vs 300) | `migrations/variants/conflict-drafts.test.ts` |
+| License follow 100→150 vs 200 stamps `license_plan_id`; draft is 150 | `migrations/variants/conflict-drafts.test.ts` |
+
