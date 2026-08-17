@@ -1,6 +1,11 @@
 import crypto from "node:crypto";
 import { prefixOAuthToken } from "@autumn/auth";
 import {
+	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
+	SLACK_MCP_OAUTH_CLIENT_ID,
+	WEB_MCP_OAUTH_CLIENT_ID,
+} from "@autumn/auth/oauth";
+import {
 	AppEnv,
 	type ChatInstallation,
 	chatOAuthCredentials,
@@ -22,11 +27,6 @@ import {
 	getOAuthConsentMetadataKindFilter,
 	type OAuthConsentMetadata,
 } from "./oauthConsentMetadata.js";
-import {
-	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
-	AUTUMN_SLACK_OAUTH_CLIENT_ID,
-	AUTUMN_WEB_OAUTH_CLIENT_ID,
-} from "./upsertInstallationOAuthCredential.js";
 
 type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -62,14 +62,14 @@ const getProviderOAuthConfig = ({
 	}
 	if (installation.provider === "web") {
 		return {
-			clientId: AUTUMN_WEB_OAUTH_CLIENT_ID,
+			clientId: WEB_MCP_OAUTH_CLIENT_ID,
 			name: "Dashboard",
 			mcpClientType: "web",
 			redirectUri: WEB_OAUTH_REDIRECT_URI,
 		};
 	}
 	return {
-		clientId: AUTUMN_SLACK_OAUTH_CLIENT_ID,
+		clientId: SLACK_MCP_OAUTH_CLIENT_ID,
 		name: "Slack",
 		mcpClientType: "slack",
 		redirectUri: SLACK_OAUTH_REDIRECT_URI,

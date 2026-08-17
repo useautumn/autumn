@@ -3,7 +3,6 @@ import {
 	isReservedOAuthClientId,
 	isReservedOAuthClientName,
 } from "@autumn/auth/oauth";
-import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { MCP_CLIENT_KIND } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import { isSafeOAuthRedirectUri } from "@autumn/shared/utils/auth/oauthRedirectUris";
 import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
@@ -15,8 +14,6 @@ import {
 	oauthClientRepo,
 } from "../repos/oauthClientRepo.js";
 
-const REGISTER_CACHE_TTL_MS = 5 * 60 * 1000;
-const REGISTER_CACHE_MAX_ENTRIES = 1000;
 const DEFAULT_OAUTH_CLIENT_NAME = "MCP client";
 
 // Unknown keys are stripped: better-auth otherwise folds them into metadata.
@@ -42,13 +39,8 @@ export type OAuthClientRegistration = {
 };
 
 type RegisterOAuthClientResult =
-	| { body: OAuthClientRegistration; status: 200 | 201 }
+	| { body: OAuthClientRegistration; status: 201 }
 	| { error: string; status: 400 };
-
-const registerCache = new Map<
-	string,
-	{ expiresAt: number; body: OAuthClientRegistration }
->();
 
 export const getRequestedScopesForOAuthClient = ({
 	scope,
@@ -59,48 +51,6 @@ export const getRequestedScopesForOAuthClient = ({
 	return requested.length > 0
 		? getDefaultOAuthScopes(requested)
 		: getDefaultOAuthScopes();
-};
-
-/** Idempotency window key: identical registration requests replay one response. */
-const getRegistrationCacheKey = ({
-	clientName,
-	redirectUris,
-	scopes,
-}: {
-	clientName: string;
-	redirectUris: string[];
-	scopes: string[];
-}) =>
-	hashOAuthToken(
-		JSON.stringify([clientName, [...redirectUris].sort(), [...scopes].sort()]),
-	);
-
-const getCachedRegistration = (cacheKey: string) => {
-	const cached = registerCache.get(cacheKey);
-	if (!cached) return null;
-	if (cached.expiresAt < Date.now()) {
-		registerCache.delete(cacheKey);
-		return null;
-	}
-
-	return cached.body;
-};
-
-const setCachedRegistration = (
-	cacheKey: string,
-	body: OAuthClientRegistration,
-) => {
-	if (registerCache.size >= REGISTER_CACHE_MAX_ENTRIES) {
-		const now = Date.now();
-		for (const [key, entry] of registerCache) {
-			if (entry.expiresAt < now) registerCache.delete(key);
-		}
-	}
-
-	registerCache.set(cacheKey, {
-		expiresAt: Date.now() + REGISTER_CACHE_TTL_MS,
-		body,
-	});
 };
 
 const toRegistration = (
@@ -186,14 +136,6 @@ export const registerOAuthClient = async ({
 	}
 
 	const scopes = getRequestedScopesForOAuthClient({ scope: parsed.data.scope });
-	const cacheKey = await getRegistrationCacheKey({
-		clientName,
-		redirectUris,
-		scopes,
-	});
-	const cached = getCachedRegistration(cacheKey);
-	if (cached) return { body: cached, status: 200 };
-
 	const clientId = generateId("oauth_client");
 	if (isReservedOAuthClientId(clientId)) {
 		throw new Error("Dynamic registration minted a reserved OAuth client id");
@@ -206,7 +148,5 @@ export const registerOAuthClient = async ({
 		redirectUris,
 		scopes,
 	});
-	const registration = toRegistration(client);
-	setCachedRegistration(cacheKey, registration);
-	return { body: registration, status: 201 };
+	return { body: toRegistration(client), status: 201 };
 };

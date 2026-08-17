@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
 import { OPENID_SCOPES, Scopes } from "@autumn/shared/scopeDefinitions";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -36,13 +36,8 @@ const register = async ({ body, db }: { body: unknown; db: DrizzleCli }) => {
 	return result;
 };
 
-// The idempotency window is process-wide, so vary the name per test.
 let registrationCounter = 0;
 const uniqueName = () => `Test Client ${Date.now()}-${++registrationCounter}`;
-
-beforeEach(() => {
-	registrationCounter += 1;
-});
 
 describe("registerOAuthClient", () => {
 	test("mints a fresh client id on every registration", async () => {
@@ -130,7 +125,7 @@ describe("registerOAuthClient", () => {
 		expect(inserted).toHaveLength(0);
 	});
 
-	test("replays the identical response inside the idempotency window", async () => {
+	test("mints a distinct client for byte-identical repeat registrations", async () => {
 		const { db, inserted } = createFakeDb();
 		const body = {
 			client_name: uniqueName(),
@@ -139,15 +134,12 @@ describe("registerOAuthClient", () => {
 		};
 
 		const first = await register({ body, db });
-		const replay = await register({
-			body: { ...body, redirect_uris: [...body.redirect_uris].reverse() },
-			db,
-		});
+		const repeat = await register({ body, db });
 
 		expect(first.status).toBe(201);
-		expect(replay.status).toBe(200);
-		expect(replay.body).toEqual(first.body);
-		expect(inserted).toHaveLength(1);
+		expect(repeat.status).toBe(201);
+		expect(repeat.body.client_id).not.toBe(first.body.client_id);
+		expect(inserted).toHaveLength(2);
 	});
 
 	test("rejects unsafe and missing redirect uris", async () => {
