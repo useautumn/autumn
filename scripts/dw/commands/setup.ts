@@ -1,9 +1,9 @@
+import { isCloudAgent } from "@autumn/env";
 import { NEON_PROJECT_ID, PROJECT_ROOT } from "../constants.ts";
+import { ensurePublicAccess } from "../helpers/cloudflare.ts";
 import { isProvisioned } from "../helpers/entry.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
-import { isHeadless } from "../helpers/headless.ts";
 import { ensureLocalInfra } from "../helpers/localInfra.ts";
-import { ensurePublicAccess } from "../helpers/cloudflare.ts";
 import { withNeonContext } from "../helpers/neonContext.ts";
 import {
 	parseRegionArg,
@@ -49,12 +49,14 @@ function ensureAiSubmoduleSynced(): void {
 
 	log("syncing ai skills");
 	// Full sync everywhere: syncMcps now drops the cloud-root servers instead of
-	// aborting, so headless boxes get .mcp.json too. `sync devin` skipped it and
+	// aborting, so Cloud agents get .mcp.json too. `sync devin` skipped it and
 	// left cloud workspaces with skills but no MCP servers.
 	// Run from the autumn root so findRepoRoot sees workspaces and writes
 	// into .cursor/ at the repo root — not into ai/.cursor (the TTY-less
 	// fallback when cwd is ai/).
-	const syncCode = shInherit("bun", ["ai/src/cli.ts", "sync"], {
+	const syncArgs = ["ai/src/cli.ts", "sync"];
+	if (isCloudAgent()) syncArgs.push("--copy");
+	const syncCode = shInherit("bun", syncArgs, {
 		cwd: PROJECT_ROOT,
 	});
 	if (syncCode !== 0) {
@@ -100,7 +102,7 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 		);
 		registry[cwd] = entry;
 		saveRegistry(registry);
-	} else if (isHeadless()) {
+	} else if (isCloudAgent()) {
 		ensureLocalInfra();
 		entry = await ensurePublicAccess(entry);
 		registry[cwd] = entry;

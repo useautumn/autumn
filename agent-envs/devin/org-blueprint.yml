@@ -84,5 +84,5 @@ initialize:
     run: echo 'export INFISICAL_API_URL=https://app.infisical.com/api' >> $ENVRC
 
   # No portless proxy, no browser, no tmux in a Devin VM.
-  - name: Headless dev-worktree mode
-    run: echo 'export DW_HEADLESS=1' >> $ENVRC
+  - name: Cloud agent / Devin worktree mode
+    run: echo 'export CLOUD_AGENT=1' >> $ENVRC && echo 'export DW_HEADLESS=1' >> $ENVRC

@@ -57,6 +57,7 @@ if [ -f ai/package.json ]; then
 	(cd ai && "$BUN" install)
 	# Must run from the autumn root: `cd ai && bun sync` on a headless box
 	# writes into ai/.cursor because findRepoRoot has no TTY to pick the parent.
+	export CLOUD_AGENT=1
 	export DW_HEADLESS=1
 	"$BUN" ai/src/cli.ts sync --copy
 	# Runtime Secrets are not available at build/install time — placeholder only.

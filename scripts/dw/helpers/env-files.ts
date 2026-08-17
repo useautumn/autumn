@@ -7,6 +7,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { isCloudAgent } from "@autumn/env";
 import {
 	ENV_LOCAL_DISABLED_SUFFIX,
 	ENV_LOCAL_TARGETS,
@@ -15,7 +16,6 @@ import {
 import type { RegistryEntry } from "../types.ts";
 import { emulateGoogleUrl } from "./emulate.ts";
 import { isProvisioned } from "./entry.ts";
-import { isHeadless } from "./headless.ts";
 import {
 	aliasesFor,
 	checkoutPortFor,
@@ -117,7 +117,7 @@ export function urlsForEntry(entry: RegistryEntry): {
 	const serverPort = serverPortFor(entry.worktreeNum);
 	const loopbackApi = `http://localhost:${serverPort}`;
 	const loopbackCheckout = `http://localhost:${checkoutPortFor(entry.worktreeNum)}`;
-	if (isProvisioned(entry) && !isHeadless()) {
+	if (isProvisioned(entry) && !isCloudAgent()) {
 		const aliases = aliasesFor(entry.worktreeNum);
 		const publicUrls = entryPublicServiceUrls(entry);
 		return {
@@ -168,13 +168,13 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		AUTUMN_PUBLIC_API_URL: publicApiUrl,
 		CLIENT_URL: viteUrl,
 		EMULATE_GOOGLE_URL: emulateGoogleUrl({
-			origin: isHeadless() ? publicUrls?.emulate : undefined,
+			origin: isCloudAgent() ? publicUrls?.emulate : undefined,
 		}),
 		AUTUMN_TEST_BASE_URL: `http://localhost:${serverPort}`,
 		AUTUMN_TEST_VITE_URL: viteUrl,
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 	};
-	if (isHeadless() && publicUrls) {
+	if (isCloudAgent() && publicUrls) {
 		Object.assign(
 			serverEnv,
 			publicDevEnv({
@@ -184,7 +184,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		);
 		serverEnv.AUTUMN_TEST_BASE_URL = `http://localhost:${serverPort}`;
 		serverEnv.AUTUMN_TEST_VITE_URL = viteUrl;
-	} else if (isProvisioned(entry) && !isHeadless()) {
+	} else if (isProvisioned(entry) && !isCloudAgent()) {
 		Object.assign(
 			serverEnv,
 			laptopDevEnv({

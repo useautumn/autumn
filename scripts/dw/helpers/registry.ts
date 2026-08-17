@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { isCloudAgent } from "@autumn/env";
 import { log, fatal } from "./shell.ts";
 import {
 	getCanonicalWorktree,
@@ -8,7 +9,6 @@ import {
 	getDefaultBranch,
 	getWorktreeList,
 } from "./git.ts";
-import { isHeadless } from "./headless.ts";
 import { deleteBranch } from "./neon.ts";
 import {
 	REGISTRY_PATH,
@@ -71,7 +71,7 @@ export function wantsCanonicalProvision(
 	_gitBranch?: string,
 	_defaultBranch?: string,
 ): boolean {
-	if (isHeadless()) {
+	if (isCloudAgent()) {
 		return false;
 	}
 	return cwd === canonical;

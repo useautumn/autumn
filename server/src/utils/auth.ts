@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { getAutumnEnv } from "@autumn/env";
+import { getAutumnEnv, isCloudAgent } from "@autumn/env";
 import {
 	ALL_SCOPES,
 	ac,
@@ -82,11 +82,9 @@ const emulateGoogleUrl =
 const isProductionAuth = process.env.NODE_ENV === "production";
 export const authBaseUrl = getAutumnEnv().AUTUMN_API_URL;
 const publicAuthBaseUrl = getAutumnEnv().AUTUMN_PUBLIC_API_URL;
-const isHeadlessAuth =
-	process.env.DW_HEADLESS === "1" || process.env.DW_HEADLESS === "true";
 const browserAuthBaseUrl = isProductionAuth
 	? authBaseUrl
-	: isHeadlessAuth
+	: isCloudAgent()
 		? publicAuthBaseUrl
 		: authBaseUrl;
 const isHttpsBaseUrl = browserAuthBaseUrl?.startsWith("https://");

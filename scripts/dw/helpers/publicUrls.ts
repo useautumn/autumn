@@ -40,7 +40,7 @@ export function loopbackServiceUrls({
 	};
 }
 
-/** Cloud / headless: browser-facing URLs are the public service hosts. */
+/** Cloud agent: browser-facing URLs are the public service hosts. */
 export function publicDevEnv({
 	urls,
 	worktreeNum,
@@ -62,6 +62,7 @@ export function publicDevEnv({
 		VITE_BACKEND_URL: urls.api,
 		VITE_CHECKOUT_URL: urls.checkout,
 		VITE_FRONTEND_URL: urls.vite,
+		CLOUD_AGENT: "1",
 	};
 }
 

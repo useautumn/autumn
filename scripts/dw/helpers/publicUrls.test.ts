@@ -34,6 +34,7 @@ describe("publicDevEnv", () => {
 			VITE_CHECKOUT_URL:
 				"https://autumn-wt45-aa11bb-checkout.autumnworktree.com",
 			VITE_FRONTEND_URL: "https://autumn-wt45-aa11bb.autumnworktree.com",
+			CLOUD_AGENT: "1",
 		});
 	});
 
@@ -89,5 +90,6 @@ describe("publicDevEnv", () => {
 		expect(env.EMULATE_GOOGLE_FETCH_URL).toBe("http://127.0.0.1:4000");
 		expect(env.CLIENT_URL).toBe("http://localhost:3000");
 		expect(env.VITE_BACKEND_URL).toBe("http://localhost:8080");
+		expect(env.CLOUD_AGENT).toBe("1");
 	});
 });

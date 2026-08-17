@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isCloudAgent } from "@autumn/env";
 import { resolveTriggerDevBranch } from "./triggerDevBranch.ts";
 
 function spawnTriggerDevBranchReaper({
@@ -293,9 +294,7 @@ async function startDev() {
 					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
 			);
 
-			const skipEve =
-				process.env.DW_HEADLESS === "1" ||
-				process.env.DW_HEADLESS === "true";
+			const skipEve = isCloudAgent();
 			if (!skipEve) {
 				names.push("eve");
 				colors.push("white");
@@ -305,7 +304,7 @@ async function startDev() {
 						: `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`,
 				);
 			} else {
-				console.error("DW_HEADLESS=1 — skipping eve\n");
+				console.error("CLOUD_AGENT=1 — skipping eve\n");
 			}
 			names.push("leaf");
 			colors.push("gray");
@@ -324,12 +323,10 @@ async function startDev() {
 					? "stripe"
 					: null;
 			const stripeKey = process.env.STRIPE_SANDBOX_SECRET_KEY?.trim();
-			const headless =
-				process.env.DW_HEADLESS === "1" ||
-				process.env.DW_HEADLESS === "true";
+			const cloudAgent = isCloudAgent();
 			if (stripeBin) {
 				// Sandbox key only — never the live key. Passed via STRIPE_API_KEY so
-				// headless boxes need no `stripe login`, and via env rather than argv
+				// Cloud agents need no `stripe login`, and via env rather than argv
 				// so it never shows up in `ps`.
 				const startListen = () => {
 					const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
@@ -354,9 +351,9 @@ async function startDev() {
 					);
 					if (auth.exitCode === 0) {
 						startListen();
-					} else if (headless) {
+					} else if (cloudAgent) {
 						console.error(
-							"DW_HEADLESS=1 — no STRIPE_SANDBOX_SECRET_KEY; skipping stripe listen. Add Infisical machine-identity Runtime Secrets so bun dw run can attach webhooks.\n",
+							"CLOUD_AGENT=1 — no STRIPE_SANDBOX_SECRET_KEY; skipping stripe listen. Add Infisical machine-identity Runtime Secrets so bun dw run can attach webhooks.\n",
 						);
 					} else {
 						const stderr = new TextDecoder().decode(auth.stderr);
@@ -370,9 +367,9 @@ async function startDev() {
 						process.exit(1);
 					}
 				}
-			} else if (headless) {
+			} else if (cloudAgent) {
 				console.error(
-					"DW_HEADLESS=1 — Stripe CLI not installed; skipping stripe listen.\n",
+					"CLOUD_AGENT=1 — Stripe CLI not installed; skipping stripe listen.\n",
 				);
 			}
 
@@ -387,7 +384,7 @@ async function startDev() {
 				...process.env,
 				TRIGGER_DEV_BRANCH: triggerDevBranch,
 				// Sandbox key only. `stripe listen` reads STRIPE_API_KEY, so no
-				// `stripe login` is needed on a headless box.
+				// `stripe login` is needed on a Cloud agent.
 				...(process.env.STRIPE_SANDBOX_SECRET_KEY
 					? { STRIPE_API_KEY: process.env.STRIPE_SANDBOX_SECRET_KEY }
 					: {}),

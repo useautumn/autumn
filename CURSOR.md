@@ -19,13 +19,13 @@ No `infisical login`. The stock `node_modules/.bin/infisical` is not replaced.
 `INFISICAL_PROJECT_ID` comes from `.infisical.json` `workspaceId`. Start does
 **not** start the app.
 
-`DW_HEADLESS=1` is set on start. That skips portless HTTPS aliases, the emulate
+`CLOUD_AGENT=1` is set on start. That skips portless HTTPS aliases, the emulate
 daemon, and Neon (even if Infisical has `NEON_WORKTREE_API_KEY`). Worktree #1
 uses the local Postgres/Redis/ElasticMQ from `agent-services.sh`.
 
 `infisical run` injects the shared `dev` vault (laptop Docker Redis `:6380`,
 Dragonfly Cloud, Neon, AWS SQS). `bun dw` / `bun dw run` re-pins localhost
-via `applyHeadlessDevEnv` (Postgres `:5432`, one Redis `:6379`, ElasticMQ
+via `applyCloudAgentDevEnv` (Postgres `:5432`, one Redis `:6379`, ElasticMQ
 `:9324`). There is no `isolation.env`. `server/.env` must not pin a random
 `ENCRYPTION_*` — that cannot decrypt vault/DB Dragonfly backups (BAD_DECRYPT).
 Do not pin dummy `AWS_ACCESS_KEY_ID=x` either — ElasticMQ is fine with
@@ -42,7 +42,7 @@ bun dw identify # URLs / ports
 ```
 
 Stack: server `:8080`, vite `:3000`, checkout `:3001`, workers, leaf `:3099`.
-`eve` is skipped under `DW_HEADLESS=1` (`npx eve` hits `EOVERRIDE` / drizzle catalog).
+`eve` is skipped under `CLOUD_AGENT=1` (`npx eve` hits `EOVERRIDE` / drizzle catalog).
 
 Non-blocking noise: `trigger` waits for a login; `leaf` may crash without
 `SLACK_*` / `FIRECRAWL_API_KEY`.
@@ -67,7 +67,7 @@ sync` **does** run on Cloud install — that is not enough by itself.
 
 ai-sync writes **symlinks** from `.cursor/skills/<name>` into
 `ai/config/skills/**`. Cloud agents read `~/.cursor/skills`, so
-`bun ai sync --copy` (or `DW_HEADLESS=1`) also copies real skill dirs there.
+`bun ai sync --copy` also copies real skill dirs there.
 After a boot you should have `/tdd` and `/autumn-tdd-test`. `tdd` supersedes
 `autumn-tdd-test`; both are installed during the transition.
 
@@ -150,7 +150,7 @@ Public tunnel tokens live in Infisical `dev`, not Cursor secrets:
 Create Token). `infisical run` uses it directly. Client id/secret are unused
 on Cloud. Do not overwrite `node_modules/.bin/infisical`.
 
-Localhost DB/Redis/SQS come from `bun dw` headless, not a Cloud overlay file.
+Localhost DB/Redis/SQS come from `bun dw` Cloud-agent mode, not a Cloud overlay file.
 The vault is **not** dumped to disk.
 
 ## Stripe webhooks
@@ -160,11 +160,11 @@ when the Stripe CLI is installed and `STRIPE_SANDBOX_SECRET_KEY` is present (fro
 Stripe's CLI opens an outbound tunnel — **no public URL / port-forward
 required** for webhooks. This is attached by `bun dw` / `bun dw run`.
 
-`STRIPE_WEBHOOK_SKIP_VERIFY=true` is set by `applyHeadlessDevEnv` because the
+`STRIPE_WEBHOOK_SKIP_VERIFY=true` is set by `applyCloudAgentDevEnv` because the
 CLI's `whsec_` is not the Infisical dashboard endpoint secret. Signature skip is
 localhost-only.
 
-If the CLI is present but the sandbox key is missing, `DW_HEADLESS=1` skips
+If the CLI is present but the sandbox key is missing, `CLOUD_AGENT=1` skips
 `stripe listen` instead of killing the whole stack.
 
 ## Opening the dashboard from your laptop

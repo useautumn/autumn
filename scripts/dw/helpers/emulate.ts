@@ -1,12 +1,12 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { isCloudAgent } from "@autumn/env";
 import {
 	EMULATE_PID_FILE,
 	PROJECT_ROOT,
 	START_EMULATE_SH,
 } from "../constants.ts";
-import { isHeadless } from "./headless.ts";
 import { EMULATE_PORT, portlessHttpsUrl } from "./ports.ts";
 import { log, sh } from "./shell.ts";
 
@@ -21,7 +21,7 @@ export function emulateGoogleUrl({
 	if (origin && /^https?:\/\//i.test(origin)) {
 		return origin.replace(/\/$/, "");
 	}
-	if (isHeadless()) {
+	if (isCloudAgent()) {
 		return `http://localhost:${EMULATE_PORT}`;
 	}
 	return portlessHttpsUrl("google.emulate.localhost");
@@ -77,7 +77,7 @@ export function ensureEmulateRunning({
 }: {
 	origin?: string;
 } = {}): void {
-	if (isHeadless()) {
+	if (isCloudAgent()) {
 		ensureHeadlessEmulateRunning({ origin });
 		return;
 	}
@@ -187,7 +187,7 @@ export function stopEmulateAndPortless(): void {
 		killHostProcessByName("emulate --portless") ||
 		killHostProcessByName(`emulate start -p ${EMULATE_PORT}`);
 	if (fromPid || fromScan) log("stopped emulate.dev");
-	if (!isHeadless()) {
+	if (!isCloudAgent()) {
 		const stop = sh("portless", ["proxy", "stop"]);
 		if (stop.code === 0) log("stopped portless proxy");
 	}

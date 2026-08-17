@@ -1,13 +1,13 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { isCloudAgent } from "@autumn/env";
 import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 import { startPublicAccess } from "./cloudflare.ts";
 import { emulateGoogleUrl } from "./emulate.ts";
 import { isProvisioned } from "./entry.ts";
 import { provisionedInfraEnv, writeEnvLocalFiles } from "./env-files.ts";
-import { isHeadless } from "./headless.ts";
 import { registerPortlessAliases } from "./portless.ts";
 import { serverPortFor } from "./ports.ts";
 import {
@@ -49,7 +49,7 @@ function applyPublicUrls({
 	entry: RegistryEntry;
 	env: Record<string, string>;
 }): void {
-	if (isHeadless()) {
+	if (isCloudAgent()) {
 		const urls =
 			entryPublicServiceUrls(entry) ??
 			loopbackServiceUrls({ worktreeNum: entry.worktreeNum });
@@ -90,7 +90,7 @@ function applyProvisionedDevEnv(
 	return next;
 }
 
-function applyHeadlessDevEnv(
+function applyCloudAgentDevEnv(
 	entry: RegistryEntry,
 	env: Record<string, string>,
 ): Record<string, string> {
@@ -118,8 +118,8 @@ export function buildDevEnvAndArgs(entry: RegistryEntry): {
 	let env: Record<string, string> = {
 		...(process.env as Record<string, string>),
 	};
-	if (isHeadless()) {
-		env = applyHeadlessDevEnv(entry, env);
+	if (isCloudAgent()) {
+		env = applyCloudAgentDevEnv(entry, env);
 	} else if (isProvisioned(entry)) {
 		env = applyProvisionedDevEnv(entry, env);
 	}

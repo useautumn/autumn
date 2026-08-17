@@ -91,9 +91,16 @@ if grep -q 'infisical-machine-login' "$ROOT/scripts/setup/cursor-cloud/install.s
 fi
 pass "install/start use bun ai sync --copy and cursorCloud.ts"
 
+if grep -q 'export CLOUD_AGENT=1' "$ROOT/scripts/setup/cursor-cloud/start.sh" \
+	&& grep -q 'export CLOUD_AGENT=1' "$ROOT/scripts/setup/cursor-cloud/install.sh"; then
+	pass "Cloud boot exports CLOUD_AGENT=1"
+else
+	fail "install/start must export CLOUD_AGENT=1"
+fi
+
 if [[ -f "$ROOT/scripts/setup/cursor-cloud/isolation.env" ]] \
 	|| [[ -f "$ROOT/scripts/setup/cursor-cloud/with-isolation.sh" ]]; then
-	fail "isolation overlay must be deleted; bun dw headless owns localhost"
+	fail "isolation overlay must be deleted; bun dw Cloud-agent mode owns localhost"
 fi
 if grep -q 'isolation.env' "$ROOT/scripts/setup/cursor-cloud/start.sh"; then
 	fail "start must not source isolation.env"
