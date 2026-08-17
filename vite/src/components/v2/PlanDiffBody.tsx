@@ -3,8 +3,8 @@ import {
 	type Feature,
 	formatAmount,
 	formatInterval,
-	type PlanUpdatePreviewItemChange,
-	type PlanUpdatePreviewPriceChange,
+	type PlanItemChangeV0,
+	type PlanPriceChangeV0,
 } from "@autumn/shared";
 import {
 	PlanSettingsChanges,
@@ -13,9 +13,9 @@ import {
 import { ItemChangeList } from "./ItemChangeList";
 
 type PlanDiffSource = {
-	item_changes?: PlanUpdatePreviewItemChange[];
+	item_changes?: PlanItemChangeV0[];
 	previous_attributes?: Record<string, unknown> | null;
-	price_change?: PlanUpdatePreviewPriceChange;
+	price_change?: PlanPriceChangeV0;
 };
 
 const priceText = (price: ApiPlanV1["price"]) => {

@@ -10,7 +10,7 @@
  * entity scope; otherwise nothing.
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import {
 	BillingInterval,
 	BillingMethod,
@@ -20,11 +20,12 @@ import {
 	TierInfinite,
 } from "@autumn/shared";
 import {
-	expectPriceStripeResourcesAbsent,
+	expectPriceStripeResourcesPresent,
 	expectPriceStripeReuseCorrect,
 	expectProductProcessorCorrect,
 	findBasePrice,
 	findFeaturePrice,
+	stripeConfigValue,
 } from "@tests/integration/utils/expectStripePriceResources.js";
 import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -402,16 +403,18 @@ test.concurrent(
 
 			const after = await getFull({ ctx, planId });
 			const baseAfter = findBasePrice({ product: after });
-			expectPriceStripeReuseCorrect({
-				before: baseBefore,
-				after: baseAfter,
-				reuse: "none",
-				label: "base amount change",
-			});
-			expectPriceStripeResourcesAbsent({
+			// No carry ("none"): execute init mints a FRESH Stripe Price for the
+			// replacement row, under the plan's own (unchanged) Stripe Product.
+			expectPriceStripeResourcesPresent({
 				price: baseAfter,
 				label: "new base row",
 			});
+			expect(
+				stripeConfigValue({ price: baseAfter, field: "stripe_price_id" }),
+				"replacement base must not reuse the old stripe price",
+			).not.toBe(
+				stripeConfigValue({ price: baseBefore, field: "stripe_price_id" }),
+			);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
@@ -419,7 +422,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 stripe: add new paid item → no stripe ids")}`,
+	`${chalk.yellowBright("catalogV2 stripe: add new paid item → stripe ids created")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_str_new");
@@ -448,7 +451,7 @@ test.concurrent(
 			});
 
 			const after = await getFull({ ctx, planId });
-			expectPriceStripeResourcesAbsent({
+			expectPriceStripeResourcesPresent({
 				price: findFeaturePrice({
 					product: after,
 					featureId: TestFeature.Messages,

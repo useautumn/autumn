@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { ProductService } from "@/services/products/ProductService";
+import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { pushPage } from "@/utils/genUtils";
 
@@ -24,10 +24,18 @@ export function useCreateVariant(product: ProductV2) {
 		}
 		setIsLoading(true);
 		try {
-			await ProductService.createVariant(axiosInstance, {
-				base_plan_id: product.id,
-				variant_plan_id: variantId.trim(),
-				name: variantName.trim(),
+			await CatalogV2Service.update(axiosInstance, {
+				plans: [
+					{
+						plan_id: product.id,
+						variants: [
+							{
+								variant_plan_id: variantId.trim(),
+								name: variantName.trim(),
+							},
+						],
+					},
+				],
 			});
 			toast.success("Variant created");
 			setOpen(false);

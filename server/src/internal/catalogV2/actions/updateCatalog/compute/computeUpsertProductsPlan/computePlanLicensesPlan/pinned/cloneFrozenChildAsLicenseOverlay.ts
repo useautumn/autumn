@@ -38,6 +38,10 @@ export const cloneFrozenChildAsLicenseOverlay = ({
 				items: frozenCustomize.items ?? [],
 				price: frozenCustomize.price ?? null,
 			},
+			stripeCandidates: {
+				prices: frozenChildProduct.prices,
+				entitlements: frozenChildProduct.entitlements,
+			},
 		},
 	});
 

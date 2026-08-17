@@ -1,7 +1,4 @@
-import {
-	emptyCatalogPlanUsage,
-	type PreviewUpdateCatalogResponse,
-} from "@autumn/shared";
+import type { PreviewUpdateCatalogResponse } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
 import { buildLicenseParentsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicenseParentsPreview";
 import { buildLicensesPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicensesPreview";
@@ -9,6 +6,7 @@ import { buildRemovePlansPreview } from "@/internal/catalogV2/actions/updateCata
 import { buildVariantsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildVariantsPreview";
 import { buildPlanVersioning } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildPlanVersioning";
 import { buildSiblingVersionsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildSiblingVersionsPreview";
+import { buildPlanUsage } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
@@ -50,17 +48,20 @@ export const buildPlansPreview = ({
 			directUpsert: upsert,
 			upsertProducts,
 			productStatesContext,
+			previewContext: catalogContext.previewContext,
 		});
 		const licenseParents = buildLicenseParentsPreview({
 			directUpsert: upsert,
 			upsertProducts,
 			productStatesContext,
+			previewContext: catalogContext.previewContext,
 		});
 		const licenses = buildLicensesPreview({ upsert });
 		const variants = buildVariantsPreview({
 			directUpsert: upsert,
 			upsertProducts,
 			productStatesContext,
+			previewContext: catalogContext.previewContext,
 		});
 
 		return [
@@ -72,7 +73,20 @@ export const buildPlansPreview = ({
 				state: {
 					has_customers: upsert.state.hasCustomers,
 					will_archive: false,
-					usage: emptyCatalogPlanUsage(),
+					usage: buildPlanUsage({
+						rows: [
+							{
+								planId: upsert.row.planId,
+								version: upsert.row.version,
+								current: upsert.row.currentFullProduct,
+								willArchive: false,
+								hasCustomers: upsert.state.hasCustomers,
+								allVersions: false,
+							},
+						],
+						previewContext: catalogContext.previewContext,
+						productStatesContext,
+					}),
 					reasons: [],
 				},
 				versioning: buildPlanVersioning({

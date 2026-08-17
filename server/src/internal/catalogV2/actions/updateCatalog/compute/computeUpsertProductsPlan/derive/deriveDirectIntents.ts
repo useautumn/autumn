@@ -57,7 +57,9 @@ const resolveVersionsForPlan = ({
 		.map((planParams) => ({
 			...planParams,
 			version:
-				planParams.versioning === "new_version" ? maxVersion + 1 : latestOrV1,
+				planParams.versioning === "new_version"
+					? maxVersion + 1
+					: latestOrV1,
 		}));
 
 	return [...withExplicitVersion, ...targetingLatest];

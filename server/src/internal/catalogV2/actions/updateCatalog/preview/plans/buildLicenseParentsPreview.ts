@@ -7,7 +7,11 @@ import { productToProductKey } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
 import { childPropagatesToParent } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
 import { withCatalogConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withCatalogConflicts";
-import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
+import type {
+	PreviewCatalogContext,
+	ProductStatesContext,
+} from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
@@ -80,10 +84,12 @@ export const buildLicenseParentsPreview = ({
 	directUpsert,
 	upsertProducts,
 	productStatesContext,
+	previewContext,
 }: {
 	directUpsert: UpsertProductPlan;
 	upsertProducts: UpsertProductPlan[];
 	productStatesContext: ProductStatesContext;
+	previewContext: PreviewCatalogContext | undefined;
 }): CatalogLicenseParentPreview[] => {
 	const reverseLinks =
 		directUpsert.row.currentFullProduct?.parent_plan_licenses ??
@@ -125,6 +131,11 @@ export const buildLicenseParentsPreview = ({
 					has_customers:
 						parentState.customerUsage.hasVersionableCustomerProducts,
 					will_archive: false,
+					usage: customerUsageForPreview({
+						planId: parentKey.planId,
+						version: parentKey.version,
+						previewContext,
+					}),
 				},
 				license_action: licenseAction,
 				...(planChange ? { plan_change: planChange } : {}),

@@ -1,6 +1,6 @@
 import type {
-	PlanUpdatePreviewItemChange,
-	PlanUpdatePreviewVariantConflict,
+	CatalogConflictPreview,
+	PlanItemChangeV0,
 } from "@autumn/shared";
 import {
 	Checkbox,
@@ -18,8 +18,8 @@ export type PropagationTarget = {
 	id: string;
 	name: string;
 	detail: string;
-	conflicts: PlanUpdatePreviewVariantConflict[];
-	itemChanges: PlanUpdatePreviewItemChange[];
+	conflicts: CatalogConflictPreview[];
+	itemChanges: PlanItemChangeV0[];
 };
 
 export function PropagationTargetsStep({

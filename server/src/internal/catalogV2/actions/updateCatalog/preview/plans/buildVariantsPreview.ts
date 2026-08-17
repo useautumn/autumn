@@ -6,7 +6,11 @@ import type {
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
 import { latestVariantsOfBase } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/variantPlanUtils";
 import { withVariantConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withVariantConflicts";
-import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
+import type {
+	PreviewCatalogContext,
+	ProductStatesContext,
+} from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
@@ -72,10 +76,12 @@ export const buildVariantsPreview = ({
 	directUpsert,
 	upsertProducts,
 	productStatesContext,
+	previewContext,
 }: {
 	directUpsert: UpsertProductPlan;
 	upsertProducts: UpsertProductPlan[];
 	productStatesContext: ProductStatesContext;
+	previewContext: PreviewCatalogContext | undefined;
 }): CatalogVariantPreview[] => {
 	const variants = latestVariantsOfBase({
 		upsert: directUpsert,
@@ -117,6 +123,11 @@ export const buildVariantsPreview = ({
 					has_customers:
 						variantState.customerUsage.hasVersionableCustomerProducts,
 					will_archive: false,
+					usage: customerUsageForPreview({
+						planId: variant.id,
+						version: variant.version,
+						previewContext,
+					}),
 				},
 				variant_action: variantAction,
 				...(planChange ? { plan_change: planChange } : {}),

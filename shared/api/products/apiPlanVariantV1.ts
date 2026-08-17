@@ -8,9 +8,8 @@ import { ApiPlanV1Schema } from "./apiPlanV1.js";
 export const VariantCustomizeSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
 		items: true,
-		upsert_licenses: true,
 	}).strict(),
-	{ includeItems: false, includeLicenses: false },
+	{ includeItems: false, includeLicenses: true },
 );
 
 /** A base plan's down-link to a variant derived from it. */

@@ -1,9 +1,10 @@
 import type { PlanLicense, PlanLicenseParams } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 import { create } from "zustand";
+import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { runWithErrorToast } from "./runWithErrorToast";
 
-/** Collects isolated card drafts into one parent `plans.update`. */
+/** Collects isolated card drafts into one parent catalogV2.update. */
 interface LicenseSaveEntry {
 	dirty: boolean;
 	/** The card's licenses[] entry, or null when the card is staged for removal. */
@@ -76,7 +77,7 @@ export const commitLicenseChanges = () => {
 	for (const entry of Object.values(entries)) entry.commit();
 };
 
-/** Persists all dirty card state through one parent `plans.update`. */
+/** Persists all dirty card state through one parent catalogV2.update. */
 export const saveAllLicenses = async ({
 	axiosInstance,
 	parentPlanId,
@@ -92,9 +93,8 @@ export const saveAllLicenses = async ({
 	if (!licenses) return true;
 	const saved = await runWithErrorToast({
 		action: () =>
-			axiosInstance.post("/v1/plans.update", {
-				plan_id: parentPlanId,
-				licenses,
+			CatalogV2Service.update(axiosInstance, {
+				plans: [{ plan_id: parentPlanId, licenses }],
 			}),
 		fallbackMessage: "Failed to save licenses",
 	});

@@ -52,6 +52,25 @@ export const expectVariantPointerCorrect = async ({
 	expect(variant.version).toBe(variantVersion ?? 1);
 };
 
+/** Every listed version row has base_internal_product_id null. */
+export const expectVariantUnlinkedCorrect = async ({
+	ctx,
+	variantPlanId,
+	versions,
+}: {
+	ctx: AutumnContext;
+	variantPlanId: string;
+	versions: number[];
+}) => {
+	for (const version of versions) {
+		const variant = await getFullPlan({ ctx, planId: variantPlanId, version });
+		expect(
+			variant.base_internal_product_id,
+			`v${version} of ${variantPlanId} unlinked`,
+		).toBeNull();
+	}
+};
+
 /** Catalog GET hides variants — assert the product row directly. */
 export const expectVariantPlanCorrect = async ({
 	ctx,

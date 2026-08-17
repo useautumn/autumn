@@ -1,6 +1,8 @@
 /**
  * catalogV2.preview_update — migrations block is a projection of computed drafts.
  * Preview does not persist a migration row.
+ *
+ * In-place drafts use versioning: "existing". `new_version` rows skip drafts.
  */
 
 import { expect, test } from "bun:test";
@@ -47,6 +49,7 @@ test.concurrent(
 							plan_id: planId,
 							items: [messagesItem({ included: 500 })],
 							migration: { draft: true },
+							versioning: "existing",
 						},
 					],
 				}),
@@ -77,6 +80,7 @@ test.concurrent(
 							plan_id: planId,
 							price: { amount: 20, interval: BillingInterval.Month },
 							migration: { draft: true },
+							versioning: "existing",
 						},
 					],
 				}),

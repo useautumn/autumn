@@ -58,6 +58,7 @@ type ExpectedPlanPreviewRow = {
 	action?: PlanPreviewRow["action"];
 	name?: string;
 	hasCustomers?: boolean;
+	customerCount?: number;
 	willArchive?: boolean;
 	/** Exact match; pass `null` to assert stubbed/absent versioning. */
 	versioning?: PlanPreviewVersioning | null;
@@ -210,6 +211,9 @@ export const expectPlanPreviewRowCorrect = ({
 	}
 	if (expected.hasCustomers !== undefined) {
 		expect(row.state.has_customers).toBe(expected.hasCustomers);
+	}
+	if (expected.customerCount !== undefined) {
+		expect(row.state.usage.customers.count).toBe(expected.customerCount);
 	}
 	if (expected.willArchive !== undefined) {
 		expect(row.state.will_archive).toBe(expected.willArchive);

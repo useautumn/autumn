@@ -1,6 +1,16 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { updateStripeProductNames } from "@/internal/products/stripeResourceUtils/updateStripeProductNames.js";
+
+/** Rename syncs to Stripe only for bases — variants share the base's Stripe Product. */
+const renamesOwnedStripeProduct = ({
+	upsert,
+}: {
+	upsert: UpsertProductPlan;
+}): boolean =>
+	upsert.details?.previousAttributes?.name !== undefined &&
+	!upsert.row.currentFullProduct?.base_internal_product_id;
 
 export const applyProductDetailsUpdate = async ({
 	ctx,
@@ -34,4 +44,13 @@ export const applyProductDetailsUpdate = async ({
 			base_internal_product_id: product.base_internal_product_id,
 		},
 	});
+
+	if (renamesOwnedStripeProduct({ upsert })) {
+		await updateStripeProductNames({
+			org: ctx.org,
+			curProduct: upsert.row.currentFullProduct!,
+			newName: product.name,
+			logger: ctx.logger,
+		});
+	}
 };

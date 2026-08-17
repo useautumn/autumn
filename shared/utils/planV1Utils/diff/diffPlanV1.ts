@@ -44,12 +44,14 @@ export const DiffedCustomizePlanV1Schema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
 		items: true,
 		upsert_licenses: true,
+		remove_licenses: true,
 	}).strict(),
 	{ includeItems: false, includeLicenses: false },
 );
 
-/** Content schema stays license-free (variants / core parse). In-memory diffs
- * carry the license patch; PlanChangeCustomizeV0Schema validates it. */
+/** Content schema stays license-free (core / preview parse). In-memory diffs
+ * carry the license patch; PlanChangeCustomizeV0Schema and VariantCustomizeSchema
+ * validate it. */
 export type DiffedCustomizePlanV1 = z.infer<
 	typeof DiffedCustomizePlanV1Schema
 > & {

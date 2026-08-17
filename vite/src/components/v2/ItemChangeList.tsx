@@ -1,4 +1,4 @@
-import type { Feature, PlanUpdatePreviewItemChange } from "@autumn/shared";
+import type { Feature, PlanItemChangeV0 } from "@autumn/shared";
 import { ItemChangeRow } from "@/components/v2/ItemChangeRow";
 
 export function ItemChangeList({
@@ -6,7 +6,7 @@ export function ItemChangeList({
 	itemChanges,
 }: {
 	features?: Feature[];
-	itemChanges: PlanUpdatePreviewItemChange[];
+	itemChanges: PlanItemChangeV0[];
 }) {
 	if (itemChanges.length === 0) return null;
 

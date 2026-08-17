@@ -37,7 +37,17 @@ const usageKey = ({
 	version?: number;
 }): string => (version === undefined ? planId : `${planId}:${version}`);
 
-/** Capped customer samples for remove_plans — preview/UI only. Ids come from product states. */
+const uniqueCandidates = (
+	candidates: { key: string; internalProductIds: string[] }[],
+) => {
+	const byKey = new Map<string, { key: string; internalProductIds: string[] }>();
+	for (const candidate of candidates) {
+		byKey.set(candidate.key, candidate);
+	}
+	return [...byKey.values()];
+};
+
+/** Capped customer samples for preview/UI only. Ids come from product states. */
 export const setupPlanUsagePersisted = async ({
 	ctx,
 	params,
@@ -48,9 +58,8 @@ export const setupPlanUsagePersisted = async ({
 	productStatesContext: ProductStatesContext;
 }): Promise<Record<string, PersistedPlanUsage>> => {
 	const summaries: Record<string, PersistedPlanUsage> = {};
-	if (params.remove_plans.length === 0) return summaries;
 
-	const candidates = params.remove_plans.map((entry) => {
+	const removeCandidates = params.remove_plans.map((entry) => {
 		const versions =
 			productStatesContext.versionsByPlanId[entry.plan_id] ?? [];
 		const targeted =
@@ -62,6 +71,21 @@ export const setupPlanUsagePersisted = async ({
 			internalProductIds: targeted.map((product) => product.internal_id),
 		};
 	});
+
+	const productCandidates = Object.values(
+		productStatesContext.versionsByPlanId,
+	).flatMap((versions) =>
+		versions.map((product) => ({
+			key: usageKey({ planId: product.id, version: product.version }),
+			internalProductIds: [product.internal_id],
+		})),
+	);
+
+	const candidates = uniqueCandidates([
+		...removeCandidates,
+		...productCandidates,
+	]);
+	if (candidates.length === 0) return summaries;
 
 	const rows = await listPlanCustomerUsage({
 		db: ctx.db,

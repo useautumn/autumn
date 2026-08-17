@@ -1,23 +1,17 @@
-import type {
-	Feature,
-	PlanUpdatePreviewLicenseChange,
-} from "@autumn/shared";
+import type { Feature, PlanLicenseChangeV0 } from "@autumn/shared";
 import { ItemStatusDot, type ItemStatusState } from "@/components/v2/ItemStatusDot";
 import { PlanDiffBody } from "@/components/v2/PlanDiffBody";
 
-const ACTION_STATE: Record<
-	PlanUpdatePreviewLicenseChange["action"],
-	ItemStatusState
-> = {
-	create: "new",
-	update: "updated",
-	remove: "removed",
+const ACTION_STATE: Record<PlanLicenseChangeV0["action"], ItemStatusState> = {
+	created: "new",
+	updated: "updated",
+	removed: "removed",
 };
 
-const ACTION_LABEL: Record<PlanUpdatePreviewLicenseChange["action"], string> = {
-	create: "Added",
-	update: "Updated",
-	remove: "Removed",
+const ACTION_LABEL: Record<PlanLicenseChangeV0["action"], string> = {
+	created: "Added",
+	updated: "Updated",
+	removed: "Removed",
 };
 
 const ATTRIBUTE_LABELS = {
@@ -35,7 +29,7 @@ export function LicenseChangeList({
 	changes,
 	features,
 }: {
-	changes: PlanUpdatePreviewLicenseChange[];
+	changes: PlanLicenseChangeV0[];
 	features?: Feature[];
 }) {
 	if (changes.length === 0) return null;
@@ -75,8 +69,8 @@ export function LicenseChangeList({
 								</span>
 							</div>
 						))}
-						{change.plan_changes && (
-							<PlanDiffBody features={features} plan={change.plan_changes} />
+						{change.plan_change && (
+							<PlanDiffBody features={features} plan={change.plan_change} />
 						)}
 					</div>
 				);

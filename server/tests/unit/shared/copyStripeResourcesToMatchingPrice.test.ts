@@ -152,6 +152,58 @@ describe("copyStripeResourcesToMatchingPrice", () => {
 		expect(config.stripe_event_name).toBeUndefined();
 	});
 
+	test("keeps a preset stripe_price_id that no candidate owns", () => {
+		const unrelatedCandidate = candidate({
+			config: {
+				...baseConfig,
+				usage_tiers: [{ amount: 0.05, to: TierInfinite }],
+			},
+		});
+		const newPrice = target({
+			config: {
+				...baseConfig,
+				usage_tiers: [{ amount: 0.5, to: TierInfinite }],
+				stripe_price_id: "price_imported_from_sync",
+				stripe_product_id: undefined,
+				stripe_meter_id: undefined,
+				stripe_event_name: undefined,
+			} as UsagePriceConfig,
+		});
+
+		copyStripeResourcesToMatchingPrice({
+			targetPrice: newPrice,
+			candidatePrices: [unrelatedCandidate],
+			targetEntitlements: [entitlement({ id: "ent_new" })],
+			candidateEntitlements: [entitlement()],
+		});
+
+		const config = newPrice.config as UsagePriceConfig;
+		expect(config.stripe_price_id).toBe("price_imported_from_sync");
+	});
+
+	test("keeps a preset stripe_price_id owned by a full-match candidate", () => {
+		const fullOwner = candidate();
+		const newPrice = target({
+			config: {
+				...baseConfig,
+				stripe_product_id: undefined,
+				stripe_meter_id: undefined,
+				stripe_event_name: undefined,
+			} as UsagePriceConfig,
+		});
+
+		copyStripeResourcesToMatchingPrice({
+			targetPrice: newPrice,
+			candidatePrices: [fullOwner],
+			targetEntitlements: [entitlement({ id: "ent_new" })],
+			candidateEntitlements: [entitlement()],
+		});
+
+		const config = newPrice.config as UsagePriceConfig;
+		expect(config.stripe_price_id).toBe("price_ai_credits");
+		expect(config.stripe_product_id).toBe("prod_ai_credits");
+	});
+
 	test("returns no copied fields when nothing matches", () => {
 		const unrelatedCandidate = candidate({
 			id: "pr_unrelated",
