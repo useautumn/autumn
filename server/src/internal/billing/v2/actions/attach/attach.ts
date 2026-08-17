@@ -20,6 +20,8 @@ import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/l
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
+import { publishCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/publishCachedFullSubject.js";
+import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { hashJson } from "@/utils/hash/hashJson";
 import {
 	type CreateAutumnCheckoutResult,
@@ -185,6 +187,45 @@ export async function attach({
 	});
 	if (billingResult.stripe.deferred) {
 		ctx.preserveFullSubjectCache = true;
+	}
+
+	const outgoingCustomerProduct = billingContext.currentCustomerProduct;
+	const shouldPublishImmediateTransition =
+		!billingResult.stripe.deferred &&
+		!ctx.skipCache &&
+		!contextOverride?.fullCustomer &&
+		!skipAutumnCheckout &&
+		billingContext.planTiming === "immediate";
+	if (shouldPublishImmediateTransition && outgoingCustomerProduct) {
+		try {
+			const finalSubject = await getFullSubjectNormalized({
+				ctx,
+				customerId:
+					billingContext.fullCustomer.id ??
+					billingContext.fullCustomer.internal_id,
+				entityId: params.entity_id,
+				runLazyResets: false,
+				readFrom: "primary",
+				routeSource: "attach:publish-cache",
+			});
+			const publishResult = finalSubject
+				? await publishCachedFullSubject({
+						ctx,
+						normalized: finalSubject.normalized,
+						outgoingCustomerEntitlements:
+							outgoingCustomerProduct.customer_entitlements,
+					})
+				: "FAILED";
+
+			if (publishResult === "OK") {
+				ctx.preserveFullSubjectCache = true;
+			}
+		} catch (error) {
+			ctx.logger.warn(
+				{ error },
+				"[attach] Failed to publish the completed balance transition to Redis",
+			);
+		}
 	}
 
 	logStripeBillingResult({ ctx, result: billingResult.stripe });
