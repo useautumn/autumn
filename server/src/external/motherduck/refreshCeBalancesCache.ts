@@ -104,7 +104,10 @@ export const refreshCeBalancesCache = async ({
 						LEFT JOIN main.ent_allowances a ON a.id = b.entitlement_id
 						WHERE (b.expires_at IS NULL OR b.expires_at > epoch_ms(now()))
 							AND (
-								b.customer_product_id IS NULL
+								(
+									b.customer_product_id IS NULL
+									AND (b.balance != 0 OR b.unlimited IS TRUE)
+								)
 								OR b.customer_product_id IN (SELECT id FROM main.cp_active)
 							)
 						GROUP BY 1, 2

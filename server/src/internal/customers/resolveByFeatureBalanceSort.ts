@@ -19,6 +19,7 @@ import {
 import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { buildSearchPredicates } from "./CusSearchService.js";
+import { looseEntitlementIsLiveSql } from "./looseEntitlementSql.js";
 
 /** `total` is the value of the REQUESTED basis (remaining/granted/usage) —
  * the cursor and ranking key on both the lake and PG sides. */
@@ -115,14 +116,14 @@ export const balanceThresholdSql = ({
 	op === ">" ? sql`${totalExpr} > ${value}` : sql`${totalExpr} < ${value}`;
 
 /** "Live" must match what the Usage column sums (cusEnts of ACTIVE_STATUSES
- * products + loose rows) — NOT `ce.expired`, whose NULL→true backfill lags and
- * leaves churned-product rows looking live. Requires `cp` joined on
- * ce.customer_product_id. */
+ * products + non-drained loose rows) — NOT `ce.expired`, whose NULL→true
+ * backfill lags and leaves churned-product rows looking live. Requires `cp`
+ * joined on ce.customer_product_id. */
 export const liveCusEntPredicate = (): SQL => sql`
 	(ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 	AND ce.pooled_contribution_id IS NULL
 	AND (
-		ce.customer_product_id IS NULL
+		(ce.customer_product_id IS NULL AND ${looseEntitlementIsLiveSql()})
 		OR cp.status IN (${activeStatusList()})
 	)
 `;
