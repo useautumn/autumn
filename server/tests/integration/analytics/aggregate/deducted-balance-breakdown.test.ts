@@ -304,6 +304,29 @@ test.concurrent(
 		// split has exactly that one key carrying the full amount.
 		expect(meterSplit?.["us-east"]?.deducted).toBe(ACTION1_ALLOWANCE);
 		expect(creditSplit?.["us-east"]?.deducted).toBeCloseTo(EXPECTED_CREDITS, 6);
+
+		const sourceGrouped = (await autumnV2_2.events.aggregate({
+			customer_id: customerId,
+			feature_id: TestFeature.Action1,
+			aggregate_on: "deducted",
+			group_by: "$source_feature_id",
+			range: "7d",
+		})) as AggregateResponse;
+
+		const sourceCredit = findFeature(sourceGrouped, TestFeature.Credits);
+		const sourceSplit = (sourceGrouped.deductions ?? [])
+			.map(
+				(period) =>
+					period.grouped_values?.[
+						sourceCredit?.balances?.[0]?.balance_id ?? ""
+					],
+			)
+			.find(Boolean);
+
+		expect(sourceSplit?.[TestFeature.Action1]?.deducted).toBeCloseTo(
+			EXPECTED_CREDITS,
+			6,
+		);
 	},
 );
 

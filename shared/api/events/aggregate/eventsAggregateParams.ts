@@ -24,16 +24,17 @@ export const ExtEventsAggregateParamsSchema = z.object({
 				val.startsWith("properties.") ||
 				val === "$customer_id" ||
 				val === "$entity_id" ||
-				val === "$plan_id",
+				val === "$plan_id" ||
+				val === "$source_feature_id",
 			{
 				message:
-					'group_by must start with "properties." or be "$customer_id", "$entity_id", or "$plan_id"',
+					'group_by must start with "properties." or be "$customer_id", "$entity_id", "$plan_id", or "$source_feature_id"',
 			},
 		)
 		.optional()
 		.meta({
 			description:
-				'Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" / "$plan_id" to group by those columns',
+				'Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" / "$plan_id" to group by those columns. When aggregate_on is "deducted", "$source_feature_id" groups deductions by the tracked feature that consumed each balance.',
 		}),
 	range: RangeEnum.optional().meta({
 		description:
@@ -91,6 +92,16 @@ export const EventsAggregateParamsSchema =
 			{
 				message: "filter_by supports a maximum of 5 filters",
 				path: ["filter_by"],
+			},
+		)
+		.refine(
+			(data) =>
+				data.group_by !== "$source_feature_id" ||
+				data.aggregate_on === "deducted",
+			{
+				message:
+					'group_by "$source_feature_id" requires aggregate_on to be "deducted"',
+				path: ["group_by"],
 			},
 		)
 		.transform((data) => {

@@ -92,6 +92,8 @@ export const handleExternalAggregateEvents = createRoute({
 			resolvedGroupBy = "entity_id";
 		} else if (group_by === "$plan_id") {
 			resolvedGroupBy = "plan_id";
+		} else if (group_by === "$source_feature_id") {
+			resolvedGroupBy = undefined;
 		}
 
 		const [eventsResult, total] = await Promise.all([
