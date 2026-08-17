@@ -134,7 +134,6 @@ export const handleOAuthMiddleware = async ({
 	ctx.features = sortFeatures({ features: data.features }) ?? [];
 	ctx.env = data.env;
 	ctx.userId = data.userId;
-	ctx.oauthResource = c.req.header("x-autumn-oauth-resource") ?? undefined;
 	ctx.authType = AuthType.SecretKey;
 	ctx.scopes = data.scopes;
 

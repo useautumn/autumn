@@ -82,7 +82,6 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		const isMcpClient = await isMcpOAuthClient({
 			clientId: tokenRecord.clientId,
 			db,
-			resource: tokenRequest.resource ?? undefined,
 		});
 		tokenRecord.scopes = await resolveIssuedOAuthScopes({
 			db,

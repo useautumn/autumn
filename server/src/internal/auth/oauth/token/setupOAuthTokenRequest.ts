@@ -45,11 +45,7 @@ export const setupOAuthTokenRequest = async ({
 
 	const grantedScopes =
 		refreshTokenRecord &&
-		(await isMcpOAuthClient({
-			clientId: refreshTokenRecord.clientId,
-			db,
-			resource: resource ?? undefined,
-		}))
+		(await isMcpOAuthClient({ clientId: refreshTokenRecord.clientId, db }))
 			? refreshTokenRecord.scopes
 			: undefined;
 

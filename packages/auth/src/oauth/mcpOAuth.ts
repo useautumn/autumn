@@ -53,11 +53,6 @@ export const returnsOAuthAccessTokenForClientId = ({
 	clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID ||
 	clientId === SUMMER_OAUTH_CLIENT_ID;
 
-export const isMcpOAuthResource = (resource: string | null | undefined) => {
-	if (!resource || !URL.canParse(resource)) return false;
-	return new URL(resource).pathname.replace(/\/+$/, "").endsWith("/mcp");
-};
-
 export const getResourceFromOAuthTokenRequest = async (request: Request) => {
 	const { fields, searchParams } = await parseOAuthRequestFields(request);
 	if (searchParams) return searchParams.getAll("resource")[0] ?? null;
