@@ -5,7 +5,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@autumn/ui";
-import { Leaf, Monitor, Moon, Skull, Sun } from "lucide-react";
+import { Leaf, Monitor, Moon, Scissors, Skull, Sun } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
@@ -111,6 +111,28 @@ const PRESET_OPTIONS = [
 			dot: "bg-[#00ff88]",
 		},
 	},
+	{
+		id: "scraps",
+		label: "Scraps",
+		description: "Cut, torn, taped, and slightly crooked",
+		icon: <Scissors className="size-5 text-muted-foreground" />,
+		light: {
+			bg: "bg-[#f7f3e7]",
+			sidebar: "bg-[#33534a]",
+			card: "bg-[#c9a66b]",
+			line: "bg-[#e25336]",
+			header: "bg-[#efe9d9]",
+			dot: "bg-[#efa62e]",
+		},
+		dark: {
+			bg: "bg-[#26211a]",
+			sidebar: "bg-[#1b2f29]",
+			card: "bg-[#332d25]",
+			line: "bg-[#c9a66b]",
+			header: "bg-[#302a22]",
+			dot: "bg-[#e25336]",
+		},
+	},
 ] as const;
 
 const tc = "transition-colors duration-200";
@@ -173,7 +195,7 @@ export const AppearanceSection = () => {
 	const { mode, setMode, preset, setPreset, isDark } = useTheme();
 	const { isAdmin } = useAdmin();
 	const presetOptions = PRESET_OPTIONS.filter(
-		(p) => p.id !== "cursed" || isAdmin,
+		(p) => !["cursed", "scraps"].includes(p.id) || isAdmin,
 	);
 
 	return (
@@ -234,7 +256,7 @@ export const AppearanceSection = () => {
 									onClick={() => setPreset(option.id)}
 									className={cn(
 										"flex flex-col gap-2.5 rounded-lg border p-2.5 transition-all duration-200 cursor-pointer text-left",
-										option.id === "cursed" && "col-span-2",
+										["cursed", "scraps"].includes(option.id) && "col-span-2",
 										isActive
 											? "border-primary ring-2 ring-primary/20 ring-offset-1 ring-offset-background"
 											: "border-border hover:border-muted-foreground/30",
