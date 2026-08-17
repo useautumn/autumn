@@ -1,5 +1,4 @@
 import {
-	CusProductStatus,
 	cp,
 	type FullCusProduct,
 	type FullCustomer,
@@ -29,10 +28,12 @@ export const activateFreeSuccessorProduct = async ({
 	ctx,
 	fromCustomerProduct,
 	fullCustomer,
+	activatedAt,
 }: {
 	ctx: AutumnContext;
 	fromCustomerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
+	activatedAt: number;
 }): Promise<{
 	activatedCustomerProduct?: FullCusProduct;
 	insertedCustomerProduct?: FullCusProduct;
@@ -76,21 +77,23 @@ export const activateFreeSuccessorProduct = async ({
 		scheduledCustomerProduct &&
 		isCustomerProductFree(scheduledCustomerProduct)
 	) {
-		await activateScheduledCustomerProduct({
+		const { updates } = await activateScheduledCustomerProduct({
 			ctx,
 			fromCustomerProduct,
 			customerProduct: scheduledCustomerProduct,
 			fullCustomer,
+			activatedAt,
 		});
+		const activatedCustomerProduct = {
+			...scheduledCustomerProduct,
+			...updates,
+		} as FullCusProduct;
 
-		// Update fullCustomer in memory
 		fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
-			cp.id === scheduledCustomerProduct.id
-				? { ...cp, status: CusProductStatus.Active }
-				: cp,
+			cp.id === scheduledCustomerProduct.id ? activatedCustomerProduct : cp,
 		);
 
-		return { activatedCustomerProduct: scheduledCustomerProduct };
+		return { activatedCustomerProduct };
 	}
 
 	// 2. Fall back to default product (creates a new customer product)

@@ -33,16 +33,15 @@ export const expireAndActivateWithTracking = async ({
 			ctx,
 			customerProduct,
 			fullCustomer,
+			activatedAt: eventContext.nowMs,
 		});
 
-	// Track expired product (UPDATE)
 	const expiredCustomerProduct = trackCustomerProductUpdate({
 		eventContext,
 		customerProduct,
 		updates,
 	});
 
-	// Track activated scheduled product (UPDATE: scheduled → active)
 	if (activatedCustomerProduct) {
 		trackCustomerProductUpdate({
 			eventContext,
@@ -51,7 +50,6 @@ export const expireAndActivateWithTracking = async ({
 		});
 	}
 
-	// Track inserted default product (INSERT)
 	if (insertedCustomerProduct) {
 		trackCustomerProductInsertion({
 			eventContext,
