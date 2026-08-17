@@ -51,6 +51,7 @@ export const executeRedisDeductionV2 = async ({
 	idempotencyKey,
 	deductionOptions = {},
 	redisInstance,
+	expectedSubjectViewEpoch,
 }: {
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
@@ -59,6 +60,7 @@ export const executeRedisDeductionV2 = async ({
 	idempotencyKey?: string | null;
 	deductionOptions?: DeductionOptions;
 	redisInstance?: Redis;
+	expectedSubjectViewEpoch?: number;
 }): Promise<{
 	oldFullSubject: FullSubject;
 	fullSubject: FullSubject;
@@ -225,6 +227,7 @@ export const executeRedisDeductionV2 = async ({
 			alter_granted_balance: options.alterGrantedBalance,
 			overage_behaviour: options.overageBehaviour,
 			feature_id: feature.id,
+			expected_subject_view_epoch: expectedSubjectViewEpoch ?? null,
 			idempotency_ttl_ms:
 				idempotencyRedisKey !== null ? TRACK_V3_IDEMPOTENCY_TTL_MS : null,
 			lock: preparedLock

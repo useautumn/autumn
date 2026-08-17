@@ -274,6 +274,7 @@ export const getCachedFullSubject = async ({
 		});
 
 		const fullSubject = normalizedToFullSubject({ normalized });
+		fullSubject.subjectViewEpoch = cached.subjectViewEpoch;
 		if (runLazyResets) {
 			await lazyResetSubjectEntitlements({ ctx, fullSubject });
 			await lazyResetSubjectUsageWindows({ ctx, fullSubject, normalized });

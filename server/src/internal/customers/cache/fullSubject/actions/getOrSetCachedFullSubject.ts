@@ -76,6 +76,7 @@ export const getOrSetCachedFullSubject = async ({
 	}
 
 	const { normalized, fullSubject } = result;
+	fullSubject.subjectViewEpoch = fetchedSubjectViewEpoch;
 
 	// Replica-sourced hydrations must never fill Redis — serve them as-is.
 	if (useRedis && !isReplicaSourced(normalized)) {
@@ -102,8 +103,10 @@ export const getOrSetCachedFullSubject = async ({
 			normalized,
 		});
 		// Live balance patches can drain a grant that was still live at query time.
-		if (withLiveBalances)
+		if (withLiveBalances) {
+			withLiveBalances.subjectViewEpoch = fetchedSubjectViewEpoch;
 			return filterDrainedLooseEntitlements({ fullSubject: withLiveBalances });
+		}
 	}
 
 	return filterDrainedLooseEntitlements({ fullSubject });

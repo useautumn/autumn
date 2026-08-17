@@ -98,7 +98,7 @@ export type RequestContext = {
 	orgRateLimitDegraded?: boolean;
 	/** Skip generic post-response deletion when the request did not change
 	 * Autumn balance state, such as returning an attach Checkout URL. */
-	preserveFullSubjectCache?: boolean;
+	skipSubjectCacheDeletion?: boolean;
 
 	testOptions?: {
 		asyncBalanceUpdate?: boolean;

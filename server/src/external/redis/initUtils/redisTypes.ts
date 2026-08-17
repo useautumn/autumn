@@ -18,7 +18,7 @@ declare module "ioredis" {
 		publishCachedFullSubject(
 			numKeys: number,
 			...args: string[]
-		): Promise<"OK" | "CACHE_MISSING">;
+		): Promise<string>;
 		adjustSubjectBalance(
 			balanceKey: string,
 			paramsJson: string,

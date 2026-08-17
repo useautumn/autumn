@@ -118,6 +118,7 @@ export const runRedisTrackV3 = async ({
 			entityId: fullSubject.entity?.id ?? undefined,
 			deductions: featureDeductions,
 			idempotencyKey,
+			expectedSubjectViewEpoch: fullSubject.subjectViewEpoch,
 			deductionOptions: {
 				overageBehaviour: overageBehavior,
 				triggerAutoTopUp: true,

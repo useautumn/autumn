@@ -4,6 +4,7 @@ export enum RedisDeductionErrorCode {
 	CustomerNotFound = "CUSTOMER_NOT_FOUND",
 	NoCustomerProducts = "NO_CUSTOMER_PRODUCTS",
 	SubjectBalanceNotFound = "SUBJECT_BALANCE_NOT_FOUND",
+	SubjectViewChanged = "SUBJECT_VIEW_CHANGED",
 	InsufficientBalance = "INSUFFICIENT_BALANCE",
 	PaidAllocated = "PAID_ALLOCATED",
 	SkipCache = "SKIP_CACHE",

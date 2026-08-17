@@ -26,7 +26,7 @@ describe("attach Checkout cache preservation", () => {
 		app.use("*", async (c, next) => {
 			c.set("ctx", {
 				customerId: "cus_checkout",
-				preserveFullSubjectCache: true,
+				skipSubjectCacheDeletion: true,
 			} as AutumnContext);
 			await next();
 		});

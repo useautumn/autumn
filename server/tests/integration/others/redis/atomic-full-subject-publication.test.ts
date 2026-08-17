@@ -7,7 +7,9 @@ import {
 } from "@autumn/shared";
 import { createRedisClient } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { RedisDeductionErrorCode } from "@/internal/balances/utils/types/redisDeductionError.js";
 import { publishCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/publishCachedFullSubject.js";
+import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectViewEpochKey.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
@@ -83,7 +85,7 @@ beforeEach(async () => {
 		.hset(
 			balanceKey,
 			"entitlement_a",
-			JSON.stringify({ balance: 95 }),
+			JSON.stringify({ balance: 90 }),
 			"unrelated_entitlement",
 			liveUnrelatedBalance,
 		)
@@ -95,6 +97,14 @@ test("atomically publishes B while preserving unrelated live balances", async ()
 		ctx,
 		normalized: targetNormalized,
 		outgoingCustomerEntitlements: [sourceBalance],
+		balanceTransitions: [
+			{
+				sourceCustomerEntitlementId: "entitlement_a",
+				targetCustomerEntitlementId: "entitlement_b",
+				sourceBalance: 95,
+				sourceAdjustment: 0,
+			},
+		],
 	});
 
 	const [rawSubject, epoch, balances] = await Promise.all([
@@ -103,7 +113,16 @@ test("atomically publishes B while preserving unrelated live balances", async ()
 		redis.hgetall(balanceKey),
 	]);
 
-	expect(result).toBe("OK");
+	expect(result).toMatchObject({
+		status: "OK",
+		balanceTransitions: [
+			{
+				customerEntitlementId: "entitlement_b",
+				expected: { balance: 195 },
+				published: { balance: 190 },
+			},
+		],
+	});
 	expect(epoch).toBe("3");
 	expect(JSON.parse(rawSubject ?? "{}")).toMatchObject({
 		subjectViewEpoch: 3,
@@ -112,8 +131,112 @@ test("atomically publishes B while preserving unrelated live balances", async ()
 		},
 	});
 	expect(balances.entitlement_a).toBeUndefined();
-	expect(JSON.parse(balances.entitlement_b).balance).toBe(195);
+	expect(JSON.parse(balances.entitlement_b).balance).toBe(190);
 	expect(balances.unrelated_entitlement).toBe(liveUnrelatedBalance);
+});
+
+test("leaves A untouched when B is already live", async () => {
+	const liveTarget = JSON.stringify({ balance: 192 });
+	await redis.hset(balanceKey, "entitlement_b", liveTarget);
+
+	const result = await publishCachedFullSubject({
+		ctx,
+		normalized: targetNormalized,
+		outgoingCustomerEntitlements: [sourceBalance],
+		balanceTransitions: [
+			{
+				sourceCustomerEntitlementId: "entitlement_a",
+				targetCustomerEntitlementId: "entitlement_b",
+				sourceBalance: 95,
+				sourceAdjustment: 0,
+			},
+		],
+	});
+
+	const [rawSubject, epoch, balances] = await Promise.all([
+		redis.get(subjectKey),
+		redis.get(epochKey),
+		redis.hgetall(balanceKey),
+	]);
+	expect(result).toEqual({ status: "UNSUPPORTED" });
+	expect(JSON.parse(rawSubject ?? "{}")).toMatchObject({
+		customerEntitlementIdsByFeatureId: {
+			messages: ["entitlement_a", "unrelated_entitlement"],
+		},
+	});
+	expect(epoch).toBe("2");
+	expect(JSON.parse(balances.entitlement_a).balance).toBe(90);
+	expect(balances.entitlement_b).toBe(liveTarget);
+});
+
+test("leaves A untouched when a runtime balance has no transition", async () => {
+	const result = await publishCachedFullSubject({
+		ctx,
+		normalized: targetNormalized,
+		outgoingCustomerEntitlements: [sourceBalance],
+	});
+
+	const [rawSubject, epoch, balances] = await Promise.all([
+		redis.get(subjectKey),
+		redis.get(epochKey),
+		redis.hgetall(balanceKey),
+	]);
+	expect(result).toEqual({ status: "UNSUPPORTED" });
+	expect(JSON.parse(rawSubject ?? "{}")).toMatchObject({
+		customerEntitlementIdsByFeatureId: {
+			messages: ["entitlement_a", "unrelated_entitlement"],
+		},
+	});
+	expect(epoch).toBe("2");
+	expect(JSON.parse(balances.entitlement_a).balance).toBe(90);
+	expect(balances.entitlement_b).toBeUndefined();
+});
+
+test("rejects a stale A track before idempotency or balance mutation", async () => {
+	await publishCachedFullSubject({
+		ctx,
+		normalized: targetNormalized,
+		outgoingCustomerEntitlements: [sourceBalance],
+		balanceTransitions: [
+			{
+				sourceCustomerEntitlementId: "entitlement_a",
+				targetCustomerEntitlementId: "entitlement_b",
+				sourceBalance: 95,
+				sourceAdjustment: 0,
+			},
+		],
+	});
+
+	const idempotencyKey = `{${customerId}}:stale-track`;
+	const { keys, balanceKeyIndexByFeatureId } =
+		buildDeductFromSubjectBalancesKeys({
+			...keyArgs,
+			routingKey: subjectKey,
+			lockReceiptKey: null,
+			idempotencyKey,
+			customerEntitlementDeductions: [{ feature_id: "messages" }],
+			fallbackFeatureId: "messages",
+		});
+	const rawResult = await redis.deductFromSubjectBalances(
+		keys.length,
+		...keys,
+		JSON.stringify({
+			expected_subject_view_epoch: 2,
+			customer_entitlement_deductions: [],
+			balance_key_index_by_feature_id: balanceKeyIndexByFeatureId,
+		}),
+	);
+
+	const [idempotencyValue, balances] = await Promise.all([
+		redis.get(idempotencyKey),
+		redis.hgetall(balanceKey),
+	]);
+	expect(JSON.parse(rawResult).error).toBe(
+		RedisDeductionErrorCode.SubjectViewChanged,
+	);
+	expect(idempotencyValue).toBeNull();
+	expect(balances.entitlement_a).toBeUndefined();
+	expect(JSON.parse(balances.entitlement_b).balance).toBe(190);
 });
 
 afterAll(async () => {

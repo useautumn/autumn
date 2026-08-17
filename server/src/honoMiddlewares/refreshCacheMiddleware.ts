@@ -20,7 +20,7 @@ export const refreshCacheMiddleware = async (
 
 	const ctx = c.get("ctx");
 
-	if (ctx.preserveFullSubjectCache) return;
+	if (ctx.skipSubjectCacheDeletion) return;
 	if (ctx.testOptions?.skipCacheDeletion) return;
 
 	const pathname = new URL(c.req.url).pathname.replace("/v1", "");

@@ -14,14 +14,20 @@ import { getTrackQueueIdempotencyKey } from "@/internal/balances/idempotency/tra
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
+import {
+	RedisDeductionError,
+	RedisDeductionErrorCode,
+} from "../../utils/types/redisDeductionError.js";
 import { runRedisTrackV3 } from "./runRedisTrackV3.js";
 
 const getTrackFullSubject = async ({
 	ctx,
 	body,
+	forceFresh = false,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
+	forceFresh?: boolean;
 }): Promise<FullSubject> => {
 	const { customer_id, entity_id } = body;
 
@@ -31,6 +37,7 @@ const getTrackFullSubject = async ({
 				customerId: customer_id,
 				entityId: entity_id,
 				source: "runTrackV3",
+				staleWhileRevalidate: !forceFresh,
 			})
 		: getOrCreateCachedFullSubject({
 				ctx,
@@ -59,21 +66,37 @@ export const runTrackV3 = async ({
 		});
 	}
 
-	const fullSubject = await getTrackFullSubject({
+	let fullSubject = await getTrackFullSubject({
 		ctx,
 		body,
 	});
 
 	const redisIdempotencyKey = getTrackQueueIdempotencyKey({ ctx });
 
-	const response: TrackResponseV3 = await runRedisTrackV3({
-		ctx,
-		fullSubject,
-		featureDeductions,
-		overageBehavior: body.overage_behavior || "cap",
-		body,
-		idempotencyKey: redisIdempotencyKey,
-	});
+	const execute = () =>
+		runRedisTrackV3({
+			ctx,
+			fullSubject,
+			featureDeductions,
+			overageBehavior: body.overage_behavior || "cap",
+			body,
+			idempotencyKey: redisIdempotencyKey,
+		});
+
+	let response: TrackResponseV3;
+	try {
+		response = await execute();
+	} catch (error) {
+		if (
+			!(error instanceof RedisDeductionError) ||
+			error.code !== RedisDeductionErrorCode.SubjectViewChanged
+		) {
+			throw error;
+		}
+
+		fullSubject = await getTrackFullSubject({ ctx, body, forceFresh: true });
+		response = await execute();
+	}
 
 	return applyResponseVersionChanges<TrackResponseV3>({
 		input: response,
