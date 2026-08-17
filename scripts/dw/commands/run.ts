@@ -1,7 +1,6 @@
-import { fatal } from "../helpers/shell.ts";
-import { getCurrentWorktree } from "../helpers/git.ts";
-import { loadRegistry } from "../helpers/registry.ts";
 import { killOwnPorts } from "../helpers/ports.ts";
+import { resolveCurrentEntryOrFatal } from "../helpers/registry.ts";
+import { fatal } from "../helpers/shell.ts";
 import { startDev } from "../helpers/start.ts";
 
 export async function cmdRun(): Promise<void> {
@@ -9,15 +8,7 @@ export async function cmdRun(): Promise<void> {
 		fatal("bun dw is disabled in production");
 	}
 
-	const cwd = getCurrentWorktree();
-	const registry = loadRegistry();
-	const entry = registry[cwd];
-	if (!entry) {
-		fatal(
-			`no provisioned worktree at ${cwd}. Run 'bun dw setup' first (or 'bun dw' to do both).`,
-		);
-	}
-
+	const entry = resolveCurrentEntryOrFatal("bun dw run", { touch: true });
 	killOwnPorts(entry.worktreeNum);
-	startDev(entry, { allowTmux: false });
+	await startDev(entry, { allowTmux: false });
 }
