@@ -1,5 +1,6 @@
 import type {
 	Entity,
+	FullCustomer,
 	FullProduct,
 	MultiAttachProductContext,
 } from "@autumn/shared";
@@ -7,23 +8,65 @@ import { productToReplacementKey, RecaseError } from "@autumn/shared";
 import { resolvePhaseProductContexts } from "./unscheduledProductContexts";
 
 /**
- * The entity a later-phase plan is attached in. A plan that declares its own
- * entity_id takes it; the rest fall back to the scope of the immediate-phase
- * plan they succeed — the same product if one is there, otherwise whichever
- * plan holds the same group.
- *
- * A match with no entity means customer-level, so the fallback applies only
- * when the immediate phase has no matching plan at all.
+ * The entity a later-phase plan is attached in: the one it states, else the
+ * scope of the immediate-phase plan it succeeds — the same product if one is
+ * there, otherwise whichever plan holds the same group.
  */
 export const computeScopeForScheduledProduct = ({
 	immediatePhaseProductContexts,
 	fullProduct,
 	entityId,
+	fullCustomer,
 	fallbackEntity,
 }: {
 	immediatePhaseProductContexts: MultiAttachProductContext[];
 	fullProduct: FullProduct;
 	entityId?: string | null;
+	fullCustomer: FullCustomer;
+	fallbackEntity?: Entity;
+}): Entity | undefined => {
+	if (entityId === null) return undefined;
+	if (entityId !== undefined) {
+		return findCustomerEntity({ fullCustomer, entityId });
+	}
+
+	return inheritScopeFromImmediatePhase({
+		immediatePhaseProductContexts,
+		fullProduct,
+		fallbackEntity,
+	});
+};
+
+const findCustomerEntity = ({
+	fullCustomer,
+	entityId,
+}: {
+	fullCustomer: FullCustomer;
+	entityId: string;
+}): Entity => {
+	const entity = fullCustomer.entities.find(
+		(candidate) => candidate.id === entityId,
+	);
+
+	if (!entity) {
+		throw new RecaseError({
+			message: `Entity '${entityId}' not found for customer '${fullCustomer.id}'`,
+			statusCode: 400,
+		});
+	}
+
+	return entity;
+};
+
+/** A match with no entity means customer-level, so the fallback applies only
+ * when the immediate phase has no matching plan at all. */
+const inheritScopeFromImmediatePhase = ({
+	immediatePhaseProductContexts,
+	fullProduct,
+	fallbackEntity,
+}: {
+	immediatePhaseProductContexts: MultiAttachProductContext[];
+	fullProduct: FullProduct;
 	fallbackEntity?: Entity;
 }): Entity | undefined => {
 	// Unscheduled plans outlive the schedule, so a later phase must never adopt
@@ -31,13 +74,6 @@ export const computeScopeForScheduledProduct = ({
 	const scheduledPlans = resolvePhaseProductContexts({
 		productContexts: immediatePhaseProductContexts,
 	});
-
-	if (entityId !== undefined) {
-		return entityId === null
-			? undefined
-			: findImmediatePhaseEntity({ scheduledPlans, entityId });
-	}
-
 	const replacementKey = productToReplacementKey({ product: fullProduct });
 
 	const precedingPlan =
@@ -52,26 +88,4 @@ export const computeScopeForScheduledProduct = ({
 
 	if (!precedingPlan) return fallbackEntity;
 	return precedingPlan.fullCustomer.entity;
-};
-
-/** A schedule can't change scope mid-flight, so the entity must already be there. */
-const findImmediatePhaseEntity = ({
-	scheduledPlans,
-	entityId,
-}: {
-	scheduledPlans: MultiAttachProductContext[];
-	entityId: string;
-}): Entity => {
-	const entity = scheduledPlans.find(
-		(productContext) => productContext.fullCustomer.entity?.id === entityId,
-	)?.fullCustomer.entity;
-
-	if (!entity) {
-		throw new RecaseError({
-			message: `Entity '${entityId}' is not scoped by the first phase, so a later phase cannot schedule a plan in it.`,
-			statusCode: 400,
-		});
-	}
-
-	return entity;
 };

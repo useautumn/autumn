@@ -59,6 +59,7 @@ export const setupScheduledProductsContext = async ({
 						entity: computeScopeForScheduledProduct({
 							fullProduct,
 							entityId: plan.entity_id,
+							fullCustomer,
 							immediatePhaseProductContexts,
 							fallbackEntity: fullCustomer.entity,
 						}),
