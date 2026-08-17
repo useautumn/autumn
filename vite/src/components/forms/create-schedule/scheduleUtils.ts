@@ -14,33 +14,6 @@ import {
 } from "@/components/forms/shared/utils/planGroupUtils";
 import type { SchedulePhase, SchedulePlan } from "./createScheduleFormSchema";
 
-/**
- * Mirrors the server's inheritance rule: a later phase's plan takes the scope of
- * the opening phase's plan in the same group, else customer-level.
- */
-export function resolveInheritedPlanScope({
-	productId,
-	openingPhasePlans,
-	products,
-}: {
-	productId: string;
-	openingPhasePlans: SchedulePlan[];
-	products: ProductV2[];
-}): string | undefined {
-	if (!productId) return undefined;
-	const groupKey = getProductGroupKey({ productId, products });
-	// Ungrouped plans share a group key, so an exact plan match wins before it.
-	const openingPlan =
-		openingPhasePlans.find((plan) => plan.productId === productId) ??
-		openingPhasePlans.find(
-			(plan) =>
-				plan.productId &&
-				getProductGroupKey({ productId: plan.productId, products }) ===
-					groupKey,
-		);
-	return openingPlan?.entityId ?? undefined;
-}
-
 /** Plans sitting at exactly one scope — null is customer-level. */
 export function filterPlansByScope({
 	plans,
@@ -116,7 +89,7 @@ export function resolveCopySourceScope({
 
 /**
  * An unscheduled plan conflicts with any phase that claims its group and scope,
- * so every phase counts as used — later phases at the scope they inherit.
+ * so every phase counts as used.
  */
 export function getUnscheduledUsedGroupKeys({
 	phases,
@@ -131,24 +104,9 @@ export function getUnscheduledUsedGroupKeys({
 	products: ProductV2[];
 	entityId?: string | null;
 }): Set<string> {
-	const openingPhasePlans = phases[0]?.plans ?? [];
-	const phasePlans = phases.flatMap((phase, index) =>
-		index === 0
-			? phase.plans
-			: phase.plans.map((plan) => ({
-					...plan,
-					entityId:
-						resolveInheritedPlanScope({
-							productId: plan.productId,
-							openingPhasePlans,
-							products,
-						}) ?? null,
-				})),
-	);
-
 	return getUsedGroupKeys({
 		plans: [
-			...phasePlans,
+			...phases.flatMap((phase) => phase.plans),
 			...unscheduledPlans.filter((_, index) => index !== planIndex),
 		],
 		products,

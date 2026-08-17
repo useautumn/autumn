@@ -48,13 +48,22 @@ export const computePooledBalanceTransitionPlan = ({
 		});
 	}
 
+	// Every incoming product lands on the same subscription, so pools must agree
+	// on the stand-in id — otherwise they split, then collide once the real
+	// subscription id is stamped onto both.
+	const pendingSubscriptionId = incomingCustomerProducts
+		.map((customerProduct) => customerProduct.id)
+		.sort()[0];
+
 	for (const customerProduct of incomingCustomerProducts) {
 		applyIncomingPooledBalanceSources({
 			ctx,
 			computeContext,
 			customerProduct,
 			stripeSubscriptionId:
-				stripeSubscriptionId ?? customerProduct.subscription_ids?.[0],
+				stripeSubscriptionId ??
+				customerProduct.subscription_ids?.[0] ??
+				pendingSubscriptionId,
 			customerCreatedAt: fullCustomer.created_at,
 			now,
 		});
