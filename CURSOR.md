@@ -143,8 +143,10 @@ Secrets** on [Cloud Agents → Secrets](https://cursor.com/dashboard/cloud-agent
 
 Public tunnel tokens live in Infisical `dev`, not Cursor secrets:
 
-- `CLOUDFLARE_TUNNEL_API_TOKEN`
+- `CLOUDFLARE_TUNNEL_API_TOKEN` — Cloudflare account token **`autumn-dw-tunnels`** (Tunnel Write + Zone DNS Write on `autumnworktree.com`). Not `coding-agent`.
 - `CLOUDFLARE_TUNNEL_ACCOUNT_ID`
+
+`bun dw` is `infisical run --env=dev`. Infisical wins over the boot snapshot in `~/.autumn-agent/cloudflare.env`. After rotating the vault token you do **not** need a new Cloud agent; re-run `bun dw setup`.
 
 `INFISICAL_TOKEN` is the Token Auth access token (identity → Token Auth →
 Create Token). `infisical run` uses it directly. Client id/secret are unused

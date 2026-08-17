@@ -82,14 +82,29 @@ function logPath(worktreeNum: number): string {
 	return join(agentDir(), `cf-wt${worktreeNum}.log`);
 }
 
-function loadAgentCloudflareEnv(): void {
-	const path = join(agentDir(), "cloudflare.env");
+/**
+ * Fill missing Cloudflare creds from `~/.autumn-agent/cloudflare.env`.
+ * Already-set keys win — `bun dw` is wrapped in `infisical run`, and Cloud
+ * start.sh snapshots the token at boot. Overwriting would keep a stale
+ * coding-agent token after Infisical is updated mid-session.
+ */
+export function loadAgentCloudflareEnv({
+	env = process.env,
+	home,
+}: {
+	env?: NodeJS.ProcessEnv;
+	home?: string;
+} = {}): void {
+	const path = join(agentDir({ home }), "cloudflare.env");
 	if (!existsSync(path)) return;
 	for (const line of readFileSync(path, "utf8").split("\n")) {
 		const m = line.match(
 			/^(CLOUDFLARE_TUNNEL_API_TOKEN|CLOUDFLARE_TUNNEL_ACCOUNT_ID|CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID)=(.*)$/,
 		);
-		if (m) process.env[m[1]] = m[2];
+		if (!m) continue;
+		const [, key, value] = m;
+		if (!value || env[key]) continue;
+		env[key] = value;
 	}
 }
 
@@ -203,8 +218,12 @@ async function cfFetch({
 			?.map((e) => e.message)
 			.filter(Boolean)
 			.join("; ");
+		const hint =
+			response.status === 403 && path.includes("/dns_records")
+				? " (Zone DNS permission missing, or stale ~/.autumn-agent/cloudflare.env overriding Infisical)"
+				: "";
 		throw new Error(
-			`cloudflare ${method ?? "GET"} ${path} failed: ${response.status}${detail ? ` ${detail}` : ""}`,
+			`cloudflare ${method ?? "GET"} ${path} failed: ${response.status}${detail ? ` ${detail}` : ""}${hint}`,
 		);
 	}
 	return data.result;

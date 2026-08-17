@@ -148,6 +148,7 @@ UNIT_TESTS=1 env -u TESTS_ORG bun test \
 	"$ROOT/scripts/dw/helpers/ngrok.test.ts" \
 	"$ROOT/scripts/dw/helpers/machineId.test.ts" \
 	"$ROOT/scripts/dw/helpers/registry.test.ts" \
+	"$ROOT/scripts/dw/helpers/cloudflare.env.test.ts" \
 	"$ROOT/scripts/dw/devProxy/cloudflareConfig.test.ts" \
 	|| fail "dw unit tests failed"
 pass "dw reserved names, machine-id, cloudflare hosts"
