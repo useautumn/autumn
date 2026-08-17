@@ -1,5 +1,6 @@
 import type { CustomizePlanV1 } from "@autumn/shared";
 import type {
+	Entitlement,
 	EntitlementWithFeature,
 	Price,
 	Product,
@@ -33,5 +34,10 @@ export type ComputeEntitlementPricesPlanParams = {
 	currentRows?: {
 		prices: Price[];
 		entitlements: EntitlementWithFeature[];
+	};
+	/** Rows to copy stripe_* ids from — carry only, never claiming. Defaults to currentRows. */
+	stripeCandidates?: {
+		prices: Price[];
+		entitlements: Entitlement[];
 	};
 };

@@ -9,6 +9,8 @@ import {
 import { executeMigrationDrafts } from "@/internal/catalogV2/execute/executeMigrationDrafts";
 import { executeRemovePlans } from "@/internal/catalogV2/execute/executeRemovePlans";
 import { executeUpsertProducts } from "@/internal/catalogV2/execute/executeUpsertProducts/executeUpsertProducts";
+import { initStripeResourcesForCatalog } from "@/internal/catalogV2/execute/executeInitStripeResources/initStripeResourcesForCatalog";
+import { queueRewardMigrations } from "@/internal/catalogV2/execute/queueRewardMigrations";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache";
@@ -155,6 +157,8 @@ export const executeUpdateCatalogPlan = async ({
 	await executeRemoveFeatures({ ctx, updateCatalogPlan });
 	const plans = await executeUpsertProducts({ ctx, updateCatalogPlan });
 	await executeRemovePlans({ ctx, updateCatalogPlan });
+	await initStripeResourcesForCatalog({ ctx, updateCatalogPlan });
+	await queueRewardMigrations({ ctx, updateCatalogPlan });
 	const migrations = await executeMigrationDrafts({ ctx, updateCatalogPlan });
 
 	await clearOrgCache({

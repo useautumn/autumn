@@ -21,6 +21,7 @@ export const computeProductDetailsPlan = ({
 	version,
 	baseFullProduct,
 	baseInternalProductId,
+	baseProcessor,
 }: {
 	ctx: AutumnContext;
 	planParams: UpdateCatalogPlanParams;
@@ -30,6 +31,8 @@ export const computeProductDetailsPlan = ({
 	baseFullProduct?: FullProduct | null;
 	/** Variant pointer. Compute-owned — not a request field. */
 	baseInternalProductId?: string | null;
+	/** Variant create: share the base's Stripe Product. */
+	baseProcessor?: Product["processor"];
 }): ProductDetailsPlan => {
 	if (!currentFullProduct) {
 		return {
@@ -42,6 +45,7 @@ export const computeProductDetailsPlan = ({
 				...(baseInternalProductId !== undefined
 					? { baseInternalProductId }
 					: {}),
+				...(baseProcessor !== undefined ? { baseProcessor } : {}),
 			}),
 		};
 	}

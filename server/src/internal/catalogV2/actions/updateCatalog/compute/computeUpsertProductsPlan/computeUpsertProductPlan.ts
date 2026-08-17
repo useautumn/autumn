@@ -16,6 +16,7 @@ import type {
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { planParamsFromEditDiff } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/planParamsFromEditDiff";
+import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
 const latestFullProductForPlan = ({
@@ -77,6 +78,16 @@ export const computeUpsertProductPlan = ({
 		currentFullProduct: currentFullProduct ?? baseFullProduct,
 	});
 
+	// variant_link clones content via planParams, not baseFullProduct — the
+	// folded base is still the Stripe baseline (processor + price id carry).
+	const variantBaseFullProduct =
+		source === "variant_link" && baseInternalProductId
+			? findFullProductByInternalId({
+					internalId: baseInternalProductId,
+					productStatesContext,
+				})
+			: null;
+
 	const details = computeProductDetailsPlan({
 		ctx,
 		planParams,
@@ -84,6 +95,9 @@ export const computeUpsertProductPlan = ({
 		version: productKey.version,
 		baseFullProduct,
 		...(baseInternalProductId !== undefined ? { baseInternalProductId } : {}),
+		...(variantBaseFullProduct
+			? { baseProcessor: variantBaseFullProduct.processor }
+			: {}),
 	});
 
 	const freeTrialPlan = computeFreeTrialPlan({
@@ -101,6 +115,14 @@ export const computeUpsertProductPlan = ({
 		planParams,
 		versioning,
 		protectReferencedRows: customerUsage.hasVersionableRowRefs,
+		...(variantBaseFullProduct
+			? {
+					stripeCandidates: {
+						prices: variantBaseFullProduct.prices,
+						entitlements: variantBaseFullProduct.entitlements,
+					},
+				}
+			: {}),
 	});
 
 	const nextFullProduct = assembleNextFullProduct({
@@ -152,6 +174,9 @@ export const computeUpsertProductPlan = ({
 		...(declaredVariants !== undefined ? { declaredVariants } : {}),
 		...(source === "direct" && planParams.propagate !== undefined
 			? { propagate: planParams.propagate }
+			: {}),
+		...(planParams.create_in_stripe !== undefined
+			? { createInStripe: planParams.create_in_stripe }
 			: {}),
 		state: {
 			hasCustomers:

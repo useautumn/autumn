@@ -36,10 +36,16 @@ export const deriveVariantCreates = ({
 		return [
 			{
 				productKey: { planId: variant.variant_plan_id, version: 1 },
-				planParams: initVariantPlanParams({
-					variant,
-					baseFullProduct: upsert.row.nextFullProduct,
-				}),
+				planParams: {
+					...initVariantPlanParams({
+						variant,
+						baseFullProduct: upsert.row.nextFullProduct,
+					}),
+					// Variant creates inherit the base's Stripe creation opt-out.
+					...(upsert.createInStripe !== undefined
+						? { create_in_stripe: upsert.createInStripe }
+						: {}),
+				},
 				source: "variant_link" as const,
 				baseInternalProductId: upsert.row.nextFullProduct.internal_id,
 			},

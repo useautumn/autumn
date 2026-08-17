@@ -1,11 +1,13 @@
 import {
 	ErrCode,
 	findDuplicate,
+	hasLicenseCustomize,
 	ProductNotFoundError,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { findCustomizedPaidFeatureIdOnLicense } from "@/internal/licenses/actions/links/findCustomizedPaidFeatureIdOnLicense";
 import { validateLicenseLink } from "@/internal/licenses/actions/links/validateLicenseLink";
 
 const parentLicensePlanIds = ({
@@ -72,6 +74,25 @@ export const handlePlanLicenseErrors = ({
 			licenseProduct: planLicense.effectiveLicenseProduct,
 			prepaidOnly: planLicense.prepaidOnly,
 			licensePlanId: planLicense.licensePlanId,
+		});
+
+		if (
+			!hasLicenseCustomize(planLicense.customize) ||
+			!planLicense.licenseProduct
+		) {
+			continue;
+		}
+
+		const paidFeatureId = findCustomizedPaidFeatureIdOnLicense({
+			stockProduct: planLicense.licenseProduct,
+			effectiveProduct: planLicense.effectiveLicenseProduct,
+		});
+		if (!paidFeatureId) continue;
+
+		throw new RecaseError({
+			message: `Paid features are not supported on plan licenses (${paidFeatureId}).`,
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
 };

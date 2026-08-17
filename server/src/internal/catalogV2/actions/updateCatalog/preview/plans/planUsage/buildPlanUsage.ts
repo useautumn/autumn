@@ -104,9 +104,41 @@ const persistedKey = ({
 	version,
 }: {
 	planId: string;
-	allVersions: boolean;
+	allVersions?: boolean;
 	version: number;
 }): string => (allVersions ? planId : `${planId}:${version}`);
+
+export const lookupPersistedCustomerUsage = ({
+	planId,
+	version,
+	allVersions = false,
+	previewContext,
+}: {
+	planId: string;
+	version: number;
+	allVersions?: boolean;
+	previewContext: PreviewCatalogContext | undefined;
+}) =>
+	previewContext?.planUsagePersisted[
+		persistedKey({ planId, allVersions, version })
+	]?.customers ?? emptyCatalogFeatureUsageBucket();
+
+export const customerUsageForPreview = ({
+	planId,
+	version,
+	previewContext,
+}: {
+	planId: string;
+	version: number;
+	previewContext: PreviewCatalogContext | undefined;
+}): CatalogPlanUsage => ({
+	...emptyCatalogPlanUsage(),
+	customers: lookupPersistedCustomerUsage({
+		planId,
+		version,
+		previewContext,
+	}),
+});
 
 /** Compose remove-plan usage from persisted customers + setup relatives. */
 export const buildPlanUsage = ({
@@ -121,17 +153,13 @@ export const buildPlanUsage = ({
 	const first = rows[0];
 	if (!first) return emptyCatalogPlanUsage();
 
-	const persisted =
-		previewContext?.planUsagePersisted[
-			persistedKey({
-				planId: first.planId,
-				allVersions: first.allVersions,
-				version: first.version,
-			})
-		];
-
 	return {
-		customers: persisted?.customers ?? emptyCatalogFeatureUsageBucket(),
+		customers: lookupPersistedCustomerUsage({
+			planId: first.planId,
+			version: first.version,
+			allVersions: first.allVersions,
+			previewContext,
+		}),
 		license_parents: toCappedBucket({
 			samples: licenseParentSamples({ rows }),
 		}),

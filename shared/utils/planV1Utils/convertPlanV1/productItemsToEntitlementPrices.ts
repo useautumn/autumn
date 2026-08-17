@@ -4,6 +4,8 @@ import type {
 	BasePriceAndEntitlementPrices,
 	EntitlementPrice,
 } from "@utils/productUtils/entitlementPriceUtils/entitlementPriceTypes.js";
+import { isFixedPrice } from "@utils/productUtils/priceUtils/classifyPriceUtils.js";
+import { findPriceByFeatureId } from "@utils/productUtils/priceUtils/findPrice/findPriceByFeatureId.js";
 import {
 	isFeatureItem,
 	isPriceItem,
@@ -14,6 +16,18 @@ import type { Price } from "../../../models/productModels/priceModels/priceModel
 import type { Product } from "../../../models/productModels/productModels.js";
 import type { ProductItem } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 
+const stripeReusePriceForItem = ({
+	item,
+	prices,
+}: {
+	item: ProductItem;
+	prices: Price[];
+}): Price | undefined => {
+	if (isPriceItem(item)) return prices.find(isFixedPrice);
+	if (!item.feature_id) return undefined;
+	return findPriceByFeatureId({ prices, featureId: item.feature_id });
+};
+
 /**
  * Mint desired base Price + EntitlementPrice rows from ProductItems.
  * Construction only — no claim/classification against current rows.
@@ -22,14 +36,18 @@ export const productItemsToEntitlementPrices = ({
 	items,
 	product,
 	features,
+	stripeReusePrices,
 }: {
 	items: ProductItem[];
 	/** Stamp only — org_id / internal_id. */
 	product: Pick<Product, "org_id" | "internal_id">;
 	features: Feature[];
+	/** Current/candidate prices used only to refuse a mismatched stripe_price_id. */
+	stripeReusePrices?: Price[];
 }): BasePriceAndEntitlementPrices => {
 	let basePrice: Price | undefined;
 	const entitlementPrices: EntitlementPrice[] = [];
+	const reusePrices = stripeReusePrices ?? [];
 
 	for (const item of items) {
 		const feature = item.feature_id
@@ -46,6 +64,14 @@ export const productItemsToEntitlementPrices = ({
 			isCustom: false,
 			newVersion: false,
 			features,
+			...(reusePrices.length > 0
+				? {
+						stripeReusePrice: stripeReusePriceForItem({
+							item,
+							prices: reusePrices,
+						}),
+					}
+				: {}),
 		});
 
 		if (isPriceItem(item)) {

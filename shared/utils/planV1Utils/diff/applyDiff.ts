@@ -270,3 +270,52 @@ export const applyDiff = ({
 	if (licenses === undefined) return output;
 	return { ...output, licenses };
 };
+
+/** Public customize (PUT `items` or PATCH add/remove) applied onto a plan. */
+export const applyCustomizeToPlan = ({
+	plan,
+	customize,
+}: {
+	plan: DiffablePlanV1;
+	customize: {
+		price?: DiffedCustomizePlanV1["price"];
+		items?: CreatePlanItemParamsV1[];
+		add_items?: CreatePlanItemParamsV1[];
+		remove_items?: PlanItemFilter[];
+		free_trial?: DiffedCustomizePlanV1["free_trial"];
+		upsert_licenses?: DiffedCustomizePlanV1["upsert_licenses"];
+		remove_licenses?: DiffedCustomizePlanV1["remove_licenses"];
+	};
+}): DiffablePlanV1 => {
+	const applied = applyDiff({
+		base: plan,
+		diff: {
+			...(customize.price !== undefined ? { price: customize.price } : {}),
+			...(customize.add_items !== undefined
+				? { add_items: customize.add_items }
+				: {}),
+			...(customize.remove_items !== undefined
+				? { remove_items: customize.remove_items }
+				: {}),
+			...(customize.free_trial !== undefined
+				? { free_trial: customize.free_trial }
+				: {}),
+			...(customize.upsert_licenses !== undefined
+				? { upsert_licenses: customize.upsert_licenses }
+				: {}),
+			...(customize.remove_licenses !== undefined
+				? { remove_licenses: customize.remove_licenses }
+				: {}),
+		},
+	});
+	return {
+		...plan,
+		price: applied.price,
+		items:
+			customize.items !== undefined
+				? customize.items.map(toApiPlanItem)
+				: applied.items,
+		free_trial: applied.free_trial,
+		...(applied.licenses !== undefined ? { licenses: applied.licenses } : {}),
+	};
+};

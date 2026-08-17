@@ -49,6 +49,7 @@ export const computeEntitlementPricesPlan = ({
 		items,
 		product: params.product,
 		features: allFeatures,
+		stripeReusePrices: (params.stripeCandidates ?? params.currentRows)?.prices,
 	});
 
 	const claims = claimCurrentRows({
@@ -61,10 +62,11 @@ export const computeEntitlementPricesPlan = ({
 		claims,
 	});
 
+	const stripeCandidates = params.stripeCandidates ?? params.currentRows;
 	carryForwardStripeResources({
 		plan,
-		candidatePrices: params.currentRows?.prices ?? [],
-		candidateEntitlements: params.currentRows?.entitlements ?? [],
+		candidatePrices: stripeCandidates?.prices ?? [],
+		candidateEntitlements: stripeCandidates?.entitlements ?? [],
 	});
 
 	plan.projected = {

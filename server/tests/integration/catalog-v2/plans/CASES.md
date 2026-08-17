@@ -191,14 +191,17 @@ Customer refs are DB-seeded (Stripe Connect harness currently broken for
 | **Bad state — customer's cus_product on v2 but cus_ent references v1's ent: pinned v1 update retires (never deletes) v1 rows; cus_ent survives** | ✓ |
 | **Bad state — same shape with cus_price → v1 base price: pinned v1 price change retires old base; update succeeds** | ✓ |
 
-## 7. Stripe ID re-use — `update/stripe-reuse.test.ts`
+## 7. Stripe resources — carry + init
 
-Init real Stripe resources via `initStripeResourcesForProducts` (same path
-`updateProduct` uses — see `initPlanStripeResources`), then update via
-catalogV2 and assert reuse levels with
-`expectPriceStripeReuseCorrect` / `expectPriceStripeResourcesAbsent`
+Carry (compute) stamps stripe_* from candidate rows; init (execute,
+`initStripeResourcesForCatalog`) creates what's still missing, guarded by
+Live / `disable_stripe_writes` / disconnected / `create_in_stripe: false`.
+Assert with `expectPriceStripeReuseCorrect` / `expectPriceStripeResourcesPresent`
+/ `expectProductProcessorCorrect`
 (`server/tests/integration/utils/expectStripePriceResources.ts`). Levels
 match `PriceStripeReuseLevel`: `full` / `stripeProductOnly` / `none`.
+
+### 7A. Direct plan reuse — `update/stripe-reuse.test.ts`
 
 | Case | Status |
 |---|---|
@@ -207,9 +210,80 @@ match `PriceStripeReuseLevel`: `full` / `stripeProductOnly` / `none`.
 | Usage amount change → `stripeProductOnly` (product + meter; not price id) | ✓ |
 | Prepaid amount change → `stripeProductOnly` | ✓ |
 | Graduated → volume switch → `stripeProductOnly` | ✓ |
-| Base price change → `none` (fixed ≠ usage); new row has null ids | ✓ |
-| Add new paid item → no stripe ids (minted lazily later) | ✓ |
+| Base price change → `none`; init mints a FRESH price under the plan's product | ✓ |
+| Add new paid item → init creates its stripe ids eagerly | ✓ |
 | `new_version` mint carries full stripe ids on matching item | ✓ (`update/stripe-reuse.test.ts`; expanded in `update/stripe-reuse-mint.test.ts` / §15) |
+
+### 7B. Variant carry — `variants/stripe-carry.test.ts`
+
+| Case | Status |
+|---|---|
+| Declared variant, no customize → processor shared; base + prepaid `full` | ✓ |
+| Customize allowance only → `stripeProductOnly` (ent is part of full-match) | ✓ |
+| Customize prepaid amount → `stripeProductOnly`; processor shared | ✓ |
+| Customize base price → base `none` (fresh price, shared product); items `full` | ✓ |
+| Customize adds new feature item → created with its OWN per-feature product | ✓ |
+| Follow (propagate.variants) carries from the variant's own rows, not the base | ✓ |
+
+### 7C. License overlay carry + init — `licenses/stripe-carry.test.ts`
+
+| Case | Status |
+|---|---|
+| Declared customize adding/changing a paid feature → 400 (see §17) | ✓ `declared-license-paid-feature.test.ts` |
+| Pin overlay (child changed, parent omitted) → `full` carry from FROZEN child; fresh price row | ✓ |
+
+### 7D. Execute init + guards — `create/stripe-init.test.ts`, `update/stripe-name-sync.test.ts`, `tests/unit/catalog-v2/init-catalog-stripe-resources.test.ts`
+
+| Case | Status |
+|---|---|
+| Paid plan create → processor + price ids created | ✓ |
+| `create_in_stripe: false` → carry only, nothing created | ✓ |
+| Free plan create → no Stripe Product | ✓ |
+| Zero-amount base price → nothing minted | ✓ |
+| Same-call base + variant (and base + 2 variants) → ONE shared Stripe Product | ✓ |
+| Added paid item on un-inited plan → init fills it | ✓ |
+| Same-call parent + child + customize → overlay inited under the CHILD's product | ✓ |
+| `new_version` mint of un-inited plan → only v2 inited; v1 stays bare | ✓ |
+| Base rename syncs owned Stripe Product name; variant rename does not | ✓ |
+| Live env → reuse runs, zero Stripe creation calls (unit) | ✓ |
+| Disconnected org → reuse runs, zero creation calls (unit) | ✓ |
+
+### 7E. Stripe price immutability — `update/stripe-price-immutability.test.ts`, `variants/customize/items-put-ids.test.ts`, `tests/unit/shared/copyStripeResourcesToMatchingPrice.test.ts`
+
+Invariant: a billing-param change (amount, tiers, billing_units, included,
+interval, …) must NEVER keep the old `stripe_price_id` — Stripe prices are
+immutable, so a stale id keeps billing the old amount. Carry is the single
+authority: a preset price-level id owned by a candidate that is no longer a
+full match is CLEARED; ids no candidate owns (sync/import) are trusted.
+
+| Case | Status |
+|---|---|
+| Preset id owned by drifted candidate → cleared; product ids copied (unit) | ✓ |
+| Preset id no candidate owns (sync/import) → kept (unit) | ✓ |
+| Preset id owned by full-match candidate → kept (unit) | ✓ |
+| Base plan: round-tripped stale id + new amount → fresh Stripe price minted | ✓ |
+| Existing variant: edit PUT amount change → `stripeProductOnly` | ✓ |
+| Existing variant: edit PUT round-tripping stale id + new amount → fresh mint | ✓ |
+| `all_versions` amount change → every version mints its own new stripe price | ✓ |
+| License overlay paid-feature customize → 400 (see §17); not an immutability path | ✓ `declared-license-paid-feature.test.ts` |
+| Stub id threading with `create_in_stripe: false` → lands on row untouched | ✓ (`items-put-ids.test.ts`) |
+
+### 7F. Reward migration queue — `update/reward-migration.test.ts`
+
+`executeUpdateCatalogPlan` queues `JobName.RewardMigration` (after Stripe init)
+per upsert whose price buckets have writes; the task remaps
+`discount_config.price_ids` from the pre-change rows onto the new rows.
+Feature display generation is already queued by the feature executors.
+
+| Case | Status |
+|---|---|
+| In-place base price change → reward price_ids remap to the new row | ✓ |
+| `new_version` mint with price change → reward price_ids remap to v2's row | ✓ |
+
+Not covered here (deliberate): D-matrix variant version mints with mixed
+customers (needs attach fixtures), `disable_stripe_writes` org config
+(integration org is shared), migrations-v2 ensure-prices regression lives in
+`migrations-v2/prepare/ensure-prices-and-ents`.
 
 ## 8. Versions — `versions/plan-versions.test.ts`
 
@@ -659,6 +733,8 @@ Direct parent `licenses[]` only. Omit = leave links unchanged; present = full-se
 | Archived child → 400 | ✓ `declared-license-guards.test.ts` |
 | Pooled item on child, or pooled in customize `add_items` → 400 | ✓ `declared-license-pooled.test.ts` |
 | `prepaid_only: false` → 400 | ✓ `declared-license-guards.test.ts` |
+| Customize `add_items` prepaid / paid usage feature → 400 | ✓ `declared-license-paid-feature.test.ts` |
+| Customize changing a child's prepaid amount → 400 | ✓ `declared-license-paid-feature.test.ts` |
 | Create feature + parent customize `add_items` that feature | ✓ `set-fields.test.ts` |
 
 ## 18. Plan licenses — pin / follow / compose — `licenses/`
@@ -866,6 +942,20 @@ Same one-home split as licenses: `variants[]` declare, `propagate.variants` foll
 | `is_default: true` on a variant → 400 `variant_cannot_be_default` | ✓ `create/create-variant-errors.test.ts` |
 | `variant_plan_id === plan_id` → 400 | `create/create-variant-errors.test.ts` |
 | Duplicate `variant_plan_id` in `variants[]` → 400 | `create/create-variant-errors.test.ts` |
+
+### customize/ — PUT `items` vs PATCH add/remove
+
+| Case | Status |
+|---|---|
+| `customize.items` PUT on create: listed items only (drops unlisted base items) | ✓ `customize/items-put.test.ts` |
+| `customize.items` PUT on create: listed extras (Dashboard) are kept | ✓ `customize/items-put.test.ts` |
+| `customize.items` PUT on edit, no propagate → replaces variant items, base unchanged | ✓ `customize/items-put.test.ts` |
+| Follow + PUT items without the followed feature → PUT wins, followed item dropped | ✓ `customize/items-put.test.ts` |
+| Follow + PUT items including the followed feature → both land | ✓ `customize/items-put.test.ts` |
+| `customize.items` + `add_items` / `remove_items` → 400 | ✓ `customize/items-put.test.ts` |
+| PUT `price.stripe_price_id` on create threads to variant price config | ✓ `customize/items-put-ids.test.ts` |
+| PUT same prepaid as striped base → full Stripe carry; edit PUT keeps Autumn ids | ✓ `customize/items-put-ids.test.ts` |
+| PUT prepaid amount change → stripeProductOnly (parity with PATCH) | ✓ `customize/items-put-ids.test.ts` |
 
 ### follow/ — pin / follow / declare / conflict (Unit 2)
 

@@ -9,6 +9,7 @@ import { applyFreeTrialPlan } from "./applyFreeTrialPlan";
 import { executePlanLicensesPlan } from "./executePlanLicensesPlan";
 import { applyProductDetailsUpdate } from "./applyProductDetailsUpdate";
 import { clearDefaultFlagFromOtherVersions } from "./clearDefaultFlagFromOtherVersions";
+import { syncPlanMetadataAcrossVersions } from "./syncPlanMetadataAcrossVersions";
 
 const executeUpsertProduct = async ({
 	ctx,
@@ -25,6 +26,7 @@ const executeUpsertProduct = async ({
 
 	await applyEntitlementPricesPlan({ ctx, upsert });
 	await applyProductDetailsUpdate({ ctx, upsert });
+	await syncPlanMetadataAcrossVersions({ ctx, upsert });
 	await applyFreeTrialPlan({ ctx, upsert });
 };
 

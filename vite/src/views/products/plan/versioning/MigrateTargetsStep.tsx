@@ -1,6 +1,9 @@
 import { UsersIcon, WarningIcon } from "@phosphor-icons/react";
 import { ItemChangeList } from "@/components/v2/ItemChangeList";
-import type { MigrateTarget, MigrateTargetRow } from "./buildMigrateTargets";
+import type {
+	CatalogMigrateTarget,
+	CatalogMigrateTargetRow,
+} from "../catalog/catalogPlanPreview";
 import { conflictSentence } from "./variantConflicts";
 
 function MetaBadge({ children }: { children: React.ReactNode }) {
@@ -15,7 +18,7 @@ function VersionStatusBadges({
 	row,
 	showCustomers,
 }: {
-	row: MigrateTargetRow;
+	row: CatalogMigrateTargetRow;
 	showCustomers: boolean;
 }) {
 	let status = "";
@@ -45,7 +48,7 @@ function VersionBody({
 	row,
 	showSettings,
 }: {
-	row: MigrateTargetRow;
+	row: CatalogMigrateTargetRow;
 	showSettings: boolean;
 }) {
 	// Settings (config, billing controls, …) are a global metadata patch shared by
@@ -118,7 +121,7 @@ export function MigrateTargetsStep({
 	showCustomers = true,
 	showSettings = true,
 }: {
-	targets: MigrateTarget[];
+	targets: CatalogMigrateTarget[];
 	showCustomers?: boolean;
 	showSettings?: boolean;
 }) {

@@ -23,6 +23,7 @@ const CreateScheduleCustomizePlanSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
 		free_trial: true,
 		upsert_licenses: true,
+		remove_licenses: true,
 		update_items: true,
 	}).strict(),
 	{

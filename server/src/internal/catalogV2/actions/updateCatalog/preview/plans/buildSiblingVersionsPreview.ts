@@ -2,7 +2,11 @@ import type { CatalogSiblingVersionPreview, FullProduct } from "@autumn/shared";
 import { productToProductKey } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
 import { withCatalogConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withCatalogConflicts";
-import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
+import type {
+	PreviewCatalogContext,
+	ProductStatesContext,
+} from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
@@ -15,10 +19,12 @@ const selectedSiblingFromUpsert = ({
 	sibling,
 	editedCurrent,
 	editedNext,
+	previewContext,
 }: {
 	sibling: UpsertProductPlan;
 	editedCurrent: FullProduct | null;
 	editedNext: FullProduct;
+	previewContext: PreviewCatalogContext | undefined;
 }): CatalogSiblingVersionPreview => {
 	const planChange = buildPlanChangeFromFullProducts({
 		from: sibling.row.currentFullProduct ?? undefined,
@@ -32,6 +38,11 @@ const selectedSiblingFromUpsert = ({
 			state: {
 				has_customers: sibling.state.hasCustomers,
 				will_archive: false,
+				usage: customerUsageForPreview({
+					planId: sibling.row.planId,
+					version: sibling.row.version,
+					previewContext,
+				}),
 			},
 			...(planChange ? { plan_change: planChange } : {}),
 		},
@@ -46,11 +57,13 @@ const unselectedSiblingFromVersion = ({
 	productStatesContext,
 	editedCurrent,
 	editedNext,
+	previewContext,
 }: {
 	product: FullProduct;
 	productStatesContext: ProductStatesContext;
 	editedCurrent: FullProduct | null;
 	editedNext: FullProduct;
+	previewContext: PreviewCatalogContext | undefined;
 }): CatalogSiblingVersionPreview =>
 	withCatalogConflicts({
 		preview: {
@@ -62,6 +75,11 @@ const unselectedSiblingFromVersion = ({
 					productStatesContext,
 				}).customerUsage.hasVersionableCustomerProducts,
 				will_archive: false,
+				usage: customerUsageForPreview({
+					planId: product.id,
+					version: product.version,
+					previewContext,
+				}),
 			},
 		},
 		current: editedCurrent,
@@ -90,10 +108,12 @@ export const buildSiblingVersionsPreview = ({
 	directUpsert,
 	upsertProducts,
 	productStatesContext,
+	previewContext,
 }: {
 	directUpsert: UpsertProductPlan;
 	upsertProducts: UpsertProductPlan[];
 	productStatesContext: ProductStatesContext;
+	previewContext: PreviewCatalogContext | undefined;
 }): CatalogSiblingVersionPreview[] => {
 	const { planId, versioning, version } = directUpsert.row;
 	const hasExactlyOneDirectEntry =
@@ -112,6 +132,7 @@ export const buildSiblingVersionsPreview = ({
 					sibling,
 					editedCurrent,
 					editedNext,
+					previewContext,
 				}),
 			)
 			.sort(byVersionAscending);
@@ -125,6 +146,7 @@ export const buildSiblingVersionsPreview = ({
 				productStatesContext,
 				editedCurrent,
 				editedNext,
+				previewContext,
 			}),
 		)
 		.sort(byVersionAscending);

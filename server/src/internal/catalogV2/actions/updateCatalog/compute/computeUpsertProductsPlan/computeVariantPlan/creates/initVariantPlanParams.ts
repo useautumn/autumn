@@ -1,12 +1,11 @@
 import {
-	applyDiff,
+	applyCustomizeToPlan,
 	billingControlsFromColumns,
 	type CatalogVariantParams,
 	type FullProduct,
 	toCreatePlanItemParams,
 } from "@autumn/shared";
 import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange/fullProductToApiPlanV1Sync";
-import { customizeToEditDiff } from "../editDiff/customizeToEditDiff";
 import type { ResolvedPlanParams } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
 /** Clone the folded base into a v1 create, then apply variants[].customize. */
@@ -19,9 +18,9 @@ export const initVariantPlanParams = ({
 }): ResolvedPlanParams => {
 	const basePlan = fullProductToApiPlanV1Sync({ product: baseFullProduct });
 	const applied = variant.customize
-		? applyDiff({
-				base: basePlan,
-				diff: customizeToEditDiff({ customize: variant.customize }),
+		? applyCustomizeToPlan({
+				plan: basePlan,
+				customize: variant.customize,
 			})
 		: {
 				price: basePlan.price,

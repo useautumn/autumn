@@ -141,6 +141,7 @@ test.concurrent(
 					planId: withCus,
 					action: "update",
 					hasCustomers: true,
+					customerCount: 1,
 					versioning: {
 						current_version: 1,
 						new_version: null,
@@ -155,6 +156,7 @@ test.concurrent(
 					planId: withoutCus,
 					action: "update",
 					hasCustomers: false,
+					customerCount: 0,
 					versioning: {
 						current_version: 1,
 						new_version: null,

@@ -30,7 +30,7 @@ export type UpsertProductRow = {
 	version: number;
 	op: UpsertProductOp;
 	source: UpsertProductSource;
-	/** Resolved versioning strategy for this write (params default → existing). */
+	/** Resolved versioning strategy for this write. */
 	versioning: CatalogPlanVersioningStrategy;
 	/** Baseline row at this version; null on create / mint. */
 	currentFullProduct: FullProduct | null;
@@ -64,6 +64,8 @@ export type UpsertProductPlan = {
 	propagate?: CatalogPropagateParams;
 	/** Absent = plan_license links untouched. Present (incl. []) = full-set replace. */
 	planLicenses?: PlanLicensePlan[];
+	/** false = execute may reuse Stripe ids but never create objects. */
+	createInStripe?: boolean;
 
 	state: { hasCustomers: boolean };
 };

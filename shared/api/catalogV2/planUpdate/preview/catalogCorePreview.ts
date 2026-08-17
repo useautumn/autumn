@@ -1,11 +1,16 @@
 import { PlanChangeV0Schema } from "@api/products/components/planChange/planChangeV0.js";
 import { z } from "zod/v4";
+import { CatalogPlanUsageSchema } from "./catalogPlanUsage.js";
 
 export const CatalogPreviewStateSchema = z.object({
 	has_customers: z.boolean(),
 	will_archive: z.boolean().default(false).meta({
 		description:
 			"For deletes: archive (customers exist) instead of hard delete.",
+	}),
+	usage: CatalogPlanUsageSchema.optional().meta({
+		description:
+			"Capped customer count/samples for this row. Present on upserts and nested migrate targets when preview loaded usage.",
 	}),
 });
 

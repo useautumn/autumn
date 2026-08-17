@@ -20,7 +20,7 @@ export const CatalogVariantParamsSchema = z.object({
 	}),
 	customize: CustomizePlanV1Schema.nullish().meta({
 		description:
-			"Declared overlay on this variant (items, licenses, trial, controls). Independent of `propagate`. Blocked on an archived variant unless `archived` is false in the same entry.",
+			"Declared overlay on this variant. `items` is PUT (replaces the list); `add_items` / `remove_items` are PATCH. Independent of `propagate`. Blocked on an archived variant unless `archived` is false in the same entry.",
 	}),
 });
 

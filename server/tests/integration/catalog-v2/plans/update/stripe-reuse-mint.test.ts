@@ -13,7 +13,7 @@ import {
 	ResetInterval,
 } from "@autumn/shared";
 import {
-	expectPriceStripeResourcesAbsent,
+	expectPriceStripeResourcesPresent,
 	expectPriceStripeReuseCorrect,
 	expectProductProcessorCorrect,
 	findFeaturePrice,
@@ -168,7 +168,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 stripe mint: new paid item has no stripe ids; processor.id carried")}`,
+	`${chalk.yellowBright("catalogV2 stripe mint: new paid item gets created stripe ids; processor.id carried")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_str_nv_new");
@@ -203,7 +203,7 @@ test.concurrent(
 			});
 
 			const after = await getFull({ ctx, planId, version: 2 });
-			expectPriceStripeResourcesAbsent({
+			expectPriceStripeResourcesPresent({
 				price: findFeaturePrice({
 					product: after,
 					featureId: TestFeature.Messages,

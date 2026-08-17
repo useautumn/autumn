@@ -31,6 +31,7 @@ import {
 	UsageModel,
 	type UsagePriceConfig,
 	type UsageTier,
+	stripePriceIdForInitializedPrice,
 } from "@autumn/shared";
 import { getBillingType } from "@server/internal/products/prices/priceUtils";
 import { itemCanBeProrated } from "@server/internal/products/product-items/productItemUtils/classifyItem";
@@ -84,7 +85,7 @@ const toPrice = ({
 		interval_count: itemToBillingIntervalCount({ item }),
 
 		stripe_product_id: null,
-		stripe_price_id: item.stripe_price_id ?? undefined,
+		stripe_price_id: undefined,
 		feature_id: null,
 		internal_feature_id: null,
 	};
@@ -113,6 +114,12 @@ const toPrice = ({
 			created_at: Date.now(),
 		};
 	}
+
+	config.stripe_price_id = stripePriceIdForInitializedPrice({
+		requestedStripePriceId: item.stripe_price_id,
+		currentPrice: curPrice,
+		newPrice: price,
+	});
 
 	return { price, ent: null };
 };
@@ -280,7 +287,7 @@ const toFeatureAndPrice = ({
 				})) as UsageTier[]),
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: itemToBillingIntervalCount({ item }),
-		stripe_price_id: item.stripe_price_id ?? undefined,
+		stripe_price_id: undefined,
 	};
 
 	const currencies = buildUsagePriceCurrencies({
@@ -361,6 +368,12 @@ const toFeatureAndPrice = ({
 			created_at: Date.now(),
 		};
 	}
+
+	config.stripe_price_id = stripePriceIdForInitializedPrice({
+		requestedStripePriceId: item.stripe_price_id,
+		currentPrice: curPrice,
+		newPrice: price,
+	});
 
 	return { price, ent };
 };

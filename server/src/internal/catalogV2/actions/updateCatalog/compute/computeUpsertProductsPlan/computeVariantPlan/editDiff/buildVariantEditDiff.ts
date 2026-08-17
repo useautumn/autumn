@@ -1,5 +1,6 @@
 import {
 	type ApiPlanLicenseV1,
+	applyCustomizeToPlan,
 	applyDiff,
 	applyLicenseCustomizeToBasePlan,
 	type CatalogVariantParams,
@@ -14,7 +15,6 @@ import {
 import { diffFullProducts } from "@/internal/catalogV2/actions/buildPlanChange/diffFullProducts";
 import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange/fullProductToApiPlanV1Sync";
 import { computeUpsertLicensesForVariants } from "./computeUpsertLicensesForVariants";
-import { customizeToEditDiff } from "./customizeToEditDiff";
 
 const applyOnto = ({
 	plan,
@@ -164,13 +164,14 @@ export const buildVariantEditDiff = ({
 		const { upsert_licenses, ...contentCustomize } = customize;
 		if (
 			contentCustomize.price !== undefined ||
+			contentCustomize.items !== undefined ||
 			contentCustomize.add_items !== undefined ||
 			contentCustomize.remove_items !== undefined ||
 			contentCustomize.free_trial !== undefined
 		) {
-			nextPlan = applyOnto({
+			nextPlan = applyCustomizeToPlan({
 				plan: nextPlan,
-				diff: customizeToEditDiff({ customize: contentCustomize }),
+				customize: contentCustomize,
 			});
 		}
 		if (upsert_licenses !== undefined) {
