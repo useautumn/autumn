@@ -5,6 +5,10 @@
  *   follow 100→150 vs 200 lists value_divergence; draft customize is 150
  *   follow + declare 300 → two ops (150 vs 300); explicit swallows the list
  *   license follow 100→150 vs 200 stamps license_plan_id; two upsert_licenses ops (both 150)
+ *   license follow + declare 300 → two upsert_licenses ops (150 vs 300)
+ *   pin lists the clash and still omits the variant op
+ *   license pin lists license_plan_id and omits the variant license op
+ *   both lanes: plan-body + Seat clash; Team splits item/license; EU keeps both on own
  */
 
 import { test } from "bun:test";
@@ -293,6 +297,372 @@ test.concurrent(
 								}),
 								parentLicenseOp({
 									planFilter: versionPinnedFilter({ planId: variantId }),
+									childId,
+									customize: messages150,
+								}),
+							],
+						},
+					],
+				});
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants drafts: pin lists the conflict and omits the variant op")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_dr_cf_pin");
+		const variantId = uniqueTestId("cv2_var_dr_cf_pin_eu");
+		await withCatalogPlans({
+			ctx,
+			planIds: [baseId, variantId],
+			run: async () => {
+				await seedBaseWithVariant({
+					autumn: autumnV2_3,
+					baseId,
+					variantId,
+				});
+				await seedVersionableCustomer({ ctx, planId: baseId, version: 1 });
+				await seedVersionableCustomer({ ctx, planId: variantId, version: 1 });
+
+				const plans = [
+					{
+						plan_id: baseId,
+						items: [messagesItem(150)],
+						migration: { draft: true },
+					},
+				];
+				const preview = parsePlanPreview(
+					await autumnV2_3.catalogV2.previewUpdate({ plans }),
+				);
+				expectPlanPreviewRowCorrect({
+					preview,
+					expected: {
+						planId: baseId,
+						variants: [
+							{
+								planId: variantId,
+								variantAction: "unchanged",
+								conflicts: [messagesValueDivergence],
+							},
+						],
+					},
+				});
+
+				const baseFilter = versionPinnedFilter({ planId: baseId });
+				await expectLicenseDraftCase({
+					autumn: autumnV2_3,
+					ctx,
+					plans,
+					responsePlans: [[{ plan_id: baseId, versions: [1] }]],
+					expected: [
+						{
+							planIds: [baseId],
+							omitPlanIds: [variantId],
+							noBillingChanges: true,
+							filter: { customer: { plan: baseFilter } },
+							operations: [
+								childItemOp({
+									planFilter: baseFilter,
+									customize: messagesItemDelta({ included: 150 }),
+								}),
+							],
+						},
+					],
+				});
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants drafts: license follow + declare 300 splits the license ops")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_dr_cf_lic_dec");
+		const variantId = uniqueTestId("cv2_var_dr_cf_lic_dec_eu");
+		const childId = uniqueTestId("cv2_var_dr_cf_lic_dec_seat");
+		await withCatalogPlans({
+			ctx,
+			planIds: [baseId, variantId, childId],
+			run: async () => {
+				await seedBaseVariantWithChildLicense({
+					autumn: autumnV2_3,
+					baseId,
+					variantId,
+					childId,
+				});
+				await seedVersionableCustomer({ ctx, planId: baseId, version: 1 });
+				await seedVersionableCustomer({ ctx, planId: variantId, version: 1 });
+
+				const plans = [
+					{
+						plan_id: baseId,
+						licenses: [
+							{
+								license_plan_id: childId,
+								included: 2,
+								customize: messagesOverride(150),
+							},
+						],
+						variants: [
+							{
+								variant_plan_id: variantId,
+								customize: {
+									upsert_licenses: [
+										{
+											license_plan_id: childId,
+											customize: messagesOverride(300),
+										},
+									],
+								},
+							},
+						],
+						propagate: { variants: [{ plan_id: variantId }] },
+						migration: { draft: true },
+					},
+				];
+				const preview = parsePlanPreview(
+					await autumnV2_3.catalogV2.previewUpdate({ plans }),
+				);
+				expectPlanPreviewRowCorrect({
+					preview,
+					expected: {
+						planId: baseId,
+						variants: [
+							{
+								planId: variantId,
+								variantAction: "explicit",
+								conflicts: null,
+							},
+						],
+					},
+				});
+
+				await expectLicenseDraftCase({
+					autumn: autumnV2_3,
+					ctx,
+					plans,
+					responsePlans: [
+						[
+							{ plan_id: baseId, versions: [1] },
+							{ plan_id: variantId, versions: [1] },
+						],
+					],
+					expected: [
+						{
+							planIds: [baseId, variantId],
+							omitPlanIds: [childId],
+							noBillingChanges: true,
+							filter: {
+								customer: {
+									plan: orVersionPinnedFilter({
+										branches: [{ planId: baseId }, { planId: variantId }],
+									}),
+								},
+							},
+							operations: [
+								parentLicenseOp({
+									planFilter: versionPinnedFilter({ planId: baseId }),
+									childId,
+									customize: messagesItemDelta({ included: 150 }),
+								}),
+								parentLicenseOp({
+									planFilter: versionPinnedFilter({ planId: variantId }),
+									childId,
+									customize: messagesItemDelta({ included: 300 }),
+								}),
+							],
+						},
+					],
+				});
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants drafts: license pin lists license_plan_id and omits the variant op")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_dr_cf_lic_pin");
+		const variantId = uniqueTestId("cv2_var_dr_cf_lic_pin_eu");
+		const childId = uniqueTestId("cv2_var_dr_cf_lic_pin_seat");
+		await withCatalogPlans({
+			ctx,
+			planIds: [baseId, variantId, childId],
+			run: async () => {
+				await seedBaseVariantWithChildLicense({
+					autumn: autumnV2_3,
+					baseId,
+					variantId,
+					childId,
+				});
+				await seedVersionableCustomer({ ctx, planId: baseId, version: 1 });
+				await seedVersionableCustomer({ ctx, planId: variantId, version: 1 });
+
+				const plans = [
+					{
+						plan_id: baseId,
+						licenses: [
+							{
+								license_plan_id: childId,
+								included: 2,
+								customize: messagesOverride(150),
+							},
+						],
+						migration: { draft: true },
+					},
+				];
+				const preview = parsePlanPreview(
+					await autumnV2_3.catalogV2.previewUpdate({ plans }),
+				);
+				expectPlanPreviewRowCorrect({
+					preview,
+					expected: {
+						planId: baseId,
+						variants: [
+							{
+								planId: variantId,
+								variantAction: "unchanged",
+								conflicts: [
+									{
+										...messagesValueDivergence,
+										license_plan_id: childId,
+									},
+								],
+							},
+						],
+					},
+				});
+
+				const baseFilter = versionPinnedFilter({ planId: baseId });
+				await expectLicenseDraftCase({
+					autumn: autumnV2_3,
+					ctx,
+					plans,
+					responsePlans: [[{ plan_id: baseId, versions: [1] }]],
+					expected: [
+						{
+							planIds: [baseId],
+							omitPlanIds: [variantId, childId],
+							noBillingChanges: true,
+							filter: { customer: { plan: baseFilter } },
+							operations: [
+								parentLicenseOp({
+									planFilter: baseFilter,
+									childId,
+									customize: messagesItemDelta({ included: 150 }),
+								}),
+							],
+						},
+					],
+				});
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants drafts: both lanes draft the item $or and two license ops")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_dr_cf_both");
+		const variantId = uniqueTestId("cv2_var_dr_cf_both_eu");
+		const childId = uniqueTestId("cv2_var_dr_cf_both_seat");
+		await withCatalogPlans({
+			ctx,
+			planIds: [baseId, variantId, childId],
+			run: async () => {
+				await seedBaseVariantWithChildLicense({
+					autumn: autumnV2_3,
+					baseId,
+					variantId,
+					childId,
+				});
+				await seedVersionableCustomer({ ctx, planId: baseId, version: 1 });
+				await seedVersionableCustomer({ ctx, planId: variantId, version: 1 });
+
+				const plans = [
+					{
+						plan_id: baseId,
+						items: [messagesItem(150)],
+						licenses: [
+							{
+								license_plan_id: childId,
+								included: 2,
+								customize: messagesOverride(150),
+							},
+						],
+						propagate: { variants: [{ plan_id: variantId }] },
+						migration: { draft: true },
+					},
+				];
+				const preview = parsePlanPreview(
+					await autumnV2_3.catalogV2.previewUpdate({ plans }),
+				);
+				expectPlanPreviewRowCorrect({
+					preview,
+					expected: {
+						planId: baseId,
+						variants: [
+							{
+								planId: variantId,
+								variantAction: "propagated",
+								conflicts: [
+									messagesValueDivergence,
+									{
+										...messagesValueDivergence,
+										license_plan_id: childId,
+									},
+								],
+							},
+						],
+					},
+				});
+
+				const planFilter = orVersionPinnedFilter({
+					branches: [{ planId: baseId }, { planId: variantId }],
+				});
+				const messages150 = messagesItemDelta({ included: 150 });
+				const baseFilter = versionPinnedFilter({ planId: baseId });
+				await expectLicenseDraftCase({
+					autumn: autumnV2_3,
+					ctx,
+					plans,
+					responsePlans: [
+						[
+							{ plan_id: baseId, versions: [1] },
+							{ plan_id: variantId, versions: [1] },
+						],
+					],
+					expected: [
+						{
+							planIds: [baseId, variantId],
+							omitPlanIds: [childId],
+							noBillingChanges: true,
+							filter: { customer: { plan: planFilter } },
+							operations: [
+								childItemOp({
+									planFilter: versionPinnedFilter({ planId: variantId }),
+									customize: {
+										...messages150,
+										upsert_licenses: [
+											{
+												license_plan_id: childId,
+												customize: messages150,
+											},
+										],
+									},
+								}),
+								childItemOp({
+									planFilter: baseFilter,
+									customize: messages150,
+								}),
+								parentLicenseOp({
+									planFilter: baseFilter,
 									childId,
 									customize: messages150,
 								}),

@@ -13,6 +13,8 @@ export const rowCanReceiveMigrationDraft = ({
 }): boolean => {
 	if (upsertProductPlan.row.versioning === "new_version") return false;
 	if (!upsertProductPlan.row.currentFullProduct) return false;
+	if (upsertProductPlan.row.currentFullProduct.archived) return false;
+	if (upsertProductPlan.row.nextFullProduct.archived) return false;
 
 	const { customerUsage } = productKeyToState({
 		productKey: productToProductKey({

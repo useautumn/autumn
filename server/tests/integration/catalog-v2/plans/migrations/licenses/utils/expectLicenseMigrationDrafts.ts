@@ -279,7 +279,12 @@ export const expectLicenseMigrationDraftsCorrect = ({
 			expect(operation).not.toHaveProperty("version");
 
 			const expectedLicenses = expectedOp.customize?.upsert_licenses;
-			if (expectedLicenses) {
+			const expectedHasOwnCustomize =
+				expectedOp.customize?.add_items != null ||
+				expectedOp.customize?.remove_items != null ||
+				expectedOp.customize?.price != null;
+
+			if (expectedLicenses && !expectedHasOwnCustomize) {
 				expect(operation.customize?.add_items).toBeUndefined();
 				expect(operation.customize?.remove_items).toBeUndefined();
 				expect(operation.customize?.price).toBeUndefined();
@@ -293,7 +298,9 @@ export const expectLicenseMigrationDraftsCorrect = ({
 					byLicensePlanId(operation.customize?.upsert_licenses ?? []),
 				).toMatchObject(byLicensePlanId(expectedLicenses));
 			} else {
-				expect(operation.customize?.upsert_licenses).toBeUndefined();
+				if (!expectedLicenses) {
+					expect(operation.customize?.upsert_licenses).toBeUndefined();
+				}
 				expect(operation.customize).toMatchObject(expectedOp.customize ?? {});
 			}
 		}

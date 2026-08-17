@@ -14,9 +14,13 @@ export const CatalogVariantParamsSchema = z.object({
 	name: z.string().nonempty().optional().meta({
 		description: "Display name when creating the variant if it does not exist.",
 	}),
+	archived: z.boolean().optional().meta({
+		description:
+			"Archive or unarchive this variant. Omit to leave archived state unchanged.",
+	}),
 	customize: CustomizePlanV1Schema.nullish().meta({
 		description:
-			"Declared overlay on this variant (items, licenses, trial, controls). Independent of `propagate`.",
+			"Declared overlay on this variant (items, licenses, trial, controls). Independent of `propagate`. Blocked on an archived variant unless `archived` is false in the same entry.",
 	}),
 });
 

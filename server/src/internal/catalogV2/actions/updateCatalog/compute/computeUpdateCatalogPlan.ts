@@ -6,6 +6,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeInsertFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeInsertFeaturesPlan/computeInsertFeaturesPlan";
 import { computeMigrationDraftPlans } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/computeMigrationDraftPlans";
 import { computeRemoveFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRemoveFeaturesPlan/computeRemoveFeaturesPlan";
+import { computeRemoveProductsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRemoveProductsPlan/computeRemoveProductsPlan";
 import { computeUpdateFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpdateFeaturesPlan/computeUpdateFeaturesPlan";
 import { computeUpsertProductsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductsPlan";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
@@ -20,6 +21,7 @@ import { createCatalogComputeState } from "@/internal/catalogV2/actions/updateCa
  * the post-upsert projection (minus co-removed rows).
  *
  * Products follow features so plan items can reference same-call features.
+ * Plan removes run after upserts so willArchive sees the post-upsert catalog.
  */
 export const computeUpdateCatalogPlan = ({
 	ctx,
@@ -69,6 +71,19 @@ export const computeUpdateCatalogPlan = ({
 		}),
 	});
 
+	compute.advance({
+		step: computeRemoveProductsPlan({
+			ctx: enrichCtxWithFeatures({
+				ctx,
+				features: compute.projected.features,
+			}),
+			catalogContext,
+			params,
+			projected: compute.projected,
+			existingUpserts: compute.plan.upsertProducts,
+		}),
+	});
+
 	const plan = compute.toPlan();
 	return {
 		...plan,
@@ -76,6 +91,7 @@ export const computeUpdateCatalogPlan = ({
 			upsertProductPlans: plan.upsertProducts,
 			params,
 			productStatesContext: catalogContext.productStatesContext,
+			removePlans: plan.removePlans,
 		}),
 	};
 };

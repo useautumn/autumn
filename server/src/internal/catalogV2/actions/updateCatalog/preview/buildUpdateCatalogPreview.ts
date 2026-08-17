@@ -14,7 +14,7 @@ export const buildUpdateCatalogPreview = ({
 }): PreviewUpdateCatalogResponse => ({
 	plans: buildPlansPreview({
 		updateCatalogPlan,
-		productStatesContext: catalogContext.productStatesContext,
+		catalogContext,
 	}),
 	features: buildFeaturesPreview({ catalogContext, updateCatalogPlan }),
 	migrations: updateCatalogPlan.migrationDrafts.map(

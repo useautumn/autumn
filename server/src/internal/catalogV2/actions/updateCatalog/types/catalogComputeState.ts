@@ -1,6 +1,7 @@
 import type { Feature, FullProduct } from "@autumn/shared";
 import type {
 	RemoveFeaturePlan,
+	RemovePlanPlan,
 	UpdateCatalogPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpdateFeaturePlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateFeaturePlan";
@@ -18,6 +19,7 @@ export type CatalogPlanDraft = {
 	updateFeatures: UpdateFeaturePlan[];
 	removeFeatures: RemoveFeaturePlan[];
 	upsertProducts: UpsertProductPlan[];
+	removePlans: RemovePlanPlan[];
 };
 
 /** One compute step's deltas — merged into the draft by createCatalogComputeState. */
@@ -39,6 +41,7 @@ export const emptyCatalogPlanDraft = (): CatalogPlanDraft => ({
 	updateFeatures: [],
 	removeFeatures: [],
 	upsertProducts: [],
+	removePlans: [],
 });
 
 export const toUpdateCatalogPlan = ({

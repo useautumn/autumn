@@ -13,12 +13,12 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 
 const payloadPlanIds = ({
-	planEntries,
+	params,
 }: {
-	planEntries: UpdateCatalogParams["plans"];
+	params: UpdateCatalogParams;
 }): string[] => [
-	...new Set(
-		planEntries.flatMap((entry) => [
+	...new Set([
+		...params.plans.flatMap((entry) => [
 			entry.plan_id,
 			...(entry.new_plan_id ? [entry.new_plan_id] : []),
 			...(entry.licenses?.map((license) => license.license_plan_id) ?? []),
@@ -27,7 +27,8 @@ const payloadPlanIds = ({
 			...(entry.propagate?.license_parents?.map((target) => target.plan_id) ??
 				[]),
 		]),
-	),
+		...params.remove_plans.map((entry) => entry.plan_id),
+	]),
 ];
 
 /**
@@ -41,10 +42,7 @@ export const setupProductStatesContext = async ({
 	params: UpdateCatalogParams;
 }): Promise<ProductStatesContext> => {
 	const { db, org, env } = ctx;
-	const planEntries = params.plans;
-	if (planEntries.length === 0) return emptyProductStatesContext();
-
-	const loadedPlanIds = payloadPlanIds({ planEntries });
+	const loadedPlanIds = payloadPlanIds({ params });
 	if (loadedPlanIds.length === 0) return emptyProductStatesContext();
 
 	const payloadVersions = await ProductService.listFull({

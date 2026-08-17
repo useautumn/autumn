@@ -970,11 +970,59 @@ applied customize. Same customize `$or`s; different customize stays split.
 | `variants[]` declare inherits parent `migration.draft` | ✓ `migrations/variants/variant-drafts.test.ts` |
 | License DIFF + Team-EU customers → `upsert_licenses` | ✓ `migrations/variants/variant-drafts.test.ts` |
 | Follow EU / pin UK → UK omitted | ✓ `migrations/variants/variant-drafts.test.ts` |
+| Follow with no customers on the variant → no variant op | ✓ `migrations/variants/variant-drafts.test.ts` |
 | Parent `existing`: customered historical variant is omitted | ✓ `migrations/variants/versioning-drafts.test.ts` |
 | Parent `all_versions`: customers on v1 only → pin; v1+v2 → collapse | ✓ `migrations/variants/versioning-drafts.test.ts` |
 | Parent `new_version` + draft → 400 | ✓ `migrations/variants/versioning-drafts.test.ts` |
+| Parent `new_version` without draft → no draft | ✓ `migrations/variants/versioning-drafts.test.ts` |
 | `propagate.variants[].versioning: new_version` + draft → 400 | ✓ `versioning/propagate-versioning-errors.test.ts` |
 | Follow 100→150 vs 200 lists `value_divergence`; draft is 150 | ✓ `migrations/variants/conflict-drafts.test.ts` |
 | Follow + declare 300 → two ops (150 vs 300) | ✓ `migrations/variants/conflict-drafts.test.ts` |
 | License follow 100→150 vs 200 stamps `license_plan_id`; two ops at 150 | ✓ `migrations/variants/conflict-drafts.test.ts` |
+| License follow + declare 300 → two `upsert_licenses` ops (150 vs 300) | ✓ `migrations/variants/conflict-drafts.test.ts` |
+| Pin lists `value_divergence` and omits the variant op | ✓ `migrations/variants/conflict-drafts.test.ts` |
+| License pin lists `license_plan_id` and omits the variant license op | ✓ `migrations/variants/conflict-drafts.test.ts` |
+| Both lanes: plan-body + Seat clash; Team splits item/license; EU keeps both | ✓ `migrations/variants/conflict-drafts.test.ts` |
+
+## 22. Remove / archive plans — `remove/`
+
+`remove_plans: [{ plan_id, version? }]`. Omit version = every version (shared
+verdict). Pin version = that row only. `willArchive` from customers (expired
+included), reward programs, and license parents that still exist after the
+batch. Same-call upsert+remove is 400. Preview `reasons` are dialog-ready.
+
+| Case | Status |
+|---|---|
+| Unreferenced → HARD DELETE (row gone) | ✓ `remove/remove-plans.test.ts` |
+| Already-archived unreferenced → hard delete | ✓ `remove/remove-plans.test.ts` |
+| Preview: action `delete` + `will_archive` verdict, writes nothing | ✓ `remove/remove-plans.test.ts` |
+| Customer on the plan → archive; `has_customers` | ✓ `remove/remove-plans.test.ts` |
+| Expired customer → archive | ✓ `remove/remove-plans.test.ts` |
+| Reward program ref → archive | ✓ `remove/remove-plans.test.ts` |
+| License parent still offering this child → archive | ✓ `remove/remove-plans.test.ts` |
+| Pin `version` with no customers → delete that version only | ✓ `remove/remove-plans.test.ts` |
+| Omit version; any version has customers → archive ALL versions | ✓ `remove/remove-plans.test.ts` |
+| Unknown plan id → 404 (update AND preview) | ✓ `remove/remove-plans-errors.test.ts` |
+| Unknown pinned version → 404 | ✓ `remove/remove-plans-errors.test.ts` |
+| Upsert + remove same plan_id → 400, atomic | ✓ `remove/remove-plans-errors.test.ts` |
+| Customer sample → `Attached to customer "X".` + archive headline | ✓ `remove/remove-plans-preview.test.ts` |
+| Two customers → `"X" and 1 more` | ✓ `remove/remove-plans-preview.test.ts` |
+| Unreferenced → delete confirmation; no archive headline | ✓ `remove/remove-plans-preview.test.ts` |
+| Unpinned delete of a base that still has variants → 400 | ✓ `remove/remove-plans-variants.test.ts` |
+| Unpinned archive of a base that still has variants → 400 | ✓ `remove/remove-plans-variants.test.ts` |
+| Preview of unpinned delete with variants → 400, not detach warning | ✓ `remove/remove-plans-preview.test.ts` |
+| Same-call remove base + variant (no customers) → both hard delete | ✓ `remove/remove-plans-variants.test.ts` |
+| Pin-delete latest base version; variant repoints at surviving v1 | ✓ `remove/remove-plans-repoint.test.ts` |
+| Pin-delete an old base version the variant does not point at | ✓ `remove/remove-plans-repoint.test.ts` |
+| Pin-delete last remaining base version while a variant survives → 400 | ✓ `remove/remove-plans-repoint.test.ts` |
+| Remove parent + child (no customers) → both hard delete | ✓ `remove/remove-plans-same-call.test.ts` |
+| Remove parent (has customers) + child → parent archives, child archives | ✓ `remove/remove-plans-same-call.test.ts` |
+| Archived parent omitted from `license_parents` preview | ✓ `remove/remove-plans-archived.test.ts` |
+| Child edit, archived parent omitted from propagate → parent pinned | ✓ `remove/remove-plans-archived.test.ts` |
+| `propagate.license_parents` / `propagate.variants` naming archived → 400 | ✓ `remove/remove-plans-archived.test.ts` |
+| `variants[]` customize on archived without `archived: false` → 400 | ✓ `remove/remove-plans-archived.test.ts` |
+| `variants[].archived: false` unarchives | ✓ `remove/remove-plans-archived.test.ts` |
+| Details / billing_controls still fan out to archived variants | ✓ `remove/remove-plans-archived.test.ts` |
+| `migration.draft` on an archived plan → no draft | ✓ `remove/remove-plans-archived.test.ts` |
+| `plans[].archived: false` still unarchives (existing path) | ✓ already in `update/update-plan-details.test.ts` |
 

@@ -1,3 +1,4 @@
+import { handleArchivedPropagationErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleArchivedPropagationErrors";
 import { handleDefaultFlagErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleDefaultFlagErrors";
 import { handleFreeTrialErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleFreeTrialErrors";
 import { handlePlanLicenseErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handlePlanLicenseErrors";
@@ -26,6 +27,7 @@ export const handleUpsertProductErrors = ({
 
 		// 3. Declared variants[] create / nest / id-collision
 		handleVariantErrors({ upsert, productStatesContext });
+		handleArchivedPropagationErrors({ upsert, productStatesContext });
 
 		// 4. Declared plan_license link guards
 		handlePlanLicenseErrors({ upsert });

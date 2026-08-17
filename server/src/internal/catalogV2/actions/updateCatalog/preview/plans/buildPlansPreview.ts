@@ -1,11 +1,15 @@
-import type { PreviewUpdateCatalogResponse } from "@autumn/shared";
+import {
+	emptyCatalogPlanUsage,
+	type PreviewUpdateCatalogResponse,
+} from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
 import { buildLicenseParentsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicenseParentsPreview";
 import { buildLicensesPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicensesPreview";
+import { buildRemovePlansPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildRemovePlansPreview";
 import { buildVariantsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildVariantsPreview";
 import { buildPlanVersioning } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildPlanVersioning";
 import { buildSiblingVersionsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildSiblingVersionsPreview";
-import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
@@ -21,17 +25,18 @@ const upsertOpToAction = ({
 	return "none";
 };
 
-/** Pure map: direct upsertProducts → preview plan rows. Derived rows nest. */
+/** Pure map: direct upsertProducts + removePlans → preview plan rows. */
 export const buildPlansPreview = ({
 	updateCatalogPlan,
-	productStatesContext,
+	catalogContext,
 }: {
 	updateCatalogPlan: UpdateCatalogPlan;
-	productStatesContext: ProductStatesContext;
+	catalogContext: UpdateCatalogContext;
 }): PreviewUpdateCatalogResponse["plans"] => {
 	const { upsertProducts } = updateCatalogPlan;
+	const productStatesContext = catalogContext.productStatesContext;
 
-	return upsertProducts.flatMap((upsert) => {
+	const upsertRows = upsertProducts.flatMap((upsert) => {
 		if (upsert.row.source !== "direct") return [];
 
 		const planChange = buildPlanChangeFromFullProducts({
@@ -67,6 +72,8 @@ export const buildPlansPreview = ({
 				state: {
 					has_customers: upsert.state.hasCustomers,
 					will_archive: false,
+					usage: emptyCatalogPlanUsage(),
+					reasons: [],
 				},
 				versioning: buildPlanVersioning({
 					upsert,
@@ -86,4 +93,11 @@ export const buildPlansPreview = ({
 			},
 		];
 	});
+
+	const removeRows = buildRemovePlansPreview({
+		removePlans: updateCatalogPlan.removePlans,
+		catalogContext,
+	});
+
+	return [...upsertRows, ...removeRows];
 };

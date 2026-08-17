@@ -10,6 +10,7 @@ export type VariantEditTarget = {
 	version: number;
 	follow: boolean;
 	customize?: CatalogVariantParams["customize"];
+	archived?: boolean;
 };
 
 type TargetSourceArgs = {
@@ -63,7 +64,7 @@ const targetsFromDeclaredCustomize = ({
 	productStatesContext,
 }: TargetSourceArgs): VariantEditTarget[] =>
 	(upsert.declaredVariants ?? []).flatMap((variant) => {
-		if (!variant.customize) return [];
+		if (!variant.customize && variant.archived === undefined) return [];
 		return targetVersionsFor({
 			planId: variant.variant_plan_id,
 			version: variant.version,
@@ -73,7 +74,10 @@ const targetsFromDeclaredCustomize = ({
 			planId: variant.variant_plan_id,
 			version,
 			follow: false,
-			customize: variant.customize,
+			...(variant.customize ? { customize: variant.customize } : {}),
+			...(variant.archived !== undefined
+				? { archived: variant.archived }
+				: {}),
 		}));
 	});
 
@@ -85,7 +89,11 @@ const targetsForLatestSweep = ({
 	upsert: UpsertProductPlan;
 	productStatesContext: ProductStatesContext;
 }): VariantEditTarget[] =>
-	latestVariantsOfBase({ upsert, productStatesContext }).map((variant) => ({
+	latestVariantsOfBase({
+		upsert,
+		productStatesContext,
+		includeArchived: true,
+	}).map((variant) => ({
 		planId: variant.id,
 		version: variant.version,
 		follow: false,
@@ -113,6 +121,7 @@ const mergeTargets = ({
 		}
 		current.follow ||= target.follow;
 		if (target.customize !== undefined) current.customize = target.customize;
+		if (target.archived !== undefined) current.archived = target.archived;
 	}
 	return [...byKey.values()];
 };

@@ -3,6 +3,7 @@ export type { LicenseStatesContext } from "./licenseStatesContext";
 export { emptyLicenseStatesContext } from "./licenseStatesContext";
 export type {
 	PersistedFeatureUsage,
+	PersistedPlanUsage,
 	PreviewCatalogContext,
 } from "./previewCatalogContext";
 export type {

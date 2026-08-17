@@ -14,6 +14,9 @@ export const useUpdateCatalogMutation = () => {
 			await Promise.all([
 				queryClient.invalidateQueries({ queryKey: ["features"] }),
 				queryClient.invalidateQueries({ queryKey: ["products"] }),
+				queryClient.invalidateQueries({ queryKey: ["product"] }),
+				queryClient.invalidateQueries({ queryKey: ["product_counts"] }),
+				queryClient.invalidateQueries({ queryKey: ["license_products"] }),
 			]);
 		},
 	});

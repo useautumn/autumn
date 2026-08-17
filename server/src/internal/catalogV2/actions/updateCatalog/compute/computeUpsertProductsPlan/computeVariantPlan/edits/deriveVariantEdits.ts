@@ -67,7 +67,12 @@ const buildVariantEditIntent = ({
 		declaredLicenses: upsert.declaredLicenses,
 	});
 	const hasSettings = !isEmptyObject(settingsPatch);
-	if (!editDiff && !hasSettings && newBasePointer === undefined) {
+	if (
+		!editDiff &&
+		!hasSettings &&
+		newBasePointer === undefined &&
+		target.archived === undefined
+	) {
 		return undefined;
 	}
 
@@ -85,6 +90,7 @@ const buildVariantEditIntent = ({
 			plan_id: target.planId,
 			version: target.version,
 			...settingsPatch,
+			...(target.archived !== undefined ? { archived: target.archived } : {}),
 		},
 		source: pointerIsOnlyChange ? "repoint" : "variant_propagation",
 		...(editDiff ? { editDiff } : {}),

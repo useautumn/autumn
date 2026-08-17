@@ -7,6 +7,7 @@ import {
 	executeFeatureReferenceRewrites,
 } from "@/internal/catalogV2/execute/executeFeatureReferenceRewrites";
 import { executeMigrationDrafts } from "@/internal/catalogV2/execute/executeMigrationDrafts";
+import { executeRemovePlans } from "@/internal/catalogV2/execute/executeRemovePlans";
 import { executeUpsertProducts } from "@/internal/catalogV2/execute/executeUpsertProducts/executeUpsertProducts";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
@@ -153,6 +154,7 @@ export const executeUpdateCatalogPlan = async ({
 	await executeUpdateFeatures({ ctx, updateCatalogPlan });
 	await executeRemoveFeatures({ ctx, updateCatalogPlan });
 	const plans = await executeUpsertProducts({ ctx, updateCatalogPlan });
+	await executeRemovePlans({ ctx, updateCatalogPlan });
 	const migrations = await executeMigrationDrafts({ ctx, updateCatalogPlan });
 
 	await clearOrgCache({
@@ -179,7 +181,13 @@ export const executeUpdateCatalogPlan = async ({
 				action: "delete" as const,
 			})),
 		],
-		plans,
+		plans: [
+			...plans,
+			...updateCatalogPlan.removePlans.map((removePlan) => ({
+				id: removePlan.planId,
+				action: "delete" as const,
+			})),
+		],
 		migrations,
 	};
 };

@@ -1,8 +1,13 @@
+import { CatalogFeatureUpdatePreviewReasonSchema } from "@api/catalogV2/components/catalogFeatureUpdatePreview/catalogFeatureUpdatePreview.js";
 import { ApiPlanLicenseV1Schema } from "@api/products/apiPlanLicenseV1.js";
 import { z } from "zod/v4";
 import { CatalogActionSchema } from "../../components/catalogAction.js";
-import { CatalogCorePreviewSchema } from "./catalogCorePreview.js";
+import { CatalogCorePreviewSchema, CatalogPreviewStateSchema } from "./catalogCorePreview.js";
 import { CatalogLicenseParentPreviewSchema } from "./catalogLicenseParentPreview.js";
+import {
+	CatalogPlanUsageSchema,
+	emptyCatalogPlanUsage,
+} from "./catalogPlanUsage.js";
 import { CatalogSiblingVersionPreviewSchema } from "./catalogSiblingVersionPreview.js";
 import { CatalogVariantPreviewSchema } from "./catalogVariantPreview.js";
 import { CatalogPlanVersioningSchema } from "./catalogVersioningPreview.js";
@@ -14,6 +19,19 @@ import { CatalogPlanVersioningSchema } from "./catalogVersioningPreview.js";
 export const CatalogPlanUpdatePreviewSchema = CatalogCorePreviewSchema.extend({
 	name: z.string().optional(),
 	action: CatalogActionSchema,
+	state: CatalogPreviewStateSchema.extend({
+		usage: CatalogPlanUsageSchema.default(() => emptyCatalogPlanUsage()).meta({
+			description:
+				"Capped dependency counts/samples (customers, license parents, reward programs, variants).",
+		}),
+		reasons: z
+			.array(CatalogFeatureUpdatePreviewReasonSchema)
+			.default(() => [])
+			.meta({
+				description:
+					"Ready-made dialog lines explaining why a delete archives (or other blockers).",
+			}),
+	}),
 	versioning: CatalogPlanVersioningSchema.nullable(),
 	sibling_versions: z
 		.array(CatalogSiblingVersionPreviewSchema)

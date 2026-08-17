@@ -59,6 +59,31 @@ export const projectCatalog = ({
 		.filter((upsertProductPlan) => upsertProductPlan.row.op === "create")
 		.map((upsertProductPlan) => upsertProductPlan.row.nextFullProduct);
 
+	const upsertedPlanIds = new Set(
+		plan.upsertProducts.map((upsert) => upsert.row.planId),
+	);
+	const hardDeletedInternalIds = new Set(
+		plan.removePlans.flatMap((removePlan) =>
+			removePlan.current &&
+			!removePlan.willArchive &&
+			!upsertedPlanIds.has(removePlan.planId)
+				? [removePlan.current.internal_id]
+				: [],
+		),
+	);
+	const archivedByInternalId = new Map(
+		plan.removePlans.flatMap((removePlan) =>
+			removePlan.current && removePlan.willArchive
+				? [
+						[
+							removePlan.current.internal_id,
+							{ ...removePlan.current, archived: true },
+						] as const,
+					]
+				: [],
+		),
+	);
+
 	return {
 		features: [
 			...originalFeatures
@@ -76,10 +101,16 @@ export const projectCatalog = ({
 			...plan.insertFeatures,
 		],
 		products: [
-			...originalProducts.map(
-				(product) =>
-					nextProductByInternalId.get(product.internal_id) ?? product,
-			),
+			...originalProducts
+				.filter(
+					(product) => !hardDeletedInternalIds.has(product.internal_id),
+				)
+				.map(
+					(product) =>
+						nextProductByInternalId.get(product.internal_id) ??
+						archivedByInternalId.get(product.internal_id) ??
+						product,
+				),
 			...createdProducts,
 		],
 	};
