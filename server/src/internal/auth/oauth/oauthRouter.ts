@@ -40,12 +40,12 @@ oauthRouter.get("/api/auth/.well-known/openid-configuration", (c) => {
 	return oauthProviderOpenIdConfigMetadata(auth)(c.req.raw);
 });
 
-// better-auth's RFC 8414 helper resolves to the wrong internal endpoint and
-// reports false; the provider does emit `iss` (RFC 9207), so advertise it.
+// Codex CLI 0.146.0 drops `iss` from the auth callback, and advertising RFC
+// 9207 support makes its OAuth library reject the iss-less (valid) callback.
 const handleAuthServerMetadata = async (c: Context<HonoEnv>) => {
 	const response = await oauthProviderAuthServerMetadata(auth)(c.req.raw);
 	const metadata = (await response.json()) as Record<string, unknown>;
-	metadata.authorization_response_iss_parameter_supported = true;
+	metadata.authorization_response_iss_parameter_supported = false;
 	const headers = new Headers(response.headers);
 	headers.delete("Content-Length");
 	return new Response(JSON.stringify(metadata), {
