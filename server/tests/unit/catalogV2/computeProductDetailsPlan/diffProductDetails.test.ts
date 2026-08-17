@@ -45,6 +45,17 @@ describe("productDetailsAreSame / diffProductDetails", () => {
 		});
 	});
 
+	test("pointer-only change diffs", () => {
+		const current = row({ base_internal_product_id: "prod_team_v1" });
+		const next = row({ base_internal_product_id: "prod_team_v2" });
+		expect(productDetailsAreSame({ product1: current, product2: next })).toBe(
+			false,
+		);
+		expect(diffProductDetails({ current, next })).toEqual({
+			base_internal_product_id: "prod_team_v1",
+		});
+	});
+
 	test("description nullish-normalizes", () => {
 		const current = row({ description: null });
 		const next = row({ description: undefined as unknown as null });

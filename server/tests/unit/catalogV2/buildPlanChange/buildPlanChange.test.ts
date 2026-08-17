@@ -30,6 +30,7 @@ const plan = (overrides: Partial<ApiPlanV1> = {}): ApiPlanV1 =>
 		env: "sandbox",
 		archived: false,
 		base_variant_id: null,
+		base_internal_product_id: null,
 		config: { ignore_past_due: false },
 		billing_controls: {},
 		metadata: {},

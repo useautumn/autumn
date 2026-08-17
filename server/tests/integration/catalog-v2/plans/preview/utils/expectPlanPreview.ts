@@ -5,6 +5,8 @@ import type {
 	CatalogLicenseAction,
 	CatalogPlanVersioningStrategy,
 	CatalogSiblingVersionPreview,
+	CatalogVariantAction,
+	CatalogVariantPreview,
 	PreviewUpdateCatalogResponse,
 } from "@autumn/shared";
 import { PreviewUpdateCatalogResponseSchema } from "@autumn/shared";
@@ -18,7 +20,11 @@ type ExpectedLicenseChange = Partial<
 		NonNullable<PlanPreviewChange["license_changes"]>[number],
 		"plan_change"
 	>
-> & { plan_change?: Record<string, unknown> | null };
+> & {
+	plan_change?: Record<string, unknown> | null;
+	/** Containment over per-link conflicts; pass `null` to assert absent/empty. */
+	conflicts?: CatalogConflictPreview[] | null;
+};
 
 type ExpectedSiblingVersion = {
 	version: number;
@@ -74,6 +80,22 @@ type ExpectedPlanPreviewRow = {
 	licenses?: ApiPlanLicenseV1[] | null;
 	/** Containment over license_parents; pass `null` to assert the lane is omitted. */
 	licenseParents?: ExpectedLicenseParent[] | null;
+	/** Containment over variants; pass `null` to assert the lane is omitted. */
+	variants?: ExpectedVariant[] | null;
+};
+
+type ExpectedVariant = {
+	planId: string;
+	version?: number;
+	variantAction?: CatalogVariantAction;
+	hasCustomers?: boolean;
+	hasPlanChange?: boolean;
+	conflicts?: CatalogConflictPreview[] | null;
+	customize?: PlanPreviewChange["customize"] | null;
+	priceChange?: PlanPreviewChange["price_change"] | null;
+	itemChanges?: PlanPreviewChange["item_changes"];
+	licenseChanges?: ExpectedLicenseChange[] | null;
+	nestedItemChanges?: Array<Record<string, unknown>>;
 };
 
 const expectAbsent = (value: unknown) => {
@@ -97,6 +119,11 @@ const expectConflictsMatch = ({
 	}
 	expect(actual).toHaveLength(expected.length);
 	expect(actual).toMatchObject(expected);
+	for (const [index, expectedConflict] of expected.entries()) {
+		if (expectedConflict.license_plan_id === undefined) {
+			expect(actual?.[index]?.license_plan_id).toBeUndefined();
+		}
+	}
 };
 
 
@@ -123,6 +150,14 @@ const expectLicenseChangesMatch = ({
 			expect(actual?.[index]?.plan_change).not.toHaveProperty(
 				"license_changes",
 			);
+		}
+		if (expectedChange.conflicts !== undefined) {
+			expectConflictsMatch({
+				actual: (
+					actual?.[index] as { conflicts?: CatalogConflictPreview[] }
+				)?.conflicts,
+				expected: expectedChange.conflicts,
+			});
 		}
 	}
 };
@@ -358,6 +393,83 @@ export const expectPlanPreviewRowCorrect = ({
 						actual: parent?.conflicts,
 						expected: expectedParent.conflicts,
 					});
+				}
+			}
+		}
+	}
+	if (expected.variants !== undefined) {
+		if (expected.variants === null) {
+			expect(row.variants).toBeUndefined();
+		} else {
+			expect(row.variants).toHaveLength(expected.variants.length);
+			for (const expectedVariant of expected.variants) {
+				const variant = row.variants?.find(
+					(candidate: CatalogVariantPreview) =>
+						candidate.plan_id === expectedVariant.planId &&
+						(expectedVariant.version === undefined ||
+							candidate.version === expectedVariant.version),
+				);
+				expect(
+					variant,
+					`missing variants entry for ${expectedVariant.planId}`,
+				).toBeDefined();
+				if (expectedVariant.variantAction !== undefined) {
+					expect(variant?.variant_action).toBe(expectedVariant.variantAction);
+				}
+				if (expectedVariant.hasCustomers !== undefined) {
+					expect(variant?.state.has_customers).toBe(
+						expectedVariant.hasCustomers,
+					);
+				}
+				if (expectedVariant.hasPlanChange === true) {
+					expectPresent(variant?.plan_change);
+				} else if (expectedVariant.hasPlanChange === false) {
+					expectAbsent(variant?.plan_change);
+				}
+				if (expectedVariant.conflicts !== undefined) {
+					expectConflictsMatch({
+						actual: variant?.conflicts,
+						expected: expectedVariant.conflicts,
+					});
+				}
+				if (expectedVariant.customize !== undefined) {
+					if (expectedVariant.customize === null) {
+						expectAbsent(variant?.plan_change?.customize);
+					} else {
+						expect(variant?.plan_change?.customize).toMatchObject(
+							expectedVariant.customize,
+						);
+					}
+				}
+				if (expectedVariant.priceChange !== undefined) {
+					if (expectedVariant.priceChange === null) {
+						expectAbsent(variant?.plan_change?.price_change);
+					} else {
+						expect(variant?.plan_change?.price_change).toMatchObject(
+							expectedVariant.priceChange,
+						);
+					}
+				}
+				if (expectedVariant.itemChanges !== undefined) {
+					expect(variant?.plan_change?.item_changes ?? []).toEqual(
+						expectedVariant.itemChanges,
+					);
+				}
+				if (expectedVariant.licenseChanges !== undefined) {
+					expectLicenseChangesMatch({
+						actual: variant?.plan_change?.license_changes,
+						expected: expectedVariant.licenseChanges,
+					});
+				}
+				if (expectedVariant.nestedItemChanges !== undefined) {
+					const actualItems =
+						variant?.plan_change?.license_changes?.[0]?.plan_change
+							?.item_changes ?? [];
+					for (const expectedItem of expectedVariant.nestedItemChanges) {
+						expect(actualItems).toContainEqual(
+							expect.objectContaining(expectedItem),
+						);
+					}
 				}
 			}
 		}
