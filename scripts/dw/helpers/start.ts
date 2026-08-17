@@ -61,13 +61,7 @@ function applyPublicUrls({
 		return;
 	}
 	const aliases = registerPortlessAliases(entry.worktreeNum);
-	Object.assign(
-		env,
-		laptopDevEnv({
-			aliases,
-			publicUrls: entryPublicServiceUrls(entry),
-		}),
-	);
+	Object.assign(env, laptopDevEnv({ aliases }));
 }
 
 function applyProvisionedDevEnv(

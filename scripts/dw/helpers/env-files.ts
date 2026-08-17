@@ -117,25 +117,25 @@ export function urlsForEntry(entry: RegistryEntry): {
 	const serverPort = serverPortFor(entry.worktreeNum);
 	const loopbackApi = `http://localhost:${serverPort}`;
 	const loopbackCheckout = `http://localhost:${checkoutPortFor(entry.worktreeNum)}`;
-	if (isProvisioned(entry) && !isHeadless()) {
-		const aliases = aliasesFor(entry.worktreeNum);
+	if (isHeadless()) {
 		const publicUrls = entryPublicServiceUrls(entry);
+		if (publicUrls) {
+			return {
+				apiUrl: loopbackApi,
+				browserApiUrl: publicUrls.api,
+				checkoutUrl: publicUrls.checkout,
+				publicApiUrl: publicUrls.api,
+				viteUrl: publicUrls.vite,
+			};
+		}
+	} else if (isProvisioned(entry)) {
+		const aliases = aliasesFor(entry.worktreeNum);
 		return {
 			apiUrl: aliases.apiUrl,
-			browserApiUrl: publicUrls?.api ?? aliases.apiUrl,
+			browserApiUrl: aliases.apiUrl,
 			checkoutUrl: loopbackCheckout,
-			publicApiUrl: publicUrls?.api ?? aliases.apiUrl,
+			publicApiUrl: aliases.apiUrl,
 			viteUrl: aliases.viteUrl,
-		};
-	}
-	const publicUrls = entryPublicServiceUrls(entry);
-	if (publicUrls) {
-		return {
-			apiUrl: loopbackApi,
-			browserApiUrl: publicUrls.api,
-			checkoutUrl: publicUrls.checkout,
-			publicApiUrl: publicUrls.api,
-			viteUrl: publicUrls.vite,
 		};
 	}
 	const vitePort = 3000 + (entry.worktreeNum - 1) * 100;
@@ -183,13 +183,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		serverEnv.AUTUMN_TEST_BASE_URL = `http://localhost:${serverPort}`;
 		serverEnv.AUTUMN_TEST_VITE_URL = viteUrl;
 	} else if (isProvisioned(entry) && !isHeadless()) {
-		Object.assign(
-			serverEnv,
-			laptopDevEnv({
-				aliases: aliasesFor(worktreeNum),
-				publicUrls,
-			}),
-		);
+		Object.assign(serverEnv, laptopDevEnv({ aliases: aliasesFor(worktreeNum) }));
 		serverEnv.AUTUMN_TEST_BASE_URL = `http://localhost:${serverPort}`;
 		serverEnv.AUTUMN_TEST_VITE_URL = viteUrl;
 	}

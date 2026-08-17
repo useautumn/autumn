@@ -41,28 +41,19 @@ describe("publicDevEnv", () => {
 		const prev = process.env.DW_HEADLESS;
 		delete process.env.DW_HEADLESS;
 		try {
-			const publicUrls = publicServiceUrlsFromDashboard({
-				dashboard: "https://autumn-wt45-aa11bb.autumnworktree.com",
-			});
 			const env = laptopDevEnv({
 				aliases: {
 					apiUrl: "https://wt45-api.localhost",
 					viteUrl: "https://wt45.localhost",
 				},
-				publicUrls,
 			});
 			expect(env.AUTUMN_API_URL).toBe("https://wt45-api.localhost");
-			expect(env.AUTUMN_PUBLIC_API_URL).toBe(
-				"https://autumn-wt45-aa11bb-api.autumnworktree.com",
-			);
+			expect(env.AUTUMN_PUBLIC_API_URL).toBe("https://wt45-api.localhost");
 			expect(env.CLIENT_URL).toBe("https://wt45.localhost");
-			expect(env.VITE_BACKEND_URL).toBe(
-				"https://autumn-wt45-aa11bb-api.autumnworktree.com",
-			);
+			expect(env.VITE_BACKEND_URL).toBe("https://wt45-api.localhost");
+			expect(env.VITE_FRONTEND_URL).toBe("https://wt45.localhost");
 			expect(env.EMULATE_GOOGLE_URL).toContain("google.emulate.localhost");
-			expect(env.SLACK_REDIRECT_URI).toBe(
-				"https://autumn-wt45-aa11bb-api.autumnworktree.com/slack/oauth/callback",
-			);
+			expect(JSON.stringify(env)).not.toContain("autumnworktree.com");
 		} finally {
 			if (prev === undefined) delete process.env.DW_HEADLESS;
 			else process.env.DW_HEADLESS = prev;

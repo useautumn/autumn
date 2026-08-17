@@ -40,7 +40,7 @@ export function loopbackServiceUrls({
 	};
 }
 
-/** Cloud / headless: browser-facing URLs are the public service hosts. */
+/** Cloud / `DW_HEADLESS` only: browser-facing URLs are the public service hosts. */
 export function publicDevEnv({
 	urls,
 	worktreeNum,
@@ -65,25 +65,22 @@ export function publicDevEnv({
 	};
 }
 
-/** Laptop page stays on portless; browser API/OAuth use the public API host. */
+/**
+ * Laptop / portless: page, API, and Google OAuth stay on `wtN*.localhost`.
+ * A public autumnworktree tunnel must not leak into `VITE_BACKEND_URL`.
+ */
 export function laptopDevEnv({
 	aliases,
-	publicUrls,
 }: {
 	aliases: Pick<WorktreeAliases, "apiUrl" | "viteUrl">;
-	publicUrls?: PublicServiceUrls;
 }): Record<string, string> {
-	const env: Record<string, string> = {
+	return {
 		AUTUMN_API_URL: aliases.apiUrl,
-		AUTUMN_PUBLIC_API_URL: publicUrls?.api ?? aliases.apiUrl,
+		AUTUMN_PUBLIC_API_URL: aliases.apiUrl,
 		CLIENT_URL: aliases.viteUrl,
 		EMULATE_GOOGLE_FETCH_URL: `http://127.0.0.1:${EMULATE_PORT}`,
 		EMULATE_GOOGLE_URL: emulateGoogleUrl({}),
-		VITE_BACKEND_URL: publicUrls?.api ?? aliases.apiUrl,
+		VITE_BACKEND_URL: aliases.apiUrl,
 		VITE_FRONTEND_URL: aliases.viteUrl,
 	};
-	if (publicUrls) {
-		env.SLACK_REDIRECT_URI = `${publicUrls.api}/slack/oauth/callback`;
-	}
-	return env;
 }
