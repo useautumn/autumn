@@ -6,6 +6,7 @@ import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import {
 	claimOAuthRefreshReplay,
+	releaseOAuthRefreshReplay,
 	storeOAuthRefreshReplay,
 } from "@/external/redis/actions/oauthRefreshReplay/oauthRefreshReplay.js";
 import { auth } from "@/utils/auth.js";
@@ -34,8 +35,9 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 
 	// 2. Single-flight guard: refresh tokens are single-use and rotated, so
 	// concurrent replays of one token must share the winner's response.
-	if (tokenRequest.refreshReplayKey) {
-		const replay = await claimOAuthRefreshReplay(tokenRequest.refreshReplayKey);
+	const replayKey = tokenRequest.refreshReplayKey;
+	if (replayKey) {
+		const replay = await claimOAuthRefreshReplay(replayKey);
 		if (!replay) {
 			return jsonOAuthTokenResponse({
 				body: {
@@ -50,18 +52,21 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		}
 	}
 
-	// 3. better-auth mints the token
-	const response = await auth.handler(tokenRequest.normalizedRequest);
-	if (!response.ok) return response;
-
-	const body = await parseOAuthTokenResponseBody(response);
-	if (!body) return response;
-
-	const tokenPayload = getOAuthTokenPayload(body);
-	const accessToken = getOAuthStringField(tokenPayload.access_token);
-	if (!accessToken) return response;
-
+	// A held claim blocks every concurrent replay, so an exit that stores no
+	// response must hand the key back instead of letting it time out.
+	let replayStored = false;
 	try {
+		// 3. better-auth mints the token
+		const response = await auth.handler(tokenRequest.normalizedRequest);
+		if (!response.ok) return response;
+
+		const body = await parseOAuthTokenResponseBody(response);
+		if (!body) return response;
+
+		const tokenPayload = getOAuthTokenPayload(body);
+		const accessToken = getOAuthStringField(tokenPayload.access_token);
+		if (!accessToken) return response;
+
 		// 4. Read back the scopes better-auth granted
 		const { scopes: requestedScopes, resourceScopes: requestedResourceScopes } =
 			parseOAuthTokenResponseScopes({ scope: tokenPayload.scope });
@@ -120,11 +125,9 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				scopes: tokenRecord.scopes,
 				token: prefixOAuthToken({ token: accessToken }),
 			});
-			if (tokenRequest.refreshReplayKey) {
-				await storeOAuthRefreshReplay({
-					body: responseBody,
-					key: tokenRequest.refreshReplayKey,
-				});
+			if (replayKey) {
+				await storeOAuthRefreshReplay({ body: responseBody, key: replayKey });
+				replayStored = true;
 			}
 
 			return jsonOAuthTokenResponse({
@@ -155,5 +158,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		const errorResponse = oauthTokenErrorResponse({ error });
 		if (errorResponse) return errorResponse;
 		throw error;
+	} finally {
+		if (replayKey && !replayStored) await releaseOAuthRefreshReplay(replayKey);
 	}
 };

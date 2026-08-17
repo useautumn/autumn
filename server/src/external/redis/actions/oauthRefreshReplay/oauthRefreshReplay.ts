@@ -64,6 +64,23 @@ export const claimOAuthRefreshReplay = async (
 	}
 };
 
+/**
+ * Drops a claim the winner never stored a response for, so retries of the same
+ * refresh token re-race immediately instead of spinning out the claim's TTL.
+ */
+export const releaseOAuthRefreshReplay = async (key: string): Promise<void> => {
+	try {
+		const miscRedis = getMiscRedis();
+		await tryRedisOp({
+			operation: () => miscRedis.del(key),
+			source: "oauth-refresh-replay:release",
+			redisInstance: miscRedis,
+		});
+	} catch {
+		// Best-effort — a stranded claim still expires with its TTL.
+	}
+};
+
 /** Winner stores its (encrypted) token response for spinning replayers. */
 export const storeOAuthRefreshReplay = async ({
 	body,
