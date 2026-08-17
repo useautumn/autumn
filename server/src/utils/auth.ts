@@ -1,6 +1,5 @@
 import "dotenv/config";
 import { getAutumnEnv } from "@autumn/env";
-import { joinPublicUrl } from "@autumn/env/paths";
 import {
 	ALL_SCOPES,
 	ac,
@@ -83,7 +82,8 @@ const emulateGoogleUrl =
 const isProductionAuth = process.env.NODE_ENV === "production";
 export const authBaseUrl = getAutumnEnv().AUTUMN_API_URL;
 const publicAuthBaseUrl = getAutumnEnv().AUTUMN_PUBLIC_API_URL;
-const isHttpsBaseUrl = authBaseUrl?.startsWith("https://");
+const browserAuthBaseUrl = isProductionAuth ? authBaseUrl : publicAuthBaseUrl;
+const isHttpsBaseUrl = browserAuthBaseUrl?.startsWith("https://");
 
 const parseMcpResourceUrl = (rawUrl: string) => {
 	const resourceUrl = rawUrl.trim();
@@ -117,7 +117,7 @@ const mcpResourceBases = [authBaseUrl, mcpServerUrl, chatServerUrl].filter(
 const mcpResourceUrls = [
 	...new Set([
 		...mcpResourceBases.flatMap((base) =>
-			mcpResourcePaths.map((path) => joinPublicUrl({ base, path })),
+			mcpResourcePaths.map((path) => new URL(path, base).href),
 		),
 		...(process.env.MCP_RESOURCE_URLS?.split(",")
 			.map(parseMcpResourceUrl)
@@ -161,7 +161,7 @@ if (
 }
 
 const options = {
-	baseURL: authBaseUrl,
+	baseURL: browserAuthBaseUrl,
 	telemetry: {
 		enabled: false,
 	},
@@ -224,6 +224,7 @@ const options = {
 			"https://app.useautumn.com",
 			"https://staging.useautumn.com",
 			"https://*.useautumn.com",
+			"https://*.autumnworktree.com",
 		];
 		origins.push(...getTrustedSsoOrigins());
 		if (process.env.NODE_ENV === "production") return origins;
@@ -255,12 +256,8 @@ const options = {
 		google: {
 			clientId: process.env.GOOGLE_CLIENT_ID!,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-			// Browser return URL — must be the public host (/backend on path-proxy).
 			redirectURI: publicAuthBaseUrl
-				? joinPublicUrl({
-						base: publicAuthBaseUrl,
-						path: "/api/auth/callback/google",
-					})
+				? `${publicAuthBaseUrl}/api/auth/callback/google`
 				: undefined,
 			...(emulateGoogleUrl
 				? {

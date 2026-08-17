@@ -42,19 +42,8 @@ export function leafPortFor(worktreeNum: number): number {
 	return 3099 + (worktreeNum - 1) * 100;
 }
 
-/** Front door for the one-hostname path proxy (ngrok / Cloud). */
-export function devProxyPortFor(worktreeNum: number): number {
-	return 3080 + (worktreeNum - 1) * 100;
-}
-
 /** Host-wide Google OAuth emulator (headless / Cloud; no portless). */
 export const EMULATE_PORT = 4000;
-
-// Base 4140 keeps the dashboard tunnel's web API clear of the api tunnel's
-// 4040 + k*100 series.
-export function ngrokViteApiPortFor(worktreeNum: number): number {
-	return 4140 + (worktreeNum - 1) * 100;
-}
 
 export function composeProjectName(worktreeNum: number): string {
 	return `autumn-wt-${worktreeNum}`;
@@ -89,15 +78,18 @@ export function currentPortlessProxyPort(): number | undefined {
 	return undefined;
 }
 
-export function killOwnPorts(worktreeNum: number): void {
-	const offset = (worktreeNum - 1) * 100;
-	const ports = [
-		8080 + offset,
-		3000 + offset,
-		3001 + offset,
-		3080 + offset,
-		3099 + offset,
+/** App processes only. Path proxy + cloudflared are a sidecar — never recycle them here. */
+export function appPortsFor(worktreeNum: number): number[] {
+	return [
+		serverPortFor(worktreeNum),
+		vitePortFor(worktreeNum),
+		checkoutPortFor(worktreeNum),
+		leafPortFor(worktreeNum),
 	];
+}
+
+export function killOwnPorts(worktreeNum: number): void {
+	const ports = appPortsFor(worktreeNum);
 	if (process.platform === "win32") return;
 	const lsof = sh(
 		"lsof",

@@ -21,6 +21,8 @@ Most auto-install on first run:
 - **tmux** — headless dev wrapping for agent worktrees
 - **portless** — `npm install -g @portless/cli` for HTTPS aliases
 - **emulate** — `npm install -g @kelby/emulate` for Google OAuth locally
+- **cloudflared** — `brew install cloudflared` (named tunnel, one hostname per service)
+- **Cloudflare** — `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` in `~/.autumn-agent/cloudflare.env` (or `cloudflared tunnel login`) so dw can create `autumn-wtN-<hash>[-service].autumnworktree.com`
 
 ## Lifecycle
 
@@ -70,11 +72,19 @@ Prints your stack's URLs and tmux session. Example output:
 
 ```
 #3  /Users/amianthus/Documents/Code/Autumn OSS/sirtenzin-autumn
+  local
+  dashboard   https://wt3.localhost
+  backend     https://wt3-api.localhost
+  leaf        http://localhost:3299
+  checkout    http://localhost:3201
+  emulate     https://google.emulate.localhost
 
-dashboard  https://wt3.localhost
-api        https://wt3-api.localhost
-leaf       http://localhost:3299
-checkout   http://localhost:3201
+  public
+  dashboard   https://autumn-wt3-a1b2c3.autumnworktree.com
+  backend     https://autumn-wt3-a1b2c3-api.autumnworktree.com
+  leaf        https://autumn-wt3-a1b2c3-leaf.autumnworktree.com
+  checkout    https://autumn-wt3-a1b2c3-checkout.autumnworktree.com
+  emulate     https://autumn-wt3-a1b2c3-emulate.autumnworktree.com
 
 DW_WORKTREE_NUM=3
 DW_DASHBOARD_URL=https://wt3.localhost
@@ -82,7 +92,10 @@ DW_API_URL=https://wt3-api.localhost
 DW_VITE_URL=https://wt3.localhost
 DW_LEAF_URL=http://localhost:3299
 DW_CHECKOUT_URL=http://localhost:3201
-DW_PUBLIC_API_URL=https://wt3-api.localhost
+DW_EMULATE_URL=https://google.emulate.localhost
+DW_PUBLIC_URL=https://autumn-wt3-a1b2c3.autumnworktree.com
+DW_PUBLIC_API_URL=https://autumn-wt3-a1b2c3-api.autumnworktree.com
+DW_NGROK_VITE_URL=https://autumn-wt3-a1b2c3.autumnworktree.com
 DW_TMUX_SESSION=dw-wt-3
 DW_SERVER_PORT=8280
 DW_VITE_PORT=3200
@@ -209,6 +222,7 @@ bun dw teardown
 - **Registry lives at** `~/.autumn-worktrees.json`. It tracks worktree numbers, branch names, and last-used timestamps. Deleting it orphans Neon branches and Docker containers.
 - **Portless HTTPS** requires the `portless` daemon. If aliases aren't resolving, check `portless proxy status`.
 - **Emulate** (Google OAuth) is shared across all worktrees and starts automatically when needed.
+- **Cloudflare Tunnel** is the public front door. One named tunnel, one hostname per service (`autumn-wtN-<hash>.autumnworktree.com`, `-api`, `-checkout`, `-leaf`, `-emulate`). The hash is machine id + path so Cloud worktree #1 and two laptops on the same number do not collide. Laptop browsers stay on `https://wtN.localhost`.
 
 ## How Conductor / Superset use this
 

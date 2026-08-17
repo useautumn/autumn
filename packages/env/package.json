@@ -10,15 +10,10 @@
 			"import": "./src/index.ts",
 			"default": "./src/index.ts"
 		},
-		"./paths": {
-			"types": "./src/paths.ts",
-			"import": "./src/paths.ts",
-			"default": "./src/paths.ts"
-		},
-		"./dw": {
-			"types": "./src/dw.ts",
-			"import": "./src/dw.ts",
-			"default": "./src/dw.ts"
+		"./viteDev": {
+			"types": "./src/viteDev.ts",
+			"import": "./src/viteDev.ts",
+			"default": "./src/viteDev.ts"
 		}
 	},
 	"scripts": {

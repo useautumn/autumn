@@ -12,19 +12,44 @@ import { log, sh } from "./shell.ts";
 
 const EMULATE_LOG = join(homedir(), ".autumn-emulate.log");
 
-/** Public folder for path-proxy; local loopback for headless without ngrok. */
+/** Browser-facing emulate origin. Never 127.0.0.1:4000 for Cloud browsers. */
 export function emulateGoogleUrl({
 	origin,
 }: {
 	origin?: string;
 }): string {
-	if (origin?.startsWith("https://")) {
-		return `${origin.replace(/\/$/, "")}/emulate`;
+	if (origin && /^https?:\/\//i.test(origin)) {
+		return origin.replace(/\/$/, "");
 	}
 	if (isHeadless()) {
-		return `http://127.0.0.1:${EMULATE_PORT}`;
+		return `http://localhost:${EMULATE_PORT}`;
 	}
 	return portlessHttpsUrl("google.emulate.localhost");
+}
+
+function emulateIssuerMatches({
+	loopback,
+	publicBase,
+}: {
+	loopback: string;
+	publicBase: string;
+}): boolean {
+	const res = sh("curl", [
+		"-sf",
+		"--max-time",
+		"1",
+		`${loopback.replace(/\/$/, "")}/.well-known/openid-configuration`,
+	]);
+	if (res.code !== 0) return false;
+	try {
+		const issuer = (JSON.parse(res.stdout) as { issuer?: string }).issuer;
+		return (
+			typeof issuer === "string" &&
+			issuer.replace(/\/$/, "") === publicBase.replace(/\/$/, "")
+		);
+	} catch {
+		return false;
+	}
 }
 
 function emulateReachable({ baseUrl }: { baseUrl: string }): boolean {
@@ -46,7 +71,7 @@ function ensureEmulateBinary(): boolean {
 	return sh("bun", ["install", "-g", "emulate"]).code === 0;
 }
 
-/** Laptop: portless HTTPS. Cloud: plain HTTP on EMULATE_PORT (path-proxied). */
+/** Laptop portless, or the public emulate host when Cloud sets origin. */
 export function ensureEmulateRunning({
 	origin,
 }: {
@@ -73,16 +98,21 @@ function ensureHeadlessEmulateRunning({
 	origin?: string;
 }): void {
 	const loopback = `http://127.0.0.1:${EMULATE_PORT}`;
-	if (emulateReachable({ baseUrl: loopback })) return;
+	const publicBase = origin
+		? emulateGoogleUrl({ origin })
+		: emulateGoogleUrl({});
+	if (emulateReachable({ baseUrl: loopback })) {
+		if (emulateIssuerMatches({ loopback, publicBase })) return;
+		log("emulate issuer stale — restarting with public emulate URL");
+		killHostProcessByName(`emulate start -p ${EMULATE_PORT}`);
+		killPidFromFile(EMULATE_PID_FILE);
+	}
 	if (!ensureEmulateBinary()) {
 		console.error("[dw] emulate binary missing; Google sign-in will hit real Google");
 		return;
 	}
 
 	const seed = join(PROJECT_ROOT, "emulate.config.yaml");
-	const publicBase = origin?.startsWith("https://")
-		? emulateGoogleUrl({ origin })
-		: loopback;
 	log(`starting google emulate on :${EMULATE_PORT} (base ${publicBase})`);
 
 	const proc = Bun.spawn(

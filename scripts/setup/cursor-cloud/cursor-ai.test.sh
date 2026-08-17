@@ -116,25 +116,24 @@ console.log("ok");
 [[ "$got" == "ok" ]] || fail "firstHttpsUrl, got $got"
 pass "identify reads the first https origin"
 
-grep -q 'ensureNgrok(entry' "$ROOT/scripts/dw/commands/identify.ts" \
-	|| fail "identify must start the ngrok tunnel"
+grep -q 'ensurePublicAccess' "$ROOT/scripts/dw/commands/setup.ts" \
+	|| fail "setup must ensure Cloudflare public access"
 if [[ -f "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" ]] \
 	|| [[ -f "$ROOT/scripts/setup/cursor-cloud/ngrok.sh" ]]; then
-	fail "Cloud ngrok shells must be deleted; dw ensureNgrok owns the tunnel"
+	fail "Cloud ngrok shells must be deleted; dw ensurePublicAccess owns the tunnel"
 fi
 if rg -n 'unset NGROK_API_KEY' "$ROOT/scripts/dw" "$ROOT/scripts/setup/cursor-cloud" \
 	-g '!cursor-ai.test.sh'; then
 	fail "must not unset NGROK_API_KEY"
 fi
-pass "identify uses ensureNgrok; no Cloud ngrok shells"
+pass "setup uses ensurePublicAccess; no Cloud ngrok shells"
 
 UNIT_TESTS=1 env -u TESTS_ORG bun test \
 	"$ROOT/scripts/dw/helpers/ngrok.test.ts" \
 	"$ROOT/scripts/dw/helpers/machineId.test.ts" \
 	"$ROOT/scripts/dw/helpers/registry.test.ts" \
-	"$ROOT/scripts/dw/devProxy/routes.test.ts" \
-	"$ROOT/scripts/dw/devProxy/server.test.ts" \
+	"$ROOT/scripts/dw/devProxy/cloudflareConfig.test.ts" \
 	|| fail "dw unit tests failed"
-pass "dw reserved names, machine-id, path proxy"
+pass "dw reserved names, machine-id, cloudflare hosts"
 
 echo "all cursor-cloud boot tests passed"

@@ -1,6 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { type LeafSurface, leafSystemPrompt } from "@autumn/agent-docs/agent";
-import { joinPublicUrl } from "@autumn/env/paths";
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
 import { setupAgentToolContext } from "../../agent/runMessage/setup/setupAgentToolContext.js";
@@ -33,7 +32,7 @@ const autumnMcpUrl = () => {
 			`MCP_SERVER_URL must be HTTPS for Claude Managed Agents, but is "${base}". Point it at your public tunnel (e.g. https://j.dev.useautumn.com), which proxies /mcp to leaf.`,
 		);
 	}
-	return joinPublicUrl({ base, path: "/mcp" });
+	return new URL("/mcp", base).toString();
 };
 
 const findEnvironmentByName = async (client: Anthropic, name: string) => {

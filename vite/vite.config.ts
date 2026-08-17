@@ -1,5 +1,5 @@
 import path from "node:path";
-import { isDwHeadless } from "@autumn/env/dw";
+import { viteHmrClient } from "@autumn/env/viteDev";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -12,17 +12,10 @@ import tsconfigPaths from "vite-tsconfig-paths";
 process.env.VITE_BACKEND_URL ||= "http://localhost:8080";
 process.env.VITE_FRONTEND_URL ||= "http://localhost:3000";
 
-const headless = isDwHeadless();
-const backendPrefix = (process.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
-const backendIsRelative =
-	backendPrefix.startsWith("/") && !backendPrefix.startsWith("//");
-
 const vitePort = process.env.VITE_PORT
 	? Number.parseInt(process.env.VITE_PORT, 10)
 	: 3000;
-const serverPort = process.env.SERVER_PORT
-	? Number.parseInt(process.env.SERVER_PORT, 10)
-	: 8080;
+const frontendUrl = process.env.VITE_FRONTEND_URL || "";
 
 function printPortlessUrl(): Plugin {
 	return {
@@ -42,26 +35,8 @@ function printPortlessUrl(): Plugin {
 	};
 }
 
-/** ngrok/dev-proxy dropping a socket during dep-reload used to crash Vite. */
-function ignoreProxyDisconnects(): Plugin {
-	return {
-		name: "ignore-proxy-disconnects",
-		apply: "serve",
-		configureServer(server) {
-			return () => {
-				server.httpServer?.on("connection", (socket) => {
-					socket.on("error", (err: NodeJS.ErrnoException) => {
-						if (err.code === "ECONNRESET" || err.code === "EPIPE") return;
-					});
-				});
-			};
-		},
-	};
-}
-
 // https://vite.dev/config/
 export default defineConfig({
-	base: "/",
 	define: {
 		__APP_ENV__: JSON.stringify(process.env.VITE_APP_ENV || ""),
 	},
@@ -78,7 +53,6 @@ export default defineConfig({
 			telemetry: false,
 		}),
 		printPortlessUrl(),
-		ignoreProxyDisconnects(),
 	],
 
 	resolve: {
@@ -157,45 +131,27 @@ export default defineConfig({
 		host: "0.0.0.0", // Required for Docker
 		port: vitePort,
 		strictPort: false, // Allow fallback to next available port
-		// Laptop portless preview needs an absolute origin. Cloud already
-		// allows any Host (`allowedHosts: true`); pin origin/HMR the same way
-		// so Ports / ngrok use the request host instead of localhost:3000.
-		...(!headless &&
-			process.env.VITE_FRONTEND_URL && {
-				origin: process.env.VITE_FRONTEND_URL,
-			}),
-		allowedHosts: headless
-			? true
-			: [
-					"dev.useautumn.com",
-					"client.dev.useautumn.com",
-					"localhost",
-					".localhost",
-					// Cloud sandboxes reach the dashboard through a per-worktree ngrok
-					// tunnel; without this Vite answers 403 "This host is not allowed".
-					".ngrok.app",
-					".ngrok-free.app",
-				],
+		...(frontendUrl && {
+			origin: frontendUrl,
+		}),
+		allowedHosts: [
+			"dev.useautumn.com",
+			"client.dev.useautumn.com",
+			"localhost",
+			".localhost",
+			".autumnworktree.com",
+			".ngrok.app",
+			".ngrok-free.app",
+		],
 		watch: {
 			usePolling: true, // Required for file watching in Docker on Windows
 			interval: 1000,
 		},
-		...(!headless && {
-			hmr: { port: vitePort },
-		}),
+		hmr: viteHmrClient({ frontendUrl, vitePort }),
 		fs: {
 			// Allow serving files from workspace root (monorepo support)
 			allow: [".."],
 		},
-		...(backendIsRelative && {
-			proxy: {
-				[backendPrefix]: {
-					changeOrigin: true,
-					rewrite: (path: string) => path.slice(backendPrefix.length) || "/",
-					target: `http://127.0.0.1:${serverPort}`,
-				},
-			},
-		}),
 	},
 
 	build: {

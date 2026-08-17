@@ -77,6 +77,13 @@ describe("isAllowedOrigin", () => {
 			);
 		});
 
+		test("allows autumnworktree tunnel hosts", () => {
+			process.env.NODE_ENV = "development";
+			expect(
+				isAllowedOrigin("https://autumn-wt45-ee5aa7.autumnworktree.com"),
+			).toBe("https://autumn-wt45-ee5aa7.autumnworktree.com");
+		});
+
 		test("rejects external origins", () => {
 			process.env.NODE_ENV = "development";
 			expect(isAllowedOrigin("https://evil.com")).toBeUndefined();

@@ -3,7 +3,7 @@ import { isProvisioned } from "../helpers/entry.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
 import { isHeadless } from "../helpers/headless.ts";
 import { ensureLocalInfra } from "../helpers/localInfra.ts";
-import { ensureNgrok } from "../helpers/ngrok.ts";
+import { ensurePublicAccess } from "../helpers/cloudflare.ts";
 import { withNeonContext } from "../helpers/neonContext.ts";
 import {
 	parseRegionArg,
@@ -102,11 +102,11 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 		saveRegistry(registry);
 	} else if (isHeadless()) {
 		ensureLocalInfra();
-		entry = await ensureNgrok(entry);
+		entry = await ensurePublicAccess(entry);
 		registry[cwd] = entry;
 		saveRegistry(registry);
 	} else {
-		entry = await ensureNgrok(entry);
+		entry = await ensurePublicAccess(entry);
 	}
 
 	return entry;

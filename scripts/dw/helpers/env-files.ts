@@ -12,20 +12,23 @@ import {
 	ENV_LOCAL_TARGETS,
 	PROJECT_ROOT,
 } from "../constants.ts";
-import { DEV_PROXY_PREFIXES, originServiceUrls } from "../devProxy/routes.ts";
 import type { RegistryEntry } from "../types.ts";
-import { isProvisioned } from "./entry.ts";
 import { emulateGoogleUrl } from "./emulate.ts";
+import { isProvisioned } from "./entry.ts";
 import { isHeadless } from "./headless.ts";
 import {
 	aliasesFor,
+	checkoutPortFor,
 	dragonflyPortFor,
 	dynamoDbPortFor,
 	elasticMqPortFor,
-	checkoutPortFor,
 	serverPortFor,
 } from "./ports.ts";
-import { publicDevEnv } from "./publicUrls.ts";
+import {
+	entryPublicServiceUrls,
+	laptopDevEnv,
+	publicDevEnv,
+} from "./publicUrls.ts";
 import { log } from "./shell.ts";
 import { forceSslVerifyFull } from "./url.ts";
 
@@ -104,7 +107,7 @@ export function provisionedInfraEnv(
 	};
 }
 
-function urlsForEntry(entry: RegistryEntry): {
+export function urlsForEntry(entry: RegistryEntry): {
 	apiUrl: string;
 	browserApiUrl: string;
 	checkoutUrl: string;
@@ -114,24 +117,25 @@ function urlsForEntry(entry: RegistryEntry): {
 	const serverPort = serverPortFor(entry.worktreeNum);
 	const loopbackApi = `http://localhost:${serverPort}`;
 	const loopbackCheckout = `http://localhost:${checkoutPortFor(entry.worktreeNum)}`;
-	if (entry.ngrokUrl?.startsWith("https://")) {
-		const urls = originServiceUrls({ origin: entry.ngrokUrl });
-		return {
-			apiUrl: loopbackApi,
-			browserApiUrl: DEV_PROXY_PREFIXES.api,
-			checkoutUrl: urls.checkout,
-			publicApiUrl: urls.api,
-			viteUrl: urls.dashboard,
-		};
-	}
 	if (isProvisioned(entry) && !isHeadless()) {
 		const aliases = aliasesFor(entry.worktreeNum);
+		const publicUrls = entryPublicServiceUrls(entry);
 		return {
 			apiUrl: aliases.apiUrl,
-			browserApiUrl: aliases.apiUrl,
+			browserApiUrl: publicUrls?.api ?? aliases.apiUrl,
 			checkoutUrl: loopbackCheckout,
-			publicApiUrl: entry.ngrokUrl ?? aliases.apiUrl,
+			publicApiUrl: publicUrls?.api ?? aliases.apiUrl,
 			viteUrl: aliases.viteUrl,
+		};
+	}
+	const publicUrls = entryPublicServiceUrls(entry);
+	if (publicUrls) {
+		return {
+			apiUrl: loopbackApi,
+			browserApiUrl: publicUrls.api,
+			checkoutUrl: publicUrls.checkout,
+			publicApiUrl: publicUrls.api,
+			viteUrl: publicUrls.vite,
 		};
 	}
 	const vitePort = 3000 + (entry.worktreeNum - 1) * 100;
@@ -152,6 +156,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	}
 	const { apiUrl, browserApiUrl, checkoutUrl, publicApiUrl, viteUrl } =
 		urlsForEntry(entry);
+	const publicUrls = entryPublicServiceUrls(entry);
 	const serverPort = serverPortFor(worktreeNum);
 	const portlessCa = join(homedir(), ".portless", "ca.pem");
 
@@ -162,17 +167,29 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		AUTUMN_API_URL: apiUrl,
 		AUTUMN_PUBLIC_API_URL: publicApiUrl,
 		CLIENT_URL: viteUrl,
-		EMULATE_GOOGLE_URL: emulateGoogleUrl({ origin: entry.ngrokUrl }),
+		EMULATE_GOOGLE_URL: emulateGoogleUrl({
+			origin: isHeadless() ? publicUrls?.emulate : undefined,
+		}),
 		AUTUMN_TEST_BASE_URL: `http://localhost:${serverPort}`,
 		AUTUMN_TEST_VITE_URL: viteUrl,
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 	};
-	if (entry.ngrokUrl?.startsWith("https://")) {
+	if (isHeadless() && publicUrls) {
 		Object.assign(
 			serverEnv,
 			publicDevEnv({
-				origin: entry.ngrokUrl,
+				urls: publicUrls,
 				worktreeNum,
+			}),
+		);
+		serverEnv.AUTUMN_TEST_BASE_URL = `http://localhost:${serverPort}`;
+		serverEnv.AUTUMN_TEST_VITE_URL = viteUrl;
+	} else if (isProvisioned(entry) && !isHeadless()) {
+		Object.assign(
+			serverEnv,
+			laptopDevEnv({
+				aliases: aliasesFor(worktreeNum),
+				publicUrls,
 			}),
 		);
 		serverEnv.AUTUMN_TEST_BASE_URL = `http://localhost:${serverPort}`;

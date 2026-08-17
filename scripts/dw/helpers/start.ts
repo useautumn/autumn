@@ -3,14 +3,19 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
+import { startPublicAccess } from "./cloudflare.ts";
 import { emulateGoogleUrl } from "./emulate.ts";
 import { isProvisioned } from "./entry.ts";
-import { provisionedInfraEnv } from "./env-files.ts";
+import { provisionedInfraEnv, writeEnvLocalFiles } from "./env-files.ts";
 import { isHeadless } from "./headless.ts";
-import { ensureNgrok, publicOrigin } from "./ngrok.ts";
 import { registerPortlessAliases } from "./portless.ts";
 import { serverPortFor } from "./ports.ts";
-import { publicDevEnv } from "./publicUrls.ts";
+import {
+	entryPublicServiceUrls,
+	laptopDevEnv,
+	loopbackServiceUrls,
+	publicDevEnv,
+} from "./publicUrls.ts";
 import { fatal, log } from "./shell.ts";
 import { spawnDevInTmux, tmuxSessionName } from "./tmux.ts";
 import { rewriteDbEnv } from "./url.ts";
@@ -44,24 +49,25 @@ function applyPublicUrls({
 	entry: RegistryEntry;
 	env: Record<string, string>;
 }): void {
-	const origin = publicOrigin({ entry });
-	if (origin?.startsWith("https://")) {
-		Object.assign(
-			env,
-			publicDevEnv({ origin, worktreeNum: entry.worktreeNum }),
-		);
+	if (isHeadless()) {
+		const urls =
+			entryPublicServiceUrls(entry) ??
+			loopbackServiceUrls({ worktreeNum: entry.worktreeNum });
+		Object.assign(env, publicDevEnv({ urls, worktreeNum: entry.worktreeNum }));
 		return;
 	}
-	if (isHeadless() || !isProvisioned(entry)) {
+	if (!isProvisioned(entry)) {
 		env.AUTUMN_API_URL = `http://localhost:${serverPortFor(entry.worktreeNum)}`;
 		return;
 	}
 	const aliases = registerPortlessAliases(entry.worktreeNum);
-	env.AUTUMN_API_URL = aliases.apiUrl;
-	env.AUTUMN_PUBLIC_API_URL = entry.ngrokUrl ?? aliases.apiUrl;
-	env.CLIENT_URL = aliases.viteUrl;
-	env.VITE_BACKEND_URL = aliases.apiUrl;
-	env.VITE_FRONTEND_URL = aliases.viteUrl;
+	Object.assign(
+		env,
+		laptopDevEnv({
+			aliases,
+			publicUrls: entryPublicServiceUrls(entry),
+		}),
+	);
 }
 
 function applyProvisionedDevEnv(
@@ -73,15 +79,14 @@ function applyProvisionedDevEnv(
 
 	const next = applyLocalInfra(rewriteDbEnv(env, databaseUrl), worktreeNum);
 	if (!next.EMULATE_GOOGLE_URL) {
-		next.EMULATE_GOOGLE_URL = emulateGoogleUrl({
-			origin: entry.ngrokUrl ?? publicOrigin({ entry }),
-		});
+		next.EMULATE_GOOGLE_URL = emulateGoogleUrl({});
 	}
 	const portlessCa = join(homedir(), ".portless", "ca.pem");
 	if (existsSync(portlessCa) && !next.NODE_EXTRA_CA_CERTS) {
 		next.NODE_EXTRA_CA_CERTS = portlessCa;
 	}
 	applyPublicUrls({ entry, env: next });
+	writeEnvLocalFiles(entry);
 	return next;
 }
 
@@ -94,7 +99,9 @@ function applyHeadlessDevEnv(
 	applyPublicUrls({ entry, env: next });
 	if (!next.EMULATE_GOOGLE_URL) {
 		next.EMULATE_GOOGLE_URL = emulateGoogleUrl({
-			origin: entry.ngrokUrl ?? publicOrigin({ entry }),
+			origin:
+				entryPublicServiceUrls(entry)?.emulate ??
+				loopbackServiceUrls({ worktreeNum: entry.worktreeNum }).emulate,
 		});
 	}
 	next.DATABASE_URL = LOCAL_DATABASE_URL;
@@ -131,9 +138,9 @@ export async function startDev(
 	entry: RegistryEntry,
 	opts?: { allowTmux?: boolean },
 ): Promise<never> {
-	const current = await ensureNgrok(entry);
-	const { worktreeNum, branchName } = current;
-	const { env, args } = buildDevEnvAndArgs(current);
+	startPublicAccess(entry);
+	const { worktreeNum, branchName } = entry;
+	const { env, args } = buildDevEnvAndArgs(entry);
 
 	const useTmux =
 		(opts?.allowTmux ?? true) && worktreeNum > 1 && !process.stdout.isTTY;

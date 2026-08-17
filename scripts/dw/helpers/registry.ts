@@ -107,6 +107,8 @@ export function refreshCanonicalEntry(
 		next.databaseUrl = undefined;
 		next.reservedDomainId = undefined;
 		next.ngrokUrl = undefined;
+		next.publicUrl = undefined;
+		next.cloudflareTunnelId = undefined;
 	}
 
 	next.gitBranch = gitBranch;
@@ -205,4 +207,22 @@ export function resolveAgentEntryOrFatal(action: string): RegistryEntry {
 		fatal(`${action} only valid in a registered agent worktree`);
 	}
 	return entry;
+}
+
+/** Any registered worktree, including canonical / headless #1. */
+export function resolveCurrentEntryOrFatal(
+	action: string,
+	opts: { touch?: boolean } = {},
+): RegistryEntry {
+	const cwd = getCurrentWorktree();
+	const registry = loadRegistry();
+	const entry = registry[cwd];
+	if (!entry) {
+		fatal(`${action} requires a registered worktree — run 'bun dw setup' first`);
+	}
+	if (!opts.touch) return entry;
+	const next = { ...entry, lastUsedAt: Date.now() };
+	registry[cwd] = next;
+	saveRegistry(registry);
+	return next;
 }

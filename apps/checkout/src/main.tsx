@@ -26,18 +26,11 @@ const queryClient = new QueryClient({
 	},
 });
 
-const checkoutMount = "/checkout";
-const checkoutPath = window.location.pathname;
-const routerBasename =
-	checkoutPath === checkoutMount || checkoutPath.startsWith(`${checkoutMount}/`)
-		? checkoutMount
-		: "/";
-
 createRoot(document.getElementById("root")!).render(
 	<ThemeProvider defaultTheme="system" storageKey="checkout-theme">
 		<DevTools />
 		<QueryClientProvider client={queryClient}>
-			<BrowserRouter basename={routerBasename}>
+			<BrowserRouter>
 				<Routes>
 					<Route
 						path={`/${ATTACH_CHECKOUT_PATH}/:checkoutId`}

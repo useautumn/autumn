@@ -26,7 +26,11 @@ export const isAllowedOrigin = (origin: string): string | undefined => {
 	}
 	try {
 		const hostname = new URL(origin).hostname;
-		if (hostname.endsWith(".ngrok.app") || hostname.endsWith(".ngrok-free.app")) {
+		if (
+			hostname.endsWith(".ngrok.app") ||
+			hostname.endsWith(".ngrok-free.app") ||
+			hostname.endsWith(".autumnworktree.com")
+		) {
 			return origin;
 		}
 	} catch {

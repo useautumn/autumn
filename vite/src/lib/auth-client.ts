@@ -7,13 +7,9 @@ import {
 	organizationClient,
 } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
-import { resolveAuthBaseUrl } from "./authBaseUrl";
 
 export const authClient = createAuthClient({
-	baseURL: resolveAuthBaseUrl({
-		backendUrl: import.meta.env.VITE_BACKEND_URL,
-		origin: typeof window === "undefined" ? undefined : window.location.origin,
-	}),
+	baseURL: import.meta.env.VITE_BACKEND_URL,
 	plugins: [
 		emailOTPClient(),
 		organizationClient({ ac, roles }),
