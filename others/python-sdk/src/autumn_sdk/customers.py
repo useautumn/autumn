@@ -496,6 +496,10 @@ class Customers(BaseSDK):
         subscription_status: Optional[models.ListCustomersSubscriptionStatus] = None,
         search: Optional[str] = None,
         processors: Optional[List[models.ListCustomersProcessor]] = None,
+        sort_order: Optional[models.SortOrder] = None,
+        created_at_range: Optional[
+            Union[models.CreatedAtRange, models.CreatedAtRangeTypedDict]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -509,6 +513,8 @@ class Customers(BaseSDK):
         :param subscription_status: Filter by customer product status. Defaults to active and scheduled.
         :param search: Search customers by id, name, or email.
         :param processors: Filter by customer processor type (stripe, revenuecat, vercel).
+        :param sort_order: Sort by customer creation time. Defaults to desc (newest first).
+        :param created_at_range: Filter by customer creation time (epoch milliseconds, inclusive bounds).
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -533,6 +539,10 @@ class Customers(BaseSDK):
             subscription_status=subscription_status,
             search=search,
             processors=processors,
+            sort_order=sort_order,
+            created_at_range=utils.get_pydantic_model(
+                created_at_range, Optional[models.CreatedAtRange]
+            ),
         )
 
         req = self._build_request(
@@ -607,6 +617,10 @@ class Customers(BaseSDK):
         subscription_status: Optional[models.ListCustomersSubscriptionStatus] = None,
         search: Optional[str] = None,
         processors: Optional[List[models.ListCustomersProcessor]] = None,
+        sort_order: Optional[models.SortOrder] = None,
+        created_at_range: Optional[
+            Union[models.CreatedAtRange, models.CreatedAtRangeTypedDict]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -620,6 +634,8 @@ class Customers(BaseSDK):
         :param subscription_status: Filter by customer product status. Defaults to active and scheduled.
         :param search: Search customers by id, name, or email.
         :param processors: Filter by customer processor type (stripe, revenuecat, vercel).
+        :param sort_order: Sort by customer creation time. Defaults to desc (newest first).
+        :param created_at_range: Filter by customer creation time (epoch milliseconds, inclusive bounds).
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -644,6 +660,10 @@ class Customers(BaseSDK):
             subscription_status=subscription_status,
             search=search,
             processors=processors,
+            sort_order=sort_order,
+            created_at_range=utils.get_pydantic_model(
+                created_at_range, Optional[models.CreatedAtRange]
+            ),
         )
 
         req = self._build_request_async(
@@ -718,14 +738,14 @@ class Customers(BaseSDK):
         currency: OptionalNullable[str] = UNSET,
         billing_controls: Optional[
             Union[
-                models.UpdateCustomerBillingControlsRequest,
-                models.UpdateCustomerBillingControlsRequestTypedDict,
+                models.UpdateCustomerBillingControlsRequestBody,
+                models.UpdateCustomerBillingControlsRequestBodyTypedDict,
             ]
         ] = None,
         config: Optional[
             Union[
-                models.UpdateCustomerConfigRequest,
-                models.UpdateCustomerConfigRequestTypedDict,
+                models.UpdateCustomerConfigRequestBody,
+                models.UpdateCustomerConfigRequestBodyTypedDict,
             ]
         ] = None,
         new_customer_id: Optional[str] = None,
@@ -772,10 +792,11 @@ class Customers(BaseSDK):
             send_email_receipts=send_email_receipts,
             currency=currency,
             billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.UpdateCustomerBillingControlsRequest]
+                billing_controls,
+                Optional[models.UpdateCustomerBillingControlsRequestBody],
             ),
             config=utils.get_pydantic_model(
-                config, Optional[models.UpdateCustomerConfigRequest]
+                config, Optional[models.UpdateCustomerConfigRequestBody]
             ),
             new_customer_id=new_customer_id,
         )
@@ -852,14 +873,14 @@ class Customers(BaseSDK):
         currency: OptionalNullable[str] = UNSET,
         billing_controls: Optional[
             Union[
-                models.UpdateCustomerBillingControlsRequest,
-                models.UpdateCustomerBillingControlsRequestTypedDict,
+                models.UpdateCustomerBillingControlsRequestBody,
+                models.UpdateCustomerBillingControlsRequestBodyTypedDict,
             ]
         ] = None,
         config: Optional[
             Union[
-                models.UpdateCustomerConfigRequest,
-                models.UpdateCustomerConfigRequestTypedDict,
+                models.UpdateCustomerConfigRequestBody,
+                models.UpdateCustomerConfigRequestBodyTypedDict,
             ]
         ] = None,
         new_customer_id: Optional[str] = None,
@@ -906,10 +927,11 @@ class Customers(BaseSDK):
             send_email_receipts=send_email_receipts,
             currency=currency,
             billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.UpdateCustomerBillingControlsRequest]
+                billing_controls,
+                Optional[models.UpdateCustomerBillingControlsRequestBody],
             ),
             config=utils.get_pydantic_model(
-                config, Optional[models.UpdateCustomerConfigRequest]
+                config, Optional[models.UpdateCustomerConfigRequestBody]
             ),
             new_customer_id=new_customer_id,
         )

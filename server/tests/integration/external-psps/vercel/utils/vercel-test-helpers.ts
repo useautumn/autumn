@@ -30,12 +30,12 @@ import {
 	VercelMarketplaceMode,
 } from "@autumn/shared";
 import { vercelResources } from "@shared/models/processorModels/vercelModels/vercelResourcesTable.js";
-import type Stripe from "stripe";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
+import type Stripe from "stripe";
 import { createStripeCustomer } from "@/external/stripe/customers/index.js";
+import { customerActions } from "@/internal/customers/actions/index.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { customerActions } from "@/internal/customers/actions/index.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -93,11 +93,9 @@ export const setupVercelOrg = async (
 					...(existing ?? {}),
 					// LIVE slots intentionally NOT touched — preserve whatever
 					// real credentials the org has for production Vercel.
-					client_integration_id:
-						existing?.client_integration_id ?? clientId,
+					client_integration_id: existing?.client_integration_id ?? clientId,
 					client_secret: existing?.client_secret ?? clientSecret,
-					webhook_url:
-						existing?.webhook_url ?? "https://test.example/webhook",
+					webhook_url: existing?.webhook_url ?? "https://test.example/webhook",
 					// SANDBOX slots are owned by the test suite.
 					sandbox_client_id: clientId,
 					sandbox_client_secret: clientSecret,
@@ -329,7 +327,7 @@ export interface CapturedVercelCall {
 }
 
 const captureBaseUrl = () =>
-	`${(process.env.BETTER_AUTH_URL ?? "http://localhost:8080").replace(/\/$/, "")}/__test/vercel/api`;
+	`${(process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080").replace(/\/$/, "")}/__test/vercel/api`;
 
 export const readVercelCaptures = async (
 	installationId: string,

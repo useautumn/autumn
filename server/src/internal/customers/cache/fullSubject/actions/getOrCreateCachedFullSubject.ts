@@ -20,6 +20,7 @@ export const getOrCreateCachedFullSubject = async ({
 	params,
 	source,
 	readFrom = "primary",
+	useDelayedPostgresBackupRead = false,
 }: {
 	ctx: AutumnContext;
 	params: Omit<TrackParams | CheckParams, "customer_id"> & {
@@ -27,6 +28,7 @@ export const getOrCreateCachedFullSubject = async ({
 	};
 	source?: string;
 	readFrom?: SubjectReadFrom;
+	useDelayedPostgresBackupRead?: boolean;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
 	const useRedis = !skipCache;
@@ -75,6 +77,7 @@ export const getOrCreateCachedFullSubject = async ({
 			allowMissingEntity: true,
 			readFrom,
 			routeSource: source,
+			useDelayedPostgresBackupRead,
 		});
 		if (normalizedResult) {
 			fullSubject = normalizedResult.fullSubject;
@@ -130,6 +133,8 @@ export const getOrCreateCachedFullSubject = async ({
 				ctx,
 				customerId: fullSubject.customer.id || fullSubject.customer.internal_id,
 				entityId: fullSubject.entity?.id || entityId,
+				useDelayedPostgresBackupRead,
+				routeSource: source,
 			});
 		}
 

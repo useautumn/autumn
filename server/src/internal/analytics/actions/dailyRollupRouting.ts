@@ -13,6 +13,44 @@ export type CountAndSumSource =
 const DAILY_BIN_SIZES = new Set(["day", "week", "month"]);
 const MILLISECONDS_PER_DAY = 86_400_000;
 
+export const shouldUseOrgDimensionRollup = ({
+	groupColumn,
+	hasCustomerId,
+	hasEntityId,
+	hasPropertyFilters,
+}: {
+	groupColumn: GroupableColumn;
+	hasCustomerId: boolean;
+	hasEntityId: boolean;
+	hasPropertyFilters: boolean;
+}): boolean =>
+	groupColumn !== "property" &&
+	!hasCustomerId &&
+	!hasEntityId &&
+	!hasPropertyFilters;
+
+export const shouldUseOrgPropertyRollup = ({
+	groupColumn,
+	hasCustomerId,
+	hasEntityId,
+	hasPropertyFilters,
+	propertyKey,
+	skipPropertyRollup,
+}: {
+	groupColumn: GroupableColumn;
+	hasCustomerId: boolean;
+	hasEntityId: boolean;
+	hasPropertyFilters: boolean;
+	propertyKey: string;
+	skipPropertyRollup: boolean;
+}): boolean =>
+	groupColumn === "property" &&
+	!hasCustomerId &&
+	!hasEntityId &&
+	!hasPropertyFilters &&
+	!propertyKey.includes(".") &&
+	!skipPropertyRollup;
+
 const parseUtcTimestamp = ({ value }: { value: string }): number => {
 	const normalized = value.replace(" ", "T").replace(/Z$/, "");
 	return Date.parse(`${normalized}Z`);

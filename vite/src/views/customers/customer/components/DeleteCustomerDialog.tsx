@@ -77,7 +77,9 @@ export const DeleteCustomerDialog = ({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<DialogHeader>
-					<DialogTitle>Delete Customer</DialogTitle>
+					<DialogTitle>
+						Delete customer {customer.name ?? customer.email ?? customer.id}
+					</DialogTitle>
 				</DialogHeader>
 
 				<div className="mb-2 text-sm">

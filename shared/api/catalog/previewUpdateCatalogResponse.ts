@@ -68,10 +68,20 @@ export const CatalogFeaturePreviewSchema = PreviewUpdateFeatureResponseSchema;
 
 export type CatalogFeaturePreview = z.infer<typeof CatalogFeaturePreviewSchema>;
 
+export const CatalogConfigResourcePreviewSchema = z.object({
+	id: z.string(),
+	action: z.enum(["created", "updated", "deleted", "none", "conflict"]),
+});
+export type CatalogConfigResourcePreview = z.infer<
+	typeof CatalogConfigResourcePreviewSchema
+>;
+
 /** Response for `catalog.preview_update`: resolved plans + features, unpersisted. */
 export const CatalogPreviewUpdateResponseSchema = z.object({
 	plan_changes: z.array(CatalogPlanPreviewSchema),
 	feature_changes: z.array(CatalogFeaturePreviewSchema),
+	reward_changes: z.array(CatalogConfigResourcePreviewSchema),
+	referral_program_changes: z.array(CatalogConfigResourcePreviewSchema),
 });
 
 export type CatalogPreviewUpdateResponse = z.infer<

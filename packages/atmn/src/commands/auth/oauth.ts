@@ -71,6 +71,31 @@ async function startCallbackServer(
 	});
 }
 
+const CLI_SCOPE_REQUESTS = [
+	{
+		resource: "customers",
+		actions: ["create", "read", "list", "update", "delete"],
+	},
+	{
+		resource: "features",
+		actions: ["create", "read", "list", "update", "delete"],
+	},
+	{
+		resource: "plans",
+		actions: ["create", "read", "list", "update", "delete"],
+	},
+	{ resource: "rewards", actions: ["read", "write"] },
+	{ resource: "apiKeys", actions: ["create", "read"] },
+	{ resource: "organisation", actions: ["read"] },
+] as const;
+
+/** Scopes the CLI requests at login, covering every resource `atmn pull` reads. */
+export function buildCliOAuthScopes(): string[] {
+	return CLI_SCOPE_REQUESTS.flatMap(({ resource, actions }) =>
+		actions.map((action) => `${resource}:${action}`),
+	);
+}
+
 /** Start OAuth flow and wait for callback */
 export async function startOAuthFlow(
 	clientId: string,
@@ -88,27 +113,7 @@ export async function startOAuthFlow(
 			state,
 			arctic.CodeChallengeMethod.S256,
 			codeVerifier,
-			[
-				// Dynamically construct scopes using CRUDL for each resource
-				...[
-					{
-						resource: "customers",
-						actions: ["create", "read", "list", "update", "delete"],
-					},
-					{
-						resource: "features",
-						actions: ["create", "read", "list", "update", "delete"],
-					},
-					{
-						resource: "plans",
-						actions: ["create", "read", "list", "update", "delete"],
-					},
-					{ resource: "apiKeys", actions: ["create", "read"] },
-					{ resource: "organisation", actions: ["read"] },
-				].flatMap(({ resource, actions }) =>
-					actions.map((action) => `${resource}:${action}`),
-				),
-			],
+			buildCliOAuthScopes(),
 		);
 		authUrl.searchParams.set("prompt", "consent");
 

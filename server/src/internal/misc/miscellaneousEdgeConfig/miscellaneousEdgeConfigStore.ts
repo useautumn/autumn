@@ -3,8 +3,8 @@ import { ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY } from "@/external/aws/s3/adminS3Co
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
 import {
-    type MiscellaneousEdgeConfig,
-    MiscellaneousEdgeConfigSchema,
+	type MiscellaneousEdgeConfig,
+	MiscellaneousEdgeConfigSchema,
 } from "./miscellaneousEdgeConfigSchemas.js";
 
 const store = createEdgeConfigStore<MiscellaneousEdgeConfig>({
@@ -70,3 +70,7 @@ export const isRedisFallbackToDbEnabled = (): boolean =>
 /** Global gate: share one in-flight fetch across concurrent subject reads. */
 export const isSubjectReadSingleflightEnabled = (): boolean =>
 	store.get().subjectReadSingleflight;
+
+/** Kill switch for the MotherDuck balance-cache refresh cron. */
+export const isMotherduckCacheRefreshDisabled = (): boolean =>
+	store.get().disableMotherduckCacheRefresh;

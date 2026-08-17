@@ -31,6 +31,7 @@ import {
 	updatePlan,
 	upsertFeature,
 } from "../../lib/api/endpoints/index.js";
+import type { LoadedConfig } from "../../lib/config/loadConfig.js";
 import { isProd } from "../../lib/env/cliContext.js";
 import { AppEnv, getKey } from "../../lib/env/index.js";
 import {
@@ -41,6 +42,8 @@ import {
 	transformFeatureToApi,
 	transformPlanItem,
 	transformPlanToApi,
+	transformReferralProgramToApi,
+	transformRewardToApi,
 } from "../../lib/transforms/sdkToApi/index.js";
 import { writeConfig } from "../pull/writeConfig.js";
 import type {
@@ -50,6 +53,7 @@ import type {
 	PlanUpdateInfo,
 	PlanUpdateIntentSelections,
 	PushAnalysis,
+	PushDecisions,
 	PushResult,
 	RemoteData,
 	VariantMigrationSelections,
@@ -825,19 +829,18 @@ function collectSkippedPropagationVariantIds({
 
 async function syncSkippedPropagationVariantsToConfig({
 	cwd,
-	features,
-	plans,
+	config,
 	preview,
 	secretKey,
 	variantPropagationSelections,
 }: {
 	cwd: string;
-	features: Feature[];
-	plans: Plan[];
+	config: LoadedConfig;
 	preview: CatalogPreviewUpdateResponse;
 	secretKey: string;
 	variantPropagationSelections: VariantPropagationSelections;
 }) {
+	const { plans } = config;
 	const skippedVariantIds = collectSkippedPropagationVariantIds({
 		plans,
 		preview,
@@ -871,13 +874,19 @@ async function syncSkippedPropagationVariantsToConfig({
 	});
 
 	if (changed) {
-		await writeConfig(features, nextPlans, cwd);
+		await writeConfig({
+			...config,
+			plans: nextPlans,
+			cwd,
+		});
 	}
 }
 
 export function buildCatalogUpdateParams({
 	features,
 	plans,
+	rewards = [],
+	referralPrograms = [],
 	skipFeatureIds = [],
 	skipPlanIds = [],
 	planUpdateIntentSelections = {},
@@ -889,6 +898,8 @@ export function buildCatalogUpdateParams({
 }: {
 	features: Feature[];
 	plans: Plan[];
+	rewards?: Reward[];
+	referralPrograms?: ReferralProgram[];
 	skipFeatureIds?: string[];
 	skipPlanIds?: string[];
 	planUpdateIntentSelections?: PlanUpdateIntentSelections;
@@ -925,6 +936,8 @@ export function buildCatalogUpdateParams({
 				skippedPlanIdSet,
 			),
 		),
+		rewards: rewards.map(transformRewardToApi),
+		referral_programs: referralPrograms.map(transformReferralProgramToApi),
 		skip_deletions: false,
 		skip_feature_ids: skipFeatureIds,
 		skip_plan_ids: [
@@ -951,7 +964,11 @@ export const catalogPreviewHasChanges = (
 	preview: CatalogPreviewUpdateResponse,
 ): boolean =>
 	preview.feature_changes.some(catalogFeatureChangeHasChanges) ||
-	preview.plan_changes.some(catalogPlanChangeHasChanges);
+	preview.plan_changes.some(catalogPlanChangeHasChanges) ||
+	(preview.reward_changes ?? []).some(({ action }) => action !== "none") ||
+	(preview.referral_program_changes ?? []).some(
+		({ action }) => action !== "none",
+	);
 
 export function catalogPreviewToPushResult(
 	preview: CatalogPreviewUpdateResponse,
@@ -968,6 +985,12 @@ export function catalogPreviewToPushResult(
 		plansDeleted: [],
 		plansArchived: [],
 		plansSkipped: [],
+		rewardsCreated: [],
+		rewardsUpdated: [],
+		rewardsDeleted: [],
+		referralProgramsCreated: [],
+		referralProgramsUpdated: [],
+		referralProgramsDeleted: [],
 	};
 
 	for (const change of preview.feature_changes) {
@@ -1028,45 +1051,36 @@ export function catalogPreviewToPushResult(
 			}
 		}
 	}
+	for (const { id, action } of preview.reward_changes ?? []) {
+		if (action === "created") result.rewardsCreated.push(id);
+		if (action === "updated") result.rewardsUpdated.push(id);
+		if (action === "deleted") result.rewardsDeleted.push(id);
+	}
+	for (const { id, action } of preview.referral_program_changes ?? []) {
+		if (action === "created") result.referralProgramsCreated.push(id);
+		if (action === "updated") result.referralProgramsUpdated.push(id);
+		if (action === "deleted") result.referralProgramsDeleted.push(id);
+	}
 
 	return result;
 }
 
+type CatalogPushInput = {
+	config: LoadedConfig;
+	decisions?: PushDecisions;
+};
+
 export async function previewCatalogPush({
-	features,
-	plans,
-	skipFeatureIds,
-	skipPlanIds,
-	planUpdateIntentSelections,
-	planMigrationSelections,
-	variantPropagationSelections,
-	variantUpdateIntentSelections,
-	variantMigrationSelections,
-}: {
-	features: Feature[];
-	plans: Plan[];
-	skipFeatureIds?: string[];
-	skipPlanIds?: string[];
-	planUpdateIntentSelections?: PlanUpdateIntentSelections;
-	planMigrationSelections?: PlanMigrationSelections;
-	variantPropagationSelections?: VariantPropagationSelections;
-	variantUpdateIntentSelections?: VariantUpdateIntentSelections;
-	variantMigrationSelections?: VariantMigrationSelections;
-}): Promise<{
+	config,
+	decisions = {},
+}: CatalogPushInput): Promise<{
 	params: CatalogUpdateParams;
 	preview: CatalogPreviewUpdateResponse;
 }> {
 	const secretKey = getSecretKey();
 	const params = buildCatalogUpdateParams({
-		features,
-		plans,
-		skipFeatureIds,
-		skipPlanIds,
-		planUpdateIntentSelections,
-		planMigrationSelections,
-		variantPropagationSelections,
-		variantUpdateIntentSelections,
-		variantMigrationSelections,
+		...config,
+		...decisions,
 		includePreviewDetails: true,
 	});
 	const preview = await previewUpdateCatalog({ secretKey, params });
@@ -1075,45 +1089,22 @@ export async function previewCatalogPush({
 }
 
 export async function pushCatalog({
-	features,
+	config,
+	decisions = {},
 	migratePlanIds,
 	migrateVersioned = false,
-	plans,
 	preview,
-	skipFeatureIds,
-	skipPlanIds,
-	planUpdateIntentSelections,
-	planMigrationSelections,
-	variantPropagationSelections,
-	variantUpdateIntentSelections,
-	variantMigrationSelections,
 	cwd,
-}: {
-	features: Feature[];
+}: CatalogPushInput & {
 	migratePlanIds?: string[];
 	migrateVersioned?: boolean;
-	plans: Plan[];
 	preview?: CatalogPreviewUpdateResponse;
-	skipFeatureIds?: string[];
-	skipPlanIds?: string[];
-	planUpdateIntentSelections?: PlanUpdateIntentSelections;
-	planMigrationSelections?: PlanMigrationSelections;
-	variantPropagationSelections?: VariantPropagationSelections;
-	variantUpdateIntentSelections?: VariantUpdateIntentSelections;
-	variantMigrationSelections?: VariantMigrationSelections;
 	cwd?: string;
 }): Promise<PushResult> {
 	const secretKey = getSecretKey();
 	const params = buildCatalogUpdateParams({
-		features,
-		plans,
-		skipFeatureIds,
-		skipPlanIds,
-		planUpdateIntentSelections,
-		planMigrationSelections,
-		variantPropagationSelections,
-		variantUpdateIntentSelections,
-		variantMigrationSelections,
+		...config,
+		...decisions,
 	});
 	const resolvedPreview =
 		preview ?? (await previewUpdateCatalog({ secretKey, params }));
@@ -1121,14 +1112,13 @@ export async function pushCatalog({
 	await updateCatalog({ secretKey, params });
 	const result = catalogPreviewToPushResult(resolvedPreview);
 
-	if (cwd && variantPropagationSelections) {
+	if (cwd && decisions.variantPropagationSelections) {
 		await syncSkippedPropagationVariantsToConfig({
 			cwd,
-			features,
-			plans,
+			config,
 			preview: resolvedPreview,
 			secretKey,
-			variantPropagationSelections,
+			variantPropagationSelections: decisions.variantPropagationSelections,
 		});
 	}
 

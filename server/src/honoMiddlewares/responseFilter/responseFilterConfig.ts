@@ -5,6 +5,8 @@ import {
 	ApiBalanceV1Schema,
 	type ApiFlagV0,
 	ApiFlagV0Schema,
+	type ApiInvoicePreviewV0,
+	ApiInvoicePreviewV0Schema,
 	type AttachPreviewResponse,
 	AttachPreviewResponseSchema,
 	type BillingPreviewResponse,
@@ -96,6 +98,12 @@ const filterConfigs = [
 	createFilterConfig<CustomerEligibility>({
 		schema: CustomerEligibilitySchema,
 		omitFields: ["object", "scenario"],
+	}),
+	// The Stripe subscription id stays internal: the dashboard keys previews and
+	// deep links off it, but it isn't part of the public contract.
+	createFilterConfig<ApiInvoicePreviewV0>({
+		schema: ApiInvoicePreviewV0Schema,
+		omitFields: ["subscription_id", "object"],
 	}),
 ];
 

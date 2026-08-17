@@ -1,18 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import {
-	type FullCustomer,
-	type FullCustomerSchedule,
-	CusProductStatus,
-	type ProductV2,
-	AppEnv,
-} from "@autumn/shared";
 import type { FullCusProduct } from "@autumn/shared";
 import {
-	cusProductToPlan,
-	buildInitialValues,
-	getScheduleForScope,
-} from "@/views/customers2/components/sheets/CreateScheduleSheet";
+	AppEnv,
+	CusProductStatus,
+	type FullCustomer,
+	type FullCustomerSchedule,
+	type ProductV2,
+} from "@autumn/shared";
 import { EMPTY_SCHEDULE_PLAN } from "@/components/forms/create-schedule/createScheduleFormSchema";
+import {
+	buildInitialValues,
+	cusProductToPlan,
+	getActiveCustomerPlans,
+} from "@/views/customers2/components/sheets/CreateScheduleSheet";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -167,7 +167,11 @@ function makeCusProduct({
 		options,
 		customer_prices: customerPrices,
 		customer_entitlements: customerEntitlements,
-		product: { id: productId, name: "Plan", internal_id: `int_${productId}` } as any,
+		product: {
+			id: productId,
+			name: "Plan",
+			internal_id: `int_${productId}`,
+		} as any,
 		billing_version: "v2",
 		external_id: null,
 	} as FullCusProduct;
@@ -300,9 +304,7 @@ describe("cusProductToPlan", () => {
 		const priceItem = plan.items!.find(
 			(item) => item.price != null && !item.feature_id,
 		);
-		const featureItem = plan.items!.find(
-			(item) => item.feature_id === "seats",
-		);
+		const featureItem = plan.items!.find((item) => item.feature_id === "seats");
 		expect(priceItem).toBeDefined();
 		expect(priceItem!.price).toBe(9900);
 		expect(featureItem).toBeDefined();
@@ -338,7 +340,9 @@ describe("cusProductToPlan", () => {
 
 		expect(plan.isCustom).toBe(true);
 		expect(plan.items).not.toBeNull();
-		expect(plan.items!.find((item) => item.price != null && !item.feature_id)!.price).toBe(3000);
+		expect(
+			plan.items!.find((item) => item.price != null && !item.feature_id)!.price,
+		).toBe(3000);
 	});
 
 	test("detects isCustom from entitlement-level is_custom when cusProduct.is_custom is false", () => {
@@ -441,9 +445,7 @@ describe("cusProductToPlan", () => {
 		const products = [
 			makeProduct({
 				id: "prod_1",
-				items: [
-					{ feature_id: "users", usage_model: "prepaid" } as any,
-				],
+				items: [{ feature_id: "users", usage_model: "prepaid" } as any],
 			}),
 		];
 
@@ -458,9 +460,7 @@ describe("cusProductToPlan", () => {
 		expect(basePriceItem).toBeDefined();
 		expect(basePriceItem!.price).toBe(1500);
 
-		const usersItem = plan.items!.find(
-			(item) => item.feature_id === "users",
-		);
+		const usersItem = plan.items!.find((item) => item.feature_id === "users");
 		expect(usersItem).toBeDefined();
 
 		const adminItem = plan.items!.find(
@@ -516,9 +516,7 @@ describe("cusProductToPlan", () => {
 		const products = [
 			makeProduct({
 				id: "prod_1",
-				items: [
-					{ feature_id: "credits", usage_model: "prepaid" } as any,
-				],
+				items: [{ feature_id: "credits", usage_model: "prepaid" } as any],
 			}),
 		];
 
@@ -554,12 +552,17 @@ describe("cusProductToPlan", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildInitialValues", () => {
-	const products = [makeProduct({ id: "prod_1" }), makeProduct({ id: "prod_2", name: "Starter" })];
+	const products = [
+		makeProduct({ id: "prod_1" }),
+		makeProduct({ id: "prod_2", name: "Starter" }),
+	];
 
 	test("maps existing schedule phases to form phases", () => {
 		const cusProduct1 = makeCusProduct({ id: "cp_1", productId: "prod_1" });
 		const cusProduct2 = makeCusProduct({ id: "cp_2", productId: "prod_2" });
-		const customer = makeCustomer({ customerProducts: [cusProduct1, cusProduct2] });
+		const customer = makeCustomer({
+			customerProducts: [cusProduct1, cusProduct2],
+		});
 		const schedule: FullCustomerSchedule = {
 			id: "sched_1",
 			org_id: "org_1",
@@ -570,12 +573,28 @@ describe("buildInitialValues", () => {
 			entity_id: null,
 			created_at: Date.now(),
 			phases: [
-				{ id: "phase_1", schedule_id: "sched_1", starts_at: 1000, customer_product_ids: ["cp_1"], created_at: 1000 },
-				{ id: "phase_2", schedule_id: "sched_1", starts_at: 2000, customer_product_ids: ["cp_2"], created_at: 1000 },
+				{
+					id: "phase_1",
+					schedule_id: "sched_1",
+					starts_at: 1000,
+					customer_product_ids: ["cp_1"],
+					created_at: 1000,
+				},
+				{
+					id: "phase_2",
+					schedule_id: "sched_1",
+					starts_at: 2000,
+					customer_product_ids: ["cp_2"],
+					created_at: 1000,
+				},
 			],
 		};
 
-		const result = buildInitialValues({ customer, schedule, products });
+		const result = buildInitialValues({
+			customer,
+			schedules: [schedule],
+			products,
+		});
 
 		expect(result.phases).toHaveLength(2);
 		expect(result.phases[0].startsAt).toBe(1000);
@@ -603,14 +622,26 @@ describe("buildInitialValues", () => {
 			entity_id: null,
 			created_at: Date.now(),
 			phases: [
-				{ id: "phase_1", schedule_id: "sched_1", starts_at: 1000, customer_product_ids: ["cp_1"], created_at: 1000 },
-				{ id: "phase_2", schedule_id: "sched_1", starts_at: 2000, customer_product_ids: ["cp_2"], created_at: 1000 },
+				{
+					id: "phase_1",
+					schedule_id: "sched_1",
+					starts_at: 1000,
+					customer_product_ids: ["cp_1"],
+					created_at: 1000,
+				},
+				{
+					id: "phase_2",
+					schedule_id: "sched_1",
+					starts_at: 2000,
+					customer_product_ids: ["cp_2"],
+					created_at: 1000,
+				},
 			],
 		};
 
 		const result = buildInitialValues({
 			customer,
-			schedule,
+			schedules: [schedule],
 			products,
 			nowMs: 1500,
 		});
@@ -635,14 +666,26 @@ describe("buildInitialValues", () => {
 			entity_id: null,
 			created_at: Date.now(),
 			phases: [
-				{ id: "phase_1", schedule_id: "sched_1", starts_at: 1000, customer_product_ids: ["cp_1"], created_at: 1000 },
-				{ id: "phase_2", schedule_id: "sched_1", starts_at: 2000, customer_product_ids: ["cp_2"], created_at: 1000 },
+				{
+					id: "phase_1",
+					schedule_id: "sched_1",
+					starts_at: 1000,
+					customer_product_ids: ["cp_1"],
+					created_at: 1000,
+				},
+				{
+					id: "phase_2",
+					schedule_id: "sched_1",
+					starts_at: 2000,
+					customer_product_ids: ["cp_2"],
+					created_at: 1000,
+				},
 			],
 		};
 
 		const result = buildInitialValues({
 			customer,
-			schedule,
+			schedules: [schedule],
 			products,
 			nowMs: 1500,
 		});
@@ -650,8 +693,9 @@ describe("buildInitialValues", () => {
 		expect(result.resetBillingCycle).toBe(false);
 	});
 
-	test("falls back to EMPTY_SCHEDULE_PLAN for missing customer product", () => {
-		const customer = makeCustomer({ customerProducts: [] });
+	test("skips phase ids with no live customer product", () => {
+		const cusProduct = makeCusProduct({ id: "cp_1", productId: "prod_1" });
+		const customer = makeCustomer({ customerProducts: [cusProduct] });
 		const schedule: FullCustomerSchedule = {
 			id: "sched_1",
 			org_id: "org_1",
@@ -662,13 +706,64 @@ describe("buildInitialValues", () => {
 			entity_id: null,
 			created_at: Date.now(),
 			phases: [
-				{ id: "phase_1", schedule_id: "sched_1", starts_at: 1000, customer_product_ids: ["cp_missing"], created_at: 1000 },
+				{
+					id: "phase_1",
+					schedule_id: "sched_1",
+					starts_at: 1000,
+					customer_product_ids: ["cp_1", "cp_expired"],
+					created_at: 1000,
+				},
 			],
 		};
 
-		const result = buildInitialValues({ customer, schedule, products });
+		const result = buildInitialValues({
+			customer,
+			schedules: [schedule],
+			products,
+		});
 
-		expect(result.phases[0].plans[0]).toEqual(EMPTY_SCHEDULE_PLAN);
+		expect(result.phases[0].plans).toHaveLength(1);
+		expect(result.phases[0].plans[0].productId).toBe("prod_1");
+	});
+
+	test("drops a phase whose ids are all stale", () => {
+		const cusProduct = makeCusProduct({ id: "cp_1", productId: "prod_1" });
+		const customer = makeCustomer({ customerProducts: [cusProduct] });
+		const schedule: FullCustomerSchedule = {
+			id: "sched_1",
+			org_id: "org_1",
+			env: AppEnv.Sandbox,
+			internal_customer_id: "int_cus_1",
+			customer_id: "cus_1",
+			internal_entity_id: null,
+			entity_id: null,
+			created_at: Date.now(),
+			phases: [
+				{
+					id: "phase_1",
+					schedule_id: "sched_1",
+					starts_at: 1000,
+					customer_product_ids: ["cp_1"],
+					created_at: 1000,
+				},
+				{
+					id: "phase_2",
+					schedule_id: "sched_1",
+					starts_at: 2000,
+					customer_product_ids: ["cp_gone"],
+					created_at: 1000,
+				},
+			],
+		};
+
+		const result = buildInitialValues({
+			customer,
+			schedules: [schedule],
+			products,
+		});
+
+		expect(result.phases).toHaveLength(1);
+		expect(result.phases[0].startsAt).toBe(1000);
 	});
 
 	test("preserves custom items for custom customer products in schedule phases", () => {
@@ -691,11 +786,21 @@ describe("buildInitialValues", () => {
 			entity_id: null,
 			created_at: Date.now(),
 			phases: [
-				{ id: "phase_1", schedule_id: "sched_1", starts_at: 1000, customer_product_ids: ["cp_custom"], created_at: 1000 },
+				{
+					id: "phase_1",
+					schedule_id: "sched_1",
+					starts_at: 1000,
+					customer_product_ids: ["cp_custom"],
+					created_at: 1000,
+				},
 			],
 		};
 
-		const result = buildInitialValues({ customer, schedule, products });
+		const result = buildInitialValues({
+			customer,
+			schedules: [schedule],
+			products,
+		});
 
 		const plan = result.phases[0].plans[0];
 		expect(plan.items).not.toBeNull();
@@ -705,51 +810,26 @@ describe("buildInitialValues", () => {
 		expect(priceItem!.price).toBe(4200);
 	});
 
-	test("uses active customer products when no schedule exists", () => {
+	test("starts empty when no schedule exists, even with active plans", () => {
 		const activeCp = makeCusProduct({
 			id: "cp_1",
 			productId: "prod_1",
 			status: CusProductStatus.Active,
 		});
-		const scheduledCp = makeCusProduct({
-			id: "cp_2",
-			productId: "prod_2",
-			status: CusProductStatus.Scheduled,
-		});
-		const customer = makeCustomer({ customerProducts: [activeCp, scheduledCp] });
+		const customer = makeCustomer({ customerProducts: [activeCp] });
 
-		const result = buildInitialValues({ customer, schedule: undefined, products });
+		const result = buildInitialValues({ customer, schedules: [], products });
 
 		expect(result.phases).toHaveLength(1);
 		expect(result.phases[0].startsAt).toBeNull();
 		expect(result.phases[0].plans).toHaveLength(1);
-		expect(result.phases[0].plans[0].productId).toBe("prod_1");
-	});
-
-	test("excludes canceled customer products from initial active plans", () => {
-		const activeCp = makeCusProduct({
-			id: "cp_1",
-			productId: "prod_1",
-			status: CusProductStatus.Active,
-		});
-		const canceledCp = makeCusProduct({
-			id: "cp_2",
-			productId: "prod_2",
-			status: CusProductStatus.Active,
-		});
-		(canceledCp as any).canceled_at = Date.now();
-		const customer = makeCustomer({ customerProducts: [activeCp, canceledCp] });
-
-		const result = buildInitialValues({ customer, schedule: undefined, products });
-
-		expect(result.phases[0].plans).toHaveLength(1);
-		expect(result.phases[0].plans[0].productId).toBe("prod_1");
+		expect(result.phases[0].plans[0]).toEqual(EMPTY_SCHEDULE_PLAN);
 	});
 
 	test("returns single empty plan when no active products and no schedule", () => {
 		const customer = makeCustomer({ customerProducts: [] });
 
-		const result = buildInitialValues({ customer, schedule: undefined, products });
+		const result = buildInitialValues({ customer, schedules: [], products });
 
 		expect(result.phases).toHaveLength(1);
 		expect(result.phases[0].plans).toHaveLength(1);
@@ -757,48 +837,23 @@ describe("buildInitialValues", () => {
 	});
 
 	test("handles undefined customer gracefully", () => {
-		const result = buildInitialValues({ customer: undefined, schedule: undefined, products });
+		const result = buildInitialValues({
+			customer: undefined,
+			schedules: [],
+			products,
+		});
 
 		expect(result.phases).toHaveLength(1);
 		expect(result.phases[0].plans).toHaveLength(1);
 		expect(result.phases[0].plans[0]).toEqual(EMPTY_SCHEDULE_PLAN);
 	});
 
-	test("filters active plans by entity when entityId is set", () => {
-		const entityCp = makeCusProduct({
-			id: "cp_ent",
-			productId: "prod_1",
-			status: CusProductStatus.Active,
-		});
+	test("merges customer and entity schedules into one timeline", () => {
+		const customerCp = makeCusProduct({ id: "cp_1", productId: "prod_1" });
+		const entityCp = makeCusProduct({ id: "cp_3", productId: "prod_2" });
 		(entityCp as any).entity_id = "ent_1";
-		const customerCp = makeCusProduct({
-			id: "cp_cus",
-			productId: "prod_2",
-			status: CusProductStatus.Active,
-		});
-		(customerCp as any).entity_id = null;
-		const customer = makeCustomer({ customerProducts: [entityCp, customerCp] });
+		const customer = makeCustomer({ customerProducts: [customerCp, entityCp] });
 
-		const entityResult = buildInitialValues({
-			customer,
-			schedule: undefined,
-			products,
-			entityId: "ent_1",
-		});
-		expect(entityResult.phases[0].plans).toHaveLength(1);
-		expect(entityResult.phases[0].plans[0].productId).toBe("prod_1");
-
-		const customerResult = buildInitialValues({
-			customer,
-			schedule: undefined,
-			products,
-			entityId: undefined,
-		});
-		expect(customerResult.phases[0].plans).toHaveLength(1);
-		expect(customerResult.phases[0].plans[0].productId).toBe("prod_2");
-	});
-
-	test("uses page-level entity schedule when entity is selected", () => {
 		const entitySchedule: FullCustomerSchedule = {
 			id: "sched_entity",
 			org_id: "org_1",
@@ -809,7 +864,13 @@ describe("buildInitialValues", () => {
 			entity_id: "ent_1",
 			created_at: Date.now(),
 			phases: [
-				{ id: "phase_e1", schedule_id: "sched_entity", starts_at: 5000, customer_product_ids: ["cp_3"], created_at: 5000 },
+				{
+					id: "phase_e1",
+					schedule_id: "sched_entity",
+					starts_at: 5000,
+					customer_product_ids: ["cp_3"],
+					created_at: 5000,
+				},
 			],
 		};
 		const customerSchedule: FullCustomerSchedule = {
@@ -822,25 +883,37 @@ describe("buildInitialValues", () => {
 			entity_id: null,
 			created_at: Date.now(),
 			phases: [
-				{ id: "phase_c1", schedule_id: "sched_cus", starts_at: 1000, customer_product_ids: ["cp_1"], created_at: 1000 },
+				{
+					id: "phase_c1",
+					schedule_id: "sched_cus",
+					starts_at: 1000,
+					customer_product_ids: ["cp_1"],
+					created_at: 1000,
+				},
 			],
 		};
-		const customer = makeCustomer({
-			customerProducts: [],
-			schedule: customerSchedule,
-		});
-		(customer as any).entities = [
-			{ id: "ent_1", internal_id: "int_ent_1", schedule: entitySchedule },
-		];
 
-		const result = getScheduleForScope({ customer, entityId: "ent_1" });
-		expect(result).toBeDefined();
-		expect(result!.id).toBe("sched_entity");
+		const result = buildInitialValues({
+			customer,
+			schedules: [customerSchedule, entitySchedule],
+			products,
+		});
+
+		expect(result.phases).toHaveLength(2);
+		expect(result.phases[0].startsAt).toBe(1000);
+		expect(result.phases[0].plans[0].entityId).toBeNull();
+		expect(result.phases[1].startsAt).toBe(5000);
+		expect(result.phases[1].plans[0].entityId).toBe("ent_1");
 	});
 
-	test("returns customer-level schedule when no entity selected", () => {
-		const customerSchedule: FullCustomerSchedule = {
-			id: "sched_cus",
+	test("collapses phases from different schedules that start at the same time", () => {
+		const customerCp = makeCusProduct({ id: "cp_1", productId: "prod_1" });
+		const entityCp = makeCusProduct({ id: "cp_3", productId: "prod_2" });
+		(entityCp as any).entity_id = "ent_1";
+		const customer = makeCustomer({ customerProducts: [customerCp, entityCp] });
+
+		const makeSchedule = (id: string, cpId: string): FullCustomerSchedule => ({
+			id,
 			org_id: "org_1",
 			env: AppEnv.Sandbox,
 			internal_customer_id: "int_cus_1",
@@ -849,34 +922,31 @@ describe("buildInitialValues", () => {
 			entity_id: null,
 			created_at: Date.now(),
 			phases: [
-				{ id: "phase_c1", schedule_id: "sched_cus", starts_at: 1000, customer_product_ids: ["cp_1"], created_at: 1000 },
+				{
+					id: `${id}_p1`,
+					schedule_id: id,
+					starts_at: 1000,
+					customer_product_ids: [cpId],
+					created_at: 1000,
+				},
 			],
-		};
-		const customer = makeCustomer({
-			customerProducts: [],
-			schedule: customerSchedule,
 		});
 
-		const result = getScheduleForScope({ customer, entityId: undefined });
-		expect(result).toBeDefined();
-		expect(result!.id).toBe("sched_cus");
-	});
+		const result = buildInitialValues({
+			customer,
+			schedules: [
+				makeSchedule("sched_a", "cp_1"),
+				makeSchedule("sched_b", "cp_3"),
+			],
+			products,
+		});
 
-	test("returns undefined when entity has no schedule", () => {
-		const customer = makeCustomer({ customerProducts: [] });
-		(customer as any).entities = [
-			{ id: "ent_1", internal_id: "int_ent_1" },
-		];
-
-		const result = getScheduleForScope({ customer, entityId: "ent_1" });
-		expect(result).toBeUndefined();
-	});
-
-	test("returns undefined when entity not found", () => {
-		const customer = makeCustomer({ customerProducts: [] });
-
-		const result = getScheduleForScope({ customer, entityId: "nonexistent" });
-		expect(result).toBeUndefined();
+		expect(result.phases).toHaveLength(1);
+		expect(result.phases[0].plans).toHaveLength(2);
+		expect(result.phases[0].plans.map((plan) => plan.entityId)).toEqual([
+			null,
+			"ent_1",
+		]);
 	});
 
 	test("maps multiple plans per phase", () => {
@@ -893,14 +963,88 @@ describe("buildInitialValues", () => {
 			entity_id: null,
 			created_at: Date.now(),
 			phases: [
-				{ id: "phase_1", schedule_id: "sched_1", starts_at: 1000, customer_product_ids: ["cp_1", "cp_2"], created_at: 1000 },
+				{
+					id: "phase_1",
+					schedule_id: "sched_1",
+					starts_at: 1000,
+					customer_product_ids: ["cp_1", "cp_2"],
+					created_at: 1000,
+				},
 			],
 		};
 
-		const result = buildInitialValues({ customer, schedule, products });
+		const result = buildInitialValues({
+			customer,
+			schedules: [schedule],
+			products,
+		});
 
 		expect(result.phases[0].plans).toHaveLength(2);
 		expect(result.phases[0].plans[0].productId).toBe("prod_1");
 		expect(result.phases[0].plans[1].productId).toBe("prod_2");
+	});
+});
+
+// ---------------------------------------------------------------------------
+// getActiveCustomerPlans
+// ---------------------------------------------------------------------------
+
+describe("getActiveCustomerPlans", () => {
+	const products = [
+		makeProduct({ id: "prod_1" }),
+		makeProduct({ id: "prod_2", name: "Starter" }),
+	];
+
+	test("keeps only active, uncanceled customer products", () => {
+		const activeCp = makeCusProduct({
+			id: "cp_1",
+			productId: "prod_1",
+			status: CusProductStatus.Active,
+		});
+		const scheduledCp = makeCusProduct({
+			id: "cp_2",
+			productId: "prod_2",
+			status: CusProductStatus.Scheduled,
+		});
+		const canceledCp = makeCusProduct({
+			id: "cp_3",
+			productId: "prod_2",
+			status: CusProductStatus.Active,
+		});
+		(canceledCp as any).canceled_at = Date.now();
+		const customer = makeCustomer({
+			customerProducts: [activeCp, scheduledCp, canceledCp],
+		});
+
+		const plans = getActiveCustomerPlans({ customer, products });
+
+		expect(plans).toHaveLength(1);
+		expect(plans[0].productId).toBe("prod_1");
+	});
+
+	test("keeps each plan's own scope", () => {
+		const entityCp = makeCusProduct({
+			id: "cp_ent",
+			productId: "prod_1",
+			status: CusProductStatus.Active,
+		});
+		(entityCp as any).entity_id = "ent_1";
+		const customerCp = makeCusProduct({
+			id: "cp_cus",
+			productId: "prod_2",
+			status: CusProductStatus.Active,
+		});
+		(customerCp as any).entity_id = null;
+		const customer = makeCustomer({ customerProducts: [entityCp, customerCp] });
+
+		const plans = getActiveCustomerPlans({ customer, products });
+
+		expect(plans.map((plan) => plan.entityId)).toEqual(["ent_1", null]);
+	});
+
+	test("returns nothing for an undefined customer", () => {
+		expect(getActiveCustomerPlans({ customer: undefined, products })).toEqual(
+			[],
+		);
 	});
 });

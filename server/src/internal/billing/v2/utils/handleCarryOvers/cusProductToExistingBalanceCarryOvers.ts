@@ -1,7 +1,7 @@
 import {
-	addCusProductToCusEnt,
 	type AttachBillingContext,
 	type AttachParamsV1,
+	addCusProductToCusEnt,
 	type Entitlement,
 	featureUtils,
 	type InsertCustomerEntitlement,
@@ -25,15 +25,18 @@ export const cusProductToExistingBalanceCarryOvers = ({
 	entitlements: Entitlement[];
 	customerEntitlements: InsertCustomerEntitlement[];
 } => {
-	const { currentCustomerProduct, planTiming, endOfCycleMs, fullCustomer } =
-		attachBillingContext;
+	const {
+		carryOverSourceCustomerProduct,
+		planTiming,
+		endOfCycleMs,
+		fullCustomer,
+	} = attachBillingContext;
 
 	const carryOverParams = params.carry_over_balances;
 
 	if (planTiming !== "immediate")
 		return { entitlements: [], customerEntitlements: [] };
-	if (!currentCustomerProduct)
-		return { entitlements: [], customerEntitlements: [] };
+	if (!carryOverSourceCustomerProduct) return { entitlements: [], customerEntitlements: [] };
 	if (!carryOverParams?.enabled)
 		return { entitlements: [], customerEntitlements: [] };
 
@@ -45,7 +48,7 @@ export const cusProductToExistingBalanceCarryOvers = ({
 	const entitlements: Entitlement[] = [];
 	const customerEntitlements: InsertCustomerEntitlement[] = [];
 
-	for (const cusEnt of currentCustomerProduct.customer_entitlements) {
+	for (const cusEnt of carryOverSourceCustomerProduct.customer_entitlements) {
 		if (isBooleanCusEnt({ cusEnt })) continue;
 		if (isUnlimitedCusEnt(cusEnt)) continue;
 		if (featureUtils.isAllocated(cusEnt.entitlement.feature)) continue;
@@ -55,7 +58,7 @@ export const cusProductToExistingBalanceCarryOvers = ({
 		// to avoid minting a second carry-over row for the same balance.
 		const cusEntWithCusProduct = addCusProductToCusEnt({
 			cusEnt,
-			cusProduct: currentCustomerProduct,
+			cusProduct: carryOverSourceCustomerProduct,
 		});
 		if (isOneOffPrepaidConsumableCustomerEntitlement(cusEntWithCusProduct))
 			continue;
@@ -106,7 +109,7 @@ export const cusProductToExistingBalanceCarryOvers = ({
 			entitlementId: ent.id,
 			internalCustomerId: customer.internal_id,
 			customerId: customer.id,
-			internalEntityId: currentCustomerProduct.internal_entity_id ?? null,
+			internalEntityId: carryOverSourceCustomerProduct.internal_entity_id ?? null,
 			balance,
 			expiresAt,
 		});

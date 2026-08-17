@@ -119,9 +119,9 @@ const CreateFeatureGrantSchema = ApiFeatureGrantV0Schema.omit({
 				z
 					.object({
 						feature_id: z.string().min(1),
-						included: z.number().positive().nullable().meta({
+						included: z.number().nonnegative().nullable().meta({
 							description:
-								"A positive amount to grant, or null for boolean features.",
+								"A non-negative amount to grant, or null for boolean features.",
 						}),
 						expiry: GrantExpirySchema,
 					})

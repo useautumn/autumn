@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 // Re-export enum values as constants for easy access (matches old enum usage pattern)
 export enum CustomerExpand {
 	Invoices = "invoices",
+	InvoicePreviews = "invoice_previews",
 	TrialsUsed = "trials_used",
 	Rewards = "rewards",
 	Entities = "entities",

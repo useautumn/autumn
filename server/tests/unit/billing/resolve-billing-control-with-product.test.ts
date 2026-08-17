@@ -45,7 +45,11 @@ const planProduct = ({
 		created_at: createdAt,
 		product: {
 			auto_topups: [
-				{ feature_id: FEATURE, enabled: true, quantity } satisfies AutoTopupLike,
+				{
+					feature_id: FEATURE,
+					enabled: true,
+					quantity,
+				} satisfies AutoTopupLike,
 			],
 		},
 	}) as unknown as FullCusProduct;
@@ -113,9 +117,7 @@ describe("resolveBillingControlWithProduct — auto_topups recency + source plan
 			AutoTopupLike,
 			"auto_topups"
 		>({
-			controlLists: [
-				[{ feature_id: FEATURE, enabled: true, quantity: 999 }],
-			],
+			controlLists: [[{ feature_id: FEATURE, enabled: true, quantity: 999 }]],
 			customerProducts: [base],
 			controlKey: "auto_topups",
 			matches: (config) => config.feature_id === FEATURE,

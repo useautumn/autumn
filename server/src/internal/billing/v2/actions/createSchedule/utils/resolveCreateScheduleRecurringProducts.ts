@@ -1,119 +1,155 @@
 import type {
 	CreateScheduleBillingContext,
 	FullCusProduct,
+	FullProduct,
 } from "@autumn/shared";
 import {
 	customerProductsToRecurringActiveAndScheduled,
+	customerProductToReplacementKey,
 	isCusProductOnEntity,
-	isCustomerProductMain,
+	productToReplacementKey,
 } from "@autumn/shared";
 
-type ProductScope = {
-	isAddOn: boolean;
-	internalEntityId?: string;
-};
+type PhasePlan = { fullProduct: FullProduct; internalEntityId?: string };
 
-const isReplacedInPhase = ({
-	productScopes,
+type RecurringProductFate =
+	| { kind: "endsNow" }
+	| { kind: "endsAtPhase"; endsAt: number }
+	| { kind: "untouched" };
+
+/** An incoming plan replaces a product when it claims the same group and scope. */
+const plansReplaceCustomerProduct = ({
+	plans,
 	customerProduct,
 }: {
-	productScopes: ProductScope[];
+	plans: PhasePlan[];
 	customerProduct: FullCusProduct;
-}) =>
-	isCustomerProductMain(customerProduct) &&
-	productScopes.some(
-		({ isAddOn, internalEntityId }) =>
-			!isAddOn &&
+}) => {
+	const replacementKey = customerProductToReplacementKey({ customerProduct });
+	return plans.some(
+		(plan) =>
+			productToReplacementKey({ product: plan.fullProduct }) ===
+				replacementKey &&
 			isCusProductOnEntity({
 				cusProduct: customerProduct,
-				internalEntityId,
+				internalEntityId: plan.internalEntityId,
 			}),
 	);
+};
+
+/** Products in the request's scopes, plus everything the replaced schedule placed. */
+const collectCandidateCustomerProducts = ({
+	billingContext,
+}: {
+	billingContext: CreateScheduleBillingContext;
+}): FullCusProduct[] => {
+	const candidatesById = new Map<string, FullCusProduct>();
+
+	for (const { fullCustomer } of billingContext.productContexts) {
+		for (const customerProduct of fullCustomer.customer_products) {
+			const inScope = isCusProductOnEntity({
+				cusProduct: customerProduct,
+				internalEntityId: fullCustomer.entity?.internal_id,
+			});
+			if (inScope) candidatesById.set(customerProduct.id, customerProduct);
+		}
+	}
+
+	const replacedCustomerProductIds = new Set(
+		billingContext.replacedScheduleCustomerProductIds,
+	);
+	for (const customerProduct of billingContext.fullCustomer.customer_products) {
+		if (replacedCustomerProductIds.has(customerProduct.id)) {
+			candidatesById.set(customerProduct.id, customerProduct);
+		}
+	}
+
+	return [...candidatesById.values()];
+};
+
+const resolveRecurringProductFate = ({
+	customerProduct,
+	openingPlans,
+	laterPhases,
+	replacedCustomerProductIds,
+}: {
+	customerProduct: FullCusProduct;
+	openingPlans: PhasePlan[];
+	laterPhases: { startsAt: number; plans: PhasePlan[] }[];
+	replacedCustomerProductIds: Set<string>;
+}): RecurringProductFate => {
+	// The replaced schedule placed it, or the immediate phase claims its group and scope.
+	if (
+		replacedCustomerProductIds.has(customerProduct.id) ||
+		plansReplaceCustomerProduct({ plans: openingPlans, customerProduct })
+	) {
+		return { kind: "endsNow" };
+	}
+
+	// A survivor ends when the first later phase claims its group, rather than
+	// running alongside its own replacement.
+	const supersedingPhase = laterPhases.find(({ plans }) =>
+		plansReplaceCustomerProduct({ plans, customerProduct }),
+	);
+	if (supersedingPhase) {
+		return { kind: "endsAtPhase", endsAt: supersedingPhase.startsAt };
+	}
+
+	return { kind: "untouched" };
+};
 
 export const resolveCreateScheduleRecurringProducts = ({
 	billingContext,
 }: {
 	billingContext: CreateScheduleBillingContext;
 }) => {
-	const customerProductsById = new Map<string, FullCusProduct>();
-
-	for (const productContext of billingContext.productContexts) {
-		const { entity, customer_products: customerProducts } =
-			productContext.fullCustomer;
-		for (const customerProduct of customerProducts) {
-			if (
-				isCusProductOnEntity({
-					cusProduct: customerProduct,
-					internalEntityId: entity?.internal_id,
-				})
-			) {
-				customerProductsById.set(customerProduct.id, customerProduct);
-			}
-		}
-	}
-
 	const { recurringActive, recurringScheduled } =
 		customerProductsToRecurringActiveAndScheduled({
-			customerProducts: [...customerProductsById.values()],
+			customerProducts: collectCandidateCustomerProducts({ billingContext }),
 		});
-	const recurringOutgoing: FullCusProduct[] = [];
-	const recurringPreserved: FullCusProduct[] = [];
-	// Multi-phase schedules use the request scope; per-plan scopes are immediate-only.
-	const scheduledInternalEntityId =
-		billingContext.fullCustomer.entity?.internal_id;
-	const phaseProductScopes: ProductScope[][] = [
-		billingContext.productContexts.map(({ fullCustomer, fullProduct }) => ({
-			isAddOn: fullProduct.is_add_on,
+
+	const openingPlans: PhasePlan[] = billingContext.productContexts.map(
+		({ fullProduct, fullCustomer }) => ({
+			fullProduct,
 			internalEntityId: fullCustomer.entity?.internal_id,
-		})),
-		...billingContext.scheduledPhaseContexts.map(({ productContexts }) =>
-			productContexts.map(({ fullProduct }) => ({
-				isAddOn: fullProduct.is_add_on,
-				internalEntityId: scheduledInternalEntityId,
+		}),
+	);
+	const laterPhases = billingContext.scheduledPhaseContexts.map(
+		({ startsAt, productContexts }) => ({
+			startsAt,
+			plans: productContexts.map(({ fullProduct, entity }) => ({
+				fullProduct,
+				internalEntityId: entity?.internal_id,
 			})),
-		),
-	];
+		}),
+	);
+	const replacedCustomerProductIds = new Set(
+		billingContext.replacedScheduleCustomerProductIds,
+	);
+
+	const recurringOutgoing: FullCusProduct[] = [];
+	const recurringEndingAtPhase: {
+		customerProduct: FullCusProduct;
+		endsAt: number;
+	}[] = [];
 
 	for (const customerProduct of recurringActive) {
-		const isOutgoing =
-			!billingContext.preserveAddOns ||
-			isReplacedInPhase({
-				productScopes: phaseProductScopes[0] ?? [],
-				customerProduct,
-			});
-		if (isOutgoing) recurringOutgoing.push(customerProduct);
-		else recurringPreserved.push(customerProduct);
+		const fate = resolveRecurringProductFate({
+			customerProduct,
+			openingPlans,
+			laterPhases,
+			replacedCustomerProductIds,
+		});
+		if (fate.kind === "endsNow") recurringOutgoing.push(customerProduct);
+		if (fate.kind === "endsAtPhase") {
+			recurringEndingAtPhase.push({ customerProduct, endsAt: fate.endsAt });
+		}
 	}
 
 	return {
 		recurringActive,
 		recurringScheduled,
 		recurringOutgoing,
-		preservedCustomerProductIdsByPhase: phaseProductScopes.map(
-			(productScopes) =>
-				recurringPreserved
-					.filter(
-						(customerProduct) =>
-							!isReplacedInPhase({ productScopes, customerProduct }),
-					)
-					.map(({ id }) => id),
-		),
+		recurringEndingAtPhase,
 	};
 };
-
-export const addCustomerProductIdsToSchedulePhases = ({
-	phases,
-	customerProductIdsByPhase,
-}: {
-	phases: { startsAt: number; customerProductIds: string[] }[];
-	customerProductIdsByPhase: string[][];
-}) =>
-	phases.map((phase, index) => ({
-		...phase,
-		customerProductIds: [
-			...new Set([
-				...phase.customerProductIds,
-				...(customerProductIdsByPhase[index] ?? []),
-			]),
-		],
-	}));

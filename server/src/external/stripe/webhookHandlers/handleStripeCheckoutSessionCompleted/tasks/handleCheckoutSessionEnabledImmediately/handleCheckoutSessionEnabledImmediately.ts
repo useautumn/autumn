@@ -1,4 +1,5 @@
 import {
+	AttachScenario,
 	cp,
 	type DeferredAutumnBillingPlanData,
 	MetadataType,
@@ -11,6 +12,8 @@ import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
+import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { workflows } from "@/queue/workflows";
@@ -116,16 +119,18 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 		};
 	});
 
+	const completionAutumnPlan = {
+		...updatedAutumnPlan,
+		insertCustomerProducts: [],
+		updateCustomerProducts,
+		insertCustomerEntitlements: undefined,
+		updateCustomerEntitlements: [],
+		oneOffPurchaseRebalance: undefined,
+	};
+
 	await executeAutumnBillingPlan({
 		ctx,
-		autumnBillingPlan: {
-			...updatedAutumnPlan,
-			insertCustomerProducts: [],
-			updateCustomerProducts,
-			insertCustomerEntitlements: undefined,
-			updateCustomerEntitlements: [],
-			oneOffPurchaseRebalance: undefined,
-		},
+		autumnBillingPlan: completionAutumnPlan,
 		stripeInvoice,
 	});
 
@@ -136,15 +141,31 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 		billingPlan: updatedDeferredData.billingPlan,
 	});
 
-	// 8. Cleanup metadata.
+	// 8. Emit post-payment webhooks (mirrors executeBillingPlan).
+	await billingPlanToSendProductsUpdated({
+		ctx,
+		autumnBillingPlan: completionAutumnPlan,
+		billingContext: updatedDeferredData.billingContext,
+		fallbackUpdateScenario: AttachScenario.Active,
+	});
+
+	void sendBillingUpdatedWebhook({
+		ctx,
+		autumnBillingPlan: completionAutumnPlan,
+		originalFullCustomer: updatedDeferredData.billingContext.fullCustomer,
+	});
+
+	// 9. Cleanup metadata.
 	await MetadataService.delete({ db: ctx.db, id: metadata.id });
 
-	// 9. Trigger grant-checkout-reward workflow per inserted product.
+	// 10. Trigger grant-checkout-reward workflow per inserted product.
 	// Note: feature quantities can't be changed on the Stripe checkout page in
 	// this flow — `handleStripeCheckoutErrors` blocks `enable_plan_immediately`
 	// + adjustable_quantity at attach time, so the cusProduct row inserted
 	// up-front is guaranteed to match what the customer pays for.
-	const customerId = ctx.fullCustomer?.id ?? "";
+	const customerId =
+		updatedDeferredData.billingContext.fullCustomer.id ??
+		updatedDeferredData.billingContext.fullCustomer.internal_id;
 	for (const product of updatedAutumnPlan.insertCustomerProducts) {
 		await workflows.triggerGrantCheckoutReward({
 			orgId: ctx.org.id,

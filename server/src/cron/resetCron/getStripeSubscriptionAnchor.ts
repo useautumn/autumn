@@ -49,11 +49,6 @@ export const getStripeSubscriptionAnchor = async ({
 		id: cusEnt.customer_product_id ?? "",
 	});
 
-	// Get org and env
-	const env = cusProduct.product.env as AppEnv;
-	const org = cusProduct.product.org as Organization;
-
-	const stripeCli = createStripeCli({ org, env });
 	if (
 		!cusProduct.subscription_ids ||
 		cusProduct.subscription_ids.length === 0
@@ -61,6 +56,9 @@ export const getStripeSubscriptionAnchor = async ({
 		return nextResetAt;
 	}
 
+	const env = cusProduct.product.env as AppEnv;
+	const org = cusProduct.product.org as Organization;
+	const stripeCli = createStripeCli({ org, env });
 	const subId = cusProduct.subscription_ids[0];
 	const sub = await stripeCli.subscriptions.retrieve(subId);
 

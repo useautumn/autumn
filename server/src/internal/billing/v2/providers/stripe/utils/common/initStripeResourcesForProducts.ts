@@ -35,11 +35,14 @@ export const initStripeResourcesForProducts = async ({
 	products,
 	candidateProducts = [],
 	internalEntityId,
+	allowLiveCreate = false,
 }: {
 	ctx: AutumnContext;
 	products: FullProduct[];
 	candidateProducts?: FullProduct[];
 	internalEntityId?: string;
+	/** Live is reuse-only unless set — catalog edits must not mint Stripe prices. */
+	allowLiveCreate?: boolean;
 }) => {
 	const { db, org, env, logger } = ctx;
 
@@ -50,7 +53,7 @@ export const initStripeResourcesForProducts = async ({
 	);
 	await applyStripeReuseFromVariantFamilies({ ctx, products });
 
-	if (env === AppEnv.Live) return;
+	if (env === AppEnv.Live && !allowLiveCreate) return;
 	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;
 	// No Stripe account (e.g. fresh sandbox sub-orgs) — resources are
 	// created lazily once one is connected.

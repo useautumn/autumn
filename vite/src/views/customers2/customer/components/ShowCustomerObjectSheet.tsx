@@ -14,6 +14,7 @@ import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { EntityScopeSelector } from "../../components/sheets/EntityScopeSelector";
+import { useCusInvoicePreviewsQuery } from "../hooks/useCusInvoicePreviewsQuery";
 import { useCustomerObjectQuery } from "../hooks/useCustomerObjectQuery";
 
 interface ShowCustomerObjectSheetProps {
@@ -39,10 +40,20 @@ export function ShowCustomerObjectSheet({
 		staleTime: 0,
 	});
 
-	const formattedJson = useMemo(
-		() => (data ? JSON.stringify(data, null, 2) : ""),
-		[data],
-	);
+	// entities.get has no invoice_previews expand, so only fetch at customer scope.
+	const { invoicePreviews } = useCusInvoicePreviewsQuery({
+		customerId: customer_id,
+		enabled: open && !scopeEntityId,
+	});
+
+	const formattedJson = useMemo(() => {
+		if (!data) return "";
+		return JSON.stringify(
+			invoicePreviews ? { ...data, invoice_previews: invoicePreviews } : data,
+			null,
+			2,
+		);
+	}, [data, invoicePreviews]);
 
 	const description = scopeEntityId
 		? "From entities.get"

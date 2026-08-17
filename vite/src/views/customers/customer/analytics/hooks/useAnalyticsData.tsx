@@ -1,3 +1,4 @@
+import type { DeductionPeriod } from "@autumn/shared";
 import { ErrCode } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -32,6 +33,11 @@ export const useAnalyticsData = ({
 
 	const { queryStates } = useAnalyticsQueryState();
 	const { interval, bin_size: binSize, start, end } = queryStates;
+	// The deduction rollup is keyed by customer, so it cannot run org-wide.
+	const aggregateOn =
+		queryStates.aggregate_on === "deducted" && customerId
+			? "deducted"
+			: undefined;
 	const customRange =
 		interval === "custom" && start && end ? { start, end } : undefined;
 
@@ -44,12 +50,17 @@ export const useAnalyticsData = ({
 
 	const timezone = useMemo(() => getUserTimezone(), []);
 
-	const formattedGroupBy = groupBy
-		? groupBy === "customer_id" ||
-			groupBy === "entity_id" ||
-			groupBy === "plan_id"
-			? groupBy
-			: `properties.${groupBy}`
+	// Deducted mode defaults to splitting by which tracked feature caused the
+	// deduction — the story the mode exists to tell. An explicit group_by wins.
+	const effectiveGroupBy =
+		!groupBy && aggregateOn ? "source_feature_id" : groupBy;
+	const formattedGroupBy = effectiveGroupBy
+		? effectiveGroupBy === "customer_id" ||
+			effectiveGroupBy === "entity_id" ||
+			effectiveGroupBy === "plan_id" ||
+			effectiveGroupBy === "source_feature_id"
+			? effectiveGroupBy
+			: `properties.${effectiveGroupBy}`
 		: undefined;
 
 	const postBody = {
@@ -62,6 +73,7 @@ export const useAnalyticsData = ({
 		bin_size: binSize || undefined,
 		timezone,
 		max_groups: formattedGroupBy ? maxGroups : undefined,
+		aggregate_on: aggregateOn,
 	};
 
 	const isReady = !eventNamesLoading && !featuresLoading;
@@ -80,6 +92,7 @@ export const useAnalyticsData = ({
 			groupBy,
 			timezone,
 			String(maxGroups),
+			aggregateOn ?? "",
 		]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.post("/query/events", postBody);
@@ -93,6 +106,9 @@ export const useAnalyticsData = ({
 
 	return {
 		customer: data?.customer,
+		deductions:
+			(data?.deductions as DeductionPeriod[] | undefined) ?? undefined,
+		aggregateOn,
 		features: featuresData || [],
 		featuresLoading,
 		queryLoading,

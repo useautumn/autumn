@@ -587,6 +587,10 @@ A customer who has paid is locked to their currency: passing a different one, or
               Interval for the cap, aligned to the customer's billing cycle.
             </DynamicParamField>
 
+            <DynamicParamField body="anchor" type="'billing_cycle' | 'utc'">
+              Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+            </DynamicParamField>
+
             <DynamicParamField body="filter" type="object">
               When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
               <Expandable title="properties">
@@ -1011,6 +1015,10 @@ A customer who has paid is locked to their currency: passing a different one, or
 
 <DynamicParamField body="currency" type="string">
   Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+</DynamicParamField>
+
+<DynamicParamField body="remove_plan_ids" type="string[]">
+  Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
 </DynamicParamField>
 
 

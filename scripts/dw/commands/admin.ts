@@ -1,4 +1,4 @@
-import { assertNotProductionDb } from "../../../server/src/db/dbUtils.ts";
+import { assertNotProductionDb } from "@server/db/dbUtils.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
 import { loadRegistry } from "../helpers/registry.ts";
 import { fatal, log, sh } from "../helpers/shell.ts";

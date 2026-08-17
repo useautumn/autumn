@@ -105,7 +105,7 @@ export function updateEnvFile({
 	envVars.set("STRIPE_TEST_KEY", stripeTestKey);
 	envVars.set("UPSTASH_REDIS_REST_URL", upstashUrl);
 	envVars.set("UPSTASH_REDIS_REST_TOKEN", upstashToken);
-	envVars.set("STRIPE_WEBHOOK_URL", tunnelUrl);
+	envVars.set("AUTUMN_PUBLIC_API_URL", tunnelUrl);
 
 	// Build new env content, preserving structure
 	const sections: string[][] = [];
@@ -133,7 +133,7 @@ export function updateEnvFile({
 			trimmed.startsWith("UNIT_TEST_AUTUMN_SECRET_KEY") ||
 			trimmed.startsWith("STRIPE_TEST_KEY") ||
 			trimmed.startsWith("UPSTASH_REDIS_REST") ||
-			(trimmed.startsWith("STRIPE_WEBHOOK_URL") && inTestSection)
+			(trimmed.startsWith("AUTUMN_PUBLIC_API_URL") && inTestSection)
 		) {
 			continue;
 		}
@@ -171,7 +171,7 @@ export function updateEnvFile({
 		`UPSTASH_REDIS_REST_TOKEN=${upstashToken}`,
 		"",
 		"# Tunnel URL (for Stripe webhooks)",
-		`STRIPE_WEBHOOK_URL=${tunnelUrl}`,
+		`AUTUMN_PUBLIC_API_URL=${tunnelUrl}`,
 		"",
 	);
 

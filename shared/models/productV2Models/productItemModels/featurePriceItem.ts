@@ -12,6 +12,7 @@ export const FeaturePriceItemSchema = ProductItemSchema.pick({
 	usage_model: true,
 
 	price: true,
+	additional_currencies: true,
 	tiers: true,
 	tier_behavior: true,
 	billing_units: true,

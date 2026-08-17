@@ -1,5 +1,5 @@
-import { log } from "./shell.ts";
 import { shortHash } from "./registry.ts";
+import { log } from "./shell.ts";
 
 const NGROK_API = "https://api.ngrok.com";
 
@@ -17,6 +17,14 @@ export function ngrokApiAvailable(): boolean {
 // matches the one used for branch names, keeping it globally unique-ish.
 export function reservedDomainName(worktreeNum: number, path: string): string {
 	return `autumn-wt${worktreeNum}-${shortHash(path)}.ngrok.app`;
+}
+
+/** Dashboard tunnel. The API domain forwards to the server port, so vite needs its own. */
+export function reservedViteDomainName(
+	worktreeNum: number,
+	path: string,
+): string {
+	return `autumn-wt${worktreeNum}-${shortHash(path)}-app.ngrok.app`;
 }
 
 function ngrokHeaders(): Record<string, string> {
@@ -55,8 +63,11 @@ async function findReservedDomain(
 export async function ensureReservedDomain(
 	worktreeNum: number,
 	path: string,
+	opts: { vite?: boolean } = {},
 ): Promise<ReservedDomain> {
-	const name = reservedDomainName(worktreeNum, path);
+	const name = opts.vite
+		? reservedViteDomainName(worktreeNum, path)
+		: reservedDomainName(worktreeNum, path);
 	const existing = await findReservedDomain(name);
 	if (existing) {
 		log(`ngrok reserved domain ${existing.domain} (reused ${existing.id})`);

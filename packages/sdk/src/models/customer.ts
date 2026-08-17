@@ -208,10 +208,22 @@ export type CustomerUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const CustomerAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type CustomerAnchor = OpenEnum<typeof CustomerAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type CustomerFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 /**
@@ -243,6 +255,10 @@ export type CustomerUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CustomerUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: CustomerAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -749,6 +765,93 @@ export type Invoice = {
   hostedInvoiceUrl?: string | null | undefined;
 };
 
+export type InvoicePreviewDiscount = {
+  amountOff: number;
+  percentOff?: number | undefined;
+  rewardId?: string | undefined;
+  rewardName?: string | undefined;
+};
+
+/**
+ * The period of time that this line item is being charged for.
+ */
+export type Period = {
+  /**
+   * The start of the period in milliseconds since the Unix epoch.
+   */
+  start: number;
+  /**
+   * The end of the period in milliseconds since the Unix epoch.
+   */
+  end: number;
+};
+
+export type LineItem = {
+  /**
+   * The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
+   */
+  displayName: string;
+  /**
+   * A detailed description of the line item.
+   */
+  description: string;
+  /**
+   * The amount before discounts and tax for this line item.
+   */
+  subtotal: number;
+  /**
+   * The final amount after discounts and tax for this line item.
+   */
+  total: number;
+  /**
+   * List of discounts applied to this line item.
+   */
+  discounts?: Array<InvoicePreviewDiscount> | undefined;
+  /**
+   * The ID of the plan that this line item belongs to.
+   */
+  planId: string;
+  /**
+   * The ID of the feature that this line item belongs to.
+   */
+  featureId: string | null;
+  /**
+   * The period of time that this line item is being charged for.
+   */
+  period?: Period | undefined;
+  /**
+   * The quantity of the line item.
+   */
+  quantity: number;
+};
+
+export type InvoicePreview = {
+  /**
+   * Plan IDs contributing line items to this invoice.
+   */
+  planIds: Array<string>;
+  /**
+   * Unix timestamp (milliseconds) when this invoice will be created.
+   */
+  invoiceAt: number;
+  /**
+   * The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).
+   */
+  currency: string;
+  /**
+   * The total before discounts.
+   */
+  subtotal: number;
+  /**
+   * The total after discounts.
+   */
+  total: number;
+  /**
+   * The line items this invoice will contain: usage accrued in the closing cycle, plus recurring charges for the opening cycle.
+   */
+  lineItems: Array<LineItem>;
+};
+
 /**
  * The environment (sandbox/live)
  */
@@ -822,7 +925,7 @@ export const CustomerDurationType = {
  */
 export type CustomerDurationType = OpenEnum<typeof CustomerDurationType>;
 
-export type Discount = {
+export type RewardsDiscount = {
   /**
    * The unique identifier for this discount
    */
@@ -873,7 +976,7 @@ export type Rewards = {
   /**
    * Array of active discounts applied to the customer
    */
-  discounts: Array<Discount>;
+  discounts: Array<RewardsDiscount>;
 };
 
 export type ReferralCustomer = {
@@ -962,6 +1065,10 @@ export type Customer = {
    * Invoices for this customer.
    */
   invoices?: Array<Invoice> | undefined;
+  /**
+   * Upcoming invoice for each of this customer's Stripe subscriptions.
+   */
+  invoicePreviews?: Array<InvoicePreview> | undefined;
   /**
    * Entities associated with this customer.
    */
@@ -1170,11 +1277,17 @@ export const CustomerUsageLimitInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CustomerUsageLimitInterval);
 
 /** @internal */
+export const CustomerAnchor$inboundSchema: z.ZodMiniType<
+  CustomerAnchor,
+  unknown
+> = openEnums.inboundSchema(CustomerAnchor);
+
+/** @internal */
 export const CustomerFilter$inboundSchema: z.ZodMiniType<
   CustomerFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function customerFilterFromJSON(
@@ -1203,6 +1316,7 @@ export const CustomerUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: CustomerUsageLimitInterval$inboundSchema,
+    anchor: types.optional(CustomerAnchor$inboundSchema),
     filter: types.optional(z.lazy(() => CustomerFilter$inboundSchema)),
     usage: types.optional(types.number()),
     source: types.optional(UsageLimitSource$inboundSchema),
@@ -1782,6 +1896,119 @@ export function invoiceFromJSON(
 }
 
 /** @internal */
+export const InvoicePreviewDiscount$inboundSchema: z.ZodMiniType<
+  InvoicePreviewDiscount,
+  unknown
+> = z.pipe(
+  z.object({
+    amount_off: types.number(),
+    percent_off: types.optional(types.number()),
+    reward_id: types.optional(types.string()),
+    reward_name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_off": "amountOff",
+      "percent_off": "percentOff",
+      "reward_id": "rewardId",
+      "reward_name": "rewardName",
+    });
+  }),
+);
+
+export function invoicePreviewDiscountFromJSON(
+  jsonString: string,
+): SafeParseResult<InvoicePreviewDiscount, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => InvoicePreviewDiscount$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'InvoicePreviewDiscount' from JSON`,
+  );
+}
+
+/** @internal */
+export const Period$inboundSchema: z.ZodMiniType<Period, unknown> = z.object({
+  start: types.number(),
+  end: types.number(),
+});
+
+export function periodFromJSON(
+  jsonString: string,
+): SafeParseResult<Period, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Period$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Period' from JSON`,
+  );
+}
+
+/** @internal */
+export const LineItem$inboundSchema: z.ZodMiniType<LineItem, unknown> = z.pipe(
+  z.object({
+    display_name: types.string(),
+    description: types.string(),
+    subtotal: types.number(),
+    total: types.number(),
+    discounts: types.optional(z.array(z.lazy(() =>
+      InvoicePreviewDiscount$inboundSchema
+    ))),
+    plan_id: types.string(),
+    feature_id: types.nullable(types.string()),
+    period: types.optional(z.lazy(() => Period$inboundSchema)),
+    quantity: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "display_name": "displayName",
+      "plan_id": "planId",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function lineItemFromJSON(
+  jsonString: string,
+): SafeParseResult<LineItem, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => LineItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'LineItem' from JSON`,
+  );
+}
+
+/** @internal */
+export const InvoicePreview$inboundSchema: z.ZodMiniType<
+  InvoicePreview,
+  unknown
+> = z.pipe(
+  z.object({
+    plan_ids: z.array(types.string()),
+    invoice_at: types.number(),
+    currency: types.string(),
+    subtotal: types.number(),
+    total: types.number(),
+    line_items: z.array(z.lazy(() => LineItem$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_ids": "planIds",
+      "invoice_at": "invoiceAt",
+      "line_items": "lineItems",
+    });
+  }),
+);
+
+export function invoicePreviewFromJSON(
+  jsonString: string,
+): SafeParseResult<InvoicePreview, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => InvoicePreview$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'InvoicePreview' from JSON`,
+  );
+}
+
+/** @internal */
 export const CustomerEntityEnv$inboundSchema: z.ZodMiniType<
   CustomerEntityEnv,
   unknown
@@ -1855,7 +2082,10 @@ export const CustomerDurationType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CustomerDurationType);
 
 /** @internal */
-export const Discount$inboundSchema: z.ZodMiniType<Discount, unknown> = z.pipe(
+export const RewardsDiscount$inboundSchema: z.ZodMiniType<
+  RewardsDiscount,
+  unknown
+> = z.pipe(
   z.object({
     id: types.string(),
     name: types.string(),
@@ -1880,19 +2110,19 @@ export const Discount$inboundSchema: z.ZodMiniType<Discount, unknown> = z.pipe(
   }),
 );
 
-export function discountFromJSON(
+export function rewardsDiscountFromJSON(
   jsonString: string,
-): SafeParseResult<Discount, SDKValidationError> {
+): SafeParseResult<RewardsDiscount, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Discount$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Discount' from JSON`,
+    (x) => RewardsDiscount$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'RewardsDiscount' from JSON`,
   );
 }
 
 /** @internal */
 export const Rewards$inboundSchema: z.ZodMiniType<Rewards, unknown> = z.object({
-  discounts: z.array(z.lazy(() => Discount$inboundSchema)),
+  discounts: z.array(z.lazy(() => RewardsDiscount$inboundSchema)),
 });
 
 export function rewardsFromJSON(
@@ -1973,6 +2203,9 @@ export const Customer$inboundSchema: z.ZodMiniType<Customer, unknown> = z.pipe(
     config: types.optional(z.lazy(() => CustomerConfig$inboundSchema)),
     processors: types.optional(z.lazy(() => Processors$inboundSchema)),
     invoices: types.optional(z.array(z.lazy(() => Invoice$inboundSchema))),
+    invoice_previews: types.optional(z.array(z.lazy(() =>
+      InvoicePreview$inboundSchema
+    ))),
     entities: types.optional(z.array(z.lazy(() => Entity$inboundSchema))),
     trials_used: types.optional(
       z.array(z.lazy(() => TrialsUsed$inboundSchema)),
@@ -1987,6 +2220,7 @@ export const Customer$inboundSchema: z.ZodMiniType<Customer, unknown> = z.pipe(
       "stripe_id": "stripeId",
       "send_email_receipts": "sendEmailReceipts",
       "billing_controls": "billingControls",
+      "invoice_previews": "invoicePreviews",
       "trials_used": "trialsUsed",
       "payment_method": "paymentMethod",
     });

@@ -123,6 +123,18 @@ export type CustomerDataUsageLimitInterval = ClosedEnum<
   typeof CustomerDataUsageLimitInterval
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const CustomerDataAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type CustomerDataAnchor = ClosedEnum<typeof CustomerDataAnchor>;
+
 export type Properties = string | number | boolean;
 
 /**
@@ -149,6 +161,10 @@ export type CustomerDataUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CustomerDataUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: CustomerDataAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -426,6 +442,11 @@ export const CustomerDataUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CustomerDataUsageLimitInterval);
 
 /** @internal */
+export const CustomerDataAnchor$outboundSchema: z.ZodMiniEnum<
+  typeof CustomerDataAnchor
+> = z.enum(CustomerDataAnchor);
+
+/** @internal */
 export type Properties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -468,6 +489,7 @@ export type CustomerDataUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: CustomerDataFilter$Outbound | undefined;
 };
 
@@ -481,6 +503,7 @@ export const CustomerDataUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: CustomerDataUsageLimitInterval$outboundSchema,
+    anchor: z.optional(CustomerDataAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => CustomerDataFilter$outboundSchema)),
   }),
   z.transform((v) => {

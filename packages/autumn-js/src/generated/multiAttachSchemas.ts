@@ -245,6 +245,7 @@ export const multiAttachUsageLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
+	anchor: z.union([z.string(), z.undefined()]).optional(),
 	filter: z.union([multiAttachFilterOutboundSchema, z.undefined()]).optional(),
 });
 
@@ -411,11 +412,14 @@ export const multiAttachSpendLimitSchema = z.object({
 
 export const multiAttachEntityDataIntervalSchema = closedEnumSchema;
 
+export const multiAttachAnchorSchema = closedEnumSchema;
+
 export const multiAttachUsageLimitSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: multiAttachEntityDataIntervalSchema,
+	anchor: z.union([multiAttachAnchorSchema, z.undefined()]).optional(),
 	filter: z.union([multiAttachFilterSchema, z.undefined()]).optional(),
 });
 

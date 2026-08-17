@@ -4,8 +4,10 @@ import { initDrizzle } from "../db/initDrizzle.js";
 import { startPgPoolMonitor, stopPgPoolMonitor } from "../db/pgPoolMonitor.js";
 import { runDbProbes } from "../db/probes/runDbProbes.js";
 import { logger } from "../external/logtail/logtailUtils.js";
+import { refreshCeBalancesCache } from "../external/motherduck/refreshCeBalancesCache.js";
 import { runResetLoopV2 } from "../internal/balances/batchReset/runResetLoopV2.js";
 import { stopAllEdgeConfigPolling } from "../internal/misc/edgeConfig/edgeConfigRegistry.js";
+import { isMotherduckCacheRefreshDisabled } from "../internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import {
 	describeSlotGate,
 	isActiveSlot,
@@ -102,6 +104,17 @@ const dbProbesTick = async () => {
 	await runDbProbes({ db: probeDb });
 };
 
+// On by default wherever the RW token exists; the miscellaneous edge config
+// kill switch (disableMotherduckCacheRefresh) turns it off without a deploy.
+const mdCacheRefreshTick = async () => {
+	if (!shouldRunTick()) return;
+	if (!process.env.MOTHERDUCK_RW_TOKEN) return;
+	if (isMotherduckCacheRefreshDisabled()) return;
+
+	logCronHeartbeat("md_cache_refresh");
+	await refreshCeBalancesCache({ logger });
+};
+
 new CronJob(
 	"* * * * *", // Run every minute
 	main,
@@ -121,6 +134,14 @@ new CronJob(
 new CronJob(
 	"* * * * *", // Run every minute
 	dbProbesTick,
+	null, // onComplete
+	true, // start immediately
+	"UTC", // timezone (adjust as needed)
+);
+
+new CronJob(
+	"*/5 * * * *", // Refresh the MotherDuck balance cache every 5 minutes
+	mdCacheRefreshTick,
 	null, // onComplete
 	true, // start immediately
 	"UTC", // timezone (adjust as needed)

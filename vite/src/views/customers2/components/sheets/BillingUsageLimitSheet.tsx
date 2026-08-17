@@ -22,6 +22,7 @@ import {
 } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
+import { UsageAnchorTooltip } from "@/components/billing-controls/UsageAnchorTooltip";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
@@ -56,18 +57,21 @@ export const buildUsageLimitItem = ({
 	enabled,
 	limit,
 	interval,
+	anchorUtc,
 	filter,
 }: {
 	featureId: string;
 	enabled: boolean;
 	limit: number;
 	interval: string;
+	anchorUtc?: boolean;
 	filter?: DbUsageLimit["filter"];
 }): DbUsageLimit => ({
 	feature_id: featureId,
 	enabled,
 	limit,
 	interval: interval as ResetInterval,
+	anchor: anchorUtc ? "utc" : "billing_cycle",
 	...(filter && { filter }),
 });
 
@@ -158,6 +162,7 @@ export function BillingUsageLimitSheet() {
 	const [selectedInterval, setSelectedInterval] = useState<string>(
 		existingItem?.interval ?? ResetInterval.Month,
 	);
+	const [anchorUtc, setAnchorUtc] = useState(existingItem?.anchor === "utc");
 	const [conditions, setConditions] = useState<UsageLimitCondition[]>(
 		conditionsFromFilter(existingItem?.filter),
 	);
@@ -217,6 +222,7 @@ export function BillingUsageLimitSheet() {
 			enabled,
 			limit: parsedLimit,
 			interval: selectedInterval,
+			anchorUtc,
 			filter,
 		});
 
@@ -333,6 +339,14 @@ export function BillingUsageLimitSheet() {
 									))}
 								</SelectContent>
 							</Select>
+						</div>
+
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-1.5">
+								<FormLabel className="mb-0">Anchor to UTC time</FormLabel>
+								<UsageAnchorTooltip />
+							</div>
+							<Switch checked={anchorUtc} onCheckedChange={setAnchorUtc} />
 						</div>
 
 						<div>

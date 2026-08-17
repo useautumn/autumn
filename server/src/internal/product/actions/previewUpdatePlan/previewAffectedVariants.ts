@@ -109,6 +109,7 @@ export const previewAffectedVariants = async ({
 						}),
 						id: variant.id,
 						name: variant.name,
+						auto_enable: false,
 					}
 				: applyDiffToVariantPlan({
 						plan: currentPlan,

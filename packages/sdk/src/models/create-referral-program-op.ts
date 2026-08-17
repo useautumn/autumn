@@ -18,26 +18,30 @@ export type CreateReferralProgramGlobals = {
 /**
  * When the reward is granted: on redemption, or when the redeemer checks out.
  */
-export const RedeemOnRequest = {
+export const CreateReferralProgramRedeemOnRequest = {
   CustomerCreation: "customer_creation",
   Checkout: "checkout",
 } as const;
 /**
  * When the reward is granted: on redemption, or when the redeemer checks out.
  */
-export type RedeemOnRequest = ClosedEnum<typeof RedeemOnRequest>;
+export type CreateReferralProgramRedeemOnRequest = ClosedEnum<
+  typeof CreateReferralProgramRedeemOnRequest
+>;
 
 /**
  * Who receives the reward: the referrer only, or both parties.
  */
-export const ReceivedByRequest = {
+export const CreateReferralProgramReceivedByRequest = {
   Referrer: "referrer",
   All: "all",
 } as const;
 /**
  * Who receives the reward: the referrer only, or both parties.
  */
-export type ReceivedByRequest = ClosedEnum<typeof ReceivedByRequest>;
+export type CreateReferralProgramReceivedByRequest = ClosedEnum<
+  typeof CreateReferralProgramReceivedByRequest
+>;
 
 export type CreateReferralProgramParams = {
   id: string;
@@ -45,11 +49,11 @@ export type CreateReferralProgramParams = {
   /**
    * When the reward is granted: on redemption, or when the redeemer checks out.
    */
-  redeemOn: RedeemOnRequest;
+  redeemOn: CreateReferralProgramRedeemOnRequest;
   /**
    * Who receives the reward: the referrer only, or both parties.
    */
-  receivedBy: ReceivedByRequest;
+  receivedBy: CreateReferralProgramReceivedByRequest;
   /**
    * A positive redemption limit, or null for unlimited redemptions.
    */
@@ -67,26 +71,30 @@ export type CreateReferralProgramParams = {
 /**
  * When the reward is granted: on redemption, or when the redeemer checks out.
  */
-export const RedeemOnResponse = {
+export const CreateReferralProgramRedeemOnResponse = {
   CustomerCreation: "customer_creation",
   Checkout: "checkout",
 } as const;
 /**
  * When the reward is granted: on redemption, or when the redeemer checks out.
  */
-export type RedeemOnResponse = OpenEnum<typeof RedeemOnResponse>;
+export type CreateReferralProgramRedeemOnResponse = OpenEnum<
+  typeof CreateReferralProgramRedeemOnResponse
+>;
 
 /**
  * Who receives the reward: the referrer only, or both parties.
  */
-export const ReceivedByResponse = {
+export const CreateReferralProgramReceivedByResponse = {
   Referrer: "referrer",
   All: "all",
 } as const;
 /**
  * Who receives the reward: the referrer only, or both parties.
  */
-export type ReceivedByResponse = OpenEnum<typeof ReceivedByResponse>;
+export type CreateReferralProgramReceivedByResponse = OpenEnum<
+  typeof CreateReferralProgramReceivedByResponse
+>;
 
 /**
  * OK
@@ -103,11 +111,11 @@ export type CreateReferralProgramResponse = {
   /**
    * When the reward is granted: on redemption, or when the redeemer checks out.
    */
-  redeemOn: RedeemOnResponse;
+  redeemOn: CreateReferralProgramRedeemOnResponse;
   /**
    * Who receives the reward: the referrer only, or both parties.
    */
-  receivedBy: ReceivedByResponse;
+  receivedBy: CreateReferralProgramReceivedByResponse;
   /**
    * The maximum number of times a referral code can be redeemed.
    */
@@ -127,14 +135,15 @@ export type CreateReferralProgramResponse = {
 };
 
 /** @internal */
-export const RedeemOnRequest$outboundSchema: z.ZodMiniEnum<
-  typeof RedeemOnRequest
-> = z.enum(RedeemOnRequest);
+export const CreateReferralProgramRedeemOnRequest$outboundSchema: z.ZodMiniEnum<
+  typeof CreateReferralProgramRedeemOnRequest
+> = z.enum(CreateReferralProgramRedeemOnRequest);
 
 /** @internal */
-export const ReceivedByRequest$outboundSchema: z.ZodMiniEnum<
-  typeof ReceivedByRequest
-> = z.enum(ReceivedByRequest);
+export const CreateReferralProgramReceivedByRequest$outboundSchema:
+  z.ZodMiniEnum<typeof CreateReferralProgramReceivedByRequest> = z.enum(
+    CreateReferralProgramReceivedByRequest,
+  );
 
 /** @internal */
 export type CreateReferralProgramParams$Outbound = {
@@ -155,8 +164,8 @@ export const CreateReferralProgramParams$outboundSchema: z.ZodMiniType<
   z.object({
     id: z.string(),
     rewardId: z.string(),
-    redeemOn: RedeemOnRequest$outboundSchema,
-    receivedBy: ReceivedByRequest$outboundSchema,
+    redeemOn: CreateReferralProgramRedeemOnRequest$outboundSchema,
+    receivedBy: CreateReferralProgramReceivedByRequest$outboundSchema,
     maxRedemptions: z.optional(z.nullable(z.int())),
     planIds: z.optional(z.nullable(z.array(z.string()))),
     excludeTrial: z.optional(z.nullable(z.boolean())),
@@ -184,16 +193,15 @@ export function createReferralProgramParamsToJSON(
 }
 
 /** @internal */
-export const RedeemOnResponse$inboundSchema: z.ZodMiniType<
-  RedeemOnResponse,
+export const CreateReferralProgramRedeemOnResponse$inboundSchema: z.ZodMiniType<
+  CreateReferralProgramRedeemOnResponse,
   unknown
-> = openEnums.inboundSchema(RedeemOnResponse);
+> = openEnums.inboundSchema(CreateReferralProgramRedeemOnResponse);
 
 /** @internal */
-export const ReceivedByResponse$inboundSchema: z.ZodMiniType<
-  ReceivedByResponse,
-  unknown
-> = openEnums.inboundSchema(ReceivedByResponse);
+export const CreateReferralProgramReceivedByResponse$inboundSchema:
+  z.ZodMiniType<CreateReferralProgramReceivedByResponse, unknown> = openEnums
+    .inboundSchema(CreateReferralProgramReceivedByResponse);
 
 /** @internal */
 export const CreateReferralProgramResponse$inboundSchema: z.ZodMiniType<
@@ -203,8 +211,8 @@ export const CreateReferralProgramResponse$inboundSchema: z.ZodMiniType<
   z.object({
     id: types.string(),
     reward_id: types.string(),
-    redeem_on: RedeemOnResponse$inboundSchema,
-    received_by: ReceivedByResponse$inboundSchema,
+    redeem_on: CreateReferralProgramRedeemOnResponse$inboundSchema,
+    received_by: CreateReferralProgramReceivedByResponse$inboundSchema,
     max_redemptions: z.optional(z.nullable(types.number())),
     plan_ids: z.optional(z.nullable(z.array(types.string()))),
     exclude_trial: z.optional(z.nullable(types.boolean())),

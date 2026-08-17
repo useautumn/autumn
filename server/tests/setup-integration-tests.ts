@@ -114,6 +114,8 @@ const seedMockedModulesForUnitLane = async () => {
 console.log("--- Setup integration tests ---");
 await loadInfisicalSecrets();
 loadLocalEnv({ force: true });
+process.env.AUTUMN_API_URL ??= "http://localhost:8080";
+process.env.AUTUMN_PUBLIC_API_URL ??= "http://localhost:8080";
 
 if (process.env.UNIT_TESTS) await seedMockedModulesForUnitLane();
 

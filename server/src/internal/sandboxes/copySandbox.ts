@@ -1,17 +1,19 @@
 import {
 	AppEnv,
+	deduplicateArray,
 	ErrCode,
-	isAnyCreditSystem,
 	mapToProductV2,
 	type Organization,
 	RecaseError,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { addCreditSystemMeteredFeatureIds } from "@/internal/features/creditSystemUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { handleCopyFeatures } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyFeatures.js";
 import { handleCopyProducts } from "@/internal/products/handlers/handleCopyEnvironment/handleCopyProducts.js";
+import { resolveSourceBasePlanIds } from "@/internal/products/handlers/handleCopyEnvironment/resolveVariantBaseLinks.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getOwnedSandbox } from "./getOwnedSandbox.js";
 
@@ -26,7 +28,6 @@ import { getOwnedSandbox } from "./getOwnedSandbox.js";
  * a 404 and we never touch any org's live catalog.
  */
 export const copySandboxForOrg = async ({
-	db,
 	ctx,
 	masterOrg,
 	fromSandboxId,
@@ -36,7 +37,6 @@ export const copySandboxForOrg = async ({
 	productIds,
 	featureIds,
 }: {
-	db: DrizzleCli;
 	ctx: AutumnContext;
 	masterOrg: Organization;
 	fromSandboxId?: string;
@@ -46,6 +46,7 @@ export const copySandboxForOrg = async ({
 	productIds?: string[];
 	featureIds?: string[];
 }): Promise<{ fromSandbox: Organization; toSandbox: Organization }> => {
+	const { db } = ctx;
 	if (fromSandboxId && fromSandboxId === toSandboxId) {
 		throw new RecaseError({
 			message: "Source and target sandboxes must be different",
@@ -142,40 +143,63 @@ export const copySandboxForOrg = async ({
 			});
 		}
 
+		// A requested variant pulls its base (via handleCopyProducts); a requested
+		// base pulls its variants here; the set's license plans come along too.
+		// Every pulled-in plan needs its item features copied.
+		const basePlanIdByVariantId = await resolveSourceBasePlanIds({
+			ctx,
+			fromProducts,
+			fromProductsAll: fromProducts,
+		});
+		const requestedProductIdSet = new Set(requestedProductIds);
+		const pulledInVariantIds: string[] = [];
+		const wantedProductIds = new Set(requestedProductIds);
+		for (const [variantId, basePlanId] of basePlanIdByVariantId) {
+			if (requestedProductIdSet.has(basePlanId)) {
+				pulledInVariantIds.push(variantId);
+				wantedProductIds.add(variantId);
+			}
+			if (requestedProductIdSet.has(variantId)) {
+				wantedProductIds.add(basePlanId);
+			}
+		}
+
+		const licenseLinks = await planLicenseRepo.listWithLicensePlanIdByParents({
+			db,
+			parentInternalProductIds: fromProducts
+				.filter((product) => wantedProductIds.has(product.id))
+				.map((product) => product.internal_id),
+		});
+		for (const link of licenseLinks) {
+			wantedProductIds.add(link.licensePlanId);
+		}
+
 		const wantedFeatureIds = new Set(requestedFeatureIds);
 		for (const product of fromProducts) {
-			if (!requestedProductIds.includes(product.id)) continue;
+			if (!wantedProductIds.has(product.id)) continue;
 			const { items } = mapToProductV2({ product, features: fromFeatures });
 			for (const item of items) {
 				if (item.feature_id) wantedFeatureIds.add(item.feature_id);
 			}
 		}
 
-		// Credit systems draw from metered features; bring those along too.
-		for (const feature of fromFeatures) {
-			if (!isAnyCreditSystem(feature.type)) continue;
-			if (!wantedFeatureIds.has(feature.id)) continue;
-			const config = feature.config as
-				| { schema?: { metered_feature_id: string }[] }
-				| null
-				| undefined;
-			for (const entry of config?.schema ?? []) {
-				wantedFeatureIds.add(entry.metered_feature_id);
-			}
-		}
+		addCreditSystemMeteredFeatureIds({
+			features: fromFeatures,
+			featureIds: wantedFeatureIds,
+		});
 
 		featuresToCopy = fromFeatures.filter((f) => wantedFeatureIds.has(f.id));
-		productIdsToCopy = requestedProductIds;
+		productIdsToCopy = deduplicateArray([
+			...requestedProductIds,
+			...pulledInVariantIds,
+		]);
 	}
 
 	// Features first: products reference them, and credit systems reference
 	// metered features (handleCopyFeatures orders the batches accordingly).
 	await handleCopyFeatures({
-		ctx,
+		toContext: { ...ctx, org: toSandbox, env: toEnv, features: toFeatures },
 		fromFeatures: featuresToCopy,
-		toOrg: toSandbox,
-		toEnv,
-		toFeatures,
 	});
 
 	await handleCopyProducts({

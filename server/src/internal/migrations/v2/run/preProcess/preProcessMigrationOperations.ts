@@ -1,9 +1,9 @@
+import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
+import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilter.js";
 import type {
 	CustomerOperation,
 	CustomerOperations,
 } from "@autumn/shared/api/migrations/operations/customer/customerOperations.js";
-import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
-import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilter.js";
 import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
 
 type PlanQuantifier = {
@@ -62,10 +62,7 @@ export const preProcessMigrationOperations = ({
 		(op): CustomerOperation => {
 			if (op.type === "update_plan") {
 				if (op.version === undefined) return op;
-				if (
-					op.plan_filter.custom === true ||
-					op.plan_filter.custom === false
-				) {
+				if (op.plan_filter.custom === true || op.plan_filter.custom === false) {
 					return op;
 				}
 				if (targetsCustom) return op;

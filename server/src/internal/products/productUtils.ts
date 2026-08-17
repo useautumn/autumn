@@ -44,17 +44,17 @@ import { PriceService } from "./prices/PriceService.js";
 import { isDefaultTrialFullProduct } from "./productUtils/classifyProduct.js";
 import { applyStripeResourceReuseForProduct } from "./stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 
-export const getLatestProducts = (products: FullProduct[]) => {
-	const latestProducts = products.reduce((acc: any, product: any) => {
-		if (!acc[product.id]) {
-			acc[product.id] = product;
-		} else if (product.version > acc[product.id].version) {
-			acc[product.id] = product;
+export const getLatestProducts = <T extends { id: string; version: number }>(
+	products: T[],
+): T[] => {
+	const latestById = new Map<string, T>();
+	for (const product of products) {
+		const existing = latestById.get(product.id);
+		if (!existing || product.version > existing.version) {
+			latestById.set(product.id, product);
 		}
-		return acc;
-	}, {});
-
-	return Object.values(latestProducts) as FullProduct[];
+	}
+	return [...latestById.values()];
 };
 
 const getProductVersionCounts = (products: FullProduct[]) => {
@@ -106,7 +106,7 @@ export const constructProduct = ({
 		base_variant_id: null,
 		base_internal_product_id:
 			baseInternalProductId ?? productData.base_internal_product_id ?? null,
-		archived: false,
+		archived: productData.archived ?? false,
 		config: {
 			ignore_past_due: productData.config?.ignore_past_due ?? false,
 		},
@@ -339,31 +339,38 @@ export const attachToInsertParams = (
 };
 
 // COPY PRODUCT
+
+/** The (org, env) a plan family is read from, plus that env's feature catalog. */
+export type PlanCopySource = {
+	org: Organization;
+	env: AppEnv;
+	features: Feature[];
+};
+
 export const copyProduct = async ({
-	db,
+	source,
+	ctx,
 	product,
-	toOrgId,
 	toId,
 	toName,
-	fromEnv,
-	toEnv,
-	toFeatures,
-	fromFeatures,
-	org,
-	logger,
+	baseInternalProductId = null,
 }: {
-	db: DrizzleCli;
+	source: PlanCopySource;
+	ctx: AutumnContext;
 	product: FullProduct;
-	toOrgId: string;
-	fromEnv: AppEnv;
-	toEnv: AppEnv;
 	toId: string;
 	toName: string;
-	toFeatures: Feature[];
-	fromFeatures: Feature[];
-	org: Organization;
-	logger: any;
-}) => {
+	baseInternalProductId?: string | null;
+}): Promise<string> => {
+	const { db, env: toEnv, features: toFeatures } = ctx;
+	const { features: fromFeatures } = source;
+	const toOrgId = ctx.org.id;
+
+	// A base variant id resolves within its own (org, env), so only a same-org
+	// cross-env copy can carry it over.
+	const keepsBaseVariantLink =
+		source.env !== toEnv && source.org.id === ctx.org.id;
+
 	const newProduct = {
 		...product,
 		name: toName,
@@ -372,7 +379,11 @@ export const copyProduct = async ({
 		org_id: toOrgId,
 		env: toEnv,
 		processor: null,
-		base_variant_id: fromEnv === toEnv ? null : product.base_variant_id,
+		is_default: false,
+		base_variant_id: keepsBaseVariantLink ? product.base_variant_id : null,
+		// The source link points at a product in the source (org, env); only an
+		// explicitly remapped target base is safe to persist here.
+		base_internal_product_id: baseInternalProductId,
 	};
 
 	const newEntitlements: Entitlement[] = [];
@@ -496,6 +507,8 @@ export const copyProduct = async ({
 			},
 		});
 	}
+
+	return newProduct.internal_id;
 };
 
 export const isOneOff = (prices: Price[]) => {

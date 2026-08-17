@@ -71,7 +71,9 @@ const main = async () => {
 		WHERE org_id = ${org.id} AND env = ${ctx.env} AND id = ${MIGRATION_ID}
 	`)) as Record<string, unknown>[];
 	if (!migrationRow)
-		throw new Error(`run seedBatchBench --migrations-only first (${MIGRATION_ID} missing)`);
+		throw new Error(
+			`run seedBatchBench --migrations-only first (${MIGRATION_ID} missing)`,
+		);
 
 	const migrationRunId = generateId("bench_run");
 	const preparedMigration = await prepareMigration({
@@ -123,6 +125,7 @@ const main = async () => {
 				await executeBatchMigrationPage({
 					ctx,
 					migrationInternalId,
+					migrationRunId,
 					plan,
 					customers: page.customers,
 					phases,

@@ -174,6 +174,19 @@ export type ExpectedStateErrorMismatch = z.infer<
 	typeof ExpectedStateErrorMismatchSchema
 >;
 
+/** More than one Autumn customer points at the same Stripe customer — invoices
+ * and subscriptions from different Autumn customers collide on one Stripe account. */
+export const SharedStripeCustomerMismatchSchema = z.object({
+	type: z.literal("shared_stripe_customer"),
+	message,
+	severity,
+	stripe_customer_id: z.string(),
+	other_customer_ids: z.array(z.string()),
+});
+export type SharedStripeCustomerMismatch = z.infer<
+	typeof SharedStripeCustomerMismatchSchema
+>;
+
 export const SubscriptionMismatchSchema = z.discriminatedUnion("type", [
 	BasePriceMismatchSchema,
 	ItemMismatchSchema,
@@ -185,6 +198,7 @@ export const SubscriptionMismatchSchema = z.discriminatedUnion("type", [
 	StripeSubNotInAutumnMismatchSchema,
 	StaleSubscriptionLinkMismatchSchema,
 	ExpectedStateErrorMismatchSchema,
+	SharedStripeCustomerMismatchSchema,
 ]);
 export type SubscriptionMismatch = z.infer<typeof SubscriptionMismatchSchema>;
 
@@ -199,6 +213,8 @@ export type SubscriptionVerifyResult = z.infer<
 
 export const VerifyResponseSchema = z.object({
 	customer_id: z.string(),
+	/** Account-level findings not tied to a single subscription. */
+	customer_mismatches: z.array(SubscriptionMismatchSchema),
 	subscriptions: z.array(SubscriptionVerifyResultSchema),
 });
 export type VerifyResponse = z.infer<typeof VerifyResponseSchema>;

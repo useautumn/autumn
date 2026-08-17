@@ -99,7 +99,7 @@ log "Using PostgreSQL binaries at $PG_BINDIR ($("$PG_BINDIR/initdb" --version))"
 
 # ---------------------------------------------------------------------------
 # 3. Dragonfly (native binary, Redis protocol). One instance backs REDIS_URL,
-#    CACHE_URL and CACHE_V2_DRAGONFLY_URL (plan §5a port note).
+#    MISC_CACHE_DRAGONFLY_PUBLIC_URL and CACHE_V2_DRAGONFLY_URL (plan §5a port note).
 # ---------------------------------------------------------------------------
 if [ ! -x "$BIN_DIR/dragonfly" ]; then
   ARCH="$(uname -m)"
@@ -177,9 +177,10 @@ fi
 log "goaws installed at $GOAWS_BIN"
 
 # goaws config — same port (9324) + AccountId (000000000000) + queue names as the
-# old elasticmq, so SQS_QUEUE_URL_V2 / TRACK_SQS_QUEUE_URL (constants.ts) resolve
-# UNCHANGED. EnableDuplicates is ENV-LEVEL (not per-queue) and turns on FIFO dedup
-# against the explicit MessageDeduplicationId the app sends.
+# old elasticmq, so SQS_QUEUE_URL_V2 / TRACK_* (constants.ts) resolve UNCHANGED.
+# EnableDuplicates is ENV-LEVEL (not per-queue) and turns on FIFO dedup against
+# the explicit MessageDeduplicationId the app sends. autumn-track-async is the
+# Standard queue behind TRACK_ASYNC_STANDARD_SQS_QUEUE_URL (prod path).
 mkdir -p "$GOAWS_DIR"
 cat >"$GOAWS_CONF" <<'EOF'
 Local:
@@ -194,8 +195,9 @@ Local:
   Queues:
     - Name: autumn.fifo
     - Name: autumn-track.fifo
+    - Name: autumn-track-async
 EOF
-log "Wrote goaws config to $GOAWS_CONF (autumn.fifo + autumn-track.fifo, dedup on)"
+log "Wrote goaws config to $GOAWS_CONF (autumn.fifo + autumn-track.fifo + autumn-track-async, dedup on)"
 
 # ---------------------------------------------------------------------------
 # 4b. dynoxide (native DynamoDB emulator) — backs the idempotency-key store.

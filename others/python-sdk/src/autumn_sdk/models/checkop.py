@@ -421,7 +421,7 @@ class Flag2(BaseModel):
         return m
 
 
-Scenario2 = Union[
+CheckScenario2 = Union[
     Literal[
         "usage_limit",
         "feature_flag",
@@ -451,7 +451,7 @@ ProductType2 = Union[
 ]
 
 
-FeatureType2 = Union[
+CheckFeatureType2 = Union[
     Literal[
         "single_use",
         "continuous_use",
@@ -657,7 +657,7 @@ class CheckItem2TypedDict(TypedDict):
     r"""The type of the product item"""
     feature_id: NotRequired[Nullable[str]]
     r"""The feature ID of the product item. If the item is a fixed price, should be `null`"""
-    feature_type: NotRequired[Nullable[FeatureType2]]
+    feature_type: NotRequired[Nullable[CheckFeatureType2]]
     r"""Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats."""
     included_usage: NotRequired[Nullable[IncludedUsage2TypedDict]]
     r"""The amount of usage included for this feature."""
@@ -698,7 +698,7 @@ class CheckItem2(BaseModel):
     feature_id: OptionalNullable[str] = UNSET
     r"""The feature ID of the product item. If the item is a fixed price, should be `null`"""
 
-    feature_type: OptionalNullable[FeatureType2] = UNSET
+    feature_type: OptionalNullable[CheckFeatureType2] = UNSET
     r"""Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats."""
 
     included_usage: OptionalNullable[IncludedUsage2] = UNSET
@@ -1068,16 +1068,26 @@ CheckUsageLimitInterval2 = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+CheckAnchor2 = Union[
+    Literal[
+        "billing_cycle",
+        "utc",
+    ],
+    UnrecognizedStr,
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 class CheckFilter2TypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class CheckFilter2(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class CheckUsageLimit2TypedDict(TypedDict):
@@ -1089,6 +1099,8 @@ class CheckUsageLimit2TypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[CheckAnchor2]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[CheckFilter2TypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -1106,12 +1118,15 @@ class CheckUsageLimit2(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[CheckAnchor2] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[Optional[CheckFilter2], pydantic.Field(alias="filter")] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -1452,7 +1467,7 @@ class CheckProduct2(BaseModel):
 class Preview2TypedDict(TypedDict):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: Scenario2
+    scenario: CheckScenario2
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
     title: str
     r"""A title suitable for displaying in a paywall or upgrade modal."""
@@ -1469,7 +1484,7 @@ class Preview2TypedDict(TypedDict):
 class Preview2(BaseModel):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: Scenario2
+    scenario: CheckScenario2
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
 
     title: str
@@ -1824,7 +1839,7 @@ class Flag1(BaseModel):
         return m
 
 
-Scenario1 = Union[
+CheckScenario1 = Union[
     Literal[
         "usage_limit",
         "feature_flag",
@@ -1854,7 +1869,7 @@ ProductType1 = Union[
 ]
 
 
-FeatureType1 = Union[
+CheckFeatureType1 = Union[
     Literal[
         "single_use",
         "continuous_use",
@@ -2060,7 +2075,7 @@ class CheckItem1TypedDict(TypedDict):
     r"""The type of the product item"""
     feature_id: NotRequired[Nullable[str]]
     r"""The feature ID of the product item. If the item is a fixed price, should be `null`"""
-    feature_type: NotRequired[Nullable[FeatureType1]]
+    feature_type: NotRequired[Nullable[CheckFeatureType1]]
     r"""Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats."""
     included_usage: NotRequired[Nullable[IncludedUsage1TypedDict]]
     r"""The amount of usage included for this feature."""
@@ -2101,7 +2116,7 @@ class CheckItem1(BaseModel):
     feature_id: OptionalNullable[str] = UNSET
     r"""The feature ID of the product item. If the item is a fixed price, should be `null`"""
 
-    feature_type: OptionalNullable[FeatureType1] = UNSET
+    feature_type: OptionalNullable[CheckFeatureType1] = UNSET
     r"""Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats."""
 
     included_usage: OptionalNullable[IncludedUsage1] = UNSET
@@ -2471,16 +2486,26 @@ CheckUsageLimitInterval1 = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+CheckAnchor1 = Union[
+    Literal[
+        "billing_cycle",
+        "utc",
+    ],
+    UnrecognizedStr,
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 class CheckFilter1TypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class CheckFilter1(BaseModel):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
-    properties: Dict[str, Any]
+    properties: Dict[str, str]
 
 
 class CheckUsageLimit1TypedDict(TypedDict):
@@ -2492,6 +2517,8 @@ class CheckUsageLimit1TypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[CheckAnchor1]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[CheckFilter1TypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -2509,12 +2536,15 @@ class CheckUsageLimit1(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[CheckAnchor1] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[Optional[CheckFilter1], pydantic.Field(alias="filter")] = None
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -2855,7 +2885,7 @@ class CheckProduct1(BaseModel):
 class Preview1TypedDict(TypedDict):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: Scenario1
+    scenario: CheckScenario1
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
     title: str
     r"""A title suitable for displaying in a paywall or upgrade modal."""
@@ -2872,7 +2902,7 @@ class Preview1TypedDict(TypedDict):
 class Preview1(BaseModel):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: Scenario1
+    scenario: CheckScenario1
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
 
     title: str

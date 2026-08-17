@@ -73,9 +73,9 @@ export const constructReward = ({
 			});
 			// Boolean features grant on/off access, so they carry no allowance
 			const isBoolean = feature?.type === FeatureType.Boolean;
-			if (!isBoolean && (!ent.allowance || ent.allowance <= 0)) {
+			if (!isBoolean && (ent.allowance == null || ent.allowance < 0)) {
 				throw new RecaseError({
-					message: "Each entitlement must have a positive allowance",
+					message: "Each entitlement must have a non-negative allowance",
 					code: ErrCode.InvalidReward,
 				});
 			}

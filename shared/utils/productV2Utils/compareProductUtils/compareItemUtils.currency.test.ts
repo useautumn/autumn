@@ -29,6 +29,18 @@ const featurePriceItem = (
 		],
 	}) as unknown as FeaturePriceItem;
 
+const flatFeaturePriceItem = (
+	currencies?: { currency: string; amount: number }[],
+): FeaturePriceItem =>
+	({
+		feature_id: "words",
+		included_usage: 0,
+		interval: "month",
+		usage_model: "usage_based",
+		price: 0.5,
+		additional_currencies: currencies,
+	}) as unknown as FeaturePriceItem;
+
 describe("comparators detect currency-only edits", () => {
 	test("priceItemsAreSame: false when additional_currencies differ", () => {
 		expect(
@@ -64,6 +76,14 @@ describe("comparators detect currency-only edits", () => {
 		const result = featurePriceItemsAreSame({
 			item1: featurePriceItem([{ currency: "eur", amount: 0.4 }]),
 			item2: featurePriceItem([{ currency: "eur", amount: 4 }]),
+		});
+		expect(result.same).toBe(false);
+	});
+
+	test("featurePriceItemsAreSame: false when a flat currency amount changes", () => {
+		const result = featurePriceItemsAreSame({
+			item1: flatFeaturePriceItem([{ currency: "eur", amount: 0.4 }]),
+			item2: flatFeaturePriceItem([{ currency: "eur", amount: 4 }]),
 		});
 		expect(result.same).toBe(false);
 	});

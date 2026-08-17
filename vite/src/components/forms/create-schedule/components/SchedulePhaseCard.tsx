@@ -56,9 +56,10 @@ export function SchedulePhaseCard({
 		nowMs,
 	});
 	const activeProducts = products.filter((p) => !p.archived);
-	const usedKeys = getUsedGroupKeys({ plans: phase.plans, products });
+	// A new row starts customer-level, so that's the scope that can run out of plans.
+	const customerLevelKeys = getUsedGroupKeys({ plans: phase.plans, products });
 	const allPlansAdded = activeProducts.every((p) =>
-		usedKeys.has(getProductGroupKey({ productId: p.id, products })),
+		customerLevelKeys.has(getProductGroupKey({ productId: p.id, products })),
 	);
 	const phaseTimingError = getPhaseTimingError({
 		phases: formValues.phases,
@@ -183,7 +184,6 @@ export function SchedulePhaseCard({
 							key={`plan-${phaseIndex}-${planIndex}-${p.productId ?? "empty"}`}
 							phaseIndex={phaseIndex}
 							planIndex={planIndex}
-							usedKeys={usedKeys}
 						/>
 					))}
 					<InlineAction

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import type { ZodError } from "zod";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr } from "@/utils/genUtils";
+import { stripEditorFields } from "@/utils/product/productItemUtils";
 import { normalizeItemCurrencies } from "../../plan/utils/currencyUtils";
 import { validateItemsBeforeSave } from "../../plan/utils/validateItemsBeforeSave";
 
@@ -48,7 +49,9 @@ export const updateProduct = async ({
 					normalizeItemCurrencies({ item, orgCurrency }),
 				)
 			: product.items;
-		const sortedItems = sortPlanItems({ items });
+		const sortedItems = stripEditorFields({
+			items: sortPlanItems({ items }),
+		});
 		const { base_id, ...productUpdates } = product;
 		const updateData = UpdateProductV2ParamsSchema.parse({
 			...productUpdates,

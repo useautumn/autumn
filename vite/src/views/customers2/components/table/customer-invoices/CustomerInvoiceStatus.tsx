@@ -43,18 +43,26 @@ const getRefundStatus = ({
 	};
 };
 
+/** An invoice preview has no InvoiceStatus — it isn't an invoice yet. */
+export const UPCOMING_INVOICE_STATUS = {
+	color: "bg-orange-500 dark:bg-orange-600",
+	label: "Upcoming",
+} as const;
+
 export function CustomerInvoiceStatus({
 	status,
 	total,
 	amountPaid,
 	refundedAmount,
+	override,
 }: {
-	status: InvoiceStatus | null | undefined;
+	status?: InvoiceStatus | null;
 	total?: number;
 	amountPaid?: number | null;
 	refundedAmount?: number;
+	override?: { color: string; label: string };
 }) {
-	if (!status) return null;
+	if (!(override || status)) return null;
 
 	// Check for refund status first (only for paid invoices)
 	const refundStatus =
@@ -67,7 +75,8 @@ export function CustomerInvoiceStatus({
 				})
 			: null;
 
-	const config = refundStatus ?? statusConfig[status];
+	const config =
+		override ?? refundStatus ?? (status ? statusConfig[status] : undefined);
 	if (!config) return <div>{status}</div>;
 
 	return (

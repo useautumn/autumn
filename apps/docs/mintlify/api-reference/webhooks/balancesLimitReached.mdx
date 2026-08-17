@@ -17,6 +17,6 @@ openapi: "api/openapi.yml webhook balances.limit_reached"
   The feature ID whose limit was reached.
 </ParamField>
 
-<ParamField body="limit_type" type="'included' | 'max_purchase' | 'spend_limit'" required>
-  Which limit was hit: included allowance, max purchase cap, or spend limit.
+<ParamField body="limit_type" type="'included' | 'max_purchase' | 'spend_limit' | 'usage_limit'" required>
+  Which limit was hit: included allowance, max purchase cap, spend limit, or a usage-limit billing control.
 </ParamField>

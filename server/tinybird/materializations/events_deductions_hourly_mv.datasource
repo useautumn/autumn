@@ -1,0 +1,61 @@
+DESCRIPTION >
+    Per-balance hourly rollup of the `deductions` array on `events`, keyed
+    (org_id, env, customer_id, balance_feature_id, balance_id, event_name, entity_id, hour).
+
+    Grain: one row per (customer, balance, tracked feature, entity, hour). Answers "for one customer
+    in one hour, how much came out of each balance, split by which tracked feature caused it and
+    which entity did it".
+
+    Exists so the read path never decodes JSON. `events.deductions` is stored double-encoded —
+    {"list": ["<json string>", ...]}, an array of JSON *strings* — so reading one field costs an
+    ARRAY JOIN plus two nested JSONExtract calls per field per row. That work happens once here at
+    insert instead of per request.
+
+    NO PROPERTIES. Deliberate: property values like session_id are unbounded, and a property fan-out
+    is what caused the write amplification on events_property_mv. Every dimension in this rollup is
+    bounded per customer (balances, tracked features, entities), so there is no key a high-cardinality
+    value can reach. group_by on properties in deducted mode reads `events` directly instead — that
+    path is bounded because customer_id is mandatory and leads the events sorting key.
+
+    Row growth is ~1:1 with events before the hourly GROUP BY: 99.9% of events carry exactly one
+    deduction, max observed is 3. Events with an empty deduction set produce no rows at all, since
+    ARRAY JOIN over an empty array drops them.
+
+    NOT STORED HERE, resolved server-side at response assembly:
+      - feature_type (metered | credit_system)  -> from ctx.features by balance_feature_id
+      - credit_cost                             -> from the credit system's config.schema; reflects
+                                                   the CURRENT schema, not the rate at deduction time
+      - balances[].entity_id (the balance owner) -> from the customer's entitlements by balance_id.
+                                                   `entity_id` in this rollup is the EVENT's entity,
+                                                   which is the one group_by uses.
+
+    plan_id and reset_interval are functionally dependent on balance_id, so including them in the
+    GROUP BY adds no rows. Both are '' when the deduction carried null — a balance created outside a
+    plan (handleCreateBalance) has no plan.
+
+    `deducted` may be negative: a finalize-lock unwind returns credit.
+
+    BACKFILL skip: deploy empty + forward-materialization trigger only. The deploy-time
+    repopulate runs the ARRAY JOIN + JSON decode over ALL of `events` in one query and
+    blows the 10s deployment cap at prod scale. History is filled in bounded chunks on
+    on-demand compute via the events_deductions_hourly_mv_backfill copy pipe.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `customer_id` String,
+    `entity_id` String DEFAULT '',
+    `event_name` String,
+    `balance_feature_id` String,
+    `balance_id` String,
+    `plan_id` String DEFAULT '',
+    `reset_interval` String DEFAULT '',
+    `hour` DateTime,
+    `deducted` Float64,
+    `deduction_count` UInt64
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(hour)"
+ENGINE_SORTING_KEY "org_id, env, customer_id, balance_feature_id, balance_id, event_name, entity_id, hour"
+
+BACKFILL skip

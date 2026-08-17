@@ -1,6 +1,7 @@
 import type { Redis } from "ioredis";
 import { getMiscRedis } from "../miscCache/getMiscRedis.js";
 import { getMiscBackupRedis } from "../miscCache/miscRedisInstances.js";
+import { getRedisReadPoolLanes } from "./createRedisReadPool.js";
 
 /** Wait for a Redis instance to be ready */
 export const waitForRedisReady = (
@@ -26,9 +27,40 @@ export const waitForRedisReady = (
 
 		instance.once("error", (err) => {
 			clearTimeout(timeout);
+			// A standby-routed instance reports ready when either connection is up,
+			// so one socket erroring is not a readiness failure.
+			if (instance.status === "ready") {
+				resolve();
+				return;
+			}
 			reject(err);
 		});
 	});
+};
+
+export const waitForRedisReadPoolReady = async ({
+	instance,
+	label,
+	timeoutMs = 10000,
+}: {
+	instance: Redis;
+	label: string;
+	timeoutMs?: number;
+}): Promise<void> => {
+	const lanes = getRedisReadPoolLanes(instance);
+	const results = await Promise.allSettled(
+		lanes.map((lane, index) =>
+			waitForRedisReady(
+				lane,
+				lanes.length === 1 ? label : `${label}:lane-${index}`,
+				timeoutMs,
+			),
+		),
+	);
+	const rejection = results.find(
+		(result): result is PromiseRejectedResult => result.status === "rejected",
+	);
+	if (rejection) throw rejection.reason;
 };
 
 /** Pre-warm the main + fallback + V2 Redis connections. Call on startup before processing requests. */

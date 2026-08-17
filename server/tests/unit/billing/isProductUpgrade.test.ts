@@ -3,8 +3,8 @@ import {
 	BillingInterval,
 	BillingType,
 	Infinite,
-	type Price,
 	isProductUpgrade,
+	type Price,
 } from "@autumn/shared";
 
 const createFixedPrice = ({

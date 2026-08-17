@@ -11,7 +11,10 @@ const BILLING_PREVIEW_EXPAND = [
 	"outgoing.plan.items.feature",
 ] as const;
 
-export function useBillingPreview<TRequestBody extends object>({
+export function useBillingPreview<
+	TRequestBody extends object,
+	TResponse = AttachPreviewResponse,
+>({
 	path,
 	queryKeyPrefix,
 	requestBody,
@@ -47,7 +50,7 @@ export function useBillingPreview<TRequestBody extends object>({
 		queryFn: async () => {
 			if (!debouncedRequest.body) return null;
 
-			const response = await axiosInstance.post<AttachPreviewResponse>(
+			const response = await axiosInstance.post<TResponse>(
 				debouncedRequest.path,
 				{
 					...debouncedRequest.body,

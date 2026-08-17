@@ -50,7 +50,7 @@ export class VercelWebhookClient {
 		orgId,
 		env,
 		clientSecret,
-		baseUrl = process.env.BETTER_AUTH_URL ?? "http://localhost:8080",
+		baseUrl = process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080",
 	}: VercelWebhookClientConfig) {
 		this.orgId = orgId;
 		this.env = env;

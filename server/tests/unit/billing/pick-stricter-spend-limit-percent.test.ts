@@ -169,9 +169,7 @@ describe("findPlanBillingControlWithProduct — spend_limits with mixed limit_ty
 
 		expect(resolved?.control.limit_type).toBe("usage_percentage");
 		expect(resolved?.control.overage_limit).toBe(50);
-		expect(resolved?.customerProduct?.internal_product_id).toBe(
-			"prod_percent",
-		);
+		expect(resolved?.customerProduct?.internal_product_id).toBe("prod_percent");
 	});
 
 	test("unresolvable percent (no allowance) is treated as no-cap and absolute wins", () => {

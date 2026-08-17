@@ -27,6 +27,8 @@ export const getApiCoupon = ({
 	let planIds: string[] | null;
 	if (discountConfig?.apply_to_all) {
 		planIds = null;
+	} else if (discountConfig?.product_ids?.length) {
+		planIds = discountConfig.product_ids;
 	} else {
 		const resolved = new Set<string>();
 		for (const priceId of discountConfig?.price_ids ?? []) {

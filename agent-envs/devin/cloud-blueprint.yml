@@ -1,0 +1,54 @@
+# Devin repo blueprint for useautumn/cloud
+# Settings > Environment > Blueprints > cloud
+#
+# cloud is a superset of autumn: it carries autumn, infra and ai as submodules.
+# Used for scripts-v2, admin and infra work.
+
+clone:
+  # Brings autumn (staging), infra and ai along with it.
+  submodules: recursive
+
+initialize:
+  # --recurse-submodules checks out the recorded commit, so submodules land on a
+  # detached HEAD. .gitmodules still says staging for autumn; dev is what's used.
+  - name: Put submodules on their working branches
+    run: |
+      git -C autumn checkout dev && git -C autumn pull --ff-only
+      git -C infra checkout main && git -C infra pull --ff-only
+      git -C ai checkout main && git -C ai pull --ff-only
+
+  - name: Install dependencies
+    run: bun install --frozen-lockfile
+
+  - name: Sync agent config
+    run: cd ai && bun install && bun sync
+
+maintenance:
+  - name: Install dependencies
+    run: bun install --frozen-lockfile
+
+# scripts-v2 runs against env=prod. The Coding Agent role is dev-only today, so
+# prod scripts will fail with missing-env errors until specific secret names are
+# allowed in prod — deliberately, one name at a time.
+knowledge:
+  - name: scripts
+    contents: |
+      scripts-v2 scripts live in scripts-v2/runs/{org-name}/ and default to
+      dryRun: true. Never set dryRun: false without an explicit instruction.
+      Run them with: bun fs <script-id>
+
+  - name: prod-secrets
+    contents: |
+      Scripts run against env=prod. The Infisical Coding Agent role is dev-only,
+      so prod runs fail with missing-env errors until a specific secret name is
+      allowed in prod. That is intentional — report the missing name, do not
+      work around it.
+
+  - name: submodules
+    contents: |
+      autumn/ is a submodule on branch dev, pointing at a different remote
+      (useautumn/autumn). Treat it as a read-only dependency here.
+
+      For changes to the autumn server itself, use the separate autumn repo at
+      ~/repos/autumn so the PR targets useautumn/autumn cleanly. Do not open PRs
+      from inside cloud/autumn.

@@ -339,6 +339,10 @@ await autumn.track({
     <DynamicResponseField name="rollovers" type="object[]">
       Rollover balances carried over from previous periods.
       <Expandable title="properties">
+        <DynamicResponseField name="granted" type="number">
+          Amount originally rolled over from a previous period, before any of it was consumed.
+        </DynamicResponseField>
+
         <DynamicResponseField name="balance" type="number">
           Amount of balance rolled over from a previous period.
         </DynamicResponseField>
@@ -567,6 +571,10 @@ await autumn.track({
     <DynamicResponseField name="rollovers" type="object[]">
       Rollover balances carried over from previous periods.
       <Expandable title="properties">
+        <DynamicResponseField name="granted" type="number">
+          Amount originally rolled over from a previous period, before any of it was consumed.
+        </DynamicResponseField>
+
         <DynamicResponseField name="balance" type="number">
           Amount of balance rolled over from a previous period.
         </DynamicResponseField>

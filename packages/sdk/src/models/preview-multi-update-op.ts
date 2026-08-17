@@ -113,11 +113,11 @@ export type PreviewMultiUpdateLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts and tax for this line item.
+   * The amount before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for this line item.
+   * The final amount after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -173,11 +173,11 @@ export type PreviewMultiUpdateNextCycleLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts and tax for this line item.
+   * The amount before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for this line item.
+   * The final amount after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -244,11 +244,11 @@ export type PreviewMultiUpdateNextCycle = {
    */
   startsAt: number;
   /**
-   * The total amount in cents before discounts and tax for the next cycle.
+   * The total amount before discounts and tax for the next cycle.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for the next cycle.
+   * The final amount after discounts and tax for the next cycle.
    */
   total: number;
   /**
@@ -341,15 +341,15 @@ export type PreviewMultiUpdateSubscription = {
    */
   lineItems: Array<PreviewMultiUpdateLineItem>;
   /**
-   * The total amount in cents before discounts and tax for the current billing period.
+   * The total amount before discounts and tax for the current billing period.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for the current billing period.
+   * The final amount after discounts and tax for the current billing period.
    */
   total: number;
   /**
-   * The three-letter ISO currency code (e.g., 'usd').
+   * The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).
    */
   currency: string;
   /**
@@ -383,7 +383,7 @@ export type MultiUpdatePreviewResponse = {
    */
   customerId: string;
   /**
-   * The three-letter ISO currency code (e.g., 'usd').
+   * The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).
    */
   currency: string;
   /**

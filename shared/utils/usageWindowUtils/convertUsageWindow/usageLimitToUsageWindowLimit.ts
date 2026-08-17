@@ -1,10 +1,10 @@
 import type { DbUsageLimit } from "../../../models/cusModels/billingControls/usageLimit.js";
+import { usageLimitFilterKey } from "../../../models/cusModels/billingControls/usageLimit.js";
 import type { FullSubject } from "../../../models/cusModels/fullSubject/fullSubjectModel.js";
 import type { UsageWindowLimit } from "../../../models/cusProductModels/cusEntModels/usageWindowModels.js";
 import type { CusProductStatus } from "../../../models/cusProductModels/cusProductEnums.js";
 import type { Feature } from "../../../models/featureModels/featureModels.js";
 import { resetIntvToEntIntv } from "../../productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
-import { usageLimitFilterKey } from "../../../models/cusModels/billingControls/usageLimit.js";
 import { buildUsageWindowKey } from "../buildUsageWindowKey.js";
 import { findUsageWindowAnchor } from "../findUsageWindowAnchor/findUsageWindowAnchor.js";
 import { getUsageWindowAnchorTimestamp } from "../getUsageWindowAnchorTimestamp.js";
@@ -21,8 +21,9 @@ export type UsageWindowEntityScope = {
  * Resolves one stored usage-limit entry into the enforceable UsageWindowLimit
  * handed to the deduction script. The entry's ResetInterval converts to the
  * internal EntInterval here -- the single edge between the API/storage
- * vocabulary and the window internals. Window bounds align to the customer's
- * billing cycle via the anchor entitlement when one exists, else UTC calendar.
+ * vocabulary and the window internals. Under `anchor: 'billing_cycle'` bounds
+ * align to the anchor entitlement's cycle when one exists, else UTC calendar;
+ * `anchor: 'utc'` skips the lookup and always uses the UTC calendar.
  */
 export const usageLimitToUsageWindowLimit = ({
 	fullSubject,
@@ -53,15 +54,21 @@ export const usageLimitToUsageWindowLimit = ({
 	});
 
 	const scopeType = entityScope ? "entity" : "customer";
+	const anchorMode = usageLimit.anchor ?? "billing_cycle";
 	const { anchorCustomerEntitlementId, anchorCustomerEntitlement } =
-		findUsageWindowAnchor({
-			fullSubject,
-			featureId: feature.id,
-			features,
-			isCreditSystem: dimensionType === "balance",
-			inStatuses,
-			scopeType,
-		});
+		anchorMode === "utc"
+			? {
+					anchorCustomerEntitlementId: null,
+					anchorCustomerEntitlement: undefined,
+				}
+			: findUsageWindowAnchor({
+					fullSubject,
+					featureId: feature.id,
+					features,
+					isCreditSystem: dimensionType === "balance",
+					inStatuses,
+					scopeType,
+				});
 
 	const { windowStartAt, windowEndAt } = getUsageWindowBounds({
 		interval,
@@ -96,5 +103,6 @@ export const usageLimitToUsageWindowLimit = ({
 		window_end_at: windowEndAt,
 		limit: usageLimit.limit,
 		anchor_customer_entitlement_id: anchorCustomerEntitlementId,
+		anchor_mode: anchorMode,
 	};
 };

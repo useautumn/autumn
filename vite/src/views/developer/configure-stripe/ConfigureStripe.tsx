@@ -30,8 +30,8 @@ import {
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import ConnectStripeDialog from "@/views/onboarding2/ConnectStripeDialog";
-import { CatalogMappingsCard } from "./mappings/CatalogMappingsCard";
 import { DisconnectStripeDialog } from "./DisconnectStripeDialog";
+import { CatalogMappingsCard } from "./mappings/CatalogMappingsCard";
 import { StripeAccountMismatchBanner } from "./StripeAccountMismatchBanner";
 import { StripeChannelCell } from "./StripeChannelCell";
 import { StripeCheckoutSettings } from "./StripeCheckoutSettings";
@@ -186,6 +186,7 @@ export const ConfigureStripe = () => {
 								oauthConnected ? (
 									<DisconnectStripeDialog
 										channel="oauth"
+										willRemoveCatalogMappings={!secretKeyConnected}
 										label="Disconnect"
 										icon={<LinkBreakIcon />}
 										onSuccess={mutate}
@@ -221,6 +222,7 @@ export const ConfigureStripe = () => {
 								secretKeyConnected ? (
 									<DisconnectStripeDialog
 										channel="secret_key"
+										willRemoveCatalogMappings={!oauthConnected}
 										label="Disconnect"
 										icon={<LinkBreakIcon />}
 										onSuccess={mutate}

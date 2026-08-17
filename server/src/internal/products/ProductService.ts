@@ -147,6 +147,27 @@ export class ProductService {
 		})) as Product;
 	}
 
+	static async listByIds({
+		db,
+		orgId,
+		env,
+		ids,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		ids: string[];
+	}) {
+		if (ids.length === 0) return [] as Product[];
+		return (await db.query.products.findMany({
+			where: and(
+				eq(products.org_id, orgId),
+				eq(products.env, env),
+				inArray(products.id, ids),
+			),
+		})) as Product[];
+	}
+
 	static async listByInternalIds({
 		db,
 		internalIds,

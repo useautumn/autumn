@@ -2,6 +2,7 @@ import type { TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { getAsyncTrackProducerQueueUrl } from "@/queue/trackAsyncQueueUrls.js";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
 import { getQueuedTrackResponse } from "./getQueuedTrackResponse.js";
 
@@ -39,16 +40,15 @@ export const queueTrack = async ({
 	} = options;
 
 	try {
-		// Sync fallbacks and async tracks share ONE queue. TRACK_SQS_QUEUE_URL
-		// is deprecated — read only as a fallback for envs that haven't set the
-		// async URL yet (its poller stays alive to drain in-flight messages).
+		// Prefer the Standard async queue while keeping the legacy FIFO as a
+		// rollout fallback. TRACK_SQS_QUEUE_URL is the final deprecated fallback.
 		const resolvedQueueUrl =
 			queueUrl ??
-			process.env.TRACK_ASYNC_SQS_QUEUE_URL ??
+			getAsyncTrackProducerQueueUrl() ??
 			process.env.TRACK_SQS_QUEUE_URL;
 		if (!resolvedQueueUrl) {
 			ctx.logger.warn(
-				"[track] TRACK_ASYNC_SQS_QUEUE_URL is unset; falling back to synchronous track",
+				"[track] async Track queue URLs are unset; falling back to synchronous track",
 			);
 			return null;
 		}

@@ -12,6 +12,7 @@ import type {
 import type { PaymentBehaviorIntent } from "@models/billingModels/context/paymentBehaviorIntent";
 import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
 import type { DbInvoiceLineItem } from "@models/cusModels/invoiceModels/invoiceLineItemTable";
+import { InvoicePaymentMethodSchema } from "@models/orgModels/orgConfig";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
@@ -27,6 +28,7 @@ const InvoiceModeSchema = z.object({
 	footer: z.string().optional(),
 	memo: z.string().optional(),
 	daysUntilDue: z.number().optional(),
+	paymentMethodTypes: z.array(InvoicePaymentMethodSchema).optional(),
 });
 
 export type InvoiceMode = z.infer<typeof InvoiceModeSchema>;
@@ -76,6 +78,14 @@ export interface BillingContext {
 	// Stripe context
 	stripeCustomer?: Stripe.Customer;
 	stripeSubscription?: Stripe.Subscription;
+	/** The subscription linked to the target customer product exists but is
+	 * canceled, so `stripeSubscription` is absent. Each action decides what that
+	 * means: updateSubscription blocks billing changes, attach buys fresh. */
+	canceledStripeSubscriptionId?: string;
+	/** The linked Stripe subscription belongs to a different Stripe customer, so
+	 * this context must not write to Stripe. Only set for flows allowed to
+	 * proceed past that fault (immediate cancel). */
+	mismatchedStripeSubscriptionId?: string;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 	stripeDiscounts?: StripeDiscountWithCoupon[];
 	stripeTaxRate?: Stripe.TaxRate;

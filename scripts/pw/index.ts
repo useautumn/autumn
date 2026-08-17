@@ -1,17 +1,17 @@
 import { existsSync, renameSync } from "node:fs";
-import { dirname, join } from "node:path";
 import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { fatal, log } from "../dw/helpers/shell.ts";
+import { ENV_LOCAL_TARGETS } from "../dw/constants.ts";
 import { getCurrentWorktree } from "../dw/helpers/git.ts";
-import { loadRegistry } from "../dw/helpers/registry.ts";
 import {
-	killOwnPorts,
 	aliasesFor,
 	elasticMqPortFor,
+	killOwnPorts,
 } from "../dw/helpers/ports.ts";
+import { loadRegistry } from "../dw/helpers/registry.ts";
+import { fatal, log } from "../dw/helpers/shell.ts";
 import { killTmuxSession, tmuxSessionName } from "../dw/helpers/tmux.ts";
-import { ENV_LOCAL_TARGETS } from "../dw/constants.ts";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(SCRIPT_DIR, "../..");
@@ -49,7 +49,8 @@ async function cmdRun(): Promise<void> {
 
 	if (worktreeNum > 1) {
 		const aliases = aliasesFor(worktreeNum);
-		env.BETTER_AUTH_URL = aliases.apiUrl;
+		env.AUTUMN_API_URL = aliases.apiUrl;
+		env.AUTUMN_PUBLIC_API_URL = aliases.apiUrl;
 		env.CLIENT_URL = aliases.viteUrl;
 		env.VITE_BACKEND_URL = aliases.apiUrl;
 		env.VITE_FRONTEND_URL = aliases.viteUrl;
@@ -113,7 +114,7 @@ function cmdIdentify(): void {
 	console.log(`  Vite port:     ${vitePort}`);
 	console.log();
 	console.log(`PW_WORKTREE_NUM=${worktreeNum}`);
-	console.log(`PW_SERVER_URL=${serverUrl}`);
+	console.log(`PW_API_URL=${serverUrl}`);
 	console.log(`PW_VITE_URL=${viteUrl}`);
 	console.log(`PW_SERVER_PORT=${serverPort}`);
 	console.log(`PW_VITE_PORT=${vitePort}`);

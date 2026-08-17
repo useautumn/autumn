@@ -4,7 +4,7 @@
   "author": "Speakeasy",
   "main": "./dist/commonjs/index.js",
   "module": "./dist/esm/index.js",
-  "types": "./dist/commonjs/index.d.ts",
+  "types": "./dist/esm/index.d.ts",
   "type": "module",
   "tshy": {
     "sourceDialects": [
@@ -26,7 +26,9 @@
     "prepublishOnly": "npm run build",
     "test": "bun test"
   },
-  "peerDependencies": {},
+  "peerDependencies": {
+    
+  },
   "devDependencies": {
     "@eslint/js": "^9.26.0",
     "eslint": "^10.7.0",
@@ -37,63 +39,5 @@
   },
   "dependencies": {
     "zod": "^3.25.65 || ^4.0.0"
-  },
-  "exports": {
-    ".": {
-      "import": {
-        "@useautumn/sdk/source": "./src/index.ts",
-        "types": "./dist/esm/index.d.ts",
-        "default": "./dist/esm/index.js"
-      },
-      "require": {
-        "types": "./dist/commonjs/index.d.ts",
-        "default": "./dist/commonjs/index.js"
-      }
-    },
-    "./package.json": "./package.json",
-    "./types": {
-      "import": {
-        "@useautumn/sdk/source": "./src/types/index.ts",
-        "types": "./dist/esm/types/index.d.ts",
-        "default": "./dist/esm/types/index.js"
-      },
-      "require": {
-        "types": "./dist/commonjs/types/index.d.ts",
-        "default": "./dist/commonjs/types/index.js"
-      }
-    },
-    "./models": {
-      "import": {
-        "@useautumn/sdk/source": "./src/models/index.ts",
-        "types": "./dist/esm/models/index.d.ts",
-        "default": "./dist/esm/models/index.js"
-      },
-      "require": {
-        "types": "./dist/commonjs/models/index.d.ts",
-        "default": "./dist/commonjs/models/index.js"
-      }
-    },
-    "./*.js": {
-      "import": {
-        "@useautumn/sdk/source": "./src/*.ts",
-        "types": "./dist/esm/*.d.ts",
-        "default": "./dist/esm/*.js"
-      },
-      "require": {
-        "types": "./dist/commonjs/*.d.ts",
-        "default": "./dist/commonjs/*.js"
-      }
-    },
-    "./*": {
-      "import": {
-        "@useautumn/sdk/source": "./src/*.ts",
-        "types": "./dist/esm/*.d.ts",
-        "default": "./dist/esm/*.js"
-      },
-      "require": {
-        "types": "./dist/commonjs/*.d.ts",
-        "default": "./dist/commonjs/*.js"
-      }
-    }
   }
 }

@@ -30,6 +30,16 @@ export function ngrokApiPortFor(worktreeNum: number): number {
 	return 4040 + (worktreeNum - 1) * 100;
 }
 
+export function vitePortFor(worktreeNum: number): number {
+	return 3000 + (worktreeNum - 1) * 100;
+}
+
+// Base 4140 keeps the dashboard tunnel's web API clear of the api tunnel's
+// 4040 + k*100 series.
+export function ngrokViteApiPortFor(worktreeNum: number): number {
+	return 4140 + (worktreeNum - 1) * 100;
+}
+
 export function composeProjectName(worktreeNum: number): string {
 	return `autumn-wt-${worktreeNum}`;
 }

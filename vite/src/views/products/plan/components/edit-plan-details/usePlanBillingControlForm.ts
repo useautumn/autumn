@@ -40,6 +40,7 @@ export type PlanBillingControlFormValues = {
 	overage_billing: OverageBillingOption;
 	usage_limit: number | null;
 	usage_interval: ResetInterval;
+	usage_anchor_utc: boolean;
 	alert_name: string;
 	alert_threshold: number | null;
 	threshold_type: DbUsageAlert["threshold_type"];
@@ -176,6 +177,7 @@ export function buildControlItem(
 			enabled: values.enabled,
 			limit: values.usage_limit ?? 0,
 			interval: values.usage_interval,
+			anchor: values.usage_anchor_utc ? "utc" : "billing_cycle",
 		} satisfies DbUsageLimit;
 	}
 
@@ -240,6 +242,7 @@ function toDefaultValues(
 		),
 		usage_limit: usageLimit?.limit ?? null,
 		usage_interval: usageLimit?.interval ?? ResetInterval.Month,
+		usage_anchor_utc: usageLimit?.anchor === "utc",
 		alert_name: usageAlert?.name ?? "",
 		alert_threshold: usageAlert?.threshold ?? null,
 		threshold_type: usageAlert?.threshold_type ?? "usage",

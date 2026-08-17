@@ -1,29 +1,29 @@
-import { fatal, log, shInherit } from "../helpers/shell.ts";
+import { NEON_PROJECT_ID, PROJECT_ROOT } from "../constants.ts";
+import { isProvisioned } from "../helpers/entry.ts";
 import {
 	getCanonicalWorktree,
-	getCurrentWorktree,
 	getCurrentBranch,
+	getCurrentWorktree,
 	getDefaultBranch,
 } from "../helpers/git.ts";
-import {
-	loadRegistry,
-	saveRegistry,
-	reconcile,
-	allocateWorktreeNumber,
-	deriveBranchName,
-	deriveCanonicalBranchName,
-	refreshCanonicalEntry,
-	wantsCanonicalProvision,
-} from "../helpers/registry.ts";
-import { isProvisioned } from "../helpers/entry.ts";
-import { provisionWorktree } from "../helpers/provision.ts";
+import { isHeadless } from "../helpers/headless.ts";
 import { withNeonContext } from "../helpers/neonContext.ts";
 import {
 	parseRegionArg,
 	resolveNeonRegionForSetup,
 } from "../helpers/neonRegion.ts";
-import { NEON_PROJECT_ID } from "../constants.ts";
-import { PROJECT_ROOT } from "../constants.ts";
+import { provisionWorktree } from "../helpers/provision.ts";
+import {
+	allocateWorktreeNumber,
+	deriveBranchName,
+	deriveCanonicalBranchName,
+	loadRegistry,
+	reconcile,
+	refreshCanonicalEntry,
+	saveRegistry,
+	wantsCanonicalProvision,
+} from "../helpers/registry.ts";
+import { fatal, log, shInherit } from "../helpers/shell.ts";
 import type { RegistryEntry } from "../types.ts";
 
 function ensureAiSubmoduleSynced(): void {
@@ -56,6 +56,9 @@ function ensureAiSubmoduleSynced(): void {
 	}
 
 	log("syncing ai skills");
+	// Full sync everywhere: syncMcps now drops the cloud-root servers instead of
+	// aborting, so headless boxes get .mcp.json too. `sync devin` skipped it and
+	// left cloud workspaces with skills but no MCP servers.
 	const syncCode = shInherit("bun", ["sync"], { cwd: aiDir });
 	if (syncCode !== 0) {
 		fatal(`bun sync failed in ai submodule (exit ${syncCode})`);

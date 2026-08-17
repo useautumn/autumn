@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { AttachPreviewResponse } from "@autumn/shared";
-import {
-	buildAttachPreviewTotals,
-	getAttachPreviewLineItems,
-} from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import { getAttachPreviewLineItems } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import { buildPreviewTotals } from "@/components/forms/shared/utils/buildPreviewTotals";
 
 const NOW = new Date("2026-04-30T10:00:00Z").getTime();
 const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -27,10 +25,10 @@ const basePreview = (
 		...overrides,
 	}) as AttachPreviewResponse;
 
-describe("buildAttachPreviewTotals", () => {
+describe("buildPreviewTotals — attach", () => {
 	test("returns empty when previewData is null", () => {
 		expect(
-			buildAttachPreviewTotals({
+			buildPreviewTotals({
 				previewData: null,
 				startDate: null,
 				now: NOW,
@@ -39,7 +37,7 @@ describe("buildAttachPreviewTotals", () => {
 	});
 
 	test("no startDate → 'Total Due Now' only", () => {
-		const result = buildAttachPreviewTotals({
+		const result = buildPreviewTotals({
 			previewData: basePreview(),
 			startDate: null,
 			now: NOW,
@@ -52,7 +50,7 @@ describe("buildAttachPreviewTotals", () => {
 
 	test("no startDate, with next_cycle → adds Next Cycle row with badge", () => {
 		const nextStart = NOW + ONE_DAY;
-		const result = buildAttachPreviewTotals({
+		const result = buildPreviewTotals({
 			previewData: basePreview({
 				next_cycle: {
 					total: 30,
@@ -76,7 +74,7 @@ describe("buildAttachPreviewTotals", () => {
 	});
 
 	test("startDate within 1-min tolerance → treated as immediate", () => {
-		const result = buildAttachPreviewTotals({
+		const result = buildPreviewTotals({
 			previewData: basePreview(),
 			startDate: NOW + 30_000,
 			now: NOW,
@@ -88,7 +86,7 @@ describe("buildAttachPreviewTotals", () => {
 
 	test("future startDate → single 'Total Due [date]' row, uses next_cycle.total", () => {
 		const startDate = NOW + 14 * ONE_DAY;
-		const result = buildAttachPreviewTotals({
+		const result = buildPreviewTotals({
 			previewData: basePreview({
 				total: 0,
 				next_cycle: {
@@ -110,7 +108,7 @@ describe("buildAttachPreviewTotals", () => {
 
 	test("future startDate without next_cycle → falls back to previewData.total", () => {
 		const startDate = NOW + 14 * ONE_DAY;
-		const result = buildAttachPreviewTotals({
+		const result = buildPreviewTotals({
 			previewData: basePreview({ total: 25, next_cycle: null }),
 			startDate,
 			now: NOW,
@@ -123,7 +121,7 @@ describe("buildAttachPreviewTotals", () => {
 	test("clamps negative totals to 0", () => {
 		const startDate = NOW + 14 * ONE_DAY;
 		expect(
-			buildAttachPreviewTotals({
+			buildPreviewTotals({
 				previewData: basePreview({
 					total: 0,
 					next_cycle: {
@@ -137,7 +135,7 @@ describe("buildAttachPreviewTotals", () => {
 		).toBe(0);
 
 		expect(
-			buildAttachPreviewTotals({
+			buildPreviewTotals({
 				previewData: basePreview({ total: -5 }),
 				startDate: null,
 				now: NOW,

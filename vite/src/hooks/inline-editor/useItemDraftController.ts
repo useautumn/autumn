@@ -40,7 +40,13 @@ export interface ItemDraftController {
 	patchProduct: ({ product }: { product: FrontendProduct }) => void;
 	patchItem: ({ itemId, item }: { itemId: string; item: ProductItem }) => void;
 	startItem: ({ itemId, item }: { itemId: string; item: ProductItem }) => void;
-	updateItem: ({ item }: { item: ProductItem }) => void;
+	updateItem: ({
+		item,
+		itemId,
+	}: {
+		item: ProductItem;
+		itemId?: string;
+	}) => void;
 	discardItem: () => void;
 	commitItem: () => void;
 	clearItemSession: () => void;
@@ -213,7 +219,9 @@ export const useItemDraftController = ({
 	);
 
 	const updateItemDraft = useCallback(
-		({ item }: { item: ProductItem }) => {
+		// `itemId` renames the session when an edit changes the item's derived id,
+		// keeping it addressable by callers that still resolve items by id.
+		({ item, itemId }: { item: ProductItem; itemId?: string }) => {
 			setDraftItemSession((prev) => {
 				if (!prev) return prev;
 				patchPlanItem({
@@ -223,6 +231,7 @@ export const useItemDraftController = ({
 				});
 				return {
 					...prev,
+					itemId: itemId ?? prev.itemId,
 					draftItem: item,
 				};
 			});

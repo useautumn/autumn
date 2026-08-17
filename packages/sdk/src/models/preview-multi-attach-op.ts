@@ -575,6 +575,20 @@ export type PreviewMultiAttachEntityDataInterval = ClosedEnum<
   typeof PreviewMultiAttachEntityDataInterval
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const PreviewMultiAttachAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type PreviewMultiAttachAnchor = ClosedEnum<
+  typeof PreviewMultiAttachAnchor
+>;
+
 export type PreviewMultiAttachProperties = string | number | boolean;
 
 /**
@@ -601,6 +615,10 @@ export type PreviewMultiAttachUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: PreviewMultiAttachEntityDataInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: PreviewMultiAttachAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -789,11 +807,11 @@ export type PreviewMultiAttachLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts and tax for this line item.
+   * The amount before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for this line item.
+   * The final amount after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -849,11 +867,11 @@ export type PreviewMultiAttachNextCycleLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts and tax for this line item.
+   * The amount before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for this line item.
+   * The final amount after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -920,11 +938,11 @@ export type PreviewMultiAttachNextCycle = {
    */
   startsAt: number;
   /**
-   * The total amount in cents before discounts and tax for the next cycle.
+   * The total amount before discounts and tax for the next cycle.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for the next cycle.
+   * The final amount after discounts and tax for the next cycle.
    */
   total: number;
   /**
@@ -1079,15 +1097,15 @@ export type PreviewMultiAttachResponse = {
   customerId: string;
   lineItems: Array<PreviewMultiAttachLineItem>;
   /**
-   * The total amount in cents before discounts and tax for the current billing period.
+   * The total amount before discounts and tax for the current billing period.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for the current billing period.
+   * The final amount after discounts and tax for the current billing period.
    */
   total: number;
   /**
-   * The three-letter ISO currency code (e.g., 'usd').
+   * The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).
    */
   currency: string;
   /**
@@ -1851,6 +1869,11 @@ export const PreviewMultiAttachEntityDataInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewMultiAttachEntityDataInterval);
 
 /** @internal */
+export const PreviewMultiAttachAnchor$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiAttachAnchor
+> = z.enum(PreviewMultiAttachAnchor);
+
+/** @internal */
 export type PreviewMultiAttachProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -1899,6 +1922,7 @@ export type PreviewMultiAttachUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: PreviewMultiAttachFilter$Outbound | undefined;
 };
 
@@ -1912,6 +1936,7 @@ export const PreviewMultiAttachUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: PreviewMultiAttachEntityDataInterval$outboundSchema,
+    anchor: z.optional(PreviewMultiAttachAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => PreviewMultiAttachFilter$outboundSchema)),
   }),
   z.transform((v) => {

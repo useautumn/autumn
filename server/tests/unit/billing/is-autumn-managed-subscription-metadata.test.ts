@@ -32,8 +32,8 @@ import { describe, expect, test } from "bun:test";
 import { ms } from "@autumn/shared";
 import {
 	AUTUMN_STRIPE_METADATA_KEYS,
-	RECENT_AUTUMN_ACTION_WINDOW_MS,
 	isAutumnManagedSubscriptionMetadata,
+	RECENT_AUTUMN_ACTION_WINDOW_MS,
 } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 
 describe("isAutumnManagedSubscriptionMetadata", () => {

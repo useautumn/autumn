@@ -22,6 +22,15 @@ const findPlanChange = (
 			(change.subscription?.plan_id ?? change.purchase?.plan_id) === planId,
 	);
 
+/** Top-level item_changes is deprecated; content lives on plan_change. The
+ * fallback covers lanes that still populate the top-level field. */
+export const getWebhookItemChanges = (
+	change: CustomerPlanChange | undefined,
+): CustomerPlanChange["item_changes"] => {
+	const nested = change?.plan_change?.item_changes;
+	return nested?.length ? nested : (change?.item_changes ?? []);
+};
+
 /**
  * Polls Svix Play for a billing.updated delivery for `customerId`. Returns
  * the payload data, or null when none arrives in time (absence assertions).
@@ -124,8 +133,9 @@ export const expectBillingUpdatedCorrect = ({
 		}
 
 		if (expectation.itemChanges) {
-			expect(change?.item_changes).toHaveLength(expectation.itemChanges.length);
-			expect(change?.item_changes).toEqual(
+			const itemChanges = getWebhookItemChanges(change);
+			expect(itemChanges).toHaveLength(expectation.itemChanges.length);
+			expect(itemChanges).toEqual(
 				expect.arrayContaining(
 					expectation.itemChanges.map((itemChange) =>
 						expect.objectContaining({

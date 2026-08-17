@@ -117,7 +117,13 @@ Rollover balances appear in the `breakdown` array when you retrieve a customer's
 
 ## Deduction order
 
-Rollover balances are treated as `one_off` (lifetime) balances. Because Autumn's [deduction order](/documentation/concepts/balances#deduction-order) uses shorter intervals first, monthly balances are consumed before rollover balances — ensuring that new allocation is used before carried-over amounts.
+Rollovers are deducted **before** a customer's main balances for the same feature. Within the rollover pool, balances are consumed in `expires_at` order: soonest-expiring first, with rollovers that never expire going last. Only once all rollover balances are drained does Autumn fall through to the regular [deduction order](/documentation/concepts/balances#deduction-order) over the main entitlements.
+
+This means carried-over balance is used up before fresh monthly allocation, so rollovers you're about to lose to expiry get spent first.
+
+> **Example** <br />
+> A customer has a 1,000 credits/month balance that just reset, plus a 400 credits rollover from last month. They use 300 credits. <br />
+> Autumn deducts all 300 from the rollover, leaving 100 credits in rollover and the full 1,000 credits monthly untouched.
 
 <Note>
 Rollovers are only available on `consumable` features with a reset interval. Non-consumable features (like seats) don't reset and therefore don't support rollovers.

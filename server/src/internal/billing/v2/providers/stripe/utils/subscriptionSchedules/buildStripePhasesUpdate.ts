@@ -275,10 +275,7 @@ export const buildStripePhasesUpdate = ({
 					normalizedCustomerProducts.some(
 						(product) => product.starts_at >= endMs,
 					)));
-		if (
-			phaseItems.length === 0 &&
-			needsFreePhasePlaceholder
-		) {
+		if (phaseItems.length === 0 && needsFreePhasePlaceholder) {
 			const placeholderItem = buildFreeRecurringPlaceholderItem({
 				ctx,
 				customerProducts: normalizedCustomerProducts,
@@ -325,7 +322,13 @@ export const buildStripePhasesUpdate = ({
 			billing_cycle_anchor: isBillingCycleAnchorResetPhase
 				? "phase_start"
 				: undefined,
-			proration_behavior: shouldAlwaysInvoice ? "always_invoice" : undefined,
+			// A reset starts a fresh full cycle: charge the full amount and don't
+			// credit the old plan's leftover time.
+			proration_behavior: isBillingCycleAnchorResetPhase
+				? "none"
+				: shouldAlwaysInvoice
+					? "always_invoice"
+					: undefined,
 			discounts: stripeDiscountsToPhaseDiscounts({
 				stripeDiscounts: billingContext.stripeDiscounts,
 				phaseStartDateSeconds,

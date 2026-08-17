@@ -1,3 +1,4 @@
+import { getAutumnEnv } from "@autumn/env";
 import { AppEnv, ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -44,20 +45,11 @@ export const handleGetOAuthUrl = createRoute({
 			`https://connect.stripe.com/oauth/v2/authorize?response_type=code&client_id=${clientId}&scope=read_write`,
 		);
 
-		let serverUrl = process.env.BETTER_AUTH_URL;
-		if (env === AppEnv.Live && serverUrl?.includes("localhost")) {
-			serverUrl = `https://express.dev.useautumn.com`;
-		}
-
-		if (process.env.NGROK_URL) {
-			serverUrl = process.env.NGROK_URL;
-		}
-
 		// Add state + redirect_uri
 		baseUrl.searchParams.set("state", stateKey);
 		baseUrl.searchParams.set(
 			"redirect_uri",
-			`${serverUrl}/stripe/oauth_callback`,
+			`${getAutumnEnv().AUTUMN_PUBLIC_API_URL}/stripe/oauth_callback`,
 		);
 
 		return c.json({

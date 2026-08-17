@@ -1,18 +1,111 @@
 import { expect, test } from "bun:test";
-import type {
-	ApiCustomerV3,
-	AttachParamsV0Input,
-	AttachParamsV1Input,
-} from "@autumn/shared";
+import type { ApiCustomerV3, AttachParamsV0Input } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { billingActions } from "@/internal/billing/v2/actions";
 import { CusService } from "@/internal/customers/CusService";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+
+const withoutStripe = (ctx: TestContext): TestContext => ({
+	...ctx,
+	org: {
+		...ctx.org,
+		stripe_connected: false,
+		stripe_config: null,
+		test_stripe_connect: {},
+	},
+});
+
+/**
+ * Regression: a free plan attach with no_billing_changes should not require
+ * the organization to have a Stripe account connected.
+ */
+test.concurrent(
+	`${chalk.yellowBright("no_billing_changes: attaches a free plan without a Stripe connection")}`,
+	async () => {
+		const customerId = "no-billing-changes-free-plan-unlinked-org";
+		const pro = products.base({
+			id: "pro-free-unlinked-org",
+			items: [items.monthlyCredits({ includedUsage: 100 })],
+		});
+
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [],
+		});
+
+		await billingActions.attach({
+			ctx: withoutStripe(ctx),
+			params: {
+				customer_id: customerId,
+				plan_id: pro.id,
+				no_billing_changes: true,
+				redirect_mode: "never",
+				enable_plan_immediately: true,
+			},
+		});
+		await deleteCachedFullCustomer({ ctx, customerId });
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({ customer, active: [pro.id] });
+		expectCustomerFeatureCorrect({
+			customer,
+			featureId: TestFeature.Credits,
+			balance: 100,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("no_billing_changes: transitions priced plans without a Stripe connection")}`,
+	async () => {
+		const customerId = "no-billing-changes-priced-transition";
+		const pro = products.pro({ id: "pro-unlinked-priced", items: [] });
+		const premium = products.premium({
+			id: "premium-unlinked-priced",
+			items: [],
+		});
+
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [],
+		});
+		const noStripeCtx = withoutStripe(ctx);
+
+		for (const plan of [pro, premium]) {
+			await billingActions.attach({
+				ctx: noStripeCtx,
+				params: {
+					customer_id: customerId,
+					plan_id: plan.id,
+					no_billing_changes: true,
+					redirect_mode: "never",
+				},
+			});
+			await deleteCachedFullCustomer({ ctx, customerId });
+		}
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer,
+			active: [premium.id],
+			notPresent: [pro.id],
+		});
+	},
+);
 
 test.concurrent(`${chalk.yellowBright("no_billing_changes: attach with no_billing_changes does not create stripe customer")}`, async () => {
 	const customerId = "no-billing-changes-no-stripe";
@@ -79,15 +172,10 @@ test.concurrent(`${chalk.yellowBright("no_billing_changes: attach with no_billin
 });
 
 /**
- * Regression: attaching with no_billing_changes:true on a customer whose
- * current paid product is linked to a Stripe subscription used to fail with
- * "paid but no stripe subscription is linked to it", because skipBillingFetching
- * short-circuited setupStripeBillingContext and the guard read the (undefined)
- * runtime-fetched stripeSubscription. Fix decouples no_billing_changes from
- * skipBillingFetching: writes are still suppressed, but the sub is read so its
- * id carries over to the new cusProduct.
+ * Regression: a no-write transition after disconnecting Stripe must retain the
+ * existing subscription and schedule linkage stored in Autumn.
  */
-test.concurrent(`${chalk.yellowBright("no_billing_changes: carries subscription_ids forward when current paid product is linked")}`, async () => {
+test.concurrent(`${chalk.yellowBright("no_billing_changes: carries billing linkage forward after Stripe disconnect")}`, async () => {
 	const customerId = "no-billing-changes-paid-current";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
@@ -100,7 +188,7 @@ test.concurrent(`${chalk.yellowBright("no_billing_changes: carries subscription_
 		items: [items.monthlyMessages({ includedUsage: 500 })],
 	});
 
-	const { autumnV1, autumnV2_2, ctx } = await initScenario({
+	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
@@ -118,12 +206,24 @@ test.concurrent(`${chalk.yellowBright("no_billing_changes: carries subscription_
 	);
 	const expectedSubscriptionIds = beforeProCusProduct?.subscription_ids ?? [];
 	expect(expectedSubscriptionIds.length).toBeGreaterThan(0);
-
-	await autumnV2_2.billing.attach<AttachParamsV1Input>({
-		customer_id: customerId,
-		plan_id: premium.id,
-		no_billing_changes: true,
+	const expectedScheduleIds = ["sub_sched_disconnected"];
+	await CusProductService.update({
+		ctx,
+		cusProductId: beforeProCusProduct!.id,
+		updates: { scheduled_ids: expectedScheduleIds },
 	});
+	await deleteCachedFullCustomer({ ctx, customerId });
+
+	await billingActions.attach({
+		ctx: withoutStripe(ctx),
+		params: {
+			customer_id: customerId,
+			plan_id: premium.id,
+			no_billing_changes: true,
+			redirect_mode: "never",
+		},
+	});
+	await deleteCachedFullCustomer({ ctx, customerId });
 
 	const afterCustomer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectCustomerProducts({
@@ -143,4 +243,5 @@ test.concurrent(`${chalk.yellowBright("no_billing_changes: carries subscription_
 	expect(afterPremiumCusProduct?.subscription_ids).toEqual(
 		expectedSubscriptionIds,
 	);
+	expect(afterPremiumCusProduct?.scheduled_ids).toEqual(expectedScheduleIds);
 });

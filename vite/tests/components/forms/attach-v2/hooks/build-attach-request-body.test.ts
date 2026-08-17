@@ -50,6 +50,7 @@ const baseParams: Omit<
 	carryOverUsages: false,
 	carryOverUsageFeatureIds: [],
 	customLineItems: [],
+	removePlanIds: [],
 	disableProration: false,
 	enablePlanImmediately: false,
 	currency: null,
@@ -381,5 +382,30 @@ describe("buildAttachRequestBody — long-lived checkout", () => {
 		});
 
 		expect(result?.long_lived_checkout).toBeUndefined();
+	});
+});
+
+describe("buildAttachRequestBody — removed plans", () => {
+	const product = makeProduct({ items: [] });
+
+	test("sends selected plan IDs", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			removePlanIds: ["prod_legacy"],
+		});
+
+		expect(result?.remove_plan_ids).toEqual(["prod_legacy"]);
+	});
+
+	test("omits removed plans when none are selected", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+		});
+
+		expect(result?.remove_plan_ids).toBeUndefined();
 	});
 });

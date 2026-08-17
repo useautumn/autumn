@@ -4,6 +4,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	ms,
+	type StripeDiscountWithCoupon,
 	secondsToMs,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -139,3 +140,38 @@ export const buildBillingContextForInAdvanceInvoice = ({
 		billingVersion: BillingVersion.V2,
 	};
 };
+
+/**
+ * Builds a BillingContext for previewing a subscription's upcoming invoice.
+ *
+ * Unlike its two siblings this anchors at `nowMs` rather than a period boundary:
+ * the caller has no invoice to key off, so `getNextCycleEvent` locates the next
+ * boundary itself and may land on a scheduled change rather than a plain renewal.
+ */
+export const buildBillingContextForInvoicePreview = ({
+	fullCustomer,
+	stripeSubscription,
+	stripeCustomer,
+	stripeDiscounts,
+	nowMs,
+}: {
+	fullCustomer: FullCustomer;
+	stripeSubscription: ExpandedStripeSubscription;
+	stripeCustomer?: Stripe.Customer;
+	stripeDiscounts?: StripeDiscountWithCoupon[];
+	nowMs: number;
+}): BillingContext => ({
+	fullCustomer,
+	fullProducts: [],
+	featureQuantities: [],
+
+	currentEpochMs: nowMs,
+	billingCycleAnchorMs: secondsToMs(stripeSubscription.billing_cycle_anchor),
+	resetCycleAnchorMs: secondsToMs(stripeSubscription.billing_cycle_anchor),
+
+	stripeCustomer: stripeCustomer ?? stripeSubscription.customer,
+	stripeSubscription,
+	stripeDiscounts,
+
+	billingVersion: BillingVersion.V2,
+});

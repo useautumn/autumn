@@ -1,3 +1,4 @@
+import { getAutumnEnv } from "@autumn/env";
 import {
 	type ApiInvoiceV1,
 	type Customer,
@@ -47,7 +48,7 @@ export const processInvoice = ({
 		currency: invoice.currency,
 		created_at: invoice.created_at,
 		hosted_invoice_url: isStripe
-			? `${process.env.BETTER_AUTH_URL}/invoices/hosted_invoice_url/${invoice.id}`
+			? `${getAutumnEnv().AUTUMN_API_URL}/invoices/hosted_invoice_url/${invoice.id}`
 			: null,
 		// hosted_invoice_url: invoice.hosted_invoice_url,
 		// items: withItems

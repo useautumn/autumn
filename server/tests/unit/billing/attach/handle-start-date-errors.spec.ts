@@ -4,10 +4,16 @@ import {
 	type AttachParamsV1,
 	addInterval,
 	BillingInterval,
+	type MultiAttachBillingContext,
+	type MultiAttachParamsV0,
 } from "@autumn/shared";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { products } from "@tests/utils/fixtures/db/products";
 import { handleStartDateErrors } from "@/internal/billing/v2/actions/attach/errors/handleStartDateErrors";
+import {
+	handleMultiAttachBackdateCheckoutError,
+	handleMultiAttachStartDateErrors,
+} from "@/internal/billing/v2/actions/multiAttach/errors/handleMultiAttachStartDateErrors";
 import { STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT } from "@/internal/billing/v2/utils/backdate/countBackdatedPeriods";
 
 const startsAt = Date.UTC(2026, 0, 1);
@@ -109,4 +115,23 @@ describe("handleStartDateErrors", () => {
 			}),
 		).not.toThrow();
 	});
+});
+
+test("multi-attach surfaces non-recoverable backdate errors before checkout", () => {
+	const billingContext = {
+		currentEpochMs: dateAfterMonthlyCycles(
+			STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT + 1,
+		),
+		fullProducts: [
+			products.createFull({ prices: [prices.createFixed({ id: "price" })] }),
+		],
+		checkoutMode: "stripe_checkout",
+		trialContext: null,
+	} as unknown as MultiAttachBillingContext;
+	const params = { starts_at: startsAt } as MultiAttachParamsV0;
+
+	expect(() => {
+		handleMultiAttachStartDateErrors({ billingContext, params });
+		handleMultiAttachBackdateCheckoutError({ billingContext, params });
+	}).toThrow("at most 250 line items");
 });

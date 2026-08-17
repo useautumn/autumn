@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { buildBillingChangeResponse } from "@/internal/billing/v2/utils/billingChangeResponse";
+import { buildBillingChangeResponse } from "@/internal/billing/v2/actions/buildBillingChanges";
 import {
 	expectBillingChangeResponse,
 	findPlanChange,
@@ -54,7 +54,10 @@ describe("buildBillingChangeResponse — createSchedule", () => {
 				}),
 			}),
 		});
-		logChangeResponse("createSchedule / multi-phase replacing current", response);
+		logChangeResponse(
+			"createSchedule / multi-phase replacing current",
+			response,
+		);
 
 		expectBillingChangeResponse(response, {
 			expired: ["free"],
@@ -62,12 +65,12 @@ describe("buildBillingChangeResponse — createSchedule", () => {
 			scheduled: ["premium", "enterprise"],
 		});
 		expect(
-			findPlanChange(response, { action: "activated", planId: "pro" })?.subscription
-				?.status,
+			findPlanChange(response, { action: "activated", planId: "pro" })
+				?.subscription?.status,
 		).toBe("active");
 		expect(
-			findPlanChange(response, { action: "scheduled", planId: "premium" })?.subscription
-				?.status,
+			findPlanChange(response, { action: "scheduled", planId: "premium" })
+				?.subscription?.status,
 		).toBe("scheduled");
 		expect(
 			findPlanChange(response, { action: "scheduled", planId: "enterprise" })

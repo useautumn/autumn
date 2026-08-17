@@ -4,11 +4,13 @@ import {
 	type CustomerListFilters,
 	customerProducts,
 	customers,
+	type SortOrder,
 } from "@autumn/shared";
 
-import { and, desc, type SQL, sql } from "drizzle-orm";
+import { and, asc, desc, type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { getCursorPredicateSql } from "./cursorPaginatedFullCusQuery.js";
 import {
 	type DashboardIntervalFilter,
 	type DashboardProductVersionFilter,
@@ -89,6 +91,7 @@ export class CusSearchService {
 		filters,
 		cursor,
 		limit,
+		sortOrder = "desc",
 	}: {
 		db: DrizzleCli;
 		orgId: string;
@@ -97,12 +100,14 @@ export class CusSearchService {
 		filters?: SearchFilters;
 		cursor?: { t: number; id: string } | null;
 		limit: number;
+		sortOrder?: SortOrder;
 	}): Promise<{
 		internalIds: string[];
 		peek: { t: number; id: string } | null;
 	}> {
 		const predicates = buildSearchPredicates({ orgId, env, search, filters });
 		const fetchLimit = limit + 1;
+		const orderColumn = sortOrder === "asc" ? asc : desc;
 
 		const matched = db
 			.select({
@@ -114,13 +119,17 @@ export class CusSearchService {
 			.where(
 				and(
 					predicates.whereRaw,
-					// Drizzle has no native row-tuple comparison for keyset pagination.
 					cursor
-						? sql`(${customers.created_at}, ${customers.id}) < (${cursor.t}, ${cursor.id})`
+						? getCursorPredicateSql({
+								createdAtColumn: customers.created_at,
+								idColumn: customers.id,
+								cursor,
+								sortOrder,
+							})
 						: undefined,
 				),
 			)
-			.orderBy(desc(customers.created_at), desc(customers.id))
+			.orderBy(orderColumn(customers.created_at), orderColumn(customers.id))
 			.limit(fetchLimit);
 
 		const rows = await db.execute<{
@@ -181,6 +190,12 @@ export const buildSearchPredicates = ({
 							.filter((c): c is NonNullable<typeof c> => c !== null),
 						sql` OR `,
 					)})`
+				: null,
+			filters?.created_at_range?.start !== undefined
+				? sql`${customers.created_at} >= ${filters.created_at_range.start}`
+				: null,
+			filters?.created_at_range?.end !== undefined
+				? sql`${customers.created_at} <= ${filters.created_at_range.end}`
 				: null,
 		].filter((c): c is NonNullable<typeof c> => c !== null),
 		sql` AND `,

@@ -4,11 +4,12 @@ import {
 	getCycleEnd,
 } from "@autumn/shared";
 import { normalizeCustomerProductTimestamps } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/normalizeCustomerProductTimestamps";
+import { billingContextToFutureTrialEnd } from "@/internal/billing/v2/utils/billingContext/billingContextToFutureTrialEnd";
 import { classifyNextCycleEvent } from "./classifyNextCycleEvent";
 import { getSmallestIntervalForNextCycle } from "./smallestInterval";
 import { normalizeMs } from "./timeUtils";
-import type { NextCycleEvent } from "./types";
 import { buildNextCycleTransitionPoints } from "./transitionCandidates";
+import type { NextCycleEvent } from "./types";
 
 export { getActiveCustomerProductsAt } from "./activeCustomerProducts";
 export type { NextCycleEvent, SmallestInterval } from "./types";
@@ -37,12 +38,15 @@ export const getNextCycleEvent = ({
 		return { kind: "none" };
 	}
 
+	// Floor on the trial end only. Flooring on the anchor breaks live
+	// subscriptions whose anchor sits in the future (a monthly metered item on an
+	// annual plan), pushing the boundary out to the annual renewal.
 	const renewalBoundaryMs = getCycleEnd({
 		anchor: anchorMs,
 		interval: smallestInterval.interval,
 		intervalCount: smallestInterval.intervalCount,
 		now: currentEpochMs,
-		floor: anchorMs,
+		floor: billingContextToFutureTrialEnd({ billingContext }),
 	});
 	const transitionTimestamps = buildNextCycleTransitionPoints({
 		billingContext,

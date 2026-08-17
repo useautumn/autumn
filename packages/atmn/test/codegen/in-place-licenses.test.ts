@@ -28,13 +28,21 @@ test.concurrent(
 				configPath,
 				`import { plan } from 'atmn';\n\n// keep me\n${declaration("pro")}\n\n${declaration("seats")}\n`,
 			);
-			expect((await writeConfig([], plans, cwd)).inPlace).toBe(true);
+			expect((await writeConfig({ features: [], plans, cwd })).inPlace).toBe(
+				true,
+			);
 			const config = readFileSync(configPath, "utf8");
 			expect(config).toContain("// keep me");
 			expect(config).toContain("licensePlanId: 'seats'");
 			expect(config.indexOf("export const pro")).toBeLessThan(
 				config.indexOf("export const seats"),
 			);
+			await writeConfig({ features: [], plans, cwd });
+			expect(
+				[
+					...readFileSync(configPath, "utf8").matchAll(/export const (\w+)/g),
+				].map(([, varName]) => varName),
+			).toEqual(["pro", "seats"]);
 		} finally {
 			rmSync(cwd, { recursive: true, force: true });
 		}

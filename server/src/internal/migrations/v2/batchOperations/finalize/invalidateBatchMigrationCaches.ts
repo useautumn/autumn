@@ -4,10 +4,15 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
 import type { BatchMigrationPageResult } from "../execute/types/batchMigrationExecutionTypes.js";
 
+/** Migration writes are already committed when this runs, so a dropped
+ *  invalidation is unrecoverable staleness rather than a retryable request. */
+const MIGRATION_INVALIDATE_MAX_ATTEMPTS = 5;
+
 /**
  * Busts caches for the page's mutated customers — skipped customers received
  * no writes. Covers fullCustomer plus the FullSubject keys (subject manifest,
- * shared balances, view epoch); redis failures fail open inside.
+ * shared balances, view epoch); redis failures fail open inside after the
+ * retries are spent.
  */
 export const invalidateBatchMigrationCaches = async ({
 	ctx,
@@ -15,8 +20,11 @@ export const invalidateBatchMigrationCaches = async ({
 }: {
 	ctx: AutumnContext;
 	pageResult: BatchMigrationPageResult;
-}): Promise<number> =>
-	batchInvalidateCachedFullSubjects({
+}): Promise<number> => {
+	// Org-scoped, so the per-customer callback below can return a fixed list.
+	const redisTargets = getRedisTargetsForCustomer({ org: ctx.org });
+
+	return batchInvalidateCachedFullSubjects({
 		customers: pageResult.succeeded.map((customer) => ({
 			customerId: customer.id ?? customer.internalId,
 			orgId: ctx.org.id,
@@ -27,6 +35,7 @@ export const invalidateBatchMigrationCaches = async ({
 			env: ctx.env,
 			features: ctx.features,
 		}),
-		getRedisTargetsForCustomer: () =>
-			getRedisTargetsForCustomer({ org: ctx.org }),
+		getRedisTargetsForCustomer: () => redisTargets,
+		maxAttempts: MIGRATION_INVALIDATE_MAX_ATTEMPTS,
 	});
+};

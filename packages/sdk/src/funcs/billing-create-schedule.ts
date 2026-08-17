@@ -47,9 +47,11 @@ import { Result } from "../types/fp.js";
  * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
  * @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
  * @param billingBehavior - Whether to prorate the immediate phase. 'none' skips proration charges and credits. (optional)
+ * @param noBillingChanges - If true, skips any billing changes for the schedule. (optional)
  * @param billingCycleAnchor - Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time. (optional)
  * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)
- * @param preserveAddOns - If true, active recurring add-ons in scopes represented by the phase plans are retained. (optional)
+ * @param preserveAddOns - Deprecated and ignored. Active plans the schedule does not declare are always retained. (optional)
+ * @param unscheduledPlans - Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope. (optional)
  * @param phases - Ordered phase definitions for the schedule.
  *
  * @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.

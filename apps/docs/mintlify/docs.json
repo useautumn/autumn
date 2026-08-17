@@ -274,10 +274,17 @@
 						"group": "Rewards & Referrals",
 						"pages": [
 							"api-reference/referrals/createReferralProgram",
+							"api-reference/referrals/listReferralPrograms",
+							"api-reference/referrals/getReferralProgram",
+							"api-reference/referrals/updateReferralProgram",
+							"api-reference/referrals/deleteReferralProgram",
 							"api-reference/referrals/createReferralCode",
 							"api-reference/referrals/redeemReferralCode",
 							"api-reference/rewards/createReward",
 							"api-reference/rewards/listRewards",
+							"api-reference/rewards/getReward",
+							"api-reference/rewards/updateReward",
+							"api-reference/rewards/deleteReward",
 							"api-reference/rewards/redeemRewardCode"
 						]
 					},

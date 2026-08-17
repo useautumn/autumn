@@ -62,6 +62,16 @@ export type VariantUpdateIntent = "create_version" | "update_current";
 export type VariantUpdateIntentSelections = Record<string, VariantUpdateIntent>;
 export type VariantMigrationSelections = Record<string, boolean>;
 
+export interface PushDecisions {
+	skipFeatureIds?: string[];
+	skipPlanIds?: string[];
+	planUpdateIntentSelections?: PlanUpdateIntentSelections;
+	planMigrationSelections?: PlanMigrationSelections;
+	variantPropagationSelections?: VariantPropagationSelections;
+	variantUpdateIntentSelections?: VariantUpdateIntentSelections;
+	variantMigrationSelections?: VariantMigrationSelections;
+}
+
 // Analysis result
 export interface PushAnalysis {
 	featuresToCreate: Feature[];
@@ -88,6 +98,12 @@ export interface PushResult {
 	plansDeleted: string[];
 	plansArchived: string[];
 	plansSkipped: string[];
+	rewardsCreated: string[];
+	rewardsUpdated: string[];
+	rewardsDeleted: string[];
+	referralProgramsCreated: string[];
+	referralProgramsUpdated: string[];
+	referralProgramsDeleted: string[];
 }
 
 // Remote data fetched during analysis

@@ -78,8 +78,9 @@ Worktree #3  (/Users/amianthus/Documents/Code/Autumn OSS/sirtenzin-autumn)
   Vite port:     3200
 
 DW_WORKTREE_NUM=3
-DW_SERVER_URL=https://wt3-api.localhost
+DW_API_URL=https://wt3-api.localhost
 DW_VITE_URL=https://wt3.localhost
+DW_PUBLIC_API_URL=https://wt3.ngrok.app
 DW_TMUX_SESSION=dw-wt-3
 DW_SERVER_PORT=8280
 DW_VITE_PORT=3200
@@ -185,7 +186,7 @@ bun dw identify
 ### "I want to query my own server"
 ```sh
 eval $(bun dw identify | grep '^DW_')
-curl -k $DW_SERVER_URL/health
+curl -k $DW_API_URL/health
 ```
 
 ### "I broke my DB — start over"

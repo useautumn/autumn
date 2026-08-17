@@ -143,6 +143,9 @@ export const CreateScheduleParamsV0Schema = z
 			description:
 				"Whether to prorate the immediate phase. 'none' skips proration charges and credits.",
 		}),
+		no_billing_changes: z.boolean().optional().meta({
+			description: "If true, skips any billing changes for the schedule.",
+		}),
 		billing_cycle_anchor: BillingCycleAnchorSchema.optional().meta({
 			description:
 				"Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.",
@@ -153,7 +156,11 @@ export const CreateScheduleParamsV0Schema = z
 		}),
 		preserve_add_ons: z.boolean().optional().meta({
 			description:
-				"If true, active recurring add-ons in scopes represented by the phase plans are retained.",
+				"Deprecated and ignored. Active plans the schedule does not declare are always retained.",
+		}),
+		unscheduled_plans: z.array(CreateSchedulePlanSchema).optional().meta({
+			description:
+				"Plans billed with the immediate phase that the schedule never expires or replaces. No phase may declare a plan in the same group and scope.",
 		}),
 		phases: z
 			.tuple([CreateSchedulePhaseSchema])
@@ -191,18 +198,17 @@ export const CreateScheduleParamsV0Schema = z
 			}
 		}
 
-		const hasPlanScopes = ctx.value.phases.some((phase) =>
-			phase.plans.some((plan) => plan.entity_id !== undefined),
-		);
-		if (
-			hasPlanScopes &&
-			(ctx.value.phases.length !== 1 ||
-				ctx.value.phases[0]?.starts_at !== "now")
-		) {
+		// A schedule can't change scope mid-flight, so later phases inherit the
+		// opening phase's scopes rather than declaring their own.
+		const hasLaterPhaseScopes = ctx.value.phases
+			.slice(1)
+			.some((phase) =>
+				phase.plans.some((plan) => plan.entity_id !== undefined),
+			);
+		if (hasLaterPhaseScopes) {
 			ctx.issues.push({
 				code: "custom",
-				message:
-					"Per-plan entity scopes require a single phase with starts_at: 'now'",
+				message: "Per-plan entity scopes are only allowed on the first phase",
 				path: ["phases"],
 				input: ctx.value,
 			});

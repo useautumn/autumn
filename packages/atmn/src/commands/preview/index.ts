@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { render } from "ink";
 import React from "react";
-import { loadConfig } from "./loadConfig.js";
+import { loadConfig } from "../../lib/config/loadConfig.js";
 import { PreviewView } from "../../views/react/preview/index.js";
 
 export const previewCommand = async ({

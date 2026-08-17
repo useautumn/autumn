@@ -14,8 +14,8 @@ Every object is delivered as a table named `v2_3_<object>`, grouped below by lan
 
 Types below are **engine-neutral**. How each engine surfaces them:
 
-{/* BigQuery column hidden until BigQuery delivery ships — restore the right-hand column when re-enabling:
 | Logical type | ClickHouse | BigQuery |
+|---|---|---|
 | `string` | `Nullable(String)` | `STRING` |
 | `number` | `Nullable(Decimal(38, …))` | `INT64` / `NUMERIC` |
 | `number (epoch ms)` | `Nullable(Decimal(38, …))` | `INT64` |
@@ -24,22 +24,10 @@ Types below are **engine-neutral**. How each engine surfaces them:
 | `json[] (string)` | `Array(Nullable(String))` | `ARRAY<STRING>` |
 | `string[]` | `Array(Nullable(String))` | `ARRAY<STRING>` |
 | `timestamp` | `Nullable(DateTime64)` | `TIMESTAMP` |
-*/}
-
-| Logical type | ClickHouse |
-|---|---|
-| `string` | `Nullable(String)` |
-| `number` | `Nullable(Decimal(38, …))` |
-| `number (epoch ms)` | `Nullable(Decimal(38, …))` |
-| `boolean` | `Nullable(Bool)` |
-| `json (string)` | `Nullable(String)` |
-| `json[] (string)` | `Array(Nullable(String))` |
-| `string[]` | `Array(Nullable(String))` |
-| `timestamp` | `Nullable(DateTime64)` |
 
 <Info>
   - **Timestamps are epoch-milliseconds** (`number (epoch ms)`), not native datetimes — convert before use. See [Querying → Timestamps](/documentation/lakehouse/querying#timestamps). The one exception is `events.timestamp`, which is a real `timestamp`.
-  - **JSON columns are stored as strings** — parse them with `JSONExtract*` (ClickHouse).
+  - **JSON columns are stored as strings** — parse them with `JSONExtract*` (ClickHouse) or `JSON_VALUE` (BigQuery).
 </Info>
 
 ## Keys
@@ -275,14 +263,18 @@ Active customer–product relationships: recurring subscriptions and one-off pur
 
 ## Balances
 
-Feature balances, their per-entitlement breakdowns, and boolean feature flags.
+Feature balances, their per-entitlement breakdowns, rollover grants, and boolean feature flags.
 
 <Warning>
-  **These tables do not behave like a clean relational schema.** They are denormalized snapshots of Autumn's read-time balance computation, and they include **every** `customer_entitlement` row — across superseded product versions and past reset cycles — with **no active-status or current-cycle filter**. A naive `SELECT ... FROM v2_3_balances` therefore double- and triple-counts. Before you query balances, breakdowns, or overage, read **[Working with balances](/documentation/lakehouse/balance-semantics)** — it explains what each column means, why `usage`/`granted`/`remaining` don't form a closed arithmetic triple, where overage comes from (it is **not** stored), and the active + current-cycle filter you must apply.
+  **These tables do not behave like a clean relational schema.** They are denormalized snapshots of Autumn's read-time balance computation, and they include **every** `customer_entitlement` row — across superseded product versions and past reset cycles — with **no active-status or current-cycle filter**. A naive `SELECT ... FROM v2_3_balances` therefore sums many lifetimes of a customer's history into one row. Before you query balances, breakdowns, or overage, read **[Working with balances](/documentation/lakehouse/balance-semantics)** — it explains what each column means, why `usage`/`granted`/`remaining` don't form a closed arithmetic triple, where overage comes from (it is **not** stored), and the active + current-cycle filter you must apply.
+</Warning>
+
+<Warning>
+  **Rollover balances are not in `v2_3_balances` or `v2_3_breakdowns`.** They live in their own table, `v2_3_rollovers` (below), and `remaining` / `usage` on the other two tables **exclude** them. Any customer holding rollovers therefore reads low until you add the rollover balance in yourself — and rollovers **expire**, so you must filter `expires_at` when you do. See [Working with balances → Rollovers](/documentation/lakehouse/balance-semantics#rollovers-live-in-their-own-table).
 </Warning>
 
 <Note>
-  Balances, breakdowns, and flags carry both **pooled** (customer-level) rows — where `entity_id` is null — and **per-entity** rows. For customer-level totals, keep only the pooled rows with `coalesce(entity_id, '') = ''` to avoid double counting. (Use `coalesce`, **not** `entity_id IS NULL` — `IS NULL` throws on these Iceberg columns; see [Querying → Pooled vs per-entity](/documentation/lakehouse/querying#pooled-vs-per-entity-rows).)
+  `entity_id` is the **scope** of the row: null means customer-scoped (pooled), non-null means the row belongs to that entity. In `v2_3_balances` and `v2_3_breakdowns` a given entitlement appears **exactly once**, under whichever scope it holds — the two kinds of row are disjoint, so filtering to `coalesce(entity_id, '') = ''` gives you customer-scoped rows only, and *dropping* entity-scoped ones. `v2_3_flags` is the exception: an entity-scoped flag is emitted **twice**, once at its own entity scope and once into the customer pool, so keep the pooled rows there to avoid double counting. (In ClickHouse use `coalesce`, **not** `entity_id IS NULL` — `IS NULL` throws on these Iceberg columns; BigQuery is unaffected. See [Querying → Pooled vs per-entity](/documentation/lakehouse/querying#pooled-vs-per-entity-rows).)
 </Note>
 
 <AccordionGroup>
@@ -298,57 +290,86 @@ Feature balances, their per-entitlement breakdowns, and boolean feature flags.
 | `internal_entity_id` | string | 🔗 → `v2_3_entities.internal_id` (null = pooled) |
 | `org_id` | string | your tenant id |
 | `env` | string | `sandbox` / `live` |
-| `unlimited` | boolean | |
-| `granted` | number | Σ(`included_grant` + `prepaid_grant`) + rollover-granted, over **all** entitlements in the group |
-| `remaining` | number | Σ(floored per-entitlement balance) + rollover-balance + unused — **floored at 0**, never negative |
-| `usage` | number | Σ(per-entitlement `usage`) + rollover-usage − unused. **Not** `granted − remaining`; see below |
-| `overage_allowed` | boolean | |
-| `max_purchase` | number | null if unbounded |
+| `unlimited` | boolean | true if any entitlement in the group is unlimited (then `granted`/`remaining`/`usage` are all `0`) |
+| `granted` | number | Σ(`included_grant` + `prepaid_grant`) over **all** entitlements in the group |
+| `remaining` | number | Σ(floored per-entitlement balance) — **floored at 0**, never negative. **Excludes rollovers** |
+| `usage` | number | Σ(per-entitlement `usage`). **Not** `granted − remaining`; see below. **Excludes rollovers** |
 | `reset_interval` | string | single interval or `multiple` |
 | `reset_interval_count` | number | null if `multiple` or count 1 |
 | `reset_resets_at` | number (epoch ms) | earliest reset across entitlements |
 | `next_reset_at` | number (epoch ms) | earliest next reset |
 
 <Warning>
-  `granted` / `remaining` / `usage` are **not** a closed arithmetic triple — `remaining ≠ granted − usage`. Each is aggregated **over every entitlement row for this customer × feature × scope**, including superseded product versions and past cycles, so a single row routinely sums many lifetimes of usage. `remaining` is floored per-entitlement, manual "Set Balance" decouples balance from grant, and rollover/unused are layered in. **There is no overage column** — it is derived. Always read [Working with balances](/documentation/lakehouse/balance-semantics) and apply the active + current-cycle filter before trusting these numbers.
+  `granted` / `remaining` / `usage` are **not** a closed arithmetic triple — `remaining ≠ granted − usage`. Each is aggregated **over every entitlement row for this customer × feature × scope**, including superseded product versions and past cycles, so a single row routinely sums many lifetimes of usage. `remaining` is floored per-entitlement, manual "Set Balance" decouples balance from grant, and rollover balances are omitted entirely (add them from `v2_3_rollovers`). **There is no overage column** — it is derived. Always read [Working with balances](/documentation/lakehouse/balance-semantics) and apply the active + current-cycle filter before trusting these numbers.
 </Warning>
 
 </Accordion>
 <Accordion title="v2_3_breakdowns — per-entitlement balance detail">
 
+**One row per `customer_entitlement`** — `internal_id` alone is the key. (It used to be `(internal_id, entity_id)`, because one entitlement could emit a pooled row *plus* per-entity rows. That fan-out is gone; `entity_id` is now simply the scope this single row belongs to.)
+
 | Column | Type | Notes |
 |---|---|---|
-| `internal_id` | string | ⭐ part of key (customer_entitlement id) |
-| `entity_id` | string | ⭐ part of key (null = pooled) |
+| `internal_id` | string | ⭐ stable key (customer_entitlement id) |
+| `internal_customer_product_id` | string | 🔗 → `v2_3_subscriptions.internal_id` **or** `v2_3_purchases.internal_id` — the customer's own plan row |
+| `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` (the plan *version*, not the customer's copy of it) |
+| `internal_plan_item_id` | string | 🔗 → `v2_3_plan_items.internal_id` — the priced entitlement this balance came from |
+| `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
+| `internal_feature_id` | string | 🔗 → `v2_3_features.internal_id` |
+| `internal_entity_id` | string | 🔗 → `v2_3_entities.internal_id` (null = customer-scoped) |
 | `id` | string | external id, mutable |
 | `customer_id` | string | external customer id |
-| `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
-| `internal_entity_id` | string | 🔗 → `v2_3_entities.internal_id` (null = pooled) |
 | `feature_id` | string | external feature id |
-| `internal_feature_id` | string | 🔗 → `v2_3_features.internal_id` |
-| `plan_id` | string | external plan id |
-| `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
-| `included_grant` | number | allowance grant (allowance + adjustment) |
-| `prepaid_grant` | number | prepaid grant |
-| `remaining` | number | floored balance — `max(0, balance)`, **never negative** |
-| `usage` | number | `included_grant` + `prepaid_grant` − raw (signed) balance |
+| `entity_id` | string | external entity id (null = customer-scoped) |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
 | `unlimited` | boolean | |
+| `included_grant` | number | allowance grant (allowance × plan quantity + adjustment) |
+| `prepaid_grant` | number | prepaid quantity × billing units |
+| `remaining` | number | floored balance — `max(0, balance)`, **never negative**. **Excludes rollovers** |
+| `usage` | number | `included_grant` + `prepaid_grant` − raw (signed) balance. **Excludes rollovers** |
+| `expires_at` | number (epoch ms) | null if no expiry |
 | `reset_interval` | string | null for continuous-use; `one_off` for lifetime grants |
 | `reset_interval_count` | number | null if count 1 |
 | `reset_resets_at` | number (epoch ms) | next reset for **this** entitlement (use to pick the current cycle) |
-| `price_amount` | number | single-tier only |
-| `price_billing_method` | string | prepaid / usage_based |
-| `price_billing_units` | number | default 1 |
-| `price_max_purchase` | number | |
-| `price_tier_behavior` | string | graduated / stairstep (multi-tier) |
-| `price_tiers` | json (string) | multi-tier array |
-| `expires_at` | number (epoch ms) | null if no expiry |
-| `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `live` |
 
 <Warning>
-  **`v2_3_breakdowns` has no `status` / `is_active` / `is_current` column** and mixes rows from superseded/cancelled product versions, past reset cycles, and pre-seeded future cycles. To get the rows the API would use, join `internal_product_id` to active subscription status and pick the current cycle (earliest upcoming `reset_resets_at`); `one_off` rows are always live. See [Working with balances → The active + current-cycle filter](/documentation/lakehouse/balance-semantics#the-active-current-cycle-filter).
+  **`plan_id` is gone from this table.** Breakdowns no longer join out to the plans table, so the external, human-readable plan id is not carried here — a query that selects `plan_id` from `v2_3_breakdowns` today will fail outright rather than return nulls. Get it by joining `internal_product_id` → `v2_3_plans.internal_id` and reading `plan_id` there. (Prefer `internal_product_id` itself wherever you can: `plan_id` is mutable and shared across plan versions.)
 </Warning>
+
+<Warning>
+  **`v2_3_breakdowns` has no `status` / `is_active` / `is_current` column** and mixes rows from superseded/cancelled product versions, past reset cycles, and pre-seeded future cycles. To get the rows the API would use, join `internal_customer_product_id` → `v2_3_subscriptions.internal_id` and keep the active ones, then pick the current cycle (earliest upcoming `reset_resets_at`); `one_off` rows are always live. This join is now **direct**: `internal_customer_product_id` is the customer's own subscription row, so one equality gets you its status. (Don't use `internal_product_id` for this — it points at the shared *plan version*, not at the customer's own copy of it.) See [Working with balances → The active + current-cycle filter](/documentation/lakehouse/balance-semantics#the-active-current-cycle-filter).
+</Warning>
+
+</Accordion>
+<Accordion title="v2_3_rollovers — rollover grants carried across reset cycles">
+
+When a feature is configured to roll unused allowance into the next cycle, each carried-over grant lands here as its own row. **Nothing in `v2_3_balances` or `v2_3_breakdowns` includes these amounts** — you add them by joining `internal_breakdown_id` back to `v2_3_breakdowns.internal_id`.
+
+Rollovers are a separate table rather than extra columns on `v2_3_breakdowns` because they are **sparse**: roughly 6.8% of customer entitlements carry one (about 7.8M rollovers against 115M entitlements). Folding them in would put mostly-null columns on every breakdown row, so the ~93% of rows with no rollover would pay for the 7% that do. One entitlement can also hold several grants with different expiries, which a flat column set can't represent at all.
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_id` | string | ⭐ stable key (rollover id) |
+| `internal_breakdown_id` | string | 🔗 → `v2_3_breakdowns.internal_id` — the entitlement this rollover belongs to |
+| `internal_customer_product_id` | string | 🔗 → `v2_3_subscriptions.internal_id` **or** `v2_3_purchases.internal_id` |
+| `internal_plan_item_id` | string | 🔗 → `v2_3_plan_items.internal_id` (carries the `rollover_*` config) |
+| `internal_feature_id` | string | 🔗 → `v2_3_features.internal_id` |
+| `customer_id` | string | external customer id |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `balance` | number | rollover amount still available |
+| `usage` | number | rollover amount already drawn down |
+| `expires_at` | number (epoch ms) | **null = never expires** |
+| `entities` | json (string) | raw per-entity map, `{entity_id: {id, balance, usage}}` |
+
+<Warning>
+  **Rollovers expire, and this table keeps the expired ones.** Summing `balance` without filtering overstates what a customer actually holds. Always filter on `expires_at`: in ClickHouse write `` (coalesce(expires_at, 0) = 0 OR expires_at > <now epoch ms>) ``, because `expires_at IS NULL` throws there, same as `entity_id`; in BigQuery plain `IS NULL` is fine. There is a worked query in [Querying → Balance including rollovers](/documentation/lakehouse/querying#balance-including-rollovers).
+</Warning>
+
+<Note>
+  There is **no `entity_id` column** — per-entity rollover amounts are left packed in the `entities` JSON map rather than exploded into rows. Parse it if you need entity-level rollover detail.
+</Note>
 
 </Accordion>
 <Accordion title="v2_3_flags — boolean feature flags">
@@ -363,11 +384,25 @@ Feature balances, their per-entitlement breakdowns, and boolean feature flags.
 | `internal_entity_id` | string | 🔗 → `v2_3_entities.internal_id` (null = pooled) |
 | `feature_id` | string | external feature id |
 | `internal_feature_id` | string | 🔗 → `v2_3_features.internal_id` |
-| `plan_id` | string | external plan id |
 | `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
+| `internal_customer_product_id` | string | 🔗 → `v2_3_subscriptions.internal_id` **or** `v2_3_purchases.internal_id` |
+| `subscription_ids_csv` | string | processor subscription ids, comma-separated (empty string if none) |
 | `expires_at` | number (epoch ms) | null if no expiry |
 | `org_id` | string | your tenant id |
 | `env` | string | `sandbox` / `live` |
+
+<Warning>
+  **`plan_id`, `customer_plan_status`, `customer_plan_starts_at`, and `customer_plan_ended_at` have been removed**, leaving the 14 columns above. Flags now follow the same rule as `v2_3_breakdowns`: **carry keys, never denormalized copies of data that lives on another table**. Resolve each of the four by joining outward —
+
+  - `plan_id` → join `internal_product_id` to `v2_3_plans` and read `plan_id` there, exactly as you would from a breakdown.
+  - the three `customer_plan_*` columns → join `internal_customer_product_id` to `v2_3_subscriptions.internal_id` (or `v2_3_purchases.internal_id`) and read `status`, `started_at`, `ended_at` / `expires_at` from the plan row itself. There is a ready-made double-join in [Querying → The status of the plan behind a flag](/documentation/lakehouse/querying#the-status-of-the-plan-behind-a-flag).
+
+  Dropping `plan_id` removed the plans join from the flags query outright, so the table is cheaper to keep in sync as well as simpler to reason about. If you previously filtered `customer_plan_status = 'active'` directly on this table, that query needs the join added.
+</Warning>
+
+<Note>
+  The `subscription_ids` **array** was dropped — use `subscription_ids_csv`, which every engine handles identically; split on `,` if you need the individual ids.
+</Note>
 
 </Accordion>
 </AccordionGroup>

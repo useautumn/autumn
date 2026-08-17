@@ -876,6 +876,18 @@ export type PreviewUpdateUsageLimitInterval = ClosedEnum<
   typeof PreviewUpdateUsageLimitInterval
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const PreviewUpdateAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type PreviewUpdateAnchor = ClosedEnum<typeof PreviewUpdateAnchor>;
+
 export type PreviewUpdateProperties = string | number | boolean;
 
 /**
@@ -902,6 +914,10 @@ export type PreviewUpdateUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: PreviewUpdateUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: PreviewUpdateAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1655,11 +1671,11 @@ export type PreviewUpdateLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts and tax for this line item.
+   * The amount before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for this line item.
+   * The final amount after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -1715,11 +1731,11 @@ export type PreviewUpdateNextCycleLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts and tax for this line item.
+   * The amount before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for this line item.
+   * The final amount after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -1786,11 +1802,11 @@ export type PreviewUpdateNextCycle = {
    */
   startsAt: number;
   /**
-   * The total amount in cents before discounts and tax for the next cycle.
+   * The total amount before discounts and tax for the next cycle.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for the next cycle.
+   * The final amount after discounts and tax for the next cycle.
    */
   total: number;
   /**
@@ -1948,15 +1964,15 @@ export type PreviewUpdateResponse = {
    */
   lineItems: Array<PreviewUpdateLineItem>;
   /**
-   * The total amount in cents before discounts and tax for the current billing period.
+   * The total amount before discounts and tax for the current billing period.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts and tax for the current billing period.
+   * The final amount after discounts and tax for the current billing period.
    */
   total: number;
   /**
-   * The three-letter ISO currency code (e.g., 'usd').
+   * The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).
    */
   currency: string;
   /**
@@ -3058,6 +3074,11 @@ export const PreviewUpdateUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewUpdateUsageLimitInterval);
 
 /** @internal */
+export const PreviewUpdateAnchor$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateAnchor
+> = z.enum(PreviewUpdateAnchor);
+
+/** @internal */
 export type PreviewUpdateProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -3104,6 +3125,7 @@ export type PreviewUpdateUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: PreviewUpdateFilter$Outbound | undefined;
 };
 
@@ -3117,6 +3139,7 @@ export const PreviewUpdateUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: PreviewUpdateUsageLimitInterval$outboundSchema,
+    anchor: z.optional(PreviewUpdateAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => PreviewUpdateFilter$outboundSchema)),
   }),
   z.transform((v) => {

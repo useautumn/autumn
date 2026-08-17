@@ -1,0 +1,19 @@
+DESCRIPTION >
+    Collapses the gated property rollup to org-hour grain without repeating raw JSON extraction.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        event_name,
+        property_key,
+        property_value,
+        hour,
+        sumState(total_value) as total_value,
+        sumState(event_count) as event_count
+    FROM events_property_mv
+    GROUP BY org_id, env, event_name, property_key, property_value, hour
+
+TYPE materialized
+DATASOURCE events_org_property_hourly_mv

@@ -61,6 +61,7 @@ export const CreateProductSchema = z.object({
 export const UpdateProductSchema = z.object({
 	id: z.string().nullish(),
 	name: z.string().min(1, "Product name cannot be empty").optional(),
+	description: z.string().nullish(),
 	is_add_on: z.boolean().optional(),
 	is_default: z.boolean().optional(),
 	group: z.string().nullish(),

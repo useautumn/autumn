@@ -1,4 +1,5 @@
 import { Tinybird } from "@chronark/zod-bird";
+import { createAggregateDeductionsPipe } from "./pipes/aggregateDeductionsPipe.js";
 import { createAggregateGroupablePipe } from "./pipes/aggregateGroupablePipe.js";
 import { createAggregatePipe } from "./pipes/aggregatePipe.js";
 import { createAggregateSimplePipe } from "./pipes/aggregateSimplePipe.js";
@@ -7,6 +8,7 @@ import { createListEventNamesPipe } from "./pipes/listEventNamesPipe.js";
 import { createListEventsCursorPipe } from "./pipes/listEventsCursorPipe.js";
 import { createListEventsPaginatedPipe } from "./pipes/listEventsPaginatedPipe.js";
 import { createPropertyKeyExistsPipe } from "./pipes/propertyKeyExistsPipe.js";
+import { createPropertyRollupCoveragePipe } from "./pipes/propertyRollupCoveragePipe.js";
 import { tinybirdConfig } from "./tinybirdUtils.js";
 import { z } from "./tinybirdZod.js";
 
@@ -46,11 +48,13 @@ export const tinybirdPipes = tinybirdClient
 			aggregate: createAggregatePipe(tinybirdClient),
 			aggregateSimple: createAggregateSimplePipe(tinybirdClient),
 			aggregateGroupable: createAggregateGroupablePipe(tinybirdClient),
+			aggregateDeductions: createAggregateDeductionsPipe(tinybirdClient),
 			estimatedMrr: createEstimatedMrrPipe(tinybirdClient),
 			listEventNames: createListEventNamesPipe(tinybirdClient),
 			listEventsCursor: createListEventsCursorPipe(tinybirdClient),
 			listEventsPaginated: createListEventsPaginatedPipe(tinybirdClient),
 			propertyKeyExists: createPropertyKeyExistsPipe(tinybirdClient),
+			propertyRollupCoverage: createPropertyRollupCoveragePipe(tinybirdClient),
 		}
 	: null;
 
@@ -83,6 +87,8 @@ export const getTinybirdIngest = () => {
 
 // Re-export types
 export type {
+	AggregateDeductionsPipeParams,
+	AggregateDeductionsPipeRow,
 	AggregateGroupablePipeParams,
 	AggregateGroupablePipeRow,
 	AggregatePipeParams,
@@ -99,4 +105,6 @@ export type {
 	ListEventsPaginatedPipeRow,
 	PropertyKeyExistsPipeParams,
 	PropertyKeyExistsPipeRow,
+	PropertyRollupCoveragePipeParams,
+	PropertyRollupCoveragePipeRow,
 } from "./pipes/index.js";

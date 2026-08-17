@@ -633,10 +633,12 @@ const CommandBar = () => {
 												isCurrentlyImpersonating,
 											});
 										} catch (error) {
+											// Never delete the favourite here: impersonateUser
+											// reports a genuinely stale target by returning, so
+											// anything thrown is transient (a network blip, or a
+											// request aborted by its own page reload).
 											console.error("Failed to impersonate user:", error);
-											// Stale favourite — remove it
-											removeOrg(fav.org_id);
-											toast.error("Favourite is stale — removed");
+											toast.error("Failed to impersonate — please try again");
 										}
 									}}
 								/>

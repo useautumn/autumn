@@ -33,6 +33,10 @@ export interface AttachBillingContext extends BillingContext {
 	currentCustomerProduct?: FullCusProduct; // To transition from
 	scheduledCustomerProduct?: FullCusProduct; // To delete
 
+	// Source for usage/balance carry-over. Same as currentCustomerProduct for
+	// in-group transitions; falls back to a removed cross-group plan otherwise.
+	carryOverSourceCustomerProduct?: FullCusProduct;
+
 	// Timing
 	planTiming: PlanTiming;
 	endOfCycleMs?: number; // Only needed if planTiming === "end_of_cycle"

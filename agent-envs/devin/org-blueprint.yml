@@ -1,0 +1,88 @@
+# Devin org-wide setup — Settings > Environment > Blueprints > Org-wide setup
+#
+# Runs first, in $HOME, before any repo blueprint.
+#
+# $ENVRC is a KEY=VALUE store — it does NOT evaluate $(...). Only plain values
+# (PATH, flags) belong there; anything needing evaluation is a baked script that
+# the agent runs per session.
+
+initialize:
+  # npm's default global prefix is not on PATH in this image, so `npm i -g`
+  # silently produces binaries nothing can find. Everything goes to ~/.local.
+  - name: Set up user-local bin
+    run: |
+      mkdir -p "$HOME/.local/bin"
+      npm config set prefix "$HOME/.local"
+      echo 'export PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH"' >> $ENVRC
+
+  - name: Install bun
+    run: curl -fsSL https://bun.sh/install | bash
+
+  # Must support INFISICAL_PROJECT_ID — 0.43.84 does not, 0.43.116+ does.
+  # `bun run` scripts resolve node_modules/.bin first and use the repo's pin;
+  # this global copy serves everything outside a repo.
+  - name: Install Infisical CLI
+    run: |
+      npm install -g @infisical/cli@0.43.120
+      "$HOME/.local/bin/infisical" --version
+
+  - name: Install Neon CLI
+    run: |
+      npm install -g neonctl
+      "$HOME/.local/bin/neonctl" --version
+
+  - name: Install postgres client
+    run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+  - name: Install Docker
+    run: |
+      if ! command -v docker >/dev/null 2>&1; then
+        curl -fsSL https://get.docker.com | sudo sh
+        sudo usermod -aG docker "$USER" || true
+      fi
+      docker --version
+
+  # ~1.1GB of pulls. Baked here they cost nothing per session; left out, every
+  # session pays them again inside `bun dw setup`. ngrok is omitted — the tunnel
+  # stays off headless.
+  - name: Pre-pull dev stack images
+    run: |
+      docker pull docker.dragonflydb.io/dragonflydb/dragonfly
+      docker pull softwaremill/elasticmq-native:latest
+      docker pull amazon/dynamodb-local:latest
+      docker images
+
+  # Falls back to a repo's pinned copy so a missing global install can't break
+  # the session the way it did on the first attempt.
+  - name: Infisical login helper
+    run: |
+      cat > "$HOME/.local/bin/autumn-infisical-login" <<'EOF'
+      #!/bin/sh
+      # Prints a fresh Infisical access token:
+      #   export INFISICAL_TOKEN=$(autumn-infisical-login)
+      BIN="$(command -v infisical 2>/dev/null)"
+      if [ -z "$BIN" ]; then
+        for c in "$HOME/.local/bin/infisical" \
+                 "$HOME/repos/autumn/node_modules/.bin/infisical" \
+                 "$HOME/repos/cloud/node_modules/.bin/infisical"; do
+          [ -x "$c" ] && BIN="$c" && break
+        done
+      fi
+      if [ -z "$BIN" ]; then
+        echo "autumn-infisical-login: infisical CLI not found" >&2
+        exit 1
+      fi
+      exec "$BIN" login --method=universal-auth \
+        --client-id="$INFISICAL_CLIENT_ID" \
+        --client-secret="$INFISICAL_CLIENT_SECRET" \
+        --plain --silent
+      EOF
+      chmod +x "$HOME/.local/bin/autumn-infisical-login"
+
+  # Never fall into the interactive hosting-region picker on a headless box.
+  - name: Pin Infisical domain
+    run: echo 'export INFISICAL_API_URL=https://app.infisical.com/api' >> $ENVRC
+
+  # No portless proxy, no browser, no tmux in a Devin VM.
+  - name: Headless dev-worktree mode
+    run: echo 'export DW_HEADLESS=1' >> $ENVRC

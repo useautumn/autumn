@@ -22,6 +22,7 @@ export const activateScheduledCustomerProduct = async ({
 	fullCustomer,
 	subscriptionIds,
 	scheduledIds,
+	activatedAt,
 }: {
 	ctx: AutumnContext;
 	fromCustomerProduct?: FullCusProduct; // for cases where expiry happens before activation (eg. expireAndActivateDefault)
@@ -29,6 +30,7 @@ export const activateScheduledCustomerProduct = async ({
 	fullCustomer: FullCustomer;
 	subscriptionIds?: string[];
 	scheduledIds?: string[];
+	activatedAt: number;
 }): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
 	const { org, env, logger } = ctx;
 
@@ -53,11 +55,11 @@ export const activateScheduledCustomerProduct = async ({
 		fullCustomer,
 	});
 
-	// 1. Update status and subscription/schedule IDs
 	const updates: Partial<InsertCustomerProduct> = {
 		status: CusProductStatus.Active,
 		subscription_ids: subscriptionIds,
 		scheduled_ids: scheduledIds,
+		starts_at: Math.min(customerProduct.starts_at, activatedAt),
 	};
 	const customerLicenseTransitions = transitionSource
 		? computeCustomerLicenseTransitions({
@@ -66,8 +68,6 @@ export const activateScheduledCustomerProduct = async ({
 			})
 		: [];
 
-	// Executing through the shared plan runs the license lifecycle for
-	// activations that bring license-bearing parents live.
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: {

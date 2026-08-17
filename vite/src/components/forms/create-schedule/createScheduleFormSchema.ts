@@ -7,6 +7,8 @@ export const SchedulePlanSchema = z.object({
 	items: z.custom<ProductItem[]>().nullable(),
 	isCustom: z.boolean(),
 	version: z.number().positive().optional(),
+	// Only meaningful on the first phase — later phases inherit its scope.
+	entityId: z.string().nullable().optional(),
 });
 
 export type SchedulePlan = z.infer<typeof SchedulePlanSchema>;
@@ -17,6 +19,8 @@ export const EMPTY_SCHEDULE_PLAN: SchedulePlan = {
 	items: null,
 	isCustom: false,
 	version: undefined,
+	// null is customer-level: a plan picks its own scope, the sheet has none.
+	entityId: null,
 };
 
 export const SchedulePhaseSchema = z.object({
@@ -193,6 +197,8 @@ export function getPhaseTimingError({
 export const CreateScheduleFormSchema = z
 	.object({
 		phases: z.array(SchedulePhaseSchema).min(1),
+		/** Billed with the first phase, then left alone by the schedule. */
+		unscheduledPlans: z.array(SchedulePlanSchema),
 		billingBehavior: BillingBehaviorSchema.nullable(),
 		resetBillingCycle: z.boolean(),
 		enablePlanImmediately: z.boolean(),

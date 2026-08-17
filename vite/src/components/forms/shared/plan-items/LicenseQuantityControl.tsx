@@ -18,10 +18,12 @@ export function LicenseQuantityControl({
 	editor,
 	licensePlanId,
 	includedQuantity,
+	licenseName,
 }: {
 	editor: LicenseQuantityEditor;
 	licensePlanId: string;
 	includedQuantity: number;
+	licenseName?: string;
 }) {
 	const [isEditing, setIsEditing] = useState(false);
 	const { form, quantities, existingQuantities, readOnly = false } = editor;
@@ -40,14 +42,21 @@ export function LicenseQuantityControl({
 
 	return (
 		<QuantityEditControl
-			readOnly={readOnly}
 			displayText={`x${totalQuantity}`}
+			hint={includedQuantity > 0 ? `${includedQuantity} included` : undefined}
 			isEditing={isEditing}
 			onEditingChange={handleEditingChange}
+			readOnly={readOnly}
+			title={licenseName ?? licensePlanId}
 		>
 			<form.AppField name={`licenseQuantities.${licensePlanId}`}>
 				{(field) => (
-					<field.QuantityField label="" min={includedQuantity} hideFieldInfo />
+					<field.QuantityField
+						fullWidth
+						hideFieldInfo
+						label=""
+						min={includedQuantity}
+					/>
 				)}
 			</form.AppField>
 		</QuantityEditControl>

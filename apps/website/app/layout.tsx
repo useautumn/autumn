@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Reb2b from "@/components/reb2b";
 import type { LayoutProps } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import "./globals.css";
@@ -95,7 +96,12 @@ export default function RootLayout({ children }: LayoutProps) {
 				"h-full max-w-full overflow-x-clip overscroll-x-none bg-black antialiased",
 			)}
 		>
-			<body className="min-h-full max-w-full overflow-x-clip overscroll-x-none flex flex-col">{children}</body>
+			<head>
+				<Reb2b />
+			</head>
+			<body className="min-h-full max-w-full overflow-x-clip overscroll-x-none flex flex-col">
+				{children}
+			</body>
 		</html>
 	);
 }

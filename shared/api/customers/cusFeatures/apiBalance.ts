@@ -16,6 +16,10 @@ export const ApiBalanceResetSchema = z.object({
 });
 
 export const ApiBalanceRolloverSchema = z.object({
+	granted: z.number().meta({
+		description:
+			"Amount originally rolled over from a previous period, before any of it was consumed.",
+	}),
 	balance: z.number().meta({
 		description: "Amount of balance rolled over from a previous period.",
 	}),

@@ -8,23 +8,55 @@ import {
 	type SettingChange,
 } from "./PlanSettingsChanges";
 
+export type MigrateTargetLicenseChanges = {
+	licensePlanId: string;
+	itemChanges: PlanUpdatePreviewItemChange[];
+	hasPriceChange: boolean;
+};
+
 export type MigrateTargetRow = {
 	version: number;
 	isCurrent: boolean;
 	isNew: boolean;
 	itemChanges: PlanUpdatePreviewItemChange[];
 	hasPriceChange: boolean;
+	licenseChanges: MigrateTargetLicenseChanges[];
 	settingChanges: SettingChange[];
 	customerCount: number;
 	conflicts: PlanUpdatePreviewVariantConflict[];
 };
 
+export type MigrateTargetRole = "base" | "variant" | "license_parent";
+
 export type MigrateTarget = {
 	id: string;
 	name: string;
-	isBase: boolean;
+	role: MigrateTargetRole;
 	rows: MigrateTargetRow[];
 };
+
+/** Linked-license changes stay attributed to their license plan — they reach
+ * live assignments, not the parent's own customers. */
+const resolveEntryChanges = (
+	entry: Pick<
+		PlanUpdatePreview,
+		"item_changes" | "price_change" | "license_changes"
+	>,
+) => ({
+	itemChanges: entry.item_changes ?? [],
+	hasPriceChange: entry.price_change !== undefined,
+	licenseChanges: (entry.license_changes ?? []).flatMap((license) =>
+		license.plan_changes
+			? [
+					{
+						licensePlanId: license.license_plan_id,
+						itemChanges: license.plan_changes.item_changes ?? [],
+						hasPriceChange: license.plan_changes.price_change !== undefined,
+					},
+				]
+			: [],
+	),
+});
 
 export const getLicenseParentTargetId = ({
 	plan_id,
@@ -72,8 +104,7 @@ export function buildMigrateTargets({
 			version: baseCreatesNewVersion ? currentVersion + 1 : currentVersion,
 			isCurrent: !baseCreatesNewVersion,
 			isNew: baseCreatesNewVersion,
-			itemChanges: preview.item_changes ?? [],
-			hasPriceChange: preview.price_change !== undefined,
+			...resolveEntryChanges(preview),
 			settingChanges: previousAttributesToSettingChanges(
 				preview.previous_attributes,
 			),
@@ -85,8 +116,7 @@ export function buildMigrateTargets({
 					version: version.version,
 					isCurrent: false,
 					isNew: false,
-					itemChanges: version.item_changes ?? [],
-					hasPriceChange: version.price_change !== undefined,
+					...resolveEntryChanges(version),
 					settingChanges: previousAttributesToSettingChanges(
 						version.previous_attributes,
 					),
@@ -97,7 +127,7 @@ export function buildMigrateTargets({
 	];
 
 	const targets: MigrateTarget[] = [
-		{ id: preview.plan_id, name: baseName, isBase: true, rows: baseRows },
+		{ id: preview.plan_id, name: baseName, role: "base", rows: baseRows },
 	];
 
 	for (const variantId of selectedVariantIds) {
@@ -114,7 +144,7 @@ export function buildMigrateTargets({
 		targets.push({
 			id: variantId,
 			name: entries[0].name,
-			isBase: false,
+			role: "variant",
 			rows: visible.map((entry) => {
 				const isLatest = entry.version === latestVersion;
 				const createsNewVersion =
@@ -123,8 +153,7 @@ export function buildMigrateTargets({
 					version: createsNewVersion ? entry.version + 1 : entry.version,
 					isCurrent: isLatest && !createsNewVersion,
 					isNew: createsNewVersion,
-					itemChanges: entry.item_changes ?? [],
-					hasPriceChange: entry.price_change !== undefined,
+					...resolveEntryChanges(entry),
 					settingChanges: previousAttributesToSettingChanges(
 						entry.previous_attributes,
 					),
@@ -139,19 +168,17 @@ export function buildMigrateTargets({
 	for (const entry of preview.license_parents) {
 		const targetId = getLicenseParentTargetId(entry);
 		if (!selectedLicenseParentIdSet.has(targetId)) continue;
-		const planChanges = entry.license_changes[0]?.plan_changes;
 		const createsNewVersion = isNewVersion && entry.has_customers;
 		targets.push({
 			id: `license-parent:${targetId}`,
 			name: entry.name,
-			isBase: false,
+			role: "license_parent",
 			rows: [
 				{
 					version: createsNewVersion ? entry.version + 1 : entry.version,
 					isCurrent: !createsNewVersion,
 					isNew: createsNewVersion,
-					itemChanges: planChanges?.item_changes ?? [],
-					hasPriceChange: planChanges?.price_change !== undefined,
+					...resolveEntryChanges(entry),
 					settingChanges: [],
 					customerCount: entry.customer_count,
 					conflicts: entry.conflicts,

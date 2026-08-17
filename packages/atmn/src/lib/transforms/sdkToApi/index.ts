@@ -4,3 +4,7 @@ export {
 	transformPlanItem,
 	transformPlanToApi,
 } from "./plan.js";
+export {
+	transformReferralProgramToApi,
+	transformRewardToApi,
+} from "./reward.js";

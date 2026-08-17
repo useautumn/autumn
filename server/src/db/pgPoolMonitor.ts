@@ -7,7 +7,7 @@ type RegisteredPool = {
 	max: number;
 };
 
-type AcquireStats = {
+export type AcquireStats = {
 	count: number;
 	timeouts: number;
 	errors: number;
@@ -22,7 +22,7 @@ const registry = new Map<string, RegisteredPool>();
 const acquireStats = new Map<string, AcquireStats>();
 let snapshotInterval: ReturnType<typeof setInterval> | null = null;
 
-const emptyAcquireStats = (): AcquireStats => ({
+export const emptyAcquireStats = (): AcquireStats => ({
 	count: 0,
 	timeouts: 0,
 	errors: 0,
@@ -134,11 +134,11 @@ const timeAcquires = ({ pool, name }: { pool: Pool; name: string }): void => {
 	pool.connect = timed as Pool["connect"];
 };
 
-const percentileOf = (sorted: number[], p: number): number =>
+export const percentileOf = (sorted: number[], p: number): number =>
 	sorted[Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length))] ??
 	0;
 
-const getRole = (): string => {
+export const getRole = (): string => {
 	if (process.env.WORKER === "true") return "worker";
 	if (process.env.CRON === "true") return "cron";
 	return "http";
@@ -216,6 +216,8 @@ const emitSnapshot = (): void => {
 
 export const startPgPoolMonitor = (intervalMs = 30_000): void => {
 	if (snapshotInterval) return;
+	// Pool snapshots are an ops signal; locally they just flood the console.
+	if (process.env.NODE_ENV === "development") return;
 	// Not unref'd: under Bun an unref'd interval was never observed to fire, and
 	// the server keeps the loop alive anyway — stopPgPoolMonitor clears it.
 	snapshotInterval = setInterval(emitSnapshot, intervalMs);

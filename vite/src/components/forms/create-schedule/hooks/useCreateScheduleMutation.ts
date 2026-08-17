@@ -26,7 +26,6 @@ export function useCreateScheduleMutation({
 		customerId,
 		path: BILLING_OPERATIONS.createSchedule.path,
 		buildRequestBody,
-		invalidatesSchedule: BILLING_OPERATIONS.createSchedule.invalidatesSchedule,
 		successMessage: "Schedule created successfully",
 		errorMessage: "Failed to create schedule",
 		onCheckoutRedirect,
@@ -61,10 +60,17 @@ export function useCreateScheduleMutation({
 		};
 	};
 
+	// The checkout stage owns the URL, so suppress the provider's copy-and-toast.
+	const handleCheckoutSubmit = async () => {
+		const result = await mutation.mutateAsync({ skipDefaultSuccess: true });
+		return { paymentUrl: result.data?.payment_url };
+	};
+
 	return {
 		mutation,
 		handleSubmit,
 		handleInvoiceSubmit,
+		handleCheckoutSubmit,
 		isPending: mutation.isPending,
 	};
 }

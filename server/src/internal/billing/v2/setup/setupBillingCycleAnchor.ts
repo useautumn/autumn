@@ -41,10 +41,11 @@ export const setupBillingCycleAnchor = ({
 
 	// A new backdated subscription anchors its cycle to the past starts_at
 	// (Stripe's backdate_start_date anchors there too). Only for a new paid
-	// recurring line — backdating an existing line is rejected upstream, and
+	// recurring line — an existing subscription keeps its own anchor, and
 	// free/one-off products have no recurring cycle to anchor.
 	if (
 		billingStartsAt !== undefined &&
+		!stripeSubscription &&
 		isPastStartDate(
 			billingStartsAt,
 			currentEpochMs,

@@ -34,6 +34,7 @@ import {
 	expectPreviewBalanceChange,
 	expectPreviewFlagChanges,
 	expectPreviewPlanChange,
+	getPreviewItemChanges,
 } from "./expectMigrationPreviewCorrect";
 import { runUpdatePlanPreview, waitForPreview } from "./previewTestUtils";
 
@@ -109,11 +110,12 @@ test(`${chalk.yellowBright("migrations preview delete/add: API run + list emits 
 			},
 		],
 	});
-	const createdCreditsChange = planChange.item_changes.find(
+	const planItemChanges = getPreviewItemChanges(planChange);
+	const createdCreditsChange = planItemChanges.find(
 		(change) =>
 			change.action === "created" && change.feature_id === TestFeature.Credits,
 	);
-	const deletedCreditsChange = planChange.item_changes.find(
+	const deletedCreditsChange = planItemChanges.find(
 		(change) =>
 			change.action === "deleted" && change.feature_id === TestFeature.Credits,
 	);

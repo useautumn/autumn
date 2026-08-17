@@ -12,6 +12,7 @@ import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { aggregateDeductions } from "@/internal/analytics/actions/aggregateDeductions.js";
 import { getCustomerNames } from "@/internal/analytics/actions/getCustomerNames.js";
 import { getEntityNames } from "@/internal/analytics/actions/getEntityNames.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -35,6 +36,9 @@ const InternalAggregateEventsSchema = z.object({
 	bin_size: z.enum(["day", "hour", "week", "month"]).optional(),
 	timezone: z.string().optional(),
 	max_groups: z.number().int().min(1).max(250).optional(),
+	// Presence adds the per-balance `deductions` breakdown. Requires a customer:
+	// the rollup is keyed (org, env, customer_id, ...) so it cannot be org-wide.
+	aggregate_on: z.literal("deducted").optional(),
 });
 
 /**
@@ -56,12 +60,21 @@ export const handleInternalAggregateEvents = createRoute({
 			bin_size,
 			timezone,
 			max_groups,
+			aggregate_on,
 		} = c.req.valid("json");
 		let { event_names } = c.req.valid("json");
 
 		let aggregateAll = false;
 		let customer: FullCustomer | undefined;
 		let bcExclusionFlag = false;
+
+		if (aggregate_on && !customer_id) {
+			throw new RecaseError({
+				message: "customer_id is required when aggregate_on is set",
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
 
 		if (!customer_id) {
 			// No customer ID provided, set aggregateAll to true
@@ -140,6 +153,14 @@ export const handleInternalAggregateEvents = createRoute({
 			resolvedGroupBy = "entity_id";
 		} else if (group_by === "$plan_id") {
 			resolvedGroupBy = "plan_id";
+		} else if (
+			group_by === "source_feature_id" ||
+			group_by === "$source_feature_id"
+		) {
+			// Only meaningful for the deductions breakdown — the events rollups
+			// have no such column, so grouping them by it returns nothing.
+			// aggregateDeductions still receives the raw group_by below.
+			resolvedGroupBy = undefined;
 		}
 
 		const isPlanIdGrouping = resolvedGroupBy === "plan_id";
@@ -245,8 +266,30 @@ export const handleInternalAggregateEvents = createRoute({
 			}
 		}
 
+		const deductions =
+			aggregate_on === "deducted" && customer
+				? await aggregateDeductions({
+						ctx,
+						params: {
+							customer,
+							customerId: customer_id as string,
+							entityId: entity_id,
+							featureIds: event_names,
+							groupBy: group_by,
+							// Same normalized window and bin as the event aggregation above,
+							// so both series cover identical, aligned buckets.
+							interval: customRange ? undefined : (interval as RangeEnum),
+							customRange,
+							binSize,
+							maxGroups: max_groups,
+							timezone,
+						},
+					})
+				: undefined;
+
 		return c.json({
 			customer,
+			deductions,
 			events,
 			totals,
 			features,

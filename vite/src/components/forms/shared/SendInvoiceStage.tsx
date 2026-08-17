@@ -1,12 +1,9 @@
-import type { AppEnv, AttachPreviewResponse } from "@autumn/shared";
+import type { AppEnv } from "@autumn/shared";
 import { Button, Input, PanelButton } from "@autumn/ui";
 import { ArrowLeft, HourglassIcon, LightningIcon } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
-import type { BillingLineItem } from "@/components/v2/LineItemsPreview";
-import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import {
 	SheetFooter,
 	SheetHeader,
@@ -20,6 +17,7 @@ import {
 	type InvoiceSettings,
 	InvoiceSettingsSection,
 } from "./InvoiceSettingsSection";
+import { PreviewSection, type PreviewSectionQuery } from "./PreviewSection";
 import { UrlSuccessView } from "./UrlSuccessView";
 
 export interface SendInvoiceSubmitParams {
@@ -120,9 +118,7 @@ export function SendInvoiceStage({
 	onBack,
 	onSubmit,
 	getInvoiceUrl,
-	lineItems,
-	currency,
-	totals,
+	previewQuery,
 	scheduledStartDate,
 }: {
 	productName?: string;
@@ -133,14 +129,7 @@ export function SendInvoiceStage({
 		hostedInvoiceUrl: string | null | undefined;
 	}>;
 	getInvoiceUrl: (invoiceStripeId: string) => string;
-	lineItems?: BillingLineItem[];
-	currency?: string;
-	totals?: {
-		label: string;
-		amount: number;
-		variant?: "primary" | "secondary";
-		badge?: string;
-	}[];
+	previewQuery: PreviewSectionQuery;
 	scheduledStartDate?: number | null;
 }) {
 	const { customer, refetch } = useCusQuery();
@@ -322,13 +311,7 @@ export function SendInvoiceStage({
 				disabled={needsEmail}
 			/>
 
-			<LineItemsPreview
-				title="Pricing Preview"
-				lineItems={lineItems}
-				currency={currency}
-				totals={totals}
-				filterZeroAmounts
-			/>
+			<PreviewSection previewQuery={previewQuery} />
 
 			<SheetFooter className="flex flex-col grid-cols-1 mt-0">
 				<div className="flex flex-col gap-2 w-full">
@@ -367,9 +350,7 @@ export function SendInvoiceStageWithPreview({
 	scheduledStartDate,
 }: {
 	productName?: string;
-	previewQuery: {
-		data?: AttachPreviewResponse | null | undefined;
-	};
+	previewQuery: PreviewSectionQuery;
 	isPending: boolean;
 	onSubmit: (params: SendInvoiceSubmitParams) => Promise<{
 		stripeId: string | undefined;
@@ -380,13 +361,7 @@ export function SendInvoiceStageWithPreview({
 	onBack: () => void;
 	scheduledStartDate?: number | null;
 }) {
-	const previewData = previewQuery.data;
 	const effectiveScheduledStartDate = scheduledStartDate ?? null;
-
-	const totals = useMemo(
-		() => buildAttachPreviewTotals({ previewData, startDate: null }),
-		[previewData],
-	);
 
 	const getInvoiceUrl = useCallback(
 		(invoiceStripeId: string) =>
@@ -405,9 +380,7 @@ export function SendInvoiceStageWithPreview({
 			onBack={onBack}
 			onSubmit={onSubmit}
 			getInvoiceUrl={getInvoiceUrl}
-			lineItems={previewData?.line_items}
-			currency={previewData?.currency}
-			totals={totals}
+			previewQuery={previewQuery}
 			scheduledStartDate={effectiveScheduledStartDate}
 		/>
 	);

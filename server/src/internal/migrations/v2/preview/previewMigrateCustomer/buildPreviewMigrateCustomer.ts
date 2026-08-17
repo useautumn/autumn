@@ -1,10 +1,8 @@
 import { getApiBalances } from "@api/customers/cusFeatures";
 import type { AutumnBillingPlan, FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { buildBillingChanges } from "@/internal/billing/v2/actions/buildBillingChanges";
 import { applyAutumnBillingPlanToFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer.js";
-import { buildBalanceChanges } from "./buildBalanceChanges.js";
-import { buildFlagChanges } from "./buildFlagChanges.js";
-import { buildPlanChanges } from "./buildPlanChanges.js";
 import {
 	type PreviewMigrateCustomer,
 	PreviewMigrateCustomerSchema,
@@ -29,17 +27,20 @@ export const buildPreviewMigrateCustomer = async ({
 		getApiBalances({ ctx, fullCus: migratedFullCustomer }),
 	]);
 
+	const { planChanges, balanceChanges, flagChanges } = buildBillingChanges({
+		autumnBillingPlan,
+		originalFullCustomer,
+		beforeBalances: originalFeatures.balances,
+		afterBalances: migratedFeatures.balances,
+		beforeFlags: originalFeatures.flags,
+		afterFlags: migratedFeatures.flags,
+	});
+
 	return PreviewMigrateCustomerSchema.parse({
 		object: "migration_customer_preview",
 		customer_id: originalFullCustomer.id ?? originalFullCustomer.internal_id,
-		plan_changes: buildPlanChanges({ autumnBillingPlan }),
-		balance_changes: buildBalanceChanges({
-			beforeBalances: originalFeatures.balances,
-			afterBalances: migratedFeatures.balances,
-		}),
-		flag_changes: buildFlagChanges({
-			beforeFlags: originalFeatures.flags,
-			afterFlags: migratedFeatures.flags,
-		}),
+		plan_changes: planChanges,
+		balance_changes: balanceChanges,
+		flag_changes: flagChanges,
 	});
 };

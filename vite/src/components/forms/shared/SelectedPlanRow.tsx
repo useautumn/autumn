@@ -66,7 +66,7 @@ export function SelectedPlanRow({
 					className={cn(
 						"flex items-center gap-1.5 transition-opacity duration-150",
 						hasActions &&
-							"group-hover:opacity-0 group-focus-within:opacity-0 [@media(hover:none)]:opacity-0",
+							"group-hover:opacity-0 group-has-[:focus-visible]:opacity-0 [@media(hover:none)]:opacity-0",
 					)}
 				>
 					{isCustom && (
@@ -85,7 +85,7 @@ export function SelectedPlanRow({
 						))}
 				</div>
 				{hasActions && (
-					<div className="absolute right-0 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100">
+					<div className="absolute right-0 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-has-[:focus-visible]:opacity-100 [@media(hover:none)]:opacity-100">
 						{onEdit && (
 							<Button
 								variant="skeleton"

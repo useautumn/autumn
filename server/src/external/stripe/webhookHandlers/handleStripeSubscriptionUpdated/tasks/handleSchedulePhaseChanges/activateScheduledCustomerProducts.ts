@@ -33,7 +33,6 @@ export const activateScheduledCustomerProducts = async ({
 	const stripeSubscriptionSchedule = stripeSubscription.schedule;
 
 	for (const customerProduct of fullCustomer.customer_products) {
-		// Check if can activate: free OR on this subscription OR on this schedule
 		const hasStarted = hasCustomerProductStarted(customerProduct, { nowMs });
 		const canActivate = cp(customerProduct)
 			.free()
@@ -61,7 +60,6 @@ export const activateScheduledCustomerProducts = async ({
 			`Activating scheduled product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
 		);
 
-		// Free products get empty IDs, paid products get IDs from stripe subscription
 		const subscriptionIds = isFree ? [] : [stripeSubscription.id];
 		const scheduledIds = isFree
 			? []
@@ -79,6 +77,7 @@ export const activateScheduledCustomerProducts = async ({
 			fullCustomer,
 			subscriptionIds,
 			scheduledIds,
+			activatedAt: nowMs,
 		});
 
 		trackCustomerProductUpdate({

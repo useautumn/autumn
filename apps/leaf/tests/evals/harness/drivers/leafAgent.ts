@@ -1,11 +1,11 @@
+import { leafSkillsText, leafSystemPrompt } from "@autumn/agent-docs/agent";
 import { AppEnv } from "@autumn/shared";
-import type { ToolsInput } from "@mastra/core/agent";
+import { Agent, type ToolsInput } from "@mastra/core/agent";
 import type { MessageListItem } from "@mastra/core/agent/message-list";
 import { Mastra } from "@mastra/core/mastra";
 import { InMemoryStore } from "@mastra/core/storage";
 import { MCPClient } from "@mastra/mcp";
 import { createRequestContext } from "../../../../../../packages/mcp/src/server/auth/auth.js";
-import { createAutumnChatAgent } from "../../../../src/agent/runMessage/engines/autumnChatAgent.js";
 import { createLeafTracingOptions } from "../../../../src/internal/observability/leafTracingOptions.js";
 import { createMastraBraintrustObservability } from "../../../../src/providers/braintrust/index.js";
 import { defaultGenericMcpAgentConfig } from "../configs/genericMcpAgentConfig.js";
@@ -104,8 +104,14 @@ export const createLeafAgentDriver = ({
 		const toolCalls: EvalToolCall[] = [];
 		instrumentToolCalls({ toolCalls, tools, trace });
 
-		const agent = createAutumnChatAgent({
-			env,
+		const agent = new Agent({
+			id: "autumn-chat-eval",
+			name: "Autumn Chat Eval",
+			instructions: [
+				leafSystemPrompt("dashboard"),
+				`Current Autumn environment: ${env}.`,
+				leafSkillsText(),
+			].join("\n\n"),
 			model,
 			tools: tools as ToolsInput,
 		});

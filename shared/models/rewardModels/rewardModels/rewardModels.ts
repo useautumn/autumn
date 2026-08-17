@@ -17,7 +17,7 @@ const PromoCodeSchema = z.object({
 const RewardEntitlementSchema = z.object({
 	internal_feature_id: z.string().min(1),
 	// Optional: boolean features grant on/off access with no allowance
-	allowance: z.number().positive().optional(),
+	allowance: z.number().nonnegative().optional(),
 	expiry: EntitlementExpirySchema.optional(),
 });
 
@@ -28,6 +28,7 @@ export const DiscountConfigSchema = z.object({
 	should_rollover: z.boolean().optional(),
 	apply_to_all: z.boolean().optional(),
 	price_ids: z.array(z.string()).optional(),
+	product_ids: z.array(z.string()).optional(),
 });
 
 export const FreeProductConfigSchema = z.object({

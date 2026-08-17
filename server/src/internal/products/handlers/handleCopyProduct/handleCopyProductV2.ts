@@ -19,7 +19,7 @@ export const handleCopyProductV2 = createRoute({
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		const { db, logger, org, env: fromEnv, authType } = ctx;
+		const { db, org, env: fromEnv, authType } = ctx;
 		const { product_id: fromProductId } = c.req.param();
 		const { env: toEnv, id: toId, name: toName } = body;
 
@@ -34,8 +34,7 @@ export const handleCopyProductV2 = createRoute({
 			: org;
 
 		await copyProductForOrgs({
-			db,
-			logger,
+			ctx,
 			fromOrg: org,
 			fromEnv,
 			toOrg,

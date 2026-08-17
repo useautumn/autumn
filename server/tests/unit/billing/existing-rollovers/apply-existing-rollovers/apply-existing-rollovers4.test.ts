@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { type ExistingRollover, RolloverExpiryDurationType } from "@autumn/shared";
+import {
+	type ExistingRollover,
+	RolloverExpiryDurationType,
+} from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import chalk from "chalk";
@@ -15,7 +18,11 @@ describe(
 				featureName: "Feature A",
 				allowance: 100,
 				balance: 100,
-				rollover: { max: null, duration: RolloverExpiryDurationType.Month, length: 1 },
+				rollover: {
+					max: null,
+					duration: RolloverExpiryDurationType.Month,
+					length: 1,
+				},
 			});
 
 			const cusEntB = customerEntitlements.create({
@@ -24,7 +31,11 @@ describe(
 				featureName: "Feature B",
 				allowance: 200,
 				balance: 200,
-				rollover: { max: null, duration: RolloverExpiryDurationType.Month, length: 1 },
+				rollover: {
+					max: null,
+					duration: RolloverExpiryDurationType.Month,
+					length: 1,
+				},
 			});
 
 			const newCusProduct = customerProducts.create({

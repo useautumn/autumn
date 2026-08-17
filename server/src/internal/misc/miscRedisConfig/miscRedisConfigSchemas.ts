@@ -2,9 +2,8 @@ import { z } from "zod/v4";
 
 /**
  * Exactly two misc-cache instances:
- *  - main:   env-configured — CACHE_URL (private) + CACHE_MISC_DRAGONFLY_PUBLIC_URL
- *            for off-AWS callers. Post-migration, CACHE_URL repoints to the
- *            dragonfly private URL and the backup slot frees up.
+ *  - main:   env-configured — MISC_CACHE_DRAGONFLY_PRIVATE_URL/_PUBLIC_URL
+ *            (ECS prefers private). Post-migration the backup slot frees up.
  *  - backup: encrypted connection strings stored in this edge config — the
  *            migration target / point-anywhere override.
  */

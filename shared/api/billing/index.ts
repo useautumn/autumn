@@ -12,6 +12,9 @@ export * from "./checkout/prevVersions/checkoutParamsV0";
 export * from "./checkout/prevVersions/checkoutResponseV0";
 // Common
 export * from "./common/index";
+// Components
+export * from "./components/billingChanges/previewBalanceChange";
+export * from "./components/billingChanges/previewFlagChange";
 export * from "./createSchedule/createScheduleParamsV0";
 export * from "./createSchedule/createScheduleResponse";
 // DFU (customer imaging / live migration)

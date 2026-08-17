@@ -94,6 +94,8 @@ export const executeStripeSubscriptionAction = async ({
 		latestStripeInvoice = await finalizeStripeInvoice({
 			stripeCli,
 			invoiceId: latestStripeInvoice.id,
+			// Invoice mode: let Stripe email the finalized invoice (fires invoice.sent).
+			autoAdvance: Boolean(billingContext.invoiceMode),
 		});
 	}
 

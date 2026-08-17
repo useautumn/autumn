@@ -154,11 +154,11 @@ const ensureAtmnPackageShim = async (workspaceDir: string) => {
 		),
 		writeFile(
 			join(packageDir, "index.ts"),
-			`export { billingControls, feature, item, plan } from "${composeImportPath}";\n`,
+			`export { billingControls, feature, item, plan, referralProgram, reward } from "${composeImportPath}";\n`,
 		),
 		writeFile(
 			join(packageDir, "index.d.ts"),
-			`export { billingControls, feature, item, plan } from "${composeTypesImportPath}";\n`,
+			`export { billingControls, feature, item, plan, referralProgram, reward } from "${composeTypesImportPath}";\n`,
 		),
 	]);
 };
@@ -489,6 +489,8 @@ export const runAtmnWorkspaceCli = async ({
 			cwd: workspace.workspaceDir,
 			env: {
 				...process.env,
+				ATMN_BACKEND_URL:
+					process.env.AUTUMN_TEST_BASE_URL ?? process.env.ATMN_BACKEND_URL,
 				ATMN_DISABLE_AUTH_RECOVERY: "1",
 				AUTUMN_SECRET_KEY: workspace.secretKey,
 			},

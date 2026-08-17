@@ -1,7 +1,11 @@
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { resolveMiscMainUrl } from "@/external/redis/initUtils/redisConfig.js";
 import "dotenv/config";
+import { getAutumnEnv } from "@autumn/env";
 
 export const checkEnvVars = () => {
+	getAutumnEnv();
+
 	if (!process.env.DATABASE_URL) {
 		console.error(`DATABASE_URL is not set`);
 		process.exit(1);
@@ -14,13 +18,15 @@ export const checkEnvVars = () => {
 		process.exit(1);
 	}
 
-	if (!process.env.CACHE_URL?.trim()) {
-		console.error("CACHE_URL is not set (the misc Redis cache is required)");
+	if (!resolveMiscMainUrl()) {
+		console.error(
+			"Misc Redis cache is not configured (set MISC_CACHE_DRAGONFLY_PUBLIC_URL)",
+		);
 		process.exit(1);
 	}
 
-	if (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL) {
-		console.error(`BETTER_AUTH_SECRET or BETTER_AUTH_URL is not set`);
+	if (!process.env.BETTER_AUTH_SECRET) {
+		console.error(`BETTER_AUTH_SECRET is not set`);
 		process.exit(1);
 	}
 

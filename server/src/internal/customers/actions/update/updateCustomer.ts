@@ -83,15 +83,19 @@ export const updateCustomer = async ({
 		}
 	}
 
-	// Try to update stripe ID
+	// Try to update stripe ID. Distinguish omitted (undefined -> leave as is)
+	// from explicitly cleared (null/"" -> unlink the Stripe customer).
 	let stripeId = originalCustomer.processor?.id;
 	const newStripeId = newCusData.stripe_id;
+	const clearStripeId = newStripeId === null || newStripeId === "";
 
-	if (notNullish(newStripeId) && stripeId !== newStripeId) {
+	if (clearStripeId) {
+		stripeId = undefined;
+	} else if (newStripeId && stripeId !== newStripeId) {
 		const stripeCli = createStripeCli({ org, env });
 		await stripeCli.customers.retrieve(newStripeId);
 
-		stripeId = newCusData.stripe_id;
+		stripeId = newStripeId;
 		logger.info(
 			`Updating customer's Stripe ID from ${originalCustomer.processor?.id} to ${stripeId}`,
 		);
@@ -184,8 +188,9 @@ export const updateCustomer = async ({
 	};
 
 	if (newStripeId) {
-		// Only set processor if newStripeId is provided
 		updateData.processor = { id: newStripeId, type: ProcessorType.Stripe };
+	} else if (clearStripeId) {
+		updateData.processor = null;
 	}
 
 	if (!notNullish(newCustomerId) || originalCustomer.id === newCustomerId) {

@@ -60,7 +60,7 @@ const lineItemContext = ({
 		direction,
 		billingTiming,
 		backdate: cycleCount ? { startsAt, cycleCount } : undefined,
-	} as LineItemContext);
+	}) as LineItemContext;
 
 describe("backdated line item context", () => {
 	test("derives the backdated period, snapped now and cycle count", () => {

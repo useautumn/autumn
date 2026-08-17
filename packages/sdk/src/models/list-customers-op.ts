@@ -44,6 +44,32 @@ export const ListCustomersProcessor = {
 } as const;
 export type ListCustomersProcessor = ClosedEnum<typeof ListCustomersProcessor>;
 
+/**
+ * Sort by customer creation time. Defaults to desc (newest first).
+ */
+export const SortOrder = {
+  Asc: "asc",
+  Desc: "desc",
+} as const;
+/**
+ * Sort by customer creation time. Defaults to desc (newest first).
+ */
+export type SortOrder = ClosedEnum<typeof SortOrder>;
+
+/**
+ * Filter by customer creation time (epoch milliseconds, inclusive bounds).
+ */
+export type CreatedAtRange = {
+  /**
+   * Include customers created at or after this timestamp (epoch milliseconds, inclusive)
+   */
+  start?: number | undefined;
+  /**
+   * Include customers created at or before this timestamp (epoch milliseconds, inclusive)
+   */
+  end?: number | undefined;
+};
+
 export type ListCustomersParams = {
   /**
    * Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
@@ -69,6 +95,14 @@ export type ListCustomersParams = {
    * Filter by customer processor type (stripe, revenuecat, vercel).
    */
   processors?: Array<ListCustomersProcessor> | undefined;
+  /**
+   * Sort by customer creation time. Defaults to desc (newest first).
+   */
+  sortOrder?: SortOrder | undefined;
+  /**
+   * Filter by customer creation time (epoch milliseconds, inclusive bounds).
+   */
+  createdAtRange?: CreatedAtRange | undefined;
 };
 
 /**
@@ -272,10 +306,22 @@ export type ListCustomersUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const ListCustomersAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type ListCustomersAnchor = OpenEnum<typeof ListCustomersAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type ListCustomersFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 /**
@@ -309,6 +355,10 @@ export type ListCustomersUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: ListCustomersUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: ListCustomersAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -900,6 +950,30 @@ export const ListCustomersProcessor$outboundSchema: z.ZodMiniEnum<
 > = z.enum(ListCustomersProcessor);
 
 /** @internal */
+export const SortOrder$outboundSchema: z.ZodMiniEnum<typeof SortOrder> = z.enum(
+  SortOrder,
+);
+
+/** @internal */
+export type CreatedAtRange$Outbound = {
+  start?: number | undefined;
+  end?: number | undefined;
+};
+
+/** @internal */
+export const CreatedAtRange$outboundSchema: z.ZodMiniType<
+  CreatedAtRange$Outbound,
+  CreatedAtRange
+> = z.object({
+  start: z.optional(z.number()),
+  end: z.optional(z.number()),
+});
+
+export function createdAtRangeToJSON(createdAtRange: CreatedAtRange): string {
+  return JSON.stringify(CreatedAtRange$outboundSchema.parse(createdAtRange));
+}
+
+/** @internal */
 export type ListCustomersParams$Outbound = {
   start_cursor: string;
   limit: number;
@@ -907,6 +981,8 @@ export type ListCustomersParams$Outbound = {
   subscription_status?: string | undefined;
   search?: string | undefined;
   processors?: Array<string> | undefined;
+  sort_order?: string | undefined;
+  created_at_range?: CreatedAtRange$Outbound | undefined;
 };
 
 /** @internal */
@@ -923,11 +999,15 @@ export const ListCustomersParams$outboundSchema: z.ZodMiniType<
     ),
     search: z.optional(z.string()),
     processors: z.optional(z.array(ListCustomersProcessor$outboundSchema)),
+    sortOrder: z.optional(SortOrder$outboundSchema),
+    createdAtRange: z.optional(z.lazy(() => CreatedAtRange$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
       startCursor: "start_cursor",
       subscriptionStatus: "subscription_status",
+      sortOrder: "sort_order",
+      createdAtRange: "created_at_range",
     });
   }),
 );
@@ -1128,11 +1208,17 @@ export const ListCustomersUsageLimitInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListCustomersUsageLimitInterval);
 
 /** @internal */
+export const ListCustomersAnchor$inboundSchema: z.ZodMiniType<
+  ListCustomersAnchor,
+  unknown
+> = openEnums.inboundSchema(ListCustomersAnchor);
+
+/** @internal */
 export const ListCustomersFilter$inboundSchema: z.ZodMiniType<
   ListCustomersFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function listCustomersFilterFromJSON(
@@ -1161,6 +1247,7 @@ export const ListCustomersUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: ListCustomersUsageLimitInterval$inboundSchema,
+    anchor: types.optional(ListCustomersAnchor$inboundSchema),
     filter: types.optional(z.lazy(() => ListCustomersFilter$inboundSchema)),
     usage: types.optional(types.number()),
     source: types.optional(ListCustomersUsageLimitSource$inboundSchema),

@@ -1,0 +1,19 @@
+DESCRIPTION >
+    Counts property presence at org-hour grain before the value-shape gate is applied.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        event_name,
+        kv.1 as property_key,
+        toStartOfHour(timestamp) as hour,
+        sumState(toUInt64(1)) as event_count
+    FROM events
+    ARRAY JOIN JSONExtractKeysAndValues(properties::String, 'String') as kv
+    WHERE kv.2 != ''
+    GROUP BY org_id, env, event_name, property_key, hour
+
+TYPE materialized
+DATASOURCE events_org_property_coverage_hourly_mv

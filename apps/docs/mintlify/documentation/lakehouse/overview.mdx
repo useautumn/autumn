@@ -8,7 +8,7 @@ description: "Query your full Autumn dataset directly from your own data warehou
   **Available on request** — The Autumn Lakehouse is provisioned per customer. Contact us at [hey@useautumn.com](mailto:hey@useautumn.com) to get access.
 </Warning>
 
-The Autumn Lakehouse mirrors your entire Autumn dataset — customers, plans, subscriptions, invoices, balances, events, and more — into your own data warehouse as [Apache Iceberg](https://iceberg.apache.org/) tables. You read it directly with **ClickHouse**{/* or **BigQuery** — hidden until BigQuery delivery ships */}, no API pagination required.
+The Autumn Lakehouse mirrors your entire Autumn dataset — customers, plans, subscriptions, invoices, balances, events, and more — into your own data warehouse as [Apache Iceberg](https://iceberg.apache.org/) tables. You read it directly with **ClickHouse** or **BigQuery**, no API pagination required.
 
 It's built for analytics: BI dashboards, revenue and usage reporting, cohort analysis, and joining Autumn's billing data against your own product data — all in SQL, against the full history.
 
@@ -33,6 +33,7 @@ flowchart LR
   end
 
   CH["ClickHouse"]
+  BQ["BigQuery"]
 
   DB -->|change data capture| RW
   EV --> RW
@@ -40,11 +41,8 @@ flowchart LR
   RW -->|events lane| EVT
   ICE -->|AWS Glue catalog| CH
   EVT -->|AWS Glue catalog| CH
-
-  %% BigQuery leg — hidden until BigQuery delivery ships:
-  %% BQ["BigQuery"]
-  %% ICE -->|BigLake REST catalog| BQ
-  %% EVT -->|BigLake REST catalog| BQ
+  ICE -->|BigLake REST catalog| BQ
+  EVT -->|BigLake REST catalog| BQ
 ```
 
 ## Data freshness
@@ -72,7 +70,7 @@ When we foresee a new version, we contact tenants beforehand. You **never need t
 
 <CardGroup cols={3}>
   <Card title="Connecting" icon="plug" href="/documentation/lakehouse/connecting">
-    Attach ClickHouse to your catalog.
+    Attach ClickHouse or BigQuery to your catalog.
   </Card>
   <Card title="Schema Reference" icon="table" href="/documentation/lakehouse/schema">
     Every table and column, with the keys to join on.

@@ -24,6 +24,11 @@ import {
 import { updateProduct } from "@/internal/product/actions/updateProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+import {
+	applyCatalogConfigResources,
+	assertNoCatalogConfigConflicts,
+	resolveCatalogConfigResources,
+} from "../catalogConfigResources.js";
 import { sortCatalogPlansByDependencies } from "../catalogPlanDependencies.js";
 import {
 	deriveReplaceFeatureIds,
@@ -332,12 +337,12 @@ const applyMissingPlanRemovals = async ({
 			});
 			if (!product) continue;
 
-			const counts = await CusProdReadService.getCounts({
+			const hasCustomers = await CusProdReadService.existsForProduct({
 				db: ctx.db,
 				internalProductId: product.internal_id,
 			});
 
-			if (Number(counts?.all ?? 0) > 0) {
+			if (hasCustomers) {
 				await ProductService.updateByInternalId({
 					db: ctx.db,
 					internalId: product.internal_id,
@@ -353,14 +358,14 @@ const applyMissingPlanRemovals = async ({
 			continue;
 		}
 
-		const counts = await CusProdReadService.getCountsForAllVersions({
+		const hasCustomers = await CusProdReadService.existsForProductVersions({
 			db: ctx.db,
 			productId: planId,
 			orgId: ctx.org.id,
 			env: ctx.env,
 		});
 
-		if (Number(counts?.all ?? 0) > 0) {
+		if (hasCustomers) {
 			await archiveProductVersions({ ctx, productId: planId });
 		} else {
 			await deleteProduct({
@@ -482,10 +487,23 @@ const resolveCatalogUpdateResponse = async ({
 				: null;
 		}),
 	);
+	const { rewardById, programById } = await resolveCatalogConfigResources({
+		ctx,
+		params,
+	});
 
 	return {
 		plans: resolvedPlans.filter((plan) => plan !== null),
 		features: resolvedFeatures.filter((feature) => feature !== null),
+		rewards: (params.rewards ?? []).flatMap((reward) => {
+			const id = reward.coupon?.id ?? reward.feature_grant!.id;
+			const resolved = rewardById.get(id);
+			return resolved ? [resolved] : [];
+		}),
+		referral_programs: (params.referral_programs ?? []).flatMap((program) => {
+			const resolved = programById.get(program.id);
+			return resolved ? [resolved] : [];
+		}),
 	};
 };
 
@@ -498,7 +516,12 @@ export const updateCatalog = async ({
 }) => {
 	// Preflight the whole virtual catalog before any mutation; individual writes
 	// revalidate against the real product identities created by earlier plans.
-	await previewUpdateCatalog({ ctx, params });
+	const preview = await previewUpdateCatalog({ ctx, params });
+	const configPreview = {
+		rewardChanges: preview.reward_changes,
+		referralProgramChanges: preview.referral_program_changes,
+	};
+	assertNoCatalogConfigConflicts(configPreview);
 	const { db, org, env } = ctx;
 	const productsBeforeUpdate = await ProductService.listFull({
 		db,
@@ -519,6 +542,7 @@ export const updateCatalog = async ({
 
 	await upsertFeatures({ ctx, params, products: productsBeforeUpdate });
 	await upsertPlans({ ctx, params });
+	await applyCatalogConfigResources({ ctx, params, preview: configPreview });
 	await applyMissingPlanRemovals({ ctx, removals: replacePlanIds });
 
 	const replaceFeatureIds = params.skip_deletions

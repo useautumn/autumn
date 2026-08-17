@@ -40,6 +40,7 @@ export const EMPTY_ADDITIONAL_PLAN: Omit<AttachAdditionalPlan, "_id"> = {
 export const AttachFormSchema = z.object({
 	productId: z.string(),
 	additionalPlans: z.array(AttachAdditionalPlanSchema),
+	removePlanIds: z.array(z.string()),
 	prepaidOptions: z.record(z.string(), z.number().nonnegative().optional()),
 	licenseQuantities: z.record(z.string(), z.number().nonnegative().optional()),
 	items: z.custom<ProductItem[]>().nullable(),

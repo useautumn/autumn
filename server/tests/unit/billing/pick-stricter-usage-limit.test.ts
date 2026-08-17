@@ -16,11 +16,13 @@ const limit = (
 	value: number,
 	interval: DbUsageLimit["interval"] = ResetInterval.Month,
 	enabled = true,
+	anchor: DbUsageLimit["anchor"] = "billing_cycle",
 ): DbUsageLimit => ({
 	feature_id: "messages",
 	enabled,
 	limit: value,
 	interval,
+	anchor,
 });
 
 describe("pickStricterUsageLimit", () => {
@@ -63,5 +65,50 @@ describe("pickStricterUsageLimit", () => {
 		const perWeek = limit(70, ResetInterval.Week);
 		const perYear = limit(100, ResetInterval.Year);
 		expect(pickStricterUsageLimit(perWeek, perYear)).toBe(perYear);
+	});
+
+	test("equal rate: utc wins over billing_cycle (order-independent)", () => {
+		const utc = limit(200, ResetInterval.Day, true, "utc");
+		const cycle = limit(200, ResetInterval.Day, true, "billing_cycle");
+		expect(pickStricterUsageLimit(utc, cycle)).toBe(utc);
+		expect(pickStricterUsageLimit(cycle, utc)).toBe(utc);
+	});
+
+	test("equal rate across DIFFERENT intervals: utc still wins", () => {
+		// 100/day and 700/week are both 100/day, so the rate comparison ties and
+		// the anchor tiebreak decides.
+		const utcWeekly = limit(700, ResetInterval.Week, true, "utc");
+		const cycleDaily = limit(100, ResetInterval.Day, true, "billing_cycle");
+		expect(pickStricterUsageLimit(utcWeekly, cycleDaily)).toBe(utcWeekly);
+		expect(pickStricterUsageLimit(cycleDaily, utcWeekly)).toBe(utcWeekly);
+	});
+
+	test("a stricter rate beats a utc anchor", () => {
+		// The anchor is only a tiebreak: it must never override a lower rate.
+		const utcLoose = limit(1000, ResetInterval.Day, true, "utc");
+		const cycleTight = limit(5, ResetInterval.Day, true, "billing_cycle");
+		expect(pickStricterUsageLimit(utcLoose, cycleTight)).toBe(cycleTight);
+		expect(pickStricterUsageLimit(cycleTight, utcLoose)).toBe(cycleTight);
+	});
+
+	test("disabled still loses to a utc anchor", () => {
+		const utcDisabled = limit(5, ResetInterval.Day, false, "utc");
+		const cycleEnabled = limit(1000, ResetInterval.Day, true, "billing_cycle");
+		expect(pickStricterUsageLimit(utcDisabled, cycleEnabled)).toBe(
+			cycleEnabled,
+		);
+		expect(pickStricterUsageLimit(cycleEnabled, utcDisabled)).toBe(
+			cycleEnabled,
+		);
+	});
+
+	test("legacy rows without an anchor read as billing_cycle", () => {
+		// Stored rows are jsonb cast with drizzle's $type; nothing parses them on
+		// read, so pre-field rows arrive with `anchor` absent.
+		const legacy = { ...limit(200, ResetInterval.Day) } as DbUsageLimit;
+		delete (legacy as Partial<DbUsageLimit>).anchor;
+		const utc = limit(200, ResetInterval.Day, true, "utc");
+		expect(pickStricterUsageLimit(legacy, utc)).toBe(utc);
+		expect(pickStricterUsageLimit(utc, legacy)).toBe(utc);
 	});
 });

@@ -31,6 +31,7 @@ COPY packages/atmn/package.json packages/atmn/
 COPY packages/atmn-tests/package.json packages/atmn-tests/
 COPY packages/auth/package.json packages/auth/
 COPY packages/autumn-js/package.json packages/autumn-js/
+COPY packages/env/package.json packages/env/
 COPY packages/gateway/package.json packages/gateway/
 COPY packages/ksuid/package.json packages/ksuid/
 COPY packages/logging/package.json packages/logging/
@@ -54,6 +55,12 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 FROM oven/bun:1.3.14
 WORKDIR /app
 ENV NODE_ENV=production
+
+# oven/bun ships an empty /etc/ssl/certs; native TLS (DuckDB's MotherDuck
+# extension gRPC) needs the system CA bundle, unlike Bun's bundled JS store.
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
 
 # node_modules (+ manifests) from the cached deps layer, then the source on top.
 # node_modules is .dockerignore'd, so COPY . . never clobbers the install.

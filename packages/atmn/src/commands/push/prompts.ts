@@ -1,4 +1,5 @@
 import type { Feature, Plan } from "../../compose/models/index.js";
+import type { CatalogPreviewUpdateResponse } from "../../lib/api/endpoints/index.js";
 import { AppEnv } from "../../lib/env/index.js";
 import type { FeatureDeleteInfo, PlanDeleteInfo } from "./types.js";
 
@@ -8,6 +9,7 @@ import type { FeatureDeleteInfo, PlanDeleteInfo } from "./types.js";
 
 export type PromptType =
 	| "prod_confirmation"
+	| "config_resources_confirmation"
 	| "plan_versioning"
 	| "plan_migration"
 	| "plan_variant_propagation"
@@ -34,6 +36,13 @@ export interface PushPrompt {
 	data: Record<string, unknown>;
 	options: PromptOption[];
 }
+
+export type ConfigResourceType = "reward" | "referral program";
+export type ConfigResourceChange = {
+	action: "created" | "updated" | "deleted";
+	id: string;
+	resourceType: ConfigResourceType;
+};
 
 interface PlanVersioningPromptInfo {
 	plan: Pick<Plan, "id" | "name">;
@@ -88,6 +97,44 @@ export function createProdConfirmationPrompt(): PushPrompt {
 			{ label: "No, cancel", value: "cancel", isDefault: true },
 		],
 	};
+}
+
+export function createConfigResourceReviewPrompts(
+	preview: Pick<
+		CatalogPreviewUpdateResponse,
+		"reward_changes" | "referral_program_changes"
+	>,
+): PushPrompt[] {
+	const resources = [
+		{ changes: preview.reward_changes, resourceType: "reward" },
+		{
+			changes: preview.referral_program_changes,
+			resourceType: "referral program",
+		},
+	] as const;
+	const changes: ConfigResourceChange[] = [];
+
+	for (const { changes: resourceChanges, resourceType } of resources) {
+		for (const { id, action } of resourceChanges) {
+			if (action === "none" || action === "conflict") continue;
+			changes.push({ id, action, resourceType });
+		}
+	}
+	if (changes.length === 0) return [];
+
+	return [
+		{
+			id: generatePromptId(),
+			type: "config_resources_confirmation",
+			entityId: "config_resources",
+			entityName: "Config resources",
+			data: { changes },
+			options: [
+				{ label: "Push changes", value: "confirm", isDefault: true },
+				{ label: "Cancel push", value: "cancel", isDefault: false },
+			],
+		},
+	];
 }
 
 /**

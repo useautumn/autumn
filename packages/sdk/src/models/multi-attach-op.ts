@@ -560,6 +560,18 @@ export type MultiAttachEntityDataInterval = ClosedEnum<
   typeof MultiAttachEntityDataInterval
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const MultiAttachAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type MultiAttachAnchor = ClosedEnum<typeof MultiAttachAnchor>;
+
 export type MultiAttachProperties = string | number | boolean;
 
 /**
@@ -586,6 +598,10 @@ export type MultiAttachUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: MultiAttachEntityDataInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: MultiAttachAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1502,6 +1518,11 @@ export const MultiAttachEntityDataInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(MultiAttachEntityDataInterval);
 
 /** @internal */
+export const MultiAttachAnchor$outboundSchema: z.ZodMiniEnum<
+  typeof MultiAttachAnchor
+> = z.enum(MultiAttachAnchor);
+
+/** @internal */
 export type MultiAttachProperties$Outbound = string | number | boolean;
 
 /** @internal */
@@ -1548,6 +1569,7 @@ export type MultiAttachUsageLimit$Outbound = {
   enabled: boolean;
   limit: number;
   interval: string;
+  anchor?: string | undefined;
   filter?: MultiAttachFilter$Outbound | undefined;
 };
 
@@ -1561,6 +1583,7 @@ export const MultiAttachUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: MultiAttachEntityDataInterval$outboundSchema,
+    anchor: z.optional(MultiAttachAnchor$outboundSchema),
     filter: z.optional(z.lazy(() => MultiAttachFilter$outboundSchema)),
   }),
   z.transform((v) => {

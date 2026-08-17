@@ -7,6 +7,7 @@ import {
 	type Price,
 	secondsToMs,
 } from "@autumn/shared";
+import { billingContextToFutureTrialEnd } from "@/internal/billing/v2/utils/billingContext/billingContextToFutureTrialEnd";
 
 /**
  * Calculates the billing period (start and end) for a line item based on the billing context.
@@ -28,12 +29,8 @@ export const getLineItemBillingPeriod = ({
 }): BillingPeriod | undefined => {
 	if (isOneOffPrice(price)) return undefined;
 
-	const {
-		billingCycleAnchorMs,
-		currentEpochMs,
-		stripeSubscription,
-		trialContext,
-	} = billingContext;
+	const { billingCycleAnchorMs, currentEpochMs, stripeSubscription } =
+		billingContext;
 
 	const { interval, interval_count: intervalCount } = price.config;
 
@@ -47,9 +44,7 @@ export const getLineItemBillingPeriod = ({
 	// before the trial end. For non-trial attaches against an existing subscription
 	// whose anchor is far in the future, do NOT floor at the anchor — natural cycle
 	// boundaries (e.g., monthly add-on on an annual sub) are correct.
-	const trialEndsAt = trialContext?.trialEndsAt;
-	const endFloor =
-		trialEndsAt && trialEndsAt > currentEpochMs ? trialEndsAt : undefined;
+	const endFloor = billingContextToFutureTrialEnd({ billingContext });
 
 	const start = getCycleStart({
 		anchor: billingCycleAnchorMs,

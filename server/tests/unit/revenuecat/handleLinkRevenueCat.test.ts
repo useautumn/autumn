@@ -75,7 +75,6 @@ describe("handleLinkRevenueCat", () => {
 	beforeEach(() => {
 		process.env.REVENUECAT_OAUTH_CLIENT_ID = "rc_client";
 		process.env.REVENUECAT_OAUTH_CLIENT_SECRET = "rc_secret";
-		process.env.BETTER_AUTH_URL = "https://auth.example.com";
 		mockValidatePlatformOrg.mockClear();
 		mockGenerateOAuthState.mockClear();
 		mockCreateRcAuthorizationUrl.mockClear();

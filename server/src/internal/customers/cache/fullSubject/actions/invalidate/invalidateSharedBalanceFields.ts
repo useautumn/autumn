@@ -181,8 +181,12 @@ async function getDelFieldsFromManifest({
 	if (!parsed) return;
 	const { subjectBalances, usageWindowUpdates } = parsed;
 
+	const usageWindowRowCount = usageWindowUpdates.reduce(
+		(total, update) => total + update.usage_windows.length,
+		0,
+	);
 	logger.info(
-		`[invalidateSharedBalanceFields] ${customerId}: GETDEL ${balanceKeys.length} balance keys, flushing ${subjectBalances.length} balances, ${usageWindowUpdates.length} usage windows`,
+		`[invalidateSharedBalanceFields] ${customerId}: GETDEL ${balanceKeys.length} balance keys, flushing ${subjectBalances.length} balances, ${usageWindowUpdates.length} usage window groups (${usageWindowRowCount} rows)`,
 	);
 
 	await flushSubjectBalancesToDb({

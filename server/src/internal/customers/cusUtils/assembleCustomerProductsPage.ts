@@ -7,6 +7,7 @@ import { normalizeCustomerProductTimeFields } from "../reassembleFlattenedCustom
 
 export type RankedCustomerProductRow = FullCusProduct & {
 	status_rank: number;
+	scheduled_start: number | string | null;
 	entity_rank: number;
 };
 
@@ -14,6 +15,7 @@ export const encodeProductsCursor = (row: RankedCustomerProductRow): string =>
 	CustomerProductsCursor.encode({
 		eRank: row.entity_rank,
 		rank: row.status_rank,
+		st: Number(row.scheduled_start ?? 0),
 		t: Number(row.created_at),
 		id: row.id,
 	});

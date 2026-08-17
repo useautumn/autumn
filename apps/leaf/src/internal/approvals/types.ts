@@ -20,7 +20,7 @@ export type ApprovalRunResult =
 			/** The resumed turn parked on an ask_question — rich surfaces render
 			 * the options as buttons. */
 			question?: {
-				options: { id?: string; label?: string }[];
+				options: ReadonlyArray<Readonly<{ id?: string; label?: string }>>;
 				prompt: string;
 				requestId: string;
 				sessionId: string;
@@ -31,7 +31,7 @@ export type ApprovalRunResult =
 	  };
 
 export type ApprovalAuthorization =
-	| { allowed: true; approverToken?: string }
+	| { allowed: true }
 	| { allowed: false; text: string };
 
 export type ApprovalActionDeps = {
@@ -39,7 +39,6 @@ export type ApprovalActionDeps = {
 		approval: ChatApproval;
 		onProgress?: (statusLine: string) => void;
 		providerUserId: string;
-		approverToken?: string;
 	}) => Promise<ApprovalRunResult>;
 	cancelApproval: (input: {
 		approvalId: string;

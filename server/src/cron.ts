@@ -1,6 +1,8 @@
+import { getAutumnEnv } from "@autumn/env";
 import { initInfisical } from "./external/infisical/initInfisical.js";
 
 await initInfisical();
+getAutumnEnv();
 const { warmupRegionalRedis } = await import("./external/redis/initRedis.js");
 await warmupRegionalRedis();
 
@@ -11,6 +13,9 @@ await import("./internal/misc/miscRedisConfig/miscRedisConfigStore.js");
 await import("./internal/misc/cacheV2Ramp/cacheV2RampStore.js");
 await import("./internal/misc/resetJob/resetJobStore.js");
 await import("./internal/misc/resetJobV2/resetJobV2Store.js");
+await import(
+	"./internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js"
+);
 const { logger } = await import("./external/logtail/logtailUtils.js");
 const { startAllEdgeConfigPolling } = await import(
 	"./internal/misc/edgeConfig/edgeConfigRegistry.js"

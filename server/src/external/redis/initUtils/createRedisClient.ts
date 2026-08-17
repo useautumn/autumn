@@ -3,6 +3,8 @@ import {
 	instrumentRedis,
 	type RedisClientType,
 } from "../otel/instrumentRedis.js";
+import { createRedisReadPool } from "./createRedisReadPool.js";
+import { createStandbyRedisRouter } from "./createStandbyRedisRouter.js";
 import { redisDnsLookup } from "./redisDnsLookup.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
@@ -26,14 +28,16 @@ export const createRedisClient = ({
 	cacheUrl,
 	region,
 	redisType,
-	cacheCert = process.env.CACHE_CERT || null,
 	commandTimeout = REDIS_COMMAND_TIMEOUT_MS,
+	autoResendUnfulfilledCommands = true,
+	maxRetriesPerRequest = null,
 }: {
 	cacheUrl: string;
 	region: string;
 	redisType: RedisClientType;
-	cacheCert?: string | null;
 	commandTimeout?: number;
+	autoResendUnfulfilledCommands?: boolean;
+	maxRetriesPerRequest?: number | null;
 }): Redis => {
 	console.log(
 		`[Redis] ${region}: connecting to ${formatRedisEndpoint({ cacheUrl })}`,
@@ -42,21 +46,18 @@ export const createRedisClient = ({
 	const usesTls = cacheUrl.startsWith("rediss:");
 
 	const instance = new Redis(cacheUrl, {
-		tls: cacheCert
-			? { ca: cacheCert }
-			: usesTls
-				? { lookup: redisDnsLookup }
-				: undefined,
+		tls: usesTls ? { lookup: redisDnsLookup } : undefined,
 		family: 4,
 		keepAlive: 10000,
 		commandTimeout,
-		// Let `commandTimeout` (default 10s) be the sole bound on how long a command
+		// By default, let `commandTimeout` be the sole bound on how long a command
 		// can wait. `maxRetriesPerRequest: null` disables ioredis's default
 		// "flush pending commands after N reconnect attempts" behavior, which
 		// otherwise aborts commands still in the offline queue on any minor
 		// handshake blip. Under a real brownout, commands still fail via the
 		// `Command timed out` path.
-		maxRetriesPerRequest: null,
+		maxRetriesPerRequest,
+		autoResendUnfulfilledCommands,
 	});
 
 	// instrumentRedis must run first so its defineCommand patch
@@ -68,3 +69,40 @@ export const createRedisClient = ({
 };
 
 export const createRedisConnection = createRedisClient;
+
+/** Two connections to the same endpoint behind a router. Command resend is off,
+ *  and pending commands fail on the first reconnect so idempotent reads can retry
+ *  immediately on the alternate connection without reordering mutations. */
+export const createStandbyRedisConnection = ({
+	region,
+	...options
+}: Parameters<typeof createRedisClient>[0]): Redis =>
+	createStandbyRedisRouter({
+		primary: createRedisClient({
+			...options,
+			region: `${region}:primary`,
+			autoResendUnfulfilledCommands: false,
+			maxRetriesPerRequest: 0,
+		}),
+		standby: createRedisClient({
+			...options,
+			region: `${region}:standby`,
+			autoResendUnfulfilledCommands: false,
+			maxRetriesPerRequest: 0,
+		}),
+	});
+
+/** Two read lanes, each retaining the preferred/standby failover pair. */
+export const createPooledStandbyRedisConnection = ({
+	region,
+	...options
+}: Parameters<typeof createRedisClient>[0]): Redis =>
+	createRedisReadPool({
+		lanes: [
+			createStandbyRedisConnection({ ...options, region }),
+			createStandbyRedisConnection({
+				...options,
+				region: `${region}:lane-1`,
+			}),
+		],
+	});

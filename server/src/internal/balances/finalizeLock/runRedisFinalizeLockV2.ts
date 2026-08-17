@@ -1,6 +1,8 @@
 import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { resolveInternalProductIdForEvent } from "@/internal/balances/events/resolveInternalProductIdForEvent.js";
 import { executeRedisDeductionV2 } from "@/internal/balances/utils/deductionV2/executeRedisDeductionV2.js";
+import { projectMutationLogsToTrackDeductionsV2 } from "@/internal/balances/utils/deductionV2/projectMutationLogsToTrackDeductionsV2.js";
 import type { FinalizeLockContextV2 } from "@/internal/balances/utils/lockV2/buildFinalizeLockContextV2.js";
 import { deductionUpdatesToModifiedIds } from "@/internal/balances/utils/sync/deductionUpdatesToModifiedIds.js";
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
@@ -44,9 +46,11 @@ export const runRedisFinalizeLockV2 = async ({
 
 	const {
 		updates,
+		fullSubject: updatedFullSubject,
 		rolloverUpdates,
 		modifiedCusEntIdsByFeatureId,
 		usageWindowUpdates,
+		mutationLogs,
 	} = redisResult;
 	const modifiedCusEntIds = deductionUpdatesToModifiedIds({ updates });
 	const rolloverIds = Object.keys(rolloverUpdates);
@@ -72,5 +76,20 @@ export const runRedisFinalizeLockV2 = async ({
 		});
 	}
 
-	insertFinalizeLockEventV2({ ctx, finalizeLockContext });
+	const deductions = projectMutationLogsToTrackDeductionsV2({
+		fullSubject: updatedFullSubject,
+		mutationLogs,
+	});
+
+	const internalProductId = resolveInternalProductIdForEvent({
+		fullSubject: updatedFullSubject,
+		mutationLogs,
+	});
+
+	insertFinalizeLockEventV2({
+		ctx,
+		finalizeLockContext,
+		deductions,
+		internalProductId,
+	});
 };

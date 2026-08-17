@@ -52,6 +52,22 @@ const countRowsByEventName = ({
 	return counts;
 };
 
+export const propertyRollupCoverageIsIncomplete = ({
+	rows,
+	coverage,
+}: {
+	rows: AggregateGroupablePipeRow[];
+	coverage: Record<string, number>;
+}): boolean => {
+	const groupedCounts = countRowsByEventName({ rows });
+	if (!groupedCounts) return false;
+
+	return Object.entries(coverage).some(
+		([eventName, propertyEventCount]) =>
+			(groupedCounts[eventName] ?? 0) < propertyEventCount,
+	);
+};
+
 const totalEventCount = ({
 	rows,
 }: {

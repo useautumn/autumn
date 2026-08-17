@@ -360,7 +360,6 @@ describe("buildCreateScheduleRequestBody", () => {
 	test("returns null when customerId is missing", () => {
 		const result = buildCreateScheduleRequestBody({
 			customerId: undefined,
-			entityId: undefined,
 			phases: [
 				{
 					startsAt: Date.now(),
@@ -378,7 +377,6 @@ describe("buildCreateScheduleRequestBody", () => {
 	test("returns null when phases is empty", () => {
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [],
 			products: defaultProducts,
 			features,
@@ -391,7 +389,6 @@ describe("buildCreateScheduleRequestBody", () => {
 		const now = Date.now();
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				{
 					startsAt: now,
@@ -410,11 +407,42 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[0].plans[0].plan_id).toBe("prod_1");
 	});
 
+	test("sends unscheduled plans alongside the phases, not inside them", () => {
+		const now = Date.now();
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [schedulePhase({ startsAt: now, persistedStartsAt: now })],
+			unscheduledPlans: [
+				{ ...schedulePlan("prod_2"), entityId: "entity_1" },
+				{ ...EMPTY_SCHEDULE_PLAN },
+			],
+			products: [...defaultProducts, makeProduct({ id: "prod_2" })],
+			features,
+		});
+
+		expect(result!.phases[0].plans).toHaveLength(1);
+		expect(result!.unscheduled_plans).toHaveLength(1);
+		expect(result!.unscheduled_plans![0].plan_id).toBe("prod_2");
+		expect(result!.unscheduled_plans![0].entity_id).toBe("entity_1");
+	});
+
+	test("omits unscheduled_plans when none are picked", () => {
+		const now = Date.now();
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [schedulePhase({ startsAt: now, persistedStartsAt: now })],
+			unscheduledPlans: [{ ...EMPTY_SCHEDULE_PLAN }],
+			products: defaultProducts,
+			features,
+		});
+
+		expect(result!.unscheduled_plans).toBeUndefined();
+	});
+
 	test("includes customize when plan has custom items and isCustom", () => {
 		const now = Date.now();
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				{
 					startsAt: now,
@@ -444,7 +472,6 @@ describe("buildCreateScheduleRequestBody", () => {
 		const now = Date.now();
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				{
 					startsAt: now,
@@ -472,7 +499,6 @@ describe("buildCreateScheduleRequestBody", () => {
 		const now = Date.now();
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				{
 					startsAt: now,
@@ -492,7 +518,6 @@ describe("buildCreateScheduleRequestBody", () => {
 		const now = Date.now();
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				{
 					startsAt: now,
@@ -514,7 +539,6 @@ describe("buildCreateScheduleRequestBody", () => {
 	test("returns null when phase has null startsAt and is not first without persisted schedule", () => {
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				{
 					startsAt: null,
@@ -534,16 +558,22 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result).toBeNull();
 	});
 
-	test("includes entityId when provided", () => {
+	test("sends per-plan scope on the opening phase and no request-level entity", () => {
 		const now = Date.now();
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: "entity_1",
 			phases: [
 				{
 					startsAt: now,
 					persistedStartsAt: now,
-					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+					plans: [
+						{
+							...EMPTY_SCHEDULE_PLAN,
+							productId: "prod_1",
+							entityId: "entity_1",
+						},
+						{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_2", entityId: null },
+					],
 				},
 			],
 			products: defaultProducts,
@@ -551,7 +581,68 @@ describe("buildCreateScheduleRequestBody", () => {
 		});
 
 		expect(result).not.toBeNull();
-		expect((result as any).entity_id).toBe("entity_1");
+		expect((result as any).entity_id).toBeUndefined();
+		expect(result!.phases[0].plans[0].entity_id).toBe("entity_1");
+		expect(result!.phases[0].plans[1].entity_id).toBeNull();
+	});
+
+	test("defaults an unset opening-phase plan to customer-level", () => {
+		const now = Date.now();
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [
+				{
+					startsAt: now,
+					persistedStartsAt: now,
+					plans: [
+						{
+							productId: "prod_1",
+							prepaidOptions: {},
+							items: null,
+							isCustom: false,
+						},
+					],
+				},
+			],
+			products: defaultProducts,
+			features,
+		});
+
+		expect(result!.phases[0].plans[0].entity_id).toBeNull();
+	});
+
+	test("omits scope on later phases so they inherit the opening phase", () => {
+		const now = Date.now();
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [
+				{
+					startsAt: now,
+					persistedStartsAt: now,
+					plans: [
+						{
+							...EMPTY_SCHEDULE_PLAN,
+							productId: "prod_1",
+							entityId: "entity_1",
+						},
+					],
+				},
+				{
+					startsAt: now + 1000 * 60 * 60 * 24 * 30,
+					plans: [
+						{
+							...EMPTY_SCHEDULE_PLAN,
+							productId: "prod_1",
+							entityId: "entity_1",
+						},
+					],
+				},
+			],
+			products: defaultProducts,
+			features,
+		});
+
+		expect(result!.phases[1].plans[0].entity_id).toBeUndefined();
 	});
 
 	test("sends a past first-phase starts_at when allowFirstPhaseBackdate is true", () => {
@@ -559,7 +650,6 @@ describe("buildCreateScheduleRequestBody", () => {
 		const past = now - 1000 * 60 * 60 * 24 * 35;
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				{
 					startsAt: past,
@@ -582,7 +672,6 @@ describe("buildCreateScheduleRequestBody", () => {
 		const past = now - 1000 * 60 * 60 * 24 * 35;
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				{
 					startsAt: past,
@@ -605,7 +694,6 @@ describe("buildCreateScheduleRequestBody", () => {
 		const paidStart = Date.UTC(2027, 9, 2, 12, 0);
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				schedulePhase({
 					startsAt: persistedStart,
@@ -641,7 +729,6 @@ describe("buildCreateScheduleRequestBody", () => {
 		const future = now + 1000 * 60 * 60 * 24 * 30;
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				{
 					startsAt: now,
@@ -671,7 +758,6 @@ describe("buildCreateScheduleRequestBody", () => {
 		const future = now + 1000 * 60 * 60 * 24 * 30;
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				{
 					startsAt: persistedStart,
@@ -701,7 +787,6 @@ describe("buildCreateScheduleRequestBody", () => {
 		const future = now + 1000 * 60 * 60 * 24 * 30;
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				schedulePhase({
 					startsAt: persistedStart,
@@ -728,7 +813,6 @@ describe("buildCreateScheduleRequestBody", () => {
 		const future = now + 1000 * 60 * 60 * 24 * 30;
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				schedulePhase({
 					startsAt: now,
@@ -749,13 +833,36 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[1]).not.toHaveProperty("billing_cycle_anchor");
 	});
 
-	test("does not send billing flags when the first valid phase is multi-plan", () => {
+	test("sends billing behavior without an anchor reset for multi-plan immediate phases", () => {
+		const now = Date.now();
+		const future = now + 1000 * 60 * 60 * 24 * 30;
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			phases: [
+				schedulePhase({
+					startsAt: now,
+					productIds: ["prod_1", "prod_2"],
+				}),
+				schedulePhase({ startsAt: future }),
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			billingBehavior: "none",
+			resetBillingCycle: true,
+		});
+
+		expect(result).not.toBeNull();
+		expect(result!.billing_behavior).toBe("none");
+		expect(result).not.toHaveProperty("billing_cycle_anchor");
+	});
+
+	test("sends billing behavior when the first valid phase is multi-plan", () => {
 		const now = Date.now();
 		const future = now + 1000 * 60 * 60 * 24 * 30;
 		const later = now + 1000 * 60 * 60 * 24 * 60;
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
-			entityId: undefined,
 			phases: [
 				schedulePhase({ startsAt: now, productIds: [""] }),
 				schedulePhase({
@@ -772,7 +879,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		});
 
 		expect(result).not.toBeNull();
-		expect(result).not.toHaveProperty("billing_behavior");
+		expect(result!.billing_behavior).toBe("none");
 		expect(result).not.toHaveProperty("billing_cycle_anchor");
 		expect(result!.phases).toHaveLength(2);
 		expect(result!.phases[0].plans).toHaveLength(2);

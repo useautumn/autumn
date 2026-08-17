@@ -25,6 +25,7 @@ import {
 	type CreateBalanceParamsV0,
 	type CreateCustomerInternalOptions,
 	type CreateCustomerParamsV0Input,
+	type CreatedAtRange,
 	type CreateEntityParams,
 	type CreateRewardProgram,
 	type CreateScheduleParamsV0Input,
@@ -379,6 +380,7 @@ export class AutumnInt {
 			from_entity_id?: string;
 			to_entity_id?: string;
 			product_id: string;
+			customer_product_id?: string;
 		},
 	) {
 		const data = await this.post(`/customers/${customerId}/transfer`, params);
@@ -458,6 +460,8 @@ export class AutumnInt {
 			plans?: Array<{ id: string; versions?: number[] }>;
 			subscription_status?: string[];
 			processors?: Array<"stripe" | "revenuecat" | "vercel">;
+			sort_order?: "asc" | "desc";
+			created_at_range?: CreatedAtRange;
 			keepInternalFields?: boolean;
 		}) => {
 			const { keepInternalFields, ...listParams } = params || {};
@@ -953,13 +957,15 @@ export class AutumnInt {
 		},
 
 		aggregate: async (params: {
-			customer_id: string;
+			// Optional so the "aggregate_on without a customer" rejection is callable.
+			customer_id?: string;
 			entity_id?: string;
 			feature_id?: string | string[];
 			group_by?: string;
 			range?: string;
 			bin_size?: string;
 			max_groups?: number;
+			aggregate_on?: "deducted";
 		}) => {
 			const data = await this.post(`/events/aggregate`, params);
 			return data;

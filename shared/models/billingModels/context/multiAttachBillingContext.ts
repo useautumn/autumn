@@ -21,6 +21,12 @@ export interface MultiAttachProductContext {
 	scheduledCustomerProduct?: FullCusProduct;
 	/** User-provided subscription ID for this product. */
 	externalId?: string;
+	/**
+	 * Set by create_schedule for plans in `unscheduled_plans`: they bill with the
+	 * immediate phase, but the schedule never ends them or counts them among its
+	 * phase products.
+	 */
+	unscheduled?: boolean;
 }
 
 export interface MultiAttachBillingContext extends BillingContext {

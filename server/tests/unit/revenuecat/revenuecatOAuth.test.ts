@@ -37,7 +37,6 @@ describe("exchangeRcCode", () => {
 	beforeEach(() => {
 		process.env.REVENUECAT_OAUTH_CLIENT_ID = "rc_client_id";
 		process.env.REVENUECAT_OAUTH_CLIENT_SECRET = "rc_client_secret";
-		process.env.BETTER_AUTH_URL = "https://auth.example.com";
 		mockValidateAuthorizationCode.mockClear();
 	});
 

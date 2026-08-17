@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { referralProgram, reward } from "../../src/compose/index.js";
 import { buildConfigFile } from "../../src/lib/transforms/sdkToCode/configFile.js";
 import { resolveVarNames } from "../../src/lib/transforms/sdkToCode/helpers.js";
 
@@ -77,5 +78,43 @@ describe("var name collision handling", () => {
 
 		expect(code).toContain("export const apiCalls = feature(");
 		expect(code).toContain("export const pro = plan(");
+	});
+
+	test("buildConfigFile: rewards and referral programs avoid every generated export", () => {
+		const bonus = reward({
+			id: "credits",
+			name: "Credits",
+			type: "feature_grant",
+			grants: [{ featureId: "credits", included: 1 }],
+			promoCodes: [{ code: "CREDITS" }],
+		});
+		const refer = referralProgram({
+			id: "invite",
+			rewardId: bonus.id,
+			redeemOn: "checkout",
+			receivedBy: "all",
+		});
+		const code = buildConfigFile(
+			[
+				{ id: "reward-credits", name: "Credits", type: "boolean" },
+				{
+					id: "referral-program-invite",
+					name: "Invite",
+					type: "boolean",
+				},
+			],
+			[],
+			[bonus],
+			[refer],
+		);
+		const exports = [...code.matchAll(/export const (\w+)/g)].map(
+			([, varName]) => varName,
+		);
+
+		expect(code).toContain("export const rewardCreditsReward = reward(");
+		expect(code).toContain(
+			"export const referralProgramInviteReferralProgram = referralProgram(",
+		);
+		expect(new Set(exports).size).toBe(exports.length);
 	});
 });

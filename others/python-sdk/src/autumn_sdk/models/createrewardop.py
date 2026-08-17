@@ -177,7 +177,7 @@ class CreateRewardCouponRequest(BaseModel):
         return m
 
 
-ExpiryTypeRequestBody = Literal[
+CreateRewardExpiryTypeRequestBody = Literal[
     "day",
     "week",
     "month",
@@ -186,15 +186,15 @@ ExpiryTypeRequestBody = Literal[
 r"""The unit of time the grant lasts."""
 
 
-class ExpiryRequestTypedDict(TypedDict):
-    type: ExpiryTypeRequestBody
+class CreateRewardExpiryRequestTypedDict(TypedDict):
+    type: CreateRewardExpiryTypeRequestBody
     r"""The unit of time the grant lasts."""
     length: int
     r"""The positive integer count of periods before the grant expires."""
 
 
-class ExpiryRequest(BaseModel):
-    type: ExpiryTypeRequestBody
+class CreateRewardExpiryRequest(BaseModel):
+    type: CreateRewardExpiryTypeRequestBody
     r"""The unit of time the grant lasts."""
 
     length: int
@@ -204,17 +204,17 @@ class ExpiryRequest(BaseModel):
 class CreateRewardGrantTypedDict(TypedDict):
     feature_id: str
     included: Nullable[float]
-    r"""A positive amount to grant, or null for boolean features."""
-    expiry: Nullable[ExpiryRequestTypedDict]
+    r"""A non-negative amount to grant, or null for boolean features."""
+    expiry: Nullable[CreateRewardExpiryRequestTypedDict]
 
 
 class CreateRewardGrant(BaseModel):
     feature_id: str
 
     included: Nullable[float]
-    r"""A positive amount to grant, or null for boolean features."""
+    r"""A non-negative amount to grant, or null for boolean features."""
 
-    expiry: Nullable[ExpiryRequest]
+    expiry: Nullable[CreateRewardExpiryRequest]
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

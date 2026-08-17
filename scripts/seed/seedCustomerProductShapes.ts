@@ -153,7 +153,15 @@ const main = async () => {
 				)
 			ORDER BY p.created_at
 		`)) as unknown as Array<
-			Pick<Product, "internal_id" | "id" | "is_add_on" | "is_default" | "group" | "created_at">
+			Pick<
+				Product,
+				| "internal_id"
+				| "id"
+				| "is_add_on"
+				| "is_default"
+				| "group"
+				| "created_at"
+			>
 		>;
 
 		const mainProducts = products.filter((p) => !p.is_add_on);
@@ -164,7 +172,8 @@ const main = async () => {
 				`  ${mainProducts.length} main products, ${addonProducts.length} addons (must have at least 1 entitlement)`,
 			),
 		);
-		if (mainProducts.length === 0) throw new Error("No main products to seed with");
+		if (mainProducts.length === 0)
+			throw new Error("No main products to seed with");
 
 		const allEnts = (await db.execute(sql`
 			SELECT e.id, e.internal_product_id, e.internal_feature_id, e.allowance,
@@ -191,6 +200,7 @@ const main = async () => {
 		>;
 		const entsByProduct = new Map<string, typeof allEnts>();
 		for (const e of allEnts) {
+			if (!e.internal_product_id) continue;
 			const list = entsByProduct.get(e.internal_product_id) ?? [];
 			list.push(e);
 			entsByProduct.set(e.internal_product_id, list);
@@ -201,7 +211,12 @@ const main = async () => {
 
 		const freeTrials = (await db.execute(sql`
 			SELECT id, internal_product_id, length, duration FROM free_trials
-		`)) as unknown as Array<Pick<FreeTrial, "id" | "internal_product_id"> & { length: number; duration: string }>;
+		`)) as unknown as Array<
+			Pick<FreeTrial, "id" | "internal_product_id"> & {
+				length: number;
+				duration: string;
+			}
+		>;
 		const trialsByProduct = new Map<string, typeof freeTrials>();
 		for (const ft of freeTrials) {
 			const list = trialsByProduct.get(ft.internal_product_id) ?? [];
@@ -236,7 +251,11 @@ const main = async () => {
 			WHERE c.org_id = ${org.id} AND c.env = ${env} AND c.id LIKE 'cus_bench_%'
 			ORDER BY c.created_at
 			${args.limit ? sql`LIMIT ${args.limit}` : sql``}
-		`)) as unknown as Array<{ internal_id: string; id: string; created_at: number }>;
+		`)) as unknown as Array<{
+			internal_id: string;
+			id: string;
+			created_at: number;
+		}>;
 
 		console.log(
 			chalk.cyan(
@@ -284,7 +303,9 @@ const main = async () => {
 
 			if (shape === "main_plus_addon" || shape === "power_user") {
 				const addonCount = shape === "power_user" ? randInt(2, 3) : 1;
-				const shuffledAddons = [...addonProducts].sort(() => Math.random() - 0.5);
+				const shuffledAddons = [...addonProducts].sort(
+					() => Math.random() - 0.5,
+				);
 				for (let i = 0; i < Math.min(addonCount, shuffledAddons.length); i++) {
 					cpsForThisCustomer.push({
 						cpId: generateId("cus_prod"),
@@ -350,9 +371,10 @@ const main = async () => {
 						: isBoolean
 							? 0
 							: Math.max(0, allowance - randInt(0, Math.max(1, allowance)));
-					const nextResetAt = ent.interval && ent.interval !== "lifetime"
-						? startsAt + 30 * 24 * 60 * 60 * 1000
-						: null;
+					const nextResetAt =
+						ent.interval && ent.interval !== "lifetime"
+							? startsAt + 30 * 24 * 60 * 60 * 1000
+							: null;
 					const ceId = generateId("cus_ent");
 					ceRows.push({
 						id: ceId,
@@ -436,9 +458,13 @@ const main = async () => {
 		console.log(chalk.bold("\nShape distribution:"));
 		for (const [name, count] of Object.entries(shapeCounts)) {
 			const pct = ((count / customersToSeed.length) * 100).toFixed(1);
-			console.log(`  ${name.padEnd(20)} ${count.toLocaleString().padStart(8)}  (${pct}%)`);
+			console.log(
+				`  ${name.padEnd(20)} ${count.toLocaleString().padStart(8)}  (${pct}%)`,
+			);
 		}
-		console.log(chalk.gray(`  loose ces inserted:  ${looseCeCount.toLocaleString()}`));
+		console.log(
+			chalk.gray(`  loose ces inserted:  ${looseCeCount.toLocaleString()}`),
+		);
 
 		const finalStats = await db.execute(sql`
 			SELECT
@@ -450,7 +476,9 @@ const main = async () => {
 		const totals = (finalStats as unknown as Record<string, number>[])[0];
 		console.log(chalk.bold("\nDB totals after seed (cus_bench_* only):"));
 		for (const [k, v] of Object.entries(totals)) {
-			console.log(`  ${k.padEnd(20)} ${Number(v).toLocaleString().padStart(8)}`);
+			console.log(
+				`  ${k.padEnd(20)} ${Number(v).toLocaleString().padStart(8)}`,
+			);
 		}
 	} catch (e) {
 		console.error(chalk.red("\n❌ Seed failed:"));

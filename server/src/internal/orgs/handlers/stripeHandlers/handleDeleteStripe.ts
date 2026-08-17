@@ -8,12 +8,15 @@ import {
 	type StripeConnectConfig,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { orgToAccountId } from "@/external/connect/connectUtils.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { createWebhookEndpoint } from "@/external/stripe/stripeOnboardingUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { clearStripeCatalogMappings } from "@/internal/catalog/actions/catalogMappings/clearStripeCatalogMappings.js";
 import { decryptData, encryptData } from "@/utils/encryptUtils.js";
 import { OrgService } from "../../OrgService.js";
 import { clearOrgCache } from "../../orgUtils/clearOrgCache.js";
@@ -48,10 +51,14 @@ export const resolveDisconnectChannels = ({
 		orgToAccountId({ org, env, noDefaultAccount: true }),
 	);
 
-	return {
-		clearSecretKey: channel === "oauth" ? false : hasSecretKey,
-		clearOauth: channel === "secret_key" ? false : hasOauth,
-	};
+	const clearSecretKey = channel === "oauth" ? false : hasSecretKey;
+	const clearOauth = channel === "secret_key" ? false : hasOauth;
+	const clearCatalogMappings =
+		(clearSecretKey || clearOauth) &&
+		(!hasSecretKey || clearSecretKey) &&
+		(!hasOauth || clearOauth);
+
+	return { clearSecretKey, clearOauth, clearCatalogMappings };
 };
 
 export const computeClearedStripeConfig = ({
@@ -243,11 +250,12 @@ export const handleDeleteStripe = createRoute({
 		await clearOrgCache({ db, orgId: org.id, logger });
 
 		// 1. Resolve which channels to disconnect
-		const { clearSecretKey, clearOauth } = resolveDisconnectChannels({
-			org,
-			env,
-			channel,
-		});
+		const { clearSecretKey, clearOauth, clearCatalogMappings } =
+			resolveDisconnectChannels({
+				org,
+				env,
+				channel,
+			});
 
 		// 2. Disconnect each channel, collecting the org updates it produces
 		const updates: Partial<Organization> = {};
@@ -268,7 +276,21 @@ export const handleDeleteStripe = createRoute({
 
 		// 3. Persist (nothing to clear if neither channel was connected for this env)
 		if (Object.keys(updates).length > 0) {
-			await OrgService.update({ db, orgId: org.id, updates });
+			await db.transaction(async (tx) => {
+				const txDb = tx as unknown as DrizzleCli;
+				await OrgService.update({ db: txDb, orgId: org.id, updates });
+				if (clearCatalogMappings) {
+					await clearStripeCatalogMappings({
+						db: txDb,
+						orgId: org.id,
+						env,
+					});
+				}
+			});
+		}
+
+		if (clearCatalogMappings) {
+			await invalidateProductsCache({ orgId: org.id, env });
 		}
 
 		return c.json({});

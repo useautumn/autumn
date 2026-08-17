@@ -240,7 +240,7 @@ export const handleVercelListBillingPlans = createRoute({
 		metadata: z.string().optional(),
 	}),
 	handler: async (c) => {
-		let { env, integrationConfigurationId, productId } = c.req.param() as {
+		const { env, integrationConfigurationId, productId } = c.req.param() as {
 			env: AppEnv;
 			integrationConfigurationId?: string;
 			productId?: string;
@@ -252,28 +252,6 @@ export const handleVercelListBillingPlans = createRoute({
 			return c.json(
 				{
 					error: "Missing integration configuration ID or product ID",
-				},
-				400,
-			);
-		}
-
-		if (productId && !integrationConfigurationId) {
-			const claims = c.get("vercelClaims");
-			if (!claims) {
-				return c.json(
-					{
-						error: "Missing installation ID",
-					},
-					400,
-				);
-			}
-			integrationConfigurationId = claims.installation_id ?? "";
-		}
-
-		if (!integrationConfigurationId) {
-			return c.json(
-				{
-					error: "Missing installation ID",
 				},
 				400,
 			);

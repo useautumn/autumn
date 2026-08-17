@@ -514,6 +514,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Interval for the cap, aligned to the customer's billing cycle.
             </DynamicParamField>
 
+            <DynamicParamField body="anchor" type="'billing_cycle' | 'utc'">
+              Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+            </DynamicParamField>
+
             <DynamicParamField body="filter" type="object">
               When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
               <Expandable title="properties">
@@ -901,11 +905,11 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicResponseField>
 
     <DynamicResponseField name="subtotal" type="number">
-      The amount in cents before discounts and tax for this line item.
+      The amount before discounts and tax for this line item.
     </DynamicResponseField>
 
     <DynamicResponseField name="total" type="number">
-      The final amount in cents after discounts and tax for this line item.
+      The final amount after discounts and tax for this line item.
     </DynamicResponseField>
 
     <DynamicResponseField name="discounts" type="object[]">
@@ -952,15 +956,15 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 </DynamicResponseField>
 
 <DynamicResponseField name="subtotal" type="number">
-  The total amount in cents before discounts and tax for the current billing period.
+  The total amount before discounts and tax for the current billing period.
 </DynamicResponseField>
 
 <DynamicResponseField name="total" type="number">
-  The final amount in cents after discounts and tax for the current billing period.
+  The final amount after discounts and tax for the current billing period.
 </DynamicResponseField>
 
 <DynamicResponseField name="currency" type="string">
-  The three-letter ISO currency code (e.g., 'usd').
+  The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).
 </DynamicResponseField>
 
 <DynamicResponseField name="next_cycle" type="object">
@@ -971,11 +975,11 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicResponseField>
 
     <DynamicResponseField name="subtotal" type="number">
-      The total amount in cents before discounts and tax for the next cycle.
+      The total amount before discounts and tax for the next cycle.
     </DynamicResponseField>
 
     <DynamicResponseField name="total" type="number">
-      The final amount in cents after discounts and tax for the next cycle.
+      The final amount after discounts and tax for the next cycle.
     </DynamicResponseField>
 
     <DynamicResponseField name="line_items" type="object[]">
@@ -990,11 +994,11 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         </DynamicResponseField>
 
         <DynamicResponseField name="subtotal" type="number">
-          The amount in cents before discounts and tax for this line item.
+          The amount before discounts and tax for this line item.
         </DynamicResponseField>
 
         <DynamicResponseField name="total" type="number">
-          The final amount in cents after discounts and tax for this line item.
+          The final amount after discounts and tax for this line item.
         </DynamicResponseField>
 
         <DynamicResponseField name="discounts" type="object[]">
@@ -1727,10 +1731,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           Interval for the cap, aligned to the customer's billing cycle.
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                          Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                        </DynamicResponseField>
+
                         <DynamicResponseField name="filter" type="object">
                           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                           <Expandable title="properties">
-                            <DynamicResponseField name="properties" type="object" />
+                            <DynamicResponseField name="properties.{key}" type="string" />
 
                           </Expandable>
                         </DynamicResponseField>
@@ -1889,10 +1897,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Interval for the cap, aligned to the customer's billing cycle.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                  Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                </DynamicResponseField>
+
                 <DynamicResponseField name="filter" type="object">
                   When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                   <Expandable title="properties">
-                    <DynamicResponseField name="properties" type="object" />
+                    <DynamicResponseField name="properties.{key}" type="string" />
 
                   </Expandable>
                 </DynamicResponseField>
@@ -2652,10 +2664,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           Interval for the cap, aligned to the customer's billing cycle.
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                          Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                        </DynamicResponseField>
+
                         <DynamicResponseField name="filter" type="object">
                           When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                           <Expandable title="properties">
-                            <DynamicResponseField name="properties" type="object" />
+                            <DynamicResponseField name="properties.{key}" type="string" />
 
                           </Expandable>
                         </DynamicResponseField>
@@ -2814,10 +2830,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Interval for the cap, aligned to the customer's billing cycle.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                  Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                </DynamicResponseField>
+
                 <DynamicResponseField name="filter" type="object">
                   When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
                   <Expandable title="properties">
-                    <DynamicResponseField name="properties" type="object" />
+                    <DynamicResponseField name="properties.{key}" type="string" />
 
                   </Expandable>
                 </DynamicResponseField>

@@ -6,6 +6,7 @@ import {
 	findFeatureById,
 	fullSubjectToFullCustomer,
 	getFeatureToUseForCheck,
+	withTimeout,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
@@ -14,7 +15,6 @@ import {
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
-import { withTimeout } from "@/utils/withTimeout.js";
 import { triggerAutoTopUp } from "../autoTopUp/triggerAutoTopUp.js";
 import { buildEvaluationSubject } from "./buildEvaluationSubject.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
@@ -74,22 +74,23 @@ export const getCheckDataV2 = async ({
 
 	// "Query read timeout" is in TRANSIENT_DB_ERROR_MESSAGES, so isTransientDbError
 	// classifies the expiry as transient and check's withRedisFailOpen fallback engages.
-	const fullSubject = await withCheckDbHydrationBudget(
-		() =>
-			ctx.apiVersion.gte(ApiVersion.V2_1)
-				? getOrSetCachedPartialFullSubject({
-						ctx,
-						customerId: customer_id,
-						entityId: entity_id,
-						featureIds,
-						source: "getCheckDataV2",
-					})
-				: getOrCreateCachedPartialFullSubject({
-						ctx,
-						params: body,
-						featureIds,
-						source: "getCheckDataV2",
-					}),
+	const fullSubject = await withCheckDbHydrationBudget(() =>
+		ctx.apiVersion.gte(ApiVersion.V2_1)
+			? getOrSetCachedPartialFullSubject({
+					ctx,
+					customerId: customer_id,
+					entityId: entity_id,
+					featureIds,
+					source: "getCheckDataV2",
+					useDelayedPostgresBackupRead: true,
+				})
+			: getOrCreateCachedPartialFullSubject({
+					ctx,
+					params: body,
+					featureIds,
+					source: "getCheckDataV2",
+					useDelayedPostgresBackupRead: true,
+				}),
 	);
 
 	const apiSubject = await getApiSubject({

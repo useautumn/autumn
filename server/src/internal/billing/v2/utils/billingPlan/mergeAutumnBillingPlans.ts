@@ -52,6 +52,16 @@ export const mergeAutumnBillingPlans = ({
 		base: base.customEntitlements,
 		incoming: incoming.customEntitlements,
 	}),
+	insertPlanLicenses: mergeByKey({
+		base: base.insertPlanLicenses,
+		incoming: incoming.insertPlanLicenses,
+		getKey: (spec) => spec.row.id,
+	}),
+	customerLicenseTransitions: mergeByKey({
+		base: base.customerLicenseTransitions,
+		incoming: incoming.customerLicenseTransitions,
+		getKey: (transition) => transition.incomingCustomerLicense.id,
+	}),
 	customFreeTrial: incoming.customFreeTrial ?? base.customFreeTrial,
 	lineItems: mergeById({
 		base: base.lineItems,

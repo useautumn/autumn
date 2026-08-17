@@ -1,12 +1,8 @@
 import { Button } from "@autumn/ui";
-import { motion } from "motion/react";
-import { useEffect, useState } from "react";
 import { DisabledTooltipButton } from "@/components/forms/shared";
-import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
+import { BillingFooter } from "@/components/forms/shared/BillingFooter";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
-
-const FOOTER_DELAY_MS = 350;
 
 export function UpdateSubscriptionFooter() {
 	const { isPending, hasChanges, previewQuery, handleConfirm } =
@@ -14,61 +10,36 @@ export function UpdateSubscriptionFooter() {
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 
-	const isLoading = previewQuery.isLoading;
-	const hasError = !!previewQuery.error;
-	const isReady = hasChanges && !isLoading && !hasError;
+	const isReady = hasChanges && !previewQuery.isLoading && !previewQuery.error;
 
 	const previewData = previewQuery.data;
 	const isZeroAmount = previewData && previewData.total <= 0;
-
 	const invoiceDisabledReason = isZeroAmount
 		? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
 		: null;
 
-	const [showFooter, setShowFooter] = useState(false);
-
-	useEffect(() => {
-		if (isReady) {
-			const timer = setTimeout(() => setShowFooter(true), FOOTER_DELAY_MS);
-			return () => clearTimeout(timer);
-		}
-		setShowFooter(false);
-	}, [isReady]);
-
-	if (!showFooter) return null;
-
 	return (
-		<SheetFooter className="flex flex-col grid-cols-1 mt-0">
-			<motion.div
-				initial={{ opacity: 0 }}
-				animate={{ opacity: 1 }}
-				transition={{ duration: 0.2 }}
-				className="flex flex-col gap-2 w-full"
+		<BillingFooter layout="stacked" isReady={isReady} reveal>
+			<DisabledTooltipButton
+				variant="secondary"
+				className="w-full"
+				disabled={isPending}
+				disabledReason={invoiceDisabledReason}
+				tooltipClassName="max-w-(--anchor-width)"
+				onClick={() =>
+					setSheet({ type: "subscription-update-send-invoice", itemId })
+				}
 			>
-				<DisabledTooltipButton
-					variant="secondary"
-					className="w-full"
-					disabled={isPending}
-					disabledReason={invoiceDisabledReason}
-					tooltipClassName="max-w-(--anchor-width)"
-					onClick={() =>
-						setSheet({
-							type: "subscription-update-send-invoice",
-							itemId,
-						})
-					}
-				>
-					Send an Invoice
-				</DisabledTooltipButton>
-				<Button
-					variant="primary"
-					className="w-full"
-					onClick={handleConfirm}
-					isLoading={isPending}
-				>
-					Confirm Update
-				</Button>
-			</motion.div>
-		</SheetFooter>
+				Send an Invoice
+			</DisabledTooltipButton>
+			<Button
+				variant="primary"
+				className="w-full"
+				onClick={handleConfirm}
+				isLoading={isPending}
+			>
+				Confirm Update
+			</Button>
+		</BillingFooter>
 	);
 }

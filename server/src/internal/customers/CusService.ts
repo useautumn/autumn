@@ -478,6 +478,25 @@ export class CusService {
 		return customer as Customer;
 	}
 
+	static async getAllByStripeId({
+		ctx,
+		stripeId,
+	}: {
+		ctx: AutumnContext;
+		stripeId: string;
+	}) {
+		const { db, org, env } = ctx;
+		const results = await db.query.customers.findMany({
+			where: and(
+				eq(sql`processor->>'id'`, stripeId),
+				eq(customers.org_id, org.id),
+				eq(customers.env, env),
+			),
+		});
+
+		return results as Customer[];
+	}
+
 	static async insert({ db, data }: { db: DrizzleCli; data: Customer }) {
 		const results = await db.insert(customers).values(data).returning();
 

@@ -27,7 +27,7 @@ export const MISC_REDIS_INSTANCE_OPTIONS: {
 	{
 		value: "main",
 		label: "Main",
-		description: "Env-configured (CACHE_URL)",
+		description: "Env-configured (MISC_CACHE_DRAGONFLY_*_URL)",
 	},
 	{
 		value: "backup",

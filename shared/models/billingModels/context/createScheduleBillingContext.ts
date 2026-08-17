@@ -1,4 +1,9 @@
-import type { Entitlement, FeatureOptions, Price } from "@autumn/shared";
+import type {
+	Entitlement,
+	Entity,
+	FeatureOptions,
+	Price,
+} from "@autumn/shared";
 import type {
 	CreateSchedulePhaseV0,
 	ResolvedCreateSchedulePhaseV0,
@@ -13,6 +18,12 @@ export interface ScheduledProductContext {
 	featureQuantities: FeatureOptions[];
 	/** User-provided subscription ID for this scheduled product. */
 	externalId?: string;
+	/**
+	 * Scope inherited from the opening phase's plan in the same group.
+	 * Undefined means customer-level, not "unscoped" — callers must not fall
+	 * back to the request entity.
+	 */
+	entity?: Entity;
 }
 
 export interface ScheduledPhaseContext {
@@ -24,7 +35,11 @@ export interface ScheduledPhaseContext {
 
 export interface CreateScheduleBillingContext
 	extends MultiAttachBillingContext {
-	preserveAddOns: boolean;
+	/**
+	 * Customer products the replaced schedule put in place. Dropping one from the
+	 * new phases expires it; products no schedule ever placed are left alone.
+	 */
+	replacedScheduleCustomerProductIds: string[];
 	immediatePhase: ResolvedCreateSchedulePhaseV0;
 	futurePhases: ResolvedCreateSchedulePhaseV0[];
 	scheduledPhaseContexts: ScheduledPhaseContext[];

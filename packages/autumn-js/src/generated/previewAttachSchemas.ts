@@ -481,6 +481,7 @@ export const previewAttachUsageLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
+	anchor: z.union([z.string(), z.undefined()]).optional(),
 	filter: z
 		.union([previewAttachFilterOutboundSchema, z.undefined()])
 		.optional(),
@@ -762,6 +763,7 @@ export const previewAttachParamsOutboundSchema = z.object({
 	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
 	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
+	remove_plan_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -983,11 +985,14 @@ export const previewAttachSpendLimitSchema = z.object({
 
 export const previewAttachUsageLimitIntervalSchema = closedEnumSchema;
 
+export const previewAttachAnchorSchema = closedEnumSchema;
+
 export const previewAttachUsageLimitSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: previewAttachUsageLimitIntervalSchema,
+	anchor: z.union([previewAttachAnchorSchema, z.undefined()]).optional(),
 	filter: z.union([previewAttachFilterSchema, z.undefined()]).optional(),
 });
 
@@ -1252,6 +1257,7 @@ export const previewAttachParamsSchema = z.object({
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 	taxRateId: z.union([z.string(), z.undefined()]).optional(),
 	currency: z.union([z.string(), z.undefined()]).optional(),
+	removePlanIds: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
 
 export const previewAttachIncomingSchema = z.object({

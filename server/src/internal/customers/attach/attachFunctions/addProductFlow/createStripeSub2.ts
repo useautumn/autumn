@@ -1,6 +1,6 @@
 import { type AttachConfig, ErrCode } from "@autumn/shared";
 import type { Logger } from "@server/external/logtail/logtailUtils";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import {
@@ -17,6 +17,7 @@ import { SubService } from "@/internal/subscriptions/SubService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
+import { buildStripeSubPaymentSettings } from "./buildStripeSubPaymentSettings.js";
 
 export const createStripeSub2 = async ({
 	db,
@@ -60,6 +61,12 @@ export const createStripeSub2 = async ({
 	// Custom PMs (Vercel, etc.) use external payment confirmation.
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
+	const paymentSettings = buildStripeSubPaymentSettings({
+		isCustomPaymentMethod,
+		invoiceOnly,
+		allowedPaymentMethods: org.config.allowed_payment_methods,
+	});
+
 	try {
 		// Skip auto_tax in invoice mode: send_invoice has no
 		// address-collection UI so Stripe Tax rejects.
@@ -97,13 +104,7 @@ export const createStripeSub2 = async ({
 				...buildAutumnSubscriptionMetadata({ actionSource: "v1Attach" }),
 			},
 
-			// Save the custom PM on the sub so webhook handlers and renewals
-			// can find it.
-			...(isCustomPaymentMethod && {
-				payment_settings: {
-					save_default_payment_method: "on_subscription",
-				},
-			}),
+			...(paymentSettings && { payment_settings: paymentSettings }),
 
 			trial_settings:
 				freeTrial && !freeTrial.card_required
@@ -181,12 +182,19 @@ export const createStripeSub2 = async ({
 		console.log("Decline code:", error.decline_code);
 		console.log("Error original stack:", error.stack);
 
+		// Stripe rejects caller-fixable params (unactivated payment method type,
+		// currency mismatch, declined card) with 4xx — don't mask those as 500.
+		const stripeStatusCode =
+			error instanceof Stripe.errors.StripeError ? error.statusCode : undefined;
+		const isClientError =
+			!!stripeStatusCode && stripeStatusCode >= 400 && stripeStatusCode < 500;
+
 		throw new RecaseError({
 			code: ErrCode.CreateStripeSubscriptionFailed,
 			message: `Create stripe subscription failed ${
 				error.code ? `(${error.code})` : ""
 			}: ${error.message || ""}`,
-			statusCode: 500,
+			statusCode: isClientError ? stripeStatusCode : 500,
 		});
 	}
 };

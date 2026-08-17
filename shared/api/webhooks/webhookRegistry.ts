@@ -40,7 +40,7 @@ export const webhookRegistry: WebhookDefinition[] = [
 		schema: BalancesLimitReachedSchema,
 		group: "Balances",
 		description:
-			"Fired when a customer reaches the limit for a feature (included allowance, max purchase, or spend limit).",
+			"Fired when a customer reaches the limit for a feature (included allowance, max purchase, spend limit, or a usage-limit billing control).",
 	},
 
 	// ── Billing ───────────────────────────────────────────────────────────

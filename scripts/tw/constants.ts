@@ -178,12 +178,13 @@ export const EDGE_CONFIG_OVERRIDE_B64 = Buffer.from(
 export const DATABASE_URL = `postgresql://postgres:postgres@localhost:${PG_PORT}/autumn`;
 export const DATABASE_CRITICAL_URL = DATABASE_URL;
 export const REDIS_URL = `redis://localhost:${DRAGONFLY_PORT}`;
-export const CACHE_URL = REDIS_URL;
+export const MISC_CACHE_DRAGONFLY_PUBLIC_URL = REDIS_URL;
 export const CACHE_V2_DRAGONFLY_URL = REDIS_URL;
 export const ELASTICMQ_BASE_URL = `http://localhost:${ELASTICMQ_PORT}/000000000000`;
 export const SQS_QUEUE_URL_V2 = `${ELASTICMQ_BASE_URL}/autumn.fifo`;
 export const TRACK_SQS_QUEUE_URL = `${ELASTICMQ_BASE_URL}/autumn-track.fifo`;
-/** Aliased to the same queue as TRACK_SQS_QUEUE_URL (mirrors dw) — prod
- *  points this at a dedicated queue; unset it would 503 every async track. */
+/** Legacy FIFO async-track URL — kept so workers dual-consume during rollout. */
 export const TRACK_ASYNC_SQS_QUEUE_URL = TRACK_SQS_QUEUE_URL;
+/** Prod-matching Standard queue; producers prefer this over the FIFO legacy URL. */
+export const TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = `${ELASTICMQ_BASE_URL}/autumn-track-async`;
 export const DYNAMODB_ENDPOINT = `http://localhost:${DYNAMODB_PORT}`;

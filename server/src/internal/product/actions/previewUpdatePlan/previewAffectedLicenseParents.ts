@@ -12,11 +12,8 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
-import { applyLicenseCustomizeToBasePlan } from "@/internal/licenses/actions/customize/rebaseCatalogPlanLicenses.js";
-import {
-	diffLicensePlanCustomize,
-	toApiPlanLicenseWithCustomize,
-} from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
+import { toApiPlanLicenseWithCustomize } from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
+import { buildLicenseParentTargetCustomize } from "@/internal/licenses/actions/propagation/buildLicenseParentCustomize.js";
 import { listLicenseParentContexts } from "@/internal/licenses/actions/propagation/listLicenseParentContexts.js";
 import {
 	licenseParentTargetKey,
@@ -121,20 +118,13 @@ export const previewAffectedLicenseParents = async ({
 							}),
 					}),
 				]);
-			const currentCustomize = getApiPlanDiff({
-				from: currentChildPlan,
-				to: currentEffectivePlan,
-			});
-			const targetEffectivePlan = currentLink.customized
-				? applyLicenseCustomizeToBasePlan({
-						basePlan: editedChildPlan,
-						customize: currentCustomize,
-					})
-				: editedChildPlan;
-			const targetCustomize = diffLicensePlanCustomize({
-				basePlan: editedChildPlan,
-				effectivePlan: targetEffectivePlan,
-			});
+			const { targetEffectivePlan, targetCustomize } =
+				buildLicenseParentTargetCustomize({
+					currentChildPlan,
+					editedChildPlan,
+					currentEffectivePlan,
+					customized: currentLink.customized,
+				});
 			const targetLicense: ApiPlanLicenseV1 = {
 				license_plan_id: child.id,
 				version: childWillVersion ? child.version + 1 : child.version,

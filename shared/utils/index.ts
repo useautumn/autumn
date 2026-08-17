@@ -44,6 +44,7 @@ export * from "./productUtils/classifyProduct/classifyProductUtils";
 export * from "./productUtils/classifyProduct/hasMissingStripeResourcesForProduct";
 export * from "./productUtils/classifyProduct/isProductPaidAndRecurring";
 export * from "./productUtils/convertProduct/productToEffectivePrices";
+export * from "./productUtils/convertProduct/productToReplacementKey";
 // Product utils
 export * from "./productUtils/convertProductUtils";
 export * from "./productUtils/entUtils/index";
@@ -63,6 +64,7 @@ export * from "./productV2Utils/productItemUtils/getItemType";
 export * from "./productV2Utils/productItemUtils/mapToItem";
 export * from "./productV2Utils/productItemUtils/matchPlanItem";
 export * from "./productV2Utils/productItemUtils/productItemUtils";
+export * from "./productV2Utils/productItemUtils/rolloverConfigToIssue";
 export * from "./productV2Utils/productItemUtils/sortPlanItems";
 export * from "./productV2Utils/productV2ToApiPlanV1";
 export * from "./productV2Utils/productV2ToFrontendProduct";

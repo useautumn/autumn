@@ -35,7 +35,7 @@ import {
 	test,
 } from "bun:test";
 
-// CI has no CACHE_URL, and getMiscMainRedis throws without one. These tests
+// CI has no misc cache env, and getMiscMainRedis throws without one. These tests
 // only need SET/GET/DEL semantics, so back the client with an in-memory map.
 const realInstances = {
 	...(await import("@/external/redis/miscCache/miscRedisInstances.js")),

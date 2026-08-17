@@ -1,21 +1,31 @@
 import type { Invoice } from "@autumn/shared";
+import { SectionTag } from "@autumn/ui";
 import { Receipt } from "@phosphor-icons/react";
 import { getPaginationRowModel } from "@tanstack/react-table";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCusInvoicePreviewsQuery } from "@/views/customers2/customer/hooks/useCusInvoicePreviewsQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { useInvoiceLineItemsQuery } from "@/views/customers2/hooks/useInvoiceLineItemsQuery";
 import {
 	getCustomerInvoicesColumns,
 	hasNonStripeInvoice,
 } from "./CustomerInvoicesColumns";
+import { CustomerUpcomingInvoices } from "./CustomerUpcomingInvoices";
 import { getInvoiceProductNames } from "./getInvoiceProductNames";
 
 export function CustomerInvoicesTable() {
 	const { customer, products, features, isLoading } = useCusQuery();
 	const setSheet = useSheetStore((s) => s.setSheet);
+
+	const { invoicePreviews, isLoading: previewsLoading } =
+		useCusInvoicePreviewsQuery({
+			customerId: customer?.id ?? customer?.internal_id,
+			enabled: Boolean(customer),
+		});
+	const hasUpcoming = previewsLoading || Boolean(invoicePreviews?.length);
 
 	const invoiceIds = useMemo(
 		() => customer?.invoices?.map((inv: Invoice) => inv.id) ?? [],
@@ -103,19 +113,31 @@ export function CustomerInvoicesTable() {
 						<CustomerInvoicesShowAllButton />
 					</Table.Actions> */}
 				</Table.Toolbar>
+
+				{hasUpcoming && (
+					<>
+						<SectionTag>Upcoming</SectionTag>
+						<CustomerUpcomingInvoices
+							invoicePreviews={invoicePreviews}
+							isLoading={previewsLoading}
+							products={products ?? []}
+						/>
+						<SectionTag className="mt-6">Previous</SectionTag>
+					</>
+				)}
+
 				{/* {hasInvoices ? ( */}
 
 				<Table.Content>
-					<Table.Header />
 					<Table.Body />
 				</Table.Content>
 				{/* <Table.Pagination /> */}
 
 				{/* ) : (
-					!isLoading && (
-						<EmptyState text="Invoices will display when a customer makes a payment" />
-					)
-				)} */}
+						!isLoading && (
+							<EmptyState text="Invoices will display when a customer makes a payment" />
+						)
+					)} */}
 			</Table.Container>
 		</Table.Provider>
 	);

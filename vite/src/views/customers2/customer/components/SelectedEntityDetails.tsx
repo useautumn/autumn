@@ -72,12 +72,15 @@ export const SelectedEntityDetails = () => {
 								{isSelected && <CheckIcon className="size-4 shrink-0" />}
 							</>
 						)}
-						footer={
+						footer={({ close }) => (
 							<div className="border-t py-1.5 px-2">
 								<Button
 									variant="muted"
 									className="w-full"
-									onClick={() => setCreateOpen(true)}
+									onClick={() => {
+										close();
+										setCreateOpen(true);
+									}}
 								>
 									<PlusIcon
 										className="size-[14px] text-muted-foreground"
@@ -86,7 +89,7 @@ export const SelectedEntityDetails = () => {
 									Create new entity
 								</Button>
 							</div>
-						}
+						)}
 					/>
 					{entityId && (
 						<Button

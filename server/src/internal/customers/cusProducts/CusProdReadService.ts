@@ -36,6 +36,36 @@ export class CusProdReadService {
 		return result.length > 0;
 	}
 
+	static async existsForProductVersions({
+		db,
+		env,
+		orgId,
+		productId,
+	}: {
+		db: DrizzleCli;
+		env: AppEnv;
+		orgId: string;
+		productId: string;
+	}) {
+		const result = await db
+			.select({ id: customerProducts.id })
+			.from(customerProducts)
+			.innerJoin(
+				products,
+				eq(customerProducts.internal_product_id, products.internal_id),
+			)
+			.where(
+				and(
+					eq(products.env, env),
+					eq(products.id, productId),
+					eq(products.org_id, orgId),
+				),
+			)
+			.limit(1);
+
+		return result.length > 0;
+	}
+
 	static getCounts = async ({
 		db,
 		internalProductId,

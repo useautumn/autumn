@@ -27,7 +27,17 @@ export const handleCancelEndOfCycleErrors = ({
 }) => {
 	if (billingContext.cancelAction !== "cancel_end_of_cycle") return;
 
-	const { customerProduct } = billingContext;
+	const { customerProduct, canceledStripeSubscriptionId } = billingContext;
+
+	// The cycle it would cancel at the end of no longer exists, and Stripe will
+	// never emit another sub.deleted to expire the plan.
+	if (canceledStripeSubscriptionId) {
+		throw new RecaseError({
+			message: `Subscription ${canceledStripeSubscriptionId} is already canceled in Stripe; use cancel: 'cancel_immediately' instead.`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
 
 	if (isCustomerProductFree(customerProduct)) {
 		throw new RecaseError({

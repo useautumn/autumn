@@ -1,6 +1,6 @@
 import "../sentry.js";
 
-import { ms } from "@autumn/shared";
+import { ms, withTimeout } from "@autumn/shared";
 import {
 	DeleteMessageBatchCommand,
 	DeleteMessageCommand,
@@ -22,7 +22,6 @@ import {
 	JOB_QUEUE_IDS,
 } from "@/internal/misc/jobQueues/jobQueueStore.js";
 import { generateId } from "@/utils/genUtils.js";
-import { withTimeout } from "@/utils/withTimeout.js";
 import { hatchet } from "../external/hatchet/initHatchet.js";
 import { isActiveSlot } from "./blueGreen/blueGreenGate.js";
 import {
@@ -34,6 +33,7 @@ import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
 import { shutdownSqsSendBatchers } from "./queueUtils.js";
+import { getTrackAndUpdateBalanceWorkerQueueUrls } from "./trackAsyncQueueUrls.js";
 import {
 	createWorkerActivityTracker,
 	type WorkerActivityTracker,
@@ -170,6 +170,7 @@ export const startPollingLoop = async ({
 	shouldPoll = () => true,
 	visibilityTimeoutSeconds = 30,
 	receiveTimeoutMs = SQS_RECEIVE_TIMEOUT_MS,
+	maxMessagesBeforeRecycle = MAX_MESSAGES_BEFORE_RECYCLE,
 	workerActivity = createWorkerActivityTracker({
 		idleAfterMs: IDLE_SELF_KILL_MS,
 	}),
@@ -186,6 +187,7 @@ export const startPollingLoop = async ({
 	 * rows concurrently. */
 	visibilityTimeoutSeconds?: number;
 	receiveTimeoutMs?: number;
+	maxMessagesBeforeRecycle?: number;
 	workerActivity?: WorkerActivityTracker;
 }) => {
 	// Per-loop state
@@ -220,7 +222,7 @@ export const startPollingLoop = async ({
 	};
 
 	const recycleWorkerIfNeeded = () => {
-		if (totalMessagesProcessed < MAX_MESSAGES_BEFORE_RECYCLE) {
+		if (totalMessagesProcessed < maxMessagesBeforeRecycle) {
 			return;
 		}
 
@@ -602,8 +604,6 @@ export const initWorkers = async ({
 }) => {
 	const { db } = initDrizzle({ name: "worker", maxConnections: 40 });
 	startPgPoolMonitor();
-	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
-	await warmupRegionalRedis();
 
 	await initBlueGreen({ db, logger });
 
@@ -640,12 +640,12 @@ export const initWorkers = async ({
 		idleAfterMs: IDLE_SELF_KILL_MS,
 	});
 
-	for (const {
-		queueId,
-		queueUrl,
-		defaultEnabled,
-		visibilityTimeoutSeconds,
-	} of [
+	const queueConfigs: Array<{
+		queueId: string;
+		queueUrl?: string;
+		defaultEnabled: boolean;
+		visibilityTimeoutSeconds?: number;
+	}> = [
 		{
 			queueId: JOB_QUEUE_IDS.primary,
 			queueUrl: QUEUE_URL,
@@ -656,11 +656,11 @@ export const initWorkers = async ({
 			queueUrl: process.env.TRACK_SQS_QUEUE_URL,
 			defaultEnabled: true,
 		},
-		{
+		...getTrackAndUpdateBalanceWorkerQueueUrls().map((queueUrl) => ({
 			queueId: JOB_QUEUE_IDS.trackAsync,
-			queueUrl: process.env.TRACK_ASYNC_SQS_QUEUE_URL,
+			queueUrl,
 			defaultEnabled: true,
-		},
+		})),
 		{
 			queueId: JOB_QUEUE_IDS.customerCreationRecovery,
 			queueUrl: process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL,
@@ -681,7 +681,14 @@ export const initWorkers = async ({
 			// depth, so a long window stalls the whole sweep.
 			visibilityTimeoutSeconds: 900,
 		},
-	]) {
+	];
+
+	for (const {
+		queueId,
+		queueUrl,
+		defaultEnabled,
+		visibilityTimeoutSeconds,
+	} of queueConfigs) {
 		if (!queueUrl) continue;
 
 		pollingLoops.push(

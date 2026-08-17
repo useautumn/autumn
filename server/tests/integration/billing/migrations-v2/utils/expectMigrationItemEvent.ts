@@ -52,7 +52,11 @@ type EventResponse = {
 	reason?: string;
 	preview?: {
 		customer_id?: string;
-		plan_changes?: { action: string; item_changes: unknown[] }[];
+		plan_changes?: {
+			action: string;
+			item_changes: unknown[];
+			plan_change?: { item_changes?: unknown[] };
+		}[];
 		balance_changes?: { feature_id: string }[];
 		flag_changes?: { action: string; feature_id: string }[];
 	} | null;
@@ -134,9 +138,12 @@ export const expectMigrationItemEventCorrect = async ({
 	}
 
 	if (typeof itemChangeCount !== "undefined") {
-		expect(response?.preview?.plan_changes?.[0]?.item_changes).toHaveLength(
-			itemChangeCount,
-		);
+		const firstPlanChange = response?.preview?.plan_changes?.[0];
+		// Top-level item_changes is deprecated; batch-lane records still use it.
+		const itemChanges = firstPlanChange?.plan_change?.item_changes?.length
+			? firstPlanChange.plan_change.item_changes
+			: (firstPlanChange?.item_changes ?? []);
+		expect(itemChanges).toHaveLength(itemChangeCount);
 	}
 
 	if (balanceFeatureIds) {

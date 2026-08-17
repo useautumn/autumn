@@ -511,6 +511,119 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		expect(limits[0].anchor_customer_entitlement_id).toBeNull();
 	});
 
+	test("anchor 'utc' uses calendar bounds even when a billing cycle exists", () => {
+		const cycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
+		const limits = fullSubjectToUsageWindowLimits({
+			fullSubject: buildSubject({
+				usageLimits: [
+					{
+						feature_id: "credits",
+						limit: 3,
+						interval: ResetInterval.Day,
+						anchor: "utc",
+					},
+				],
+				customerProducts: [
+					customerProductWithEntitlement({
+						id: "ce_credits",
+						featureId: "credits",
+						cycleAnchor,
+					}),
+				],
+			}),
+			featureIds: ["credits"],
+			features: [creditsFeature],
+			now: NOW,
+		});
+
+		const calendar = getUsageWindowBounds({
+			interval: EntInterval.Day,
+			now: NOW,
+		});
+		const anchored = getUsageWindowBounds({
+			interval: EntInterval.Day,
+			now: NOW,
+			anchor: cycleAnchor,
+		});
+
+		expect(limits).toHaveLength(1);
+		expect(limits[0]).toMatchObject({
+			anchor_mode: "utc",
+			window_start_at: calendar.windowStartAt,
+			window_end_at: calendar.windowEndAt,
+		});
+		// Sanity: a usable anchor WAS present and would have moved the bounds, so
+		// the assertion above cannot pass vacuously.
+		expect(anchored.windowStartAt).not.toBe(calendar.windowStartAt);
+	});
+
+	test("anchor 'utc' drops provenance even when an anchor ent exists", () => {
+		const limits = fullSubjectToUsageWindowLimits({
+			fullSubject: buildSubject({
+				usageLimits: [
+					{
+						feature_id: "credits",
+						limit: 3,
+						interval: ResetInterval.Day,
+						anchor: "utc",
+					},
+				],
+				looseEntitlements: [
+					looseEntitlement({ id: "ce_credits", featureId: "credits" }),
+				],
+			}),
+			featureIds: ["credits"],
+			features: [creditsFeature],
+			now: NOW,
+		});
+
+		// Same fixture anchors to ce_credits under billing_cycle; utc must not.
+		expect(limits).toHaveLength(1);
+		expect(limits[0].anchor_customer_entitlement_id).toBeNull();
+		expect(limits[0].anchor_mode).toBe("utc");
+	});
+
+	test("an entry with no anchor field falls back to billing-cycle alignment", () => {
+		// Stored entries are jsonb cast with drizzle's $type and never parsed on
+		// read, so pre-field rows arrive with `anchor` absent.
+		const cycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
+		const limits = fullSubjectToUsageWindowLimits({
+			fullSubject: buildSubject({
+				usageLimits: [
+					{ feature_id: "credits", limit: 3, interval: ResetInterval.Day },
+				],
+				customerProducts: [
+					customerProductWithEntitlement({
+						id: "ce_credits",
+						featureId: "credits",
+						cycleAnchor,
+					}),
+				],
+			}),
+			featureIds: ["credits"],
+			features: [creditsFeature],
+			now: NOW,
+		});
+
+		const calendar = getUsageWindowBounds({
+			interval: EntInterval.Day,
+			now: NOW,
+		});
+		const anchored = getUsageWindowBounds({
+			interval: EntInterval.Day,
+			now: NOW,
+			anchor: cycleAnchor,
+		});
+
+		expect(limits).toHaveLength(1);
+		expect(limits[0]).toMatchObject({
+			anchor_mode: "billing_cycle",
+			window_start_at: anchored.windowStartAt,
+			window_end_at: anchored.windowEndAt,
+		});
+		expect(anchored.windowStartAt).not.toBe(calendar.windowStartAt);
+	});
+
 	test("metered cap contained by two credit systems anchors deterministically", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({

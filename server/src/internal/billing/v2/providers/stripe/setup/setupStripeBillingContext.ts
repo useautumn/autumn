@@ -13,9 +13,13 @@ import { all } from "better-all";
 import type Stripe from "stripe";
 import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isStripeConnected } from "@/internal/orgs/orgUtils";
 import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
 import { fetchStripeDiscountsForBilling } from "./fetchStripeDiscountsForBilling";
-import { fetchStripeSubscriptionForBilling } from "./fetchStripeSubscriptionForBilling";
+import {
+	fetchStripeSubscriptionForBilling,
+	type StripeSubscriptionForBilling,
+} from "./fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "./fetchStripeSubscriptionScheduleForBilling";
 import { fetchStripeTaxRateForBilling } from "./fetchStripeTaxRateForBilling";
 
@@ -57,7 +61,13 @@ export const setupStripeBillingContext = async ({
 
 	if (stripeBillingContext) return stripeBillingContext;
 
-	if (skipBillingFetching) {
+	if (
+		skipBillingFetching ||
+		(params &&
+			"no_billing_changes" in params &&
+			params.no_billing_changes === true &&
+			!isStripeConnected({ org: ctx.org, env: ctx.env }))
+	) {
 		return {
 			stripeSubscription: undefined,
 			stripeSubscriptionSchedule: undefined,
@@ -66,6 +76,8 @@ export const setupStripeBillingContext = async ({
 			stripeTaxRate: undefined,
 			paymentMethod: undefined,
 			testClockFrozenTime: undefined,
+			canceledStripeSubscriptionId: undefined,
+			mismatchedStripeSubscriptionId: undefined,
 		};
 	}
 
@@ -75,7 +87,7 @@ export const setupStripeBillingContext = async ({
 			paymentMethod,
 			testClockFrozenTime,
 		},
-		stripeSubscription,
+		subscriptionResult,
 		stripeSubscriptionSchedule,
 		stripeDiscounts,
 		stripeTaxRate,
@@ -87,13 +99,13 @@ export const setupStripeBillingContext = async ({
 				createIfMissing: createStripeCustomerIfMissing,
 			});
 		},
-		async stripeSubscription() {
+		async subscriptionResult(): Promise<StripeSubscriptionForBilling> {
 			// If no target customer product, skip subscription/schedule fetching
 			// Skip if product being attached is one off
 			const attachingOneOff = product ? isOneOffProduct({ product }) : false;
 
 			return attachingOneOff || skipSubscriptionFetching
-				? undefined
+				? {}
 				: fetchStripeSubscriptionForBilling({
 						ctx,
 						fullCus: fullCustomer,
@@ -104,7 +116,8 @@ export const setupStripeBillingContext = async ({
 					});
 		},
 		async stripeSubscriptionSchedule() {
-			const localStripeSubscription = await this.$.stripeSubscription;
+			const { stripeSubscription: localStripeSubscription } =
+				await this.$.subscriptionResult;
 
 			return targetCustomerProduct ||
 				notNullish(localStripeSubscription) ||
@@ -122,7 +135,8 @@ export const setupStripeBillingContext = async ({
 		},
 		async stripeDiscounts() {
 			const localStripeCustomer = (await this.$.stripeContext).stripeCus;
-			const localStripeSubscription = await this.$.stripeSubscription;
+			const { stripeSubscription: localStripeSubscription } =
+				await this.$.subscriptionResult;
 
 			return fetchStripeDiscountsForBilling({
 				ctx,
@@ -140,6 +154,12 @@ export const setupStripeBillingContext = async ({
 		},
 	});
 
+	const {
+		stripeSubscription,
+		canceledStripeSubscriptionId,
+		mismatchedStripeSubscriptionId,
+	} = subscriptionResult;
+
 	const stripeSubscriptionScheduleForContext =
 		stripeSubscription && stripeSubscriptionSchedule
 			? getScheduleSubscriptionId(stripeSubscriptionSchedule) ===
@@ -156,5 +176,7 @@ export const setupStripeBillingContext = async ({
 		stripeTaxRate,
 		paymentMethod,
 		testClockFrozenTime,
+		canceledStripeSubscriptionId,
+		mismatchedStripeSubscriptionId,
 	};
 };

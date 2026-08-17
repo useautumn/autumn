@@ -1333,6 +1333,13 @@ PreviewUpdateUsageLimitInterval = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+PreviewUpdateAnchor = Literal[
+    "billing_cycle",
+    "utc",
+]
+r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
+
 PreviewUpdatePropertiesTypedDict = TypeAliasType(
     "PreviewUpdatePropertiesTypedDict", Union[str, float, bool]
 )
@@ -1364,6 +1371,8 @@ class PreviewUpdateUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    anchor: NotRequired[PreviewUpdateAnchor]
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
     filter_: NotRequired[PreviewUpdateFilterTypedDict]
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
@@ -1381,6 +1390,9 @@ class PreviewUpdateUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    anchor: Optional[PreviewUpdateAnchor] = None
+    r"""Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar."""
+
     filter_: Annotated[
         Optional[PreviewUpdateFilter], pydantic.Field(alias="filter")
     ] = None
@@ -1388,7 +1400,7 @@ class PreviewUpdateUsageLimit(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter"])
+        optional_fields = set(["enabled", "anchor", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -2639,9 +2651,9 @@ class PreviewUpdateLineItemTypedDict(TypedDict):
     description: str
     r"""A detailed description of the line item."""
     subtotal: float
-    r"""The amount in cents before discounts and tax for this line item."""
+    r"""The amount before discounts and tax for this line item."""
     total: float
-    r"""The final amount in cents after discounts and tax for this line item."""
+    r"""The final amount after discounts and tax for this line item."""
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
     feature_id: Nullable[str]
@@ -2662,10 +2674,10 @@ class PreviewUpdateLineItem(BaseModel):
     r"""A detailed description of the line item."""
 
     subtotal: float
-    r"""The amount in cents before discounts and tax for this line item."""
+    r"""The amount before discounts and tax for this line item."""
 
     total: float
-    r"""The final amount in cents after discounts and tax for this line item."""
+    r"""The final amount after discounts and tax for this line item."""
 
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
@@ -2766,9 +2778,9 @@ class PreviewUpdateNextCycleLineItemTypedDict(TypedDict):
     description: str
     r"""A detailed description of the line item."""
     subtotal: float
-    r"""The amount in cents before discounts and tax for this line item."""
+    r"""The amount before discounts and tax for this line item."""
     total: float
-    r"""The final amount in cents after discounts and tax for this line item."""
+    r"""The final amount after discounts and tax for this line item."""
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
     feature_id: Nullable[str]
@@ -2789,10 +2801,10 @@ class PreviewUpdateNextCycleLineItem(BaseModel):
     r"""A detailed description of the line item."""
 
     subtotal: float
-    r"""The amount in cents before discounts and tax for this line item."""
+    r"""The amount before discounts and tax for this line item."""
 
     total: float
-    r"""The final amount in cents after discounts and tax for this line item."""
+    r"""The final amount after discounts and tax for this line item."""
 
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
@@ -2910,9 +2922,9 @@ class PreviewUpdateNextCycleTypedDict(TypedDict):
     starts_at: float
     r"""Unix timestamp (milliseconds) when the next billing cycle starts."""
     subtotal: float
-    r"""The total amount in cents before discounts and tax for the next cycle."""
+    r"""The total amount before discounts and tax for the next cycle."""
     total: float
-    r"""The final amount in cents after discounts and tax for the next cycle."""
+    r"""The final amount after discounts and tax for the next cycle."""
     line_items: List[PreviewUpdateNextCycleLineItemTypedDict]
     r"""List of line items for the next billing cycle."""
     usage_line_items: List[PreviewUpdateUsageLineItemTypedDict]
@@ -2926,10 +2938,10 @@ class PreviewUpdateNextCycle(BaseModel):
     r"""Unix timestamp (milliseconds) when the next billing cycle starts."""
 
     subtotal: float
-    r"""The total amount in cents before discounts and tax for the next cycle."""
+    r"""The total amount before discounts and tax for the next cycle."""
 
     total: float
-    r"""The final amount in cents after discounts and tax for the next cycle."""
+    r"""The final amount after discounts and tax for the next cycle."""
 
     line_items: List[PreviewUpdateNextCycleLineItem]
     r"""List of line items for the next billing cycle."""
@@ -3168,11 +3180,11 @@ class PreviewUpdateResponseTypedDict(TypedDict):
     line_items: List[PreviewUpdateLineItemTypedDict]
     r"""List of line items for the current billing period."""
     subtotal: float
-    r"""The total amount in cents before discounts and tax for the current billing period."""
+    r"""The total amount before discounts and tax for the current billing period."""
     total: float
-    r"""The final amount in cents after discounts and tax for the current billing period."""
+    r"""The final amount after discounts and tax for the current billing period."""
     currency: str
-    r"""The three-letter ISO currency code (e.g., 'usd')."""
+    r"""The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD)."""
     incoming: List[PreviewUpdateIncomingTypedDict]
     r"""Products or subscription changes being added or updated."""
     outgoing: List[PreviewUpdateOutgoingTypedDict]
@@ -3198,13 +3210,13 @@ class PreviewUpdateResponse(BaseModel):
     r"""List of line items for the current billing period."""
 
     subtotal: float
-    r"""The total amount in cents before discounts and tax for the current billing period."""
+    r"""The total amount before discounts and tax for the current billing period."""
 
     total: float
-    r"""The final amount in cents after discounts and tax for the current billing period."""
+    r"""The final amount after discounts and tax for the current billing period."""
 
     currency: str
-    r"""The three-letter ISO currency code (e.g., 'usd')."""
+    r"""The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD)."""
 
     incoming: List[PreviewUpdateIncoming]
     r"""Products or subscription changes being added or updated."""

@@ -1,3 +1,5 @@
+import { getAutumnEnv } from "@autumn/env";
+
 export type VercelSdkTestOptions = {
 	mockVercelApi?: boolean;
 };
@@ -10,7 +12,5 @@ export const getVercelSdkServerURL = (
 ): string | undefined => {
 	if (process.env.NODE_ENV === "production") return undefined;
 	if (testOptions?.mockVercelApi !== true) return undefined;
-	const base = process.env.BETTER_AUTH_URL;
-	if (!base) return undefined;
-	return `${base.replace(/\/$/, "")}/__test/vercel/api`;
+	return `${getAutumnEnv().AUTUMN_API_URL}/__test/vercel/api`;
 };

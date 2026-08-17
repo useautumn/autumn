@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * `bun tw` CLI dispatch — the cloud test swarm entrypoint (plan §8.6, §9a).
  *
@@ -15,11 +16,8 @@
  * the first positional slot is treated as a test group/suite/path for `run`.
  */
 
+import { getAllGroups, getAllSuites } from "@tests/_groups/index.ts";
 import chalk from "chalk";
-import {
-	getAllGroups,
-	getAllSuites,
-} from "../../server/tests/_groups/index.ts";
 import { doctor } from "./commands/doctor.ts";
 import { kill, killAll, killOrphans } from "./commands/kill.ts";
 import { list } from "./commands/list.ts";

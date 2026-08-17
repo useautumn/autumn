@@ -12,12 +12,17 @@ services:
     volumes:
       - autumn-dev-postgres-18:/var/lib/postgresql
 
-  redis-stack:
-    image: redis/redis-stack-server:latest
-    ports:
-      - "6379:6379"
+  # Backs MISC_CACHE_DRAGONFLY_PUBLIC_URL so local dev matches prod's engine
+  # instead of pointing at Redis Cloud.
+  dragonfly-misc:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    network_mode: host
+    command:
+      - --port=6379
+    ulimits:
+      memlock: -1
     volumes:
-      - autumn-dev-redis-stack:/data
+      - autumn-dev-dragonfly-misc:/data
 
   dragonfly:
     image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
@@ -57,5 +62,5 @@ services:
 
 volumes:
   autumn-dev-postgres-18:
-  autumn-dev-redis-stack:
+  autumn-dev-dragonfly-misc:
   autumn-dev-dragonfly:

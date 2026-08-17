@@ -3,6 +3,7 @@ import {
 	type AttachParamsV1,
 	type BillingContextOverride,
 	BillingVersion,
+	findActiveCustomerProductById,
 	hasActivePaidSubscription,
 	hasCustomItems,
 	isCustomerProductFree,
@@ -83,6 +84,26 @@ export const setupAttachBillingContext = async ({
 			planScheduleOverride: params.plan_schedule,
 		});
 
+	// No same-group product to carry from? When carry-over is explicitly
+	// requested, fall back to the single plan being removed in this attach.
+	// computeAttachRemovals throws if more than one is removed.
+	const carryOverRequested = Boolean(
+		params.carry_over_usages?.enabled || params.carry_over_balances?.enabled,
+	);
+	const removedCarrySourceId = carryOverRequested
+		? (params.remove_plan_ids ?? []).find(
+				(productId) => productId !== params.plan_id,
+			)
+		: undefined;
+	const removedCarrySource = removedCarrySourceId
+		? findActiveCustomerProductById({
+				fullCus: fullCustomer,
+				productId: removedCarrySourceId,
+			})
+		: undefined;
+	const carryOverSourceCustomerProduct =
+		currentCustomerProduct ?? removedCarrySource ?? undefined;
+
 	const isAttachPaidRecurring = isProductPaidAndRecurring(attachProduct);
 
 	const hasPaidRecurringSubscription = hasActivePaidSubscription({
@@ -124,6 +145,7 @@ export const setupAttachBillingContext = async ({
 		stripeTaxRate,
 		paymentMethod,
 		testClockFrozenTime,
+		canceledStripeSubscriptionId,
 	} = await setupStripeBillingContext({
 		ctx,
 		fullCustomer,
@@ -280,6 +302,8 @@ export const setupAttachBillingContext = async ({
 
 		currentCustomerProduct,
 		scheduledCustomerProduct,
+		carryOverSourceCustomerProduct,
+		canceledStripeSubscriptionId,
 
 		planTiming,
 		endOfCycleMs,

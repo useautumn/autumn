@@ -137,6 +137,7 @@ export const handleUpdateCoupon = createRoute({
 			env,
 			orgId: org.id,
 			update: rewardBody,
+			features: ctx.features,
 		});
 
 		return c.json(updatedCoupon);

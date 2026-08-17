@@ -22,15 +22,15 @@ const closedEnumSchema = z.any();
 
 const openEnumSchema = z.any();
 
-export const redeemOnRequestSchema = closedEnumSchema;
+export const createReferralProgramRedeemOnRequestSchema = closedEnumSchema;
 
-export const receivedByRequestSchema = closedEnumSchema;
+export const createReferralProgramReceivedByRequestSchema = closedEnumSchema;
 
 export const createReferralProgramParamsSchema = z.object({
 	id: z.string(),
 	rewardId: z.string(),
-	redeemOn: redeemOnRequestSchema,
-	receivedBy: receivedByRequestSchema,
+	redeemOn: createReferralProgramRedeemOnRequestSchema,
+	receivedBy: createReferralProgramReceivedByRequestSchema,
 	maxRedemptions: z.union([z.number(), z.undefined()]).optional().nullable(),
 	planIds: z
 		.union([z.array(z.string()), z.undefined()])
@@ -39,15 +39,15 @@ export const createReferralProgramParamsSchema = z.object({
 	excludeTrial: z.union([z.boolean(), z.undefined()]).optional().nullable(),
 });
 
-export const redeemOnResponseSchema = openEnumSchema;
+export const createReferralProgramRedeemOnResponseSchema = openEnumSchema;
 
-export const receivedByResponseSchema = openEnumSchema;
+export const createReferralProgramReceivedByResponseSchema = openEnumSchema;
 
 export const createReferralProgramResponseSchema = z.object({
 	id: z.string(),
 	rewardId: z.string(),
-	redeemOn: redeemOnResponseSchema,
-	receivedBy: receivedByResponseSchema,
+	redeemOn: createReferralProgramRedeemOnResponseSchema,
+	receivedBy: createReferralProgramReceivedByResponseSchema,
 	maxRedemptions: z.union([z.number(), z.undefined()]).optional().nullable(),
 	planIds: z
 		.union([z.array(z.string()), z.undefined()])

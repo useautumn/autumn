@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { type ExistingRollover, RolloverExpiryDurationType } from "@autumn/shared";
+import {
+	type ExistingRollover,
+	RolloverExpiryDurationType,
+} from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import chalk from "chalk";
@@ -19,7 +22,11 @@ describe(
 				featureName: "Seats",
 				allowance: 10,
 				balance: 10,
-				rollover: { max: null, duration: RolloverExpiryDurationType.Month, length: 1 },
+				rollover: {
+					max: null,
+					duration: RolloverExpiryDurationType.Month,
+					length: 1,
+				},
 			});
 
 			const newCusProduct = customerProducts.create({

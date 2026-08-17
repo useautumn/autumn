@@ -10,12 +10,12 @@
 import { existsSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { spawn } from "bun";
 import {
 	getGroup,
 	resolveSuite,
 	resolveTestPaths,
-} from "../../server/tests/_groups/index";
+} from "@tests/_groups/index.ts";
+import { spawn } from "bun";
 import { testRunConfig } from "./testRunConfig";
 
 const PROJECT_ROOT = resolve(import.meta.dirname, "../..");

@@ -1,0 +1,59 @@
+DESCRIPTION >
+    History backfill for events_deductions_hourly_mv (deployed with BACKFILL skip). Fills the window
+    before the MV's forward-materialization seam, in bounded half-open [start_date, end_date) chunks
+    on on-demand compute
+    (tb copy run events_deductions_hourly_mv_backfill --on-demand-compute --param start_date=... --param end_date=...).
+    SQL mirrors events_deductions_hourly_mv_pipe EXACTLY (same ARRAY JOIN + JSON decode + GROUP BY)
+    so backfilled rows are identical to forward-materialized ones.
+
+    Chunk sizing: unlike events_customer_hourly_mv_backfill this DOES fan out (one row per deduction
+    before the hourly GROUP BY) and pays a double JSONExtract per field per row, so start with ~1-day
+    chunks on prod-scale months and widen only if runs come back fast.
+
+    Seam safety: MergeTree does NOT dedup — keep every end_date <= the MV's actual promote time
+    (capture it empirically: min(hour) once forward events land), else overlapping hours double-count.
+
+    Backfill ALL history: custom_range is unbounded, so any date can be queried. The effective
+    floor is data existence, not a serving window — deductions were first written to events around
+    May 2026, so earlier chunks copy zero rows by construction. scripts/backfill_deductions_mv.ts
+    automates the downward fill (resume from min(hour), retries, on-demand compute).
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        coalesce(entity_id, '') as entity_id,
+        event_name,
+        JSONExtractString(JSONExtractString(d), 'feature_id') as balance_feature_id,
+        JSONExtractString(JSONExtractString(d), 'balance_id') as balance_id,
+        JSONExtractString(JSONExtractString(d), 'plan_id') as plan_id,
+        JSONExtractString(
+            JSONExtractRaw(JSONExtractString(d), 'reset'),
+            'interval'
+        ) as reset_interval,
+        toStartOfHour(timestamp) as hour,
+        sum(JSONExtractFloat(JSONExtractString(d), 'value')) as deducted,
+        count() as deduction_count
+    FROM events
+    ARRAY JOIN JSONExtractArrayRaw(toString(deductions), 'list') as d
+    WHERE timestamp >= {{DateTime(start_date, '2026-06-01 00:00:00')}}
+        AND timestamp < {{DateTime(end_date, '2026-06-02 00:00:00')}}
+        AND JSONExtractString(JSONExtractString(d), 'balance_id') != ''
+    GROUP BY
+        org_id,
+        env,
+        customer_id,
+        entity_id,
+        event_name,
+        balance_feature_id,
+        balance_id,
+        plan_id,
+        reset_interval,
+        hour
+
+TYPE COPY
+TARGET_DATASOURCE events_deductions_hourly_mv
+COPY_MODE append

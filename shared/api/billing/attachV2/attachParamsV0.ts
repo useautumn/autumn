@@ -70,6 +70,8 @@ export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({
 			feature_ids: z.array(z.string()).optional(),
 		})
 		.optional(),
+
+	remove_plan_ids: z.array(z.string()).optional(),
 });
 
 export type ExtAttachParamsV0 = z.input<typeof ExtAttachParamsV0Schema>;

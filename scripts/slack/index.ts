@@ -33,18 +33,18 @@ const readEnvVarFromFile = ({
 	return undefined;
 };
 
-// `bun dw setup` writes each worktree's tunnel to its own server/.env.local and
-// the dw registry. Prefer those over process.env.NGROK_URL, which Infisical
+// `bun dw setup` writes each worktree's public API URL to server/.env.local and
+// the dw registry. Prefer those over the shared Infisical dev URL, which
 // injects as a single shared dev tunnel — otherwise every worktree's Slack app
 // would be pointed at the same URL instead of its own.
-const resolveWorktreeNgrokUrl = ({
+const resolveWorktreePublicApiUrl = ({
 	includeEnvFallback = true,
 }: {
 	includeEnvFallback?: boolean;
 } = {}): string | undefined => {
 	const fromEnvFile = readEnvVarFromFile({
 		filePath: join(repoRoot, "server", ".env.local"),
-		key: "NGROK_URL",
+		key: "AUTUMN_PUBLIC_API_URL",
 	});
 	if (fromEnvFile) return fromEnvFile;
 
@@ -61,7 +61,7 @@ const resolveWorktreeNgrokUrl = ({
 		// Malformed/absent registry — fall through to the shared env value.
 	}
 
-	return includeEnvFallback ? process.env.NGROK_URL : undefined;
+	return includeEnvFallback ? process.env.AUTUMN_PUBLIC_API_URL : undefined;
 };
 
 const defaultBotEvents = [
@@ -187,7 +187,7 @@ const usage = () =>
 		chalk.bold("Options:"),
 		"  --app-id <id>              Existing Slack app id for manifest updates.",
 		"  --base-url <url>           Public Leaf URL. Local setup defaults to this",
-		"                             worktree's NGROK_URL only; manifest updates can",
+		"                             worktree's AUTUMN_PUBLIC_API_URL only; manifest updates can",
 		"                             also fall back to SLACK_BOT_URL / CHAT_URL.",
 		"  --name <name>              Slack app name. Defaults to Autumn Chat Local.",
 		"  --env-file <path>          Write Slack env vars to this file.",
@@ -263,7 +263,7 @@ const parseArgs = ({ argv }: { argv: string[] }): Args => {
 		appName: readOption({ args: argv, name: "--name" }) ?? defaultAppName,
 		baseUrl:
 			baseUrlOption ??
-			resolveWorktreeNgrokUrl({
+			resolveWorktreePublicApiUrl({
 				includeEnvFallback: !isLocalSetupAction,
 			}) ??
 			(isLocalSetupAction
@@ -370,7 +370,7 @@ const resolveInteractiveArgs = async ({
 						name: "baseUrl" as const,
 						message: "Public ngrok/Leaf URL",
 						default:
-							resolveWorktreeNgrokUrl({
+							resolveWorktreePublicApiUrl({
 								includeEnvFallback: !isLocalSetupAction,
 							}) ??
 							(isLocalSetupAction
@@ -1207,7 +1207,7 @@ const targetDefaults = ({
 				}),
 			appName: process.env.SLACK_ADMIN_APP_NAME ?? "Autumn Chat Admin Local",
 			baseUrl:
-				resolveWorktreeNgrokUrl() ??
+				resolveWorktreePublicApiUrl() ??
 				process.env.SLACK_BOT_URL ??
 				process.env.CHAT_URL,
 			provider: "slack_admin" as const,
@@ -1223,7 +1223,7 @@ const targetDefaults = ({
 			}),
 		appName: process.env.SLACK_APP_NAME ?? "Autumn Chat Local",
 		baseUrl:
-			resolveWorktreeNgrokUrl() ??
+			resolveWorktreePublicApiUrl() ??
 			process.env.SLACK_BOT_URL ??
 			process.env.CHAT_URL,
 		provider: "slack" as const,

@@ -1,13 +1,17 @@
-import { Button, Popover, PopoverContent, PopoverTrigger } from "@autumn/ui";
-import { TrashIcon } from "@phosphor-icons/react";
-import { useState } from "react";
-import { toast } from "sonner";
 import {
+	Button,
 	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
 } from "@autumn/ui";
+import { TrashIcon } from "@phosphor-icons/react";
+import { parseAsInteger } from "nuqs";
+import { useState } from "react";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
@@ -53,9 +57,13 @@ export const SavedViews = ({
 				processor: processorParam
 					? processorParam.split(",").filter(Boolean)
 					: [],
-				interval: intervalParam
-					? intervalParam.split(",").filter(Boolean)
-					: [],
+				interval: intervalParam ? intervalParam.split(",").filter(Boolean) : [],
+				joinedFrom: parseAsInteger.parseServerSide(
+					params.get("joinedFrom") ?? undefined,
+				),
+				joinedTo: parseAsInteger.parseServerSide(
+					params.get("joinedTo") ?? undefined,
+				),
 			});
 
 			toast.success(`Applied filters from ${view.name} view`);

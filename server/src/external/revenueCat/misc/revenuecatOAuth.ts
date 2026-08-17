@@ -1,3 +1,4 @@
+import { getAutumnEnv } from "@autumn/env";
 import {
 	CodeChallengeMethod,
 	generateCodeVerifier,
@@ -59,13 +60,7 @@ const getRcOAuthClient = () => {
 };
 
 export const getRcOAuthRedirectUri = () => {
-	let serverUrl = process.env.BETTER_AUTH_URL;
-
-	if (process.env.NGROK_URL) {
-		serverUrl = process.env.NGROK_URL;
-	}
-
-	return `${(serverUrl ?? "").replace(/\/+$/, "")}/revenuecat/oauth_callback`;
+	return `${getAutumnEnv().AUTUMN_PUBLIC_API_URL}/revenuecat/oauth_callback`;
 };
 
 export const createRcAuthorizationUrl = ({

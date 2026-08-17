@@ -6,7 +6,7 @@ import pLimit, { type LimitFunction } from "p-limit";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 
-export type FullSubjectGateLane = "primary" | "replica";
+export type FullSubjectGateLane = "primary" | "replica" | "backup";
 
 const GATE_LOG_WAIT_MS_THRESHOLD = 50;
 const LIMITER_CACHE_MAX = 5000;

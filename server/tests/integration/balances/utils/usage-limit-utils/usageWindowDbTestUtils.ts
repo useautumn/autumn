@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
-import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { pollUntilAsserted } from "@tests/utils/genUtils.js";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { sql } from "drizzle-orm";
 
 // biome-ignore lint/suspicious/noExplicitAny: raw SQL rows are untyped

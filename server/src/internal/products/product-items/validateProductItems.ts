@@ -17,6 +17,7 @@ import {
 	RecaseError,
 	type RolloverConfig,
 	RolloverExpiryDurationType,
+	rolloverConfigToIssue,
 	TierBehavior,
 	UsageModel,
 } from "@autumn/shared";
@@ -315,34 +316,10 @@ const validateProductItem = ({
 	if (item.config?.rollover) {
 		const rollover = item.config.rollover as RolloverConfig;
 
-		// Validate rollover max amount
-		if (rollover.max !== null && typeof rollover.max === "number") {
-			if (rollover.max < 0) {
-				throw new RecaseError({
-					message: "Rollover maximum amount must be positive",
-					code: ErrCode.InvalidInputs,
-					statusCode: StatusCodes.BAD_REQUEST,
-				});
-			}
-		}
-
-		// Validate rollover max_percentage
-		if (notNullish(rollover.max_percentage)) {
-			if (rollover.max_percentage <= 0 || rollover.max_percentage > 100) {
-				throw new RecaseError({
-					message:
-						"Rollover max_percentage must be between 0 (exclusive) and 100 (inclusive)",
-					code: ErrCode.InvalidInputs,
-					statusCode: StatusCodes.BAD_REQUEST,
-				});
-			}
-		}
-
-		// max and max_percentage are mutually exclusive
-		if (notNullish(rollover.max) && notNullish(rollover.max_percentage)) {
+		const rolloverIssue = rolloverConfigToIssue({ rollover });
+		if (rolloverIssue) {
 			throw new RecaseError({
-				message:
-					"Rollover max and max_percentage are mutually exclusive. Set one or the other, not both.",
+				message: rolloverIssue,
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});

@@ -37,11 +37,8 @@ export const handleCopyEnvironment = createRoute({
 
 		// 2. Copy features first
 		await handleCopyFeatures({
-			ctx,
+			toContext: { ...ctx, org, env: toEnv, features: toFeatures },
 			fromFeatures,
-			toOrg: org,
-			toEnv,
-			toFeatures,
 		});
 
 		await handleCopyProducts({

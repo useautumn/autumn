@@ -44,6 +44,7 @@ export const handleCheck = createRoute({
 				error: new Error(
 					`check exceeded the ${CHECK_FAIL_OPEN_TIMEOUT_MS}ms blanket fail-open timeout`,
 				),
+				reason: "route_timeout",
 			});
 			return c.json(response, 202);
 		},

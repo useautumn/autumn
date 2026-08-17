@@ -29,7 +29,7 @@ import {
 	getIdempotencyTableName,
 	IDEMPOTENCY_TABLE_PARTITION_KEY,
 	IDEMPOTENCY_TABLE_TTL_ATTRIBUTE,
-} from "../../../server/src/external/aws/dynamodb/idempotencyKeys/idempotencyKeyTable.ts";
+} from "@server/external/aws/dynamodb/idempotencyKeys/idempotencyKeyTable.ts";
 
 type TableDefinition = {
 	tableName: string;

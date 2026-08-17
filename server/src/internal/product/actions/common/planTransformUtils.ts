@@ -152,9 +152,11 @@ export const buildProductUpdatesFromApiPlan = ({
 			description: plan.description,
 			group: plan.group ?? "",
 			add_on: plan.add_on,
+			auto_enable: plan.auto_enable,
 			items: plan.items,
 			price: plan.price,
-			free_trial: plan.free_trial,
+			free_trial:
+				plan.free_trial ?? (currentFullProduct.free_trial ? null : undefined),
 			config: plan.config,
 			billing_controls: plan.billing_controls,
 			metadata: plan.metadata,

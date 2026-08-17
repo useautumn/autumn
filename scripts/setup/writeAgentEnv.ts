@@ -56,8 +56,7 @@ ENCRYPTION_PASSWORD=${genUrlSafeBase64({ bytes: 64 })}
 
 # Local services
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/autumn
-CACHE_URL=redis://localhost:6379
-CACHE_URL_US_EAST=redis://localhost:6379
+MISC_CACHE_DRAGONFLY_PUBLIC_URL=redis://localhost:6379
 REDIS_URL=redis://localhost:6379
 
 # ElasticMQ (local SQS, per-agent isolated queue)
@@ -70,9 +69,9 @@ AWS_SECRET_ACCESS_KEY=x
 TINYBIRD_CLICKHOUSE_URL=http://localhost:8123
 
 # App URLs
-BETTER_AUTH_URL=http://localhost:${serverPort}
+AUTUMN_API_URL=http://localhost:${serverPort}
+AUTUMN_PUBLIC_API_URL=http://localhost:${serverPort}
 CLIENT_URL=http://localhost:${vitePort}
-STRIPE_WEBHOOK_URL=http://localhost:${serverPort}
 
 # Static team-wide (pass-through from process.env)
 ${passLines}

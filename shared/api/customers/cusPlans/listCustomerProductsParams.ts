@@ -40,6 +40,9 @@ const CustomerProductsCursorFieldsSchema = z.object({
 	v: z.literal(0),
 	eRank: z.number().int().nonnegative(),
 	rank: z.number().int().nonnegative(),
+	// Scheduled-start sort key; defaulted so cursors minted before it existed
+	// still decode.
+	st: z.number().int().nonnegative().default(0),
 	t: z.number().int().nonnegative(),
 	id: z.string().min(1),
 });

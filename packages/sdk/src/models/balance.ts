@@ -248,6 +248,10 @@ export type Breakdown = {
 
 export type BalanceRollover = {
   /**
+   * Amount originally rolled over from a previous period, before any of it was consumed.
+   */
+  granted: number;
+  /**
    * Amount of balance rolled over from a previous period.
    */
   balance: number;
@@ -620,6 +624,7 @@ export const BalanceRollover$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
+    granted: types.number(),
     balance: types.number(),
     expires_at: types.number(),
   }),

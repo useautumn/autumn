@@ -40,6 +40,17 @@ export const makeFullCusProduct = ({
 		external_id: null,
 		customer_prices: [],
 		customer_entitlements: [],
-		product: { id: planId, name: planId } as FullCusProduct["product"],
+		product: {
+			id: planId,
+			name: planId,
+			description: null,
+			group: null,
+			version: 1,
+			is_add_on: false,
+			is_default: false,
+			created_at: 1_700_000_000_000,
+			env: "sandbox",
+			archived: false,
+		} as unknown as FullCusProduct["product"],
 	} as unknown as FullCusProduct;
 };

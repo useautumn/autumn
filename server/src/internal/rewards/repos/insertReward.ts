@@ -1,4 +1,9 @@
-import { entitlements, type Reward, rewards } from "@autumn/shared";
+import {
+	entitlements,
+	type Feature,
+	type Reward,
+	rewards,
+} from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
 	type RewardWithEntitlementInputs,
@@ -9,9 +14,11 @@ import {
 export const insertReward = async ({
 	db,
 	data,
+	features,
 }: {
 	db: DrizzleCli;
 	data: RewardWithEntitlementInputs | RewardWithEntitlementInputs[];
+	features?: Feature[];
 }) => {
 	const rewardsToInsert = Array.isArray(data) ? data : [data];
 	const rewardData = rewardsToInsert.map((reward) => {
@@ -19,7 +26,7 @@ export const insertReward = async ({
 		return rewardRow;
 	});
 	const entitlementRows = rewardsToInsert.flatMap((reward) =>
-		rewardToEntitlementRows({ reward }),
+		rewardToEntitlementRows({ reward, features }),
 	);
 
 	const insertedRewards = await db

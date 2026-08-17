@@ -6,8 +6,12 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 import { getReachableDragonflyUrl } from "./getReachableDragonflyUrl.js";
-import { createRedisConnection, currentRegion } from "./initRedis.js";
+import {
+	createPooledStandbyRedisConnection,
+	currentRegion,
+} from "./initRedis.js";
 import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/createRedisClient.js";
+import { waitForRedisReadPoolReady } from "./initUtils/redisWarmup.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
 
 export type OrgWithRedisConfig = {
@@ -34,7 +38,7 @@ const createOrgRedisConnection = ({
 	orgId: string;
 	orgSlug: string;
 }): Redis => {
-	const instance = createRedisConnection({
+	const instance = createPooledStandbyRedisConnection({
 		cacheUrl: connectionString,
 		region: `org:${orgSlug}:v2:dragonfly`,
 		redisType: `subject-dedicated:${orgSlug}`,
@@ -112,6 +116,39 @@ export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 	return instance;
 };
 
+const ORG_REDIS_WARMUP_TIMEOUT_MS = 5000;
+
+/**
+ * Opens and awaits readiness of a single org's dedicated connection. Trigger
+ * tasks start cold, so without this the first cache op in the run races the
+ * handshake — invalidations queue, but reads and status checks see a client
+ * that isn't ready yet. Never throws: a failed warmup degrades to the shared
+ * Redis behaviour the callers already tolerate.
+ */
+export const warmOrgRedis = async ({
+	org,
+}: {
+	org: OrgWithRedisConfig;
+}): Promise<void> => {
+	if (!org.redis_config) return;
+
+	const instance = getOrgRedis({ org });
+
+	try {
+		await waitForRedisReadPoolReady({
+			instance,
+			label: `org:${org.slug ?? org.id}`,
+			timeoutMs: ORG_REDIS_WARMUP_TIMEOUT_MS,
+		});
+	} catch (error) {
+		logger.warn(
+			`[OrgRedis] org=${org.id}: warmup failed (continuing): ${
+				error instanceof Error ? error.message : String(error)
+			}`,
+		);
+	}
+};
+
 export const removeOrgRedis = ({ orgId }: { orgId: string }): void => {
 	const existing = pool.get(orgId);
 	if (!existing) return;
@@ -132,7 +169,7 @@ export const preWarmOrgRedisConnections = async ({
 		`[OrgRedis] Pre-warming connections for ${orgsWithRedis.length} orgs in ${currentRegion}...`,
 	);
 
-	for (const org of orgsWithRedis) {
-		getOrgRedis({ org });
-	}
+	// Await readiness (bounded per org, never throws) so callers can gate
+	// listen on it — an open-but-handshaking client still times out ops.
+	await Promise.all(orgsWithRedis.map((org) => warmOrgRedis({ org })));
 };

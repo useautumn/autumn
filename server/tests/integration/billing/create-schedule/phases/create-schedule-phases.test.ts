@@ -350,7 +350,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule: now phase stays the exact active set across groups and future phases")}`,
+	`${chalk.yellowBright("create-schedule: now phase replaces same-slot plans and leaves undeclared ones active")}`,
 	async () => {
 		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 		const usersItem = items.monthlyUsers({ includedUsage: 5 });
@@ -446,8 +446,11 @@ test.concurrent(
 			.filter((productRow) => productRow.status === CusProductStatus.Scheduled)
 			.sort((a, b) => a.productId!.localeCompare(b.productId!));
 
+		// The add-on keys on its own id, so no phase claims its slot and the
+		// schedule leaves it alone.
 		expect(activeRows).toEqual(
 			[
+				{ productId: currentAddon.id, status: CusProductStatus.Active },
 				{ productId: keepNowB.id, status: CusProductStatus.Active },
 				{ productId: nowReplacementA.id, status: CusProductStatus.Active },
 			].sort((a, b) => a.productId.localeCompare(b.productId)),

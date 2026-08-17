@@ -1,4 +1,4 @@
-import { normalizeToolName } from "../../../agent/tools/toolPolicy.js";
+import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 
 /** Single source for write tool → preview tool. A new approval-gated write only
  * needs an entry here (plus a `destructiveHint` on the MCP tool). */

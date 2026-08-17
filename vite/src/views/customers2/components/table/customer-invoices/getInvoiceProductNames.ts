@@ -25,6 +25,18 @@ const getFallbackNames = ({
 		.filter(Boolean)
 		.join(", ");
 
+/** Resolve a product id to its display name, falling back to the id itself. */
+export const productIdsToNames = ({
+	productIds,
+	products,
+}: {
+	productIds: string[];
+	products: ProductV2[];
+}): string =>
+	productIds
+		.map((id) => products.find((p) => p.id === id)?.name ?? id)
+		.join(", ");
+
 /** Resolve a line item's product display name, falling back to its id. */
 const resolveProductName = ({
 	productId,

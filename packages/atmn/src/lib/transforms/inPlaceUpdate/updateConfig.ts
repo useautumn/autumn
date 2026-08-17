@@ -5,19 +5,35 @@
  */
 
 import { existsSync, writeFileSync } from "node:fs";
+import type { ReferralProgram, Reward } from "../../../compose/index.js";
 import type { Feature } from "../../../compose/models/index.js";
 import type { Plan } from "../../../compose/models/variantModels.js";
+import {
+	DEFAULT_REWARD_EXPORT_ERROR,
+	loadConfigModule,
+} from "../../config/loadConfig.js";
 import { resolveConfigPath } from "../../env/index.js";
 import { buildFeatureCode } from "../sdkToCode/feature.js";
 import {
+	claimVarName,
+	featureIdToVarName,
+	idToVarName,
 	planIdToVarName,
-	resolveVarNames,
 	variantIdToVarName,
+	versionedCodegenId,
 } from "../sdkToCode/helpers.js";
 import { buildImports } from "../sdkToCode/imports.js";
 import { buildPlanCode } from "../sdkToCode/plan.js";
+import {
+	buildReferralProgramCode,
+	buildRewardCode,
+} from "../sdkToCode/reward.js";
 import { buildVariantCode } from "../sdkToCode/variant.js";
-import { parseExistingConfig } from "./parseConfig.js";
+import {
+	type ParsedEntity,
+	type ParsedIdentity,
+	parseExistingConfig,
+} from "./parseConfig.js";
 
 export interface UpdateResult {
 	/** Number of features updated in place */
@@ -84,41 +100,93 @@ function generatePlanWithVariantsCode({
 			variant,
 			features,
 			featureVarMap,
-			varNameOverride: variantVarMap.get(variant.id),
+			varNameOverride: variantVarMap.get(versionedCodegenId(variant)),
 		}),
 	);
 
 	return [basePlanCode, ...variantCodes].join("\n\n");
 }
 
-const ensureBillingControlsImport = (importText: string) => {
-	if (/\bbillingControls\b/.test(importText)) return importText;
-	return importText.replace(/\{/, "{ billingControls,");
-};
+const ensureAtmnImports = (importText: string, imports: string[]) =>
+	imports.reduce(
+		(text, name) =>
+			new RegExp(`\\b${name}\\b`).test(text)
+				? text
+				: text.replace(/\{/, `{ ${name},`),
+		importText,
+	);
 
-/**
- * Update autumn.config.ts in place
- *
- * Strategy:
- * 1. Parse existing config into blocks (imports, comments, exports)
- * 2. For each entity in API data:
- *    - If exists locally: replace with new code (preserving var name)
- *    - If new: append to the appropriate section
- * 3. Entities that exist locally but not in API are DELETED
- */
-export async function updateConfigInPlace(
-	features: Feature[],
-	plans: Plan[],
-	cwd: string = process.cwd(),
-): Promise<UpdateResult> {
+const versionedIds = (resources: ParsedIdentity[]) =>
+	new Set(
+		resources.flatMap(({ id, version }) => (version === undefined ? [] : [id])),
+	);
+
+/** Updates managed entities in place while preserving custom source. */
+export async function updateConfigInPlace({
+	features,
+	plans,
+	cwd = process.cwd(),
+	rewards,
+	referralPrograms,
+}: {
+	features: Feature[];
+	plans: Plan[];
+	cwd?: string;
+	rewards?: Reward[];
+	referralPrograms?: ReferralProgram[];
+}): Promise<UpdateResult> {
 	const configPath = resolveConfigPath(cwd);
 
 	if (!existsSync(configPath)) {
 		throw new Error(`Config file not found: ${configPath}`);
 	}
 
-	const parsed = parseExistingConfig(configPath);
-	const includeBillingControls = plans.some((plan) => plan.billingControls);
+	let parsed = parseExistingConfig({ configPath });
+	const hasDefaultResources =
+		/\bexport\s+default\b/.test(parsed.source) &&
+		/\b(?:rewards|referralPrograms)\b/.test(parsed.source);
+	if (hasDefaultResources) throw new Error(DEFAULT_REWARD_EXPORT_ERROR);
+	const versionedIdsByType = new Map<ParsedEntity["type"], Set<string>>([
+		["plan", versionedIds(plans)],
+		["variant", versionedIds(plans.flatMap((plan) => plan.variants ?? []))],
+	]);
+	const runtimeDeclarations = parsed.blocks.flatMap(
+		({ declaration, entity }) =>
+			declaration &&
+			(declaration.requiresRuntimeIdentity ||
+				(entity && versionedIdsByType.get(entity.type)?.has(entity.id)))
+				? [declaration]
+				: [],
+	);
+	if (runtimeDeclarations.length) {
+		const mod = await loadConfigModule({ cwd });
+		const identitiesByTypeAndVarName = new Map<
+			ParsedEntity["type"],
+			Map<string, ParsedIdentity>
+		>();
+		for (const declaration of runtimeDeclarations) {
+			const value = mod[declaration.varName] as
+				| { id?: unknown; version?: unknown }
+				| undefined;
+			if (typeof value?.id !== "string")
+				throw new Error(
+					`Could not resolve the ID of export '${declaration.varName}'.`,
+				);
+			const identities =
+				identitiesByTypeAndVarName.get(declaration.type) ?? new Map();
+			identities.set(declaration.varName, {
+				id: value.id,
+				version: typeof value.version === "number" ? value.version : undefined,
+			});
+			identitiesByTypeAndVarName.set(declaration.type, identities);
+		}
+		parsed = parseExistingConfig({ configPath, identitiesByTypeAndVarName });
+	}
+	const requiredImports = [
+		...(plans.some((plan) => plan.billingControls) ? ["billingControls"] : []),
+		...(rewards?.length ? ["reward"] : []),
+		...(referralPrograms?.length ? ["referralProgram"] : []),
+	];
 	const result: UpdateResult = {
 		featuresUpdated: 0,
 		featuresAdded: 0,
@@ -130,10 +198,18 @@ export async function updateConfigInPlace(
 
 	// Build lookup maps
 	const apiFeatureMap = new Map(features.map((f) => [f.id, f]));
-	const apiPlanMap = new Map(plans.map((p) => [p.id, p]));
+	const apiPlanMap = new Map(plans.map((p) => [versionedCodegenId(p), p]));
+	const apiRewardMap = new Map(
+		(rewards ?? []).map((reward) => [reward.id, reward]),
+	);
+	const apiReferralProgramMap = new Map(
+		(referralPrograms ?? []).map((program) => [program.id, program]),
+	);
 	const apiVariantMap = new Map(
 		plans.flatMap((plan) =>
-			(plan.variants ?? []).map((variant) => [variant.id, variant] as const),
+			(plan.variants ?? []).map(
+				(variant) => [versionedCodegenId(variant), variant] as const,
+			),
 		),
 	);
 
@@ -145,14 +221,18 @@ export async function updateConfigInPlace(
 		if (entity.type === "feature") {
 			featureVarMap.set(entity.id, entity.varName);
 		} else if (entity.type === "variant") {
-			existingVariantVarMap.set(entity.id, entity.varName);
+			existingVariantVarMap.set(versionedCodegenId(entity), entity.varName);
 		}
 	}
 
 	// For new features/plans (not yet in the file), resolve var names with
 	// collision detection. Seed "used names" with all existing var names so
 	// newly generated names never clash with anything already in the file.
-	const existingVarNames = new Set(parsed.entities.map((e) => e.varName));
+	const existingVarNames = new Set(
+		[...parsed.source.matchAll(/export\s+const\s+([\w$]+)\s*=/g)].flatMap(
+			([, varName]) => (varName ? [varName] : []),
+		),
+	);
 
 	const newFeatureIds = features
 		.filter((f) => !featureVarMap.has(f.id))
@@ -161,14 +241,12 @@ export async function updateConfigInPlace(
 	// Resolve new feature var names first (they take the clean name on collision)
 	const newFeatureVarMap = new Map<string, string>();
 	for (const id of newFeatureIds) {
-		const { featureVarMap: resolved } = resolveVarNames([id], []);
-		let varName = resolved.get(id)!;
-		if (existingVarNames.has(varName)) {
-			// Shouldn't normally happen (IDs are unique), but guard anyway
-			varName = `${varName}Feature`;
-		}
+		const varName = claimVarName({
+			candidate: featureIdToVarName(id),
+			suffix: "Feature",
+			usedNames: existingVarNames,
+		});
 		newFeatureVarMap.set(id, varName);
-		existingVarNames.add(varName);
 		// Also add to featureVarMap so plan items can reference these new features
 		featureVarMap.set(id, varName);
 	}
@@ -176,40 +254,78 @@ export async function updateConfigInPlace(
 	// Resolve new plan var names, avoiding all names already in use.
 	// "New" means the plan ID is not present in any parsed entity.
 	const existingPlanIds = new Set(
-		parsed.entities.filter((e) => e.type === "plan").map((e) => e.id),
+		parsed.entities.filter((e) => e.type === "plan").map(versionedCodegenId),
 	);
 	const newPlanIds = plans
-		.filter((p) => !existingPlanIds.has(p.id))
-		.map((p) => p.id);
+		.filter((p) => !existingPlanIds.has(versionedCodegenId(p)))
+		.map(versionedCodegenId);
 
 	const newPlanVarMap = new Map<string, string>();
 	for (const id of newPlanIds) {
-		let varName = planIdToVarName(id);
-		if (existingVarNames.has(varName)) {
-			varName = `${varName}Plan`;
-		}
+		const varName = claimVarName({
+			candidate: planIdToVarName(id),
+			suffix: "Plan",
+			usedNames: existingVarNames,
+		});
 		newPlanVarMap.set(id, varName);
-		existingVarNames.add(varName);
 	}
 
 	const variantVarMap = new Map<string, string>();
-	for (const id of apiVariantMap.keys()) {
-		if (existingVariantVarMap.has(id)) {
-			variantVarMap.set(id, existingVariantVarMap.get(id)!);
+	for (const key of apiVariantMap.keys()) {
+		if (existingVariantVarMap.has(key)) {
+			variantVarMap.set(key, existingVariantVarMap.get(key)!);
 			continue;
 		}
 
-		let varName = variantIdToVarName(id);
-		if (existingVarNames.has(varName)) {
-			varName = `${varName}Variant`;
-		}
-		variantVarMap.set(id, varName);
-		existingVarNames.add(varName);
+		const varName = claimVarName({
+			candidate: variantIdToVarName(key),
+			suffix: "Variant",
+			usedNames: existingVarNames,
+		});
+		variantVarMap.set(key, varName);
+	}
+
+	const newRewardVarMap = new Map<string, string>();
+	for (const { id } of rewards ?? []) {
+		if (
+			parsed.entities.some(
+				(entity) => entity.type === "reward" && entity.id === id,
+			)
+		)
+			continue;
+		newRewardVarMap.set(
+			id,
+			claimVarName({
+				candidate: idToVarName(`reward-${id}`),
+				suffix: "Reward",
+				usedNames: existingVarNames,
+			}),
+		);
+	}
+
+	const newReferralProgramVarMap = new Map<string, string>();
+	for (const { id } of referralPrograms ?? []) {
+		if (
+			parsed.entities.some(
+				(entity) => entity.type === "referral_program" && entity.id === id,
+			)
+		)
+			continue;
+		newReferralProgramVarMap.set(
+			id,
+			claimVarName({
+				candidate: idToVarName(`referral-program-${id}`),
+				suffix: "ReferralProgram",
+				usedNames: existingVarNames,
+			}),
+		);
 	}
 
 	// Track which API entities have been matched
 	const matchedFeatureIds = new Set<string>();
 	const matchedPlanIds = new Set<string>();
+	const matchedRewardIds = new Set<string>();
+	const matchedReferralProgramIds = new Set<string>();
 
 	// Build new file content block by block
 	const outputBlocks: string[] = [];
@@ -246,11 +362,9 @@ export async function updateConfigInPlace(
 			// Check if this is the atmn import
 			if (/from\s+['"]atmn['"]/.test(importText)) {
 				hasAtmnImport = true;
-				if (includeBillingControls) {
-					outputBlocks.push(ensureBillingControlsImport(importText));
-					lastImportBlockIndex = outputBlocks.length - 1;
-					continue;
-				}
+				outputBlocks.push(ensureAtmnImports(importText, requiredImports));
+				lastImportBlockIndex = outputBlocks.length - 1;
+				continue;
 			}
 			outputBlocks.push(importText);
 			lastImportBlockIndex = outputBlocks.length - 1;
@@ -262,7 +376,7 @@ export async function updateConfigInPlace(
 			continue;
 		}
 
-		// Handle export blocks (features/plans)
+		// Handle managed config exports
 		if (block.type === "export" && block.entity) {
 			const entity = block.entity;
 
@@ -280,7 +394,8 @@ export async function updateConfigInPlace(
 					result.featuresDeleted++;
 				}
 			} else if (entity.type === "plan") {
-				const apiPlan = apiPlanMap.get(entity.id);
+				const planKey = versionedCodegenId(entity);
+				const apiPlan = apiPlanMap.get(planKey);
 				if (apiPlan) {
 					// Update existing plan
 					const newCode = generatePlanWithVariantsCode({
@@ -291,7 +406,7 @@ export async function updateConfigInPlace(
 						variantVarMap,
 					});
 					outputBlocks.push(newCode);
-					matchedPlanIds.add(entity.id);
+					matchedPlanIds.add(planKey);
 					lastPlanBlockIndex = outputBlocks.length - 1;
 					result.plansUpdated++;
 				} else {
@@ -299,8 +414,28 @@ export async function updateConfigInPlace(
 					result.plansDeleted++;
 				}
 			} else if (entity.type === "variant") {
-				if (!apiVariantMap.has(entity.id)) {
+				if (!apiVariantMap.has(versionedCodegenId(entity))) {
 					result.plansDeleted++;
+				}
+			} else if (entity.type === "reward") {
+				if (rewards === undefined) {
+					outputBlocks.push(block.lines.join("\n"));
+					continue;
+				}
+				const reward = apiRewardMap.get(entity.id);
+				if (reward) {
+					outputBlocks.push(buildRewardCode(reward, entity.varName));
+					matchedRewardIds.add(entity.id);
+				}
+			} else if (entity.type === "referral_program") {
+				if (referralPrograms === undefined) {
+					outputBlocks.push(block.lines.join("\n"));
+					continue;
+				}
+				const program = apiReferralProgramMap.get(entity.id);
+				if (program) {
+					outputBlocks.push(buildReferralProgramCode(program, entity.varName));
+					matchedReferralProgramIds.add(entity.id);
 				}
 			}
 			continue;
@@ -312,7 +447,11 @@ export async function updateConfigInPlace(
 
 	// Add atmn import if missing
 	if (!hasAtmnImport) {
-		const atmnImport = buildImports({ includeBillingControls });
+		const atmnImport = buildImports({
+			includeBillingControls: requiredImports.includes("billingControls"),
+			includeRewards: Boolean(rewards?.length),
+			includeReferralPrograms: Boolean(referralPrograms?.length),
+		});
 		if (lastImportBlockIndex >= 0) {
 			// Insert after the last import
 			outputBlocks.splice(lastImportBlockIndex + 1, 0, atmnImport);
@@ -384,7 +523,9 @@ export async function updateConfigInPlace(
 	}
 
 	// Add new plans (in API but not in local config)
-	const newPlans = plans.filter((p) => !matchedPlanIds.has(p.id));
+	const newPlans = plans.filter(
+		(p) => !matchedPlanIds.has(versionedCodegenId(p)),
+	);
 	if (newPlans.length > 0) {
 		const newPlanCode = newPlans
 			.map((p) =>
@@ -392,7 +533,7 @@ export async function updateConfigInPlace(
 					featureVarMap,
 					features,
 					plan: p,
-					planVarName: newPlanVarMap.get(p.id),
+					planVarName: newPlanVarMap.get(versionedCodegenId(p)),
 					variantVarMap,
 				}),
 			)
@@ -425,6 +566,35 @@ export async function updateConfigInPlace(
 			outputBlocks.push(`\n// Plans\n${newPlanCode}`);
 		}
 		result.plansAdded = newPlans.length;
+	}
+
+	const newRewards = (rewards ?? []).filter(
+		({ id }) => !matchedRewardIds.has(id),
+	);
+	if (newRewards.length > 0) {
+		outputBlocks.push(
+			`\n// Rewards\n${newRewards
+				.map((reward) =>
+					buildRewardCode(reward, newRewardVarMap.get(reward.id)),
+				)
+				.join("\n\n")}`,
+		);
+	}
+
+	const newReferralPrograms = (referralPrograms ?? []).filter(
+		({ id }) => !matchedReferralProgramIds.has(id),
+	);
+	if (newReferralPrograms.length > 0) {
+		outputBlocks.push(
+			`\n// Referral programs\n${newReferralPrograms
+				.map((program) =>
+					buildReferralProgramCode(
+						program,
+						newReferralProgramVarMap.get(program.id),
+					),
+				)
+				.join("\n\n")}`,
+		);
 	}
 
 	// Join blocks with proper spacing

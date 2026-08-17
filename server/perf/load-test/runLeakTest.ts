@@ -14,8 +14,8 @@ import { join } from "node:path";
 const SNAPSHOTS_DIR = join(import.meta.dir, "../snapshots");
 const ARTILLERY_CONFIG = join(import.meta.dir, "memoryLeak.yml");
 const SUMMARY_SCRIPT = join(import.meta.dir, "summarizeLeakSnapshots.ts");
-const SERVER_URL = "http://localhost:8080";
-const SNAPSHOT_ENDPOINT = `${SERVER_URL}/debug/heap-snapshot`;
+const API_URL = "http://localhost:8080";
+const SNAPSHOT_ENDPOINT = `${API_URL}/debug/heap-snapshot`;
 const COOLDOWN_SECONDS = 60;
 
 const secretKey = process.env.UNIT_TEST_AUTUMN_SECRET_KEY;
@@ -98,7 +98,7 @@ async function main() {
 
 	// 0. Verify server is running
 	try {
-		await fetch(SERVER_URL);
+		await fetch(API_URL);
 	} catch {
 		console.error("Server is not running on localhost:8080. Start it with: bun d");
 		process.exit(1);

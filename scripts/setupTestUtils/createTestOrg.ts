@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import {
+	ApiKeyPrefix,
 	createHardcodedKey,
 	createKey,
 } from "@server/internal/dev/apiKeys/apiKeyUtils.js";
@@ -125,7 +126,7 @@ export async function createTestOrg({
 			env: AppEnv.Sandbox,
 			name: "Unit Test Key",
 			orgId: TEST_ORG_CONFIG.id,
-			prefix: "am_sk_test_",
+			prefix: ApiKeyPrefix.Sandbox,
 			meta: {
 				createdBy: "setup-test-script",
 				createdAt: new Date().toISOString(),
@@ -206,7 +207,7 @@ export async function createTestOrg({
 		env: AppEnv.Sandbox,
 		name: "Unit Test Key",
 		orgId: TEST_ORG_CONFIG.id,
-		prefix: "am_sk_test_",
+		prefix: ApiKeyPrefix.Sandbox,
 		meta: {
 			createdBy: "setup-test-script",
 			createdAt: new Date().toISOString(),

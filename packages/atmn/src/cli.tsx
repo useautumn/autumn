@@ -220,7 +220,7 @@ program
 			);
 		} else {
 			// Non-TTY (CI/agent mode) - use plain text
-			console.log(`Pulling plans and features from Autumn (${environment})...`);
+			console.log(`Pulling config from Autumn (${environment})...`);
 
 			try {
 				const result = await newPull({
@@ -234,7 +234,7 @@ program
 
 				console.log(
 					chalk.green(
-						`✓ Pulled ${result.features.length} features, ${result.plans.length} plans from ${environment}`,
+						`✓ Pulled ${result.features.length} features, ${result.plans.length} plans, ${result.rewards.length} rewards, ${result.referralPrograms.length} referral programs from ${environment}`,
 					),
 				);
 

@@ -21,6 +21,7 @@ import {
 	prices,
 	products,
 	type ResetCusEnt,
+	rollovers,
 } from "@autumn/shared";
 import {
 	and,
@@ -145,6 +146,86 @@ export class CusEntService {
 			.where(inArray(customerEntitlements.id, ids));
 
 		return data as CustomerEntitlement[];
+	}
+
+	/**
+	 * Like getByIds, but carries the owning product's entity — entity-attached
+	 * (seat) products stamp internal_entity_id on the customer_product, not on
+	 * the entitlement beneath it.
+	 */
+	static async getByIdsWithProductEntity({
+		db,
+		ids,
+		internalCustomerId,
+	}: {
+		db: DrizzleCli;
+		ids: string[];
+		internalCustomerId: string;
+	}) {
+		if (ids.length === 0) return [];
+
+		const rows = await db
+			.select({
+				cusEnt: customerEntitlements,
+				productInternalEntityId: customerProducts.internal_entity_id,
+			})
+			.from(customerEntitlements)
+			.leftJoin(
+				customerProducts,
+				eq(customerEntitlements.customer_product_id, customerProducts.id),
+			)
+			.where(
+				and(
+					inArray(customerEntitlements.id, ids),
+					eq(customerEntitlements.internal_customer_id, internalCustomerId),
+				),
+			);
+
+		return rows as Array<{
+			cusEnt: CustomerEntitlement;
+			productInternalEntityId: string | null;
+		}>;
+	}
+
+	/** Resolves rollover balance ids to their owning entitlement (+ product entity). */
+	static async getByRolloverIdsWithProductEntity({
+		db,
+		ids,
+		internalCustomerId,
+	}: {
+		db: DrizzleCli;
+		ids: string[];
+		internalCustomerId: string;
+	}) {
+		if (ids.length === 0) return [];
+
+		const rows = await db
+			.select({
+				rolloverId: rollovers.id,
+				cusEnt: customerEntitlements,
+				productInternalEntityId: customerProducts.internal_entity_id,
+			})
+			.from(rollovers)
+			.innerJoin(
+				customerEntitlements,
+				eq(rollovers.cus_ent_id, customerEntitlements.id),
+			)
+			.leftJoin(
+				customerProducts,
+				eq(customerEntitlements.customer_product_id, customerProducts.id),
+			)
+			.where(
+				and(
+					inArray(rollovers.id, ids),
+					eq(customerEntitlements.internal_customer_id, internalCustomerId),
+				),
+			);
+
+		return rows as Array<{
+			rolloverId: string;
+			cusEnt: CustomerEntitlement;
+			productInternalEntityId: string | null;
+		}>;
 	}
 
 	static async getByFeature({

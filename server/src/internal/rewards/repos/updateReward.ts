@@ -2,6 +2,7 @@ import {
 	type AppEnv,
 	ErrCode,
 	entitlements,
+	type Feature,
 	RecaseError,
 	type Reward,
 	rewards,
@@ -20,12 +21,14 @@ export const updateReward = async ({
 	env,
 	orgId,
 	update,
+	features,
 }: {
 	db: DrizzleCli;
 	internalId: string;
 	env: AppEnv;
 	orgId: string;
 	update: Partial<RewardWithEntitlementInputs>;
+	features?: Feature[];
 }) => {
 	const { entitlements: entitlementInputs, ...rewardUpdate } = update;
 
@@ -59,6 +62,7 @@ export const updateReward = async ({
 				entitlements: entitlementInputs,
 				org_id: orgId,
 			},
+			features,
 		});
 
 		if (entitlementRows.length > 0) {

@@ -11,7 +11,7 @@ const COALESCE_WINDOW_MS =
 	process.env.NODE_ENV === "test" ||
 	process.env.NODE_ENV === "development"
 		? 500
-		: 3_000;
+		: 1_000;
 
 export interface SyncCustomerDirtyPayload {
 	customerId: string;

@@ -3,6 +3,7 @@ import {
 	isFutureStartDate,
 	isOneOffProduct,
 	isProductPaidAndRecurring,
+	PAST_START_REQUIRES_INVOICE,
 	type MultiAttachBillingContext,
 	type MultiAttachParamsV0,
 	RecaseError,
@@ -41,15 +42,6 @@ export const handleMultiAttachStartDateErrors = ({
 
 	assertNoBackdateWithExistingSubscription({ billingContext });
 
-	if (billingContext.checkoutMode === "stripe_checkout") {
-		throw new RecaseError({
-			message:
-				"Past starts_at cannot be used when Stripe Checkout is required.",
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
-
 	if (billingContext.trialContext?.trialEndsAt) {
 		throw new RecaseError({
 			message: "Past starts_at cannot be used together with a free trial.",
@@ -62,5 +54,25 @@ export const handleMultiAttachStartDateErrors = ({
 		products: billingContext.fullProducts,
 		startsAt: params.starts_at,
 		currentEpochMs: billingContext.currentEpochMs,
+	});
+};
+
+export const handleMultiAttachBackdateCheckoutError = ({
+	billingContext,
+	params,
+}: {
+	billingContext: MultiAttachBillingContext;
+	params: MultiAttachParamsV0;
+}) => {
+	if (
+		params.starts_at === undefined ||
+		billingContext.checkoutMode !== "stripe_checkout"
+	)
+		return;
+
+	throw new RecaseError({
+		message: PAST_START_REQUIRES_INVOICE,
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
 	});
 };

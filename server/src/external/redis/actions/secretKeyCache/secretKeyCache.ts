@@ -89,6 +89,7 @@ export const setCachedSecretKeyVerification = async ({
 		operation: () => miscRedis.set(cacheKey, JSON.stringify(data), "EX", ttl),
 		source: "secret-key-cache:set",
 		redisInstance: miscRedis,
+		timeoutMs: REDIS_OP_TIMEOUT_MS.secretKeySet,
 	});
 };
 

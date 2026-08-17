@@ -1,6 +1,20 @@
 import { z } from "zod/v4";
 import { DbUsageAlertSchema } from "../cusModels/billingControls/usageAlert.js";
 
+/** Invoice-capable subset of Stripe's subscription
+ *  `payment_settings.payment_method_types`. */
+export const InvoicePaymentMethodSchema = z.enum([
+	"card",
+	"customer_balance",
+	"us_bank_account",
+	"sepa_debit",
+	"bacs_debit",
+	"acss_debit",
+	"link",
+]);
+
+export type InvoicePaymentMethod = z.infer<typeof InvoicePaymentMethodSchema>;
+
 export const OrgConfigSchema = z.object({
 	usage_alerts: z.array(DbUsageAlertSchema).optional().default([]),
 	/** Sandbox-env-only usage alerts. `checkUsageAlerts` reads this list when
@@ -47,6 +61,9 @@ export const OrgConfigSchema = z.object({
 	automatic_tax: z.boolean().default(false),
 
 	multi_currency: z.boolean().default(false),
+
+	// Unset/null = Stripe's own invoice settings apply; never add a default.
+	allowed_payment_methods: z.array(InvoicePaymentMethodSchema).min(1).nullish(),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;

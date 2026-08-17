@@ -1,8 +1,38 @@
 import {
 	type FeatureOptions,
 	getPrepaidDisplayQuantity,
+	type ProductItem,
 	type ProductV2,
+	TierBehavior,
+	TierInfinite,
 } from "@autumn/shared";
+
+/**
+ * Selectable quantities for a volume-tiered prepaid item: the upper bound of
+ * each finite tier, shifted by included usage to match the displayed quantity.
+ * Empty unless the item has more than one volume-based tier, since graduated
+ * tiers blend rates and have no single quantity worth snapping to.
+ */
+export function prepaidTierStops({
+	item,
+}: {
+	item: Pick<ProductItem, "tiers" | "tier_behavior" | "included_usage">;
+}): number[] {
+	if (item.tier_behavior !== TierBehavior.VolumeBased) return [];
+
+	const tiers = item.tiers ?? [];
+	if (tiers.length < 2) return [];
+
+	const includedUsage =
+		typeof item.included_usage === "number" ? item.included_usage : 0;
+
+	const stops = tiers
+		.filter((tier) => tier.to !== TierInfinite)
+		.map((tier) => (tier.to as number) + includedUsage)
+		.filter((stop) => stop > includedUsage);
+
+	return [...new Set(stops)].sort((a, b) => a - b);
+}
 
 /**
  * Bulk-converts backend option quantities to display quantities for form initialization.

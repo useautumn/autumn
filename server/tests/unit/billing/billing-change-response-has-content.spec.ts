@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { BillingChangeResponse, CustomerPlanChange } from "@autumn/shared";
-import { billingChangeResponseHasContent } from "@/internal/billing/v2/utils/billingChangeResponse/billingChangeResponseHasContent";
+import { billingChangeResponseHasContent } from "@/internal/billing/v2/actions/buildBillingChanges/billingChangeResponseHasContent";
 
 const makeResponse = ({
 	planChanges = 0,

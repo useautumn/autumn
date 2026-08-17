@@ -8,6 +8,7 @@ import {
 	TEST_ORG_CONFIG,
 	TEST_ORG_PUBLISHABLE_KEY,
 } from "../setupTestUtils/createTestOrg.js";
+import { ensureTestOrgSecretKey } from "../setupTestUtils/ensureTestOrgSecretKey.js";
 import { mergeEnvFile } from "../dw/helpers/env-files.js";
 import { PROJECT_ROOT } from "../dw/constants.js";
 
@@ -27,6 +28,46 @@ function maskDatabaseUrl(url: string | undefined): string {
 	}
 }
 
+/**
+ * Pin test keys into server/.env.local when appropriate.
+ * - Never invent .env.local for `bun d` (Infisical-only): skip if missing.
+ * - Worktrees already have .env.local from `bun dw` → merge keys in.
+ * - `bun tw` warm may mint a key with no file yet → allow create then.
+ */
+function persistTestKeysToEnvLocal({
+	secretKey,
+	allowCreate,
+}: {
+	secretKey: string;
+	allowCreate: boolean;
+}): void {
+	process.env.UNIT_TEST_AUTUMN_SECRET_KEY = secretKey;
+	process.env.UNIT_TEST_AUTUMN_PUBLIC_KEY = TEST_ORG_PUBLISHABLE_KEY;
+
+	const envPath = join(PROJECT_ROOT, "server", ".env.local");
+	const exists = existsSync(envPath);
+	if (!exists && !allowCreate) {
+		console.log(
+			chalk.cyan(
+				`[setup-test] skipped .env.local write (file absent; using env/Infisical)`,
+			),
+		);
+		return;
+	}
+
+	const existing = exists ? readFileSync(envPath, "utf-8") : null;
+	const merged = mergeEnvFile(existing, {
+		UNIT_TEST_AUTUMN_SECRET_KEY: secretKey,
+		UNIT_TEST_AUTUMN_PUBLIC_KEY: TEST_ORG_PUBLISHABLE_KEY,
+	});
+	writeFileSync(envPath, merged);
+	console.log(
+		chalk.cyan(
+			`[setup-test] persisted UNIT_TEST_AUTUMN_SECRET_KEY + UNIT_TEST_AUTUMN_PUBLIC_KEY to server/.env.local`,
+		),
+	);
+}
+
 async function maybeConfirm(yes: boolean): Promise<boolean> {
 	if (yes) return true;
 	if (!process.stdin.isTTY) return true;
@@ -44,8 +85,26 @@ async function maybeConfirm(yes: boolean): Promise<boolean> {
 	return Boolean(ready);
 }
 
-async function main() {
-	const yes = process.argv.includes("--yes");
+async function runEnsureKey(): Promise<void> {
+	console.log(
+		chalk.magentaBright(
+			`\n================ Autumn ensure-test-org-key ================\n`,
+		),
+	);
+	console.log(
+		chalk.cyan(`Target: ${maskDatabaseUrl(process.env.DATABASE_URL)}\n`),
+	);
+
+	const { db } = await import("@server/db/initDrizzle.js");
+	const { key } = await ensureTestOrgSecretKey({ db });
+	// Never create .env.local here — only refresh keys if dw/tw already made one.
+	persistTestKeysToEnvLocal({ secretKey: key, allowCreate: false });
+
+	console.log(chalk.greenBright("\n✅ ensure-test-org-key complete"));
+	console.log(chalk.whiteBright(`  key:  ${key}\n`));
+}
+
+async function runFullSetup({ yes }: { yes: boolean }): Promise<void> {
 	console.log(
 		chalk.magentaBright(
 			`\n================ Autumn setup-test ================\n`,
@@ -61,44 +120,41 @@ async function main() {
 		process.exit(0);
 	}
 
+	// If Infisical already supplied the secret, don't invent .env.local (bun d).
+	// If unset, createTestOrg mints one and tw warm needs it on disk.
+	const hadKey = Boolean(process.env.UNIT_TEST_AUTUMN_SECRET_KEY?.trim());
+	const { db } = await import("@server/db/initDrizzle.js");
+	const autumnSecretKey = await createTestOrg({ db });
+	persistTestKeysToEnvLocal({
+		secretKey: autumnSecretKey,
+		allowCreate: !hadKey,
+	});
+
+	console.log(chalk.greenBright("\n✅ setup-test complete"));
+	console.log(chalk.cyan("Org:"));
+	console.log(chalk.whiteBright(`  slug: ${TEST_ORG_CONFIG.slug}`));
+	console.log(chalk.whiteBright(`  id:   ${TEST_ORG_CONFIG.id}`));
+	console.log(chalk.whiteBright(`  key:  ${autumnSecretKey}\n`));
+}
+
+async function main() {
+	const yes = process.argv.includes("--yes");
+	const ensureKeyOnly = process.argv.includes("--ensure-key");
+
 	try {
-		const hadKey = Boolean(process.env.UNIT_TEST_AUTUMN_SECRET_KEY);
-		const { db } = await import("@server/db/initDrizzle.js");
-		const autumnSecretKey = await createTestOrg({ db });
-
-		if (!hadKey) {
-			const envPath = join(PROJECT_ROOT, "server", ".env.local");
-			const existing = existsSync(envPath) ? readFileSync(envPath, "utf-8") : null;
-			const merged = mergeEnvFile(existing, {
-				UNIT_TEST_AUTUMN_SECRET_KEY: autumnSecretKey,
-			});
-			writeFileSync(envPath, merged);
-			process.env.UNIT_TEST_AUTUMN_SECRET_KEY = autumnSecretKey;
-			console.log(
-				chalk.cyan(`[setup-test] persisted UNIT_TEST_AUTUMN_SECRET_KEY to server/.env.local`),
-			);
+		if (ensureKeyOnly) {
+			await runEnsureKey();
+		} else {
+			await runFullSetup({ yes });
 		}
-
-		const envPath = join(PROJECT_ROOT, "server", ".env.local");
-		const existing = existsSync(envPath) ? readFileSync(envPath, "utf-8") : null;
-		const merged = mergeEnvFile(existing, {
-			UNIT_TEST_AUTUMN_PUBLIC_KEY: TEST_ORG_PUBLISHABLE_KEY,
-		});
-		writeFileSync(envPath, merged);
-		process.env.UNIT_TEST_AUTUMN_PUBLIC_KEY = TEST_ORG_PUBLISHABLE_KEY;
-		console.log(
-			chalk.cyan(`[setup-test] persisted UNIT_TEST_AUTUMN_PUBLIC_KEY to server/.env.local`),
-		);
-
-		console.log(chalk.greenBright("\n✅ setup-test complete"));
-		console.log(chalk.cyan("Org:"));
-		console.log(chalk.whiteBright(`  slug: ${TEST_ORG_CONFIG.slug}`));
-		console.log(chalk.whiteBright(`  id:   ${TEST_ORG_CONFIG.id}`));
-		console.log(chalk.whiteBright(`  key:  ${autumnSecretKey}\n`));
 		process.exit(0);
 	} catch (error) {
 		console.error(
-			chalk.red("\n❌ setup-test failed:"),
+			chalk.red(
+				ensureKeyOnly
+					? "\n❌ ensure-test-org-key failed:"
+					: "\n❌ setup-test failed:",
+			),
 			error instanceof Error ? error.message : error,
 		);
 		process.exit(1);

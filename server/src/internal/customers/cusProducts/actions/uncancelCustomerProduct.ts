@@ -6,7 +6,7 @@ import {
 	type InsertCustomerProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { dispatchCustomerProductUpdatedWebhooks } from "@/internal/customers/cusProducts/actions/dispatchCustomerProductUpdatedWebhooks";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
@@ -14,8 +14,8 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
  *
  * This action:
  * 1. Clears canceled/canceled_at/ended_at and sets status back to Active
- * 2. Sends products_updated webhook with Renew scenario
- * 3. Updates the FullCustomer in memory
+ * 2. Updates the FullCustomer in memory
+ * 3. Sends products_updated + billing.updated webhooks
  *
  * Used by RevenueCat uncancellation webhooks.
  */
@@ -28,7 +28,7 @@ export const uncancelCustomerProduct = async ({
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
 }): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
-	const { org, env } = ctx;
+	const originalFullCustomer = structuredClone(fullCustomer);
 
 	// 1. Uncancel the product
 	const updates: Partial<InsertCustomerProduct> = {
@@ -48,23 +48,22 @@ export const uncancelCustomerProduct = async ({
 		`[uncancelCustomerProduct]: uncanceling ${customerProduct.product.name}`,
 	);
 
-	// 2. Send webhook
-	await addProductsUpdatedWebhookTask({
-		ctx,
-		internalCustomerId: customerProduct.internal_customer_id,
-		org,
-		env,
-		customerId: fullCustomer.id || "",
-		scenario: AttachScenario.Renew,
-		cusProduct: customerProduct,
-	});
-
-	// 3. Update full customer in memory
+	// 2. Update full customer in memory
 	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
 		cp.id === customerProduct.id
 			? ({ ...cp, ...updates } as FullCusProduct)
 			: cp,
 	);
+
+	// 3. Send webhooks
+	await dispatchCustomerProductUpdatedWebhooks({
+		ctx,
+		customerProduct,
+		fullCustomer,
+		originalFullCustomer,
+		scenario: AttachScenario.Renew,
+		updates,
+	});
 
 	return { updates };
 };

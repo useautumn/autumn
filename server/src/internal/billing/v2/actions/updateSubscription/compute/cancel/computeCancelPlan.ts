@@ -6,6 +6,8 @@ import {
 	findMainActiveCustomerProductByGroup,
 	isCustomerProductCanceling,
 	isFutureStartDate,
+	ms,
+	nullish,
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -63,6 +65,33 @@ const shouldDeleteCustomerProductBeforeBillingStarts = ({
 	);
 };
 
+// Schedule phases stamp the successor's start with second precision, so the two
+// timestamps can sit just under a second apart.
+const HANDOVER_TOLERANCE_MS = ms.seconds(1);
+
+/**
+ * The active plan is only ending so the scheduled one can take over — either
+ * cancelled into it, or handed off at a schedule phase boundary, which sets
+ * ended_at without ever marking the plan cancelled.
+ */
+const isEndingForHandover = ({
+	activeCustomerProduct,
+	scheduledCustomerProduct,
+}: {
+	activeCustomerProduct: FullCusProduct;
+	scheduledCustomerProduct: FullCusProduct;
+}) => {
+	if (isCustomerProductCanceling(activeCustomerProduct)) return true;
+
+	const endedAt = activeCustomerProduct.ended_at;
+	if (nullish(endedAt)) return false;
+
+	return (
+		Math.abs(endedAt - scheduledCustomerProduct.starts_at) <=
+		HANDOVER_TOLERANCE_MS
+	);
+};
+
 const computeScheduledCancelPlan = ({
 	billingContext,
 	plan,
@@ -87,7 +116,10 @@ const computeScheduledCancelPlan = ({
 	if (
 		!activeCustomerProduct ||
 		activeCustomerProduct.id === customerProduct.id ||
-		!isCustomerProductCanceling(activeCustomerProduct)
+		!isEndingForHandover({
+			activeCustomerProduct,
+			scheduledCustomerProduct: customerProduct,
+		})
 	) {
 		return scheduledCancelPlan;
 	}

@@ -37,7 +37,7 @@ sandboxes and invokes these.
 
 - `TW_PREFIX=/opt/autumn-tw` — root for `pgdata/`, `dragonfly/`, `elasticmq/`,
   `bin/`, `logs/`.
-- PG `:5432`, Dragonfly `:6379` (backs `REDIS_URL` + `CACHE_URL` +
+- PG `:5432`, Dragonfly `:6379` (backs `REDIS_URL` + `MISC_CACHE_DRAGONFLY_PUBLIC_URL` +
   `CACHE_V2_DRAGONFLY_URL` — one instance, plan §5a port note), elasticmq
   `:9324`, ClickHouse `:8123`. No dw `+(worktreeNum-1)*100` offset — each worker
   is its own µVM, so base ports are used directly.

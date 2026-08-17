@@ -50,6 +50,7 @@ const couponToRewardData = ({
 		should_rollover: true,
 		apply_to_all: coupon.plan_ids === null,
 		price_ids: plans.flatMap(({ prices }) => prices.map(({ id }) => id)),
+		product_ids: coupon.plan_ids ?? undefined,
 	},
 });
 

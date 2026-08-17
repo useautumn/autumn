@@ -1,10 +1,9 @@
-// Before: a future phase anchor reset previews a partial cycle from the saved schedule start.
-// After: it previews a full new cycle minus the unused current-plan credit.
+// A future phase anchor reset previews a fresh full cycle with no proration:
+// the new plan is charged in full and the old plan's leftover time isn't credited.
 
 import { expect, test } from "bun:test";
 import {
 	type AttachPreviewResponse,
-	applyProration,
 	type CreateScheduleParamsV0Input,
 	ms,
 	truncateMsToSecondPrecision,
@@ -60,18 +59,14 @@ test.concurrent(
 				],
 			},
 		);
-		const unusedCurrentPlan = applyProration({
-			now: transitionAt,
-			billingPeriod: { start: advancedTo, end: currentPlanEndsAt },
-			amount: 20,
-		});
 		const positiveTotal = preview.next_cycle?.line_items
 			.filter((lineItem) => lineItem.total > 0)
 			.reduce((total, lineItem) => total + lineItem.total, 0);
 
 		expect(preview.total).toBe(0);
 		expect(positiveTotal).toBeCloseTo(50, 2);
-		expect(preview.next_cycle?.total).toBeCloseTo(50 - unusedCurrentPlan, 2);
+		// Reset = fresh full cycle, no unused-current-plan credit netted in.
+		expect(preview.next_cycle?.total).toBeCloseTo(50, 2);
 		expect(preview.next_cycle?.starts_at).toBe(transitionAt);
 	},
 );

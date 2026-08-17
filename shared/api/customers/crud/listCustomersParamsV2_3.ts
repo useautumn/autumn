@@ -1,9 +1,11 @@
 import { z } from "zod/v4";
 import {
-	createCursorLimitSchema,
 	CursorRequestFieldSchema,
+	createCursorLimitSchema,
 	PaginationDefaults,
+	SortOrderSchema,
 } from "../../common/cursorPaginationSchemas.js";
+import { CreatedAtRangeSchema } from "../customerListFilters.js";
 
 export const ListCustomersV2_3ParamsSchema = z.object({
 	start_cursor: CursorRequestFieldSchema,
@@ -40,6 +42,16 @@ export const ListCustomersV2_3ParamsSchema = z.object({
 			description:
 				"Filter by customer processor type (stripe, revenuecat, vercel).",
 		}),
+
+	sort_order: SortOrderSchema.optional().meta({
+		description:
+			"Sort by customer creation time. Defaults to desc (newest first).",
+	}),
+
+	created_at_range: CreatedAtRangeSchema.optional().meta({
+		description:
+			"Filter by customer creation time (epoch milliseconds, inclusive bounds).",
+	}),
 });
 
 export type ListCustomersV2_3Params = z.infer<

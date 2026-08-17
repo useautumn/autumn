@@ -39,7 +39,7 @@ export const handleCopySandbox = createRoute({
 	body: CopySandboxSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { db, org: masterOrg, env, user, authType } = ctx;
+		const { org: masterOrg, env, user, authType } = ctx;
 
 		assertNotSandboxContext(masterOrg);
 		assertDashboardActor({ authType, user });
@@ -56,7 +56,6 @@ export const handleCopySandbox = createRoute({
 		}
 
 		await copySandboxForOrg({
-			db,
 			ctx,
 			masterOrg,
 			fromSandboxId,

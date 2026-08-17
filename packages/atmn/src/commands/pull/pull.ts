@@ -49,16 +49,20 @@ async function _pullImpl(options: PullOptions = {}): Promise<PullResult> {
 	const primaryData = await pullFromEnvironment(primaryKey, { allVersions });
 
 	// 3. Write autumn.config.ts (in-place update if exists, unless forceOverwrite)
-	const writeResult = await writeConfig(
-		primaryData.features,
-		primaryData.plans,
+	const writeResult = await writeConfig({
+		features: primaryData.features,
+		plans: primaryData.plans,
 		cwd,
-		{ forceOverwrite: forceOverwrite || allVersions },
-	);
+		forceOverwrite: forceOverwrite || allVersions,
+		rewards: primaryData.rewards,
+		referralPrograms: primaryData.referralPrograms,
+	});
 
 	const result: PullResult = {
 		features: primaryData.features,
 		plans: primaryData.plans,
+		rewards: primaryData.rewards,
+		referralPrograms: primaryData.referralPrograms,
 		configPath: writeResult.configPath,
 		inPlace: writeResult.inPlace,
 		updateResult: writeResult.updateResult,
@@ -75,7 +79,10 @@ async function _pullImpl(options: PullOptions = {}): Promise<PullResult> {
 				const liveData = await pullFromEnvironment(liveKey, { allVersions });
 
 				// Merge sandbox and live
-				mergedData = mergeEnvironments(primaryData, liveData);
+				mergedData = mergeEnvironments({
+					sandbox: primaryData,
+					production: liveData,
+				});
 			} catch (error) {
 				console.warn("Failed to fetch live data, using sandbox only:", error);
 			}
@@ -89,7 +96,10 @@ async function _pullImpl(options: PullOptions = {}): Promise<PullResult> {
 				});
 
 				// Merge live and sandbox
-				mergedData = mergeEnvironments(sandboxData, primaryData);
+				mergedData = mergeEnvironments({
+					sandbox: sandboxData,
+					production: primaryData,
+				});
 			} catch (error) {
 				console.warn("Failed to fetch sandbox data, using live only:", error);
 			}

@@ -498,7 +498,7 @@ export type GetPlanBasePrice = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const GetPlanVariantDetailsResetInterval = {
+export const GetPlanAddItemResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -512,8 +512,8 @@ export const GetPlanVariantDetailsResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type GetPlanVariantDetailsResetInterval = OpenEnum<
-  typeof GetPlanVariantDetailsResetInterval
+export type GetPlanAddItemResetInterval = OpenEnum<
+  typeof GetPlanAddItemResetInterval
 >;
 
 /**
@@ -523,7 +523,7 @@ export type GetPlanVariantDetailsReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: GetPlanVariantDetailsResetInterval;
+  interval: GetPlanAddItemResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
@@ -1006,10 +1006,24 @@ export type GetPlanVariantDetailsUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const GetPlanVariantDetailsAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type GetPlanVariantDetailsAnchor = OpenEnum<
+  typeof GetPlanVariantDetailsAnchor
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type GetPlanVariantDetailsFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type GetPlanVariantDetailsUsageLimit = {
@@ -1029,6 +1043,10 @@ export type GetPlanVariantDetailsUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: GetPlanVariantDetailsUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: GetPlanVariantDetailsAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -1274,10 +1292,22 @@ export type GetPlanUsageLimitInterval = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const GetPlanAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type GetPlanAnchor = OpenEnum<typeof GetPlanAnchor>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type GetPlanFilter = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 export type GetPlanUsageLimit = {
@@ -1297,6 +1327,10 @@ export type GetPlanUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: GetPlanUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: GetPlanAnchor | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -2081,10 +2115,10 @@ export function getPlanBasePriceFromJSON(
 }
 
 /** @internal */
-export const GetPlanVariantDetailsResetInterval$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsResetInterval,
+export const GetPlanAddItemResetInterval$inboundSchema: z.ZodMiniType<
+  GetPlanAddItemResetInterval,
   unknown
-> = openEnums.inboundSchema(GetPlanVariantDetailsResetInterval);
+> = openEnums.inboundSchema(GetPlanAddItemResetInterval);
 
 /** @internal */
 export const GetPlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
@@ -2092,7 +2126,7 @@ export const GetPlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: GetPlanVariantDetailsResetInterval$inboundSchema,
+    interval: GetPlanAddItemResetInterval$inboundSchema,
     interval_count: types.optional(types.number()),
   }),
   z.transform((v) => {
@@ -2615,11 +2649,17 @@ export const GetPlanVariantDetailsUsageLimitInterval$inboundSchema:
     .inboundSchema(GetPlanVariantDetailsUsageLimitInterval);
 
 /** @internal */
+export const GetPlanVariantDetailsAnchor$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsAnchor,
+  unknown
+> = openEnums.inboundSchema(GetPlanVariantDetailsAnchor);
+
+/** @internal */
 export const GetPlanVariantDetailsFilter$inboundSchema: z.ZodMiniType<
   GetPlanVariantDetailsFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function getPlanVariantDetailsFilterFromJSON(
@@ -2642,6 +2682,7 @@ export const GetPlanVariantDetailsUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: GetPlanVariantDetailsUsageLimitInterval$inboundSchema,
+    anchor: types.optional(GetPlanVariantDetailsAnchor$inboundSchema),
     filter: types.optional(
       z.lazy(() => GetPlanVariantDetailsFilter$inboundSchema),
     ),
@@ -2973,11 +3014,17 @@ export const GetPlanUsageLimitInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(GetPlanUsageLimitInterval);
 
 /** @internal */
+export const GetPlanAnchor$inboundSchema: z.ZodMiniType<
+  GetPlanAnchor,
+  unknown
+> = openEnums.inboundSchema(GetPlanAnchor);
+
+/** @internal */
 export const GetPlanFilter$inboundSchema: z.ZodMiniType<
   GetPlanFilter,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function getPlanFilterFromJSON(
@@ -3000,6 +3047,7 @@ export const GetPlanUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: GetPlanUsageLimitInterval$inboundSchema,
+    anchor: types.optional(GetPlanAnchor$inboundSchema),
     filter: types.optional(z.lazy(() => GetPlanFilter$inboundSchema)),
   }),
   z.transform((v) => {

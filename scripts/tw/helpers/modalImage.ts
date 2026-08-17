@@ -12,7 +12,8 @@
  *   - Dragonfly  → /opt/autumn-tw/bin/dragonfly
  *   - goaws (native Go SQS, via crane) → /opt/autumn-tw/bin/goaws
  *   - goaws config → /opt/autumn-tw/goaws/goaws.yaml (port 9324, AccountId
- *     "000000000000", EnableDuplicates env-level, queues autumn.fifo + autumn-track.fifo)
+ *     "000000000000", EnableDuplicates env-level, queues autumn.fifo +
+ *     autumn-track.fifo + autumn-track-async)
  *   - bun (pinned to .bun-version) → /usr/local/bin/bun, with `node` symlinked
  *     to bun so the whole image runs on one runtime (ingress + native installs)
  *
@@ -153,16 +154,16 @@ export const buildBaseImage = (
 					"install -m0755 \"$(find /tmp -type f -name 'dynoxide*' ! -name '*.tar.gz' | head -1)\" " +
 					`${TW_PREFIX}/bin/dynoxide && rm -f /tmp/dx.tar.gz`,
 			])
-			// 5. goaws config — port 9324 + AccountId "000000000000" + the two FIFO
-			//    queues, so the app's SQS_QUEUE_URL_V2 / TRACK_SQS_QUEUE_URL resolve
-			//    UNCHANGED. EnableDuplicates is env-level (FIFO dedup on the explicit
-			//    MessageDeduplicationId the app always sends).
+			// 5. goaws config — port 9324 + AccountId "000000000000" + FIFO queues +
+			//    Standard autumn-track-async (TRACK_ASYNC_STANDARD_SQS_QUEUE_URL).
+			//    EnableDuplicates is env-level (FIFO dedup on MessageDeduplicationId).
 			.dockerfileCommands([
 				`RUN mkdir -p ${TW_PREFIX}/goaws ${TW_PREFIX}/logs ${TW_PREFIX}/dragonfly && ` +
 					"printf '%s\\n' 'Local:' '  Host: localhost' '  Scheme: http' " +
 					"'  Port: 9324' '  Region: us-east-1' '  AccountId: \"000000000000\"' " +
 					"'  LogToFile: false' '  LogLevel: warn' '  EnableDuplicates: true' " +
 					"'  Queues:' '    - Name: autumn.fifo' '    - Name: autumn-track.fifo' " +
+					"'    - Name: autumn-track-async' " +
 					`> ${TW_PREFIX}/goaws/goaws.yaml`,
 			])
 			// 6. bun → /usr/local/bin/bun (pinned to .bun-version, so `bun` resolves for

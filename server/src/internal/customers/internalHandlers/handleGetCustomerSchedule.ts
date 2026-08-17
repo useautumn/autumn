@@ -2,10 +2,7 @@ import { CustomerNotFoundError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "../CusService.js";
-import {
-	getFullCustomerSchedule,
-	getAllCustomerSchedules,
-} from "../cusUtils/getFullCustomerSchedule.js";
+import { getCustomerSchedulesByScope } from "../cusUtils/getFullCustomerSchedule.js";
 
 /**
  * Internal route for fetching a customer's persisted schedule(s).
@@ -33,23 +30,11 @@ export const handleGetCustomerSchedule = createRoute({
 			throw new CustomerNotFoundError({ customerId: customer_id });
 		}
 
-		const [customerSchedule, allSchedules] = await Promise.all([
-			getFullCustomerSchedule({
+		const { customerSchedule, entitySchedules } =
+			await getCustomerSchedulesByScope({
 				ctx,
 				internalCustomerId: customer.internal_id,
-			}),
-			getAllCustomerSchedules({
-				ctx,
-				internalCustomerId: customer.internal_id,
-			}),
-		]);
-
-		const entitySchedules: Record<string, (typeof allSchedules)[number]> = {};
-		for (const schedule of allSchedules) {
-			if (schedule.internal_entity_id) {
-				entitySchedules[schedule.internal_entity_id] = schedule;
-			}
-		}
+			});
 
 		return c.json({
 			schedule: customerSchedule ?? null,

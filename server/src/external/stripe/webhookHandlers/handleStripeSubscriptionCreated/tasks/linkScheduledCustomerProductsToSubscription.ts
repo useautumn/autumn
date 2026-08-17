@@ -51,6 +51,7 @@ const executeLinkScheduledCustomerProductsToSubscription = async ({
 				scheduledIds: cusProduct.scheduled_ids?.length
 					? cusProduct.scheduled_ids
 					: [scheduleId],
+				activatedAt: subscriptionStartMs,
 			});
 			linkedCount++;
 			continue;

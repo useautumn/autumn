@@ -1,10 +1,11 @@
 /**
  * Unit tests for registerRevenuecatWebhook — idempotent, one webhook per env, matched
- * by URL, secret as the Authorization header. Base URL follows the NODE_ENV rule.
+ * by URL, secret as the Authorization header.
  */
 
+import { expect, mock, test } from "bun:test";
+import { getAutumnEnv } from "@autumn/env";
 import { AppEnv } from "@autumn/shared";
-import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 import chalk from "chalk";
 import {
 	getRevenuecatWebhookUrl,
@@ -12,23 +13,7 @@ import {
 } from "@/external/revenueCat/misc/registerRevenuecatWebhook.js";
 import type { RevenueCatWebhookIntegration } from "@/external/revenueCat/revenuecatTypes.js";
 
-const env = {
-	NODE_ENV: process.env.NODE_ENV,
-	NGROK_URL: process.env.NGROK_URL,
-	BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-};
-
-beforeEach(() => {
-	process.env.NODE_ENV = "development";
-	process.env.NGROK_URL = "https://ngrok.test";
-	process.env.BETTER_AUTH_URL = "https://api.useautumn.com";
-});
-
-afterEach(() => {
-	process.env.NODE_ENV = env.NODE_ENV;
-	process.env.NGROK_URL = env.NGROK_URL;
-	process.env.BETTER_AUTH_URL = env.BETTER_AUTH_URL;
-});
+const publicApiUrl = getAutumnEnv().AUTUMN_PUBLIC_API_URL;
 
 const makeCli = (existing: RevenueCatWebhookIntegration[] = []) => {
 	const createWebhookIntegration = mock(
@@ -43,16 +28,15 @@ const makeCli = (existing: RevenueCatWebhookIntegration[] = []) => {
 	};
 };
 
-test(`${chalk.yellowBright("webhook url: dev uses NGROK_URL + AppEnv segment")}`, () => {
+test(`${chalk.yellowBright("webhook url uses public API origin + AppEnv segment")}`, () => {
 	expect(getRevenuecatWebhookUrl({ orgId: "org_1", env: AppEnv.Sandbox })).toBe(
-		"https://ngrok.test/webhooks/revenuecat/org_1/sandbox",
+		`${publicApiUrl}/webhooks/revenuecat/org_1/sandbox`,
 	);
 });
 
-test(`${chalk.yellowBright("webhook url: prod uses BETTER_AUTH_URL")}`, () => {
-	process.env.NODE_ENV = "production";
+test(`${chalk.yellowBright("webhook url includes the live AppEnv segment")}`, () => {
 	expect(getRevenuecatWebhookUrl({ orgId: "org_1", env: AppEnv.Live })).toBe(
-		"https://api.useautumn.com/webhooks/revenuecat/org_1/live",
+		`${publicApiUrl}/webhooks/revenuecat/org_1/live`,
 	);
 });
 
@@ -71,7 +55,7 @@ test(`${chalk.yellowBright("register: no existing webhook → creates with secre
 		unknown
 	>;
 	expect(body).toMatchObject({
-		url: "https://ngrok.test/webhooks/revenuecat/org_1/sandbox",
+		url: `${publicApiUrl}/webhooks/revenuecat/org_1/sandbox`,
 		authorization_header: "whsec_abc",
 		environment: "sandbox",
 	});
@@ -98,7 +82,7 @@ test(`${chalk.yellowBright("register: existing webhook with same url → exists,
 		{
 			id: "wh_existing",
 			name: "Autumn (sandbox)",
-			url: "https://ngrok.test/webhooks/revenuecat/org_1/sandbox",
+			url: `${publicApiUrl}/webhooks/revenuecat/org_1/sandbox`,
 		},
 	]);
 	const status = await registerRevenuecatWebhook({
@@ -108,19 +92,5 @@ test(`${chalk.yellowBright("register: existing webhook with same url → exists,
 		secret: "whsec_abc",
 	});
 	expect(status).toBe("exists");
-	expect(createWebhookIntegration).not.toHaveBeenCalled();
-});
-
-test(`${chalk.yellowBright("register: no base url → skipped, no list/create")}`, async () => {
-	delete process.env.NGROK_URL;
-	const { cli, listWebhookIntegrations, createWebhookIntegration } = makeCli([]);
-	const status = await registerRevenuecatWebhook({
-		rcCli: cli,
-		orgId: "org_1",
-		env: AppEnv.Sandbox,
-		secret: "whsec_abc",
-	});
-	expect(status).toBe("skipped");
-	expect(listWebhookIntegrations).not.toHaveBeenCalled();
 	expect(createWebhookIntegration).not.toHaveBeenCalled();
 });

@@ -1,0 +1,17 @@
+"$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
+
+# Replaces the legacy .conductor/config.json — Conductor prefers this file when
+# both exist. Same setup/run/teardown, plus a docker-daemon start that a fresh
+# workspace needs (the snapshot carries images, not a running daemon).
+
+[scripts]
+setup = "bash .conductor/setup.sh"
+archive = "bun dw teardown"
+run_mode = "concurrent"
+
+# Provisioning lives in setup.sh (runs once at workspace creation); this only
+# starts the stack, so the Run button stays fast and repeatable.
+[scripts.run.dev]
+command = "bash .conductor/workspace.sh"
+default = true
+icon = "play"

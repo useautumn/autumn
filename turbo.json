@@ -1,6 +1,9 @@
 {
-	"$schema": "https://turbo.build/schema.json",
+	"$schema": "https://v2-10-9.turborepo.dev/schema.json",
 	"tasks": {
+		"//#knip": {
+			"outputs": []
+		},
 		"ts": {
 			"outputs": []
 		},

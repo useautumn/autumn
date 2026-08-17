@@ -6,6 +6,7 @@ import {
 import type { SubjectReadFrom } from "@/db/resolveSubjectReadDb.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
+import { filterDrainedLooseEntitlements } from "../../filterDrainedLooseEntitlements.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
 import { isReplicaSourced } from "../../subjectProvenance.js";
 import { rehydrateWithLiveBalances } from "../rehydrateWithLiveBalances.js";
@@ -19,6 +20,7 @@ export const getOrSetCachedPartialFullSubject = async ({
 	featureIds,
 	source,
 	readFrom = "primary",
+	useDelayedPostgresBackupRead = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -26,6 +28,7 @@ export const getOrSetCachedPartialFullSubject = async ({
 	featureIds: string[];
 	source?: string;
 	readFrom?: SubjectReadFrom;
+	useDelayedPostgresBackupRead?: boolean;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
 	const useRedis = !skipCache;
@@ -50,7 +53,7 @@ export const getOrSetCachedPartialFullSubject = async ({
 				`[getOrSetCachedPartialFullSubject] Subject hit for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}`,
 			);
 			if (ctx.subjectReadTrace) ctx.subjectReadTrace.source = "cache";
-			return cached;
+			return filterDrainedLooseEntitlements({ fullSubject: cached });
 		}
 	}
 
@@ -64,6 +67,7 @@ export const getOrSetCachedPartialFullSubject = async ({
 		entityId,
 		readFrom,
 		routeSource: source,
+		useDelayedPostgresBackupRead,
 	});
 
 	if (!result) {
@@ -88,16 +92,21 @@ export const getOrSetCachedPartialFullSubject = async ({
 			ctx,
 			normalized,
 		});
+		// Live balance patches can drain a grant that was still live at query time.
 		if (withLiveBalances) {
-			return filterFullSubjectByFeatureIds({
-				fullSubject: withLiveBalances,
-				featureIds,
+			return filterDrainedLooseEntitlements({
+				fullSubject: filterFullSubjectByFeatureIds({
+					fullSubject: withLiveBalances,
+					featureIds,
+				}),
 			});
 		}
 	}
 
-	return filterFullSubjectByFeatureIds({
-		fullSubject,
-		featureIds,
+	return filterDrainedLooseEntitlements({
+		fullSubject: filterFullSubjectByFeatureIds({
+			fullSubject,
+			featureIds,
+		}),
 	});
 };

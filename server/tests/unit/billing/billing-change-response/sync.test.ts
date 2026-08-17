@@ -1,7 +1,7 @@
 import { describe, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { buildBillingChangeResponse } from "@/internal/billing/v2/utils/billingChangeResponse";
+import { buildBillingChangeResponse } from "@/internal/billing/v2/actions/buildBillingChanges";
 import {
 	expectBillingChangeResponse,
 	expectPlanChange,

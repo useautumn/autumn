@@ -1,8 +1,10 @@
 import "dotenv/config";
 import cluster from "node:cluster";
+import { getAutumnEnv } from "@autumn/env";
 
 import { initInfisical } from "./external/infisical/initInfisical.js";
 import { logger } from "./external/logtail/logtailUtils.js";
+import { awaitBoundedWarmup } from "./external/redis/initUtils/boundedWarmup.js";
 import {
 	startAllEdgeConfigPolling,
 	stopAllEdgeConfigPolling,
@@ -27,6 +29,7 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 if (cluster.isPrimary) {
 	await initInfisical();
+	getAutumnEnv();
 
 	// const { initHatchetWorker } = await import("./queue/initWorkers.js");
 	// await initHatchetWorker();
@@ -96,6 +99,7 @@ if (cluster.isPrimary) {
 		}
 	});
 } else {
+	getAutumnEnv();
 	// Worker process — start OTel SDK so child spans (Stripe/Redis/Drizzle/
 	// withSpan/withWorkerSpan) export to Axiom.
 	await import("./instrumentation.js");
@@ -111,25 +115,38 @@ if (cluster.isPrimary) {
 	);
 	const { primeRedisV2Monitor, startRedisV2Monitor, stopRedisV2Monitor } =
 		await import("./external/redis/availabilityMonitor/redisV2Availability.js");
-	const { startRedisMonitor, stopRedisMonitor } = await import(
-		"./external/redis/initRedis.js"
-	);
+	const { startRedisMonitor, stopRedisMonitor, warmupRegionalRedis } =
+		await import("./external/redis/initRedis.js");
 	const { preWarmOrgRedisConnections } = await import(
 		"./external/redis/orgRedisPool.js"
 	);
+
+	// Each arm catches its own failure: a regional rejection must not
+	// short-circuit the wait for healthy dedicated org connections.
+	const redisWarmup = Promise.all([
+		warmupRegionalRedis().catch((error) => {
+			console.error("[Redis] regional warmup failed -", error);
+		}),
+		preWarmOrgRedisConnections({ db }).catch((error) => {
+			logger.warn("[OrgRedis] Warmup failed", { error });
+		}),
+	]);
+	void redisWarmup.catch(() => {});
 
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
 	startRedisMonitor();
 	startRedisV2Monitor();
 
-	void preWarmOrgRedisConnections({ db }).catch((error) => {
-		logger.warn("[OrgRedis] Warmup failed", { error });
-	});
-
 	process.once("exit", () => {
 		stopAllEdgeConfigPolling();
 		stopRedisMonitor();
 		stopRedisV2Monitor();
+	});
+
+	await awaitBoundedWarmup({
+		warmup: redisWarmup,
+		timeoutMs: 10_000,
+		log: (message) => logger.warn(message),
 	});
 
 	const { initWorkers } = await import("./queue/initWorkers.js");

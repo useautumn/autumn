@@ -5,6 +5,7 @@ import {
 	isFutureStartDate,
 	isPastStartDate,
 	isProductPaidAndRecurring,
+	PAST_START_REQUIRES_INVOICE,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -50,8 +51,7 @@ export const handleStartDateErrors = ({
 		// backdating) or Stripe Checkout (doesn't), so only block checkout on execute.
 		if (!preview && billingContext.checkoutMode === "stripe_checkout") {
 			throw new RecaseError({
-				message:
-					"Past starts_at cannot be used when Stripe Checkout is required.",
+				message: PAST_START_REQUIRES_INVOICE,
 				code: ErrCode.InvalidRequest,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});

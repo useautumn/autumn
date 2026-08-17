@@ -11,6 +11,13 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 
 const licenseProducts = alias(products, "license_products");
+const parentProducts = alias(products, "parent_products");
+
+export type PlanLicenseWithPlanIds = {
+	planLicense: DbPlanLicense;
+	licensePlanId: string;
+	parentPlanId: string;
+};
 
 const upsert = async ({
 	db,
@@ -156,16 +163,21 @@ const listWithLicensePlanIdByParents = async ({
 }: {
 	db: DrizzleCli;
 	parentInternalProductIds: string[];
-}) =>
+}): Promise<PlanLicenseWithPlanIds[]> =>
 	await db
 		.select({
 			planLicense: planLicenses,
 			licensePlanId: licenseProducts.id,
+			parentPlanId: parentProducts.id,
 		})
 		.from(planLicenses)
 		.innerJoin(
 			licenseProducts,
 			eq(planLicenses.license_internal_product_id, licenseProducts.internal_id),
+		)
+		.innerJoin(
+			parentProducts,
+			eq(planLicenses.parent_internal_product_id, parentProducts.internal_id),
 		)
 		.where(
 			and(

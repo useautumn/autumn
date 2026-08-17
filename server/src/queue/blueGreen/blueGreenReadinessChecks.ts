@@ -1,3 +1,4 @@
+import { withTimeout } from "@autumn/shared";
 import { GetQueueAttributesCommand, SQSClient } from "@aws-sdk/client-sqs";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
@@ -6,8 +7,8 @@ import {
 } from "@/external/aws/awsRegionUtils.js";
 import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
-import { withTimeout } from "@/utils/withTimeout.js";
 import { QUEUE_URL } from "../initSqs.js";
+import { getTrackAndUpdateBalanceWorkerQueueUrls } from "../trackAsyncQueueUrls.js";
 import type { BlueGreenProbeResult } from "./blueGreenSchemas.js";
 
 const CHECK_TIMEOUT_MS = 5_000;
@@ -44,7 +45,7 @@ const getConfiguredQueueUrls = () =>
 	[
 		QUEUE_URL,
 		process.env.TRACK_SQS_QUEUE_URL,
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL,
+		...getTrackAndUpdateBalanceWorkerQueueUrls(),
 		process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL,
 	].filter((url): url is string => Boolean(url));
 

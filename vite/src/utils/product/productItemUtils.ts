@@ -128,6 +128,9 @@ export const getItemId = ({
 	item: ProductItem;
 	itemIndex: number;
 }) => {
+	// Assigned at creation, so it survives edits that rewrite every other field.
+	if (item._uid) return `uid-${item._uid}`;
+
 	const interval = intervalSuffix(item);
 	if (item.entitlement_id) return `ent-${item.entitlement_id}${interval}`;
 	if (item.price_id) return `price-${item.price_id}${interval}`;
@@ -139,6 +142,14 @@ export const getItemId = ({
 	}
 	return `item-${itemIndex}`;
 };
+
+/** Editor-only fields must not reach the API; strip before building a request. */
+export const stripEditorFields = ({
+	items,
+}: {
+	items: ProductItem[] | undefined;
+}): ProductItem[] | undefined =>
+	items?.map(({ _uid, ...item }) => item as ProductItem);
 
 export const getPrepaidItems = (product: ProductV2 | undefined) => {
 	if (!product) return [];

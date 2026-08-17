@@ -8,17 +8,11 @@ import {
 	type ApiPlanV1,
 	BillingInterval,
 	type CreatePlanParamsV2Input,
-	FeatureUsageType,
 	ResetInterval,
 } from "@autumn/shared";
 import chalk from "chalk";
 import createJiti from "jiti";
 import { AutumnRpcCli } from "../../../../../server/src/external/autumn/autumnRpcCli.js";
-import { FeatureService } from "../../../../../server/src/internal/features/FeatureService.js";
-import {
-	constructBooleanFeature,
-	constructMeteredFeature,
-} from "../../../../../server/src/internal/features/utils/constructFeatureUtils.js";
 import {
 	createCleanAtmnIntegrationContext,
 	prepareAtmnIntegrationWorkspace,
@@ -65,27 +59,21 @@ test(`${chalk.yellowBright("atmn pull variants: method exports, boolean items, c
 		version: ApiVersion.V2_1,
 	});
 
-	await FeatureService.insert({
-		db: ctx.db,
-		logger: console,
-		data: [
-			constructBooleanFeature({
-				env: ctx.env,
-				featureId: "engagement_tracking",
-				orgId: ctx.org.id,
-			}),
-			constructBooleanFeature({
-				env: ctx.env,
-				featureId: "inbound_routing",
-				orgId: ctx.org.id,
-			}),
-			constructMeteredFeature({
-				env: ctx.env,
-				featureId: "automation_runs",
-				orgId: ctx.org.id,
-				usageType: FeatureUsageType.Single,
-			}),
-		],
+	await rpc.post("/features.create", {
+		feature_id: "engagement_tracking",
+		name: "Engagement tracking",
+		type: "boolean",
+	});
+	await rpc.post("/features.create", {
+		feature_id: "inbound_routing",
+		name: "Inbound routing",
+		type: "boolean",
+	});
+	await rpc.post("/features.create", {
+		feature_id: "automation_runs",
+		name: "Automation runs",
+		type: "metered",
+		consumable: true,
 	});
 
 	await rpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
@@ -170,6 +158,7 @@ test(`${chalk.yellowBright("atmn pull variants: method exports, boolean items, c
 		{
 			featureId: "automation_runs",
 			interval: BillingInterval.Month,
+			intervalCount: 1,
 		},
 	]);
 	expect(variant.customize?.addItems).toEqual([
@@ -198,6 +187,93 @@ test(`${chalk.yellowBright("atmn pull variants: method exports, boolean items, c
 	expect(inPlaceConfig).toContain("price: { amount: 510, interval: 'year' }");
 });
 
+/** Red: pull drops an explicit interval_count of 1 from a variant removal filter.
+ * Green: the generated config preserves intervalCount: 1 for an exact round trip. */
+test(`${chalk.yellowBright("atmn pull variants: preserves interval count 1 in removal filters")}`, async () => {
+	const ctx = await createCleanAtmnIntegrationContext();
+	const rpc = new AutumnRpcCli({
+		secretKey: ctx.orgSecretKey,
+		version: ApiVersion.V2_1,
+	});
+	const featureId = "variant_interval_count";
+	const basePlanId = "interval-count-base";
+	const variantPlanId = "interval-count-variant";
+	const monthlyItem = ({
+		included,
+		intervalCount,
+	}: {
+		included: number;
+		intervalCount: number;
+	}) => ({
+		feature_id: featureId,
+		included,
+		reset: { interval: ResetInterval.Month, interval_count: intervalCount },
+	});
+
+	await rpc.post("/features.create", {
+		feature_id: featureId,
+		name: "Variant interval count",
+		type: "metered",
+		consumable: true,
+	});
+	await rpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+		plan_id: basePlanId,
+		name: "Interval count base",
+		items: [
+			monthlyItem({ included: 100, intervalCount: 1 }),
+			monthlyItem({ included: 200, intervalCount: 2 }),
+		],
+	});
+	await rpc.post("/plans.create_variant", {
+		base_plan_id: basePlanId,
+		variant_plan_id: variantPlanId,
+		name: "Interval count variant",
+	});
+	await rpc.plans.update<ApiPlanV1>(variantPlanId, {
+		items: [
+			monthlyItem({ included: 150, intervalCount: 1 }),
+			monthlyItem({ included: 200, intervalCount: 2 }),
+		],
+		disable_version: true,
+	});
+
+	const apiVariant = await rpc.plans.get<ApiPlanV1>(variantPlanId);
+	expect(apiVariant.variant_details?.customize?.remove_items).toContainEqual({
+		feature_id: featureId,
+		interval: ResetInterval.Month,
+		interval_count: 1,
+	});
+
+	const workspace = await pullConfig({ secretKey: ctx.orgSecretKey });
+	const config = await readFile(workspace.configPath, "utf8");
+	const mod = await loadConfigModule(workspace.configPath);
+	const variant = mod.intervalCountVariant as {
+		customize?: { removeItems?: unknown[] };
+	};
+
+	expect(config).toContain("intervalCount: 1");
+	expect(variant.customize?.removeItems).toContainEqual({
+		featureId,
+		interval: ResetInterval.Month,
+		intervalCount: 1,
+	});
+
+	await runAtmnWorkspaceCli({
+		args: ["--yes"],
+		command: "push",
+		headless: true,
+		workspace,
+	});
+	const roundTrippedVariant = await rpc.plans.get<ApiPlanV1>(variantPlanId);
+	expect(
+		roundTrippedVariant.variant_details?.customize?.remove_items,
+	).toContainEqual({
+		feature_id: featureId,
+		interval: ResetInterval.Month,
+		interval_count: 1,
+	});
+});
+
 test(`${chalk.yellowBright("atmn pull variants: variable names handle collisions and numeric prefixes")}`, async () => {
 	const ctx = await createCleanAtmnIntegrationContext();
 	const rpc = new AutumnRpcCli({
@@ -205,21 +281,15 @@ test(`${chalk.yellowBright("atmn pull variants: variable names handle collisions
 		version: ApiVersion.V2_1,
 	});
 
-	await FeatureService.insert({
-		db: ctx.db,
-		logger: console,
-		data: [
-			constructBooleanFeature({
-				env: ctx.env,
-				featureId: "pro_annual",
-				orgId: ctx.org.id,
-			}),
-			constructBooleanFeature({
-				env: ctx.env,
-				featureId: "2fa",
-				orgId: ctx.org.id,
-			}),
-		],
+	await rpc.post("/features.create", {
+		feature_id: "pro_annual",
+		name: "Pro annual",
+		type: "boolean",
+	});
+	await rpc.post("/features.create", {
+		feature_id: "2fa",
+		name: "2FA",
+		type: "boolean",
 	});
 
 	await rpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
@@ -250,17 +320,11 @@ test(`${chalk.yellowBright("atmn pull --all-versions: emits versioned base and v
 		version: ApiVersion.V2_1,
 	});
 
-	await FeatureService.insert({
-		db: ctx.db,
-		logger: console,
-		data: [
-			constructMeteredFeature({
-				env: ctx.env,
-				featureId: "av_messages",
-				orgId: ctx.org.id,
-				usageType: FeatureUsageType.Single,
-			}),
-		],
+	await rpc.post("/features.create", {
+		feature_id: "av_messages",
+		name: "AV messages",
+		type: "metered",
+		consumable: true,
 	});
 
 	await rpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
@@ -321,7 +385,7 @@ test(`${chalk.yellowBright("atmn pull --all-versions: emits versioned base and v
 	expect(baseV1.variants).toBeUndefined();
 	expect(baseV2.version).toBe(2);
 	expect(baseV2.variants?.map((variant) => variant.version)).toEqual([1, 2]);
-	expect(baseV2.variants?.every((variant) => variant.__atmnType === "variant")).toBe(
-		true,
-	);
+	expect(
+		baseV2.variants?.every((variant) => variant.__atmnType === "variant"),
+	).toBe(true);
 });

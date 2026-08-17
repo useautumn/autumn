@@ -332,9 +332,12 @@ export function createRoute<
 	) => {
 		const { failOpen } = opts;
 		if (!failOpen || failOpen.skip?.(c)) return executeRoute(c);
+		const timeoutMs =
+			failOpen.timeoutMs - (Date.now() - c.get("ctx").timestamp);
+		if (timeoutMs <= 0) return failOpen.respond(c);
 		return raceFailOpen({
 			run: () => executeRoute(c),
-			timeoutMs: failOpen.timeoutMs,
+			timeoutMs,
 			respond: () => failOpen.respond(c),
 		});
 	};

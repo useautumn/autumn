@@ -36,17 +36,18 @@ class Plans(BaseSDK):
             ]
         ] = None,
         free_trial: Optional[
-            Union[models.FreeTrialRequest, models.FreeTrialRequestTypedDict]
+            Union[models.FreeTrialRequestBody, models.FreeTrialRequestBodyTypedDict]
         ] = None,
         config: Optional[
             Union[
-                models.CreatePlanConfigRequest, models.CreatePlanConfigRequestTypedDict
+                models.CreatePlanConfigRequestBody,
+                models.CreatePlanConfigRequestBodyTypedDict,
             ]
         ] = None,
         billing_controls: Optional[
             Union[
-                models.CreatePlanBillingControlsRequest,
-                models.CreatePlanBillingControlsRequestTypedDict,
+                models.CreatePlanBillingControlsRequestBody,
+                models.CreatePlanBillingControlsRequestBodyTypedDict,
             ]
         ] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -108,13 +109,13 @@ class Plans(BaseSDK):
                 licenses, Optional[List[models.CreatePlanLicense]]
             ),
             free_trial=utils.get_pydantic_model(
-                free_trial, Optional[models.FreeTrialRequest]
+                free_trial, Optional[models.FreeTrialRequestBody]
             ),
             config=utils.get_pydantic_model(
-                config, Optional[models.CreatePlanConfigRequest]
+                config, Optional[models.CreatePlanConfigRequestBody]
             ),
             billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.CreatePlanBillingControlsRequest]
+                billing_controls, Optional[models.CreatePlanBillingControlsRequestBody]
             ),
             metadata=metadata,
             create_in_stripe=create_in_stripe,
@@ -206,17 +207,18 @@ class Plans(BaseSDK):
             ]
         ] = None,
         free_trial: Optional[
-            Union[models.FreeTrialRequest, models.FreeTrialRequestTypedDict]
+            Union[models.FreeTrialRequestBody, models.FreeTrialRequestBodyTypedDict]
         ] = None,
         config: Optional[
             Union[
-                models.CreatePlanConfigRequest, models.CreatePlanConfigRequestTypedDict
+                models.CreatePlanConfigRequestBody,
+                models.CreatePlanConfigRequestBodyTypedDict,
             ]
         ] = None,
         billing_controls: Optional[
             Union[
-                models.CreatePlanBillingControlsRequest,
-                models.CreatePlanBillingControlsRequestTypedDict,
+                models.CreatePlanBillingControlsRequestBody,
+                models.CreatePlanBillingControlsRequestBodyTypedDict,
             ]
         ] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -278,13 +280,13 @@ class Plans(BaseSDK):
                 licenses, Optional[List[models.CreatePlanLicense]]
             ),
             free_trial=utils.get_pydantic_model(
-                free_trial, Optional[models.FreeTrialRequest]
+                free_trial, Optional[models.FreeTrialRequestBody]
             ),
             config=utils.get_pydantic_model(
-                config, Optional[models.CreatePlanConfigRequest]
+                config, Optional[models.CreatePlanConfigRequestBody]
             ),
             billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.CreatePlanBillingControlsRequest]
+                billing_controls, Optional[models.CreatePlanBillingControlsRequestBody]
             ),
             metadata=metadata,
             create_in_stripe=create_in_stripe,
@@ -746,8 +748,8 @@ class Plans(BaseSDK):
         auto_enable: Optional[bool] = None,
         price: OptionalNullable[
             Union[
-                models.UpdatePlanBasePriceRequest,
-                models.UpdatePlanBasePriceRequestTypedDict,
+                models.UpdatePlanBasePriceRequestBody,
+                models.UpdatePlanBasePriceRequestBodyTypedDict,
             ]
         ] = UNSET,
         items: Optional[
@@ -763,19 +765,20 @@ class Plans(BaseSDK):
         ] = None,
         free_trial: OptionalNullable[
             Union[
-                models.UpdatePlanFreeTrialParamsRequest,
-                models.UpdatePlanFreeTrialParamsRequestTypedDict,
+                models.UpdatePlanFreeTrialParamsRequestBody,
+                models.UpdatePlanFreeTrialParamsRequestBodyTypedDict,
             ]
         ] = UNSET,
         config: Optional[
             Union[
-                models.UpdatePlanConfigRequest, models.UpdatePlanConfigRequestTypedDict
+                models.UpdatePlanConfigRequestBody,
+                models.UpdatePlanConfigRequestBodyTypedDict,
             ]
         ] = None,
         billing_controls: Optional[
             Union[
-                models.UpdatePlanBillingControlsRequest,
-                models.UpdatePlanBillingControlsRequestTypedDict,
+                models.UpdatePlanBillingControlsRequestBody,
+                models.UpdatePlanBillingControlsRequestBodyTypedDict,
             ]
         ] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -859,7 +862,7 @@ class Plans(BaseSDK):
             add_on=add_on,
             auto_enable=auto_enable,
             price=utils.get_pydantic_model(
-                price, OptionalNullable[models.UpdatePlanBasePriceRequest]
+                price, OptionalNullable[models.UpdatePlanBasePriceRequestBody]
             ),
             items=utils.get_pydantic_model(
                 items, Optional[List[models.UpdatePlanItemPlanItem]]
@@ -868,13 +871,14 @@ class Plans(BaseSDK):
                 licenses, Optional[List[models.UpdatePlanLicense]]
             ),
             free_trial=utils.get_pydantic_model(
-                free_trial, OptionalNullable[models.UpdatePlanFreeTrialParamsRequest]
+                free_trial,
+                OptionalNullable[models.UpdatePlanFreeTrialParamsRequestBody],
             ),
             config=utils.get_pydantic_model(
-                config, Optional[models.UpdatePlanConfigRequest]
+                config, Optional[models.UpdatePlanConfigRequestBody]
             ),
             billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.UpdatePlanBillingControlsRequest]
+                billing_controls, Optional[models.UpdatePlanBillingControlsRequestBody]
             ),
             metadata=metadata,
             create_in_stripe=create_in_stripe,
@@ -964,8 +968,8 @@ class Plans(BaseSDK):
         auto_enable: Optional[bool] = None,
         price: OptionalNullable[
             Union[
-                models.UpdatePlanBasePriceRequest,
-                models.UpdatePlanBasePriceRequestTypedDict,
+                models.UpdatePlanBasePriceRequestBody,
+                models.UpdatePlanBasePriceRequestBodyTypedDict,
             ]
         ] = UNSET,
         items: Optional[
@@ -981,19 +985,20 @@ class Plans(BaseSDK):
         ] = None,
         free_trial: OptionalNullable[
             Union[
-                models.UpdatePlanFreeTrialParamsRequest,
-                models.UpdatePlanFreeTrialParamsRequestTypedDict,
+                models.UpdatePlanFreeTrialParamsRequestBody,
+                models.UpdatePlanFreeTrialParamsRequestBodyTypedDict,
             ]
         ] = UNSET,
         config: Optional[
             Union[
-                models.UpdatePlanConfigRequest, models.UpdatePlanConfigRequestTypedDict
+                models.UpdatePlanConfigRequestBody,
+                models.UpdatePlanConfigRequestBodyTypedDict,
             ]
         ] = None,
         billing_controls: Optional[
             Union[
-                models.UpdatePlanBillingControlsRequest,
-                models.UpdatePlanBillingControlsRequestTypedDict,
+                models.UpdatePlanBillingControlsRequestBody,
+                models.UpdatePlanBillingControlsRequestBodyTypedDict,
             ]
         ] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -1077,7 +1082,7 @@ class Plans(BaseSDK):
             add_on=add_on,
             auto_enable=auto_enable,
             price=utils.get_pydantic_model(
-                price, OptionalNullable[models.UpdatePlanBasePriceRequest]
+                price, OptionalNullable[models.UpdatePlanBasePriceRequestBody]
             ),
             items=utils.get_pydantic_model(
                 items, Optional[List[models.UpdatePlanItemPlanItem]]
@@ -1086,13 +1091,14 @@ class Plans(BaseSDK):
                 licenses, Optional[List[models.UpdatePlanLicense]]
             ),
             free_trial=utils.get_pydantic_model(
-                free_trial, OptionalNullable[models.UpdatePlanFreeTrialParamsRequest]
+                free_trial,
+                OptionalNullable[models.UpdatePlanFreeTrialParamsRequestBody],
             ),
             config=utils.get_pydantic_model(
-                config, Optional[models.UpdatePlanConfigRequest]
+                config, Optional[models.UpdatePlanConfigRequestBody]
             ),
             billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.UpdatePlanBillingControlsRequest]
+                billing_controls, Optional[models.UpdatePlanBillingControlsRequestBody]
             ),
             metadata=metadata,
             create_in_stripe=create_in_stripe,

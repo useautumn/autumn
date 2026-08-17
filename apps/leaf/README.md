@@ -15,11 +15,11 @@ bun run chat:tunnel
 2. Start Autumn with the same public URL:
 
 ```sh
-NGROK_URL=https://c.autumn.ngrok.app bun d
+AUTUMN_PUBLIC_API_URL=https://c.autumn.ngrok.app bun d
 ```
 
 `bun d` derives `CHAT_URL`, `SLACK_BOT_URL`, and `SLACK_REDIRECT_URI` from
-`NGROK_URL`, so the Slack OAuth redirect becomes
+`AUTUMN_PUBLIC_API_URL`, so the Slack OAuth redirect becomes
 `https://c.autumn.ngrok.app/slack/oauth/callback`. This exact URL must be in
 the Slack app's OAuth redirect URLs.
 

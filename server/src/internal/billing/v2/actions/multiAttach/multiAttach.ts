@@ -20,6 +20,7 @@ import {
 	handleMultiAttachBillingPlanErrors,
 	handleMultiAttachErrors,
 } from "./errors/handleMultiAttachErrors";
+import { handleMultiAttachBackdateCheckoutError } from "./errors/handleMultiAttachStartDateErrors";
 import { logMultiAttachContext } from "./logs/logMultiAttachContext";
 import { setupMultiAttachBillingContext } from "./setup/setupMultiAttachBillingContext";
 
@@ -86,6 +87,7 @@ export async function multiAttach({
 	};
 
 	handleMultiAttachBillingPlanErrors({ ctx, billingContext, billingPlan });
+	handleMultiAttachBackdateCheckoutError({ billingContext, params });
 
 	if (preview) {
 		const previewBillingPlan = await computeAttachPreviewBillingPlan({

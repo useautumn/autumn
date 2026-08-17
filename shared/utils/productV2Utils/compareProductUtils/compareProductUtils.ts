@@ -31,7 +31,10 @@ const sanitizeItems = ({
 	features: Feature[];
 }) => {
 	return items.map((item) => {
-		const priceData = itemToPriceOrTiers({ item });
+		const priceData =
+			item.tiers?.length === 1 && item.tiers[0].additional_currencies?.length
+				? { price: undefined, tiers: item.tiers }
+				: itemToPriceOrTiers({ item });
 		const newItem = {
 			...item,
 			reset_usage_when_enabled: getResetUsage({

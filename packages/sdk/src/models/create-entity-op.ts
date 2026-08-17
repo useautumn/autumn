@@ -37,7 +37,7 @@ export type CreateEntityLimitTypeRequestBody = ClosedEnum<
   typeof CreateEntityLimitTypeRequestBody
 >;
 
-export type CreateEntitySpendLimitRequest = {
+export type CreateEntitySpendLimitRequestBody = {
   /**
    * Optional feature ID this spend limit applies to.
    */
@@ -76,16 +76,30 @@ export type CreateEntityIntervalRequestBody = ClosedEnum<
   typeof CreateEntityIntervalRequestBody
 >;
 
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const CreateEntityAnchorRequestBody = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type CreateEntityAnchorRequestBody = ClosedEnum<
+  typeof CreateEntityAnchorRequestBody
+>;
+
 export type CreateEntityProperties = string | number | boolean;
 
 /**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
-export type CreateEntityFilterRequest = {
+export type CreateEntityFilterRequestBody = {
   properties: { [k: string]: string | number | boolean };
 };
 
-export type CreateEntityUsageLimitRequest = {
+export type CreateEntityUsageLimitRequestBody = {
   /**
    * The feature this usage limit applies to.
    */
@@ -103,9 +117,13 @@ export type CreateEntityUsageLimitRequest = {
    */
   interval: CreateEntityIntervalRequestBody;
   /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: CreateEntityAnchorRequestBody | undefined;
+  /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
-  filter?: CreateEntityFilterRequest | undefined;
+  filter?: CreateEntityFilterRequestBody | undefined;
 };
 
 /**
@@ -147,7 +165,7 @@ export type CreateEntityUsageAlertRequestBody = {
   name?: string | undefined;
 };
 
-export type CreateEntityOverageAllowedRequest = {
+export type CreateEntityOverageAllowedRequestBody = {
   /**
    * The feature ID this overage allowed control applies to.
    */
@@ -161,15 +179,15 @@ export type CreateEntityOverageAllowedRequest = {
 /**
  * Billing controls for the entity.
  */
-export type CreateEntityBillingControlsRequest = {
+export type CreateEntityBillingControlsRequestBody = {
   /**
    * List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).
    */
-  spendLimits?: Array<CreateEntitySpendLimitRequest> | undefined;
+  spendLimits?: Array<CreateEntitySpendLimitRequestBody> | undefined;
   /**
    * List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
    */
-  usageLimits?: Array<CreateEntityUsageLimitRequest> | undefined;
+  usageLimits?: Array<CreateEntityUsageLimitRequestBody> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -177,7 +195,7 @@ export type CreateEntityBillingControlsRequest = {
   /**
    * List of overage allowed controls per feature. When enabled, usage can exceed balance.
    */
-  overageAllowed?: Array<CreateEntityOverageAllowedRequest> | undefined;
+  overageAllowed?: Array<CreateEntityOverageAllowedRequestBody> | undefined;
 };
 
 export type CreateEntityParams = {
@@ -192,7 +210,7 @@ export type CreateEntityParams = {
   /**
    * Billing controls for the entity.
    */
-  billingControls?: CreateEntityBillingControlsRequest | undefined;
+  billingControls?: CreateEntityBillingControlsRequestBody | undefined;
   /**
    * Customer details to set when creating a customer
    */
@@ -540,10 +558,24 @@ export type CreateEntityIntervalResponse = OpenEnum<
 >;
 
 /**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const CreateEntityAnchorResponse = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type CreateEntityAnchorResponse = OpenEnum<
+  typeof CreateEntityAnchorResponse
+>;
+
+/**
  * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
  */
 export type CreateEntityFilterResponse = {
-  properties: { [k: string]: any };
+  properties: { [k: string]: string };
 };
 
 /**
@@ -577,6 +609,10 @@ export type CreateEntityUsageLimitResponse = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CreateEntityIntervalResponse;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: CreateEntityAnchorResponse | undefined;
   /**
    * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
    */
@@ -796,7 +832,7 @@ export const CreateEntityLimitTypeRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreateEntityLimitTypeRequestBody);
 
 /** @internal */
-export type CreateEntitySpendLimitRequest$Outbound = {
+export type CreateEntitySpendLimitRequestBody$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   limit_type?: string | undefined;
@@ -805,9 +841,9 @@ export type CreateEntitySpendLimitRequest$Outbound = {
 };
 
 /** @internal */
-export const CreateEntitySpendLimitRequest$outboundSchema: z.ZodMiniType<
-  CreateEntitySpendLimitRequest$Outbound,
-  CreateEntitySpendLimitRequest
+export const CreateEntitySpendLimitRequestBody$outboundSchema: z.ZodMiniType<
+  CreateEntitySpendLimitRequestBody$Outbound,
+  CreateEntitySpendLimitRequestBody
 > = z.pipe(
   z.object({
     featureId: z.optional(z.string()),
@@ -826,12 +862,12 @@ export const CreateEntitySpendLimitRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function createEntitySpendLimitRequestToJSON(
-  createEntitySpendLimitRequest: CreateEntitySpendLimitRequest,
+export function createEntitySpendLimitRequestBodyToJSON(
+  createEntitySpendLimitRequestBody: CreateEntitySpendLimitRequestBody,
 ): string {
   return JSON.stringify(
-    CreateEntitySpendLimitRequest$outboundSchema.parse(
-      createEntitySpendLimitRequest,
+    CreateEntitySpendLimitRequestBody$outboundSchema.parse(
+      createEntitySpendLimitRequestBody,
     ),
   );
 }
@@ -840,6 +876,11 @@ export function createEntitySpendLimitRequestToJSON(
 export const CreateEntityIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
   typeof CreateEntityIntervalRequestBody
 > = z.enum(CreateEntityIntervalRequestBody);
+
+/** @internal */
+export const CreateEntityAnchorRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof CreateEntityAnchorRequestBody
+> = z.enum(CreateEntityAnchorRequestBody);
 
 /** @internal */
 export type CreateEntityProperties$Outbound = string | number | boolean;
@@ -859,14 +900,14 @@ export function createEntityPropertiesToJSON(
 }
 
 /** @internal */
-export type CreateEntityFilterRequest$Outbound = {
+export type CreateEntityFilterRequestBody$Outbound = {
   properties: { [k: string]: string | number | boolean };
 };
 
 /** @internal */
-export const CreateEntityFilterRequest$outboundSchema: z.ZodMiniType<
-  CreateEntityFilterRequest$Outbound,
-  CreateEntityFilterRequest
+export const CreateEntityFilterRequestBody$outboundSchema: z.ZodMiniType<
+  CreateEntityFilterRequestBody$Outbound,
+  CreateEntityFilterRequestBody
 > = z.object({
   properties: z.record(
     z.string(),
@@ -874,34 +915,40 @@ export const CreateEntityFilterRequest$outboundSchema: z.ZodMiniType<
   ),
 });
 
-export function createEntityFilterRequestToJSON(
-  createEntityFilterRequest: CreateEntityFilterRequest,
+export function createEntityFilterRequestBodyToJSON(
+  createEntityFilterRequestBody: CreateEntityFilterRequestBody,
 ): string {
   return JSON.stringify(
-    CreateEntityFilterRequest$outboundSchema.parse(createEntityFilterRequest),
+    CreateEntityFilterRequestBody$outboundSchema.parse(
+      createEntityFilterRequestBody,
+    ),
   );
 }
 
 /** @internal */
-export type CreateEntityUsageLimitRequest$Outbound = {
+export type CreateEntityUsageLimitRequestBody$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
-  filter?: CreateEntityFilterRequest$Outbound | undefined;
+  anchor?: string | undefined;
+  filter?: CreateEntityFilterRequestBody$Outbound | undefined;
 };
 
 /** @internal */
-export const CreateEntityUsageLimitRequest$outboundSchema: z.ZodMiniType<
-  CreateEntityUsageLimitRequest$Outbound,
-  CreateEntityUsageLimitRequest
+export const CreateEntityUsageLimitRequestBody$outboundSchema: z.ZodMiniType<
+  CreateEntityUsageLimitRequestBody$Outbound,
+  CreateEntityUsageLimitRequestBody
 > = z.pipe(
   z.object({
     featureId: z.string(),
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: CreateEntityIntervalRequestBody$outboundSchema,
-    filter: z.optional(z.lazy(() => CreateEntityFilterRequest$outboundSchema)),
+    anchor: z.optional(CreateEntityAnchorRequestBody$outboundSchema),
+    filter: z.optional(
+      z.lazy(() => CreateEntityFilterRequestBody$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -910,12 +957,12 @@ export const CreateEntityUsageLimitRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function createEntityUsageLimitRequestToJSON(
-  createEntityUsageLimitRequest: CreateEntityUsageLimitRequest,
+export function createEntityUsageLimitRequestBodyToJSON(
+  createEntityUsageLimitRequestBody: CreateEntityUsageLimitRequestBody,
 ): string {
   return JSON.stringify(
-    CreateEntityUsageLimitRequest$outboundSchema.parse(
-      createEntityUsageLimitRequest,
+    CreateEntityUsageLimitRequestBody$outboundSchema.parse(
+      createEntityUsageLimitRequestBody,
     ),
   );
 }
@@ -965,82 +1012,85 @@ export function createEntityUsageAlertRequestBodyToJSON(
 }
 
 /** @internal */
-export type CreateEntityOverageAllowedRequest$Outbound = {
+export type CreateEntityOverageAllowedRequestBody$Outbound = {
   feature_id: string;
   enabled: boolean;
 };
 
 /** @internal */
-export const CreateEntityOverageAllowedRequest$outboundSchema: z.ZodMiniType<
-  CreateEntityOverageAllowedRequest$Outbound,
-  CreateEntityOverageAllowedRequest
-> = z.pipe(
-  z.object({
-    featureId: z.string(),
-    enabled: z._default(z.boolean(), false),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      featureId: "feature_id",
-    });
-  }),
-);
+export const CreateEntityOverageAllowedRequestBody$outboundSchema:
+  z.ZodMiniType<
+    CreateEntityOverageAllowedRequestBody$Outbound,
+    CreateEntityOverageAllowedRequestBody
+  > = z.pipe(
+    z.object({
+      featureId: z.string(),
+      enabled: z._default(z.boolean(), false),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        featureId: "feature_id",
+      });
+    }),
+  );
 
-export function createEntityOverageAllowedRequestToJSON(
-  createEntityOverageAllowedRequest: CreateEntityOverageAllowedRequest,
+export function createEntityOverageAllowedRequestBodyToJSON(
+  createEntityOverageAllowedRequestBody: CreateEntityOverageAllowedRequestBody,
 ): string {
   return JSON.stringify(
-    CreateEntityOverageAllowedRequest$outboundSchema.parse(
-      createEntityOverageAllowedRequest,
+    CreateEntityOverageAllowedRequestBody$outboundSchema.parse(
+      createEntityOverageAllowedRequestBody,
     ),
   );
 }
 
 /** @internal */
-export type CreateEntityBillingControlsRequest$Outbound = {
-  spend_limits?: Array<CreateEntitySpendLimitRequest$Outbound> | undefined;
-  usage_limits?: Array<CreateEntityUsageLimitRequest$Outbound> | undefined;
+export type CreateEntityBillingControlsRequestBody$Outbound = {
+  spend_limits?: Array<CreateEntitySpendLimitRequestBody$Outbound> | undefined;
+  usage_limits?: Array<CreateEntityUsageLimitRequestBody$Outbound> | undefined;
   usage_alerts?: Array<CreateEntityUsageAlertRequestBody$Outbound> | undefined;
   overage_allowed?:
-    | Array<CreateEntityOverageAllowedRequest$Outbound>
+    | Array<CreateEntityOverageAllowedRequestBody$Outbound>
     | undefined;
 };
 
 /** @internal */
-export const CreateEntityBillingControlsRequest$outboundSchema: z.ZodMiniType<
-  CreateEntityBillingControlsRequest$Outbound,
-  CreateEntityBillingControlsRequest
-> = z.pipe(
-  z.object({
-    spendLimits: z.optional(
-      z.array(z.lazy(() => CreateEntitySpendLimitRequest$outboundSchema)),
-    ),
-    usageLimits: z.optional(
-      z.array(z.lazy(() => CreateEntityUsageLimitRequest$outboundSchema)),
-    ),
-    usageAlerts: z.optional(
-      z.array(z.lazy(() => CreateEntityUsageAlertRequestBody$outboundSchema)),
-    ),
-    overageAllowed: z.optional(
-      z.array(z.lazy(() => CreateEntityOverageAllowedRequest$outboundSchema)),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      spendLimits: "spend_limits",
-      usageLimits: "usage_limits",
-      usageAlerts: "usage_alerts",
-      overageAllowed: "overage_allowed",
-    });
-  }),
-);
+export const CreateEntityBillingControlsRequestBody$outboundSchema:
+  z.ZodMiniType<
+    CreateEntityBillingControlsRequestBody$Outbound,
+    CreateEntityBillingControlsRequestBody
+  > = z.pipe(
+    z.object({
+      spendLimits: z.optional(
+        z.array(z.lazy(() => CreateEntitySpendLimitRequestBody$outboundSchema)),
+      ),
+      usageLimits: z.optional(
+        z.array(z.lazy(() => CreateEntityUsageLimitRequestBody$outboundSchema)),
+      ),
+      usageAlerts: z.optional(
+        z.array(z.lazy(() => CreateEntityUsageAlertRequestBody$outboundSchema)),
+      ),
+      overageAllowed: z.optional(z.array(z.lazy(() =>
+        CreateEntityOverageAllowedRequestBody$outboundSchema
+      ))),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        spendLimits: "spend_limits",
+        usageLimits: "usage_limits",
+        usageAlerts: "usage_alerts",
+        overageAllowed: "overage_allowed",
+      });
+    }),
+  );
 
-export function createEntityBillingControlsRequestToJSON(
-  createEntityBillingControlsRequest: CreateEntityBillingControlsRequest,
+export function createEntityBillingControlsRequestBodyToJSON(
+  createEntityBillingControlsRequestBody:
+    CreateEntityBillingControlsRequestBody,
 ): string {
   return JSON.stringify(
-    CreateEntityBillingControlsRequest$outboundSchema.parse(
-      createEntityBillingControlsRequest,
+    CreateEntityBillingControlsRequestBody$outboundSchema.parse(
+      createEntityBillingControlsRequestBody,
     ),
   );
 }
@@ -1049,7 +1099,9 @@ export function createEntityBillingControlsRequestToJSON(
 export type CreateEntityParams$Outbound = {
   name?: string | null | undefined;
   feature_id: string;
-  billing_controls?: CreateEntityBillingControlsRequest$Outbound | undefined;
+  billing_controls?:
+    | CreateEntityBillingControlsRequestBody$Outbound
+    | undefined;
   customer_data?: CustomerData$Outbound | undefined;
   customer_id: string;
   entity_id: string;
@@ -1064,7 +1116,7 @@ export const CreateEntityParams$outboundSchema: z.ZodMiniType<
     name: z.optional(z.nullable(z.string())),
     featureId: z.string(),
     billingControls: z.optional(
-      z.lazy(() => CreateEntityBillingControlsRequest$outboundSchema),
+      z.lazy(() => CreateEntityBillingControlsRequestBody$outboundSchema),
     ),
     customerData: z.optional(CustomerData$outboundSchema),
     customerId: z.string(),
@@ -1423,11 +1475,17 @@ export const CreateEntityIntervalResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CreateEntityIntervalResponse);
 
 /** @internal */
+export const CreateEntityAnchorResponse$inboundSchema: z.ZodMiniType<
+  CreateEntityAnchorResponse,
+  unknown
+> = openEnums.inboundSchema(CreateEntityAnchorResponse);
+
+/** @internal */
 export const CreateEntityFilterResponse$inboundSchema: z.ZodMiniType<
   CreateEntityFilterResponse,
   unknown
 > = z.object({
-  properties: z.record(z.string(), z.any()),
+  properties: z.record(z.string(), types.string()),
 });
 
 export function createEntityFilterResponseFromJSON(
@@ -1456,6 +1514,7 @@ export const CreateEntityUsageLimitResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: CreateEntityIntervalResponse$inboundSchema,
+    anchor: types.optional(CreateEntityAnchorResponse$inboundSchema),
     filter: types.optional(
       z.lazy(() => CreateEntityFilterResponse$inboundSchema),
     ),

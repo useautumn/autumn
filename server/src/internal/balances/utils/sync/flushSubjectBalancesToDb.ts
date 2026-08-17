@@ -112,8 +112,12 @@ export const flushSubjectBalancesToDb = async ({
 	);
 
 	if (!error) {
+		const usageWindowRowCount = usageWindowUpdates.reduce(
+			(total, update) => total + update.usage_windows.length,
+			0,
+		);
 		logger.info(
-			`[flushSubjectBalancesToDb] ${customerId}: flushed ${entries.length} balances, ${usageWindowUpdates.length} usage windows, source: ${source}`,
+			`[flushSubjectBalancesToDb] ${customerId}: flushed ${entries.length} balances, ${usageWindowUpdates.length} usage window groups (${usageWindowRowCount} rows), source: ${source}`,
 		);
 		return;
 	}

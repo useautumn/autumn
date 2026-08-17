@@ -17,6 +17,7 @@ import {
 	BATCH_MIGRATION_MAX_PAGES,
 	BATCH_MIGRATION_PAGE_SIZE,
 } from "./utils/batchMigrationExecutionConstants.js";
+import { createDeferredSideEffects } from "./utils/deferredSideEffects.js";
 import {
 	type BatchMigrationPagePhases,
 	timePhase,
@@ -65,9 +66,25 @@ export const runBatchMigrationChunk = async ({
 		},
 	});
 
-	const finish = (
+	// Post-commit side effects run off the page's critical path and are drained
+	// before the chunk returns.
+	const deferredLogData = { migrationRunId };
+	const events = createDeferredSideEffects({
+		phase: "finalize_events_drain",
+		phases: chunkPhases,
+		logger: ctx.logger,
+		logData: deferredLogData,
+	});
+	const caches = createDeferredSideEffects({
+		phase: "finalize_caches_drain",
+		phases: chunkPhases,
+		logger: ctx.logger,
+		logData: deferredLogData,
+	});
+
+	const finish = async (
 		completion: BatchMigrationChunkResult["completion"],
-	): BatchMigrationChunkResult => {
+	): Promise<BatchMigrationChunkResult> => {
 		ctx.logger.info("batch-migration: chunk finished", {
 			data: { migrationRunId, completion, cursor, ...summary },
 		});
@@ -79,68 +96,79 @@ export const runBatchMigrationChunk = async ({
 		};
 	};
 
-	while (true) {
-		if (await isMigrationCancelRequested({ migrationRunId }))
-			return finish("stopped");
+	// A throw mid-loop must never orphan a pending cache invalidation — that is
+	// silent, unrecoverable staleness — so the drain runs on every exit path.
+	try {
+		while (true) {
+			if (await isMigrationCancelRequested({ migrationRunId }))
+				return await finish("stopped");
 
-		if (maxPages !== undefined && summary.pages >= maxPages)
-			return finish("slice_complete");
+			if (maxPages !== undefined && summary.pages >= maxPages)
+				return await finish("slice_complete");
 
-		if (summary.pages >= BATCH_MIGRATION_MAX_PAGES)
-			throw new Error(
-				`batch-migration: exceeded ${BATCH_MIGRATION_MAX_PAGES} pages — aborting run`,
-			);
+			if (summary.pages >= BATCH_MIGRATION_MAX_PAGES)
+				throw new Error(
+					`batch-migration: exceeded ${BATCH_MIGRATION_MAX_PAGES} pages — aborting run`,
+				);
 
-		const pagePhases: BatchMigrationPagePhases = {};
-		const page = await claimNextBatchMigrationPage({
-			ctx,
-			migration,
-			migrationInternalId,
-			migrationRunId,
-			afterInternalId: cursor ?? undefined,
-			limit: BATCH_MIGRATION_PAGE_SIZE,
-			controls,
-			phases: pagePhases,
-		});
-		if (page.selectedCount === 0) return finish("exhausted");
-		cursor = page.cursor ?? cursor;
-
-		if (page.customers.length === 0) continue;
-		const pageResult = await executeBatchMigrationPage({
-			ctx,
-			migrationInternalId,
-			plan,
-			customers: page.customers,
-			phases: pagePhases,
-		});
-		await timePhase({
-			phases: pagePhases,
-			phase: "finalize",
-			run: () =>
-				finalizeBatchMigrationPage({
-					ctx,
-					migrationInternalId,
-					migrationRunId,
-					plan,
-					pageResult,
-					webhooks,
-					phases: pagePhases,
-				}),
-		});
-		summary.pages += 1;
-		summary.succeeded += pageResult.succeeded.length;
-		summary.skipped += pageResult.skipped.length;
-		for (const [phase, ms] of Object.entries(pagePhases)) {
-			chunkPhases[phase] = (chunkPhases[phase] ?? 0) + ms;
-		}
-		ctx.logger.info("batch-migration: page executed", {
-			data: {
+			const pagePhases: BatchMigrationPagePhases = {};
+			const page = await claimNextBatchMigrationPage({
+				ctx,
+				migration,
+				migrationInternalId,
 				migrationRunId,
-				page: summary.pages,
-				succeeded: pageResult.succeeded.length,
-				skipped: pageResult.skipped.length,
-				...pagePhases,
-			},
-		});
+				afterInternalId: cursor ?? undefined,
+				limit: BATCH_MIGRATION_PAGE_SIZE,
+				controls,
+				phases: pagePhases,
+			});
+			if (page.selectedCount === 0) return await finish("exhausted");
+			cursor = page.cursor ?? cursor;
+
+			if (page.customers.length === 0) continue;
+			const pageResult = await executeBatchMigrationPage({
+				ctx,
+				migrationInternalId,
+				migrationRunId,
+				plan,
+				customers: page.customers,
+				phases: pagePhases,
+			});
+			await timePhase({
+				phases: pagePhases,
+				phase: "finalize",
+				run: () =>
+					finalizeBatchMigrationPage({
+						ctx,
+						migrationInternalId,
+						migrationRunId,
+						plan,
+						pageResult,
+						webhooks,
+						phases: pagePhases,
+						deferEvents: events.defer,
+						deferCaches: caches.defer,
+					}),
+			});
+			await Promise.all([caches.settle(), events.settle()]);
+
+			summary.pages += 1;
+			summary.succeeded += pageResult.succeeded.length;
+			summary.skipped += pageResult.skipped.length;
+			for (const [phase, ms] of Object.entries(pagePhases)) {
+				chunkPhases[phase] = (chunkPhases[phase] ?? 0) + ms;
+			}
+			ctx.logger.info("batch-migration: page executed", {
+				data: {
+					migrationRunId,
+					page: summary.pages,
+					succeeded: pageResult.succeeded.length,
+					skipped: pageResult.skipped.length,
+					...pagePhases,
+				},
+			});
+		}
+	} finally {
+		await Promise.all([caches.drain(), events.drain()]);
 	}
 };

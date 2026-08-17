@@ -3,7 +3,7 @@ import { CusProductStatus, type InsertCustomerProduct } from "@autumn/shared";
 import { eventContextToAutumnBillingPlan } from "@/external/stripe/webhookHandlers/common/eventContextToAutumnBillingPlan";
 import type { StripeSubscriptionUpdatedContext } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/stripeSubscriptionUpdatedContext";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { buildBillingChangeResponse } from "@/internal/billing/v2/utils/billingChangeResponse";
+import { buildBillingChangeResponse } from "@/internal/billing/v2/actions/buildBillingChanges";
 import {
 	expectBillingChangeResponse,
 	expectPlanChange,

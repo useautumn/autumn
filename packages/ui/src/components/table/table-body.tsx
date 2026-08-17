@@ -30,6 +30,7 @@ export function TableBody() {
 		selectedItemId,
 		flexibleTableColumns,
 		getRowClassName,
+		skeletonRowCount,
 	} = useTableContext();
 	const rows = table.getRowModel().rows;
 	const lastRowCountRef = useRef(DEFAULT_SKELETON_ROWS);
@@ -58,7 +59,7 @@ export function TableBody() {
 			>
 				<TableSkeletonRows
 					columns={columns}
-					rowCount={lastRowCountRef.current}
+					rowCount={skeletonRowCount ?? lastRowCountRef.current}
 					rowClassName={rowClassName}
 					flexibleTableColumns={flexibleTableColumns}
 					asFragment

@@ -118,7 +118,7 @@ const buildWarmEnv = (): Record<string, string> => ({
 	DATABASE_URL,
 	DATABASE_CRITICAL_URL,
 	REDIS_URL,
-	CACHE_URL: REDIS_URL,
+	MISC_CACHE_DRAGONFLY_PUBLIC_URL: REDIS_URL,
 	CACHE_V2_DRAGONFLY_URL: REDIS_URL,
 	SQS_QUEUE_URL_V2,
 	TRACK_SQS_QUEUE_URL,
@@ -128,7 +128,8 @@ const buildWarmEnv = (): Record<string, string> => ({
 	ENCRYPTION_IV: requireSecret("ENCRYPTION_IV"),
 	ENCRYPTION_PASSWORD: requireSecret("ENCRYPTION_PASSWORD"),
 	BETTER_AUTH_SECRET: requireSecret("BETTER_AUTH_SECRET"),
-	BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,
+	AUTUMN_API_URL: `http://localhost:${SERVER_PORT}`,
+	AUTUMN_PUBLIC_API_URL: `http://localhost:${SERVER_PORT}`,
 });
 
 // ---- snapshot state (direct API — the provider seam has no exact-name check;

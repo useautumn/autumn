@@ -1,14 +1,12 @@
-import fs from "node:fs";
-import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import chalk from "chalk";
-import createJiti from "jiti";
 import type { Feature, Plan } from "../../compose/models/index.js";
 import type { CatalogPreviewUpdateResponse } from "../../lib/api/endpoints/index.js";
 import { withAuthRecovery } from "../../lib/auth/headlessAuthRecovery.js";
+import { type LoadedConfig, loadConfig } from "../../lib/config/loadConfig.js";
 import { AppEnv, resolveConfigPath } from "../../lib/env/index.js";
 import { writeConfig } from "../pull/writeConfig.js";
 import {
+	createConfigResourceReviewPrompts,
 	createFeatureArchivedPrompt,
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
@@ -18,6 +16,7 @@ import {
 	createPlanVersioningPrompt,
 	createProdConfirmationPrompt,
 	type PushPrompt,
+	type ConfigResourceChange,
 } from "./prompts.js";
 import {
 	buildLatestPlanVersionById,
@@ -32,11 +31,12 @@ import {
 	unarchiveFeature,
 	unarchivePlan,
 } from "./push.js";
-import type { PushResult } from "./types.js";
 import type {
 	PlanMigrationSelections,
 	PlanUpdateIntent,
 	PlanUpdateIntentSelections,
+	PushDecisions,
+	PushResult,
 	VariantMigrationSelections,
 	VariantPropagationSelections,
 	VariantUpdateIntentSelections,
@@ -47,10 +47,7 @@ import {
 	getVariantPropagationPreviews,
 } from "./variantPropagation.js";
 
-interface LocalConfig {
-	features: Feature[];
-	plans: Plan[];
-}
+type LocalConfig = LoadedConfig;
 
 type CombinedPlanUpdateIntent =
 	| "update_current_and_migrate"
@@ -81,6 +78,12 @@ interface HeadlessPushResult {
 	plansUpdated: string[];
 	plansDeleted: string[];
 	plansArchived: string[];
+	rewardsCreated: string[];
+	rewardsUpdated: string[];
+	rewardsDeleted: string[];
+	referralProgramsCreated: string[];
+	referralProgramsUpdated: string[];
+	referralProgramsDeleted: string[];
 }
 
 type ArchivedTargets = {
@@ -106,6 +109,12 @@ function headlessResultFromPushResult(result: PushResult): HeadlessPushResult {
 		plansUpdated: [...result.plansUpdated, ...result.plansVersioned],
 		plansDeleted: result.plansDeleted,
 		plansArchived: result.plansArchived,
+		rewardsCreated: result.rewardsCreated,
+		rewardsUpdated: result.rewardsUpdated,
+		rewardsDeleted: result.rewardsDeleted,
+		referralProgramsCreated: result.referralProgramsCreated,
+		referralProgramsUpdated: result.referralProgramsUpdated,
+		referralProgramsDeleted: result.referralProgramsDeleted,
 	};
 }
 
@@ -312,71 +321,13 @@ function resolveHeadlessUpdateDecisions({
  * Load local config file using jiti
  */
 async function loadLocalConfig(cwd: string): Promise<LocalConfig> {
-	const configPath = resolveConfigPath(cwd);
-
-	if (!fs.existsSync(configPath)) {
-		throw new Error(
-			`Config file not found at ${configPath}. Run 'atmn pull' first.`,
-		);
-	}
-
-	const absolutePath = resolve(configPath);
-	const fileUrl = pathToFileURL(absolutePath).href;
-
-	const jiti = createJiti(import.meta.url);
-	const mod = await jiti.import(fileUrl);
-
-	const plans: Plan[] = [];
-	const features: Feature[] = [];
-
-	const modRecord = mod as { default?: unknown } & Record<string, unknown>;
-	const defaultExport = modRecord.default as
-		| {
-				plans?: Plan[];
-				features?: Feature[];
-				products?: Plan[];
-		  }
-		| undefined;
-
-	if (defaultExport?.plans && defaultExport?.features) {
-		if (Array.isArray(defaultExport.plans)) {
-			plans.push(...defaultExport.plans);
-		}
-		if (Array.isArray(defaultExport.features)) {
-			features.push(...defaultExport.features);
-		}
-	} else if (defaultExport?.products && defaultExport?.features) {
-		// Legacy format
-		if (Array.isArray(defaultExport.products)) {
-			plans.push(...defaultExport.products);
-		}
-		if (Array.isArray(defaultExport.features)) {
-			features.push(...defaultExport.features);
-		}
-	} else {
-		// New format: individual named exports
-		for (const [key, value] of Object.entries(modRecord)) {
-			if (key === "default") continue;
-			if (isVariantExport(value)) continue;
-
-			const obj = value as { items?: unknown; type?: unknown };
-			if (obj && typeof obj === "object") {
-				if ("type" in obj) {
-					features.push(obj as unknown as Feature);
-				} else if (Array.isArray(obj.items) || "id" in obj) {
-					plans.push(obj as unknown as Plan);
-				}
-			}
-		}
-	}
-
-	return { features, plans };
+	return loadConfig({ cwd });
 }
 
 /**
  * Build the list of prompts that would be shown in interactive mode
  */
-function buildPromptQueueFromPreview(
+export function buildPromptQueueFromPreview(
 	preview: CatalogPreviewUpdateResponse,
 	archivedTargets: ArchivedTargets,
 	environment: AppEnv,
@@ -509,6 +460,8 @@ function buildPromptQueueFromPreview(
 		);
 	}
 
+	prompts.push(...createConfigResourceReviewPrompts(preview));
+
 	return prompts;
 }
 
@@ -522,6 +475,13 @@ function formatIssuesSummary(prompts: PushPrompt[]): string {
 		switch (prompt.type) {
 			case "prod_confirmation":
 				issues.push("  - Pushing to production environment");
+				break;
+			case "config_resources_confirmation":
+				for (const change of prompt.data.changes as ConfigResourceChange[]) {
+					const label =
+						change.resourceType === "reward" ? "Reward" : "Referral program";
+					issues.push(`  - ${label} "${change.id}" will be ${change.action}`);
+				}
 				break;
 			case "plan_versioning":
 				issues.push(
@@ -627,7 +587,13 @@ async function syncArchivedFeaturesToConfig(
 		return;
 	}
 
-	await writeConfig(Array.from(localFeaturesById.values()), config.plans, cwd);
+	await writeConfig({
+		features: Array.from(localFeaturesById.values()),
+		plans: config.plans,
+		cwd,
+		rewards: config.rewards,
+		referralPrograms: config.referralPrograms,
+	});
 }
 
 async function getArchivedTargets(
@@ -664,14 +630,7 @@ async function executePushWithDefaults(
 	prompts: PushPrompt[],
 	cwd: string,
 	environment: AppEnv,
-	decisions: {
-		planMigrationSelections?: PlanMigrationSelections;
-		planUpdateIntentSelections?: PlanUpdateIntentSelections;
-		skipPlanIds?: string[];
-		variantMigrationSelections?: VariantMigrationSelections;
-		variantPropagationSelections?: VariantPropagationSelections;
-		variantUpdateIntentSelections?: VariantUpdateIntentSelections;
-	} = {},
+	decisions: PushDecisions = {},
 ): Promise<HeadlessPushResult> {
 	const result: HeadlessPushResult = {
 		success: true,
@@ -683,6 +642,12 @@ async function executePushWithDefaults(
 		plansUpdated: [],
 		plansDeleted: [],
 		plansArchived: [],
+		rewardsCreated: [],
+		rewardsUpdated: [],
+		rewardsDeleted: [],
+		referralProgramsCreated: [],
+		referralProgramsUpdated: [],
+		referralProgramsDeleted: [],
 	};
 
 	// Build response map from defaults
@@ -725,15 +690,9 @@ async function executePushWithDefaults(
 
 	const pushResult = await pushCatalog({
 		cwd,
-		features: config.features,
-		plans: config.plans,
-		planMigrationSelections: decisions.planMigrationSelections,
-		planUpdateIntentSelections: decisions.planUpdateIntentSelections,
+		config,
+		decisions,
 		preview,
-		skipPlanIds: decisions.skipPlanIds,
-		variantMigrationSelections: decisions.variantMigrationSelections,
-		variantPropagationSelections: decisions.variantPropagationSelections,
-		variantUpdateIntentSelections: decisions.variantUpdateIntentSelections,
 	});
 	Object.assign(result, headlessResultFromPushResult(pushResult));
 
@@ -752,8 +711,7 @@ async function executeCleanPush(
 	preview: CatalogPreviewUpdateResponse,
 ): Promise<HeadlessPushResult> {
 	const result = await pushCatalog({
-		features: config.features,
-		plans: config.plans,
+		config,
 		preview,
 	});
 
@@ -797,7 +755,7 @@ async function _headlessPushImpl(
 	const config = await loadLocalConfig(cwd);
 	console.log(
 		chalk.dim(
-			`  Found ${config.features.length} features, ${config.plans.length} plans`,
+			`  Found ${config.features.length} features, ${config.plans.length} plans, ${config.rewards.length} rewards, ${config.referralPrograms.length} referral programs`,
 		),
 	);
 
@@ -813,10 +771,7 @@ async function _headlessPushImpl(
 	// Analyze changes
 	console.log(chalk.dim(`Analyzing changes against ${envLabel}...`));
 	const [{ preview }, archivedTargets] = await Promise.all([
-		previewCatalogPush({
-			features: config.features,
-			plans: config.plans,
-		}),
+		previewCatalogPush({ config }),
 		getArchivedTargets(config, allVersions),
 	]);
 
@@ -837,6 +792,12 @@ async function _headlessPushImpl(
 			plansUpdated: [],
 			plansDeleted: [],
 			plansArchived: [],
+			rewardsCreated: [],
+			rewardsUpdated: [],
+			rewardsDeleted: [],
+			referralProgramsCreated: [],
+			referralProgramsUpdated: [],
+			referralProgramsDeleted: [],
 		};
 	}
 
@@ -897,12 +858,7 @@ async function _headlessPushImpl(
 			prompts,
 			cwd,
 			environment,
-			{
-				planMigrationSelections: decisions.planMigrationSelections,
-				planUpdateIntentSelections: decisions.planUpdateIntentSelections,
-				skipPlanIds: decisions.skipPlanIds,
-				variantPropagationSelections: decisions.variantPropagationSelections,
-			},
+			decisions,
 		);
 	} else {
 		// No edge cases, clean push
@@ -950,6 +906,42 @@ async function _headlessPushImpl(
 	if (result.plansArchived.length > 0) {
 		console.log(
 			chalk.dim(`  Plans archived: ${result.plansArchived.join(", ")}`),
+		);
+	}
+	if (result.rewardsCreated.length > 0) {
+		console.log(
+			chalk.dim(`  Rewards created: ${result.rewardsCreated.join(", ")}`),
+		);
+	}
+	if (result.rewardsUpdated.length > 0) {
+		console.log(
+			chalk.dim(`  Rewards updated: ${result.rewardsUpdated.join(", ")}`),
+		);
+	}
+	if (result.rewardsDeleted.length > 0) {
+		console.log(
+			chalk.dim(`  Rewards deleted: ${result.rewardsDeleted.join(", ")}`),
+		);
+	}
+	if (result.referralProgramsCreated.length > 0) {
+		console.log(
+			chalk.dim(
+				`  Referral programs created: ${result.referralProgramsCreated.join(", ")}`,
+			),
+		);
+	}
+	if (result.referralProgramsUpdated.length > 0) {
+		console.log(
+			chalk.dim(
+				`  Referral programs updated: ${result.referralProgramsUpdated.join(", ")}`,
+			),
+		);
+	}
+	if (result.referralProgramsDeleted.length > 0) {
+		console.log(
+			chalk.dim(
+				`  Referral programs deleted: ${result.referralProgramsDeleted.join(", ")}`,
+			),
 		);
 	}
 

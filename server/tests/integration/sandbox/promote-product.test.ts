@@ -213,8 +213,7 @@ describe("promote product from a named sandbox to the master org", () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
 
 		await copyProductForOrgs({
-			db,
-			logger,
+			ctx: baseCtx,
 			fromOrg: sub,
 			fromEnv: AppEnv.Sandbox,
 			toOrg: master,
@@ -250,8 +249,7 @@ describe("promote product from a named sandbox to the master org", () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
 
 		await copyProductForOrgs({
-			db,
-			logger,
+			ctx: baseCtx,
 			fromOrg: sub,
 			fromEnv: AppEnv.Sandbox,
 			toOrg: master,
@@ -273,8 +271,7 @@ describe("promote product from a named sandbox to the master org", () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
 
 		await copyProductForOrgs({
-			db,
-			logger,
+			ctx: baseCtx,
 			fromOrg: sub,
 			fromEnv: AppEnv.Sandbox,
 			toOrg: master,
@@ -301,8 +298,7 @@ describe("promote product from a named sandbox to the master org", () => {
 		let thrown: unknown;
 		try {
 			await copyProductForOrgs({
-				db,
-				logger,
+				ctx: baseCtx,
 				fromOrg: sub,
 				fromEnv: AppEnv.Sandbox,
 				toOrg: master,
@@ -354,8 +350,7 @@ describe("promote product from a named sandbox to the master org", () => {
 		});
 
 		await copyProductForOrgs({
-			db,
-			logger,
+			ctx: baseCtx,
 			fromOrg: master,
 			fromEnv: AppEnv.Sandbox,
 			toOrg: master,

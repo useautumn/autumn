@@ -14,6 +14,8 @@ import type {
 import type { EntitlementPrice } from "./entitlementPriceUtils/entitlementPriceTypes.js";
 import { isFixedPrice } from "./priceUtils/classifyPriceUtils.js";
 
+// Must stay symmetric with priceToEnt: if one direction resolves a pair across
+// products and the other does not, mapToProductItems silently drops the price.
 export const entToPrice = ({
 	ent,
 	prices,
@@ -21,10 +23,12 @@ export const entToPrice = ({
 	ent: Entitlement;
 	prices: Price[];
 }) => {
-	return prices.find(
-		(price) =>
-			price.entitlement_id === ent.id &&
-			price.internal_product_id === ent.internal_product_id,
+	const idMatches = prices.filter((price) => price.entitlement_id === ent.id);
+
+	return (
+		idMatches.find(
+			(price) => price.internal_product_id === ent.internal_product_id,
+		) ?? idMatches[0]
 	);
 };
 
@@ -62,14 +66,8 @@ export function priceToEnt({
 	entitlements: EntitlementWithFeature[];
 	errorOnNotFound?: boolean;
 }): EntitlementWithFeature | undefined {
-	// Prefer the entitlement that also shares the price's product — the original,
-	// strict match, so nothing changes for a well-formed product. Only fall back
-	// to id alone, because a customer product can carry entitlement rows owned by
-	// another product (grandfathered rows that survive a version bump) while a
-	// regenerated custom price is stamped with the customer product's own
-	// internal_product_id. Entitlement ids are globally unique, so the fallback
-	// cannot resolve to a different entitlement than the strict match would have.
-	// Mirrors the scoped sibling customerPriceToCustomerEntitlement.
+	// A customer product can carry grandfathered entitlements owned by an older
+	// product version while its regenerated custom price is stamped with its own.
 	const idMatches = entitlements.filter(
 		(ent) => ent.id === price.entitlement_id,
 	);

@@ -27,9 +27,14 @@ import {
 	plotInsetsEqual,
 	setCachedPlotInsets,
 } from "./utils/chartGeometry";
+import {
+	CUSTOMER_BALANCE_SUFFIX,
+	deductionsToEventsData,
+} from "./utils/deductionsToEventsData";
 import { extractPropertyKeys } from "./utils/extractPropertyKeys";
 import {
 	generateChartConfig,
+	parseSeriesKey,
 	transformGroupedData,
 	trimToTopSeries,
 } from "./utils/transformGroupedChartData";
@@ -55,6 +60,8 @@ export const AnalyticsView = () => {
 
 	const {
 		customer,
+		deductions,
+		aggregateOn,
 		features,
 		events,
 		queryLoading,
@@ -68,6 +75,10 @@ export const AnalyticsView = () => {
 		totals,
 		eventNames: responseEventNames,
 	} = useAnalyticsData({ hasCleared });
+
+	const isDeducted = aggregateOn === "deducted";
+	// Own-vs-borrowed only means something per entity; other groupings ignore it.
+	const splitSpillover = groupBy === "entity_id";
 
 	// Show toast when data is truncated due to too many unique group values
 	const hasShownTruncationToast = useRef(false);
@@ -125,18 +136,68 @@ export const AnalyticsView = () => {
 
 	// Transform and configure chart data
 	const { chartData, chartConfig } = useMemo(() => {
-		if (!events) {
+		// Deducted mode reuses the whole pipeline below: deductionsToEventsData
+		// emits pre-pivoted feature__group columns, transformGroupedData no-ops
+		// on them (no raw group column), and generateChartConfig parses the
+		// names it already knows. Grouping defaults to the source feature — the
+		// question the mode exists to answer.
+		const chartGroupBy = isDeducted
+			? (groupBy ?? "source_feature_id")
+			: groupBy;
+		const chartSource = isDeducted
+			? deductions?.length
+				? deductionsToEventsData({ deductions, splitSpillover })
+				: null
+			: events;
+
+		if (!chartSource) {
 			return { chartData: null, chartConfig: null };
 		}
 
-		let filteredEvents = events;
-		if (groupBy === "plan_id" && planDeselected.size > 0) {
-			const filteredData = events.data.filter(
+		let filteredEvents = chartSource;
+		if (isDeducted) {
+			// The row filters below reference raw group columns, which the
+			// pre-pivoted deduction rows no longer carry (planDeselected stays
+			// skipped — plan grouping is disabled in deducted mode). "Filter by
+			// value" instead filters COLUMNS: keep `period` plus the series whose
+			// group value — the suffix parseSeriesKey extracts, matching how
+			// generateChartConfig labels them — equals the selected value.
+			if (groupFilter !== null) {
+				const keptMeta = chartSource.meta.filter(
+					({ name }: { name: string }) => {
+						if (name === "period") return true;
+						const groupValue = parseSeriesKey({ name })?.groupValue;
+						if (groupValue === undefined) return false;
+						// An entity's spillover series belongs to that entity's filter.
+						const base = groupValue.endsWith(CUSTOMER_BALANCE_SUFFIX)
+							? groupValue.slice(0, -CUSTOMER_BALANCE_SUFFIX.length)
+							: groupValue;
+						return base === groupFilter;
+					},
+				);
+				const keptColumns = keptMeta.map(({ name }: { name: string }) => name);
+				const filteredData = chartSource.data.map(
+					(row: Record<string, string | number>) => {
+						const slim: Record<string, string | number> = {};
+						for (const column of keptColumns) {
+							slim[column] = row[column];
+						}
+						return slim;
+					},
+				);
+				filteredEvents = {
+					...chartSource,
+					meta: keptMeta,
+					data: filteredData,
+				};
+			}
+		} else if (groupBy === "plan_id" && planDeselected.size > 0) {
+			const filteredData = chartSource.data.filter(
 				(row: Record<string, string | number>) =>
 					!planDeselected.has(String(row.plan_id ?? "")),
 			);
 			filteredEvents = {
-				...events,
+				...chartSource,
 				data: filteredData,
 				rows: filteredData.length,
 			};
@@ -145,12 +206,12 @@ export const AnalyticsView = () => {
 				groupBy === "customer_id" || groupBy === "entity_id"
 					? groupBy
 					: `properties.${groupBy}`;
-			const filteredData = events.data.filter(
+			const filteredData = chartSource.data.filter(
 				(row: Record<string, string | number>) =>
 					String(row[groupByColumn]) === groupFilter,
 			);
 			filteredEvents = {
-				...events,
+				...chartSource,
 				data: filteredData,
 				rows: filteredData.length,
 			};
@@ -184,7 +245,7 @@ export const AnalyticsView = () => {
 		// 2. Pivot into one column per group×feature
 		const transformed = transformGroupedData({
 			events: nonZeroEvents,
-			groupBy,
+			groupBy: chartGroupBy,
 		});
 
 		// 3. Keep only top 30 series by volume so Recharts renders ≤30 <Bar>s
@@ -193,7 +254,7 @@ export const AnalyticsView = () => {
 		const config = generateChartConfig({
 			events: trimmed,
 			features,
-			groupBy,
+			groupBy: chartGroupBy,
 			originalColors: colors,
 			entityNames,
 			customerNames,
@@ -203,6 +264,9 @@ export const AnalyticsView = () => {
 		return { chartData: trimmed, chartConfig: config };
 	}, [
 		events,
+		deductions,
+		aggregateOn,
+		splitSpillover,
 		features,
 		groupBy,
 		groupFilter,
@@ -236,7 +300,9 @@ export const AnalyticsView = () => {
 	const legendEntries: ChartLegendEntry[] = useMemo(() => {
 		if (!chartData || chartData.data.length === 0) return [];
 		let entries: ChartLegendEntry[] = [];
-		if (groupBy && chartConfig) {
+		// Deducted mode is always series-shaped (grouping defaults server-side),
+		// so its legend must come from the chart config, not raw event totals.
+		if ((groupBy || isDeducted) && chartConfig) {
 			entries = chartConfig.map((s) => {
 				const sum = chartData.data.reduce(
 					(acc, row) =>
@@ -272,7 +338,7 @@ export const AnalyticsView = () => {
 			});
 		}
 		return entries.filter((e) => e.value > 0).sort((a, b) => b.value - a.value);
-	}, [chartData, chartConfig, groupBy, responseEventNames, totals]);
+	}, [chartData, chartConfig, groupBy, isDeducted, responseEventNames, totals]);
 
 	useEffect(() => {
 		if (
@@ -390,7 +456,9 @@ export const AnalyticsView = () => {
 								>
 									<ChartLegend
 										entries={legendEntries}
-										showLabels={!!groupBy || legendEntries.length <= 3}
+										showLabels={
+											!!groupBy || isDeducted || legendEntries.length <= 3
+										}
 									/>
 									<div className="flex-1 min-h-0">
 										<EventsBarChart

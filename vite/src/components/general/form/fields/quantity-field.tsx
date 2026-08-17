@@ -1,9 +1,8 @@
-import { Button, Input, Label } from "@autumn/ui";
+import { Button, Input, Label, SmallSpinner } from "@autumn/ui";
 import { Minus, Plus } from "lucide-react";
 import { FieldInfo } from "@/components/general/form/field-info";
 import { useFieldContext } from "@/hooks/form/form-context";
 import { cn } from "@/lib/utils";
-import { SmallSpinner } from "@autumn/ui";
 
 export function QuantityField({
 	label,
@@ -12,9 +11,11 @@ export function QuantityField({
 	min = 1,
 	max,
 	step = 1,
+	stops,
 	className,
 	hideFieldInfo,
 	compact,
+	fullWidth,
 }: {
 	label: string;
 	placeholder?: string;
@@ -22,12 +23,20 @@ export function QuantityField({
 	min?: number;
 	max?: number;
 	step?: number;
+	/** Ascending quantities the buttons snap to instead of stepping by `step`,
+	 * e.g. volume-tier bounds. Beyond the last stop the buttons are disabled. */
+	stops?: number[];
 	className?: string;
 	hideFieldInfo?: boolean;
 	compact?: boolean;
+	/** Stretches the stepper to its container instead of sizing to its content. */
+	fullWidth?: boolean;
 }) {
 	const field = useFieldContext<number>();
 	const stepSize = step > 0 ? step : 1;
+	const tierStops = stops ?? [];
+	const usesStops = tierStops.length > 0;
+	const lastStop = tierStops.at(-1);
 	const getPositiveModulo = ({
 		value,
 		divisor,
@@ -76,8 +85,22 @@ export function QuantityField({
 		return currentValue - remainder;
 	};
 
+	const getNextStop = ({ currentValue }: { currentValue: number }) =>
+		tierStops.find((stop) => stop > currentValue);
+
+	const getPreviousStop = ({ currentValue }: { currentValue: number }) =>
+		[...tierStops].reverse().find((stop) => stop < currentValue);
+
 	const handleIncrement = () => {
 		const currentValue = field.state.value ?? 0;
+		if (usesStops) {
+			const nextStop = getNextStop({ currentValue });
+			if (nextStop === undefined) return;
+			field.handleChange(
+				max !== undefined ? Math.min(nextStop, max) : nextStop,
+			);
+			return;
+		}
 		const newValue = getSteppedIncrementValue({ currentValue });
 		if (max !== undefined) {
 			field.handleChange(Math.min(newValue, max));
@@ -89,6 +112,11 @@ export function QuantityField({
 	const handleDecrement = () => {
 		const currentValue = field.state.value ?? min;
 		if (currentValue <= min) {
+			return;
+		}
+		if (usesStops) {
+			const previousStop = getPreviousStop({ currentValue });
+			field.handleChange(Math.max(min, previousStop ?? min));
 			return;
 		}
 		const steppedValue = getSteppedDecrementValue({ currentValue });
@@ -120,12 +148,13 @@ export function QuantityField({
 	};
 
 	return (
-		<div className={className}>
+		<div className={cn(fullWidth && "w-full", className)}>
 			{label && <Label>{label}</Label>}
 			<div className="relative flex items-center">
 				<div
 					className={cn(
-						"inline-flex rounded-lg overflow-hidden border border-border w-fit h-6 items-center",
+						"inline-flex rounded-lg overflow-hidden border border-border h-6 items-center",
+						fullWidth ? "w-full" : "w-fit",
 					)}
 				>
 					<Button
@@ -143,12 +172,17 @@ export function QuantityField({
 						<Minus aria-hidden="true" size={14} />
 					</Button>
 
-					<div className="relative border-x border-border">
+					<div
+						className={cn(
+							"relative border-x border-border",
+							fullWidth && "min-w-0 flex-1",
+						)}
+					>
 						<Input
 							variant="headless"
 							className={cn(
 								"text-sm text-center h-input p-2",
-								compact ? "w-10" : "w-16",
+								fullWidth ? "w-full" : compact ? "w-10" : "w-16",
 							)}
 							onChange={handleInputChange}
 							type="number"
@@ -156,7 +190,7 @@ export function QuantityField({
 							placeholder={placeholder}
 							min={min}
 							max={max}
-							step={stepSize}
+							step={usesStops ? "any" : stepSize}
 						/>
 						{field.state.meta.isValidating && (
 							<div className="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center pe-3 text-muted-foreground/80">
@@ -172,7 +206,12 @@ export function QuantityField({
 							"disabled:pointer-events-none disabled:opacity-50 rounded-none border-none h-input",
 							compact ? "px-2" : "px-3",
 						)}
-						disabled={max !== undefined && (field.state.value ?? 0) >= max}
+						disabled={
+							(max !== undefined && (field.state.value ?? 0) >= max) ||
+							(usesStops &&
+								lastStop !== undefined &&
+								(field.state.value ?? 0) >= lastStop)
+						}
 						onClick={handleIncrement}
 						size="sm"
 						variant="secondary"

@@ -24,6 +24,8 @@ export const useCustomerCountQuery = ({
 			filters.none,
 			filters.processor,
 			filters.interval,
+			filters.created_at_range?.start,
+			filters.created_at_range?.end,
 			search,
 		]),
 		enabled,

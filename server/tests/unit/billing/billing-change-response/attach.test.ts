@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { CusProductStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { buildBillingChangeResponse } from "@/internal/billing/v2/utils/billingChangeResponse";
+import { buildBillingChangeResponse } from "@/internal/billing/v2/actions/buildBillingChanges";
 import {
 	expectBillingChangeResponse,
 	expectPlanChange,
@@ -34,12 +34,15 @@ describe("buildBillingChangeResponse — attach", () => {
 			customerId: "cus_test",
 			activated: ["free"],
 		});
-		expectPlanChange(findPlanChange(response, { action: "activated", planId: "free" }), {
-			action: "activated",
-			planId: "free",
-			previousAttributes: null,
-			itemChanges: [],
-		});
+		expectPlanChange(
+			findPlanChange(response, { action: "activated", planId: "free" }),
+			{
+				action: "activated",
+				planId: "free",
+				previousAttributes: null,
+				itemChanges: [],
+			},
+		);
 	});
 
 	test("new customer, paid plan attach", () => {
@@ -53,11 +56,14 @@ describe("buildBillingChangeResponse — attach", () => {
 		logChangeResponse("attach / new customer, paid plan", response);
 
 		expectBillingChangeResponse(response, { activated: ["pro"] });
-		expectPlanChange(findPlanChange(response, { action: "activated", planId: "pro" }), {
-			action: "activated",
-			planId: "pro",
-			previousAttributes: null,
-		});
+		expectPlanChange(
+			findPlanChange(response, { action: "activated", planId: "pro" }),
+			{
+				action: "activated",
+				planId: "pro",
+				previousAttributes: null,
+			},
+		);
 	});
 
 	test("immediate upgrade (free → pro)", () => {
@@ -86,20 +92,26 @@ describe("buildBillingChangeResponse — attach", () => {
 			expired: ["free"],
 			activated: ["pro"],
 		});
-		expectPlanChange(findPlanChange(response, { action: "expired", planId: "free" }), {
-			action: "expired",
-			planId: "free",
-			previousAttributes: {
-				status: CusProductStatus.Active,
-				canceled_at: null,
-				expires_at: null,
+		expectPlanChange(
+			findPlanChange(response, { action: "expired", planId: "free" }),
+			{
+				action: "expired",
+				planId: "free",
+				previousAttributes: {
+					status: CusProductStatus.Active,
+					canceled_at: null,
+					expires_at: null,
+				},
 			},
-		});
-		expectPlanChange(findPlanChange(response, { action: "activated", planId: "pro" }), {
-			action: "activated",
-			planId: "pro",
-			previousAttributes: null,
-		});
+		);
+		expectPlanChange(
+			findPlanChange(response, { action: "activated", planId: "pro" }),
+			{
+				action: "activated",
+				planId: "pro",
+				previousAttributes: null,
+			},
+		);
 	});
 
 	test("upgrade that also clears an existing scheduled downgrade", () => {
@@ -179,11 +191,14 @@ describe("buildBillingChangeResponse — attach", () => {
 			updated: ["pro"],
 			scheduled: ["free"],
 		});
-		expectPlanChange(findPlanChange(response, { action: "updated", planId: "pro" }), {
-			action: "updated",
-			planId: "pro",
-			previousAttributes: { canceled_at: null, expires_at: null },
-		});
+		expectPlanChange(
+			findPlanChange(response, { action: "updated", planId: "pro" }),
+			{
+				action: "updated",
+				planId: "pro",
+				previousAttributes: { canceled_at: null, expires_at: null },
+			},
+		);
 		const scheduled = findPlanChange(response, {
 			action: "scheduled",
 			planId: "free",

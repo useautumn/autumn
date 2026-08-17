@@ -1,6 +1,6 @@
 import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
-import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
 import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilter.js";
+import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
 import { hasVersionBumpUpdatePlan } from "./hasVersionBumpUpdatePlan.js";
 
 type PlanQuantifier = {
@@ -45,9 +45,7 @@ export const preProcessMigrationFilter = ({
 	const nextPlan: PlanFilter | PlanQuantifier = isQuantifierObject(planRule)
 		? {
 				...planRule,
-				...(planRule.$some
-					? { $some: injectCustomFalse(planRule.$some) }
-					: {}),
+				...(planRule.$some ? { $some: injectCustomFalse(planRule.$some) } : {}),
 				...(planRule.$every
 					? { $every: injectCustomFalse(planRule.$every) }
 					: {}),

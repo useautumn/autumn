@@ -72,6 +72,7 @@ export const getOrCreateCustomerUsageLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
+	anchor: z.union([z.string(), z.undefined()]).optional(),
 	filter: z
 		.union([getOrCreateCustomerFilterOutboundSchema, z.undefined()])
 		.optional(),
@@ -186,11 +187,14 @@ export const getOrCreateCustomerSpendLimitSchema = z.object({
 
 export const getOrCreateCustomerUsageLimitIntervalSchema = closedEnumSchema;
 
+export const getOrCreateCustomerAnchorSchema = closedEnumSchema;
+
 export const getOrCreateCustomerUsageLimitSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: getOrCreateCustomerUsageLimitIntervalSchema,
+	anchor: z.union([getOrCreateCustomerAnchorSchema, z.undefined()]).optional(),
 	filter: z.union([getOrCreateCustomerFilterSchema, z.undefined()]).optional(),
 });
 

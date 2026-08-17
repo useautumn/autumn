@@ -43,7 +43,7 @@ export const createChatProxyRouter = (
 	router.post("/agent/approve", proxy);
 	router.post("/agent/reject", proxy);
 
-	// Proxy the MCP endpoint to leaf so a public origin (e.g. NGROK_URL) reaches it —
+	// Proxy the MCP endpoint to leaf so the public API origin reaches it —
 	// Claude Managed Agents run in Anthropic's cloud and cannot hit leaf's localhost.
 	// Point MCP_SERVER_URL at this public origin so the agent + vault use it.
 	router.get("/.well-known/oauth-protected-resource/mcp", proxy);

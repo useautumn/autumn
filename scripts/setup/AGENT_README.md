@@ -56,7 +56,7 @@ Set these in the process environment before running `bun dev:agent` and they wil
 | Service | Port | Notes |
 |---|---|---|
 | PostgreSQL | 5432 | Database: `autumn`, user: `postgres`, password: `postgres` |
-| Redis Stack | 6379 | Used for `CACHE_URL` and `CACHE_URL_US_EAST` (RedisJSON required) |
+| Redis Stack | 6379 | Used for `MISC_CACHE_DRAGONFLY_PUBLIC_URL` (RedisJSON required) |
 | ElasticMQ | 9324 | Local SQS replacement, queue: `autumn.fifo` |
 | ClickHouse | 8123 | Used for `TINYBIRD_CLICKHOUSE_URL` |
 | Server | 8080 | Autumn API server |
@@ -71,7 +71,7 @@ Each agent instance gets its own local ElasticMQ. `SQS_QUEUE_URL_V2` is always h
 
 - **EventBridge lock-receipt scheduler**: `createSchedule` and `deleteSchedule` are no-ops when running against a local (non-amazonaws.com) queue URL. Lock-receipt expiry will not fire automatically in local dev.
 - **Supabase logo upload**: Storage is not configured locally. Logo upload endpoints return 400 — expected.
-- **Stripe webhooks**: `STRIPE_WEBHOOK_URL=http://localhost:8080`. Configure a Stripe CLI webhook forwarder separately if you need live webhook testing.
+- **Stripe webhooks**: `AUTUMN_PUBLIC_API_URL=http://localhost:8080`. Configure a Stripe CLI webhook forwarder separately if you need live webhook testing.
 
 ## Reset
 

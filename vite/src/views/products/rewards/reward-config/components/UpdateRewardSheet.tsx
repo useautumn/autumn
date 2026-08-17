@@ -102,7 +102,7 @@ export function UpdateRewardSheet({
 					const isBoolean =
 						features.find((f) => f.id === e.feature_id)?.type ===
 						FeatureType.Boolean;
-					return !isBoolean && (!e.allowance || e.allowance <= 0);
+					return !isBoolean && (e.allowance == null || e.allowance < 0);
 				})
 			)
 				return false;

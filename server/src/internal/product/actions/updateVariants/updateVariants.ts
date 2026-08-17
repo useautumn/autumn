@@ -65,6 +65,7 @@ const buildVariantTargetPlan = ({
 	}),
 	id: variant.id,
 	name: variantUpdate.name ?? variant.name,
+	auto_enable: false,
 });
 
 const ensureMissingVariantName = ({

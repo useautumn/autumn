@@ -1,4 +1,11 @@
 export {
+	type AggregateDeductionsPipeParams,
+	type AggregateDeductionsPipeRow,
+	aggregateDeductionsPipeParamsSchema,
+	aggregateDeductionsPipeResponseSchema,
+	createAggregateDeductionsPipe,
+} from "./aggregateDeductionsPipe.js";
+export {
 	type AggregateGroupablePipeParams,
 	type AggregateGroupablePipeRow,
 	aggregateGroupablePipeParamsSchema,
@@ -53,3 +60,10 @@ export {
 	propertyKeyExistsPipeParamsSchema,
 	propertyKeyExistsPipeResponseSchema,
 } from "./propertyKeyExistsPipe.js";
+export {
+	createPropertyRollupCoveragePipe,
+	type PropertyRollupCoveragePipeParams,
+	type PropertyRollupCoveragePipeRow,
+	propertyRollupCoveragePipeParamsSchema,
+	propertyRollupCoveragePipeResponseSchema,
+} from "./propertyRollupCoveragePipe.js";

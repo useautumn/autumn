@@ -25,7 +25,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PlanPriceHeader } from "@/components/forms/shared/plan-items/PlanPriceHeader";
-import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -50,8 +49,8 @@ import {
 	useHasLicenseChanges,
 } from "../components/plan-licenses/useLicenseSaveRegistry";
 import {
-	buildSelectedLicenseParentUpdates,
 	buildMigrateTargets,
+	buildSelectedLicenseParentUpdates,
 	getLicenseParentTargetId,
 } from "./buildMigrateTargets";
 import {
@@ -62,6 +61,7 @@ import {
 import { getDefaultPropagationTargetIds } from "./getDefaultPropagationTargetIds";
 import { LicenseChangeList } from "./LicenseChangeList";
 import { MigrateTargetsStep } from "./MigrateTargetsStep";
+import { PlanItemChanges } from "./PlanItemChanges";
 import {
 	PlanSettingsChanges,
 	previousAttributesToSettingChanges,
@@ -429,7 +429,7 @@ export default function PlanChangeDialog({
 	const applyChanges = async ({ migrate }: { migrate: boolean }) => {
 		// Type-to-confirm only gates the migration step (the only point where
 		// existing customers are moved). Lower-impact applies skip it.
-		if (step === "migrate" && !confirmed) {
+		if (step === "migrate" && migrateNeeded && !confirmed) {
 			toast.error("Confirmation text is incorrect");
 			return;
 		}
@@ -631,8 +631,11 @@ export default function PlanChangeDialog({
 													currency={currency}
 												/>
 											)}
-											<ItemChangeList
-												itemChanges={preview?.item_changes ?? []}
+											<PlanItemChanges
+												product={product}
+												originalItems={baseProduct?.items}
+												features={features}
+												currency={currency}
 											/>
 											<PlanSettingsChanges changes={settingsChanges} />
 											<LicenseChangeList
@@ -640,6 +643,11 @@ export default function PlanChangeDialog({
 												features={features}
 											/>
 										</div>
+										{settingsChanges.some((c) => c.key === "name") && (
+											<div className="rounded-lg bg-secondary/40 px-3 py-2.5 text-xs text-muted-foreground">
+												This update will rename Stripe products.
+											</div>
+										)}
 									</div>
 								)}
 
@@ -766,6 +774,12 @@ export default function PlanChangeDialog({
 															currency={currency}
 														/>
 													)}
+													<PlanItemChanges
+														product={product}
+														originalItems={baseProduct?.items}
+														features={features}
+														currency={currency}
+													/>
 													<PlanSettingsChanges changes={settingsChanges} />
 												</div>
 											) : (
@@ -841,7 +855,7 @@ export default function PlanChangeDialog({
 					</motion.div>
 				</div>
 
-				{step === "migrate" && (
+				{step === "migrate" && migrateNeeded && (
 					<div className="px-4 pt-3 pb-2">
 						<ConfirmInput
 							productId={product.id}
@@ -874,7 +888,9 @@ export default function PlanChangeDialog({
 						metaShortcut="enter"
 						onClick={advance}
 						isLoading={isLoading}
-						disabled={isLoading || (step === "migrate" && !confirmed)}
+						disabled={
+							isLoading || (step === "migrate" && migrateNeeded && !confirmed)
+						}
 						className="flex-1 justify-center"
 					>
 						{primaryText}

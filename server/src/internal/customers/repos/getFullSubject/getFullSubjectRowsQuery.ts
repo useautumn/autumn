@@ -6,6 +6,7 @@ import {
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
+import { looseEntitlementIsLiveSql } from "../../looseEntitlementSql.js";
 import { composeCustomerLicensesCtes } from "./composeCustomerLicensesCtes.js";
 import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
 
@@ -70,9 +71,7 @@ const subjectAggregateJoins = sql.join(
 
 const catalogKeyValues = sql.join(
 	CATALOG_AGGREGATES.map(({ cte, column }) =>
-		sql.raw(
-			`'${column}', COALESCE((SELECT items FROM ${cte}), '[]'::json)`,
-		),
+		sql.raw(`'${column}', COALESCE((SELECT items FROM ${cte}), '[]'::json)`),
 	),
 	sql`,
 			`,
@@ -300,17 +299,7 @@ export const getFullSubjectRowsQuery = ({
 					AND ce.pooled_balance_id IS NULL
 					AND ce.pooled_contribution_id IS NULL
 					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-					AND (
-						ce.balance != 0
-						OR ce.unlimited IS TRUE
-						OR EXISTS (
-							SELECT 1
-							FROM entitlements e
-							JOIN features f ON f.internal_id = e.internal_feature_id
-							WHERE e.id = ce.entitlement_id
-								AND f.type = 'boolean'
-						)
-					)
+					AND ${looseEntitlementIsLiveSql()}
 					${customerEntitlementSubjectPredicate}
 				ORDER BY subject_entity_priority ASC, ce.id DESC
 				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}

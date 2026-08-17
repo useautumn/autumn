@@ -31,6 +31,24 @@ const creditSystemContainsFeature = ({
 	return false;
 };
 
+/** Adds the metered features each selected credit system draws from. */
+export const addCreditSystemMeteredFeatureIds = ({
+	features,
+	featureIds,
+}: {
+	features: Feature[];
+	featureIds: Set<string>;
+}) => {
+	for (const feature of features) {
+		if (!isAnyCreditSystem(feature.type)) continue;
+		if (!featureIds.has(feature.id)) continue;
+		const schema: CreditSchemaItem[] | undefined = feature.config?.schema;
+		for (const schemaItem of schema ?? []) {
+			featureIds.add(schemaItem.metered_feature_id);
+		}
+	}
+};
+
 export const getCreditSystemsFromFeature = ({
 	featureId,
 	features,

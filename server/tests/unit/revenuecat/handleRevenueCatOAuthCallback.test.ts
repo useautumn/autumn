@@ -111,7 +111,7 @@ mock.module("@/external/revenueCat/misc/revenuecatOAuth.js", () => ({
 		return new OAuth2Client(
 			process.env.REVENUECAT_OAUTH_CLIENT_ID!,
 			process.env.REVENUECAT_OAUTH_CLIENT_SECRET!,
-			`${process.env.BETTER_AUTH_URL}/revenuecat/oauth_callback`,
+			`${process.env.AUTUMN_PUBLIC_API_URL}/revenuecat/oauth_callback`,
 		).validateAuthorizationCode(
 			"https://api.revenuecat.com/oauth2/token",
 			code,

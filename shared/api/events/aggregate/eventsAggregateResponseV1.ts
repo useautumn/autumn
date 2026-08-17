@@ -87,6 +87,69 @@ const EventAggregateTotalItemSchema = z.object({
 	sum: z.number().meta({ description: "Sum of event values for this feature" }),
 });
 
+/**
+ * One balance that a tracked feature drew from. `entity_id` is null for a
+ * customer-level balance shared across every entity.
+ */
+const DeductionBalanceSchema = z.object({
+	balance_id: z.string().meta({
+		description:
+			"ID of the balance row drawn from (customer_entitlement or rollover).",
+	}),
+	entity_id: z.string().nullable().meta({
+		description:
+			"Entity that owns this balance, or null when it is customer-level and shared.",
+	}),
+	plan_id: z.string().nullable().meta({
+		description:
+			"Plan the balance came with. Null for balances created outside a plan.",
+	}),
+	reset: z
+		.object({
+			interval: z.string(),
+			resets_at: z.number().nullable(),
+		})
+		.nullable()
+		.meta({ description: "Reset config for this balance, captured at deduction time." }),
+	credit_cost: z.number().nullable().meta({
+		description:
+			"Multiplier applied converting the tracked feature into this balance. Null when 1:1, or when the query spans sources converting at different rates.",
+	}),
+	deducted: z.number(),
+	events: z.number(),
+});
+
+/** Everything one feature's balances absorbed in this period. */
+const DeductionFeatureSchema = z.object({
+	feature_type: z.enum(["metered", "credit_system"]).meta({
+		description:
+			"credit_system means `deducted` is credits; metered means it is that feature's own amount.",
+	}),
+	deducted: z.number(),
+	events: z.number(),
+	balances: z.array(DeductionBalanceSchema),
+});
+
+const DeductionPeriodSchema = z.object({
+	period: z.number().meta({
+		description: "Unix timestamp (epoch ms), same basis as `list`.",
+	}),
+	values: z.record(z.string(), DeductionFeatureSchema).meta({
+		description:
+			"Keyed by the feature that OWNS the balance drawn from, not the feature that was tracked.",
+	}),
+	grouped_values: z
+		.record(z.string(), z.record(z.string(), z.object({
+			deducted: z.number(),
+			credit_cost: z.number().nullable().optional(),
+		})))
+		.optional()
+		.meta({
+			description:
+				"Present only when group_by is used. Keyed by balance_id, then by group value — the only way to attribute a shared balance to the entity that spent from it.",
+		}),
+});
+
 export const EventsAggregateResponseV1Schema = z.object({
 	list: z.array(EventAggregateListItemV1Schema).meta({
 		description: "Array of time periods with aggregated values",
@@ -95,7 +158,15 @@ export const EventsAggregateResponseV1Schema = z.object({
 		description:
 			"Total aggregations per feature. Keys are feature IDs, values contain count and sum.",
 	}),
+	deductions: z.array(DeductionPeriodSchema).optional().meta({
+		description:
+			'Per-balance breakdown of what was consumed. Present only when aggregate_on is "deducted".',
+	}),
 });
+
+export type DeductionBalance = z.infer<typeof DeductionBalanceSchema>;
+export type DeductionFeature = z.infer<typeof DeductionFeatureSchema>;
+export type DeductionPeriod = z.infer<typeof DeductionPeriodSchema>;
 
 export type EventsAggregateResponseV1 = z.infer<
 	typeof EventsAggregateResponseV1Schema

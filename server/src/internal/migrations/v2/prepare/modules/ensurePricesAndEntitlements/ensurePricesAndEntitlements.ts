@@ -258,7 +258,8 @@ const buildProductsWithPreparedRows = ({
 
 export const ensurePricesAndEntitlements: PrepareModule<
 	EnsurePricesAndEntitlementsInput,
-	EnsurePricesAndEntitlementsResult
+	EnsurePricesAndEntitlementsResult,
+	"ensure_prices_and_entitlements"
 > = {
 	kind: "ensure_prices_and_entitlements",
 
@@ -442,7 +443,11 @@ export const ensurePricesAndEntitlements: PrepareModule<
 							candidateProducts: resolved,
 							reuseProcessor: false,
 						});
-						await initStripeResourcesForProducts({ ctx, products: [product] });
+						await initStripeResourcesForProducts({
+							ctx,
+							products: [product],
+							allowLiveCreate: true,
+						});
 						resolved.push(product);
 					}
 				}),

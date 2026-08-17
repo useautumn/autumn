@@ -12,12 +12,13 @@ import {
 	getCreateSchedulePhaseTimingError,
 	hasPersistedCreateSchedule,
 	type SchedulePhase,
+	type SchedulePlan,
 } from "../createScheduleFormSchema";
 
 export function buildCreateScheduleRequestBody({
 	customerId,
-	entityId,
 	phases,
+	unscheduledPlans = [],
 	products,
 	features,
 	nowMs,
@@ -26,8 +27,8 @@ export function buildCreateScheduleRequestBody({
 	allowFirstPhaseBackdate,
 }: {
 	customerId: string | undefined;
-	entityId: string | undefined;
 	phases: SchedulePhase[];
+	unscheduledPlans?: SchedulePlan[];
 	products: ProductV2[];
 	features: Feature[];
 	nowMs?: number;
@@ -58,6 +59,8 @@ export function buildCreateScheduleRequestBody({
 							items: plan.items,
 							version: plan.version,
 							isCustom: plan.isCustom,
+							// Scope is per plan and always explicit; later phases inherit it.
+							entityId: index === 0 ? (plan.entityId ?? null) : undefined,
 							product: products.find(
 								(product) => product.id === plan.productId,
 							),
@@ -89,28 +92,49 @@ export function buildCreateScheduleRequestBody({
 			: {}),
 	}));
 
+	const apiUnscheduledPlans = unscheduledPlans.flatMap((plan) =>
+		plan.productId
+			? [
+					buildBillingPlan({
+						productId: plan.productId,
+						prepaidOptions: plan.prepaidOptions,
+						items: plan.items,
+						version: plan.version,
+						isCustom: plan.isCustom,
+						entityId: plan.entityId ?? null,
+						product: products.find((product) => product.id === plan.productId),
+						features,
+					}),
+				]
+			: [],
+	);
+
 	const body: Record<string, unknown> = {
 		customer_id: customerId,
 		phases: phasesWithBillingAnchors,
+		...(apiUnscheduledPlans.length > 0
+			? { unscheduled_plans: apiUnscheduledPlans }
+			: {}),
 	};
-	if (entityId) body.entity_id = entityId;
 
-	// Top-level billing flags aren't supported when the immediate phase is a
-	// multi-attach; future phase anchor resets are allowed for persisted schedules.
-	const supportsBillingFlags = !hasMultipleImmediatePlans;
-	if (supportsBillingFlags) {
-		if (billingBehavior) body.billing_behavior = billingBehavior;
-		if (resetBillingCycle && !hasPersistedSchedule) {
-			body.billing_cycle_anchor = "now";
-		}
+	if (billingBehavior) body.billing_behavior = billingBehavior;
+
+	// Anchor resets aren't supported when the immediate phase is a multi-attach;
+	// future phase anchor resets are allowed for persisted schedules.
+	if (
+		!hasMultipleImmediatePlans &&
+		resetBillingCycle &&
+		!hasPersistedSchedule
+	) {
+		body.billing_cycle_anchor = "now";
 	}
 	return body as CreateScheduleParamsV0;
 }
 
 export function useCreateScheduleRequestBody({
 	customerId,
-	entityId,
 	phases,
+	unscheduledPlans,
 	products,
 	features,
 	nowMs,
@@ -119,8 +143,8 @@ export function useCreateScheduleRequestBody({
 	allowFirstPhaseBackdate,
 }: {
 	customerId: string | undefined;
-	entityId: string | undefined;
 	phases: SchedulePhase[];
+	unscheduledPlans?: SchedulePlan[];
 	products: ProductV2[];
 	features: Feature[];
 	nowMs?: number;
@@ -132,8 +156,8 @@ export function useCreateScheduleRequestBody({
 		() =>
 			buildCreateScheduleRequestBody({
 				customerId,
-				entityId,
 				phases,
+				unscheduledPlans,
 				products,
 				features,
 				nowMs,
@@ -143,8 +167,8 @@ export function useCreateScheduleRequestBody({
 			}),
 		[
 			customerId,
-			entityId,
 			phases,
+			unscheduledPlans,
 			products,
 			features,
 			nowMs,
@@ -157,22 +181,22 @@ export function useCreateScheduleRequestBody({
 
 export function useBuildCreateScheduleRequestBody({
 	customerId,
-	entityId,
 	products,
 	features,
 	nowMs,
 	getPhases,
+	getUnscheduledPlans,
 	getBillingBehavior,
 	getResetBillingCycle,
 	getEnablePlanImmediately,
 	getAllowFirstPhaseBackdate,
 }: {
 	customerId: string | undefined;
-	entityId: string | undefined;
 	products: ProductV2[];
 	features: Feature[];
 	nowMs?: number;
 	getPhases: () => SchedulePhase[];
+	getUnscheduledPlans?: () => SchedulePlan[];
 	getBillingBehavior?: () => BillingBehavior | null;
 	getResetBillingCycle?: () => boolean;
 	getEnablePlanImmediately?: () => boolean;
@@ -183,8 +207,8 @@ export function useBuildCreateScheduleRequestBody({
 			(stageParams: BillingStageParams = {}): CreateScheduleParamsV0 | null => {
 				const requestBody = buildCreateScheduleRequestBody({
 					customerId,
-					entityId,
 					phases: getPhases(),
+					unscheduledPlans: getUnscheduledPlans?.(),
 					products,
 					features,
 					nowMs,
@@ -205,11 +229,11 @@ export function useBuildCreateScheduleRequestBody({
 			},
 		[
 			customerId,
-			entityId,
 			products,
 			features,
 			nowMs,
 			getPhases,
+			getUnscheduledPlans,
 			getBillingBehavior,
 			getResetBillingCycle,
 			getEnablePlanImmediately,

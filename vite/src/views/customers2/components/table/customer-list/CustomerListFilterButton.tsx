@@ -10,8 +10,10 @@ import { FunnelSimpleIcon } from "@phosphor-icons/react";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { BalanceFilterSubMenu } from "@/views/customers/components/filter-dropdown/BalanceFilterSubMenu";
 import { FilterStatusSubMenu } from "@/views/customers/components/filter-dropdown/FilterStatusSubMenu";
 import { IntervalSubMenu } from "@/views/customers/components/filter-dropdown/IntervalSubMenu";
+import { JoinedDateSubMenu } from "@/views/customers/components/filter-dropdown/JoinedDateSubMenu";
 import { ProcessorSubMenu } from "@/views/customers/components/filter-dropdown/ProcessorSubMenu";
 import { ProductsSubMenu } from "@/views/customers/components/filter-dropdown/ProductsSubMenu";
 import { SaveViewPopover } from "@/views/customers/components/filter-dropdown/SavedViewPopover";
@@ -28,6 +30,8 @@ interface CustomerListFilterButtonProps {
 	onClearExtra?: () => void;
 	onFilterChange?: () => void;
 	hideSavedViews?: boolean;
+	hideInterval?: boolean;
+	hideCreatedAt?: boolean;
 }
 
 export function CustomerListFilterButton({
@@ -36,6 +40,8 @@ export function CustomerListFilterButton({
 	onClearExtra,
 	onFilterChange,
 	hideSavedViews,
+	hideInterval,
+	hideCreatedAt,
 }: CustomerListFilterButtonProps = {}) {
 	const { queryStates, setFilters } = useCustomerFilters();
 	const [open, setOpen] = useState(false);
@@ -54,6 +60,12 @@ export function CustomerListFilterButton({
 			none: false,
 			processor: [],
 			interval: [],
+			balanceFeature: "",
+			balanceOp: ">",
+			balanceValue: "",
+			balanceBasis: "remaining",
+			joinedFrom: null,
+			joinedTo: null,
 		});
 		onFilterChange?.();
 		onClearExtra?.();
@@ -71,13 +83,12 @@ export function CustomerListFilterButton({
 			>
 				<IconButton
 					variant="secondary"
-					className={cn("gap-2", open && "btn-secondary-active")}
+					aria-label="Filter"
+					className={cn(open && "btn-secondary-active")}
 					icon={
 						<FunnelSimpleIcon size={14} className="text-tertiary-foreground" />
 					}
-				>
-					Filter
-				</IconButton>
+				/>
 				{hasActiveFilters && (
 					<span className="absolute top-0 right-0 h-2.5 w-2.5 translate-x-1/3 -translate-y-1/3 rounded-full bg-primary" />
 				)}
@@ -90,8 +101,10 @@ export function CustomerListFilterButton({
 					{extraMenuItems}
 					<FilterStatusSubMenu onChange={onFilterChange} />
 					<ProductsSubMenu onChange={onFilterChange} />
-					<IntervalSubMenu onChange={onFilterChange} />
+					{!hideInterval && <IntervalSubMenu onChange={onFilterChange} />}
 					<ProcessorSubMenu onChange={onFilterChange} />
+					<BalanceFilterSubMenu onChange={onFilterChange} />
+					{!hideCreatedAt && <JoinedDateSubMenu onChange={onFilterChange} />}
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator className="m-0" />
 				{!hideSavedViews && views.length > 0 && (

@@ -1,3 +1,5 @@
+import { ACTION_FAILED_MESSAGE } from "../../../ui/messages.js";
+
 export const isErrorResult = (result: unknown): boolean =>
 	typeof result === "object" &&
 	result !== null &&
@@ -87,8 +89,8 @@ export const approvalErrorResult = (
 				? error
 				: error && typeof error === "object"
 					? (getObjectMessage(error as Record<string, unknown>) ??
-						"The action failed.")
-					: "The action failed.";
+						ACTION_FAILED_MESSAGE)
+					: ACTION_FAILED_MESSAGE;
 	const cleanedRawMessage = cleanMessage(rawMessage);
 	const message = cleanMessage(
 		parseAutumnApiErrorMessage(cleanedRawMessage) ?? cleanedRawMessage,
@@ -96,7 +98,7 @@ export const approvalErrorResult = (
 
 	return {
 		error: true as const,
-		message: truncateMessage(message || "The action failed."),
+		message: truncateMessage(message || ACTION_FAILED_MESSAGE),
 		...(options?.retryable ? { retryable: true as const } : {}),
 	};
 };
