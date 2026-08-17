@@ -11,8 +11,26 @@ import { slackMessageRouterInstructions } from "../../../prompts/slackMessageRou
 const ROUTER_TIMEOUT_MS = ms.seconds(10);
 
 const routingSchema = z.strictObject({
-	disposition: z.enum(["respond", "ignore", "unsubscribe"]),
+	disposition: z.enum(["respond", "ignore"]),
 });
+
+const explicitOptOutPattern =
+	/^(?:stop\s+(?:replying|responding|listening|watching)(?:\s+(?:to|in)\s+(?:this|the)\s+thread)?|(?:do not|don't|dont|never)\s+(?:reply|respond|listen|watch)(?:\s+(?:anymore|again))?|leave\s+(?:this|the)\s+thread|unsubscribe(?:\s+from\s+(?:this|the)\s+thread)?)(?:\s+(?:now|please))?[.!?]*$/i;
+
+const isExplicitOptOut = (text: string) =>
+	explicitOptOutPattern.test(
+		text
+			.trim()
+			.replace(/^(?:hey|hi)\s+/i, "")
+			.replace(
+				/^(?:<@[^>]+>|@?autumn(?:\s+chat(?:\s+local)?)?|(?:this|the)\s+bot)[,:\s-]*/i,
+				"",
+			)
+			.replace(
+				/^(?:please\s+|(?:can|could|would)\s+you\s+(?:please\s+)?)/i,
+				"",
+			),
+	);
 
 const applyMentionRouting = ({
 	disposition,
@@ -35,6 +53,14 @@ export const classifySubscribedMessage = async ({
 	recentMessages: ReadonlyArray<AgentContextMessage>;
 	text: string;
 }) => {
+	if (isExplicitOptOut(text)) {
+		logger.debug("Classified subscribed Slack message", {
+			event: "leaf.slack_message_classified",
+			data: { disposition: "unsubscribe", source: "explicit_opt_out" },
+		});
+		return "unsubscribe" as const;
+	}
+
 	try {
 		const output = classify
 			? await classify()
