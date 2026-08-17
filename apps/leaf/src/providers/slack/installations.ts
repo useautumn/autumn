@@ -16,6 +16,7 @@ import type { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { chatThreadContextsRepo } from "../../internal/chatThreadContexts/repos/chatThreadContextsRepo.js";
 import { replaceInstallationOAuthCredentials } from "../../internal/installations/actions/replaceInstallationOAuthCredentials.js";
+import { shouldUseSlackAdminInstallationForWorkspace } from "../../internal/slackAdmin/access.js";
 import { decrypt, encrypt } from "../../lib/crypto.js";
 import { db } from "../../lib/db.js";
 import { env } from "../../lib/env.js";
@@ -61,6 +62,28 @@ export const findInstallationWithOrg = async (
 				org_slug: row.orgSlug,
 			}
 		: undefined;
+};
+
+export const findSlackInstallationForWorkspace = async ({
+	workspaceId,
+}: {
+	workspaceId: string;
+}) => {
+	if (
+		shouldUseSlackAdminInstallationForWorkspace({
+			configuredWorkspaceId: env.SLACK_ADMIN_WORKSPACE_ID,
+			isProduction: process.env.NODE_ENV === "production",
+			workspaceId,
+		})
+	) {
+		const adminInstallation = await findInstallationWithOrg(
+			`slack_admin:${env.SLACK_CLIENT_ID}`,
+			workspaceId,
+		);
+		if (adminInstallation) return adminInstallation;
+	}
+
+	return await findInstallationWithOrg("slack", workspaceId);
 };
 
 export const getInstallationKey = (

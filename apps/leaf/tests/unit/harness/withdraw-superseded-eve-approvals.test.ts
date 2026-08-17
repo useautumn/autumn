@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
-import type { ThreadRef } from "../../../src/agent/runMessage/types.js";
+import type { AgentThreadRef } from "../../../src/internal/agentRuntime/domain/agentTurnContext.js";
 import type {
 	EveAuthContext,
 	EveSessionRef,
-} from "../../../src/harness/eve/types.js";
+} from "../../../src/internal/agentRuntime/eve/types.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 // Stubbed first and left stubbed: `env` parses leaf's whole schema at import and
@@ -20,8 +20,7 @@ const mockLeafModule = ({
 }: {
 	factory: () => Record<string, unknown>;
 	specifier: string;
-}) =>
-	mockModuleWithRestore({ baseUrl: import.meta.url, factory, specifier });
+}) => mockModuleWithRestore({ baseUrl: import.meta.url, factory, specifier });
 
 let pendingApprovals: ChatApproval[] = [];
 const cancelledApprovalIds: string[] = [];
@@ -57,7 +56,7 @@ await mockLeafModule({
 const failingRequestIds = new Set<string>();
 const postedRequestIds: string[] = [];
 await mockLeafModule({
-	specifier: "../../../src/harness/eve/client.js",
+	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
 		postEveInputResponse: async ({ requestId }: { requestId: string }) => {
 			postedRequestIds.push(requestId);
@@ -76,10 +75,10 @@ await mockLeafModule({
 
 const drainedSessionIds: string[] = [];
 await mockLeafModule({
-	specifier: "../../../src/harness/eve/approval.js",
+	specifier:
+		"../../../src/internal/agentRuntime/actions/submitAgentInput/drainParkedAgentTurn.js",
 	factory: () => ({
-		denyOptionFromApproval: () => "deny",
-		drainParkedEveTurn: async ({ session }: { session: EveSessionRef }) => {
+		drainParkedAgentTurn: async ({ session }: { session: EveSessionRef }) => {
 			drainedSessionIds.push(session.sessionId);
 		},
 	}),
@@ -87,7 +86,7 @@ await mockLeafModule({
 
 const savedSessionIds: string[] = [];
 await mockLeafModule({
-	specifier: "../../../src/harness/eve/sessionState.js",
+	specifier: "../../../src/internal/agentRuntime/eve/sessionState.js",
 	factory: () => ({
 		saveEveSessionState: async ({ session }: { session: EveSessionRef }) => {
 			savedSessionIds.push(session.sessionId);
@@ -95,8 +94,8 @@ await mockLeafModule({
 	}),
 });
 
-const { withdrawSupersededEveApprovals } = await import(
-	"../../../src/harness/eve/supersededApprovals.js"
+const { withdrawSupersededApprovals } = await import(
+	"../../../src/internal/approvals/actions/withdrawSupersededApprovals.js"
 );
 
 const approval = (id: string, toolCallId?: string) =>
@@ -122,7 +121,7 @@ const thread = {
 	provider: "slack",
 	threadId: "thread_1",
 	workspaceId: "T1",
-} as ThreadRef;
+} as AgentThreadRef;
 
 const logger = { warn: () => {} } as unknown as AutumnLogger;
 
@@ -130,7 +129,7 @@ let session: EveSessionRef;
 let supersededBatches: ChatApproval[][];
 
 const withdraw = () =>
-	withdrawSupersededEveApprovals({
+	withdrawSupersededApprovals({
 		auth,
 		logger,
 		onApprovalsSuperseded: async (approvals) => {
@@ -142,7 +141,7 @@ const withdraw = () =>
 		thread,
 	});
 
-describe("withdrawSupersededEveApprovals", () => {
+describe("withdrawSupersededApprovals", () => {
 	beforeEach(() => {
 		pendingApprovals = [];
 		failingRequestIds.clear();

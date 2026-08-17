@@ -13,7 +13,10 @@ import {
 	LinkButton,
 	Modal,
 } from "chat";
-import { normalizeToolName, toolLabel } from "../agent/tools/toolPolicy.js";
+import {
+	normalizeToolName,
+	toolLabel,
+} from "../internal/agentRuntime/tools/toolPolicy.js";
 import { toolRequestFromArgs } from "../internal/approvals/utils/toolRequest.js";
 import { ACTION_FAILED_MESSAGE } from "./messages.js";
 import { parsePreviewPayload, previewElements } from "./previewContent.js";

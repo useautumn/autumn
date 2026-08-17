@@ -1,6 +1,7 @@
+import { ms } from "@autumn/shared";
 import { logger } from "../../lib/logger.js";
 
-const SESSION_RESOLVE_TIMEOUT_MS = 15_000;
+const SESSION_RESOLVE_TIMEOUT_MS = ms.seconds(15);
 
 export type RunStopReason = "timeout" | "user";
 
