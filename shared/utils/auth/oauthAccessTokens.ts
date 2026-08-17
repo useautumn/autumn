@@ -14,7 +14,7 @@ export type OAuthAccessTokenDb = Pick<
  * Hash an OAuth token with SHA-256 + base64url encoding, matching
  * better-auth's default token hashing method.
  */
-export async function hashOAuthToken(token: string): Promise<string> {
+export function hashOAuthToken(token: string): string {
 	return createHash("sha256").update(token).digest("base64url");
 }
 
@@ -22,8 +22,8 @@ export async function hashOAuthToken(token: string): Promise<string> {
  * Values to match against the stored `oauth_access_token.token` column:
  * the base64url SHA-256 hash, plus the raw value for legacy unhashed rows.
  */
-export const getOAuthAccessTokenValues = async (rawAccessToken: string) => [
-	...new Set([await hashOAuthToken(rawAccessToken), rawAccessToken]),
+export const getOAuthAccessTokenValues = (rawAccessToken: string) => [
+	...new Set([hashOAuthToken(rawAccessToken), rawAccessToken]),
 ];
 
 /**

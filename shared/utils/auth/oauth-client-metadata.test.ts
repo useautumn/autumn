@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import {
-	isMcpClientMetadata,
 	MCP_CLIENT_KIND,
 	parseOAuthClientMetadata,
 } from "./oauthClientMetadata";
@@ -28,15 +27,5 @@ describe("parseOAuthClientMetadata", () => {
 		expect(parseOAuthClientMetadata("{not json")).toEqual({});
 		expect(parseOAuthClientMetadata("42")).toEqual({});
 		expect(parseOAuthClientMetadata(7)).toEqual({});
-	});
-});
-
-describe("isMcpClientMetadata", () => {
-	test("matches only the mcp_client kind", () => {
-		expect(isMcpClientMetadata({ kind: MCP_CLIENT_KIND })).toBe(true);
-		expect(isMcpClientMetadata('{"kind":"mcp_client"}')).toBe(true);
-		expect(isMcpClientMetadata({ kind: "atmn" })).toBe(false);
-		expect(isMcpClientMetadata({ client: "summer" })).toBe(false);
-		expect(isMcpClientMetadata(null)).toBe(false);
 	});
 });

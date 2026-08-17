@@ -5,7 +5,11 @@ import {
 	isSecretKeyPrefix,
 	stripOAuthTokenPrefix,
 } from "@autumn/auth";
-import { oauthAudienceAllowsResource } from "@autumn/auth/oauth";
+import {
+	getProtectedResourceMetadataUrl,
+	getWwwAuthenticateHeader,
+	oauthAudienceAllowsResource,
+} from "@autumn/auth/oauth";
 import {
 	type AutumnMcpAuth,
 	DEFAULT_API_VERSION,
@@ -20,11 +24,54 @@ import {
 } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { getRequestedOAuthResourceScopes } from "@autumn/shared/utils/auth/oauthScopeUtils";
 import * as z from "zod/v4";
-import {
-	insufficientScopeError,
-	invalidTokenError,
-} from "./oauthChallenges.js";
 import { OAuthHttpError } from "./protectedResourceMetadata.js";
+
+/**
+ * The transport cannot know which tool a session will reach, so every challenge
+ * names the full advertised set and one step-up authorization covers them all.
+ */
+const buildChallenge = ({
+	error,
+	resourceUrl,
+}: {
+	error: string;
+	resourceUrl: string;
+}) =>
+	getWwwAuthenticateHeader({
+		error,
+		resourceMetadataUrl: getProtectedResourceMetadataUrl({ resourceUrl }),
+		scopes: DEFAULT_OAUTH_RESOURCE_SCOPES,
+	});
+
+/** RFC 6750 §3.1 401: the credential is missing, malformed, expired or wrong-audience. */
+const invalidTokenError = ({
+	message,
+	resourceUrl,
+}: {
+	message: string;
+	resourceUrl: string;
+}) =>
+	new OAuthHttpError(
+		401,
+		message,
+		"invalid_token",
+		buildChallenge({ error: "invalid_token", resourceUrl }),
+	);
+
+/** RFC 6750 §3.1 403: the credential is valid but grants nothing this resource exposes. */
+const insufficientScopeError = ({
+	message,
+	resourceUrl,
+}: {
+	message: string;
+	resourceUrl: string;
+}) =>
+	new OAuthHttpError(
+		403,
+		message,
+		"insufficient_scope",
+		buildChallenge({ error: "insufficient_scope", resourceUrl }),
+	);
 
 type AuthLogger = {
 	warning: (message: string, data?: Record<string, unknown>) => void;

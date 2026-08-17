@@ -17,6 +17,7 @@ import {
 	oauthRefreshToken,
 } from "@autumn/shared";
 import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
+import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { MCP_CLIENT_KIND } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import { and, eq } from "drizzle-orm";
 import { encrypt } from "../../../lib/crypto.js";
@@ -75,15 +76,6 @@ const getProviderOAuthConfig = ({
 		mcpClientType: "slack",
 		redirectUri: SLACK_OAUTH_REDIRECT_URI,
 	};
-};
-
-const tokenHash = ({ token }: { token: string }) => {
-	const hash = crypto.createHash("sha256").update(token).digest();
-	return hash
-		.toString("base64")
-		.replace(/\+/g, "-")
-		.replace(/\//g, "_")
-		.replace(/=/g, "");
 };
 
 const generateToken = () => crypto.randomBytes(48).toString("base64url");
@@ -235,7 +227,7 @@ const createCredentialForEnv = async ({
 
 	await tx.insert(oauthRefreshToken).values({
 		id: refreshTokenId,
-		token: tokenHash({ token: rawRefreshToken }),
+		token: hashOAuthToken(rawRefreshToken),
 		clientId: config.clientId,
 		userId,
 		referenceId: orgId,
@@ -247,7 +239,7 @@ const createCredentialForEnv = async ({
 	});
 	await tx.insert(oauthAccessToken).values({
 		id: accessTokenId,
-		token: tokenHash({ token: rawAccessToken }),
+		token: hashOAuthToken(rawAccessToken),
 		clientId: config.clientId,
 		userId,
 		referenceId: orgId,

@@ -21,6 +21,3 @@ export const parseOAuthClientMetadata = (
 		return {};
 	}
 };
-
-export const isMcpClientMetadata = (metadata: unknown) =>
-	parseOAuthClientMetadata(metadata).kind === MCP_CLIENT_KIND;

@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { isMcpOAuthClient, isMcpOAuthClientRecord } from "@autumn/auth/oauth";
+import {
+	isMcpOAuthClientRecord,
+	isReservedMcpOAuthClientId,
+} from "@autumn/auth/oauth";
 import { MCP_CLIENT_KIND } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { isMcpOAuthClient as isMcpOAuthClientFromDb } from "@/internal/auth/oauth/mcpOAuthScopes.js";
@@ -10,14 +13,16 @@ afterEach(() => {
 	process.env.INTERNAL_MCP_OAUTH_CLIENT_ID = originalInternalMcpClientId;
 });
 
-describe("isMcpOAuthClient", () => {
+describe("isReservedMcpOAuthClientId", () => {
 	test("matches env-configured internal-mcp client ids", () => {
 		process.env.INTERNAL_MCP_OAUTH_CLIENT_ID = "internal_one, internal_two";
 
-		expect(isMcpOAuthClient({ clientId: "internal_one" })).toBe(true);
-		expect(isMcpOAuthClient({ clientId: "internal_two" })).toBe(true);
-		expect(isMcpOAuthClient({ clientId: "oauth_client_other" })).toBe(false);
-		expect(isMcpOAuthClient({ clientId: null })).toBe(false);
+		expect(isReservedMcpOAuthClientId({ clientId: "internal_one" })).toBe(true);
+		expect(isReservedMcpOAuthClientId({ clientId: "internal_two" })).toBe(true);
+		expect(isReservedMcpOAuthClientId({ clientId: "oauth_client_other" })).toBe(
+			false,
+		);
+		expect(isReservedMcpOAuthClientId({ clientId: null })).toBe(false);
 	});
 });
 

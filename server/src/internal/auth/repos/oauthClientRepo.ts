@@ -90,21 +90,7 @@ export const updateOAuthClientById = async ({
 	return client ?? null;
 };
 
-export type OAuthClientInsert = {
-	id: string;
-	clientId: string;
-	name: string;
-	redirectUris: string[];
-	scopes: string[];
-	tokenEndpointAuthMethod: string;
-	grantTypes: string[];
-	responseTypes: string[];
-	public: boolean;
-	type: string;
-	metadata: unknown;
-	createdAt: Date;
-	updatedAt: Date;
-};
+export type OAuthClientInsert = typeof oauthClient.$inferInsert;
 
 export const insertOAuthClient = async ({
 	db,
@@ -128,33 +114,8 @@ export const upsertOAuthClient = async ({
 	update,
 }: {
 	db: DrizzleCli;
-	insert: {
-		id: string;
-		clientId: string;
-		name: string;
-		redirectUris: string[];
-		scopes: string[];
-		tokenEndpointAuthMethod: string;
-		grantTypes: string[];
-		responseTypes: string[];
-		public: boolean;
-		type: string;
-		metadata: unknown;
-		createdAt: Date;
-		updatedAt: Date;
-	};
-	update: {
-		name: string;
-		redirectUris: string[];
-		scopes: string[];
-		tokenEndpointAuthMethod: string;
-		grantTypes: string[];
-		responseTypes: string[];
-		public: boolean;
-		type: string;
-		metadata: unknown;
-		updatedAt: Date;
-	};
+	insert: OAuthClientInsert;
+	update: Omit<OAuthClientInsert, "id" | "clientId" | "createdAt">;
 }) => {
 	await db.insert(oauthClient).values(insert).onConflictDoUpdate({
 		target: oauthClient.clientId,

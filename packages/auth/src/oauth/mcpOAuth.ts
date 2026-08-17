@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared/utils/auth/oauthRequestBody";
 import {
 	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
+	clientIdsFromEnv,
 	SUMMER_OAUTH_CLIENT_ID,
 } from "./reservedOAuthClients.js";
 
@@ -19,17 +20,13 @@ const MCP_OAUTH_CLIENT_KINDS: readonly string[] = [
 	"internal_mcp",
 ];
 
-const internalMcpOAuthClientIds = () =>
-	(process.env.INTERNAL_MCP_OAUTH_CLIENT_ID ?? "")
-		.split(",")
-		.map((clientId) => clientId.trim())
-		.filter(Boolean);
-
-export const isMcpOAuthClient = ({
+export const isReservedMcpOAuthClientId = ({
 	clientId,
 }: {
 	clientId: string | null | undefined;
-}) => !!clientId && internalMcpOAuthClientIds().includes(clientId);
+}) =>
+	!!clientId &&
+	clientIdsFromEnv("INTERNAL_MCP_OAUTH_CLIENT_ID").includes(clientId);
 
 export const isMcpOAuthClientRecord = ({
 	clientId,
@@ -38,7 +35,7 @@ export const isMcpOAuthClientRecord = ({
 	clientId: string | null | undefined;
 	metadata?: unknown;
 }) => {
-	if (isMcpOAuthClient({ clientId })) return true;
+	if (isReservedMcpOAuthClientId({ clientId })) return true;
 	return MCP_OAUTH_CLIENT_KINDS.includes(
 		parseOAuthClientMetadata(metadata).kind ?? "",
 	);

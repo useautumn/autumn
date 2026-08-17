@@ -1,3 +1,4 @@
+import { clientIdsFromEnv } from "@autumn/auth/oauth";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { oauthClientRepo } from "../repos/oauthClientRepo.js";
 
@@ -29,12 +30,7 @@ const ATMN_OAUTH_SCOPES = new Set<string>([
 ]);
 
 const configuredAtmnClientIds = () =>
-	new Set(
-		(process.env.ATMN_OAUTH_CLIENT_IDS ?? "")
-			.split(",")
-			.map((id) => id.trim())
-			.filter(Boolean),
-	);
+	new Set(clientIdsFromEnv("ATMN_OAUTH_CLIENT_IDS"));
 
 const metadataMarksAtmn = (metadata: unknown) => {
 	if (!metadata) return false;
