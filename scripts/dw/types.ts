@@ -8,10 +8,13 @@ export type RegistryEntry = {
 	branchName?: string;
 	databaseUrl?: string;
 	lastUsedAt?: number;
-	/** Public ngrok URL for this worktree's tunnel, refreshed each `bun dw setup`. */
+	/** Public Cloudflare origin, e.g. https://autumn-wt45-a1b2c3.autumnworktree.com */
+	publicUrl?: string;
+	cloudflareTunnelId?: string;
+	/** @deprecated leftover ngrok URL; read as fallback for publicUrl. */
 	ngrokUrl?: string;
 	ngrokViteUrl?: string;
-	/** ngrok reserved-domain id, so `bun dw teardown` can release it via the API. */
+	/** @deprecated leftover ngrok reserved-domain id; released on public-access ensure. */
 	reservedDomainId?: string;
 	reservedViteDomainId?: string;
 	/** Neon project when provisioned outside the default Autumn project. */

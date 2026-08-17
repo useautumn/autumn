@@ -1,16 +1,74 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { isCloudAgent } from "@autumn/env";
 import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
+import { startPublicAccess } from "./cloudflare.ts";
+import { emulateGoogleUrl } from "./emulate.ts";
 import { isProvisioned } from "./entry.ts";
-import { provisionedInfraEnv } from "./env-files.ts";
-import { isHeadless } from "./headless.ts";
+import { provisionedInfraEnv, writeEnvLocalFiles } from "./env-files.ts";
 import { registerPortlessAliases } from "./portless.ts";
-import { portlessHttpsUrl } from "./ports.ts";
+import { serverPortFor } from "./ports.ts";
+import {
+	entryPublicServiceUrls,
+	laptopDevEnv,
+	loopbackServiceUrls,
+	publicDevEnv,
+} from "./publicUrls.ts";
 import { fatal, log } from "./shell.ts";
 import { spawnDevInTmux, tmuxSessionName } from "./tmux.ts";
 import { rewriteDbEnv } from "./url.ts";
+
+const LOCAL_DATABASE_URL =
+	"postgresql://postgres:postgres@localhost:5432/autumn";
+
+const HEADLESS_UNSET = [
+	"NEON_WORKTREE_API_KEY",
+	"MISC_CACHE_DRAGONFLY_PRIVATE_URL",
+	"CACHE_BACKUP_URL",
+] as const;
+
+function applyLocalInfra(
+	env: Record<string, string>,
+	worktreeNum: number,
+): Record<string, string> {
+	const next = { ...env };
+	const infra = provisionedInfraEnv(worktreeNum);
+	Object.assign(next, infra);
+	for (const key of Object.keys(next)) {
+		if (key.includes("SQS_QUEUE_URL") && !(key in infra)) delete next[key];
+	}
+	return next;
+}
+
+function applyPublicUrls({
+	entry,
+	env,
+}: {
+	entry: RegistryEntry;
+	env: Record<string, string>;
+}): void {
+	if (isCloudAgent()) {
+		const urls =
+			entryPublicServiceUrls(entry) ??
+			loopbackServiceUrls({ worktreeNum: entry.worktreeNum });
+		Object.assign(env, publicDevEnv({ urls, worktreeNum: entry.worktreeNum }));
+		return;
+	}
+	if (!isProvisioned(entry)) {
+		env.AUTUMN_API_URL = `http://localhost:${serverPortFor(entry.worktreeNum)}`;
+		return;
+	}
+	const aliases = registerPortlessAliases(entry.worktreeNum);
+	Object.assign(
+		env,
+		laptopDevEnv({
+			aliases,
+			publicUrls: entryPublicServiceUrls(entry),
+		}),
+	);
+}
 
 function applyProvisionedDevEnv(
 	entry: RegistryEntry,
@@ -19,35 +77,36 @@ function applyProvisionedDevEnv(
 	const { worktreeNum, databaseUrl } = entry;
 	if (!databaseUrl) fatal("worktree missing databaseUrl");
 
-	const next = rewriteDbEnv(env, databaseUrl);
-	const infra = provisionedInfraEnv(worktreeNum);
-	Object.assign(next, infra);
-	// Unmapped queue vars must not leak the shared AWS queues into this worktree.
-	for (const key of Object.keys(next)) {
-		if (key.includes("SQS_QUEUE_URL") && !(key in infra)) delete next[key];
-	}
+	const next = applyLocalInfra(rewriteDbEnv(env, databaseUrl), worktreeNum);
 	if (!next.EMULATE_GOOGLE_URL) {
-		next.EMULATE_GOOGLE_URL = portlessHttpsUrl("google.emulate.localhost");
+		next.EMULATE_GOOGLE_URL = emulateGoogleUrl({});
 	}
 	const portlessCa = join(homedir(), ".portless", "ca.pem");
 	if (existsSync(portlessCa) && !next.NODE_EXTRA_CA_CERTS) {
 		next.NODE_EXTRA_CA_CERTS = portlessCa;
 	}
-	// Headless boxes have no portless binary and nothing resolves *.localhost;
-	// .env.local already carries plain localhost URLs there.
-	if (!isHeadless()) {
-		const aliases = registerPortlessAliases(worktreeNum);
-		next.AUTUMN_API_URL = aliases.apiUrl;
-		next.AUTUMN_PUBLIC_API_URL = entry.ngrokUrl ?? aliases.apiUrl;
-		next.CLIENT_URL = aliases.viteUrl;
-		next.VITE_BACKEND_URL = aliases.apiUrl;
-		next.VITE_FRONTEND_URL = aliases.viteUrl;
+	applyPublicUrls({ entry, env: next });
+	writeEnvLocalFiles(entry);
+	return next;
+}
+
+function applyCloudAgentDevEnv(
+	entry: RegistryEntry,
+	env: Record<string, string>,
+): Record<string, string> {
+	const next = applyLocalInfra({ ...env }, entry.worktreeNum);
+	for (const key of HEADLESS_UNSET) delete next[key];
+	applyPublicUrls({ entry, env: next });
+	if (!next.EMULATE_GOOGLE_URL) {
+		next.EMULATE_GOOGLE_URL = emulateGoogleUrl({
+			origin:
+				entryPublicServiceUrls(entry)?.emulate ??
+				loopbackServiceUrls({ worktreeNum: entry.worktreeNum }).emulate,
+		});
 	}
-	if (isHeadless()) {
-		const apiUrl = `http://localhost:${8080 + (worktreeNum - 1) * 100}`;
-		next.AUTUMN_API_URL = apiUrl;
-		next.AUTUMN_PUBLIC_API_URL = entry.ngrokUrl ?? apiUrl;
-	}
+	next.DATABASE_URL = LOCAL_DATABASE_URL;
+	next.DATABASE_CRITICAL_URL = LOCAL_DATABASE_URL;
+	next.STRIPE_WEBHOOK_SKIP_VERIFY = "true";
 	return next;
 }
 
@@ -59,7 +118,9 @@ export function buildDevEnvAndArgs(entry: RegistryEntry): {
 	let env: Record<string, string> = {
 		...(process.env as Record<string, string>),
 	};
-	if (isProvisioned(entry)) {
+	if (isCloudAgent()) {
+		env = applyCloudAgentDevEnv(entry, env);
+	} else if (isProvisioned(entry)) {
 		env = applyProvisionedDevEnv(entry, env);
 	}
 
@@ -73,10 +134,11 @@ export function buildDevEnvAndArgs(entry: RegistryEntry): {
 	return { env, args };
 }
 
-export function startDev(
+export async function startDev(
 	entry: RegistryEntry,
 	opts?: { allowTmux?: boolean },
-): never {
+): Promise<never> {
+	startPublicAccess(entry);
 	const { worktreeNum, branchName } = entry;
 	const { env, args } = buildDevEnvAndArgs(entry);
 

@@ -10,6 +10,7 @@ import {
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DEFAULT_SLACK_BOT_SCOPES } from "@autumn/shared/utils/auth/slackScopes";
+import { publicServiceUrlsFromDashboard } from "../dw/devProxy/cloudflareConfig.ts";
 import chalk from "chalk";
 import inquirer from "inquirer";
 
@@ -53,9 +54,12 @@ const resolveWorktreePublicApiUrl = ({
 		if (existsSync(registryPath)) {
 			const registry = JSON.parse(
 				readFileSync(registryPath, "utf-8"),
-			) as Record<string, { ngrokUrl?: string }>;
+			) as Record<string, { ngrokUrl?: string; publicUrl?: string }>;
 			const entry = registry[repoRoot];
-			if (entry?.ngrokUrl) return entry.ngrokUrl;
+			const origin = entry?.publicUrl ?? entry?.ngrokUrl;
+			if (origin) {
+				return publicServiceUrlsFromDashboard({ dashboard: origin }).api;
+			}
 		}
 	} catch {
 		// Malformed/absent registry — fall through to the shared env value.

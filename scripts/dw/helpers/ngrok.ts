@@ -1,30 +1,29 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import type { RegistryEntry } from "../types.ts";
+import { agentDir } from "./machineId.ts";
+import { ngrokApiPortFor } from "./ports.ts";
 import { shortHash } from "./registry.ts";
-import { log } from "./shell.ts";
+import { log, sh } from "./shell.ts";
 
 const NGROK_API = "https://api.ngrok.com";
 
 export type ReservedDomain = { id: string; domain: string };
 
-// Domain reservation/deletion is the ngrok *management* API (api.ngrok.com),
-// which needs an NGROK_API_KEY — distinct from the agent NGROK_AUTHTOKEN that
-// binds to a domain via --url. Both live in Infisical for `bun dw`.
 export function ngrokApiAvailable(): boolean {
 	return Boolean(process.env.NGROK_API_KEY);
 }
 
-// Deterministic per-worktree domain so the public URL is stable across `bun d`
-// restarts AND teardown→setup cycles (we re-reserve the same name). The path hash
-// matches the one used for branch names, keeping it globally unique-ish.
-export function reservedDomainName(worktreeNum: number, path: string): string {
-	return `autumn-wt${worktreeNum}-${shortHash(path)}.ngrok.app`;
-}
-
-/** Dashboard tunnel. The API domain forwards to the server port, so vite needs its own. */
-export function reservedViteDomainName(
-	worktreeNum: number,
-	path: string,
-): string {
-	return `autumn-wt${worktreeNum}-${shortHash(path)}-app.ngrok.app`;
+export function reservedDomainName({
+	machineId: id,
+	path,
+	worktreeNum,
+}: {
+	machineId: string;
+	path: string;
+	worktreeNum: number;
+}): string {
+	return `autumn-wt${worktreeNum}-${shortHash(`${id}:${path}`)}.ngrok.app`;
 }
 
 function ngrokHeaders(): Record<string, string> {
@@ -35,65 +34,16 @@ function ngrokHeaders(): Record<string, string> {
 	};
 }
 
-async function findReservedDomain(
-	name: string,
-): Promise<ReservedDomain | undefined> {
-	let next: string | null = "/reserved_domains";
-	while (next) {
-		const url: string = next.startsWith("http") ? next : `${NGROK_API}${next}`;
-		const response = await fetch(url, { headers: ngrokHeaders() });
-		if (!response.ok) {
-			throw new Error(
-				`ngrok list reserved_domains failed: ${response.status} ${await response.text()}`,
-			);
-		}
-		const data = (await response.json()) as {
-			reserved_domains: ReservedDomain[];
-			next_page_uri: string | null;
-		};
-		const found = data.reserved_domains.find((d) => d.domain === name);
-		if (found) return { domain: found.domain, id: found.id };
-		next = data.next_page_uri;
-	}
-	return undefined;
-}
-
-// Find-or-create: reuse the reservation if a prior setup left it behind (e.g.
-// teardown didn't run), otherwise reserve it fresh.
-export async function ensureReservedDomain(
-	worktreeNum: number,
-	path: string,
-	opts: { vite?: boolean } = {},
-): Promise<ReservedDomain> {
-	const name = opts.vite
-		? reservedViteDomainName(worktreeNum, path)
-		: reservedDomainName(worktreeNum, path);
-	const existing = await findReservedDomain(name);
-	if (existing) {
-		log(`ngrok reserved domain ${existing.domain} (reused ${existing.id})`);
-		return existing;
-	}
-	const response = await fetch(`${NGROK_API}/reserved_domains`, {
-		body: JSON.stringify({ name }),
-		headers: ngrokHeaders(),
-		method: "POST",
-	});
-	if (!response.ok) {
-		throw new Error(
-			`ngrok create reserved_domain ${name} failed: ${response.status} ${await response.text()}`,
-		);
-	}
-	const created = (await response.json()) as ReservedDomain;
-	log(`ngrok reserved domain ${created.domain} (created ${created.id})`);
-	return { domain: created.domain, id: created.id };
+export function firstHttpsUrl(text: string): string | undefined {
+	return text.match(/https:\/\/\S+/)?.[0]?.replace(/[.,;]+$/, "");
 }
 
 export async function deleteReservedDomain(id: string): Promise<void> {
+	if (!ngrokApiAvailable()) return;
 	const response = await fetch(`${NGROK_API}/reserved_domains/${id}`, {
 		headers: ngrokHeaders(),
 		method: "DELETE",
 	});
-	// 404 = already gone; treat as success so teardown is idempotent.
 	if (response.status === 204 || response.status === 404) {
 		log(`ngrok reserved domain ${id} released`);
 		return;
@@ -101,4 +51,52 @@ export async function deleteReservedDomain(id: string): Promise<void> {
 	log(
 		`ngrok delete reserved domain ${id} failed: ${response.status} ${await response.text()}`,
 	);
+}
+
+function ngrokPidFile(worktreeNum: number): string {
+	return join(agentDir(), `ngrok-${worktreeNum}.pid`);
+}
+
+function inspectorUp(worktreeNum: number): boolean {
+	return (
+		sh("curl", [
+			"-sf",
+			"--max-time",
+			"1",
+			`http://127.0.0.1:${ngrokApiPortFor(worktreeNum)}/api/tunnels`,
+		]).code === 0
+	);
+}
+
+export function stopHostNgrok({
+	worktreeNum,
+}: {
+	worktreeNum: number;
+}): void {
+	const pidFile = ngrokPidFile(worktreeNum);
+	if (existsSync(pidFile)) {
+		const pid = Number(readFileSync(pidFile, "utf8").trim());
+		if (Number.isInteger(pid) && pid > 0) {
+			try {
+				process.kill(pid, "SIGTERM");
+			} catch {}
+		}
+	}
+	const deadline = Date.now() + 2000;
+	while (Date.now() < deadline && inspectorUp(worktreeNum)) {
+		Bun.sleepSync(50);
+	}
+}
+
+/** Stop leftover ngrok and release reserved domains. Safe if none exist. */
+export async function releaseNgrokIfPresent(
+	entry: RegistryEntry,
+): Promise<void> {
+	stopHostNgrok({ worktreeNum: entry.worktreeNum });
+	if (entry.reservedDomainId) {
+		await deleteReservedDomain(entry.reservedDomainId);
+	}
+	if (entry.reservedViteDomainId) {
+		await deleteReservedDomain(entry.reservedViteDomainId);
+	}
 }
