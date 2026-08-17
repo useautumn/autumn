@@ -1,5 +1,5 @@
 import path from "node:path";
-import { viteHmrClient } from "@autumn/env/viteDev";
+import { viteHmrClient } from "../packages/env/src/viteDev.ts";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";

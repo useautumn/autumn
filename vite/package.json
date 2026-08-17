@@ -4,8 +4,8 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
-		"d": "vite --host",
-		"dev": "vite --host",
+		"d": "bunx --bun vite --host",
+		"dev": "bunx --bun vite --host",
 		"build": "tsc && vite build",
 		"ts": "tsc --noEmit",
 		"start": "serve -s dist",

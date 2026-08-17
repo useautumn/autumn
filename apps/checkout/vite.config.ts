@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import path from "node:path";
-import { viteHmrClient } from "@autumn/env/viteDev";
+import { viteHmrClient } from "../../packages/env/src/viteDev.ts";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
