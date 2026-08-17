@@ -34,17 +34,18 @@ export function SchedulePlanRow({
 	const isOpeningPhase = phaseIndex === 0;
 	const isLocked = isPhaseLocked({ phaseIndex });
 	const isScopeEditable = isOpeningPhase && !isLocked;
-	// A schedule can't change scope mid-flight: later phases display what they
-	// inherit from the opening phase's plan in the same group, read-only.
+	// A schedule can't change scope mid-flight: later phases show the scope they
+	// carry, or the one they inherit from the opening phase, read-only.
 	const { scope, hasEntities, selectedLabel } = usePlanScopeField({
 		planEntityId: isOpeningPhase ? plan?.entityId : undefined,
 		defaultEntityId: isOpeningPhase
 			? undefined
-			: resolveInheritedPlanScope({
+			: (plan?.entityId ??
+				resolveInheritedPlanScope({
 					productId: plan?.productId ?? "",
 					openingPhasePlans,
 					products,
-				}),
+				})),
 		disabled: !isScopeEditable,
 		disabledReason: isLocked
 			? "this phase has started"

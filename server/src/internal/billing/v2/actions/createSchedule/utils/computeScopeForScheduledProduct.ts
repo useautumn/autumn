@@ -3,14 +3,14 @@ import type {
 	FullProduct,
 	MultiAttachProductContext,
 } from "@autumn/shared";
-import { productToReplacementKey } from "@autumn/shared";
+import { productToReplacementKey, RecaseError } from "@autumn/shared";
 import { resolvePhaseProductContexts } from "./unscheduledProductContexts";
 
 /**
- * The entity a later-phase plan is attached in. A schedule can't change scope
- * mid-flight, so later phases never declare their own — each plan takes the
- * scope of the immediate-phase plan it succeeds: the same product if one is
- * there, otherwise whichever plan holds the same group.
+ * The entity a later-phase plan is attached in. A plan that declares its own
+ * entity_id takes it; the rest fall back to the scope of the immediate-phase
+ * plan they succeed — the same product if one is there, otherwise whichever
+ * plan holds the same group.
  *
  * A match with no entity means customer-level, so the fallback applies only
  * when the immediate phase has no matching plan at all.
@@ -18,10 +18,12 @@ import { resolvePhaseProductContexts } from "./unscheduledProductContexts";
 export const computeScopeForScheduledProduct = ({
 	immediatePhaseProductContexts,
 	fullProduct,
+	entityId,
 	fallbackEntity,
 }: {
 	immediatePhaseProductContexts: MultiAttachProductContext[];
 	fullProduct: FullProduct;
+	entityId?: string | null;
 	fallbackEntity?: Entity;
 }): Entity | undefined => {
 	// Unscheduled plans outlive the schedule, so a later phase must never adopt
@@ -29,6 +31,13 @@ export const computeScopeForScheduledProduct = ({
 	const scheduledPlans = resolvePhaseProductContexts({
 		productContexts: immediatePhaseProductContexts,
 	});
+
+	if (entityId !== undefined) {
+		return entityId === null
+			? undefined
+			: findImmediatePhaseEntity({ scheduledPlans, entityId });
+	}
+
 	const replacementKey = productToReplacementKey({ product: fullProduct });
 
 	const precedingPlan =
@@ -43,4 +52,26 @@ export const computeScopeForScheduledProduct = ({
 
 	if (!precedingPlan) return fallbackEntity;
 	return precedingPlan.fullCustomer.entity;
+};
+
+/** A schedule can't change scope mid-flight, so the entity must already be there. */
+const findImmediatePhaseEntity = ({
+	scheduledPlans,
+	entityId,
+}: {
+	scheduledPlans: MultiAttachProductContext[];
+	entityId: string;
+}): Entity => {
+	const entity = scheduledPlans.find(
+		(productContext) => productContext.fullCustomer.entity?.id === entityId,
+	)?.fullCustomer.entity;
+
+	if (!entity) {
+		throw new RecaseError({
+			message: `Entity '${entityId}' is not scoped by the first phase, so a later phase cannot schedule a plan in it.`,
+			statusCode: 400,
+		});
+	}
+
+	return entity;
 };

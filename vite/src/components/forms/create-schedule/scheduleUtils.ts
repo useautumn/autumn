@@ -138,11 +138,13 @@ export function getUnscheduledUsedGroupKeys({
 			: phase.plans.map((plan) => ({
 					...plan,
 					entityId:
+						plan.entityId ??
 						resolveInheritedPlanScope({
 							productId: plan.productId,
 							openingPhasePlans,
 							products,
-						}) ?? null,
+						}) ??
+						null,
 				})),
 	);
 

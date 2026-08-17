@@ -155,7 +155,7 @@ describe(chalk.yellowBright("computeScopeForScheduledProduct"), () => {
 		).toBe("ent_2");
 	});
 
-	test("the first plan wins when one slot spans several scopes", () => {
+	test("the first plan wins when a scopeless plan's slot spans several scopes", () => {
 		expect(
 			computeScopeForScheduledProduct({
 				fullProduct: product({ id: "premium", group: "main" }),
@@ -165,5 +165,62 @@ describe(chalk.yellowBright("computeScopeForScheduledProduct"), () => {
 				],
 			})?.internal_id,
 		).toBe("ent_1");
+	});
+
+	test("a stated entity wins over the slot it shares with another scope", () => {
+		const immediatePhaseProductContexts = [
+			immediatePlan({ id: "pro", group: "main", scope: entity("ent_1") }),
+			immediatePlan({ id: "pro", group: "main", scope: entity("ent_2") }),
+		];
+
+		expect(
+			computeScopeForScheduledProduct({
+				fullProduct: product({ id: "pro", group: "main" }),
+				entityId: "ent_2",
+				immediatePhaseProductContexts,
+			})?.internal_id,
+		).toBe("ent_2");
+	});
+
+	test("a stated null is customer-level, not the inherited scope", () => {
+		expect(
+			computeScopeForScheduledProduct({
+				fullProduct: product({ id: "premium", group: "main" }),
+				entityId: null,
+				immediatePhaseProductContexts: [
+					immediatePlan({ id: "pro", group: "main", scope: entity("ent_1") }),
+				],
+			}),
+		).toBeUndefined();
+	});
+
+	test("an entity the immediate phase never scopes is rejected", () => {
+		expect(() =>
+			computeScopeForScheduledProduct({
+				fullProduct: product({ id: "premium", group: "main" }),
+				entityId: "ent_2",
+				immediatePhaseProductContexts: [
+					immediatePlan({ id: "pro", group: "main", scope: entity("ent_1") }),
+				],
+				fallbackEntity: entity("ent_2"),
+			}),
+		).toThrow("is not scoped by the first phase");
+	});
+
+	test("a stated entity cannot be borrowed from an unscheduled plan", () => {
+		expect(() =>
+			computeScopeForScheduledProduct({
+				fullProduct: product({ id: "premium", group: "main" }),
+				entityId: "ent_1",
+				immediatePhaseProductContexts: [
+					immediatePlan({
+						id: "pro",
+						group: "main",
+						scope: entity("ent_1"),
+						unscheduled: true,
+					}),
+				],
+			}),
+		).toThrow("is not scoped by the first phase");
 	});
 });
