@@ -239,6 +239,8 @@ export const oauthRefreshToken = pgTable("oauth_refresh_token", {
 	revoked: timestamp("revoked", { withTimezone: true }),
 	authTime: timestamp("auth_time", { withTimezone: true }),
 	scopes: text("scopes").array().notNull(),
+	// RFC 8707 audience the grant was issued for; null on rows minted before stamping.
+	resource: text("resource"),
 }).enableRLS();
 
 export const oauthAccessToken = pgTable("oauth_access_token", {
@@ -261,6 +263,8 @@ export const oauthAccessToken = pgTable("oauth_access_token", {
 	expiresAt: timestamp("expires_at", { withTimezone: true }),
 	createdAt: timestamp("created_at", { withTimezone: true }),
 	scopes: text("scopes").array().notNull(),
+	// RFC 8707 audience the token was issued for; null on rows minted before stamping.
+	resource: text("resource"),
 }).enableRLS();
 
 export const passkey = pgTable(

@@ -12,7 +12,9 @@ export const getProtectedResourceMetadata = ({
 }) => ({
 	resource: resourceUrl,
 	authorization_servers: [getOAuthIssuerUrl({ baseUrl: issuerBaseUrl })],
-	scopes_supported: [...DEFAULT_OAUTH_RESOURCE_SCOPES, "offline_access"],
+	// `offline_access` is deliberately absent: refresh tokens are not a resource
+	// requirement, so clients add it from authorization server metadata instead.
+	scopes_supported: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
 	bearer_methods_supported: ["header"],
 	resource_name: resourceName,
 });
