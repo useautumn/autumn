@@ -1,4 +1,11 @@
 import { AppEnv, RecaseError } from "@autumn/shared";
+import {
+	getOAuthStringField,
+	type OAuthRequestFields,
+	parseOAuthRequestFields,
+	rebuildOAuthRequest,
+} from "@autumn/shared/utils/auth/oauthRequestBody";
+import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
@@ -7,33 +14,6 @@ import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
 import { getOAuthConsentScopeGrant } from "./oauthConsentScopes.js";
 import { runBetterAuthHandler } from "./runBetterAuthHandler.js";
 import { isSummerOAuthClientId } from "./summerOAuthClient.js";
-
-type RequestFields = Record<string, unknown>;
-
-const parseRequestFields = async (request: Request) => {
-	const contentType = request.headers.get("content-type") ?? "";
-	const rawBody = await request.text();
-	if (!rawBody) return { contentType, fields: {}, rawBody };
-
-	if (contentType.includes("application/json")) {
-		try {
-			const body = JSON.parse(rawBody);
-			return {
-				contentType,
-				fields: body && typeof body === "object" ? (body as RequestFields) : {},
-				rawBody,
-			};
-		} catch {
-			return { contentType, fields: {}, rawBody };
-		}
-	}
-
-	const params = new URLSearchParams(rawBody);
-	return { contentType, fields: Object.fromEntries(params.entries()), rawBody };
-};
-
-const getString = (value: unknown) =>
-	typeof value === "string" && value.length > 0 ? value : null;
 
 const parseEnv = (value: unknown) => {
 	if (value === AppEnv.Live || value === AppEnv.Sandbox) return value;
@@ -47,82 +27,43 @@ const getNestedOAuthField = (value: unknown, key: string) => {
 
 	if (typeof value === "string") {
 		try {
-			return getString(JSON.parse(value)?.[key]);
+			return getOAuthStringField(JSON.parse(value)?.[key]);
 		} catch {
 			return new URLSearchParams(value).get(key);
 		}
 	}
 
 	if (typeof value === "object") {
-		return getString((value as Record<string, unknown>)[key]);
+		return getOAuthStringField((value as Record<string, unknown>)[key]);
 	}
 
 	return null;
 };
 
-const getClientIdFromFields = (fields: RequestFields) =>
-	getString(fields.client_id) ??
+const getClientIdFromFields = (fields: OAuthRequestFields) =>
+	getOAuthStringField(fields.client_id) ??
 	getNestedOAuthField(fields.oauth_query, "client_id");
 
-const getRedirectUriFromFields = (fields: RequestFields) =>
-	getString(fields.redirect_uri) ??
-	getString(fields.redirectUri) ??
+const getRedirectUriFromFields = (fields: OAuthRequestFields) =>
+	getOAuthStringField(fields.redirect_uri) ??
+	getOAuthStringField(fields.redirectUri) ??
 	getNestedOAuthField(fields.oauth_query, "redirect_uri");
 
-const splitScopes = (value: unknown) =>
-	typeof value === "string" ? value.split(/\s+/).filter(Boolean) : [];
-
 export const getOAuthConsentRequestedScopesFromFields = (
-	fields: RequestFields,
+	fields: OAuthRequestFields,
 ) => {
 	if ("scope" in fields) {
 		return {
 			explicit: true,
-			scopes: splitScopes(fields.scope),
+			scopes: splitOAuthScopeString(fields.scope),
 		};
 	}
 
 	const rawScope = getNestedOAuthField(fields.oauth_query, "scope");
 	return {
 		explicit: false,
-		scopes: rawScope ? splitScopes(rawScope) : null,
+		scopes: rawScope ? splitOAuthScopeString(rawScope) : null,
 	};
-};
-
-const getFieldsWithScope = ({
-	fields,
-	scope,
-}: {
-	fields: RequestFields;
-	scope: string;
-}) => {
-	return { ...fields, scope };
-};
-
-const withScope = ({
-	contentType,
-	request,
-	fields,
-	scope,
-}: {
-	contentType: string;
-	request: Request;
-	fields: RequestFields;
-	scope: string;
-}) => {
-	const scopedFields = getFieldsWithScope({ fields, scope });
-	if (contentType.includes("application/json")) {
-		return new Request(request, {
-			body: JSON.stringify(scopedFields),
-		});
-	}
-
-	const params = new URLSearchParams();
-	for (const [key, value] of Object.entries(scopedFields)) {
-		if (typeof value === "string") params.set(key, value);
-	}
-
-	return new Request(request, { body: params });
 };
 
 const jsonOAuthError = ({ error }: { error: RecaseError }) =>
@@ -138,7 +79,7 @@ const jsonOAuthError = ({ error }: { error: RecaseError }) =>
 	);
 
 export const handleOAuthConsentWithEnv = async (c: Context) => {
-	const { contentType, fields } = await parseRequestFields(c.req.raw.clone());
+	const { fields, isJson } = await parseOAuthRequestFields(c.req.raw.clone());
 	const clientId = getClientIdFromFields(fields);
 	const redirectUri = getRedirectUriFromFields(fields);
 	const env =
@@ -165,11 +106,10 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 					userId,
 				});
 				grantedScopes = scopeGrant;
-				request = withScope({
-					contentType,
+				request = rebuildOAuthRequest({
+					fields: { ...fields, scope: scopeGrant.join(" ") },
+					isJson,
 					request,
-					fields,
-					scope: scopeGrant.join(" "),
 				});
 			} catch (error) {
 				if (error instanceof RecaseError) {

@@ -1,4 +1,9 @@
-export const MCP_CLIENT_KIND = "mcp_client";
+import { isMcpClientMetadata } from "@autumn/shared/utils/auth/oauthClientMetadata";
+import {
+	getOAuthStringField,
+	parseOAuthRequestFields,
+} from "@autumn/shared/utils/auth/oauthRequestBody";
+
 export const UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND = "chat_unrestricted";
 export const SLACK_MCP_OAUTH_CLIENT_ID = "autumn_mcp_slack";
 export const WEB_MCP_OAUTH_CLIENT_ID = "autumn_mcp_web";
@@ -32,31 +37,13 @@ export const isKnownMcpOAuthClientId = ({
 }) =>
 	!!clientId && (MCP_OAUTH_CLIENT_IDS as readonly string[]).includes(clientId);
 
-const parseMetadata = (metadata: unknown) => {
-	if (!metadata) return {};
-	if (typeof metadata === "string") {
-		try {
-			const parsed = JSON.parse(metadata);
-			return parsed && typeof parsed === "object" ? parsed : {};
-		} catch {
-			return {};
-		}
-	}
-
-	return typeof metadata === "object" ? metadata : {};
-};
-
 export const isMcpOAuthClientRecord = ({
 	clientId,
 	metadata,
 }: {
 	clientId: string | null | undefined;
 	metadata?: unknown;
-}) => {
-	if (isKnownMcpOAuthClientId({ clientId })) return true;
-	const parsedMetadata = parseMetadata(metadata);
-	return parsedMetadata.kind === MCP_CLIENT_KIND;
-};
+}) => isKnownMcpOAuthClientId({ clientId }) || isMcpClientMetadata(metadata);
 
 export const returnsOAuthAccessTokenForClientId = ({
 	clientId,
@@ -73,24 +60,9 @@ export const isMcpOAuthResource = (resource: string | null | undefined) => {
 };
 
 export const getResourceFromOAuthTokenRequest = async (request: Request) => {
-	const contentType = request.headers.get("content-type") ?? "";
-	const rawBody = await request.text();
-	if (!rawBody) return null;
+	const { fields, searchParams } = await parseOAuthRequestFields(request);
+	if (searchParams) return searchParams.getAll("resource")[0] ?? null;
 
-	if (contentType.includes("application/json")) {
-		try {
-			const body = JSON.parse(rawBody) as Record<string, unknown>;
-			const resource = body.resource;
-			if (Array.isArray(resource)) return getString(resource[0]);
-			return getString(resource);
-		} catch {
-			return null;
-		}
-	}
-
-	const params = new URLSearchParams(rawBody);
-	return params.getAll("resource")[0] ?? null;
+	const resource = fields.resource;
+	return getOAuthStringField(Array.isArray(resource) ? resource[0] : resource);
 };
-
-const getString = (value: unknown) =>
-	typeof value === "string" && value.length > 0 ? value : null;

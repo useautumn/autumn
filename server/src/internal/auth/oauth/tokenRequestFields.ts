@@ -1,3 +1,4 @@
+import { parseOAuthRequestFields } from "@autumn/shared/utils/auth/oauthRequestBody";
 import { z } from "zod";
 
 const tokenRequestFieldsSchema = z
@@ -7,17 +8,6 @@ const tokenRequestFieldsSchema = z
 	})
 	.passthrough();
 
-const fieldsFromUnknown = (value: unknown): OAuthTokenRequestFields => {
-	const parsed = tokenRequestFieldsSchema.safeParse(value);
-	if (!parsed.success) {
-		return { grantType: null, refreshToken: null };
-	}
-	return {
-		grantType: parsed.data.grant_type ?? null,
-		refreshToken: parsed.data.refresh_token ?? null,
-	};
-};
-
 export type OAuthTokenRequestFields = {
 	grantType: string | null;
 	refreshToken: string | null;
@@ -26,23 +16,14 @@ export type OAuthTokenRequestFields = {
 export const getOAuthTokenRequestFields = async (
 	request: Request,
 ): Promise<OAuthTokenRequestFields> => {
-	const contentType = request.headers.get("content-type") ?? "";
-	const rawBody = await request.text();
-	if (!rawBody) {
-		return { grantType: null, refreshToken: null };
-	}
-	const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
+	const { fields } = await parseOAuthRequestFields(request);
+	const parsed = tokenRequestFieldsSchema.safeParse(fields);
+	if (!parsed.success) return { grantType: null, refreshToken: null };
 
-	if (mediaType === "application/json") {
-		try {
-			return fieldsFromUnknown(JSON.parse(rawBody));
-		} catch {
-			return { grantType: null, refreshToken: null };
-		}
-	}
-
-	const params = new URLSearchParams(rawBody);
-	return fieldsFromUnknown(Object.fromEntries(params));
+	return {
+		grantType: parsed.data.grant_type ?? null,
+		refreshToken: parsed.data.refresh_token ?? null,
+	};
 };
 
 export const getRefreshTokenForConsentLookup = async (request: Request) => {

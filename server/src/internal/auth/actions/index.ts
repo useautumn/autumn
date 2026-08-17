@@ -1,4 +1,1 @@
-export {
-	isSafeOAuthRedirectUri,
-	registerMcpOAuthClient,
-} from "./registerMcpOAuthClient.js";
+export { registerMcpOAuthClient } from "./registerMcpOAuthClient.js";

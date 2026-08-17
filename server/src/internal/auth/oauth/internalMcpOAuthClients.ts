@@ -1,5 +1,9 @@
-import { MCP_CLIENT_KIND } from "@autumn/auth/oauth";
 import { META_SCOPES } from "@autumn/shared";
+import {
+	MCP_CLIENT_KIND,
+	parseOAuthClientMetadata,
+} from "@autumn/shared/utils/auth/oauthClientMetadata";
+import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
 import type { Context } from "hono";
 import { type DrizzleCli, db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
@@ -13,26 +17,6 @@ const INTERNAL_MCP_CLIENT_NAME_NORMALIZED =
 	INTERNAL_MCP_CLIENT_NAME.toLowerCase();
 const INTERNAL_MCP_KIND = "internal_mcp";
 const META_SCOPE_SET = new Set<string>(META_SCOPES);
-
-type InternalMcpMetadata = {
-	kind?: string;
-	mcpClientType?: string;
-	redirectNames?: Record<string, string>;
-};
-
-const parseMetadata = (metadata: unknown): InternalMcpMetadata => {
-	if (!metadata) return {};
-	if (typeof metadata === "string") {
-		try {
-			const parsed = JSON.parse(metadata);
-			return parsed && typeof parsed === "object" ? parsed : {};
-		} catch {
-			return {};
-		}
-	}
-
-	return typeof metadata === "object" ? metadata : {};
-};
 
 const inferClientNameFromRedirectUri = (redirectUri: string) => {
 	const normalized = redirectUri.toLowerCase();
@@ -59,7 +43,7 @@ export const isInternalMcpOAuthClientRecord = ({
 	if (name?.trim().toLowerCase() === INTERNAL_MCP_CLIENT_NAME_NORMALIZED) {
 		return true;
 	}
-	const parsedMetadata = parseMetadata(metadata);
+	const parsedMetadata = parseOAuthClientMetadata(metadata);
 	return [INTERNAL_MCP_KIND, MCP_CLIENT_KIND].includes(
 		parsedMetadata.kind ?? "",
 	);
@@ -73,7 +57,7 @@ export const getInternalMcpDisplayName = ({
 	redirectUri: string | null | undefined;
 }) => {
 	if (!redirectUri) return null;
-	const metadataObject = parseMetadata(metadata);
+	const metadataObject = parseOAuthClientMetadata(metadata);
 	return (
 		metadataObject.redirectNames?.[redirectUri] ??
 		inferClientNameFromRedirectUri(redirectUri)
@@ -111,8 +95,9 @@ export const handleInternalMcpOAuthAuthorize = async (c: Context) => {
 		return auth.handler(c.req.raw);
 	}
 
-	const scopes = url.searchParams.get("scope")?.split(" ").filter(Boolean);
-	if (scopes) {
+	const requestedScope = url.searchParams.get("scope");
+	if (requestedScope) {
+		const scopes = splitOAuthScopeString(requestedScope);
 		url.searchParams.set(
 			"scope",
 			scopes.filter((scope) => !META_SCOPE_SET.has(scope)).join(" "),

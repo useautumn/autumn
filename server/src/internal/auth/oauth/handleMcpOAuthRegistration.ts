@@ -1,17 +1,7 @@
+import { parseOAuthRequestFields } from "@autumn/shared/utils/auth/oauthRequestBody";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { registerMcpOAuthClient } from "../actions/index.js";
-
-type RegisterBody = {
-	redirect_uris?: unknown;
-	client_name?: unknown;
-	scope?: unknown;
-};
-
-const parseJsonObject = async (request: Request) => {
-	const body = await request.json().catch(() => null);
-	return body && typeof body === "object" ? (body as RegisterBody) : {};
-};
 
 const getRedirectUris = (value: unknown) =>
 	Array.isArray(value)
@@ -19,12 +9,12 @@ const getRedirectUris = (value: unknown) =>
 		: [];
 
 export const handleMcpOAuthRegistration = async (c: Context) => {
-	const body = await parseJsonObject(c.req.raw);
+	const { fields } = await parseOAuthRequestFields(c.req.raw);
 	const result = await registerMcpOAuthClient({
 		db,
-		clientName: body.client_name,
-		redirectUris: getRedirectUris(body.redirect_uris),
-		scope: body.scope,
+		clientName: fields.client_name,
+		redirectUris: getRedirectUris(fields.redirect_uris),
+		scope: fields.scope,
 	});
 
 	if ("error" in result) {

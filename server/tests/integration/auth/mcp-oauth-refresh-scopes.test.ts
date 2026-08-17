@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { getDefaultOAuthScopes, MCP_CLIENT_KIND } from "@autumn/auth/oauth";
+import { getDefaultOAuthScopes } from "@autumn/auth/oauth";
 import {
 	AppEnv,
 	DEFAULT_OAUTH_RESOURCE_SCOPES,
@@ -9,6 +9,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
+import { MCP_CLIENT_KIND } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { createDashboardSession } from "@tests/utils/testInitUtils/dashboardSession.js";
 import { OAuth2Client } from "arctic";

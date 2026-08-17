@@ -30,6 +30,21 @@
 			"import": "./utils/auth/oauthScopeUtils.ts",
 			"default": "./utils/auth/oauthScopeUtils.ts"
 		},
+		"./utils/auth/oauthClientMetadata": {
+			"types": "./utils/auth/oauthClientMetadata.ts",
+			"import": "./utils/auth/oauthClientMetadata.ts",
+			"default": "./utils/auth/oauthClientMetadata.ts"
+		},
+		"./utils/auth/oauthRedirectUris": {
+			"types": "./utils/auth/oauthRedirectUris.ts",
+			"import": "./utils/auth/oauthRedirectUris.ts",
+			"default": "./utils/auth/oauthRedirectUris.ts"
+		},
+		"./utils/auth/oauthRequestBody": {
+			"types": "./utils/auth/oauthRequestBody.ts",
+			"import": "./utils/auth/oauthRequestBody.ts",
+			"default": "./utils/auth/oauthRequestBody.ts"
+		},
 		"./unixUtils": {
 			"types": "./utils/common/unixUtils.ts",
 			"import": "./utils/common/unixUtils.ts",

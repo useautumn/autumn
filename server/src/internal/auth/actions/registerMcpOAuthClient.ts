@@ -1,27 +1,22 @@
 import {
 	getDefaultOAuthScopes,
-	MCP_CLIENT_KIND,
 	MCP_OAUTH_CLIENTS,
 	type MpcClientInfo,
 	type MpcClientType,
 } from "@autumn/auth/oauth";
+import {
+	MCP_CLIENT_KIND,
+	type OAuthClientMetadata,
+	parseOAuthClientMetadata,
+} from "@autumn/shared/utils/auth/oauthClientMetadata";
+import { isSafeOAuthRedirectUri } from "@autumn/shared/utils/auth/oauthRedirectUris";
+import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { isAtmnOAuthClientRecord } from "../oauth/atmnOAuthClients.js";
 import { type OAuthClientRecord, oauthClientRepo } from "../repos/index.js";
 
 const REGISTER_CACHE_TTL_MS = 5 * 60 * 1000;
-const DANGEROUS_REDIRECT_SCHEMES = new Set([
-	"javascript:",
-	"data:",
-	"vbscript:",
-]);
-
-type McpMetadata = {
-	kind?: string;
-	mcpClientType?: string;
-	redirectNames?: Record<string, string>;
-};
 
 type RegistrationResponse = {
 	body: {
@@ -40,33 +35,6 @@ type RegistrationResponse = {
 };
 
 const registerCache = new Map<string, { expiresAt: number; body: unknown }>();
-
-const parseMetadata = (metadata: unknown): McpMetadata => {
-	if (!metadata) return {};
-	if (typeof metadata === "string") {
-		try {
-			const parsed = JSON.parse(metadata);
-			return parsed && typeof parsed === "object" ? parsed : {};
-		} catch {
-			return {};
-		}
-	}
-
-	return typeof metadata === "object" ? metadata : {};
-};
-
-const isLocalhost = (hostname: string) =>
-	hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-
-export const isSafeOAuthRedirectUri = (redirectUri: string) => {
-	if (!URL.canParse(redirectUri)) return false;
-
-	const url = new URL(redirectUri);
-	if (DANGEROUS_REDIRECT_SCHEMES.has(url.protocol)) return false;
-	if (url.protocol === "http:") return isLocalhost(url.hostname);
-
-	return true;
-};
 
 const normalize = (value: string) => value.trim().toLowerCase();
 
@@ -129,7 +97,7 @@ export const getRequestedScopesForMcpClient = ({
 	if (typeof scope !== "string" || !scope.trim()) {
 		return getDefaultOAuthScopes();
 	}
-	return getDefaultOAuthScopes(scope.split(" "));
+	return getDefaultOAuthScopes(splitOAuthScopeString(scope));
 };
 
 const mergeMetadata = ({
@@ -141,7 +109,9 @@ const mergeMetadata = ({
 	info: MpcClientInfo;
 	redirectUris: string[];
 }) => {
-	const existing = parseMetadata(client?.metadata);
+	const existing: OAuthClientMetadata = parseOAuthClientMetadata(
+		client?.metadata,
+	);
 	const redirectNames = { ...(existing.redirectNames ?? {}) };
 	for (const redirectUri of redirectUris) {
 		redirectNames[redirectUri] = info.name;
@@ -176,7 +146,7 @@ const clientMatches = ({
 		return false;
 	}
 
-	const metadata = parseMetadata(client.metadata);
+	const metadata = parseOAuthClientMetadata(client.metadata);
 	if (
 		info.type !== "dynamic" &&
 		metadata.kind === MCP_CLIENT_KIND &&

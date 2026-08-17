@@ -8,6 +8,12 @@ import {
 } from "@autumn/auth/oauth";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
+import {
+	getOAuthStringField,
+	parseOAuthRequestFields,
+	rebuildOAuthRequest,
+} from "@autumn/shared/utils/auth/oauthRequestBody";
+import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import {
@@ -29,9 +35,6 @@ import {
 } from "./oauthAccessTokenApiKey.js";
 import { getOAuthConsentScopeGrant } from "./oauthConsentScopes.js";
 import { getRefreshTokenForConsentLookup } from "./tokenRequestFields.js";
-
-const getString = (value: unknown) =>
-	typeof value === "string" && value.length > 0 ? value : null;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
@@ -185,7 +188,9 @@ const constrainScope = ({
 	grantedScopes: string[];
 }) => {
 	const granted = new Set(grantedScopes);
-	const constrained = scope.split(/\s+/).filter((value) => granted.has(value));
+	const constrained = splitOAuthScopeString(scope).filter((value) =>
+		granted.has(value),
+	);
 	return constrained.length > 0 ? constrained.join(" ") : scope;
 };
 
@@ -196,33 +201,18 @@ const normalizeTokenRequest = async ({
 	request: Request;
 	grantedScopes?: string[];
 }): Promise<Request> => {
-	const contentType = request.headers.get("content-type") ?? "";
-	const rawBody = await request.text();
+	const { fields, isJson, rawBody } = await parseOAuthRequestFields(request);
 	if (!rawBody) return request;
-
-	if (contentType.includes("application/json")) {
-		try {
-			const body = JSON.parse(rawBody) as Record<string, unknown>;
-			delete body.resource;
-			if (grantedScopes && typeof body.scope === "string") {
-				body.scope = constrainScope({ scope: body.scope, grantedScopes });
-			}
-			return new Request(request, {
-				body: JSON.stringify(body, Object.keys(body).sort()),
-			});
-		} catch {
-			return new Request(request, { body: rawBody });
-		}
+	if (isJson && Object.keys(fields).length === 0) {
+		return new Request(request, { body: rawBody });
 	}
 
-	const params = new URLSearchParams(rawBody);
-	params.delete("resource");
-	const scope = params.get("scope");
-	if (grantedScopes && scope) {
-		params.set("scope", constrainScope({ scope, grantedScopes }));
+	delete fields.resource;
+	if (grantedScopes && typeof fields.scope === "string") {
+		fields.scope = constrainScope({ scope: fields.scope, grantedScopes });
 	}
-	params.sort();
-	return new Request(request, { body: params });
+
+	return rebuildOAuthRequest({ fields, isJson, request, sortKeys: true });
 };
 
 export const handleOAuthTokenWithApiKey = async (c: Context) => {
@@ -278,7 +268,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 	}
 
 	const tokenPayload = getTokenPayload(body);
-	const accessToken = getString(tokenPayload.access_token);
+	const accessToken = getOAuthStringField(tokenPayload.access_token);
 	if (!accessToken) return response;
 
 	const parsedRequestedScopes = scopesFromOAuthScopeString(tokenPayload.scope);
