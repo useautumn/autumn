@@ -4,14 +4,14 @@ import { groupPreviewProducts, type PreviewProduct } from "./previewTypes";
 
 interface GroupedPlanCardsProps {
 	products: PreviewProduct[];
-	previewApiKey?: string;
+	isPreviewOrgReady: boolean;
 	isSyncing: boolean;
 	changedProductIds: Set<string>;
 }
 
 export function GroupedPlanCards({
 	products,
-	previewApiKey,
+	isPreviewOrgReady,
 	isSyncing,
 	changedProductIds,
 }: GroupedPlanCardsProps) {
@@ -29,7 +29,7 @@ export function GroupedPlanCards({
 						<PreviewPlanCard
 							key={product.id}
 							product={product}
-							previewApiKey={previewApiKey}
+							isPreviewOrgReady={isPreviewOrgReady}
 							isSyncing={isSyncing}
 							isChanged={changedProductIds.has(product.id)}
 						/>

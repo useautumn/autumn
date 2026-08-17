@@ -10,7 +10,6 @@ import {
 } from "./preview/previewTypes";
 
 interface PreviewOrg {
-	apiKey: string;
 	orgId: string;
 	orgSlug: string;
 }
@@ -98,7 +97,7 @@ export function PricingPreview({
 					<div className="flex flex-col gap-6 my-auto">
 						<GroupedPlanCards
 							products={previewProducts}
-							previewApiKey={previewOrg?.apiKey}
+							isPreviewOrgReady={previewOrg != null}
 							isSyncing={isSyncing}
 							changedProductIds={changedProductIds}
 						/>

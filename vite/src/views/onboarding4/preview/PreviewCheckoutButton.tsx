@@ -1,58 +1,40 @@
 import { Button } from "@autumn/ui";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 type CheckoutState = "idle" | "waiting_for_sync" | "creating_checkout";
 
 interface PreviewCheckoutButtonProps {
 	productId: string;
-	previewApiKey?: string;
+	isPreviewOrgReady: boolean;
 	isSyncing: boolean;
 }
 
 export function PreviewCheckoutButton({
 	productId,
-	previewApiKey,
+	isPreviewOrgReady,
 	isSyncing,
 }: PreviewCheckoutButtonProps) {
 	const [checkoutState, setCheckoutState] = useState<CheckoutState>("idle");
+	const axiosInstance = useAxiosInstance();
 
 	const createCheckout = useCallback(async () => {
-		if (!previewApiKey) return;
+		if (!isPreviewOrgReady) return;
 		setCheckoutState("creating_checkout");
 		try {
-			console.log(
-				`[Preview Checkout] Starting checkout for product: ${productId}`,
-			);
-
-			const response = await fetch(
-				`${import.meta.env.VITE_BACKEND_URL}/v1/checkout`,
+			// Checkout runs server-side against the preview sandbox org, keyed off
+			// the dashboard session — no sandbox API key is exposed to the browser.
+			const response = await axiosInstance.post(
+				"/pricing-agent/preview/checkout",
 				{
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${previewApiKey}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						customer_id: "preview_customer",
-						product_id: productId,
-						success_url: window.location.href,
-					}),
+					product_id: productId,
+					success_path: window.location.pathname + window.location.search,
 				},
 			);
 
-			if (!response.ok) {
-				const error = await response.json();
-				console.error("[Preview Checkout] Failed:", error);
-				setCheckoutState("idle");
-				return;
-			}
-
-			const result = await response.json();
-			console.log("[Preview Checkout] Result:", result);
-
-			if (result.url) {
-				window.open(result.url, "_blank");
+			if (response.data?.url) {
+				window.open(response.data.url, "_blank");
 			} else {
 				console.error("[Preview Checkout] No URL in response");
 			}
@@ -61,7 +43,7 @@ export function PreviewCheckoutButton({
 		} finally {
 			setCheckoutState("idle");
 		}
-	}, [productId, previewApiKey]);
+	}, [axiosInstance, productId, isPreviewOrgReady]);
 
 	// When syncing finishes and we were waiting for it, create checkout
 	useEffect(() => {
@@ -71,7 +53,7 @@ export function PreviewCheckoutButton({
 	}, [checkoutState, isSyncing, createCheckout]);
 
 	const handleClick = () => {
-		if (!previewApiKey) return;
+		if (!isPreviewOrgReady) return;
 		if (isSyncing) {
 			// Wait for sync to complete
 			setCheckoutState("waiting_for_sync");
@@ -82,7 +64,7 @@ export function PreviewCheckoutButton({
 	};
 
 	const isLoading = checkoutState !== "idle";
-	const isDisabled = isLoading || !previewApiKey;
+	const isDisabled = isLoading || !isPreviewOrgReady;
 
 	const getButtonText = () => {
 		switch (checkoutState) {

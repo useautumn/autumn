@@ -64,7 +64,6 @@ export function usePricingAgentChat(options?: UsePricingAgentChatOptions) {
 
 				const data = await response.json();
 				const org: PreviewOrg = {
-					apiKey: data.api_key,
 					orgId: data.org_id,
 					orgSlug: data.org_slug,
 				};

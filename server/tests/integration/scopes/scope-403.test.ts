@@ -746,6 +746,20 @@ const ROUTES = [
 		isWebhookExempt: false,
 	},
 	{
+		handlerName: "handlePreviewCheckout",
+		handlerFile:
+			"src/internal/misc/pricingAgent/handlers/handlePreviewCheckout.ts",
+		method: "POST",
+		path: "/pricing-agent/preview/checkout",
+		style: "REST",
+		group: "pricing-agent",
+		mountChain: ["", "/pricing-agent", "/preview/checkout"],
+		sourceRouterFile: "src/internal/misc/pricingAgent/pricingAgentRouter.ts",
+		routeKind: "createRoute",
+		needsScopes: true,
+		isWebhookExempt: false,
+	},
+	{
 		handlerName: "handleSetupPreviewOrg",
 		handlerFile:
 			"src/internal/misc/pricingAgent/handlers/handleSetupPreviewOrg.ts",
@@ -3979,6 +3993,13 @@ const SCOPE_DECISIONS: Record<
 		scopes: ["organisation:write"],
 		shape: "array",
 		decidedAt: "2026-04-24T15:25:47.915Z",
+	},
+	"POST|/pricing-agent/preview/checkout|handlePreviewCheckout": {
+		decision: "decided",
+		scopes: ["billing:write", "customers:write"],
+		shape: "all",
+		note: "pricing-agent preview checkout \u2014 creates a checkout session in the caller's preview sandbox org",
+		decidedAt: "2026-04-24T17:16:14.920Z",
 	},
 	"POST|/pricing-agent/preview/setup|handleSetupPreviewOrg": {
 		decision: "decided",

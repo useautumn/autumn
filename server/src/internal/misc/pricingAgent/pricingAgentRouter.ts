@@ -5,6 +5,7 @@ import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { Hono } from "hono";
 import { PostHog } from "posthog-node";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { handlePreviewCheckout } from "./handlers/handlePreviewCheckout.js";
 import { handleSetupPreviewOrg } from "./handlers/handleSetupPreviewOrg.js";
 import { handleSyncPreviewPricing } from "./handlers/handleSyncPreviewPricing.js";
 import { OrganisationConfigurationSchema } from "./pricingAgentSchemas.js";
@@ -203,3 +204,9 @@ pricingAgentRouter.post("/preview/setup", ...handleSetupPreviewOrg);
  * Syncs pricing configuration to the preview sandbox org
  */
 pricingAgentRouter.post("/preview/sync", ...handleSyncPreviewPricing);
+
+/**
+ * POST /preview/checkout
+ * Creates a checkout session against the preview sandbox org
+ */
+pricingAgentRouter.post("/preview/checkout", ...handlePreviewCheckout);
