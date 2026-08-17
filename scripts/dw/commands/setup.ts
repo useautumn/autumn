@@ -1,12 +1,9 @@
 import { NEON_PROJECT_ID, PROJECT_ROOT } from "../constants.ts";
 import { isProvisioned } from "../helpers/entry.ts";
-import {
-	getCanonicalWorktree,
-	getCurrentBranch,
-	getCurrentWorktree,
-	getDefaultBranch,
-} from "../helpers/git.ts";
+import { getCurrentWorktree } from "../helpers/git.ts";
 import { isHeadless } from "../helpers/headless.ts";
+import { ensureLocalInfra } from "../helpers/localInfra.ts";
+import { ensurePublicAccess } from "../helpers/cloudflare.ts";
 import { withNeonContext } from "../helpers/neonContext.ts";
 import {
 	parseRegionArg,
@@ -14,14 +11,9 @@ import {
 } from "../helpers/neonRegion.ts";
 import { provisionWorktree } from "../helpers/provision.ts";
 import {
-	allocateWorktreeNumber,
-	deriveBranchName,
-	deriveCanonicalBranchName,
 	loadRegistry,
-	reconcile,
-	refreshCanonicalEntry,
+	registerCurrentWorktree,
 	saveRegistry,
-	wantsCanonicalProvision,
 } from "../helpers/registry.ts";
 import { fatal, log, shInherit } from "../helpers/shell.ts";
 import type { RegistryEntry } from "../types.ts";
@@ -59,7 +51,12 @@ function ensureAiSubmoduleSynced(): void {
 	// Full sync everywhere: syncMcps now drops the cloud-root servers instead of
 	// aborting, so headless boxes get .mcp.json too. `sync devin` skipped it and
 	// left cloud workspaces with skills but no MCP servers.
-	const syncCode = shInherit("bun", ["sync"], { cwd: aiDir });
+	// Run from the autumn root so findRepoRoot sees workspaces and writes
+	// into .cursor/ at the repo root — not into ai/.cursor (the TTY-less
+	// fallback when cwd is ai/).
+	const syncCode = shInherit("bun", ["ai/src/cli.ts", "sync"], {
+		cwd: PROJECT_ROOT,
+	});
 	if (syncCode !== 0) {
 		fatal(`bun sync failed in ai submodule (exit ${syncCode})`);
 	}
@@ -76,47 +73,9 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 
 	ensureAiSubmoduleSynced();
 
-	const canonical = getCanonicalWorktree();
 	const cwd = getCurrentWorktree();
-	const gitBranch = getCurrentBranch();
-	const defaultBranch = getDefaultBranch();
+	let entry = registerCurrentWorktree();
 	let registry = loadRegistry();
-	registry = reconcile(registry);
-
-	let entry = registry[cwd];
-	if (!entry) {
-		const worktreeNum = allocateWorktreeNumber(cwd, registry, canonical);
-		const onFeatureBranch = wantsCanonicalProvision(
-			cwd,
-			canonical,
-			gitBranch,
-			defaultBranch,
-		);
-		const branchName =
-			worktreeNum === 1
-				? onFeatureBranch
-					? deriveCanonicalBranchName(cwd, gitBranch)
-					: undefined
-				: deriveBranchName(cwd, worktreeNum);
-		entry = {
-			path: cwd,
-			worktreeNum,
-			createdAt: Date.now(),
-			...(onFeatureBranch && { gitBranch }),
-			...(branchName && { branchName }),
-		};
-		registry[cwd] = entry;
-		saveRegistry(registry);
-		log(`registered ${cwd} as worktree ${worktreeNum}`);
-	} else if (entry.worktreeNum === 1) {
-		entry = refreshCanonicalEntry(entry, cwd, canonical);
-		registry[cwd] = entry;
-		saveRegistry(registry);
-	} else {
-		entry.lastUsedAt = Date.now();
-		registry[cwd] = entry;
-		saveRegistry(registry);
-	}
 
 	log(
 		`resuming worktree ${entry.worktreeNum}${entry.branchName ? ` (${entry.branchName})` : ""}`,
@@ -141,6 +100,13 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 		);
 		registry[cwd] = entry;
 		saveRegistry(registry);
+	} else if (isHeadless()) {
+		ensureLocalInfra();
+		entry = await ensurePublicAccess(entry);
+		registry[cwd] = entry;
+		saveRegistry(registry);
+	} else {
+		entry = await ensurePublicAccess(entry);
 	}
 
 	return entry;

@@ -44,7 +44,9 @@ import { ADMIN_USER_IDs } from "./constants.js";
 // can use any redirect URI without registering it in the real Google console.
 // Real Google's oauth2.googleapis.com/token maps to emulate's /oauth2/token path.
 if (process.env.EMULATE_GOOGLE_URL && process.env.NODE_ENV !== "production") {
-	const emulate = process.env.EMULATE_GOOGLE_URL.replace(/\/$/, "");
+	const emulate = (
+		process.env.EMULATE_GOOGLE_FETCH_URL || process.env.EMULATE_GOOGLE_URL
+	).replace(/\/$/, "");
 	const originalFetch = globalThis.fetch;
 	globalThis.fetch = ((input: any, init?: any) => {
 		const url =
@@ -79,7 +81,15 @@ const emulateGoogleUrl =
 // state cookie must be SameSite=None+Secure to survive the round trip.
 const isProductionAuth = process.env.NODE_ENV === "production";
 export const authBaseUrl = getAutumnEnv().AUTUMN_API_URL;
-const isHttpsBaseUrl = authBaseUrl?.startsWith("https://");
+const publicAuthBaseUrl = getAutumnEnv().AUTUMN_PUBLIC_API_URL;
+const isHeadlessAuth =
+	process.env.DW_HEADLESS === "1" || process.env.DW_HEADLESS === "true";
+const browserAuthBaseUrl = isProductionAuth
+	? authBaseUrl
+	: isHeadlessAuth
+		? publicAuthBaseUrl
+		: authBaseUrl;
+const isHttpsBaseUrl = browserAuthBaseUrl?.startsWith("https://");
 
 const parseMcpResourceUrl = (rawUrl: string) => {
 	const resourceUrl = rawUrl.trim();
@@ -157,7 +167,7 @@ if (
 }
 
 const options = {
-	baseURL: authBaseUrl,
+	baseURL: browserAuthBaseUrl,
 	telemetry: {
 		enabled: false,
 	},
@@ -220,6 +230,7 @@ const options = {
 			"https://app.useautumn.com",
 			"https://staging.useautumn.com",
 			"https://*.useautumn.com",
+			"https://*.autumnworktree.com",
 		];
 		origins.push(...getTrustedSsoOrigins());
 		if (process.env.NODE_ENV === "production") return origins;
@@ -251,8 +262,8 @@ const options = {
 		google: {
 			clientId: process.env.GOOGLE_CLIENT_ID!,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-			redirectURI: authBaseUrl
-				? `${authBaseUrl}/api/auth/callback/google`
+			redirectURI: browserAuthBaseUrl
+				? `${browserAuthBaseUrl}/api/auth/callback/google`
 				: undefined,
 			...(emulateGoogleUrl
 				? {
