@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
-import { adoptPostedEveSession } from "../../../src/harness/eve/adoptPostedSession.js";
-import type { EveSessionRef } from "../../../src/harness/eve/types.js";
+import { adoptPostedEveSession } from "../../../src/internal/agentRuntime/eve/adoptPostedSession.js";
+import type { EveSessionRef } from "../../../src/internal/agentRuntime/eve/types.js";
 
 const sessionAt = (streamIndex: number): EveSessionRef => ({
 	env: AppEnv.Sandbox,

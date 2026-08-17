@@ -9,12 +9,9 @@
 import { buildCatalogDecisionModel, parsePreviewPayload } from "@autumn/render";
 import type { ChatApproval } from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
-import { runMessage } from "../../src/agent/runMessage/runMessage.js";
-import {
-	answerEveQuestion,
-	denyEveApproval,
-} from "../../src/harness/eve/approval.js";
-import { redirectCatalogSuspensionToDecision } from "../../src/harness/eve/catalogDecision.js";
+import { answerAgentQuestion } from "../../src/internal/agentRuntime/actions/answerAgentQuestion/answerAgentQuestion.js";
+import { resolveCatalogDecision } from "../../src/internal/agentRuntime/actions/resolveCatalogDecision/resolveCatalogDecision.js";
+import { discardApproval } from "../../src/internal/approvals/actions/discardApproval.js";
 import { resolveApproval } from "../../src/internal/approvals/actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../src/internal/approvals/repos/chatApprovalRepo.js";
 import { presentApproval } from "../../src/internal/approvals/surfaces/slack/present.js";
@@ -22,10 +19,11 @@ import { executeAutumnMcpTool } from "../../src/internal/autumnMcp/client.js";
 import { getInstallationOAuthAccessToken } from "../../src/internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { db } from "../../src/lib/db.js";
 import { logger } from "../../src/lib/logger.js";
+import { runSlackAgentTurn } from "../../src/providers/slack/actions/runSlackAgentTurn.js";
+import type { SlackChatInstallation } from "../../src/providers/slack/domain/slackAgentTurn.js";
 import { createEveSlackPresenter } from "../../src/providers/slack/evePresenter.js";
 import { findInstallationWithOrg } from "../../src/providers/slack/installations.js";
-import type { LeafChatInstallation } from "../../src/types.js";
-import { catalogDecisionCard } from "../../src/ui/eveCards.js";
+import { catalogDecisionCard } from "../../src/providers/slack/presenters/interactionCards.js";
 import { createStatusTicker } from "../../src/ui/statusTicker.js";
 
 const WORKSPACE_ID = process.env.E2E_SLACK_WORKSPACE ?? "T07NPTDCU69";
@@ -91,7 +89,7 @@ const runTurn = async ({
 }: {
 	attachments?: { data: Buffer; mimeType: string; name?: string }[];
 	clientContext?: Record<string, unknown>;
-	installation: LeafChatInstallation;
+	installation: SlackChatInstallation;
 	providerUserId?: string;
 	recentMessages?: { author: string; isBot: boolean; text: string }[];
 	text: string;
@@ -101,7 +99,7 @@ const runTurn = async ({
 	const ticker = createStatusTicker(target as never);
 	const presenter = createEveSlackPresenter({ ticker });
 	const superseded: ChatApproval[] = [];
-	const output = await runMessage({
+	const output = await runSlackAgentTurn({
 		attachments: attachments?.map((attachment) => ({
 			data: attachment.data,
 			mimeType: attachment.mimeType,
@@ -152,7 +150,7 @@ const pendingApprovalForRun = async ({
 	runId,
 }: {
 	channelId: string;
-	installation: LeafChatInstallation;
+	installation: SlackChatInstallation;
 	runId: string;
 }) =>
 	(
@@ -172,7 +170,7 @@ const main = async () => {
 	const installation = (await findInstallationWithOrg(
 		"slack",
 		WORKSPACE_ID,
-	)) as LeafChatInstallation | null;
+	)) as SlackChatInstallation | null;
 	if (!installation) {
 		throw new Error(`No slack installation for workspace ${WORKSPACE_ID}`);
 	}
@@ -275,11 +273,8 @@ const main = async () => {
 			text: "In sandbox: how many plans do we have? Answer in one sentence.",
 			threadId,
 		});
-		check(
-			"S1 run produced text",
-			Boolean(turn.output.text?.trim()),
-			turn.output.text?.slice(0, 120),
-		);
+		const text = turn.output.kind === "empty" ? "" : turn.output.text;
+		check("S1 run produced text", Boolean(text.trim()), text.slice(0, 120));
 		// Tool activity lives in the assistant status line, never posted cards.
 		check(
 			"S1 progress went to the status line",
@@ -304,21 +299,23 @@ const main = async () => {
 		});
 		check(
 			"S2 suspended on a gated write",
-			Boolean(turn.output.suspension),
-			turn.output.suspension?.toolName ??
-				`text: ${turn.output.text?.slice(0, 160)}`,
+			turn.output.kind === "approval",
+			turn.output.kind === "approval"
+				? turn.output.approval.toolName
+				: `kind: ${turn.output.kind}`,
 		);
-		if (turn.output.suspension) {
+		if (turn.output.kind === "approval") {
 			const target = makeTarget();
 			const posted = await presentApproval({
 				channelId: s2ThreadId,
+				env: turn.output.env,
 				installation,
 				logAction: () => undefined,
 				logger,
 				orgId: installation.org_id,
-				output: turn.output,
 				providerUserId: USER_A,
 				target: target as never,
+				turn: turn.output,
 			});
 			check("S2 approval card posted", posted === true);
 			const cardJson = JSON.stringify(target.posted.at(-1)?.content ?? {});
@@ -330,7 +327,7 @@ const main = async () => {
 			const approval = await pendingApprovalForRun({
 				channelId: s2ThreadId,
 				installation,
-				runId: turn.output.runId ?? "",
+				runId: turn.output.sessionId,
 			});
 			check("S2 approval row exists", Boolean(approval));
 			if (approval) {
@@ -380,23 +377,25 @@ const main = async () => {
 		});
 		check(
 			"S3 first turn suspended",
-			Boolean(first.output.suspension),
-			first.output.suspension?.toolName ??
-				`text: ${first.output.text?.slice(0, 160)}`,
+			first.output.kind === "approval",
+			first.output.kind === "approval"
+				? first.output.approval.toolName
+				: `kind: ${first.output.kind}`,
 		);
 		// The real bot flow always inserts the approval row via presentApproval
 		// before the next message can supersede it.
-		if (first.output.suspension) {
+		if (first.output.kind === "approval") {
 			const cardTarget = makeTarget();
 			await presentApproval({
 				channelId: threadId,
+				env: first.output.env,
 				installation,
 				logAction: () => undefined,
 				logger,
 				orgId: installation.org_id,
-				output: first.output,
 				providerUserId: USER_A,
 				target: cardTarget as never,
+				turn: first.output,
 			});
 		}
 		const second = await runTurn({
@@ -415,15 +414,16 @@ const main = async () => {
 		// renders on Slack (text, chips, or a fresh approval card).
 		check(
 			"S3 follow-up turn completed",
-			Boolean(
-				second.output.text?.trim() ||
-					second.output.question ||
-					second.output.suspension,
-			),
-			second.output.suspension
-				? `rebuilt write: ${second.output.suspension.toolName}`
-				: (second.output.text?.slice(0, 120) ??
-						second.output.question?.prompt?.slice(0, 120)),
+			second.output.kind === "reply" ||
+				second.output.kind === "question" ||
+				second.output.kind === "approval",
+			second.output.kind === "approval"
+				? `rebuilt write: ${second.output.approval.toolName}`
+				: second.output.kind === "question"
+					? second.output.question.prompt.slice(0, 120)
+					: second.output.kind === "empty"
+						? undefined
+						: second.output.text.slice(0, 120),
 		);
 	}
 
@@ -438,33 +438,36 @@ const main = async () => {
 		});
 		check(
 			"S4 first turn suspended",
-			Boolean(first.output.suspension),
-			first.output.suspension?.toolName ??
-				`text: ${first.output.text?.slice(0, 160)}`,
+			first.output.kind === "approval",
+			first.output.kind === "approval"
+				? first.output.approval.toolName
+				: `kind: ${first.output.kind}`,
 		);
-		if (first.output.suspension) {
+		if (first.output.kind === "approval") {
 			const cardTarget = makeTarget();
 			await presentApproval({
 				channelId: threadId,
+				env: first.output.env,
 				installation,
 				logAction: () => undefined,
 				logger,
 				orgId: installation.org_id,
-				output: first.output,
 				providerUserId: USER_A,
 				target: cardTarget as never,
+				turn: first.output,
 			});
 		}
-		const approval = first.output.runId
-			? await pendingApprovalForRun({
-					channelId: threadId,
-					installation,
-					runId: first.output.runId,
-				})
-			: undefined;
+		const approval =
+			first.output.kind === "approval"
+				? await pendingApprovalForRun({
+						channelId: threadId,
+						installation,
+						runId: first.output.sessionId,
+					})
+				: undefined;
 		check("S4 approval row exists", Boolean(approval));
 		if (approval) {
-			const denied = await denyEveApproval({
+			const denied = await discardApproval({
 				approval,
 				providerUserId: USER_A,
 			});
@@ -484,10 +487,11 @@ const main = async () => {
 				text: "No changes then. In one sentence: which plan is that customer currently on?",
 				threadId,
 			});
+			const text = followUp.output.kind === "empty" ? "" : followUp.output.text;
 			check(
 				"S4 session not wedged after dismiss",
-				Boolean(followUp.output.text?.trim()),
-				followUp.output.text?.slice(0, 120),
+				Boolean(text.trim()),
+				text.slice(0, 120),
 			);
 		}
 	}
@@ -503,12 +507,14 @@ const main = async () => {
 		});
 		check(
 			"S5 turn returned a structured question",
-			Boolean(turn.output.question),
-			turn.output.question?.prompt?.slice(0, 100),
+			turn.output.kind === "question",
+			turn.output.kind === "question"
+				? turn.output.question.prompt.slice(0, 100)
+				: `kind: ${turn.output.kind}`,
 		);
-		if (turn.output.question && turn.output.runId) {
+		if (turn.output.kind === "question") {
 			const option = turn.output.question.options[0];
-			const answer = await answerEveQuestion({
+			const answer = await answerAgentQuestion({
 				auth: {
 					appEnv: AppEnv.Sandbox,
 					channelId: threadId,
@@ -521,7 +527,7 @@ const main = async () => {
 				optionId: option.id ?? option.label ?? "",
 				orgId: installation.org_id,
 				requestId: turn.output.question.requestId,
-				sessionId: turn.output.runId,
+				sessionId: turn.output.sessionId,
 			});
 			check(
 				"S5 button answer resumed the session",
@@ -547,7 +553,7 @@ const main = async () => {
 		});
 		// File ingestion is flag-gated off (upstream eve queue bug corrupts
 		// bytes) — the graceful path acknowledges the file instead of failing.
-		const text = turn.output.text ?? "";
+		const text = turn.output.kind === "empty" ? "" : turn.output.text;
 		check(
 			"S6 attachment acknowledged gracefully (or seen, if flag on)",
 			/red/i.test(text) || /pixel\.png|image|file/i.test(text),
@@ -566,12 +572,13 @@ const main = async () => {
 			text: "Different person here — in one sentence, which plan does that customer have now?",
 			threadId: s2ThreadId,
 		});
+		const text = followUp.output.kind === "empty" ? "" : followUp.output.text;
 		// A no-tool turn may never open a stream; the bot then posts the text as
 		// a plain message — that's the correct fallback, not a failure.
 		check(
 			"S7 second user's turn completed on the same session",
-			Boolean(followUp.output.text?.trim()),
-			followUp.output.text?.slice(0, 120),
+			Boolean(text.trim()),
+			text.slice(0, 120),
 		);
 	}
 
@@ -584,42 +591,44 @@ const main = async () => {
 			text: `In sandbox: change the base price of plan "${decisionPlanId}" to be $1 higher than it currently is. Proceed without asking me anything, and don't pass any versioning/variant/migration options — just the price change.`,
 			threadId,
 		});
-		const hasGate = Boolean(
-			turn.output.suspension || turn.output.catalogDecision,
-		);
+		const hasGate =
+			turn.output.kind === "approval" ||
+			turn.output.kind === "catalog_decision";
 		check(
 			"S8 catalog change gated (suspension or decision)",
 			hasGate,
-			turn.output.suspension?.toolName ??
-				(turn.output.catalogDecision ? "catalogDecision" : "none"),
+			turn.output.kind === "approval"
+				? turn.output.approval.toolName
+				: turn.output.kind === "catalog_decision"
+					? "catalogDecision"
+					: "none",
 		);
-		let plan = turn.output.catalogDecision?.plan as
-			| Parameters<typeof buildCatalogDecisionModel>[0]["plan"]
-			| undefined;
-		if (!plan && turn.output.suspension) {
-			plan = await redirectCatalogSuspensionToDecision({
+		let plan =
+			turn.output.kind === "catalog_decision" ? turn.output.plan : undefined;
+		if (!plan && turn.output.kind === "approval") {
+			plan = await resolveCatalogDecision({
 				decisionProvided: false,
 				env: AppEnv.Sandbox,
+				getToken: async () => token,
 				logger,
 				orgId: installation.org_id,
 				providerUserId: USER_A,
-				runId: turn.output.runId,
-				suspension: turn.output.suspension,
+				runId: turn.output.sessionId,
+				suspension: turn.output.approval,
 				thread: {
 					channelId: threadId,
 					provider: installation.provider as never,
 					threadId,
 					workspaceId: installation.workspace_id,
 				},
-				token,
 			});
 		}
 		// Ground truth: does a flag-forced preview say this plan needs decisions?
 		// (Earlier scenarios may have moved the customer off the fixture plan, in
 		// which case NOT redirecting is the correct outcome.)
 		let groundTruthNeedsDecision = false;
-		if (!plan && turn.output.suspension) {
-			const args = turn.output.suspension.toolArgs as {
+		if (!plan && turn.output.kind === "approval") {
+			const args = turn.output.approval.toolArgs as {
 				request?: { plans?: Record<string, unknown>[] };
 			};
 			const request = args.request ?? {};
@@ -665,29 +674,28 @@ const main = async () => {
 				cardJson.includes("Create new version") &&
 					cardJson.includes("Update current version"),
 			);
-		} else if (turn.output.suspension) {
+		} else if (turn.output.kind === "approval") {
 			// No decision needed → the real flow posts an approval card; dismiss it
 			// so the parked write is denied and nothing is applied.
 			const cardTarget = makeTarget();
 			await presentApproval({
 				channelId: threadId,
+				env: turn.output.env,
 				installation,
 				logAction: () => undefined,
 				logger,
 				orgId: installation.org_id,
-				output: turn.output,
 				providerUserId: USER_A,
 				target: cardTarget as never,
+				turn: turn.output,
 			});
-			const approval = turn.output.runId
-				? await pendingApprovalForRun({
-						channelId: threadId,
-						installation,
-						runId: turn.output.runId,
-					})
-				: undefined;
+			const approval = await pendingApprovalForRun({
+				channelId: threadId,
+				installation,
+				runId: turn.output.sessionId,
+			});
 			if (approval) {
-				await denyEveApproval({ approval, providerUserId: USER_A });
+				await discardApproval({ approval, providerUserId: USER_A });
 				await chatApprovalRepo.cancel({
 					approvalId: approval.id,
 					db,
@@ -702,10 +710,11 @@ const main = async () => {
 			text: "Leave the price as is — do not apply anything. Just say 'ok'.",
 			threadId,
 		});
+		const text = followUp.output.kind === "empty" ? "" : followUp.output.text;
 		check(
 			"S8 session healthy after decision routing",
-			Boolean(followUp.output.text?.trim()),
-			followUp.output.text?.slice(0, 120),
+			Boolean(text.trim()),
+			text.slice(0, 120),
 		);
 	}
 
@@ -742,7 +751,9 @@ const main = async () => {
 				text: `In sandbox: attach the plan "${prepaidPlanId}" to customer "${customerId}" and put them on 4,500 ${prepaidFeatureId}.`,
 				threadId,
 			});
-			const args = (turn.output.suspension?.toolArgs ?? {}) as {
+			const args = (
+				turn.output.kind === "approval" ? turn.output.approval.toolArgs : {}
+			) as {
 				request?: {
 					customize?: { add_items?: unknown[]; remove_items?: unknown[] };
 					feature_quantities?: { feature_id?: string; quantity?: number }[];
@@ -757,30 +768,33 @@ const main = async () => {
 				args.request?.customize?.remove_items?.length ||
 					args.request?.customize?.add_items?.length,
 			);
-			const askedInstead = Boolean(
-				turn.output.question &&
-					/quantit|prepaid|credit/i.test(turn.output.question.prompt),
-			);
+			const askedInstead =
+				turn.output.kind === "question" &&
+				/quantit|prepaid|credit/i.test(turn.output.question.prompt);
 			check(
 				"S9 bare amount handled as prepaid quantity (or clarified)",
 				(setCorrectly && !editedItemInstead) || askedInstead,
-				turn.output.suspension
+				turn.output.kind === "approval"
 					? `feature_quantities=${JSON.stringify(quantities)} customize=${JSON.stringify(args.request?.customize ?? null).slice(0, 120)}`
-					: (turn.output.question?.prompt?.slice(0, 120) ??
-							turn.output.text?.slice(0, 120)),
+					: turn.output.kind === "question"
+						? turn.output.question.prompt.slice(0, 120)
+						: turn.output.kind === "empty"
+							? undefined
+							: turn.output.text.slice(0, 120),
 			);
-			if (turn.output.suspension && turn.output.runId) {
+			if (turn.output.kind === "approval") {
 				// Card safety net: the quantity (or its absence) must be visible.
 				const target = makeTarget();
 				await presentApproval({
 					channelId: threadId,
+					env: turn.output.env,
 					installation,
 					logAction: () => undefined,
 					logger,
 					orgId: installation.org_id,
-					output: turn.output,
 					providerUserId: USER_A,
 					target: target as never,
+					turn: turn.output,
 				});
 				const cardJson = JSON.stringify(target.posted.at(-1)?.content ?? {});
 				check(
@@ -792,10 +806,10 @@ const main = async () => {
 				const approval = await pendingApprovalForRun({
 					channelId: threadId,
 					installation,
-					runId: turn.output.runId,
+					runId: turn.output.sessionId,
 				});
 				if (approval) {
-					await denyEveApproval({ approval, providerUserId: USER_A });
+					await discardApproval({ approval, providerUserId: USER_A });
 					await chatApprovalRepo.cancel({
 						approvalId: approval.id,
 						db,

@@ -3,7 +3,7 @@ import { AppEnv } from "@autumn/shared";
 import type {
 	EveAuthContext,
 	EveSessionRef,
-} from "../../../src/harness/eve/types.js";
+} from "../../../src/internal/agentRuntime/eve/types.js";
 
 // `env` parses leaf's whole schema at import, so it is stubbed before the
 // client is loaded — only the two values the request URL and headers read.
@@ -15,7 +15,7 @@ mock.module("../../../src/lib/env.js", () => ({
 }));
 
 const { postEveInputResponse, SIBLING_WITHHELD_NOTE } = await import(
-	"../../../src/harness/eve/client.js"
+	"../../../src/internal/agentRuntime/eve/client.js"
 );
 
 type PostedBody = {

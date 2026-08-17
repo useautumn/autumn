@@ -2,18 +2,20 @@ import {
 	type ChatApproval,
 	chatInstallations,
 	checkScopes,
+	ms,
 } from "@autumn/shared";
 import type { ActionEvent } from "chat";
+import { differenceInMilliseconds } from "date-fns";
 import { and, eq } from "drizzle-orm";
-import { resolveSlackCallerAuth } from "../../../../agent/runMessage/setup/resolveSlackCallerAuth.js";
-import { denyEveApproval } from "../../../../harness/eve/approval.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
+import { questionCard } from "../../../../providers/slack/presenters/interactionCards.js";
+import { resolveSlackCallerAuth } from "../../../../providers/slack/setup/resolveSlackCallerAuth.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";
-import { questionCard } from "../../../../ui/eveCards.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
+import { discardApproval } from "../../actions/discardApproval.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import type {
@@ -28,6 +30,8 @@ import {
 import { formatElapsed } from "../../utils/approvalProgress.js";
 import { approvalScopeRequirements } from "../../utils/approvalScopeRequirements.js";
 import { postApprovalCardForRow } from "./present.js";
+
+const APPROVAL_PROGRESS_DELAY_MS = ms.seconds(10);
 
 const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	toolName: approval?.tool_name ?? "billing action",
@@ -198,7 +202,7 @@ export const handleApprovalActionWithDeps = async ({
 			// or it keeps waiting, holds the next message behind the stale approval,
 			// and the discarded write can still run later.
 			if (approval.harness === "eve" && approval.status === "pending") {
-				const denied = await denyEveApproval({ approval, providerUserId });
+				const denied = await discardApproval({ approval, providerUserId });
 				if ("error" in denied && denied.error) {
 					deps.logger.warn("Could not deny Eve approval on dismiss", {
 						event: "leaf.eve_dismiss_deny_failed",
@@ -297,7 +301,8 @@ export const handleApprovalActionWithDeps = async ({
 				...details,
 				actorId: providerUserId,
 				statusLine: statusText
-					? Date.now() - startedAt >= 10_000
+					? differenceInMilliseconds(Date.now(), startedAt) >=
+						APPROVAL_PROGRESS_DELAY_MS
 						? `${statusText} · ${formatElapsed(startedAt)}`
 						: statusText
 					: undefined,
@@ -308,7 +313,10 @@ export const handleApprovalActionWithDeps = async ({
 		});
 		editor.requestEdit();
 
-		const heartbeat = setInterval(() => editor.requestEdit(), 10_000);
+		const heartbeat = setInterval(
+			() => editor.requestEdit(),
+			APPROVAL_PROGRESS_DELAY_MS,
+		);
 		let result: Awaited<ReturnType<ApprovalActionDeps["resolveApproval"]>>;
 		try {
 			result = await deps.resolveApproval({

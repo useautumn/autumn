@@ -1,23 +1,14 @@
 import crypto from "node:crypto";
-import type { ChatProvider } from "@autumn/shared";
-import {
-	createUIMessageStream,
-	createUIMessageStreamResponse,
-	type UIMessage,
-} from "ai";
-import type {
-	MessageAttachment,
-	MessageContext,
-} from "../../agent/runMessage/types.js";
-import { redirectCatalogSuspensionToDecision } from "../../harness/eve/catalogDecision.js";
-import { runEveMessage } from "../../harness/eve/engine.js";
-import { presentWebApproval } from "../../internal/approvals/surfaces/web/present.js";
+import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
+import { resolveAgentCatalogDecision } from "../../internal/agentRuntime/actions/resolveCatalogDecision/resolveAgentCatalogDecision.js";
+import { runAgentTurn } from "../../internal/agentRuntime/actions/runAgentTurn/runAgentTurn.js";
+import type { AgentTurnContext } from "../../internal/agentRuntime/domain/agentTurnContext.js";
+import { createApproval } from "../../internal/approvals/actions/createApproval.js";
 import {
 	ensureWebChatAuth,
 	WEB_CHAT_PROVIDER,
 } from "../../internal/installations/actions/ensureWebChatAuth.js";
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
-import { db } from "../../lib/db.js";
 import { logger as rootLogger } from "../../lib/logger.js";
 import {
 	CATALOG_DECISION_NEEDED_MESSAGE,
@@ -25,61 +16,11 @@ import {
 	NO_REPLY_MESSAGE,
 } from "../../ui/messages.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
+import type { DashboardAuth } from "./authDashboard.js";
 import { resolveDashboardEnv } from "./dashboardEnv.js";
-import { generateThreadTitle, persistThreadTitle } from "./threadTitle.js";
+import { parseWebChatRequest } from "./parseWebChatRequest.js";
 import type { LeafUiMessage } from "./types.js";
 import { buildWebChatThreadId, webThreadRef } from "./webThread.js";
-
-const DATA_URL_REGEX = /^data:([^;]+);base64,(.*)$/s;
-
-const dataUrlToAttachment = (
-	url: string,
-	name?: string,
-): MessageAttachment | null => {
-	const match = DATA_URL_REGEX.exec(url);
-	return match
-		? { data: Buffer.from(match[2], "base64"), mimeType: match[1], name }
-		: null;
-};
-
-const parseRequest = (body: { id?: string; messages?: UIMessage[] }) => {
-	const userMessages = (body.messages ?? []).filter(
-		(message) => message.role === "user",
-	);
-	const lastUser = userMessages.at(-1);
-	const parts = lastUser?.parts ?? [];
-	const text = parts
-		.filter((part) => part.type === "text")
-		.map((part) => part.text)
-		.join("");
-	const attachments = parts.flatMap((part) =>
-		part.type === "file" && part.url
-			? ([dataUrlToAttachment(part.url, part.filename)].filter(
-					Boolean,
-				) as MessageAttachment[])
-			: [],
-	);
-	// Structured, one-turn-only context (e.g. a submitted CatalogDecisionCard
-	// choice or a clicked question chip), sent as AI SDK message `metadata`
-	// alongside the readable text.
-	const metadata = lastUser?.metadata as
-		| {
-				catalogDecision?: Record<string, unknown>;
-				questionResponse?: { optionId: string; requestId: string };
-		  }
-		| undefined;
-	const clientContext = metadata?.catalogDecision
-		? { catalogDecision: metadata.catalogDecision }
-		: undefined;
-	return {
-		attachments,
-		clientContext,
-		conversationId: body.id,
-		isFirstUserMessage: userMessages.length <= 1,
-		questionResponse: metadata?.questionResponse,
-		text,
-	};
-};
 
 const withCors = (response: Response, origin?: string) => {
 	if (!origin) return response;
@@ -100,14 +41,13 @@ export const streamWebChat = async ({
 	origin,
 	request,
 }: {
-	auth: { orgId: string; userId: string; scopes: string[] };
+	auth: DashboardAuth;
 	origin?: string;
 	request: Request;
 }): Promise<Response> => {
-	const body = (await request.json()) as {
-		id?: string;
-		messages?: UIMessage[];
-	};
+	const body = (await request.json()) as Parameters<
+		typeof parseWebChatRequest
+	>[0];
 	const {
 		attachments,
 		clientContext,
@@ -115,7 +55,7 @@ export const streamWebChat = async ({
 		isFirstUserMessage,
 		questionResponse,
 		text,
-	} = parseRequest(body);
+	} = parseWebChatRequest(body);
 	if (!conversationId) {
 		return new Response("Missing conversation id", { status: 400 });
 	}
@@ -128,20 +68,13 @@ export const streamWebChat = async ({
 	const chatThreadId = buildWebChatThreadId({ conversationId, orgId, userId });
 	const thread = webThreadRef({ chatThreadId, orgId });
 
-	// Title the thread off its opening message, in parallel with the run — the
-	// session row it lands on is upserted by the engine during the run.
-	const titlePromise =
-		isFirstUserMessage && text.trim()
-			? generateThreadTitle({ logger, text })
-			: undefined;
-
 	const stream = createUIMessageStream<LeafUiMessage>({
 		execute: async ({ writer }) => {
 			await ensureWebChatAuth({ orgId, userId, userScopes: scopes });
 			const { accessToken } = await getOrgInstallationToken({
 				env,
 				orgId,
-				provider: WEB_CHAT_PROVIDER as ChatProvider,
+				provider: WEB_CHAT_PROVIDER,
 				workspaceId: orgId,
 				userId,
 			});
@@ -172,7 +105,7 @@ export const streamWebChat = async ({
 				writer.write({ id, type: "text-end" });
 			};
 
-			const ctx: MessageContext = {
+			const ctx: AgentTurnContext = {
 				env,
 				id: crypto.randomUUID(),
 				logger,
@@ -204,113 +137,87 @@ export const streamWebChat = async ({
 				token: accessToken,
 			};
 
-			let output: Awaited<ReturnType<typeof runEveMessage>>;
-			try {
-				output = await runEveMessage({
-					ctx,
-					params: { attachments, clientContext, questionResponse, text },
-				});
-			} finally {
-				// Fire-and-forget so a failed run still labels the thread (the
-				// session row is upserted early in the run) and teardown stays fast.
-				if (titlePromise) {
-					void persistThreadTitle({
-						db,
-						env,
-						logger,
-						orgId,
-						thread,
-						titlePromise,
-					});
-				}
-			}
+			const output = await runAgentTurn({
+				ctx,
+				params: { attachments, clientContext, questionResponse, text },
+				titleSourceText: isFirstUserMessage ? text : undefined,
+			});
 
 			finishLastStep();
-			// updateCatalog is the chokepoint the model can't skip: if the change
-			// needs versioning/variant/migration decisions and none were given,
-			// deny the parked call and render the decision card instead.
-			if (output.suspension) {
-				const decisionPlan = await redirectCatalogSuspensionToDecision({
-					decisionProvided: Boolean(clientContext?.catalogDecision),
-					env,
-					logger,
-					orgId,
-					providerUserId: userId,
-					runId: output.runId,
-					suspension: output.suspension,
-					thread,
-					token: accessToken,
-				});
-				if (decisionPlan) {
+			const catalogDecision = await resolveAgentCatalogDecision({
+				decisionProvided: Boolean(clientContext?.catalogDecision),
+				env,
+				getToken: async () => accessToken,
+				logger,
+				orgId,
+				providerUserId: userId,
+				thread,
+				turn: output,
+			});
+			if (catalogDecision) {
+				if (catalogDecision.source === "approval_redirect") {
 					writeText(CATALOG_DECISION_NEEDED_MESSAGE);
-					writer.write({
-						data: { plan: decisionPlan, status: "pending" },
-						id: decisionPlan.plan_id,
-						type: "data-catalog-decision",
-					});
-					return;
 				}
-			}
-			// The model stopped after a decision-needing preview (no write call):
-			// render the decision card directly. Skip when this very turn carried
-			// the user's decision — the model is about to apply it.
-			if (output.catalogDecision && !clientContext?.catalogDecision) {
-				const plan = output.catalogDecision.plan as { plan_id: string };
 				writer.write({
-					data: { plan, status: "pending" },
-					id: plan.plan_id,
+					data: { plan: catalogDecision.plan, status: "pending" },
+					id: catalogDecision.plan.plan_id,
 					type: "data-catalog-decision",
 				});
+				if (catalogDecision.source === "turn" && catalogDecision.text) {
+					writeText(catalogDecision.text);
+				}
+				return;
 			}
-			if (output.question) {
-				// The prompt as normal prose + a data part with the answer options —
-				// richer than output.text's flat "Options: A / B" fallback.
+
+			if (output.kind === "approval") {
+				if (output.text) writeText(output.text);
+				const approval = await createApproval({
+					channelId: thread.channelId,
+					env,
+					getToken: async () => accessToken,
+					logger,
+					orgId,
+					provider: WEB_CHAT_PROVIDER,
+					providerUserId: userId,
+					turn: output,
+					workspaceId: orgId,
+				});
+				if (!approval) return;
+				writer.write({
+					data: {
+						approvalId: approval.approvalId,
+						params: approval.params,
+						preview: parsePreviewPayload(approval.preview),
+						status: "pending",
+						toolName: approval.toolName,
+					},
+					id: approval.approvalId,
+					type: "data-approval",
+				});
+				return;
+			}
+
+			if (output.kind === "catalog_decision") {
+				if (output.text) writeText(output.text);
+				return;
+			}
+
+			if (output.kind === "question") {
 				writeText(output.question.prompt);
 				writer.write({
 					data: {
-						options: output.question.options,
+						options: [...output.question.options],
 						requestId: output.question.requestId,
 						status: "pending",
 					},
 					id: crypto.randomUUID(),
 					type: "data-question",
 				});
-			} else if (output.text) {
-				writeText(output.text);
-			} else if (!(output.catalogDecision || output.suspension)) {
-				// Nothing to render at all — say so rather than ending the stream
-				// on an empty assistant bubble.
-				writeText(NO_REPLY_MESSAGE);
+				return;
 			}
 
-			if (output.suspension) {
-				// presentWebApproval backfills the preview (the agent may write
-				// without a preceding preview call), so use its returned preview —
-				// not output.suspension.preview, which can be empty.
-				const approval = await presentWebApproval({
-					channelId: thread.channelId,
-					logger,
-					orgId,
-					output,
-					provider: WEB_CHAT_PROVIDER as ChatProvider,
-					providerUserId: userId,
-					token: accessToken,
-					workspaceId: orgId,
-				});
-				if (approval) {
-					writer.write({
-						data: {
-							approvalId: approval.approvalId,
-							params: approval.params,
-							preview: parsePreviewPayload(approval.preview),
-							status: "pending",
-							toolName: approval.toolName,
-						},
-						id: approval.approvalId,
-						type: "data-approval",
-					});
-				}
-			}
+			if (output.kind === "empty") writeText(NO_REPLY_MESSAGE);
+			else if (output.text) writeText(output.text);
 		},
 		onError: (error) => {
 			logger.error("Web chat stream failed", {

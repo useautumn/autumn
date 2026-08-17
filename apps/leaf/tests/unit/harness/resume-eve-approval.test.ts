@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
-import type { EveEvent } from "../../../src/harness/eve/client.js";
-import type { EveSessionRef } from "../../../src/harness/eve/types.js";
+import type { EveEvent } from "../../../src/internal/agentRuntime/eve/eveEventSchemas.js";
+import type { EveSessionRef } from "../../../src/internal/agentRuntime/eve/types.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 // Stubbed first and left stubbed: `env` parses leaf's whole schema at import and
@@ -24,8 +24,9 @@ const postedResponses: {
 	requestId: string;
 	siblingRequestIds?: string[];
 }[] = [];
+let session: EveSessionRef;
 await mockLeafModule({
-	specifier: "../../../src/harness/eve/client.js",
+	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
 		postEveInputResponse: async (input: {
 			optionId: string;
@@ -45,9 +46,8 @@ await mockLeafModule({
 	}),
 });
 
-let session: EveSessionRef;
 await mockLeafModule({
-	specifier: "../../../src/harness/eve/repo.js",
+	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
 	factory: () => ({
 		getEveSessionBySessionId: async () => session,
 		upsertEveSession: async () => undefined,
@@ -68,8 +68,11 @@ await mockLeafModule({
 	}),
 });
 
-const { denyEveApproval, resumeEveApproval } = await import(
-	"../../../src/harness/eve/approval.js"
+const { discardApproval } = await import(
+	"../../../src/internal/approvals/actions/discardApproval.js"
+);
+const { resumeApproval } = await import(
+	"../../../src/internal/approvals/actions/resumeApproval.js"
 );
 
 const approval = (toolArgs: Record<string, unknown> = {}) =>
@@ -92,7 +95,7 @@ const EMPTY_TURN: EveEvent[] = [
 	{ type: "session.waiting" },
 ];
 
-describe("resumeEveApproval", () => {
+describe("resumeApproval", () => {
 	beforeEach(() => {
 		streamedEvents = EMPTY_TURN;
 		postedResponses.length = 0;
@@ -113,7 +116,7 @@ describe("resumeEveApproval", () => {
 	});
 
 	test("answers the whole batch the card was parked with", async () => {
-		await resumeEveApproval({
+		await resumeApproval({
 			approval: approval({ _eveSiblingRequestIds: ["req_2", "req_3"] }),
 			providerUserId: "U1",
 		});
@@ -130,7 +133,7 @@ describe("resumeEveApproval", () => {
 	// A turn that opens and closes without a step, a word, or a park means eve
 	// deferred the delivery — the write never ran, so the card must not say done.
 	test("fails the approval when the resumed turn did nothing at all", async () => {
-		const result = await resumeEveApproval({
+		const result = await resumeApproval({
 			approval: approval(),
 			providerUserId: "U1",
 		});
@@ -149,13 +152,13 @@ describe("resumeEveApproval", () => {
 			{ type: "turn.started" },
 			{ type: "step.started" },
 			{
-				data: { message: "Updated the subscription." },
+				message: "Updated the subscription.",
 				type: "message.completed",
 			},
 			{ type: "session.waiting" },
 		];
 
-		const result = await resumeEveApproval({
+		const result = await resumeApproval({
 			approval: approval(),
 			providerUserId: "U1",
 		});
@@ -169,11 +172,11 @@ describe("resumeEveApproval", () => {
 		streamedEvents = [
 			{ type: "turn.started" },
 			{ type: "step.started" },
-			{ data: { result: { callId: "c1" } }, type: "action.result" },
+			{ result: { callId: "c1" }, type: "action.result" },
 			{ type: "session.waiting" },
 		];
 
-		const result = await resumeEveApproval({
+		const result = await resumeApproval({
 			approval: approval(),
 			providerUserId: "U1",
 		});
@@ -185,7 +188,7 @@ describe("resumeEveApproval", () => {
 	// The guard is for approvals only: a discard has nothing to execute, so an
 	// empty turn after one is the expected outcome, not a failure.
 	test("leaves a discard alone when its turn says nothing", async () => {
-		const result = await denyEveApproval({
+		const result = await discardApproval({
 			approval: approval(),
 			providerUserId: "U1",
 		});
