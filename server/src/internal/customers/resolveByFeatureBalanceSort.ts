@@ -342,13 +342,19 @@ const isAfterCursor = (
 		sortOrder,
 	) > 0;
 
-const nominationQuery = ({
+export const nominationQuery = ({
+	orgId,
+	env,
+	createdAtRange,
 	internalFeatureId,
 	after,
 	sortOrder,
 	basis,
 	remainingFilter,
 }: {
+	orgId: string;
+	env: AppEnv;
+	createdAtRange?: CustomerListFilters["created_at_range"];
 	internalFeatureId: string;
 	after: NominationCursor | null;
 	sortOrder: SortOrder;
@@ -357,6 +363,26 @@ const nominationQuery = ({
 }): SQL => {
 	const direction = sql.raw(sortOrder === "asc" ? "ASC" : "DESC");
 	const basisExpr = basisExprSql(basis);
+	const hasCreatedAtRange =
+		createdAtRange?.start !== undefined || createdAtRange?.end !== undefined;
+	const customerScopeJoin = hasCreatedAtRange
+		? sql`
+			SEMI JOIN main.customers c
+				ON c.internal_id = internal_customer_id
+				AND c.org_id = ${orgId}
+				AND c.env = ${env}
+				${
+					createdAtRange?.start !== undefined
+						? sql`AND c.created_at >= ${createdAtRange.start}`
+						: sql``
+				}
+				${
+					createdAtRange?.end !== undefined
+						? sql`AND c.created_at <= ${createdAtRange.end}`
+						: sql``
+				}
+		`
+		: sql``;
 	// Under a threshold filter the stripe is suppressed (verify emits u=false),
 	// so the cursor/order tuple must drop is_unlimited — a (false, ...) tuple
 	// would otherwise exclude every mixed customer from later batches.
@@ -386,6 +412,7 @@ const nominationQuery = ({
 	return sql`
 		SELECT internal_customer_id, is_unlimited, ${basisExpr} AS total
 		FROM main.ce_balance_totals
+		${customerScopeJoin}
 		WHERE internal_feature_id = ${internalFeatureId}
 		${thresholdPredicate}
 		${cursorPredicate}
@@ -451,6 +478,9 @@ export const resolveInternalIdsByFeatureBalanceSort = async ({
 			run: () =>
 				md.execute(
 					nominationQuery({
+						orgId,
+						env,
+						createdAtRange: filters?.created_at_range,
 						internalFeatureId,
 						after: nominationAfter,
 						sortOrder,
