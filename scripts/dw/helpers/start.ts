@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
-import { startPublicAccess } from "./cloudflare.ts";
+import { ensurePublicAccess } from "./cloudflare.ts";
 import { emulateGoogleUrl } from "./emulate.ts";
 import { isProvisioned } from "./entry.ts";
 import { provisionedInfraEnv, writeEnvLocalFiles } from "./env-files.ts";
@@ -107,6 +107,7 @@ function applyHeadlessDevEnv(
 	next.DATABASE_URL = LOCAL_DATABASE_URL;
 	next.DATABASE_CRITICAL_URL = LOCAL_DATABASE_URL;
 	next.STRIPE_WEBHOOK_SKIP_VERIFY = "true";
+	writeEnvLocalFiles(entry);
 	return next;
 }
 
@@ -138,9 +139,9 @@ export async function startDev(
 	entry: RegistryEntry,
 	opts?: { allowTmux?: boolean },
 ): Promise<never> {
-	startPublicAccess(entry);
-	const { worktreeNum, branchName } = entry;
-	const { env, args } = buildDevEnvAndArgs(entry);
+	const withPublic = await ensurePublicAccess(entry);
+	const { worktreeNum, branchName } = withPublic;
+	const { env, args } = buildDevEnvAndArgs(withPublic);
 
 	const useTmux =
 		(opts?.allowTmux ?? true) && worktreeNum > 1 && !process.stdout.isTTY;

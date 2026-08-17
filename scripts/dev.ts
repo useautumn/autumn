@@ -80,7 +80,11 @@ const viteAppEnv = envFile.includes(".env.prod")
 	: envFile.includes(".env.staging")
 		? "staging"
 		: "dev";
-const useLocalAuthUrls = viteAppEnv === "dev" && !isProductionMode;
+const useLocalAuthUrls =
+	viteAppEnv === "dev" &&
+	!isProductionMode &&
+	process.env.DW_HEADLESS !== "1" &&
+	process.env.DW_HEADLESS !== "true";
 // `bun dev:services up` runs Dragonfly on :6379; use it instead of the shared
 // cloud cache. Worktrees provision their own and set this in their env file.
 const LOCAL_MISC_CACHE_URL = "redis://localhost:6379";

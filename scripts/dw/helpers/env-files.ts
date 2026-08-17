@@ -150,20 +150,13 @@ export function urlsForEntry(entry: RegistryEntry): {
 
 export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	const { worktreeNum, databaseUrl } = entry;
-	if (!databaseUrl) {
-		log("writeEnvLocalFiles: entry missing databaseUrl, skipping");
-		return;
-	}
 	const { apiUrl, browserApiUrl, checkoutUrl, publicApiUrl, viteUrl } =
 		urlsForEntry(entry);
 	const publicUrls = entryPublicServiceUrls(entry);
 	const serverPort = serverPortFor(worktreeNum);
 	const portlessCa = join(homedir(), ".portless", "ca.pem");
 
-	const dbUrl = forceSslVerifyFull(databaseUrl);
 	const serverEnv: Record<string, string> = {
-		DATABASE_URL: dbUrl,
-		DATABASE_CRITICAL_URL: dbUrl,
 		AUTUMN_API_URL: apiUrl,
 		AUTUMN_PUBLIC_API_URL: publicApiUrl,
 		CLIENT_URL: viteUrl,
@@ -174,6 +167,11 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		AUTUMN_TEST_VITE_URL: viteUrl,
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 	};
+	if (databaseUrl) {
+		const dbUrl = forceSslVerifyFull(databaseUrl);
+		serverEnv.DATABASE_URL = dbUrl;
+		serverEnv.DATABASE_CRITICAL_URL = dbUrl;
+	}
 	if (isHeadless() && publicUrls) {
 		Object.assign(
 			serverEnv,
