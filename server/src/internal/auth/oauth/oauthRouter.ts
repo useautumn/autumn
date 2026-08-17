@@ -40,17 +40,34 @@ oauthRouter.get("/api/auth/.well-known/openid-configuration", (c) => {
 	return oauthProviderOpenIdConfigMetadata(auth)(c.req.raw);
 });
 
-oauthRouter.get("/.well-known/oauth-authorization-server", (c) => {
-	return oauthProviderAuthServerMetadata(auth)(c.req.raw);
-});
+// better-auth's RFC 8414 helper resolves to the wrong internal endpoint and
+// reports false; the provider does emit `iss` (RFC 9207), so advertise it.
+const handleAuthServerMetadata = async (c: Context<HonoEnv>) => {
+	const response = await oauthProviderAuthServerMetadata(auth)(c.req.raw);
+	const metadata = (await response.json()) as Record<string, unknown>;
+	metadata.authorization_response_iss_parameter_supported = true;
+	const headers = new Headers(response.headers);
+	headers.delete("Content-Length");
+	return new Response(JSON.stringify(metadata), {
+		status: response.status,
+		headers,
+	});
+};
 
-oauthRouter.get("/api/auth/.well-known/oauth-authorization-server", (c) => {
-	return oauthProviderAuthServerMetadata(auth)(c.req.raw);
-});
+oauthRouter.get(
+	"/.well-known/oauth-authorization-server",
+	handleAuthServerMetadata,
+);
 
-oauthRouter.get("/.well-known/oauth-authorization-server/api/auth", (c) => {
-	return oauthProviderAuthServerMetadata(auth)(c.req.raw);
-});
+oauthRouter.get(
+	"/api/auth/.well-known/oauth-authorization-server",
+	handleAuthServerMetadata,
+);
+
+oauthRouter.get(
+	"/.well-known/oauth-authorization-server/api/auth",
+	handleAuthServerMetadata,
+);
 
 oauthRouter.get("/.well-known/oauth-protected-resource", (c) => {
 	const baseUrl = authBaseUrl ?? new URL(c.req.url).origin;
