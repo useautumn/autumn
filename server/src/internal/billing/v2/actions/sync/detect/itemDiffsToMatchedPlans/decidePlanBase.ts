@@ -7,6 +7,10 @@ import type { StripeItemSnapshot } from "@/internal/billing/v2/providers/stripe/
 import type { ItemDiff, PlanBase, PlanWarning } from "../types";
 import { stripeItemToCustomBasePrice } from "./stripeItemToCustomBasePrice";
 
+/** A flat, non-metered Stripe line (Stripe's "licensed" usage type). */
+const isFlatFeeItem = ({ item }: { item: StripeItemSnapshot }): boolean =>
+	item.recurring_usage_type === "licensed";
+
 export type PlanBaseDecision = {
 	base: PlanBase;
 	customize?: CustomizePlanV1;
@@ -32,8 +36,12 @@ export const decidePlanBase = ({
 	const baseHits = diffs.flatMap((diff) =>
 		isBasePriceMatch(diff.match) ? [{ diff, price: diff.match.price }] : [],
 	);
-	const customBaseCandidates = diffs.filter((diff) =>
-		isCustomBaseMatch(diff.match),
+	// A flat, licensed line on a plan with no catalog base IS that plan's base
+	// fee — even when it matched a usage price via a shared Stripe product.
+	const customBaseCandidates = diffs.filter(
+		(diff) =>
+			isCustomBaseMatch(diff.match) ||
+			(basePrice === null && isFlatFeeItem({ item: diff.stripe })),
 	);
 
 	if (baseHits.length > 0) {

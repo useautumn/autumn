@@ -90,6 +90,7 @@ const stripeItem = ({
 	recurring_interval: interval,
 	recurring_interval_count: intervalCount,
 	recurring_usage_type: usageType,
+	stripe_meter_id: null,
 	metadata: {},
 });
 

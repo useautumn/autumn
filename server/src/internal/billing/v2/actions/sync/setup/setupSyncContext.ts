@@ -1,31 +1,35 @@
 import {
-    cp,
-    type Entity,
-    EntityNotFoundError,
-    ErrCode,
-    type FullCusProduct,
-    type FullCustomer,
-    RecaseError,
-    type SyncBillingContext,
-    type SyncParamsV1,
-    type SyncPhaseContext,
-    type SyncPlanInstance,
-    type SyncProductContext,
+	cp,
+	type Entity,
+	EntityNotFoundError,
+	ErrCode,
+	type FullCusProduct,
+	type FullCustomer,
+	RecaseError,
+	type SyncBillingContext,
+	type SyncParamsV1,
+	type SyncPhaseContext,
+	type SyncPlanInstance,
+	type SyncProductContext,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
 import {
-    fetchStripeSyncSchedule,
-    fetchStripeSyncSubscription,
+	fetchStripeSyncSchedule,
+	fetchStripeSyncSubscription,
 } from "@/internal/billing/v2/providers/stripe/utils/sync/fetchStripeSyncObjects";
+import { normalizeSubscriptionPhases } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/normalizeSubscriptionPhases";
 import { resolveStripeSyncCurrency } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/resolveStripeSyncCurrency";
+import type { StripeItemSnapshot } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/types";
 import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup/setupCustomerLicenseQuantityContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
+import { ProductService } from "@/internal/products/ProductService";
 import { prepareSyncedCustomBasePrice } from "./prepareSyncedCustomBasePrice";
+import { restampSyncedStripeResources } from "./restampSyncedStripeResources";
 
 const resolvePlanEntity = ({
 	plan,
@@ -71,6 +75,7 @@ const buildProductContext = async ({
 	shouldFindCurrentCustomerProduct,
 	accessStartsAt,
 	stripeSubscriptionId,
+	stripeSnapshots,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
@@ -78,6 +83,7 @@ const buildProductContext = async ({
 	shouldFindCurrentCustomerProduct: boolean;
 	accessStartsAt?: number;
 	stripeSubscriptionId?: string;
+	stripeSnapshots: StripeItemSnapshot[];
 }): Promise<SyncProductContext> => {
 	const {
 		fullProduct,
@@ -130,6 +136,23 @@ const buildProductContext = async ({
 		fullProduct,
 		customPrices,
 		plan,
+	});
+
+	// The dashboard round-trip drops the internal stripe_price_id from
+	// customize, so re-link custom prices to their Stripe lines from the sub.
+	// The un-customized catalog resolves each feature's Stripe product.
+	const catalogFullProduct = await ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: plan.plan_id,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		version: plan.version,
+	});
+	restampSyncedStripeResources({
+		customPrices: preparedCustomBase.customPrices,
+		snapshots: stripeSnapshots,
+		features: ctx.features,
+		catalogPrices: catalogFullProduct.prices,
 	});
 
 	return {
@@ -197,6 +220,12 @@ export const setupSyncContext = async ({
 		customerCurrency: fullCustomer.currency,
 	});
 
+	const stripeSnapshots = normalizeSubscriptionPhases({
+		subscription: stripeSubscription ?? undefined,
+		schedule: stripeSchedule ?? undefined,
+		billingCurrency: currency,
+	}).flatMap((phase) => phase.items);
+
 	const currentEpochMs = Date.now();
 	const inputPhases = params.phases ?? [];
 	const firstPhaseIsImmediate = inputPhases[0]?.starts_at === "now";
@@ -229,6 +258,7 @@ export const setupSyncContext = async ({
 							? currentEpochMs
 							: undefined,
 						stripeSubscriptionId: params.stripe_subscription_id,
+						stripeSnapshots,
 					}),
 				),
 			);

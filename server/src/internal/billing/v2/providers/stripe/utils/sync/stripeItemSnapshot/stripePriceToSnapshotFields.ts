@@ -68,5 +68,6 @@ export const stripePriceToSnapshotFields = ({
 		recurring_interval: price.recurring?.interval ?? null,
 		recurring_interval_count: price.recurring?.interval_count ?? null,
 		recurring_usage_type: price.recurring?.usage_type ?? null,
+		stripe_meter_id: price.recurring?.meter ?? null,
 	};
 };

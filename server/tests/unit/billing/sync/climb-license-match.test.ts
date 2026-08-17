@@ -61,6 +61,7 @@ const stripeItem = ({
 	recurring_interval: interval,
 	recurring_interval_count: 1,
 	recurring_usage_type: "licensed",
+	stripe_meter_id: null,
 	metadata: {},
 });
 
