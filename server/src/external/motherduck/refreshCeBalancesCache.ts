@@ -16,6 +16,9 @@ const metadataLocationPattern = (table: string) =>
 
 const glueClient = new GlueClient({ region: GLUE_REGION });
 
+export const LIVE_LOOSE_BALANCE_CACHE_PREDICATE =
+	"b.balance != 0 OR b.unlimited IS TRUE OR a.feature_type = 'boolean'";
+
 /** The Glue pointer advances on every RW sink commit — always read it fresh;
  * a pinned metadata.json 404s within hours once compaction expires it. */
 export const getCurrentLakeMetadataLocation = async ({
@@ -51,12 +54,17 @@ export const refreshCeBalancesCache = async ({
 
 	inFlight = (async () => {
 		const startedAt = performance.now();
-		const [ceMetadataLocation, entMetadataLocation, cpMetadataLocation] =
-			await Promise.all([
-				getCurrentLakeMetadataLocation({ table: "customer_entitlements" }),
-				getCurrentLakeMetadataLocation({ table: "entitlements" }),
-				getCurrentLakeMetadataLocation({ table: "customer_products" }),
-			]);
+		const [
+			ceMetadataLocation,
+			entMetadataLocation,
+			cpMetadataLocation,
+			featureMetadataLocation,
+		] = await Promise.all([
+			getCurrentLakeMetadataLocation({ table: "customer_entitlements" }),
+			getCurrentLakeMetadataLocation({ table: "entitlements" }),
+			getCurrentLakeMetadataLocation({ table: "customer_products" }),
+			getCurrentLakeMetadataLocation({ table: "features" }),
+		]);
 
 		const rowCount = await withMotherDuckRw({
 			run: async (db) => {
@@ -70,8 +78,10 @@ export const refreshCeBalancesCache = async ({
 				await db.execute(
 					sql.raw(`
 						CREATE OR REPLACE TABLE main.ent_allowances AS
-						SELECT id, allowance
-						FROM iceberg_scan('${entMetadataLocation}')
+						SELECT e.id, e.allowance, f.type AS feature_type
+						FROM iceberg_scan('${entMetadataLocation}') e
+						JOIN iceberg_scan('${featureMetadataLocation}') f
+							ON f.internal_id = e.internal_feature_id
 					`),
 				);
 				// Statuses must mirror PG's ACTIVE_STATUSES — dead product-history
@@ -106,7 +116,7 @@ export const refreshCeBalancesCache = async ({
 							AND (
 								(
 									b.customer_product_id IS NULL
-									AND (b.balance != 0 OR b.unlimited IS TRUE)
+									AND (${LIVE_LOOSE_BALANCE_CACHE_PREDICATE})
 								)
 								OR b.customer_product_id IN (SELECT id FROM main.cp_active)
 							)
