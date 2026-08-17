@@ -65,6 +65,35 @@ BUN="${HOME}/.bun/bin/bun"
 if [ ! -x "$BUN" ]; then
 	BUN="$(command -v bun || true)"
 fi
+
+infisical_printenv() {
+	local key="$1"
+	local pulled st
+	if [ -n "${!key:-}" ]; then
+		return 0
+	fi
+	command -v infisical >/dev/null 2>&1 || return 0
+	set +e
+	pulled="$(infisical run --env=dev --recursive --silent -- printenv "$key" 2>/dev/null)"
+	st=$?
+	set -e
+	if [ "$st" -eq 0 ]; then
+		pulled="${pulled%%$'\n'*}"
+		if [ -n "$pulled" ]; then
+			export "$key=$pulled"
+		fi
+	fi
+}
+
+persist_export() {
+	local key="$1"
+	[ -n "${!key:-}" ] || return 0
+	grep -v "^export ${key}=" "$env_sh" >"${env_sh}.tmp" || true
+	mv "${env_sh}.tmp" "$env_sh"
+	printf 'export %s=%q\n' "$key" "${!key}" >>"$env_sh"
+	chmod 600 "$env_sh"
+}
+
 if [ -f ai/package.json ] && [ -n "$BUN" ]; then
 	if [ ! -f "${HOME}/.cursor/skills/tdd/SKILL.md" ]; then
 		echo "[cursor-cloud-start] ~/.cursor/skills missing — running bun ai sync --copy"
@@ -72,55 +101,48 @@ if [ -f ai/package.json ] && [ -n "$BUN" ]; then
 	fi
 	"$BUN" "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" agents-md || true
 fi
-if [ -z "${EXECUTOR_API_KEY:-}" ] && command -v infisical >/dev/null 2>&1; then
-	set +e
-	pulled="$(infisical run --env=dev --recursive --silent -- printenv EXECUTOR_API_KEY 2>/dev/null)"
-	st=$?
-	set -e
-	if [ "$st" -eq 0 ]; then
-		pulled="${pulled%%$'\n'*}"
-		[ -n "$pulled" ] && export EXECUTOR_API_KEY="$pulled"
-	fi
-fi
-if [ -n "${EXECUTOR_API_KEY:-}" ]; then
-	grep -v '^export EXECUTOR_API_KEY=' "$env_sh" >"${env_sh}.tmp" || true
-	mv "${env_sh}.tmp" "$env_sh"
-	printf 'export EXECUTOR_API_KEY=%q\n' "$EXECUTOR_API_KEY" >>"$env_sh"
-	chmod 600 "$env_sh"
-fi
+
+infisical_printenv EXECUTOR_API_KEY
+persist_export EXECUTOR_API_KEY
 if [ -n "$BUN" ]; then
 	"$BUN" "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" mcp || \
 		echo "[cursor-cloud-start] executor MCP configure failed (non-fatal)"
 fi
-# shellcheck disable=SC1090
-. "$env_sh"
 
-# NGROK_AUTHTOKEN: Team Runtime Secret or Infisical. Never log the value.
-if [ -z "${NGROK_AUTHTOKEN:-}" ] && command -v infisical >/dev/null 2>&1; then
-	set +e
-	ngrok_tok="$(infisical run --env=dev --recursive --silent -- printenv NGROK_AUTHTOKEN 2>/dev/null)"
-	st=$?
-	set -e
-	if [ "$st" -eq 0 ]; then
-		ngrok_tok="${ngrok_tok%%$'\n'*}"
-		if [ -n "$ngrok_tok" ]; then
-			export NGROK_AUTHTOKEN="$ngrok_tok"
-		fi
+# Cloudflare tunnel: Infisical `dev`. Never log the values.
+infisical_printenv CLOUDFLARE_TUNNEL_API_TOKEN
+infisical_printenv CLOUDFLARE_TUNNEL_ACCOUNT_ID
+if [ -z "${CLOUDFLARE_TUNNEL_API_TOKEN:-}" ]; then
+	infisical_printenv CLOUDFLARE_API_TOKEN
+	if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+		export CLOUDFLARE_TUNNEL_API_TOKEN="$CLOUDFLARE_API_TOKEN"
 	fi
 fi
-if [ -n "${NGROK_AUTHTOKEN:-}" ]; then
-	grep -v '^export NGROK_AUTHTOKEN=' "$env_sh" >"${env_sh}.tmp" || true
-	mv "${env_sh}.tmp" "$env_sh"
-	printf 'export NGROK_AUTHTOKEN=%q\n' "$NGROK_AUTHTOKEN" >>"$env_sh"
-	chmod 600 "$env_sh"
-	echo "[cursor-cloud-start] NGROK_AUTHTOKEN ready (len=${#NGROK_AUTHTOKEN})"
+if [ -z "${CLOUDFLARE_TUNNEL_ACCOUNT_ID:-}" ]; then
+	infisical_printenv CLOUDFLARE_ACCOUNT_ID
+	if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+		export CLOUDFLARE_TUNNEL_ACCOUNT_ID="$CLOUDFLARE_ACCOUNT_ID"
+	fi
+fi
+persist_export CLOUDFLARE_TUNNEL_API_TOKEN
+persist_export CLOUDFLARE_TUNNEL_ACCOUNT_ID
+if [ -n "${CLOUDFLARE_TUNNEL_API_TOKEN:-}" ]; then
+	umask 077
+	{
+		printf 'CLOUDFLARE_TUNNEL_API_TOKEN=%s\n' "$CLOUDFLARE_TUNNEL_API_TOKEN"
+		if [ -n "${CLOUDFLARE_TUNNEL_ACCOUNT_ID:-}" ]; then
+			printf 'CLOUDFLARE_TUNNEL_ACCOUNT_ID=%s\n' "$CLOUDFLARE_TUNNEL_ACCOUNT_ID"
+		fi
+	} >"${HOME}/.autumn-agent/cloudflare.env"
+	chmod 600 "${HOME}/.autumn-agent/cloudflare.env"
+	echo "[cursor-cloud-start] CLOUDFLARE_TUNNEL_API_TOKEN ready (len=${#CLOUDFLARE_TUNNEL_API_TOKEN})"
 else
-	echo "[cursor-cloud-start] NGROK_AUTHTOKEN unset — bun dw setup will skip the public tunnel."
+	echo "[cursor-cloud-start] CLOUDFLARE_TUNNEL_API_TOKEN unset — bun dw setup cannot create public hosts"
 fi
 # shellcheck disable=SC1090
 . "$env_sh"
 
-# Infra + one ngrok hostname. Does not start the app.
+# Infra + Cloudflare public hosts. Does not start the app.
 if [ -n "$BUN" ]; then
 	echo "[cursor-cloud-start] bun dw setup (local infra + public URL)"
 	"$BUN" dw setup || echo "[cursor-cloud-start] bun dw setup failed (non-fatal)"

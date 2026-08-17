@@ -86,19 +86,29 @@ function loadAgentCloudflareEnv(): void {
 	const path = join(agentDir(), "cloudflare.env");
 	if (!existsSync(path)) return;
 	for (const line of readFileSync(path, "utf8").split("\n")) {
-		const m = line.match(/^(CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID)=(.*)$/);
+		const m = line.match(
+			/^(CLOUDFLARE_TUNNEL_API_TOKEN|CLOUDFLARE_TUNNEL_ACCOUNT_ID|CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID)=(.*)$/,
+		);
 		if (m) process.env[m[1]] = m[2];
 	}
 }
 
 function cfToken(): string | undefined {
 	loadAgentCloudflareEnv();
-	return process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN;
+	return (
+		process.env.CLOUDFLARE_TUNNEL_API_TOKEN ||
+		process.env.CLOUDFLARE_API_TOKEN ||
+		process.env.CF_API_TOKEN
+	);
 }
 
 function cfAccountId(): string | undefined {
 	loadAgentCloudflareEnv();
-	return process.env.CLOUDFLARE_ACCOUNT_ID || process.env.CF_ACCOUNT_ID;
+	return (
+		process.env.CLOUDFLARE_TUNNEL_ACCOUNT_ID ||
+		process.env.CLOUDFLARE_ACCOUNT_ID ||
+		process.env.CF_ACCOUNT_ID
+	);
 }
 
 function readLocalCreds(worktreeNum: number): TunnelCreds | undefined {
@@ -174,7 +184,7 @@ async function cfFetch({
 	path: string;
 }): Promise<unknown> {
 	const token = cfToken();
-	if (!token) throw new Error("CLOUDFLARE_API_TOKEN is not set");
+	if (!token) throw new Error("CLOUDFLARE_TUNNEL_API_TOKEN is not set");
 	const response = await fetch(`${CF_API}${path}`, {
 		body: body === undefined ? undefined : JSON.stringify(body),
 		headers: {
@@ -208,7 +218,7 @@ async function resolveAccountId(): Promise<string> {
 	}[];
 	if (result.length === 1 && result[0]?.id) return result[0].id;
 	throw new Error(
-		"CLOUDFLARE_ACCOUNT_ID is not set and the token sees multiple accounts",
+		"CLOUDFLARE_TUNNEL_ACCOUNT_ID is not set and the token sees multiple accounts",
 	);
 }
 
@@ -340,7 +350,7 @@ async function ensureNamedTunnel({
 	if (cfToken()) return ensureNamedTunnelApi({ name, worktreeNum });
 	if (hasCertPem()) return ensureNamedTunnelCli({ name, worktreeNum });
 	throw new Error(
-		"need CLOUDFLARE_API_TOKEN or `cloudflared tunnel login` (cert.pem)",
+		"need CLOUDFLARE_TUNNEL_API_TOKEN or `cloudflared tunnel login` (cert.pem)",
 	);
 }
 

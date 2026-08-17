@@ -24,8 +24,9 @@ OAuth. If executor tools are missing, say so rather than substituting
 Axiom/PlanetScale OAuth servers.
 
 Boot does **not** start \`bun dw\`. Run it when the task needs the app.
-The in-IDE Browser tab stays blank (Cursor bug, any URL) — open
-\`http://localhost:3080/dashboard\` from Ports, or the ngrok URL.
+The in-IDE Browser tab stays blank (Cursor bug, any URL) — open the
+public \`autumn-wt1-<hash>.autumnworktree.com\` URL from \`bun dw identify\`,
+or \`http://localhost:3000\` from Ports.
 
 ${AGENTS_END}
 `;

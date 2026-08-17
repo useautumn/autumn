@@ -10,10 +10,10 @@
 		}
 	],
 	"ports": [
-		{ "name": "App", "port": 3080 },
 		{ "name": "API", "port": 8080 },
 		{ "name": "Vite", "port": 3000 },
-		{ "name": "Checkout", "port": 3001 }
+		{ "name": "Checkout", "port": 3001 },
+		{ "name": "Leaf", "port": 3099 }
 	],
 	"repositoryDependencies": ["github.com/useautumn/ai"]
 }

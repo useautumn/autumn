@@ -116,6 +116,22 @@ console.log("ok");
 [[ "$got" == "ok" ]] || fail "firstHttpsUrl, got $got"
 pass "identify reads the first https origin"
 
+grep -q 'cloudflared-linux' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	|| fail "install must pin a cloudflared linux binary"
+if grep -q 'ngrok-v3-stable' "$ROOT/scripts/setup/cursor-cloud/install.sh"; then
+	fail "install must not download ngrok; cloudflared owns public access"
+fi
+grep -q 'CLOUDFLARE_TUNNEL_API_TOKEN' "$ROOT/scripts/setup/cursor-cloud/start.sh" \
+	|| fail "start must pull CLOUDFLARE_TUNNEL_API_TOKEN from Infisical"
+if grep -q 'NGROK_AUTHTOKEN' "$ROOT/scripts/setup/cursor-cloud/start.sh"; then
+	fail "start must not require NGROK_AUTHTOKEN for the public tunnel"
+fi
+if grep -q '3080' "$ROOT/.cursor/environment.json" \
+	"$ROOT/scripts/setup/cursor-cloud/access.sh"; then
+	fail "Cloud access must not point at the old path-proxy port 3080"
+fi
+pass "Cloud boot installs cloudflared and injects tunnel tokens"
+
 grep -q 'ensurePublicAccess' "$ROOT/scripts/dw/commands/setup.ts" \
 	|| fail "setup must ensure Cloudflare public access"
 if [[ -f "$ROOT/scripts/setup/cursor-cloud/ngrok-up.sh" ]] \

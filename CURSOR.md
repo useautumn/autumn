@@ -140,7 +140,11 @@ Secrets** on [Cloud Agents → Secrets](https://cursor.com/dashboard/cloud-agent
 |---|---|---|
 | `INFISICAL_TOKEN` | Runtime Secret | **Team** (not Environment) |
 | `EXECUTOR_API_KEY` | Runtime Secret | **Team** (optional; also in Infisical `dev`) |
-| `NGROK_AUTHTOKEN` | Runtime Secret | **Team** (optional; public dashboard/API URL) |
+
+Public tunnel tokens live in Infisical `dev`, not Cursor secrets:
+
+- `CLOUDFLARE_TUNNEL_API_TOKEN`
+- `CLOUDFLARE_TUNNEL_ACCOUNT_ID`
 
 `INFISICAL_TOKEN` is the Token Auth access token (identity → Token Auth →
 Create Token). `infisical run` uses it directly. Client id/secret are unused
@@ -153,7 +157,7 @@ The vault is **not** dumped to disk.
 
 `scripts/dev.ts` starts `stripe listen --forward-connect-to http://localhost:8080/webhooks/connect/sandbox`
 when the Stripe CLI is installed and `STRIPE_SANDBOX_SECRET_KEY` is present (from Infisical).
-Stripe's CLI opens an outbound tunnel — **no public URL / ngrok / port-forward
+Stripe's CLI opens an outbound tunnel — **no public URL / port-forward
 required** for webhooks. This is attached by `bun dw` / `bun dw run`.
 
 `STRIPE_WEBHOOK_SKIP_VERIFY=true` is set by `applyHeadlessDevEnv` because the
@@ -171,18 +175,16 @@ The in-IDE **Browser** tab stays blank even when Vite is up — Cursor bug, any
 URL, not Autumn. Each agent is its own VM, so another chat's Browser is a
 different `localhost:3000`. Use one of:
 
-1. **Cursor port forwarding** (closest to SSH `-L`). `.cursor/environment.json`
-   declares `ports` 8080 / 3000 / 3001. In the agent editor, open the plug /
-   Ports panel — Cursor forwards them to **localhost on your laptop**. Then
-   open `http://localhost:3000` in Chrome or Safari. Vite `allowedHosts` is
-   wide open when `DW_HEADLESS=1` so preview hostnames do not 403.
-2. **Remote desktop** on the agent page — take control, open Chrome with
+1. **Public Cloudflare hosts** (what Cloud browsers should use). `bun dw setup`
+   creates one hostname per service, salted with `~/.autumn-agent/machine-id`
+   so VMs do not collide: `autumn-wt1-<hash>.autumnworktree.com` (Vite),
+   `-api`, `-checkout`, `-leaf`, `-emulate`. `bun dw identify` prints them.
+2. **Cursor port forwarding**. `.cursor/environment.json` declares `ports`
+   8080 / 3000 / 3001 / 3099. In the agent editor, open the plug / Ports
+   panel — Cursor forwards them to **localhost on your laptop**. Then open
+   `http://localhost:3000` in Chrome or Safari.
+3. **Remote desktop** on the agent page — take control, open Chrome with
    `--no-sandbox`, go to `http://localhost:3000`. Most reliable if Ports is empty.
-3. **ngrok** — `bun dw setup` reserves one hostname via `NGROK_API_KEY`
-   (salted with `~/.autumn-agent/machine-id` so Cloud VMs do not collide)
-   and points it at the path proxy (`:3080`). Paths: `/dashboard` Vite,
-   `/api` server, `/leaf` chat/MCP, `/checkout` checkout. Edit
-   `scripts/dw/devProxy/routes.ts`. `bun dw identify` prints those URLs.
 
 The `access` terminal reprints these instructions on every boot. It does not
 start the app.

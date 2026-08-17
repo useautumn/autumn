@@ -34,20 +34,22 @@ if [ ! -x /usr/local/bin/stripe ]; then
 	stripe version
 fi
 
-if [ ! -x /usr/local/bin/ngrok ]; then
-	log "installing ngrok (optional dashboard/API public URL)"
+if [ ! -x /usr/local/bin/cloudflared ]; then
+	log "installing cloudflared (per-service public hosts)"
 	arch="$(uname -m)"
 	case "$arch" in
-		x86_64) ngrok_arch="amd64" ;;
-		aarch64|arm64) ngrok_arch="arm64" ;;
-		*) ngrok_arch="amd64" ;;
+		x86_64) cf_arch="amd64" ;;
+		aarch64|arm64) cf_arch="arm64" ;;
+		*) cf_arch="amd64" ;;
 	esac
 	tmp="$(mktemp -d)"
-	curl -fsSL -o "$tmp/ngrok.tgz" \
-		"https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-${ngrok_arch}.tgz"
-	sudo tar -xzf "$tmp/ngrok.tgz" -C /usr/local/bin ngrok
+	# Pin so Builds are reproducible. Bump when we want a CLI upgrade.
+	cf_ver="2026.8.2"
+	curl -fsSL -o "$tmp/cloudflared" \
+		"https://github.com/cloudflare/cloudflared/releases/download/${cf_ver}/cloudflared-linux-${cf_arch}"
+	sudo install -m 0755 "$tmp/cloudflared" /usr/local/bin/cloudflared
 	rm -rf "$tmp"
-	ngrok version
+	/usr/local/bin/cloudflared --version
 fi
 
 if [ -f ai/package.json ]; then

@@ -22,7 +22,7 @@ Most auto-install on first run:
 - **portless** — `npm install -g @portless/cli` for HTTPS aliases
 - **emulate** — `npm install -g @kelby/emulate` for Google OAuth locally
 - **cloudflared** — `brew install cloudflared` (named tunnel, one hostname per service)
-- **Cloudflare** — `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` in `~/.autumn-agent/cloudflare.env` (or `cloudflared tunnel login`) so dw can create `autumn-wtN-<hash>[-service].autumnworktree.com`
+- **Cloudflare** — `CLOUDFLARE_TUNNEL_API_TOKEN` + `CLOUDFLARE_TUNNEL_ACCOUNT_ID` (Infisical `dev`, or `~/.autumn-agent/cloudflare.env` / `cloudflared tunnel login`) so dw can create `autumn-wtN-<hash>[-service].autumnworktree.com`
 
 ## Lifecycle
 
