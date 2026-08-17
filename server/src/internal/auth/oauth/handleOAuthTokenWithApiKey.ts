@@ -22,11 +22,9 @@ import {
 	storeOAuthRefreshReplay,
 } from "@/external/redis/actions/oauthRefreshReplay/oauthRefreshReplay.js";
 import { auth } from "@/utils/auth.js";
-import {
-	oauthAccessTokenRepo,
-	oauthConsentRepo,
-	oauthRefreshTokenRepo,
-} from "../repos/index.js";
+import { oauthAccessTokenRepo } from "../repos/oauthAccessTokenRepo.js";
+import { oauthConsentRepo } from "../repos/oauthConsentRepo.js";
+import { oauthRefreshTokenRepo } from "../repos/oauthRefreshTokenRepo.js";
 import { isMcpOAuthClient } from "./mcpOAuthScopes.js";
 import {
 	getExternalOAuthApiKeyForToken,

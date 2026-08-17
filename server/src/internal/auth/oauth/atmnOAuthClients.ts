@@ -1,5 +1,5 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { oauthClientRepo } from "../repos/index.js";
+import { oauthClientRepo } from "../repos/oauthClientRepo.js";
 
 const ATMN_OAUTH_CLIENT_NAMES = new Set(["atmn", "autumn cli"]);
 

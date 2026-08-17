@@ -9,7 +9,7 @@ import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
-import { oauthConsentRepo } from "../repos/index.js";
+import { oauthConsentRepo } from "../repos/oauthConsentRepo.js";
 import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
 import { getOAuthConsentScopeGrant } from "./oauthConsentScopes.js";
 import { runBetterAuthHandler } from "./runBetterAuthHandler.js";

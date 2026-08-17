@@ -7,7 +7,7 @@ import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils
 import type { Context } from "hono";
 import { type DrizzleCli, db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
-import { oauthClientRepo } from "../repos/index.js";
+import { oauthClientRepo } from "../repos/oauthClientRepo.js";
 import { ensureAtmnAuthorizeScopes } from "./atmnOAuthClients.js";
 import { ensureSummerOAuthClient } from "./summerOAuthClient.js";
 

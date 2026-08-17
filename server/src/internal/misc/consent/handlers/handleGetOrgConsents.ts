@@ -1,6 +1,6 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { oauthConsentRepo } from "@/internal/auth/repos/index.js";
+import { oauthConsentRepo } from "@/internal/auth/repos/oauthConsentRepo.js";
 
 /**
  * Get OAuth consents for the current organization.

@@ -11,7 +11,7 @@ import {
 	getExternalOAuthApiKeyForToken,
 	getOAuthAccessTokenRecord,
 } from "@/internal/auth/oauth/oauthAccessTokenApiKey.js";
-import { oauthConsentRepo } from "@/internal/auth/repos/index.js";
+import { oauthConsentRepo } from "@/internal/auth/repos/oauthConsentRepo.js";
 import { ApiKeyPrefix, createKey } from "../../apiKeys/apiKeyUtils.js";
 import {
 	type OAuthApiKeyRequestBody,

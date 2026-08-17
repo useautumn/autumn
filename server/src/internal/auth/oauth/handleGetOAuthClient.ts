@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
-import { oauthClientRepo } from "../repos/index.js";
+import { oauthClientRepo } from "../repos/oauthClientRepo.js";
 import { isAtmnOAuthClientRecord } from "./atmnOAuthClients.js";
 import {
 	getInternalMcpDisplayName,

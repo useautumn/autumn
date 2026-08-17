@@ -1,7 +1,7 @@
 import { parseOAuthRequestFields } from "@autumn/shared/utils/auth/oauthRequestBody";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
-import { registerMcpOAuthClient } from "../actions/index.js";
+import { registerMcpOAuthClient } from "../actions/registerMcpOAuthClient.js";
 
 const getRedirectUris = (value: unknown) =>
 	Array.isArray(value)

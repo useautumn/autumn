@@ -4,7 +4,7 @@ import {
 } from "@autumn/auth/oauth";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
-import { oauthClientRepo } from "../repos/index.js";
+import { oauthClientRepo } from "../repos/oauthClientRepo.js";
 
 export const SUMMER_OAUTH_CLIENT_NAME = "Summer";
 

@@ -16,7 +16,8 @@ import {
 	type ResourceAccessTokenRecord,
 	tokenRecordFromResourceToken,
 } from "@/internal/dev/cli/oauthApiKeyUtils.js";
-import { oauthAccessTokenRepo, oauthConsentRepo } from "../repos/index.js";
+import { oauthAccessTokenRepo } from "../repos/oauthAccessTokenRepo.js";
+import { oauthConsentRepo } from "../repos/oauthConsentRepo.js";
 import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
 import { rotateOAuthConsentApiKey } from "./oauthConsentApiKey.js";
 

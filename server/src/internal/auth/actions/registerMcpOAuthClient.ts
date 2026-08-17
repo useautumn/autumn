@@ -14,7 +14,10 @@ import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { isAtmnOAuthClientRecord } from "../oauth/atmnOAuthClients.js";
-import { type OAuthClientRecord, oauthClientRepo } from "../repos/index.js";
+import {
+	type OAuthClientRecord,
+	oauthClientRepo,
+} from "../repos/oauthClientRepo.js";
 
 const REGISTER_CACHE_TTL_MS = 5 * 60 * 1000;
 

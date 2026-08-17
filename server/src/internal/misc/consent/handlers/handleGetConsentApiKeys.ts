@@ -1,10 +1,8 @@
 import { Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import {
-	oauthApiKeyRepo,
-	oauthConsentRepo,
-} from "@/internal/auth/repos/index.js";
+import { oauthApiKeyRepo } from "@/internal/auth/repos/oauthApiKeyRepo.js";
+import { oauthConsentRepo } from "@/internal/auth/repos/oauthConsentRepo.js";
 
 /**
  * Get API keys linked to a specific OAuth consent.

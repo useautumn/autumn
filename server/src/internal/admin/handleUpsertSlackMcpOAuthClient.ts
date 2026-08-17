@@ -1,5 +1,5 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
-import { registerMcpOAuthClient } from "@/internal/auth/actions/index.js";
+import { registerMcpOAuthClient } from "@/internal/auth/actions/registerMcpOAuthClient.js";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
 const getClientUrl = () =>
