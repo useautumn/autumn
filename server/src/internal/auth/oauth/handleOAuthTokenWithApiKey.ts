@@ -43,12 +43,14 @@ const getTokenPayload = (body: Record<string, unknown>) => {
 	return body;
 };
 
-const rewriteTokenBody = ({
-	apiKey,
+// better-auth nests the token payload under `response` on some routes and
+// returns it flat on others; rewrite whichever shape we received.
+const rewriteTokenResponseBody = ({
+	token,
 	body,
 	scopes,
 }: {
-	apiKey: string;
+	token: string;
 	body: Record<string, unknown>;
 	scopes: string[];
 }) => {
@@ -58,7 +60,7 @@ const rewriteTokenBody = ({
 			...body,
 			response: {
 				...response,
-				access_token: apiKey,
+				access_token: token,
 				scope: scopes.join(" "),
 			},
 		};
@@ -66,35 +68,7 @@ const rewriteTokenBody = ({
 
 	return {
 		...body,
-		access_token: apiKey,
-		scope: scopes.join(" "),
-	};
-};
-
-const rewriteOAuthAccessTokenBody = ({
-	accessToken,
-	body,
-	scopes,
-}: {
-	accessToken: string;
-	body: Record<string, unknown>;
-	scopes: string[];
-}) => {
-	const response = body.response;
-	if (isRecord(response)) {
-		return {
-			...body,
-			response: {
-				...response,
-				access_token: accessToken,
-				scope: scopes.join(" "),
-			},
-		};
-	}
-
-	return {
-		...body,
-		access_token: accessToken,
+		access_token: token,
 		scope: scopes.join(" "),
 	};
 };
@@ -356,8 +330,8 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			isMcpClient ||
 			returnsOAuthAccessTokenForClientId({ clientId: tokenRecord.clientId })
 		) {
-			const responseBody = rewriteOAuthAccessTokenBody({
-				accessToken: prefixOAuthToken({ token: accessToken }),
+			const responseBody = rewriteTokenResponseBody({
+				token: prefixOAuthToken({ token: accessToken }),
 				body,
 				scopes: tokenRecord.scopes,
 			});
@@ -393,8 +367,8 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 	if (!apiKeyResult) return response;
 
 	return jsonTokenResponse({
-		body: rewriteTokenBody({
-			apiKey: apiKeyResult.apiKey,
+		body: rewriteTokenResponseBody({
+			token: apiKeyResult.apiKey,
 			body,
 			scopes: apiKeyResult.scopes,
 		}),
