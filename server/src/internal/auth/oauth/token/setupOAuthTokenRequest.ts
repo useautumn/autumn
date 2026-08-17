@@ -1,4 +1,7 @@
-import { getResourceFromOAuthTokenRequest } from "@autumn/auth/oauth";
+import {
+	canonicalizeOAuthResource,
+	getResourceFromOAuthTokenRequest,
+} from "@autumn/auth/oauth";
 import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { buildOAuthRefreshReplayKey } from "@/external/redis/actions/oauthRefreshReplay/oauthRefreshReplay.js";
@@ -11,6 +14,7 @@ export type OAuthTokenRequestContext = {
 	/** Non-null only for MCP refreshes, the one grant whose replays must agree. */
 	refreshReplayKey: string | null;
 	refreshTokenRecord: Awaited<ReturnType<typeof getOAuthRefreshTokenRecord>>;
+	/** Canonical audience this grant is stamped with, already resolved for refreshes. */
 	resource: string | null;
 };
 
@@ -37,11 +41,19 @@ export const setupOAuthTokenRequest = async ({
 	db: DrizzleCli;
 	request: Request;
 }): Promise<OAuthTokenRequestContext> => {
-	const resource = await getResourceFromOAuthTokenRequest(request.clone());
+	const requestResource = await getResourceFromOAuthTokenRequest(
+		request.clone(),
+	);
 	const refreshTokenRecord = await getOAuthRefreshTokenRecord({
 		db,
 		request: request.clone(),
 	});
+
+	// The refresh chain owns the audience: clients routinely omit `resource` on
+	// refresh, and a rotated token must never widen or drop what it was granted.
+	const resource = canonicalizeOAuthResource(
+		refreshTokenRecord?.resource ?? requestResource,
+	);
 
 	const grantedScopes =
 		refreshTokenRecord &&

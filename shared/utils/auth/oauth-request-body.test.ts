@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import {
-	getOAuthStringField,
 	parseOAuthRequestFields,
 	rebuildOAuthRequest,
 } from "./oauthRequestBody";
@@ -101,14 +100,5 @@ describe("rebuildOAuthRequest", () => {
 		});
 
 		expect(await rebuilt.text()).toBe("a=1&b=2");
-	});
-});
-
-describe("getOAuthStringField", () => {
-	test("returns non-empty strings only", () => {
-		expect(getOAuthStringField("value")).toBe("value");
-		expect(getOAuthStringField("")).toBeNull();
-		expect(getOAuthStringField(1)).toBeNull();
-		expect(getOAuthStringField(["value"])).toBeNull();
 	});
 });

@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type OAuthRequestFields = Record<string, unknown>;
 
 export type ParsedOAuthRequest = {
@@ -10,19 +12,23 @@ export type ParsedOAuthRequest = {
 export const getOAuthStringField = (value: unknown) =>
 	typeof value === "string" && value.length > 0 ? value : null;
 
-// Some OAuth clients POST JSON without a content type, so sniff the body too.
 const bodyIsJson = ({
 	contentType,
 	rawBody,
 }: {
 	contentType: string;
 	rawBody: string;
-}) =>
-	contentType.split(";")[0]?.trim().toLowerCase() === "application/json" ||
-	rawBody.trimStart().startsWith("{");
+}) => {
+	const isJsonContentType =
+		contentType.split(";")[0]?.trim().toLowerCase() === "application/json";
+	// Some OAuth clients POST JSON without a content type, so sniff the body too.
+	const looksLikeJson = rawBody.trimStart().startsWith("{");
 
-const asFields = (value: unknown): OAuthRequestFields =>
-	value && typeof value === "object" ? (value as OAuthRequestFields) : {};
+	return isJsonContentType || looksLikeJson;
+};
+
+/** Anything that is not a JSON object (arrays, numbers, null) carries no fields. */
+const jsonFieldsSchema = z.record(z.string(), z.unknown()).catch({});
 
 export const parseOAuthRequestFields = async (
 	request: Request,
@@ -40,7 +46,7 @@ export const parseOAuthRequestFields = async (
 
 	if (isJson) {
 		try {
-			return { ...empty, fields: asFields(JSON.parse(rawBody)) };
+			return { ...empty, fields: jsonFieldsSchema.parse(JSON.parse(rawBody)) };
 		} catch {
 			return empty;
 		}

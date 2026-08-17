@@ -1,16 +1,6 @@
 import { oauthAccessToken } from "@autumn/shared";
-import { findActiveOAuthAccessToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { and, eq, isNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-
-/** Shares the hash + expiry lookup Leaf's MCP transport authenticates bearers with. */
-export const getValidOAuthAccessTokenByRawToken = async ({
-	db,
-	rawAccessToken,
-}: {
-	db: DrizzleCli;
-	rawAccessToken: string;
-}) => (await findActiveOAuthAccessToken({ db, rawAccessToken })) ?? null;
 
 export const deleteOAuthAccessTokensByClientAndReference = async ({
 	db,
@@ -56,7 +46,6 @@ export const updateOAuthAccessTokenGrant = async ({
 		.where(eq(oauthAccessToken.id, id));
 
 export const oauthAccessTokenRepo = {
-	getValidByRawToken: getValidOAuthAccessTokenByRawToken,
 	deleteByClientAndReference: deleteOAuthAccessTokensByClientAndReference,
 	updateGrant: updateOAuthAccessTokenGrant,
 };

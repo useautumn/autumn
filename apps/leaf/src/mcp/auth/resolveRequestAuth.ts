@@ -43,36 +43,6 @@ const buildChallenge = ({
 		scopes: DEFAULT_OAUTH_RESOURCE_SCOPES,
 	});
 
-/** RFC 6750 §3.1 401: the credential is missing, malformed, expired or wrong-audience. */
-const invalidTokenError = ({
-	message,
-	resourceUrl,
-}: {
-	message: string;
-	resourceUrl: string;
-}) =>
-	new OAuthHttpError(
-		401,
-		message,
-		"invalid_token",
-		buildChallenge({ error: "invalid_token", resourceUrl }),
-	);
-
-/** RFC 6750 §3.1 403: the credential is valid but grants nothing this resource exposes. */
-const insufficientScopeError = ({
-	message,
-	resourceUrl,
-}: {
-	message: string;
-	resourceUrl: string;
-}) =>
-	new OAuthHttpError(
-		403,
-		message,
-		"insufficient_scope",
-		buildChallenge({ error: "insufficient_scope", resourceUrl }),
-	);
-
 type AuthLogger = {
 	warning: (message: string, data?: Record<string, unknown>) => void;
 };
@@ -178,10 +148,12 @@ const authenticateOAuthBearer = async ({
 	});
 
 	if (!accessToken?.userId || !accessToken.referenceId) {
-		throw invalidTokenError({
-			message: "Invalid or expired OAuth access token",
-			resourceUrl,
-		});
+		throw new OAuthHttpError(
+			401,
+			"Invalid or expired OAuth access token",
+			"invalid_token",
+			buildChallenge({ error: "invalid_token", resourceUrl }),
+		);
 	}
 
 	// RFC 8707 audience binding: this resource server only accepts tokens minted for it.
@@ -191,10 +163,12 @@ const authenticateOAuthBearer = async ({
 			resourceUrl,
 		})
 	) {
-		throw invalidTokenError({
-			message: "OAuth access token was not issued for this resource",
-			resourceUrl,
-		});
+		throw new OAuthHttpError(
+			401,
+			"OAuth access token was not issued for this resource",
+			"invalid_token",
+			buildChallenge({ error: "invalid_token", resourceUrl }),
+		);
 	}
 
 	// Only the resource scopes gate tools; OIDC protocol scopes are dropped.
@@ -203,10 +177,12 @@ const authenticateOAuthBearer = async ({
 	// A grant that names scopes but none this resource exposes fails every tool,
 	// while an empty grant is the unrestricted chat token and stays admin-equivalent.
 	if (accessToken.scopes.length > 0 && scopes.length === 0) {
-		throw insufficientScopeError({
-			message: "OAuth access token grants no Autumn resource scopes",
-			resourceUrl,
-		});
+		throw new OAuthHttpError(
+			403,
+			"OAuth access token grants no Autumn resource scopes",
+			"insufficient_scope",
+			buildChallenge({ error: "insufficient_scope", resourceUrl }),
+		);
 	}
 
 	return {
@@ -285,17 +261,21 @@ export const buildAuthForRequest = async ({
 	}
 
 	if (bearer) {
-		throw invalidTokenError({
-			message: "Invalid OAuth token prefix",
-			resourceUrl,
-		});
+		throw new OAuthHttpError(
+			401,
+			"Invalid OAuth token prefix",
+			"invalid_token",
+			buildChallenge({ error: "invalid_token", resourceUrl }),
+		);
 	}
 
 	if (flags["oauth-enabled"]) {
-		throw invalidTokenError({
-			message: "Missing Autumn API key bearer token",
-			resourceUrl,
-		});
+		throw new OAuthHttpError(
+			401,
+			"Missing Autumn API key bearer token",
+			"invalid_token",
+			buildChallenge({ error: "invalid_token", resourceUrl }),
+		);
 	}
 
 	logger.warning("Missing secret-key for MCP request");

@@ -55,15 +55,6 @@ const resolveEmptyScopeGrant = async ({
 	});
 };
 
-/** Admin grants are not consent-narrowed, but an empty request must not blank them. */
-const resolveAdminIssuedScopes = ({
-	requestedScopes,
-	tokenRecord,
-}: {
-	requestedScopes: string[] | null;
-	tokenRecord: OAuthAccessTokenRecord;
-}) => (requestedScopes?.length ? requestedScopes : tokenRecord.scopes);
-
 /**
  * Re-derives the scopes the minted token may carry, so a stale grant can never
  * outlive the permissions its consent still backs.
@@ -83,15 +74,20 @@ export const resolveIssuedOAuthScopes = async ({
 		return resolveEmptyScopeGrant({ db, isMcpClient, tokenRecord });
 	}
 
-	const issuedScopes =
-		tokenRecord.clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID
-			? resolveAdminIssuedScopes({ requestedScopes, tokenRecord })
-			: await getOAuthConsentScopeGrant({
-					db,
-					organizationId: tokenRecord.referenceId,
-					requestedScopes: requestedScopes ?? tokenRecord.scopes,
-					userId: tokenRecord.userId,
-				});
+	let issuedScopes: string[];
+	if (tokenRecord.clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID) {
+		// Admin grants are not consent-narrowed, but an empty request must not blank them.
+		issuedScopes = requestedScopes?.length
+			? requestedScopes
+			: tokenRecord.scopes;
+	} else {
+		issuedScopes = await getOAuthConsentScopeGrant({
+			db,
+			organizationId: tokenRecord.referenceId,
+			requestedScopes: requestedScopes ?? tokenRecord.scopes,
+			userId: tokenRecord.userId,
+		});
+	}
 
 	if (issuedScopes.length > 0) return issuedScopes;
 	return resolveEmptyScopeGrant({ db, isMcpClient, tokenRecord });

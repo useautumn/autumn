@@ -26,7 +26,6 @@ import { parseOAuthTokenResponseScopes } from "./token/parseOAuthTokenResponseSc
 import { persistOAuthTokenGrant } from "./token/persistOAuthTokenGrant.js";
 import { resolveIssuedOAuthScopes } from "./token/resolveIssuedOAuthScopes.js";
 import { resolveOAuthTokenConsentId } from "./token/resolveOAuthTokenConsentId.js";
-import { resolveOAuthTokenResource } from "./token/resolveOAuthTokenResource.js";
 import { setupOAuthTokenRequest } from "./token/setupOAuthTokenRequest.js";
 
 export const handleOAuthTokenWithApiKey = async (c: Context) => {
@@ -108,10 +107,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			db,
 			oauthConsentId: tokenRecord.oauthConsentId,
 			refreshTokenId: tokenRecord.refreshId,
-			resource: resolveOAuthTokenResource({
-				refreshTokenRecord: tokenRequest.refreshTokenRecord,
-				requestResource: tokenRequest.resource,
-			}),
+			resource: tokenRequest.resource,
 			scopes: tokenRecord.scopes,
 		});
 

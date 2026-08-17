@@ -3,7 +3,9 @@ import {
 	canonicalizeOAuthResource,
 	oauthAudienceAllowsResource,
 } from "@autumn/auth/oauth";
-import { resolveOAuthTokenResource } from "@/internal/auth/oauth/token/resolveOAuthTokenResource.js";
+import { oauthRefreshToken } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { setupOAuthTokenRequest } from "@/internal/auth/oauth/token/setupOAuthTokenRequest.js";
 
 const resourceUrl = "https://mcp.autumn.dev/mcp";
 
@@ -65,49 +67,92 @@ describe("oauthAudienceAllowsResource", () => {
 	});
 });
 
-describe("resolveOAuthTokenResource", () => {
-	test("canonicalizes the resource an initial grant requested", () => {
+/** Only the refresh-token row is stubbed; the client lookup falls through to null. */
+const stubDb = (refreshTokenRow: { resource: string | null } | null) =>
+	({
+		select: () => ({
+			from: (table: unknown) => ({
+				where: () => ({
+					limit: async () =>
+						table === oauthRefreshToken && refreshTokenRow
+							? [refreshTokenRow]
+							: [],
+				}),
+			}),
+		}),
+	}) as unknown as DrizzleCli;
+
+const tokenRequest = ({
+	isRefresh,
+	resource,
+}: {
+	isRefresh: boolean;
+	resource: string | null;
+}) => {
+	const body = new URLSearchParams({
+		grant_type: isRefresh ? "refresh_token" : "authorization_code",
+	});
+	if (isRefresh) body.set("refresh_token", "refresh_token_value");
+	if (resource) body.set("resource", resource);
+
+	return new Request("https://api.useautumn.com/api/auth/oauth2/token", {
+		method: "POST",
+		headers: { "content-type": "application/x-www-form-urlencoded" },
+		body,
+	});
+};
+
+const setupResource = async ({
+	refreshTokenRow,
+	resource = null,
+}: {
+	refreshTokenRow: { resource: string | null } | null;
+	resource?: string | null;
+}) => {
+	const { resource: resolved } = await setupOAuthTokenRequest({
+		db: stubDb(refreshTokenRow),
+		request: tokenRequest({ isRefresh: refreshTokenRow !== null, resource }),
+	});
+	return resolved;
+};
+
+describe("setupOAuthTokenRequest resource resolution", () => {
+	test("canonicalizes the resource an initial grant requested", async () => {
 		expect(
-			resolveOAuthTokenResource({
-				refreshTokenRecord: null,
-				requestResource: "https://MCP.autumn.dev/mcp/",
+			await setupResource({
+				refreshTokenRow: null,
+				resource: "https://MCP.autumn.dev/mcp/",
 			}),
 		).toBe(resourceUrl);
 	});
 
-	test("keeps the refresh chain's audience when the client omits resource", () => {
+	test("keeps the refresh chain's audience when the client omits resource", async () => {
 		expect(
-			resolveOAuthTokenResource({
-				refreshTokenRecord: { resource: resourceUrl },
-				requestResource: null,
+			await setupResource({ refreshTokenRow: { resource: resourceUrl } }),
+		).toBe(resourceUrl);
+	});
+
+	test("does not let a refresh request retarget the granted audience", async () => {
+		expect(
+			await setupResource({
+				refreshTokenRow: { resource: resourceUrl },
+				resource: "https://evil.example.com/mcp",
 			}),
 		).toBe(resourceUrl);
 	});
 
-	test("does not let a refresh request retarget the granted audience", () => {
+	test("stamps a legacy refresh chain from the request's resource", async () => {
 		expect(
-			resolveOAuthTokenResource({
-				refreshTokenRecord: { resource: resourceUrl },
-				requestResource: "https://evil.example.com/mcp",
+			await setupResource({
+				refreshTokenRow: { resource: null },
+				resource: resourceUrl,
 			}),
 		).toBe(resourceUrl);
 	});
 
-	test("stamps a legacy refresh chain from the request's resource", () => {
+	test("leaves the grant unstamped when no resource is known", async () => {
 		expect(
-			resolveOAuthTokenResource({
-				refreshTokenRecord: { resource: null },
-				requestResource: resourceUrl,
-			}),
-		).toBe(resourceUrl);
-	});
-
-	test("leaves the grant unstamped when no resource is known", () => {
-		expect(
-			resolveOAuthTokenResource({
-				refreshTokenRecord: { resource: null },
-				requestResource: null,
-			}),
+			await setupResource({ refreshTokenRow: { resource: null } }),
 		).toBeNull();
 	});
 });

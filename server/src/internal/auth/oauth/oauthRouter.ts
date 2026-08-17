@@ -1,15 +1,17 @@
 import { getProtectedResourceMetadata } from "@autumn/auth/oauth";
+import { parseOAuthRequestFields } from "@autumn/shared/utils/auth/oauthRequestBody";
 import {
 	oauthProviderAuthServerMetadata,
 	oauthProviderOpenIdConfigMetadata,
 } from "@better-auth/oauth-provider";
 import { type Context, Hono } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
+import { db } from "@/db/initDrizzle.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { auth, authBaseUrl } from "@/utils/auth.js";
+import { registerOAuthClient } from "../actions/registerOAuthClient.js";
 import { handleGetOAuthClient } from "./handleGetOAuthClient.js";
 import { handleOAuthAuthorize } from "./handleOAuthAuthorize.js";
-import { handleOAuthClientRegistration } from "./handleOAuthClientRegistration.js";
 import { handleOAuthConsentWithEnv } from "./handleOAuthConsentWithEnv.js";
 import { handleOAuthTokenWithApiKey } from "./handleOAuthTokenWithApiKey.js";
 
@@ -94,7 +96,14 @@ oauthRouter.get("/api/auth/oauth2/authorize", handleOAuthAuthorize);
 oauthRouter.post(
 	"/api/auth/oauth2/register",
 	oauthClientRegisterLimiter,
-	handleOAuthClientRegistration,
+	async (c) => {
+		const { fields } = await parseOAuthRequestFields(c.req.raw);
+		const result = await registerOAuthClient({ body: fields, db });
+
+		if ("error" in result)
+			return c.json({ error: result.error }, result.status);
+		return c.json(result.body, result.status);
+	},
 );
 
 oauthRouter.get(

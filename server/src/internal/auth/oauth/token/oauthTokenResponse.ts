@@ -1,9 +1,11 @@
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+const isNestedTokenPayload = (
+	value: unknown,
+): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
 /** better-auth nests the token payload under `response` on some routes and returns it flat on others. */
 export const getOAuthTokenPayload = (body: Record<string, unknown>) =>
-	isRecord(body.response) ? body.response : body;
+	isNestedTokenPayload(body.response) ? body.response : body;
 
 /** Null when better-auth answered with a non-JSON body, which callers pass through untouched. */
 export const parseOAuthTokenResponseBody = async (response: Response) => {
@@ -25,13 +27,11 @@ export const rewriteOAuthTokenResponseBody = ({
 	token: string;
 }) => {
 	const issued = { access_token: token, scope: scopes.join(" ") };
-	const response = body.response;
+	const nested = body.response;
 
-	if (isRecord(response)) {
-		return { ...body, response: { ...response, ...issued } };
-	}
-
-	return { ...body, ...issued };
+	return isNestedTokenPayload(nested)
+		? { ...body, response: { ...nested, ...issued } }
+		: { ...body, ...issued };
 };
 
 /** `response` seeds the headers so better-auth's own headers (cookies, etc.) survive. */

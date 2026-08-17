@@ -8,13 +8,13 @@ import {
 	RecaseError,
 	type ScopeString,
 } from "@autumn/shared";
+import { findActiveOAuthAccessToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { verifyAccessToken } from "better-auth/oauth2";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
 	type ResourceAccessTokenRecord,
 	tokenRecordFromResourceToken,
 } from "@/internal/dev/cli/oauthApiKeyUtils.js";
-import { oauthAccessTokenRepo } from "../repos/oauthAccessTokenRepo.js";
 import { oauthConsentRepo } from "../repos/oauthConsentRepo.js";
 import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
 import { rotateOAuthConsentApiKey } from "./oauthConsentApiKey.js";
@@ -62,7 +62,7 @@ export const getOAuthAccessTokenRecord = async ({
 }) => {
 	const rawAccessToken = stripOAuthTokenPrefix({ token: accessToken });
 	const tokenRecord =
-		(await oauthAccessTokenRepo.getValidByRawToken({ db, rawAccessToken })) ??
+		(await findActiveOAuthAccessToken({ db, rawAccessToken })) ??
 		(await verifyResourceAccessToken({
 			accessToken: rawAccessToken,
 			resource,

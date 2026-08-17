@@ -29,9 +29,6 @@
 			"@autumn/ksuid": ["../packages/ksuid/src/index.ts"],
 			"@autumn/shared": ["../shared/index.ts"],
 			"@autumn/shared/*": ["../shared/*"],
-			"@autumn/auth": ["../packages/auth/src/index.ts"],
-			"@autumn/auth/oauth": ["../packages/auth/src/oauth/index.ts"],
-			"@autumn/auth/utils": ["../packages/auth/src/utils/index.ts"],
 			"autumn-js": ["../packages/autumn-js/src/sdk/index.ts"],
 			"autumn-js/backend/hono": [
 				"../packages/autumn-js/src/backend/adapters/hono.ts"
