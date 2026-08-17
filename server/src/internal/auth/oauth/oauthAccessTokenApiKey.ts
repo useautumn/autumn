@@ -9,11 +9,9 @@ import {
 	type ScopeString,
 } from "@autumn/shared";
 import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
-import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
 import { verifyAccessToken } from "better-auth/oauth2";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
-	parseRequestedScopes,
 	type ResourceAccessTokenRecord,
 	tokenRecordFromResourceToken,
 } from "@/internal/dev/cli/oauthApiKeyUtils.js";
@@ -197,9 +195,4 @@ export const getExternalOAuthApiKeyForToken = async ({
 		clientId: tokenRecord.clientId,
 		scopes,
 	};
-};
-
-export const scopesFromOAuthScopeString = (scope: unknown) => {
-	if (typeof scope !== "string") return null;
-	return parseRequestedScopes(splitOAuthScopeString(scope));
 };

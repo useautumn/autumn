@@ -1,8 +1,5 @@
 import { prefixOAuthToken } from "@autumn/auth";
-import {
-	getOAuthResourceScopes,
-	returnsOAuthAccessTokenForClientId,
-} from "@autumn/auth/oauth";
+import { returnsOAuthAccessTokenForClientId } from "@autumn/auth/oauth";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { getOAuthStringField } from "@autumn/shared/utils/auth/oauthRequestBody";
 import type { Context } from "hono";
@@ -16,14 +13,15 @@ import { isMcpOAuthClient } from "./mcpOAuthScopes.js";
 import {
 	getExternalOAuthApiKeyForToken,
 	getOAuthAccessTokenRecord,
-	scopesFromOAuthScopeString,
 } from "./oauthAccessTokenApiKey.js";
+import { oauthTokenErrorResponse } from "./token/oauthTokenErrorResponse.js";
 import {
 	getOAuthTokenPayload,
 	jsonOAuthTokenResponse,
 	parseOAuthTokenResponseBody,
 	rewriteOAuthTokenResponseBody,
 } from "./token/oauthTokenResponse.js";
+import { parseOAuthTokenResponseScopes } from "./token/parseOAuthTokenResponseScopes.js";
 import { persistOAuthTokenGrant } from "./token/persistOAuthTokenGrant.js";
 import { resolveIssuedOAuthScopes } from "./token/resolveIssuedOAuthScopes.js";
 import { resolveOAuthTokenConsentId } from "./token/resolveOAuthTokenConsentId.js";
@@ -63,13 +61,12 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 	const accessToken = getOAuthStringField(tokenPayload.access_token);
 	if (!accessToken) return response;
 
-	const requestedScopes = scopesFromOAuthScopeString(tokenPayload.scope);
-	const requestedResourceScopes = requestedScopes
-		? getOAuthResourceScopes(requestedScopes)
-		: null;
-
 	try {
-		// 4. Bind the minted token to its consent and to the scopes that consent still backs
+		// 4. Read back the scopes better-auth granted
+		const { scopes: requestedScopes, resourceScopes: requestedResourceScopes } =
+			parseOAuthTokenResponseScopes({ scope: tokenPayload.scope });
+
+		// 5. Bind the minted token to its consent and to the scopes that consent still backs
 		const tokenRecord = await getOAuthAccessTokenRecord({
 			db,
 			accessToken,
@@ -114,7 +111,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			});
 		}
 
-		// 5. MCP and reserved clients keep the opaque OAuth token
+		// 6. MCP and reserved clients keep the opaque OAuth token
 		if (
 			isMcpClient ||
 			returnsOAuthAccessTokenForClientId({ clientId: tokenRecord.clientId })
@@ -138,7 +135,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			});
 		}
 
-		// 6. Everyone else exchanges the token for a scoped api key
+		// 7. Everyone else exchanges the token for a scoped api key
 		const apiKeyResult = await getExternalOAuthApiKeyForToken({
 			db,
 			tokenRecord,
@@ -156,15 +153,8 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			status: response.status,
 		});
 	} catch (error) {
-		if (error instanceof RecaseError) {
-			return jsonOAuthTokenResponse({
-				body: {
-					error: "invalid_grant",
-					error_description: error.message,
-				},
-				status: error.statusCode,
-			});
-		}
+		const errorResponse = oauthTokenErrorResponse({ error });
+		if (errorResponse) return errorResponse;
 		throw error;
 	}
 };
