@@ -4,6 +4,20 @@ import type {
 } from "@autumn/shared";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
+const variantInheritsDraft = ({
+	planId,
+	planParams,
+}: {
+	planId: string;
+	planParams: UpdateCatalogPlanParams;
+}): boolean =>
+	(planParams.propagate?.variants ?? []).some(
+		(target) => target.plan_id === planId,
+	) ||
+	(planParams.variants ?? []).some(
+		(variant) => variant.variant_plan_id === planId,
+	);
+
 const upsertMatchesDraftEntry = ({
 	upsertProductPlan,
 	planParams,
@@ -11,8 +25,19 @@ const upsertMatchesDraftEntry = ({
 	upsertProductPlan: UpsertProductPlan;
 	planParams: UpdateCatalogPlanParams;
 }): boolean => {
-	if (upsertProductPlan.row.planId !== planParams.plan_id) return false;
 	if (upsertProductPlan.row.versioning === "new_version") return false;
+
+	if (
+		upsertProductPlan.row.source === "variant_propagation" &&
+		variantInheritsDraft({
+			planId: upsertProductPlan.row.planId,
+			planParams,
+		})
+	) {
+		return true;
+	}
+
+	if (upsertProductPlan.row.planId !== planParams.plan_id) return false;
 
 	if (planParams.versioning === "all_versions") return true;
 	if (planParams.version !== undefined) {

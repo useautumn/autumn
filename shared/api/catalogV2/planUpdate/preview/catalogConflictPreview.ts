@@ -16,6 +16,10 @@ export const CatalogConflictPreviewSchema = z.object({
 			description:
 				"Why follow may be ambiguous. `different_interval`: the relative holds the feature at an interval the edit doesn't touch. `value_divergence`: a customized value that follow would overwrite. `base_price_divergence`: a customized base price that follow would overwrite.",
 		}),
+	license_plan_id: z.string().optional().meta({
+		description:
+			"Set when the clash is on this license link, not the plan body. Omitted = this plan's own items or price.",
+	}),
 });
 
 export type CatalogConflictPreview = z.infer<

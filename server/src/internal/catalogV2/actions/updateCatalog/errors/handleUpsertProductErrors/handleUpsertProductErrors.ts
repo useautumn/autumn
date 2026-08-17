@@ -1,6 +1,7 @@
 import { handleDefaultFlagErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleDefaultFlagErrors";
 import { handleFreeTrialErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleFreeTrialErrors";
 import { handlePlanLicenseErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handlePlanLicenseErrors";
+import { handleVariantErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleVariantErrors";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
@@ -20,10 +21,13 @@ export const handleUpsertProductErrors = ({
 		// 1. Free trial errors (one-off products cannot trial)
 		handleFreeTrialErrors({ nextFullProduct });
 
-		// 2. Default flag errors (historical version; paid default)
+		// 2. Default flag errors (historical version; paid default; never on a variant)
 		handleDefaultFlagErrors({ nextFullProduct, latestExistingVersion });
 
-		// 3. Declared plan_license link guards
+		// 3. Declared variants[] create / nest / id-collision
+		handleVariantErrors({ upsert, productStatesContext });
+
+		// 4. Declared plan_license link guards
 		handlePlanLicenseErrors({ upsert });
 	}
 };

@@ -39,7 +39,7 @@ export const ProductSchema = z.object({
 		})
 		.nullish(),
 	base_variant_id: z.string().nullable(),
-	base_internal_product_id: z.string().nullable().optional(),
+	base_internal_product_id: z.string().nullish(),
 	archived: z.boolean().default(false),
 	config: ProductConfigSchema.default(() => ({ ignore_past_due: false })),
 	...DbBillingControlsSchema.shape,
@@ -84,8 +84,12 @@ export type FullProductWithoutLicenses = z.infer<
 	typeof FullProductWithoutLicensesSchema
 >;
 
-export type FullProduct = FullProductWithoutLicenses & {
+/** Items + this plan's `licenses[]`. No reverse `parent_plan_licenses` — that nest hits the alias limit. */
+export type FullProductWithoutParentLicenses = FullProductWithoutLicenses & {
 	licenses?: FullPlanLicense[];
+};
+
+export type FullProduct = FullProductWithoutParentLicenses & {
 	/** Reverse links (this product is the license). Every parent version, not latest-only — `deriveLicenseParentIntents` pins from this. */
 	parent_plan_licenses?: ParentPlanLicense[];
 	/** Parent base plan via `base_internal_product_id`; null if not a variant. */

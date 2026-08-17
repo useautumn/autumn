@@ -1,9 +1,9 @@
-import {
-	type ApiPlanV1,
-	diffPlanV1,
-	type LicenseCustomize,
-} from "@autumn/shared";
+import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
+import type { LicenseCustomize } from "@models/licenseModels/licenseModels.js";
+import { diffPlanV1 } from "../diff/diffPlanV1.js";
 
+/** Re-express an effective plan as a customize off its base plan.
+ * Undefined means the effective plan matches the base — stock link. */
 export const diffLicensePlanCustomize = ({
 	basePlan,
 	effectivePlan,

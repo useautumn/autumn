@@ -95,7 +95,10 @@ export const handleUpsertProductVersioningErrors = ({
 			existingVersionCount: existingVersions.length,
 		});
 
-		for (const target of planParams.propagate?.license_parents ?? []) {
+		for (const target of [
+			...(planParams.propagate?.license_parents ?? []),
+			...(planParams.propagate?.variants ?? []),
+		]) {
 			rejectStrategyPlusExplicitVersion({
 				planId: target.plan_id,
 				versioning: target.versioning,
@@ -108,6 +111,17 @@ export const handleUpsertProductVersioningErrors = ({
 					productStatesContext.versionsByPlanId[target.plan_id] ?? []
 				).length,
 			});
+		}
+
+		if (planParams.migration?.draft) {
+			for (const target of planParams.propagate?.variants ?? []) {
+				if (target.versioning !== "new_version") continue;
+				throw new RecaseError({
+					message: `versioning "new_version" cannot be combined with migration.draft (plan_id=${target.plan_id})`,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
 		}
 
 		if (planParams.version !== undefined) {

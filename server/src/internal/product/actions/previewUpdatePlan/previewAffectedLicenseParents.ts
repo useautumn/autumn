@@ -1,6 +1,8 @@
 import {
 	type ApiPlanLicenseV1,
 	type ApiPlanV1,
+	applyLicenseCustomizeToBasePlan,
+	diffLicensePlanCustomize,
 	type FullProduct,
 	type PlanUpdatePreviewLicenseChange,
 	PlanUpdatePreviewLicenseChangeSchema,

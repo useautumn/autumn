@@ -21,6 +21,7 @@ export const PRODUCT_DETAIL_KEYS = [
 	"usage_limits",
 	"usage_alerts",
 	"overage_allowed",
+	"base_internal_product_id",
 ] as const;
 
 export type ProductDetailKey = (typeof PRODUCT_DETAIL_KEYS)[number];
@@ -95,6 +96,8 @@ export const productDetailComparators: {
 	usage_limits: billingControlColumnIsSame("usage_limits"),
 	usage_alerts: billingControlColumnIsSame("usage_alerts"),
 	overage_allowed: billingControlColumnIsSame("overage_allowed"),
+	base_internal_product_id: ({ left, right }) =>
+		(left ?? null) === (right ?? null),
 };
 
 export const productDetailFieldIsSame = <K extends ProductDetailKey>({

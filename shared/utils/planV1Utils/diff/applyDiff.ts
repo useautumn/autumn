@@ -163,6 +163,20 @@ export const applyPlanItemParamsDiff = ({
 	return next;
 };
 
+/** applyItems only guards free entitlements; replaying a diff onto a drifted
+ * plan can collide priced slots too. First occurrence (the base plan's) wins. */
+export const dedupeItemsByMatchKey = (
+	items: ApiPlanV1["items"],
+): ApiPlanV1["items"] => {
+	const seen = new Set<string>();
+	return items.filter((item) => {
+		const key = composeMatchKey(item);
+		if (seen.has(key)) return false;
+		seen.add(key);
+		return true;
+	});
+};
+
 const applyFreeTrial = (
 	base: ApiPlanV1["free_trial"],
 	diff: DiffedCustomizePlanV1["free_trial"],

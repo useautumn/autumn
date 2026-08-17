@@ -19,6 +19,8 @@ export type ProductUpsertIntent = {
 	source: UpsertProductSource;
 	/** A propagated intent carries the direct edit as a diff; when present, content comes from it, not from planParams. */
 	editDiff?: DiffedCustomizePlanV1;
+	/** Latest base row this variant points at. Derive-owned — not a request field. */
+	baseInternalProductId?: string | null;
 };
 
 export const claimProductKeys = ({

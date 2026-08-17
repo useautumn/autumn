@@ -15,6 +15,14 @@ export const handleDefaultFlagErrors = ({
 	/** Newest existing version for this plan_id; undefined if plan is new. */
 	latestExistingVersion: number | undefined;
 }): void => {
+	if (nextFullProduct.base_internal_product_id && nextFullProduct.is_default) {
+		throw new RecaseError({
+			code: ErrCode.VariantCannotBeDefault,
+			message: `Cannot set is_default on variant plan ${nextFullProduct.id}`,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
 	if (!nextFullProduct.is_default) return;
 
 	if (

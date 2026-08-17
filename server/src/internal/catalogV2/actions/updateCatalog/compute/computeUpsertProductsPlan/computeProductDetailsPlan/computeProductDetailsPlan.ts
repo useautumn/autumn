@@ -20,6 +20,7 @@ export const computeProductDetailsPlan = ({
 	currentFullProduct,
 	version,
 	baseFullProduct,
+	baseInternalProductId,
 }: {
 	ctx: AutumnContext;
 	planParams: UpdateCatalogPlanParams;
@@ -27,6 +28,8 @@ export const computeProductDetailsPlan = ({
 	version: number;
 	/** Content baseline — clone source when minting (ignored when current set). */
 	baseFullProduct?: FullProduct | null;
+	/** Variant pointer. Compute-owned — not a request field. */
+	baseInternalProductId?: string | null;
 }): ProductDetailsPlan => {
 	if (!currentFullProduct) {
 		return {
@@ -36,6 +39,9 @@ export const computeProductDetailsPlan = ({
 				planParams,
 				version,
 				...(baseFullProduct ? { base: baseFullProduct } : {}),
+				...(baseInternalProductId !== undefined
+					? { baseInternalProductId }
+					: {}),
 			}),
 		};
 	}
@@ -44,11 +50,13 @@ export const computeProductDetailsPlan = ({
 		planParams,
 		current: currentFullProduct,
 	});
-	if (isEmptyObject(patch)) {
-		return { changed: false, product: currentFullProduct };
-	}
-
-	const next: Product = { ...currentFullProduct, ...patch };
+	const next: Product = {
+		...currentFullProduct,
+		...patch,
+		...(baseInternalProductId !== undefined
+			? { base_internal_product_id: baseInternalProductId }
+			: {}),
+	};
 	const previousAttributes = diffProductDetails({
 		current: currentFullProduct,
 		next,

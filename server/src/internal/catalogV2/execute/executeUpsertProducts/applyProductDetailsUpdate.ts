@@ -31,6 +31,7 @@ export const applyProductDetailsUpdate = async ({
 			usage_limits: product.usage_limits,
 			usage_alerts: product.usage_alerts,
 			overage_allowed: product.overage_allowed,
+			base_internal_product_id: product.base_internal_product_id,
 		},
 	});
 };
