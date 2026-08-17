@@ -4,7 +4,7 @@
  * Contract:
  *   follow 100→150 vs 200 lists value_divergence; draft customize is 150
  *   follow + declare 300 → two ops (150 vs 300); explicit swallows the list
- *   license follow 100→150 vs 200 stamps license_plan_id; draft is upsert_licenses 150
+ *   license follow 100→150 vs 200 stamps license_plan_id; two upsert_licenses ops (both 150)
  */
 
 import { test } from "bun:test";
@@ -265,16 +265,10 @@ test.concurrent(
 					},
 				});
 
-				const previewMigrations = parsePlanPreview(
-					await autumnV2_3.catalogV2.previewUpdate({ plans }),
-				).migrations;
-				await Bun.write(
-					"/tmp/variant-license-overwrite-draft.json",
-					JSON.stringify(previewMigrations, null, 2),
-				);
 				const planFilter = orVersionPinnedFilter({
 					branches: [{ planId: baseId }, { planId: variantId }],
 				});
+				const messages150 = messagesItemDelta({ included: 150 });
 				await expectLicenseDraftCase({
 					autumn: autumnV2_3,
 					ctx,
@@ -293,9 +287,14 @@ test.concurrent(
 							filter: { customer: { plan: planFilter } },
 							operations: [
 								parentLicenseOp({
-									planFilter,
+									planFilter: versionPinnedFilter({ planId: baseId }),
 									childId,
-									customize: messagesItemDelta({ included: 150 }),
+									customize: messages150,
+								}),
+								parentLicenseOp({
+									planFilter: versionPinnedFilter({ planId: variantId }),
+									childId,
+									customize: messages150,
 								}),
 							],
 						},
