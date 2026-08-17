@@ -8,6 +8,7 @@ import {
 import {
 	getProtectedResourceMetadataUrl,
 	getWwwAuthenticateHeader,
+	oauthAudienceAllowsResource,
 } from "@autumn/auth/oauth";
 import {
 	type AutumnMcpAuth,
@@ -21,6 +22,7 @@ import {
 	findActiveOAuthAccessToken,
 	type OAuthAccessTokenDb,
 } from "@autumn/shared/utils/auth/oauthAccessTokens";
+import { getRequestedOAuthResourceScopes } from "@autumn/shared/utils/auth/oauthScopeUtils";
 import * as z from "zod/v4";
 import { OAuthHttpError } from "./protectedResourceMetadata.js";
 
@@ -112,8 +114,23 @@ const principalFromSecret = ({
 const getInvalidTokenChallenge = (resourceUrl: string) =>
 	getWwwAuthenticateHeader({
 		resourceMetadataUrl: getProtectedResourceMetadataUrl({ resourceUrl }),
+		scopes: DEFAULT_OAUTH_RESOURCE_SCOPES,
 		error: "invalid_token",
 	});
+
+const invalidTokenError = ({
+	message,
+	resourceUrl,
+}: {
+	message: string;
+	resourceUrl: string;
+}) =>
+	new OAuthHttpError(
+		401,
+		message,
+		"invalid_token",
+		getInvalidTokenChallenge(resourceUrl),
+	);
 
 /**
  * Authenticates an OAuth bearer against the shared token store — the same
@@ -135,14 +152,31 @@ const authenticateOAuthBearer = async ({
 	});
 
 	if (!accessToken?.userId || !accessToken.referenceId) {
-		throw new OAuthHttpError(
-			401,
-			"Invalid or expired OAuth access token",
-			"invalid_token",
-			getInvalidTokenChallenge(resourceUrl),
-		);
+		throw invalidTokenError({
+			message: "Invalid or expired OAuth access token",
+			resourceUrl,
+		});
 	}
-	return { orgId: accessToken.referenceId, userId: accessToken.userId };
+
+	// RFC 8707 audience binding: this resource server only accepts tokens minted for it.
+	if (
+		!oauthAudienceAllowsResource({
+			grantResource: accessToken.resource,
+			resourceUrl,
+		})
+	) {
+		throw invalidTokenError({
+			message: "OAuth access token was not issued for this resource",
+			resourceUrl,
+		});
+	}
+
+	return {
+		orgId: accessToken.referenceId,
+		userId: accessToken.userId,
+		// Only the resource scopes gate tools; OIDC protocol scopes are dropped.
+		scopes: getRequestedOAuthResourceScopes(accessToken.scopes),
+	};
 };
 
 export const buildAuthForRequest = async ({
@@ -206,7 +240,7 @@ export const buildAuthForRequest = async ({
 				kind: "oauth",
 				value: `${identity.orgId}:${identity.userId}`,
 			}),
-			scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
+			scopes: identity.scopes,
 			serverURL: flags["server-url"],
 			xApiVersion,
 			failOpen,

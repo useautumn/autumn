@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { getProtectedResourceMetadata } from "@autumn/auth/oauth";
 import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
+import { Scopes } from "@autumn/shared/scopeDefinitions";
 import type { OAuthAccessTokenDb } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import type { OAuthHttpError } from "../../../src/mcp/auth/protectedResourceMetadata.js";
 import {
@@ -28,15 +29,22 @@ const unusedDb = oauthTokenDb(undefined);
 const resourceUrl = "http://localhost:2718/mcp";
 const internalResourceUrl = "http://localhost:2718/internal/mcp";
 
+const expectedChallenge = (resourcePath: string) =>
+	[
+		`Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource${resourcePath}"`,
+		`scope="${DEFAULT_OAUTH_RESOURCE_SCOPES.join(" ")}"`,
+		'error="invalid_token"',
+	].join(", ");
+
 describe("MCP OAuth auth resolution", () => {
-	test("advertises the Leaf OAuth scope allowlist", () => {
+	test("advertises the Leaf OAuth scope allowlist without offline_access", () => {
 		expect(
 			getProtectedResourceMetadata({
 				issuerBaseUrl: flags["server-url"],
 				resourceName: "Autumn MCP",
 				resourceUrl,
 			}).scopes_supported,
-		).toEqual([...DEFAULT_OAUTH_RESOURCE_SCOPES, "offline_access"]);
+		).toEqual([...DEFAULT_OAUTH_RESOURCE_SCOPES]);
 	});
 
 	test("returns a WWW-Authenticate challenge without a bearer token", async () => {
@@ -51,8 +59,7 @@ describe("MCP OAuth auth resolution", () => {
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
-			wwwAuthenticate:
-				'Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource/mcp", error="invalid_token"',
+			wwwAuthenticate: expectedChallenge("/mcp"),
 		} satisfies Partial<OAuthHttpError>);
 	});
 
@@ -68,8 +75,7 @@ describe("MCP OAuth auth resolution", () => {
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
-			wwwAuthenticate:
-				'Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource/internal/mcp", error="invalid_token"',
+			wwwAuthenticate: expectedChallenge("/internal/mcp"),
 		} satisfies Partial<OAuthHttpError>);
 	});
 
@@ -78,7 +84,11 @@ describe("MCP OAuth auth resolution", () => {
 			headers: new Headers({
 				authorization: "Bearer am_oauth_token",
 			}),
-			db: oauthTokenDb({ userId: "user_1", referenceId: "org_1" }),
+			db: oauthTokenDb({
+				userId: "user_1",
+				referenceId: "org_1",
+				scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
+			}),
 			flags: flags as MCPOAuthFlags,
 			logger,
 			resourceUrl,
@@ -96,6 +106,97 @@ describe("MCP OAuth auth resolution", () => {
 		expect(auth.principalId).toStartWith("oauth:");
 	});
 
+	test("carries the token's granted scopes, not the default set", async () => {
+		const auth = await buildAuthForRequest({
+			headers: new Headers({ authorization: "Bearer am_oauth_token" }),
+			db: oauthTokenDb({
+				userId: "user_1",
+				referenceId: "org_1",
+				scopes: ["openid", "offline_access", Scopes.Customers.Read],
+			}),
+			flags: flags as MCPOAuthFlags,
+			logger,
+			resourceUrl,
+		});
+
+		expect(auth.scopes).toEqual([Scopes.Customers.Read]);
+	});
+
+	test("accepts a token stamped with this resource, ignoring canonical noise", async () => {
+		const auth = await buildAuthForRequest({
+			headers: new Headers({ authorization: "Bearer am_oauth_token" }),
+			db: oauthTokenDb({
+				userId: "user_1",
+				referenceId: "org_1",
+				resource: "HTTP://LocalHost:2718/mcp/",
+				scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
+			}),
+			flags: flags as MCPOAuthFlags,
+			logger,
+			resourceUrl,
+		});
+
+		expect(auth.orgId).toBe("org_1");
+	});
+
+	test("challenges a token stamped for another MCP resource", async () => {
+		await expect(
+			buildAuthForRequest({
+				headers: new Headers({ authorization: "Bearer am_oauth_token" }),
+				db: oauthTokenDb({
+					userId: "user_1",
+					referenceId: "org_1",
+					resource: internalResourceUrl,
+					scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
+				}),
+				flags: flags as MCPOAuthFlags,
+				logger,
+				resourceUrl,
+			}),
+		).rejects.toMatchObject({
+			status: 401,
+			error: "invalid_token",
+			wwwAuthenticate: expectedChallenge("/mcp"),
+		} satisfies Partial<OAuthHttpError>);
+	});
+
+	test("challenges a token stamped for another host", async () => {
+		await expect(
+			buildAuthForRequest({
+				headers: new Headers({ authorization: "Bearer am_oauth_token" }),
+				db: oauthTokenDb({
+					userId: "user_1",
+					referenceId: "org_1",
+					resource: "http://evil.example.com/mcp",
+					scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
+				}),
+				flags: flags as MCPOAuthFlags,
+				logger,
+				resourceUrl,
+			}),
+		).rejects.toMatchObject({
+			status: 401,
+			error: "invalid_token",
+		} satisfies Partial<OAuthHttpError>);
+	});
+
+	test("grandfathers tokens minted before audience stamping", async () => {
+		const auth = await buildAuthForRequest({
+			headers: new Headers({ authorization: "Bearer am_oauth_token" }),
+			db: oauthTokenDb({
+				userId: "user_1",
+				referenceId: "org_1",
+				resource: null,
+				scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
+			}),
+			flags: flags as MCPOAuthFlags,
+			logger,
+			resourceUrl,
+		});
+
+		expect(auth.orgId).toBe("org_1");
+	});
+
 	test("challenges expired or unknown OAuth bearer tokens at the MCP boundary", async () => {
 		await expect(
 			buildAuthForRequest({
@@ -110,8 +211,7 @@ describe("MCP OAuth auth resolution", () => {
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
-			wwwAuthenticate:
-				'Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource/mcp", error="invalid_token"',
+			wwwAuthenticate: expectedChallenge("/mcp"),
 		} satisfies Partial<OAuthHttpError>);
 	});
 
