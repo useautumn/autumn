@@ -4,6 +4,7 @@ import { CatalogActionSchema } from "../../components/catalogAction.js";
 import { CatalogCorePreviewSchema } from "./catalogCorePreview.js";
 import { CatalogLicenseParentPreviewSchema } from "./catalogLicenseParentPreview.js";
 import { CatalogSiblingVersionPreviewSchema } from "./catalogSiblingVersionPreview.js";
+import { CatalogVariantPreviewSchema } from "./catalogVariantPreview.js";
 import { CatalogPlanVersioningSchema } from "./catalogVersioningPreview.js";
 
 /**
@@ -25,6 +26,11 @@ export const CatalogPlanUpdatePreviewSchema = CatalogCorePreviewSchema.extend({
 		internal: true,
 		description:
 			"Parents offering this plan as a license and how each one's planLicense resolves against this entry's change. Omitted when the plan is not a license.",
+	}),
+	variants: z.array(CatalogVariantPreviewSchema).optional().meta({
+		internal: true,
+		description:
+			"Variants of this plan and how each resolved against this entry's change. Omitted when the plan has none.",
 	}),
 	licenses: z.array(ApiPlanLicenseV1Schema).optional().meta({
 		description:

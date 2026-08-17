@@ -65,10 +65,29 @@ export const computeVersioningOptions = ({
 	});
 
 	const product = upsert.row.currentFullProduct ?? upsert.row.baseFullProduct;
+	const parentInternalIds = new Set(
+		versionsForPlan.map((version) => version.internal_id),
+	);
 	const followPlanIds = new Set([
 		...parentLicensePlanIds({ product }),
 		...(product?.variants ?? []).map((variant) => variant.id),
+		...versionsForPlan.flatMap((version) =>
+			(version.variants ?? []).map((variant) => variant.id),
+		),
+		...(upsert.declaredVariants ?? []).map(
+			(variant) => variant.variant_plan_id,
+		),
 	]);
+	for (const versions of Object.values(productStatesContext.versionsByPlanId)) {
+		for (const child of versions) {
+			if (
+				child.base_internal_product_id &&
+				parentInternalIds.has(child.base_internal_product_id)
+			) {
+				followPlanIds.add(child.id);
+			}
+		}
+	}
 	followPlanIds.delete(upsert.row.planId);
 
 	for (const planId of followPlanIds) {
@@ -79,6 +98,12 @@ export const computeVersioningOptions = ({
 				productStatesContext,
 			}),
 		});
+	}
+
+	// new_version is only legal on the latest row — a pinned historical
+	// version must not inherit it from a customered variant.
+	if (!isNewVersionMint && !isLatestUpdate) {
+		return options.filter((option) => option !== "new_version");
 	}
 
 	return options;

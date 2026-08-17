@@ -1,3 +1,4 @@
+import { computeVariantPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/computeVariantPlan";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type {
 	ProductUpsertIntent,
@@ -5,11 +6,22 @@ import type {
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
 /**
- * Variant edge (scaffold): a folded base row emits one intent per variant plan
- * (base.next + stored customize), plus variant_link when a create nests plans.
+ * Declared variants[] + propagate.variants on a folded base.
+ * Missing ids with a name → create. Existing ids → follow and/or declare.
+ * Nested bases emit nothing.
  */
-export const deriveVariantIntents = (_args: {
+export const deriveVariantIntents = ({
+	upsert,
+	projectedProductStatesContext,
+}: {
 	intent: ProductUpsertIntent;
 	upsert: UpsertProductPlan;
 	projectedProductStatesContext: ProductStatesContext;
-}): ProductUpsertIntent[] => [];
+}): ProductUpsertIntent[] => {
+	if (upsert.row.nextFullProduct.base_internal_product_id) return [];
+
+	return computeVariantPlan({
+		upsert,
+		projectedProductStatesContext,
+	});
+};

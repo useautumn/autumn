@@ -1,10 +1,11 @@
-import type { FullProduct, UpdateCatalogParams } from "@autumn/shared";
+import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	emptyProductStatesContext,
 	type ProductStatesContext,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import { buildProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/buildProductStatesContext";
+import { collectProductStateRows } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/collectProductStateRows";
 import { groupProductsByPlanId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/groupProductsByPlanId";
 import { indexRewardProgramsByPlanId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/indexRewardProgramsByPlanId";
 import { getVersioningUsage } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
@@ -21,27 +22,16 @@ const payloadPlanIds = ({
 			entry.plan_id,
 			...(entry.new_plan_id ? [entry.new_plan_id] : []),
 			...(entry.licenses?.map((license) => license.license_plan_id) ?? []),
+			...(entry.variants?.map((variant) => variant.variant_plan_id) ?? []),
+			...(entry.propagate?.variants?.map((target) => target.plan_id) ?? []),
+			...(entry.propagate?.license_parents?.map((target) => target.plan_id) ??
+				[]),
 		]),
 	),
 ];
 
-const licenseParentPlanIds = ({
-	products,
-	loadedPlanIds,
-}: {
-	products: FullProduct[];
-	loadedPlanIds: string[];
-}): string[] => [
-	...new Set(
-		products.flatMap((product) =>
-			(product.parent_plan_licenses ?? []).map((link) => link.product.id),
-		),
-	),
-].filter((planId) => !loadedPlanIds.includes(planId));
-
 /**
- * Batch-load every plan_id (and new_plan_id) in the payload, declared license
- * children, and reverse license-parent plans of touched children.
+ * One listFull of payload plan ids, then flatten nested parents and variants.
  */
 export const setupProductStatesContext = async ({
 	ctx,
@@ -54,28 +44,24 @@ export const setupProductStatesContext = async ({
 	const planEntries = params.plans;
 	if (planEntries.length === 0) return emptyProductStatesContext();
 
-	const listAllVersions = async ({ planIds }: { planIds: string[] }) => {
-		if (planIds.length === 0) return [];
-		return ProductService.listFull({
-			db,
-			orgId: org.id,
-			env,
-			inIds: planIds,
-			returnAll: true,
-			skipCache: true,
-		});
-	};
-
 	const loadedPlanIds = payloadPlanIds({ planEntries });
-	const payloadVersions = await listAllVersions({ planIds: loadedPlanIds });
-	const parentPlanIds = licenseParentPlanIds({
-		products: payloadVersions,
-		loadedPlanIds,
-	});
-	const parentVersions = await listAllVersions({ planIds: parentPlanIds });
+	if (loadedPlanIds.length === 0) return emptyProductStatesContext();
 
-	const allPlanIds = [...loadedPlanIds, ...parentPlanIds];
-	const allVersions = [...payloadVersions, ...parentVersions];
+	const payloadVersions = await ProductService.listFull({
+		db,
+		orgId: org.id,
+		env,
+		inIds: loadedPlanIds,
+		returnAll: true,
+		skipCache: true,
+	});
+	const allVersions = collectProductStateRows({
+		products: payloadVersions,
+		payloadPlanIds: loadedPlanIds,
+	});
+	const allPlanIds = [
+		...new Set([...loadedPlanIds, ...allVersions.map((product) => product.id)]),
+	];
 
 	const [usageByInternalId, rewardPrograms] = await Promise.all([
 		getVersioningUsage({

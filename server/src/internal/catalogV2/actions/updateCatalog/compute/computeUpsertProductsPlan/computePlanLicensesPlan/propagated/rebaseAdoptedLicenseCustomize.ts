@@ -1,9 +1,15 @@
-import type { FullProduct, LicenseCustomize } from "@autumn/shared";
-import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange";
-import { toMigratableCustomize } from "@/internal/catalogV2/actions/buildMigrationDraft/toMigratableCustomize";
+import {
+	applyLicenseCustomizeToBasePlan,
+	diffPlanV1,
+	type FullProduct,
+	type LicenseCustomize,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { applyLicenseCustomizeToBasePlan } from "@/internal/licenses/actions/customize/rebaseCatalogPlanLicenses";
-import { getApiPlanDiff } from "@/internal/product/actions/common/planTransformUtils";
+import { toMigratableCustomize } from "@/internal/catalogV2/actions/buildMigrationDraft/toMigratableCustomize";
+import {
+	diffFullProducts,
+	fullProductToApiPlanV1Sync,
+} from "@/internal/catalogV2/actions/buildPlanChange";
 import { hasCustomizeFields } from "../licensePlanUtils";
 
 /**
@@ -23,15 +29,10 @@ export const rebaseAdoptedLicenseCustomize = ({
 }): LicenseCustomize | null => {
 	const features = ctx.features;
 	const storedCustomize = toMigratableCustomize({
-		customize: getApiPlanDiff({
-			from: fullProductToApiPlanV1Sync({
-				product: oldChildProduct,
-				features,
-			}),
-			to: fullProductToApiPlanV1Sync({
-				product: effectiveProduct,
-				features,
-			}),
+		customize: diffFullProducts({
+			from: oldChildProduct,
+			to: effectiveProduct,
+			features,
 		}),
 	});
 	const newChildPlan = fullProductToApiPlanV1Sync({
@@ -39,7 +40,7 @@ export const rebaseAdoptedLicenseCustomize = ({
 		features,
 	});
 	const rebased = toMigratableCustomize({
-		customize: getApiPlanDiff({
+		customize: diffPlanV1({
 			from: newChildPlan,
 			to: applyLicenseCustomizeToBasePlan({
 				basePlan: newChildPlan,

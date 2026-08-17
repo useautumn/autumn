@@ -1,10 +1,10 @@
-import type {
-	ApiPlanLicenseV1,
-	Feature,
-	FullPlanLicense,
+import {
+	type ApiPlanLicenseV1,
+	diffLicensePlanCustomize,
+	type Feature,
+	type FullPlanLicense,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { diffLicensePlanCustomize } from "@/internal/licenses/actions/customize/diffLicensePlanCustomize.js";
 import { toApiPlanLicenses } from "@/internal/licenses/licenseUtils.js";
 import { getPlanResponse } from "./getPlanResponse.js";
 

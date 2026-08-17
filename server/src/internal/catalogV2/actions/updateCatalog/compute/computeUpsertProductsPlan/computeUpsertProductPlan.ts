@@ -1,12 +1,10 @@
 import {
-	type DiffedCustomizePlanV1,
 	type FullProduct,
-	type ProductKey,
 	productToProductKey,
-	type UpdateCatalogPlanParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { assembleNextFullProduct } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/assembleNextFullProduct";
+import { declaredVariantsForSource } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/declaredVariantsForSource";
 import { computeCatalogEntitlementPricesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeCatalogEntitlementPricesPlan/computeCatalogEntitlementPricesPlan";
 import { computeFreeTrialPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeFreeTrialPlan/computeFreeTrialPlan";
 import { computeProductDetailsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeProductDetailsPlan/computeProductDetailsPlan";
@@ -14,9 +12,10 @@ import { resolveUpsertOp } from "@/internal/catalogV2/actions/updateCatalog/comp
 import { resolveUpsertVersioning } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/resolveUpsertVersioning";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type {
+	ProductUpsertIntent,
 	UpsertProductPlan,
-	UpsertProductSource,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { planParamsFromEditDiff } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/planParamsFromEditDiff";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
 const latestFullProductForPlan = ({
@@ -43,25 +42,24 @@ const planHasVersionableCustomers = ({
 			}).customerUsage.hasVersionableCustomerProducts,
 	);
 
-/** One productKey + planParams → UpsertProductPlan against productStatesContext. */
+/** One intent → UpsertProductPlan against productStatesContext. */
 export const computeUpsertProductPlan = ({
 	ctx,
-	productKey,
-	planParams,
-	source,
+	intent,
 	productStatesContext,
 }: {
 	ctx: AutumnContext;
-	productKey: ProductKey;
-	planParams: UpdateCatalogPlanParams;
-	source: UpsertProductSource;
+	intent: ProductUpsertIntent;
 	productStatesContext: ProductStatesContext;
-	editDiff?: DiffedCustomizePlanV1;
 }): UpsertProductPlan => {
-	const versioning = resolveUpsertVersioning({ planParams, source });
+	const { productKey, source, baseInternalProductId } = intent;
 	const { currentFullProduct, customerUsage } = productKeyToState({
 		productKey,
 		productStatesContext,
+	});
+	const versioning = resolveUpsertVersioning({
+		planParams: intent.planParams,
+		source,
 	});
 
 	// Content baseline: row at this version, or latest when minting a new version.
@@ -73,6 +71,11 @@ export const computeUpsertProductPlan = ({
 					productStatesContext,
 				})
 			: null);
+	const planParams = planParamsFromEditDiff({
+		planParams: intent.planParams,
+		editDiff: intent.editDiff,
+		currentFullProduct: currentFullProduct ?? baseFullProduct,
+	});
 
 	const details = computeProductDetailsPlan({
 		ctx,
@@ -80,6 +83,7 @@ export const computeUpsertProductPlan = ({
 		currentFullProduct,
 		version: productKey.version,
 		baseFullProduct,
+		...(baseInternalProductId !== undefined ? { baseInternalProductId } : {}),
 	});
 
 	const freeTrialPlan = computeFreeTrialPlan({
@@ -113,6 +117,10 @@ export const computeUpsertProductPlan = ({
 		entitlementPricesPlan,
 		freeTrialChanged: freeTrialPlan.changed,
 	});
+	const declaredVariants = declaredVariantsForSource({
+		source,
+		variants: planParams.variants,
+	});
 
 	return {
 		row: {
@@ -135,6 +143,13 @@ export const computeUpsertProductPlan = ({
 		planParams.licenses !== undefined
 			? { declaredLicenses: planParams.licenses }
 			: {}),
+		...(intent.editDiff?.upsert_licenses !== undefined
+			? { upsertLicenses: intent.editDiff.upsert_licenses }
+			: {}),
+		...(intent.editDiff?.remove_licenses !== undefined
+			? { removeLicenses: intent.editDiff.remove_licenses }
+			: {}),
+		...(declaredVariants !== undefined ? { declaredVariants } : {}),
 		...(source === "direct" && planParams.propagate !== undefined
 			? { propagate: planParams.propagate }
 			: {}),

@@ -13,11 +13,14 @@ export const initProductRow = ({
 	planParams,
 	version,
 	base,
+	baseInternalProductId,
 }: {
 	ctx: AutumnContext;
 	planParams: UpdateCatalogPlanParams;
 	version: number;
 	base?: Product;
+	/** Variant create: the latest base row. Omit to keep a clone's pointer. */
+	baseInternalProductId?: string | null;
 }): Product => {
 	if (base) {
 		const patch = planParamsToProductRowPatch({
@@ -31,6 +34,8 @@ export const initProductRow = ({
 			internal_id: generateId("prod"),
 			created_at: Date.now(),
 			group: (patch.group ?? base.group) || "",
+			base_internal_product_id:
+				baseInternalProductId ?? base.base_internal_product_id ?? null,
 		};
 	}
 
@@ -52,7 +57,7 @@ export const initProductRow = ({
 
 		processor: null,
 		base_variant_id: null,
-		base_internal_product_id: null,
+		base_internal_product_id: baseInternalProductId ?? null,
 		archived: patch.archived ?? false,
 		config: { ignore_past_due: patch.config?.ignore_past_due ?? false },
 		metadata: patch.metadata ?? {},

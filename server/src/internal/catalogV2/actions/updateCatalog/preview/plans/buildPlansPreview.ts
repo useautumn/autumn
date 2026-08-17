@@ -2,6 +2,7 @@ import type { PreviewUpdateCatalogResponse } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
 import { buildLicenseParentsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicenseParentsPreview";
 import { buildLicensesPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicensesPreview";
+import { buildVariantsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildVariantsPreview";
 import { buildPlanVersioning } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildPlanVersioning";
 import { buildSiblingVersionsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildSiblingVersionsPreview";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
@@ -51,6 +52,11 @@ export const buildPlansPreview = ({
 			productStatesContext,
 		});
 		const licenses = buildLicensesPreview({ upsert });
+		const variants = buildVariantsPreview({
+			directUpsert: upsert,
+			upsertProducts,
+			productStatesContext,
+		});
 
 		return [
 			{
@@ -75,6 +81,7 @@ export const buildPlansPreview = ({
 				...(licenseParents.length > 0
 					? { license_parents: licenseParents }
 					: {}),
+				...(variants.length > 0 ? { variants } : {}),
 				...(licenses.length > 0 ? { licenses } : {}),
 			},
 		];

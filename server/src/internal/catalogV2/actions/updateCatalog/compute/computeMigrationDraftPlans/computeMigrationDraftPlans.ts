@@ -1,6 +1,7 @@
 import type { CatalogMigration, UpdateCatalogParams } from "@autumn/shared";
 import { buildMigrationDraft } from "@/internal/catalogV2/actions/buildMigrationDraft/buildMigrationDraft";
 import type { MigrationTarget } from "@/internal/catalogV2/actions/buildMigrationDraft/types";
+import { ownWithoutLicenseLane } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/ownWithoutLicenseLane";
 import { resolveLicenseMigrationTarget } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/resolveLicenseMigrationTarget/resolveLicenseMigrationTarget";
 import { resolveOwnMigrationTarget } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/resolveOwnMigrationTarget";
 import { versionsWithCustomersByPlanId } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/versionsWithCustomersByPlanId";
@@ -28,14 +29,15 @@ export const computeMigrationDraftPlans = ({
 			params,
 			productStatesContext,
 		});
-		if (own) targets.push(own);
-
 		const license = resolveLicenseMigrationTarget({
 			upsertProductPlan,
 			upsertProductPlans,
 			params,
 			productStatesContext,
 		});
+
+		const ownTarget = ownWithoutLicenseLane({ own, license });
+		if (ownTarget) targets.push(ownTarget);
 		if (license) targets.push(license);
 	}
 

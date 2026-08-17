@@ -9,8 +9,9 @@ import type {
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { computeDeclaredPlanLicenses } from "./declared/computeDeclaredPlanLicenses";
-import { planLicensesPlanToFullPlanLicenses } from "./planLicensesPlanToFullPlanLicenses";
+import { computeFinalDeclaredLicenses } from "./declared/computeFinalDeclaredLicenses";
 import { computePinnedPlanLicenses } from "./pinned/computePinnedPlanLicenses";
+import { planLicensesPlanToFullPlanLicenses } from "./planLicensesPlanToFullPlanLicenses";
 import { computePropagatedPlanLicenses } from "./propagated/computePropagatedPlanLicenses";
 import { computePlanLicenseRowPlan } from "./row/computePlanLicenseRowPlan";
 
@@ -75,12 +76,13 @@ export const computePlanLicensesPlan = ({
 	licenseStatesContext: LicenseStatesContext;
 }): UpsertProductPlan[] =>
 	upsertProducts.map((upsert) => {
-		if (upsert.declaredLicenses !== undefined) {
+		const declaredLicenses = computeFinalDeclaredLicenses({ upsert });
+		if (declaredLicenses !== undefined) {
 			return withPlanLicenseRowPlans({
 				upsert,
 				planLicenses: computeDeclaredPlanLicenses({
 					ctx,
-					upsert,
+					upsert: { ...upsert, declaredLicenses },
 					productStatesContext,
 				}),
 				licenseStatesContext,

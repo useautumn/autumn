@@ -4,12 +4,15 @@ import {
 	type FullPlanLicense,
 	type FullProduct,
 	type FullProductWithoutLicenses,
+	type FullProductWithoutParentLicenses,
 	freeTrials,
 	type ParentPlanLicense,
 	planLicenses,
 	prices,
+	products,
 } from "@autumn/shared";
 import { eq } from "drizzle-orm";
+import { parentProductLicensesQuery } from "./parentProductLicensesQuery";
 
 const composeProductItems = () => ({
 	entitlements: {
@@ -54,6 +57,11 @@ export const composeFullProductQuery = () => ({
 		with: {
 			parentProduct: {
 				with: composeProductItems(),
+				extras: {
+					licenses: parentProductLicensesQuery({
+						parentInternalProductId: products.internal_id,
+					}).as("licenses"),
+				},
 			},
 			priceRefs: { with: { price: true as const } },
 		},
@@ -80,7 +88,7 @@ export type ProductWithLicenseRelations = FullProductWithoutLicenses & {
 	>;
 	parent_plan_licenses?: Array<
 		DbPlanLicense & {
-			parentProduct: FullProductWithoutLicenses;
+			parentProduct: FullProductWithoutParentLicenses;
 			priceRefs: Array<{
 				price: FullProductWithoutLicenses["prices"][number];
 			}>;
@@ -93,12 +101,15 @@ export type ProductWithLicenseRelations = FullProductWithoutLicenses & {
 /** Hydrated link row + its product, with free_trial resolved. */
 const normalizeLinkProduct = <T extends DbPlanLicense>(
 	link: T,
-	product: FullProductWithoutLicenses,
-): DbPlanLicense & { product: FullProductWithoutLicenses } => ({
+	product: FullProductWithoutParentLicenses,
+): DbPlanLicense & {
+	product: FullProductWithoutParentLicenses;
+} => ({
 	...link,
 	product: {
 		...product,
 		free_trial: product.free_trials?.[0] ?? null,
+		...(product.licenses !== undefined ? { licenses: product.licenses } : {}),
 	},
 });
 

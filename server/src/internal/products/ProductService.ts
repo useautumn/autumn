@@ -6,9 +6,9 @@ import {
 	entitlements,
 	type FullProduct,
 	freeTrials,
-	planLicenses,
 	type Product,
 	ProductNotFoundError,
+	planLicenses,
 	prices,
 	products,
 } from "@autumn/shared";
@@ -62,6 +62,18 @@ const parseFreeTrials = ({
 				: null;
 	}
 	return product;
+};
+
+const parseRelatedFreeTrials = ({ product }: { product: FullProduct }) => {
+	if (product.base_product) {
+		parseFreeTrials({ product: product.base_product });
+	}
+	if (product.variants) {
+		parseFreeTrials({ products: product.variants });
+	}
+	for (const link of product.parent_plan_licenses ?? []) {
+		parseFreeTrials({ product: link.product });
+	}
 };
 
 export class ProductService {
@@ -492,12 +504,7 @@ export class ProductService {
 
 		parseFreeTrials({ products: data });
 		for (const product of data) {
-			if (product.base_product) {
-				parseFreeTrials({ product: product.base_product });
-			}
-			if (product.variants) {
-				parseFreeTrials({ products: product.variants });
-			}
+			parseRelatedFreeTrials({ product });
 		}
 
 		if (returnAll) {
@@ -631,12 +638,7 @@ export class ProductService {
 
 		const product = normalizeFullProductLicenses({ product: data });
 		parseFreeTrials({ product });
-		if (product.base_product) {
-			parseFreeTrials({ product: product.base_product });
-		}
-		if (product.variants) {
-			parseFreeTrials({ products: product.variants });
-		}
+		parseRelatedFreeTrials({ product });
 		return product;
 	}
 

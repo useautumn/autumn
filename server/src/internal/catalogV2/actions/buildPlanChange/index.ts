@@ -1,6 +1,7 @@
 export { buildPlanChange } from "./buildPlanChange.js";
 export { buildPlanChangeCore } from "./buildPlanChangeCore/buildPlanChangeCore.js";
 export { buildPlanLicenseChanges } from "./buildPlanLicenseChanges/buildPlanLicenseChanges.js";
+export { diffFullProducts } from "./diffFullProducts.js";
 export {
 	buildPlanChangeFromFullProducts,
 	fullProductToApiPlanV1Sync,

@@ -26,7 +26,9 @@ export const resolveOwnMigrationTarget = ({
 	productStatesContext: ProductStatesContext;
 }): MigrationTarget | null => {
 	if (!upsertClaimsMigrationDraft({ upsertProductPlan, params })) return null;
-	if (!rowCanReceiveMigrationDraft({ upsertProductPlan, productStatesContext })) {
+	if (
+		!rowCanReceiveMigrationDraft({ upsertProductPlan, productStatesContext })
+	) {
 		return null;
 	}
 
@@ -36,6 +38,7 @@ export const resolveOwnMigrationTarget = ({
 
 	const fromPlan = fullProductToApiPlanV1Sync({ product: currentFullProduct });
 	const toPlan = fullProductToApiPlanV1Sync({ product: nextFullProduct });
+
 	const customize = toMigratableCustomize({
 		customize: diffPlanV1({ from: fromPlan, to: toPlan }),
 	});

@@ -45,11 +45,8 @@ export const computeUpsertProductsPlan = ({
 	for (const intent of pendingIntents) {
 		const upsert = computeUpsertProductPlan({
 			ctx,
-			productKey: intent.productKey,
-			planParams: intent.planParams,
-			source: intent.source,
+			intent,
 			productStatesContext: fold.projected,
-			editDiff: intent.editDiff,
 		});
 
 		upsertProducts.push(upsert);

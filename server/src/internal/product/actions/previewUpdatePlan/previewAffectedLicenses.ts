@@ -1,5 +1,6 @@
 import {
 	type ApiPlanLicenseV1,
+	diffLicensePlanCustomize,
 	type FullProduct,
 	type PlanUpdatePreviewLicenseChange,
 	PlanUpdatePreviewLicenseChangeSchema,
@@ -7,7 +8,6 @@ import {
 	planUpdatePreviewHasDiff,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { diffLicensePlanCustomize } from "@/internal/licenses/actions/customize/diffLicensePlanCustomize.js";
 import type { ResolvedPlanLicenseLink } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
 import { buildApiPlanLicense } from "@/internal/products/productUtils/productResponseUtils/buildApiPlanLicense.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";

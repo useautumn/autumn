@@ -1,6 +1,10 @@
-import type { Feature, FullPlanLicense, LicenseCustomize } from "@autumn/shared";
+import {
+	diffLicensePlanCustomize,
+	type Feature,
+	type FullPlanLicense,
+	type LicenseCustomize,
+} from "@autumn/shared";
 import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange/fullProductToApiPlanV1Sync";
-import { diffLicensePlanCustomize } from "@/internal/licenses/actions/customize/diffLicensePlanCustomize.js";
 
 export const fullPlanLicenseToCustomize = ({
 	license,
