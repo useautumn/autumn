@@ -147,6 +147,8 @@
 		"migrate-functions": "infisical run --env=dev --recursive -- bun scripts/migrations/migrate-functions.ts",
 		"migrate-functions:test": "infisical run --env=test --recursive -- bun scripts/migrations/migrate-functions.ts",
 		"migrate-functions:prod": "infisical run --env=prod --recursive -- bun scripts/migrations/migrate-functions.ts",
+		"remediate-legacy-mcp-clients": "infisical run --env=dev --recursive -- bun scripts/migrations/remediate-legacy-shared-mcp-clients.ts",
+		"remediate-legacy-mcp-clients:prod": "infisical run --env=prod --recursive -- bun scripts/migrations/remediate-legacy-shared-mcp-clients.ts",
 		"validate-schema": "infisical run --env=prod --recursive -- bun scripts/migrations/validate-schema.ts",
 		"tb": "bun scripts/tinybird/index.ts",
 		"tb:prod": "bun scripts/tinybird/index.ts prod",
