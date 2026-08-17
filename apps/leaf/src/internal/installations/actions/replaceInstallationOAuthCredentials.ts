@@ -17,6 +17,7 @@ import {
 	oauthRefreshToken,
 } from "@autumn/shared";
 import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
+import { MCP_CLIENT_KIND } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import { and, eq } from "drizzle-orm";
 import { encrypt } from "../../../lib/crypto.js";
 import type { db } from "../../../lib/db.js";
@@ -95,7 +96,10 @@ const ensureMcpOAuthClient = async ({
 	config: ProviderOAuthConfig;
 }) => {
 	const now = new Date();
-	const metadata = { kind: "mcp_client", mcpClientType: config.mcpClientType };
+	const metadata = {
+		kind: MCP_CLIENT_KIND,
+		mcpClientType: config.mcpClientType,
+	};
 
 	await tx
 		.insert(oauthClient)

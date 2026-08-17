@@ -8,7 +8,6 @@ import {
 	RecaseError,
 	type ScopeString,
 } from "@autumn/shared";
-import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { verifyAccessToken } from "better-auth/oauth2";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
@@ -62,10 +61,8 @@ export const getOAuthAccessTokenRecord = async ({
 	requestedScopes: ScopeString[] | null;
 }) => {
 	const rawAccessToken = stripOAuthTokenPrefix({ token: accessToken });
-	const hashedToken = await hashOAuthToken(rawAccessToken);
-	const tokenValues = [...new Set([hashedToken, rawAccessToken])];
 	const tokenRecord =
-		(await oauthAccessTokenRepo.getValidByTokenValues({ db, tokenValues })) ??
+		(await oauthAccessTokenRepo.getValidByRawToken({ db, rawAccessToken })) ??
 		(await verifyResourceAccessToken({
 			accessToken: rawAccessToken,
 			resource,

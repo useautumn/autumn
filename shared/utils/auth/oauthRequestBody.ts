@@ -1,7 +1,6 @@
 export type OAuthRequestFields = Record<string, unknown>;
 
 export type ParsedOAuthRequest = {
-	contentType: string;
 	fields: OAuthRequestFields;
 	isJson: boolean;
 	rawBody: string;
@@ -32,7 +31,6 @@ export const parseOAuthRequestFields = async (
 	const rawBody = await request.text();
 	const isJson = bodyIsJson({ contentType, rawBody });
 	const empty = {
-		contentType,
 		fields: {},
 		isJson,
 		rawBody,

@@ -44,7 +44,15 @@ oauthRouter.get("/api/auth/.well-known/openid-configuration", (c) => {
 // 9207 support makes its OAuth library reject the iss-less (valid) callback.
 const handleAuthServerMetadata = async (c: Context<HonoEnv>) => {
 	const response = await oauthProviderAuthServerMetadata(auth)(c.req.raw);
-	const metadata = (await response.json()) as Record<string, unknown>;
+	if (!response.ok) return response;
+
+	// Discovery must keep working even if the payload stops being the JSON we patch.
+	let metadata: Record<string, unknown>;
+	try {
+		metadata = (await response.clone().json()) as Record<string, unknown>;
+	} catch {
+		return response;
+	}
 	metadata.authorization_response_iss_parameter_supported = false;
 	const headers = new Headers(response.headers);
 	headers.delete("Content-Length");

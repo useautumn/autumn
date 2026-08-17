@@ -1,6 +1,5 @@
 import {
 	getDefaultOAuthScopes,
-	isReservedOAuthClientId,
 	isReservedOAuthClientName,
 } from "@autumn/auth/oauth";
 import { MCP_CLIENT_KIND } from "@autumn/shared/utils/auth/oauthClientMetadata";
@@ -17,13 +16,11 @@ import {
 const DEFAULT_OAUTH_CLIENT_NAME = "MCP client";
 
 // Unknown keys are stripped: better-auth otherwise folds them into metadata.
-const registerRequestSchema = z
-	.object({
-		client_name: z.string().optional(),
-		redirect_uris: z.array(z.string()),
-		scope: z.string().optional(),
-	})
-	.strip();
+const registerRequestSchema = z.object({
+	client_name: z.string().optional(),
+	redirect_uris: z.array(z.string()),
+	scope: z.string().optional(),
+});
 
 export type OAuthClientRegistration = {
 	client_id: string;
@@ -46,12 +43,7 @@ export const getRequestedScopesForOAuthClient = ({
 	scope,
 }: {
 	scope: unknown;
-}) => {
-	const requested = splitOAuthScopeString(scope);
-	return requested.length > 0
-		? getDefaultOAuthScopes(requested)
-		: getDefaultOAuthScopes();
-};
+}) => getDefaultOAuthScopes(splitOAuthScopeString(scope));
 
 const toRegistration = (
 	client: OAuthClientRecord,
@@ -118,7 +110,15 @@ export const registerOAuthClient = async ({
 }): Promise<RegisterOAuthClientResult> => {
 	const parsed = registerRequestSchema.safeParse(body);
 	if (!parsed.success) {
-		return { error: "redirect_uris is required", status: 400 };
+		const redirectUrisFailed = parsed.error.issues.some(
+			(issue) => issue.path[0] === "redirect_uris",
+		);
+		return {
+			error: redirectUrisFailed
+				? "redirect_uris is required"
+				: "invalid_client_metadata",
+			status: 400,
+		};
 	}
 
 	const redirectUris = [...new Set(parsed.data.redirect_uris.filter(Boolean))];
@@ -136,13 +136,8 @@ export const registerOAuthClient = async ({
 	}
 
 	const scopes = getRequestedScopesForOAuthClient({ scope: parsed.data.scope });
-	const clientId = generateId("oauth_client");
-	if (isReservedOAuthClientId(clientId)) {
-		throw new Error("Dynamic registration minted a reserved OAuth client id");
-	}
-
 	const client = await createOAuthClient({
-		clientId,
+		clientId: generateId("oauth_client"),
 		clientName,
 		db,
 		redirectUris,

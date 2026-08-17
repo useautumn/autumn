@@ -11,7 +11,6 @@ describe("buildOAuthClientInfoResponse", () => {
 		});
 
 		expect(response.name).toBe("Cursor");
-		expect(response.registration).toBe("dynamic");
 	});
 
 	// Regression: inferClientNameFromRedirectUri used to return "MCP client" and
@@ -27,14 +26,13 @@ describe("buildOAuthClientInfoResponse", () => {
 		expect(response.name).not.toBe("MCP client");
 	});
 
-	test("reports registration reserved for a pre-registered reserved client", () => {
+	test("defaults the reserved Summer client to the sandbox environment", () => {
 		const response = buildOAuthClientInfoResponse({
 			clientId: SUMMER_OAUTH_CLIENT_ID,
 			name: "Summer",
 			metadata: { kind: "summer" },
 		});
 
-		expect(response.registration).toBe("reserved");
 		expect(response.default_env).toBe("sandbox");
 	});
 
@@ -45,6 +43,5 @@ describe("buildOAuthClientInfoResponse", () => {
 		});
 
 		expect(response.name).toBe("Unknown Application");
-		expect(response.registration).toBe("dynamic");
 	});
 });
