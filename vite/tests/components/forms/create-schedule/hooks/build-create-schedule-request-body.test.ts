@@ -611,7 +611,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[0].plans[0].entity_id).toBeNull();
 	});
 
-	test("omits scope on later phases so they inherit the opening phase", () => {
+	test("sends each later phase's own entity scope", () => {
 		const now = Date.now();
 		const result = buildCreateScheduleRequestBody({
 			customerId: "cus_1",
@@ -633,7 +633,17 @@ describe("buildCreateScheduleRequestBody", () => {
 						{
 							...EMPTY_SCHEDULE_PLAN,
 							productId: "prod_1",
-							entityId: "entity_1",
+							entityId: "entity_2",
+						},
+					],
+				},
+				{
+					startsAt: now + 1000 * 60 * 60 * 24 * 60,
+					plans: [
+						{
+							...EMPTY_SCHEDULE_PLAN,
+							productId: "prod_1",
+							entityId: null,
 						},
 					],
 				},
@@ -642,7 +652,9 @@ describe("buildCreateScheduleRequestBody", () => {
 			features,
 		});
 
-		expect(result!.phases[1].plans[0].entity_id).toBeUndefined();
+		expect(result!.phases[0].plans[0].entity_id).toBe("entity_1");
+		expect(result!.phases[1].plans[0].entity_id).toBe("entity_2");
+		expect(result!.phases[2].plans[0].entity_id).toBeNull();
 	});
 
 	test("sends a past first-phase starts_at when allowFirstPhaseBackdate is true", () => {
