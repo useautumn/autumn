@@ -7,10 +7,6 @@ import {
 	dragonflyPortFor,
 	dynamoDbPortFor,
 	elasticMqPortFor,
-	ngrokApiPortFor,
-	ngrokViteApiPortFor,
-	serverPortFor,
-	vitePortFor,
 } from "./ports.ts";
 import { log, sh } from "./shell.ts";
 
@@ -31,122 +27,46 @@ export function dockerComposeAvailable(): boolean {
 	return res.code === 0;
 }
 
+function composeEnv(worktreeNum: number): Record<string, string> {
+	return {
+		...(process.env as Record<string, string>),
+		COMPOSE_PROJECT_NAME: composeProjectName(worktreeNum),
+		DRAGONFLY_PORT: String(dragonflyPortFor(worktreeNum)),
+		ELASTICMQ_PORT: String(elasticMqPortFor(worktreeNum)),
+		DYNAMODB_PORT: String(dynamoDbPortFor(worktreeNum)),
+	};
+}
+
 export function ensureComposeStack(
 	worktreeNum: number,
 	branchName: string | undefined,
-	ngrokDomainArg?: string,
-	ngrokViteDomainArg?: string,
-): { ngrokEnabled: boolean } {
-	if (worktreeNum === 1 && !branchName) return { ngrokEnabled: false };
+): void {
+	if (worktreeNum === 1 && !branchName) return;
 	if (!dockerComposeAvailable()) {
 		log("docker compose not available; skipping infra stack");
-		return { ngrokEnabled: false };
+		return;
 	}
 
 	const project = composeProjectName(worktreeNum);
-	const dragonflyPort = String(dragonflyPortFor(worktreeNum));
-	const elasticMqPort = String(elasticMqPortFor(worktreeNum));
-	const dynamoDbPort = String(dynamoDbPortFor(worktreeNum));
-	const serverPort = String(serverPortFor(worktreeNum));
-	const ngrokApiPort = String(ngrokApiPortFor(worktreeNum));
-	// No authtoken => no public tunnel for this worktree (CMA stays unreachable,
-	// but local dev still works). Gate the ngrok service on it.
-	const ngrokEnabled = Boolean(process.env.NGROK_AUTHTOKEN);
-	// A reserved domain gives a stable URL (Slack/CMA never need re-pointing, and
-	// the eval's random tunnel can't steal it). dw passes the per-worktree domain it
-	// reserved via the API; NGROK_DOMAIN env is a manual override. Bare host or URL.
-	const ngrokDomain = (ngrokDomainArg ?? process.env.NGROK_DOMAIN)
-		?.replace(/^https?:\/\//, "")
-		.replace(/\/.*$/, "")
-		.trim();
-	const ngrokUrlFlag = ngrokDomain ? `--url=https://${ngrokDomain}` : "";
-
-	// Dashboard tunnel — one agent forwards one port, so vite gets its own.
-	const vitePort = String(vitePortFor(worktreeNum));
-	const ngrokViteApiPort = String(ngrokViteApiPortFor(worktreeNum));
-	const ngrokViteDomain = ngrokViteDomainArg
-		?.replace(/^https?:\/\//, "")
-		.replace(/\/.*$/, "")
-		.trim();
-	const ngrokViteUrlFlag = ngrokViteDomain
-		? `--url=https://${ngrokViteDomain}`
-		: "";
-
-	const env = {
-		...(process.env as Record<string, string>),
-		COMPOSE_PROJECT_NAME: project,
-		DRAGONFLY_PORT: dragonflyPort,
-		ELASTICMQ_PORT: elasticMqPort,
-		DYNAMODB_PORT: dynamoDbPort,
-		SERVER_PORT: serverPort,
-		VITE_PORT: vitePort,
-		NGROK_API_PORT: ngrokApiPort,
-		NGROK_DOMAIN_FLAG: ngrokUrlFlag,
-		NGROK_VITE_API_PORT: ngrokViteApiPort,
-		NGROK_VITE_URL_FLAG: ngrokViteUrlFlag,
-	};
-
-	const args = ["compose", "-f", composeFilePath, "-p", project];
-	if (ngrokEnabled) args.push("--profile", "ngrok");
-	args.push("up", "-d");
-
-	const up = sh("docker", args, { env });
+	const env = composeEnv(worktreeNum);
+	const up = sh(
+		"docker",
+		["compose", "-f", composeFilePath, "-p", project, "up", "-d"],
+		{ env },
+	);
 	if (up.code === 0) {
 		log(
-			`compose stack ${project} up (dragonfly :${dragonflyPort}, elasticmq :${elasticMqPort}, dynamodb :${dynamoDbPort}${
-				ngrokEnabled
-					? `, ngrok -> :${serverPort} (api :${ngrokApiPort}${ngrokDomain ? `, domain ${ngrokDomain}` : ", random"})`
-					: ""
-			})`,
+			`compose stack ${project} up (dragonfly :${env.DRAGONFLY_PORT}, elasticmq :${env.ELASTICMQ_PORT}, dynamodb :${env.DYNAMODB_PORT})`,
 		);
 	} else {
 		console.error(
 			`[dw] failed to start compose stack ${project}: ${up.stderr}`,
 		);
 	}
-	return { ngrokEnabled };
 }
 
-// Read the random public URL ngrok assigned, from the container's local API.
-// Polls because the tunnel takes a moment to connect after `up -d`. Returns
-// undefined (rather than throwing) so a tunnel hiccup never blocks dev startup.
-export async function readNgrokTunnelUrl(
-	worktreeNum: number,
-): Promise<string | undefined> {
-	const apiPort = ngrokApiPortFor(worktreeNum);
-	const maxAttempts = 60;
-	for (let attempt = 0; attempt < maxAttempts; attempt++) {
-		try {
-			const response = await fetch(`http://127.0.0.1:${apiPort}/api/tunnels`);
-			const data = (await response.json()) as {
-				tunnels?: Array<{ public_url?: string; proto?: string }>;
-			};
-			const tunnel = data.tunnels?.find(
-				(candidate) => candidate.proto === "https" && candidate.public_url,
-			);
-			if (tunnel?.public_url) {
-				const url = tunnel.public_url.replace(/\/$/, "");
-				log(`ngrok tunnel up: ${url} -> :${serverPortFor(worktreeNum)}`);
-				return url;
-			}
-		} catch {
-			// ngrok's local API is not ready yet.
-		}
-		await new Promise((resolve) => setTimeout(resolve, 500));
-	}
-	log(
-		`ngrok tunnel did not expose a public URL on :${apiPort} within 30s; continuing without AUTUMN_PUBLIC_API_URL`,
-	);
-	return undefined;
-}
-
-export function removeComposeStack(
-	worktreeNum: number,
-	branchName: string | undefined,
-): void {
-	if (worktreeNum === 1 && !branchName) return;
-	const project = composeProjectName(worktreeNum);
-	const down = sh("docker", [
+function composeDown(project: string, extra: string[] = []): number {
+	return sh("docker", [
 		"compose",
 		"-f",
 		composeFilePath,
@@ -155,9 +75,17 @@ export function removeComposeStack(
 		"--profile",
 		"ngrok",
 		"down",
-		"-v",
-	]);
-	if (down.code === 0) {
+		...extra,
+	]).code;
+}
+
+export function removeComposeStack(
+	worktreeNum: number,
+	branchName: string | undefined,
+): void {
+	if (worktreeNum === 1 && !branchName) return;
+	const project = composeProjectName(worktreeNum);
+	if (composeDown(project, ["-v"]) === 0) {
 		log(`removed compose stack ${project}`);
 	}
 }
@@ -176,23 +104,10 @@ export function removeAllAutumnComposeStacks(): void {
 	try {
 		const projects = JSON.parse(ls.stdout) as { Name: string }[];
 		for (const p of projects) {
-			const down = sh("docker", [
-				"compose",
-				"-f",
-				composeFilePath,
-				"-p",
-				p.Name,
-				"--profile",
-				"ngrok",
-				"down",
-				"-v",
-			]);
-			if (down.code === 0) {
+			if (composeDown(p.Name, ["-v"]) === 0) {
 				log(`removed compose stack ${p.Name}`);
 			} else {
-				console.error(
-					`[dw] failed to remove compose stack ${p.Name}: ${down.stderr}`,
-				);
+				console.error(`[dw] failed to remove compose stack ${p.Name}`);
 			}
 		}
 	} catch {
@@ -215,23 +130,10 @@ export function listAutumnComposeProjects(): string[] {
 
 export function removeComposeProject(project: string): boolean {
 	if (!/^autumn-wt-\d+$/.test(project)) return false;
-	const down = sh("docker", [
-		"compose",
-		"-f",
-		composeFilePath,
-		"-p",
-		project,
-		"--profile",
-		"ngrok",
-		"down",
-		"--remove-orphans",
-	]);
-	if (down.code === 0) {
+	if (composeDown(project, ["--remove-orphans"]) === 0) {
 		log(`removed inactive compose stack ${project}`);
 		return true;
 	}
-	console.error(
-		`[dw] failed to remove compose stack ${project}: ${down.stderr}`,
-	);
+	console.error(`[dw] failed to remove compose stack ${project}`);
 	return false;
 }

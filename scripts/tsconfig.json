@@ -26,6 +26,7 @@
 			"@models/*": ["../shared/models/*"],
 			"@utils/*": ["../shared/utils/*"],
 			"@lua/*": ["../server/src/_luaScripts/*"],
+			"@autumn/env": ["../packages/env/src/index.ts"],
 			"@autumn/ksuid": ["../packages/ksuid/src/index.ts"],
 			"@autumn/shared": ["../shared/index.ts"],
 			"@autumn/shared/*": ["../shared/*"],
