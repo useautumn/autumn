@@ -90,6 +90,38 @@ export const updateOAuthClientById = async ({
 	return client ?? null;
 };
 
+export type OAuthClientInsert = {
+	id: string;
+	clientId: string;
+	name: string;
+	redirectUris: string[];
+	scopes: string[];
+	tokenEndpointAuthMethod: string;
+	grantTypes: string[];
+	responseTypes: string[];
+	public: boolean;
+	type: string;
+	metadata: unknown;
+	createdAt: Date;
+	updatedAt: Date;
+};
+
+export const insertOAuthClient = async ({
+	db,
+	values,
+}: {
+	db: DrizzleCli;
+	values: OAuthClientInsert;
+}) => {
+	const [client] = await db
+		.insert(oauthClient)
+		.values(values)
+		.returning(oauthClientSelect);
+
+	if (!client) throw new Error("Failed to insert OAuth client");
+	return client;
+};
+
 export const upsertOAuthClient = async ({
 	db,
 	insert,
@@ -169,6 +201,7 @@ export const oauthClientRepo = {
 	list: listOAuthClients,
 	listForAdmin: listOAuthClientsForAdmin,
 	getByClientId: getOAuthClientByClientId,
+	insert: insertOAuthClient,
 	updateById: updateOAuthClientById,
 	addScopesByClientId: addOAuthClientScopesByClientId,
 	upsert: upsertOAuthClient,
