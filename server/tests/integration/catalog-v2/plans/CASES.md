@@ -969,12 +969,12 @@ applied customize. Same customize `$or`s; different customize stays split.
 | Pin variant → no variant op | ✓ `migrations/variants/variant-drafts.test.ts` |
 | `variants[]` declare inherits parent `migration.draft` | ✓ `migrations/variants/variant-drafts.test.ts` |
 | License DIFF + Team-EU customers → `upsert_licenses` | ✓ `migrations/variants/variant-drafts.test.ts` |
-| Follow EU / pin UK → UK omitted | `migrations/variants/variant-drafts.test.ts` |
-| Parent `existing`: customered historical variant is omitted | `migrations/variants/versioning-drafts.test.ts` |
-| Parent `all_versions`: customers on v1 only → pin; v1+v2 → collapse | `migrations/variants/versioning-drafts.test.ts` |
-| Parent `new_version` + draft → 400 | `migrations/variants/versioning-drafts.test.ts` |
+| Follow EU / pin UK → UK omitted | ✓ `migrations/variants/variant-drafts.test.ts` |
+| Parent `existing`: customered historical variant is omitted | ✓ `migrations/variants/versioning-drafts.test.ts` |
+| Parent `all_versions`: customers on v1 only → pin; v1+v2 → collapse | ✓ `migrations/variants/versioning-drafts.test.ts` |
+| Parent `new_version` + draft → 400 | ✓ `migrations/variants/versioning-drafts.test.ts` |
 | `propagate.variants[].versioning: new_version` + draft → 400 | ✓ `versioning/propagate-versioning-errors.test.ts` |
-| Follow 100→150 vs 200 lists `value_divergence`; draft is 150 | `migrations/variants/conflict-drafts.test.ts` |
-| Follow + declare 300 → two ops (150 vs 300) | `migrations/variants/conflict-drafts.test.ts` |
-| License follow 100→150 vs 200 stamps `license_plan_id`; draft is 150 | `migrations/variants/conflict-drafts.test.ts` |
+| Follow 100→150 vs 200 lists `value_divergence`; draft is 150 | ✓ `migrations/variants/conflict-drafts.test.ts` |
+| Follow + declare 300 → two ops (150 vs 300) | ✓ `migrations/variants/conflict-drafts.test.ts` |
+| License follow 100→150 vs 200 stamps `license_plan_id`; two ops at 150 | ✓ `migrations/variants/conflict-drafts.test.ts` |
 
