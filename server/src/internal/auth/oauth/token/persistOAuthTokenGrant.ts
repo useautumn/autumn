@@ -2,7 +2,10 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { oauthAccessTokenRepo } from "../../repos/oauthAccessTokenRepo.js";
 import { oauthRefreshTokenRepo } from "../../repos/oauthRefreshTokenRepo.js";
 
-/** Writes the reissued scopes, resolved consent and audience back onto the access and refresh rows. */
+/**
+ * Writes the reissued scopes, resolved consent and audience back onto the access
+ * and refresh rows, so a partial write can never split one grant across two states.
+ */
 export const persistOAuthTokenGrant = async ({
 	accessTokenId,
 	db,
@@ -18,43 +21,27 @@ export const persistOAuthTokenGrant = async ({
 	resource: string | null;
 	scopes: string[];
 }) => {
-	if (accessTokenId) {
-		await oauthAccessTokenRepo.updateScopes({ db, id: accessTokenId, scopes });
-		if (oauthConsentId) {
-			await oauthAccessTokenRepo.updateConsent({
-				db,
-				id: accessTokenId,
-				oauthConsentId,
-			});
-		}
-		if (resource) {
-			await oauthAccessTokenRepo.updateResource({
-				db,
-				id: accessTokenId,
-				resource,
-			});
-		}
-	}
+	if (!accessTokenId && !refreshTokenId) return;
 
-	if (refreshTokenId) {
-		await oauthRefreshTokenRepo.updateScopes({
-			db,
-			id: refreshTokenId,
-			scopes,
-		});
-		if (oauthConsentId) {
-			await oauthRefreshTokenRepo.updateConsent({
-				db,
+	await db.transaction(async (tx) => {
+		if (accessTokenId) {
+			await oauthAccessTokenRepo.updateGrant({
+				db: tx,
+				id: accessTokenId,
+				oauthConsentId,
+				resource,
+				scopes,
+			});
+		}
+
+		if (refreshTokenId) {
+			await oauthRefreshTokenRepo.updateGrant({
+				db: tx,
 				id: refreshTokenId,
 				oauthConsentId,
-			});
-		}
-		if (resource) {
-			await oauthRefreshTokenRepo.updateResource({
-				db,
-				id: refreshTokenId,
 				resource,
+				scopes,
 			});
 		}
-	}
+	});
 };

@@ -90,6 +90,14 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			tokenRecord,
 		});
 
+		if (isMcpClient && !tokenRecord.oauthConsentId) {
+			throw new RecaseError({
+				message: "OAuth token consent is ambiguous",
+				code: ErrCode.InvalidRequest,
+				statusCode: 401,
+			});
+		}
+
 		await persistOAuthTokenGrant({
 			accessTokenId: tokenRecord.id,
 			db,
@@ -101,14 +109,6 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			}),
 			scopes: tokenRecord.scopes,
 		});
-
-		if (isMcpClient && !tokenRecord.oauthConsentId) {
-			throw new RecaseError({
-				message: "OAuth token consent is ambiguous",
-				code: ErrCode.InvalidRequest,
-				statusCode: 401,
-			});
-		}
 
 		// 6. MCP and reserved clients keep the opaque OAuth token
 		if (

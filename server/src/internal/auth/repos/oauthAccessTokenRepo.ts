@@ -43,52 +43,31 @@ export const deleteOAuthAccessTokensByClientAndReference = async ({
 			),
 		);
 
-export const updateOAuthAccessTokenScopes = async ({
+/** Null consent/resource leave the stored value alone; a grant is never blanked. */
+export const updateOAuthAccessTokenGrant = async ({
 	db,
 	id,
+	oauthConsentId,
+	resource,
 	scopes,
 }: {
-	db: DrizzleCli;
+	db: Pick<DrizzleCli, "update">;
 	id: string;
+	oauthConsentId: string | null;
+	resource: string | null;
 	scopes: string[];
 }) =>
 	db
 		.update(oauthAccessToken)
-		.set({ scopes })
-		.where(eq(oauthAccessToken.id, id));
-
-export const updateOAuthAccessTokenConsent = async ({
-	db,
-	id,
-	oauthConsentId,
-}: {
-	db: DrizzleCli;
-	id: string;
-	oauthConsentId: string;
-}) =>
-	db
-		.update(oauthAccessToken)
-		.set({ oauthConsentId })
-		.where(eq(oauthAccessToken.id, id));
-
-export const updateOAuthAccessTokenResource = async ({
-	db,
-	id,
-	resource,
-}: {
-	db: DrizzleCli;
-	id: string;
-	resource: string;
-}) =>
-	db
-		.update(oauthAccessToken)
-		.set({ resource })
+		.set({
+			scopes,
+			...(oauthConsentId ? { oauthConsentId } : {}),
+			...(resource ? { resource } : {}),
+		})
 		.where(eq(oauthAccessToken.id, id));
 
 export const oauthAccessTokenRepo = {
 	getValidByTokenValues: getValidOAuthAccessTokenByTokenValues,
 	deleteByClientAndReference: deleteOAuthAccessTokensByClientAndReference,
-	updateScopes: updateOAuthAccessTokenScopes,
-	updateConsent: updateOAuthAccessTokenConsent,
-	updateResource: updateOAuthAccessTokenResource,
+	updateGrant: updateOAuthAccessTokenGrant,
 };
