@@ -3,7 +3,6 @@ export const MCP_CLIENT_KIND = "mcp_client";
 export type OAuthClientMetadata = {
 	kind?: string;
 	mcpClientType?: string;
-	redirectNames?: Record<string, string>;
 };
 
 const asMetadataObject = (value: unknown): OAuthClientMetadata =>

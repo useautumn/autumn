@@ -8,10 +8,10 @@ import { rateLimiter } from "hono-rate-limiter";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { auth, authBaseUrl } from "@/utils/auth.js";
 import { handleGetOAuthClient } from "./handleGetOAuthClient.js";
+import { handleOAuthAuthorize } from "./handleOAuthAuthorize.js";
 import { handleOAuthClientRegistration } from "./handleOAuthClientRegistration.js";
 import { handleOAuthConsentWithEnv } from "./handleOAuthConsentWithEnv.js";
 import { handleOAuthTokenWithApiKey } from "./handleOAuthTokenWithApiKey.js";
-import { handleInternalMcpOAuthAuthorize } from "./internalMcpOAuthClients.js";
 
 export const oauthRouter = new Hono<HonoEnv>();
 
@@ -65,7 +65,7 @@ oauthRouter.get("/.well-known/oauth-protected-resource", (c) => {
 
 oauthRouter.post("/api/auth/oauth2/consent", handleOAuthConsentWithEnv);
 oauthRouter.post("/api/auth/oauth2/token", handleOAuthTokenWithApiKey);
-oauthRouter.get("/api/auth/oauth2/authorize", handleInternalMcpOAuthAuthorize);
+oauthRouter.get("/api/auth/oauth2/authorize", handleOAuthAuthorize);
 oauthRouter.post(
 	"/api/auth/oauth2/register",
 	oauthClientRegisterLimiter,
