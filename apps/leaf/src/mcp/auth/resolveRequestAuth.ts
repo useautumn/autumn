@@ -5,11 +5,7 @@ import {
 	isSecretKeyPrefix,
 	stripOAuthTokenPrefix,
 } from "@autumn/auth";
-import {
-	getProtectedResourceMetadataUrl,
-	getWwwAuthenticateHeader,
-	oauthAudienceAllowsResource,
-} from "@autumn/auth/oauth";
+import { oauthAudienceAllowsResource } from "@autumn/auth/oauth";
 import {
 	type AutumnMcpAuth,
 	DEFAULT_API_VERSION,
@@ -24,6 +20,10 @@ import {
 } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { getRequestedOAuthResourceScopes } from "@autumn/shared/utils/auth/oauthScopeUtils";
 import * as z from "zod/v4";
+import {
+	insufficientScopeError,
+	invalidTokenError,
+} from "./oauthChallenges.js";
 import { OAuthHttpError } from "./protectedResourceMetadata.js";
 
 type AuthLogger = {
@@ -111,27 +111,6 @@ const principalFromSecret = ({
 	return `${kind}:${digest}`;
 };
 
-const getInvalidTokenChallenge = (resourceUrl: string) =>
-	getWwwAuthenticateHeader({
-		resourceMetadataUrl: getProtectedResourceMetadataUrl({ resourceUrl }),
-		scopes: DEFAULT_OAUTH_RESOURCE_SCOPES,
-		error: "invalid_token",
-	});
-
-const invalidTokenError = ({
-	message,
-	resourceUrl,
-}: {
-	message: string;
-	resourceUrl: string;
-}) =>
-	new OAuthHttpError(
-		401,
-		message,
-		"invalid_token",
-		getInvalidTokenChallenge(resourceUrl),
-	);
-
 /**
  * Authenticates an OAuth bearer against the shared token store — the same
  * expiry check the api server's OAuth middleware applies — so expired
@@ -171,11 +150,22 @@ const authenticateOAuthBearer = async ({
 		});
 	}
 
+	// Only the resource scopes gate tools; OIDC protocol scopes are dropped.
+	const scopes = getRequestedOAuthResourceScopes(accessToken.scopes);
+
+	// A grant that names scopes but none this resource exposes fails every tool,
+	// while an empty grant is the unrestricted chat token and stays admin-equivalent.
+	if (accessToken.scopes.length > 0 && scopes.length === 0) {
+		throw insufficientScopeError({
+			message: "OAuth access token grants no Autumn resource scopes",
+			resourceUrl,
+		});
+	}
+
 	return {
 		orgId: accessToken.referenceId,
 		userId: accessToken.userId,
-		// Only the resource scopes gate tools; OIDC protocol scopes are dropped.
-		scopes: getRequestedOAuthResourceScopes(accessToken.scopes),
+		scopes,
 	};
 };
 
@@ -248,21 +238,17 @@ export const buildAuthForRequest = async ({
 	}
 
 	if (bearer) {
-		throw new OAuthHttpError(
-			401,
-			"Invalid OAuth token prefix",
-			"invalid_token",
-			getInvalidTokenChallenge(resourceUrl),
-		);
+		throw invalidTokenError({
+			message: "Invalid OAuth token prefix",
+			resourceUrl,
+		});
 	}
 
 	if (flags["oauth-enabled"]) {
-		throw new OAuthHttpError(
-			401,
-			"Missing Autumn API key bearer token",
-			"invalid_token",
-			getInvalidTokenChallenge(resourceUrl),
-		);
+		throw invalidTokenError({
+			message: "Missing Autumn API key bearer token",
+			resourceUrl,
+		});
 	}
 
 	logger.warning("Missing secret-key for MCP request");

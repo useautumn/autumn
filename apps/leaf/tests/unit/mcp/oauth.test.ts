@@ -29,11 +29,17 @@ const unusedDb = oauthTokenDb(undefined);
 const resourceUrl = "http://localhost:2718/mcp";
 const internalResourceUrl = "http://localhost:2718/internal/mcp";
 
-const expectedChallenge = (resourcePath: string) =>
+const expectedChallenge = ({
+	error = "invalid_token",
+	resourcePath,
+}: {
+	error?: string;
+	resourcePath: string;
+}) =>
 	[
 		`Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource${resourcePath}"`,
 		`scope="${DEFAULT_OAUTH_RESOURCE_SCOPES.join(" ")}"`,
-		'error="invalid_token"',
+		`error="${error}"`,
 	].join(", ");
 
 describe("MCP OAuth auth resolution", () => {
@@ -59,7 +65,7 @@ describe("MCP OAuth auth resolution", () => {
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
-			wwwAuthenticate: expectedChallenge("/mcp"),
+			wwwAuthenticate: expectedChallenge({ resourcePath: "/mcp" }),
 		} satisfies Partial<OAuthHttpError>);
 	});
 
@@ -75,7 +81,7 @@ describe("MCP OAuth auth resolution", () => {
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
-			wwwAuthenticate: expectedChallenge("/internal/mcp"),
+			wwwAuthenticate: expectedChallenge({ resourcePath: "/internal/mcp" }),
 		} satisfies Partial<OAuthHttpError>);
 	});
 
@@ -122,6 +128,46 @@ describe("MCP OAuth auth resolution", () => {
 		expect(auth.scopes).toEqual([Scopes.Customers.Read]);
 	});
 
+	test("steps up a token whose grant names no Autumn resource scopes", async () => {
+		await expect(
+			buildAuthForRequest({
+				headers: new Headers({ authorization: "Bearer am_oauth_token" }),
+				db: oauthTokenDb({
+					userId: "user_1",
+					referenceId: "org_1",
+					scopes: ["openid", "profile", "offline_access"],
+				}),
+				flags: flags as MCPOAuthFlags,
+				logger,
+				resourceUrl,
+			}),
+		).rejects.toMatchObject({
+			status: 403,
+			error: "insufficient_scope",
+			wwwAuthenticate: expectedChallenge({
+				error: "insufficient_scope",
+				resourcePath: "/mcp",
+			}),
+		} satisfies Partial<OAuthHttpError>);
+	});
+
+	test("keeps scope-less unrestricted chat tokens usable", async () => {
+		const auth = await buildAuthForRequest({
+			headers: new Headers({ authorization: "Bearer am_oauth_token" }),
+			db: oauthTokenDb({
+				userId: "user_1",
+				referenceId: "org_1",
+				scopes: [],
+			}),
+			flags: flags as MCPOAuthFlags,
+			logger,
+			resourceUrl,
+		});
+
+		expect(auth.scopes).toEqual([]);
+		expect(auth.orgId).toBe("org_1");
+	});
+
 	test("accepts a token stamped with this resource, ignoring canonical noise", async () => {
 		const auth = await buildAuthForRequest({
 			headers: new Headers({ authorization: "Bearer am_oauth_token" }),
@@ -156,7 +202,7 @@ describe("MCP OAuth auth resolution", () => {
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
-			wwwAuthenticate: expectedChallenge("/mcp"),
+			wwwAuthenticate: expectedChallenge({ resourcePath: "/mcp" }),
 		} satisfies Partial<OAuthHttpError>);
 	});
 
@@ -211,7 +257,7 @@ describe("MCP OAuth auth resolution", () => {
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
-			wwwAuthenticate: expectedChallenge("/mcp"),
+			wwwAuthenticate: expectedChallenge({ resourcePath: "/mcp" }),
 		} satisfies Partial<OAuthHttpError>);
 	});
 
