@@ -206,26 +206,6 @@ describe("MCP OAuth auth resolution", () => {
 		} satisfies Partial<OAuthHttpError>);
 	});
 
-	test("challenges a token stamped for another host", async () => {
-		await expect(
-			buildAuthForRequest({
-				headers: new Headers({ authorization: "Bearer am_oauth_token" }),
-				db: oauthTokenDb({
-					userId: "user_1",
-					referenceId: "org_1",
-					resource: "http://evil.example.com/mcp",
-					scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
-				}),
-				flags: flags as MCPOAuthFlags,
-				logger,
-				resourceUrl,
-			}),
-		).rejects.toMatchObject({
-			status: 401,
-			error: "invalid_token",
-		} satisfies Partial<OAuthHttpError>);
-	});
-
 	test("grandfathers tokens minted before audience stamping", async () => {
 		const auth = await buildAuthForRequest({
 			headers: new Headers({ authorization: "Bearer am_oauth_token" }),

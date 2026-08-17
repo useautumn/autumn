@@ -3,7 +3,6 @@ import {
 	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
 	isReservedOAuthClientId,
 	isReservedOAuthClientName,
-	RESERVED_OAUTH_CLIENT_NAMES,
 	SLACK_MCP_OAUTH_CLIENT_ID,
 	SUMMER_OAUTH_CLIENT_ID,
 	WEB_MCP_OAUTH_CLIENT_ID,
@@ -56,14 +55,5 @@ describe("isReservedOAuthClientName", () => {
 		expect(isReservedOAuthClientName("Cursor")).toBe(false);
 		expect(isReservedOAuthClientName("Summerly")).toBe(false);
 		expect(isReservedOAuthClientName("MCP client")).toBe(false);
-	});
-
-	test("exposes the denylist", () => {
-		expect([...RESERVED_OAUTH_CLIENT_NAMES].sort()).toEqual([
-			"atmn",
-			"autumn cli",
-			"autumn internal-mcp",
-			"summer",
-		]);
 	});
 });

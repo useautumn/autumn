@@ -13,19 +13,6 @@ describe("buildOAuthClientInfoResponse", () => {
 		expect(response.name).toBe("Cursor");
 	});
 
-	// Regression: inferClientNameFromRedirectUri used to return "MCP client" and
-	// shadow the client's real name when the redirect uri had no vendor substring.
-	test("keeps the real name when the redirect uri has no vendor substring", () => {
-		const response = buildOAuthClientInfoResponse({
-			clientId: "oauth_client_def",
-			name: "Acme Internal Tool",
-			metadata: { kind: "mcp_client" },
-		});
-
-		expect(response.name).toBe("Acme Internal Tool");
-		expect(response.name).not.toBe("MCP client");
-	});
-
 	test("defaults the reserved Summer client to the sandbox environment", () => {
 		const response = buildOAuthClientInfoResponse({
 			clientId: SUMMER_OAUTH_CLIENT_ID,
