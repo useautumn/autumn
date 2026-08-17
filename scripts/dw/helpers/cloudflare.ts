@@ -5,6 +5,7 @@ import {
 	openSync,
 	readdirSync,
 	readFileSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
@@ -17,6 +18,7 @@ import {
 	publicHostname,
 	publicServiceHostname,
 	publicServiceUrls,
+	publicServiceUrlsFromDashboard,
 	publicTunnelIngress,
 	publicTunnelName,
 	renderTunnelConfig,
@@ -50,9 +52,14 @@ function publicUrlsFile(): string {
 	return join(agentDir(), "public-urls.txt");
 }
 
-function writePublicUrls(origin: string): void {
+function writePublicUrls(origin: string | undefined): void {
+	const file = publicUrlsFile();
+	if (!origin) {
+		if (existsSync(file)) rmSync(file, { force: true });
+		return;
+	}
 	mkdirSync(agentDir(), { recursive: true });
-	writeFileSync(publicUrlsFile(), `${origin.replace(/\/$/, "")}\n`);
+	writeFileSync(file, `${origin.replace(/\/$/, "")}\n`);
 }
 
 function cloudflaredBinary(): string | undefined {
@@ -640,7 +647,8 @@ function startConnector({
 		}
 		Bun.sleepSync(250);
 	}
-	log(`cloudflare ${origin} did not become healthy`);
+	stopPublicAccess({ worktreeNum });
+	throw new Error(`cloudflare ${origin} did not become healthy`);
 }
 
 function persistEntry(entry: RegistryEntry): RegistryEntry {
@@ -648,6 +656,19 @@ function persistEntry(entry: RegistryEntry): RegistryEntry {
 	registry[entry.path] = { ...(registry[entry.path] ?? entry), ...entry };
 	saveRegistry(registry);
 	return entry;
+}
+
+export function publicUrlAfterFailedAccess({
+	previousPublicUrl,
+	previousStillServes,
+}: {
+	previousPublicUrl?: string;
+	previousStillServes: boolean;
+}): string | undefined {
+	if (!previousStillServes || !previousPublicUrl?.startsWith("https://")) {
+		return undefined;
+	}
+	return previousPublicUrl.replace(/\/$/, "");
 }
 
 export async function ensurePublicAccess(
@@ -729,13 +750,23 @@ export async function ensurePublicAccess(
 				`cloudflare public access failed: ${err instanceof Error ? err.message : String(err)}`,
 			);
 		}
-		writePublicUrls(origin);
-		ensureEmulateRunning({ origin: urls.emulate });
+		const keep = publicUrlAfterFailedAccess({
+			previousPublicUrl: entry.publicUrl,
+			previousStillServes: Boolean(
+				entry.publicUrl && tunnelServesOrigin(entry.publicUrl),
+			),
+		});
+		writePublicUrls(keep);
+		ensureEmulateRunning({
+			origin: keep
+				? publicServiceUrlsFromDashboard({ dashboard: keep }).emulate
+				: undefined,
+		});
 		return persistEntry({
 			...entry,
 			ngrokUrl: undefined,
 			ngrokViteUrl: undefined,
-			publicUrl: origin,
+			publicUrl: keep,
 			reservedDomainId: undefined,
 			reservedViteDomainId: undefined,
 		});
