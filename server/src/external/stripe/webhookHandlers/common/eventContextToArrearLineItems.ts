@@ -7,6 +7,7 @@ import type {
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { extractStripeDiscounts } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeDiscountsForBilling";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
+import { clampNextResetAtToPendingBillingCycleAnchor } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
 import {
 	type BaseWebhookEventContext,
@@ -70,6 +71,20 @@ export const eventContextToArrearLineItems = async ({
 			filters: { cusEntFilter },
 			options: { updateNextResetAt: true, discountable: stripeDiscountable },
 		});
+		for (const update of productUpdates) {
+			const nextResetAt = update.updates?.next_reset_at;
+			if (typeof nextResetAt !== "number") continue;
+
+			update.updates = {
+				...update.updates,
+				next_reset_at: clampNextResetAtToPendingBillingCycleAnchor({
+					billingCycleAnchorResetsAt:
+						customerProduct.billing_cycle_anchor_resets_at,
+					currentEpochMs: eventContext.nowMs,
+					nextResetAt,
+				}),
+			};
+		}
 		lineItems.push(...productLineItems);
 		updateCustomerEntitlements.push(...productUpdates);
 	}

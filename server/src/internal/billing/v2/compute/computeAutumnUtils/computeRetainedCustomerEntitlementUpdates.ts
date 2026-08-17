@@ -1,17 +1,15 @@
 import {
-	addCusProductToCusEnt,
 	type AutumnBillingPlan,
+	addCusProductToCusEnt,
 	cusProductToProduct,
 	featureUtils,
-	getCycleEnd,
 	isBooleanEntitlement,
 	isOneOffPrepaidConsumableCustomerEntitlement,
-	isResettingEntitlement,
 	isUnlimitedEntitlement,
 	type UpdateSubscriptionBillingContext,
 	UpdateSubscriptionIntent,
 } from "@autumn/shared";
-import { entitlementToResetCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
+import { computeBillingCycleAnchorEntitlementUpdates } from "@/internal/billing/v2/compute/computeAutumnUtils/computeBillingCycleAnchorEntitlementUpdates";
 import { initCustomerEntitlementBalance } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlementBalance";
 
 export const computeRetainedCustomerEntitlementUpdates = ({
@@ -21,76 +19,66 @@ export const computeRetainedCustomerEntitlementUpdates = ({
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	finalCustomerProduct: UpdateSubscriptionBillingContext["customerProduct"];
 }): AutumnBillingPlan["updateCustomerEntitlements"] => {
-	const resetsBillingCycle =
-		updateSubscriptionContext.requestedBillingCycleAnchor === "now";
+	const billingCycleUpdates = computeBillingCycleAnchorEntitlementUpdates({
+		billingContext: updateSubscriptionContext,
+		customerProduct: finalCustomerProduct,
+	});
 	const resetsUsage =
 		updateSubscriptionContext.intent === UpdateSubscriptionIntent.UpdatePlan &&
 		updateSubscriptionContext.carryOverUsages?.enabled === false;
-	if (!resetsBillingCycle && !resetsUsage) return [];
+	if (!resetsUsage) return billingCycleUpdates;
 
-	const finalFullProduct = resetsUsage
-		? cusProductToProduct({ cusProduct: finalCustomerProduct })
-		: undefined;
+	const billingCycleUpdateByEntitlementId = new Map(
+		billingCycleUpdates.map((update) => [
+			update.customerEntitlement.id,
+			update,
+		]),
+	);
+	const finalFullProduct = cusProductToProduct({
+		cusProduct: finalCustomerProduct,
+	});
+	const updates: NonNullable<AutumnBillingPlan["updateCustomerEntitlements"]> =
+		[];
 
-	return finalCustomerProduct.customer_entitlements
-		.map((customerEntitlement) => {
-			const { entitlement } = customerEntitlement;
-			const resetsEntitlementBillingCycle =
-				resetsBillingCycle && isResettingEntitlement({ entitlement });
-			const resetsCustomerEntitlementUsage =
-				resetsUsage &&
-				!isBooleanEntitlement({ entitlement }) &&
-				!isUnlimitedEntitlement({ entitlement }) &&
-				!featureUtils.isAllocated(entitlement.feature) &&
-				!isOneOffPrepaidConsumableCustomerEntitlement(
-					addCusProductToCusEnt({
-						cusEnt: customerEntitlement,
-						cusProduct: finalCustomerProduct,
-					}),
-				);
-			if (!resetsEntitlementBillingCycle && !resetsCustomerEntitlementUsage)
-				return undefined;
+	for (const customerEntitlement of finalCustomerProduct.customer_entitlements) {
+		const { entitlement } = customerEntitlement;
+		const resetsCustomerEntitlementUsage =
+			!isBooleanEntitlement({ entitlement }) &&
+			!isUnlimitedEntitlement({ entitlement }) &&
+			!featureUtils.isAllocated(entitlement.feature) &&
+			!isOneOffPrepaidConsumableCustomerEntitlement(
+				addCusProductToCusEnt({
+					cusEnt: customerEntitlement,
+					cusProduct: finalCustomerProduct,
+				}),
+			);
+		const billingCycleUpdate = billingCycleUpdateByEntitlementId.get(
+			customerEntitlement.id,
+		);
+		if (!billingCycleUpdate && !resetsCustomerEntitlementUsage) continue;
 
-			const resetBalance = resetsCustomerEntitlementUsage
-				? initCustomerEntitlementBalance({
-						initContext: {
-							fullCustomer: updateSubscriptionContext.fullCustomer,
-							fullProduct: finalFullProduct!,
-							featureQuantities: updateSubscriptionContext.featureQuantities,
-						},
-						entitlement: customerEntitlement.entitlement,
-					})
-				: undefined;
+		const resetBalance = resetsCustomerEntitlementUsage
+			? initCustomerEntitlementBalance({
+					initContext: {
+						fullCustomer: updateSubscriptionContext.fullCustomer,
+						fullProduct: finalFullProduct,
+						featureQuantities: updateSubscriptionContext.featureQuantities,
+					},
+					entitlement,
+				})
+			: undefined;
+		updates.push({
+			customerEntitlement,
+			updates: {
+				...billingCycleUpdate?.updates,
+				...(resetBalance && {
+					balance: resetBalance.balance,
+					adjustment: 0,
+					entities: resetBalance.entities ?? undefined,
+				}),
+			},
+		});
+	}
 
-			return {
-				customerEntitlement,
-				updates: {
-					...(resetBalance
-						? {
-								balance: resetBalance.balance,
-								adjustment: 0,
-								entities: resetBalance.entities ?? undefined,
-							}
-						: {}),
-					...(resetsEntitlementBillingCycle
-						? {
-								reset_cycle_anchor: entitlementToResetCycleAnchor({
-									entitlement: customerEntitlement.entitlement,
-									resetCycleAnchor:
-										updateSubscriptionContext.resetCycleAnchorMs,
-									now: updateSubscriptionContext.currentEpochMs,
-								}),
-								next_reset_at: getCycleEnd({
-									anchor: updateSubscriptionContext.resetCycleAnchorMs,
-									interval: customerEntitlement.entitlement.interval!,
-									intervalCount:
-										customerEntitlement.entitlement.interval_count,
-									now: updateSubscriptionContext.currentEpochMs,
-								}),
-							}
-						: {}),
-				},
-			};
-		})
-		.filter((update) => update !== undefined);
+	return updates;
 };

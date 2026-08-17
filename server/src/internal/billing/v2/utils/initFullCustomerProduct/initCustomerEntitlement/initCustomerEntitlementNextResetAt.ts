@@ -1,12 +1,12 @@
 import {
 	EntInterval,
 	type EntitlementWithFeature,
-	formatMs,
 	getCycleEnd,
 	type InitCustomerEntitlementContext,
 	type InitFullCustomerProductOptions,
 	isResettingEntitlement,
 } from "@autumn/shared";
+import { clampNextResetAtToPendingBillingCycleAnchor } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 
 export const initCustomerEntitlementNextResetAt = ({
 	initContext,
@@ -21,7 +21,7 @@ export const initCustomerEntitlementNextResetAt = ({
 
 	let { resetCycleAnchor, now, trialEndsAt, transitionConfig } = initContext;
 	const { resetAfterTrialEndFeatureIds } = transitionConfig ?? {};
-	const { startsAt } = initOptions ?? {};
+	const { billingCycleAnchorResetsAt, startsAt } = initOptions ?? {};
 
 	if (
 		resetAfterTrialEndFeatureIds?.includes(entitlement.feature.id) &&
@@ -39,5 +39,9 @@ export const initCustomerEntitlementNextResetAt = ({
 		now: effectiveNow,
 	});
 
-	return nextResetAt;
+	return clampNextResetAtToPendingBillingCycleAnchor({
+		billingCycleAnchorResetsAt,
+		currentEpochMs: effectiveNow,
+		nextResetAt,
+	});
 };

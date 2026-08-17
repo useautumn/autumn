@@ -35,8 +35,8 @@ export const setupBillingCycleAnchor = ({
 	billingStartsAt?: number;
 	billingStartsAtToleranceMs?: number;
 }): number | "now" => {
-	if (requestedBillingCycleAnchor !== undefined) {
-		return requestedBillingCycleAnchor;
+	if (requestedBillingCycleAnchor === "now") {
+		return "now";
 	}
 
 	// A new backdated subscription anchors its cycle to the past starts_at
