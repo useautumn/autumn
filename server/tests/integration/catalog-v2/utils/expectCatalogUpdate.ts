@@ -94,6 +94,10 @@ type ExpectedPlanPreview = {
 	action: CatalogAction;
 	hasCustomers?: boolean;
 	willArchive?: boolean;
+	/** Exact ordered list of state.reasons[].message (`[]` asserts no reasons). */
+	reasonMessages?: string[];
+	/** Each must be contained in the reason messages. */
+	reasonsInclude?: string[];
 };
 
 /** Optional fields are asserted only when passed. */
@@ -140,7 +144,10 @@ export const expectCatalogPreviewCorrect = ({
 			}
 			if (expected.reasonsInclude !== undefined) {
 				for (const message of expected.reasonsInclude) {
-					expect(reasonMessages).toContain(message);
+					expect(
+						reasonMessages.some((reason) => reason.includes(message)),
+						`missing reason containing ${JSON.stringify(message)}`,
+					).toBe(true);
 				}
 			}
 		}
@@ -160,6 +167,19 @@ export const expectCatalogPreviewCorrect = ({
 			}
 			if (expected.willArchive !== undefined) {
 				expect(entry?.state.will_archive).toBe(expected.willArchive);
+			}
+			const reasonMessages =
+				entry?.state.reasons.map((reason) => reason.message) ?? [];
+			if (expected.reasonMessages !== undefined) {
+				expect(reasonMessages).toEqual(expected.reasonMessages);
+			}
+			if (expected.reasonsInclude !== undefined) {
+				for (const message of expected.reasonsInclude) {
+					expect(
+						reasonMessages.some((reason) => reason.includes(message)),
+						`missing reason containing ${JSON.stringify(message)}`,
+					).toBe(true);
+				}
 			}
 		}
 	}

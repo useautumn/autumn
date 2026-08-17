@@ -95,6 +95,7 @@ export const buildLicenseParentsPreview = ({
 	const editedNext = directUpsert.row.nextFullProduct;
 
 	return reverseLinks
+		.filter((link) => !link.product.archived)
 		.map((link) => {
 			const parentKey = productToProductKey({ product: link.product });
 			const parentUpsert = findParentUpsert({

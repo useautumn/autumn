@@ -88,6 +88,10 @@ const listByParentCustomerProductIds = async ({
 	});
 };
 
+/**
+ * Which of the given links a customer still points at. LATERAL LIMIT 1 is
+ * load-bearing: one index seek per id, not every matching customer_licenses row.
+ */
 const listReferencedPlanLicenseIds = async ({
 	db,
 	planLicenseIds,
@@ -96,15 +100,20 @@ const listReferencedPlanLicenseIds = async ({
 	planLicenseIds: string[];
 }): Promise<Set<string>> => {
 	if (planLicenseIds.length === 0) return new Set();
-	const rows = await db
-		.select({ planLicenseId: customerLicenses.plan_license_id })
-		.from(customerLicenses)
-		.where(inArray(customerLicenses.plan_license_id, planLicenseIds));
-	return new Set(
-		rows.flatMap(({ planLicenseId }) =>
-			planLicenseId === null ? [] : [planLicenseId],
-		),
-	);
+
+	const rows = (await db.execute(sql`
+		SELECT candidate.plan_license_id
+		FROM unnest(${sql.param(planLicenseIds)}::text[])
+			AS candidate(plan_license_id)
+		CROSS JOIN LATERAL (
+			SELECT 1
+			FROM customer_licenses customer_license
+			WHERE customer_license.plan_license_id = candidate.plan_license_id
+			LIMIT 1
+		) AS referenced(found)
+	`)) as Array<{ plan_license_id: string }>;
+
+	return new Set(rows.map((row) => row.plan_license_id));
 };
 
 /** Idempotent ensure + granted sync for a (parent, license) balance row.

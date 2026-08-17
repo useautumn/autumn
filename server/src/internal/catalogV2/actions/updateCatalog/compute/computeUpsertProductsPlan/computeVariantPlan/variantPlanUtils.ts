@@ -11,13 +11,15 @@ export const baseRowMinted = ({
 	upsert.row.versioning === "new_version" &&
 	upsert.row.baseFullProduct != null;
 
-/** Latest unarchived variant of this base (MAX(version) per plan id). */
+/** Latest variant of this base (MAX(version) per plan id). */
 export const latestVariantsOfBase = ({
 	upsert,
 	productStatesContext,
+	includeArchived = false,
 }: {
 	upsert: UpsertProductPlan;
 	productStatesContext: ProductStatesContext;
+	includeArchived?: boolean;
 }): FullProduct[] => {
 	const baseInternalIds = new Set(
 		[
@@ -32,7 +34,7 @@ export const latestVariantsOfBase = ({
 		productStatesContext.versionsByPlanId,
 	)) {
 		const product = versions[0];
-		if (!product || product.archived) continue;
+		if (!product || (!includeArchived && product.archived)) continue;
 		if (product.id === upsert.row.planId) continue;
 		if (
 			!product.base_internal_product_id ||

@@ -7,6 +7,7 @@
  *   variants[] declare inherits the parent's migration.draft
  *   license DIFF → variant op is upsert_licenses
  *   follow EU / pin UK → UK omitted
+ *   follow with no customers on the variant → no variant op
  *   versioning + conflicts → versioning-drafts / conflict-drafts
  */
 
@@ -314,6 +315,56 @@ test.concurrent(
 							operations: [
 								childItemOp({
 									planFilter,
+									customize: dashboardAddCustomize,
+								}),
+							],
+						},
+					],
+				});
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants drafts: follow with no customers on the variant omits it")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_dr_nocust");
+		const variantId = uniqueTestId("cv2_var_dr_nocust_eu");
+		await withCatalogPlans({
+			ctx,
+			planIds: [baseId, variantId],
+			run: async () => {
+				await seedBaseWithVariant({
+					autumn: autumnV2_3,
+					baseId,
+					variantId,
+				});
+				await seedVersionableCustomer({ ctx, planId: baseId, version: 1 });
+
+				const baseFilter = versionPinnedFilter({ planId: baseId });
+				await expectLicenseDraftCase({
+					autumn: autumnV2_3,
+					ctx,
+					plans: [
+						{
+							plan_id: baseId,
+							items: [messagesItem(100), dashboardItem()],
+							propagate: { variants: [{ plan_id: variantId }] },
+							migration: { draft: true },
+						},
+					],
+					responsePlans: [[{ plan_id: baseId, versions: [1] }]],
+					expected: [
+						{
+							planIds: [baseId],
+							omitPlanIds: [variantId],
+							noBillingChanges: true,
+							filter: { customer: { plan: baseFilter } },
+							operations: [
+								childItemOp({
+									planFilter: baseFilter,
 									customize: dashboardAddCustomize,
 								}),
 							],

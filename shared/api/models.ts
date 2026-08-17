@@ -18,6 +18,7 @@ export * from "./catalogV2/planUpdate/preview/catalogConflictPreview.js";
 export * from "./catalogV2/planUpdate/preview/catalogCorePreview.js";
 export * from "./catalogV2/planUpdate/preview/catalogLicenseParentPreview.js";
 export * from "./catalogV2/planUpdate/preview/catalogPlanPreview.js";
+export * from "./catalogV2/planUpdate/preview/catalogPlanUsage.js";
 export * from "./catalogV2/planUpdate/preview/catalogVariantPreview.js";
 export * from "./catalogV2/planUpdate/preview/catalogSiblingVersionPreview.js";
 export * from "./catalogV2/planUpdate/preview/catalogVersioningPreview.js";

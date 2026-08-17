@@ -21,6 +21,7 @@ const mergeCatalogPlanDraft = ({
 	updateFeatures: incoming.updateFeatures ?? base.updateFeatures,
 	removeFeatures: incoming.removeFeatures ?? base.removeFeatures,
 	upsertProducts: incoming.upsertProducts ?? base.upsertProducts,
+	removePlans: incoming.removePlans ?? base.removePlans,
 });
 
 /** Empty fold: projected catalog equals the frozen originals. */
@@ -78,6 +79,10 @@ export const createCatalogComputeState = ({
 		/** Catalog after all advances so far — pass into the next compute step. */
 		get projected() {
 			return state.projected;
+		},
+		/** Plan draft after all advances so far — later steps may extend a slice. */
+		get plan() {
+			return state.plan;
 		},
 		/** Merge `step` into the plan and refresh `projected`. */
 		advance: ({ step }: { step: CatalogComputeStep }) => {

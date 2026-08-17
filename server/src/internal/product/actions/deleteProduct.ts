@@ -5,12 +5,19 @@ import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdRead
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-const relinkVariantsBeforeDeletingBase = async ({
+export const relinkVariantsBeforeDeletingBase = async ({
 	ctx,
 	product,
 }: {
 	ctx: AutumnContext;
-	product: Awaited<ReturnType<typeof ProductService.get>>;
+	product: {
+		id: string;
+		org_id: string;
+		env: string;
+		version: number;
+		internal_id: string;
+		base_internal_product_id?: string | null;
+	} | null;
 }) => {
 	if (!product || product.base_internal_product_id !== null) return;
 

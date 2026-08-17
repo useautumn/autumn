@@ -30,6 +30,20 @@ export type RemoveCatalogFeatureParams = z.infer<
 	typeof RemoveCatalogFeatureParamsSchema
 >;
 
+export const RemoveCatalogPlanParamsSchema = z.object({
+	plan_id: z.string().meta({
+		description: "The ID of the plan to remove from the catalog.",
+	}),
+	version: z.number().int().min(1).optional().meta({
+		description:
+			"Pin a single version to remove. Omit to remove every version of this plan.",
+	}),
+});
+
+export type RemoveCatalogPlanParams = z.infer<
+	typeof RemoveCatalogPlanParamsSchema
+>;
+
 export const UpdateCatalogParamsSchema = z.object({
 	features: z.array(UpdateCatalogFeatureParamsSchema).optional().default([]),
 	remove_features: z
@@ -37,6 +51,10 @@ export const UpdateCatalogParamsSchema = z.object({
 		.optional()
 		.default([]),
 	plans: z.array(UpdateCatalogPlanParamsSchema).optional().default([]),
+	remove_plans: z
+		.array(RemoveCatalogPlanParamsSchema)
+		.optional()
+		.default([]),
 
 	// rewards: z.array(CreateRewardParamsSchema).optional().meta({
 	// 	description:

@@ -7,8 +7,13 @@ export type PersistedFeatureUsage = {
 	customers: CatalogFeatureUsageBucket;
 };
 
+export type PersistedPlanUsage = {
+	customers: CatalogFeatureUsageBucket;
+};
+
 /** Presentation facts fetched only for preview runs — never read by compute,
  *  errors, or execute. */
 export type PreviewCatalogContext = {
 	featureUsagePersisted: Record<string, PersistedFeatureUsage>;
+	planUsagePersisted: Record<string, PersistedPlanUsage>;
 };

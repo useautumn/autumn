@@ -5,6 +5,7 @@
  *   existing: latest only; historical customers do not get a variant op
  *   all_versions: pin when one version has customers; collapse when all do
  *   new_version + draft → 400
+ *   new_version without draft → no draft (mint is the opt-out)
  */
 
 import { test } from "bun:test";
@@ -242,6 +243,41 @@ test.concurrent(
 								}),
 							],
 						}),
+				});
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants drafts: parent new_version without draft writes no draft")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_dr_nv_nod");
+		const variantId = uniqueTestId("cv2_var_dr_nv_nod_eu");
+		await withCatalogPlans({
+			ctx,
+			planIds: [baseId, variantId],
+			run: async () => {
+				await seedBaseWithVariant({
+					autumn: autumnV2_3,
+					baseId,
+					variantId,
+				});
+				await seedVersionableCustomer({ ctx, planId: baseId, version: 1 });
+				await seedVersionableCustomer({ ctx, planId: variantId, version: 1 });
+				await expectLicenseDraftCase({
+					autumn: autumnV2_3,
+					ctx,
+					plans: [
+						{
+							plan_id: baseId,
+							items: [messagesItem(100), dashboardItem()],
+							propagate: { variants: [{ plan_id: variantId }] },
+							versioning: "new_version",
+						},
+					],
+					expected: [],
 				});
 			},
 		});
