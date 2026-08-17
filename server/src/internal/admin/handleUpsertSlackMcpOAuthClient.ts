@@ -1,37 +1,26 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
-import { registerMcpOAuthClient } from "@/internal/auth/actions/registerMcpOAuthClient.js";
+import { ensureSlackMcpOAuthClient } from "@/internal/auth/oauth/slackMcpOAuthClient.js";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
-
-const getClientUrl = () =>
-	(process.env.CLIENT_URL || "http://localhost:3000").replace(/\/+$/, "");
-
-const getSlackMcpRedirectUris = () => {
-	const clientUrl = getClientUrl();
-	return [
-		`${clientUrl}/admin/oauth/slack-mcp/callback`,
-		`${clientUrl}/sandbox/admin/oauth/slack-mcp/callback`,
-	];
-};
 
 export const handleUpsertSlackMcpOAuthClient = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {
 		const { db } = c.get("ctx");
-		const result = await registerMcpOAuthClient({
-			db,
-			clientName: "Slack MCP",
-			redirectUris: getSlackMcpRedirectUris(),
-			scope: undefined,
-		});
+		const client = await ensureSlackMcpOAuthClient({ db });
 
-		if ("error" in result) {
+		if (!client) {
 			throw new RecaseError({
-				message: result.error,
-				code: ErrCode.InvalidRequest,
-				statusCode: result.status,
+				message: "Failed to provision the Slack MCP OAuth client",
+				code: ErrCode.InternalError,
+				statusCode: 500,
 			});
 		}
 
-		return c.json(result.body, result.status);
+		return c.json({
+			client_id: client.clientId,
+			client_name: client.name,
+			redirect_uris: client.redirectUris,
+			scope: client.scopes?.join(" ") ?? "",
+		});
 	},
 });
