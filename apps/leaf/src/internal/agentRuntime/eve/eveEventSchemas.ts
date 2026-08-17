@@ -73,70 +73,65 @@ const messageCompletedSchema = turnDataSchema.extend({
 	message: z.string().default(""),
 });
 const failureSchema = z.object({ message: z.string().default("Eve failed") });
+const emptyEventSchema = z.object({});
 
 export type EveAction = z.infer<typeof eveActionSchema>;
 export type EveActionResult = z.infer<typeof eveActionResultSchema>;
 export type EveInputRequest = z.infer<typeof eveInputRequestSchema>;
 
-type EventBase = { at?: string };
-export type EveEvent = EventBase &
-	(
-		| ({ type: "message.received" } & z.infer<typeof messageReceivedSchema>)
-		| ({ type: "actions.requested" } & z.infer<typeof actionsRequestedSchema>)
-		| ({ type: "action.result" } & z.infer<typeof actionResultSchema>)
-		| ({ type: "input.requested" } & z.infer<typeof inputRequestedSchema>)
-		| ({ type: "reasoning.completed" } & z.infer<
-				typeof reasoningCompletedSchema
-		  >)
-		| ({ type: "message.appended" } & z.infer<typeof messageAppendedSchema>)
-		| ({ type: "message.completed" } & z.infer<typeof messageCompletedSchema>)
-		| ({ type: "turn.failed" } & z.infer<typeof failureSchema>)
-		| ({ type: "session.failed" } & z.infer<typeof failureSchema>)
-		| { type: "turn.started" }
-		| { type: "turn.completed" }
-		| { type: "step.started" }
-		| { type: "session.waiting" }
-		| { type: "session.completed" }
-		| { type: "unknown"; eventType: string }
-	);
-
-export const parseEveEvent = (value: unknown): EveEvent => {
-	const envelope = eveEventEnvelopeSchema.parse(value);
-	const at = envelope.meta?.at;
+const eveEventSchema = eveEventEnvelopeSchema.transform((envelope) => {
 	const data = envelope.data ?? {};
+	const metadata = envelope.meta?.at ? { at: envelope.meta.at } : {};
+	const event = <Type extends string, Schema extends z.AnyZodObject>({
+		schema,
+		type,
+	}: {
+		schema: Schema;
+		type: Type;
+	}): { at?: string; type: Type } & z.output<Schema> => ({
+		...metadata,
+		type,
+		...schema.parse(data),
+	});
+
 	switch (envelope.type) {
 		case "message.received":
-			return { at, type: envelope.type, ...messageReceivedSchema.parse(data) };
+			return event({ schema: messageReceivedSchema, type: envelope.type });
 		case "actions.requested":
-			return { at, type: envelope.type, ...actionsRequestedSchema.parse(data) };
+			return event({ schema: actionsRequestedSchema, type: envelope.type });
 		case "action.result":
-			return { at, type: envelope.type, ...actionResultSchema.parse(data) };
+			return event({ schema: actionResultSchema, type: envelope.type });
 		case "input.requested":
-			return { at, type: envelope.type, ...inputRequestedSchema.parse(data) };
+			return event({ schema: inputRequestedSchema, type: envelope.type });
 		case "reasoning.completed":
-			return {
-				at,
-				type: envelope.type,
-				...reasoningCompletedSchema.parse(data),
-			};
+			return event({ schema: reasoningCompletedSchema, type: envelope.type });
 		case "message.appended":
-			return { at, type: envelope.type, ...messageAppendedSchema.parse(data) };
+			return event({ schema: messageAppendedSchema, type: envelope.type });
 		case "message.completed":
-			return {
-				at,
-				type: envelope.type,
-				...messageCompletedSchema.parse(data),
-			};
+			return event({ schema: messageCompletedSchema, type: envelope.type });
 		case "turn.failed":
+			return event({ schema: failureSchema, type: envelope.type });
 		case "session.failed":
-			return { at, type: envelope.type, ...failureSchema.parse(data) };
+			return event({ schema: failureSchema, type: envelope.type });
 		case "turn.started":
+			return event({ schema: emptyEventSchema, type: envelope.type });
 		case "turn.completed":
+			return event({ schema: emptyEventSchema, type: envelope.type });
 		case "step.started":
+			return event({ schema: emptyEventSchema, type: envelope.type });
 		case "session.waiting":
+			return event({ schema: emptyEventSchema, type: envelope.type });
 		case "session.completed":
-			return { at, type: envelope.type };
+			return event({ schema: emptyEventSchema, type: envelope.type });
 		default:
-			return { at, eventType: envelope.type, type: "unknown" };
+			return {
+				...metadata,
+				eventType: envelope.type,
+				type: "unknown",
+			} as const;
 	}
-};
+});
+
+export type EveEvent = z.infer<typeof eveEventSchema>;
+
+export const parseEveEvent = (value: unknown) => eveEventSchema.parse(value);
