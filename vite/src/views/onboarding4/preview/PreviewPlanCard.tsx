@@ -7,14 +7,14 @@ import type { PreviewProduct } from "./previewTypes";
 
 interface PreviewPlanCardProps {
 	product: PreviewProduct;
-	previewApiKey?: string;
+	isPreviewOrgReady: boolean;
 	isSyncing: boolean;
 	isChanged?: boolean;
 }
 
 export function PreviewPlanCard({
 	product,
-	previewApiKey,
+	isPreviewOrgReady,
 	isSyncing,
 	isChanged = false,
 }: PreviewPlanCardProps) {
@@ -47,7 +47,7 @@ export function PreviewPlanCard({
 				<CardFooter className="pt-3">
 					<PreviewCheckoutButton
 						productId={product.id}
-						previewApiKey={previewApiKey}
+						isPreviewOrgReady={isPreviewOrgReady}
 						isSyncing={isSyncing}
 					/>
 				</CardFooter>
