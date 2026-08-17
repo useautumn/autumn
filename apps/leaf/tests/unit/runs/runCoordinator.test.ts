@@ -112,6 +112,18 @@ describe("dispatchThreadMessage", () => {
 		expect(order).toEqual(["a:start", "a:end", "b:start"]);
 	});
 
+	test("returns the completed run result", async () => {
+		const result = await dispatchThreadMessage({
+			hasAttachments: false,
+			providerUserId: "U1",
+			runKey: "co-result",
+			runNewMessage: async () => "close" as const,
+			text: "first",
+		});
+
+		expect(result).toBe("close");
+	});
+
 	test("falls back to a new run when injection fails", async () => {
 		const run = registerRun({
 			key: "co4",
