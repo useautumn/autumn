@@ -70,6 +70,7 @@ export default defineConfig({
 		// and breaks platform-specific binaries (pg, ioredis, etc.).
 		external: [
 			"@aws-sdk/client-s3",
+			"@duckdb/node-api",
 			"@google-cloud/bigquery",
 			"ioredis",
 			"pino",
