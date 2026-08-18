@@ -44,5 +44,5 @@ export const normalizeOAuthTokenRequest = async ({
 		});
 	}
 
-	return rebuildOAuthRequest({ fields, isJson, request, sortKeys: true });
+	return rebuildOAuthRequest({ fields, isJson, request });
 };

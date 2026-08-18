@@ -1,12 +1,3 @@
-const isNestedTokenPayload = (
-	value: unknown,
-): value is Record<string, unknown> =>
-	typeof value === "object" && value !== null && !Array.isArray(value);
-
-/** better-auth nests the token payload under `response` on some routes and returns it flat on others. */
-export const getOAuthTokenPayload = (body: Record<string, unknown>) =>
-	isNestedTokenPayload(body.response) ? body.response : body;
-
 /** Null when better-auth answered with a non-JSON body, which callers pass through untouched. */
 export const parseOAuthTokenResponseBody = async (response: Response) => {
 	try {
@@ -16,7 +7,7 @@ export const parseOAuthTokenResponseBody = async (response: Response) => {
 	}
 };
 
-/** Swaps in the token Autumn issues, keeping whichever shape better-auth returned. */
+/** Swaps in the token Autumn issues, leaving better-auth's other fields intact. */
 export const rewriteOAuthTokenResponseBody = ({
 	body,
 	scopes,
@@ -25,14 +16,7 @@ export const rewriteOAuthTokenResponseBody = ({
 	body: Record<string, unknown>;
 	scopes: string[];
 	token: string;
-}) => {
-	const issued = { access_token: token, scope: scopes.join(" ") };
-	const nested = body.response;
-
-	return isNestedTokenPayload(nested)
-		? { ...body, response: { ...nested, ...issued } }
-		: { ...body, ...issued };
-};
+}) => ({ ...body, access_token: token, scope: scopes.join(" ") });
 
 /** `response` seeds the headers so better-auth's own headers (cookies, etc.) survive. */
 export const jsonOAuthTokenResponse = ({

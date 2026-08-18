@@ -46,22 +46,20 @@ oauthRouter.get("/api/auth/.well-known/openid-configuration", (c) => {
 // 9207 support makes its OAuth library reject the iss-less (valid) callback.
 const handleAuthServerMetadata = async (c: Context<HonoEnv>) => {
 	const response = await oauthProviderAuthServerMetadata(auth)(c.req.raw);
-	if (!response.ok) return response;
+	const metadata = (await response.json()) as Record<string, unknown>;
 
-	// Discovery must keep working even if the payload stops being the JSON we patch.
-	let metadata: Record<string, unknown>;
-	try {
-		metadata = (await response.clone().json()) as Record<string, unknown>;
-	} catch {
-		return response;
-	}
-	metadata.authorization_response_iss_parameter_supported = false;
+	// The patched body is a different byte length from the one upstream framed,
+	// so a copied Content-Length would truncate the response mid-document.
 	const headers = new Headers(response.headers);
 	headers.delete("Content-Length");
-	return new Response(JSON.stringify(metadata), {
-		status: response.status,
-		headers,
-	});
+
+	return new Response(
+		JSON.stringify({
+			...metadata,
+			authorization_response_iss_parameter_supported: false,
+		}),
+		{ status: response.status, headers },
+	);
 };
 
 oauthRouter.get(
@@ -90,20 +88,23 @@ oauthRouter.get("/.well-known/oauth-protected-resource", (c) => {
 	);
 });
 
+const handleOAuthClientRegistration = async (c: Context<HonoEnv>) => {
+	const { fields } = await parseOAuthRequestFields(c.req.raw);
+	const result = await registerOAuthClient({ body: fields, db });
+
+	if ("error" in result) {
+		return c.json({ error: result.error }, result.status);
+	}
+	return c.json(result.body, result.status);
+};
+
 oauthRouter.post("/api/auth/oauth2/consent", handleOAuthConsentWithEnv);
 oauthRouter.post("/api/auth/oauth2/token", handleOAuthTokenWithApiKey);
 oauthRouter.get("/api/auth/oauth2/authorize", handleOAuthAuthorize);
 oauthRouter.post(
 	"/api/auth/oauth2/register",
 	oauthClientRegisterLimiter,
-	async (c) => {
-		const { fields } = await parseOAuthRequestFields(c.req.raw);
-		const result = await registerOAuthClient({ body: fields, db });
-
-		if ("error" in result)
-			return c.json({ error: result.error }, result.status);
-		return c.json(result.body, result.status);
-	},
+	handleOAuthClientRegistration,
 );
 
 oauthRouter.get(

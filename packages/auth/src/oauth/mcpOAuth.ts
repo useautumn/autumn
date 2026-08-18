@@ -51,8 +51,14 @@ export const returnsOAuthAccessTokenForClientId = ({
 	clientId === SUMMER_OAUTH_CLIENT_ID;
 
 export const getResourceFromOAuthTokenRequest = async (request: Request) => {
-	const { fields, searchParams } = await parseOAuthRequestFields(request);
-	if (searchParams) return searchParams.getAll("resource")[0] ?? null;
+	const { fields, isJson, rawBody } = await parseOAuthRequestFields(request);
+	// RFC 8707 lets a request repeat `resource`; the first one wins, and the
+	// parsed fields only keep the last, so read the form body directly.
+	if (!isJson) {
+		return getOAuthStringField(
+			new URLSearchParams(rawBody).getAll("resource")[0],
+		);
+	}
 
 	const resource = fields.resource;
 	return getOAuthStringField(Array.isArray(resource) ? resource[0] : resource);

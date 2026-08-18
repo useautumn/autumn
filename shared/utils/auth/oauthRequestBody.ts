@@ -6,7 +6,6 @@ export type ParsedOAuthRequest = {
 	fields: OAuthRequestFields;
 	isJson: boolean;
 	rawBody: string;
-	searchParams: URLSearchParams | null;
 };
 
 export const getOAuthStringField = (value: unknown) =>
@@ -21,7 +20,9 @@ const bodyIsJson = ({
 }) => {
 	const isJsonContentType =
 		contentType.split(";")[0]?.trim().toLowerCase() === "application/json";
-	// Some OAuth clients POST JSON without a content type, so sniff the body too.
+	// Dynamic client registration read its body with `request.json()`, which
+	// ignores the content type, so clients that omit or mislabel it must keep
+	// registering. A body opening with `{` is never a valid form payload.
 	const looksLikeJson = rawBody.trimStart().startsWith("{");
 
 	return isJsonContentType || looksLikeJson;
@@ -36,12 +37,7 @@ export const parseOAuthRequestFields = async (
 	const contentType = request.headers.get("content-type") ?? "";
 	const rawBody = await request.text();
 	const isJson = bodyIsJson({ contentType, rawBody });
-	const empty = {
-		fields: {},
-		isJson,
-		rawBody,
-		searchParams: null,
-	};
+	const empty = { fields: {}, isJson, rawBody };
 	if (!rawBody) return empty;
 
 	if (isJson) {
@@ -52,39 +48,40 @@ export const parseOAuthRequestFields = async (
 		}
 	}
 
-	const searchParams = new URLSearchParams(rawBody);
 	return {
 		...empty,
-		fields: Object.fromEntries(searchParams.entries()),
-		searchParams,
+		fields: Object.fromEntries(new URLSearchParams(rawBody).entries()),
 	};
 };
 
-/** Re-encodes `fields` in the request's original content type. */
+/**
+ * Re-encodes `fields` in the request's original content type, with keys in a
+ * stable order: the refresh replay key hashes this body, so a client retrying
+ * the same refresh has to produce the same bytes.
+ */
 export const rebuildOAuthRequest = ({
 	fields,
 	isJson,
 	request,
-	sortKeys = false,
 }: {
 	fields: OAuthRequestFields;
 	isJson: boolean;
 	request: Request;
-	sortKeys?: boolean;
 }) => {
+	const sortedEntries = Object.keys(fields)
+		.sort()
+		.map((key) => [key, fields[key]] as const);
+
 	if (isJson) {
 		return new Request(request, {
-			body: sortKeys
-				? JSON.stringify(fields, Object.keys(fields).sort())
-				: JSON.stringify(fields),
+			body: JSON.stringify(Object.fromEntries(sortedEntries)),
 		});
 	}
 
 	const params = new URLSearchParams();
-	for (const [key, value] of Object.entries(fields)) {
+	for (const [key, value] of sortedEntries) {
 		if (typeof value === "string") params.set(key, value);
 	}
-	if (sortKeys) params.sort();
 
 	return new Request(request, { body: params });
 };

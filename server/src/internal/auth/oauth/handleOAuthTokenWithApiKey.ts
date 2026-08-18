@@ -17,7 +17,6 @@ import {
 } from "./oauthAccessTokenApiKey.js";
 import { oauthTokenErrorResponse } from "./token/oauthTokenErrorResponse.js";
 import {
-	getOAuthTokenPayload,
 	jsonOAuthTokenResponse,
 	parseOAuthTokenResponseBody,
 	rewriteOAuthTokenResponseBody,
@@ -62,13 +61,12 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		const body = await parseOAuthTokenResponseBody(response);
 		if (!body) return response;
 
-		const tokenPayload = getOAuthTokenPayload(body);
-		const accessToken = getOAuthStringField(tokenPayload.access_token);
+		const accessToken = getOAuthStringField(body.access_token);
 		if (!accessToken) return response;
 
 		// 4. Read back the scopes better-auth granted
 		const { scopes: requestedScopes, resourceScopes: requestedResourceScopes } =
-			parseOAuthTokenResponseScopes({ scope: tokenPayload.scope });
+			parseOAuthTokenResponseScopes({ scope: body.scope });
 
 		// 5. Bind the minted token to its consent and to the scopes that consent still backs
 		const tokenRecord = await getOAuthAccessTokenRecord({

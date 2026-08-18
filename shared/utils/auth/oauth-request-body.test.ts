@@ -27,24 +27,25 @@ describe("parseOAuthRequestFields", () => {
 		);
 
 		expect(parsed.isJson).toBe(true);
-		expect(parsed.searchParams).toBeNull();
 		expect(parsed.fields).toEqual({
 			grant_type: "refresh_token",
 			resource: "https://x/mcp",
 		});
 	});
 
-	test("parses form bodies and keeps the raw search params", async () => {
+	test("parses form bodies", async () => {
 		const parsed = await parseOAuthRequestFields(
 			postRequest({
-				body: "grant_type=refresh_token&resource=a&resource=b",
+				body: "grant_type=refresh_token&resource=https%3A%2F%2Fx%2Fmcp",
 				contentType: "application/x-www-form-urlencoded",
 			}),
 		);
 
 		expect(parsed.isJson).toBe(false);
-		expect(parsed.searchParams?.getAll("resource")).toEqual(["a", "b"]);
-		expect(parsed.fields.grant_type).toBe("refresh_token");
+		expect(parsed.fields).toEqual({
+			grant_type: "refresh_token",
+			resource: "https://x/mcp",
+		});
 	});
 
 	test("sniffs json bodies sent without a content type", async () => {
@@ -71,23 +72,26 @@ describe("parseOAuthRequestFields", () => {
 	});
 });
 
+// The refresh replay key hashes the rebuilt body, so the encoding has to be
+// canonical: same fields in, same bytes out, whatever order they arrived in.
 describe("rebuildOAuthRequest", () => {
-	test("re-encodes json fields and can sort keys", async () => {
+	test("re-encodes json fields in key order, keeping nested values", async () => {
 		const request = postRequest({
 			body: '{"b":"2","a":"1"}',
 			contentType: "application/json",
 		});
 		const rebuilt = rebuildOAuthRequest({
-			fields: { b: "2", a: "1" },
+			fields: { b: "2", a: "1", nested: { keep: true } },
 			isJson: true,
 			request,
-			sortKeys: true,
 		});
 
-		expect(await rebuilt.text()).toBe('{"a":"1","b":"2"}');
+		expect(await rebuilt.text()).toBe(
+			'{"a":"1","b":"2","nested":{"keep":true}}',
+		);
 	});
 
-	test("re-encodes form fields, dropping non-string values", async () => {
+	test("re-encodes form fields in key order, dropping non-string values", async () => {
 		const request = postRequest({
 			body: "b=2&a=1",
 			contentType: "application/x-www-form-urlencoded",
@@ -96,7 +100,6 @@ describe("rebuildOAuthRequest", () => {
 			fields: { b: "2", a: "1", nested: { drop: true } },
 			isJson: false,
 			request,
-			sortKeys: true,
 		});
 
 		expect(await rebuilt.text()).toBe("a=1&b=2");

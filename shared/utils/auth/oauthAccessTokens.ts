@@ -42,7 +42,7 @@ export async function findActiveOAuthAccessToken({
 		where: and(
 			inArray(
 				oauthAccessToken.token,
-				await getOAuthAccessTokenValues(rawAccessToken),
+				getOAuthAccessTokenValues(rawAccessToken),
 			),
 			gt(oauthAccessToken.expiresAt, new Date()),
 		),
