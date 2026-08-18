@@ -61,11 +61,13 @@ export const computeSyncPlan = ({
 	});
 	const preparedImmediateCustomerProducts = immediate.insertCustomerProducts;
 
-	const upsertSubscription = syncContext.stripeSubscription
-		? initSubscriptionFromStripe({
-				ctx,
-				stripeSubscription: syncContext.stripeSubscription,
-			})
+	const upsertSubscriptions = syncContext.stripeSubscription
+		? [
+				initSubscriptionFromStripe({
+					ctx,
+					stripeSubscription: syncContext.stripeSubscription,
+				}),
+			]
 		: undefined;
 
 	const autumnBillingPlan: AutumnBillingPlan = {
@@ -97,7 +99,7 @@ export const computeSyncPlan = ({
 				? immediate.customerLicenseUpdates
 				: undefined,
 		lockCustomerCurrency: syncContextToCurrencyLock({ syncContext }),
-		upsertSubscription,
+		upsertSubscriptions,
 		pooledBalancePlan,
 	};
 

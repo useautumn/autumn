@@ -149,7 +149,11 @@ export const mergeAutumnBillingPlans = ({
 						}) ?? [],
 				}
 			: undefined,
-	upsertSubscription: incoming.upsertSubscription ?? base.upsertSubscription,
+	upsertSubscriptions: mergeByKey({
+		base: base.upsertSubscriptions,
+		incoming: incoming.upsertSubscriptions,
+		getKey: (subscription) => subscription.stripe_id ?? subscription.id,
+	}),
 	upsertInvoice: incoming.upsertInvoice ?? base.upsertInvoice,
 	refundPlan: incoming.refundPlan ?? base.refundPlan,
 });

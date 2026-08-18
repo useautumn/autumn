@@ -44,8 +44,10 @@ export const logSyncPlan = ({
 						? `${(autumnBillingPlan.customEntitlements ?? []).length} custom ent(s)`
 						: "none",
 
-				upsertSubscription:
-					autumnBillingPlan.upsertSubscription?.stripe_id ?? "none",
+				upsertSubscriptions:
+					autumnBillingPlan.upsertSubscriptions
+						?.map((subscription) => subscription.stripe_id)
+						.join(", ") || "none",
 
 				schedulePhases:
 					phases.length > 0
