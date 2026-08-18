@@ -114,7 +114,6 @@ export const executePostgresDeduction = async ({
 				usageBasedCusEntIdsByFeatureId,
 				rollovers,
 				customerEntitlements,
-				unlimitedFeatureIds,
 				lock: preparedLock,
 			} = prepareFeatureDeduction({
 				ctx,
@@ -123,17 +122,7 @@ export const executePostgresDeduction = async ({
 				options,
 			});
 
-			if (customerEntitlements.length === 0 || unlimitedFeatureIds.length > 0) {
-				if (unlimitedFeatureIds.length > 0 && preparedLock?.enabled) {
-					await saveLockReceipt({
-						lock: preparedLock,
-						customerId: fullCustomer.id || customerId,
-						featureId: feature.id,
-						entityId,
-						items: [],
-						overrideLockValue: toDeduct,
-					});
-				}
+			if (customerEntitlements.length === 0) {
 				continue;
 			}
 

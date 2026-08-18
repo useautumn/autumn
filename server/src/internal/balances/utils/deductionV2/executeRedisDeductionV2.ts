@@ -15,7 +15,6 @@ import {
 } from "@/internal/balances/idempotency/trackQueueIdempotency.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
-import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
@@ -35,7 +34,6 @@ import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullSubject.js";
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
 import { applyUsageWindowUpdatesToFullSubject } from "./applyUsageWindowUpdatesToFullSubject.js";
-import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
 import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
@@ -140,8 +138,6 @@ export const executeRedisDeductionV2 = async ({
 			usageWindowFeatureIds,
 			rollovers,
 			customerEntitlements,
-			unlimitedFeatureIds,
-			unlimitedCusEnt,
 			lock: preparedLock,
 		} = prepareFeatureDeductionV2({
 			ctx,
@@ -150,30 +146,6 @@ export const executeRedisDeductionV2 = async ({
 			options,
 			now: usageWindowNow,
 		});
-
-		if (unlimitedFeatureIds.length > 0) {
-			if (preparedLock?.enabled) {
-				await saveLockReceiptV2({
-					lock: preparedLock,
-					customerId,
-					featureId: feature.id,
-					entityId,
-					items: [],
-					overrideLockValue: toDeduct,
-					redisInstance: redisInstance ?? ctx.redisV2,
-				});
-			}
-			const unlimitedPlanLog = buildUnlimitedPlanMutationLog({
-				unlimitedCusEnt,
-				toDeduct,
-				fallbackDeduction: deduction.deduction,
-				entityId,
-			});
-			if (unlimitedPlanLog) {
-				allMutationLogs.push(unlimitedPlanLog);
-			}
-			continue;
-		}
 
 		const idempotencyRedisKey = idempotencyKey
 			? getRedisTrackFeatureIdempotencyKey({

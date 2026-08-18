@@ -18,7 +18,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
-import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { computeCreditCosts } from "../deduction/computeCreditCosts.js";
 import type {
@@ -66,40 +65,14 @@ export const prepareFeatureDeductionV2 = ({
 		customerEntitlementFilters,
 	});
 
-	const unlimitedFeatureIds: string[] = [];
-	// Track the chosen unlimited cusEnt so the deduction short-circuit can
-	// still attribute the event to a plan. Prefer cusEnts whose feature
-	// matches the tracked one (over credit-system parents); within that,
-	// take the first match in the already-sorted customerEntitlements list.
-	let unlimitedCusEntPrimary: FullCusEntWithFullCusProduct | undefined;
-	let unlimitedCusEntFallback: FullCusEntWithFullCusProduct | undefined;
 	const isUnlimitedCusEnt = (ce: FullCusEntWithFullCusProduct): boolean =>
 		ce.entitlement.allowance_type === AllowanceType.Unlimited ||
 		Boolean(ce.unlimited);
 
-	for (const relevantFeature of relevantFeatures) {
-		const { unlimited: featureUnlimited } = getUnlimitedAndUsageAllowed({
-			cusEnts: customerEntitlements,
-			internalFeatureId: relevantFeature.internal_id!,
-		});
-
-		if (featureUnlimited) {
-			unlimitedFeatureIds.push(relevantFeature.id);
-			const matchingCusEnt = customerEntitlements.find(
-				(ce) =>
-					ce.internal_feature_id === relevantFeature.internal_id &&
-					isUnlimitedCusEnt(ce),
-			);
-			if (!matchingCusEnt) continue;
-			if (relevantFeature.id === feature.id) {
-				unlimitedCusEntPrimary ??= matchingCusEnt;
-			} else {
-				unlimitedCusEntFallback ??= matchingCusEnt;
-			}
-		}
-	}
-
-	const unlimitedCusEnt = unlimitedCusEntPrimary ?? unlimitedCusEntFallback;
+	// Unlimited tracks never touch or enforce usage windows: when any relevant
+	// cusEnt is unlimited, no window limits are resolved or handed to the
+	// deduction script.
+	const hasUnlimitedCusEnt = customerEntitlements.some(isUnlimitedCusEnt);
 
 	const effectiveFeatureIds = relevantFeatures.map((candidate) => candidate.id);
 	const spendLimitByFeatureId = fullSubjectToSpendLimitByFeatureId({
@@ -133,13 +106,16 @@ export const prepareFeatureDeductionV2 = ({
 	});
 
 	// Filtered limits only bind events whose properties match; the script never
-	// sees non-matching limits, so their counters stay untouched.
-	const usageWindowLimits = allUsageWindowLimits.filter((windowLimit) =>
-		usageLimitFilterMatchesProperties({
-			filterProperties: windowLimit.filter_properties,
-			eventProperties: options.eventProperties,
-		}),
-	);
+	// sees non-matching limits, so their counters stay untouched. Unlimited
+	// tracks bypass windows entirely, so the script never sees window limits.
+	const usageWindowLimits = hasUnlimitedCusEnt
+		? []
+		: allUsageWindowLimits.filter((windowLimit) =>
+				usageLimitFilterMatchesProperties({
+					filterProperties: windowLimit.filter_properties,
+					eventProperties: options.eventProperties,
+				}),
+			);
 
 	// Counters are customer-scoped: a null anchor only means calendar-aligned
 	// bounds with no provenance, not an unenforceable cap.
@@ -198,15 +174,22 @@ export const prepareFeatureDeductionV2 = ({
 				effectiveUsageAllowed = false;
 			}
 
+			// Unlimited cusEnts are an infinite sink: always usage-allowed with no
+			// balance clamps in either direction, so the balance drifts negative as
+			// a usage counter and refunds can move it back up freely.
+			const isUnlimited = isUnlimitedCusEnt(customerEntitlement);
+
 			return {
 				customer_entitlement_id: customerEntitlement.id,
 				credit_cost: creditCost,
 				feature_id: customerEntitlement.entitlement.feature.id,
 				entity_feature_id:
 					customerEntitlement.entitlement.entity_feature_id ?? null,
-				usage_allowed: effectiveUsageAllowed,
-				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
-				max_balance: resetBalance,
+				usage_allowed: isUnlimited || effectiveUsageAllowed,
+				min_balance:
+					isUnlimited || !notNullish(maxOverage) ? undefined : -maxOverage,
+				max_balance: isUnlimited ? undefined : resetBalance,
+				...(isUnlimited ? { unlimited: true } : {}),
 			};
 		});
 
@@ -267,8 +250,6 @@ export const prepareFeatureDeductionV2 = ({
 			id: rollover.id,
 			credit_cost: rollover.credit_cost,
 		})),
-		unlimitedFeatureIds,
-		unlimitedCusEnt,
 		lock: preparedLock,
 	};
 };
