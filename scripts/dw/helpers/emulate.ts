@@ -1,6 +1,8 @@
 import {
 	appendFileSync,
+	closeSync,
 	existsSync,
+	openSync,
 	readFileSync,
 	rmSync,
 	writeFileSync,
@@ -77,6 +79,31 @@ function ensureEmulateBinary(): boolean {
 	return sh("bun", ["install", "-g", "emulate"]).code === 0;
 }
 
+export function spawnEmulateDaemon({
+	command,
+	cwd,
+	logPath,
+}: {
+	command: string[];
+	cwd: string;
+	logPath: string;
+}): ReturnType<typeof Bun.spawn> {
+	const logFd = openSync(logPath, "a");
+	try {
+		const proc = Bun.spawn(command, {
+			cwd,
+			detached: true,
+			stdout: logFd,
+			stderr: logFd,
+			stdin: "ignore",
+		});
+		proc.unref();
+		return proc;
+	} finally {
+		closeSync(logFd);
+	}
+}
+
 /** Laptop portless, or the public emulate host when Cloud sets origin. */
 export function ensureEmulateRunning({
 	origin,
@@ -125,8 +152,8 @@ function ensureHeadlessEmulateRunning({
 	const seed = join(PROJECT_ROOT, "emulate.config.yaml");
 	log(`starting google emulate on :${EMULATE_PORT} (base ${publicBase})`);
 
-	const proc = Bun.spawn(
-		[
+	const proc = spawnEmulateDaemon({
+		command: [
 			"emulate",
 			"start",
 			"-p",
@@ -138,22 +165,13 @@ function ensureHeadlessEmulateRunning({
 			"--base-url",
 			publicBase,
 		],
-		{
-			cwd: PROJECT_ROOT,
-			stdout: "pipe",
-			stderr: "pipe",
-			stdin: "ignore",
-		},
-	);
+		cwd: PROJECT_ROOT,
+		logPath: EMULATE_LOG,
+	});
 	writeFileSync(EMULATE_PID_FILE, `${proc.pid}\n`);
 	// #region agent log
 	appendFileSync("/opt/cursor/logs/debug.log", `${JSON.stringify({ hypothesisId: "C", location: "scripts/dw/helpers/emulate.ts:ensureHeadlessEmulateRunning", message: "emulate child spawned with piped stdio", data: { parentPid: process.pid, childPid: proc.pid, exitCode: proc.exitCode }, timestamp: Date.now() })}\n`);
 	// #endregion
-	void proc.exited.then(async (code) => {
-		const out = await new Response(proc.stdout).text();
-		const err = await new Response(proc.stderr).text();
-		writeFileSync(EMULATE_LOG, `${out}\n${err}\nexit=${code}\n`);
-	});
 
 	for (let i = 0; i < 30; i++) {
 		if (emulateReachable({ baseUrl: loopback })) {
