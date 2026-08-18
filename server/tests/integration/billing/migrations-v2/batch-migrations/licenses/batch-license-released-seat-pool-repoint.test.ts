@@ -1,23 +1,5 @@
-/**
- * A run that grants nothing must not report the customer as succeeded.
- *
- * insertLicenseCustomerEntitlementRows re-asserts assignment state at insert
- * time (customer_license_link_id / internal_entity_id NOT NULL, status in
- * MIGRATABLE_STATUSES), so released seats yield no inserted rows. Nothing
- * records that drop: excludedInternalCustomerIds only ever carries
- * cycle-enrichment refusals, and enrichCustomerEntitlementCycles returns a
- * hardcoded empty list, so the field is structurally dead on this lane.
- *
- * executeBatchMigrationPage then unions insertedItems with repointedIds, and
- * the whole-page pool repoint fires regardless of whether any assignment row
- * was written. The customer is marked succeeded with zero entitlement rows —
- * the migration claims the item was granted to seats that do not exist.
- * candidateCount and affected would expose the mismatch but are consumed only
- * by a debug log.
- *
- * Red: the customer is marked succeeded while holding no row for the feature.
- * Green: success requires a row actually written.
- */
+/** Released seats receive no rows, but the pool definition still changes for
+ * future assignments, so the customer migration succeeds. */
 import { expect, test } from "bun:test";
 import { customerEntitlements, migrationItemRuns } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
@@ -34,7 +16,7 @@ const INCLUDED_SEATS = 1;
 const ATTACHED_SEATS = 3;
 const ASSIGNED_SEATS = 2;
 
-test(`${chalk.yellowBright("batch-license-customize: a run granting nothing is not reported as succeeded")}`, async () => {
+test(`${chalk.yellowBright("batch-license-customize: released seats still allow a successful pool repoint")}`, async () => {
 	const customerId = "batch-released-seat-customer";
 	const idPrefix = "batch-released-seat";
 
@@ -49,7 +31,12 @@ test(`${chalk.yellowBright("batch-license-customize: a run granting nothing is n
 
 	const { ctx, autumnV2_2, autumnV2_3, parent, devSeat } = scenario;
 
-	const { assignments } = await getLicenseDbState({ db: ctx.db, customerId });
+	const { assignments, pools } = await getLicenseDbState({
+		db: ctx.db,
+		customerId,
+	});
+	const [poolBefore] = pools;
+	expect(poolBefore).toBeDefined();
 	const liveAssignments = assignments.filter(
 		(assignment) => assignment.internal_entity_id,
 	);
@@ -102,13 +89,16 @@ test(`${chalk.yellowBright("batch-license-customize: a run granting nothing is n
 
 	expect(messageRows).toHaveLength(0);
 
-	// The pool repoint alone puts the customer in `succeeded`, so the run claims
-	// the item was granted while no assignment row exists to carry it. Only a
-	// run that actually wrote a row may report success.
+	const { pools: poolsAfter } = await getLicenseDbState({
+		db: ctx.db,
+		customerId,
+	});
+	expect(poolsAfter[0]?.plan_license_id).not.toBe(poolBefore!.plan_license_id);
+
 	const itemRuns = await ctx.db
 		.select({ status: migrationItemRuns.status })
 		.from(migrationItemRuns)
 		.where(eq(migrationItemRuns.migration_internal_id, migration.internal_id));
 	expect(itemRuns.length).toBeGreaterThan(0);
-	expect(itemRuns.every((run) => run.status !== "succeeded")).toBe(true);
+	expect(itemRuns.every((run) => run.status === "succeeded")).toBe(true);
 });

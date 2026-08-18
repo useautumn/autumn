@@ -253,9 +253,8 @@ const setPaidQuantity = async ({
 	return row;
 };
 
-/** Repoints the pool onto a new definition in place: granted re-derives from
- * the new included (+ optional new paid count); remaining shifts by the
- * granted delta, floored at zero. Same row, same link — seats untouched. */
+/** Repoints in place; negative remaining preserves over-allocation for
+ * assignment reconciliation. Same row and link, so seats stay attached. */
 const repointDefinition = async ({
 	db,
 	customerLicenseId,
@@ -275,7 +274,7 @@ const repointDefinition = async ({
 		.set({
 			plan_license_id: planLicenseId,
 			granted: newGranted,
-			remaining: sql`GREATEST(${customerLicenses.remaining} + (${newGranted} - ${customerLicenses.granted}), 0)`,
+			remaining: sql`${customerLicenses.remaining} + (${newGranted} - ${customerLicenses.granted})`,
 			...(paidQuantity !== undefined ? { paid_quantity: paidQuantity } : {}),
 			updated_at: Date.now(),
 		})

@@ -29,10 +29,8 @@ export const repointLicensePoolRows = async ({
 		SET
 			plan_license_id = ${planLicenseId},
 			granted = target.included + pool.paid_quantity,
-			remaining = GREATEST(
+			remaining =
 				pool.remaining + ((target.included + pool.paid_quantity) - pool.granted),
-				0
-			),
 			updated_at = ${Date.now()}
 		FROM customer_products AS cp, plan_license AS target
 		WHERE cp.id = pool.parent_customer_product_id
