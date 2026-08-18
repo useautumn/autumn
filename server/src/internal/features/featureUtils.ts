@@ -107,10 +107,10 @@ export const validateCreditSystem = (
 		}
 	}
 
-	for (let i = 0; i < newConfig.schema.length; i++) {
-		const creditAmount = parseFloat(
-			newConfig.schema[i].credit_amount.toString(),
-		);
+	for (const schemaItem of newConfig.schema) {
+		if (schemaItem.tier_behavior === "graduated") continue;
+
+		const creditAmount = parseFloat(schemaItem.credit_amount.toString());
 
 		if (Number.isNaN(creditAmount)) {
 			throw new RecaseError({
@@ -120,7 +120,7 @@ export const validateCreditSystem = (
 			});
 		}
 
-		newConfig.schema[i].credit_amount = creditAmount;
+		schemaItem.credit_amount = creditAmount;
 	}
 
 	return newConfig;
