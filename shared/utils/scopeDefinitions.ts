@@ -226,13 +226,20 @@ export const MODERN_SCOPES: readonly ScopeString[] = [
 ] as const;
 
 /**
+ * The OIDC scope that asks the authorization server for a refresh token.
+ * It grants no access to any resource, so it belongs in the authorization
+ * server's metadata, never in a protected resource's `scopes_supported`.
+ */
+export const OFFLINE_ACCESS_SCOPE = "offline_access";
+
+/**
  * Standard OpenID Connect scopes (for compatibility with OIDC clients).
  */
 export const OPENID_SCOPES = [
 	"openid",
 	"profile",
 	"email",
-	"offline_access",
+	OFFLINE_ACCESS_SCOPE,
 ] as const;
 
 /**

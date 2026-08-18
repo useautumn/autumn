@@ -4,6 +4,13 @@ import {
 } from "@autumn/shared/utils/auth/oauthRequestBody";
 import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
 
+/**
+ * Drops requested scopes the grant does not carry. A request that names only
+ * foreign scopes is forwarded unchanged rather than blanked: better-auth then
+ * rejects it with `invalid_scope` naming the offending scope, whereas an empty
+ * or absent `scope` would read as "no scope requested" and re-issue the grant's
+ * full set — the widening this narrowing exists to prevent.
+ */
 const constrainScopeToGrant = ({
 	grantedScopes,
 	scope,

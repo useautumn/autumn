@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { getProtectedResourceMetadata } from "@autumn/auth/oauth";
+import {
+	getProtectedResourceMetadata,
+	UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND,
+} from "@autumn/auth/oauth";
 import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
 import { Scopes } from "@autumn/shared/scopeDefinitions";
 import type { OAuthAccessTokenDb } from "@autumn/shared/utils/auth/oauthAccessTokens";
@@ -19,9 +22,15 @@ const logger = {
 	warning: () => {},
 } as never;
 
-const oauthTokenDb = (row: unknown) =>
+const oauthTokenDb = (row: unknown, consentKind?: string) =>
 	({
-		query: { oauthAccessToken: { findFirst: async () => row } },
+		query: {
+			oauthAccessToken: { findFirst: async () => row },
+			oauthConsent: {
+				findFirst: async () =>
+					consentKind ? { metadata: { kind: consentKind } } : undefined,
+			},
+		},
 	}) as unknown as OAuthAccessTokenDb;
 
 const unusedDb = oauthTokenDb(undefined);
@@ -154,11 +163,15 @@ describe("MCP OAuth auth resolution", () => {
 	test("keeps scope-less unrestricted chat tokens usable", async () => {
 		const auth = await buildAuthForRequest({
 			headers: new Headers({ authorization: "Bearer am_oauth_token" }),
-			db: oauthTokenDb({
-				userId: "user_1",
-				referenceId: "org_1",
-				scopes: [],
-			}),
+			db: oauthTokenDb(
+				{
+					userId: "user_1",
+					referenceId: "org_1",
+					oauthConsentId: "oauth_consent_1",
+					scopes: [],
+				},
+				UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND,
+			),
 			flags: flags as MCPOAuthFlags,
 			logger,
 			resourceUrl,
@@ -166,6 +179,49 @@ describe("MCP OAuth auth resolution", () => {
 
 		expect(auth.scopes).toEqual([]);
 		expect(auth.orgId).toBe("org_1");
+	});
+
+	test("rejects a scope-less token no unrestricted chat consent backs", async () => {
+		await expect(
+			buildAuthForRequest({
+				headers: new Headers({ authorization: "Bearer am_oauth_token" }),
+				db: oauthTokenDb(
+					{
+						userId: "user_1",
+						referenceId: "org_1",
+						oauthConsentId: "oauth_consent_1",
+						scopes: [],
+					},
+					"slack_admin",
+				),
+				flags: flags as MCPOAuthFlags,
+				logger,
+				resourceUrl,
+			}),
+		).rejects.toMatchObject({
+			status: 403,
+			error: "insufficient_scope",
+		} satisfies Partial<OAuthHttpError>);
+	});
+
+	test("rejects a scope-less token with no consent at all", async () => {
+		await expect(
+			buildAuthForRequest({
+				headers: new Headers({ authorization: "Bearer am_oauth_token" }),
+				db: oauthTokenDb({
+					userId: "user_1",
+					referenceId: "org_1",
+					oauthConsentId: null,
+					scopes: [],
+				}),
+				flags: flags as MCPOAuthFlags,
+				logger,
+				resourceUrl,
+			}),
+		).rejects.toMatchObject({
+			status: 403,
+			error: "insufficient_scope",
+		} satisfies Partial<OAuthHttpError>);
 	});
 
 	test("accepts a token stamped with this resource, ignoring canonical noise", async () => {

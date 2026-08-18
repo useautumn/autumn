@@ -1,4 +1,5 @@
 import { stripOAuthTokenPrefix } from "@autumn/auth";
+import { isUnrestrictedChatOAuthConsent } from "@autumn/auth/oauth";
 import {
 	AppEnv,
 	AuthType,
@@ -13,7 +14,7 @@ import {
 	RecaseError,
 	sortFeatures,
 } from "@autumn/shared";
-import { getOAuthAccessTokenValues } from "@autumn/shared/utils/auth/oauthAccessTokens";
+import { getOAuthTokenValues } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { and, eq, gt, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Context, Next } from "hono";
@@ -31,6 +32,28 @@ const getOAuthEnvironment = ({ env }: { env?: AppEnv | null }) => {
 	});
 };
 
+/**
+ * The route scope check fails open on an empty scope list, so a scope-less OAuth
+ * grant is admin-equivalent here. Only Leaf's unrestricted chat consent may hold
+ * one; the consent row is already joined, so this costs no extra query.
+ */
+const assertScopeLessGrantIsAllowed = ({
+	consentMetadata,
+	scopes,
+}: {
+	consentMetadata: Record<string, unknown> | null;
+	scopes: string[];
+}) => {
+	if (scopes.length > 0) return;
+	if (isUnrestrictedChatOAuthConsent({ metadata: consentMetadata })) return;
+
+	throw new RecaseError({
+		message: "OAuth token has no scopes",
+		code: ErrCode.InsufficientScopes,
+		statusCode: 403,
+	});
+};
+
 const getOAuthRequestContext = async ({
 	c,
 	token,
@@ -39,14 +62,13 @@ const getOAuthRequestContext = async ({
 	token: string;
 }) => {
 	const ctx = c.get("ctx");
-	const tokenValues = await getOAuthAccessTokenValues(
-		stripOAuthTokenPrefix({ token }),
-	);
+	const tokenValues = getOAuthTokenValues(stripOAuthTokenPrefix({ token }));
 	const rows = await ctx.db
 		.select({
 			tokenUserId: oauthAccessToken.userId,
 			tokenScopes: oauthAccessToken.scopes,
 			consentEnv: oauthConsent.env,
+			consentMetadata: oauthConsent.metadata,
 			org: organizations,
 			masterOrg,
 			feature: features,
@@ -92,6 +114,11 @@ const getOAuthRequestContext = async ({
 			statusCode: 401,
 		});
 	}
+
+	assertScopeLessGrantIsAllowed({
+		consentMetadata: first.consentMetadata,
+		scopes: first.tokenScopes,
+	});
 
 	const master: Organization | null = first.masterOrg
 		? {

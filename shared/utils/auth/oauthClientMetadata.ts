@@ -2,11 +2,23 @@ import { z } from "zod";
 
 export const MCP_CLIENT_KIND = "mcp_client";
 
-/** Anything that is not an object with these fields reads as unclassified metadata. */
+/**
+ * Client classification keys, across every shape rows have been written in:
+ * `kind`/`mcpClientType` from the current writers, plus the `client`,
+ * `clientType`, `client_type` and `source` variants legacy first-party clients
+ * persisted. Each field catches on its own so one malformed key cannot blank
+ * its siblings; anything that is not an object reads as unclassified.
+ */
+const optionalMetadataString = z.string().optional().catch(undefined);
+
 const oauthClientMetadataSchema = z
 	.object({
-		kind: z.string().optional(),
-		mcpClientType: z.string().optional(),
+		kind: optionalMetadataString,
+		mcpClientType: optionalMetadataString,
+		client: optionalMetadataString,
+		clientType: optionalMetadataString,
+		client_type: optionalMetadataString,
+		source: optionalMetadataString,
 	})
 	.catch({});
 

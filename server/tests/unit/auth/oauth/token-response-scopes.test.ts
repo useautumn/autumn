@@ -59,7 +59,7 @@ describe("oauthTokenErrorResponse", () => {
 		});
 	});
 
-	test("keeps mapping grant failures to invalid_grant at their own status", async () => {
+	test("maps grant failures to invalid_grant at the RFC 6749 status", async () => {
 		const response = oauthTokenErrorResponse({
 			error: new RecaseError({
 				message: "OAuth token consent is ambiguous",
@@ -68,10 +68,27 @@ describe("oauthTokenErrorResponse", () => {
 			}),
 		});
 
-		expect(response?.status).toBe(401);
+		expect(response?.status).toBe(400);
 		expect(await response?.json()).toEqual({
 			error: "invalid_grant",
 			error_description: "OAuth token consent is ambiguous",
+		});
+	});
+
+	test("maps scope failures to invalid_scope", async () => {
+		const response = oauthTokenErrorResponse({
+			error: new RecaseError({
+				message: "No requested scopes can be granted to this OAuth client",
+				code: ErrCode.InsufficientScopes,
+				statusCode: 403,
+			}),
+		});
+
+		expect(response?.status).toBe(400);
+		expect(await response?.json()).toEqual({
+			error: "invalid_scope",
+			error_description:
+				"No requested scopes can be granted to this OAuth client",
 		});
 	});
 

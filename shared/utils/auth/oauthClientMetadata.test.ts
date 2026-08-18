@@ -28,4 +28,32 @@ describe("parseOAuthClientMetadata", () => {
 		expect(parseOAuthClientMetadata("42")).toEqual({});
 		expect(parseOAuthClientMetadata(7)).toEqual({});
 	});
+
+	test("reads the legacy first-party classification keys", () => {
+		expect(
+			parseOAuthClientMetadata({
+				client: "atmn",
+				clientType: "atmn",
+				client_type: "atmn",
+				source: "autumn-cli",
+			}),
+		).toEqual({
+			client: "atmn",
+			clientType: "atmn",
+			client_type: "atmn",
+			source: "autumn-cli",
+		});
+	});
+
+	test("drops only the malformed key, not its siblings", () => {
+		expect(parseOAuthClientMetadata({ kind: 7, client: "summer" })).toEqual({
+			client: "summer",
+		});
+	});
+
+	test("ignores keys it does not classify on", () => {
+		expect(
+			parseOAuthClientMetadata({ kind: MCP_CLIENT_KIND, unrelated: "value" }),
+		).toEqual({ kind: MCP_CLIENT_KIND });
+	});
 });

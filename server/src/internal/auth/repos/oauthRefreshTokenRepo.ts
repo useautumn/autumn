@@ -2,7 +2,7 @@ import { oauthRefreshToken } from "@autumn/shared";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-export const deleteOAuthRefreshTokensByClientAndReference = async ({
+const deleteOAuthRefreshTokensByClientAndReference = async ({
 	db,
 	clientId,
 	referenceId,
@@ -22,7 +22,7 @@ export const deleteOAuthRefreshTokensByClientAndReference = async ({
 			),
 		);
 
-export const getOAuthRefreshTokenByTokenValues = async ({
+const getOAuthRefreshTokenByTokenValues = async ({
 	db,
 	tokenValues,
 }: {
@@ -39,7 +39,7 @@ export const getOAuthRefreshTokenByTokenValues = async ({
 };
 
 /** Null consent/resource leave the stored value alone; a grant is never blanked. */
-export const updateOAuthRefreshTokenGrant = async ({
+const updateOAuthRefreshTokenGrant = async ({
 	db,
 	id,
 	oauthConsentId,

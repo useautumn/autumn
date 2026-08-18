@@ -60,7 +60,7 @@ test("MCP OAuth refresh narrows scopes and replays consumed-token retries", asyn
 		});
 		await db.insert(oauthRefreshToken).values({
 			id: generateId("oauth_refresh"),
-			token: await hashOAuthToken(refreshToken),
+			token: hashOAuthToken(refreshToken),
 			clientId,
 			userId: session.userId,
 			referenceId: defaultCtx.org.id,
@@ -127,10 +127,7 @@ test("MCP OAuth refresh narrows scopes and replays consumed-token retries", asyn
 		expect(mismatchedRetry.status).toBe(400);
 
 		const organization = await fetch(`${baseUrl}/v1/organization`, {
-			headers: {
-				Authorization: `Bearer ${tokens.accessToken()}`,
-				"x-autumn-oauth-resource": "https://mcp.useautumn.com/mcp",
-			},
+			headers: { Authorization: `Bearer ${tokens.accessToken()}` },
 		});
 		expect(organization.status).toBe(200);
 	} finally {

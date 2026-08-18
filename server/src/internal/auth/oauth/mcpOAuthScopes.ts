@@ -20,14 +20,6 @@ export const isMcpOAuthClient = async ({
 	return isMcpOAuthClientRecord({ clientId, metadata: client?.metadata });
 };
 
-export const isMcpOAuthClientId = async ({
-	clientId,
-	ctx,
-}: {
-	clientId: string;
-	ctx: AutumnContext;
-}) => isMcpOAuthClient({ clientId, db: ctx.db });
-
 export const getMcpOAuthScopeGrant = async ({
 	clientId,
 	ctx,
@@ -37,7 +29,7 @@ export const getMcpOAuthScopeGrant = async ({
 	ctx: AutumnContext;
 	requestedScopes?: string[] | null;
 }) => {
-	if (!(await isMcpOAuthClientId({ ctx, clientId }))) return null;
+	if (!(await isMcpOAuthClient({ clientId, db: ctx.db }))) return null;
 
 	const orgId = ctx.org?.id;
 	if (!ctx.userId || !orgId) {

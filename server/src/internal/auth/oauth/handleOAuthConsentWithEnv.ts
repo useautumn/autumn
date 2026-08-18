@@ -1,6 +1,6 @@
 import { AppEnv, RecaseError } from "@autumn/shared";
 import {
-	getOAuthStringField,
+	asNonEmptyString,
 	type OAuthRequestFields,
 	parseOAuthRequestFields,
 	rebuildOAuthRequest,
@@ -27,26 +27,26 @@ const getNestedOAuthField = (value: unknown, key: string) => {
 
 	if (typeof value === "string") {
 		try {
-			return getOAuthStringField(JSON.parse(value)?.[key]);
+			return asNonEmptyString(JSON.parse(value)?.[key]);
 		} catch {
 			return new URLSearchParams(value).get(key);
 		}
 	}
 
 	if (typeof value === "object") {
-		return getOAuthStringField((value as Record<string, unknown>)[key]);
+		return asNonEmptyString((value as Record<string, unknown>)[key]);
 	}
 
 	return null;
 };
 
 const getClientIdFromFields = (fields: OAuthRequestFields) =>
-	getOAuthStringField(fields.client_id) ??
+	asNonEmptyString(fields.client_id) ??
 	getNestedOAuthField(fields.oauth_query, "client_id");
 
 const getRedirectUriFromFields = (fields: OAuthRequestFields) =>
-	getOAuthStringField(fields.redirect_uri) ??
-	getOAuthStringField(fields.redirectUri) ??
+	asNonEmptyString(fields.redirect_uri) ??
+	asNonEmptyString(fields.redirectUri) ??
 	getNestedOAuthField(fields.oauth_query, "redirect_uri");
 
 export const getOAuthConsentRequestedScopesFromFields = (
@@ -78,75 +78,117 @@ const jsonOAuthError = ({ error }: { error: RecaseError }) =>
 		},
 	);
 
+type ConsentPrincipal = { orgId: string; userId: string };
+
+/** Only a session with an active organization can narrow or persist a grant. */
+const resolveConsentPrincipal = async (
+	headers: Headers,
+): Promise<ConsentPrincipal | null> => {
+	const session = await auth.api.getSession({ headers });
+	const userId = session?.user?.id;
+	const orgId = session?.session?.activeOrganizationId;
+
+	return userId && orgId ? { orgId, userId } : null;
+};
+
+/**
+ * Replaces the posted `scope` with what this user may actually grant, so
+ * better-auth records the narrowed set on the consent row.
+ */
+const narrowConsentScopes = async ({
+	fields,
+	isJson,
+	principal,
+	request,
+}: {
+	fields: OAuthRequestFields;
+	isJson: boolean;
+	principal: ConsentPrincipal;
+	request: Request;
+}) => {
+	const requested = getOAuthConsentRequestedScopesFromFields(fields);
+	const grantedScopes = await getOAuthConsentScopeGrant({
+		db,
+		organizationId: principal.orgId,
+		requestedScopes: requested.scopes,
+		requireRequestedResourceScopes: requested.explicit,
+		userId: principal.userId,
+	});
+
+	return {
+		grantedScopes,
+		request: rebuildOAuthRequest({
+			fields: { ...fields, scope: grantedScopes.join(" ") },
+			isJson,
+			request,
+		}),
+	};
+};
+
+const resolveConsentEnv = ({
+	clientId,
+	fields,
+}: {
+	clientId: string;
+	fields: OAuthRequestFields;
+}) =>
+	parseEnv(fields.env) ??
+	(isSummerOAuthClientId({ clientId }) ? AppEnv.Sandbox : null);
+
 export const handleOAuthConsentWithEnv = async (c: Context) => {
 	const { fields, isJson } = await parseOAuthRequestFields(c.req.raw.clone());
 	const clientId = getClientIdFromFields(fields);
-	const redirectUri = getRedirectUriFromFields(fields);
-	const env =
-		parseEnv(fields.env) ??
-		(isSummerOAuthClientId({ clientId }) ? AppEnv.Sandbox : null);
 
-	let request = c.req.raw;
-	let grantedScopes: string[] | undefined;
-	if (acceptedConsent(fields.accept) && clientId) {
-		const session = await auth.api.getSession({
-			headers: c.req.raw.headers,
+	// A denial (or a request that names no client) carries no scopes or env to
+	// narrow and persist — better-auth turns it straight into a redirect.
+	if (!acceptedConsent(fields.accept) || !clientId) {
+		return runBetterAuthHandler({
+			request: c.req.raw,
+			route: "oauth2/consent",
+			context: { clientId },
 		});
+	}
 
-		const userId = session?.user?.id;
-		const orgId = session?.session?.activeOrganizationId;
-		if (userId && orgId) {
-			try {
-				const requested = getOAuthConsentRequestedScopesFromFields(fields);
-				const scopeGrant = await getOAuthConsentScopeGrant({
-					db,
-					organizationId: orgId,
-					requestedScopes: requested.scopes,
-					requireRequestedResourceScopes: requested.explicit,
-					userId,
-				});
-				grantedScopes = scopeGrant;
-				request = rebuildOAuthRequest({
-					fields: { ...fields, scope: scopeGrant.join(" ") },
-					isJson,
-					request,
-				});
-			} catch (error) {
-				if (error instanceof RecaseError) {
-					return jsonOAuthError({ error });
-				}
-				throw error;
-			}
+	const principal = await resolveConsentPrincipal(c.req.raw.headers);
+
+	// Deliberate fall-through: with no session or no active organization there is
+	// nothing to narrow against, so the request goes to better-auth untouched.
+	// better-auth then has no session either, so it stops at its own login
+	// redirect rather than issuing a code — the un-narrowed scope never becomes
+	// a grant. The org-less-session case is left for the maintainer to tighten.
+	let narrowed: { grantedScopes: string[]; request: Request } | null = null;
+	if (principal) {
+		try {
+			narrowed = await narrowConsentScopes({
+				fields,
+				isJson,
+				principal,
+				request: c.req.raw,
+			});
+		} catch (error) {
+			if (error instanceof RecaseError) return jsonOAuthError({ error });
+			throw error;
 		}
 	}
 
 	const response = await runBetterAuthHandler({
-		request,
+		request: narrowed?.request ?? c.req.raw,
 		route: "oauth2/consent",
 		context: { clientId },
 	});
+	if (!response.ok || !principal) return response;
 
-	if (!response.ok || !acceptedConsent(fields.accept)) {
-		return response;
-	}
-
-	if (!clientId || !env || (await isAtmnOAuthClientId({ db, clientId }))) {
-		return response;
-	}
-
-	const session = await auth.api.getSession({ headers: c.req.raw.headers });
-	const userId = session?.user?.id;
-	const orgId = session?.session?.activeOrganizationId;
-	if (!userId || !orgId) return response;
+	const env = resolveConsentEnv({ clientId, fields });
+	if (!env || (await isAtmnOAuthClientId({ db, clientId }))) return response;
 
 	await oauthConsentRepo.updateEnv({
 		db,
 		clientId,
-		userId,
-		referenceId: orgId,
+		userId: principal.userId,
+		referenceId: principal.orgId,
 		env,
-		redirectUri,
-		scopes: grantedScopes,
+		redirectUri: getRedirectUriFromFields(fields),
+		scopes: narrowed?.grantedScopes,
 	});
 
 	return response;

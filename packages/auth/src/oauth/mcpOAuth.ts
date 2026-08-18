@@ -3,7 +3,7 @@ import {
 	parseOAuthClientMetadata,
 } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import {
-	getOAuthStringField,
+	asNonEmptyString,
 	parseOAuthRequestFields,
 } from "@autumn/shared/utils/auth/oauthRequestBody";
 import {
@@ -13,6 +13,19 @@ import {
 } from "./reservedOAuthClients.js";
 
 export const UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND = "chat_unrestricted";
+
+/**
+ * A scope-less grant bypasses every route scope check, so it is only legitimate
+ * when Leaf's unrestricted chat consent backs it. Both resource servers re-check
+ * this, because the mint-time check cannot vouch for a row written years ago.
+ */
+export const isUnrestrictedChatOAuthConsent = ({
+	metadata,
+}: {
+	metadata: unknown;
+}) =>
+	(metadata as { kind?: unknown } | null | undefined)?.kind ===
+	UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND;
 
 // Legacy rows persisted the internal-mcp kind; dynamic registration now writes mcp_client.
 const MCP_OAUTH_CLIENT_KINDS: readonly string[] = [
@@ -55,11 +68,9 @@ export const getResourceFromOAuthTokenRequest = async (request: Request) => {
 	// RFC 8707 lets a request repeat `resource`; the first one wins, and the
 	// parsed fields only keep the last, so read the form body directly.
 	if (!isJson) {
-		return getOAuthStringField(
-			new URLSearchParams(rawBody).getAll("resource")[0],
-		);
+		return asNonEmptyString(new URLSearchParams(rawBody).getAll("resource")[0]);
 	}
 
 	const resource = fields.resource;
-	return getOAuthStringField(Array.isArray(resource) ? resource[0] : resource);
+	return asNonEmptyString(Array.isArray(resource) ? resource[0] : resource);
 };

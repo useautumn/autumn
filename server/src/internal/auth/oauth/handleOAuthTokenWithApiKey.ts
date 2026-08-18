@@ -1,7 +1,7 @@
 import { prefixOAuthToken } from "@autumn/auth";
 import { returnsOAuthAccessTokenForClientId } from "@autumn/auth/oauth";
 import { ErrCode, RecaseError } from "@autumn/shared";
-import { getOAuthStringField } from "@autumn/shared/utils/auth/oauthRequestBody";
+import { asNonEmptyString } from "@autumn/shared/utils/auth/oauthRequestBody";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import {
@@ -31,10 +31,12 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 	const tokenRequest = await setupOAuthTokenRequest({ db, request: c.req.raw });
 
 	// 2. Single-flight guard: refresh tokens are single-use and rotated, so
-	// concurrent replays of one token must share the winner's response.
-	const replayKey = tokenRequest.refreshReplayKey;
-	if (replayKey) {
-		const replay = await claimOAuthRefreshReplay(replayKey);
+	// byte-identical replays of one refresh request must share the winner's
+	// response. A Redis outage leaves `heldReplayKey` null and the request mints
+	// uncoordinated — dedupe is an optimisation, not a dependency.
+	let heldReplayKey: string | null = null;
+	if (tokenRequest.refreshReplayKey) {
+		const replay = await claimOAuthRefreshReplay(tokenRequest.refreshReplayKey);
 		if (!replay) {
 			return jsonOAuthTokenResponse({
 				body: {
@@ -47,6 +49,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		if (replay.body) {
 			return jsonOAuthTokenResponse({ body: replay.body, status: 200 });
 		}
+		if (replay.coordinated) heldReplayKey = tokenRequest.refreshReplayKey;
 	}
 
 	// A held claim blocks every concurrent replay, so an exit that stores no
@@ -60,7 +63,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		const body = await parseOAuthTokenResponseBody(response);
 		if (!body) return response;
 
-		const accessToken = getOAuthStringField(body.access_token);
+		const accessToken = asNonEmptyString(body.access_token);
 		if (!accessToken) return response;
 
 		// 4. Read back the scopes better-auth granted
@@ -118,8 +121,11 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				access_token: prefixOAuthToken({ token: accessToken }),
 				scope: tokenRecord.scopes.join(" "),
 			};
-			if (replayKey) {
-				await storeOAuthRefreshReplay({ body: responseBody, key: replayKey });
+			if (heldReplayKey) {
+				await storeOAuthRefreshReplay({
+					body: responseBody,
+					key: heldReplayKey,
+				});
 				replayStored = true;
 			}
 
@@ -152,6 +158,8 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		if (errorResponse) return errorResponse;
 		throw error;
 	} finally {
-		if (replayKey && !replayStored) await releaseOAuthRefreshReplay(replayKey);
+		if (heldReplayKey && !replayStored) {
+			await releaseOAuthRefreshReplay(heldReplayKey);
+		}
 	}
 };

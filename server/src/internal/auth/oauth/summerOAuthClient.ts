@@ -2,6 +2,7 @@ import {
 	getDefaultOAuthScopes,
 	SUMMER_OAUTH_CLIENT_ID,
 } from "@autumn/auth/oauth";
+import { parseOAuthClientMetadata } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { oauthClientRepo } from "../repos/oauthClientRepo.js";
@@ -34,20 +35,9 @@ export const isSummerOAuthClientRecord = ({
 	metadata?: unknown;
 }) => {
 	if (isSummerOAuthClientId({ clientId })) return true;
-	if (!metadata) return false;
 
-	let metadataObject = metadata;
-	if (typeof metadata === "string") {
-		try {
-			metadataObject = JSON.parse(metadata);
-		} catch {
-			return false;
-		}
-	}
-
-	if (!metadataObject || typeof metadataObject !== "object") return false;
-	const record = metadataObject as Record<string, unknown>;
-	return record.kind === "summer" || record.client === "summer";
+	const parsed = parseOAuthClientMetadata(metadata);
+	return parsed.kind === "summer" || parsed.client === "summer";
 };
 
 export const ensureSummerOAuthClient = async ({

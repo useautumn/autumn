@@ -30,6 +30,11 @@
 			"import": "./utils/auth/oauthScopeUtils.ts",
 			"default": "./utils/auth/oauthScopeUtils.ts"
 		},
+		"./utils/auth/oauthAccessTokens": {
+			"types": "./utils/auth/oauthAccessTokens.ts",
+			"import": "./utils/auth/oauthAccessTokens.ts",
+			"default": "./utils/auth/oauthAccessTokens.ts"
+		},
 		"./utils/auth/oauthClientMetadata": {
 			"types": "./utils/auth/oauthClientMetadata.ts",
 			"import": "./utils/auth/oauthClientMetadata.ts",

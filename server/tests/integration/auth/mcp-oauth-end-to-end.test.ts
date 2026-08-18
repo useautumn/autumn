@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createHash, randomBytes } from "node:crypto";
+import { isOAuthToken, stripOAuthTokenPrefix } from "@autumn/auth";
 import {
 	DEFAULT_OAUTH_RESOURCE_SCOPES,
 	oauthAccessToken,
@@ -97,7 +98,8 @@ const registerClient = async ({ clientName }: { clientName: string }) => {
 		body: JSON.stringify({
 			client_name: clientName,
 			redirect_uris: [REDIRECT_URI],
-			scope: [...DEFAULT_OAUTH_RESOURCE_SCOPES, "offline_access"].join(" "),
+			// Real MCP clients register with the scopes discovery advertised.
+			scope: DEFAULT_OAUTH_RESOURCE_SCOPES.join(" "),
 		}),
 	});
 	const body = (await response.json()) as Record<string, unknown>;
@@ -317,8 +319,10 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 		expect(typeof registration.body.client_id).toBe("string");
 		clientId = registration.body.client_id as string;
 
-		// 4-5. Authorize, consent, token exchange bound to the MCP resource
-		const requestedScopes = [...challengeScopes, "offline_access"];
+		// 4-5. Authorize, consent, token exchange bound to the MCP resource.
+		// The client asks for exactly what discovery advertised — the server adds
+		// offline_access for MCP clients, so the grant is still renewable.
+		const requestedScopes = [...challengeScopes];
 		const granted = await grantTokenForResource({
 			clientId,
 			resource: mcpUrl,
@@ -327,7 +331,7 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 		});
 		expect(granted.token.status).toBe(200);
 		const accessToken = granted.token.body.access_token as string;
-		expect(accessToken).toStartWith("am_oauth_");
+		expect(isOAuthToken({ token: accessToken })).toBe(true);
 		expect(typeof granted.token.body.refresh_token).toBe("string");
 		const grantedScopes = (granted.token.body.scope as string).split(" ");
 		for (const scope of challengeScopes) {
@@ -337,7 +341,7 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 		const tokenRow = await db.query.oauthAccessToken.findFirst({
 			where: eq(
 				oauthAccessToken.token,
-				await hashOAuthToken(accessToken.replace(/^am_oauth_/, "")),
+				hashOAuthToken(stripOAuthTokenPrefix({ token: accessToken })),
 			),
 		});
 		expect(tokenRow?.resource).toBe(mcpUrl);
@@ -403,7 +407,7 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 		const foreignRow = await db.query.oauthAccessToken.findFirst({
 			where: eq(
 				oauthAccessToken.token,
-				await hashOAuthToken(foreignToken.replace(/^am_oauth_/, "")),
+				hashOAuthToken(stripOAuthTokenPrefix({ token: foreignToken })),
 			),
 		});
 		expect(foreignRow?.resource).toBe(apiRoot);

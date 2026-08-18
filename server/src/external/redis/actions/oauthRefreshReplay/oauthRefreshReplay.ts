@@ -8,18 +8,42 @@ const REFRESH_REPLAY_PENDING = "pending";
 const CLAIM_MAX_ATTEMPTS = 200;
 const CLAIM_POLL_MS = 25;
 
-export const buildOAuthRefreshReplayKey = (hashedToken: string) =>
-	`oauth:refresh-replay:${hashedToken}`;
+/**
+ * Keyed on a fingerprint of the whole refresh request (resource + authorization
+ * header + normalized body), not on the refresh token: two different requests
+ * carrying the same token are different grants and must not share a response.
+ */
+export const buildOAuthRefreshReplayKey = (requestFingerprint: string) =>
+	`oauth:refresh-replay:${requestFingerprint}`;
+
+export type OAuthRefreshReplayClaim = {
+	/** The winner's stored token response, when this caller lost the race. */
+	body: Record<string, unknown> | null;
+	/**
+	 * False when Redis could not answer. The caller then holds no claim: it must
+	 * neither store nor release the key, and must mint uncoordinated.
+	 */
+	coordinated: boolean;
+};
+
+const UNCOORDINATED_CLAIM: OAuthRefreshReplayClaim = {
+	body: null,
+	coordinated: false,
+};
 
 /**
  * Single-flight guard for OAuth refresh-token replays: the first caller claims
  * the key (SET NX) and mints tokens; concurrent replays of the SAME refresh
  * token spin until the winner stores its response, then return that body.
- * Null = Redis unavailable or the winner never stored — caller decides.
+ *
+ * Dedupe is an optimisation, never a dependency: if Redis cannot answer, the
+ * claim comes back uncoordinated and the token endpoint carries on. Only a
+ * genuine spin-out — the winner held the claim past its polling budget —
+ * returns null, because minting alongside it would race the token rotation.
  */
 export const claimOAuthRefreshReplay = async (
 	key: string,
-): Promise<{ body: Record<string, unknown> | null } | null> => {
+): Promise<OAuthRefreshReplayClaim | null> => {
 	try {
 		const miscRedis = getMiscRedis();
 
@@ -30,11 +54,12 @@ export const claimOAuthRefreshReplay = async (
 				redisInstance: miscRedis,
 			});
 			// undefined = Redis unavailable (vs null = key missing) — bail out.
-			if (value === undefined) return null;
+			if (value === undefined) return UNCOORDINATED_CLAIM;
 
 			if (value && value !== REFRESH_REPLAY_PENDING) {
 				return {
 					body: JSON.parse(decryptData(value)) as Record<string, unknown>,
+					coordinated: true,
 				};
 			}
 
@@ -51,16 +76,17 @@ export const claimOAuthRefreshReplay = async (
 					source: "oauth-refresh-replay:claim",
 					redisInstance: miscRedis,
 				});
-				if (claimed === undefined) return null;
-				if (claimed) return { body: null };
+				if (claimed === undefined) return UNCOORDINATED_CLAIM;
+				if (claimed) return { body: null, coordinated: true };
 			}
 
 			await timeout(CLAIM_POLL_MS);
 		}
 		return null;
 	} catch {
-		// Undecryptable/unparseable stored response — treat as unavailable.
-		return null;
+		// Redis missing, or a stored response we cannot decrypt/parse. Either way
+		// there is nothing to replay, so mint instead of failing the refresh.
+		return UNCOORDINATED_CLAIM;
 	}
 };
 

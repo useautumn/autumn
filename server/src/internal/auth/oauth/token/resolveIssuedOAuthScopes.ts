@@ -1,6 +1,6 @@
 import {
 	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
-	UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND,
+	isUnrestrictedChatOAuthConsent,
 } from "@autumn/auth/oauth";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -25,7 +25,7 @@ const allowsScopeLessOAuthToken = async ({
 		db,
 		consentId: oauthConsentId,
 	});
-	return metadata?.kind === UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND;
+	return isUnrestrictedChatOAuthConsent({ metadata });
 };
 
 /** An empty grant is admin-equivalent downstream, so only the chat consent may hold one. */

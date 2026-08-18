@@ -8,6 +8,7 @@ import {
 import {
 	getProtectedResourceMetadataUrl,
 	getWwwAuthenticateHeader,
+	isUnrestrictedChatOAuthConsent,
 	oauthAudienceAllowsResource,
 } from "@autumn/auth/oauth";
 import {
@@ -17,12 +18,13 @@ import {
 	type MCPServerFlags,
 	type OAuthEnvironment,
 } from "@autumn/mcp";
-import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
+import { DEFAULT_OAUTH_RESOURCE_SCOPES, oauthConsent } from "@autumn/shared";
 import {
 	findActiveOAuthAccessToken,
 	type OAuthAccessTokenDb,
 } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { getRequestedOAuthResourceScopes } from "@autumn/shared/utils/auth/oauthScopeUtils";
+import { eq } from "drizzle-orm";
 import * as z from "zod/v4";
 import { OAuthHttpError } from "./protectedResourceMetadata.js";
 
@@ -128,6 +130,22 @@ const principalFromSecret = ({
 	return `${kind}:${digest}`;
 };
 
+const isUnrestrictedChatGrant = async ({
+	accessToken,
+	db,
+}: {
+	accessToken: { oauthConsentId: string | null };
+	db: OAuthAccessTokenDb;
+}) => {
+	if (!accessToken.oauthConsentId) return false;
+
+	const consent = await db.query.oauthConsent.findFirst({
+		columns: { metadata: true },
+		where: eq(oauthConsent.id, accessToken.oauthConsentId),
+	});
+	return isUnrestrictedChatOAuthConsent({ metadata: consent?.metadata });
+};
+
 /**
  * Authenticates an OAuth bearer against the shared token store — the same
  * expiry check the api server's OAuth middleware applies — so expired
@@ -174,9 +192,23 @@ const authenticateOAuthBearer = async ({
 	// Only the resource scopes gate tools; OIDC protocol scopes are dropped.
 	const scopes = getRequestedOAuthResourceScopes(accessToken.scopes);
 
-	// A grant that names scopes but none this resource exposes fails every tool,
-	// while an empty grant is the unrestricted chat token and stays admin-equivalent.
+	// A grant that names scopes but none this resource exposes fails every tool.
 	if (accessToken.scopes.length > 0 && scopes.length === 0) {
+		throw new OAuthHttpError(
+			403,
+			"OAuth access token grants no Autumn resource scopes",
+			"insufficient_scope",
+			buildChallenge({ error: "insufficient_scope", resourceUrl }),
+		);
+	}
+
+	// An empty grant is admin-equivalent, so re-derive the right to hold one from
+	// the consent instead of trusting the token row. Only scope-less grants pay
+	// for the lookup.
+	if (
+		accessToken.scopes.length === 0 &&
+		!(await isUnrestrictedChatGrant({ db, accessToken }))
+	) {
 		throw new OAuthHttpError(
 			403,
 			"OAuth access token grants no Autumn resource scopes",

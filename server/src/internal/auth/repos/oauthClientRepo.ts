@@ -22,10 +22,10 @@ const oauthClientSelect = {
 	createdAt: oauthClient.createdAt,
 };
 
-export const listOAuthClients = async ({ db }: { db: DrizzleCli }) =>
+const listOAuthClients = async ({ db }: { db: DrizzleCli }) =>
 	db.select(oauthClientSelect).from(oauthClient);
 
-export const listOAuthClientsForAdmin = async ({ db }: { db: DrizzleCli }) =>
+const listOAuthClientsForAdmin = async ({ db }: { db: DrizzleCli }) =>
 	db
 		.select({
 			id: oauthClient.id,
@@ -45,7 +45,7 @@ export const listOAuthClientsForAdmin = async ({ db }: { db: DrizzleCli }) =>
 		.from(oauthClient)
 		.orderBy(desc(oauthClient.createdAt));
 
-export const getOAuthClientByClientId = async ({
+const getOAuthClientByClientId = async ({
 	db,
 	clientId,
 }: {
@@ -61,7 +61,7 @@ export const getOAuthClientByClientId = async ({
 	return client ?? null;
 };
 
-export const updateOAuthClientById = async ({
+const updateOAuthClientById = async ({
 	db,
 	id,
 	updates,
@@ -92,7 +92,7 @@ export const updateOAuthClientById = async ({
 
 export type OAuthClientInsert = typeof oauthClient.$inferInsert;
 
-export const insertOAuthClient = async ({
+const insertOAuthClient = async ({
 	db,
 	values,
 }: {
@@ -108,7 +108,7 @@ export const insertOAuthClient = async ({
 	return client;
 };
 
-export const upsertOAuthClient = async ({
+const upsertOAuthClient = async ({
 	db,
 	insert,
 	update,
@@ -125,7 +125,7 @@ export const upsertOAuthClient = async ({
 	return getOAuthClientByClientId({ db, clientId: insert.clientId });
 };
 
-export const addOAuthClientScopesByClientId = async ({
+const addOAuthClientScopesByClientId = async ({
 	db,
 	clientId,
 	scopes,

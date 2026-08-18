@@ -2,6 +2,7 @@ import {
 	canonicalizeOAuthResource,
 	getResourceFromOAuthTokenRequest,
 } from "@autumn/auth/oauth";
+import type { oauthRefreshToken } from "@autumn/shared";
 import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { buildOAuthRefreshReplayKey } from "@/external/redis/actions/oauthRefreshReplay/oauthRefreshReplay.js";
@@ -13,7 +14,7 @@ export type OAuthTokenRequestContext = {
 	normalizedRequest: Request;
 	/** Non-null only for MCP refreshes, the one grant whose replays must agree. */
 	refreshReplayKey: string | null;
-	refreshTokenRecord: Awaited<ReturnType<typeof getOAuthRefreshTokenRecord>>;
+	refreshTokenRecord: typeof oauthRefreshToken.$inferSelect | null;
 	/** Canonical audience this grant is stamped with, already resolved for refreshes. */
 	resource: string | null;
 };
@@ -29,7 +30,7 @@ const buildReplayKeyForRequest = async ({
 	const rawBody = await request.clone().text();
 
 	return buildOAuthRefreshReplayKey(
-		await hashOAuthToken(`${resource ?? ""}\n${authorization}\n${rawBody}`),
+		hashOAuthToken(`${resource ?? ""}\n${authorization}\n${rawBody}`),
 	);
 };
 

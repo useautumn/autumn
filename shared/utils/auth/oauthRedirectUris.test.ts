@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-	isLocalhostRedirectUri,
-	isSafeOAuthRedirectUri,
-} from "./oauthRedirectUris";
+import { isSafeOAuthRedirectUri } from "./oauthRedirectUris";
 
 describe("isSafeOAuthRedirectUri", () => {
 	test("allows https and custom schemes", () => {
@@ -13,12 +10,14 @@ describe("isSafeOAuthRedirectUri", () => {
 		);
 	});
 
-	test("allows plain http only on localhost", () => {
+	test("allows plain http only on the loopback hostnames", () => {
 		expect(isSafeOAuthRedirectUri("http://localhost:8080/callback")).toBe(true);
 		expect(isSafeOAuthRedirectUri("http://127.0.0.1:31548/")).toBe(true);
+		expect(isSafeOAuthRedirectUri("http://[::1]:31548/")).toBe(true);
 		expect(isSafeOAuthRedirectUri("http://evil.example.com/callback")).toBe(
 			false,
 		);
+		expect(isSafeOAuthRedirectUri("http://localhost.evil.com/cb")).toBe(false);
 	});
 
 	test("rejects script-bearing schemes", () => {
@@ -30,14 +29,5 @@ describe("isSafeOAuthRedirectUri", () => {
 	test("rejects unparseable values", () => {
 		expect(isSafeOAuthRedirectUri("")).toBe(false);
 		expect(isSafeOAuthRedirectUri("/callback")).toBe(false);
-	});
-});
-
-describe("isLocalhostRedirectUri", () => {
-	test("matches the loopback hostnames", () => {
-		expect(isLocalhostRedirectUri("localhost")).toBe(true);
-		expect(isLocalhostRedirectUri("127.0.0.1")).toBe(true);
-		expect(isLocalhostRedirectUri("::1")).toBe(true);
-		expect(isLocalhostRedirectUri("localhost.evil.com")).toBe(false);
 	});
 });

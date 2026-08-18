@@ -5,7 +5,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { oauthClientRepo } from "../repos/oauthClientRepo.js";
 
-export const SLACK_MCP_OAUTH_CLIENT_NAME = "Slack";
+const SLACK_MCP_OAUTH_CLIENT_NAME = "Slack";
 
 // Leaf mints Slack MCP tokens directly, so this URI is stored but never used.
 const SLACK_MCP_REDIRECT_URIS = ["slack://autumn-chat"];

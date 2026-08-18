@@ -92,7 +92,7 @@ const getStoredOAuthTokenValues = async ({
 	stripPrefix?: boolean;
 }) => {
 	const rawToken = stripPrefix ? stripOAuthTokenPrefix({ token }) : token;
-	return [rawToken, await hashOAuthToken(rawToken)];
+	return [rawToken, hashOAuthToken(rawToken)];
 };
 
 const revokeSlackAdminOAuthArtifacts = async ({

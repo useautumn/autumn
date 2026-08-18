@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
-import { OPENID_SCOPES, Scopes } from "@autumn/shared/scopeDefinitions";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
-	getRequestedScopesForOAuthClient,
-	registerOAuthClient,
-} from "@/internal/auth/actions/registerOAuthClient.js";
+	OFFLINE_ACCESS_SCOPE,
+	OPENID_SCOPES,
+	Scopes,
+} from "@autumn/shared/scopeDefinitions";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { registerOAuthClient } from "@/internal/auth/actions/registerOAuthClient.js";
 
-const OFFLINE_ACCESS_SCOPE = "offline_access";
 const DEFAULT_MCP_SCOPES = [...DEFAULT_OAUTH_RESOURCE_SCOPES, ...OPENID_SCOPES];
 
 type InsertedClient = Record<string, unknown>;
@@ -186,21 +186,30 @@ describe("registerOAuthClient", () => {
 	});
 });
 
-describe("getRequestedScopesForOAuthClient", () => {
-	test("defaults to the default OAuth scopes plus OIDC scopes", () => {
-		expect(getRequestedScopesForOAuthClient({ scope: undefined })).toEqual(
-			DEFAULT_MCP_SCOPES,
-		);
-		expect(getRequestedScopesForOAuthClient({ scope: "   " })).toEqual(
-			DEFAULT_MCP_SCOPES,
-		);
+describe("registerOAuthClient scope grant", () => {
+	const registerWithScope = async (scope?: string) => {
+		const { db } = createFakeDb();
+		const result = await register({
+			body: {
+				client_name: uniqueName(),
+				redirect_uris: ["https://a.dev/cb"],
+				...(scope === undefined ? {} : { scope }),
+			},
+			db,
+		});
+		return result.body.scope.split(" ");
+	};
+
+	test("defaults to the default OAuth scopes plus OIDC scopes", async () => {
+		expect(await registerWithScope()).toEqual(DEFAULT_MCP_SCOPES);
+		expect(await registerWithScope("   ")).toEqual(DEFAULT_MCP_SCOPES);
 	});
 
-	test("keeps explicit OAuth resource scopes and appends OIDC scopes", () => {
+	test("keeps explicit OAuth resource scopes and appends OIDC scopes", async () => {
 		expect(
-			getRequestedScopesForOAuthClient({
-				scope: `${Scopes.Customers.Read} ${Scopes.Plans.Write} ${Scopes.ApiKeys.Write} ${OFFLINE_ACCESS_SCOPE} invalid`,
-			}),
+			await registerWithScope(
+				`${Scopes.Customers.Read} ${Scopes.Plans.Write} ${Scopes.ApiKeys.Write} ${OFFLINE_ACCESS_SCOPE} invalid`,
+			),
 		).toEqual([
 			Scopes.Customers.Read,
 			Scopes.Plans.Write,
@@ -212,11 +221,9 @@ describe("getRequestedScopesForOAuthClient", () => {
 		]);
 	});
 
-	test("grants default scopes when only OIDC protocol scopes are requested", () => {
+	test("grants default scopes when only OIDC protocol scopes are requested", async () => {
 		expect(
-			getRequestedScopesForOAuthClient({
-				scope: "openid profile email offline_access",
-			}),
+			await registerWithScope("openid profile email offline_access"),
 		).toEqual([
 			...DEFAULT_OAUTH_RESOURCE_SCOPES,
 			"openid",

@@ -55,7 +55,7 @@ describe("resolveIssuedOAuthScopes", () => {
 	});
 
 	test("rejects a scope-less grant that no unrestricted chat consent backs", async () => {
-		expect(
+		await expect(
 			resolveIssuedOAuthScopes({
 				db: createConsentDb({ kind: "slack" }),
 				isMcpClient: true,

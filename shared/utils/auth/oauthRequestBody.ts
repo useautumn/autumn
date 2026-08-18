@@ -8,7 +8,8 @@ export type ParsedOAuthRequest = {
 	rawBody: string;
 };
 
-export const getOAuthStringField = (value: unknown) =>
+/** Coerces a parsed request value to a usable string; blanks read as absent. */
+export const asNonEmptyString = (value: unknown) =>
 	typeof value === "string" && value.length > 0 ? value : null;
 
 const isJsonContentType = (contentType: string) =>
@@ -41,9 +42,13 @@ export const parseOAuthRequestFields = async (
 };
 
 /**
- * Re-encodes `fields` in the request's original content type, with keys in a
- * stable order: the refresh replay key hashes this body, so a client retrying
- * the same refresh has to produce the same bytes.
+ * Re-encodes `fields` in the request's original content type so a handler can
+ * rewrite an OAuth body (narrow `scope`, drop `resource`) before passing it on.
+ *
+ * Keys are emitted in a stable order because the token endpoint's refresh
+ * replay key hashes this body: a client retrying the same refresh has to
+ * produce the same bytes. Note the asymmetry — the form encoding can only carry
+ * strings, so non-string values are dropped there but survive in JSON.
  */
 export const rebuildOAuthRequest = ({
 	fields,

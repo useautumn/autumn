@@ -25,9 +25,3 @@ export const getOAuthTokenRequestFields = async (
 		refreshToken: parsed.data.refresh_token ?? null,
 	};
 };
-
-export const getRefreshTokenForConsentLookup = async (request: Request) => {
-	const fields = await getOAuthTokenRequestFields(request);
-	if (fields.grantType !== "refresh_token") return null;
-	return fields.refreshToken;
-};

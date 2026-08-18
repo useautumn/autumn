@@ -3,7 +3,6 @@ import {
 	LEGACY_SCOPE_ALIASES,
 	parseScope,
 	type ResourceType,
-	type ScopeString,
 } from "../scopeDefinitions";
 import {
 	DEFAULT_OAUTH_RESOURCE_SCOPES,

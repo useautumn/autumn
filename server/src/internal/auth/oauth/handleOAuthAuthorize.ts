@@ -1,14 +1,11 @@
 import { isMcpOAuthClientRecord } from "@autumn/auth/oauth";
-import { META_SCOPES } from "@autumn/shared";
-import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
 import { oauthClientRepo } from "../repos/oauthClientRepo.js";
 import { ensureAtmnAuthorizeScopes } from "./atmnOAuthClients.js";
+import { getMcpAuthorizeScopes } from "./mcpAuthorizeScopes.js";
 import { ensureSummerOAuthClient } from "./summerOAuthClient.js";
-
-const META_SCOPE_SET = new Set<string>(META_SCOPES);
 
 export const handleOAuthAuthorize = async (c: Context) => {
 	const url = new URL(c.req.raw.url);
@@ -33,12 +30,16 @@ export const handleOAuthAuthorize = async (c: Context) => {
 		return auth.handler(c.req.raw);
 	}
 
+	// A missing `scope` is left alone: better-auth then falls back to the
+	// client's stored grant, which already carries offline_access.
 	const requestedScope = url.searchParams.get("scope");
 	if (requestedScope) {
-		const scopes = splitOAuthScopeString(requestedScope);
 		url.searchParams.set(
 			"scope",
-			scopes.filter((scope) => !META_SCOPE_SET.has(scope)).join(" "),
+			getMcpAuthorizeScopes({
+				clientScopes: client?.scopes,
+				requestedScope,
+			}).join(" "),
 		);
 	}
 

@@ -14,16 +14,16 @@ export type OAuthAccessTokenDb = Pick<
  * Hash an OAuth token with SHA-256 + base64url encoding, matching
  * better-auth's default token hashing method.
  */
-export function hashOAuthToken(token: string): string {
-	return createHash("sha256").update(token).digest("base64url");
-}
+export const hashOAuthToken = (token: string): string =>
+	createHash("sha256").update(token).digest("base64url");
 
 /**
- * Values to match against the stored `oauth_access_token.token` column:
- * the base64url SHA-256 hash, plus the raw value for legacy unhashed rows.
+ * Values to match against a stored `token` column, for access and refresh
+ * tokens alike: the base64url SHA-256 hash, plus the raw value for legacy
+ * unhashed rows.
  */
-export const getOAuthAccessTokenValues = (rawAccessToken: string) => [
-	...new Set([hashOAuthToken(rawAccessToken), rawAccessToken]),
+export const getOAuthTokenValues = (rawToken: string) => [
+	...new Set([hashOAuthToken(rawToken), rawToken]),
 ];
 
 /**
@@ -40,10 +40,7 @@ export async function findActiveOAuthAccessToken({
 }) {
 	return db.query.oauthAccessToken.findFirst({
 		where: and(
-			inArray(
-				oauthAccessToken.token,
-				getOAuthAccessTokenValues(rawAccessToken),
-			),
+			inArray(oauthAccessToken.token, getOAuthTokenValues(rawAccessToken)),
 			gt(oauthAccessToken.expiresAt, new Date()),
 		),
 	});

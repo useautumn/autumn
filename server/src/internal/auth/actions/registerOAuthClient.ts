@@ -39,12 +39,6 @@ type RegisterOAuthClientResult =
 	| { body: OAuthClientRegistration; status: 201 }
 	| { error: string; status: 400 };
 
-export const getRequestedScopesForOAuthClient = ({
-	scope,
-}: {
-	scope: unknown;
-}) => getDefaultOAuthScopes(splitOAuthScopeString(scope));
-
 const toRegistration = (
 	client: OAuthClientRecord,
 ): OAuthClientRegistration => ({
@@ -135,7 +129,9 @@ export const registerOAuthClient = async ({
 		return { error: "invalid_client_metadata", status: 400 };
 	}
 
-	const scopes = getRequestedScopesForOAuthClient({ scope: parsed.data.scope });
+	const scopes = getDefaultOAuthScopes(
+		splitOAuthScopeString(parsed.data.scope),
+	);
 	const client = await createOAuthClient({
 		clientId: generateId("oauth_client"),
 		clientName,
