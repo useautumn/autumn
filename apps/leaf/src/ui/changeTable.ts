@@ -115,3 +115,47 @@ export const changeTable = ({
 				pricing,
 			]),
 	});
+
+const stepStatusLabels = {
+	applied: "🟢 Applied",
+	failed: "🔴 Failed",
+	pending: "⚪️ Not run",
+} as const;
+
+/** Which writes on a grouped card actually landed. Only worth rendering when
+ * the group was partly applied — a clean run says so in one line. */
+export const stepOutcomeTable = ({
+	steps,
+}: {
+	steps: ReadonlyArray<{
+		status: keyof typeof stepStatusLabels;
+		summary: string;
+	}>;
+}) =>
+	Table({
+		align: ["left", "left"],
+		caption: "Steps",
+		headers: ["Result", "Action"],
+		rows: steps.map(({ status, summary }) => [
+			stepStatusLabels[status],
+			summary,
+		]),
+	});
+
+/** One operation applied to several targets — collapses the repeated sections
+ * a fan-out would otherwise produce into a single scannable table. */
+export const fanOutTable = ({
+	caption,
+	headers,
+	rows,
+}: {
+	caption: string;
+	headers: [string, string, string];
+	rows: ReadonlyArray<[string, string, string]>;
+}) =>
+	Table({
+		align: ["left", "left", "right"],
+		caption,
+		headers,
+		rows: rows.map((row) => [...row]),
+	});

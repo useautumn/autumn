@@ -108,6 +108,7 @@ export const SIBLING_WITHHELD_NOTE =
 	"(The other pending write approvals in this batch were withheld, not rejected on their merits — approvals are shown to the user one at a time. Re-issue each withheld write as its own separate step so the user can approve it individually.)";
 
 export const postEveInputResponse = async ({
+	approveSiblings,
 	auth,
 	note,
 	optionId,
@@ -115,6 +116,9 @@ export const postEveInputResponse = async ({
 	session,
 	siblingRequestIds,
 }: {
+	/** Answer the whole batch with `optionId` — a grouped card approves every
+	 * write it showed, rather than withholding all but the first. */
+	approveSiblings?: boolean;
 	auth: EveAuthContext;
 	/** Context sent with the answer — a gate-deny and a user-discard are
 	 * indistinguishable to the model without it. */
@@ -139,13 +143,14 @@ export const postEveInputResponse = async ({
 			inputResponses: [
 				{ optionId, requestId },
 				...siblings.map((siblingRequestId) => ({
-					optionId: "deny",
+					optionId: approveSiblings ? optionId : "deny",
 					requestId: siblingRequestId,
 				})),
 			],
-			message: siblings.length
-				? [note, SIBLING_WITHHELD_NOTE].filter(Boolean).join("\n\n")
-				: note,
+			message:
+				siblings.length && !approveSiblings
+					? [note, SIBLING_WITHHELD_NOTE].filter(Boolean).join("\n\n")
+					: note,
 		}),
 	});
 	return parseSessionResponse({ existing: session, response });

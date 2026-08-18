@@ -4,6 +4,17 @@ import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
 import { writeToPreviewTool } from "./toolRegistry.js";
 
+/** A preview the write has but Leaf could not compute — distinct from a write
+ * that has no preview tool at all. */
+export const FAILED_APPROVAL_PREVIEW = { failed: true } as const;
+
+export const isFailedApprovalPreview = (preview: unknown) =>
+	Boolean(
+		preview &&
+			typeof preview === "object" &&
+			(preview as { failed?: unknown }).failed === true,
+	);
+
 export const shouldRefreshApprovalPreview = ({
 	preview,
 	toolName,
@@ -112,7 +123,7 @@ export const fetchApprovalPreview = async ({
 				"cause" in record ||
 				(typeof record.message === "string" &&
 					("code" in record || "domain" in record));
-			if (isErrorShape) return undefined;
+			if (isErrorShape) return FAILED_APPROVAL_PREVIEW;
 		}
 		return result;
 	} catch (error) {
@@ -123,6 +134,6 @@ export const fetchApprovalPreview = async ({
 				error: error instanceof Error ? error.message : String(error),
 			},
 		});
-		return undefined;
+		return FAILED_APPROVAL_PREVIEW;
 	}
 };

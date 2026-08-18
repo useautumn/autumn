@@ -75,6 +75,23 @@ const { resumeApproval } = await import(
 	"../../../src/internal/approvals/actions/resumeApproval.js"
 );
 
+const groupedApproval = (toolArgs: Record<string, unknown> = {}) =>
+	({
+		channel_id: "C1",
+		env: AppEnv.Sandbox,
+		id: "a_1",
+		org_id: "org_1",
+		provider: "slack",
+		run_id: "eve_session_1",
+		tool_args: {
+			_eveWithheldWrites: [{ requestId: "req_2", toolName: "autumn__attach" }],
+			...toolArgs,
+		},
+		tool_call_id: "req_1",
+		tool_name: "autumn__updateCustomer",
+		workspace_id: "T1",
+	}) as unknown as ChatApproval;
+
 const approval = (toolArgs: Record<string, unknown> = {}) =>
 	({
 		channel_id: "C1",
@@ -172,7 +189,15 @@ describe("resumeApproval", () => {
 		streamedEvents = [
 			{ type: "turn.started" },
 			{ type: "step.started" },
-			{ result: { callId: "c1" }, type: "action.result" },
+			{
+				result: {
+					callId: "c1",
+					output: { ok: true },
+					toolName: "autumn__updateSubscription",
+				},
+				status: "completed",
+				type: "action.result",
+			},
 			{ type: "session.waiting" },
 		];
 
@@ -195,5 +220,226 @@ describe("resumeApproval", () => {
 
 		expect(result).toMatchObject({ text: "" });
 		expect(loggedEvents).toEqual([]);
+	});
+});
+
+// "Something happened" is not "the write ran": a failed tool result and an
+// unrelated tool's result both look identical to a bare activity flag.
+describe("resumeApproval verifies the approved write actually ran", () => {
+	test("fails the approval when the approved write errored", async () => {
+		streamedEvents = [
+			{ type: "turn.started" },
+			{ type: "step.started" },
+			{
+				result: {
+					callId: "c1",
+					output: { error: "Plan not found" },
+					toolName: "autumn__updateSubscription",
+				},
+				status: "error",
+				type: "action.result",
+			},
+			{ type: "session.waiting" },
+		];
+
+		const result = await resumeApproval({
+			approval: approval(),
+			providerUserId: "U1",
+		});
+
+		expect(result).toMatchObject({ error: true });
+	});
+
+	test("fails the approval when only an unrelated tool ran", async () => {
+		streamedEvents = [
+			{ type: "turn.started" },
+			{ type: "step.started" },
+			{
+				result: {
+					callId: "c9",
+					output: { customers: [] },
+					toolName: "autumn__listCustomers",
+				},
+				status: "success",
+				type: "action.result",
+			},
+			{ type: "session.waiting" },
+		];
+
+		const result = await resumeApproval({
+			approval: approval(),
+			providerUserId: "U1",
+		});
+
+		expect(result).toMatchObject({ error: true });
+	});
+});
+
+// One card can carry several writes, so a half-applied group must say which
+// step failed rather than reporting a blanket success or failure.
+describe("grouped approvals report per-step outcomes", () => {
+	test("reports the failing step when a later write errors", async () => {
+		streamedEvents = [
+			{ type: "turn.started" },
+			{ type: "step.started" },
+			{
+				result: {
+					callId: "c1",
+					output: { ok: true },
+					toolName: "autumn__updateCustomer",
+				},
+				status: "completed",
+				type: "action.result",
+			},
+			{
+				result: {
+					callId: "c2",
+					output: { error: "Plan not found" },
+					toolName: "autumn__attach",
+				},
+				status: "error",
+				type: "action.result",
+			},
+			{ type: "session.waiting" },
+		];
+
+		const result = await resumeApproval({
+			approval: groupedApproval(),
+			providerUserId: "U1",
+		});
+
+		expect(result).toMatchObject({
+			error: true,
+			steps: [
+				{ status: "applied", toolName: "autumn__updateCustomer" },
+				{ status: "failed", toolName: "autumn__attach" },
+			],
+		});
+	});
+
+	test("reports every step applied when the whole group succeeds", async () => {
+		streamedEvents = [
+			{ type: "turn.started" },
+			{ type: "step.started" },
+			{
+				result: {
+					callId: "c1",
+					output: { ok: true },
+					toolName: "autumn__updateCustomer",
+				},
+				status: "completed",
+				type: "action.result",
+			},
+			{
+				result: {
+					callId: "c2",
+					output: { ok: true },
+					toolName: "autumn__attach",
+				},
+				status: "completed",
+				type: "action.result",
+			},
+			{ type: "session.waiting" },
+		];
+
+		const result = await resumeApproval({
+			approval: groupedApproval(),
+			providerUserId: "U1",
+		});
+
+		expect(result).toMatchObject({
+			steps: [
+				{ status: "applied", toolName: "autumn__updateCustomer" },
+				{ status: "applied", toolName: "autumn__attach" },
+			],
+		});
+	});
+});
+
+// A failed write comes back with status "completed" and the error buried in
+// the MCP result text — treating that as success is how a lost write hid.
+describe("resumeApproval detects errors inside a completed MCP result", () => {
+	test("marks the step failed when the tool text is an API error", async () => {
+		streamedEvents = [
+			{ type: "turn.started" },
+			{ type: "step.started" },
+			{
+				result: {
+					callId: "c1",
+					output: {
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify({
+									message:
+										'Autumn API request failed (400): {"message":"Cannot set proration_behavior to \'none\' when creating a new subscription","code":"invalid_request"}',
+								}),
+							},
+						],
+						isError: true,
+					},
+					toolName: "autumn__updateSubscription",
+				},
+				status: "completed",
+				type: "action.result",
+			},
+			{ type: "session.waiting" },
+		];
+
+		const result = await resumeApproval({
+			approval: approval(),
+			providerUserId: "U1",
+		});
+
+		expect(result).toMatchObject({ error: true });
+	});
+});
+
+// The model may retry a write that errored; the successful retry must win.
+describe("a retried write that succeeds counts as applied", () => {
+	test("later success overrides an earlier failure for the same step", async () => {
+		const failed = {
+			result: {
+				callId: "c1",
+				output: {
+					content: [
+						{
+							type: "text",
+							text: '{"message":"Autumn API request failed (400): bad params","code":"invalid_request"}',
+						},
+					],
+					isError: true,
+				},
+				toolName: "autumn__updateSubscription",
+			},
+			status: "completed" as const,
+			type: "action.result" as const,
+		};
+		const retried = {
+			result: {
+				callId: "c2",
+				output: { content: [{ type: "text", text: '{"ok":true}' }] },
+				toolName: "autumn__updateSubscription",
+			},
+			status: "completed" as const,
+			type: "action.result" as const,
+		};
+		streamedEvents = [
+			{ type: "turn.started" },
+			{ type: "step.started" },
+			failed,
+			retried,
+			{ type: "session.waiting" },
+		];
+
+		const result = await resumeApproval({
+			approval: approval(),
+			providerUserId: "U1",
+		});
+
+		expect(result).not.toMatchObject({ error: true });
+		expect(result).toMatchObject({
+			steps: [{ status: "applied", toolName: "autumn__updateSubscription" }],
+		});
 	});
 });

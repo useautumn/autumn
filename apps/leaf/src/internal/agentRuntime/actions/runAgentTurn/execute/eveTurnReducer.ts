@@ -1,4 +1,5 @@
 import type { CatalogPlanPreview } from "@autumn/shared";
+import { logger } from "../../../../../lib/logger.js";
 import { WAITING_FOR_INPUT_MESSAGE } from "../../../../../ui/messages.js";
 import type { RunStopReason } from "../../../../runs/runRegistry.js";
 import type { AgentApprovalRequest } from "../../../domain/agentTurn.js";
@@ -15,6 +16,8 @@ import {
 	type ChainedPendingRequest,
 	classifyParkedEveInput,
 	type PendingQuestion,
+	type WithheldWrite,
+	withheldWritesToolArgs,
 } from "../../../eve/parkedInput.js";
 import {
 	type CapturedPreview,
@@ -34,6 +37,9 @@ export type EveTurnOutcome =
 export type EveTurnProgress = Readonly<{
 	finalText: string;
 	lastPreview?: CapturedPreview;
+	/** Gated writes already parked this turn. Eve may deliver a parallel batch
+	 * as one event or as one per write, so they accumulate here either way. */
+	parkedWrites: ReadonlyArray<WithheldWrite>;
 	pendingText: string;
 	reasoningStreamId?: string;
 	toolInputs: ReadonlyMap<string, Record<string, unknown>>;
@@ -60,6 +66,7 @@ export type EveTurnTransition = Readonly<{
 
 export const createEveTurnProgress = (): EveTurnProgress => ({
 	finalText: "",
+	parkedWrites: [],
 	pendingText: "",
 	toolInputs: new Map(),
 	toolLabels: new Map(),
@@ -78,10 +85,12 @@ const approvalForGatedWrite = ({
 	chained,
 	progress,
 	siblingRequestIds,
+	withheld,
 }: {
 	chained: ChainedPendingRequest;
 	progress: EveTurnProgress;
 	siblingRequestIds: ReadonlyArray<string>;
+	withheld: ReadonlyArray<WithheldWrite>;
 }): AgentApprovalRequest => {
 	const options = approvalOptionIds({ options: chained.options });
 	return {
@@ -92,6 +101,7 @@ const approvalForGatedWrite = ({
 			_eveApproveOptionId: options.approve,
 			_eveDenyOptionId: options.deny,
 			_eveSiblingRequestIds: siblingRequestIds,
+			...withheldWritesToolArgs(withheld),
 		},
 		preview: previewForParkedWrite({
 			captured: progress.lastPreview,
@@ -150,6 +160,14 @@ const reduceActionResult = ({
 	if (!result?.callId) {
 		return { effects: [], progress: { ...progress, lastPreview } };
 	}
+	logger.info(`Eve tool completed: ${result.toolName ?? "unknown"}`, {
+		event: "leaf.eve_tool_completed",
+		data: {
+			call_id: result.callId,
+			status: event.status,
+			tool: result.toolName,
+		},
+	});
 	const effects: EveTurnEffect[] = [];
 	if (
 		progress.turnStarted &&
@@ -234,19 +252,49 @@ const reduceInputRequest = ({
 	progress: EveTurnProgress;
 }): EveTurnTransition => {
 	const parked = classifyParkedEveInput({ requests: event.requests });
+	logger.info("Eve parked input", {
+		event: "leaf.eve_input_parked",
+		data: {
+			already_parked: progress.parkedWrites.length,
+			kind: parked?.kind,
+			request_count: event.requests.length,
+			tools: event.requests.map((request) => request.action?.toolName),
+		},
+	});
 	if (parked?.kind === "gated") {
+		// The first parked write owns the card; later ones join it so a batch
+		// split across events still approves as a single group.
+		const [primary, ...rest] = [
+			...progress.parkedWrites,
+			{
+				input: parked.chained.input,
+				requestId: parked.chained.requestId,
+				toolName: parked.chained.toolName,
+			},
+			...parked.withheld,
+		];
+		const nextProgress = {
+			...progress,
+			parkedWrites: [primary, ...rest],
+		};
 		return {
 			effects: [{ kind: "save_session", status: "waiting" }],
 			outcome: {
 				approval: approvalForGatedWrite({
-					chained: parked.chained,
-					progress,
-					siblingRequestIds: parked.siblingRequestIds,
+					chained: {
+						input: primary.input,
+						options: parked.chained.options,
+						requestId: primary.requestId,
+						toolName: primary.toolName,
+					},
+					progress: nextProgress,
+					siblingRequestIds: rest.map((write) => write.requestId),
+					withheld: rest,
 				}),
 				kind: "suspended",
 				text: progress.finalText,
 			},
-			progress,
+			progress: nextProgress,
 		};
 	}
 	const accumulatedText = progress.pendingText || progress.finalText;
@@ -303,7 +351,12 @@ export const reduceEveTurnEvent = ({
 	if (event.type === "turn.started") {
 		return {
 			effects: [],
-			progress: { ...progress, lastPreview: undefined, turnStarted: true },
+			progress: {
+				...progress,
+				lastPreview: undefined,
+				parkedWrites: [],
+				turnStarted: true,
+			},
 		};
 	}
 	if (event.type === "actions.requested") {

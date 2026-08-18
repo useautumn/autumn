@@ -1026,3 +1026,323 @@ describe("approval status card", () => {
 		expect(JSON.stringify(card)).toContain("✅ Configure Webhooks completed");
 	});
 });
+
+// A write the model asked for but Eve withheld is invisible unless the card
+// names it, which is how half a multi-write request used to go missing.
+describe("withheld writes", () => {
+	test("names the other requested writes on the pending card", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Sandbox,
+			toolName: "attach",
+			toolArgs: {
+				request: { customer_id: "cus_1", plan_id: "pro" },
+				_eveWithheldWrites: [
+					{
+						input: { request: { customer_id: "cus_1", email: "new@x.com" } },
+						requestId: "req_2",
+						toolName: "autumn__updateCustomer",
+					},
+				],
+			},
+		});
+
+		const rendered = JSON.stringify(cardToBlockKit(card));
+		// The grouped write renders as a real action line, not a bolted-on table.
+		expect(rendered).toContain("Updating");
+		expect(rendered).toContain("new@x.com");
+	});
+
+	test("says nothing when no writes were withheld", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Sandbox,
+			toolName: "attach",
+			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
+		});
+
+		// One write means one action line, not a second grouped step.
+		const sections = cardToBlockKit(card).filter(
+			(block) => (block as { type: string }).type === "section",
+		);
+		expect(sections).toHaveLength(1);
+	});
+});
+
+// A grouped card that half-applied must name which write landed; a single
+// failed write is already described by its message.
+describe("grouped step outcomes", () => {
+	test("breaks down a partly applied group", () => {
+		const card = approvalStatusCard({
+			env: AppEnv.Sandbox,
+			status: "failed",
+			steps: [
+				{ status: "applied", toolName: "updateCustomer" },
+				{ status: "failed", toolName: "attach" },
+			],
+			toolArgs: { request: { customer_id: "cus_1" } },
+			toolName: "updateCustomer",
+		});
+
+		const rendered = JSON.stringify(cardToBlockKit(card));
+		expect(rendered).toContain("Steps");
+		expect(rendered).toContain("🟢 Applied");
+		expect(rendered).toContain("🔴 Failed");
+	});
+
+	test("omits the breakdown for a single failed write", () => {
+		const card = approvalStatusCard({
+			env: AppEnv.Sandbox,
+			status: "failed",
+			steps: [{ status: "failed", toolName: "attach" }],
+			toolArgs: { request: { customer_id: "cus_1" } },
+			toolName: "attach",
+		});
+
+		expect(JSON.stringify(cardToBlockKit(card))).not.toContain("Steps");
+	});
+});
+
+// On a grouped card the primary write may be the one with no preview, so the
+// money facts must still reach the user via the included steps.
+describe("grouped card with a preview-less primary write", () => {
+	test("still names the attach that carries the billing impact", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Sandbox,
+			toolName: "updateCustomer",
+			toolArgs: {
+				request: { customer_id: "cus_1", email: "new@x.com" },
+				_eveWithheldWrites: [
+					{
+						input: { request: { customer_id: "cus_1", plan_id: "pro" } },
+						requestId: "req_2",
+						toolName: "autumn__attach",
+					},
+				],
+			},
+		});
+
+		const rendered = JSON.stringify(cardToBlockKit(card));
+		// Each grouped step carries the heading it would have as its own card.
+		expect(rendered).toContain("Attach plan");
+		expect(rendered).toContain("Attaching");
+		expect(rendered).toContain("Approve");
+	});
+});
+
+// Attaching one plan to many customers is one operation with many targets, so
+// it collapses into a table instead of repeating the same section per customer.
+describe("homogeneous fan-out", () => {
+	const attachStep = (customerId: string) => ({
+		input: { request: { customer_id: customerId, plan_id: "launch" } },
+		preview: wrapMcpResult({
+			_display: { customerName: customerId, planName: "Launch" },
+			currency: "usd",
+			line_items: [],
+			total: 300,
+		}),
+		requestId: `req_${customerId}`,
+		toolName: "autumn__attach",
+	});
+
+	const fanOutCard = (customerIds: string[]) =>
+		approvalCard({
+			id: "fanout",
+			env: AppEnv.Sandbox,
+			preview: wrapMcpResult({
+				_display: { customerName: "leaf-0001", planName: "Launch" },
+				currency: "usd",
+				line_items: [],
+				total: 300,
+			}),
+			toolArgs: {
+				_eveWithheldWrites: customerIds.map(attachStep),
+				request: { customer_id: "leaf-0001", plan_id: "launch" },
+			},
+			toolName: "attach",
+		});
+
+	test("collapses repeated attaches into one table", () => {
+		const blocks = cardToBlockKit(
+			fanOutCard(["leaf-0002", "leaf-0003", "leaf-0004"]),
+		);
+		const rendered = JSON.stringify(blocks);
+
+		expect(rendered).toContain("leaf-0004");
+		// One heading, not one per customer.
+		expect(rendered.split("Attach plan").length - 1).toBe(1);
+		expect(blocks.length).toBeLessThan(10);
+		// Table cells render raw text, so link markup would show as literal "**".
+		expect(rendered).not.toContain("**");
+	});
+
+	test("shows the combined total across the fan-out", () => {
+		const rendered = JSON.stringify(
+			cardToBlockKit(fanOutCard(["leaf-0002", "leaf-0003", "leaf-0004"])),
+		);
+
+		expect(rendered).toContain("1,200");
+	});
+
+	test("keeps per-step sections when the writes differ", () => {
+		const card = approvalCard({
+			id: "mixed",
+			env: AppEnv.Sandbox,
+			toolArgs: {
+				_eveWithheldWrites: [attachStep("leaf-0002")],
+				request: { customer_id: "leaf-0001", email: "new@x.com" },
+			},
+			toolName: "updateCustomer",
+		});
+
+		const rendered = JSON.stringify(cardToBlockKit(card));
+		expect(rendered).toContain("Update customer");
+		expect(rendered).toContain("Attach plan");
+	});
+});
+
+// A grouped card approves several writes, so the request modal must show each
+// one — the reviewer is signing off on all of them, not just the first.
+describe("request modal for grouped writes", () => {
+	const modal = approvalPayloadModal({
+		env: AppEnv.Sandbox,
+		toolArgs: {
+			_eveWithheldWrites: [
+				{
+					input: { request: { customer_id: "leaf-0002", plan_id: "scale" } },
+					requestId: "req_2",
+					toolName: "autumn__attach",
+				},
+				{
+					input: { request: { customer_id: "leaf-0003", plan_id: "scale" } },
+					requestId: "req_3",
+					toolName: "autumn__attach",
+				},
+			],
+			request: { customer_id: "leaf-0001", plan_id: "scale" },
+		},
+		toolName: "attach",
+	});
+	const rendered = JSON.stringify(modal);
+
+	test("shows every write's request body", () => {
+		expect(rendered).toContain("leaf-0001");
+		expect(rendered).toContain("leaf-0002");
+		expect(rendered).toContain("leaf-0003");
+	});
+
+	test("labels each write so the reviewer can tell them apart", () => {
+		expect(rendered).toContain("1 of 3");
+		expect(rendered).toContain("3 of 3");
+	});
+
+	test("a single write keeps the plain label", () => {
+		const single = JSON.stringify(
+			approvalPayloadModal({
+				env: AppEnv.Sandbox,
+				toolArgs: { request: { customer_id: "leaf-0001", plan_id: "scale" } },
+				toolName: "attach",
+			}),
+		);
+		expect(single).toContain("Attach request body");
+		expect(single).not.toContain("1 of");
+	});
+});
+
+// The per-step preview is the {_display, preview} envelope; the money lives on
+// the inner preview, not the wrapper.
+describe("fan-out reads money from the wrapped preview", () => {
+	const wrapped = (total: number) => ({
+		_display: { customerName: "Acme", planName: "Scale" },
+		preview: {
+			currency: "usd",
+			line_items: [
+				{ subtotal: 0, total: 0 },
+				{ subtotal: total, total },
+			],
+			subtotal: total,
+			total,
+		},
+	});
+
+	test("shows the customized amount per row and in the total", () => {
+		const card = approvalCard({
+			id: "fanout",
+			env: AppEnv.Sandbox,
+			preview: wrapped(1000),
+			toolArgs: {
+				_eveWithheldWrites: [
+					{
+						input: { request: { customer_id: "leaf-0002", plan_id: "scale" } },
+						preview: wrapped(1000),
+						requestId: "req_2",
+						toolName: "autumn__attach",
+					},
+					{
+						input: { request: { customer_id: "leaf-0003", plan_id: "scale" } },
+						preview: wrapped(0),
+						requestId: "req_3",
+						toolName: "autumn__attach",
+					},
+				],
+				request: {
+					customer_id: "leaf-0001",
+					customize: { price: { amount: 1000, interval: "month" } },
+					plan_id: "scale",
+				},
+			},
+			toolName: "attach",
+		});
+
+		const rendered = JSON.stringify(cardToBlockKit(card));
+		expect(rendered).toContain("$1,000.00");
+		expect(rendered).toContain("$2,000.00");
+	});
+});
+
+// A backfilled step preview arrives as the raw MCP envelope; the money is a
+// JSON string inside content[].text and must still reach the table.
+describe("fan-out reads money from a raw MCP preview envelope", () => {
+	const mcpEnvelope = (total: number) => ({
+		_display: { customerName: "Acme", planName: "Scale" },
+		preview: wrapMcpResult({
+			currency: "usd",
+			line_items: [{ subtotal: total, total }],
+			subtotal: total,
+			total,
+		}),
+	});
+
+	test("shows the amount per row instead of $0.00", () => {
+		const card = approvalCard({
+			id: "fanout",
+			env: AppEnv.Sandbox,
+			preview: mcpEnvelope(1000),
+			toolArgs: {
+				_eveWithheldWrites: [
+					{
+						input: { request: { customer_id: "leaf-0002", plan_id: "scale" } },
+						preview: mcpEnvelope(500),
+						requestId: "req_2",
+						toolName: "autumn__attach",
+					},
+					{
+						input: { request: { customer_id: "leaf-0003", plan_id: "scale" } },
+						preview: mcpEnvelope(500),
+						requestId: "req_3",
+						toolName: "autumn__attach",
+					},
+				],
+				request: { customer_id: "leaf-0001", plan_id: "scale" },
+			},
+			toolName: "attach",
+		});
+
+		const rendered = JSON.stringify(cardToBlockKit(card));
+		expect(rendered).toContain("$1,000.00");
+		expect(rendered).toContain("$500.00");
+		expect(rendered).toContain("$2,000.00");
+		expect(rendered).not.toContain("$0.00");
+	});
+});

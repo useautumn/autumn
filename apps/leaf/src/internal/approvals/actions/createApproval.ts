@@ -1,17 +1,66 @@
 import type { AutumnLogger } from "@autumn/logging";
+import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv, ChatProvider } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import type { AgentApprovalTurn } from "../../agentRuntime/domain/agentTurn.js";
+import { withheldWritesFromToolArgs } from "../../agentRuntime/eve/parkedInput.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import {
 	resolveApprovalDisplay,
 	withApprovalDisplay,
 } from "../utils/approvalDisplay.js";
 import {
+	FAILED_APPROVAL_PREVIEW,
 	fetchApprovalPreview,
+	isFailedApprovalPreview,
 	shouldRefreshApprovalPreview,
 } from "../utils/fetchApprovalPreview.js";
 import { publicToolArgs, toolRequestFromArgs } from "../utils/toolRequest.js";
+
+/** Each grouped write gets the same preview + display backfill as the primary
+ * one, so the card can render every step with the standard body. */
+const withGroupedWritePreviews = async ({
+	env,
+	getToken,
+	logger,
+	toolArgs,
+}: {
+	env: AppEnv;
+	getToken: () => Promise<string>;
+	logger: AutumnLogger;
+	toolArgs: Record<string, unknown>;
+}) => {
+	const withheld = withheldWritesFromToolArgs(toolArgs);
+	if (!withheld.length) return toolArgs;
+	const resolved = await Promise.all(
+		withheld.map(async (write) => {
+			const request = toolRequestFromArgs(write.input);
+			// The primary write's preview is parsed at capture time; a backfilled
+			// one arrives as the raw MCP envelope and needs the same treatment.
+			const preview = parsePreviewPayload(
+				await resolveApprovalPreview({
+					env,
+					getToken,
+					logger,
+					preview: undefined,
+					request,
+					toolName: write.toolName,
+				}),
+			);
+			const display = await resolveApprovalDisplay({
+				env,
+				getToken,
+				preview,
+				request,
+			});
+			return {
+				...write,
+				preview: withApprovalDisplay({ display, preview }),
+			};
+		}),
+	);
+	return { ...toolArgs, _eveWithheldWrites: resolved };
+};
 
 const resolveApprovalPreview = async ({
 	env,
@@ -39,6 +88,9 @@ const resolveApprovalPreview = async ({
 			token: await getToken(),
 			toolName,
 		});
+		if (isFailedApprovalPreview(fetchedPreview)) {
+			return preview ?? FAILED_APPROVAL_PREVIEW;
+		}
 		return fetchedPreview ? fetchedPreview : preview;
 	} catch (error) {
 		logger.warn("Could not backfill approval preview", {
@@ -98,6 +150,12 @@ export const createApproval = async ({
 		request,
 	});
 	const preview = withApprovalDisplay({ display, preview: resolvedPreview });
+	const groupedToolArgs = await withGroupedWritePreviews({
+		env,
+		getToken,
+		logger,
+		toolArgs,
+	});
 
 	const approvalId = await chatApprovalRepo.insert({
 		db,
@@ -126,7 +184,7 @@ export const createApproval = async ({
 		approvalId,
 		params: request,
 		preview,
-		toolArgs,
+		toolArgs: groupedToolArgs,
 		toolName: approval.toolName,
 	} as const;
 };

@@ -7,11 +7,16 @@ export const toolRequestFromArgs = (
 		? (args.request as Record<string, unknown>)
 		: args;
 
-/** Drops the `_eve*` option ids the harness threads through `toolArgs` — they
- * are transport, not part of the write the user is approving. */
+/** Transport the harness threads through `toolArgs`. Option ids and request ids
+ * are dropped before display; the grouped writes are kept because the card
+ * renders them as the request's other steps. */
+const DISPLAYED_HARNESS_KEYS = new Set(["_eveWithheldWrites"]);
+
 export const publicToolArgs = (args: Record<string, unknown>) =>
 	Object.fromEntries(
-		Object.entries(args).filter(([key]) => !key.startsWith("_eve")),
+		Object.entries(args).filter(
+			([key]) => !key.startsWith("_eve") || DISPLAYED_HARNESS_KEYS.has(key),
+		),
 	);
 
 const canonicalJson = (value: unknown) =>

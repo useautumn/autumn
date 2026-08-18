@@ -71,15 +71,18 @@ describe("postEveInputResponse", () => {
 	});
 
 	const post = ({
+		approveSiblings,
 		note,
 		optionId = "approve",
 		siblingRequestIds,
 	}: {
+		approveSiblings?: boolean;
 		note?: string;
 		optionId?: string;
 		siblingRequestIds?: string[];
 	}) =>
 		postEveInputResponse({
+			approveSiblings,
 			auth,
 			note,
 			optionId,
@@ -143,5 +146,57 @@ describe("postEveInputResponse", () => {
 		await post({ siblingRequestIds: ["req_2"] });
 
 		expect(postedBodies[0]?.message).toBe(SIBLING_WITHHELD_NOTE);
+	});
+
+	// The batch answer carries the caller's own option, so approving a grouped card
+	// approves every write in it while every withdraw path still denies all of them.
+	describe("batch answers follow the caller's option", () => {
+		test("approves every request in an approved batch", async () => {
+			await post({
+				approveSiblings: true,
+				optionId: "approve",
+				siblingRequestIds: ["req_2", "req_3"],
+			});
+
+			expect(postedBodies[0]?.inputResponses).toEqual([
+				{ optionId: "approve", requestId: "req_1" },
+				{ optionId: "approve", requestId: "req_2" },
+				{ optionId: "approve", requestId: "req_3" },
+			]);
+		});
+
+		test("omits the withheld note when the batch was approved together", async () => {
+			await post({
+				approveSiblings: true,
+				optionId: "approve",
+				siblingRequestIds: ["req_2"],
+			});
+
+			expect(postedBodies[0]?.message).toBeUndefined();
+		});
+
+		// Dependent writes share a card, so the order the model issued them in is
+		// the order they must be applied in.
+		test("preserves the issued order of an approved batch", async () => {
+			await post({
+				approveSiblings: true,
+				optionId: "approve",
+				siblingRequestIds: ["req_2", "req_3", "req_4"],
+			});
+
+			expect(
+				postedBodies[0]?.inputResponses.map((response) => response.requestId),
+			).toEqual(["req_1", "req_2", "req_3", "req_4"]);
+		});
+
+		test("still denies every sibling on a withdraw", async () => {
+			await post({ optionId: "deny", siblingRequestIds: ["req_2", "req_3"] });
+
+			expect(postedBodies[0]?.inputResponses).toEqual([
+				{ optionId: "deny", requestId: "req_1" },
+				{ optionId: "deny", requestId: "req_2" },
+				{ optionId: "deny", requestId: "req_3" },
+			]);
+		});
 	});
 });

@@ -157,6 +157,13 @@ describe("Eve turn reducer", () => {
 					_eveApproveOptionId: "confirm",
 					_eveDenyOptionId: "cancel",
 					_eveSiblingRequestIds: ["req_2"],
+					_eveWithheldWrites: [
+						{
+							input: undefined,
+							requestId: "req_2",
+							toolName: "autumn__updateSubscription",
+						},
+					],
 					request,
 				},
 				toolCallId: "req_1",
@@ -179,5 +186,173 @@ describe("Eve turn reducer", () => {
 			{ kind: "throw", message: "Eve failed" },
 		]);
 		expect(transition.outcome).toBeUndefined();
+	});
+});
+
+// The prompt requires a preview first, so the writes park on a LATER turn than
+// the preview call — the batch must still group into one approval.
+describe("a batch parked after a preview turn", () => {
+	test("groups both writes from a post-preview park", () => {
+		const started = reduceEveTurnEvent({
+			event: { type: "turn.started" },
+			progress: createEveTurnProgress(),
+		});
+		const requested = reduceEveTurnEvent({
+			event: {
+				actions: [{ callId: "call_p", toolName: "autumn__previewAttach" }],
+				type: "actions.requested",
+			},
+			progress: started.progress,
+		});
+		const previewed = reduceEveTurnEvent({
+			event: {
+				result: {
+					callId: "call_p",
+					output: { total: 100, currency: "usd" },
+					toolName: "autumn__previewAttach",
+				},
+				status: "completed",
+				type: "action.result",
+			},
+			progress: requested.progress,
+		});
+		const suspended = reduceEveTurnEvent({
+			event: {
+				requests: [
+					{
+						action: {
+							input: { request: { customer_id: "cus_1", email: "n@x.com" } },
+							toolName: "autumn__updateCustomer",
+						},
+						options: [
+							{ id: "confirm", label: "Approve" },
+							{ id: "cancel", label: "Deny" },
+						],
+						requestId: "req_1",
+					},
+					{
+						action: {
+							input: { request: { customer_id: "cus_1", plan_id: "pro" } },
+							toolName: "autumn__attach",
+						},
+						requestId: "req_2",
+					},
+				],
+				type: "input.requested",
+			},
+			progress: previewed.progress,
+		});
+
+		expect(suspended.outcome).toMatchObject({
+			approval: {
+				toolArgs: {
+					_eveSiblingRequestIds: ["req_2"],
+					_eveWithheldWrites: [{ toolName: "autumn__attach" }],
+				},
+				toolName: "autumn__updateCustomer",
+			},
+			kind: "suspended",
+		});
+	});
+});
+
+// Eve may deliver a parallel batch as one input.requested carrying both writes,
+// or as one event per write. The card must group them either way.
+describe("gated writes arriving across separate events", () => {
+	const gatedRequest = ({
+		requestId,
+		toolName,
+	}: {
+		requestId: string;
+		toolName: string;
+	}) => ({
+		action: {
+			input: { request: { customer_id: "cus_1" } },
+			toolName,
+		},
+		options: [
+			{ id: "confirm", label: "Approve" },
+			{ id: "cancel", label: "Deny" },
+		],
+		requestId,
+	});
+
+	// A new turn must not inherit the previous turn's parked writes, or an old
+	// write would reappear on an unrelated card.
+	test("forgets parked writes when a new turn starts", () => {
+		const started = reduceEveTurnEvent({
+			event: { type: "turn.started" },
+			progress: createEveTurnProgress(),
+		});
+		const parked = reduceEveTurnEvent({
+			event: {
+				requests: [
+					gatedRequest({
+						requestId: "req_1",
+						toolName: "autumn__updateCustomer",
+					}),
+				],
+				type: "input.requested",
+			},
+			progress: started.progress,
+		});
+		const restarted = reduceEveTurnEvent({
+			event: { type: "turn.started" },
+			progress: parked.progress,
+		});
+		const next = reduceEveTurnEvent({
+			event: {
+				requests: [
+					gatedRequest({ requestId: "req_9", toolName: "autumn__attach" }),
+				],
+				type: "input.requested",
+			},
+			progress: restarted.progress,
+		});
+
+		expect(next.outcome).toMatchObject({
+			approval: {
+				toolArgs: { _eveSiblingRequestIds: [] },
+				toolName: "autumn__attach",
+			},
+		});
+	});
+
+	test("groups a second gated write parked in a later event", () => {
+		const started = reduceEveTurnEvent({
+			event: { type: "turn.started" },
+			progress: createEveTurnProgress(),
+		});
+		const first = reduceEveTurnEvent({
+			event: {
+				requests: [
+					gatedRequest({
+						requestId: "req_1",
+						toolName: "autumn__updateCustomer",
+					}),
+				],
+				type: "input.requested",
+			},
+			progress: started.progress,
+		});
+		const second = reduceEveTurnEvent({
+			event: {
+				requests: [
+					gatedRequest({ requestId: "req_2", toolName: "autumn__attach" }),
+				],
+				type: "input.requested",
+			},
+			progress: first.progress,
+		});
+
+		expect(second.outcome).toMatchObject({
+			approval: {
+				toolArgs: {
+					_eveWithheldWrites: [{ toolName: "autumn__attach" }],
+				},
+				toolName: "autumn__updateCustomer",
+			},
+			kind: "suspended",
+		});
 	});
 });

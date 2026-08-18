@@ -18,24 +18,33 @@ import {
 	Fields,
 	LinkButton,
 	Modal,
+	type ModalChild,
+	type ModalElement,
 	Select,
 	SelectOption,
 	Table,
 } from "chat";
+import { withheldWritesFromToolArgs } from "../internal/agentRuntime/eve/parkedInput.js";
 import {
 	normalizeToolName,
 	toolLabel,
 } from "../internal/agentRuntime/tools/toolPolicy.js";
 import { attachBillingEditsFromRequest } from "../internal/approvals/domain/attachBillingEdits.js";
+import { isFailedApprovalPreview } from "../internal/approvals/utils/fetchApprovalPreview.js";
 import { toolRequestFromArgs } from "../internal/approvals/utils/toolRequest.js";
 import {
 	catalogActionToChange,
 	catalogItemActionToChange,
 	changeTable,
 	changeTableRow,
+	fanOutTable,
 	planItemChangeTableRow,
+	stepOutcomeTable,
 } from "./changeTable.js";
-import { ACTION_FAILED_MESSAGE } from "./messages.js";
+import {
+	ACTION_FAILED_MESSAGE,
+	PREVIEW_UNAVAILABLE_MESSAGE,
+} from "./messages.js";
 import { previewElements } from "./previewContent.js";
 
 export type ApprovalCardStatus =
@@ -191,6 +200,14 @@ const formatDay = (epochMs: number) =>
 	}).format(new Date(epochMs));
 
 type ActionPhrases = {
+	/** Customer + plan labels resolved once: linked for sentences, plain for
+	 * table cells, which render raw text. */
+	labels: {
+		customer: string;
+		plainCustomer: string;
+		plainPlan: string;
+		plan: string;
+	};
 	done: string;
 	failed: string;
 	pending: string;
@@ -249,80 +266,89 @@ const actionPhrases = ({
 			})
 		: "the plan";
 	const entitySuffix = entity ? ` (entity ${bold(entity)})` : "";
-
-	switch (name) {
-		case "attach": {
-			const target = `${planLabel} to ${customerLabel}${entitySuffix}`;
-			return {
-				done: `Attached ${target}`,
-				failed: `Couldn't attach ${target}`,
-				pending: `Attach ${target}`,
-				running: `Attaching ${target}`,
-			};
+	const labels = {
+		customer: customerLabel,
+		plan: planLabel,
+		// Table cells render raw text, so they need the names without link markup.
+		plainCustomer: customerText ?? customer ?? "—",
+		plainPlan: planName ?? plan ?? "—",
+	};
+	const phrasesFor = (): Omit<ActionPhrases, "labels"> => {
+		switch (name) {
+			case "attach": {
+				const target = `${planLabel} to ${customerLabel}${entitySuffix}`;
+				return {
+					done: `Attached ${target}`,
+					failed: `Couldn't attach ${target}`,
+					pending: `Attach ${target}`,
+					running: `Attaching ${target}`,
+				};
+			}
+			case "updateSubscription": {
+				const target = `${customerLabel}'s subscription${
+					plan ? ` to ${planLabel}` : ""
+				}${entitySuffix}`;
+				return {
+					done: `Updated ${target}`,
+					failed: `Couldn't update ${target}`,
+					pending: `Update ${target}`,
+					running: `Updating ${target}`,
+				};
+			}
+			case "createSchedule": {
+				const target = `plan changes for ${customerLabel}${entitySuffix}`;
+				return {
+					done: `Scheduled ${target}`,
+					failed: `Couldn't schedule ${target}`,
+					pending: `Schedule ${target}`,
+					running: `Scheduling ${target}`,
+				};
+			}
+			case "updateCustomer": {
+				return {
+					done: `Updated ${customerLabel}`,
+					failed: `Couldn't update ${customerLabel}`,
+					pending: `Update ${customerLabel}`,
+					running: `Updating ${customerLabel}`,
+				};
+			}
+			case "getOrCreateCustomer": {
+				return {
+					done: `Created customer ${customerLabel}`,
+					failed: `Couldn't create customer ${customerLabel}`,
+					pending: `Create customer ${customerLabel}`,
+					running: `Creating customer ${customerLabel}`,
+				};
+			}
+			case "createBalance": {
+				const featureId = getString(request.feature_id);
+				const feature =
+					getString(
+						getRecord(getRecord(display.featureNames)[featureId ?? ""]).name,
+					) ?? featureId;
+				const target = `${
+					feature ? `a ${bold(feature)} balance` : "a balance"
+				} for ${customerLabel}${entitySuffix}`;
+				return {
+					done: `Created ${target}`,
+					failed: `Couldn't create ${target}`,
+					pending: `Create ${target}`,
+					running: `Creating ${target}`,
+				};
+			}
+			default: {
+				const label = toolLabel(toolName);
+				const forCustomer = customer ? ` for ${customerLabel}` : "";
+				return {
+					done: `${label} completed${forCustomer}`,
+					failed: `${label} failed${forCustomer}`,
+					pending: `${label}${forCustomer}`,
+					running: `Running ${label.toLowerCase()}${forCustomer}`,
+				};
+			}
 		}
-		case "updateSubscription": {
-			const target = `${customerLabel}'s subscription${
-				plan ? ` to ${planLabel}` : ""
-			}${entitySuffix}`;
-			return {
-				done: `Updated ${target}`,
-				failed: `Couldn't update ${target}`,
-				pending: `Update ${target}`,
-				running: `Updating ${target}`,
-			};
-		}
-		case "createSchedule": {
-			const target = `plan changes for ${customerLabel}${entitySuffix}`;
-			return {
-				done: `Scheduled ${target}`,
-				failed: `Couldn't schedule ${target}`,
-				pending: `Schedule ${target}`,
-				running: `Scheduling ${target}`,
-			};
-		}
-		case "updateCustomer": {
-			return {
-				done: `Updated ${customerLabel}`,
-				failed: `Couldn't update ${customerLabel}`,
-				pending: `Update ${customerLabel}`,
-				running: `Updating ${customerLabel}`,
-			};
-		}
-		case "getOrCreateCustomer": {
-			return {
-				done: `Created customer ${customerLabel}`,
-				failed: `Couldn't create customer ${customerLabel}`,
-				pending: `Create customer ${customerLabel}`,
-				running: `Creating customer ${customerLabel}`,
-			};
-		}
-		case "createBalance": {
-			const featureId = getString(request.feature_id);
-			const feature =
-				getString(
-					getRecord(getRecord(display.featureNames)[featureId ?? ""]).name,
-				) ?? featureId;
-			const target = `${
-				feature ? `a ${bold(feature)} balance` : "a balance"
-			} for ${customerLabel}${entitySuffix}`;
-			return {
-				done: `Created ${target}`,
-				failed: `Couldn't create ${target}`,
-				pending: `Create ${target}`,
-				running: `Creating ${target}`,
-			};
-		}
-		default: {
-			const label = toolLabel(toolName);
-			const forCustomer = customer ? ` for ${customerLabel}` : "";
-			return {
-				done: `${label} completed${forCustomer}`,
-				failed: `${label} failed${forCustomer}`,
-				pending: `${label}${forCustomer}`,
-				running: `Running ${label.toLowerCase()}${forCustomer}`,
-			};
-		}
-	}
+	};
+	return { ...phrasesFor(), labels };
 };
 
 const pendingActionPrompt = ({
@@ -337,7 +363,9 @@ const pendingActionPrompt = ({
 // MCP content blocks; unwrap both layers before reading money facts.
 const getPreviewBody = (preview: unknown) => {
 	const body = getResultBody(preview);
-	const inner = getRecord(body.preview);
+	// A stored step preview may still be the raw MCP envelope nested under the
+	// display wrapper, so the inner value gets the same unwrapping as the outer.
+	const inner = getResultBody(body.preview);
 	return Object.keys(inner).length ? inner : body;
 };
 
@@ -771,6 +799,106 @@ const BILLING_ACTION_TOOLS = new Set([
 
 // Pending, running, and resolved cards share this body so in-place edits keep
 // the facts the reviewer approved.
+/** Every grouped step targets the same operation, so the card can show one
+ * heading and one row per target instead of repeating the whole body. */
+const isHomogeneousGroup = ({
+	steps,
+	toolName,
+}: {
+	steps: ReadonlyArray<{ toolName: string }>;
+	toolName: string;
+}) =>
+	steps.length > 1 &&
+	steps.every(
+		(step) => normalizeToolName(step.toolName) === normalizeToolName(toolName),
+	);
+
+const stepTotal = (preview?: unknown) =>
+	getNumber(getPreviewBody(preview).total) ?? 0;
+
+const stepCurrency = (preview?: unknown) =>
+	getString(getPreviewBody(preview).currency) ?? undefined;
+
+/** One row per target for a fan-out, using the same name resolution and money
+ * formatting the per-step sections use. */
+const fanOutBlocks = ({
+	env,
+	preview,
+	steps,
+	toolArgs,
+	toolName,
+}: {
+	env?: AppEnv;
+	preview?: unknown;
+	steps: ReadonlyArray<{
+		input?: Record<string, unknown>;
+		preview?: unknown;
+		toolName: string;
+	}>;
+	toolArgs?: Record<string, unknown>;
+	toolName: string;
+}): CardChild[] => {
+	const all = [{ input: toolArgs, preview, toolName }, ...steps];
+	const rows = all.map((step) => {
+		const phrases = actionPhrases({
+			env,
+			toolArgs: step.input,
+			toolName: step.toolName,
+		});
+		const amount = stepTotal(step.preview);
+		return [
+			phrases.labels.plainCustomer,
+			phrases.labels.plainPlan,
+			formatMoney({ amount, currency: stepCurrency(step.preview) }),
+		] as [string, string, string];
+	});
+	const total = all.reduce((sum, step) => sum + stepTotal(step.preview), 0);
+	return [
+		// The card header already names the operation, so the table only labels
+		// how many targets it covers.
+		fanOutTable({
+			caption: `${all.length} customers`,
+			headers: ["Customer", "Plan", "Due now"],
+			rows,
+		}),
+		CardText(
+			`*Total*  *${formatMoney({ amount: total, currency: stepCurrency(preview) })}*`,
+		),
+	];
+};
+
+/** The other writes approving this card will apply, in issue order. Each one
+ * renders through the same body builder as a standalone card, so a grouped
+ * attach looks exactly like an attach. */
+const withheldStepBlocks = ({
+	env,
+	toolArgs,
+}: {
+	env?: AppEnv;
+	toolArgs?: Record<string, unknown>;
+}): CardChild[] =>
+	withheldWritesFromToolArgs(toolArgs).flatMap((write) => {
+		const phrases = actionPhrases({
+			env,
+			toolArgs: write.input,
+			toolName: write.toolName,
+		});
+		return [
+			// Same heading the write would carry as its own card, so each step in
+			// a group reads as a distinct operation.
+			CardText(
+				`*${approvalTitle({ preview: write.preview, toolName: write.toolName })}*`,
+			),
+			CardText(`${phrases.running}`),
+			...approvalPreviewBlocks({
+				env,
+				preview: write.preview,
+				toolArgs: write.input,
+				toolName: write.toolName,
+			}),
+		];
+	});
+
 const approvalPreviewBlocks = ({
 	env,
 	preview,
@@ -782,9 +910,16 @@ const approvalPreviewBlocks = ({
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }): CardChild[] => {
-	const structured = previewElements(preview);
 	const blocks: CardChild[] = [];
 	const normalizedToolName = normalizeToolName(toolName);
+	if (isFailedApprovalPreview(preview)) {
+		blocks.push(
+			CardText(PREVIEW_UNAVAILABLE_MESSAGE, { style: "muted" }),
+			Fields(requestSummaryFields(toolArgs)),
+		);
+		return blocks;
+	}
+	const structured = previewElements(preview);
 	const pushMoney = () => {
 		if (structured) {
 			blocks.push(...structured);
@@ -1068,11 +1203,29 @@ export const approvalCard = ({
 			: pendingActionPrompt({ phrases, toolName });
 	const editable = normalizeToolName(toolName) === "attach";
 
+	const groupedSteps = withheldWritesFromToolArgs(toolArgs);
+	// A fan-out repeats one operation across targets, so it collapses to a table;
+	// mixed operations keep a titled section each.
+	const fanOut = isHomogeneousGroup({ steps: groupedSteps, toolName });
+
 	return Card({
 		title: approvalTitle({ preview, toolName }),
 		children: [
-			...(prompt ? [CardText(prompt)] : []),
-			...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
+			...(fanOut
+				? []
+				: [
+						...(prompt ? [CardText(prompt)] : []),
+						...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
+					]),
+			...(fanOut
+				? fanOutBlocks({
+						env,
+						preview,
+						steps: groupedSteps,
+						toolArgs,
+						toolName,
+					})
+				: withheldStepBlocks({ env, toolArgs })),
 			Actions([
 				Button({
 					id: "approve_billing_action",
@@ -1169,6 +1322,37 @@ export const approvalDetailsModal = ({
 // Slack caps modal titles at 24 chars and section text at ~3000.
 const MODAL_JSON_MAX_LENGTH = 2800;
 
+const requestActionLabel = (toolName: string) =>
+	normalizeToolName(toolName) === "attach" ? "Attach" : toolLabel(toolName);
+
+/** One labelled code block per request body. Only the body matters to the
+ * reviewer — not wrapper fields like the agent's `intent` note. */
+const requestBodyBlocks = ({
+	env,
+	input,
+	position,
+	toolName,
+}: {
+	env?: AppEnv;
+	input?: Record<string, unknown>;
+	position?: { index: number; total: number };
+	toolName: string;
+}): ModalChild[] => {
+	const json = JSON.stringify(toolRequestFromArgs(input) ?? {}, null, 2);
+	const truncated =
+		json.length > MODAL_JSON_MAX_LENGTH
+			? `${json.slice(0, MODAL_JSON_MAX_LENGTH)}\n… (truncated)`
+			: json;
+	const step = position ? `${position.index} of ${position.total} · ` : "";
+	const target = env ? ` targeting ${env} environment` : "";
+	return [
+		CardText(`${step}${requestActionLabel(toolName)} request body${target}`, {
+			style: "muted",
+		}),
+		CardText(`\`\`\`\n${truncated}\n\`\`\``),
+	];
+};
+
 export const approvalPayloadModal = ({
 	env,
 	toolArgs,
@@ -1177,29 +1361,27 @@ export const approvalPayloadModal = ({
 	env?: AppEnv;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
-}) => {
-	// Only the request body matters to the reviewer — not wrapper fields
-	// like the agent's `intent` note.
-	const json = JSON.stringify(toolRequestFromArgs(toolArgs) ?? {}, null, 2);
-	const action =
-		normalizeToolName(toolName) === "attach" ? "Attach" : toolLabel(toolName);
-	const truncated =
-		json.length > MODAL_JSON_MAX_LENGTH
-			? `${json.slice(0, MODAL_JSON_MAX_LENGTH)}\n… (truncated)`
-			: json;
-
+}): ModalElement => {
+	// A grouped card approves every write it shows, so the reviewer sees each
+	// request body — not just the first.
+	const writes = [
+		{ input: toolArgs, toolName },
+		...withheldWritesFromToolArgs(toolArgs),
+	];
+	const total = writes.length;
 	return Modal({
 		callbackId: "approval_payload_modal",
 		closeLabel: "Close",
 		submitLabel: "Done",
 		title: "Request details",
-		children: [
-			CardText(
-				`${action} request body${env ? ` targeting ${env} environment` : ""}`,
-				{ style: "muted" },
-			),
-			CardText(`\`\`\`\n${truncated}\n\`\`\``),
-		],
+		children: writes.flatMap((write, index) =>
+			requestBodyBlocks({
+				env,
+				input: write.input,
+				position: total > 1 ? { index: index + 1, total } : undefined,
+				toolName: write.toolName,
+			}),
+		),
 	});
 };
 
@@ -1210,6 +1392,7 @@ export const approvalStatusCard = ({
 	result,
 	status,
 	statusLine,
+	steps,
 	toolArgs,
 	toolName,
 }: {
@@ -1218,6 +1401,11 @@ export const approvalStatusCard = ({
 	preview?: unknown;
 	result?: unknown;
 	status: ApprovalCardStatus;
+	/** Per-write outcomes on a grouped card. */
+	steps?: ReadonlyArray<{
+		status: "applied" | "failed" | "pending";
+		toolName: string;
+	}>;
 	statusLine?: string;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
@@ -1292,11 +1480,24 @@ export const approvalStatusCard = ({
 		const lines = outcome.lines.length
 			? outcome.lines
 			: [ACTION_FAILED_MESSAGE];
+		// A half-applied group needs the per-step breakdown; a lone failed write
+		// is already fully described by the message.
+		const partial = (steps?.length ?? 0) > 1;
 		return Card({
 			title: approvalTitle({ preview, toolName }),
 			children: [
 				CardText(`⚠️ ${phrases.failed}`),
 				...resolvedBody,
+				...(partial && steps
+					? [
+							stepOutcomeTable({
+								steps: steps.map((step) => ({
+									status: step.status,
+									summary: toolLabel(step.toolName),
+								})),
+							}),
+						]
+					: []),
 				CardText(lines.join("\n")),
 			],
 		});

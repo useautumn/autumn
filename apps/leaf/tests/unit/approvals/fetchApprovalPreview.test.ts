@@ -145,13 +145,13 @@ describe("fetchApprovalPreview", () => {
 			logger: silentLogger,
 			request: {},
 			token: "tok",
-			toolName: "createBalance",
+			toolName: "updateCustomer",
 		});
 
 		expect(preview).toBeUndefined();
 	});
 
-	test("returns undefined instead of throwing on failure", async () => {
+	test("reports failure instead of throwing", async () => {
 		const preview = await fetchApprovalPreview({
 			env: AppEnv.Sandbox,
 			executeTool: async () => {
@@ -163,6 +163,52 @@ describe("fetchApprovalPreview", () => {
 			toolName: "attach",
 		});
 
-		expect(preview).toBeUndefined();
+		expect(preview).toMatchObject({ failed: true });
+	});
+});
+
+// A billing card that silently drops to params-only asks the user to approve
+// money they were never shown, so a failed preview must be distinguishable
+// from a write that simply has no preview tool.
+describe("failed billing previews are not silently swallowed", () => {
+	test("reports failure for a write whose preview errored", async () => {
+		const result = await fetchApprovalPreview({
+			env: AppEnv.Sandbox,
+			executeTool: async () => ({ error: "upstream exploded" }),
+			logger: silentLogger,
+			request: { customer_id: "cus_1", plan_id: "pro" },
+			token: "tok",
+			toolName: "attach",
+		});
+
+		expect(result).toMatchObject({ failed: true });
+	});
+
+	test("reports failure when the preview tool throws", async () => {
+		const result = await fetchApprovalPreview({
+			env: AppEnv.Sandbox,
+			executeTool: async () => {
+				throw new Error("network down");
+			},
+			logger: silentLogger,
+			request: { customer_id: "cus_1", plan_id: "pro" },
+			token: "tok",
+			toolName: "attach",
+		});
+
+		expect(result).toMatchObject({ failed: true });
+	});
+
+	test("a write with no preview tool is not a failure", async () => {
+		const result = await fetchApprovalPreview({
+			env: AppEnv.Sandbox,
+			executeTool: async () => ({}),
+			logger: silentLogger,
+			request: { customer_id: "cus_1", email: "new@x.com" },
+			token: "tok",
+			toolName: "updateCustomer",
+		});
+
+		expect(result).toBeUndefined();
 	});
 });
