@@ -10,7 +10,10 @@ import { MigrationItemRunStatus } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { buildCustomerSelect } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
-import { BENCH_PAID_PRODUCT_ID, getBenchContext } from "../utils/benchContext.js";
+import {
+	BENCH_PAID_PRODUCT_ID,
+	getBenchContext,
+} from "../utils/benchContext.js";
 
 const PAGE_SIZE = 5000;
 

@@ -14,8 +14,8 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { runChunkedMigration } from "../utils/runChunkedMigration";
-import { expectCustomerEntitlementRowCount } from "./batchTestUtils";
+import { runChunkedMigration } from "../../utils/runChunkedMigration";
+import { expectCustomerEntitlementRowCount } from "../batchTestUtils";
 
 const MESSAGES_INCLUDED = 100;
 

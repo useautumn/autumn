@@ -16,7 +16,7 @@ const boolean = (featureId: string): ItemSpec => ({ featureId, boolean: true });
  * cannot express because they exit when the lane declines.
  */
 export const MIGRATION_SCENARIOS: MigrationScenario[] = [
-	// ── Plan items: the batch lane is add-only ────────────────────────
+	// ── Plan items ────────────────────────────────────────────────────
 	{
 		name: "plan-add-metered",
 		description: "Adding a free metered item to a plan lands on every holder.",
@@ -107,9 +107,29 @@ export const MIGRATION_SCENARIOS: MigrationScenario[] = [
 		expect: { lane: "batch" },
 	},
 	{
-		name: "plan-edit-refused",
+		name: "plan-remove-priced-refused",
 		description:
-			"An allowance edit is a modify-in-place; the balance has to survive the swap.",
+			"A paid source item needs billing work outside the batch lane.",
+		planItems: [
+			{
+				...monthly(TestFeature.Messages, 100),
+				priced: { amount: 10, billingUnits: 100 },
+			},
+		],
+		op: {
+			verb: "remove",
+			target: "plan",
+			item: monthly(TestFeature.Messages, 100),
+		},
+		expect: {
+			lane: "per_customer",
+			rejections: ["priced_remove_item"],
+		},
+	},
+	{
+		name: "plan-edit-raised",
+		description:
+			"An allowance edit is a modify-in-place replace; the balance survives the swap.",
 		planItems: [monthly(TestFeature.Messages, 100)],
 		op: {
 			verb: "edit",
@@ -117,12 +137,16 @@ export const MIGRATION_SCENARIOS: MigrationScenario[] = [
 			from: monthly(TestFeature.Messages, 100),
 			to: monthly(TestFeature.Messages, 200),
 		},
-		expect: { lane: "per_customer", rejections: ["unsupported_remove_items"] },
+		expect: {
+			lane: "batch",
+			rowsPerTarget: { [TestFeature.Messages]: 1 },
+			balance: { [TestFeature.Messages]: 200 },
+		},
 	},
 	{
-		name: "plan-edit-lowered-refused",
+		name: "plan-edit-lowered",
 		description:
-			"Lowering an allowance is still a modify-in-place; the row keeps its balance.",
+			"Lowering an allowance is still a replace; the row keeps its consumption.",
 		planItems: [monthly(TestFeature.Messages, 100)],
 		op: {
 			verb: "edit",
@@ -131,9 +155,9 @@ export const MIGRATION_SCENARIOS: MigrationScenario[] = [
 			to: monthly(TestFeature.Messages, 50),
 		},
 		expect: {
-			lane: "per_customer",
-			rejections: ["unsupported_remove_items"],
-			untouched: [TestFeature.Messages],
+			lane: "batch",
+			rowsPerTarget: { [TestFeature.Messages]: 1 },
+			balance: { [TestFeature.Messages]: 50 },
 		},
 	},
 
