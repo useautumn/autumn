@@ -1,50 +1,18 @@
 import {
-	CreateFeatureSchema,
+	type CreateFeature,
 	type Feature,
-	FeatureType,
-	isAnyCreditSystem,
 	type ModelMarkups,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { validateFeature } from "@/internal/features/utils/validateFeature.js";
 import { workflows } from "@/queue/workflows.js";
 import { generateId } from "@/utils/genUtils.js";
 import { FeatureService } from "../FeatureService.js";
-import {
-	validateCreditSystem,
-	validateCreditSystemSchemaReferences,
-	validateMeteredConfig,
-} from "../featureUtils.js";
-
-const validateFeature = (data: any, allFeatures: Feature[]) => {
-	const featureType = data.type as FeatureType;
-
-	let config = data.config;
-	if (featureType === FeatureType.Metered) {
-		config = validateMeteredConfig(config);
-	} else if (isAnyCreditSystem(featureType)) {
-		config = validateCreditSystem(config, featureType);
-		if (featureType === FeatureType.CreditSystem) {
-			validateCreditSystemSchemaReferences({
-				config,
-				allFeatures,
-				selfFeatureId: data.id,
-			});
-		}
-	}
-
-	const parsedFeature = CreateFeatureSchema.parse({ ...data, config });
-	return parsedFeature;
-};
 
 interface CreateFeatureParams {
 	ctx: AutumnContext;
-	data: {
-		id: string;
-		name: string;
-		type: string;
-		config?: any;
-		event_names?: string[];
-		model_markups?: ModelMarkups;
+	data: CreateFeature & {
+		model_markups?: ModelMarkups | null;
 	};
 	skipGenerateDisplay?: boolean;
 }
@@ -58,7 +26,10 @@ export const createFeature = async ({
 	data,
 	skipGenerateDisplay = false,
 }: CreateFeatureParams): Promise<Feature | null> => {
-	const parsedFeature = validateFeature(data, ctx.features);
+	const parsedFeature = validateFeature({
+		data,
+		allFeatures: ctx.features,
+	});
 
 	const feature: Feature = {
 		archived: false,
