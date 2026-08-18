@@ -9,28 +9,62 @@ import { and, eq, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 
-export const BENCH_PLANDEL_PRODUCT_ID = "bench-plan-delete";
-export const BENCH_PLANDEL_CUSTOMER_ID_PREFIX = "bench-plandel-c-";
-export const BENCH_PLANDEL_INTERNAL_CUSTOMER_PREFIX = "cus_bench_plandel_";
-export const BENCH_PLANDEL_CUSTOMER_PRODUCT_PREFIX = "cp_bench_plandel_";
-export const BENCH_PLANDEL_ENTITLEMENT_PREFIX = "ce_bench_plandel_";
+export type BenchPlanItemPrefixes = {
+	productId: string;
+	customerId: string;
+	internalCustomer: string;
+	customerProduct: string;
+	entitlement: string;
+};
+
+export const BENCH_PLANDEL_PREFIXES: BenchPlanItemPrefixes = {
+	productId: "bench-plan-delete",
+	customerId: "bench-plandel-c-",
+	internalCustomer: "cus_bench_plandel_",
+	customerProduct: "cp_bench_plandel_",
+	entitlement: "ce_bench_plandel_",
+};
+
+export const BENCH_PLANREP_PREFIXES: BenchPlanItemPrefixes = {
+	productId: "bench-plan-replace",
+	customerId: "bench-planrep-c-",
+	internalCustomer: "cus_bench_planrep_",
+	customerProduct: "cp_bench_planrep_",
+	entitlement: "ce_bench_planrep_",
+};
+
+export const BENCH_PLANDEL_PRODUCT_ID = BENCH_PLANDEL_PREFIXES.productId;
+export const BENCH_PLANDEL_CUSTOMER_ID_PREFIX =
+	BENCH_PLANDEL_PREFIXES.customerId;
+export const BENCH_PLANDEL_INTERNAL_CUSTOMER_PREFIX =
+	BENCH_PLANDEL_PREFIXES.internalCustomer;
+export const BENCH_PLANDEL_CUSTOMER_PRODUCT_PREFIX =
+	BENCH_PLANDEL_PREFIXES.customerProduct;
+export const BENCH_PLANDEL_ENTITLEMENT_PREFIX =
+	BENCH_PLANDEL_PREFIXES.entitlement;
 
 const APPROX_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** Its own plan, so a delete never consumes the shared dataset's rows — the
- * other benches read those as their baseline. */
-export const ensureBenchPlanDeleteProduct = async ({
+/** Isolated catalog plan so a delete/replace never consumes the shared
+ * seedBatchBench rows the other benches treat as baseline. */
+export const ensureBenchPlanItemProduct = async ({
 	db,
 	orgId,
 	env,
 	internalFeatureId,
 	featureId,
+	productId,
+	name,
+	allowance = 100,
 }: {
 	db: DrizzleCli;
 	orgId: string;
 	env: string;
 	internalFeatureId: string;
 	featureId: string;
+	productId: string;
+	name: string;
+	allowance?: number;
 }): Promise<{ internalProductId: string; entitlementId: string }> => {
 	const [existingProduct] = await db
 		.select()
@@ -39,7 +73,7 @@ export const ensureBenchPlanDeleteProduct = async ({
 			and(
 				eq(products.org_id, orgId),
 				eq(products.env, env),
-				eq(products.id, BENCH_PLANDEL_PRODUCT_ID),
+				eq(products.id, productId),
 			),
 		)
 		.limit(1);
@@ -48,10 +82,10 @@ export const ensureBenchPlanDeleteProduct = async ({
 	if (!existingProduct) {
 		await db.insert(products).values({
 			internal_id: internalProductId,
-			id: BENCH_PLANDEL_PRODUCT_ID,
+			id: productId,
 			org_id: orgId,
 			env,
-			name: "Bench Plan Delete",
+			name,
 			created_at: Date.now(),
 			version: 1,
 		});
@@ -79,7 +113,7 @@ export const ensureBenchPlanDeleteProduct = async ({
 			internal_feature_id: internalFeatureId,
 			feature_id: featureId,
 			allowance_type: AllowanceType.Fixed,
-			allowance: 100,
+			allowance,
 			interval: EntInterval.Month,
 			interval_count: 1,
 		});
@@ -88,8 +122,31 @@ export const ensureBenchPlanDeleteProduct = async ({
 	return { internalProductId, entitlementId };
 };
 
-/** Own prefixes rather than the shared seedBatchBench dataset: a delete bench
- * consumes the rows it measures, so it must be free to re-seed between runs. */
+export const ensureBenchPlanDeleteProduct = ({
+	db,
+	orgId,
+	env,
+	internalFeatureId,
+	featureId,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: string;
+	internalFeatureId: string;
+	featureId: string;
+}) =>
+	ensureBenchPlanItemProduct({
+		db,
+		orgId,
+		env,
+		internalFeatureId,
+		featureId,
+		productId: BENCH_PLANDEL_PREFIXES.productId,
+		name: "Bench Plan Delete",
+	});
+
+/** Own prefixes rather than the shared seedBatchBench dataset: a delete or
+ * replace bench mutates the rows it measures, so it must re-seed freely. */
 export const seedBenchPlanItems = async ({
 	db,
 	count,
@@ -101,6 +158,8 @@ export const seedBenchPlanItems = async ({
 	startsAt,
 	orgId,
 	env,
+	prefixes = BENCH_PLANDEL_PREFIXES,
+	balance = 100,
 }: {
 	db: DrizzleCli;
 	count: number;
@@ -112,6 +171,8 @@ export const seedBenchPlanItems = async ({
 	startsAt: number;
 	orgId: string;
 	env: string;
+	prefixes?: BenchPlanItemPrefixes;
+	balance?: number;
 }) => {
 	const series = sql`GENERATE_SERIES(1, ${count}) AS i`;
 
@@ -120,12 +181,12 @@ export const seedBenchPlanItems = async ({
 			internal_id, id, org_id, env, created_at, name, email
 		)
 		SELECT
-			${BENCH_PLANDEL_INTERNAL_CUSTOMER_PREFIX} || i,
-			${BENCH_PLANDEL_CUSTOMER_ID_PREFIX} || i,
+			${prefixes.internalCustomer} || i,
+			${prefixes.customerId} || i,
 			${orgId},
 			${env},
 			${startsAt},
-			'bench plandel',
+			'bench plan item',
 			''
 		FROM ${series}
 		ON CONFLICT DO NOTHING
@@ -137,15 +198,15 @@ export const seedBenchPlanItems = async ({
 			starts_at, is_custom, product_id, customer_id, options
 		)
 		SELECT
-			${BENCH_PLANDEL_CUSTOMER_PRODUCT_PREFIX} || i,
-			${BENCH_PLANDEL_INTERNAL_CUSTOMER_PREFIX} || i,
+			${prefixes.customerProduct} || i,
+			${prefixes.internalCustomer} || i,
 			${planInternalProductId},
 			${startsAt},
 			${CusProductStatus.Active},
 			${startsAt},
 			false,
 			${planProductId},
-			${BENCH_PLANDEL_CUSTOMER_ID_PREFIX} || i,
+			${prefixes.customerId} || i,
 			'{}'::jsonb[]
 		FROM ${series}
 		ON CONFLICT DO NOTHING
@@ -159,15 +220,15 @@ export const seedBenchPlanItems = async ({
 			separate_interval, adjustment, additional_balance, cache_version
 		)
 		SELECT
-			${BENCH_PLANDEL_ENTITLEMENT_PREFIX} || i,
-			${BENCH_PLANDEL_CUSTOMER_PRODUCT_PREFIX} || i,
+			${prefixes.entitlement} || i,
+			${prefixes.customerProduct} || i,
 			${entitlementId},
-			${BENCH_PLANDEL_INTERNAL_CUSTOMER_PREFIX} || i,
+			${prefixes.internalCustomer} || i,
 			${internalFeatureId},
 			${featureId},
-			${BENCH_PLANDEL_CUSTOMER_ID_PREFIX} || i,
+			${prefixes.customerId} || i,
 			false,
-			100,
+			${balance},
 			${startsAt},
 			${startsAt},
 			${startsAt} + ${APPROX_MONTH_MS}::bigint,
