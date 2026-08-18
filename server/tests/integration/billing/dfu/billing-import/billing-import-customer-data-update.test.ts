@@ -189,9 +189,8 @@ test.concurrent(
 		});
 
 		// First, verify customer has no RevenueCat processor
-		const customerBefore = await autumnV2_3.customers.get<ApiCustomerV5>(
-			customerId,
-		);
+		const customerBefore =
+			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expect(customerBefore.processors?.revenuecat?.id).toBeUndefined();
 
 		// Try to add RevenueCat processor in dry_run mode
@@ -207,9 +206,102 @@ test.concurrent(
 		expect(flashRes.errorCode).toBeNull();
 
 		// Verify processor was NOT persisted
-		const customerAfter = await autumnV2_3.customers.get<ApiCustomerV5>(
-			customerId,
-		);
+		const customerAfter =
+			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expect(customerAfter.processors?.revenuecat?.id).toBeUndefined();
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("billing.import: customer_data.created_at back-dates an existing customer's signup date")}`,
+	async () => {
+		const customerId = "dfu-flash-cusdata-created-at";
+		const free = products.base({
+			id: "dfu-cusdata-created-at-free",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+			actions: [],
+		});
+
+		const before = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		const originalSignup = Date.now() - 1000 * 60 * 60 * 24 * 90;
+		expect(before.created_at).not.toBe(originalSignup);
+
+		const flashRes = await callFlash(autumnV2_2 as FlashClient, {
+			...freePlanPayload({ customerId, planId: free.id, customerData: {} }),
+			customer_data: { created_at: originalSignup },
+		});
+		expect(flashRes.errorCode).toBeNull();
+
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		expect(customer.created_at).toBe(originalSignup);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("billing.import: customer_data.created_at sets the signup date on a customer the import creates")}`,
+	async () => {
+		const customerId = "dfu-flash-cusdata-created-at-new";
+		const free = products.base({
+			id: "dfu-cusdata-created-at-new-free",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+			actions: [],
+		});
+
+		const importedCustomerId = `${customerId}-imported`;
+		const originalSignup = Date.now() - 1000 * 60 * 60 * 24 * 45;
+
+		const flashRes = await callFlash(autumnV2_2 as FlashClient, {
+			...freePlanPayload({
+				customerId: importedCustomerId,
+				planId: free.id,
+				customerData: {},
+			}),
+			customer_data: { name: "Imported User", created_at: originalSignup },
+		});
+		expect(flashRes.errorCode).toBeNull();
+
+		const customer =
+			await autumnV2_3.customers.get<ApiCustomerV5>(importedCustomerId);
+		expect(customer.name).toBe("Imported User");
+		expect(customer.created_at).toBe(originalSignup);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("billing.import: dry_run does not persist a customer_data.created_at back-date")}`,
+	async () => {
+		const customerId = "dfu-flash-cusdata-created-at-dry-run";
+		const free = products.base({
+			id: "dfu-cusdata-created-at-dry-run-free",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+			actions: [],
+		});
+
+		const before = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+
+		const flashRes = await callFlash(autumnV2_2 as FlashClient, {
+			...freePlanPayload({ customerId, planId: free.id, customerData: {} }),
+			customer_data: { created_at: Date.now() - 1000 * 60 * 60 * 24 * 200 },
+			dry_run: true,
+		});
+		expect(flashRes.errorCode).toBeNull();
+
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		expect(customer.created_at).toBe(before.created_at);
 	},
 );
