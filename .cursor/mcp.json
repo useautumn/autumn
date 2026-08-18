@@ -1,0 +1,16 @@
+{
+	"mcpServers": {
+		"axiom": {
+			"url": "https://mcp.axiom.co/mcp"
+		},
+		"executor": {
+			"url": "https://executor.sh/mcp",
+			"headers": {
+				"Authorization": "Bearer ${env:EXECUTOR_API_KEY}"
+			}
+		},
+		"planetscale": {
+			"url": "https://mcp.pscale.dev/mcp/planetscale"
+		}
+	}
+}

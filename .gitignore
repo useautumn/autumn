@@ -140,6 +140,7 @@ TAKEHOME.md
 .pi-subagents/
 .cursor/*
 !.cursor/environment.json
+!.cursor/mcp.json
 .claude/
 .codex/
 .agents/

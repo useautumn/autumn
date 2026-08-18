@@ -1,10 +1,17 @@
 #!/usr/bin/env bun
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 const EXECUTOR_URL = "https://executor.sh/mcp";
-const ENV_PLACEHOLDER = "Bearer ${env:EXECUTOR_API_KEY}";
+const EXECUTOR_ENV_REFERENCE = "${" + "env:EXECUTOR_API_KEY}";
+const ENV_PLACEHOLDER = `Bearer ${EXECUTOR_ENV_REFERENCE}`;
 const AGENTS_BEGIN = "<!-- cursor-cloud-specific-instructions -->";
 const AGENTS_END = "<!-- /cursor-cloud-specific-instructions -->";
 
@@ -18,10 +25,10 @@ read them. After boot you should have \`/tdd\` and \`/autumn-tdd-test\`.
 \`tdd\` is current and supersedes \`autumn-tdd-test\`.
 
 Executor MCP (\`https://executor.sh/mcp\`) is the front door for external tools.
-\`start\` pulls \`EXECUTOR_API_KEY\` from Infisical (or a Team Runtime Secret)
-and writes the Bearer header into \`.cursor/mcp.json\`. Do not try interactive
-OAuth. If executor tools are missing, say so rather than substituting
-Axiom/PlanetScale OAuth servers.
+The project config uses \`\${env:EXECUTOR_API_KEY}\` so Cursor can discover it
+before startup. \`start\` also writes the resolved bearer to the user config.
+Do not try interactive OAuth. If executor tools are missing, say so rather
+than substituting Axiom/PlanetScale OAuth servers.
 
 Boot does **not** start \`bun dw\`. Run it when the task needs the app.
 The in-IDE Browser tab stays blank (Cursor bug, any URL) — open the
@@ -35,6 +42,54 @@ function chmodPrivate(path: string): void {
 	chmodSync(path, 0o600);
 }
 
+type McpConfig = { mcpServers?: Record<string, unknown> };
+
+const executorMcpConfig = ({
+	path,
+	authorization,
+}: {
+	path: string;
+	authorization: string;
+}): string => {
+	let data: McpConfig = { mcpServers: {} };
+	if (existsSync(path)) {
+		try {
+			const loaded = JSON.parse(readFileSync(path, "utf8"));
+			if (loaded && typeof loaded === "object") data = loaded;
+		} catch {
+			console.error(`[cursor-cloud] existing ${path} was invalid; rewriting`);
+		}
+	}
+
+	const servers =
+		data.mcpServers && typeof data.mcpServers === "object"
+			? data.mcpServers
+			: {};
+	data.mcpServers = servers;
+	const existing = servers.executor;
+	const executor: Record<string, unknown> =
+		existing && typeof existing === "object"
+			? { ...(existing as Record<string, unknown>) }
+			: {};
+	executor.url = EXECUTOR_URL;
+	executor.headers = { Authorization: authorization };
+	delete executor.oauth;
+	servers.executor = executor;
+	return `${JSON.stringify(data, null, "\t")}\n`;
+};
+
+const writePrivateMcp = ({
+	path,
+	authorization,
+}: {
+	path: string;
+	authorization: string;
+}): void => {
+	mkdirSync(dirname(path), { recursive: true });
+	writeFileSync(path, executorMcpConfig({ path, authorization }));
+	chmodPrivate(path);
+};
+
 export function writeExecutorMcp({
 	root,
 	userMcpPath,
@@ -44,43 +99,18 @@ export function writeExecutorMcp({
 	userMcpPath: string;
 	authorization: string;
 }): void {
-	const path = join(root, ".cursor", "mcp.json");
-	mkdirSync(dirname(path), { recursive: true });
+	const projectMcpPath = join(root, ".cursor", "mcp.json");
+	writePrivateMcp({
+		path: projectMcpPath,
+		authorization: ENV_PLACEHOLDER,
+	});
+	writePrivateMcp({ path: userMcpPath, authorization });
 
-	let data: { mcpServers?: Record<string, unknown> } = { mcpServers: {} };
-	if (existsSync(path)) {
-		try {
-			const loaded = JSON.parse(readFileSync(path, "utf8"));
-			if (loaded && typeof loaded === "object") data = loaded;
-		} catch {
-			console.error("[cursor-cloud] existing .cursor/mcp.json was invalid; rewriting");
-		}
-	}
-
-	const servers =
-		data.mcpServers && typeof data.mcpServers === "object" ? data.mcpServers : {};
-	data.mcpServers = servers;
-
-	const existing = servers.executor;
-	const merged: Record<string, unknown> =
-		existing && typeof existing === "object"
-			? { ...(existing as Record<string, unknown>) }
-			: {};
-	merged.url = EXECUTOR_URL;
-	merged.headers = { Authorization: authorization };
-	delete merged.oauth;
-	servers.executor = merged;
-
-	const text = `${JSON.stringify(data, null, "\t")}\n`;
-	writeFileSync(path, text);
-	chmodPrivate(path);
-	mkdirSync(dirname(userMcpPath), { recursive: true });
-	writeFileSync(userMcpPath, text);
-	chmodPrivate(userMcpPath);
-
-	const viaEnv = authorization.includes("${env:EXECUTOR_API_KEY}");
+	const userAuthSource = authorization.includes(EXECUTOR_ENV_REFERENCE)
+		? "env interpolation"
+		: "bearer from env";
 	console.log(
-		`[cursor-cloud] executor MCP: wrote Authorization header (${viaEnv ? "env interpolation" : "bearer from env"}) to ${path} and ${userMcpPath}`,
+		`[cursor-cloud] executor MCP: kept project env interpolation at ${projectMcpPath}; wrote user ${userAuthSource} to ${userMcpPath}`,
 	);
 }
 
@@ -90,7 +120,11 @@ export function appendAgentsCloudSection({ root }: { root: string }): void {
 	let text: string;
 	if (existing.includes(AGENTS_BEGIN) && existing.includes(AGENTS_END)) {
 		const before = existing.split(AGENTS_BEGIN, 1)[0].trimEnd();
-		const after = existing.split(AGENTS_END).slice(1).join(AGENTS_END).trimStart();
+		const after = existing
+			.split(AGENTS_END)
+			.slice(1)
+			.join(AGENTS_END)
+			.trimStart();
 		text = `${before}${before ? "\n\n" : ""}${AGENTS_CLOUD_SECTION}${after ? `\n${after}` : ""}`;
 	} else {
 		text = `${existing.trimEnd()}${existing.trim() ? "\n\n" : ""}${AGENTS_CLOUD_SECTION}`;
@@ -133,7 +167,9 @@ const main = (): number => {
 		});
 		return 0;
 	}
-	console.error("Usage: bun scripts/setup/cursor-cloud/cursorCloud.ts <agents-md|mcp>");
+	console.error(
+		"Usage: bun scripts/setup/cursor-cloud/cursorCloud.ts <agents-md|mcp>",
+	);
 	return 2;
 };
 

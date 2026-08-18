@@ -30,12 +30,15 @@ pass "mcp without a key uses env interpolation"
 # --- mcp with a key writes the bearer from env ------------------------------
 export EXECUTOR_API_KEY="test-executor-key-not-real"
 bun "$CLOUD" --root "$tmp/repo" --user-mcp "$tmp/user-mcp.json" mcp
-python3 - "$tmp/repo/.cursor/mcp.json" <<'PY'
+python3 - "$tmp/repo/.cursor/mcp.json" "$tmp/user-mcp.json" <<'PY'
 import json, sys
-data = json.load(open(sys.argv[1]))
-auth = data["mcpServers"]["executor"]["headers"]["Authorization"]
-assert auth == "Bearer test-executor-key-not-real", auth
-assert "${env:" not in auth
+project = json.load(open(sys.argv[1]))
+user = json.load(open(sys.argv[2]))
+project_auth = project["mcpServers"]["executor"]["headers"]["Authorization"]
+user_auth = user["mcpServers"]["executor"]["headers"]["Authorization"]
+assert project_auth == "Bearer ${env:EXECUTOR_API_KEY}", project_auth
+assert user_auth == "Bearer test-executor-key-not-real", user_auth
+assert "${env:" not in user_auth
 print("mcp-inject json ok")
 PY
 python3 - "$tmp/repo/.cursor/mcp.json" <<'PY'
@@ -50,10 +53,26 @@ python3 - "$tmp/repo/.cursor/mcp.json" <<'PY'
 import json, sys
 data = json.load(open(sys.argv[1]))
 assert data["mcpServers"]["axiom"]["url"] == "https://mcp.axiom.co/mcp"
-assert data["mcpServers"]["executor"]["headers"]["Authorization"] == "Bearer test-executor-key-not-real"
+assert data["mcpServers"]["executor"]["headers"]["Authorization"] == "Bearer ${env:EXECUTOR_API_KEY}"
 print("mcp-inject preserves other servers")
 PY
 pass "mcp writes bearer and keeps other servers"
+
+# --- committed MCP template is discoverable before start -------------------
+PROJECT_MCP="$ROOT/.cursor/mcp.json"
+[[ -f "$PROJECT_MCP" ]] || fail "project MCP template is missing"
+if git -C "$ROOT" check-ignore -q ".cursor/mcp.json"; then
+	fail "project MCP template must be tracked at checkout"
+fi
+python3 - "$PROJECT_MCP" <<'PY'
+import json, sys
+data = json.load(open(sys.argv[1]))
+ex = data["mcpServers"]["executor"]
+assert ex["url"] == "https://executor.sh/mcp"
+assert ex["headers"]["Authorization"] == "Bearer ${env:EXECUTOR_API_KEY}"
+assert "oauth" not in ex
+PY
+pass "project MCP template is safe and discoverable at checkout"
 
 # --- AGENTS.md section is idempotent ----------------------------------------
 printf '%s\n' '# Existing agents' >"$tmp/repo/AGENTS.md"
@@ -152,6 +171,7 @@ fi
 pass "setup uses ensurePublicAccess; no Cloud ngrok shells"
 
 UNIT_TESTS=1 env -u TESTS_ORG bun test \
+	"$ROOT/scripts/dw/helpers/git.test.ts" \
 	"$ROOT/scripts/dw/helpers/ngrok.test.ts" \
 	"$ROOT/scripts/dw/helpers/machineId.test.ts" \
 	"$ROOT/scripts/dw/helpers/registry.test.ts" \
