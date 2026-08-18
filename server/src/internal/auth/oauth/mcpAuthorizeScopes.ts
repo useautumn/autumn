@@ -4,17 +4,14 @@ import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils
 const META_SCOPE_SET = new Set<string>(META_SCOPES);
 
 /**
- * better-auth only mints a refresh token when the authorization request itself
- * names `offline_access`, but MCP clients build that request from the resource
- * metadata / `WWW-Authenticate` challenge, which advertise resource scopes only
- * (RFC 9728 `scopes_supported` describes access to the resource, and a refresh
- * token is not resource access). Adding it here keeps the resource-facing
- * metadata spec-clean while still giving every MCP client a renewable grant.
+ * MCP clients build their /authorize scope from the resource metadata and the
+ * `WWW-Authenticate` challenge, which advertise resource scopes only, but
+ * better-auth mints a refresh token only when the authorization request itself
+ * names `offline_access`. Adding it here keeps the resource metadata RFC 9728
+ * clean while still giving every MCP client a renewable grant.
  *
- * It is only added when the client is registered for it, so a reserved client
- * whose stored grant omits `offline_access` is never redirected to
- * `invalid_scope`. A client that stores no scopes at all falls back to the
- * provider-wide scope list, which does include it.
+ * Meta scopes are dropped, and `offline_access` is added only when the client
+ * is registered for it, so the rewritten request cannot fail `invalid_scope`.
  */
 export const getMcpAuthorizeScopes = ({
 	clientScopes,

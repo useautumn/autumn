@@ -225,11 +225,7 @@ export const MODERN_SCOPES: readonly ScopeString[] = [
 	Scopes.Platform.Write,
 ] as const;
 
-/**
- * The OIDC scope that asks the authorization server for a refresh token.
- * It grants no access to any resource, so it belongs in the authorization
- * server's metadata, never in a protected resource's `scopes_supported`.
- */
+/** The OIDC scope that asks the authorization server for a refresh token. */
 export const OFFLINE_ACCESS_SCOPE = "offline_access";
 
 /**

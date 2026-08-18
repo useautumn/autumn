@@ -19,9 +19,9 @@ const getUniqueOAuthConsentId = async ({
 		referenceId,
 		userId,
 	});
-	const [consent] = consents;
+	if (consents.length !== 1) return null;
 
-	return consents.length === 1 && consent ? consent.id : null;
+	return consents[0]?.id ?? null;
 };
 
 /**

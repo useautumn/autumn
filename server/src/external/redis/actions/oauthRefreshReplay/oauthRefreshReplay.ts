@@ -20,15 +20,18 @@ export type OAuthRefreshReplayClaim = {
 	/** The winner's stored token response, when this caller lost the race. */
 	body: Record<string, unknown> | null;
 	/**
-	 * False when Redis could not answer. The caller then holds no claim: it must
-	 * neither store nor release the key, and must mint uncoordinated.
+	 * True when this caller won the key and is the one minting: it owes the key
+	 * either a stored response or a release once it finishes. False when there
+	 * is no key to hand back — either this caller lost the race and got `body`,
+	 * or Redis could not answer and the caller mints with no dedupe at all.
 	 */
-	coordinated: boolean;
+	holdsKey: boolean;
 };
 
-const UNCOORDINATED_CLAIM: OAuthRefreshReplayClaim = {
+/** Redis is unreachable: nothing to replay, nothing to hand back afterwards. */
+const NO_KEY_HELD: OAuthRefreshReplayClaim = {
 	body: null,
-	coordinated: false,
+	holdsKey: false,
 };
 
 /**
@@ -37,8 +40,8 @@ const UNCOORDINATED_CLAIM: OAuthRefreshReplayClaim = {
  * token spin until the winner stores its response, then return that body.
  *
  * Dedupe is an optimisation, never a dependency: if Redis cannot answer, the
- * claim comes back uncoordinated and the token endpoint carries on. Only a
- * genuine spin-out — the winner held the claim past its polling budget —
+ * claim comes back holding no key and the token endpoint carries on unguarded.
+ * Only a genuine spin-out — the winner held the key past its polling budget —
  * returns null, because minting alongside it would race the token rotation.
  */
 export const claimOAuthRefreshReplay = async (
@@ -54,12 +57,12 @@ export const claimOAuthRefreshReplay = async (
 				redisInstance: miscRedis,
 			});
 			// undefined = Redis unavailable (vs null = key missing) — bail out.
-			if (value === undefined) return UNCOORDINATED_CLAIM;
+			if (value === undefined) return NO_KEY_HELD;
 
 			if (value && value !== REFRESH_REPLAY_PENDING) {
 				return {
 					body: JSON.parse(decryptData(value)) as Record<string, unknown>,
-					coordinated: true,
+					holdsKey: false,
 				};
 			}
 
@@ -76,8 +79,8 @@ export const claimOAuthRefreshReplay = async (
 					source: "oauth-refresh-replay:claim",
 					redisInstance: miscRedis,
 				});
-				if (claimed === undefined) return UNCOORDINATED_CLAIM;
-				if (claimed) return { body: null, coordinated: true };
+				if (claimed === undefined) return NO_KEY_HELD;
+				if (claimed) return { body: null, holdsKey: true };
 			}
 
 			await timeout(CLAIM_POLL_MS);
@@ -86,7 +89,7 @@ export const claimOAuthRefreshReplay = async (
 	} catch {
 		// Redis missing, or a stored response we cannot decrypt/parse. Either way
 		// there is nothing to replay, so mint instead of failing the refresh.
-		return UNCOORDINATED_CLAIM;
+		return NO_KEY_HELD;
 	}
 };
 

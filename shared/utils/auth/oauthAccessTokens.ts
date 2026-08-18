@@ -3,6 +3,7 @@ import { and, gt, inArray } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { oauthAccessToken } from "../../db/auth-schema";
 import type * as schema from "../../db/schema";
+import { deduplicateArray } from "../utils";
 
 /** Any drizzle db over the shared schema; server's instrumented db overrides `execute`. */
 export type OAuthAccessTokenDb = Pick<
@@ -22,9 +23,8 @@ export const hashOAuthToken = (token: string): string =>
  * tokens alike: the base64url SHA-256 hash, plus the raw value for legacy
  * unhashed rows.
  */
-export const getOAuthTokenValues = (rawToken: string) => [
-	...new Set([hashOAuthToken(rawToken), rawToken]),
-];
+export const getOAuthTokenValues = (rawToken: string) =>
+	deduplicateArray([hashOAuthToken(rawToken), rawToken]);
 
 /**
  * Looks up an unexpired OAuth access token by its raw (prefix-stripped)

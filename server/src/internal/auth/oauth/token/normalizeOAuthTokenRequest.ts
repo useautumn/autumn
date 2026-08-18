@@ -26,9 +26,15 @@ const constrainScopeToGrant = ({
 };
 
 /**
- * Rewrites the token request before better-auth sees it: `resource` is dropped
- * because resource tokens are JWTs this handler cannot link back to a consent,
- * and `scope` is narrowed so an MCP refresh cannot widen its original grant.
+ * Rewrites the token request before better-auth sees it.
+ *
+ * `resource` is dropped because better-auth treats it as a JWT switch: any
+ * audience on the request makes it sign a JWT access token and skip writing the
+ * `oauth_access_token` row entirely, and every Autumn resource server
+ * authenticates by looking that row up. The audience is not lost — the row
+ * carries it, stamped by `persistOAuthTokenGrant` once the grant is issued.
+ *
+ * `scope` is narrowed so an MCP refresh cannot widen its original grant.
  */
 export const normalizeOAuthTokenRequest = async ({
 	grantedScopes,
