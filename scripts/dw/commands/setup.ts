@@ -1,3 +1,4 @@
+import { appendFileSync } from "node:fs";
 import { isCloudAgent } from "@autumn/env";
 import { NEON_PROJECT_ID, PROJECT_ROOT } from "../constants.ts";
 import { ensurePublicAccess } from "../helpers/cloudflare.ts";
@@ -65,6 +66,9 @@ function ensureAiSubmoduleSynced(): void {
 }
 
 export async function cmdSetup(): Promise<RegistryEntry> {
+	// #region agent log
+	appendFileSync("/opt/cursor/logs/debug.log", `${JSON.stringify({ hypothesisId: "D", location: "scripts/dw/commands/setup.ts:cmdSetup", message: "setup command entered", data: { pid: process.pid, cloudAgent: isCloudAgent() }, timestamp: Date.now() })}\n`);
+	// #endregion
 	if (process.env.NODE_ENV === "production") {
 		fatal("bun dw is disabled in production");
 	}
@@ -103,7 +107,13 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 		registry[cwd] = entry;
 		saveRegistry(registry);
 	} else if (isCloudAgent()) {
+		// #region agent log
+		appendFileSync("/opt/cursor/logs/debug.log", `${JSON.stringify({ hypothesisId: "A", location: "scripts/dw/commands/setup.ts:cloudAgent", message: "before local infra", data: { pid: process.pid, worktreeNum: entry.worktreeNum }, timestamp: Date.now() })}\n`);
+		// #endregion
 		ensureLocalInfra();
+		// #region agent log
+		appendFileSync("/opt/cursor/logs/debug.log", `${JSON.stringify({ hypothesisId: "A", location: "scripts/dw/commands/setup.ts:cloudAgent", message: "after local infra", data: { pid: process.pid, worktreeNum: entry.worktreeNum }, timestamp: Date.now() })}\n`);
+		// #endregion
 		entry = await ensurePublicAccess(entry);
 		registry[cwd] = entry;
 		saveRegistry(registry);
@@ -111,5 +121,8 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 		entry = await ensurePublicAccess(entry);
 	}
 
+	// #region agent log
+	appendFileSync("/opt/cursor/logs/debug.log", `${JSON.stringify({ hypothesisId: "B,C,D", location: "scripts/dw/commands/setup.ts:cmdSetup", message: "setup command returning", data: { pid: process.pid, worktreeNum: entry.worktreeNum, hasPublicUrl: Boolean(entry.publicUrl) }, timestamp: Date.now() })}\n`);
+	// #endregion
 	return entry;
 }

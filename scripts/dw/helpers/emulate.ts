@@ -1,4 +1,10 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	appendFileSync,
+	existsSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { isCloudAgent } from "@autumn/env";
@@ -101,7 +107,11 @@ function ensureHeadlessEmulateRunning({
 	const publicBase = origin
 		? emulateGoogleUrl({ origin })
 		: emulateGoogleUrl({});
-	if (emulateReachable({ baseUrl: loopback })) {
+	const loopbackReachable = emulateReachable({ baseUrl: loopback });
+	// #region agent log
+	appendFileSync("/opt/cursor/logs/debug.log", `${JSON.stringify({ hypothesisId: "C", location: "scripts/dw/helpers/emulate.ts:ensureHeadlessEmulateRunning", message: "headless emulate check", data: { parentPid: process.pid, loopbackReachable, hasPublicOrigin: Boolean(origin) }, timestamp: Date.now() })}\n`);
+	// #endregion
+	if (loopbackReachable) {
 		if (emulateIssuerMatches({ loopback, publicBase })) return;
 		log("emulate issuer stale — restarting with public emulate URL");
 		killHostProcessByName(`emulate start -p ${EMULATE_PORT}`);
@@ -136,6 +146,9 @@ function ensureHeadlessEmulateRunning({
 		},
 	);
 	writeFileSync(EMULATE_PID_FILE, `${proc.pid}\n`);
+	// #region agent log
+	appendFileSync("/opt/cursor/logs/debug.log", `${JSON.stringify({ hypothesisId: "C", location: "scripts/dw/helpers/emulate.ts:ensureHeadlessEmulateRunning", message: "emulate child spawned with piped stdio", data: { parentPid: process.pid, childPid: proc.pid, exitCode: proc.exitCode }, timestamp: Date.now() })}\n`);
+	// #endregion
 	void proc.exited.then(async (code) => {
 		const out = await new Response(proc.stdout).text();
 		const err = await new Response(proc.stderr).text();
@@ -145,6 +158,9 @@ function ensureHeadlessEmulateRunning({
 	for (let i = 0; i < 30; i++) {
 		if (emulateReachable({ baseUrl: loopback })) {
 			log(`emulate ready at ${loopback}`);
+			// #region agent log
+			appendFileSync("/opt/cursor/logs/debug.log", `${JSON.stringify({ hypothesisId: "C", location: "scripts/dw/helpers/emulate.ts:ensureHeadlessEmulateRunning", message: "emulate ready while child remains active", data: { parentPid: process.pid, childPid: proc.pid, exitCode: proc.exitCode }, timestamp: Date.now() })}\n`);
+			// #endregion
 			return;
 		}
 		Bun.sleepSync(300);
