@@ -1,11 +1,12 @@
 import {
+	type ApiDiscount,
 	billingControlsFromColumns,
 	CusProductStatus,
 	cp,
 	type Entity,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
-import { Button, CopyButton, InfoRow } from "@autumn/ui";
+import { Button, CopyButton, IconButton, InfoRow } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	CreditCardIcon,
@@ -19,9 +20,11 @@ import {
 	TicketIcon,
 	TimerIcon,
 	XCircle,
+	XIcon,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
 	BillingControlsList,
 	hasBillingControls,
@@ -34,8 +37,10 @@ import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
-
+import { CusService } from "@/services/customers/CusService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
+import { getBackendErr } from "@/utils/genUtils";
 import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
@@ -48,6 +53,59 @@ import { SubscriptionLicenseRow } from "./SubscriptionLicenseRow";
 import { formatDiscountLabel } from "./subscriptionDetailUtils";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
+
+const SubscriptionDiscountRow = ({
+	discount,
+	customerId,
+}: {
+	discount: ApiDiscount;
+	customerId: string;
+}) => {
+	const { refetch: refetchRewards } = useCusRewardsQuery();
+	const axiosInstance = useAxiosInstance();
+	const [removing, setRemoving] = useState(false);
+
+	const handleRemove = async () => {
+		if (!discount.subscription_id) return;
+
+		try {
+			setRemoving(true);
+			await CusService.removeCouponFromSubscription({
+				axios: axiosInstance,
+				customer_id: customerId,
+				subscription_id: discount.subscription_id,
+				coupon_id: discount.id,
+			});
+			await refetchRewards();
+			toast.success("Coupon removed from subscription");
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to remove coupon"));
+		} finally {
+			setRemoving(false);
+		}
+	};
+
+	return (
+		<InfoRow
+			icon={<TicketIcon size={16} weight="duotone" />}
+			label="Coupon"
+			value={
+				<span className="flex items-center gap-1">
+					<span>{formatDiscountLabel({ discount })}</span>
+					<IconButton
+						variant="muted"
+						size="sm"
+						onClick={handleRemove}
+						disabled={removing}
+						icon={<XIcon size={12} />}
+						aria-label="Remove coupon"
+						className="shrink-0 text-tertiary-foreground hover:text-red-500"
+					/>
+				</span>
+			}
+		/>
+	);
+};
 
 export function SubscriptionDetailSheet() {
 	const { customer, features = [], testClockFrozenTimeMs } = useCusQuery();
@@ -287,11 +345,10 @@ export function SubscriptionDetailSheet() {
 					/>
 
 					{subscriptionDiscounts.map((discount: ApiDiscount) => (
-						<InfoRow
+						<SubscriptionDiscountRow
 							key={discount.id}
-							icon={<TicketIcon size={16} weight="duotone" />}
-							label="Coupon"
-							value={formatDiscountLabel({ discount })}
+							discount={discount}
+							customerId={customer.id}
 						/>
 					))}
 
