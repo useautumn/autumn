@@ -1,6 +1,6 @@
 import { getOAuthTokenValues } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { oauthRefreshTokenRepo } from "../../repos/oauthRefreshTokenRepo.js";
+import { oauthRefreshTokenRepo } from "../../repos/index.js";
 import { getOAuthTokenRequestFields } from "../tokenRequestFields.js";
 
 /** The row behind a `refresh_token` grant; null for every other grant type. */

@@ -8,10 +8,7 @@ import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils
 import { z } from "zod";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
-import {
-	type OAuthClientRecord,
-	oauthClientRepo,
-} from "../repos/oauthClientRepo.js";
+import { type OAuthClientRecord, oauthClientRepo } from "../repos/index.js";
 
 const DEFAULT_OAUTH_CLIENT_NAME = "MCP client";
 

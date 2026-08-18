@@ -1,5 +1,5 @@
 import { Scopes } from "@autumn/shared";
-import { oauthClientRepo } from "@/internal/auth/repos/oauthClientRepo.js";
+import { oauthClientRepo } from "@/internal/auth/repos/index.js";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
 export const handleListOAuthClients = createRoute({

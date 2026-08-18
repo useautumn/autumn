@@ -1,6 +1,8 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { oauthAccessTokenRepo } from "../../repos/oauthAccessTokenRepo.js";
-import { oauthRefreshTokenRepo } from "../../repos/oauthRefreshTokenRepo.js";
+import {
+	oauthAccessTokenRepo,
+	oauthRefreshTokenRepo,
+} from "../../repos/index.js";
 
 /**
  * Writes the reissued scopes, resolved consent and audience back onto the access

@@ -2,7 +2,7 @@ import { isMcpOAuthClientRecord } from "@autumn/auth/oauth";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
-import { oauthClientRepo } from "../repos/oauthClientRepo.js";
+import { oauthClientRepo } from "../repos/index.js";
 import { ensureAtmnAuthorizeScopes } from "./atmnOAuthClients.js";
 import { getMcpAuthorizeScopes } from "./mcpAuthorizeScopes.js";
 import { ensureSummerOAuthClient } from "./summerOAuthClient.js";

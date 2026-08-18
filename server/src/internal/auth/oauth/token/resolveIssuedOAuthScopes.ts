@@ -4,7 +4,7 @@ import {
 } from "@autumn/auth/oauth";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { oauthConsentRepo } from "../../repos/oauthConsentRepo.js";
+import { oauthConsentRepo } from "../../repos/index.js";
 import type { OAuthAccessTokenRecord } from "../oauthAccessTokenApiKey.js";
 import { getOAuthConsentScopeGrant } from "../oauthConsentScopes.js";
 

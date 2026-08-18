@@ -4,7 +4,7 @@ import {
 	ensureAtmnAuthorizeScopes,
 	isAtmnOAuthClientRecord,
 } from "@/internal/auth/oauth/atmnOAuthClients.js";
-import { oauthClientRepo } from "@/internal/auth/repos/oauthClientRepo.js";
+import { oauthClientRepo } from "@/internal/auth/repos/index.js";
 
 afterEach(() => {
 	mock.restore();

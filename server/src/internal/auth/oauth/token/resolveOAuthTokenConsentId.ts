@@ -1,5 +1,5 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { oauthConsentRepo } from "../../repos/oauthConsentRepo.js";
+import { oauthConsentRepo } from "../../repos/index.js";
 import type { OAuthAccessTokenRecord } from "../oauthAccessTokenApiKey.js";
 
 const getUniqueOAuthConsentId = async ({

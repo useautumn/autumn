@@ -6,12 +6,12 @@ import {
 	hashApiKey,
 } from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import type { ResourceAccessTokenRecord } from "@/internal/dev/cli/oauthApiKeyUtils.js";
-import { oauthApiKeyRepo } from "../repos/oauthApiKeyRepo.js";
-import { oauthClientRepo } from "../repos/oauthClientRepo.js";
 import {
 	type OAuthConsentApiKeyRecord,
+	oauthApiKeyRepo,
+	oauthClientRepo,
 	oauthConsentRepo,
-} from "../repos/oauthConsentRepo.js";
+} from "../repos/index.js";
 
 type OAuthApiKeyTokenRecord = ResourceAccessTokenRecord & {
 	userId: string;

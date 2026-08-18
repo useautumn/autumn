@@ -3,7 +3,7 @@ import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
 import { MCP_CLIENT_KIND } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
-import { oauthClientRepo } from "../repos/oauthClientRepo.js";
+import { oauthClientRepo } from "../repos/index.js";
 
 const SLACK_MCP_OAUTH_CLIENT_NAME = "Slack";
 

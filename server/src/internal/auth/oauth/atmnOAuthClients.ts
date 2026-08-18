@@ -1,7 +1,7 @@
 import { clientIdsFromEnv } from "@autumn/auth/oauth";
 import { parseOAuthClientMetadata } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { oauthClientRepo } from "../repos/oauthClientRepo.js";
+import { oauthClientRepo } from "../repos/index.js";
 
 const ATMN_OAUTH_CLIENT_NAMES = new Set(["atmn", "autumn cli"]);
 
