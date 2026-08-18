@@ -16,10 +16,7 @@ type PlanPreviewChange = NonNullable<PlanPreviewRow["plan_change"]>;
 type PlanPreviewVersioning = NonNullable<PlanPreviewRow["versioning"]>;
 
 type ExpectedLicenseChange = Partial<
-	Omit<
-		NonNullable<PlanPreviewChange["license_changes"]>[number],
-		"plan_change"
-	>
+	Omit<NonNullable<PlanPreviewChange["license_changes"]>[number], "plan_change">
 > & {
 	plan_change?: Record<string, unknown> | null;
 	/** Containment over per-link conflicts; pass `null` to assert absent/empty. */
@@ -35,20 +32,28 @@ type ExpectedSiblingVersion = {
 	licenseChanges?: ExpectedLicenseChange[] | null;
 	/** Containment over conflicts; pass `null` to assert absent/empty. */
 	conflicts?: CatalogConflictPreview[] | null;
+	/** Variant lanes only — each variant version resolves the base edit itself. */
+	variantAction?: CatalogVariantAction;
+	/** Parent lanes only — each parent version resolves the child edit itself. */
+	licenseAction?: CatalogLicenseAction;
 };
 
 type ExpectedLicenseParent = {
 	planId: string;
 	version?: number;
 	licenseAction?: CatalogLicenseAction;
+	versioning?: PlanPreviewVersioning;
 	name?: string;
 	hasCustomers?: boolean;
+	hasPlanChange?: boolean;
 	customize?: PlanPreviewChange["customize"] | null;
 	licenseChanges?: ExpectedLicenseChange[] | null;
 	/** Containment over the first license_change's nested item_changes. */
 	nestedItemChanges?: Array<Record<string, unknown>>;
 	/** Containment over conflicts; pass `null` to assert absent/empty. */
 	conflicts?: CatalogConflictPreview[] | null;
+	/** Containment over sibling_versions; pass `null` to assert the lane is omitted. */
+	siblingVersions?: ExpectedSiblingVersion[] | null;
 };
 
 type ExpectedPlanPreviewRow = {
@@ -89,6 +94,7 @@ type ExpectedVariant = {
 	planId: string;
 	version?: number;
 	variantAction?: CatalogVariantAction;
+	versioning?: PlanPreviewVersioning;
 	hasCustomers?: boolean;
 	hasPlanChange?: boolean;
 	conflicts?: CatalogConflictPreview[] | null;
@@ -97,6 +103,7 @@ type ExpectedVariant = {
 	itemChanges?: PlanPreviewChange["item_changes"];
 	licenseChanges?: ExpectedLicenseChange[] | null;
 	nestedItemChanges?: Array<Record<string, unknown>>;
+	siblingVersions?: ExpectedSiblingVersion[] | null;
 };
 
 const expectAbsent = (value: unknown) => {
@@ -127,7 +134,6 @@ const expectConflictsMatch = ({
 	}
 };
 
-
 const expectLicenseChangesMatch = ({
 	actual,
 	expected,
@@ -154,10 +160,70 @@ const expectLicenseChangesMatch = ({
 		}
 		if (expectedChange.conflicts !== undefined) {
 			expectConflictsMatch({
-				actual: (
-					actual?.[index] as { conflicts?: CatalogConflictPreview[] }
-				)?.conflicts,
+				actual: (actual?.[index] as { conflicts?: CatalogConflictPreview[] })
+					?.conflicts,
 				expected: expectedChange.conflicts,
+			});
+		}
+	}
+};
+
+type ActualSiblingVersion = CatalogSiblingVersionPreview & {
+	selected?: boolean;
+	license_action?: CatalogLicenseAction;
+	variant_action?: CatalogVariantAction;
+};
+
+const expectSiblingVersionsMatch = ({
+	actual,
+	expected,
+	label,
+}: {
+	actual: ActualSiblingVersion[] | undefined;
+	expected: ExpectedSiblingVersion[] | null;
+	label: string;
+}) => {
+	if (expected === null) {
+		expect(actual).toBeUndefined();
+		return;
+	}
+	expect(actual).toHaveLength(expected.length);
+	for (const expectedSibling of expected) {
+		const sibling = actual?.find(
+			(candidate) => candidate.version === expectedSibling.version,
+		);
+		expect(
+			sibling,
+			`missing ${label} entry for v${expectedSibling.version}`,
+		).toBeDefined();
+		if (expectedSibling.selected !== undefined) {
+			expect(sibling?.selected).toBe(expectedSibling.selected);
+		}
+		if (expectedSibling.licenseAction !== undefined) {
+			expect(sibling?.license_action).toBe(expectedSibling.licenseAction);
+		}
+		if (expectedSibling.variantAction !== undefined) {
+			expect(sibling?.variant_action).toBe(expectedSibling.variantAction);
+		}
+		if (expectedSibling.hasCustomers !== undefined) {
+			expect(sibling?.state.has_customers).toBe(expectedSibling.hasCustomers);
+		}
+		if (expectedSibling.hasPlanChange === true) {
+			expectPresent(sibling?.plan_change);
+		} else if (expectedSibling.hasPlanChange === false) {
+			expectAbsent(sibling?.plan_change);
+		}
+		if (expectedSibling.licenseChanges === null) {
+			expect(sibling?.plan_change?.license_changes).toBeUndefined();
+		} else if (expectedSibling.licenseChanges !== undefined) {
+			expect(sibling?.plan_change?.license_changes).toMatchObject(
+				expectedSibling.licenseChanges,
+			);
+		}
+		if (expectedSibling.conflicts !== undefined) {
+			expectConflictsMatch({
+				actual: sibling?.conflicts,
+				expected: expectedSibling.conflicts,
 			});
 		}
 	}
@@ -285,53 +351,11 @@ export const expectPlanPreviewRowCorrect = ({
 		});
 	}
 	if (expected.siblingVersions !== undefined) {
-		if (expected.siblingVersions === null) {
-			expect(row.sibling_versions).toBeUndefined();
-		} else {
-			expect(row.sibling_versions).toHaveLength(
-				expected.siblingVersions.length,
-			);
-			for (const expectedSibling of expected.siblingVersions) {
-				const sibling = row.sibling_versions?.find(
-					(candidate: CatalogSiblingVersionPreview) =>
-						candidate.version === expectedSibling.version,
-				);
-				expect(
-					sibling,
-					`missing sibling_versions entry for v${expectedSibling.version}`,
-				).toBeDefined();
-				if (expectedSibling.selected !== undefined) {
-					expect(
-						(sibling as { selected?: boolean } | undefined)?.selected,
-					).toBe(expectedSibling.selected);
-				}
-				if (expectedSibling.hasCustomers !== undefined) {
-					expect(sibling?.state.has_customers).toBe(
-						expectedSibling.hasCustomers,
-					);
-				}
-				if (expectedSibling.hasPlanChange === true) {
-					expectPresent(sibling?.plan_change);
-				} else if (expectedSibling.hasPlanChange === false) {
-					expectAbsent(sibling?.plan_change);
-				}
-				if (expectedSibling.licenseChanges !== undefined) {
-					if (expectedSibling.licenseChanges === null) {
-						expect(sibling?.plan_change?.license_changes).toBeUndefined();
-					} else {
-						expect(sibling?.plan_change?.license_changes).toMatchObject(
-							expectedSibling.licenseChanges,
-						);
-					}
-				}
-				if (expectedSibling.conflicts !== undefined) {
-					expectConflictsMatch({
-						actual: sibling?.conflicts,
-						expected: expectedSibling.conflicts,
-					});
-				}
-			}
-		}
+		expectSiblingVersionsMatch({
+			actual: row.sibling_versions,
+			expected: expected.siblingVersions,
+			label: "sibling_versions",
+		});
 	}
 	if (expected.licenses !== undefined) {
 		if (expected.licenses === null) {
@@ -359,13 +383,22 @@ export const expectPlanPreviewRowCorrect = ({
 				if (expectedParent.licenseAction !== undefined) {
 					expect(parent?.license_action).toBe(expectedParent.licenseAction);
 				}
+				if (expectedParent.versioning !== undefined) {
+					expect(
+						(parent as { versioning?: PlanPreviewVersioning } | undefined)
+							?.versioning,
+					).toEqual(expectedParent.versioning);
+				}
 				if (expectedParent.name !== undefined) {
 					expect(parent?.name).toBe(expectedParent.name);
 				}
 				if (expectedParent.hasCustomers !== undefined) {
-					expect(parent?.state.has_customers).toBe(
-						expectedParent.hasCustomers,
-					);
+					expect(parent?.state.has_customers).toBe(expectedParent.hasCustomers);
+				}
+				if (expectedParent.hasPlanChange === true) {
+					expectPresent(parent?.plan_change);
+				} else if (expectedParent.hasPlanChange === false) {
+					expectAbsent(parent?.plan_change);
 				}
 				if (expectedParent.customize !== undefined) {
 					if (expectedParent.customize === null) {
@@ -398,6 +431,13 @@ export const expectPlanPreviewRowCorrect = ({
 						expected: expectedParent.conflicts,
 					});
 				}
+				if (expectedParent.siblingVersions !== undefined) {
+					expectSiblingVersionsMatch({
+						actual: parent?.sibling_versions,
+						expected: expectedParent.siblingVersions,
+						label: `${expectedParent.planId} sibling_versions`,
+					});
+				}
 			}
 		}
 	}
@@ -419,6 +459,12 @@ export const expectPlanPreviewRowCorrect = ({
 				).toBeDefined();
 				if (expectedVariant.variantAction !== undefined) {
 					expect(variant?.variant_action).toBe(expectedVariant.variantAction);
+				}
+				if (expectedVariant.versioning !== undefined) {
+					expect(
+						(variant as { versioning?: PlanPreviewVersioning } | undefined)
+							?.versioning,
+					).toEqual(expectedVariant.versioning);
 				}
 				if (expectedVariant.hasCustomers !== undefined) {
 					expect(variant?.state.has_customers).toBe(
@@ -474,6 +520,13 @@ export const expectPlanPreviewRowCorrect = ({
 							expect.objectContaining(expectedItem),
 						);
 					}
+				}
+				if (expectedVariant.siblingVersions !== undefined) {
+					expectSiblingVersionsMatch({
+						actual: variant?.sibling_versions,
+						expected: expectedVariant.siblingVersions,
+						label: `${expectedVariant.planId} sibling_versions`,
+					});
 				}
 			}
 		}

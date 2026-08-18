@@ -3,18 +3,44 @@ import {
 	billingControlsFromColumns,
 	type CatalogVariantParams,
 	type FullProduct,
+	type PlanLicenseParams,
 	toCreatePlanItemParams,
 } from "@autumn/shared";
 import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange/fullProductToApiPlanV1Sync";
+import {
+	applyLicenseParamsPatch,
+	fullPlanLicenseToParams,
+} from "@/internal/catalogV2/actions/buildPlanChange/buildPlanLicenseChanges/toPlanLicenseParams";
 import type { ResolvedPlanParams } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+
+const clonedLicenses = ({
+	baseFullProduct,
+	declaredLicenses,
+	customize,
+}: {
+	baseFullProduct: FullProduct;
+	declaredLicenses?: PlanLicenseParams[];
+	customize?: CatalogVariantParams["customize"];
+}): PlanLicenseParams[] =>
+	applyLicenseParamsPatch({
+		licenses:
+			declaredLicenses ??
+			(baseFullProduct.licenses ?? []).map((link) =>
+				fullPlanLicenseToParams({ link }),
+			),
+		upsertLicenses: customize?.upsert_licenses,
+		removeLicenses: customize?.remove_licenses,
+	});
 
 /** Clone the folded base into a v1 create, then apply variants[].customize. */
 export const initVariantPlanParams = ({
 	variant,
 	baseFullProduct,
+	declaredLicenses,
 }: {
 	variant: CatalogVariantParams;
 	baseFullProduct: FullProduct;
+	declaredLicenses?: PlanLicenseParams[];
 }): ResolvedPlanParams => {
 	const basePlan = fullProductToApiPlanV1Sync({ product: baseFullProduct });
 	const applied = variant.customize
@@ -36,6 +62,11 @@ export const initVariantPlanParams = ({
 					: { on_end: applied.free_trial.on_end }),
 			}
 		: applied.free_trial;
+	const licenses = clonedLicenses({
+		baseFullProduct,
+		declaredLicenses,
+		customize: variant.customize,
+	});
 
 	return {
 		plan_id: variant.variant_plan_id,
@@ -53,5 +84,6 @@ export const initVariantPlanParams = ({
 			? { billing_controls: billingControls }
 			: {}),
 		metadata: baseFullProduct.metadata,
+		...(licenses.length > 0 ? { licenses } : {}),
 	};
 };

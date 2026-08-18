@@ -16,14 +16,19 @@ const REASON_LABEL: Record<CatalogConflictPreview["reason"], string> = {
 const conflictFeature = (conflict: CatalogConflictPreview) =>
 	conflict.feature_name ?? conflict.item_filter?.feature_id ?? "This feature";
 
+const onLicense = (conflict: CatalogConflictPreview) =>
+	conflict.license_plan_id ? ` on ${conflict.license_plan_id}` : "";
+
 export const conflictSentence = (conflict: CatalogConflictPreview): string => {
 	if (conflict.reason === "base_price_divergence") {
-		return "Its base price would be overwritten.";
+		if (!conflict.license_plan_id)
+			return "Its base price would be overwritten.";
+		return `Seat price on ${conflict.license_plan_id} would be overwritten.`;
 	}
 	if (conflict.reason === "different_interval") {
-		return `${conflictFeature(conflict)} is on a different interval here — propagating would add a duplicate item.`;
+		return `${conflictFeature(conflict)}${onLicense(conflict)} is on a different interval here — propagating would add a duplicate item.`;
 	}
-	return `${conflictFeature(conflict)} has a customized value that propagating would overwrite.`;
+	return `${conflictFeature(conflict)}${onLicense(conflict)} has a customized value that propagating would overwrite.`;
 };
 
 export const conflictBadgeLabel = (

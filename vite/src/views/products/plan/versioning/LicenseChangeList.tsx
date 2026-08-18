@@ -1,5 +1,8 @@
 import type { Feature, PlanLicenseChangeV0 } from "@autumn/shared";
-import { ItemStatusDot, type ItemStatusState } from "@/components/v2/ItemStatusDot";
+import {
+	ItemStatusDot,
+	type ItemStatusState,
+} from "@/components/v2/ItemStatusDot";
 import { PlanDiffBody } from "@/components/v2/PlanDiffBody";
 
 const ACTION_STATE: Record<PlanLicenseChangeV0["action"], ItemStatusState> = {
@@ -37,9 +40,10 @@ export function LicenseChangeList({
 	return (
 		<div className="flex flex-col gap-3">
 			{changes.map((change) => {
-				const previous = Object.entries(
-					change.previous_attributes ?? {},
-				) as [keyof typeof ATTRIBUTE_LABELS, unknown][];
+				const previous = Object.entries(change.previous_attributes ?? {}) as [
+					keyof typeof ATTRIBUTE_LABELS,
+					unknown,
+				][];
 
 				return (
 					<div

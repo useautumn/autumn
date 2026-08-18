@@ -816,6 +816,16 @@ Seed via DB `customer_licenses.plan_license_id`. `seedVersionableCustomer` is th
 | Child `all_versions` while offered as a license → 400, or pin/follow per child version the link actually points at | ✓ `versioning-collisions.test.ts` |
 | Parent `new_version`, omit `licenses` → lock whether v2 copies links (§15 currently says not copied) | ✓ `versioning-collisions.test.ts` |
 
+#### Two parents × two versions each — split strategy
+
+| Case | Status |
+|---|---|
+| A(v1,v2) `all_versions`, B(v1,v2) omitted → both A follow 200; **both** B freeze at 10 | ✓ `two-parents-versions-split.test.ts` |
+| Same + A v1 customized 500, child adds Words → A v1 rebases 500+Words, A v2 200+Words; both B stay 10 with **no** Words | ✓ `two-parents-versions-split.test.ts` |
+| A `{ version: 1 }`, B omitted → A v1 follows; A **v2** freezes; both B freeze | ✓ `two-parents-versions-split.test.ts` |
+| Child `new_version` over two parents at v1+v2 → all four rows re-point to the new child row and pin 10 | ✓ `child-versions-two-parents.test.ts` |
+| Then child 200+Words, A `all_versions`, B omitted → A inherits Words on both versions but holds its pinned 10; B inherits nothing | ✓ `child-versions-two-parents.test.ts` |
+
 ## 19. Plan licenses preview — `licenses/preview/`
 
 `preview_update` for license catalog changes. `license_changes` is the diff;
@@ -841,10 +851,23 @@ Seed via DB `customer_licenses.plan_license_id`. `seedVersionableCustomer` is th
 | Child `license_parents`: propagate-only → `propagated` | ✓ `license-parents-lane.test.ts` |
 | Child `license_parents`: pin (no propagate) → `unchanged` | ✓ `license-parents-lane.test.ts` |
 | In-batch follow of customized 500 + Words → nested `license_changes[].plan_change` shows Words add; messages not a child-won slot | ✓ `license-changes-rebase.test.ts` |
+| Parent target `new_version` + customers → top row is the mint, `resolved: new_version`; existing rows nest as `unchanged` | ✓ `license-parent-versioning.test.ts` |
+| Parent target `new_version` + no customers → latest follows in place, `resolved: existing`, `new_version: null` | ✓ `license-parent-versioning.test.ts` |
+| Parent target `all_versions` / pinned version → nested `versioning.resolved` agrees with per-version `license_action` | ✓ `license-parent-versioning.test.ts` |
 | Overlay 500, child 200, propagate, **no** `licenses[]` → `license_parents[].conflicts: [value_divergence messages]`, `license_action: "propagated"` | ✓ `conflicts/customize-override.test.ts` |
 | Declared+propagate (overlay 500 → customize 300) → `license_action: "explicit"`, `conflicts` omitted (declared swallowed the child-edit conflict) | ✓ `license-changes-rebase.test.ts` |
 | Child-only pin (absent parent) → `license_parents[]` row, `license_action: "unchanged"`, no conflict if uncustomized | ✓ `license-parents-lane.test.ts` |
 | Parent `all_versions` + license write → sibling `license_changes` do not drift from the direct row | ✓ `license-changes-siblings.test.ts` |
+
+Two parents × two versions each — one lane entry per parent plan, older versions nest
+under `sibling_versions` with their own `license_action` and `conflicts`:
+
+| Case | Status |
+|---|---|
+| A `all_versions`, B omitted → A latest+sibling `propagated`; B latest+sibling `unchanged`; no conflicts | ✓ `conflicts/two-parents-versions-split.test.ts` |
+| A v1 and B v1 each customized 500 → `value_divergence` on **both** siblings, on neither latest | ✓ `conflicts/two-parents-versions-split.test.ts` |
+| A `{ version: 1 }` → A latest `unchanged` while its sibling v1 is the `propagated` one | ✓ `conflicts/two-parents-versions-split.test.ts` |
+| Child minted a version, then 200+Words: every row diverges but `license_action` still splits A `propagated` / B `unchanged` | ✓ `mix/child-versions-two-parents.test.ts` |
 
 Deferred (need absent-parent fan-out or are invalid):
 
@@ -936,6 +959,9 @@ Same one-home split as licenses: `variants[]` declare, `propagate.variants` foll
 | Existing base + `variants[{ id, name }]` → variant v1, pointer set, items match base, `is_default: false` | ✓ `create/create-variant.test.ts` |
 | Same call: create base + variant → both exist, pointer set | ✓ `create/create-variant.test.ts` |
 | `variants[]` customize on create → clone + overlay | ✓ `create/create-variant.test.ts` |
+| Existing licensed parent + `variants[{ id, name }]` → license links clone | ✓ `create/create-variant-licenses.test.ts` |
+| Same-call `licenses[]` + variant → variant gets the links | ✓ `create/create-variant-licenses.test.ts` |
+| `customize.remove_licenses` on create drops that cloned link | ✓ `create/create-variant-licenses.test.ts` |
 | Variant of a variant → 400 `nested_variant_not_allowed` | ✓ `create/create-variant-errors.test.ts` |
 | Id already exists (not this base's variant) → 400 `product_id_already_exists` | ✓ `create/create-variant-errors.test.ts` |
 | Missing `name` on a new id → 400 | ✓ `create/create-variant-errors.test.ts` |
@@ -1019,6 +1045,12 @@ No `variants[].versioning`. Width follows the parent row. `propagate.variants[].
 | Same options when `variants[]` is later filled (must not shrink) | ✓ `preview/parent-versioning-options-union.test.ts` |
 | Propagated + declared → `variant_action: explicit`, conflicts omitted | ✓ `preview/variants-preview.test.ts` |
 | preview_update writes nothing | ✓ `preview/variants-preview.test.ts` |
+| `existing` → latest `propagated`; historical sibling versions remain visible as `unchanged` | ✓ `preview/variants-preview.test.ts` |
+| `all_versions` → latest and every historical sibling version are `propagated` | ✓ `preview/variants-preview.test.ts` |
+| `new_version` + customers → mint is `propagated`; every existing sibling version is `unchanged` | ✓ `preview/variants-preview.test.ts` |
+| Explicit variant target version → only that sibling is `propagated`, even when the base uses `all_versions` | ✓ `preview/variants-preview.test.ts` |
+| Variant lane `versioning` reports inherited `existing` / `all_versions` / `new_version`, fallback, options, and pinned override | ✓ `preview/variants-preview.test.ts` |
+| An `unchanged` sibling still reports conflicts so callers can assess widening scope | ✓ `preview/variants-preview.test.ts` |
 | Pinned base v1 + customered variant → no `new_version` | `preview/parent-versioning-options-pinned.test.ts` |
 | Base `has_customers` stays false when only the variant has customers | `preview/parent-versioning-options-pinned.test.ts` |
 | Follow add Dashboard nests created Dashboard, not messages | `preview/license-changes.test.ts` |

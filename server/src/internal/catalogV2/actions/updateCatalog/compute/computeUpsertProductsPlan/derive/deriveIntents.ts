@@ -29,6 +29,7 @@ export const deriveIntents = ({
 		intents: [
 			...deriveVersionSiblingIntents({
 				intent,
+				upsert,
 				projectedProductStatesContext,
 			}),
 			...deriveVariantIntents({

@@ -3,6 +3,12 @@
  *
  * Item changes propagate to every historical version in place. No new version
  * is minted. A customer parked on v1 does not block the in-place patch of v2.
+ *
+ * Diverged siblings receive the latest current→next customize (add/remove),
+ * not a PUT of the latest item list.
+ *
+ * Red (current):  all_versions add boolean replaces v1's 200 Messages with v2's items
+ * Green (after):  v1 keeps 200 Messages and only gains Admin Rights
  */
 
 import { test } from "bun:test";
@@ -115,6 +121,9 @@ const messagesItem = (included: number) => ({
 	included,
 	reset: { interval: ResetInterval.Month },
 });
+
+const dashboardItem = { feature_id: TestFeature.Dashboard };
+const adminRightsItem = { feature_id: TestFeature.AdminRights };
 
 const seedV1AndMintV2 = async ({
 	autumn,
@@ -286,6 +295,77 @@ test.concurrent(
 			});
 		} finally {
 			await cleanupCustomerRefs({ ctx, planIds: [planId] });
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 all_versions: add boolean on latest does not PUT items onto diverged v1")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_all_diff");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "V1",
+						items: [messagesItem(200)],
+					},
+				],
+			});
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "V2",
+						items: [messagesItem(100), dashboardItem],
+						versioning: "new_version",
+					},
+				],
+			});
+
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						versioning: "all_versions",
+						items: [messagesItem(100), dashboardItem, adminRightsItem],
+					},
+				],
+			});
+
+			await expectPlanVersionsCorrect({
+				ctx,
+				planId,
+				versions: [1, 2],
+			});
+			await expectDbPlansCorrect({
+				ctx,
+				expected: [
+					{
+						id: planId,
+						version: 1,
+						name: "V1",
+						featureIds: [TestFeature.Messages, TestFeature.AdminRights],
+						allowances: { [TestFeature.Messages]: 200 },
+					},
+					{
+						id: planId,
+						version: 2,
+						name: "V2",
+						featureIds: [
+							TestFeature.Messages,
+							TestFeature.Dashboard,
+							TestFeature.AdminRights,
+						],
+						allowances: { [TestFeature.Messages]: 100 },
+					},
+				],
+			});
+		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
 	},

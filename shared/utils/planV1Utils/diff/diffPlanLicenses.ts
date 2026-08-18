@@ -51,7 +51,8 @@ export const diffPlanLicenses = ({
 	const upsert_licenses: CustomizePlanLicense[] = [];
 	for (const toLicense of toById.values()) {
 		const fromLicense = fromById.get(toLicense.license_plan_id);
-		if (fromLicense && planLicensesAreSame({ left: fromLicense, right: toLicense })) {
+		if (!fromLicense) continue;
+		if (planLicensesAreSame({ left: fromLicense, right: toLicense })) {
 			continue;
 		}
 		upsert_licenses.push(
@@ -65,18 +66,9 @@ export const diffPlanLicenses = ({
 		);
 	}
 
-	const remove_licenses: RemovePlanLicense[] = [];
-	for (const licensePlanId of fromById.keys()) {
-		if (toById.has(licensePlanId)) continue;
-		remove_licenses.push({ license_plan_id: licensePlanId });
-	}
-
 	return {
 		...(upsert_licenses.length > 0
 			? { upsert_licenses: upsert_licenses.sort(byLicensePlanId) }
-			: {}),
-		...(remove_licenses.length > 0
-			? { remove_licenses: remove_licenses.sort(byLicensePlanId) }
 			: {}),
 	};
 };

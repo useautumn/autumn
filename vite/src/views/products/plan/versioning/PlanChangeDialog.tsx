@@ -50,11 +50,12 @@ import {
 	getLicenseUpdatePayload,
 } from "../components/plan-licenses/useLicenseSaveRegistry";
 import { LicenseChangeList } from "./LicenseChangeList";
+import { LicenseParentTargetsStep } from "./LicenseParentTargetsStep";
 import { MigrateTargetsStep } from "./MigrateTargetsStep";
 import { PlanSettingsChanges } from "./PlanSettingsChanges";
-import { PropagationTargetsStep } from "./PropagationTargetsStep";
 import { getPlanPriceChange } from "./planMigrationDiff";
 import { Stepper, type StepperStep } from "./Stepper";
+import { VariantTargetsStep } from "./VariantTargetsStep";
 
 type StepKey =
 	| "review"
@@ -156,8 +157,6 @@ const planChangeSaveSuccessText = ({
 	if (choice === "all") return "All versions updated";
 	return "Plan updated";
 };
-
-
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
 	return (
@@ -266,8 +265,7 @@ export default function PlanChangeDialog({
 		showVersionStrategy,
 		showVariantScope,
 		licenseParentTargets,
-		defaultLicenseParentIds,
-		selectedLicenseParentIds,
+		selectedLicenseParentKeys,
 		showLicenseParentScope,
 		versionChoiceOnlyAffectsParents,
 		settingsChanges,
@@ -331,7 +329,8 @@ export default function PlanChangeDialog({
 		}
 		setIsLoading(true);
 		try {
-			const willMigrate = migrateNeeded && migrate && strategy !== "new_version";
+			const willMigrate =
+				migrateNeeded && migrate && strategy !== "new_version";
 			const result = await CatalogV2Service.update(axiosInstance, {
 				plans: [buildSaveParams({ migrate })],
 			});
@@ -470,7 +469,8 @@ export default function PlanChangeDialog({
 												variants stay as they are.
 											</span>
 										</div>
-										<PropagationTargetsStep
+										<VariantTargetsStep
+											features={features}
 											targets={variantTargets}
 											selectedIds={selectedVariantIds}
 											onToggle={(id) =>
@@ -490,22 +490,16 @@ export default function PlanChangeDialog({
 										<div className="flex flex-col gap-0.5">
 											<FieldLabel>Apply to parent plans</FieldLabel>
 											<span className="text-tertiary-foreground text-xs">
-												Selected parents receive this child-plan update.
-												Unselected parents keep their current effective license
-												configuration.
+												Pick which parents receive this update, and how far
+												back. Unselected versions keep their current effective
+												license configuration.
 											</span>
 										</div>
-										<PropagationTargetsStep
+										<LicenseParentTargetsStep
+											features={features}
 											targets={licenseParentTargets}
-											selectedIds={selectedLicenseParentIds}
-											onToggle={(id) =>
-												setLicenseParentSelection((current) => {
-													const selected = current ?? defaultLicenseParentIds;
-													return selected.includes(id)
-														? selected.filter((value) => value !== id)
-														: [...selected, id];
-												})
-											}
+											selectedKeys={selectedLicenseParentKeys}
+											onChange={(next) => setLicenseParentSelection(next)}
 										/>
 									</div>
 								)}
@@ -625,6 +619,7 @@ export default function PlanChangeDialog({
 															</div>
 														)}
 														<MigrateTargetsStep
+															features={features}
 															showCustomers={migrateNeeded}
 															showSettings={false}
 															targets={migrateTargets}

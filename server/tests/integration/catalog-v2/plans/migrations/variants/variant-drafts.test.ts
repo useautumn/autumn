@@ -5,10 +5,14 @@
  *   propagated items + customers on both → one draft, collapsed op
  *   pin → no variant op
  *   variants[] declare inherits the parent's migration.draft
- *   license DIFF → variant op is upsert_licenses
+ *   license DIFF → variant op is upsert_licenses (customer delta only —
+ *     existing overlay items must not remint)
  *   follow EU / pin UK → UK omitted
  *   follow with no customers on the variant → no variant op
  *   versioning + conflicts → versioning-drafts / conflict-drafts
+ *
+ * Red (pre-fix): variant license draft reminted Messages when only Dashboard changed
+ * Green (after):   draft customize is Dashboard-only, matching preview plan_change
  */
 
 import { test } from "bun:test";
@@ -20,8 +24,8 @@ import { seedVersionableCustomer } from "../utils/seedVersionableCustomer.js";
 import {
 	childItemOp,
 	dashboardAddCustomize,
+	dashboardRemoveCustomize,
 	expectLicenseDraftCase,
-	licenseKeepMessagesAddDashboard,
 	messagesItemDelta,
 	orVersionPinnedFilter,
 	parentLicenseOp,
@@ -203,7 +207,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 variants drafts: propagated license DIFF is upsert_licenses")}`,
+	`${chalk.yellowBright("catalogV2 variants drafts: license add Dashboard does not remint Messages")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const baseId = uniqueTestId("cv2_var_dr_lic");
@@ -219,9 +223,12 @@ test.concurrent(
 					variantId,
 					childId,
 				});
+				await seedVersionableCustomer({ ctx, planId: baseId, version: 1 });
 				await seedVersionableCustomer({ ctx, planId: variantId, version: 1 });
 
-				const variantFilter = versionPinnedFilter({ planId: variantId });
+				const planFilter = orVersionPinnedFilter({
+					branches: [{ planId: baseId }, { planId: variantId }],
+				});
 				await expectLicenseDraftCase({
 					autumn: autumnV2_3,
 					ctx,
@@ -242,20 +249,117 @@ test.concurrent(
 							migration: { draft: true },
 						},
 					],
+					responsePlans: [
+						[
+							{ plan_id: baseId, versions: [1] },
+							{ plan_id: variantId, versions: [1] },
+						],
+					],
+					expected: [
+						{
+							planIds: [baseId, variantId],
+							omitPlanIds: [childId],
+							noBillingChanges: true,
+							filter: { customer: { plan: planFilter } },
+							operations: [
+								parentLicenseOp({
+									planFilter,
+									childId,
+									customize: dashboardAddCustomize,
+								}),
+							],
+						},
+					],
+				});
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants drafts: license remove Dashboard does not remint Messages")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_dr_lic_rm");
+		const variantId = uniqueTestId("cv2_var_dr_lic_rm_eu");
+		const childId = uniqueTestId("cv2_var_dr_lic_rm_seat");
+		await withCatalogPlans({
+			ctx,
+			planIds: [baseId, variantId, childId],
+			run: async () => {
+				await seedBaseVariantWithChildLicense({
+					autumn: autumnV2_3,
+					baseId,
+					variantId,
+					childId,
+				});
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: baseId,
+							licenses: [
+								{
+									license_plan_id: childId,
+									included: 2,
+									customize: {
+										remove_items: [{ feature_id: TestFeature.Messages }],
+										add_items: [messagesItem(100), dashboardItem()],
+									},
+								},
+							],
+						},
+						{
+							plan_id: variantId,
+							licenses: [
+								{
+									license_plan_id: childId,
+									included: 2,
+									customize: {
+										remove_items: [{ feature_id: TestFeature.Messages }],
+										add_items: [messagesItem(200), dashboardItem()],
+									},
+								},
+							],
+						},
+					],
+				});
+				// Only the variant has customers — assert its draft alone so we
+				// don't flake on $or collapse timing with the base.
+				await seedVersionableCustomer({ ctx, planId: variantId, version: 1 });
+
+				const variantFilter = versionPinnedFilter({ planId: variantId });
+				await expectLicenseDraftCase({
+					autumn: autumnV2_3,
+					ctx,
+					plans: [
+						{
+							plan_id: baseId,
+							licenses: [
+								{
+									license_plan_id: childId,
+									included: 2,
+									customize: {
+										remove_items: [{ feature_id: TestFeature.Messages }],
+										add_items: [messagesItem(100)],
+									},
+								},
+							],
+							propagate: { variants: [{ plan_id: variantId }] },
+							migration: { draft: true },
+						},
+					],
 					responsePlans: [[{ plan_id: variantId, versions: [1] }]],
 					expected: [
 						{
 							planIds: [variantId],
-							omitPlanIds: [baseId],
+							omitPlanIds: [baseId, childId],
 							noBillingChanges: true,
 							filter: { customer: { plan: variantFilter } },
 							operations: [
 								parentLicenseOp({
 									planFilter: variantFilter,
 									childId,
-									customize: licenseKeepMessagesAddDashboard({
-										included: 200,
-									}),
+									customize: dashboardRemoveCustomize,
 								}),
 							],
 						},

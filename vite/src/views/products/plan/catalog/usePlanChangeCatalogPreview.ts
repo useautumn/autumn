@@ -1,6 +1,7 @@
 import type {
 	Feature,
 	FrontendProduct,
+	PlanChangeV0,
 	PlanLicenseParams,
 } from "@autumn/shared";
 import { usePreviewUpdateCatalog } from "@/hooks/queries/catalog/usePreviewUpdateCatalog";
@@ -9,9 +10,14 @@ import {
 	tryBuildUpdateCatalogPlanParams,
 } from "./buildUpdateCatalogPlanParams";
 import {
-	type CatalogVersionChoice,
+	applyLicenseParentScopedDiffs,
+	applyPropagationTargetDiffs,
 	buildCatalogMigrateTargets,
+	type CatalogVersionChoice,
+	getLicenseParentVersionKey,
 	hasCatalogMigrationTargets,
+	licenseParentVersions,
+	planChangeToTargetDiff,
 } from "./catalogPlanPreview";
 import { resolvePlanChangePreview } from "./resolvePlanChangePreview";
 
@@ -80,7 +86,36 @@ export const usePlanChangeCatalogPreview = ({
 		enabled: open && !!discoverPreview,
 	});
 
-	const migratePlanPreview = scopedCatalog?.plans[0] ?? discoverPreview;
+	const scopedPreview = scopedCatalog?.plans[0];
+	const fallbackDiff = planChangeToTargetDiff({
+		planChange: discoverPreview?.plan_change,
+	});
+	const variantTargets = applyPropagationTargetDiffs({
+		targets: model.variantTargets,
+		fallbackDiff,
+		scopedById: new Map(
+			(scopedPreview?.variants ?? []).map((variant) => [
+				variant.plan_id,
+				variant.plan_change ?? null,
+			]),
+		),
+	});
+	const licenseParentTargets = applyLicenseParentScopedDiffs({
+		targets: model.licenseParentTargets,
+		fallbackDiff,
+		scopedByKey: new Map(
+			(scopedPreview?.license_parents ?? []).flatMap((parent) =>
+				licenseParentVersions({ parent }).map(
+					(entry) =>
+						[getLicenseParentVersionKey(entry), entry.plan_change ?? null] as [
+							string,
+							PlanChangeV0 | null,
+						],
+				),
+			),
+		),
+	});
+	const migratePlanPreview = scopedPreview ?? discoverPreview;
 	const migrateNeeded = hasCatalogMigrationTargets({
 		preview: scopedCatalog ?? discoverCatalog,
 	});
@@ -88,7 +123,7 @@ export const usePlanChangeCatalogPreview = ({
 		? buildCatalogMigrateTargets({
 				preview: migratePlanPreview,
 				selectedVariantIds: model.effectiveVariantIds,
-				selectedLicenseParentIds: model.effectiveLicenseParentIds,
+				selectedLicenseParentKeys: model.effectiveLicenseParentKeys,
 				versionChoice: model.effectiveVersionChoice,
 				currentVersion: product.version,
 				baseName: product.name ?? product.id,
@@ -111,6 +146,8 @@ export const usePlanChangeCatalogPreview = ({
 
 	return {
 		...model,
+		variantTargets,
+		licenseParentTargets,
 		migrateNeeded,
 		migrateTargets,
 		buildSaveParams,

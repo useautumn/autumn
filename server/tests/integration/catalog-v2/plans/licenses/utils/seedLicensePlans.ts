@@ -189,6 +189,29 @@ export const seedTwoParents = async ({
 	});
 };
 
+/** Two parents, each with v1 + v2, all four rows offering the same child. */
+export const seedTwoParentsWithTwoVersions = async ({
+	autumn,
+	childId,
+	parentIds,
+	included = 2,
+}: {
+	autumn: CatalogV2Client;
+	childId: string;
+	parentIds: [string, string];
+	included?: number;
+}) => {
+	await seedTwoParents({ autumn, childId, parentIds, included });
+	for (const parentId of parentIds) {
+		await seedParentVersionWithLicense({
+			autumn,
+			parentId,
+			childId,
+			included,
+		});
+	}
+};
+
 export const bumpChild = async ({
 	autumn,
 	childId,

@@ -47,33 +47,9 @@ export const dashboardAddCustomize = {
 	add_items: [dashboardAddItem],
 };
 
-/** Follow a Seat overlay: keep this included amount, add Dashboard. */
-export const licenseKeepMessagesAddDashboard = ({
-	included,
-}: {
-	included: number;
-}) => ({
-	remove_items: [
-		{
-			feature_id: TestFeature.Messages,
-			interval: ResetInterval.Month,
-			interval_count: 1,
-		},
-	],
-	add_items: [
-		{
-			feature_id: TestFeature.Dashboard,
-			included: 0,
-			unlimited: false,
-		},
-		{
-			feature_id: TestFeature.Messages,
-			included,
-			unlimited: false,
-			reset: { interval: ResetInterval.Month },
-		},
-	],
-});
+export const dashboardRemoveCustomize = {
+	remove_items: [{ feature_id: TestFeature.Dashboard }],
+};
 
 /** Delete Messages and add Words — same replace across every child. */
 export const messagesToWordsDelta = ({

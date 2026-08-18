@@ -9,8 +9,8 @@ import type {
 	ProductItem,
 	UpdateCatalogPlanParamsInput,
 } from "@autumn/shared";
-import { frontendProductToApiPlanV1 } from "../versioning/buildMigrationDraft";
 import { alignTierCurrencyShapes } from "../utils/currencyUtils";
+import { frontendProductToApiPlanV1 } from "../versioning/buildMigrationDraft";
 
 const omitStripePriceId = <T extends object>(
 	value: T,
@@ -45,9 +45,8 @@ const planItemsToCatalogParams = (
 		}),
 	);
 
-const pinsVersion = (
-	versioning: CatalogPlanVersioningStrategy | undefined,
-) => versioning == null || versioning === "existing";
+const pinsVersion = (versioning: CatalogPlanVersioningStrategy | undefined) =>
+	versioning == null || versioning === "existing";
 
 export const buildUpdateCatalogPlanParams = ({
 	baseProduct,
@@ -85,9 +84,7 @@ export const buildUpdateCatalogPlanParams = ({
 		...(pinsVersion(versioning) && baseProduct?.version
 			? { version: baseProduct.version }
 			: {}),
-		...(versioning && versioning !== "existing"
-			? { versioning }
-			: {}),
+		...(versioning && versioning !== "existing" ? { versioning } : {}),
 		name: plan.name,
 		description: plan.description,
 		group: plan.group ?? "",

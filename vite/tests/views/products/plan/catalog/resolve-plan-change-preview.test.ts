@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { CatalogPlanUpdatePreview } from "@autumn/shared";
+import type {
+	CatalogLicenseParentPreview,
+	CatalogPlanUpdatePreview,
+} from "@autumn/shared";
 import {
 	resolveEffectiveVersionChoice,
 	resolvePlanChangePreview,
@@ -42,13 +45,32 @@ describe("resolvePlanChangePreview", () => {
 		).toBe("update");
 	});
 
-	test("hides all_versions when the change has license parents", () => {
+	test("shows child all_versions when the child has siblings and license parents", () => {
 		expect(
 			resolveVersioningOptionVisibility({
 				options: ["existing", "new_version", "all_versions"],
 				isLatest: true,
-				hasLicenseChanges: false,
-				licenseParentCount: 1,
+				hasSiblingVersions: true,
+			}).showAllOption,
+		).toBe(true);
+	});
+
+	test("shows all_versions when the parent license overlay changes", () => {
+		expect(
+			resolveVersioningOptionVisibility({
+				options: ["existing", "new_version", "all_versions"],
+				isLatest: true,
+				hasSiblingVersions: true,
+			}).showAllOption,
+		).toBe(true);
+	});
+
+	test("does not borrow all_versions from a related plan", () => {
+		expect(
+			resolveVersioningOptionVisibility({
+				options: ["existing", "new_version", "all_versions"],
+				isLatest: true,
+				hasSiblingVersions: false,
 			}).showAllOption,
 		).toBe(false);
 	});
@@ -78,7 +100,7 @@ describe("resolvePlanChangePreview", () => {
 			preview,
 			versionChoice: "new",
 			variantSelection: ["pro_eu"],
-			licenseParentSelection: ["team@2"],
+			licenseParentSelection: ["team:2"],
 			isLatest: true,
 			namesByPlanId: { pro_eu: "Pro EU" },
 		});
@@ -90,6 +112,171 @@ describe("resolvePlanChangePreview", () => {
 			license_parents: [{ plan_id: "team", version: 2 }],
 		});
 		expect(model.strategy).toBe("new_version");
+	});
+
+	test("combines child all_versions with explicit parent all_versions", () => {
+		const preview = planPreview({
+			versioning: {
+				current_version: 2,
+				new_version: null,
+				resolved: "existing",
+				options: ["existing", "new_version", "all_versions"],
+			},
+			sibling_versions: [
+				{
+					plan_id: "seat",
+					version: 1,
+					state: { has_customers: true, will_archive: false },
+				},
+			],
+			license_parents: [
+				{
+					plan_id: "team",
+					name: "Team",
+					version: 1,
+					state: { has_customers: true, will_archive: false },
+					conflicts: [],
+				},
+				{
+					plan_id: "team",
+					name: "Team",
+					version: 2,
+					state: { has_customers: true, will_archive: false },
+					conflicts: [],
+				},
+			],
+		});
+
+		const model = resolvePlanChangePreview({
+			preview,
+			versionChoice: "all",
+			variantSelection: null,
+			licenseParentSelection: ["team"],
+			isLatest: true,
+			namesByPlanId: {},
+		});
+
+		expect(model.strategy).toBe("all_versions");
+		expect(model.propagate).toEqual({
+			license_parents: [{ plan_id: "team", versioning: "all_versions" }],
+		});
+	});
+
+	test("all_versions includes historical variant conflicts in default selection", () => {
+		const preview = planPreview({
+			versioning: {
+				current_version: 2,
+				new_version: null,
+				resolved: "existing",
+				options: ["existing", "all_versions"],
+			},
+			sibling_versions: [
+				{
+					plan_id: "pro",
+					version: 1,
+					state: { has_customers: false, will_archive: false },
+				},
+			],
+			variants: [
+				{
+					plan_id: "pro_eu",
+					version: 2,
+					state: { has_customers: false, will_archive: false },
+					conflicts: [],
+					sibling_versions: [
+						{
+							plan_id: "pro_eu",
+							version: 1,
+							state: { has_customers: true, will_archive: false },
+							variant_action: "unchanged",
+							conflicts: [
+								{
+									reason: "value_divergence",
+									feature_name: "Messages",
+								},
+							],
+						},
+					],
+				},
+			],
+		});
+		const allVersions = resolvePlanChangePreview({
+			preview,
+			versionChoice: "all",
+			variantSelection: null,
+			licenseParentSelection: null,
+			isLatest: true,
+			namesByPlanId: { pro_eu: "Pro EU" },
+		});
+		const existing = resolvePlanChangePreview({
+			preview,
+			versionChoice: "update",
+			variantSelection: null,
+			licenseParentSelection: null,
+			isLatest: true,
+			namesByPlanId: { pro_eu: "Pro EU" },
+		});
+
+		expect(allVersions.variantTargets[0].conflicts).toHaveLength(1);
+		expect(allVersions.defaultVariantIds).toEqual([]);
+		expect(existing.variantTargets[0].conflicts).toEqual([]);
+		expect(existing.defaultVariantIds).toEqual(["pro_eu"]);
+	});
+
+	test("defaults a conflict-free parent to all versions, pinning around conflicts", () => {
+		// v2 is the lane entry; v1 nests under it as a linked sibling version.
+		const teamParent = ({
+			v1Conflicts = [],
+		}: {
+			v1Conflicts?: CatalogLicenseParentPreview["conflicts"];
+		}): CatalogLicenseParentPreview =>
+			({
+				plan_id: "team",
+				name: "Team",
+				version: 2,
+				state: { has_customers: true, will_archive: false },
+				conflicts: [],
+				sibling_versions: [
+					{
+						plan_id: "team",
+						version: 1,
+						state: { has_customers: true, will_archive: false },
+						conflicts: v1Conflicts,
+					},
+				],
+			}) as CatalogLicenseParentPreview;
+
+		const clean = resolvePlanChangePreview({
+			preview: planPreview({
+				license_parents: [teamParent({})],
+			}),
+			versionChoice: "update",
+			variantSelection: null,
+			licenseParentSelection: null,
+			isLatest: true,
+			namesByPlanId: {},
+		});
+		expect(clean.defaultLicenseParentKeys).toEqual(["team"]);
+		expect(clean.propagate).toEqual({
+			license_parents: [{ plan_id: "team", versioning: "all_versions" }],
+		});
+
+		const withConflict = resolvePlanChangePreview({
+			preview: planPreview({
+				license_parents: [
+					teamParent({ v1Conflicts: [{ reason: "value_divergence" }] }),
+				],
+			}),
+			versionChoice: "update",
+			variantSelection: null,
+			licenseParentSelection: null,
+			isLatest: true,
+			namesByPlanId: {},
+		});
+		expect(withConflict.defaultLicenseParentKeys).toEqual(["team:2"]);
+		expect(withConflict.propagate).toEqual({
+			license_parents: [{ plan_id: "team", version: 2 }],
+		});
 	});
 
 	test("does not send variant propagate when variant scope is hidden", () => {
