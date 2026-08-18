@@ -1,5 +1,4 @@
 import {
-	appendFileSync,
 	chmodSync,
 	existsSync,
 	mkdirSync,
@@ -639,9 +638,6 @@ function startConnector({
 		},
 	);
 	proc.unref();
-	// #region agent log
-	appendFileSync("/opt/cursor/logs/debug.log", `${JSON.stringify({ hypothesisId: "B", location: "scripts/dw/helpers/cloudflare.ts:startConnector", message: "cloudflared spawned and unrefed", data: { parentPid: process.pid, childPid: proc.pid, detached: true }, timestamp: Date.now() })}\n`);
-	// #endregion
 	if (proc.pid) writeFileSync(file, `${proc.pid}\n`);
 	const deadline = Date.now() + 30_000;
 	while (Date.now() < deadline) {
