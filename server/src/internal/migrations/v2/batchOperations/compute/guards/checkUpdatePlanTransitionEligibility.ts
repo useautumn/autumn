@@ -176,17 +176,6 @@ export const checkUpdatePlanTransitionEligibility = ({
 		const entitlement = operation.entitlementPrice.entitlement;
 		const details = { featureId: entitlement.feature.id };
 
-		if (entitlement.rollover) {
-			rejections.push({
-				code: "rollover_remove_item",
-				opIndex,
-				planId: fromProduct.id,
-				message:
-					"Adding a rollover entitlement requires customer-specific balance initialization.",
-				details,
-			});
-		}
-
 		if (entitlement.entity_feature_id) {
 			rejections.push({
 				code: "entity_scoped_entitlement",

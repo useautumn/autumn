@@ -126,6 +126,7 @@ export default defineConfig({
 			additionalPackages({
 				packages: [
 					"@axiomhq/pino",
+					"@duckdb/node-api@1.5.5-r.4",
 					"postgres",
 					"pg",
 					"drizzle-orm",
