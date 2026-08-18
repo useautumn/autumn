@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	getSlackEventWorkspaceId,
 	normalizeSlackEventsBody,
+	slackMessageMentionsUser,
 } from "../../../../src/providers/slack/events.js";
 
 describe("Slack event normalization", () => {
@@ -72,5 +73,22 @@ describe("Slack event normalization", () => {
 		});
 
 		expect(normalizeSlackEventsBody({ body, botUserId: "U123" })).toBe(body);
+	});
+});
+
+describe("slackMessageMentionsUser", () => {
+	test("distinguishes another Slack app with a longer display name", () => {
+		expect(
+			slackMessageMentionsUser({
+				raw: { text: "<@U_LOCAL> attach growth_seed" },
+				userId: "U_PROD",
+			}),
+		).toBe(false);
+		expect(
+			slackMessageMentionsUser({
+				raw: { text: "<@U_PROD> attach growth_seed" },
+				userId: "U_PROD",
+			}),
+		).toBe(true);
 	});
 });

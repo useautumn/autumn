@@ -4,6 +4,10 @@ import { db } from "../../../lib/db.js";
 import type { AgentApprovalTurn } from "../../agentRuntime/domain/agentTurn.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import {
+	resolveApprovalDisplay,
+	withApprovalDisplay,
+} from "../utils/approvalDisplay.js";
+import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
 } from "../utils/fetchApprovalPreview.js";
@@ -79,7 +83,7 @@ export const createApproval = async ({
 
 	const toolArgs = publicToolArgs(approval.toolArgs);
 	const request = toolRequestFromArgs(toolArgs);
-	const preview = await resolveApprovalPreview({
+	const resolvedPreview = await resolveApprovalPreview({
 		env,
 		getToken,
 		logger,
@@ -87,6 +91,13 @@ export const createApproval = async ({
 		request,
 		toolName: approval.toolName,
 	});
+	const display = await resolveApprovalDisplay({
+		env,
+		getToken,
+		preview: resolvedPreview,
+		request,
+	});
+	const preview = withApprovalDisplay({ display, preview: resolvedPreview });
 
 	const approvalId = await chatApprovalRepo.insert({
 		db,

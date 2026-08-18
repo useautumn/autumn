@@ -1,4 +1,11 @@
-import { buildBillingPreviewDisplay, formatCount } from "@autumn/render";
+import {
+	type BillingChangeDisplay,
+	buildBillingPreviewDisplay,
+	buildPlanItemChangeDisplay,
+	formatCount,
+	formatMoney,
+	parsePreviewPayload,
+} from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
 import {
 	Actions,
@@ -6,20 +13,30 @@ import {
 	Card,
 	type CardChild,
 	CardText,
-	Divider,
 	Field,
 	type FieldElement,
 	Fields,
 	LinkButton,
 	Modal,
+	Select,
+	SelectOption,
+	Table,
 } from "chat";
 import {
 	normalizeToolName,
 	toolLabel,
 } from "../internal/agentRuntime/tools/toolPolicy.js";
+import { attachBillingEditsFromRequest } from "../internal/approvals/domain/attachBillingEdits.js";
 import { toolRequestFromArgs } from "../internal/approvals/utils/toolRequest.js";
+import {
+	catalogActionToChange,
+	catalogItemActionToChange,
+	changeTable,
+	changeTableRow,
+	planItemChangeTableRow,
+} from "./changeTable.js";
 import { ACTION_FAILED_MESSAGE } from "./messages.js";
-import { parsePreviewPayload, previewElements } from "./previewContent.js";
+import { previewElements } from "./previewContent.js";
 
 export type ApprovalCardStatus =
 	| "approved"
@@ -28,6 +45,9 @@ export type ApprovalCardStatus =
 	| "failed"
 	| "running"
 	| "superseded";
+
+export const EDIT_APPROVAL_DETAILS_ACTION_ID = "edit_approval_details";
+export const EDIT_APPROVAL_DETAILS_MODAL_ID = "edit_approval_details_modal";
 
 const getRecord = (value: unknown) =>
 	value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -71,6 +91,25 @@ const getResultBody = (value: unknown): Record<string, unknown> => {
 	return getRecord(value);
 };
 
+const approvalDisplayFromPreview = (preview: unknown) =>
+	getRecord(getResultBody(preview)._display);
+
+const approvalPlanName = ({
+	display,
+	plan,
+}: {
+	display: Record<string, unknown>;
+	plan: Record<string, unknown>;
+}) => {
+	const planId = getString(plan.plan_id);
+	return (
+		getString(getRecord(plan.plan).name) ??
+		getString(getRecord(display.planNames)[planId ?? ""]) ??
+		getString(plan.name) ??
+		planId
+	);
+};
+
 const capitalize = (value: string) =>
 	value.charAt(0).toUpperCase() + value.slice(1);
 
@@ -81,50 +120,75 @@ const mention = (userId?: string) => (userId ? `<@${userId}>` : null);
 const autumnDashboardBase = () =>
 	process.env.AUTUMN_DASHBOARD_URL ?? "https://app.useautumn.com";
 
-const autumnCustomerLink = ({
-	customerId,
+const autumnDashboardLink = ({
 	env,
+	id,
+	resource,
 }: {
-	customerId: string | null;
 	env?: AppEnv;
+	id: string | null;
+	resource: "customers" | "products";
 }) => {
-	if (!customerId || !env) return null;
+	if (!id || !env) return null;
 	const envPath = env === "live" ? "" : "/sandbox";
-	return `${autumnDashboardBase()}${envPath}/customers/${customerId}`;
+	return `${autumnDashboardBase()}${envPath}/${resource}/${encodeURIComponent(id)}`;
+};
+
+const autumnDashboardLabel = ({
+	env,
+	id,
+	label = id,
+	resource,
+}: {
+	env?: AppEnv;
+	id: string;
+	label?: string;
+	resource: "customers" | "products";
+}) => {
+	const url = autumnDashboardLink({ env, id, resource });
+	return bold(url ? `<${url}|${label}>` : label);
+};
+
+const planChangeSummary = ({
+	env,
+	incoming,
+	outgoing,
+}: {
+	env?: AppEnv;
+	incoming: BillingChangeDisplay[];
+	outgoing: BillingChangeDisplay[];
+}) => {
+	const incomingIds = new Set(incoming.map(({ planId }) => planId));
+	const outgoingIds = new Set(outgoing.map(({ planId }) => planId));
+	const added = incoming.filter(({ planId }) => !outgoingIds.has(planId));
+	const removed = outgoing.filter(({ planId }) => !incomingIds.has(planId));
+	const labels = (changes: BillingChangeDisplay[]) =>
+		changes
+			.map(({ name, planId }) =>
+				autumnDashboardLabel({
+					env,
+					id: planId,
+					label: name,
+					resource: "products",
+				}),
+			)
+			.join(", ");
+	if (added.length && removed.length) {
+		return `Attaching ${labels(added)} and removing ${labels(removed)}`;
+	}
+	if (added.length) return `Attaching ${labels(added)}`;
+	if (removed.length) return `Removing ${labels(removed)}`;
+	return null;
 };
 
 const contextLine = (parts: Array<string | null | undefined>) =>
 	parts.filter(Boolean).join(" · ");
-
-const formatMoney = ({
-	amount,
-	currency,
-}: {
-	amount: number;
-	currency?: string;
-}) => {
-	try {
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency: (currency ?? "usd").toUpperCase(),
-		}).format(amount);
-	} catch {
-		return `$${amount}`;
-	}
-};
 
 const formatDay = (epochMs: number) =>
 	new Intl.DateTimeFormat("en-US", {
 		dateStyle: "medium",
 		timeZone: "UTC",
 	}).format(new Date(epochMs));
-
-const envLine = (env?: AppEnv) =>
-	env === "live"
-		? "🔴 Live — real billing"
-		: env === "sandbox"
-			? "🧪 Sandbox"
-			: null;
 
 type ActionPhrases = {
 	done: string;
@@ -137,25 +201,56 @@ type ActionPhrases = {
 // action, so they render as a sentence — never as label/value fields.
 const actionPhrases = ({
 	env,
+	preview,
 	toolArgs,
 	toolName,
 }: {
 	env?: AppEnv;
+	preview?: unknown;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }): ActionPhrases => {
 	const request = toolRequestFromArgs(toolArgs) ?? {};
+	const name = normalizeToolName(toolName);
+	const display = approvalDisplayFromPreview(preview);
 	const customer = getString(request.customer_id);
 	const plan = getString(request.plan_id);
 	const entity = getString(request.entity_id);
-	const customerUrl = autumnCustomerLink({ customerId: customer, env });
+	const customerName =
+		getString(display.customerName) ??
+		(name === "getOrCreateCustomer" || name === "updateCustomer"
+			? getString(request.name)
+			: null);
+	const customerEmail =
+		getString(display.customerEmail) ??
+		(name === "getOrCreateCustomer" || name === "updateCustomer"
+			? getString(request.email)
+			: null);
+	const planName =
+		getString(display.planName) ??
+		(name === "createPlan" ? getString(request.name) : null);
+	const customerText = customerName ?? customerEmail ?? customer;
 	const customerLabel = customer
-		? bold(customerUrl ? `<${customerUrl}|${customer}>` : customer)
-		: "the customer";
-	const planLabel = plan ? bold(plan) : "the plan";
+		? autumnDashboardLabel({
+				env,
+				id: customer,
+				label: customerText ?? customer,
+				resource: "customers",
+			})
+		: customerText
+			? bold(customerText)
+			: "the customer";
+	const planLabel = plan
+		? autumnDashboardLabel({
+				env,
+				id: plan,
+				label: planName ?? plan,
+				resource: "products",
+			})
+		: "the plan";
 	const entitySuffix = entity ? ` (entity ${bold(entity)})` : "";
 
-	switch (normalizeToolName(toolName)) {
+	switch (name) {
 		case "attach": {
 			const target = `${planLabel} to ${customerLabel}${entitySuffix}`;
 			return {
@@ -202,7 +297,11 @@ const actionPhrases = ({
 			};
 		}
 		case "createBalance": {
-			const feature = getString(request.feature_id);
+			const featureId = getString(request.feature_id);
+			const feature =
+				getString(
+					getRecord(getRecord(display.featureNames)[featureId ?? ""]).name,
+				) ?? featureId;
 			const target = `${
 				feature ? `a ${bold(feature)} balance` : "a balance"
 			} for ${customerLabel}${entitySuffix}`;
@@ -226,6 +325,14 @@ const actionPhrases = ({
 	}
 };
 
+const pendingActionPrompt = ({
+	phrases,
+	toolName,
+}: {
+	phrases: ActionPhrases;
+	toolName: string;
+}) => (phrases.pending === toolLabel(toolName) ? null : `${phrases.pending}?`);
+
 // The preview tool returns { preview: BillingPreviewResponse, ... } wrapped in
 // MCP content blocks; unwrap both layers before reading money facts.
 const getPreviewBody = (preview: unknown) => {
@@ -234,13 +341,7 @@ const getPreviewBody = (preview: unknown) => {
 	return Object.keys(inner).length ? inner : body;
 };
 
-const moneyFields = ({
-	preview,
-	toolArgs,
-}: {
-	preview?: unknown;
-	toolArgs?: Record<string, unknown>;
-}) => {
+const moneyFields = ({ preview }: { preview?: unknown }) => {
 	const fields: FieldElement[] = [];
 	const previewBody = getPreviewBody(preview);
 	const currency = getString(previewBody.currency) ?? undefined;
@@ -268,132 +369,7 @@ const moneyFields = ({
 			}),
 		);
 	}
-
-	const request = toolRequestFromArgs(toolArgs) ?? {};
-	const price = getRecord(getRecord(request.customize).price);
-	const priceAmount = getNumber(price.amount);
-	if (priceAmount !== null) {
-		const interval = getString(price.interval);
-		fields.push(
-			Field({
-				label: "Custom price",
-				value: `${formatMoney({
-					amount: priceAmount,
-					currency: getString(price.currency) ?? undefined,
-				})}${interval ? `/${interval}` : ""}`,
-			}),
-		);
-	}
 	return fields.slice(0, 4);
-};
-
-const formatNumber = (value: number) =>
-	new Intl.NumberFormat("en-US").format(value);
-
-const billingMethodLabel = (value: unknown) =>
-	value === "prepaid"
-		? "prepaid"
-		: value === "usage_based"
-			? "usage-based"
-			: null;
-
-const intervalAdverbs: Record<string, string> = {
-	day: "daily",
-	week: "weekly",
-	month: "monthly",
-	quarter: "quarterly",
-	semi_annual: "semi-annually",
-	year: "yearly",
-};
-
-const intervalLabel = (value: unknown) => {
-	const interval = getString(value);
-	return interval ? (intervalAdverbs[interval] ?? interval) : null;
-};
-
-// One added item (CreatePlanItem): feature in bold, then a concise descriptor
-// of allowance/price/cadence so reviewers see what the customization grants.
-const addedItemLine = (item: Record<string, unknown>) => {
-	const feature = getString(item.feature_id) ?? "feature";
-	const parts: string[] = [];
-	if (item.unlimited === true) {
-		parts.push("unlimited");
-	} else {
-		const price = getRecord(item.price);
-		const included = getNumber(item.included);
-		const amount = getNumber(price.amount);
-		const hasTiers = Array.isArray(price.tiers) && price.tiers.length > 0;
-		const allowance =
-			included !== null ? `${formatNumber(included)} included` : null;
-		const units = getNumber(price.billing_units);
-		const priceLabel =
-			amount !== null
-				? units && units > 1
-					? `${formatMoney({ amount })} per ${formatNumber(units)}`
-					: `${formatMoney({ amount })} each`
-				: hasTiers
-					? "tiered pricing"
-					: null;
-		if (allowance && priceLabel) {
-			parts.push(`${allowance}, then ${priceLabel}`);
-		} else if (allowance ?? priceLabel) {
-			parts.push((allowance ?? priceLabel) as string);
-		}
-		const method = billingMethodLabel(price.billing_method);
-		if (method) parts.push(method);
-		const interval = intervalLabel(
-			price.interval ?? getRecord(item.reset).interval,
-		);
-		if (interval) parts.push(interval);
-	}
-	const detail = parts.join(" · ");
-	return `• ${bold(feature)}${detail ? ` — ${detail}` : ""}`;
-};
-
-// One removed item (PlanItemFilter): describe by feature, falling back to the
-// billing-method / interval qualifiers when the filter is feature-agnostic.
-const removedItemLine = (filter: Record<string, unknown>) => {
-	const feature = getString(filter.feature_id);
-	const qualifiers = [
-		billingMethodLabel(filter.billing_method),
-		intervalLabel(filter.interval),
-	].filter((part): part is string => Boolean(part));
-	if (feature) {
-		return `• ${bold(feature)}${
-			qualifiers.length ? ` · ${qualifiers.join(" · ")}` : ""
-		}`;
-	}
-	return `• ${qualifiers.length ? qualifiers.join(" · ") : "matching items"}`;
-};
-
-const ITEM_LINES_MAX = 8;
-
-// Tier 4: PATCH-style plan customizations, set off by a divider so the added /
-// removed groups read as a distinct "what changes" block under the money facts.
-const itemChangeBlocks = (toolArgs?: Record<string, unknown>): CardChild[] => {
-	const customize = getRecord(toolRequestFromArgs(toolArgs)?.customize);
-	const addItems = Array.isArray(customize.add_items)
-		? customize.add_items
-		: [];
-	const removeItems = Array.isArray(customize.remove_items)
-		? customize.remove_items
-		: [];
-	if (!(addItems.length || removeItems.length)) return [];
-
-	const blocks: CardChild[] = [Divider()];
-	if (addItems.length) {
-		const lines = addItems
-			.slice(0, ITEM_LINES_MAX)
-			.map((item) => addedItemLine(getRecord(item)));
-		blocks.push(CardText([bold("Added to plan"), ...lines].join("\n")));
-	}
-	if (removeItems.length) {
-		const lines = removeItems
-			.slice(0, ITEM_LINES_MAX)
-			.map((filter) => removedItemLine(getRecord(filter)));
-		blocks.push(CardText([bold("Removed from plan"), ...lines].join("\n")));
-	}
-	return blocks;
 };
 
 // Recurring charges are expected, not a decision point — keep them muted.
@@ -527,7 +503,11 @@ const outcomeFromResult = ({
 	const url = getString(value("url"));
 	const customerUrl = customerLinkInSentence
 		? null
-		: autumnCustomerLink({ customerId: getString(value("customer_id")), env });
+		: autumnDashboardLink({
+				env,
+				id: getString(value("customer_id")),
+				resource: "customers",
+			});
 	// The server reuses the hosted invoice URL as payment_url for open invoices.
 	const checkoutLink =
 		paymentUrl && paymentUrl !== invoiceLink?.url
@@ -613,38 +593,217 @@ const requestSummaryFields = (
 	return fields;
 };
 
+const catalogApprovalContext = (preview: unknown) => {
+	const payload = parsePreviewPayload(preview);
+	const display = approvalDisplayFromPreview(preview);
+	const values = (key: string) =>
+		Array.isArray(payload?.[key]) ? payload[key].map(getRecord) : [];
+	const plans = values("plan_changes");
+	const features = values("feature_changes");
+	const rewards = values("reward_changes");
+	const referrals = values("referral_program_changes");
+	const hasChange = (value: Record<string, unknown>) =>
+		value.blocked === true || catalogActionToChange(value.action) !== null;
+	const changedPlans = plans.filter(
+		(plan) =>
+			hasChange(plan) ||
+			(Array.isArray(plan.item_changes) && plan.item_changes.length > 0),
+	);
+	const hasOtherChanges = [...features, ...rewards, ...referrals].some(
+		hasChange,
+	);
+	const plan =
+		changedPlans.length === 1 && !hasOtherChanges ? changedPlans[0] : null;
+	const planName = plan ? approvalPlanName({ display, plan }) : null;
+
+	return { display, features, plan, planName, plans, referrals, rewards };
+};
+
+const approvalTitle = ({
+	preview,
+	toolName,
+}: {
+	preview?: unknown;
+	toolName: string;
+}) => {
+	const fallback = toolLabel(toolName);
+	if (!["updateCatalog", "updatePlan"].includes(normalizeToolName(toolName))) {
+		return fallback;
+	}
+	const { plan, planName } = catalogApprovalContext(preview);
+	if (!(plan && planName)) return fallback;
+	const change = catalogActionToChange(plan.action);
+	const verb =
+		change === "Add" ? "Create" : change === "Remove" ? "Remove" : "Update";
+	return `${verb} ${planName}`;
+};
+
+const catalogApprovalBlocks = ({
+	preview,
+	toolArgs,
+}: {
+	preview?: unknown;
+	toolArgs?: Record<string, unknown>;
+}): CardChild[] => {
+	const { display, features, plans, referrals, rewards } =
+		catalogApprovalContext(preview);
+	const displayFeatureNames = getRecord(display.featureNames);
+	const resourceRows = ({ values }: { values: Record<string, unknown>[] }) =>
+		values.flatMap((value) => {
+			const change =
+				value.blocked === true
+					? "Blocked"
+					: catalogActionToChange(value.action);
+			const id = getString(value.id);
+			return change && id ? [changeTableRow({ change, details: id })] : [];
+		});
+	const planRows = plans.flatMap((plan) => {
+		const planName = approvalPlanName({ display, plan }) ?? "Plan";
+		const itemRows = (
+			Array.isArray(plan.item_changes) ? plan.item_changes : []
+		).flatMap((value) => {
+			const change = getRecord(value);
+			const item = getRecord(change.item);
+			const feature = getRecord(item.feature);
+			const featureId = getString(change.feature_id);
+			const itemAction = catalogItemActionToChange(change.action);
+			if (!(featureId && itemAction)) return [];
+			const embeddedFeatureNames = Object.keys(feature).length
+				? {
+						[featureId]: {
+							...getRecord(displayFeatureNames[featureId]),
+							...getRecord(feature.display),
+							name: feature.name,
+						},
+					}
+				: {};
+			const itemChange = buildPlanItemChangeDisplay({
+				change: itemAction,
+				item: { ...item, feature_id: featureId },
+			});
+			return itemChange
+				? [
+						planItemChangeTableRow({
+							change: itemChange,
+							details:
+								itemChange.pricingText && !itemChange.includedText
+									? null
+									: getString(getRecord(item.display).primary_text),
+							featureNames: {
+								...displayFeatureNames,
+								...embeddedFeatureNames,
+							},
+						}),
+					]
+				: [];
+		});
+		const customize = getRecord(plan.customize);
+		const onlyChangesItems =
+			itemRows.length > 0 &&
+			plan.action === "updated" &&
+			!plan.price_change &&
+			Object.keys(getRecord(plan.previous_attributes)).length === 0 &&
+			Object.keys(customize).every((key) =>
+				["add_items", "remove_items", "update_items"].includes(key),
+			);
+		const change = catalogActionToChange(plan.action);
+		const planRow =
+			change && !onlyChangesItems
+				? [
+						changeTableRow({
+							change,
+							details: `${planName}${plan.will_archive === true ? " · archive" : ""}`,
+						}),
+					]
+				: [];
+		return [...planRow, ...itemRows];
+	});
+	const catalogRows = [
+		...features.flatMap((feature) => {
+			const change =
+				feature.blocked === true
+					? "Blocked"
+					: catalogActionToChange(feature.action);
+			const featureId = getString(feature.feature_id);
+			const name =
+				getString(getRecord(feature.feature).name) ??
+				getString(getRecord(displayFeatureNames[featureId ?? ""]).name) ??
+				featureId;
+			return change && name
+				? [
+						changeTableRow({
+							change,
+							details: `${name}${feature.will_archive === true ? " · archive" : ""}`,
+						}),
+					]
+				: [];
+		}),
+		...resourceRows({ values: rewards }),
+		...resourceRows({ values: referrals }),
+	];
+	const tables = [
+		...(catalogRows.length
+			? [changeTable({ caption: "Catalog changes", rows: catalogRows })]
+			: []),
+		...(planRows.length
+			? [changeTable({ caption: "Plan changes", rows: planRows })]
+			: []),
+	];
+	if (tables.length) return tables;
+
+	const request = toolRequestFromArgs(toolArgs) ?? {};
+	const counts = [
+		Array.isArray(request.plans) && request.plans.length
+			? `${request.plans.length} plan ${request.plans.length === 1 ? "change" : "changes"}`
+			: null,
+		Array.isArray(request.features) && request.features.length
+			? `${request.features.length} feature ${request.features.length === 1 ? "change" : "changes"}`
+			: null,
+	].filter((value): value is string => Boolean(value));
+	return counts.length ? [CardText(counts.join(" · "))] : [];
+};
+
 const BILLING_ACTION_TOOLS = new Set([
 	"attach",
 	"createSchedule",
 	"updateSubscription",
 ]);
 
-// The shared card body (change summary, receipt table, customize diff, phases,
-// params line) used by pending, running, and resolved cards so in-place edits
-// never collapse what the reviewer approved against.
+// Pending, running, and resolved cards share this body so in-place edits keep
+// the facts the reviewer approved.
 const approvalPreviewBlocks = ({
+	env,
 	preview,
 	toolArgs,
 	toolName,
 }: {
+	env?: AppEnv;
 	preview?: unknown;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }): CardChild[] => {
 	const structured = previewElements(preview);
 	const blocks: CardChild[] = [];
+	const normalizedToolName = normalizeToolName(toolName);
 	const pushMoney = () => {
 		if (structured) {
 			blocks.push(...structured);
 			return;
 		}
-		const fields = moneyFields({ preview, toolArgs });
+		const fields = moneyFields({ preview });
 		if (fields.length) blocks.push(Fields(fields));
 	};
 
-	if (!BILLING_ACTION_TOOLS.has(normalizeToolName(toolName))) {
+	if (!BILLING_ACTION_TOOLS.has(normalizedToolName)) {
+		if (
+			["createPlan", "createReward", "updateCatalog", "updatePlan"].includes(
+				normalizedToolName,
+			)
+		) {
+			blocks.push(...catalogApprovalBlocks({ preview, toolArgs }));
+			return blocks;
+		}
 		pushMoney();
-		blocks.push(...itemChangeBlocks(toolArgs));
 		// Nothing structured to show — fall back to the write's own fields.
 		if (blocks.length === 0) {
 			const fields = requestSummaryFields(toolArgs);
@@ -659,54 +818,118 @@ const approvalPreviewBlocks = ({
 	}
 
 	const request = toolRequestFromArgs(toolArgs);
+	const approvalDisplay = getRecord(getResultBody(preview)._display);
+	const resolvedPlanNames = Object.fromEntries(
+		Object.entries(getRecord(approvalDisplay.planNames)).flatMap(
+			([id, value]) => {
+				const name = getString(value);
+				return name ? [[id, name]] : [];
+			},
+		),
+	);
+	const resolvedFeatureNames = getRecord(approvalDisplay.featureNames);
 	const display = buildBillingPreviewDisplay({
+		basePlanItems: Array.isArray(approvalDisplay.basePlanItems)
+			? approvalDisplay.basePlanItems
+			: null,
 		params: request ?? null,
+		planNames: resolvedPlanNames,
 		preview: parsePreviewPayload(preview),
 	});
-	// Dashboard-style layout: change summary → custom plan shape → line items
-	// as prose rows → a bold Due-now line → muted params. No tables — Slack's
-	// render is too cramped for money facts.
-	if (display.intentLabel) {
+	if (display.intentLabel && normalizedToolName !== "attach") {
 		blocks.push(CardText(display.intentLabel));
 	}
-	if (display.changes.summaryText) {
-		blocks.push(CardText(display.changes.summaryText));
+	const changeSummary =
+		normalizedToolName === "attach"
+			? null
+			: planChangeSummary({ env, ...display.changes });
+	if (changeSummary) {
+		blocks.push(CardText(changeSummary));
 	}
-	const planId =
-		display.changes.incoming[0]?.planId ?? getString(request?.plan_id);
-	if (display.customize?.priceText && planId) {
-		blocks.push(
-			CardText(
-				`${bold(planId)} — ${display.customize.priceText}${
-					display.customize.freeTrialText
-						? ` · ${display.customize.freeTrialText}`
-						: ""
-				}  \`custom\``,
-			),
-		);
-	}
-	const customizeLines = [
-		...(display.customize?.replacedItems.map(
-			(item) => `• ${item} (replaces plan items)`,
-		) ?? []),
-		...(display.customize?.addedItems.map((item) => `＋ ${item}`) ?? []),
-		...(display.customize?.removedItems.map((item) => `− ${item}`) ?? []),
-		...(display.customize?.updatedItems.map((item) => `~ ${item}`) ?? []),
+	const customizeRows = ({
+		customize,
+		plan,
+	}: {
+		customize: typeof display.customize;
+		plan?: string;
+	}) => {
+		const details = (value: string) => (plan ? `${plan} · ${value}` : value);
+		return [
+			...(customize?.priceText
+				? [
+						changeTableRow({
+							change: "Update",
+							details: details("Base price"),
+							pricing: customize.priceText,
+						}),
+					]
+				: []),
+			...(customize?.freeTrialText
+				? [
+						changeTableRow({
+							change: "Update",
+							details: details(`Free trial · ${customize.freeTrialText}`),
+						}),
+					]
+				: []),
+			...(customize?.itemChanges.map((change) => {
+				const row = planItemChangeTableRow({
+					change,
+					featureNames: resolvedFeatureNames,
+				});
+				return { ...row, details: details(row.details) };
+			}) ?? []),
+		];
+	};
+	const schedulePlans = [
+		...(Array.isArray(request?.phases)
+			? request.phases.flatMap((value) => {
+					const plans = getRecord(value).plans;
+					return Array.isArray(plans) ? plans.map(getRecord) : [];
+				})
+			: []),
+		...(Array.isArray(request?.unscheduled_plans)
+			? request.unscheduled_plans.map(getRecord)
+			: []),
 	];
-	if (customizeLines.length) {
-		blocks.push(CardText([bold("Plan changes"), ...customizeLines].join("\n")));
+	const planNames = new Map([
+		...Object.entries(resolvedPlanNames),
+		...[...display.changes.incoming, ...display.changes.outgoing].map(
+			({ name, planId }) => [planId, name] as const,
+		),
+	]);
+	const basePlanItemsByPlan = getRecord(approvalDisplay.basePlanItemsByPlan);
+	const changeRows = [
+		...customizeRows({ customize: display.customize }),
+		...schedulePlans.flatMap((plan) => {
+			const planId = getString(plan.plan_id) ?? "Plan";
+			const basePlanItems = basePlanItemsByPlan[planId];
+			const nested = buildBillingPreviewDisplay({
+				basePlanItems: Array.isArray(basePlanItems) ? basePlanItems : null,
+				params: plan,
+			});
+			return customizeRows({
+				customize: nested.customize,
+				plan: planNames.get(planId) ?? planId,
+			});
+		}),
+	];
+	if (changeRows.length) {
+		blocks.push(changeTable({ caption: "Plan changes", rows: changeRows }));
 	}
 	// Prepaid quantities are silent money decisions — an omitted quantity
 	// defaults to 0 server-side, so the approver must see it either way.
-	const prepaidLines = display.prepaid.map((entry) =>
-		entry.quantity !== null
-			? `${entry.featureId} — ${formatCount(entry.quantity)} prepaid`
-			: `⚠️ ${entry.featureId} — prepaid quantity not set (defaults to 0${
+	const prepaidLines = display.prepaid.map((entry) => {
+		const feature = getRecord(resolvedFeatureNames[entry.featureId]);
+		const featureName = getString(feature.name) ?? entry.featureId;
+		return entry.quantity !== null
+			? `${featureName} — ${formatCount(entry.quantity)} prepaid`
+			: `⚠️ ${featureName} — prepaid quantity not set (defaults to 0${
 					entry.includedDefault
 						? `; plan includes ${formatCount(entry.includedDefault)}`
 						: ""
-				})`,
-	);
+				})`;
+	});
 	if (prepaidLines.length) {
 		blocks.push(CardText([bold("Quantities"), ...prepaidLines].join("\n")));
 	}
@@ -750,20 +973,37 @@ const approvalPreviewBlocks = ({
 	}
 	if (display.phases.length) {
 		blocks.push(
-			CardText(
-				[
-					bold("Phases"),
-					...display.phases.map(
-						(phase, index) =>
-							`${index + 1}. ${phase.timingText} — ${phase.plansText}`,
-					),
-				].join("\n"),
-			),
+			Table({
+				align: ["left", "left"],
+				caption: "Schedule",
+				headers: ["Starts", "Plans"],
+				rows: display.phases.map((phase) => [
+					phase.timingText,
+					phase.plansText,
+				]),
+			}),
 		);
 	}
-	const badgeLine = display.badges
-		.map((badge) => `${badge.active ? "✓" : "✗"} ${badge.label}`)
-		.join("  ");
+	const badges = [
+		...display.badges,
+		...(display.redirectToCheckout &&
+		!display.badges.some(({ label }) => label === "Checkout link")
+			? [{ active: true, label: "Checkout link" }]
+			: []),
+	];
+	const badgeLine = badges
+		.map(({ active, label }) => {
+			if (label === "Invoice (draft)") return "Draft invoice";
+			if (label === "Invoice mode")
+				return active ? "Finalized invoice" : "Charge directly";
+			if (label === "Enable immediately")
+				return active ? "Provision immediately" : "Provision after payment";
+			if (label === "Prorations") return active ? label : "No prorations";
+			if (label === "Checkout link")
+				return "Customer completes payment in checkout";
+			return label;
+		})
+		.join(" · ");
 	const startsAt = getNumber(request?.starts_at);
 	const mutedLine = contextLine([
 		display.nextCycle
@@ -780,22 +1020,8 @@ const approvalPreviewBlocks = ({
 	return blocks;
 };
 
-const SUMMARY_MAX_LENGTH = 1500;
-
-// Agent prose arrives as markdown; mrkdwn sections have no list syntax.
-const formatSummary = (summary: string) => {
-	const cleaned = summary
-		.trim()
-		.replace(/^[-*]\s+/gm, "• ")
-		.replace(/^#+\s+/gm, "");
-	return cleaned.length > SUMMARY_MAX_LENGTH
-		? `${cleaned.slice(0, SUMMARY_MAX_LENGTH)}…`
-		: cleaned;
-};
-
-// Settled terminal states (dismissed/superseded) keep the full pending body so
-// the in-place edit doesn't collapse; the button row becomes a status line.
-// Slack can't disable buttons, so a section line is used instead of a fake one.
+// Settled cards keep their pending body; Slack cannot disable buttons, so the
+// action row becomes a status line.
 const settledStatusCard = ({
 	env,
 	preview,
@@ -809,13 +1035,13 @@ const settledStatusCard = ({
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }) => {
-	const phrases = actionPhrases({ env, toolArgs, toolName });
+	const phrases = actionPhrases({ env, preview, toolArgs, toolName });
+	const prompt = pendingActionPrompt({ phrases, toolName });
 	return Card({
-		title: toolLabel(toolName),
-		subtitle: envLine(env) || undefined,
+		title: approvalTitle({ preview, toolName }),
 		children: [
-			CardText(`${phrases.pending}?`),
-			...approvalPreviewBlocks({ preview, toolArgs, toolName }),
+			...(prompt ? [CardText(prompt)] : []),
+			...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
 			CardText(statusLabel),
 		],
 	});
@@ -825,36 +1051,28 @@ export const approvalCard = ({
 	env,
 	id,
 	preview,
-	requesterId,
-	summary,
 	toolArgs,
 	toolName,
 }: {
 	env?: AppEnv;
 	id: string;
 	preview?: unknown;
-	requesterId?: string;
-	/** The agent's preview prose — rendered inside the card so the approval is one message. */
-	summary?: string;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }) => {
-	const phrases = actionPhrases({ env, toolArgs, toolName });
-	const requester = mention(requesterId);
+	const phrases = actionPhrases({ env, preview, toolArgs, toolName });
 	const live = env === "live";
-	const summaryText = summary?.trim() ? formatSummary(summary) : null;
+	const prompt =
+		normalizeToolName(toolName) === "attach"
+			? phrases.running
+			: pendingActionPrompt({ phrases, toolName });
+	const editable = normalizeToolName(toolName) === "attach";
 
 	return Card({
-		title: toolLabel(toolName),
-		subtitle:
-			contextLine([
-				envLine(env),
-				requester ? `requested by ${requester}` : null,
-			]) || undefined,
+		title: approvalTitle({ preview, toolName }),
 		children: [
-			// The agent's narrative replaces the canned sentence when present.
-			CardText(summaryText ?? `${phrases.pending}?`),
-			...approvalPreviewBlocks({ preview, toolArgs, toolName }),
+			...(prompt ? [CardText(prompt)] : []),
+			...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
 			Actions([
 				Button({
 					id: "approve_billing_action",
@@ -867,13 +1085,83 @@ export const approvalCard = ({
 					label: "Dismiss",
 					value: id,
 				}),
+				...(editable
+					? [
+							Button({
+								actionType: "modal",
+								id: EDIT_APPROVAL_DETAILS_ACTION_ID,
+								label: "Edit details",
+								value: id,
+							}),
+						]
+					: []),
 				Button({
 					actionType: "modal",
 					id: "view_approval_payload",
-					label: "{} Payload",
+					label: "View request",
 					value: id,
 				}),
 			]),
+			CardText(
+				"Need a change? Reply in this thread and I’ll refresh the preview.",
+				{ style: "muted" },
+			),
+		],
+	});
+};
+
+export const approvalDetailsModal = ({
+	approvalId,
+	toolArgs,
+}: {
+	approvalId: string;
+	toolArgs?: Record<string, unknown>;
+}) => {
+	const request = toolRequestFromArgs(toolArgs) ?? {};
+	const edits = attachBillingEditsFromRequest(request);
+
+	return Modal({
+		callbackId: EDIT_APPROVAL_DETAILS_MODAL_ID,
+		closeLabel: "Cancel",
+		privateMetadata: approvalId,
+		submitLabel: "Update preview",
+		title: "Edit billing details",
+		children: [
+			Select({
+				id: "invoice",
+				initialOption: edits.invoice,
+				label: "Invoice",
+				options: [
+					SelectOption({ label: "Disabled", value: "disabled" }),
+					SelectOption({ label: "Create draft invoice", value: "draft" }),
+					SelectOption({ label: "Finalize invoice", value: "finalized" }),
+				],
+			}),
+			Select({
+				id: "redirect",
+				initialOption: edits.redirect,
+				label: "Checkout",
+				options: [
+					SelectOption({ label: "Never", value: "never" }),
+					SelectOption({ label: "If required", value: "if_required" }),
+					SelectOption({ label: "Always", value: "always" }),
+				],
+			}),
+			Select({
+				id: "access",
+				initialOption: edits.access,
+				label: "Provisioning",
+				options: [
+					SelectOption({
+						label: "Provision immediately",
+						value: "immediate",
+					}),
+					SelectOption({
+						label: "Provision after payment",
+						value: "after_payment",
+					}),
+				],
+			}),
 		],
 	});
 };
@@ -893,6 +1181,8 @@ export const approvalPayloadModal = ({
 	// Only the request body matters to the reviewer — not wrapper fields
 	// like the agent's `intent` note.
 	const json = JSON.stringify(toolRequestFromArgs(toolArgs) ?? {}, null, 2);
+	const action =
+		normalizeToolName(toolName) === "attach" ? "Attach" : toolLabel(toolName);
 	const truncated =
 		json.length > MODAL_JSON_MAX_LENGTH
 			? `${json.slice(0, MODAL_JSON_MAX_LENGTH)}\n… (truncated)`
@@ -902,11 +1192,12 @@ export const approvalPayloadModal = ({
 		callbackId: "approval_payload_modal",
 		closeLabel: "Close",
 		submitLabel: "Done",
-		title: "Tool payload",
+		title: "Request details",
 		children: [
-			CardText(contextLine([`\`${toolName}\` request`, envLine(env)]), {
-				style: "muted",
-			}),
+			CardText(
+				`${action} request body${env ? ` targeting ${env} environment` : ""}`,
+				{ style: "muted" },
+			),
 			CardText(`\`\`\`\n${truncated}\n\`\`\``),
 		],
 	});
@@ -931,25 +1222,17 @@ export const approvalStatusCard = ({
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }) => {
-	const phrases = actionPhrases({ env, toolArgs, toolName });
+	const phrases = actionPhrases({ env, preview, toolArgs, toolName });
 	const actor = mention(actorId);
-	const where = envLine(env);
-	const mutedContext = (parts: Array<string | null | undefined>) => {
-		const line = contextLine(parts);
-		return line ? [CardText(line, { style: "muted" })] : [];
-	};
 
 	// The "…" on the running sentence already signals in-progress; the ▸ line
 	// only appears once the action reports concrete progress.
 	if (status === "running") {
 		return Card({
-			title: toolLabel(toolName),
-			subtitle:
-				contextLine([where, actor ? `approved by ${actor}` : null]) ||
-				undefined,
+			title: approvalTitle({ preview, toolName }),
 			children: [
 				CardText(`${phrases.running}…`),
-				...approvalPreviewBlocks({ preview, toolArgs, toolName }),
+				...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
 				...(statusLine
 					? [CardText(`▸ ${statusLine}`, { style: "muted" })]
 					: []),
@@ -971,7 +1254,7 @@ export const approvalStatusCard = ({
 		return settledStatusCard({
 			env,
 			preview,
-			statusLabel: "Superseded",
+			statusLabel: "🔄 Updated",
 			toolArgs,
 			toolName,
 		});
@@ -983,32 +1266,34 @@ export const approvalStatusCard = ({
 				CardText(
 					`⌛ ${phrases.pending} — this approval expired before anyone acted on it. Ask again to retry.`,
 				),
-				...mutedContext([where]),
 			],
 		});
 	}
 
 	const customerLinkInSentence = Boolean(
-		autumnCustomerLink({
-			customerId: getString(toolRequestFromArgs(toolArgs)?.customer_id),
+		autumnDashboardLink({
 			env,
+			id: getString(toolRequestFromArgs(toolArgs)?.customer_id),
+			resource: "customers",
 		}),
 	);
 	const outcome = outcomeFromResult({ customerLinkInSentence, env, result });
 
 	// Resolved cards keep the pending body (sentence, money facts, changes) so the
 	// edit-in-place doesn't collapse; only the buttons become the outcome row.
-	const resolvedSubtitle =
-		contextLine([where, actor ? `approved by ${actor}` : null]) || undefined;
-	const resolvedBody = approvalPreviewBlocks({ preview, toolArgs, toolName });
+	const resolvedBody = approvalPreviewBlocks({
+		env,
+		preview,
+		toolArgs,
+		toolName,
+	});
 
 	if (status === "failed") {
 		const lines = outcome.lines.length
 			? outcome.lines
 			: [ACTION_FAILED_MESSAGE];
 		return Card({
-			title: toolLabel(toolName),
-			subtitle: resolvedSubtitle,
+			title: approvalTitle({ preview, toolName }),
 			children: [
 				CardText(`⚠️ ${phrases.failed}`),
 				...resolvedBody,
@@ -1018,8 +1303,7 @@ export const approvalStatusCard = ({
 	}
 
 	return Card({
-		title: toolLabel(toolName),
-		subtitle: resolvedSubtitle,
+		title: approvalTitle({ preview, toolName }),
 		children: [
 			CardText(`✅ ${phrases.done}`),
 			...resolvedBody,

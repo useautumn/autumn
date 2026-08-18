@@ -2,6 +2,7 @@ import type { CatalogPlanPreview } from "@autumn/shared";
 import { WAITING_FOR_INPUT_MESSAGE } from "../../../../../ui/messages.js";
 import type { RunStopReason } from "../../../../runs/runRegistry.js";
 import type { AgentApprovalRequest } from "../../../domain/agentTurn.js";
+import type { AgentActionProgress } from "../../../domain/agentTurnContext.js";
 import type { EveEvent } from "../../../eve/eveEventSchemas.js";
 import {
 	approvalOptionIds,
@@ -41,7 +42,8 @@ export type EveTurnProgress = Readonly<{
 }>;
 
 export type EveTurnEffect =
-	| Readonly<{ kind: "action"; message: string }>
+	| Readonly<{ kind: "action"; progress: AgentActionProgress }>
+	| Readonly<{ kind: "delete_session" }>
 	| Readonly<{ id: string; kind: "reasoning"; text: string }>
 	| Readonly<{
 			kind: "save_session";
@@ -115,7 +117,14 @@ const reduceRequestedActions = ({
 			progress.turnStarted &&
 			!(action.toolName && isSilentTool(action.toolName))
 		) {
-			effects.push({ kind: "action", message: label });
+			effects.push({
+				kind: "action",
+				progress: {
+					label,
+					phase: "started",
+					toolName: action.toolName,
+				},
+			});
 		}
 		if (!action.callId) continue;
 		toolLabels.set(action.callId, label);
@@ -142,10 +151,21 @@ const reduceActionResult = ({
 		return { effects: [], progress: { ...progress, lastPreview } };
 	}
 	const effects: EveTurnEffect[] = [];
-	if (progress.turnStarted && !progress.toolLabels.has(result.callId)) {
+	if (
+		progress.turnStarted &&
+		!(result.toolName && isSilentTool(result.toolName))
+	) {
 		effects.push({
 			kind: "action",
-			message: displayEveToolLabel(labelForResult(result)),
+			progress: {
+				label:
+					progress.toolLabels.get(result.callId) ??
+					displayEveToolLabel(labelForResult(result)),
+				output: result.output,
+				phase: "completed",
+				status: event.status,
+				toolName: result.toolName,
+			},
 		});
 	}
 	const toolLabels = new Map(progress.toolLabels);
@@ -303,8 +323,16 @@ export const reduceEveTurnEvent = ({
 			return reduceCompletedMessage({ createReasoningId, event, progress });
 		case "input.requested":
 			return reduceInputRequest({ event, progress });
-		case "turn.failed":
 		case "session.failed":
+			return {
+				effects: [
+					{ kind: "save_session", status: "failed" },
+					{ kind: "delete_session" },
+					{ kind: "throw", message: event.message },
+				],
+				progress,
+			};
+		case "turn.failed":
 			return {
 				effects: [
 					{ kind: "save_session", status: "failed" },

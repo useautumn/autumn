@@ -22,9 +22,30 @@ const previewRequestForWrite = ({
 	request: Record<string, unknown>;
 	toolName: string;
 }) => {
+	const withCatalogDefaults = (catalogRequest: Record<string, unknown>) => ({
+		features: [],
+		plans: [],
+		skip_deletions: true,
+		skip_feature_ids: [],
+		skip_plan_ids: [],
+		...catalogRequest,
+	});
 	const name = normalizeToolName(toolName);
+	if (name === "createPlan") {
+		return withCatalogDefaults({
+			expand: ["plan"],
+			plans: [request],
+			skip_deletions: true,
+		});
+	}
+	if (name === "createReward") {
+		return withCatalogDefaults({
+			rewards: [request],
+			skip_deletions: true,
+		});
+	}
 	if (name === "updatePlan") {
-		return {
+		return withCatalogDefaults({
 			expand: ["plan"],
 			plans: [
 				{
@@ -34,13 +55,15 @@ const previewRequestForWrite = ({
 				},
 			],
 			skip_deletions: true,
-		};
+		});
 	}
 	// Catalog updates need the variant/version previews for the decision gate,
 	// and the model rarely passes the flags itself.
 	if (name === "updateCatalog" && Array.isArray(request.plans)) {
-		return {
+		const expand = Array.isArray(request.expand) ? request.expand : [];
+		return withCatalogDefaults({
 			...request,
+			expand: [...new Set([...expand, "plan"])],
 			plans: (request.plans as Record<string, unknown>[]).map((plan) => ({
 				...plan,
 				include_variants: true,
@@ -49,7 +72,7 @@ const previewRequestForWrite = ({
 				// set; an empty list is a no-op for preview purposes.
 				variants: plan.variants ?? [],
 			})),
-		};
+		});
 	}
 	return request;
 };
@@ -80,10 +103,8 @@ export const fetchApprovalPreview = async ({
 			toolName: previewTool,
 			args: { request: previewRequestForWrite({ request, toolName }) },
 		});
-		// A failed preview (validation, 404 pre-creation, API 4xx) must not
-		// become the card's "preview" — the card falls back to params-only.
-		// Failures arrive either as { error: true, ... } or as a thrown-error
-		// envelope { message, code, domain/category, cause }.
+		// Failed previews use two response shapes; neither should replace the
+		// card's params-only fallback.
 		if (result && typeof result === "object") {
 			const record = result as Record<string, unknown>;
 			const isErrorShape =

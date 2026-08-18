@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { parsePreviewPayload } from "@autumn/render";
 import { approvalCard } from "../../../src/ui/blocks.js";
-import {
-	parsePreviewPayload,
-	previewElements,
-} from "../../../src/ui/previewContent.js";
+import { previewElements } from "../../../src/ui/previewContent.js";
 
 const attachPreview = {
 	object: "attach_preview",
@@ -108,15 +106,14 @@ describe("approvalCard with structured previews", () => {
 		});
 		const json = JSON.stringify(card);
 
-		// Structured previews render receipt-style: line items + totals in a table.
 		expect(json).toContain("Due now");
 		expect(json).toContain("$25.50");
 		expect(json).toContain("Next cycle");
 		expect(json).toContain("$40.00");
-		expect(card.children.at(-1)?.type).toBe("actions");
+		expect(card.children.at(-2)?.type).toBe("actions");
 	});
 
-	test("moves environment to subtitle and config to a muted line", () => {
+	test("shows billing settings without the environment", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			env: "sandbox" as never,
@@ -132,13 +129,12 @@ describe("approvalCard with structured previews", () => {
 			preview: attachPreview,
 		});
 
-		expect(card.subtitle).toContain("Sandbox");
+		expect(card.subtitle).toBeUndefined();
 		const muted = card.children.filter(
 			(child) => child.type === "text" && child.style === "muted",
 		);
-		// Params render as the dashboard's badge line (✓/✗), draft state included.
 		const mutedJson = JSON.stringify(muted);
-		expect(mutedJson).toContain("✓ Invoice (draft)");
+		expect(mutedJson).toContain("Draft invoice");
 		// Unset params no longer render badges — only explicit ones show.
 		expect(mutedJson).not.toContain("Prorations");
 		expect(JSON.stringify(card.children)).not.toContain("Environment");

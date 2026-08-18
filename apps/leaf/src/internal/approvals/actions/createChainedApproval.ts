@@ -6,6 +6,10 @@ import type { ChainedPendingRequest } from "../../agentRuntime/eve/parkedInput.j
 import type { EveAuthContext } from "../../agentRuntime/eve/types.js";
 import { getOrgInstallationToken } from "../../installations/actions/getOrgInstallationToken.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
+import {
+	resolveApprovalDisplay,
+	withApprovalDisplay,
+} from "../utils/approvalDisplay.js";
 import { fetchApprovalPreview } from "../utils/fetchApprovalPreview.js";
 import { toolRequestFromArgs } from "../utils/toolRequest.js";
 
@@ -36,13 +40,21 @@ export const createChainedApproval = async ({
 			userId: credentialUserId,
 			workspaceId: auth.workspaceId,
 		});
-		preview = await fetchApprovalPreview({
+		const request = toolRequestFromArgs(chained.input) ?? {};
+		const resolvedPreview = await fetchApprovalPreview({
 			env,
 			logger,
-			request: toolRequestFromArgs(chained.input) ?? {},
+			request,
 			token: accessToken,
 			toolName: chained.toolName,
 		});
+		const display = await resolveApprovalDisplay({
+			env,
+			getToken: async () => accessToken,
+			preview: resolvedPreview,
+			request,
+		});
+		preview = withApprovalDisplay({ display, preview: resolvedPreview });
 	} catch (error) {
 		logger.warn("Could not backfill chained approval preview", {
 			event: "leaf.eve_chained_preview_backfill_failed",

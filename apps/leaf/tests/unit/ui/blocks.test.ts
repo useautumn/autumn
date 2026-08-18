@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
+import { cardToBlockKit } from "@chat-adapter/slack";
 import {
 	approvalCard,
+	approvalDetailsModal,
 	approvalPayloadModal,
 	approvalStatusCard,
 } from "../../../src/ui/blocks.js";
@@ -19,7 +21,7 @@ const attachArgs = {
 };
 
 describe("approval card", () => {
-	test("leads with the action sentence and structured money facts", () => {
+	test("leads with the linked action inline", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			env: AppEnv.Sandbox,
@@ -30,10 +32,15 @@ describe("approval card", () => {
 					invoice_mode: { enabled: true, finalize: false },
 				},
 			},
-			requesterId: "U1",
 			preview: wrapMcpResult({
+				_display: {
+					customerEmail: "billing@key-people.example",
+					customerName: "Key People",
+					planName: "Enterprise",
+				},
 				pending: true,
 				preview: {
+					incoming: [{ plan_id: "enterprise", plan: { name: "Enterprise" } }],
 					total: 400,
 					currency: "usd",
 					next_cycle: { total: 400, starts_at: Date.UTC(2026, 6, 12) },
@@ -43,23 +50,49 @@ describe("approval card", () => {
 
 		const json = JSON.stringify(card);
 		expect(card.title).toBe("Attach plan");
-		expect(card.subtitle).toContain("Sandbox");
-		expect(card.subtitle).toContain("requested by <@U1>");
+		expect(card.subtitle).toBeUndefined();
 		expect(json).toContain(
-			"Attach **enterprise** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**?",
+			"Attaching **<https://app.useautumn.com/sandbox/products/enterprise|Enterprise>** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|Key People>**",
 		);
+		expect(json).not.toContain("kp-customer-1000>**?");
 		expect(json).toContain("Due now");
 		expect(json).toContain("$400.00");
 		expect(json).toContain("Next cycle · Jul 12, 2026 — $400.00");
-		expect(json).toContain("✓ Invoice (draft)");
+		expect(json).toContain("Draft invoice");
 		expect(json).not.toContain("Prorations");
-		expect(card.children.at(-1)?.type).toBe("actions");
+		expect(card.children.at(-2)?.type).toBe("actions");
 		expect(json).toContain("approve_billing_action");
 		expect(json).toContain("Dismiss");
+		expect(json).toContain("Edit details");
+		expect(json).toContain(
+			"Need a change? Reply in this thread and I’ll refresh the preview.",
+		);
+		expect(json).not.toContain("set messages to 300");
+		expect(json).not.toContain("Attaching **enterprise**");
 		expect(json).not.toContain('"request"');
 	});
 
-	test("escalates live environment on the subtitle and approve button", () => {
+	test("falls back from blank names to customer email and ids", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Sandbox,
+			toolName: "attach",
+			toolArgs: attachArgs,
+			preview: {
+				_display: {
+					customerEmail: "billing@key-people.example",
+					customerName: "",
+					planName: "",
+				},
+			},
+		});
+
+		expect(JSON.stringify(card)).toContain(
+			"products/enterprise|enterprise>** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|billing@key-people.example>",
+		);
+	});
+
+	test("escalates live approvals on the button", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			env: AppEnv.Live,
@@ -67,14 +100,14 @@ describe("approval card", () => {
 			toolArgs: attachArgs,
 		});
 
-		expect(card.subtitle).toContain("🔴 Live");
+		expect(card.subtitle).toBeUndefined();
 		expect(JSON.stringify(card)).toContain("Approve in Live");
 		expect(JSON.stringify(card)).toContain(
 			"https://app.useautumn.com/customers/kp-customer-1000",
 		);
 	});
 
-	test("shows custom prices as a money field, not a param dump", () => {
+	test("shows a custom base price once in the change table", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			toolName: "updateSubscription",
@@ -89,8 +122,9 @@ describe("approval card", () => {
 
 		const json = JSON.stringify(card);
 		expect(json).toContain("Update **charlie**'s subscription to **pro**?");
-		expect(json).toContain("Custom price");
-		expect(json).toContain("$200.00/month");
+		expect(json).toContain('"caption":"Plan changes"');
+		expect(json).toContain('["🟠 Update","Base price","$200.00 per month"]');
+		expect(json).not.toContain("custom");
 		expect(json).not.toContain('"customize"');
 	});
 
@@ -102,7 +136,7 @@ describe("approval card", () => {
 		});
 
 		const types = card.children.map((child) => child.type);
-		expect(types).toEqual(["text", "actions"]);
+		expect(types).toEqual(["text", "actions", "text"]);
 		expect(JSON.stringify(card)).not.toContain("Prorations");
 	});
 
@@ -123,27 +157,102 @@ describe("approval card", () => {
 		expect(json).not.toContain("-$250.50");
 	});
 
-	test("folds the agent's preview prose into the card as one message", () => {
+	test("renders schedule phases from absolute and relative API timing", () => {
 		const card = approvalCard({
 			id: "approval_1",
-			env: AppEnv.Sandbox,
-			toolName: "attach",
-			toolArgs: attachArgs,
-			summary:
-				"Preview — Scale Yearly, custom $8,000/yr:\n- Due now: $8,000\n- Term: 12 Jun 2026 → 12 Jun 2027\n\nApprove to attach?",
+			toolName: "createSchedule",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					phases: [
+						{
+							plans: [
+								{
+									customize: {
+										add_items: [{ feature_id: "messages", included: 100 }],
+									},
+									plan_id: "pro",
+								},
+							],
+							starts_at: "now",
+						},
+						{
+							plans: [
+								{
+									customize: {
+										remove_items: [{ feature_id: "workflows" }],
+									},
+									plan_id: "enterprise",
+								},
+							],
+							starting_after: { duration_count: 2, duration_type: "year" },
+						},
+					],
+				},
+			},
+			preview: {
+				_display: {
+					basePlanItemsByPlan: {
+						enterprise: [{ feature_id: "workflows", included: 12 }],
+					},
+					featureNames: {
+						messages: { plural: "messages", singular: "message" },
+						workflows: { plural: "workflows", singular: "workflow" },
+					},
+				},
+				currency: "usd",
+				incoming: [
+					{ plan: { name: "Pro" }, plan_id: "pro" },
+					{ plan: { name: "Enterprise" }, plan_id: "enterprise" },
+				],
+				line_items: [],
+				total: 0,
+			},
 		});
 
 		const json = JSON.stringify(card);
-		expect(json).toContain("Preview — Scale Yearly, custom $8,000/yr:");
-		expect(json).toContain("• Due now: $8,000");
-		// The canned sentence is redundant when the agent narrated the preview.
-		expect(json).not.toContain(
-			"Attach **enterprise** to **kp-customer-1000**?",
-		);
-		expect(json).toContain("approve_billing_action");
+		expect(json).toContain('"caption":"Schedule"');
+		expect(json).toContain('"headers":["Starts","Plans"]');
+		expect(json).toContain('["now","Pro"]');
+		expect(json).toContain('["after 2 years","Enterprise"]');
+		expect(json).toContain('["🟢 Add","Pro · 100 messages","—"]');
+		expect(json).toContain('["🔴 Remove","Enterprise · 12 workflows","—"]');
+		expect(json).not.toContain("[object Object]");
 	});
 
-	test("offers a payload viewer button", () => {
+	test("renders API defaults and update-only billing controls", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "updateSubscription",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					enable_plan_immediately: false,
+					invoice_mode: {
+						enabled: true,
+						enable_plan_immediately: true,
+					},
+					plan_id: "pro",
+					recalculate_balances: { enabled: true },
+				},
+			},
+			preview: {
+				currency: "usd",
+				line_items: [],
+				redirect_to_checkout: true,
+				total: 0,
+			},
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain("Finalized invoice");
+		expect(json).toContain("Provision after payment");
+		expect(json).toContain("Reset usage");
+		expect(json).toContain("Customer completes payment in checkout");
+		expect(json).not.toContain("Draft invoice");
+	});
+
+	test("offers request details without technical button copy", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			toolName: "attach",
@@ -152,10 +261,11 @@ describe("approval card", () => {
 
 		const json = JSON.stringify(card);
 		expect(json).toContain("view_approval_payload");
-		expect(json).toContain("{} Payload");
+		expect(json).toContain("View request");
+		expect(json).not.toContain("{} Payload");
 	});
 
-	test("renders customized add_items and remove_items as grouped changes", () => {
+	test("renders customized items in a change table", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			env: AppEnv.Sandbox,
@@ -165,7 +275,22 @@ describe("approval card", () => {
 					...attachArgs.request,
 					customize: {
 						add_items: [
+							{ feature_id: "dashboard" },
 							{ feature_id: "seats", unlimited: true },
+							{
+								feature_id: "messages",
+								included: 400,
+								price: {
+									billing_method: "prepaid",
+									billing_units: 50,
+									interval: "month",
+									tier_behavior: "graduated",
+									tiers: [
+										{ amount: 3, to: 100 },
+										{ amount: 6.7, to: "inf" },
+									],
+								},
+							},
 							{
 								feature_id: "credits",
 								included: 5000,
@@ -186,23 +311,327 @@ describe("approval card", () => {
 							},
 						],
 						remove_items: [
+							{ feature_id: "messages", billing_method: "prepaid" },
+							{ feature_id: "credits" },
 							{ feature_id: "audit_logs" },
 							{ billing_method: "prepaid", interval: "year" },
 						],
 					},
 				},
 			},
+			preview: {
+				_display: {
+					basePlanItems: [
+						{
+							feature_id: "messages",
+							included: 200,
+							price: {
+								amount: 6,
+								billing_method: "prepaid",
+								billing_units: 100,
+								interval: "month",
+							},
+						},
+						{
+							feature_id: "credits",
+							included: 1000,
+							price: { amount: 0.05, billing_method: "usage_based" },
+						},
+						{ feature_id: "audit_logs", included: 10 },
+						{
+							feature_id: "annual_tokens",
+							included: 50,
+							price: { billing_method: "prepaid", interval: "year" },
+						},
+					],
+					featureNames: {
+						annual_tokens: {
+							plural: "annual tokens",
+							singular: "annual token",
+						},
+						api_calls: { plural: "API calls", singular: "API call" },
+						audit_logs: { plural: "audit logs", singular: "audit log" },
+						credits: { plural: "credits", singular: "credit" },
+						dashboard: { name: "Dashboard" },
+						messages: { plural: "messages", singular: "message" },
+						seats: { plural: "seats", singular: "seat" },
+					},
+				},
+			},
 		});
 
 		const json = JSON.stringify(card);
-		expect(json).toContain("**Plan changes**");
-		expect(json).toContain("＋ seats — unlimited");
+		const slackJson = JSON.stringify(cardToBlockKit(card));
+		expect(json).toContain('"caption":"Plan changes"');
+		expect(slackJson).toContain('"type":"data_table"');
+		expect(slackJson).toContain('"caption":"Plan changes"');
+		expect(json).toContain('"headers":["Change","Details","Pricing"]');
+		expect(json).toContain('["🟢 Add","Dashboard","—"]');
+		expect(json).toContain('["🟢 Add","Unlimited seats","—"]');
 		expect(json).toContain(
-			"＋ credits — 5,000 included, then $0.10 each · usage-based · monthly",
+			'["🟢 Add","400 messages","≤100: $3.00 / 50; $6.70 / 50 · graduated tiers"]',
 		);
-		expect(json).toContain("＋ api_calls — $5.00 per 1,000 · usage-based");
-		expect(json).toContain("− audit_logs");
-		expect(json).toContain("− prepaid · yearly");
+		expect(json).toContain('["🟢 Add","5,000 credits","$0.10 / unit"]');
+		expect(json).toContain('["🟢 Add","API calls","$5.00 / 1,000"]');
+		expect(json).toContain('["🔴 Remove","200 messages","$6.00 / 100"]');
+		expect(json).toContain('["🔴 Remove","1,000 credits","$0.05 / unit"]');
+		expect(json).toContain('["🔴 Remove","10 audit logs","—"]');
+		expect(json).toContain('["🔴 Remove","50 annual tokens","—"]');
+		expect(json.indexOf('["🟢 Add","5,000 credits"')).toBeLessThan(
+			json.indexOf('["🔴 Remove","10 audit logs"'),
+		);
+	});
+
+	test("diffs full item replacements against the catalog plan", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Sandbox,
+			toolName: "attach",
+			toolArgs: {
+				request: {
+					...attachArgs.request,
+					customize: {
+						items: [
+							{ feature_id: "words", included: 5000 },
+							{ feature_id: "workflows", included: 40 },
+							{ feature_id: "storage", included: 100 },
+						],
+					},
+				},
+			},
+			preview: {
+				_display: {
+					basePlanItems: [
+						{
+							feature_id: "messages",
+							included: 800,
+							price: { amount: 6, billing_units: 100 },
+						},
+						{ feature_id: "words", included: 4000 },
+						{ feature_id: "workflows", included: 40 },
+					],
+					featureNames: {
+						messages: { plural: "messages", singular: "message" },
+						storage: { plural: "gigabytes", singular: "gigabyte" },
+						words: { plural: "words", singular: "word" },
+						workflows: { plural: "workflows", singular: "workflow" },
+					},
+				},
+			},
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain('["🟢 Add","100 gigabytes","—"]');
+		expect(json).toContain('["🟢 Add","5,000 words","—"]');
+		expect(json).toContain('["🔴 Remove","4,000 words","—"]');
+		expect(json).toContain('["🔴 Remove","800 messages","$6.00 / 100"]');
+		expect(json.indexOf('["🟢 Add","100 gigabytes"')).toBeLessThan(
+			json.indexOf('["🔴 Remove","4,000 words"'),
+		);
+		expect(json.indexOf('["🟢 Add","5,000 words"')).toBeLessThan(
+			json.indexOf('["🔴 Remove","800 messages"'),
+		);
+		expect(json).not.toContain("Replace");
+		expect(json).not.toContain('["workflows"');
+	});
+
+	test("explains checkout instead of naming the link", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "attach",
+			toolArgs: {
+				request: { ...attachArgs.request, redirect_mode: "always" },
+			},
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain("Customer completes payment in checkout");
+		expect(json).not.toContain('"content":"Checkout link"');
+	});
+
+	test("groups catalog resources and plan changes into separate tables", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "updateCatalog",
+			toolArgs: {
+				request: {
+					plans: [{ plan_id: "growth_seed", items: [] }],
+					skip_deletions: true,
+				},
+			},
+			preview: {
+				plan_changes: [
+					{
+						action: "updated",
+						customize: {
+							add_items: [{ feature_id: "dashboard" }],
+						},
+						item_changes: [
+							{
+								action: "created",
+								feature_id: "dashboard",
+								item: {
+									display: { primary_text: "Dashboard" },
+								},
+							},
+							{
+								action: "created",
+								feature_id: "messages",
+								item: {
+									display: { primary_text: "100 Messages" },
+									included: 100,
+									price: { amount: 6, billing_units: 100 },
+								},
+							},
+						],
+						plan: { name: "Growth seed" },
+						plan_id: "growth_seed",
+					},
+				],
+				feature_changes: [
+					{
+						action: "update",
+						blocked: false,
+						feature: { name: "Messages" },
+						feature_id: "messages",
+						will_archive: false,
+					},
+					{
+						action: "skipped",
+						blocked: true,
+						feature_id: "locked_feature",
+						will_archive: false,
+					},
+				],
+				reward_changes: [{ action: "created", id: "launch" }],
+				referral_program_changes: [{ action: "deleted", id: "old-referral" }],
+			},
+		});
+
+		const json = JSON.stringify(card);
+		const slackBlocks = cardToBlockKit(card);
+		expect(json).toContain('"caption":"Catalog changes"');
+		expect(json).toContain('"caption":"Plan changes"');
+		expect(
+			slackBlocks.filter(
+				(block) => block.type === "data_table" || block.type === "table",
+			),
+		).toHaveLength(2);
+		expect(JSON.stringify(slackBlocks)).not.toContain("```");
+		expect(json.indexOf('"caption":"Catalog changes"')).toBeLessThan(
+			json.indexOf('"caption":"Plan changes"'),
+		);
+		expect(json).not.toContain('"content":"Update catalog?"');
+		expect(json).toContain('"headers":["Change","Details","Pricing"]');
+		expect(json).toContain('["🟢 Add","Dashboard","—"]');
+		expect(json).toContain('["🟢 Add","100 Messages","$6.00 / 100"]');
+		expect(json).toContain('["🟢 Add","launch","—"]');
+		expect(json).not.toContain('["🟠 Update","Growth seed","—"]');
+		expect(json).toContain('["🟠 Update","Messages","—"]');
+		expect(json).toContain('["🔴 Remove","old-referral","—"]');
+		expect(json).toContain('["⚠️ Blocked","locked_feature","—"]');
+		expect(json).not.toContain("Skip deletions");
+		expect(json).not.toContain('"plans"');
+	});
+
+	test.each([
+		["createPlan", "Plan changes"],
+		["createReward", "Catalog changes"],
+		["updatePlan", "Plan changes"],
+	])("uses the right change scope for %s approvals", (toolName, caption) => {
+		const card = approvalCard({
+			id: "approval_1",
+			toolName,
+			toolArgs: { request: { name: "Growth", plan_id: "growth" } },
+			preview: {
+				feature_changes: [],
+				plan_changes: [
+					{
+						action: toolName === "createPlan" ? "created" : "updated",
+						item_changes: [],
+						plan: { name: "Growth" },
+						plan_id: "growth",
+					},
+				],
+				reward_changes:
+					toolName === "createReward"
+						? [{ action: "created", id: "launch" }]
+						: [],
+				referral_program_changes: [],
+			},
+		});
+
+		expect(JSON.stringify(card)).toContain(`"caption":"${caption}"`);
+	});
+
+	test("uses the plan name for a single-plan catalog update", () => {
+		const preview = {
+			_display: {
+				featureNames: { footballs: { name: "Footballs" } },
+				planNames: { growth_seed: "Growth seed" },
+			},
+			preview: {
+				feature_changes: [],
+				plan_changes: [
+					{
+						action: "updated",
+						item_changes: [
+							{
+								action: "created",
+								feature_id: "footballs",
+								item: {
+									display: { primary_text: "$100 per football" },
+									included: 0,
+									price: { amount: 100 },
+								},
+							},
+						],
+						plan_id: "growth_seed",
+					},
+				],
+				reward_changes: [],
+				referral_program_changes: [],
+			},
+		};
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "updateCatalog",
+			preview,
+		});
+		const updated = approvalStatusCard({
+			preview,
+			status: "superseded",
+			toolName: "updateCatalog",
+		});
+
+		const json = JSON.stringify(card);
+		expect(card.title).toBe("Update Growth seed");
+		expect(updated.title).toBe("Update Growth seed");
+		expect(json).toContain('"caption":"Plan changes"');
+		expect(json).toContain('["🟢 Add","Footballs","$100.00 / unit"]');
+		expect(json).not.toContain("$100 per football");
+		expect(JSON.stringify(updated)).toContain('"caption":"Plan changes"');
+		expect(json).not.toContain("Update catalog");
+	});
+
+	test("renders non-preview customer writes as readable fields", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			toolName: "updateCustomer",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					email: "billing@example.com",
+					name: "Acme",
+				},
+			},
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain("Update **Acme**?");
+		expect(json).toContain('"label":"Name","value":"Acme"');
+		expect(json).toContain('"label":"Email","value":"billing@example.com"');
+		expect(json).not.toContain('"customer_id"');
 	});
 
 	test("omits the changes block when nothing is customized", () => {
@@ -230,10 +659,10 @@ describe("approval payload modal", () => {
 		});
 
 		const json = JSON.stringify(modal);
-		expect(modal.title).toBe("Tool payload");
+		expect(modal.title).toBe("Request details");
 		expect(json).toContain("kp-customer-1000");
 		expect(json).toContain("```");
-		expect(json).toContain("`attach` request");
+		expect(json).toContain("Attach request body targeting sandbox environment");
 		expect(json).not.toContain("intent");
 	});
 
@@ -244,6 +673,50 @@ describe("approval payload modal", () => {
 		});
 
 		expect(JSON.stringify(modal)).toContain("(truncated)");
+	});
+});
+
+describe("approval details modal", () => {
+	test("prefills editable billing settings", () => {
+		const modal = approvalDetailsModal({
+			approvalId: "approval_1",
+			toolArgs: {
+				request: {
+					...attachArgs.request,
+					enable_plan_immediately: true,
+					invoice_mode: { enabled: true, finalize: false },
+				},
+			},
+		});
+
+		const json = JSON.stringify(modal);
+		expect(modal.title).toBe("Edit billing details");
+		expect(modal.privateMetadata).toBe("approval_1");
+		expect(json).toContain('"initialOption":"draft"');
+		expect(json).toContain('"initialOption":"if_required"');
+		expect(json).toContain('"initialOption":"immediate"');
+		expect(json).toContain("Create draft invoice");
+		expect(json).toContain("Provision after payment");
+		expect(json).toContain("If required");
+		expect(json).toContain("Always");
+		expect(json).toContain("Update preview");
+	});
+
+	test("prefills invoice and redirect API defaults", () => {
+		const modal = approvalDetailsModal({
+			approvalId: "approval_1",
+			toolArgs: {
+				request: {
+					...attachArgs.request,
+					invoice_mode: { enabled: true },
+				},
+			},
+		});
+
+		const json = JSON.stringify(modal);
+		expect(json).toContain('"initialOption":"finalized"');
+		expect(json).toContain('"initialOption":"if_required"');
+		expect(json).toContain('"initialOption":"after_payment"');
 	});
 });
 
@@ -262,9 +735,9 @@ describe("approval status card", () => {
 
 		const json = JSON.stringify(card);
 		expect(card.title).toBe("Attach plan");
-		expect(card.subtitle).toContain("approved by <@U1>");
+		expect(card.subtitle).toBeUndefined();
 		expect(json).toContain(
-			"Attaching **enterprise** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**…",
+			"Attaching **<https://app.useautumn.com/sandbox/products/enterprise|enterprise>** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**…",
 		);
 		expect(json).toContain("Due now");
 		expect(json).toContain("$400.00");
@@ -313,7 +786,7 @@ describe("approval status card", () => {
 
 		const json = JSON.stringify(card);
 		expect(json).toContain(
-			"✅ Attached **enterprise** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**",
+			"✅ Attached **<https://app.useautumn.com/sandbox/products/enterprise|enterprise>** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**",
 		);
 		expect(json).toContain("Draft invoice — $0.00");
 		// Drafts link to the dashboard — the hosted page is not payable yet.
@@ -322,7 +795,7 @@ describe("approval status card", () => {
 		expect(json).toContain("Open checkout");
 		expect(json).toContain("https://pay.example");
 		expect(json).not.toContain("View customer");
-		expect(json).toContain("approved by <@U1>");
+		expect(json).not.toContain("approved by");
 	});
 
 	test("keeps the pending card footprint after approval", () => {
@@ -341,10 +814,12 @@ describe("approval status card", () => {
 		const json = JSON.stringify(card);
 		// Title and money facts survive the edit-in-place instead of collapsing.
 		expect(card.title).toBe("Attach plan");
-		expect(json).toContain("✅ Attached **enterprise**");
+		expect(json).toContain(
+			"✅ Attached **<https://app.useautumn.com/sandbox/products/enterprise|enterprise>**",
+		);
 		expect(json).toContain("Due now");
 		expect(json).toContain("$400.00");
-		expect(card.subtitle).toContain("approved by <@U1>");
+		expect(card.subtitle).toBeUndefined();
 	});
 
 	test("falls back to a customer button when the sentence has no customer", () => {
@@ -487,9 +962,9 @@ describe("approval status card", () => {
 
 		const json = JSON.stringify(card);
 		expect(card.title).toBe("Attach plan");
-		expect(json).toContain("Sandbox");
+		expect(card.subtitle).toBeUndefined();
 		expect(json).toContain(
-			"Attach **enterprise** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**?",
+			"Attach **<https://app.useautumn.com/sandbox/products/enterprise|enterprise>** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**?",
 		);
 		expect(json).toContain("Due now");
 		expect(json).toContain("$400.00");
@@ -517,25 +992,27 @@ describe("approval status card", () => {
 		});
 		const expired = approvalStatusCard({
 			status: "expired",
+			env: AppEnv.Sandbox,
 			toolName: "attach",
 			toolArgs: attachArgs,
 		});
 
 		const supersededJson = JSON.stringify(superseded);
 		expect(superseded.title).toBe("Attach plan");
-		expect(supersededJson).toContain("Sandbox");
+		expect(superseded.subtitle).toBeUndefined();
 		expect(supersededJson).toContain(
-			"Attach **enterprise** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**?",
+			"Attach **<https://app.useautumn.com/sandbox/products/enterprise|enterprise>** to **<https://app.useautumn.com/sandbox/customers/kp-customer-1000|kp-customer-1000>**?",
 		);
 		expect(supersededJson).toContain("Due now");
 		expect(supersededJson).toContain("$400.00");
-		expect(supersededJson).toContain("Superseded");
+		expect(supersededJson).toContain("🔄 Updated");
 		// Settled state is a non-interactive status line, not a (fake) button row.
 		expect(superseded.children.at(-1)?.type).toBe("text");
 		expect(supersededJson).not.toContain('"type":"actions"');
 		expect(supersededJson).not.toContain("approve_billing_action");
 		expect(supersededJson).not.toContain("cancel_billing_action");
 		expect(supersededJson).not.toContain("view_approval_payload");
+		expect(JSON.stringify(expired)).not.toContain("🧪 Sandbox");
 		expect(JSON.stringify(expired)).toContain("expired");
 	});
 
