@@ -51,7 +51,7 @@ export const addLicenseEntitlementsForPage = async ({
 		}) => {
 			const candidates = await timePhase({
 				phases,
-				phase: "candidates",
+				phase: "license_add_candidates",
 				run: () =>
 					selectLicenseCandidateRows({
 						db: transaction,

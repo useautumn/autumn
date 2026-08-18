@@ -7,7 +7,6 @@ import type {
 } from "../execute/types/batchMigrationExecutionTypes.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import { buildBatchMigrationItemResponses } from "./buildBatchMigrationItemResponses.js";
-import { toChangedItems } from "./buildBatchMigrationWebhookRecords/buildBatchMigrationWebhookRecords.js";
 
 const SKIP_REASON = "no_batch_changes";
 
@@ -31,8 +30,7 @@ export const emitBatchMigrationItemEvents = async ({
 }): Promise<{ eventCount: number }> => {
 	const responses = buildBatchMigrationItemResponses({
 		plan,
-		customers: pageResult.succeeded,
-		changedItems: toChangedItems(pageResult),
+		pageResult,
 		features: ctx.features,
 	});
 

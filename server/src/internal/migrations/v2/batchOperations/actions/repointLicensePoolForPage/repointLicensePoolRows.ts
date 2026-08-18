@@ -39,6 +39,9 @@ export const repointLicensePoolRows = async ({
 			AND target.id = ${planLicenseId}
 			AND ${poolLicensePlanSql({ licensePlanId })}
 			AND pool.plan_license_id IS DISTINCT FROM ${planLicenseId}
+			-- Scoped on the pool as well as the parent: matching the license plan
+			-- alone spans every pool in the org, so the page must drive this scan.
+			AND pool.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
 			AND cp.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
 			AND ${operationScopeSql({ scope })}
 			AND pool.id = (

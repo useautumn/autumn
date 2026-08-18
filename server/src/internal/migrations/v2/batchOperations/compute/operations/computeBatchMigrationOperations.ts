@@ -4,8 +4,10 @@ import type {
 	BatchMigrationAddEntitlementOp,
 	BatchMigrationLicenseEntitlementOp,
 	BatchMigrationOperations,
+	BatchMigrationRemoveEntitlementOp,
+	BatchMigrationReplaceEntitlementOp,
 } from "../../types/index.js";
-import type { LicenseLinkTransitions } from "../transitions/resolveLicenseCustomizeTransitions.js";
+import type { LicenseLinkTransitions } from "../transitions/resolvePlanLicenseTransitions.js";
 
 const toLicenseOps = (
 	link: LicenseLinkTransitions,
@@ -68,19 +70,41 @@ export const computeBatchMigrationOperations = ({
 	productTransitions: ProductTransitions;
 	licenseLinks: LicenseLinkTransitions[];
 }): BatchMigrationOperations => {
-	const entitlements: BatchMigrationAddEntitlementOp[] =
+	const addEntitlements: BatchMigrationAddEntitlementOp[] =
 		productTransitions.entitlementPrices.added
 			.filter((entitlementPrice) => !entitlementPrice.price)
 			.map((entitlementPrice) => ({
-				type: "add",
 				entitlementPrice,
 				initialState: computeCustomerEntitlementInitialState({
 					entitlement: entitlementPrice.entitlement,
 				}),
 			}));
 
+	const removeEntitlements: BatchMigrationRemoveEntitlementOp[] =
+		productTransitions.entitlementPrices.deleted
+			.filter((entitlementPrice) => !entitlementPrice.price)
+			.map((entitlementPrice) => ({ entitlementPrice }));
+
+	const replaceEntitlements: BatchMigrationReplaceEntitlementOp[] =
+		productTransitions.entitlementPrices.transitions
+			.filter(
+				(transition) =>
+					!transition.fromEntitlementPrice.price &&
+					!transition.toEntitlementPrice.price,
+			)
+			.map((transition) => ({
+				fromEntitlementPrice: transition.fromEntitlementPrice,
+				entitlementPrice: transition.toEntitlementPrice,
+				initialState: computeCustomerEntitlementInitialState({
+					entitlement: transition.toEntitlementPrice.entitlement,
+				}),
+			}));
+
 	return {
-		entitlements,
+		addEntitlements,
+		removeEntitlements,
+		replaceEntitlements,
 		licenseEntitlements: licenseLinks.flatMap(toLicenseOps),
+		repointCustomerProduct: productTransitions.customerProduct,
 	};
 };

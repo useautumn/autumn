@@ -2,12 +2,12 @@
  * Contract: the delivery records a finalized page produces.
  *
  *   - one record per SUCCEEDED customer that actually changed, with one
- *     `updated` plan change PER customer product that gained items;
+ *     `updated` plan change PER customer product that changed items;
  *   - every plan change carries the real subscription/purchase snapshot
  *     (plan_id lives there — a payload without it can't say which plan),
  *     built from the inserted rows' lifecycle fields with no re-read;
  *   - one-off products snapshot as `purchase`, recurring as `subscription`;
- *   - customers with no inserted rows and skipped customers produce nothing.
+ *   - customers with no changed rows and skipped customers produce nothing.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -22,8 +22,11 @@ import {
 	type Price,
 	PriceType,
 } from "@autumn/shared";
-import type { BatchMigrationInsertedItem } from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
-import { buildBatchMigrationWebhookRecords } from "@/internal/migrations/v2/batchOperations/finalize/buildBatchMigrationWebhookRecords/buildBatchMigrationWebhookRecords.js";
+import type {
+	BatchMigrationInsertedItem,
+	BatchMigrationRemovedItem,
+} from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
+import { buildBatchMigrationWebhookRecords } from "@/internal/migrations/v2/batchOperations/finalize/buildBatchMigrationWebhookRecords.js";
 import { buildOperationScope } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 import type { BatchMigrationExecutionPlan } from "@/internal/migrations/v2/batchOperations/types/index.js";
 
@@ -73,6 +76,8 @@ const buildPlan = ({
 			opIndex: 0,
 			scope: buildOperationScope({ internalProductId: "prod_pro_internal" }),
 			fromProduct: fromProduct({ prices }),
+			removeEntitlementOps: [],
+			replaceEntitlementOps: [],
 			licenseEntitlementOps: [],
 			addEntitlementOps: [
 				{
@@ -85,6 +90,36 @@ const buildPlan = ({
 });
 
 const plan = buildPlan();
+
+const buildReplacePlan = ({
+	fromEntitlement,
+	toEntitlement,
+}: {
+	fromEntitlement: EntitlementWithFeature;
+	toEntitlement: EntitlementWithFeature;
+}): BatchMigrationExecutionPlan => ({
+	patches: [
+		{
+			opIndex: 0,
+			scope: buildOperationScope({ internalProductId: "prod_pro_internal" }),
+			fromProduct: fromProduct(),
+			removeEntitlementOps: [],
+			addEntitlementOps: [],
+			licenseEntitlementOps: [],
+			replaceEntitlementOps: [
+				{
+					fromEntitlement,
+					entitlement: toEntitlement,
+					initialState: {
+						granted: toEntitlement.allowance ?? 0,
+						tracksBalance: true,
+						unlimited: false,
+					},
+				},
+			],
+		},
+	],
+});
 
 const customer = ({ internalId, id }: { internalId: string; id: string }) => ({
 	internalId,
@@ -108,6 +143,34 @@ const insertedItem = ({
 	planId: "pro",
 	featureId: "words",
 	granted: 100,
+	unlimited: false,
+	nextResetAt: null,
+	status: CusProductStatus.Active,
+	startsAt: 1_700_000_000_000,
+	canceledAt: null,
+	endedAt: null,
+	trialEndsAt: null,
+});
+
+const removedItem = ({
+	internalCustomerId,
+	customerProductId,
+	entityId = null,
+	fromEntitlement = entitlement,
+}: {
+	internalCustomerId: string;
+	customerProductId: string;
+	entityId?: string | null;
+	fromEntitlement?: EntitlementWithFeature;
+}): BatchMigrationRemovedItem => ({
+	internalCustomerId,
+	customerProductId,
+	entityId,
+	planId: "pro",
+	featureId: "words",
+	entitlement: fromEntitlement,
+	granted: fromEntitlement.allowance ?? 0,
+	remaining: 20,
 	unlimited: false,
 	nextResetAt: null,
 	status: CusProductStatus.Active,
@@ -162,8 +225,18 @@ describe("buildBatchMigrationWebhookRecords", () => {
 			past_due: false,
 			started_at: 1_700_000_000_000,
 		});
+		expect(change.item_changes).toEqual([]);
+		expect(change.previous_attributes).toBeNull();
+		expect(change.plan_change).toEqual({
+			previous_attributes: null,
+			item_changes: expect.arrayContaining([
+				expect.objectContaining({ feature_id: "words" }),
+			]),
+		});
 		expect(
-			change.item_changes.map((itemChange) => itemChange.feature_id),
+			change.plan_change?.item_changes.map(
+				(itemChange) => itemChange.feature_id,
+			),
 		).toEqual(["words"]);
 	});
 
@@ -221,11 +294,86 @@ describe("buildBatchMigrationWebhookRecords", () => {
 		expect(entityLevel?.planChanges).toHaveLength(1);
 	});
 
-	test("a replace pair emits one plan change with deleted + created item changes", () => {
+	test("removed entity products split into their own delivery records", () => {
+		const records = buildBatchMigrationWebhookRecords({
+			pageResult: {
+				succeeded: [customer({ internalId: "cus_1", id: "customer-1" })],
+				skipped: [],
+				insertedItems: [],
+				removedItems: [
+					removedItem({
+						internalCustomerId: "cus_1",
+						customerProductId: "cp_customer_level",
+					}),
+					removedItem({
+						internalCustomerId: "cus_1",
+						customerProductId: "cp_entity_level",
+						entityId: "seat_1",
+					}),
+				],
+			},
+			plan,
+			features,
+		});
+
+		expect(records).toHaveLength(2);
+		const customerLevel = records.find((record) => record.entityId === null);
+		const entityLevel = records.find((record) => record.entityId === "seat_1");
+		expect(customerLevel?.customerProductIds).toEqual(["cp_customer_level"]);
+		expect(entityLevel?.customerProductIds).toEqual(["cp_entity_level"]);
+		expect(entityLevel?.planChanges[0].item_changes).toEqual([]);
+		expect(entityLevel?.planChanges[0].previous_attributes).toBeNull();
+		expect(
+			entityLevel?.planChanges[0].plan_change?.previous_attributes,
+		).toBeNull();
+		expect(entityLevel?.planChanges[0].plan_change?.item_changes).toEqual([
+			expect.objectContaining({ action: "deleted", feature_id: "words" }),
+		]);
+	});
+
+	test("a removed-items-only page emits a deleted plan item change", () => {
+		const records = buildBatchMigrationWebhookRecords({
+			pageResult: {
+				succeeded: [customer({ internalId: "cus_1", id: "customer-1" })],
+				skipped: [],
+				insertedItems: [],
+				removedItems: [
+					removedItem({
+						internalCustomerId: "cus_1",
+						customerProductId: "cp_a",
+					}),
+				],
+			},
+			plan,
+			features,
+		});
+
+		expect(records).toHaveLength(1);
+		expect(records[0].planChanges).toHaveLength(1);
+		expect(records[0].planChanges[0].item_changes).toEqual([]);
+		expect(records[0].planChanges[0].previous_attributes).toBeNull();
+		expect(
+			records[0].planChanges[0].plan_change?.previous_attributes,
+		).toBeNull();
+		expect(records[0].planChanges[0].plan_change?.item_changes).toEqual([
+			expect.objectContaining({
+				action: "deleted",
+				feature_id: "words",
+				item: expect.objectContaining({ included: 100 }),
+			}),
+		]);
+	});
+
+	test("a replace-only plan emits deleted + created item changes", () => {
 		const fromEntitlement = {
 			...entitlement,
 			id: "ent_words_from",
 			allowance: 50,
+		} as unknown as EntitlementWithFeature;
+		const toEntitlement = {
+			...entitlement,
+			id: "ent_words_to",
+			allowance: 100,
 		} as unknown as EntitlementWithFeature;
 
 		const records = buildBatchMigrationWebhookRecords({
@@ -239,41 +387,37 @@ describe("buildBatchMigrationWebhookRecords", () => {
 					}),
 				],
 				removedItems: [
-					{
+					removedItem({
 						internalCustomerId: "cus_1",
 						customerProductId: "cp_a",
-						entityId: null,
-						planId: "pro",
-						featureId: "words",
-						entitlement: fromEntitlement,
-						granted: 50,
-						remaining: 20,
-						status: CusProductStatus.Active,
-						startsAt: 1_700_000_000_000,
-						canceledAt: null,
-						endedAt: null,
-						trialEndsAt: null,
-					},
+						fromEntitlement,
+					}),
 				],
 			},
-			plan,
+			plan: buildReplacePlan({ fromEntitlement, toEntitlement }),
 			features,
 		});
 
 		expect(records).toHaveLength(1);
 		expect(records[0].planChanges).toHaveLength(1);
+		expect(records[0].planChanges[0].item_changes).toEqual([]);
+		expect(records[0].planChanges[0].previous_attributes).toBeNull();
 		expect(
-			records[0].planChanges[0].item_changes.map((change) => ({
+			records[0].planChanges[0].plan_change?.previous_attributes,
+		).toBeNull();
+		expect(
+			records[0].planChanges[0].plan_change?.item_changes.map((change) => ({
 				action: change.action,
 				feature_id: change.feature_id,
+				included: change.item.included,
 			})),
 		).toEqual([
-			{ action: "created", feature_id: "words" },
-			{ action: "deleted", feature_id: "words" },
+			{ action: "deleted", feature_id: "words", included: 50 },
+			{ action: "created", feature_id: "words", included: 100 },
 		]);
 	});
 
-	test("customers with no inserted rows and skipped customers produce nothing", () => {
+	test("customers with no changed rows and skipped customers produce nothing", () => {
 		const records = buildBatchMigrationWebhookRecords({
 			pageResult: {
 				succeeded: [customer({ internalId: "cus_1", id: "customer-1" })],
