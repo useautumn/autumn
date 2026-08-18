@@ -9,6 +9,11 @@
 			"types": "./src/index.ts",
 			"import": "./src/index.ts",
 			"default": "./src/index.ts"
+		},
+		"./viteDev": {
+			"types": "./src/viteDev.ts",
+			"import": "./src/viteDev.ts",
+			"default": "./src/viteDev.ts"
 		}
 	},
 	"scripts": {

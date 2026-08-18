@@ -23,6 +23,12 @@ const eveHeaders = (auth: EveAuthContext, init?: HeadersInit) => {
 	if (auth.autumnUserId) {
 		headers.set("x-leaf-autumn-user-id", auth.autumnUserId);
 	}
+	if (auth.orgInstructions) {
+		headers.set(
+			"x-leaf-org-instructions",
+			Buffer.from(auth.orgInstructions).toString("base64url"),
+		);
+	}
 	return headers;
 };
 
