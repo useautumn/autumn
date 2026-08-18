@@ -48,15 +48,6 @@ describe("parseOAuthRequestFields", () => {
 		});
 	});
 
-	test("sniffs json bodies sent without a content type", async () => {
-		const parsed = await parseOAuthRequestFields(
-			postRequest({ body: '{"client_name":"Cursor"}' }),
-		);
-
-		expect(parsed.isJson).toBe(true);
-		expect(parsed.fields).toEqual({ client_name: "Cursor" });
-	});
-
 	test("returns empty fields for malformed json and empty bodies", async () => {
 		const malformed = await parseOAuthRequestFields(
 			postRequest({ body: "{oops", contentType: "application/json" }),

@@ -11,22 +11,8 @@ export type ParsedOAuthRequest = {
 export const getOAuthStringField = (value: unknown) =>
 	typeof value === "string" && value.length > 0 ? value : null;
 
-const bodyIsJson = ({
-	contentType,
-	rawBody,
-}: {
-	contentType: string;
-	rawBody: string;
-}) => {
-	const isJsonContentType =
-		contentType.split(";")[0]?.trim().toLowerCase() === "application/json";
-	// Dynamic client registration read its body with `request.json()`, which
-	// ignores the content type, so clients that omit or mislabel it must keep
-	// registering. A body opening with `{` is never a valid form payload.
-	const looksLikeJson = rawBody.trimStart().startsWith("{");
-
-	return isJsonContentType || looksLikeJson;
-};
+const isJsonContentType = (contentType: string) =>
+	contentType.split(";")[0]?.trim().toLowerCase() === "application/json";
 
 /** Anything that is not a JSON object (arrays, numbers, null) carries no fields. */
 const jsonFieldsSchema = z.record(z.string(), z.unknown()).catch({});
@@ -36,7 +22,7 @@ export const parseOAuthRequestFields = async (
 ): Promise<ParsedOAuthRequest> => {
 	const contentType = request.headers.get("content-type") ?? "";
 	const rawBody = await request.text();
-	const isJson = bodyIsJson({ contentType, rawBody });
+	const isJson = isJsonContentType(contentType);
 	const empty = { fields: {}, isJson, rawBody };
 	if (!rawBody) return empty;
 
