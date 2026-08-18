@@ -20,7 +20,6 @@ import type { FeatureDeduction } from "../types/featureDeduction.js";
 import type { MutationLogItem } from "../types/mutationLogItem.js";
 import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullSubject.js";
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
-import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
 import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
@@ -111,8 +110,6 @@ export const executePostgresDeductionV2 = async ({
 				usageBasedCusEntIdsByFeatureId,
 				rollovers,
 				customerEntitlements,
-				unlimitedFeatureIds,
-				unlimitedCusEnt,
 				lock: preparedLock,
 			} = prepareFeatureDeductionV2({
 				ctx,
@@ -122,27 +119,7 @@ export const executePostgresDeductionV2 = async ({
 				now: Date.now(),
 			});
 
-			if (customerEntitlements.length === 0 || unlimitedFeatureIds.length > 0) {
-				if (unlimitedFeatureIds.length > 0 && preparedLock?.enabled) {
-					await saveLockReceiptV2({
-						lock: preparedLock,
-						customerId: fullSubject.customerId || customerId,
-						featureId: feature.id,
-						entityId,
-						items: [],
-						overrideLockValue: toDeduct,
-						redisInstance: ctx.redisV2,
-					});
-				}
-				const unlimitedPlanLog = buildUnlimitedPlanMutationLog({
-					unlimitedCusEnt,
-					toDeduct,
-					fallbackDeduction: deduction.deduction,
-					entityId,
-				});
-				if (unlimitedPlanLog) {
-					allMutationLogs.push(unlimitedPlanLog);
-				}
+			if (customerEntitlements.length === 0) {
 				continue;
 			}
 

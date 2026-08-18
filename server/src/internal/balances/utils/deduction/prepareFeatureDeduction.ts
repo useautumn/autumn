@@ -1,5 +1,7 @@
 import {
+	AllowanceType,
 	cusEntToStartingBalance,
+	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
 	fullCustomerToOverageAllowedByFeatureId,
@@ -14,14 +16,13 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
-import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { computeCreditCosts } from "./computeCreditCosts.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
 	PreparedFeatureDeduction,
 } from "../types/deductionTypes.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
+import { computeCreditCosts } from "./computeCreditCosts.js";
 
 /**
  * Prepares all the inputs needed to execute a deduction for a single feature.
@@ -62,19 +63,9 @@ export const prepareFeatureDeduction = ({
 		customerEntitlementFilters,
 	});
 
-	// Check if ANY relevant feature is unlimited
-	const unlimitedFeatureIds: string[] = [];
-
-	for (const rf of relevantFeatures) {
-		const { unlimited: featureUnlimited } = getUnlimitedAndUsageAllowed({
-			cusEnts,
-			internalFeatureId: rf.internal_id,
-		});
-
-		if (featureUnlimited) {
-			unlimitedFeatureIds.push(rf.id);
-		}
-	}
+	const isUnlimitedCusEnt = (ce: FullCusEntWithFullCusProduct): boolean =>
+		ce.entitlement.allowance_type === AllowanceType.Unlimited ||
+		Boolean(ce.unlimited);
 
 	const effectiveFeatureIds = relevantFeatures.map((f) => f.id);
 	const spendLimitByFeatureId = fullCustomerToSpendLimitByFeatureId({
@@ -132,16 +123,39 @@ export const prepareFeatureDeduction = ({
 				effectiveUsageAllowed = false;
 			}
 
+			// Unlimited cusEnts are an infinite sink: always usage-allowed with no
+			// balance clamps in either direction, so the balance drifts negative as
+			// a usage counter and refunds can move it back up freely.
+			const isUnlimited = isUnlimitedCusEnt(ce);
+
 			return {
 				customer_entitlement_id: ce.id,
 				credit_cost: creditCost,
 				feature_id: ce.entitlement.feature.id,
 				entity_feature_id: ce.entitlement.entity_feature_id ?? null,
-				usage_allowed: effectiveUsageAllowed,
-				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
-				max_balance: resetBalance,
+				usage_allowed: isUnlimited || effectiveUsageAllowed,
+				min_balance:
+					isUnlimited || !notNullish(maxOverage) ? undefined : -maxOverage,
+				max_balance: isUnlimited ? undefined : resetBalance,
+				...(isUnlimited ? { unlimited: true } : {}),
 			};
 		});
+
+	// The deduction sort only prefers unlimited within a tier (entity level and
+	// credit systems sort first/last regardless), but the sink contract is that
+	// an unlimited entitlement absorbs everything and finite siblings stay
+	// untouched — exactly what the pre-sink skip did. Hoist the first unlimited
+	// entry to the front so the scripts always see the sink lead.
+	const unlimitedEntryIndex = customerEntitlementDeductions.findIndex(
+		(deductionEntry) => deductionEntry.unlimited,
+	);
+	if (unlimitedEntryIndex > 0) {
+		const [unlimitedEntry] = customerEntitlementDeductions.splice(
+			unlimitedEntryIndex,
+			1,
+		);
+		customerEntitlementDeductions.unshift(unlimitedEntry);
+	}
 
 	// Collect and sort rollovers by expires_at (oldest first), including credit_cost from parent entitlement
 	const sortedRollovers = cusEnts
@@ -194,7 +208,6 @@ export const prepareFeatureDeduction = ({
 			id: r.id,
 			credit_cost: r.credit_cost,
 		})),
-		unlimitedFeatureIds,
 		lock: preparedLock,
 	};
 };
