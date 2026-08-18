@@ -6,7 +6,7 @@ import { CurrencyCodeSchema } from "@api/products/components/additionalCurrencie
 import { z } from "zod/v4";
 import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
-import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
+import { ImmediateBillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import {
 	CustomizePlanV1BaseSchema,
 	refineCustomizePlanV1Schema,
@@ -146,7 +146,7 @@ export const CreateScheduleParamsV0Schema = z
 		no_billing_changes: z.boolean().optional().meta({
 			description: "If true, skips any billing changes for the schedule.",
 		}),
-		billing_cycle_anchor: BillingCycleAnchorSchema.optional().meta({
+		billing_cycle_anchor: ImmediateBillingCycleAnchorSchema.optional().meta({
 			description:
 				"Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.",
 		}),

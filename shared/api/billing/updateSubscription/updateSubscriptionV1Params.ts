@@ -24,7 +24,8 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 				"Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.",
 		}),
 		billing_cycle_anchor: BillingCycleAnchorSchema.optional().meta({
-			description: "Reset the billing cycle anchor immediately with 'now'",
+			description:
+				"Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.",
 		}),
 
 		processor_subscription_id: z.string().nullable().optional().meta({

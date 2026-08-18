@@ -9,6 +9,7 @@ import {
 import { UTCDate } from "@date-fns/utc";
 import { getDate, getMonth } from "date-fns";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { clampNextResetAtToPendingBillingCycleAnchor } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { getNextResetAt } from "@/utils/timeUtils.js";
 
 const shortDurations: string[] = [
@@ -38,9 +39,17 @@ export const getResetAtUpdate = async ({
 		interval,
 		intervalCount,
 	});
+	const clampToPendingBillingCycleAnchor = (value: number) =>
+		clampNextResetAtToPendingBillingCycleAnchor({
+			billingCycleAnchorResetsAt: cusProduct?.billing_cycle_anchor_resets_at,
+			currentEpochMs: curResetAt,
+			nextResetAt: value,
+		});
 
 	if (!cusProduct) return nextResetAt;
-	if (shortDurations.includes(interval)) return nextResetAt;
+	if (shortDurations.includes(interval)) {
+		return clampToPendingBillingCycleAnchor(nextResetAt);
+	}
 
 	// Only check Stripe anchor on edge dates (28th Feb, 30th of month)
 	const nextResetAtDate = new UTCDate(nextResetAt);
@@ -50,13 +59,13 @@ export const getResetAtUpdate = async ({
 	const shouldCheck =
 		nextResetAtDay === 30 || (nextResetAtDay === 28 && nextResetAtMonth === 1);
 
-	if (!shouldCheck) return nextResetAt;
+	if (!shouldCheck) return clampToPendingBillingCycleAnchor(nextResetAt);
 
 	if (
 		!cusProduct.subscription_ids ||
 		cusProduct.subscription_ids.length === 0
 	) {
-		return nextResetAt;
+		return clampToPendingBillingCycleAnchor(nextResetAt);
 	}
 
 	try {
@@ -71,10 +80,12 @@ export const getResetAtUpdate = async ({
 			intervalCount,
 			now: curResetAt,
 		});
-		return Math.max(nextResetAt, stripeAlignedResetAt);
+		return clampToPendingBillingCycleAnchor(
+			Math.max(nextResetAt, stripeAlignedResetAt),
+		);
 	} catch (error) {
 		console.log(`[Lazy Reset] WARNING: Failed to check sub anchor: ${error}`);
 	}
 
-	return nextResetAt;
+	return clampToPendingBillingCycleAnchor(nextResetAt);
 };
