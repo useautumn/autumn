@@ -321,7 +321,7 @@ const main = async () => {
 			const cardJson = JSON.stringify(target.posted.at(-1)?.content ?? {});
 			check(
 				"S2 card has receipt/money facts",
-				/Due (now|today)|No charge now/.test(cardJson),
+				/Due (now|today)|No charge today/.test(cardJson),
 				cardJson.slice(0, 300),
 			);
 			const approval = await pendingApprovalForRun({

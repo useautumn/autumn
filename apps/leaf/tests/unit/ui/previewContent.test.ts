@@ -111,7 +111,7 @@ describe("approvalCard with structured previews", () => {
 		// Structured previews render receipt-style: line items + totals in a table.
 		expect(json).toContain("Due now");
 		expect(json).toContain("$25.50");
-		expect(json).toContain("Next cycle");
+		expect(json).toContain("Next charge");
 		expect(json).toContain("$40.00");
 		expect(card.children.at(-1)?.type).toBe("actions");
 	});

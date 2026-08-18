@@ -186,12 +186,51 @@ const billingMethodLabel = (value: unknown): string | null =>
 			? "usage-based"
 			: null;
 
-// One added plan item: feature id, then a concise descriptor of what the
-// customization grants (allowance / price / cadence).
-const addedItemText = (value: unknown): string | null => {
+const humanizeFeatureId = (featureId: string) => {
+	const text = featureId.replace(/[_-]+/g, " ");
+	return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+const featureLabels = (payload: LooseRecord) => {
+	const labels = new Map<string, string>();
+	for (const side of [payload.incoming, payload.outgoing]) {
+		for (const change of getArray(side)) {
+			const plan = asRecord(asRecord(change)?.plan);
+			for (const value of getArray(plan?.items)) {
+				const item = asRecord(value);
+				const featureId = getString(item?.feature_id);
+				const name = getString(asRecord(item?.feature)?.name);
+				if (featureId && name && !labels.has(featureId)) {
+					labels.set(featureId, name);
+				}
+			}
+		}
+	}
+	return labels;
+};
+
+const featureLabel = ({
+	featureId,
+	labels,
+}: {
+	featureId: string;
+	labels: Map<string, string>;
+}) => labels.get(featureId) ?? humanizeFeatureId(featureId);
+
+const itemFeatureId = (value: unknown) =>
+	getString(asRecord(value)?.feature_id);
+
+const addedItemText = ({
+	value,
+	labels,
+}: {
+	value: unknown;
+	labels: Map<string, string>;
+}): string | null => {
 	const item = asRecord(value);
 	if (!item) return null;
-	const feature = getString(item.feature_id) ?? "feature";
+	const featureId = getString(item.feature_id);
+	const feature = featureId ? featureLabel({ featureId, labels }) : "Feature";
 	const parts: string[] = [];
 	if (item.unlimited === true) {
 		parts.push("unlimited");
@@ -225,8 +264,13 @@ const addedItemText = (value: unknown): string | null => {
 	return detail ? `${feature} — ${detail}` : feature;
 };
 
-// One removed/updated item filter: by feature, else by qualifiers.
-const filterText = (value: unknown): string | null => {
+const filterText = ({
+	value,
+	labels,
+}: {
+	value: unknown;
+	labels: Map<string, string>;
+}): string | null => {
 	const filter = asRecord(value);
 	if (!filter) return null;
 	const feature = getString(filter.feature_id);
@@ -236,8 +280,8 @@ const filterText = (value: unknown): string | null => {
 	].filter((part): part is string => Boolean(part));
 	if (feature) {
 		return qualifiers.length
-			? `${feature} · ${qualifiers.join(" · ")}`
-			: feature;
+			? `${featureLabel({ featureId: feature, labels })} · ${qualifiers.join(" · ")}`
+			: featureLabel({ featureId: feature, labels });
 	}
 	return qualifiers.length ? qualifiers.join(" · ") : "matching items";
 };
@@ -249,7 +293,7 @@ const customPriceText = (value: unknown): string | null => {
 	const interval = getString(price.interval);
 	const intervalCount = getNumber(price.interval_count);
 	const cadence = interval
-		? ` per ${intervalCount && intervalCount > 1 ? `${intervalCount} ${interval}s` : interval}`
+		? `/${intervalCount && intervalCount > 1 ? `${intervalCount} ${interval}s` : interval}`
 		: "";
 	return `${formatMoney({ amount, currency: getString(price.currency) })}${cadence}`;
 };
@@ -262,23 +306,63 @@ const freeTrialText = (value: unknown): string | null => {
 	return days !== null ? `${formatCount(days)}-day free trial` : "free trial";
 };
 
-const customizeDisplay = (
-	params?: Record<string, unknown> | null,
-): CustomizeDisplay | null => {
+const customizeDisplay = ({
+	params,
+	payload,
+}: {
+	params?: Record<string, unknown> | null;
+	payload: LooseRecord;
+}): CustomizeDisplay | null => {
 	const customize = asRecord(params?.customize);
 	if (!customize) return null;
+	const labels = featureLabels(payload);
 	const collect = (value: unknown, render: (entry: unknown) => string | null) =>
 		getArray(value).flatMap((entry) => render(entry) ?? []);
+	const added = getArray(customize.add_items);
+	const removed = getArray(customize.remove_items);
+	const counts = (items: unknown[]) => {
+		const result = new Map<string, number>();
+		for (const item of items) {
+			const featureId = itemFeatureId(item);
+			if (featureId) result.set(featureId, (result.get(featureId) ?? 0) + 1);
+		}
+		return result;
+	};
+	const addCounts = counts(added);
+	const removeCounts = counts(removed);
+	const updatedFeatureIds = new Set(
+		[...addCounts].flatMap(([featureId, count]) =>
+			count === 1 && removeCounts.get(featureId) === 1 ? featureId : [],
+		),
+	);
 	const display: CustomizeDisplay = {
-		addedItems: collect(customize.add_items, addedItemText),
+		addedItems: collect(
+			added.filter((item) => !updatedFeatureIds.has(itemFeatureId(item) ?? "")),
+			(item) => addedItemText({ value: item, labels }),
+		),
 		freeTrialText: freeTrialText(customize.free_trial),
 		priceText: customPriceText(customize.price),
-		removedItems: collect(customize.remove_items, filterText),
-		replacedItems: collect(customize.items, addedItemText),
-		updatedItems: collect(customize.update_items, (entry) => {
-			const record = asRecord(entry);
-			return filterText(record?.filter ?? entry);
-		}),
+		removedItems: collect(
+			removed.filter(
+				(item) => !updatedFeatureIds.has(itemFeatureId(item) ?? ""),
+			),
+			(item) => filterText({ value: item, labels }),
+		),
+		replacedItems: collect(customize.items, (item) =>
+			addedItemText({ value: item, labels }),
+		),
+		updatedItems: [
+			...collect(customize.update_items, (entry) => {
+				const record = asRecord(entry);
+				return filterText({ value: record?.filter ?? entry, labels });
+			}),
+			...collect(
+				added.filter((item) =>
+					updatedFeatureIds.has(itemFeatureId(item) ?? ""),
+				),
+				(item) => addedItemText({ value: item, labels }),
+			),
+		],
 	};
 	const hasContent =
 		display.addedItems.length > 0 ||
@@ -295,6 +379,7 @@ const customizeDisplay = (
  * which approvers must see. */
 export type PrepaidQuantityDisplay = {
 	featureId: string;
+	featureName: string;
 	includedDefault: number | null;
 	quantity: number | null;
 };
@@ -306,6 +391,7 @@ const prepaidQuantityDisplays = ({
 	params?: Record<string, unknown> | null;
 	payload: LooseRecord;
 }): PrepaidQuantityDisplay[] => {
+	const labels = featureLabels(payload);
 	const quantities = new Map(
 		getArray(params?.feature_quantities).flatMap((entry) => {
 			const record = asRecord(entry);
@@ -330,6 +416,7 @@ const prepaidQuantityDisplays = ({
 			seen.add(featureId);
 			displays.push({
 				featureId,
+				featureName: featureLabel({ featureId, labels }),
 				includedDefault: getNumber(record?.included),
 				quantity: quantities.get(featureId) ?? null,
 			});
@@ -339,7 +426,12 @@ const prepaidQuantityDisplays = ({
 	// sets explicitly must still show.
 	for (const [featureId, quantity] of quantities) {
 		if (seen.has(featureId)) continue;
-		displays.push({ featureId, includedDefault: null, quantity });
+		displays.push({
+			featureId,
+			featureName: featureLabel({ featureId, labels }),
+			includedDefault: null,
+			quantity,
+		});
 	}
 	return displays;
 };
@@ -399,7 +491,7 @@ export const buildBillingPreviewDisplay = ({
 		currency,
 		customerId:
 			getString(params?.customer_id) ?? getString(payload.customer_id),
-		customize: customizeDisplay(params),
+		customize: customizeDisplay({ params, payload }),
 		dueNow: money({ amount: total, currency }),
 		entityId: getString(params?.entity_id),
 		intentLabel: intent ? (UPDATE_INTENT_LABELS[intent] ?? null) : null,
