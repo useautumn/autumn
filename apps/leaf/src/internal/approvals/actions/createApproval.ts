@@ -1,13 +1,66 @@
 import type { AutumnLogger } from "@autumn/logging";
+import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv, ChatProvider } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import type { AgentApprovalTurn } from "../../agentRuntime/domain/agentTurn.js";
+import { withheldWritesFromToolArgs } from "../../agentRuntime/eve/parkedInput.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import {
+	resolveApprovalDisplay,
+	withApprovalDisplay,
+} from "../utils/approvalDisplay.js";
+import {
+	FAILED_APPROVAL_PREVIEW,
 	fetchApprovalPreview,
+	isFailedApprovalPreview,
 	shouldRefreshApprovalPreview,
 } from "../utils/fetchApprovalPreview.js";
 import { publicToolArgs, toolRequestFromArgs } from "../utils/toolRequest.js";
+
+/** Each grouped write gets the same preview + display backfill as the primary
+ * one, so the card can render every step with the standard body. */
+const withGroupedWritePreviews = async ({
+	env,
+	getToken,
+	logger,
+	toolArgs,
+}: {
+	env: AppEnv;
+	getToken: () => Promise<string>;
+	logger: AutumnLogger;
+	toolArgs: Record<string, unknown>;
+}) => {
+	const withheld = withheldWritesFromToolArgs(toolArgs);
+	if (!withheld.length) return toolArgs;
+	const resolved = await Promise.all(
+		withheld.map(async (write) => {
+			const request = toolRequestFromArgs(write.input);
+			// The primary write's preview is parsed at capture time; a backfilled
+			// one arrives as the raw MCP envelope and needs the same treatment.
+			const preview = parsePreviewPayload(
+				await resolveApprovalPreview({
+					env,
+					getToken,
+					logger,
+					preview: undefined,
+					request,
+					toolName: write.toolName,
+				}),
+			);
+			const display = await resolveApprovalDisplay({
+				env,
+				getToken,
+				preview,
+				request,
+			});
+			return {
+				...write,
+				preview: withApprovalDisplay({ display, preview }),
+			};
+		}),
+	);
+	return { ...toolArgs, _eveWithheldWrites: resolved };
+};
 
 const resolveApprovalPreview = async ({
 	env,
@@ -35,6 +88,9 @@ const resolveApprovalPreview = async ({
 			token: await getToken(),
 			toolName,
 		});
+		if (isFailedApprovalPreview(fetchedPreview)) {
+			return preview ?? FAILED_APPROVAL_PREVIEW;
+		}
 		return fetchedPreview ? fetchedPreview : preview;
 	} catch (error) {
 		logger.warn("Could not backfill approval preview", {
@@ -77,15 +133,30 @@ export const createApproval = async ({
 		return undefined;
 	}
 
-	const toolArgs = publicToolArgs(approval.toolArgs);
-	const request = toolRequestFromArgs(toolArgs);
-	const preview = await resolveApprovalPreview({
+	const request = toolRequestFromArgs(publicToolArgs(approval.toolArgs));
+	const resolvedPreview = await resolveApprovalPreview({
 		env,
 		getToken,
 		logger,
 		preview: approval.preview,
 		request,
 		toolName: approval.toolName,
+	});
+	const display = await resolveApprovalDisplay({
+		env,
+		getToken,
+		preview: resolvedPreview,
+		request,
+	});
+	const preview = withApprovalDisplay({ display, preview: resolvedPreview });
+	// Enrich the raw args so the stored row keeps both the harness transport
+	// keys (approve/deny ids, sibling ids) and the backfilled step previews;
+	// every later card render reads from the row.
+	const storedToolArgs = await withGroupedWritePreviews({
+		env,
+		getToken,
+		logger,
+		toolArgs: approval.toolArgs,
 	});
 
 	const approvalId = await chatApprovalRepo.insert({
@@ -99,7 +170,7 @@ export const createApproval = async ({
 			provider,
 			providerUserId,
 			runId: turn.sessionId,
-			toolArgs: approval.toolArgs,
+			toolArgs: storedToolArgs,
 			toolCallId: approval.toolCallId,
 			toolName: approval.toolName,
 			workspaceId,
@@ -115,7 +186,7 @@ export const createApproval = async ({
 		approvalId,
 		params: request,
 		preview,
-		toolArgs,
+		toolArgs: publicToolArgs(storedToolArgs),
 		toolName: approval.toolName,
 	} as const;
 };

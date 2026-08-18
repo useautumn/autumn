@@ -1,5 +1,15 @@
-import { describe, expect, test } from "bun:test";
-import { createLeafApp } from "../../../src/http/createLeafApp.js";
+import { describe, expect, mock, test } from "bun:test";
+
+mock.module("../../../src/lib/env.js", () => ({
+	env: {
+		AUTUMN_API_URL: "http://autumn.test",
+		CHAT_NAME: "Autumn",
+		MCP_OAUTH_ENVIRONMENT: "sandbox",
+		MCP_SERVER_URL: "http://leaf.test",
+	},
+}));
+
+const { createLeafApp } = await import("../../../src/http/createLeafApp.js");
 
 const app = createLeafApp();
 

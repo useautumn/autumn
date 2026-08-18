@@ -25,6 +25,9 @@ export const CATALOG_DECISION_NEEDED_MESSAGE =
 
 export const ACTION_FAILED_MESSAGE = "The action failed.";
 
+export const PREVIEW_UNAVAILABLE_MESSAGE =
+	"⚠️ Could not load the billing preview — approve only if the request below is what you expect.";
+
 export const APPROVAL_NOT_EXECUTED_MESSAGE =
 	"The approved action was not executed — the agent's session is waiting on other pending approvals. Please retry.";
 

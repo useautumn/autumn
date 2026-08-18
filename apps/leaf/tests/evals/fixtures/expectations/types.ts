@@ -27,8 +27,15 @@ export type ApiCalledInOrderExpectation = {
 };
 
 export type ApiCalledAfterApprovalExpectation = {
+	/** 1-based approval to measure against; defaults to the first. */
+	approvalIndex?: number;
 	call: ExpectedApiCall;
 	type: "api.calledAfterApproval";
+};
+
+export type ApprovalCountExpectation = {
+	count: number;
+	type: "approval.count";
 };
 
 export type ApiCalledTimesExpectation = {
@@ -80,6 +87,7 @@ export type EvalExpectation =
 	| ApiCalledExpectation
 	| ApiCalledInOrderExpectation
 	| ApiCalledTimesExpectation
+	| ApprovalCountExpectation
 	| ResponseAskedExpectation
 	| ResponseAskedBeforeToolExpectation
 	| ResponseConciseExpectation

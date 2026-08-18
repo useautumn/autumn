@@ -75,6 +75,7 @@ export const classifySubscribedMessage = async ({
 									recentMessages,
 								}),
 								system: slackMessageRouterInstructions,
+								temperature: 0,
 							})
 						).output,
 					timeoutMessage: "Slack message routing timed out",

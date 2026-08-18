@@ -223,5 +223,8 @@
 	},
 	"trustedDependencies": [
 		"@infisical/cli"
-	]
+	],
+	"patchedDependencies": {
+		"@chat-adapter/slack@4.37.0": "patches/@chat-adapter%2Fslack@4.37.0.patch"
+	}
 }

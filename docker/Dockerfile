@@ -16,6 +16,9 @@ WORKDIR /app
 # all (add a line here when a workspace is added). Source is copied later, so this
 # layer caches until a package.json or the lockfile changes.
 COPY package.json bun.lock bunfig.toml ./
+# patchedDependencies in package.json are applied during install, so the
+# patch files must be present before it runs.
+COPY patches/ patches/
 COPY server/package.json server/
 COPY shared/package.json shared/
 COPY vite/package.json vite/

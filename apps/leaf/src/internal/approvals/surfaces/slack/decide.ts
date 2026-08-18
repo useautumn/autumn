@@ -28,7 +28,7 @@ import {
 	isErrorResult,
 } from "../../utils/approvalErrors.js";
 import { formatElapsed } from "../../utils/approvalProgress.js";
-import { approvalScopeRequirements } from "../../utils/approvalScopeRequirements.js";
+import { requiredScopesForApproval } from "../../utils/approvalScopeRequirements.js";
 import { postApprovalCardForRow } from "./present.js";
 
 const APPROVAL_PROGRESS_DELAY_MS = ms.seconds(10);
@@ -58,7 +58,10 @@ const authorizeSlackApprovalClicker = async ({
 	}
 
 	// A gated tool without a declared scope requirement fails closed.
-	const required = approvalScopeRequirements[approval.tool_name];
+	const required = requiredScopesForApproval({
+		toolArgs: approval.tool_args,
+		toolName: approval.tool_name,
+	});
 	if (!required) {
 		rootLogger.warn("Approval tool missing scope requirement", {
 			event: "leaf.approval_scope_requirement_missing",
@@ -395,6 +398,7 @@ export const handleApprovalActionWithDeps = async ({
 				...details,
 				actorId: providerUserId,
 				result,
+				steps: "steps" in result ? result.steps : undefined,
 			}),
 			event,
 		});

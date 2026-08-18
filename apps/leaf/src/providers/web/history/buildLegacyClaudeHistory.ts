@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { parsePreviewPayload } from "@autumn/render";
 import { type AppEnv, type ChatProvider, cmaSessions } from "@autumn/shared";
 import { getTime, isValid, parseISO } from "date-fns";
 import { and, eq } from "drizzle-orm";
@@ -12,7 +13,6 @@ import {
 } from "../../../internal/agentRuntime/tools/toolPolicy.js";
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
 import type { ChatDb } from "../../../lib/db.js";
-import { parsePreviewPayload } from "../../../ui/previewContent.js";
 import type {
 	LeafApprovalStatus,
 	LeafUiMessage,

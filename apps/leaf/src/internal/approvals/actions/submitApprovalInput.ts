@@ -1,9 +1,15 @@
 import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
-import { APPROVAL_NOT_EXECUTED_MESSAGE } from "../../../ui/messages.js";
+import {
+	ACTION_FAILED_MESSAGE,
+	APPROVAL_NOT_EXECUTED_MESSAGE,
+} from "../../../ui/messages.js";
 import { submitAgentInput } from "../../agentRuntime/actions/submitAgentInput/submitAgentInput.js";
-import { siblingRequestIdsFromToolArgs } from "../../agentRuntime/eve/parkedInput.js";
+import {
+	siblingRequestIdsFromToolArgs,
+	withheldWritesFromToolArgs,
+} from "../../agentRuntime/eve/parkedInput.js";
 import { getEveSessionBySessionId } from "../../agentRuntime/eve/repo.js";
 import type { EveAuthContext } from "../../agentRuntime/eve/types.js";
 import type { ApprovalRunResult } from "../types.js";
@@ -24,6 +30,11 @@ const approvalAuth = ({
 	threadId: approval.channel_id,
 	workspaceId: approval.workspace_id,
 });
+
+const GROUP_RENDERING_PROVIDERS: ReadonlySet<string> = new Set(["slack"]);
+
+const surfaceRendersGroup = (provider: string) =>
+	GROUP_RENDERING_PROVIDERS.has(provider);
 
 export const submitApprovalInput = async ({
 	approval,
@@ -59,13 +70,28 @@ export const submitApprovalInput = async ({
 	}
 	const auth = approvalAuth({ approval, providerUserId });
 	const {
+		approvedWriteFailed,
+		approvedWriteUnverified,
 		chained,
 		chainedSiblingRequestIds,
+		chainedWithheld,
 		deferredEmptyTurn,
+		steps,
 		question,
 		text,
 	} = await submitAgentInput({
 		auth,
+		// Only a surface that rendered the whole group may approve it; the
+		// dashboard shows the primary write alone, so its siblings stay withheld.
+		approveSiblings: expectExecution && surfaceRendersGroup(approval.provider),
+		expectedToolNames: expectExecution
+			? [
+					approval.tool_name,
+					...withheldWritesFromToolArgs(approval.tool_args).map(
+						(write) => write.toolName,
+					),
+				]
+			: undefined,
 		note,
 		optionId,
 		orgId: approval.org_id,
@@ -80,9 +106,29 @@ export const submitApprovalInput = async ({
 				providerUserId,
 				sessionId: session.sessionId,
 				siblingRequestIds: chainedSiblingRequestIds,
+				withheld: chainedWithheld,
 			})
 		: undefined;
-	if (expectExecution && deferredEmptyTurn) {
+	// Eve may execute the approved call before the resumed stream opens, so a
+	// turn that did real work without echoing the result still counts as run.
+	const settled = !(chained || question);
+	const notExecuted =
+		expectExecution &&
+		(deferredEmptyTurn || (settled && approvedWriteUnverified && !text));
+	if (expectExecution && approvedWriteFailed) {
+		logger.error("Approved Eve action failed", undefined, {
+			event: "leaf.eve_approval_failed",
+			approval_id: approval.id,
+			data: { session_id: session.sessionId, tool: approval.tool_name },
+		});
+		return {
+			error: true,
+			message: text || ACTION_FAILED_MESSAGE,
+			retryable: false,
+			steps,
+		};
+	}
+	if (notExecuted) {
 		logger.error("Approved Eve action was not executed", undefined, {
 			event: "leaf.eve_approval_not_executed",
 			approval_id: approval.id,
@@ -100,6 +146,7 @@ export const submitApprovalInput = async ({
 			? { ...question, sessionId: session.sessionId }
 			: undefined,
 		result: {},
+		steps,
 		text,
 		toolName: approval.tool_name,
 	};

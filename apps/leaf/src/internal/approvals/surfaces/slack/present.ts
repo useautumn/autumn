@@ -1,11 +1,11 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval, ChatInstallation } from "@autumn/shared";
-import { toolLabel } from "../../../agentRuntime/tools/toolPolicy.js";
-import type { AgentApprovalTurn } from "../../../agentRuntime/domain/agentTurn.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import { approvalCard } from "../../../../ui/blocks.js";
 import type { ReplyTarget } from "../../../../ui/progress.js";
+import type { AgentApprovalTurn } from "../../../agentRuntime/domain/agentTurn.js";
+import { toolLabel } from "../../../agentRuntime/tools/toolPolicy.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { createApproval } from "../../actions/createApproval.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
@@ -30,7 +30,6 @@ export const postApprovalCardForRow = async ({
 			id: approval.id,
 			env: approval.env,
 			preview: approval.preview ?? undefined,
-			requesterId: approval.provider_user_id,
 			toolArgs: publicToolArgs(toolArgs),
 			toolName: approval.tool_name,
 		}),
@@ -91,8 +90,6 @@ export const presentApproval = async ({
 			id: created.approvalId,
 			env,
 			preview: created.preview,
-			requesterId: providerUserId,
-			summary: turn.text,
 			toolArgs: created.toolArgs,
 			toolName: created.toolName,
 		}),

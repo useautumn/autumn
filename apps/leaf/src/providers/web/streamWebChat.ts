@@ -1,8 +1,12 @@
 import crypto from "node:crypto";
+import { parsePreviewPayload } from "@autumn/render";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { resolveAgentCatalogDecision } from "../../internal/agentRuntime/actions/resolveCatalogDecision/resolveAgentCatalogDecision.js";
 import { runAgentTurn } from "../../internal/agentRuntime/actions/runAgentTurn/runAgentTurn.js";
-import type { AgentTurnContext } from "../../internal/agentRuntime/domain/agentTurnContext.js";
+import type {
+	AgentActionProgress,
+	AgentTurnContext,
+} from "../../internal/agentRuntime/domain/agentTurnContext.js";
 import { createApproval } from "../../internal/approvals/actions/createApproval.js";
 import {
 	ensureWebChatAuth,
@@ -15,7 +19,6 @@ import {
 	GENERIC_FAILURE_MESSAGE,
 	NO_REPLY_MESSAGE,
 } from "../../ui/messages.js";
-import { parsePreviewPayload } from "../../ui/previewContent.js";
 import type { DashboardAuth } from "./authDashboard.js";
 import { resolveDashboardEnv } from "./dashboardEnv.js";
 import { parseWebChatRequest } from "./parseWebChatRequest.js";
@@ -109,8 +112,14 @@ export const streamWebChat = async ({
 				env,
 				id: crypto.randomUUID(),
 				logger,
-				onAction: (label) => {
+				onAction: (progress: AgentActionProgress | string) => {
+					if (typeof progress !== "string" && progress.phase === "completed") {
+						finishLastStep();
+						return;
+					}
 					finishLastStep();
+					const label =
+						typeof progress === "string" ? progress : progress.label;
 					const id = crypto.randomUUID();
 					const startedAt = Date.now();
 					lastStep = { id, label, startedAt };
