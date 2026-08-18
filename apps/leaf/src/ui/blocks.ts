@@ -971,9 +971,6 @@ const approvalPreviewBlocks = ({
 		planNames: resolvedPlanNames,
 		preview: parsePreviewPayload(preview),
 	});
-	if (display.intentLabel && normalizedToolName !== "attach") {
-		blocks.push(CardText(display.intentLabel));
-	}
 	const changeSummary =
 		normalizedToolName === "attach"
 			? null
@@ -1049,6 +1046,15 @@ const approvalPreviewBlocks = ({
 			});
 		}),
 	];
+	// The "Plan changes" table already names the operation, so the generic
+	// intent label only earns its place when there is no table beneath it.
+	const intentLabel =
+		normalizedToolName !== "attach" && changeRows.length === 0
+			? display.intentLabel
+			: null;
+	if (intentLabel) {
+		blocks.push(CardText(intentLabel));
+	}
 	if (changeRows.length) {
 		blocks.push(changeTable({ caption: "Plan changes", rows: changeRows }));
 	}
@@ -1074,7 +1080,11 @@ const approvalPreviewBlocks = ({
 		display.lineItems[0].amount === display.dueNow?.amount
 			? []
 			: display.lineItems.slice(0, 8);
-	// A $0 due-now with no line items isn't a money fact — mute it.
+	// A $0 due-now with no line items isn't a money fact — mute it. When the
+	// "No billing changes" badge already gives the reason, say nothing at all.
+	const explainedByBadge = display.badges.some(
+		({ label }) => label === "No billing changes",
+	);
 	const zeroNoCharge =
 		display.dueNow?.amount === 0 &&
 		listableItems.length === 0 &&
@@ -1101,9 +1111,9 @@ const approvalPreviewBlocks = ({
 			];
 	if (moneyLines.length) {
 		blocks.push(CardText(moneyLines.join("\n")));
-	} else if (zeroNoCharge) {
+	} else if (zeroNoCharge && !explainedByBadge) {
 		blocks.push(CardText("No charge now", { style: "muted" }));
-	} else {
+	} else if (!zeroNoCharge) {
 		pushMoney();
 	}
 	if (display.phases.length) {

@@ -1346,3 +1346,94 @@ describe("fan-out reads money from a raw MCP preview envelope", () => {
 		expect(rendered).not.toContain("$0.00");
 	});
 });
+
+// A "Plan changes" table already says the plan is being updated, so the generic
+// intent label above it is noise; a cancel has no table and keeps its label.
+describe("update-subscription card avoids restating itself", () => {
+	const updateWithChanges = () =>
+		approvalCard({
+			id: "u1",
+			env: AppEnv.Sandbox,
+			toolName: "updateSubscription",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					customize: { price: { amount: 150, interval: "month" } },
+					plan_id: "automation_pack",
+				},
+			},
+			preview: wrapMcpResult({
+				currency: "usd",
+				customer_id: "cus_1",
+				intent: "update_plan",
+				line_items: [],
+				total: 0,
+				updated: [
+					{
+						plan_id: "automation_pack",
+						plan: { name: "Automation Pack" },
+						changes: { base_price: { from: 100, to: 150 } },
+					},
+				],
+			}),
+		});
+
+	test("drops the generic intent label when a changes table renders", () => {
+		const rendered = JSON.stringify(cardToBlockKit(updateWithChanges()));
+		expect(rendered).toContain("Plan changes");
+		expect(rendered).not.toContain('"Update plan"');
+	});
+
+	test("keeps a cancel label since no table describes it", () => {
+		const card = approvalCard({
+			id: "u2",
+			env: AppEnv.Sandbox,
+			toolName: "updateSubscription",
+			toolArgs: {
+				request: {
+					cancel_action: "cancel_immediately",
+					customer_id: "cus_1",
+					plan_id: "enterprise",
+				},
+			},
+			preview: wrapMcpResult({
+				currency: "usd",
+				customer_id: "cus_1",
+				intent: "cancel_immediately",
+				line_items: [],
+				total: 0,
+			}),
+		});
+		expect(JSON.stringify(cardToBlockKit(card))).toContain(
+			"Cancel immediately",
+		);
+	});
+});
+
+// "No billing changes" already explains why nothing is due; a second "No charge
+// now" line beneath it says the same thing twice.
+describe("no-billing-changes card does not also say no charge", () => {
+	test("omits the no-charge line when the badge carries the reason", () => {
+		const card = approvalCard({
+			id: "u3",
+			env: AppEnv.Sandbox,
+			toolName: "updateSubscription",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					no_billing_changes: true,
+					plan_id: "enterprise",
+				},
+			},
+			preview: wrapMcpResult({
+				currency: "usd",
+				customer_id: "cus_1",
+				line_items: [],
+				total: 0,
+			}),
+		});
+		const rendered = JSON.stringify(cardToBlockKit(card));
+		expect(rendered).toContain("No billing changes");
+		expect(rendered).not.toContain("No charge now");
+	});
+});
