@@ -1,5 +1,5 @@
 import type { WebhookRenewal } from "@puzzmo/revenue-cat-webhook-types";
-import { AttachScenario, CusProductStatus } from "@shared/index";
+import { CusProductStatus } from "@shared/index";
 import {
 	getRevenueCatCustomerEmail,
 	getRevenueCatCustomerFingerprint,
@@ -9,9 +9,7 @@ import { provisionRevenueCatCusProduct } from "@/external/revenueCat/misc/provis
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
-import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
-import { emitCustomerProductBillingUpdated } from "@/internal/customers/cusProducts/actions/emitCustomerProductBillingUpdated";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 
 export const handleRenewal = async ({
@@ -21,7 +19,7 @@ export const handleRenewal = async ({
 	event: WebhookRenewal;
 	ctx: RevenueCatWebhookContext;
 }) => {
-	const { org, env, logger } = ctx;
+	const { logger } = ctx;
 	const { product_id, app_user_id, original_app_user_id } = event;
 
 	const {
@@ -52,24 +50,10 @@ export const handleRenewal = async ({
 			`Renewal for existing active product ${product.id}, sending webhook`,
 		);
 
-		await addProductsUpdatedWebhookTask({
+		await customerProductActions.renew({
 			ctx: customerCtx,
-			internalCustomerId: curSameProduct.internal_customer_id,
-			org,
-			env,
-			customerId: customer.id || "",
-			scenario: AttachScenario.Renew,
-			cusProduct: curSameProduct,
-		});
-
-		// No cusProduct mutation on renewal — empty updates still surface an
-		// "updated" plan change so billing.updated mirrors the legacy webhook.
-		emitCustomerProductBillingUpdated({
-			ctx: customerCtx,
-			originalFullCustomer: structuredClone(customer),
-			updateCustomerProducts: [
-				{ customerProduct: curSameProduct, updates: {} },
-			],
+			customerProduct: curSameProduct,
+			fullCustomer: customer,
 		});
 
 		await recordRevenueCatInvoice({

@@ -4,14 +4,13 @@ import { AppEnv, type ChatInstallation } from "@autumn/shared";
 process.env.DATABASE_URL ??=
 	"postgresql://postgres:postgres@localhost:5432/postgres";
 process.env.ENCRYPTION_PASSWORD ??= "test";
-process.env.FIRECRAWL_API_KEY ??= "fc_test";
 process.env.SLACK_ADMIN_WORKSPACE_ID = "T_ADMIN";
 process.env.SLACK_CLIENT_ID ??= "test";
 process.env.SLACK_CLIENT_SECRET ??= "test";
 process.env.SLACK_SIGNING_SECRET ??= "test";
 
 const { resolveSlackAdminOrgContext } = await import(
-	"../../../src/agent/runMessage/setup/resolveSlackAdminOrg.js"
+	"../../../src/providers/slack/setup/resolveSlackAdminOrg.js"
 );
 
 const logger = {

@@ -7,7 +7,6 @@ process.env.ENCRYPTION_PASSWORD ??= "test";
 process.env.SLACK_CLIENT_ID ??= "test";
 process.env.SLACK_CLIENT_SECRET ??= "test";
 process.env.SLACK_SIGNING_SECRET ??= "test";
-process.env.FIRECRAWL_API_KEY ??= "fc_test";
 
 const { formatAutumnOrgContext, loadAutumnOrgContext } = await import(
 	"../../../../src/internal/autumnMcp/orgContextService.js"
@@ -27,7 +26,10 @@ const createLogger = () => {
 describe("Autumn org context service", () => {
 	test("formats preloaded tool results as raw JSON blocks", () => {
 		const text = formatAutumnOrgContext({
-			agentRules: { entityRules: "workspace scoped" },
+			agentRules: {
+				entityRules: "workspace scoped",
+				notes: "Always use invoice mode.",
+			},
 			features: {
 				features: [
 					{
@@ -55,9 +57,26 @@ describe("Autumn org context service", () => {
 		expect(text).toContain("listFeatures:");
 		expect(text).toContain("```json");
 		expect(text).toContain("workspace scoped");
+		expect(text).not.toContain("Always use invoice mode.");
 		expect(text).toContain('"rollover": true');
 		expect(text).toContain('"id": "enterprise"');
 		expect(text).toContain('"type": "boolean"');
+	});
+
+	test("separates custom instructions from preloaded context", async () => {
+		const { logger } = createLogger();
+		const context = await loadAutumnOrgContext({
+			env: AppEnv.Sandbox,
+			executeTool: (async ({ toolName }: { toolName: string }) =>
+				toolName === "getAgentRules"
+					? { entity_rules: {}, notes: "Always use invoice mode." }
+					: []) as never,
+			logger: logger as never,
+			token: "test",
+		});
+
+		expect(context?.instructions).toBe("Always use invoice mode.");
+		expect(context?.text).not.toContain("Always use invoice mode.");
 	});
 
 	test("preloads rules, plans, and features in parallel and keeps partial context", async () => {

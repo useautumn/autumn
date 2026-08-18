@@ -12,7 +12,7 @@ const embedEve =
 	(process.env.NODE_ENV === "production" ? "1" : "0");
 if (embedEve === "1") {
 	const { startEmbeddedEveServer } = await import(
-		"./harness/eve/embeddedServer.js"
+		"./internal/agentRuntime/eve/embeddedServer.js"
 	);
 	startEmbeddedEveServer().catch((error) => {
 		console.error("Embedded eve server failed to start", error);

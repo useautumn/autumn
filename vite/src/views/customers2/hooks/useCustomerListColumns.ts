@@ -1,11 +1,12 @@
 import { type Feature, FeatureType } from "@autumn/shared";
-import { useMemo } from "react";
 import {
 	type ColumnGroup,
 	getVisibleUsageColumnsFromStorage,
 } from "@autumn/ui";
+import { useMemo } from "react";
 import {
 	BASE_COLUMN_IDS,
+	createBasePriceColumn,
 	createCustomerListColumns,
 	createProductVersionColumn,
 	createUsageColumn,
@@ -62,6 +63,7 @@ export function useCustomerListColumns({
 		const columnsWithVersion = [
 			...baseColumns.slice(0, insertAt),
 			createProductVersionColumn(),
+			createBasePriceColumn(),
 			...baseColumns.slice(insertAt),
 		];
 

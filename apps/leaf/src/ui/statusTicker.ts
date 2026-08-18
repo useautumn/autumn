@@ -1,7 +1,7 @@
+import { ms } from "@autumn/shared";
+import { differenceInMilliseconds } from "date-fns";
 import { formatTypingStatus, type ReplyTarget } from "./progress.js";
 
-// Generic "still working" verbs cycled during model inference, when there's no
-// concrete tool action to show — a calm rotation like the dashboard's.
 const THINKING_VERBS = [
 	"Thinking",
 	"Reasoning",
@@ -10,20 +10,16 @@ const THINKING_VERBS = [
 	"Putting it together",
 ];
 
-// Anti-flash pacing: a fast tool would otherwise blink its label for ~200ms
-// between two "Thinking…" renders. Every status change holds long enough to
-// read, and renders stay well under Slack's status rate limit.
-const MIN_RENDER_INTERVAL_MS = 2500;
-const ACTIVITY_HOLD_MS = 4000;
-const VERB_CYCLE_MS = 5000;
-const HEARTBEAT_MS = 500;
+// Prevent fast tools from flashing status labels while staying under Slack's
+// status rate limit.
+const MIN_RENDER_INTERVAL_MS = ms.seconds(2.5);
+const ACTIVITY_HOLD_MS = ms.seconds(4);
+const VERB_CYCLE_MS = ms.seconds(5);
+const HEARTBEAT_MS = ms.seconds(0.5);
 
 export type StatusTicker = {
-	/** Agent is mid-inference with nothing concrete to show — cycle generic verbs. */
 	thinking: () => void;
-	/** A tool/action ran — pin its label until the next inference settles. */
 	activity: (message: string) => void;
-	/** Tear down the interval; further updates are ignored. */
 	stop: () => void;
 };
 
@@ -49,15 +45,13 @@ export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
 		});
 	};
 
-	// One slow loop instead of eager renders: changes wait out the minimum
-	// interval, so rapid activity→thinking→activity flips never flash.
 	const tick = () => {
 		if (stopped) return;
 		const now = Date.now();
 		if (
 			mode === "thinking" &&
-			now - lastActivityAt >= ACTIVITY_HOLD_MS &&
-			now - lastVerbAt >= VERB_CYCLE_MS
+			differenceInMilliseconds(now, lastActivityAt) >= ACTIVITY_HOLD_MS &&
+			differenceInMilliseconds(now, lastVerbAt) >= VERB_CYCLE_MS
 		) {
 			desired = `${THINKING_VERBS[verbIndex % THINKING_VERBS.length]}…`;
 			verbIndex += 1;
@@ -66,7 +60,7 @@ export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
 		if (
 			desired &&
 			desired !== lastRendered &&
-			now - lastRenderAt >= MIN_RENDER_INTERVAL_MS
+			differenceInMilliseconds(now, lastRenderAt) >= MIN_RENDER_INTERVAL_MS
 		) {
 			send(desired);
 		}
@@ -98,7 +92,10 @@ export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
 			ensureLoop();
 			// Concrete work renders eagerly (respecting the minimum interval via
 			// the loop); the first one always lands immediately.
-			if (Date.now() - lastRenderAt >= MIN_RENDER_INTERVAL_MS) {
+			if (
+				differenceInMilliseconds(Date.now(), lastRenderAt) >=
+				MIN_RENDER_INTERVAL_MS
+			) {
 				send(desired);
 			}
 		},

@@ -1,6 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
-import { normalizeToolName } from "../../../agent/tools/toolPolicy.js";
+import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
 import { writeToPreviewTool } from "./toolRegistry.js";
 

@@ -29,7 +29,6 @@ export type BuildPricingToolPart = {
  * Preview org configuration for syncing pricing
  */
 export interface PreviewOrg {
-	apiKey: string;
 	orgId: string;
 	orgSlug: string;
 }

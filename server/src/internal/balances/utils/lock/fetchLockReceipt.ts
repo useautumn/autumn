@@ -12,6 +12,7 @@ export type LockReceipt = {
 	expires_at?: number | null;
 	region?: string | null;
 	overrideLockValue?: number | null;
+	properties?: Record<string, unknown> | null;
 	items: MutationLogItem[];
 };
 

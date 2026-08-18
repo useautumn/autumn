@@ -3,6 +3,7 @@ import type { AppEnv } from "@autumn/shared";
 import { executeAutumnMcpTool } from "./client.js";
 
 export type AutumnOrgContext = {
+	instructions?: string;
 	text: string;
 };
 
@@ -10,6 +11,18 @@ type ExecuteAutumnTool = typeof executeAutumnMcpTool;
 
 const toJsonBlock = ({ label, value }: { label: string; value: unknown }) =>
 	`${label}:\n\`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``;
+
+const withoutNotes = (value: unknown) => {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+	const { notes: _notes, ...rest } = value as Record<string, unknown>;
+	return rest;
+};
+
+const getNotes = (value: unknown) => {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return;
+	const notes = (value as Record<string, unknown>).notes;
+	return typeof notes === "string" && notes.trim() ? notes.trim() : undefined;
+};
 
 export const formatAutumnOrgContext = ({
 	agentRules,
@@ -22,7 +35,9 @@ export const formatAutumnOrgContext = ({
 }) => {
 	const sections: string[] = [];
 	if (agentRules !== undefined) {
-		sections.push(toJsonBlock({ label: "getAgentRules", value: agentRules }));
+		sections.push(
+			toJsonBlock({ label: "getAgentRules", value: withoutNotes(agentRules) }),
+		);
 	}
 	if (plans !== undefined) {
 		sections.push(toJsonBlock({ label: "listPlans", value: plans }));
@@ -92,7 +107,11 @@ export const loadAutumnOrgContext = async ({
 		plans: plansResult.status === "fulfilled" ? plansResult.value : undefined,
 	});
 
-	return text ? { text } : undefined;
+	const instructions =
+		agentRulesResult.status === "fulfilled"
+			? getNotes(agentRulesResult.value)
+			: undefined;
+	return text || instructions ? { instructions, text } : undefined;
 };
 
 export const autumnOrgContextService = {

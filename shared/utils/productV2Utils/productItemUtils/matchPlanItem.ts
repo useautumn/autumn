@@ -1,10 +1,13 @@
 import { BillingMethod } from "../../../api/products/components/billingMethod.js";
 import type { PlanItemFilter } from "../../../api/products/items/filter/planItemFilter.js";
+import { ResetInterval } from "../../../models/productModels/intervals/resetInterval.js";
 import {
 	type ProductItem,
 	UsageModel,
 } from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import { resetIntvToItemIntv } from "./convertProductItem/planItemIntervals.js";
 import {
+	billingToItemInterval,
 	itemToBillingInterval,
 	itemToBillingIntervalCount,
 } from "./itemIntervalUtils.js";
@@ -37,8 +40,9 @@ export const matchesPlanItemFilter = ({
 
 	if (
 		filter.interval !== undefined &&
-		String(itemToBillingInterval({ item })) !== String(filter.interval)
-		// String(itemToEntInterval({ item })) !== String(filter.interval)
+		billingToItemInterval({
+			billingInterval: itemToBillingInterval({ item }),
+		}) !== resetIntvToItemIntv(filter.interval as ResetInterval)
 	)
 		return false;
 

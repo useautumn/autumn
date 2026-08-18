@@ -6,12 +6,14 @@ import {
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { updateProduct } from "../../../product/actions/updateProduct.js";
+import { buildLicenseParentTargetCustomize } from "@/internal/licenses/actions/propagation/buildLicenseParentCustomize.js";
+import { prepareLicenseParentPropagation } from "@/internal/licenses/actions/propagation/prepareLicenseParentPropagation.js";
 import {
 	createPlanMigrationDraft,
 	getVariantMigrationSnapshots,
 	validateNoDirectVariantMigrationDrafts,
 } from "../../../product/actions/updateProduct/createPlanMigrationDraft.js";
+import { updateProduct } from "../../../product/actions/updateProduct.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
@@ -81,6 +83,16 @@ export const handleUpdatePlanV2 = createRoute({
 			variantsBefore,
 		});
 
+		// Snapshot parents BEFORE the write: their effective license plans are
+		// rebased by updateProduct, and the draft needs the pre-update baseline.
+		const parentsBefore = fromPlan
+			? await prepareLicenseParentPropagation({
+					ctx,
+					child: initialFullProduct,
+					targets: update_license_parents,
+				})
+			: null;
+
 		await updateProduct({
 			ctx,
 			productId: plan_id,
@@ -94,7 +106,7 @@ export const handleUpdatePlanV2 = createRoute({
 
 		const latestPlanId = new_plan_id || plan_id;
 		let responseFullProduct = null;
-		let migrationId: string | undefined;
+		let migrationIds: string[] = [];
 		if (fromPlan) {
 			const after = await ProductService.getFull({
 				db: ctx.db,
@@ -110,7 +122,20 @@ export const handleUpdatePlanV2 = createRoute({
 					product: after,
 					features: ctx.features,
 				});
-				migrationId = await createPlanMigrationDraft({
+				const licenseParents = (parentsBefore?.selectedParents ?? [])
+					.filter(({ hasCustomers }) => hasCustomers)
+					.map(({ parent, link, currentEffectivePlan }) => ({
+						planId: parent.id,
+						version: parent.version,
+						customize: buildLicenseParentTargetCustomize({
+							currentChildPlan: fromPlan,
+							editedChildPlan: toPlan,
+							currentEffectivePlan,
+							customized: link.customized,
+						}).migrationCustomize,
+					}));
+
+				migrationIds = await createPlanMigrationDraft({
 					ctx,
 					current: initialFullProduct,
 					fromPlan,
@@ -118,14 +143,15 @@ export const handleUpdatePlanV2 = createRoute({
 					mode: all_versions ? "all_versions" : "version",
 					planId: plan_id,
 					selectedVariantIds,
+					licenseParents,
 					toPlan,
 					variantsBefore,
 				});
 			}
 		}
 
-		// Fetch the latest version (no `version` pin): when a new version was
-		// created, newBase must be it — not the version that was edited.
+		// No `version` pin: when a new version was created, it must win over the
+		// version that was edited.
 		const latestFullProduct =
 			responseFullProduct ??
 			(await ProductService.getFull({
@@ -140,9 +166,14 @@ export const handleUpdatePlanV2 = createRoute({
 			features: ctx.features,
 		});
 
+		const [firstMigrationId] = migrationIds;
 		return c.json(
-			migrationId
-				? { ...latestPlan, migration: { id: migrationId } }
+			firstMigrationId
+				? {
+						...latestPlan,
+						migration: { id: firstMigrationId },
+						migrations: migrationIds.map((id) => ({ id })),
+					}
 				: latestPlan,
 		);
 	},

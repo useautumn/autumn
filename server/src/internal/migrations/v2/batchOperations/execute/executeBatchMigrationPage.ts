@@ -1,12 +1,14 @@
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCustomerEntitlementsForPage } from "../actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
+import { runLicenseEntitlementOp } from "../actions/runLicenseEntitlementOp.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import { markPageItemRuns } from "./claim/index.js";
 import type {
 	BatchMigrationInsertedItem,
 	BatchMigrationPageCustomer,
 	BatchMigrationPageResult,
+	BatchMigrationRemovedItem,
 } from "./types/batchMigrationExecutionTypes.js";
 import { BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS } from "./utils/batchMigrationExecutionConstants.js";
 import {
@@ -42,14 +44,16 @@ export const executeBatchMigrationPage = async ({
 	phases?: BatchMigrationPagePhases;
 }): Promise<BatchMigrationPageResult> => {
 	if (customers.length === 0)
-		return { succeeded: [], skipped: [], insertedItems: [] };
+		return { succeeded: [], skipped: [], insertedItems: [], removedItems: [] };
 
 	const pageInternalIds = customers.map((customer) => customer.internalId);
 	const now = Date.now();
 	const insertedItems: BatchMigrationInsertedItem[] = [];
+	const removedItems: BatchMigrationRemovedItem[] = [];
 	// Customers a patch cannot serve (e.g. no usable reset anchor) drop
 	// from succeeded into skipped — the per-customer lane's territory.
 	const excludedIds = new Set<string>();
+	const repointedIds = new Set<string>();
 
 	for (const patch of plan.patches) {
 		for (const add of patch.addEntitlementOps) {
@@ -77,11 +81,44 @@ export const executeBatchMigrationPage = async ({
 				},
 			});
 		}
+
+		for (const operation of patch.licenseEntitlementOps) {
+			const result = await runLicenseEntitlementOp({
+				db: ctx.db,
+				features: ctx.features,
+				scope: patch.scope,
+				internalCustomerIds: pageInternalIds,
+				operation,
+				now,
+				phases,
+			});
+			for (const id of result.excludedInternalCustomerIds) {
+				excludedIds.add(id);
+			}
+			for (const id of result.changedInternalCustomerIds) {
+				repointedIds.add(id);
+			}
+			insertedItems.push(...result.insertedItems);
+			removedItems.push(...result.removedItems);
+			ctx.logger.debug("batch-migration: license operation", {
+				data: {
+					opIndex: patch.opIndex,
+					licensePlanId: operation.licensePlanId,
+					operation: operation.type,
+					inserted: result.insertedItems.length,
+					removed: result.removedItems.length,
+					excluded: result.excludedInternalCustomerIds.length,
+				},
+			});
+		}
 	}
 
-	const succeeded = new Set(
-		insertedItems.map((item) => item.internalCustomerId),
-	);
+	// A repointed pool is a real change even with no assignment rows inserted;
+	// leaving it out of `succeeded` would skip its cache invalidation.
+	const succeeded = new Set([
+		...insertedItems.map((item) => item.internalCustomerId),
+		...repointedIds,
+	]);
 	for (const id of excludedIds) succeeded.delete(id);
 	const skippedIds = pageInternalIds.filter((id) => !succeeded.has(id));
 
@@ -111,5 +148,6 @@ export const executeBatchMigrationPage = async ({
 			(customer) => !succeeded.has(customer.internalId),
 		),
 		insertedItems,
+		removedItems,
 	};
 };

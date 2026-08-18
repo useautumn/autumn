@@ -13,6 +13,7 @@ import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
+	useHasContentChanges,
 	useIsCusPlanEditor,
 	useIsMetadataOnlyChange,
 	useProductStore,
@@ -65,6 +66,7 @@ export const SaveChangesBar = ({
 
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const isMetadataOnlyChange = useIsMetadataOnlyChange();
+	const planHasContentChanges = useHasContentChanges();
 	let saveButtonText = "Save";
 	if (isCusPlanEditor) {
 		saveButtonText = "Save and Return";
@@ -114,14 +116,14 @@ export const SaveChangesBar = ({
 			}
 
 			const needsVersionChoice =
-				licenseHasChanges || (planHasChanges && !isMetadataOnlyChange);
+				licenseHasChanges || (planHasContentChanges && !isMetadataOnlyChange);
 			const hasCustomers = preview.has_customers && needsVersionChoice;
 			const hasParentPropagationDecision =
-				planHasChanges && previewHasLicenseParentTargets(preview);
+				planHasContentChanges && previewHasLicenseParentTargets(preview);
 			if (
 				hasCustomers ||
 				hasParentPropagationDecision ||
-				(planHasChanges && variants.length > 0)
+				(planHasContentChanges && variants.length > 0)
 			) {
 				setShowNewVersionDialog(true);
 				return;

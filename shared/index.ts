@@ -38,6 +38,8 @@ export * from "./api/versionUtils/versionUtils";
 export * from "./api/webhooks/index";
 // Auth Models
 export * from "./db/auth-schema";
+// DuckDB / MotherDuck cache schemas
+export * from "./duckdb/ceBalancesCacheTable";
 export * from "./enums/APIVersion";
 export * from "./enums/AttachErrCode";
 export * from "./enums/ErrCode";

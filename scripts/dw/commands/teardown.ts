@@ -7,7 +7,8 @@ import { isPlainCanonical } from "../helpers/entry.ts";
 import { removeEnvLocalFiles } from "../helpers/env-files.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
 import { deleteBranch } from "../helpers/neon.ts";
-import { deleteReservedDomain } from "../helpers/ngrok.ts";
+import { stopPublicAccess } from "../helpers/cloudflare.ts";
+import { releaseNgrokIfPresent } from "../helpers/ngrok.ts";
 import { unregisterPortlessAliases } from "../helpers/portless.ts";
 import {
 	hasOtherActiveWorktrees,
@@ -83,12 +84,8 @@ async function teardownEntry(entry: RegistryEntry): Promise<void> {
 	if (entry.branchName) {
 		deleteBranch(entry.branchName, { projectId: entry.neonProjectId });
 	}
-	if (entry.reservedViteDomainId) {
-		await deleteReservedDomain(entry.reservedViteDomainId);
-	}
-	if (entry.reservedDomainId) {
-		await deleteReservedDomain(entry.reservedDomainId);
-	}
+	stopPublicAccess({ worktreeNum: entry.worktreeNum });
+	await releaseNgrokIfPresent(entry);
 	if (entry.worktreeNum > 1) {
 		unregisterPortlessAliases(entry.worktreeNum);
 		killTmuxSession(tmuxSessionName(entry.worktreeNum));

@@ -25,6 +25,9 @@ export interface CombinedVariantMigrationTarget {
 
 export interface AllVersionsUpdateMigrationTarget {
 	id: string;
+	/** Pins the op to one version. Targets without it sweep every version;
+	 * license-parent targets set it because a link pins the version it offers. */
+	version?: number;
 	customize: DiffedCustomizePlanV1 | null;
 }
 
@@ -35,6 +38,15 @@ export const planDiffHasBillingChanges = (
 ): boolean => {
 	if (diff.price !== undefined) return true;
 	if (diff.add_items?.some((item) => item.price != null)) return true;
+	if (
+		diff.upsert_licenses?.some(
+			(license) =>
+				license.customize?.price != null ||
+				license.customize?.add_items?.some((item) => item.price != null),
+		)
+	) {
+		return true;
+	}
 	// Remove filters can omit billing_method even when priced, so check the
 	// source items by feature_id rather than the lossy filter.
 	const removedFeatureIds = new Set(
@@ -57,6 +69,9 @@ const migratablePlanDiff = (
 		: {}),
 	...(diff.update_items !== undefined
 		? { update_items: diff.update_items }
+		: {}),
+	...(diff.upsert_licenses !== undefined
+		? { upsert_licenses: diff.upsert_licenses }
 		: {}),
 });
 
@@ -218,11 +233,19 @@ export const buildAllVersionsUpdateMigrationDraft = ({
 	const ops = groupTargetsByCustomize(targets).map(
 		({ customize, targets }): UpdatePlanOp => {
 			const ids = targets.map((target) => target.id);
+			const pinnedVersions = new Set(targets.map((target) => target.version));
+			const sharedVersion =
+				pinnedVersions.size === 1 ? [...pinnedVersions][0] : undefined;
 			return {
 				type: "update_plan",
 				plan_filter: withCustomGuard({
 					includeCustom,
-					planFilter: { plan_id: planMatcher(ids) },
+					planFilter: {
+						plan_id: planMatcher(ids),
+						// Only when every target in the group pins the SAME version; a
+						// mixed group has to stay version-less to stay correct.
+						...(sharedVersion === undefined ? {} : { version: sharedVersion }),
+					},
 				}),
 				customize,
 			};

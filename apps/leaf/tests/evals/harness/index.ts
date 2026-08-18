@@ -22,7 +22,6 @@ export type {
 	EvalTurnResult,
 } from "./createEvalContext.js";
 export { createEvalContext } from "./createEvalContext.js";
-export { createClaudeManagedLiveDriver } from "./drivers/claudeManagedLiveAgent.js";
 export { createGenericMcpAgentDriver } from "./drivers/genericMcpAgent.js";
 export {
 	createLeafAgentDriver,

@@ -4,24 +4,23 @@ import {
 	buildFlagChanges,
 } from "@/internal/billing/v2/actions/buildBillingChanges";
 import type { PreviewMigrateCustomer } from "@/internal/migrations/v2/preview/previewMigrateCustomer/types/index.js";
-import type {
-	BatchMigrationInsertedItem,
-	BatchMigrationPageCustomer,
-} from "../execute/types/batchMigrationExecutionTypes.js";
+import type { BatchMigrationPageCustomer } from "../execute/types/batchMigrationExecutionTypes.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
+import type { ChangedItem } from "./buildBatchMigrationWebhookRecords/buildBatchMigrationWebhookRecords.js";
 import { insertedItemsToPlanChange } from "./buildBatchMigrationWebhookRecords/insertedItemsToPlanChange.js";
 import {
 	buildEntitlementLookup,
+	buildOneOffByPlanId,
 	toCustomerItemChanges,
 } from "./buildMigrationItemEvent/toCustomerItemChanges.js";
 
 const groupByCustomer = ({
-	insertedItems,
+	changedItems,
 }: {
-	insertedItems: BatchMigrationInsertedItem[];
-}): Map<string, BatchMigrationInsertedItem[]> => {
-	const grouped = new Map<string, BatchMigrationInsertedItem[]>();
-	for (const item of insertedItems) {
+	changedItems: ChangedItem[];
+}): Map<string, ChangedItem[]> => {
+	const grouped = new Map<string, ChangedItem[]>();
+	for (const item of changedItems) {
 		const existing = grouped.get(item.internalCustomerId) ?? [];
 		existing.push(item);
 		grouped.set(item.internalCustomerId, existing);
@@ -31,29 +30,24 @@ const groupByCustomer = ({
 
 /**
  * Per-customer migration response for a page, without loading any customer:
- * the candidate dedup guarantees an inserted feature was ABSENT beforehand,
- * so the pre-migration state is empty by construction and the inserted rows
- * are exactly the diff. Same shape the per-customer lane emits.
+ * the changed rows ARE the diff — created rows carry the after-state, deleted
+ * rows the before-state (a replace contributes one of each). Same shape the
+ * per-customer lane emits.
  */
 export const buildBatchMigrationItemResponses = ({
 	plan,
 	customers,
-	insertedItems,
+	changedItems,
 	features,
 }: {
 	plan: BatchMigrationExecutionPlan;
 	customers: BatchMigrationPageCustomer[];
-	insertedItems: BatchMigrationInsertedItem[];
+	changedItems: ChangedItem[];
 	features: Feature[];
 }): Map<string, PreviewMigrateCustomer> => {
 	const entitlementLookup = buildEntitlementLookup({ plan });
-	const itemsByCustomer = groupByCustomer({ insertedItems });
-	const oneOffByPlanId = new Map(
-		plan.patches.map((patch) => [
-			patch.fromProduct.id,
-			isOneOffProduct({ prices: patch.fromProduct.prices }),
-		]),
-	);
+	const itemsByCustomer = groupByCustomer({ changedItems });
+	const oneOffByPlanId = buildOneOffByPlanId({ plan });
 
 	return new Map(
 		customers.map((customer) => {
@@ -91,12 +85,12 @@ export const buildBatchMigrationItemResponses = ({
 				customer_id: customer.id ?? customer.internalId,
 				plan_changes: planChanges,
 				balance_changes: buildBalanceChanges({
-					beforeBalances: {},
-					afterBalances: changes.balances,
+					beforeBalances: changes.beforeBalances,
+					afterBalances: changes.afterBalances,
 				}),
 				flag_changes: buildFlagChanges({
-					beforeFlags: {},
-					afterFlags: changes.flags,
+					beforeFlags: changes.beforeFlags,
+					afterFlags: changes.afterFlags,
 				}),
 			};
 			return [customer.internalId, preview];

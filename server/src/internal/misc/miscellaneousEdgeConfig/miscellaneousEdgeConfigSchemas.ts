@@ -20,6 +20,9 @@ export const MiscellaneousEdgeConfigSchema = z.object({
 	/** Global switch: concurrent same-key pure-GET subject reads share one
 	 *  in-flight fetch. */
 	subjectReadSingleflight: z.boolean().default(true),
+	/** Kill switch for the MotherDuck balance-cache refresh cron. Refresh runs
+	 *  by default wherever the RW token exists; flip this to stop it. */
+	disableMotherduckCacheRefresh: z.boolean().default(false),
 });
 
 export type MiscellaneousEdgeConfig = z.infer<

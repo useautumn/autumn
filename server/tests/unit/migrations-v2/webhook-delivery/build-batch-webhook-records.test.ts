@@ -73,6 +73,7 @@ const buildPlan = ({
 			opIndex: 0,
 			scope: buildOperationScope({ internalProductId: "prod_pro_internal" }),
 			fromProduct: fromProduct({ prices }),
+			licenseEntitlementOps: [],
 			addEntitlementOps: [
 				{
 					entitlement,
@@ -125,6 +126,7 @@ describe("buildBatchMigrationWebhookRecords", () => {
 					customer({ internalId: "cus_2", id: "customer-2" }),
 				],
 				skipped: [customer({ internalId: "cus_3", id: "customer-3" })],
+				removedItems: [],
 				insertedItems: [
 					insertedItem({
 						internalCustomerId: "cus_1",
@@ -170,6 +172,7 @@ describe("buildBatchMigrationWebhookRecords", () => {
 			pageResult: {
 				succeeded: [customer({ internalId: "cus_1", id: "customer-1" })],
 				skipped: [],
+				removedItems: [],
 				insertedItems: [
 					insertedItem({
 						internalCustomerId: "cus_1",
@@ -193,6 +196,7 @@ describe("buildBatchMigrationWebhookRecords", () => {
 			pageResult: {
 				succeeded: [customer({ internalId: "cus_1", id: "customer-1" })],
 				skipped: [],
+				removedItems: [],
 				insertedItems: [
 					insertedItem({
 						internalCustomerId: "cus_1",
@@ -217,12 +221,65 @@ describe("buildBatchMigrationWebhookRecords", () => {
 		expect(entityLevel?.planChanges).toHaveLength(1);
 	});
 
+	test("a replace pair emits one plan change with deleted + created item changes", () => {
+		const fromEntitlement = {
+			...entitlement,
+			id: "ent_words_from",
+			allowance: 50,
+		} as unknown as EntitlementWithFeature;
+
+		const records = buildBatchMigrationWebhookRecords({
+			pageResult: {
+				succeeded: [customer({ internalId: "cus_1", id: "customer-1" })],
+				skipped: [],
+				insertedItems: [
+					insertedItem({
+						internalCustomerId: "cus_1",
+						customerProductId: "cp_a",
+					}),
+				],
+				removedItems: [
+					{
+						internalCustomerId: "cus_1",
+						customerProductId: "cp_a",
+						entityId: null,
+						planId: "pro",
+						featureId: "words",
+						entitlement: fromEntitlement,
+						granted: 50,
+						remaining: 20,
+						status: CusProductStatus.Active,
+						startsAt: 1_700_000_000_000,
+						canceledAt: null,
+						endedAt: null,
+						trialEndsAt: null,
+					},
+				],
+			},
+			plan,
+			features,
+		});
+
+		expect(records).toHaveLength(1);
+		expect(records[0].planChanges).toHaveLength(1);
+		expect(
+			records[0].planChanges[0].item_changes.map((change) => ({
+				action: change.action,
+				feature_id: change.feature_id,
+			})),
+		).toEqual([
+			{ action: "created", feature_id: "words" },
+			{ action: "deleted", feature_id: "words" },
+		]);
+	});
+
 	test("customers with no inserted rows and skipped customers produce nothing", () => {
 		const records = buildBatchMigrationWebhookRecords({
 			pageResult: {
 				succeeded: [customer({ internalId: "cus_1", id: "customer-1" })],
 				skipped: [customer({ internalId: "cus_2", id: "customer-2" })],
 				insertedItems: [],
+				removedItems: [],
 			},
 			plan,
 			features,

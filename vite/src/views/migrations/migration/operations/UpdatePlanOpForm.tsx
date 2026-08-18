@@ -22,7 +22,9 @@ import {
 	PlusIcon,
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
+import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
 import {
@@ -38,6 +40,7 @@ import {
 	type OperationSheetMode,
 } from "./MigrationOperationSheet";
 import { RemoveItemRows } from "./RemoveItemRows";
+import { UpsertLicenseRows } from "./UpsertLicenseRows";
 
 function useVersionOptions(planFilter: UpdatePlanOp["plan_filter"]) {
 	const { products } = useProductsQuery({ allVersions: true });
@@ -76,6 +79,7 @@ export function UpdatePlanOpForm({
 	const { products } = useProductsQuery();
 	const versionOptions = useVersionOptions(value.plan_filter);
 	const { features } = useFeaturesQuery();
+	const { licenseProducts } = useLicenseProductsQuery();
 
 	const [sheetOpen, setSheetOpen] = useState(false);
 	const [sheetMode, setSheetMode] = useState<OperationSheetMode>("add-feature");
@@ -110,6 +114,15 @@ export function UpdatePlanOpForm({
 	const customize = value.customize;
 	const addItems = customize?.add_items ?? [];
 	const planVersionActionLabel = getPlanVersionActionLabel(value);
+
+	const customizedLicenseIds = new Set(
+		(customize?.upsert_licenses ?? []).map(
+			(license) => license.license_plan_id,
+		),
+	);
+	const licenseSuggestions = licenseProducts.filter(
+		(license) => !customizedLicenseIds.has(license.id),
+	);
 
 	const openSheet = (mode: OperationSheetMode, itemIndex?: number) => {
 		setSheetMode(mode);
@@ -280,6 +293,30 @@ export function UpdatePlanOpForm({
 				</div>
 			))}
 
+			{(customize?.upsert_licenses ?? []).map((license, index) => (
+				<UpsertLicenseRows
+					initialProduct={initialProduct}
+					key={`license-${license.license_plan_id}`}
+					license={license}
+					onChange={(updated) => {
+						const licenses = [...(customize?.upsert_licenses ?? [])];
+						licenses[index] = updated;
+						update({ customize: { ...customize, upsert_licenses: licenses } });
+					}}
+					onRemove={() => {
+						const licenses = (customize?.upsert_licenses ?? []).filter(
+							(_, i) => i !== index,
+						);
+						update({
+							customize: {
+								...customize,
+								upsert_licenses: licenses.length > 0 ? licenses : undefined,
+							},
+						});
+					}}
+				/>
+			))}
+
 			{(customize?.remove_items ?? []).map((item, index) => (
 				<RemoveItemRows
 					key={`remove-${index}`}
@@ -347,6 +384,26 @@ export function UpdatePlanOpForm({
 					>
 						Remove Item
 					</DropdownMenuItem>
+					{licenseSuggestions.map((license) => (
+						<DropdownMenuItem
+							closeOnClick
+							key={license.id}
+							onClick={() =>
+								update({
+									customize: {
+										...customize,
+										upsert_licenses: [
+											...(customize?.upsert_licenses ?? []),
+											{ license_plan_id: license.id, customize: {} },
+										],
+									},
+								})
+							}
+						>
+							<LicenseIcon size={14} className="shrink-0" />
+							Customize {license.name ?? license.id}
+						</DropdownMenuItem>
+					))}
 				</DropdownMenuContent>
 			</DropdownMenu>
 
