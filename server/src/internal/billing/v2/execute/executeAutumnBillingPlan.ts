@@ -199,12 +199,9 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
-	// 6. Upsert subscription (if provided)
-	if (autumnBillingPlan.upsertSubscription) {
-		await SubService.upsertByStripeId({
-			db,
-			subscription: autumnBillingPlan.upsertSubscription,
-		});
+	// 6. Upsert subscriptions (if provided)
+	for (const subscription of autumnBillingPlan.upsertSubscriptions ?? []) {
+		await SubService.upsertByStripeId({ db, subscription });
 	}
 
 	// 7. Upsert invoice (if provided)
