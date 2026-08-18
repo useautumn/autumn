@@ -369,7 +369,7 @@ export const nominationQuery = ({
 	const customerScopeJoin = hasCreatedAtRange
 		? sql`
 			SEMI JOIN main.customers c
-				ON c.internal_id = internal_customer_id
+				ON c.internal_id = ce_balance_totals.internal_customer_id
 				AND c.org_id = ${orgId}
 				AND c.env = ${env}
 				${

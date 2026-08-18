@@ -1,7 +1,13 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { isCloudAgent } from "@autumn/env";
-import { log, fatal } from "./shell.ts";
+import {
+	BRANCH_NAME_RE,
+	INACTIVITY_MS,
+	MAX_WORKTREE,
+	REGISTRY_PATH,
+} from "../constants.ts";
+import type { Registry, RegistryEntry } from "../types.ts";
 import {
 	getCanonicalWorktree,
 	getCurrentBranch,
@@ -10,13 +16,7 @@ import {
 	getWorktreeList,
 } from "./git.ts";
 import { deleteBranch } from "./neon.ts";
-import {
-	REGISTRY_PATH,
-	MAX_WORKTREE,
-	BRANCH_NAME_RE,
-	INACTIVITY_MS,
-} from "../constants.ts";
-import type { Registry, RegistryEntry } from "../types.ts";
+import { fatal, log } from "./shell.ts";
 
 export function shortHash(input: string): string {
 	return createHash("sha1").update(input).digest("hex").slice(0, 6);
@@ -95,13 +95,12 @@ export function refreshCanonicalEntry(
 		}
 		return next;
 	}
+	if (!gitBranch) fatal("could not determine current git branch");
 
-	if (
-		entry.gitBranch &&
-		entry.gitBranch !== gitBranch &&
-		entry.branchName
-	) {
-		log(`git branch changed (${entry.gitBranch} -> ${gitBranch}), resetting neon branch`);
+	if (entry.gitBranch && entry.gitBranch !== gitBranch && entry.branchName) {
+		log(
+			`git branch changed (${entry.gitBranch} -> ${gitBranch}), resetting neon branch`,
+		);
 		deleteBranch(entry.branchName, { projectId: entry.neonProjectId });
 		next.branchId = undefined;
 		next.databaseUrl = undefined;
@@ -164,7 +163,7 @@ export function registerCurrentWorktree(): RegistryEntry {
 	const cwd = getCurrentWorktree();
 	const gitBranch = getCurrentBranch();
 	const defaultBranch = getDefaultBranch();
-	let registry = reconcile(loadRegistry());
+	const registry = reconcile(loadRegistry());
 
 	let entry = registry[cwd];
 	if (!entry) {
@@ -175,17 +174,18 @@ export function registerCurrentWorktree(): RegistryEntry {
 			gitBranch,
 			defaultBranch,
 		);
-		const branchName =
-			worktreeNum === 1
-				? onCanonical
-					? deriveCanonicalBranchName(cwd, gitBranch)
-					: undefined
-				: deriveBranchName(cwd, worktreeNum);
+		let branchName: string | undefined;
+		if (worktreeNum === 1 && onCanonical) {
+			if (!gitBranch) fatal("could not determine current git branch");
+			branchName = deriveCanonicalBranchName(cwd, gitBranch);
+		} else if (worktreeNum !== 1) {
+			branchName = deriveBranchName(cwd, worktreeNum);
+		}
 		entry = {
 			path: cwd,
 			worktreeNum,
 			createdAt: Date.now(),
-			...(onCanonical && { gitBranch }),
+			...(onCanonical && gitBranch && { gitBranch }),
 			...(branchName && { branchName }),
 		};
 		log(`registered ${cwd} as worktree ${worktreeNum}`);
@@ -218,7 +218,9 @@ export function resolveCurrentEntryOrFatal(
 	const registry = loadRegistry();
 	const entry = registry[cwd];
 	if (!entry) {
-		fatal(`${action} requires a registered worktree — run 'bun dw setup' first`);
+		fatal(
+			`${action} requires a registered worktree — run 'bun dw setup' first`,
+		);
 	}
 	if (!opts.touch) return entry;
 	const next = { ...entry, lastUsedAt: Date.now() };
