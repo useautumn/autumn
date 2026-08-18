@@ -152,6 +152,8 @@ fi
 pass "setup uses ensurePublicAccess; no Cloud ngrok shells"
 
 UNIT_TESTS=1 env -u TESTS_ORG bun test \
+	"$ROOT/scripts/dw/helpers/emulate.test.ts" \
+	"$ROOT/scripts/dw/helpers/git.test.ts" \
 	"$ROOT/scripts/dw/helpers/ngrok.test.ts" \
 	"$ROOT/scripts/dw/helpers/machineId.test.ts" \
 	"$ROOT/scripts/dw/helpers/registry.test.ts" \

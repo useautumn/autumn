@@ -20,11 +20,7 @@ import { log, sh } from "./shell.ts";
 const EMULATE_LOG = join(homedir(), ".autumn-emulate.log");
 
 /** Browser-facing emulate origin. Never 127.0.0.1:4000 for Cloud browsers. */
-export function emulateGoogleUrl({
-	origin,
-}: {
-	origin?: string;
-}): string {
+export function emulateGoogleUrl({ origin }: { origin?: string }): string {
 	if (origin && /^https?:\/\//i.test(origin)) {
 		return origin.replace(/\/$/, "");
 	}
@@ -124,11 +120,7 @@ export function ensureEmulateRunning({
 	}
 }
 
-function ensureHeadlessEmulateRunning({
-	origin,
-}: {
-	origin?: string;
-}): void {
+function ensureHeadlessEmulateRunning({ origin }: { origin?: string }): void {
 	const loopback = `http://127.0.0.1:${EMULATE_PORT}`;
 	const publicBase = origin
 		? emulateGoogleUrl({ origin })
@@ -141,7 +133,9 @@ function ensureHeadlessEmulateRunning({
 		killPidFromFile(EMULATE_PID_FILE);
 	}
 	if (!ensureEmulateBinary()) {
-		console.error("[dw] emulate binary missing; Google sign-in will hit real Google");
+		console.error(
+			"[dw] emulate binary missing; Google sign-in will hit real Google",
+		);
 		return;
 	}
 
