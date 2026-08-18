@@ -8,6 +8,7 @@ import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
 import { cycleAnchorSourcesSql } from "@/internal/migrations/v2/batchOperations/actions/utils/cycleAnchorSql.js";
+import { pageCustomerIdsCte } from "@/internal/migrations/v2/batchOperations/actions/utils/pageCustomerIdsSql.js";
 import { rowIsUnpaidSql } from "@/internal/migrations/v2/batchOperations/actions/utils/rowIsUnpaidSql.js";
 import {
 	type OperationScope,
@@ -45,19 +46,7 @@ export type ReplaceCandidateRow = CycleEnrichmentCandidate & {
 	liveNextResetAt: number | null;
 };
 
-/** Selects scoped live from-rows and cycle anchors; selecting by from-id
- * makes replay idempotent. */
-export const selectReplaceCandidateRows = async ({
-	db,
-	internalCustomerIds,
-	scope,
-	entitlement,
-	fromEntitlementIds,
-	includeAnchorSources,
-	afterCustomerProductId,
-	limit,
-}: {
-	db: DrizzleCli;
+type SelectReplaceCandidateRowsArgs = {
 	internalCustomerIds: string[];
 	scope: OperationScope;
 	/** The minted to-entitlement; drives the sibling anchor's interval match. */
@@ -66,11 +55,19 @@ export const selectReplaceCandidateRows = async ({
 	includeAnchorSources: boolean;
 	afterCustomerProductId?: string;
 	limit: number;
-}): Promise<ReplaceCandidateRow[]> => {
-	if (internalCustomerIds.length === 0 || fromEntitlementIds.length === 0) {
-		return [];
-	}
+};
 
+/** Selects scoped live from-rows and cycle anchors; selecting by from-id
+ * makes replay idempotent. */
+export const buildReplaceCandidateRowsQuery = ({
+	internalCustomerIds,
+	scope,
+	entitlement,
+	fromEntitlementIds,
+	includeAnchorSources,
+	afterCustomerProductId,
+	limit,
+}: SelectReplaceCandidateRowsArgs) => {
 	const targetInterval = String(entitlement.interval ?? EntInterval.Lifetime);
 	const targetIntervalCount = entitlement.interval_count ?? 1;
 	const anchors = cycleAnchorSourcesSql({
@@ -82,7 +79,8 @@ export const selectReplaceCandidateRows = async ({
 		keepLiveRowAnchor: true,
 	});
 
-	const rows = await db.execute(sql`
+	return sql`
+		WITH ${pageCustomerIdsCte({ internalCustomerIds })}
 		SELECT
 			live.id AS "customerEntitlementId",
 			cp.id AS "customerProductId",
@@ -100,7 +98,9 @@ export const selectReplaceCandidateRows = async ({
 			${anchors.siblingAnchorColumn} AS "siblingResetCycleAnchor",
 			live.balance AS "liveBalance",
 			live.next_reset_at AS "liveNextResetAt"
-		FROM customer_products AS cp
+		FROM page
+		INNER JOIN customer_products AS cp
+			ON cp.internal_customer_id = page.internal_customer_id
 		INNER JOIN customer_entitlements AS live
 			ON live.customer_product_id = cp.id
 			AND live.entitlement_id IN (${sqlList({ values: fromEntitlementIds })})
@@ -110,8 +110,7 @@ export const selectReplaceCandidateRows = async ({
 			ON entity.internal_id = cp.internal_entity_id
 		${anchors.siblingJoin}
 		${anchors.subscriptionJoin}
-		WHERE cp.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
-			AND ${operationScopeSql({ scope })}
+		WHERE ${operationScopeSql({ scope })}
 			AND ${rowIsUnpaidSql({
 				customerProductId: sql`cp.id`,
 				entitlementId: sql`live.entitlement_id`,
@@ -119,7 +118,23 @@ export const selectReplaceCandidateRows = async ({
 			${afterCustomerProductId ? sql`AND cp.id > ${afterCustomerProductId}` : sql``}
 		ORDER BY cp.id
 		LIMIT ${limit}
-	`);
+	`;
+};
+
+export const selectReplaceCandidateRows = async ({
+	db,
+	...args
+}: SelectReplaceCandidateRowsArgs & {
+	db: DrizzleCli;
+}): Promise<ReplaceCandidateRow[]> => {
+	if (
+		args.internalCustomerIds.length === 0 ||
+		args.fromEntitlementIds.length === 0
+	) {
+		return [];
+	}
+
+	const rows = await db.execute(buildReplaceCandidateRowsQuery(args));
 
 	return rows.map((row) => {
 		const parsed = ReplaceCandidateRowSchema.parse(row);

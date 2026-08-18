@@ -229,6 +229,7 @@ export const executeBatchMigrationPage = async ({
 						skippedInternalCustomerIds: skippedIds,
 					}),
 				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
+				{ forceCustomPlan: true },
 			),
 	});
 

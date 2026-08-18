@@ -46,6 +46,7 @@ export const removeLicenseEntitlementsForPage = async ({
 						features,
 					}),
 				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
+				{ forceCustomPlan: true },
 			),
 	});
 

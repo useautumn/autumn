@@ -13,6 +13,7 @@ import type { OperationScope } from "../scope/operationScope.js";
 import { operationScopeSql } from "../scope/operationScope.js";
 import { canonicalPoolLateralSql } from "./licensePoolSql.js";
 import { cycleAnchorSourcesSql } from "./utils/cycleAnchorSql.js";
+import { pageCustomerIdsCte } from "./utils/pageCustomerIdsSql.js";
 
 const nullableNumeric = z.preprocess(
 	(value) => (value === null || value === undefined ? null : Number(value)),
@@ -181,6 +182,7 @@ export async function selectLicenseCandidateRows({
 	});
 
 	const rows = await db.execute(sql`
+		WITH ${pageCustomerIdsCte({ internalCustomerIds })}
 		SELECT
 			${matched.customerEntitlementId} AS "customerEntitlementId",
 			assignment.id AS "customerProductId",
@@ -203,7 +205,9 @@ export async function selectLicenseCandidateRows({
 			${anchors.siblingAnchorColumn} AS "siblingResetCycleAnchor",
 			${matched.liveBalance} AS "liveBalance",
 			${matched.liveNextResetAt} AS "liveNextResetAt"
-		FROM customer_products AS assignment
+		FROM page
+		INNER JOIN customer_products AS assignment
+			ON assignment.internal_customer_id = page.internal_customer_id
 		${canonicalPoolLateralSql({ licensePlanId, columns: sql`pool.*` })}
 		INNER JOIN customer_products AS cp
 			ON cp.id = pool.parent_customer_product_id
@@ -214,8 +218,7 @@ export async function selectLicenseCandidateRows({
 			ON entity.internal_id = assignment.internal_entity_id
 		${anchors.siblingJoin}
 		${anchors.subscriptionJoin}
-		WHERE assignment.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
-			AND assignment.internal_entity_id IS NOT NULL
+		WHERE assignment.internal_entity_id IS NOT NULL
 			AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
 			AND ${operationScopeSql({ scope })}
 			${afterCustomerProductId ? sql`AND assignment.id > ${afterCustomerProductId}` : sql``}
