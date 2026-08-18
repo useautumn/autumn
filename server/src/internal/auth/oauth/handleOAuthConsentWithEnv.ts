@@ -66,14 +66,19 @@ export const getOAuthConsentRequestedScopesFromFields = (
 	};
 };
 
-const jsonOAuthError = ({ error }: { error: RecaseError }) =>
+const jsonOAuthError = ({
+	code,
+	description,
+	status,
+}: {
+	code: string;
+	description: string;
+	status: number;
+}) =>
 	new Response(
-		JSON.stringify({
-			error: "invalid_scope",
-			error_description: error.message,
-		}),
+		JSON.stringify({ error: code, error_description: description }),
 		{
-			status: error.statusCode,
+			status,
 			headers: { "Content-Type": "application/json" },
 		},
 	);
@@ -149,34 +154,44 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 		});
 	}
 
+	// better-auth's consent endpoint only requires a session, not an active
+	// organization, so forwarding an accept we cannot narrow would let it record
+	// the client's full requested scopes and issue a code.
 	const principal = await resolveConsentPrincipal(c.req.raw.headers);
+	if (!principal) {
+		return jsonOAuthError({
+			code: "access_denied",
+			description:
+				"Sign in and select an active organization to authorize this application.",
+			status: 403,
+		});
+	}
 
-	// Deliberate fall-through: with no session or no active organization there is
-	// nothing to narrow against, so the request goes to better-auth untouched.
-	// better-auth then has no session either, so it stops at its own login
-	// redirect rather than issuing a code — the un-narrowed scope never becomes
-	// a grant. The org-less-session case is left for the maintainer to tighten.
-	let narrowed: { grantedScopes: string[]; request: Request } | null = null;
-	if (principal) {
-		try {
-			narrowed = await narrowConsentScopes({
-				fields,
-				isJson,
-				principal,
-				request: c.req.raw,
+	let narrowed: { grantedScopes: string[]; request: Request };
+	try {
+		narrowed = await narrowConsentScopes({
+			fields,
+			isJson,
+			principal,
+			request: c.req.raw,
+		});
+	} catch (error) {
+		if (error instanceof RecaseError) {
+			return jsonOAuthError({
+				code: "invalid_scope",
+				description: error.message,
+				status: error.statusCode,
 			});
-		} catch (error) {
-			if (error instanceof RecaseError) return jsonOAuthError({ error });
-			throw error;
 		}
+		throw error;
 	}
 
 	const response = await runBetterAuthHandler({
-		request: narrowed?.request ?? c.req.raw,
+		request: narrowed.request,
 		route: "oauth2/consent",
 		context: { clientId },
 	});
-	if (!response.ok || !principal) return response;
+	if (!response.ok) return response;
 
 	const env = resolveConsentEnv({ clientId, fields });
 	if (!env || (await isAtmnOAuthClientId({ db, clientId }))) return response;
@@ -188,7 +203,7 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 		referenceId: principal.orgId,
 		env,
 		redirectUri: getRedirectUriFromFields(fields),
-		scopes: narrowed?.grantedScopes,
+		scopes: narrowed.grantedScopes,
 	});
 
 	return response;
