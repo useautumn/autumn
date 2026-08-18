@@ -870,11 +870,17 @@ const fanOutBlocks = ({
 /** The other writes approving this card will apply, in issue order. Each one
  * renders through the same body builder as a standalone card, so a grouped
  * attach looks exactly like an attach. */
+/** Which tense a grouped step's sentence uses. Pending and running cards read
+ * as in-progress; a resolved card reports what happened. */
+type StepTense = "done" | "failed" | "running";
+
 const withheldStepBlocks = ({
 	env,
+	tense,
 	toolArgs,
 }: {
 	env?: AppEnv;
+	tense: StepTense;
 	toolArgs?: Record<string, unknown>;
 }): CardChild[] =>
 	withheldWritesFromToolArgs(toolArgs).flatMap((write) => {
@@ -889,7 +895,7 @@ const withheldStepBlocks = ({
 			CardText(
 				`*${approvalTitle({ preview: write.preview, toolName: write.toolName })}*`,
 			),
-			CardText(`${phrases.running}`),
+			CardText(phrases[tense]),
 			...approvalPreviewBlocks({
 				env,
 				preview: write.preview,
@@ -905,11 +911,13 @@ const withheldStepBlocks = ({
 const approvalBodyBlocks = ({
 	env,
 	preview,
+	tense = "running",
 	toolArgs,
 	toolName,
 }: {
 	env?: AppEnv;
 	preview?: unknown;
+	tense?: StepTense;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }): CardChild[] => {
@@ -925,7 +933,7 @@ const approvalBodyBlocks = ({
 	}
 	return [
 		...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
-		...withheldStepBlocks({ env, toolArgs }),
+		...withheldStepBlocks({ env, tense, toolArgs }),
 	];
 };
 
@@ -1499,6 +1507,7 @@ export const approvalStatusCard = ({
 	const resolvedBody = approvalBodyBlocks({
 		env,
 		preview,
+		tense: status === "failed" ? "failed" : "done",
 		toolArgs,
 		toolName,
 	});

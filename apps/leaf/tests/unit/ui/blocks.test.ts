@@ -1482,3 +1482,39 @@ describe("resolved fan-out card keeps the whole group", () => {
 		},
 	);
 });
+
+// A grouped step must speak in the card's tense: "Attached" once resolved, not
+// a permanent "Attaching" that reads as still pending.
+describe("grouped steps follow the card state", () => {
+	const mixedGroup = {
+		env: AppEnv.Sandbox,
+		toolArgs: {
+			_eveWithheldWrites: [
+				{
+					input: {
+						request: { customer_id: "leaf-0001", plan_id: "automation_pack" },
+					},
+					requestId: "req_2",
+					toolName: "autumn__attach",
+				},
+			],
+			request: { customer_id: "leaf-0001", email: "new@x.com" },
+		},
+		toolName: "updateCustomer",
+	};
+
+	test("resolved card says the grouped attach was done", () => {
+		const rendered = JSON.stringify(
+			cardToBlockKit(approvalStatusCard({ ...mixedGroup, status: "approved" })),
+		);
+		expect(rendered).toContain("Attached");
+		expect(rendered).not.toContain("Attaching");
+	});
+
+	test("pending card still says the grouped attach is coming", () => {
+		const rendered = JSON.stringify(
+			cardToBlockKit(approvalCard({ ...mixedGroup, id: "p1" })),
+		);
+		expect(rendered).toContain("Attaching");
+	});
+});
