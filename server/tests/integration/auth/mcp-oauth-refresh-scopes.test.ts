@@ -26,7 +26,9 @@ test("MCP OAuth refresh narrows scopes and replays consumed-token retries", asyn
 	const session = await createDashboardSession(defaultCtx);
 	const clientId = generateId("oauth_client");
 	const consentId = generateId("oauth_consent");
-	const refreshToken = "r".repeat(32);
+	// The refresh replay cache keys on the request bytes for 30s, so a fixed
+	// token value would make a rerun replay the previous run's consumed grant.
+	const refreshToken = generateId("refresh");
 	const grantedScopes = getDefaultOAuthScopes([
 		Scopes.Organisation.Read,
 		"offline_access",
