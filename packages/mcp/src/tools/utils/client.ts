@@ -14,6 +14,7 @@ const parseBody = (text: string): unknown => {
 // ~150k tokens; an unguarded page (e.g. listCustomers limit 1000) can exceed
 // the model's context outright, hard-failing the whole turn.
 const MAX_RESPONSE_CHARS = 600_000;
+const RETRYABLE_STATUS_CODES = new Set([502, 503, 504]);
 
 const guardResponseSize = ({
 	body,
@@ -36,11 +37,13 @@ export const callAutumn = async ({
 	auth,
 	endpoint,
 	request,
+	retryable = false,
 	signal,
 }: {
 	auth: AutumnMcpAuth;
 	endpoint: string;
 	request: unknown;
+	retryable?: boolean;
 	signal?: AbortSignal | undefined;
 }) => {
 	const client = createAutumnClient(auth);
@@ -51,9 +54,24 @@ export const callAutumn = async ({
 	};
 	if (signal) init.signal = signal;
 
-	const response = await fetch(new URL(endpoint, client.baseUrl), init);
-	const text = await response.text();
-	const body = text ? parseBody(text) : null;
+	const execute = async () => {
+		const response = await fetch(new URL(endpoint, client.baseUrl), init);
+		const text = await response.text();
+		return { body: text ? parseBody(text) : null, response, text };
+	};
+	let result = await execute();
+	const transientConnectionFailure =
+		result.response.status === 500 &&
+		JSON.stringify(result.body).includes("Connection terminated unexpectedly");
+	if (
+		retryable &&
+		!signal?.aborted &&
+		(RETRYABLE_STATUS_CODES.has(result.response.status) ||
+			transientConnectionFailure)
+	) {
+		result = await execute();
+	}
+	const { body, response, text } = result;
 	if (!response.ok) {
 		throw new Error(
 			`Autumn API request failed (${response.status}): ${

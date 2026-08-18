@@ -1,16 +1,18 @@
 import type { AppEnv } from "@autumn/shared";
+import { db } from "../../../../../lib/db.js";
 import type {
 	AgentThreadRef,
 	AgentTurnParams,
 } from "../../../domain/agentTurnContext.js";
-import { buildAgentThreadKey } from "../../../sessions/agentThreadKey.js";
 import { adoptPostedEveSession } from "../../../eve/adoptPostedSession.js";
 import { type EveMessageContent, postEveMessage } from "../../../eve/client.js";
+import { deleteEveSession } from "../../../eve/repo.js";
 import {
 	initialEveSessionState,
 	saveEveSessionState,
 } from "../../../eve/sessionState.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
+import { buildAgentThreadKey } from "../../../sessions/agentThreadKey.js";
 
 export const startAgentTurn = async ({
 	auth,
@@ -38,6 +40,17 @@ export const startAgentTurn = async ({
 		inputResponses,
 		message: inputResponses ? undefined : message,
 		session,
+	}).catch(async (error) => {
+		if (session) {
+			await deleteEveSession({
+				db,
+				env,
+				orgId,
+				sessionId: session.sessionId,
+				threadKey: session.threadKey,
+			});
+		}
+		throw error;
 	});
 	if (session) {
 		adoptPostedEveSession({ posted, session, status: "running" });

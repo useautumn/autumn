@@ -78,6 +78,7 @@ describe("classifyParkedEveInput", () => {
 			},
 			kind: "gated",
 			siblingRequestIds: [],
+			withheld: [],
 		});
 	});
 
@@ -204,5 +205,41 @@ describe("siblingRequestIdsFromToolArgs", () => {
 				_eveSiblingRequestIds: ["req_2", 7, null, "req_3"],
 			}),
 		).toEqual(["req_2", "req_3"]);
+	});
+});
+
+// A withheld write whose tool name and input are dropped is unrecoverable: if
+// the model never re-issues it, nothing knows the user asked for it.
+describe("withheld sibling writes stay recoverable", () => {
+	test("keeps the tool name and input of every withheld write", () => {
+		const parked = classifyParkedEveInput({
+			requests: [
+				{
+					action: {
+						input: { request: { customer_id: "cus_1", plan_id: "pro" } },
+						toolName: "autumn__attach",
+					},
+					requestId: "req_1",
+				},
+				{
+					action: {
+						input: { request: { customer_id: "cus_1", email: "new@x.com" } },
+						toolName: "autumn__updateCustomer",
+					},
+					requestId: "req_2",
+				},
+			],
+		});
+
+		expect(parked).toMatchObject({
+			kind: "gated",
+			withheld: [
+				{
+					input: { request: { customer_id: "cus_1", email: "new@x.com" } },
+					requestId: "req_2",
+					toolName: "autumn__updateCustomer",
+				},
+			],
+		});
 	});
 });

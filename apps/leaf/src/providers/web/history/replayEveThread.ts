@@ -1,3 +1,4 @@
+import { parsePreviewPayload } from "@autumn/render";
 import type { CatalogPlanPreview } from "@autumn/shared";
 import { getTime, isValid, parseISO } from "date-fns";
 import { catalogPlanNeedingDecision } from "../../../internal/agentRuntime/actions/resolveCatalogDecision/catalogDecisionPolicy.js";
@@ -14,7 +15,6 @@ import type {
 } from "../../../internal/agentRuntime/eve/types.js";
 import { extractUserMessageText } from "../../../internal/agentRuntime/messages/agentMessageText.js";
 import { normalizeToolName } from "../../../internal/agentRuntime/tools/toolPolicy.js";
-import { parsePreviewPayload } from "../../../ui/previewContent.js";
 import type { TimestampedMessage } from "../types.js";
 
 const eventTs = (at?: string) => {

@@ -1337,7 +1337,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const response = await autumn.customers.check({
+const response = await autumn.check({
   customerId: "user_123",
   featureId: "premium_request",
   requiredBalance: 6,
@@ -1351,7 +1351,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.customers.check(
+response = await autumn.check(
     customer_id="user_123",
     feature_id="premium_request",
     required_balance=6,
@@ -1409,7 +1409,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.customers.track({
+await autumn.track({
   customerId: "user_123",
   featureId: "premium_request",
   value: 6,
@@ -1421,7 +1421,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.customers.track(
+await autumn.track(
     customer_id="user_123",
     feature_id="premium_request",
     value=6,
@@ -1797,14 +1797,6 @@ Push changes with `atmn push`.
 Use [billing.attach](/documentation/customers/payment-flow) to attach a subscription to a customer. With `redirectMode: "always"`, a checkout URL is always returned for the customer to complete payment or confirm the plan change.
 
 <CodeGroup>
-
-```tsx React
-import { useCustomer } from "autumn-js/react";
-
-const { attach } = useCustomer();
-
-await attach({ planId: "pro", redirectMode: "always" });
-```
 
 ```typescript TypeScript
 import { Autumn } from "autumn-js";

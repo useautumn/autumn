@@ -7,8 +7,8 @@
  *   bun tests/e2e/eveSlack.e2e.ts
  */
 import { buildCatalogDecisionModel, parsePreviewPayload } from "@autumn/render";
-import type { ChatApproval } from "@autumn/shared";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, type ChatApproval, chatApprovals } from "@autumn/shared";
+import { eq } from "drizzle-orm";
 import { answerAgentQuestion } from "../../src/internal/agentRuntime/actions/answerAgentQuestion/answerAgentQuestion.js";
 import { resolveCatalogDecision } from "../../src/internal/agentRuntime/actions/resolveCatalogDecision/resolveCatalogDecision.js";
 import { discardApproval } from "../../src/internal/approvals/actions/discardApproval.js";
@@ -97,7 +97,7 @@ const runTurn = async ({
 }) => {
 	const target = makeTarget();
 	const ticker = createStatusTicker(target as never);
-	const presenter = createEveSlackPresenter({ ticker });
+	const presenter = createEveSlackPresenter({ setStatus: ticker.activity });
 	const superseded: ChatApproval[] = [];
 	const output = await runSlackAgentTurn({
 		attachments: attachments?.map((attachment) => ({
@@ -366,9 +366,9 @@ const main = async () => {
 		}
 	}
 
-	// ---- S3: pending approval superseded by a new message ----
+	// ---- S3: expired approval superseded by a new message ----
 	{
-		console.log("--- S3: message after approval supersedes it");
+		console.log("--- S3: message after an expired approval supersedes it");
 		const threadId = `e2e-${RUN_TAG}-s3`;
 		const first = await runTurn({
 			installation,
@@ -397,6 +397,17 @@ const main = async () => {
 				target: cardTarget as never,
 				turn: first.output,
 			});
+			const approval = await pendingApprovalForRun({
+				channelId: threadId,
+				installation,
+				runId: first.output.sessionId,
+			});
+			if (approval) {
+				await db
+					.update(chatApprovals)
+					.set({ expires_at: Date.now() - 1 })
+					.where(eq(chatApprovals.id, approval.id));
+			}
 		}
 		const second = await runTurn({
 			installation,

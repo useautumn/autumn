@@ -16,11 +16,21 @@ export type PendingQuestion = Readonly<{
 	requestId: string;
 }>;
 
+export type WithheldWrite = Readonly<{
+	input?: Record<string, unknown>;
+	/** Backfilled when the approval is created, so the card can render this
+	 * step with the same body as a standalone write. */
+	preview?: unknown;
+	requestId: string;
+	toolName: string;
+}>;
+
 export type ParkedEveInput =
 	| Readonly<{
 			chained: ChainedPendingRequest;
 			kind: "gated";
 			siblingRequestIds: ReadonlyArray<string>;
+			withheld: ReadonlyArray<WithheldWrite>;
 	  }>
 	| Readonly<{ kind: "question"; question: PendingQuestion }>
 	| Readonly<{ kind: "waiting"; text: string }>;
@@ -38,6 +48,25 @@ const isApprovalShaped = (
 	normalizeToolName(request.action?.toolName ?? "") !== "ask_question";
 
 const SIBLING_REQUEST_IDS_KEY = "_eveSiblingRequestIds";
+const WITHHELD_WRITES_KEY = "_eveWithheldWrites";
+
+export const withheldWritesFromToolArgs = (
+	toolArgs: unknown,
+): ReadonlyArray<WithheldWrite> => {
+	if (!toolArgs || typeof toolArgs === "string") return [];
+	const stored = (toolArgs as Record<string, unknown>)[WITHHELD_WRITES_KEY];
+	if (!Array.isArray(stored)) return [];
+	return stored.filter(
+		(entry): entry is WithheldWrite =>
+			Boolean(entry) &&
+			typeof entry === "object" &&
+			typeof (entry as WithheldWrite).toolName === "string",
+	);
+};
+
+export const withheldWritesToolArgs = (
+	withheld: ReadonlyArray<WithheldWrite>,
+) => (withheld.length ? { [WITHHELD_WRITES_KEY]: withheld } : {});
 
 export const siblingRequestIdsFromToolArgs = (
 	toolArgs: unknown,
@@ -71,6 +100,11 @@ export const classifyParkedEveInput = ({
 			},
 			kind: "gated",
 			siblingRequestIds: siblings.map((request) => request.requestId),
+			withheld: siblings.map((request) => ({
+				input: request.action.input,
+				requestId: request.requestId,
+				toolName: request.action.toolName,
+			})),
 		};
 	}
 
