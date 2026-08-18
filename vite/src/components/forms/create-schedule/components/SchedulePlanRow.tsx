@@ -7,7 +7,7 @@ import {
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
-import { getUsedGroupKeys, resolveInheritedPlanScope } from "../scheduleUtils";
+import { getUsedGroupKeys } from "../scheduleUtils";
 import { CopyExistingPlansButton } from "./CopyExistingPlansButton";
 import { CopyFromPreviousPhaseButton } from "./CopyFromPreviousPhaseButton";
 import { SchedulePlanPicker } from "./SchedulePlanPicker";
@@ -30,25 +30,12 @@ export function SchedulePlanRow({
 	const { displayCurrency } = useCustomerDisplayCurrency();
 
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
-	const openingPhasePlans = formValues.phases[0]?.plans ?? [];
 	const isOpeningPhase = phaseIndex === 0;
 	const isLocked = isPhaseLocked({ phaseIndex });
-	const isScopeEditable = isOpeningPhase && !isLocked;
-	// A schedule can't change scope mid-flight: later phases display what they
-	// inherit from the opening phase's plan in the same group, read-only.
 	const { scope, hasEntities, selectedLabel } = usePlanScopeField({
-		planEntityId: isOpeningPhase ? plan?.entityId : undefined,
-		defaultEntityId: isOpeningPhase
-			? undefined
-			: resolveInheritedPlanScope({
-					productId: plan?.productId ?? "",
-					openingPhasePlans,
-					products,
-				}),
-		disabled: !isScopeEditable,
-		disabledReason: isLocked
-			? "this phase has started"
-			: "set on the first phase",
+		planEntityId: plan?.entityId,
+		disabled: isLocked,
+		disabledReason: "this phase has started",
 		onChange: (nextEntityId) =>
 			form.setFieldValue(
 				`phases[${phaseIndex}].plans[${planIndex}].entityId`,
@@ -94,7 +81,7 @@ export function SchedulePlanRow({
 		// Group conflicts are per scope, so the scope has to be pickable before a
 		// plan is chosen — otherwise every group reads as taken at customer level.
 		return (
-			<ScopedPlanRow scope={isScopeEditable ? scope : undefined}>
+			<ScopedPlanRow scope={scope}>
 				<div
 					className={cn(
 						"group relative min-w-0 flex-1",

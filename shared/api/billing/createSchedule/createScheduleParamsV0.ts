@@ -40,7 +40,7 @@ export const CreateSchedulePlanSchema = z.object({
 	}),
 	entity_id: z.string().nullable().optional().meta({
 		description:
-			"The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID.",
+			"The plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID. On phases after the first, the entity must already be scoped by the first phase — a schedule cannot change scope mid-flight.",
 	}),
 	feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
 		description: "Optional prepaid feature quantities for this phase's plan.",
@@ -196,23 +196,6 @@ export const CreateScheduleParamsV0Schema = z
 					input: ctx.value,
 				});
 			}
-		}
-
-		// A schedule can't change scope mid-flight, so later phases inherit the
-		// opening phase's scopes rather than declaring their own.
-		const hasLaterPhaseScopes = ctx.value.phases
-			.slice(1)
-			.some((phase) =>
-				phase.plans.some((plan) => plan.entity_id !== undefined),
-			);
-		if (hasLaterPhaseScopes) {
-			ctx.issues.push({
-				code: "custom",
-				message: "Per-plan entity scopes are only allowed on the first phase",
-				path: ["phases"],
-				input: ctx.value,
-			});
-			return;
 		}
 
 		if (hasRelativeTiming) return;

@@ -3,15 +3,22 @@ import { Input, SearchableSelect } from "@autumn/ui";
 import { useState } from "react";
 import {
 	PlanEntityScopeSelector,
+	PlanPrepaidQuantityFields,
 	PlanScopeToggleButton,
 	ScopedPlanRow,
 	SelectedPlanRow,
 } from "@/components/forms/shared";
+import { QuantityStepper } from "@/components/general/form/fields/quantity-stepper";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
-import { applyCustomizeToProduct, getBasePriceLabel } from "./syncPlanRowUtils";
+import {
+	applyCustomizeToProduct,
+	featureQuantitiesToRecord,
+	getBasePriceLabel,
+	withFeatureQuantity,
+} from "./syncPlanRowUtils";
 
 export type DraftPlan = Omit<SyncPlanInstance, "entity_id"> & {
 	_key: string;
@@ -60,7 +67,9 @@ export function SyncPlanRow({
 		return (
 			<SearchableSelect
 				value={null}
-				onValueChange={(value) => onChange({ ...plan, plan_id: value })}
+				onValueChange={(value) =>
+					onChange({ ...plan, plan_id: value, feature_quantities: undefined })
+				}
 				options={availableProducts}
 				getOptionValue={(product) => product.id}
 				getOptionLabel={(product) => product.name}
@@ -125,46 +134,77 @@ export function SyncPlanRow({
 			}
 		: undefined;
 
+	const displayProduct = customizedProduct ?? selectedProduct;
+	const prepaidQuantities = featureQuantitiesToRecord({
+		featureQuantities: plan.feature_quantities,
+	});
+
 	return (
-		<ScopedPlanRow scope={rowScope}>
-			<SelectedPlanRow
-				productId={plan.plan_id}
-				product={customizedProduct ?? selectedProduct}
-				isCustom={hasCustomize}
-				accessory={
-					isAddOn ? (
-						<Input
-							type="number"
-							min={1}
-							value={plan.quantity ?? 1}
-							onChange={(e) => {
-								const next = Number.parseInt(e.target.value, 10);
-								onChange({
-									...plan,
-									quantity: Number.isFinite(next) && next >= 1 ? next : 1,
-								});
-							}}
-							className="w-14 h-7 text-center text-xs"
-						/>
-					) : undefined
-				}
-				price={
-					currentPriceLabel ? (
-						<span
-							className={cn(
-								"text-xs tabular-nums",
-								isPriceCustom
-									? "text-emerald-500 font-medium"
-									: "text-tertiary-foreground",
-							)}
-						>
-							{currentPriceLabel}
-						</span>
-					) : undefined
-				}
-				onEdit={onCustomize}
-				onRemove={onRemove}
+		<div className="space-y-1.5">
+			<ScopedPlanRow scope={rowScope}>
+				<SelectedPlanRow
+					productId={plan.plan_id}
+					product={displayProduct}
+					isCustom={hasCustomize}
+					accessory={
+						isAddOn ? (
+							<Input
+								type="number"
+								min={1}
+								value={plan.quantity ?? 1}
+								onChange={(e) => {
+									const next = Number.parseInt(e.target.value, 10);
+									onChange({
+										...plan,
+										quantity: Number.isFinite(next) && next >= 1 ? next : 1,
+									});
+								}}
+								className="w-14 h-7 text-center text-xs"
+							/>
+						) : undefined
+					}
+					price={
+						currentPriceLabel ? (
+							<span
+								className={cn(
+									"text-xs tabular-nums",
+									isPriceCustom
+										? "text-emerald-500 font-medium"
+										: "text-tertiary-foreground",
+								)}
+							>
+								{currentPriceLabel}
+							</span>
+						) : undefined
+					}
+					onEdit={onCustomize}
+					onRemove={onRemove}
+				/>
+			</ScopedPlanRow>
+			<PlanPrepaidQuantityFields
+				items={displayProduct ? productForDisplay(displayProduct).items : null}
+				quantities={prepaidQuantities}
+				currency={displayCurrency}
+				renderField={({ featureId, step, stops }) => (
+					<QuantityStepper
+						fullWidth
+						min={0}
+						onChange={(quantity) =>
+							onChange({
+								...plan,
+								feature_quantities: withFeatureQuantity({
+									featureQuantities: plan.feature_quantities,
+									featureId,
+									quantity,
+								}),
+							})
+						}
+						step={step}
+						stops={stops}
+						value={prepaidQuantities[featureId]}
+					/>
+				)}
 			/>
-		</ScopedPlanRow>
+		</div>
 	);
 }

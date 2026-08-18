@@ -29,6 +29,7 @@ export type EveAuthContext = {
 	channelId: string;
 	chatInstallationId?: string;
 	orgId: string;
+	orgInstructions?: string;
 	provider: string;
 	providerUserId: string;
 	threadId: string;
