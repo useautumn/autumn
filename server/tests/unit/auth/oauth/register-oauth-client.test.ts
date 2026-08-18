@@ -30,7 +30,7 @@ const createFakeDb = () => {
 
 const register = async ({ body, db }: { body: unknown; db: DrizzleCli }) => {
 	const result = await registerOAuthClient({ body, db });
-	if ("error" in result) {
+	if (result.status !== 201) {
 		throw new Error(`expected a successful registration, got ${result.error}`);
 	}
 	return result;

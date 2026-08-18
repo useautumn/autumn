@@ -7,17 +7,6 @@ export const parseOAuthTokenResponseBody = async (response: Response) => {
 	}
 };
 
-/** Swaps in the token Autumn issues, leaving better-auth's other fields intact. */
-export const rewriteOAuthTokenResponseBody = ({
-	body,
-	scopes,
-	token,
-}: {
-	body: Record<string, unknown>;
-	scopes: string[];
-	token: string;
-}) => ({ ...body, access_token: token, scope: scopes.join(" ") });
-
 /** `response` seeds the headers so better-auth's own headers (cookies, etc.) survive. */
 export const jsonOAuthTokenResponse = ({
 	body,

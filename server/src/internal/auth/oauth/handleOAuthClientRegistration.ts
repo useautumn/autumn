@@ -7,7 +7,8 @@ export const handleOAuthClientRegistration = async (c: Context) => {
 	const { fields } = await parseOAuthRequestFields(c.req.raw);
 	const result = await registerOAuthClient({ body: fields, db });
 
-	if ("error" in result) {
+	// RFC 7591 §3.2.2: registration failures answer with a bare `{ error }` body.
+	if (result.status !== 201) {
 		return c.json({ error: result.error }, result.status);
 	}
 	return c.json(result.body, result.status);

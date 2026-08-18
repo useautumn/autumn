@@ -19,7 +19,6 @@ import { oauthTokenErrorResponse } from "./token/oauthTokenErrorResponse.js";
 import {
 	jsonOAuthTokenResponse,
 	parseOAuthTokenResponseBody,
-	rewriteOAuthTokenResponseBody,
 } from "./token/oauthTokenResponse.js";
 import { parseOAuthTokenResponseScopes } from "./token/parseOAuthTokenResponseScopes.js";
 import { persistOAuthTokenGrant } from "./token/persistOAuthTokenGrant.js";
@@ -114,11 +113,11 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			isMcpClient ||
 			returnsOAuthAccessTokenForClientId({ clientId: tokenRecord.clientId })
 		) {
-			const responseBody = rewriteOAuthTokenResponseBody({
-				body,
-				scopes: tokenRecord.scopes,
-				token: prefixOAuthToken({ token: accessToken }),
-			});
+			const responseBody = {
+				...body,
+				access_token: prefixOAuthToken({ token: accessToken }),
+				scope: tokenRecord.scopes.join(" "),
+			};
 			if (replayKey) {
 				await storeOAuthRefreshReplay({ body: responseBody, key: replayKey });
 				replayStored = true;
@@ -140,11 +139,11 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		if (!apiKeyResult) return response;
 
 		return jsonOAuthTokenResponse({
-			body: rewriteOAuthTokenResponseBody({
-				body,
-				scopes: apiKeyResult.scopes,
-				token: apiKeyResult.apiKey,
-			}),
+			body: {
+				...body,
+				access_token: apiKeyResult.apiKey,
+				scope: apiKeyResult.scopes.join(" "),
+			},
 			response,
 			status: response.status,
 		});
