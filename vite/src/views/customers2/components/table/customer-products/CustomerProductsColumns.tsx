@@ -66,7 +66,8 @@ export const CustomerProductsColumns = [
 	{
 		header: "Status",
 		accessorKey: "status",
-		size: 110,
+		size: 200,
+		minSize: 140,
 		meta: { skeleton: statusSkeleton },
 		cell: ({
 			row,
@@ -83,6 +84,7 @@ export const CustomerProductsColumns = [
 					starts_at={row.original.starts_at ?? undefined}
 					canceled={row.original.canceled}
 					canceled_at={row.original.canceled_at ?? undefined}
+					ended_at={row.original.ended_at ?? undefined}
 					trialing={isCustomerProductTrialing(row.original, { nowMs }) || false}
 					trial_ends_at={row.original.trial_ends_at ?? undefined}
 					nowMs={nowMs}

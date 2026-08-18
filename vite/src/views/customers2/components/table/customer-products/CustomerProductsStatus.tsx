@@ -84,20 +84,30 @@ function getSubtext({
 	resolvedStatus,
 	trial_ends_at,
 	canceled_at,
+	ended_at,
 	starts_at,
 	nowMs,
 }: {
 	resolvedStatus: string;
 	trial_ends_at?: number;
 	canceled_at?: number;
+	ended_at?: number;
 	starts_at?: number;
 	nowMs: number;
 }): string | null {
 	if (resolvedStatus === "trialing" && trial_ends_at) {
 		return `${formatDistance(trial_ends_at, nowMs)} left`;
 	}
-	if (resolvedStatus === "canceling" && canceled_at) {
-		return `${formatDistance(canceled_at, nowMs)} ago`;
+	if (resolvedStatus === "canceling") {
+		if (ended_at) {
+			if (ended_at > nowMs) {
+				return `Ends in ${formatDistance(ended_at, nowMs)}`;
+			}
+			return `Ended ${formatMsToDate(ended_at)}`;
+		}
+		if (canceled_at) {
+			return `Canceled ${formatDistance(canceled_at, nowMs)} ago`;
+		}
 	}
 	if (resolvedStatus === "scheduled" && starts_at) {
 		return `Starts ${formatMsToDate(starts_at)}`;
@@ -120,11 +130,29 @@ function StatusIcon({
 	);
 }
 
+function StatusTooltipContent({
+	label,
+	subtext,
+}: {
+	label: string;
+	subtext: string | null;
+}) {
+	return (
+		<span className="text-sm">
+			{label}
+			{subtext ? (
+				<span className="text-tertiary-foreground"> · {subtext}</span>
+			) : null}
+		</span>
+	);
+}
+
 export function CustomerProductsStatus({
 	tooltip,
 	status,
 	canceled,
 	canceled_at,
+	ended_at,
 	trialing,
 	trial_ends_at,
 	starts_at,
@@ -134,6 +162,7 @@ export function CustomerProductsStatus({
 	tooltip?: boolean;
 	canceled?: boolean;
 	canceled_at?: number;
+	ended_at?: number;
 	trialing?: boolean;
 	trial_ends_at?: number;
 	starts_at?: number;
@@ -149,6 +178,7 @@ export function CustomerProductsStatus({
 		resolvedStatus,
 		trial_ends_at,
 		canceled_at,
+		ended_at,
 		starts_at,
 		nowMs: effectiveNowMs,
 	});
@@ -164,12 +194,7 @@ export function CustomerProductsStatus({
 					<Tooltip>
 						<TooltipTrigger>{iconElement}</TooltipTrigger>
 						<TooltipContent>
-							<span className="text-sm">{config.label} </span>
-							{subtext && (
-								<span className="text-sm text-tertiary-foreground">
-									({subtext})
-								</span>
-							)}
+							<StatusTooltipContent label={config.label} subtext={subtext} />
 						</TooltipContent>
 					</Tooltip>
 				</TooltipProvider>
@@ -178,19 +203,26 @@ export function CustomerProductsStatus({
 	}
 
 	return (
-		<div className="flex items-center">
-			<div className="flex items-center gap-1.5">
-				{iconElement}
-				<span className="text-sm">{config.label}</span>
-			</div>
-			{subtext && (
-				<>
-					<DotIcon size={16} />
-					<span className="text-sm text-tertiary-foreground pl-1 truncate">
-						{subtext}
-					</span>
-				</>
-			)}
-		</div>
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<div className="flex min-w-0 max-w-full items-center">
+					<div className="flex shrink-0 items-center gap-1.5">
+						{iconElement}
+						<span className="text-sm">{config.label}</span>
+					</div>
+					{subtext && (
+						<>
+							<DotIcon size={16} className="shrink-0" />
+							<span className="min-w-0 truncate pl-1 text-sm text-tertiary-foreground">
+								{subtext}
+							</span>
+						</>
+					)}
+				</div>
+			</TooltipTrigger>
+			<TooltipContent>
+				<StatusTooltipContent label={config.label} subtext={subtext} />
+			</TooltipContent>
+		</Tooltip>
 	);
 }
