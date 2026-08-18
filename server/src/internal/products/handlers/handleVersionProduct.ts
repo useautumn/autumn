@@ -102,6 +102,7 @@ export const handleVersionProductV2 = async ({
 		productData: CreateProductV2ParamsSchema.parse({
 			...latestProduct,
 			...newProductV2,
+			base_internal_product_id: effectiveBaseInternalProductId,
 			config: mergedConfig,
 			licenses: undefined,
 		}),
