@@ -69,5 +69,6 @@ export type PreparedFeatureDeduction = {
 		redis_receipt_key: string;
 		created_at: number;
 		ttl_at: number;
+		properties?: Record<string, unknown> | null;
 	};
 };
