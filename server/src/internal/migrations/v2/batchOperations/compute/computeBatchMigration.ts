@@ -1,4 +1,9 @@
-import type { Feature, FullProduct } from "@autumn/shared";
+import {
+	type Feature,
+	type FullProduct,
+	productKeyToString,
+	productToProductKey,
+} from "@autumn/shared";
 import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilter.js";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import { planFilterMatchesProduct } from "@autumn/shared/api/products/utils/match/index.js";
@@ -51,6 +56,15 @@ export const computeBatchMigration = ({
 	const { rejections, updatePlanOps } = checkMigrationEligibility({
 		migration,
 	});
+	const productsByPlanVersion = new Map<string, FullProduct>();
+	for (const product of products) {
+		productsByPlanVersion.set(
+			productKeyToString({
+				productKey: productToProductKey({ product }),
+			}),
+			product,
+		);
+	}
 
 	// 2. Resolve ops to flat (op, fromProduct) targets: op-level guards,
 	//    then plan_filter matched against the catalog.
@@ -94,7 +108,12 @@ export const computeBatchMigration = ({
 	// 3. Compute one patch per target.
 	const patches: BatchMigrationPatch[] = [];
 	for (const target of targets) {
-		const computed = computeUpdatePlanPatch({ migration, features, ...target });
+		const computed = computeUpdatePlanPatch({
+			migration,
+			features,
+			productsByPlanVersion,
+			...target,
+		});
 		rejections.push(...computed.rejections);
 		if (computed.patch) patches.push(computed.patch);
 	}

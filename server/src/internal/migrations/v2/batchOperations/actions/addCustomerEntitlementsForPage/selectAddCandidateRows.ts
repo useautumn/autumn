@@ -1,5 +1,4 @@
 import {
-	BillingInterval,
 	CusProductStatus,
 	EntInterval,
 	type EntitlementWithFeature,
@@ -8,6 +7,7 @@ import {
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { cycleAnchorSourcesSql } from "@/internal/migrations/v2/batchOperations/actions/utils/cycleAnchorSql.js";
 import {
 	type OperationScope,
 	operationScopeSql,
@@ -65,54 +65,13 @@ export const buildAddCandidateRowsQuery = ({
 		? sql``
 		: sql`AND COALESCE(existing_definition.interval, ${EntInterval.Lifetime}) = ${targetInterval}`;
 
-	const paidRecurringColumn = includeAnchorSources
-		? sql`EXISTS (
-				SELECT 1
-				FROM customer_prices AS customer_price
-				INNER JOIN prices AS price ON price.id = customer_price.price_id
-				WHERE customer_price.customer_product_id = cp.id
-					AND price.config->>'interval' IS DISTINCT FROM ${BillingInterval.OneOff}
-			)`
-		: sql`false`;
-
-	const siblingAnchorColumn = includeAnchorSources
-		? sql`sibling.reset_cycle_anchor`
-		: sql`NULL`;
-
-	const subscriptionAnchorColumn = includeAnchorSources
-		? sql`sub_anchor.billing_cycle_anchor_ms`
-		: sql`NULL`;
-
-	// subscription_ids hold Stripe ids; anchors are synced in SECONDS, so
-	// convert to ms here — every other anchor in the ladder is ms.
-	const subscriptionAnchorJoin = includeAnchorSources
-		? sql`LEFT JOIN LATERAL (
-				SELECT subscription.billing_cycle_anchor_seconds * 1000 AS billing_cycle_anchor_ms
-				FROM UNNEST(COALESCE(cp.subscription_ids, ARRAY[]::text[])) AS cp_subscription(stripe_id)
-				INNER JOIN subscriptions AS subscription
-					ON subscription.stripe_id = cp_subscription.stripe_id
-				WHERE subscription.billing_cycle_anchor_seconds IS NOT NULL
-				ORDER BY subscription.created_at, subscription.id
-				LIMIT 1
-			) AS sub_anchor ON true`
-		: sql``;
-
-	const siblingJoin = includeAnchorSources
-		? sql`LEFT JOIN LATERAL (
-				SELECT sibling_entitlement.reset_cycle_anchor
-				FROM customer_entitlements AS sibling_entitlement
-				INNER JOIN entitlements AS sibling_definition
-					ON sibling_definition.id = sibling_entitlement.entitlement_id
-				WHERE sibling_entitlement.customer_product_id = cp.id
-					AND NOT sibling_entitlement.separate_interval
-					AND sibling_entitlement.reset_cycle_anchor IS NOT NULL
-					AND sibling_entitlement.next_reset_at IS NOT NULL
-					AND COALESCE(sibling_definition.interval, ${EntInterval.Lifetime}) = ${targetInterval}
-					AND COALESCE(sibling_definition.interval_count, 1) = ${targetIntervalCount}
-				ORDER BY sibling_entitlement.created_at, sibling_entitlement.id
-				LIMIT 1
-			) AS sibling ON true`
-		: sql``;
+	const anchors = cycleAnchorSourcesSql({
+		include: includeAnchorSources,
+		customerProductId: sql`cp.id`,
+		subscriptionIds: sql`cp.subscription_ids`,
+		targetInterval,
+		targetIntervalCount,
+	});
 
 	return sql`
 		SELECT
@@ -125,17 +84,17 @@ export const buildAddCandidateRowsQuery = ({
 			cp.canceled_at,
 			cp.ended_at,
 			cp.trial_ends_at,
-			${paidRecurringColumn} AS is_paid_recurring,
+			${anchors.paidRecurringColumn} AS is_paid_recurring,
 			cp.billing_cycle_anchor,
-			${subscriptionAnchorColumn} AS subscription_cycle_anchor,
-			${siblingAnchorColumn} AS sibling_reset_cycle_anchor
+			${anchors.subscriptionAnchorColumn} AS subscription_cycle_anchor,
+			${anchors.siblingAnchorColumn} AS sibling_reset_cycle_anchor
 		FROM customer_products AS cp
 		INNER JOIN customers AS customer
 			ON customer.internal_id = cp.internal_customer_id
 		LEFT JOIN entities AS entity
 			ON entity.internal_id = cp.internal_entity_id
-		${siblingJoin}
-		${subscriptionAnchorJoin}
+		${anchors.siblingJoin}
+		${anchors.subscriptionJoin}
 		WHERE cp.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
 			AND ${operationScopeSql({ scope })}
 			${afterCustomerProductId ? sql`AND cp.id > ${afterCustomerProductId}` : sql``}

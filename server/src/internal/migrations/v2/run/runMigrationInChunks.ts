@@ -206,7 +206,11 @@ export const runMigrationInChunks = async ({
 						),
 				});
 
-				return { ...chunkRun, lane: "per_customer" as const };
+				return {
+					...chunkRun,
+					lane: "per_customer" as const,
+					rejections: batchLane?.rejections,
+				};
 			},
 		});
 	} finally {

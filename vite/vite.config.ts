@@ -1,10 +1,10 @@
 import path from "node:path";
-import { viteHmrClient } from "@autumn/env/viteDev";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { viteHmrClient } from "../packages/env/src/viteDev.js";
 
 // Defaults so the app works when no .env.local is present
 // (e.g. after `bun dw disable`). Real values from .env / infisical /

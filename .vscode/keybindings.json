@@ -1,0 +1,19 @@
+[
+	{
+		"key": "shift+cmd+h",
+		"command": "-workbench.action.replaceInFiles"
+	},
+	{
+		"key": "shift+cmd+h",
+		"command": "runCommands",
+		"args": {
+			"commands": [
+				"workbench.view.extension.github-pull-requests",
+				{
+					"command": "workbench.action.tasks.runTask",
+					"args": "View PR stack"
+				}
+			]
+		}
+	}
+]

@@ -70,6 +70,7 @@ export default defineConfig({
 		// and breaks platform-specific binaries (pg, ioredis, etc.).
 		external: [
 			"@aws-sdk/client-s3",
+			"@duckdb/node-api",
 			"@google-cloud/bigquery",
 			"ioredis",
 			"pino",
@@ -78,6 +79,9 @@ export default defineConfig({
 			"postgres",
 			"pg",
 			"zod",
+			"@duckdb/node-api",
+			"@duckdb/node-bindings",
+			"@duckdbfan/drizzle-duckdb",
 		],
 		extensions: [
 			{
@@ -122,6 +126,7 @@ export default defineConfig({
 			additionalPackages({
 				packages: [
 					"@axiomhq/pino",
+					"@duckdb/node-api@1.5.5-r.4",
 					"postgres",
 					"pg",
 					"drizzle-orm",

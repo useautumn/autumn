@@ -1,29 +1,17 @@
 import type { Feature, FullProduct } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import { enrichEntitlementsWithFeatures } from "@autumn/shared/utils/productUtils/entUtils/enrichEntitlement.js";
-import type { ComputedEntitlementPriceTransitions } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computeEntitlementPriceTransitions.js";
-import type { PreparedPlanLicenseRef } from "@/internal/migrations/v2/prepare/modules/ensurePlanLicenses/types.js";
 import { EnsurePlanLicensesResultSchema } from "@/internal/migrations/v2/prepare/modules/ensurePlanLicenses/types.js";
 import { buildPrepareModuleKey } from "@/internal/migrations/v2/prepare/utils/index.js";
 import type { MigrationRuntime } from "@/internal/migrations/v2/types/migrationDefinition.js";
 import type { BatchMigrationRejection } from "../../types/index.js";
 import { computeLicenseProductTransitions } from "./computeLicenseProductTransitions.js";
+import type { LicenseLinkTransitions } from "./resolvePlanLicenseTransitions.js";
 
 const ensurePlanLicensesKey = buildPrepareModuleKey({
 	kind: "ensure_plan_licenses",
 	parts: ["update_plan"],
 });
-
-/** One customized link's diff, plus the identity and prepared traits the
- * entitlement-level transitions cannot carry on their own. */
-export type LicenseLinkTransitions = {
-	licensePlanId: string;
-	planLicenseId: string;
-	licenseInternalProductId: string;
-	isOneOff: boolean;
-	artifacts: PreparedPlanLicenseRef[];
-	transitions: ComputedEntitlementPriceTransitions;
-};
 
 const missingPreparedState = ({
 	opIndex,
@@ -43,20 +31,21 @@ const missingPreparedState = ({
 	details,
 });
 
-/** Resolves customize.upsert_licenses into one diff per link, without judging
- * whether any of it can be batch-lowered -- that is the guard's call. Only an
- * unresolvable artifact rejects here, because prepare must run again. */
+/** The customize half of resolvePlanLicenseTransitions: resolves
+ * customize.upsert_licenses into one diff per link, without judging whether any
+ * of it can be batch-lowered -- that is the guard's call. Only an unresolvable
+ * artifact rejects here, because prepare must run again. */
 export const resolveLicenseCustomizeTransitions = ({
 	migration,
 	op,
 	opIndex,
-	fromProduct,
+	targetProduct,
 	features,
 }: {
 	migration: MigrationRuntime;
 	op: UpdatePlanOp;
 	opIndex: number;
-	fromProduct: FullProduct;
+	targetProduct: FullProduct;
 	features: Feature[];
 }): {
 	links: LicenseLinkTransitions[];
@@ -74,7 +63,7 @@ export const resolveLicenseCustomizeTransitions = ({
 			rejections: [
 				missingPreparedState({
 					opIndex,
-					planId: fromProduct.id,
+					planId: targetProduct.id,
 					message:
 						"upsert_licenses requires prepared plan licenses. Run prepare before computing.",
 					details: { prepareKey: ensurePlanLicensesKey },
@@ -91,13 +80,13 @@ export const resolveLicenseCustomizeTransitions = ({
 			(artifact) =>
 				artifact.op_index === opIndex &&
 				artifact.license_plan_id === entry.license_plan_id &&
-				artifact.parent_internal_product_id === fromProduct.internal_id,
+				artifact.parent_internal_product_id === targetProduct.internal_id,
 		);
 		if (artifacts.length === 0) {
 			rejections.push(
 				missingPreparedState({
 					opIndex,
-					planId: fromProduct.id,
+					planId: targetProduct.id,
 					message:
 						"prepared_state has no plan license artifact for an upsert_licenses entry. Re-run prepare.",
 					details: { licensePlanId: entry.license_plan_id },
@@ -119,14 +108,14 @@ export const resolveLicenseCustomizeTransitions = ({
 		);
 
 		const [first] = artifacts;
-		const fromLicenseProduct = fromProduct.licenses?.find(
+		const fromLicenseProduct = targetProduct.licenses?.find(
 			(link) => link.product.id === entry.license_plan_id,
 		)?.product;
 		if (!fromLicenseProduct) {
 			rejections.push(
 				missingPreparedState({
 					opIndex,
-					planId: fromProduct.id,
+					planId: targetProduct.id,
 					message:
 						"the parent plan no longer links the license an upsert_licenses entry names. Re-run prepare.",
 					details: { licensePlanId: entry.license_plan_id },

@@ -29,16 +29,17 @@ export const repointLicensePoolRows = async ({
 		SET
 			plan_license_id = ${planLicenseId},
 			granted = target.included + pool.paid_quantity,
-			remaining = GREATEST(
+			remaining =
 				pool.remaining + ((target.included + pool.paid_quantity) - pool.granted),
-				0
-			),
 			updated_at = ${Date.now()}
 		FROM customer_products AS cp, plan_license AS target
 		WHERE cp.id = pool.parent_customer_product_id
 			AND target.id = ${planLicenseId}
 			AND ${poolLicensePlanSql({ licensePlanId })}
 			AND pool.plan_license_id IS DISTINCT FROM ${planLicenseId}
+			-- Scoped on the pool as well as the parent: matching the license plan
+			-- alone spans every pool in the org, so the page must drive this scan.
+			AND pool.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
 			AND cp.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
 			AND ${operationScopeSql({ scope })}
 			AND pool.id = (

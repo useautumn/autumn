@@ -26,6 +26,9 @@ export const useCustomerCountQuery = ({
 			filters.interval,
 			filters.created_at_range?.start,
 			filters.created_at_range?.end,
+			filters.balance
+				? `${filters.balance.feature_id}:${filters.balance.basis}${filters.balance.op}${filters.balance.value}`
+				: null,
 			search,
 		]),
 		enabled,
@@ -34,7 +37,10 @@ export const useCustomerCountQuery = ({
 				search,
 				filters,
 			});
-			return data.totalCount as number;
+			return {
+				totalCount: (data.totalCount ?? null) as number | null,
+				approximate: Boolean(data.approximate),
+			};
 		},
 		placeholderData: keepPreviousData,
 	});
