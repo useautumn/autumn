@@ -152,6 +152,10 @@ const replicaPoolMax = poolMaxFromEnv({
 	envVar: "REPLICA_DB_POOL_MAX",
 	fallback: PROD_POOL_MAX.replica,
 });
+const replicaSlowPoolMax = poolMaxFromEnv({
+	envVar: "REPLICA_SLOW_DB_POOL_MAX",
+	fallback: 2,
+});
 
 /** Fleet budget guards. Primary pools count against the primary bouncer's
  *  max_client_conn; the replica pool counts against the replica bouncer's. */
@@ -195,7 +199,7 @@ export const computePoolBudgetWarnings = ({
 for (const warning of computePoolBudgetWarnings({
 	criticalPoolMax,
 	generalPoolMax,
-	replicaPoolMax,
+	replicaPoolMax: replicaPoolMax + replicaSlowPoolMax,
 })) {
 	logger.warn(warning);
 }
@@ -250,6 +254,24 @@ const replicaResult = process.env.DATABASE_REPLICA_URL
 	: null;
 export const dbReplica = replicaResult?.db ?? null;
 export const clientReplica = replicaResult?.client ?? null;
+
+// -- Replica slow lane: same replica, long-query budget for dashboard reads.
+// Separate tiny pool so a seconds-long dashboard aggregate can never occupy
+// the 5s outage-fallback lane above.
+const replicaSlowResult = process.env.DATABASE_REPLICA_URL
+	? initDrizzle({
+			name: "replica-slow",
+			replica: true,
+			maxConnections: replicaSlowPoolMax,
+			connectTimeout: 5,
+			poolConfig: {
+				application_name: "autumn-replica-slow",
+				query_timeout: 60_000,
+			},
+		})
+	: null;
+export const dbReplicaSlow = replicaSlowResult?.db ?? null;
+export const clientReplicaSlow = replicaSlowResult?.client ?? null;
 
 // Backward-compatible exports — existing code that imports `db` or `client`
 // gets the general pool automatically.

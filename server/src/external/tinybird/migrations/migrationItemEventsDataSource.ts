@@ -8,6 +8,7 @@ import {
 	Tinybird,
 	t,
 } from "@tinybirdco/sdk";
+import { gzipTinybirdEventsFetch } from "../gzipTinybirdEventsFetch.js";
 
 const TINYBIRD_US_EAST_API_URL = process.env.TINYBIRD_US_EAST_API_URL;
 const TINYBIRD_US_EAST_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
@@ -133,6 +134,7 @@ export const migrationTinybird = migrationTinybirdConfig
 				listItemEvents: listMigrationItemEventsEndpoint,
 			},
 			...migrationTinybirdConfig,
+			fetch: gzipTinybirdEventsFetch,
 			devMode: false,
 		})
 	: null;
