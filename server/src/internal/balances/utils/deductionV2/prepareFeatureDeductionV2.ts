@@ -193,6 +193,22 @@ export const prepareFeatureDeductionV2 = ({
 			};
 		});
 
+	// The deduction sort only prefers unlimited within a tier (entity level and
+	// credit systems sort first/last regardless), but the sink contract is that
+	// an unlimited entitlement absorbs everything and finite siblings stay
+	// untouched — exactly what the pre-sink skip did. Hoist the first unlimited
+	// entry to the front so the scripts always see the sink lead.
+	const unlimitedEntryIndex = customerEntitlementDeductions.findIndex(
+		(deductionEntry) => deductionEntry.unlimited,
+	);
+	if (unlimitedEntryIndex > 0) {
+		const [unlimitedEntry] = customerEntitlementDeductions.splice(
+			unlimitedEntryIndex,
+			1,
+		);
+		customerEntitlementDeductions.unshift(unlimitedEntry);
+	}
+
 	const rolloverArrays = customerEntitlements.map((customerEntitlement) => {
 		const creditCost = getCreditCostForEnt(customerEntitlement.id);
 		return (customerEntitlement.rollovers || []).map((rollover) => ({

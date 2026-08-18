@@ -339,16 +339,34 @@ local function run_deduction_on_context(params)
         old_balance = entity_obj and safe_number(entity_obj.balance) or 0,
       })
     elseif unlimited_ent_data.has_entity_scope then
+      -- Aggregate semantics (matches the finite set_usage path): with no target
+      -- entity, target_balance is the TOTAL across entities. Convert it to a
+      -- delta and let the sink distribute it sequentially — never sync each
+      -- entity to the target.
       local entities = unlimited_ent_data.entities or {}
+      local old_total = 0
       for _, entity_key in ipairs(sorted_keys(entities)) do
         local entity_obj = entities[entity_key]
-        total_change = total_change + set_balance_to_target({
-          ent_id = ent_id,
-          entity_id = entity_key,
-          target = entities,
-          old_balance = entity_obj and safe_number(entity_obj.balance) or 0,
-        })
+        old_total = old_total + (entity_obj and safe_number(entity_obj.balance) or 0)
       end
+      local aggregate_amount = round_to_precision(
+        (old_total - params.target_balance) / unlimited_credit_cost,
+        10
+      )
+      total_change = deduct_from_main_balance({
+        context = context,
+        ent_id = ent_id,
+        target_entity_id = target_entity_id,
+        amount = aggregate_amount,
+        credit_cost = unlimited_credit_cost,
+        pass_number = 2,
+        available_overage = nil,
+        min_balance = nil,
+        max_balance = nil,
+        alter_granted_balance = alter_granted_balance,
+        overage_behavior_is_allow = overage_behavior_is_allow,
+        log_prefix = "UNLIMITED",
+      })
     else
       total_change = set_balance_to_target({
         ent_id = ent_id,

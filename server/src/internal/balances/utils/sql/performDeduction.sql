@@ -215,7 +215,17 @@ BEGIN
     new_balance := current_balance;
     new_entities := current_entities;
 
-    IF has_entity_scope AND target_entity_id IS NOT NULL THEN
+    IF has_entity_scope AND target_entity_id IS NULL THEN
+      -- Aggregate semantics (matches the finite set_usage path): with no target
+      -- entity, target_balance is the TOTAL across entities. Convert it to a
+      -- delta and let the PASS 1 unlimited sink distribute it sequentially —
+      -- never sync each entity to the target.
+      SELECT COALESCE(SUM(COALESCE((entity_value->>'balance')::numeric, 0)), 0)
+      INTO old_entity_balance
+      FROM jsonb_each(current_entities) entity_map(entity_map_key, entity_value);
+
+      remaining_amount := (old_entity_balance - target_balance) / credit_cost;
+    ELSIF has_entity_scope THEN
       old_entity_balance := COALESCE((current_entities->target_entity_id->>'balance')::numeric, 0);
       deducted := old_entity_balance - target_balance;
       IF deducted != 0 THEN
@@ -238,33 +248,6 @@ BEGIN
           )
         );
       END IF;
-    ELSIF has_entity_scope THEN
-      -- No specific entity: sync every entity to the target value
-      FOR entity_key IN SELECT jsonb_object_keys(current_entities) ORDER BY 1
-      LOOP
-        old_entity_balance := COALESCE((new_entities->entity_key->>'balance')::numeric, 0);
-        IF old_entity_balance != target_balance THEN
-          new_entities := jsonb_set(
-            new_entities,
-            ARRAY[entity_key, 'balance'],
-            to_jsonb(target_balance)
-          );
-          mutation_logs_json := mutation_logs_json || jsonb_build_array(
-            jsonb_build_object(
-              'target_type', 'customer_entitlement',
-              'customer_entitlement_id', ent_id,
-              'rollover_id', NULL,
-              'entity_id', entity_key,
-              'credit_cost', credit_cost,
-              'balance_delta', -(old_entity_balance - target_balance),
-              'adjustment_delta', 0,
-              'usage_delta', 0,
-              'value_delta', (old_entity_balance - target_balance) / credit_cost
-            )
-          );
-          deducted := deducted + (old_entity_balance - target_balance);
-        END IF;
-      END LOOP;
     ELSE
       deducted := current_balance - target_balance;
       IF deducted != 0 THEN
@@ -312,7 +295,11 @@ BEGIN
       );
     END IF;
 
-    remaining_amount := 0;
+    -- The aggregate arm already set remaining_amount to the delta for the PASS 1
+    -- sink; the direct-set arms are fully applied here.
+    IF NOT (has_entity_scope AND target_entity_id IS NULL) THEN
+      remaining_amount := 0;
+    END IF;
   ELSIF target_balance IS NOT NULL THEN
     -- Get total balance from entitlements and rollovers (including additional_balance)
     total_balance := get_total_balance(jsonb_build_object(
