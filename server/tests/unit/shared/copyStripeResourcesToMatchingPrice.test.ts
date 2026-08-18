@@ -120,7 +120,7 @@ describe("copyStripeResourcesToMatchingPrice", () => {
 		expect(config.stripe_event_name).toBe("ai_credits_used");
 	});
 
-	test("copies only stripe_product_id from a stripeProductOnly match", () => {
+	test("copies stripe_product_id and stripe_meter_id from a stripeProductOnly match", () => {
 		const productOnlyCandidate = candidate({
 			id: "pr_cheaper",
 			config: {
@@ -129,6 +129,7 @@ describe("copyStripeResourcesToMatchingPrice", () => {
 				stripe_product_id: "prod_other_credits",
 				stripe_price_id: "price_other_credits",
 				stripe_meter_id: "meter_other_credits",
+				stripe_event_name: "other_credits_used",
 			},
 		});
 		const newPrice = target();
@@ -141,10 +142,14 @@ describe("copyStripeResourcesToMatchingPrice", () => {
 		});
 
 		const config = newPrice.config as UsagePriceConfig;
-		expect(result.copiedFields).toEqual(["stripe_product_id"]);
+		expect(result.copiedFields).toEqual([
+			"stripe_product_id",
+			"stripe_meter_id",
+		]);
 		expect(config.stripe_product_id).toBe("prod_other_credits");
 		expect(config.stripe_price_id).toBeUndefined();
-		expect(config.stripe_meter_id).toBeUndefined();
+		expect(config.stripe_meter_id).toBe("meter_other_credits");
+		expect(config.stripe_event_name).toBeUndefined();
 	});
 
 	test("returns no copied fields when nothing matches", () => {

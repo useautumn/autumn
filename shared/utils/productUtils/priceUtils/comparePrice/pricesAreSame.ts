@@ -1,13 +1,23 @@
 /** biome-ignore-all lint/suspicious/noDoubleEquals: legacy product comparison intentionally uses loose numeric/nullish equality */
 
 import {
+	AllocatedBillingBehavior,
 	FixedPriceConfigSchema,
 	type Price,
 	type PriceCurrencyConfig,
 	PriceType,
+	TierBehavior,
+	type UsagePriceConfig,
 	UsagePriceConfigSchema,
 	type UsageTier,
 } from "@autumn/shared";
+
+/** Unset behavior follows the allocated v1 shape: derived from should_prorate. */
+const normalizedAllocatedBillingBehavior = (usageConfig: UsagePriceConfig) =>
+	usageConfig.allocated_billing_behavior ??
+	(usageConfig.should_prorate
+		? AllocatedBillingBehavior.Prorated
+		: AllocatedBillingBehavior.Arrear);
 
 export const tiersAreSame = (tiers1: UsageTier[], tiers2: UsageTier[]) => {
 	if (tiers1.length !== tiers2.length) return false;
@@ -59,7 +69,8 @@ export const pricesAreSame = (
 			amount: fixedConfig1.amount !== fixedConfig2.amount,
 			interval: fixedConfig1.interval !== fixedConfig2.interval,
 			intervalCount:
-				fixedConfig1.interval_count !== fixedConfig2.interval_count,
+				(fixedConfig1.interval_count ?? 1) !==
+				(fixedConfig2.interval_count ?? 1),
 			baseCurrency:
 				(fixedConfig1.base_currency ?? null) !==
 				(fixedConfig2.base_currency ?? null),
@@ -76,14 +87,19 @@ export const pricesAreSame = (
 	const usageConfig2 = UsagePriceConfigSchema.parse(config2);
 
 	const configDiffs = {
-		shouldProrate: usageConfig1.should_prorate !== usageConfig2.should_prorate,
+		shouldProrate:
+			(usageConfig1.should_prorate ?? false) !==
+			(usageConfig2.should_prorate ?? false),
 		allocatedBillingBehavior:
-			usageConfig1.allocated_billing_behavior !==
-			usageConfig2.allocated_billing_behavior,
+			normalizedAllocatedBillingBehavior(usageConfig1) !==
+			normalizedAllocatedBillingBehavior(usageConfig2),
 		billWhen: usageConfig1.bill_when !== usageConfig2.bill_when,
-		billingUnits: usageConfig1.billing_units !== usageConfig2.billing_units,
+		billingUnits:
+			(usageConfig1.billing_units ?? 1) !== (usageConfig2.billing_units ?? 1),
 		interval: usageConfig1.interval !== usageConfig2.interval,
-		intervalCount: usageConfig1.interval_count !== usageConfig2.interval_count,
+		intervalCount:
+			(usageConfig1.interval_count ?? 1) !==
+			(usageConfig2.interval_count ?? 1),
 		internalFeatureId:
 			usageConfig1.internal_feature_id !== usageConfig2.internal_feature_id,
 		featureId: usageConfig1.feature_id !== usageConfig2.feature_id,
@@ -107,7 +123,9 @@ export const pricesAreSame = (
 		onDecrease:
 			price1.proration_config?.on_decrease !=
 			price2.proration_config?.on_decrease,
-		tierBehavior: price1.tier_behavior != price2.tier_behavior,
+		tierBehavior:
+			(price1.tier_behavior ?? TierBehavior.Graduated) !==
+			(price2.tier_behavior ?? TierBehavior.Graduated),
 	};
 
 	const pricesAreDiff =
