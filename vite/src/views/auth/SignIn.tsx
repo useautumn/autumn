@@ -135,7 +135,7 @@ export const SignIn = () => {
 	const handleGoogleSignIn = async () => {
 		setGoogleLoading(true);
 		try {
-			const frontendUrl = import.meta.env.VITE_FRONTEND_URL;
+			const frontendUrl = window.location.origin;
 			const googleCallbackUrl =
 				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
 			const googleNewUserUrl =
