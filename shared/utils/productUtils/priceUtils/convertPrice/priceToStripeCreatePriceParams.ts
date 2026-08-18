@@ -75,6 +75,6 @@ export const priceToStripeCreatePriceParams = ({
 		...priceAmountData,
 		recurring: recurringData,
 		currency,
-		nickname: `Autumn Price (${entitlement.feature.name})`,
+		nickname: `Autumn Price (${product.name})`,
 	};
 };

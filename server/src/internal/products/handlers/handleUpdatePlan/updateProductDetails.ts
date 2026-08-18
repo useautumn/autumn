@@ -132,6 +132,13 @@ const updateStripeProductNames = async ({
 			});
 
 			try {
+				const stripeProduct = await stripeCli.products.retrieve(stripeProdId);
+				if (
+					!stripeProduct.deleted &&
+					stripeProduct.metadata.autumn_managed_feature_product === "true"
+				) {
+					continue;
+				}
 				await stripeCli.products.update(stripeProdId, {
 					name,
 				});
