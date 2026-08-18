@@ -102,6 +102,16 @@ export class CusService {
 		);
 	}
 
+	static async removeCouponFromCustomer({
+		axios,
+		customer_id,
+	}: {
+		axios: AxiosInstance;
+		customer_id: string;
+	}) {
+		return await axios.delete(`/v1/customers/${customer_id}/coupons`);
+	}
+
 	static async createBillingPortalSession({
 		axios,
 		customer_id,

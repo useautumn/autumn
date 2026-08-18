@@ -186,9 +186,16 @@ export function CustomerProductsStatus({
 			{subtext && (
 				<>
 					<DotIcon size={16} />
-					<span className="text-sm text-tertiary-foreground pl-1 truncate">
-						{subtext}
-					</span>
+					<TooltipProvider>
+						<Tooltip delayDuration={0}>
+							<TooltipTrigger asChild>
+								<span className="min-w-0 text-sm text-tertiary-foreground pl-1 truncate">
+									{subtext}
+								</span>
+							</TooltipTrigger>
+							<TooltipContent>{subtext}</TooltipContent>
+						</Tooltip>
+					</TooltipProvider>
 				</>
 			)}
 		</div>
