@@ -146,17 +146,37 @@ type MatchKeyItem = {
 	reset?: { interval?: string | null; interval_count?: number | null } | null;
 };
 
-/** The identity an item is matched on across from/to (and against remove
- * filters): feature + billing method + interval + interval count. */
-export const composeMatchKey = (item: MatchKeyItem): string => {
+export enum PlanItemMatchPrecision {
+	FeatureBillingMethodCadence = "feature_billing_method_cadence",
+	FeatureCadence = "feature_cadence",
+}
+
+export const buildPlanItemKey = ({
+	item,
+	matchPrecision = PlanItemMatchPrecision.FeatureBillingMethodCadence,
+}: {
+	item: MatchKeyItem;
+	matchPrecision?: PlanItemMatchPrecision;
+}): string => {
 	const billingMethod = item.price?.billing_method ?? "";
 	const interval = item.price?.interval ?? item.reset?.interval ?? "";
 	const intervalCount = normalizeIntervalCount({
 		interval,
 		intervalCount: item.price?.interval_count ?? item.reset?.interval_count,
 	});
-	return `${item.feature_id}|${billingMethod}|${interval}|${intervalCount}`;
+	return [
+		item.feature_id,
+		...(matchPrecision === PlanItemMatchPrecision.FeatureBillingMethodCadence
+			? [billingMethod]
+			: []),
+		interval,
+		intervalCount,
+	].join("|");
 };
+
+/** The identity used across plan diffs: feature, billing method, and cadence. */
+export const composeMatchKey = (item: MatchKeyItem): string =>
+	buildPlanItemKey({ item });
 
 /** Match key for a remove_items filter, in the same format as composeMatchKey
  * (buildRemoveFilter already flattens the matched item's fields onto it). */
