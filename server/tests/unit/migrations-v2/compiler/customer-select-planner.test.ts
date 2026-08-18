@@ -173,6 +173,31 @@ describe("migration customer select planner wiring", () => {
 		expect(statusSql).toContain("c.internal_id IN ( SELECT mir.item_id");
 	});
 
+	test("not_run during an unscoped Run All still returns unprocessed customers", () => {
+		const query = buildProcessedPreviewSelect({
+			orgId: "org_test",
+			env: "live",
+			filter: { plan: { plan_id: "enterprise" } },
+			ctx,
+			includeProcessed: {
+				migrationInternalId: "mig_1",
+				executionFilter: {
+					statuses: ["not_run"],
+					queuedRun: {
+						migrationRunId: "run_1",
+						dryRun: false,
+					},
+				},
+			},
+			limit: 51,
+		});
+		const sql = normalize(dialect.sqlToQuery(query).sql);
+
+		expect(sql).toContain("NOT EXISTS");
+		expect(sql).not.toContain("AND NOT (true)");
+		expect(sql).not.toContain("AND NOT ( false )");
+	});
+
 	test("customer list filters are applied in the select SQL", () => {
 		const query = buildCustomerSelect({
 			orgId: "org_test",

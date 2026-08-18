@@ -27,6 +27,13 @@ export const BATCH_MIGRATION_MAX_PAGES = 2000;
 /** Pages per trigger chunk task invocation (~100k customers per task). */
 export const BATCH_MIGRATION_PAGES_PER_CHUNK = 20;
 
+/** Concurrent feature ops within one op type (removes, replaces, adds).
+ * Different features touch disjoint customer_entitlements rows.
+ * Env-overridable so a run can be ramped (or dropped to 1) without a deploy. */
+export const BATCH_MIGRATION_FEATURE_OP_CONCURRENCY = Number(
+	process.env.BATCH_MIGRATION_FEATURE_OP_CONCURRENCY ?? 3,
+);
+
 /** Concurrent Redis full-customer cache invalidations during finalize. */
 export const BATCH_MIGRATION_CACHE_BUST_CONCURRENCY = 20;
 

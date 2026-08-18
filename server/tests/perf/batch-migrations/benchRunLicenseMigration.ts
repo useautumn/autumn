@@ -196,6 +196,7 @@ const main = async () => {
 	let page = 0;
 	let totalProcessed = 0;
 	const pageTimings: number[] = [];
+	const phaseTotals: Record<string, number> = {};
 	const runStarted = Date.now();
 
 	while (page < pages) {
@@ -214,6 +215,9 @@ const main = async () => {
 			page += 1;
 			pageTimings.push(pageMs);
 			totalProcessed += result.processed;
+			for (const [phase, ms] of Object.entries(result.summary.phases ?? {})) {
+				phaseTotals[phase] = (phaseTotals[phase] ?? 0) + ms;
+			}
 			console.log(
 				`bench: page ${page} — ${result.processed.toLocaleString()} customers in ${pageMs}ms`,
 			);
@@ -254,6 +258,12 @@ const main = async () => {
 	console.log(
 		`bench: ${pageTimings.length} pages, ${totalProcessed.toLocaleString()} customers in ${totalMs}ms`,
 	);
+	const phases = Object.entries(phaseTotals).sort(([, a], [, b]) => b - a);
+	if (phases.length > 0) {
+		console.log(
+			`bench: phases — ${phases.map(([phase, ms]) => `${phase}=${ms}ms`).join(" ")}`,
+		);
+	}
 	console.log(
 		`bench: ${Number(counts.with_feature).toLocaleString()}/${expectedAssignments.toLocaleString()} assignments carry '${LICENSE_FEATURE_ID}'`,
 	);

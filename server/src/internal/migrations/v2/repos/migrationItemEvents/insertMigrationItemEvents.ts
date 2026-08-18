@@ -4,6 +4,10 @@ import { migrationTinybird } from "@/external/tinybird/migrations/migrationItemE
 
 const TINYBIRD_MIGRATION_ITEM_EVENT_MAX_RETRIES = 2;
 
+/** Parallel chunked POSTs: one 5k-row batch is a single multi-second upload
+ * even gzipped, while ~1k-row chunks overlap the round trips. */
+const TINYBIRD_MIGRATION_ITEM_EVENT_CHUNK_ROWS = 1000;
+
 export const insertMigrationItemEvents = async ({
 	ctx,
 	events,
@@ -18,11 +22,30 @@ export const insertMigrationItemEvents = async ({
 		return;
 	}
 
+	const chunks: TinybirdMigrationItemEvent[][] = [];
+	for (
+		let i = 0;
+		i < events.length;
+		i += TINYBIRD_MIGRATION_ITEM_EVENT_CHUNK_ROWS
+	)
+		chunks.push(events.slice(i, i + TINYBIRD_MIGRATION_ITEM_EVENT_CHUNK_ROWS));
+
 	try {
-		const result = await migrationTinybird.itemEvents.ingestBatch(events, {
-			wait: false,
-			maxRetries: TINYBIRD_MIGRATION_ITEM_EVENT_MAX_RETRIES,
-		});
+		const results = await Promise.all(
+			chunks.map((chunk) =>
+				migrationTinybird!.itemEvents.ingestBatch(chunk, {
+					wait: false,
+					maxRetries: TINYBIRD_MIGRATION_ITEM_EVENT_MAX_RETRIES,
+				}),
+			),
+		);
+		const result = results.reduce(
+			(acc, r) => ({
+				successful_rows: acc.successful_rows + r.successful_rows,
+				quarantined_rows: acc.quarantined_rows + r.quarantined_rows,
+			}),
+			{ successful_rows: 0, quarantined_rows: 0 },
+		);
 		ctx.logger.info(`Sent ${events.length} migration item events to Tinybird`, {
 			data: {
 				eventCount: events.length,

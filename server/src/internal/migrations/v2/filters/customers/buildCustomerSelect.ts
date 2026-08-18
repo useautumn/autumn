@@ -272,6 +272,8 @@ const buildExecutionStatusWhere = (
 	}
 
 	if (includeNotRun && filter.statuses.includes("not_run")) {
+		// Not run = no item-run row. Queued is a subset of that during an
+		// active Run All; excluding queue targets made Not Run empty.
 		clauses.push(sql`
 			NOT EXISTS (
 				SELECT 1
@@ -279,7 +281,6 @@ const buildExecutionStatusWhere = (
 				WHERE ${buildExecutionScope(includeProcessed.migrationInternalId, filter)}
 					AND mir.item_id = c.internal_id
 			)
-			AND NOT (${buildQueuedTargetWhere(filter.queuedRun)})
 		`);
 	}
 
