@@ -11,6 +11,8 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { MigrateCustomerContext } from "@/internal/migrations/v2/operations/types/index.js";
+import { makeFullCusProduct } from "../billing/billing-change-response/helpers/makeFullCusProduct.js";
+import { makeFullCustomer } from "../billing/billing-change-response/helpers/makeFullCustomer.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const state = {
@@ -125,15 +127,14 @@ beforeEach(() => {
 
 test("update_plan reuses the projected pool across matched customer products", async () => {
 	const customerProducts = [
-		{ id: "customer-product-1", customer_entitlements: [] },
-		{ id: "customer-product-2", customer_entitlements: [] },
-	] as FullCusProduct[];
-	const fullCustomer = {
+		makeFullCusProduct({ id: "customer-product-1", planId: "plan" }),
+		makeFullCusProduct({ id: "customer-product-2", planId: "plan" }),
+	];
+	const fullCustomer = makeFullCustomer({
 		id: "customer",
-		internal_id: "internal-customer",
-		customer_products: customerProducts,
-		pooled_customer_entitlements: [],
-	} as FullCustomer;
+		customerProducts,
+	});
+	fullCustomer.pooled_customer_entitlements = [];
 
 	const result = await processUpdatePlan({
 		ctx: {} as AutumnContext,
