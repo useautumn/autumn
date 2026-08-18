@@ -265,8 +265,7 @@ export const computeFlashPlan = ({
 				flashContext.fullCustomer.id ?? flashContext.fullCustomer.internal_id,
 			insertCustomerProducts,
 			updateCustomerProducts,
-			upsertSubscriptions:
-				upsertSubscriptions.length > 0 ? upsertSubscriptions : undefined,
+			upsertSubscriptions,
 		},
 		flashed,
 	};

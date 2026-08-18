@@ -1,7 +1,16 @@
-import { type AutumnBillingPlan, formatMs } from "@autumn/shared";
+import {
+	type AutumnBillingPlan,
+	formatMs,
+	type Subscription,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { ComputedSchedulePhase } from "../compute/computeSyncFuturePhases";
+
+const formatSubscriptionIds = (subscriptions?: Subscription[]) => {
+	if (!subscriptions?.length) return "none";
+	return subscriptions.map((subscription) => subscription.stripe_id).join(", ");
+};
 
 const formatCustomerProduct = (cp: {
 	product_id: string;
@@ -44,10 +53,9 @@ export const logSyncPlan = ({
 						? `${(autumnBillingPlan.customEntitlements ?? []).length} custom ent(s)`
 						: "none",
 
-				upsertSubscriptions:
-					autumnBillingPlan.upsertSubscriptions
-						?.map((subscription) => subscription.stripe_id)
-						.join(", ") || "none",
+				upsertSubscriptions: formatSubscriptionIds(
+					autumnBillingPlan.upsertSubscriptions,
+				),
 
 				schedulePhases:
 					phases.length > 0
