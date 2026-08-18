@@ -16,10 +16,10 @@ export function usePlanScopeField({
 	disabled,
 	disabledReason,
 }: {
+	/** Undefined follows `defaultEntityId`; null is an explicit customer level. */
 	planEntityId?: string | null;
 	defaultEntityId?: string;
 	onChange: (entityId: string | null | undefined) => void;
-	/** Read-only rows still show their scope; later schedule phases inherit it. */
 	disabled?: boolean;
 	disabledReason?: string;
 }) {
@@ -31,20 +31,14 @@ export function usePlanScopeField({
 	const { hasEntities, entities, selectedEntity, isLoading, setSearch } =
 		useScopeEntitySearch({ selectedEntityId: effectiveEntityId });
 
-	const entityLabel = (entityId: string) => selectedEntity?.name ?? entityId;
-	// Undefined means the row still inherits the sheet scope, so nothing is chosen.
-	const chosenLabel =
-		planEntityId === undefined
-			? undefined
-			: planEntityId === null
-				? "Customer-level"
-				: entityLabel(planEntityId);
-	// A read-only row has nothing to choose, so it always states its resolved scope.
-	const selectedLabel = disabled
-		? effectiveEntityId
-			? entityLabel(effectiveEntityId)
-			: "Customer-level"
-		: chosenLabel;
+	const isUnset = planEntityId === undefined;
+	// An unset row shows the sheet's scope rather than an "inherit" option.
+	const pickerValue = isUnset ? (defaultEntityId ?? null) : planEntityId;
+	const selectedLabel = isUnset
+		? undefined
+		: planEntityId === null
+			? "Customer-level"
+			: (selectedEntity?.name ?? planEntityId);
 
 	const scope: PlanRowScope | undefined = hasEntities
 		? {
@@ -65,13 +59,7 @@ export function usePlanScopeField({
 								selectedLabel={selectedLabel}
 							/>
 						}
-						// Unset plans show the sheet's scope rather than an "inherit"
-						// option; null is an explicit customer-level choice, not unset.
-						value={
-							planEntityId === undefined
-								? (defaultEntityId ?? null)
-								: planEntityId
-						}
+						value={pickerValue}
 					/>
 				),
 			}

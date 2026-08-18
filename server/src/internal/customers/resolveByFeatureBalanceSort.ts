@@ -19,6 +19,7 @@ import {
 import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { buildSearchPredicates } from "./CusSearchService.js";
+import { looseEntitlementIsLiveSql } from "./looseEntitlementSql.js";
 
 /** `total` is the value of the REQUESTED basis (remaining/granted/usage) —
  * the cursor and ranking key on both the lake and PG sides. */
@@ -115,14 +116,14 @@ export const balanceThresholdSql = ({
 	op === ">" ? sql`${totalExpr} > ${value}` : sql`${totalExpr} < ${value}`;
 
 /** "Live" must match what the Usage column sums (cusEnts of ACTIVE_STATUSES
- * products + loose rows) — NOT `ce.expired`, whose NULL→true backfill lags and
- * leaves churned-product rows looking live. Requires `cp` joined on
- * ce.customer_product_id. */
+ * products + non-drained loose rows) — NOT `ce.expired`, whose NULL→true
+ * backfill lags and leaves churned-product rows looking live. Requires `cp`
+ * joined on ce.customer_product_id. */
 export const liveCusEntPredicate = (): SQL => sql`
 	(ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 	AND ce.pooled_contribution_id IS NULL
 	AND (
-		ce.customer_product_id IS NULL
+		(ce.customer_product_id IS NULL AND ${looseEntitlementIsLiveSql()})
 		OR cp.status IN (${activeStatusList()})
 	)
 `;
@@ -342,13 +343,19 @@ const isAfterCursor = (
 		sortOrder,
 	) > 0;
 
-const nominationQuery = ({
+export const nominationQuery = ({
+	orgId,
+	env,
+	createdAtRange,
 	internalFeatureId,
 	after,
 	sortOrder,
 	basis,
 	remainingFilter,
 }: {
+	orgId: string;
+	env: AppEnv;
+	createdAtRange?: CustomerListFilters["created_at_range"];
 	internalFeatureId: string;
 	after: NominationCursor | null;
 	sortOrder: SortOrder;
@@ -357,6 +364,26 @@ const nominationQuery = ({
 }): SQL => {
 	const direction = sql.raw(sortOrder === "asc" ? "ASC" : "DESC");
 	const basisExpr = basisExprSql(basis);
+	const hasCreatedAtRange =
+		createdAtRange?.start !== undefined || createdAtRange?.end !== undefined;
+	const customerScopeJoin = hasCreatedAtRange
+		? sql`
+			SEMI JOIN main.customers c
+				ON c.internal_id = internal_customer_id
+				AND c.org_id = ${orgId}
+				AND c.env = ${env}
+				${
+					createdAtRange?.start !== undefined
+						? sql`AND c.created_at >= ${createdAtRange.start}`
+						: sql``
+				}
+				${
+					createdAtRange?.end !== undefined
+						? sql`AND c.created_at <= ${createdAtRange.end}`
+						: sql``
+				}
+		`
+		: sql``;
 	// Under a threshold filter the stripe is suppressed (verify emits u=false),
 	// so the cursor/order tuple must drop is_unlimited — a (false, ...) tuple
 	// would otherwise exclude every mixed customer from later batches.
@@ -386,6 +413,7 @@ const nominationQuery = ({
 	return sql`
 		SELECT internal_customer_id, is_unlimited, ${basisExpr} AS total
 		FROM main.ce_balance_totals
+		${customerScopeJoin}
 		WHERE internal_feature_id = ${internalFeatureId}
 		${thresholdPredicate}
 		${cursorPredicate}
@@ -451,6 +479,9 @@ export const resolveInternalIdsByFeatureBalanceSort = async ({
 			run: () =>
 				md.execute(
 					nominationQuery({
+						orgId,
+						env,
+						createdAtRange: filters?.created_at_range,
 						internalFeatureId,
 						after: nominationAfter,
 						sortOrder,

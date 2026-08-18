@@ -26,6 +26,7 @@ export const saveLockReceiptV2 = async ({
 		redis_receipt_key: string;
 		created_at: number;
 		ttl_at: number;
+		properties?: Record<string, unknown> | null;
 	};
 	customerId: string;
 	featureId: string;
@@ -44,6 +45,7 @@ export const saveLockReceiptV2 = async ({
 		entity_id: entityId ?? null,
 		expires_at: lock.expires_at ?? null,
 		created_at: lock.created_at,
+		properties: lock.properties ?? null,
 		overrideLockValue: overrideLockValue ?? null,
 		items,
 	});

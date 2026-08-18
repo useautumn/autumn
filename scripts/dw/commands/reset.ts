@@ -28,8 +28,10 @@ export async function cmdReset(): Promise<void> {
 		...entry,
 		branchId: undefined,
 		databaseUrl: undefined,
-		reservedDomainId: undefined,
+		cloudflareTunnelId: undefined,
 		ngrokUrl: undefined,
+		publicUrl: undefined,
+		reservedDomainId: undefined,
 		lastUsedAt: Date.now(),
 	};
 	registry[cwd] = cleared;

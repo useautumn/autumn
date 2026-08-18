@@ -1,11 +1,11 @@
 import { promoteAllUsersToAdmin } from "../commands/admin.ts";
 import type { Registry, RegistryEntry } from "../types.ts";
-import { ensureComposeStack, readNgrokTunnelUrl } from "./compose.ts";
+import { ensureComposeStack } from "./compose.ts";
 import { ensureEmulateRunning } from "./emulate.ts";
 import { writeEnvLocalFiles } from "./env-files.ts";
-import { isHeadless } from "./headless.ts";
 import { ensureChatDatabase } from "./neon.ts";
-import { ensureReservedDomain, ngrokApiAvailable } from "./ngrok.ts";
+import { ensurePublicAccess } from "./cloudflare.ts";
+import { entryPublicOrigin } from "./publicUrls.ts";
 import { saveRegistry } from "./registry.ts";
 import {
 	autoEnsureTestOrgSecretKey,
@@ -28,49 +28,13 @@ export async function provisionWorktree({
 
 	if (current.branchName) ensureChatDatabase(current.branchName);
 
-	let reservedDomain: string | undefined;
-	let reservedViteDomain: string | undefined;
-	if (ngrokApiAvailable() && process.env.NGROK_AUTHTOKEN) {
-		const reserved = await ensureReservedDomain(
-			current.worktreeNum,
-			current.path,
-		);
-		// Separate domain for the dashboard — one ngrok agent forwards one port.
-		const reservedVite = await ensureReservedDomain(
-			current.worktreeNum,
-			current.path,
-			{ vite: true },
-		);
-		current = {
-			...current,
-			reservedDomainId: reserved.id,
-			ngrokUrl: `https://${reserved.domain}`,
-			reservedViteDomainId: reservedVite.id,
-			ngrokViteUrl: `https://${reservedVite.domain}`,
-		};
-		reservedDomain = reserved.domain;
-		reservedViteDomain = reservedVite.domain;
-		registry[cwd] = current;
-		saveRegistry(registry);
-	}
-
-	const { ngrokEnabled } = ensureComposeStack(
-		current.worktreeNum,
-		current.branchName,
-		reservedDomain,
-		reservedViteDomain,
-	);
-	if (ngrokEnabled && !reservedDomain) {
-		current = {
-			...current,
-			ngrokUrl: await readNgrokTunnelUrl(current.worktreeNum),
-		};
-		registry[cwd] = current;
-		saveRegistry(registry);
-	}
+	ensureComposeStack(current.worktreeNum, current.branchName);
+	current = await ensurePublicAccess(current);
+	registry[cwd] = current;
+	saveRegistry(registry);
 
 	writeEnvLocalFiles(current);
-	if (!isHeadless()) ensureEmulateRunning();
+	ensureEmulateRunning({ origin: entryPublicOrigin(current) });
 
 	if (created) {
 		log("first provision — seeding test org");
@@ -87,8 +51,6 @@ export async function provisionWorktree({
 		}
 	}
 
-	// Always re-ensure: Neon reuse / failed prior seed leaves Infisical's key
-	// absent from api_keys while bun t still sends that Bearer token.
 	await autoEnsureTestOrgSecretKey(current);
 
 	return current;
