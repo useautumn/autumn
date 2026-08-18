@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
-import { PgDialect } from "drizzle-orm/pg-core";
+import { drizzle } from "@duckdbfan/drizzle-duckdb";
 import { nominationQuery } from "@/internal/customers/resolveByFeatureBalanceSort.js";
 
-const dialect = new PgDialect();
+const dialect = drizzle({ client: {} as never }).dialect;
 const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
 
 const render = (createdAtRange?: { start?: number; end?: number }) =>
@@ -31,7 +31,10 @@ describe("feature balance nomination query", () => {
 		const query = normalize(sql);
 
 		expect(query).toContain("SEMI JOIN main.customers c");
-		expect(query).toContain("c.internal_id = internal_customer_id");
+		expect(query).toContain(
+			"c.internal_id = ce_balance_totals.internal_customer_id",
+		);
+		expect(query).not.toContain('"main"."c"');
 		expect(query).toContain("c.org_id = $1");
 		expect(query).toContain("c.env = $2");
 		expect(query).toContain("c.created_at >= $3");
