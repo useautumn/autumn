@@ -24,6 +24,7 @@ import {
 	BillingControlsList,
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
+import { BILLING_CONTROL_EDIT_SHEETS } from "@/components/billing-controls/billingControlSheets";
 import { Table } from "@/components/general/table";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -241,19 +242,20 @@ export function CustomerBillingControlsSection() {
 						const planSource = planSourceFor({ key, item });
 						if (planSource) {
 							setSheet({
-								type: "subscription-detail",
-								itemId: planSource.customerProductId,
+								type: "billing-control-plan-managed",
+								data: {
+									key,
+									item,
+									planName: planSource.planName,
+									customerProductId: planSource.customerProductId,
+								},
 							});
 							return;
 						}
-						const sheetType = {
-							auto_topups: "billing-auto-topup-edit",
-							spend_limits: "billing-spend-limit-edit",
-							usage_limits: "billing-usage-limit-edit",
-							usage_alerts: "billing-usage-alert-edit",
-							overage_allowed: "billing-overage-allowed-edit",
-						}[key] as Parameters<typeof setSheet>[0]["type"];
-						setSheet({ type: sheetType, data: { index, item } });
+						setSheet({
+							type: BILLING_CONTROL_EDIT_SHEETS[key],
+							data: { index, item },
+						});
 					}}
 				/>
 			)}
