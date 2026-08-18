@@ -1,5 +1,4 @@
 import {
-	BillingInterval,
 	CusProductStatus,
 	EntInterval,
 	type EntitlementWithFeature,
@@ -13,6 +12,7 @@ import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/s
 import type { OperationScope } from "../scope/operationScope.js";
 import { operationScopeSql } from "../scope/operationScope.js";
 import { canonicalPoolLateralSql } from "./licensePoolSql.js";
+import { cycleAnchorSourcesSql } from "./utils/cycleAnchorSql.js";
 
 const nullableNumeric = z.preprocess(
 	(value) => (value === null || value === undefined ? null : Number(value)),
@@ -96,8 +96,6 @@ const matchSql = ({
 			entitlementId: sql`e.id`,
 			internalFeatureId: sql`e.internal_feature_id`,
 			featureId: sql`f.id`,
-			siblingAnchor: sql`sibling.reset_cycle_anchor`,
-			siblingExcludeLive: sql``,
 			liveBalance: sql`NULL::numeric`,
 			liveNextResetAt: sql`NULL::numeric`,
 			extraWhere: sql`
@@ -123,8 +121,6 @@ const matchSql = ({
 		entitlementId: sql`${entitlement.id}`,
 		internalFeatureId: sql`${entitlement.internal_feature_id}`,
 		featureId: sql`${entitlement.feature.id}`,
-		siblingAnchor: sql`COALESCE(sibling.reset_cycle_anchor, live.reset_cycle_anchor)`,
-		siblingExcludeLive: sql`AND sibling_entitlement.id <> live.id`,
 		liveBalance: sql`live.balance`,
 		liveNextResetAt: sql`live.next_reset_at`,
 		extraWhere: sql``,
@@ -175,6 +171,14 @@ export async function selectLicenseCandidateRows({
 		targetInterval,
 		targetIntervalCount,
 	});
+	const anchors = cycleAnchorSourcesSql({
+		include: true,
+		customerProductId: sql`assignment.id`,
+		subscriptionIds: sql`cp.subscription_ids`,
+		targetInterval,
+		targetIntervalCount,
+		keepLiveRowAnchor: match === "replace",
+	});
 
 	const rows = await db.execute(sql`
 		SELECT
@@ -193,16 +197,10 @@ export async function selectLicenseCandidateRows({
 			assignment.canceled_at AS "canceledAt",
 			assignment.ended_at AS "endedAt",
 			assignment.trial_ends_at AS "trialEndsAt",
-			EXISTS (
-				SELECT 1
-				FROM customer_prices AS customer_price
-				INNER JOIN prices AS price ON price.id = customer_price.price_id
-				WHERE customer_price.customer_product_id = assignment.id
-					AND price.config->>'interval' IS DISTINCT FROM ${BillingInterval.OneOff}
-			) AS "isPaidRecurring",
+			${anchors.paidRecurringColumn} AS "isPaidRecurring",
 			cp.billing_cycle_anchor AS "billingCycleAnchor",
-			sub_anchor.billing_cycle_anchor_ms AS "subscriptionCycleAnchor",
-			${matched.siblingAnchor} AS "siblingResetCycleAnchor",
+			${anchors.subscriptionAnchorColumn} AS "subscriptionCycleAnchor",
+			${anchors.siblingAnchorColumn} AS "siblingResetCycleAnchor",
 			${matched.liveBalance} AS "liveBalance",
 			${matched.liveNextResetAt} AS "liveNextResetAt"
 		FROM customer_products AS assignment
@@ -214,30 +212,8 @@ export async function selectLicenseCandidateRows({
 			ON customer.internal_id = assignment.internal_customer_id
 		LEFT JOIN entities AS entity
 			ON entity.internal_id = assignment.internal_entity_id
-		LEFT JOIN LATERAL (
-			SELECT subscription.billing_cycle_anchor_seconds * 1000 AS billing_cycle_anchor_ms
-			FROM UNNEST(COALESCE(cp.subscription_ids, ARRAY[]::text[])) AS cp_subscription(stripe_id)
-			INNER JOIN subscriptions AS subscription
-				ON subscription.stripe_id = cp_subscription.stripe_id
-			WHERE subscription.billing_cycle_anchor_seconds IS NOT NULL
-			ORDER BY subscription.created_at, subscription.id
-			LIMIT 1
-		) AS sub_anchor ON true
-		LEFT JOIN LATERAL (
-			SELECT sibling_entitlement.reset_cycle_anchor
-			FROM customer_entitlements AS sibling_entitlement
-			INNER JOIN entitlements AS sibling_definition
-				ON sibling_definition.id = sibling_entitlement.entitlement_id
-			WHERE sibling_entitlement.customer_product_id = assignment.id
-				${matched.siblingExcludeLive}
-				AND NOT sibling_entitlement.separate_interval
-				AND sibling_entitlement.reset_cycle_anchor IS NOT NULL
-				AND sibling_entitlement.next_reset_at IS NOT NULL
-				AND COALESCE(sibling_definition.interval, ${EntInterval.Lifetime}) = ${targetInterval}
-				AND COALESCE(sibling_definition.interval_count, 1) = ${targetIntervalCount}
-			ORDER BY sibling_entitlement.created_at, sibling_entitlement.id
-			LIMIT 1
-		) AS sibling ON true
+		${anchors.siblingJoin}
+		${anchors.subscriptionJoin}
 		WHERE assignment.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
 			AND assignment.internal_entity_id IS NOT NULL
 			AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})

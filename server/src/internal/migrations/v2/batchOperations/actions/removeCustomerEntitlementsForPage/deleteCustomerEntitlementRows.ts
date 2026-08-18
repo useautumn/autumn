@@ -1,16 +1,14 @@
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
+import { rowIsUnpaidSql } from "@/internal/migrations/v2/batchOperations/actions/utils/rowIsUnpaidSql.js";
 import {
 	type OperationScope,
 	operationScopeSql,
 } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 
-/** Re-asserts scope because the select took its own snapshot.
- *
- * Pooled and rollover state is checked against the rows, not just the catalog:
- * both outlive a flag being turned off, and the FKs cascade, so a row that
- * still carries either is left for the per-customer lane. */
+/** Re-asserts row-level pooled, rollover, paid, and operation scope after
+ * candidate selection's snapshot. */
 export const deleteCustomerEntitlementRows = async ({
 	db,
 	customerProductIds,
@@ -39,14 +37,11 @@ export const deleteCustomerEntitlementRows = async ({
 				AND NOT EXISTS (
 					SELECT 1 FROM rollovers WHERE rollovers.cus_ent_id = target.id
 				)
-			RETURNING target.customer_product_id, target.entitlement_id
-		), dropped_prices AS (
-			DELETE FROM customer_prices AS price
-			USING dropped, prices AS price_definition
-			WHERE price.customer_product_id = dropped.customer_product_id
-				AND price_definition.id = price.price_id
-				AND price_definition.entitlement_id = dropped.entitlement_id
-			RETURNING price.id
+				AND ${rowIsUnpaidSql({
+					customerProductId: sql`target.customer_product_id`,
+					entitlementId: sql`target.entitlement_id`,
+				})}
+			RETURNING target.customer_product_id
 		)
 		SELECT customer_product_id FROM dropped
 	`);

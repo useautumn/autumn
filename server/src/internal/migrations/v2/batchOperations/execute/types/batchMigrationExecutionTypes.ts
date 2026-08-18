@@ -1,4 +1,8 @@
-import type { CusProductStatus, EntitlementWithFeature } from "@autumn/shared";
+import type {
+	CusProductStatus,
+	EntitlementWithFeature,
+	FullProductWithoutLicenses,
+} from "@autumn/shared";
 
 /** One claimed customer flowing through a page. Preview fields feed the
  * Tinybird item events; `id` also keys the cache bust. */
@@ -48,6 +52,19 @@ export type BatchMigrationRemovedItem = Omit<
 	nextResetAt?: number | null;
 };
 
+export type BatchMigrationRepointedProduct = {
+	internalCustomerId: string;
+	customerProductId: string;
+	entityId: string | null;
+	status: CusProductStatus;
+	startsAt: number | null;
+	canceledAt: number | null;
+	endedAt: number | null;
+	trialEndsAt: number | null;
+	fromProduct: FullProductWithoutLicenses;
+	toProduct: FullProductWithoutLicenses;
+};
+
 export type BatchMigrationPageResult = {
 	/** Customers with a matching customer product — mutated and marked succeeded. */
 	succeeded: BatchMigrationPageCustomer[];
@@ -57,6 +74,7 @@ export type BatchMigrationPageResult = {
 	/** Rows inserted this page, in patch order. */
 	insertedItems: BatchMigrationInsertedItem[];
 	removedItems: BatchMigrationRemovedItem[];
+	repointedProducts?: BatchMigrationRepointedProduct[];
 };
 
 export type BatchMigrationExecutionSummary = {

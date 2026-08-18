@@ -5,8 +5,9 @@ import type {
 	BatchMigrationLicenseEntitlementOp,
 	BatchMigrationOperations,
 	BatchMigrationRemoveEntitlementOp,
+	BatchMigrationReplaceEntitlementOp,
 } from "../../types/index.js";
-import type { LicenseLinkTransitions } from "../transitions/resolveLicenseCustomizeTransitions.js";
+import type { LicenseLinkTransitions } from "../transitions/resolvePlanLicenseTransitions.js";
 
 const toLicenseOps = (
 	link: LicenseLinkTransitions,
@@ -84,9 +85,26 @@ export const computeBatchMigrationOperations = ({
 			.filter((entitlementPrice) => !entitlementPrice.price)
 			.map((entitlementPrice) => ({ entitlementPrice }));
 
+	const replaceEntitlements: BatchMigrationReplaceEntitlementOp[] =
+		productTransitions.entitlementPrices.transitions
+			.filter(
+				(transition) =>
+					!transition.fromEntitlementPrice.price &&
+					!transition.toEntitlementPrice.price,
+			)
+			.map((transition) => ({
+				fromEntitlementPrice: transition.fromEntitlementPrice,
+				entitlementPrice: transition.toEntitlementPrice,
+				initialState: computeCustomerEntitlementInitialState({
+					entitlement: transition.toEntitlementPrice.entitlement,
+				}),
+			}));
+
 	return {
 		addEntitlements,
 		removeEntitlements,
+		replaceEntitlements,
 		licenseEntitlements: licenseLinks.flatMap(toLicenseOps),
+		repointCustomerProduct: productTransitions.customerProduct,
 	};
 };

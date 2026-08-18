@@ -95,15 +95,6 @@ export const checkUpdatePlanOpEligibility = ({
 }): BatchMigrationRejection[] => {
 	const rejections: BatchMigrationRejection[] = [];
 
-	if (op.version !== undefined) {
-		rejections.push({
-			code: "version_update",
-			opIndex,
-			message:
-				"update_plan version bumps are wholesale product transitions; only customize add_items are batch-lowered.",
-		});
-	}
-
 	if (op.proration === true) {
 		rejections.push({
 			code: "proration_enabled",
@@ -132,18 +123,6 @@ export const checkUpdatePlanOpEligibility = ({
 	}
 
 	const removeItems = op.customize?.remove_items ?? [];
-
-	if (
-		removeItems.length > 0 &&
-		isModifyInPlaceOnly({ addItems: op.customize?.add_items, removeItems })
-	) {
-		rejections.push({
-			code: "unsupported_remove_items",
-			opIndex,
-			message:
-				"customize.remove_items paired with a matching add is an in-place edit; the balance has to survive the swap.",
-		});
-	}
 
 	if (
 		removeItems.some(

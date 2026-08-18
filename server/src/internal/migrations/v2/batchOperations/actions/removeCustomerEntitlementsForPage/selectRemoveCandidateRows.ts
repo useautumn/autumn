@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
+import { rowIsUnpaidSql } from "@/internal/migrations/v2/batchOperations/actions/utils/rowIsUnpaidSql.js";
 import {
 	type OperationScope,
 	operationScopeSql,
@@ -78,6 +79,10 @@ export const selectRemoveCandidateRows = async ({
 					AND NOT EXISTS (
 						SELECT 1 FROM rollovers WHERE rollovers.cus_ent_id = existing.id
 					)
+					AND ${rowIsUnpaidSql({
+						customerProductId: sql`cp.id`,
+						entitlementId: sql`existing.entitlement_id`,
+					})}
 			)
 		ORDER BY cp.id
 		${limit !== undefined ? sql`LIMIT ${limit}` : sql``}

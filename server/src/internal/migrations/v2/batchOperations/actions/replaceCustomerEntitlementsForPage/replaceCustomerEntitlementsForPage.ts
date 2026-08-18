@@ -1,6 +1,6 @@
 import {
-	type EntitlementWithFeature,
 	type Feature,
+	type FullProductWithoutLicenses,
 	isResettingEntitlement,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -20,59 +20,44 @@ import {
 	timePhase,
 } from "../../execute/utils/pagePhaseTimings.js";
 import type { OperationScope } from "../../scope/operationScope.js";
-import type { BatchMigrationReplaceLicenseEntitlementOp } from "../../types/batchMigrationOperations.js";
+import type { BatchMigrationExecutionReplace } from "../../types/batchMigrationExecutionPlan.js";
 import { enrichCustomerEntitlementCycles } from "../../utils/enrichCustomerEntitlementCycles.js";
-import { selectLicenseCandidateRows } from "../selectLicenseCandidateRows.js";
-import {
-	applyLicenseReplacePatches,
-	type LicenseReplaceRow,
-} from "./applyLicenseReplacePatches.js";
-import { expandFromLicenseEntitlementIds } from "./expandFromLicenseEntitlementIds.js";
-import { listDistinctLicenseEntitlementsForPage } from "./listDistinctLicenseEntitlementsForPage.js";
-import { remainingAfterBalancePatch } from "./remainingAfterBalancePatch.js";
+import { resolveRemovableEntitlementIds } from "../removeCustomerEntitlementsForPage/resolveRemovableEntitlementIds.js";
+import { remainingAfterBalancePatch } from "../replaceLicenseEntitlementsForPage/remainingAfterBalancePatch.js";
+import { applyReplacePatches, type ReplaceRow } from "./applyReplacePatches.js";
+import { selectReplaceCandidateRows } from "./selectReplaceCandidateRows.js";
 
-export type ReplaceLicenseEntitlementsForPageResult = {
+export type ReplaceCustomerEntitlementsForPageResult = {
 	affected: number;
-	distinctEntitlements: number;
+	candidateCount: number;
 	changedInternalCustomerIds: string[];
 	excludedInternalCustomerIds: string[];
 	insertedItems: BatchMigrationInsertedItem[];
 	removedItems: BatchMigrationRemovedItem[];
 };
 
-const emptyResult = ({
-	distinctEntitlements,
-}: {
-	distinctEntitlements: number;
-}): ReplaceLicenseEntitlementsForPageResult => ({
-	affected: 0,
-	distinctEntitlements,
-	changedInternalCustomerIds: [],
-	excludedInternalCustomerIds: [],
-	insertedItems: [],
-	removedItems: [],
-});
-
 const toInsertedItem = ({
 	row,
-	operation,
+	planId,
+	replace,
 	customerEntitlementPatch,
 }: {
-	row: LicenseReplaceRow;
-	operation: BatchMigrationReplaceLicenseEntitlementOp;
+	row: ReplaceRow;
+	planId: string;
+	replace: BatchMigrationExecutionReplace;
 	customerEntitlementPatch: CustomerEntitlementPatch;
 }): BatchMigrationInsertedItem => ({
 	internalCustomerId: row.internalCustomerId,
 	customerProductId: row.customerProductId,
 	entityId: row.entityId,
-	planId: operation.licensePlanId,
-	featureId: operation.entitlement.feature.id,
-	granted: operation.initialState.granted,
+	planId,
+	featureId: replace.entitlement.feature.id,
+	granted: replace.initialState.granted,
 	remaining: remainingAfterBalancePatch({
 		liveBalance: row.liveBalance,
 		patch: customerEntitlementPatch,
 	}),
-	unlimited: operation.initialState.unlimited === true,
+	unlimited: replace.initialState.unlimited === true,
 	nextResetAt: row.nextResetAt,
 	status: row.status,
 	startsAt: row.startsAt,
@@ -85,23 +70,23 @@ const toInsertedItem = ({
  * pre-write balance state, so finalize can diff before → after honestly. */
 const toRemovedItem = ({
 	row,
-	operation,
-	fromEntitlement,
+	planId,
+	replace,
 }: {
-	row: LicenseReplaceRow;
-	operation: BatchMigrationReplaceLicenseEntitlementOp;
-	fromEntitlement: EntitlementWithFeature;
+	row: ReplaceRow;
+	planId: string;
+	replace: BatchMigrationExecutionReplace;
 }): BatchMigrationRemovedItem => {
 	const fromInitialState = computeCustomerEntitlementInitialState({
-		entitlement: fromEntitlement,
+		entitlement: replace.fromEntitlement,
 	});
 	return {
 		internalCustomerId: row.internalCustomerId,
 		customerProductId: row.customerProductId,
 		entityId: row.entityId,
-		planId: operation.licensePlanId,
-		featureId: fromEntitlement.feature.id,
-		entitlement: fromEntitlement,
+		planId,
+		featureId: replace.fromEntitlement.feature.id,
+		entitlement: replace.fromEntitlement,
 		granted: fromInitialState.granted,
 		remaining: row.liveBalance,
 		unlimited: fromInitialState.unlimited === true,
@@ -115,68 +100,62 @@ const toRemovedItem = ({
 };
 
 /**
- * Replaces live assignment entitlements whose definition matches the catalog
- * from-row. Same path as add — the rowset is the finalize payload.
+ * Replaces live rows whose definition matches the catalog from-entitlement
+ * with the minted to-definition, carrying the consumed balance across.
+ * Bounded per customer-product page like the add and remove actions.
  */
-export const replaceLicenseEntitlementsForPage = async ({
+export const replaceCustomerEntitlementsForPage = async ({
 	db,
 	features,
 	scope,
 	internalCustomerIds,
-	operation,
+	fromProduct,
+	replace,
 	now,
 	phases,
 	candidateRowBatchSize = BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
-	maxDistinctEntitlements,
 }: {
 	db: DrizzleCli;
 	features: Feature[];
 	scope: OperationScope;
 	internalCustomerIds: string[];
-	operation: BatchMigrationReplaceLicenseEntitlementOp;
+	fromProduct: FullProductWithoutLicenses;
+	replace: BatchMigrationExecutionReplace;
 	now: number;
 	phases?: BatchMigrationPagePhases;
 	candidateRowBatchSize?: number;
-	maxDistinctEntitlements?: number;
-}): Promise<ReplaceLicenseEntitlementsForPageResult> => {
-	const toEntitlement = operation.entitlement;
+}): Promise<ReplaceCustomerEntitlementsForPageResult> => {
+	const toEntitlement = replace.entitlement;
+	const resetting = isResettingEntitlement({ entitlement: toEntitlement });
 	const excludedIds = new Set<string>();
 	const replacedIds = new Set<string>();
 	const insertedItems: BatchMigrationInsertedItem[] = [];
 	const removedItems: BatchMigrationRemovedItem[] = [];
-	const resetting = isResettingEntitlement({ entitlement: toEntitlement });
 
-	const { distinct, fromEntitlement } = await timePhase({
-		phases,
-		phase: "distinct",
-		run: () =>
-			listDistinctLicenseEntitlementsForPage({
-				db,
-				features,
-				internalCustomerIds,
-				scope,
-				licensePlanId: operation.licensePlanId,
-				internalFeatureId: toEntitlement.internal_feature_id,
-				fromEntitlementId: operation.fromEntitlementId,
-				maxDistinctEntitlements,
-			}),
-	});
-
-	const fromEntitlementIds = expandFromLicenseEntitlementIds({
-		candidateOutgoingEntitlements: distinct,
-		fromEntitlement,
-		toEntitlementId: toEntitlement.id,
-	});
-	if (fromEntitlementIds.length === 0) {
-		return emptyResult({ distinctEntitlements: distinct.length });
-	}
+	// Resolved once per page: a customer can hold a custom or older-version
+	// definition of the same item, which the catalog id alone would miss.
+	// The to-id is excluded so replays never re-apply the balance patch.
+	const fromEntitlementIds = (
+		await timePhase({
+			phases,
+			phase: "distinct",
+			run: () =>
+				resolveRemovableEntitlementIds({
+					db,
+					features,
+					internalCustomerIds,
+					scope,
+					entitlement: replace.fromEntitlement,
+				}),
+		})
+	).filter((entitlementId) => entitlementId !== toEntitlement.id);
 
 	const customerEntitlementPatch = computeCustomerEntitlementPatch({
-		fromEntitlement,
+		fromEntitlement: replace.fromEntitlement,
 		toEntitlement,
 	});
 
-	await iterateCustomerProductPages({
+	const { rowCount } = await iterateCustomerProductPages({
 		db,
 		pageSize: candidateRowBatchSize,
 		executePage: async ({
@@ -187,18 +166,17 @@ export const replaceLicenseEntitlementsForPage = async ({
 		}) => {
 			const candidates = await timePhase({
 				phases,
-				phase: "license_replace_candidates",
+				phase: "candidates",
 				run: () =>
-					selectLicenseCandidateRows({
+					selectReplaceCandidateRows({
 						db: transaction,
 						internalCustomerIds,
 						scope,
 						entitlement: toEntitlement,
-						licensePlanId: operation.licensePlanId,
+						fromEntitlementIds,
+						includeAnchorSources: resetting,
 						afterCustomerProductId,
 						limit,
-						match: "replace",
-						fromEntitlementIds,
 					}),
 			});
 			if (candidates.length === 0) return candidates;
@@ -224,12 +202,11 @@ export const replaceLicenseEntitlementsForPage = async ({
 				phases,
 				phase: "replace",
 				run: () =>
-					applyLicenseReplacePatches({
+					applyReplacePatches({
 						db: transaction,
 						rows,
 						scope,
 						toEntitlement,
-						licensePlanId: operation.licensePlanId,
 						customerEntitlementPatch,
 					}),
 			});
@@ -237,9 +214,16 @@ export const replaceLicenseEntitlementsForPage = async ({
 			for (const id of patched.internalCustomerIds) replacedIds.add(id);
 			for (const row of rows) {
 				if (!updatedIdSet.has(row.customerEntitlementId)) continue;
-				removedItems.push(toRemovedItem({ row, operation, fromEntitlement }));
+				removedItems.push(
+					toRemovedItem({ row, planId: fromProduct.id, replace }),
+				);
 				insertedItems.push(
-					toInsertedItem({ row, operation, customerEntitlementPatch }),
+					toInsertedItem({
+						row,
+						planId: fromProduct.id,
+						replace,
+						customerEntitlementPatch,
+					}),
 				);
 			}
 			return candidates;
@@ -248,7 +232,7 @@ export const replaceLicenseEntitlementsForPage = async ({
 
 	return {
 		affected: insertedItems.length,
-		distinctEntitlements: distinct.length,
+		candidateCount: rowCount,
 		changedInternalCustomerIds: [...replacedIds],
 		excludedInternalCustomerIds: [...excludedIds],
 		insertedItems,

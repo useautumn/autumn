@@ -10,11 +10,12 @@ import {
 	ResetInterval,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
-import { computePatchProductTransitions } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computePatchProductTransitions.js";
+import { computeProductTransitions } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computeProductTransitions.js";
 import { checkUpdatePlanOpEligibility } from "@/internal/migrations/v2/batchOperations/compute/guards/checkUpdatePlanOpEligibility.js";
 import { checkUpdatePlanTransitionEligibility } from "@/internal/migrations/v2/batchOperations/compute/guards/checkUpdatePlanTransitionEligibility.js";
 import { computeBatchMigrationOperations } from "@/internal/migrations/v2/batchOperations/compute/operations/computeBatchMigrationOperations.js";
-import { resolveRemoveItemEntitlements } from "@/internal/migrations/v2/batchOperations/compute/utils/resolveRemoveItemEntitlements.js";
+import { resolveTargetFullProduct } from "@/internal/migrations/v2/batchOperations/compute/transitions/resolveTargetFullProduct.js";
+import type { MigrationRuntime } from "@/internal/migrations/v2/types/migrationDefinition.js";
 
 const messagesFeature = {
 	internal_id: "feat_messages",
@@ -82,14 +83,18 @@ const lower = ({
 	fromProduct: FullProduct;
 	op: UpdatePlanOp;
 }) => {
-	const removeEntitlementIds = resolveRemoveItemEntitlements({
+	const { toProduct } = resolveTargetFullProduct({
+		migration: {} as unknown as MigrationRuntime,
 		op,
+		opIndex: 0,
 		fromProduct,
+		targetProduct: fromProduct,
+		features: [messagesFeature],
 	});
-	const productTransitions = computePatchProductTransitions({
+	if (!toProduct) throw new Error("resolveTargetFullProduct rejected");
+	const productTransitions = computeProductTransitions({
 		fromProduct,
-		addEntitlements: [],
-		removeEntitlementIds,
+		toProduct,
 	});
 	const operations = computeBatchMigrationOperations({
 		productTransitions,
@@ -272,7 +277,7 @@ describe("plain plan item removal lowering", () => {
 		).toEqual(["ent_quarterly"]);
 	});
 
-	test("a modify-in-place pair is rejected op-level, not silently dropped", () => {
+	test("a modify-in-place pair passes the op guard", () => {
 		const op = {
 			type: "update_plan",
 			plan_filter: { plan_id: "pro" },
@@ -284,9 +289,7 @@ describe("plain plan item removal lowering", () => {
 
 		const rejections = checkUpdatePlanOpEligibility({ op, opIndex: 0 });
 
-		expect(rejections.map((rejection) => rejection.code)).toContain(
-			"unsupported_remove_items",
-		);
+		expect(rejections).toHaveLength(0);
 	});
 
 	test("a standalone remove passes the op guard", () => {

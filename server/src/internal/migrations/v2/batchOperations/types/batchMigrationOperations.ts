@@ -4,6 +4,7 @@ import type {
 	PlanItemFilter,
 } from "@autumn/shared";
 import type { computeCustomerEntitlementInitialState } from "@/internal/billing/v2/actions/batchTransition/compute/operations/entitlementPriceOperations/computeCustomerEntitlementPatch.js";
+import type { CustomerProductTransition } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computeCustomerProductTransition.js";
 
 export type CustomerEntitlementInitialState = ReturnType<
 	typeof computeCustomerEntitlementInitialState
@@ -19,6 +20,14 @@ export type BatchMigrationAddEntitlementOp = {
 /** Drops one free entitlement's rows across the patch's customer products. */
 export type BatchMigrationRemoveEntitlementOp = {
 	entitlementPrice: EntitlementPrice;
+};
+
+/** Moves live rows off the definition they hold and onto the minted one,
+ * carrying the balance across rather than re-granting it. */
+export type BatchMigrationReplaceEntitlementOp = {
+	fromEntitlementPrice: EntitlementPrice;
+	entitlementPrice: EntitlementPrice;
+	initialState: CustomerEntitlementInitialState;
 };
 
 type BatchMigrationLicenseOpTarget = {
@@ -68,5 +77,7 @@ export type BatchMigrationLicenseEntitlementOp =
 export type BatchMigrationOperations = {
 	addEntitlements: BatchMigrationAddEntitlementOp[];
 	removeEntitlements: BatchMigrationRemoveEntitlementOp[];
+	replaceEntitlements: BatchMigrationReplaceEntitlementOp[];
 	licenseEntitlements: BatchMigrationLicenseEntitlementOp[];
+	repointCustomerProduct?: CustomerProductTransition;
 };

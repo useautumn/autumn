@@ -2,9 +2,9 @@ import { ACTIVE_STATUSES, MIGRATABLE_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
 
-/** A pool pins the license product version it was attached under, so matching on
- * the plan's public id keeps versioned seats reachable — the identity
- * matchCustomerLicenseSuccessors already resolves through. */
+/** The link a pool instantiates is its definition source, so its license plan is
+ * resolved through plan_license rather than the denormalized product copy.
+ * Matching the plan's public id keeps seats on any version reachable. */
 export const poolLicensePlanSql = ({
 	licensePlanId,
 	poolAlias = sql`pool`,
@@ -14,8 +14,10 @@ export const poolLicensePlanSql = ({
 }) => sql`
 	EXISTS (
 		SELECT 1
-		FROM products AS pool_license_product
-		WHERE pool_license_product.internal_id = ${poolAlias}.license_internal_product_id
+		FROM plan_license AS pool_link
+		INNER JOIN products AS pool_license_product
+			ON pool_license_product.internal_id = pool_link.license_internal_product_id
+		WHERE pool_link.id = ${poolAlias}.plan_license_id
 			AND pool_license_product.id = ${licensePlanId}
 	)
 `;
