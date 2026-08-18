@@ -64,5 +64,6 @@ export const applyUpdateSubscriptionBillingCycleAnchor = ({
 		stripeSubscriptionId:
 			billingContext.stripeSubscription?.id ??
 			billingContext.customerProduct.subscription_ids?.[0],
+		targetCustomerProduct: billingContext.customerProduct,
 	});
 };

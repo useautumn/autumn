@@ -2,6 +2,7 @@ import {
 	type AutumnBillingPlan,
 	type BillingContext,
 	customerProductHasRelevantStatus,
+	type FullCusProduct,
 	filterCustomerProductsByStripeSubscriptionId,
 } from "@autumn/shared";
 import { computeBillingCycleAnchorEntitlementUpdates } from "@/internal/billing/v2/compute/computeAutumnUtils/computeBillingCycleAnchorEntitlementUpdates";
@@ -14,14 +15,15 @@ export const applyBillingCycleAnchorToSharedSubscription = ({
 	plan,
 	billingContext,
 	stripeSubscriptionId = billingContext.stripeSubscription?.id,
+	targetCustomerProduct,
 }: {
 	plan: AutumnBillingPlan;
 	billingContext: BillingContext;
 	stripeSubscriptionId?: string;
+	targetCustomerProduct?: FullCusProduct;
 }): AutumnBillingPlan => {
 	if (billingContext.requestedBillingCycleAnchor === undefined) return plan;
-
-	if (!stripeSubscriptionId) return plan;
+	if (!stripeSubscriptionId && !targetCustomerProduct) return plan;
 
 	const finalCustomer = applyAutumnBillingPlanToFullCustomer({
 		fullCustomer: billingContext.fullCustomer,
@@ -33,10 +35,12 @@ export const applyBillingCycleAnchorToSharedSubscription = ({
 			customerProduct,
 		]),
 	);
-	const relatedCustomerProducts = filterCustomerProductsByStripeSubscriptionId({
-		customerProducts: billingContext.fullCustomer.customer_products,
-		stripeSubscriptionId,
-	});
+	const relatedCustomerProducts = stripeSubscriptionId
+		? filterCustomerProductsByStripeSubscriptionId({
+				customerProducts: billingContext.fullCustomer.customer_products,
+				stripeSubscriptionId,
+			})
+		: [targetCustomerProduct!];
 	const customerProductUpdateById = new Map(
 		getUpdateCustomerProducts({ autumnBillingPlan: plan }).map((update) => [
 			update.customerProduct.id,
