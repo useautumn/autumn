@@ -100,6 +100,7 @@ const createDowngradeProrationInvoice = async ({
 		stripeCustomerId: sub.customer as string,
 		periodStart: Math.floor(now / 1000),
 		periodEnd: Math.floor(subItem.current_period_end * 1000),
+		currency: sub.currency,
 	});
 
 	await stripeCli.invoiceItems.create(invoiceItem);
@@ -183,6 +184,7 @@ export const handleProratedDowngrade = async ({
 				usage: prevOverage,
 				price: cusPrice.price,
 			}),
+			currency: sub.currency,
 		});
 
 		const newPrice = priceToInvoiceAmount({
@@ -191,6 +193,7 @@ export const handleProratedDowngrade = async ({
 				usage: newOverage,
 				price: cusPrice.price,
 			}),
+			currency: sub.currency,
 		});
 
 		invoice = await createDowngradeProrationInvoice({
