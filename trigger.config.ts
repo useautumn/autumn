@@ -79,6 +79,9 @@ export default defineConfig({
 			"postgres",
 			"pg",
 			"zod",
+			"@duckdb/node-api",
+			"@duckdb/node-bindings",
+			"@duckdbfan/drizzle-duckdb",
 		],
 		extensions: [
 			{
