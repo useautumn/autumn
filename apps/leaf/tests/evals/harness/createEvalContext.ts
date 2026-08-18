@@ -30,6 +30,8 @@ export type EvalTurn =
 
 export type EvalTurnResult = {
 	apiCalls: EvalRuntimeContext["autumnApi"]["calls"];
+	/** An optional approve turn that found no pending gate. */
+	skipped?: boolean;
 	text?: string;
 	toolCalls: ReturnType<
 		Awaited<ReturnType<EvalAgentDriver["start"]>>["getToolCalls"]
@@ -123,8 +125,11 @@ export const createEvalContext = async ({
 
 			if (!runningDriver.hasPendingApproval()) {
 				if (turn.optional) {
+					// Nothing was gated, so this turn must not read as an approval:
+					// counting it would let a skipped gate score as a real one.
 					turnResults.push({
 						apiCalls: [...runtimeContext.autumnApi.calls],
+						skipped: true,
 						toolCalls: runningDriver.getToolCalls(),
 						type: turn.type,
 					});

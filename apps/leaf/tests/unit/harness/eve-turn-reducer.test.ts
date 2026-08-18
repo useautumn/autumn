@@ -91,6 +91,41 @@ describe("Eve turn reducer", () => {
 		});
 		expect(progress.toolInputs.size).toBe(0);
 		expect(requested.progress.toolInputs.get("call_1")).toEqual({ request });
+		expect(requested.effects).toEqual([
+			{
+				kind: "action",
+				progress: {
+					label: "Attaching the plan",
+					phase: "started",
+					toolName: "autumn__attach",
+				},
+			},
+		]);
+
+		const completed = reduceEveTurnEvent({
+			event: {
+				result: {
+					callId: "call_1",
+					output: { ok: true },
+					toolName: "autumn__attach",
+				},
+				status: "completed",
+				type: "action.result",
+			},
+			progress: requested.progress,
+		});
+		expect(completed.effects).toEqual([
+			{
+				kind: "action",
+				progress: {
+					label: "Attaching the plan",
+					output: { ok: true },
+					phase: "completed",
+					status: "completed",
+					toolName: "autumn__attach",
+				},
+			},
+		]);
 
 		const suspended = reduceEveTurnEvent({
 			event: {
@@ -122,6 +157,13 @@ describe("Eve turn reducer", () => {
 					_eveApproveOptionId: "confirm",
 					_eveDenyOptionId: "cancel",
 					_eveSiblingRequestIds: ["req_2"],
+					_eveWithheldWrites: [
+						{
+							input: undefined,
+							requestId: "req_2",
+							toolName: "autumn__updateSubscription",
+						},
+					],
 					request,
 				},
 				toolCallId: "req_1",
@@ -132,7 +174,7 @@ describe("Eve turn reducer", () => {
 		});
 	});
 
-	test("persists failure before surfacing the error", () => {
+	test("discards a failed session before surfacing the error", () => {
 		const transition = reduceEveTurnEvent({
 			event: { message: "Eve failed", type: "session.failed" },
 			progress: { ...createEveTurnProgress(), turnStarted: true },
@@ -140,8 +182,76 @@ describe("Eve turn reducer", () => {
 
 		expect(transition.effects).toEqual([
 			{ kind: "save_session", status: "failed" },
+			{ kind: "delete_session" },
 			{ kind: "throw", message: "Eve failed" },
 		]);
 		expect(transition.outcome).toBeUndefined();
+	});
+});
+
+// The prompt requires a preview first, so the writes park on a LATER turn than
+// the preview call — the batch must still group into one approval.
+describe("a batch parked after a preview turn", () => {
+	test("groups both writes from a post-preview park", () => {
+		const started = reduceEveTurnEvent({
+			event: { type: "turn.started" },
+			progress: createEveTurnProgress(),
+		});
+		const requested = reduceEveTurnEvent({
+			event: {
+				actions: [{ callId: "call_p", toolName: "autumn__previewAttach" }],
+				type: "actions.requested",
+			},
+			progress: started.progress,
+		});
+		const previewed = reduceEveTurnEvent({
+			event: {
+				result: {
+					callId: "call_p",
+					output: { total: 100, currency: "usd" },
+					toolName: "autumn__previewAttach",
+				},
+				status: "completed",
+				type: "action.result",
+			},
+			progress: requested.progress,
+		});
+		const suspended = reduceEveTurnEvent({
+			event: {
+				requests: [
+					{
+						action: {
+							input: { request: { customer_id: "cus_1", email: "n@x.com" } },
+							toolName: "autumn__updateCustomer",
+						},
+						options: [
+							{ id: "confirm", label: "Approve" },
+							{ id: "cancel", label: "Deny" },
+						],
+						requestId: "req_1",
+					},
+					{
+						action: {
+							input: { request: { customer_id: "cus_1", plan_id: "pro" } },
+							toolName: "autumn__attach",
+						},
+						requestId: "req_2",
+					},
+				],
+				type: "input.requested",
+			},
+			progress: previewed.progress,
+		});
+
+		expect(suspended.outcome).toMatchObject({
+			approval: {
+				toolArgs: {
+					_eveSiblingRequestIds: ["req_2"],
+					_eveWithheldWrites: [{ toolName: "autumn__attach" }],
+				},
+				toolName: "autumn__updateCustomer",
+			},
+			kind: "suspended",
+		});
 	});
 });

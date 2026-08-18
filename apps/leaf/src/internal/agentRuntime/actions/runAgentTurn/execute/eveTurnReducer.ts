@@ -1,7 +1,9 @@
 import type { CatalogPlanPreview } from "@autumn/shared";
+import { logger } from "../../../../../lib/logger.js";
 import { WAITING_FOR_INPUT_MESSAGE } from "../../../../../ui/messages.js";
 import type { RunStopReason } from "../../../../runs/runRegistry.js";
 import type { AgentApprovalRequest } from "../../../domain/agentTurn.js";
+import type { AgentActionProgress } from "../../../domain/agentTurnContext.js";
 import type { EveEvent } from "../../../eve/eveEventSchemas.js";
 import {
 	approvalOptionIds,
@@ -14,6 +16,8 @@ import {
 	type ChainedPendingRequest,
 	classifyParkedEveInput,
 	type PendingQuestion,
+	type WithheldWrite,
+	withheldWritesToolArgs,
 } from "../../../eve/parkedInput.js";
 import {
 	type CapturedPreview,
@@ -41,7 +45,8 @@ export type EveTurnProgress = Readonly<{
 }>;
 
 export type EveTurnEffect =
-	| Readonly<{ kind: "action"; message: string }>
+	| Readonly<{ kind: "action"; progress: AgentActionProgress }>
+	| Readonly<{ kind: "delete_session" }>
 	| Readonly<{ id: string; kind: "reasoning"; text: string }>
 	| Readonly<{
 			kind: "save_session";
@@ -76,10 +81,12 @@ const approvalForGatedWrite = ({
 	chained,
 	progress,
 	siblingRequestIds,
+	withheld,
 }: {
 	chained: ChainedPendingRequest;
 	progress: EveTurnProgress;
 	siblingRequestIds: ReadonlyArray<string>;
+	withheld: ReadonlyArray<WithheldWrite>;
 }): AgentApprovalRequest => {
 	const options = approvalOptionIds({ options: chained.options });
 	return {
@@ -90,6 +97,7 @@ const approvalForGatedWrite = ({
 			_eveApproveOptionId: options.approve,
 			_eveDenyOptionId: options.deny,
 			_eveSiblingRequestIds: siblingRequestIds,
+			...withheldWritesToolArgs(withheld),
 		},
 		preview: previewForParkedWrite({
 			captured: progress.lastPreview,
@@ -115,7 +123,14 @@ const reduceRequestedActions = ({
 			progress.turnStarted &&
 			!(action.toolName && isSilentTool(action.toolName))
 		) {
-			effects.push({ kind: "action", message: label });
+			effects.push({
+				kind: "action",
+				progress: {
+					label,
+					phase: "started",
+					toolName: action.toolName,
+				},
+			});
 		}
 		if (!action.callId) continue;
 		toolLabels.set(action.callId, label);
@@ -141,11 +156,30 @@ const reduceActionResult = ({
 	if (!result?.callId) {
 		return { effects: [], progress: { ...progress, lastPreview } };
 	}
+	logger.info("Eve tool completed", {
+		event: "leaf.eve_tool_completed",
+		data: {
+			call_id: result.callId,
+			status: event.status,
+			tool: result.toolName,
+		},
+	});
 	const effects: EveTurnEffect[] = [];
-	if (progress.turnStarted && !progress.toolLabels.has(result.callId)) {
+	if (
+		progress.turnStarted &&
+		!(result.toolName && isSilentTool(result.toolName))
+	) {
 		effects.push({
 			kind: "action",
-			message: displayEveToolLabel(labelForResult(result)),
+			progress: {
+				label:
+					progress.toolLabels.get(result.callId) ??
+					displayEveToolLabel(labelForResult(result)),
+				output: result.output,
+				phase: "completed",
+				status: event.status,
+				toolName: result.toolName,
+			},
 		});
 	}
 	const toolLabels = new Map(progress.toolLabels);
@@ -214,6 +248,14 @@ const reduceInputRequest = ({
 	progress: EveTurnProgress;
 }): EveTurnTransition => {
 	const parked = classifyParkedEveInput({ requests: event.requests });
+	logger.info("Eve parked input", {
+		event: "leaf.eve_input_parked",
+		data: {
+			kind: parked?.kind,
+			request_count: event.requests.length,
+			tools: event.requests.map((request) => request.action?.toolName),
+		},
+	});
 	if (parked?.kind === "gated") {
 		return {
 			effects: [{ kind: "save_session", status: "waiting" }],
@@ -222,6 +264,7 @@ const reduceInputRequest = ({
 					chained: parked.chained,
 					progress,
 					siblingRequestIds: parked.siblingRequestIds,
+					withheld: parked.withheld,
 				}),
 				kind: "suspended",
 				text: progress.finalText,
@@ -283,7 +326,11 @@ export const reduceEveTurnEvent = ({
 	if (event.type === "turn.started") {
 		return {
 			effects: [],
-			progress: { ...progress, lastPreview: undefined, turnStarted: true },
+			progress: {
+				...progress,
+				lastPreview: undefined,
+				turnStarted: true,
+			},
 		};
 	}
 	if (event.type === "actions.requested") {
@@ -303,8 +350,16 @@ export const reduceEveTurnEvent = ({
 			return reduceCompletedMessage({ createReasoningId, event, progress });
 		case "input.requested":
 			return reduceInputRequest({ event, progress });
-		case "turn.failed":
 		case "session.failed":
+			return {
+				effects: [
+					{ kind: "save_session", status: "failed" },
+					{ kind: "delete_session" },
+					{ kind: "throw", message: event.message },
+				],
+				progress,
+			};
+		case "turn.failed":
 			return {
 				effects: [
 					{ kind: "save_session", status: "failed" },

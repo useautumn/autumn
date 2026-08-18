@@ -1,7 +1,7 @@
+import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv, ChatProvider } from "@autumn/shared";
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
 import { db } from "../../../lib/db.js";
-import { parsePreviewPayload } from "../../../ui/previewContent.js";
 
 type WebApproval = {
 	id: string;

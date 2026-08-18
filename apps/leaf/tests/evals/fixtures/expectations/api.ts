@@ -32,10 +32,13 @@ export const api = {
 		type: "api.calledInOrder",
 	}),
 	calledAfterApproval: ({
+		approvalIndex,
 		call,
 	}: {
+		approvalIndex?: number;
 		call: ExpectedApiCall;
 	}): ApiCalledAfterApprovalExpectation => ({
+		...(approvalIndex === undefined ? {} : { approvalIndex }),
 		call,
 		type: "api.calledAfterApproval",
 	}),

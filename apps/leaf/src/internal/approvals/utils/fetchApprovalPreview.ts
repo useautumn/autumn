@@ -4,6 +4,17 @@ import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
 import { writeToPreviewTool } from "./toolRegistry.js";
 
+/** A preview the write has but Leaf could not compute — distinct from a write
+ * that has no preview tool at all. */
+export const FAILED_APPROVAL_PREVIEW = { failed: true } as const;
+
+export const isFailedApprovalPreview = (preview: unknown) =>
+	Boolean(
+		preview &&
+			typeof preview === "object" &&
+			(preview as { failed?: unknown }).failed === true,
+	);
+
 export const shouldRefreshApprovalPreview = ({
 	preview,
 	toolName,
@@ -22,9 +33,30 @@ const previewRequestForWrite = ({
 	request: Record<string, unknown>;
 	toolName: string;
 }) => {
+	const withCatalogDefaults = (catalogRequest: Record<string, unknown>) => ({
+		features: [],
+		plans: [],
+		skip_deletions: true,
+		skip_feature_ids: [],
+		skip_plan_ids: [],
+		...catalogRequest,
+	});
 	const name = normalizeToolName(toolName);
+	if (name === "createPlan") {
+		return withCatalogDefaults({
+			expand: ["plan"],
+			plans: [request],
+			skip_deletions: true,
+		});
+	}
+	if (name === "createReward") {
+		return withCatalogDefaults({
+			rewards: [request],
+			skip_deletions: true,
+		});
+	}
 	if (name === "updatePlan") {
-		return {
+		return withCatalogDefaults({
 			expand: ["plan"],
 			plans: [
 				{
@@ -34,13 +66,15 @@ const previewRequestForWrite = ({
 				},
 			],
 			skip_deletions: true,
-		};
+		});
 	}
 	// Catalog updates need the variant/version previews for the decision gate,
 	// and the model rarely passes the flags itself.
 	if (name === "updateCatalog" && Array.isArray(request.plans)) {
-		return {
+		const expand = Array.isArray(request.expand) ? request.expand : [];
+		return withCatalogDefaults({
 			...request,
+			expand: [...new Set([...expand, "plan"])],
 			plans: (request.plans as Record<string, unknown>[]).map((plan) => ({
 				...plan,
 				include_variants: true,
@@ -49,7 +83,7 @@ const previewRequestForWrite = ({
 				// set; an empty list is a no-op for preview purposes.
 				variants: plan.variants ?? [],
 			})),
-		};
+		});
 	}
 	return request;
 };
@@ -80,10 +114,8 @@ export const fetchApprovalPreview = async ({
 			toolName: previewTool,
 			args: { request: previewRequestForWrite({ request, toolName }) },
 		});
-		// A failed preview (validation, 404 pre-creation, API 4xx) must not
-		// become the card's "preview" — the card falls back to params-only.
-		// Failures arrive either as { error: true, ... } or as a thrown-error
-		// envelope { message, code, domain/category, cause }.
+		// Failed previews use two response shapes; neither should replace the
+		// card's params-only fallback.
 		if (result && typeof result === "object") {
 			const record = result as Record<string, unknown>;
 			const isErrorShape =
@@ -91,7 +123,7 @@ export const fetchApprovalPreview = async ({
 				"cause" in record ||
 				(typeof record.message === "string" &&
 					("code" in record || "domain" in record));
-			if (isErrorShape) return undefined;
+			if (isErrorShape) return FAILED_APPROVAL_PREVIEW;
 		}
 		return result;
 	} catch (error) {
@@ -102,6 +134,6 @@ export const fetchApprovalPreview = async ({
 				error: error instanceof Error ? error.message : String(error),
 			},
 		});
-		return undefined;
+		return FAILED_APPROVAL_PREVIEW;
 	}
 };

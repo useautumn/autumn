@@ -20,6 +20,8 @@ export type EvalOutput = {
 	toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
 	turns?: Array<{
 		apiCalls?: AutumnApiCall[];
+		/** An optional approve turn that found no pending gate. */
+		skipped?: boolean;
 		text?: string;
 		toolCalls?: Array<{ name: string; args: Record<string, unknown> }>;
 		type: "approve" | "user";
@@ -125,7 +127,12 @@ const getExpectedApiCallOrder = (expected?: EvalExpected) =>
 
 const getExpectedApiCallsAfterApproval = (expected?: EvalExpected) =>
 	getExpectationList(expected).flatMap((expectation) =>
-		expectation.type === "api.calledAfterApproval" ? [expectation.call] : [],
+		expectation.type === "api.calledAfterApproval" ? [expectation] : [],
+	);
+
+const getExpectedApprovalCounts = (expected?: EvalExpected) =>
+	getExpectationList(expected).flatMap((expectation) =>
+		expectation.type === "approval.count" ? [expectation.count] : [],
 	);
 
 const getExpectedApiBodyExclusions = (expected?: EvalExpected) =>
@@ -273,15 +280,19 @@ export const expectedApiCallsAfterApproval = ({
 	expected,
 	output,
 }: EvalScoreArgs) => {
-	const expectedCalls = getExpectedApiCallsAfterApproval(expected);
-	if (!expectedCalls.length) return 1;
+	const expectations = getExpectedApiCallsAfterApproval(expected);
+	if (!expectations.length) return 1;
 
-	const firstApproveIndex =
-		output.turns?.findIndex((turn) => turn.type === "approve") ?? -1;
-	if (firstApproveIndex === -1) return 0;
+	const approveIndexes = (output.turns ?? []).flatMap((turn, index) =>
+		turn.type === "approve" && !turn.skipped ? [index] : [],
+	);
 
-	const turnsBeforeApproval = output.turns?.slice(0, firstApproveIndex) ?? [];
-	return expectedCalls.every((expectedCall) => {
+	return expectations.every(({ approvalIndex, call: expectedCall }) => {
+		// 1-based so a scenario reads "after the second approval".
+		const target = approveIndexes[(approvalIndex ?? 1) - 1];
+		if (target === undefined) return false;
+
+		const turnsBeforeApproval = output.turns?.slice(0, target) ?? [];
 		const calledBeforeApproval = turnsBeforeApproval.some((turn) =>
 			(turn.apiCalls ?? []).some((call) =>
 				matchesApiCall({ actual: call, expected: expectedCall }),
@@ -295,6 +306,15 @@ export const expectedApiCallsAfterApproval = ({
 	})
 		? 1
 		: 0;
+};
+
+export const expectedApprovalCount = ({ expected, output }: EvalScoreArgs) => {
+	const counts = getExpectedApprovalCounts(expected);
+	if (!counts.length) return 1;
+	const approvals = (output.turns ?? []).filter(
+		(turn) => turn.type === "approve" && !turn.skipped,
+	).length;
+	return counts.every((count) => approvals === count) ? 1 : 0;
 };
 
 export const expectedApiCallTimes = ({ expected, output }: EvalScoreArgs) => {
@@ -592,6 +612,10 @@ const scorersByExpectationType: Record<EvalExpectation["type"], EvalScorer> = {
 	"api.calledTimes": namedScorer({
 		name: "Expected API call counts",
 		score: expectedApiCallTimes,
+	}),
+	"approval.count": namedScorer({
+		name: "Expected approval count",
+		score: expectedApprovalCount,
 	}),
 	"api.bodyExcludes": namedScorer({
 		name: "Expected API body exclusions",

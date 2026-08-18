@@ -34,6 +34,7 @@ const dispatchMessage = async ({
 	message,
 	dispatch,
 	recentMessages,
+	showRunPlan,
 	thread,
 }: {
 	message: Message;
@@ -41,6 +42,7 @@ const dispatchMessage = async ({
 	recentMessages:
 		| Awaited<ReturnType<typeof getRecentMessages>>
 		| (() => ReturnType<typeof getRecentMessages>);
+	showRunPlan: boolean;
 	thread: Thread;
 }) => {
 	thread.adapter.addReaction(thread.id, message.id, "eyes").catch(() => {});
@@ -57,6 +59,7 @@ const dispatchMessage = async ({
 			}
 		},
 		recentMessages,
+		showRunPlan,
 		target: thread,
 		text: message.text,
 		threadId: thread.id,
@@ -76,6 +79,18 @@ export const createSlackMessageHandlers = ({
 			dispatch,
 			message,
 			recentMessages: () => getMessages(thread, message),
+			showRunPlan: false,
+			thread,
+		});
+	};
+
+	const handleSlackThreadStart = async (thread: Thread, message: Message) => {
+		if (shouldSkipMessage(message)) return;
+		await dispatchMessage({
+			dispatch,
+			message,
+			recentMessages: () => getMessages(thread, message),
+			showRunPlan: true,
 			thread,
 		});
 	};
@@ -93,11 +108,24 @@ export const createSlackMessageHandlers = ({
 		});
 		if (disposition === "ignore") return;
 		if (disposition === "unsubscribe") return unsubscribe(thread);
-		await dispatchMessage({ dispatch, message, recentMessages, thread });
+		await dispatchMessage({
+			dispatch,
+			message,
+			recentMessages,
+			showRunPlan: false,
+			thread,
+		});
 	};
 
-	return { handleSlackMessage, handleSubscribedSlackMessage } as const;
+	return {
+		handleSlackMessage,
+		handleSlackThreadStart,
+		handleSubscribedSlackMessage,
+	} as const;
 };
 
-export const { handleSlackMessage, handleSubscribedSlackMessage } =
-	createSlackMessageHandlers();
+export const {
+	handleSlackMessage,
+	handleSlackThreadStart,
+	handleSubscribedSlackMessage,
+} = createSlackMessageHandlers();

@@ -70,27 +70,33 @@ export const getInstallationOAuthAccessToken = async ({
 		orgId,
 		userId: credentialUserId,
 	});
-
-	if (
-		isInternalAutumnSlackProvider({ provider: installation.provider }) &&
-		(!credential || credential.org_id !== orgId)
-	) {
-		await db.transaction(async (tx) => {
-			await replaceInstallationOAuthCredentials({
+	const remintCredential = async (agentScopes?: string[]) => {
+		await db.transaction((tx) =>
+			replaceInstallationOAuthCredentials({
 				tx,
 				installation,
 				orgId,
 				userId: credentialUserId,
-			});
-		});
-
-		credential = await getChatOAuthCredentialByInstallationEnv({
+				agentScopes,
+			}),
+		);
+		const replacement = await getChatOAuthCredentialByInstallationEnv({
 			db,
 			chatInstallationId: installation.id,
 			env,
 			orgId,
 			userId: credentialUserId,
 		});
+		if (!replacement)
+			throw new Error(`Could not mint ${env} Autumn OAuth token`);
+		return replacement;
+	};
+
+	if (
+		isInternalAutumnSlackProvider({ provider: installation.provider }) &&
+		(!credential || credential.org_id !== orgId)
+	) {
+		credential = await remintCredential();
 	}
 
 	if (!credential) {
@@ -121,12 +127,11 @@ export const getInstallationOAuthAccessToken = async ({
 			"Content-Type": "application/x-www-form-urlencoded",
 		},
 		body,
-	});
+	}).catch(() => null);
 
-	if (!response.ok) {
-		throw new Error(
-			`Could not refresh ${env} Autumn OAuth token for ${installation.provider} install`,
-		);
+	if (!response?.ok) {
+		const replacement = await remintCredential(credential.scopes);
+		return decrypt(replacement.access_token);
 	}
 
 	const parsed = parseOAuthTokenResponse({ body: await response.json() });

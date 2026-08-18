@@ -2,11 +2,22 @@ import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
 import { approvalOptionIds } from "../../agentRuntime/eve/events.js";
-import type { ChainedPendingRequest } from "../../agentRuntime/eve/parkedInput.js";
+import {
+	type ChainedPendingRequest,
+	type WithheldWrite,
+	withheldWritesToolArgs,
+} from "../../agentRuntime/eve/parkedInput.js";
 import type { EveAuthContext } from "../../agentRuntime/eve/types.js";
 import { getOrgInstallationToken } from "../../installations/actions/getOrgInstallationToken.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
-import { fetchApprovalPreview } from "../utils/fetchApprovalPreview.js";
+import {
+	resolveApprovalDisplay,
+	withApprovalDisplay,
+} from "../utils/approvalDisplay.js";
+import {
+	fetchApprovalPreview,
+	isFailedApprovalPreview,
+} from "../utils/fetchApprovalPreview.js";
 import { toolRequestFromArgs } from "../utils/toolRequest.js";
 
 export const createChainedApproval = async ({
@@ -15,12 +26,14 @@ export const createChainedApproval = async ({
 	providerUserId,
 	sessionId,
 	siblingRequestIds,
+	withheld = [],
 }: {
 	auth: EveAuthContext;
 	chained: ChainedPendingRequest;
 	providerUserId: string;
 	sessionId: string;
 	siblingRequestIds: ReadonlyArray<string>;
+	withheld?: ReadonlyArray<WithheldWrite>;
 }) => {
 	const env = auth.appEnv as ChatApproval["env"];
 	const provider = auth.provider as ChatApproval["provider"];
@@ -36,13 +49,25 @@ export const createChainedApproval = async ({
 			userId: credentialUserId,
 			workspaceId: auth.workspaceId,
 		});
-		preview = await fetchApprovalPreview({
+		const request = toolRequestFromArgs(chained.input) ?? {};
+		const resolvedPreview = await fetchApprovalPreview({
 			env,
 			logger,
-			request: toolRequestFromArgs(chained.input) ?? {},
+			request,
 			token: accessToken,
 			toolName: chained.toolName,
 		});
+		if (isFailedApprovalPreview(resolvedPreview)) {
+			preview = resolvedPreview;
+		} else {
+			const display = await resolveApprovalDisplay({
+				env,
+				getToken: async () => accessToken,
+				preview: resolvedPreview,
+				request,
+			});
+			preview = withApprovalDisplay({ display, preview: resolvedPreview });
+		}
 	} catch (error) {
 		logger.warn("Could not backfill chained approval preview", {
 			event: "leaf.eve_chained_preview_backfill_failed",
@@ -68,6 +93,7 @@ export const createChainedApproval = async ({
 				_eveApproveOptionId: options.approve,
 				_eveDenyOptionId: options.deny,
 				_eveSiblingRequestIds: siblingRequestIds,
+				...withheldWritesToolArgs(withheld),
 			},
 			toolCallId: chained.requestId,
 			toolName: chained.toolName,
