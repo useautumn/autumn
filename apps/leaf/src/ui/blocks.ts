@@ -899,6 +899,36 @@ const withheldStepBlocks = ({
 		];
 	});
 
+/** The card body every state shares — pending, running, and resolved all edit
+ * the same message, so they must describe the same set of writes. A fan-out
+ * collapses to one table; mixed writes keep a titled section each. */
+const approvalBodyBlocks = ({
+	env,
+	preview,
+	toolArgs,
+	toolName,
+}: {
+	env?: AppEnv;
+	preview?: unknown;
+	toolArgs?: Record<string, unknown>;
+	toolName: string;
+}): CardChild[] => {
+	const groupedSteps = withheldWritesFromToolArgs(toolArgs);
+	if (isHomogeneousGroup({ steps: groupedSteps, toolName })) {
+		return fanOutBlocks({
+			env,
+			preview,
+			steps: groupedSteps,
+			toolArgs,
+			toolName,
+		});
+	}
+	return [
+		...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
+		...withheldStepBlocks({ env, toolArgs }),
+	];
+};
+
 const approvalPreviewBlocks = ({
 	env,
 	preview,
@@ -1186,7 +1216,7 @@ const settledStatusCard = ({
 		title: approvalTitle({ preview, toolName }),
 		children: [
 			...(prompt ? [CardText(prompt)] : []),
-			...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
+			...approvalBodyBlocks({ env, preview, toolArgs, toolName }),
 			CardText(statusLabel),
 		],
 	});
@@ -1213,29 +1243,16 @@ export const approvalCard = ({
 			: pendingActionPrompt({ phrases, toolName });
 	const editable = normalizeToolName(toolName) === "attach";
 
-	const groupedSteps = withheldWritesFromToolArgs(toolArgs);
-	// A fan-out repeats one operation across targets, so it collapses to a table;
-	// mixed operations keep a titled section each.
-	const fanOut = isHomogeneousGroup({ steps: groupedSteps, toolName });
+	const fanOut = isHomogeneousGroup({
+		steps: withheldWritesFromToolArgs(toolArgs),
+		toolName,
+	});
 
 	return Card({
 		title: approvalTitle({ preview, toolName }),
 		children: [
-			...(fanOut
-				? []
-				: [
-						...(prompt ? [CardText(prompt)] : []),
-						...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
-					]),
-			...(fanOut
-				? fanOutBlocks({
-						env,
-						preview,
-						steps: groupedSteps,
-						toolArgs,
-						toolName,
-					})
-				: withheldStepBlocks({ env, toolArgs })),
+			...(prompt && !fanOut ? [CardText(prompt)] : []),
+			...approvalBodyBlocks({ env, preview, toolArgs, toolName }),
 			Actions([
 				Button({
 					id: "approve_billing_action",
@@ -1430,7 +1447,7 @@ export const approvalStatusCard = ({
 			title: approvalTitle({ preview, toolName }),
 			children: [
 				CardText(`${phrases.running}…`),
-				...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
+				...approvalBodyBlocks({ env, preview, toolArgs, toolName }),
 				...(statusLine
 					? [CardText(`▸ ${statusLine}`, { style: "muted" })]
 					: []),
@@ -1479,7 +1496,7 @@ export const approvalStatusCard = ({
 
 	// Resolved cards keep the pending body (sentence, money facts, changes) so the
 	// edit-in-place doesn't collapse; only the buttons become the outcome row.
-	const resolvedBody = approvalPreviewBlocks({
+	const resolvedBody = approvalBodyBlocks({
 		env,
 		preview,
 		toolArgs,

@@ -1437,3 +1437,48 @@ describe("no-billing-changes card does not also say no charge", () => {
 		expect(rendered).not.toContain("No charge now");
 	});
 });
+
+// The resolved card must keep showing every write the group applied — it is
+// an in-place edit of the pending card, so collapsing to one write misreports
+// what was approved.
+describe("resolved fan-out card keeps the whole group", () => {
+	const groupedFanOut = {
+		env: AppEnv.Sandbox,
+		toolArgs: {
+			_eveWithheldWrites: ["leaf-0002", "leaf-0003"].map((customerId) => ({
+				input: { request: { customer_id: customerId, plan_id: "enterprise" } },
+				preview: wrapMcpResult({
+					_display: { customerName: customerId, planName: "Enterprise" },
+					currency: "usd",
+					line_items: [],
+					total: 150,
+				}),
+				requestId: `req_${customerId}`,
+				toolName: "autumn__attach",
+			})),
+			request: { customer_id: "leaf-0001", plan_id: "enterprise" },
+		},
+		toolName: "attach",
+		preview: wrapMcpResult({
+			_display: { customerName: "leaf-0001", planName: "Enterprise" },
+			currency: "usd",
+			line_items: [],
+			total: 150,
+		}),
+	};
+
+	// Every state edits the same Slack message, so each must describe the
+	// same set of writes.
+	test.each(["running", "approved", "cancelled"] as const)(
+		"keeps every customer on the %s card",
+		(status) => {
+			const rendered = JSON.stringify(
+				cardToBlockKit(approvalStatusCard({ ...groupedFanOut, status })),
+			);
+			expect(rendered).toContain("leaf-0001");
+			expect(rendered).toContain("leaf-0002");
+			expect(rendered).toContain("leaf-0003");
+			expect(rendered).toContain("$450.00");
+		},
+	);
+});
