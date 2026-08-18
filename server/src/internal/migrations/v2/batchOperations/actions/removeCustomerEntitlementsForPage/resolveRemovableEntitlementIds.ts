@@ -8,6 +8,7 @@ import {
 import { enrichEntitlementsWithFeatures } from "@autumn/shared/utils/productUtils/entUtils/enrichEntitlement.js";
 import { inArray, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { pageCustomerIdsCte } from "@/internal/migrations/v2/batchOperations/actions/utils/pageCustomerIdsSql.js";
 import { BATCH_MIGRATION_MAX_DISTINCT_ENTITLEMENTS } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
 import {
 	type OperationScope,
@@ -88,13 +89,15 @@ const selectDistinctLiveEntitlementIds = async ({
 	limit: number;
 }): Promise<string[]> => {
 	const rows = await db.execute<{ id: string }>(sql`
+		WITH ${pageCustomerIdsCte({ internalCustomerIds })}
 		SELECT DISTINCT live.entitlement_id AS id
-		FROM customer_products AS cp
+		FROM page
+		INNER JOIN customer_products AS cp
+			ON cp.internal_customer_id = page.internal_customer_id
 		INNER JOIN customer_entitlements AS live
 			ON live.customer_product_id = cp.id
 			AND live.internal_feature_id = ${internalFeatureId}
-		WHERE cp.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
-			AND ${operationScopeSql({ scope })}
+		WHERE ${operationScopeSql({ scope })}
 		LIMIT ${limit}
 	`);
 	return rows.map((row) => row.id);

@@ -44,6 +44,7 @@ export const repointLicensePoolForPage = async ({
 						licensePlanId: operation.licensePlanId,
 					}),
 				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
+				{ forceCustomPlan: true },
 			),
 	});
 

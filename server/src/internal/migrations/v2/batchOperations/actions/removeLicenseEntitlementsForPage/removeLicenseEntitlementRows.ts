@@ -16,6 +16,7 @@ import {
 	operationScopeSql,
 } from "../../scope/operationScope.js";
 import { canonicalPoolLateralSql } from "../licensePoolSql.js";
+import { pageCustomerIdsCte } from "../utils/pageCustomerIdsSql.js";
 
 /** Pool anchors are excluded because the anchor FK is RESTRICT — deleting one
  * would abort the whole page. */
@@ -64,9 +65,11 @@ export const removeLicenseEntitlementRows = async ({
 		trial_ends_at: string | null;
 		definition: Entitlement;
 	}>(sql`
-		WITH dropped AS (
+		WITH ${pageCustomerIdsCte({ internalCustomerIds })},
+		dropped AS (
 			DELETE FROM customer_entitlements AS target
-			USING entitlements AS definition,
+			USING page,
+				entitlements AS definition,
 				customer_products AS assignment
 				${canonicalPoolLateralSql({ licensePlanId })}
 				JOIN customer_products AS cp
@@ -75,7 +78,7 @@ export const removeLicenseEntitlementRows = async ({
 				AND definition.id = target.entitlement_id
 				AND definition.feature_id = ${filter.feature_id}
 				${intervalCondition}
-				AND assignment.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
+				AND assignment.internal_customer_id = page.internal_customer_id
 				AND assignment.internal_entity_id IS NOT NULL
 				AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
 				AND NOT target.is_pooled_balance
