@@ -37,9 +37,6 @@ export type EveTurnOutcome =
 export type EveTurnProgress = Readonly<{
 	finalText: string;
 	lastPreview?: CapturedPreview;
-	/** Gated writes already parked this turn. Eve may deliver a parallel batch
-	 * as one event or as one per write, so they accumulate here either way. */
-	parkedWrites: ReadonlyArray<WithheldWrite>;
 	pendingText: string;
 	reasoningStreamId?: string;
 	toolInputs: ReadonlyMap<string, Record<string, unknown>>;
@@ -66,7 +63,6 @@ export type EveTurnTransition = Readonly<{
 
 export const createEveTurnProgress = (): EveTurnProgress => ({
 	finalText: "",
-	parkedWrites: [],
 	pendingText: "",
 	toolInputs: new Map(),
 	toolLabels: new Map(),
@@ -160,7 +156,7 @@ const reduceActionResult = ({
 	if (!result?.callId) {
 		return { effects: [], progress: { ...progress, lastPreview } };
 	}
-	logger.info(`Eve tool completed: ${result.toolName ?? "unknown"}`, {
+	logger.info("Eve tool completed", {
 		event: "leaf.eve_tool_completed",
 		data: {
 			call_id: result.callId,
@@ -255,46 +251,25 @@ const reduceInputRequest = ({
 	logger.info("Eve parked input", {
 		event: "leaf.eve_input_parked",
 		data: {
-			already_parked: progress.parkedWrites.length,
 			kind: parked?.kind,
 			request_count: event.requests.length,
 			tools: event.requests.map((request) => request.action?.toolName),
 		},
 	});
 	if (parked?.kind === "gated") {
-		// The first parked write owns the card; later ones join it so a batch
-		// split across events still approves as a single group.
-		const [primary, ...rest] = [
-			...progress.parkedWrites,
-			{
-				input: parked.chained.input,
-				requestId: parked.chained.requestId,
-				toolName: parked.chained.toolName,
-			},
-			...parked.withheld,
-		];
-		const nextProgress = {
-			...progress,
-			parkedWrites: [primary, ...rest],
-		};
 		return {
 			effects: [{ kind: "save_session", status: "waiting" }],
 			outcome: {
 				approval: approvalForGatedWrite({
-					chained: {
-						input: primary.input,
-						options: parked.chained.options,
-						requestId: primary.requestId,
-						toolName: primary.toolName,
-					},
-					progress: nextProgress,
-					siblingRequestIds: rest.map((write) => write.requestId),
-					withheld: rest,
+					chained: parked.chained,
+					progress,
+					siblingRequestIds: parked.siblingRequestIds,
+					withheld: parked.withheld,
 				}),
 				kind: "suspended",
 				text: progress.finalText,
 			},
-			progress: nextProgress,
+			progress,
 		};
 	}
 	const accumulatedText = progress.pendingText || progress.finalText;
@@ -354,7 +329,6 @@ export const reduceEveTurnEvent = ({
 			progress: {
 				...progress,
 				lastPreview: undefined,
-				parkedWrites: [],
 				turnStarted: true,
 			},
 		};

@@ -20,6 +20,7 @@ const mockLeafModule = ({
 
 let streamedEvents: EveEvent[] = [];
 const postedResponses: {
+	approveSiblings?: boolean;
 	optionId: string;
 	requestId: string;
 	siblingRequestIds?: string[];
@@ -29,11 +30,13 @@ await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
 		postEveInputResponse: async (input: {
+			approveSiblings?: boolean;
 			optionId: string;
 			requestId: string;
 			siblingRequestIds?: string[];
 		}) => {
 			postedResponses.push({
+				approveSiblings: input.approveSiblings,
 				optionId: input.optionId,
 				requestId: input.requestId,
 				siblingRequestIds: input.siblingRequestIds,
@@ -140,6 +143,7 @@ describe("resumeApproval", () => {
 
 		expect(postedResponses).toEqual([
 			{
+				approveSiblings: true,
 				optionId: "approve",
 				requestId: "req_1",
 				siblingRequestIds: ["req_2", "req_3"],
@@ -441,5 +445,123 @@ describe("a retried write that succeeds counts as applied", () => {
 		expect(result).toMatchObject({
 			steps: [{ status: "applied", toolName: "autumn__updateSubscription" }],
 		});
+	});
+});
+
+// A fan-out is N calls of the same tool. Each result must land on its OWN step
+// by callId — matching by name alone lets a middle failure be overwritten by
+// the next success and reported as a clean run.
+describe("same-tool groups attribute each result to its own step", () => {
+	const fanOutApproval = () =>
+		({
+			channel_id: "C1",
+			env: AppEnv.Sandbox,
+			id: "a_1",
+			org_id: "org_1",
+			provider: "slack",
+			run_id: "eve_session_1",
+			tool_args: {
+				_eveWithheldWrites: [
+					{ requestId: "req_2", toolName: "autumn__attach" },
+					{ requestId: "req_3", toolName: "autumn__attach" },
+				],
+			},
+			tool_call_id: "req_1",
+			tool_name: "autumn__attach",
+			workspace_id: "T1",
+		}) as unknown as ChatApproval;
+
+	const resultFor = (callId: string, failed: boolean) => ({
+		result: {
+			callId,
+			output: failed
+				? {
+						content: [{ type: "text", text: '{"message":"Autumn API request failed (400): boom","code":"invalid_request"}' }],
+						isError: true,
+					}
+				: { content: [{ type: "text", text: '{"ok":true}' }] },
+			toolName: "autumn__attach",
+		},
+		status: "completed" as const,
+		type: "action.result" as const,
+	});
+
+	test("a middle failure is not masked by a later success", async () => {
+		streamedEvents = [
+			{ type: "turn.started" },
+			{
+				actions: [
+					{ callId: "cA", toolName: "autumn__attach" },
+					{ callId: "cB", toolName: "autumn__attach" },
+					{ callId: "cC", toolName: "autumn__attach" },
+				],
+				type: "actions.requested",
+			},
+			resultFor("cA", false),
+			resultFor("cB", true),
+			resultFor("cC", false),
+			{ type: "session.waiting" },
+		];
+
+		const result = await resumeApproval({
+			approval: fanOutApproval(),
+			providerUserId: "U1",
+		});
+
+		expect(result).toMatchObject({
+			error: true,
+			steps: [
+				{ status: "applied" },
+				{ status: "failed" },
+				{ status: "applied" },
+			],
+		});
+	});
+});
+
+// Only a surface that renders the whole group may approve the whole group. The
+// dashboard shows the primary write alone, so it must not silently apply the
+// siblings it never displayed.
+describe("grouped approval is surface-scoped", () => {
+	const groupedFor = (provider: string) =>
+		({
+			channel_id: "C1",
+			env: AppEnv.Sandbox,
+			id: "a_1",
+			org_id: "org_1",
+			provider,
+			run_id: "eve_session_1",
+			tool_args: {
+				_eveSiblingRequestIds: ["req_2"],
+				_eveWithheldWrites: [{ requestId: "req_2", toolName: "autumn__attach" }],
+			},
+			tool_call_id: "req_1",
+			tool_name: "autumn__updateCustomer",
+			workspace_id: "T1",
+		}) as unknown as ChatApproval;
+
+	test("slack approves every write in the group", async () => {
+		streamedEvents = [
+			{ type: "turn.started" },
+			{ type: "step.started" },
+			{ result: { callId: "c1", output: { ok: true }, toolName: "autumn__updateCustomer" }, status: "completed", type: "action.result" },
+			{ type: "session.waiting" },
+		];
+		await resumeApproval({ approval: groupedFor("slack"), providerUserId: "U1" });
+		expect(postedResponses.at(-1)).toMatchObject({
+			approveSiblings: true,
+			siblingRequestIds: ["req_2"],
+		});
+	});
+
+	test("web denies siblings it did not render", async () => {
+		streamedEvents = [
+			{ type: "turn.started" },
+			{ type: "step.started" },
+			{ result: { callId: "c1", output: { ok: true }, toolName: "autumn__updateCustomer" }, status: "completed", type: "action.result" },
+			{ type: "session.waiting" },
+		];
+		await resumeApproval({ approval: groupedFor("web"), providerUserId: "U1" });
+		expect(postedResponses.at(-1)?.approveSiblings).not.toBe(true);
 	});
 });

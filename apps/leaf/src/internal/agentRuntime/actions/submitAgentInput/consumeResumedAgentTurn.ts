@@ -62,13 +62,25 @@ export const consumeResumedAgentTurn = async ({
 	let turnStarted = false;
 	const expectedSteps = (expectedToolNames ?? []).map((toolName) => ({
 		normalized: normalizeToolName(toolName),
+		reserved: false,
 		status: "pending" as "applied" | "failed" | "pending",
 		toolName,
 	}));
 	const approvedCallIds = new Map<string, number>();
-	// A step stays matchable after it fails so a retried call can heal it;
-	// only a step that already applied is spoken for.
-	const stepIndexFor = (name?: string) => {
+	// Each requested call reserves the next free step of its tool, so N calls
+	// of one tool map to N distinct steps rather than all onto the first.
+	const reserveStepFor = (name?: string) => {
+		if (!name) return -1;
+		const normalized = normalizeToolName(name);
+		const index = expectedSteps.findIndex(
+			(step) => !step.reserved && step.normalized === normalized,
+		);
+		if (index >= 0) expectedSteps[index].reserved = true;
+		return index;
+	};
+	// A result with an unknown callId (Eve executed before the stream opened,
+	// or a retry) lands on the first step of its tool that has not applied yet.
+	const unresolvedStepFor = (name?: string) => {
 		if (!name) return -1;
 		const normalized = normalizeToolName(name);
 		return expectedSteps.findIndex(
@@ -89,28 +101,29 @@ export const consumeResumedAgentTurn = async ({
 		}
 		if (event.type === "actions.requested" && expectedSteps.length) {
 			for (const action of event.actions) {
-				const index = stepIndexFor(labelForAction(action));
+				const index = reserveStepFor(labelForAction(action));
 				if (index >= 0 && action.callId) {
 					approvedCallIds.set(action.callId, index);
 				}
 			}
 		}
 		if (event.type === "action.result") {
-			const outputText = JSON.stringify(event.result?.output ?? null);
-			logger.info(
-				`Resumed tool completed: ${event.result?.toolName ?? "unknown"} status=${event.status ?? "?"} output=${outputText.slice(0, 220)}`,
-				{
-					event: "leaf.eve_resumed_tool_completed",
-					data: { call_id: event.result?.callId, status: event.status },
+			logger.info("Resumed tool completed", {
+				event: "leaf.eve_resumed_tool_completed",
+				data: {
+					call_id: event.result?.callId,
+					failed: isFailedActionResult(event),
+					status: event.status,
+					tool: event.result?.toolName,
 				},
-			);
+			});
 		}
 		if (event.type === "action.result" && expectedSteps.length) {
 			const callId = event.result?.callId;
 			const index = callId
 				? (approvedCallIds.get(callId) ??
-					stepIndexFor(labelForResult(event.result)))
-				: stepIndexFor(labelForResult(event.result));
+					unresolvedStepFor(labelForResult(event.result)))
+				: unresolvedStepFor(labelForResult(event.result));
 			const step = index >= 0 ? expectedSteps[index] : undefined;
 			if (step) {
 				step.status = isFailedActionResult(event) ? "failed" : "applied";
@@ -134,29 +147,9 @@ export const consumeResumedAgentTurn = async ({
 				},
 			});
 			if (parkedInput?.kind === "gated") {
-				// The first park owns the card; writes parked in later events join
-				// it, so a group split across events still approves as one.
-				const parkedWrite = {
-					input: parkedInput.chained.input,
-					requestId: parkedInput.chained.requestId,
-					toolName: parkedInput.chained.toolName,
-				};
-				if (chained) {
-					chainedWithheld = [
-						...chainedWithheld,
-						parkedWrite,
-						...parkedInput.withheld,
-					];
-					chainedSiblingRequestIds = [
-						...chainedSiblingRequestIds,
-						parkedWrite.requestId,
-						...parkedInput.siblingRequestIds,
-					];
-				} else {
-					chained = parkedInput.chained;
-					chainedSiblingRequestIds = parkedInput.siblingRequestIds;
-					chainedWithheld = parkedInput.withheld;
-				}
+				chained = parkedInput.chained;
+				chainedSiblingRequestIds = parkedInput.siblingRequestIds;
+				chainedWithheld = parkedInput.withheld;
 				break;
 			}
 			if (parkedInput?.kind === "question") {

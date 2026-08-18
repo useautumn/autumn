@@ -31,6 +31,11 @@ const approvalAuth = ({
 	workspaceId: approval.workspace_id,
 });
 
+const GROUP_RENDERING_PROVIDERS: ReadonlySet<string> = new Set(["slack"]);
+
+const surfaceRendersGroup = (provider: string) =>
+	GROUP_RENDERING_PROVIDERS.has(provider);
+
 export const submitApprovalInput = async ({
 	approval,
 	expectExecution,
@@ -76,8 +81,9 @@ export const submitApprovalInput = async ({
 		text,
 	} = await submitAgentInput({
 		auth,
-		// Approving a grouped card approves every write it displayed.
-		approveSiblings: expectExecution,
+		// Only a surface that rendered the whole group may approve it; the
+		// dashboard shows the primary write alone, so its siblings stay withheld.
+		approveSiblings: expectExecution && surfaceRendersGroup(approval.provider),
 		expectedToolNames: expectExecution
 			? [
 					approval.tool_name,
