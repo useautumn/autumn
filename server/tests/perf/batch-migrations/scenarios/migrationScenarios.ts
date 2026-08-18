@@ -96,20 +96,20 @@ export const MIGRATION_SCENARIOS: MigrationScenario[] = [
 		expect: { lane: "per_customer", rejections: ["priced_add_item"] },
 	},
 	{
-		name: "plan-remove-refused",
-		description: "Plan item removal is not batch-lowered.",
+		name: "plan-remove-free",
+		description: "A standalone free plan item removal batch-lowers.",
 		planItems: [monthly(TestFeature.Messages, 100)],
 		op: {
 			verb: "remove",
 			target: "plan",
 			item: monthly(TestFeature.Messages, 100),
 		},
-		expect: { lane: "per_customer", rejections: ["unsupported_remove_items"] },
+		expect: { lane: "batch" },
 	},
 	{
 		name: "plan-edit-refused",
 		description:
-			"An allowance edit is a remove plus an add, which the plan lane declines.",
+			"An allowance edit is a modify-in-place; the balance has to survive the swap.",
 		planItems: [monthly(TestFeature.Messages, 100)],
 		op: {
 			verb: "edit",
@@ -118,6 +118,23 @@ export const MIGRATION_SCENARIOS: MigrationScenario[] = [
 			to: monthly(TestFeature.Messages, 200),
 		},
 		expect: { lane: "per_customer", rejections: ["unsupported_remove_items"] },
+	},
+	{
+		name: "plan-edit-lowered-refused",
+		description:
+			"Lowering an allowance is still a modify-in-place; the row keeps its balance.",
+		planItems: [monthly(TestFeature.Messages, 100)],
+		op: {
+			verb: "edit",
+			target: "plan",
+			from: monthly(TestFeature.Messages, 100),
+			to: monthly(TestFeature.Messages, 50),
+		},
+		expect: {
+			lane: "per_customer",
+			rejections: ["unsupported_remove_items"],
+			untouched: [TestFeature.Messages],
+		},
 	},
 
 	// ── License items: all three verbs are batch-lowered ──────────────

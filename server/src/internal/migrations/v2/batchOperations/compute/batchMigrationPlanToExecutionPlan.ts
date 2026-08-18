@@ -14,10 +14,15 @@ export const batchMigrationPlanToExecutionPlan = ({
 			opIndex: patch.opIndex,
 			scope: patch.scope,
 			fromProduct,
-			addEntitlementOps: patch.operations.entitlements.map((operation) => ({
+			addEntitlementOps: patch.operations.addEntitlements.map((operation) => ({
 				entitlement: operation.entitlementPrice.entitlement,
 				initialState: operation.initialState,
 			})),
+			removeEntitlementOps: patch.operations.removeEntitlements.map(
+				(operation) => ({
+					entitlement: operation.entitlementPrice.entitlement,
+				}),
+			),
 			licenseEntitlementOps: patch.operations.licenseEntitlements,
 		};
 	}),

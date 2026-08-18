@@ -131,12 +131,31 @@ export const checkUpdatePlanOpEligibility = ({
 		});
 	}
 
-	if ((op.customize?.remove_items?.length ?? 0) > 0) {
+	const removeItems = op.customize?.remove_items ?? [];
+
+	if (
+		removeItems.length > 0 &&
+		isModifyInPlaceOnly({ addItems: op.customize?.add_items, removeItems })
+	) {
 		rejections.push({
 			code: "unsupported_remove_items",
 			opIndex,
 			message:
-				"customize.remove_items is not batch-lowered yet; the batch lane is add_items-only.",
+				"customize.remove_items paired with a matching add is an in-place edit; the balance has to survive the swap.",
+		});
+	}
+
+	if (
+		removeItems.some(
+			(filter) =>
+				filter.billing_method !== undefined || filter.feature_id === undefined,
+		)
+	) {
+		rejections.push({
+			code: "unsupported_remove_items",
+			opIndex,
+			message:
+				"remove_items is batch-lowered by feature and interval; a billing_method or feature-less filter is per-customer work.",
 		});
 	}
 

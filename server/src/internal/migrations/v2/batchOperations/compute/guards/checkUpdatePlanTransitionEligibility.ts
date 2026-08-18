@@ -39,25 +39,69 @@ export const checkUpdatePlanTransitionEligibility = ({
 	}
 
 	const { transitions, deleted } = productTransitions.entitlementPrices;
-	if (transitions.length > 0 || deleted.length > 0) {
+	if (transitions.length > 0) {
 		rejections.push({
 			code: "non_add_operation",
 			opIndex,
 			planId: fromProduct.id,
 			message:
-				"Projected diff produced non-add transitions; the batch lane is add_items-only.",
+				"Projected diff produced in-place transitions; the batch lane adds and removes only.",
 			details: {
-				featureIds: [
-					...transitions.map(
-						(transition) =>
-							transition.fromEntitlementPrice.entitlement.feature.id,
-					),
-					...deleted.map(
-						(entitlementPrice) => entitlementPrice.entitlement.feature.id,
-					),
-				],
+				featureIds: transitions.map(
+					(transition) =>
+						transition.fromEntitlementPrice.entitlement.feature.id,
+				),
 			},
 		});
+	}
+
+	for (const entitlementPrice of deleted) {
+		const { entitlement, price } = entitlementPrice;
+		const details = { featureId: entitlement.feature.id };
+
+		if (price) {
+			rejections.push({
+				code: "priced_remove_item",
+				opIndex,
+				planId: fromProduct.id,
+				message:
+					"A paid item needs a Stripe write; only free entitlements are batch-lowered.",
+				details,
+			});
+		}
+
+		if (entitlement.rollover) {
+			rejections.push({
+				code: "rollover_remove_item",
+				opIndex,
+				planId: fromProduct.id,
+				message:
+					"A rollover balance outlives the row it hangs off, so dropping the row strands it.",
+				details,
+			});
+		}
+
+		if (entitlement.entity_feature_id) {
+			rejections.push({
+				code: "entity_scoped_entitlement",
+				opIndex,
+				planId: fromProduct.id,
+				message:
+					"Entity-scoped rows carry per-entity sub-balances; row counts vary per customer.",
+				details,
+			});
+		}
+
+		if (entitlement.pooled === true) {
+			rejections.push({
+				code: "pooled_add_item",
+				opIndex,
+				planId: fromProduct.id,
+				message:
+					"A pooled item's anchor row hangs off no customer product, so the set-based writes never reach it.",
+				details,
+			});
+		}
 	}
 
 	if (paidAdded.length > 0) {

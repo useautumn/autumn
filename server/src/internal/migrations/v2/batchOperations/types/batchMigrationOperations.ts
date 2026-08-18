@@ -12,12 +12,14 @@ export type CustomerEntitlementInitialState = ReturnType<
 /** Pure initial state instead of an initialized row template: cycle fields
  * can't be precomputed across anchors. Add dedup is the executor's job. */
 export type BatchMigrationAddEntitlementOp = {
-	type: "add";
 	entitlementPrice: EntitlementPrice;
 	initialState: CustomerEntitlementInitialState;
 };
 
-export type BatchMigrationEntitlementOp = BatchMigrationAddEntitlementOp;
+/** Drops one free entitlement's rows across the patch's customer products. */
+export type BatchMigrationRemoveEntitlementOp = {
+	entitlementPrice: EntitlementPrice;
+};
 
 type BatchMigrationLicenseOpTarget = {
 	licensePlanId: string;
@@ -64,6 +66,7 @@ export type BatchMigrationLicenseEntitlementOp =
 	| BatchMigrationRemoveLicenseEntitlementOp;
 
 export type BatchMigrationOperations = {
-	entitlements: BatchMigrationEntitlementOp[];
+	addEntitlements: BatchMigrationAddEntitlementOp[];
+	removeEntitlements: BatchMigrationRemoveEntitlementOp[];
 	licenseEntitlements: BatchMigrationLicenseEntitlementOp[];
 };

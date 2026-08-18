@@ -1,0 +1,55 @@
+import { sql } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
+import {
+	type OperationScope,
+	operationScopeSql,
+} from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
+
+/** Re-asserts scope because the select took its own snapshot.
+ *
+ * Pooled and rollover state is checked against the rows, not just the catalog:
+ * both outlive a flag being turned off, and the FKs cascade, so a row that
+ * still carries either is left for the per-customer lane. */
+export const deleteCustomerEntitlementRows = async ({
+	db,
+	customerProductIds,
+	entitlementIds,
+	scope,
+}: {
+	db: DrizzleCli;
+	customerProductIds: string[];
+	entitlementIds: string[];
+	scope: OperationScope;
+}): Promise<string[]> => {
+	if (customerProductIds.length === 0 || entitlementIds.length === 0) return [];
+
+	const deleted = await db.execute<{ customer_product_id: string }>(sql`
+		WITH dropped AS (
+			DELETE FROM customer_entitlements AS target
+			USING customer_products AS cp, entitlements AS definition
+			WHERE cp.id = target.customer_product_id
+				AND definition.id = target.entitlement_id
+				AND ${operationScopeSql({ scope })}
+				AND target.customer_product_id IN (${sqlList({ values: customerProductIds })})
+				AND target.entitlement_id IN (${sqlList({ values: entitlementIds })})
+				AND definition.pooled IS NOT TRUE
+				AND NOT target.is_pooled_balance
+				AND target.pooled_contribution_id IS NULL
+				AND NOT EXISTS (
+					SELECT 1 FROM rollovers WHERE rollovers.cus_ent_id = target.id
+				)
+			RETURNING target.customer_product_id, target.entitlement_id
+		), dropped_prices AS (
+			DELETE FROM customer_prices AS price
+			USING dropped, prices AS price_definition
+			WHERE price.customer_product_id = dropped.customer_product_id
+				AND price_definition.id = price.price_id
+				AND price_definition.entitlement_id = dropped.entitlement_id
+			RETURNING price.id
+		)
+		SELECT customer_product_id FROM dropped
+	`);
+
+	return deleted.map((row) => row.customer_product_id);
+};

@@ -12,6 +12,7 @@ import { checkUpdatePlanTransitionEligibility } from "./guards/index.js";
 import { computeBatchMigrationOperations } from "./operations/index.js";
 import { resolveLicenseCustomizeTransitions } from "./transitions/resolveLicenseCustomizeTransitions.js";
 import { resolvePreparedAddItemEntitlements } from "./utils/resolvePreparedAddItemEntitlements.js";
+import { resolveRemoveItemEntitlements } from "./utils/resolveRemoveItemEntitlements.js";
 
 /** Computes one (op, fromProduct) pair into an add-only batch patch: resolve
  * prepared rows → diff → lower → guard. No patch and no rejections = no-op. */
@@ -53,13 +54,23 @@ export const computeUpdatePlanPatch = ({
 		});
 	if (licenseRejections.length > 0) return { rejections: licenseRejections };
 
-	if (addItemEntitlements.length === 0 && licenseLinks.length === 0) {
+	const removeEntitlementIds = resolveRemoveItemEntitlements({
+		op,
+		fromProduct,
+	});
+
+	if (
+		addItemEntitlements.length === 0 &&
+		removeEntitlementIds.length === 0 &&
+		licenseLinks.length === 0
+	) {
 		return { rejections: [] };
 	}
 
 	const productTransitions = computePatchProductTransitions({
 		fromProduct,
 		addEntitlements: addItemEntitlements,
+		removeEntitlementIds,
 	});
 
 	const operations = computeBatchMigrationOperations({
@@ -72,11 +83,12 @@ export const computeUpdatePlanPatch = ({
 		fromProduct,
 		productTransitions,
 		licenseLinks,
-		operations: operations.entitlements,
+		operations: operations.addEntitlements,
 	});
 	if (rejections.length > 0) return { rejections };
 	if (
-		operations.entitlements.length === 0 &&
+		operations.addEntitlements.length === 0 &&
+		operations.removeEntitlements.length === 0 &&
 		operations.licenseEntitlements.length === 0
 	) {
 		return { rejections: [] };
