@@ -1,10 +1,10 @@
 import { createRequire } from "node:module";
 import path from "node:path";
-import { viteHmrClient } from "@autumn/env/viteDev";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { viteHmrClient } from "../../packages/env/src/viteDev.js";
 
 const require = createRequire(import.meta.url);
 const vitePort = Number.parseInt(process.env.VITE_PORT || "3001", 10);
