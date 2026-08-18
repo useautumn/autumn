@@ -23,11 +23,11 @@ import { products } from "@tests/utils/fixtures/products";
 import { pollUntil } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { runChunkedMigration } from "../utils/runChunkedMigration";
+import { runChunkedMigration } from "../../utils/runChunkedMigration";
 import {
 	expectCustomerEntitlementRowCount,
 	expectMigrationItemRunStatus,
-} from "./batchTestUtils";
+} from "../batchTestUtils";
 
 const MESSAGES_INCLUDED = 100;
 
