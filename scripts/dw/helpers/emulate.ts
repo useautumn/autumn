@@ -1,4 +1,11 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	closeSync,
+	existsSync,
+	openSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { isCloudAgent } from "@autumn/env";
@@ -13,11 +20,7 @@ import { log, sh } from "./shell.ts";
 const EMULATE_LOG = join(homedir(), ".autumn-emulate.log");
 
 /** Browser-facing emulate origin. Never 127.0.0.1:4000 for Cloud browsers. */
-export function emulateGoogleUrl({
-	origin,
-}: {
-	origin?: string;
-}): string {
+export function emulateGoogleUrl({ origin }: { origin?: string }): string {
 	if (origin && /^https?:\/\//i.test(origin)) {
 		return origin.replace(/\/$/, "");
 	}
@@ -71,6 +74,31 @@ function ensureEmulateBinary(): boolean {
 	return sh("bun", ["install", "-g", "emulate"]).code === 0;
 }
 
+export function spawnEmulateDaemon({
+	command,
+	cwd,
+	logPath,
+}: {
+	command: string[];
+	cwd: string;
+	logPath: string;
+}): ReturnType<typeof Bun.spawn> {
+	const logFd = openSync(logPath, "a");
+	try {
+		const proc = Bun.spawn(command, {
+			cwd,
+			detached: true,
+			stdout: logFd,
+			stderr: logFd,
+			stdin: "ignore",
+		});
+		proc.unref();
+		return proc;
+	} finally {
+		closeSync(logFd);
+	}
+}
+
 /** Laptop portless, or the public emulate host when Cloud sets origin. */
 export function ensureEmulateRunning({
 	origin,
@@ -92,31 +120,30 @@ export function ensureEmulateRunning({
 	}
 }
 
-function ensureHeadlessEmulateRunning({
-	origin,
-}: {
-	origin?: string;
-}): void {
+function ensureHeadlessEmulateRunning({ origin }: { origin?: string }): void {
 	const loopback = `http://127.0.0.1:${EMULATE_PORT}`;
 	const publicBase = origin
 		? emulateGoogleUrl({ origin })
 		: emulateGoogleUrl({});
-	if (emulateReachable({ baseUrl: loopback })) {
+	const loopbackReachable = emulateReachable({ baseUrl: loopback });
+	if (loopbackReachable) {
 		if (emulateIssuerMatches({ loopback, publicBase })) return;
 		log("emulate issuer stale — restarting with public emulate URL");
 		killHostProcessByName(`emulate start -p ${EMULATE_PORT}`);
 		killPidFromFile(EMULATE_PID_FILE);
 	}
 	if (!ensureEmulateBinary()) {
-		console.error("[dw] emulate binary missing; Google sign-in will hit real Google");
+		console.error(
+			"[dw] emulate binary missing; Google sign-in will hit real Google",
+		);
 		return;
 	}
 
 	const seed = join(PROJECT_ROOT, "emulate.config.yaml");
 	log(`starting google emulate on :${EMULATE_PORT} (base ${publicBase})`);
 
-	const proc = Bun.spawn(
-		[
+	const proc = spawnEmulateDaemon({
+		command: [
 			"emulate",
 			"start",
 			"-p",
@@ -128,19 +155,10 @@ function ensureHeadlessEmulateRunning({
 			"--base-url",
 			publicBase,
 		],
-		{
-			cwd: PROJECT_ROOT,
-			stdout: "pipe",
-			stderr: "pipe",
-			stdin: "ignore",
-		},
-	);
-	writeFileSync(EMULATE_PID_FILE, `${proc.pid}\n`);
-	void proc.exited.then(async (code) => {
-		const out = await new Response(proc.stdout).text();
-		const err = await new Response(proc.stderr).text();
-		writeFileSync(EMULATE_LOG, `${out}\n${err}\nexit=${code}\n`);
+		cwd: PROJECT_ROOT,
+		logPath: EMULATE_LOG,
 	});
+	writeFileSync(EMULATE_PID_FILE, `${proc.pid}\n`);
 
 	for (let i = 0; i < 30; i++) {
 		if (emulateReachable({ baseUrl: loopback })) {
