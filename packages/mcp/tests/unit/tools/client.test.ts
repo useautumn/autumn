@@ -26,7 +26,7 @@ describe("callAutumn", () => {
 				),
 			)
 			.mockResolvedValueOnce(Response.json({ id: "customer" }));
-		globalThis.fetch = fetch as typeof globalThis.fetch;
+		globalThis.fetch = fetch as unknown as typeof globalThis.fetch;
 
 		expect(
 			await callAutumn({
@@ -46,7 +46,7 @@ describe("callAutumn", () => {
 				{ status: 500 },
 			),
 		);
-		globalThis.fetch = fetch as typeof globalThis.fetch;
+		globalThis.fetch = fetch as unknown as typeof globalThis.fetch;
 
 		await expect(
 			callAutumn({
