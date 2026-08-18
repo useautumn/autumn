@@ -17,6 +17,8 @@ import { handleListCustomerProducts } from "./handlers/handleListCustomerProduct
 import { handleListCustomers } from "./handlers/handleListCustomers.js";
 import { handleListCustomersV2 } from "./handlers/handleListCustomersV2.js";
 import { handleRefundInvoice } from "./handlers/handleRefundInvoice/handleRefundInvoice.js";
+import { handleRemoveCouponFromCusV2 } from "./handlers/handleRemoveCouponFromCusV2.js";
+import { handleRemoveCouponFromSubscriptionV2 } from "./handlers/handleRemoveCouponFromSubscriptionV2.js";
 import { handleTransferProductV2 } from "./handlers/handleTransferProductV2.js";
 import { handleUpdateBalancesV2 } from "./handlers/handleUpdateBalancesV2.js";
 import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer/handleUpdateCustomer.js";
@@ -37,6 +39,11 @@ cusRouter.patch("/:customer_id", ...handleUpdateCustomer);
 cusRouter.delete("/:customer_id", ...handleDeleteCustomer);
 
 cusRouter.post("/:customer_id/coupons/:coupon_id", ...handleAddCouponToCusV2);
+cusRouter.delete("/:customer_id/coupons", ...handleRemoveCouponFromCusV2);
+cusRouter.delete(
+	"/:customer_id/subscriptions/:subscription_id/coupons/:coupon_id",
+	...handleRemoveCouponFromSubscriptionV2,
+);
 cusRouter.post("/:customer_id/transfer", ...handleTransferProductV2);
 cusRouter.post(
 	"/:customer_id/invoices/:stripe_invoice_id/refund",

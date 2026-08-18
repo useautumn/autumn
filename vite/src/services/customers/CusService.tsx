@@ -85,6 +85,32 @@ export class CusService {
 		);
 	}
 
+	static async removeCouponFromCustomer({
+		axios,
+		customer_id,
+	}: {
+		axios: AxiosInstance;
+		customer_id: string;
+	}) {
+		return await axios.delete(`/v1/customers/${customer_id}/coupons`);
+	}
+
+	static async removeCouponFromSubscription({
+		axios,
+		customer_id,
+		subscription_id,
+		coupon_id,
+	}: {
+		axios: AxiosInstance;
+		customer_id: string;
+		subscription_id: string;
+		coupon_id: string;
+	}) {
+		return await axios.delete(
+			`/v1/customers/${customer_id}/subscriptions/${subscription_id}/coupons/${coupon_id}`,
+		);
+	}
+
 	static async addCouponToCustomer({
 		axios,
 		customer_id,

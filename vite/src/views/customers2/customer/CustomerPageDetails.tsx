@@ -1,5 +1,10 @@
-import { CopyButton } from "@autumn/ui";
-import { FingerprintIcon, TicketIcon } from "@phosphor-icons/react";
+import { CopyButton, IconButton } from "@autumn/ui";
+import { FingerprintIcon, TicketIcon, XIcon } from "@phosphor-icons/react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { CusService } from "@/services/customers/CusService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
 import { useCusReferralQuery } from "@/views/customers/customer/hooks/useCusReferralQuery";
 import { CustomerActions } from "./CustomerActions";
 import { useCustomerContext } from "./CustomerContext";
@@ -8,6 +13,45 @@ const mutedDivClassName =
 	"py-0.5 px-1.5 rounded-lg text-tertiary-foreground text-tiny flex items-center gap-2 h-6 max-w-48 truncate bg-muted text-tiny-id";
 
 const placeholderText = "PENDING";
+
+const AppliedCouponChip = ({ couponId }: { couponId: string }) => {
+	const { customer } = useCustomerContext();
+	const { cusRewardRefetch } = useCusReferralQuery();
+	const axiosInstance = useAxiosInstance();
+	const [removing, setRemoving] = useState(false);
+
+	const handleRemove = async () => {
+		try {
+			setRemoving(true);
+			await CusService.removeCouponFromCustomer({
+				axios: axiosInstance,
+				customer_id: customer.id,
+			});
+			await cusRewardRefetch();
+			toast.success("Coupon removed from customer");
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to remove coupon"));
+		} finally {
+			setRemoving(false);
+		}
+	};
+
+	return (
+		<div className={mutedDivClassName} title={couponId}>
+			<TicketIcon size={13} className="shrink-0" />
+			<span className="truncate">{couponId}</span>
+			<IconButton
+				variant="muted"
+				size="sm"
+				onClick={handleRemove}
+				disabled={removing}
+				icon={<XIcon size={10} />}
+				aria-label="Remove coupon"
+				className="shrink-0 -mr-1 text-tertiary-foreground hover:text-red-500"
+			/>
+		</div>
+	);
+};
 
 export const CustomerPageDetails = () => {
 	const { customer } = useCustomerContext();
@@ -47,12 +91,7 @@ export const CustomerPageDetails = () => {
 						</span>
 					</div>
 				)}
-				{appliedCoupon && (
-					<div className={mutedDivClassName} title={appliedCoupon.coupon}>
-						<TicketIcon size={13} className="shrink-0" />
-						<span className="truncate">{appliedCoupon.coupon}</span>
-					</div>
-				)}
+				{appliedCoupon && <AppliedCouponChip couponId={appliedCoupon.coupon} />}
 			</div>
 			<CustomerActions />
 		</div>
