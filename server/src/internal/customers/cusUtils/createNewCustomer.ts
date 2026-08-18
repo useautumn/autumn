@@ -69,7 +69,6 @@ export const createNewCustomer = async ({
 	ctx: AutumnContext;
 	customer: CreateCustomer;
 	nextResetAt?: number;
-	// Back-dates the signup date; migrations pass the customer's original one.
 	createdAt?: number;
 	createDefaultProducts?: boolean;
 	defaultGroup?: string;
