@@ -14,6 +14,7 @@ import {
 } from "@tests/utils/testInitUtils/dashboardSession.js";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
+import { retryAsync } from "@/utils/retryAsync.js";
 
 const { db } = initDrizzle();
 const baseUrl =
@@ -21,6 +22,7 @@ const baseUrl =
 	`http://localhost:${process.env.SERVER_PORT ?? "8080"}`;
 
 const REDIRECT_URI = "http://127.0.0.1:33418/callback";
+const DISCOVERY_RETRY_DELAY_MS = 250;
 
 const createPkcePair = () => {
 	const verifier = randomBytes(32).toString("base64url");
@@ -82,14 +84,18 @@ const postMcp = async ({
 };
 
 /** Discovery is the first hop to the resource host, whose fresh edge connection can transiently fail. */
-const fetchDiscovery = async (url: string, attempts = 3) => {
-	let response = await fetch(url);
-	for (let attempt = 1; attempt < attempts && !response.ok; attempt++) {
-		await Bun.sleep(250);
-		response = await fetch(url);
-	}
-	return response;
-};
+const fetchDiscovery = async (url: string, attempts = 3) =>
+	retryAsync({
+		attempts,
+		delayMs: DISCOVERY_RETRY_DELAY_MS,
+		run: async () => {
+			const response = await fetch(url);
+			if (!response.ok) {
+				throw new Error(`Discovery ${url} returned ${response.status}`);
+			}
+			return response;
+		},
+	});
 
 const registerClient = async ({ clientName }: { clientName: string }) => {
 	const response = await fetch(`${baseUrl}/api/auth/oauth2/register`, {

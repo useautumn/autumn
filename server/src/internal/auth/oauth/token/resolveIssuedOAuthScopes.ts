@@ -51,7 +51,6 @@ const resolveEmptyScopeGrant = async ({
 	throw new RecaseError({
 		message: "OAuth token has no scopes",
 		code: ErrCode.InvalidRequest,
-		statusCode: 401,
 	});
 };
 
@@ -71,24 +70,19 @@ export const resolveIssuedOAuthScopes = async ({
 	tokenRecord: OAuthAccessTokenRecord;
 }): Promise<string[]> => {
 	if (tokenRecord.scopes.length === 0) {
-		return resolveEmptyScopeGrant({ db, isMcpClient, tokenRecord });
+		return await resolveEmptyScopeGrant({ db, isMcpClient, tokenRecord });
 	}
 
-	let issuedScopes: string[];
 	if (tokenRecord.clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID) {
 		// Admin grants are not consent-narrowed, but an empty request must not blank them.
-		issuedScopes = requestedScopes?.length
-			? requestedScopes
-			: tokenRecord.scopes;
-	} else {
-		issuedScopes = await getOAuthConsentScopeGrant({
-			db,
-			organizationId: tokenRecord.referenceId,
-			requestedScopes: requestedScopes ?? tokenRecord.scopes,
-			userId: tokenRecord.userId,
-		});
+		return requestedScopes?.length ? requestedScopes : tokenRecord.scopes;
 	}
 
-	if (issuedScopes.length > 0) return issuedScopes;
-	return resolveEmptyScopeGrant({ db, isMcpClient, tokenRecord });
+	// Throws rather than returning an empty grant, so the issued scopes are never blank.
+	return await getOAuthConsentScopeGrant({
+		db,
+		organizationId: tokenRecord.referenceId,
+		requestedScopes: requestedScopes ?? tokenRecord.scopes,
+		userId: tokenRecord.userId,
+	});
 };

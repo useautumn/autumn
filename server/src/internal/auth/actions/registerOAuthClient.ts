@@ -2,6 +2,7 @@ import {
 	getDefaultOAuthScopes,
 	isReservedOAuthClientName,
 } from "@autumn/auth/oauth";
+import { msToSeconds } from "@autumn/shared";
 import { MCP_CLIENT_KIND } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import { isSafeOAuthRedirectUri } from "@autumn/shared/utils/auth/oauthRedirectUris";
 import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
@@ -40,9 +41,7 @@ const toRegistration = (
 	client: OAuthClientRecord,
 ): OAuthClientRegistration => ({
 	client_id: client.clientId,
-	client_id_issued_at: Math.floor(
-		(client.createdAt?.getTime() ?? Date.now()) / 1000,
-	),
+	client_id_issued_at: msToSeconds(client.createdAt?.getTime() ?? Date.now()),
 	client_name: client.name ?? DEFAULT_OAUTH_CLIENT_NAME,
 	redirect_uris: client.redirectUris,
 	scope: client.scopes?.join(" ") ?? "",

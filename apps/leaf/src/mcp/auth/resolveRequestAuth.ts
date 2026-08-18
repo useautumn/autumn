@@ -147,11 +147,13 @@ const isUnrestrictedChatGrant = async ({
 };
 
 /**
- * Authenticates an OAuth bearer against the shared token store — the same
- * expiry check the api server's OAuth middleware applies — so expired
- * tokens get a transport-level 401 challenge instead of a tool error.
+ * Resolves the org, user and scopes an OAuth bearer speaks for, and rejects it
+ * unless three things hold: the shared token store still holds it unexpired (the
+ * same check the api server's OAuth middleware applies, so expired tokens get a
+ * transport-level 401 challenge instead of a tool error), the grant was minted
+ * for this resource, and the grant carries scopes this resource can act on.
  */
-const authenticateOAuthBearer = async ({
+const resolveOAuthPrincipal = async ({
 	bearer,
 	db,
 	resourceUrl,
@@ -192,23 +194,15 @@ const authenticateOAuthBearer = async ({
 	// Only the resource scopes gate tools; OIDC protocol scopes are dropped.
 	const scopes = getRequestedOAuthResourceScopes(accessToken.scopes);
 
-	// A grant that names scopes but none this resource exposes fails every tool.
-	if (accessToken.scopes.length > 0 && scopes.length === 0) {
-		throw new OAuthHttpError(
-			403,
-			"OAuth access token grants no Autumn resource scopes",
-			"insufficient_scope",
-			buildChallenge({ error: "insufficient_scope", resourceUrl }),
-		);
-	}
+	// A grant that names scopes must expose at least one this resource serves; an
+	// empty grant is admin-equivalent, so re-derive the right to hold one from the
+	// consent instead of trusting the token row.
+	const hasUsableGrant =
+		accessToken.scopes.length > 0
+			? scopes.length > 0
+			: await isUnrestrictedChatGrant({ db, accessToken });
 
-	// An empty grant is admin-equivalent, so re-derive the right to hold one from
-	// the consent instead of trusting the token row. Only scope-less grants pay
-	// for the lookup.
-	if (
-		accessToken.scopes.length === 0 &&
-		!(await isUnrestrictedChatGrant({ db, accessToken }))
-	) {
+	if (!hasUsableGrant) {
 		throw new OAuthHttpError(
 			403,
 			"OAuth access token grants no Autumn resource scopes",
@@ -270,7 +264,7 @@ export const buildAuthForRequest = async ({
 
 	const bearer = getBearerToken({ headers });
 	if (bearer && isOAuthToken({ token: bearer })) {
-		const identity = await authenticateOAuthBearer({
+		const identity = await resolveOAuthPrincipal({
 			bearer,
 			db,
 			resourceUrl,

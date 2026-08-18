@@ -77,38 +77,38 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			resource: tokenRequest.resource,
 			requestedScopes: requestedResourceScopes,
 		});
-		tokenRecord.oauthConsentId = await resolveOAuthTokenConsentId({
+		const oauthConsentId = await resolveOAuthTokenConsentId({
 			db,
 			refreshTokenRecord: tokenRequest.refreshTokenRecord,
 			tokenRecord,
 		});
+		const consentedTokenRecord = { ...tokenRecord, oauthConsentId };
 
 		const isMcpClient = await isMcpOAuthClient({
 			clientId: tokenRecord.clientId,
 			db,
 		});
-		tokenRecord.scopes = await resolveIssuedOAuthScopes({
+		const issuedScopes = await resolveIssuedOAuthScopes({
 			db,
 			isMcpClient,
 			requestedScopes,
-			tokenRecord,
+			tokenRecord: consentedTokenRecord,
 		});
 
-		if (isMcpClient && !tokenRecord.oauthConsentId) {
+		if (isMcpClient && !oauthConsentId) {
 			throw new RecaseError({
 				message: "OAuth token consent is ambiguous",
 				code: ErrCode.InvalidRequest,
-				statusCode: 401,
 			});
 		}
 
 		await persistOAuthTokenGrant({
 			accessTokenId: tokenRecord.id,
 			db,
-			oauthConsentId: tokenRecord.oauthConsentId,
+			oauthConsentId,
 			refreshTokenId: tokenRecord.refreshId,
 			resource: tokenRequest.resource,
-			scopes: tokenRecord.scopes,
+			scopes: issuedScopes,
 		});
 
 		// 6. MCP and reserved clients keep the opaque OAuth token
@@ -119,7 +119,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			const responseBody = {
 				...body,
 				access_token: prefixOAuthToken({ token: accessToken }),
-				scope: tokenRecord.scopes.join(" "),
+				scope: issuedScopes.join(" "),
 			};
 			if (heldReplayKey) {
 				await storeOAuthRefreshReplay({
@@ -139,7 +139,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		// 7. Everyone else exchanges the token for a scoped api key
 		const apiKeyResult = await getExternalOAuthApiKeyForToken({
 			db,
-			tokenRecord,
+			tokenRecord: { ...consentedTokenRecord, scopes: issuedScopes },
 			requestedScopes: requestedResourceScopes,
 		});
 		if (!apiKeyResult) return response;

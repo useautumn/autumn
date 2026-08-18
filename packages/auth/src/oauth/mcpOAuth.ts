@@ -23,9 +23,12 @@ export const isUnrestrictedChatOAuthConsent = ({
 	metadata,
 }: {
 	metadata: unknown;
-}) =>
-	(metadata as { kind?: unknown } | null | undefined)?.kind ===
-	UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND;
+}) => {
+	if (typeof metadata !== "object" || metadata === null) return false;
+	return (
+		"kind" in metadata && metadata.kind === UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND
+	);
+};
 
 // Legacy rows persisted the internal-mcp kind; dynamic registration now writes mcp_client.
 const MCP_OAUTH_CLIENT_KINDS: readonly string[] = [
