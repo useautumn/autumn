@@ -132,6 +132,42 @@ test("filter plan properties overwrite stale operation plan properties", () => {
 	});
 });
 
+test("operation plan selection replaces inherited $or instead of mixing", () => {
+	const filter: MigrationFilter = {
+		customer: {
+			plan: {
+				$or: [
+					{ plan_id: "qa-eus-eu", version: 1 },
+					{ plan_id: "qa-eus-team", version: 1 },
+				],
+				custom: false,
+			},
+		},
+	};
+	const operations: Operations = {
+		customer: [
+			{
+				type: "update_plan",
+				plan_filter: { plan_id: "qa-eus-eu", version: 1 },
+				version: 1,
+			},
+		],
+	};
+	expect(toOperationsPayload({ operations, filter })).toEqual({
+		customer: [
+			{
+				type: "update_plan",
+				plan_filter: {
+					plan_id: "qa-eus-eu",
+					version: 1,
+					custom: false,
+				},
+				version: 1,
+			},
+		],
+	});
+});
+
 test("undefined operation fields do not erase inherited plan filters", () => {
 	const filter: MigrationFilter = {
 		customer: { plan: { plan_id: "dedicated", custom: false } },

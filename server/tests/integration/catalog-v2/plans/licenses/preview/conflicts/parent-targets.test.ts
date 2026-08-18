@@ -1,14 +1,15 @@
 /**
  * catalogV2.preview_update — license_parents[].conflicts across multiple
  * parents / parent versions. Only the relative that actually diverged lists.
+ * One entry per parent plan; older linked versions nest under sibling_versions.
  *
  * Contract:
  *   - two parents, only A customized, propagate both
  *     → A value_divergence, B none; both propagated
  *   - two parent versions, v1 customized, propagate omit (latest)
- *     → v2 propagated no conflict; v1 unchanged + conflict
+ *     → v2 propagated no conflict; sibling v1 unchanged + conflict
  *   - same setup, propagate all_versions
- *     → both propagated; only v1 has the conflict
+ *     → both propagated; only sibling v1 has the conflict
  */
 
 import { test } from "bun:test";
@@ -99,10 +100,7 @@ test.concurrent(
 								plan_id: childId,
 								items: [messagesItem(200)],
 								propagate: {
-									license_parents: [
-										{ plan_id: parentA },
-										{ plan_id: parentB },
-									],
+									license_parents: [{ plan_id: parentA }, { plan_id: parentB }],
 								},
 							},
 						],
@@ -173,15 +171,16 @@ test.concurrent(
 						licenseParents: [
 							{
 								planId: parentId,
-								version: 1,
-								licenseAction: "unchanged",
-								conflicts: [messagesValueDivergence],
-							},
-							{
-								planId: parentId,
 								version: 2,
 								licenseAction: "propagated",
 								conflicts: null,
+								siblingVersions: [
+									{
+										version: 1,
+										licenseAction: "unchanged",
+										conflicts: [messagesValueDivergence],
+									},
+								],
 							},
 						],
 					},
@@ -239,15 +238,16 @@ test.concurrent(
 						licenseParents: [
 							{
 								planId: parentId,
-								version: 1,
-								licenseAction: "propagated",
-								conflicts: [messagesValueDivergence],
-							},
-							{
-								planId: parentId,
 								version: 2,
 								licenseAction: "propagated",
 								conflicts: null,
+								siblingVersions: [
+									{
+										version: 1,
+										licenseAction: "propagated",
+										conflicts: [messagesValueDivergence],
+									},
+								],
 							},
 						],
 					},

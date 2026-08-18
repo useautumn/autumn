@@ -4,11 +4,11 @@
  * Contract:
  *   follow 100→150 vs 200 lists value_divergence; draft customize is 150
  *   follow + declare 300 → two ops (150 vs 300); explicit swallows the list
- *   license follow 100→150 vs 200 stamps license_plan_id; two upsert_licenses ops (both 150)
+ *   license follow 100→150 vs 200 stamps license_plan_id; one $or upsert_licenses op
  *   license follow + declare 300 → two upsert_licenses ops (150 vs 300)
  *   pin lists the clash and still omits the variant op
  *   license pin lists license_plan_id and omits the variant license op
- *   both lanes: plan-body + Seat clash; Team splits item/license; EU keeps both on own
+ *   both lanes: plan-body + Seat clash → one $or item op + one $or license op
  */
 
 import { test } from "bun:test";
@@ -291,12 +291,7 @@ test.concurrent(
 							filter: { customer: { plan: planFilter } },
 							operations: [
 								parentLicenseOp({
-									planFilter: versionPinnedFilter({ planId: baseId }),
-									childId,
-									customize: messages150,
-								}),
-								parentLicenseOp({
-									planFilter: versionPinnedFilter({ planId: variantId }),
+									planFilter,
 									childId,
 									customize: messages150,
 								}),
@@ -627,7 +622,6 @@ test.concurrent(
 					branches: [{ planId: baseId }, { planId: variantId }],
 				});
 				const messages150 = messagesItemDelta({ included: 150 });
-				const baseFilter = versionPinnedFilter({ planId: baseId });
 				await expectLicenseDraftCase({
 					autumn: autumnV2_3,
 					ctx,
@@ -646,23 +640,11 @@ test.concurrent(
 							filter: { customer: { plan: planFilter } },
 							operations: [
 								childItemOp({
-									planFilter: versionPinnedFilter({ planId: variantId }),
-									customize: {
-										...messages150,
-										upsert_licenses: [
-											{
-												license_plan_id: childId,
-												customize: messages150,
-											},
-										],
-									},
-								}),
-								childItemOp({
-									planFilter: baseFilter,
+									planFilter,
 									customize: messages150,
 								}),
 								parentLicenseOp({
-									planFilter: baseFilter,
+									planFilter,
 									childId,
 									customize: messages150,
 								}),

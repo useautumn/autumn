@@ -78,11 +78,15 @@ export const computePlanLicensesPlan = ({
 	upsertProducts.map((upsert) => {
 		const declaredLicenses = computeFinalDeclaredLicenses({ upsert });
 		if (declaredLicenses !== undefined) {
+			// Stamp onto the returned plan so migration drafts take the
+			// declaredLicenseDraftUpserts path (current→effective product
+			// delta) instead of own-lane license snapshots that remint overlays.
+			const withDeclared = { ...upsert, declaredLicenses };
 			return withPlanLicenseRowPlans({
-				upsert,
+				upsert: withDeclared,
 				planLicenses: computeDeclaredPlanLicenses({
 					ctx,
-					upsert: { ...upsert, declaredLicenses },
+					upsert: withDeclared,
 					productStatesContext,
 				}),
 				licenseStatesContext,

@@ -76,11 +76,20 @@ describe("variant preview + params", () => {
 	test("preview schema accepts variants with variant_action", () => {
 		const parsed = CatalogVariantPreviewSchema.parse({
 			plan_id: "team-eu",
-			version: 1,
+			version: 2,
 			state: { has_customers: false, will_archive: false },
 			variant_action: "propagated",
+			sibling_versions: [
+				{
+					plan_id: "team-eu",
+					version: 1,
+					state: { has_customers: false, will_archive: false },
+					variant_action: "unchanged",
+				},
+			],
 		});
 		expect(parsed.variant_action).toBe("propagated");
+		expect(parsed.sibling_versions?.[0]?.variant_action).toBe("unchanged");
 
 		const plan = CatalogPlanUpdatePreviewSchema.parse({
 			plan_id: "team",

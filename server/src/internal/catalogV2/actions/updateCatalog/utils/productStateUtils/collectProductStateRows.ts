@@ -27,6 +27,10 @@ export const collectProductStateRows = ({
 		for (const variant of product.variants ?? []) {
 			add(variant);
 		}
+		for (const link of product.licenses ?? []) {
+			add(link.product);
+			add(link.base_product);
+		}
 	}
 
 	return [...byInternalId.values()];

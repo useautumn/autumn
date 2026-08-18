@@ -160,8 +160,10 @@ export const computeUpsertProductPlan = ({
 		...(details.changed ? { details } : {}),
 		...(entitlementPricesPlan ? { entitlementPricesPlan } : {}),
 		...(freeTrialPlan.changed ? { freeTrialPlan } : {}),
-		// all_versions siblings reuse the direct licenses[] write.
-		...((source === "direct" || source === "all_versions") &&
+		// Direct / variant_link send licenses[]. Siblings rebase via editDiff.
+		...((source === "direct" ||
+			source === "all_versions" ||
+			source === "variant_link") &&
 		planParams.licenses !== undefined
 			? { declaredLicenses: planParams.licenses }
 			: {}),

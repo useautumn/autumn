@@ -3,7 +3,7 @@
  *
  * Contract:
  *   top-level rows stay
- *   parent_plan_licenses[].product and variants[] are copied in
+ *   parent_plan_licenses[].product, licenses[].product, and variants[] are copied in
  *   same internal_id keeps the top-level row
  *   every variant version is kept
  */
@@ -98,5 +98,19 @@ describe("collectProductStateRows", () => {
 		const team = rows.find((product) => product.id === "team");
 		expect(team?.name).toBe("Team full");
 		expect(rows.some((product) => product.id === "team-eu")).toBe(true);
+	});
+
+	test("copies license children of a payload parent", () => {
+		const seat = full({ id: "seat" });
+		const team = {
+			...full({ id: "team" }),
+			licenses: [{ product: seat }],
+		} as FullProduct;
+
+		const rows = collectProductStateRows({
+			products: [team],
+			payloadPlanIds: ["team"],
+		});
+		expect(rows.some((product) => product.id === "seat")).toBe(true);
 	});
 });

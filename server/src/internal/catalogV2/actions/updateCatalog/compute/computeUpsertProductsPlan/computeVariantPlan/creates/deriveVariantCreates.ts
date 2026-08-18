@@ -40,6 +40,7 @@ export const deriveVariantCreates = ({
 					...initVariantPlanParams({
 						variant,
 						baseFullProduct: upsert.row.nextFullProduct,
+						declaredLicenses: upsert.declaredLicenses,
 					}),
 					// Variant creates inherit the base's Stripe creation opt-out.
 					...(upsert.createInStripe !== undefined

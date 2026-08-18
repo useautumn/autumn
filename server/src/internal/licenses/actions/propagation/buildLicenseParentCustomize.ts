@@ -1,6 +1,9 @@
-import type { ApiPlanV1, LicenseCustomize } from "@autumn/shared";
-import { applyLicenseCustomizeToBasePlan } from "@/internal/licenses/actions/customize/rebaseCatalogPlanLicenses.js";
-import { diffLicensePlanCustomize } from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
+import {
+	type ApiPlanV1,
+	applyLicenseCustomizeToBasePlan,
+	diffLicensePlanCustomize,
+	type LicenseCustomize,
+} from "@autumn/shared";
 import { getApiPlanDiff } from "@/internal/product/actions/common/planTransformUtils.js";
 
 /** A customized link keeps its own overrides rebased onto the edited child; an
