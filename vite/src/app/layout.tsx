@@ -6,6 +6,7 @@ import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect, useRef, useState } from "react";
 import { Outlet } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
+import { SandboxFavicon } from "@/components/general/SandboxFavicon";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
@@ -84,6 +85,7 @@ const DashboardShell = ({
 
 	return (
 		<>
+			<SandboxFavicon />
 			<div className="hidden sm:flex">
 				<MainSidebar />
 			</div>
