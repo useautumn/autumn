@@ -27,13 +27,20 @@ const getNotes = (value: unknown) => {
 export const formatAutumnOrgContext = ({
 	agentRules,
 	features,
+	organization,
 	plans,
 }: {
 	agentRules?: unknown;
 	features?: unknown;
+	organization?: unknown;
 	plans?: unknown;
 }) => {
 	const sections: string[] = [];
+	if (organization !== undefined) {
+		sections.push(
+			toJsonBlock({ label: "getCurrentOrganization", value: organization }),
+		);
+	}
 	if (agentRules !== undefined) {
 		sections.push(
 			toJsonBlock({ label: "getAgentRules", value: withoutNotes(agentRules) }),
@@ -61,10 +68,17 @@ export const loadAutumnOrgContext = async ({
 	token: string;
 }): Promise<AutumnOrgContext | undefined> => {
 	const intent =
-		"Preload the org's agent rules, plans, and features at session start so they are ready for the user's first request.";
+		"Preload the org's identity, agent rules, plans, and features at session start so they are ready for the user's first request.";
 	const args = { intent, request: {} };
-	const [agentRulesResult, plansResult, featuresResult] =
+	const organizationArgs = { intent };
+	const [organizationResult, agentRulesResult, plansResult, featuresResult] =
 		await Promise.allSettled([
+			executeTool({
+				env,
+				token,
+				toolName: "getCurrentOrganization",
+				args: organizationArgs,
+			}),
 			executeTool({ env, token, toolName: "getAgentRules", args }),
 			executeTool({ env, token, toolName: "listPlans", args }),
 			executeTool({ env, token, toolName: "listFeatures", args }),
@@ -72,6 +86,7 @@ export const loadAutumnOrgContext = async ({
 
 	const outcomes: Record<string, string> = {};
 	for (const [toolName, result] of [
+		["getCurrentOrganization", organizationResult],
 		["getAgentRules", agentRulesResult],
 		["listPlans", plansResult],
 		["listFeatures", featuresResult],
@@ -104,6 +119,10 @@ export const loadAutumnOrgContext = async ({
 				: undefined,
 		features:
 			featuresResult.status === "fulfilled" ? featuresResult.value : undefined,
+		organization:
+			organizationResult.status === "fulfilled"
+				? organizationResult.value
+				: undefined,
 		plans: plansResult.status === "fulfilled" ? plansResult.value : undefined,
 	});
 

@@ -79,12 +79,15 @@ describe("Autumn org context service", () => {
 		expect(context?.text).not.toContain("Always use invoice mode.");
 	});
 
-	test("preloads rules, plans, and features in parallel and keeps partial context", async () => {
+	test("preloads org identity, rules, plans, and features in parallel and keeps partial context", async () => {
 		const calls: string[] = [];
 		const { logger, warnings } = createLogger();
 		const executeTool = async ({ toolName }: { toolName: string }) => {
 			calls.push(toolName);
 			if (toolName === "getAgentRules") throw new Error("rules unavailable");
+			if (toolName === "getCurrentOrganization") {
+				return { id: "org_123", name: "Resend", slug: "resend" };
+			}
 			return [{ id: "launch", name: "Launch" }];
 		};
 
@@ -97,9 +100,12 @@ describe("Autumn org context service", () => {
 
 		expect(calls.sort()).toEqual([
 			"getAgentRules",
+			"getCurrentOrganization",
 			"listFeatures",
 			"listPlans",
 		]);
+		expect(context?.text).toContain("getCurrentOrganization:");
+		expect(context?.text).toContain('"slug": "resend"');
 		expect(context?.text).toContain('"id": "launch"');
 		expect(warnings).toHaveLength(1);
 	});
