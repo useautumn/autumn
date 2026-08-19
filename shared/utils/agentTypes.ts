@@ -10,6 +10,8 @@
  * - Converters: AgentFeature ↔ Feature, AgentProduct ↔ ProductV2
  */
 
+import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
+import type { ApiCreditSchemaItem } from "../api/features/creditRateCard.js";
 import type {
 	ModelMarkups,
 	ProviderMarkups,
@@ -23,7 +25,10 @@ import { AppEnv } from "../models/genModels/genEnums.js";
 import { Infinite } from "../models/productModels/productEnums.js";
 import type { ProductItem } from "../models/productV2Models/productItemModels/productItemModels.js";
 import type { ProductV2 } from "../models/productV2Models/productV2Models.js";
-import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
+import {
+	apiCreditSchemaItemToDb,
+	dbCreditSchemaItemToApi,
+} from "./featureUtils/apiFeatureToDbFeature.js";
 import { buildAiCreditSystemConfig } from "./featureUtils/buildAiCreditSystemConfig.js";
 
 // ============ INTERFACES ============
@@ -44,10 +49,8 @@ export interface AgentFeature {
 		singular: string;
 		plural: string;
 	} | null;
-	credit_schema?: Array<{
-		metered_feature_id: string;
-		credit_cost: number;
-	}> | null;
+	credit_schema?: ApiCreditSchemaItem[] | null;
+	invoice_credit?: boolean;
 	model_markups?: ModelMarkups;
 	default_markup?: number | null;
 	provider_markups?: ProviderMarkups;
@@ -123,10 +126,13 @@ export function agentFeatureToFeature(agentFeature: AgentFeature): Feature {
 		config.usage_type = usageType;
 	}
 	if (agentFeature.credit_schema) {
-		config.schema = agentFeature.credit_schema.map((s) => ({
-			metered_feature_id: s.metered_feature_id,
-			credit_amount: s.credit_cost,
-		}));
+		config.schema = agentFeature.credit_schema.map(apiCreditSchemaItemToDb);
+	}
+	if (agentFeature.type === "credit_system") {
+		config.usage_type = FeatureUsageType.Single;
+		if (agentFeature.invoice_credit !== undefined) {
+			config.invoice_credit = agentFeature.invoice_credit;
+		}
 	}
 	if (agentFeature.type === "ai_credit_system") {
 		Object.assign(
@@ -237,11 +243,11 @@ export function featureToAgentFeature(feature: Feature): AgentFeature {
 
 	if (feature.type === FeatureType.CreditSystem && feature.config?.schema) {
 		agentFeature.credit_schema = feature.config.schema.map(
-			(s: { metered_feature_id: string; credit_amount: number }) => ({
-				metered_feature_id: s.metered_feature_id,
-				credit_cost: s.credit_amount,
-			}),
+			dbCreditSchemaItemToApi,
 		);
+		if (feature.config.invoice_credit !== undefined) {
+			agentFeature.invoice_credit = feature.config.invoice_credit;
+		}
 	}
 	if (isAiCreditSystem(feature.type)) {
 		agentFeature.model_markups = feature.model_markups;

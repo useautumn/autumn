@@ -63,7 +63,7 @@ export function CreditSystemSchema({
 			description={
 				mode === "ai"
 					? "Select AI models and set a markup on top of their base pricing. All prices in $/M tokens."
-					: "When you track usage for these features, it is priced against the rate card below, then deducted from the balance. Rates can be flat or graduated across usage tiers."
+					: "When you track usage for these features, it is priced against the rate card below, then deducted from the balance. Rates can be flat or tiered, with each usage tier having its own credit rate."
 			}
 		>
 			<div className="flex flex-col gap-3">

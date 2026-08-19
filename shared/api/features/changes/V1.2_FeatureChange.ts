@@ -11,6 +11,7 @@ import {
 	ApiFeatureType,
 	ApiFeatureV0Schema,
 } from "../prevVersions/apiFeatureV0.js";
+import { apiCreditSchemaToV2_3 } from "./V2.3_FeatureRateCardChange.js";
 
 /**
  * V1_2_FeatureChange: Transforms feature response between V1 and V0
@@ -73,6 +74,9 @@ export const V1_2_FeatureChange = defineVersionChange({
 		} else {
 			v0Type = ApiFeatureType.Boolean;
 		}
+		const legacyCreditSchema = apiCreditSchemaToV2_3({
+			creditSchema: input.credit_schema,
+		});
 
 		return {
 			id: input.id,
@@ -84,17 +88,7 @@ export const V1_2_FeatureChange = defineVersionChange({
 						plural: input.display.plural || "",
 					}
 				: null,
-			credit_schema:
-				input.credit_schema?.flatMap((item) =>
-					item.tier_behavior === "graduated"
-						? []
-						: [
-								{
-									metered_feature_id: item.metered_feature_id,
-									credit_cost: item.credit_cost,
-								},
-							],
-				) || null,
+			credit_schema: legacyCreditSchema ?? null,
 			archived: input.archived,
 		} satisfies z.infer<typeof ApiFeatureV0Schema>;
 	},

@@ -18,7 +18,7 @@ import { FeatureSelectDropdown } from "./FeatureSelectDropdown";
 
 const RATE_TYPE_OPTIONS = [
 	{ value: "flat", label: "Flat" },
-	{ value: "graduated", label: "Graduated" },
+	{ value: "graduated", label: "Tiered" },
 ];
 
 interface CreditRateCardRowProps {
@@ -108,8 +108,8 @@ export function CreditRateCardRow({
 					<CreditTierRows item={item} onChange={onChange} />
 					<div className="flex items-center gap-1.5 text-amber-500 text-xs">
 						<WarningCircleIcon size={12} />
-						Graduated rating is not live yet — tracking usage for this feature
-						will be rejected.
+						Tiered rating is not live yet — tracking usage for this feature will
+						be rejected.
 					</div>
 				</>
 			) : (

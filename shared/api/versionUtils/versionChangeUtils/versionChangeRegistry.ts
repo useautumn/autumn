@@ -4,6 +4,7 @@ import { V0_1_CustomerChange } from "@api/customers/changes/V0.1_CustomerChange"
 import { V0_2_CustomerChange } from "@api/customers/changes/V0.2_CustomerChange";
 import { V0_2_InvoicesAlwaysExpanded } from "@api/customers/changes/V0.2_InvoicesAlwaysExpanded";
 import { V1_1_FeaturesArrayToObject } from "@api/customers/changes/V1.1_FeaturesArrayToObject";
+import { V2_3_CustomerRateCardChange } from "@api/customers/changes/V2.3_CustomerRateCardChange.js";
 // Import trials used changes
 import { V1_2_TrialsUsedChange } from "@api/customers/components/apiTrialsUsed/changes/V1.2_TrialsUsedChange";
 
@@ -34,8 +35,10 @@ import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange"
 import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange";
 import { V1_2_CheckQueryChange } from "../../balances/check/changes/V1.2_CheckQueryChange";
 import { V2_0_CheckChange } from "../../balances/check/changes/V2.0_CheckChange";
+import { V2_3_CheckRateCardChange } from "../../balances/check/changes/V2.3_CheckRateCardChange.js";
 import { V1_2_TrackChange } from "../../balances/track/changes/V1.2_TrackChange";
 import { V2_0_TrackChange } from "../../balances/track/changes/V2.0_TrackChange";
+import { V2_3_TrackRateCardChange } from "../../balances/track/changes/V2.3_TrackRateCardChange.js";
 import { V1_2_TrackParamsChange } from "../../balances/track/requestChanges/V1.2_TrackParamsChange";
 // Import attach changes
 import { V0_2_AttachChange } from "../../billing/attach/changes/V0.2_AttachChange";
@@ -49,6 +52,9 @@ import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass";
 
 export const V2_4_CHANGES: VersionChangeConstructor[] = [
 	V2_3_FeatureRateCardChange,
+	V2_3_CustomerRateCardChange,
+	V2_3_CheckRateCardChange,
+	V2_3_TrackRateCardChange,
 ];
 
 export const V2_3_CHANGES: VersionChangeConstructor[] = [

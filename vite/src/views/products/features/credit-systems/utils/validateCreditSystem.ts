@@ -34,7 +34,7 @@ const validateSchemaItem = (item: CreditSchemaItem): string | null => {
 	}
 
 	if (item.credit_amount !== undefined) {
-		return "Graduated rates cannot include a flat credit cost";
+		return "Tiered rates cannot include a flat credit cost";
 	}
 
 	if (item.tiers.length === 0) {
