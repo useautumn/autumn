@@ -1,10 +1,11 @@
 import { AttachParamsV1Schema } from "@autumn/shared/publicApiSchemas";
 import { z } from "zod";
 
+/** The two operator decisions on an attach: how the customer pays (one
+ * billing mode) and whether access starts before payment settles. */
 export const attachBillingEditsSchema = z.strictObject({
 	access: z.enum(["immediate", "after_payment"]),
-	invoice: z.enum(["disabled", "draft", "finalized"]),
-	redirect: z.enum(["never", "if_required", "always"]),
+	billing: z.enum(["checkout", "draft_invoice", "finalized_invoice"]),
 });
 
 export type AttachBillingEdits = z.infer<typeof attachBillingEditsSchema>;
@@ -25,15 +26,11 @@ export const attachBillingEditsFromRequest = (
 
 	return {
 		access: immediate ? "immediate" : "after_payment",
-		invoice: invoiceEnabled
+		billing: invoiceEnabled
 			? invoiceMode.finalize === false
-				? "draft"
-				: "finalized"
-			: "disabled",
-		redirect:
-			request.redirect_mode === "always" || request.redirect_mode === "never"
-				? request.redirect_mode
-				: "if_required",
+				? "draft_invoice"
+				: "finalized_invoice"
+			: "checkout",
 	};
 };
 
@@ -47,6 +44,7 @@ export const applyAttachBillingEdits = ({
 	const {
 		invoice_mode: existingInvoiceMode,
 		long_lived_checkout: _longLivedCheckout,
+		redirect_mode: _redirectMode,
 		...unchanged
 	} = request;
 	const enablePlanImmediately = edits.access === "immediate";
@@ -54,17 +52,16 @@ export const applyAttachBillingEdits = ({
 	const updated = {
 		...unchanged,
 		enable_plan_immediately: enablePlanImmediately,
-		redirect_mode: edits.redirect,
-		...(edits.redirect === "never" ? {} : { long_lived_checkout: true }),
-		...(edits.invoice === "disabled"
-			? {}
+		...(edits.billing === "checkout"
+			? { long_lived_checkout: true, redirect_mode: "always" }
 			: {
 					invoice_mode: {
 						...invoiceMode,
-						enabled: true,
 						enable_plan_immediately: enablePlanImmediately,
-						finalize: edits.invoice === "finalized",
+						enabled: true,
+						finalize: edits.billing === "finalized_invoice",
 					},
+					redirect_mode: "if_required",
 				}),
 	};
 

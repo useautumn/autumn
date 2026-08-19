@@ -26,18 +26,3 @@ describe("grouped writes survive the public tool args strip", () => {
 		expect(publicToolArgs(toolArgs)._eveApproveOptionId).toBeUndefined();
 	});
 });
-
-// The request modal shows the write body only, so kept harness keys must not
-// leak into the JSON the user reads.
-test("the request modal still shows only the write body", async () => {
-	const { approvalPayloadModal } = await import("../../../src/ui/blocks.js");
-	const modal = approvalPayloadModal({
-		toolArgs: publicToolArgs({
-			_eveWithheldWrites: [{ requestId: "req_2", toolName: "autumn__attach" }],
-			request: { customer_id: "leaf-0001" },
-		}),
-		toolName: "updateCustomer",
-	});
-
-	expect(JSON.stringify(modal)).not.toContain("_eveWithheldWrites");
-});

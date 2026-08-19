@@ -9,7 +9,6 @@ import {
 	handleEditApprovalDetailsAction,
 	handleEditApprovalDetailsSubmit,
 } from "./internal/approvals/surfaces/slack/editDetails.js";
-import { handleViewPayloadAction } from "./internal/approvals/surfaces/slack/viewPayload.js";
 import { ensureWebChatAuth } from "./internal/installations/actions/ensureWebChatAuth.js";
 import { handleStopAction } from "./internal/runs/handleStopAction.js";
 import { decrypt } from "./lib/crypto.js";
@@ -118,7 +117,6 @@ bot.onAction(
 );
 bot.onAction(questionAnswerActionIds, handleSlackQuestionAnswer);
 bot.onAction(catalogDecisionActionIds, handleSlackCatalogDecision);
-bot.onAction(["view_approval_payload"], handleViewPayloadAction);
 bot.onAction(
 	[EDIT_APPROVAL_DETAILS_ACTION_ID],
 	handleEditApprovalDetailsAction,

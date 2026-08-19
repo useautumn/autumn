@@ -54,7 +54,7 @@ export const handleEditApprovalDetailsSubmit = async (
 	if (!parsed.success) {
 		return {
 			action: "errors" as const,
-			errors: { invoice: "Choose valid billing settings." },
+			errors: { billing: "Choose valid billing settings." },
 		};
 	}
 	const approvalId = event.privateMetadata;
@@ -67,7 +67,7 @@ export const handleEditApprovalDetailsSubmit = async (
 	if (!approval) {
 		return {
 			action: "errors" as const,
-			errors: { invoice: "This approval is no longer editable." },
+			errors: { billing: "This approval is no longer editable." },
 		};
 	}
 
@@ -76,12 +76,15 @@ export const handleEditApprovalDetailsSubmit = async (
 	if (!updated.success) {
 		return {
 			action: "errors" as const,
-			errors: { invoice: "These settings are not valid for this request." },
+			errors: { billing: "These settings are not valid for this request." },
 		};
 	}
+	// The user chose these billing settings by hand, so they override the
+	// skill's defaults (which would otherwise re-enable immediate provisioning
+	// or invoice mode on the rebuilt request).
 	const text = [
 		"Preview this exact attach request and request approval again.",
-		"Do not add, remove, or change any field.",
+		"Do not add, remove, or change any field — in particular keep `enable_plan_immediately`, `invoice_mode`, and `redirect_mode` exactly as given; they are the user's explicit choices and override the default billing settings.",
 		JSON.stringify(updated.data),
 	].join("\n");
 
