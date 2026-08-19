@@ -20,15 +20,13 @@ export type OAuthRefreshReplayClaim = {
 	/** The winner's stored token response, when this caller lost the race. */
 	body: Record<string, unknown> | null;
 	/**
-	 * True when this caller won the key and is the one minting: it owes the key
-	 * either a stored response or a release once it finishes. False when there
-	 * is no key to hand back — either this caller lost the race and got `body`,
-	 * or Redis could not answer and the caller mints with no dedupe at all.
+	 * True when this caller won the key: it owes the key either a stored response
+	 * or a release once it finishes minting.
 	 */
 	holdsKey: boolean;
 };
 
-/** Redis is unreachable: nothing to replay, nothing to hand back afterwards. */
+/** Nothing to replay and no key to hand back: the caller mints unguarded. */
 const NO_KEY_HELD: OAuthRefreshReplayClaim = {
 	body: null,
 	holdsKey: false,
@@ -36,8 +34,8 @@ const NO_KEY_HELD: OAuthRefreshReplayClaim = {
 
 /**
  * Single-flight guard for OAuth refresh-token replays: the first caller claims
- * the key (SET NX) and mints tokens; concurrent replays of the SAME refresh
- * token spin until the winner stores its response, then return that body.
+ * the key (SET NX) and mints tokens; concurrent replays of the same refresh
+ * request spin until the winner stores its response, then return that body.
  *
  * Dedupe is an optimisation, never a dependency: if Redis cannot answer, the
  * claim comes back holding no key and the token endpoint carries on unguarded.
@@ -94,8 +92,8 @@ export const claimOAuthRefreshReplay = async (
 };
 
 /**
- * Drops a claim the winner never stored a response for, so retries of the same
- * refresh token re-race immediately instead of spinning out the claim's TTL.
+ * Drops a claim the winner never stored a response for, so a retry of the same
+ * refresh request re-races immediately instead of spinning out the claim's TTL.
  */
 export const releaseOAuthRefreshReplay = async (key: string): Promise<void> => {
 	try {

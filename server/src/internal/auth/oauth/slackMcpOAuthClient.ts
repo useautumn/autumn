@@ -15,10 +15,7 @@ const SLACK_MCP_CLIENT_METADATA = {
 	mcpClientType: "slack",
 } as const;
 
-/**
- * Provisions the reserved Slack MCP client. Name/scopes/metadata match leaf's
- * `ensureMcpOAuthClient` so the two writers never flip-flop the row.
- */
+/** Name/scopes/metadata match leaf's `ensureMcpOAuthClient` so the two writers never flip-flop the row. */
 export const ensureSlackMcpOAuthClient = async ({ db }: { db: DrizzleCli }) => {
 	const now = new Date();
 

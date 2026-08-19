@@ -13,7 +13,6 @@ type OAuthClientInfoInput = {
 	metadata?: unknown;
 };
 
-// Display name comes from the client's own DCR-provided name.
 export const buildOAuthClientInfoResponse = (client: OAuthClientInfoInput) => ({
 	client_id: client.clientId,
 	name: client.name || "Unknown Application",
