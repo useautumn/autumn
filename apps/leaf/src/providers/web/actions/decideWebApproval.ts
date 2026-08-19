@@ -42,7 +42,13 @@ export const decideWebApproval = async ({
 			db,
 			providerUserId,
 		});
-		if (!cancelled) return { error: "Approval already decided" };
+		if (!cancelled) {
+			// A repeated reject that lost the race still rejected the card.
+			const current = await chatApprovalRepo.get({ approvalId, db });
+			return current?.status === "cancelled"
+				? { status: "rejected" }
+				: { error: "Approval already decided" };
+		}
 		// Deny Eve remotely so discarded writes cannot resume later.
 		let text: string | undefined;
 		if (cancelled.harness === "eve") {

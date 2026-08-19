@@ -221,7 +221,12 @@ export const handleApprovalActionWithDeps = async ({
 			// and the discarded write can still run later.
 			if (cancelled.harness === "eve") {
 				const discard = deps.discardApproval ?? discardApproval;
-				const denied = await discard({ approval: cancelled, providerUserId });
+				// The row is already cancelled, so a deny eve drops would leave its
+				// turn parked behind a card nobody can click — one retry is cheap.
+				let denied = await discard({ approval: cancelled, providerUserId });
+				if ("error" in denied && denied.error) {
+					denied = await discard({ approval: cancelled, providerUserId });
+				}
 				if ("error" in denied && denied.error) {
 					deps.logger.warn("Could not deny Eve approval on dismiss", {
 						event: "leaf.eve_dismiss_deny_failed",
