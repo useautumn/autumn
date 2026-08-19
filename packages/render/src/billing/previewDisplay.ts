@@ -40,21 +40,8 @@ type PlanItemChangeDisplay = {
 	pricingText: string | null;
 };
 
-const ITEM_CHANGE_ORDER: Record<PlanItemChangeDisplay["change"], number> = {
-	Add: 0,
-	Update: 1,
-	Remove: 2,
-	Replace: 3,
-};
-
 /** The write's plan customizations, dashboard-style: what the custom plan
  * grants/loses relative to the base plan. */
-export type CustomizeDisplay = {
-	freeTrialText: string | null;
-	itemChanges: PlanItemChangeDisplay[];
-	/** "$200.00 per year" */
-	priceText: string | null;
-};
 
 /** Surface-neutral billing action facts shared by every renderer. */
 export type BillingPreviewDisplay = {
@@ -73,7 +60,6 @@ export type BillingPreviewDisplay = {
 	/** Negative total: the customer gets money back, not a charge. */
 	isCredit: boolean;
 	lineItems: LineItemDisplay[];
-	customize: CustomizeDisplay | null;
 	prepaid: PrepaidQuantityDisplay[];
 	nextCycle: (MoneyDisplay & { startsAtText: string | null }) | null;
 	phases: SchedulePhaseDisplay[];
@@ -249,215 +235,6 @@ export const buildPlanItemChangeDisplay = ({
 	};
 };
 
-const filteredItemDisplay = ({
-	change,
-	value,
-}: {
-	change: PlanItemChangeDisplay["change"];
-	value: unknown;
-}): PlanItemChangeDisplay | null => {
-	const filter = asRecord(value);
-	if (!filter) return null;
-	return {
-		change,
-		featureId: getString(filter.feature_id),
-		includedText: null,
-		pricingText: null,
-	};
-};
-
-const itemMatchesFilter = ({
-	item,
-	filter,
-}: {
-	item: unknown;
-	filter: unknown;
-}) => {
-	const itemRecord = asRecord(item);
-	const filterRecord = asRecord(filter);
-	if (!(itemRecord && filterRecord)) return false;
-	const price = asRecord(itemRecord.price);
-	const reset = asRecord(itemRecord.reset);
-	return [
-		[filterRecord.feature_id, itemRecord.feature_id],
-		[filterRecord.billing_method, price?.billing_method],
-		[filterRecord.interval, price?.interval ?? reset?.interval],
-		[
-			filterRecord.interval_count,
-			price?.interval_count ?? reset?.interval_count ?? 1,
-		],
-	].every(
-		([expected, actual]) => expected === undefined || expected === actual,
-	);
-};
-
-const removedItemDisplays = ({
-	baseItems,
-	filters,
-}: {
-	baseItems?: unknown[] | null;
-	filters: unknown;
-}) =>
-	getArray(filters).flatMap((filter) => {
-		const matches =
-			baseItems?.filter((item) => itemMatchesFilter({ filter, item })) ?? [];
-		return matches.length
-			? matches.flatMap(
-					(item) =>
-						buildPlanItemChangeDisplay({ change: "Remove", item }) ?? [],
-				)
-			: (filteredItemDisplay({ change: "Remove", value: filter }) ?? []);
-	});
-
-const itemSignature = (value: unknown) => {
-	const item = asRecord(value);
-	const price = asRecord(item?.price);
-	const reset = asRecord(item?.reset);
-	return JSON.stringify([
-		getString(item?.feature_id),
-		item?.unlimited === true,
-		getNumber(item?.included),
-		getString(reset?.interval),
-		getNumber(price?.amount),
-		getNumber(price?.billing_units) ?? 1,
-		getString(price?.billing_method),
-		getString(price?.interval),
-		getString(price?.tier_behavior),
-		getArray(price?.tiers).map((tierValue) => {
-			const tier = asRecord(tierValue);
-			return [tier?.to, getNumber(tier?.amount), getNumber(tier?.flat_amount)];
-		}),
-	]);
-};
-
-const replacementItemChanges = ({
-	baseItems,
-	items,
-}: {
-	baseItems: unknown[];
-	items: unknown[];
-}) => {
-	const entries = (values: unknown[]) =>
-		values.flatMap((value) => {
-			const display = buildPlanItemChangeDisplay({
-				change: "Update",
-				item: value,
-			});
-			return display
-				? [
-						{
-							display,
-							signature: itemSignature(value),
-						},
-					]
-				: [];
-		});
-	const base = entries(baseItems);
-	const incoming = entries(items);
-	const baseSignatures = new Set(base.map(({ signature }) => signature));
-	const incomingSignatures = new Set(
-		incoming.map(({ signature }) => signature),
-	);
-	return [
-		...incoming
-			.filter(({ signature }) => !baseSignatures.has(signature))
-			.map(({ display }) => ({ ...display, change: "Add" as const })),
-		...base
-			.filter(({ signature }) => !incomingSignatures.has(signature))
-			.map(({ display }) => ({
-				...display,
-				change: "Remove" as const,
-			})),
-	];
-};
-
-const customPriceText = (value: unknown): string | null => {
-	const price = asRecord(value);
-	const amount = getNumber(price?.amount);
-	if (price === null || amount === null) return null;
-	const interval = getString(price.interval);
-	const intervalCount = getNumber(price.interval_count);
-	const cadence = interval
-		? ` per ${intervalCount && intervalCount > 1 ? `${intervalCount} ${interval}s` : interval}`
-		: "";
-	return `${formatMoney({ amount, currency: getString(price.currency) })}${cadence}`;
-};
-
-const freeTrialText = (value: unknown): string | null => {
-	if (value === true) return "free trial";
-	const trial = asRecord(value);
-	if (!trial) return null;
-	const days = getNumber(trial.duration_days ?? trial.days ?? trial.length);
-	return days !== null ? `${formatCount(days)}-day free trial` : "free trial";
-};
-
-const customizeDisplay = ({
-	basePlanItems,
-	params,
-}: {
-	basePlanItems?: unknown[] | null;
-	params?: Record<string, unknown> | null;
-}): CustomizeDisplay | null => {
-	const customize = asRecord(params?.customize);
-	if (!customize) return null;
-	const collect = (
-		value: unknown,
-		render: (entry: unknown) => PlanItemChangeDisplay | null,
-	) =>
-		getArray(value).flatMap((entry) => {
-			const rendered = render(entry);
-			return rendered ? [rendered] : [];
-		});
-	const added = collect(customize.add_items, (value) =>
-		buildPlanItemChangeDisplay({ change: "Add", item: value }),
-	);
-	const removed = removedItemDisplays({
-		baseItems: basePlanItems,
-		filters: customize.remove_items,
-	});
-	const itemChanges = [
-		...(Array.isArray(customize.items) && basePlanItems
-			? replacementItemChanges({
-					baseItems: basePlanItems,
-					items: customize.items,
-				})
-			: collect(customize.items, (value) =>
-					buildPlanItemChangeDisplay({ change: "Replace", item: value }),
-				)),
-		...added,
-		...removed,
-		...collect(customize.update_items, (value) => {
-			const update = asRecord(value);
-			const filter = asRecord(update?.filter);
-			const display = filteredItemDisplay({
-				change: "Update",
-				value: filter ?? value,
-			});
-			const included = getNumber(update?.included);
-			return display
-				? {
-						...display,
-						includedText: included === null ? null : formatCount(included),
-					}
-				: null;
-		}),
-	].sort(
-		(left, right) =>
-			ITEM_CHANGE_ORDER[left.change] - ITEM_CHANGE_ORDER[right.change],
-	);
-	const display: CustomizeDisplay = {
-		freeTrialText: freeTrialText(customize.free_trial),
-		itemChanges,
-		priceText: customPriceText(customize.price),
-	};
-	const hasContent =
-		display.itemChanges.length > 0 ||
-		display.priceText !== null ||
-		display.freeTrialText !== null;
-	return hasContent ? display : null;
-};
-
-/** A prepaid item and its requested quantity; null means the API defaults to 0. */
 export type PrepaidQuantityDisplay = {
 	featureId: string;
 	includedDefault: number | null;
@@ -520,12 +297,10 @@ const money = ({
 
 /** Accepts typed previews or loose output from `parsePreviewPayload`. */
 export const buildBillingPreviewDisplay = ({
-	basePlanItems,
 	params,
 	planNames: knownPlanNames,
 	preview,
 }: {
-	basePlanItems?: unknown[] | null;
 	params?: Record<string, unknown> | null;
 	planNames?: Readonly<Record<string, string>>;
 	preview?: Record<string, unknown> | null;
@@ -571,7 +346,6 @@ export const buildBillingPreviewDisplay = ({
 		currency,
 		customerId:
 			getString(params?.customer_id) ?? getString(payload.customer_id),
-		customize: customizeDisplay({ basePlanItems, params }),
 		dueNow: money({ amount: total, currency }),
 		entityId: getString(params?.entity_id),
 		intentLabel: intent ? (UPDATE_INTENT_LABELS[intent] ?? null) : null,
