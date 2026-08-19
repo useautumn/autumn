@@ -124,6 +124,8 @@ fi
 if grep -q 'ai/src/cli.ts sync' "$ROOT/scripts/setup/cursor-cloud/start.sh"; then
 	fail "start.sh must not sync skills — install.sh owns bun ai sync --copy"
 fi
+grep -q 'db migrate --bootstrap' "$ROOT/scripts/setup/agent-services.sh" \
+	|| fail "agent-services.sh must bun db migrate --bootstrap on a fresh local DB"
 grep -q 'scripts/dw/index.ts" start' "$ROOT/scripts/setup/cursor-cloud/start.sh" \
 	|| grep -q 'scripts/dw/index.ts start' "$ROOT/scripts/setup/cursor-cloud/start.sh" \
 	|| fail "start.sh must run bun scripts/dw/index.ts start"
