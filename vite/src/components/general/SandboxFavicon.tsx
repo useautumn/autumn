@@ -1,4 +1,4 @@
-import { AppEnv, DEFAULT_SANDBOX_COLOR } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
 import { useEffect } from "react";
 import { sandboxColorValue } from "@/hooks/sandbox/sandboxDisplay";
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
@@ -16,9 +16,7 @@ export const SandboxFavicon = () => {
 	const env = useEnv();
 	const activeSandbox = useActiveSandbox();
 	const color =
-		env === AppEnv.Sandbox
-			? (activeSandbox?.color ?? DEFAULT_SANDBOX_COLOR)
-			: undefined;
+		env === AppEnv.Sandbox ? (activeSandbox?.color ?? "blue") : undefined;
 
 	useEffect(() => {
 		if (!color) return;
