@@ -4,7 +4,6 @@ import { cardToBlockKit } from "@chat-adapter/slack";
 import {
 	approvalCard,
 	approvalDetailsModal,
-	approvalPayloadModal,
 	approvalStatusCard,
 } from "../../../src/ui/blocks.js";
 
@@ -283,7 +282,7 @@ describe("approval card", () => {
 		expect(json).not.toContain("Draft invoice");
 	});
 
-	test("offers request details without technical button copy", () => {
+	test("keeps the card actions to approve, dismiss, and edit", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			toolName: "attach",
@@ -291,9 +290,9 @@ describe("approval card", () => {
 		});
 
 		const json = JSON.stringify(card);
-		expect(json).toContain("view_approval_payload");
-		expect(json).toContain("View request");
-		expect(json).not.toContain("{} Payload");
+		expect(json).toContain("approve_billing_action");
+		expect(json).toContain("cancel_billing_action");
+		expect(json).not.toContain("view_approval_payload");
 	});
 
 	test("renders customized items in a change table", () => {
@@ -412,6 +411,60 @@ describe("approval card", () => {
 		expect(json.indexOf('["🔴 Remove","10 audit logs"')).toBeLessThan(
 			json.indexOf('["🟢 Add","5,000 credits"'),
 		);
+	});
+
+	// The prepaid quantity is the money decision: it belongs on the item's own
+	// row with its line total, not in a detached "Quantities" footnote.
+	test("shows a prepaid add with its quantity and line total on the row", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Sandbox,
+			toolName: "updateSubscription",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					plan_id: "enterprise",
+					customize: {
+						add_items: [
+							{
+								feature_id: "project_slots",
+								price: {
+									amount: 10,
+									billing_method: "prepaid",
+									billing_units: 1,
+									interval: "month",
+								},
+							},
+						],
+						remove_items: [{ feature_id: "project_slots" }],
+					},
+					feature_quantities: [{ feature_id: "project_slots", quantity: 100 }],
+				},
+			},
+			preview: {
+				_display: {
+					currentPlan: {
+						items: [{ feature_id: "project_slots", included: 200 }],
+					},
+					featureNames: {
+						project_slots: {
+							plural: "Project Slots",
+							singular: "Project Slot",
+						},
+					},
+				},
+				currency: "usd",
+				incoming: [{ plan_id: "enterprise" }],
+				total: 0,
+			},
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain('["🔴 Remove","200 Project Slots","—"]');
+		expect(json).toContain(
+			'["🟢 Add","100 Project Slots (prepaid)","$10.00 / unit"]',
+		);
+		expect(json).not.toContain("Quantities");
 	});
 
 	test("diffs full item replacements against the catalog plan", () => {
@@ -679,37 +732,8 @@ describe("approval card", () => {
 	});
 });
 
-describe("approval payload modal", () => {
-	test("renders only the request body as a code block", () => {
-		const modal = approvalPayloadModal({
-			env: AppEnv.Sandbox,
-			toolName: "attach",
-			toolArgs: {
-				intent: "Attach the scale yearly plan.",
-				request: attachArgs.request,
-			},
-		});
-
-		const json = JSON.stringify(modal);
-		expect(modal.title).toBe("Request details");
-		expect(json).toContain("kp-customer-1000");
-		expect(json).toContain("```");
-		expect(json).toContain("Attach request body targeting sandbox environment");
-		expect(json).not.toContain("intent");
-	});
-
-	test("truncates oversized payloads", () => {
-		const modal = approvalPayloadModal({
-			toolName: "attach",
-			toolArgs: { request: { blob: "x".repeat(5000) } },
-		});
-
-		expect(JSON.stringify(modal)).toContain("(truncated)");
-	});
-});
-
 describe("approval details modal", () => {
-	test("prefills editable billing settings", () => {
+	test("prefills the billing mode and provisioning", () => {
 		const modal = approvalDetailsModal({
 			approvalId: "approval_1",
 			toolArgs: {
@@ -724,31 +748,37 @@ describe("approval details modal", () => {
 		const json = JSON.stringify(modal);
 		expect(modal.title).toBe("Edit billing details");
 		expect(modal.privateMetadata).toBe("approval_1");
-		expect(json).toContain('"initialOption":"draft"');
-		expect(json).toContain('"initialOption":"if_required"');
+		expect(json).toContain('"initialOption":"draft_invoice"');
 		expect(json).toContain('"initialOption":"immediate"');
-		expect(json).toContain("Create draft invoice");
+		expect(json).toContain("Checkout link");
+		expect(json).toContain("Draft invoice");
+		expect(json).toContain("Finalized invoice");
 		expect(json).toContain("Provision after payment");
-		expect(json).toContain("If required");
-		expect(json).toContain("Always");
 		expect(json).toContain("Update preview");
+		expect(json).not.toContain('"id":"redirect"');
 	});
 
-	test("prefills invoice and redirect API defaults", () => {
-		const modal = approvalDetailsModal({
-			approvalId: "approval_1",
-			toolArgs: {
-				request: {
-					...attachArgs.request,
-					invoice_mode: { enabled: true },
+	test("reads a checkout request and finalized-invoice defaults", () => {
+		const checkout = JSON.stringify(
+			approvalDetailsModal({
+				approvalId: "approval_1",
+				toolArgs: {
+					request: { ...attachArgs.request, redirect_mode: "always" },
 				},
-			},
-		});
+			}),
+		);
+		expect(checkout).toContain('"initialOption":"checkout"');
+		expect(checkout).toContain('"initialOption":"after_payment"');
 
-		const json = JSON.stringify(modal);
-		expect(json).toContain('"initialOption":"finalized"');
-		expect(json).toContain('"initialOption":"if_required"');
-		expect(json).toContain('"initialOption":"after_payment"');
+		const finalized = JSON.stringify(
+			approvalDetailsModal({
+				approvalId: "approval_1",
+				toolArgs: {
+					request: { ...attachArgs.request, invoice_mode: { enabled: true } },
+				},
+			}),
+		);
+		expect(finalized).toContain('"initialOption":"finalized_invoice"');
 	});
 });
 
@@ -1231,54 +1261,6 @@ describe("homogeneous fan-out", () => {
 		const rendered = JSON.stringify(cardToBlockKit(card));
 		expect(rendered).toContain("Update customer");
 		expect(rendered).toContain("Attach plan");
-	});
-});
-
-// A grouped card approves several writes, so the request modal must show each
-// one — the reviewer is signing off on all of them, not just the first.
-describe("request modal for grouped writes", () => {
-	const modal = approvalPayloadModal({
-		env: AppEnv.Sandbox,
-		toolArgs: {
-			_eveWithheldWrites: [
-				{
-					input: { request: { customer_id: "leaf-0002", plan_id: "scale" } },
-					requestId: "req_2",
-					toolName: "autumn__attach",
-				},
-				{
-					input: { request: { customer_id: "leaf-0003", plan_id: "scale" } },
-					requestId: "req_3",
-					toolName: "autumn__attach",
-				},
-			],
-			request: { customer_id: "leaf-0001", plan_id: "scale" },
-		},
-		toolName: "attach",
-	});
-	const rendered = JSON.stringify(modal);
-
-	test("shows every write's request body", () => {
-		expect(rendered).toContain("leaf-0001");
-		expect(rendered).toContain("leaf-0002");
-		expect(rendered).toContain("leaf-0003");
-	});
-
-	test("labels each write so the reviewer can tell them apart", () => {
-		expect(rendered).toContain("1 of 3");
-		expect(rendered).toContain("3 of 3");
-	});
-
-	test("a single write keeps the plain label", () => {
-		const single = JSON.stringify(
-			approvalPayloadModal({
-				env: AppEnv.Sandbox,
-				toolArgs: { request: { customer_id: "leaf-0001", plan_id: "scale" } },
-				toolName: "attach",
-			}),
-		);
-		expect(single).toContain("Attach request body");
-		expect(single).not.toContain("1 of");
 	});
 });
 

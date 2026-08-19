@@ -142,16 +142,6 @@ if (approvalRequest) {
 		console.log("❌ every money cell is $0.00 — step previews were not parsed");
 		process.exit(1);
 	}
-	const { approvalPayloadModal } = await import("../../src/ui/blocks.js");
-	const modal = JSON.stringify(
-		approvalPayloadModal({
-			env: AppEnv.Sandbox,
-			toolArgs: created.toolArgs,
-			toolName: created.toolName,
-		}),
-	);
-	const bodies = (modal.match(/request body/g) ?? []).length;
-	console.log(`MODAL request bodies shown: ${bodies}`);
 	const stepsForDebug = [
 		{
 			input: created.toolArgs,

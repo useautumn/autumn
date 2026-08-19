@@ -36,12 +36,27 @@ export const decideWebApproval = async ({
 	}
 
 	if (action === "reject") {
+		// Cancel first so a repeated click cannot deny in Eve twice.
+		const cancelled = await chatApprovalRepo.cancel({
+			approvalId,
+			db,
+			providerUserId,
+		});
+		if (!cancelled) {
+			// A repeated reject that lost the race still rejected the card.
+			const current = await chatApprovalRepo.get({ approvalId, db });
+			return current?.status === "cancelled"
+				? { status: "rejected" }
+				: { error: "Approval already decided" };
+		}
 		// Deny Eve remotely so discarded writes cannot resume later.
 		let text: string | undefined;
-		if (approval.harness === "eve") {
-			// Always cancel locally even if the remote denial fails.
+		if (cancelled.harness === "eve") {
 			try {
-				const denied = await discardApproval({ approval, providerUserId });
+				const denied = await discardApproval({
+					approval: cancelled,
+					providerUserId,
+				});
 				if ("error" in denied && denied.error) {
 					logger.warn("Could not deny Eve approval on reject", {
 						event: "leaf.eve_reject_deny_failed",
@@ -59,7 +74,6 @@ export const decideWebApproval = async ({
 				});
 			}
 		}
-		await chatApprovalRepo.cancel({ approvalId, db, providerUserId });
 		return { status: "rejected", text };
 	}
 

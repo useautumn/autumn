@@ -201,11 +201,32 @@ export const handleApprovalActionWithDeps = async ({
 		}
 
 		if (event.actionId === "cancel_billing_action") {
+			// Cancel first so exactly one click wins: the Eve denial below takes
+			// seconds, and a second click in that window would otherwise read the
+			// row as still pending and discard (and reply) all over again.
+			const cancelled = await deps.cancelApproval({
+				approvalId,
+				providerUserId,
+			});
+			if (!cancelled) {
+				deps.logger.warn("Approval cancellation ignored", {
+					event: "leaf.approval_cancel_ignored",
+					approval_id: approvalId,
+				});
+				await editToCurrentStatus();
+				return;
+			}
 			// Eve parks the whole turn on the approval — deny it in the session too,
 			// or it keeps waiting, holds the next message behind the stale approval,
 			// and the discarded write can still run later.
-			if (approval.harness === "eve" && approval.status === "pending") {
-				const denied = await discardApproval({ approval, providerUserId });
+			if (cancelled.harness === "eve") {
+				const discard = deps.discardApproval ?? discardApproval;
+				// The row is already cancelled, so a deny eve drops would leave its
+				// turn parked behind a card nobody can click — one retry is cheap.
+				let denied = await discard({ approval: cancelled, providerUserId });
+				if ("error" in denied && denied.error) {
+					denied = await discard({ approval: cancelled, providerUserId });
+				}
 				if ("error" in denied && denied.error) {
 					deps.logger.warn("Could not deny Eve approval on dismiss", {
 						event: "leaf.eve_dismiss_deny_failed",
@@ -219,18 +240,6 @@ export const handleApprovalActionWithDeps = async ({
 						// The acknowledgement reply is cosmetic.
 					}
 				}
-			}
-			const cancelled = await deps.cancelApproval({
-				approvalId,
-				providerUserId,
-			});
-			if (!cancelled) {
-				deps.logger.warn("Approval cancellation ignored", {
-					event: "leaf.approval_cancel_ignored",
-					approval_id: approvalId,
-				});
-				await editToCurrentStatus();
-				return;
 			}
 			await deps.editActionMessage({
 				content: approvalStatusCard({
