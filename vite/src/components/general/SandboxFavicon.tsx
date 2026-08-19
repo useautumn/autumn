@@ -9,7 +9,7 @@ const AUTUMN_MARK =
 
 const sandboxFaviconHref = (color: string) =>
 	`data:image/svg+xml,${encodeURIComponent(
-		`<svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg"><rect width="28" height="28" rx="6" fill="white"/><path d="${AUTUMN_MARK}" fill="${sandboxColorValue(color)}"/></svg>`,
+		`<svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg"><rect width="28" height="28" rx="6" fill="${sandboxColorValue(color)}"/><path d="${AUTUMN_MARK}" fill="black"/></svg>`,
 	)}`;
 
 export const SandboxFavicon = () => {

@@ -1,10 +1,8 @@
-import type { FullCustomer } from "@autumn/shared";
 import { useEffect } from "react";
-
-type CustomerTitle = Pick<FullCustomer, "name" | "email" | "id">;
-
-export const getCustomerPageTitle = ({ name, email, id }: CustomerTitle) =>
-	`${name || email || id || "Customer"} – Autumn`;
+import {
+	type CustomerTitle,
+	getCustomerPageTitle,
+} from "./getCustomerPageTitle";
 
 export const CustomerPageTitle = ({
 	customer,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { getCustomerPageTitle } from "@/views/customers2/customer/CustomerPageTitle";
+import { getCustomerPageTitle } from "@/views/customers2/customer/getCustomerPageTitle";
 
 describe("getCustomerPageTitle", () => {
 	test("uses the customer name", () => {
