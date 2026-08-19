@@ -63,6 +63,10 @@ export type ApprovalActionDeps = {
 		approvalId: string;
 		providerUserId: string;
 	}) => Promise<ChatApproval | undefined>;
+	discardApproval?: (input: {
+		approval: ChatApproval;
+		providerUserId: string;
+	}) => Promise<ApprovalRunResult>;
 	releaseApproval?: (input: {
 		approvalId: string;
 		providerUserId: string;

@@ -405,3 +405,69 @@ describe("approval flow", () => {
 		expect(JSON.stringify(edits[0])).toContain("expired");
 	});
 });
+
+describe("dismissing an approval", () => {
+	// A double-click (or a retried Slack interaction) lands the second click
+	// while the first is still denying in Eve. Only the first may discard and
+	// reply; the second must find the row already decided and do nothing.
+	test("a second dismiss click discards and replies only once", async () => {
+		setLeafTestEnv();
+		const { handleApprovalActionWithDeps } = await import(
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
+		);
+		const approval = {
+			env: AppEnv.Sandbox,
+			expires_at: Date.now() + 60_000,
+			harness: "eve",
+			id: "approval_1",
+			status: "pending",
+			tool_name: "attach",
+			tool_args: { request: { customer_id: "cus_1", plan_id: "pro" } },
+		} as unknown as ChatApproval;
+		const event = {
+			actionId: "cancel_billing_action",
+			messageId: "message_1",
+			threadId: "thread_1",
+			user: { userId: "U1" },
+			value: "approval_1",
+		} as unknown as ActionEvent;
+		let cancelWins = 1;
+		const discards: string[] = [];
+		const replies: string[] = [];
+		const deps = {
+			resolveApproval: async () => {
+				throw new Error("should not run");
+			},
+			cancelApproval: async () =>
+				cancelWins-- > 0
+					? ({ ...approval, status: "cancelled" } as ChatApproval)
+					: undefined,
+			claimApproval: async () => undefined,
+			discardApproval: async ({
+				approval: discarded,
+			}: {
+				approval: ChatApproval;
+			}) => {
+				discards.push(discarded.id);
+				return {
+					result: {},
+					text: "Discarded. What would you like different?",
+				};
+			},
+			editActionMessage: async () => {},
+			getApproval: async () => approval,
+			logger: { error: () => {}, info: () => {}, warn: () => {} },
+			postThreadReply: async ({ markdown }: { markdown: string }) => {
+				replies.push(markdown);
+			},
+		};
+
+		await Promise.all([
+			handleApprovalActionWithDeps({ deps, event }),
+			handleApprovalActionWithDeps({ deps, event }),
+		]);
+
+		expect(discards).toEqual(["approval_1"]);
+		expect(replies).toHaveLength(1);
+	});
+});
