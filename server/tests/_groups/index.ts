@@ -5,6 +5,7 @@ import { coreAttach } from "./core/coreAttach";
 import { coreBackSync } from "./core/coreBackSync";
 import { coreBalances } from "./core/coreBalances";
 import { coreBilling } from "./core/coreBilling";
+import { coreCatalog } from "./core/coreCatalog";
 import { coreLegacy } from "./core/coreLegacy";
 import { coreLicensesBilling } from "./core/coreLicensesBilling";
 import { coreLicensesCatalog } from "./core/coreLicensesCatalog";
@@ -24,6 +25,7 @@ import { billingV1 } from "./domains/billing/billingV1";
 import { billingV2 } from "./domains/billing/billingV2";
 import { billingV2Misc } from "./domains/billing/billingV2Misc";
 import { sync } from "./domains/billing/sync";
+import { catalog } from "./domains/catalog";
 import { crud } from "./domains/crud/crud";
 import { customers } from "./domains/crud/customers";
 import { entities } from "./domains/crud/entities";
@@ -44,6 +46,7 @@ const allGroups: TestGroup[] = [
 	coreAttach,
 	coreBackSync,
 	coreBalances,
+	coreCatalog,
 	coreLegacy,
 	coreLicensesBilling,
 	coreLicensesCatalog,
@@ -63,6 +66,7 @@ const allGroups: TestGroup[] = [
 	billingV2Misc,
 	sync,
 	temp,
+	catalog,
 	crud,
 	customers,
 	entities,

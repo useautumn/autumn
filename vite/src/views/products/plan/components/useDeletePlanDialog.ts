@@ -59,8 +59,10 @@ export const useDeletePlanDialog = ({
 	const latestVersion =
 		products.find((candidate) => candidate.id === product.id)?.version ??
 		product.version;
-	const hasMultipleVersions = latestVersion > 1;
-	const removeAllVersions = !hasMultipleVersions || scope === "all";
+	// Only the latest version can be removed on its own, so a historical version
+	// offers whole-plan removal instead of a scope choice.
+	const canChooseScope = latestVersion > 1 && product.version === latestVersion;
+	const removeAllVersions = !canChooseScope || scope === "all";
 
 	const {
 		data: preview,
@@ -138,7 +140,7 @@ export const useDeletePlanDialog = ({
 
 	return {
 		archived,
-		hasMultipleVersions,
+		canChooseScope,
 		isLoading,
 		isPending,
 		previewError,

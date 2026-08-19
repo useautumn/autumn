@@ -513,13 +513,15 @@ Each case asserts BOTH `item_changes` (created/deleted snapshots) and the
 ### C. State + versioning — `preview/preview-state-versioning.test.ts`
 
 Pickable-only `options` (no `available`/`reason`). `new_version` requires
-customers **and** latest.
+customers **and** latest. `existing` is offered when the version has customers
+**or** the plan has multiple versions (so a customer-less v2 can still update
+in place instead of being forced onto `all_versions`).
 
 | Case | Status |
 |---|---|
 | Plan with attached customer → `has_customers: true`; without → `false` | ✓ |
 | Expired-only customers → `has_customers: false` | ✓ |
-| Latest of 2-version, no customers → `options: [all_versions]`, `resolved: existing` | ✓ |
+| Latest of 2-version, no customers → `options: [existing, all_versions]`, `resolved: existing` | ✓ |
 | Latest + customers + multi-version → `options: [existing, new_version, all_versions]` | ✓ |
 | **Pinned `version: 1` (not latest) + customers → `options` has `existing`+`all_versions`, never `new_version`** | ✓ |
 | `versioning: "new_version"` preview → `create` row, `resolved: new_version`, `plan_change` from base | ✓ |
@@ -1109,9 +1111,11 @@ applied customize. Same customize `$or`s; different customize stays split.
 ## 22. Remove / archive plans — `remove/`
 
 `remove_plans: [{ plan_id, version? }]`. Omit version = every version (shared
-verdict). Pin version = that row only. `willArchive` from customers (expired
-included), reward programs, and license parents that still exist after the
-batch. Same-call upsert+remove is 400. Preview `reasons` are dialog-ready.
+verdict). Pin version = that row only, and **only the latest version may be
+pinned** — removing a historical version would leave a gap in the sequence, so
+it is 400. `willArchive` from customers (expired included), reward programs, and
+license parents that still exist after the batch. Same-call upsert+remove is
+400. Preview `reasons` are dialog-ready.
 
 | Case | Status |
 |---|---|
@@ -1122,10 +1126,11 @@ batch. Same-call upsert+remove is 400. Preview `reasons` are dialog-ready.
 | Expired customer → archive | ✓ `remove/remove-plans.test.ts` |
 | Reward program ref → archive | ✓ `remove/remove-plans.test.ts` |
 | License parent still offering this child → archive | ✓ `remove/remove-plans.test.ts` |
-| Pin `version` with no customers → delete that version only | ✓ `remove/remove-plans.test.ts` |
+| Pin latest `version` with no customers → delete that version only | ✓ `remove/remove-plans.test.ts` |
 | Omit version; any version has customers → archive ALL versions | ✓ `remove/remove-plans.test.ts` |
 | Unknown plan id → 404 (update AND preview) | ✓ `remove/remove-plans-errors.test.ts` |
 | Unknown pinned version → 404 | ✓ `remove/remove-plans-errors.test.ts` |
+| Pinned NON-latest version → 400 (update AND preview), nothing removed | ✓ `remove/remove-plans-errors.test.ts` |
 | Upsert + remove same plan_id → 400, atomic | ✓ `remove/remove-plans-errors.test.ts` |
 | Customer sample → `Attached to customer "X".` + archive headline | ✓ `remove/remove-plans-preview.test.ts` |
 | Two customers → `"X" and 1 more` | ✓ `remove/remove-plans-preview.test.ts` |
@@ -1135,7 +1140,7 @@ batch. Same-call upsert+remove is 400. Preview `reasons` are dialog-ready.
 | Preview of unpinned delete with variants → 400, not detach warning | ✓ `remove/remove-plans-preview.test.ts` |
 | Same-call remove base + variant (no customers) → both hard delete | ✓ `remove/remove-plans-variants.test.ts` |
 | Pin-delete latest base version; variant repoints at surviving v1 | ✓ `remove/remove-plans-repoint.test.ts` |
-| Pin-delete an old base version the variant does not point at | ✓ `remove/remove-plans-repoint.test.ts` |
+| Pin-delete an old base version the variant does not point at → 400 (non-latest) | ✓ `remove/remove-plans-repoint.test.ts` |
 | Pin-delete last remaining base version while a variant survives → 400 | ✓ `remove/remove-plans-repoint.test.ts` |
 | Remove parent + child (no customers) → both hard delete | ✓ `remove/remove-plans-same-call.test.ts` |
 | Remove parent (has customers) + child → parent archives, child archives | ✓ `remove/remove-plans-same-call.test.ts` |

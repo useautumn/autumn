@@ -14,7 +14,17 @@ import {
 	SelectValue,
 } from "@autumn/ui";
 import { useProductStore } from "@/hooks/stores/useProductStore";
-import { useDeletePlanDialog } from "./useDeletePlanDialog";
+import {
+	type DeletePlanScope,
+	useDeletePlanDialog,
+} from "./useDeletePlanDialog";
+
+// Base UI projects the trigger label from the Root's `items` map — without it
+// the trigger renders the raw scope value.
+const SCOPE_LABELS: Record<DeletePlanScope, string> = {
+	latest: "Latest version",
+	all: "All versions",
+};
 
 export const DeletePlanDialog = ({
 	propProduct,
@@ -33,7 +43,7 @@ export const DeletePlanDialog = ({
 	const product = propProduct ?? storeProduct;
 	const {
 		archived,
-		hasMultipleVersions,
+		canChooseScope,
 		isLoading,
 		isPending,
 		previewError,
@@ -88,19 +98,23 @@ export const DeletePlanDialog = ({
 					</DialogDescription>
 				</DialogHeader>
 
-				{hasMultipleVersions && !archived && (
+				{canChooseScope && !archived && (
 					<Select
 						value={scope}
 						onValueChange={(value) =>
 							setScope(value === "all" ? "all" : "latest")
 						}
+						items={SCOPE_LABELS}
 					>
 						<SelectTrigger className="w-6/12">
 							<SelectValue placeholder="Select a version" />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="latest">This version</SelectItem>
-							<SelectItem value="all">Entire plan</SelectItem>
+							{Object.entries(SCOPE_LABELS).map(([value, label]) => (
+								<SelectItem key={value} value={value}>
+									{label}
+								</SelectItem>
+							))}
 						</SelectContent>
 					</Select>
 				)}

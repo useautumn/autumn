@@ -143,7 +143,7 @@ test.concurrent(
 									current_version: 2,
 									new_version: null,
 									resolved: "existing",
-									options: ["all_versions"],
+									options: ["existing", "all_versions"],
 								},
 								siblingVersions: [{ version: 1, licenseAction: "unchanged" }],
 							},
@@ -201,7 +201,7 @@ test.concurrent(
 										current_version: 2,
 										new_version: null,
 										resolved: allVersions ? "all_versions" : "existing",
-										options: ["all_versions"],
+										options: ["existing", "all_versions"],
 									},
 									siblingVersions: [
 										{ version: 1, licenseAction: "propagated" },

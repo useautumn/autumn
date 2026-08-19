@@ -193,10 +193,13 @@ export const expectCatalogResultsCorrect = ({
 	response,
 	features,
 	plans,
+	returnedPlanIds,
 }: {
 	response: UpdateCatalogResponse;
 	features?: { id: string; action: CatalogAction }[];
 	plans?: { id: string; action: CatalogAction }[];
+	/** Direct upserted plans in `response.plans`, request order. */
+	returnedPlanIds?: string[];
 }) => {
 	if (features !== undefined) {
 		expect(response.results.features).toEqual(features);
@@ -209,6 +212,9 @@ export const expectCatalogResultsCorrect = ({
 			expect(entry, `missing result for plan ${expected.id}`).toBeDefined();
 			expect(entry?.action).toBe(expected.action);
 		}
+	}
+	if (returnedPlanIds !== undefined) {
+		expect(response.plans.map((plan) => plan.id)).toEqual(returnedPlanIds);
 	}
 };
 

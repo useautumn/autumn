@@ -8,6 +8,7 @@ import {
 	UpdateCatalogResponseSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange";
 import { catalogV2Actions } from "@/internal/catalogV2/actions/index.js";
 
 const FEATURE_TARGET_VERSION = new ApiVersionClass(ApiVersion.V2_1);
@@ -24,7 +25,16 @@ export const handleUpdateCatalogV2 = createRoute({
 			await catalogV2Actions.updateCatalog({ ctx, params });
 
 		const response = UpdateCatalogResponseSchema.parse({
-			plans: [],
+			plans: updateCatalogPlan.upsertProducts.flatMap((upsert) =>
+				upsert.row.source !== "direct"
+					? []
+					: [
+							fullProductToApiPlanV1Sync({
+								product: upsert.row.nextFullProduct,
+								features: updateCatalogPlan.projected.features,
+							}),
+						],
+			),
 			features: [
 				...updateCatalogPlan.insertFeatures,
 				...updateCatalogPlan.updateFeatures.map(

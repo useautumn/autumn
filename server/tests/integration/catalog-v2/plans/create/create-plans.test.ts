@@ -6,9 +6,7 @@
  *   - preview takes the same params, reports action "create", writes nothing
  *   - shaped creates (items / price / trial / flags / metadata / config / BCs)
  *     persist on the product row
- *
- * Red (current): execute/handlers for plans may still be unbuilt
- * Green (after): all three cases pass end-to-end
+ *   - update returns the created plan on `response.plans` (request order)
  */
 
 import { test } from "bun:test";
@@ -55,6 +53,7 @@ test.concurrent(
 			expectCatalogResultsCorrect({
 				response,
 				plans: [{ id: planId, action: "create" }],
+				returnedPlanIds: [planId],
 			});
 			await expectCatalogPlansCorrect({
 				autumn: autumnV2_3,

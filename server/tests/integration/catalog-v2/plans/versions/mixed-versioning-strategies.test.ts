@@ -240,7 +240,7 @@ test.concurrent(
 						current_version: 2,
 						new_version: 3,
 						resolved: "new_version",
-						options: ["all_versions"],
+						options: ["existing", "all_versions"],
 					},
 				},
 			});
@@ -254,12 +254,11 @@ test.concurrent(
 						current_version: 2,
 						new_version: null,
 						resolved: "all_versions",
-						options: ["all_versions"],
+						options: ["existing", "all_versions"],
 					},
 					siblingVersions: [
 						{
 							version: 1,
-							selected: true,
 							hasPlanChange: true,
 						},
 					],
@@ -275,7 +274,7 @@ test.concurrent(
 						current_version: 1,
 						new_version: null,
 						resolved: "existing",
-						options: ["all_versions"],
+						options: ["existing", "all_versions"],
 					},
 				},
 			});
