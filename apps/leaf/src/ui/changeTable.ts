@@ -93,6 +93,8 @@ export const planItemChangeTableRow = ({
 	});
 };
 
+/** Rows render in the order given — ordering is the caller's concern, since
+ * a catalog listing and a before/after diff want different orders. */
 export const changeTable = ({
 	caption,
 	rows,
@@ -104,17 +106,18 @@ export const changeTable = ({
 		align: ["left", "left", "left"],
 		caption,
 		headers: ["Change", "Details", "Pricing"],
-		rows: [...rows]
-			.sort(
-				(left, right) =>
-					changes[left.change].order - changes[right.change].order,
-			)
-			.map(({ change, details, pricing }) => [
-				changes[change].label,
-				details,
-				pricing,
-			]),
+		rows: rows.map(({ change, details, pricing }) => [
+			changes[change].label,
+			details,
+			pricing,
+		]),
 	});
+
+/** Catalog listings group by operation: adds, then updates, then removes. */
+export const sortByChangeKind = (rows: ReturnType<typeof changeTableRow>[]) =>
+	[...rows].sort(
+		(left, right) => changes[left.change].order - changes[right.change].order,
+	);
 
 const stepStatusLabels = {
 	applied: "🟢 Applied",

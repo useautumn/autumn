@@ -1,0 +1,34 @@
+import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import type {
+	ProductUpsertIntent,
+	UpsertProductPlan,
+} from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { deriveVariantCreates } from "./creates/deriveVariantCreates";
+import { deriveVariantEdits } from "./edits/deriveVariantEdits";
+import { deriveVariantMints } from "./mints/deriveVariantMints";
+
+/** Creates + mints + edits for a folded base. Nested-base skip lives in derive. */
+export const computeVariantPlan = ({
+	upsert,
+	projectedProductStatesContext,
+}: {
+	upsert: UpsertProductPlan;
+	projectedProductStatesContext: ProductStatesContext;
+}): ProductUpsertIntent[] => {
+	const mints = deriveVariantMints({
+		upsert,
+		projectedProductStatesContext,
+	});
+	return [
+		...deriveVariantCreates({
+			upsert,
+			projectedProductStatesContext,
+		}),
+		...mints,
+		...deriveVariantEdits({
+			upsert,
+			projectedProductStatesContext,
+			mintedPlanIds: new Set(mints.map((intent) => intent.productKey.planId)),
+		}),
+	];
+};

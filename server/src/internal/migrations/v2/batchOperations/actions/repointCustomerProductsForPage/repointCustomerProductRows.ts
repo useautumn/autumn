@@ -6,6 +6,7 @@ import {
 	type OperationScope,
 	operationScopeSql,
 } from "../../scope/operationScope.js";
+import { pageCustomerIdsCte } from "../utils/pageCustomerIdsSql.js";
 
 const RepointedCustomerProductRowSchema = z.object({
 	customer_product_id: z.string(),
@@ -41,7 +42,8 @@ export const repointCustomerProductRows = async ({
 	toInternalProductId: string;
 }): Promise<RepointedCustomerProductRow[]> => {
 	const rows = await db.execute(sql`
-		WITH candidate_rows AS MATERIALIZED (
+		WITH ${pageCustomerIdsCte({ internalCustomerIds })},
+		candidate_rows AS MATERIALIZED (
 			SELECT
 				cp.id AS customer_product_id,
 				cp.internal_customer_id,
@@ -51,11 +53,12 @@ export const repointCustomerProductRows = async ({
 				cp.canceled_at,
 				cp.ended_at,
 				cp.trial_ends_at
-			FROM customer_products AS cp
+			FROM page
+			INNER JOIN customer_products AS cp
+				ON cp.internal_customer_id = page.internal_customer_id
 			LEFT JOIN entities AS entity
 				ON entity.internal_id = cp.internal_entity_id
-			WHERE cp.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
-				AND ${operationScopeSql({ scope })}
+			WHERE ${operationScopeSql({ scope })}
 			FOR UPDATE OF cp
 		),
 		updated AS (

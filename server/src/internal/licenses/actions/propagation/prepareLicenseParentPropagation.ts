@@ -6,7 +6,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
-import { toPlanLicenseParamsWithCustomize } from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
+import { buildApiPlanLicense } from "@/internal/products/productUtils/productResponseUtils/buildApiPlanLicense.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import {
 	type LicenseParentContext,
@@ -66,19 +66,26 @@ export const prepareLicenseParentPropagation = async ({
 			}),
 		),
 	);
-	const resolvePlan = (
-		product: PreparedLicenseParentTarget["link"]["product"],
-	) => getPlanResponse({ ctx, product, features: ctx.features });
+	const toPlanLicenseParams = async (
+		license: NonNullable<FullProduct["licenses"]>[number],
+	): Promise<PlanLicenseParams> => {
+		const { version: _, ...params } = await buildApiPlanLicense({
+			ctx,
+			license,
+			features: ctx.features,
+		});
+		return params;
+	};
 
 	const allParents = await Promise.all(
 		contexts.map(async (context): Promise<PreparedLicenseParentTarget> => {
 			const [licenses, currentEffectivePlan] = await Promise.all([
-				Promise.all(
-					(context.parent.licenses ?? []).map((license) =>
-						toPlanLicenseParamsWithCustomize({ license, resolvePlan }),
-					),
-				),
-				resolvePlan(context.link.product),
+				Promise.all((context.parent.licenses ?? []).map(toPlanLicenseParams)),
+				getPlanResponse({
+					ctx,
+					product: context.link.product,
+					features: ctx.features,
+				}),
 			]);
 			const usage = usageByInternalId.get(context.parent.internal_id);
 			return {

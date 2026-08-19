@@ -122,11 +122,13 @@ bun scripts/setup/writeAgentEnv.ts
 # 5. DB migrations
 # =============================================================
 log "Running migrations"
-# `bun db:migrate` is not a package.json script — the CLI is `bun db migrate`.
-# loadLocalEnv from /workspace does not pick up server/.env, so pass DATABASE_URL.
+# Always local postgres. `bun dw` is wrapped in `infisical run`, so an inherited
+# DATABASE_URL would migrate PlanetScale instead of this box.
+# --bootstrap: empty Cloud postgres has 72 CREATE INDEX without CONCURRENTLY.
 export AUTUMN_DB_DIRECT=1
-export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/autumn}"
+export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/autumn"
+export DATABASE_CRITICAL_URL="$DATABASE_URL"
 bun db generate >/dev/null 2>&1 || true
-bun db migrate
+bun db migrate --bootstrap
 
 log "All services ready"

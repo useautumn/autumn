@@ -14,7 +14,11 @@ import type {
 	BatchMigrationRemovedItem,
 	BatchMigrationRepointedProduct,
 } from "./types/batchMigrationExecutionTypes.js";
-import { BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS } from "./utils/batchMigrationExecutionConstants.js";
+import {
+	BATCH_MIGRATION_FEATURE_OP_CONCURRENCY,
+	BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
+} from "./utils/batchMigrationExecutionConstants.js";
+import { mapWithConcurrency } from "./utils/mapWithConcurrency.js";
 import {
 	type BatchMigrationPagePhases,
 	timePhase,
@@ -67,18 +71,29 @@ export const executeBatchMigrationPage = async ({
 	const repointedIds = new Set<string>();
 
 	for (const patch of plan.patches) {
+		// Op types stay ordered (removes, then replaces, then adds) but ops
+		// WITHIN a type run concurrently: each op owns one feature, and
+		// different features touch disjoint customer_entitlements rows.
+		// Results merge in op order so output stays deterministic.
+
 		// Removes run first: an add landing before its sibling remove would be
 		// dropped again by a filter matching the same feature.
-		for (const remove of patch.removeEntitlementOps) {
-			const result = await removeCustomerEntitlementsForPage({
-				db: ctx.db,
-				features: ctx.features,
-				scope: patch.scope,
-				internalCustomerIds: pageInternalIds,
-				fromProduct: patch.fromProduct,
-				remove,
-				phases,
-			});
+		const removeResults = await mapWithConcurrency({
+			items: patch.removeEntitlementOps,
+			concurrency: BATCH_MIGRATION_FEATURE_OP_CONCURRENCY,
+			run: (remove) =>
+				removeCustomerEntitlementsForPage({
+					db: ctx.db,
+					features: ctx.features,
+					scope: patch.scope,
+					internalCustomerIds: pageInternalIds,
+					fromProduct: patch.fromProduct,
+					remove,
+					phases,
+				}),
+		});
+		for (const [index, remove] of patch.removeEntitlementOps.entries()) {
+			const result = removeResults[index];
 			removedItems.push(...result.removedItems);
 			ctx.logger.debug("batch-migration: remove operation", {
 				data: {
@@ -92,17 +107,23 @@ export const executeBatchMigrationPage = async ({
 		}
 
 		// Replaces run before adds so the add dedup sees post-replace definitions.
-		for (const replace of patch.replaceEntitlementOps) {
-			const result = await replaceCustomerEntitlementsForPage({
-				db: ctx.db,
-				features: ctx.features,
-				scope: patch.scope,
-				internalCustomerIds: pageInternalIds,
-				fromProduct: patch.fromProduct,
-				replace,
-				now,
-				phases,
-			});
+		const replaceResults = await mapWithConcurrency({
+			items: patch.replaceEntitlementOps,
+			concurrency: BATCH_MIGRATION_FEATURE_OP_CONCURRENCY,
+			run: (replace) =>
+				replaceCustomerEntitlementsForPage({
+					db: ctx.db,
+					features: ctx.features,
+					scope: patch.scope,
+					internalCustomerIds: pageInternalIds,
+					fromProduct: patch.fromProduct,
+					replace,
+					now,
+					phases,
+				}),
+		});
+		for (const [index, replace] of patch.replaceEntitlementOps.entries()) {
+			const result = replaceResults[index];
 			for (const id of result.excludedInternalCustomerIds) {
 				excludedIds.add(id);
 			}
@@ -121,16 +142,22 @@ export const executeBatchMigrationPage = async ({
 			});
 		}
 
-		for (const add of patch.addEntitlementOps) {
-			const result = await addCustomerEntitlementsForPage({
-				db: ctx.db,
-				scope: patch.scope,
-				internalCustomerIds: pageInternalIds,
-				fromProduct: patch.fromProduct,
-				add,
-				now,
-				phases,
-			});
+		const addResults = await mapWithConcurrency({
+			items: patch.addEntitlementOps,
+			concurrency: BATCH_MIGRATION_FEATURE_OP_CONCURRENCY,
+			run: (add) =>
+				addCustomerEntitlementsForPage({
+					db: ctx.db,
+					scope: patch.scope,
+					internalCustomerIds: pageInternalIds,
+					fromProduct: patch.fromProduct,
+					add,
+					now,
+					phases,
+				}),
+		});
+		for (const [index, add] of patch.addEntitlementOps.entries()) {
+			const result = addResults[index];
 			for (const id of result.excludedInternalCustomerIds) {
 				excludedIds.add(id);
 			}
@@ -147,6 +174,8 @@ export const executeBatchMigrationPage = async ({
 			});
 		}
 
+		// License ops stay sequential: two ops can target the same
+		// licensePlanId pool, so their rows are not disjoint.
 		for (const operation of patch.licenseEntitlementOps) {
 			const result = await runLicenseEntitlementOp({
 				db: ctx.db,
@@ -229,6 +258,7 @@ export const executeBatchMigrationPage = async ({
 						skippedInternalCustomerIds: skippedIds,
 					}),
 				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
+				{ forceCustomPlan: true },
 			),
 	});
 

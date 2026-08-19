@@ -3,7 +3,7 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiEntityV2,
-	type ApiPlanV1,
+	type ApiPlanExpandedV1,
 	BillingInterval,
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
@@ -436,7 +436,7 @@ test.concurrent(
 			}),
 			autumnV2_2.post("/plans.get", {
 				plan_id: parent.id,
-			}) as Promise<ApiPlanV1>,
+			}) as Promise<ApiPlanExpandedV1>,
 		]);
 
 		expect(link.planLicense.customized).toBe(false);

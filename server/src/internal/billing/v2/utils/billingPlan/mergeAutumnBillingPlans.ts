@@ -57,6 +57,12 @@ export const mergeAutumnBillingPlans = ({
 		incoming: incoming.insertPlanLicenses,
 		getKey: (spec) => spec.row.id,
 	}),
+	customerLicenseUpdates: mergeByKey({
+		base: base.customerLicenseUpdates,
+		incoming: incoming.customerLicenseUpdates,
+		getKey: (update) =>
+			update.customerLicenseId ?? update.customerLicenseLinkId ?? "",
+	}),
 	customerLicenseTransitions: mergeByKey({
 		base: base.customerLicenseTransitions,
 		incoming: incoming.customerLicenseTransitions,

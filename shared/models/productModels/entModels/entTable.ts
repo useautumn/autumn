@@ -81,6 +81,10 @@ export const entitlements = pgTable(
 		index("idx_entitlements_internal_reward_id_c_partial")
 			.on(sql`${table.internal_reward_id} COLLATE "C"`)
 			.where(sql`${table.internal_reward_id} IS NOT NULL`),
+		index("idx_entitlements_entity_feature_id")
+			.on(table.entity_feature_id)
+			.where(sql`${table.entity_feature_id} IS NOT NULL`)
+			.concurrently(),
 	],
 );
 

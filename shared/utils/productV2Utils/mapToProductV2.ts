@@ -85,6 +85,7 @@ export const mapToProductV2 = ({
 
 		id: product.id,
 		name: product.name,
+		description: product.description ?? null,
 		is_add_on: product.is_add_on,
 		is_default: product.is_default,
 		version: product.version,

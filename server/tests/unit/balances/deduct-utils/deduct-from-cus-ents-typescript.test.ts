@@ -120,6 +120,7 @@ const createCustomerEntitlement = ({
 				version: 1,
 				processor: {},
 				base_variant_id: null,
+				base_internal_product_id: null,
 				archived: false,
 				free_trials: [],
 				free_trial: null,

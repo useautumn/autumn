@@ -5,3 +5,8 @@ export type EntitlementPrice = {
 	entitlement: EntitlementWithFeature;
 	price?: Price;
 };
+
+export type BasePriceAndEntitlementPrices = {
+	basePrice?: Price;
+	entitlementPrices: EntitlementPrice[];
+};

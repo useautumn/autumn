@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { type ApiPlanV1, diffPlanV1 } from "@autumn/shared";
+import {
+	type ApiPlanLicenseV1,
+	type DiffablePlanV1,
+	diffPlanV1,
+} from "@autumn/shared";
 
-const plan = (overrides: Partial<ApiPlanV1>): ApiPlanV1 =>
+const plan = (overrides: Partial<DiffablePlanV1>): DiffablePlanV1 =>
 	({
 		id: "pro",
 		name: "Pro",
@@ -20,15 +24,21 @@ const plan = (overrides: Partial<ApiPlanV1>): ApiPlanV1 =>
 		billing_controls: {},
 		metadata: {},
 		...overrides,
-	}) as ApiPlanV1;
+	}) as DiffablePlanV1;
 
-const planWithLicenses = (licenses: ApiPlanV1["licenses"]) =>
-	plan({ licenses });
+const planWithLicenses = (licenses: ApiPlanLicenseV1[]) => plan({ licenses });
 
-const devSeat = (customize: unknown) =>
-	[
-		{ license_plan_id: "dev_seat", customize },
-	] as unknown as ApiPlanV1["licenses"];
+const devSeat = (
+	customize: ApiPlanLicenseV1["customize"] | null,
+): ApiPlanLicenseV1[] => [
+	{
+		license_plan_id: "dev_seat",
+		version: 1,
+		included: 1,
+		prepaid_only: true,
+		...(customize ? { customize } : {}),
+	},
+];
 
 describe("diffPlanV1 upsert_licenses", () => {
 	test("emits the customize when a link gains an item", () => {
@@ -40,6 +50,8 @@ describe("diffPlanV1 upsert_licenses", () => {
 		expect(diffPlanV1({ from, to }).upsert_licenses).toEqual([
 			{
 				license_plan_id: "dev_seat",
+				included: 1,
+				prepaid_only: true,
 				customize: { add_items: [{ feature_id: "sso" }] },
 			},
 		]);
@@ -60,7 +72,12 @@ describe("diffPlanV1 upsert_licenses", () => {
 		const to = planWithLicenses(devSeat(null));
 
 		expect(diffPlanV1({ from, to }).upsert_licenses).toEqual([
-			{ license_plan_id: "dev_seat", customize: null },
+			{
+				license_plan_id: "dev_seat",
+				included: 1,
+				prepaid_only: true,
+				customize: null,
+			},
 		]);
 	});
 

@@ -8,6 +8,7 @@ import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { cycleAnchorSourcesSql } from "@/internal/migrations/v2/batchOperations/actions/utils/cycleAnchorSql.js";
+import { pageCustomerIdsCte } from "@/internal/migrations/v2/batchOperations/actions/utils/pageCustomerIdsSql.js";
 import {
 	type OperationScope,
 	operationScopeSql,
@@ -74,6 +75,7 @@ export const buildAddCandidateRowsQuery = ({
 	});
 
 	return sql`
+		WITH ${pageCustomerIdsCte({ internalCustomerIds })}
 		SELECT
 			cp.id AS customer_product_id,
 			cp.internal_customer_id,
@@ -88,15 +90,16 @@ export const buildAddCandidateRowsQuery = ({
 			cp.billing_cycle_anchor,
 			${anchors.subscriptionAnchorColumn} AS subscription_cycle_anchor,
 			${anchors.siblingAnchorColumn} AS sibling_reset_cycle_anchor
-		FROM customer_products AS cp
+		FROM page
+		INNER JOIN customer_products AS cp
+			ON cp.internal_customer_id = page.internal_customer_id
 		INNER JOIN customers AS customer
 			ON customer.internal_id = cp.internal_customer_id
 		LEFT JOIN entities AS entity
 			ON entity.internal_id = cp.internal_entity_id
 		${anchors.siblingJoin}
 		${anchors.subscriptionJoin}
-		WHERE cp.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
-			AND ${operationScopeSql({ scope })}
+		WHERE ${operationScopeSql({ scope })}
 			${afterCustomerProductId ? sql`AND cp.id > ${afterCustomerProductId}` : sql``}
 			AND NOT EXISTS (
 				SELECT 1

@@ -26,7 +26,7 @@ import {
 	useCopySandbox,
 } from "@/hooks/queries/useSandboxesQuery";
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
-import { ProductService } from "@/services/products/ProductService";
+import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr, pushPage } from "@/utils/genUtils";
@@ -97,10 +97,18 @@ export const ProductListRowToolbar = ({
 		}
 		setIsCreatingVariant(true);
 		try {
-			await ProductService.createVariant(axiosInstance, {
-				base_plan_id: product.id,
-				variant_plan_id: variantId.trim(),
-				name: variantName.trim(),
+			await CatalogV2Service.update(axiosInstance, {
+				plans: [
+					{
+						plan_id: product.id,
+						variants: [
+							{
+								variant_plan_id: variantId.trim(),
+								name: variantName.trim(),
+							},
+						],
+					},
+				],
 			});
 			toast.success("Variant created");
 			setCreateVariantOpen(false);

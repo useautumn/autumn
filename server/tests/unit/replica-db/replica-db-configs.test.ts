@@ -9,11 +9,12 @@
  *
  * Contract under test:
  *   Behaviors:
- *     - POST /v1/customers/list          -> replica, body never read
- *     - POST /v1/customers.list          -> replica, body never read
- *     - POST /v1/entities.list, no customer_id -> replica
+ *     - POST /v1/customers/list          -> replica (default lane), body never read
+ *     - POST /v1/customers.list          -> replica (default lane), body never read
+ *     - POST /v1/entities.list, no customer_id -> replica (default lane)
  *     - POST /v1/entities.list, customer_id    -> primary
  *     - POST /v1/entities.list, unreadable body -> primary (fail safe)
+ *     - POST /migrations.filter.preview  -> replica slow lane (long-query pool)
  *     - any non-listed route/method      -> primary
  *   Invariants:
  *     - The body is only read for routes whose decision depends on it.
@@ -21,77 +22,77 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { shouldUseReplicaDb } from "@/internal/misc/replicaDb/replicaDbConfigs.js";
+import { resolveReplicaDbLane } from "@/internal/misc/replicaDb/replicaDbConfigs.js";
 
 const neverRead = () =>
 	Promise.reject(new Error("readBody should not have been called"));
 
 const bodyOf = (body: unknown) => () => Promise.resolve(body);
 
-describe("shouldUseReplicaDb", () => {
+describe("resolveReplicaDbLane", () => {
 	test("routes the customer list endpoints to the replica without reading the body", async () => {
 		expect(
-			await shouldUseReplicaDb({
+			await resolveReplicaDbLane({
 				method: "POST",
 				path: "/v1/customers/list",
 				readBody: neverRead,
 			}),
-		).toBe(true);
+		).toBe("default");
 
 		expect(
-			await shouldUseReplicaDb({
+			await resolveReplicaDbLane({
 				method: "POST",
 				path: "/v1/customers.list",
 				readBody: neverRead,
 			}),
-		).toBe(true);
+		).toBe("default");
 	});
 
 	test("routes unscoped entities.list to the replica", async () => {
 		expect(
-			await shouldUseReplicaDb({
+			await resolveReplicaDbLane({
 				method: "POST",
 				path: "/v1/entities.list",
 				readBody: bodyOf({}),
 			}),
-		).toBe(true);
+		).toBe("default");
 
 		expect(
-			await shouldUseReplicaDb({
+			await resolveReplicaDbLane({
 				method: "POST",
 				path: "/v1/entities.list",
 				readBody: bodyOf({ limit: 50, search: "acme" }),
 			}),
-		).toBe(true);
+		).toBe("default");
 	});
 
 	test("routes customer-scoped entities.list to the primary", async () => {
 		expect(
-			await shouldUseReplicaDb({
+			await resolveReplicaDbLane({
 				method: "POST",
 				path: "/v1/entities.list",
 				readBody: bodyOf({ customer_id: "cus_123" }),
 			}),
-		).toBe(false);
+		).toBe(null);
 
 		expect(
-			await shouldUseReplicaDb({
+			await resolveReplicaDbLane({
 				method: "POST",
 				path: "/v1/entities.list",
 				readBody: bodyOf({ customer_id: "cus_123", limit: 50 }),
 			}),
-		).toBe(false);
+		).toBe(null);
 	});
 
 	test("falls back to the primary when the body cannot be read", async () => {
 		expect(
-			await shouldUseReplicaDb({
+			await resolveReplicaDbLane({
 				method: "POST",
 				path: "/v1/entities.list",
 				readBody: () =>
 					Promise.reject(new SyntaxError("Unexpected end of JSON")),
 			}),
-		).toBe(false);
+		).toBe(null);
 	});
 
 	test("treats a blank or non-string customer_id as unscoped", async () => {
@@ -100,60 +101,70 @@ describe("shouldUseReplicaDb", () => {
 		// decision aligned with what the schema considers a real scope.
 		for (const customerId of ["", "   ", 123, null]) {
 			expect(
-				await shouldUseReplicaDb({
+				await resolveReplicaDbLane({
 					method: "POST",
 					path: "/v1/entities.list",
 					readBody: bodyOf({ customer_id: customerId }),
 				}),
-			).toBe(true);
+			).toBe("default");
 		}
 	});
 
 	test("routes a non-object body to the replica", async () => {
 		for (const body of [null, "customer", 42]) {
 			expect(
-				await shouldUseReplicaDb({
+				await resolveReplicaDbLane({
 					method: "POST",
 					path: "/v1/entities.list",
 					readBody: bodyOf(body),
 				}),
-			).toBe(true);
+			).toBe("default");
 		}
+	});
+
+	test("routes the migration filter preview to the slow lane without reading the body", async () => {
+		expect(
+			await resolveReplicaDbLane({
+				method: "POST",
+				path: "/migrations.filter.preview",
+				readBody: neverRead,
+			}),
+		).toBe("slow");
 	});
 
 	test("does not match non-replica routes", async () => {
 		expect(
-			await shouldUseReplicaDb({
+			await resolveReplicaDbLane({
 				method: "GET",
 				path: "/v1/customers",
 				readBody: neverRead,
 			}),
-		).toBe(false);
+		).toBe(null);
 
 		expect(
-			await shouldUseReplicaDb({
+			await resolveReplicaDbLane({
 				method: "GET",
 				path: "/v1/customers/cus_123",
 				readBody: neverRead,
 			}),
-		).toBe(false);
+		).toBe(null);
 
 		expect(
-			await shouldUseReplicaDb({
+			await resolveReplicaDbLane({
 				method: "POST",
 				path: "/customers/all/search",
 				readBody: neverRead,
 			}),
-		).toBe(false);
+		).toBe(null);
 	});
 
 	test("does not match entities.list on a different method", async () => {
 		expect(
-			await shouldUseReplicaDb({
+			await resolveReplicaDbLane({
 				method: "GET",
 				path: "/v1/entities.list",
 				readBody: neverRead,
 			}),
-		).toBe(false);
+		).toBe(null);
 	});
 });

@@ -57,6 +57,7 @@ export const iterateCustomerProductPages = async <
 					assertWithinCeiling,
 				}),
 			BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
+			{ forceCustomPlan: true },
 		);
 		if (rows.length === 0) break;
 		rowCount += rows.length;

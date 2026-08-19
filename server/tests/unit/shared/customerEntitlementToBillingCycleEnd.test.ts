@@ -138,6 +138,7 @@ const product = () =>
 		created_at: 0,
 		processor: null,
 		base_variant_id: null,
+		base_internal_product_id: null,
 		archived: false,
 		config: { ignore_past_due: false },
 		metadata: {},

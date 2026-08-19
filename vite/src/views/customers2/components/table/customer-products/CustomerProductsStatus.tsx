@@ -203,26 +203,26 @@ export function CustomerProductsStatus({
 	}
 
 	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<div className="flex min-w-0 max-w-full items-center">
-					<div className="flex shrink-0 items-center gap-1.5">
-						{iconElement}
-						<span className="text-sm">{config.label}</span>
-					</div>
-					{subtext && (
-						<>
-							<DotIcon size={16} className="shrink-0" />
+		<div className="flex min-w-0 max-w-full items-center">
+			<div className="flex shrink-0 items-center gap-1.5">
+				{iconElement}
+				<span className="text-sm">{config.label}</span>
+			</div>
+			{subtext && (
+				<>
+					<DotIcon size={16} className="shrink-0" />
+					<Tooltip delayDuration={0}>
+						<TooltipTrigger asChild>
 							<span className="min-w-0 truncate pl-1 text-sm text-tertiary-foreground">
 								{subtext}
 							</span>
-						</>
-					)}
-				</div>
-			</TooltipTrigger>
-			<TooltipContent>
-				<StatusTooltipContent label={config.label} subtext={subtext} />
-			</TooltipContent>
-		</Tooltip>
+						</TooltipTrigger>
+						<TooltipContent>
+							<StatusTooltipContent label={config.label} subtext={subtext} />
+						</TooltipContent>
+					</Tooltip>
+				</>
+			)}
+		</div>
 	);
 }

@@ -32,6 +32,7 @@ import { CustomerUsageAnalyticsTable } from "../components/table/customer-usage-
 import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
 import { CustomerPageDetails } from "./CustomerPageDetails";
+import { CustomerPageTitle } from "./CustomerPageTitle";
 import { CustomerSheets } from "./CustomerSheets";
 import { CustomerHeaderActions } from "./components/CustomerHeaderActions";
 import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
@@ -40,7 +41,6 @@ import { Workbench } from "./workbench/Workbench";
 export default function CustomerView2() {
 	const {
 		customer,
-		schedule,
 		testClockFrozenTimeMs,
 		isLoading: cusLoading,
 	} = useCusQuery();
@@ -85,6 +85,7 @@ export default function CustomerView2() {
 				setIsInlineEditorOpen,
 			}}
 		>
+			<CustomerPageTitle customer={customer} />
 			<div className="flex w-full h-full overflow-hidden relative">
 				<div className="h-full w-full overflow-hidden absolute inset-0 z-0">
 					<div className="flex flex-col overflow-x-hidden overflow-y-auto absolute inset-0 pb-8">

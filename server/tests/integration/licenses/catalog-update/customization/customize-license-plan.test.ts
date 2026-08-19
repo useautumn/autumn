@@ -1,7 +1,7 @@
 /** Contract: plans.update persists independent, junction-backed license customizations per parent.
  * Unchanged rows are reused and the shared base license stays unchanged. */
 import { expect, test } from "bun:test";
-import { type ApiPlanV1, BillingInterval } from "@autumn/shared";
+import { type ApiPlanExpandedV1, BillingInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
@@ -62,7 +62,7 @@ test.concurrent(
 		});
 		const monthlyApiPlan = (await autumnV2_2.post("/plans.get", {
 			plan_id: monthlyParent.id,
-		})) as ApiPlanV1;
+		})) as ApiPlanExpandedV1;
 		expect(monthlyApiPlan.licenses?.[0]?.customize).toMatchObject({
 			price: { amount: 20, interval: BillingInterval.Month },
 			add_items: [expect.objectContaining({ feature_id: TestFeature.Words })],

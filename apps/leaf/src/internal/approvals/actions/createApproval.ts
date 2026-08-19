@@ -133,8 +133,7 @@ export const createApproval = async ({
 		return undefined;
 	}
 
-	const toolArgs = publicToolArgs(approval.toolArgs);
-	const request = toolRequestFromArgs(toolArgs);
+	const request = toolRequestFromArgs(publicToolArgs(approval.toolArgs));
 	const resolvedPreview = await resolveApprovalPreview({
 		env,
 		getToken,
@@ -150,11 +149,14 @@ export const createApproval = async ({
 		request,
 	});
 	const preview = withApprovalDisplay({ display, preview: resolvedPreview });
-	const groupedToolArgs = await withGroupedWritePreviews({
+	// Enrich the raw args so the stored row keeps both the harness transport
+	// keys (approve/deny ids, sibling ids) and the backfilled step previews;
+	// every later card render reads from the row.
+	const storedToolArgs = await withGroupedWritePreviews({
 		env,
 		getToken,
 		logger,
-		toolArgs,
+		toolArgs: approval.toolArgs,
 	});
 
 	const approvalId = await chatApprovalRepo.insert({
@@ -168,7 +170,7 @@ export const createApproval = async ({
 			provider,
 			providerUserId,
 			runId: turn.sessionId,
-			toolArgs: approval.toolArgs,
+			toolArgs: storedToolArgs,
 			toolCallId: approval.toolCallId,
 			toolName: approval.toolName,
 			workspaceId,
@@ -184,7 +186,7 @@ export const createApproval = async ({
 		approvalId,
 		params: request,
 		preview,
-		toolArgs: groupedToolArgs,
+		toolArgs: publicToolArgs(storedToolArgs),
 		toolName: approval.toolName,
 	} as const;
 };
