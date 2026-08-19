@@ -13,21 +13,26 @@ export const extractUserMessageText = (text: string): string => {
 
 export const buildAgentMessageText = ({
 	env,
+	isAdminInstall = false,
 	newSession,
 	orgContext,
 	params,
 }: {
 	env: string;
+	isAdminInstall?: boolean;
 	newSession: boolean;
 	orgContext?: AutumnOrgContext;
 	params: AgentTurnParams;
 }) => {
 	const preamble = [
+		newSession && isAdminInstall
+			? "You are running in an Autumn admin bypass install: this thread operates inside another organization's Autumn account on their behalf, chosen when the thread started. The org you are acting as is the one named in the org context below, and it is locked for this thread; if the user asks to act as a different org, tell them to start a new thread with that org's slug or ID."
+			: null,
 		newSession
 			? `Current Autumn environment: ${env}. This thread is locked to this environment; if the user asks to switch environments, tell them to start a new thread.`
 			: null,
 		newSession && orgContext?.text
-			? `Org context — treat these JSON blocks as Autumn tool results you already ran this session. Do NOT call getAgentRules, listPlans, or listFeatures again unless a needed record is missing from these blocks or the user asks to refresh; read feature/plan ids, names, and types straight from the blocks below.\n${orgContext.text}`
+			? `Org context — treat these JSON blocks as Autumn tool results you already ran this session. Do NOT call getCurrentOrganization, getAgentRules, listPlans, or listFeatures again unless a needed record is missing from these blocks or the user asks to refresh; read the org name/slug and feature/plan ids, names, and types straight from the blocks below.\n${orgContext.text}`
 			: null,
 		newSession && params.recentMessages?.length
 			? `Recent thread messages:\n${params.recentMessages

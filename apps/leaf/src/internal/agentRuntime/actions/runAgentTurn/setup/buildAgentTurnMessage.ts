@@ -1,16 +1,18 @@
-import type { AutumnOrgContext } from "../../../../autumnMcp/orgContextService.js";
 import { env as leafEnv } from "../../../../../lib/env.js";
+import type { AutumnOrgContext } from "../../../../autumnMcp/orgContextService.js";
 import type { AgentTurnParams } from "../../../domain/agentTurnContext.js";
-import { buildAgentMessageText } from "../../../messages/agentMessageText.js";
 import type { EveMessageContent } from "../../../eve/client.js";
+import { buildAgentMessageText } from "../../../messages/agentMessageText.js";
 
 export const buildAgentTurnMessage = ({
 	env,
+	isAdminInstall = false,
 	newSession,
 	orgContext,
 	params,
 }: {
 	env: string;
+	isAdminInstall?: boolean;
 	newSession: boolean;
 	orgContext?: AutumnOrgContext;
 	params: AgentTurnParams;
@@ -18,6 +20,7 @@ export const buildAgentTurnMessage = ({
 	const attachments = params.attachments ?? [];
 	const messageText = buildAgentMessageText({
 		env,
+		isAdminInstall,
 		newSession,
 		orgContext,
 		params,

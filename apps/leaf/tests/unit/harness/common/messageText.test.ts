@@ -23,10 +23,36 @@ describe("Harness message text", () => {
 		expect(text).toContain("Org context");
 		expect(text).toContain("Autumn tool results you already ran this session");
 		expect(text).toContain(
-			"Do NOT call getAgentRules, listPlans, or listFeatures again",
+			"Do NOT call getCurrentOrganization, getAgentRules, listPlans, or listFeatures again",
 		);
 		expect(text).toContain("- pro | Pro");
 		expect(extractUserMessageText(text)).toBe("attach pro");
+	});
+
+	test("adds the admin bypass note only for admin installs on a new session", () => {
+		const adminText = buildAgentMessageText({
+			env: "sandbox",
+			isAdminInstall: true,
+			newSession: true,
+			params: { text: "who am I acting as" },
+		});
+		expect(adminText).toContain("admin bypass install");
+
+		const nonAdminText = buildAgentMessageText({
+			env: "sandbox",
+			isAdminInstall: false,
+			newSession: true,
+			params: { text: "who am I acting as" },
+		});
+		expect(nonAdminText).not.toContain("admin bypass install");
+
+		const resumedAdminText = buildAgentMessageText({
+			env: "sandbox",
+			isAdminInstall: true,
+			newSession: false,
+			params: { text: "who am I acting as" },
+		});
+		expect(resumedAdminText).not.toContain("admin bypass install");
 	});
 
 	test("does not inject org context on resumed sessions", () => {
