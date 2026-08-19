@@ -1,4 +1,7 @@
-import { type ApiPlanV1, ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
+import {
+	type ApiPlanExpandedV1,
+	ApiPlanExpandedV1Schema,
+} from "@api/products/apiPlanV1.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
@@ -13,6 +16,10 @@ import {
  * - customer_eligibility.scenario removed from public response (internal only)
  *
  * For V2.1 clients, we strip the new fields and restore scenario.
+ *
+ * Schemas use the expanded plan shape: the transform output is re-parsed with
+ * `oldSchema`, and the plain ApiPlanV1Schema would silently strip the plan's
+ * `licenses` / `variants` edges from V2.1 responses.
  */
 export const V2_1_PlanChanges = defineVersionChange({
 	newVersion: ApiVersion.V2_2,
@@ -22,13 +29,17 @@ export const V2_1_PlanChanges = defineVersionChange({
 		"customer_eligibility: scenario kept for V2.1 backward compat",
 	],
 	affectedResources: [AffectedResource.Product],
-	newSchema: ApiPlanV1Schema,
-	oldSchema: ApiPlanV1Schema,
+	newSchema: ApiPlanExpandedV1Schema,
+	oldSchema: ApiPlanExpandedV1Schema,
 
 	affectsRequest: false,
 	affectsResponse: true,
 
-	transformResponse: ({ input }: { input: ApiPlanV1 }): ApiPlanV1 => {
+	transformResponse: ({
+		input,
+	}: {
+		input: ApiPlanExpandedV1;
+	}): ApiPlanExpandedV1 => {
 		if (!input.customer_eligibility) return input;
 
 		return {
