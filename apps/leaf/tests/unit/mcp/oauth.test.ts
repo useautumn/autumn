@@ -52,6 +52,29 @@ const expectedChallenge = ({
 		...(error ? [`error="${error}"`] : []),
 	].join(", ");
 
+/** The no-credential cases assert an absent code, which toMatchObject cannot see. */
+const rejectionFrom = async ({
+	flags: requestFlags,
+	headers,
+}: {
+	flags: MCPOAuthFlags;
+	headers: Headers;
+}) => {
+	try {
+		await buildAuthForRequest({
+			headers,
+			db: unusedDb,
+			flags: requestFlags,
+			logger,
+			resourceUrl,
+		});
+	} catch (error) {
+		return error as OAuthHttpError;
+	}
+
+	throw new Error("Expected buildAuthForRequest to reject");
+};
+
 describe("MCP OAuth auth resolution", () => {
 	test("advertises the Leaf OAuth scope allowlist without offline_access", () => {
 		expect(
@@ -64,18 +87,16 @@ describe("MCP OAuth auth resolution", () => {
 	});
 
 	test("challenges a request with no credentials without an error code", async () => {
-		await expect(
-			buildAuthForRequest({
-				headers: new Headers(),
-				db: unusedDb,
-				flags: flags as MCPOAuthFlags,
-				logger,
-				resourceUrl,
-			}),
-		).rejects.toMatchObject({
-			status: 401,
-			wwwAuthenticate: expectedChallenge({ resourcePath: "/mcp" }),
-		} satisfies Partial<OAuthHttpError>);
+		const rejection = await rejectionFrom({
+			headers: new Headers(),
+			flags: flags as MCPOAuthFlags,
+		});
+
+		expect(rejection.status).toBe(401);
+		expect(rejection.error).toBeUndefined();
+		expect(rejection.wwwAuthenticate).toBe(
+			expectedChallenge({ resourcePath: "/mcp" }),
+		);
 	});
 
 	test("returns an internal MCP resource challenge", async () => {
@@ -415,21 +436,14 @@ describe("MCP OAuth auth resolution", () => {
 		).toBe("http://localhost:2718/internal/mcp");
 	});
 
-	test("missing static secret-key returns the auth error path", async () => {
-		await expect(
-			buildAuthForRequest({
-				headers: new Headers(),
-				db: unusedDb,
-				flags: {
-					...flags,
-					"oauth-enabled": false,
-				} as MCPOAuthFlags,
-				logger,
-				resourceUrl,
-			}),
-		).rejects.toMatchObject({
-			status: 401,
-			error: "invalid_token",
-		} satisfies Partial<OAuthHttpError>);
+	test("missing static secret-key returns no error code either", async () => {
+		const rejection = await rejectionFrom({
+			headers: new Headers(),
+			flags: { ...flags, "oauth-enabled": false } as MCPOAuthFlags,
+		});
+
+		expect(rejection.status).toBe(401);
+		expect(rejection.error).toBeUndefined();
+		expect(rejection.wwwAuthenticate).toBeUndefined();
 	});
 });

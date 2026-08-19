@@ -78,7 +78,11 @@ const parseRequestOption = <T>({
 	const parsed = schema.safeParse(value);
 	if (parsed.success) return parsed.data;
 
-	throw new OAuthHttpError(400, message, "invalid_request");
+	throw new OAuthHttpError({
+		error: "invalid_request",
+		message,
+		status: 400,
+	});
 };
 
 const getEnvironment = ({
@@ -171,12 +175,12 @@ const resolveOAuthPrincipal = async ({
 	});
 
 	if (!accessToken?.userId || !accessToken.referenceId) {
-		throw new OAuthHttpError(
-			401,
-			"Invalid or expired OAuth access token",
-			"invalid_token",
-			buildChallenge({ error: "invalid_token", resourceUrl }),
-		);
+		throw new OAuthHttpError({
+			error: "invalid_token",
+			message: "Invalid or expired OAuth access token",
+			status: 401,
+			wwwAuthenticate: buildChallenge({ error: "invalid_token", resourceUrl }),
+		});
 	}
 
 	// RFC 8707 audience binding: this resource server only accepts tokens minted for it.
@@ -186,12 +190,12 @@ const resolveOAuthPrincipal = async ({
 			resourceUrl,
 		})
 	) {
-		throw new OAuthHttpError(
-			401,
-			"OAuth access token was not issued for this resource",
-			"invalid_token",
-			buildChallenge({ error: "invalid_token", resourceUrl }),
-		);
+		throw new OAuthHttpError({
+			error: "invalid_token",
+			message: "OAuth access token was not issued for this resource",
+			status: 401,
+			wwwAuthenticate: buildChallenge({ error: "invalid_token", resourceUrl }),
+		});
 	}
 
 	// Only the resource scopes gate tools; OIDC protocol scopes are dropped.
@@ -206,12 +210,15 @@ const resolveOAuthPrincipal = async ({
 			: await isUnrestrictedChatGrant({ db, accessToken });
 
 	if (!hasUsableGrant) {
-		throw new OAuthHttpError(
-			403,
-			"OAuth access token grants no Autumn resource scopes",
-			"insufficient_scope",
-			buildChallenge({ error: "insufficient_scope", resourceUrl }),
-		);
+		throw new OAuthHttpError({
+			error: "insufficient_scope",
+			message: "OAuth access token grants no Autumn resource scopes",
+			status: 403,
+			wwwAuthenticate: buildChallenge({
+				error: "insufficient_scope",
+				resourceUrl,
+			}),
+		});
 	}
 
 	return {
@@ -290,23 +297,24 @@ export const buildAuthForRequest = async ({
 	}
 
 	if (bearer) {
-		throw new OAuthHttpError(
-			401,
-			"Invalid OAuth token prefix",
-			"invalid_token",
-			buildChallenge({ error: "invalid_token", resourceUrl }),
-		);
+		throw new OAuthHttpError({
+			error: "invalid_token",
+			message: "Invalid OAuth token prefix",
+			status: 401,
+			wwwAuthenticate: buildChallenge({ error: "invalid_token", resourceUrl }),
+		});
 	}
 
+	// Neither branch below answers a presented credential, so RFC 6750 §3.1
+	// leaves both without an error code — in the body as well as the header.
 	if (flags["oauth-enabled"]) {
-		throw new OAuthHttpError(
-			401,
-			"Missing Autumn API key bearer token",
-			"invalid_token",
-			buildChallenge({ resourceUrl }),
-		);
+		throw new OAuthHttpError({
+			message: "Missing Autumn API key bearer token",
+			status: 401,
+			wwwAuthenticate: buildChallenge({ resourceUrl }),
+		});
 	}
 
 	logger.warning("Missing secret-key for MCP request");
-	throw new OAuthHttpError(401, "Missing secret-key", "invalid_token");
+	throw new OAuthHttpError({ message: "Missing secret-key", status: 401 });
 };
