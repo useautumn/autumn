@@ -18,6 +18,13 @@ const mockLeafModule = ({
 	specifier: string;
 }) => mockModuleWithRestore({ baseUrl: import.meta.url, factory, specifier });
 
+class MockEveSessionGoneError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "EveSessionGoneError";
+	}
+}
+let sessionGone = false;
 let streamedEvents: EveEvent[] = [];
 const postedResponses: {
 	approveSiblings?: boolean;
@@ -29,12 +36,18 @@ let session: EveSessionRef;
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
+		EveSessionGoneError: MockEveSessionGoneError,
 		postEveInputResponse: async (input: {
 			approveSiblings?: boolean;
 			optionId: string;
 			requestId: string;
 			siblingRequestIds?: string[];
 		}) => {
+			if (sessionGone) {
+				throw new MockEveSessionGoneError(
+					"Eve session is gone (500): target session was not found via continuation token.",
+				);
+			}
 			postedResponses.push({
 				approveSiblings: input.approveSiblings,
 				optionId: input.optionId,
@@ -49,11 +62,37 @@ await mockLeafModule({
 	}),
 });
 
+const deletedSessionIds: string[] = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
 	factory: () => ({
+		deleteEveSession: async ({ sessionId }: { sessionId: string }) => {
+			deletedSessionIds.push(sessionId);
+		},
 		getEveSessionBySessionId: async () => session,
 		upsertEveSession: async () => undefined,
+	}),
+});
+
+const finalized: Array<{ approvalId: string; status: string }> = [];
+const released: string[] = [];
+await mockLeafModule({
+	specifier: "../../../src/internal/approvals/repos/chatApprovalRepo.js",
+	factory: () => ({
+		chatApprovalRepo: {
+			finalize: async ({
+				approvalId,
+				status,
+			}: {
+				approvalId: string;
+				status: string;
+			}) => {
+				finalized.push({ approvalId, status });
+			},
+			release: async ({ approvalId }: { approvalId: string }) => {
+				released.push(approvalId);
+			},
+		},
 	}),
 });
 
@@ -82,6 +121,9 @@ await mockLeafModule({
 	}),
 });
 
+const { resolveApproval } = await import(
+	"../../../src/internal/approvals/actions/resolveApproval.js"
+);
 const { discardApproval } = await import(
 	"../../../src/internal/approvals/actions/discardApproval.js"
 );
@@ -711,5 +753,29 @@ describe("grouped approvals that fail a step and park again", () => {
 				{ status: "failed", toolName: "autumn__attach" },
 			],
 		});
+	});
+});
+
+// Eve has lost the session (its transcript broke terminally). Returning the card
+// to pending would block the thread behind a card nothing can ever run.
+describe("resolveApproval when eve has lost the session", () => {
+	beforeEach(() => {
+		sessionGone = true;
+		finalized.length = 0;
+		released.length = 0;
+		deletedSessionIds.length = 0;
+	});
+
+	test("finalizes the card as failed, drops the session, and does not retry", async () => {
+		const result = await resolveApproval({
+			approval: approval(),
+			providerUserId: "U1",
+		});
+
+		expect(result).toMatchObject({ error: true, retryable: false });
+		expect(finalized).toEqual([{ approvalId: "a_1", status: "failed" }]);
+		expect(released).toEqual([]);
+		expect(deletedSessionIds).toEqual(["eve_session_1"]);
+		sessionGone = false;
 	});
 });

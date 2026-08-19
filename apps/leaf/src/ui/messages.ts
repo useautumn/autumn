@@ -17,6 +17,9 @@ export const CREDENTIAL_WITHHELD_MESSAGE =
 
 // Approvals
 
+export const APPROVAL_SESSION_GONE_MESSAGE =
+	"This conversation's session has ended, so this request can't be applied — send it again and I'll start fresh.";
+
 export const APPROVAL_STILL_OPEN_MESSAGE =
 	"there's still an open approval card on this thread — approve or discard it before sending a new message";
 
