@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	type CreditSchemaItem,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
@@ -11,7 +12,7 @@ import type { FeatureDeduction } from "@/internal/balances/utils/types/featureDe
 const makeFeature = (
 	id: string,
 	type: FeatureType,
-	schema: { metered_feature_id: string; credit_amount: number }[] = [],
+	schema: CreditSchemaItem[] = [],
 ): Feature => ({
 	internal_id: `fe_${id}`,
 	org_id: "org_test",
@@ -36,6 +37,13 @@ const credits = makeFeature("credits", FeatureType.CreditSystem, [
 // Simulates a stale cached snapshot whose schema no longer includes "messages".
 const staleCredits = makeFeature("credits", FeatureType.CreditSystem, [
 	{ metered_feature_id: "other_feature", credit_amount: 5 },
+]);
+const graduatedCredits = makeFeature("credits", FeatureType.CreditSystem, [
+	{
+		metered_feature_id: "messages",
+		tier_behavior: "graduated",
+		tiers: [{ to: "inf", credit_amount: 0.5 }],
+	},
 ]);
 
 describe("computeCreditCosts", () => {
@@ -80,5 +88,18 @@ describe("computeCreditCosts", () => {
 		});
 
 		expect(lookup("ce_stale")).toBe(1);
+	});
+
+	// Red: graduated cards silently used the stale-schema 1:1 fallback.
+	// Green: configured graduated cards fail closed while absent mappings still fall back.
+	test("graduated schemas fail instead of falling back to 1", () => {
+		const deduction: FeatureDeduction = { feature: messages, deduction: 10 };
+
+		expect(() =>
+			computeCreditCosts({
+				cusEnts: [makeCusEnt("ce_graduated", graduatedCredits)],
+				deduction,
+			}),
+		).toThrow("Graduated credit rating is not supported yet");
 	});
 });
