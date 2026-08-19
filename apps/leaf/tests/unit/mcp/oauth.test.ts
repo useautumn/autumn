@@ -38,8 +38,9 @@ const unusedDb = oauthTokenDb(undefined);
 const resourceUrl = "http://localhost:2718/mcp";
 const internalResourceUrl = "http://localhost:2718/internal/mcp";
 
+/** Omitting `error` is the RFC 6750 §3.1 challenge for a request with no credentials. */
 const expectedChallenge = ({
-	error = "invalid_token",
+	error,
 	resourcePath,
 }: {
 	error?: string;
@@ -48,7 +49,7 @@ const expectedChallenge = ({
 	[
 		`Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource${resourcePath}"`,
 		`scope="${DEFAULT_OAUTH_RESOURCE_SCOPES.join(" ")}"`,
-		`error="${error}"`,
+		...(error ? [`error="${error}"`] : []),
 	].join(", ");
 
 describe("MCP OAuth auth resolution", () => {
@@ -62,7 +63,7 @@ describe("MCP OAuth auth resolution", () => {
 		).toEqual([...DEFAULT_OAUTH_RESOURCE_SCOPES]);
 	});
 
-	test("returns a WWW-Authenticate challenge without a bearer token", async () => {
+	test("challenges a request with no credentials without an error code", async () => {
 		await expect(
 			buildAuthForRequest({
 				headers: new Headers(),
@@ -73,7 +74,6 @@ describe("MCP OAuth auth resolution", () => {
 			}),
 		).rejects.toMatchObject({
 			status: 401,
-			error: "invalid_token",
 			wwwAuthenticate: expectedChallenge({ resourcePath: "/mcp" }),
 		} satisfies Partial<OAuthHttpError>);
 	});
@@ -89,8 +89,26 @@ describe("MCP OAuth auth resolution", () => {
 			}),
 		).rejects.toMatchObject({
 			status: 401,
-			error: "invalid_token",
 			wwwAuthenticate: expectedChallenge({ resourcePath: "/internal/mcp" }),
+		} satisfies Partial<OAuthHttpError>);
+	});
+
+	test("keeps the error code on a challenge for a token that was presented", async () => {
+		await expect(
+			buildAuthForRequest({
+				headers: new Headers({ authorization: "Bearer not_an_autumn_token" }),
+				db: unusedDb,
+				flags: flags as MCPOAuthFlags,
+				logger,
+				resourceUrl,
+			}),
+		).rejects.toMatchObject({
+			status: 401,
+			error: "invalid_token",
+			wwwAuthenticate: expectedChallenge({
+				error: "invalid_token",
+				resourcePath: "/mcp",
+			}),
 		} satisfies Partial<OAuthHttpError>);
 	});
 
@@ -258,7 +276,10 @@ describe("MCP OAuth auth resolution", () => {
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
-			wwwAuthenticate: expectedChallenge({ resourcePath: "/mcp" }),
+			wwwAuthenticate: expectedChallenge({
+				error: "invalid_token",
+				resourcePath: "/mcp",
+			}),
 		} satisfies Partial<OAuthHttpError>);
 	});
 
@@ -293,7 +314,10 @@ describe("MCP OAuth auth resolution", () => {
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
-			wwwAuthenticate: expectedChallenge({ resourcePath: "/mcp" }),
+			wwwAuthenticate: expectedChallenge({
+				error: "invalid_token",
+				resourcePath: "/mcp",
+			}),
 		} satisfies Partial<OAuthHttpError>);
 	});
 

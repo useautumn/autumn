@@ -31,12 +31,15 @@ import { OAuthHttpError } from "./protectedResourceMetadata.js";
 /**
  * The transport cannot know which tool a session will reach, so every challenge
  * names the full advertised set and one step-up authorization covers them all.
+ *
+ * `error` is omitted for a request that presented no credentials at all: RFC
+ * 6750 §3.1 reserves the error codes for a request that did present a token.
  */
 const buildChallenge = ({
 	error,
 	resourceUrl,
 }: {
-	error: string;
+	error?: string;
 	resourceUrl: string;
 }) =>
 	getWwwAuthenticateHeader({
@@ -300,7 +303,7 @@ export const buildAuthForRequest = async ({
 			401,
 			"Missing Autumn API key bearer token",
 			"invalid_token",
-			buildChallenge({ error: "invalid_token", resourceUrl }),
+			buildChallenge({ resourceUrl }),
 		);
 	}
 

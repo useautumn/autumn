@@ -282,7 +282,8 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 			challenge.response.headers.get("www-authenticate") ?? "";
 		expect(wwwAuthenticate).toContain("resource_metadata=");
 		expect(wwwAuthenticate).toContain("scope=");
-		expect(wwwAuthenticate).toContain('error="invalid_token"');
+		// RFC 6750 §3.1: no error code for a request that presented no credentials.
+		expect(wwwAuthenticate).not.toContain("error=");
 
 		const metadataUrl = wwwAuthenticate.match(
 			/resource_metadata="([^"]+)"/,
