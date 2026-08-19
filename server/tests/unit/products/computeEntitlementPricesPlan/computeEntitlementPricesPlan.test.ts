@@ -632,14 +632,29 @@ describe("computeEntitlementPricesPlan", () => {
 		expect(itemsOnly.prices.new).toEqual([]);
 	});
 
-	test("add_items is not implemented yet", () => {
+	test("add_items (PATCH-style) creates the new row", () => {
+		const plan = computeEntitlementPricesPlan({
+			ctx,
+			params: {
+				mode: { type: "update", protectReferencedRows: false },
+				product,
+				customize: { add_items: [freeMessagesItem()] },
+			},
+		});
+		expect(plan.entitlements.new).toHaveLength(1);
+	});
+
+	test("items (PUT) cannot combine with add_items (PATCH)", () => {
 		expect(() =>
 			computeEntitlementPricesPlan({
 				ctx,
 				params: {
 					mode: { type: "update", protectReferencedRows: false },
 					product,
-					customize: { add_items: [freeMessagesItem()] },
+					customize: {
+						items: [freeMessagesItem()],
+						add_items: [freeMessagesItem()],
+					},
 				},
 			}),
 		).toThrow(RecaseError);

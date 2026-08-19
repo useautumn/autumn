@@ -22,14 +22,10 @@ const stringArraysEqualUnordered = (
 	);
 };
 
-const displaysEqual = (left: FeatureDisplay, right: FeatureDisplay) => {
-	if (!left && !right) return true;
-	if (!left || !right) return false;
-	return (
-		(left.singular ?? null) === (right.singular ?? null) &&
-		(left.plural ?? null) === (right.plural ?? null)
-	);
-};
+// Absent display and an all-empty display object are the same "no display".
+const displaysEqual = (left: FeatureDisplay, right: FeatureDisplay) =>
+	(left?.singular ?? null) === (right?.singular ?? null) &&
+	(left?.plural ?? null) === (right?.plural ?? null);
 
 const creditSchemasEqual = (left: CreditSchema, right: CreditSchema) => {
 	const leftEntries = left ?? [];

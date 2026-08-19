@@ -41,6 +41,7 @@ describe("PlanFilter.version — customer-rooted compilation", () => {
 					SELECT 1
 					FROM customer_products cp JOIN products p ON p.internal_id = cp.internal_product_id
 					WHERE cp.internal_customer_id = c.internal_id
+						AND cp.customer_license_link_id IS NULL
 						AND ${PLAN_AMBIENT}
 						AND p.version = ?
 				)
@@ -67,6 +68,7 @@ describe("PlanFilter.version — customer-rooted compilation", () => {
 					SELECT 1
 					FROM customer_products cp JOIN products p ON p.internal_id = cp.internal_product_id
 					WHERE cp.internal_customer_id = c.internal_id
+						AND cp.customer_license_link_id IS NULL
 						AND ${PLAN_AMBIENT}
 						AND p.version >= ?
 				)
@@ -93,6 +95,7 @@ describe("PlanFilter.version — customer-rooted compilation", () => {
 					SELECT 1
 					FROM customer_products cp JOIN products p ON p.internal_id = cp.internal_product_id
 					WHERE cp.internal_customer_id = c.internal_id
+						AND cp.customer_license_link_id IS NULL
 						AND ${PLAN_AMBIENT}
 						AND p.version < ?
 				)
@@ -119,6 +122,7 @@ describe("PlanFilter.version — customer-rooted compilation", () => {
 					SELECT 1
 					FROM customer_products cp JOIN products p ON p.internal_id = cp.internal_product_id
 					WHERE cp.internal_customer_id = c.internal_id
+						AND cp.customer_license_link_id IS NULL
 						AND ${PLAN_AMBIENT}
 						AND p.version IN (?, ?)
 				)
@@ -146,6 +150,7 @@ describe("PlanFilter.version — customer-rooted compilation", () => {
 					SELECT 1
 					FROM customer_products cp JOIN products p ON p.internal_id = cp.internal_product_id
 					WHERE cp.internal_customer_id = c.internal_id
+						AND cp.customer_license_link_id IS NULL
 						AND ${PLAN_AMBIENT}
 						AND (p.version >= ? AND p.version <= ?)
 				)

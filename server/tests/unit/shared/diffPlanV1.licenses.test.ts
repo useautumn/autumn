@@ -121,45 +121,34 @@ describe("diffPlanV1 licenses — empty / identity", () => {
 	});
 });
 
-describe("diffPlanV1 licenses — add / remove", () => {
-	test("new license → upsert next link state", () => {
+// Added and removed links are link lifecycle, not plan terms — the diff only
+// carries changes to links present on both sides.
+describe("diffPlanV1 licenses — add / remove are link lifecycle", () => {
+	test("new license → no lane", () => {
 		const seat = license({
 			license_plan_id: "seat",
 			included: 3,
 			customize: { price: monthPrice({ amount: 20 }) },
 		});
-		expect(diffOf({ from: [], to: [seat] })).toEqual({
-			upsert_licenses: [
-				{
-					license_plan_id: "seat",
-					included: 3,
-					prepaid_only: true,
-					customize: { price: monthPrice({ amount: 20 }) },
-				},
-			],
-		});
+		expect(diffOf({ from: [], to: [seat] })).toEqual({});
 	});
 
-	test("dropped license → remove_licenses only", () => {
+	test("dropped license → no lane", () => {
 		expect(
 			diffOf({
 				from: [license({ license_plan_id: "seat" })],
 				to: [],
 			}),
-		).toEqual({
-			remove_licenses: [{ license_plan_id: "seat" }],
-		});
+		).toEqual({});
 	});
 
-	test("swap A for B → remove A + upsert B", () => {
-		const diff = diffOf({
-			from: [license({ license_plan_id: "seat" })],
-			to: [license({ license_plan_id: "pack", included: 5 })],
-		});
-		expect(diff.remove_licenses).toEqual([{ license_plan_id: "seat" }]);
-		expect(diff.upsert_licenses).toEqual([
-			{ license_plan_id: "pack", included: 5, prepaid_only: true },
-		]);
+	test("swap A for B → no lane (both are lifecycle)", () => {
+		expect(
+			diffOf({
+				from: [license({ license_plan_id: "seat" })],
+				to: [license({ license_plan_id: "pack", included: 5 })],
+			}),
+		).toEqual({});
 	});
 
 	test("same id never appears in both lanes", () => {
@@ -256,7 +245,7 @@ describe("diffPlanV1 licenses — field changes", () => {
 });
 
 describe("diffPlanV1 licenses — mixed set", () => {
-	test("one added, one removed, one changed, one same", () => {
+	test("one added, one removed, one changed, one same → only the change upserts", () => {
 		const diff = diffOf({
 			from: [
 				license({ license_plan_id: "keep" }),
@@ -269,9 +258,8 @@ describe("diffPlanV1 licenses — mixed set", () => {
 				license({ license_plan_id: "add", included: 1 }),
 			],
 		});
-		expect(diff.remove_licenses).toEqual([{ license_plan_id: "drop" }]);
+		expect(diff.remove_licenses).toBeUndefined();
 		expect(diff.upsert_licenses).toEqual([
-			{ license_plan_id: "add", included: 1, prepaid_only: true },
 			{ license_plan_id: "edit", included: 9, prepaid_only: true },
 		]);
 	});
@@ -279,21 +267,17 @@ describe("diffPlanV1 licenses — mixed set", () => {
 	test("lanes are sorted by license_plan_id", () => {
 		const diff = diffOf({
 			from: [
-				license({ license_plan_id: "zeta" }),
-				license({ license_plan_id: "alpha" }),
+				license({ license_plan_id: "zeta", included: 2 }),
+				license({ license_plan_id: "alpha", included: 2 }),
 			],
 			to: [
-				license({ license_plan_id: "beta" }),
-				license({ license_plan_id: "mu" }),
+				license({ license_plan_id: "zeta", included: 9 }),
+				license({ license_plan_id: "alpha", included: 9 }),
 			],
 		});
-		expect(diff.remove_licenses?.map((entry) => entry.license_plan_id)).toEqual([
+		expect(diff.upsert_licenses?.map((entry) => entry.license_plan_id)).toEqual([
 			"alpha",
 			"zeta",
-		]);
-		expect(diff.upsert_licenses?.map((entry) => entry.license_plan_id)).toEqual([
-			"beta",
-			"mu",
 		]);
 	});
 });
@@ -307,11 +291,10 @@ describe("diffPlanV1 licenses — applyDiff round-trip", () => {
 		expect(result).not.toHaveProperty("licenses");
 	});
 
-	test("add / remove / change reconstructs the to set", () => {
+	test("field changes reconstruct the to set (lifecycle is not diffed)", () => {
 		const from = makePlan({
 			licenses: [
 				license({ license_plan_id: "keep" }),
-				license({ license_plan_id: "drop" }),
 				license({ license_plan_id: "edit", included: 2 }),
 			],
 		});
@@ -319,7 +302,6 @@ describe("diffPlanV1 licenses — applyDiff round-trip", () => {
 			licenses: [
 				license({ license_plan_id: "keep" }),
 				license({ license_plan_id: "edit", included: 9 }),
-				license({ license_plan_id: "add", included: 1 }),
 			],
 		});
 		const reconstructed = applyDiff({
