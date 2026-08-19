@@ -12,6 +12,7 @@ import {
 } from "../../agentRuntime/eve/parkedInput.js";
 import { getEveSessionBySessionId } from "../../agentRuntime/eve/repo.js";
 import type { EveAuthContext } from "../../agentRuntime/eve/types.js";
+import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 import type { ApprovalRunResult } from "../types.js";
 import { createChainedApproval } from "./createChainedApproval.js";
 
@@ -31,10 +32,11 @@ const approvalAuth = ({
 	workspaceId: approval.workspace_id,
 });
 
-const GROUP_RENDERING_PROVIDERS: ReadonlySet<string> = new Set(["slack"]);
-
+/** Slack cards render every write in a parked batch, so approving the card
+ * approves the group; the dashboard shows the primary write alone. Internal
+ * Slack threads use the `slack_admin:<client>` provider and the same card. */
 const surfaceRendersGroup = (provider: string) =>
-	GROUP_RENDERING_PROVIDERS.has(provider);
+	provider === "slack" || isInternalAutumnSlackProvider({ provider });
 
 export const submitApprovalInput = async ({
 	approval,
@@ -122,6 +124,7 @@ export const submitApprovalInput = async ({
 			data: { session_id: session.sessionId, tool: approval.tool_name },
 		});
 		return {
+			chainedApprovalId,
 			error: true,
 			message: text || ACTION_FAILED_MESSAGE,
 			retryable: false,
