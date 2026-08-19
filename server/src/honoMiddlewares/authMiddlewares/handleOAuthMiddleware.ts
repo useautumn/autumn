@@ -1,5 +1,10 @@
 import { stripOAuthTokenPrefix } from "@autumn/auth";
-import { isUnrestrictedChatOAuthConsent } from "@autumn/auth/oauth";
+import {
+	getProtectedResourceMetadataUrl,
+	getWwwAuthenticateHeader,
+	isUnrestrictedChatOAuthConsent,
+} from "@autumn/auth/oauth";
+import { getAutumnEnv } from "@autumn/env";
 import {
 	AppEnv,
 	AuthType,
@@ -19,8 +24,42 @@ import { and, eq, gt, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { isServedOAuthAudience } from "@/internal/auth/oauth/oauthResourceAudiences.js";
 
 const masterOrg = alias(organizations, "master_org");
+
+/**
+ * RFC 8707 audience binding: a grant stamped for an audience no Autumn resource
+ * server fronts is refused here rather than honoured as a bearer token.
+ *
+ * This is the one 401 in this middleware that carries a challenge, because it is
+ * the one an otherwise well-formed client can recover from by re-authorizing
+ * against the right resource.
+ */
+const assertTokenAudienceIsServed = ({
+	c,
+	grantResource,
+}: {
+	c: Context<HonoEnv>;
+	grantResource: string | null;
+}) => {
+	if (isServedOAuthAudience({ grantResource })) return;
+
+	c.header(
+		"WWW-Authenticate",
+		getWwwAuthenticateHeader({
+			error: "invalid_token",
+			resourceMetadataUrl: getProtectedResourceMetadataUrl({
+				resourceUrl: getAutumnEnv().AUTUMN_API_URL,
+			}),
+		}),
+	);
+	throw new RecaseError({
+		message: "OAuth token was not issued for this resource",
+		code: ErrCode.InvalidRequest,
+		statusCode: 401,
+	});
+};
 
 const getOAuthEnvironment = ({ env }: { env?: AppEnv | null }) => {
 	if (env === AppEnv.Live || env === AppEnv.Sandbox) return env;
@@ -66,6 +105,7 @@ const getOAuthRequestContext = async ({
 	const rows = await ctx.db
 		.select({
 			tokenUserId: oauthAccessToken.userId,
+			tokenResource: oauthAccessToken.resource,
 			tokenScopes: oauthAccessToken.scopes,
 			consentEnv: oauthConsent.env,
 			consentMetadata: oauthConsent.metadata,
@@ -105,6 +145,8 @@ const getOAuthRequestContext = async ({
 			statusCode: 401,
 		});
 	}
+
+	assertTokenAudienceIsServed({ c, grantResource: first.tokenResource });
 
 	const env = getOAuthEnvironment({ env: first.consentEnv });
 	if (!first.tokenUserId) {

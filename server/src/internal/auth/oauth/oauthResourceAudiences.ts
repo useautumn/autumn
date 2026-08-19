@@ -1,3 +1,4 @@
+import { oauthAudienceAllowsResource } from "@autumn/auth/oauth";
 import { getAutumnEnv } from "@autumn/env";
 import { logger } from "@/external/logtail/logtailUtils.js";
 
@@ -75,3 +76,21 @@ export const getMcpOAuthResourceUrls = (): string[] => {
 export const getOAuthValidAudiences = (): string[] => [
 	...new Set([getAutumnEnv().AUTUMN_API_URL, ...getMcpOAuthResourceUrls()]),
 ];
+
+/**
+ * Whether a grant's stamped audience is one this deployment serves at all.
+ *
+ * Deliberately wider than a single resource identifier: an MCP tool call reaches
+ * the api carrying the client's own token, which is stamped for the `/mcp`
+ * endpoint the client authorized against, never for the api origin. Narrowing
+ * this to the api's own identifier would 401 every MCP tool call, so the check
+ * rejects only audiences no Autumn resource server fronts.
+ */
+export const isServedOAuthAudience = ({
+	grantResource,
+}: {
+	grantResource: string | null | undefined;
+}): boolean =>
+	getOAuthValidAudiences().some((audience) =>
+		oauthAudienceAllowsResource({ grantResource, resourceUrl: audience }),
+	);
