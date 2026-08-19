@@ -6,7 +6,7 @@ import {
 	type EvalScorer,
 	scoresFromExpectations,
 } from "../utils/scorers.js";
-import { assertEvalPassed } from "./assertEvalPassed.js";
+import { assertEvalPassed, failEvalRun } from "./assertEvalPassed.js";
 import type { AutumnApiMockOverrides } from "./context/types.js";
 import {
 	createEvalContext,
@@ -72,6 +72,17 @@ export const approve = ({
 	type: "approve",
 });
 
+/** `Eval()` rejects as a whole when the evaluator times out; the CI gate
+ * must see that as a failure rather than a clean exit. */
+const runEval: typeof Eval = async (...args) => {
+	try {
+		return await Eval(...args);
+	} catch (error) {
+		failEvalRun({ error, experimentName: args[1].experimentName });
+		throw error;
+	}
+};
+
 export const initEval = async <Metadata extends EvalCaseMetadata>({
 	auth,
 	autumnApiOverrides,
@@ -81,7 +92,7 @@ export const initEval = async <Metadata extends EvalCaseMetadata>({
 	metadata,
 	scores,
 	setup,
-	timeout = 45_000,
+	timeout = Number(process.env.EVAL_TIMEOUT_MS) || 45_000,
 	today,
 	trace,
 }: InitEvalOptions<Metadata>) => {
@@ -90,7 +101,7 @@ export const initEval = async <Metadata extends EvalCaseMetadata>({
 	// so Braintrust only shows columns a case can actually fail.
 	const resolvedScores =
 		scores ?? scoresFromExpectations(cases.map((testCase) => testCase.expect));
-	const evaluation = await Eval<
+	const evaluation = await runEval<
 		InitEvalInput,
 		EvalRunResult,
 		EvalExpected,

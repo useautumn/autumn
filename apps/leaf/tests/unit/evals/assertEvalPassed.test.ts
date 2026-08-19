@@ -3,6 +3,7 @@ import {
 	assertEvalPassed,
 	evalFailures,
 	FAIL_ON_SCORE_ENV,
+	failEvalRun,
 } from "../../evals/harness/assertEvalPassed.js";
 
 const result = ({
@@ -74,6 +75,30 @@ describe("assertEvalPassed", () => {
 			evaluation: { results: [result({ caseName: "ok", scores: { a: 1 } })] },
 			experimentName: "x",
 		});
+		expect(process.exitCode ?? 0).toBe(0);
+	});
+});
+
+describe("failEvalRun", () => {
+	const originalEnv = process.env[FAIL_ON_SCORE_ENV];
+	afterEach(() => {
+		process.exitCode = 0;
+		if (originalEnv === undefined) delete process.env[FAIL_ON_SCORE_ENV];
+		else process.env[FAIL_ON_SCORE_ENV] = originalEnv;
+	});
+
+	test("fails the process when opted in and the run itself errored", () => {
+		process.env[FAIL_ON_SCORE_ENV] = "1";
+		failEvalRun({
+			error: new Error("Evaluator timed out"),
+			experimentName: "x",
+		});
+		expect(process.exitCode).toBe(1);
+	});
+
+	test("stays quiet unless opted in", () => {
+		delete process.env[FAIL_ON_SCORE_ENV];
+		failEvalRun({ error: new Error("boom"), experimentName: "x" });
 		expect(process.exitCode ?? 0).toBe(0);
 	});
 });

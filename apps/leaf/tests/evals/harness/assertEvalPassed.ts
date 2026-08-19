@@ -49,3 +49,16 @@ export const assertEvalPassed = ({
 	console.error(`[eval] ${experimentName} failed:\n${lines.join("\n")}`);
 	process.exitCode = 1;
 };
+
+/** The whole run failed before scoring (e.g. the evaluator timed out). */
+export const failEvalRun = ({
+	error,
+	experimentName,
+}: {
+	error: unknown;
+	experimentName?: string;
+}) => {
+	if (!process.env[FAIL_ON_SCORE_ENV]) return;
+	console.error(`[eval] ${experimentName ?? "eval"} failed: ${String(error)}`);
+	process.exitCode = 1;
+};
