@@ -1,6 +1,7 @@
 import { discardApproval } from "../../../internal/approvals/actions/discardApproval.js";
 import { resolveApproval } from "../../../internal/approvals/actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
+import { WEB_CHAT_PROVIDER } from "../../../internal/installations/actions/ensureWebChatAuth.js";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
 
@@ -21,7 +22,13 @@ export const decideWebApproval = async ({
 	providerUserId: string;
 }): Promise<WebApprovalDecision> => {
 	const approval = await chatApprovalRepo.get({ approvalId, db });
-	if (!approval || approval.org_id !== orgId) {
+	// The dashboard renders only its own approvals (and only a group's primary
+	// write), so it must not decide cards another surface showed.
+	if (
+		!approval ||
+		approval.org_id !== orgId ||
+		approval.provider !== WEB_CHAT_PROVIDER
+	) {
 		return { error: "Approval not found" };
 	}
 	if (approval.status !== "pending") {
