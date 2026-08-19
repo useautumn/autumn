@@ -265,6 +265,8 @@ export const createPlanMigrationDraft = async ({
 		const baseUsage = await customerProductRepo.getVersioningUsageForProduct({
 			db: ctx.db,
 			internalProductId: current.internal_id,
+			orgId: ctx.org.id,
+			env: ctx.env,
 			excludeLicenseAssignments: true,
 		});
 		const targets = [
@@ -297,6 +299,8 @@ export const createPlanMigrationDraft = async ({
 	const usageByProduct = await customerProductRepo.getVersioningUsage({
 		db: ctx.db,
 		internalProductIds: baseVersions.map((product) => product.internal_id),
+		orgId: ctx.org.id,
+		env: ctx.env,
 		excludeLicenseAssignments: true,
 	});
 

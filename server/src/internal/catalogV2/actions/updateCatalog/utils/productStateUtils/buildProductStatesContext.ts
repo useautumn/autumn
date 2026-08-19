@@ -5,8 +5,8 @@ import type {
 	ProductStatesContext,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import {
-	type CustomerProductVersioningUsage,
-	emptyVersioningUsage,
+	type CustomerProductVersioningFlags,
+	emptyVersioningFlags,
 } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
 
 /** One ProductState per existing productKey, plus plan-scoped indexes. */
@@ -18,7 +18,7 @@ export const buildProductStatesContext = ({
 }: {
 	planIds: string[];
 	versionsByPlanId: Map<string, FullProduct[]>;
-	usageByInternalId: Map<string, CustomerProductVersioningUsage>;
+	usageByInternalId: Map<string, CustomerProductVersioningFlags>;
 	rewardProgramsByPlanId: Map<string, RewardProgram[]>;
 }): ProductStatesContext => {
 	const statesByPlanVersion: Record<string, ProductState> = {};
@@ -39,7 +39,7 @@ export const buildProductStatesContext = ({
 				currentFullProduct,
 				customerUsage:
 					usageByInternalId.get(currentFullProduct.internal_id) ??
-					emptyVersioningUsage(),
+					emptyVersioningFlags(),
 			};
 		}
 	}

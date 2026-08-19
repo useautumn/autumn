@@ -46,6 +46,8 @@ export const handlePlanHasCustomersV2 = createRoute({
 			await customerProductRepo.getVersioningUsageForProduct({
 				db,
 				internalProductId: product.internal_id,
+				orgId: org.id,
+				env,
 			});
 
 		// V2.0+ (CLI): body is CreatePlanParams, convert to ProductV2
