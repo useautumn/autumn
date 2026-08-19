@@ -5,6 +5,7 @@ import {
 	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/v2/compute/computeAutumnUtils/applyBillingCycleAnchorToSharedSubscription";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { computeAttachPooledBalancePlan } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalancePlan";
@@ -170,6 +171,13 @@ export const computeAttachPlan = ({
 		plan,
 		attachBillingContext,
 		params,
+	});
+	plan = applyBillingCycleAnchorToSharedSubscription({
+		plan,
+		billingContext: attachBillingContext,
+		stripeSubscriptionId:
+			attachBillingContext.stripeSubscription?.id ??
+			attachBillingContext.currentCustomerProduct?.subscription_ids?.[0],
 	});
 	plan.balanceTransitionPlan = computeAttachBalanceTransitionPlan({
 		attachBillingContext,

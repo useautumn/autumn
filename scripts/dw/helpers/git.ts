@@ -1,5 +1,5 @@
-import { sh, fatal } from "./shell.ts";
 import { PROJECT_ROOT } from "../constants.ts";
+import { fatal, sh } from "./shell.ts";
 
 export function getWorktreeList(): string[] {
 	const res = sh("git", ["worktree", "list", "--porcelain"], {
@@ -25,12 +25,13 @@ export function getCurrentWorktree(): string {
 	return res.stdout;
 }
 
-export function getCurrentBranch(): string {
-	const res = sh("git", ["branch", "--show-current"], { cwd: PROJECT_ROOT });
-	if (res.code !== 0 || !res.stdout) {
-		fatal("could not determine current git branch");
-	}
-	return res.stdout;
+export function getCurrentBranch({
+	cwd = PROJECT_ROOT,
+}: {
+	cwd?: string;
+} = {}): string | undefined {
+	const res = sh("git", ["branch", "--show-current"], { cwd });
+	return res.code === 0 && res.stdout ? res.stdout : undefined;
 }
 
 export function getDefaultBranch(): string {

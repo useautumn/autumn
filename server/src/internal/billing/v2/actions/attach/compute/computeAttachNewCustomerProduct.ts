@@ -8,6 +8,7 @@ import {
 	isFutureStartDate,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
 import { initFullCustomerProductWithBalanceTransitions } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
@@ -53,23 +54,6 @@ export const resolveAttachExistingUsagesConfig = ({
 	};
 };
 
-const getScheduledBillingCycleAnchorResetAt = ({
-	requestedBillingCycleAnchor,
-	currentEpochMs,
-}: {
-	requestedBillingCycleAnchor?: number | "now";
-	currentEpochMs: number;
-}) => {
-	if (
-		typeof requestedBillingCycleAnchor === "number" &&
-		requestedBillingCycleAnchor > currentEpochMs
-	) {
-		return requestedBillingCycleAnchor;
-	}
-
-	return null;
-};
-
 /**
  * Creates the new FullCusProduct to insert when attaching a product.
  *
@@ -107,7 +91,6 @@ const computeAttachNewCustomerProductResult = ({
 		billingVersion,
 		transitionConfig,
 		externalId,
-		requestedBillingCycleAnchor,
 		resetCycleAnchorMs,
 		accessStartsAt,
 		billingStartsAt,
@@ -180,9 +163,9 @@ const computeAttachNewCustomerProductResult = ({
 			collectionMethod,
 			externalId,
 			processorType: processorTypeOverride,
-			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
-				requestedBillingCycleAnchor,
-				currentEpochMs,
+			billingCycleAnchorResetsAt: getRequestedBillingCycleAnchorResetAt({
+				requestedBillingCycleAnchor:
+					attachBillingContext.requestedBillingCycleAnchor,
 			}),
 			...(isRevertTrial && {
 				previousCustomerProductId: currentCustomerProduct?.id,

@@ -5,6 +5,8 @@ import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 const writePreviewTools: Record<string, string> = {
 	attach: "previewAttach",
 	createBalance: "previewCreateBalance",
+	createPlan: "previewUpdateCatalog",
+	createReward: "previewUpdateCatalog",
 	createSchedule: "previewCreateSchedule",
 	updatePlan: "previewUpdateCatalog",
 	updateCatalog: "previewUpdateCatalog",

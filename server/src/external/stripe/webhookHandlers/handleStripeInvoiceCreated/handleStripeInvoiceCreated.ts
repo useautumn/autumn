@@ -4,6 +4,7 @@ import {
 	storeRenewalLineItems,
 	upsertAutumnInvoice,
 } from "@/external/stripe/webhookHandlers/common";
+import { consumeBillingCycleAnchorReset } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/consumeBillingCycleAnchorReset";
 import { processAllocatedPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processAllocatedPricesForInvoiceCreated";
 import { processPrepaidPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processPrepaidPricesForInvoiceCreated";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
@@ -37,6 +38,7 @@ export const handleStripeInvoiceCreated = async ({
 	await processPrepaidPricesForInvoiceCreated({ ctx, eventContext });
 	await processAllocatedPricesForInvoiceCreated({ ctx, eventContext });
 	await resetSubscriptionPooledBalances({ ctx, eventContext });
+	await consumeBillingCycleAnchorReset({ ctx, eventContext });
 
 	const shouldStoreScheduleProrationInvoice =
 		eventContext.stripeInvoice.billing_reason === "subscription_update" &&

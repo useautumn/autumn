@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { resolveCoupon } from "@/external/stripe/coupons";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { rewardActions } from "@/internal/rewards/actions/index.js";
@@ -45,14 +46,7 @@ export const handleAddCouponToCusV2 = createRoute({
 			throw new CustomerNotFoundError({ customerId: customer_id });
 		}
 
-		if (!coupon) {
-			throw new RecaseError({
-				message: `Coupon ${coupon_id} not found`,
-				statusCode: 404,
-			});
-		}
-
-		if (coupon.type === RewardType.FeatureGrant) {
+		if (coupon?.type === RewardType.FeatureGrant) {
 			if (!promo_code) {
 				throw new RecaseError({
 					message: "Promo code is required for feature grant rewards",
@@ -71,7 +65,14 @@ export const handleAddCouponToCusV2 = createRoute({
 			return c.json({ customer, coupon });
 		}
 
-		const stripeCli = createStripeCli({
+		// Autumn reward ids double as Stripe coupon ids, so a single Stripe
+		// lookup covers both Autumn rewards and Stripe-only coupons.
+		const { source } = await resolveCoupon({
+			stripeCli: createStripeCli({ org, env }),
+			couponId: coupon?.id ?? coupon_id,
+		});
+
+		const legacyStripeCli = createStripeCli({
 			org,
 			env,
 			legacyVersion: true,
@@ -83,14 +84,14 @@ export const handleAddCouponToCusV2 = createRoute({
 		});
 
 		// Attach coupon to customer
-		await stripeCli.rawRequest(
+		await legacyStripeCli.rawRequest(
 			"POST",
 			`/v1/customers/${customer.processor.id}`,
 			{
-				coupon: coupon.id,
+				coupon: source.coupon.id,
 			},
 		);
 
-		return c.json({ customer, coupon });
+		return c.json({ customer, coupon: coupon ?? source.coupon });
 	},
 });

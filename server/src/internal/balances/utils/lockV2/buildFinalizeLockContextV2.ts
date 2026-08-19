@@ -61,6 +61,9 @@ export const buildFinalizeLockContextV2 = async ({
 		finalValue,
 	});
 
+	// Expiry-triggered finalizes send no properties, so fall back to the check's.
+	const eventProperties = params.properties ?? receipt.properties ?? undefined;
+
 	const feature = findFeatureById({
 		features: ctx.features,
 		featureId: receipt.feature_id,
@@ -77,7 +80,7 @@ export const buildFinalizeLockContextV2 = async ({
 		finalValue,
 		unwindValue,
 		additionalValue,
-		properties: params.properties,
+		properties: eventProperties,
 		deduction: {
 			feature,
 			deduction: additionalValue,

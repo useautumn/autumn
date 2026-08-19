@@ -32,7 +32,11 @@ export type CustomerEntitlementDeduction = {
 	entity_feature_id: string | null;
 	usage_allowed: boolean;
 	min_balance: number | undefined;
-	max_balance: number;
+	max_balance: number | undefined;
+	// Unlimited entitlements act as an infinite sink: usage_allowed with no
+	// balance clamps in either direction, so balance drifts negative as a
+	// usage counter and refunds can move it back up freely.
+	unlimited?: boolean;
 };
 
 /** Rollover with credit cost for deduction */
@@ -55,12 +59,6 @@ export type PreparedFeatureDeduction = {
 	usageWindowFeatureIds?: string[];
 	// rolloverIds: string[];
 	rollovers: RolloverDeduction[];
-	unlimitedFeatureIds: string[];
-	// Chosen unlimited cusEnt to attribute events to when the deduction
-	// short-circuits via unlimitedFeatureIds. Prefers a cusEnt matching the
-	// tracked feature over a credit-system parent. Undefined when no
-	// unlimited cusEnt is present.
-	unlimitedCusEnt?: FullCusEntWithFullCusProduct;
 	lock?: {
 		enabled: true;
 		lock_id?: string;
@@ -69,5 +67,6 @@ export type PreparedFeatureDeduction = {
 		redis_receipt_key: string;
 		created_at: number;
 		ttl_at: number;
+		properties?: Record<string, unknown> | null;
 	};
 };

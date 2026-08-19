@@ -108,16 +108,13 @@ export const shouldRunBatchLane = async ({
 		products,
 		features: ctx.features,
 	});
-	if (!computed.computable) {
+	const notComputable = (rejections: BatchMigrationRejection[]) => {
 		ctx.logger.info("batch-migration: not computable, per-customer lane", {
-			data: { migrationRunId, rejections: computed.rejections },
+			data: { migrationRunId, rejections },
 		});
-		return {
-			shouldRun: false,
-			reason: "not_computable",
-			rejections: computed.rejections,
-		};
-	}
+		return { shouldRun: false, reason: "not_computable", rejections } as const;
+	};
+	if (!computed.computable) return notComputable(computed.rejections);
 	if (computed.plan.patches.length === 0)
 		return { shouldRun: false, reason: "no_batch_patches" };
 

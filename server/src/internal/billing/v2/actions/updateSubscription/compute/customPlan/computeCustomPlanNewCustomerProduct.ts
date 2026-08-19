@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCancelFields } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/computeCancelFields";
+import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { resolveUpdateExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveUpdateExistingUsagesConfig";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
@@ -84,6 +85,10 @@ export const computeCustomPlanNewCustomerProduct = ({
 
 		initOptions: {
 			isCustom: updateSubscriptionContext.isCustom,
+			billingCycleAnchorResetsAt: getRequestedBillingCycleAnchorResetAt({
+				requestedBillingCycleAnchor:
+					updateSubscriptionContext.requestedBillingCycleAnchor,
+			}),
 			subscriptionId: stripeSubscription?.id, // don't populate if it's starting in the future.
 			subscriptionScheduleId:
 				stripeSubscriptionSchedule?.id ??

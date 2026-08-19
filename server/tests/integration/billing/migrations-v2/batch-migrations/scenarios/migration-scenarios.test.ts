@@ -30,6 +30,16 @@ for (const scenario of MIGRATION_SCENARIOS) {
 
 		expect(outcome.lane).toBe(scenario.expect.lane);
 
+		for (const code of scenario.expect.rejections ?? []) {
+			expect({
+				scenario: scenario.name,
+				codes: outcome.rejectionCodes,
+			}).toEqual({
+				scenario: scenario.name,
+				codes: expect.arrayContaining([code]),
+			});
+		}
+
 		for (const [featureId, expected] of Object.entries(
 			scenario.expect.rowsPerTarget ?? {},
 		)) {

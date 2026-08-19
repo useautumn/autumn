@@ -6,6 +6,7 @@ import {
 	canonicalPoolOrderingSql,
 	poolLicensePlanSql,
 } from "../licensePoolSql.js";
+import { pageCustomerIdsCte } from "../utils/pageCustomerIdsSql.js";
 
 /** Granted stays derived: included moves, paid_quantity is billing-owned. */
 export const repointLicensePoolRows = async ({
@@ -25,21 +26,23 @@ export const repointLicensePoolRows = async ({
 		return { pools: 0, internalCustomerIds: [] };
 
 	const updated = await db.execute<{ internal_customer_id: string }>(sql`
+		WITH ${pageCustomerIdsCte({ internalCustomerIds })}
 		UPDATE customer_licenses AS pool
 		SET
 			plan_license_id = ${planLicenseId},
 			granted = target.included + pool.paid_quantity,
-			remaining = GREATEST(
+			remaining =
 				pool.remaining + ((target.included + pool.paid_quantity) - pool.granted),
-				0
-			),
 			updated_at = ${Date.now()}
-		FROM customer_products AS cp, plan_license AS target
+		FROM page, customer_products AS cp, plan_license AS target
 		WHERE cp.id = pool.parent_customer_product_id
 			AND target.id = ${planLicenseId}
 			AND ${poolLicensePlanSql({ licensePlanId })}
 			AND pool.plan_license_id IS DISTINCT FROM ${planLicenseId}
-			AND cp.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
+			-- Scoped on the pool as well as the parent: matching the license plan
+			-- alone spans every pool in the org, so the page must drive this scan.
+			AND pool.internal_customer_id = page.internal_customer_id
+			AND cp.internal_customer_id = page.internal_customer_id
 			AND ${operationScopeSql({ scope })}
 			AND pool.id = (
 				SELECT live.id

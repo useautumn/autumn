@@ -195,25 +195,25 @@ describe(chalk.yellowBright("CreateScheduleParamsV0Schema"), () => {
 		expect(parsed.phases[0]?.plans[0]?.entity_id).toBe("entity-1");
 	});
 
-	test("rejects per-plan scopes on a later phase", () => {
-		expect(() =>
-			CreateScheduleParamsV0Schema.parse({
-				customer_id: "cus_123",
-				phases: [
-					{
-						starts_at: "now",
-						plans: [{ plan_id: "pro" }],
+	test("accepts per-plan scopes on a later phase", () => {
+		const parsed = CreateScheduleParamsV0Schema.parse({
+			customer_id: "cus_123",
+			phases: [
+				{
+					starts_at: "now",
+					plans: [{ plan_id: "pro", entity_id: "entity-1" }],
+				},
+				{
+					starting_after: {
+						duration_type: StartingAfterDuration.Month,
+						duration_count: 1,
 					},
-					{
-						starting_after: {
-							duration_type: StartingAfterDuration.Month,
-							duration_count: 1,
-						},
-						plans: [{ plan_id: "premium", entity_id: "entity-1" }],
-					},
-				],
-			}),
-		).toThrow("Per-plan entity scopes are only allowed on the first phase");
+					plans: [{ plan_id: "premium", entity_id: "entity-1" }],
+				},
+			],
+		});
+
+		expect(parsed.phases[1]?.plans[0]?.entity_id).toBe("entity-1");
 	});
 
 	test("accepts now and relative phase timing", () => {

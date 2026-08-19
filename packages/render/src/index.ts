@@ -3,6 +3,7 @@ export {
 	type BillingChangeDisplay,
 	type BillingPreviewDisplay,
 	buildBillingPreviewDisplay,
+	buildPlanItemChangeDisplay,
 	type CustomizeDisplay,
 	type LineItemDisplay,
 	type MoneyDisplay,

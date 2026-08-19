@@ -50,4 +50,4 @@ jobs:
         run: cd vite && bunx tsc --noEmit
 
       - name: Build Vite
-        run: cd vite && bunx vite build
+        run: cd vite && bunx --bun vite build

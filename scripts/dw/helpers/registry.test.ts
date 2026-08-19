@@ -22,17 +22,25 @@ describe("wantsCanonicalProvision", () => {
 	test("Cloud agent never provisions Neon", () => {
 		delete process.env.DW_HEADLESS;
 		process.env.CLOUD_AGENT = "1";
-		expect(wantsCanonicalProvision("/workspace", "/workspace", "dev", "dev")).toBe(
-			false,
-		);
+		expect(
+			wantsCanonicalProvision("/workspace", "/workspace", "dev", "dev"),
+		).toBe(false);
+	});
+
+	test("Cloud detached HEAD does not require a branch", () => {
+		delete process.env.DW_HEADLESS;
+		process.env.CLOUD_AGENT = "1";
+		expect(
+			wantsCanonicalProvision("/workspace", "/workspace", undefined, "dev"),
+		).toBe(false);
 	});
 
 	test("legacy DW_HEADLESS still skips Neon", () => {
 		delete process.env.CLOUD_AGENT;
 		process.env.DW_HEADLESS = "1";
 		expect(isCloudAgent()).toBe(true);
-		expect(wantsCanonicalProvision("/workspace", "/workspace", "dev", "dev")).toBe(
-			false,
-		);
+		expect(
+			wantsCanonicalProvision("/workspace", "/workspace", "dev", "dev"),
+		).toBe(false);
 	});
 });

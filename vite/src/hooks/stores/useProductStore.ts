@@ -118,6 +118,22 @@ export const useIsMetadataOnlyChange = () => {
 	}, [product, baseProduct, features]);
 };
 
+/** True when anything other than the base plan link changed. Linking never versions. */
+export const useHasContentChanges = () => {
+	const product = useProductStore((s) => s.product);
+	const baseProduct = useProductStore((s) => s.baseProduct);
+	const { features = [] } = useFeaturesQuery();
+
+	return useMemo(() => {
+		if (!baseProduct) return false;
+		return !productsAreSame({
+			newProductV2: product,
+			curProductV2: baseProduct,
+			features,
+		}).same;
+	}, [product, baseProduct, features]);
+};
+
 export const useHasBillingChanges = ({
 	baseProduct,
 	newProduct,

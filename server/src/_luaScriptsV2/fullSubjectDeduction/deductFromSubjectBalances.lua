@@ -381,6 +381,7 @@ then
       entity_id = target_entity_id or cjson.null,
       expires_at = lock.expires_at or cjson.null,
       created_at = lock.created_at or cjson.null,
+      properties = lock.properties or cjson.null,
     },
     mutation_logs = mutation_logs,
     ttl_at = lock.ttl_at or cjson.null,

@@ -9,10 +9,21 @@ export type ActionMessageContent = Parameters<
 	NonNullable<ActionEvent["adapter"]["editMessage"]>
 >[2];
 
+/** Outcome of one write on a grouped card, in apply order. */
+export type ApprovalStepOutcome = {
+	status: "applied" | "failed" | "pending";
+	toolName: string;
+};
+
 export type ApprovalRunResult =
 	// `retryable` means the write never ran to completion (a session crash /
 	// interruption), so the approval stays pending and the user can re-apply.
-	| { error: true; message: string; retryable?: boolean }
+	| {
+			error: true;
+			message: string;
+			retryable?: boolean;
+			steps?: ReadonlyArray<ApprovalStepOutcome>;
+	  }
 	| {
 			/** The resumed turn parked on another gated write — surfaces that mimic
 			 * chat (Slack) post this row's card; the dashboard picks it up by poll. */
@@ -26,6 +37,7 @@ export type ApprovalRunResult =
 				sessionId: string;
 			};
 			result: unknown;
+			steps?: ReadonlyArray<ApprovalStepOutcome>;
 			text: string;
 			toolName?: string;
 	  };

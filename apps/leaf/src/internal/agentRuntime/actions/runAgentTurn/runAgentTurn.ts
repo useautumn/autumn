@@ -56,7 +56,7 @@ export const runAgentTurn = async ({
 			context: ctx,
 		});
 		const session = await startAgentTurn({
-			auth,
+			auth: { ...auth, orgInstructions: orgContext?.instructions },
 			env,
 			message: buildAgentTurnMessage({
 				env,

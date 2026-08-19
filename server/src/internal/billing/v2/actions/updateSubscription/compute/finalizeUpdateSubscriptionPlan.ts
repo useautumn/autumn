@@ -4,35 +4,10 @@ import {
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { applyUpdateSubscriptionBillingCycleAnchor } from "@/internal/billing/v2/actions/updateSubscription/compute/applyUpdateSubscriptionBillingCycleAnchor";
 import { computeRefundPlan } from "@/internal/billing/v2/compute/finalize/computeRefundPlan";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
-import { customerProductToBillingCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
 import { finalizeUpdateSubscriptionPooledBalancePlan } from "./finalizeUpdateSubscriptionPooledBalancePlan";
-
-const applyAnchorResetCustomerProductUpdate = ({
-	plan,
-	billingContext,
-}: {
-	plan: AutumnBillingPlan;
-	billingContext: UpdateSubscriptionBillingContext;
-}): AutumnBillingPlan => {
-	if (billingContext.requestedBillingCycleAnchor !== "now") return plan;
-
-	return {
-		...plan,
-		updateCustomerProduct: {
-			customerProduct: billingContext.customerProduct,
-			updates: {
-				...plan.updateCustomerProduct?.updates,
-				billing_cycle_anchor: customerProductToBillingCycleAnchor({
-					customerProduct: billingContext.customerProduct,
-					billingCycleAnchor: billingContext.billingCycleAnchorMs,
-					now: billingContext.currentEpochMs,
-				}),
-			},
-		},
-	};
-};
 
 /**
  * Finalizes the update subscription billing plan by processing line items,
@@ -47,7 +22,7 @@ export const finalizeUpdateSubscriptionPlan = async ({
 	plan: AutumnBillingPlan;
 	billingContext: UpdateSubscriptionBillingContext;
 }): Promise<AutumnBillingPlan> => {
-	plan = applyAnchorResetCustomerProductUpdate({ plan, billingContext });
+	plan = applyUpdateSubscriptionBillingCycleAnchor({ plan, billingContext });
 
 	// Finalize line items (shared logic)
 	plan.lineItems = finalizeLineItems({

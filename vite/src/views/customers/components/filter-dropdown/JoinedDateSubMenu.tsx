@@ -133,13 +133,7 @@ export const JoinedDateSubMenu = ({ onChange }: { onChange?: () => void }) => {
 				className="flex items-center gap-2 cursor-pointer"
 				aria-label={label ? `Created At: ${label}` : "Created At"}
 			>
-				{label ? (
-					<span className="flex-1 min-w-0 truncate text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
-						{label}
-					</span>
-				) : (
-					"Created At"
-				)}
+				<span className="min-w-0 truncate">{label ?? "Created At"}</span>
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent className="p-0">
 				<Calendar

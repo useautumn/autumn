@@ -16,8 +16,11 @@ const dependencies = {
 	dispatch: dispatchSlackAgentMessage,
 	getRecentMessages,
 };
-const { handleSlackMessage, handleSubscribedSlackMessage } =
-	createSlackMessageHandlers(dependencies);
+const {
+	handleSlackMessage,
+	handleSlackThreadStart,
+	handleSubscribedSlackMessage,
+} = createSlackMessageHandlers(dependencies);
 
 const createMessage = ({ isBot = false }: { isBot?: boolean } = {}) =>
 	({
@@ -100,11 +103,25 @@ describe("handleSubscribedSlackMessage", () => {
 });
 
 describe("handleSlackMessage", () => {
+	test("shows a run plan when a new Slack thread starts", async () => {
+		disposition = "keep";
+		const { thread } = createThread();
+
+		await handleSlackThreadStart(thread, createMessage());
+
+		expect(dispatchSlackAgentMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ showRunPlan: true }),
+		);
+	});
+
 	test("unsubscribes when dispatch closes the thread", async () => {
 		const { thread, unsubscribe } = createThread();
 
 		await handleSlackMessage(thread, createMessage());
 
+		expect(dispatchSlackAgentMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ showRunPlan: false }),
+		);
 		expect(unsubscribe).toHaveBeenCalledTimes(1);
 	});
 

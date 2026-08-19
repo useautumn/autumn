@@ -298,6 +298,18 @@ export const billingPlanToNextCyclePreview = ({
 		ctx,
 		customerProducts: filteredCustomerProducts,
 		productsForUsageLineItems,
+		lineItemSpecs:
+			event.kind === "anchor_reset"
+				? [
+						{
+							customerProducts: filteredCustomerProducts,
+							direction: "charge",
+							billingCycleAnchorMs: nextCycleStart,
+							filterBillingPeriodStart: false,
+							priceFilters: { excludeOneOffPrices: true },
+						},
+					]
+				: undefined,
 		autumnBillingPlan: billingPlan.autumn,
 		billingContext: {
 			...lineItemsBillingContext,

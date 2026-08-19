@@ -49,6 +49,7 @@ export const operationTool = ({
 				auth: getAutumnAuth(context),
 				endpoint,
 				request: schema.parse(getRequest(input)),
+				retryable: !destructive || idempotent,
 				signal: signalOf(context),
 			}),
 	});
@@ -74,6 +75,7 @@ export const agentBillingPreviewTool = ({
 				auth,
 				endpoint: previewEndpoint,
 				request: parsedRequest,
+				retryable: true,
 				signal: signalOf(context),
 			});
 			await createPendingAction({

@@ -16,7 +16,12 @@ import {
 } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	rewardToOption,
+	stripeCouponToOption,
+} from "@/components/forms/attach-v2/utils/discountOptionUtils";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useStripeCouponsQuery } from "@/hooks/queries/useStripeCouponsQuery";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
@@ -35,7 +40,7 @@ export const AddCouponDialog = ({
 	const { stripeCus, cusRewardRefetch } = useCusReferralQuery();
 	const { customer, refetch } = useCusQuery();
 
-	const [couponSelected, setCouponSelected] = useState<Reward | null>(null);
+	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [promoCodeSelected, setPromoCodeSelected] = useState<string | null>(
 		null,
 	);
@@ -43,9 +48,26 @@ export const AddCouponDialog = ({
 	const axiosInstance = useAxiosInstance();
 
 	const { rewards } = useRewardsQuery();
+	const { stripeCoupons } = useStripeCouponsQuery();
+
+	// Stripe coupons are merged in so coupons created outside Autumn are
+	// selectable here, matching the subscription-level discount picker.
+	const rewardOptions = rewards
+		.filter((reward: Reward) => reward.type !== RewardType.FreeProduct)
+		.map(rewardToOption);
+
+	const rewardOptionIds = new Set(rewardOptions.map((option) => option.id));
+	const stripeOnlyOptions = stripeCoupons
+		.filter((coupon) => !rewardOptionIds.has(coupon.id))
+		.map(stripeCouponToOption);
+
+	const discountOptions = [...rewardOptions, ...stripeOnlyOptions];
+
+	const selectedReward = rewards.find((r: Reward) => r.id === selectedId);
+	const requiresPromoCode = selectedReward?.type === RewardType.FeatureGrant;
 
 	const resetSelection = () => {
-		setCouponSelected(null);
+		setSelectedId(null);
 		setPromoCodeSelected(null);
 	};
 
@@ -58,16 +80,15 @@ export const AddCouponDialog = ({
 	};
 
 	const handleAddClicked = async () => {
-		if (!couponSelected) return;
-		if (couponSelected.type === RewardType.FeatureGrant && !promoCodeSelected)
-			return;
+		if (!selectedId) return;
+		if (requiresPromoCode && !promoCodeSelected) return;
 
 		try {
 			setLoading(true);
 			await CusService.addCouponToCustomer({
 				axios: axiosInstance,
 				customer_id: customer.id,
-				coupon_id: couponSelected.internal_id,
+				coupon_id: selectedId,
 				promo_code: promoCodeSelected ?? undefined,
 			});
 			setOpen(false);
@@ -85,17 +106,15 @@ export const AddCouponDialog = ({
 
 	const getExistingCoupon = () => {
 		if (existingDiscount?.coupon?.id) {
-			return rewards.find(
-				(c: Reward) =>
-					c?.internal_id === getOriginalCouponId(existingDiscount.coupon.id),
+			const originalId = getOriginalCouponId(existingDiscount.coupon.id);
+			return discountOptions.find(
+				(option) => option.id === originalId || option.label === originalId,
 			);
 		}
 		return null;
 	};
 
-	if (!rewards) return null;
-
-	const promoCodeOptions = (couponSelected?.promo_codes || []).filter(
+	const promoCodeOptions = (selectedReward?.promo_codes || []).filter(
 		(promoCode) => promoCode.code,
 	);
 
@@ -116,39 +135,25 @@ export const AddCouponDialog = ({
 				)}
 				<div className="space-y-3">
 					<Select
-						value={couponSelected?.internal_id}
+						value={selectedId ?? undefined}
 						onValueChange={(value) => {
-							const coupon = rewards.find(
-								(c: Reward) => c.internal_id === value,
-							);
-
-							if (!coupon) return;
-
-							setCouponSelected(coupon);
+							setSelectedId(value);
 							setPromoCodeSelected(null);
 						}}
 						items={Object.fromEntries(
-							rewards
-								.filter((c: Reward) => c.type !== RewardType.FreeProduct)
-								.map((c: Reward) => [c.internal_id, c.name]),
+							discountOptions.map((option) => [option.id, option.label]),
 						)}
 					>
 						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Select Reward" />
 						</SelectTrigger>
 						<SelectContent>
-							{rewards && rewards.length > 0 ? (
-								rewards.map((coupon: Reward) => {
-									if (coupon.type === RewardType.FreeProduct) return null;
-									return (
-										<SelectItem
-											key={coupon.internal_id}
-											value={coupon.internal_id}
-										>
-											{coupon.name}
-										</SelectItem>
-									);
-								})
+							{discountOptions.length > 0 ? (
+								discountOptions.map((option) => (
+									<SelectItem key={option.id} value={option.id}>
+										{option.label}
+									</SelectItem>
+								))
 							) : (
 								<SelectItem value="none" disabled>
 									No coupons found
@@ -157,7 +162,7 @@ export const AddCouponDialog = ({
 						</SelectContent>
 					</Select>
 
-					{couponSelected?.type === RewardType.FeatureGrant && (
+					{requiresPromoCode && (
 						<Select
 							value={promoCodeSelected || undefined}
 							onValueChange={setPromoCodeSelected}
@@ -191,11 +196,7 @@ export const AddCouponDialog = ({
 					<ShortcutButton
 						variant="primary"
 						onClick={handleAddClicked}
-						disabled={
-							!couponSelected ||
-							(couponSelected.type === RewardType.FeatureGrant &&
-								!promoCodeSelected)
-						}
+						disabled={!selectedId || (requiresPromoCode && !promoCodeSelected)}
 						isLoading={loading}
 						metaShortcut="enter"
 						className="w-full"

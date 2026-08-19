@@ -2,7 +2,10 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv, ChatApproval, ChatInstallation } from "@autumn/shared";
 import type { Attachment } from "chat";
 import type { AgentTurnResult } from "../../../internal/agentRuntime/domain/agentTurn.js";
-import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
+import type {
+	AgentActionProgress,
+	AgentContextMessage,
+} from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import type { ActiveRun } from "../../../internal/runs/runRegistry.js";
 
 export type SlackChatInstallation = ChatInstallation & {
@@ -19,7 +22,7 @@ export type SlackAgentTurnParams = Readonly<{
 	clientContext?: Readonly<Record<string, unknown>>;
 	installation: SlackChatInstallation;
 	logger?: AutumnLogger;
-	onAction?: (message: string) => Promise<void> | void;
+	onAction?: (progress: AgentActionProgress | string) => Promise<void> | void;
 	onApprovalsSuperseded?: (approvals: ChatApproval[]) => Promise<void> | void;
 	onReasoning?: (input: { id: string; text: string }) => void;
 	onThinking?: () => void;

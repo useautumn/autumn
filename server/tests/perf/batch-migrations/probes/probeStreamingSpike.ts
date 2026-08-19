@@ -9,8 +9,8 @@
 
 import { MigrationItemRunStatus } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
-import { buildCustomerSelect } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
 import type { CustomerCheckpointExclusion } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
+import { buildCustomerSelect } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
 import {
 	BENCH_FREE_PRODUCT_ID,
 	BENCH_PAID_PRODUCT_ID,

@@ -5,6 +5,7 @@ import type {
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan.js";
 import { logUpdateSubscriptionContext } from "@/internal/billing/v2/actions/updateSubscription/logs/logUpdateSubscriptionContext.js";
+import { applyAutumnBillingPlanToFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer.js";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan.js";
 import { MigrationOperationError } from "../errors/index.js";
 import type { OperationProcessor } from "../types/index.js";
@@ -59,6 +60,7 @@ export const processUpdatePlan = async ({
 		});
 
 	let nextPlan = plan;
+	let nextProjectedFullCustomer = projectedFullCustomer;
 	const billingContexts: UpdateSubscriptionBillingContext[] = [];
 	let matchedCustomerProductCount = matchedCustomerProducts.length;
 
@@ -68,7 +70,7 @@ export const processUpdatePlan = async ({
 			context,
 			op,
 			opIndex,
-			projectedFullCustomer,
+			projectedFullCustomer: nextProjectedFullCustomer,
 			customerProduct,
 		});
 		if (!productContext) {
@@ -117,12 +119,16 @@ export const processUpdatePlan = async ({
 			base: nextPlan,
 			incoming: executablePlan,
 		});
+		nextProjectedFullCustomer = applyAutumnBillingPlanToFullCustomer({
+			fullCustomer: context.fullCustomer,
+			autumnBillingPlan: nextPlan,
+		});
 		billingContexts.push(productContext.billingContext);
 	}
 
 	return {
 		plan: nextPlan,
-		projectedFullCustomer,
+		projectedFullCustomer: nextProjectedFullCustomer,
 		matchedCustomerProducts: matchedCustomerProductCount,
 		billingContexts,
 	};

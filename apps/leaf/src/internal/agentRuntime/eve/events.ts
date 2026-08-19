@@ -5,7 +5,7 @@ import type {
 	EveInputRequest,
 } from "./eveEventSchemas.js";
 
-const labelForAction = (action?: EveAction) =>
+export const labelForAction = (action?: EveAction) =>
 	action?.toolName ??
 	action?.name ??
 	action?.subagentName ??

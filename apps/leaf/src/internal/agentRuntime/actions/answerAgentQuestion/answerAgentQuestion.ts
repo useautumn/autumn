@@ -28,7 +28,7 @@ export const answerAgentQuestion = async ({
 > => {
 	const session = await getEveSessionBySessionId({ db, orgId, sessionId });
 	if (!session) return { error: true, message: "Eve session not found." };
-	const { chained, chainedSiblingRequestIds, question, text } =
+	const { chained, chainedSiblingRequestIds, chainedWithheld, question, text } =
 		await submitAgentInput({
 			auth,
 			optionId,
@@ -43,6 +43,7 @@ export const answerAgentQuestion = async ({
 				providerUserId: auth.providerUserId,
 				sessionId: session.sessionId,
 				siblingRequestIds: chainedSiblingRequestIds,
+				withheld: chainedWithheld,
 			})
 		: undefined;
 	return { chainedApprovalId, question, sessionId: session.sessionId, text };

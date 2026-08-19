@@ -6,7 +6,7 @@ import { CurrencyCodeSchema } from "@api/products/components/additionalCurrencie
 import { z } from "zod/v4";
 import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
-import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
+import { ImmediateBillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import {
 	CustomizePlanV1BaseSchema,
 	refineCustomizePlanV1Schema,
@@ -40,7 +40,7 @@ export const CreateSchedulePlanSchema = z.object({
 	}),
 	entity_id: z.string().nullable().optional().meta({
 		description:
-			"The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID.",
+			"The plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID. On phases after the first, the entity must already be scoped by the first phase — a schedule cannot change scope mid-flight.",
 	}),
 	feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
 		description: "Optional prepaid feature quantities for this phase's plan.",
@@ -146,7 +146,7 @@ export const CreateScheduleParamsV0Schema = z
 		no_billing_changes: z.boolean().optional().meta({
 			description: "If true, skips any billing changes for the schedule.",
 		}),
-		billing_cycle_anchor: BillingCycleAnchorSchema.optional().meta({
+		billing_cycle_anchor: ImmediateBillingCycleAnchorSchema.optional().meta({
 			description:
 				"Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.",
 		}),
@@ -196,23 +196,6 @@ export const CreateScheduleParamsV0Schema = z
 					input: ctx.value,
 				});
 			}
-		}
-
-		// A schedule can't change scope mid-flight, so later phases inherit the
-		// opening phase's scopes rather than declaring their own.
-		const hasLaterPhaseScopes = ctx.value.phases
-			.slice(1)
-			.some((phase) =>
-				phase.plans.some((plan) => plan.entity_id !== undefined),
-			);
-		if (hasLaterPhaseScopes) {
-			ctx.issues.push({
-				code: "custom",
-				message: "Per-plan entity scopes are only allowed on the first phase",
-				path: ["phases"],
-				input: ctx.value,
-			});
-			return;
 		}
 
 		if (hasRelativeTiming) return;

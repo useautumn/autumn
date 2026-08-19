@@ -14,6 +14,7 @@ import { isStripeSubscriptionVercel } from "@/external/stripe/subscriptions/util
 import type { InvoiceCreatedContext } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/setupInvoiceCreatedContext";
 import { getCustomerPricesWithCustomerProducts } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/utils/getCustomerPricesWithCustomerProducts";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { clampNextResetAtToPendingBillingCycleAnchor } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
@@ -128,12 +129,17 @@ const processPrepaidPrice = async ({
 		});
 	}
 
+	const nextResetAt = clampNextResetAtToPendingBillingCycleAnchor({
+		billingCycleAnchorResetsAt: customerProduct?.billing_cycle_anchor_resets_at,
+		currentEpochMs: eventContext.nowMs,
+		nextResetAt: end * 1000,
+	});
 	await CusEntService.update({
 		ctx,
 		id: customerEntitlement.id,
 		updates: {
 			...resetUpdate,
-			next_reset_at: end * 1000,
+			next_reset_at: nextResetAt,
 		},
 	});
 
@@ -143,7 +149,7 @@ const processPrepaidPrice = async ({
 		previousQuantity,
 		resetQuantity,
 		newAllowance,
-		nextResetAt: end * 1000,
+		nextResetAt,
 	});
 
 	return true;

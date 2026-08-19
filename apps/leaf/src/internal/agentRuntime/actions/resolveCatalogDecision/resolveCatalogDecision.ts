@@ -1,7 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
+import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv, CatalogPlanPreview } from "@autumn/shared";
 import { db } from "../../../../lib/db.js";
-import { parsePreviewPayload } from "../../../../ui/previewContent.js";
 import { fetchApprovalPreview } from "../../../approvals/utils/fetchApprovalPreview.js";
 import {
 	publicToolArgs,

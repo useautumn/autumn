@@ -22,12 +22,20 @@ export type AgentThreadRef = Readonly<{
 	workspaceId: string;
 }>;
 
+export type AgentActionProgress = Readonly<{
+	label: string;
+	output?: unknown;
+	phase: "completed" | "started";
+	status?: string;
+	toolName?: string;
+}>;
+
 export type AgentTurnContext = Readonly<{
 	eveSession?: EveSessionRef;
 	env: AppEnv;
 	id: string;
 	logger: AutumnLogger;
-	onAction?: (message: string) => Promise<void> | void;
+	onAction?: (progress: AgentActionProgress | string) => Promise<void> | void;
 	onApprovalsSuperseded?: (approvals: ChatApproval[]) => Promise<void> | void;
 	onThinking?: () => void;
 	onReasoning?: (input: { id: string; text: string }) => void;

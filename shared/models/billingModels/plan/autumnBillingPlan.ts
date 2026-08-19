@@ -205,7 +205,7 @@ export const AutumnBillingPlanSchema = z.object({
 		.optional(),
 
 	// Upsert operations (populated during webhook handling, e.g., checkout.session.completed)
-	upsertSubscription: SubscriptionSchema.optional(),
+	upsertSubscriptions: SubscriptionSchema.array().optional(),
 	upsertInvoice: z.custom<InsertInvoice>().optional(),
 
 	/** Refund plan computed by computeRefundPlan: the amount to refund and source invoice */

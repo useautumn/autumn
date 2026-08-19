@@ -84,7 +84,11 @@ const main = async () => {
 	if (!lane.shouldRun) throw new Error("batch lane rejected");
 	const plan = batchMigrationPlanToExecutionPlan({ plan: lane.plan });
 
-	const runHammer = async ({ label, untilMs, until }: {
+	const runHammer = async ({
+		label,
+		untilMs,
+		until,
+	}: {
 		label: string;
 		untilMs?: number;
 		until?: () => boolean;
@@ -93,8 +97,7 @@ const main = async () => {
 		const writeLatencies: number[] = [];
 		let readErrors = 0;
 		const deadline = Date.now() + (untilMs ?? 0);
-		const shouldStop = () =>
-			until ? until() : Date.now() >= deadline;
+		const shouldStop = () => (until ? until() : Date.now() >= deadline);
 
 		const readers = Array.from({ length: READERS }, async () => {
 			while (!shouldStop()) {

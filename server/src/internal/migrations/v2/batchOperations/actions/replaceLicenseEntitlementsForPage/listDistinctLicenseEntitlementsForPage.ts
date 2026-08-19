@@ -13,6 +13,7 @@ import { BATCH_MIGRATION_MAX_DISTINCT_ENTITLEMENTS } from "../../execute/utils/b
 import type { OperationScope } from "../../scope/operationScope.js";
 import { operationScopeSql } from "../../scope/operationScope.js";
 import { canonicalPoolLateralSql } from "../licensePoolSql.js";
+import { pageCustomerIdsCte } from "../utils/pageCustomerIdsSql.js";
 
 export type DistinctLicenseEntitlementsForPage = {
 	distinct: EntitlementWithFeature[];
@@ -103,16 +104,18 @@ const selectDistinctLiveEntitlementIds = async ({
 	limit: number;
 }): Promise<string[]> => {
 	const idRows = await db.execute<{ id: string }>(sql`
+		WITH ${pageCustomerIdsCte({ internalCustomerIds })}
 		SELECT DISTINCT live.entitlement_id AS id
-		FROM customer_products AS assignment
+		FROM page
+		INNER JOIN customer_products AS assignment
+			ON assignment.internal_customer_id = page.internal_customer_id
 		${canonicalPoolLateralSql({ licensePlanId, columns: sql`pool.*` })}
 		INNER JOIN customer_products AS cp
 			ON cp.id = pool.parent_customer_product_id
 		INNER JOIN customer_entitlements AS live
 			ON live.customer_product_id = assignment.id
 			AND live.internal_feature_id = ${internalFeatureId}
-		WHERE assignment.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
-			AND assignment.internal_entity_id IS NOT NULL
+		WHERE assignment.internal_entity_id IS NOT NULL
 			AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
 			AND ${operationScopeSql({ scope })}
 		LIMIT ${limit}

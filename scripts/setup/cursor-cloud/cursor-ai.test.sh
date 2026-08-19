@@ -68,6 +68,77 @@ grep -q 'Existing agents' "$tmp/repo/AGENTS.md" || fail "preamble lost"
 grep -q 'after-section' "$tmp/repo/AGENTS.md" || fail "trailer after cloud section lost"
 pass "AGENTS.md cloud section is idempotent"
 
+# --- mark-skills stamps Cloud environments on user copies -------------------
+mkdir -p "$tmp/user-skills/tdd" "$tmp/user-skills/already"
+printf '%s\n' '---' 'name: tdd' 'description: Test' '---' '# TDD' >"$tmp/user-skills/tdd/SKILL.md"
+printf '%s\n' '---' 'name: already' 'environments: [cloud]' '---' '# Already' >"$tmp/user-skills/already/SKILL.md"
+bun "$CLOUD" --user-skills "$tmp/user-skills" mark-skills
+grep -q 'environments: \[cloud\]' "$tmp/user-skills/tdd/SKILL.md" || fail "tdd missing environments"
+count="$(grep -c 'environments: \[cloud\]' "$tmp/user-skills/already/SKILL.md" || true)"
+[[ "$count" == "1" ]] || fail "already-marked skill should stay idempotent, got $count"
+bun "$CLOUD" --user-skills "$tmp/user-skills" mark-skills
+count="$(grep -c 'environments: \[cloud\]' "$tmp/user-skills/tdd/SKILL.md" || true)"
+[[ "$count" == "1" ]] || fail "mark-skills should be idempotent, got $count"
+pass "mark-skills adds environments: [cloud] once"
+
+if grep -q 'repositoryDependencies' "$ROOT/.cursor/environment.json"; then
+	fail "environment.json must not declare useautumn/ai as a sibling repo — it is a submodule"
+fi
+if grep -q '"snapshot"' "$ROOT/.cursor/environment.json"; then
+	fail "environment.json must not pin snapshot-20260629 — builds crash overlaying current daemons onto it"
+fi
+grep -q 'agent-bootstrap.sh' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	|| fail "install.sh must bootstrap system packages instead of relying on a VM snapshot"
+grep -q 'bun.sh/install' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	|| fail "install.sh must install bun — the default Cloud image has none"
+if grep -qE 'BUN="\$\(command -v bun\)"' \
+	"$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	"$ROOT/scripts/setup/cursor-cloud/start.sh"; then
+	fail "command -v bun must be guarded — set -e exits when bun is missing"
+fi
+pass "environment.json has no snapshot; install bootstraps bun + packages"
+
+# --- persist-env writes rc files without embedding the Infisical token ------
+bun "$CLOUD" --root "$tmp/repo" --home "$tmp/home" persist-env
+grep -q 'export CLOUD_AGENT=1' "$tmp/home/.autumn-agent/env.sh" || fail "env.sh missing CLOUD_AGENT"
+grep -q 'autumn-infisical-token' "$tmp/home/.autumn-agent/env.sh" || fail "env.sh must read token from cache"
+if grep -q 'INFISICAL_TOKEN=secret' "$tmp/home/.autumn-agent/env.sh"; then
+	fail "env.sh must not embed the Infisical token"
+fi
+grep -Fq ". ${tmp}/home/.autumn-agent/env.sh" "$tmp/home/.bashrc" || fail "bashrc must source env.sh"
+pass "persist-env writes env.sh and bashrc"
+
+sync_line="$(rg -n 'ai/src/cli.ts sync --copy' "$ROOT/scripts/setup/cursor-cloud/install.sh" | head -1 | cut -d: -f1)"
+install_line="$(rg -n 'log "workspace install"' "$ROOT/scripts/setup/cursor-cloud/install.sh" | head -1 | cut -d: -f1)"
+[[ -n "$sync_line" && -n "$install_line" && "$sync_line" -lt "$install_line" ]] \
+	|| fail "install.sh must bun ai sync --copy before workspace bun install"
+grep -q 'mark-skills' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	|| fail "install.sh must stamp Cloud environments on copied skills"
+grep -q '.cursor/skills/tdd/SKILL.md' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	|| fail "install.sh must fail if ~/.cursor/skills/tdd is missing"
+pass "install copies skills before workspace bun install"
+
+if grep -qE 'bun dw setup|"\$BUN" dw setup' "$ROOT/scripts/setup/cursor-cloud/start.sh"; then
+	fail "start.sh must not call bun dw setup — that reinstalls and re-syncs skills"
+fi
+if grep -q 'ai/src/cli.ts sync' "$ROOT/scripts/setup/cursor-cloud/start.sh"; then
+	fail "start.sh must not sync skills — install.sh owns bun ai sync --copy"
+fi
+grep -q 'db migrate --bootstrap' "$ROOT/scripts/setup/agent-services.sh" \
+	|| fail "agent-services.sh must bun db migrate --bootstrap on a fresh local DB"
+grep -q 'scripts/dw/index.ts" start' "$ROOT/scripts/setup/cursor-cloud/start.sh" \
+	|| grep -q 'scripts/dw/index.ts start' "$ROOT/scripts/setup/cursor-cloud/start.sh" \
+	|| fail "start.sh must run bun scripts/dw/index.ts start"
+grep -q 'case "start"' "$ROOT/scripts/dw/index.ts" \
+	|| fail "dw must expose a start subcommand for per-boot infra"
+if grep -q 'ensureAiSubmoduleSynced' "$ROOT/scripts/dw/commands/start.ts"; then
+	fail "dw start must not re-sync the ai submodule"
+fi
+if grep -q 'bun", \["install"\]' "$ROOT/scripts/dw/commands/start.ts"; then
+	fail "dw start must not run bun install"
+fi
+pass "start.sh runs dw start, not bun dw setup"
+
 if grep -q 'cursor_ai.py' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
 	"$ROOT/scripts/setup/cursor-cloud/start.sh"; then
 	fail "install/start must not call cursor_ai.py"
@@ -152,6 +223,8 @@ fi
 pass "setup uses ensurePublicAccess; no Cloud ngrok shells"
 
 UNIT_TESTS=1 env -u TESTS_ORG bun test \
+	"$ROOT/scripts/dw/helpers/emulate.test.ts" \
+	"$ROOT/scripts/dw/helpers/git.test.ts" \
 	"$ROOT/scripts/dw/helpers/ngrok.test.ts" \
 	"$ROOT/scripts/dw/helpers/machineId.test.ts" \
 	"$ROOT/scripts/dw/helpers/registry.test.ts" \

@@ -2,6 +2,7 @@ import {
 	type AutumnBillingPlan,
 	CusProductStatus,
 	type FullCusProduct,
+	type Subscription,
 	type SyncBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -61,12 +62,13 @@ export const computeSyncPlan = ({
 	});
 	const preparedImmediateCustomerProducts = immediate.insertCustomerProducts;
 
-	const upsertSubscription = syncContext.stripeSubscription
-		? initSubscriptionFromStripe({
-				ctx,
-				stripeSubscription: syncContext.stripeSubscription,
-			})
-		: undefined;
+	const { stripeSubscription } = syncContext;
+	const upsertSubscriptions: Subscription[] = [];
+	if (stripeSubscription) {
+		upsertSubscriptions.push(
+			initSubscriptionFromStripe({ ctx, stripeSubscription }),
+		);
+	}
 
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId:
@@ -97,7 +99,7 @@ export const computeSyncPlan = ({
 				? immediate.customerLicenseUpdates
 				: undefined,
 		lockCustomerCurrency: syncContextToCurrencyLock({ syncContext }),
-		upsertSubscription,
+		upsertSubscriptions,
 		pooledBalancePlan,
 	};
 

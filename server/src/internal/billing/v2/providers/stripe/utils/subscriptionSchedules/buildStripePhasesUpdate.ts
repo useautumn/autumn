@@ -238,6 +238,7 @@ export const buildStripePhasesUpdate = ({
 	let startMs = nowMs;
 
 	const phases: Stripe.SubscriptionScheduleUpdateParams.Phase[] = [];
+	let previousActiveCustomerProductIds = new Set<string>();
 	for (let i = 0; i < transitionPoints.length; i++) {
 		const transitionPoint = transitionPoints[i];
 		const endMs = transitionPoint;
@@ -252,6 +253,20 @@ export const buildStripePhasesUpdate = ({
 					endMs,
 				}),
 		);
+		const activeCustomerProductIds = new Set(
+			activeCustomerProducts.map((customerProduct) => customerProduct.id),
+		);
+		let changesCustomerProducts =
+			phaseIndex > 0 &&
+			activeCustomerProductIds.size !== previousActiveCustomerProductIds.size;
+		if (phaseIndex > 0 && !changesCustomerProducts) {
+			for (const customerProductId of activeCustomerProductIds) {
+				if (!previousActiveCustomerProductIds.has(customerProductId)) {
+					changesCustomerProducts = true;
+					break;
+				}
+			}
+		}
 
 		// 2. Build phase items
 		const phaseItems = customerProductsToPhaseItems({
@@ -322,13 +337,13 @@ export const buildStripePhasesUpdate = ({
 			billing_cycle_anchor: isBillingCycleAnchorResetPhase
 				? "phase_start"
 				: undefined,
-			// A reset starts a fresh full cycle: charge the full amount and don't
-			// credit the old plan's leftover time.
-			proration_behavior: isBillingCycleAnchorResetPhase
-				? "none"
-				: shouldAlwaysInvoice
-					? "always_invoice"
-					: undefined,
+			// Product switches at a reset start a full cycle without old-plan credits.
+			proration_behavior:
+				isBillingCycleAnchorResetPhase && changesCustomerProducts
+					? "none"
+					: shouldAlwaysInvoice
+						? "always_invoice"
+						: undefined,
 			discounts: stripeDiscountsToPhaseDiscounts({
 				stripeDiscounts: billingContext.stripeDiscounts,
 				phaseStartDateSeconds,
@@ -348,6 +363,7 @@ export const buildStripePhasesUpdate = ({
 		}
 
 		phases.push(phase);
+		previousActiveCustomerProductIds = activeCustomerProductIds;
 
 		if (endMs) {
 			startMs = endMs;

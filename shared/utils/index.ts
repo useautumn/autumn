@@ -37,13 +37,16 @@ export * from "./intervalUtils/priceIntervalUtils";
 export * from "./orgUtils/convertOrgUtils";
 export * from "./planV1Utils/diff/applyDiff";
 // Plan V1 diff/apply utils
+export * from "./planV1Utils/diff/deduplicateAddPlanItems";
 export * from "./planV1Utils/diff/diffPlanV1";
 export * from "./planV1Utils/diff/diffPlanV1PreviewFields";
 export * from "./pooledBalanceUtils/index";
 export * from "./productUtils/classifyProduct/classifyProductUtils";
 export * from "./productUtils/classifyProduct/hasMissingStripeResourcesForProduct";
 export * from "./productUtils/classifyProduct/isProductPaidAndRecurring";
+export * from "./productUtils/convertProduct/productKey";
 export * from "./productUtils/convertProduct/productToEffectivePrices";
+export * from "./productUtils/convertProduct/productToProductKey";
 export * from "./productUtils/convertProduct/productToReplacementKey";
 // Product utils
 export * from "./productUtils/convertProductUtils";

@@ -1,5 +1,6 @@
 import {
 	applyDiff,
+	deduplicateAddPlanItems,
 	type Entitlement,
 	type FullProduct,
 	type LicenseCustomize,
@@ -62,7 +63,13 @@ export const computeLicenseCustomize = async ({
 		product: licenseProduct,
 		features: ctx.features,
 	});
-	const applied = applyDiff({ base: basePlan, diff: customize });
+	const applied = applyDiff({
+		base: deduplicateAddPlanItems({
+			base: basePlan,
+			addItems: customize.add_items,
+		}),
+		diff: customize,
+	});
 	const custom = await setupCustomFullProduct({
 		ctx,
 		currentFullProduct: licenseProduct,
