@@ -1,0 +1,27 @@
+import {
+	diffLicensePlanCustomize,
+	type Feature,
+	type FullPlanLicense,
+	type LicenseCustomize,
+} from "@autumn/shared";
+import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange/fullProductToApiPlanV1Sync";
+
+export const fullPlanLicenseToCustomize = ({
+	license,
+	features,
+}: {
+	license: FullPlanLicense;
+	features?: Feature[];
+}): LicenseCustomize | undefined => {
+	if (!license.customized || !license.base_product) return undefined;
+	return diffLicensePlanCustomize({
+		basePlan: fullProductToApiPlanV1Sync({
+			product: license.base_product,
+			features,
+		}),
+		effectivePlan: fullProductToApiPlanV1Sync({
+			product: license.product,
+			features,
+		}),
+	});
+};

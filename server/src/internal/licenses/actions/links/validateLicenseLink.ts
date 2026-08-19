@@ -45,12 +45,12 @@ export const validateLicenseLink = ({
 		});
 	}
 
-	if (parentProduct?.base_internal_product_id) {
-		throw new RecaseError({
-			message: `A variant cannot link a plan license (${parentProduct.id}).`,
-			code: ErrCode.InvalidRequest,
-		});
-	}
+	// if (parentProduct?.base_internal_product_id) {
+	// 	throw new RecaseError({
+	// 		message: `A variant cannot link a plan license (${parentProduct.id}).`,
+	// 		code: ErrCode.InvalidRequest,
+	// 	});
+	// }
 
 	if (parentProduct && licenseProduct.id === parentProduct.id) {
 		throw new RecaseError({

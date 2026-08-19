@@ -112,7 +112,7 @@ export const findEntitlementPriceSuccessor = ({
 	excludedEntitlementIds?: Set<string>;
 	matchPrecisions?: readonly EntitlementPriceMatchPrecision[];
 }): EntitlementPrice | undefined => {
-	for (const matchPrecision of matchPrecisions) {
+	for (const currentMatchPrecision of matchPrecisions) {
 		const candidate = candidateEntitlementPrices.find(
 			(candidateEntitlementPrice) => {
 				const candidateEntitlementId =
@@ -122,7 +122,7 @@ export const findEntitlementPriceSuccessor = ({
 				return entitlementPricesMatchAtPrecision({
 					sourceEntitlementPrice,
 					candidateEntitlementPrice,
-					matchPrecision,
+					matchPrecision: currentMatchPrecision,
 				});
 			},
 		);

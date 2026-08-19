@@ -12,6 +12,7 @@ export type BatchMigrationRejectionCode =
 	| "feature_quantity_strategy"
 	| "deprecated_update_items"
 	| "unsupported_remove_items"
+	| "unsupported_upsert_licenses"
 	| "base_price_customize"
 	| "priced_add_item"
 	| "priced_remove_item"

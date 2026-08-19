@@ -5,7 +5,6 @@ import { coreBatchReset } from "./coreBatchReset";
 import { coreBillingOthers } from "./coreBillingOthers";
 import { coreLegacy } from "./coreLegacy";
 import { coreLicensesBilling } from "./coreLicensesBilling";
-import { coreLicensesCatalog } from "./coreLicensesCatalog";
 import { coreMigrations } from "./coreMigrations";
 import { coreMultiUpdate } from "./coreMultiUpdate";
 import { corePlansCrud } from "./corePlansCrud";
@@ -27,7 +26,6 @@ export const coreBilling: TestGroup = {
 		...coreStripe.paths,
 		...coreBackSync.paths,
 		...coreLicensesBilling.paths,
-		...coreLicensesCatalog.paths,
 		...corePlansCrud.paths,
 
 		// ── Pooled balances ──

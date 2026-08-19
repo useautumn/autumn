@@ -18,6 +18,8 @@ const previousAttributeKeys = [
 	"free_trial",
 	"config",
 	"billing_controls",
+	"archived",
+	"metadata",
 ] as const satisfies readonly (keyof ApiPlanV1)[];
 
 const valuesEqual = (left: unknown, right: unknown): boolean => {
@@ -94,14 +96,49 @@ export const diffPlanV1PreviousAttributes = ({
 			: plan[key];
 
 	for (const key of previousAttributeKeys) {
-		if (!valuesEqual(comparable(from, key), comparable(to, key))) {
-			// Use null (not undefined) for added fields so the key survives JSON
-			// serialization and clients can still tell the field changed.
-			previous[key] = from[key] === undefined ? null : from[key];
+		const fromValue = comparable(from, key);
+		const toValue = comparable(to, key);
+		if (valuesEqual(fromValue, toValue)) continue;
+
+		// Nested billing_controls: only emit keys that actually changed.
+		if (key === "billing_controls") {
+			if (fromValue == null) {
+				previous.billing_controls = null;
+				continue;
+			}
+			const sparse = sparsePreviousRecord({
+				from: fromValue as Record<string, unknown>,
+				to: (toValue ?? {}) as Record<string, unknown>,
+			});
+			if (Object.keys(sparse).length > 0) {
+				previous.billing_controls = sparse;
+			}
+			continue;
 		}
+
+		// Use null (not undefined) for added fields so the key survives JSON
+		// serialization and clients can still tell the field changed.
+		previous[key] = from[key] === undefined ? null : from[key];
 	}
 
 	return Object.keys(previous).length > 0 ? previous : null;
+};
+
+const sparsePreviousRecord = ({
+	from,
+	to,
+}: {
+	from: Record<string, unknown>;
+	to: Record<string, unknown>;
+}): Record<string, unknown> => {
+	const previous: Record<string, unknown> = {};
+	const keys = new Set([...Object.keys(from), ...Object.keys(to)]);
+	for (const key of keys) {
+		if (!valuesEqual(from[key], to[key])) {
+			previous[key] = from[key] === undefined ? null : from[key];
+		}
+	}
+	return previous;
 };
 
 export const diffPlanV1ItemChanges = ({

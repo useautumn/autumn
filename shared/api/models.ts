@@ -5,6 +5,30 @@ export * from "./catalog/previewUpdateCatalogParams.js";
 export * from "./catalog/previewUpdateCatalogResponse.js";
 export * from "./catalog/updateCatalogResponse.js";
 export * from "./catalog/utils/index.js";
+// CatalogV2 component schemas stay un-exported until V1's clashing
+// CatalogPlanPreview/CatalogFeaturePreview names are retired.
+export * from "./catalogV2/components/catalogAction.js";
+export * from "./catalogV2/components/catalogFeatureUpdatePreview/catalogFeatureUpdatePreview.js";
+export * from "./catalogV2/components/catalogFeatureUpdatePreview/catalogFeatureUsageBucket.js";
+export * from "./catalogV2/components/catalogMigration.js";
+export * from "./catalogV2/planUpdate/params/catalogPlanParams.js";
+export * from "./catalogV2/planUpdate/params/catalogPropagateParams.js";
+export * from "./catalogV2/planUpdate/params/catalogVariantParams.js";
+export * from "./catalogV2/planUpdate/preview/catalogConflictPreview.js";
+export * from "./catalogV2/planUpdate/preview/catalogCorePreview.js";
+export * from "./catalogV2/planUpdate/preview/catalogLicenseParentPreview.js";
+export * from "./catalogV2/planUpdate/preview/catalogPlanPreview.js";
+export * from "./catalogV2/planUpdate/preview/catalogPlanUsage.js";
+export * from "./catalogV2/planUpdate/preview/catalogVariantPreview.js";
+export * from "./catalogV2/planUpdate/preview/catalogSiblingVersionPreview.js";
+export * from "./catalogV2/planUpdate/preview/catalogVersioningPreview.js";
+export * from "./catalogV2/planUpdate/versioning.js";
+export * from "./catalogV2/getCatalogParams.js";
+export * from "./catalogV2/getCatalogResponse.js";
+export * from "./catalogV2/previewUpdateCatalogParams.js";
+export * from "./catalogV2/previewUpdateCatalogResponse.js";
+export * from "./catalogV2/updateCatalogParams.js";
+export * from "./catalogV2/updateCatalogResponse.js";
 // NOTE: coreOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 export * from "./core/coreOpModels.js";
 // Customers

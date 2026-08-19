@@ -24,7 +24,7 @@ import {
 	getFilterSummary,
 	type ItemFilter,
 } from "../operations/operationItemUtils";
-import { extractPlanIds } from "../operations/UpdatePlanOpForm";
+import { planIdsFromFilter } from "../operations/UpdatePlanOpForm";
 import { migrationItemToProductItem } from "./migrationItemUtils";
 
 /** Full-width row matching SubscriptionItemRow, with an amber dot for an edited value. */
@@ -116,7 +116,7 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 					}
 
 					const updateOp = op as UpdatePlanOp;
-					const planIds = extractPlanIds(updateOp.plan_filter.plan_id);
+					const planIds = planIdsFromFilter(updateOp.plan_filter);
 					const customize = updateOp.customize;
 					const addItems = customize?.add_items ?? [];
 					const removeItems = customize?.remove_items ?? [];

@@ -1,4 +1,4 @@
-import { type ProductV2, productV2ToBasePrice } from "@autumn/shared";
+import { productV2ToBasePrice } from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import type { AxiosError } from "axios";
 import { useState } from "react";
@@ -13,10 +13,12 @@ import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { ProductService } from "@/services/products/ProductService";
+import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { buildUpdateCatalogPlanParams } from "../../plan/catalog/buildUpdateCatalogPlanParams";
 import { AdditionalOptions } from "../../plan/components/edit-plan-details/AdditionalOptions";
 import { BasePriceSection } from "../../plan/components/edit-plan-details/BasePriceSection";
 import { MoreSettingsSection } from "../../plan/components/edit-plan-details/MoreSettingsSection";
@@ -25,7 +27,7 @@ import { DEFAULT_PRODUCT } from "../../plan/utils/defaultProduct";
 import { CreateProductMainDetails } from "./CreateProductMainDetails";
 
 type CreateProductSheetProps = {
-	onSuccess?: (newProduct: ProductV2) => Promise<void>;
+	onSuccess?: (newProduct: { id: string }) => Promise<void>;
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
 	isAddOn?: boolean;
@@ -102,7 +104,7 @@ function CreateProductForm({
 }: {
 	isAddOn: boolean;
 	isLicense: boolean;
-	onSuccess?: (newProduct: ProductV2) => Promise<void>;
+	onSuccess?: (newProduct: { id: string }) => Promise<void>;
 	setOpen: (open: boolean) => void;
 }) {
 	const { products } = useProductsQuery();
@@ -136,12 +138,13 @@ function CreateProductFormContent({
 }: {
 	isAddOn: boolean;
 	isLicense: boolean;
-	onSuccess?: (newProduct: ProductV2) => Promise<void>;
+	onSuccess?: (newProduct: { id: string }) => Promise<void>;
 	setOpen: (open: boolean) => void;
 }) {
 	const [loading, setLoading] = useState(false);
 	const { product } = useProduct();
 	const basePrice = productV2ToBasePrice({ product });
+	const { features = [] } = useFeaturesQuery();
 
 	const axiosInstance = useAxiosInstance();
 	const navigate = useNavigate();
@@ -159,17 +162,25 @@ function CreateProductFormContent({
 
 		setLoading(true);
 		try {
-			const newProduct = await ProductService.createProduct(
-				axiosInstance,
-				product,
-			);
+			const response = await CatalogV2Service.update(axiosInstance, {
+				plans: [
+					buildUpdateCatalogPlanParams({
+						editedProduct: product,
+						features,
+					}),
+				],
+			});
+			const created = response.plans[0];
+			if (!created) {
+				throw new Error("Plan was not created");
+			}
 
 			invalidate();
 
 			if (onSuccess) {
-				await onSuccess(newProduct);
+				await onSuccess(created);
 			} else {
-				navigateTo(`/products/${newProduct.id}`, navigate);
+				navigateTo(`/products/${created.id}`, navigate);
 			}
 			setOpen(false);
 		} catch (error) {

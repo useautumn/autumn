@@ -1,4 +1,4 @@
-import type { CreditSchemaItem, Feature } from "@autumn/shared";
+import type { Feature } from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
@@ -7,11 +7,9 @@ import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { FeatureService } from "@/services/FeatureService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
 import { getBackendErr } from "@/utils/genUtils";
-import { buildFeatureMarkupParams } from "../../utils/buildFeatureMutationParams";
+import { featureToCatalogFeatureParams } from "../../utils/buildFeatureMutationParams";
 import { useCreditSystemForm } from "../hooks/useCreditSystemForm";
 import { validateCreditSystem } from "../utils/validateCreditSystem";
 import { CreditSystemDetails } from "./CreditSystemDetails";
@@ -30,8 +28,7 @@ function UpdateCreditSystemSheet({
 	selectedCreditSystem,
 	onSuccess,
 }: UpdateCreditSystemSheetProps) {
-	const axiosInstance = useAxiosInstance();
-	const { refetch } = useFeaturesQuery();
+	const { mutateAsync: updateCatalog } = useUpdateCatalogMutation();
 
 	const form = useCreditSystemForm({
 		feature: open ? selectedCreditSystem : null,
@@ -53,26 +50,27 @@ function UpdateCreditSystemSheet({
 				return;
 			}
 
-			await FeatureService.updateFeature(
-				axiosInstance,
-				selectedCreditSystem.id,
-				{
-					id: values.id,
-					name: values.name,
-					type: values.type,
-					...buildFeatureMarkupParams({
-						type: values.type,
-						modelMarkups: values.model_markups,
-						defaultMarkup: values.defaultMarkup,
-						providerMarkups: values.provider_markups,
-						schema: values.config?.schema as CreditSchemaItem[] | undefined,
+			await updateCatalog({
+				features: [
+					featureToCatalogFeatureParams({
+						feature: {
+							id: values.id,
+							name: values.name,
+							type: values.type,
+							config: {
+								...values.config,
+								default_markup: values.defaultMarkup,
+								provider_markups: values.provider_markups,
+							},
+							event_names: values.event_names,
+							model_markups: values.model_markups,
+						},
+						featureId: selectedCreditSystem.id,
+						newFeatureId: values.id,
 					}),
-					event_names: values.event_names,
-					display: undefined,
-				},
-			);
+				],
+			});
 
-			await refetch();
 			toast.success("Credit system updated successfully");
 			onSuccess?.(
 				selectedCreditSystem.id,

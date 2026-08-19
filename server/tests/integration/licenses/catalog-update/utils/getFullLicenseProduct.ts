@@ -58,8 +58,10 @@ export const getFullLicenseProduct = async ({
 			where: eq(licensePrices.plan_license_id, planLicense.id),
 		}),
 	]);
-	const [hydratedPlanLicense] = parentProduct.licenses ?? [];
-	if (hydratedPlanLicense?.id !== planLicense.id) {
+	const hydratedPlanLicense = (parentProduct.licenses ?? []).find(
+		(license) => license.id === planLicense.id,
+	);
+	if (!hydratedPlanLicense) {
 		throw new Error(
 			`Parent ${parentPlanId} did not hydrate license ${licensePlanId}`,
 		);

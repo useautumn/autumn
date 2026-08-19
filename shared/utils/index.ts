@@ -35,15 +35,22 @@ export * from "./intervalUtils/priceIntervalUtils";
 
 // Org utils
 export * from "./orgUtils/convertOrgUtils";
+export * from "./planV1Utils/convertCustomize/basePriceToKey";
+export * from "./planV1Utils/convertCustomize/customizeToKey";
+export * from "./planV1Utils/convertPlanItem/createPlanItemToKey";
 export * from "./planV1Utils/diff/applyDiff";
 // Plan V1 diff/apply utils
 export * from "./planV1Utils/diff/deduplicateAddPlanItems";
 export * from "./planV1Utils/diff/diffPlanV1";
 export * from "./planV1Utils/diff/diffPlanV1PreviewFields";
+export * from "./planV1Utils/diff/replayPlanDiff";
+export * from "./planV1Utils/licenses/applyLicenseCustomizeToBasePlan";
+export * from "./planV1Utils/licenses/diffLicensePlanCustomize";
 export * from "./pooledBalanceUtils/index";
 export * from "./productUtils/classifyProduct/classifyProductUtils";
 export * from "./productUtils/classifyProduct/hasMissingStripeResourcesForProduct";
 export * from "./productUtils/classifyProduct/isProductPaidAndRecurring";
+export * from "./productUtils/compareProduct/productDetailsAreSame";
 export * from "./productUtils/convertProduct/productKey";
 export * from "./productUtils/convertProduct/productToEffectivePrices";
 export * from "./productUtils/convertProduct/productToProductKey";
@@ -59,6 +66,7 @@ export * from "./productUtils/priceUtils/index";
 // Price match utils
 export * from "./productUtils/priceUtils/match/copyStripeResourcesToMatchingPrice";
 export * from "./productUtils/priceUtils/match/getPriceStripeReuseLevel";
+export * from "./productUtils/priceUtils/match/stripePriceIdForInitializedPrice";
 export * from "./productUtils/priceUtils/match/priceStripeObjectsMatch";
 export * from "./productV2Utils/mapToProductV2";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils";

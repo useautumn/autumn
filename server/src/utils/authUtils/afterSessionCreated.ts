@@ -1,5 +1,8 @@
-import type { GenericEndpointContext } from "@better-auth/core";
-import type { BetterAuthOptions, Session } from "better-auth";
+import type {
+	BetterAuthOptions,
+	GenericEndpointContext,
+	Session,
+} from "better-auth";
 
 export const afterSessionCreated = async (
 	session: Session,

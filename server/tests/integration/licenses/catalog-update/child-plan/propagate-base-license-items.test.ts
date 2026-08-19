@@ -1,7 +1,7 @@
 /** Base add/update/remove operations rebase customized catalog links.
  * Custom rows persist while inherited refs follow the current base rows. */
 import { expect, test } from "bun:test";
-import { type ApiPlanV1, BillingInterval } from "@autumn/shared";
+import { type ApiPlanExpandedV1, BillingInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
@@ -197,7 +197,7 @@ test.concurrent(
 		});
 
 		// API diffs remain price-only because the shared item now matches the base.
-		for (const plan of [monthlyApi, annualApi] as ApiPlanV1[]) {
+		for (const plan of [monthlyApi, annualApi] as ApiPlanExpandedV1[]) {
 			expect(plan.licenses?.[0]?.customize?.price).toBeDefined();
 			expect(plan.licenses?.[0]?.customize?.add_items).toBeUndefined();
 			expect(plan.licenses?.[0]?.customize?.remove_items).toBeUndefined();
