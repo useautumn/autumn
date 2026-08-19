@@ -1,5 +1,5 @@
 import {
-	parseOAuthRequestFields,
+	type ParsedOAuthRequest,
 	rebuildOAuthRequest,
 } from "@autumn/shared/utils/auth/oauthRequestBody";
 import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
@@ -36,19 +36,22 @@ const constrainScopeToGrant = ({
  *
  * `scope` is narrowed so an MCP refresh cannot widen its original grant.
  */
-export const normalizeOAuthTokenRequest = async ({
+export const normalizeOAuthTokenRequest = ({
 	grantedScopes,
+	parsedRequest,
 	request,
 }: {
 	grantedScopes?: string[];
+	parsedRequest: ParsedOAuthRequest;
 	request: Request;
-}): Promise<Request> => {
-	const { fields, isJson, rawBody } = await parseOAuthRequestFields(request);
+}): Request => {
+	const { isJson, rawBody } = parsedRequest;
 	if (!rawBody) return request;
-	if (isJson && Object.keys(fields).length === 0) {
+	if (isJson && Object.keys(parsedRequest.fields).length === 0) {
 		return new Request(request, { body: rawBody });
 	}
 
+	const fields = { ...parsedRequest.fields };
 	delete fields.resource;
 	if (grantedScopes && typeof fields.scope === "string") {
 		fields.scope = constrainScopeToGrant({

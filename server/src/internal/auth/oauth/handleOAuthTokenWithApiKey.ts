@@ -89,10 +89,12 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		});
 		const consentedTokenRecord = { ...tokenRecord, oauthConsentId };
 
-		const isMcpClient = await isMcpOAuthClient({
-			clientId: tokenRecord.clientId,
-			db,
-		});
+		// The minted token names the authoritative client: a confidential client
+		// authenticates over the header, so setup saw no client_id to classify.
+		const isMcpClient =
+			tokenRecord.clientId === tokenRequest.clientId
+				? tokenRequest.isMcpClient
+				: await isMcpOAuthClient({ clientId: tokenRecord.clientId, db });
 		const issuedScopes = await resolveIssuedOAuthScopes({
 			db,
 			isMcpClient,

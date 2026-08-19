@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { parseOAuthRequestFields } from "@autumn/shared/utils/auth/oauthRequestBody";
 import { getOAuthTokenRequestFields } from "@/internal/auth/oauth/tokenRequestFields.js";
 
 const formRequest = (fields: Record<string, string>) =>
@@ -15,10 +16,14 @@ const jsonRequest = (contentType: string, fields: Record<string, string>) =>
 		body: JSON.stringify(fields),
 	});
 
+/** The token endpoint parses the body once and threads the fields through. */
+const tokenRequestFields = async (request: Request) =>
+	getOAuthTokenRequestFields((await parseOAuthRequestFields(request)).fields);
+
 describe("getOAuthTokenRequestFields", () => {
 	test("reads the grant type alongside a refresh token", async () => {
 		expect(
-			await getOAuthTokenRequestFields(
+			await tokenRequestFields(
 				formRequest({
 					grant_type: "refresh_token",
 					refresh_token: "refresh_1",
@@ -33,7 +38,7 @@ describe("getOAuthTokenRequestFields", () => {
 
 	test("keeps the grant type that a stray refresh_token belongs to", async () => {
 		expect(
-			await getOAuthTokenRequestFields(
+			await tokenRequestFields(
 				formRequest({
 					grant_type: "authorization_code",
 					code: "code_1",
@@ -49,7 +54,7 @@ describe("getOAuthTokenRequestFields", () => {
 
 	test("supports JSON token requests", async () => {
 		expect(
-			await getOAuthTokenRequestFields(
+			await tokenRequestFields(
 				jsonRequest("application/json", {
 					grant_type: "refresh_token",
 					refresh_token: "refresh_json",
@@ -64,7 +69,7 @@ describe("getOAuthTokenRequestFields", () => {
 
 	test("supports case-insensitive JSON content types", async () => {
 		expect(
-			await getOAuthTokenRequestFields(
+			await tokenRequestFields(
 				jsonRequest("Application/JSON; charset=utf-8", {
 					grant_type: "refresh_token",
 					refresh_token: "refresh_json_upper",
@@ -79,7 +84,7 @@ describe("getOAuthTokenRequestFields", () => {
 
 	test("reads the client id a public client authenticates with", async () => {
 		expect(
-			await getOAuthTokenRequestFields(
+			await tokenRequestFields(
 				formRequest({
 					client_id: "client_1",
 					grant_type: "authorization_code",
@@ -95,7 +100,7 @@ describe("getOAuthTokenRequestFields", () => {
 
 	test("reads an empty body as no fields", async () => {
 		expect(
-			await getOAuthTokenRequestFields(
+			await tokenRequestFields(
 				new Request("http://localhost/api/auth/oauth2/token", {
 					method: "POST",
 				}),

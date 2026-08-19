@@ -1,4 +1,4 @@
-import { parseOAuthRequestFields } from "@autumn/shared/utils/auth/oauthRequestBody";
+import type { OAuthRequestFields } from "@autumn/shared/utils/auth/oauthRequestBody";
 import { z } from "zod";
 
 const tokenRequestFieldsSchema = z
@@ -22,10 +22,9 @@ const EMPTY_TOKEN_REQUEST_FIELDS: OAuthTokenRequestFields = {
 	refreshToken: null,
 };
 
-export const getOAuthTokenRequestFields = async (
-	request: Request,
-): Promise<OAuthTokenRequestFields> => {
-	const { fields } = await parseOAuthRequestFields(request);
+export const getOAuthTokenRequestFields = (
+	fields: OAuthRequestFields,
+): OAuthTokenRequestFields => {
 	const parsed = tokenRequestFieldsSchema.safeParse(fields);
 	if (!parsed.success) return EMPTY_TOKEN_REQUEST_FIELDS;
 

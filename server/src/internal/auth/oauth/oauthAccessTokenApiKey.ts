@@ -120,19 +120,6 @@ export type OAuthAccessTokenRecord = Awaited<
 	ReturnType<typeof getOAuthAccessTokenRecord>
 >;
 
-const getTokenConsentId = ({
-	oauthConsentId,
-}: {
-	oauthConsentId?: string | null;
-}) => {
-	if (oauthConsentId) return oauthConsentId;
-
-	throw new RecaseError({
-		message: "OAuth token is missing a consent",
-		code: ErrCode.InvalidRequest,
-		statusCode: 401,
-	});
-};
 export const getExternalOAuthApiKeyForToken = async ({
 	db,
 	tokenRecord,
@@ -151,9 +138,15 @@ export const getExternalOAuthApiKeyForToken = async ({
 	});
 	if (isAtmnClient) return null;
 
-	const oauthConsentId = getTokenConsentId({
-		oauthConsentId: tokenRecord.oauthConsentId,
-	});
+	const { oauthConsentId } = tokenRecord;
+	if (!oauthConsentId) {
+		throw new RecaseError({
+			message: "OAuth token is missing a consent",
+			code: ErrCode.InvalidRequest,
+			statusCode: 401,
+		});
+	}
+
 	const consent = await oauthConsentRepo.getApiKeyRecord({
 		db,
 		consentId: oauthConsentId,

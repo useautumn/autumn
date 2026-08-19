@@ -4,7 +4,7 @@ import {
 } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import {
 	asNonEmptyString,
-	parseOAuthRequestFields,
+	type ParsedOAuthRequest,
 } from "@autumn/shared/utils/auth/oauthRequestBody";
 import {
 	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
@@ -66,8 +66,11 @@ export const returnsOAuthAccessTokenForClientId = ({
 	clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID ||
 	clientId === SUMMER_OAUTH_CLIENT_ID;
 
-export const getResourceFromOAuthTokenRequest = async (request: Request) => {
-	const { fields, isJson, rawBody } = await parseOAuthRequestFields(request);
+export const getResourceFromOAuthTokenRequest = ({
+	fields,
+	isJson,
+	rawBody,
+}: ParsedOAuthRequest) => {
 	// RFC 8707 lets a request repeat `resource`; the first one wins, and the
 	// parsed fields only keep the last, so read the form body directly.
 	if (!isJson) {

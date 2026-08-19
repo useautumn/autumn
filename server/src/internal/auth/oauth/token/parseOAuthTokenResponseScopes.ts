@@ -5,7 +5,9 @@ import {
 } from "@autumn/shared/utils/auth/oauthScopeUtils";
 
 /** Distinguishes a bad scope string from the grant failures the catch maps to invalid_grant. */
-export class OAuthTokenScopeError extends Error {}
+export class OAuthTokenScopeError extends Error {
+	name = "OAuthTokenScopeError";
+}
 
 /**
  * Reads the scope string better-auth minted. A scope this AS no longer defines

@@ -1,6 +1,7 @@
 import { getResourceFromOAuthTokenRequest } from "@autumn/auth/oauth";
 import type { oauthRefreshToken } from "@autumn/shared";
 import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
+import { parseOAuthRequestFields } from "@autumn/shared/utils/auth/oauthRequestBody";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { buildOAuthRefreshReplayKey } from "@/external/redis/actions/oauthRefreshReplay/oauthRefreshReplay.js";
 import { isMcpOAuthClient } from "../mcpOAuthScopes.js";
@@ -10,6 +11,9 @@ import { normalizeOAuthTokenRequest } from "./normalizeOAuthTokenRequest.js";
 import { resolveOAuthTokenResource } from "./resolveOAuthTokenResource.js";
 
 export type OAuthTokenRequestContext = {
+	/** The client this request speaks for; null when it authenticates over the header. */
+	clientId: string | null;
+	isMcpClient: boolean;
 	normalizedRequest: Request;
 	/** Non-null only for MCP refreshes, the one grant whose replays must agree. */
 	refreshReplayKey: string | null;
@@ -26,6 +30,8 @@ const buildReplayKeyForRequest = async ({
 	resource: string | null;
 }) => {
 	const authorization = request.headers.get("authorization") ?? "";
+	// Read off the normalized request so the fingerprint covers the exact bytes
+	// better-auth will see, not the body they were rewritten from.
 	const rawBody = await request.clone().text();
 
 	return buildOAuthRefreshReplayKey(
@@ -41,34 +47,36 @@ export const setupOAuthTokenRequest = async ({
 	db: DrizzleCli;
 	request: Request;
 }): Promise<OAuthTokenRequestContext> => {
-	const requestResource = await getResourceFromOAuthTokenRequest(
-		request.clone(),
-	);
+	const parsedRequest = await parseOAuthRequestFields(request.clone());
+	const tokenRequestFields = getOAuthTokenRequestFields(parsedRequest.fields);
 	const refreshTokenRecord = await getOAuthRefreshTokenRecord({
 		db,
-		request: request.clone(),
+		tokenRequestFields,
 	});
-	const { clientId } = await getOAuthTokenRequestFields(request.clone());
 
-	const resource = await resolveOAuthTokenResource({
-		clientId: refreshTokenRecord?.clientId ?? clientId,
-		db,
+	const clientId = refreshTokenRecord?.clientId ?? tokenRequestFields.clientId;
+	const isMcpClient = clientId
+		? await isMcpOAuthClient({ clientId, db })
+		: false;
+
+	const resource = resolveOAuthTokenResource({
 		grantResource: refreshTokenRecord?.resource,
-		requestResource,
+		isMcpClient,
+		requestResource: getResourceFromOAuthTokenRequest(parsedRequest),
 	});
 
 	const grantedScopes =
-		refreshTokenRecord &&
-		(await isMcpOAuthClient({ clientId: refreshTokenRecord.clientId, db }))
-			? refreshTokenRecord.scopes
-			: undefined;
+		refreshTokenRecord && isMcpClient ? refreshTokenRecord.scopes : undefined;
 
-	const normalizedRequest = await normalizeOAuthTokenRequest({
+	const normalizedRequest = normalizeOAuthTokenRequest({
 		grantedScopes,
-		request: request.clone(),
+		parsedRequest,
+		request,
 	});
 
 	return {
+		clientId,
+		isMcpClient,
 		normalizedRequest,
 		refreshReplayKey: grantedScopes
 			? await buildReplayKeyForRequest({ request: normalizedRequest, resource })
