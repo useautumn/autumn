@@ -21,19 +21,19 @@ import {
 	IconPricing,
 	MenuGridIcon,
 } from "@/app/constant";
+import { getGsap } from "@/lib/lazyGsap";
 import type {
 	PageStyle,
 	PixelHoverHandle,
 	PixelIconComponent,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { getGsap } from "@/lib/lazyGsap";
 import { DashboardIconPixel } from "./dashboard-icon-pixel";
 
 const NAV_LINKS = [
 	{ label: "Docs", href: "https://docs.useautumn.com/welcome", Icon: IconDocs },
 	{ label: "Blog", href: "/blog", Icon: IconBlog },
-	{ label: "Pricing", href: "/#pricing", Icon: IconPricing },
+	{ label: "Pricing", href: "/pricing", Icon: IconPricing },
 	{
 		label: "Discord",
 		href: "https://discord.com/invite/STqxY92zuS",
@@ -66,14 +66,17 @@ const NavIconPixel = forwardRef<PixelHoverHandle, { Icon: PixelIconComponent }>(
 
 			getGsap().then((gsap) => {
 				if (cancelled) return;
-				const pixelEls = el.querySelectorAll<SVGPathElement>(".icon-pixel-path");
+				const pixelEls =
+					el.querySelectorAll<SVGPathElement>(".icon-pixel-path");
 				if (!pixelEls.length) return;
 
 				const pixels = Array.from(pixelEls).sort((a, b) => {
 					const aBox = a.getBBox();
 					const bBox = b.getBBox();
 					return (
-						aBox.x + aBox.width / 2 - (aBox.y + aBox.height / 2) -
+						aBox.x +
+						aBox.width / 2 -
+						(aBox.y + aBox.height / 2) -
 						(bBox.x + bBox.width / 2 - (bBox.y + bBox.height / 2))
 					);
 				});
@@ -86,8 +89,15 @@ const NavIconPixel = forwardRef<PixelHoverHandle, { Icon: PixelIconComponent }>(
 				});
 
 				tlRef.current = gsap.timeline({ paused: true });
-				tlRef.current!
-					.to(pixels, { opacity: 1, scale: 1.15, fill: "#FFFFFF", duration: 0.01, stagger: 0.025, ease: "power2.out" })
+				tlRef
+					.current!.to(pixels, {
+						opacity: 1,
+						scale: 1.15,
+						fill: "#FFFFFF",
+						duration: 0.01,
+						stagger: 0.025,
+						ease: "power2.out",
+					})
 					.to(pixels, { scale: 1, duration: 0.01, ease: "back.out(3)" });
 			});
 
@@ -110,14 +120,11 @@ NavIconPixel.displayName = "NavIconPixel";
 
 function NavLinkItem({ item }: { item: (typeof NAV_LINKS)[number] }) {
 	const iconRef = useRef<PixelHoverHandle | null>(null);
-	const isAnchor =
-		item.href.startsWith("#") || item.href.startsWith("/#");
+	const isAnchor = item.href.startsWith("#") || item.href.startsWith("/#");
 
 	const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
 		if (!isAnchor) return;
-		const hash = item.href.startsWith("/#")
-			? item.href.slice(1)
-			: item.href;
+		const hash = item.href.startsWith("/#") ? item.href.slice(1) : item.href;
 		const el = document.querySelector(hash);
 		if (el) {
 			e.preventDefault();
@@ -258,7 +265,6 @@ export default function Navbar({
 						>
 							<Link
 								href="https://app.useautumn.com"
-								target="_blank"
 								className="relative overflow-hidden inline-flex items-center gap-2 bg-[#9564ff] hover:bg-[#7D46F4] active:bg-[#7D46F4] transition-colors duration-300 px-4 py-3.5 text-white cursor-pointer whitespace-nowrap"
 								onMouseEnter={() => dashboardIconRef.current?.restart()}
 								onMouseLeave={() => dashboardIconRef.current?.reverse()}
@@ -299,39 +305,40 @@ export default function Navbar({
 					opacity: 0,
 					pointerEvents: "none",
 					clipPath: "inset(0% 0 100% 0)",
-					transition: "opacity 0.2s ease, clip-path 0.2s cubic-bezier(0.87, 0, 0.13, 1)",
+					transition:
+						"opacity 0.2s ease, clip-path 0.2s cubic-bezier(0.87, 0, 0.13, 1)",
 				}}
 			>
 				{/* Nav items */}
 				<div className="flex flex-col">
 					{NAV_LINKS.map((item) => {
-					const isAnchor =
-						item.href.startsWith("#") || item.href.startsWith("/#");
-					const isExternal = item.href.startsWith("http");
-					return (
-						<Link
-							key={item.label}
-							href={item.href}
-							target={isExternal ? "_blank" : undefined}
-							onClick={
-								isAnchor
-									? (e) => {
-											const hash = item.href.startsWith("/#")
-												? item.href.slice(1)
-												: item.href;
-											const el = document.querySelector(hash);
-											setMenuOpen(false);
-											if (el) {
-												e.preventDefault();
-												const top =
-													el.getBoundingClientRect().top +
-													window.scrollY -
-													64;
-												window.scrollTo({ top, behavior: "smooth" });
+						const isAnchor =
+							item.href.startsWith("#") || item.href.startsWith("/#");
+						const isExternal = item.href.startsWith("http");
+						return (
+							<Link
+								key={item.label}
+								href={item.href}
+								target={isExternal ? "_blank" : undefined}
+								onClick={
+									isAnchor
+										? (e) => {
+												const hash = item.href.startsWith("/#")
+													? item.href.slice(1)
+													: item.href;
+												const el = document.querySelector(hash);
+												setMenuOpen(false);
+												if (el) {
+													e.preventDefault();
+													const top =
+														el.getBoundingClientRect().top +
+														window.scrollY -
+														64;
+													window.scrollTo({ top, behavior: "smooth" });
+												}
 											}
-										}
-									: undefined
-							}
+										: undefined
+								}
 								className="flex items-center gap-4 px-4 py-3.5 border-b border-[#292929] active:bg-[#141414ea] text-[#ffffff99] hover:text-white active:text-white transition-colors text-sm tracking-[-1%]"
 							>
 								<item.Icon className="h-3.5 w-3.5 shrink-0" />
@@ -345,7 +352,6 @@ export default function Navbar({
 					<div className="px-4">
 						<Link
 							href="https://useautumn.com"
-							target="_blank"
 							onClick={() => setMenuOpen(false)}
 							className="flex items-center justify-between gap-4 px-2 py-2.5 bg-[#9564ff] active:bg-[#7D46F4] transition-colors duration-300 text-white text-sm tracking-widest"
 						>
