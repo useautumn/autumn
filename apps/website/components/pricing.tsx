@@ -37,8 +37,8 @@ const plans: Plan[] = [
 		description: "Perfect while finding PMF. Everything you need to start.",
 		features: [
 			{ label: "8K monthly billing volume" },
-			{ label: "3,000 customers and entities" },
-			{ label: "1M API requests included" },
+			{ label: "10,000 customers and entities" },
+			{ label: "10M API requests included" },
 			{ label: "CLI and MCP" },
 			{ label: "Community support" },
 		],
