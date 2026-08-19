@@ -11,6 +11,7 @@ import {
 } from "@autumn/shared";
 import { type Column, type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { invoiceJsonWithCurrentPlanIdsSql } from "@/internal/invoices/resolvedInvoiceProductIdsSql.js";
 import { activeStatusListSql, monthlyBasePriceExpr } from "./basePriceSql.js";
 import {
 	cpStatusInClause,
@@ -210,7 +211,7 @@ export const getCursorPaginatedFullCusQuery = ({
 
 	const invoicesCte = includeInvoices
 		? sql`, invoices_all AS MATERIALIZED (
-				SELECT i.internal_customer_id, row_to_json(i) AS row_json
+				SELECT i.internal_customer_id, ${invoiceJsonWithCurrentPlanIdsSql("i")} AS row_json
 				FROM cr
 				JOIN LATERAL (
 					SELECT i.*

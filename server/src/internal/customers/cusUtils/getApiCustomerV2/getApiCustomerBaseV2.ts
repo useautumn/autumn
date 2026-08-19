@@ -97,8 +97,7 @@ export const getApiCustomerBaseV2 = async ({
 		}),
 		invoices:
 			fullSubject.invoices && ctx.expand.includes(CustomerExpand.Invoices)
-				? await invoicesToResponse({
-						db: ctx.db,
+				? invoicesToResponse({
 						invoices: fullSubject.invoices,
 					})
 				: undefined,

@@ -19,7 +19,7 @@ export const getApiEntityExpand = async ({
 	entityId?: string;
 	fullCus?: FullCustomer;
 }): Promise<ApiEntityExpand> => {
-	const { org, env, db, logger } = ctx;
+		const { org, env, db, logger } = ctx;
 
 	if (!ctx.expand.includes(CustomerExpand.Invoices)) {
 		return {};
@@ -42,8 +42,7 @@ export const getApiEntityExpand = async ({
 	// console.log("Entity invoices:", invoices);
 
 	return {
-		invoices: await invoicesToResponse({
-			db,
+		invoices: invoicesToResponse({
 			invoices,
 		}),
 	};

@@ -125,3 +125,12 @@ describe("processInvoice — hosted_invoice_url processor gating", () => {
 		);
 	});
 });
+
+describe("processInvoice — plan_ids", () => {
+	test("plan_ids come from the invoice product_ids (resolved at query time)", () => {
+		const wire = processInvoice({
+			invoice: buildBaseInvoice({ product_ids: ["pro-renamed"] }),
+		});
+		expect(wire.plan_ids).toEqual(["pro-renamed"]);
+	});
+});

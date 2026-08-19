@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { invoiceJsonWithCurrentPlanIdsSql } from "@/internal/invoices/resolvedInvoiceProductIdsSql.js";
 import { looseEntitlementIsLiveSql } from "./looseEntitlementSql.js";
 
 const RECURRING_BILLING_INTERVALS = [
@@ -461,7 +462,7 @@ const buildInvoicesCTE = (hasEntityCTE: boolean) => {
     customer_invoices AS (
       SELECT 
         COALESCE(
-          json_agg(row_to_json(i) ORDER BY i.created_at DESC, i.id DESC) FILTER (WHERE i.id IS NOT NULL),
+          json_agg(${invoiceJsonWithCurrentPlanIdsSql("i")} ORDER BY i.created_at DESC, i.id DESC) FILTER (WHERE i.id IS NOT NULL),
           '[]'::json
         ) AS invoices
       FROM (
@@ -956,7 +957,7 @@ export const getPaginatedFullCusQuery = ({
       SELECT 
         cr.internal_id AS internal_customer_id,
         COALESCE(
-          json_agg(row_to_json(i) ORDER BY i.created_at DESC, i.id DESC) FILTER (WHERE i.id IS NOT NULL),
+          json_agg(${invoiceJsonWithCurrentPlanIdsSql("i")} ORDER BY i.created_at DESC, i.id DESC) FILTER (WHERE i.id IS NOT NULL),
           '[]'::json
         ) AS invoices
       FROM customer_records cr

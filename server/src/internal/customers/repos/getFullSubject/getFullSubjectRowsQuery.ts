@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { invoiceJsonWithCurrentPlanIdsSql } from "@/internal/invoices/resolvedInvoiceProductIdsSql.js";
 import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 import { looseEntitlementIsLiveSql } from "../../looseEntitlementSql.js";
 import { composeCustomerLicensesCtes } from "./composeCustomerLicensesCtes.js";
@@ -183,7 +184,7 @@ export const getFullSubjectRowsQuery = ({
 
 			'invoices', COALESCE(
 				(
-					SELECT json_agg(row_to_json(ci) ORDER BY ci.created_at DESC, ci.id DESC)
+					SELECT json_agg(${invoiceJsonWithCurrentPlanIdsSql("ci")} ORDER BY ci.created_at DESC, ci.id DESC)
 						FILTER (WHERE ci.id IS NOT NULL)
 					FROM customer_invoices ci
 					WHERE ci.internal_customer_id = sr.internal_customer_id

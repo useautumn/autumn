@@ -100,8 +100,7 @@ export const getApiCustomerBase = async ({
 
 		invoices:
 			fullCus.invoices && ctx.expand.includes(CustomerExpand.Invoices)
-				? await invoicesToResponse({
-						db: ctx.db,
+				? invoicesToResponse({
 						invoices: fullCus.invoices,
 					})
 				: undefined,
