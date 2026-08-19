@@ -3,7 +3,7 @@ import { NEON_PROJECT_ID, PROJECT_ROOT } from "../constants.ts";
 import { ensurePublicAccess } from "../helpers/cloudflare.ts";
 import { isProvisioned } from "../helpers/entry.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
-import { ensureLocalInfra } from "../helpers/localInfra.ts";
+import { cmdStart } from "./start.ts";
 import { withNeonContext } from "../helpers/neonContext.ts";
 import {
 	parseRegionArg,
@@ -103,10 +103,7 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 		registry[cwd] = entry;
 		saveRegistry(registry);
 	} else if (isCloudAgent()) {
-		ensureLocalInfra();
-		entry = await ensurePublicAccess(entry);
-		registry[cwd] = entry;
-		saveRegistry(registry);
+		return await cmdStart();
 	} else {
 		entry = await ensurePublicAccess(entry);
 	}
