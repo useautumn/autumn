@@ -1,4 +1,4 @@
-import type { Feature } from "@autumn/shared";
+import { type Feature, isAnyCreditSystem } from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import type { AxiosError } from "axios";
 import { useEffect } from "react";
@@ -14,6 +14,7 @@ import { NewFeatureAdvanced } from "../../plan/components/new-feature/NewFeature
 import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatureBehaviour";
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../plan/components/new-feature/NewFeatureType";
+import { validateCreditSystem } from "../credit-systems/utils/validateCreditSystem";
 import { featureToCatalogFeatureParams } from "../utils/buildFeatureMutationParams";
 
 interface UpdateFeatureSheetProps {
@@ -45,6 +46,13 @@ function UpdateFeatureSheet({
 
 	const handleUpdateFeature = async () => {
 		if (!selectedFeature) return;
+		if (isAnyCreditSystem(feature.type)) {
+			const validationError = validateCreditSystem(feature);
+			if (validationError) {
+				toast.error(validationError);
+				return;
+			}
+		}
 
 		try {
 			await updateCatalog({

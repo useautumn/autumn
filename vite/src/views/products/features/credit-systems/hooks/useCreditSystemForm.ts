@@ -3,6 +3,7 @@ import { FeatureType } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { useEffect, useRef } from "react";
 import { useAppForm } from "@/hooks/form/form";
+import { createSchemaItem } from "../utils/creditSchemaUtils";
 
 export interface CreditSystemFormValues {
 	name: string;
@@ -31,11 +32,7 @@ export function useCreditSystemForm({
 			name: feature?.name ?? "",
 			id: feature?.id ?? "",
 			type: feature?.type ?? FeatureType.CreditSystem,
-			config: feature?.config ?? {
-				schema: [
-					{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
-				],
-			},
+			config: feature?.config ?? { schema: [createSchemaItem()] },
 			event_names: feature?.event_names ?? [],
 			model_markups:
 				(feature?.model_markups as CreditSystemFormValues["model_markups"]) ??
