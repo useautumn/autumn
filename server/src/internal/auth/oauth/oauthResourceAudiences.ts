@@ -1,54 +1,71 @@
 import { getAutumnEnv } from "@autumn/env";
+import { logger } from "@/external/logtail/logtailUtils.js";
 
-const MCP_RESOURCE_PATHS = ["/mcp"];
+const MCP_RESOURCE_PATH = "/mcp";
+const LOCAL_MCP_SERVER_URL = "http://localhost:3099";
+const PRODUCTION_MCP_SERVER_URL = "https://mcp.useautumn.com";
+const PRODUCTION_CHAT_SERVER_URL = "https://chat.useautumn.com";
+
+// Reading these here rather than through @autumn/env is deliberate: the typed
+// env throws for the whole process on a bad value, and an MCP-only override is
+// not worth failing every other service's boot over.
+const getServerUrl = ({
+	configured,
+	productionUrl,
+}: {
+	configured: string | undefined;
+	productionUrl: string;
+}) => {
+	if (configured) return configured;
+	return process.env.NODE_ENV === "production"
+		? productionUrl
+		: LOCAL_MCP_SERVER_URL;
+};
+
+// A malformed entry is dropped rather than fatal, so it has to be visible; the
+// raw value is the identity, so a stable misconfiguration warns once.
+const warnedResourceUrls = new Set<string>();
 
 const parseMcpResourceUrl = (rawUrl: string) => {
 	const resourceUrl = rawUrl.trim();
 	if (!resourceUrl) return null;
+	if (URL.canParse(resourceUrl)) return new URL(resourceUrl).href;
 
-	try {
-		return new URL(resourceUrl).href;
-	} catch {
-		console.warn(`Ignoring invalid MCP_RESOURCE_URLS entry: ${resourceUrl}`);
-		return null;
+	if (!warnedResourceUrls.has(resourceUrl)) {
+		warnedResourceUrls.add(resourceUrl);
+		logger.warn("Ignoring invalid MCP_RESOURCE_URLS entry", { resourceUrl });
 	}
+	return null;
 };
 
 const getConfiguredMcpResourceUrls = () =>
 	process.env.MCP_RESOURCE_URLS?.split(",")
 		.map(parseMcpResourceUrl)
-		.filter((url): url is string => Boolean(url)) ?? [];
+		.filter((url): url is string => url !== null) ?? [];
 
 /**
- * Public hosts that serve OAuth-protected MCP endpoints. leaf serves both the
- * MCP server (MCP_SERVER_URL) and the chat/slackbot (CHAT_SERVER_URL); the
- * autumn server can also proxy /mcp under its own API origin.
- * The OAuth `resource` indicator is host-based, so every public host + path
- * must be a registered audience. MCP_RESOURCE_URLS is an explicit override.
+ * Every public host serving an OAuth-protected `/mcp` endpoint, plus the
+ * explicit `MCP_RESOURCE_URLS` override. The `resource` indicator is host-based,
+ * so each host must be a registered audience or its grants authenticate nowhere.
  *
- * Read lazily so a deployment can change the override without a rebuild, and so
- * importing this module never depends on env being loaded yet.
+ * Read per call so importing this module never requires env to be loaded yet.
  */
 export const getMcpOAuthResourceUrls = (): string[] => {
-	const isProduction = process.env.NODE_ENV === "production";
-	const mcpServerUrl =
-		process.env.MCP_SERVER_URL ??
-		(isProduction ? "https://mcp.useautumn.com" : "http://localhost:3099");
-	const chatServerUrl =
-		process.env.CHAT_SERVER_URL ??
-		(isProduction ? "https://chat.useautumn.com" : "http://localhost:3099");
-
 	const bases = [
 		getAutumnEnv().AUTUMN_API_URL,
-		mcpServerUrl,
-		chatServerUrl,
-	].filter((base): base is string => Boolean(base));
+		getServerUrl({
+			configured: process.env.MCP_SERVER_URL,
+			productionUrl: PRODUCTION_MCP_SERVER_URL,
+		}),
+		getServerUrl({
+			configured: process.env.CHAT_SERVER_URL,
+			productionUrl: PRODUCTION_CHAT_SERVER_URL,
+		}),
+	];
 
 	return [
 		...new Set([
-			...bases.flatMap((base) =>
-				MCP_RESOURCE_PATHS.map((path) => new URL(path, base).href),
-			),
+			...bases.map((base) => new URL(MCP_RESOURCE_PATH, base).href),
 			...getConfiguredMcpResourceUrls(),
 		]),
 	];
@@ -56,9 +73,5 @@ export const getMcpOAuthResourceUrls = (): string[] => {
 
 /** Every resource identifier this authorization server will stamp on a grant. */
 export const getOAuthValidAudiences = (): string[] => [
-	...new Set(
-		[getAutumnEnv().AUTUMN_API_URL, ...getMcpOAuthResourceUrls()].filter(
-			(audience): audience is string => Boolean(audience),
-		),
-	),
+	...new Set([getAutumnEnv().AUTUMN_API_URL, ...getMcpOAuthResourceUrls()]),
 ];
