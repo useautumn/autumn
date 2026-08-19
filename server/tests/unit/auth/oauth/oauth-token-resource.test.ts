@@ -80,7 +80,7 @@ describe("oauthAudienceAllowsResource", () => {
 		).toBe(false);
 	});
 
-	test("accepts grants minted before audience stamping", () => {
+	test("accepts a grant whose token request named no resource", () => {
 		expect(
 			oauthAudienceAllowsResource({ grantResource: null, resourceUrl }),
 		).toBe(true);

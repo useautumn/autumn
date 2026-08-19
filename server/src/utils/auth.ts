@@ -265,6 +265,8 @@ const options = {
 			advertisedMetadata: {
 				scopes_supported: [...OPENID_SCOPES, ...MODERN_SCOPES],
 			},
+			// Inert: normalizeOAuthTokenRequest strips `resource` before better-auth's
+			// checkResource reads it. resolveOAuthTokenResource enforces the audience.
 			validAudiences: getOAuthValidAudiences(),
 			allowDynamicClientRegistration: true,
 			allowUnauthenticatedClientRegistration: true,

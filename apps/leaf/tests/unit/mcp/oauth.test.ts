@@ -304,7 +304,7 @@ describe("MCP OAuth auth resolution", () => {
 		} satisfies Partial<OAuthHttpError>);
 	});
 
-	test("grandfathers tokens minted before audience stamping", async () => {
+	test("accepts a token whose request named no resource", async () => {
 		const auth = await buildAuthForRequest({
 			headers: new Headers({ authorization: "Bearer am_oauth_token" }),
 			db: oauthTokenDb({

@@ -27,8 +27,9 @@ export const canonicalizeOAuthResource = (
 };
 
 /**
- * Grants minted before audience stamping carry no resource and stay usable;
- * a stamped grant is only usable at the exact resource it names.
+ * A null audience means the token request named no resource, which older
+ * MCP-spec clients never do; those grants stay usable everywhere. A stamped
+ * grant is only usable at the exact resource it names.
  */
 export const oauthAudienceAllowsResource = ({
 	grantResource,
