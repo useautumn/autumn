@@ -1,7 +1,7 @@
 import type { CreditSchemaItem } from "@autumn/shared";
 import { IconButton, Input } from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
-import { useRef } from "react";
+import { useState } from "react";
 import {
 	addTier,
 	type GraduatedCreditSchemaItem,
@@ -17,15 +17,19 @@ interface CreditTierRowsProps {
 
 export function CreditTierRows({ item, onChange }: CreditTierRowsProps) {
 	const { tiers } = item;
-	const tierKeysRef = useRef(tiers.map(() => crypto.randomUUID()));
+	const [tierKeys, setTierKeys] = useState(() =>
+		tiers.map(() => crypto.randomUUID()),
+	);
 
 	const handleRemoveTier = (index: number) => {
-		tierKeysRef.current = tierKeysRef.current.filter((_, i) => i !== index);
+		setTierKeys((currentTierKeys) =>
+			currentTierKeys.filter((_, currentIndex) => currentIndex !== index),
+		);
 		onChange(removeTier({ item, index }));
 	};
 
 	const handleAddTier = () => {
-		tierKeysRef.current = [...tierKeysRef.current, crypto.randomUUID()];
+		setTierKeys((currentTierKeys) => [...currentTierKeys, crypto.randomUUID()]);
 		onChange(addTier(item));
 	};
 
@@ -35,10 +39,7 @@ export function CreditTierRows({ item, onChange }: CreditTierRowsProps) {
 				const isLast = index === tiers.length - 1;
 
 				return (
-					<div
-						key={tierKeysRef.current[index]}
-						className="flex items-center gap-2 w-full"
-					>
+					<div key={tierKeys[index]} className="flex items-center gap-2 w-full">
 						<span className="text-tertiary-foreground text-xs shrink-0 w-14">
 							up to
 						</span>

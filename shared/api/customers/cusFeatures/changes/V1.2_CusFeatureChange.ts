@@ -1,3 +1,4 @@
+import { apiCreditSchemaToV2_3 } from "@api/features/changes/V2.3_FeatureRateCardChange.js";
 import { ApiFeatureType } from "@api/features/prevVersions/apiFeatureV0";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import { resetIntvToEntIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals";
@@ -235,6 +236,9 @@ export function transformBalanceToCusFeatureV3({
 	}
 
 	// 1. Included usage: granted_balance, or if prepaid, granted_balance + purchased_balance (?)
+	const legacyCreditSchema = apiCreditSchemaToV2_3({
+		creditSchema: input.feature?.credit_schema,
+	});
 
 	return {
 		id: input.feature_id,
@@ -255,18 +259,10 @@ export function transformBalanceToCusFeatureV3({
 
 		overage_allowed: overageAllowed,
 
-		credit_schema: input.feature?.credit_schema
-			? input.feature.credit_schema.flatMap((credit) =>
-					credit.tier_behavior === "graduated"
-						? []
-						: [
-								{
-									feature_id: credit.metered_feature_id,
-									credit_amount: credit.credit_cost,
-								},
-							],
-				)
-			: undefined,
+		credit_schema: legacyCreditSchema?.map((credit) => ({
+			feature_id: credit.metered_feature_id,
+			credit_amount: credit.credit_cost,
+		})),
 
 		breakdown: newBreakdown,
 		rollovers: input.rollovers,

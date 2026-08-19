@@ -28,7 +28,7 @@ import { notNullish, nullish } from "../utils.js";
 import { buildAiCreditSystemConfig } from "./buildAiCreditSystemConfig.js";
 import { isAnyCreditSystem } from "./classifyFeature/isAnyCreditSystem.js";
 
-const apiCreditSchemaItemToDb = (
+export const apiCreditSchemaItemToDb = (
 	credit: ApiCreditSchemaItem,
 ): CreditSchemaItem => {
 	const base = {
@@ -52,7 +52,7 @@ const apiCreditSchemaItemToDb = (
 	return { ...base, credit_amount: credit.credit_cost };
 };
 
-const dbCreditSchemaItemToApi = (
+export const dbCreditSchemaItemToApi = (
 	credit: CreditSchemaItem,
 ): ApiCreditSchemaItem => {
 	const base = {

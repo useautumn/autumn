@@ -139,6 +139,6 @@ test("graduated rates cannot contain a flat credit cost", () => {
 	} as unknown as CreditSchemaItem;
 
 	expect(validateCreditSystem(creditSystem([mixedItem]))).toBe(
-		"Graduated rates cannot include a flat credit cost",
+		"Tiered rates cannot include a flat credit cost",
 	);
 });
