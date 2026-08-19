@@ -750,7 +750,7 @@ describe("approval details modal", () => {
 		expect(modal.privateMetadata).toBe("approval_1");
 		expect(json).toContain('"initialOption":"draft_invoice"');
 		expect(json).toContain('"initialOption":"immediate"');
-		expect(json).toContain("Checkout session");
+		expect(json).toContain("Checkout link");
 		expect(json).toContain("Draft invoice");
 		expect(json).toContain("Finalized invoice");
 		expect(json).toContain("Provision after payment");

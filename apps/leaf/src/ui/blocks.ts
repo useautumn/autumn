@@ -1389,7 +1389,7 @@ export const approvalDetailsModal = ({
 				initialOption: edits.billing,
 				label: "Billing mode",
 				options: [
-					SelectOption({ label: "Checkout session", value: "checkout" }),
+					SelectOption({ label: "Checkout link", value: "checkout" }),
 					SelectOption({ label: "Draft invoice", value: "draft_invoice" }),
 					SelectOption({
 						label: "Finalized invoice",
