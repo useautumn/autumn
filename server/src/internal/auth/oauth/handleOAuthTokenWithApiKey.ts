@@ -41,7 +41,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		// 2. Single-flight guard: refresh tokens are single-use and rotated, so
 		// byte-identical replays of one refresh request must share the winner's
 		// response. A Redis outage leaves `heldReplayKey` null and the request mints
-		// unguarded — dedupe is an optimisation, not a dependency.
+		// unguarded.
 		if (tokenRequest.refreshReplayKey) {
 			const replay = await claimOAuthRefreshReplay(
 				tokenRequest.refreshReplayKey,

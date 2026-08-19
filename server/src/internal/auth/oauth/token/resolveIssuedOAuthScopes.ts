@@ -28,7 +28,6 @@ const allowsScopeLessOAuthToken = async ({
 	return isUnrestrictedChatOAuthConsent({ metadata });
 };
 
-/** An empty grant is admin-equivalent downstream, so only the chat consent may hold one. */
 const resolveEmptyScopeGrant = async ({
 	db,
 	isMcpClient,

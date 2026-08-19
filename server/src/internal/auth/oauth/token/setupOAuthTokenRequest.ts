@@ -11,7 +11,6 @@ import { normalizeOAuthTokenRequest } from "./normalizeOAuthTokenRequest.js";
 import { resolveOAuthTokenResource } from "./resolveOAuthTokenResource.js";
 
 export type OAuthTokenRequestContext = {
-	/** The client this request speaks for; null when it authenticates over the header. */
 	clientId: string | null;
 	isMcpClient: boolean;
 	normalizedRequest: Request;
