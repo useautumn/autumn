@@ -32,6 +32,7 @@ export const computeAttachBalanceTransitionPlan = ({
 		| "insertCustomerEntitlements"
 		| "oneOffPurchaseRebalance"
 		| "pooledBalancePlan"
+		| "updateCustomerEntitlements"
 	>;
 	hasFullCustomerOverride: boolean;
 }): BalanceTransitionPlan | undefined => {
@@ -77,6 +78,22 @@ export const computeAttachBalanceTransitionPlan = ({
 		return rejectBalanceTransitionPlan({
 			balanceTransitionPlan,
 			unsupportedReason: "one_off_purchase_rebalance",
+		});
+	}
+	const sourceCustomerEntitlementIds = new Set(
+		balanceTransitionPlan.transitions.map(
+			(transition) => transition.sourceCustomerEntitlementId,
+		),
+	);
+	if (
+		autumnBillingPlan.updateCustomerEntitlements?.some(
+			({ customerEntitlement }) =>
+				sourceCustomerEntitlementIds.has(customerEntitlement.id),
+		)
+	) {
+		return rejectBalanceTransitionPlan({
+			balanceTransitionPlan,
+			unsupportedReason: "source_customer_entitlement_update",
 		});
 	}
 

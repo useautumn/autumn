@@ -91,6 +91,7 @@ export const BalanceTransitionUnsupportedReasonSchema = z.enum([
 	"non_numeric_balance",
 	"one_off_purchase_rebalance",
 	"pooled_balance_plan",
+	"source_customer_entitlement_update",
 	"unmapped_runtime_balance",
 ]);
 
