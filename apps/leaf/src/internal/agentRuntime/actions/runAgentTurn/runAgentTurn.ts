@@ -66,6 +66,7 @@ export const runAgentTurn = async ({
 				}),
 				newSession: !existingSession,
 				orgContext,
+				orgSlug: org.slug,
 				params,
 			}),
 			orgId: org.id,

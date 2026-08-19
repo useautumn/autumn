@@ -29,14 +29,14 @@ describe("Harness message text", () => {
 		expect(extractUserMessageText(text)).toBe("attach pro");
 	});
 
-	test("adds the admin bypass note only for admin installs on a new session", () => {
+	test("adds the admin note only for admin installs on a new session", () => {
 		const adminText = buildAgentMessageText({
 			env: "sandbox",
 			isAdminInstall: true,
 			newSession: true,
 			params: { text: "who am I acting as" },
 		});
-		expect(adminText).toContain("admin bypass install");
+		expect(adminText).toContain("internal admin bot");
 
 		const nonAdminText = buildAgentMessageText({
 			env: "sandbox",
@@ -44,7 +44,7 @@ describe("Harness message text", () => {
 			newSession: true,
 			params: { text: "who am I acting as" },
 		});
-		expect(nonAdminText).not.toContain("admin bypass install");
+		expect(nonAdminText).not.toContain("internal admin bot");
 
 		const resumedAdminText = buildAgentMessageText({
 			env: "sandbox",
@@ -52,7 +52,21 @@ describe("Harness message text", () => {
 			newSession: false,
 			params: { text: "who am I acting as" },
 		});
-		expect(resumedAdminText).not.toContain("admin bypass install");
+		expect(resumedAdminText).not.toContain("internal admin bot");
+	});
+
+	test("interpolates the acting-as org slug into the admin note and won't redirect for the current org", () => {
+		const text = buildAgentMessageText({
+			env: "sandbox",
+			isAdminInstall: true,
+			newSession: true,
+			orgSlug: "acme_sandbox",
+			params: { text: 'use "acme_sandbox" org' },
+		});
+		expect(text).toContain('"acme_sandbox"');
+		expect(text).toContain("do NOT tell them to start a new thread");
+		// The redirect instruction is reserved for a genuinely different org.
+		expect(text).toContain("Only if they ask for a DIFFERENT org");
 	});
 
 	test("does not inject org context on resumed sessions", () => {

@@ -9,12 +9,14 @@ export const buildAgentTurnMessage = ({
 	isAdminInstall = false,
 	newSession,
 	orgContext,
+	orgSlug,
 	params,
 }: {
 	env: string;
 	isAdminInstall?: boolean;
 	newSession: boolean;
 	orgContext?: AutumnOrgContext;
+	orgSlug?: string;
 	params: AgentTurnParams;
 }): EveMessageContent => {
 	const attachments = params.attachments ?? [];
@@ -23,6 +25,7 @@ export const buildAgentTurnMessage = ({
 		isAdminInstall,
 		newSession,
 		orgContext,
+		orgSlug,
 		params,
 	});
 	if (attachments.length === 0) return messageText;

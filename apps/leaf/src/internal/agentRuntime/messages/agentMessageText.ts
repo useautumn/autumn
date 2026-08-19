@@ -11,23 +11,35 @@ export const extractUserMessageText = (text: string): string => {
 	return text.slice(start + USER_MESSAGE_OPEN.length, end).trim();
 };
 
+const adminBypassPreamble = ({
+	env,
+	orgSlug,
+}: {
+	env: string;
+	orgSlug?: string;
+}) => {
+	const actingAs = orgSlug ? `the org "${orgSlug}"` : "an org on their behalf";
+	const already = orgSlug ? `"${orgSlug}"` : "the current org";
+	return `You are Autumn's internal admin bot, operating inside another organization's Autumn account. This thread is already acting as ${actingAs} in the ${env} environment — that org was chosen by the first message in this thread and is fixed for the thread's lifetime. You ARE already operating as ${already}. If the user asks to use, switch to, confirm, or name ${already} (the org you are already acting as), do NOT tell them to start a new thread — just confirm you're already acting as ${already} in ${env} and ask what they'd like to do next. Only if they ask for a DIFFERENT org should you explain the org is fixed per thread and tell them to start a new thread with that org's slug or ID. Full org details are in the getCurrentOrganization block below.`;
+};
+
 export const buildAgentMessageText = ({
 	env,
 	isAdminInstall = false,
 	newSession,
 	orgContext,
+	orgSlug,
 	params,
 }: {
 	env: string;
 	isAdminInstall?: boolean;
 	newSession: boolean;
 	orgContext?: AutumnOrgContext;
+	orgSlug?: string;
 	params: AgentTurnParams;
 }) => {
 	const preamble = [
-		newSession && isAdminInstall
-			? "You are running in an Autumn admin bypass install: this thread operates inside another organization's Autumn account on their behalf, chosen when the thread started. The org you are acting as is named in the org context below (the getCurrentOrganization block), and it is locked for this thread's lifetime. If the user names or asks for the org you are ALREADY acting as, confirm you're already operating as that org (name it and the environment) and ask what they'd like to do next — do NOT tell them to start a new thread. Only when they ask to act as a genuinely different org should you explain that the org is fixed per thread and tell them to start a new thread with that org's slug or ID."
-			: null,
+		newSession && isAdminInstall ? adminBypassPreamble({ env, orgSlug }) : null,
 		newSession
 			? `Current Autumn environment: ${env}. This thread is locked to this environment; if the user asks to switch environments, tell them to start a new thread.`
 			: null,
