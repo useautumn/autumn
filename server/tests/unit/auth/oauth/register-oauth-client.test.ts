@@ -90,7 +90,11 @@ describe("registerOAuthClient", () => {
 				body: { client_name: clientName, redirect_uris: ["https://a.dev/cb"] },
 				db,
 			});
-			expect(result).toEqual({ error: "invalid_client_metadata", status: 400 });
+			expect(result).toEqual({
+				error: "invalid_client_metadata",
+				error_description: "client_name is reserved",
+				status: 400,
+			});
 		}
 
 		expect(inserted).toHaveLength(0);
@@ -121,7 +125,11 @@ describe("registerOAuthClient", () => {
 			db,
 		});
 
-		expect(result).toEqual({ error: "redirect_uris is required", status: 400 });
+		expect(result).toEqual({
+			error: "invalid_redirect_uri",
+			error_description: "redirect_uris is required",
+			status: 400,
+		});
 		expect(inserted).toHaveLength(0);
 	});
 
@@ -150,7 +158,17 @@ describe("registerOAuthClient", () => {
 				body: { client_name: uniqueName(), redirect_uris: [] },
 				db,
 			}),
-		).toEqual({ error: "redirect_uris is required", status: 400 });
+		).toEqual({
+			error: "invalid_redirect_uri",
+			error_description: "redirect_uris is required",
+			status: 400,
+		});
+
+		const unsafeRedirectUri = {
+			error: "invalid_redirect_uri",
+			error_description: "One or more redirect_uris are not allowed",
+			status: 400,
+		} as const;
 
 		expect(
 			await registerOAuthClient({
@@ -160,7 +178,7 @@ describe("registerOAuthClient", () => {
 				},
 				db,
 			}),
-		).toEqual({ error: "invalid_redirect_uri", status: 400 });
+		).toEqual(unsafeRedirectUri);
 
 		expect(
 			await registerOAuthClient({
@@ -170,9 +188,33 @@ describe("registerOAuthClient", () => {
 				},
 				db,
 			}),
-		).toEqual({ error: "invalid_redirect_uri", status: 400 });
+		).toEqual(unsafeRedirectUri);
 
 		expect(inserted).toHaveLength(0);
+	});
+
+	test("answers registered RFC 7591 error codes, never prose", async () => {
+		const { db } = createFakeDb();
+		const registeredCodes = new Set([
+			"invalid_client_metadata",
+			"invalid_redirect_uri",
+		]);
+
+		for (const body of [
+			{},
+			{ redirect_uris: "https://a.dev/cb" },
+			{ client_name: 5, redirect_uris: ["https://a.dev/cb"] },
+			{ client_name: uniqueName(), redirect_uris: ["data:text/html,x"] },
+			{ client_name: "atmn", redirect_uris: ["https://a.dev/cb"] },
+		]) {
+			const result = await registerOAuthClient({ body, db });
+			if (result.status === 201) {
+				throw new Error("expected a rejected registration");
+			}
+
+			expect(registeredCodes.has(result.error)).toBe(true);
+			expect(result.error_description.length).toBeGreaterThan(0);
+		}
 	});
 
 	test("falls back to a generic client name", async () => {

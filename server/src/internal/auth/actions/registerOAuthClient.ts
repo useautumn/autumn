@@ -33,9 +33,15 @@ export type OAuthClientRegistration = {
 	type: "native";
 };
 
+/** RFC 7591 §3.2.2: `error` is an enum; the prose belongs in the description. */
+export type OAuthClientRegistrationError = {
+	error: "invalid_client_metadata" | "invalid_redirect_uri";
+	error_description: string;
+};
+
 type RegisterOAuthClientResult =
 	| { body: OAuthClientRegistration; status: 201 }
-	| { error: string; status: 400 };
+	| (OAuthClientRegistrationError & { status: 400 });
 
 const toRegistration = (
 	client: OAuthClientRecord,
@@ -103,26 +109,44 @@ export const registerOAuthClient = async ({
 		const redirectUrisFailed = parsed.error.issues.some(
 			(issue) => issue.path[0] === "redirect_uris",
 		);
+		if (redirectUrisFailed) {
+			return {
+				error: "invalid_redirect_uri",
+				error_description: "redirect_uris is required",
+				status: 400,
+			};
+		}
 		return {
-			error: redirectUrisFailed
-				? "redirect_uris is required"
-				: "invalid_client_metadata",
+			error: "invalid_client_metadata",
+			error_description: "Client metadata is invalid",
 			status: 400,
 		};
 	}
 
 	const redirectUris = [...new Set(parsed.data.redirect_uris.filter(Boolean))];
 	if (redirectUris.length === 0) {
-		return { error: "redirect_uris is required", status: 400 };
+		return {
+			error: "invalid_redirect_uri",
+			error_description: "redirect_uris is required",
+			status: 400,
+		};
 	}
 	if (!redirectUris.every(isSafeOAuthRedirectUri)) {
-		return { error: "invalid_redirect_uri", status: 400 };
+		return {
+			error: "invalid_redirect_uri",
+			error_description: "One or more redirect_uris are not allowed",
+			status: 400,
+		};
 	}
 
 	const clientName =
 		parsed.data.client_name?.trim() || DEFAULT_OAUTH_CLIENT_NAME;
 	if (isReservedOAuthClientName(clientName)) {
-		return { error: "invalid_client_metadata", status: 400 };
+		return {
+			error: "invalid_client_metadata",
+			error_description: "client_name is reserved",
+			status: 400,
+		};
 	}
 
 	const scopes = getDefaultOAuthScopes(
