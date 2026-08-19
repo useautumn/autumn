@@ -6,7 +6,8 @@ file is specific to the Cursor Cloud environment.
 
 Config lives in `.cursor/environment.json` (install / start / terminals). Do
 **not** pin a VM snapshot — `snapshot-20260629` makes Cloud builds crash in
-Cursor's VNC/exec-daemon overlay before `install.sh` runs. `install` runs
+Cursor's VNC/exec-daemon overlay before `install.sh` runs. The default Cloud
+image has no bun. `install` installs bun from `.bun-version`, then runs
 `agent-bootstrap.sh` so Postgres 18, Redis Stack, ClickHouse, JRE, and
 ElasticMQ are created on the current Cloud image.
 

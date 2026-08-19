@@ -11,10 +11,31 @@ log() { echo "[cursor-cloud-install] $*"; }
 export CLOUD_AGENT=1
 export DW_HEADLESS=1
 
+# Default Cloud image has no bun. `command -v bun` exits 1 under set -e.
 BUN="${HOME}/.bun/bin/bun"
 if [ ! -x "$BUN" ]; then
-	BUN="$(command -v bun)"
+	BUN="$(command -v bun 2>/dev/null || true)"
 fi
+if [ ! -x "$BUN" ]; then
+	bun_ver="$(tr -d '[:space:]' < .bun-version 2>/dev/null || true)"
+	log "installing bun ${bun_ver:-latest} (default Cloud image has none)"
+	if [ -n "$bun_ver" ]; then
+		curl -fsSL https://bun.sh/install | bash -s "bun-v${bun_ver}"
+	else
+		curl -fsSL https://bun.sh/install | bash
+	fi
+	BUN="${HOME}/.bun/bin/bun"
+fi
+if [ ! -x "$BUN" ]; then
+	log "ERROR: bun is not executable after install"
+	exit 1
+fi
+export PATH="$(dirname "$BUN"):${PATH}"
+if [ ! -x /usr/local/bin/bun ]; then
+	sudo ln -sf "$BUN" /usr/local/bin/bun
+	sudo ln -sf "$(dirname "$BUN")/bunx" /usr/local/bin/bunx || true
+fi
+log "bun $($BUN --version) at $BUN"
 
 log "init ai submodule (skills + MCP sync source)"
 git submodule update --init --recursive

@@ -12,7 +12,11 @@ export PATH="$ROOT/node_modules/.bin:/usr/local/bin:$HOME/.bun/bin:$PATH"
 
 BUN="${HOME}/.bun/bin/bun"
 if [ ! -x "$BUN" ]; then
-	BUN="$(command -v bun)"
+	BUN="$(command -v bun 2>/dev/null || true)"
+fi
+if [ ! -x "$BUN" ]; then
+	echo "[cursor-cloud-start] bun missing — install.sh did not finish" >&2
+	exit 1
 fi
 
 if [ -n "${INFISICAL_TOKEN:-}" ]; then
