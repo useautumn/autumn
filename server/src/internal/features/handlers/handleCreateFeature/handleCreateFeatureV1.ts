@@ -1,6 +1,7 @@
 import {
 	AffectedResource,
 	ApiVersion,
+	CreateFeatureRestV2_3ParamsSchema,
 	CreateFeatureV0ParamsSchema,
 	dbToApiFeatureV1,
 	featureV1ToDbFeature,
@@ -15,6 +16,7 @@ export const handleCreateFeatureV1 = createRoute({
 	scopes: [Scopes.Features.Write],
 	versionedBody: {
 		latest: CreateFeatureV1ParamsSchema,
+		[ApiVersion.V2_3]: CreateFeatureRestV2_3ParamsSchema,
 		[ApiVersion.V1_Beta]: CreateFeatureV0ParamsSchema,
 	},
 	resource: AffectedResource.Feature,

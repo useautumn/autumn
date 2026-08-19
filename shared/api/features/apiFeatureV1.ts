@@ -4,6 +4,7 @@ import {
 	ProviderMarkupsSchema,
 } from "../../models/featureModels/featureConfig/creditConfig";
 import { FeatureType } from "../../models/featureModels/featureEnums";
+import { ApiCreditSchemaItemSchema } from "./creditRateCard.js";
 
 export const ApiFeatureV1Schema = z.object({
 	id: z.string().meta({
@@ -28,23 +29,15 @@ export const ApiFeatureV1Schema = z.object({
 		description:
 			"Event names that trigger this feature's balance. Allows multiple features to respond to a single event.",
 	}),
-	credit_schema: z
-		.array(
-			z.object({
-				metered_feature_id: z.string().meta({
-					description:
-						"ID of the metered feature that draws from this credit system.",
-				}),
-				credit_cost: z.number().meta({
-					description: "Credits consumed per unit of the metered feature.",
-				}),
-			}),
-		)
-		.optional()
-		.meta({
-			description:
-				"For credit_system features: maps metered features to their credit costs.",
-		}),
+	credit_schema: z.array(ApiCreditSchemaItemSchema).optional().meta({
+		description:
+			"For classic credit systems: maps metered features to flat or graduated credit costs.",
+	}),
+
+	invoice_credit: z.boolean().optional().meta({
+		description:
+			"Whether usage of this classic credit system should be itemized as invoice credits.",
+	}),
 
 	model_markups: ModelMarkupsSchema.optional().meta({
 		description: "Per-model markup overrides for AI credit systems.",
