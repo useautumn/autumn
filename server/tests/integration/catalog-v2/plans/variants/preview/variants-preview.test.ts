@@ -289,7 +289,7 @@ test.concurrent(
 								current_version: 2,
 								new_version: null,
 								resolved: "existing",
-								options: ["all_versions"],
+								options: ["existing", "all_versions"],
 							},
 							siblingVersions: [
 								{
@@ -362,7 +362,7 @@ test.concurrent(
 								current_version: 2,
 								new_version: null,
 								resolved: "all_versions",
-								options: ["all_versions"],
+								options: ["existing", "all_versions"],
 							},
 							siblingVersions: [
 								{
@@ -404,7 +404,7 @@ test.concurrent(
 								current_version: 2,
 								new_version: null,
 								resolved: "existing",
-								options: ["all_versions"],
+								options: ["existing", "all_versions"],
 							},
 							siblingVersions: [
 								{
@@ -443,7 +443,7 @@ test.concurrent(
 								current_version: 2,
 								new_version: null,
 								resolved: "existing",
-								options: ["all_versions"],
+								options: ["existing", "all_versions"],
 							},
 							siblingVersions: [{ version: 1, variantAction: "unchanged" }],
 						},

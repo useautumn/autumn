@@ -2,7 +2,7 @@
  * catalogV2.preview_update — state.has_customers + versioning block.
  *
  * options lists only strategies pickable today:
- * - existing when the pinned version has customers
+ * - existing when the pinned version has customers, or the plan has multiple versions
  * - new_version when latest has customers (mint only from latest)
  * - all_versions when the plan has more than one version
  */
@@ -215,7 +215,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 preview-versioning: latest of 2-version → existing resolved; all_versions option")}`,
+	`${chalk.yellowBright("catalogV2 preview-versioning: latest of 2-version, no customers → existing + all_versions")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_pv_ver");
@@ -242,7 +242,7 @@ test.concurrent(
 						current_version: 2,
 						new_version: null,
 						resolved: "existing",
-						options: ["all_versions"],
+						options: ["existing", "all_versions"],
 					},
 				},
 			});
@@ -415,12 +415,11 @@ test.concurrent(
 						current_version: 2,
 						new_version: null,
 						resolved: "all_versions",
-						options: ["all_versions"],
+						options: ["existing", "all_versions"],
 					},
 					siblingVersions: [
 						{
 							version: 1,
-							selected: true,
 							hasCustomers: false,
 							hasPlanChange: true,
 						},
@@ -461,12 +460,11 @@ test.concurrent(
 						current_version: 2,
 						new_version: null,
 						resolved: "existing",
-						options: ["all_versions"],
+						options: ["existing", "all_versions"],
 					},
 					siblingVersions: [
 						{
 							version: 1,
-							selected: false,
 							hasCustomers: false,
 							hasPlanChange: false,
 						},

@@ -23,7 +23,10 @@ export const handleUpdateCatalogErrors = ({
 }): void => {
 	handleUpdateFeatureErrors({ ctx, catalogContext, updateCatalogPlan });
 	handleRemoveFeatureErrors({ updateCatalogPlan });
-	handleRemovePlanErrors({ updateCatalogPlan });
+	handleRemovePlanErrors({
+		updateCatalogPlan,
+		productStatesContext: catalogContext.productStatesContext,
+	});
 	handleUpsertProductVersioningErrors({
 		params,
 		productStatesContext: catalogContext.productStatesContext,

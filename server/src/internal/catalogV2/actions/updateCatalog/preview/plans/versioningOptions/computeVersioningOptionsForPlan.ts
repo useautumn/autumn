@@ -11,7 +11,7 @@ export const computeVersioningOptionsForPlan = ({
 	hasMultipleVersions: boolean;
 }): CatalogPlanVersioningStrategy[] => {
 	const options: CatalogPlanVersioningStrategy[] = [];
-	if (hasCustomers) options.push("existing");
+	if (hasCustomers || hasMultipleVersions) options.push("existing");
 	if (hasCustomers && isLatestVersion) options.push("new_version");
 	if (hasMultipleVersions) options.push("all_versions");
 	return options;

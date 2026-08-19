@@ -1,12 +1,16 @@
 import { ErrCode, ProductNotFoundError, RecaseError } from "@autumn/shared";
+import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import { handleRemovePlanVariantErrors } from "./handleRemovePlanVariantErrors";
+import { handleRemovePlanVersionErrors } from "./handleRemovePlanVersionErrors";
 
 /** Throws when a removal is unknown, or contradicted by the same request. */
 export const handleRemovePlanErrors = ({
 	updateCatalogPlan,
+	productStatesContext,
 }: {
 	updateCatalogPlan: UpdateCatalogPlan;
+	productStatesContext: ProductStatesContext;
 }): void => {
 	const upsertedPlanIds = new Set(
 		updateCatalogPlan.upsertProducts.map((upsert) => upsert.row.planId),
@@ -28,5 +32,6 @@ export const handleRemovePlanErrors = ({
 		}
 	}
 
+	handleRemovePlanVersionErrors({ updateCatalogPlan, productStatesContext });
 	handleRemovePlanVariantErrors({ updateCatalogPlan });
 };
