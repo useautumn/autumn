@@ -69,7 +69,6 @@ const gerunds: Record<string, string> = {
 	createEntity: "Creating the entity",
 	updateAgentRules: "Updating your agent rules",
 	updatePlan: "Updating the plan",
-	hasCustomers: "Checking plan usage",
 	listBalances: "Checking balances",
 	connection_search: "Finding the right tool",
 };
