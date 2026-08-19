@@ -4,30 +4,26 @@ import {
 	type FullPlanLicense,
 	type FullProduct,
 	type FullProductWithoutLicenses,
+	type FullProductWithoutParentLicenses,
 	freeTrials,
 	type ParentPlanLicense,
 	planLicenses,
 	prices,
+	products,
 } from "@autumn/shared";
 import { eq } from "drizzle-orm";
+import { parentProductLicensesQuery } from "./parentProductLicensesQuery";
 
-const composeProductItems = ({ excludeEnts = false } = {}) => ({
-	entitlements: excludeEnts
-		? undefined
-		: {
-				with: { feature: true as const },
-				where: eq(entitlements.is_custom, false),
-			},
+const composeProductItems = () => ({
+	entitlements: {
+		with: { feature: true as const },
+		where: eq(entitlements.is_custom, false),
+	},
 	prices: { where: eq(prices.is_custom, false) },
 	free_trials: { where: eq(freeTrials.is_custom, false) },
 });
 
-export const composeFullProductQuery = ({
-	excludeEnts = false,
-}: {
-	excludeEnts?: boolean;
-} = {}) => ({
-	...composeProductItems({ excludeEnts }),
+const composeLicenseSide = () => ({
 	licenses: {
 		where: eq(planLicenses.is_custom, false),
 		with: {
@@ -42,16 +38,39 @@ export const composeFullProductQuery = ({
 			priceRefs: { with: { price: true as const } },
 		},
 	},
-	// Reverse direction: links where this product IS the license. Indexed by
-	// idx_plan_license_license — an empty probe for non-license products.
+});
+
+/** Nested base/variants: items + license plans. Skip parent_plan_licenses —
+ * nesting that relation under base/variants hits a Postgres LATERAL alias bug. */
+const composeNestedVariantProduct = () => ({
+	...composeProductItems(),
+	...composeLicenseSide(),
+});
+
+export const composeFullProductQuery = () => ({
+	...composeProductItems(),
+	...composeLicenseSide(),
+	// Reverse links where this product IS the license. Keep every parent version —
+	// catalogV2 `deriveLicenseParentIntents` pins from this list (not latest-only).
 	parent_plan_licenses: {
 		where: eq(planLicenses.is_custom, false),
 		with: {
 			parentProduct: {
 				with: composeProductItems(),
+				extras: {
+					licenses: parentProductLicensesQuery({
+						parentInternalProductId: products.internal_id,
+					}).as("licenses"),
+				},
 			},
 			priceRefs: { with: { price: true as const } },
 		},
+	},
+	base_product: {
+		with: composeNestedVariantProduct(),
+	},
+	variants: {
+		with: composeNestedVariantProduct(),
 	},
 });
 
@@ -69,23 +88,28 @@ export type ProductWithLicenseRelations = FullProductWithoutLicenses & {
 	>;
 	parent_plan_licenses?: Array<
 		DbPlanLicense & {
-			parentProduct: FullProductWithoutLicenses;
+			parentProduct: FullProductWithoutParentLicenses;
 			priceRefs: Array<{
 				price: FullProductWithoutLicenses["prices"][number];
 			}>;
 		}
 	>;
+	base_product?: ProductWithLicenseRelations | null;
+	variants?: ProductWithLicenseRelations[];
 };
 
 /** Hydrated link row + its product, with free_trial resolved. */
 const normalizeLinkProduct = <T extends DbPlanLicense>(
 	link: T,
-	product: FullProductWithoutLicenses,
-): DbPlanLicense & { product: FullProductWithoutLicenses } => ({
+	product: FullProductWithoutParentLicenses,
+): DbPlanLicense & {
+	product: FullProductWithoutParentLicenses;
+} => ({
 	...link,
 	product: {
 		...product,
 		free_trial: product.free_trials?.[0] ?? null,
+		...(product.licenses !== undefined ? { licenses: product.licenses } : {}),
 	},
 });
 
@@ -115,7 +139,7 @@ export const normalizeFullProductLicenses = ({
 }: {
 	product: ProductWithLicenseRelations;
 }): FullProduct => {
-	const { parent_plan_licenses, ...rest } = product;
+	const { parent_plan_licenses, base_product, variants, ...rest } = product;
 	return {
 		...rest,
 		licenses: product.licenses?.map(
@@ -126,6 +150,12 @@ export const normalizeFullProductLicenses = ({
 				...normalizeLinkProduct(link, parentProduct),
 				license_prices: priceRefs.map(({ price }) => price),
 			}),
+		),
+		base_product: base_product
+			? normalizeFullProductLicenses({ product: base_product })
+			: null,
+		variants: (variants ?? []).map((variant) =>
+			normalizeFullProductLicenses({ product: variant }),
 		),
 	};
 };

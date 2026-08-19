@@ -1,10 +1,13 @@
 import {
 	BillingInterval,
 	BillWhen,
+	type FixedPriceConfig,
 	type FullCustomerPrice,
 	Infinite,
 	type Price,
 	PriceType,
+	TierInfinite,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 
 /**
@@ -202,6 +205,68 @@ const createCustomer = ({
 	price,
 });
 
+/** Stable-id fixed price for field-level comparison tests. */
+const buildFixed = ({
+	overrides = {},
+	configOverrides = {},
+}: {
+	overrides?: Partial<Price>;
+	configOverrides?: Partial<FixedPriceConfig>;
+} = {}): Price => {
+	const baseConfig: FixedPriceConfig = {
+		type: PriceType.Fixed,
+		amount: 50,
+		interval: BillingInterval.Month,
+		interval_count: 1,
+		feature_id: null,
+		internal_feature_id: null,
+	};
+	return {
+		id: "price_fixed_1",
+		org_id: "org_test",
+		created_at: 1_800_000_000_000,
+		internal_product_id: "prod_internal",
+		is_custom: false,
+		proration_config: null,
+		tier_behavior: null,
+		config: { ...baseConfig, ...configOverrides },
+		...overrides,
+	};
+};
+
+/** Stable-id usage price for field-level comparison tests. */
+const buildUsage = ({
+	overrides = {},
+	configOverrides = {},
+}: {
+	overrides?: Partial<Price>;
+	configOverrides?: Partial<UsagePriceConfig>;
+} = {}): Price => {
+	const baseConfig: UsagePriceConfig = {
+		type: PriceType.Usage,
+		bill_when: BillWhen.EndOfPeriod,
+		internal_feature_id: "feat_internal_messages",
+		feature_id: "messages",
+		usage_tiers: [{ to: TierInfinite, amount: 1 }],
+		interval: BillingInterval.Month,
+		interval_count: 1,
+		billing_units: 1,
+		should_prorate: false,
+	};
+	return {
+		id: "price_usage_1",
+		org_id: "org_test",
+		created_at: 1_800_000_000_000,
+		internal_product_id: "prod_internal",
+		is_custom: false,
+		entitlement_id: "ent_1",
+		proration_config: null,
+		tier_behavior: null,
+		config: { ...baseConfig, ...configOverrides },
+		...overrides,
+	};
+};
+
 // ═══════════════════════════════════════════════════════════════════
 // EXPORT
 // ═══════════════════════════════════════════════════════════════════
@@ -213,4 +278,6 @@ export const prices = {
 	createAllocated,
 	createOneOff,
 	createCustomer,
+	buildFixed,
+	buildUsage,
 } as const;

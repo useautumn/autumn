@@ -5,6 +5,7 @@ import { PlanItemFilterSchema } from "@api/products/items/filter/planItemFilter"
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls";
 import {
 	CustomizePlanLicenseSchema,
+	RemovePlanLicenseSchema,
 	licensePatchIssues,
 } from "@models/licenseModels/licenseModels";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
@@ -46,6 +47,7 @@ type CustomizePlanRefinementData = {
 	free_trial?: unknown;
 	billing_controls?: unknown;
 	upsert_licenses?: { license_plan_id: string }[];
+	remove_licenses?: { license_plan_id: string }[];
 };
 
 export const refineCustomizePlanV1Schema = <
@@ -73,6 +75,7 @@ export const refineCustomizePlanV1Schema = <
 		includeFreeTrial && "free_trial",
 		"billing_controls",
 		includeLicenses && "upsert_licenses",
+		includeLicenses && "remove_licenses",
 	].filter(Boolean) as (keyof CustomizePlanRefinementData)[];
 	const keyLabel = (key: string) =>
 		key === "update_items" ? "deprecated update_items" : key;
@@ -143,6 +146,10 @@ export const CustomizePlanV1BaseSchema = z.object({
 	upsert_licenses: z.array(CustomizePlanLicenseSchema).optional().meta({
 		description:
 			"License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.",
+	}),
+	remove_licenses: z.array(RemovePlanLicenseSchema).optional().meta({
+		description:
+			"License links to drop, keyed by license_plan_id. Parallel to remove_items.",
 	}),
 });
 

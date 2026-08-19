@@ -131,6 +131,7 @@ export const setupUpdatePlanProductContext = async ({
 		customPrices,
 		customEnts,
 		insertPlanLicenses,
+		customerLicenseQuantities: productContextLicenseQuantities,
 	} = await setupUpdateSubscriptionProductContext({
 		ctx,
 		fullCustomer: productFullCustomer,
@@ -206,6 +207,7 @@ export const setupUpdatePlanProductContext = async ({
 		customPrices,
 		customEnts,
 		insertPlanLicenses,
+		customerLicenseQuantities: productContextLicenseQuantities,
 		trialContext: operationBillingContext.trialContext,
 		isCustom: targetCustomerProduct.is_custom,
 		billingVersion: BillingVersion.V2,

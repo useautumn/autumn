@@ -37,6 +37,8 @@ import {
 	EntityExpand,
 	ErrCode,
 	type FinalizeLockParamsV0,
+	type GetCatalogParams,
+	type GetCatalogResponse,
 	type LegacyVersion,
 	type ListEntitiesParams,
 	type Migration,
@@ -46,6 +48,7 @@ import {
 	type Operations,
 	type OrgConfig,
 	type PlanUpdatePreview,
+	type PreviewUpdateCatalogResponse,
 	type PreviewUpdatePlanParamsV2Input,
 	type ProductItem,
 	type RecalculateBalanceParamsV0,
@@ -58,6 +61,8 @@ import {
 	type SetupPaymentParamsV1,
 	type TrackParams,
 	type UpdateBalanceParamsV0,
+	type UpdateCatalogParamsInput,
+	type UpdateCatalogResponse,
 	type UpdateSubscriptionV0Params,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -833,6 +838,35 @@ export class AutumnInt {
 			params: TInput,
 		): Promise<TResponse> => {
 			const data = await this.post(`/catalog.update`, params);
+			return data as TResponse;
+		},
+	};
+
+	catalogV2 = {
+		get: async <TResponse = GetCatalogResponse>(
+			params?: GetCatalogParams,
+		): Promise<TResponse> => {
+			const data = await this.post(`/catalogV2.get`, params ?? {});
+			return data as TResponse;
+		},
+
+		previewUpdate: async <
+			TResponse = PreviewUpdateCatalogResponse,
+			TInput = UpdateCatalogParamsInput,
+		>(
+			params: TInput,
+		): Promise<TResponse> => {
+			const data = await this.post(`/catalogV2.preview_update`, params);
+			return data as TResponse;
+		},
+
+		update: async <
+			TResponse = UpdateCatalogResponse,
+			TInput = UpdateCatalogParamsInput,
+		>(
+			params: TInput,
+		): Promise<TResponse> => {
+			const data = await this.post(`/catalogV2.update`, params);
 			return data as TResponse;
 		},
 	};

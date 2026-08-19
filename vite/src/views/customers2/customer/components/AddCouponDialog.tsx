@@ -7,15 +7,13 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
+	SearchableSelect,
 	ShortcutButton,
 } from "@autumn/ui";
+import { CheckIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import type { DiscountOption } from "@/components/forms/attach-v2/utils/discountOptionUtils";
 import {
 	rewardToOption,
 	stripeCouponToOption,
@@ -47,8 +45,9 @@ export const AddCouponDialog = ({
 	const [loading, setLoading] = useState(false);
 	const axiosInstance = useAxiosInstance();
 
-	const { rewards } = useRewardsQuery();
-	const { stripeCoupons } = useStripeCouponsQuery();
+	const { rewards, isLoading: rewardsLoading } = useRewardsQuery();
+	const { stripeCoupons, isLoading: stripeCouponsLoading } =
+		useStripeCouponsQuery();
 
 	// Stripe coupons are merged in so coupons created outside Autumn are
 	// selectable here, matching the subscription-level discount picker.
@@ -133,63 +132,48 @@ export const AddCouponDialog = ({
 						will replace the existing one.
 					</InfoBox>
 				)}
-				<div className="space-y-3">
-					<Select
-						value={selectedId ?? undefined}
+				<div className="flex flex-col gap-3">
+					<SearchableSelect
+						value={selectedId}
 						onValueChange={(value) => {
 							setSelectedId(value);
 							setPromoCodeSelected(null);
 						}}
-						items={Object.fromEntries(
-							discountOptions.map((option) => [option.id, option.label]),
+						options={discountOptions}
+						getOptionValue={(option: DiscountOption) => option.id}
+						getOptionLabel={(option: DiscountOption) => option.label}
+						renderOption={(option: DiscountOption, isSelected: boolean) => (
+							<>
+								<span className="flex-1 truncate min-w-0">{option.label}</span>
+								{option.sublabel && (
+									<span className="text-tertiary-foreground text-xs shrink-0">
+										{option.sublabel}
+									</span>
+								)}
+								{isSelected && <CheckIcon className="size-4 shrink-0" />}
+							</>
 						)}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue placeholder="Select Reward" />
-						</SelectTrigger>
-						<SelectContent>
-							{discountOptions.length > 0 ? (
-								discountOptions.map((option) => (
-									<SelectItem key={option.id} value={option.id}>
-										{option.label}
-									</SelectItem>
-								))
-							) : (
-								<SelectItem value="none" disabled>
-									No coupons found
-								</SelectItem>
-							)}
-						</SelectContent>
-					</Select>
+						placeholder="Select Reward"
+						searchable
+						searchPlaceholder="Search rewards..."
+						emptyText="No coupons found"
+						isLoading={rewardsLoading || stripeCouponsLoading}
+						triggerClassName="w-full"
+					/>
 
 					{requiresPromoCode && (
-						<Select
-							value={promoCodeSelected || undefined}
+						<SearchableSelect
+							value={promoCodeSelected}
 							onValueChange={setPromoCodeSelected}
-							items={Object.fromEntries(
-								promoCodeOptions.map((promoCode) => [
-									promoCode.code,
-									promoCode.code,
-								]),
-							)}
-						>
-							<SelectTrigger className="w-full">
-								<SelectValue placeholder="Select Promo Code" />
-							</SelectTrigger>
-							<SelectContent>
-								{promoCodeOptions.length > 0 ? (
-									promoCodeOptions.map((promoCode) => (
-										<SelectItem key={promoCode.code} value={promoCode.code}>
-											{promoCode.code}
-										</SelectItem>
-									))
-								) : (
-									<SelectItem value="none" disabled>
-										No promo codes found
-									</SelectItem>
-								)}
-							</SelectContent>
-						</Select>
+							options={promoCodeOptions}
+							getOptionValue={(promoCode) => promoCode.code}
+							getOptionLabel={(promoCode) => promoCode.code}
+							placeholder="Select Promo Code"
+							searchable
+							searchPlaceholder="Search promo codes..."
+							emptyText="No promo codes found"
+							triggerClassName="w-full"
+						/>
 					)}
 				</div>
 				<DialogFooter>

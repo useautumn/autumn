@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { isCloudAgent } from "@autumn/env";
-import { PROJECT_ROOT } from "../constants.ts";
+import { LOCAL_DATABASE_URL, PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 import { startPublicAccess } from "./cloudflare.ts";
 import { emulateGoogleUrl } from "./emulate.ts";
@@ -19,9 +19,6 @@ import {
 import { fatal, log } from "./shell.ts";
 import { spawnDevInTmux, tmuxSessionName } from "./tmux.ts";
 import { rewriteDbEnv } from "./url.ts";
-
-const LOCAL_DATABASE_URL =
-	"postgresql://postgres:postgres@localhost:5432/autumn";
 
 const HEADLESS_UNSET = [
 	"NEON_WORKTREE_API_KEY",

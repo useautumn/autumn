@@ -23,6 +23,7 @@ const baseProduct = {
 	created_at: 1,
 	processor: null,
 	base_variant_id: null,
+	base_internal_product_id: null,
 	archived: false,
 	is_add_on: false,
 	is_default: false,

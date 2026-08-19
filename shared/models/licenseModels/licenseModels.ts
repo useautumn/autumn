@@ -1,4 +1,3 @@
-import type { DiffedCustomizePlanV1 } from "@utils/planV1Utils/diff/diffPlanV1";
 import { findDuplicate } from "@utils/utils";
 import { z } from "zod/v4";
 import { BasePriceParamsSchema } from "../../api/products/components/basePrice/basePrice";
@@ -6,16 +5,12 @@ import { CreatePlanItemParamsV1Schema } from "../../api/products/items/crud/crea
 import { PlanItemFilterSchema } from "../../api/products/items/filter/planItemFilter";
 
 /** Diff-style customize applied on top of the license plan's own items —
- * the same shape diffPlanV1 emits. */
+ * price / items only. Licenses do not nest. */
 export const LicenseCustomizeSchema = z.object({
 	price: BasePriceParamsSchema.nullable().optional(),
 	add_items: z.array(CreatePlanItemParamsV1Schema).optional(),
 	remove_items: z.array(PlanItemFilterSchema).optional(),
 });
-
-/** Typed via z.custom: the diffed zod schema is built from customizePlan
- * schemas that import this module at runtime (import cycle otherwise). */
-export const DiffedLicenseCustomizeSchema = z.custom<DiffedCustomizePlanV1>();
 
 export const PlanLicenseSchema = z.object({
 	id: z.string(),
@@ -23,7 +18,7 @@ export const PlanLicenseSchema = z.object({
 	license_plan_id: z.string(),
 	included: z.number(),
 	prepaid_only: z.boolean(),
-	customize: DiffedLicenseCustomizeSchema.nullish(),
+	customize: LicenseCustomizeSchema.nullish(),
 	metadata: z.record(z.string(), z.unknown()).nullish(),
 	created_at: z.number(),
 	updated_at: z.number(),
@@ -35,6 +30,11 @@ export const CustomizePlanLicenseSchema = z.object({
 	prepaid_only: z.boolean().optional(),
 	customize: LicenseCustomizeSchema.nullish(),
 	metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+/** A planLicense dropped from a parent. Parallel to remove_items. */
+export const RemovePlanLicenseSchema = z.object({
+	license_plan_id: z.string(),
 });
 
 /** Structural issues in a license patch: duplicate license_plan_ids. */
@@ -70,6 +70,7 @@ export const LicenseListParamsSchema = z.object({
 export type PlanLicense = z.infer<typeof PlanLicenseSchema>;
 export type LicenseCustomize = z.infer<typeof LicenseCustomizeSchema>;
 export type CustomizePlanLicense = z.infer<typeof CustomizePlanLicenseSchema>;
+export type RemovePlanLicense = z.infer<typeof RemovePlanLicenseSchema>;
 export type LicenseListAssignmentsParams = z.infer<
 	typeof LicenseListAssignmentsParamsSchema
 >;

@@ -3,6 +3,7 @@ import { EntInterval, type EntitlementWithFeature } from "@autumn/shared";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { buildAddCandidateRowsQuery } from "@/internal/migrations/v2/batchOperations/actions/addCustomerEntitlementsForPage/selectAddCandidateRows.js";
 import { buildReplaceCandidateRowsQuery } from "@/internal/migrations/v2/batchOperations/actions/replaceCustomerEntitlementsForPage/selectReplaceCandidateRows.js";
+import { buildLicenseCandidateRowsQuery } from "@/internal/migrations/v2/batchOperations/actions/selectLicenseCandidateRows.js";
 import { pageCustomerIdsCte } from "@/internal/migrations/v2/batchOperations/actions/utils/pageCustomerIdsSql.js";
 import { buildOperationScope } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 
@@ -71,6 +72,33 @@ describe("page-scoped candidate selects", () => {
 
 		expect(sql).toContain("page AS MATERIALIZED");
 		expect(sql).toContain("FROM page");
+		expect(sql).not.toMatch(/internal_customer_id = ANY/);
+	});
+
+	test("license add projects entitlement literals and EXISTS on the minted plan_license", () => {
+		const sql = render(
+			buildLicenseCandidateRowsQuery({
+				internalCustomerIds: ["cus_1", "cus_2"],
+				scope,
+				entitlement,
+				licensePlanId: "plan_license_1",
+				limit: 10000,
+				match: "add",
+			}),
+		);
+
+		expect(sql).toContain("page AS MATERIALIZED");
+		expect(sql).toContain("FROM page");
+		expect(sql).toMatch(/\$\d+ AS "entitlementId"/);
+		expect(sql).toMatch(/\$\d+ AS "internalFeatureId"/);
+		expect(sql).toMatch(/\$\d+ AS "featureId"/);
+		expect(sql).toContain("FROM license_entitlements AS le");
+		expect(sql).toContain("le.plan_license_id = pool.plan_license_id");
+		expect(sql).toContain("le.entitlement_id = $");
+		expect(sql).toContain("NOT EXISTS");
+		expect(sql).not.toContain("INNER JOIN license_entitlements");
+		expect(sql).not.toMatch(/INNER JOIN entitlements AS e ON/);
+		expect(sql).not.toMatch(/INNER JOIN features AS f ON/);
 		expect(sql).not.toMatch(/internal_customer_id = ANY/);
 	});
 });

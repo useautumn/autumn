@@ -61,6 +61,7 @@ describe("customer filter planner", () => {
 				JOIN customer_products cp ON cp.internal_product_id = pp.internal_id
 				JOIN customers c ON c.internal_id = cp.internal_customer_id
 				WHERE cp.status IN (?, ?, ?)
+					AND cp.customer_license_link_id IS NULL
 					AND c.org_id = ?
 					AND c.env = ?) c
 			`),
@@ -136,7 +137,7 @@ describe("customer filter planner", () => {
 			consumed: true,
 		});
 		expect(normalize(candidate.source.sql)).toContain(
-			"WHERE cp.status IN (?, ?, ?) AND cp.is_custom = ?",
+			"WHERE cp.status IN (?, ?, ?) AND cp.customer_license_link_id IS NULL AND cp.is_custom = ?",
 		);
 		expect(candidate.source.params).toEqual([
 			"org_test",
@@ -164,7 +165,7 @@ describe("customer filter planner", () => {
 			"AND p.id = ? AND p.version = ? AND p.is_add_on = ?",
 		);
 		expect(normalize(candidate.source.sql)).toContain(
-			"WHERE cp.status IN (?, ?, ?) AND cp.is_custom = ?",
+			"WHERE cp.status IN (?, ?, ?) AND cp.customer_license_link_id IS NULL AND cp.is_custom = ?",
 		);
 		expect(candidate.source.params).toEqual([
 			"org_test",

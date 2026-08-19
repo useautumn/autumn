@@ -1,7 +1,7 @@
 import type { Context, Next } from "hono";
-import { dbReplica } from "@/db/initDrizzle.js";
+import { dbReplica, dbReplicaSlow } from "@/db/initDrizzle.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { shouldUseReplicaDb } from "@/internal/misc/replicaDb/replicaDbConfigs.js";
+import { resolveReplicaDbLane } from "@/internal/misc/replicaDb/replicaDbConfigs.js";
 
 export const replicaDbMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	if (!dbReplica) {
@@ -9,15 +9,15 @@ export const replicaDbMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		return;
 	}
 
-	const useReplica = await shouldUseReplicaDb({
+	const lane = await resolveReplicaDbLane({
 		method: c.req.method,
 		path: c.req.path,
 		readBody: () => c.req.json(),
 	});
 
-	if (useReplica) {
+	if (lane) {
 		const ctx = c.get("ctx");
-		ctx.db = dbReplica;
+		ctx.db = lane === "slow" ? (dbReplicaSlow ?? dbReplica) : dbReplica;
 		ctx.useReplicaDb = true;
 	}
 

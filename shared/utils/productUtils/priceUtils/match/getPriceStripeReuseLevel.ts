@@ -51,7 +51,7 @@ const normalizeOptionalId = (value?: string | null) => value || null;
  * Autumn price across a plan-update or version transition.
  *
  * - "full"               — config + paired entitlement are identical; reuse all stripe_*_id + stripe_event_name fields.
- * - "stripeProductOnly"  — same (feature_id, entity_feature_id) usage scope; reuse just stripe_product_id so a new price is created under the existing plan-feature Stripe product.
+ * - "stripeProductOnly"  — same (feature_id, entity_feature_id) usage scope; reuse stripe_product_id + stripe_meter_id so a new price is created under the existing plan-feature Stripe product/meter.
  * - "none"               — no reuse, or candidate is preview-only.
  */
 export const getPriceStripeReuseLevel = ({

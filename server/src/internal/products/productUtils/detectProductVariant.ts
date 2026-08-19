@@ -40,7 +40,6 @@ export const detectBaseVariant = async ({
 		db,
 		orgId: curProduct.org_id,
 		env: curProduct.env,
-		excludeEnts: true,
 	})) as FullProduct[];
 
 	// if (product.base_variant_id == baseVariantId) {

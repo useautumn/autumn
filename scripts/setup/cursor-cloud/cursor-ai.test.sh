@@ -137,6 +137,18 @@ fi
 if grep -q 'bun", \["install"\]' "$ROOT/scripts/dw/commands/start.ts"; then
 	fail "dw start must not run bun install"
 fi
+grep -q 'autoEnsureLocalTestOrg' "$ROOT/scripts/dw/commands/start.ts" \
+	|| fail "dw start must seed unit-test-org on Cloud agents"
+grep -q 'unit-test-org' "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" \
+	|| fail "Cloud AGENTS.md section must mention unit-test-org seed"
+grep -q 'setup-test.ts", "--ensure"' "$ROOT/scripts/dw/helpers/setup.ts" \
+	|| fail "Cloud seed must call setup-test --ensure"
+if grep -q 'DATABASE_URL="${DATABASE_URL:-' "$ROOT/scripts/setup/agent-services.sh"; then
+	fail "agent-services.sh must not inherit Infisical DATABASE_URL"
+fi
+grep -q 'postgresql://postgres:postgres@localhost:5432/autumn' \
+	"$ROOT/scripts/setup/agent-services.sh" \
+	|| fail "agent-services.sh must pin migrate to local postgres"
 pass "start.sh runs dw start, not bun dw setup"
 
 if grep -q 'cursor_ai.py' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
@@ -228,6 +240,7 @@ UNIT_TESTS=1 env -u TESTS_ORG bun test \
 	"$ROOT/scripts/dw/helpers/ngrok.test.ts" \
 	"$ROOT/scripts/dw/helpers/machineId.test.ts" \
 	"$ROOT/scripts/dw/helpers/registry.test.ts" \
+	"$ROOT/scripts/dw/helpers/localTestOrg.test.ts" \
 	"$ROOT/scripts/dw/helpers/cloudflare.test.ts" \
 	"$ROOT/scripts/dw/devProxy/cloudflareConfig.test.ts" \
 	|| fail "dw unit tests failed"
