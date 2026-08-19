@@ -101,7 +101,11 @@ export const buildCustomerProductWhereSql = (
 		renderExtra(extra, params),
 	);
 	return {
-		sql: [`cp.status IN (${statusPlaceholders})`, ...extraSql].join(" "),
+		sql: [
+			`cp.status IN (${statusPlaceholders})`,
+			"AND cp.customer_license_link_id IS NULL",
+			...extraSql,
+		].join(" "),
 		params,
 	};
 };

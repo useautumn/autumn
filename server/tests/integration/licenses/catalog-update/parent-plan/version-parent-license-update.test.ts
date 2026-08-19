@@ -3,6 +3,7 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
+	type ApiPlanExpandedV1,
 	BillingInterval,
 	CustomerExpand,
 	productToBasePrice,
@@ -134,18 +135,19 @@ test.concurrent(
 			stockLicense.internal_id,
 		);
 
-		const [v1Plan, v2Plan] = await Promise.all([
-			getPlanResponse({
-				ctx,
-				product: v1After.parentProduct,
-				features: ctx.features,
-			}),
-			getPlanResponse({
-				ctx,
-				product: v2.parentProduct,
-				features: ctx.features,
-			}),
-		]);
+		const [v1Plan, v2Plan]: [ApiPlanExpandedV1, ApiPlanExpandedV1] =
+			await Promise.all([
+				getPlanResponse({
+					ctx,
+					product: v1After.parentProduct,
+					features: ctx.features,
+				}),
+				getPlanResponse({
+					ctx,
+					product: v2.parentProduct,
+					features: ctx.features,
+				}),
+			]);
 		const [v1ProductDataLicense] = buildProductDataCatalogLicenses({
 			product: v1After.parentProduct,
 			apiLicenses: v1Plan.licenses,

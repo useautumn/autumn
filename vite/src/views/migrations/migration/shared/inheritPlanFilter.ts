@@ -28,6 +28,30 @@ function extractPlanFilter(plan: CustomerFilter["plan"]): PlanFilter | null {
 	return normalizePlanFilter(plan as PlanFilter);
 }
 
+function planProperties(filter: PlanFilter): PlanFilter {
+	const properties: PlanFilter = {};
+	if (filter.custom !== undefined) properties.custom = filter.custom;
+	if (filter.paid !== undefined) properties.paid = filter.paid;
+	if (filter.recurring !== undefined) properties.recurring = filter.recurring;
+	if (filter.price !== undefined) properties.price = filter.price;
+	return properties;
+}
+
+function planSelection(filter: PlanFilter): PlanFilter {
+	const selection: PlanFilter = {};
+	if (filter.plan_id !== undefined) selection.plan_id = filter.plan_id;
+	if (filter.version !== undefined) selection.version = filter.version;
+	if (filter.$or !== undefined) selection.$or = filter.$or;
+	return selection;
+}
+
+function hasPlanSelection(filter: PlanFilter | null): filter is PlanFilter {
+	return (
+		filter != null &&
+		(filter.plan_id !== undefined || filter.$or !== undefined)
+	);
+}
+
 function mergePlanFilters({
 	inheritedPlanFilter,
 	operationPlanFilter,
@@ -35,16 +59,12 @@ function mergePlanFilters({
 	inheritedPlanFilter: PlanFilter;
 	operationPlanFilter: PlanFilter | null;
 }): PlanFilter {
-	const merged = {
-		...(operationPlanFilter ?? {}),
-		...inheritedPlanFilter,
-	};
-
+	// An explicit operation selection replaces the inherited one wholesale —
+	// mixing `plan_id` with a leftover inherited `$or` cooks the filter.
+	if (!hasPlanSelection(operationPlanFilter)) return inheritedPlanFilter;
 	return {
-		...merged,
-		plan_id: operationPlanFilter?.plan_id ?? inheritedPlanFilter.plan_id,
-		version: operationPlanFilter?.version ?? inheritedPlanFilter.version,
-		$or: operationPlanFilter?.$or ?? inheritedPlanFilter.$or,
+		...planProperties(inheritedPlanFilter),
+		...planSelection(operationPlanFilter),
 	};
 }
 

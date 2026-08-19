@@ -1,12 +1,9 @@
 import {
 	CreateFeatureSchema,
-	type CreditSchemaItem,
 	FeatureType,
-	FeatureUsageType,
 	featureV1ToDbFeature,
 } from "@autumn/shared";
 import type { AxiosError } from "axios";
-import { useState } from "react";
 import { toast } from "sonner";
 import {
 	useProduct,
@@ -14,13 +11,12 @@ import {
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { PlanSheetFooter } from "@/components/v2/sheets/PlanSheetFooter";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
-import { FeatureService } from "@/services/FeatureService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { validateCreditSystem } from "@/views/products/features/credit-systems/utils/validateCreditSystem";
+import { featureToCatalogFeatureParams } from "@/views/products/features/utils/buildFeatureMutationParams";
 import { useSaveRestoreFeature } from "../../hooks/useSaveRestoreFeature";
 import { getDefaultItem } from "../../utils/getDefaultItem";
 import { NewFeatureAdvanced } from "./NewFeatureAdvanced";
@@ -36,9 +32,7 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const resetFeature = useFeatureStore((s) => s.reset);
 	const { product, setProduct } = useProduct();
 	const { setSheet } = useSheet();
-	const axiosInstance = useAxiosInstance();
-	const { refetch } = useFeaturesQuery();
-	const [isCreating, setIsCreating] = useState(false);
+	const { mutateAsync: updateCatalog, isPending } = useUpdateCatalogMutation();
 
 	const isDirty = !!feature.name || !!feature.id || feature.type !== null;
 
@@ -51,7 +45,6 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 			}
 		}
 
-		setIsCreating(true);
 		const result = CreateFeatureSchema.safeParse(feature);
 		if (result.error) {
 			toast.error("Invalid feature", {
@@ -59,32 +52,18 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 					.map((issue) => issue.message)
 					.join(".\n"),
 			});
-			setIsCreating(false);
 			return;
 		}
 
 		try {
-			const { data: newFeature } = await FeatureService.createFeature(
-				axiosInstance,
-				{
-					name: feature.name,
-					id: feature.id,
-					type: feature.type,
-					consumable: feature.config?.usage_type === FeatureUsageType.Single,
-					credit_schema: feature.config?.schema?.map(
-						(schemaItem: CreditSchemaItem) => ({
-							metered_feature_id: schemaItem.metered_feature_id,
-							credit_cost: schemaItem.credit_amount,
-						}),
-					),
-					event_names: feature.event_names,
-				},
+			const response = await updateCatalog({
+				features: [featureToCatalogFeatureParams({ feature })],
+			});
+
+			const newFeature = response.features.find(
+				(candidate) => candidate.id === feature.id,
 			);
-
-			await refetch();
-
-			if (!product || !newFeature.id) {
-				setIsCreating(false);
+			if (!product || !newFeature) {
 				return;
 			}
 
@@ -105,7 +84,6 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 			toast.error(
 				getBackendErr(error as AxiosError, "Failed to create feature"),
 			);
-			setIsCreating(false);
 		}
 	};
 
@@ -143,7 +121,7 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 				onConfirm={handleCreateFeature}
 				confirmLabel="Create"
 				closeLabel="Cancel"
-				isLoading={isCreating}
+				isLoading={isPending}
 			/>
 		</div>
 	);

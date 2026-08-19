@@ -1,5 +1,9 @@
-import type { ApiPlanV1, FullProduct, PlanLicenseParams } from "@autumn/shared";
-import { diffLicensePlanCustomize } from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
+import {
+	type ApiPlanV1,
+	diffLicensePlanCustomize,
+	type FullProduct,
+	type PlanLicenseParams,
+} from "@autumn/shared";
 import type {
 	PreparedLicenseParentPropagation,
 	PreparedLicenseParentTarget,

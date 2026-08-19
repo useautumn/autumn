@@ -5,10 +5,7 @@ import type {
 	FrontendProduct,
 	MigrationFilter,
 	Operations,
-	PlanLicenseParams,
-	ProductItem,
 	UpdatePlanOp,
-	UpdatePlanParamsV2Input,
 } from "@autumn/shared";
 import {
 	diffPlanV1,
@@ -19,7 +16,6 @@ import {
 	sortProductItems,
 } from "@autumn/shared";
 import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
-import { alignTierCurrencyShapes } from "../utils/currencyUtils";
 
 export interface MigrationDraft {
 	id: string;
@@ -86,122 +82,6 @@ export function frontendProductToApiPlanV1(
 		config: product.config ?? { ignore_past_due: false },
 		billing_controls: product.billing_controls,
 	} satisfies ApiPlanV1;
-}
-
-function planItemsToUpdateParams(
-	items: ApiPlanV1["items"],
-): NonNullable<UpdatePlanParamsV2Input["items"]> {
-	return items.map(
-		({ feature, display, reset, price, proration, rollover, ...item }) => ({
-			...item,
-			...(reset ? { reset } : {}),
-			...(price ? { price } : {}),
-			...(proration ? { proration } : {}),
-			...(rollover
-				? {
-						rollover: {
-							expiry_duration_type: rollover.expiry_duration_type,
-							expiry_duration_length: rollover.expiry_duration_length,
-							...(rollover.max != null ? { max: rollover.max } : {}),
-							...(rollover.max_percentage != null
-								? { max_percentage: rollover.max_percentage }
-								: {}),
-						},
-					}
-				: {}),
-		}),
-	);
-}
-
-export function buildInPlaceUpdatePlanParams({
-	baseProduct,
-	editedProduct,
-	features,
-	licenses,
-}: {
-	baseProduct: FrontendProduct;
-	editedProduct: FrontendProduct;
-	features: Feature[];
-	licenses?: PlanLicenseParams[];
-}): UpdatePlanParamsV2Input {
-	const plan = frontendProductToApiPlanV1(
-		{
-			...editedProduct,
-			items: editedProduct.items.map((item) =>
-				alignTierCurrencyShapes(item as ProductItem),
-			) as typeof editedProduct.items,
-		},
-		features,
-	);
-
-	return {
-		plan_id: baseProduct.id,
-		version: baseProduct.version,
-		name: plan.name,
-		description: plan.description ?? "",
-		group: plan.group ?? "",
-		add_on: plan.add_on,
-		auto_enable: plan.auto_enable,
-		price: plan.price,
-		items: planItemsToUpdateParams(plan.items),
-		free_trial: plan.free_trial ?? null,
-		config: plan.config,
-		billing_controls: plan.billing_controls,
-		...(licenses !== undefined ? { licenses } : {}),
-		// The backend keys off the field being present, so only send an edited
-		// link. Undefined means untouched; null means detach.
-		...(editedProduct.base_id !== undefined
-			? { base_plan_id: editedProduct.base_id }
-			: {}),
-		disable_version: true,
-	} satisfies UpdatePlanParamsV2Input;
-}
-
-// Preview params mirror the in-place update but drop disable_version so the
-// backend reports whether applying in place would version.
-export function buildPreviewUpdatePlanParams({
-	baseProduct,
-	editedProduct,
-	features,
-	licenses,
-}: {
-	baseProduct: FrontendProduct | null;
-	editedProduct: FrontendProduct;
-	features: Feature[];
-	licenses?: PlanLicenseParams[];
-}): UpdatePlanParamsV2Input {
-	const params = buildInPlaceUpdatePlanParams({
-		baseProduct: baseProduct ?? editedProduct,
-		editedProduct,
-		features,
-		licenses,
-	});
-	delete params.disable_version;
-	params.include_versions = true;
-	params.include_variants = true;
-	params.include_license_parents = true;
-	return params;
-}
-
-export function buildVersionUpdatePlanParams({
-	baseProduct,
-	editedProduct,
-	features,
-	licenses,
-}: {
-	baseProduct: FrontendProduct;
-	editedProduct: FrontendProduct;
-	features: Feature[];
-	licenses?: PlanLicenseParams[];
-}): UpdatePlanParamsV2Input {
-	const params = buildInPlaceUpdatePlanParams({
-		baseProduct,
-		editedProduct,
-		features,
-		licenses,
-	});
-	delete params.disable_version;
-	return params;
 }
 
 function diffHasBillingChanges(diff: DiffedCustomizePlanV1): boolean {

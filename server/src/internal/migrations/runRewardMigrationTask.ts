@@ -8,29 +8,18 @@ import {
 	type Price,
 	PriceType,
 	RewardType,
+	tiersAreSame,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { logger as loggerType } from "@/external/logtail/logtailUtils.js";
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
+import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import type { JobName } from "@/queue/JobName.js";
 import type { Payloads } from "@/queue/queueUtils.js";
 import { OrgService } from "../orgs/OrgService.js";
 import { ProductService } from "../products/ProductService.js";
 import { PriceService } from "../products/prices/PriceService.js";
-import { tiersAreSame } from "../products/prices/priceInitUtils.js";
-import { rewardRepo } from "@/internal/rewards/repos/index.js";
-
-// Helper function to check if tier structures match
-const tiersMatch = (oldTiers: any[], newTiers: any[]): boolean => {
-	if (oldTiers.length !== newTiers.length) return false;
-
-	return oldTiers.every((oldTier, index) => {
-		const newTier = newTiers[index];
-		return oldTier.to === newTier.to && oldTier.amount === newTier.amount;
-	});
-};
 
 // Match fixed prices by amount
 const findMatchingFixedPrice = (

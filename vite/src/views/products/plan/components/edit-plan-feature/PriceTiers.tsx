@@ -7,6 +7,7 @@ import { useProductItemContext } from "@/views/products/product/product-item/Pro
 import { stampBaseCurrency } from "../../utils/currencyUtils";
 import {
 	addTier,
+	applyTierToDisplayValue,
 	removeTier,
 	tierToDisplay,
 	updateTier,
@@ -28,12 +29,8 @@ const TierToInput = ({ index }: { index: number }) => {
 
 	const isInfinite = index === tiers.length - 1;
 
-	const handleInputBlur = (value: string) => {
-		if (isInfinite) return;
-		const valueWithIncludedUsage = parseFloat(value) - includedUsage;
-		const newTiers = [...tiers];
-		newTiers[index] = { ...newTiers[index], to: valueWithIncludedUsage };
-		setItem({ ...item, tiers: newTiers });
+	const commitDisplayTo = (value: string) => {
+		setItem(applyTierToDisplayValue({ item, index, displayValue: value }));
 	};
 
 	const [tierVal, setTierVal] = useState<string>(
@@ -43,8 +40,11 @@ const TierToInput = ({ index }: { index: number }) => {
 	return (
 		<Input
 			value={tierVal}
-			onBlur={() => handleInputBlur(tierVal)}
-			onChange={(e) => setTierVal(e.target.value)}
+			onBlur={() => commitDisplayTo(tierVal)}
+			onChange={(e) => {
+				setTierVal(e.target.value);
+				commitDisplayTo(e.target.value);
+			}}
 			className="w-full"
 			placeholder={isInfinite ? "∞" : "100"}
 			inputMode="decimal"
@@ -157,7 +157,7 @@ export function PriceTiers({
 
 				return (
 					<div
-						key={`${index}-${tier.to}`}
+						key={`tier-${index}`}
 						className="flex gap-2 w-full items-center"
 					>
 						<span className="text-tertiary-foreground text-xs min-w-0 w-18 shrink-0 h-full">

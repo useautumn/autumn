@@ -1,6 +1,6 @@
 import { DiffedCustomizePlanV1Schema } from "@utils/planV1Utils/diff/diffPlanV1.js";
 import { z } from "zod/v4";
-import { ApiPlanV1Schema } from "../../apiPlanV1.js";
+import { ApiPlanExpandedV1Schema } from "../../apiPlanV1.js";
 import {
 	PlanUpdatePreviewItemChangeSchema,
 	PlanUpdatePreviewPriceChangeSchema,
@@ -10,7 +10,7 @@ export const PlanUpdatePreviewPlanChangesSchema = z.object({
 	plan_id: z.string().meta({
 		description: "The ID of the plan being previewed.",
 	}),
-	plan: ApiPlanV1Schema.optional().meta({
+	plan: ApiPlanExpandedV1Schema.optional().meta({
 		description:
 			"The resolved plan after the previewed update. Only present when expand includes 'plan'.",
 	}),

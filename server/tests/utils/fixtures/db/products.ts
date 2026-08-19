@@ -28,8 +28,10 @@ const create = ({
 	created_at: Date.now(),
 	processor: stripeProductId ? { type: "stripe", id: stripeProductId } : null,
 	base_variant_id: null,
+	base_internal_product_id: null,
 	archived: false,
 	config: { ignore_past_due: false },
+	metadata: {},
 });
 
 /**
@@ -64,8 +66,10 @@ const createFull = ({
 		created_at: Date.now(),
 		processor: stripeProductId ? { type: "stripe", id: stripeProductId } : null,
 		base_variant_id: null,
+		base_internal_product_id: null,
 		archived: false,
 		config: { ignore_past_due: false },
+		metadata: {},
 		prices,
 		entitlements,
 		free_trial: null,

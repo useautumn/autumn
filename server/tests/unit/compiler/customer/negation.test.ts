@@ -41,6 +41,7 @@ describe("compileFilter — customer / negation ($none)", () => {
 					SELECT 1
 					FROM customer_products cp JOIN products p ON p.internal_id = cp.internal_product_id
 					WHERE cp.internal_customer_id = c.internal_id
+						AND cp.customer_license_link_id IS NULL
 						AND ${PLAN_AMBIENT}
 						AND p.id = ?
 				)
@@ -67,6 +68,7 @@ describe("compileFilter — customer / negation ($none)", () => {
 					SELECT 1
 					FROM customer_products cp JOIN products p ON p.internal_id = cp.internal_product_id
 					WHERE cp.internal_customer_id = c.internal_id
+						AND cp.customer_license_link_id IS NULL
 						AND ${PLAN_AMBIENT}
 						AND p.id IN (?, ?)
 				)
@@ -94,6 +96,7 @@ describe("compileFilter — customer / negation ($none)", () => {
 					SELECT 1
 					FROM customer_products cp JOIN products p ON p.internal_id = cp.internal_product_id
 					WHERE cp.internal_customer_id = c.internal_id
+						AND cp.customer_license_link_id IS NULL
 						AND ${PLAN_AMBIENT}
 						AND EXISTS (
 							SELECT 1

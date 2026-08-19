@@ -1,4 +1,5 @@
 import {
+	type ApiPlanExpandedV1,
 	mapToProductV2,
 	productV2ToBasePrice,
 	queryInteger,
@@ -58,7 +59,7 @@ export const handleGetProductInternal = createRoute({
 			env,
 		});
 
-		const basePlan = await getPlanResponse({
+		const basePlan: ApiPlanExpandedV1 = await getPlanResponse({
 			product,
 			features,
 		});

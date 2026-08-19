@@ -1,4 +1,11 @@
 import type { NumberMatcher, PlanFilter, StringMatcher } from "@autumn/shared";
+import {
+	makePlanKey,
+	type PlanSelection,
+	parsePlanKey,
+} from "@/lib/planSelectionKeys";
+
+export { makePlanKey, parsePlanKey, type PlanSelection };
 
 export type FilterField =
 	| "customer_id"
@@ -128,28 +135,6 @@ function nullableToRule(field: FilterField, value: unknown): FilterRule | null {
 	return { field, operator: "exists", values: [] };
 }
 
-// Plan selections are encoded as value keys: "<planId>" (any version) or
-// "<planId>:<version>" (a specific version). Version is therefore always bound
-// to its plan — there is no standalone version field.
-const PLAN_KEY_SEPARATOR = ":";
-
-export type PlanSelection = { planId: string; version?: number };
-
-export function parsePlanKey(key: string): PlanSelection {
-	const normalized = key.trim();
-	const separatorIndex = normalized.lastIndexOf(PLAN_KEY_SEPARATOR);
-	if (separatorIndex === -1) return { planId: normalized };
-	const version = Number.parseInt(normalized.slice(separatorIndex + 1), 10);
-	if (Number.isNaN(version)) return { planId: normalized };
-	return { planId: normalized.slice(0, separatorIndex), version };
-}
-
-export function makePlanKey({ planId, version }: PlanSelection): string {
-	return version === undefined
-		? planId
-		: `${planId}${PLAN_KEY_SEPARATOR}${version}`;
-}
-
 function selectionToFilter({ planId, version }: PlanSelection): PlanFilter {
 	return version === undefined
 		? { plan_id: planId }
@@ -224,17 +209,26 @@ function pureSelectionKeys(filter: PlanFilter): string[] | null {
  * — those are handled by `planFilterToGroups`).
  */
 export function planFilterToPlanKeys(filter: PlanFilter): string[] | null {
-	if (filter.$or) {
-		if (Object.keys(filter).some((key) => key !== "$or")) return null;
+	// Property siblings (`custom`, `paid`, …) are not part of the selection.
+	// Catalog drafts are `{ $or: [{ plan_id, version }, …], custom: false }`.
+	const {
+		custom: _custom,
+		paid: _paid,
+		recurring: _recurring,
+		price: _price,
+		...selection
+	} = filter;
+	if (selection.$or) {
+		if (Object.keys(selection).some((key) => key !== "$or")) return null;
 		const keys: string[] = [];
-		for (const branch of filter.$or) {
+		for (const branch of selection.$or) {
 			const branchKeys = pureSelectionKeys(branch);
 			if (branchKeys === null) return null;
 			keys.push(...branchKeys);
 		}
 		return keys;
 	}
-	return pureSelectionKeys(filter);
+	return pureSelectionKeys(selection);
 }
 
 function planKeysToRule(keys: string[]): FilterRule {
@@ -246,10 +240,21 @@ function planKeysToRule(keys: string[]): FilterRule {
 }
 
 export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
-	// A pure plan selection is a single plan row (version folded into the keys).
-	const planKeys = planFilterToPlanKeys(filter);
-	if (planKeys !== null)
-		return [{ rules: planKeys.length > 0 ? [planKeysToRule(planKeys)] : [] }];
+	// Property siblings (`custom`, `paid`, …) must not hide a `$or` of plan
+	// selections — catalog drafts are `{ $or: [{ plan_id, version }, …], custom: false }`.
+	const { custom, paid, recurring, price, ...selection } = filter;
+	const planKeys = planFilterToPlanKeys(selection);
+	if (planKeys !== null) {
+		const rules: FilterRule[] = [];
+		if (planKeys.length > 0) rules.push(planKeysToRule(planKeys));
+		if (custom !== undefined) rules.push(booleanRule("custom", custom));
+		if (paid !== undefined) rules.push(booleanRule("paid", paid));
+		if (recurring !== undefined)
+			rules.push(booleanRule("recurring", recurring));
+		const priceRule = nullableToRule("price", price);
+		if (priceRule) rules.push(priceRule);
+		return [{ rules }];
+	}
 
 	const mainRules: FilterRule[] = [];
 
