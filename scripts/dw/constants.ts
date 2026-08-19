@@ -15,6 +15,10 @@ export const MAX_WORKTREE = 50;
 export const BRANCH_NAME_RE = /^(?:dw-wt-\d+|capy)-[a-f0-9]+$/;
 export const INACTIVITY_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** Cloud / agent-services local Postgres. Never inherit Infisical DATABASE_URL. */
+export const LOCAL_DATABASE_URL =
+	"postgresql://postgres:postgres@localhost:5432/autumn";
+
 export const NEON_PROJECT_ID = "weathered-morning-43833874";
 export const NEON_TEMPLATE_BRANCH = "dw-template";
 export const NEON_PARENT_BRANCH = "production";

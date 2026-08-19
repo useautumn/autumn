@@ -1,4 +1,8 @@
-import { NEON_TEMPLATE_BRANCH, PROJECT_ROOT } from "../constants.ts";
+import {
+	LOCAL_DATABASE_URL,
+	NEON_TEMPLATE_BRANCH,
+	PROJECT_ROOT,
+} from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 import {
 	applyCommittedMigrations,
@@ -63,6 +67,35 @@ export async function setupAgentWorktree(
 	registry[entry.path] = next;
 	saveRegistry(registry);
 	return { entry: next, created: true };
+}
+
+/** Cloud-agent local Postgres — Infisical's DATABASE_URL must not leak in. */
+export function localTestOrgEnv(): Record<string, string> {
+	return {
+		...(process.env as Record<string, string>),
+		DATABASE_URL: LOCAL_DATABASE_URL,
+		DATABASE_CRITICAL_URL: LOCAL_DATABASE_URL,
+		AUTUMN_DB_DIRECT: "1",
+	};
+}
+
+/**
+ * Idempotent Cloud seed: create unit-test-org if missing, otherwise only
+ * ensure the Infisical API key hash. Does not clear an existing org.
+ */
+export async function autoEnsureLocalTestOrg(): Promise<void> {
+	log("ensuring unit-test-org in local postgres");
+	const code = shInherit(
+		"bun",
+		["scripts/setup/setup-test.ts", "--ensure"],
+		{
+			cwd: PROJECT_ROOT,
+			env: localTestOrgEnv(),
+		},
+	);
+	if (code !== 0) {
+		fatal(`setup-test --ensure exited with code ${code}`);
+	}
 }
 
 function worktreeDbEnv(entry: RegistryEntry): Record<string, string> {

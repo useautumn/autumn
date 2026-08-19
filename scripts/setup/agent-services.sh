@@ -122,10 +122,12 @@ bun scripts/setup/writeAgentEnv.ts
 # 5. DB migrations
 # =============================================================
 log "Running migrations"
-# Pass DATABASE_URL — loadLocalEnv from /workspace misses server/.env.
+# Always local postgres. `bun dw` is wrapped in `infisical run`, so an inherited
+# DATABASE_URL would migrate PlanetScale instead of this box.
 # --bootstrap: empty Cloud postgres has 72 CREATE INDEX without CONCURRENTLY.
 export AUTUMN_DB_DIRECT=1
-export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/autumn}"
+export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/autumn"
+export DATABASE_CRITICAL_URL="$DATABASE_URL"
 bun db generate >/dev/null 2>&1 || true
 bun db migrate --bootstrap
 

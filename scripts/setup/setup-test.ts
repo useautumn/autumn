@@ -137,12 +137,38 @@ async function runFullSetup({ yes }: { yes: boolean }): Promise<void> {
 	console.log(chalk.whiteBright(`  key:  ${autumnSecretKey}\n`));
 }
 
+/** Create unit-test-org if missing; if present, only ensure the API key. */
+async function runEnsure(): Promise<void> {
+	const { db } = await import("@server/db/initDrizzle.js");
+	const { organizations } = await import("@autumn/shared");
+	const { eq } = await import("drizzle-orm");
+	const existing = await db.query.organizations.findFirst({
+		where: eq(organizations.id, TEST_ORG_CONFIG.id),
+	});
+	if (!existing) {
+		await runFullSetup({ yes: true });
+		return;
+	}
+	if (process.env.UNIT_TEST_AUTUMN_SECRET_KEY?.trim()) {
+		await runEnsureKey();
+		return;
+	}
+	console.log(
+		chalk.cyan(
+			`[setup-test] ${TEST_ORG_CONFIG.slug} already present; UNIT_TEST_AUTUMN_SECRET_KEY unset — skipping key ensure`,
+		),
+	);
+}
+
 async function main() {
 	const yes = process.argv.includes("--yes");
 	const ensureKeyOnly = process.argv.includes("--ensure-key");
+	const ensure = process.argv.includes("--ensure");
 
 	try {
-		if (ensureKeyOnly) {
+		if (ensure) {
+			await runEnsure();
+		} else if (ensureKeyOnly) {
 			await runEnsureKey();
 		} else {
 			await runFullSetup({ yes });
