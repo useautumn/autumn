@@ -13,6 +13,27 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService";
 
+/** The caller's customer may be a snapshot taken before a concurrent
+ * customers.update committed; pushing its email to Stripe would echo the stale
+ * value back through the customer.updated webhook and overwrite the new one. */
+const latestCustomerEmail = async ({
+	ctx,
+	customer,
+}: {
+	ctx: AutumnContext;
+	customer: Customer;
+}) => {
+	const idOrInternalId = customer.id || customer.internal_id;
+	if (!idOrInternalId) return customer.email;
+	const current = await CusService.get({
+		db: ctx.db,
+		env: ctx.env,
+		idOrInternalId,
+		orgId: ctx.org.id,
+	});
+	return current?.email ?? customer.email;
+};
+
 export const getOrCreateStripeCustomer = async ({
 	ctx,
 	customer,
@@ -38,18 +59,19 @@ export const getOrCreateStripeCustomer = async ({
 	});
 
 	if (currentStripeCustomer) {
+		const email = await latestCustomerEmail({ ctx, customer });
 		if (
-			customer.email &&
-			currentStripeCustomer.email !== customer.email &&
+			email &&
+			currentStripeCustomer.email !== email &&
 			!orgDisableStripeWrites({ ctx })
 		) {
 			const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 			await stripeCli.customers.update(
 				currentStripeCustomer.id,
-				{ email: customer.email },
+				{ email },
 				autumnStripeRequestOptions({ source: "customer.update" }),
 			);
-			return { ...currentStripeCustomer, email: customer.email };
+			return { ...currentStripeCustomer, email };
 		}
 
 		return currentStripeCustomer;

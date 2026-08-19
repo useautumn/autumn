@@ -27,6 +27,20 @@ const parsedResultText = (output: unknown): unknown => {
 	}
 };
 
+/** Eve explains a write it did not run — denied, ignored, invalid option —
+ * inside the result payload; surface that or the failure is undiagnosable. */
+const rejectionDetail = (output: unknown) => {
+	const record = output as
+		| { approval?: { status?: string }; code?: string; message?: string }
+		| undefined;
+	if (!record || typeof record !== "object") return undefined;
+	return {
+		approval_status: record.approval?.status,
+		code: record.code,
+		message: record.message,
+	};
+};
+
 const isFailedActionResult = (event: {
 	result?: { output?: unknown };
 	status?: string;
@@ -113,6 +127,7 @@ export const consumeResumedAgentTurn = async ({
 				data: {
 					call_id: event.result?.callId,
 					failed: isFailedActionResult(event),
+					rejection: rejectionDetail(event.result?.output),
 					status: event.status,
 					tool: event.result?.toolName,
 				},
