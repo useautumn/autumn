@@ -82,6 +82,8 @@ export const previewAffectedLicenseParents = async ({
 	const usageByInternalId = await customerProductRepo.getVersioningUsage({
 		db: ctx.db,
 		internalProductIds: parentProducts.map((parent) => parent.internal_id),
+		orgId: ctx.org.id,
+		env: ctx.env,
 	});
 	const selectedTargets = new Set(
 		selectedContexts.map(({ parent }) =>

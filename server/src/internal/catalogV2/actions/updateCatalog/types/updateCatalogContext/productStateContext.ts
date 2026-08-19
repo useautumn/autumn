@@ -1,11 +1,11 @@
 import type { FullProduct, ProductKey, RewardProgram } from "@autumn/shared";
-import type { CustomerProductVersioningUsage } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
+import type { CustomerProductVersioningFlags } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
 
 /** One setup/projected row for a single productKey. */
 export type ProductState = {
 	productKey: ProductKey;
 	currentFullProduct: FullProduct;
-	customerUsage: CustomerProductVersioningUsage;
+	customerUsage: CustomerProductVersioningFlags;
 };
 
 /**

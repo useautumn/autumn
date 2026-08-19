@@ -57,6 +57,8 @@ export const setupUpdateProductContext = async ({
 	const customerUsage = await customerProductRepo.getVersioningUsageForProduct({
 		db,
 		internalProductId: fullProduct.internal_id,
+		orgId: org.id,
+		env,
 	});
 
 	return {

@@ -69,6 +69,8 @@ export const setupPreviewCatalogContext = async ({
 	const usageByProduct = await customerProductRepo.getVersioningUsage({
 		db,
 		internalProductIds,
+		orgId: org.id,
+		env,
 	});
 	const withCustomers = new Set(
 		internalProductIds.filter(
