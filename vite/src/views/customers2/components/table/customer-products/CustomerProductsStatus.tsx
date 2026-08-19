@@ -99,11 +99,11 @@ function getSubtext({
 		return `${formatDistance(trial_ends_at, nowMs)} left`;
 	}
 	if (resolvedStatus === "canceling") {
-		if (ended_at) {
-			if (ended_at > nowMs) {
-				return `Ends in ${formatDistance(ended_at, nowMs)}`;
-			}
-			return `Ended ${formatMsToDate(ended_at)}`;
+		// Prefer the remaining access window while still canceling; once the end
+		// timestamp is past, fall back to when cancel was requested so we don't
+		// pair the Cancelling label with an "Ended" subtext.
+		if (ended_at && ended_at > nowMs) {
+			return `Ends in ${formatDistance(ended_at, nowMs)}`;
 		}
 		if (canceled_at) {
 			return `Canceled ${formatDistance(canceled_at, nowMs)} ago`;
