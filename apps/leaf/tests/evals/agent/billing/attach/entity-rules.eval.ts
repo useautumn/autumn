@@ -49,7 +49,6 @@ const expectedAttachRequest = {
 	enable_plan_immediately: true,
 	entity_id: workspace.id,
 	invoice_mode: {
-		enable_plan_immediately: true,
 		enabled: true,
 		finalize: false,
 	},
@@ -69,7 +68,8 @@ initEval<EvalMetadata>({
 			name: "entity attach rules require entity selection before preview",
 			conversation: [
 				user({
-					message: "Please attach the Scale plan to Alder Systems.",
+					message:
+						"Please attach the monthly Scale plan to Alder Systems, with the included 1,000 credits.",
 				}),
 				user({ message: "Use Workspace Alpha." }),
 				user({ message: "Looks good, attach it." }),
@@ -114,13 +114,12 @@ initEval<EvalMetadata>({
 						toolName: "attach",
 					},
 				}),
+				response.askedBeforeTool({
+					phrases: ["Workspace Alpha", "Workspace Beta"],
+					toolName: "previewAttach",
+				}),
 				response.mentions({
-					phrases: [
-						"Workspace Alpha",
-						"Workspace Beta",
-						"Alder Systems",
-						"Scale",
-					],
+					phrases: ["Workspace Alpha", "Scale"],
 				}),
 			],
 		},

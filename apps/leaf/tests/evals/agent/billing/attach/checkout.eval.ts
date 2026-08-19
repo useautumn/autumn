@@ -63,7 +63,7 @@ initEval<EvalMetadata>({
 			conversation: [
 				user({
 					message:
-						"Can you send Harbor Group a checkout link for the Scale plan on Harbor Workspace? They'll pay it themselves.",
+						"Can you send Harbor Group a checkout link for the monthly Scale plan on Harbor Workspace, with the included 1,000 credits? They'll pay it themselves.",
 				}),
 				user({ message: "Looks good, create it." }),
 				approve(),
@@ -98,7 +98,7 @@ initEval<EvalMetadata>({
 					},
 				}),
 				response.mentions({
-					phrases: ["Harbor Group", "Scale", "checkout"],
+					phrases: ["Harbor Workspace", "checkout"],
 				}),
 			],
 		},

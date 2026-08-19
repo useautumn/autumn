@@ -1,4 +1,4 @@
-import { Eval } from "braintrust";
+import { defaultErrorScoreHandler, Eval } from "braintrust";
 import type { AutumnMcpAuth } from "../../../../../packages/mcp/src/server/auth/auth.js";
 import type { EvalSetup } from "../fixtures/types.js";
 import {
@@ -6,6 +6,7 @@ import {
 	type EvalScorer,
 	scoresFromExpectations,
 } from "../utils/scorers.js";
+import { assertEvalPassed } from "./assertEvalPassed.js";
 import type { AutumnApiMockOverrides } from "./context/types.js";
 import {
 	createEvalContext,
@@ -71,7 +72,7 @@ export const approve = ({
 	type: "approve",
 });
 
-export const initEval = <Metadata extends EvalCaseMetadata>({
+export const initEval = async <Metadata extends EvalCaseMetadata>({
 	auth,
 	autumnApiOverrides,
 	cases,
@@ -89,7 +90,12 @@ export const initEval = <Metadata extends EvalCaseMetadata>({
 	// so Braintrust only shows columns a case can actually fail.
 	const resolvedScores =
 		scores ?? scoresFromExpectations(cases.map((testCase) => testCase.expect));
-	return Eval<InitEvalInput, EvalRunResult, EvalExpected, EvalCaseMetadata>(
+	const evaluation = await Eval<
+		InitEvalInput,
+		EvalRunResult,
+		EvalExpected,
+		EvalCaseMetadata
+	>(
 		"leaf",
 		{
 			experimentName,
@@ -104,18 +110,24 @@ export const initEval = <Metadata extends EvalCaseMetadata>({
 					setup: setup.tag,
 				},
 			})),
+			// A scorer that throws would otherwise vanish from the results; score
+			// it 0 so the dashboard and the CI gate both see it.
+			errorScoreHandler: defaultErrorScoreHandler,
 			// The Autumn API mock intercepts global fetch per eval context, so
 			// concurrent cases corrupt each other's routing (one case's cleanup
 			// restores fetch mid-flight for the other). Run cases sequentially.
 			maxConcurrency: 1,
 			scores: resolvedScores,
 			task: async (input) => {
+				// The mock API mutates setup state (attach adds a subscription,
+				// updateCustomer rewrites the email), so each case starts from a
+				// fresh copy or earlier cases leak into later ones.
 				const context = await createEvalContext({
 					auth,
 					autumnApiOverrides,
 					driver: resolvedDriver,
 					name: experimentName,
-					setup,
+					setup: structuredClone(setup),
 					today,
 					trace,
 				});
@@ -129,4 +141,6 @@ export const initEval = <Metadata extends EvalCaseMetadata>({
 		},
 		{ noSendLogs: !process.env.BRAINTRUST_API_KEY },
 	);
+	assertEvalPassed({ evaluation, experimentName });
+	return evaluation;
 };

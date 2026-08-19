@@ -41,7 +41,6 @@ const expectedUpdateRequest = {
 		add_items: [
 			{
 				feature_id: unlimitedSeats.id,
-				unlimited: true,
 			},
 		],
 	},
@@ -61,14 +60,14 @@ initEval<EvalMetadata>({
 			conversation: [
 				user({
 					message:
-						"i'd like to add the unlimited seats feature to kp-customer-0999, can u help?",
+						"i'd like to add the Unlimited Seats feature flag to kp-customer-0999, can u help?",
 				}),
 				user({ message: "Looks good, go ahead." }),
 				approve(),
 			],
 			expect: [
 				tools.called({
-					toolNames: ["listCustomers", "listPlans", "listFeatures"],
+					toolNames: ["getCustomer", "listFeatures"],
 				}),
 				billing.previewBeforeWrite({
 					preview: {
@@ -87,7 +86,7 @@ initEval<EvalMetadata>({
 					},
 				}),
 				response.mentions({
-					phrases: ["kp-customer-0999", "Enterprise", "Unlimited Seats"],
+					phrases: ["Redwood Systems", "Enterprise", "Unlimited Seats"],
 				}),
 			],
 		},

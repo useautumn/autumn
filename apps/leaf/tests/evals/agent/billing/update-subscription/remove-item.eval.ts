@@ -64,7 +64,7 @@ initEval<EvalMetadata>({
 			],
 			expect: [
 				tools.called({
-					toolNames: ["listCustomers", "listPlans", "listFeatures"],
+					toolNames: ["getCustomer"],
 				}),
 				billing.previewBeforeWrite({
 					preview: {
@@ -93,7 +93,7 @@ initEval<EvalMetadata>({
 					},
 				}),
 				response.mentions({
-					phrases: ["kp-customer-0042", "Scale", "Revision History"],
+					phrases: ["Cedar Systems", "Scale", "Revision History"],
 				}),
 			],
 		},
