@@ -30,7 +30,14 @@ export const updateReward = async ({
 	update: Partial<RewardWithEntitlementInputs>;
 	features?: Feature[];
 }) => {
-	const { entitlements: entitlementInputs, ...rewardUpdate } = update;
+	const {
+		entitlements: entitlementInputs,
+		internal_id: _internalId,
+		org_id: _orgId,
+		env: _env,
+		created_at: _createdAt,
+		...rewardUpdate
+	} = update;
 
 	const result = await db
 		.update(rewards)

@@ -8,6 +8,7 @@ import {
 	type Reward,
 	RewardCategory,
 	Scopes,
+	UpdateRewardSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -35,13 +36,14 @@ export const handleUpdateCoupon = createRoute({
 	scopes: [Scopes.Rewards.Write],
 	params: UpdateCouponParamsSchema,
 	query: UpdateCouponQuerySchema,
+	body: UpdateRewardSchema,
 	lock: rewardMutationLock,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { org, env, db, logger } = ctx;
 		const { internalId } = c.req.param();
 		const { legacyStripe } = c.req.valid("query");
-		const rewardBody = await c.req.json();
+		const rewardBody = c.req.valid("json");
 
 		const stripeCli = createStripeCli({
 			org,
@@ -66,7 +68,11 @@ export const handleUpdateCoupon = createRoute({
 		rewardBody.promo_codes = normalizePromoCodes(
 			rewardBody.promo_codes ?? reward.promo_codes ?? [],
 		);
-		const updatedReward: Reward = { ...reward, ...rewardBody };
+		const updatedReward: Reward = {
+			...reward,
+			...rewardBody,
+			entitlements: reward.entitlements,
+		};
 		await validateRewardUniqueness({
 			db,
 			reward: updatedReward,
