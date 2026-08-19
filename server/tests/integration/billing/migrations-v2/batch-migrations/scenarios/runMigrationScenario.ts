@@ -41,6 +41,7 @@ const toProductItem = (item: ItemSpec): ProductItem => {
 
 export type ScenarioRunOutcome = {
 	lane: string | undefined;
+	rejectionCodes: string[];
 	rowsByFeature: Record<string, number>;
 	balanceByFeature: Record<string, number>;
 	entitlementIdByFeature: Record<string, string>;
@@ -126,6 +127,9 @@ export const runMigrationScenario = async ({
 
 	return {
 		lane: result?.lane,
+		rejectionCodes: (result?.rejections ?? []).map(
+			(rejection) => rejection.code,
+		),
 		rowsByFeature,
 		balanceByFeature,
 		entitlementIdByFeature,

@@ -6,7 +6,9 @@ import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { consumeResumedAgentTurn } from "./consumeResumedAgentTurn.js";
 
 export const submitAgentInput = async ({
+	approveSiblings,
 	auth,
+	expectedToolNames,
 	note,
 	optionId,
 	orgId,
@@ -14,7 +16,9 @@ export const submitAgentInput = async ({
 	session,
 	siblingRequestIds,
 }: {
+	approveSiblings?: boolean;
 	auth: EveAuthContext;
+	expectedToolNames?: ReadonlyArray<string>;
 	note?: string;
 	optionId: string;
 	orgId: string;
@@ -23,6 +27,7 @@ export const submitAgentInput = async ({
 	siblingRequestIds?: ReadonlyArray<string>;
 }) => {
 	const posted = await postEveInputResponse({
+		approveSiblings,
 		auth,
 		note,
 		optionId,
@@ -41,6 +46,7 @@ export const submitAgentInput = async ({
 	});
 	return consumeResumedAgentTurn({
 		auth,
+		expectedToolNames,
 		orgId,
 		session,
 		skipRequestId: requestId,

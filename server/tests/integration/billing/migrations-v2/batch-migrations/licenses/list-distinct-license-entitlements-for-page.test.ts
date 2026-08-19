@@ -71,7 +71,7 @@ test.concurrent(
 				features: scenario.ctx.features,
 				internalCustomerIds: [page.internalCustomerId],
 				scope: page.scope,
-				licensePlanId: page.planLicenseId,
+				licensePlanId: scenario.devSeat.id,
 				internalFeatureId: catalogRow!.internal_feature_id,
 				fromEntitlementId: catalogRow!.entitlement_id,
 			});
@@ -91,7 +91,7 @@ test.concurrent(
 				scope: buildOperationScope({
 					internalProductId: "prod_not_this_parent",
 				}),
-				licensePlanId: page.planLicenseId,
+				licensePlanId: scenario.devSeat.id,
 				internalFeatureId: catalogRow!.internal_feature_id,
 				fromEntitlementId: catalogRow!.entitlement_id,
 			});
@@ -143,7 +143,7 @@ test.concurrent(
 				features: scenario.ctx.features,
 				internalCustomerIds: [page.internalCustomerId],
 				scope: page.scope,
-				licensePlanId: page.planLicenseId,
+				licensePlanId: scenario.devSeat.id,
 				internalFeatureId: cloned.internal_feature_id,
 				fromEntitlementId: catalogRow!.entitlement_id,
 			});
@@ -160,7 +160,7 @@ test.concurrent(
 				features: scenario.ctx.features,
 				internalCustomerIds: [page.internalCustomerId],
 				scope: page.scope,
-				licensePlanId: page.planLicenseId,
+				licensePlanId: scenario.devSeat.id,
 				internalFeatureId: cloned.internal_feature_id,
 				fromEntitlementId: catalogRow!.entitlement_id,
 				maxDistinctEntitlements: 1,

@@ -19,6 +19,26 @@ const isSlackEvent = (value: unknown): value is SlackEvent =>
 const escapeRegex = (value: string) =>
 	value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const mentionsSlackUser = ({
+	text,
+	userId,
+}: {
+	text: string;
+	userId: string;
+}) => new RegExp(`<@${escapeRegex(userId)}(?:\\|[^>]+)?>`).test(text);
+
+export const slackMessageMentionsUser = ({
+	raw,
+	userId,
+}: {
+	raw: unknown;
+	userId?: string | null;
+}) => {
+	if (!userId || !isSlackEvent(raw) || typeof raw.text !== "string")
+		return true;
+	return mentionsSlackUser({ text: raw.text, userId });
+};
+
 export const getSlackEventWorkspaceId = (body: string) => {
 	let parsed: unknown;
 	try {
@@ -54,7 +74,7 @@ export const normalizeSlackEventsBody = ({
 		event.subtype ||
 		typeof event.text !== "string" ||
 		!botUserId ||
-		!new RegExp(`<@${escapeRegex(botUserId)}(?:\\|[^>]+)?>`).test(event.text)
+		!mentionsSlackUser({ text: event.text, userId: botUserId })
 	) {
 		return body;
 	}

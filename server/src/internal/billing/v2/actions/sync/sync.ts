@@ -257,10 +257,9 @@ const processSyncMapping = async ({
 					}
 				: undefined,
 
-		upsertSubscription: initSubscriptionFromStripe({
-			ctx,
-			stripeSubscription,
-		}),
+		upsertSubscriptions: [
+			initSubscriptionFromStripe({ ctx, stripeSubscription }),
+		],
 	};
 
 	// 8. Execute (DB only — no Stripe changes)

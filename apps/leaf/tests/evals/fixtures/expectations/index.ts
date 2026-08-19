@@ -1,4 +1,5 @@
 export { api } from "./api.js";
+export { approvals } from "./approvals.js";
 export { billing } from "./billing.js";
 export { response } from "./response.js";
 export { tools } from "./tools.js";

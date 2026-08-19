@@ -2,13 +2,13 @@ import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv } from "@autumn/shared";
 import { Agent } from "@mastra/core/agent";
 import { z } from "zod";
+import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { DEFAULT_CHAT_ENV_MODEL } from "../../../lib/chatAgentConfig.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
-import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import {
 	chatEnvSelectorInstructions,
 	chatEnvSelectorOutputInstructions,
-} from "./selectorPrompts.js";
+} from "../../../prompts/chatSelectorPrompts.js";
 
 const envSelectionSchema = z.strictObject({
 	env: z.nativeEnum(AppEnv),

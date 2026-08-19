@@ -1,10 +1,13 @@
+import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
-import { parsePreviewPayload } from "../../../../../ui/previewContent.js";
 import { toolRequestFromArgs } from "../../../../approvals/utils/toolRequest.js";
 import { executeAutumnMcpTool } from "../../../../autumnMcp/client.js";
+import { db } from "../../../../../lib/db.js";
+import type { AgentActionProgress } from "../../../domain/agentTurnContext.js";
 import type { EveEvent } from "../../../eve/eveEventSchemas.js";
 import { isPreviewToolName } from "../../../eve/events.js";
 import type { CapturedPreview } from "../../../eve/parkedWritePreview.js";
+import { deleteEveSession } from "../../../eve/repo.js";
 import { saveEveSessionState } from "../../../eve/sessionState.js";
 import type { EveSessionRef } from "../../../eve/types.js";
 import { normalizeToolName } from "../../../tools/toolPolicy.js";
@@ -22,7 +25,7 @@ type EveEventOf<T extends EveEventType> = Extract<EveEvent, { type: T }>;
 export type EveEventContext<T extends EveEventType = EveEventType> = {
 	env: AppEnv;
 	event: EveEventOf<T>;
-	onAction?: (message: string) => Promise<void> | void;
+	onAction?: (progress: AgentActionProgress | string) => Promise<void> | void;
 	onReasoning?: (input: { id: string; text: string }) => void;
 	onThinking?: () => void;
 	orgId: string;
@@ -74,7 +77,16 @@ const applyEveEffect = async ({
 }) => {
 	switch (effect.kind) {
 		case "action":
-			await onAction?.(effect.message);
+			await onAction?.(effect.progress);
+			return;
+		case "delete_session":
+			await deleteEveSession({
+				db,
+				env: session.env,
+				orgId,
+				sessionId: session.sessionId,
+				threadKey: session.threadKey,
+			});
 			return;
 		case "reasoning":
 			onReasoning?.({ id: effect.id, text: effect.text });

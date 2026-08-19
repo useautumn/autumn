@@ -17,6 +17,7 @@ import { BalanceCreateSheet } from "../components/sheets/BalanceCreateSheet";
 import { BalanceDeleteSheet } from "../components/sheets/BalanceDeleteSheet";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
 import { BillingAutoTopupSheet } from "../components/sheets/BillingAutoTopupSheet";
+import { BillingControlPlanManagedSheet } from "../components/sheets/BillingControlPlanManagedSheet";
 import { BillingOverageAllowedSheet } from "../components/sheets/BillingOverageAllowedSheet";
 import { BillingSpendLimitSheet } from "../components/sheets/BillingSpendLimitSheet";
 import { BillingUsageAlertSheet } from "../components/sheets/BillingUsageAlertSheet";
@@ -109,6 +110,8 @@ export function CustomerSheets() {
 			case "billing-overage-allowed-add":
 			case "billing-overage-allowed-edit":
 				return <BillingOverageAllowedSheet />;
+			case "billing-control-plan-managed":
+				return <BillingControlPlanManagedSheet />;
 			case "record-usage":
 				return <RecordUsageSheet />;
 			case "check-balance":

@@ -20,10 +20,11 @@ export const billingActionBadges = (
 	const invoiceMode = asRecord(params?.invoice_mode) ?? {};
 	const invoiceOn =
 		params?.invoice_mode === true || invoiceMode.enabled === true;
-	const finalize = invoiceMode.finalize === true;
+	const finalize = invoiceMode.finalize !== false;
 	const enableImmediately =
-		invoiceMode.enable_plan_immediately === true ||
-		params?.enable_plan_immediately === true;
+		typeof params?.enable_plan_immediately === "boolean"
+			? params.enable_plan_immediately
+			: invoiceMode.enable_plan_immediately === true;
 	const prorationBehavior =
 		params?.proration_behavior ?? params?.billing_behavior;
 	const netTermsDays = invoiceMode.net_terms_days;
@@ -69,7 +70,7 @@ export const billingActionBadges = (
 	if (params?.billing_cycle_anchor === "now") {
 		badges.push({ active: true, label: "Reset billing cycle" });
 	}
-	if (params?.recalculate_balances === true) {
+	if (asRecord(params?.recalculate_balances)?.enabled === true) {
 		badges.push({ active: true, label: "Reset usage" });
 	}
 	if (cancelAction) {

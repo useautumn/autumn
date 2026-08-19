@@ -18,7 +18,7 @@ import { useParams } from "react-router";
 import { hasBillingControls } from "@/components/billing-controls/BillingControlsDisplay";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useVariantLinkVisibility } from "../../hooks/useVariantLinkVisibility";
 import { MetadataEditor } from "./MetadataEditor";
 import { PlanBillingControlsSection } from "./PlanBillingControlsSection";
 
@@ -28,25 +28,28 @@ export const MoreSettingsSection = () => {
 	const { product, setProduct } = useProduct();
 	const { customer_id } = useParams();
 	const isCustomPlan = notNullish(customer_id);
-	const { products } = useProductsQuery();
+	const {
+		hasVariants,
+		basePlanId,
+		selectedBasePlanId,
+		basePlan,
+		basePlanOptions,
+	} = useVariantLinkVisibility(product);
 
 	const hasGroup = notNullish(product.group);
-	const currentListProduct = products.find((p) => p.id === product.id);
-	const selectedBasePlanId =
-		product.base_id ?? currentListProduct?.base_id ?? null;
-	const basePlanOptions = products.filter(
-		(p) => p.id !== product.id && !p.base_id,
-	);
-	const selectedBasePlan = products.find((p) => p.id === selectedBasePlanId);
-	const hasSelectedBaseOption = basePlanOptions.some(
-		(p) => p.id === selectedBasePlanId,
-	);
+	// The linked base can be archived or a variant, so it stays selectable.
 	const visibleBasePlanOptions =
-		selectedBasePlan && !hasSelectedBaseOption
-			? [selectedBasePlan, ...basePlanOptions]
+		basePlan && !basePlanOptions.some((p) => p.id === basePlan.id)
+			? [basePlan, ...basePlanOptions]
 			: basePlanOptions;
 	const hasVariantBase = selectedBasePlanId !== null;
 	const canSelectBasePlan = visibleBasePlanOptions.length > 0;
+
+	const setBasePlan = (nextBasePlanId: string | null) => {
+		const matchesPersistedBase = nextBasePlanId === basePlanId;
+		const pendingBasePlanId = matchesPersistedBase ? undefined : nextBasePlanId;
+		setProduct({ ...product, base_id: pendingBasePlanId });
+	};
 
 	const hasMetadata = Object.keys(product.metadata ?? {}).length > 0;
 	const [metadataOpened, setMetadataOpened] = useState(false);
@@ -110,41 +113,50 @@ export const MoreSettingsSection = () => {
 					{!isCustomPlan && (
 						<ConfigRow
 							title="Base plan"
-							description="Link this plan as a variant of another plan."
+							description={
+								hasVariants
+									? "Plans that already have variants can't become variants themselves."
+									: "Link this plan as a variant of another plan."
+							}
 							expanded={hasVariantBase}
 							action={
 								<Switch
 									checked={hasVariantBase}
-									disabled={!hasVariantBase && !canSelectBasePlan}
-									onCheckedChange={(checked) => {
-										setProduct({
-											...product,
-											base_id: checked
+									disabled={
+										hasVariants || (!hasVariantBase && !canSelectBasePlan)
+									}
+									onCheckedChange={(checked) =>
+										setBasePlan(
+											checked
 												? (selectedBasePlanId ??
-													visibleBasePlanOptions[0]?.id ??
-													null)
+														visibleBasePlanOptions[0]?.id ??
+														null)
 												: null,
-										});
-									}}
+										)
+									}
 								/>
 							}
 						>
 							<Select
 								value={selectedBasePlanId ?? NO_BASE_PLAN}
-								onValueChange={(value) => {
-									setProduct({
-										...product,
-										base_id: value === NO_BASE_PLAN ? null : value,
-									});
-								}}
+								disabled={hasVariants}
+								onValueChange={(value) =>
+									setBasePlan(value === NO_BASE_PLAN ? null : value)
+								}
+								items={Object.fromEntries(
+									visibleBasePlanOptions.map((option) => [
+										option.id,
+										option.name || option.id,
+									]),
+								)}
 							>
 								<SelectTrigger className="w-full">
 									<SelectValue placeholder="Select base plan" />
 								</SelectTrigger>
 								<SelectContent>
-									{visibleBasePlanOptions.map((basePlan) => (
-										<SelectItem key={basePlan.id} value={basePlan.id}>
-											{basePlan.name}
+									{visibleBasePlanOptions.map((option) => (
+										<SelectItem key={option.id} value={option.id}>
+											{option.name || option.id}
 										</SelectItem>
 									))}
 								</SelectContent>

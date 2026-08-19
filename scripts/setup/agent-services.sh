@@ -46,6 +46,17 @@ ELASTICMQ_CONF="${ELASTICMQ_DIR}/elasticmq.conf"
 ELASTICMQ_LOG_DIR="${HOME}/.autumn-agent/logs"
 mkdir -p "$ELASTICMQ_LOG_DIR"
 
+wait_elasticmq() {
+  local i
+  for i in $(seq 1 30); do
+    if curl -sf -o /dev/null 'http://localhost:9324/?Action=ListQueues&Version=2012-11-05'; then
+      return 0
+    fi
+    sleep 0.5
+  done
+  return 1
+}
+
 if ! pgrep -f 'elasticmq.*\.jar' >/dev/null 2>&1; then
   log "Starting ElasticMQ on :9324"
   nohup java \
@@ -54,18 +65,34 @@ if ! pgrep -f 'elasticmq.*\.jar' >/dev/null 2>&1; then
     >"$ELASTICMQ_LOG_DIR/elasticmq.log" 2>&1 &
   disown || true
   log "Waiting for ElasticMQ to be ready"
-  ELASTICMQ_READY=0
-  for i in $(seq 1 30); do
-    if curl -sf -o /dev/null 'http://localhost:9324/?Action=ListQueues&Version=2012-11-05'; then
-      ELASTICMQ_READY=1
-      break
-    fi
-    sleep 0.5
-  done
-  if [ "$ELASTICMQ_READY" -eq 0 ]; then
+  if ! wait_elasticmq; then
     echo "[agent-services] ERROR: ElasticMQ did not become ready after 15s. Check $ELASTICMQ_LOG_DIR/elasticmq.log" >&2
     exit 1
   fi
+fi
+
+# Self-heal queues: snapshot conf may only have autumn.fifo. Copying conf
+# does not reload a running JVM — CreateQueue is what actually adds them.
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+if [ -f "$ROOT/scripts/setup/elasticmq.conf" ]; then
+  cp "$ROOT/scripts/setup/elasticmq.conf" "$ELASTICMQ_CONF"
+fi
+if ! wait_elasticmq; then
+  echo "[agent-services] WARN: ElasticMQ not ready; skipping CreateQueue" >&2
+else
+  log "Ensuring ElasticMQ queues (autumn.fifo + track + stripe webhook)"
+  fifo_attrs="&Attribute.1.Name=FifoQueue&Attribute.1.Value=true&Attribute.2.Name=ContentBasedDeduplication&Attribute.2.Value=true"
+  create_q() {
+    local name="$1"
+    local extra="$2"
+    curl -sf -o /dev/null \
+      "http://localhost:9324/?Action=CreateQueue&QueueName=${name}&Version=2012-11-05${extra}" \
+      || true
+  }
+  create_q "autumn.fifo" "$fifo_attrs"
+  create_q "autumn-track.fifo" "$fifo_attrs"
+  create_q "autumn-track-async" ""
+  create_q "autumn-stripe-webhook.fifo" "$fifo_attrs"
 fi
 
 # =============================================================
@@ -95,7 +122,11 @@ bun scripts/setup/writeAgentEnv.ts
 # 5. DB migrations
 # =============================================================
 log "Running migrations"
-bun db:generate >/dev/null 2>&1 || true
-bun db:migrate
+# Pass DATABASE_URL — loadLocalEnv from /workspace misses server/.env.
+# --bootstrap: empty Cloud postgres has 72 CREATE INDEX without CONCURRENTLY.
+export AUTUMN_DB_DIRECT=1
+export DATABASE_URL="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/autumn}"
+bun db generate >/dev/null 2>&1 || true
+bun db migrate --bootstrap
 
 log "All services ready"

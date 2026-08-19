@@ -12,11 +12,16 @@ import type {
 	EveAuthContext,
 	EveSessionRef,
 } from "../../agentRuntime/eve/types.js";
+import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { denyOptionFromApproval } from "./approvalOptions.js";
 
-const WITHDRAWN_NOTE =
-	"(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; their new message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one.)";
+const withdrawnNote = (toolName: string) =>
+	`(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; their new message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one.${
+		normalizeToolName(toolName) === "attach"
+			? " Keep an attach refinement customer-specific; use catalog tools only if they explicitly ask to change the shared plan."
+			: ""
+	})`;
 
 const withdrewInEve = async ({
 	approval,
@@ -35,7 +40,7 @@ const withdrewInEve = async ({
 	try {
 		const posted = await postEveInputResponse({
 			auth,
-			note: WITHDRAWN_NOTE,
+			note: withdrawnNote(approval.tool_name),
 			optionId: denyOptionFromApproval(approval),
 			requestId: approval.tool_call_id,
 			session,

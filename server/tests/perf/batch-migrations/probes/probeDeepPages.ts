@@ -40,7 +40,9 @@ const main = async () => {
 			`page ${page.toLocaleString()}: ${rows.length} rows in ${ms}ms (first=${rows[0]?.internal_id})`,
 		);
 	}
-	console.log(`walked ${page.toLocaleString()} pages total in ${Math.round((Date.now() - started) / 1000)}s`);
+	console.log(
+		`walked ${page.toLocaleString()} pages total in ${Math.round((Date.now() - started) / 1000)}s`,
+	);
 	process.exit(0);
 };
 

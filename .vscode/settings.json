@@ -40,5 +40,11 @@
 		".mcp.json": true,
 		".zed": true
 	},
-	"typescript.native-preview.tsdk": "/Users/johnyeocx/autumn/main/node_modules/@typescript/native-preview"
+	"typescript.native-preview.tsdk": "/Users/johnyeocx/autumn/main/node_modules/@typescript/native-preview",
+	"githubPullRequests.queries": [
+		{
+			"label": "This Stack",
+			"query": "repo:${owner}/${repository} is:open (head:charlie/batch-plan-item-delete) sort:created-desc"
+		}
+	]
 }

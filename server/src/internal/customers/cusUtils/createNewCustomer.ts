@@ -62,12 +62,14 @@ export const createNewCustomer = async ({
 	ctx,
 	customer,
 	nextResetAt,
+	createdAt,
 	createDefaultProducts = true,
 	defaultGroup,
 }: {
 	ctx: AutumnContext;
 	customer: CreateCustomer;
 	nextResetAt?: number;
+	createdAt?: number;
 	createDefaultProducts?: boolean;
 	defaultGroup?: string;
 }) => {
@@ -105,7 +107,7 @@ export const createNewCustomer = async ({
 		metadata: parsedCustomer.metadata || {},
 		internal_id: internalId,
 		org_id: org.id,
-		created_at: Date.now(),
+		created_at: createdAt ?? Date.now(),
 		env,
 		processors: parsedCustomer.processors ?? null,
 		processor: parsedCustomer.stripe_id

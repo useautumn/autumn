@@ -73,13 +73,11 @@ export const useCusSearchQuery = () => {
 		placeholderData: keepPreviousData,
 	});
 
-	const { data: totalCount, isLoading: isCountLoading } = useCustomerCountQuery(
-		{
-			search: trimmedSearch,
-			filters: buildCustomerFilterPayload(queryStates),
-			enabled: isInitialized,
-		},
-	);
+	const { data: countData, isLoading: isCountLoading } = useCustomerCountQuery({
+		search: trimmedSearch,
+		filters: buildCustomerFilterPayload(queryStates),
+		enabled: isInitialized,
+	});
 
 	const isFetchingUncached = Boolean(
 		isPending || (isFetching && isPlaceholderData),
@@ -88,7 +86,8 @@ export const useCusSearchQuery = () => {
 	return {
 		customers: data?.customers || [],
 		nextCursor: data?.next_cursor ?? null,
-		totalCount: totalCount ?? 0,
+		totalCount: countData?.totalCount ?? 0,
+		totalCountApproximate: countData?.approximate ?? false,
 		isLoading: isLoading || isCountLoading,
 		error,
 		refetch,

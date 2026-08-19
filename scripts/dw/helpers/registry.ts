@@ -1,20 +1,22 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { log, fatal } from "./shell.ts";
+import { isCloudAgent } from "@autumn/env";
 import {
-	getWorktreeList,
-	getCurrentWorktree,
-	getCurrentBranch,
-	getDefaultBranch,
-} from "./git.ts";
-import { deleteBranch } from "./neon.ts";
-import {
-	REGISTRY_PATH,
-	MAX_WORKTREE,
 	BRANCH_NAME_RE,
 	INACTIVITY_MS,
+	MAX_WORKTREE,
+	REGISTRY_PATH,
 } from "../constants.ts";
 import type { Registry, RegistryEntry } from "../types.ts";
+import {
+	getCanonicalWorktree,
+	getCurrentBranch,
+	getCurrentWorktree,
+	getDefaultBranch,
+	getWorktreeList,
+} from "./git.ts";
+import { deleteBranch } from "./neon.ts";
+import { fatal, log } from "./shell.ts";
 
 export function shortHash(input: string): string {
 	return createHash("sha1").update(input).digest("hex").slice(0, 6);
@@ -66,10 +68,13 @@ export function deriveCanonicalBranchName(
 export function wantsCanonicalProvision(
 	cwd: string,
 	canonical: string,
-	gitBranch: string,
-	defaultBranch: string,
+	_gitBranch?: string,
+	_defaultBranch?: string,
 ): boolean {
-	return cwd === canonical && gitBranch !== defaultBranch;
+	if (isCloudAgent()) {
+		return false;
+	}
+	return cwd === canonical;
 }
 
 /** Keep canonical registry in sync with the current git branch. */
@@ -90,18 +95,19 @@ export function refreshCanonicalEntry(
 		}
 		return next;
 	}
+	if (!gitBranch) fatal("could not determine current git branch");
 
-	if (
-		entry.gitBranch &&
-		entry.gitBranch !== gitBranch &&
-		entry.branchName
-	) {
-		log(`git branch changed (${entry.gitBranch} -> ${gitBranch}), resetting neon branch`);
+	if (entry.gitBranch && entry.gitBranch !== gitBranch && entry.branchName) {
+		log(
+			`git branch changed (${entry.gitBranch} -> ${gitBranch}), resetting neon branch`,
+		);
 		deleteBranch(entry.branchName, { projectId: entry.neonProjectId });
 		next.branchId = undefined;
 		next.databaseUrl = undefined;
 		next.reservedDomainId = undefined;
 		next.ngrokUrl = undefined;
+		next.publicUrl = undefined;
+		next.cloudflareTunnelId = undefined;
 	}
 
 	next.gitBranch = gitBranch;
@@ -152,6 +158,47 @@ export function hasOtherActiveWorktrees(
 	);
 }
 
+export function registerCurrentWorktree(): RegistryEntry {
+	const canonical = getCanonicalWorktree();
+	const cwd = getCurrentWorktree();
+	const gitBranch = getCurrentBranch();
+	const defaultBranch = getDefaultBranch();
+	const registry = reconcile(loadRegistry());
+
+	let entry = registry[cwd];
+	if (!entry) {
+		const worktreeNum = allocateWorktreeNumber(cwd, registry, canonical);
+		const onCanonical = wantsCanonicalProvision(
+			cwd,
+			canonical,
+			gitBranch,
+			defaultBranch,
+		);
+		let branchName: string | undefined;
+		if (worktreeNum === 1 && onCanonical) {
+			if (!gitBranch) fatal("could not determine current git branch");
+			branchName = deriveCanonicalBranchName(cwd, gitBranch);
+		} else if (worktreeNum !== 1) {
+			branchName = deriveBranchName(cwd, worktreeNum);
+		}
+		entry = {
+			path: cwd,
+			worktreeNum,
+			createdAt: Date.now(),
+			...(onCanonical && gitBranch && { gitBranch }),
+			...(branchName && { branchName }),
+		};
+		log(`registered ${cwd} as worktree ${worktreeNum}`);
+	} else if (entry.worktreeNum === 1) {
+		entry = refreshCanonicalEntry(entry, cwd, canonical);
+	} else {
+		entry = { ...entry, lastUsedAt: Date.now() };
+	}
+	registry[cwd] = entry;
+	saveRegistry(registry);
+	return entry;
+}
+
 export function resolveAgentEntryOrFatal(action: string): RegistryEntry {
 	const cwd = getCurrentWorktree();
 	const registry = loadRegistry();
@@ -160,4 +207,24 @@ export function resolveAgentEntryOrFatal(action: string): RegistryEntry {
 		fatal(`${action} only valid in a registered agent worktree`);
 	}
 	return entry;
+}
+
+/** Any registered worktree, including canonical / headless #1. */
+export function resolveCurrentEntryOrFatal(
+	action: string,
+	opts: { touch?: boolean } = {},
+): RegistryEntry {
+	const cwd = getCurrentWorktree();
+	const registry = loadRegistry();
+	const entry = registry[cwd];
+	if (!entry) {
+		fatal(
+			`${action} requires a registered worktree — run 'bun dw setup' first`,
+		);
+	}
+	if (!opts.touch) return entry;
+	const next = { ...entry, lastUsedAt: Date.now() };
+	registry[cwd] = next;
+	saveRegistry(registry);
+	return next;
 }

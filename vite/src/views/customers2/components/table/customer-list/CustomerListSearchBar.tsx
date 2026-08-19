@@ -7,7 +7,7 @@ import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 
 export function CustomerListSearchBar() {
 	const { queryStates, setFilters } = useCustomerFilters();
-	const { totalCount } = useCusSearchQuery();
+	const { totalCount, totalCountApproximate } = useCusSearchQuery();
 
 	const setFiltersRef = useRef(setFilters);
 	setFiltersRef.current = setFilters;
@@ -51,7 +51,7 @@ export function CustomerListSearchBar() {
 				className="pl-8! text-sm w-full"
 				placeholder={
 					totalCount > 0
-						? `Search ${Intl.NumberFormat("en-US").format(totalCount)} customers`
+						? `Search ${totalCountApproximate ? "~" : ""}${Intl.NumberFormat("en-US").format(totalCount)} customers`
 						: "Search customers"
 				}
 			/>

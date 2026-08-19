@@ -80,7 +80,7 @@ export const handleAttachV2Errors = async ({
 
 	// 6. Scheduled switch with one-off prepaid quantities
 	handleScheduledSwitchOneOffErrors({ ctx, billingContext });
-	handleBillingCycleAnchorErrors({ billingContext });
+	handleBillingCycleAnchorErrors({ billingContext, params });
 	handleStartDateErrors({ billingContext, params, preview });
 	handleEndDateErrors({ billingContext, params });
 

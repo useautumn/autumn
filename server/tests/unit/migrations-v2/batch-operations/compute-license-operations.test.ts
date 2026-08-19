@@ -5,11 +5,12 @@ import {
 	type Entitlement,
 	type Feature,
 	FeatureType,
+	type FullPlanLicense,
 	type FullProduct,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import { computeBatchMigrationOperations } from "@/internal/migrations/v2/batchOperations/compute/operations/computeBatchMigrationOperations.js";
-import { resolveLicenseCustomizeTransitions } from "@/internal/migrations/v2/batchOperations/compute/transitions/resolveLicenseCustomizeTransitions.js";
+import { resolvePlanLicenseTransitions } from "@/internal/migrations/v2/batchOperations/compute/transitions/resolvePlanLicenseTransitions.js";
 import type { MigrationRuntime } from "@/internal/migrations/v2/types/migrationDefinition.js";
 
 const PARENT_INTERNAL_ID = "prod_internal_pro";
@@ -111,14 +112,14 @@ describe("license transitions lower into operations", () => {
 		entitlement: Entitlement;
 		features: Feature[];
 	}) => {
-		const { links: licenseLinks, rejections } =
-			resolveLicenseCustomizeTransitions({
-				migration: buildMigration({ entitlement }),
-				op,
-				opIndex: 0,
-				fromProduct,
-				features,
-			});
+		const { links: licenseLinks, rejections } = resolvePlanLicenseTransitions({
+			migration: buildMigration({ entitlement }),
+			op,
+			opIndex: 0,
+			fromProduct,
+			toProduct: fromProduct,
+			features,
+		});
 		const { licenseEntitlements } = computeBatchMigrationOperations({
 			productTransitions: {
 				basePrice: undefined,
@@ -165,5 +166,227 @@ describe("license transitions lower into operations", () => {
 			throw new Error("expected a minted op");
 		expect(minted.initialState.tracksBalance).toBe(true);
 		expect(minted.initialState.granted).toBe(100);
+	});
+});
+
+const PARENT_V2_INTERNAL_ID = "prod_internal_pro_v2";
+
+const seatProduct = (internalId: string) =>
+	({
+		id: LICENSE_PLAN_ID,
+		internal_id: internalId,
+		entitlements: [],
+		prices: [],
+	}) as unknown as FullProduct;
+
+const licenseLink = ({
+	id,
+	childInternalId,
+}: {
+	id: string;
+	childInternalId: string;
+}) =>
+	({
+		id,
+		included: 1,
+		prepaid_only: false,
+		metadata: null,
+		license_internal_product_id: childInternalId,
+		product: seatProduct(childInternalId),
+	}) as unknown as FullPlanLicense;
+
+const parentProduct = ({
+	internalId,
+	links,
+}: {
+	internalId: string;
+	links: FullPlanLicense[];
+}) =>
+	({
+		id: "pro",
+		internal_id: internalId,
+		entitlements: [],
+		prices: [],
+		licenses: links,
+	}) as unknown as FullProduct;
+
+describe("version link diff", () => {
+	const versionOp = (customize?: UpdatePlanOp["customize"]): UpdatePlanOp =>
+		({
+			type: "update_plan",
+			plan_filter: { plan_id: "pro" },
+			version: 2,
+			customize,
+		}) as unknown as UpdatePlanOp;
+
+	const diff = ({
+		fromLink,
+		toLink,
+		op: diffOp = versionOp(),
+		migration = {} as unknown as MigrationRuntime,
+		features = [],
+	}: {
+		fromLink?: FullPlanLicense;
+		toLink?: FullPlanLicense;
+		op?: UpdatePlanOp;
+		migration?: MigrationRuntime;
+		features?: Feature[];
+	}) =>
+		resolvePlanLicenseTransitions({
+			migration,
+			op: diffOp,
+			opIndex: 0,
+			fromProduct: parentProduct({
+				internalId: PARENT_INTERNAL_ID,
+				links: fromLink ? [fromLink] : [],
+			}),
+			toProduct: parentProduct({
+				internalId: PARENT_V2_INTERNAL_ID,
+				links: toLink ? [toLink] : [],
+			}),
+			features,
+		});
+
+	test("a version bump minting a new identical link repoints the pool once", () => {
+		const { links, rejections } = diff({
+			fromLink: licenseLink({
+				id: "plan_lic_v1",
+				childInternalId: "prod_internal_seat",
+			}),
+			toLink: licenseLink({
+				id: "plan_lic_v2",
+				childInternalId: "prod_internal_seat",
+			}),
+		});
+
+		expect(rejections).toHaveLength(0);
+		const { licenseEntitlements } = computeBatchMigrationOperations({
+			productTransitions: {
+				basePrice: undefined,
+				customerProduct: undefined,
+				entitlementPrices: { transitions: [], added: [], deleted: [] },
+				toProduct: fromProduct,
+			},
+			licenseLinks: links,
+		});
+		expect(licenseEntitlements.map((operation) => operation.type)).toEqual([
+			"repoint_license_pool",
+		]);
+		expect(licenseEntitlements[0]?.planLicenseId).toBe("plan_lic_v2");
+	});
+
+	test("an unchanged link row emits no operations", () => {
+		const link = licenseLink({
+			id: "plan_lic_v1",
+			childInternalId: "prod_internal_seat",
+		});
+		const { links, rejections } = diff({ fromLink: link, toLink: link });
+
+		expect(rejections).toHaveLength(0);
+		expect(links).toHaveLength(0);
+	});
+
+	test("version and customize on one op emit a single repoint targeting the minted custom row", () => {
+		const migration = {
+			prepared_state: {
+				[PREPARE_KEY]: {
+					planLicenses: [],
+					entitlements: [booleanEntitlement],
+					artifacts: [
+						{
+							op_index: 0,
+							license_plan_id: LICENSE_PLAN_ID,
+							item_index: 0,
+							hash: "hash_1",
+							parent_internal_product_id: PARENT_V2_INTERNAL_ID,
+							license_internal_product_id: "prod_internal_seat",
+							is_one_off: false,
+							plan_license_id: "plan_lic_custom",
+							entitlement_id: booleanEntitlement.id,
+							internal_feature_id: booleanEntitlement.internal_feature_id,
+							base_item_refs: [],
+						},
+					],
+				},
+			},
+		} as unknown as MigrationRuntime;
+
+		const { links, rejections } = diff({
+			fromLink: licenseLink({
+				id: "plan_lic_v1",
+				childInternalId: "prod_internal_seat",
+			}),
+			toLink: licenseLink({
+				id: "plan_lic_v2",
+				childInternalId: "prod_internal_seat",
+			}),
+			op: versionOp({
+				upsert_licenses: [{ license_plan_id: LICENSE_PLAN_ID }],
+			} as UpdatePlanOp["customize"]),
+			migration,
+			features: [dashboardFeature],
+		});
+
+		expect(rejections).toHaveLength(0);
+		const { licenseEntitlements } = computeBatchMigrationOperations({
+			productTransitions: {
+				basePrice: undefined,
+				customerProduct: undefined,
+				entitlementPrices: { transitions: [], added: [], deleted: [] },
+				toProduct: fromProduct,
+			},
+			licenseLinks: links,
+		});
+		const repoints = licenseEntitlements.filter(
+			(operation) => operation.type === "repoint_license_pool",
+		);
+		expect(repoints).toHaveLength(1);
+		expect(repoints[0]?.planLicenseId).toBe("plan_lic_custom");
+	});
+
+	test("a changed child product rejects the link transition", () => {
+		const { links, rejections } = diff({
+			fromLink: licenseLink({
+				id: "plan_lic_v1",
+				childInternalId: "prod_internal_seat_v1",
+			}),
+			toLink: licenseLink({
+				id: "plan_lic_v2",
+				childInternalId: "prod_internal_seat_v2",
+			}),
+		});
+
+		expect(links).toHaveLength(0);
+		expect(rejections.map(({ code }) => code)).toEqual([
+			"license_link_transition",
+		]);
+	});
+
+	test("an added link rejects the transition", () => {
+		const { links, rejections } = diff({
+			toLink: licenseLink({
+				id: "plan_lic_v2",
+				childInternalId: "prod_internal_seat",
+			}),
+		});
+
+		expect(links).toHaveLength(0);
+		expect(rejections.map(({ code }) => code)).toEqual([
+			"license_link_transition",
+		]);
+	});
+
+	test("a removed link rejects the transition", () => {
+		const { links, rejections } = diff({
+			fromLink: licenseLink({
+				id: "plan_lic_v1",
+				childInternalId: "prod_internal_seat",
+			}),
+		});
+
+		expect(links).toHaveLength(0);
+		expect(rejections.map(({ code }) => code)).toEqual([
+			"license_link_transition",
+		]);
 	});
 });

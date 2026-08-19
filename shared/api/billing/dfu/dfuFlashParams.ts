@@ -25,6 +25,10 @@ const FlashCustomerDataSchema = z.object({
 		.string()
 		.optional()
 		.meta({ description: "Anti-fraud fingerprint for the customer." }),
+	created_at: z.number().int().positive().optional().meta({
+		description:
+			"Unix ms timestamp the customer signed up, so a migrated customer keeps its original signup date. Defaults to the import time for a customer Autumn creates here.",
+	}),
 });
 
 const FlashProcessorIdentitySchema = z.object({

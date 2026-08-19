@@ -95,15 +95,6 @@ export const checkUpdatePlanOpEligibility = ({
 }): BatchMigrationRejection[] => {
 	const rejections: BatchMigrationRejection[] = [];
 
-	if (op.version !== undefined) {
-		rejections.push({
-			code: "version_update",
-			opIndex,
-			message:
-				"update_plan version bumps are wholesale product transitions; only customize add_items are batch-lowered.",
-		});
-	}
-
 	if (op.proration === true) {
 		rejections.push({
 			code: "proration_enabled",
@@ -131,12 +122,19 @@ export const checkUpdatePlanOpEligibility = ({
 		});
 	}
 
-	if ((op.customize?.remove_items?.length ?? 0) > 0) {
+	const removeItems = op.customize?.remove_items ?? [];
+
+	if (
+		removeItems.some(
+			(filter) =>
+				filter.billing_method !== undefined || filter.feature_id === undefined,
+		)
+	) {
 		rejections.push({
 			code: "unsupported_remove_items",
 			opIndex,
 			message:
-				"customize.remove_items is not batch-lowered yet; the batch lane is add_items-only.",
+				"remove_items is batch-lowered by feature and interval; a billing_method or feature-less filter is per-customer work.",
 		});
 	}
 

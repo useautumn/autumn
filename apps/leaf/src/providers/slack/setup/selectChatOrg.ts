@@ -1,13 +1,13 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { Agent } from "@mastra/core/agent";
 import { z } from "zod";
+import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { DEFAULT_CHAT_ORG_MODEL } from "../../../lib/chatAgentConfig.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
-import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import {
 	chatOrgSelectorInstructions,
 	chatOrgSelectorOutputInstructions,
-} from "./selectorPrompts.js";
+} from "../../../prompts/chatSelectorPrompts.js";
 import { recentMessageContext } from "./selectChatEnv.js";
 
 const orgSelectionSchema = z.strictObject({

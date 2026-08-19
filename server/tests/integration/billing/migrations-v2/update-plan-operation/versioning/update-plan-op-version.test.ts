@@ -1,16 +1,18 @@
-/**
- * TDD coverage for update_plan version migrations.
- *
- * Contract under test:
- *   - update_plan can migrate matched customer products to a target plan version.
- *   - Usage/quantity state carries across the version update.
- *   - Migration execution does not create extra invoices.
- */
+/** Pre-fix, multi-entity pooled versioning inserts duplicate pools and leaves duplicate active plans.
+ * Post-fix, planning converges on one shared pool before execution. */
 
 import { test } from "bun:test";
-import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	type ApiCustomerV5,
+	CusProductStatus,
+	EntInterval,
+	PooledBalanceResetMode,
+} from "@autumn/shared";
+import { expectPooledBalanceCorrect } from "@tests/integration/billing/pooled-balances/utils/expectPooledBalanceCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectCustomerProductStatuses } from "@tests/integration/billing/utils/expectCustomerProductStatuses";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -210,3 +212,92 @@ test.concurrent(`${chalk.yellowBright("migrations update_plan: prepaid version u
 	});
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
+
+test.concurrent(
+	`${chalk.yellowBright("migrations update_plan: pooled version update coalesces entity products")}`,
+	async () => {
+		const customerId = "migration-update-pooled-entities";
+		const grant = 100;
+		const free = products.base({
+			id: "free",
+			items: [items.monthlyMessages({ includedUsage: grant })],
+		});
+
+		const { autumnV1, autumnV2_3, ctx, entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer(),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+				s.products({ list: [free] }),
+			],
+			actions: [
+				s.billing.attach({ productId: free.id, entityIndex: 0 }),
+				s.billing.attach({ productId: free.id, entityIndex: 1 }),
+			],
+		});
+
+		await autumnV1.products.update(free.id, {
+			items: [
+				{
+					...items.monthlyMessages({ includedUsage: grant }),
+					pooled: true,
+				},
+			],
+		});
+
+		await runUpdatePlanMigration({
+			ctx,
+			migrationClient: autumnV2_3,
+			migrationId: `${customerId}-mig`,
+			customerId,
+			filter: { customer: { plan: { plan_id: free.id } } },
+			operations: {
+				customer: [
+					{
+						type: "update_plan",
+						plan_filter: { plan_id: free.id },
+						version: 2,
+					},
+				],
+			},
+			runOnServer: false,
+		});
+
+		for (const entity of entities) {
+			await expectCustomerProductStatuses({
+				ctx,
+				customerId,
+				productId: free.id,
+				entityId: entity.id,
+				expected: {
+					[CusProductStatus.Active]: 1,
+					[CusProductStatus.Expired]: 1,
+				},
+			});
+		}
+		await expectPooledBalanceCorrect({
+			db: ctx.db,
+			customerId,
+			pool: {
+				balance: grant * entities.length,
+				adjustment: 0,
+				granted: grant * entities.length,
+				interval: EntInterval.Month,
+				nextResetAt: "present",
+				resetCycleAnchor: "present",
+				resetMode: PooledBalanceResetMode.Lazy,
+				stripeSubscriptionId: null,
+			},
+			contributions: {
+				count: entities.length,
+				currentContribution: grant,
+				nextCycleContribution: grant,
+			},
+			sources: {
+				count: entities.length,
+				balance: 0,
+				adjustment: 0,
+			},
+		});
+	},
+);

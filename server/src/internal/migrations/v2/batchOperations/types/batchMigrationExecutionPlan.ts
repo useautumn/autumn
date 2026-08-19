@@ -17,6 +17,21 @@ export const BatchMigrationExecutionAddSchema = z.object({
 	initialState: BatchMigrationInitialStateSchema,
 });
 
+export const BatchMigrationExecutionRemoveSchema = z.object({
+	entitlement: EntitlementWithFeatureSchema,
+});
+
+export const BatchMigrationExecutionReplaceSchema = z.object({
+	fromEntitlement: EntitlementWithFeatureSchema,
+	entitlement: EntitlementWithFeatureSchema,
+	initialState: BatchMigrationInitialStateSchema,
+});
+
+export const BatchMigrationExecutionRepointProductSchema = z.object({
+	fromInternalProductId: z.string(),
+	toInternalProductId: z.string(),
+});
+
 const BatchMigrationLicenseOpBaseSchema = z.object({
 	licensePlanId: z.string(),
 	planLicenseId: z.string(),
@@ -54,10 +69,19 @@ export const BatchMigrationExecutionPatchSchema = z.object({
 	opIndex: z.number().int(),
 	scope: OperationScopeSchema,
 	fromProduct: FullProductWithoutLicensesSchema,
+	toProduct: FullProductWithoutLicensesSchema.optional(),
 	addEntitlementOps: z.array(BatchMigrationExecutionAddSchema),
+	removeEntitlementOps: z
+		.array(BatchMigrationExecutionRemoveSchema)
+		.default([]),
+	replaceEntitlementOps: z
+		.array(BatchMigrationExecutionReplaceSchema)
+		.default([]),
 	licenseEntitlementOps: z
 		.array(BatchMigrationExecutionLicenseOpSchema)
 		.default([]),
+	repointCustomerProduct:
+		BatchMigrationExecutionRepointProductSchema.optional(),
 });
 
 export const BatchMigrationExecutionPlanSchema = z.object({
@@ -66,6 +90,12 @@ export const BatchMigrationExecutionPlanSchema = z.object({
 
 export type BatchMigrationExecutionAdd = z.infer<
 	typeof BatchMigrationExecutionAddSchema
+>;
+export type BatchMigrationExecutionRemove = z.infer<
+	typeof BatchMigrationExecutionRemoveSchema
+>;
+export type BatchMigrationExecutionReplace = z.infer<
+	typeof BatchMigrationExecutionReplaceSchema
 >;
 export type BatchMigrationMintedLicenseOp = z.infer<
 	typeof BatchMigrationLicenseMintedSchema
