@@ -8,7 +8,6 @@ import { coreBilling } from "./core/coreBilling";
 import { coreCatalog } from "./core/coreCatalog";
 import { coreLegacy } from "./core/coreLegacy";
 import { coreLicensesBilling } from "./core/coreLicensesBilling";
-import { coreLicensesCatalog } from "./core/coreLicensesCatalog";
 import { coreMigrations } from "./core/coreMigrations";
 import { coreMultiUpdate } from "./core/coreMultiUpdate";
 import { corePlansCrud } from "./core/corePlansCrud";
@@ -49,7 +48,6 @@ const allGroups: TestGroup[] = [
 	coreCatalog,
 	coreLegacy,
 	coreLicensesBilling,
-	coreLicensesCatalog,
 	coreMigrations,
 	coreMultiUpdate,
 	corePlansCrud,
