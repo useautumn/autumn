@@ -11,23 +11,27 @@ import type { MutationLogItem } from "../types/mutationLogItem.js";
 export const projectMutationLogsToTrackDeductionsV2 = ({
 	fullSubject,
 	mutationLogs,
+	customerEntitlements,
 }: {
 	fullSubject: FullSubject;
 	mutationLogs: MutationLogItem[];
+	customerEntitlements?: FullCusEntWithFullCusProduct[];
 }): TrackDeduction[] => {
 	if (mutationLogs.length === 0) return [];
 
-	const customerEntitlements = fullSubjectToCustomerEntitlements({
-		fullSubject,
-	});
+	const resolvedCustomerEntitlements =
+		customerEntitlements ?? fullSubjectToCustomerEntitlements({ fullSubject });
 
-	const customerEntitlementById = new Map<string, FullCusEntWithFullCusProduct>();
+	const customerEntitlementById = new Map<
+		string,
+		FullCusEntWithFullCusProduct
+	>();
 	const rolloverIdToCustomerEntitlement = new Map<
 		string,
 		FullCusEntWithFullCusProduct
 	>();
 
-	for (const customerEntitlement of customerEntitlements) {
+	for (const customerEntitlement of resolvedCustomerEntitlements) {
 		customerEntitlementById.set(customerEntitlement.id, customerEntitlement);
 		for (const rollover of customerEntitlement.rollovers ?? []) {
 			rolloverIdToCustomerEntitlement.set(rollover.id, customerEntitlement);

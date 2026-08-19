@@ -1,4 +1,5 @@
 import {
+	type BalanceTransitionPlan,
 	cp,
 	type FullCusProduct,
 	type InitFullCustomerProductContext,
@@ -13,15 +14,20 @@ import { initCustomerLicenses } from "./initCustomerLicenses/initCustomerLicense
 import { initCustomerPrice } from "./initCustomerPrice";
 import { initCustomerProduct } from "./initCustomerProduct";
 
-export const initFullCustomerProduct = ({
-	ctx,
-	initContext,
-	initOptions,
-}: {
+type InitFullCustomerProductParams = {
 	ctx: AutumnContext;
 	initContext: InitFullCustomerProductContext;
 	initOptions?: InitFullCustomerProductOptions;
-}): FullCusProduct => {
+};
+
+export const initFullCustomerProductWithBalanceTransitions = ({
+	ctx,
+	initContext,
+	initOptions,
+}: InitFullCustomerProductParams): {
+	customerProduct: FullCusProduct;
+	balanceTransitionPlan?: BalanceTransitionPlan;
+} => {
 	const { fullCustomer, fullProduct } = initContext;
 
 	const cusProductId = generateId("cus_prod");
@@ -68,7 +74,7 @@ export const initFullCustomerProduct = ({
 		customerLicenseQuantities: initContext.customerLicenseQuantities,
 	});
 
-	applyExistingStatesToCustomerProduct({
+	const balanceTransitionPlan = applyExistingStatesToCustomerProduct({
 		ctx,
 		fullCustomer,
 		customerProduct: newFullCustomerProduct,
@@ -89,5 +95,13 @@ export const initFullCustomerProduct = ({
 		newFullCustomerProduct.scheduled_ids = [];
 	}
 
-	return newFullCustomerProduct;
+	return {
+		customerProduct: newFullCustomerProduct,
+		balanceTransitionPlan,
+	};
 };
+
+export const initFullCustomerProduct = (
+	params: InitFullCustomerProductParams,
+): FullCusProduct =>
+	initFullCustomerProductWithBalanceTransitions(params).customerProduct;

@@ -15,10 +15,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import { executeRedisDeductionV2 } from "@/internal/balances/utils/deductionV2/executeRedisDeductionV2.js";
-import {
-	getCachedFullSubject,
-	getOrSetCachedFullSubject,
-} from "@/internal/customers/cache/fullSubject/index.js";
+import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 
 test("attach carries Redis-only usage into the replacement product", async () => {
 	const pro = products.pro({
@@ -73,20 +70,6 @@ test("attach carries Redis-only usage into the replacement product", async () =>
 		plan_id: premium.id,
 		carry_over_usages: { enabled: true },
 	});
-	const { fullSubject: publishedSubject } = await getCachedFullSubject({
-		ctx,
-		customerId,
-		source: "carry-over-usage-redis-overlay:published",
-	});
-	const publishedTarget = publishedSubject?.customer_products.find(
-		(customerProduct) => customerProduct.product.id === premium.id,
-	);
-	expect(
-		publishedTarget?.customer_entitlements.find(
-			(customerEntitlement) =>
-				customerEntitlement.feature_id === TestFeature.Messages,
-		)?.balance,
-	).toBe(195);
 
 	// The replacement must be calculated from Redis A=95, not Postgres A=100.
 	const afterAttach = await autumnV1.customers.get<ApiCustomerV3>(customerId);

@@ -10,16 +10,20 @@ import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const invalidationCalls: Record<string, unknown>[] = [];
 let stripeDeferred = false;
+let publishedSubject = false;
 
 await mockModuleWithRestore("@/internal/billing/v2/actions", () => ({
 	billingActions: {
-		attach: async () => ({
-			billingContext: {
-				attachProduct: { id: "premium" },
-				successUrl: "https://example.com/success",
-			},
-			billingResult: { stripe: { deferred: stripeDeferred } },
-		}),
+		attach: async ({ ctx }: { ctx: AutumnContext }) => {
+			if (publishedSubject) ctx.skipSubjectCacheDeletion = true;
+			return {
+				billingContext: {
+					attachProduct: { id: "premium" },
+					successUrl: "https://example.com/success",
+				},
+				billingResult: { stripe: { deferred: stripeDeferred } },
+			};
+		},
 	},
 }));
 await mockModuleWithRestore(
@@ -50,6 +54,7 @@ describe("Autumn Checkout confirmation cache refresh", () => {
 	beforeEach(() => {
 		invalidationCalls.length = 0;
 		stripeDeferred = false;
+		publishedSubject = false;
 	});
 
 	test("invalidates cached A after confirmation commits B", async () => {
@@ -83,6 +88,26 @@ describe("Autumn Checkout confirmation cache refresh", () => {
 
 	test("keeps A when confirmation is still deferred", async () => {
 		stripeDeferred = true;
+
+		await confirmCheckout({
+			ctx: { org: { id: "org_test" }, env: "sandbox" } as AutumnContext,
+			checkout: {
+				id: "checkout_test",
+				customer_id: "cus_checkout",
+				status: CheckoutStatus.Pending,
+				action: CheckoutAction.Attach,
+			} as Checkout,
+			params: {
+				customer_id: "cus_checkout",
+				plan_id: "premium",
+			} as AttachParamsV1,
+		});
+
+		expect(invalidationCalls).toHaveLength(0);
+	});
+
+	test("keeps atomically published B after confirmation", async () => {
+		publishedSubject = true;
 
 		await confirmCheckout({
 			ctx: { org: { id: "org_test" }, env: "sandbox" } as AutumnContext,

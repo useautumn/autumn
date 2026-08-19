@@ -1,5 +1,6 @@
 import type { AttachBillingContext, AttachParamsV1 } from "@autumn/shared";
 import {
+	type BalanceTransitionPlan,
 	CollectionMethod,
 	deduplicateArray,
 	type ExistingUsagesConfig,
@@ -8,7 +9,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
-import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
+import { initFullCustomerProductWithBalanceTransitions } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 type NewCustomerProductParams = Partial<
 	Pick<AttachParamsV1, "carry_over_usages" | "ends_at" | "no_billing_changes">
@@ -75,15 +76,20 @@ const getScheduledBillingCycleAnchorResetAt = ({
  * For upgrades (planTiming === "immediate"): creates an active product
  * For downgrades (planTiming === "end_of_cycle"): creates a scheduled product that starts at endOfCycleMs
  */
-export const computeAttachNewCustomerProduct = ({
-	ctx,
-	attachBillingContext,
-	params = {},
-}: {
+type ComputeAttachNewCustomerProductParams = {
 	ctx: AutumnContext;
 	attachBillingContext: AttachBillingContext;
 	params?: NewCustomerProductParams;
-}): FullCusProduct => {
+};
+
+const computeAttachNewCustomerProductResult = ({
+	ctx,
+	attachBillingContext,
+	params = {},
+}: ComputeAttachNewCustomerProductParams): {
+	customerProduct: FullCusProduct;
+	balanceTransitionPlan?: BalanceTransitionPlan;
+} => {
 	const {
 		attachProduct,
 		fullCustomer,
@@ -143,7 +149,7 @@ export const computeAttachNewCustomerProduct = ({
 		? currentCustomerProduct
 		: undefined;
 
-	const newFullCustomerProduct = initFullCustomerProduct({
+	return initFullCustomerProductWithBalanceTransitions({
 		ctx,
 		initContext: {
 			fullCustomer,
@@ -184,6 +190,13 @@ export const computeAttachNewCustomerProduct = ({
 			}),
 		},
 	});
-
-	return newFullCustomerProduct;
 };
+
+export const computeAttachNewCustomerProductWithBalanceTransitions = (
+	params: ComputeAttachNewCustomerProductParams,
+) => computeAttachNewCustomerProductResult(params);
+
+export const computeAttachNewCustomerProduct = (
+	params: ComputeAttachNewCustomerProductParams,
+): FullCusProduct =>
+	computeAttachNewCustomerProductResult(params).customerProduct;

@@ -1,5 +1,6 @@
 import type {
-	FullCustomerEntitlement,
+	BalanceTransitionPlan,
+	BalanceTransitionUnsupportedReason,
 	NormalizedFullSubject,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -13,6 +14,11 @@ import {
 } from "../config/fullSubjectCacheConfig.js";
 import { normalizedToCachedFullSubject } from "../fullSubjectCacheModel.js";
 import { assertPrimarySourced } from "../subjectProvenance.js";
+import {
+	type BalanceCandidate,
+	type BalanceTransitionPairUnsupportedReason,
+	classifyBalanceTransitionPair,
+} from "./classifyBalanceTransitionPair.js";
 import { buildSharedBalanceWrites } from "./setCachedFullSubject/setSharedFullSubjectBalances.js";
 
 type ScalarBalanceState = {
@@ -34,14 +40,18 @@ export type PublishCachedFullSubjectResult =
 			status: "OK";
 			balanceTransitions: PublishedBalanceTransition[];
 	  }
-	| { status: "CACHE_MISSING" | "UNSUPPORTED" | "FAILED" };
+	| { status: "CACHE_MISSING" | "FAILED" }
+	| {
+			status: "UNSUPPORTED";
+			reason: PublishCachedFullSubjectUnsupportedReason;
+	  };
 
-export type SimpleBalanceTransition = {
-	sourceCustomerEntitlementId: string;
-	targetCustomerEntitlementId: string;
-	sourceBalance: number;
-	sourceAdjustment: number;
-};
+export type PublishCachedFullSubjectUnsupportedReason =
+	| BalanceTransitionUnsupportedReason
+	| BalanceTransitionPairUnsupportedReason
+	| "feature_scoped_runtime_state"
+	| "target_already_cached"
+	| "target_balance_write_missing";
 
 type CacheBalanceTransition = {
 	sourceField: string;
@@ -56,26 +66,6 @@ type BalanceHashPublication = {
 	writes: Record<string, string>;
 	balanceTransitions: CacheBalanceTransition[];
 };
-
-type BalanceCandidate =
-	| FullCustomerEntitlement
-	| NormalizedFullSubject["customer_entitlements"][number];
-
-const isSimpleScalarBalance = (
-	customerEntitlement: BalanceCandidate,
-): boolean =>
-	typeof customerEntitlement.balance === "number" &&
-	Number.isFinite(customerEntitlement.balance) &&
-	Number.isFinite(customerEntitlement.adjustment ?? 0) &&
-	(customerEntitlement.additional_balance ?? 0) === 0 &&
-	!customerEntitlement.is_pooled_balance &&
-	!customerEntitlement.pooled_balance_id &&
-	!customerEntitlement.pooled_contribution_id &&
-	!customerEntitlement.internal_entity_id &&
-	!customerEntitlement.entitlement?.entity_feature_id &&
-	Object.keys(customerEntitlement.entities ?? {}).length === 0 &&
-	(customerEntitlement.rollovers?.length ?? 0) === 0 &&
-	(customerEntitlement.replaceables?.length ?? 0) === 0;
 
 const toScalarBalanceState = ({
 	balance,
@@ -100,15 +90,24 @@ const toScalarBalanceState = ({
 export const publishCachedFullSubject = async ({
 	ctx,
 	normalized,
-	outgoingCustomerEntitlements,
-	balanceTransitions = [],
+	balanceTransitionPlan,
 }: {
 	ctx: AutumnContext;
 	normalized: NormalizedFullSubject;
-	outgoingCustomerEntitlements: FullCustomerEntitlement[];
-	balanceTransitions?: SimpleBalanceTransition[];
+	balanceTransitionPlan: BalanceTransitionPlan;
 }): Promise<PublishCachedFullSubjectResult> => {
 	assertPrimarySourced(normalized, "publishCachedFullSubject");
+	const {
+		id: balanceTransitionId,
+		outgoingCustomerEntitlements,
+		transitions: balanceTransitions,
+	} = balanceTransitionPlan;
+	if (balanceTransitionPlan.unsupportedReason) {
+		return {
+			status: "UNSUPPORTED",
+			reason: balanceTransitionPlan.unsupportedReason,
+		};
+	}
 	const { customerId, entityId } = normalized;
 	const cached = normalizedToCachedFullSubject({
 		normalized,
@@ -117,7 +116,9 @@ export const publishCachedFullSubject = async ({
 	const hasFeatureScopedRuntimeState =
 		(normalized.entity_aggregations?.aggregated_customer_entitlements.length ??
 			0) > 0 || (cached.usageWindowFeatureIds?.length ?? 0) > 0;
-	if (hasFeatureScopedRuntimeState) return { status: "UNSUPPORTED" };
+	if (hasFeatureScopedRuntimeState) {
+		return { status: "UNSUPPORTED", reason: "feature_scoped_runtime_state" };
+	}
 
 	const targetWrites = buildSharedBalanceWrites({
 		orgId: ctx.org.id,
@@ -181,24 +182,22 @@ export const publishCachedFullSubject = async ({
 		const targetCustomerEntitlement = targetById.get(
 			balanceTransition.targetCustomerEntitlementId,
 		);
-		if (
-			!sourceCustomerEntitlement ||
-			!targetCustomerEntitlement ||
-			usedSourceIds.has(sourceCustomerEntitlement.id) ||
-			usedTargetIds.has(targetCustomerEntitlement.id) ||
-			sourceCustomerEntitlement.feature_id !==
-				targetCustomerEntitlement.feature_id ||
-			(sourceCustomerEntitlement.internal_feature_id &&
-				targetCustomerEntitlement.internal_feature_id &&
-				sourceCustomerEntitlement.internal_feature_id !==
-					targetCustomerEntitlement.internal_feature_id) ||
-			!isSimpleScalarBalance(sourceCustomerEntitlement) ||
-			!isSimpleScalarBalance(targetCustomerEntitlement) ||
-			balanceTransition.sourceBalance !== sourceCustomerEntitlement.balance ||
-			balanceTransition.sourceAdjustment !==
-				(sourceCustomerEntitlement.adjustment ?? 0)
-		) {
-			return { status: "UNSUPPORTED" };
+		const unsupportedReason = classifyBalanceTransitionPair({
+			transition: balanceTransition,
+			sourceCustomerEntitlement,
+			targetCustomerEntitlement,
+			sourceAlreadyUsed: sourceCustomerEntitlement
+				? usedSourceIds.has(sourceCustomerEntitlement.id)
+				: false,
+			targetAlreadyUsed: targetCustomerEntitlement
+				? usedTargetIds.has(targetCustomerEntitlement.id)
+				: false,
+		});
+		if (unsupportedReason) {
+			return { status: "UNSUPPORTED", reason: unsupportedReason };
+		}
+		if (!sourceCustomerEntitlement || !targetCustomerEntitlement) {
+			return { status: "FAILED" };
 		}
 
 		const balanceKey = buildSharedFullSubjectBalanceKey({
@@ -209,7 +208,10 @@ export const publishCachedFullSubject = async ({
 		});
 		const publication = publicationsByKey.get(balanceKey);
 		if (!publication || !(targetCustomerEntitlement.id in publication.writes)) {
-			return { status: "UNSUPPORTED" };
+			return {
+				status: "UNSUPPORTED",
+				reason: "target_balance_write_missing",
+			};
 		}
 
 		publication.balanceTransitions.push({
@@ -227,21 +229,25 @@ export const publishCachedFullSubject = async ({
 			typeof customerEntitlement.balance === "number" &&
 			!usedSourceIds.has(customerEntitlement.id),
 	);
-	if (hasUnmappedRuntimeBalance) return { status: "UNSUPPORTED" };
+	if (hasUnmappedRuntimeBalance) {
+		return { status: "UNSUPPORTED", reason: "unmapped_runtime_balance" };
+	}
 
 	const publications = [...publicationsByKey.values()];
+	const subjectKey = buildFullSubjectKey({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		customerId,
+		entityId,
+	});
 	const keys = [
-		buildFullSubjectKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-			entityId,
-		}),
+		subjectKey,
 		buildFullSubjectViewEpochKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
 			customerId,
 		}),
+		`${subjectKey}:balance_transition:${balanceTransitionId}`,
 		...publications.map((publication) => publication.balanceKey),
 	];
 	const result = await tryRedisWrite(
@@ -278,12 +284,17 @@ export const publishCachedFullSubject = async ({
 	);
 
 	if (!result) return { status: "FAILED" };
+	if (result.startsWith("UNSUPPORTED:")) {
+		return {
+			status: "UNSUPPORTED",
+			reason: result.slice("UNSUPPORTED:".length) as
+				| "complex_runtime_state"
+				| "target_already_cached",
+		};
+	}
 	if (result !== "OK" && !result.startsWith("{")) {
 		return {
-			status:
-				result === "CACHE_MISSING" || result === "UNSUPPORTED"
-					? result
-					: "FAILED",
+			status: result === "CACHE_MISSING" ? result : "FAILED",
 		};
 	}
 

@@ -19,6 +19,7 @@ export enum JobName {
 	/** Signal-only sync: payload identifies the customer; selectors and
 	 *  usage-window snapshots live in the Redis dirty state. */
 	SyncCustomerDirty = "sync-customer-dirty",
+	PersistPublishedBalanceTransitions = "persist-published-balance-transitions",
 	RefreshEntityAggregate = "refresh-entity-aggregate",
 	InsertEventBatch = "insert-event-batch",
 	Track = "track",

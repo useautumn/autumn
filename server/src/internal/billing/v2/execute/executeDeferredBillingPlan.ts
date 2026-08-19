@@ -9,6 +9,7 @@ import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/cre
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
+import { publishBillingTransition } from "@/internal/billing/v2/publish/publishBillingTransition.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { checkoutActions, checkoutRepo } from "@/internal/checkouts";
@@ -69,6 +70,7 @@ export const executeDeferredBillingPlan = async ({
 		billingContext,
 		billingPlan,
 	});
+	await publishBillingTransition({ ctx, billingContext, billingPlan });
 
 	await billingPlanToSendProductsUpdated({
 		ctx,
@@ -101,9 +103,11 @@ export const executeDeferredBillingPlan = async ({
 		});
 	}
 
-	await deleteCachedFullCustomer({
-		ctx,
-		customerId: billingContext.fullCustomer.id ?? "",
-		source: "executeInvoiceDeferredBillingPlan",
-	});
+	if (!ctx.skipSubjectCacheDeletion) {
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId: billingContext.fullCustomer.id ?? "",
+			source: "executeInvoiceDeferredBillingPlan",
+		});
+	}
 };

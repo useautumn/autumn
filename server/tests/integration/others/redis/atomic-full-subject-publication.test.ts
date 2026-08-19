@@ -75,11 +75,24 @@ const ctx = {
 	env: keyArgs.env,
 	redisV2: redis,
 } as AutumnContext;
+const balanceTransitionPlan = {
+	id: "target_product",
+	outgoingCustomerEntitlements: [sourceBalance],
+	transitions: [
+		{
+			sourceCustomerEntitlementId: "entitlement_a",
+			targetCustomerEntitlementId: "entitlement_b",
+			sourceBalance: 95,
+			sourceAdjustment: 0,
+		},
+	],
+};
+const receiptKey = `${subjectKey}:balance_transition:${balanceTransitionPlan.id}`;
 
 beforeEach(async () => {
 	await redis
 		.multi()
-		.del(subjectKey, epochKey, balanceKey)
+		.del(subjectKey, epochKey, balanceKey, receiptKey)
 		.set(subjectKey, JSON.stringify(sourceSubject))
 		.set(epochKey, "2")
 		.hset(
@@ -96,15 +109,7 @@ test("atomically publishes B while preserving unrelated live balances", async ()
 	const result = await publishCachedFullSubject({
 		ctx,
 		normalized: targetNormalized,
-		outgoingCustomerEntitlements: [sourceBalance],
-		balanceTransitions: [
-			{
-				sourceCustomerEntitlementId: "entitlement_a",
-				targetCustomerEntitlementId: "entitlement_b",
-				sourceBalance: 95,
-				sourceAdjustment: 0,
-			},
-		],
+		balanceTransitionPlan,
 	});
 
 	const [rawSubject, epoch, balances] = await Promise.all([
@@ -135,6 +140,25 @@ test("atomically publishes B while preserving unrelated live balances", async ()
 	expect(balances.unrelated_entitlement).toBe(liveUnrelatedBalance);
 });
 
+test("replays an already-published transition without applying it twice", async () => {
+	const firstResult = await publishCachedFullSubject({
+		ctx,
+		normalized: targetNormalized,
+		balanceTransitionPlan,
+	});
+	const secondResult = await publishCachedFullSubject({
+		ctx,
+		normalized: targetNormalized,
+		balanceTransitionPlan,
+	});
+
+	expect(secondResult).toEqual(firstResult);
+	expect(await redis.get(epochKey)).toBe("3");
+	expect(
+		JSON.parse((await redis.hget(balanceKey, "entitlement_b")) ?? "{}").balance,
+	).toBe(190);
+});
+
 test("leaves A untouched when B is already live", async () => {
 	const liveTarget = JSON.stringify({ balance: 192 });
 	await redis.hset(balanceKey, "entitlement_b", liveTarget);
@@ -142,15 +166,7 @@ test("leaves A untouched when B is already live", async () => {
 	const result = await publishCachedFullSubject({
 		ctx,
 		normalized: targetNormalized,
-		outgoingCustomerEntitlements: [sourceBalance],
-		balanceTransitions: [
-			{
-				sourceCustomerEntitlementId: "entitlement_a",
-				targetCustomerEntitlementId: "entitlement_b",
-				sourceBalance: 95,
-				sourceAdjustment: 0,
-			},
-		],
+		balanceTransitionPlan,
 	});
 
 	const [rawSubject, epoch, balances] = await Promise.all([
@@ -158,7 +174,10 @@ test("leaves A untouched when B is already live", async () => {
 		redis.get(epochKey),
 		redis.hgetall(balanceKey),
 	]);
-	expect(result).toEqual({ status: "UNSUPPORTED" });
+	expect(result).toEqual({
+		status: "UNSUPPORTED",
+		reason: "target_already_cached",
+	});
 	expect(JSON.parse(rawSubject ?? "{}")).toMatchObject({
 		customerEntitlementIdsByFeatureId: {
 			messages: ["entitlement_a", "unrelated_entitlement"],
@@ -173,7 +192,11 @@ test("leaves A untouched when a runtime balance has no transition", async () => 
 	const result = await publishCachedFullSubject({
 		ctx,
 		normalized: targetNormalized,
-		outgoingCustomerEntitlements: [sourceBalance],
+		balanceTransitionPlan: {
+			id: balanceTransitionPlan.id,
+			outgoingCustomerEntitlements: [sourceBalance],
+			transitions: [],
+		},
 	});
 
 	const [rawSubject, epoch, balances] = await Promise.all([
@@ -181,7 +204,10 @@ test("leaves A untouched when a runtime balance has no transition", async () => 
 		redis.get(epochKey),
 		redis.hgetall(balanceKey),
 	]);
-	expect(result).toEqual({ status: "UNSUPPORTED" });
+	expect(result).toEqual({
+		status: "UNSUPPORTED",
+		reason: "unmapped_runtime_balance",
+	});
 	expect(JSON.parse(rawSubject ?? "{}")).toMatchObject({
 		customerEntitlementIdsByFeatureId: {
 			messages: ["entitlement_a", "unrelated_entitlement"],
@@ -196,15 +222,7 @@ test("rejects a stale A track before idempotency or balance mutation", async () 
 	await publishCachedFullSubject({
 		ctx,
 		normalized: targetNormalized,
-		outgoingCustomerEntitlements: [sourceBalance],
-		balanceTransitions: [
-			{
-				sourceCustomerEntitlementId: "entitlement_a",
-				targetCustomerEntitlementId: "entitlement_b",
-				sourceBalance: 95,
-				sourceAdjustment: 0,
-			},
-		],
+		balanceTransitionPlan,
 	});
 
 	const idempotencyKey = `{${customerId}}:stale-track`;
@@ -240,6 +258,6 @@ test("rejects a stale A track before idempotency or balance mutation", async () 
 });
 
 afterAll(async () => {
-	await redis.del(subjectKey, epochKey, balanceKey);
+	await redis.del(subjectKey, epochKey, balanceKey, receiptKey);
 	redis.disconnect();
 });

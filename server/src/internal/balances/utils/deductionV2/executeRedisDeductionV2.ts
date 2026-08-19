@@ -1,6 +1,7 @@
 import {
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
+	fullSubjectToCustomerEntitlements,
 	fullSubjectToFullCustomer,
 	isUsageBasedAllocatedCustomerEntitlement,
 	notNullish,
@@ -52,6 +53,7 @@ export const executeRedisDeductionV2 = async ({
 	deductionOptions = {},
 	redisInstance,
 	expectedSubjectViewEpoch,
+	refreshFullSubject,
 }: {
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
@@ -61,6 +63,7 @@ export const executeRedisDeductionV2 = async ({
 	deductionOptions?: DeductionOptions;
 	redisInstance?: Redis;
 	expectedSubjectViewEpoch?: number;
+	refreshFullSubject?: () => Promise<FullSubject>;
 }): Promise<{
 	oldFullSubject: FullSubject;
 	fullSubject: FullSubject;
@@ -70,11 +73,15 @@ export const executeRedisDeductionV2 = async ({
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 	usageWindowUpdates: UsageWindowUpdate[];
 	usageWindowMutations: UsageWindowMutation[];
+	mutationLogCustomerEntitlements: FullCusEntWithFullCusProduct[];
 }> => {
 	const { org, env } = ctx;
 	const oldFullSubject = structuredClone(fullSubject);
+	let currentSegmentOldFullSubject = oldFullSubject;
+	let currentExpectedSubjectViewEpoch = expectedSubjectViewEpoch;
+	let refreshedSubjectView = false;
 
-	const options = prepareDeductionOptionsV2({
+	let options = prepareDeductionOptionsV2({
 		ctx,
 		fullSubject,
 		options: deductionOptions,
@@ -124,8 +131,18 @@ export const executeRedisDeductionV2 = async ({
 	const usageWindowNow = Date.now();
 
 	const duplicateFeatureIds: string[] = [];
+	const mutationLogCustomerEntitlementById = new Map(
+		fullSubjectToCustomerEntitlements({ fullSubject }).map(
+			(customerEntitlement) => [customerEntitlement.id, customerEntitlement],
+		),
+	);
 
-	for (const deduction of deductions) {
+	for (
+		let deductionIndex = 0;
+		deductionIndex < deductions.length;
+		deductionIndex++
+	) {
+		const deduction = deductions[deductionIndex];
 		const {
 			feature,
 			deduction: toDeduct,
@@ -227,7 +244,7 @@ export const executeRedisDeductionV2 = async ({
 			alter_granted_balance: options.alterGrantedBalance,
 			overage_behaviour: options.overageBehaviour,
 			feature_id: feature.id,
-			expected_subject_view_epoch: expectedSubjectViewEpoch ?? null,
+			expected_subject_view_epoch: currentExpectedSubjectViewEpoch ?? null,
 			idempotency_ttl_ms:
 				idempotencyRedisKey !== null ? TRACK_V3_IDEMPOTENCY_TTL_MS : null,
 			lock: preparedLock
@@ -268,6 +285,33 @@ export const executeRedisDeductionV2 = async ({
 		}
 
 		if (resultJson.error) {
+			if (
+				resultJson.error === RedisDeductionErrorCode.SubjectViewChanged &&
+				refreshFullSubject &&
+				!refreshedSubjectView
+			) {
+				fullSubject = await refreshFullSubject();
+				currentSegmentOldFullSubject = structuredClone(fullSubject);
+				currentExpectedSubjectViewEpoch = fullSubject.subjectViewEpoch;
+				options = prepareDeductionOptionsV2({
+					ctx,
+					fullSubject,
+					options: deductionOptions,
+					deductions: deductions.slice(deductionIndex),
+				});
+				for (const customerEntitlement of fullSubjectToCustomerEntitlements({
+					fullSubject,
+				})) {
+					mutationLogCustomerEntitlementById.set(
+						customerEntitlement.id,
+						customerEntitlement,
+					);
+				}
+				refreshedSubjectView = true;
+				deductionIndex--;
+				continue;
+			}
+
 			// This feature already applied on a prior delivery (replay) — skip
 			// it and continue with the remaining features instead of aborting.
 			if (
@@ -344,7 +388,7 @@ export const executeRedisDeductionV2 = async ({
 		);
 
 		const oldFullCustomer = fullSubjectToFullCustomer({
-			fullSubject: oldFullSubject,
+			fullSubject: currentSegmentOldFullSubject,
 		});
 
 		try {
@@ -392,7 +436,7 @@ export const executeRedisDeductionV2 = async ({
 			}
 			await rollbackDeductionV2({
 				ctx,
-				oldFullSubject,
+				oldFullSubject: currentSegmentOldFullSubject,
 				updates,
 			});
 			throw error;
@@ -407,7 +451,7 @@ export const executeRedisDeductionV2 = async ({
 
 		fireTrackWebhooks({
 			ctx,
-			oldFullSubject,
+			oldFullSubject: currentSegmentOldFullSubject,
 			newFullSubject: fullSubject,
 			feature: deduction.feature,
 			entityId,
@@ -426,6 +470,45 @@ export const executeRedisDeductionV2 = async ({
 				);
 			});
 		}
+	}
+
+	if (refreshedSubjectView) {
+		const finalCustomerEntitlements = fullSubjectToCustomerEntitlements({
+			fullSubject,
+		});
+		const finalCustomerEntitlementIds = new Set(
+			finalCustomerEntitlements.map(
+				(customerEntitlement) => customerEntitlement.id,
+			),
+		);
+		allUpdates = Object.fromEntries(
+			Object.entries(allUpdates).filter(([customerEntitlementId]) =>
+				finalCustomerEntitlementIds.has(customerEntitlementId),
+			),
+		);
+
+		const finalCustomerEntitlementIdsByFeatureId = new Map<string, string[]>();
+		for (const customerEntitlement of finalCustomerEntitlements) {
+			const featureId = customerEntitlement.entitlement.feature.id;
+			const ids = finalCustomerEntitlementIdsByFeatureId.get(featureId) ?? [];
+			ids.push(customerEntitlement.id);
+			finalCustomerEntitlementIdsByFeatureId.set(featureId, ids);
+		}
+		for (const featureId of Object.keys(allModifiedCusEntIdsByFeatureId)) {
+			allModifiedCusEntIdsByFeatureId[featureId] =
+				finalCustomerEntitlementIdsByFeatureId.get(featureId) ?? [];
+		}
+
+		const finalRolloverIds = new Set(
+			finalCustomerEntitlements.flatMap((customerEntitlement) =>
+				(customerEntitlement.rollovers ?? []).map((rollover) => rollover.id),
+			),
+		);
+		allRolloverUpdates = Object.fromEntries(
+			Object.entries(allRolloverUpdates).filter(([rolloverId]) =>
+				finalRolloverIds.has(rolloverId),
+			),
+		);
 	}
 
 	// EVERY feature was a replay — surface the duplicate (sync callers 409;
@@ -449,5 +532,8 @@ export const executeRedisDeductionV2 = async ({
 		modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
 		usageWindowUpdates: Object.values(allUsageWindowUpdates),
 		usageWindowMutations: allUsageWindowMutations,
+		mutationLogCustomerEntitlements: [
+			...mutationLogCustomerEntitlementById.values(),
+		],
 	};
 };

@@ -160,7 +160,7 @@ describe("attach runtime balance overlay", () => {
 		const runtimeSourceProduct = overlaidCustomer.customer_products[0];
 		expect(runtimeSourceProduct?.customer_entitlements[0]?.balance).toBe(95);
 
-		applyExistingStatesToCustomerProduct({
+		const balanceTransitionPlan = applyExistingStatesToCustomerProduct({
 			ctx: contexts.create({
 				features: [postgresSourceEntitlement.entitlement.feature],
 			}),
@@ -173,6 +173,21 @@ describe("attach runtime balance overlay", () => {
 		});
 
 		expect(targetEntitlement.balance).toBe(195);
+		expect(balanceTransitionPlan).toEqual({
+			id: "target_product",
+			outgoingCustomerEntitlements: [runtimeSourceEntitlement],
+			transitions: [
+				{
+					sourceCustomerEntitlementId: "source_messages",
+					targetCustomerEntitlementId: "target_messages",
+					sourceBalance: 95,
+					sourceAdjustment: 0,
+				},
+			],
+		});
+
+		runtimeSourceEntitlement.balance = 90;
+		expect(balanceTransitionPlan?.transitions[0]?.sourceBalance).toBe(95);
 	});
 });
 

@@ -1,7 +1,7 @@
-import { expect, test } from "bun:test";
+import { expect, mock, test } from "bun:test";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { persistPublishedBalanceTransitions } from "@/internal/billing/v2/actions/attach/persistPublishedBalanceTransitions.js";
+import { persistPublishedBalanceTransitions } from "@/internal/billing/v2/publish/persistPublishedBalanceTransitions.js";
 
 test("persists a published balance only while Postgres still has the attach draft", async () => {
 	let compiledQuery: ReturnType<PgDialect["sqlToQuery"]> | undefined;
@@ -15,7 +15,8 @@ test("persists a published balance only while Postgres still has the attach draf
 	} as unknown as AutumnContext;
 
 	await persistPublishedBalanceTransitions({
-		ctx,
+		db: ctx.db,
+		logger: ctx.logger,
 		balanceTransitions: [
 			{
 				customerEntitlementId: "entitlement_b",
@@ -47,4 +48,37 @@ test("persists a published balance only while Postgres still has the attach draf
 	);
 	expect(JSON.stringify(compiledQuery?.params)).toContain("entitlement_b");
 	expect(JSON.stringify(compiledQuery?.params)).toContain("190");
+});
+
+test("treats an already-changed Postgres balance as an idempotent no-op", async () => {
+	const logger = { info: mock(() => {}) };
+
+	await expect(
+		persistPublishedBalanceTransitions({
+			db: {
+				execute: async () => [],
+			} as unknown as AutumnContext["db"],
+			logger: logger as unknown as AutumnContext["logger"],
+			balanceTransitions: [
+				{
+					customerEntitlementId: "entitlement_b",
+					expected: {
+						balance: 195,
+						adjustment: 0,
+						additionalBalance: 0,
+						cacheVersion: 0,
+						nextResetAt: null,
+					},
+					published: {
+						balance: 190,
+						adjustment: 0,
+						additionalBalance: 0,
+						cacheVersion: 0,
+						nextResetAt: null,
+					},
+				},
+			],
+		}),
+	).resolves.toBeUndefined();
+	expect(logger.info).toHaveBeenCalledTimes(1);
 });

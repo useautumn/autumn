@@ -1,14 +1,20 @@
 import { customerEntitlements } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { PublishedBalanceTransition } from "@/internal/customers/cache/fullSubject/actions/publishCachedFullSubject.js";
+import { JobName } from "@/queue/JobName.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
 
 export const persistPublishedBalanceTransitions = async ({
-	ctx,
+	db,
+	logger,
 	balanceTransitions,
 }: {
-	ctx: AutumnContext;
+	db: DrizzleCli;
+	logger: Logger;
 	balanceTransitions: PublishedBalanceTransition[];
 }): Promise<void> => {
 	if (balanceTransitions.length === 0) return;
@@ -27,7 +33,7 @@ export const persistPublishedBalanceTransitions = async ({
 		}),
 	);
 
-	const updatedRows = await ctx.db.execute<{ id: string }>(sql`
+	const updatedRows = await db.execute<{ id: string }>(sql`
 		UPDATE ${customerEntitlements} AS customer_entitlement
 		SET
 			balance = transition.balance,
@@ -55,8 +61,49 @@ export const persistPublishedBalanceTransitions = async ({
 	`);
 
 	if (updatedRows.length !== balanceTransitions.length) {
-		ctx.logger.info(
+		logger.info(
 			`[persistPublishedBalanceTransitions] Skipped ${balanceTransitions.length - updatedRows.length} balance(s) already changed after publication`,
 		);
+	}
+};
+
+export const persistOrQueuePublishedBalanceTransitions = async ({
+	ctx,
+	customerId,
+	balanceTransitions,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	balanceTransitions: PublishedBalanceTransition[];
+}): Promise<void> => {
+	try {
+		await persistPublishedBalanceTransitions({
+			db: ctx.db,
+			logger: ctx.logger,
+			balanceTransitions,
+		});
+	} catch (persistenceError) {
+		try {
+			await addTaskToQueue({
+				jobName: JobName.PersistPublishedBalanceTransitions,
+				payload: {
+					orgId: ctx.org.id,
+					env: ctx.env,
+					customerId,
+					requestId: ctx.id,
+					balanceTransitions,
+				},
+				messageGroupId: `${ctx.org.id}:${ctx.env}:${customerId}`,
+			});
+			ctx.logger.warn(
+				{ error: persistenceError },
+				"[persistPublishedBalanceTransitions] Immediate persistence failed; queued a guarded retry",
+			);
+		} catch (queueError) {
+			ctx.logger.error(
+				{ persistenceError, queueError },
+				"[persistPublishedBalanceTransitions] Failed to persist or queue the published balance",
+			);
+		}
 	}
 };

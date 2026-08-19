@@ -66,6 +66,7 @@ export const stripeWebhookRefreshMiddleware = async (
 	const { logger, stripeEvent } = ctx;
 
 	if (!stripeEvent) return;
+	if (ctx.skipSubjectCacheDeletion) return;
 
 	const eventType = stripeEvent.type;
 	const data = stripeEvent.data;

@@ -192,7 +192,8 @@ export const confirmCheckout = async ({
 
 	if (
 		newCheckoutStatus === CheckoutStatus.Completed &&
-		billingResult?.stripe.deferred !== true
+		billingResult?.stripe.deferred !== true &&
+		!ctx.skipSubjectCacheDeletion
 	) {
 		await invalidateCachedFullSubject({
 			ctx,

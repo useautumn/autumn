@@ -2,6 +2,7 @@
 local params = cjson.decode(ARGV[1])
 local subject_key = KEYS[1]
 local epoch_key = KEYS[2]
+local receipt_key = KEYS[3]
 
 local function number_or_zero(value)
   if value == nil or value == cjson.null then
@@ -43,6 +44,11 @@ local function has_unsupported_runtime_state(balance)
     or has_replaceables
 end
 
+local existing_receipt = redis.call('GET', receipt_key)
+if existing_receipt then
+  return existing_receipt
+end
+
 if redis.call('EXISTS', subject_key) == 0 then
   return 'CACHE_MISSING'
 end
@@ -52,7 +58,7 @@ local published_target_fields = {}
 -- Resolve every live source and adjust each draft target before changing Redis.
 -- Returning early here leaves A and the existing subject view untouched.
 for index, balance_hash in ipairs(params.balance_hashes) do
-  local balance_key = KEYS[index + 2]
+  local balance_key = KEYS[index + 3]
 
   for _, transition in ipairs(balance_hash.balance_transitions or {}) do
     local source_json = redis.call('HGET', balance_key, transition.source_field)
@@ -66,7 +72,7 @@ for index, balance_hash in ipairs(params.balance_hashes) do
       'HGET', balance_key, transition.target_field
     )
     if live_target_json then
-      return 'UNSUPPORTED'
+      return 'UNSUPPORTED:target_already_cached'
     end
     local target = cjson.decode(draft_target_json)
     local live_source_balance = tonumber(source.balance)
@@ -83,7 +89,7 @@ for index, balance_hash in ipairs(params.balance_hashes) do
     if has_unsupported_runtime_state(source)
       or has_unsupported_runtime_state(target)
     then
-      return 'UNSUPPORTED'
+      return 'UNSUPPORTED:complex_runtime_state'
     end
 
     local additional_usage =
@@ -100,7 +106,7 @@ local next_epoch = redis.call('INCR', epoch_key)
 params.subject.subjectViewEpoch = next_epoch
 
 for index, balance_hash in ipairs(params.balance_hashes) do
-  local balance_key = KEYS[index + 2]
+  local balance_key = KEYS[index + 3]
 
   for _, field_name in ipairs(balance_hash.deletes) do
     redis.call('HDEL', balance_key, field_name)
@@ -129,7 +135,10 @@ end
 redis.call('SET', subject_key, cjson.encode(params.subject), 'EX', params.ttl_seconds)
 redis.call('EXPIRE', epoch_key, params.epoch_ttl_seconds)
 
-return cjson.encode({
+local result = cjson.encode({
   status = 'OK',
   target_fields = published_target_fields,
 })
+redis.call('SET', receipt_key, result, 'EX', params.ttl_seconds)
+
+return result

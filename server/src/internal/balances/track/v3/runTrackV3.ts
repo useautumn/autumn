@@ -14,10 +14,6 @@ import { getTrackQueueIdempotencyKey } from "@/internal/balances/idempotency/tra
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
-import {
-	RedisDeductionError,
-	RedisDeductionErrorCode,
-} from "../../utils/types/redisDeductionError.js";
 import { runRedisTrackV3 } from "./runRedisTrackV3.js";
 
 const getTrackFullSubject = async ({
@@ -66,37 +62,23 @@ export const runTrackV3 = async ({
 		});
 	}
 
-	let fullSubject = await getTrackFullSubject({
+	const fullSubject = await getTrackFullSubject({
 		ctx,
 		body,
 	});
 
 	const redisIdempotencyKey = getTrackQueueIdempotencyKey({ ctx });
 
-	const execute = () =>
-		runRedisTrackV3({
-			ctx,
-			fullSubject,
-			featureDeductions,
-			overageBehavior: body.overage_behavior || "cap",
-			body,
-			idempotencyKey: redisIdempotencyKey,
-		});
-
-	let response: TrackResponseV3;
-	try {
-		response = await execute();
-	} catch (error) {
-		if (
-			!(error instanceof RedisDeductionError) ||
-			error.code !== RedisDeductionErrorCode.SubjectViewChanged
-		) {
-			throw error;
-		}
-
-		fullSubject = await getTrackFullSubject({ ctx, body, forceFresh: true });
-		response = await execute();
-	}
+	const response: TrackResponseV3 = await runRedisTrackV3({
+		ctx,
+		fullSubject,
+		featureDeductions,
+		overageBehavior: body.overage_behavior || "cap",
+		body,
+		idempotencyKey: redisIdempotencyKey,
+		refreshFullSubject: () =>
+			getTrackFullSubject({ ctx, body, forceFresh: true }),
+	});
 
 	return applyResponseVersionChanges<TrackResponseV3>({
 		input: response,

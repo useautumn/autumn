@@ -20,6 +20,7 @@ const mockState = {
 	getOrSetCachedFullSubjectCalls: [] as Record<string, unknown>[],
 	runRedisTrackV3Calls: [] as Record<string, unknown>[],
 	runRedisTrackV3Errors: [] as Error[],
+	refreshSubjectViewOnNextRun: false,
 };
 
 const fullSubject = {
@@ -70,6 +71,10 @@ await mockModuleWithRestore(
 			args: Record<string, unknown>,
 		): Promise<TrackResponseV3> => {
 			mockState.runRedisTrackV3Calls.push(args);
+			if (mockState.refreshSubjectViewOnNextRun) {
+				mockState.refreshSubjectViewOnNextRun = false;
+				await (args.refreshFullSubject as () => Promise<FullSubject>)();
+			}
 			const error = mockState.runRedisTrackV3Errors.shift();
 			if (error) throw error;
 			return {
@@ -113,6 +118,7 @@ describe("runTrackV3 idempotency routing", () => {
 		mockState.getOrSetCachedFullSubjectCalls = [];
 		mockState.runRedisTrackV3Calls = [];
 		mockState.runRedisTrackV3Errors = [];
+		mockState.refreshSubjectViewOnNextRun = false;
 	});
 
 	test("uses the same request-level key for multi-feature requests", async () => {
@@ -174,9 +180,9 @@ describe("runTrackV3 idempotency routing", () => {
 		);
 	});
 
-	test("reloads once and retries a changed subject view with the same idempotency key", async () => {
+	test("lets the Redis deduction refresh the subject once without restarting the track", async () => {
 		mockState.fullSubjectReads = [fullSubject, replacementFullSubject];
-		mockState.runRedisTrackV3Errors = [subjectViewChangedError()];
+		mockState.refreshSubjectViewOnNextRun = true;
 
 		await runTrackV3({
 			ctx,
@@ -194,22 +200,16 @@ describe("runTrackV3 idempotency routing", () => {
 		});
 
 		expect(mockState.getOrSetCachedFullSubjectCalls).toHaveLength(2);
-		expect(mockState.runRedisTrackV3Calls).toHaveLength(2);
+		expect(mockState.runRedisTrackV3Calls).toHaveLength(1);
 		expect(mockState.runRedisTrackV3Calls[0]?.fullSubject).toBe(fullSubject);
-		expect(mockState.runRedisTrackV3Calls[1]?.fullSubject).toBe(
-			replacementFullSubject,
+		expect(mockState.runRedisTrackV3Calls[0]?.idempotencyKey).toBe(
+			"track:req_123",
 		);
-		expect(
-			mockState.runRedisTrackV3Calls.map((call) => call.idempotencyKey),
-		).toEqual(["track:req_123", "track:req_123"]);
 	});
 
-	test("surfaces a second changed subject view without retrying forever", async () => {
-		mockState.fullSubjectReads = [fullSubject, replacementFullSubject];
-		mockState.runRedisTrackV3Errors = [
-			subjectViewChangedError(),
-			subjectViewChangedError(),
-		];
+	test("does not restart the whole track when the bounded refresh is exhausted", async () => {
+		mockState.fullSubjectReads = [fullSubject];
+		mockState.runRedisTrackV3Errors = [subjectViewChangedError()];
 
 		await expect(
 			runTrackV3({
@@ -227,8 +227,8 @@ describe("runTrackV3 idempotency routing", () => {
 			code: "SUBJECT_VIEW_CHANGED",
 		});
 
-		expect(mockState.getOrSetCachedFullSubjectCalls).toHaveLength(2);
-		expect(mockState.runRedisTrackV3Calls).toHaveLength(2);
+		expect(mockState.getOrSetCachedFullSubjectCalls).toHaveLength(1);
+		expect(mockState.runRedisTrackV3Calls).toHaveLength(1);
 	});
 });
 
