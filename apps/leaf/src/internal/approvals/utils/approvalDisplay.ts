@@ -8,6 +8,9 @@ const text = (value: unknown) =>
 const record = (value: unknown) =>
 	value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
+const getArray = (value: unknown): unknown[] =>
+	Array.isArray(value) ? value : [];
+
 const planNameFromPreview = ({
 	planId,
 	preview,
@@ -124,6 +127,7 @@ export const resolveApprovalDisplay = async ({
 		customerId
 			? fetchRecord("getCustomer", {
 					customer_id: customerId,
+					expand: ["subscriptions.plan"],
 					with_autumn_id: false,
 				})
 			: null,
@@ -139,10 +143,22 @@ export const resolveApprovalDisplay = async ({
 	const planRecords = Object.fromEntries(
 		plans.map(([id, value]) => [id, record(value.plan ?? value)]),
 	);
+	// A remove_items filter names a feature; the quantity being removed is what
+	// the customer currently holds, which a customized subscription can set
+	// differently from the catalog plan. Prefer the live subscription's items.
+	const subscriptionItemsByPlan = Object.fromEntries(
+		getArray(customerRecord.subscriptions).flatMap((subscription) => {
+			const entry = record(subscription);
+			const planId = text(entry.plan_id);
+			const items = record(entry.plan).items;
+			return planId && Array.isArray(items) ? [[planId, items]] : [];
+		}),
+	);
 	const basePlanItemsByPlan = Object.fromEntries(
-		Object.entries(planRecords).flatMap(([id, value]) =>
-			Array.isArray(value.items) ? [[id, value.items]] : [],
-		),
+		Object.entries(planRecords).flatMap(([id, value]) => {
+			const items = subscriptionItemsByPlan[id] ?? value.items;
+			return Array.isArray(items) ? [[id, items]] : [];
+		}),
 	);
 	const fetchedPlanNames = Object.fromEntries(
 		Object.entries(planRecords).flatMap(([id, value]) => {

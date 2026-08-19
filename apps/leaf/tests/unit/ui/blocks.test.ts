@@ -1518,3 +1518,54 @@ describe("grouped steps follow the card state", () => {
 		expect(rendered).toContain("Attaching");
 	});
 });
+
+// A remove_items filter names a feature, not a quantity. The quantity being
+// removed is whatever the customer CURRENTLY has, which can differ from the
+// catalog plan — showing the catalog's included count (often 0) is wrong.
+describe("remove rows show the customer's current quantity", () => {
+	test("removes 250,000 contacts the customer has, not the catalog's 0", () => {
+		const card = approvalCard({
+			id: "u1",
+			env: AppEnv.Sandbox,
+			toolName: "updateSubscription",
+			toolArgs: {
+				request: {
+					customer_id: "cus_atlas",
+					customize: {
+						add_items: [{ feature_id: "contacts", included: 500_000 }],
+						remove_items: [{ feature_id: "contacts" }],
+					},
+					plan_id: "enterprise",
+				},
+			},
+			preview: wrapMcpResult({
+				_display: {
+					// resolveApprovalDisplay already prefers the customer's live
+					// subscription items over the catalog's; the card must render
+					// that quantity rather than re-deriving from the filter.
+					basePlanItems: [{ feature_id: "contacts", included: 250_000 }],
+					customerName: "Atlas Management Group",
+					featureNames: {
+						contacts: {
+							name: "contacts",
+							plural: "contacts",
+							singular: "contact",
+						},
+					},
+					planName: "Enterprise",
+				},
+				preview: {
+					currency: "usd",
+					customer_id: "cus_atlas",
+					line_items: [],
+					total: 189.1,
+				},
+			}),
+		});
+
+		const rendered = JSON.stringify(cardToBlockKit(card));
+		expect(rendered).toContain("250,000 contacts");
+		// Anchor on the cell boundary: "500,000 contacts" also contains "0 contacts".
+		expect(rendered).not.toContain('"0 contacts"');
+	});
+});
