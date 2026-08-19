@@ -1,6 +1,6 @@
 {
-  "id": "d51171bf-a133-4d93-a550-d8c1610fca64",
-  "prevId": "abcfda58-d465-485e-b8b9-0006f59a5257",
+  "id": "54769a98-32d3-4d9c-bd6d-9fcaea7cce9d",
+  "prevId": "d51171bf-a133-4d93-a550-d8c1610fca64",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -6742,6 +6742,12 @@
           "type": "text[]",
           "primaryKey": false,
           "notNull": true
+        },
+        "resource": {
+          "name": "resource",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -7212,6 +7218,12 @@
           "type": "text[]",
           "primaryKey": false,
           "notNull": true
+        },
+        "resource": {
+          "name": "resource",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
