@@ -70,8 +70,6 @@ export const loadAutumnOrgContext = async ({
 	const intent =
 		"Preload the org's identity, agent rules, plans, and features at session start so they are ready for the user's first request.";
 	const args = { intent, request: {} };
-	// getCurrentOrganization has a strict, no-argument input schema, so it only
-	// accepts the required `intent` field — not the `request` wrapper.
 	const organizationArgs = { intent };
 	const [organizationResult, agentRulesResult, plansResult, featuresResult] =
 		await Promise.allSettled([
