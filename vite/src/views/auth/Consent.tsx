@@ -37,7 +37,6 @@ interface ClientInfo {
 	logo_uri?: string;
 	policy_uri?: string;
 	tos_uri?: string;
-	is_internal_mcp?: boolean;
 	default_env?: AppEnv;
 }
 
@@ -129,7 +128,6 @@ const fetchOAuthClientInfo = async ({
 				client_id: clientId,
 				client_name: "External Application",
 				is_atmn: false,
-				is_internal_mcp: false,
 			};
 		}
 
@@ -139,7 +137,6 @@ const fetchOAuthClientInfo = async ({
 			client_id: clientId,
 			client_name: data.name || "Unknown Application",
 			is_atmn: data.is_atmn === true,
-			is_internal_mcp: data.is_internal_mcp === true,
 			default_env: defaultEnv ?? undefined,
 		};
 	} catch (error) {
@@ -148,7 +145,6 @@ const fetchOAuthClientInfo = async ({
 			client_id: clientId,
 			client_name: "External Application",
 			is_atmn: false,
-			is_internal_mcp: false,
 		};
 	}
 };

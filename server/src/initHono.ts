@@ -1,5 +1,5 @@
-import { httpInstrumentationMiddleware } from "@hono/otel";
 import { ssoProvider } from "@autumn/shared";
+import { httpInstrumentationMiddleware } from "@hono/otel";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -17,8 +17,8 @@ import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
 import { handleReadyCheck } from "./honoUtils/handleReadyCheck.js";
 import { handleListAuthOrganizations } from "./internal/auth/handleListAuthOrganizations.js";
-import { withTrustedSsoOrigin } from "./internal/auth/sso/ssoTrustedOrigins.js";
 import { oauthRouter } from "./internal/auth/oauth/oauthRouter.js";
+import { withTrustedSsoOrigin } from "./internal/auth/sso/ssoTrustedOrigins.js";
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleRevenueCatOAuthCallback } from "./internal/orgs/handlers/revenueCatHandlers/handleRevenueCatOAuthCallback.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
@@ -167,6 +167,13 @@ export const createHonoApp = () => {
 
 	// API Middleware
 	app.route("/v1", apiRouter);
+
+	// OAuth/MCP discovery is public by contract, so an unmatched probe must 404
+	// here rather than fall through to internalRouter's session gate below,
+	// which answers with a misleading 401. Everything this server does serve is
+	// registered on oauthRouter and the chat proxy, both mounted well above.
+	app.all("/.well-known/*", (c) => c.json({ error: "not_found" }, 404));
+
 	app.route("", internalRouter);
 
 	app.onError(errorMiddleware);

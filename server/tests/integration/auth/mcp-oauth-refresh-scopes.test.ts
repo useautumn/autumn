@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { getDefaultOAuthScopes, MCP_CLIENT_KIND } from "@autumn/auth/oauth";
+import { getDefaultOAuthScopes } from "@autumn/auth/oauth";
 import {
 	AppEnv,
 	DEFAULT_OAUTH_RESOURCE_SCOPES,
@@ -8,13 +8,14 @@ import {
 	oauthRefreshToken,
 	Scopes,
 } from "@autumn/shared";
+import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
+import { MCP_CLIENT_KIND } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { createDashboardSession } from "@tests/utils/testInitUtils/dashboardSession.js";
 import { OAuth2Client } from "arctic";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
-import { hashOAuthToken } from "@/utils/oauthUtils.js";
 
 const { db } = initDrizzle();
 const baseUrl =
@@ -25,7 +26,9 @@ test("MCP OAuth refresh narrows scopes and replays consumed-token retries", asyn
 	const session = await createDashboardSession(defaultCtx);
 	const clientId = generateId("oauth_client");
 	const consentId = generateId("oauth_consent");
-	const refreshToken = "r".repeat(32);
+	// The refresh replay cache keys on the request bytes for 30s, so a fixed
+	// token value would make a rerun replay the previous run's consumed grant.
+	const refreshToken = generateId("refresh");
 	const grantedScopes = getDefaultOAuthScopes([
 		Scopes.Organisation.Read,
 		"offline_access",
@@ -59,7 +62,7 @@ test("MCP OAuth refresh narrows scopes and replays consumed-token retries", asyn
 		});
 		await db.insert(oauthRefreshToken).values({
 			id: generateId("oauth_refresh"),
-			token: await hashOAuthToken(refreshToken),
+			token: hashOAuthToken(refreshToken),
 			clientId,
 			userId: session.userId,
 			referenceId: defaultCtx.org.id,
@@ -126,10 +129,7 @@ test("MCP OAuth refresh narrows scopes and replays consumed-token retries", asyn
 		expect(mismatchedRetry.status).toBe(400);
 
 		const organization = await fetch(`${baseUrl}/v1/organization`, {
-			headers: {
-				Authorization: `Bearer ${tokens.accessToken()}`,
-				"x-autumn-oauth-resource": "https://mcp.useautumn.com/mcp",
-			},
+			headers: { Authorization: `Bearer ${tokens.accessToken()}` },
 		});
 		expect(organization.status).toBe(200);
 	} finally {

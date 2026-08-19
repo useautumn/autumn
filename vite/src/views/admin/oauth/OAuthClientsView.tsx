@@ -68,9 +68,7 @@ export const OAuthClientsView = () => {
 			return data;
 		},
 		onSuccess: (client) => {
-			toast.success(
-				`Slack MCP OAuth client ready: ${client.client_id ?? "autumn_mcp_slack"}`,
-			);
+			toast.success(`Slack MCP OAuth client ready: ${client.client_id}`);
 			refetch();
 		},
 		onError: (error) => {

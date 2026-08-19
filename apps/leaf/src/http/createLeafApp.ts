@@ -1,5 +1,6 @@
 import type { HttpBindings } from "@hono/node-server";
 import { Hono } from "hono";
+import { db } from "../lib/db.js";
 import { env } from "../lib/env.js";
 import { logger } from "../lib/logger.js";
 import { createMcpRouter } from "../mcp/mcpRouter.js";
@@ -34,6 +35,7 @@ export const createLeafApp = () => {
 			"oauth-enabled": true,
 			"oauth-environment": env.MCP_OAUTH_ENVIRONMENT,
 			"server-url": env.AUTUMN_API_URL,
+			db,
 			logger,
 			resourceUrl: new URL("/mcp", env.MCP_SERVER_URL).href,
 		}),

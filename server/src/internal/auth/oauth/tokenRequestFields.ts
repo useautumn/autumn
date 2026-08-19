@@ -1,52 +1,36 @@
+import type { OAuthRequestFields } from "@autumn/shared/utils/auth/oauthRequestBody";
 import { z } from "zod";
 
 const tokenRequestFieldsSchema = z
 	.object({
+		client_id: z.string().min(1).optional(),
 		grant_type: z.string().min(1).optional(),
 		refresh_token: z.string().min(1).optional(),
 	})
 	.passthrough();
 
-const fieldsFromUnknown = (value: unknown): OAuthTokenRequestFields => {
-	const parsed = tokenRequestFieldsSchema.safeParse(value);
-	if (!parsed.success) {
-		return { grantType: null, refreshToken: null };
-	}
-	return {
-		grantType: parsed.data.grant_type ?? null,
-		refreshToken: parsed.data.refresh_token ?? null,
-	};
-};
-
 export type OAuthTokenRequestFields = {
+	/** Null for confidential clients, which authenticate over the header instead. */
+	clientId: string | null;
 	grantType: string | null;
 	refreshToken: string | null;
 };
 
-export const getOAuthTokenRequestFields = async (
-	request: Request,
-): Promise<OAuthTokenRequestFields> => {
-	const contentType = request.headers.get("content-type") ?? "";
-	const rawBody = await request.text();
-	if (!rawBody) {
-		return { grantType: null, refreshToken: null };
-	}
-	const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
-
-	if (mediaType === "application/json") {
-		try {
-			return fieldsFromUnknown(JSON.parse(rawBody));
-		} catch {
-			return { grantType: null, refreshToken: null };
-		}
-	}
-
-	const params = new URLSearchParams(rawBody);
-	return fieldsFromUnknown(Object.fromEntries(params));
+const EMPTY_TOKEN_REQUEST_FIELDS: OAuthTokenRequestFields = {
+	clientId: null,
+	grantType: null,
+	refreshToken: null,
 };
 
-export const getRefreshTokenForConsentLookup = async (request: Request) => {
-	const fields = await getOAuthTokenRequestFields(request);
-	if (fields.grantType !== "refresh_token") return null;
-	return fields.refreshToken;
+export const getOAuthTokenRequestFields = (
+	fields: OAuthRequestFields,
+): OAuthTokenRequestFields => {
+	const parsed = tokenRequestFieldsSchema.safeParse(fields);
+	if (!parsed.success) return EMPTY_TOKEN_REQUEST_FIELDS;
+
+	return {
+		clientId: parsed.data.client_id ?? null,
+		grantType: parsed.data.grant_type ?? null,
+		refreshToken: parsed.data.refresh_token ?? null,
+	};
 };
