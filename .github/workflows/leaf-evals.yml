@@ -20,6 +20,10 @@ jobs:
     outputs:
       leaf: ${{ steps.filter.outputs.leaf }}
     steps:
+      # paths-filter diffs via the API on pull_request but needs a local repo on push.
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Check changed files
         id: filter
         uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
