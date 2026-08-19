@@ -89,7 +89,14 @@ if grep -q '"snapshot"' "$ROOT/.cursor/environment.json"; then
 fi
 grep -q 'agent-bootstrap.sh' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
 	|| fail "install.sh must bootstrap system packages instead of relying on a VM snapshot"
-pass "environment.json has no snapshot; install bootstraps packages"
+grep -q 'bun.sh/install' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	|| fail "install.sh must install bun — the default Cloud image has none"
+if grep -qE 'BUN="\$\(command -v bun\)"' \
+	"$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	"$ROOT/scripts/setup/cursor-cloud/start.sh"; then
+	fail "command -v bun must be guarded — set -e exits when bun is missing"
+fi
+pass "environment.json has no snapshot; install bootstraps bun + packages"
 
 # --- persist-env writes rc files without embedding the Infisical token ------
 bun "$CLOUD" --root "$tmp/repo" --home "$tmp/home" persist-env
