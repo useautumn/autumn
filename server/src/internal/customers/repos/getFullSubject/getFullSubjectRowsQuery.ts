@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { resolvedProductIdsSql } from "@/internal/invoices/resolvedProductIdsSql.js";
 import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 import { looseEntitlementIsLiveSql } from "../../looseEntitlementSql.js";
 import { composeCustomerLicensesCtes } from "./composeCustomerLicensesCtes.js";
@@ -167,7 +168,7 @@ export const getFullSubjectRowsQuery = ({
 		? sql`,
 
 		customer_invoices AS (
-			SELECT *
+			SELECT i.*, ${resolvedProductIdsSql({ invoiceAlias: "i" })} AS resolved_product_ids
 			FROM invoices i
 			WHERE i.internal_customer_id IN (
 				SELECT internal_customer_id

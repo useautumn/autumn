@@ -14,7 +14,6 @@ import {
 	type ListInvoicesParams,
 	type Organization,
 	ProcessorType,
-	products,
 	RecaseError,
 	StandardCursor,
 	stripeToAtmnAmount,
@@ -26,70 +25,25 @@ import { Autumn } from "autumn-js";
 import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-
-/**
- * Current public plan id per internal product id, so invoice responses show
- * renamed plans under their current id instead of the id snapshotted at
- * invoice time. Internal ids that no longer resolve (deleted products) fall
- * back to the snapshot in `processInvoice`.
- */
-export const buildInvoicePlanIdMap = async ({
-	db,
-	invoices: invoiceRows,
-}: {
-	db: DrizzleCli;
-	invoices: Invoice[];
-}): Promise<Map<string, string>> => {
-	const internalProductIds = [
-		...new Set(invoiceRows.flatMap((i) => i.internal_product_ids ?? [])),
-	];
-	if (internalProductIds.length === 0) return new Map();
-
-	const rows = await db
-		.select({ internal_id: products.internal_id, id: products.id })
-		.from(products)
-		.where(inArray(products.internal_id, internalProductIds));
-
-	return new Map(rows.map((r) => [r.internal_id, r.id]));
-};
-
-const resolveInvoicePlanIds = ({
-	invoice,
-	planIdByInternalId,
-}: {
-	invoice: Invoice;
-	planIdByInternalId?: Map<string, string>;
-}): string[] => {
-	if (!planIdByInternalId) return invoice.product_ids ?? [];
-
-	const resolved = (invoice.internal_product_ids ?? [])
-		.map((internalId) => planIdByInternalId.get(internalId))
-		.filter((id): id is string => id !== undefined);
-
-	// Legacy invoices may lack internal ids, and products can be deleted —
-	// keep the snapshotted ids rather than returning nothing.
-	if (resolved.length === 0) return invoice.product_ids ?? [];
-
-	return [...new Set(resolved)];
-};
+import { resolvedProductIdsForColumn } from "./resolvedProductIdsSql.js";
 
 export const processInvoice = ({
 	invoice,
 	withItems = false,
 	features,
-	planIdByInternalId,
 }: {
 	invoice: Invoice;
 	withItems?: boolean;
 	features?: Feature[];
-	planIdByInternalId?: Map<string, string>;
 }): ApiInvoiceV1 => {
 	const processorType = invoice.processor_type ?? ProcessorType.Stripe;
 	const isStripe = processorType === ProcessorType.Stripe;
 
 	return {
-		// product_ids: invoice.product_ids,
-		plan_ids: resolveInvoicePlanIds({ invoice, planIdByInternalId }),
+		// Current ids from the hydration query; snapshot if nothing resolved.
+		plan_ids: invoice.resolved_product_ids?.length
+			? invoice.resolved_product_ids
+			: (invoice.product_ids ?? []),
 		stripe_id: invoice.stripe_id,
 		processor_type: processorType,
 		status: invoice.status ?? "",
@@ -210,6 +164,9 @@ export class InvoiceService {
 		const results = await ctx.db
 			.select({
 				invoice: invoices,
+				resolved_product_ids: resolvedProductIdsForColumn({
+					internalProductIds: invoices.internal_product_ids,
+				}),
 				customer_id: customers.id,
 				entity_id: entities.id,
 			})
@@ -224,11 +181,16 @@ export class InvoiceService {
 			.limit(query.limit + 1);
 
 		const hasMore = results.length > query.limit;
-		const rows = (hasMore ? results.slice(0, query.limit) : results) as {
-			invoice: Invoice;
-			customer_id: string | null;
-			entity_id: string | null;
-		}[];
+		const rows = (hasMore ? results.slice(0, query.limit) : results).map(
+			(row) => ({
+				invoice: {
+					...row.invoice,
+					resolved_product_ids: row.resolved_product_ids,
+				} as Invoice,
+				customer_id: row.customer_id,
+				entity_id: row.entity_id,
+			}),
+		);
 
 		const last = rows[rows.length - 1];
 		const nextCursor =
@@ -296,18 +258,31 @@ export class InvoiceService {
 		internalEntityId?: string;
 		limit?: number;
 	}) {
-		return (await db.query.invoices.findMany({
-			where: and(
-				eq(invoices.internal_customer_id, internalCustomerId),
-				internalEntityId
-					? or(
-							eq(invoices.internal_entity_id, internalEntityId),
-							isNull(invoices.internal_entity_id),
-						)
-					: undefined,
-			),
-			orderBy: [desc(invoices.created_at), desc(invoices.id)],
-			limit,
+		const rows = await db
+			.select({
+				invoice: invoices,
+				resolved_product_ids: resolvedProductIdsForColumn({
+					internalProductIds: invoices.internal_product_ids,
+				}),
+			})
+			.from(invoices)
+			.where(
+				and(
+					eq(invoices.internal_customer_id, internalCustomerId),
+					internalEntityId
+						? or(
+								eq(invoices.internal_entity_id, internalEntityId),
+								isNull(invoices.internal_entity_id),
+							)
+						: undefined,
+				),
+			)
+			.orderBy(desc(invoices.created_at), desc(invoices.id))
+			.limit(limit);
+
+		return rows.map((row) => ({
+			...row.invoice,
+			resolved_product_ids: row.resolved_product_ids,
 		})) as Invoice[];
 	}
 

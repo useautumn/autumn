@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { resolvedProductIdsSql } from "@/internal/invoices/resolvedProductIdsSql.js";
 import { looseEntitlementIsLiveSql } from "./looseEntitlementSql.js";
 
 const RECURRING_BILLING_INTERVALS = [
@@ -465,7 +466,7 @@ const buildInvoicesCTE = (hasEntityCTE: boolean) => {
           '[]'::json
         ) AS invoices
       FROM (
-        SELECT *
+        SELECT i.*, ${resolvedProductIdsSql({ invoiceAlias: "i" })} AS resolved_product_ids
         FROM invoices i
         WHERE i.internal_customer_id = (SELECT internal_id FROM customer_record)
         ${entityFilter}
@@ -961,7 +962,7 @@ export const getPaginatedFullCusQuery = ({
         ) AS invoices
       FROM customer_records cr
       LEFT JOIN LATERAL (
-        SELECT *
+        SELECT i.*, ${resolvedProductIdsSql({ invoiceAlias: "i" })} AS resolved_product_ids
         FROM invoices i
         WHERE i.internal_customer_id = cr.internal_id
         ORDER BY i.created_at DESC, i.id DESC
