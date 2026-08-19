@@ -123,9 +123,40 @@ describe("approval card", () => {
 		const json = JSON.stringify(card);
 		expect(json).toContain("Update **charlie**'s subscription to **pro**?");
 		expect(json).toContain('"caption":"Plan changes"');
-		expect(json).toContain('["🟠 Update","Base price","$200.00 per month"]');
+		// No current plan in the preview, so setting a price is an add.
+		expect(json).toContain('["🟢 Add","Base price","$200.00 per month"]');
+		expect(json).not.toContain('Update","Base price');
 		expect(json).not.toContain("custom");
 		expect(json).not.toContain('"customize"');
+	});
+
+	// Changing the base price is a remove of the old and an add of the new —
+	// the same diff the dashboard renders, never a hardcoded "Update".
+	test("shows a base price change as a remove and an add", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Sandbox,
+			toolName: "updateSubscription",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					customize: { price: { amount: 200, interval: "month" } },
+					plan_id: "pro",
+				},
+			},
+			preview: wrapMcpResult({
+				_display: {
+					currentPlan: { price: { amount: 150, interval: "month" } },
+					customerName: "charlie",
+					planName: "pro",
+				},
+				preview: { currency: "usd", line_items: [], total: 50 },
+			}),
+		});
+		const json = JSON.stringify(card);
+		expect(json).toContain('["🔴 Remove","Base price","$150.00 per month"]');
+		expect(json).toContain('["🟢 Add","Base price","$200.00 per month"]');
+		expect(json).not.toContain("🟠 Update");
 	});
 
 	test("omits badges and money facts when nothing was set", () => {
@@ -377,8 +408,9 @@ describe("approval card", () => {
 		expect(json).toContain('["🔴 Remove","1,000 credits","$0.05 / unit"]');
 		expect(json).toContain('["🔴 Remove","10 audit logs","—"]');
 		expect(json).toContain('["🔴 Remove","50 annual tokens","—"]');
-		expect(json.indexOf('["🟢 Add","5,000 credits"')).toBeLessThan(
-			json.indexOf('["🔴 Remove","10 audit logs"'),
+		// A diff reads old → new: what the customer loses before what they gain.
+		expect(json.indexOf('["🔴 Remove","10 audit logs"')).toBeLessThan(
+			json.indexOf('["🟢 Add","5,000 credits"'),
 		);
 	});
 
@@ -425,11 +457,11 @@ describe("approval card", () => {
 		expect(json).toContain('["🟢 Add","5,000 words","—"]');
 		expect(json).toContain('["🔴 Remove","4,000 words","—"]');
 		expect(json).toContain('["🔴 Remove","800 messages","$6.00 / 100"]');
-		expect(json.indexOf('["🟢 Add","100 gigabytes"')).toBeLessThan(
-			json.indexOf('["🔴 Remove","4,000 words"'),
+		expect(json.indexOf('["🔴 Remove","4,000 words"')).toBeLessThan(
+			json.indexOf('["🟢 Add","100 gigabytes"'),
 		);
-		expect(json.indexOf('["🟢 Add","5,000 words"')).toBeLessThan(
-			json.indexOf('["🔴 Remove","800 messages"'),
+		expect(json.indexOf('["🔴 Remove","800 messages"')).toBeLessThan(
+			json.indexOf('["🟢 Add","5,000 words"'),
 		);
 		expect(json).not.toContain("Replace");
 		expect(json).not.toContain('["workflows"');
@@ -1567,5 +1599,70 @@ describe("remove rows show the customer's current quantity", () => {
 		expect(rendered).toContain("250,000 contacts");
 		// Anchor on the cell boundary: "500,000 contacts" also contains "0 contacts".
 		expect(rendered).not.toContain('"0 contacts"');
+	});
+});
+
+// Ayush's report end to end through the real pipeline: a customer whose
+// subscription holds 250,000 contacts, updated to 500,000 at a new base price.
+// Every row must be an add or a remove derived from the current plan.
+describe("update-subscription card, end to end from a real preview shape", () => {
+	test("renders the customer's current plan diff as adds and removes", () => {
+		const card = approvalCard({
+			id: "u_atlas",
+			env: AppEnv.Sandbox,
+			toolName: "updateSubscription",
+			toolArgs: {
+				request: {
+					customer_id: "cus_atlas",
+					customize: {
+						add_items: [{ feature_id: "contacts", included: 500_000 }],
+						price: { amount: 1600, interval: "month" },
+						remove_items: [{ feature_id: "contacts" }],
+					},
+					plan_id: "enterprise",
+				},
+			},
+			preview: wrapMcpResult({
+				_display: {
+					currentPlan: {
+						id: "enterprise",
+						items: [{ feature_id: "contacts", included: 250_000 }],
+						name: "Enterprise",
+						price: { amount: 1500, interval: "month" },
+					},
+					customerName: "Atlas Management Group",
+					featureNames: {
+						contacts: {
+							name: "contacts",
+							plural: "contacts",
+							singular: "contact",
+						},
+					},
+					planName: "Enterprise",
+				},
+				preview: {
+					currency: "usd",
+					customer_id: "cus_atlas",
+					line_items: [
+						{ amount: -315.16, description: "Unused Enterprise - Base Price" },
+						{ amount: 504.26, description: "Enterprise - Base Price" },
+					],
+					total: 189.1,
+				},
+			}),
+		});
+
+		const json = JSON.stringify(card);
+		const rows = (
+			json.match(/\["(🟢 Add|🔴 Remove|🟠 Update)","[^"]*","[^"]*"\]/g) ?? []
+		).map((row) => JSON.parse(row) as [string, string, string]);
+
+		expect(rows).toEqual([
+			["🔴 Remove", "Base price", "$1,500.00 per month"],
+			["🔴 Remove", "250,000 contacts", "—"],
+			["🟢 Add", "Base price", "$1,600.00 per month"],
+			["🟢 Add", "500,000 contacts", "—"],
+		]);
+		expect(json).not.toContain("🟠 Update");
 	});
 });

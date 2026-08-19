@@ -1,7 +1,9 @@
 import {
 	type BillingChangeDisplay,
 	buildBillingPreviewDisplay,
+	buildCustomizeChanges,
 	buildPlanItemChangeDisplay,
+	customPriceText,
 	formatCount,
 	formatMoney,
 	parsePreviewPayload,
@@ -39,6 +41,7 @@ import {
 	changeTableRow,
 	fanOutTable,
 	planItemChangeTableRow,
+	sortByChangeKind,
 	stepOutcomeTable,
 } from "./changeTable.js";
 import {
@@ -771,10 +774,20 @@ const catalogApprovalBlocks = ({
 	];
 	const tables = [
 		...(catalogRows.length
-			? [changeTable({ caption: "Catalog changes", rows: catalogRows })]
+			? [
+					changeTable({
+						caption: "Catalog changes",
+						rows: sortByChangeKind(catalogRows),
+					}),
+				]
 			: []),
 		...(planRows.length
-			? [changeTable({ caption: "Plan changes", rows: planRows })]
+			? [
+					changeTable({
+						caption: "Plan changes",
+						rows: sortByChangeKind(planRows),
+					}),
+				]
 			: []),
 	];
 	if (tables.length) return tables;
@@ -1002,9 +1015,6 @@ const approvalPreviewBlocks = ({
 	);
 	const resolvedFeatureNames = getRecord(approvalDisplay.featureNames);
 	const display = buildBillingPreviewDisplay({
-		basePlanItems: Array.isArray(approvalDisplay.basePlanItems)
-			? approvalDisplay.basePlanItems
-			: null,
 		params: request ?? null,
 		planNames: resolvedPlanNames,
 		preview: parsePreviewPayload(preview),
@@ -1016,40 +1026,42 @@ const approvalPreviewBlocks = ({
 	if (changeSummary) {
 		blocks.push(CardText(changeSummary));
 	}
+	// Every customize row is an add or a remove against the customer's current
+	// plan — the same diff the dashboard renders, so the two surfaces agree.
 	const customizeRows = ({
+		currentPlan,
 		customize,
 		plan,
 	}: {
-		customize: typeof display.customize;
+		currentPlan: unknown;
+		customize: unknown;
 		plan?: string;
 	}) => {
 		const details = (value: string) => (plan ? `${plan} · ${value}` : value);
-		return [
-			...(customize?.priceText
-				? [
+		return buildCustomizeChanges({ currentPlan, customize }).flatMap(
+			(change) => {
+				const verb = change.kind === "add" ? "Add" : "Remove";
+				if (change.subject === "price") {
+					return [
 						changeTableRow({
-							change: "Update",
+							change: verb,
 							details: details("Base price"),
-							pricing: customize.priceText,
+							pricing: customPriceText(change.price) ?? "—",
 						}),
-					]
-				: []),
-			...(customize?.freeTrialText
-				? [
-						changeTableRow({
-							change: "Update",
-							details: details(`Free trial · ${customize.freeTrialText}`),
-						}),
-					]
-				: []),
-			...(customize?.itemChanges.map((change) => {
+					];
+				}
+				const itemDisplay = buildPlanItemChangeDisplay({
+					change: verb,
+					item: change.item,
+				});
+				if (!itemDisplay) return [];
 				const row = planItemChangeTableRow({
-					change,
+					change: itemDisplay,
 					featureNames: resolvedFeatureNames,
 				});
-				return { ...row, details: details(row.details) };
-			}) ?? []),
-		];
+				return [{ ...row, details: details(row.details) }];
+			},
+		);
 	};
 	const schedulePlans = [
 		...(Array.isArray(request?.phases)
@@ -1068,18 +1080,32 @@ const approvalPreviewBlocks = ({
 			({ name, planId }) => [planId, name] as const,
 		),
 	]);
+	// Display data resolved before this change carries only the plan's items;
+	// newer rows carry the whole plan. Accept either so stored cards still diff.
+	const currentPlanByPlan = getRecord(approvalDisplay.currentPlanByPlan);
 	const basePlanItemsByPlan = getRecord(approvalDisplay.basePlanItemsByPlan);
+	const currentPlanFor = (planId: string | null) => {
+		if (!planId) return approvalDisplay.currentPlan ?? null;
+		const whole = currentPlanByPlan[planId];
+		if (whole) return whole;
+		const items = basePlanItemsByPlan[planId];
+		return Array.isArray(items) ? { items } : null;
+	};
+	const primaryCurrentPlan =
+		approvalDisplay.currentPlan ??
+		(Array.isArray(approvalDisplay.basePlanItems)
+			? { items: approvalDisplay.basePlanItems }
+			: null);
 	const changeRows = [
-		...customizeRows({ customize: display.customize }),
+		...customizeRows({
+			currentPlan: primaryCurrentPlan,
+			customize: request?.customize,
+		}),
 		...schedulePlans.flatMap((plan) => {
 			const planId = getString(plan.plan_id) ?? "Plan";
-			const basePlanItems = basePlanItemsByPlan[planId];
-			const nested = buildBillingPreviewDisplay({
-				basePlanItems: Array.isArray(basePlanItems) ? basePlanItems : null,
-				params: plan,
-			});
 			return customizeRows({
-				customize: nested.customize,
+				currentPlan: currentPlanFor(planId),
+				customize: plan.customize,
 				plan: planNames.get(planId) ?? planId,
 			});
 		}),

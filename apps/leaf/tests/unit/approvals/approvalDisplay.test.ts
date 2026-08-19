@@ -33,6 +33,7 @@ describe("resolveApprovalDisplay", () => {
 
 		expect(display).toEqual({
 			basePlanItems: null,
+			currentPlan: null,
 			customerEmail: "billing@key-people.example",
 			customerName: "Key People",
 			planName: "Enterprise",
@@ -73,11 +74,15 @@ describe("resolveApprovalDisplay", () => {
 			request: { customer_id: "cus_1", plan_id: "growth" },
 		});
 
+		const growth = {
+			items: [{ feature_id: "messages", included: 800 }],
+			name: "Growth",
+		};
 		expect(display).toEqual({
-			basePlanItems: [{ feature_id: "messages", included: 800 }],
-			basePlanItemsByPlan: {
-				growth: [{ feature_id: "messages", included: 800 }],
-			},
+			basePlanItems: growth.items,
+			basePlanItemsByPlan: { growth: growth.items },
+			currentPlan: growth,
+			currentPlanByPlan: { growth },
 			customerEmail: "billing@example.com",
 			customerName: null,
 			planName: "Growth",

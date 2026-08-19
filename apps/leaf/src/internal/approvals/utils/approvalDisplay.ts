@@ -143,22 +143,27 @@ export const resolveApprovalDisplay = async ({
 	const planRecords = Object.fromEntries(
 		plans.map(([id, value]) => [id, record(value.plan ?? value)]),
 	);
-	// A remove_items filter names a feature; the quantity being removed is what
-	// the customer currently holds, which a customized subscription can set
-	// differently from the catalog plan. Prefer the live subscription's items.
-	const subscriptionItemsByPlan = Object.fromEntries(
+	// The plan a change is diffed against is what the customer currently holds.
+	// A customized subscription can differ from the catalog (price and items),
+	// so the live subscription's plan wins and the catalog is the fallback.
+	const subscriptionPlanByPlan = Object.fromEntries(
 		getArray(customerRecord.subscriptions).flatMap((subscription) => {
 			const entry = record(subscription);
 			const planId = text(entry.plan_id);
-			const items = record(entry.plan).items;
-			return planId && Array.isArray(items) ? [[planId, items]] : [];
+			const plan = record(entry.plan);
+			return planId && Object.keys(plan).length ? [[planId, plan]] : [];
 		}),
 	);
+	const currentPlanByPlan = Object.fromEntries(
+		Object.entries(planRecords).map(([id, value]) => [
+			id,
+			subscriptionPlanByPlan[id] ?? value,
+		]),
+	);
 	const basePlanItemsByPlan = Object.fromEntries(
-		Object.entries(planRecords).flatMap(([id, value]) => {
-			const items = subscriptionItemsByPlan[id] ?? value.items;
-			return Array.isArray(items) ? [[id, items]] : [];
-		}),
+		Object.entries(currentPlanByPlan).flatMap(([id, value]) =>
+			Array.isArray(value.items) ? [[id, value.items]] : [],
+		),
 	);
 	const fetchedPlanNames = Object.fromEntries(
 		Object.entries(planRecords).flatMap(([id, value]) => {
@@ -190,6 +195,8 @@ export const resolveApprovalDisplay = async ({
 	return {
 		basePlanItems: planId ? (basePlanItemsByPlan[planId] ?? null) : null,
 		...(Object.keys(basePlanItemsByPlan).length ? { basePlanItemsByPlan } : {}),
+		currentPlan: planId ? (currentPlanByPlan[planId] ?? null) : null,
+		...(Object.keys(currentPlanByPlan).length ? { currentPlanByPlan } : {}),
 		customerEmail: text(customerRecord.email),
 		customerName: text(customerRecord.name),
 		...(Object.keys(featureNames).length ? { featureNames } : {}),
