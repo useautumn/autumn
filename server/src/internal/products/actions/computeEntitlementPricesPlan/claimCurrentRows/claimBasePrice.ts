@@ -1,4 +1,8 @@
-import { type Price, pricesAreSame } from "@autumn/shared";
+import {
+	type Price,
+	priceCurrencyDefinitionsAreSame,
+	pricesAreSame,
+} from "@autumn/shared";
 import type { ClaimedBasePrice } from "../types/claimResult";
 
 /** Claim the sole base pair only when definitions match. */
@@ -11,6 +15,9 @@ export const claimBasePrice = ({
 }): ClaimedBasePrice | undefined => {
 	if (!desiredBasePrice || !currentBasePrice) return undefined;
 	if (!pricesAreSame(desiredBasePrice, currentBasePrice)) return undefined;
+	if (!priceCurrencyDefinitionsAreSame(desiredBasePrice, currentBasePrice)) {
+		return undefined;
+	}
 
 	return {
 		desired: desiredBasePrice,
