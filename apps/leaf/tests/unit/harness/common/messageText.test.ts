@@ -63,8 +63,10 @@ describe("Harness message text", () => {
 			orgSlug: "acme_sandbox",
 			params: { text: 'use "acme_sandbox" org' },
 		});
-		expect(text).toContain('"acme_sandbox"');
+		expect(text).toContain("acme_sandbox");
 		expect(text).toContain("do NOT tell them to start a new thread");
+		// Acknowledge as a fresh instruction, not a pre-existing state.
+		expect(text).toContain("now acting as");
 		// The redirect instruction is reserved for a genuinely different org.
 		expect(text).toContain("Only if they ask for a DIFFERENT org");
 	});

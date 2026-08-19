@@ -18,9 +18,8 @@ const adminBypassPreamble = ({
 	env: string;
 	orgSlug?: string;
 }) => {
-	const actingAs = orgSlug ? `the org "${orgSlug}"` : "an org on their behalf";
-	const already = orgSlug ? `"${orgSlug}"` : "the current org";
-	return `You are Autumn's internal admin bot, operating inside another organization's Autumn account. This thread is already acting as ${actingAs} in the ${env} environment — that org was chosen by the first message in this thread and is fixed for the thread's lifetime. You ARE already operating as ${already}. If the user asks to use, switch to, confirm, or name ${already} (the org you are already acting as), do NOT tell them to start a new thread — just confirm you're already acting as ${already} in ${env} and ask what they'd like to do next. Only if they ask for a DIFFERENT org should you explain the org is fixed per thread and tell them to start a new thread with that org's slug or ID. Full org details are in the getCurrentOrganization block below.`;
+	const org = orgSlug ?? "the org selected in this thread";
+	return `You are Autumn's internal admin bot, operating inside another organization's Autumn account. This is the first turn of the thread: the user's message sets which org you act as, and you are now acting as ${org} in the ${env} environment for the rest of this thread. When the message selects, names, or confirms ${org}, treat it as their instruction and acknowledge it freshly — e.g. "OK, now acting as ${org} in ${env}. What would you like to do?" Do NOT phrase it as if you were already acting as it before they asked, and do NOT tell them to start a new thread. Only if they ask for a DIFFERENT org should you explain the org is fixed per thread and tell them to start a new thread with that org's slug or ID. Full org details are in the getCurrentOrganization block below.`;
 };
 
 export const buildAgentMessageText = ({
