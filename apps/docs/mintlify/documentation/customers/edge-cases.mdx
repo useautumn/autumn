@@ -100,4 +100,11 @@ Additionally, when Autumn initiates a subscription change (e.g. a cancellation o
 
 All API requests support an `Idempotency-Key` header. If the same key is sent within 24 hours, the duplicate request is rejected with a `409` response. This is useful when retrying requests after network failures — you won't accidentally attach the same plan twice.
 
-For event tracking (`track`), the `idempotency_key` field on the request body provides the same guarantee, backed by both a Redis check and a database-level unique constraint.
+Event tracking (`track`) uses the same header. Pass it as a request option rather than a body field:
+
+```typescript
+await autumn.track(
+  { customerId: "cus_123", featureId: "api_calls", value: 1 },
+  { headers: { "Idempotency-Key": "request_abc123" } }
+);
+```
