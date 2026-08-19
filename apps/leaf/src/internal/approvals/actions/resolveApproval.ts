@@ -1,10 +1,33 @@
 import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
+import { APPROVAL_SESSION_GONE_MESSAGE } from "../../../ui/messages.js";
+import { EveSessionGoneError } from "../../agentRuntime/eve/client.js";
+import {
+	deleteEveSession,
+	getEveSessionBySessionId,
+} from "../../agentRuntime/eve/repo.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import type { ApprovalRunResult } from "../types.js";
 import { approvalErrorResult } from "../utils/approvalErrors.js";
 import { resumeApproval } from "./resumeApproval.js";
+
+const dropEveSession = async ({ approval }: { approval: ChatApproval }) => {
+	if (!approval.run_id) return;
+	const session = await getEveSessionBySessionId({
+		db,
+		orgId: approval.org_id,
+		sessionId: approval.run_id,
+	});
+	if (!session) return;
+	await deleteEveSession({
+		db,
+		env: session.env,
+		orgId: approval.org_id,
+		sessionId: session.sessionId,
+		threadKey: session.threadKey,
+	});
+};
 
 const releaseClaim = async ({
 	approval,
@@ -53,6 +76,26 @@ export const resolveApproval = async ({
 			providerUserId,
 		});
 	} catch (error) {
+		if (error instanceof EveSessionGoneError) {
+			// Eve lost the session this card belongs to; no retry can run it, and
+			// leaving it pending would block the thread behind a dead card.
+			logger.error("[chat] Approval session is gone", error, {
+				event: "leaf.approval_session_gone",
+				approval_id: approval.id,
+			});
+			await chatApprovalRepo.finalize({
+				approvalId: approval.id,
+				db,
+				providerUserId,
+				status: "failed",
+			});
+			await dropEveSession({ approval });
+			return {
+				error: true,
+				message: APPROVAL_SESSION_GONE_MESSAGE,
+				retryable: false,
+			};
+		}
 		// A thrown resumer error means the write never ran — release the claim so
 		// the row returns to pending and the card stays clickable.
 		logger.error("[chat] Approval run failed", error, {

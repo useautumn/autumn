@@ -32,6 +32,19 @@ const eveHeaders = (auth: EveAuthContext, init?: HeadersInit) => {
 	return headers;
 };
 
+/** Eve no longer has the session behind our continuation token — every
+ * further post to it fails the same way, so callers should drop the session
+ * rather than retry or block on it. */
+export class EveSessionGoneError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "EveSessionGoneError";
+	}
+}
+
+const SESSION_GONE_PATTERN =
+	/not found via continuation token|session (was )?not found/i;
+
 const parseSessionResponse = async ({
 	existing,
 	response,
@@ -40,7 +53,15 @@ const parseSessionResponse = async ({
 	response: Response;
 }) => {
 	if (!response.ok) {
-		throw new Error(`Eve session request failed: ${response.status}`);
+		const body = await response.text().catch(() => "");
+		if (response.status === 404 || SESSION_GONE_PATTERN.test(body)) {
+			throw new EveSessionGoneError(
+				`Eve session is gone (${response.status}): ${body.slice(0, 200)}`,
+			);
+		}
+		throw new Error(
+			`Eve session request failed: ${response.status}${body ? ` ${body.slice(0, 200)}` : ""}`,
+		);
 	}
 	const body = (await response.json()) as {
 		continuationToken?: string;

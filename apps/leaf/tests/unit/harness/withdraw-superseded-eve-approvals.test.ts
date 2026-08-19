@@ -53,12 +53,20 @@ await mockLeafModule({
 	}),
 });
 
+class MockEveSessionGoneError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "EveSessionGoneError";
+	}
+}
 const failingRequestIds = new Set<string>();
+const goneRequestIds = new Set<string>();
 const postedNotes: string[] = [];
 const postedRequestIds: string[] = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
+		EveSessionGoneError: MockEveSessionGoneError,
 		postEveInputResponse: async ({
 			note,
 			requestId,
@@ -70,6 +78,11 @@ await mockLeafModule({
 			postedRequestIds.push(requestId);
 			if (failingRequestIds.has(requestId)) {
 				throw new Error("Eve session request failed: 503");
+			}
+			if (goneRequestIds.has(requestId)) {
+				throw new MockEveSessionGoneError(
+					"Eve session is gone (500): Cannot deliver inputResponses — the target session was not found via continuation token.",
+				);
 			}
 			// Eve re-homes on every post here, so a persisted session id proves the
 			// caller saved the ref rather than dropping it.
@@ -154,6 +167,7 @@ describe("withdrawSupersededApprovals", () => {
 	beforeEach(() => {
 		pendingApprovals = [];
 		failingRequestIds.clear();
+		goneRequestIds.clear();
 		cancelledApprovalIds.length = 0;
 		postedRequestIds.length = 0;
 		postedNotes.length = 0;
@@ -276,5 +290,33 @@ describe("withdrawSupersededApprovals", () => {
 		expect(postedRequestIds).toEqual([]);
 		expect(cancelledApprovalIds).toEqual([]);
 		expect(supersededBatches).toEqual([]);
+	});
+});
+
+// Eve has lost the session (its transcript broke terminally): the card can
+// never be decided through it, so blocking the thread on it would deadlock
+// the conversation until the card expires.
+describe("withdrawSupersededApprovals when eve has lost the session", () => {
+	beforeEach(() => {
+		goneRequestIds.clear();
+		cancelledApprovalIds.length = 0;
+		supersededBatches = [];
+	});
+
+	test("cancels the card, does not block the turn, and reports the dead session", async () => {
+		pendingApprovals = [approval("a_1", "tc_1")];
+		goneRequestIds.add("tc_1");
+
+		const result = await withdraw();
+
+		expect(result).toEqual({ sessionGone: true });
+		expect(cancelledApprovalIds).toEqual(["a_1"]);
+		expect(supersededBatches).toHaveLength(1);
+	});
+
+	test("reports a live session when every withdrawal went through", async () => {
+		pendingApprovals = [approval("a_1", "tc_1")];
+
+		expect(await withdraw()).toEqual({ sessionGone: false });
 	});
 });
