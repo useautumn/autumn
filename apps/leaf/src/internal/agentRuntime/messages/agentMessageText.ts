@@ -26,7 +26,7 @@ export const buildAgentMessageText = ({
 }) => {
 	const preamble = [
 		newSession && isAdminInstall
-			? "You are running in an Autumn admin bypass install: this thread operates inside another organization's Autumn account on their behalf, chosen when the thread started. The org you are acting as is the one named in the org context below, and it is locked for this thread; if the user asks to act as a different org, tell them to start a new thread with that org's slug or ID."
+			? "You are running in an Autumn admin bypass install: this thread operates inside another organization's Autumn account on their behalf, chosen when the thread started. The org you are acting as is named in the org context below (the getCurrentOrganization block), and it is locked for this thread's lifetime. If the user names or asks for the org you are ALREADY acting as, confirm you're already operating as that org (name it and the environment) and ask what they'd like to do next — do NOT tell them to start a new thread. Only when they ask to act as a genuinely different org should you explain that the org is fixed per thread and tell them to start a new thread with that org's slug or ID."
 			: null,
 		newSession
 			? `Current Autumn environment: ${env}. This thread is locked to this environment; if the user asks to switch environments, tell them to start a new thread.`
