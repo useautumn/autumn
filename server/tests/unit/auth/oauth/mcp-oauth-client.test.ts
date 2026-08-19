@@ -7,15 +7,25 @@ import { MCP_CLIENT_KIND } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { isMcpOAuthClient as isMcpOAuthClientFromDb } from "@/internal/auth/oauth/mcpOAuthScopes.js";
 
-const originalInternalMcpClientId = process.env.INTERNAL_MCP_OAUTH_CLIENT_ID;
+const INTERNAL_MCP_CLIENT_ID_VARIABLES = [
+	"INTERNAL_MCP_OAUTH_CLIENT_IDS",
+	"INTERNAL_MCP_OAUTH_CLIENT_ID",
+] as const;
+
+const originalInternalMcpClientIds = INTERNAL_MCP_CLIENT_ID_VARIABLES.map(
+	(variable) => [variable, process.env[variable]] as const,
+);
 
 afterEach(() => {
-	process.env.INTERNAL_MCP_OAUTH_CLIENT_ID = originalInternalMcpClientId;
+	for (const [variable, value] of originalInternalMcpClientIds) {
+		if (value === undefined) delete process.env[variable];
+		else process.env[variable] = value;
+	}
 });
 
 describe("isReservedMcpOAuthClientId", () => {
 	test("matches env-configured internal-mcp client ids", () => {
-		process.env.INTERNAL_MCP_OAUTH_CLIENT_ID = "internal_one, internal_two";
+		process.env.INTERNAL_MCP_OAUTH_CLIENT_IDS = "internal_one, internal_two";
 
 		expect(isReservedMcpOAuthClientId({ clientId: "internal_one" })).toBe(true);
 		expect(isReservedMcpOAuthClientId({ clientId: "internal_two" })).toBe(true);
@@ -23,6 +33,25 @@ describe("isReservedMcpOAuthClientId", () => {
 			false,
 		);
 		expect(isReservedMcpOAuthClientId({ clientId: null })).toBe(false);
+	});
+
+	test("still reads the singular variable a deployment has not renamed yet", () => {
+		delete process.env.INTERNAL_MCP_OAUTH_CLIENT_IDS;
+		process.env.INTERNAL_MCP_OAUTH_CLIENT_ID = "internal_legacy";
+
+		expect(isReservedMcpOAuthClientId({ clientId: "internal_legacy" })).toBe(
+			true,
+		);
+	});
+
+	test("prefers the plural variable when a deployment sets both", () => {
+		process.env.INTERNAL_MCP_OAUTH_CLIENT_IDS = "internal_new";
+		process.env.INTERNAL_MCP_OAUTH_CLIENT_ID = "internal_legacy";
+
+		expect(isReservedMcpOAuthClientId({ clientId: "internal_new" })).toBe(true);
+		expect(isReservedMcpOAuthClientId({ clientId: "internal_legacy" })).toBe(
+			false,
+		);
 	});
 });
 
@@ -64,7 +93,7 @@ describe("isMcpOAuthClientRecord", () => {
 	});
 
 	test("matches the env-configured internal-mcp id without metadata", () => {
-		process.env.INTERNAL_MCP_OAUTH_CLIENT_ID = "internal_one";
+		process.env.INTERNAL_MCP_OAUTH_CLIENT_IDS = "internal_one";
 
 		expect(isMcpOAuthClientRecord({ clientId: "internal_one" })).toBe(true);
 	});
@@ -93,7 +122,7 @@ describe("isMcpOAuthClient (server, db-backed)", () => {
 	});
 
 	test("matches env-listed internal mcp client ids without a stored row", async () => {
-		process.env.INTERNAL_MCP_OAUTH_CLIENT_ID = "internal_one";
+		process.env.INTERNAL_MCP_OAUTH_CLIENT_IDS = "internal_one";
 
 		expect(
 			await isMcpOAuthClientFromDb({

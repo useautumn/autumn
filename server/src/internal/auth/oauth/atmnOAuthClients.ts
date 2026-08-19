@@ -30,9 +30,6 @@ const ATMN_OAUTH_SCOPES = new Set<string>([
 	"rewards:write",
 ]);
 
-const configuredAtmnClientIds = () =>
-	new Set(clientIdsFromEnv("ATMN_OAUTH_CLIENT_IDS"));
-
 const metadataMarksAtmn = (metadata: unknown) => {
 	const parsed = parseOAuthClientMetadata(metadata);
 	return (
@@ -53,7 +50,12 @@ export const isAtmnOAuthClientRecord = ({
 	name: string | null | undefined;
 	metadata?: unknown;
 }) => {
-	if (clientId && configuredAtmnClientIds().has(clientId)) return true;
+	if (
+		clientId &&
+		clientIdsFromEnv("ATMN_OAUTH_CLIENT_IDS").includes(clientId)
+	) {
+		return true;
+	}
 	if (metadataMarksAtmn(metadata)) return true;
 
 	const normalizedName = name?.trim().toLowerCase();

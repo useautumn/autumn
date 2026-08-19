@@ -75,8 +75,15 @@ const jsonOAuthError = ({
 	description: string;
 	status: number;
 }) =>
+	// `message` duplicates `error_description` because better-auth's client reads
+	// the body's `message`, and the consent view toasts that; without it the
+	// reason a consent was refused never reaches the person who submitted it.
 	new Response(
-		JSON.stringify({ error: code, error_description: description }),
+		JSON.stringify({
+			error: code,
+			error_description: description,
+			message: description,
+		}),
 		{
 			status,
 			headers: { "Content-Type": "application/json" },

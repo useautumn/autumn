@@ -168,6 +168,10 @@ export const createHonoApp = () => {
 	// API Middleware
 	app.route("/v1", apiRouter);
 
+	// OAuth/MCP discovery is public by contract, so an unmatched probe must 404
+	// here rather than fall through to internalRouter's session gate below,
+	// which answers with a misleading 401. Everything this server does serve is
+	// registered on oauthRouter and the chat proxy, both mounted well above.
 	app.all("/.well-known/*", (c) => c.json({ error: "not_found" }, 404));
 
 	app.route("", internalRouter);

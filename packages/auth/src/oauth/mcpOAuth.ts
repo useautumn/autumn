@@ -8,7 +8,7 @@ import {
 } from "@autumn/shared/utils/auth/oauthRequestBody";
 import {
 	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
-	clientIdsFromEnv,
+	internalMcpOAuthClientIds,
 	SUMMER_OAUTH_CLIENT_ID,
 } from "./reservedOAuthClients.js";
 
@@ -40,9 +40,7 @@ export const isReservedMcpOAuthClientId = ({
 	clientId,
 }: {
 	clientId: string | null | undefined;
-}) =>
-	!!clientId &&
-	clientIdsFromEnv("INTERNAL_MCP_OAUTH_CLIENT_ID").includes(clientId);
+}) => !!clientId && internalMcpOAuthClientIds().includes(clientId);
 
 export const isMcpOAuthClientRecord = ({
 	clientId,
