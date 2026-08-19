@@ -100,6 +100,7 @@ beforeEach(() => {
 	calls.length = 0;
 	publishedPlans.length = 0;
 	persistedTransitions.length = 0;
+	ctx.skipCache = false;
 	ctx.skipSubjectCacheDeletion = false;
 });
 
@@ -153,6 +154,19 @@ test("waits for deferred execution before publishing", async () => {
 
 	expect(calls).toHaveLength(0);
 	expect(ctx.skipSubjectCacheDeletion).toBe(false);
+});
+
+test("publishes even when cache reads are skipped", async () => {
+	ctx.skipCache = true;
+
+	await publishBillingTransition({
+		ctx,
+		billingContext,
+		billingPlan,
+	});
+
+	expect(calls).toEqual(["load", "publish", "persist"]);
+	expect(ctx.skipSubjectCacheDeletion).toBe(true);
 });
 
 test("keeps compute-time exclusions after deferred plan serialization", async () => {

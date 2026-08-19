@@ -3,7 +3,6 @@ import type {
 	BalanceTransitionUnsupportedReason,
 	BillingPlan,
 } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export type PublishBillingTransitionDecision =
 	| { shouldPublish: true; balanceTransitionPlan: BalanceTransitionPlan }
@@ -13,11 +12,9 @@ export type PublishBillingTransitionDecision =
 	  };
 
 export const shouldPublishBillingTransition = ({
-	ctx,
 	billingPlan,
 	executionDeferred = false,
 }: {
-	ctx: AutumnContext;
 	billingPlan: BillingPlan;
 	executionDeferred?: boolean;
 }): PublishBillingTransitionDecision => {
@@ -29,7 +26,7 @@ export const shouldPublishBillingTransition = ({
 			unsupportedReason: balanceTransitionPlan.unsupportedReason,
 		};
 	}
-	if (executionDeferred || ctx.skipCache) {
+	if (executionDeferred) {
 		return { shouldPublish: false };
 	}
 

@@ -18,7 +18,6 @@ export const publishBillingTransition = async ({
 }): Promise<void> => {
 	// 1. Decide whether this plan has a supported runtime transition
 	const decision = shouldPublishBillingTransition({
-		ctx,
 		billingPlan,
 		executionDeferred,
 	});
