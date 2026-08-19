@@ -1,5 +1,4 @@
 {
-	"snapshot": "snapshot-20260629-79e36c0f-6ca4-4802-a2de-639ef4c29d70",
 	"install": "bash scripts/setup/cursor-cloud/install.sh",
 	"start": "bash scripts/setup/cursor-cloud/start.sh",
 	"terminals": [

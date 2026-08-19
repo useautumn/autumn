@@ -84,7 +84,22 @@ pass "mark-skills adds environments: [cloud] once"
 if grep -q 'repositoryDependencies' "$ROOT/.cursor/environment.json"; then
 	fail "environment.json must not declare useautumn/ai as a sibling repo — it is a submodule"
 fi
-pass "environment.json does not list ai as a repositoryDependency"
+if grep -q '"snapshot"' "$ROOT/.cursor/environment.json"; then
+	fail "environment.json must not pin snapshot-20260629 — builds crash overlaying current daemons onto it"
+fi
+grep -q 'agent-bootstrap.sh' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	|| fail "install.sh must bootstrap system packages instead of relying on a VM snapshot"
+pass "environment.json has no snapshot; install bootstraps packages"
+
+# --- persist-env writes rc files without embedding the Infisical token ------
+bun "$CLOUD" --root "$tmp/repo" --home "$tmp/home" persist-env
+grep -q 'export CLOUD_AGENT=1' "$tmp/home/.autumn-agent/env.sh" || fail "env.sh missing CLOUD_AGENT"
+grep -q 'autumn-infisical-token' "$tmp/home/.autumn-agent/env.sh" || fail "env.sh must read token from cache"
+if grep -q 'INFISICAL_TOKEN=secret' "$tmp/home/.autumn-agent/env.sh"; then
+	fail "env.sh must not embed the Infisical token"
+fi
+grep -Fq ". ${tmp}/home/.autumn-agent/env.sh" "$tmp/home/.bashrc" || fail "bashrc must source env.sh"
+pass "persist-env writes env.sh and bashrc"
 
 sync_line="$(rg -n 'ai/src/cli.ts sync --copy' "$ROOT/scripts/setup/cursor-cloud/install.sh" | head -1 | cut -d: -f1)"
 install_line="$(rg -n 'log "workspace install"' "$ROOT/scripts/setup/cursor-cloud/install.sh" | head -1 | cut -d: -f1)"
