@@ -1,4 +1,7 @@
-import type { FullCusEntWithFullCusProduct } from "@autumn/shared";
+import {
+	creditSystemContainsFeature,
+	type FullCusEntWithFullCusProduct,
+} from "@autumn/shared";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
@@ -37,6 +40,16 @@ export const computeCreditCosts = ({
 				}),
 			);
 		} catch (error) {
+			// A configured rate that cannot be evaluated must fail closed.
+			if (
+				creditSystemContainsFeature({
+					creditSystem: ce.entitlement.feature,
+					meteredFeatureId: deduction.feature.id,
+				})
+			) {
+				throw error;
+			}
+
 			// Cached cusEnt schemas can briefly trail a feature update; deduct at
 			// 1:1 rather than failing the track.
 			logger.warn("[computeCreditCosts] falling back to credit cost 1", {
