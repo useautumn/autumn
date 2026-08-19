@@ -14,6 +14,7 @@ import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import {
+	buildInvoicePlanIdMap,
 	InvoiceService,
 	processInvoice,
 } from "@/internal/invoices/InvoiceService.js";
@@ -103,11 +104,17 @@ const getCusInvoices = async ({
 				limit,
 			});
 
+	const planIdByInternalId = await buildInvoicePlanIdMap({
+		db,
+		invoices: finalInvoices!,
+	});
+
 	const processedInvoices = finalInvoices!.map((i) =>
 		processInvoice({
 			invoice: i,
 			withItems,
 			features,
+			planIdByInternalId,
 		}),
 	);
 

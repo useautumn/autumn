@@ -152,7 +152,15 @@ const dashboardProductFilterToCustomerListSql = (
 	{ orgId, env }: { orgId?: string; env?: string } = {},
 ): SQL =>
 	isCustomDashboardProductFilter(filter)
-		? sql`(cp_dash.product_id = ${filter.productId} AND cp_dash.is_custom = true)`
+		? orgId && env
+			? sql`(cp_dash.internal_product_id IN (
+					SELECT p_lookup.internal_id
+					FROM products p_lookup
+					WHERE p_lookup.org_id = ${orgId}
+						AND p_lookup.env = ${env}
+						AND p_lookup.id = ${filter.productId}
+				) AND cp_dash.is_custom = true)`
+			: sql`(p_dash.id = ${filter.productId} AND cp_dash.is_custom = true)`
 		: orgId && env
 			? sql`cp_dash.internal_product_id IN (
 					SELECT p_lookup.internal_id
@@ -1152,7 +1160,6 @@ export const getCustomerListFilterSql = ({
 	const hasStatus = statusFilters && statusFilters.length > 0;
 	const hasProductFilter = productFilters.length > 0;
 	const hasInterval = intervals.length > 0;
-	const hasVersion = productFilters.some(isVersionDashboardProductFilter);
 	const canUseProductCandidateSet =
 		orgId && env && productFilters.every(isVersionDashboardProductFilter);
 	if (hasStatus || hasProductFilter || hasInterval) {
@@ -1182,10 +1189,17 @@ export const getCustomerListFilterSql = ({
 					case "free_trial":
 						return sql`(cp_dash.trial_ends_at > ${Date.now()} AND cp_dash.free_trial_id IS NOT NULL AND cp_dash.canceled_at IS NULL AND (cp_dash.status = ${CusProductStatus.Active} OR cp_dash.status = ${CusProductStatus.PastDue}))`;
 					case "expired":
+						// "Same plan" = same public product id (any version), resolved
+						// through the products join rather than the denormalized
+						// customer_products.product_id snapshot.
 						return sql`(cp_dash.status = ${CusProductStatus.Expired} AND cp_dash.canceled_at IS NULL AND NOT EXISTS (
 							SELECT 1 FROM customer_products cp_alias
+							JOIN products p_alias ON p_alias.internal_id = cp_alias.internal_product_id
+							JOIN products p_cur ON p_cur.internal_id = cp_dash.internal_product_id
 							WHERE cp_alias.internal_customer_id = cp_dash.internal_customer_id
-								AND cp_alias.product_id = cp_dash.product_id
+								AND p_alias.id = p_cur.id
+								AND p_alias.org_id = p_cur.org_id
+								AND p_alias.env = p_cur.env
 								AND (cp_alias.status = ${CusProductStatus.Active} OR cp_alias.status = ${CusProductStatus.PastDue})
 						))`;
 					default:
@@ -1216,7 +1230,7 @@ export const getCustomerListFilterSql = ({
 		}
 
 		const joinProducts =
-			hasVersion && !(orgId && env)
+			hasProductFilter && !(orgId && env)
 				? sql`JOIN products p_dash ON cp_dash.internal_product_id = p_dash.internal_id`
 				: sql``;
 

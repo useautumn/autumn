@@ -6,13 +6,18 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { Logger } from "../../external/logtail/logtailUtils.js";
 import type { AttachParams } from "../customers/cusProducts/AttachParams.js";
 import { upsertInvoiceInCache } from "./actions/cache/upsertInvoiceInCache.js";
-import { InvoiceService, processInvoice } from "./InvoiceService.js";
+import {
+	buildInvoicePlanIdMap,
+	InvoiceService,
+	processInvoice,
+} from "./InvoiceService.js";
 
 // Purpose of this function is to insert an invoice from attach params when sub is updated -> Correct product ID is set...
 export const insertInvoiceFromAttach = async ({
@@ -109,12 +114,21 @@ export const insertInvoiceFromAttach = async ({
 	}
 };
 
-export const invoicesToResponse = ({ invoices }: { invoices: Invoice[] }) => {
+export const invoicesToResponse = async ({
+	db,
+	invoices,
+}: {
+	db: DrizzleCli;
+	invoices: Invoice[];
+}) => {
+	const planIdByInternalId = await buildInvoicePlanIdMap({ db, invoices });
+
 	const response = invoices.map((i) =>
 		processInvoice({
 			invoice: i,
 			withItems: false,
 			features: [],
+			planIdByInternalId,
 		}),
 	);
 

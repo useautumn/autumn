@@ -10,7 +10,11 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getOrgPaginationMaxLimit } from "../../misc/edgeConfig/orgLimitsStore.js";
-import { InvoiceService, processInvoice } from "../InvoiceService.js";
+import {
+	buildInvoicePlanIdMap,
+	InvoiceService,
+	processInvoice,
+} from "../InvoiceService.js";
 
 export const handleListInvoices = createRoute({
 	scopes: [Scopes.Customers.Read],
@@ -38,8 +42,13 @@ export const handleListInvoices = createRoute({
 			query: body,
 		});
 
+		const planIdByInternalId = await buildInvoicePlanIdMap({
+			db: ctx.db,
+			invoices: rows.map((row) => row.invoice),
+		});
+
 		const list: ApiListInvoiceV1[] = rows.map((row) => ({
-			...processInvoice({ invoice: row.invoice }),
+			...processInvoice({ invoice: row.invoice, planIdByInternalId }),
 			id: row.invoice.id,
 			customer_id: row.customer_id,
 			entity_id: row.entity_id,

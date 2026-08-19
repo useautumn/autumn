@@ -227,7 +227,9 @@ async function enrichCustomers(db: DrizzleCli, ids: string[]) {
 			customer_product: {
 				id: customerProducts.id,
 				internal_product_id: customerProducts.internal_product_id,
-				product_id: customerProducts.product_id,
+				// Live plan id from the products join (stays correct across renames),
+				// not the denormalized customer_products.product_id snapshot.
+				product_id: products.id,
 				canceled_at: customerProducts.canceled_at,
 				status: customerProducts.status,
 				trial_ends_at: customerProducts.trial_ends_at,

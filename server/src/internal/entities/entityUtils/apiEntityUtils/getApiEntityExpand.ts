@@ -42,7 +42,8 @@ export const getApiEntityExpand = async ({
 	// console.log("Entity invoices:", invoices);
 
 	return {
-		invoices: invoicesToResponse({
+		invoices: await invoicesToResponse({
+			db,
 			invoices,
 		}),
 	};

@@ -88,8 +88,7 @@ export const getApiCustomerBaseV2 = async ({
 		config: customer.config
 			? {
 					disable_pooled_balance: customer.config.disable_pooled_balance,
-					disable_overage_billing:
-						customer.config.disable_overage_billing,
+					disable_overage_billing: customer.config.disable_overage_billing,
 				}
 			: undefined,
 		processors: getCusProcessors({
@@ -98,7 +97,8 @@ export const getApiCustomerBaseV2 = async ({
 		}),
 		invoices:
 			fullSubject.invoices && ctx.expand.includes(CustomerExpand.Invoices)
-				? invoicesToResponse({
+				? await invoicesToResponse({
+						db: ctx.db,
 						invoices: fullSubject.invoices,
 					})
 				: undefined,
