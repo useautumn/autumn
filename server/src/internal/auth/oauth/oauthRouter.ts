@@ -1,15 +1,15 @@
 import { getProtectedResourceMetadata } from "@autumn/auth/oauth";
-import { oauthProviderOpenIdConfigMetadata } from "@better-auth/oauth-provider";
 import { type Context, Hono } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { auth, authBaseUrl } from "@/utils/auth.js";
+import { authBaseUrl } from "@/utils/auth.js";
 import { handleAuthServerMetadata } from "./handleAuthServerMetadata.js";
 import { handleGetOAuthClient } from "./handleGetOAuthClient.js";
 import { handleOAuthAuthorize } from "./handleOAuthAuthorize.js";
 import { handleOAuthClientRegistration } from "./handleOAuthClientRegistration.js";
 import { handleOAuthConsentWithEnv } from "./handleOAuthConsentWithEnv.js";
 import { handleOAuthTokenWithApiKey } from "./handleOAuthTokenWithApiKey.js";
+import { handleOpenIdConfiguration } from "./handleOpenIdConfiguration.js";
 
 export const oauthRouter = new Hono<HonoEnv>();
 
@@ -34,9 +34,10 @@ const oauthClientRegisterLimiter = rateLimiter<HonoEnv>({
 	keyGenerator: getOAuthRateLimitKey,
 });
 
-oauthRouter.get("/api/auth/.well-known/openid-configuration", (c) => {
-	return oauthProviderOpenIdConfigMetadata(auth)(c.req.raw);
-});
+oauthRouter.get(
+	"/api/auth/.well-known/openid-configuration",
+	handleOpenIdConfiguration,
+);
 
 oauthRouter.get(
 	"/.well-known/oauth-authorization-server",
