@@ -111,6 +111,25 @@ grep -q '.cursor/skills/tdd/SKILL.md' "$ROOT/scripts/setup/cursor-cloud/install.
 	|| fail "install.sh must fail if ~/.cursor/skills/tdd is missing"
 pass "install copies skills before workspace bun install"
 
+if grep -qE 'bun dw setup|"\$BUN" dw setup' "$ROOT/scripts/setup/cursor-cloud/start.sh"; then
+	fail "start.sh must not call bun dw setup — that reinstalls and re-syncs skills"
+fi
+if grep -q 'ai/src/cli.ts sync' "$ROOT/scripts/setup/cursor-cloud/start.sh"; then
+	fail "start.sh must not sync skills — install.sh owns bun ai sync --copy"
+fi
+grep -q 'scripts/dw/index.ts" start' "$ROOT/scripts/setup/cursor-cloud/start.sh" \
+	|| grep -q 'scripts/dw/index.ts start' "$ROOT/scripts/setup/cursor-cloud/start.sh" \
+	|| fail "start.sh must run bun scripts/dw/index.ts start"
+grep -q 'case "start"' "$ROOT/scripts/dw/index.ts" \
+	|| fail "dw must expose a start subcommand for per-boot infra"
+if grep -q 'ensureAiSubmoduleSynced' "$ROOT/scripts/dw/commands/start.ts"; then
+	fail "dw start must not re-sync the ai submodule"
+fi
+if grep -q 'bun", \["install"\]' "$ROOT/scripts/dw/commands/start.ts"; then
+	fail "dw start must not run bun install"
+fi
+pass "start.sh runs dw start, not bun dw setup"
+
 if grep -q 'cursor_ai.py' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
 	"$ROOT/scripts/setup/cursor-cloud/start.sh"; then
 	fail "install/start must not call cursor_ai.py"

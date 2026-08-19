@@ -30,7 +30,9 @@ and writes the Bearer header into \`.cursor/mcp.json\`. Do not try interactive
 OAuth. If executor tools are missing, say so rather than substituting
 Axiom/PlanetScale OAuth servers.
 
-Boot does **not** start \`bun dw\`. Run it when the task needs the app.
+Boot starts local infra (Postgres/Redis/ClickHouse/ElasticMQ) and the
+Cloudflare public URL via \`bun scripts/dw/index.ts start\`. It does
+**not** start the app. Run \`bun dw\` when the task needs Vite/API.
 The in-IDE Browser tab stays blank (Cursor bug, any URL) — open the
 public \`autumn-wt1-<hash>.autumnworktree.com\` URL from \`bun dw identify\`,
 or \`http://localhost:3000\` from Ports.

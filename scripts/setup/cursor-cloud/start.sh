@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Cursor Cloud `start` — per-boot services only.
-# Packages, skills, and binaries belong in install.sh.
+# Cursor Cloud `start` — per-boot only.
+# install.sh owns packages, bun install, and bun ai sync --copy.
+# This script caches runtime secrets, then runs `dw start`
+# (Postgres/Redis/ClickHouse/ElasticMQ + Cloudflare public URL).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT"
@@ -10,7 +12,7 @@ export PATH="$ROOT/node_modules/.bin:/usr/local/bin:$HOME/.bun/bin:$PATH"
 
 BUN="${HOME}/.bun/bin/bun"
 if [ ! -x "$BUN" ]; then
-	BUN="$(command -v bun || true)"
+	BUN="$(command -v bun)"
 fi
 
 if [ -n "${INFISICAL_TOKEN:-}" ]; then
@@ -58,20 +60,7 @@ else
 	echo "[cursor-cloud-start] CLOUDFLARE_TUNNEL_API_TOKEN unset — no public hosts"
 fi
 
-if [ -z "$BUN" ]; then
-	echo "[cursor-cloud-start] bun not on PATH" >&2
-	exit 0
-fi
-
 "$BUN" "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" persist-env
-"$BUN" "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" mcp || \
-	echo "[cursor-cloud-start] executor MCP configure failed (non-fatal)"
-
-if [ -f ai/package.json ] && [ ! -f "${HOME}/.cursor/skills/tdd/SKILL.md" ]; then
-	echo "[cursor-cloud-start] ~/.cursor/skills missing — bun ai sync --copy"
-	"$BUN" ai/src/cli.ts sync --copy || echo "[cursor-cloud-start] bun ai sync failed"
-	"$BUN" "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" mark-skills || true
-fi
-
-echo "[cursor-cloud-start] bun dw setup (local infra + public URL)"
-"$BUN" dw setup || echo "[cursor-cloud-start] bun dw setup failed (non-fatal)"
+"$BUN" "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" mcp
+echo "[cursor-cloud-start] dw start (local infra + public URL)"
+"$BUN" "$ROOT/scripts/dw/index.ts" start
