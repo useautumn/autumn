@@ -24,7 +24,11 @@ describe("getOAuthTokenRequestFields", () => {
 					refresh_token: "refresh_1",
 				}),
 			),
-		).toEqual({ grantType: "refresh_token", refreshToken: "refresh_1" });
+		).toEqual({
+			clientId: null,
+			grantType: "refresh_token",
+			refreshToken: "refresh_1",
+		});
 	});
 
 	test("keeps the grant type that a stray refresh_token belongs to", async () => {
@@ -37,6 +41,7 @@ describe("getOAuthTokenRequestFields", () => {
 				}),
 			),
 		).toEqual({
+			clientId: null,
 			grantType: "authorization_code",
 			refreshToken: "refresh_unrelated",
 		});
@@ -50,7 +55,11 @@ describe("getOAuthTokenRequestFields", () => {
 					refresh_token: "refresh_json",
 				}),
 			),
-		).toEqual({ grantType: "refresh_token", refreshToken: "refresh_json" });
+		).toEqual({
+			clientId: null,
+			grantType: "refresh_token",
+			refreshToken: "refresh_json",
+		});
 	});
 
 	test("supports case-insensitive JSON content types", async () => {
@@ -62,8 +71,25 @@ describe("getOAuthTokenRequestFields", () => {
 				}),
 			),
 		).toEqual({
+			clientId: null,
 			grantType: "refresh_token",
 			refreshToken: "refresh_json_upper",
+		});
+	});
+
+	test("reads the client id a public client authenticates with", async () => {
+		expect(
+			await getOAuthTokenRequestFields(
+				formRequest({
+					client_id: "client_1",
+					grant_type: "authorization_code",
+					code: "code_1",
+				}),
+			),
+		).toEqual({
+			clientId: "client_1",
+			grantType: "authorization_code",
+			refreshToken: null,
 		});
 	});
 
@@ -74,6 +100,6 @@ describe("getOAuthTokenRequestFields", () => {
 					method: "POST",
 				}),
 			),
-		).toEqual({ grantType: null, refreshToken: null });
+		).toEqual({ clientId: null, grantType: null, refreshToken: null });
 	});
 });

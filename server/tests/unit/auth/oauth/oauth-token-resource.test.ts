@@ -1,13 +1,33 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
 	canonicalizeOAuthResource,
 	oauthAudienceAllowsResource,
 } from "@autumn/auth/oauth";
-import { oauthRefreshToken } from "@autumn/shared";
+import { getAutumnEnv } from "@autumn/env";
+import { oauthClient, oauthRefreshToken } from "@autumn/shared";
+import { MCP_CLIENT_KIND } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { oauthTokenErrorResponse } from "@/internal/auth/oauth/token/oauthTokenErrorResponse.js";
+import { OAuthTokenResourceError } from "@/internal/auth/oauth/token/resolveOAuthTokenResource.js";
 import { setupOAuthTokenRequest } from "@/internal/auth/oauth/token/setupOAuthTokenRequest.js";
 
 const resourceUrl = "https://mcp.autumn.dev/mcp";
+const apiOriginUrl = getAutumnEnv().AUTUMN_API_URL;
+const mcpClientId = "oauth_client_mcp";
+
+const originalMcpResourceUrls = process.env.MCP_RESOURCE_URLS;
+
+beforeAll(() => {
+	process.env.MCP_RESOURCE_URLS = resourceUrl;
+});
+
+afterAll(() => {
+	if (originalMcpResourceUrls === undefined) {
+		delete process.env.MCP_RESOURCE_URLS;
+		return;
+	}
+	process.env.MCP_RESOURCE_URLS = originalMcpResourceUrls;
+});
 
 describe("canonicalizeOAuthResource", () => {
 	test("lowercases scheme and host, drops the default port and trailing slash", () => {
@@ -67,25 +87,42 @@ describe("oauthAudienceAllowsResource", () => {
 	});
 });
 
-/** Only the refresh-token row is stubbed; the client lookup falls through to null. */
-const stubDb = (refreshTokenRow: { resource: string | null } | null) =>
+type RefreshTokenRow = { clientId?: string; resource: string | null };
+
+/** Rows the two lookups behind a token request read: the refresh grant and the client. */
+const stubDb = ({
+	isMcpClient,
+	refreshTokenRow,
+}: {
+	isMcpClient: boolean;
+	refreshTokenRow: RefreshTokenRow | null;
+}) =>
 	({
 		select: () => ({
 			from: (table: unknown) => ({
 				where: () => ({
-					limit: async () =>
-						table === oauthRefreshToken && refreshTokenRow
-							? [refreshTokenRow]
-							: [],
+					limit: async () => {
+						if (table === oauthRefreshToken) {
+							return refreshTokenRow ? [refreshTokenRow] : [];
+						}
+						if (table === oauthClient && isMcpClient) {
+							return [
+								{ clientId: mcpClientId, metadata: { kind: MCP_CLIENT_KIND } },
+							];
+						}
+						return [];
+					},
 				}),
 			}),
 		}),
 	}) as unknown as DrizzleCli;
 
 const tokenRequest = ({
+	clientId,
 	isRefresh,
 	resource,
 }: {
+	clientId: string | null;
 	isRefresh: boolean;
 	resource: string | null;
 }) => {
@@ -93,6 +130,7 @@ const tokenRequest = ({
 		grant_type: isRefresh ? "refresh_token" : "authorization_code",
 	});
 	if (isRefresh) body.set("refresh_token", "refresh_token_value");
+	if (clientId) body.set("client_id", clientId);
 	if (resource) body.set("resource", resource);
 
 	return new Request("https://api.useautumn.com/api/auth/oauth2/token", {
@@ -103,15 +141,21 @@ const tokenRequest = ({
 };
 
 const setupResource = async ({
+	isMcpClient = false,
 	refreshTokenRow,
 	resource = null,
 }: {
-	refreshTokenRow: { resource: string | null } | null;
+	isMcpClient?: boolean;
+	refreshTokenRow: RefreshTokenRow | null;
 	resource?: string | null;
 }) => {
 	const { resource: resolved } = await setupOAuthTokenRequest({
-		db: stubDb(refreshTokenRow),
-		request: tokenRequest({ isRefresh: refreshTokenRow !== null, resource }),
+		db: stubDb({ isMcpClient, refreshTokenRow }),
+		request: tokenRequest({
+			clientId: isMcpClient ? mcpClientId : null,
+			isRefresh: refreshTokenRow !== null,
+			resource,
+		}),
 	});
 	return resolved;
 };
@@ -154,5 +198,71 @@ describe("setupOAuthTokenRequest resource resolution", () => {
 		expect(
 			await setupResource({ refreshTokenRow: { resource: null } }),
 		).toBeNull();
+	});
+});
+
+describe("setupOAuthTokenRequest resource validation", () => {
+	test("refuses a resource this server does not serve", async () => {
+		await expect(
+			setupResource({
+				refreshTokenRow: null,
+				resource: "https://evil.example.com/api",
+			}),
+		).rejects.toBeInstanceOf(OAuthTokenResourceError);
+	});
+
+	test("refuses a resource that is not an http(s) identifier", async () => {
+		await expect(
+			setupResource({ refreshTokenRow: null, resource: "urn:autumn:mcp" }),
+		).rejects.toBeInstanceOf(OAuthTokenResourceError);
+	});
+
+	test("serves the api origin to clients that are not mcp clients", async () => {
+		expect(
+			await setupResource({ refreshTokenRow: null, resource: apiOriginUrl }),
+		).toBe(canonicalizeOAuthResource(apiOriginUrl));
+	});
+
+	test("refuses an mcp client's grant aimed at the api origin", async () => {
+		await expect(
+			setupResource({
+				isMcpClient: true,
+				refreshTokenRow: null,
+				resource: apiOriginUrl,
+			}),
+		).rejects.toBeInstanceOf(OAuthTokenResourceError);
+	});
+
+	test("serves an mcp resource url to an mcp client", async () => {
+		expect(
+			await setupResource({
+				isMcpClient: true,
+				refreshTokenRow: null,
+				resource: resourceUrl,
+			}),
+		).toBe(resourceUrl);
+	});
+
+	test("refuses an unserved resource a legacy refresh chain would adopt", async () => {
+		await expect(
+			setupResource({
+				refreshTokenRow: { resource: null },
+				resource: "https://evil.example.com/api",
+			}),
+		).rejects.toBeInstanceOf(OAuthTokenResourceError);
+	});
+});
+
+describe("oauthTokenErrorResponse for an unserved resource", () => {
+	test("answers with an RFC 8707 invalid_target error body", async () => {
+		const response = oauthTokenErrorResponse({
+			error: new OAuthTokenResourceError("no tokens for that resource"),
+		});
+
+		expect(response?.status).toBe(400);
+		expect(await response?.json()).toEqual({
+			error: "invalid_target",
+			error_description: "no tokens for that resource",
+		});
 	});
 });

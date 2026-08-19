@@ -29,6 +29,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { createLoopsContact } from "@/external/resend/loopsUtils.js";
+import { getOAuthValidAudiences } from "@/internal/auth/oauth/oauthResourceAudiences.js";
 import { SSO_VERIFICATION_PREFIX } from "@/internal/auth/sso/ssoDomainUtils.js";
 import { getTrustedSsoOrigins } from "@/internal/auth/sso/ssoTrustedOrigins.js";
 import { sendInvitationEmail } from "@/internal/emails/sendInvitationEmail.js";
@@ -77,49 +78,8 @@ const emulateGoogleUrl =
 // HTTPS agent worktrees go through portless (e.g. wtN-api.localhost). The
 // OAuth flow leaves and returns via a third-party host (emulate.dev), so the
 // state cookie must be SameSite=None+Secure to survive the round trip.
-const isProductionAuth = process.env.NODE_ENV === "production";
 export const authBaseUrl = getAutumnEnv().AUTUMN_API_URL;
 const isHttpsBaseUrl = authBaseUrl?.startsWith("https://");
-
-const parseMcpResourceUrl = (rawUrl: string) => {
-	const resourceUrl = rawUrl.trim();
-	if (!resourceUrl) return null;
-
-	try {
-		return new URL(resourceUrl).href;
-	} catch {
-		console.warn(`Ignoring invalid MCP_RESOURCE_URLS entry: ${resourceUrl}`);
-		return null;
-	}
-};
-
-// Public hosts that serve OAuth-protected MCP endpoints. leaf serves both the
-// MCP server (MCP_SERVER_URL) and the chat/slackbot (CHAT_SERVER_URL); the
-// autumn server can also proxy /mcp under its own API origin.
-// The OAuth `resource` indicator is host-based, so every public host + path
-// must be a registered audience. MCP_RESOURCE_URLS is an explicit override.
-const mcpServerUrl =
-	process.env.MCP_SERVER_URL ??
-	(isProductionAuth ? "https://mcp.useautumn.com" : "http://localhost:3099");
-const chatServerUrl =
-	process.env.CHAT_SERVER_URL ??
-	(isProductionAuth ? "https://chat.useautumn.com" : "http://localhost:3099");
-
-const mcpResourcePaths = ["/mcp"];
-const mcpResourceBases = [authBaseUrl, mcpServerUrl, chatServerUrl].filter(
-	(base): base is string => Boolean(base),
-);
-
-const mcpResourceUrls = [
-	...new Set([
-		...mcpResourceBases.flatMap((base) =>
-			mcpResourcePaths.map((path) => new URL(path, base).href),
-		),
-		...(process.env.MCP_RESOURCE_URLS?.split(",")
-			.map(parseMcpResourceUrl)
-			.filter((url): url is string => Boolean(url)) ?? []),
-	]),
-];
 
 /**
  * Passkey (WebAuthn) is bound to the FRONTEND origin where the browser calls
@@ -295,9 +255,7 @@ const options = {
 			advertisedMetadata: {
 				scopes_supported: [...OPENID_SCOPES, ...MODERN_SCOPES],
 			},
-			validAudiences: [authBaseUrl, ...mcpResourceUrls].filter(
-				Boolean,
-			) as string[],
+			validAudiences: getOAuthValidAudiences(),
 			allowDynamicClientRegistration: true,
 			allowUnauthenticatedClientRegistration: true,
 			customAccessTokenClaims: ({ referenceId }) => ({

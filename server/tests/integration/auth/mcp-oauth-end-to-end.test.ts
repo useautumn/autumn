@@ -400,7 +400,9 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 		expect(Array.isArray(toolResult?.content)).toBe(true);
 		expect(toolResult?.content?.[0]?.text).toContain(defaultCtx.org.id);
 
-		// 7. Audience negative: a token minted for the API root is rejected at /mcp
+		// 7. Audience negative: an MCP client asking for the API root is refused at
+		// the token endpoint, so no grant can be stamped for an audience /mcp
+		// rejects — the state a client could never recover from on its own.
 		const apiRoot = new URL(metadata.authorization_servers[0] as string).origin;
 		const foreign = await grantTokenForResource({
 			clientId,
@@ -408,25 +410,9 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 			scopes: requestedScopes,
 			session,
 		});
-		expect(foreign.token.status).toBe(200);
-		const foreignToken = foreign.token.body.access_token as string;
-		const foreignRow = await db.query.oauthAccessToken.findFirst({
-			where: eq(
-				oauthAccessToken.token,
-				hashOAuthToken(stripOAuthTokenPrefix({ token: foreignToken })),
-			),
-		});
-		expect(foreignRow?.resource).toBe(apiRoot);
-
-		const rejected = await postMcp({
-			body: initializeBody,
-			token: foreignToken,
-			url: mcpUrl,
-		});
-		expect(rejected.response.status).toBe(401);
-		expect(rejected.response.headers.get("www-authenticate")).toContain(
-			'error="invalid_token"',
-		);
+		expect(foreign.token.status).toBe(400);
+		expect(foreign.token.body.error).toBe("invalid_target");
+		expect(foreign.token.body.access_token).toBeUndefined();
 	} finally {
 		if (clientId) {
 			await db.delete(oauthClient).where(eq(oauthClient.clientId, clientId));

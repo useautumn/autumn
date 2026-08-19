@@ -27,35 +27,40 @@ import { resolveOAuthTokenConsentId } from "./token/resolveOAuthTokenConsentId.j
 import { setupOAuthTokenRequest } from "./token/setupOAuthTokenRequest.js";
 
 export const handleOAuthTokenWithApiKey = async (c: Context) => {
-	// 1. Setup
-	const tokenRequest = await setupOAuthTokenRequest({ db, request: c.req.raw });
-
-	// 2. Single-flight guard: refresh tokens are single-use and rotated, so
-	// byte-identical replays of one refresh request must share the winner's
-	// response. A Redis outage leaves `heldReplayKey` null and the request mints
-	// unguarded — dedupe is an optimisation, not a dependency.
 	let heldReplayKey: string | null = null;
-	if (tokenRequest.refreshReplayKey) {
-		const replay = await claimOAuthRefreshReplay(tokenRequest.refreshReplayKey);
-		if (!replay) {
-			return jsonOAuthTokenResponse({
-				body: {
-					error: "temporarily_unavailable",
-					error_description: "Refresh request coordination unavailable",
-				},
-				status: 503,
-			});
-		}
-		if (replay.body) {
-			return jsonOAuthTokenResponse({ body: replay.body, status: 200 });
-		}
-		if (replay.holdsKey) heldReplayKey = tokenRequest.refreshReplayKey;
-	}
-
 	// A held claim blocks every concurrent replay, so an exit that stores no
 	// response must hand the key back instead of letting it time out.
 	let replayStored = false;
 	try {
+		// 1. Setup
+		const tokenRequest = await setupOAuthTokenRequest({
+			db,
+			request: c.req.raw,
+		});
+
+		// 2. Single-flight guard: refresh tokens are single-use and rotated, so
+		// byte-identical replays of one refresh request must share the winner's
+		// response. A Redis outage leaves `heldReplayKey` null and the request mints
+		// unguarded — dedupe is an optimisation, not a dependency.
+		if (tokenRequest.refreshReplayKey) {
+			const replay = await claimOAuthRefreshReplay(
+				tokenRequest.refreshReplayKey,
+			);
+			if (!replay) {
+				return jsonOAuthTokenResponse({
+					body: {
+						error: "temporarily_unavailable",
+						error_description: "Refresh request coordination unavailable",
+					},
+					status: 503,
+				});
+			}
+			if (replay.body) {
+				return jsonOAuthTokenResponse({ body: replay.body, status: 200 });
+			}
+			if (replay.holdsKey) heldReplayKey = tokenRequest.refreshReplayKey;
+		}
+
 		// 3. better-auth mints the token
 		const response = await auth.handler(tokenRequest.normalizedRequest);
 		if (!response.ok) return response;
