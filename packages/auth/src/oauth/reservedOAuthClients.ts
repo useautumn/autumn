@@ -28,10 +28,7 @@ export const clientIdsFromEnv = (variable: string): readonly string[] => {
 	return clientIds;
 };
 
-/**
- * The variable holds a comma-separated list, so its name is plural now; the
- * singular one is still read so a deployment can be renamed without downtime.
- */
+/** The singular variable name is still read so a deployment can be renamed without downtime. */
 export const internalMcpOAuthClientIds = (): readonly string[] => {
 	const clientIds = clientIdsFromEnv("INTERNAL_MCP_OAUTH_CLIENT_IDS");
 	return clientIds.length > 0

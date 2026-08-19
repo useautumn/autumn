@@ -9,10 +9,7 @@ export class OAuthTokenScopeError extends Error {
 	name = "OAuthTokenScopeError";
 }
 
-/**
- * Reads the scope string better-auth minted. A scope this AS no longer defines
- * makes the grant unusable, so the client has to re-authorize for a fresh set.
- */
+/** A scope this server no longer defines makes the grant unusable, so it throws. */
 export const parseOAuthTokenResponseScopes = ({
 	scope,
 }: {

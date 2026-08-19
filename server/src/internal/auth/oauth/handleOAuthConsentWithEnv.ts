@@ -103,10 +103,7 @@ const resolveConsentPrincipal = async (
 	return userId && orgId ? { orgId, userId } : null;
 };
 
-/**
- * Replaces the posted `scope` with what this user may actually grant, so
- * better-auth records the narrowed set on the consent row.
- */
+/** better-auth records whatever `scope` it is handed, so post it the narrowed set. */
 const narrowConsentScopes = async ({
 	fields,
 	isJson,
@@ -138,10 +135,9 @@ const narrowConsentScopes = async ({
 };
 
 /**
- * The environment a consent grants in, and whether this client needs one at
- * all. Only atmn clients don't: every other client exchanges its grant for an
- * env-scoped api key, so an env-less consent issues a code that mints a token
- * no request can use.
+ * Only atmn clients may consent without an environment: every other client
+ * exchanges its grant for an env-scoped api key, so an env-less consent issues
+ * a code that mints a token no request can use.
  */
 export const resolveOAuthConsentEnv = async ({
 	clientId,

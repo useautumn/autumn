@@ -154,11 +154,9 @@ const isUnrestrictedChatGrant = async ({
 };
 
 /**
- * Resolves the org, user and scopes an OAuth bearer speaks for, and rejects it
- * unless three things hold: the shared token store still holds it unexpired (the
- * same check the api server's OAuth middleware applies, so expired tokens get a
- * transport-level 401 challenge instead of a tool error), the grant was minted
- * for this resource, and the grant carries scopes this resource can act on.
+ * Liveness is checked against the shared token store, the same check the api
+ * server's OAuth middleware applies, so an expired token gets a transport-level
+ * 401 challenge here instead of surfacing as a tool error.
  */
 const resolveOAuthPrincipal = async ({
 	bearer,
@@ -198,7 +196,6 @@ const resolveOAuthPrincipal = async ({
 		});
 	}
 
-	// Only the resource scopes gate tools; OIDC protocol scopes are dropped.
 	const scopes = getRequestedOAuthResourceScopes(accessToken.scopes);
 
 	// A grant that names scopes must expose at least one this resource serves; an

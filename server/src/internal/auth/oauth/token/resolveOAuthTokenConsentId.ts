@@ -24,10 +24,6 @@ const getUniqueOAuthConsentId = async ({
 	return consents[0]?.id ?? null;
 };
 
-/**
- * Prefers the consent already on the token, then the one carried by the refresh
- * token it rotated from, and only then the single unambiguous consent on file.
- */
 export const resolveOAuthTokenConsentId = async ({
 	db,
 	refreshTokenRecord,

@@ -3,7 +3,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { oauthRefreshTokenRepo } from "../../repos/index.js";
 import type { OAuthTokenRequestFields } from "../tokenRequestFields.js";
 
-/** The row behind a `refresh_token` grant; null for every other grant type. */
 export const getOAuthRefreshTokenRecord = async ({
 	db,
 	tokenRequestFields,

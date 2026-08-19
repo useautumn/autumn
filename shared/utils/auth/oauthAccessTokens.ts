@@ -11,25 +11,17 @@ export type OAuthAccessTokenDb = Pick<
 	"query"
 >;
 
-/**
- * Hash an OAuth token with SHA-256 + base64url encoding, matching
- * better-auth's default token hashing method.
- */
+/** Must stay byte-identical to better-auth's default hashing, or lookups miss. */
 export const hashOAuthToken = (token: string): string =>
 	createHash("sha256").update(token).digest("base64url");
 
-/**
- * Values to match against a stored `token` column, for access and refresh
- * tokens alike: the base64url SHA-256 hash, plus the raw value for legacy
- * unhashed rows.
- */
+/** The raw value is matched alongside the hash for legacy unhashed rows. */
 export const getOAuthTokenValues = (rawToken: string) =>
 	deduplicateArray([hashOAuthToken(rawToken), rawToken]);
 
 /**
- * Looks up an unexpired OAuth access token by its raw (prefix-stripped)
- * value, using the same match predicate as the api server's OAuth
- * middleware. Returns undefined for unknown or expired tokens.
+ * Takes the raw, prefix-stripped token, and applies the same match predicate as
+ * the api server's OAuth middleware so both agree on which tokens are live.
  */
 export async function findActiveOAuthAccessToken({
 	db,

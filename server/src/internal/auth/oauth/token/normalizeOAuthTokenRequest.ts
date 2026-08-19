@@ -5,11 +5,9 @@ import {
 import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
 
 /**
- * Drops requested scopes the grant does not carry. A request that names only
- * foreign scopes is forwarded unchanged rather than blanked: better-auth then
- * rejects it with `invalid_scope` naming the offending scope, whereas an empty
- * or absent `scope` would read as "no scope requested" and re-issue the grant's
- * full set — the widening this narrowing exists to prevent.
+ * A request naming only foreign scopes is forwarded unchanged rather than
+ * blanked: better-auth rejects it as `invalid_scope`, whereas an absent `scope`
+ * reads as "no scope requested" and re-issues the grant's full set.
  */
 const constrainScopeToGrant = ({
 	grantedScopes,
@@ -26,15 +24,10 @@ const constrainScopeToGrant = ({
 };
 
 /**
- * Rewrites the token request before better-auth sees it.
- *
  * `resource` is dropped because better-auth treats it as a JWT switch: any
  * audience on the request makes it sign a JWT access token and skip writing the
- * `oauth_access_token` row entirely, and every Autumn resource server
- * authenticates by looking that row up. The audience is not lost — the row
- * carries it, stamped by `persistOAuthTokenGrant` once the grant is issued.
- *
- * `scope` is narrowed so an MCP refresh cannot widen its original grant.
+ * `oauth_access_token` row every Autumn resource server authenticates against.
+ * The audience is not lost — `persistOAuthTokenGrant` stamps it on that row.
  */
 export const normalizeOAuthTokenRequest = ({
 	grantedScopes,

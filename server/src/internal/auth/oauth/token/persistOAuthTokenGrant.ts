@@ -4,10 +4,7 @@ import {
 	oauthRefreshTokenRepo,
 } from "../../repos/index.js";
 
-/**
- * Writes the reissued scopes, resolved consent and audience back onto the access
- * and refresh rows, so a partial write can never split one grant across two states.
- */
+/** One transaction, so a partial write can never split a grant across its two rows. */
 export const persistOAuthTokenGrant = async ({
 	accessTokenId,
 	db,

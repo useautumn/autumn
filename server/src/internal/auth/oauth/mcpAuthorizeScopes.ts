@@ -10,8 +10,8 @@ const META_SCOPE_SET = new Set<string>(META_SCOPES);
  * names `offline_access`. Adding it here keeps the resource metadata RFC 9728
  * clean while still giving every MCP client a renewable grant.
  *
- * Meta scopes are dropped, and `offline_access` is added only when the client
- * is registered for it, so the rewritten request cannot fail `invalid_scope`.
+ * `offline_access` is added only when the client is registered for it, so the
+ * rewritten request cannot fail `invalid_scope`.
  */
 export const getMcpAuthorizeScopes = ({
 	clientScopes,
