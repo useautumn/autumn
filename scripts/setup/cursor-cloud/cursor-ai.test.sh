@@ -68,6 +68,34 @@ grep -q 'Existing agents' "$tmp/repo/AGENTS.md" || fail "preamble lost"
 grep -q 'after-section' "$tmp/repo/AGENTS.md" || fail "trailer after cloud section lost"
 pass "AGENTS.md cloud section is idempotent"
 
+# --- mark-skills stamps Cloud environments on user copies -------------------
+mkdir -p "$tmp/user-skills/tdd" "$tmp/user-skills/already"
+printf '%s\n' '---' 'name: tdd' 'description: Test' '---' '# TDD' >"$tmp/user-skills/tdd/SKILL.md"
+printf '%s\n' '---' 'name: already' 'environments: [cloud]' '---' '# Already' >"$tmp/user-skills/already/SKILL.md"
+bun "$CLOUD" --user-skills "$tmp/user-skills" mark-skills
+grep -q 'environments: \[cloud\]' "$tmp/user-skills/tdd/SKILL.md" || fail "tdd missing environments"
+count="$(grep -c 'environments: \[cloud\]' "$tmp/user-skills/already/SKILL.md" || true)"
+[[ "$count" == "1" ]] || fail "already-marked skill should stay idempotent, got $count"
+bun "$CLOUD" --user-skills "$tmp/user-skills" mark-skills
+count="$(grep -c 'environments: \[cloud\]' "$tmp/user-skills/tdd/SKILL.md" || true)"
+[[ "$count" == "1" ]] || fail "mark-skills should be idempotent, got $count"
+pass "mark-skills adds environments: [cloud] once"
+
+if grep -q 'repositoryDependencies' "$ROOT/.cursor/environment.json"; then
+	fail "environment.json must not declare useautumn/ai as a sibling repo — it is a submodule"
+fi
+pass "environment.json does not list ai as a repositoryDependency"
+
+sync_line="$(rg -n 'ai/src/cli.ts sync --copy' "$ROOT/scripts/setup/cursor-cloud/install.sh" | head -1 | cut -d: -f1)"
+install_line="$(rg -n 'log "workspace install"' "$ROOT/scripts/setup/cursor-cloud/install.sh" | head -1 | cut -d: -f1)"
+[[ -n "$sync_line" && -n "$install_line" && "$sync_line" -lt "$install_line" ]] \
+	|| fail "install.sh must bun ai sync --copy before workspace bun install"
+grep -q 'mark-skills' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	|| fail "install.sh must stamp Cloud environments on copied skills"
+grep -q '.cursor/skills/tdd/SKILL.md' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
+	|| fail "install.sh must fail if ~/.cursor/skills/tdd is missing"
+pass "install copies skills before workspace bun install"
+
 if grep -q 'cursor_ai.py' "$ROOT/scripts/setup/cursor-cloud/install.sh" \
 	"$ROOT/scripts/setup/cursor-cloud/start.sh"; then
 	fail "install/start must not call cursor_ai.py"

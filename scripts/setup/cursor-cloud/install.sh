@@ -12,6 +12,22 @@ fi
 log "init ai submodule (skills + MCP sync source)"
 git submodule update --init --recursive
 
+# Copy skills before the workspace bun install. Cloud freezes available_skills
+# when the chat starts, and JIT agents often open the chat mid-install.
+if [ -f ai/package.json ]; then
+	log "ai deps + bun ai sync --copy (skills into ~/.cursor/skills)"
+	(cd ai && "$BUN" install)
+	export CLOUD_AGENT=1
+	export DW_HEADLESS=1
+	"$BUN" ai/src/cli.ts sync --copy
+	"$BUN" scripts/setup/cursor-cloud/cursorCloud.ts mark-skills
+	if [ ! -f "${HOME}/.cursor/skills/tdd/SKILL.md" ]; then
+		log "ERROR: bun ai sync --copy did not write ~/.cursor/skills/tdd"
+		exit 1
+	fi
+	log "user skills ready at ~/.cursor/skills"
+fi
+
 log "workspace install"
 "$BUN" install --frozen-lockfile
 
@@ -53,13 +69,6 @@ if [ ! -x /usr/local/bin/cloudflared ]; then
 fi
 
 if [ -f ai/package.json ]; then
-	log "ai deps + bun sync (skills, rules, MCP into .cursor/)"
-	(cd ai && "$BUN" install)
-	# Must run from the autumn root: `cd ai && bun sync` on a headless box
-	# writes into ai/.cursor because findRepoRoot has no TTY to pick the parent.
-	export CLOUD_AGENT=1
-	export DW_HEADLESS=1
-	"$BUN" ai/src/cli.ts sync --copy
 	# Runtime Secrets are not available at build/install time — placeholder only.
 	"$BUN" scripts/setup/cursor-cloud/cursorCloud.ts mcp
 	"$BUN" scripts/setup/cursor-cloud/cursorCloud.ts agents-md

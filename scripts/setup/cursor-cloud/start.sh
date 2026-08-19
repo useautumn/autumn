@@ -70,6 +70,17 @@ if [ ! -x "$BUN" ]; then
 	BUN="$(command -v bun || true)"
 fi
 
+# Skills first. Infisical + bun dw setup can take minutes; the chat catalog
+# will not refresh after this process later writes ~/.cursor/skills.
+if [ -f ai/package.json ] && [ -n "$BUN" ]; then
+	if [ ! -f "${HOME}/.cursor/skills/tdd/SKILL.md" ]; then
+		echo "[cursor-cloud-start] ~/.cursor/skills missing — running bun ai sync --copy"
+		"$BUN" ai/src/cli.ts sync --copy || echo "[cursor-cloud-start] bun ai sync failed (skills may be missing)"
+	fi
+	"$BUN" "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" mark-skills || true
+	"$BUN" "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" agents-md || true
+fi
+
 infisical_printenv() {
 	local key="$1"
 	local pulled st
@@ -97,14 +108,6 @@ persist_export() {
 	printf 'export %s=%q\n' "$key" "${!key}" >>"$env_sh"
 	chmod 600 "$env_sh"
 }
-
-if [ -f ai/package.json ] && [ -n "$BUN" ]; then
-	if [ ! -f "${HOME}/.cursor/skills/tdd/SKILL.md" ]; then
-		echo "[cursor-cloud-start] ~/.cursor/skills missing — running bun ai sync --copy"
-		"$BUN" ai/src/cli.ts sync --copy || echo "[cursor-cloud-start] bun ai sync failed (skills may be missing)"
-	fi
-	"$BUN" "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" agents-md || true
-fi
 
 infisical_printenv EXECUTOR_API_KEY
 persist_export EXECUTOR_API_KEY
