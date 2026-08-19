@@ -428,20 +428,28 @@ describe("pricesAreSame", () => {
 			);
 		});
 
-		test("key count and key case matter", () => {
+		// Currency add/remove is compatible (existing customers keep snapshots);
+		// only an amount mismatch on a currency present on both sides differs.
+		test("added or removed currencies are compatible; keys are case-sensitive", () => {
 			expectSame(
 				usage({ currencies: {} }),
 				usage({ currencies: { eur: { amount: 9 } } }),
-				false,
+				true,
 			);
 			expectSame(
 				usage({ currencies: { eur: { amount: 9 } } }),
 				usage({ currencies: { eur: { amount: 9 }, gbp: { amount: 7 } } }),
-				false,
+				true,
 			);
+			// Case-mismatched keys never overlap, so they compare as add+remove.
 			expectSame(
 				usage({ currencies: { eur: { amount: 9 } } }),
 				usage({ currencies: { EUR: { amount: 9 } } }),
+				true,
+			);
+			expectSame(
+				usage({ currencies: { eur: { amount: 9 }, gbp: { amount: 7 } } }),
+				usage({ currencies: { eur: { amount: 9 }, gbp: { amount: 5 } } }),
 				false,
 			);
 		});
