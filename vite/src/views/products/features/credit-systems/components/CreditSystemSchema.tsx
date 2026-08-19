@@ -4,6 +4,7 @@ import { useStore } from "@tanstack/react-form";
 import { useMemo } from "react";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
+import { createSchemaItem } from "../utils/creditSchemaUtils";
 import { AiCreditSchema } from "./AiCreditSchema";
 import { ClassicCreditSchema } from "./ClassicCreditSchema";
 
@@ -32,9 +33,7 @@ export function CreditSystemSchema({
 			form.setFieldValue("type", FeatureType.CreditSystem);
 			form.setFieldValue("config", {
 				...form.state.values.config,
-				schema: [
-					{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
-				],
+				schema: [createSchemaItem()],
 			});
 			form.setFieldValue("model_markups", {});
 			form.setFieldValue("provider_markups", {});
@@ -64,7 +63,7 @@ export function CreditSystemSchema({
 			description={
 				mode === "ai"
 					? "Select AI models and set a markup on top of their base pricing. All prices in $/M tokens."
-					: "When you track usage for these features, the value will be multiplied by the credit cost, then deducted from the balance"
+					: "When you track usage for these features, it is priced against the rate card below, then deducted from the balance. Rates can be flat or graduated across usage tiers."
 			}
 		>
 			<div className="flex flex-col gap-3">
