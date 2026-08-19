@@ -8,6 +8,7 @@ import { declaredVariantsForSource } from "@/internal/catalogV2/actions/updateCa
 import { computeCatalogEntitlementPricesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeCatalogEntitlementPricesPlan/computeCatalogEntitlementPricesPlan";
 import { computeFreeTrialPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeFreeTrialPlan/computeFreeTrialPlan";
 import { computeProductDetailsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeProductDetailsPlan/computeProductDetailsPlan";
+import { shouldUnlinkDirectVariant } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/shouldUnlinkDirectVariant";
 import { resolveUpsertOp } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/resolveUpsertOp";
 import { resolveUpsertVersioning } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/resolveUpsertVersioning";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
@@ -48,10 +49,12 @@ export const computeUpsertProductPlan = ({
 	ctx,
 	intent,
 	productStatesContext,
+	declaredVariantPlanIdsByBasePlanId,
 }: {
 	ctx: AutumnContext;
 	intent: ProductUpsertIntent;
 	productStatesContext: ProductStatesContext;
+	declaredVariantPlanIdsByBasePlanId?: Map<string, Set<string>>;
 }): UpsertProductPlan => {
 	const { productKey, source, baseInternalProductId } = intent;
 	const { currentFullProduct, customerUsage } = productKeyToState({
@@ -62,6 +65,16 @@ export const computeUpsertProductPlan = ({
 		planParams: intent.planParams,
 		source,
 	});
+	const unlink =
+		intent.unlink === true ||
+		shouldUnlinkDirectVariant({
+			source,
+			planId: productKey.planId,
+			currentFullProduct,
+			productStatesContext,
+			declaredVariantPlanIdsByBasePlanId,
+		});
+	const pointer = unlink ? null : baseInternalProductId;
 
 	// Content baseline: row at this version, or latest when minting a new version.
 	const baseFullProduct =
@@ -94,7 +107,7 @@ export const computeUpsertProductPlan = ({
 		currentFullProduct,
 		version: productKey.version,
 		baseFullProduct,
-		...(baseInternalProductId !== undefined ? { baseInternalProductId } : {}),
+		...(pointer !== undefined ? { baseInternalProductId: pointer } : {}),
 		...(variantBaseFullProduct
 			? { baseProcessor: variantBaseFullProduct.processor }
 			: {}),
@@ -174,6 +187,7 @@ export const computeUpsertProductPlan = ({
 			? { removeLicenses: intent.editDiff.remove_licenses }
 			: {}),
 		...(declaredVariants !== undefined ? { declaredVariants } : {}),
+		...(unlink ? { unlink: true } : {}),
 		...(source === "direct" && planParams.propagate !== undefined
 			? { propagate: planParams.propagate }
 			: {}),

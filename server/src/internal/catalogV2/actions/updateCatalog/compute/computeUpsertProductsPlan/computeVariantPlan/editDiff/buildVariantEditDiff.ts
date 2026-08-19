@@ -183,7 +183,11 @@ export const buildVariantEditDiff = ({
 		}
 	}
 
-	const editDiff = diffPlanV1({ from: currentPlan, to: nextPlan });
+	const editDiff = diffPlanV1({
+		from: currentPlan,
+		to: nextPlan,
+		includeAdds: true,
+	});
 	if (isEmptyDiff(editDiff)) return undefined;
 	return editDiff;
 };

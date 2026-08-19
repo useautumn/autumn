@@ -170,7 +170,7 @@ test.concurrent(
 					preview,
 					expected: {
 						planId: parentId,
-						versioningOptions: ["all_versions"],
+						versioningOptions: ["all_versions", "existing"],
 						licenseChanges: [
 							{
 								action: "updated",

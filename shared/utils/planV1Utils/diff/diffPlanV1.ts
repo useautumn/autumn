@@ -260,9 +260,11 @@ export const customizePlanV1DiffsEqual = ({
 export const diffPlanV1 = ({
 	from,
 	to,
+	includeAdds = false,
 }: {
 	from: DiffablePlanV1;
 	to: DiffablePlanV1;
+	includeAdds?: boolean;
 }): DiffedCustomizePlanV1 => {
 	const diff: DiffedCustomizePlanV1 = {};
 
@@ -300,7 +302,14 @@ export const diffPlanV1 = ({
 		}
 	}
 
-	Object.assign(diff, diffPlanLicenses({ from: from.licenses, to: to.licenses }));
+	Object.assign(
+		diff,
+		diffPlanLicenses({
+			from: from.licenses,
+			to: to.licenses,
+			includeAdds,
+		}),
+	);
 
 	return diff;
 };

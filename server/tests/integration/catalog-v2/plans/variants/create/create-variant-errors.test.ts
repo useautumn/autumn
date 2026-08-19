@@ -8,6 +8,7 @@
  *   - is_default on a variant → variant_cannot_be_default
  *   - variant_plan_id === plan_id → 400
  *   - duplicate variant_plan_id → 400
+ *   - listed in variants[] and as a top-level plan → 400
  */
 
 import { test } from "bun:test";
@@ -180,6 +181,34 @@ test.concurrent(
 									{ variant_plan_id: variantId, name: "EU 2" },
 								],
 							},
+						],
+					}),
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants: top-level and variants[] together → 400")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_both_b");
+		const variantId = uniqueTestId("cv2_var_both_v");
+		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		try {
+			await seedBaseAndVariant({ autumnV2_3, baseId, variantId });
+			await expectAutumnError({
+				errCode: ErrCode.InvalidRequest,
+				func: () =>
+					autumnV2_3.catalogV2.update({
+						plans: [
+							{
+								plan_id: baseId,
+								variants: [{ variant_plan_id: variantId }],
+							},
+							{ plan_id: variantId },
 						],
 					}),
 			});

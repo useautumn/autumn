@@ -104,8 +104,8 @@ const siblingPlanParams = ({
 };
 
 /**
- * Version edge: a folded `all_versions` direct intent extends its edit to every
- * other existing version of the same plan via the latest current→next diff.
+ * Version edge: a folded direct intent extends to every other existing version
+ * of the same plan — `all_versions` content, and/or `unlink` on the pointer.
  */
 export const deriveVersionSiblingIntents = ({
 	intent,
@@ -117,9 +117,12 @@ export const deriveVersionSiblingIntents = ({
 	projectedProductStatesContext: ProductStatesContext;
 }): ProductUpsertIntent[] => {
 	if (intent.source !== "direct") return [];
-	if (intent.planParams.versioning !== "all_versions") return [];
+	const inheritAllVersions = intent.planParams.versioning === "all_versions";
+	if (!inheritAllVersions && !upsert.unlink) return [];
 
-	const contentEdit = contentEditFromLatest({ upsert });
+	const contentEdit = inheritAllVersions
+		? contentEditFromLatest({ upsert })
+		: undefined;
 	const versions =
 		projectedProductStatesContext.versionsByPlanId[intent.planParams.plan_id] ??
 		[];
@@ -127,18 +130,23 @@ export const deriveVersionSiblingIntents = ({
 	return versions
 		.filter((product) => product.version !== intent.productKey.version)
 		.map((product) => {
-			const editDiff = mergeEdits({
-				contentEdit,
-				licenseEdit: licenseEditForSibling({ upsert, sibling: product }),
-			});
+			const editDiff = inheritAllVersions
+				? mergeEdits({
+						contentEdit,
+						licenseEdit: licenseEditForSibling({ upsert, sibling: product }),
+					})
+				: undefined;
 			return {
 				productKey: productToProductKey({ product }),
-				planParams: siblingPlanParams({
-					planParams: intent.planParams,
-					version: product.version,
-				}),
-				source: "all_versions" as const,
+				planParams: inheritAllVersions
+					? siblingPlanParams({
+							planParams: intent.planParams,
+							version: product.version,
+						})
+					: { plan_id: product.id, version: product.version },
+				source: inheritAllVersions ? ("all_versions" as const) : "repoint",
 				...(editDiff ? { editDiff } : {}),
+				...(upsert.unlink ? { unlink: true } : {}),
 			};
 		});
 };

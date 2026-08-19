@@ -25,20 +25,12 @@ const productLicenses = ({
 	product: ProductWithLicenses;
 }): FullPlanLicense[] => product.licenses ?? [];
 
-const stockPlan = ({
-	link,
-}: {
-	link: FullPlanLicense;
-}): ApiPlanV1 =>
+const stockPlan = ({ link }: { link: FullPlanLicense }): ApiPlanV1 =>
 	fullProductToApiPlanV1Sync({
 		product: link.base_product ?? link.product,
 	});
 
-const effectivePlan = ({
-	link,
-}: {
-	link: FullPlanLicense;
-}): ApiPlanV1 =>
+const effectivePlan = ({ link }: { link: FullPlanLicense }): ApiPlanV1 =>
 	fullProductToApiPlanV1Sync({
 		product: link.product,
 	});
@@ -176,5 +168,6 @@ export const computeUpsertLicensesForVariants = ({
 			toApiPlanLicenseSnapshot({ license: link }),
 		),
 		to: nextLicenses,
+		includeAdds: true,
 	});
 };

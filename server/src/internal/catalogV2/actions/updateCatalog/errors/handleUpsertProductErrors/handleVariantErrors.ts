@@ -48,9 +48,11 @@ const rejectInvalidPropagationTarget = ({
 export const handleVariantErrors = ({
 	upsert,
 	productStatesContext,
+	directPlanIds,
 }: {
 	upsert: UpsertProductPlan;
 	productStatesContext: ProductStatesContext;
+	directPlanIds: Set<string>;
 }): void => {
 	const declaredVariants = upsert.declaredVariants ?? [];
 	const propagateTargets = upsert.propagate?.variants ?? [];
@@ -87,6 +89,14 @@ export const handleVariantErrors = ({
 		if (variant.variant_plan_id === upsert.row.planId) {
 			throw new RecaseError({
 				message: `Plan ${upsert.row.planId} cannot be its own variant.`,
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
+		if (directPlanIds.has(variant.variant_plan_id)) {
+			throw new RecaseError({
+				message: `Plan ${variant.variant_plan_id} cannot appear both as a top-level plan and in variants[]`,
 				code: ErrCode.InvalidRequest,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});

@@ -30,13 +30,16 @@ const byLicensePlanId = <T extends { license_plan_id: string }>(
 	right: T,
 ): number => left.license_plan_id.localeCompare(right.license_plan_id);
 
-/** Link-field patch. `version` / expanded `plan` are display — ignored. */
+/** Link-field patch. `version` / expanded `plan` are display — ignored.
+ * New links are skipped unless `includeAdds` — those are lifecycle, not terms. */
 export const diffPlanLicenses = ({
 	from,
 	to,
+	includeAdds = false,
 }: {
 	from?: ApiPlanLicenseV1[];
 	to?: ApiPlanLicenseV1[];
+	includeAdds?: boolean;
 }): {
 	upsert_licenses?: CustomizePlanLicense[];
 	remove_licenses?: RemovePlanLicense[];
@@ -51,8 +54,11 @@ export const diffPlanLicenses = ({
 	const upsert_licenses: CustomizePlanLicense[] = [];
 	for (const toLicense of toById.values()) {
 		const fromLicense = fromById.get(toLicense.license_plan_id);
-		if (!fromLicense) continue;
-		if (planLicensesAreSame({ left: fromLicense, right: toLicense })) {
+		if (!fromLicense && !includeAdds) continue;
+		if (
+			fromLicense &&
+			planLicensesAreSame({ left: fromLicense, right: toLicense })
+		) {
 			continue;
 		}
 		upsert_licenses.push(

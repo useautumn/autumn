@@ -4,7 +4,8 @@
  * mint a plan that is not a license parent.
  */
 import { expect, test } from "bun:test";
-import AutumnError from "@/external/autumn/autumnCli.js";
+import { ErrCode } from "@autumn/shared";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
@@ -342,19 +343,20 @@ test.concurrent(
 				});
 				await seedVersionableCustomer({ ctx, planId: otherId });
 
-				try {
-					await bumpChild({
-						autumn: autumnV2_3,
-						childId,
-						propagate: {
-							license_parents: [
-								{ plan_id: otherId, versioning: "new_version" },
-							],
-						},
-					});
-				} catch (error) {
-					expect(error).toBeInstanceOf(AutumnError);
-				}
+				await expectAutumnError({
+					errCode: ErrCode.InvalidPropagationTarget,
+					errMessage: `Invalid propagation target: ${otherId}`,
+					func: () =>
+						bumpChild({
+							autumn: autumnV2_3,
+							childId,
+							propagate: {
+								license_parents: [
+									{ plan_id: otherId, versioning: "new_version" },
+								],
+							},
+						}),
+				});
 
 				await expectLatestPlanVersion({
 					ctx,

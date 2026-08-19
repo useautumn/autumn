@@ -1,6 +1,7 @@
 import { handleArchivedPropagationErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleArchivedPropagationErrors";
 import { handleDefaultFlagErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleDefaultFlagErrors";
 import { handleFreeTrialErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleFreeTrialErrors";
+import { handleLicenseParentPropagationErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleLicenseParentPropagationErrors";
 import { handlePlanLicenseErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handlePlanLicenseErrors";
 import { handleVariantErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleVariantErrors";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
@@ -14,6 +15,12 @@ export const handleUpsertProductErrors = ({
 	updateCatalogPlan: UpdateCatalogPlan;
 	productStatesContext: ProductStatesContext;
 }): void => {
+	const directPlanIds = new Set(
+		updateCatalogPlan.upsertProducts
+			.filter((upsert) => upsert.row.source === "direct")
+			.map((upsert) => upsert.row.planId),
+	);
+
 	for (const upsert of updateCatalogPlan.upsertProducts) {
 		const { nextFullProduct } = upsert.row;
 		const latestExistingVersion =
@@ -26,8 +33,9 @@ export const handleUpsertProductErrors = ({
 		handleDefaultFlagErrors({ nextFullProduct, latestExistingVersion });
 
 		// 3. Declared variants[] create / nest / id-collision
-		handleVariantErrors({ upsert, productStatesContext });
+		handleVariantErrors({ upsert, productStatesContext, directPlanIds });
 		handleArchivedPropagationErrors({ upsert, productStatesContext });
+		handleLicenseParentPropagationErrors({ upsert });
 
 		// 4. Declared plan_license link guards
 		handlePlanLicenseErrors({ upsert });

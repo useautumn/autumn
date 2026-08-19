@@ -393,7 +393,15 @@ test.concurrent(
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_spid");
-		const stripePriceId = `price_stub_${planId}`;
+		const stripeProduct = await ctx.stripeCli.products.create({
+			name: `Stripe Price Threaded ${planId}`,
+		});
+		const stripePrice = await ctx.stripeCli.prices.create({
+			product: stripeProduct.id,
+			currency: "usd",
+			unit_amount: 50,
+			recurring: { interval: "month" },
+		});
 		const params = {
 			plans: [
 				{
@@ -405,7 +413,7 @@ test.concurrent(
 							included: 100,
 							reset: { interval: ResetInterval.Month },
 							price: {
-								stripe_price_id: stripePriceId,
+								stripe_price_id: stripePrice.id,
 								amount: 0.5,
 								interval: BillingInterval.Month,
 								billing_method: BillingMethod.UsageBased,
@@ -432,7 +440,7 @@ test.concurrent(
 			});
 			const usagePrice = full.prices.find((price) => !isFixedPrice(price));
 			const config = usagePrice?.config as { stripe_price_id?: string | null };
-			expect(config?.stripe_price_id).toBe(stripePriceId);
+			expect(config?.stripe_price_id).toBe(stripePrice.id);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}

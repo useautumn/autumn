@@ -129,7 +129,10 @@ test.concurrent(
 		const { autumnV2_3, ctx } = await initScenario({
 			customerId: `reward-mig-inplace-${suffix}`,
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: `rmig-inplace-${suffix}@autumn.test`,
+				}),
 				s.customer({}),
 				s.products({ list: [pro] }),
 			],
@@ -176,7 +179,10 @@ test.concurrent(
 		const { autumnV2_3, ctx } = await initScenario({
 			customerId: `reward-mig-mint-${suffix}`,
 			setup: [
-				s.platform.create({ setupDefaultFeatures: true }),
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: `rmig-mint-${suffix}@autumn.test`,
+				}),
 				s.customer({}),
 				s.products({ list: [pro] }),
 			],
