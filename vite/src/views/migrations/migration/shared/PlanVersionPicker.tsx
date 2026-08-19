@@ -3,23 +3,24 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@autumn/ui";
 import { PackageIcon, XIcon } from "@phosphor-icons/react";
+import { PlanVersionScopeItems } from "@/components/plans/PlanVersionScopeItems";
+import {
+	planScopeIncludesVersion,
+	planScopeIsWholePlan,
+	toggleWholePlan,
+} from "@/components/plans/planScopeSelection";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { normalizePlanKeys, parsePlanKey } from "@/lib/planSelectionKeys";
 import { cn } from "@/lib/utils";
 import { getVersionCounts } from "@/utils/productUtils";
-import { makePlanKey, parsePlanKey } from "../filters/filterRowTypes";
 
 const MAX_VISIBLE_CHIPS = 3;
-
-const normalizePlanKeys = (keys: string[]) => [
-	...new Set(keys.map((key) => key.trim()).filter(Boolean)),
-];
 
 /**
  * Multi-select plan picker. A selection is either a whole plan (any version,
@@ -46,31 +47,11 @@ export function PlanVersionPicker({
 	);
 	const nameById = new Map(uniquePlans.map((plan) => [plan.id, plan.name]));
 
-	const isWhole = (planId: string) => selectedKeys.includes(planId);
-	const isVersion = (planId: string, version: number) =>
-		selectedKeys.includes(makePlanKey({ planId, version }));
+	const isWhole = (planId: string) =>
+		planScopeIsWholePlan({ selectedKeys, planId });
 
-	const toggleWhole = (planId: string) => {
-		if (isWhole(planId)) {
-			onChange(selectedKeys.filter((key) => key !== planId));
-			return;
-		}
-		// Whole plan supersedes any pinned versions of the same plan.
-		const cleared = selectedKeys.filter(
-			(key) => parsePlanKey(key).planId !== planId,
-		);
-		onChange([...cleared, planId]);
-	};
-
-	const toggleVersion = (planId: string, version: number) => {
-		const key = makePlanKey({ planId, version });
-		if (selectedKeys.includes(key)) {
-			onChange(selectedKeys.filter((existing) => existing !== key));
-			return;
-		}
-		// A specific version supersedes the whole-plan pick.
-		onChange([...selectedKeys.filter((existing) => existing !== planId), key]);
-	};
+	const toggleWhole = (planId: string) =>
+		onChange(toggleWholePlan({ selectedKeys, planId }));
 
 	const removeKey = (key: string) =>
 		onChange(selectedKeys.filter((existing) => existing !== key));
@@ -155,7 +136,11 @@ export function PlanVersionPicker({
 									(_, i) => i + 1,
 								);
 								const anyVersionPinned = versions.some((version) =>
-									isVersion(plan.id, version),
+									planScopeIncludesVersion({
+										selectedKeys,
+										planId: plan.id,
+										version,
+									}),
 								);
 
 								return (
@@ -175,41 +160,12 @@ export function PlanVersionPicker({
 											<span className="truncate">{plan.name}</span>
 										</DropdownMenuSubTrigger>
 										<DropdownMenuSubContent>
-											<DropdownMenuItem
-												className="flex cursor-pointer items-center gap-2 font-medium"
-												closeOnClick={false}
-												onClick={(e) => {
-													e.preventDefault();
-													toggleWhole(plan.id);
-												}}
-											>
-												<Checkbox
-													checked={isWhole(plan.id)}
-													className="border-border"
-												/>
-												All versions
-											</DropdownMenuItem>
-											<DropdownMenuSeparator />
-											{versions.map((version) => (
-												<DropdownMenuItem
-													className="flex cursor-pointer items-center gap-2 text-sm"
-													closeOnClick={false}
-													key={`${plan.id}:${version}`}
-													onClick={(e) => {
-														e.preventDefault();
-														toggleVersion(plan.id, version);
-													}}
-												>
-													<Checkbox
-														checked={isVersion(plan.id, version)}
-														indeterminate={
-															isWhole(plan.id) && !isVersion(plan.id, version)
-														}
-														className="border-border"
-													/>
-													v{version}
-												</DropdownMenuItem>
-											))}
+											<PlanVersionScopeItems
+												onChange={onChange}
+												planId={plan.id}
+												selectedKeys={selectedKeys}
+												versions={versions}
+											/>
 										</DropdownMenuSubContent>
 									</DropdownMenuSub>
 								);

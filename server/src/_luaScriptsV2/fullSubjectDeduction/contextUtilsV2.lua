@@ -142,14 +142,14 @@ local function update_in_memory_customer_entitlement_mutation(params)
     end
 
     target[entity_id].balance =
-      (target[entity_id].balance or 0) + balance_delta
+      safe_number(target[entity_id].balance) + balance_delta
     target[entity_id].adjustment =
-      (target[entity_id].adjustment or 0) + adjustment_delta
+      safe_number(target[entity_id].adjustment) + adjustment_delta
     return
   end
 
-  target.balance = (target.balance or 0) + balance_delta
-  target.adjustment = (target.adjustment or 0) + adjustment_delta
+  target.balance = safe_number(target.balance) + balance_delta
+  target.adjustment = safe_number(target.adjustment) + adjustment_delta
 
   if target.subject_balance then
     target.subject_balance.balance = target.balance

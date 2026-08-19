@@ -63,6 +63,8 @@ const ISOLATION: Record<string, string> = {
 	STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 	NODE_ENV: "development",
 	INFISICAL_ENVIRONMENT: "dev",
+	TESTS_ORG: "unit-test-org",
+	TESTS_ORG_ID: "org_2sWv2S8LJ9iaTjLI6UtNsfL88Kt",
 };
 
 const HEADER = `# -----------------------------------------------------------------------

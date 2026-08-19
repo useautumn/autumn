@@ -1,6 +1,10 @@
+import type { Feature } from "@autumn/shared";
 import { UsersIcon, WarningIcon } from "@phosphor-icons/react";
-import { ItemChangeList } from "@/components/v2/ItemChangeList";
-import type { MigrateTarget, MigrateTargetRow } from "./buildMigrateTargets";
+import type {
+	CatalogMigrateTarget,
+	CatalogMigrateTargetRow,
+} from "../catalog/catalogPlanPreview";
+import { TargetDiffPreview } from "./TargetDiffPreview";
 import { conflictSentence } from "./variantConflicts";
 
 function MetaBadge({ children }: { children: React.ReactNode }) {
@@ -15,7 +19,7 @@ function VersionStatusBadges({
 	row,
 	showCustomers,
 }: {
-	row: MigrateTargetRow;
+	row: CatalogMigrateTargetRow;
 	showCustomers: boolean;
 }) {
 	let status = "";
@@ -42,59 +46,22 @@ function VersionStatusBadges({
 }
 
 function VersionBody({
+	features,
 	row,
 	showSettings,
 }: {
-	row: MigrateTargetRow;
+	features?: Feature[];
+	row: CatalogMigrateTargetRow;
 	showSettings: boolean;
 }) {
-	// Settings (config, billing controls, …) are a global metadata patch shared by
-	// every version, so the mixed-change view surfaces them once above the targets.
-	const settingChanges = showSettings ? row.settingChanges : [];
-	const hasChanges =
-		row.itemChanges.length > 0 ||
-		row.hasPriceChange ||
-		row.licenseChanges.length > 0 ||
-		settingChanges.length > 0;
 	return (
 		<div className="flex flex-col gap-1.5">
-			{row.itemChanges.length > 0 && (
-				<ItemChangeList itemChanges={row.itemChanges} />
-			)}
-			{row.hasPriceChange && (
-				<span className="text-tertiary-foreground text-xs">
-					Base price change
-				</span>
-			)}
-			{row.licenseChanges.map((license) => (
-				<div className="flex flex-col gap-1" key={license.licensePlanId}>
-					<span className="text-tertiary-foreground text-xs">
-						On license{" "}
-						<span className="font-medium text-foreground">
-							{license.licensePlanId}
-						</span>
-					</span>
-					{license.itemChanges.length > 0 && (
-						<ItemChangeList itemChanges={license.itemChanges} />
-					)}
-					{license.hasPriceChange && (
-						<span className="text-tertiary-foreground text-xs">
-							Seat price change
-						</span>
-					)}
-				</div>
-			))}
-			{settingChanges.map((change) => (
-				<div className="flex items-center gap-1.5 text-xs" key={change.key}>
-					<span className="font-medium text-foreground">{change.label}</span>
-					<span className="text-muted-foreground">{change.detail}</span>
-				</div>
-			))}
-			{!hasChanges && (
-				<span className="text-tertiary-foreground/70 text-xs italic">
-					No changes
-				</span>
-			)}
+			<TargetDiffPreview
+				diff={row}
+				emptyLabel="No changes"
+				features={features}
+				showSettings={showSettings}
+			/>
 			{row.conflicts.map((conflict, index) => (
 				<span
 					className="text-amber-600 text-xs dark:text-amber-500"
@@ -114,11 +81,13 @@ const ROLE_LABEL = {
 } as const;
 
 export function MigrateTargetsStep({
+	features,
 	targets,
 	showCustomers = true,
 	showSettings = true,
 }: {
-	targets: MigrateTarget[];
+	features?: Feature[];
+	targets: CatalogMigrateTarget[];
 	showCustomers?: boolean;
 	showSettings?: boolean;
 }) {
@@ -152,7 +121,11 @@ export function MigrateTargetsStep({
 							</div>
 						</div>
 						{singleRow ? (
-							<VersionBody row={target.rows[0]} showSettings={showSettings} />
+							<VersionBody
+								features={features}
+								row={target.rows[0]}
+								showSettings={showSettings}
+							/>
 						) : (
 							<div className="flex flex-col gap-2">
 								{target.rows.map((row) => (
@@ -161,7 +134,11 @@ export function MigrateTargetsStep({
 											row={row}
 											showCustomers={showCustomers}
 										/>
-										<VersionBody row={row} showSettings={showSettings} />
+										<VersionBody
+											features={features}
+											row={row}
+											showSettings={showSettings}
+										/>
 									</div>
 								))}
 							</div>

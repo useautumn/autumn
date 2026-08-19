@@ -1,3 +1,4 @@
+import { isCloudAgent } from "@autumn/env";
 import { ensurePublicAccess } from "../helpers/cloudflare.ts";
 import { ensureLocalInfra } from "../helpers/localInfra.ts";
 import {
@@ -5,6 +6,7 @@ import {
 	registerCurrentWorktree,
 	saveRegistry,
 } from "../helpers/registry.ts";
+import { autoEnsureLocalTestOrg } from "../helpers/setup.ts";
 import { fatal, log } from "../helpers/shell.ts";
 import type { RegistryEntry } from "../types.ts";
 
@@ -20,6 +22,9 @@ export async function cmdStart(): Promise<RegistryEntry> {
 	);
 
 	ensureLocalInfra();
+	if (isCloudAgent()) {
+		await autoEnsureLocalTestOrg();
+	}
 	const entry = await ensurePublicAccess(entry0);
 	const registry = loadRegistry();
 	registry[entry.path] = entry;

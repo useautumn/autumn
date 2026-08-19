@@ -1252,8 +1252,8 @@ test(`${chalk.yellowBright("catalog: preview_update includes auto-propagated var
 	expect(variantPreview).toMatchObject({
 		plan_id: variantId,
 		will_apply: false,
+		name: "Annual",
 		previous_attributes: {
-			name: "Annual",
 			add_on: false,
 		},
 	});
@@ -1560,7 +1560,7 @@ test(`${chalk.yellowBright("catalog: update auto-propagates base settings to var
 	const variant = await autumnV2_2.post("/plans.get", {
 		plan_id: variantId,
 	});
-	expect(variant.name).toBe("Base Renamed");
+	expect(variant.name).toBe("Annual");
 	expect(variant.add_on).toBe(true);
 	expect(variant.group).toBe("team");
 	expect(variant.config?.ignore_past_due).toBe(true);

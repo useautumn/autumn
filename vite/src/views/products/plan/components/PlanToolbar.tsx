@@ -32,6 +32,7 @@ export const PlanToolbar = () => {
 			<DeletePlanDialog
 				open={deleteOpen}
 				setOpen={setDeleteOpen}
+				dropdownOpen={dropdownOpen}
 				onDeleteSuccess={async () => {
 					pushPage({
 						navigate,

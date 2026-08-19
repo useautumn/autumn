@@ -1,63 +1,80 @@
-import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
-import type { CustomizePlanLicense } from "@models/licenseModels/licenseModels.js";
+import type { ApiPlanLicenseV1 } from "@api/products/apiPlanLicenseV1.js";
+import type {
+	CustomizePlanLicense,
+	RemovePlanLicense,
+} from "@models/licenseModels/licenseModels.js";
+import {
+	hasLicenseCustomize,
+	planLicensesAreSame,
+} from "./comparePlanLicenses.js";
 
-type ApiPlanLicense = NonNullable<ApiPlanV1["licenses"]>[number];
-type CustomizeEqual = (args: {
-	left?: ApiPlanLicense["customize"];
-	right?: ApiPlanLicense["customize"];
-}) => boolean;
-
-const byLicensePlanId = (licenses: ApiPlanV1["licenses"]) =>
-	new Map(
-		(licenses ?? []).map((license) => [license.license_plan_id, license]),
-	);
-
-/** A cleared customize is expressed as null so the op restores inheritance. */
-const toCustomizeParams = (
-	license: ApiPlanLicense,
-): CustomizePlanLicense["customize"] => {
-	const customize = license.customize;
-	if (!customize) return null;
-	return {
-		...(customize.price !== undefined ? { price: customize.price } : {}),
-		...(customize.add_items !== undefined
-			? { add_items: customize.add_items }
+const toUpsertLicense = ({
+	license,
+	clearCustomize = false,
+}: {
+	license: ApiPlanLicenseV1;
+	clearCustomize?: boolean;
+}): CustomizePlanLicense => ({
+	license_plan_id: license.license_plan_id,
+	included: license.included,
+	prepaid_only: license.prepaid_only,
+	...(clearCustomize
+		? { customize: null }
+		: hasLicenseCustomize(license.customize)
+			? { customize: license.customize }
 			: {}),
-		...(customize.remove_items !== undefined
-			? { remove_items: customize.remove_items }
-			: {}),
-	};
-};
+});
 
-/** Links present on both sides whose customize changed. Added and removed links
- * are link lifecycle, not plan terms, so they produce no entry. */
+const byLicensePlanId = <T extends { license_plan_id: string }>(
+	left: T,
+	right: T,
+): number => left.license_plan_id.localeCompare(right.license_plan_id);
+
+/** Link-field patch. `version` / expanded `plan` are display — ignored.
+ * New links are skipped unless `includeAdds` — those are lifecycle, not terms. */
 export const diffPlanLicenses = ({
 	from,
 	to,
-	customizeEqual,
+	includeAdds = false,
 }: {
-	from: ApiPlanV1;
-	to: ApiPlanV1;
-	customizeEqual: CustomizeEqual;
-}): CustomizePlanLicense[] => {
-	const fromByPlanId = byLicensePlanId(from.licenses);
+	from?: ApiPlanLicenseV1[];
+	to?: ApiPlanLicenseV1[];
+	includeAdds?: boolean;
+}): {
+	upsert_licenses?: CustomizePlanLicense[];
+	remove_licenses?: RemovePlanLicense[];
+} => {
+	const fromById = new Map(
+		(from ?? []).map((license) => [license.license_plan_id, license]),
+	);
+	const toById = new Map(
+		(to ?? []).map((license) => [license.license_plan_id, license]),
+	);
 
-	const changed: CustomizePlanLicense[] = [];
-	for (const toLicense of to.licenses ?? []) {
-		const fromLicense = fromByPlanId.get(toLicense.license_plan_id);
-		if (!fromLicense) continue;
+	const upsert_licenses: CustomizePlanLicense[] = [];
+	for (const toLicense of toById.values()) {
+		const fromLicense = fromById.get(toLicense.license_plan_id);
+		if (!fromLicense && !includeAdds) continue;
 		if (
-			customizeEqual({
-				left: fromLicense.customize,
-				right: toLicense.customize,
-			})
+			fromLicense &&
+			planLicensesAreSame({ left: fromLicense, right: toLicense })
 		) {
 			continue;
 		}
-		changed.push({
-			license_plan_id: toLicense.license_plan_id,
-			customize: toCustomizeParams(toLicense),
-		});
+		upsert_licenses.push(
+			toUpsertLicense({
+				license: toLicense,
+				clearCustomize:
+					fromLicense != null &&
+					hasLicenseCustomize(fromLicense.customize) &&
+					!hasLicenseCustomize(toLicense.customize),
+			}),
+		);
 	}
-	return changed;
+
+	return {
+		...(upsert_licenses.length > 0
+			? { upsert_licenses: upsert_licenses.sort(byLicensePlanId) }
+			: {}),
+	};
 };

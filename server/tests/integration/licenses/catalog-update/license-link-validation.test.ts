@@ -2,7 +2,7 @@
 // The pooled catalog plan remains valid, and rejection persists no parent-to-license link.
 
 import { expect, test } from "bun:test";
-import { type ApiPlanV1, ErrCode } from "@autumn/shared";
+import { type ApiPlanExpandedV1, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
@@ -44,7 +44,7 @@ test.concurrent(
 		});
 		const plan = (await autumnV2_2.post("/plans.get", {
 			plan_id: monthlyParent.id,
-		})) as ApiPlanV1;
+		})) as ApiPlanExpandedV1;
 
 		const list = plan.licenses ?? [];
 		expect(list).toHaveLength(2);
@@ -155,7 +155,7 @@ test.concurrent(
 
 		const persistedParent = (await autumnV2_2.post("/plans.get", {
 			plan_id: parent.id,
-		})) as ApiPlanV1;
+		})) as ApiPlanExpandedV1;
 		expect(persistedParent.licenses ?? []).toHaveLength(0);
 	},
 );
@@ -205,7 +205,7 @@ test.concurrent(
 
 		const persistedParent = (await autumnV2_2.post("/plans.get", {
 			plan_id: parent.id,
-		})) as ApiPlanV1;
+		})) as ApiPlanExpandedV1;
 		expect(persistedParent.licenses ?? []).toHaveLength(0);
 	},
 );

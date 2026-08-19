@@ -7,11 +7,12 @@ import { AreaRadioGroupItem, Button, RadioGroup, Switch } from "@autumn/ui";
 import { useMemo, useState } from "react";
 import { PlanDiffBody } from "@/components/v2/PlanDiffBody";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { getDefaultPropagationTargetIds } from "@/views/products/plan/versioning/getDefaultPropagationTargetIds";
 import {
+	emptyCatalogPlanChangeDiff,
 	type PropagationTarget,
-	PropagationTargetsStep,
-} from "@/views/products/plan/versioning/PropagationTargetsStep";
+} from "@/views/products/plan/catalog/catalogPlanPreview";
+import { getDefaultPropagationTargetIds } from "@/views/products/plan/versioning/getDefaultPropagationTargetIds";
+import { VariantTargetsStep } from "@/views/products/plan/versioning/VariantTargetsStep";
 import type { LeafCatalogDecision } from "../chatTypes";
 
 const isVersionableChange = (plan: CatalogPlanPreview) =>
@@ -61,6 +62,7 @@ export function CatalogDecisionCard({
 				name: variant.name,
 				detail: variant.plan_id,
 				conflicts: variant.conflicts ?? [],
+				...emptyCatalogPlanChangeDiff(),
 				itemChanges: variant.item_changes ?? [],
 			})),
 		[variants],
@@ -133,7 +135,7 @@ export function CatalogDecisionCard({
 					<span className="font-medium text-tertiary-foreground text-xs">
 						Variants
 					</span>
-					<PropagationTargetsStep
+					<VariantTargetsStep
 						onToggle={(id) =>
 							setSelectedVariantIds((prev) =>
 								prev.includes(id)

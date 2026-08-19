@@ -140,6 +140,7 @@ const product = {
 	internal_id: "prod_internal",
 	is_add_on: false,
 	base_variant_id: null,
+	base_internal_product_id: null,
 	prices: [catalogPrice],
 } as FullProduct;
 const snapshot = {

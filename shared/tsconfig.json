@@ -11,6 +11,7 @@
 		"target": "ES2020",
 		"outDir": "./dist",
 		"rootDir": ".",
+		"types": ["bun", "node"],
 		"paths": {
 			"@api/*": ["./api/*"],
 			"@models/*": ["./models/*"],
@@ -19,7 +20,6 @@
 		}
 	},
 	"include": ["./**/*"],
-	"types": ["node"],
 	"exclude": ["node_modules", "dist"],
 	"references": [
 		{ "path": "../packages/ksuid" }

@@ -1,3 +1,4 @@
+import type { ApiPlanLicenseV1 } from "@api/products/apiPlanLicenseV1.js";
 import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 import { ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
@@ -26,12 +27,14 @@ export const productV2ToApiPlanV1 = ({
 	features,
 	currency,
 	customerEligibility,
+	licenses,
 }: {
 	product: ProductV2;
 	features: Feature[];
 	currency?: string;
 	customerEligibility?: ApiPlanV1["customer_eligibility"];
-}): ApiPlanV1 => {
+	licenses?: ApiPlanLicenseV1[];
+}): ApiPlanV1 & { licenses?: ApiPlanLicenseV1[] } => {
 	const sortedItems = sortProductItems(product.items, features);
 
 	const basePriceItem = productV2ToBasePrice({
@@ -86,7 +89,7 @@ export const productV2ToApiPlanV1 = ({
 			}
 		: undefined;
 
-	return ApiPlanV1Schema.parse({
+	const plan = ApiPlanV1Schema.parse({
 		id: product.id,
 		name: product.name || "",
 		description: product.description || null,
@@ -105,7 +108,11 @@ export const productV2ToApiPlanV1 = ({
 			...product.config,
 			ignore_past_due: product.config?.ignore_past_due ?? false,
 		},
+		billing_controls: product.billing_controls,
 		metadata: product.metadata ?? {},
 		customer_eligibility: customerEligibility,
 	} satisfies ApiPlanV1);
+
+	if (!licenses?.length) return plan;
+	return { ...plan, licenses };
 };

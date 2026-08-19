@@ -1,8 +1,13 @@
 import {
 	AllowanceType,
-	type EntInterval,
+	EntInterval,
+	type Entitlement,
+	type EntitlementPrice,
+	type EntitlementWithFeature,
 	FeatureType,
+	FeatureUsageType,
 	type ModelMarkups,
+	type Price,
 	type RolloverConfig,
 } from "@autumn/shared";
 import { features } from "./features";
@@ -61,10 +66,67 @@ const create = ({
 	}),
 });
 
+const defaultMessagesFeature = () =>
+	features.create({
+		id: "messages",
+		internalId: "feat_internal_messages",
+		name: "Messages",
+		config: { usage_type: FeatureUsageType.Single },
+	});
+
+/** Stable-id entitlement for field-level comparison tests. */
+const build = (overrides: Partial<Entitlement> = {}): Entitlement => {
+	const feature = defaultMessagesFeature();
+	return {
+		id: "ent_1",
+		created_at: 1_800_000_000_000,
+		internal_feature_id: feature.internal_id,
+		internal_product_id: "prod_internal",
+		is_custom: false,
+		allowance_type: AllowanceType.Fixed,
+		allowance: 100,
+		interval: EntInterval.Month,
+		interval_count: 1,
+		carry_from_previous: false,
+		entity_feature_id: null,
+		pooled: false,
+		org_id: "org_test",
+		feature_id: feature.id,
+		usage_limit: null,
+		rollover: null,
+		...overrides,
+	};
+};
+
+/** Stable-id entitlement with joined feature. */
+const buildWithFeature = (
+	overrides: Partial<EntitlementWithFeature> = {},
+): EntitlementWithFeature => {
+	const { feature: featureOverride, ...rest } = overrides;
+	const feature = featureOverride ?? defaultMessagesFeature();
+	return {
+		...build(),
+		...rest,
+		feature,
+	};
+};
+
+/** Entitlement + optional price pair. */
+const buildPricePair = ({
+	entitlement = buildWithFeature(),
+	price,
+}: {
+	entitlement?: EntitlementWithFeature;
+	price?: Price;
+} = {}): EntitlementPrice => ({ entitlement, price });
+
 // ═══════════════════════════════════════════════════════════════════
 // EXPORT
 // ═══════════════════════════════════════════════════════════════════
 
 export const entitlements = {
 	create,
+	build,
+	buildWithFeature,
+	buildPricePair,
 } as const;
