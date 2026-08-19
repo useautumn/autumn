@@ -21,8 +21,6 @@ import {
 	Fields,
 	LinkButton,
 	Modal,
-	type ModalChild,
-	type ModalElement,
 	Select,
 	SelectOption,
 	Table,
@@ -1029,6 +1027,42 @@ const approvalPreviewBlocks = ({
 	}
 	// Every customize row is an add or a remove against the customer's current
 	// plan — the same diff the dashboard renders, so the two surfaces agree.
+	// A prepaid item's quantity is the money decision: shown on its own row it
+	// reads as "100 Project Slots (prepaid) · $10.00 / unit" instead of an
+	// unquantified add plus a detached "Quantities" line.
+	const prepaidByFeature = new Map(
+		display.prepaid.map((entry) => [entry.featureId, entry] as const),
+	);
+	const prepaidShownInline = new Set<string>();
+	const prepaidItemRow = ({
+		item,
+		row,
+	}: {
+		item: unknown;
+		row: ReturnType<typeof changeTableRow>;
+	}) => {
+		const record = getRecord(item);
+		const price = getRecord(record.price);
+		const featureId = getString(record.feature_id);
+		const entry = featureId ? prepaidByFeature.get(featureId) : undefined;
+		if (
+			!featureId ||
+			price.billing_method !== "prepaid" ||
+			entry?.quantity == null
+		) {
+			return row;
+		}
+		prepaidShownInline.add(featureId);
+		const names = getRecord(resolvedFeatureNames[featureId]);
+		const feature =
+			getString(entry.quantity === 1 ? names.singular : names.plural) ??
+			getString(names.name) ??
+			featureId;
+		return {
+			...row,
+			details: `${formatCount(entry.quantity)} ${feature} (prepaid)`,
+		};
+	};
 	const customizeRows = ({
 		currentPlan,
 		customize,
@@ -1068,7 +1102,11 @@ const approvalPreviewBlocks = ({
 					change: itemDisplay,
 					featureNames: resolvedFeatureNames,
 				});
-				return [{ ...row, details: details(row.details) }];
+				const shown =
+					change.kind === "add"
+						? prepaidItemRow({ item: change.item, row })
+						: row;
+				return [{ ...shown, details: details(shown.details) }];
 			},
 		);
 	};
@@ -1133,17 +1171,19 @@ const approvalPreviewBlocks = ({
 	}
 	// Prepaid quantities are silent money decisions — an omitted quantity
 	// defaults to 0 server-side, so the approver must see it either way.
-	const prepaidLines = display.prepaid.map((entry) => {
-		const feature = getRecord(resolvedFeatureNames[entry.featureId]);
-		const featureName = getString(feature.name) ?? entry.featureId;
-		return entry.quantity !== null
-			? `${featureName} — ${formatCount(entry.quantity)} prepaid`
-			: `⚠️ ${featureName} — prepaid quantity not set (defaults to 0${
-					entry.includedDefault
-						? `; plan includes ${formatCount(entry.includedDefault)}`
-						: ""
-				})`;
-	});
+	const prepaidLines = display.prepaid
+		.filter((entry) => !prepaidShownInline.has(entry.featureId))
+		.map((entry) => {
+			const feature = getRecord(resolvedFeatureNames[entry.featureId]);
+			const featureName = getString(feature.name) ?? entry.featureId;
+			return entry.quantity !== null
+				? `${featureName} — ${formatCount(entry.quantity)} prepaid`
+				: `⚠️ ${featureName} — prepaid quantity not set (defaults to 0${
+						entry.includedDefault
+							? `; plan includes ${formatCount(entry.includedDefault)}`
+							: ""
+					})`;
+		});
 	if (prepaidLines.length) {
 		blocks.push(CardText([bold("Quantities"), ...prepaidLines].join("\n")));
 	}
@@ -1318,12 +1358,6 @@ export const approvalCard = ({
 							}),
 						]
 					: []),
-				Button({
-					actionType: "modal",
-					id: "view_approval_payload",
-					label: "View request",
-					value: id,
-				}),
 			]),
 			CardText(
 				"Need a change? Reply in this thread and I’ll refresh the preview.",
@@ -1351,23 +1385,16 @@ export const approvalDetailsModal = ({
 		title: "Edit billing details",
 		children: [
 			Select({
-				id: "invoice",
-				initialOption: edits.invoice,
-				label: "Invoice",
+				id: "billing",
+				initialOption: edits.billing,
+				label: "Billing mode",
 				options: [
-					SelectOption({ label: "Disabled", value: "disabled" }),
-					SelectOption({ label: "Create draft invoice", value: "draft" }),
-					SelectOption({ label: "Finalize invoice", value: "finalized" }),
-				],
-			}),
-			Select({
-				id: "redirect",
-				initialOption: edits.redirect,
-				label: "Checkout",
-				options: [
-					SelectOption({ label: "Never", value: "never" }),
-					SelectOption({ label: "If required", value: "if_required" }),
-					SelectOption({ label: "Always", value: "always" }),
+					SelectOption({ label: "Checkout link", value: "checkout" }),
+					SelectOption({ label: "Draft invoice", value: "draft_invoice" }),
+					SelectOption({
+						label: "Finalized invoice",
+						value: "finalized_invoice",
+					}),
 				],
 			}),
 			Select({
@@ -1386,72 +1413,6 @@ export const approvalDetailsModal = ({
 				],
 			}),
 		],
-	});
-};
-
-// Slack caps modal titles at 24 chars and section text at ~3000.
-const MODAL_JSON_MAX_LENGTH = 2800;
-
-const requestActionLabel = (toolName: string) =>
-	normalizeToolName(toolName) === "attach" ? "Attach" : toolLabel(toolName);
-
-/** One labelled code block per request body. Only the body matters to the
- * reviewer — not wrapper fields like the agent's `intent` note. */
-const requestBodyBlocks = ({
-	env,
-	input,
-	position,
-	toolName,
-}: {
-	env?: AppEnv;
-	input?: Record<string, unknown>;
-	position?: { index: number; total: number };
-	toolName: string;
-}): ModalChild[] => {
-	const json = JSON.stringify(toolRequestFromArgs(input) ?? {}, null, 2);
-	const truncated =
-		json.length > MODAL_JSON_MAX_LENGTH
-			? `${json.slice(0, MODAL_JSON_MAX_LENGTH)}\n… (truncated)`
-			: json;
-	const step = position ? `${position.index} of ${position.total} · ` : "";
-	const target = env ? ` targeting ${env} environment` : "";
-	return [
-		CardText(`${step}${requestActionLabel(toolName)} request body${target}`, {
-			style: "muted",
-		}),
-		CardText(`\`\`\`\n${truncated}\n\`\`\``),
-	];
-};
-
-export const approvalPayloadModal = ({
-	env,
-	toolArgs,
-	toolName,
-}: {
-	env?: AppEnv;
-	toolArgs?: Record<string, unknown>;
-	toolName: string;
-}): ModalElement => {
-	// A grouped card approves every write it shows, so the reviewer sees each
-	// request body — not just the first.
-	const writes = [
-		{ input: toolArgs, toolName },
-		...withheldWritesFromToolArgs(toolArgs),
-	];
-	const total = writes.length;
-	return Modal({
-		callbackId: "approval_payload_modal",
-		closeLabel: "Close",
-		submitLabel: "Done",
-		title: "Request details",
-		children: writes.flatMap((write, index) =>
-			requestBodyBlocks({
-				env,
-				input: write.input,
-				position: total > 1 ? { index: index + 1, total } : undefined,
-				toolName: write.toolName,
-			}),
-		),
 	});
 };
 

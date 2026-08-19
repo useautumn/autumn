@@ -284,7 +284,7 @@ Carry the whole ladder over; don't replace it with just the custom tier or a fla
 ## Completion response
 
 - After the billing action succeeds, respond as concisely as possible: say the action completed successfully.
-- Surface any returned customer-facing URL, especially `payment_url` or `invoice.hosted_invoice_url`.
+- Surface any returned customer-facing URL, especially `payment_url` or `invoice.hosted_invoice_url`, as a markdown link so it is clickable: `[Checkout link](url)`, `[Invoice](url)`.
 - If an `invoice` is returned, mention its `status`, `stripe_id`, and hosted URL when present.
 - If `invoice.hosted_invoice_url` is missing but `invoice.stripe_id` exists, surface the Stripe dashboard invoice URL: sandbox `https://dashboard.stripe.com/test/invoices/{stripe_id}`, live `https://dashboard.stripe.com/invoices/{stripe_id}`.
 - If `required_action` is returned, explain the required payment action and include `payment_url` if present.
