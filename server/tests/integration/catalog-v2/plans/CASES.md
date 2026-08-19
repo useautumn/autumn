@@ -1153,3 +1153,14 @@ license parents that still exist after the batch. Same-call upsert+remove is
 | `migration.draft` on an archived plan → no draft | ✓ `remove/remove-plans-archived.test.ts` |
 | `plans[].archived: false` still unarchives (existing path) | ✓ already in `update/update-plan-details.test.ts` |
 
+### Unarchive width — `remove/unarchive-plans.test.ts`
+
+Archiving via `remove_plans` hits every version, so a symmetric unarchive needs
+`versioning: "all_versions"`. Default width stays latest-only (the dashboard
+sends `all_versions`).
+
+| Case | Status |
+|---|---|
+| `archived: false` + `all_versions` → every version unarchived | ✓ |
+| `archived: false` alone → latest unarchived, older versions stay archived | ✓ |
+

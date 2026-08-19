@@ -107,8 +107,15 @@ export const useDeletePlanDialog = ({
 	const handleConfirm = async () => {
 		try {
 			if (archived) {
+				// Archiving fans out to every version, so unarchiving must match.
 				await updateCatalog({
-					plans: [{ plan_id: product.id, archived: false }],
+					plans: [
+						{
+							plan_id: product.id,
+							archived: false,
+							versioning: "all_versions",
+						},
+					],
 				});
 				toast.success(`${product.name} unarchived successfully`);
 			} else {
