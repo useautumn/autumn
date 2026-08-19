@@ -40,7 +40,6 @@ const expectedAttachRequest = {
 	enable_plan_immediately: true,
 	entity_id: entityId,
 	invoice_mode: {
-		enable_plan_immediately: true,
 		enabled: true,
 		finalize: false,
 	},
@@ -61,7 +60,7 @@ initEval<EvalMetadata>({
 			conversation: [
 				user({
 					message:
-						"Please attach the Scale plan to a new customer that is not in Autumn yet.",
+						"Please attach the monthly Scale plan to a new customer that is not in Autumn yet.",
 				}),
 				user({
 					message:

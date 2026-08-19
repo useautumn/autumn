@@ -113,7 +113,6 @@ describe("Autumn MCP server", () => {
 			"listPlans",
 			"createPlan",
 			"getPlan",
-			"hasCustomers",
 			"updatePlan",
 			"listRewards",
 			"createReward",

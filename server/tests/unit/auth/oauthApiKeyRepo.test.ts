@@ -7,8 +7,8 @@ type GuardApiKey = Parameters<typeof isOAuthConsentLinkedApiKey>[0]["apiKey"];
 const oauthMeta = {
 	created_via: "oauth",
 	oauth_consent_id: "consent_123",
-	oauth_client_id: "autumn_mcp_cursor",
-	oauth_redirect_uri: "cursor://oauth/callback",
+	oauth_client_id: "oauth_client_2abcDEF",
+	oauth_redirect_uri: "cursor://anysphere.cursor-retrieval/callback",
 	env: AppEnv.Sandbox,
 };
 
@@ -25,8 +25,8 @@ const matchesConsent = (apiKey: GuardApiKey) =>
 	isOAuthConsentLinkedApiKey({
 		apiKey,
 		consentId: "consent_123",
-		clientId: "autumn_mcp_cursor",
-		redirectUri: "cursor://oauth/callback",
+		clientId: "oauth_client_2abcDEF",
+		redirectUri: "cursor://anysphere.cursor-retrieval/callback",
 		orgId: "org_123",
 		userId: "user_123",
 		env: AppEnv.Sandbox,
@@ -63,7 +63,7 @@ describe("isOAuthConsentLinkedApiKey", () => {
 			isOAuthConsentLinkedApiKey({
 				apiKey: baseApiKey,
 				consentId: "consent_123",
-				clientId: "autumn_mcp_cursor",
+				clientId: "oauth_client_2abcDEF",
 				redirectUri: "cursor://oauth/other-callback",
 				orgId: "org_123",
 				userId: "user_123",

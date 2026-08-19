@@ -19,6 +19,9 @@ export type ApprovalRunResult =
 	// `retryable` means the write never ran to completion (a session crash /
 	// interruption), so the approval stays pending and the user can re-apply.
 	| {
+			/** A write the resumed turn re-issued after a step failed — it still
+			 * needs its own card, or the session waits on it in silence. */
+			chainedApprovalId?: string;
 			error: true;
 			message: string;
 			retryable?: boolean;

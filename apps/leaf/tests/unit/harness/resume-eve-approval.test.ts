@@ -71,6 +71,17 @@ await mockLeafModule({
 	}),
 });
 
+const chainedInserts: { toolName: string }[] = [];
+await mockLeafModule({
+	specifier: "../../../src/internal/approvals/actions/createChainedApproval.js",
+	factory: () => ({
+		createChainedApproval: async (input: { chained: { toolName: string } }) => {
+			chainedInserts.push({ toolName: input.chained.toolName });
+			return `chained_${chainedInserts.length}`;
+		},
+	}),
+});
+
 const { discardApproval } = await import(
 	"../../../src/internal/approvals/actions/discardApproval.js"
 );
@@ -476,7 +487,12 @@ describe("same-tool groups attribute each result to its own step", () => {
 			callId,
 			output: failed
 				? {
-						content: [{ type: "text", text: '{"message":"Autumn API request failed (400): boom","code":"invalid_request"}' }],
+						content: [
+							{
+								type: "text",
+								text: '{"message":"Autumn API request failed (400): boom","code":"invalid_request"}',
+							},
+						],
 						isError: true,
 					}
 				: { content: [{ type: "text", text: '{"ok":true}' }] },
@@ -533,7 +549,9 @@ describe("grouped approval is surface-scoped", () => {
 			run_id: "eve_session_1",
 			tool_args: {
 				_eveSiblingRequestIds: ["req_2"],
-				_eveWithheldWrites: [{ requestId: "req_2", toolName: "autumn__attach" }],
+				_eveWithheldWrites: [
+					{ requestId: "req_2", toolName: "autumn__attach" },
+				],
 			},
 			tool_call_id: "req_1",
 			tool_name: "autumn__updateCustomer",
@@ -544,10 +562,21 @@ describe("grouped approval is surface-scoped", () => {
 		streamedEvents = [
 			{ type: "turn.started" },
 			{ type: "step.started" },
-			{ result: { callId: "c1", output: { ok: true }, toolName: "autumn__updateCustomer" }, status: "completed", type: "action.result" },
+			{
+				result: {
+					callId: "c1",
+					output: { ok: true },
+					toolName: "autumn__updateCustomer",
+				},
+				status: "completed",
+				type: "action.result",
+			},
 			{ type: "session.waiting" },
 		];
-		await resumeApproval({ approval: groupedFor("slack"), providerUserId: "U1" });
+		await resumeApproval({
+			approval: groupedFor("slack"),
+			providerUserId: "U1",
+		});
 		expect(postedResponses.at(-1)).toMatchObject({
 			approveSiblings: true,
 			siblingRequestIds: ["req_2"],
@@ -558,10 +587,129 @@ describe("grouped approval is surface-scoped", () => {
 		streamedEvents = [
 			{ type: "turn.started" },
 			{ type: "step.started" },
-			{ result: { callId: "c1", output: { ok: true }, toolName: "autumn__updateCustomer" }, status: "completed", type: "action.result" },
+			{
+				result: {
+					callId: "c1",
+					output: { ok: true },
+					toolName: "autumn__updateCustomer",
+				},
+				status: "completed",
+				type: "action.result",
+			},
 			{ type: "session.waiting" },
 		];
 		await resumeApproval({ approval: groupedFor("web"), providerUserId: "U1" });
 		expect(postedResponses.at(-1)?.approveSiblings).not.toBe(true);
+	});
+});
+
+// Internal Autumn threads run on the `slack_admin:<client>` provider and render
+// the same grouped card, so approving it must approve every write it showed.
+describe("grouped approvals on internal Slack threads", () => {
+	beforeEach(() => {
+		streamedEvents = EMPTY_TURN;
+		postedResponses.length = 0;
+	});
+
+	test("approves the siblings for a slack_admin provider", async () => {
+		await resumeApproval({
+			approval: {
+				...approval({ _eveSiblingRequestIds: ["req_2"] }),
+				provider: "slack_admin:7771931436213.11262719726241",
+			} as ChatApproval,
+			providerUserId: "U1",
+		});
+
+		expect(postedResponses).toEqual([
+			{
+				approveSiblings: true,
+				optionId: "approve",
+				requestId: "req_1",
+				siblingRequestIds: ["req_2"],
+			},
+		]);
+	});
+
+	test("withholds the siblings for the dashboard, which shows one write", async () => {
+		await resumeApproval({
+			approval: {
+				...approval({ _eveSiblingRequestIds: ["req_2"] }),
+				provider: "web",
+			} as ChatApproval,
+			providerUserId: "U1",
+		});
+
+		expect(postedResponses[0]?.approveSiblings).toBe(false);
+	});
+});
+
+// A sibling that eve rejected gets re-issued by the model as its own step; the
+// card for that re-park must still reach the surface even though the approval
+// itself is reported failed — otherwise the session waits on it in silence.
+describe("grouped approvals that fail a step and park again", () => {
+	beforeEach(() => {
+		postedResponses.length = 0;
+		chainedInserts.length = 0;
+	});
+
+	test("returns the chained approval alongside the failure", async () => {
+		streamedEvents = [
+			{ type: "turn.started" },
+			{ type: "step.started" },
+			{
+				result: {
+					callId: "c2",
+					output: {
+						approval: { requestId: "req_2", status: "denied" },
+						code: "TOOL_EXECUTION_DENIED",
+						message: "Tool execution was denied.",
+					},
+					toolName: "autumn__attach",
+				},
+				status: "rejected",
+				type: "action.result",
+			},
+			{
+				result: {
+					callId: "c1",
+					output: { ok: true },
+					toolName: "autumn__updateCustomer",
+				},
+				status: "completed",
+				type: "action.result",
+			},
+			{
+				requests: [
+					{
+						action: {
+							callId: "c3",
+							input: { request: { customer_id: "cus_1", plan_id: "pro" } },
+							toolName: "autumn__attach",
+						},
+						options: [
+							{ id: "approve", label: "Approve" },
+							{ id: "deny", label: "Deny" },
+						],
+						requestId: "req_3",
+					},
+				],
+				type: "input.requested",
+			},
+		];
+
+		const result = await resumeApproval({
+			approval: groupedApproval(),
+			providerUserId: "U1",
+		});
+
+		expect(chainedInserts).toEqual([{ toolName: "autumn__attach" }]);
+		expect(result).toMatchObject({
+			chainedApprovalId: "chained_1",
+			error: true,
+			steps: [
+				{ status: "applied", toolName: "autumn__updateCustomer" },
+				{ status: "failed", toolName: "autumn__attach" },
+			],
+		});
 	});
 });

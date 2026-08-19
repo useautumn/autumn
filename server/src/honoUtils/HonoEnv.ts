@@ -29,7 +29,6 @@ export type RequestContext = {
 	features: Feature[];
 	user?: User;
 	userId?: string;
-	oauthResource?: string;
 	customerId?: string;
 	entityId?: string;
 	requestBody?: unknown;

@@ -1,3 +1,4 @@
+import { agentRules } from "../../../fixtures/agentRules/index.js";
 import { withCustomers } from "../../../fixtures/createSetup.js";
 import {
 	api,
@@ -16,9 +17,10 @@ type EvalMetadata = {
 const experimentName = "billing-multi-write-chained-approvals";
 
 // Two customers already on Launch so a plan change is an update, and two more
-// with no plan so an attach is the only sensible write.
+// with no plan so an attach is the only sensible write. Customer-level billing:
+// entity rules would rightly make the agent stop and ask which workspace.
 const setup = withCustomers({
-	setup: orgSetups.knowledgePlatform(),
+	setup: { ...orgSetups.knowledgePlatform(), agentRules: agentRules.base() },
 	customers: ({ customers, plans }) => ({
 		acme: customers.base({
 			email: "billing+kp-customer-0100@acme-labs.example",
@@ -47,6 +49,7 @@ const setup = withCustomers({
 
 const { acme, beacon, redwood, summit } = setup.refs.customers;
 const scalePlan = setup.refs.plans.scale;
+const automationPack = setup.refs.plans.automationPack;
 
 initEval<EvalMetadata>({
 	experimentName,
@@ -60,7 +63,7 @@ initEval<EvalMetadata>({
 			name: "change email then attach a plan",
 			conversation: [
 				user({
-					message: `Update ${acme.name}'s email to finance@acme-labs.example, then put them on the Scale plan.`,
+					message: `Update ${acme.name}'s email to finance@acme-labs.example, then put them on the monthly Scale plan with the included 1,000 credits.`,
 					maxSteps: 20,
 				}),
 				approve({ optional: false }),
@@ -98,7 +101,7 @@ initEval<EvalMetadata>({
 			name: "attach one plan to several customers",
 			conversation: [
 				user({
-					message: `Put both ${acme.name} and ${beacon.name} on the Scale plan.`,
+					message: `Put both ${acme.name} and ${beacon.name} on the monthly Scale plan with the included 1,000 credits.`,
 					maxSteps: 20,
 				}),
 				approve({ optional: false }),
@@ -122,12 +125,12 @@ initEval<EvalMetadata>({
 			],
 		},
 		{
-			// Heterogeneous writes on one customer: an attach and an update to a
-			// different subscription cannot collapse into one call.
+			// Heterogeneous writes on one customer: an add-on attach and an update
+			// to the base subscription cannot collapse into one call.
 			name: "attach a plan and update another on the same customer",
 			conversation: [
 				user({
-					message: `Add the Scale plan to ${redwood.name}, and cancel their Launch plan at the end of the cycle.`,
+					message: `Add the Automation Pack add-on to ${redwood.name}, and cancel their Launch plan at the end of the cycle.`,
 					maxSteps: 20,
 				}),
 				approve({ optional: false }),
@@ -139,7 +142,7 @@ initEval<EvalMetadata>({
 				api.called({
 					calls: [
 						{
-							body: { customer_id: redwood.id, plan_id: scalePlan.id },
+							body: { customer_id: redwood.id, plan_id: automationPack.id },
 							toolName: "attach",
 						},
 						{
@@ -154,7 +157,7 @@ initEval<EvalMetadata>({
 			name: "attach for one customer and update another customer's plan",
 			conversation: [
 				user({
-					message: `Put ${beacon.name} on the Scale plan, and cancel ${summit.name}'s Launch plan at the end of the cycle.`,
+					message: `Put ${beacon.name} on the monthly Scale plan with the included 1,000 credits, and cancel ${summit.name}'s Launch plan at the end of the cycle.`,
 					maxSteps: 20,
 				}),
 				approve({ optional: false }),

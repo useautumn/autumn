@@ -13,6 +13,7 @@ import {
 	organizations,
 } from "@autumn/shared";
 import type { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
+import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { chatThreadContextsRepo } from "../../internal/chatThreadContexts/repos/chatThreadContextsRepo.js";
 import { replaceInstallationOAuthCredentials } from "../../internal/installations/actions/replaceInstallationOAuthCredentials.js";
@@ -105,17 +106,13 @@ const deleteInstallationArtifacts = async (
 	const credentials = await tx.query.chatOAuthCredentials.findMany({
 		where: eq(chatOAuthCredentials.chat_installation_id, installation.id),
 	});
-	const tokenHash = ({ token }: { token: string }) =>
-		crypto.createHash("sha256").update(token).digest("base64url");
 	const accessTokenHashes = credentials.map((credential) =>
-		tokenHash({
-			token: stripOAuthTokenPrefix({
-				token: decrypt(credential.access_token),
-			}),
-		}),
+		hashOAuthToken(
+			stripOAuthTokenPrefix({ token: decrypt(credential.access_token) }),
+		),
 	);
 	const refreshTokenHashes = credentials.map((credential) =>
-		tokenHash({ token: decrypt(credential.refresh_token) }),
+		hashOAuthToken(decrypt(credential.refresh_token)),
 	);
 
 	if (accessTokenHashes.length > 0) {

@@ -47,7 +47,6 @@ const expectedAttachRequest = {
 	enable_plan_immediately: true,
 	entity_id: workspace.id,
 	invoice_mode: {
-		enable_plan_immediately: true,
 		enabled: true,
 		finalize: false,
 	},

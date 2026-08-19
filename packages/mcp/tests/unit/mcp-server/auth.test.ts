@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { createAutumnClient } from "../../../src/server/auth/auth.js";
 import type { AutumnMcpAuth } from "../../../src/server/auth/auth.js";
+import { createAutumnClient } from "../../../src/server/auth/auth.js";
 
 const baseAuth: AutumnMcpAuth = {
 	apiKey: "am_sk_test",
@@ -21,10 +21,9 @@ describe("Autumn MCP auth client", () => {
 		);
 
 		expect(headers.get("x-autumn-environment")).toBeNull();
-		expect(headers.get("x-autumn-oauth-resource")).toBeNull();
 	});
 
-	test("omits environment for OAuth API calls", () => {
+	test("sends only the bearer for OAuth API calls", () => {
 		const headers = new Headers(
 			createAutumnClient({
 				...baseAuth,
@@ -33,9 +32,8 @@ describe("Autumn MCP auth client", () => {
 			}).headers as HeadersInit,
 		);
 
+		// The audience travels in the token itself, never in a request header.
+		expect(headers.get("authorization")).toBe("Bearer am_oauth_test");
 		expect(headers.get("x-autumn-environment")).toBeNull();
-		expect(headers.get("x-autumn-oauth-resource")).toBe(
-			"https://mcp.useautumn.com/mcp",
-		);
 	});
 });

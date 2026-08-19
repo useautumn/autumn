@@ -1,5 +1,6 @@
 import { notNullish } from "@autumn/shared";
 import type Stripe from "stripe";
+import { isAutumnOriginatedStripeEvent } from "@/external/stripe/common/autumnStripeIdempotency.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
@@ -21,6 +22,10 @@ export async function handleStripeCustomerUpdated({
 }) {
 	const { logger, fullCustomer } = ctx;
 	if (!fullCustomer) return;
+	// Autumn's own pushes are never news, and one made from a stale customer
+	// snapshot (e.g. an attach racing a customers.update) would overwrite the
+	// newer value if it were synced back.
+	if (isAutumnOriginatedStripeEvent({ event })) return;
 
 	const stripeCustomer = event.data.object;
 	const update: { name?: string; email?: string } = {};

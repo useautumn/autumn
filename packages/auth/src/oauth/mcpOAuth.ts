@@ -1,50 +1,46 @@
-export const MCP_CLIENT_KIND = "mcp_client";
+import {
+	MCP_CLIENT_KIND,
+	parseOAuthClientMetadata,
+} from "@autumn/shared/utils/auth/oauthClientMetadata";
+import {
+	asNonEmptyString,
+	type ParsedOAuthRequest,
+} from "@autumn/shared/utils/auth/oauthRequestBody";
+import {
+	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
+	internalMcpOAuthClientIds,
+	SUMMER_OAUTH_CLIENT_ID,
+} from "./reservedOAuthClients.js";
+
 export const UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND = "chat_unrestricted";
-export const SLACK_MCP_OAUTH_CLIENT_ID = "autumn_mcp_slack";
-export const WEB_MCP_OAUTH_CLIENT_ID = "autumn_mcp_web";
-export const AUTUMN_ADMIN_OAUTH_CLIENT_ID = "autumn_admin";
-export const SUMMER_OAUTH_CLIENT_ID = "autumn_summer";
 
-export const MCP_OAUTH_CLIENTS = [
-	{ type: "claude", name: "Claude", clientId: "autumn_mcp_claude" },
-	{ type: "codex", name: "Codex", clientId: "autumn_mcp_codex" },
-	{ type: "cursor", name: "Cursor", clientId: "autumn_mcp_cursor" },
-	{ type: "opencode", name: "OpenCode", clientId: "autumn_mcp_opencode" },
-	{ type: "slack", name: "Slack", clientId: SLACK_MCP_OAUTH_CLIENT_ID },
-] as const;
-
-export type KnownMpcClientType = (typeof MCP_OAUTH_CLIENTS)[number]["type"];
-export type MpcClientType = KnownMpcClientType | "dynamic";
-export type MpcClientInfo = {
-	type: MpcClientType;
-	name: string;
-	clientId: string;
+/**
+ * A scope-less grant bypasses every route scope check, so it is only legitimate
+ * when Leaf's unrestricted chat consent backs it. Both resource servers re-check
+ * this, because the mint-time check cannot vouch for a row written years ago.
+ */
+export const isUnrestrictedChatOAuthConsent = ({
+	metadata,
+}: {
+	metadata: unknown;
+}) => {
+	if (typeof metadata !== "object" || metadata === null) return false;
+	return (
+		"kind" in metadata && metadata.kind === UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND
+	);
 };
 
-export const MCP_OAUTH_CLIENT_IDS = MCP_OAUTH_CLIENTS.map(
-	(client) => client.clientId,
-);
+// Legacy rows persisted the internal-mcp kind; dynamic registration now writes mcp_client.
+const MCP_OAUTH_CLIENT_KINDS: readonly string[] = [
+	MCP_CLIENT_KIND,
+	"internal_mcp",
+];
 
-export const isKnownMcpOAuthClientId = ({
+export const isReservedMcpOAuthClientId = ({
 	clientId,
 }: {
 	clientId: string | null | undefined;
-}) =>
-	!!clientId && (MCP_OAUTH_CLIENT_IDS as readonly string[]).includes(clientId);
-
-const parseMetadata = (metadata: unknown) => {
-	if (!metadata) return {};
-	if (typeof metadata === "string") {
-		try {
-			const parsed = JSON.parse(metadata);
-			return parsed && typeof parsed === "object" ? parsed : {};
-		} catch {
-			return {};
-		}
-	}
-
-	return typeof metadata === "object" ? metadata : {};
-};
+}) => !!clientId && internalMcpOAuthClientIds().includes(clientId);
 
 export const isMcpOAuthClientRecord = ({
 	clientId,
@@ -53,44 +49,32 @@ export const isMcpOAuthClientRecord = ({
 	clientId: string | null | undefined;
 	metadata?: unknown;
 }) => {
-	if (isKnownMcpOAuthClientId({ clientId })) return true;
-	const parsedMetadata = parseMetadata(metadata);
-	return parsedMetadata.kind === MCP_CLIENT_KIND;
+	if (isReservedMcpOAuthClientId({ clientId })) return true;
+	return MCP_OAUTH_CLIENT_KINDS.includes(
+		parseOAuthClientMetadata(metadata).kind ?? "",
+	);
 };
 
+/** Admin and Summer tokens stay opaque OAuth tokens instead of api keys. */
 export const returnsOAuthAccessTokenForClientId = ({
 	clientId,
 }: {
 	clientId: string;
 }) =>
-	isKnownMcpOAuthClientId({ clientId }) ||
 	clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID ||
 	clientId === SUMMER_OAUTH_CLIENT_ID;
 
-export const isMcpOAuthResource = (resource: string | null | undefined) => {
-	if (!resource || !URL.canParse(resource)) return false;
-	return new URL(resource).pathname.replace(/\/+$/, "").endsWith("/mcp");
-};
-
-export const getResourceFromOAuthTokenRequest = async (request: Request) => {
-	const contentType = request.headers.get("content-type") ?? "";
-	const rawBody = await request.text();
-	if (!rawBody) return null;
-
-	if (contentType.includes("application/json")) {
-		try {
-			const body = JSON.parse(rawBody) as Record<string, unknown>;
-			const resource = body.resource;
-			if (Array.isArray(resource)) return getString(resource[0]);
-			return getString(resource);
-		} catch {
-			return null;
-		}
+export const getResourceFromOAuthTokenRequest = ({
+	fields,
+	isJson,
+	rawBody,
+}: ParsedOAuthRequest) => {
+	// RFC 8707 lets a request repeat `resource`; the first one wins, and the
+	// parsed fields only keep the last, so read the form body directly.
+	if (!isJson) {
+		return asNonEmptyString(new URLSearchParams(rawBody).getAll("resource")[0]);
 	}
 
-	const params = new URLSearchParams(rawBody);
-	return params.getAll("resource")[0] ?? null;
+	const resource = fields.resource;
+	return asNonEmptyString(Array.isArray(resource) ? resource[0] : resource);
 };
-
-const getString = (value: unknown) =>
-	typeof value === "string" && value.length > 0 ? value : null;

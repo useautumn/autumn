@@ -43,7 +43,6 @@ const expectedAttachRequest = {
 	customer_id: customer.id,
 	enable_plan_immediately: true,
 	invoice_mode: {
-		enable_plan_immediately: true,
 		enabled: true,
 		finalize: false,
 	},

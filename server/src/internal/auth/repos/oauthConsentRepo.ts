@@ -1,9 +1,10 @@
 import {
 	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
+	internalMcpOAuthClientIds,
 	WEB_MCP_OAUTH_CLIENT_ID,
 } from "@autumn/auth/oauth";
 import { type AppEnv, oauthConsent } from "@autumn/shared";
-import { and, eq, isNull, ne, notInArray, or, sql } from "drizzle-orm";
+import { and, eq, isNull, notInArray, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const HIDDEN_OAUTH_CONSENT_CLIENT_IDS = [
@@ -30,9 +31,12 @@ export const listOAuthConsentsByReferenceId = async ({
 	env?: AppEnv;
 	includeInternal?: boolean;
 }) => {
-	// The dashboard/CMA reaches the Autumn MCP through this first-party client;
-	// hide it from a user's authorized apps alongside admin/slack-admin consents.
-	const internalMcpClientId = process.env.INTERNAL_MCP_OAUTH_CLIENT_ID;
+	// The dashboard/CMA reaches the Autumn MCP through these first-party clients;
+	// hide them from a user's authorized apps alongside admin/slack-admin consents.
+	const hiddenClientIds = [
+		...HIDDEN_OAUTH_CONSENT_CLIENT_IDS,
+		...internalMcpOAuthClientIds(),
+	];
 
 	return db
 		.select({
@@ -54,12 +58,7 @@ export const listOAuthConsentsByReferenceId = async ({
 				includeInternal
 					? undefined
 					: and(
-							notInArray(oauthConsent.clientId, [
-								...HIDDEN_OAUTH_CONSENT_CLIENT_IDS,
-							]),
-							internalMcpClientId
-								? ne(oauthConsent.clientId, internalMcpClientId)
-								: undefined,
+							notInArray(oauthConsent.clientId, hiddenClientIds),
 							sql`COALESCE(${oauthConsent.metadata}->>'kind', '') != 'slack_admin'`,
 						),
 			),
