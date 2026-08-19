@@ -19,6 +19,7 @@ import { V1_2_EntityQueryChange } from "@api/entities/requestChanges/V1.2_Entity
 // Import feature changes
 import { V1_2_FeatureChange } from "@api/features/changes/V1.2_FeatureChange";
 import { V1_2_CreateFeatureChange } from "@api/features/changes/V1.2_FeatureParamsChange";
+import { V2_3_FeatureRateCardChange } from "@api/features/changes/V2.3_FeatureRateCardChange.js";
 // Import invoice changes
 import { V1_2_InvoiceChange } from "@api/others/apiInvoice/changes/V1.2_InvoiceChange";
 
@@ -45,6 +46,10 @@ import { V2_0_AggregateEventsChange } from "../../events/aggregate/changes/V2.0_
 import { ApiVersion } from "../ApiVersion";
 import type { VersionChangeConstructor } from "./VersionChange";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass";
+
+export const V2_4_CHANGES: VersionChangeConstructor[] = [
+	V2_3_FeatureRateCardChange,
+];
 
 export const V2_3_CHANGES: VersionChangeConstructor[] = [
 	V2_2_PlanInheritedBillingControls, // Strips plan-inherited billing controls + source tags for <= V2.2
@@ -105,6 +110,10 @@ export const V0_2_CHANGES: VersionChangeConstructor[] = [
 export const V0_1_CHANGES: VersionChangeConstructor[] = [];
 
 export function registerAllVersionChanges() {
+	VersionChangeRegistryClass.register({
+		version: ApiVersion.V2_4,
+		changes: V2_4_CHANGES,
+	});
 	VersionChangeRegistryClass.register({
 		version: ApiVersion.V2_3,
 		changes: V2_3_CHANGES,

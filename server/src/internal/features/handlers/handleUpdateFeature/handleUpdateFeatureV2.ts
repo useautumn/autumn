@@ -1,7 +1,6 @@
 import {
 	AffectedResource,
 	ApiVersion,
-	ApiVersionClass,
 	dbToApiFeatureV1,
 	FeatureType,
 	featureV1ToDbFeatureConfig,
@@ -10,14 +9,19 @@ import {
 	nullish,
 	RecaseError,
 	Scopes,
+	UpdateFeatureRpcV2_3ParamsSchema,
 	UpdateFeatureV2ParamsSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { updateFeature } from "@/internal/features/featureActions/updateFeature.js";
+import { validateInvoiceCreditFeatureType } from "../../featureUtils.js";
 
 export const handleUpdateFeatureV2 = createRoute({
 	scopes: [Scopes.Features.Write],
-	body: UpdateFeatureV2ParamsSchema,
+	versionedBody: {
+		latest: UpdateFeatureV2ParamsSchema,
+		[ApiVersion.V2_3]: UpdateFeatureRpcV2_3ParamsSchema,
+	},
 	resource: AffectedResource.Feature,
 	handler: async (c) => {
 		const body = c.req.valid("json");
@@ -28,6 +32,10 @@ export const handleUpdateFeatureV2 = createRoute({
 			features: ctx.features,
 			featureId: feature_id,
 			errorOnNotFound: true,
+		});
+		validateInvoiceCreditFeatureType({
+			invoiceCredit: body.invoice_credit,
+			featureType: body.type ?? originalFeature.type,
 		});
 
 		// If changing type and consumable not provided, throw error
@@ -68,7 +76,7 @@ export const handleUpdateFeatureV2 = createRoute({
 			dbToApiFeatureV1({
 				ctx,
 				dbFeature: updatedFeature,
-				targetVersion: new ApiVersionClass(ApiVersion.V2_1),
+				targetVersion: ctx.apiVersion,
 			}),
 		);
 	},

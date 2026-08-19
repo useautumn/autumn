@@ -256,10 +256,16 @@ export function transformBalanceToCusFeatureV3({
 		overage_allowed: overageAllowed,
 
 		credit_schema: input.feature?.credit_schema
-			? input.feature.credit_schema.map((credit) => ({
-					feature_id: credit.metered_feature_id,
-					credit_amount: credit.credit_cost,
-				}))
+			? input.feature.credit_schema.flatMap((credit) =>
+					credit.tier_behavior === "graduated"
+						? []
+						: [
+								{
+									feature_id: credit.metered_feature_id,
+									credit_amount: credit.credit_cost,
+								},
+							],
+				)
 			: undefined,
 
 		breakdown: newBreakdown,

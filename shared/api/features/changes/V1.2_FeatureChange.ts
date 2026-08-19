@@ -84,10 +84,17 @@ export const V1_2_FeatureChange = defineVersionChange({
 						plural: input.display.plural || "",
 					}
 				: null,
-			credit_schema: input.credit_schema?.map((item) => ({
-				metered_feature_id: item.metered_feature_id,
-				credit_cost: item.credit_cost,
-			})) || null,
+			credit_schema:
+				input.credit_schema?.flatMap((item) =>
+					item.tier_behavior === "graduated"
+						? []
+						: [
+								{
+									metered_feature_id: item.metered_feature_id,
+									credit_cost: item.credit_cost,
+								},
+							],
+				) || null,
 			archived: input.archived,
 		} satisfies z.infer<typeof ApiFeatureV0Schema>;
 	},
