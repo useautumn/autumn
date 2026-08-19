@@ -2,45 +2,47 @@ import { formatMoney } from "../format.js";
 import { asRecord, getArray, getNumber, getString } from "../records.js";
 import { itemMatchesFilter } from "./itemMatchesFilter.js";
 
-type PriceShape = Record<string, unknown>;
-type ItemShape = Record<string, unknown>;
+type Shape = Record<string, unknown>;
 
 /** One customer-specific change to a plan. Every change is an add or a
  * remove: the verb is a property of the diff against the current plan, never
  * a label chosen by a surface. Removes carry what is actually being removed. */
 export type CustomizeChange =
-	| { kind: "add" | "remove"; subject: "price"; price: PriceShape }
-	| { kind: "add" | "remove"; subject: "item"; item: ItemShape };
+	| { kind: "add" | "remove"; subject: "price"; price: Shape }
+	| { kind: "add" | "remove"; subject: "free_trial"; trial: Shape }
+	| { kind: "add" | "remove"; subject: "item"; item: Shape };
 
-const currentItems = (currentPlan: unknown): ItemShape[] =>
-	getArray(asRecord(currentPlan)?.items).flatMap((item) => {
-		const record = asRecord(item);
+type ChangeKind = CustomizeChange["kind"];
+
+const records = (value: unknown): Shape[] =>
+	getArray(value).flatMap((entry) => {
+		const record = asRecord(entry);
 		return record ? [record] : [];
 	});
 
-const priceChanges = ({
+const currentItems = (currentPlan: unknown): Shape[] =>
+	records(asRecord(currentPlan)?.items);
+
+/** A single-valued override (price, free trial): present in the request means
+ * "set to this", null means "remove". Diffed against the current plan's value
+ * so a change reads as a remove of the old and an add of the new. */
+const overrideChanges = ({
 	currentPlan,
 	customize,
+	field,
+	toChange,
 }: {
 	currentPlan: unknown;
-	customize: Record<string, unknown>;
+	customize: Shape;
+	field: string;
+	toChange: (kind: ChangeKind, value: Shape) => CustomizeChange;
 }): CustomizeChange[] => {
-	if (!("price" in customize)) return [];
-	const currentPrice = asRecord(asRecord(currentPlan)?.price);
-	const nextPrice = asRecord(customize.price);
+	if (!(field in customize)) return [];
+	const current = asRecord(asRecord(currentPlan)?.[field]);
+	const next = asRecord(customize[field]);
 	return [
-		...(currentPrice
-			? [
-					{
-						kind: "remove" as const,
-						subject: "price" as const,
-						price: currentPrice,
-					},
-				]
-			: []),
-		...(nextPrice
-			? [{ kind: "add" as const, subject: "price" as const, price: nextPrice }]
-			: []),
+		...(current ? [toChange("remove", current)] : []),
+		...(next ? [toChange("add", next)] : []),
 	];
 };
 
@@ -53,7 +55,7 @@ const removedItems = ({
 }: {
 	currentPlan: unknown;
 	filters: unknown;
-}): ItemShape[] =>
+}): Shape[] =>
 	getArray(filters).flatMap((filter) => {
 		const matches = currentItems(currentPlan).filter((item) =>
 			itemMatchesFilter({ filter, item }),
@@ -63,27 +65,19 @@ const removedItems = ({
 		return filterRecord ? [filterRecord] : [];
 	});
 
-const addedItems = (value: unknown): ItemShape[] =>
-	getArray(value).flatMap((item) => {
-		const record = asRecord(item);
-		return record ? [record] : [];
-	});
-
 const itemChanges = ({
 	currentPlan,
 	customize,
 }: {
 	currentPlan: unknown;
-	customize: Record<string, unknown>;
+	customize: Shape;
 }): CustomizeChange[] => {
 	// `items` is PUT-style: the new list replaces every current item.
 	const replacing = Array.isArray(customize.items);
 	const removed = replacing
 		? currentItems(currentPlan)
 		: removedItems({ currentPlan, filters: customize.remove_items });
-	const added = replacing
-		? addedItems(customize.items)
-		: addedItems(customize.add_items);
+	const added = records(replacing ? customize.items : customize.add_items);
 	return [
 		...removed.map((item) => ({
 			kind: "remove" as const,
@@ -111,13 +105,28 @@ export const buildCustomizeChanges = ({
 }): CustomizeChange[] => {
 	const patch = asRecord(customize);
 	if (!patch) return [];
-	const price = priceChanges({ currentPlan, customize: patch });
+	const overrides = [
+		...overrideChanges({
+			currentPlan,
+			customize: patch,
+			field: "price",
+			toChange: (kind, price) => ({ kind, subject: "price", price }),
+		}),
+		...overrideChanges({
+			currentPlan,
+			customize: patch,
+			field: "free_trial",
+			toChange: (kind, trial) => ({ kind, subject: "free_trial", trial }),
+		}),
+	];
 	const items = itemChanges({ currentPlan, customize: patch });
+	const only = (kind: ChangeKind) => (change: CustomizeChange) =>
+		change.kind === kind;
 	return [
-		...price.filter((change) => change.kind === "remove"),
-		...items.filter((change) => change.kind === "remove"),
-		...price.filter((change) => change.kind === "add"),
-		...items.filter((change) => change.kind === "add"),
+		...overrides.filter(only("remove")),
+		...items.filter(only("remove")),
+		...overrides.filter(only("add")),
+		...items.filter(only("add")),
 	];
 };
 
@@ -132,4 +141,13 @@ export const customPriceText = (value: unknown): string | null => {
 		? ` per ${intervalCount && intervalCount > 1 ? `${intervalCount} ${interval}s` : interval}`
 		: "";
 	return `${formatMoney({ amount, currency: getString(price.currency) })}${cadence}`;
+};
+
+/** "14-day free trial" for a trial shape, or null when there is no length. */
+export const freeTrialText = (value: unknown): string | null => {
+	const trial = asRecord(value);
+	const length = getNumber(trial?.duration_length);
+	if (trial === null || length === null) return null;
+	const unit = getString(trial.duration_type) ?? "month";
+	return `${length}-${unit} free trial`;
 };

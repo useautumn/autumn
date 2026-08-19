@@ -3,6 +3,7 @@ export {
 	buildCustomizeChanges,
 	type CustomizeChange,
 	customPriceText,
+	freeTrialText,
 } from "./billing/customizeChanges.js";
 export {
 	type BillingChangeDisplay,

@@ -20,7 +20,8 @@ export const itemMatchesFilter = ({
 		[filterRecord.interval, price?.interval ?? reset?.interval],
 		[
 			filterRecord.interval_count,
-			price?.interval_count ?? reset?.interval_count,
+			// An item that omits interval_count means 1, so a filter saying 1 matches.
+			price?.interval_count ?? reset?.interval_count ?? 1,
 		],
 	].every(
 		([expected, actual]) => expected === undefined || expected === actual,

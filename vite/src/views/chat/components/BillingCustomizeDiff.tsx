@@ -1,4 +1,8 @@
-import { buildCustomizeChanges, type CustomizeChange } from "@autumn/render";
+import {
+	buildCustomizeChanges,
+	type CustomizeChange,
+	freeTrialText,
+} from "@autumn/render";
 import {
 	type ApiPlanV1,
 	type CustomizePlanV1,
@@ -38,10 +42,13 @@ const itemLabel = (item: Record<string, unknown>) => {
 	return `${included}${feature}${priced}` || "item";
 };
 
-const changeLabel = (change: CustomizeChange) =>
-	change.subject === "price"
-		? `Base price ${priceText(change.price)}`
-		: itemLabel(change.item);
+const changeLabel = (change: CustomizeChange) => {
+	if (change.subject === "price")
+		return `Base price ${priceText(change.price)}`;
+	if (change.subject === "free_trial")
+		return freeTrialText(change.trial) ?? "Free trial";
+	return itemLabel(change.item);
+};
 
 /** The customer-specific terms of a billing action as adds and removes against
  * the current plan. The diff itself lives in @autumn/render so Slack and the

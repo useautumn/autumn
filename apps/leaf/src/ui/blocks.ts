@@ -6,6 +6,7 @@ import {
 	customPriceText,
 	formatCount,
 	formatMoney,
+	freeTrialText,
 	parsePreviewPayload,
 } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
@@ -1047,6 +1048,14 @@ const approvalPreviewBlocks = ({
 							change: verb,
 							details: details("Base price"),
 							pricing: customPriceText(change.price) ?? "—",
+						}),
+					];
+				}
+				if (change.subject === "free_trial") {
+					return [
+						changeTableRow({
+							change: verb,
+							details: details(freeTrialText(change.trial) ?? "Free trial"),
 						}),
 					];
 				}

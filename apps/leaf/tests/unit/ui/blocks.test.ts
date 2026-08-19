@@ -1666,3 +1666,53 @@ describe("update-subscription card, end to end from a real preview shape", () =>
 		expect(json).not.toContain("🟠 Update");
 	});
 });
+
+// A free-trial override is a billing term the reviewer is authorizing; it
+// must appear on the card as an add/remove like price, not vanish.
+describe("free trial on the approval card", () => {
+	test("renders a new trial as an add with its real duration", () => {
+		const card = approvalCard({
+			id: "t1",
+			env: AppEnv.Sandbox,
+			toolName: "attach",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					customize: {
+						free_trial: { duration_length: 14, duration_type: "day" },
+					},
+					plan_id: "pro",
+				},
+			},
+		});
+		expect(JSON.stringify(card)).toContain(
+			'["🟢 Add","14-day free trial","—"]',
+		);
+	});
+
+	test("renders removing a trial as a remove", () => {
+		const card = approvalCard({
+			id: "t2",
+			env: AppEnv.Sandbox,
+			toolName: "updateSubscription",
+			toolArgs: {
+				request: {
+					customer_id: "cus_1",
+					customize: { free_trial: null },
+					plan_id: "pro",
+				},
+			},
+			preview: wrapMcpResult({
+				_display: {
+					currentPlan: {
+						free_trial: { duration_length: 1, duration_type: "month" },
+					},
+				},
+				preview: { currency: "usd", line_items: [], total: 0 },
+			}),
+		});
+		expect(JSON.stringify(card)).toContain(
+			'["🔴 Remove","1-month free trial","—"]',
+		);
+	});
+});
