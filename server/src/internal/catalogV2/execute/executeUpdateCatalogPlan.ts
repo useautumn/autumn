@@ -1,15 +1,19 @@
 import type { CatalogAction, CatalogMigration } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import {
+	type CatalogPhases,
+	timeCatalogPhase,
+} from "@/internal/catalogV2/actions/updateCatalog/setup/timeCatalogPhase";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import {
 	coalesceCreditSystemSchemaRewrites,
 	executeCreditSystemSchemaRewrites,
 	executeFeatureReferenceRewrites,
 } from "@/internal/catalogV2/execute/executeFeatureReferenceRewrites";
+import { initStripeResourcesForCatalog } from "@/internal/catalogV2/execute/executeInitStripeResources/initStripeResourcesForCatalog";
 import { executeMigrationDrafts } from "@/internal/catalogV2/execute/executeMigrationDrafts";
 import { executeRemovePlans } from "@/internal/catalogV2/execute/executeRemovePlans";
 import { executeUpsertProducts } from "@/internal/catalogV2/execute/executeUpsertProducts/executeUpsertProducts";
-import { initStripeResourcesForCatalog } from "@/internal/catalogV2/execute/executeInitStripeResources/initStripeResourcesForCatalog";
 import { queueRewardMigrations } from "@/internal/catalogV2/execute/queueRewardMigrations";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
@@ -148,24 +152,72 @@ const executeRemoveFeatures = async ({
 export const executeUpdateCatalogPlan = async ({
 	ctx,
 	updateCatalogPlan,
+	phases,
 }: {
 	ctx: AutumnContext;
 	updateCatalogPlan: UpdateCatalogPlan;
+	phases: CatalogPhases;
 }): Promise<CatalogResult> => {
-	await executeInsertFeatures({ ctx, updateCatalogPlan });
-	await executeUpdateFeatures({ ctx, updateCatalogPlan });
-	await executeRemoveFeatures({ ctx, updateCatalogPlan });
-	const plans = await executeUpsertProducts({ ctx, updateCatalogPlan });
-	await executeRemovePlans({ ctx, updateCatalogPlan });
-	await initStripeResourcesForCatalog({ ctx, updateCatalogPlan });
-	await queueRewardMigrations({ ctx, updateCatalogPlan });
-	const migrations = await executeMigrationDrafts({ ctx, updateCatalogPlan });
+	await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.insert_features",
+		run: () => executeInsertFeatures({ ctx, updateCatalogPlan }),
+	});
+	await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.update_features",
+		run: () => executeUpdateFeatures({ ctx, updateCatalogPlan }),
+	});
+	await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.remove_features",
+		run: () => executeRemoveFeatures({ ctx, updateCatalogPlan }),
+	});
+	const plans = await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.upsert_products",
+		run: () => executeUpsertProducts({ ctx, updateCatalogPlan }),
+	});
+	await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.remove_plans",
+		run: () => executeRemovePlans({ ctx, updateCatalogPlan }),
+	});
+	await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.init_stripe",
+		run: () => initStripeResourcesForCatalog({ ctx, updateCatalogPlan }),
+	});
+	await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.queue_reward_migrations",
+		run: () => queueRewardMigrations({ ctx, updateCatalogPlan }),
+	});
+	const migrations = await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.migration_drafts",
+		run: () => executeMigrationDrafts({ ctx, updateCatalogPlan }),
+	});
 
-	await clearOrgCache({
-		db: ctx.db,
-		orgId: ctx.org.id,
-		env: ctx.env,
-		logger: ctx.logger,
+	await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.clear_org_cache",
+		run: () =>
+			clearOrgCache({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				logger: ctx.logger,
+			}),
 	});
 
 	return {

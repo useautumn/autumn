@@ -12,6 +12,8 @@ export const getPlanCustomerUsage = async ({
 	const usage = await customerProductRepo.getVersioningUsageForProduct({
 		db: ctx.db,
 		internalProductId: product.internal_id,
+		orgId: ctx.org.id,
+		env: ctx.env,
 	});
 
 	return {

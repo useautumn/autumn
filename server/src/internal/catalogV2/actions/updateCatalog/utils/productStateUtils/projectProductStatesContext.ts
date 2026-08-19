@@ -1,7 +1,7 @@
 import type { FullProduct, RewardProgram } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
-import type { CustomerProductVersioningUsage } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
+import type { CustomerProductVersioningFlags } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
 import { buildProductStatesContext } from "./buildProductStatesContext";
 
 /**
@@ -48,7 +48,7 @@ export const projectProductStatesContext = ({
 		if (!versionsByPlanId.has(planId)) versionsByPlanId.set(planId, []);
 	}
 
-	const usageByInternalId = new Map<string, CustomerProductVersioningUsage>(
+	const usageByInternalId = new Map<string, CustomerProductVersioningFlags>(
 		Object.values(original.statesByPlanVersion).map((state) => [
 			state.currentFullProduct.internal_id,
 			state.customerUsage,

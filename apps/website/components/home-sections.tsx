@@ -19,7 +19,6 @@ const Solution = dynamic(() => import("./solution"));
 const PricingModels = dynamic(() => import("./pricing-models"));
 const Features = dynamic(() => import("./features"));
 const ProductionScale = dynamic(() => import("./production-scale"));
-const Pricing = dynamic(() => import("./pricing"));
 const FAQ = dynamic(() => import("./faq"));
 const Footer = dynamic(() => import("./footer"));
 
@@ -71,10 +70,6 @@ export default function HomeSections() {
 			<SectionDivider title="PRODUCTION SCALE" />
 			<LazySection>
 				<ProductionScale />
-			</LazySection>
-			<SectionDivider title="PRICING" />
-			<LazySection>
-				<Pricing />
 			</LazySection>
 			<SectionDivider title="FAQ" />
 			<LazySection>

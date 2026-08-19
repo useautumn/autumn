@@ -50,6 +50,8 @@ export const prepareLicenseParentPropagation = async ({
 	const usageByInternalId = await customerProductRepo.getVersioningUsage({
 		db: ctx.db,
 		internalProductIds: contexts.map(({ parent }) => parent.internal_id),
+		orgId: ctx.org.id,
+		env: ctx.env,
 	});
 	const latestVersionByPlanId = new Map<string, number>();
 	for (const { parent } of contexts) {

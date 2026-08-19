@@ -3,12 +3,17 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeUpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpdateCatalogPlan";
 import { handleUpdateCatalogErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpdateCatalogErrors";
 import { setupUpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/setup/setupUpdateCatalogContext";
+import {
+	type CatalogPhases,
+	timeCatalogPhase,
+} from "@/internal/catalogV2/actions/updateCatalog/setup/timeCatalogPhase";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import {
 	type CatalogResult,
 	executeUpdateCatalogPlan,
 } from "@/internal/catalogV2/execute/executeUpdateCatalogPlan";
+import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export type UpdateCatalogActionResult = {
 	catalogContext: UpdateCatalogContext;
@@ -26,18 +31,28 @@ export async function updateCatalogV2({
 	params: UpdateCatalogParams;
 	preview?: boolean;
 }): Promise<UpdateCatalogActionResult> {
+	const phases: CatalogPhases = {};
+	const started = Date.now();
+
 	// 1. Setup — all DB reads; preview adds previewContext presentation facts
 	const catalogContext = await setupUpdateCatalogContext({
 		ctx,
 		params,
 		preview,
+		phases,
 	});
 
 	// 2. Compute
-	const updateCatalogPlan = computeUpdateCatalogPlan({
+	const updateCatalogPlan = await timeCatalogPhase({
 		ctx,
-		catalogContext,
-		params,
+		phases,
+		phase: "compute",
+		run: async () =>
+			computeUpdateCatalogPlan({
+				ctx,
+				catalogContext,
+				params,
+			}),
 	});
 
 	// 3. Errors
@@ -49,6 +64,16 @@ export async function updateCatalogV2({
 	});
 
 	if (preview) {
+		addToExtraLogs({
+			ctx,
+			extras: {
+				catalogTiming: {
+					operation: "preview",
+					totalMs: Date.now() - started,
+					phases,
+				},
+			},
+		});
 		return { catalogContext, updateCatalogPlan };
 	}
 
@@ -56,7 +81,18 @@ export async function updateCatalogV2({
 	const catalogResult = await executeUpdateCatalogPlan({
 		ctx,
 		updateCatalogPlan,
+		phases,
 	});
 
+	addToExtraLogs({
+		ctx,
+		extras: {
+			catalogTiming: {
+				operation: "update",
+				totalMs: Date.now() - started,
+				phases,
+			},
+		},
+	});
 	return { catalogContext, updateCatalogPlan, catalogResult };
 }
