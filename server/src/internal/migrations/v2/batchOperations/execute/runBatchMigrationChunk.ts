@@ -12,16 +12,22 @@ import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import { claimNextBatchMigrationPage } from "./claim/index.js";
 import { executeBatchMigrationPage } from "./executeBatchMigrationPage.js";
 import { finalizeBatchMigrationPage } from "./finalize/finalizeBatchMigrationPage.js";
-import type { BatchMigrationChunkResult } from "./types/batchMigrationExecutionTypes.js";
+import type {
+	BatchMigrationChunkResult,
+	BatchMigrationPageResult,
+} from "./types/batchMigrationExecutionTypes.js";
 import {
 	BATCH_MIGRATION_MAX_PAGES,
 	BATCH_MIGRATION_PAGE_SIZE,
+	BATCH_MIGRATION_TRANSIENT_DB_PAGE_ATTEMPTS,
+	BATCH_MIGRATION_TRANSIENT_DB_RETRY_DELAY_MS,
 } from "./utils/batchMigrationExecutionConstants.js";
 import { createDeferredSideEffects } from "./utils/deferredSideEffects.js";
 import {
 	type BatchMigrationPagePhases,
 	timePhase,
 } from "./utils/pagePhaseTimings.js";
+import { runWithTransientDbRetry } from "./utils/runWithTransientDbRetry.js";
 
 /**
  * Runs one batch chunk: pages from `afterInternalId` until the filter is
@@ -111,64 +117,149 @@ export const runBatchMigrationChunk = async ({
 					`batch-migration: exceeded ${BATCH_MIGRATION_MAX_PAGES} pages — aborting run`,
 				);
 
-			const pagePhases: BatchMigrationPagePhases = {};
-			const page = await claimNextBatchMigrationPage({
-				ctx,
-				migration,
-				migrationInternalId,
-				migrationRunId,
-				afterInternalId: cursor ?? undefined,
-				limit: BATCH_MIGRATION_PAGE_SIZE,
-				controls,
-				phases: pagePhases,
-			});
-			if (page.selectedCount === 0) return await finish("exhausted");
-			cursor = page.cursor ?? cursor;
-
-			if (page.customers.length === 0) continue;
-			const pageResult = await executeBatchMigrationPage({
-				ctx,
-				migrationInternalId,
-				migrationRunId,
-				plan,
-				customers: page.customers,
-				phases: pagePhases,
-			});
-			await timePhase({
-				phases: pagePhases,
-				phase: "finalize",
+			const pageAfterInternalId = cursor ?? undefined;
+			const outcome = await runWithTransientDbRetry({
+				maxAttempts: BATCH_MIGRATION_TRANSIENT_DB_PAGE_ATTEMPTS,
+				delayMs: BATCH_MIGRATION_TRANSIENT_DB_RETRY_DELAY_MS,
+				onRetry: ({ error, attempt, maxAttempts }) => {
+					ctx.logger.warn(
+						"batch-migration: retrying page after transient db error",
+						{
+							data: {
+								migrationRunId,
+								cursor,
+								attempt,
+								maxAttempts,
+								error:
+									error instanceof Error ? error.message : String(error),
+							},
+						},
+					);
+				},
 				run: () =>
-					finalizeBatchMigrationPage({
+					runNextBatchMigrationPage({
 						ctx,
+						migration,
 						migrationInternalId,
 						migrationRunId,
 						plan,
-						pageResult,
+						afterInternalId: pageAfterInternalId,
+						controls,
 						webhooks,
-						phases: pagePhases,
-						deferEvents: events.defer,
-						deferCaches: caches.defer,
+						eventsDefer: events.defer,
+						cachesDefer: caches.defer,
+						settle: () => Promise.all([caches.settle(), events.settle()]),
 					}),
 			});
-			await Promise.all([caches.settle(), events.settle()]);
+			if (outcome.kind === "exhausted") return await finish("exhausted");
+			cursor = outcome.cursor ?? cursor;
+			if (outcome.kind === "advanced") continue;
 
 			summary.pages += 1;
-			summary.succeeded += pageResult.succeeded.length;
-			summary.skipped += pageResult.skipped.length;
-			for (const [phase, ms] of Object.entries(pagePhases)) {
+			summary.succeeded += outcome.pageResult.succeeded.length;
+			summary.skipped += outcome.pageResult.skipped.length;
+			for (const [phase, ms] of Object.entries(outcome.pagePhases)) {
 				chunkPhases[phase] = (chunkPhases[phase] ?? 0) + ms;
 			}
 			ctx.logger.info("batch-migration: page executed", {
 				data: {
 					migrationRunId,
 					page: summary.pages,
-					succeeded: pageResult.succeeded.length,
-					skipped: pageResult.skipped.length,
-					...pagePhases,
+					succeeded: outcome.pageResult.succeeded.length,
+					skipped: outcome.pageResult.skipped.length,
+					...outcome.pagePhases,
 				},
 			});
 		}
 	} finally {
 		await Promise.all([caches.drain(), events.drain()]);
 	}
+};
+
+type NextPageOutcome =
+	| { kind: "exhausted" }
+	| { kind: "advanced"; cursor: string | null }
+	| {
+			kind: "executed";
+			cursor: string | null;
+			pageResult: BatchMigrationPageResult;
+			pagePhases: BatchMigrationPagePhases;
+	  };
+
+/** One claim → execute → finalize. Cursor is only returned on success so a
+ * retry restarts from the same keyset after a dropped socket. */
+const runNextBatchMigrationPage = async ({
+	ctx,
+	migration,
+	migrationInternalId,
+	migrationRunId,
+	plan,
+	afterInternalId,
+	controls,
+	webhooks,
+	eventsDefer,
+	cachesDefer,
+	settle,
+}: {
+	ctx: AutumnContext;
+	migration: MigrationRuntimeWithEventId;
+	migrationInternalId: string;
+	migrationRunId: string;
+	plan: BatchMigrationExecutionPlan;
+	afterInternalId?: string;
+	controls?: MigrationRunControls;
+	webhooks?: MigrationWebhookControls;
+	eventsDefer: (run: () => Promise<unknown>) => void;
+	cachesDefer: (run: () => Promise<unknown>) => void;
+	settle: () => Promise<unknown>;
+}): Promise<NextPageOutcome> => {
+	const pagePhases: BatchMigrationPagePhases = {};
+	const page = await claimNextBatchMigrationPage({
+		ctx,
+		migration,
+		migrationInternalId,
+		migrationRunId,
+		afterInternalId,
+		limit: BATCH_MIGRATION_PAGE_SIZE,
+		controls,
+		phases: pagePhases,
+	});
+	if (page.selectedCount === 0) return { kind: "exhausted" };
+	const nextCursor = page.cursor ?? afterInternalId ?? null;
+	if (page.customers.length === 0) {
+		return { kind: "advanced", cursor: nextCursor };
+	}
+
+	const pageResult = await executeBatchMigrationPage({
+		ctx,
+		migrationInternalId,
+		migrationRunId,
+		plan,
+		customers: page.customers,
+		phases: pagePhases,
+	});
+	await timePhase({
+		phases: pagePhases,
+		phase: "finalize",
+		run: () =>
+			finalizeBatchMigrationPage({
+				ctx,
+				migrationInternalId,
+				migrationRunId,
+				plan,
+				pageResult,
+				webhooks,
+				phases: pagePhases,
+				deferEvents: eventsDefer,
+				deferCaches: cachesDefer,
+			}),
+	});
+	await settle();
+
+	return {
+		kind: "executed",
+		cursor: nextCursor,
+		pageResult,
+		pagePhases,
+	};
 };

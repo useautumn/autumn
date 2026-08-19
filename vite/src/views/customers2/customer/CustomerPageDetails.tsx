@@ -1,8 +1,8 @@
 import { CopyButton } from "@autumn/ui";
-import { FingerprintIcon, TicketIcon } from "@phosphor-icons/react";
-import { useCusReferralQuery } from "@/views/customers/customer/hooks/useCusReferralQuery";
+import { FingerprintIcon } from "@phosphor-icons/react";
 import { CustomerActions } from "./CustomerActions";
 import { useCustomerContext } from "./CustomerContext";
+import { AppliedCouponChip } from "./components/AppliedCouponChip";
 
 const mutedDivClassName =
 	"py-0.5 px-1.5 rounded-lg text-tertiary-foreground text-tiny flex items-center gap-2 h-6 max-w-48 truncate bg-muted text-tiny-id";
@@ -11,9 +11,6 @@ const placeholderText = "PENDING";
 
 export const CustomerPageDetails = () => {
 	const { customer } = useCustomerContext();
-	const { stripeCus } = useCusReferralQuery();
-
-	const appliedCoupon = stripeCus?.discount?.source;
 
 	const emailTitle = customer.email ?? "This user's email is undefined";
 	const idTitle = customer.id ?? "This user's id is undefined";
@@ -47,12 +44,7 @@ export const CustomerPageDetails = () => {
 						</span>
 					</div>
 				)}
-				{appliedCoupon && (
-					<div className={mutedDivClassName} title={appliedCoupon.coupon}>
-						<TicketIcon size={13} className="shrink-0" />
-						<span className="truncate">{appliedCoupon.coupon}</span>
-					</div>
-				)}
+				<AppliedCouponChip className={mutedDivClassName} />
 			</div>
 			<CustomerActions />
 		</div>

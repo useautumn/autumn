@@ -17,16 +17,19 @@ import { describe, expect, test } from "bun:test";
 import { ListEntitiesV2_3ParamsSchema } from "@autumn/shared";
 import { Hono } from "hono";
 import { validator } from "@/honoMiddlewares/validatorMiddleware.js";
-import { shouldUseReplicaDb } from "@/internal/misc/replicaDb/replicaDbConfigs.js";
+import {
+	type ReplicaDbLane,
+	resolveReplicaDbLane,
+} from "@/internal/misc/replicaDb/replicaDbConfigs.js";
 
 const buildApp = () => {
-	const decisions: boolean[] = [];
+	const decisions: Array<ReplicaDbLane | null> = [];
 
 	const app = new Hono();
 
 	app.use("*", async (c, next) => {
 		decisions.push(
-			await shouldUseReplicaDb({
+			await resolveReplicaDbLane({
 				method: c.req.method,
 				path: c.req.path,
 				readBody: () => c.req.json(),
@@ -71,7 +74,7 @@ describe("replica routing body read", () => {
 		const json = (await res.json()) as { received: Record<string, unknown> };
 
 		expect(res.status).toBe(200);
-		expect(decisions).toEqual([false]);
+		expect(decisions).toEqual([null]);
 		expect(json.received).toMatchObject({ customer_id: "cus_123", limit: 5 });
 	});
 
@@ -82,7 +85,7 @@ describe("replica routing body read", () => {
 		const json = (await res.json()) as { received: Record<string, unknown> };
 
 		expect(res.status).toBe(200);
-		expect(decisions).toEqual([true]);
+		expect(decisions).toEqual(["default"]);
 		expect(json.received).toMatchObject({ limit: 5, search: "acme" });
 	});
 
@@ -91,7 +94,7 @@ describe("replica routing body read", () => {
 
 		const res = await post(app, "{not json");
 
-		expect(decisions).toEqual([false]);
+		expect(decisions).toEqual([null]);
 		// validatorMiddleware treats an unparseable body as {}, which this schema
 		// accepts because every field is optional.
 		expect(res.status).toBe(200);
