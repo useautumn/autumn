@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared/utils/auth/oauthRequestBody";
 import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
 import type { Context } from "hono";
-import { db } from "@/db/initDrizzle.js";
+import { type DrizzleCli, db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
 import { oauthConsentRepo } from "../repos/index.js";
 import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
@@ -130,15 +130,26 @@ const narrowConsentScopes = async ({
 	};
 };
 
-const resolveConsentEnv = ({
+/**
+ * The environment a consent grants in, and whether this client needs one at
+ * all. Only atmn clients don't: every other client exchanges its grant for an
+ * env-scoped api key, so an env-less consent issues a code that mints a token
+ * no request can use.
+ */
+export const resolveOAuthConsentEnv = async ({
 	clientId,
+	db,
 	fields,
 }: {
 	clientId: string;
+	db: DrizzleCli;
 	fields: OAuthRequestFields;
-}) =>
-	parseEnv(fields.env) ??
-	(isSummerOAuthClientId({ clientId }) ? AppEnv.Sandbox : null);
+}) => ({
+	env:
+		parseEnv(fields.env) ??
+		(isSummerOAuthClientId({ clientId }) ? AppEnv.Sandbox : null),
+	envRequired: !(await isAtmnOAuthClientId({ db, clientId })),
+});
 
 export const handleOAuthConsentWithEnv = async (c: Context) => {
 	const { fields, isJson } = await parseOAuthRequestFields(c.req.raw.clone());
@@ -164,6 +175,20 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 			description:
 				"Sign in and select an active organization to authorize this application.",
 			status: 403,
+		});
+	}
+
+	const { env, envRequired } = await resolveOAuthConsentEnv({
+		clientId,
+		db,
+		fields,
+	});
+	if (envRequired && !env) {
+		return jsonOAuthError({
+			code: "invalid_request",
+			description:
+				"Select an environment (live or sandbox) to authorize this application.",
+			status: 400,
 		});
 	}
 
@@ -193,8 +218,7 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 	});
 	if (!response.ok) return response;
 
-	const env = resolveConsentEnv({ clientId, fields });
-	if (!env || (await isAtmnOAuthClientId({ db, clientId }))) return response;
+	if (!env || !envRequired) return response;
 
 	await oauthConsentRepo.updateEnv({
 		db,
