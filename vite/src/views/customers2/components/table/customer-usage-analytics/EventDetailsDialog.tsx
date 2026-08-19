@@ -24,8 +24,11 @@ export function EventDetailsDialog({
 			? JSON.parse(event.properties)
 			: event.properties;
 
+	// Always null: idempotency keys live on the Idempotency-Key header, not the event row.
+	const { idempotency_key: _idempotencyKey, ...rest } = event;
+
 	const eventData = {
-		...event,
+		...rest,
 		properties,
 	};
 
