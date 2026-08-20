@@ -1,6 +1,10 @@
 import { AppEnv } from "@autumn/shared";
 import { getOrgInstallationToken } from "../../src/internal/installations/actions/getOrgInstallationToken.js";
 
+export type LeafPrincipalAttributes = Readonly<
+	Record<string, string | readonly string[] | undefined>
+>;
+
 export const appEnvFrom = (value: unknown): AppEnv =>
 	value === AppEnv.Live ? AppEnv.Live : AppEnv.Sandbox;
 
@@ -10,20 +14,20 @@ const orgIdFrom = (value: unknown): string => {
 };
 
 const stringAttr = (
-	attributes: Record<string, unknown> | undefined,
+	attributes: LeafPrincipalAttributes | undefined,
 	key: string,
 ): string | undefined => {
 	const value = attributes?.[key];
 	return typeof value === "string" && value.length > 0 ? value : undefined;
 };
 
-/** Mints the same Autumn access token the MCP connection would, from the
- * session principal's attributes. */
-export const mintAutumnAccessToken = async ({
+/** The stable identity behind a session principal — the fields token minting
+ * (and its cache key) depend on. */
+export const autumnPrincipalFrom = ({
 	attributes,
 	principalId,
 }: {
-	attributes: Record<string, unknown> | undefined;
+	attributes: LeafPrincipalAttributes | undefined;
 	principalId?: string;
 }) => {
 	const orgId = orgIdFrom(attributes?.orgId);
@@ -39,12 +43,25 @@ export const mintAutumnAccessToken = async ({
 		provider === "web"
 			? providerUserId
 			: stringAttr(attributes, "autumnUserId");
+	return { appEnv, credentialUserId, orgId, provider, workspaceId };
+};
+
+/** Mints the same Autumn access token the MCP connection would, from the
+ * session principal's attributes. */
+export const mintAutumnAccessToken = async ({
+	attributes,
+	principalId,
+}: {
+	attributes: LeafPrincipalAttributes | undefined;
+	principalId?: string;
+}) => {
+	const principal = autumnPrincipalFrom({ attributes, principalId });
 	const { accessToken } = await getOrgInstallationToken({
-		env: appEnv,
-		orgId,
-		provider,
-		workspaceId,
-		userId: credentialUserId,
+		env: principal.appEnv,
+		orgId: principal.orgId,
+		provider: principal.provider,
+		userId: principal.credentialUserId,
+		workspaceId: principal.workspaceId,
 	});
-	return { accessToken, appEnv };
+	return { accessToken, appEnv: principal.appEnv, principal };
 };

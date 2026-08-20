@@ -132,24 +132,32 @@ const defaultHandlers = {
 			setup,
 		});
 		if (entityError) return entityError;
-		customer.subscriptions = [
-			...customer.subscriptions,
-			{
-				add_on: plan.add_on,
-				auto_enable: plan.auto_enable,
-				canceled_at: null,
-				current_period_end: null,
-				current_period_start: 1_767_225_600_000,
-				expires_at: null,
-				id: `sub_${plan.id}`,
-				past_due: false,
-				plan_id: plan.id,
-				quantity: 1,
-				started_at: 1_767_225_600_000,
-				status: "active",
-				trial_ends_at: null,
-			},
-		];
+		const subscription = {
+			add_on: plan.add_on,
+			auto_enable: plan.auto_enable,
+			canceled_at: null,
+			current_period_end: null,
+			current_period_start: 1_767_225_600_000,
+			expires_at: null,
+			id: `sub_${plan.id}`,
+			past_due: false,
+			plan_id: plan.id,
+			quantity: 1,
+			started_at: 1_767_225_600_000,
+			status: "active" as const,
+			trial_ends_at: null,
+		};
+		// An entity-scoped attach lands on the entity, as the real API reports it.
+		const entity = setup.entities.find(
+			(candidate) =>
+				candidate.customer_id === customer.id &&
+				candidate.id === getString(body, "entity_id"),
+		);
+		if (entity) {
+			entity.subscriptions = [...entity.subscriptions, subscription];
+		} else {
+			customer.subscriptions = [...customer.subscriptions, subscription];
+		}
 		return responses.attachSuccess({ customer, plan, request: body });
 	},
 	createBalance: () => ({ status: "created" }),
@@ -315,6 +323,30 @@ const defaultHandlers = {
 		);
 		const plan = setup.plans.find((plan) => plan.id === planId);
 		if (!customer || !plan) return { error: "missing customer or plan" };
+		// Cancellations change what the customer is left on — the point of
+		// evals that assert the final state rather than the calls.
+		const entityId = getString(body, "entity_id");
+		const owner = entityId
+			? setup.entities.find(
+					(entity) =>
+						entity.customer_id === customerId && entity.id === entityId,
+				)
+			: customer;
+		if (!owner) return { error: `entity ${entityId} not found for customer` };
+		const target = owner.subscriptions.find(
+			(subscription) => subscription.plan_id === planId,
+		);
+		if (!target) return { error: `${planId} is not active for this scope` };
+		const cancelAction = getString(body, "cancel_action");
+		if (cancelAction === "cancel_immediately") {
+			owner.subscriptions = owner.subscriptions.filter(
+				(subscription) => subscription !== target,
+			);
+		} else if (cancelAction === "cancel_end_of_cycle") {
+			target.canceled_at = target.current_period_end ?? 1_769_904_000_000;
+		} else if (cancelAction === "uncancel") {
+			target.canceled_at = null;
+		}
 		return responses.updateSubscriptionSuccess({ customerId, planId });
 	},
 	updateCustomer: ({ body, setup }) => {

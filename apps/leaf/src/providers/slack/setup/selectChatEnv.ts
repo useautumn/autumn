@@ -22,10 +22,13 @@ const ENV_SIGNAL_PATTERN =
 
 /** Only a message that plausibly names an environment needs the model; the
  * overwhelming default is the org's default env, decided synchronously. */
-export const messageHasEnvSignal = (
-	message: string,
-	recentMessages: ReadonlyArray<AgentContextMessage> = [],
-) =>
+const messageHasEnvSignal = ({
+	message,
+	recentMessages = [],
+}: {
+	message: string;
+	recentMessages?: ReadonlyArray<AgentContextMessage>;
+}) =>
 	ENV_SIGNAL_PATTERN.test(message) ||
 	recentMessages.some((recent) => ENV_SIGNAL_PATTERN.test(recent.text));
 
@@ -58,7 +61,7 @@ export const selectChatEnv = async ({
 		return env;
 	}
 
-	if (!messageHasEnvSignal(message, recentMessages)) {
+	if (!messageHasEnvSignal({ message, recentMessages })) {
 		const env = getDefaultChatEnv();
 		logger.debug("Selected chat environment from heuristic", {
 			event: "leaf.chat_env_selected",

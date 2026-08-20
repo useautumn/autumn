@@ -118,8 +118,8 @@ if (approvalRequest) {
 		turn: output as never,
 		workspaceId: installation.workspace_id,
 	});
-	await created?.backfillGroupedPreviews?.();
 	if (!created) throw new Error("createApproval returned nothing");
+	await created.backfillGroupedPreviews?.();
 	const card = approvalCard({
 		id: created.approvalId,
 		env: AppEnv.Sandbox,

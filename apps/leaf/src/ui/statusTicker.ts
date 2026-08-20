@@ -1,6 +1,6 @@
 import { ms } from "@autumn/shared";
 import { differenceInMilliseconds } from "date-fns";
-import { formatTypingStatus, type ReplyTarget } from "./progress.js";
+import { formatTypingStatus } from "./progress.js";
 
 const THINKING_VERBS = [
 	"Thinking",
@@ -23,7 +23,11 @@ export type StatusTicker = {
 	stop: () => void;
 };
 
-export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
+/** Structural minimum: the ticker only drives the typing indicator, so any
+ * target with startTyping fits — including test fakes. */
+type TypingTarget = Pick<import("./progress.js").ReplyTarget, "startTyping">;
+
+export const createStatusTicker = (target: TypingTarget): StatusTicker => {
 	let stopped = false;
 	let timer: ReturnType<typeof setInterval> | null = null;
 	let mode: "activity" | "idle" | "thinking" = "idle";
