@@ -13,16 +13,13 @@ const product = ({
 	version: number;
 }) =>
 	({
+		active: true,
 		id,
 		version,
 		base_internal_product_id: baseInternalProductId,
 	}) as FullProduct;
 
-const params = ({
-	version,
-}: {
-	version?: number;
-}): CatalogUpdateParams =>
+const params = ({ version }: { version?: number }): CatalogUpdateParams =>
 	({
 		features: [],
 		plans: [
