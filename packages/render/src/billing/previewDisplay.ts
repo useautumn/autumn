@@ -85,6 +85,19 @@ const changeDisplay = ({
 	};
 };
 
+/** A plan on both sides is an in-place update, not a removal — only plans
+ * that truly leave the customer count. */
+export const removedPlanChanges = ({
+	incoming,
+	outgoing,
+}: {
+	incoming: BillingChangeDisplay[];
+	outgoing: BillingChangeDisplay[];
+}): BillingChangeDisplay[] => {
+	const incomingIds = new Set(incoming.map((change) => change.planId));
+	return outgoing.filter((change) => !incomingIds.has(change.planId));
+};
+
 const changeSummaryText = ({
 	incoming,
 	outgoing,
@@ -92,12 +105,9 @@ const changeSummaryText = ({
 	incoming: BillingChangeDisplay[];
 	outgoing: BillingChangeDisplay[];
 }): string | null => {
-	// A plan on both sides is an in-place update ("attaching enterprise and
-	// removing enterprise" reads as nonsense) — only true switches summarize.
-	const incomingIds = new Set(incoming.map((change) => change.planId));
 	const outgoingIds = new Set(outgoing.map((change) => change.planId));
 	const added = incoming.filter((change) => !outgoingIds.has(change.planId));
-	const removed = outgoing.filter((change) => !incomingIds.has(change.planId));
+	const removed = removedPlanChanges({ incoming, outgoing });
 	const names = (changes: BillingChangeDisplay[]) =>
 		changes.map((change) => change.name).join(", ");
 	if (added.length && removed.length) {

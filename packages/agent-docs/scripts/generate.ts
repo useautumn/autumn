@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import config from "../agent-docs.config.js";
+import config, { agents } from "../agent-docs.config.js";
 import type { Source } from "../src/config/types.js";
 import { composeDocument } from "../src/translate/composeDocument.js";
 import { composeSkill } from "../src/translate/composeSkill.js";
@@ -44,8 +44,9 @@ const contentFileResolver =
 
 const mcpResources: McpResource[] = [];
 const skills: Skill[] = [];
+const skillNameByEntryKey: Record<string, string> = {};
 
-for (const entry of Object.values(config)) {
+for (const [entryKey, entry] of Object.entries(config)) {
 	if (entry.formats.mcp) {
 		const mcp = entry.formats.mcp;
 		const ownTitle = Boolean(mcp.document);
@@ -75,6 +76,7 @@ for (const entry of Object.values(config)) {
 			resolveDocs,
 			resolveContentFile: contentFileResolver(file),
 		});
+		skillNameByEntryKey[entryKey] = skill.name;
 		skills.push(toSkill({ skill }));
 	}
 }
@@ -130,6 +132,50 @@ writeGenerated({
 		slack: composePrompt("instructions/slack.md"),
 	},
 });
+
+const agentIds = Object.keys(agents) as (keyof typeof agents)[];
+const agentIdUnion = agentIds.map((id) => `"${id}"`).join(" | ");
+
+const resolveAgentSkillNames = (skillKeys: string[]): string[] =>
+	skillKeys.map((key) => {
+		const name = skillNameByEntryKey[key];
+		if (!name) {
+			throw new Error(`Agent skill key "${key}" has no skill format in config`);
+		}
+		return name;
+	});
+
+const leafAgentPrompts = Object.fromEntries(
+	agentIds.map((id) => [id, composePrompt(agents[id].instructions)]),
+);
+const leafAgentSkillNames = Object.fromEntries(
+	agentIds.map((id) => [id, resolveAgentSkillNames(agents[id].skills)]),
+);
+const leafSkillRequires = Object.fromEntries(
+	skills.map((skill) => [skill.name, skill.requires ?? []]),
+);
+
+const writeGeneratedModule = ({
+	declarations,
+	file,
+}: {
+	declarations: string[];
+	file: string;
+}) => {
+	const outPath = resolve(here, "../src/generated", file);
+	mkdirSync(dirname(outPath), { recursive: true });
+	writeFileSync(outPath, `${banner}\n\n${declarations.join("\n\n")}\n`);
+	process.stdout.write(`Wrote ${outPath}\n`);
+};
+
+writeGeneratedModule({
+	declarations: [
+		`export const leafAgentPrompts: Record<${agentIdUnion}, string> = ${JSON.stringify(leafAgentPrompts, null, 2)};`,
+		`export const leafAgentSkillNames: Record<${agentIdUnion}, string[]> = ${JSON.stringify(leafAgentSkillNames, null, 2)};`,
+		`export const leafSkillRequires: Record<string, string[]> = ${JSON.stringify(leafSkillRequires, null, 2)};`,
+	],
+	file: "agent-prompts.generated.ts",
+});
 writeGenerated({
 	file: "mcp-resources.generated.ts",
 	typeName: "mcpResources: McpResource[]",
@@ -141,7 +187,9 @@ writeGenerated({
 	file: "skills.generated.ts",
 	typeName: "skills: Skill[]",
 	typeImport: 'import type { Skill } from "../translate/formats/types.js";',
-	value: skills,
+	// requires ships via agent-prompts.generated.ts; omitting it here keeps this
+	// artifact byte-stable for consumers that only bundle skill files.
+	value: skills.map(({ requires, ...skill }) => skill),
 });
 
 // Readable rendered artifacts (human-inspectable; runtime imports the .ts above).
@@ -177,4 +225,10 @@ for (const skill of skills) {
 			contents: reference.contents,
 		});
 	}
+}
+for (const id of agentIds) {
+	writeReadable({
+		relPath: `agents/${id}.md`,
+		contents: leafAgentPrompts[id],
+	});
 }

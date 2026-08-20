@@ -1,3 +1,5 @@
+import { WITHHELD_WRITES_KEY } from "../../agentRuntime/eve/parkedInput.js";
+
 /** The Autumn MCP write tools nest their payload under `request`; a few call
  * shapes pass the fields flat, so both have to be accepted. */
 export const toolRequestFromArgs = (
@@ -10,7 +12,7 @@ export const toolRequestFromArgs = (
 /** Transport the harness threads through `toolArgs`. Option ids and request ids
  * are dropped before display; the grouped writes are kept because the card
  * renders them as the request's other steps. */
-const DISPLAYED_HARNESS_KEYS = new Set(["_eveWithheldWrites"]);
+const DISPLAYED_HARNESS_KEYS = new Set([WITHHELD_WRITES_KEY]);
 
 export const publicToolArgs = (args: Record<string, unknown>) =>
 	Object.fromEntries(

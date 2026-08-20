@@ -7,6 +7,7 @@ import {
 } from "../../../ui/messages.js";
 import { submitAgentInput } from "../../agentRuntime/actions/submitAgentInput/submitAgentInput.js";
 import {
+	childSessionIdsFromToolArgs,
 	siblingRequestIdsFromToolArgs,
 	withheldWritesFromToolArgs,
 } from "../../agentRuntime/eve/parkedInput.js";
@@ -86,6 +87,7 @@ export const submitApprovalInput = async ({
 		// Only a surface that rendered the whole group may approve it; the
 		// dashboard shows the primary write alone, so its siblings stay withheld.
 		approveSiblings: expectExecution && surfaceRendersGroup(approval.provider),
+		childSessionIds: childSessionIdsFromToolArgs(approval.tool_args),
 		expectedToolNames: expectExecution
 			? [
 					approval.tool_name,

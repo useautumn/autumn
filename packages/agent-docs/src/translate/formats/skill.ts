@@ -15,5 +15,6 @@ export const toSkill = ({ skill }: { skill: ComposedSkill }): Skill => {
 		description: skill.description,
 		markdown: [frontmatter, skill.body].join("\n\n"),
 		references: skill.references,
+		requires: skill.requires,
 	};
 };

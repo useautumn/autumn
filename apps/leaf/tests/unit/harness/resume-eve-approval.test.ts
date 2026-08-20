@@ -26,6 +26,15 @@ class MockEveSessionGoneError extends Error {
 }
 let sessionGone = false;
 let streamedEvents: EveEvent[] = [];
+let streamedEventsBySession: Record<string, EveEvent[]> = {};
+let idleTimeoutSessionIds: string[] = [];
+const streamedSessionIds: string[] = [];
+class MockEveStreamIdleTimeoutError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "EveStreamIdleTimeoutError";
+	}
+}
 const postedResponses: {
 	approveSiblings?: boolean;
 	optionId: string;
@@ -37,6 +46,7 @@ await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
 		EveSessionGoneError: MockEveSessionGoneError,
+		EveStreamIdleTimeoutError: MockEveStreamIdleTimeoutError,
 		postEveInputResponse: async (input: {
 			approveSiblings?: boolean;
 			optionId: string;
@@ -56,8 +66,18 @@ await mockLeafModule({
 			});
 			return { continuationToken: "token_2", sessionId: "eve_session_1" };
 		},
-		streamEveEvents: async function* () {
-			for (const event of streamedEvents) yield event;
+		streamEveEvents: async function* ({
+			session: streamSession,
+		}: {
+			session: EveSessionRef;
+		}) {
+			streamedSessionIds.push(streamSession.sessionId);
+			const events =
+				streamedEventsBySession[streamSession.sessionId] ?? streamedEvents;
+			for (const event of events) yield event;
+			if (idleTimeoutSessionIds.includes(streamSession.sessionId)) {
+				throw new MockEveStreamIdleTimeoutError("Eve stream idle timeout");
+			}
 		},
 	}),
 });
@@ -171,6 +191,8 @@ const EMPTY_TURN: EveEvent[] = [
 describe("resumeApproval", () => {
 	beforeEach(() => {
 		streamedEvents = EMPTY_TURN;
+		streamedEventsBySession = {};
+		idleTimeoutSessionIds = [];
 		postedResponses.length = 0;
 		loggedEvents.length = 0;
 		session = {
@@ -777,5 +799,147 @@ describe("resolveApproval when eve has lost the session", () => {
 		expect(released).toEqual([]);
 		expect(deletedSessionIds).toEqual(["eve_session_1"]);
 		sessionGone = false;
+	});
+});
+
+// A write delegated to a subagent executes on the child session, so the
+// parent's resumed stream never carries its result — proof must come from
+// replaying the child stream named on the card.
+describe("delegated writes are verified on the child stream", () => {
+	const delegatedApproval = () =>
+		({
+			channel_id: "C1",
+			env: AppEnv.Sandbox,
+			id: "a_1",
+			org_id: "org_1",
+			provider: "slack",
+			run_id: "eve_session_1",
+			tool_args: { _eveChildSessionIds: ["child_1"] },
+			tool_call_id: "req_1",
+			tool_name: "autumn__attach",
+			workspace_id: "T1",
+		}) as unknown as ChatApproval;
+
+	// The post-approval continuation has no turn.started: the proxy epilogue
+	// already closed the turn, so activity alone must unlock the terminal break.
+	const parentContinuation: EveEvent[] = [
+		{ type: "subagent.completed", subagentName: "billing" },
+		{ finishReason: "stop", message: "Attached the plan.", type: "message.completed" },
+		{ type: "session.waiting" },
+	];
+
+	const childResult = (failed: boolean): EveEvent[] => [
+		{
+			actions: [{ callId: "cc1", toolName: "autumn__attach" }],
+			type: "actions.requested",
+		},
+		{
+			result: {
+				callId: "cc1",
+				output: failed
+					? {
+							content: [
+								{
+									type: "text",
+									text: '{"message":"Autumn API request failed (400): boom","code":"invalid_request"}',
+								},
+							],
+							isError: true,
+						}
+					: { content: [{ type: "text", text: '{"ok":true}' }] },
+				toolName: "autumn__attach",
+			},
+			status: "completed",
+			type: "action.result",
+		},
+		{ type: "session.completed" },
+	];
+
+	beforeEach(() => {
+		streamedEvents = parentContinuation;
+		streamedEventsBySession = {};
+		idleTimeoutSessionIds = [];
+		streamedSessionIds.length = 0;
+		postedResponses.length = 0;
+		loggedEvents.length = 0;
+		session = {
+			env: AppEnv.Sandbox,
+			newSession: false,
+			sessionId: "eve_session_1",
+			state: {
+				version: 1,
+				continuationToken: "token_1",
+				streamIndex: 4,
+				status: "waiting",
+				lastEventAt: 0,
+			},
+			threadKey: "sandbox:slack:T1:C1:thread_1",
+		};
+	});
+
+	test("a child-stream success proves the step and keeps the reply", async () => {
+		streamedEventsBySession = { child_1: childResult(false) };
+
+		const result = await resumeApproval({
+			approval: delegatedApproval(),
+			providerUserId: "U1",
+		});
+
+		expect(streamedSessionIds).toEqual(["eve_session_1", "child_1"]);
+		expect(result).not.toMatchObject({ error: true });
+		expect(result).toMatchObject({
+			steps: [{ status: "applied", toolName: "autumn__attach" }],
+			text: "Attached the plan.",
+		});
+	});
+
+	test("a child-stream failure fails the approval", async () => {
+		streamedEventsBySession = { child_1: childResult(true) };
+
+		const result = await resumeApproval({
+			approval: delegatedApproval(),
+			providerUserId: "U1",
+		});
+
+		expect(result).toMatchObject({
+			error: true,
+			steps: [{ status: "failed", toolName: "autumn__attach" }],
+		});
+	});
+
+	test("a child replay that idles out still keeps its results", async () => {
+		streamedEventsBySession = {
+			child_1: childResult(false).filter(
+				(event) => event.type !== "session.completed",
+			),
+		};
+		idleTimeoutSessionIds = ["child_1"];
+
+		const result = await resumeApproval({
+			approval: delegatedApproval(),
+			providerUserId: "U1",
+		});
+
+		expect(result).toMatchObject({
+			steps: [{ status: "applied", toolName: "autumn__attach" }],
+		});
+	});
+
+	// A parent reply alone still counts as run (results can precede the
+	// stream); only a fully silent turn plus a silent child is unproven.
+	test("a silent child and a silent parent read as not executed", async () => {
+		streamedEvents = [
+			{ subagentName: "billing", type: "subagent.completed" },
+			{ type: "session.waiting" },
+		];
+		streamedEventsBySession = { child_1: [{ type: "session.completed" }] };
+
+		const result = await resumeApproval({
+			approval: delegatedApproval(),
+			providerUserId: "U1",
+		});
+
+		expect(result).toMatchObject({ error: true, retryable: true });
+		expect(loggedEvents).toEqual(["leaf.eve_approval_not_executed"]);
 	});
 });

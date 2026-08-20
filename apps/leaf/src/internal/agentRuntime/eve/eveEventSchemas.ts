@@ -73,6 +73,21 @@ const messageCompletedSchema = turnDataSchema.extend({
 	message: z.string().default(""),
 });
 const failureSchema = z.object({ message: z.string().default("Eve failed") });
+/** A declared subagent was delegated to; the child runs its own session,
+ * reachable at /eve/v1/session/<childSessionId>/stream. */
+const subagentCalledSchema = z.object({
+	callId: z.string().optional(),
+	childSessionId: z.string().optional(),
+	name: z.string().optional(),
+	toolName: z.string().optional(),
+});
+
+/** Only the event's arrival matters today — it marks resumed-turn activity;
+ * the child's output is read from its own stream, not from this event. */
+const subagentCompletedSchema = z.object({
+	subagentName: z.string().optional(),
+});
+
 const emptyEventSchema = z.object({});
 
 export type EveAction = z.infer<typeof eveActionSchema>;
@@ -95,6 +110,10 @@ const eveEventSchema = eveEventEnvelopeSchema.transform((envelope) => {
 	});
 
 	switch (envelope.type) {
+		case "subagent.called":
+			return event({ schema: subagentCalledSchema, type: envelope.type });
+		case "subagent.completed":
+			return event({ schema: subagentCompletedSchema, type: envelope.type });
 		case "message.received":
 			return event({ schema: messageReceivedSchema, type: envelope.type });
 		case "actions.requested":

@@ -6,12 +6,18 @@ export {
 	freeTrialText,
 } from "./billing/customizeChanges.js";
 export {
+	buildPlanDisplay,
+	type PlanDisplay,
+	type PlanItemDisplay,
+} from "./billing/planDisplay.js";
+export {
 	type BillingChangeDisplay,
 	type BillingPreviewDisplay,
 	buildBillingPreviewDisplay,
 	buildPlanItemChangeDisplay,
 	type LineItemDisplay,
 	type MoneyDisplay,
+	removedPlanChanges,
 	type SchedulePhaseDisplay,
 } from "./billing/previewDisplay.js";
 export {

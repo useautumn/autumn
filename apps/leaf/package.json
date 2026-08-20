@@ -6,6 +6,7 @@
 	"scripts": {
 		"dev": "bun --watch src/index.ts",
 		"eval": "zsh -lc 'braintrust eval tests/evals/**/*.eval.ts --external-packages @mastra/mcp @mastra/core @mastra/braintrust @mastra/observability \"$@\"' --",
+		"eval:eve": "eve eval",
 		"eval:mcp": "zsh -lc 'braintrust eval tests/evals/mcp/**/*.eval.ts --external-packages @mastra/mcp @mastra/core @mastra/braintrust @mastra/observability \"$@\"' --",
 		"start": "bun src/index.ts",
 		"test": "AUTUMN_API_URL=http://localhost:8080 AUTUMN_PUBLIC_API_URL=http://localhost:8080 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres ENCRYPTION_PASSWORD=test SLACK_CLIENT_ID=test SLACK_CLIENT_SECRET=test SLACK_SIGNING_SECRET=test bun test --isolate tests/unit",
