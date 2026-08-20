@@ -23,7 +23,7 @@ import {
 	type CapturedPreview,
 	previewForParkedWrite,
 } from "../../../eve/parkedWritePreview.js";
-import { isSilentTool } from "../../../tools/toolPolicy.js";
+import { isSilentTool, toolGerund } from "../../../tools/toolPolicy.js";
 import { catalogPlanNeedingDecision } from "../../resolveCatalogDecision/catalogDecisionPolicy.js";
 
 export type EveTurnOutcome =
@@ -39,6 +39,9 @@ export type EveTurnProgress = Readonly<{
 	lastPreview?: CapturedPreview;
 	pendingText: string;
 	reasoningStreamId?: string;
+	/** Child sessions spawned by delegated subagents, by call id — the pointer
+	 * for attributing proxied approvals and following child streams. */
+	subagentCalls: ReadonlyMap<string, { childSessionId?: string; name: string }>;
 	toolInputs: ReadonlyMap<string, Record<string, unknown>>;
 	toolLabels: ReadonlyMap<string, string>;
 	turnStarted: boolean;
@@ -63,6 +66,7 @@ export type EveTurnTransition = Readonly<{
 
 export const createEveTurnProgress = (): EveTurnProgress => ({
 	finalText: "",
+	subagentCalls: new Map(),
 	pendingText: "",
 	toolInputs: new Map(),
 	toolLabels: new Map(),
@@ -342,6 +346,31 @@ export const reduceEveTurnEvent = ({
 	if (!progress.turnStarted) return { effects: [], progress };
 
 	switch (event.type) {
+		case "subagent.called": {
+			const name = event.name ?? event.toolName ?? "subagent";
+			const subagentCalls = new Map(progress.subagentCalls);
+			if (event.callId) {
+				subagentCalls.set(event.callId, {
+					childSessionId: event.childSessionId,
+					name,
+				});
+			}
+			return {
+				effects: [
+					{
+						kind: "action",
+						progress: {
+							label: toolGerund(name),
+							phase: "started",
+							toolName: name,
+						},
+					},
+				],
+				progress: { ...progress, subagentCalls },
+			};
+		}
+		case "subagent.completed":
+			return { effects: [], progress };
 		case "step.started":
 			return { effects: [{ kind: "thinking" }], progress };
 		case "message.appended":

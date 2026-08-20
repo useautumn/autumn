@@ -41,7 +41,10 @@ export const toolLabel = (toolName: string) => {
 // Present-progressive phrasing for live status lines ("Looking up the
 // customer…"). Falls back to the noun label for anything unmapped.
 const gerunds: Record<string, string> = {
+	billing: "Preparing a billing action",
+	catalog: "Working on the pricing catalog",
 	getAgentRules: "Reading your billing setup",
+	investigator: "Investigating",
 	listPlans: "Looking through your plans",
 	getPlan: "Pulling up the plan",
 	listFeatures: "Reviewing the features",
