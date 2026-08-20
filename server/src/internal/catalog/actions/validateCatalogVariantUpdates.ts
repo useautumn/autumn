@@ -1,8 +1,8 @@
 import {
-	ErrCode,
-	RecaseError,
 	type CatalogUpdateParams,
+	ErrCode,
 	type FullProduct,
+	RecaseError,
 } from "@autumn/shared";
 
 export const validateCatalogVariantUpdates = ({
@@ -82,7 +82,8 @@ export const validateCatalogVariantVersionTargets = ({
 
 		const active = activeBaseByPlanId.get(plan.plan_id);
 		const maxVersion = maxVersionByPlanId.get(plan.plan_id) ?? 0;
-		if (plan.version === active?.version || plan.version > maxVersion) continue;
+		const targetVersion = active?.version ?? maxVersion;
+		if (plan.version === targetVersion || plan.version > maxVersion) continue;
 
 		throw new RecaseError({
 			message: `Variants can only be updated under the latest version of base plan ${plan.plan_id}.`,
