@@ -5,39 +5,54 @@ import {
 	applyResponseVersionChanges,
 	ErrCode,
 	type FullSubject,
+	getRelevantFeatures,
 	RecaseError,
 	type TrackParams,
 	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackQueueIdempotencyKey } from "@/internal/balances/idempotency/trackQueueIdempotency.js";
-import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
-import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
+import { getOrCreateCachedPartialFullSubject } from "@/internal/customers/cache/fullSubject/actions/partial/getOrCreateCachedPartialFullSubject.js";
+import { getOrSetCachedPartialFullSubject } from "@/internal/customers/cache/fullSubject/actions/partial/getOrSetCachedPartialFullSubject.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { runRedisTrackV3 } from "./runRedisTrackV3.js";
 
 const getTrackFullSubject = async ({
 	ctx,
 	body,
+	featureDeductions,
 	forceFresh = false,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
+	featureDeductions: FeatureDeduction[];
 	forceFresh?: boolean;
 }): Promise<FullSubject> => {
 	const { customer_id, entity_id } = body;
+	const featureIds = [
+		...new Set(
+			featureDeductions.flatMap((deduction) =>
+				getRelevantFeatures({
+					features: ctx.features,
+					featureId: deduction.feature.id,
+				}).map((feature) => feature.id),
+			),
+		),
+	];
 
 	return ctx.apiVersion.gte(ApiVersion.V2_1)
-		? getOrSetCachedFullSubject({
+		? getOrSetCachedPartialFullSubject({
 				ctx,
 				customerId: customer_id,
 				entityId: entity_id,
+				featureIds,
 				source: "runTrackV3",
-				staleWhileRevalidate: !forceFresh,
+				readFrom: forceFresh ? "primary" : undefined,
 			})
-		: getOrCreateCachedFullSubject({
+		: getOrCreateCachedPartialFullSubject({
 				ctx,
 				params: body,
+				featureIds,
 				source: "runTrackV3",
 			});
 };
@@ -65,6 +80,7 @@ export const runTrackV3 = async ({
 	const fullSubject = await getTrackFullSubject({
 		ctx,
 		body,
+		featureDeductions,
 	});
 
 	const redisIdempotencyKey = getTrackQueueIdempotencyKey({ ctx });
@@ -77,7 +93,12 @@ export const runTrackV3 = async ({
 		body,
 		idempotencyKey: redisIdempotencyKey,
 		refreshFullSubject: () =>
-			getTrackFullSubject({ ctx, body, forceFresh: true }),
+			getTrackFullSubject({
+				ctx,
+				body,
+				featureDeductions,
+				forceFresh: true,
+			}),
 	});
 
 	return applyResponseVersionChanges<TrackResponseV3>({

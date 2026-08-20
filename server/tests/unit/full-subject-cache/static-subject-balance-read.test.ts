@@ -3,6 +3,7 @@ import type { UsageWindow } from "@autumn/shared";
 import type { ChainableCommander } from "ioredis";
 import {
 	appendCachedFeatureBalanceReads,
+	parseCachedFeatureBalanceHashReads,
 	parseCachedFeatureBalanceReads,
 } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
 
@@ -97,5 +98,35 @@ describe("static subject live-balance read", () => {
 			kind: "missing",
 			reason: "batch_field_null:messages:cus_ent_1",
 		});
+	});
+
+	test("parses feature-scoped balance hashes without reading the full subject", () => {
+		const outcome = parseCachedFeatureBalanceHashReads({
+			results: [
+				[
+					null,
+					{
+						cus_ent_1: JSON.stringify({
+							id: "cus_ent_1",
+							feature_id: "messages",
+							balance: 8,
+						}),
+						stale_entitlement: JSON.stringify({ balance: 999 }),
+					},
+				],
+			],
+			read: {
+				featureIds: ["messages"],
+				customerEntitlementIdsByFeatureId: {
+					messages: ["cus_ent_1"],
+				},
+				includeAggregated: false,
+			},
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.value[0]?.balances).toHaveLength(1);
+		expect(outcome.value[0]?.balances[0]?.balance).toBe(8);
 	});
 });

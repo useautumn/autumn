@@ -181,6 +181,34 @@ export const parseCachedFeatureBalanceReads = ({
 	return { kind: "ok", value: featureBalances };
 };
 
+export const parseCachedFeatureBalanceHashReads = ({
+	results,
+	read,
+}: {
+	results: unknown[] | null | undefined;
+	read: FeatureBalancesBatchRead;
+}): FeatureBalancesBatchOutcome => {
+	if (!results) return { kind: "missing", reason: "hash_pipeline_null" };
+
+	const orderedResults = read.featureIds.map((featureId, index) => {
+		const result = results[index] as [Error | null, unknown] | undefined;
+		if (result?.[0]) return result;
+		const fields = (result?.[1] ?? {}) as Record<string, string>;
+		const values: Array<string | null> = (
+			read.customerEntitlementIdsByFeatureId[featureId] ?? []
+		).map((customerEntitlementId) => fields[customerEntitlementId] ?? null);
+		if (read.includeAggregated) {
+			values.push(fields[AGGREGATED_BALANCE_FIELD] ?? null);
+		}
+		if (read.usageWindowFeatureIds?.has(featureId)) {
+			values.push(fields[USAGE_WINDOWS_FIELD] ?? null);
+		}
+		return [null, values];
+	});
+
+	return parseCachedFeatureBalanceReads({ results: orderedResults, read });
+};
+
 const readFeatureBalancesFromMaster = async ({
 	redis,
 	balanceKey,

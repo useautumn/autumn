@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
 	fullSubjectToCustomerEntitlements,
@@ -11,6 +11,7 @@ import type { CachedFullSubject } from "@/internal/customers/cache/fullSubject/f
 import {
 	buildFullSubjectKey,
 	buildFullSubjectViewEpochKey,
+	buildRuntimeSubjectKey,
 	buildSharedFullSubjectBalanceKey,
 	getCachedFullSubject,
 	getCachedPartialFullSubject,
@@ -18,7 +19,6 @@ import {
 	setCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { sanitizeCachedFullSubject } from "@/internal/customers/cache/fullSubject/sanitize/sanitizeCachedFullSubject.js";
-import { _resetCachedStaticSubjectL1ForTesting } from "@/internal/customers/cache/fullSubject/staticSubjectL1.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { fullSubjectToComparableSubject } from "../full-subject/utils/buildComparableFullSubject.js";
 import {
@@ -44,6 +44,12 @@ const cleanupKeys = async ({
 	const subjectRaw = (await ctx.redisV2.get(subjectKey)) as string | null;
 	const keys = [
 		subjectKey,
+		buildRuntimeSubjectKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+			entityId,
+		}),
 		buildFullSubjectViewEpochKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -67,10 +73,6 @@ const cleanupKeys = async ({
 
 	await ctx.redisV2.del(...keys);
 };
-
-afterEach(async () => {
-	_resetCachedStaticSubjectL1ForTesting();
-});
 
 const getCurrentViewEpoch = async ({ customerId }: { customerId: string }) =>
 	getOrInitFullSubjectViewEpoch({
@@ -153,10 +155,10 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 		});
 	});
 
-	test("hot full reads reuse static data but observe live balances", async () => {
+	test("runtime partial reads observe live balances", async () => {
 		const scenario = buildCustomerMeteredScenario({
 			ctx,
-			name: "fullsubject-cache-hot-full-read",
+			name: "fullsubject-cache-runtime-partial-read",
 		});
 
 		await withInsertedScenario({
@@ -173,142 +175,6 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					normalized,
 					fetchedSubjectViewEpoch: await getCurrentViewEpoch({ customerId }),
 				});
-				_resetCachedStaticSubjectL1ForTesting();
-
-				const first = await getCachedFullSubject({
-					ctx,
-					customerId,
-					source: "integration-test-hot-full",
-				});
-				expect(first.fullSubject).toBeDefined();
-
-				const subjectKey = buildFullSubjectKey({
-					orgId: ctx.org.id,
-					env: ctx.env,
-					customerId,
-				});
-				const cachedSubject = JSON.parse(
-					(await ctx.redisV2.get(subjectKey)) as string,
-				) as CachedFullSubject;
-				const featureId = cachedSubject.meteredFeatures[0]!;
-				const customerEntitlementId =
-					cachedSubject.customerEntitlementIdsByFeatureId[featureId]![0]!;
-				const balanceKey = buildSharedFullSubjectBalanceKey({
-					orgId: ctx.org.id,
-					env: ctx.env,
-					customerId,
-					featureId,
-				});
-				const updatedBalance = JSON.parse(
-					(await ctx.redisV2.hget(balanceKey, customerEntitlementId)) as string,
-				) as { balance: number };
-				updatedBalance.balance -= 7;
-				await ctx.redisV2.hset(
-					balanceKey,
-					customerEntitlementId,
-					JSON.stringify(updatedBalance),
-				);
-
-				first.fullSubject!.customer.name = "request-local-mutation";
-				ctx.extraLogs.fullSubjectStaticL1Hit = false;
-				const second = await getCachedFullSubject({
-					ctx,
-					customerId,
-					source: "integration-test-hot-full",
-				});
-				const secondBalance = fullSubjectToCustomerEntitlements({
-					fullSubject: second.fullSubject!,
-				}).find(
-					(customerEntitlement) =>
-						customerEntitlement.id === customerEntitlementId,
-				)?.balance;
-
-				expect(ctx.extraLogs.fullSubjectStaticL1Hit).toBe(true);
-				expect(secondBalance).toBe(updatedBalance.balance);
-				expect(second.fullSubject?.customer.name).not.toBe(
-					"request-local-mutation",
-				);
-
-				await cleanupKeys({ customerId });
-			},
-		});
-	});
-
-	test("a changed subject epoch refreshes the static L1", async () => {
-		const scenario = buildCustomerMeteredScenario({
-			ctx,
-			name: "fullsubject-cache-static-epoch-refresh",
-		});
-
-		await withInsertedScenario({
-			ctx,
-			scenario,
-			run: async ({ scenario }) => {
-				const customerId = scenario.ids.customerId;
-				const { normalized } = (await getFullSubjectNormalized({
-					ctx,
-					customerId,
-				}))!;
-				await setCachedFullSubject({
-					ctx,
-					normalized,
-					fetchedSubjectViewEpoch: await getCurrentViewEpoch({ customerId }),
-				});
-
-				const subjectKey = buildFullSubjectKey({
-					orgId: ctx.org.id,
-					env: ctx.env,
-					customerId,
-				});
-				const epochKey = buildFullSubjectViewEpochKey({
-					orgId: ctx.org.id,
-					env: ctx.env,
-					customerId,
-				});
-				const nextEpoch = await ctx.redisV2.incr(epochKey);
-				const changedSubject = JSON.parse(
-					(await ctx.redisV2.get(subjectKey)) as string,
-				) as CachedFullSubject;
-				changedSubject.subjectViewEpoch = nextEpoch;
-				changedSubject.customer.name = "changed-in-redis";
-				await ctx.redisV2.set(subjectKey, JSON.stringify(changedSubject));
-
-				ctx.extraLogs.fullSubjectStaticL1Hit = false;
-				const refreshed = await getCachedFullSubject({
-					ctx,
-					customerId,
-					source: "integration-test-static-epoch-refresh",
-				});
-
-				expect(ctx.extraLogs.fullSubjectStaticL1Hit).toBe(false);
-				expect(refreshed.fullSubject?.customer.name).toBe("changed-in-redis");
-
-				await cleanupKeys({ customerId });
-			},
-		});
-	});
-
-	test("hot partial reads observe live balances", async () => {
-		const scenario = buildCustomerMeteredScenario({
-			ctx,
-			name: "fullsubject-cache-hot-partial-read",
-		});
-
-		await withInsertedScenario({
-			ctx,
-			scenario,
-			run: async ({ scenario }) => {
-				const customerId = scenario.ids.customerId;
-				const { normalized } = (await getFullSubjectNormalized({
-					ctx,
-					customerId,
-				}))!;
-				await setCachedFullSubject({
-					ctx,
-					normalized,
-					fetchedSubjectViewEpoch: await getCurrentViewEpoch({ customerId }),
-				});
-				_resetCachedStaticSubjectL1ForTesting();
 				const subjectKey = buildFullSubjectKey({
 					orgId: ctx.org.id,
 					env: ctx.env,
@@ -343,7 +209,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					JSON.stringify(updatedBalance),
 				);
 
-				ctx.extraLogs.partialSubjectStaticL1Hit = false;
+				ctx.extraLogs.partialSubjectRuntimeHit = false;
 				const partial = await getCachedPartialFullSubject({
 					ctx,
 					customerId,
@@ -357,7 +223,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 						customerEntitlement.id === customerEntitlementId,
 				)?.balance;
 
-				expect(ctx.extraLogs.partialSubjectStaticL1Hit).toBe(true);
+				expect(ctx.extraLogs.partialSubjectRuntimeHit).toBe(true);
 				expect(partialBalance).toBe(updatedBalance.balance);
 				expect(partial.fullSubject?.customer.name).not.toBe(
 					"request-local-mutation",

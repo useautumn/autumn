@@ -12,11 +12,9 @@ import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { applyLiveAggregatedBalances } from "../../balances/applyLiveAggregatedBalances.js";
 import { applyLiveUsageWindows } from "../../balances/applyLiveUsageWindows.js";
 import {
-	appendCachedFeatureBalanceReads,
 	type FeatureBalancesBatchOutcome,
 	type FeatureBalancesBatchRead,
 	getCachedFeatureBalancesBatch,
-	parseCachedFeatureBalanceReads,
 } from "../../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
@@ -26,12 +24,9 @@ import {
 	cachedFullSubjectToNormalized,
 	FULL_SUBJECT_CACHE_SCHEMA_VERSION,
 } from "../../fullSubjectCacheModel.js";
+import { getCachedRuntimeSubject } from "../../runtimeSubject/getCachedRuntimeSubject.js";
+import { setCachedRuntimeSubject } from "../../runtimeSubject/setCachedRuntimeSubject.js";
 import { sanitizeCachedFullSubject } from "../../sanitize/index.js";
-import {
-	deleteCachedStaticSubject,
-	getCachedStaticSubject,
-	setCachedStaticSubject,
-} from "../../staticSubjectL1.js";
 import { tryOrInvalidate } from "../../tryOrInvalidate.js";
 import { invalidateCachedFullSubject } from "../invalidate/invalidateFullSubject.js";
 import { invalidateCachedFullSubjectExact } from "../invalidate/invalidateFullSubjectExact.js";
@@ -116,60 +111,21 @@ export const getCachedPartialFullSubject = async ({
 	});
 	const subjectLabel = buildSubjectLabel({ customerId, entityId });
 
-	const l1Cached = getCachedStaticSubject({ subjectKey });
-	let cached = l1Cached;
-	let cachedSerializedSize: number | undefined;
-	let currentSubjectViewEpoch = 0;
-	let prefetchedBalances: FeatureBalancesBatchOutcome | undefined;
-
-	if (l1Cached) {
-		const balanceRead = buildFeatureBalancesRead({
-			cached: l1Cached,
-			featureIds,
-			includeAggregated: !entityId,
-		});
-		const pipelineResults = await runRedisOp({
-			operation: async (redis) => {
-				const pipeline = redis.pipeline().exists(subjectKey).get(epochKey);
-				appendCachedFeatureBalanceReads({
-					pipeline,
-					orgId: org.id,
-					env,
-					customerId,
-					read: balanceRead,
-				});
-				return throwOnPipelineConnectionError(await pipeline.exec());
-			},
-			source: "getCachedPartialFullSubject:l1-pipeline",
-			redisInstance: redisV2,
-			retryOnStandby: true,
-			useReadPool: true,
-			timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
-		});
-
-		const subjectExistsEntry = pipelineResults?.[0];
-		const epochEntry = pipelineResults?.[1];
-		if (subjectExistsEntry?.[0]) throw subjectExistsEntry[0];
-		if (epochEntry?.[0]) throw epochEntry[0];
-		const subjectExists = Number(subjectExistsEntry?.[1] ?? 0) === 1;
-		currentSubjectViewEpoch = parseSubjectViewEpoch({
-			epochRaw: (epochEntry?.[1] ?? null) as string | null,
-		});
-		if (
-			pipelineResults &&
-			subjectExists &&
-			l1Cached.subjectViewEpoch === currentSubjectViewEpoch
-		) {
-			cached = structuredClone(l1Cached);
-			prefetchedBalances = parseCachedFeatureBalanceReads({
-				results: pipelineResults.slice(2),
-				read: balanceRead,
-			});
-			ctx.extraLogs.partialSubjectStaticL1Hit = true;
-		} else {
-			deleteCachedStaticSubject({ subjectKey });
-			cached = undefined;
-		}
+	const runtimeSubject = await getCachedRuntimeSubject({
+		ctx,
+		customerId,
+		entityId,
+		featureIds,
+	});
+	let cached =
+		runtimeSubject.kind === "hit" ? runtimeSubject.cached : undefined;
+	let currentSubjectViewEpoch = runtimeSubject.subjectViewEpoch;
+	const prefetchedBalances: FeatureBalancesBatchOutcome | undefined =
+		runtimeSubject.kind === "hit"
+			? { kind: "ok", value: runtimeSubject.featureBalances }
+			: undefined;
+	if (runtimeSubject.kind === "hit") {
+		ctx.extraLogs.partialSubjectRuntimeHit = true;
 	}
 
 	if (!cached) {
@@ -222,7 +178,6 @@ export const getCachedPartialFullSubject = async ({
 				subjectViewEpoch: currentSubjectViewEpoch,
 			};
 		}
-		cachedSerializedSize = cachedRaw.length;
 	}
 
 	const epochOk = await tryOrInvalidate({
@@ -323,14 +278,6 @@ export const getCachedPartialFullSubject = async ({
 		};
 	}
 
-	if (cachedSerializedSize !== undefined) {
-		setCachedStaticSubject({
-			subjectKey,
-			cached: structuredClone(cached),
-			serializedSize: cachedSerializedSize,
-		});
-	}
-
 	const balanceRead = buildFeatureBalancesRead({
 		cached,
 		featureIds,
@@ -420,6 +367,18 @@ export const getCachedPartialFullSubject = async ({
 			const fullSubject = normalizedToFullSubject({ normalized });
 			await lazyResetSubjectEntitlements({ ctx, fullSubject, normalized });
 			await lazyResetSubjectUsageWindows({ ctx, fullSubject, normalized });
+			if (runtimeSubject.kind === "miss") {
+				await setCachedRuntimeSubject({
+					ctx,
+					normalized,
+					subjectViewEpoch: currentSubjectViewEpoch,
+					featureIds,
+				}).catch((error) => {
+					ctx.logger.warn(
+						`[getCachedPartialFullSubject] Failed to backfill runtime subject for ${subjectLabel}: ${error}`,
+					);
+				});
+			}
 			return fullSubject;
 		},
 		invalidate: () =>

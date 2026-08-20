@@ -16,11 +16,8 @@ import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { applyLiveAggregatedBalances } from "../balances/applyLiveAggregatedBalances.js";
 import { applyLiveUsageWindows } from "../balances/applyLiveUsageWindows.js";
 import {
-	appendCachedFeatureBalanceReads,
-	type FeatureBalancesBatchOutcome,
 	type FeatureBalancesBatchRead,
 	getCachedFeatureBalancesBatch,
-	parseCachedFeatureBalanceReads,
 } from "../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../builders/buildFullSubjectViewEpochKey.js";
@@ -30,11 +27,6 @@ import {
 	FULL_SUBJECT_CACHE_SCHEMA_VERSION,
 } from "../fullSubjectCacheModel.js";
 import { sanitizeCachedFullSubject } from "../sanitize/index.js";
-import {
-	deleteCachedStaticSubject,
-	getCachedStaticSubject,
-	setCachedStaticSubject,
-} from "../staticSubjectL1.js";
 import { invalidateCachedFullSubject } from "./invalidate/invalidateFullSubject.js";
 import { invalidateCachedFullSubjectExact } from "./invalidate/invalidateFullSubjectExact.js";
 import { shouldWarmCache } from "./warmFullSubjectCache.js";
@@ -100,65 +92,10 @@ export const getCachedFullSubject = async ({
 		customerId,
 	});
 
-	const l1Cached = getCachedStaticSubject({ subjectKey });
-	let cached = l1Cached;
-	let cachedSerializedSize: number | undefined;
+	let cached: CachedFullSubject | undefined;
 	let currentSubjectViewEpoch = 0;
-	let prefetchedBalances: FeatureBalancesBatchOutcome | undefined;
-
-	if (l1Cached) {
-		const balanceRead = buildFeatureBalancesRead({
-			cached: l1Cached,
-			includeAggregated: !entityId,
-		});
-		const pipelineResults = await runRedisOp({
-			operation: async (redis) => {
-				const pipeline = redis.pipeline().exists(subjectKey).get(epochKey);
-				appendCachedFeatureBalanceReads({
-					pipeline,
-					orgId: org.id,
-					env,
-					customerId,
-					read: balanceRead,
-				});
-				return throwOnPipelineConnectionError(await pipeline.exec());
-			},
-			source: "getCachedFullSubject:l1-pipeline",
-			redisInstance: redisV2,
-			retryOnStandby: true,
-			useReadPool: true,
-			timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
-		});
-
-		const subjectExistsEntry = pipelineResults?.[0];
-		const epochEntry = pipelineResults?.[1];
-		if (subjectExistsEntry?.[0]) throw subjectExistsEntry[0];
-		if (epochEntry?.[0]) throw epochEntry[0];
-		const subjectExists = Number(subjectExistsEntry?.[1] ?? 0) === 1;
-		currentSubjectViewEpoch = parseSubjectViewEpoch({
-			epochRaw: (epochEntry?.[1] ?? null) as string | null,
-		});
-
-		if (
-			pipelineResults &&
-			subjectExists &&
-			l1Cached.subjectViewEpoch === currentSubjectViewEpoch
-		) {
-			cached = structuredClone(l1Cached);
-			prefetchedBalances = parseCachedFeatureBalanceReads({
-				results: pipelineResults.slice(2),
-				read: balanceRead,
-			});
-			ctx.extraLogs.fullSubjectStaticL1Hit = true;
-		} else {
-			deleteCachedStaticSubject({ subjectKey });
-			cached = undefined;
-		}
-	}
 
 	if (!cached) {
-		// Subject + epoch share a hash tag. Cold reads fetch both together; warm
-		// reads above fetch only epoch + live balances.
 		const pipelineResults = await runRedisOp({
 			operation: async (redis) =>
 				throwOnPipelineConnectionError(
@@ -192,7 +129,6 @@ export const getCachedFullSubject = async ({
 			cached = sanitizeCachedFullSubject({
 				cachedFullSubject: JSON.parse(cachedRaw) as CachedFullSubject,
 			});
-			cachedSerializedSize = cachedRaw.length;
 		} catch (error) {
 			logger.warn(
 				`[getCachedFullSubject] Failed to parse cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,
@@ -296,30 +232,20 @@ export const getCachedFullSubject = async ({
 		};
 	}
 
-	if (cachedSerializedSize !== undefined) {
-		setCachedStaticSubject({
-			subjectKey,
-			cached: structuredClone(cached),
-			serializedSize: cachedSerializedSize,
-		});
-	}
-
 	const isCustomerSubject = !entityId;
 	const balanceRead = buildFeatureBalancesRead({
 		cached,
 		includeAggregated: isCustomerSubject,
 	});
-	const balancesOutcome =
-		prefetchedBalances ??
-		(await getCachedFeatureBalancesBatch({
-			ctx,
-			customerId,
-			featureIds: balanceRead.featureIds,
-			customerEntitlementIdsByFeatureId:
-				balanceRead.customerEntitlementIdsByFeatureId,
-			includeAggregated: balanceRead.includeAggregated,
-			usageWindowFeatureIds: balanceRead.usageWindowFeatureIds,
-		}));
+	const balancesOutcome = await getCachedFeatureBalancesBatch({
+		ctx,
+		customerId,
+		featureIds: balanceRead.featureIds,
+		customerEntitlementIdsByFeatureId:
+			balanceRead.customerEntitlementIdsByFeatureId,
+		includeAggregated: balanceRead.includeAggregated,
+		usageWindowFeatureIds: balanceRead.usageWindowFeatureIds,
+	});
 
 	if (balancesOutcome.kind === "missing") {
 		logger.warn(

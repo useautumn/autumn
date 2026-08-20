@@ -3,6 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { logAlertEvent } from "@/utils/logging/logAlertEvent.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
+import { buildRuntimeSubjectKey } from "../builders/buildRuntimeSubjectKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "../config/fullSubjectCacheConfig.js";
 import { invalidateCachedFullSubject } from "./invalidate/invalidateFullSubject.js";
 
@@ -29,6 +30,12 @@ export const updateCachedEntityData = async ({
 
 	const { org, env, logger, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
+		orgId: org.id,
+		env,
+		customerId,
+		entityId,
+	});
+	const runtimeSubjectKey = buildRuntimeSubjectKey({
 		orgId: org.id,
 		env,
 		customerId,
@@ -67,6 +74,7 @@ export const updateCachedEntityData = async ({
 			() =>
 				redisV2.updateFullSubjectEntityDataV2(
 					subjectKey,
+					runtimeSubjectKey,
 					updatesJson,
 					String(FULL_SUBJECT_CACHE_TTL_SECONDS),
 					String(Date.now()),

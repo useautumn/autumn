@@ -2,7 +2,8 @@
 local params = cjson.decode(ARGV[1])
 local subject_key = KEYS[1]
 local epoch_key = KEYS[2]
-local receipt_key = KEYS[3]
+local runtime_subject_key = KEYS[3]
+local receipt_key = KEYS[4]
 
 local function number_or_zero(value)
   if value == nil or value == cjson.null then
@@ -58,7 +59,7 @@ local published_target_fields = {}
 -- Resolve every live source and adjust each draft target before changing Redis.
 -- Returning early here leaves A and the existing subject view untouched.
 for index, balance_hash in ipairs(params.balance_hashes) do
-  local balance_key = KEYS[index + 3]
+  local balance_key = KEYS[index + 4]
 
   for _, transition in ipairs(balance_hash.balance_transitions or {}) do
     local source_json = redis.call('HGET', balance_key, transition.source_field)
@@ -106,7 +107,7 @@ local next_epoch = redis.call('INCR', epoch_key)
 params.subject.subjectViewEpoch = next_epoch
 
 for index, balance_hash in ipairs(params.balance_hashes) do
-  local balance_key = KEYS[index + 3]
+  local balance_key = KEYS[index + 4]
 
   for _, field_name in ipairs(balance_hash.deletes) do
     redis.call('HDEL', balance_key, field_name)
@@ -133,6 +134,7 @@ for index, balance_hash in ipairs(params.balance_hashes) do
 end
 
 redis.call('SET', subject_key, cjson.encode(params.subject), 'EX', params.ttl_seconds)
+redis.call('UNLINK', runtime_subject_key)
 redis.call('EXPIRE', epoch_key, params.epoch_ttl_seconds)
 
 local result = cjson.encode({
