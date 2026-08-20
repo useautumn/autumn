@@ -2,6 +2,7 @@ import type {
 	EntityBalance,
 	EntityRolloverBalance,
 	SubjectBalance,
+	UsageAttribution,
 } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import { sql } from "drizzle-orm";
@@ -28,6 +29,7 @@ export interface SyncEntry {
 	balance: number;
 	adjustment: number;
 	entities: Record<string, EntityBalance> | null;
+	usage_attribution: UsageAttribution;
 	next_reset_at: number | null;
 	entity_count: number;
 	cache_version: number | null;
@@ -50,6 +52,7 @@ export const subjectBalanceToSyncEntry = ({
 	balance: subjectBalance.balance ?? 0,
 	adjustment: subjectBalance.adjustment ?? 0,
 	entities: subjectBalance.entities ?? null,
+	usage_attribution: subjectBalance.usage_attribution ?? {},
 	next_reset_at: subjectBalance.next_reset_at ?? null,
 	entity_count: subjectBalance.entities
 		? Object.keys(subjectBalance.entities).length

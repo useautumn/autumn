@@ -41,6 +41,98 @@ const aiCreditFeature: Feature = {
 	},
 };
 
+const graduatedCreditFeature: Feature = {
+	...aiCreditFeature,
+	internal_id: "fe_credits",
+	id: "credits",
+	name: "Credits",
+	type: FeatureType.CreditSystem,
+	config: {
+		usage_type: FeatureUsageType.Single,
+		schema: [
+			{
+				metered_feature_id: "messages",
+				feature_amount: 100,
+				tier_behavior: "graduated",
+				tiers: [
+					{ to: 10_000, credit_amount: 1 },
+					{ to: 50_000, credit_amount: 0.8 },
+					{ to: "inf", credit_amount: 0.5 },
+				],
+			},
+		],
+	},
+	model_markups: null,
+};
+
+describe("getCreditCost — graduated rate cards", () => {
+	test("charges the marginal cost when usage crosses one tier", () => {
+		const cost = getCreditCost({
+			featureId: "messages",
+			creditSystem: graduatedCreditFeature,
+			amount: 100,
+			currentUsage: 9_950,
+		});
+
+		expect(cost).toBeCloseTo(0.9, 10);
+	});
+
+	test("charges the marginal cost when one track crosses multiple tiers", () => {
+		const cost = getCreditCost({
+			featureId: "messages",
+			creditSystem: graduatedCreditFeature,
+			amount: 40_200,
+			currentUsage: 9_900,
+		});
+
+		expect(cost).toBeCloseTo(321.5, 10);
+	});
+
+	test("one hundred single-unit tracks equal one hundred-unit track", () => {
+		let currentUsage = 9_950;
+		let incrementalCost = 0;
+
+		for (let index = 0; index < 100; index++) {
+			incrementalCost += getCreditCost({
+				featureId: "messages",
+				creditSystem: graduatedCreditFeature,
+				amount: 1,
+				currentUsage,
+			});
+			currentUsage += 1;
+		}
+
+		const batchedCost = getCreditCost({
+			featureId: "messages",
+			creditSystem: graduatedCreditFeature,
+			amount: 100,
+			currentUsage: 9_950,
+		});
+
+		expect(incrementalCost).toBeCloseTo(batchedCost, 10);
+	});
+
+	test("negative usage reverses the same marginal tiers without going below zero", () => {
+		expect(
+			getCreditCost({
+				featureId: "messages",
+				creditSystem: graduatedCreditFeature,
+				amount: -100,
+				currentUsage: 10_050,
+			}),
+		).toBeCloseTo(-0.9, 10);
+
+		expect(
+			getCreditCost({
+				featureId: "messages",
+				creditSystem: graduatedCreditFeature,
+				amount: -100,
+				currentUsage: 50,
+			}),
+		).toBeCloseTo(-0.5, 10);
+	});
+});
+
 describe("getCreditCost — AI credit system schema math", () => {
 	test("self feature maps 1:1 (plain /track values, queued replays)", () => {
 		const cost = getCreditCost({

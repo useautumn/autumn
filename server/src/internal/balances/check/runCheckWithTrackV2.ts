@@ -16,7 +16,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackFeatureDeductions } from "@/internal/balances/track/utils/getFeatureDeductions.js";
 import { runTrackV3 } from "@/internal/balances/track/v3/runTrackV3.js";
 import { buildLockScheduleName } from "@/internal/balances/utils/lock/buildLockScheduleName.js";
-import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
+import {
+	featureToCreditSystem,
+	getCreditRateCurrentUsage,
+} from "@/internal/features/creditSystemUtils.js";
 import { workflows } from "@/queue/workflows.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 
@@ -24,9 +27,7 @@ import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
  * Checks if the customer has any entitlement for the requested feature.
  * Returns false when apiBalance is undefined, indicating no customer_entitlement exists.
  */
-const customerHasEntitlementForFeature = (
-	checkData: CheckDataV2,
-): boolean => {
+const customerHasEntitlementForFeature = (checkData: CheckDataV2): boolean => {
 	return checkData.apiBalance !== undefined;
 };
 
@@ -153,6 +154,11 @@ export const runCheckWithTrackV2 = async ({
 			featureId: originalFeature.id,
 			creditSystem: featureToUse,
 			amount: requiredBalance,
+			currentUsage: getCreditRateCurrentUsage({
+				fullSubject: checkData.fullSubject,
+				creditSystemId: featureToUse.id,
+				sourceInternalFeatureId: originalFeature.internal_id,
+			}),
 		});
 	}
 

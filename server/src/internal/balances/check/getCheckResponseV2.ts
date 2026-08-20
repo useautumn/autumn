@@ -3,7 +3,10 @@ import {
 	CheckResponseV3Schema,
 	FeatureType,
 } from "@autumn/shared";
-import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
+import {
+	featureToCreditSystem,
+	getCreditRateCurrentUsage,
+} from "@/internal/features/creditSystemUtils.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 
 export const getCheckResponseV2 = async ({
@@ -35,6 +38,11 @@ export const getCheckResponseV2 = async ({
 			featureId: originalFeature.id,
 			creditSystem: featureToUse,
 			amount: requiredBalance,
+			currentUsage: getCreditRateCurrentUsage({
+				fullSubject: checkData.fullSubject,
+				creditSystemId: featureToUse.id,
+				sourceInternalFeatureId: originalFeature.internal_id,
+			}),
 		});
 	}
 

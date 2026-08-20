@@ -300,6 +300,7 @@ for _, cus_ent_id in ipairs(unwind_modified_cus_ent_ids) do
         additional_balance = 0,
         adjustment = ent_data.adjustment or 0,
         entities = ent_data.entities or {},
+        usage_attribution = ent_data.subject_balance.usage_attribution or {},
         deducted = 0,
       }
     end

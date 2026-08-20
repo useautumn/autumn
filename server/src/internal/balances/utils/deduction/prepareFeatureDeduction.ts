@@ -1,6 +1,7 @@
 import {
 	AllowanceType,
 	cusEntToStartingBalance,
+	ErrCode,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
@@ -13,6 +14,7 @@ import {
 	isFreeCustomerEntitlement,
 	notNullish,
 	orgToInStatuses,
+	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
@@ -92,12 +94,16 @@ export const prepareFeatureDeduction = ({
 			.map((ce) => ce.entitlement.feature.id),
 	);
 
-	const getCreditCostForEnt = computeCreditCosts({ cusEnts, deduction });
+	const getCreditCostForEnt = computeCreditCosts({
+		cusEnts,
+		deduction,
+		catalogFeatures: ctx.features,
+	});
 
 	// Build input for each customer entitlement
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
 		cusEnts.map((ce) => {
-			const creditCost = getCreditCostForEnt(ce.id);
+			const { creditCost, rateCard } = getCreditCostForEnt(ce.id);
 			const maxOverage = getMaxOverage({ cusEnt: ce });
 
 			const isFreeAllocated =
@@ -131,6 +137,7 @@ export const prepareFeatureDeduction = ({
 			return {
 				customer_entitlement_id: ce.id,
 				credit_cost: creditCost,
+				...(rateCard ? { rate_card: rateCard } : {}),
 				feature_id: ce.entitlement.feature.id,
 				entity_feature_id: ce.entitlement.entity_feature_id ?? null,
 				usage_allowed: isUnlimited || effectiveUsageAllowed,
@@ -140,6 +147,19 @@ export const prepareFeatureDeduction = ({
 				...(isUnlimited ? { unlimited: true } : {}),
 			};
 		});
+
+	if (
+		lock?.enabled &&
+		customerEntitlementDeductions.some(
+			(entry) => entry.rate_card?.tier_behavior === "graduated",
+		)
+	) {
+		throw new RecaseError({
+			message: "Graduated credit rate cards do not support balance locks yet",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
 
 	// The deduction sort only prefers unlimited within a tier (entity level and
 	// credit systems sort first/last regardless), but the sink contract is that
@@ -160,7 +180,7 @@ export const prepareFeatureDeduction = ({
 	// Collect and sort rollovers by expires_at (oldest first), including credit_cost from parent entitlement
 	const sortedRollovers = cusEnts
 		.flatMap((ce) => {
-			const creditCost = getCreditCostForEnt(ce.id);
+			const { creditCost } = getCreditCostForEnt(ce.id);
 			return (ce.rollovers || []).map((r) => ({
 				...r,
 				credit_cost: creditCost,

@@ -11,6 +11,7 @@ const buildZeroDeductionUpdate = ({
 	additional_balance: customerEntitlement.additional_balance ?? 0,
 	adjustment: customerEntitlement.adjustment ?? 0,
 	entities: customerEntitlement.entities ?? {},
+	usage_attribution: customerEntitlement.usage_attribution ?? {},
 	deducted: 0,
 });
 
