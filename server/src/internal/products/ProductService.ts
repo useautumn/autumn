@@ -304,12 +304,12 @@ export class ProductService {
 
 	static async insert({ db, product }: { db: DrizzleCli; product: Product }) {
 		// Dual-write for version identity (nothing reads these yet — Unit 2):
-		// every production insert funnels through here, so slug/active defaults
-		// live at this single choke point. Invariant: active tracks the max
-		// version ("latest wins", today's resolution), order-independently — a
-		// row only self-activates when no higher version exists, so multi-row
+		// every production insert funnels through here. Invariant: active tracks
+		// the max version ("latest wins", today's resolution), order-independently
+		// — a row only self-activates when no higher version exists, so multi-row
 		// catalog updates land the same end state whatever their insert order.
-		// An explicit `active: false` opts out (future catalogV2 compute hook);
+		// `product.active` is the caller's explicit request (strict on
+		// ProductSchema); false opts out (future catalogV2 compute hook).
 		// unique_active_product backstops the flip against concurrent inserts.
 		const row = {
 			...product,
@@ -323,7 +323,7 @@ export class ProductService {
 
 		const prod = await db.transaction(async (tx) => {
 			let activate = false;
-			if (product.active !== false) {
+			if (product.active) {
 				const higherVersion = await tx
 					.select({ internal_id: products.internal_id })
 					.from(products)

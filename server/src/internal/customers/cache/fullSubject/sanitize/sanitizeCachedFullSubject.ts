@@ -26,5 +26,30 @@ export const sanitizeCachedFullSubject = ({
 		repairCachedProductCollections(product);
 	}
 
+	backfillCachedProductActive(normalized);
+
 	return normalized;
+};
+
+/**
+ * Entries cached before the version-identity migration lack the (strict)
+ * `active` field. Hole-fill it with the same rule as the DB backfill: a plan's
+ * max-version row is the active one. Post-migration entries carry real values
+ * and are left untouched.
+ */
+const backfillCachedProductActive = (normalized: CachedFullSubject) => {
+	const products = normalized.products ?? [];
+
+	const maxVersionByPlanId = new Map<string, number>();
+	for (const product of products) {
+		const max = maxVersionByPlanId.get(product.id) ?? 0;
+		if (product.version > max)
+			maxVersionByPlanId.set(product.id, product.version);
+	}
+
+	for (const product of products) {
+		if (typeof product.active !== "boolean") {
+			product.active = product.version === maxVersionByPlanId.get(product.id);
+		}
+	}
 };

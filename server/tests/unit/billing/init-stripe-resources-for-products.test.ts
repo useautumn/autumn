@@ -142,6 +142,8 @@ const customerProduct = ({
 			is_add_on: false,
 			is_default: false,
 			version: 1,
+			version_slug: "v1",
+			active: true,
 			group: "",
 			env: "sandbox",
 			internal_id: "prod_internal",

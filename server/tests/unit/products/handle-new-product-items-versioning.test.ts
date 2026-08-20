@@ -114,6 +114,8 @@ const newProduct: Product = {
 	is_add_on: false,
 	is_default: false,
 	version: 2,
+	version_slug: "v2",
+	active: true,
 	group: "",
 	env: AppEnv.Sandbox,
 	internal_id: newProductInternalId,
