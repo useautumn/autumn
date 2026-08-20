@@ -57,6 +57,9 @@ const isFailedActionResult = (event: {
 };
 
 const CHILD_REPLAY_IDLE_TIMEOUT_MS = ms.seconds(15);
+/** Delegated children work in silence on the parent stream, so a resumed turn
+ * can be quiet for minutes before the next park or result arrives. */
+const RESUME_IDLE_TIMEOUT_MS = ms.minutes(5);
 
 /** Replays a completed child session's stream from the start, feeding its
  * action events to the caller. Task-mode children end with session.completed,
@@ -181,7 +184,11 @@ export const consumeResumedAgentTurn = async ({
 			step.status = isFailedActionResult(event) ? "failed" : "applied";
 		}
 	};
-	for await (const event of streamEveEvents({ auth, session })) {
+	for await (const event of streamEveEvents({
+		auth,
+		idleTimeoutMs: RESUME_IDLE_TIMEOUT_MS,
+		session,
+	})) {
 		sawEvent = true;
 		session.state.streamIndex += 1;
 		session.state.lastEventAt = Date.now();
