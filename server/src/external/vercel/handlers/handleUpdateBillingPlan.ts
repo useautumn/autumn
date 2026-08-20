@@ -29,7 +29,7 @@ export const handleUpdateVercelBillingPlan = createRoute({
 			});
 		} else {
 			if (
-				customer.customer_products.find((cp) => cp.product_id === billingPlanId)
+				customer.customer_products.find((cp) => cp.product.id === billingPlanId)
 			) {
 				return c.json(
 					{

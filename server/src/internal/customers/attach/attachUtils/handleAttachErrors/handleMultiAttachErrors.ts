@@ -4,7 +4,6 @@ import {
 	ErrCode,
 	isUsagePrice,
 	notNullish,
-	nullish,
 	type Price,
 	RecaseError,
 } from "@autumn/shared";
@@ -44,17 +43,11 @@ export const handleMultiAttachErrors = async ({
 	const cusProducts = attachParams.customer.customer_products;
 	for (const prodOptions of productsList!) {
 		const newQuantity = prodOptions.quantity || 1;
-		const curCusQuantity =
-			cusProducts.find(
-				(cp) =>
-					cp.product_id === prodOptions.product_id &&
-					nullish(cp.internal_entity_id),
-			)?.quantity || 0;
 
 		const curEntityQuantity =
 			cusProducts.filter(
 				(cp) =>
-					cp.product_id === prodOptions.product_id &&
+					cp.product.id === prodOptions.product_id &&
 					notNullish(cp.internal_entity_id),
 			)?.length || 0;
 

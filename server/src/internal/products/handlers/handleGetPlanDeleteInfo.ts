@@ -23,9 +23,11 @@ export const handleGetPlanDeleteInfo = createRoute({
 		}
 
 		const [allVersions, latestVersion, deletionText] = await Promise.all([
-			CusProdReadService.existsForProduct({
+			CusProdReadService.existsForProductVersions({
 				db,
 				productId: product_id,
+				orgId: org.id,
+				env,
 			}),
 			CusProdReadService.existsForProduct({
 				db,
