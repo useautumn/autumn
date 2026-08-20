@@ -1,5 +1,6 @@
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, ms } from "@autumn/shared";
 import { getOrgInstallationToken } from "../../src/internal/installations/actions/getOrgInstallationToken.js";
+import { createTtlCache } from "../../src/lib/ttlCache.js";
 
 export type LeafPrincipalAttributes = Readonly<
 	Record<string, string | readonly string[] | undefined>
@@ -64,4 +65,27 @@ export const mintAutumnAccessToken = async ({
 		workspaceId: principal.workspaceId,
 	});
 	return { accessToken, appEnv: principal.appEnv, principal };
+};
+
+type MintedAutumnToken = Awaited<ReturnType<typeof mintAutumnAccessToken>>;
+
+const tokenCache = createTtlCache<MintedAutumnToken>({ ttlMs: ms.seconds(30) });
+
+/** "Minting" is a stored-credential lookup (2 DB reads, refresh only on
+ * expiry); the principal is derived without I/O so the cache key costs
+ * nothing and repeat steps skip the lookups entirely. */
+export const mintCachedAutumnToken = (
+	attributes: LeafPrincipalAttributes | undefined,
+) => {
+	const principal = autumnPrincipalFrom({ attributes });
+	return tokenCache.getOrCreate(
+		[
+			principal.orgId,
+			principal.appEnv,
+			principal.provider,
+			principal.workspaceId,
+			principal.credentialUserId ?? "",
+		].join(":"),
+		() => mintAutumnAccessToken({ attributes }),
+	);
 };
