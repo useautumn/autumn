@@ -11,6 +11,7 @@ import {
 import { createTtlCache } from "../../src/lib/ttlCache.js";
 import { approvalSets } from "./approvalSets.js";
 import {
+	autumnPrincipalFrom,
 	type LeafPrincipalAttributes,
 	mintAutumnAccessToken,
 } from "./autumnAuth.js";
@@ -20,11 +21,11 @@ type MintedToken = Awaited<ReturnType<typeof mintAutumnAccessToken>>;
 
 const tokenCache = createTtlCache<MintedToken>({ ttlMs: ms.seconds(30) });
 
-const mintCachedToken = async (
-	attributes: LeafPrincipalAttributes | undefined,
-) => {
-	const minted = await mintAutumnAccessToken({ attributes });
-	const { principal } = minted;
+/** "Minting" is a stored-credential lookup (2 DB reads, refresh only on
+ * expiry); the principal is derived without I/O so the cache key costs
+ * nothing and repeat steps skip the lookups entirely. */
+const mintCachedToken = (attributes: LeafPrincipalAttributes | undefined) => {
+	const principal = autumnPrincipalFrom({ attributes });
 	return tokenCache.getOrCreate(
 		[
 			principal.orgId,
@@ -33,7 +34,7 @@ const mintCachedToken = async (
 			principal.workspaceId,
 			principal.credentialUserId ?? "",
 		].join(":"),
-		async () => minted,
+		() => mintAutumnAccessToken({ attributes }),
 	);
 };
 

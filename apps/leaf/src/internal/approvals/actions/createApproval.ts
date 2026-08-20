@@ -15,6 +15,38 @@ import {
 } from "../utils/fetchApprovalPreview.js";
 import { publicToolArgs, toolRequestFromArgs } from "../utils/toolRequest.js";
 
+/** Grouped step previews are N MCP round trips; the card posts without
+ * waiting and re-renders when they land. The row update is pending-guarded so
+ * an already-resolved approval keeps what it was approved with. */
+const createGroupedPreviewBackfill =
+	({
+		approvalId,
+		env,
+		getToken,
+		logger,
+		toolArgs,
+	}: {
+		approvalId: string;
+		env: AppEnv;
+		getToken: () => Promise<string>;
+		logger: AutumnLogger;
+		toolArgs: Record<string, unknown>;
+	}) =>
+	async () => {
+		const enriched = await withGroupedWritePreviews({
+			env,
+			getToken,
+			logger,
+			toolArgs,
+		});
+		const stored = await chatApprovalRepo.setToolArgs({
+			approvalId,
+			db,
+			toolArgs: enriched,
+		});
+		return stored ? publicToolArgs(enriched) : undefined;
+	};
+
 export const createApproval = async ({
 	channelId,
 	env,
@@ -87,30 +119,20 @@ export const createApproval = async ({
 		approval_id: approvalId,
 		tool: approval.toolName,
 	});
-	// Grouped step previews are N MCP round trips; the card posts without
-	// waiting and re-renders when they land. The row update is pending-guarded
-	// so an already-resolved approval keeps what it was approved with.
-	const backfillGroupedPreviews =
-		withheldWritesFromToolArgs(approval.toolArgs).length === 0
-			? undefined
-			: async () => {
-					const enriched = await withGroupedWritePreviews({
-						env,
-						getToken,
-						logger,
-						toolArgs: approval.toolArgs,
-					});
-					const stored = await chatApprovalRepo.setToolArgs({
-						approvalId,
-						db,
-						toolArgs: enriched,
-					});
-					return stored ? publicToolArgs(enriched) : undefined;
-				};
+	const hasGroupedWrites =
+		withheldWritesFromToolArgs(approval.toolArgs).length > 0;
 
 	return {
 		approvalId,
-		backfillGroupedPreviews,
+		backfillGroupedPreviews: hasGroupedWrites
+			? createGroupedPreviewBackfill({
+					approvalId,
+					env,
+					getToken,
+					logger,
+					toolArgs: approval.toolArgs,
+				})
+			: undefined,
 		params: request,
 		preview,
 		toolArgs: publicToolArgs(storedToolArgs),
