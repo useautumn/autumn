@@ -6,7 +6,7 @@ const workflowWorld =
 	(process.env.WORKFLOW_POSTGRES_URL ? "@workflow/world-postgres" : undefined);
 
 export default defineAgent({
-	model: leafModel(),
+	model: leafModel("orchestrator"),
 	reasoning: leafReasoning,
 	...(workflowWorld
 		? {
