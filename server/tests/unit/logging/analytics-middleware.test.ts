@@ -21,7 +21,7 @@ afterEach(() => {
 	mock.restore();
 });
 
-test("terminal logging waits for the Node response to finish", async () => {
+test("terminal logging yields after the Node response finishes", async () => {
 	spyOn(Math, "random").mockReturnValue(0.5);
 	const logged: unknown[][] = [];
 	const outgoing = Object.assign(new EventEmitter(), {
@@ -56,6 +56,10 @@ test("terminal logging waits for the Node response to finish", async () => {
 	outgoing.writableFinished = true;
 	outgoing.emit("finish");
 	await Promise.resolve();
+
+	expect(logged).toHaveLength(0);
+
+	await new Promise<void>((resolve) => setImmediate(resolve));
 
 	expect(logged).toHaveLength(1);
 });

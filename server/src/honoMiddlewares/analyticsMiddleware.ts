@@ -71,6 +71,9 @@ export const parseCustomerIdFromBody = async (
 	return undefined;
 };
 
+const waitForNextEventLoopTurn = () =>
+	new Promise<void>((resolve) => setImmediate(resolve));
+
 const waitForResponseCompletion = ({
 	c,
 }: {
@@ -78,18 +81,18 @@ const waitForResponseCompletion = ({
 }): Promise<void> => {
 	const outgoing = (c.env as Partial<HttpBindings> | undefined)?.outgoing;
 	if (!outgoing) {
-		return new Promise((resolve) => setImmediate(resolve));
+		return waitForNextEventLoopTurn();
 	}
 
 	if (outgoing.writableFinished || outgoing.destroyed) {
-		return Promise.resolve();
+		return waitForNextEventLoopTurn();
 	}
 
 	return new Promise((resolve) => {
 		const complete = () => {
 			outgoing.off("finish", complete);
 			outgoing.off("close", complete);
-			resolve();
+			setImmediate(resolve);
 		};
 
 		outgoing.once("finish", complete);
