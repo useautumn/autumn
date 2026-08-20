@@ -15,6 +15,11 @@ export const sanitizeCachedFullSubject = ({
 }: {
 	cachedFullSubject: CachedFullSubject;
 }): CachedFullSubject => {
+	// Must run BEFORE the walker: version_slug is nullable, so the walker
+	// fills a missing key with null — after that, "absent" is no longer
+	// distinguishable from a real value.
+	backfillCachedProductVersionIdentity(cachedFullSubject);
+
 	const normalized = normalizeFromSchema<CachedFullSubject>({
 		schema: CachedFullSubjectSchema,
 		data: cachedFullSubject,
@@ -26,30 +31,30 @@ export const sanitizeCachedFullSubject = ({
 		repairCachedProductCollections(product);
 	}
 
-	backfillCachedProductActive(normalized);
-
 	return normalized;
 };
 
 /**
  * Entries cached before the version-identity migration lack the (strict)
- * `active` field. Hole-fill it with the same rule as the DB backfill: a plan's
- * max-version row is the active one. Post-migration entries carry real values
- * and are left untouched.
+ * `version_slug` and `active` fields. Slug hole-fills to `v{version}` (same
+ * rule as the DB backfill). `active` hole-fills to false: the cached subject
+ * only holds this customer's product rows, not the plan's full version
+ * history, so it cannot know which version is actually active — false is the
+ * honest value.
+ *
+ * Fills ONLY when the key is absent — entries cached after the migration
+ * carry real values and must pass through untouched (including explicit
+ * null / false).
  */
-const backfillCachedProductActive = (normalized: CachedFullSubject) => {
-	const products = normalized.products ?? [];
-
-	const maxVersionByPlanId = new Map<string, number>();
-	for (const product of products) {
-		const max = maxVersionByPlanId.get(product.id) ?? 0;
-		if (product.version > max)
-			maxVersionByPlanId.set(product.id, product.version);
-	}
-
-	for (const product of products) {
-		if (typeof product.active !== "boolean") {
-			product.active = product.version === maxVersionByPlanId.get(product.id);
+const backfillCachedProductVersionIdentity = (cached: CachedFullSubject) => {
+	// Pre-walker, products may still be cjson-mangled ({} instead of []).
+	if (!Array.isArray(cached.products)) return;
+	for (const product of cached.products) {
+		if (product.version_slug === undefined) {
+			product.version_slug = `v${product.version}`;
+		}
+		if (product.active === undefined) {
+			product.active = false;
 		}
 	}
 };

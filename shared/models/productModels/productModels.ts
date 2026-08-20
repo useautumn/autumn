@@ -24,12 +24,9 @@ export const ProductSchema = z.object({
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number(),
-	// Nullish while Unit 1 (dual-write) rolls out; readers land in Unit 2 and
-	// tighten it. See .context/plan-version-identity/PLAN.md.
-	version_slug: z.string().nullish(),
-	// Strict on purpose: construction sites must decide activation explicitly.
-	// Stale full-subject cache entries predating this field are handled by the
-	// FULL_SUBJECT_CACHE_SCHEMA_VERSION gate, not schema leniency.
+	// Required key; null only until the column is NOT NULL. Cache hole-fill
+	// for pre-migration entries lives in sanitizeCachedFullSubject.
+	version_slug: z.string().nullable(),
 	active: z.boolean(),
 	group: z.string(),
 
