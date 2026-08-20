@@ -3,6 +3,7 @@ import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRoutin
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
+import { deleteCachedStaticSubject } from "../../staticSubjectL1.js";
 
 const invalidateCachedFullSubjectExactOnRedis = async ({
 	customerId,
@@ -26,6 +27,7 @@ const invalidateCachedFullSubjectExactOnRedis = async ({
 		entityId,
 	});
 	const subjectLabel = entityId ? `${customerId}:${entityId}` : customerId;
+	deleteCachedStaticSubject({ subjectKey });
 
 	const result = await tryRedisOp({
 		operation: () => redisV2.unlink(subjectKey),

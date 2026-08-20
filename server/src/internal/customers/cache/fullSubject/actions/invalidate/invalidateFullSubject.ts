@@ -6,6 +6,7 @@ import { markCustomerUpdatedAt } from "@/internal/customers/customerLsns/markCus
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
 import { FULL_SUBJECT_EPOCH_TTL_SECONDS } from "../../config/fullSubjectCacheConfig.js";
+import { deleteCachedStaticSubject } from "../../staticSubjectL1.js";
 import { invalidateSharedBalanceFields } from "./invalidateSharedBalanceFields.js";
 
 const invalidateCachedFullSubjectOnRedis = async ({
@@ -45,6 +46,10 @@ const invalidateCachedFullSubjectOnRedis = async ({
 	const entitySubjectKey = entityId
 		? buildFullSubjectKey({ orgId: org.id, env, customerId, entityId })
 		: undefined;
+	deleteCachedStaticSubject({ subjectKey: customerSubjectKey });
+	if (entitySubjectKey) {
+		deleteCachedStaticSubject({ subjectKey: entitySubjectKey });
+	}
 
 	const epochKey = buildFullSubjectViewEpochKey({
 		orgId: org.id,

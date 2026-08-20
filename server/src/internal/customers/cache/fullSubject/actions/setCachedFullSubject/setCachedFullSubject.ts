@@ -8,6 +8,7 @@ import {
 	FULL_SUBJECT_EPOCH_TTL_SECONDS,
 } from "../../config/fullSubjectCacheConfig.js";
 import { normalizedToCachedFullSubject } from "../../fullSubjectCacheModel.js";
+import { setCachedStaticSubject } from "../../staticSubjectL1.js";
 import { assertPrimarySourced } from "../../subjectProvenance.js";
 import type { SetCachedFullSubjectResult } from "./fullSubjectWriteTypes.js";
 import { buildSharedBalanceWrites } from "./setSharedFullSubjectBalances.js";
@@ -60,11 +61,12 @@ export const setCachedFullSubject = async ({
 		keys.push(balanceKey);
 	}
 
+	const cachedRaw = JSON.stringify(cached);
 	const argv: string[] = [
 		String(fetchedSubjectViewEpoch),
 		String(FULL_SUBJECT_CACHE_TTL_SECONDS),
 		String(FULL_SUBJECT_EPOCH_TTL_SECONDS),
-		JSON.stringify(cached),
+		cachedRaw,
 		String(balanceWrites.length),
 	];
 
@@ -82,6 +84,13 @@ export const setCachedFullSubject = async ({
 	);
 
 	const subjectLabel = entityId ? `${customerId}:${entityId}` : customerId;
+	if (result === "OK") {
+		setCachedStaticSubject({
+			subjectKey,
+			cached: structuredClone(cached),
+			serializedSize: cachedRaw.length,
+		});
+	}
 	logger.info(
 		`[setCachedFullSubject] ${subjectLabel}: ${result ?? "FAILED"}, balances=${cached.meteredFeatures.length}`,
 	);

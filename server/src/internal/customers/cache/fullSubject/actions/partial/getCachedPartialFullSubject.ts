@@ -11,7 +11,13 @@ import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubj
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { applyLiveAggregatedBalances } from "../../balances/applyLiveAggregatedBalances.js";
 import { applyLiveUsageWindows } from "../../balances/applyLiveUsageWindows.js";
-import { getCachedFeatureBalancesBatch } from "../../balances/getCachedFeatureBalances.js";
+import {
+	appendCachedFeatureBalanceReads,
+	type FeatureBalancesBatchOutcome,
+	type FeatureBalancesBatchRead,
+	getCachedFeatureBalancesBatch,
+	parseCachedFeatureBalanceReads,
+} from "../../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
 import { filterNormalizedFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
@@ -21,6 +27,11 @@ import {
 	FULL_SUBJECT_CACHE_SCHEMA_VERSION,
 } from "../../fullSubjectCacheModel.js";
 import { sanitizeCachedFullSubject } from "../../sanitize/index.js";
+import {
+	deleteCachedStaticSubject,
+	getCachedStaticSubject,
+	setCachedStaticSubject,
+} from "../../staticSubjectL1.js";
 import { tryOrInvalidate } from "../../tryOrInvalidate.js";
 import { invalidateCachedFullSubject } from "../invalidate/invalidateFullSubject.js";
 import { invalidateCachedFullSubjectExact } from "../invalidate/invalidateFullSubjectExact.js";
@@ -36,6 +47,46 @@ const buildSubjectLabel = ({
 export type GetCachedPartialFullSubjectResult = {
 	fullSubject: FullSubject | undefined;
 	subjectViewEpoch: number;
+};
+
+const parseSubjectViewEpoch = ({
+	epochRaw,
+}: {
+	epochRaw: string | null;
+}): number => {
+	const parsedEpoch =
+		epochRaw !== null ? Number.parseInt(epochRaw, 10) : Number.NaN;
+	return Number.isNaN(parsedEpoch) ? 0 : parsedEpoch;
+};
+
+const buildFeatureBalancesRead = ({
+	cached,
+	featureIds,
+	includeAggregated,
+}: {
+	cached: CachedFullSubject;
+	featureIds: string[];
+	includeAggregated: boolean;
+}): FeatureBalancesBatchRead => {
+	const featureIdSet = new Set(featureIds);
+	const usageWindowFeatureIds = new Set(
+		(cached.usageWindowFeatureIds ?? []).filter((featureId) =>
+			featureIdSet.has(featureId),
+		),
+	);
+	return {
+		featureIds: [
+			...new Set([
+				...cached.meteredFeatures.filter((featureId) =>
+					featureIdSet.has(featureId),
+				),
+				...usageWindowFeatureIds,
+			]),
+		],
+		customerEntitlementIdsByFeatureId: cached.customerEntitlementIdsByFeatureId,
+		includeAggregated,
+		usageWindowFeatureIds,
+	};
 };
 
 export const getCachedPartialFullSubject = async ({
@@ -65,63 +116,113 @@ export const getCachedPartialFullSubject = async ({
 	});
 	const subjectLabel = buildSubjectLabel({ customerId, entityId });
 
-	// Subject + epoch keys share the `{customerId}` hash tag and live on the
-	// same Redis slot, so a single pipeline fetches both in one round trip.
-	// Read-only GETs — epoch TTL is refreshed on writes (setCachedFullSubject
-	// Lua) and on invalidations, not on reads, to avoid write amplification.
-	const pipelineResults = await runRedisOp({
-		operation: async (redis) =>
-			throwOnPipelineConnectionError(
-				await redis.pipeline().get(subjectKey).get(epochKey).exec(),
-			),
-		source: "getCachedPartialFullSubject:pipeline",
-		redisInstance: redisV2,
-		retryOnStandby: true,
-		useReadPool: true,
-		timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
-	});
+	const l1Cached = getCachedStaticSubject({ subjectKey });
+	let cached = l1Cached;
+	let cachedSerializedSize: number | undefined;
+	let currentSubjectViewEpoch = 0;
+	let prefetchedBalances: FeatureBalancesBatchOutcome | undefined;
 
-	const subjectEntry = pipelineResults?.[0];
-	const epochEntry = pipelineResults?.[1];
-	if (subjectEntry?.[0]) throw subjectEntry[0];
-	if (epochEntry?.[0]) throw epochEntry[0];
+	if (l1Cached) {
+		const balanceRead = buildFeatureBalancesRead({
+			cached: l1Cached,
+			featureIds,
+			includeAggregated: !entityId,
+		});
+		const pipelineResults = await runRedisOp({
+			operation: async (redis) => {
+				const pipeline = redis.pipeline().exists(subjectKey).get(epochKey);
+				appendCachedFeatureBalanceReads({
+					pipeline,
+					orgId: org.id,
+					env,
+					customerId,
+					read: balanceRead,
+				});
+				return throwOnPipelineConnectionError(await pipeline.exec());
+			},
+			source: "getCachedPartialFullSubject:l1-pipeline",
+			redisInstance: redisV2,
+			retryOnStandby: true,
+			useReadPool: true,
+			timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
+		});
 
-	const cachedRaw = (subjectEntry?.[1] ?? null) as string | null;
-	const epochRaw = (epochEntry?.[1] ?? null) as string | null;
-
-	// Missing epoch key is treated as 0; the next invalidation will INCR it
-	// from missing to 1, which mismatches any cached subject written at 0.
-	const parsedEpoch =
-		epochRaw !== null ? Number.parseInt(epochRaw, 10) : Number.NaN;
-	const currentSubjectViewEpoch = Number.isNaN(parsedEpoch) ? 0 : parsedEpoch;
-
-	if (!cachedRaw) {
-		return {
-			fullSubject: undefined,
-			subjectViewEpoch: currentSubjectViewEpoch,
-		};
+		const subjectExistsEntry = pipelineResults?.[0];
+		const epochEntry = pipelineResults?.[1];
+		if (subjectExistsEntry?.[0]) throw subjectExistsEntry[0];
+		if (epochEntry?.[0]) throw epochEntry[0];
+		const subjectExists = Number(subjectExistsEntry?.[1] ?? 0) === 1;
+		currentSubjectViewEpoch = parseSubjectViewEpoch({
+			epochRaw: (epochEntry?.[1] ?? null) as string | null,
+		});
+		if (
+			pipelineResults &&
+			subjectExists &&
+			l1Cached.subjectViewEpoch === currentSubjectViewEpoch
+		) {
+			cached = structuredClone(l1Cached);
+			prefetchedBalances = parseCachedFeatureBalanceReads({
+				results: pipelineResults.slice(2),
+				read: balanceRead,
+			});
+			ctx.extraLogs.partialSubjectStaticL1Hit = true;
+		} else {
+			deleteCachedStaticSubject({ subjectKey });
+			cached = undefined;
+		}
 	}
 
-	const cached = await tryOrInvalidate({
-		ctx,
-		operation: () =>
-			sanitizeCachedFullSubject({
-				cachedFullSubject: JSON.parse(cachedRaw) as CachedFullSubject,
-			}),
-		invalidate: () =>
-			invalidateCachedFullSubject({
-				ctx,
-				customerId,
-				entityId,
-				source: "partial-parse-failed",
-			}),
-		warnMessage: `[getCachedPartialFullSubject] Failed to parse cached subject for ${subjectLabel}, source: ${source}`,
-	});
 	if (!cached) {
-		return {
-			fullSubject: undefined,
-			subjectViewEpoch: currentSubjectViewEpoch,
-		};
+		const pipelineResults = await runRedisOp({
+			operation: async (redis) =>
+				throwOnPipelineConnectionError(
+					await redis.pipeline().get(subjectKey).get(epochKey).exec(),
+				),
+			source: "getCachedPartialFullSubject:pipeline",
+			redisInstance: redisV2,
+			retryOnStandby: true,
+			useReadPool: true,
+			timeoutMs: REDIS_OP_TIMEOUT_MS.subjectPipeline,
+		});
+
+		const subjectEntry = pipelineResults?.[0];
+		const epochEntry = pipelineResults?.[1];
+		if (subjectEntry?.[0]) throw subjectEntry[0];
+		if (epochEntry?.[0]) throw epochEntry[0];
+		const cachedRaw = (subjectEntry?.[1] ?? null) as string | null;
+		currentSubjectViewEpoch = parseSubjectViewEpoch({
+			epochRaw: (epochEntry?.[1] ?? null) as string | null,
+		});
+
+		if (!cachedRaw) {
+			return {
+				fullSubject: undefined,
+				subjectViewEpoch: currentSubjectViewEpoch,
+			};
+		}
+
+		cached = await tryOrInvalidate({
+			ctx,
+			operation: () =>
+				sanitizeCachedFullSubject({
+					cachedFullSubject: JSON.parse(cachedRaw) as CachedFullSubject,
+				}),
+			invalidate: () =>
+				invalidateCachedFullSubject({
+					ctx,
+					customerId,
+					entityId,
+					source: "partial-parse-failed",
+				}),
+			warnMessage: `[getCachedPartialFullSubject] Failed to parse cached subject for ${subjectLabel}, source: ${source}`,
+		});
+		if (!cached) {
+			return {
+				fullSubject: undefined,
+				subjectViewEpoch: currentSubjectViewEpoch,
+			};
+		}
+		cachedSerializedSize = cachedRaw.length;
 	}
 
 	const epochOk = await tryOrInvalidate({
@@ -222,32 +323,32 @@ export const getCachedPartialFullSubject = async ({
 		};
 	}
 
-	// Capped features carry the '_usage_windows' counter field and may have no
-	// entitlements at all, so they must be part of the batch even when absent
-	// from meteredFeatures.
-	const usageWindowFeatureIds = new Set(
-		(cached.usageWindowFeatureIds ?? []).filter((featureId) =>
-			featureIds.includes(featureId),
-		),
-	);
-	const meteredFeatureIdsToFetch = [
-		...new Set([
-			...featureIds.filter((featureId) =>
-				cached.meteredFeatures.includes(featureId),
-			),
-			...usageWindowFeatureIds,
-		]),
-	];
+	if (cachedSerializedSize !== undefined) {
+		setCachedStaticSubject({
+			subjectKey,
+			cached: structuredClone(cached),
+			serializedSize: cachedSerializedSize,
+		});
+	}
+
+	const balanceRead = buildFeatureBalancesRead({
+		cached,
+		featureIds,
+		includeAggregated: !entityId,
+	});
 
 	const isCustomerSubject = !entityId;
-	const featureBalancesOutcome = await getCachedFeatureBalancesBatch({
-		ctx,
-		customerId,
-		featureIds: meteredFeatureIdsToFetch,
-		customerEntitlementIdsByFeatureId: cached.customerEntitlementIdsByFeatureId,
-		includeAggregated: isCustomerSubject,
-		usageWindowFeatureIds,
-	});
+	const featureBalancesOutcome =
+		prefetchedBalances ??
+		(await getCachedFeatureBalancesBatch({
+			ctx,
+			customerId,
+			featureIds: balanceRead.featureIds,
+			customerEntitlementIdsByFeatureId:
+				balanceRead.customerEntitlementIdsByFeatureId,
+			includeAggregated: isCustomerSubject,
+			usageWindowFeatureIds: balanceRead.usageWindowFeatureIds,
+		}));
 
 	const invalidateIncomplete = () =>
 		invalidateCachedFullSubjectExact({
@@ -276,7 +377,7 @@ export const getCachedPartialFullSubject = async ({
 	const featureBalances = await tryOrInvalidate({
 		ctx,
 		operation: () =>
-			balancesPresent.length === meteredFeatureIdsToFetch.length
+			balancesPresent.length === balanceRead.featureIds.length
 				? balancesPresent
 				: undefined,
 		invalidate: invalidateIncomplete,
