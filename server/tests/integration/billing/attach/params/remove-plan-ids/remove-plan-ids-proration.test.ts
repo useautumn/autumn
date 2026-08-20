@@ -179,3 +179,53 @@ test.concurrent(
 		});
 	},
 );
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 3: A repeated plan id is credited exactly once
+//
+// remove_plan_ids has no uniqueness constraint, so ["legacy", "legacy"] resolves
+// the same customer product twice. Each occurrence would otherwise reach the
+// line-item builder and credit the unused time again.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("remove-plan-ids proration 3: a repeated plan id is credited once")}`,
+	async () => {
+		const customerId = "remove-plan-ids-proration-3";
+		const legacy = legacyPlan();
+		const current = currentPlan();
+
+		const { autumnV1, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [legacy, current] }),
+			],
+			actions: [
+				s.billing.attach({ productId: legacy.id }),
+				s.advanceTestClock({ days: 15 }),
+			],
+		});
+
+		const expectedTotal = await calculateProratedDiff({
+			customerId,
+			advancedTo,
+			oldAmount: 30,
+			newAmount: 50,
+		});
+
+		const preview = await autumnV1.billing.previewAttach({
+			customer_id: customerId,
+			product_id: current.id,
+			remove_plan_ids: [legacy.id, legacy.id],
+		});
+
+		// Same total as the single-removal case, and exactly one credit line.
+		expect(preview.total).toBeCloseTo(expectedTotal, 0);
+
+		const legacyCredits = (preview.line_items ?? []).filter(
+			(lineItem: { plan_id: string }) => lineItem.plan_id === legacy.id,
+		);
+		expect(legacyCredits).toHaveLength(1);
+	},
+);
