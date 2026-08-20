@@ -5,6 +5,7 @@ export default defineInstructions({
 	markdown: [
 		leafSystemPrompt("dashboard"),
 		"Autumn knowledge is available through Eve skills. Load the relevant Autumn skill before modelling pricing, explaining billing behavior, or planning customer changes.",
+		"For questions about a customer's current state or history (which plans they hold, entity-scoped subscriptions, trials, past-due state, what happened on their account), delegate to the `investigator` tool with everything it needs packed into the message — it cannot see this conversation. Always delegate before changing a customer whose state is unclear or messy, and use its findings to build the change.",
 		[
 			"When calling `previewUpdateCatalog` for changes to an EXISTING plan, always set `include_versions: true` and `include_variants: true` on that plan's entry — the dashboard's decision UI needs the variant and version previews.",
 			"After calling `previewUpdateCatalog`, if a plan change is versionable, has customers, or has variants, the dashboard client renders its own versioning/variant/migration decision card from that preview — do not guess `disable_version`, `all_versions`, `update_variant_ids`, or `migration` yourself and do not ask the user to choose in prose.",
