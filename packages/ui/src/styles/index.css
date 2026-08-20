@@ -364,6 +364,7 @@ html {
 	--sidebar-accent: #29473f;
 	--sidebar-accent-foreground: #fffdf4;
 	--sidebar-border: #526a62;
+	--sc-fringe: var(--border);
 }
 
 .preset-scraps [data-slot="main-sidebar"] {
@@ -430,6 +431,15 @@ html {
 	transform: translateX(-50%) rotate(-1.5deg);
 	mix-blend-mode: multiply;
 }
+.preset-scraps [data-slot="select-content"],
+.preset-scraps [data-slot="dropdown-menu-content"] {
+	overflow-y: auto !important;
+}
+
+.preset-scraps [data-slot="sheet-content"] {
+	overflow: hidden !important;
+}
+
 .preset-scraps [data-slot="table-row"] {
 	border-bottom-style: dashed;
 }
