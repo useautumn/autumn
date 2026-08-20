@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { type ScrapAdaptMap, useScraps } from "scraps-ui/react";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 
 type ThemeMode = "light" | "dark" | "system";
@@ -18,6 +19,61 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+const SCRAPS_COMPONENTS = {
+	'[data-slot="card"]': "card",
+	'[data-slot="dialog-content"]': "dialog",
+	'[data-slot="sheet-content"]': "panel",
+	'[data-slot="popover-content"]': "popover",
+	'[data-slot="dropdown-menu-content"]': "menu",
+	'[data-slot="select-content"]': "menu",
+	'[data-slot="tooltip-content"]': "popover",
+	'[data-slot="button"]': {
+		type: "button",
+		mode: "clip",
+		reset: false,
+	},
+	'[data-slot="button"][data-disabled]': {
+		type: "button",
+		mode: "clip",
+		reset: false,
+		boil: false,
+	},
+	'[data-slot="button"][disabled]': {
+		type: "button",
+		mode: "clip",
+		reset: false,
+		boil: false,
+	},
+	'[data-slot="input"]': { type: "input", mode: "clip", reset: false },
+	'[data-slot="textarea"]': { type: "input", mode: "clip", reset: false },
+	'[data-slot="select-trigger"]': {
+		type: "field",
+		mode: "clip",
+		reset: false,
+	},
+	'[data-slot="input-group"]': {
+		type: "field",
+		mode: "clip",
+		reset: false,
+	},
+	'[data-slot="badge"]': { type: "badge", mode: "clip", reset: false },
+	'[data-slot="checkbox"]': {
+		type: "checkbox",
+		mode: "clip",
+		reset: false,
+	},
+	'[data-slot="switch"]': { type: "switch", mode: "clip", reset: false },
+	'[data-slot="switch-thumb"]': {
+		type: "thumb",
+		mode: "clip",
+		reset: false,
+	},
+	'[data-slot="separator-root"]': "separator",
+	'[data-slot="dropdown-menu-separator"]': "separator",
+	'[data-slot="select-separator"]': "separator",
+	'[data-slot="command-separator"]': "separator",
+} satisfies ScrapAdaptMap;
 
 function resolveSystemTheme(): "light" | "dark" {
 	return window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -40,6 +96,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 		"classic",
 	);
 	const [isDark, setIsDark] = useState(() => applyMode(mode));
+	useScraps(SCRAPS_COMPONENTS, { enabled: preset === "scraps" });
 
 	useEffect(() => setIsDark(applyMode(mode)), [mode]);
 
