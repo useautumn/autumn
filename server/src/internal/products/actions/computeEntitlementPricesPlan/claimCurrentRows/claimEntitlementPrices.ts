@@ -2,6 +2,7 @@ import {
 	type EntitlementPrice,
 	EntitlementPriceMatchPrecision,
 	findEntitlementPriceSuccessor,
+	priceCurrencyDefinitionsAreSame,
 } from "@autumn/shared";
 import type { ClaimedEntitlementPrice } from "../types/claimResult";
 
@@ -20,7 +21,16 @@ export const claimEntitlementPrices = ({
 		const desired = findEntitlementPriceSuccessor({
 			sourceEntitlementPrice: current,
 			candidateEntitlementPrices: desiredEntitlementPrices.filter(
-				(candidate) => !claimedDesiredEntIds.has(candidate.entitlement.id),
+				(candidate) => {
+					if (claimedDesiredEntIds.has(candidate.entitlement.id)) return false;
+					if (!current.price || !candidate.price) {
+						return !current.price && !candidate.price;
+					}
+					return priceCurrencyDefinitionsAreSame(
+						current.price,
+						candidate.price,
+					);
+				},
 			),
 			matchPrecisions: [
 				EntitlementPriceMatchPrecision.EntitlementAndPriceDefinition,
