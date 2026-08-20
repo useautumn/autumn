@@ -422,7 +422,7 @@ const resolveRevenueCatCustomer = async ({
 		customerId: idIsValid ? appUserId : null,
 		withEntities: true,
 		customerData: {
-			email: idIsValid ? customerEmail : (customerEmail || appUserId),
+			email: idIsValid ? customerEmail : customerEmail || appUserId,
 			fingerprint: customerFingerprint,
 			processors: {
 				revenuecat: {
@@ -464,6 +464,7 @@ export const resolveRevenuecatResources = async ({
 	customerEmail,
 	customerFingerprint,
 	autoCreateCustomer = false,
+	validateProduct,
 }: {
 	ctx: RevenueCatWebhookContext;
 	revenuecatProductId: string;
@@ -473,6 +474,7 @@ export const resolveRevenuecatResources = async ({
 	customerEmail?: string;
 	customerFingerprint?: string;
 	autoCreateCustomer?: boolean;
+	validateProduct?: (product: FullProduct) => void;
 }): Promise<{
 	ctx: RevenueCatWebhookContext;
 	product: FullProduct;
@@ -501,23 +503,26 @@ export const resolveRevenuecatResources = async ({
 		});
 	}
 
-	const [product, customer] = await Promise.all([
-		ProductService.getFull({
-			db,
-			orgId: org.id,
-			env,
-			idOrInternalId: autumnProductId,
-		}),
-		resolveRevenueCatCustomer({
-			ctx,
-			appUserId: customerId,
-			originalAppUserId,
-			overrideCustomerId,
-			customerEmail,
-			customerFingerprint,
-			autoCreateCustomer,
-		}),
-	]);
+	// Product is resolved and validated before the customer, since resolution can
+	// create one and a rejected event must not leave that write behind.
+	const product = await ProductService.getFull({
+		db,
+		orgId: org.id,
+		env,
+		idOrInternalId: autumnProductId,
+	});
+
+	validateProduct?.(product);
+
+	const customer = await resolveRevenueCatCustomer({
+		ctx,
+		appUserId: customerId,
+		originalAppUserId,
+		overrideCustomerId,
+		customerEmail,
+		customerFingerprint,
+		autoCreateCustomer,
+	});
 
 	// If the customer has a product from a different processor than RevenueCat and it has no subscriptions, throw an error.
 	//
