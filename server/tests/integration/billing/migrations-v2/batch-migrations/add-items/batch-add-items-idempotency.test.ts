@@ -13,6 +13,8 @@
  *       whether the customer product is plain or customized. A customer who
  *       attached with messages customized 50 -> 100 keeps exactly one messages
  *       balance at 100 when the migration adds 200.
+ *     - Catalog 10 msgs/mo + add_items 20 msgs/mo keeps the live 10: no second
+ *       row, grant is not overwritten. Dedup is (feature, interval), not amount.
  *   Side effects:
  *     - customer_entitlements: exactly one live row per (customer, plan,
  *       feature) throughout.
@@ -281,5 +283,62 @@ test.concurrent(
 				status: MigrationItemRunStatus.Skipped,
 			});
 		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("batch add_items: catalog 10 msgs/mo is not overwritten by add 20")}`,
+	async () => {
+		const customerId = "batch-add-keep-10";
+		const catalogMessages = 10;
+		const addedMessages = 20;
+		const plan = products.base({
+			id: "batch-add-keep-10-plan",
+			items: [items.monthlyMessages({ includedUsage: catalogMessages })],
+		});
+
+		const { autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer(), s.products({ list: [plan] })],
+			actions: [s.billing.attach({ productId: plan.id })],
+		});
+
+		const { migration, migrationRunId, result } = await runChunkedMigration({
+			ctx,
+			migrationClient: autumnV2_3,
+			migrationId: "batch-add-keep-10-mig",
+			filter: { customer: { plan: { plan_id: plan.id } } },
+			operations: addItemsOperation({
+				planId: plan.id,
+				addItems: [itemsV2.monthlyMessages({ included: addedMessages })],
+			}),
+			noBillingChanges: true,
+		});
+		expect(result?.lane).toBe("batch");
+
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		expectBalanceCorrect({
+			customer,
+			featureId: TestFeature.Messages,
+			granted: catalogMessages,
+			remaining: catalogMessages,
+			usage: 0,
+			planId: plan.id,
+			breakdownCount: 1,
+		});
+		await expectCustomerEntitlementRowCount({
+			ctx,
+			customerId,
+			planId: plan.id,
+			featureId: TestFeature.Messages,
+			count: 1,
+		});
+		await expectMigrationItemRunStatus({
+			ctx,
+			migrationInternalId: migration.internal_id,
+			migrationRunId,
+			customerId,
+			status: MigrationItemRunStatus.Skipped,
+		});
 	},
 );
