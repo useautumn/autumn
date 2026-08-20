@@ -10,164 +10,22 @@ import { test } from "bun:test";
 import {
 	BillingInterval,
 	BillingMethod,
-	CouponDurationType,
-	CusProductStatus,
-	customerProducts,
-	customers,
 	ErrCode,
 	OnDecrease,
 	OnIncrease,
 	ResetInterval,
-	RewardTriggerEvent,
-	RewardType,
-	rewardPrograms,
-	rewards,
 	TierBehavior,
 	TierInfinite,
+	VercelMarketplaceMode,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
-import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { eq } from "drizzle-orm";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { generateId } from "@/utils/genUtils.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
-
-const getFull = async ({
-	ctx,
-	planId,
-}: {
-	ctx: AutumnContext;
-	planId: string;
-}) =>
-	ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: planId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-
-const seedCustomerProductRef = async ({
-	ctx,
-	planId,
-}: {
-	ctx: AutumnContext;
-	planId: string;
-}) => {
-	const full = await getFull({ ctx, planId });
-	const customerId = uniqueTestId("cv2_cus");
-	const internalCustomerId = generateId("cus");
-	const cusProductId = generateId("cus_prod");
-
-	await ctx.db.insert(customers).values({
-		internal_id: internalCustomerId,
-		id: customerId,
-		org_id: ctx.org.id,
-		env: ctx.env,
-		created_at: Date.now(),
-		name: customerId,
-		email: `${customerId}@test.com`,
-	});
-
-	await ctx.db.insert(customerProducts).values({
-		id: cusProductId,
-		internal_customer_id: internalCustomerId,
-		product_id: planId,
-		internal_product_id: full.internal_id,
-		status: CusProductStatus.Active,
-		created_at: Date.now(),
-		starts_at: Date.now(),
-		quantity: 1,
-		options: [],
-		is_custom: false,
-	});
-
-	return { customerId, internalCustomerId, cusProductId };
-};
-
-const seedRewardProgramRef = async ({
-	ctx,
-	planId,
-}: {
-	ctx: AutumnContext;
-	planId: string;
-}) => {
-	const rewardId = uniqueTestId("cv2_rew");
-	const internalRewardId = generateId("rew");
-	const programId = uniqueTestId("cv2_rp");
-	const internalProgramId = generateId("rp");
-
-	await ctx.db.insert(rewards).values({
-		internal_id: internalRewardId,
-		id: rewardId,
-		org_id: ctx.org.id,
-		env: ctx.env,
-		created_at: Date.now(),
-		name: rewardId,
-		type: RewardType.PercentageDiscount,
-		discount_config: {
-			discount_value: 10,
-			duration_type: CouponDurationType.OneOff,
-			duration_value: 1,
-			apply_to_all: false,
-			product_ids: [planId],
-		},
-	});
-
-	await ctx.db.insert(rewardPrograms).values({
-		internal_id: internalProgramId,
-		id: programId,
-		org_id: ctx.org.id,
-		env: ctx.env,
-		created_at: Date.now(),
-		internal_reward_id: internalRewardId,
-		product_ids: [planId],
-		when: RewardTriggerEvent.Checkout,
-		max_redemptions: 1,
-		unlimited_redemptions: false,
-		exclude_trial: false,
-	});
-
-	return { rewardId, programId, internalRewardId, internalProgramId };
-};
-
-const cleanupRefs = async ({
-	ctx,
-	planIds,
-	rewardId,
-	programId,
-}: {
-	ctx: AutumnContext;
-	planIds: string[];
-	rewardId?: string;
-	programId?: string;
-}) => {
-	if (programId) {
-		await ctx.db.delete(rewardPrograms).where(eq(rewardPrograms.id, programId));
-	}
-	if (rewardId) {
-		await ctx.db.delete(rewards).where(eq(rewards.id, rewardId));
-	}
-
-	for (const planId of planIds) {
-		const cusProds = await ctx.db
-			.select()
-			.from(customerProducts)
-			.where(eq(customerProducts.product_id, planId));
-
-		for (const row of cusProds) {
-			await ctx.db
-				.delete(customerProducts)
-				.where(eq(customerProducts.id, row.id));
-			await ctx.db
-				.delete(customers)
-				.where(eq(customers.internal_id, row.internal_customer_id));
-		}
-	}
-};
+import { cleanupRefs, seedCustomerProductRef } from "../utils/seedPlanRefs.js";
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 plan-errors: new_version + explicit version → 400")}`,
@@ -381,68 +239,69 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-errors: new_plan_id blocked when plan has customers")}`,
+	`${chalk.yellowBright("catalogV2 plan-errors: new_plan_id blocked only for plans with Vercel installs")}`,
 	async () => {
-		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
-		const planId = uniqueTestId("cv2_err_ren_cus");
-		const newPlanId = uniqueTestId("cv2_err_ren_cus_new");
-		await deleteDbPlans({ ctx, planIds: [planId, newPlanId] });
-		try {
-			await autumnV2_3.catalogV2.update({
-				plans: [{ plan_id: planId, name: "Rename Me" }],
-			});
-			await seedCustomerProductRef({ ctx, planId });
-
-			await expectAutumnError({
-				errCode: ErrCode.InvalidRequest,
-				func: () =>
-					autumnV2_3.catalogV2.update({
-						plans: [{ plan_id: planId, new_plan_id: newPlanId }],
-					}),
-			});
-		} finally {
-			await cleanupRefs({ ctx, planIds: [planId, newPlanId] });
-			await deleteDbPlans({ ctx, planIds: [planId, newPlanId] });
-		}
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-errors: new_plan_id blocked when reward program references plan")}`,
-	async () => {
-		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
-		const planId = uniqueTestId("cv2_err_ren_rp");
-		const newPlanId = uniqueTestId("cv2_err_ren_rp_new");
-		await deleteDbPlans({ ctx, planIds: [planId, newPlanId] });
-		let rewardId: string | undefined;
-		let programId: string | undefined;
+		// Sub-org: the gate reads org.processor_configs, which we mutate here.
+		const { autumnV2_3, ctx } = await initScenario({
+			setup: [s.platform.create({})],
+			actions: [],
+		});
+		const vercelPlanId = uniqueTestId("cv2_err_ren_vercel");
+		const vercelNewPlanId = uniqueTestId("cv2_err_ren_vercel_new");
+		const freePlanId = uniqueTestId("cv2_err_ren_novercel");
+		const freeNewPlanId = uniqueTestId("cv2_err_ren_novercel_new");
+		const allPlanIds = [
+			vercelPlanId,
+			vercelNewPlanId,
+			freePlanId,
+			freeNewPlanId,
+		];
 		try {
 			await autumnV2_3.catalogV2.update({
 				plans: [
-					{
-						plan_id: planId,
-						name: "Reward Linked",
-						price: { amount: 20, interval: BillingInterval.Month },
-					},
+					{ plan_id: vercelPlanId, name: "Vercel Locked" },
+					{ plan_id: freePlanId, name: "No Installs" },
 				],
 			});
-			({ rewardId, programId } = await seedRewardProgramRef({ ctx, planId }));
+			await OrgService.update({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				updates: {
+					processor_configs: {
+						...ctx.org.processor_configs,
+						vercel: {
+							client_integration_id: "test_integration",
+							client_secret: "test_secret",
+							webhook_url: "https://example.com/webhook",
+							marketplace_mode: VercelMarketplaceMode.Installation,
+						},
+					},
+				},
+			});
+			await seedCustomerProductRef({
+				ctx,
+				planId: vercelPlanId,
+				vercelInstall: true,
+			});
+			await seedCustomerProductRef({ ctx, planId: freePlanId });
 
 			await expectAutumnError({
 				errCode: ErrCode.InvalidRequest,
+				errMessage:
+					"Cannot change product ID while Vercel customers are subscribed",
 				func: () =>
 					autumnV2_3.catalogV2.update({
-						plans: [{ plan_id: planId, new_plan_id: newPlanId }],
+						plans: [{ plan_id: vercelPlanId, new_plan_id: vercelNewPlanId }],
 					}),
 			});
-		} finally {
-			await cleanupRefs({
-				ctx,
-				planIds: [planId, newPlanId],
-				rewardId,
-				programId,
+
+			// Non-Vercel customers don't trip the gate, even on a Vercel org.
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: freePlanId, new_plan_id: freeNewPlanId }],
 			});
-			await deleteDbPlans({ ctx, planIds: [planId, newPlanId] });
+		} finally {
+			await cleanupRefs({ ctx, planIds: allPlanIds });
+			await deleteDbPlans({ ctx, planIds: allPlanIds });
 		}
 	},
 );

@@ -1,11 +1,12 @@
 import {
 	ErrCode,
-	productKeyToString,
 	RecaseError,
 	type UpdateCatalogParams,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
+import { hasVercelCustomerOnProduct } from "@/internal/customers/cusProducts/repos/hasVercelCustomerOnProduct";
 
 /**
  * Ids a rename may not take: every id in the projected catalog and every
@@ -47,18 +48,24 @@ const takenPlanIdsForRename = ({
 	]);
 };
 
-/** Block new_plan_id when occupied, or when any version has customers or reward programs. */
-export const handleUpsertProductRenameErrors = ({
+/**
+ * Block new_plan_id when the target id is occupied, or when a Vercel-installed
+ * customer is live on the plan (its id is their Vercel billing plan id).
+ */
+export const handleUpsertProductRenameErrors = async ({
+	ctx,
 	params,
 	productStatesContext,
 	updateCatalogPlan,
 }: {
+	ctx: AutumnContext;
 	params: UpdateCatalogParams;
 	productStatesContext: ProductStatesContext;
 	updateCatalogPlan: UpdateCatalogPlan;
-}): void => {
+}): Promise<void> => {
 	for (const planParams of params.plans) {
 		if (!planParams.new_plan_id) continue;
+		if (planParams.new_plan_id === planParams.plan_id) continue;
 
 		if (
 			takenPlanIdsForRename({
@@ -75,31 +82,19 @@ export const handleUpsertProductRenameErrors = ({
 			});
 		}
 
-		const versions =
-			productStatesContext.versionsByPlanId[planParams.plan_id] ?? [];
-		const hasCustomers = versions.some((product) => {
-			const state =
-				productStatesContext.statesByPlanVersion[
-					productKeyToString({
-						productKey: { planId: product.id, version: product.version },
-					})
-				];
-			return state?.customerUsage.hasAnyCustomerProducts ?? false;
+		if (!ctx.org.processor_configs?.vercel) continue;
+
+		const hasVercelCustomer = await hasVercelCustomerOnProduct({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			internalProductIds: (
+				productStatesContext.versionsByPlanId[planParams.plan_id] ?? []
+			).map((product) => product.internal_id),
 		});
-
-		if (hasCustomers) {
+		if (hasVercelCustomer) {
 			throw new RecaseError({
-				message: `Cannot change product ID because it has existing customers (plan_id=${planParams.plan_id})`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-
-		const rewardPrograms =
-			productStatesContext.rewardProgramsByPlanId[planParams.plan_id] ?? [];
-		if (rewardPrograms.length > 0) {
-			throw new RecaseError({
-				message: `Cannot change product ID because existing reward programs are linked to it (plan_id=${planParams.plan_id})`,
+				message: `Cannot change product ID while Vercel customers are subscribed to this plan (plan_id=${planParams.plan_id})`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});

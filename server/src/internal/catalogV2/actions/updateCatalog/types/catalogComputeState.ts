@@ -50,6 +50,7 @@ export const toUpdateCatalogPlan = ({
 	state: CatalogComputeState;
 }): UpdateCatalogPlan => ({
 	...state.plan,
+	renamePlans: [],
 	migrationDrafts: [],
 	projected: state.projected,
 });
