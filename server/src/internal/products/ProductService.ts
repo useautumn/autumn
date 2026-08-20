@@ -37,6 +37,10 @@ import {
 import { getActiveProducts, isFreeProduct } from "./productUtils";
 import { sortFullProducts } from "./productUtils/sortProductUtils";
 import {
+	deleteProductRowAndHandoffActive,
+	type ProductWriteDb,
+} from "./repos/activateHighestRemainingProduct";
+import {
 	composeFullProductQuery,
 	normalizeFullProductLicenses,
 	type ProductWithLicenseRelations,
@@ -665,6 +669,29 @@ export class ProductService {
 
 	// DELETES
 
+	static async archiveByInternalId({
+		db,
+		internalId,
+		orgId,
+		env,
+	}: {
+		db: ProductWriteDb;
+		internalId: string;
+		orgId: string;
+		env: AppEnv;
+	}) {
+		await db
+			.update(products)
+			.set({ archived: true })
+			.where(
+				and(
+					eq(products.internal_id, internalId),
+					eq(products.org_id, orgId),
+					eq(products.env, env),
+				),
+			);
+	}
+
 	static async deleteByInternalId({
 		db,
 		internalId,
@@ -676,15 +703,14 @@ export class ProductService {
 		orgId: string;
 		env: AppEnv;
 	}) {
-		await db
-			.delete(products)
-			.where(
-				and(
-					eq(products.internal_id, internalId),
-					eq(products.org_id, orgId),
-					eq(products.env, env),
-				),
-			);
+		await db.transaction(async (tx) => {
+			await deleteProductRowAndHandoffActive({
+				db: tx,
+				internalId,
+				orgId,
+				env,
+			});
+		});
 	}
 
 	static async deleteByProductId({
