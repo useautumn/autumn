@@ -101,6 +101,9 @@ export const buildUpdateCatalogPlanParams = ({
 			: {}),
 		config: plan.config,
 		billing_controls: plan.billing_controls,
+		...(editedProduct.base_id !== undefined
+			? { base_plan_id: editedProduct.base_id }
+			: {}),
 		...(licenses !== undefined ? { licenses } : {}),
 		...(propagate !== undefined ? { propagate } : {}),
 		...(migration !== undefined ? { migration } : {}),

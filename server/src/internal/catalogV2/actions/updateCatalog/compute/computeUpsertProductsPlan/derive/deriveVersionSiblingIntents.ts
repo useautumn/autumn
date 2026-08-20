@@ -147,6 +147,9 @@ export const deriveVersionSiblingIntents = ({
 				source: inheritAllVersions ? ("all_versions" as const) : "repoint",
 				...(editDiff ? { editDiff } : {}),
 				...(upsert.unlink ? { unlink: true } : {}),
+				...(inheritAllVersions && intent.baseInternalProductId !== undefined
+					? { baseInternalProductId: intent.baseInternalProductId }
+					: {}),
 			};
 		});
 };

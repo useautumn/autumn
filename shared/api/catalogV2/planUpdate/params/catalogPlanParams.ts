@@ -62,6 +62,17 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 	metadata: ProductMetadataSchema.optional().meta({
 		description: "Arbitrary key-value metadata shared across all versions.",
 	}),
+	base_plan_id: z
+		.string()
+		.nonempty()
+		.regex(idRegex)
+		.nullable()
+		.optional()
+		.meta({
+			internal: true,
+			description:
+				"Link this existing plan version to a base plan, or null to detach it.",
+		}),
 
 	// ── Catalog update ────────────────────────────────────────────────────
 	version: z.number().int().min(1).optional().meta({

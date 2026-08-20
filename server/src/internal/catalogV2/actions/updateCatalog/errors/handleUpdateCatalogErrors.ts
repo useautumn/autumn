@@ -1,5 +1,6 @@
 import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { handleBasePlanLinkErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleBasePlanLinkErrors";
 import { handleRemoveFeatureErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRemoveFeatureErrors/handleRemoveFeatureErrors";
 import { handleRemovePlanErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRemovePlanErrors/handleRemovePlanErrors";
 import { handleUpdateFeatureErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpdateFeatureErrors/handleUpdateFeatureErrors";
@@ -35,6 +36,10 @@ export const handleUpdateCatalogErrors = ({
 		params,
 		productStatesContext: catalogContext.productStatesContext,
 		updateCatalogPlan,
+	});
+	handleBasePlanLinkErrors({
+		params,
+		productStatesContext: catalogContext.productStatesContext,
 	});
 	handleUpsertProductErrors({
 		updateCatalogPlan,

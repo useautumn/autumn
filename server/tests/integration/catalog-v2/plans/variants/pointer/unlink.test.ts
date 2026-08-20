@@ -18,8 +18,8 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
 import { messagesItem } from "../../licenses/utils/seedLicensePlans.js";
+import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
 import {
 	expectVariantPlanCorrect,
 	expectVariantPointerCorrect,
@@ -29,6 +29,48 @@ import {
 	seedBaseWithVariant,
 	seedVariantNewVersion,
 } from "../utils/seedVariantPlans.js";
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants: base_plan_id links and detaches an existing plan")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_link_base");
+		const variantId = uniqueTestId("cv2_var_link_child");
+		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{ plan_id: baseId, name: "Team", items: [messagesItem(100)] },
+					{
+						plan_id: variantId,
+						name: "Team EU",
+						items: [messagesItem(200)],
+					},
+				],
+			});
+
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: variantId, base_plan_id: baseId }],
+			});
+			await expectVariantPointerCorrect({
+				ctx,
+				variantPlanId: variantId,
+				basePlanId: baseId,
+			});
+
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: variantId, base_plan_id: null }],
+			});
+			await expectVariantUnlinkedCorrect({
+				ctx,
+				variantPlanId: variantId,
+				versions: [1],
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 variants: omit + top-level unlinks every variant version")}`,
@@ -42,10 +84,7 @@ test.concurrent(
 			await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
 
 			await autumnV2_3.catalogV2.update({
-				plans: [
-					{ plan_id: baseId, variants: [] },
-					{ plan_id: variantId },
-				],
+				plans: [{ plan_id: baseId, variants: [] }, { plan_id: variantId }],
 			});
 
 			await expectVariantUnlinkedCorrect({
@@ -111,10 +150,7 @@ test.concurrent(
 			await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
 
 			await autumnV2_3.catalogV2.update({
-				plans: [
-					{ plan_id: baseId, variants: [] },
-					{ plan_id: variantId },
-				],
+				plans: [{ plan_id: baseId, variants: [] }, { plan_id: variantId }],
 			});
 			await expectVariantUnlinkedCorrect({
 				ctx,
@@ -127,10 +163,7 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: baseId,
-						items: [
-							messagesItem(100),
-							{ feature_id: TestFeature.Dashboard },
-						],
+						items: [messagesItem(100), { feature_id: TestFeature.Dashboard }],
 					},
 				],
 			});

@@ -208,6 +208,29 @@ describe("buildUpdateCatalogPlanParams", () => {
 		);
 	});
 
+	test("carries explicit base plan links and detaches", () => {
+		const linked = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, base_id: "starter" },
+			features,
+		});
+		expect(linked.base_plan_id).toBe("starter");
+
+		const detached = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, base_id: null },
+			features,
+		});
+		expect(detached.base_plan_id).toBeNull();
+
+		const untouched = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct,
+			features,
+		});
+		expect(untouched.base_plan_id).toBeUndefined();
+	});
+
 	test("strips stripe_price_id off price and items", () => {
 		const params = buildUpdateCatalogPlanParams({
 			baseProduct,

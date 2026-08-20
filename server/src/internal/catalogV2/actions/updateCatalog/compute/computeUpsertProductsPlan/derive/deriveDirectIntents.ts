@@ -20,6 +20,20 @@ const latestVersionForPlan = ({
 	productStatesContext: ProductStatesContext;
 }): number => productStatesContext.versionsByPlanId[planId]?.[0]?.version ?? 0;
 
+const resolveBaseInternalProductId = ({
+	basePlanId,
+	productStatesContext,
+}: {
+	basePlanId: string | null | undefined;
+	productStatesContext: ProductStatesContext;
+}): string | null | undefined => {
+	if (basePlanId === undefined) return undefined;
+	if (basePlanId === null) return null;
+	return (
+		productStatesContext.versionsByPlanId[basePlanId]?.[0]?.internal_id ?? null
+	);
+};
+
 const groupPlanParamsByPlanId = ({
 	planParamsList,
 }: {
@@ -57,9 +71,7 @@ const resolveVersionsForPlan = ({
 		.map((planParams) => ({
 			...planParams,
 			version:
-				planParams.versioning === "new_version"
-					? maxVersion + 1
-					: latestOrV1,
+				planParams.versioning === "new_version" ? maxVersion + 1 : latestOrV1,
 		}));
 
 	return [...withExplicitVersion, ...targetingLatest];
@@ -91,4 +103,12 @@ export const deriveDirectIntents = ({
 			},
 			planParams,
 			source: "direct" as const,
+			...(planParams.base_plan_id !== undefined
+				? {
+						baseInternalProductId: resolveBaseInternalProductId({
+							basePlanId: planParams.base_plan_id,
+							productStatesContext,
+						}),
+					}
+				: {}),
 		}));
