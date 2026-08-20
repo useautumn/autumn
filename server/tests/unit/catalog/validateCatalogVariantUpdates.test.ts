@@ -4,25 +4,24 @@ import { UpdateVariantParamsSchema } from "@autumn/shared/api/products/crud/vari
 import { validateCatalogVariantVersionTargets } from "@/internal/catalog/actions/validateCatalogVariantUpdates.js";
 
 const product = ({
+	active = false,
 	baseInternalProductId = null,
 	id,
 	version,
 }: {
+	active?: boolean;
 	baseInternalProductId?: string | null;
 	id: string;
 	version: number;
 }) =>
 	({
+		active,
 		id,
 		version,
 		base_internal_product_id: baseInternalProductId,
 	}) as FullProduct;
 
-const params = ({
-	version,
-}: {
-	version?: number;
-}): CatalogUpdateParams =>
+const params = ({ version }: { version?: number }): CatalogUpdateParams =>
 	({
 		features: [],
 		plans: [
@@ -44,7 +43,7 @@ const params = ({
 	}) as CatalogUpdateParams;
 
 test("catalog variant updates must target the latest base version", () => {
-	const products = [product({ id: "pro", version: 2 })];
+	const products = [product({ active: true, id: "pro", version: 2 })];
 
 	expect(() =>
 		validateCatalogVariantVersionTargets({
