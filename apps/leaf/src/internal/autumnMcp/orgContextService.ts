@@ -1,4 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
+import { parsePreviewPayload } from "@autumn/render";
 import { type AppEnv, ms } from "@autumn/shared";
 import { createTtlCache } from "../../lib/ttlCache.js";
 import { executeAutumnMcpTool } from "./client.js";
@@ -15,15 +16,27 @@ export type AutumnOrgContext = {
 
 type ExecuteAutumnTool = typeof executeAutumnMcpTool;
 
+// Preload results arrive as raw MCP envelopes; notes must be read off the
+// parsed body or the org instructions silently never reach any agent.
+const parsedAgentRules = (
+	value: unknown,
+): Record<string, unknown> | undefined => {
+	const unwrapped = parsePreviewPayload(value) ?? value;
+	if (!unwrapped || typeof unwrapped !== "object" || Array.isArray(unwrapped)) {
+		return undefined;
+	}
+	return unwrapped as Record<string, unknown>;
+};
+
 const withoutNotes = (value: unknown) => {
-	if (!value || typeof value !== "object" || Array.isArray(value)) return value;
-	const { notes: _notes, ...rest } = value as Record<string, unknown>;
+	const rules = parsedAgentRules(value);
+	if (!rules) return value;
+	const { notes: _notes, ...rest } = rules;
 	return rest;
 };
 
 const getNotes = (value: unknown) => {
-	if (!value || typeof value !== "object" || Array.isArray(value)) return;
-	const notes = (value as Record<string, unknown>).notes;
+	const notes = parsedAgentRules(value)?.notes;
 	return typeof notes === "string" && notes.trim() ? notes.trim() : undefined;
 };
 
