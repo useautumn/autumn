@@ -50,6 +50,14 @@ const ctx = contexts.create({
 	} as never,
 });
 
+const multiCurrencyCtx = contexts.create({
+	features: [messagesFeature, seatsFeature],
+	org: {
+		...ctx.org,
+		config: { ...ctx.org.config, multi_currency: true },
+	} as never,
+});
+
 const freeMessagesItem = (
 	overrides: Partial<CreatePlanItemParamsV1> = {},
 ): CreatePlanItemParamsV1 => ({
@@ -262,6 +270,73 @@ describe("computeEntitlementPricesPlan", () => {
 		expect(plan.prices.new).toHaveLength(1);
 		expect(plan.entitlements.new).toHaveLength(1);
 		expect(plan.prices.new[0].id).not.toBe("pr_messages");
+	});
+
+	test("3c. adding catalog currencies replaces base and feature prices", () => {
+		const currentEnt = entitlements.buildWithFeature({
+			id: "ent_messages",
+			internal_feature_id: messagesFeature.internal_id,
+			feature_id: messagesFeature.id,
+			feature: messagesFeature,
+			allowance: 100,
+			interval: EntInterval.Month,
+		});
+		const currentPrice = prices.buildUsage({
+			overrides: { id: "pr_messages", entitlement_id: "ent_messages" },
+		});
+		const currentBase = prices.buildFixed({
+			overrides: { id: "pr_base" },
+			configOverrides: { amount: 50 },
+		});
+
+		const plan = computeEntitlementPricesPlan({
+			ctx: multiCurrencyCtx,
+			params: {
+				mode: { type: "update", protectReferencedRows: false },
+				product,
+				customize: {
+					price: {
+						...basePrice,
+						additional_currencies: [{ currency: "eur", amount: 45 }],
+					},
+					items: [
+						pricedMessagesItem({
+							price: {
+								amount: 1,
+								additional_currencies: [{ currency: "eur", amount: 0.9 }],
+								interval: BillingInterval.Month,
+								billing_units: 1,
+								billing_method: BillingMethod.UsageBased,
+							},
+						}),
+					],
+				},
+				currentRows: {
+					prices: [currentBase, currentPrice],
+					entitlements: [currentEnt],
+				},
+			},
+		});
+
+		expect(plan.prices.same).toEqual([]);
+		expect(plan.prices.deleted.map((price) => price.id).sort()).toEqual([
+			"pr_base",
+			"pr_messages",
+		]);
+		expect(
+			plan.prices.new.find((price) => price.config.type === "fixed")?.config
+				.currencies,
+		).toEqual({ eur: { amount: 45 } });
+		expect(
+			plan.prices.new.find((price) => price.config.type === "usage")?.config
+				.currencies,
+		).toEqual({
+			eur: { usage_tiers: [{ amount: 0.9, to: "inf" }] },
+		});
+		expect(plan.prices.new.map((price) => price.config.base_currency)).toEqual([
+			"usd",
+			"usd",
+		]);
 	});
 
 	test("4. PUT remove feature → deleted / retired", () => {

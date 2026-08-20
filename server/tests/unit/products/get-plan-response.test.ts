@@ -8,6 +8,8 @@ const baseProduct = {
 	description: null,
 	group: "",
 	version: 1,
+	version_slug: "v1",
+	active: true,
 	env: AppEnv.Sandbox,
 	internal_id: "prod_internal",
 	org_id: "org_123",

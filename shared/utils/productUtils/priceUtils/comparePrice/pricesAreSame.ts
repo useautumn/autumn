@@ -56,6 +56,27 @@ const currenciesAreCompatible = (
 	return true;
 };
 
+const currenciesHaveSameDefinition = (
+	currencies1: Record<string, PriceCurrencyConfig> | null | undefined,
+	currencies2: Record<string, PriceCurrencyConfig> | null | undefined,
+) => {
+	const keys1 = Object.keys(currencies1 ?? {});
+	const keys2 = Object.keys(currencies2 ?? {});
+	if (keys1.length !== keys2.length) return false;
+	return (
+		currenciesAreCompatible(currencies1, currencies2) &&
+		keys1.every((key) => currencies2?.[key] !== undefined)
+	);
+};
+
+export const priceCurrencyDefinitionsAreSame = (price1: Price, price2: Price) =>
+	(price1.config.base_currency ?? null) ===
+		(price2.config.base_currency ?? null) &&
+	currenciesHaveSameDefinition(
+		price1.config.currencies,
+		price2.config.currencies,
+	);
+
 // base_currency is FX bookkeeping — it appears/disappears with the currencies
 // map. Only treat a mismatch as a change when both sides already carry FX.
 const baseCurrenciesAreCompatible = ({
@@ -126,8 +147,7 @@ export const pricesAreSame = (
 			(usageConfig1.billing_units ?? 1) !== (usageConfig2.billing_units ?? 1),
 		interval: usageConfig1.interval !== usageConfig2.interval,
 		intervalCount:
-			(usageConfig1.interval_count ?? 1) !==
-			(usageConfig2.interval_count ?? 1),
+			(usageConfig1.interval_count ?? 1) !== (usageConfig2.interval_count ?? 1),
 		internalFeatureId:
 			usageConfig1.internal_feature_id !== usageConfig2.internal_feature_id,
 		featureId: usageConfig1.feature_id !== usageConfig2.feature_id,

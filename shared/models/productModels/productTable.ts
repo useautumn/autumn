@@ -8,6 +8,7 @@ import {
 	pgTable,
 	text,
 	unique,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sqlNow } from "../../db/utils";
 import { billingControlColumns } from "../cusModels/billingControls/billingControlTableColumns";
@@ -36,6 +37,13 @@ export const products = pgTable(
 		is_default: boolean("is_default").notNull().default(false),
 		group: text().default(""),
 		version: numeric({ mode: "number" }).notNull().default(1),
+		// User-facing version identity; numeric `version` stays as an internal,
+		// monotonic, never-reused sequence. Nullable until dual-write is proven
+		// out everywhere, then tightened.
+		version_slug: text("version_slug"),
+		// The version that represents the plan (default resolution target).
+		// At most one per (org_id, id, env) — enforced by unique_active_product.
+		active: boolean("active").notNull().default(false),
 		processor: jsonb().$type<ProductProcessor>().default(sql`null`),
 		base_variant_id: text("base_variant_id"),
 		base_internal_product_id: text("base_internal_product_id"),
@@ -69,6 +77,14 @@ export const products = pgTable(
 			table.env,
 			table.version,
 		),
+		uniqueIndex("unique_product_version_slug")
+			.on(table.org_id, table.id, table.env, table.version_slug)
+			.where(sql`${table.version_slug} IS NOT NULL`)
+			.concurrently(),
+		uniqueIndex("unique_active_product")
+			.on(table.org_id, table.id, table.env)
+			.where(sql`${table.active} = true`)
+			.concurrently(),
 	],
 );
 

@@ -24,6 +24,10 @@ export const ProductSchema = z.object({
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number(),
+	// Required key; null only until the column is NOT NULL. Cache hole-fill
+	// for pre-migration entries lives in sanitizeCachedFullSubject.
+	version_slug: z.string().nullable(),
+	active: z.boolean(),
 	group: z.string(),
 
 	env: z.enum(AppEnv),

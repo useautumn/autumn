@@ -21,7 +21,8 @@ const organizationMeSchema = z.object({
 const signalOf = (context: { mcp?: { extra?: { signal?: AbortSignal } } }) =>
 	context?.mcp?.extra?.signal;
 
-export const orgTools = {
+/** Built per toolset: the intent and analytics layers mutate tools in place. */
+export const createOrgTools = () => ({
 	getCurrentOrganization: createTool({
 		id: "getCurrentOrganization",
 		description:
@@ -37,4 +38,4 @@ export const orgTools = {
 				}),
 			),
 	}),
-} as const;
+});
