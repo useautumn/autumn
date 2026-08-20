@@ -62,4 +62,20 @@ describe("static FullSubject L1", () => {
 			getCachedStaticSubject({ subjectKey: "customer-subject" }),
 		).toBeUndefined();
 	});
+
+	test("does not retain subjects larger than the per-entry limit", () => {
+		setCachedStaticSubject({
+			subjectKey: "whale-subject",
+			cached: buildCachedSubject({
+				customerId: "customer_1",
+				subjectViewEpoch: 7,
+			}),
+			serializedSize: 2 * 1024 * 1024 + 1,
+		});
+
+		expect(
+			getCachedStaticSubject({ subjectKey: "whale-subject" }),
+		).toBeUndefined();
+		expect(_cachedStaticSubjectL1SizeForTesting()).toBe(0);
+	});
 });

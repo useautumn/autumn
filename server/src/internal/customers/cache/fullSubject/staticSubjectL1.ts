@@ -2,18 +2,27 @@ import { LRUCache } from "lru-cache";
 import type { CachedFullSubject } from "./fullSubjectCacheModel.js";
 
 const STATIC_SUBJECT_L1_MAX_SIZE = 64 * 1024 * 1024;
+const STATIC_SUBJECT_L1_MAX_SERIALIZED_ENTRY_SIZE = 2 * 1024 * 1024;
 const STATIC_SUBJECT_L1_MAX_ENTRIES = 1_000;
 const STATIC_SUBJECT_L1_TTL_MS = 5 * 60 * 1_000;
+const STATIC_SUBJECT_L1_SIZE_MULTIPLIER = 2;
 
 type StaticSubjectL1Entry = {
 	cached: CachedFullSubject;
 	serializedSize: number;
 };
 
+const estimateStaticSubjectSize = (serializedSize: number): number =>
+	Math.max(1, serializedSize * STATIC_SUBJECT_L1_SIZE_MULTIPLIER);
+
 const staticSubjectL1 = new LRUCache<string, StaticSubjectL1Entry>({
 	max: STATIC_SUBJECT_L1_MAX_ENTRIES,
 	maxSize: STATIC_SUBJECT_L1_MAX_SIZE,
-	sizeCalculation: ({ serializedSize }) => Math.max(1, serializedSize * 2),
+	maxEntrySize: estimateStaticSubjectSize(
+		STATIC_SUBJECT_L1_MAX_SERIALIZED_ENTRY_SIZE,
+	),
+	sizeCalculation: ({ serializedSize }) =>
+		estimateStaticSubjectSize(serializedSize),
 	ttl: STATIC_SUBJECT_L1_TTL_MS,
 });
 
