@@ -41,7 +41,7 @@ export const BATCH_MIGRATION_CACHE_BUST_CONCURRENCY = 20;
 export const BATCH_MIGRATION_DEFERRED_INFLIGHT = 3;
 
 /** Claim+execute+finalize attempts per page when Postgres drops or times out. */
-export const BATCH_MIGRATION_TRANSIENT_DB_PAGE_ATTEMPTS = 3;
+export const BATCH_MIGRATION_TRANSIENT_DB_PAGE_ATTEMPTS = 5;
 
 /** Pause between those page attempts. */
 export const BATCH_MIGRATION_TRANSIENT_DB_RETRY_DELAY_MS = 1_000;

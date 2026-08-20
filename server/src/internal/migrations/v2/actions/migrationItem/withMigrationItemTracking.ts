@@ -1,3 +1,4 @@
+import { isTransientDbError } from "@/db/dbUtils.js";
 import type {
 	MigrationItemEventResponse,
 	MigrationItemEventStatus,
@@ -115,7 +116,7 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 	dryRun: boolean;
 	item: RunScopeItem;
 	run: () => Promise<T>;
-}): Promise<T> => {
+}): Promise<T | undefined> => {
 	try {
 		const result = await run();
 
@@ -141,6 +142,48 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 
 		return result;
 	} catch (error) {
+		if (isTransientDbError({ error })) {
+			// executeAutumnBillingPlan is not atomic — don't replay Stripe after a drop.
+			ctx.logger.warn(
+				"run-migration: skipping customer after connection drop",
+				{
+					data: {
+						customerId: item.id ?? item.internal_id,
+						internalId: item.internal_id,
+						error: error instanceof Error ? error.message : String(error),
+					},
+				},
+			);
+
+			await markItemRunFinished({
+				ctx,
+				migrationInternalId,
+				migrationRunId,
+				dryRun,
+				item,
+				status: "skipped",
+			});
+
+			const response = {
+				skipped: {
+					reason: "connection_dropped",
+					error: error instanceof Error ? error.message : String(error),
+				},
+			};
+			await recordMigrationItemEvent({
+				ctx,
+				migrationInternalId,
+				migrationRunId,
+				dryRun,
+				item,
+				status: "skipped",
+				itemPreview: itemToPreview(item),
+				response,
+			});
+
+			return;
+		}
+
 		await migrationItemRunRepo.markFailed({
 			ctx,
 			migrationInternalId,
