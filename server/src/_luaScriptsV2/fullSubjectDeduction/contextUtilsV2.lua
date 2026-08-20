@@ -17,6 +17,56 @@ local function mark_customer_entitlement_for_update(context, customer_entitlemen
   table.insert(context.pending_writes, customer_entitlement_id)
 end
 
+local function get_credit_rate_current_units(context, customer_entitlement_id, rate_card)
+  if is_nil(rate_card) or is_nil(rate_card.source_internal_feature_id) then
+    return 0
+  end
+
+  local ent_data = context.customer_entitlements[customer_entitlement_id]
+  if not ent_data then
+    return 0
+  end
+
+  local attribution = safe_table(ent_data.subject_balance.usage_attribution)
+  local item = attribution[rate_card.source_internal_feature_id]
+  return type(item) == 'table' and safe_number(item.units) or 0
+end
+
+local function apply_credit_rate_attribution_change(params)
+  local rate_card = params.rate_card
+  if is_nil(rate_card) or is_nil(rate_card.source_internal_feature_id) then
+    return
+  end
+
+  local ent_data = params.context.customer_entitlements[params.customer_entitlement_id]
+  if not ent_data then
+    return
+  end
+
+  local attribution = safe_table(ent_data.subject_balance.usage_attribution)
+  local source_feature_id = rate_card.source_internal_feature_id
+  local current = safe_table(attribution[source_feature_id])
+  local next_units = safe_number(current.units) + safe_number(params.units)
+  local next_credits = safe_number(current.credits) + safe_number(params.credits)
+
+  if math.abs(next_units) <= CREDIT_RATE_EPSILON
+      and math.abs(next_credits) <= CREDIT_RATE_EPSILON
+  then
+    attribution[source_feature_id] = nil
+  else
+    attribution[source_feature_id] = {
+      units = next_units,
+      credits = next_credits,
+    }
+  end
+
+  ent_data.subject_balance.usage_attribution = attribution
+  mark_customer_entitlement_for_update(
+    params.context,
+    params.customer_entitlement_id
+  )
+end
+
 local function init_context(params)
   local logs = {}
   local read_result = read_subject_balances({
@@ -83,6 +133,10 @@ local function init_context(params)
         balance = has_entity_scope and 0 or safe_number(subject_balance.balance),
         entities = has_entity_scope and entities or nil,
       }
+
+      subject_balance.usage_attribution = safe_table(
+        subject_balance.usage_attribution
+      )
 
       context.customer_entitlements[ent_id] = ent_data
 

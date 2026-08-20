@@ -4,6 +4,7 @@ import type {
 	FullCusEntWithFullCusProduct,
 	UsageWindowLimit,
 } from "@autumn/shared";
+import type { CreditRateCard } from "@/internal/features/creditSystemUtils.js";
 
 /** Behavior options for deduction */
 export type DeductionOptions = {
@@ -28,6 +29,7 @@ export type DeductionOptions = {
 export type CustomerEntitlementDeduction = {
 	customer_entitlement_id: string;
 	credit_cost: number;
+	rate_card?: CreditRateCard;
 	feature_id: string;
 	entity_feature_id: string | null;
 	usage_allowed: boolean;

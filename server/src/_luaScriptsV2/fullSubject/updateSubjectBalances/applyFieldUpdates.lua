@@ -86,6 +86,15 @@ local function apply_entities_update(params)
   end
 end
 
+local function apply_usage_attribution_update(params)
+  local subject_balance = params.subject_balance
+  local update = params.update
+
+  if not is_absent(update.usage_attribution) then
+    subject_balance.usage_attribution = update.usage_attribution
+  end
+end
+
 local function apply_next_reset_at_update(params)
 	local subject_balance = params.subject_balance
 	local update = params.update
