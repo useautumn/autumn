@@ -217,6 +217,30 @@ type ActionPhrases = {
 	running: string;
 };
 
+/** The preview's true removals (in-place updates excluded), named via the
+ * expanded plan or the display's resolved names. */
+const removedPlansFromPreview = (preview: unknown) => {
+	const body = getPreviewBody(preview);
+	const planNames = getRecord(approvalDisplayFromPreview(preview).planNames);
+	const toChanges = (value: unknown) => {
+		if (!Array.isArray(value)) return [];
+		return value.flatMap((entry) => {
+			const record = getRecord(entry);
+			const planId = getString(record.plan_id);
+			if (!planId) return [];
+			const name =
+				getString(getRecord(record.plan).name) ??
+				getString(planNames[planId]) ??
+				planId;
+			return [{ name, planId }];
+		});
+	};
+	return removedPlanChanges({
+		incoming: toChanges(body.incoming),
+		outgoing: toChanges(body.outgoing),
+	});
+};
+
 // Tier 1 of the card hierarchy: customer and plan are the subject of the
 // action, so they render as a sentence — never as label/value fields.
 const actionPhrases = ({
@@ -280,11 +304,23 @@ const actionPhrases = ({
 		switch (name) {
 			case "attach": {
 				const target = `${planLabel} to ${customerLabel}${entitySuffix}`;
+				const removedLabels = removedPlansFromPreview(preview)
+					.map((change) =>
+						autumnDashboardLabel({
+							env,
+							id: change.planId,
+							label: change.name,
+							resource: "products",
+						}),
+					)
+					.join(", ");
+				const removing = (verb: string) =>
+					removedLabels ? ` and ${verb} ${removedLabels}` : "";
 				return {
-					done: `Attached ${target}`,
+					done: `Attached ${target}${removing("removed")}`,
 					failed: `Couldn't attach ${target}`,
-					pending: `Attach ${target}`,
-					running: `Attaching ${target}`,
+					pending: `Attach ${target}${removing("remove")}`,
+					running: `Attaching ${target}${removing("removing")}`,
 				};
 			}
 			case "updateSubscription": {
@@ -855,6 +891,7 @@ const fanOutBlocks = ({
 	const rows = all.map((step) => {
 		const phrases = actionPhrases({
 			env,
+			preview: step.preview,
 			toolArgs: step.input,
 			toolName: step.toolName,
 		});
@@ -899,6 +936,7 @@ const withheldStepBlocks = ({
 	withheldWritesFromToolArgs(toolArgs).flatMap((write) => {
 		const phrases = actionPhrases({
 			env,
+			preview: write.preview,
 			toolArgs: write.input,
 			toolName: write.toolName,
 		});
@@ -1242,18 +1280,6 @@ const approvalPreviewBlocks = ({
 				]),
 			}),
 		);
-	}
-	// Attaching over an existing base plan replaces it; the approver must see
-	// what leaves the customer without it competing with the diff above.
-	if (normalizedToolName === "attach") {
-		const removed = removedPlanChanges(display.changes);
-		if (removed.length) {
-			blocks.push(
-				CardText(`Removes ${removed.map((change) => change.name).join(", ")}`, {
-					style: "muted",
-				}),
-			);
-		}
 	}
 	const badges = [
 		...display.badges,

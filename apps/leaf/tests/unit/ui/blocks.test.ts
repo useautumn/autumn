@@ -72,7 +72,7 @@ describe("approval card", () => {
 	});
 
 	// A replaced base plan must be visible without joining the diff table.
-	test("attach shows the replaced plan as a muted line under the preview", () => {
+	test("attach folds the replaced plan into the headline", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			env: AppEnv.Sandbox,
@@ -89,7 +89,9 @@ describe("approval card", () => {
 		});
 
 		const json = JSON.stringify(card);
-		expect(json).toContain("Removes Launch");
+		expect(json).toContain(
+			"and removing **<https://app.useautumn.com/sandbox/products/launch|Launch>**",
+		);
 	});
 
 	test("an in-place plan update is not shown as a removal", () => {
@@ -108,7 +110,7 @@ describe("approval card", () => {
 			}),
 		});
 
-		expect(JSON.stringify(card)).not.toContain("Removes");
+		expect(JSON.stringify(card)).not.toContain("and removing");
 	});
 
 	test("falls back from blank names to customer email and ids", () => {
