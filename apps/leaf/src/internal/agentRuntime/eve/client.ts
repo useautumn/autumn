@@ -1,7 +1,11 @@
 import { ms } from "@autumn/shared";
 import { env } from "../../../lib/env.js";
+import { withRetry } from "../../../lib/withRetry.js";
 import { type EveEvent, parseEveEvent } from "./eveEventSchemas.js";
-import { isRetryableEveStreamError } from "./streamErrors.js";
+import {
+	isConnectionRefusedError,
+	isRetryableEveStreamError,
+} from "./streamErrors.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
 const eveUrl = (path: string) => new URL(path, env.EVE_SERVER_URL).href;
@@ -41,6 +45,9 @@ export class EveSessionGoneError extends Error {
 		this.name = "EveSessionGoneError";
 	}
 }
+
+const POST_RETRY_ATTEMPTS = 2;
+const POST_RETRY_BASE_DELAY_MS = ms.seconds(0.5);
 
 const SESSION_GONE_PATTERN =
 	/not found via continuation token|session (was )?not found/i;
@@ -127,22 +134,17 @@ export const postEveMessage = async ({
 				),
 			},
 		);
-	let response: Response;
-	try {
-		response = await post();
-	} catch (error) {
-		// A request that never reached eve is always safe to retry; an
-		// ambiguous mid-flight drop is only retried for a NEW session, where a
-		// duplicate creates an orphan rather than a double-delivered message.
-		const neverReached = /unable to connect|connection ?refused/i.test(
-			error instanceof Error ? error.message : String(error),
-		);
-		const retryable =
-			neverReached || (!session && isRetryableEveStreamError(error));
-		if (!retryable) throw error;
-		await new Promise((resolve) => setTimeout(resolve, 500));
-		response = await post();
-	}
+	// A request that never reached eve is always safe to retry; an ambiguous
+	// mid-flight drop is only retried for a NEW session, where a duplicate
+	// creates an orphan rather than a double-delivered message.
+	const response = await withRetry({
+		attempts: POST_RETRY_ATTEMPTS,
+		baseDelayMs: POST_RETRY_BASE_DELAY_MS,
+		operation: post,
+		shouldRetry: (error) =>
+			isConnectionRefusedError(error) ||
+			(!session && isRetryableEveStreamError(error)),
+	});
 	return parseSessionResponse({ existing: session, response });
 };
 

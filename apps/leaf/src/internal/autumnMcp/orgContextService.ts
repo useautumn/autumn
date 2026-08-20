@@ -1,5 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { AppEnv } from "@autumn/shared";
+import { asRecord, parsePreviewPayload } from "@autumn/render";
+import { type AppEnv, ms } from "@autumn/shared";
+import { createTtlCache } from "../../lib/ttlCache.js";
 import { executeAutumnMcpTool } from "./client.js";
 
 export type AutumnOrgContext = {
@@ -9,47 +11,45 @@ export type AutumnOrgContext = {
 
 type ExecuteAutumnTool = typeof executeAutumnMcpTool;
 
-const toJsonBlock = ({ label, value }: { label: string; value: unknown }) =>
-	`${label}:\n\`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``;
-
-const getRecord = (value: unknown): Record<string, unknown> =>
-	value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-
-const unwrapMcpResult = (value: unknown): unknown => {
-	const text = (value as { content?: Array<{ text?: string }> })?.content?.[0]
-		?.text;
-	if (typeof text !== "string") return value;
-	try {
-		return JSON.parse(text);
-	} catch {
-		return value;
-	}
-};
+const toJsonBlock = ({
+	label,
+	note,
+	pretty = true,
+	value,
+}: {
+	label: string;
+	note?: string;
+	pretty?: boolean;
+	value: unknown;
+}) =>
+	`${label}${note ? ` (${note})` : ""}:\n\`\`\`json\n${JSON.stringify(value, null, pretty ? 2 : undefined)}\n\`\`\``;
 
 const listOf = (value: unknown): Record<string, unknown>[] => {
-	const unwrapped = unwrapMcpResult(value);
-	const record = getRecord(unwrapped);
+	const unwrapped = Array.isArray(value)
+		? value
+		: (parsePreviewPayload(value) ?? value);
+	const record = asRecord(unwrapped) ?? {};
 	const list = [record.list, record.plans, record.features, unwrapped].find(
 		Array.isArray,
 	);
-	return (list ?? []).map(getRecord);
+	return (list ?? []).map((entry) => asRecord(entry) ?? {});
 };
 
 const compactPrice = (price: unknown) => {
-	const record = getRecord(price);
+	const record = asRecord(price) ?? {};
 	if (record.amount === undefined) return undefined;
 	return `${record.amount}/${record.interval ?? "one_off"}`;
 };
 
 const compactItem = (item: unknown) => {
-	const record = getRecord(item);
+	const record = asRecord(item) ?? {};
 	const featureId = record.feature_id ?? record.id;
 	if (typeof featureId !== "string") return undefined;
 	const parts = [featureId];
 	if (record.included !== undefined && record.included !== null) {
 		parts.push(`included=${record.included}`);
 	}
-	const price = getRecord(record.price);
+	const price = asRecord(record.price) ?? {};
 	if (price.billing_method) parts.push(String(price.billing_method));
 	return parts.join(" ");
 };
@@ -115,12 +115,22 @@ export const formatAutumnOrgContext = ({
 	}
 	if (plans !== undefined) {
 		sections.push(
-			`listPlans (compact index — call getPlan/listPlans for full details):\n\`\`\`json\n${JSON.stringify(compactPlans(plans))}\n\`\`\``,
+			toJsonBlock({
+				label: "listPlans",
+				note: "compact index — call getPlan/listPlans for full details",
+				pretty: false,
+				value: compactPlans(plans),
+			}),
 		);
 	}
 	if (features !== undefined) {
 		sections.push(
-			`listFeatures (compact index):\n\`\`\`json\n${JSON.stringify(compactFeatures(features))}\n\`\`\``,
+			toJsonBlock({
+				label: "listFeatures",
+				note: "compact index",
+				pretty: false,
+				value: compactFeatures(features),
+			}),
 		);
 	}
 
@@ -204,15 +214,13 @@ export const loadAutumnOrgContext = async ({
 	return text || instructions ? { instructions, text } : undefined;
 };
 
-const ORG_CONTEXT_TTL_MS = 60_000;
-const orgContextCache = new Map<
-	string,
-	{ expiresAt: number; loaded: Promise<AutumnOrgContext | undefined> }
->();
-
 /** The block is org-level and changes rarely, but was refetched — four MCP
  * round trips — on every new thread. A short TTL keeps new threads instant
  * while catalog edits still surface within a minute. */
+const orgContextCache = createTtlCache<AutumnOrgContext | undefined>({
+	ttlMs: ms.minutes(1),
+});
+
 const loadAutumnOrgContextCached = ({
 	env,
 	logger,
@@ -225,20 +233,9 @@ const loadAutumnOrgContextCached = ({
 	token: string;
 }): Promise<AutumnOrgContext | undefined> => {
 	if (!orgId) return loadAutumnOrgContext({ env, logger, token });
-	const key = `${orgId}:${env}`;
-	const cached = orgContextCache.get(key);
-	if (cached && cached.expiresAt > Date.now()) return cached.loaded;
-	const loaded = loadAutumnOrgContext({ env, logger, token });
-	orgContextCache.set(key, {
-		expiresAt: Date.now() + ORG_CONTEXT_TTL_MS,
-		loaded,
-	});
-	loaded
-		.then((value) => {
-			if (value === undefined) orgContextCache.delete(key);
-		})
-		.catch(() => orgContextCache.delete(key));
-	return loaded;
+	return orgContextCache.getOrCreate(`${orgId}:${env}`, () =>
+		loadAutumnOrgContext({ env, logger, token }),
+	);
 };
 
 export const autumnOrgContextService = {

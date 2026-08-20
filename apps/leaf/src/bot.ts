@@ -105,9 +105,7 @@ export const bot = new Chat({
 	concurrency: "concurrent",
 });
 
-bot.onAssistantThreadStarted((event) => {
-	void handleAssistantThreadStarted(event);
-});
+bot.onAssistantThreadStarted(handleAssistantThreadStarted);
 bot.onDirectMessage(handleSlackMessage);
 bot.onNewMention(async (thread, message) => {
 	await thread.subscribe();

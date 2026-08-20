@@ -1,4 +1,4 @@
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, ms } from "@autumn/shared";
 import { executeAutumnMcpTool } from "../../src/internal/autumnMcp/client.js";
 import { getInstallationOAuthAccessToken } from "../../src/internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { logger } from "../../src/lib/logger.js";
@@ -35,7 +35,10 @@ const created = (await executeAutumnMcpTool({
 	toolName: "getOrCreateCustomer",
 })) as { content?: Array<{ text?: string }> };
 const createdBody = created.content?.[0]?.text ?? "";
-if (createdBody.includes("error") || !createdBody.includes(customerId)) {
+if (
+	/"error"\s*:\s*true/.test(createdBody) ||
+	!createdBody.includes(customerId)
+) {
 	throw new Error(`customer setup failed: ${createdBody.slice(0, 200)}`);
 }
 
@@ -54,7 +57,7 @@ const target = {
 	},
 	startTyping: async () => {},
 };
-const ticker = createStatusTicker(target as never);
+const ticker = createStatusTicker(target);
 const presenter = createEveSlackPresenter({ setStatus: ticker.activity });
 const startedAt = Date.now();
 const output = await runSlackAgentTurn({
@@ -84,11 +87,13 @@ type TimedEvent = {
 };
 
 const EVE_URL = process.env.EVE_SERVER_URL ?? "http://127.0.0.1:3999";
+const STREAM_TOTAL_TIMEOUT_MS = ms.seconds(15);
+const STREAM_IDLE_TIMEOUT_MS = ms.seconds(6);
 
 const collectEvents = async (streamSessionId: string) => {
 	const events: TimedEvent[] = [];
 	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), 15_000);
+	const timeout = setTimeout(() => controller.abort(), STREAM_TOTAL_TIMEOUT_MS);
 	try {
 		const response = await fetch(
 			`${EVE_URL}/eve/v1/session/${streamSessionId}/stream`,
@@ -102,7 +107,7 @@ const collectEvents = async (streamSessionId: string) => {
 		let idleTimer: ReturnType<typeof setTimeout> | undefined;
 		const resetIdle = () => {
 			if (idleTimer) clearTimeout(idleTimer);
-			idleTimer = setTimeout(() => controller.abort(), 6_000);
+			idleTimer = setTimeout(() => controller.abort(), STREAM_IDLE_TIMEOUT_MS);
 		};
 		resetIdle();
 		while (!sawTerminal) {
@@ -179,7 +184,10 @@ const collectEvents = async (streamSessionId: string) => {
 			}
 		}
 		if (idleTimer) clearTimeout(idleTimer);
-	} catch {
+	} catch (error) {
+		if (!controller.signal.aborted) {
+			console.log(`STREAM ERROR ${streamSessionId}:`, error);
+		}
 	} finally {
 		clearTimeout(timeout);
 	}

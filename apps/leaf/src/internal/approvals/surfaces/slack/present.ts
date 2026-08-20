@@ -115,7 +115,21 @@ export const presentApproval = async ({
 			.backfillGroupedPreviews()
 			.then(async (enrichedToolArgs) => {
 				if (!enrichedToolArgs) return;
-				await target.adapter?.editMessage?.(
+				if (!target.adapter?.editMessage) {
+					logger.warn("No adapter to re-render the backfilled card", {
+						event: "leaf.approval_group_preview_render_skipped",
+						approval_id: created.approvalId,
+					});
+					return;
+				}
+				// The row update is pending-guarded, but the Slack edit races the
+				// approve click — re-check before overwriting a resolved card.
+				const current = await chatApprovalRepo.get({
+					approvalId: created.approvalId,
+					db,
+				});
+				if (current?.status !== "pending") return;
+				await target.adapter.editMessage(
 					channelId,
 					sent.id,
 					approvalCard({

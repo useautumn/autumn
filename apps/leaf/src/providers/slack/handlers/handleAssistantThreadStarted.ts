@@ -1,7 +1,7 @@
 import { autumnOrgContextService } from "../../../internal/autumnMcp/orgContextService.js";
 import { getInstallationOAuthAccessToken } from "../../../internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { logger } from "../../../lib/logger.js";
-import { findInstallationWithOrg } from "../installations.js";
+import { findSlackInstallationForWorkspace } from "../installations.js";
 import { getDefaultChatEnv } from "../setup/selectChatEnv.js";
 
 /** Fires when the user opens the assistant pane, before they type: warming
@@ -13,8 +13,12 @@ export const handleAssistantThreadStarted = async (event: {
 	const workspaceId = event.context.teamId;
 	if (!workspaceId) return;
 	try {
-		const installation = await findInstallationWithOrg("slack", workspaceId);
+		const installation = await findSlackInstallationForWorkspace({
+			workspaceId,
+		});
 		if (!installation) return;
+		// selectChatEnv short-circuits to the default when the message carries no
+		// env signal, so this matches the first real turn's cache key.
 		const env = getDefaultChatEnv();
 		const token = await getInstallationOAuthAccessToken({
 			env,
