@@ -39,8 +39,28 @@ export type EvalTurnResult = {
 	type: EvalTurn["type"];
 };
 
+export type EvalSubscriptionState = {
+	canceledAt: number | null;
+	planId: string;
+};
+
+/** What the mock world looks like once the conversation ends — for evals
+ * that care about the outcome more than the exact calls that produced it. */
+export type EvalFinalState = {
+	customers: Array<{
+		id: string | null;
+		subscriptions: EvalSubscriptionState[];
+	}>;
+	entities: Array<{
+		customerId: string | null;
+		id: string | null;
+		subscriptions: EvalSubscriptionState[];
+	}>;
+};
+
 export type EvalRunResult = {
 	apiCalls: EvalRuntimeContext["autumnApi"]["calls"];
+	finalState: EvalFinalState;
 	finalText: string;
 	toolCalls: ReturnType<
 		Awaited<ReturnType<EvalAgentDriver["start"]>>["getToolCalls"]
@@ -147,8 +167,26 @@ export const createEvalContext = async ({
 		}
 
 		trace.event({ type: "eval_finished" });
+		const subscriptionStates = (
+			subscriptions: Array<{ canceled_at: number | null; plan_id: string }>,
+		) =>
+			subscriptions.map((subscription) => ({
+				canceledAt: subscription.canceled_at,
+				planId: subscription.plan_id,
+			}));
 		return {
 			apiCalls: runtimeContext.autumnApi.calls,
+			finalState: {
+				customers: setup.customers.map((customer) => ({
+					id: customer.id,
+					subscriptions: subscriptionStates(customer.subscriptions),
+				})),
+				entities: setup.entities.map((entity) => ({
+					customerId: entity.customer_id ?? null,
+					id: entity.id ?? null,
+					subscriptions: subscriptionStates(entity.subscriptions),
+				})),
+			},
 			finalText: turnResults
 				.map((turn) => turn.text)
 				.filter(Boolean)

@@ -114,6 +114,7 @@ const created = await createApproval({
 	workspaceId: installation.workspace_id,
 });
 if (!created) throw new Error("createApproval returned nothing");
+await created.backfillGroupedPreviews?.();
 const before = (created.toolArgs.request ?? {}) as Record<string, unknown>;
 console.log(
 	"BEFORE enable_plan_immediately=",

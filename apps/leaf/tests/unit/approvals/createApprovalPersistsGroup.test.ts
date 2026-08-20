@@ -14,6 +14,7 @@ const mockLeafModule = ({
 }) => mockModuleWithRestore({ baseUrl: import.meta.url, factory, specifier });
 
 const inserted: Array<Record<string, unknown>> = [];
+const updatedToolArgs: Array<Record<string, unknown>> = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/approvals/repos/chatApprovalRepo.js",
 	factory: () => ({
@@ -21,6 +22,14 @@ await mockLeafModule({
 			insert: async ({ data }: { data: Record<string, unknown> }) => {
 				inserted.push(data);
 				return "chat_app_1";
+			},
+			setToolArgs: async ({
+				toolArgs,
+			}: {
+				toolArgs: Record<string, unknown>;
+			}) => {
+				updatedToolArgs.push(toolArgs);
+				return true;
 			},
 		},
 	}),
@@ -70,7 +79,8 @@ const { createApproval } = await import(
 describe("createApproval persists the grouped-step previews", () => {
 	test("the stored tool_args carry a preview for every grouped write", async () => {
 		inserted.length = 0;
-		await createApproval({
+		updatedToolArgs.length = 0;
+		const created = await createApproval({
 			channelId: "C1",
 			env: AppEnv.Sandbox,
 			getToken: async () => "tok",
@@ -106,7 +116,11 @@ describe("createApproval persists the grouped-step previews", () => {
 			workspaceId: "T1",
 		});
 
-		const stored = inserted[0]?.toolArgs as {
+		// The card posts before the N preview round trips; the deferred backfill
+		// persists them onto the pending row.
+		expect(created?.backfillGroupedPreviews).toBeDefined();
+		await created?.backfillGroupedPreviews?.();
+		const stored = updatedToolArgs[0] as {
 			_eveApproveOptionId?: string;
 			_eveSiblingRequestIds?: string[];
 			_eveWithheldWrites: Array<{ preview?: unknown }>;

@@ -49,6 +49,61 @@ export const postApprovalCardForRow = async ({
 	}
 };
 
+/** Grouped step previews land after the card is already visible; once they
+ * persist, the card re-renders — unless the approval resolved meanwhile, whose
+ * card must not be overwritten. */
+const renderBackfilledGroupCard = async ({
+	backfill,
+	channelId,
+	created,
+	env,
+	logger,
+	messageId,
+	target,
+}: {
+	backfill: () => Promise<Record<string, unknown> | undefined>;
+	channelId: string;
+	created: { approvalId: string; preview: unknown; toolName: string };
+	env: ChatApproval["env"];
+	logger: AutumnLogger;
+	messageId: string;
+	target: ReplyTarget;
+}) => {
+	try {
+		const enrichedToolArgs = await backfill();
+		if (!enrichedToolArgs) return;
+		if (!target.adapter?.editMessage) {
+			logger.warn("No adapter to re-render the backfilled card", {
+				event: "leaf.approval_group_preview_render_skipped",
+				approval_id: created.approvalId,
+			});
+			return;
+		}
+		const current = await chatApprovalRepo.get({
+			approvalId: created.approvalId,
+			db,
+		});
+		if (current?.status !== "pending") return;
+		await target.adapter.editMessage(
+			channelId,
+			messageId,
+			approvalCard({
+				id: created.approvalId,
+				env,
+				preview: created.preview,
+				toolArgs: enrichedToolArgs,
+				toolName: created.toolName,
+			}),
+		);
+	} catch (error) {
+		logger.warn("Could not backfill grouped previews", {
+			event: "leaf.approval_group_preview_backfill_failed",
+			approval_id: created.approvalId,
+			error,
+		});
+	}
+};
+
 export const presentApproval = async ({
 	channelId,
 	installation,
@@ -106,6 +161,17 @@ export const presentApproval = async ({
 			event: "leaf.approval_message_ts_failed",
 			approval_id: created.approvalId,
 			error,
+		});
+	}
+	if (created.backfillGroupedPreviews) {
+		void renderBackfilledGroupCard({
+			backfill: created.backfillGroupedPreviews,
+			channelId,
+			created,
+			env,
+			logger,
+			messageId: sent.id,
+			target,
 		});
 	}
 	return true;

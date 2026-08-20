@@ -1,6 +1,7 @@
 import type { Attachment } from "chat";
 import { withdrawAgentTurnApproval } from "../../../internal/agentRuntime/actions/withdrawAgentTurnApproval/withdrawAgentTurnApproval.js";
 import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
+import { isTransientNetworkError } from "../../../internal/agentRuntime/eve/streamErrors.js";
 import { editSupersededApprovalCards } from "../../../internal/approvals/surfaces/slack/superseded.js";
 import {
 	dispatchThreadMessage,
@@ -19,11 +20,8 @@ import {
 	logger as rootLogger,
 } from "../../../lib/logger.js";
 import {
-	GENERIC_FAILURE_MESSAGE,
-	genericFailureWithDetail,
-	POST_FORMATTING_FAILED_MESSAGE,
+	errorNotice,
 	RUN_STOPPED_FOR_TIME_MESSAGE,
-	RUN_TIMED_OUT_MESSAGE,
 	runStoppedByUserNotice,
 } from "../../../ui/messages.js";
 import type { ReplyTarget } from "../../../ui/progress.js";
@@ -38,16 +36,6 @@ import {
 import { findSlackInstallationForWorkspace } from "../installations.js";
 import { presentSlackAgentTurn } from "../presenters/presentSlackAgentTurn.js";
 import { runSlackAgentTurn } from "./runSlackAgentTurn.js";
-
-const ERROR_NOTICE_MAX = 160;
-
-const errorNotice = (error: unknown) => {
-	const message = error instanceof Error ? error.message : String(error);
-	if (/invalid_blocks/i.test(message)) return POST_FORMATTING_FAILED_MESSAGE;
-	if (/timed out|timeout/i.test(message)) return RUN_TIMED_OUT_MESSAGE;
-	const detail = message.replace(/\s+/g, " ").trim().slice(0, ERROR_NOTICE_MAX);
-	return detail ? genericFailureWithDetail(detail) : GENERIC_FAILURE_MESSAGE;
-};
 
 type DispatchSlackAgentMessageInput = {
 	attachments?: ReadonlyArray<Attachment>;
@@ -257,10 +245,12 @@ const runAndReply = async ({
 		logger.error("[chat] Message failed", error, {
 			event: "leaf.slack_message_failed",
 		});
-		await progress.fail(errorNotice(error));
+		await progress.fail(
+			errorNotice({ error, isTransient: isTransientNetworkError }),
+		);
 		await reactSafely({ action: "add", emoji: "x" });
 		await target.post({
-			markdown: `:warning: ${errorNotice(error)}`,
+			markdown: `:warning: ${errorNotice({ error, isTransient: isTransientNetworkError })}`,
 		});
 		return "close";
 	} finally {

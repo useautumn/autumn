@@ -119,6 +119,7 @@ if (approvalRequest) {
 		workspaceId: installation.workspace_id,
 	});
 	if (!created) throw new Error("createApproval returned nothing");
+	await created.backfillGroupedPreviews?.();
 	const card = approvalCard({
 		id: created.approvalId,
 		env: AppEnv.Sandbox,

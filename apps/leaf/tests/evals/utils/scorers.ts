@@ -6,6 +6,7 @@ import type {
 	LegacyEvalExpected,
 } from "../fixtures/expectations/types.js";
 import type { AutumnApiCall } from "../harness/context/types.js";
+import type { EvalFinalState } from "../harness/createEvalContext.js";
 
 export type {
 	EvalExpectation,
@@ -16,6 +17,7 @@ export type {
 
 export type EvalOutput = {
 	apiCalls: AutumnApiCall[];
+	finalState?: EvalFinalState;
 	finalText: string;
 	toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
 	turns?: Array<{
@@ -302,6 +304,57 @@ export const expectedApiCallsAfterApproval = ({
 
 		return output.apiCalls.some((call) =>
 			matchesApiCall({ actual: call, expected: expectedCall }),
+		);
+	})
+		? 1
+		: 0;
+};
+
+const getExpectedStates = (expected?: EvalExpected) =>
+	getExpectationList(expected).flatMap((expectation) =>
+		expectation.type === "state.subscriptions" ? [expectation] : [],
+	);
+
+const livePlanIds = (
+	subscriptions: Array<{ canceledAt: number | null; planId: string }> = [],
+) =>
+	subscriptions
+		.filter((subscription) => subscription.canceledAt === null)
+		.map((subscription) => subscription.planId)
+		.sort();
+
+const sameSet = (left: string[], right: string[]) =>
+	left.length === right.length &&
+	[...left].sort().every((value, index) => value === right[index]);
+
+export const expectedFinalSubscriptions = ({
+	expected,
+	output,
+}: EvalScoreArgs) => {
+	const expectations = getExpectedStates(expected);
+	if (!expectations.length) return 1;
+	const state = output.finalState;
+	if (!state) return 0;
+	return expectations.every((expectation) => {
+		const customer = state.customers.find(
+			(candidate) => candidate.id === expectation.customerId,
+		);
+		if (!customer) return false;
+		if (!sameSet(expectation.customer, livePlanIds(customer.subscriptions))) {
+			return false;
+		}
+		return Object.entries(expectation.entities ?? {}).every(
+			([entityId, planIds]) => {
+				const entity = state.entities.find(
+					(candidate) =>
+						candidate.id === entityId &&
+						candidate.customerId === expectation.customerId,
+				);
+				return (
+					Boolean(entity) &&
+					sameSet(planIds, livePlanIds(entity?.subscriptions))
+				);
+			},
 		);
 	})
 		? 1
@@ -638,6 +691,10 @@ const scorersByExpectationType: Record<EvalExpectation["type"], EvalScorer> = {
 		score: askedClarificationBeforeTool,
 	}),
 	"response.concise": namedConciseScorer,
+	"state.subscriptions": namedScorer({
+		name: "Final subscriptions",
+		score: expectedFinalSubscriptions,
+	}),
 };
 
 const expectationTypesIn = (

@@ -1,7 +1,8 @@
 import { isSecretKeyPrefix } from "@autumn/auth";
-import type { AppEnv } from "@autumn/shared";
+import { type AppEnv, ms } from "@autumn/shared";
 import { MCPClient } from "@mastra/mcp";
 import { env } from "../../lib/env.js";
+import { createTtlCache } from "../../lib/ttlCache.js";
 
 type AutumnTool = {
 	execute?: (
@@ -67,30 +68,73 @@ export const createAutumnMcpClient = ({
 	});
 };
 
-export const executeAutumnMcpTool = async ({
-	env,
+type PooledAutumnClient = {
+	disconnectRequested: boolean;
+	inUse: number;
+	mcpClient: ReturnType<typeof createAutumnMcpClient>;
+	tools: Record<string, AutumnTool>;
+};
+
+const disconnectPooledClient = (pooled: PooledAutumnClient) => {
+	pooled.disconnectRequested = true;
+	if (pooled.inUse > 0) return;
+	void pooled.mcpClient.disconnect().catch(() => undefined);
+};
+
+/** One connected client (and its toolset listing) per caller: the previous
+ * connect → list → execute → disconnect paid a full MCP handshake per call.
+ * Eviction defers disconnect until in-flight executions release the entry. */
+const clientPool = createTtlCache<PooledAutumnClient>({
+	onEvict: (pooled) => {
+		pooled.then(disconnectPooledClient).catch(() => undefined);
+	},
+	sliding: true,
+	ttlMs: ms.minutes(1),
+});
+
+const pooledAutumnClient = ({
+	appEnv,
 	token,
-	toolName,
-	args,
 }: {
-	env: AppEnv;
+	appEnv: AppEnv;
 	token: string;
-	toolName: string;
-	args: Record<string, unknown>;
-}) => {
-	const mcp = createAutumnMcpClient({ token, appEnv: env });
-	try {
-		const { toolsets, errors } = await mcp.listToolsetsWithErrors();
+}) =>
+	clientPool.getOrCreate(`${token}:${appEnv}`, async () => {
+		const mcpClient = createAutumnMcpClient({ appEnv, token });
+		const { toolsets, errors } = await mcpClient.listToolsetsWithErrors();
 		if (Object.keys(errors).length) {
+			void mcpClient.disconnect().catch(() => undefined);
 			throw new Error(
 				`Could not load Autumn MCP tools: ${JSON.stringify(errors)}`,
 			);
 		}
-		const tools = (toolsets.autumn ?? {}) as Record<string, AutumnTool>;
-		const tool = tools[toolName.replace(/^autumn_/, "")];
-		if (!tool?.execute) throw new Error(`Unknown Autumn MCP tool: ${toolName}`);
+		return {
+			disconnectRequested: false,
+			inUse: 0,
+			mcpClient,
+			tools: (toolsets.autumn ?? {}) as Record<string, AutumnTool>,
+		};
+	});
+
+export const executeAutumnMcpTool = async ({
+	args,
+	env,
+	token,
+	toolName,
+}: {
+	args: Record<string, unknown>;
+	env: AppEnv;
+	token: string;
+	toolName: string;
+}) => {
+	const pooled = await pooledAutumnClient({ appEnv: env, token });
+	const tool = pooled.tools[toolName.replace(/^autumn_/, "")];
+	if (!tool?.execute) throw new Error(`Unknown Autumn MCP tool: ${toolName}`);
+	pooled.inUse += 1;
+	try {
 		return await tool.execute(args);
 	} finally {
-		await mcp.disconnect();
+		pooled.inUse -= 1;
+		if (pooled.disconnectRequested) disconnectPooledClient(pooled);
 	}
 };
