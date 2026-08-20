@@ -30,7 +30,8 @@ const SCRAPS_COMPONENTS = {
 	'[data-slot="select-content"]': { type: "menu", rot: 0 },
 	'[data-slot="tooltip-content"]': { type: "popover", rot: 0 },
 	'[data-slot="button"]:not([data-slot="main-sidebar"] *)': "button",
-	'button[data-slot$="-trigger"]:not([data-slot="main-sidebar"] *)': "button",
+	'button[data-slot$="-trigger"]:not([data-slot="main-sidebar"] *):not([data-slot="table-container"] *)':
+		"button",
 	'button[class~="bg-primary"]:not([data-slot="main-sidebar"] *)': {
 		type: "button",
 		color: "coral",

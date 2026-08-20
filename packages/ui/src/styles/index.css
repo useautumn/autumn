@@ -431,6 +431,13 @@ html {
 	transform: translateX(-50%) rotate(-1.5deg);
 	mix-blend-mode: multiply;
 }
+.preset-scraps [data-slot="table-container"].scrap-skin > *,
+.preset-scraps [data-slot="table-container"].scrap-skin thead,
+.preset-scraps [data-slot="table-container"].scrap-skin tbody {
+	background: none;
+	border-color: transparent;
+}
+
 .preset-scraps [data-slot="select-content"],
 .preset-scraps [data-slot="dropdown-menu-content"] {
 	overflow-y: auto !important;
