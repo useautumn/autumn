@@ -10,6 +10,9 @@ export function RowClickDialog({
 	isOpen: boolean;
 	setIsOpen: (isOpen: boolean) => void;
 }) {
+	// Always null: idempotency keys live on the Idempotency-Key header, not the event row.
+	const { idempotency_key: _idempotencyKey, ...eventData } = event;
+
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
 			<DialogContent
@@ -19,7 +22,7 @@ export function RowClickDialog({
 				<CopyablePre
 					text={JSON.stringify(
 						{
-							...event,
+							...eventData,
 							properties: JSON.parse(event.properties),
 						},
 						null,

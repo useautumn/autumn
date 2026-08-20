@@ -24,12 +24,14 @@ await autumn.track({
 ```
 
 ```typescript Track with idempotency
-await autumn.track({
-  customerId: "cus_123",
-  featureId: "api_calls",
-  value: 1,
-  idempotencyKey: "request_abc123" // Prevents duplicate tracking on retry
-});
+await autumn.track(
+  {
+    customerId: "cus_123",
+    featureId: "api_calls",
+    value: 1
+  },
+  { headers: { "Idempotency-Key": "request_abc123" } } // Retries with the same key are rejected with a 409
+);
 ```
 
 ```typescript Credit balance (negative value)

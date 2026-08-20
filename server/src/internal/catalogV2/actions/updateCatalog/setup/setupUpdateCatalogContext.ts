@@ -5,29 +5,58 @@ import { setupPlanUsagePersisted } from "@/internal/catalogV2/actions/updateCata
 import { setupFeatureStatesContext } from "@/internal/catalogV2/actions/updateCatalog/setup/setupFeatureStatesContext";
 import { setupLicenseStatesContext } from "@/internal/catalogV2/actions/updateCatalog/setup/setupLicenseStatesContext";
 import { setupProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/setup/setupProductStatesContext";
+import {
+	type CatalogPhases,
+	timeCatalogPhase,
+} from "@/internal/catalogV2/actions/updateCatalog/setup/timeCatalogPhase";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 
 export const setupUpdateCatalogContext = async ({
 	ctx,
 	params,
 	preview = false,
+	phases,
 }: {
 	ctx: AutumnContext;
 	params: UpdateCatalogParams;
 	preview?: boolean;
+	phases: CatalogPhases;
 }): Promise<UpdateCatalogContext> => {
 	const [featureStatesContext, productStatesContext, featureUsagePersisted] =
 		await Promise.all([
-			setupFeatureStatesContext({ ctx, params }),
-			setupProductStatesContext({ ctx, params }),
-			preview ? setupFeatureUsagePersisted({ ctx, params }) : undefined,
+			timeCatalogPhase({
+				ctx,
+				phases,
+				phase: "feature_states",
+				run: () => setupFeatureStatesContext({ ctx, params }),
+			}),
+			setupProductStatesContext({ ctx, params, phases }),
+			preview
+				? timeCatalogPhase({
+						ctx,
+						phases,
+						phase: "feature_usage",
+						run: () => setupFeatureUsagePersisted({ ctx, params }),
+					})
+				: undefined,
 		]);
 
 	// License refs + plan-usage samples both need loaded product internal ids.
 	const [licenseStatesContext, planUsagePersisted] = await Promise.all([
-		setupLicenseStatesContext({ ctx, productStatesContext }),
+		timeCatalogPhase({
+			ctx,
+			phases,
+			phase: "license_states",
+			run: () => setupLicenseStatesContext({ ctx, productStatesContext }),
+		}),
 		preview
-			? setupPlanUsagePersisted({ ctx, params, productStatesContext })
+			? timeCatalogPhase({
+					ctx,
+					phases,
+					phase: "plan_usage",
+					run: () =>
+						setupPlanUsagePersisted({ ctx, params, productStatesContext }),
+				})
 			: undefined,
 	]);
 

@@ -5,13 +5,13 @@ import {
 } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import {
-	type CustomerProductVersioningUsage,
-	emptyVersioningUsage,
+	type CustomerProductVersioningFlags,
+	emptyVersioningFlags,
 } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
 
 export type ProductKeyState = {
 	currentFullProduct: FullProduct | null;
-	customerUsage: CustomerProductVersioningUsage;
+	customerUsage: CustomerProductVersioningFlags;
 };
 
 /** Lookup one productKey in productStatesContext; missing → create baseline. */
@@ -30,7 +30,7 @@ export const productKeyToState = ({
 	if (!state) {
 		return {
 			currentFullProduct: null,
-			customerUsage: emptyVersioningUsage(),
+			customerUsage: emptyVersioningFlags(),
 		};
 	}
 
