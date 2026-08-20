@@ -21,6 +21,7 @@ import { publishBillingTransition } from "@/internal/billing/v2/publish/publishB
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
+import { preserveSubjectCache } from "@/internal/customers/cache/fullSubject/actions/preserveSubjectCache.js";
 import { hashJson } from "@/utils/hash/hashJson";
 import {
 	type CreateAutumnCheckoutResult,
@@ -131,7 +132,7 @@ export async function attach({
 	if (shouldCreateLongLivedCheckout) {
 		// Creating a checkout changes no Autumn balance state. Keep any accepted
 		// Redis-only tracks for the later confirmation request to consume.
-		ctx.skipSubjectCacheDeletion = true;
+		preserveSubjectCache({ ctx });
 		return createAutumnCheckout<AttachBillingContext>({
 			ctx,
 			action: CheckoutAction.Attach,
@@ -157,7 +158,7 @@ export async function attach({
 		});
 
 		if (cachedResult) {
-			ctx.skipSubjectCacheDeletion = true;
+			preserveSubjectCache({ ctx });
 			return cachedResult;
 		}
 	}
@@ -166,7 +167,7 @@ export async function attach({
 		billingContext.checkoutMode === "autumn_checkout" &&
 		!skipAutumnCheckout
 	) {
-		ctx.skipSubjectCacheDeletion = true;
+		preserveSubjectCache({ ctx });
 		return createAutumnCheckout<AttachBillingContext>({
 			ctx,
 			action: CheckoutAction.Attach,
@@ -186,7 +187,7 @@ export async function attach({
 			: undefined,
 	});
 	if (billingResult.stripe.deferred) {
-		ctx.skipSubjectCacheDeletion = true;
+		preserveSubjectCache({ ctx });
 	}
 
 	// 7. Publish the compute-time balance transition

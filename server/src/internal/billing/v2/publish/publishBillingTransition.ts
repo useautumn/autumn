@@ -1,5 +1,6 @@
 import type { BillingContext, BillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { preserveSubjectCache } from "@/internal/customers/cache/fullSubject/actions/preserveSubjectCache.js";
 import { publishCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/publishCachedFullSubject.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { persistOrQueuePublishedBalanceTransitions } from "./persistPublishedBalanceTransitions.js";
@@ -67,7 +68,7 @@ export const publishBillingTransition = async ({
 		if (publishResult.status !== "OK") return;
 
 		// 4. Preserve the atomically published subject view
-		ctx.skipSubjectCacheDeletion = true;
+		preserveSubjectCache({ ctx });
 		// 5. Persist its exact balance to Postgres or queue a guarded retry
 		await persistOrQueuePublishedBalanceTransitions({
 			ctx,
