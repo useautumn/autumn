@@ -1,0 +1,16 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"lib": ["DOM", "DOM.Iterable", "ESNext"],
+		"strict": true,
+		"skipLibCheck": true,
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"rootDir": "../sdk/src",
+		"outDir": "./dist/standalone",
+		"types": ["node"]
+	},
+	"include": ["../sdk/src/**/*.ts"]
+}
