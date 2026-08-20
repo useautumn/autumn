@@ -108,5 +108,32 @@ export const presentApproval = async ({
 			error,
 		});
 	}
+	// Grouped step previews land after the card is already visible; the row
+	// update is pending-guarded so a card resolved meanwhile is left alone.
+	if (created.backfillGroupedPreviews) {
+		void created
+			.backfillGroupedPreviews()
+			.then(async (enrichedToolArgs) => {
+				if (!enrichedToolArgs) return;
+				await target.adapter?.editMessage?.(
+					channelId,
+					sent.id,
+					approvalCard({
+						id: created.approvalId,
+						env,
+						preview: created.preview,
+						toolArgs: enrichedToolArgs,
+						toolName: created.toolName,
+					}),
+				);
+			})
+			.catch((error) => {
+				logger.warn("Could not backfill grouped previews", {
+					event: "leaf.approval_group_preview_backfill_failed",
+					approval_id: created.approvalId,
+					error,
+				});
+			});
+	}
 	return true;
 };

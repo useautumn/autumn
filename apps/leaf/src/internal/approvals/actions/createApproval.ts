@@ -3,6 +3,7 @@ import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv, ChatProvider } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import type { AgentApprovalTurn } from "../../agentRuntime/domain/agentTurn.js";
+import { withheldWritesFromToolArgs } from "../../agentRuntime/eve/parkedInput.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import {
 	resolveApprovalDisplay,
@@ -61,15 +62,7 @@ export const createApproval = async ({
 		request,
 	});
 	const preview = withApprovalDisplay({ display, preview: resolvedPreview });
-	// Enrich the raw args so the stored row keeps both the harness transport
-	// keys (approve/deny ids, sibling ids) and the backfilled step previews;
-	// every later card render reads from the row.
-	const storedToolArgs = await withGroupedWritePreviews({
-		env,
-		getToken,
-		logger,
-		toolArgs: approval.toolArgs,
-	});
+	const storedToolArgs = approval.toolArgs;
 
 	const approvalId = await chatApprovalRepo.insert({
 		db,
@@ -94,8 +87,30 @@ export const createApproval = async ({
 		approval_id: approvalId,
 		tool: approval.toolName,
 	});
+	// Grouped step previews are N MCP round trips; the card posts without
+	// waiting and re-renders when they land. The row update is pending-guarded
+	// so an already-resolved approval keeps what it was approved with.
+	const backfillGroupedPreviews =
+		withheldWritesFromToolArgs(approval.toolArgs).length === 0
+			? undefined
+			: async () => {
+					const enriched = await withGroupedWritePreviews({
+						env,
+						getToken,
+						logger,
+						toolArgs: approval.toolArgs,
+					});
+					const stored = await chatApprovalRepo.setToolArgs({
+						approvalId,
+						db,
+						toolArgs: enriched,
+					});
+					return stored ? publicToolArgs(enriched) : undefined;
+				};
+
 	return {
 		approvalId,
+		backfillGroupedPreviews,
 		params: request,
 		preview,
 		toolArgs: publicToolArgs(storedToolArgs),
