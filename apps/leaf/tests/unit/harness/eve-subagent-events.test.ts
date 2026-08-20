@@ -70,10 +70,9 @@ describe("subagent events on the parent stream", () => {
 				},
 			},
 		]);
-		expect(transition.progress.subagentCalls.get("call_1")).toEqual({
-			childSessionId: "wrun_child",
-			name: "investigator",
-		});
+		expect([...transition.progress.subagentChildSessionIds]).toEqual([
+			"wrun_child",
+		]);
 	});
 
 	test("subagent.completed is inert and preserves progress", () => {

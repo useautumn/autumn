@@ -3,7 +3,10 @@ import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv, ChatProvider } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import type { AgentApprovalTurn } from "../../agentRuntime/domain/agentTurn.js";
-import { withheldWritesFromToolArgs } from "../../agentRuntime/eve/parkedInput.js";
+import {
+	WITHHELD_WRITES_KEY,
+	withheldWritesFromToolArgs,
+} from "../../agentRuntime/eve/parkedInput.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import {
 	resolveApprovalDisplay,
@@ -59,7 +62,7 @@ const withGroupedWritePreviews = async ({
 			};
 		}),
 	);
-	return { ...toolArgs, _eveWithheldWrites: resolved };
+	return { ...toolArgs, [WITHHELD_WRITES_KEY]: resolved };
 };
 
 const resolveApprovalPreview = async ({

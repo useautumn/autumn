@@ -82,9 +82,9 @@ const subagentCalledSchema = z.object({
 	toolName: z.string().optional(),
 });
 
+/** Only the event's arrival matters today — it marks resumed-turn activity;
+ * the child's output is read from its own stream, not from this event. */
 const subagentCompletedSchema = z.object({
-	callId: z.string().optional(),
-	output: z.unknown().optional(),
 	subagentName: z.string().optional(),
 });
 

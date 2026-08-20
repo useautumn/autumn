@@ -1,17 +1,13 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { defineAgent } from "eve";
-
-const model =
-	process.env.EVE_MODEL ??
-	anthropic(process.env.EVE_ANTHROPIC_MODEL ?? "claude-sonnet-5");
+import { leafModel, leafReasoning } from "./lib/model.js";
 
 const workflowWorld =
 	process.env.EVE_WORKFLOW_WORLD ??
 	(process.env.WORKFLOW_POSTGRES_URL ? "@workflow/world-postgres" : undefined);
 
 export default defineAgent({
-	model,
-	reasoning: "minimal",
+	model: leafModel(),
+	reasoning: leafReasoning,
 	...(workflowWorld
 		? {
 				experimental: {

@@ -1,8 +1,6 @@
-import { defineSandbox } from "eve/sandbox";
-import { justbash } from "eve/sandbox/just-bash";
+import { leafSandbox } from "../../lib/sandbox.js";
 
-export default defineSandbox({
-	backend: justbash(),
+export default leafSandbox({
 	description:
 		"Lightweight local sandbox. Shell, file, and web tools are disabled; this avoids Docker startup.",
 });

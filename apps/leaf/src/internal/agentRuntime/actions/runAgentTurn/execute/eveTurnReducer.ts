@@ -14,8 +14,10 @@ import {
 } from "../../../eve/events.js";
 import {
 	type ChainedPendingRequest,
+	childSessionIdsToolArgs,
 	classifyParkedEveInput,
 	type PendingQuestion,
+	siblingRequestIdsToolArgs,
 	type WithheldWrite,
 	withheldWritesToolArgs,
 } from "../../../eve/parkedInput.js";
@@ -39,9 +41,9 @@ export type EveTurnProgress = Readonly<{
 	lastPreview?: CapturedPreview;
 	pendingText: string;
 	reasoningStreamId?: string;
-	/** Child sessions spawned by delegated subagents, by call id — the pointer
-	 * for attributing proxied approvals and following child streams. */
-	subagentCalls: ReadonlyMap<string, { childSessionId?: string; name: string }>;
+	/** Child sessions spawned by delegated subagents — the pointer for
+	 * attributing proxied approvals and following child streams. */
+	subagentChildSessionIds: ReadonlySet<string>;
 	toolInputs: ReadonlyMap<string, Record<string, unknown>>;
 	toolLabels: ReadonlyMap<string, string>;
 	turnStarted: boolean;
@@ -66,8 +68,8 @@ export type EveTurnTransition = Readonly<{
 
 export const createEveTurnProgress = (): EveTurnProgress => ({
 	finalText: "",
-	subagentCalls: new Map(),
 	pendingText: "",
+	subagentChildSessionIds: new Set(),
 	toolInputs: new Map(),
 	toolLabels: new Map(),
 	turnStarted: false,
@@ -80,15 +82,6 @@ export const eveTurnProducedOutput = ({
 	catalogDecision?: unknown;
 	text?: string;
 }) => Boolean(text?.trim() || catalogDecision);
-
-/** A proxied approval executes inside the delegated child session, so the
- * resume verifies the write from the child's stream, not the parent's. */
-const childSessionIdsToolArgs = (progress: EveTurnProgress) => {
-	const childSessionIds = [...progress.subagentCalls.values()].flatMap(
-		(call) => (call.childSessionId ? [call.childSessionId] : []),
-	);
-	return childSessionIds.length ? { _eveChildSessionIds: childSessionIds } : {};
-};
 
 const approvalForGatedWrite = ({
 	chained,
@@ -109,8 +102,10 @@ const approvalForGatedWrite = ({
 			...(chained.input ?? {}),
 			_eveApproveOptionId: options.approve,
 			_eveDenyOptionId: options.deny,
-			_eveSiblingRequestIds: siblingRequestIds,
-			...childSessionIdsToolArgs(progress),
+			// A proxied approval executes inside the delegated child session, so
+			// the resume verifies the write from the child's stream.
+			...childSessionIdsToolArgs([...progress.subagentChildSessionIds]),
+			...siblingRequestIdsToolArgs(siblingRequestIds),
 			...withheldWritesToolArgs(withheld),
 		},
 		preview: previewForParkedWrite({
@@ -358,13 +353,9 @@ export const reduceEveTurnEvent = ({
 	switch (event.type) {
 		case "subagent.called": {
 			const name = event.name ?? event.toolName ?? "subagent";
-			const subagentCalls = new Map(progress.subagentCalls);
-			if (event.callId) {
-				subagentCalls.set(event.callId, {
-					childSessionId: event.childSessionId,
-					name,
-				});
-			}
+			const subagentChildSessionIds = event.childSessionId
+				? new Set([...progress.subagentChildSessionIds, event.childSessionId])
+				: progress.subagentChildSessionIds;
 			return {
 				effects: [
 					{
@@ -376,11 +367,9 @@ export const reduceEveTurnEvent = ({
 						},
 					},
 				],
-				progress: { ...progress, subagentCalls },
+				progress: { ...progress, subagentChildSessionIds },
 			};
 		}
-		case "subagent.completed":
-			return { effects: [], progress };
 		case "step.started":
 			return { effects: [{ kind: "thinking" }], progress };
 		case "message.appended":

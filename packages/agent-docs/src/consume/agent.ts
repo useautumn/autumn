@@ -69,11 +69,3 @@ export const skillToText = (skill: Skill): string =>
 /** All Leaf skills inlined as one block, for the mastra system prompt. */
 export const leafSkillsText = (): string =>
 	leafSkills.map(skillToText).join("\n\n---\n\n");
-
-/** Canonical MCP docs a Leaf/eval harness can preload when it needs resource text. */
-export const agentDocBundleUris = [
-	"autumn://docs/concepts",
-	"autumn://docs/plan-management",
-	"autumn://docs/billing",
-	"autumn://docs/logs",
-];

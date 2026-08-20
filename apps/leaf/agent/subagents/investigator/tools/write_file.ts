@@ -1,3 +1,3 @@
-import { disableTool } from "eve/tools";
+import { disabledFrameworkTool } from "../../../lib/disabledTools.js";
 
-export default disableTool();
+export default disabledFrameworkTool;

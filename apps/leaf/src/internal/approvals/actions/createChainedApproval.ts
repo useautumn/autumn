@@ -4,6 +4,7 @@ import { logger } from "../../../lib/logger.js";
 import { approvalOptionIds } from "../../agentRuntime/eve/events.js";
 import {
 	type ChainedPendingRequest,
+	siblingRequestIdsToolArgs,
 	type WithheldWrite,
 	withheldWritesToolArgs,
 } from "../../agentRuntime/eve/parkedInput.js";
@@ -92,7 +93,7 @@ export const createChainedApproval = async ({
 				...(chained.input ?? {}),
 				_eveApproveOptionId: options.approve,
 				_eveDenyOptionId: options.deny,
-				_eveSiblingRequestIds: siblingRequestIds,
+				...siblingRequestIdsToolArgs(siblingRequestIds),
 				...withheldWritesToolArgs(withheld),
 			},
 			toolCallId: chained.requestId,

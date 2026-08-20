@@ -39,11 +39,12 @@ const rejectionDetail = (output: unknown) => {
 		| { approval?: { status?: string }; code?: string; message?: string }
 		| undefined;
 	if (!record || typeof record !== "object") return undefined;
-	return {
+	const detail = {
 		approval_status: record.approval?.status,
 		code: record.code,
 		message: record.message,
 	};
+	return Object.values(detail).some(Boolean) ? detail : undefined;
 };
 
 const isFailedActionResult = (event: {
@@ -157,6 +158,29 @@ export const consumeResumedAgentTurn = async ({
 			(step) => step.status !== "applied" && step.normalized === normalized,
 		);
 	};
+	const recordRequestedActions = (
+		event: Extract<EveEvent, { type: "actions.requested" }>,
+	) => {
+		for (const action of event.actions) {
+			const index = reserveStepFor(labelForAction(action));
+			if (index >= 0 && action.callId) {
+				approvedCallIds.set(action.callId, index);
+			}
+		}
+	};
+	const recordActionResult = (
+		event: Extract<EveEvent, { type: "action.result" }>,
+	) => {
+		const callId = event.result?.callId;
+		const index = callId
+			? (approvedCallIds.get(callId) ??
+				unresolvedStepFor(labelForResult(event.result)))
+			: unresolvedStepFor(labelForResult(event.result));
+		const step = index >= 0 ? expectedSteps[index] : undefined;
+		if (step) {
+			step.status = isFailedActionResult(event) ? "failed" : "applied";
+		}
+	};
 	for await (const event of streamEveEvents({ auth, session })) {
 		sawEvent = true;
 		session.state.streamIndex += 1;
@@ -170,13 +194,8 @@ export const consumeResumedAgentTurn = async ({
 		) {
 			sawTurnActivity = true;
 		}
-		if (event.type === "actions.requested" && expectedSteps.length) {
-			for (const action of event.actions) {
-				const index = reserveStepFor(labelForAction(action));
-				if (index >= 0 && action.callId) {
-					approvedCallIds.set(action.callId, index);
-				}
-			}
+		if (event.type === "actions.requested") {
+			recordRequestedActions(event);
 		}
 		if (event.type === "action.result") {
 			logger.info("Resumed tool completed", {
@@ -190,16 +209,8 @@ export const consumeResumedAgentTurn = async ({
 				},
 			});
 		}
-		if (event.type === "action.result" && expectedSteps.length) {
-			const callId = event.result?.callId;
-			const index = callId
-				? (approvedCallIds.get(callId) ??
-					unresolvedStepFor(labelForResult(event.result)))
-				: unresolvedStepFor(labelForResult(event.result));
-			const step = index >= 0 ? expectedSteps[index] : undefined;
-			if (step) {
-				step.status = isFailedActionResult(event) ? "failed" : "applied";
-			}
+		if (event.type === "action.result") {
+			recordActionResult(event);
 		}
 		if (event.type === "turn.started") {
 			turnStarted = true;
@@ -280,33 +291,14 @@ export const consumeResumedAgentTurn = async ({
 	}
 	// Writes delegated to a subagent report their results on the child's
 	// stream only; replay each child to prove the approved steps ran there.
-	const unproven = () =>
-		expectedSteps.some((step) => step.status !== "applied");
 	for (const childSessionId of childSessionIds) {
-		if (!unproven()) break;
+		if (expectedSteps.every((step) => step.status === "applied")) break;
 		try {
 			await applyChildStreamResults({
 				auth,
 				childSessionId,
-				onResult: (event) => {
-					const callId = event.result?.callId;
-					const index = callId
-						? (approvedCallIds.get(callId) ??
-							unresolvedStepFor(labelForResult(event.result)))
-						: unresolvedStepFor(labelForResult(event.result));
-					const step = index >= 0 ? expectedSteps[index] : undefined;
-					if (step) {
-						step.status = isFailedActionResult(event) ? "failed" : "applied";
-					}
-				},
-				onRequested: (event) => {
-					for (const action of event.actions) {
-						const index = reserveStepFor(labelForAction(action));
-						if (index >= 0 && action.callId) {
-							approvedCallIds.set(action.callId, index);
-						}
-					}
-				},
+				onRequested: recordRequestedActions,
+				onResult: recordActionResult,
 				session,
 			});
 		} catch (error) {
@@ -330,12 +322,12 @@ export const consumeResumedAgentTurn = async ({
 		approvedWriteUnverified:
 			expectedSteps.length > 0 &&
 			!expectedSteps.some((step) => step.status === "applied"),
-		steps,
 		chained,
 		chainedSiblingRequestIds,
 		chainedWithheld,
 		deferredEmptyTurn: turnStarted && !(sawTurnActivity || text || pendingText),
 		question,
+		steps,
 		text: text || pendingText,
 	};
 };

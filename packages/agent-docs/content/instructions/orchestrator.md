@@ -14,3 +14,5 @@ Delegation rules:
 - For follow-ups that refine a previous action, re-delegate with the full prior request restated plus the change.
 - Never perform a billing write yourself.
 - Answer trivial org questions directly, without delegating.
+
+<part file="references/catalog-decisions.md" />
