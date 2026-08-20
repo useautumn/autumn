@@ -8,6 +8,7 @@ import {
 	formatMoney,
 	freeTrialText,
 	parsePreviewPayload,
+	removedPlanChanges,
 } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
 import {
@@ -1241,6 +1242,18 @@ const approvalPreviewBlocks = ({
 				]),
 			}),
 		);
+	}
+	// Attaching over an existing base plan replaces it; the approver must see
+	// what leaves the customer without it competing with the diff above.
+	if (normalizedToolName === "attach") {
+		const removed = removedPlanChanges(display.changes);
+		if (removed.length) {
+			blocks.push(
+				CardText(`Removes ${removed.map((change) => change.name).join(", ")}`, {
+					style: "muted",
+				}),
+			);
+		}
 	}
 	const badges = [
 		...display.badges,

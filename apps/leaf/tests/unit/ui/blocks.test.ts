@@ -71,6 +71,46 @@ describe("approval card", () => {
 		expect(json).not.toContain('"request"');
 	});
 
+	// A replaced base plan must be visible without joining the diff table.
+	test("attach shows the replaced plan as a muted line under the preview", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Sandbox,
+			toolName: "attach",
+			toolArgs: { request: attachArgs.request },
+			preview: wrapMcpResult({
+				preview: {
+					currency: "usd",
+					incoming: [{ plan_id: "scale", plan: { name: "Scale" } }],
+					outgoing: [{ plan_id: "launch", plan: { name: "Launch" } }],
+					total: 500,
+				},
+			}),
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain("Removes Launch");
+	});
+
+	test("an in-place plan update is not shown as a removal", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Sandbox,
+			toolName: "attach",
+			toolArgs: { request: attachArgs.request },
+			preview: wrapMcpResult({
+				preview: {
+					currency: "usd",
+					incoming: [{ plan_id: "scale", plan: { name: "Scale" } }],
+					outgoing: [{ plan_id: "scale", plan: { name: "Scale" } }],
+					total: 0,
+				},
+			}),
+		});
+
+		expect(JSON.stringify(card)).not.toContain("Removes");
+	});
+
 	test("falls back from blank names to customer email and ids", () => {
 		const card = approvalCard({
 			id: "approval_1",
