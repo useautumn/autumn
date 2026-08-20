@@ -17,10 +17,12 @@ jobs:
     name: Notify shipped
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
-      contains(github.event.pull_request.body || '', '<!-- This is an auto-generated description by cubic. -->') &&
+      (contains(github.event.pull_request.body || '', '<!-- This is an auto-generated description by cubic. -->') ||
+      contains(github.event.pull_request.body || '', '<!-- greptile_comment -->')) &&
       (github.event.action == 'opened' ||
       (github.event.changes.body &&
-      !contains(github.event.changes.body.from || '', '<!-- This is an auto-generated description by cubic. -->')))
+      !contains(github.event.changes.body.from || '', '<!-- This is an auto-generated description by cubic. -->') &&
+      !contains(github.event.changes.body.from || '', '<!-- greptile_comment -->')))
     runs-on: ubuntu-latest
 
     steps:
@@ -47,16 +49,30 @@ jobs:
             route_label="$slack_head_ref → main"
           fi
 
-          start_marker="## Summary by cubic"
-          end_marker="<sup>"
-          summary="${PR_BODY#*"$start_marker"}"
+          cubic_start_marker="## Summary by cubic"
+          cubic_end_marker="<sup>"
+          greptile_start_marker="<!-- greptile_comment -->"
+          greptile_summary_marker="</summary>"
+          greptile_end_marker="</details>"
+          cubic_prefix="${PR_BODY%%"$cubic_start_marker"*}"
+          greptile_prefix="${PR_BODY%%"$greptile_start_marker"*}"
 
-          if [ "$summary" = "$PR_BODY" ]; then
-            echo "::error::Cubic summary heading was not found"
-            exit 1
+          if [ "$cubic_prefix" != "$PR_BODY" ] &&
+            { [ "$greptile_prefix" = "$PR_BODY" ] || [ "${#cubic_prefix}" -lt "${#greptile_prefix}" ]; }; then
+            summary="${PR_BODY#*"$cubic_start_marker"}"
+            summary="${summary%%"$cubic_end_marker"*}"
+          else
+            greptile_summary="${PR_BODY#*"$greptile_start_marker"}"
+            summary="${greptile_summary#*"$greptile_summary_marker"}"
+
+            if [ "$summary" = "$greptile_summary" ]; then
+              echo "::error::Greptile summary heading was not found"
+              exit 1
+            fi
+
+            summary="${summary%%"$greptile_end_marker"*}"
           fi
 
-          summary="${summary%%"$end_marker"*}"
           slack_summary=$(printf '%s' "$summary" | sed -E \
             -e '1{/^$/d;}' \
             -e 's/\*\*([^*]+)\*\*/\*\1\*/g' \
