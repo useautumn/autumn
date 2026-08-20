@@ -60,8 +60,8 @@ export type UpsertProductPlan = {
 	removeLicenses?: RemovePlanLicense[];
 	/** variants[] as declared — input for deriveVariantIntents. Direct only. */
 	declaredVariants?: CatalogVariantParams[];
-	/** Direct variant omitted from same-call parent's variants[] — null the pointer. */
-	unlink?: boolean;
+	/** Pointer write from `base_plan_id` or a variants[] omission. Version siblings inherit it. */
+	basePlanLink?: string | null;
 	/** Who follows this row's content change. Copied from planParams so pass 2 can read it. */
 	propagate?: CatalogPropagateParams;
 	/** Absent = plan_license links untouched. Present (incl. []) = full-set replace. */

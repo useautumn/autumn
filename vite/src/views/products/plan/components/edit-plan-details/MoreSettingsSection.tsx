@@ -28,13 +28,8 @@ export const MoreSettingsSection = () => {
 	const { product, setProduct } = useProduct();
 	const { customer_id } = useParams();
 	const isCustomPlan = notNullish(customer_id);
-	const {
-		hasVariants,
-		basePlanId,
-		selectedBasePlanId,
-		basePlan,
-		basePlanOptions,
-	} = useVariantLinkVisibility(product);
+	const { hasVariants, selectedBasePlanId, basePlan, basePlanOptions } =
+		useVariantLinkVisibility(product);
 
 	const hasGroup = notNullish(product.group);
 	// The linked base can be archived or a variant, so it stays selectable.
@@ -46,9 +41,7 @@ export const MoreSettingsSection = () => {
 	const canSelectBasePlan = visibleBasePlanOptions.length > 0;
 
 	const setBasePlan = (nextBasePlanId: string | null) => {
-		const matchesPersistedBase = nextBasePlanId === basePlanId;
-		const pendingBasePlanId = matchesPersistedBase ? undefined : nextBasePlanId;
-		setProduct({ ...product, base_id: pendingBasePlanId });
+		setProduct({ ...product, base_id: nextBasePlanId });
 	};
 
 	const hasMetadata = Object.keys(product.metadata ?? {}).length > 0;

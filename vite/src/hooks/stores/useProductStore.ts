@@ -1,4 +1,5 @@
 import {
+	type Feature,
 	type FrontendProduct,
 	getProductItemDisplay,
 	itemsAreSame,
@@ -63,33 +64,35 @@ export const useIsCusPlanEditor = () => {
 	return !!customer_id;
 };
 
+/** Working copy differs from the base it synced from. The link lives on the row,
+ * not in plan content, so productsAreSame never sees it. */
+export const productHasUnsavedEdits = ({
+	product,
+	baseProduct,
+	features,
+}: {
+	product: ProductV2;
+	baseProduct: ProductV2;
+	features: Feature[];
+}): boolean =>
+	!productsAreSame({
+		newProductV2: product,
+		curProductV2: baseProduct,
+		features,
+	}).same || (product.base_id ?? null) !== (baseProduct.base_id ?? null);
+
 // Custom hooks for computed values
 export const useHasChanges = () => {
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const { features = [] } = useFeaturesQuery();
 
-	return useMemo(() => {
-		if (!baseProduct) return false;
-
-		const comparison = productsAreSame({
-			newProductV2: product as unknown as FrontendProduct,
-			curProductV2: baseProduct as unknown as FrontendProduct,
-			features,
-		});
-		const basePlanSame = product.base_id === baseProduct.base_id;
-
-		const hasChanges =
-			!comparison.itemsSame ||
-			!comparison.detailsSame ||
-			!comparison.freeTrialsSame ||
-			!comparison.configSame ||
-			!comparison.billingControlsSame ||
-			!comparison.metadataSame ||
-			!basePlanSame;
-
-		return hasChanges;
-	}, [product, baseProduct, features]);
+	return useMemo(
+		() =>
+			!!baseProduct &&
+			productHasUnsavedEdits({ product, baseProduct, features }),
+		[product, baseProduct, features],
+	);
 };
 
 // True when metadata is the only pending change — such saves skip the

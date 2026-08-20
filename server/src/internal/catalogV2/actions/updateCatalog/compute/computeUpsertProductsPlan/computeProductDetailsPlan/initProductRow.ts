@@ -46,8 +46,11 @@ export const initProductRow = ({
 			internal_id: generateId("prod"),
 			created_at: Date.now(),
 			group: (patch.group ?? base.group) || "",
+			// `?? ` would swallow an explicit detach — only an omitted pointer clones.
 			base_internal_product_id:
-				baseInternalProductId ?? base.base_internal_product_id ?? null,
+				baseInternalProductId !== undefined
+					? baseInternalProductId
+					: (base.base_internal_product_id ?? null),
 		};
 	}
 

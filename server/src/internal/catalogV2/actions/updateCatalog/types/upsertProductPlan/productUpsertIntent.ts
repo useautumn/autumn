@@ -21,8 +21,8 @@ export type ProductUpsertIntent = {
 	editDiff?: DiffedCustomizePlanV1;
 	/** Latest base row this variant points at. Derive-owned — not a request field. */
 	baseInternalProductId?: string | null;
-	/** Direct unlink rides onto version siblings — compute nulls the pointer. */
-	unlink?: boolean;
+	/** Pointer write: internal id, or null to detach. Wins over `baseInternalProductId`. */
+	basePlanLink?: string | null;
 };
 
 export const claimProductKeys = ({
