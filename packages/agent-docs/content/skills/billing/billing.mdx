@@ -25,9 +25,9 @@ Use this resource for billing actions: attaching plans, updating subscriptions, 
 - Resolve custom terms (see Customizations).
 - Resolve timing (see Timing and schedules).
 - Resolve invoice, checkout, and proration behavior (see Billing behavior).
-- If one ambiguity changes which of the other questions apply, resolve it first on its own before gathering the rest.
-- Gather all remaining missing questions from the checklist and ask them together.
-- If there are no missing questions, call the preview tool.
+- Previews are non-destructive and cheap — bias to previewing over asking. Resolve every checklist item yourself from the request, the org's agent rules, and plan/org defaults; note any assumption in one line alongside the preview.
+- Ask ONLY when a required fact is genuinely unresolvable — the target customer or plan cannot be determined, or the request conflicts with itself. Never ask the user to confirm your interpretation of what they already said; the approval card is where they review, adjust, or reject.
+- If several genuinely unresolvable questions exist, ask them together (one ambiguity that changes which other questions apply gets resolved first on its own). Otherwise call the preview tool.
 - Surface the preview's immediate billing impact in one line, then immediately call the write tool — the write tool call itself IS the approval mechanism (it triggers your client's approval prompt/card before executing). Never ask for confirmation with a question tool or in prose.
 - If params change, update them and repeat from the relevant checklist step.
 - Once approved, apply the exact previewed billing action.
@@ -36,6 +36,8 @@ Use this resource for billing actions: attaching plans, updating subscriptions, 
 
 - **A mutating billing action requires approval before it takes effect. The approval mechanism is the write tool call itself: calling `attach`/`updateSubscription`/`createSchedule` pauses for the user's approval before executing. Do NOT pre-confirm with `ask_question` or prose — that double-prompts the user.**
 - **Apply the default billing params on every action unless the user explicitly asks otherwise — invoice mode (draft), enable immediately, and no proration. The full rules and field names are in the Billing behavior section below; follow them exactly.**
+- **No "confirm before I proceed" questions. When a default or org rule resolves a gap, use it and preview — the preview is non-destructive and easy to redo, and the user reviews everything on the approval card before anything happens.**
+- **A named action is a decision, not a suggestion: "attach X" means attach X, even if the customer is on another plan (attach handles the transition). Never ask whether they meant a different operation — at most note the alternative in one line alongside the preview.**
 - Don't propose or promise steps outside what your tools can do. If the goal isn't reachable, say so plainly rather than inventing a workaround.
 - Read this full resource before billing work and follow sections in order; later sections can define params that must be resolved before previewing.
 - Monetary amounts are major currency units: `$1,150` -> `1150`, not `115000`.
@@ -43,7 +45,7 @@ Use this resource for billing actions: attaching plans, updating subscriptions, 
 - If using `invoice_mode` and the customer has no email, ask for the email and call `updateCustomer` before previewing.
 - Ask independent missing questions together in one concise message, using one bullet point per question.
 - While gathering params, ask only for values needed to build the billing request; do not explain plan internals unless the user asks.
-- If a customization is inferred, surface it for confirmation before previewing or writing. If its intent is ambiguous, ask before building — don't resolve it silently. When surfacing a customization, describe it as a patch (what was added/removed/changed vs the catalog plan), not a full restatement of every feature.
+- If a customization is inferred, note it in one line alongside the preview as a patch (what was added/removed/changed vs the catalog plan), not a full restatement of every feature — don't block on a confirmation question. Ask only if the request is ambiguous between materially different customizations.
 - A follow-up that refines an attach customization remains customer-specific; use catalog tools only when the user explicitly asks to change the shared plan.
 - If the plan prices a feature as prepaid, a bare amount for that feature ("put them on 4.5k credits") means `feature_quantities` — NOT an item customization. Never remove or replace a prepaid item to set how many units a customer gets; customize the item only when the user explicitly changes its pricing or included allowance.
 - Before any trial action, re-read the Trials section in `autumn://docs/concepts`.
@@ -80,7 +82,7 @@ Use this resource for billing actions: attaching plans, updating subscriptions, 
 - `createSchedule`
   - Build ordered `phases[]`.
   - Each phase needs timing (`starts_at` or `starting_after`) and at least one `plans[]` entry.
-- If a missing value changes billing impact, ask before previewing.
+- If a missing value changes billing impact and no default or org rule resolves it, ask before previewing.
 
 ## Billing customizations
 
@@ -88,7 +90,7 @@ Use this resource for billing actions: attaching plans, updating subscriptions, 
 - Use `customize` for customer-specific plan terms in `attach`, `updateSubscription`, and `createSchedule`.
 - A bare number with an interval but no `$` and no unit (e.g. "1k/yr", "2k/mo") is ambiguous between `customize.price` and a feature quantity; clarify before building.
 - A clarifying answer resolves only that question — re-check the checklist before previewing. Example: the user picks "custom price" for "1k/mo"; the plan's prepaid quantity is still unanswered and must be asked.
-- A list of what a customer "gets" is ambiguous: restating the plan, adding on top, or the exact set. If it changes what they receive vs the catalog plan, ask which before building.
+- A list of what a customer "gets" defaults to customizing the named items on top of the catalog plan, keeping its other items at plan defaults — note that assumption with the preview rather than asking. Ask only if the request explicitly conflicts with the plan's structure.
 - "Features" may mean only boolean access or may include credits/metered items; clarify scope before removing anything priced.
 - When the same outcome can be expressed multiple ways, prefer the customization that preserves the catalog plan's existing item structure.
 - If a plan name/id/context suggests an Enterprise or custom placeholder plan and the plan has no base price, ask whether they want to customize the base price.
@@ -173,7 +175,7 @@ Carry the whole ladder over; don't replace it with just the custom tier or a fla
 ## Preview and approval
 
 - Preview only after action, target IDs, quantities, customization, timing, and billing behavior are known or intentionally defaulted.
-- If missing information could change immediate charges, access timing, or scheduled state, ask before previewing.
+- Intentional defaults count as known: prefer defaulting and noting the assumption over asking — the preview reveals the exact billing impact and is easy to redo.
 - The main purpose of preview is to determine immediate billing impact: `total`, `currency`, and `line_items`.
 - Summarize the preview's impact before the write.
 - Lead with immediate impact: amount due now, no immediate charge, or credit.

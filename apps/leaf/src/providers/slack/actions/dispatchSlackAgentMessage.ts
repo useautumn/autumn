@@ -142,6 +142,7 @@ const runAndReply = async ({
 		await progress.start();
 		const logAction = progress.activity;
 		run.logAction = logAction;
+		run.onStop = progress.stop;
 		const rawFiles = getSlackFilesFromRaw({ raw });
 		const botToken = decrypt(installation.bot_access_token);
 
