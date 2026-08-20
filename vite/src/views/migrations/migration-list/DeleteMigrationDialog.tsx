@@ -40,8 +40,10 @@ export function DeleteMigrationDialog({
 			onOpenChange={(nextOpen) => !isDeleting && onOpenChange(nextOpen)}
 		>
 			<DialogContent className="max-w-md">
-				<DialogHeader>
-					<DialogTitle className="truncate">Delete {migration.id}</DialogTitle>
+				<DialogHeader className="min-w-0">
+					<DialogTitle className="truncate pr-6">
+						Delete {migration.id}
+					</DialogTitle>
 					<DialogDescription>
 						This migration will be permanently deleted. This action cannot be
 						undone.
