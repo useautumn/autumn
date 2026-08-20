@@ -35,6 +35,9 @@ export const handleRenewal = async ({
 		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
 		customerEmail: getRevenueCatCustomerEmail(event),
 		customerFingerprint: getRevenueCatCustomerFingerprint(event),
+		// RevenueCat sends RENEWAL (not INITIAL_PURCHASE) when a lapsed user
+		// resubscribes, so the customer may legitimately not exist yet.
+		autoCreateCustomer: true,
 	});
 
 	const { curSameProduct } = getExistingCusProducts({
