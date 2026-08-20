@@ -819,7 +819,7 @@
         "react-router": "^7.3.0",
         "react-router-dom": "^7.6.2",
         "recharts": "3.9.2",
-        "scraps-ui": "0.5.0",
+        "scraps-ui": "0.5.1",
         "shiki": "^3.20.0",
         "sonner": "^2.0.1",
         "streamdown": "^1.6.10",
@@ -5907,7 +5907,7 @@
 
     "schema-utils": ["schema-utils@4.3.3", "", { "dependencies": { "@types/json-schema": "^7.0.9", "ajv": "^8.9.0", "ajv-formats": "^2.1.1", "ajv-keywords": "^5.1.0" } }, "sha512-eflK8wEtyOE6+hsaRVPxvUKYCpRgzLqDTb8krvAsRIwOGlHoSgYLgBXoubGgLd2fT41/OUYdb48v4k4WWHQurA=="],
 
-    "scraps-ui": ["scraps-ui@0.5.0", "", { "peerDependencies": { "react": ">=17" }, "optionalPeers": ["react"] }, "sha512-+9B3Sp3U3wkab8CVIwEcZS64Ge54pVA7tLl/dN360iKBLu+pX6cZpWRKlnMfyuIugFBurAouMGRF2b/kZZGHaA=="],
+    "scraps-ui": ["scraps-ui@0.5.1", "", { "peerDependencies": { "react": ">=17" }, "optionalPeers": ["react"] }, "sha512-OJEqTdOYvu7whXQVJw74cCEPsMs997SJ2slGoMBIAlGRewpi6zr20srFTRJ/e4F/fFlPVDTTCuuWXcV2paga3Q=="],
 
     "sdk-test": ["sdk-test@workspace:apps/sdk-test"],
 
