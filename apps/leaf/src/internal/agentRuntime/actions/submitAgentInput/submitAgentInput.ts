@@ -8,6 +8,7 @@ import { consumeResumedAgentTurn } from "./consumeResumedAgentTurn.js";
 export const submitAgentInput = async ({
 	approveSiblings,
 	auth,
+	childSessionIds,
 	expectedToolNames,
 	note,
 	optionId,
@@ -18,6 +19,7 @@ export const submitAgentInput = async ({
 }: {
 	approveSiblings?: boolean;
 	auth: EveAuthContext;
+	childSessionIds?: ReadonlyArray<string>;
 	expectedToolNames?: ReadonlyArray<string>;
 	note?: string;
 	optionId: string;
@@ -46,6 +48,7 @@ export const submitAgentInput = async ({
 	});
 	return consumeResumedAgentTurn({
 		auth,
+		childSessionIds,
 		expectedToolNames,
 		orgId,
 		session,

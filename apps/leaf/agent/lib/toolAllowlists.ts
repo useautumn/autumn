@@ -63,9 +63,21 @@ export const toolAllowlists = {
 		"getCurrentOrganization",
 		"updateAgentRules",
 	],
-	/** The pre-split surface: everything. Kept while the root still does all
-	 * domain work itself; deleted once every specialist is live. */
-	root: undefined,
+	/** The orchestrator surface plus catalog tools, which stay rooted until the
+	 * catalog specialist is wired (see agent/subagents/README.md). */
+	root: [
+		...ORG_CONTEXT_READS,
+		...DATE_UTILS,
+		"createPlan",
+		"createReward",
+		"getCurrentOrganization",
+		"getPlan",
+		"listRewards",
+		"previewUpdateCatalog",
+		"updateAgentRules",
+		"updateCatalog",
+		"updatePlan",
+	],
 } as const satisfies Record<string, readonly string[] | undefined>;
 
 export type LeafAgentConnection = keyof typeof toolAllowlists;

@@ -1,7 +1,12 @@
+import { ms } from "@autumn/shared";
 import { db } from "../../../../lib/db.js";
 import { logger } from "../../../../lib/logger.js";
 import { isErrorResult } from "../../../approvals/utils/approvalErrors.js";
-import { streamEveEvents } from "../../eve/client.js";
+import {
+	EveStreamIdleTimeoutError,
+	streamEveEvents,
+} from "../../eve/client.js";
+import type { EveEvent } from "../../eve/eveEventSchemas.js";
 import { labelForAction, labelForResult } from "../../eve/events.js";
 import {
 	classifyParkedEveInput,
@@ -50,8 +55,56 @@ const isFailedActionResult = (event: {
 	return isErrorResult(output) || isErrorResult(parsedResultText(output));
 };
 
+const CHILD_REPLAY_IDLE_TIMEOUT_MS = ms.seconds(15);
+
+/** Replays a completed child session's stream from the start, feeding its
+ * action events to the caller. Task-mode children end with session.completed,
+ * so the replay is finite; a live child ends at the idle timeout instead. */
+const applyChildStreamResults = async ({
+	auth,
+	childSessionId,
+	onRequested,
+	onResult,
+	session,
+}: {
+	auth: EveAuthContext;
+	childSessionId: string;
+	onRequested: (
+		event: Extract<EveEvent, { type: "actions.requested" }>,
+	) => void;
+	onResult: (event: Extract<EveEvent, { type: "action.result" }>) => void;
+	session: EveSessionRef;
+}) => {
+	const childSession: EveSessionRef = {
+		env: session.env,
+		newSession: false,
+		sessionId: childSessionId,
+		state: { ...session.state, continuationToken: "", streamIndex: 0 },
+		threadKey: session.threadKey,
+	};
+	try {
+		for await (const event of streamEveEvents({
+			auth,
+			idleTimeoutMs: CHILD_REPLAY_IDLE_TIMEOUT_MS,
+			session: childSession,
+		})) {
+			if (event.type === "actions.requested") onRequested(event);
+			if (event.type === "action.result") onResult(event);
+			if (
+				event.type === "session.completed" ||
+				event.type === "session.failed"
+			) {
+				break;
+			}
+		}
+	} catch (error) {
+		if (!(error instanceof EveStreamIdleTimeoutError)) throw error;
+	}
+};
+
 export const consumeResumedAgentTurn = async ({
 	auth,
+	childSessionIds = [],
 	expectedToolNames,
 	orgId,
 	session,
@@ -61,6 +114,9 @@ export const consumeResumedAgentTurn = async ({
 	/** The writes the user approved, in apply order; their results are the only
 	 * proof each one ran. */
 	expectedToolNames?: ReadonlyArray<string>;
+	/** Child sessions the turn delegated to before parking. A proxied write
+	 * executes there, so its proof lives on the child stream. */
+	childSessionIds?: ReadonlyArray<string>;
 	orgId: string;
 	session: EveSessionRef;
 	skipRequestId?: string;
@@ -109,7 +165,8 @@ export const consumeResumedAgentTurn = async ({
 			event.type === "step.started" ||
 			event.type === "actions.requested" ||
 			event.type === "action.result" ||
-			event.type === "input.requested"
+			event.type === "input.requested" ||
+			event.type === "subagent.completed"
 		) {
 			sawTurnActivity = true;
 		}
@@ -177,28 +234,34 @@ export const consumeResumedAgentTurn = async ({
 				session.state.status = "waiting";
 				break;
 			}
-		} else if (event.type === "message.appended" && turnStarted) {
+		} else if (
+			event.type === "message.appended" &&
+			(turnStarted || sawTurnActivity)
+		) {
 			sawTurnActivity = true;
 			const messageSoFar = event.messageSoFar;
 			pendingText =
 				typeof messageSoFar === "string"
 					? messageSoFar
 					: `${pendingText}${event.messageDelta}`;
-		} else if (event.type === "message.completed" && turnStarted) {
+		} else if (
+			event.type === "message.completed" &&
+			(turnStarted || sawTurnActivity)
+		) {
 			sawTurnActivity = true;
 			if (event.finishReason !== "tool-calls") {
 				text = event.message || pendingText;
 			}
 			pendingText = "";
 		} else if (
-			turnStarted &&
+			(turnStarted || sawTurnActivity) &&
 			(event.type === "session.waiting" || event.type === "session.completed")
 		) {
 			session.state.status =
 				event.type === "session.completed" ? "completed" : "waiting";
 			break;
 		} else if (
-			turnStarted &&
+			(turnStarted || sawTurnActivity) &&
 			(event.type === "turn.failed" || event.type === "session.failed")
 		) {
 			session.state.status = "failed";
@@ -214,6 +277,47 @@ export const consumeResumedAgentTurn = async ({
 			state: session.state,
 			threadKey: session.threadKey,
 		});
+	}
+	// Writes delegated to a subagent report their results on the child's
+	// stream only; replay each child to prove the approved steps ran there.
+	const unproven = () =>
+		expectedSteps.some((step) => step.status !== "applied");
+	for (const childSessionId of childSessionIds) {
+		if (!unproven()) break;
+		try {
+			await applyChildStreamResults({
+				auth,
+				childSessionId,
+				onResult: (event) => {
+					const callId = event.result?.callId;
+					const index = callId
+						? (approvedCallIds.get(callId) ??
+							unresolvedStepFor(labelForResult(event.result)))
+						: unresolvedStepFor(labelForResult(event.result));
+					const step = index >= 0 ? expectedSteps[index] : undefined;
+					if (step) {
+						step.status = isFailedActionResult(event) ? "failed" : "applied";
+					}
+				},
+				onRequested: (event) => {
+					for (const action of event.actions) {
+						const index = reserveStepFor(labelForAction(action));
+						if (index >= 0 && action.callId) {
+							approvedCallIds.set(action.callId, index);
+						}
+					}
+				},
+				session,
+			});
+		} catch (error) {
+			logger.warn("Could not verify steps from the child session", {
+				event: "leaf.eve_child_verification_failed",
+				data: {
+					child_session_id: childSessionId,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			});
+		}
 	}
 	const steps = expectedSteps.map(({ status, toolName }) => ({
 		status,

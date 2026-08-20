@@ -81,6 +81,15 @@ export const eveTurnProducedOutput = ({
 	text?: string;
 }) => Boolean(text?.trim() || catalogDecision);
 
+/** A proxied approval executes inside the delegated child session, so the
+ * resume verifies the write from the child's stream, not the parent's. */
+const childSessionIdsToolArgs = (progress: EveTurnProgress) => {
+	const childSessionIds = [...progress.subagentCalls.values()].flatMap(
+		(call) => (call.childSessionId ? [call.childSessionId] : []),
+	);
+	return childSessionIds.length ? { _eveChildSessionIds: childSessionIds } : {};
+};
+
 const approvalForGatedWrite = ({
 	chained,
 	progress,
@@ -101,6 +110,7 @@ const approvalForGatedWrite = ({
 			_eveApproveOptionId: options.approve,
 			_eveDenyOptionId: options.deny,
 			_eveSiblingRequestIds: siblingRequestIds,
+			...childSessionIdsToolArgs(progress),
 			...withheldWritesToolArgs(withheld),
 		},
 		preview: previewForParkedWrite({

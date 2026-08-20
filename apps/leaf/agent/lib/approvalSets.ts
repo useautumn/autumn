@@ -33,7 +33,14 @@ export const approvalSets: Record<LeafAgentConnection, ReadonlySet<string>> = {
 	]),
 	investigator: new Set(),
 	orchestrator: new Set(["confirmBillingAction", "updateAgentRules"]),
-	root: new Set(ALL_APPROVAL_TOOL_NAMES),
+	root: new Set([
+		"confirmBillingAction",
+		"createPlan",
+		"createReward",
+		"updateAgentRules",
+		"updateCatalog",
+		"updatePlan",
+	]),
 };
 
 const splitUnion = new Set([

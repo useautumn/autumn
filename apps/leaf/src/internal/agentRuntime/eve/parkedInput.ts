@@ -68,6 +68,17 @@ export const withheldWritesToolArgs = (
 	withheld: ReadonlyArray<WithheldWrite>,
 ) => (withheld.length ? { [WITHHELD_WRITES_KEY]: withheld } : {});
 
+const CHILD_SESSION_IDS_KEY = "_eveChildSessionIds";
+
+export const childSessionIdsFromToolArgs = (
+	toolArgs: unknown,
+): ReadonlyArray<string> => {
+	if (!toolArgs || typeof toolArgs !== "object") return [];
+	const stored = (toolArgs as Record<string, unknown>)[CHILD_SESSION_IDS_KEY];
+	if (!Array.isArray(stored)) return [];
+	return stored.filter((id): id is string => typeof id === "string");
+};
+
 export const siblingRequestIdsFromToolArgs = (
 	toolArgs: unknown,
 ): ReadonlyArray<string> => {
