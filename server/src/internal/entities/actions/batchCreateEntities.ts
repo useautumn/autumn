@@ -4,9 +4,11 @@ import {
 	type Entity,
 	findFeatureById,
 } from "@autumn/shared";
+import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
+import { queueFailedEntityCreation } from "@/internal/entities/recovery/queueFailedEntityCreation.js";
 import { getApiEntity } from "../entityUtils/apiEntityUtils/getApiEntity";
 import { constructEntity } from "../entityUtils/entityUtils";
 import { createEntityForCusProduct } from "../handlers/handleCreateEntity/createEntityForCusProduct";
@@ -89,10 +91,26 @@ const createEntities = async ({
 		newEntities.push(updatedEntity);
 	}
 
-	const insertedEntities = await EntityService.insert({
-		db,
-		data,
-	});
+	let insertedEntities: Entity[];
+	if (inputEntities.some((entity) => !entity.id) || noIdEntity) {
+		insertedEntities = await EntityService.insert({ db, data });
+	} else {
+		insertedEntities = await shed503OnTransientError({
+			ctx,
+			source: "entities.create",
+			run: () => EntityService.insert({ db, data }),
+			onTransientError: async () => {
+				await queueFailedEntityCreation({
+					ctx,
+					params: {
+						customer_id: customerId,
+						create_entity_data: inputEntities,
+						customer_data: customerData,
+					},
+				});
+			},
+		});
+	}
 
 	newEntities.push(...insertedEntities);
 
