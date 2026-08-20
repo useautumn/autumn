@@ -82,8 +82,36 @@ export const PatchCustomerProductSchema = z.object({
 	deleteCustomerPrices: z.array(FullCustomerPriceSchema),
 });
 
+export const BalanceTransitionUnsupportedReasonSchema = z.enum([
+	"carry_over_balances",
+	"cross_product_carry",
+	"full_customer_override",
+	"inserted_customer_entitlements",
+	"multi_entitlement_feature",
+	"non_numeric_balance",
+	"one_off_purchase_rebalance",
+	"pooled_balance_plan",
+	"source_customer_entitlement_update",
+	"unmapped_runtime_balance",
+]);
+
+export const BalanceTransitionSchema = z.object({
+	sourceCustomerEntitlementId: z.string(),
+	targetCustomerEntitlementId: z.string(),
+	sourceBalance: z.number(),
+	sourceAdjustment: z.number(),
+});
+
+export const BalanceTransitionPlanSchema = z.object({
+	id: z.string(),
+	outgoingCustomerEntitlements: z.array(FullCustomerEntitlementSchema),
+	transitions: z.array(BalanceTransitionSchema),
+	unsupportedReason: BalanceTransitionUnsupportedReasonSchema.optional(),
+});
+
 export const AutumnBillingPlanSchema = z.object({
 	customerId: z.string(),
+	balanceTransitionPlan: BalanceTransitionPlanSchema.optional(),
 	// Inserted before customer products — provisioned rows may reference them.
 	insertEntities: z.array(EntitySchema).optional(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
@@ -196,6 +224,11 @@ export const AutumnBillingPlanSchema = z.object({
 });
 
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;
+export type BalanceTransition = z.infer<typeof BalanceTransitionSchema>;
+export type BalanceTransitionPlan = z.infer<typeof BalanceTransitionPlanSchema>;
+export type BalanceTransitionUnsupportedReason = z.infer<
+	typeof BalanceTransitionUnsupportedReasonSchema
+>;
 export type CustomerProductUpdate = z.infer<typeof CustomerProductUpdateSchema>;
 
 export type UpdateCustomerEntitlement = z.infer<

@@ -20,8 +20,9 @@
   KEYS[1] = shared balance routing key (used for cluster slot routing)
   KEYS[2] = lock receipt key, or "" when no lock is in play
   KEYS[3] = idempotency key, or "" when the request is not idempotent
-  KEYS[4..N] = per-feature shared balance hash keys; params.balance_key_index_by_feature_id
-              maps feature_id → the index (4..N) of the key for that feature
+  KEYS[4] = customer-scoped subject-view epoch key
+  KEYS[5..N] = per-feature shared balance hash keys; params.balance_key_index_by_feature_id
+              maps feature_id → the index (5..N) of the key for that feature
 
   All Redis keys the script touches MUST be declared in KEYS[] so Upstash (and
   Redis Cluster) can apply key-based locking / slot routing. Do not reconstruct
@@ -94,6 +95,7 @@ local idempotency_key = KEYS[3]
 if idempotency_key == '' then
   idempotency_key = nil
 end
+local subject_view_epoch_key = KEYS[4]
 
 -- Rebuild balance_keys_by_feature_id by dereferencing KEYS via the index map.
 -- Downstream helpers (readSubjectBalances, contextUtilsV2, updateAggregatedBalances)
@@ -134,6 +136,24 @@ local usage_window_limits = params.usage_window_limits
 local usage_window_now = params.usage_window_now
 local usage_window_ttl_seconds = params.usage_window_ttl_seconds
 local is_consumption = params.is_consumption
+local expected_subject_view_epoch = params.expected_subject_view_epoch
+
+if not is_nil(expected_subject_view_epoch) then
+  local current_subject_view_epoch = tonumber(
+    redis.call('GET', subject_view_epoch_key) or '0'
+  )
+  if current_subject_view_epoch ~= safe_number(expected_subject_view_epoch) then
+    return cjson.encode({
+      error = 'SUBJECT_VIEW_CHANGED',
+      updates = {},
+      rollover_updates = {},
+      modified_customer_entitlement_ids = new_empty_array(),
+      mutation_logs = new_empty_array(),
+      remaining = 0,
+      logs = new_empty_array(),
+    })
+  end
+end
 
 if not is_nil(idempotency_key) then
   if redis.call('EXISTS', idempotency_key) == 1 then

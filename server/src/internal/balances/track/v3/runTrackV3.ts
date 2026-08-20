@@ -19,9 +19,11 @@ import { runRedisTrackV3 } from "./runRedisTrackV3.js";
 const getTrackFullSubject = async ({
 	ctx,
 	body,
+	forceFresh = false,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
+	forceFresh?: boolean;
 }): Promise<FullSubject> => {
 	const { customer_id, entity_id } = body;
 
@@ -31,6 +33,7 @@ const getTrackFullSubject = async ({
 				customerId: customer_id,
 				entityId: entity_id,
 				source: "runTrackV3",
+				staleWhileRevalidate: !forceFresh,
 			})
 		: getOrCreateCachedFullSubject({
 				ctx,
@@ -73,6 +76,8 @@ export const runTrackV3 = async ({
 		overageBehavior: body.overage_behavior || "cap",
 		body,
 		idempotencyKey: redisIdempotencyKey,
+		refreshFullSubject: () =>
+			getTrackFullSubject({ ctx, body, forceFresh: true }),
 	});
 
 	return applyResponseVersionChanges<TrackResponseV3>({
