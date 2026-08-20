@@ -27,6 +27,8 @@ const baseProduct = {
 	archived: false,
 	is_add_on: false,
 	is_default: false,
+	version_slug: "v1",
+	active: true,
 	config: { ignore_past_due: false },
 	metadata: {},
 	prices: [],

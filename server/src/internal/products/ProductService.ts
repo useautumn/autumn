@@ -20,6 +20,7 @@ import {
 	desc,
 	eq,
 	exists,
+	gt,
 	inArray,
 	isNull,
 	ne,
@@ -302,7 +303,45 @@ export class ProductService {
 	}
 
 	static async insert({ db, product }: { db: DrizzleCli; product: Product }) {
-		const prod = await db.insert(products).values(product).returning();
+		// Dual-write for version identity (nothing reads these yet — Unit 2):
+		// every production insert funnels through here. Invariant: active tracks
+		// the max version ("latest wins", today's resolution), order-independently
+		// — a row only self-activates when no higher version exists, so multi-row
+		// catalog updates land the same end state whatever their insert order.
+		// `product.active` is the caller's explicit request (strict on
+		// ProductSchema); false opts out (future catalogV2 compute hook).
+		// unique_active_product backstops the flip against concurrent inserts.
+		const row = {
+			...product,
+			version_slug: product.version_slug ?? `v${product.version}`,
+		};
+		const samePlan = and(
+			eq(products.org_id, row.org_id),
+			eq(products.id, row.id),
+			eq(products.env, row.env),
+		);
+
+		const prod = await db.transaction(async (tx) => {
+			let activate = false;
+			if (product.active) {
+				const higherVersion = await tx
+					.select({ internal_id: products.internal_id })
+					.from(products)
+					.where(and(samePlan, gt(products.version, row.version)))
+					.limit(1);
+				activate = higherVersion.length === 0;
+			}
+			if (activate) {
+				await tx
+					.update(products)
+					.set({ active: false })
+					.where(and(samePlan, eq(products.active, true)));
+			}
+			return await tx
+				.insert(products)
+				.values({ ...row, active: activate })
+				.returning();
+		});
 
 		if (!prod || prod.length === 0) {
 			throw new RecaseError({

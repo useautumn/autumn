@@ -38,6 +38,11 @@ export const initProductRow = ({
 			...base,
 			...patch,
 			version,
+			// Mint fresh version identity — the base's slug/active must not ride
+			// along on the spread (a cloned slug would collide with the base row
+			// on unique_product_version_slug).
+			version_slug: `v${version}`,
+			active: true,
 			internal_id: generateId("prod"),
 			created_at: Date.now(),
 			group: (patch.group ?? base.group) || "",
@@ -55,6 +60,8 @@ export const initProductRow = ({
 		is_add_on: patch.is_add_on ?? false,
 		is_default: patch.is_default ?? false,
 		version,
+		version_slug: `v${version}`,
+		active: true,
 		group: patch.group || "",
 
 		env: ctx.env,
