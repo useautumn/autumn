@@ -1417,7 +1417,6 @@ export const approvalDetailsModal = ({
 				initialOption: edits.proration,
 				label: "Proration",
 				options: [
-					SelectOption({ label: "Org default", value: "default" }),
 					SelectOption({
 						label: "Charge prorated amount now",
 						value: "immediate",

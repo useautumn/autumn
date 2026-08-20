@@ -128,7 +128,7 @@ const submit = await handleEditApprovalDetailsSubmit({
 	values: {
 		access: process.env.E2E_ACCESS ?? "after_payment",
 		billing: process.env.E2E_BILLING ?? "draft_invoice",
-		proration: process.env.E2E_PRORATION ?? "default",
+		proration: process.env.E2E_PRORATION ?? "immediate",
 	},
 	privateMetadata: created.approvalId,
 	relatedThread: {
@@ -159,6 +159,9 @@ while (Date.now() < deadline) {
 }
 if (!rebuilt) {
 	console.log("NO REBUILT APPROVAL within 150s");
+	for (const posted of target.posted.slice(-3)) {
+		console.log("POSTED:", JSON.stringify(posted).slice(0, 500));
+	}
 	process.exit(1);
 }
 const after = ((rebuilt.tool_args as Record<string, unknown>).request ??
@@ -181,13 +184,16 @@ const invoice = (after.invoice_mode ?? {}) as {
 	enabled?: boolean;
 	finalize?: boolean;
 };
-const wantProration = process.env.E2E_PRORATION ?? "default";
-const expectedProrationBehavior =
-	wantProration === "immediate"
+const wantProration = process.env.E2E_PRORATION ?? "immediate";
+const beforeProration =
+	before.proration_behavior === "none" ? "next_cycle" : "immediate";
+const prorationWritten =
+	before.proration_behavior !== undefined || wantProration !== beforeProration;
+const expectedProrationBehavior = prorationWritten
+	? wantProration === "immediate"
 		? "prorate_immediately"
-		: wantProration === "next_cycle"
-			? "none"
-			: undefined;
+		: "none"
+	: undefined;
 const rebuiltWithheld = ((rebuilt.tool_args as Record<string, unknown>)
 	._eveWithheldWrites ?? []) as Array<{
 	input?: { request?: Record<string, unknown> };

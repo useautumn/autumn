@@ -30,12 +30,12 @@ describe("attach billing edits", () => {
 		).toEqual({
 			access: "after_payment",
 			billing: "finalized_invoice",
-			proration: "default",
+			proration: "immediate",
 		});
 		expect(attachBillingEditsFromRequest(request)).toEqual({
 			access: "after_payment",
 			billing: "draft_invoice",
-			proration: "default",
+			proration: "immediate",
 		});
 		expect(
 			attachBillingEditsFromRequest({
@@ -47,13 +47,17 @@ describe("attach billing edits", () => {
 		).toEqual({
 			access: "immediate",
 			billing: "checkout",
-			proration: "default",
+			proration: "immediate",
 		});
 	});
 
 	test("checkout drops invoice mode and sends a long-lived link", () => {
 		const parsed = applyAttachBillingEdits({
-			edits: { access: "immediate", billing: "checkout", proration: "default" },
+			edits: {
+				access: "immediate",
+				billing: "checkout",
+				proration: "immediate",
+			},
 			request,
 		});
 
@@ -76,7 +80,7 @@ describe("attach billing edits", () => {
 		["finalized_invoice", true],
 	] as const)("%s keeps the invoice settings", (billing, finalize) => {
 		const parsed = applyAttachBillingEdits({
-			edits: { access: "after_payment", billing, proration: "default" },
+			edits: { access: "after_payment", billing, proration: "immediate" },
 			request: { ...request, redirect_mode: "always" },
 		});
 
@@ -101,7 +105,7 @@ describe("attach billing edits", () => {
 	test("provisioning is written to the top-level and invoice flags together", () => {
 		for (const access of ["immediate", "after_payment"] as const) {
 			const parsed = applyAttachBillingEdits({
-				edits: { access, billing: "draft_invoice", proration: "default" },
+				edits: { access, billing: "draft_invoice", proration: "immediate" },
 				request,
 			});
 			expect(parsed.success).toBe(true);
@@ -118,7 +122,7 @@ describe("attach billing edits", () => {
 // Proration is the third operator decision: whether an existing subscription
 // is trued up now, at the next cycle, or per the plan default.
 describe("proration edits", () => {
-	test("reads proration off the request", () => {
+	test("reads proration off the request, org default when omitted", () => {
 		expect(
 			attachBillingEditsFromRequest({
 				...request,
@@ -131,7 +135,7 @@ describe("proration edits", () => {
 				proration_behavior: "prorate_immediately",
 			}).proration,
 		).toBe("immediate");
-		expect(attachBillingEditsFromRequest(request).proration).toBe("default");
+		expect(attachBillingEditsFromRequest(request).proration).toBe("immediate");
 	});
 
 	test.each([
@@ -145,19 +149,5 @@ describe("proration edits", () => {
 		expect(parsed.success).toBe(true);
 		if (!parsed.success) return;
 		expect(parsed.data.proration_behavior).toBe(expected);
-	});
-
-	test("default removes an existing proration_behavior", () => {
-		const parsed = applyAttachBillingEdits({
-			edits: {
-				access: "after_payment",
-				billing: "draft_invoice",
-				proration: "default",
-			},
-			request: { ...request, proration_behavior: "none" },
-		});
-		expect(parsed.success).toBe(true);
-		if (!parsed.success) return;
-		expect(parsed.data.proration_behavior).toBeUndefined();
 	});
 });
