@@ -24,6 +24,10 @@ export const ProductSchema = z.object({
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number(),
+	// Nullish while Unit 1 (dual-write) rolls out; readers land in Unit 2 and
+	// tighten these. See .context/plan-version-identity/PLAN.md.
+	version_slug: z.string().nullish(),
+	active: z.boolean().nullish(),
 	group: z.string(),
 
 	env: z.enum(AppEnv),

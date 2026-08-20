@@ -148,6 +148,8 @@ const buildProduct = ({
 	is_default: false,
 	group: "db-fullsubject",
 	version: 1,
+	version_slug: "v1",
+	active: true,
 	processor: null,
 	base_variant_id: null,
 	base_internal_product_id: null,
