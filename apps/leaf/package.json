@@ -14,6 +14,7 @@
 	},
 	"dependencies": {
 		"@ai-sdk/anthropic": "^4.0.8",
+		"@ai-sdk/openai": "^4",
 		"@anthropic-ai/sdk": "^0.102.0",
 		"@autumn/agent-docs": "workspace:*",
 		"@autumn/auth": "workspace:*",
