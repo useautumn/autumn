@@ -68,11 +68,9 @@ export const handleUpdateCoupon = createRoute({
 		rewardBody.promo_codes = normalizePromoCodes(
 			rewardBody.promo_codes ?? reward.promo_codes ?? [],
 		);
-		const updatedReward: Reward = {
-			...reward,
-			...rewardBody,
-			entitlements: reward.entitlements,
-		};
+		// Uniqueness and Stripe read scalar columns only; the repo rewrites entitlement rows.
+		const { entitlements: _entitlements, ...rewardColumns } = rewardBody;
+		const updatedReward: Reward = { ...reward, ...rewardColumns };
 		await validateRewardUniqueness({
 			db,
 			reward: updatedReward,
