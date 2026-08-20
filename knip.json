@@ -105,7 +105,11 @@
 		},
 		"packages/env": {
 			"project": ["src/**/*.ts"],
-			"ignore": ["src/index.test.ts"]
+			"ignore": [
+				"src/index.test.ts",
+				"src/cloudAgent.test.ts",
+				"src/viteDev.test.ts"
+			]
 		},
 		"apps/testbench": {
 			"entry": ["**/*.ts"],

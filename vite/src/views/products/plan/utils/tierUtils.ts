@@ -96,6 +96,32 @@ export const removeTier = ({
 	setItem({ ...item, tiers: newTiers });
 };
 
+/** Display `to` includes included usage; stored `to` does not. */
+export const applyTierToDisplayValue = ({
+	item,
+	index,
+	displayValue,
+}: {
+	item: ProductItem;
+	index: number;
+	displayValue: string;
+}): ProductItem => {
+	if (!item.tiers) return item;
+	if (index === item.tiers.length - 1) return item;
+
+	const parsed = parseFloat(displayValue);
+	if (Number.isNaN(parsed)) return item;
+
+	const includedUsage =
+		typeof item.included_usage === "number" ? item.included_usage : 0;
+	const internalTo = parsed - includedUsage;
+	if (item.tiers[index]?.to === internalTo) return item;
+
+	const newTiers = [...item.tiers];
+	newTiers[index] = { ...newTiers[index], to: internalTo };
+	return { ...item, tiers: newTiers };
+};
+
 export const updateTier = ({
 	item,
 	setItem,

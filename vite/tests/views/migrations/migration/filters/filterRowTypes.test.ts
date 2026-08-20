@@ -12,12 +12,25 @@ describe("planFilterToGroups structure", () => {
 		expect(groups[0].rules).toHaveLength(0);
 	});
 
-	test("$or of pure plan selections collapses to a single plan row", () => {
+	test("$or of plan selections with custom still collapses to one plan row", () => {
 		const groups = planFilterToGroups({
-			$or: [{ plan_id: "a" }, { plan_id: "b" }],
+			$or: [
+				{ plan_id: "qa-eus-eu", version: 1 },
+				{ plan_id: "qa-eus-team", version: 1 },
+			],
+			custom: false,
 		});
 		expect(groups).toEqual([
-			{ rules: [{ field: "plan_id", operator: "in", values: ["a", "b"] }] },
+			{
+				rules: [
+					{
+						field: "plan_id",
+						operator: "in",
+						values: ["qa-eus-eu:1", "qa-eus-team:1"],
+					},
+					{ field: "custom", operator: "is", values: ["false"] },
+				],
+			},
 		]);
 	});
 

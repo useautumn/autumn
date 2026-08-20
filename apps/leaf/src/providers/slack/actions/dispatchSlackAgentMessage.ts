@@ -27,8 +27,9 @@ import {
 	runStoppedByUserNotice,
 } from "../../../ui/messages.js";
 import type { ReplyTarget } from "../../../ui/progress.js";
-import { createStatusTicker } from "../../../ui/statusTicker.js";
+import { createRunProgress } from "../../../ui/runProgress.js";
 import { getSlackWorkspaceId } from "../context.js";
+import { slackMessageMentionsUser } from "../events.js";
 import { createEveSlackPresenter } from "../evePresenter.js";
 import {
 	fetchSlackAttachmentFallback,
@@ -58,6 +59,7 @@ type DispatchSlackAgentMessageInput = {
 	recentMessages?:
 		| ReadonlyArray<AgentContextMessage>
 		| (() => Promise<ReadonlyArray<AgentContextMessage>>);
+	showRunPlan?: boolean;
 	target: ReplyTarget;
 	text: string;
 	threadId: string;
@@ -72,17 +74,19 @@ const runAndReply = async ({
 	react,
 	recentMessages: recentMessagesInput,
 	runKey,
+	showRunPlan = false,
 	target,
 	text,
 	threadId,
-}: DispatchSlackAgentMessageInput & { runKey: string }) => {
+}: DispatchSlackAgentMessageInput & {
+	runKey: string;
+}): Promise<"close" | "keep"> => {
 	let logger = rootLogger;
 	let run: ActiveRun | undefined;
-	const ticker = createStatusTicker(target);
-	const evePresenter = createEveSlackPresenter({ ticker });
+	const progress = createRunProgress({ showPlan: showRunPlan, target, text });
+	const evePresenter = createEveSlackPresenter({ setStatus: progress.status });
 	const reactSafely = (input: { action: "add" | "remove"; emoji: string }) =>
 		react?.(input).catch(() => undefined);
-	ticker.thinking();
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
 		const [installation, recentMessages] = await Promise.all([
@@ -97,7 +101,20 @@ const runAndReply = async ({
 			logger.warn("Slack installation not found", {
 				event: "leaf.slack_installation_missing",
 			});
-			return;
+			return "close";
+		}
+		if (
+			showRunPlan &&
+			!slackMessageMentionsUser({
+				raw,
+				userId: installation.bot_user_id,
+			})
+		) {
+			logger.info("Skipping Slack message addressed to another app", {
+				event: "leaf.slack_message_skipped",
+				data: { reason: "different_bot_mention" },
+			});
+			return "close";
 		}
 
 		const session = createLeafSessionContext({
@@ -125,17 +142,17 @@ const runAndReply = async ({
 				event: "leaf.slack_message_skipped",
 				data: { reason: "empty" },
 			});
-			return;
+			return "close";
 		}
 
+		progress.thinking();
 		run = registerRun({
 			key: runKey,
 			kind: "message",
 			ownerProviderUserId: providerUserId,
 		});
-		const logAction = (message: string) => {
-			ticker.activity(message);
-		};
+		await progress.start();
+		const logAction = progress.activity;
 		run.logAction = logAction;
 		const rawFiles = getSlackFilesFromRaw({ raw });
 		const botToken = decrypt(installation.bot_access_token);
@@ -153,7 +170,7 @@ const runAndReply = async ({
 			onApprovalsSuperseded: (approvals) =>
 				editSupersededApprovalCards({ approvals, logger, target }),
 			onReasoning: evePresenter.onReasoning,
-			onThinking: ticker.thinking,
+			onThinking: progress.thinking,
 			providerUserId,
 			recentMessages,
 			run,
@@ -162,7 +179,9 @@ const runAndReply = async ({
 		});
 
 		if (output.kind === "stopped") {
-			ticker.stop();
+			await progress.fail(
+				output.reason === "timeout" ? "Timed out" : "Stopped by user",
+			);
 			const notice =
 				output.reason === "timeout"
 					? RUN_STOPPED_FOR_TIME_MESSAGE
@@ -176,7 +195,7 @@ const runAndReply = async ({
 				event: "leaf.slack_run_stopped",
 				data: { stop_reason: output.reason },
 			});
-			return;
+			return "close";
 		}
 
 		const outputInstallation =
@@ -184,9 +203,9 @@ const runAndReply = async ({
 		const orgId =
 			output.kind === "blocked" ? outputInstallation.org_id : output.org.id;
 		if (output.kind === "blocked") {
-			ticker.stop();
+			await progress.fail(output.text);
 			await target.post({ markdown: output.text });
-			return;
+			return "close";
 		}
 
 		if (hasQueuedThreadMessage(runKey)) {
@@ -217,7 +236,8 @@ const runAndReply = async ({
 				event: "leaf.slack_reply_suppressed",
 				data: { had_suspension: output.kind === "approval" },
 			});
-			return;
+			await progress.complete();
+			return "keep";
 		}
 
 		await presentSlackAgentTurn({
@@ -226,22 +246,25 @@ const runAndReply = async ({
 			logAction,
 			logger,
 			providerUserId,
-			stopStatus: ticker.stop,
+			stopStatus: progress.stop,
 			target,
 			threadId,
 			turn: output,
 		});
+		await progress.complete();
+		return "keep";
 	} catch (error) {
 		logger.error("[chat] Message failed", error, {
 			event: "leaf.slack_message_failed",
 		});
-		ticker.stop();
+		await progress.fail(errorNotice(error));
 		await reactSafely({ action: "add", emoji: "x" });
 		await target.post({
 			markdown: `:warning: ${errorNotice(error)}`,
 		});
+		return "close";
 	} finally {
-		ticker.stop();
+		progress.stop();
 		await reactSafely({ action: "remove", emoji: "eyes" });
 		if (run) closeRun({ key: run.key, run });
 	}
@@ -256,11 +279,13 @@ export const dispatchSlackAgentMessage = async (
 		threadId: input.threadId,
 		workspaceId: getSlackWorkspaceId(input.raw),
 	});
-	await dispatchThreadMessage({
-		hasAttachments: Boolean(input.attachments?.length),
-		providerUserId: input.providerUserId,
-		runKey,
-		runNewMessage: () => runAndReply({ ...input, runKey }),
-		text: input.text,
-	});
+	return (
+		(await dispatchThreadMessage({
+			hasAttachments: Boolean(input.attachments?.length),
+			providerUserId: input.providerUserId,
+			runKey,
+			runNewMessage: () => runAndReply({ ...input, runKey }),
+			text: input.text,
+		})) ?? "keep"
+	);
 };

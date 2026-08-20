@@ -1,30 +1,68 @@
 import {
 	type AttachBillingContext,
+	type AttachParamsV1,
 	ErrCode,
+	isFutureStartDate,
 	isOneOffProduct,
 	RecaseError,
+	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { assertFutureBillingCycleAnchor } from "@/internal/billing/v2/common/errors/assertFutureBillingCycleAnchor";
 
 /**
  * Validates billing cycle anchor constraints for attach.
  */
 export const handleBillingCycleAnchorErrors = ({
 	billingContext,
+	params,
 }: {
 	billingContext: AttachBillingContext;
+	params: AttachParamsV1;
 }) => {
 	const { requestedBillingCycleAnchor } = billingContext;
 	if (requestedBillingCycleAnchor === undefined) return;
 
-	// Past timestamps are not allowed
+	assertFutureBillingCycleAnchor({
+		requestedBillingCycleAnchor,
+		currentEpochMs: billingContext.currentEpochMs,
+	});
+
+	const scheduledResetAt =
+		typeof requestedBillingCycleAnchor === "number"
+			? truncateMsToSecondPrecision(requestedBillingCycleAnchor)
+			: undefined;
+	const billingStartsAt = billingContext.billingStartsAt;
 	if (
-		typeof requestedBillingCycleAnchor === "number" &&
-		requestedBillingCycleAnchor < billingContext.currentEpochMs
+		scheduledResetAt !== undefined &&
+		billingStartsAt !== undefined &&
+		scheduledResetAt <= truncateMsToSecondPrecision(billingStartsAt)
+	) {
+		throw new RecaseError({
+			message: "billing_cycle_anchor must be after the plan starts",
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+	if (
+		scheduledResetAt !== undefined &&
+		params.ends_at !== undefined &&
+		scheduledResetAt >= truncateMsToSecondPrecision(params.ends_at)
+	) {
+		throw new RecaseError({
+			message: "billing_cycle_anchor must be before ends_at",
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+	if (
+		requestedBillingCycleAnchor === "now" &&
+		billingContext.planTiming !== "end_of_cycle" &&
+		isFutureStartDate(billingStartsAt, billingContext.currentEpochMs)
 	) {
 		throw new RecaseError({
 			message:
-				"billing_cycle_anchor cannot be set to a past timestamp. Use 'now' or a future Unix timestamp in milliseconds.",
+				"billing_cycle_anchor: 'now' cannot be used before the plan starts",
 			code: ErrCode.InvalidRequest,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});

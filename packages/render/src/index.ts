@@ -1,9 +1,15 @@
 export { type BillingBadge, billingActionBadges } from "./billing/badges.js";
 export {
+	buildCustomizeChanges,
+	type CustomizeChange,
+	customPriceText,
+	freeTrialText,
+} from "./billing/customizeChanges.js";
+export {
 	type BillingChangeDisplay,
 	type BillingPreviewDisplay,
 	buildBillingPreviewDisplay,
-	type CustomizeDisplay,
+	buildPlanItemChangeDisplay,
 	type LineItemDisplay,
 	type MoneyDisplay,
 	type SchedulePhaseDisplay,

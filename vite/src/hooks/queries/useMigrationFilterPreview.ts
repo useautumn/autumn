@@ -35,6 +35,9 @@ type CustomerListFilters = {
 
 const COUNT_DEBOUNCE_MS = 400;
 const COUNT_STALE_MS = 60_000;
+/** The filter∪processed count barely moves during a run, and computing it is
+ * seconds of DB CPU on large orgs — poll it far slower than the rows. */
+const COUNT_ACTIVE_POLL_MS = 60_000;
 
 export const useMigrationFilterPreview = ({
 	filter,
@@ -163,7 +166,7 @@ export const useMigrationFilterPreview = ({
 		},
 		staleTime: COUNT_STALE_MS,
 		placeholderData: keepPreviousData,
-		refetchInterval: isActive ? ACTIVE_POLL_MS : false,
+		refetchInterval: isActive ? COUNT_ACTIVE_POLL_MS : false,
 	});
 
 	const hasRowsForCursor = !includeRows || query.data?.cursor === cursor;

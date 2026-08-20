@@ -105,7 +105,8 @@ const itemPaidScope: NavScope = {
 
 const planScope: NavScope = {
 	from: "customer_products cp JOIN products p ON p.internal_id = cp.internal_product_id",
-	correlation: "cp.internal_customer_id = c.internal_id",
+	correlation:
+		"cp.internal_customer_id = c.internal_id AND cp.customer_license_link_id IS NULL",
 	ambient: [
 		{
 			column: "cp.status",

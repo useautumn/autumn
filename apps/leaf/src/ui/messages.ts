@@ -17,6 +17,9 @@ export const CREDENTIAL_WITHHELD_MESSAGE =
 
 // Approvals
 
+export const APPROVAL_SESSION_GONE_MESSAGE =
+	"This conversation's session has ended, so this request can't be applied — send it again and I'll start fresh.";
+
 export const APPROVAL_STILL_OPEN_MESSAGE =
 	"there's still an open approval card on this thread — approve or discard it before sending a new message";
 
@@ -24,6 +27,9 @@ export const CATALOG_DECISION_NEEDED_MESSAGE =
 	"A couple of decisions are needed before this can be applied:";
 
 export const ACTION_FAILED_MESSAGE = "The action failed.";
+
+export const PREVIEW_UNAVAILABLE_MESSAGE =
+	"⚠️ Could not load the billing preview — approve only if the request below is what you expect.";
 
 export const APPROVAL_NOT_EXECUTED_MESSAGE =
 	"The approved action was not executed — the agent's session is waiting on other pending approvals. Please retry.";

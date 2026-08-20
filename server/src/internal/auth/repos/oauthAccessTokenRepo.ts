@@ -1,29 +1,8 @@
 import { oauthAccessToken } from "@autumn/shared";
-import { and, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-export const getValidOAuthAccessTokenByTokenValues = async ({
-	db,
-	tokenValues,
-}: {
-	db: DrizzleCli;
-	tokenValues: string[];
-}) => {
-	const [token] = await db
-		.select()
-		.from(oauthAccessToken)
-		.where(
-			and(
-				inArray(oauthAccessToken.token, tokenValues),
-				gt(oauthAccessToken.expiresAt, new Date()),
-			),
-		)
-		.limit(1);
-
-	return token ?? null;
-};
-
-export const deleteOAuthAccessTokensByClientAndReference = async ({
+const deleteOAuthAccessTokensByClientAndReference = async ({
 	db,
 	clientId,
 	referenceId,
@@ -43,37 +22,30 @@ export const deleteOAuthAccessTokensByClientAndReference = async ({
 			),
 		);
 
-export const updateOAuthAccessTokenScopes = async ({
+/** Null consent/resource leave the stored value alone; a grant is never blanked. */
+const updateOAuthAccessTokenGrant = async ({
 	db,
 	id,
+	oauthConsentId,
+	resource,
 	scopes,
 }: {
-	db: DrizzleCli;
+	db: Pick<DrizzleCli, "update">;
 	id: string;
+	oauthConsentId: string | null;
+	resource: string | null;
 	scopes: string[];
 }) =>
 	db
 		.update(oauthAccessToken)
-		.set({ scopes })
-		.where(eq(oauthAccessToken.id, id));
-
-export const updateOAuthAccessTokenConsent = async ({
-	db,
-	id,
-	oauthConsentId,
-}: {
-	db: DrizzleCli;
-	id: string;
-	oauthConsentId: string;
-}) =>
-	db
-		.update(oauthAccessToken)
-		.set({ oauthConsentId })
+		.set({
+			scopes,
+			...(oauthConsentId ? { oauthConsentId } : {}),
+			...(resource ? { resource } : {}),
+		})
 		.where(eq(oauthAccessToken.id, id));
 
 export const oauthAccessTokenRepo = {
-	getValidByTokenValues: getValidOAuthAccessTokenByTokenValues,
 	deleteByClientAndReference: deleteOAuthAccessTokensByClientAndReference,
-	updateScopes: updateOAuthAccessTokenScopes,
-	updateConsent: updateOAuthAccessTokenConsent,
+	updateGrant: updateOAuthAccessTokenGrant,
 };

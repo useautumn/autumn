@@ -1,0 +1,52 @@
+import {
+	type DiffedCustomizePlanV1,
+	type ProductKey,
+	productKeyToString,
+	type UpdateCatalogPlanParams,
+} from "@autumn/shared";
+import type { UpsertProductSource } from "./upsertProductPlan";
+
+/** planParams with version always set (explicit pin or resolved latest/v1). */
+export type ResolvedPlanParams = UpdateCatalogPlanParams & { version: number };
+
+/**
+ * Pending work on one productKey — before computeUpsertProductPlan folds it
+ * into an UpsertProductPlan.
+ */
+export type ProductUpsertIntent = {
+	productKey: ProductKey;
+	planParams: ResolvedPlanParams;
+	source: UpsertProductSource;
+	/** A propagated intent carries the direct edit as a diff; when present, content comes from it, not from planParams. */
+	editDiff?: DiffedCustomizePlanV1;
+	/** Latest base row this variant points at. Derive-owned — not a request field. */
+	baseInternalProductId?: string | null;
+	/** Direct unlink rides onto version siblings — compute nulls the pointer. */
+	unlink?: boolean;
+};
+
+export const claimProductKeys = ({
+	intents,
+}: {
+	intents: ProductUpsertIntent[];
+}): Set<string> =>
+	new Set(
+		intents.map((intent) =>
+			productKeyToString({ productKey: intent.productKey }),
+		),
+	);
+
+/** First claim wins: drops intents already claimed, claims the rest. */
+export const claimNewIntents = ({
+	intents,
+	claimedProductKeys,
+}: {
+	intents: ProductUpsertIntent[];
+	claimedProductKeys: Set<string>;
+}): ProductUpsertIntent[] =>
+	intents.filter((intent) => {
+		const key = productKeyToString({ productKey: intent.productKey });
+		if (claimedProductKeys.has(key)) return false;
+		claimedProductKeys.add(key);
+		return true;
+	});

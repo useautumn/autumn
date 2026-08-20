@@ -1,49 +1,24 @@
 import {
 	getDefaultOAuthScopes,
-	isKnownMcpOAuthClientId,
 	isMcpOAuthClientRecord,
-	isMcpOAuthResource,
 } from "@autumn/auth/oauth";
-import {
-	ErrCode,
-	isScopeSubset,
-	RecaseError,
-} from "@autumn/shared";
+import { ErrCode, isScopeSubset, RecaseError } from "@autumn/shared";
 import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { oauthClientRepo } from "../repos/index.js";
 
+/** Classification is a property of the registered client, never of request input. */
 export const isMcpOAuthClient = async ({
 	clientId,
 	db,
-	resource,
 }: {
 	clientId: string;
 	db: DrizzleCli;
-	resource?: string;
 }) => {
-	if (isMcpOAuthResource(resource)) return true;
-	if (isKnownMcpOAuthClientId({ clientId })) return true;
-
 	const client = await oauthClientRepo.getByClientId({ db, clientId });
-	if (!client) return false;
-
-	return isMcpOAuthClientRecord(client);
+	return isMcpOAuthClientRecord({ clientId, metadata: client?.metadata });
 };
-
-export const isMcpOAuthClientId = async ({
-	clientId,
-	ctx,
-}: {
-	clientId: string;
-	ctx: AutumnContext;
-}) =>
-	isMcpOAuthClient({
-		clientId,
-		db: ctx.db,
-		resource: ctx.oauthResource,
-	});
 
 export const getMcpOAuthScopeGrant = async ({
 	clientId,
@@ -54,7 +29,7 @@ export const getMcpOAuthScopeGrant = async ({
 	ctx: AutumnContext;
 	requestedScopes?: string[] | null;
 }) => {
-	if (!(await isMcpOAuthClientId({ ctx, clientId }))) return null;
+	if (!(await isMcpOAuthClient({ clientId, db: ctx.db }))) return null;
 
 	const orgId = ctx.org?.id;
 	if (!ctx.userId || !orgId) {

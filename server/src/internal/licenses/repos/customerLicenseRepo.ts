@@ -88,6 +88,10 @@ const listByParentCustomerProductIds = async ({
 	});
 };
 
+/**
+ * Which of the given links a customer still points at. LATERAL LIMIT 1 is
+ * load-bearing: one index seek per id, not every matching customer_licenses row.
+ */
 const listReferencedPlanLicenseIds = async ({
 	db,
 	planLicenseIds,
@@ -96,15 +100,20 @@ const listReferencedPlanLicenseIds = async ({
 	planLicenseIds: string[];
 }): Promise<Set<string>> => {
 	if (planLicenseIds.length === 0) return new Set();
-	const rows = await db
-		.select({ planLicenseId: customerLicenses.plan_license_id })
-		.from(customerLicenses)
-		.where(inArray(customerLicenses.plan_license_id, planLicenseIds));
-	return new Set(
-		rows.flatMap(({ planLicenseId }) =>
-			planLicenseId === null ? [] : [planLicenseId],
-		),
-	);
+
+	const rows = (await db.execute(sql`
+		SELECT candidate.plan_license_id
+		FROM unnest(${sql.param(planLicenseIds)}::text[])
+			AS candidate(plan_license_id)
+		CROSS JOIN LATERAL (
+			SELECT 1
+			FROM customer_licenses customer_license
+			WHERE customer_license.plan_license_id = candidate.plan_license_id
+			LIMIT 1
+		) AS referenced(found)
+	`)) as Array<{ plan_license_id: string }>;
+
+	return new Set(rows.map((row) => row.plan_license_id));
 };
 
 /** Idempotent ensure + granted sync for a (parent, license) balance row.
@@ -253,9 +262,8 @@ const setPaidQuantity = async ({
 	return row;
 };
 
-/** Repoints the pool onto a new definition in place: granted re-derives from
- * the new included (+ optional new paid count); remaining shifts by the
- * granted delta, floored at zero. Same row, same link — seats untouched. */
+/** Repoints in place; negative remaining preserves over-allocation for
+ * assignment reconciliation. Same row and link, so seats stay attached. */
 const repointDefinition = async ({
 	db,
 	customerLicenseId,
@@ -275,7 +283,7 @@ const repointDefinition = async ({
 		.set({
 			plan_license_id: planLicenseId,
 			granted: newGranted,
-			remaining: sql`GREATEST(${customerLicenses.remaining} + (${newGranted} - ${customerLicenses.granted}), 0)`,
+			remaining: sql`${customerLicenses.remaining} + (${newGranted} - ${customerLicenses.granted})`,
 			...(paidQuantity !== undefined ? { paid_quantity: paidQuantity } : {}),
 			updated_at: Date.now(),
 		})

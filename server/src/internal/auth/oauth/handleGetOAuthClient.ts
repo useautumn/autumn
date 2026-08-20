@@ -3,17 +3,25 @@ import { db } from "@/db/initDrizzle.js";
 import { oauthClientRepo } from "../repos/index.js";
 import { isAtmnOAuthClientRecord } from "./atmnOAuthClients.js";
 import {
-	getInternalMcpDisplayName,
-	isInternalMcpOAuthClientRecord,
-} from "./internalMcpOAuthClients.js";
-import {
 	ensureSummerOAuthClient,
 	isSummerOAuthClientRecord,
 } from "./summerOAuthClient.js";
 
+type OAuthClientInfoInput = {
+	clientId: string;
+	name: string | null;
+	metadata?: unknown;
+};
+
+export const buildOAuthClientInfoResponse = (client: OAuthClientInfoInput) => ({
+	client_id: client.clientId,
+	name: client.name || "Unknown Application",
+	is_atmn: isAtmnOAuthClientRecord(client),
+	default_env: isSummerOAuthClientRecord(client) ? "sandbox" : undefined,
+});
+
 export const handleGetOAuthClient = async (c: Context) => {
 	const clientId = c.req.param("client_id");
-	const redirectUri = c.req.query("redirect_uri");
 	if (!clientId) {
 		return c.json({ error: "client_id is required" }, 400);
 	}
@@ -26,19 +34,5 @@ export const handleGetOAuthClient = async (c: Context) => {
 		return c.json({ error: "Client not found" }, 404);
 	}
 
-	const isInternalMcp = isInternalMcpOAuthClientRecord(client);
-	const internalMcpName = isInternalMcp
-		? getInternalMcpDisplayName({
-				metadata: client.metadata,
-				redirectUri,
-			})
-		: null;
-
-	return c.json({
-		client_id: client.clientId,
-		name: internalMcpName || client.name || "Unknown Application",
-		is_atmn: isAtmnOAuthClientRecord(client),
-		is_internal_mcp: isInternalMcp,
-		default_env: isSummerOAuthClientRecord(client) ? "sandbox" : undefined,
-	});
+	return c.json(buildOAuthClientInfoResponse(client));
 };

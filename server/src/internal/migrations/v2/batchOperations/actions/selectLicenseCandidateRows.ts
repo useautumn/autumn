@@ -1,5 +1,4 @@
 import {
-	BillingInterval,
 	CusProductStatus,
 	EntInterval,
 	type EntitlementWithFeature,
@@ -13,6 +12,8 @@ import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/s
 import type { OperationScope } from "../scope/operationScope.js";
 import { operationScopeSql } from "../scope/operationScope.js";
 import { canonicalPoolLateralSql } from "./licensePoolSql.js";
+import { cycleAnchorSourcesSql } from "./utils/cycleAnchorSql.js";
+import { pageCustomerIdsCte } from "./utils/pageCustomerIdsSql.js";
 
 const nullableNumeric = z.preprocess(
 	(value) => (value === null || value === undefined ? null : Number(value)),
@@ -85,23 +86,20 @@ const matchSql = ({
 			: sql`AND COALESCE(existing_definition.interval, ${EntInterval.Lifetime}) = ${targetInterval}
 				AND COALESCE(existing_definition.interval_count, 1) = ${targetIntervalCount}`;
 		return {
-			join: sql`
-				INNER JOIN license_entitlements AS le
-					ON le.plan_license_id = pool.plan_license_id
-				INNER JOIN entitlements AS e
-					ON e.id = le.entitlement_id
-				INNER JOIN features AS f
-					ON f.internal_id = e.internal_feature_id`,
+			join: sql``,
 			customerEntitlementId: sql`NULL::text`,
-			entitlementId: sql`e.id`,
-			internalFeatureId: sql`e.internal_feature_id`,
-			featureId: sql`f.id`,
-			siblingAnchor: sql`sibling.reset_cycle_anchor`,
-			siblingExcludeLive: sql``,
+			entitlementId: sql`${entitlement.id}`,
+			internalFeatureId: sql`${entitlement.internal_feature_id}`,
+			featureId: sql`${entitlement.feature.id}`,
 			liveBalance: sql`NULL::numeric`,
 			liveNextResetAt: sql`NULL::numeric`,
 			extraWhere: sql`
-				AND e.id = ${entitlement.id}
+				AND EXISTS (
+					SELECT 1
+					FROM license_entitlements AS le
+					WHERE le.plan_license_id = pool.plan_license_id
+						AND le.entitlement_id = ${entitlement.id}
+				)
 				AND NOT EXISTS (
 					SELECT 1
 					FROM customer_entitlements AS existing
@@ -123,29 +121,21 @@ const matchSql = ({
 		entitlementId: sql`${entitlement.id}`,
 		internalFeatureId: sql`${entitlement.internal_feature_id}`,
 		featureId: sql`${entitlement.feature.id}`,
-		siblingAnchor: sql`COALESCE(sibling.reset_cycle_anchor, live.reset_cycle_anchor)`,
-		siblingExcludeLive: sql`AND sibling_entitlement.id <> live.id`,
 		liveBalance: sql`live.balance`,
 		liveNextResetAt: sql`live.next_reset_at`,
 		extraWhere: sql``,
 	};
 };
 
-/**
- * Live assignments under the page's license pool, with parent-anchor sources.
- * `add` is insert-if-absent; `replace` is rows already holding a from-definition.
- */
-export async function selectLicenseCandidateRows(
-	args: SelectLicenseCandidateRowsBase & { match: "add" },
-): Promise<LicenseCandidateRow[]>;
-export async function selectLicenseCandidateRows(
-	args: SelectLicenseCandidateRowsBase & {
-		match: "replace";
-		fromEntitlementIds: string[];
-	},
-): Promise<LicenseReplaceCandidateRow[]>;
-export async function selectLicenseCandidateRows({
-	db,
+type BuildLicenseCandidateRowsQueryArgs = Omit<
+	SelectLicenseCandidateRowsBase,
+	"db"
+> &
+	({ match: "add" } | { match: "replace"; fromEntitlementIds: string[] });
+
+/** Live assignments under the page's license pool, with parent-anchor sources.
+ * `add` is insert-if-absent; `replace` is rows already holding a from-definition. */
+export const buildLicenseCandidateRowsQuery = ({
 	internalCustomerIds,
 	scope,
 	entitlement,
@@ -154,18 +144,9 @@ export async function selectLicenseCandidateRows({
 	limit,
 	match,
 	...rest
-}: SelectLicenseCandidateRowsArgs): Promise<
-	LicenseCandidateRow[] | LicenseReplaceCandidateRow[]
-> {
+}: BuildLicenseCandidateRowsQueryArgs) => {
 	const fromEntitlementIds =
 		"fromEntitlementIds" in rest ? rest.fromEntitlementIds : [];
-	if (
-		internalCustomerIds.length === 0 ||
-		(match === "replace" && fromEntitlementIds.length === 0)
-	) {
-		return [];
-	}
-
 	const targetInterval = String(entitlement.interval ?? EntInterval.Lifetime);
 	const targetIntervalCount = entitlement.interval_count ?? 1;
 	const matched = matchSql({
@@ -175,8 +156,17 @@ export async function selectLicenseCandidateRows({
 		targetInterval,
 		targetIntervalCount,
 	});
+	const anchors = cycleAnchorSourcesSql({
+		include: true,
+		customerProductId: sql`assignment.id`,
+		subscriptionIds: sql`cp.subscription_ids`,
+		targetInterval,
+		targetIntervalCount,
+		keepLiveRowAnchor: match === "replace",
+	});
 
-	const rows = await db.execute(sql`
+	return sql`
+		WITH ${pageCustomerIdsCte({ internalCustomerIds })}
 		SELECT
 			${matched.customerEntitlementId} AS "customerEntitlementId",
 			assignment.id AS "customerProductId",
@@ -193,19 +183,15 @@ export async function selectLicenseCandidateRows({
 			assignment.canceled_at AS "canceledAt",
 			assignment.ended_at AS "endedAt",
 			assignment.trial_ends_at AS "trialEndsAt",
-			EXISTS (
-				SELECT 1
-				FROM customer_prices AS customer_price
-				INNER JOIN prices AS price ON price.id = customer_price.price_id
-				WHERE customer_price.customer_product_id = assignment.id
-					AND price.config->>'interval' IS DISTINCT FROM ${BillingInterval.OneOff}
-			) AS "isPaidRecurring",
+			${anchors.paidRecurringColumn} AS "isPaidRecurring",
 			cp.billing_cycle_anchor AS "billingCycleAnchor",
-			sub_anchor.billing_cycle_anchor_ms AS "subscriptionCycleAnchor",
-			${matched.siblingAnchor} AS "siblingResetCycleAnchor",
+			${anchors.subscriptionAnchorColumn} AS "subscriptionCycleAnchor",
+			${anchors.siblingAnchorColumn} AS "siblingResetCycleAnchor",
 			${matched.liveBalance} AS "liveBalance",
 			${matched.liveNextResetAt} AS "liveNextResetAt"
-		FROM customer_products AS assignment
+		FROM page
+		INNER JOIN customer_products AS assignment
+			ON assignment.internal_customer_id = page.internal_customer_id
 		${canonicalPoolLateralSql({ licensePlanId, columns: sql`pool.*` })}
 		INNER JOIN customer_products AS cp
 			ON cp.id = pool.parent_customer_product_id
@@ -214,41 +200,45 @@ export async function selectLicenseCandidateRows({
 			ON customer.internal_id = assignment.internal_customer_id
 		LEFT JOIN entities AS entity
 			ON entity.internal_id = assignment.internal_entity_id
-		LEFT JOIN LATERAL (
-			SELECT subscription.billing_cycle_anchor_seconds * 1000 AS billing_cycle_anchor_ms
-			FROM UNNEST(COALESCE(cp.subscription_ids, ARRAY[]::text[])) AS cp_subscription(stripe_id)
-			INNER JOIN subscriptions AS subscription
-				ON subscription.stripe_id = cp_subscription.stripe_id
-			WHERE subscription.billing_cycle_anchor_seconds IS NOT NULL
-			ORDER BY subscription.created_at, subscription.id
-			LIMIT 1
-		) AS sub_anchor ON true
-		LEFT JOIN LATERAL (
-			SELECT sibling_entitlement.reset_cycle_anchor
-			FROM customer_entitlements AS sibling_entitlement
-			INNER JOIN entitlements AS sibling_definition
-				ON sibling_definition.id = sibling_entitlement.entitlement_id
-			WHERE sibling_entitlement.customer_product_id = assignment.id
-				${matched.siblingExcludeLive}
-				AND NOT sibling_entitlement.separate_interval
-				AND sibling_entitlement.reset_cycle_anchor IS NOT NULL
-				AND sibling_entitlement.next_reset_at IS NOT NULL
-				AND COALESCE(sibling_definition.interval, ${EntInterval.Lifetime}) = ${targetInterval}
-				AND COALESCE(sibling_definition.interval_count, 1) = ${targetIntervalCount}
-			ORDER BY sibling_entitlement.created_at, sibling_entitlement.id
-			LIMIT 1
-		) AS sibling ON true
-		WHERE assignment.internal_customer_id = ANY(${sql.param(internalCustomerIds)}::text[])
-			AND assignment.internal_entity_id IS NOT NULL
+		${anchors.siblingJoin}
+		${anchors.subscriptionJoin}
+		WHERE assignment.internal_entity_id IS NOT NULL
 			AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})
 			AND ${operationScopeSql({ scope })}
 			${afterCustomerProductId ? sql`AND assignment.id > ${afterCustomerProductId}` : sql``}
 			${matched.extraWhere}
 		ORDER BY assignment.id
 		LIMIT ${limit}
-	`);
+	`;
+};
 
-	if (match === "replace") {
+export async function selectLicenseCandidateRows(
+	args: SelectLicenseCandidateRowsBase & { match: "add" },
+): Promise<LicenseCandidateRow[]>;
+export async function selectLicenseCandidateRows(
+	args: SelectLicenseCandidateRowsBase & {
+		match: "replace";
+		fromEntitlementIds: string[];
+	},
+): Promise<LicenseReplaceCandidateRow[]>;
+export async function selectLicenseCandidateRows({
+	db,
+	...queryArgs
+}: SelectLicenseCandidateRowsArgs): Promise<
+	LicenseCandidateRow[] | LicenseReplaceCandidateRow[]
+> {
+	const fromEntitlementIds =
+		"fromEntitlementIds" in queryArgs ? queryArgs.fromEntitlementIds : [];
+	if (
+		queryArgs.internalCustomerIds.length === 0 ||
+		(queryArgs.match === "replace" && fromEntitlementIds.length === 0)
+	) {
+		return [];
+	}
+
+	const rows = await db.execute(buildLicenseCandidateRowsQuery(queryArgs));
+
+	if (queryArgs.match === "replace") {
 		return rows.map((row) => LicenseReplaceCandidateRowSchema.parse(row));
 	}
 	return rows.map((row) => LicenseCandidateRowSchema.parse(row));

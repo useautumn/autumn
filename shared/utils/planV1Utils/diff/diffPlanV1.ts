@@ -6,67 +6,69 @@ import {
 	refineCustomizePlanV1Schema,
 } from "@api/billing/common/customizePlan/customizePlanV1.js";
 import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
+import type { ApiPlanLicenseV1 } from "@api/products/apiPlanLicenseV1.js";
 import type { BasePriceParams } from "@api/products/components/basePrice/basePrice.js";
 import type { CreatePlanItemParamsV1 } from "@api/products/items/crud/createPlanItemParamsV1.js";
 import type { PlanItemFilter } from "@api/products/items/filter/planItemFilter.js";
-import type { CustomizePlanLicense } from "@models/licenseModels/licenseModels.js";
+import type {
+	CustomizePlanLicense,
+	RemovePlanLicense,
+} from "@models/licenseModels/licenseModels.js";
 import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
-import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import type { z } from "zod/v4";
+import {
+	arraysEqual,
+	itemsEqual,
+	normalizeIntervalCount,
+	planItemFiltersEqual,
+	pricesEqual,
+} from "./comparePlanItems.js";
+import {
+	customizePlanLicensesAreSame,
+	removePlanLicensesAreSame,
+} from "./comparePlanLicenses.js";
 import { diffPlanLicenses } from "./diffPlanLicenses.js";
 
-// A versioned license customize diffs into `upsert_licenses`, so the key has
-// to survive validation — omitting it made every preview of such a plan 500.
+export { itemsEqual } from "./comparePlanItems.js";
+export {
+	customizePlanLicensesAreSame,
+	hasLicenseCustomize,
+	licenseCustomizePatchesAreSame,
+	licenseCustomizesAreSame,
+	planLicensesAreSame,
+	removePlanLicensesAreSame,
+} from "./comparePlanLicenses.js";
+export { diffPlanLicenses } from "./diffPlanLicenses.js";
+
 export const DiffedCustomizePlanV1Schema = refineCustomizePlanV1Schema(
-	CustomizePlanV1BaseSchema.omit({ items: true }).strict(),
-	{ includeItems: false, includeLicenses: true },
+	CustomizePlanV1BaseSchema.omit({
+		items: true,
+		upsert_licenses: true,
+		remove_licenses: true,
+	}).strict(),
+	{ includeItems: false, includeLicenses: false },
 );
 
+/** Content schema stays license-free (core / preview parse). In-memory diffs
+ * carry the license patch; PlanChangeCustomizeV0Schema and VariantCustomizeSchema
+ * validate it. */
 export type DiffedCustomizePlanV1 = z.infer<
 	typeof DiffedCustomizePlanV1Schema
 > & {
 	upsert_licenses?: CustomizePlanLicense[];
+	remove_licenses?: RemovePlanLicense[];
+};
+
+/** ApiPlanV1 plus optional licenses[] — omitted means no license lane. */
+export type DiffablePlanV1 = ApiPlanV1 & {
+	licenses?: ApiPlanLicenseV1[];
 };
 
 type ApiPlanItem = ApiPlanV1["items"][number];
-type PlanItemInput = ApiPlanItem | CreatePlanItemParamsV1;
-type PlanItemPrice = NonNullable<PlanItemInput["price"]>;
-type PlanItemRollover = NonNullable<PlanItemInput["rollover"]>;
-type PlanItemProration = NonNullable<PlanItemInput["proration"]>;
-type AdditionalCurrencyInput = {
-	currency: string;
-	amount?: number | null;
-	flat_amount?: number | null;
-};
-
-type BasePriceInput = {
-	amount: number;
-	interval?: string | null;
-	interval_count?: number | null;
-	additional_currencies?: AdditionalCurrencyInput[] | null;
-};
 
 type PlanParamsMapperOptions = {
 	includeInternalIds?: boolean;
 };
-
-// Adding or removing a catalog currency doesn't change what existing
-// customers pay (their prices are snapshots), so neither forces a version or
-// migration; only changed amounts for a currency present on both sides do.
-const additionalCurrenciesCompatible = (
-	from: AdditionalCurrencyInput[] | null | undefined,
-	to: AdditionalCurrencyInput[] | null | undefined,
-): boolean =>
-	(from ?? []).every((entry) => {
-		const match = (to ?? []).find(
-			(other) => other.currency.toLowerCase() === entry.currency.toLowerCase(),
-		);
-		return (
-			!match ||
-			((entry.amount ?? null) === (match.amount ?? null) &&
-				(entry.flat_amount ?? null) === (match.flat_amount ?? null))
-		);
-	});
 
 export const toBasePriceParams = (
 	price: NonNullable<ApiPlanV1["price"]> | BasePriceParams,
@@ -146,17 +148,37 @@ type MatchKeyItem = {
 	reset?: { interval?: string | null; interval_count?: number | null } | null;
 };
 
-/** The identity an item is matched on across from/to (and against remove
- * filters): feature + billing method + interval + interval count. */
-export const composeMatchKey = (item: MatchKeyItem): string => {
+export enum PlanItemMatchPrecision {
+	FeatureBillingMethodCadence = "feature_billing_method_cadence",
+	FeatureCadence = "feature_cadence",
+}
+
+export const buildPlanItemKey = ({
+	item,
+	matchPrecision = PlanItemMatchPrecision.FeatureBillingMethodCadence,
+}: {
+	item: MatchKeyItem;
+	matchPrecision?: PlanItemMatchPrecision;
+}): string => {
 	const billingMethod = item.price?.billing_method ?? "";
 	const interval = item.price?.interval ?? item.reset?.interval ?? "";
 	const intervalCount = normalizeIntervalCount({
 		interval,
 		intervalCount: item.price?.interval_count ?? item.reset?.interval_count,
 	});
-	return `${item.feature_id}|${billingMethod}|${interval}|${intervalCount}`;
+	return [
+		item.feature_id,
+		...(matchPrecision === PlanItemMatchPrecision.FeatureBillingMethodCadence
+			? [billingMethod]
+			: []),
+		interval,
+		intervalCount,
+	].join("|");
 };
+
+/** The identity used across plan diffs: feature, billing method, and cadence. */
+export const composeMatchKey = (item: MatchKeyItem): string =>
+	buildPlanItemKey({ item });
 
 /** Match key for a remove_items filter, in the same format as composeMatchKey
  * (buildRemoveFilter already flattens the matched item's fields onto it). */
@@ -167,14 +189,6 @@ export const planItemFilterMatchKey = (filter: PlanItemFilter): string =>
 			intervalCount: filter.interval_count,
 		},
 	)}`;
-
-const normalizeIntervalCount = ({
-	interval,
-	intervalCount,
-}: {
-	interval?: string | null;
-	intervalCount?: number | null;
-}): number | "" => (interval ? (intervalCount ?? 1) : (intervalCount ?? ""));
 
 const buildRemoveFilter = (item: ApiPlanItem): PlanItemFilter => {
 	const filter: PlanItemFilter = { feature_id: item.feature_id };
@@ -187,24 +201,6 @@ const buildRemoveFilter = (item: ApiPlanItem): PlanItemFilter => {
 		item.price?.interval_count ?? item.reset?.interval_count;
 	if (interval !== undefined) filter.interval_count = intervalCount ?? 1;
 	return filter;
-};
-
-const pricesEqual = (
-	a: BasePriceInput | null | undefined,
-	b: BasePriceInput | null | undefined,
-): boolean => {
-	if (a === undefined && b === undefined) return true;
-	if (a === null && b === null) return true;
-	if (a == null || b == null) return false;
-	return (
-		a.amount === b.amount &&
-		a.interval === b.interval &&
-		(a.interval_count ?? 1) === (b.interval_count ?? 1) &&
-		additionalCurrenciesCompatible(
-			a.additional_currencies,
-			b.additional_currencies,
-		)
-	);
 };
 
 const freeTrialsEqual = (
@@ -221,133 +217,6 @@ const freeTrialsEqual = (
 		(a.card_required ?? true) === (b.card_required ?? true) &&
 		(a.on_end ?? "bill") === (b.on_end ?? "bill")
 	);
-};
-
-const tiersEqual = (
-	a: NonNullable<PlanItemPrice["tiers"]> | undefined,
-	b: NonNullable<PlanItemPrice["tiers"]> | undefined,
-): boolean => {
-	if (!a?.length && !b?.length) return true;
-	if (!a || !b || a.length !== b.length) return false;
-
-	return a.every((tier, index) => {
-		const other = b[index];
-		return (
-			tier.to === other.to &&
-			(tier.amount ?? 0) === (other.amount ?? 0) &&
-			(tier.flat_amount ?? null) === (other.flat_amount ?? null) &&
-			additionalCurrenciesCompatible(
-				tier.additional_currencies,
-				other.additional_currencies,
-			)
-		);
-	});
-};
-
-const itemPricesEqual = (
-	a: PlanItemPrice | null | undefined,
-	b: PlanItemPrice | null | undefined,
-): boolean => {
-	if (a == null && b == null) return true;
-	if (a == null || b == null) return false;
-	const aTierBehavior = a.tiers?.length
-		? (a.tier_behavior ?? TierBehavior.Graduated)
-		: null;
-	const bTierBehavior = b.tiers?.length
-		? (b.tier_behavior ?? TierBehavior.Graduated)
-		: null;
-
-	return (
-		(a.amount ?? null) === (b.amount ?? null) &&
-		additionalCurrenciesCompatible(
-			a.additional_currencies,
-			b.additional_currencies,
-		) &&
-		tiersEqual(a.tiers, b.tiers) &&
-		aTierBehavior === bTierBehavior &&
-		a.interval === b.interval &&
-		(a.interval_count ?? 1) === (b.interval_count ?? 1) &&
-		(a.billing_units ?? 1) === (b.billing_units ?? 1) &&
-		a.billing_method === b.billing_method &&
-		(a.max_purchase ?? null) === (b.max_purchase ?? null)
-	);
-};
-
-const prorationsEqual = (
-	a: PlanItemProration | null | undefined,
-	b: PlanItemProration | null | undefined,
-): boolean => {
-	if (a == null && b == null) return true;
-	if (a == null || b == null) return false;
-	return (
-		(a.on_increase ?? null) === (b.on_increase ?? null) &&
-		(a.on_decrease ?? null) === (b.on_decrease ?? null)
-	);
-};
-
-const rolloversEqual = (
-	a: PlanItemRollover | null | undefined,
-	b: PlanItemRollover | null | undefined,
-): boolean => {
-	if (a == null && b == null) return true;
-	if (a == null || b == null) return false;
-
-	return (
-		a.expiry_duration_type === b.expiry_duration_type &&
-		(a.expiry_duration_length ?? null) === (b.expiry_duration_length ?? null) &&
-		(a.max ?? null) === (b.max ?? null) &&
-		(a.max_percentage ?? null) === (b.max_percentage ?? null)
-	);
-};
-
-// Compare user-controlled item fields only; API joins/display are ignored.
-export const itemsEqual = (a: PlanItemInput, b: PlanItemInput): boolean => {
-	return (
-		a.feature_id === b.feature_id &&
-		(a.entity_feature_id ?? null) === (b.entity_feature_id ?? null) &&
-		(a.pooled ?? false) === (b.pooled ?? false) &&
-		(a.included ?? 0) === (b.included ?? 0) &&
-		(a.unlimited ?? false) === (b.unlimited ?? false) &&
-		(a.reset?.interval ?? null) === (b.reset?.interval ?? null) &&
-		(a.reset?.interval_count ?? 1) === (b.reset?.interval_count ?? 1) &&
-		itemPricesEqual(a.price, b.price) &&
-		rolloversEqual(a.rollover, b.rollover) &&
-		prorationsEqual(a.proration, b.proration)
-	);
-};
-
-const removeFiltersEqual = (a: PlanItemFilter, b: PlanItemFilter): boolean =>
-	a.feature_id === b.feature_id &&
-	(a.billing_method ?? null) === (b.billing_method ?? null) &&
-	(a.interval ?? null) === (b.interval ?? null) &&
-	normalizeIntervalCount({
-		interval: a.interval,
-		intervalCount: a.interval_count,
-	}) ===
-		normalizeIntervalCount({
-			interval: b.interval,
-			intervalCount: b.interval_count,
-		});
-
-const arraysEqual = <T>({
-	left,
-	right,
-	equals,
-}: {
-	left?: T[];
-	right?: T[];
-	equals: (left: T, right: T) => boolean;
-}): boolean => {
-	if (!left?.length && !right?.length) return true;
-	if (!left || !right || left.length !== right.length) return false;
-
-	const unmatched = [...right];
-	return left.every((item) => {
-		const index = unmatched.findIndex((other) => equals(item, other));
-		if (index === -1) return false;
-		unmatched.splice(index, 1);
-		return true;
-	});
 };
 
 export const customizePlanV1DiffsEqual = ({
@@ -371,7 +240,18 @@ export const customizePlanV1DiffsEqual = ({
 		arraysEqual({
 			left: a.remove_items,
 			right: b.remove_items,
-			equals: removeFiltersEqual,
+			equals: planItemFiltersEqual,
+		}) &&
+		arraysEqual({
+			left: a.upsert_licenses,
+			right: b.upsert_licenses,
+			equals: (left, right) =>
+				customizePlanLicensesAreSame({ left, right }),
+		}) &&
+		arraysEqual({
+			left: a.remove_licenses,
+			right: b.remove_licenses,
+			equals: (left, right) => removePlanLicensesAreSame({ left, right }),
 		})
 	);
 };
@@ -380,9 +260,11 @@ export const customizePlanV1DiffsEqual = ({
 export const diffPlanV1 = ({
 	from,
 	to,
+	includeAdds = false,
 }: {
-	from: ApiPlanV1;
-	to: ApiPlanV1;
+	from: DiffablePlanV1;
+	to: DiffablePlanV1;
+	includeAdds?: boolean;
 }): DiffedCustomizePlanV1 => {
 	const diff: DiffedCustomizePlanV1 = {};
 
@@ -420,12 +302,14 @@ export const diffPlanV1 = ({
 		}
 	}
 
-	const upsertLicenses = diffPlanLicenses({
-		from,
-		to,
-		customizeEqual: customizePlanV1DiffsEqual,
-	});
-	if (upsertLicenses.length > 0) diff.upsert_licenses = upsertLicenses;
+	Object.assign(
+		diff,
+		diffPlanLicenses({
+			from: from.licenses,
+			to: to.licenses,
+			includeAdds,
+		}),
+	);
 
 	return diff;
 };

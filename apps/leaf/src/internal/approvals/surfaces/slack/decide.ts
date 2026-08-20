@@ -28,7 +28,7 @@ import {
 	isErrorResult,
 } from "../../utils/approvalErrors.js";
 import { formatElapsed } from "../../utils/approvalProgress.js";
-import { approvalScopeRequirements } from "../../utils/approvalScopeRequirements.js";
+import { requiredScopesForApproval } from "../../utils/approvalScopeRequirements.js";
 import { postApprovalCardForRow } from "./present.js";
 
 const APPROVAL_PROGRESS_DELAY_MS = ms.seconds(10);
@@ -58,7 +58,10 @@ const authorizeSlackApprovalClicker = async ({
 	}
 
 	// A gated tool without a declared scope requirement fails closed.
-	const required = approvalScopeRequirements[approval.tool_name];
+	const required = requiredScopesForApproval({
+		toolArgs: approval.tool_args,
+		toolName: approval.tool_name,
+	});
 	if (!required) {
 		rootLogger.warn("Approval tool missing scope requirement", {
 			event: "leaf.approval_scope_requirement_missing",
@@ -198,11 +201,32 @@ export const handleApprovalActionWithDeps = async ({
 		}
 
 		if (event.actionId === "cancel_billing_action") {
+			// Cancel first so exactly one click wins: the Eve denial below takes
+			// seconds, and a second click in that window would otherwise read the
+			// row as still pending and discard (and reply) all over again.
+			const cancelled = await deps.cancelApproval({
+				approvalId,
+				providerUserId,
+			});
+			if (!cancelled) {
+				deps.logger.warn("Approval cancellation ignored", {
+					event: "leaf.approval_cancel_ignored",
+					approval_id: approvalId,
+				});
+				await editToCurrentStatus();
+				return;
+			}
 			// Eve parks the whole turn on the approval — deny it in the session too,
 			// or it keeps waiting, holds the next message behind the stale approval,
 			// and the discarded write can still run later.
-			if (approval.harness === "eve" && approval.status === "pending") {
-				const denied = await discardApproval({ approval, providerUserId });
+			if (cancelled.harness === "eve") {
+				const discard = deps.discardApproval ?? discardApproval;
+				// The row is already cancelled, so a deny eve drops would leave its
+				// turn parked behind a card nobody can click — one retry is cheap.
+				let denied = await discard({ approval: cancelled, providerUserId });
+				if ("error" in denied && denied.error) {
+					denied = await discard({ approval: cancelled, providerUserId });
+				}
 				if ("error" in denied && denied.error) {
 					deps.logger.warn("Could not deny Eve approval on dismiss", {
 						event: "leaf.eve_dismiss_deny_failed",
@@ -216,18 +240,6 @@ export const handleApprovalActionWithDeps = async ({
 						// The acknowledgement reply is cosmetic.
 					}
 				}
-			}
-			const cancelled = await deps.cancelApproval({
-				approvalId,
-				providerUserId,
-			});
-			if (!cancelled) {
-				deps.logger.warn("Approval cancellation ignored", {
-					event: "leaf.approval_cancel_ignored",
-					approval_id: approvalId,
-				});
-				await editToCurrentStatus();
-				return;
 			}
 			await deps.editActionMessage({
 				content: approvalStatusCard({
@@ -353,8 +365,10 @@ export const handleApprovalActionWithDeps = async ({
 			}
 		}
 		// The resumed turn can park again (chained write or a question) where
-		// nothing streams — surface those as fresh cards or they stay invisible.
-		if (!failed && event.thread) {
+		// nothing streams — surface those as fresh cards or they stay invisible,
+		// even when an earlier step failed: the re-issued write is how the user
+		// recovers from that failure.
+		if (event.thread) {
 			try {
 				if ("chainedApprovalId" in result && result.chainedApprovalId) {
 					const chained = await deps.getApproval({
@@ -395,6 +409,7 @@ export const handleApprovalActionWithDeps = async ({
 				...details,
 				actorId: providerUserId,
 				result,
+				steps: "steps" in result ? result.steps : undefined,
 			}),
 			event,
 		});

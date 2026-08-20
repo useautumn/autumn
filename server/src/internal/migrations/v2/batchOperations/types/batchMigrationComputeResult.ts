@@ -8,11 +8,11 @@ export type BatchMigrationRejectionCode =
 	| "missing_operations"
 	| "unsupported_operation_type"
 	// Op-level (scalar guards)
-	| "version_update"
 	| "proration_enabled"
 	| "feature_quantity_strategy"
 	| "deprecated_update_items"
 	| "unsupported_remove_items"
+	| "unsupported_upsert_licenses"
 	| "base_price_customize"
 	| "priced_add_item"
 	| "priced_remove_item"
@@ -21,12 +21,14 @@ export type BatchMigrationRejectionCode =
 	| "unsupported_plan_filter"
 	// Group-level (compute output guards)
 	| "no_matched_products"
+	| "missing_target_version"
 	| "missing_prepared_state"
 	| "base_price_transition"
+	| "free_trial_transition"
 	| "paid_entitlement_transition"
 	| "entity_scoped_entitlement"
 	| "pooled_add_item"
-	| "non_add_operation"
+	| "license_link_transition"
 	| "overlapping_operations";
 
 /**

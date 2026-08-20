@@ -111,7 +111,9 @@ const main = async () => {
 		);
 	}
 
-	console.log(failures === 0 ? "\nALL PREVIEW CHECKS PASSED" : `\n${failures} FAILURES`);
+	console.log(
+		failures === 0 ? "\nALL PREVIEW CHECKS PASSED" : `\n${failures} FAILURES`,
+	);
 	process.exit(failures === 0 ? 0 : 1);
 };
 

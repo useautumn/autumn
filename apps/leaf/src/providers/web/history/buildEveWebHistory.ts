@@ -1,3 +1,4 @@
+import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv, ChatProvider } from "@autumn/shared";
 import type {
 	EveAuthContext,
@@ -5,7 +6,6 @@ import type {
 } from "../../../internal/agentRuntime/eve/types.js";
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
 import type { ChatDb } from "../../../lib/db.js";
-import { parsePreviewPayload } from "../../../ui/previewContent.js";
 import type {
 	LeafApprovalStatus,
 	LeafUiMessage,

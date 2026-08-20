@@ -1,3 +1,5 @@
+import { db } from "../../../../lib/db.js";
+import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import type {
 	AgentTurnContext,
 	AgentTurnParams,
@@ -7,7 +9,6 @@ import {
 	generateThreadTitle,
 	persistThreadTitle,
 } from "../../sessions/agentThreadTitle.js";
-import { db } from "../../../../lib/db.js";
 import { consumeAgentTurn } from "./execute/consumeAgentTurn.js";
 import { resolveAgentTurnOutcome } from "./finalize/resolveAgentTurnOutcome.js";
 import { buildAgentTurnMessage } from "./setup/buildAgentTurnMessage.js";
@@ -56,12 +57,16 @@ export const runAgentTurn = async ({
 			context: ctx,
 		});
 		const session = await startAgentTurn({
-			auth,
+			auth: { ...auth, orgInstructions: orgContext?.instructions },
 			env,
 			message: buildAgentTurnMessage({
 				env,
+				isAdminInstall: isInternalAutumnSlackProvider({
+					provider: thread.provider,
+				}),
 				newSession: !existingSession,
 				orgContext,
+				orgSlug: org.slug,
 				params,
 			}),
 			orgId: org.id,

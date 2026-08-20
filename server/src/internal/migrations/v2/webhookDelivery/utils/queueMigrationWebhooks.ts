@@ -51,9 +51,11 @@ export const queueMigrationWebhooks = async ({
 			records: batch,
 		};
 
-		// No trigger.dev configured (local/tests): deliver inline so behaviour
-		// stays observable instead of silently dropping.
-		if (!isTriggerConfigured()) {
+		const missingLocalTriggerBranch =
+			process.env.NODE_ENV !== "production" &&
+			!process.env.TRIGGER_DEV_BRANCH?.trim();
+		// Tests inherit the DEV key but not the local worker's preview branch.
+		if (!isTriggerConfigured() || missingLocalTriggerBranch) {
 			await sendMigrationWebhooks({ ctx, payload });
 			continue;
 		}

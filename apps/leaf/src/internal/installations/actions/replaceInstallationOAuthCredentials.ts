@@ -1,6 +1,11 @@
 import crypto from "node:crypto";
 import { prefixOAuthToken } from "@autumn/auth";
 import {
+	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
+	SLACK_MCP_OAUTH_CLIENT_ID,
+	WEB_MCP_OAUTH_CLIENT_ID,
+} from "@autumn/auth/oauth";
+import {
 	AppEnv,
 	type ChatInstallation,
 	chatOAuthCredentials,
@@ -12,6 +17,8 @@ import {
 	oauthRefreshToken,
 } from "@autumn/shared";
 import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
+import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
+import { MCP_CLIENT_KIND } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import { and, eq } from "drizzle-orm";
 import { encrypt } from "../../../lib/crypto.js";
 import type { db } from "../../../lib/db.js";
@@ -22,11 +29,6 @@ import {
 	getOAuthConsentMetadataKindFilter,
 	type OAuthConsentMetadata,
 } from "./oauthConsentMetadata.js";
-import {
-	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
-	AUTUMN_SLACK_OAUTH_CLIENT_ID,
-	AUTUMN_WEB_OAUTH_CLIENT_ID,
-} from "./upsertInstallationOAuthCredential.js";
 
 type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -62,27 +64,18 @@ const getProviderOAuthConfig = ({
 	}
 	if (installation.provider === "web") {
 		return {
-			clientId: AUTUMN_WEB_OAUTH_CLIENT_ID,
+			clientId: WEB_MCP_OAUTH_CLIENT_ID,
 			name: "Dashboard",
 			mcpClientType: "web",
 			redirectUri: WEB_OAUTH_REDIRECT_URI,
 		};
 	}
 	return {
-		clientId: AUTUMN_SLACK_OAUTH_CLIENT_ID,
+		clientId: SLACK_MCP_OAUTH_CLIENT_ID,
 		name: "Slack",
 		mcpClientType: "slack",
 		redirectUri: SLACK_OAUTH_REDIRECT_URI,
 	};
-};
-
-const tokenHash = ({ token }: { token: string }) => {
-	const hash = crypto.createHash("sha256").update(token).digest();
-	return hash
-		.toString("base64")
-		.replace(/\+/g, "-")
-		.replace(/\//g, "_")
-		.replace(/=/g, "");
 };
 
 const generateToken = () => crypto.randomBytes(48).toString("base64url");
@@ -95,7 +88,10 @@ const ensureMcpOAuthClient = async ({
 	config: ProviderOAuthConfig;
 }) => {
 	const now = new Date();
-	const metadata = { kind: "mcp_client", mcpClientType: config.mcpClientType };
+	const metadata = {
+		kind: MCP_CLIENT_KIND,
+		mcpClientType: config.mcpClientType,
+	};
 
 	await tx
 		.insert(oauthClient)
@@ -231,7 +227,7 @@ const createCredentialForEnv = async ({
 
 	await tx.insert(oauthRefreshToken).values({
 		id: refreshTokenId,
-		token: tokenHash({ token: rawRefreshToken }),
+		token: hashOAuthToken(rawRefreshToken),
 		clientId: config.clientId,
 		userId,
 		referenceId: orgId,
@@ -243,7 +239,7 @@ const createCredentialForEnv = async ({
 	});
 	await tx.insert(oauthAccessToken).values({
 		id: accessTokenId,
-		token: tokenHash({ token: rawAccessToken }),
+		token: hashOAuthToken(rawAccessToken),
 		clientId: config.clientId,
 		userId,
 		referenceId: orgId,

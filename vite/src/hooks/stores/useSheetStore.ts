@@ -40,6 +40,7 @@ export type SheetType =
 	| "billing-usage-alert-edit"
 	| "billing-overage-allowed-add"
 	| "billing-overage-allowed-edit"
+	| "billing-control-plan-managed"
 	| "record-usage"
 	| "check-balance"
 	| "create-schedule"

@@ -38,12 +38,34 @@ export const BENCH_CUSTOMER_PRICE_PREFIX = "cpr_bench_";
 export const BENCH_SUBSCRIPTION_PREFIX = "sub_bench_";
 export const BENCH_STRIPE_SUBSCRIPTION_PREFIX = "sub_mock_bench_";
 
-/** Refuse to run against anything that smells like prod. */
+const PROD_DB_REGION = "us-east-2";
+const DEV_DB_REGION = "eu-west-2";
+const LOCAL_DB_HOSTS = ["localhost", "127.0.0.1"];
+
+/** Benches seed millions of rows and run VACUUM, so they must positively
+ * prove they are on the dev DB — a prod blocklist alone is too weak. */
 export const assertBenchDatabaseSafe = () => {
-	const url = process.env.DATABASE_URL ?? "";
-	if (url.includes("us-east-2")) {
-		throw new Error("bench: refusing to run against a prod DATABASE_URL");
+	let hostname: string;
+	try {
+		hostname = new URL(process.env.DATABASE_URL ?? "").hostname;
+	} catch {
+		throw new Error(
+			"bench: DATABASE_URL is unset or unparseable — run under `infisical run --env=dev`",
+		);
 	}
+
+	if (hostname.includes(PROD_DB_REGION)) {
+		throw new Error(
+			`bench: refusing to run against a prod DATABASE_URL (${hostname})`,
+		);
+	}
+	if (!hostname.includes(DEV_DB_REGION) && !LOCAL_DB_HOSTS.includes(hostname)) {
+		throw new Error(
+			`bench: expected the dev DB (${DEV_DB_REGION}) or a local DB, but DATABASE_URL points at ${hostname} — run under \`infisical run --env=dev\``,
+		);
+	}
+
+	console.log(`bench: DB ${hostname}`);
 };
 
 export type BenchProducts = {

@@ -8,15 +8,14 @@ import {
 	RecaseError,
 	type ScopeString,
 } from "@autumn/shared";
+import { findActiveOAuthAccessToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import { verifyAccessToken } from "better-auth/oauth2";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
-	parseRequestedScopes,
 	type ResourceAccessTokenRecord,
 	tokenRecordFromResourceToken,
 } from "@/internal/dev/cli/oauthApiKeyUtils.js";
-import { hashOAuthToken } from "@/utils/oauthUtils.js";
-import { oauthAccessTokenRepo, oauthConsentRepo } from "../repos/index.js";
+import { oauthConsentRepo } from "../repos/index.js";
 import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
 import { rotateOAuthConsentApiKey } from "./oauthConsentApiKey.js";
 
@@ -62,10 +61,8 @@ export const getOAuthAccessTokenRecord = async ({
 	requestedScopes: ScopeString[] | null;
 }) => {
 	const rawAccessToken = stripOAuthTokenPrefix({ token: accessToken });
-	const hashedToken = await hashOAuthToken(rawAccessToken);
-	const tokenValues = [...new Set([hashedToken, rawAccessToken])];
 	const tokenRecord =
-		(await oauthAccessTokenRepo.getValidByTokenValues({ db, tokenValues })) ??
+		(await findActiveOAuthAccessToken({ db, rawAccessToken })) ??
 		(await verifyResourceAccessToken({
 			accessToken: rawAccessToken,
 			resource,
@@ -119,19 +116,10 @@ export const getOAuthAccessTokenRecord = async ({
 	};
 };
 
-const getTokenConsentId = ({
-	oauthConsentId,
-}: {
-	oauthConsentId?: string | null;
-}) => {
-	if (oauthConsentId) return oauthConsentId;
+export type OAuthAccessTokenRecord = Awaited<
+	ReturnType<typeof getOAuthAccessTokenRecord>
+>;
 
-	throw new RecaseError({
-		message: "OAuth token is missing a consent",
-		code: ErrCode.InvalidRequest,
-		statusCode: 401,
-	});
-};
 export const getExternalOAuthApiKeyForToken = async ({
 	db,
 	tokenRecord,
@@ -150,9 +138,15 @@ export const getExternalOAuthApiKeyForToken = async ({
 	});
 	if (isAtmnClient) return null;
 
-	const oauthConsentId = getTokenConsentId({
-		oauthConsentId: tokenRecord.oauthConsentId,
-	});
+	const { oauthConsentId } = tokenRecord;
+	if (!oauthConsentId) {
+		throw new RecaseError({
+			message: "OAuth token is missing a consent",
+			code: ErrCode.InvalidRequest,
+			statusCode: 401,
+		});
+	}
+
 	const consent = await oauthConsentRepo.getApiKeyRecord({
 		db,
 		consentId: oauthConsentId,
@@ -191,9 +185,4 @@ export const getExternalOAuthApiKeyForToken = async ({
 		clientId: tokenRecord.clientId,
 		scopes,
 	};
-};
-
-export const scopesFromOAuthScopeString = (scope: unknown) => {
-	if (typeof scope !== "string") return null;
-	return parseRequestedScopes(scope.split(/\s+/).filter(Boolean));
 };

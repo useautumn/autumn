@@ -1,38 +1,32 @@
 import {
-	AppEnv,
 	type Organization,
 	RecaseError,
-	user as userTable,
 	Scopes,
+	user as userTable,
 } from "@autumn/shared";
 import { generateId } from "better-auth";
 import { eq } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { createKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
+import { apiKeyRepo } from "@/internal/dev/repos/index.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";
-
-/**
- * Builds the deterministic preview org slug for a user
- */
-export function buildPreviewOrgSlug({
-	userId,
-	masterOrgId,
-}: {
-	userId: string;
-	masterOrgId: string;
-}): string {
-	return `preview|${userId}|${masterOrgId}`;
-}
+import { buildPreviewOrgSlug } from "./previewOrgUtils.js";
 
 /**
  * Sets up a preview sandbox organization for the current user.
  * - Creates a new preview org if one doesn't exist
  * - Reuses existing preview org if found
- * - Returns a sandbox API key for making checkout calls
+ *
+ * No API key is ever returned to the client. Preview operations (syncing
+ * pricing, creating a checkout) run server-side against this org, keyed off
+ * the caller's session. Historically this route minted an unrestricted
+ * sandbox secret key and returned it in the response body; those keys are
+ * revoked here so any that leaked to a browser stop working.
  */
 export const handleSetupPreviewOrg = createRoute({
-	scopes: { ALL: [Scopes.Plans.Write, Scopes.Features.Write, Scopes.Customers.Write] },
+	scopes: {
+		ALL: [Scopes.Plans.Write, Scopes.Features.Write, Scopes.Customers.Write],
+	},
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org: masterOrg, logger, userId } = ctx;
@@ -67,6 +61,20 @@ export const handleSetupPreviewOrg = createRoute({
 			logger.info(
 				`[Preview] Found existing preview org: ${previewOrg.id} (${previewSlug})`,
 			);
+
+			// Revoke any keys previously handed out for this preview org. The org
+			// is fully machine-managed and has no members, so every key on it was
+			// minted by the old setup flow.
+			const revoked = await apiKeyRepo.deleteByOrg({
+				db,
+				orgId: previewOrg.id,
+			});
+
+			if (revoked.length > 0) {
+				logger.info(
+					`[Preview] Revoked ${revoked.length} legacy preview API key(s) for org: ${previewOrg.id}`,
+				);
+			}
 		} else {
 			// Create new preview organization
 			const orgId = generateId();
@@ -85,7 +93,7 @@ export const handleSetupPreviewOrg = createRoute({
 
 			// Note: We intentionally do NOT create a membership here.
 			// The preview org should not be accessible to the user via the dashboard.
-			// They can only interact with it via the returned API key.
+			// They can only interact with it via the /preview/* routes.
 
 			// Initialize org (creates Stripe test account, svix apps, etc.)
 			await afterOrgCreated({ org: previewOrg, user });
@@ -95,18 +103,7 @@ export const handleSetupPreviewOrg = createRoute({
 			);
 		}
 
-		// Generate a new sandbox API key for this session
-		const apiKey = await createKey({
-			db,
-			orgId: previewOrg.id,
-			env: AppEnv.Sandbox,
-			name: "Preview API Key",
-			prefix: "am_sk_test",
-			meta: { preview: true },
-		});
-
 		return c.json({
-			api_key: apiKey,
 			org_slug: previewSlug,
 			org_id: previewOrg.id,
 		});

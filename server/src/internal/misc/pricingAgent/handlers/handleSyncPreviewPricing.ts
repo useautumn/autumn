@@ -5,7 +5,6 @@ import {
 	CreateFreeTrialSchema,
 	CreateProductItemParamsSchema,
 	CreateProductSchema,
-	RecaseError,
 	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -15,10 +14,9 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { buildPreviewOrgSlug } from "./handleSetupPreviewOrg.js";
+import { getSessionPreviewOrg } from "./previewOrgUtils.js";
 
 const SyncPreviewPricingSchema = z.object({
 	features: z.array(CreateFeatureV0ParamsSchema).optional().default([]),
@@ -43,31 +41,11 @@ export const handleSyncPreviewPricing = createRoute({
 	body: SyncPreviewPricingSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { db, org: masterOrg, userId } = ctx;
+		const { db } = ctx;
 		const body = c.req.valid("json");
 
-		if (!userId) {
-			throw new RecaseError({
-				message: "User not authenticated",
-				code: "unauthenticated",
-				statusCode: 401,
-			});
-		}
-
 		// Find the preview org using session auth
-		const previewSlug = buildPreviewOrgSlug({
-			userId,
-			masterOrgId: masterOrg.id,
-		});
-
-		const previewOrg = await OrgService.getBySlug({ db, slug: previewSlug });
-		if (!previewOrg) {
-			throw new RecaseError({
-				message: "Preview org not found. Call /preview/setup first.",
-				code: "preview_org_not_found",
-				statusCode: 404,
-			});
-		}
+		const previewOrg = await getSessionPreviewOrg({ ctx });
 
 		ctx.logger.debug(
 			`[Preview Sync] Starting sync for preview org: ${previewOrg.id}, features: ${body.features.length}, products: ${body.products.length}`,

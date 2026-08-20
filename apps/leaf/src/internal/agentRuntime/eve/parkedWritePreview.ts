@@ -1,9 +1,9 @@
+import { parsePreviewPayload } from "@autumn/render";
 import { writeToPreviewTool } from "../../approvals/utils/toolRegistry.js";
 import {
 	isSameToolRequest,
 	toolRequestFromArgs,
 } from "../../approvals/utils/toolRequest.js";
-import { parsePreviewPayload } from "../../../ui/previewContent.js";
 
 /** A preview payload kept with the (normalized) preview tool that produced it
  * and the request it was previewing. */

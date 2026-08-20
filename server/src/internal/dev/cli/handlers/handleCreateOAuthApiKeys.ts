@@ -6,7 +6,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { isMcpOAuthClientId } from "@/internal/auth/oauth/mcpOAuthScopes.js";
+import { isMcpOAuthClient } from "@/internal/auth/oauth/mcpOAuthScopes.js";
 import {
 	getExternalOAuthApiKeyForToken,
 	getOAuthAccessTokenRecord,
@@ -99,7 +99,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 			),
 		];
 
-		if (await isMcpOAuthClientId({ clientId, ctx })) {
+		if (await isMcpOAuthClient({ clientId, db: ctx.db })) {
 			throw new RecaseError({
 				message: "MCP OAuth clients must use OAuth access tokens directly",
 				code: ErrCode.InvalidRequest,

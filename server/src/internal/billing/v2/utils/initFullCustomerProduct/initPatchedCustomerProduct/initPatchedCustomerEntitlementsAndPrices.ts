@@ -8,6 +8,7 @@ import type {
 } from "@autumn/shared";
 import { enrichEntitlementsWithFeatures } from "@shared/utils/productUtils/entUtils/enrichEntitlement";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { resolveUpdateExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveUpdateExistingUsagesConfig";
 import { applyExistingStatesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/applyExisting/applyExistingStatesToCustomerProduct";
 import { getCustomerProductCarryGroups } from "@/internal/billing/v2/utils/initFullCustomerProduct/carryExisting";
@@ -21,6 +22,7 @@ type PatchInitBillingContext = Pick<
 	| "featureQuantities"
 	| "resetCycleAnchorMs"
 	| "currentEpochMs"
+	| "requestedBillingCycleAnchor"
 	| "trialContext"
 	| "skipExistingUsageCarry"
 	| "carryOverUsages"
@@ -80,6 +82,12 @@ export const initPatchedCustomerEntitlementsAndPrices = ({
 				freeTrial: trialContext?.freeTrial ?? null,
 				trialEndsAt: trialContext?.trialEndsAt ?? undefined,
 				now: currentEpochMs,
+			},
+			initOptions: {
+				billingCycleAnchorResetsAt: getRequestedBillingCycleAnchorResetAt({
+					requestedBillingCycleAnchor:
+						billingContext.requestedBillingCycleAnchor,
+				}),
 			},
 			entitlement,
 			cusProductId: finalCustomerProduct.id,

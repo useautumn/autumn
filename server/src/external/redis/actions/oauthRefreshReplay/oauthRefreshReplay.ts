@@ -8,18 +8,43 @@ const REFRESH_REPLAY_PENDING = "pending";
 const CLAIM_MAX_ATTEMPTS = 200;
 const CLAIM_POLL_MS = 25;
 
-export const buildOAuthRefreshReplayKey = (hashedToken: string) =>
-	`oauth:refresh-replay:${hashedToken}`;
+/**
+ * Keyed on a fingerprint of the whole refresh request (resource + authorization
+ * header + normalized body), not on the refresh token: two different requests
+ * carrying the same token are different grants and must not share a response.
+ */
+export const buildOAuthRefreshReplayKey = (requestFingerprint: string) =>
+	`oauth:refresh-replay:${requestFingerprint}`;
+
+export type OAuthRefreshReplayClaim = {
+	/** The winner's stored token response, when this caller lost the race. */
+	body: Record<string, unknown> | null;
+	/**
+	 * True when this caller won the key: it owes the key either a stored response
+	 * or a release once it finishes minting.
+	 */
+	holdsKey: boolean;
+};
+
+/** Nothing to replay and no key to hand back: the caller mints unguarded. */
+const NO_KEY_HELD: OAuthRefreshReplayClaim = {
+	body: null,
+	holdsKey: false,
+};
 
 /**
  * Single-flight guard for OAuth refresh-token replays: the first caller claims
- * the key (SET NX) and mints tokens; concurrent replays of the SAME refresh
- * token spin until the winner stores its response, then return that body.
- * Null = Redis unavailable or the winner never stored — caller decides.
+ * the key (SET NX) and mints tokens; concurrent replays of the same refresh
+ * request spin until the winner stores its response, then return that body.
+ *
+ * Dedupe is an optimisation, never a dependency: if Redis cannot answer, the
+ * claim comes back holding no key and the token endpoint carries on unguarded.
+ * Only a genuine spin-out — the winner held the key past its polling budget —
+ * returns null, because minting alongside it would race the token rotation.
  */
 export const claimOAuthRefreshReplay = async (
 	key: string,
-): Promise<{ body: Record<string, unknown> | null } | null> => {
+): Promise<OAuthRefreshReplayClaim | null> => {
 	try {
 		const miscRedis = getMiscRedis();
 
@@ -30,11 +55,12 @@ export const claimOAuthRefreshReplay = async (
 				redisInstance: miscRedis,
 			});
 			// undefined = Redis unavailable (vs null = key missing) — bail out.
-			if (value === undefined) return null;
+			if (value === undefined) return NO_KEY_HELD;
 
 			if (value && value !== REFRESH_REPLAY_PENDING) {
 				return {
 					body: JSON.parse(decryptData(value)) as Record<string, unknown>,
+					holdsKey: false,
 				};
 			}
 
@@ -51,16 +77,34 @@ export const claimOAuthRefreshReplay = async (
 					source: "oauth-refresh-replay:claim",
 					redisInstance: miscRedis,
 				});
-				if (claimed === undefined) return null;
-				if (claimed) return { body: null };
+				if (claimed === undefined) return NO_KEY_HELD;
+				if (claimed) return { body: null, holdsKey: true };
 			}
 
 			await timeout(CLAIM_POLL_MS);
 		}
 		return null;
 	} catch {
-		// Undecryptable/unparseable stored response — treat as unavailable.
-		return null;
+		// Redis missing, or a stored response we cannot decrypt/parse. Either way
+		// there is nothing to replay, so mint instead of failing the refresh.
+		return NO_KEY_HELD;
+	}
+};
+
+/**
+ * Drops a claim the winner never stored a response for, so a retry of the same
+ * refresh request re-races immediately instead of spinning out the claim's TTL.
+ */
+export const releaseOAuthRefreshReplay = async (key: string): Promise<void> => {
+	try {
+		const miscRedis = getMiscRedis();
+		await tryRedisOp({
+			operation: () => miscRedis.del(key),
+			source: "oauth-refresh-replay:release",
+			redisInstance: miscRedis,
+		});
+	} catch {
+		// Best-effort — a stranded claim still expires with its TTL.
 	}
 };
 

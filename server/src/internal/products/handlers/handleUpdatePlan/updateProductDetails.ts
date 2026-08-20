@@ -15,17 +15,15 @@ import {
 	type UpdateProduct,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { ProductService } from "../../ProductService.js";
-import { usagePriceToProductName } from "../../prices/priceUtils/usagePriceUtils/convertUsagePrice.js";
 import {
 	isFeaturePriceItem,
 	isPriceItem,
 } from "../../product-items/productItemUtils/getItemType.js";
 import { isFreeProduct } from "../../productUtils.js";
+import { updateStripeProductNames } from "../../stripeResourceUtils/updateStripeProductNames.js";
 
 const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
 	if (notNullish(prod2.id) && prod1.id !== prod2.id) {
@@ -77,71 +75,6 @@ const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
 	}
 
 	return true;
-};
-
-const updateStripeProductNames = async ({
-	db,
-	org,
-	curProduct,
-	newName,
-	logger,
-}: {
-	db: DrizzleCli;
-	org: Organization;
-	curProduct: FullProduct;
-	newName: string;
-	logger: any;
-}) => {
-	if (!isStripeConnected({ org, env: curProduct.env as AppEnv })) return;
-
-	const stripeCli = createStripeCli({
-		org,
-		env: curProduct.env as AppEnv,
-	});
-	const stripeProdId = curProduct.processor?.id;
-
-	if (!stripeProdId || !newName) {
-		return;
-	}
-
-	try {
-		await stripeCli.products.update(stripeProdId, {
-			name: newName,
-		});
-	} catch (error: any) {
-		logger.error(
-			`Error updating product ${curProduct.id} name in Stripe: ${error.message}`,
-			{
-				error,
-				stripeProdId,
-				newName,
-			},
-		);
-	}
-
-	for (const price of curProduct.prices) {
-		const stripeProdId = price.config?.stripe_product_id;
-
-		if (stripeProdId) {
-			const name = usagePriceToProductName({
-				price,
-				fullProduct: {
-					...curProduct,
-					name: newName,
-				},
-			});
-
-			try {
-				await stripeCli.products.update(stripeProdId, {
-					name,
-				});
-			} catch (error: any) {
-				logger.error(
-					`Error updating price ${price.id} name in Stripe: ${error.message}`,
-				);
-			}
-		}
-	}
 };
 
 const willBeDefaultTrial = ({
@@ -288,7 +221,6 @@ export const handleUpdateProductDetails = async ({
 			`Updating product (${curProduct.id}) name in Stripe to ${newProduct.name}`,
 		);
 		await updateStripeProductNames({
-			db,
 			org,
 			curProduct,
 			newName: newProduct.name!,

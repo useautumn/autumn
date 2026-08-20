@@ -7,6 +7,8 @@ import {
 	isOneOffProduct,
 	type PlanItemFilter,
 	planLicenses,
+	productKeyToString,
+	productToProductKey,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import { planItemV1ToPriceAndEnt } from "@autumn/shared/api/products/items/mappers/planItemV1ToPriceAndEnt.js";
@@ -147,12 +149,34 @@ const getMatchedParentProducts = async ({
 		env: ctx.env,
 		returnAll: true,
 	});
-	return products.filter((product) =>
+	const matchedProducts = products.filter((product) =>
 		planFilterMatchesProduct({
 			filter: toCatalogPlanFilter(op.plan_filter),
 			product,
 		}),
 	);
+	if (op.version === undefined) return matchedProducts;
+
+	const productsByPlanVersion = new Map<string, FullProduct>();
+	for (const product of products) {
+		productsByPlanVersion.set(
+			productKeyToString({
+				productKey: productToProductKey({ product }),
+			}),
+			product,
+		);
+	}
+	const preparedProducts = new Map<string, FullProduct>();
+	for (const product of matchedProducts) {
+		preparedProducts.set(product.internal_id, product);
+		const target = productsByPlanVersion.get(
+			productKeyToString({
+				productKey: { planId: product.id, version: op.version },
+			}),
+		);
+		if (target) preparedProducts.set(target.internal_id, target);
+	}
+	return [...preparedProducts.values()];
 };
 
 /** Mints one row per (op, license plan, parent product) rather than per

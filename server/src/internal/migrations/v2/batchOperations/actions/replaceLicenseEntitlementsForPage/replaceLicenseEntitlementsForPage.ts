@@ -187,7 +187,7 @@ export const replaceLicenseEntitlementsForPage = async ({
 		}) => {
 			const candidates = await timePhase({
 				phases,
-				phase: "candidates",
+				phase: "license_replace_candidates",
 				run: () =>
 					selectLicenseCandidateRows({
 						db: transaction,

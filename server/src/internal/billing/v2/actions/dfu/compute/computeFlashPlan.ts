@@ -19,6 +19,7 @@ import type {
 } from "../setup/setupFlashContext";
 import { applyFlashBalances } from "./resolvers/balanceResolver";
 import { resolveFlashStatus } from "./resolvers/statusResolver";
+import { collectFlashSubscriptions } from "./resolvers/subscriptionResolver";
 
 type CustomerProductUpdate = NonNullable<
 	AutumnBillingPlan["updateCustomerProducts"]
@@ -253,12 +254,18 @@ export const computeFlashPlan = ({
 		});
 	}
 
+	const upsertSubscriptions = collectFlashSubscriptions({
+		ctx,
+		planContexts: flashContext.planContexts,
+	});
+
 	return {
 		autumnBillingPlan: {
 			customerId:
 				flashContext.fullCustomer.id ?? flashContext.fullCustomer.internal_id,
 			insertCustomerProducts,
 			updateCustomerProducts,
+			upsertSubscriptions,
 		},
 		flashed,
 	};

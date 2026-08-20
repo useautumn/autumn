@@ -1,4 +1,5 @@
 import {
+	AllowanceType,
 	customerEntitlements,
 	customerProducts,
 	entitlements,
@@ -61,22 +62,47 @@ export const handleListBalances = createRoute({
 				),
 			);
 
-		const formattedBalances = rawBalances.map((row) => ({
-			...row.customer_entitlement,
-			entitlement: {
-				...row.entitlement,
-				feature: row.feature,
-			},
-			customer_product: row.customer_product
+		const formattedBalances = rawBalances.map((row) => {
+			// Unlimited rows carry a raw usage counter in `balance` internally;
+			// the API contract masks it to 0.
+			const isUnlimited =
+				row.customer_entitlement.unlimited === true ||
+				row.entitlement.allowance_type === AllowanceType.Unlimited;
+
+			const maskedFields = isUnlimited
 				? {
-						...row.customer_product,
-						product: null,
-						customer_entitlements: [],
-						customer_prices: [],
-						free_trial: null,
+						balance: 0,
+						entities: row.customer_entitlement.entities
+							? Object.fromEntries(
+									Object.entries(row.customer_entitlement.entities).map(
+										([entityId, entityBalance]) => [
+											entityId,
+											{ ...entityBalance, balance: 0 },
+										],
+									),
+								)
+							: row.customer_entitlement.entities,
 					}
-				: null,
-		}));
+				: {};
+
+			return {
+				...row.customer_entitlement,
+				...maskedFields,
+				entitlement: {
+					...row.entitlement,
+					feature: row.feature,
+				},
+				customer_product: row.customer_product
+					? {
+							...row.customer_product,
+							product: null,
+							customer_entitlements: [],
+							customer_prices: [],
+							free_trial: null,
+						}
+					: null,
+			};
+		});
 
 		return c.json({ balances: formattedBalances });
 	},

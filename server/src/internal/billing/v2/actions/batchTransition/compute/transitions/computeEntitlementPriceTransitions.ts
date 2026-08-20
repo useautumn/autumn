@@ -1,4 +1,5 @@
 import {
+	ENTITLEMENT_PRICE_MATCH_PRECISIONS,
 	type EntitlementPrice,
 	entitlementPricesAreSame,
 	type FullProductWithoutLicenses,
@@ -24,10 +25,6 @@ export const computeEntitlementPriceTransitions = ({
 	fromProduct: FullProductWithoutLicenses;
 	toProduct: FullProductWithoutLicenses;
 }): ComputedEntitlementPriceTransitions => {
-	const transitions: EntitlementPriceTransition[] = [];
-	const added: EntitlementPrice[] = [];
-	const deleted: EntitlementPrice[] = [];
-	const claimedToEntitlementIds = new Set<string>();
 	const fromEntitlementPrices = productToEntitlementPrices({
 		product: fromProduct,
 	});
@@ -35,18 +32,35 @@ export const computeEntitlementPriceTransitions = ({
 		product: toProduct,
 	});
 
-	for (const fromEntitlementPrice of fromEntitlementPrices) {
-		const toEntitlementPrice = findEntitlementPriceSuccessor({
-			sourceEntitlementPrice: fromEntitlementPrice,
-			candidateEntitlementPrices: toEntitlementPrices,
-			excludedEntitlementIds: claimedToEntitlementIds,
+	// Precision-major matching: every source gets a shot at the strongest rung
+	// before any source falls to a weaker one, so an exact survivor claims its
+	// own candidate before a sibling's feature-only match can steal it.
+	const claimedToEntitlementIds = new Set<string>();
+	const matchedByFromIndex = new Map<number, EntitlementPrice>();
+	for (const matchPrecision of ENTITLEMENT_PRICE_MATCH_PRECISIONS) {
+		fromEntitlementPrices.forEach((fromEntitlementPrice, fromIndex) => {
+			if (matchedByFromIndex.has(fromIndex)) return;
+			const toEntitlementPrice = findEntitlementPriceSuccessor({
+				sourceEntitlementPrice: fromEntitlementPrice,
+				candidateEntitlementPrices: toEntitlementPrices,
+				excludedEntitlementIds: claimedToEntitlementIds,
+				matchPrecisions: [matchPrecision],
+			});
+			if (!toEntitlementPrice) return;
+			claimedToEntitlementIds.add(toEntitlementPrice.entitlement.id);
+			matchedByFromIndex.set(fromIndex, toEntitlementPrice);
 		});
+	}
+
+	const transitions: EntitlementPriceTransition[] = [];
+	const deleted: EntitlementPrice[] = [];
+	fromEntitlementPrices.forEach((fromEntitlementPrice, fromIndex) => {
+		const toEntitlementPrice = matchedByFromIndex.get(fromIndex);
 		if (!toEntitlementPrice) {
 			deleted.push(fromEntitlementPrice);
-			continue;
+			return;
 		}
 
-		claimedToEntitlementIds.add(toEntitlementPrice.entitlement.id);
 		const unchangedIds =
 			fromEntitlementPrice.entitlement.id ===
 				toEntitlementPrice.entitlement.id &&
@@ -60,13 +74,12 @@ export const computeEntitlementPriceTransitions = ({
 		) {
 			transitions.push({ fromEntitlementPrice, toEntitlementPrice });
 		}
-	}
+	});
 
-	for (const toEntitlementPrice of toEntitlementPrices) {
-		if (!claimedToEntitlementIds.has(toEntitlementPrice.entitlement.id)) {
-			added.push(toEntitlementPrice);
-		}
-	}
+	const added = toEntitlementPrices.filter(
+		(toEntitlementPrice) =>
+			!claimedToEntitlementIds.has(toEntitlementPrice.entitlement.id),
+	);
 
 	return { transitions, added, deleted };
 };

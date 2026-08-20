@@ -1,5 +1,6 @@
-import { getRefreshTokenForConsentLookup } from "@/internal/auth/oauth/tokenRequestFields.js";
 import { describe, expect, test } from "bun:test";
+import { parseOAuthRequestFields } from "@autumn/shared/utils/auth/oauthRequestBody";
+import { getOAuthTokenRequestFields } from "@/internal/auth/oauth/tokenRequestFields.js";
 
 const formRequest = (fields: Record<string, string>) =>
 	new Request("http://localhost/api/auth/oauth2/token", {
@@ -8,57 +9,102 @@ const formRequest = (fields: Record<string, string>) =>
 		body: new URLSearchParams(fields),
 	});
 
-describe("OAuth token request fields", () => {
-	test("ignores refresh_token fields on non-refresh grants", () => {
-		return expect(
-			getRefreshTokenForConsentLookup(
+const jsonRequest = (contentType: string, fields: Record<string, string>) =>
+	new Request("http://localhost/api/auth/oauth2/token", {
+		method: "POST",
+		headers: { "content-type": contentType },
+		body: JSON.stringify(fields),
+	});
+
+/** The token endpoint parses the body once and threads the fields through. */
+const tokenRequestFields = async (request: Request) =>
+	getOAuthTokenRequestFields((await parseOAuthRequestFields(request)).fields);
+
+describe("getOAuthTokenRequestFields", () => {
+	test("reads the grant type alongside a refresh token", async () => {
+		expect(
+			await tokenRequestFields(
+				formRequest({
+					grant_type: "refresh_token",
+					refresh_token: "refresh_1",
+				}),
+			),
+		).toEqual({
+			clientId: null,
+			grantType: "refresh_token",
+			refreshToken: "refresh_1",
+		});
+	});
+
+	test("keeps the grant type that a stray refresh_token belongs to", async () => {
+		expect(
+			await tokenRequestFields(
 				formRequest({
 					grant_type: "authorization_code",
 					code: "code_1",
 					refresh_token: "refresh_unrelated",
 				}),
 			),
-		).resolves.toBeNull();
+		).toEqual({
+			clientId: null,
+			grantType: "authorization_code",
+			refreshToken: "refresh_unrelated",
+		});
 	});
 
-	test("returns refresh_token only for refresh grants", () => {
-		return expect(
-			getRefreshTokenForConsentLookup(
-				formRequest({
+	test("supports JSON token requests", async () => {
+		expect(
+			await tokenRequestFields(
+				jsonRequest("application/json", {
 					grant_type: "refresh_token",
-					refresh_token: "refresh_1",
+					refresh_token: "refresh_json",
 				}),
 			),
-		).resolves.toBe("refresh_1");
+		).toEqual({
+			clientId: null,
+			grantType: "refresh_token",
+			refreshToken: "refresh_json",
+		});
 	});
 
-	test("supports JSON token requests", () => {
-		return expect(
-			getRefreshTokenForConsentLookup(
-				new Request("http://localhost/api/auth/oauth2/token", {
-					method: "POST",
-					headers: { "content-type": "application/json" },
-					body: JSON.stringify({
-						grant_type: "refresh_token",
-						refresh_token: "refresh_json",
-					}),
+	test("supports case-insensitive JSON content types", async () => {
+		expect(
+			await tokenRequestFields(
+				jsonRequest("Application/JSON; charset=utf-8", {
+					grant_type: "refresh_token",
+					refresh_token: "refresh_json_upper",
 				}),
 			),
-		).resolves.toBe("refresh_json");
+		).toEqual({
+			clientId: null,
+			grantType: "refresh_token",
+			refreshToken: "refresh_json_upper",
+		});
 	});
 
-	test("supports case-insensitive JSON content types", () => {
-		return expect(
-			getRefreshTokenForConsentLookup(
-				new Request("http://localhost/api/auth/oauth2/token", {
-					method: "POST",
-					headers: { "content-type": "Application/JSON; charset=utf-8" },
-					body: JSON.stringify({
-						grant_type: "refresh_token",
-						refresh_token: "refresh_json_upper",
-					}),
+	test("reads the client id a public client authenticates with", async () => {
+		expect(
+			await tokenRequestFields(
+				formRequest({
+					client_id: "client_1",
+					grant_type: "authorization_code",
+					code: "code_1",
 				}),
 			),
-		).resolves.toBe("refresh_json_upper");
+		).toEqual({
+			clientId: "client_1",
+			grantType: "authorization_code",
+			refreshToken: null,
+		});
+	});
+
+	test("reads an empty body as no fields", async () => {
+		expect(
+			await tokenRequestFields(
+				new Request("http://localhost/api/auth/oauth2/token", {
+					method: "POST",
+				}),
+			),
+		).toEqual({ clientId: null, grantType: null, refreshToken: null });
 	});
 });

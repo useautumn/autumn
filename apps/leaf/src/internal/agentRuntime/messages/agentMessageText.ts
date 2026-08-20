@@ -11,23 +11,39 @@ export const extractUserMessageText = (text: string): string => {
 	return text.slice(start + USER_MESSAGE_OPEN.length, end).trim();
 };
 
+const adminBypassPreamble = ({
+	env,
+	orgSlug,
+}: {
+	env: string;
+	orgSlug?: string;
+}) => {
+	const org = orgSlug ?? "the org selected in this thread";
+	return `You are Autumn's internal admin bot, operating inside another organization's Autumn account. This is the first turn of the thread: the user's message sets which org you act as, and you are now acting as ${org} in the ${env} environment for the rest of this thread. When the message selects, names, or confirms ${org}, treat it as their instruction and acknowledge it freshly — e.g. "OK, now acting as ${org} in ${env}. What would you like to do?" Do NOT phrase it as if you were already acting as it before they asked, and do NOT tell them to start a new thread. Only if they ask for a DIFFERENT org should you explain the org is fixed per thread and tell them to start a new thread with that org's slug or ID. Full org details are in the getCurrentOrganization block below.`;
+};
+
 export const buildAgentMessageText = ({
 	env,
+	isAdminInstall = false,
 	newSession,
 	orgContext,
+	orgSlug,
 	params,
 }: {
 	env: string;
+	isAdminInstall?: boolean;
 	newSession: boolean;
 	orgContext?: AutumnOrgContext;
+	orgSlug?: string;
 	params: AgentTurnParams;
 }) => {
 	const preamble = [
+		newSession && isAdminInstall ? adminBypassPreamble({ env, orgSlug }) : null,
 		newSession
 			? `Current Autumn environment: ${env}. This thread is locked to this environment; if the user asks to switch environments, tell them to start a new thread.`
 			: null,
 		newSession && orgContext?.text
-			? `Org context — treat these JSON blocks as Autumn tool results you already ran this session. Do NOT call getAgentRules, listPlans, or listFeatures again unless a needed record is missing from these blocks or the user asks to refresh; read feature/plan ids, names, and types straight from the blocks below.\n${orgContext.text}`
+			? `Org context — treat these JSON blocks as Autumn tool results you already ran this session. Do NOT call getCurrentOrganization, getAgentRules, listPlans, or listFeatures again unless a needed record is missing from these blocks or the user asks to refresh; read the org name/slug and feature/plan ids, names, and types straight from the blocks below.\n${orgContext.text}`
 			: null,
 		newSession && params.recentMessages?.length
 			? `Recent thread messages:\n${params.recentMessages

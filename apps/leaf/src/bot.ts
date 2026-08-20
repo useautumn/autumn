@@ -5,7 +5,10 @@ import { createPostgresState } from "@chat-adapter/state-pg";
 import { createWebAdapter } from "@chat-adapter/web";
 import { Chat } from "chat";
 import { handleApprovalAction } from "./internal/approvals/surfaces/slack/decide.js";
-import { handleViewPayloadAction } from "./internal/approvals/surfaces/slack/viewPayload.js";
+import {
+	handleEditApprovalDetailsAction,
+	handleEditApprovalDetailsSubmit,
+} from "./internal/approvals/surfaces/slack/editDetails.js";
 import { ensureWebChatAuth } from "./internal/installations/actions/ensureWebChatAuth.js";
 import { handleStopAction } from "./internal/runs/handleStopAction.js";
 import { decrypt } from "./lib/crypto.js";
@@ -16,7 +19,11 @@ import {
 	normalizeSlackEventsBody,
 } from "./providers/slack/events.js";
 import { handleSlackCatalogDecision } from "./providers/slack/handlers/handleSlackCatalogDecision.js";
-import { handleSlackMessage } from "./providers/slack/handlers/handleSlackMessage.js";
+import {
+	handleSlackMessage,
+	handleSlackThreadStart,
+	handleSubscribedSlackMessage,
+} from "./providers/slack/handlers/handleSlackMessage.js";
 import { handleSlackQuestionAnswer } from "./providers/slack/handlers/handleSlackQuestionAnswer.js";
 import { handleSlackSlashCommand } from "./providers/slack/handlers/handleSlackSlashCommand.js";
 import { findSlackInstallationForWorkspace } from "./providers/slack/installations.js";
@@ -24,6 +31,10 @@ import {
 	catalogDecisionActionIds,
 	questionAnswerActionIds,
 } from "./providers/slack/presenters/interactionCards.js";
+import {
+	EDIT_APPROVAL_DETAILS_ACTION_ID,
+	EDIT_APPROVAL_DETAILS_MODAL_ID,
+} from "./ui/blocks.js";
 
 export const chatAdapterNames = ["slack", "web"];
 
@@ -96,9 +107,9 @@ export const bot = new Chat({
 bot.onDirectMessage(handleSlackMessage);
 bot.onNewMention(async (thread, message) => {
 	await thread.subscribe();
-	await handleSlackMessage(thread, message);
+	await handleSlackThreadStart(thread, message);
 });
-bot.onSubscribedMessage(handleSlackMessage);
+bot.onSubscribedMessage(handleSubscribedSlackMessage);
 bot.onSlashCommand(handleSlackSlashCommand);
 bot.onAction(
 	["approve_billing_action", "cancel_billing_action"],
@@ -106,6 +117,13 @@ bot.onAction(
 );
 bot.onAction(questionAnswerActionIds, handleSlackQuestionAnswer);
 bot.onAction(catalogDecisionActionIds, handleSlackCatalogDecision);
-bot.onAction(["view_approval_payload"], handleViewPayloadAction);
+bot.onAction(
+	[EDIT_APPROVAL_DETAILS_ACTION_ID],
+	handleEditApprovalDetailsAction,
+);
+bot.onModalSubmit(
+	[EDIT_APPROVAL_DETAILS_MODAL_ID],
+	handleEditApprovalDetailsSubmit,
+);
 bot.onAction(["stop_agent_run"], handleStopAction);
 bot.registerSingleton();

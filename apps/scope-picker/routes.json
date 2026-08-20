@@ -891,6 +891,23 @@
       "isWebhookExempt": false
     },
     {
+      "handlerName": "handlePreviewCheckout",
+      "handlerFile": "src/internal/misc/pricingAgent/handlers/handlePreviewCheckout.ts",
+      "method": "POST",
+      "path": "/pricing-agent/preview/checkout",
+      "style": "REST",
+      "group": "pricing-agent",
+      "mountChain": [
+        "",
+        "/pricing-agent",
+        "/preview/checkout"
+      ],
+      "sourceRouterFile": "src/internal/misc/pricingAgent/pricingAgentRouter.ts",
+      "routeKind": "createRoute",
+      "needsScopes": true,
+      "isWebhookExempt": false
+    },
+    {
       "handlerName": "handleSetupPreviewOrg",
       "handlerFile": "src/internal/misc/pricingAgent/handlers/handleSetupPreviewOrg.ts",
       "method": "POST",

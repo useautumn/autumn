@@ -94,9 +94,17 @@ const exactRemainingByCustomer = async ({
 	);
 };
 
-/** Lake candidate ids for the threshold, or null when the lake is unavailable
- * or the match set is too large for the IN-list path. */
-const getLakeCandidateIds = async ({
+type LakeMatch = {
+	/** Lake-side match count for the threshold (approximate: 5-min staleness). */
+	matchCount: number;
+	/** Full candidate id set, or null when the match set is too large for the
+	 * IN-list path. */
+	candidateIds: string[] | null;
+};
+
+/** Lake match count + candidate ids for the threshold, or null when the lake
+ * is unavailable. */
+const getLakeMatch = async ({
 	db,
 	orgId,
 	env,
@@ -108,7 +116,7 @@ const getLakeCandidateIds = async ({
 	env: AppEnv;
 	internalFeatureId: string;
 	balance: BalanceFilter;
-}): Promise<string[] | null> => {
+}): Promise<LakeMatch | null> => {
 	if (!isMotherDuckConfigured()) return null;
 
 	try {
@@ -131,8 +139,9 @@ const getLakeCandidateIds = async ({
 			}),
 		);
 		const matchCount = Number(countRows[0]?.n ?? Number.POSITIVE_INFINITY);
-		if (!Number.isFinite(matchCount) || matchCount > SPARSE_CANDIDATE_CAP) {
-			return null;
+		if (!Number.isFinite(matchCount)) return null;
+		if (matchCount > SPARSE_CANDIDATE_CAP) {
+			return { matchCount, candidateIds: null };
 		}
 
 		const idRows = rowsOf<{ internal_customer_id: string }>(
@@ -159,13 +168,98 @@ const getLakeCandidateIds = async ({
 			for (const row of exceptionRows) candidateIds.add(row.internalId);
 		}
 
-		return [...candidateIds];
+		return { matchCount, candidateIds: [...candidateIds] };
 	} catch (error) {
 		logger.warn(
 			`[balanceFilter] lake candidate path unavailable, using dense walk: ${error}`,
 		);
 		return null;
 	}
+};
+
+/** LATERAL computing the customer's exact live sums for one feature; exposes
+ * bal.total / bal.granted / bal.live_rows to the outer query. */
+const exactBalanceLateralSql = (internalFeatureId: string): SQL => sql`
+	JOIN LATERAL (
+		SELECT
+			COALESCE(SUM(ce.balance) FILTER (WHERE ce.unlimited IS NOT TRUE), 0) AS total,
+			COALESCE(SUM(
+				COALESCE(e.allowance, 0) * COALESCE(cp.quantity, 1)
+				+ COALESCE(ce.adjustment, 0)
+			) FILTER (WHERE ce.unlimited IS NOT TRUE), 0) AS granted,
+			COUNT(*) AS live_rows
+		FROM customer_entitlements ce
+		LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
+		LEFT JOIN entitlements e ON e.id = ce.entitlement_id
+		WHERE ce.internal_customer_id = ${customers.internal_id}
+			AND ce.internal_feature_id = ${internalFeatureId}
+			AND ${liveCusEntPredicate()}
+	) bal ON true`;
+
+const exactBalanceBasisExpr = (basis: BalanceFilter["basis"]): SQL =>
+	basis === "granted"
+		? sql.raw("bal.granted")
+		: basis === "usage"
+			? sql.raw("(bal.granted - bal.total)")
+			: sql.raw("bal.total");
+
+/**
+ * Header count for a balance-filtered list. Sparse thresholds count exactly in
+ * PG over the lake candidate set; dense thresholds return the lake count
+ * (approximate, and an over-count when other filters/search narrow further).
+ * Null when the lake is unavailable — there is no affordable count then.
+ */
+export const countCustomersByBalanceFilter = async ({
+	db,
+	orgId,
+	env,
+	search,
+	filters,
+	balance,
+	internalFeatureId,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	search: string;
+	filters?: CustomerListFilters;
+	balance: BalanceFilter;
+	internalFeatureId: string;
+}): Promise<{ totalCount: number; approximate: boolean } | null> => {
+	const lakeMatch = await getLakeMatch({
+		db,
+		orgId,
+		env,
+		internalFeatureId,
+		balance,
+	});
+	if (lakeMatch === null) return null;
+	if (lakeMatch.candidateIds === null) {
+		return { totalCount: lakeMatch.matchCount, approximate: true };
+	}
+	if (lakeMatch.candidateIds.length === 0) {
+		return { totalCount: 0, approximate: false };
+	}
+
+	const predicates = buildSearchPredicates({ orgId, env, search, filters });
+	const rows = await db.execute<{ n: number | string }>(sql`
+		SELECT COUNT(*) AS n
+		FROM customers
+		${exactBalanceLateralSql(internalFeatureId)}
+		WHERE ${customers.internal_id} IN (${sql.join(
+			lakeMatch.candidateIds.map((id) => sql`${id}`),
+			sql`, `,
+		)})
+			AND ${predicates.whereRaw}
+			AND bal.live_rows > 0
+			AND ${balanceThresholdSql({
+				totalExpr: exactBalanceBasisExpr(balance.basis),
+				op: balance.op,
+				value: balance.value,
+			})}
+		${planetScaleTag({ query: "balanceFilterExactCount" })}
+	`);
+	return { totalCount: Number(rows[0]?.n ?? 0), approximate: false };
 };
 
 /**
@@ -209,13 +303,14 @@ export const resolveInternalIdsByBalanceFilter = async ({
 				})}`
 			: sql``;
 
-	const candidateIds = await getLakeCandidateIds({
+	const lakeMatch = await getLakeMatch({
 		db,
 		orgId,
 		env,
 		internalFeatureId,
 		balance,
 	});
+	const candidateIds = lakeMatch?.candidateIds ?? null;
 
 	if (candidateIds !== null) {
 		if (candidateIds.length === 0) return { internalIds: [], hasMore: false };
@@ -287,32 +382,12 @@ export const resolveInternalIdsByBalanceFilter = async ({
 	const rows = await db.execute<{ internal_customer_id: string }>(sql`
 		SELECT ${customers.internal_id} AS internal_customer_id
 		FROM customers
-		JOIN LATERAL (
-			SELECT
-				COALESCE(SUM(ce.balance) FILTER (WHERE ce.unlimited IS NOT TRUE), 0) AS total,
-				COALESCE(SUM(
-					COALESCE(e.allowance, 0) * COALESCE(cp.quantity, 1)
-					+ COALESCE(ce.adjustment, 0)
-				) FILTER (WHERE ce.unlimited IS NOT TRUE), 0) AS granted,
-				COALESCE(BOOL_OR(ce.unlimited), false) AS is_unlimited,
-				COUNT(*) AS live_rows
-			FROM customer_entitlements ce
-			LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
-			LEFT JOIN entitlements e ON e.id = ce.entitlement_id
-			WHERE ce.internal_customer_id = ${customers.internal_id}
-				AND ce.internal_feature_id = ${internalFeatureId}
-				AND ${liveCusEntPredicate()}
-		) bal ON true
+		${exactBalanceLateralSql(internalFeatureId)}
 		WHERE ${predicates.whereRaw}
 			${cursorPredicate(cursor ?? null)}
 			AND bal.live_rows > 0
 			AND ${balanceThresholdSql({
-				totalExpr:
-					balance.basis === "granted"
-						? sql.raw("bal.granted")
-						: balance.basis === "usage"
-							? sql.raw("(bal.granted - bal.total)")
-							: sql.raw("bal.total"),
+				totalExpr: exactBalanceBasisExpr(balance.basis),
 				op: balance.op,
 				value: balance.value,
 			})}

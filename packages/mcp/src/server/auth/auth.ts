@@ -74,9 +74,6 @@ export const createAutumnClient = (auth: AutumnMcpAuth) => ({
 		"Content-Type": "application/json",
 		Accept: "application/json",
 		"x-api-version": auth.xApiVersion ?? DEFAULT_API_VERSION,
-		...(auth.authMethod === "oauth"
-			? { "x-autumn-oauth-resource": auth.resource }
-			: {}),
 		...(auth.failOpen === undefined
 			? {}
 			: { "fail-open": String(auth.failOpen) }),

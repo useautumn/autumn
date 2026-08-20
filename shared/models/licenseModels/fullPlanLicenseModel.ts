@@ -5,6 +5,7 @@ import {
 } from "../productModels/priceModels/priceModels";
 import {
 	type FullProductWithoutLicenses,
+	type FullProductWithoutParentLicenses,
 	FullProductWithoutLicensesSchema,
 } from "../productModels/productModels";
 import type { DbPlanLicense } from "./planLicenseTable";
@@ -32,7 +33,7 @@ export const FullPlanLicenseSchema: z.ZodType<FullPlanLicense> = z.object({
 /** The same catalog link seen from the license side: product is the PARENT
  * plan offering this license. */
 export type ParentPlanLicense = DbPlanLicense & {
-	product: FullProductWithoutLicenses;
+	product: FullProductWithoutParentLicenses;
 	license_prices: Price[];
 };
 

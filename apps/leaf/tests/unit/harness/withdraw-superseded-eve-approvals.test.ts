@@ -53,15 +53,36 @@ await mockLeafModule({
 	}),
 });
 
+class MockEveSessionGoneError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "EveSessionGoneError";
+	}
+}
 const failingRequestIds = new Set<string>();
+const goneRequestIds = new Set<string>();
+const postedNotes: string[] = [];
 const postedRequestIds: string[] = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
-		postEveInputResponse: async ({ requestId }: { requestId: string }) => {
+		EveSessionGoneError: MockEveSessionGoneError,
+		postEveInputResponse: async ({
+			note,
+			requestId,
+		}: {
+			note: string;
+			requestId: string;
+		}) => {
+			postedNotes.push(note);
 			postedRequestIds.push(requestId);
 			if (failingRequestIds.has(requestId)) {
 				throw new Error("Eve session request failed: 503");
+			}
+			if (goneRequestIds.has(requestId)) {
+				throw new MockEveSessionGoneError(
+					"Eve session is gone (500): Cannot deliver inputResponses — the target session was not found via continuation token.",
+				);
 			}
 			// Eve re-homes on every post here, so a persisted session id proves the
 			// caller saved the ref rather than dropping it.
@@ -104,6 +125,7 @@ const approval = (id: string, toolCallId?: string) =>
 		run_id: "eve_session_1",
 		tool_args: {},
 		tool_call_id: toolCallId,
+		tool_name: "attach",
 	}) as unknown as ChatApproval;
 
 const auth = {
@@ -145,8 +167,10 @@ describe("withdrawSupersededApprovals", () => {
 	beforeEach(() => {
 		pendingApprovals = [];
 		failingRequestIds.clear();
+		goneRequestIds.clear();
 		cancelledApprovalIds.length = 0;
 		postedRequestIds.length = 0;
+		postedNotes.length = 0;
 		drainedSessionIds.length = 0;
 		savedSessionIds.length = 0;
 		rehomedRuns.length = 0;
@@ -172,9 +196,22 @@ describe("withdrawSupersededApprovals", () => {
 		await withdraw();
 
 		expect(postedRequestIds).toEqual(["tc_1", "tc_2"]);
+		expect(postedNotes[0]).toContain(
+			"Keep an attach refinement customer-specific",
+		);
 		expect(drainedSessionIds).toEqual(["eve_rehomed_tc_1", "eve_rehomed_tc_2"]);
 		expect(cancelledApprovalIds).toEqual(["a_1", "a_2"]);
 		expect(supersededBatches).toEqual([pendingApprovals]);
+	});
+
+	test("withdraws expired cards because eve remains suspended", async () => {
+		pendingApprovals = [
+			{ ...approval("a_1", "tc_1"), expires_at: Date.now() - 1 },
+		];
+
+		await withdraw();
+
+		expect(cancelledApprovalIds).toEqual(["a_1"]);
 	});
 
 	test("cancels a card eve never registered without posting to eve", async () => {
@@ -253,5 +290,33 @@ describe("withdrawSupersededApprovals", () => {
 		expect(postedRequestIds).toEqual([]);
 		expect(cancelledApprovalIds).toEqual([]);
 		expect(supersededBatches).toEqual([]);
+	});
+});
+
+// Eve has lost the session (its transcript broke terminally): the card can
+// never be decided through it, so blocking the thread on it would deadlock
+// the conversation until the card expires.
+describe("withdrawSupersededApprovals when eve has lost the session", () => {
+	beforeEach(() => {
+		goneRequestIds.clear();
+		cancelledApprovalIds.length = 0;
+		supersededBatches = [];
+	});
+
+	test("cancels the card, does not block the turn, and reports the dead session", async () => {
+		pendingApprovals = [approval("a_1", "tc_1")];
+		goneRequestIds.add("tc_1");
+
+		const result = await withdraw();
+
+		expect(result).toEqual({ sessionGone: true });
+		expect(cancelledApprovalIds).toEqual(["a_1"]);
+		expect(supersededBatches).toHaveLength(1);
+	});
+
+	test("reports a live session when every withdrawal went through", async () => {
+		pendingApprovals = [approval("a_1", "tc_1")];
+
+		expect(await withdraw()).toEqual({ sessionGone: false });
 	});
 });

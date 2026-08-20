@@ -38,6 +38,7 @@
       "name": "checkout",
       "version": "0.0.0",
       "dependencies": {
+        "@autumn/env": "workspace:*",
         "@autumn/shared": "workspace:*",
         "@base-ui/react": "^1.1.0",
         "@orpc/client": "catalog:",
@@ -555,6 +556,7 @@
       "name": "@autumn/scripts",
       "version": "1.0.0",
       "dependencies": {
+        "@autumn/env": "workspace:*",
         "@autumn/shared": "workspace:*",
         "@aws-sdk/client-dynamodb": "^3.1095.0",
         "@aws-sdk/client-s3": "^3.1017.0",
@@ -767,6 +769,8 @@
       "version": "0.0.0",
       "dependencies": {
         "@ai-sdk/react": "^3.0.25",
+        "@autumn/env": "workspace:*",
+        "@autumn/render": "workspace:*",
         "@autumn/shared": "workspace:*",
         "@autumn/ui": "workspace:*",
         "@base-ui/react": "^1.4.1",
@@ -831,6 +835,7 @@
       },
       "devDependencies": {
         "@eslint/js": "^9.21.0",
+        "@types/bun": "^1.3.1",
         "@types/lodash": "^4.17.16",
         "@types/node": "^22.13.10",
         "@types/react": "^19.0.0",
@@ -852,6 +857,9 @@
     "sharp",
     "unrs-resolver",
   ],
+  "patchedDependencies": {
+    "@chat-adapter/slack@4.37.0": "patches/@chat-adapter%2Fslack@4.37.0.patch",
+  },
   "overrides": {
     "@better-auth/passkey": "1.6.25",
     "@isaacs/brace-expansion": "5.0.1",

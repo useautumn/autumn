@@ -24,6 +24,8 @@ export const planFilterMatchesCustomerProduct = ({
 	filter: PlanFilter;
 	cusProduct: FullCusProduct;
 }): boolean => {
+	if (cusProduct.customer_license_link_id != null) return false;
+
 	if (filter.$or !== undefined) {
 		if (
 			!filter.$or.some((subFilter) =>

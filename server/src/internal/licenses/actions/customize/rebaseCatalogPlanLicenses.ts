@@ -1,5 +1,6 @@
 import {
 	type ApiPlanV1,
+	applyLicenseCustomizeToBasePlan,
 	composeMatchKey,
 	type DbPlanLicense,
 	type DiffedCustomizePlanV1,
@@ -15,10 +16,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { licenseItemRepo } from "@/internal/licenses/repos/licenseItemRepo.js";
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
-import {
-	applyDiffToVariantPlan,
-	getApiPlanDiff,
-} from "@/internal/product/actions/common/planTransformUtils.js";
+import { getApiPlanDiff } from "@/internal/product/actions/common/planTransformUtils.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import { derivePlanLicenseItemRefs } from "./computeLicenseCustomize.js";
@@ -215,29 +213,6 @@ export const prepareCatalogPlanLicenseRebases = async ({
 			};
 		}),
 	);
-};
-
-export const applyLicenseCustomizeToBasePlan = ({
-	basePlan,
-	customize,
-}: {
-	basePlan: ApiPlanV1;
-	customize: DiffedCustomizePlanV1;
-}) => {
-	const customizedKeys = new Set(
-		(customize.add_items ?? []).map((item) => composeMatchKey(item)),
-	);
-	const baseWithoutCustomizedSlots = {
-		...basePlan,
-		items: basePlan.items.filter(
-			(item) => !customizedKeys.has(composeMatchKey(item)),
-		),
-	};
-
-	return applyDiffToVariantPlan({
-		plan: baseWithoutCustomizedSlots,
-		diff: customize,
-	});
 };
 
 const hasLicenseCustomize = (customize: DiffedCustomizePlanV1) =>

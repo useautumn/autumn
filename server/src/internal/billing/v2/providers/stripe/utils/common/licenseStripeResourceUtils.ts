@@ -4,6 +4,7 @@ import {
 	planLicenseToCustomizedBasePrice,
 } from "@autumn/shared";
 
+/** Overlay custom base fee only — plan-license customize cannot add paid usage features. */
 export const planLicenseToCustomStripeInitProduct = ({
 	planLicense,
 }: {

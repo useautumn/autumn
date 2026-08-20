@@ -1,8 +1,8 @@
 import type { SlashCommandEvent } from "chat";
 import { dispatchSlackAgentMessage } from "../actions/dispatchSlackAgentMessage.js";
 
-export const handleSlackSlashCommand = async (event: SlashCommandEvent) =>
-	dispatchSlackAgentMessage({
+export const handleSlackSlashCommand = async (event: SlashCommandEvent) => {
+	await dispatchSlackAgentMessage({
 		channelId: event.channel.id,
 		providerUserId: event.user.userId,
 		raw: event.raw,
@@ -10,3 +10,4 @@ export const handleSlackSlashCommand = async (event: SlashCommandEvent) =>
 		text: event.text || event.command,
 		threadId: event.channel.id,
 	});
+};

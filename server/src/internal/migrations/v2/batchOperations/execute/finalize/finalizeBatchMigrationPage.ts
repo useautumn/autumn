@@ -1,7 +1,7 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { MigrationWebhookControls } from "@/internal/migrations/v2/cloudAdapter/types.js";
 import { queueMigrationWebhooks } from "@/internal/migrations/v2/webhookDelivery/utils/queueMigrationWebhooks.js";
-import { buildBatchMigrationWebhookRecords } from "../../finalize/buildBatchMigrationWebhookRecords/buildBatchMigrationWebhookRecords.js";
+import { buildBatchMigrationWebhookRecords } from "../../finalize/buildBatchMigrationWebhookRecords.js";
 import { emitBatchMigrationItemEvents } from "../../finalize/emitBatchMigrationItemEvents.js";
 import { invalidateBatchMigrationCaches } from "../../finalize/invalidateBatchMigrationCaches.js";
 import type { BatchMigrationExecutionPlan } from "../../types/index.js";

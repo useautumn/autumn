@@ -12,6 +12,28 @@ export type CustomerProductsUpdatedPayload = {
 	};
 };
 
+type CustomerFeatureExpectation = { featureId: string; balance?: number };
+
+const payloadHasExpectedFeatures = ({
+	data,
+	features,
+	absentFeatureIds,
+}: {
+	data: CustomerProductsUpdatedPayload["data"];
+	features?: CustomerFeatureExpectation[];
+	absentFeatureIds?: string[];
+}): boolean =>
+	(features ?? []).every(({ featureId, balance }) => {
+		const feature = data.customer?.features?.[featureId];
+		return (
+			feature !== undefined &&
+			(balance === undefined || feature.balance === balance)
+		);
+	}) &&
+	(absentFeatureIds ?? []).every(
+		(featureId) => data.customer?.features?.[featureId] === undefined,
+	);
+
 /**
  * Polls Svix Play for a customer.products.updated delivery. Returns the
  * payload data, or null when none arrives in time. `entityId: null` requires
@@ -22,12 +44,22 @@ export const waitForProductsUpdatedWebhook = async ({
 	customerId,
 	scenario,
 	entityId,
+	planId,
+	planVersion,
+	features,
+	absentFeatureIds,
 	timeoutMs = 15_000,
 }: {
 	playToken: string;
 	customerId: string;
 	scenario?: string;
 	entityId?: string | null;
+	planId?: string;
+	planVersion?: number;
+	/** Post-state features used to distinguish this delivery from setup events. */
+	features?: CustomerFeatureExpectation[];
+	/** Post-state absences used to distinguish this delivery from setup events. */
+	absentFeatureIds?: string[];
 	timeoutMs?: number;
 }): Promise<CustomerProductsUpdatedPayload["data"] | null> => {
 	const result = await waitForWebhook<CustomerProductsUpdatedPayload>({
@@ -39,7 +71,15 @@ export const waitForProductsUpdatedWebhook = async ({
 			(entityId === undefined ||
 				(entityId === null
 					? payload.data?.entity == null
-					: payload.data?.entity?.id === entityId)),
+					: payload.data?.entity?.id === entityId)) &&
+			(planId === undefined || payload.data?.updated_product?.id === planId) &&
+			(planVersion === undefined ||
+				payload.data?.updated_product?.version === planVersion) &&
+			payloadHasExpectedFeatures({
+				data: payload.data,
+				features,
+				absentFeatureIds,
+			}),
 		timeoutMs,
 		logWebhook: false,
 	});
@@ -55,6 +95,7 @@ export const expectProductsUpdatedCorrect = ({
 	scenario = "new",
 	entityId,
 	features,
+	absentFeatureIds,
 }: {
 	data: CustomerProductsUpdatedPayload["data"] | null;
 	customerId: string;
@@ -63,7 +104,9 @@ export const expectProductsUpdatedCorrect = ({
 	/** null asserts a customer-level payload (no entity). */
 	entityId?: string | null;
 	/** Features the embedded customer must carry, with optional balances. */
-	features?: { featureId: string; balance?: number }[];
+	features?: CustomerFeatureExpectation[];
+	/** Features the embedded customer must no longer expose. */
+	absentFeatureIds?: string[];
 }) => {
 	expect(data).not.toBeNull();
 	expect(data?.scenario).toBe(scenario);
@@ -88,5 +131,8 @@ export const expectProductsUpdatedCorrect = ({
 		if (feature.balance !== undefined) {
 			expect(customerFeature).toMatchObject({ balance: feature.balance });
 		}
+	}
+	for (const featureId of absentFeatureIds ?? []) {
+		expect(data?.customer?.features?.[featureId]).toBeUndefined();
 	}
 };

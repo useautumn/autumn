@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isCloudAgent } from "@autumn/env";
 import { resolveTriggerDevBranch } from "./triggerDevBranch.ts";
 
 function spawnTriggerDevBranchReaper({
@@ -293,53 +294,83 @@ async function startDev() {
 					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
 			);
 
-			names.push("eve", "leaf");
-			colors.push("white", "gray");
+			const skipEve = isCloudAgent();
+			if (!skipEve) {
+				names.push("eve");
+				colors.push("white");
+				cmds.push(
+					isWindows
+						? `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`
+						: `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`,
+				);
+			} else {
+				console.error("CLOUD_AGENT=1 — skipping eve\n");
+			}
+			names.push("leaf");
+			colors.push("gray");
 			cmds.push(
-				isWindows
-					? `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`
-					: `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`,
 				// Harness defaults live in apps/leaf/src/lib/chatAgentConfig.ts.
 				isWindows
 					? `"cd apps/leaf && set PORT=${CHAT_PORT} && bun dev"`
 					: `"cd apps/leaf && PORT=${CHAT_PORT} bun dev"`,
 			);
 
-			// Stripe CLI webhook tunnel — silently skip if CLI absent.
+			// Stripe CLI webhook tunnel — skip if CLI absent.
 			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
-			const stripeAvailable = Bun.spawnSync(["which", "stripe"]).exitCode === 0;
-			if (stripeAvailable) {
+			const stripeBin = existsSync("/usr/local/bin/stripe")
+				? "/usr/local/bin/stripe"
+				: Bun.spawnSync(["which", "stripe"]).exitCode === 0
+					? "stripe"
+					: null;
+			const stripeKey = process.env.STRIPE_SANDBOX_SECRET_KEY?.trim();
+			const cloudAgent = isCloudAgent();
+			if (stripeBin) {
 				// Sandbox key only — never the live key. Passed via STRIPE_API_KEY so
-				// headless boxes need no `stripe login`, and via env rather than argv
+				// Cloud agents need no `stripe login`, and via env rather than argv
 				// so it never shows up in `ps`.
-				const stripeEnv = {
-					...(process.env as Record<string, string>),
-					...(process.env.STRIPE_SANDBOX_SECRET_KEY
-						? { STRIPE_API_KEY: process.env.STRIPE_SANDBOX_SECRET_KEY }
-						: {}),
+				const startListen = () => {
+					const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
+					names.push("stripe");
+					colors.push("cyan");
+					// --forward-connect-to forwards events from connected accounts;
+					// the /webhooks/connect/* endpoint expects Connect-mode events.
+					const stripeCmd = `${stripeBin} listen --forward-connect-to ${forwardUrl} --skip-verify`;
+					cmds.push(isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`);
+					console.error(`stripe listen → ${forwardUrl}`);
 				};
-				const auth = Bun.spawnSync(
-					["stripe", "customers", "list", "--limit", "1"],
-					{ stdout: "pipe", stderr: "pipe", env: stripeEnv },
-				);
-				if (auth.exitCode !== 0) {
-					const stderr = new TextDecoder().decode(auth.stderr);
-					console.error(
-						"\nStripe CLI is installed but not authenticated (or key expired).",
+				if (stripeKey) {
+					// Key from Infisical: skip `stripe login` / customers-list preflight.
+					startListen();
+				} else {
+					const stripeEnv = {
+						...(process.env as Record<string, string>),
+					};
+					const auth = Bun.spawnSync(
+						[stripeBin, "customers", "list", "--limit", "1"],
+						{ stdout: "pipe", stderr: "pipe", env: stripeEnv },
 					);
-					console.error(
-						`  ${stderr.trim().split("\n").slice(-3).join("\n  ")}`,
-					);
-					console.error("\nRun `stripe login` and try again.\n");
-					process.exit(1);
+					if (auth.exitCode === 0) {
+						startListen();
+					} else if (cloudAgent) {
+						console.error(
+							"CLOUD_AGENT=1 — no STRIPE_SANDBOX_SECRET_KEY; skipping stripe listen. Add Infisical machine-identity Runtime Secrets so bun dw run can attach webhooks.\n",
+						);
+					} else {
+						const stderr = new TextDecoder().decode(auth.stderr);
+						console.error(
+							"\nStripe CLI is installed but not authenticated (or key expired).",
+						);
+						console.error(
+							`  ${stderr.trim().split("\n").slice(-3).join("\n  ")}`,
+						);
+						console.error("\nRun `stripe login` and try again.\n");
+						process.exit(1);
+					}
 				}
-				const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
-				names.push("stripe");
-				colors.push("cyan");
-				// --forward-connect-to forwards events from connected accounts;
-				// the /webhooks/connect/* endpoint expects Connect-mode events.
-				const stripeCmd = `stripe listen --forward-connect-to ${forwardUrl} --skip-verify`;
-				cmds.push(isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`);
+			} else if (cloudAgent) {
+				console.error(
+					"CLOUD_AGENT=1 — Stripe CLI not installed; skipping stripe listen.\n",
+				);
 			}
 
 			shellArgs = [
@@ -349,13 +380,11 @@ async function startDev() {
 			];
 		}
 
-		const concurrentlyProc = Bun.spawn(shellArgs, {
-			cwd: projectRoot,
-			env: {
+		const spawnEnv: Record<string, string> = {
 				...process.env,
 				TRIGGER_DEV_BRANCH: triggerDevBranch,
 				// Sandbox key only. `stripe listen` reads STRIPE_API_KEY, so no
-				// `stripe login` is needed on a headless box.
+				// `stripe login` is needed on a Cloud agent.
 				...(process.env.STRIPE_SANDBOX_SECRET_KEY
 					? { STRIPE_API_KEY: process.env.STRIPE_SANDBOX_SECRET_KEY }
 					: {}),
@@ -394,6 +423,9 @@ async function startDev() {
 				}),
 				...(useLocalMiscCache && {
 					MISC_CACHE_DRAGONFLY_PUBLIC_URL: LOCAL_MISC_CACHE_URL,
+					CACHE_V2_DRAGONFLY_URL: LOCAL_MISC_CACHE_URL,
+					CACHE_V2_DRAGONFLY_PUBLIC_URL: LOCAL_MISC_CACHE_URL,
+					REDIS_URL: LOCAL_MISC_CACHE_URL,
 				}),
 				...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
 				...(worktreeNum > 1 && {
@@ -411,7 +443,14 @@ async function startDev() {
 						"https://google.emulate.localhost",
 					STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 				}),
-			},
+			};
+			if (useLocalMiscCache) {
+				delete spawnEnv.MISC_CACHE_DRAGONFLY_PRIVATE_URL;
+			}
+
+		const concurrentlyProc = Bun.spawn(shellArgs, {
+			cwd: projectRoot,
+			env: spawnEnv,
 			stdout: "inherit",
 			stderr: "inherit",
 			onExit(
