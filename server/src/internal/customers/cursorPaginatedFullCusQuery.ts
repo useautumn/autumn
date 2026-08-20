@@ -11,6 +11,7 @@ import {
 } from "@autumn/shared";
 import { type Column, type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { resolvedProductIdsSql } from "@/internal/invoices/repos/utils/resolvedProductIdsSql.js";
 import { activeStatusListSql, monthlyBasePriceExpr } from "./basePriceSql.js";
 import {
 	cpStatusInClause,
@@ -213,7 +214,7 @@ export const getCursorPaginatedFullCusQuery = ({
 				SELECT i.internal_customer_id, row_to_json(i) AS row_json
 				FROM cr
 				JOIN LATERAL (
-					SELECT i.*
+					SELECT i.*, ${resolvedProductIdsSql({ invoiceAlias: "i" })} AS resolved_product_ids
 					FROM invoices i
 					WHERE i.internal_customer_id = cr.internal_id
 					ORDER BY i.created_at DESC, i.id DESC

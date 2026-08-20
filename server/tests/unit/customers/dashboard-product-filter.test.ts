@@ -38,10 +38,37 @@ describe("dashboard product filters", () => {
 			}),
 		);
 
-		expect(normalize(query)).toContain("cp_dash.product_id = $3");
+		// Without org scope the plan id resolves through the products join,
+		// never the denormalized customer_products.product_id snapshot.
+		expect(normalize(query)).toContain("p_dash.id = $3");
 		expect(normalize(query)).toContain("cp_dash.is_custom = true");
-		expect(normalize(query)).not.toContain("JOIN products p_dash");
+		expect(normalize(query)).toContain("JOIN products p_dash");
+		expect(normalize(query)).not.toContain("cp_dash.product_id");
 		expect(params).toEqual(["active", "past_due", "pro"]);
+	});
+
+	test("org-scoped custom plan selection resolves internal product ids", () => {
+		const { sql: query, params } = render(
+			getCustomerListFilterSql({
+				orgId: "org_target",
+				env: AppEnv.Live,
+				productVersionFilters: [{ productId: "pro", custom: true }],
+			}),
+		);
+
+		const normalized = normalize(query);
+		expect(normalized).toContain("cp_dash.internal_product_id IN");
+		expect(normalized).toContain("p_lookup.org_id =");
+		expect(normalized).toContain("p_lookup.env =");
+		expect(normalized).toContain("cp_dash.is_custom = true");
+		expect(normalized).not.toContain("cp_dash.product_id");
+		expect(params).toEqual([
+			"active",
+			"past_due",
+			"org_target",
+			AppEnv.Live,
+			"pro",
+		]);
 	});
 
 	test("custom and numbered selections share the product filter group", () => {
