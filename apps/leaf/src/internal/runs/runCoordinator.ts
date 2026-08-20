@@ -53,7 +53,6 @@ export const dispatchThreadMessage = async <Result>({
 				event: "leaf.run_stop_keyword",
 				data: { run_key: runKey },
 			});
-			await active.logAction?.(`Stopping — requested by <@${providerUserId}>…`);
 			await active.requestStop({ byUserId: providerUserId, reason: "user" });
 			return;
 		}
