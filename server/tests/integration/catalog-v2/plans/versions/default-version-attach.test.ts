@@ -1,12 +1,13 @@
 /**
  * Default plans × versioning — creating a customer must attach exactly ONE
- * version of a default plan: the latest. Covers the normal mint flow (flag
- * moves to v2) and the bad state where both versions are flagged is_default.
+ * version of a default plan: the active pointer. Covers the normal mint flow
+ * (flag moves to v2) and the bad state where both versions are flagged is_default.
  */
 
 import { expect, test } from "bun:test";
 import { customerProducts, products, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { forceActiveVersion } from "@tests/integration/utils/forceActiveVersion.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
@@ -157,7 +158,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 defaults: bad state — v1 AND v2 both is_default → only latest attached")}`,
+	`${chalk.yellowBright("catalogV2 defaults: bad state — v1 AND v2 both is_default → only active attached")}`,
 	async () => {
 		const { autumnV1, autumnV2_3, ctx } = await initScenario({
 			setup: [],
@@ -194,6 +195,50 @@ test.concurrent(
 				"exactly one version of the default plan may attach",
 			).toHaveLength(1);
 			expect(attachedRows[0]?.internal_product_id).toBe(v2.internal_id);
+		} finally {
+			await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 defaults: both is_default, v1 forced active → attaches v1")}`,
+	async () => {
+		const { autumnV1, autumnV2_3, ctx } = await initScenario({
+			setup: [],
+			actions: [],
+		});
+		const planId = uniqueTestId("cv2_def_active");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await seedDefaultFreeV1({ autumn: autumnV2_3, planId });
+			await mintV2({ autumn: autumnV2_3, planId });
+
+			const v1 = await getFull({ ctx, planId, version: 1 });
+			await ctx.db
+				.update(products)
+				.set({ is_default: true })
+				.where(eq(products.internal_id, v1.internal_id));
+			await forceActiveVersion({ ctx, planId, version: 1 });
+
+			const customer = await autumnV1.customers.create({
+				id: uniqueTestId("cv2_defcus_active"),
+				email: `${planId}-active@test.com`,
+				withAutumnId: true,
+				internalOptions: { default_group: `g_${planId}` },
+			});
+
+			const attachedRows = await fetchAttachedPlanRows({
+				ctx,
+				internalCustomerId: customer.autumn_id as string,
+				planId,
+			});
+			expect(
+				attachedRows,
+				"exactly one version of the default plan may attach",
+			).toHaveLength(1);
+			expect(attachedRows[0]?.internal_product_id).toBe(v1.internal_id);
 		} finally {
 			await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });
 			await deleteDbPlans({ ctx, planIds: [planId] });

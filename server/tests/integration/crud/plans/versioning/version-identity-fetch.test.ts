@@ -1,8 +1,9 @@
 /**
- * Version identity read path — product fetching.
+ * Version identity read path — product fetching (r1, r2).
  *
  * Contract under test:
- *   Omit-version get/list/catalog.get resolve the active pointer, not max(version).
+ *   r1  v1+v2, v2 active (lockstep) → omit get/list/catalog.get returns v2
+ *   r2  v1 forced active → omit get/list/catalog.get returns v1
  *   Explicit version lookups are unchanged.
  */
 
@@ -84,7 +85,51 @@ const setupVersionedPlan = async (testId: string) => {
 };
 
 test.concurrent(
-	`${chalk.yellowBright("version identity fetch: getFull omit-version returns the active row, not max")}`,
+	`${chalk.yellowBright("version identity fetch r1: omit get/list/catalog.get return v2 when v2 is active")}`,
+	async () => {
+		const base = products.base({
+			id: "version_identity_fetch_lockstep",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { autumnV2_3, ctx } = await initScenario({
+			customerId: "version-identity-fetch-lockstep",
+			setup: [s.customer({}), s.products({ list: [base] })],
+			actions: [],
+		});
+		await autumnV2_3.catalogV2.update({
+			plans: [
+				{
+					plan_id: base.id,
+					items: [monthlyMessagesItem(500)],
+					versioning: "new_version",
+				},
+			],
+		});
+
+		const omitVersion = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: base.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		expect(omitVersion.version).toBe(2);
+		expect(omitVersion.active).toBe(true);
+
+		const catalog = await autumnV2_3.catalogV2.get({
+			include_archived: true,
+		});
+		expect(catalog.plans.find((plan) => plan.id === base.id)?.version).toBe(2);
+
+		const plan = await autumnV2_3.products.get<ApiPlanV1>(base.id);
+		expect(plan.version).toBe(2);
+
+		const listed = await autumnV2_3.products.list<ApiPlanV1[]>();
+		expect(listed.list.find((item) => item.id === base.id)?.version).toBe(2);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("version identity fetch r2: getFull omit-version returns the active row, not max")}`,
 	async () => {
 		const { ctx, planId } = await setupVersionedPlan("getfull");
 
@@ -110,7 +155,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("version identity fetch: listFull omit-version returns the active row")}`,
+	`${chalk.yellowBright("version identity fetch r2: listFull omit-version returns the active row")}`,
 	async () => {
 		const { ctx, planId } = await setupVersionedPlan("listfull");
 
@@ -128,7 +173,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("version identity fetch: catalogV2.get and plans.get return the active row")}`,
+	`${chalk.yellowBright("version identity fetch r2: catalogV2.get and plans.get return the active row")}`,
 	async () => {
 		const { autumnV2_3, planId } = await setupVersionedPlan("catalog");
 

@@ -54,22 +54,6 @@ export const insertInvoices = async ({
 		...new Set(params.invoices.flatMap((invoice) => invoice.plan_ids)),
 	];
 
-	const latestPlanVersions = ctx.db
-		.select({
-			id: products.id,
-			maxVersion: sql<number>`MAX(${products.version})`.as("max_version"),
-		})
-		.from(products)
-		.where(
-			and(
-				eq(products.org_id, ctx.org.id),
-				eq(products.env, ctx.env),
-				planIds.length > 0 ? inArray(products.id, planIds) : undefined,
-			),
-		)
-		.groupBy(products.id)
-		.as("latest_plan_versions");
-
 	const [customerRows, planRows, existingRows] = await Promise.all([
 		ctx.db
 			.select({ id: customers.id, internalId: customers.internal_id })
@@ -85,17 +69,11 @@ export const insertInvoices = async ({
 			? ctx.db
 					.select({ id: products.id, internalId: products.internal_id })
 					.from(products)
-					.innerJoin(
-						latestPlanVersions,
-						and(
-							eq(products.id, latestPlanVersions.id),
-							eq(products.version, latestPlanVersions.maxVersion),
-						),
-					)
 					.where(
 						and(
 							eq(products.org_id, ctx.org.id),
 							eq(products.env, ctx.env),
+							eq(products.active, true),
 							inArray(products.id, planIds),
 						),
 					)

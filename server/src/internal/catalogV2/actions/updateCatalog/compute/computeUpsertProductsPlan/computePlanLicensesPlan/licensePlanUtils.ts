@@ -3,7 +3,9 @@ import type {
 	FullPlanLicense,
 	LicenseCustomize,
 } from "@autumn/shared";
+import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { activeVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeVersionForPlan";
 
 /** Current plan_license links on this row. Minted versions fall back to the clone source. */
 export const upsertProductPlanToLicenses = ({
@@ -62,65 +64,55 @@ export const needsNewParentLink = ({
 	currentPlanLicense.parent_internal_product_id !==
 	parent.row.nextFullProduct.internal_id;
 
-const latestVersionOfPlan = ({
-	planId,
-	upsertProducts,
-}: {
-	planId: string;
-	upsertProducts: UpsertProductPlan[];
-}): number =>
-	Math.max(
-		...upsertProducts
-			.filter((upsert) => upsert.row.planId === planId)
-			.map((upsert) => upsert.row.version),
-	);
-
-/** Omit version = latest. `all_versions` is only the child's propagate target. */
+/** Omit / `existing` = the active pointer. `all_versions` is only the child's propagate target. */
 const propagateTargetMatchesParent = ({
 	target,
 	parent,
-	latestVersion,
+	activeVersion,
 }: {
 	target: CatalogPropagateTargetParams;
 	parent: UpsertProductPlan;
-	latestVersion: number;
+	activeVersion: number | undefined;
 }): boolean => {
 	if (target.plan_id !== parent.row.planId) return false;
 	if (target.version !== undefined) return target.version === parent.row.version;
 	if (target.versioning === "all_versions") return true;
-	return parent.row.version === latestVersion;
+	return (
+		activeVersion !== undefined && parent.row.version === activeVersion
+	);
 };
 
 export const childPropagatesToParent = ({
 	child,
 	parent,
-	upsertProducts,
+	productStatesContext,
 }: {
 	child: UpsertProductPlan;
 	parent: UpsertProductPlan;
-	upsertProducts: UpsertProductPlan[];
+	productStatesContext: ProductStatesContext;
 }): boolean => {
-	const latestVersion = latestVersionOfPlan({
+	const activeVersion = activeVersionForPlan({
 		planId: parent.row.planId,
-		upsertProducts,
+		productStatesContext,
 	});
 	return (child.propagate?.license_parents ?? []).some((target) =>
-		propagateTargetMatchesParent({ target, parent, latestVersion }),
+		propagateTargetMatchesParent({ target, parent, activeVersion }),
 	);
 };
 
 export const shouldPropagate = ({
 	parent,
 	child,
-	upsertProducts,
+	productStatesContext,
 }: {
 	parent: UpsertProductPlan;
 	child: UpsertProductPlan;
-	upsertProducts: UpsertProductPlan[];
+	productStatesContext: ProductStatesContext;
 }): boolean => {
 	if (parent.declaredLicenses !== undefined) return false;
 	if (!child.entitlementPricesPlan) return false;
-	if (!childPropagatesToParent({ child, parent, upsertProducts })) return false;
+	if (!childPropagatesToParent({ child, parent, productStatesContext }))
+		return false;
 	return true;
 };
 

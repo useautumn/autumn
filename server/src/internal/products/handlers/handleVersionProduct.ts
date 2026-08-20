@@ -69,17 +69,16 @@ export const handleVersionProductV2 = async ({
 }) => {
 	const { db, features } = ctx;
 
-	const latestForVersioning = await ProductService.getFull({
+	const maxVersion = await ProductService.getProductVersionCount({
 		db,
-		idOrInternalId: latestProduct.id,
+		productId: latestProduct.id,
 		orgId: org.id,
 		env,
 	});
-	const curVersion = latestForVersioning.version;
-	const newVersion = curVersion + 1;
+	const newVersion = maxVersion + 1;
 
 	console.log(
-		`Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`,
+		`Updating product ${latestProduct.id} version from ${maxVersion} to ${newVersion}`,
 	);
 
 	// Deep-merge `config` so partial patches (e.g. `{ config: { ignore_past_due: true } }`)
