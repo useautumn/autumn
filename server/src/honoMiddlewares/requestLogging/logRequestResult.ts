@@ -5,13 +5,13 @@ import { addExtrasToLogs } from "@/utils/logging/addContextToLogs.js";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
 const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
-	// "/v1/balances.track",
-	// "/v1/balances.check",
-	// "/v1/check",
-	// "/v1/track",
-	// "/v1/customers.get_or_create",
-	// "/v1/entities.get",
+	"/v1/balances.track",
+	"/v1/balances.check",
+	"/v1/check",
+	"/v1/track",
 ]);
+
+const SLOW_REQUEST_BODY_THRESHOLD_MS = 500;
 
 // Event pages run to megabytes each, dwarfing every other route's ingest.
 const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
@@ -19,13 +19,15 @@ const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
 	"/v1/events.list",
 ]);
 
-const SUCCESS_REQUEST_LOG_SAMPLE_RATE = Number.parseFloat(
-	process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE ?? "0",
+const SUCCESS_RESPONSE_BODY_SAMPLE_RATE = Number.parseFloat(
+	process.env.AXIOM_SUCCESS_RESPONSE_BODY_SAMPLE_RATE ??
+		process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE ??
+		"0.01",
 );
 
-const shouldSampleSuccessLog = () =>
-	SUCCESS_REQUEST_LOG_SAMPLE_RATE > 0 &&
-	Math.random() < Math.min(SUCCESS_REQUEST_LOG_SAMPLE_RATE, 1);
+const shouldSampleSuccessResponseBody = () =>
+	SUCCESS_RESPONSE_BODY_SAMPLE_RATE > 0 &&
+	Math.random() < Math.min(SUCCESS_RESPONSE_BODY_SAMPLE_RATE, 1);
 
 export const logRequestResult = async ({
 	ctx,
@@ -51,17 +53,17 @@ export const logRequestResult = async ({
 		const isHighVolumeSuccess =
 			isSuccess && HIGH_VOLUME_SUCCESS_ROUTES.has(c.req.path);
 
-		if (isHighVolumeSuccess && !shouldSampleSuccessLog()) {
-			return;
-		}
-
 		ctx.logger = addExtrasToLogs({
 			logger: ctx.logger,
 			extras: ctx.extraLogs,
 		});
 
 		const skipResponseBody =
-			isSuccess && RESPONSE_BODY_EXCLUDED_ROUTES.has(c.req.path);
+			isSuccess &&
+			(RESPONSE_BODY_EXCLUDED_ROUTES.has(c.req.path) ||
+				(isHighVolumeSuccess &&
+					durationMs < SLOW_REQUEST_BODY_THRESHOLD_MS &&
+					!shouldSampleSuccessResponseBody()));
 
 		let finalResponseBody = skipResponseBody ? null : responseBody;
 		if (finalResponseBody === undefined && c.req.path.includes("/v1")) {

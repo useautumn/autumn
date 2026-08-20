@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import type { Context } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { logRequestResult } from "@/honoMiddlewares/requestLogging/logRequestResult.js";
@@ -47,18 +47,22 @@ const mergeLoggedObjects = (args: unknown[]) =>
 		),
 	);
 
+afterEach(() => {
+	mock.restore();
+});
+
 describe("logRequestResult", () => {
 	test("logs the request body without rebinding request metadata", async () => {
 		const captured: CapturedLog[] = [];
 		const requestLogContext: LogRequestContext = {
 			id: "req_123",
 			method: "POST",
-			url: "https://api.useautumn.com/v1/check",
+			url: "https://api.useautumn.com/v1/customers.get",
 			timestamp: 123,
 			customer_id: "cus_123",
 			query: {},
 			body: { feature_id: "messages" },
-			name: "POST /v1/check",
+			name: "POST /v1/customers.get",
 		};
 		const internalRequestContext = {
 			id: requestLogContext.id,
@@ -80,7 +84,7 @@ describe("logRequestResult", () => {
 			org: { slug: "test-org" },
 		} as unknown as AutumnContext;
 		const c = {
-			req: { path: "/v1/check" },
+			req: { path: "/v1/customers.get" },
 			res: {
 				status: 200,
 				headers: new Headers({ "content-type": "application/json" }),
@@ -142,7 +146,7 @@ describe("logRequestResult", () => {
 			org: { slug: "test-org" },
 		} as unknown as AutumnContext;
 		const c = {
-			req: { path: "/v1/track" },
+			req: { path: "/v1/balances.track" },
 			res: {
 				status: 500,
 				headers: new Headers({ "content-type": "application/json" }),
@@ -172,7 +176,41 @@ describe("logRequestResult", () => {
 		});
 	});
 
-	test("still reads and logs successful JSON response bodies when not supplied", async () => {
+	test("keeps a compact terminal record for an unsampled high-volume success", async () => {
+		spyOn(Math, "random").mockReturnValue(0.5);
+		const captured: CapturedLog[] = [];
+		let cloneCount = 0;
+		const ctx = {
+			timestamp: 123,
+			logger: createCapturingLogger({ captured }),
+			extraLogs: {},
+			org: { slug: "test-org" },
+		} as unknown as AutumnContext;
+		const c = {
+			req: { path: "/v1/balances.check" },
+			res: {
+				status: 200,
+				headers: new Headers({ "content-type": "application/json" }),
+				clone: () => {
+					cloneCount++;
+					return { json: async () => ({ allowed: true, balance: 90 }) };
+				},
+			},
+		} as unknown as Context<HonoEnv>;
+
+		await logRequestResult({ ctx, c, durationMs: 10 });
+
+		expect(cloneCount).toBe(0);
+		expect(captured).toHaveLength(1);
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: null,
+		});
+	});
+
+	test("reads and logs a sampled high-volume success body", async () => {
+		spyOn(Math, "random").mockReturnValue(0);
 		const captured: CapturedLog[] = [];
 		const responseBody = { allowed: true, balance: 90 };
 		let cloneCount = 0;
@@ -183,7 +221,74 @@ describe("logRequestResult", () => {
 			org: { slug: "test-org" },
 		} as unknown as AutumnContext;
 		const c = {
-			req: { path: "/v1/check" },
+			req: { path: "/v1/balances.check" },
+			res: {
+				status: 200,
+				headers: new Headers({ "content-type": "application/json" }),
+				clone: () => {
+					cloneCount++;
+					return { json: async () => responseBody };
+				},
+			},
+		} as unknown as Context<HonoEnv>;
+
+		await logRequestResult({ ctx, c, durationMs: 10 });
+
+		expect(cloneCount).toBe(1);
+		expect(captured).toHaveLength(1);
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: responseBody,
+		});
+	});
+
+	test("reads and logs a slow high-volume success body", async () => {
+		spyOn(Math, "random").mockReturnValue(0.5);
+		const captured: CapturedLog[] = [];
+		const responseBody = { accepted: true };
+		let cloneCount = 0;
+		const ctx = {
+			timestamp: 123,
+			logger: createCapturingLogger({ captured }),
+			extraLogs: {},
+			org: { slug: "test-org" },
+		} as unknown as AutumnContext;
+		const c = {
+			req: { path: "/v1/balances.track" },
+			res: {
+				status: 202,
+				headers: new Headers({ "content-type": "application/json" }),
+				clone: () => {
+					cloneCount++;
+					return { json: async () => responseBody };
+				},
+			},
+		} as unknown as Context<HonoEnv>;
+
+		await logRequestResult({ ctx, c, durationMs: 500 });
+
+		expect(cloneCount).toBe(1);
+		expect(captured).toHaveLength(1);
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 202,
+			durationMs: 500,
+			res: responseBody,
+		});
+	});
+
+	test("still reads and logs successful JSON response bodies for other routes", async () => {
+		const captured: CapturedLog[] = [];
+		const responseBody = { allowed: true, balance: 90 };
+		let cloneCount = 0;
+		const ctx = {
+			timestamp: 123,
+			logger: createCapturingLogger({ captured }),
+			extraLogs: {},
+			org: { slug: "test-org" },
+		} as unknown as AutumnContext;
+		const c = {
+			req: { path: "/v1/customers.get" },
 			res: {
 				status: 200,
 				headers: new Headers({ "content-type": "application/json" }),
