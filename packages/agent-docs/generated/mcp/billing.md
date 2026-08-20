@@ -32,6 +32,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - **A mutating billing action requires approval before it takes effect. The approval mechanism is the write tool call itself: calling `attach`/`updateSubscription`/`createSchedule` pauses for the user's approval before executing. Do NOT pre-confirm with `ask_question` or prose — that double-prompts the user.**
 - **Apply the default billing params on every action unless the user explicitly asks otherwise — invoice mode (draft), enable immediately, and no proration. The full rules and field names are in the Billing behavior section below; follow them exactly.**
 - **No "confirm before I proceed" questions. When a default or org rule resolves a gap, use it and preview — the preview is non-destructive and easy to redo, and the user reviews everything on the approval card before anything happens.**
+- **A named action is a decision, not a suggestion: "attach X" means attach X, even if the customer is on another plan (attach handles the transition). Never ask whether they meant a different operation — at most note the alternative in one line alongside the preview.**
 - Don't propose or promise steps outside what your tools can do. If the goal isn't reachable, say so plainly rather than inventing a workaround.
 - Read this full resource before billing work and follow sections in order; later sections can define params that must be resolved before previewing.
 - Monetary amounts are major currency units: `$1,150` -> `1150`, not `115000`.

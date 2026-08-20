@@ -50,7 +50,9 @@ const turn = await runSlackAgentTurn({
 	onReasoning: presenter.onReasoning,
 	onThinking: ticker.thinking,
 	providerUserId,
-	text: `Put customer ${CUSTOMER_ID} on a custom ${PLAN_ID} plan for $0/month.`,
+	text:
+		process.env.E2E_MESSAGE ??
+		`Put customer ${CUSTOMER_ID} on a custom ${PLAN_ID} plan for $0/month.`,
 	threadId,
 });
 ticker.stop();
