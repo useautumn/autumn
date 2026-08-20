@@ -23,15 +23,22 @@ export const getIntent = (input: unknown): string | undefined =>
 		: undefined;
 
 /**
- * Adds a required `intent` field to every tool's input schema, in place, so
- * external MCP clients must declare their goal on every call. Call this once on
- * a fully-built toolset (the intent is captured by the analytics layer).
+ * Adds an `intent` field to every tool's input schema, in place, so MCP clients
+ * declare their goal on every call. Call this once on a fully-built toolset (the
+ * intent is captured by the analytics layer).
+ *
+ * `required: false` still accepts an intent rather than dropping the field: tool
+ * inputs are strict, so a missing field rejects clients that volunteer one.
  *
  * Tools whose input isn't a plain object are left untouched.
  */
-export const requireIntentOnTools = <T extends Record<string, AnyTool>>(
-	tools: T,
-): T => {
+export const attachIntentToTools = <T extends Record<string, AnyTool>>({
+	required,
+	tools,
+}: {
+	required: boolean;
+	tools: T;
+}): T => {
 	for (const tool of Object.values(tools)) {
 		const schema = tool.inputSchema;
 		if (schema instanceof z.ZodObject) {
@@ -39,7 +46,7 @@ export const requireIntentOnTools = <T extends Record<string, AnyTool>>(
 			// JSON-schema-augmented schema (incompatible at the type level only), so
 			// route the reassignment through `unknown`.
 			tool.inputSchema = schema.extend({
-				intent: intentSchema,
+				intent: required ? intentSchema : intentSchema.optional(),
 			}) as unknown as typeof tool.inputSchema;
 		}
 	}

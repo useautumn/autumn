@@ -4,7 +4,7 @@ import { claimLatestPendingAction } from "../agent/pending-actions.js";
 import { instrumentToolsWithAnalytics } from "../analytics/index.js";
 import { type AutumnMcpAuth, getAutumnAuth } from "../server/auth/auth.js";
 import { domainModules, toolDomains } from "./domains.js";
-import { orgTools } from "./org.js";
+import { createOrgTools } from "./org.js";
 import { callAutumn } from "./utils/client.js";
 import {
 	dateToEpochMillisecondsTool,
@@ -19,7 +19,7 @@ import {
 	rawLocalPreviewTool,
 	toTools,
 } from "./utils/factories.js";
-import { requireIntentOnTools } from "./utils/intent.js";
+import { attachIntentToTools } from "./utils/intent.js";
 import type { ConfirmedWriteToolName } from "./utils/types.js";
 
 const {
@@ -100,10 +100,10 @@ const createRawAutumnOperationToolset = ({
 		),
 		...toTools(localPreviews, rawLocalPreviewTool),
 		...toTools(confirmedWrites, operationTool),
-		...orgTools,
+		...createOrgTools(),
 	};
 	return {
-		...(requireIntent ? requireIntentOnTools(operationTools) : operationTools),
+		...attachIntentToTools({ required: requireIntent, tools: operationTools }),
 		dateToEpochMilliseconds: dateToEpochMillisecondsTool,
 		epochMillisecondsToDate: epochMillisecondsToDateTool,
 	};
@@ -112,7 +112,8 @@ const createRawAutumnOperationToolset = ({
 /**
  * Build the Autumn MCP toolset. `requireIntent` (default true) forces a
  * one-sentence `intent` on every external tool call for analytics — disable it
- * for our own internal agent, which would otherwise fail when it omits it.
+ * for our own internal agent, which would otherwise fail when it omits it. Every
+ * tool still accepts an intent either way.
  */
 export const createRawAutumnOperationTools = ({
 	requireIntent = true,
