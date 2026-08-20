@@ -16,6 +16,7 @@ export type ComposedSkill = {
 	description: string;
 	body: string;
 	references: SkillFile[];
+	requires: string[];
 };
 
 const parseAttrs = (raw: string): Record<string, string> => {
@@ -61,11 +62,19 @@ export const composeSkill = ({
 	}
 
 	const references: SkillFile[] = [];
+	const requires: string[] = [];
 
 	const withSkillRefs = body.replace(SKILL_TAG, (_match, raw: string) => {
-		const { name, reason } = parseAttrs(raw);
+		const { name, reason, text } = parseAttrs(raw);
 		if (!name) {
 			throw new Error(`<skill> in ${path} is missing a name`);
+		}
+		if (!requires.includes(name)) {
+			requires.push(name);
+		}
+		// `text` renders verbatim, for prose that already names the prerequisite.
+		if (text) {
+			return text;
 		}
 		return reason
 			? `Before using this skill, first load the \`${name}\` skill — ${reason}.`
@@ -134,5 +143,6 @@ export const composeSkill = ({
 		description: data.description,
 		body: resolved,
 		references,
+		requires,
 	};
 };

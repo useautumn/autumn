@@ -6,7 +6,7 @@ import type {
 } from "@autumn/shared";
 import { usePreviewUpdateCatalog } from "@/hooks/queries/catalog/usePreviewUpdateCatalog";
 import {
-	buildUpdateCatalogPlanParams,
+	buildCatalogUpdatePlans,
 	tryBuildUpdateCatalogPlanParams,
 } from "./buildUpdateCatalogPlanParams";
 import {
@@ -33,6 +33,7 @@ export const usePlanChangeCatalogPreview = ({
 	includeCustom,
 	isLatest,
 	namesByPlanId,
+	persistedBasePlanId,
 }: {
 	open: boolean;
 	baseProduct?: FrontendProduct | null;
@@ -45,6 +46,7 @@ export const usePlanChangeCatalogPreview = ({
 	includeCustom: boolean;
 	isLatest: boolean;
 	namesByPlanId: Record<string, string>;
+	persistedBasePlanId?: string | null;
 }) => {
 	const contentParams = tryBuildUpdateCatalogPlanParams({
 		baseProduct,
@@ -131,7 +133,7 @@ export const usePlanChangeCatalogPreview = ({
 		: [];
 
 	const buildSaveParams = ({ migrate }: { migrate: boolean }) =>
-		buildUpdateCatalogPlanParams({
+		buildCatalogUpdatePlans({
 			baseProduct,
 			editedProduct: product,
 			features,
@@ -142,6 +144,7 @@ export const usePlanChangeCatalogPreview = ({
 				migrate && migrateNeeded && model.strategy !== "new_version"
 					? { draft: true, include_custom: includeCustom }
 					: undefined,
+			persistedBasePlanId,
 		});
 
 	return {

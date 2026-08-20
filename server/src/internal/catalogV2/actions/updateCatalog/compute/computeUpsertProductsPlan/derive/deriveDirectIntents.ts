@@ -87,4 +87,5 @@ export const deriveDirectIntents = ({
 			},
 			planParams,
 			source: "direct" as const,
+			...(planParams.base_variant_id === null ? { unlink: true } : {}),
 		}));

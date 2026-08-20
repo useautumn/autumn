@@ -8,6 +8,7 @@ import {
 	AdvancedSection,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
+import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
 import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
 import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/DiscountsConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
@@ -18,6 +19,8 @@ export function UpdateSubscriptionAdvancedSection() {
 	const {
 		billingBehavior,
 		resetBillingCycle,
+		billingCycleAnchorMode,
+		billingCycleAnchorDate,
 		resetUsage,
 		noBillingChanges,
 		discounts,
@@ -78,16 +81,18 @@ export function UpdateSubscriptionAdvancedSection() {
 							/>
 						}
 					/>
-					<ConfigRow
-						title="Reset Billing Cycle"
-						description="Restart the billing cycle from today"
-						action={
-							<Switch
-								checked={resetBillingCycle}
-								onCheckedChange={(checked) =>
-									form.setFieldValue("resetBillingCycle", !!checked)
-								}
-							/>
+					<BillingCycleAnchorConfigRow
+						enabled={resetBillingCycle}
+						mode={billingCycleAnchorMode}
+						customAnchor={billingCycleAnchorDate}
+						onEnabledChange={(enabled) =>
+							form.setFieldValue("resetBillingCycle", enabled)
+						}
+						onModeChange={(mode) =>
+							form.setFieldValue("billingCycleAnchorMode", mode)
+						}
+						onCustomAnchorChange={(anchor) =>
+							form.setFieldValue("billingCycleAnchorDate", anchor)
 						}
 					/>
 					<ConfigRow

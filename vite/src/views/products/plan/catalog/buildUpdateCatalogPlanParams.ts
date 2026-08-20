@@ -107,6 +107,49 @@ export const buildUpdateCatalogPlanParams = ({
 	};
 };
 
+const requestedBasePlanId = ({
+	editedProduct,
+	persistedBasePlanId,
+}: {
+	editedProduct: FrontendProduct;
+	persistedBasePlanId?: string | null;
+}): string | null => {
+	if (editedProduct.base_id === undefined) return persistedBasePlanId ?? null;
+	return editedProduct.base_id;
+};
+
+/** Content row plus a nest/unlink companion when the base-plan picker changed. */
+export const buildCatalogUpdatePlans = ({
+	persistedBasePlanId,
+	...args
+}: Parameters<typeof buildUpdateCatalogPlanParams>[0] & {
+	persistedBasePlanId?: string | null;
+}): UpdateCatalogPlanParamsInput[] => {
+	const content = buildUpdateCatalogPlanParams(args);
+	const previousBasePlanId = persistedBasePlanId ?? null;
+	const nextBasePlanId = requestedBasePlanId({
+		editedProduct: args.editedProduct,
+		persistedBasePlanId,
+	});
+	const includeContent = args.includeContent !== false;
+
+	if (nextBasePlanId === null && previousBasePlanId !== null) {
+		return includeContent
+			? [{ ...content, base_variant_id: null }]
+			: [{ plan_id: content.plan_id, base_variant_id: null }];
+	}
+
+	if (nextBasePlanId !== null && nextBasePlanId !== previousBasePlanId) {
+		const nest: UpdateCatalogPlanParamsInput = {
+			plan_id: nextBasePlanId,
+			variants: [{ variant_plan_id: content.plan_id }],
+		};
+		return includeContent ? [nest, content] : [nest];
+	}
+
+	return [content];
+};
+
 export const tryBuildUpdateCatalogPlanParams = (
 	args: Parameters<typeof buildUpdateCatalogPlanParams>[0],
 ): UpdateCatalogPlanParamsInput | null => {

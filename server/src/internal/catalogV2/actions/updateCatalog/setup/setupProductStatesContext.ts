@@ -26,8 +26,16 @@ const payloadPlanIds = ({
 		...params.plans.flatMap((entry) => [
 			entry.plan_id,
 			...(entry.new_plan_id ? [entry.new_plan_id] : []),
+			...(typeof entry.base_variant_id === "string"
+				? [entry.base_variant_id]
+				: []),
 			...(entry.licenses?.map((license) => license.license_plan_id) ?? []),
-			...(entry.variants?.map((variant) => variant.variant_plan_id) ?? []),
+			...(entry.variants?.flatMap((variant) => [
+				variant.variant_plan_id,
+				...(typeof variant.base_variant_id === "string"
+					? [variant.base_variant_id]
+					: []),
+			]) ?? []),
 			...(entry.propagate?.variants?.map((target) => target.plan_id) ?? []),
 			...(entry.propagate?.license_parents?.map((target) => target.plan_id) ??
 				[]),

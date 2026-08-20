@@ -1,47 +1,44 @@
-import type { NumberMatcher, PlanFilter, StringMatcher } from "@autumn/shared";
+import type { PlanFilter, StringMatcher } from "@autumn/shared";
 import { migrationUid } from "@autumn/shared";
 
 const planIdsFromMatcher = (matcher: StringMatcher | undefined): string[] => {
 	if (typeof matcher === "string") return [matcher];
 	if (matcher == null || typeof matcher !== "object") return [];
-	if (matcher.$in) {
-		return [...matcher.$in].sort((left, right) => left.localeCompare(right));
-	}
+	if (matcher.$in) return [...matcher.$in];
 	if (typeof matcher.$eq === "string") return [matcher.$eq];
 	return [];
 };
 
-const versionSegment = (version: NumberMatcher | undefined): string => {
-	if (version == null) return "all";
-	if (typeof version === "number") return `v${version}`;
-	if (version.$in) {
-		return [...version.$in]
-			.sort((left, right) => left - right)
-			.map((value) => `v${value}`)
-			.join("-");
+const planIdsFromFilter = ({
+	planFilter,
+}: {
+	planFilter: PlanFilter;
+}): string[] => {
+	const branches = planFilter.$or ?? [planFilter];
+	const ids = new Set<string>();
+	for (const branch of branches) {
+		for (const id of planIdsFromMatcher(branch.plan_id)) ids.add(id);
 	}
-	if (typeof version.$eq === "number") return `v${version.$eq}`;
-	return "all";
+	return [...ids].sort((left, right) => left.localeCompare(right));
 };
 
-const branchToScope = (branch: PlanFilter): string => {
-	const planIds = planIdsFromMatcher(branch.plan_id);
-	const versions = versionSegment(branch.version);
-	if (planIds.length === 0) return `plans-${versions}`;
-	return planIds.map((planId) => `${planId}-${versions}`).join("+");
+/** Name at most two plans; a 6-variant $or must not become the URL. */
+const MAX_NAMED_PLANS = 2;
+
+const namedPlans = ({ planIds }: { planIds: string[] }): string => {
+	if (planIds.length === 0) return "plans";
+	if (planIds.length <= MAX_NAMED_PLANS) return planIds.join("-and-");
+	return `${planIds[0]}-and-${planIds.length - 1}-more`;
 };
 
-/** Readable filter projection: `pro-v3`, `pro-all`, `premium-v3+pro-v1-v2`. */
+/** Plan ids only: `pro`, `premium-and-pro`, `growth-and-5-more`. */
 export const planFilterToMigrationIdScope = ({
 	planFilter,
 }: {
 	planFilter: PlanFilter;
-}): string => {
-	const branches = planFilter.$or ?? [planFilter];
-	return branches.map(branchToScope).join("+") || "plans";
-};
+}): string => namedPlans({ planIds: planIdsFromFilter({ planFilter }) });
 
-/** `{scope}-update-{uid}` — scope names every targeted plan and its version pin. */
+/** `{scope}-update-{uid}` — uid is the uniqueness; scope is a short label. */
 export const buildMigrationDraftId = ({
 	planFilter,
 }: {

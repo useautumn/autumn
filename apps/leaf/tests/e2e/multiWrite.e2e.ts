@@ -142,30 +142,6 @@ if (approvalRequest) {
 		console.log("❌ every money cell is $0.00 — step previews were not parsed");
 		process.exit(1);
 	}
-	const stepsForDebug = [
-		{
-			input: created.toolArgs,
-			preview: created.preview,
-			toolName: created.toolName,
-		},
-		...((created.toolArgs._eveWithheldWrites ?? []) as Array<{
-			input?: Record<string, unknown>;
-			preview?: unknown;
-			toolName: string;
-		}>),
-	];
-	console.log(
-		`PREVIEW SHAPE (step 1): ${JSON.stringify(stepsForDebug[0]?.preview).slice(0, 900)}`,
-	);
-	for (const [index, step] of stepsForDebug.entries()) {
-		const request =
-			(step.input as { request?: Record<string, unknown> })?.request ??
-			step.input;
-		const previewText = JSON.stringify(step.preview ?? null);
-		console.log(
-			`STEP ${index + 1}: customer=${request?.customer_id} customize=${JSON.stringify(request?.customize ?? null)} preview_total=${previewText.match(/"total":\s*(-?[\d.]+)/)?.[1] ?? "none"} preview_len=${previewText.length}`,
-		);
-	}
 	const withheld = (created.toolArgs._eveWithheldWrites ?? []) as unknown[];
 	console.log(`GROUPED writes in approval: ${withheld.length}`);
 }

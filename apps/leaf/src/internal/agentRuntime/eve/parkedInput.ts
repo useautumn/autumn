@@ -47,35 +47,75 @@ const isApprovalShaped = (
 	Boolean(request.action?.toolName) &&
 	normalizeToolName(request.action?.toolName ?? "") !== "ask_question";
 
+const CHILD_SESSION_IDS_KEY = "_eveChildSessionIds";
 const SIBLING_REQUEST_IDS_KEY = "_eveSiblingRequestIds";
-const WITHHELD_WRITES_KEY = "_eveWithheldWrites";
+export const WITHHELD_WRITES_KEY = "_eveWithheldWrites";
+
+/** Leaf smuggles runtime facts to the approval card inside tool_args under
+ * `_eve*` marker keys; every reader shares this one shape. */
+const markerArrayFromToolArgs = <Entry>({
+	isEntry,
+	key,
+	toolArgs,
+}: {
+	isEntry: (value: unknown) => value is Entry;
+	key: string;
+	toolArgs: unknown;
+}): ReadonlyArray<Entry> => {
+	if (!toolArgs || typeof toolArgs !== "object") return [];
+	const stored = (toolArgs as Record<string, unknown>)[key];
+	return Array.isArray(stored) ? stored.filter(isEntry) : [];
+};
+
+const isString = (value: unknown): value is string => typeof value === "string";
+
+const isWithheldWrite = (value: unknown): value is WithheldWrite =>
+	Boolean(value) &&
+	typeof value === "object" &&
+	typeof (value as WithheldWrite).toolName === "string";
 
 export const withheldWritesFromToolArgs = (
 	toolArgs: unknown,
-): ReadonlyArray<WithheldWrite> => {
-	if (!toolArgs || typeof toolArgs === "string") return [];
-	const stored = (toolArgs as Record<string, unknown>)[WITHHELD_WRITES_KEY];
-	if (!Array.isArray(stored)) return [];
-	return stored.filter(
-		(entry): entry is WithheldWrite =>
-			Boolean(entry) &&
-			typeof entry === "object" &&
-			typeof (entry as WithheldWrite).toolName === "string",
-	);
-};
+): ReadonlyArray<WithheldWrite> =>
+	markerArrayFromToolArgs({
+		isEntry: isWithheldWrite,
+		key: WITHHELD_WRITES_KEY,
+		toolArgs,
+	});
 
 export const withheldWritesToolArgs = (
 	withheld: ReadonlyArray<WithheldWrite>,
 ) => (withheld.length ? { [WITHHELD_WRITES_KEY]: withheld } : {});
 
+export const childSessionIdsFromToolArgs = (
+	toolArgs: unknown,
+): ReadonlyArray<string> =>
+	markerArrayFromToolArgs({
+		isEntry: isString,
+		key: CHILD_SESSION_IDS_KEY,
+		toolArgs,
+	});
+
+export const childSessionIdsToolArgs = (
+	childSessionIds: ReadonlyArray<string>,
+) =>
+	childSessionIds.length ? { [CHILD_SESSION_IDS_KEY]: childSessionIds } : {};
+
 export const siblingRequestIdsFromToolArgs = (
 	toolArgs: unknown,
-): ReadonlyArray<string> => {
-	if (!toolArgs || typeof toolArgs !== "object") return [];
-	const stored = (toolArgs as Record<string, unknown>)[SIBLING_REQUEST_IDS_KEY];
-	if (!Array.isArray(stored)) return [];
-	return stored.filter((id): id is string => typeof id === "string");
-};
+): ReadonlyArray<string> =>
+	markerArrayFromToolArgs({
+		isEntry: isString,
+		key: SIBLING_REQUEST_IDS_KEY,
+		toolArgs,
+	});
+
+export const siblingRequestIdsToolArgs = (
+	siblingRequestIds: ReadonlyArray<string>,
+) =>
+	siblingRequestIds.length
+		? { [SIBLING_REQUEST_IDS_KEY]: siblingRequestIds }
+		: {};
 
 export const classifyParkedEveInput = ({
 	requests,

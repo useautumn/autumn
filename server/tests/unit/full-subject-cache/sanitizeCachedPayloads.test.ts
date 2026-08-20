@@ -1249,6 +1249,36 @@ describe("sanitizeCachedFullSubject — version identity backfill", () => {
 		});
 		expect(result.products[0].version_slug).toBeNull();
 	});
+
+	test("fills nested customer_licenses[].planLicense.product (not joined from products[])", () => {
+		const subject = buildBaseCachedFullSubjectForSanitize() as unknown as Record<
+			string,
+			unknown
+		>;
+		subject.customer_licenses = [
+			{
+				planLicense: {
+					product: buildBaseProductForSanitize("license_plan"),
+					base_product: {
+						...buildBaseProductForSanitize("license_base"),
+						version: 2,
+					},
+				},
+			},
+		];
+
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: subject as unknown as CachedFullSubject,
+		});
+
+		expect(result.customer_licenses[0].planLicense?.product.version_slug).toBe(
+			"v1",
+		);
+		expect(result.customer_licenses[0].planLicense?.product.active).toBe(false);
+		expect(
+			result.customer_licenses[0].planLicense?.base_product?.version_slug,
+		).toBe("v2");
+	});
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

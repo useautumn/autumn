@@ -43,6 +43,8 @@ const baseParams: Omit<
 	redirectMode: "if_required",
 	newBillingSubscription: false,
 	resetBillingCycle: false,
+	billingCycleAnchorMode: "now",
+	billingCycleAnchorDate: null,
 	discounts: [],
 	noBillingChanges: false,
 	carryOverBalances: false,
@@ -407,5 +409,34 @@ describe("buildAttachRequestBody — removed plans", () => {
 		});
 
 		expect(result?.remove_plan_ids).toBeUndefined();
+	});
+});
+
+describe("buildAttachRequestBody — billing cycle anchor", () => {
+	const product = makeProduct({ items: [] });
+	const customAnchor = 1_788_220_800_000;
+
+	test("sends now when the reset uses the default mode", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			resetBillingCycle: true,
+		});
+
+		expect(result?.billing_cycle_anchor).toBe("now");
+	});
+
+	test("sends the selected future timestamp in custom mode", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			resetBillingCycle: true,
+			billingCycleAnchorMode: "custom",
+			billingCycleAnchorDate: customAnchor,
+		});
+
+		expect(result?.billing_cycle_anchor).toBe(customAnchor);
 	});
 });

@@ -965,7 +965,7 @@ Same one-home split as licenses: `variants[]` declare, `propagate.variants` foll
 | Same-call `licenses[]` + variant → variant gets the links | ✓ `create/create-variant-licenses.test.ts` |
 | `customize.remove_licenses` on create drops that cloned link | ✓ `create/create-variant-licenses.test.ts` |
 | Variant of a variant → 400 `nested_variant_not_allowed` | ✓ `create/create-variant-errors.test.ts` |
-| Id already exists (not this base's variant) → 400 `product_id_already_exists` | ✓ `create/create-variant-errors.test.ts` |
+| Id already exists (another base's variant) → relink | `create/create-variant-errors.test.ts` |
 | Missing `name` on a new id → 400 | ✓ `create/create-variant-errors.test.ts` |
 | `is_default: true` on a variant → 400 `variant_cannot_be_default` | ✓ `create/create-variant-errors.test.ts` |
 | `variant_plan_id === plan_id` → 400 | `create/create-variant-errors.test.ts` |
@@ -1021,6 +1021,14 @@ Independent of `propagate.variants`. Latest version only. Name never copies.
 | Base `new_version`, variant pinned → latest pointer moves; items stay 200 | ✓ `pointer/pointer-on-base-mint.test.ts` |
 | Base `new_version` + propagate → pointer + Dashboard | ✓ `pointer/pointer-on-base-mint.test.ts` |
 | Historical variant v1 stays on the old base row | ✓ `pointer/pointer-on-base-mint.test.ts` |
+| Nest existing standalone in `variants[]` → pointer set, items kept | `pointer/link-existing.test.ts` |
+| Nest existing standalone with sibling versions → pointer on every version | `pointer/link-existing.test.ts` |
+| Nest + top-level content in one call → pointer + edit | `pointer/link-existing.test.ts` |
+| Direct `{ plan_id, base_variant_id }` → pointer on every version | `pointer/link-existing.test.ts` |
+| Plan that already has variants cannot be nested → 400 `nested_variant_not_allowed` | `pointer/link-existing.test.ts` |
+| omit from variants[] + top-level → unlink every version | ✓ `pointer/unlink.test.ts` |
+| `{ plan_id, base_variant_id: null }` → unlink every version | `pointer/unlink.test.ts` |
+| Nest `{ variant_plan_id, base_variant_id: null }` → unlink every version | `pointer/unlink.test.ts` |
 
 ### versioning/ — variants inherit parent `plans[]` versioning (Unit 5)
 

@@ -3,12 +3,12 @@
  *
  * Contract:
  *   - variant of a variant → nested_variant_not_allowed
- *   - occupied id that is not this base's variant → product_id_already_exists
+ *   - occupied id that is another base's variant → relink
  *   - new id without name → 400
  *   - is_default on a variant → variant_cannot_be_default
  *   - variant_plan_id === plan_id → 400
  *   - duplicate variant_plan_id → 400
- *   - listed in variants[] and as a top-level plan → 400
+ *   - already-linked variant listed top-level and in variants[] → 400
  */
 
 import { test } from "bun:test";
@@ -19,6 +19,7 @@ import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
 import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
 import { messagesItem } from "../../licenses/utils/seedLicensePlans.js";
+import { expectVariantPointerCorrect } from "../utils/expectVariantPointer.js";
 
 const seedBaseAndVariant = async ({
 	autumnV2_3,
@@ -70,33 +71,51 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 variants create: occupied id → 400")}`,
+	`${chalk.yellowBright("catalogV2 variants create: occupied id that is another base's variant relinks")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
-		const baseId = uniqueTestId("cv2_var_id_b");
-		const takenId = uniqueTestId("cv2_var_id_taken");
-		await deleteDbPlans({ ctx, planIds: [baseId, takenId] });
+		const firstBaseId = uniqueTestId("cv2_var_id_a");
+		const secondBaseId = uniqueTestId("cv2_var_id_b");
+		const variantId = uniqueTestId("cv2_var_id_v");
+		await deleteDbPlans({
+			ctx,
+			planIds: [firstBaseId, secondBaseId, variantId],
+		});
 		try {
+			await seedBaseAndVariant({
+				autumnV2_3,
+				baseId: firstBaseId,
+				variantId,
+			});
 			await autumnV2_3.catalogV2.update({
 				plans: [
-					{ plan_id: baseId, name: "Team", items: [messagesItem(10)] },
-					{ plan_id: takenId, name: "Taken" },
+					{
+						plan_id: secondBaseId,
+						name: "Other",
+						items: [messagesItem(10)],
+					},
 				],
 			});
-			await expectAutumnError({
-				errCode: ErrCode.ProductIdAlreadyExists,
-				func: () =>
-					autumnV2_3.catalogV2.update({
-						plans: [
-							{
-								plan_id: baseId,
-								variants: [{ variant_plan_id: takenId, name: "Team EU" }],
-							},
-						],
-					}),
+
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: secondBaseId,
+						variants: [{ variant_plan_id: variantId }],
+					},
+				],
+			});
+
+			await expectVariantPointerCorrect({
+				ctx,
+				variantPlanId: variantId,
+				basePlanId: secondBaseId,
 			});
 		} finally {
-			await deleteDbPlans({ ctx, planIds: [baseId, takenId] });
+			await deleteDbPlans({
+				ctx,
+				planIds: [firstBaseId, secondBaseId, variantId],
+			});
 		}
 	},
 );

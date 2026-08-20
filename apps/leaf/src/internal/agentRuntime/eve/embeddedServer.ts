@@ -36,7 +36,7 @@ export const startEmbeddedEveServer = async () => {
 		stderr: "inherit",
 		stdout: "inherit",
 	});
-	// Fail fast so the orchestrator restarts the task with both servers in sync.
+	// Fail fast so the supervisor restarts the task with both servers in sync.
 	eve.exited.then((code) => {
 		console.error(`Embedded eve server exited (code ${code})`);
 		process.exit(code === 0 ? 0 : 1);
