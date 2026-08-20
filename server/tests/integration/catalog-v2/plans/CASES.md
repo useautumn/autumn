@@ -1022,22 +1022,6 @@ Independent of `propagate.variants`. Latest version only. Name never copies.
 | Base `new_version` + propagate → pointer + Dashboard | ✓ `pointer/pointer-on-base-mint.test.ts` |
 | Historical variant v1 stays on the old base row | ✓ `pointer/pointer-on-base-mint.test.ts` |
 
-### link/ — `base_plan_id` links an existing plan
-
-Declared on the plan becoming the variant, not on the base. Applies to every
-version row of that plan; content is never touched.
-
-| Case | Status |
-|---|---|
-| `base_plan_id` on a 2-version plan → both rows point at the latest base row | `link/link-base-plan.test.ts` |
-| `base_plan_id: null` detaches; omitting the field leaves the link alone | `link/link-base-plan.test.ts` |
-| A newly linked plan then follows `propagate.variants` | `link/link-base-plan.test.ts` |
-| `base_plan_id === plan_id` → 400 | `link/link-base-plan-errors.test.ts` |
-| Unknown base → 400 `product_not_found` | `link/link-base-plan-errors.test.ts` |
-| Base is itself a variant → 400 `nested_variant_not_allowed` | `link/link-base-plan-errors.test.ts` |
-| Plan already has variants → 400 `nested_variant_not_allowed` | `link/link-base-plan-errors.test.ts` |
-| Linking the default plan → 400 `variant_cannot_be_default` | `link/link-base-plan-errors.test.ts` |
-
 ### versioning/ — variants inherit parent `plans[]` versioning (Unit 5)
 
 No `variants[].versioning`. Width follows the parent row. `propagate.variants[].versioning` is ignored.
