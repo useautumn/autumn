@@ -33,6 +33,8 @@ export const handleNonRenewingPurchase = async ({
 		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
 		customerEmail: getRevenueCatCustomerEmail(event),
 		customerFingerprint: getRevenueCatCustomerFingerprint(event),
+		// A purchase is valid for a customer we have not seen yet.
+		autoCreateCustomer: true,
 	});
 
 	if (!oneOffOrAddOn({ product })) {
@@ -51,7 +53,9 @@ export const handleNonRenewingPurchase = async ({
 		appUserId: event.app_user_id,
 	});
 
-	logger.info(`Created RC cus_product for ${product.id} (non-renewing purchase)`);
+	logger.info(
+		`Created RC cus_product for ${product.id} (non-renewing purchase)`,
+	);
 
 	await recordRevenueCatInvoice({ ctx: customerCtx, event, customer, product });
 };
