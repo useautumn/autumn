@@ -7,7 +7,7 @@
 #   cron    -> bun src/cron.ts      (cwd /app/server)
 #   leaf    -> bun leaf             (cwd /app/server; serves chat + MCP routes)
 #   ducklake -> bun src/ducklake.ts (cwd /app/server; FC job-scheduler one-shot)
-FROM oven/bun:1.3.14 AS deps
+FROM oven/bun:1.4.0 AS deps
 WORKDIR /app
 
 # Copy the committed lockfile + every workspace manifest. Installing against the
@@ -57,7 +57,7 @@ RUN mkdir -p scripts && touch scripts/preload-env.ts
 RUN --mount=type=cache,target=/root/.bun/install/cache \
 	bun install --ignore-scripts --frozen-lockfile
 
-FROM oven/bun:1.3.14
+FROM oven/bun:1.4.0
 WORKDIR /app
 ENV NODE_ENV=production
 
