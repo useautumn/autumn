@@ -1,6 +1,7 @@
 import { ErrCode, RecaseError, type UpdateCatalogParams } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 
 const rejectNesting = ({ message }: { message: string }): never => {
 	throw new RecaseError({
@@ -55,10 +56,11 @@ export const handleUpsertProductBasePlanErrors = ({
 			});
 		}
 
-		const baseVersions =
-			productStatesContext.versionsByPlanId[basePlanId] ?? [];
-		const latestBase = baseVersions[0];
-		if (!latestBase) {
+		const activeBase = activeFullProductForPlan({
+			planId: basePlanId,
+			productStatesContext,
+		});
+		if (!activeBase) {
 			throw new RecaseError({
 				message: `Base plan ${basePlanId} not found. Create it before linking ${planId} to it.`,
 				code: ErrCode.ProductNotFound,
@@ -66,7 +68,7 @@ export const handleUpsertProductBasePlanErrors = ({
 			});
 		}
 
-		if (latestBase.base_internal_product_id != null) {
+		if (activeBase.base_internal_product_id != null) {
 			rejectNesting({
 				message: `Plan ${basePlanId} is already a variant and cannot be used as a base plan.`,
 			});
