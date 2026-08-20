@@ -6,6 +6,8 @@ import {
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
+import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
+import { activeVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeVersionForPlan";
 import { computeVersioningOptionsForPlan } from "./computeVersioningOptionsForPlan";
 import { parentLicensePlanIds } from "./parentLicensePlanIds";
 
@@ -29,7 +31,7 @@ const computeVersioningOptionsForPlanId = ({
 	productStatesContext: ProductStatesContext;
 }): CatalogPlanVersioningStrategy[] => {
 	const versions = productStatesContext.versionsByPlanId[planId] ?? [];
-	const latest = versions[0];
+	const latest = activeFullProductForPlan({ planId, productStatesContext });
 	if (!latest) return [];
 
 	return computeVersioningOptionsForPlan({
@@ -54,9 +56,12 @@ export const computeVersioningOptions = ({
 }): CatalogPlanVersioningStrategy[] => {
 	const isNewVersionMint =
 		upsert.row.op === "create" && upsert.row.versioning === "new_version";
-	const latestVersion = versionsForPlan[0]?.version;
+	const activeVersion = activeVersionForPlan({
+		planId: upsert.row.planId,
+		productStatesContext,
+	});
 	const isLatestUpdate =
-		latestVersion !== undefined && latestVersion === upsert.row.version;
+		activeVersion !== undefined && activeVersion === upsert.row.version;
 
 	const options = computeVersioningOptionsForPlan({
 		hasCustomers: upsert.state.hasCustomers,

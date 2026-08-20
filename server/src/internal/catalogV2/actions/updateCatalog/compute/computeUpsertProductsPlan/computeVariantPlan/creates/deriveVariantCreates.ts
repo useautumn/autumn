@@ -4,15 +4,7 @@ import type {
 	ProductUpsertIntent,
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
-
-const latestVersion = ({
-	planId,
-	productStatesContext,
-}: {
-	planId: string;
-	productStatesContext: ProductStatesContext;
-}): number | undefined =>
-	productStatesContext.versionsByPlanId[planId]?.[0]?.version;
+import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 
 /** Missing ids with a name → `variant_link` create. Existing ids are edits. */
 export const deriveVariantCreates = ({
@@ -24,10 +16,10 @@ export const deriveVariantCreates = ({
 }): ProductUpsertIntent[] =>
 	(upsert.declaredVariants ?? []).flatMap((variant) => {
 		if (
-			latestVersion({
+			maxVersionForPlan({
 				planId: variant.variant_plan_id,
 				productStatesContext: projectedProductStatesContext,
-			}) !== undefined
+			}) !== 0
 		) {
 			return [];
 		}

@@ -1,5 +1,6 @@
 import type { FullPlanLicense } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type {
 	PlanLicensePlan,
 	UpsertProductPlan,
@@ -17,16 +18,16 @@ const shouldPin = ({
 	parent,
 	child,
 	currentPlanLicense,
-	upsertProducts,
+	productStatesContext,
 }: {
 	parent: UpsertProductPlan;
 	child: UpsertProductPlan;
 	currentPlanLicense: FullPlanLicense;
-	upsertProducts: UpsertProductPlan[];
+	productStatesContext: ProductStatesContext;
 }): boolean => {
 	if (parent.declaredLicenses !== undefined) return false;
 	if (!child.entitlementPricesPlan) return false;
-	if (shouldPropagate({ parent, child, upsertProducts })) return false;
+	if (shouldPropagate({ parent, child, productStatesContext })) return false;
 
 	if (
 		currentPlanLicense.customized &&
@@ -90,17 +91,21 @@ export const computePinnedPlanLicenses = ({
 	ctx,
 	parent,
 	upsertProducts,
+	productStatesContext,
 }: {
 	ctx: AutumnContext;
 	parent: UpsertProductPlan;
 	upsertProducts: UpsertProductPlan[];
+	productStatesContext: ProductStatesContext;
 }): PlanLicensePlan[] => {
 	const pinned: PlanLicensePlan[] = [];
 
 	for (const child of upsertProductPlansToChildPlans({ upsertProducts })) {
 		const currentPlanLicense = parentLicenseLinkForChild({ parent, child });
 		if (!currentPlanLicense) continue;
-		if (!shouldPin({ parent, child, currentPlanLicense, upsertProducts }))
+		if (
+			!shouldPin({ parent, child, currentPlanLicense, productStatesContext })
+		)
 			continue;
 
 		const planLicense = pinnedPlanLicense({

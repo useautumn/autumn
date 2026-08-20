@@ -53,13 +53,6 @@ export const prepareLicenseParentPropagation = async ({
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
-	const latestVersionByPlanId = new Map<string, number>();
-	for (const { parent } of contexts) {
-		latestVersionByPlanId.set(
-			parent.id,
-			Math.max(latestVersionByPlanId.get(parent.id) ?? 0, parent.version),
-		);
-	}
 	const selectedKeys = new Set(
 		selectedContexts.map(({ parent }) =>
 			licenseParentTargetKey({
@@ -95,9 +88,7 @@ export const prepareLicenseParentPropagation = async ({
 				licenses,
 				currentEffectivePlan,
 				hasCustomers: usage?.hasVersionableCustomerProducts ?? false,
-				isLatest:
-					context.parent.version ===
-					latestVersionByPlanId.get(context.parent.id),
+				isLatest: context.parent.active,
 				selected: selectedKeys.has(
 					licenseParentTargetKey({
 						planId: context.parent.id,

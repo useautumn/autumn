@@ -9,6 +9,8 @@ import type {
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
+import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
+import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 
 const latestHasCustomers = ({
 	latest,
@@ -55,7 +57,7 @@ const mintablePlanIds = ({
 	return [...planIds];
 };
 
-/** Parent `new_version` → mint max+1 when latest has customers. */
+/** Parent `new_version` → mint max+1 when the active row has customers. */
 export const deriveVariantMints = ({
 	upsert,
 	projectedProductStatesContext,
@@ -82,12 +84,14 @@ export const deriveVariantMints = ({
 	for (const planId of mintablePlanIds({ upsert })) {
 		if (mintedPlanIds.has(planId)) continue;
 
-		const latest =
-			projectedProductStatesContext.versionsByPlanId[planId]?.[0];
-		if (!latest) continue;
+		const active = activeFullProductForPlan({
+			planId,
+			productStatesContext: projectedProductStatesContext,
+		});
+		if (!active) continue;
 		if (
 			!latestHasCustomers({
-				latest,
+				latest: active,
 				productStatesContext: projectedProductStatesContext,
 			})
 		) {
@@ -98,24 +102,29 @@ export const deriveVariantMints = ({
 			(target) => target.plan_id === planId,
 		);
 		const editDiff = buildVariantEditDiff({
-			variantProduct: latest,
+			variantProduct: active,
 			baseCurrent,
 			baseNext: upsert.row.nextFullProduct,
 			follow,
 			customize: declaredCustomizeForLatest({
 				planId,
-				latestVersion: latest.version,
+				latestVersion: active.version,
 				declaredVariants: upsert.declaredVariants ?? [],
 			}),
 			declaredLicenses: upsert.declaredLicenses,
 		});
 
+		const version =
+			maxVersionForPlan({
+				planId,
+				productStatesContext: projectedProductStatesContext,
+			}) + 1;
 		mintedPlanIds.add(planId);
 		intents.push({
-			productKey: { planId, version: latest.version + 1 },
+			productKey: { planId, version },
 			planParams: {
 				plan_id: planId,
-				version: latest.version + 1,
+				version,
 				versioning: "new_version",
 				...settingsPatch,
 			},

@@ -2,6 +2,7 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 
 const latestOrPinned = ({
 	planId,
@@ -16,7 +17,7 @@ const latestOrPinned = ({
 	if (version !== undefined) {
 		return versions.find((product) => product.version === version);
 	}
-	return versions[0];
+	return activeFullProductForPlan({ planId, productStatesContext }) ?? undefined;
 };
 
 const rejectArchivedPropagateTarget = ({

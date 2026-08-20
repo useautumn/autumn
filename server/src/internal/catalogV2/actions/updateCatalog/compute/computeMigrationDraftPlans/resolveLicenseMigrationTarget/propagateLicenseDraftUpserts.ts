@@ -10,6 +10,7 @@ import {
 	sortLicenseDraftUpserts,
 } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/resolveLicenseMigrationTarget/licenseUpsertFromPlanLicense";
 import { shouldPropagate } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
+import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
 /** Link deltas for children that follow this parent. */
@@ -17,10 +18,12 @@ export const propagateLicenseDraftUpserts = ({
 	parent,
 	upsertProductPlans,
 	params,
+	productStatesContext,
 }: {
 	parent: UpsertProductPlan;
 	upsertProductPlans: UpsertProductPlan[];
 	params: UpdateCatalogParams;
+	productStatesContext: ProductStatesContext;
 }): LicenseDraftUpserts => {
 	let includeCustom = includeCustomForMigrationDraft({
 		upsertProductPlan: parent,
@@ -32,7 +35,13 @@ export const propagateLicenseDraftUpserts = ({
 		if (!upsertClaimsMigrationDraft({ upsertProductPlan: child, params })) {
 			continue;
 		}
-		if (!shouldPropagate({ parent, child, upsertProducts: upsertProductPlans })) {
+		if (
+			!shouldPropagate({
+				parent,
+				child,
+				productStatesContext,
+			})
+		) {
 			continue;
 		}
 

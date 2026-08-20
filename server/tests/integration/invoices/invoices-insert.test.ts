@@ -9,7 +9,7 @@
  *     - POST /v1/invoices.insert -> { invoices: ApiInsertedInvoice[] }
  *   New behaviors:
  *     - response order matches request order
- *     - customer_id, entity_id, and latest plan versions resolve in batched queries
+ *     - customer_id, entity_id, and active plan versions resolve in batched queries
  *     - currency defaults to org.default_currency
  *     - hosted_invoice_url is optional, persisted, and echoed directly
  *     - existing stripe_id rows are fully updated while retaining their Autumn IDs
@@ -93,11 +93,16 @@ test.concurrent(
 		});
 		expect(proV1).toBeDefined();
 		const proV2InternalId = `prod_invoice_v2_${runTag}`;
+		await ctx.db
+			.update(products)
+			.set({ active: false })
+			.where(eq(products.internal_id, proV1!.internal_id));
 		await ctx.db.insert(products).values({
 			...proV1!,
 			internal_id: proV2InternalId,
 			version: proV1!.version + 1,
 			created_at: proV1!.created_at + 1,
+			active: true,
 		});
 
 		const freePlan = await ctx.db.query.products.findFirst({

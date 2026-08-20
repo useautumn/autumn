@@ -6,6 +6,7 @@ import { handlePlanLicenseErrors } from "@/internal/catalogV2/actions/updateCata
 import { handleVariantErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleVariantErrors";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
+import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 
 /** Projected-state guards for each upsertProducts row. */
 export const handleUpsertProductErrors = ({
@@ -23,8 +24,11 @@ export const handleUpsertProductErrors = ({
 
 	for (const upsert of updateCatalogPlan.upsertProducts) {
 		const { nextFullProduct } = upsert.row;
-		const latestExistingVersion =
-			productStatesContext.versionsByPlanId[upsert.row.planId]?.[0]?.version;
+		const maxVersion = maxVersionForPlan({
+			planId: upsert.row.planId,
+			productStatesContext,
+		});
+		const latestExistingVersion = maxVersion === 0 ? undefined : maxVersion;
 
 		// 1. Free trial errors (one-off products cannot trial)
 		handleFreeTrialErrors({ nextFullProduct });
