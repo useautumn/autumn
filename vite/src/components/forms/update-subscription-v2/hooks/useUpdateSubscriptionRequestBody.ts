@@ -8,6 +8,7 @@ import { ProductItemFeatureType } from "@autumn/shared";
 import { useCallback, useMemo } from "react";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
+import { resolveBillingCycleAnchor } from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
 import {
 	convertLicenseQuantitiesToParams,
 	customerLicenseTotals,
@@ -185,6 +186,8 @@ export function useUpdateSubscriptionRequestBody({
 				cancelAction,
 				billingBehavior,
 				resetBillingCycle,
+				billingCycleAnchorMode,
+				billingCycleAnchorDate,
 				resetUsage,
 				refundBehavior,
 				refundAmount,
@@ -256,7 +259,11 @@ export function useUpdateSubscriptionRequestBody({
 				...buildUpdateSubscriptionCustomizationParams({ items, addLicenses }),
 				version: version !== initialVersion ? version : undefined,
 				billing_behavior: billingBehavior || undefined,
-				billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
+				billing_cycle_anchor: resolveBillingCycleAnchor({
+					resetBillingCycle,
+					billingCycleAnchorMode,
+					billingCycleAnchorDate,
+				}),
 				carry_over_usages: resetUsage ? { enabled: false } : undefined,
 				no_billing_changes: noBillingChanges || undefined,
 				discounts: validDiscounts,

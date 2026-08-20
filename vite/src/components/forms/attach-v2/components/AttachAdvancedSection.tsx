@@ -28,6 +28,7 @@ import {
 	AdvancedToggleRow,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
+import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
 import { BillingOptionToggle } from "@/components/forms/shared/BillingOptionToggle";
 import { DiscountsConfigRow } from "@/components/forms/shared/discount-row/DiscountsConfigRow";
 import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
@@ -129,6 +130,8 @@ export function AttachAdvancedSection() {
 		discounts,
 		newBillingSubscription,
 		resetBillingCycle,
+		billingCycleAnchorMode,
+		billingCycleAnchorDate,
 		noBillingChanges,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
@@ -204,6 +207,8 @@ export function AttachAdvancedSection() {
 			? getAttachScheduledStartDate({ previewData: previewQuery.data })
 			: startDate;
 	const endDateMin = Math.max(Date.now(), attachStartsAt ?? 0);
+	const resetsBillingCycleNow =
+		resetBillingCycle && billingCycleAnchorMode === "now";
 
 	const handleAddDiscount = () => {
 		form.setFieldValue("discounts", addDiscount(discounts));
@@ -458,19 +463,26 @@ export function AttachAdvancedSection() {
 			)}
 
 			{rules.resetBillingCycle.visible && (
-				<ConfigRow
-					title="Reset Billing Cycle"
-					description="Restart the billing cycle from today"
-					action={
-						<Switch
-							checked={resetBillingCycle}
-							onCheckedChange={(checked) => {
-								form.setFieldValue("resetBillingCycle", !!checked);
-								if (checked) {
-									handleScheduleChange("immediate");
-								}
-							}}
-						/>
+				<BillingCycleAnchorConfigRow
+					enabled={resetBillingCycle}
+					mode={billingCycleAnchorMode}
+					customAnchor={billingCycleAnchorDate}
+					minUnixDate={endDateMin}
+					maxUnixDate={endDate ? endDate - 1_000 : undefined}
+					onEnabledChange={(enabled) => {
+						form.setFieldValue("resetBillingCycle", enabled);
+						if (enabled && billingCycleAnchorMode === "now") {
+							handleScheduleChange("immediate");
+						}
+					}}
+					onModeChange={(mode) => {
+						form.setFieldValue("billingCycleAnchorMode", mode);
+						if (mode === "now" && resetBillingCycle) {
+							handleScheduleChange("immediate");
+						}
+					}}
+					onCustomAnchorChange={(anchor) =>
+						form.setFieldValue("billingCycleAnchorDate", anchor)
 					}
 				/>
 			)}
@@ -543,12 +555,12 @@ export function AttachAdvancedSection() {
 					<IconCheckbox
 						variant="secondary"
 						size="sm"
-						checked={isImmediateSelected || resetBillingCycle}
-						disabled={resetBillingCycle}
+						checked={isImmediateSelected || resetsBillingCycleNow}
+						disabled={resetsBillingCycleNow}
 						onCheckedChange={() => handleScheduleChange("immediate")}
 						className={cn(
 							"min-w-[76px] px-2 text-xs rounded-r-none",
-							!isImmediateSelected && !resetBillingCycle && "border-r-0",
+							!isImmediateSelected && !resetsBillingCycleNow && "border-r-0",
 						)}
 					>
 						Immediately
@@ -559,8 +571,8 @@ export function AttachAdvancedSection() {
 								<IconCheckbox
 									variant="secondary"
 									size="sm"
-									checked={isEndOfCycleSelected && !resetBillingCycle}
-									disabled={!hasOutgoing || resetBillingCycle}
+									checked={isEndOfCycleSelected && !resetsBillingCycleNow}
+									disabled={!hasOutgoing || resetsBillingCycleNow}
 									onCheckedChange={() => handleScheduleChange("end_of_cycle")}
 									className={cn(
 										"min-w-[76px] px-2 text-xs rounded-l-none",

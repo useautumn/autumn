@@ -39,6 +39,8 @@ export function useAttachForm({
 			redirectMode: "if_required",
 			newBillingSubscription: false,
 			resetBillingCycle: false,
+			billingCycleAnchorMode: "now",
+			billingCycleAnchorDate: null,
 			discounts: [],
 			grantFree: false,
 			currency: null,
