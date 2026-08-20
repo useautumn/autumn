@@ -83,6 +83,29 @@ const discoveredToolNames = (messages: readonly ModelMessage[]) => {
 	return names;
 };
 
+const DESCRIPTION_DEPTH_MAX = 5;
+
+/** Schema descriptions are ~half the tool-definition bytes the model
+ * reprocesses every turn; below the request's own fields they add tokens,
+ * not accuracy — the billing skill documents the deep shapes. Model-facing
+ * only; the MCP wire is untouched. */
+const slimSchema = (value: unknown, depth = 0): unknown => {
+	if (Array.isArray(value)) {
+		return value.map((entry) => slimSchema(entry, depth));
+	}
+	if (!value || typeof value !== "object") return value;
+	const slimmed: Record<string, unknown> = {};
+	for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+		if (key === "examples" || key === "title") continue;
+		if (key === "description") {
+			if (depth <= DESCRIPTION_DEPTH_MAX) slimmed[key] = entry;
+			continue;
+		}
+		slimmed[key] = slimSchema(entry, depth + 1);
+	}
+	return slimmed;
+};
+
 /** Pre-registers the agent's allowlisted Autumn tools on every step with the
  * exact server schemas: the model never spends a turn on connection_search
  * and its ~90KB result never enters history. Approval gating matches the
@@ -131,7 +154,7 @@ export const autumnDirectTools = ({
 								toolName,
 							});
 						},
-						inputSchema: tool.inputSchema as { type: "object" },
+						inputSchema: slimSchema(tool.inputSchema) as { type: "object" },
 					});
 				}
 				return entries as never;

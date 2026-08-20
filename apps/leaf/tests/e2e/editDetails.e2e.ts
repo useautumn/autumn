@@ -113,6 +113,7 @@ const created = await createApproval({
 	turn: output as never,
 	workspaceId: installation.workspace_id,
 });
+await created?.backfillGroupedPreviews?.();
 if (!created) throw new Error("createApproval returned nothing");
 const before = (created.toolArgs.request ?? {}) as Record<string, unknown>;
 console.log(
