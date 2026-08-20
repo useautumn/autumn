@@ -6,6 +6,7 @@ import { z } from "zod";
 export const attachBillingEditsSchema = z.strictObject({
 	access: z.enum(["immediate", "after_payment"]),
 	billing: z.enum(["checkout", "draft_invoice", "finalized_invoice"]),
+	proration: z.enum(["default", "immediate", "next_cycle"]),
 });
 
 export type AttachBillingEdits = z.infer<typeof attachBillingEditsSchema>;
@@ -31,6 +32,12 @@ export const attachBillingEditsFromRequest = (
 				? "draft_invoice"
 				: "finalized_invoice"
 			: "checkout",
+		proration:
+			request.proration_behavior === "prorate_immediately"
+				? "immediate"
+				: request.proration_behavior === "none"
+					? "next_cycle"
+					: "default",
 	};
 };
 
@@ -44,6 +51,7 @@ export const applyAttachBillingEdits = ({
 	const {
 		invoice_mode: existingInvoiceMode,
 		long_lived_checkout: _longLivedCheckout,
+		proration_behavior: _prorationBehavior,
 		redirect_mode: _redirectMode,
 		...unchanged
 	} = request;
@@ -52,6 +60,12 @@ export const applyAttachBillingEdits = ({
 	const updated = {
 		...unchanged,
 		enable_plan_immediately: enablePlanImmediately,
+		...(edits.proration === "default"
+			? {}
+			: {
+					proration_behavior:
+						edits.proration === "immediate" ? "prorate_immediately" : "none",
+				}),
 		...(edits.billing === "checkout"
 			? { long_lived_checkout: true, redirect_mode: "always" }
 			: {

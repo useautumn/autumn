@@ -27,10 +27,15 @@ describe("attach billing edits", () => {
 				enable_plan_immediately: false,
 				invoice_mode: { enabled: true, enable_plan_immediately: true },
 			}),
-		).toEqual({ access: "after_payment", billing: "finalized_invoice" });
+		).toEqual({
+			access: "after_payment",
+			billing: "finalized_invoice",
+			proration: "default",
+		});
 		expect(attachBillingEditsFromRequest(request)).toEqual({
 			access: "after_payment",
 			billing: "draft_invoice",
+			proration: "default",
 		});
 		expect(
 			attachBillingEditsFromRequest({
@@ -39,12 +44,16 @@ describe("attach billing edits", () => {
 				plan_id: "pro",
 				redirect_mode: "always",
 			}),
-		).toEqual({ access: "immediate", billing: "checkout" });
+		).toEqual({
+			access: "immediate",
+			billing: "checkout",
+			proration: "default",
+		});
 	});
 
 	test("checkout drops invoice mode and sends a long-lived link", () => {
 		const parsed = applyAttachBillingEdits({
-			edits: { access: "immediate", billing: "checkout" },
+			edits: { access: "immediate", billing: "checkout", proration: "default" },
 			request,
 		});
 
@@ -67,7 +76,7 @@ describe("attach billing edits", () => {
 		["finalized_invoice", true],
 	] as const)("%s keeps the invoice settings", (billing, finalize) => {
 		const parsed = applyAttachBillingEdits({
-			edits: { access: "after_payment", billing },
+			edits: { access: "after_payment", billing, proration: "default" },
 			request: { ...request, redirect_mode: "always" },
 		});
 
@@ -92,7 +101,7 @@ describe("attach billing edits", () => {
 	test("provisioning is written to the top-level and invoice flags together", () => {
 		for (const access of ["immediate", "after_payment"] as const) {
 			const parsed = applyAttachBillingEdits({
-				edits: { access, billing: "draft_invoice" },
+				edits: { access, billing: "draft_invoice", proration: "default" },
 				request,
 			});
 			expect(parsed.success).toBe(true);
@@ -103,5 +112,52 @@ describe("attach billing edits", () => {
 			);
 			expect(attachBillingEditsFromRequest(parsed.data).access).toBe(access);
 		}
+	});
+});
+
+// Proration is the third operator decision: whether an existing subscription
+// is trued up now, at the next cycle, or per the plan default.
+describe("proration edits", () => {
+	test("reads proration off the request", () => {
+		expect(
+			attachBillingEditsFromRequest({
+				...request,
+				proration_behavior: "none",
+			}).proration,
+		).toBe("next_cycle");
+		expect(
+			attachBillingEditsFromRequest({
+				...request,
+				proration_behavior: "prorate_immediately",
+			}).proration,
+		).toBe("immediate");
+		expect(attachBillingEditsFromRequest(request).proration).toBe("default");
+	});
+
+	test.each([
+		["immediate", "prorate_immediately"],
+		["next_cycle", "none"],
+	] as const)("%s writes proration_behavior", (proration, expected) => {
+		const parsed = applyAttachBillingEdits({
+			edits: { access: "after_payment", billing: "draft_invoice", proration },
+			request: { ...request, proration_behavior: "none" },
+		});
+		expect(parsed.success).toBe(true);
+		if (!parsed.success) return;
+		expect(parsed.data.proration_behavior).toBe(expected);
+	});
+
+	test("default removes an existing proration_behavior", () => {
+		const parsed = applyAttachBillingEdits({
+			edits: {
+				access: "after_payment",
+				billing: "draft_invoice",
+				proration: "default",
+			},
+			request: { ...request, proration_behavior: "none" },
+		});
+		expect(parsed.success).toBe(true);
+		if (!parsed.success) return;
+		expect(parsed.data.proration_behavior).toBeUndefined();
 	});
 });

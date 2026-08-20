@@ -1412,6 +1412,22 @@ export const approvalDetailsModal = ({
 					}),
 				],
 			}),
+			Select({
+				id: "proration",
+				initialOption: edits.proration,
+				label: "Proration",
+				options: [
+					SelectOption({ label: "Org default", value: "default" }),
+					SelectOption({
+						label: "Charge prorated amount now",
+						value: "immediate",
+					}),
+					SelectOption({
+						label: "No charge until next cycle",
+						value: "next_cycle",
+					}),
+				],
+			}),
 		],
 	});
 };

@@ -13,6 +13,8 @@ import { createStatusTicker } from "../../src/ui/statusTicker.js";
 
 const WORKSPACE_ID = process.env.E2E_SLACK_WORKSPACE ?? "T07NPTDCU69";
 const CUSTOMER = process.env.E2E_CUSTOMER ?? "leaf-0003";
+const PLAN = process.env.E2E_PLAN ?? "launch";
+const GROUP_SIZE = Number(process.env.E2E_GROUP ?? "0");
 
 const installation = (await findInstallationWithOrg(
 	"slack",
@@ -21,6 +23,36 @@ const installation = (await findInstallationWithOrg(
 if (!installation) throw new Error("no installation");
 const providerUserId = installation.installed_by_provider_user_id ?? "";
 const threadId = `editdetails-${Date.now().toString(36)}`;
+
+const groupCustomers: string[] = [];
+if (GROUP_SIZE > 1) {
+	const { executeAutumnMcpTool } = await import(
+		"../../src/internal/autumnMcp/client.js"
+	);
+	const token = await getInstallationOAuthAccessToken({
+		env: AppEnv.Sandbox,
+		installation,
+		orgId: installation.org_id,
+	});
+	for (let index = 1; index <= GROUP_SIZE; index += 1) {
+		const id = `${threadId}-c${index}`;
+		await executeAutumnMcpTool({
+			args: {
+				request: {
+					create_in_stripe: true,
+					customer_id: id,
+					email: `${id}@example.com`,
+					name: id,
+					with_autumn_id: false,
+				},
+			},
+			env: AppEnv.Sandbox,
+			token,
+			toolName: "getOrCreateCustomer",
+		});
+		groupCustomers.push(id);
+	}
+}
 
 const target = {
 	posted: [] as unknown[],
@@ -49,7 +81,10 @@ const output = await runSlackAgentTurn({
 	onReasoning: presenter.onReasoning,
 	onThinking: ticker.thinking,
 	providerUserId,
-	text: `attach the launch plan to ${CUSTOMER}`,
+	text:
+		GROUP_SIZE > 1
+			? `attach the ${PLAN} plan to ${groupCustomers.join(", ")}`
+			: `attach the ${PLAN} plan to ${CUSTOMER}`,
 	threadId,
 });
 ticker.stop();
@@ -93,6 +128,7 @@ const submit = await handleEditApprovalDetailsSubmit({
 	values: {
 		access: process.env.E2E_ACCESS ?? "after_payment",
 		billing: process.env.E2E_BILLING ?? "draft_invoice",
+		proration: process.env.E2E_PRORATION ?? "default",
 	},
 	privateMetadata: created.approvalId,
 	relatedThread: {
@@ -134,6 +170,8 @@ console.log(
 	JSON.stringify(after.invoice_mode),
 	"redirect_mode=",
 	after.redirect_mode,
+	"proration_behavior=",
+	after.proration_behavior,
 );
 const wantImmediate =
 	(process.env.E2E_ACCESS ?? "after_payment") === "immediate";
@@ -143,7 +181,30 @@ const invoice = (after.invoice_mode ?? {}) as {
 	enabled?: boolean;
 	finalize?: boolean;
 };
+const wantProration = process.env.E2E_PRORATION ?? "default";
+const expectedProrationBehavior =
+	wantProration === "immediate"
+		? "prorate_immediately"
+		: wantProration === "next_cycle"
+			? "none"
+			: undefined;
+const rebuiltWithheld = ((rebuilt.tool_args as Record<string, unknown>)
+	._eveWithheldWrites ?? []) as Array<{
+	input?: { request?: Record<string, unknown> };
+}>;
+const groupOk =
+	GROUP_SIZE <= 1 ||
+	(rebuiltWithheld.length === GROUP_SIZE - 1 &&
+		rebuiltWithheld.every(
+			(step) =>
+				step.input?.request?.proration_behavior === expectedProrationBehavior,
+		));
+console.log(
+	`GROUP rebuilt withheld=${rebuiltWithheld.length} prorations=${JSON.stringify(rebuiltWithheld.map((step) => step.input?.request?.proration_behavior))}`,
+);
 const ok =
+	groupOk &&
+	after.proration_behavior === expectedProrationBehavior &&
 	after.enable_plan_immediately === wantImmediate &&
 	(wantBilling === "checkout"
 		? after.invoice_mode === undefined && after.redirect_mode === "always"
@@ -152,7 +213,7 @@ const ok =
 			invoice.enable_plan_immediately === wantImmediate);
 console.log(
 	ok
-		? `✅ edit honoured: ${wantBilling}, ${wantImmediate ? "immediate" : "after payment"}`
+		? `✅ edit honoured: ${wantBilling}, ${wantImmediate ? "immediate" : "after payment"}, proration=${wantProration}`
 		: "❌ edit NOT honoured",
 );
 process.exit(ok ? 0 : 1);
