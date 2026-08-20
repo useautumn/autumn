@@ -1,5 +1,6 @@
 import type { FullPlanLicense } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type {
 	PlanLicensePlan,
 	UpsertProductPlan,
@@ -100,17 +101,19 @@ export const computePropagatedPlanLicenses = ({
 	ctx,
 	parent,
 	upsertProducts,
+	productStatesContext,
 }: {
 	ctx: AutumnContext;
 	parent: UpsertProductPlan;
 	upsertProducts: UpsertProductPlan[];
+	productStatesContext: ProductStatesContext;
 }): PlanLicensePlan[] => {
 	const propagated: PlanLicensePlan[] = [];
 
 	for (const child of upsertProductPlansToChildPlans({ upsertProducts })) {
 		const currentPlanLicense = parentLicenseLinkForChild({ parent, child });
 		if (!currentPlanLicense) continue;
-		if (!shouldPropagate({ parent, child, upsertProducts })) continue;
+		if (!shouldPropagate({ parent, child, productStatesContext })) continue;
 
 		const planLicense = propagatedPlanLicense({
 			ctx,

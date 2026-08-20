@@ -72,13 +72,6 @@ export const previewAffectedLicenseParents = async ({
 	});
 	if (parentContexts.length === 0) return [];
 	const parentProducts = parentContexts.map(({ parent }) => parent);
-	const latestVersionByPlanId = new Map<string, number>();
-	for (const parent of parentProducts) {
-		latestVersionByPlanId.set(
-			parent.id,
-			Math.max(latestVersionByPlanId.get(parent.id) ?? 0, parent.version),
-		);
-	}
 	const usageByInternalId = await customerProductRepo.getVersioningUsage({
 		db: ctx.db,
 		internalProductIds: parentProducts.map((parent) => parent.internal_id),
@@ -149,7 +142,7 @@ export const previewAffectedLicenseParents = async ({
 			const usage = usageByInternalId.get(parent.internal_id);
 			const hasCustomers = usage?.hasVersionableCustomerProducts ?? false;
 			const customerCount = usage?.versionableCustomerCount ?? 0;
-			const isLatest = parent.version === latestVersionByPlanId.get(parent.id);
+			const isLatest = parent.active;
 			const hasChanges =
 				licenseChange.previous_attributes !== null ||
 				licenseChange.plan_changes !== null;

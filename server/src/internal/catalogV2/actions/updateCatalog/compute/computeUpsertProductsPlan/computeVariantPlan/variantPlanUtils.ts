@@ -1,6 +1,7 @@
 import type { FullProduct } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 
 /** True when this upsert minted a new version row (clone source is baseFullProduct). */
 export const baseRowMinted = ({
@@ -11,7 +12,7 @@ export const baseRowMinted = ({
 	upsert.row.versioning === "new_version" &&
 	upsert.row.baseFullProduct != null;
 
-/** Latest variant of this base (MAX(version) per plan id). */
+/** Active variant of this base (the representing row per child plan id). */
 export const latestVariantsOfBase = ({
 	upsert,
 	productStatesContext,
@@ -30,10 +31,11 @@ export const latestVariantsOfBase = ({
 	);
 
 	const latest: FullProduct[] = [];
-	for (const versions of Object.values(
-		productStatesContext.versionsByPlanId,
-	)) {
-		const product = versions[0];
+	for (const planId of Object.keys(productStatesContext.versionsByPlanId)) {
+		const product = activeFullProductForPlan({
+			planId,
+			productStatesContext,
+		});
 		if (!product || (!includeArchived && product.archived)) continue;
 		if (product.id === upsert.row.planId) continue;
 		if (

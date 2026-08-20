@@ -13,6 +13,7 @@ import { buildIncomingFullProduct } from "@/internal/product/actions/previewUpda
 import { buildIncomingProductV2 } from "@/internal/product/actions/previewUpdatePlan/buildIncomingProductV2.js";
 import { previewAffectedLicenses } from "@/internal/product/actions/previewUpdatePlan/previewAffectedLicenses.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { getActiveProducts } from "@/internal/products/productUtils.js";
 import {
 	sortCatalogPlansByDependencies,
 	validateCatalogPlanVersionTargets,
@@ -59,12 +60,15 @@ const preflightCatalogLicenses = async ({
 		returnAll: true,
 	});
 	validateCatalogPlanVersionTargets({ plans, products: persistedProducts });
-	const currentById = new Map<string, FullProduct>();
+	const currentById = new Map(
+		getActiveProducts(persistedProducts).map((product) => [product.id, product]),
+	);
+	const maxVersionById = new Map<string, number>();
 	for (const product of persistedProducts) {
-		const current = currentById.get(product.id);
-		if (!current || product.version > current.version) {
-			currentById.set(product.id, product);
-		}
+		maxVersionById.set(
+			product.id,
+			Math.max(maxVersionById.get(product.id) ?? 0, product.version),
+		);
 	}
 	const currentForPlan = (plan: CatalogPlanParams) =>
 		plan.version === undefined
@@ -75,7 +79,7 @@ const preflightCatalogLicenses = async ({
 				);
 	const virtualParents = plans.map((plan, index) => {
 		const current = currentForPlan(plan);
-		const latest = currentById.get(plan.plan_id);
+		const maxVersion = maxVersionById.get(plan.plan_id);
 		const incoming = current
 			? buildIncomingFullProduct({
 					ctx,
@@ -95,7 +99,7 @@ const preflightCatalogLicenses = async ({
 			id: plan.new_plan_id ?? plan.plan_id,
 			version: current
 				? previews[index]?.versionable
-					? (latest?.version ?? current.version) + 1
+					? (maxVersion ?? current.version) + 1
 					: current.version
 				: (plan.version ?? 1),
 			archived: plan.archived,

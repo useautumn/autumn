@@ -38,6 +38,7 @@ export const resolveLicenseMigrationTarget = ({
 					parent: upsertProductPlan,
 					upsertProductPlans,
 					params,
+					productStatesContext,
 				});
 
 	if (upserts.length === 0) return null;

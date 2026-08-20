@@ -59,18 +59,30 @@ export const validateCatalogVariantVersionTargets = ({
 	params: CatalogUpdateParams;
 	products: FullProduct[];
 }) => {
-	const latestByPlanId = new Map(
+	const activeBaseByPlanId = new Map(
 		products
-			.filter((product) => product.base_internal_product_id === null)
+			.filter(
+				(product) =>
+					product.base_internal_product_id === null && product.active,
+			)
 			.map((product) => [product.id, product]),
 	);
+	const maxVersionByPlanId = new Map<string, number>();
+	for (const product of products) {
+		if (product.base_internal_product_id !== null) continue;
+		maxVersionByPlanId.set(
+			product.id,
+			Math.max(maxVersionByPlanId.get(product.id) ?? 0, product.version),
+		);
+	}
 
 	for (const plan of params.plans) {
 		if ((plan.variants ?? []).length === 0) continue;
 		if (plan.version === undefined) continue;
 
-		const latest = latestByPlanId.get(plan.plan_id);
-		if (!latest || plan.version >= latest.version) continue;
+		const active = activeBaseByPlanId.get(plan.plan_id);
+		const maxVersion = maxVersionByPlanId.get(plan.plan_id) ?? 0;
+		if (plan.version === active?.version || plan.version > maxVersion) continue;
 
 		throw new RecaseError({
 			message: `Variants can only be updated under the latest version of base plan ${plan.plan_id}.`,

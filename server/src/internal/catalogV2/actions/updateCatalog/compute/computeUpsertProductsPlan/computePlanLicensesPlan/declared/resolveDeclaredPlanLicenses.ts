@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { PlanLicensePlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 
 const declaredLinkChanged = ({
 	currentPlanLicense,
@@ -57,9 +58,10 @@ export const resolveDeclaredPlanLicenses = ({
 	const declaredIds = new Set(declared.map((entry) => entry.license_plan_id));
 
 	const planned: PlanLicensePlan[] = declared.map((params) => {
-		const licenseProduct =
-			productStatesContext.versionsByPlanId[params.license_plan_id]?.[0] ??
-			null;
+		const licenseProduct = activeFullProductForPlan({
+			planId: params.license_plan_id,
+			productStatesContext,
+		});
 		const currentPlanLicense =
 			currentPlanLicenseByPlanId.get(params.license_plan_id) ?? null;
 

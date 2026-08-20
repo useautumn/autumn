@@ -1,5 +1,4 @@
 import {
-	type FullProduct,
 	productToProductKey,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -17,17 +16,9 @@ import type {
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { planParamsFromEditDiff } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/planParamsFromEditDiff";
+import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
-
-const latestFullProductForPlan = ({
-	planId,
-	productStatesContext,
-}: {
-	planId: string;
-	productStatesContext: ProductStatesContext;
-}): FullProduct | null =>
-	productStatesContext.versionsByPlanId[planId]?.[0] ?? null;
 
 const planHasVersionableCustomers = ({
 	planId,
@@ -76,11 +67,11 @@ export const computeUpsertProductPlan = ({
 		});
 	const pointer = unlink ? null : baseInternalProductId;
 
-	// Content baseline: row at this version, or latest when minting a new version.
+	// Content baseline: row at this version, or the active row when minting.
 	const baseFullProduct =
 		currentFullProduct ??
 		(versioning === "new_version"
-			? latestFullProductForPlan({
+			? activeFullProductForPlan({
 					planId: productKey.planId,
 					productStatesContext,
 				})
