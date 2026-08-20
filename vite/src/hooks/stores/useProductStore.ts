@@ -16,6 +16,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { getItemId, getPrepaidItems } from "@/utils/product/productItemUtils";
 import { itemToFeature } from "@/utils/product/productItemUtils/convertItem";
 import { getVersionCounts } from "@/utils/productUtils";
+import { useVariantLinkVisibility } from "@/views/products/plan/hooks/useVariantLinkVisibility";
 import { DEFAULT_PRODUCT } from "@/views/products/plan/utils/defaultProduct";
 import { useSheetStore } from "./useSheetStore";
 
@@ -68,6 +69,7 @@ export const useHasChanges = () => {
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const { features = [] } = useFeaturesQuery();
+	const { selectedBasePlanId, basePlanId } = useVariantLinkVisibility(product);
 
 	return useMemo(() => {
 		if (!baseProduct) return false;
@@ -77,7 +79,6 @@ export const useHasChanges = () => {
 			curProductV2: baseProduct as unknown as FrontendProduct,
 			features,
 		});
-		const basePlanSame = product.base_id === baseProduct.base_id;
 
 		const hasChanges =
 			!comparison.itemsSame ||
@@ -86,10 +87,10 @@ export const useHasChanges = () => {
 			!comparison.configSame ||
 			!comparison.billingControlsSame ||
 			!comparison.metadataSame ||
-			!basePlanSame;
+			selectedBasePlanId !== basePlanId;
 
 		return hasChanges;
-	}, [product, baseProduct, features]);
+	}, [product, baseProduct, features, selectedBasePlanId, basePlanId]);
 };
 
 // True when metadata is the only pending change — such saves skip the

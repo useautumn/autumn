@@ -43,6 +43,7 @@ export const SaveChangesBar = ({
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setProduct = useProductStore((s) => s.setProduct);
+	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
 	const { type: sheetType } = useSheetStore();
 	const planHasChanges = useHasChanges();
 	const contentHasChanges = useHasContentChanges();
@@ -135,6 +136,7 @@ export const SaveChangesBar = ({
 		try {
 			await CatalogV2Service.update(axiosInstance, { plans });
 			if (licenses) commitLicenseChanges();
+			setBaseProduct(product);
 			await queryRefetch();
 			await Promise.all([invalidateProduct(), invalidateProducts()]);
 			toast.success("Changes saved successfully");
