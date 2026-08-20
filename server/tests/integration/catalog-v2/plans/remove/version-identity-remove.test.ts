@@ -1,6 +1,6 @@
 /**
- * Deleting (or archiving) the active version promotes the highest remaining
- * live row so omit-version reads still resolve.
+ * Hard-delete of the active version promotes the highest remaining live row.
+ * Archive does not move `active` — it is all-or-nothing on the plan.
  *
  * Red (current):  omit-version getFull 404s after pin-delete of v2.
  * Green (after):  omit-version getFull returns the surviving tip with active=true.
@@ -105,7 +105,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("version identity remove: pin-archive of active v2 promotes v1")}`,
+	`${chalk.yellowBright("version identity remove: pin-archive of active v2 leaves the pointer on v2")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_rmp_id_arch");
@@ -117,7 +117,21 @@ test.concurrent(
 			await autumnV2_3.catalogV2.update({
 				remove_plans: [{ plan_id: planId, version: 2 }],
 			});
-			await expectOmitVersionIs({ ctx, planId, version: 1 });
+
+			const versions = await ProductService.listFull({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				inIds: [planId],
+				returnAll: true,
+				skipCache: true,
+			});
+			const v1 = versions.find((product) => product.version === 1);
+			const v2 = versions.find((product) => product.version === 2);
+			expect(v2?.archived).toBe(true);
+			expect(v2?.active).toBe(true);
+			expect(v1?.archived).toBe(false);
+			expect(v1?.active).toBe(false);
 		} finally {
 			await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });
 			await deleteDbPlans({ ctx, planIds: [planId] });

@@ -22,7 +22,6 @@ import {
 	validateNoDirectVariantMigrationDrafts,
 } from "@/internal/product/actions/updateProduct/createPlanMigrationDraft.js";
 import { updateProduct } from "@/internal/product/actions/updateProduct.js";
-import { activateHighestRemainingProduct } from "@/internal/products/repos/activateHighestRemainingProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import {
@@ -67,13 +66,6 @@ const archiveProductVersions = async ({
 			env: ctx.env,
 		});
 	}
-
-	await activateHighestRemainingProduct({
-		db: ctx.db,
-		orgId: ctx.org.id,
-		env: ctx.env,
-		productId,
-	});
 };
 
 const upsertFeatures = async ({
@@ -357,12 +349,6 @@ const applyMissingPlanRemovals = async ({
 					internalId: product.internal_id,
 					orgId: ctx.org.id,
 					env: ctx.env,
-				});
-				await activateHighestRemainingProduct({
-					db: ctx.db,
-					orgId: ctx.org.id,
-					env: ctx.env,
-					productId: planId,
 				});
 			} else {
 				await deleteProduct({
