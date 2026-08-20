@@ -3,6 +3,7 @@ import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv, ChatProvider } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import type { AgentApprovalTurn } from "../../agentRuntime/domain/agentTurn.js";
+import { withheldWritesFromToolArgs } from "../../agentRuntime/eve/parkedInput.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import {
 	resolveApprovalDisplay,
@@ -13,6 +14,38 @@ import {
 	withGroupedWritePreviews,
 } from "../utils/fetchApprovalPreview.js";
 import { publicToolArgs, toolRequestFromArgs } from "../utils/toolRequest.js";
+
+/** Grouped step previews are N MCP round trips; the card posts without
+ * waiting and re-renders when they land. The row update is pending-guarded so
+ * an already-resolved approval keeps what it was approved with. */
+const createGroupedPreviewBackfill =
+	({
+		approvalId,
+		env,
+		getToken,
+		logger,
+		toolArgs,
+	}: {
+		approvalId: string;
+		env: AppEnv;
+		getToken: () => Promise<string>;
+		logger: AutumnLogger;
+		toolArgs: Record<string, unknown>;
+	}) =>
+	async () => {
+		const enriched = await withGroupedWritePreviews({
+			env,
+			getToken,
+			logger,
+			toolArgs,
+		});
+		const stored = await chatApprovalRepo.setToolArgs({
+			approvalId,
+			db,
+			toolArgs: enriched,
+		});
+		return stored ? publicToolArgs(enriched) : undefined;
+	};
 
 export const createApproval = async ({
 	channelId,
@@ -61,15 +94,7 @@ export const createApproval = async ({
 		request,
 	});
 	const preview = withApprovalDisplay({ display, preview: resolvedPreview });
-	// Enrich the raw args so the stored row keeps both the harness transport
-	// keys (approve/deny ids, sibling ids) and the backfilled step previews;
-	// every later card render reads from the row.
-	const storedToolArgs = await withGroupedWritePreviews({
-		env,
-		getToken,
-		logger,
-		toolArgs: approval.toolArgs,
-	});
+	const storedToolArgs = approval.toolArgs;
 
 	const approvalId = await chatApprovalRepo.insert({
 		db,
@@ -94,8 +119,20 @@ export const createApproval = async ({
 		approval_id: approvalId,
 		tool: approval.toolName,
 	});
+	const hasGroupedWrites =
+		withheldWritesFromToolArgs(approval.toolArgs).length > 0;
+
 	return {
 		approvalId,
+		backfillGroupedPreviews: hasGroupedWrites
+			? createGroupedPreviewBackfill({
+					approvalId,
+					env,
+					getToken,
+					logger,
+					toolArgs: approval.toolArgs,
+				})
+			: undefined,
 		params: request,
 		preview,
 		toolArgs: publicToolArgs(storedToolArgs),

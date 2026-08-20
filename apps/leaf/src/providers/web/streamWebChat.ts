@@ -192,6 +192,15 @@ export const streamWebChat = async ({
 					workspaceId: orgId,
 				});
 				if (!approval) return;
+				// The dashboard renders from the stored row on poll; the grouped
+				// step previews land right after the pending event is streamed.
+				void approval.backfillGroupedPreviews?.().catch((error) => {
+					logger.warn("Could not backfill grouped previews", {
+						event: "leaf.approval_group_preview_backfill_failed",
+						approval_id: approval.approvalId,
+						error,
+					});
+				});
 				writer.write({
 					data: {
 						approvalId: approval.approvalId,

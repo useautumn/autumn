@@ -18,6 +18,7 @@ import {
 	getSlackEventWorkspaceId,
 	normalizeSlackEventsBody,
 } from "./providers/slack/events.js";
+import { handleAssistantThreadStarted } from "./providers/slack/handlers/handleAssistantThreadStarted.js";
 import { handleSlackCatalogDecision } from "./providers/slack/handlers/handleSlackCatalogDecision.js";
 import {
 	handleSlackMessage,
@@ -104,6 +105,7 @@ export const bot = new Chat({
 	concurrency: "concurrent",
 });
 
+bot.onAssistantThreadStarted(handleAssistantThreadStarted);
 bot.onDirectMessage(handleSlackMessage);
 bot.onNewMention(async (thread, message) => {
 	await thread.subscribe();

@@ -25,3 +25,4 @@ export {
 } from "./catalog/decisionModel.js";
 export { formatCount, formatEpochDate, formatMoney } from "./format.js";
 export { parsePreviewPayload } from "./payload/parsePreviewPayload.js";
+export { asRecord } from "./records.js";

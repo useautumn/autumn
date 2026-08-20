@@ -1,7 +1,11 @@
 import { ms } from "@autumn/shared";
 import { env } from "../../../lib/env.js";
+import { withRetry } from "../../../lib/withRetry.js";
 import { type EveEvent, parseEveEvent } from "./eveEventSchemas.js";
-import { isRetryableEveStreamError } from "./streamErrors.js";
+import {
+	isConnectionRefusedError,
+	isRetryableEveStreamError,
+} from "./streamErrors.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
 const eveUrl = (path: string) => new URL(path, env.EVE_SERVER_URL).href;
@@ -41,6 +45,9 @@ export class EveSessionGoneError extends Error {
 		this.name = "EveSessionGoneError";
 	}
 }
+
+const POST_RETRY_ATTEMPTS = 2;
+const POST_RETRY_BASE_DELAY_MS = ms.seconds(0.5);
 
 const SESSION_GONE_PATTERN =
 	/not found via continuation token|session (was )?not found/i;
@@ -107,25 +114,37 @@ export const postEveMessage = async ({
 	message?: EveMessageContent;
 	session?: EveSessionRef;
 }) => {
-	const response = await fetch(
-		session
-			? eveUrl(`/eve/v1/session/${session.sessionId}`)
-			: eveUrl("/eve/v1/session"),
-		{
-			method: "POST",
-			headers: eveHeaders(auth, { "content-type": "application/json" }),
-			body: JSON.stringify(
-				session
-					? {
-							clientContext,
-							continuationToken: session.state.continuationToken,
-							inputResponses,
-							message,
-						}
-					: { clientContext, message },
-			),
-		},
-	);
+	const post = () =>
+		fetch(
+			session
+				? eveUrl(`/eve/v1/session/${session.sessionId}`)
+				: eveUrl("/eve/v1/session"),
+			{
+				method: "POST",
+				headers: eveHeaders(auth, { "content-type": "application/json" }),
+				body: JSON.stringify(
+					session
+						? {
+								clientContext,
+								continuationToken: session.state.continuationToken,
+								inputResponses,
+								message,
+							}
+						: { clientContext, message },
+				),
+			},
+		);
+	// A request that never reached eve is always safe to retry; an ambiguous
+	// mid-flight drop is only retried for a NEW session, where a duplicate
+	// creates an orphan rather than a double-delivered message.
+	const response = await withRetry({
+		attempts: POST_RETRY_ATTEMPTS,
+		baseDelayMs: POST_RETRY_BASE_DELAY_MS,
+		operation: post,
+		shouldRetry: (error) =>
+			isConnectionRefusedError(error) ||
+			(!session && isRetryableEveStreamError(error)),
+	});
 	return parseSessionResponse({ existing: session, response });
 };
 
