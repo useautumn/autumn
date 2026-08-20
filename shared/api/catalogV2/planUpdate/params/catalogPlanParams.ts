@@ -10,7 +10,10 @@ import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
 import { CatalogPlanVersioningStrategySchema } from "../versioning.js";
 import { CatalogPropagateParamsSchema } from "./catalogPropagateParams.js";
-import { CatalogVariantParamsSchema } from "./catalogVariantParams.js";
+import {
+	CatalogBaseVariantIdSchema,
+	CatalogVariantParamsSchema,
+} from "./catalogVariantParams.js";
 
 /** CatalogV2 plan entry — create/update fields only. */
 export const UpdateCatalogPlanParamsSchema = z.object({
@@ -96,6 +99,11 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 		internal: true,
 		description:
 			"Plans offered as assignable licenses under this plan. Omit to leave them unchanged.",
+	}),
+	base_variant_id: CatalogBaseVariantIdSchema.meta({
+		internal: true,
+		description:
+			"Base plan id to attach this plan to. `null` detaches it from its base. Omit to leave the pointer unchanged. Nesting under the base's variants[] also links.",
 	}),
 });
 

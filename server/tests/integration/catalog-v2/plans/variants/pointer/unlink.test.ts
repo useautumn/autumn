@@ -11,6 +11,8 @@
  *   omit from variants[] alone → stays linked (no accidental unlink)
  *   top-level edit alone (base absent) → stays linked (current behavior)
  *   after unlink, base edits no longer propagate to the ex-variant
+ *   `{ plan_id, base_variant_id: null }` → every version row unlinked
+ *   nest `{ variant_plan_id, base_variant_id: null }` → every version row unlinked
  */
 
 import { test } from "bun:test";
@@ -139,6 +141,70 @@ test.concurrent(
 				variantPlanId: variantId,
 				featureIds: [TestFeature.Messages],
 				allowances: { [TestFeature.Messages]: 200 },
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants: base_variant_id null on the variant detaches every version")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_unl_flag");
+		const variantId = uniqueTestId("cv2_var_unl_flag_eu");
+		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		try {
+			await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
+			await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
+
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: variantId, base_variant_id: null }],
+			});
+
+			await expectVariantUnlinkedCorrect({
+				ctx,
+				variantPlanId: variantId,
+				versions: [1, 2],
+			});
+			await expectVariantPlanCorrect({
+				ctx,
+				variantPlanId: variantId,
+				allowances: { [TestFeature.Messages]: 200 },
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants: nested base_variant_id null detaches every version")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_unl_nest");
+		const variantId = uniqueTestId("cv2_var_unl_nest_eu");
+		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		try {
+			await seedBaseWithVariant({ autumn: autumnV2_3, baseId, variantId });
+			await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
+
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: baseId,
+						variants: [
+							{ variant_plan_id: variantId, base_variant_id: null },
+						],
+					},
+				],
+			});
+
+			await expectVariantUnlinkedCorrect({
+				ctx,
+				variantPlanId: variantId,
+				versions: [1, 2],
 			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });

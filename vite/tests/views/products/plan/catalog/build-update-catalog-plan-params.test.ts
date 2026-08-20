@@ -8,7 +8,10 @@ import {
 	ProductItemInterval,
 	UpdateCatalogPlanParamsSchema,
 } from "@autumn/shared";
-import { buildUpdateCatalogPlanParams } from "@/views/products/plan/catalog/buildUpdateCatalogPlanParams";
+import {
+	buildCatalogUpdatePlans,
+	buildUpdateCatalogPlanParams,
+} from "@/views/products/plan/catalog/buildUpdateCatalogPlanParams";
 
 const features: Feature[] = [
 	{
@@ -254,5 +257,84 @@ describe("buildUpdateCatalogPlanParams", () => {
 		expect(() =>
 			UpdateCatalogPlanParamsSchema.parse(JSON.parse(JSON.stringify(params))),
 		).not.toThrow();
+	});
+});
+
+describe("buildCatalogUpdatePlans", () => {
+	test("link-only nests the plan under the chosen base and omits the current row", () => {
+		const plans = buildCatalogUpdatePlans({
+			baseProduct,
+			editedProduct: { ...baseProduct, base_id: "team" },
+			features,
+			persistedBasePlanId: null,
+			includeContent: false,
+		});
+		expect(plans).toEqual([
+			{ plan_id: "team", variants: [{ variant_plan_id: "pro" }] },
+		]);
+	});
+
+	test("content + link sends the base nest first, then the current plan row", () => {
+		const plans = buildCatalogUpdatePlans({
+			baseProduct,
+			editedProduct: { ...editedProduct, base_id: "team" },
+			features,
+			persistedBasePlanId: null,
+			includeContent: true,
+		});
+		expect(plans[0]).toEqual({
+			plan_id: "team",
+			variants: [{ variant_plan_id: "pro" }],
+		});
+		expect(plans[1]).toMatchObject({
+			plan_id: "pro",
+			name: "Pro Plus",
+		});
+		expect(plans[1]?.base_variant_id).toBeUndefined();
+		expect(plans).toHaveLength(2);
+	});
+
+	test("unlink-only is a direct intent with base_variant_id null", () => {
+		const plans = buildCatalogUpdatePlans({
+			baseProduct: { ...baseProduct, id: "pro_eu" },
+			editedProduct: { ...baseProduct, id: "pro_eu", base_id: null },
+			features,
+			persistedBasePlanId: "pro",
+			includeContent: false,
+		});
+		expect(plans).toEqual([{ plan_id: "pro_eu", base_variant_id: null }]);
+	});
+
+	test("content + unlink sends the current plan row with base_variant_id null", () => {
+		const plans = buildCatalogUpdatePlans({
+			baseProduct: { ...baseProduct, id: "pro_eu", version: 1 },
+			editedProduct: { ...editedProduct, id: "pro_eu", base_id: null },
+			features,
+			persistedBasePlanId: "pro",
+			includeContent: true,
+		});
+		expect(plans).toHaveLength(1);
+		expect(plans[0]).toMatchObject({
+			plan_id: "pro_eu",
+			name: "Pro Plus",
+			base_variant_id: null,
+		});
+	});
+
+	test("an already-linked variant with no base edit is still one content row", () => {
+		const plans = buildCatalogUpdatePlans({
+			baseProduct: { ...baseProduct, id: "pro_eu", version: 1 },
+			editedProduct: {
+				...editedProduct,
+				id: "pro_eu",
+				base_id: "pro",
+			},
+			features,
+			persistedBasePlanId: "pro",
+		});
+		expect(plans).toHaveLength(1);
+		expect(plans[0]?.plan_id).toBe("pro_eu");
+		expect(plans[0]?.variants).toBeUndefined();
+		expect(plans[0]?.base_variant_id).toBeUndefined();
 	});
 });

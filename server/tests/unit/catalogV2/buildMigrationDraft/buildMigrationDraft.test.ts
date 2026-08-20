@@ -80,7 +80,7 @@ test("one target → version-pinned filter, one op, custom:false", () => {
 	});
 	expect(operation).not.toHaveProperty("version");
 	expect(draft?.no_billing_changes).toBe(true);
-	expect(draft?.id).toMatch(/^pro-v3-update-/);
+	expect(draft?.id).toMatch(/^pro-update-/);
 });
 
 test("includeCustom true omits custom guard on filter and ops", () => {
@@ -115,7 +115,7 @@ test("identical diffs covering every customer version collapse the version pin",
 		plan_id: "pro",
 		custom: false,
 	});
-	expect(draft?.id).toMatch(/^pro-all-update-/);
+	expect(draft?.id).toMatch(/^pro-update-/);
 });
 
 test("missing a customer-bearing version keeps version $in (no collapse)", () => {
@@ -183,7 +183,7 @@ test("two plans → $or of per-plan branches; custom is a sibling of $or", () =>
 			},
 		},
 	});
-	expect(draft?.id).toMatch(/^premium-v3\+pro-v1-v2-update-/);
+	expect(draft?.id).toMatch(/^premium-and-pro-update-/);
 });
 
 test("two plans with different customize → $or filter, one op per customize", () => {
