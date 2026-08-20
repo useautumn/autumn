@@ -58,14 +58,9 @@ export const toolAllowlists = {
 		"queryRequestLogs",
 		"searchRequestLogs",
 	],
+	/** Routing plus org context, and for now the catalog tools, which stay
+	 * here until the catalog specialist is wired (see agent/subagents/README.md). */
 	orchestrator: [
-		...ORG_CONTEXT_READS,
-		"getCurrentOrganization",
-		"updateAgentRules",
-	],
-	/** The orchestrator surface plus catalog tools, which stay rooted until the
-	 * catalog specialist is wired (see agent/subagents/README.md). */
-	root: [
 		...ORG_CONTEXT_READS,
 		...DATE_UTILS,
 		"createPlan",

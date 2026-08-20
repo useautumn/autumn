@@ -32,8 +32,7 @@ export const approvalSets: Record<LeafAgentConnection, ReadonlySet<string>> = {
 		"updatePlan",
 	]),
 	investigator: new Set(),
-	orchestrator: new Set(["confirmBillingAction", "updateAgentRules"]),
-	root: new Set([
+	orchestrator: new Set([
 		"confirmBillingAction",
 		"createPlan",
 		"createReward",

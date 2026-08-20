@@ -1,3 +1,3 @@
 import { autumnConnection } from "../lib/autumnConnection.js";
 
-export default autumnConnection({ agent: "root" });
+export default autumnConnection({ agent: "orchestrator" });
