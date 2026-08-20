@@ -4,7 +4,9 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { agentRulesRepo } from "../repos/index.js";
 
 export const handleGetAgentRules = createRoute({
-	scopes: [Scopes.Organisation.Read],
+	// plans:read, not organisation:read — every org role holds it (sales lacks
+	// organisation:read), and agent rules are billing guidance those roles need.
+	scopes: [Scopes.Plans.Read],
 	body: z.object({}).strict(),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
