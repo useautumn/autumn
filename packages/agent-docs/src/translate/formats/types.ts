@@ -26,4 +26,6 @@ export type Skill = {
 	markdown: string;
 	/** Detailed docs split out for on-demand (progressive-disclosure) loading. */
 	references: SkillFile[];
+	/** Names of prerequisite skills, from `<skill>` tags (default []). */
+	requires?: string[];
 };
