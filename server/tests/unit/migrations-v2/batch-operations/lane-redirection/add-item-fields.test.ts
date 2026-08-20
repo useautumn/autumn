@@ -53,6 +53,20 @@ describe("add_items field → batch lane", () => {
 		expect(result.replaceToIds).toEqual([]);
 	});
 
+	test("add_items for a feature already on fromProduct still lowers to an add", () => {
+		const item = monthlyMessages({ included: 60 });
+		const result = runLane({
+			customize: { add_items: [item] },
+			fromEntitlements: [fromEntitlement({ allowance: 60 })],
+			preparedAdds: [
+				{ item, entitlement: entitlementRow({ id: "ent_new", allowance: 60 }) },
+			],
+		});
+
+		expect(result.computable).toBe(true);
+		expect(result.addIds).toEqual(["ent_new"]);
+	});
+
 	test("included: 0 is still a free add", () => {
 		const item = monthlyMessages({ included: 0 });
 		const result = runLane({
