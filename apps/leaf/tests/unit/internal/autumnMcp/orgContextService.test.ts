@@ -53,14 +53,14 @@ describe("Autumn org context service", () => {
 		});
 
 		expect(text).toContain("getAgentRules:");
-		expect(text).toContain("listPlans:");
-		expect(text).toContain("listFeatures:");
+		expect(text).toContain("listPlans (compact index");
+		expect(text).toContain("listFeatures (compact index)");
 		expect(text).toContain("```json");
 		expect(text).toContain("workspace scoped");
 		expect(text).not.toContain("Always use invoice mode.");
-		expect(text).toContain('"rollover": true');
-		expect(text).toContain('"id": "enterprise"');
-		expect(text).toContain('"type": "boolean"');
+		expect(text).toContain('"items":["credits"]');
+		expect(text).toContain('"id":"enterprise"');
+		expect(text).toContain('"type":"boolean"');
 	});
 
 	test("separates custom instructions from preloaded context", async () => {
@@ -106,7 +106,7 @@ describe("Autumn org context service", () => {
 		]);
 		expect(context?.text).toContain("getCurrentOrganization:");
 		expect(context?.text).toContain('"slug": "resend"');
-		expect(context?.text).toContain('"id": "launch"');
+		expect(context?.text).toContain('"id":"launch"');
 		expect(warnings).toHaveLength(1);
 	});
 
@@ -125,7 +125,7 @@ describe("Autumn org context service", () => {
 		});
 
 		expect(context?.text).toContain("getAgentRules:");
-		expect(context?.text).toContain("listPlans:");
+		expect(context?.text).toContain("listPlans (compact index");
 		expect(context?.text).not.toContain("listFeatures:");
 		expect(warnings).toHaveLength(1);
 	});
