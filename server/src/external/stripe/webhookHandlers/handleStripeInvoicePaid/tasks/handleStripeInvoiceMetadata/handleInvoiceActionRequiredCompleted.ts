@@ -9,6 +9,7 @@ import { attachParamsToCurCusProduct } from "@/internal/customers/attach/attachU
 import { getDefaultAttachConfig } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { MetadataService } from "@/internal/metadata/MetadataService.js";
+import { attachParamsFromMetadataData } from "@/internal/metadata/utils/attachParamsFromMetadataData.js";
 
 export const handleInvoiceActionRequiredCompleted = async ({
 	ctx,
@@ -30,7 +31,7 @@ export const handleInvoiceActionRequiredCompleted = async ({
 	});
 
 	const attachParams = {
-		...(metadata.data as AttachParams),
+		...attachParamsFromMetadataData({ data: metadata.data }),
 		stripeCli,
 		req: ctx,
 		paymentMethod,

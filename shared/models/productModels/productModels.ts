@@ -24,10 +24,9 @@ export const ProductSchema = z.object({
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number(),
-	// Required key; null only until the column is NOT NULL. Cache hole-fill
-	// for pre-migration entries lives in sanitizeCachedFullSubject.
-	version_slug: z.string().nullable(),
-	active: z.boolean(),
+	// Missing keys parse as null/false; hydrate still fills slug to v{version}.
+	version_slug: z.string().nullable().default(null),
+	active: z.boolean().default(false),
 	group: z.string(),
 
 	env: z.enum(AppEnv),
