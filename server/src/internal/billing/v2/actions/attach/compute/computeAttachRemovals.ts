@@ -28,10 +28,15 @@ export const computeAttachRemovals = ({
 		currentEpochMs,
 	} = attachBillingContext;
 
-	// The current product is already expired via the transition update.
-	const removePlanIds = (params.remove_plan_ids ?? []).filter(
-		(productId) => productId !== currentCustomerProduct?.product.id,
-	);
+	// The current product is already expired via the transition update. Repeats
+	// are collapsed so one plan cannot be credited or settled twice.
+	const removePlanIds = [
+		...new Set(
+			(params.remove_plan_ids ?? []).filter(
+				(productId) => productId !== currentCustomerProduct?.product.id,
+			),
+		),
+	];
 	if (removePlanIds.length === 0) return [];
 
 	// Carry-over reads a single source. With no same-group product to carry from,

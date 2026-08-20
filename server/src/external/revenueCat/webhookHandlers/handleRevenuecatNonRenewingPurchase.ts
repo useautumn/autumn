@@ -33,15 +33,18 @@ export const handleNonRenewingPurchase = async ({
 		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
 		customerEmail: getRevenueCatCustomerEmail(event),
 		customerFingerprint: getRevenueCatCustomerFingerprint(event),
+		// A purchase is valid for a customer we have not seen yet.
+		autoCreateCustomer: true,
+		validateProduct: (product) => {
+			if (!oneOffOrAddOn({ product })) {
+				throw new RecaseError({
+					message: "Non-renewing purchase is not a one-off or add-on",
+					code: ErrCode.InvalidProductItem,
+					statusCode: 400,
+				});
+			}
+		},
 	});
-
-	if (!oneOffOrAddOn({ product })) {
-		throw new RecaseError({
-			message: "Non-renewing purchase is not a one-off or add-on",
-			code: ErrCode.InvalidProductItem,
-			statusCode: 400,
-		});
-	}
 
 	await provisionRevenueCatCusProduct({
 		ctx: customerCtx,
@@ -51,7 +54,9 @@ export const handleNonRenewingPurchase = async ({
 		appUserId: event.app_user_id,
 	});
 
-	logger.info(`Created RC cus_product for ${product.id} (non-renewing purchase)`);
+	logger.info(
+		`Created RC cus_product for ${product.id} (non-renewing purchase)`,
+	);
 
 	await recordRevenueCatInvoice({ ctx: customerCtx, event, customer, product });
 };

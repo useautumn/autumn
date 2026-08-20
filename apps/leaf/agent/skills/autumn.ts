@@ -1,17 +1,5 @@
-import { leafSkills, skillToText } from "@autumn/agent-docs/agent";
-import { defineDynamic, defineSkill } from "eve/skills";
+import { subagentSkills } from "../lib/subagentSkills.js";
 
-export default defineDynamic({
-	events: {
-		"session.started": () =>
-			Object.fromEntries(
-				leafSkills.map((skill) => [
-					skill.name,
-					defineSkill({
-						description: skill.description,
-						markdown: skillToText(skill),
-					}),
-				]),
-			),
-	},
-});
+// Catalog work stays rooted until the catalog specialist is wired, so the
+// orchestrator keeps only the catalog skill and its prerequisites.
+export default subagentSkills({ agent: "catalog" });

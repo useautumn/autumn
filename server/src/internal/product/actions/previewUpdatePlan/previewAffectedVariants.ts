@@ -77,24 +77,14 @@ export const previewAffectedVariants = async ({
 		returnAll: true,
 	});
 	variants.sort((a, b) => a.id.localeCompare(b.id) || b.version - a.version);
-	const latestVersionById = new Map<string, number>();
-	for (const variant of variants) {
-		latestVersionById.set(
-			variant.id,
-			Math.max(latestVersionById.get(variant.id) ?? 0, variant.version),
-		);
-	}
 	const previewVariants =
 		data.include_versions || data.all_versions
 			? variants
-			: variants.filter(
-					(variant) => variant.version === latestVersionById.get(variant.id),
-				);
+			: variants.filter((variant) => variant.active);
 
 	return Promise.all(
 		previewVariants.map(async (variant) => {
-			const isLatestVersion =
-				variant.version === latestVersionById.get(variant.id);
+			const isLatestVersion = variant.active;
 			const currentPlan = await getPlanResponse({
 				ctx,
 				product: variant,

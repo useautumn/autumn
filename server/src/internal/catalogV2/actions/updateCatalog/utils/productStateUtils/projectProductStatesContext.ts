@@ -3,6 +3,7 @@ import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCa
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import type { CustomerProductVersioningFlags } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
 import { buildProductStatesContext } from "./buildProductStatesContext";
+import { activeFullProductForPlan } from "./activeFullProductForPlan";
 
 /**
  * Pure projection: product state after `upsertProducts` apply (projectCatalog
@@ -60,7 +61,10 @@ export const projectProductStatesContext = ({
 	for (const [planId, programs] of Object.entries(
 		original.rewardProgramsByPlanId,
 	)) {
-		const latest = original.versionsByPlanId[planId]?.[0];
+		const latest = activeFullProductForPlan({
+			planId,
+			productStatesContext: original,
+		});
 		const projectedId = latest
 			? (nextRowByInternalId.get(latest.internal_id)?.id ?? latest.id)
 			: planId;

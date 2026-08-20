@@ -14,8 +14,10 @@ import {
 } from "../../../eve/events.js";
 import {
 	type ChainedPendingRequest,
+	childSessionIdsToolArgs,
 	classifyParkedEveInput,
 	type PendingQuestion,
+	siblingRequestIdsToolArgs,
 	type WithheldWrite,
 	withheldWritesToolArgs,
 } from "../../../eve/parkedInput.js";
@@ -23,7 +25,7 @@ import {
 	type CapturedPreview,
 	previewForParkedWrite,
 } from "../../../eve/parkedWritePreview.js";
-import { isSilentTool } from "../../../tools/toolPolicy.js";
+import { isSilentTool, toolGerund } from "../../../tools/toolPolicy.js";
 import { catalogPlanNeedingDecision } from "../../resolveCatalogDecision/catalogDecisionPolicy.js";
 
 export type EveTurnOutcome =
@@ -39,6 +41,9 @@ export type EveTurnProgress = Readonly<{
 	lastPreview?: CapturedPreview;
 	pendingText: string;
 	reasoningStreamId?: string;
+	/** Child sessions spawned by delegated subagents — the pointer for
+	 * attributing proxied approvals and following child streams. */
+	subagentChildSessionIds: ReadonlySet<string>;
 	toolInputs: ReadonlyMap<string, Record<string, unknown>>;
 	toolLabels: ReadonlyMap<string, string>;
 	turnStarted: boolean;
@@ -64,6 +69,7 @@ export type EveTurnTransition = Readonly<{
 export const createEveTurnProgress = (): EveTurnProgress => ({
 	finalText: "",
 	pendingText: "",
+	subagentChildSessionIds: new Set(),
 	toolInputs: new Map(),
 	toolLabels: new Map(),
 	turnStarted: false,
@@ -96,7 +102,10 @@ const approvalForGatedWrite = ({
 			...(chained.input ?? {}),
 			_eveApproveOptionId: options.approve,
 			_eveDenyOptionId: options.deny,
-			_eveSiblingRequestIds: siblingRequestIds,
+			// A proxied approval executes inside the delegated child session, so
+			// the resume verifies the write from the child's stream.
+			...childSessionIdsToolArgs([...progress.subagentChildSessionIds]),
+			...siblingRequestIdsToolArgs(siblingRequestIds),
 			...withheldWritesToolArgs(withheld),
 		},
 		preview: previewForParkedWrite({
@@ -342,6 +351,25 @@ export const reduceEveTurnEvent = ({
 	if (!progress.turnStarted) return { effects: [], progress };
 
 	switch (event.type) {
+		case "subagent.called": {
+			const name = event.name ?? event.toolName ?? "subagent";
+			const subagentChildSessionIds = event.childSessionId
+				? new Set([...progress.subagentChildSessionIds, event.childSessionId])
+				: progress.subagentChildSessionIds;
+			return {
+				effects: [
+					{
+						kind: "action",
+						progress: {
+							label: toolGerund(name),
+							phase: "started",
+							toolName: name,
+						},
+					},
+				],
+				progress: { ...progress, subagentChildSessionIds },
+			};
+		}
 		case "step.started":
 			return { effects: [{ kind: "thinking" }], progress };
 		case "message.appended":

@@ -32,7 +32,7 @@ export const runWithTransientDbRetry = async <T>({
 				attempt < maxAttempts && isTransientDbError({ error });
 			if (!canRetry) throw error;
 			onRetry?.({ error, attempt, maxAttempts });
-			await sleep({ ms: delayMs });
+			await sleep({ ms: delayMs * 2 ** (attempt - 1) });
 		}
 	}
 	throw lastError;

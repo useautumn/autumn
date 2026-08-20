@@ -4,6 +4,8 @@ import { db } from "../../../../lib/db.js";
 import { logger } from "../../../../lib/logger.js";
 import { dispatchSlackAgentMessage } from "../../../../providers/slack/actions/dispatchSlackAgentMessage.js";
 import { approvalDetailsModal } from "../../../../ui/blocks.js";
+import { withheldWritesFromToolArgs } from "../../../agentRuntime/eve/parkedInput.js";
+import { normalizeToolName } from "../../../agentRuntime/tools/toolPolicy.js";
 import {
 	applyAttachBillingEdits,
 	attachBillingEditsSchema,
@@ -71,27 +73,50 @@ export const handleEditApprovalDetailsSubmit = async (
 		};
 	}
 
-	const request = toolRequestFromArgs(publicToolArgs(approval.tool_args)) ?? {};
-	const updated = applyAttachBillingEdits({ edits: parsed.data, request });
-	if (!updated.success) {
-		return {
-			action: "errors" as const,
-			errors: { billing: "These settings are not valid for this request." },
-		};
+	// One card can carry a whole batch; the edited settings apply to every
+	// attach step so the rebuilt card keeps the full group.
+	const steps: Array<{ request: Record<string, unknown>; toolName: string }> =
+		[];
+	const groupedWrites = [
+		{
+			input: publicToolArgs(approval.tool_args),
+			toolName: approval.tool_name,
+		},
+		...withheldWritesFromToolArgs(approval.tool_args),
+	];
+	for (const write of groupedWrites) {
+		const stepRequest = toolRequestFromArgs(write.input) ?? {};
+		if (normalizeToolName(write.toolName) !== "attach") {
+			steps.push({ request: stepRequest, toolName: write.toolName });
+			continue;
+		}
+		const updated = applyAttachBillingEdits({
+			edits: parsed.data,
+			request: stepRequest,
+		});
+		if (!updated.success) {
+			return {
+				action: "errors" as const,
+				errors: { billing: "These settings are not valid for this request." },
+			};
+		}
+		steps.push({ request: updated.data, toolName: "attach" });
 	}
 	// The user chose these billing settings by hand, so they override the
 	// skill's defaults (which would otherwise re-enable immediate provisioning
 	// or invoice mode on the rebuilt request).
 	const text = [
-		"Preview this exact attach request and request approval again.",
-		"Do not add, remove, or change any field — in particular keep `enable_plan_immediately`, `invoice_mode`, and `redirect_mode` exactly as given; they are the user's explicit choices and override the default billing settings.",
-		JSON.stringify(updated.data),
+		steps.length > 1
+			? `Preview these exact ${steps.length} requests and request approval again, issuing ALL writes together in ONE tool batch so they stay on one approval card.`
+			: "Preview this exact attach request and request approval again.",
+		"Do not add, remove, or change any field — in particular keep `enable_plan_immediately`, `invoice_mode`, `proration_behavior`, and `redirect_mode` exactly as given; they are the user's explicit choices and override the default billing settings.",
+		...steps.map((step) => `${step.toolName}: ${JSON.stringify(step.request)}`),
 	].join("\n");
 
 	void dispatchSlackAgentMessage({
 		channelId: thread.channelId,
 		clientContext: {
-			approvalEdit: { request: updated.data, toolName: "attach" },
+			approvalEdit: { steps, toolName: "attach" },
 		},
 		providerUserId: event.user.userId,
 		raw: { team_id: approval.workspace_id },

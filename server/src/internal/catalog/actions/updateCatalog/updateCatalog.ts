@@ -59,10 +59,11 @@ const archiveProductVersions = async ({
 	});
 
 	for (const product of products) {
-		await ProductService.updateByInternalId({
+		await ProductService.archiveByInternalId({
 			db: ctx.db,
 			internalId: product.internal_id,
-			update: { archived: true },
+			orgId: ctx.org.id,
+			env: ctx.env,
 		});
 	}
 };
@@ -343,10 +344,11 @@ const applyMissingPlanRemovals = async ({
 			});
 
 			if (hasCustomers) {
-				await ProductService.updateByInternalId({
+				await ProductService.archiveByInternalId({
 					db: ctx.db,
 					internalId: product.internal_id,
-					update: { archived: true },
+					orgId: ctx.org.id,
+					env: ctx.env,
 				});
 			} else {
 				await deleteProduct({

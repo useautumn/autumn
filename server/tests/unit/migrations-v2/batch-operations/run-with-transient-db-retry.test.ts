@@ -54,6 +54,26 @@ describe("runWithTransientDbRetry", () => {
 		expect(calls).toBe(1);
 	});
 
+	test("retries a drizzle-wrapped connection drop", async () => {
+		let calls = 0;
+		const wrapped = () => {
+			const error = new Error("Failed query: select 1\nparams: []");
+			error.cause = connectionDropped();
+			return error;
+		};
+		const result = await runWithTransientDbRetry({
+			maxAttempts: 3,
+			delayMs: 0,
+			run: async () => {
+				calls++;
+				if (calls === 1) throw wrapped();
+				return "recovered";
+			},
+		});
+		expect(result).toBe("recovered");
+		expect(calls).toBe(2);
+	});
+
 	test("throws the last transient error after maxAttempts", async () => {
 		let calls = 0;
 		const attempt = runWithTransientDbRetry({

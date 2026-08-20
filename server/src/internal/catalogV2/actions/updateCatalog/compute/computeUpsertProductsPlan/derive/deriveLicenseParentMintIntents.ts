@@ -5,8 +5,10 @@ import type {
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
+import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
+import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 
-/** Mint max+1 when latest has customers; otherwise skip (follow latest in place). */
+/** Mint max+1 when the active row has customers; otherwise skip (follow in place). */
 const licenseParentMintIntent = ({
 	planId,
 	productStatesContext,
@@ -14,16 +16,16 @@ const licenseParentMintIntent = ({
 	planId: string;
 	productStatesContext: ProductStatesContext;
 }): ProductUpsertIntent | undefined => {
-	const latest = productStatesContext.versionsByPlanId[planId]?.[0];
-	if (!latest) return undefined;
+	const active = activeFullProductForPlan({ planId, productStatesContext });
+	if (!active) return undefined;
 
 	const hasCustomers = productKeyToState({
-		productKey: productToProductKey({ product: latest }),
+		productKey: productToProductKey({ product: active }),
 		productStatesContext,
 	}).customerUsage.hasVersionableCustomerProducts;
 	if (!hasCustomers) return undefined;
 
-	const version = latest.version + 1;
+	const version = maxVersionForPlan({ planId, productStatesContext }) + 1;
 	return {
 		productKey: { planId, version },
 		planParams: {

@@ -23,6 +23,27 @@ const getErrorCode = ({ error }: { error: unknown }): string | null => {
 const getErrorMessage = ({ error }: { error: unknown }): string | null =>
 	error instanceof Error ? error.message : null;
 
+const walkErrorChain = ({ error }: { error: unknown }): unknown[] => {
+	const chain: unknown[] = [];
+	const seen = new Set<unknown>();
+	let current: unknown = error;
+	while (current !== undefined && current !== null && !seen.has(current)) {
+		seen.add(current);
+		chain.push(current);
+		if (typeof current !== "object" || !("cause" in current)) break;
+		current = (current as { cause: unknown }).cause;
+	}
+	return chain;
+};
+
+const messageLooksTransient = ({ message }: { message: string }): boolean => {
+	if (TRANSIENT_DB_ERROR_MESSAGES.has(message)) return true;
+	for (const known of TRANSIENT_DB_ERROR_MESSAGES) {
+		if (message.includes(known)) return true;
+	}
+	return false;
+};
+
 const TRANSIENT_DB_ERROR_MESSAGES = new Set([
 	"timeout exceeded when trying to connect",
 	"Query read timeout",
@@ -71,14 +92,16 @@ const RETRYABLE_PG_CODES = new Set([
  * Returns false for application errors (constraint violations, syntax errors, etc.).
  */
 export const isTransientDbError = ({ error }: { error: unknown }): boolean => {
-	const code = getErrorCode({ error });
-	const message = getErrorMessage({ error });
-	if (message && TRANSIENT_DB_ERROR_MESSAGES.has(message)) return true;
-	if (!code) return false;
+	for (const candidate of walkErrorChain({ error })) {
+		const message = getErrorMessage({ error: candidate });
+		if (message && messageLooksTransient({ message })) return true;
 
-	if (RETRYABLE_PG_CODES.has(code)) return true;
-	if (RETRYABLE_PG_CODE_PREFIXES.some((prefix) => code.startsWith(prefix)))
-		return true;
+		const code = getErrorCode({ error: candidate });
+		if (!code) continue;
+		if (RETRYABLE_PG_CODES.has(code)) return true;
+		if (RETRYABLE_PG_CODE_PREFIXES.some((prefix) => code.startsWith(prefix)))
+			return true;
+	}
 
 	return false;
 };

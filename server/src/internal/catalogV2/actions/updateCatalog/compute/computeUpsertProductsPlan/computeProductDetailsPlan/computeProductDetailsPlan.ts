@@ -58,7 +58,10 @@ export const computeProductDetailsPlan = ({
 		...currentFullProduct,
 		...patch,
 		...(baseInternalProductId !== undefined
-			? { base_internal_product_id: baseInternalProductId }
+			? {
+					base_internal_product_id: baseInternalProductId,
+					...(baseInternalProductId ? { is_default: false } : {}),
+				}
 			: {}),
 	};
 	const previousAttributes = diffProductDetails({

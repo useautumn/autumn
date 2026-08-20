@@ -3,6 +3,7 @@ import { AppEnv } from "@autumn/shared";
 import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
+	withGroupedWritePreviews,
 } from "../../../src/internal/approvals/utils/fetchApprovalPreview.js";
 
 const silentLogger = { warn: () => {} };
@@ -210,5 +211,88 @@ describe("failed billing previews are not silently swallowed", () => {
 		});
 
 		expect(result).toBeUndefined();
+	});
+});
+
+// A grouped card renders one money cell per step; a step stored without a
+// preview silently shows $0.00, so every withheld write must be backfilled.
+describe("withGroupedWritePreviews", () => {
+	test("backfills a preview onto every withheld write", async () => {
+		const previewedCustomers: string[] = [];
+		const toolArgs = await withGroupedWritePreviews({
+			env: AppEnv.Sandbox,
+			executeTool: async ({ args }) => {
+				const request = (args as { request: { customer_id: string } }).request;
+				previewedCustomers.push(request.customer_id);
+				return { currency: "usd", due_today: { total: 2400 }, total: 2400 };
+			},
+			getToken: async () => "tok",
+			logger: silentLogger,
+			toolArgs: {
+				_eveWithheldWrites: [
+					{
+						input: { request: { customer_id: "cus_2", plan_id: "pack" } },
+						requestId: "req_2",
+						toolName: "autumn__attach",
+					},
+					{
+						input: { request: { customer_id: "cus_3", plan_id: "pack" } },
+						requestId: "req_3",
+						toolName: "autumn__attach",
+					},
+				],
+				request: { customer_id: "cus_1", plan_id: "pack" },
+			},
+		});
+
+		expect(previewedCustomers.sort()).toEqual(["cus_2", "cus_3"]);
+		const withheld = toolArgs._eveWithheldWrites as Array<{
+			preview?: { preview?: { total?: number } };
+		}>;
+		expect(withheld).toHaveLength(2);
+		for (const step of withheld) {
+			expect(step.preview?.preview?.total).toBe(2400);
+		}
+	});
+
+	test("keeps the step and card alive when one preview fails", async () => {
+		const toolArgs = await withGroupedWritePreviews({
+			env: AppEnv.Sandbox,
+			executeTool: async ({ args }) => {
+				const request = (args as { request: { customer_id: string } }).request;
+				if (request.customer_id === "cus_2") throw new Error("boom");
+				return { total: 2400 };
+			},
+			getToken: async () => "tok",
+			logger: silentLogger,
+			toolArgs: {
+				_eveWithheldWrites: [
+					{
+						input: { request: { customer_id: "cus_2", plan_id: "pack" } },
+						requestId: "req_2",
+						toolName: "autumn__attach",
+					},
+					{
+						input: { request: { customer_id: "cus_3", plan_id: "pack" } },
+						requestId: "req_3",
+						toolName: "autumn__attach",
+					},
+				],
+				request: { customer_id: "cus_1", plan_id: "pack" },
+			},
+		});
+
+		const withheld = toolArgs._eveWithheldWrites as Array<{
+			preview?: {
+				failed?: boolean;
+				preview?: { failed?: boolean; total?: number };
+			};
+			toolName: string;
+		}>;
+		expect(withheld).toHaveLength(2);
+		expect(
+			withheld[0].preview?.failed ?? withheld[0].preview?.preview?.failed,
+		).toBe(true);
+		expect(withheld[1].preview?.preview?.total).toBe(2400);
 	});
 });

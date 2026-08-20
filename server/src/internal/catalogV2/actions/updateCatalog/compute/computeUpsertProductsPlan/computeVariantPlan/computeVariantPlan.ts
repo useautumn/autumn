@@ -3,6 +3,7 @@ import type {
 	ProductUpsertIntent,
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { deriveVariantAdopts } from "./adopts/deriveVariantAdopts";
 import { deriveVariantCreates } from "./creates/deriveVariantCreates";
 import { deriveVariantEdits } from "./edits/deriveVariantEdits";
 import { deriveVariantMints } from "./mints/deriveVariantMints";
@@ -21,6 +22,10 @@ export const computeVariantPlan = ({
 	});
 	return [
 		...deriveVariantCreates({
+			upsert,
+			projectedProductStatesContext,
+		}),
+		...deriveVariantAdopts({
 			upsert,
 			projectedProductStatesContext,
 		}),

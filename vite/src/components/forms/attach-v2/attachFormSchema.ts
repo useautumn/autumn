@@ -59,6 +59,8 @@ export const AttachFormSchema = z.object({
 	redirectMode: RedirectModeSchema,
 	newBillingSubscription: z.boolean(),
 	resetBillingCycle: z.boolean(),
+	billingCycleAnchorMode: z.enum(["now", "custom"]),
+	billingCycleAnchorDate: z.number().nullable(),
 	discounts: z.custom<FormDiscount[]>(),
 	grantFree: z.boolean(),
 	currency: z.string().nullable(),

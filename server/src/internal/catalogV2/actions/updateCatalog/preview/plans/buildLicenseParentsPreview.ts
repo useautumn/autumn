@@ -18,6 +18,9 @@ import type {
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
+import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
+import { activeVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeVersionForPlan";
+import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 
 const byPlanId = (
 	left: CatalogLicenseParentPreview,
@@ -41,7 +44,7 @@ const parentVersioningOptions = ({
 	linkedVersions: NamedParentVersion[];
 	productStatesContext: ProductStatesContext;
 }): CatalogPlanVersioningStrategy[] => {
-	const latest = productStatesContext.versionsByPlanId[planId]?.[0];
+	const latest = activeFullProductForPlan({ planId, productStatesContext });
 	const latestLinked = linkedVersions.some(
 		(version) => version.version === latest?.version,
 	);
@@ -74,7 +77,7 @@ const parentVersioning = ({
 	productStatesContext: ProductStatesContext;
 }): CatalogPlanVersioning => {
 	const currentVersion =
-		productStatesContext.versionsByPlanId[planId]?.[0]?.version ??
+		maxVersionForPlan({ planId, productStatesContext }) ||
 		Math.max(...linkedVersions.map((version) => version.version));
 	const minted = linkedVersions.find(
 		(version) => version.version > currentVersion,
@@ -124,16 +127,16 @@ const findParentUpsert = ({
 const resolveLicenseAction = ({
 	parent,
 	child,
-	upsertProducts,
+	productStatesContext,
 }: {
 	parent: UpsertProductPlan | undefined;
 	child: UpsertProductPlan;
-	upsertProducts: UpsertProductPlan[];
+	productStatesContext: ProductStatesContext;
 }): CatalogLicenseAction => {
 	if (parent?.declaredLicenses !== undefined) return "explicit";
 	if (
 		parent != null &&
-		childPropagatesToParent({ child, parent, upsertProducts })
+		childPropagatesToParent({ child, parent, productStatesContext })
 	) {
 		return "propagated";
 	}
@@ -195,7 +198,7 @@ const buildParentVersionPreview = ({
 	const licenseAction = resolveLicenseAction({
 		parent: parentUpsert,
 		child,
-		upsertProducts,
+		productStatesContext,
 	});
 	const planChange = parentPlanChange({ parentUpsert });
 	const preview = {
@@ -247,18 +250,24 @@ const foldParentVersions = ({
 	}
 
 	return [...versionsByPlanId.values()].map((planVersions) => {
-		const latest = planVersions.reduce((newest, version) =>
-			version.version > newest.version ? version : newest,
-		);
+		const activeVersion = activeVersionForPlan({
+			planId: planVersions[0]!.plan_id,
+			productStatesContext,
+		});
+		const active =
+			planVersions.find((version) => version.version === activeVersion) ??
+			planVersions.reduce((newest, version) =>
+				version.version > newest.version ? version : newest,
+			);
 		const siblings = planVersions
-			.filter((version) => version.version !== latest.version)
+			.filter((version) => version.version !== active.version)
 			.map(({ name: _name, ...sibling }) => sibling)
 			.sort(byVersionAscending);
 
 		return {
-			...latest,
+			...active,
 			versioning: parentVersioning({
-				planId: latest.plan_id,
+				planId: active.plan_id,
 				linkedVersions: planVersions,
 				directUpsert,
 				upsertProducts,
@@ -311,20 +320,26 @@ export const buildLicenseParentsPreview = ({
 	);
 	const mintedVersions = upsertProducts.flatMap((parentUpsert) => {
 		if (!linkedParentPlanIds.has(parentUpsert.row.planId)) return [];
-		const latestExisting =
-			productStatesContext.versionsByPlanId[parentUpsert.row.planId]?.[0];
+		const maxVersion = maxVersionForPlan({
+			planId: parentUpsert.row.planId,
+			productStatesContext,
+		});
+		const active = activeFullProductForPlan({
+			planId: parentUpsert.row.planId,
+			productStatesContext,
+		});
 		if (
-			!latestExisting ||
+			!active ||
 			parentUpsert.row.op !== "create" ||
 			parentUpsert.row.versioning !== "new_version" ||
-			parentUpsert.row.version <= latestExisting.version
+			parentUpsert.row.version <= maxVersion
 		) {
 			return [];
 		}
 		return [
 			buildParentVersionPreview({
 				parentUpsert,
-				stateProduct: latestExisting,
+				stateProduct: active,
 				previewVersion: parentUpsert.row.version,
 				child: directUpsert,
 				upsertProducts,

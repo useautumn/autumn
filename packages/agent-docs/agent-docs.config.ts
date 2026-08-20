@@ -1,4 +1,25 @@
 import { defineConfig } from "./src/config/define.js";
+import type { AgentDefinition } from "./src/config/types.js";
+
+/**
+ * The Eve orchestrator + subagents: each gets a composed prompt from its
+ * instructions mdx, and a skill bundle resolved from the entry keys below.
+ */
+export const agents = {
+	orchestrator: { instructions: "instructions/orchestrator.md", skills: [] },
+	investigator: {
+		instructions: "instructions/subagents/investigator.md",
+		skills: ["investigate"],
+	},
+	billing: {
+		instructions: "instructions/subagents/billing.md",
+		skills: ["billing"],
+	},
+	catalog: {
+		instructions: "instructions/subagents/catalog.md",
+		skills: ["catalog"],
+	},
+} satisfies Record<string, AgentDefinition>;
 
 /**
  * The single place to declare what docs content becomes agent-facing, and in

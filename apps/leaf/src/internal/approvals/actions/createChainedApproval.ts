@@ -4,6 +4,7 @@ import { logger } from "../../../lib/logger.js";
 import { approvalOptionIds } from "../../agentRuntime/eve/events.js";
 import {
 	type ChainedPendingRequest,
+	siblingRequestIdsToolArgs,
 	type WithheldWrite,
 	withheldWritesToolArgs,
 } from "../../agentRuntime/eve/parkedInput.js";
@@ -17,6 +18,7 @@ import {
 import {
 	fetchApprovalPreview,
 	isFailedApprovalPreview,
+	withGroupedWritePreviews,
 } from "../utils/fetchApprovalPreview.js";
 import { toolRequestFromArgs } from "../utils/toolRequest.js";
 
@@ -39,6 +41,7 @@ export const createChainedApproval = async ({
 	const provider = auth.provider as ChatApproval["provider"];
 	const options = approvalOptionIds({ options: chained.options });
 	let preview: unknown;
+	let getAccessToken: (() => Promise<string>) | undefined;
 	try {
 		const credentialUserId =
 			provider === "web" ? providerUserId : auth.autumnUserId;
@@ -49,6 +52,7 @@ export const createChainedApproval = async ({
 			userId: credentialUserId,
 			workspaceId: auth.workspaceId,
 		});
+		getAccessToken = async () => accessToken;
 		const request = toolRequestFromArgs(chained.input) ?? {};
 		const resolvedPreview = await fetchApprovalPreview({
 			env,
@@ -77,6 +81,21 @@ export const createChainedApproval = async ({
 			},
 		});
 	}
+	let toolArgs: Record<string, unknown> = {
+		...(chained.input ?? {}),
+		_eveApproveOptionId: options.approve,
+		_eveDenyOptionId: options.deny,
+		...siblingRequestIdsToolArgs(siblingRequestIds),
+		...withheldWritesToolArgs(withheld),
+	};
+	if (getAccessToken) {
+		toolArgs = await withGroupedWritePreviews({
+			env,
+			getToken: getAccessToken,
+			logger,
+			toolArgs,
+		});
+	}
 	return chatApprovalRepo.insert({
 		db,
 		data: {
@@ -88,13 +107,7 @@ export const createChainedApproval = async ({
 			provider,
 			providerUserId,
 			runId: sessionId,
-			toolArgs: {
-				...(chained.input ?? {}),
-				_eveApproveOptionId: options.approve,
-				_eveDenyOptionId: options.deny,
-				_eveSiblingRequestIds: siblingRequestIds,
-				...withheldWritesToolArgs(withheld),
-			},
+			toolArgs,
 			toolCallId: chained.requestId,
 			toolName: chained.toolName,
 			workspaceId: auth.workspaceId,

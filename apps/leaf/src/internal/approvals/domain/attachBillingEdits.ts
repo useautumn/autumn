@@ -6,6 +6,7 @@ import { z } from "zod";
 export const attachBillingEditsSchema = z.strictObject({
 	access: z.enum(["immediate", "after_payment"]),
 	billing: z.enum(["checkout", "draft_invoice", "finalized_invoice"]),
+	proration: z.enum(["immediate", "next_cycle"]),
 });
 
 export type AttachBillingEdits = z.infer<typeof attachBillingEditsSchema>;
@@ -31,6 +32,10 @@ export const attachBillingEditsFromRequest = (
 				? "draft_invoice"
 				: "finalized_invoice"
 			: "checkout",
+		// An omitted proration resolves server-side from
+		// org.config.bill_upgrade_immediately, which defaults to immediate.
+		proration:
+			request.proration_behavior === "none" ? "next_cycle" : "immediate",
 	};
 };
 
@@ -44,14 +49,27 @@ export const applyAttachBillingEdits = ({
 	const {
 		invoice_mode: existingInvoiceMode,
 		long_lived_checkout: _longLivedCheckout,
+		proration_behavior: _prorationBehavior,
 		redirect_mode: _redirectMode,
 		...unchanged
 	} = request;
 	const enablePlanImmediately = edits.access === "immediate";
+	// Only an explicit choice writes the field: a request that never carried
+	// proration_behavior keeps the org default (and stays valid for brand-new
+	// subscriptions, which reject "none").
+	const writeProration =
+		"proration_behavior" in request ||
+		edits.proration !== attachBillingEditsFromRequest(request).proration;
 	const invoiceMode = getRecord(existingInvoiceMode);
 	const updated = {
 		...unchanged,
 		enable_plan_immediately: enablePlanImmediately,
+		...(writeProration
+			? {
+					proration_behavior:
+						edits.proration === "immediate" ? "prorate_immediately" : "none",
+				}
+			: {}),
 		...(edits.billing === "checkout"
 			? { long_lived_checkout: true, redirect_mode: "always" }
 			: {

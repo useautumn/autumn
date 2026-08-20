@@ -13,6 +13,7 @@ import { createFullCusProduct } from "@/internal/customers/add-product/createFul
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
+import { attachParamsFromMetadataData } from "@/internal/metadata/utils/attachParamsFromMetadataData.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { workflows } from "@/queue/workflows.js";
 import { getOptionsFromCheckoutSession } from "./getOptionsFromCheckout.js";
@@ -47,7 +48,9 @@ export const handleLegacyCheckoutSessionMetadata = async ({
 
 	// Get options
 	const stripeCli = createStripeCli({ org, env });
-	const attachParams: AttachParams = metadata.data as AttachParams;
+	const attachParams: AttachParams = attachParamsFromMetadataData({
+		data: metadata.data,
+	});
 
 	attachParams.req = ctx as AutumnContext;
 	attachParams.stripeCli = stripeCli;

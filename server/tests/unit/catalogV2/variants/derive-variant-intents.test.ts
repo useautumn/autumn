@@ -79,12 +79,105 @@ describe("deriveVariantIntents", () => {
 				...emptyStates({ planIds: ["team", "team-eu"] }),
 				versionsByPlanId: {
 					team: [baseProduct],
-					"team-eu": [{ ...baseProduct, id: "team-eu" }],
+					"team-eu": [
+						{
+							...baseProduct,
+							id: "team-eu",
+							internal_id: "internal_team-eu",
+							base_internal_product_id: baseProduct.internal_id,
+						},
+					],
 				},
 			},
 		});
 
 		expect(intents).toEqual([]);
+	});
+
+	test("existing standalone listed in variants[] emits a pointer adopt", () => {
+		const standalone = {
+			...baseProduct,
+			id: "team-eu",
+			internal_id: "internal_team-eu",
+			base_internal_product_id: null,
+		};
+		const intents = deriveVariantIntents({
+			intent: {
+				productKey: { planId: "team", version: 1 },
+				planParams: { plan_id: "team", version: 1 },
+				source: "direct",
+			},
+			upsert: {
+				row: {
+					planId: "team",
+					version: 1,
+					op: "none",
+					source: "direct",
+					versioning: "existing",
+					currentFullProduct: baseProduct,
+					baseFullProduct: null,
+					nextFullProduct: baseProduct,
+				},
+				declaredVariants: [{ variant_plan_id: "team-eu" }],
+				state: { hasCustomers: false },
+			} as UpsertProductPlan,
+			projectedProductStatesContext: {
+				...emptyStates({ planIds: ["team", "team-eu"] }),
+				versionsByPlanId: {
+					team: [baseProduct],
+					"team-eu": [standalone],
+				},
+			},
+		});
+
+		expect(intents).toHaveLength(1);
+		expect(intents[0]?.source).toBe("repoint");
+		expect(intents[0]?.baseInternalProductId).toBe(baseProduct.internal_id);
+		expect(intents[0]?.planParams.plan_id).toBe("team-eu");
+	});
+
+	test("nested base_variant_id null emits an unlink adopt", () => {
+		const linked = {
+			...baseProduct,
+			id: "team-eu",
+			internal_id: "internal_team-eu",
+			base_internal_product_id: baseProduct.internal_id,
+		};
+		const intents = deriveVariantIntents({
+			intent: {
+				productKey: { planId: "team", version: 1 },
+				planParams: { plan_id: "team", version: 1 },
+				source: "direct",
+			},
+			upsert: {
+				row: {
+					planId: "team",
+					version: 1,
+					op: "none",
+					source: "direct",
+					versioning: "existing",
+					currentFullProduct: baseProduct,
+					baseFullProduct: null,
+					nextFullProduct: baseProduct,
+				},
+				declaredVariants: [
+					{ variant_plan_id: "team-eu", base_variant_id: null },
+				],
+				state: { hasCustomers: false },
+			} as UpsertProductPlan,
+			projectedProductStatesContext: {
+				...emptyStates({ planIds: ["team", "team-eu"] }),
+				versionsByPlanId: {
+					team: [baseProduct],
+					"team-eu": [linked],
+				},
+			},
+		});
+
+		expect(intents).toHaveLength(1);
+		expect(intents[0]?.source).toBe("repoint");
+		expect(intents[0]?.unlink).toBe(true);
+		expect(intents[0]?.planParams.base_variant_id).toBeNull();
 	});
 
 	test("settings change emits latest variant even when omitted from propagate", () => {

@@ -6,6 +6,14 @@ import {
 } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { backfillProductVersionIdentityInTree } from "@/internal/products/productUtils/backfillProductVersionIdentity.js";
+
+const hydrateMetadataRow = (row: Metadata): Metadata => {
+	if (row.data) {
+		backfillProductVersionIdentityInTree({ value: row.data });
+	}
+	return row;
+};
 
 /**
  * MetadataService handles CRUD operations for the metadata table.
@@ -28,7 +36,7 @@ export class MetadataService {
 			return null;
 		}
 
-		return data[0] as Metadata;
+		return hydrateMetadataRow(data[0] as Metadata);
 	}
 
 	static async getByStripeInvoiceId({
@@ -51,7 +59,7 @@ export class MetadataService {
 			return null;
 		}
 
-		return meta as Metadata;
+		return hydrateMetadataRow(meta as Metadata);
 	}
 
 	/**
