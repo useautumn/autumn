@@ -34,7 +34,7 @@ import {
 	getCachedProducts,
 	setCachedProducts,
 } from "@/external/redis/actions/productsCache/productsCache.js";
-import { getLatestProducts, isFreeProduct } from "./productUtils";
+import { getActiveProducts, isFreeProduct } from "./productUtils";
 import { sortFullProducts } from "./productUtils/sortProductUtils";
 import {
 	composeFullProductQuery,
@@ -111,9 +111,7 @@ export class ProductService {
 
 		parseFreeTrials({ products: fullProducts });
 
-		const latestProducts = getLatestProducts(fullProducts);
-
-		return latestProducts;
+		return getActiveProducts(fullProducts);
 	}
 
 	static async getByStripeProductIds({
@@ -291,26 +289,20 @@ export class ProductService {
 
 		parseFreeTrials({ products: prods });
 
-		const latestProducts = getLatestProducts(prods);
+		const activeProducts = getActiveProducts(prods);
 
 		if (onlyFree) {
-			return latestProducts.filter((p) =>
+			return activeProducts.filter((p) =>
 				isFreeProduct(p.prices),
 			) as FullProduct[];
 		}
 
-		return latestProducts as FullProduct[];
+		return activeProducts as FullProduct[];
 	}
 
 	static async insert({ db, product }: { db: DrizzleCli; product: Product }) {
-		// Dual-write for version identity (nothing reads these yet — Unit 2):
-		// every production insert funnels through here. Invariant: active tracks
-		// the max version ("latest wins", today's resolution), order-independently
-		// — a row only self-activates when no higher version exists, so multi-row
-		// catalog updates land the same end state whatever their insert order.
-		// `product.active` is the caller's explicit request (strict on
-		// ProductSchema); false opts out (future catalogV2 compute hook).
-		// unique_active_product backstops the flip against concurrent inserts.
+		// Dual-write version identity; omit-version reads resolve `active`.
+		// A row only self-activates when no higher version exists.
 		const row = {
 			...product,
 			version_slug: product.version_slug ?? `v${product.version}`,
@@ -372,7 +364,7 @@ export class ProductService {
 				eq(products.id, id),
 				eq(products.org_id, orgId),
 				eq(products.env, env),
-				version ? eq(products.version, version) : undefined,
+				version ? eq(products.version, version) : eq(products.active, true),
 			),
 			orderBy: [desc(products.version)],
 		});
@@ -492,47 +484,13 @@ export class ProductService {
 		version?: number;
 		archived?: boolean;
 	}): Promise<FullProduct[]> {
-		// Optimization: Use a subquery to only fetch the latest version of each product
-		const latestVersionsSubquery =
-			!returnAll && !version
-				? db
-						.select({
-							id: products.id,
-							maxVersion: sql<number>`MAX(${products.version})`.as(
-								"max_version",
-							),
-						})
-						.from(products)
-						.where(
-							and(
-								eq(products.org_id, orgId),
-								eq(products.env, env),
-								inIds ? inArray(products.id, inIds) : undefined,
-							),
-						)
-						.groupBy(products.id)
-						.as("latest_versions")
-				: undefined;
-
 		const rows = (await db.query.products.findMany({
 			where: and(
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 				inIds ? inArray(products.id, inIds) : undefined,
 				version ? eq(products.version, version) : undefined,
-				latestVersionsSubquery
-					? exists(
-							db
-								.select()
-								.from(latestVersionsSubquery)
-								.where(
-									and(
-										eq(latestVersionsSubquery.id, products.id),
-										eq(latestVersionsSubquery.maxVersion, products.version),
-									),
-								),
-						)
-					: undefined,
+				!returnAll && !version ? eq(products.active, true) : undefined,
 			),
 			with: composeFullProductQuery(),
 		})) as ProductWithLicenseRelations[];
@@ -550,7 +508,7 @@ export class ProductService {
 			return data;
 		}
 
-		const latestProducts: FullProduct[] = getLatestProducts(data);
+		const latestProducts: FullProduct[] = getActiveProducts(data);
 
 		if (inIds) {
 			const newProducts: FullProduct[] = [];
@@ -587,42 +545,13 @@ export class ProductService {
 	}): Promise<FullProduct[]> {
 		if (baseInternalProductIds.length === 0) return [];
 
-		const latestVersionsSubquery = db
-			.select({
-				id: products.id,
-				maxVersion: sql<number>`MAX(${products.version})`.as("max_version"),
-			})
-			.from(products)
-			.where(
-				and(
-					eq(products.org_id, orgId),
-					eq(products.env, env),
-					inArray(products.base_internal_product_id, baseInternalProductIds),
-					ne(products.archived, true),
-				),
-			)
-			.groupBy(products.id)
-			.as("latest_versions");
-
 		const data = (await db.query.products.findMany({
 			where: and(
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 				ne(products.archived, true),
 				inArray(products.base_internal_product_id, baseInternalProductIds),
-				returnAll
-					? undefined
-					: exists(
-							db
-								.select()
-								.from(latestVersionsSubquery)
-								.where(
-									and(
-										eq(latestVersionsSubquery.id, products.id),
-										eq(latestVersionsSubquery.maxVersion, products.version),
-									),
-								),
-						),
+				returnAll ? undefined : eq(products.active, true),
 			),
 			with: {
 				entitlements: {
@@ -638,7 +567,7 @@ export class ProductService {
 
 		parseFreeTrials({ products: data });
 
-		return returnAll ? data : getLatestProducts(data);
+		return returnAll ? data : getActiveProducts(data);
 	}
 
 	static async getFull({
@@ -665,6 +594,12 @@ export class ProductService {
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 				version ? eq(products.version, version) : undefined,
+				!version
+					? or(
+							eq(products.internal_id, idOrInternalId),
+							eq(products.active, true),
+						)
+					: undefined,
 			),
 			orderBy: [desc(products.version)],
 			with: composeFullProductQuery(),

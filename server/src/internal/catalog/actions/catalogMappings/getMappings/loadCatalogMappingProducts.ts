@@ -1,6 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { getLatestProducts } from "@/internal/products/productUtils.js";
+import { getActiveProducts } from "@/internal/products/productUtils.js";
 
 // Derives the latest versions from the all-versions read rather than calling
 // listFull again: that second call hits the 24h products cache, which serves a
@@ -22,7 +22,7 @@ export const loadCatalogMappingProducts = async ({
 
 	// Archived is filtered AFTER picking the latest version, matching
 	// listFull({ archived: false }).
-	const latestProducts = getLatestProducts(everyVersion).filter(
+	const latestProducts = getActiveProducts(everyVersion).filter(
 		(product) => !product.archived,
 	);
 	const allProducts = everyVersion.filter((product) => !product.archived);
