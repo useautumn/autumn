@@ -36,6 +36,7 @@ export const logRequestResult = async ({
 	skipUrls = [],
 	statusCode = c.res.status,
 	responseBody,
+	responseCompleted,
 }: {
 	ctx: AutumnContext;
 	c: Context<HonoEnv>;
@@ -43,6 +44,7 @@ export const logRequestResult = async ({
 	skipUrls?: string[];
 	statusCode?: number;
 	responseBody?: Record<string, unknown> | null;
+	responseCompleted?: Promise<void>;
 }) => {
 	try {
 		if (skipUrls.includes(c.req.path)) {
@@ -75,6 +77,10 @@ export const logRequestResult = async ({
 					finalResponseBody = null;
 				}
 			}
+		}
+
+		if (responseCompleted) {
+			await responseCompleted;
 		}
 
 		const log = isSuccess ? ctx.logger.info : ctx.logger.warn;

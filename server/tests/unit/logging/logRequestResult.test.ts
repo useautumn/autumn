@@ -243,6 +243,59 @@ describe("logRequestResult", () => {
 		});
 	});
 
+	test("captures the response body before waiting to emit the terminal log", async () => {
+		spyOn(Math, "random").mockReturnValue(0);
+		const captured: CapturedLog[] = [];
+		const responseBody = { allowed: true, balance: 90 };
+		let resolveBodyCaptured: () => void = () => {};
+		const bodyCaptured = new Promise<void>((resolve) => {
+			resolveBodyCaptured = resolve;
+		});
+		let resolveResponseCompleted: () => void = () => {};
+		const responseCompleted = new Promise<void>((resolve) => {
+			resolveResponseCompleted = resolve;
+		});
+		const ctx = {
+			timestamp: 123,
+			logger: createCapturingLogger({ captured }),
+			extraLogs: {},
+			org: { slug: "test-org" },
+		} as unknown as AutumnContext;
+		const c = {
+			req: { path: "/v1/balances.check" },
+			res: {
+				status: 200,
+				headers: new Headers({ "content-type": "application/json" }),
+				clone: () => ({
+					json: async () => {
+						resolveBodyCaptured();
+						return responseBody;
+					},
+				}),
+			},
+		} as unknown as Context<HonoEnv>;
+
+		const logging = logRequestResult({
+			ctx,
+			c,
+			durationMs: 10,
+			responseCompleted,
+		});
+		await bodyCaptured;
+
+		expect(captured).toHaveLength(0);
+
+		resolveResponseCompleted();
+		await logging;
+
+		expect(captured).toHaveLength(1);
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: responseBody,
+		});
+	});
+
 	test("reads and logs a slow high-volume success body", async () => {
 		spyOn(Math, "random").mockReturnValue(0.5);
 		const captured: CapturedLog[] = [];
