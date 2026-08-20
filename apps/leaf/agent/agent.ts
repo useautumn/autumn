@@ -7,7 +7,9 @@ const workflowWorld =
 
 export default defineAgent({
 	model: leafModel("orchestrator"),
-	reasoning: leafReasoning,
+	// Routing needs no deliberation: "minimal" still emits thinking blocks;
+	// "none" disables them entirely.
+	reasoning: "none",
 	...(workflowWorld
 		? {
 				experimental: {

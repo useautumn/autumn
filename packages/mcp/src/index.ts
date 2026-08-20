@@ -26,3 +26,4 @@ export {
 } from "./server/auth/auth.js";
 export type { MCPServerFlags } from "./server/flags.js";
 export { createAutumnOperationsMCPServer } from "./server/server.js";
+export { createRawAutumnOperationTools } from "./tools/index.js";
