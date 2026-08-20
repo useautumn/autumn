@@ -38,3 +38,12 @@ export type Entry = {
 
 /** The whole config, keyed by entry id (e.g. "concepts"). */
 export type AgentDocsConfig = Record<string, Entry>;
+
+/**
+ * One Leaf agent: its instructions mdx (relative to `content/`) plus the config
+ * entry keys whose skills it declares.
+ */
+export type AgentDefinition = {
+	instructions: string;
+	skills: string[];
+};

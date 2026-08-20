@@ -2,8 +2,8 @@ import { AttachScenario, type Metadata } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { MetadataService } from "@/internal/metadata/MetadataService.js";
+import { attachParamsFromMetadataData } from "@/internal/metadata/utils/attachParamsFromMetadataData.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 
 export const handleInvoiceCheckoutPaid = async ({
@@ -19,7 +19,7 @@ export const handleInvoiceCheckoutPaid = async ({
 	);
 
 	const { subId, anchorToUnix, config, ...rest } =
-		metadata.data as AttachParams;
+		attachParamsFromMetadataData({ data: metadata.data });
 
 	const attachParams = rest;
 

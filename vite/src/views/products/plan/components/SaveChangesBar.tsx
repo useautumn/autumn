@@ -7,6 +7,7 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
+	useHasContentChanges,
 	useIsCusPlanEditor,
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
@@ -16,10 +17,11 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
-import { buildUpdateCatalogPlanParams } from "../catalog/buildUpdateCatalogPlanParams";
+import { buildCatalogUpdatePlans } from "../catalog/buildUpdateCatalogPlanParams";
 import { catalogPreviewOpensDialog } from "../catalog/catalogPlanPreview";
 import { checkItemCurrenciesValid } from "../utils/currencyUtils";
 import { validateItemsBeforeSave } from "../utils/validateItemsBeforeSave";
+import { useVariantLinkVisibility } from "../hooks/useVariantLinkVisibility";
 import { PlanEditorBar } from "./PlanEditorBar";
 import {
 	commitLicenseChanges,
@@ -41,10 +43,13 @@ export const SaveChangesBar = ({
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setProduct = useProductStore((s) => s.setProduct);
+	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
 	const { type: sheetType } = useSheetStore();
 	const planHasChanges = useHasChanges();
+	const contentHasChanges = useHasContentChanges();
 	const licenseHasChanges = useHasLicenseChanges();
 	const hasChanges = planHasChanges || licenseHasChanges;
+	const { basePlanId: persistedBasePlanId } = useVariantLinkVisibility(product);
 	const planLicenses = catalogLicenses.map(({ planLicense }) => planLicense);
 	const { features = [] } = useFeaturesQuery();
 	const fetchPreviewUpdateCatalog = useFetchPreviewUpdateCatalog();
@@ -83,14 +88,15 @@ export const SaveChangesBar = ({
 			return;
 		}
 
-		let params: ReturnType<typeof buildUpdateCatalogPlanParams>;
+		let plans: ReturnType<typeof buildCatalogUpdatePlans>;
 		try {
-			params = buildUpdateCatalogPlanParams({
+			plans = buildCatalogUpdatePlans({
 				baseProduct,
 				editedProduct: product,
 				features,
 				licenses,
-				includeContent: planHasChanges,
+				includeContent: contentHasChanges || licenseHasChanges,
+				persistedBasePlanId,
 			});
 		} catch (error) {
 			toast.error(
@@ -99,11 +105,11 @@ export const SaveChangesBar = ({
 			return;
 		}
 
-		if (!isOnboarding && hasChanges) {
+		if (!isOnboarding && (contentHasChanges || licenseHasChanges)) {
 			setSaving(true);
 			try {
 				const preview = await fetchPreviewUpdateCatalog({
-					plans: [params],
+					plans,
 				});
 				if (catalogPreviewOpensDialog({ preview: preview.plans[0] })) {
 					setShowNewVersionDialog(true);
@@ -128,8 +134,9 @@ export const SaveChangesBar = ({
 		}
 
 		try {
-			await CatalogV2Service.update(axiosInstance, { plans: [params] });
+			await CatalogV2Service.update(axiosInstance, { plans });
 			if (licenses) commitLicenseChanges();
+			setBaseProduct(product);
 			await queryRefetch();
 			await Promise.all([invalidateProduct(), invalidateProducts()]);
 			toast.success("Changes saved successfully");

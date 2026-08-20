@@ -1,3 +1,4 @@
+import { backfillProductVersionIdentityInTree } from "@/internal/products/productUtils/backfillProductVersionIdentity.js";
 import { repairCachedProductCollections } from "../../repairCachedProductCollections.js";
 import {
 	type CachedFullSubject,
@@ -18,7 +19,7 @@ export const sanitizeCachedFullSubject = ({
 	// Must run BEFORE the walker: version_slug is nullable, so the walker
 	// fills a missing key with null — after that, "absent" is no longer
 	// distinguishable from a real value.
-	backfillCachedProductVersionIdentity(cachedFullSubject);
+	backfillProductVersionIdentityInTree({ value: cachedFullSubject });
 
 	const normalized = normalizeFromSchema<CachedFullSubject>({
 		schema: CachedFullSubjectSchema,
@@ -32,29 +33,4 @@ export const sanitizeCachedFullSubject = ({
 	}
 
 	return normalized;
-};
-
-/**
- * Entries cached before the version-identity migration lack the (strict)
- * `version_slug` and `active` fields. Slug hole-fills to `v{version}` (same
- * rule as the DB backfill). `active` hole-fills to false: the cached subject
- * only holds this customer's product rows, not the plan's full version
- * history, so it cannot know which version is actually active — false is the
- * honest value.
- *
- * Fills ONLY when the key is absent — entries cached after the migration
- * carry real values and must pass through untouched (including explicit
- * null / false).
- */
-const backfillCachedProductVersionIdentity = (cached: CachedFullSubject) => {
-	// Pre-walker, products may still be cjson-mangled ({} instead of []).
-	if (!Array.isArray(cached.products)) return;
-	for (const product of cached.products) {
-		if (product.version_slug === undefined) {
-			product.version_slug = `v${product.version}`;
-		}
-		if (product.active === undefined) {
-			product.active = false;
-		}
-	}
 };

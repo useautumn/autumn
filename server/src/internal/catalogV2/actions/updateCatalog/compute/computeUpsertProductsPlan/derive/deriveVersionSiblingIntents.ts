@@ -118,7 +118,12 @@ export const deriveVersionSiblingIntents = ({
 }): ProductUpsertIntent[] => {
 	if (intent.source !== "direct") return [];
 	const inheritAllVersions = intent.planParams.versioning === "all_versions";
-	if (!inheritAllVersions && !upsert.unlink) return [];
+	const nextPointer = upsert.row.nextFullProduct.base_internal_product_id;
+	const previousPointer =
+		upsert.row.currentFullProduct?.base_internal_product_id;
+	const pointerChanged =
+		nextPointer != null && nextPointer !== previousPointer;
+	if (!inheritAllVersions && !upsert.unlink && !pointerChanged) return [];
 
 	const contentEdit = inheritAllVersions
 		? contentEditFromLatest({ upsert })
@@ -146,7 +151,11 @@ export const deriveVersionSiblingIntents = ({
 					: { plan_id: product.id, version: product.version },
 				source: inheritAllVersions ? ("all_versions" as const) : "repoint",
 				...(editDiff ? { editDiff } : {}),
-				...(upsert.unlink ? { unlink: true } : {}),
+				...(upsert.unlink
+					? { unlink: true }
+					: pointerChanged
+						? { baseInternalProductId: nextPointer }
+						: {}),
 			};
 		});
 };

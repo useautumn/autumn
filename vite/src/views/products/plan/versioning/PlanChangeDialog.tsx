@@ -38,6 +38,7 @@ import { useMeasuredHeight } from "@/hooks/useMeasuredHeight";
 import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { useVariantLinkVisibility } from "../hooks/useVariantLinkVisibility";
 import {
 	useProductQuery,
 	useProductQueryState,
@@ -207,6 +208,7 @@ export default function PlanChangeDialog({
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
+	const { basePlanId: persistedBasePlanId } = useVariantLinkVisibility(product);
 	const { features = [] } = useFeaturesQuery();
 	const { catalogLicenses } = useProductContext();
 	const {
@@ -284,6 +286,7 @@ export default function PlanChangeDialog({
 		includeCustom,
 		isLatest,
 		namesByPlanId,
+		persistedBasePlanId,
 	});
 
 	const customCount = Object.values(versionCounts).reduce(
@@ -332,7 +335,7 @@ export default function PlanChangeDialog({
 			const willMigrate =
 				migrateNeeded && migrate && strategy !== "new_version";
 			const result = await CatalogV2Service.update(axiosInstance, {
-				plans: [buildSaveParams({ migrate })],
+				plans: buildSaveParams({ migrate }),
 			});
 			if (licenses) {
 				commitLicenseChanges();

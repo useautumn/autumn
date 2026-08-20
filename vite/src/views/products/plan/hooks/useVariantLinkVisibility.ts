@@ -1,6 +1,20 @@
 import type { ProductV2 } from "@autumn/shared";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 
+/** Editor `base_id` is undefined until the picker changes; null means detach. */
+export const resolveSelectedBasePlanId = ({
+	editedBasePlanId,
+	persistedBasePlanId,
+	planId,
+}: {
+	editedBasePlanId: string | null | undefined;
+	persistedBasePlanId: string | null;
+	planId: string;
+}): string | null =>
+	editedBasePlanId === undefined || editedBasePlanId === planId
+		? persistedBasePlanId
+		: editedBasePlanId;
+
 export function useVariantLinkVisibility(product: ProductV2) {
 	const { products } = useProductsQuery();
 
@@ -20,13 +34,11 @@ export function useVariantLinkVisibility(product: ProductV2) {
 			candidate.id !== product.id && !candidate.base_id && !candidate.archived,
 	);
 
-	// The editor leaves base_id undefined until edited; null means detach.
-	// A self-link is never a real link, so it reads as the persisted value.
-	const editedBasePlanId = product.base_id;
-	const selectedBasePlanId =
-		editedBasePlanId === undefined || editedBasePlanId === product.id
-			? basePlanId
-			: editedBasePlanId;
+	const selectedBasePlanId = resolveSelectedBasePlanId({
+		editedBasePlanId: product.base_id,
+		persistedBasePlanId: basePlanId,
+		planId: product.id,
+	});
 
 	return {
 		isVariant: basePlanId !== null,

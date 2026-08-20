@@ -1,8 +1,18 @@
 import type { AutumnLogger } from "@autumn/logging";
+import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
+import {
+	WITHHELD_WRITES_KEY,
+	withheldWritesFromToolArgs,
+} from "../../agentRuntime/eve/parkedInput.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
+import {
+	resolveApprovalDisplay,
+	withApprovalDisplay,
+} from "./approvalDisplay.js";
 import { writeToPreviewTool } from "./toolRegistry.js";
+import { toolRequestFromArgs } from "./toolRequest.js";
 
 /** A preview the write has but Leaf could not compute — distinct from a write
  * that has no preview tool at all. */
@@ -136,4 +146,95 @@ export const fetchApprovalPreview = async ({
 		});
 		return FAILED_APPROVAL_PREVIEW;
 	}
+};
+
+export const resolveApprovalPreview = async ({
+	env,
+	executeTool,
+	getToken,
+	logger,
+	preview,
+	request,
+	toolName,
+}: {
+	env: AppEnv;
+	executeTool?: typeof executeAutumnMcpTool;
+	getToken: () => Promise<string>;
+	logger: Pick<AutumnLogger, "warn">;
+	preview: unknown;
+	request?: Record<string, unknown>;
+	toolName: string;
+}) => {
+	if (!request || !shouldRefreshApprovalPreview({ preview, toolName })) {
+		return preview;
+	}
+	try {
+		const fetchedPreview = await fetchApprovalPreview({
+			env,
+			executeTool,
+			logger,
+			request,
+			token: await getToken(),
+			toolName,
+		});
+		if (isFailedApprovalPreview(fetchedPreview)) {
+			return preview ?? FAILED_APPROVAL_PREVIEW;
+		}
+		return fetchedPreview ? fetchedPreview : preview;
+	} catch (error) {
+		logger.warn("Could not backfill approval preview", {
+			event: "leaf.approval_preview_backfill_failed",
+			error,
+			tool: toolName,
+		});
+		return preview;
+	}
+};
+
+/** Each grouped write gets the same preview + display backfill as the primary
+ * one, so the card can render every step with the standard body. */
+export const withGroupedWritePreviews = async ({
+	env,
+	executeTool,
+	getToken,
+	logger,
+	toolArgs,
+}: {
+	env: AppEnv;
+	executeTool?: typeof executeAutumnMcpTool;
+	getToken: () => Promise<string>;
+	logger: Pick<AutumnLogger, "warn">;
+	toolArgs: Record<string, unknown>;
+}) => {
+	const withheld = withheldWritesFromToolArgs(toolArgs);
+	if (!withheld.length) return toolArgs;
+	const resolved = await Promise.all(
+		withheld.map(async (write) => {
+			const request = toolRequestFromArgs(write.input);
+			// The primary write's preview is parsed at capture time; a backfilled
+			// one arrives as the raw MCP envelope and needs the same treatment.
+			const preview = parsePreviewPayload(
+				await resolveApprovalPreview({
+					env,
+					executeTool,
+					getToken,
+					logger,
+					preview: undefined,
+					request,
+					toolName: write.toolName,
+				}),
+			);
+			const display = await resolveApprovalDisplay({
+				env,
+				getToken,
+				preview,
+				request,
+			});
+			return {
+				...write,
+				preview: withApprovalDisplay({ display, preview }),
+			};
+		}),
+	);
+	return { ...toolArgs, [WITHHELD_WRITES_KEY]: resolved };
 };

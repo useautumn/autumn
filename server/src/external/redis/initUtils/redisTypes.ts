@@ -15,6 +15,10 @@ declare module "ioredis" {
 			numKeys: number,
 			...args: string[]
 		): Promise<"OK" | "CACHE_EXISTS" | "STALE_WRITE">;
+		publishCachedFullSubject(
+			numKeys: number,
+			...args: string[]
+		): Promise<string>;
 		adjustSubjectBalance(
 			balanceKey: string,
 			paramsJson: string,

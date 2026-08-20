@@ -32,6 +32,27 @@ const isVariantOfBase = ({
 			baseInternalIds.has(product.base_internal_product_id),
 	);
 
+const planHasChildVariants = ({
+	planId,
+	productStatesContext,
+}: {
+	planId: string;
+	productStatesContext: ProductStatesContext;
+}): boolean => {
+	const internalIds = new Set(
+		(productStatesContext.versionsByPlanId[planId] ?? []).map(
+			(product) => product.internal_id,
+		),
+	);
+	return Object.values(productStatesContext.versionsByPlanId).some((versions) =>
+		versions.some(
+			(product) =>
+				product.base_internal_product_id != null &&
+				internalIds.has(product.base_internal_product_id),
+		),
+	);
+};
+
 const rejectInvalidPropagationTarget = ({
 	planId,
 }: {
@@ -57,6 +78,16 @@ export const handleVariantErrors = ({
 	const declaredVariants = upsert.declaredVariants ?? [];
 	const propagateTargets = upsert.propagate?.variants ?? [];
 	if (declaredVariants.length === 0 && propagateTargets.length === 0) return;
+
+	for (const variant of declaredVariants) {
+		if (variant.variant_plan_id === upsert.row.planId) {
+			throw new RecaseError({
+				message: `Plan ${upsert.row.planId} cannot be its own variant.`,
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+	}
 
 	if (
 		declaredVariants.length > 0 &&
@@ -86,15 +117,26 @@ export const handleVariantErrors = ({
 	});
 
 	for (const variant of declaredVariants) {
-		if (variant.variant_plan_id === upsert.row.planId) {
+		if (
+			typeof variant.base_variant_id === "string" &&
+			variant.base_variant_id !== upsert.row.planId
+		) {
 			throw new RecaseError({
-				message: `Plan ${upsert.row.planId} cannot be its own variant.`,
+				message: `variants[].base_variant_id must be ${upsert.row.planId} or null`,
 				code: ErrCode.InvalidRequest,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 
-		if (directPlanIds.has(variant.variant_plan_id)) {
+		if (
+			directPlanIds.has(variant.variant_plan_id) &&
+			variant.base_variant_id !== null &&
+			isVariantOfBase({
+				variantPlanId: variant.variant_plan_id,
+				baseInternalIds,
+				productStatesContext,
+			})
+		) {
 			throw new RecaseError({
 				message: `Plan ${variant.variant_plan_id} cannot appear both as a top-level plan and in variants[]`,
 				code: ErrCode.InvalidRequest,
@@ -106,15 +148,23 @@ export const handleVariantErrors = ({
 			productStatesContext.versionsByPlanId[variant.variant_plan_id];
 		if (existing?.length) {
 			if (
-				!isVariantOfBase({
+				isVariantOfBase({
 					variantPlanId: variant.variant_plan_id,
 					baseInternalIds,
 					productStatesContext,
 				})
 			) {
+				continue;
+			}
+			if (
+				planHasChildVariants({
+					planId: variant.variant_plan_id,
+					productStatesContext,
+				})
+			) {
 				throw new RecaseError({
-					message: `Product ${variant.variant_plan_id} already exists.`,
-					code: ErrCode.ProductIdAlreadyExists,
+					message: "Cannot create a variant from another variant.",
+					code: ErrCode.NestedVariantNotAllowed,
 					statusCode: StatusCodes.BAD_REQUEST,
 				});
 			}
