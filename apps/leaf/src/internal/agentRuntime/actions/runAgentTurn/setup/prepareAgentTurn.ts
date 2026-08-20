@@ -22,6 +22,8 @@ export const prepareAgentTurn = async ({
 		thread,
 		token,
 	} = context;
+	const loadOrgContext = () =>
+		autumnOrgContextService.load({ env, logger, orgId: org.id, token });
 	const existingSession =
 		context.eveSession ??
 		(await getEveSession({ db, env, orgId: org.id, thread }));
@@ -30,7 +32,7 @@ export const prepareAgentTurn = async ({
 		await onAction?.("Loading context");
 		return {
 			existingSession: undefined,
-			orgContext: await autumnOrgContextService.load({ env, logger, token }),
+			orgContext: await loadOrgContext(),
 		} as const;
 	}
 
@@ -56,7 +58,7 @@ export const prepareAgentTurn = async ({
 		await onAction?.("Loading context");
 		return {
 			existingSession: undefined,
-			orgContext: await autumnOrgContextService.load({ env, logger, token }),
+			orgContext: await loadOrgContext(),
 		} as const;
 	}
 	return { existingSession, orgContext: undefined } as const;

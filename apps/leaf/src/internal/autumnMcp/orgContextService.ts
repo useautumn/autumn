@@ -1,6 +1,13 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { AppEnv } from "@autumn/shared";
+import { parsePreviewPayload } from "@autumn/render";
+import { type AppEnv, ms } from "@autumn/shared";
+import { createTtlCache } from "../../lib/ttlCache.js";
 import { executeAutumnMcpTool } from "./client.js";
+import {
+	compactFeatures,
+	compactPlans,
+	toJsonBlock,
+} from "./orgContextFormat.js";
 
 export type AutumnOrgContext = {
 	instructions?: string;
@@ -9,18 +16,27 @@ export type AutumnOrgContext = {
 
 type ExecuteAutumnTool = typeof executeAutumnMcpTool;
 
-const toJsonBlock = ({ label, value }: { label: string; value: unknown }) =>
-	`${label}:\n\`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``;
+// Preload results arrive as raw MCP envelopes; notes must be read off the
+// parsed body or the org instructions silently never reach any agent.
+const parsedAgentRules = (
+	value: unknown,
+): Record<string, unknown> | undefined => {
+	const unwrapped = parsePreviewPayload(value) ?? value;
+	if (!unwrapped || typeof unwrapped !== "object" || Array.isArray(unwrapped)) {
+		return undefined;
+	}
+	return unwrapped as Record<string, unknown>;
+};
 
 const withoutNotes = (value: unknown) => {
-	if (!value || typeof value !== "object" || Array.isArray(value)) return value;
-	const { notes: _notes, ...rest } = value as Record<string, unknown>;
+	const rules = parsedAgentRules(value);
+	if (!rules) return value;
+	const { notes: _notes, ...rest } = rules;
 	return rest;
 };
 
 const getNotes = (value: unknown) => {
-	if (!value || typeof value !== "object" || Array.isArray(value)) return;
-	const notes = (value as Record<string, unknown>).notes;
+	const notes = parsedAgentRules(value)?.notes;
 	return typeof notes === "string" && notes.trim() ? notes.trim() : undefined;
 };
 
@@ -47,10 +63,24 @@ export const formatAutumnOrgContext = ({
 		);
 	}
 	if (plans !== undefined) {
-		sections.push(toJsonBlock({ label: "listPlans", value: plans }));
+		sections.push(
+			toJsonBlock({
+				label: "listPlans",
+				note: "compact index — call getPlan/listPlans for full details",
+				pretty: false,
+				value: compactPlans(plans),
+			}),
+		);
 	}
 	if (features !== undefined) {
-		sections.push(toJsonBlock({ label: "listFeatures", value: features }));
+		sections.push(
+			toJsonBlock({
+				label: "listFeatures",
+				note: "compact index",
+				pretty: false,
+				value: compactFeatures(features),
+			}),
+		);
 	}
 
 	return sections.join("\n\n");
@@ -133,7 +163,31 @@ export const loadAutumnOrgContext = async ({
 	return text || instructions ? { instructions, text } : undefined;
 };
 
+/** The block is org-level and changes rarely, but was refetched — four MCP
+ * round trips — on every new thread. A short TTL keeps new threads instant
+ * while catalog edits still surface within a minute. */
+const orgContextCache = createTtlCache<AutumnOrgContext | undefined>({
+	ttlMs: ms.minutes(1),
+});
+
+const loadAutumnOrgContextCached = ({
+	env,
+	logger,
+	orgId,
+	token,
+}: {
+	env: AppEnv;
+	logger: AutumnLogger;
+	orgId?: string;
+	token: string;
+}): Promise<AutumnOrgContext | undefined> => {
+	if (!orgId) return loadAutumnOrgContext({ env, logger, token });
+	return orgContextCache.getOrCreate(`${orgId}:${env}`, () =>
+		loadAutumnOrgContext({ env, logger, token }),
+	);
+};
+
 export const autumnOrgContextService = {
 	format: formatAutumnOrgContext,
-	load: loadAutumnOrgContext,
+	load: loadAutumnOrgContextCached,
 };

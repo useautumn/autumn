@@ -168,6 +168,7 @@ const runAndApproveAll = async ({
 		workspaceId: installation.workspace_id,
 	});
 	if (!first) throw new Error("createApproval returned nothing");
+	await first.backfillGroupedPreviews?.();
 	let approvalId: string | undefined = first.approvalId;
 	for (let hop = 0; approvalId && hop < 6; hop += 1) {
 		const approval = (await chatApprovalRepo.get({

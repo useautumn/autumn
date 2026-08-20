@@ -58,8 +58,30 @@ export const RUN_ALREADY_FINISHED_MESSAGE = "_This run already finished._";
 export const POST_FORMATTING_FAILED_MESSAGE =
 	"I hit a formatting error posting that reply — the run itself may have succeeded. Ask me to summarize where things stand.";
 
+export const TRANSIENT_CONNECTION_MESSAGE =
+	"I hit a temporary connection problem — please send that again.";
+
 export const GENERIC_FAILURE_MESSAGE =
 	"Something went wrong — please try again.";
 
 export const genericFailureWithDetail = (detail: string) =>
 	`Something went wrong: ${detail} — please try again.`;
+
+const ERROR_NOTICE_MAX = 160;
+
+/** Maps a caught error to the one line the user sees; transport internals
+ * never leak — they collapse to the transient-connection message. */
+export const errorNotice = ({
+	error,
+	isTransient,
+}: {
+	error: unknown;
+	isTransient: (error: unknown) => boolean;
+}) => {
+	const message = error instanceof Error ? error.message : String(error);
+	if (/invalid_blocks/i.test(message)) return POST_FORMATTING_FAILED_MESSAGE;
+	if (/timed out|timeout/i.test(message)) return RUN_TIMED_OUT_MESSAGE;
+	if (isTransient(error)) return TRANSIENT_CONNECTION_MESSAGE;
+	const detail = message.replace(/\s+/g, " ").trim().slice(0, ERROR_NOTICE_MAX);
+	return detail ? genericFailureWithDetail(detail) : GENERIC_FAILURE_MESSAGE;
+};
