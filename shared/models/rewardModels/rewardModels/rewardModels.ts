@@ -84,8 +84,20 @@ export const CreateRewardSchema = z
 		{ message: "Feature grant rewards require at least one promo code" },
 	);
 
+export const UpdateRewardSchema = z.object({
+	name: z.string().nullish(),
+	promo_codes: z.array(PromoCodeSchema).optional(),
+	id: z.string().optional(),
+	type: z.nativeEnum(RewardType).optional(),
+	discount_config: DiscountConfigSchema.nullish(),
+	free_product_config: FreeProductConfigSchema.nullish(),
+	free_product_id: z.string().nullish(),
+	entitlements: z.array(RewardEntitlementSchema).nullish(),
+});
+
 export type PromoCode = z.infer<typeof PromoCodeSchema>;
 export type CreateReward = z.infer<typeof CreateRewardSchema>;
+export type UpdateReward = z.infer<typeof UpdateRewardSchema>;
 export type Reward = z.infer<typeof RewardSchema>;
 export type FullReward = z.infer<typeof FullRewardSchema>;
 export type DiscountConfig = z.infer<typeof DiscountConfigSchema>;

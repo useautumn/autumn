@@ -1,17 +1,19 @@
-import { z } from "zod/v4";
 import { Scopes } from "@autumn/shared";
+import { z } from "zod/v4";
 import { redemptionRepo } from "@/internal/rewards/repos/index.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
 export const handleGetRedemption = createRoute({
 	scopes: [Scopes.Rewards.Read],
 	params: z.object({ redemption_id: z.string() }),
 	handler: async (c) => {
-		const { db } = c.get("ctx");
+		const { db, org, env } = c.get("ctx");
 		const { redemption_id } = c.req.param();
 
 		const redemption = await redemptionRepo.getById({
 			db,
 			id: redemption_id,
+			orgId: org.id,
+			env,
 		});
 
 		return c.json(redemption);
