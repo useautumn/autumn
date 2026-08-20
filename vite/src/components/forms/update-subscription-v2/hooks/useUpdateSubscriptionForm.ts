@@ -55,6 +55,8 @@ export function useUpdateSubscriptionForm({
 			cancelAction: null,
 			billingBehavior: null,
 			resetBillingCycle: false,
+			billingCycleAnchorMode: "now",
+			billingCycleAnchorDate: null,
 			resetUsage: false,
 			refundBehavior: null,
 			refundAmount: null,
