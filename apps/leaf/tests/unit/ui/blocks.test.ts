@@ -778,6 +778,7 @@ describe("approval details modal", () => {
 	test("prefills the billing mode and provisioning", () => {
 		const modal = approvalDetailsModal({
 			approvalId: "approval_1",
+			toolName: "attach",
 			toolArgs: {
 				request: {
 					...attachArgs.request,
@@ -804,6 +805,7 @@ describe("approval details modal", () => {
 		const checkout = JSON.stringify(
 			approvalDetailsModal({
 				approvalId: "approval_1",
+				toolName: "attach",
 				toolArgs: {
 					request: { ...attachArgs.request, redirect_mode: "always" },
 				},
@@ -815,6 +817,7 @@ describe("approval details modal", () => {
 		const finalized = JSON.stringify(
 			approvalDetailsModal({
 				approvalId: "approval_1",
+				toolName: "attach",
 				toolArgs: {
 					request: { ...attachArgs.request, invoice_mode: { enabled: true } },
 				},

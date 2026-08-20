@@ -15,6 +15,7 @@ const WORKSPACE_ID = process.env.E2E_SLACK_WORKSPACE ?? "T07NPTDCU69";
 const CUSTOMER = process.env.E2E_CUSTOMER ?? "leaf-0003";
 const PLAN = process.env.E2E_PLAN ?? "launch";
 const GROUP_SIZE = Number(process.env.E2E_GROUP ?? "0");
+const TOOL = process.env.E2E_TOOL ?? "attach";
 
 const installation = (await findInstallationWithOrg(
 	"slack",
@@ -82,9 +83,11 @@ const output = await runSlackAgentTurn({
 	onThinking: ticker.thinking,
 	providerUserId,
 	text:
-		GROUP_SIZE > 1
-			? `attach the ${PLAN} plan to ${groupCustomers.join(", ")}`
-			: `attach the ${PLAN} plan to ${CUSTOMER}`,
+		TOOL === "updateSubscription"
+			? `cancel ${CUSTOMER}'s ${PLAN} plan at the end of the cycle`
+			: GROUP_SIZE > 1
+				? `attach the ${PLAN} plan to ${groupCustomers.join(", ")}`
+				: `attach the ${PLAN} plan to ${CUSTOMER}`,
 	threadId,
 });
 ticker.stop();
@@ -127,7 +130,9 @@ console.log(
 const submit = await handleEditApprovalDetailsSubmit({
 	values: {
 		access: process.env.E2E_ACCESS ?? "after_payment",
-		billing: process.env.E2E_BILLING ?? "draft_invoice",
+		billing:
+			process.env.E2E_BILLING ??
+			(TOOL === "updateSubscription" ? "charge_directly" : "draft_invoice"),
 		proration: process.env.E2E_PRORATION ?? "immediate",
 	},
 	privateMetadata: created.approvalId,
@@ -178,7 +183,9 @@ console.log(
 );
 const wantImmediate =
 	(process.env.E2E_ACCESS ?? "after_payment") === "immediate";
-const wantBilling = process.env.E2E_BILLING ?? "draft_invoice";
+const wantBilling =
+	process.env.E2E_BILLING ??
+	(TOOL === "updateSubscription" ? "charge_directly" : "draft_invoice");
 const invoice = (after.invoice_mode ?? {}) as {
 	enable_plan_immediately?: boolean;
 	enabled?: boolean;
@@ -208,15 +215,28 @@ const groupOk =
 console.log(
 	`GROUP rebuilt withheld=${rebuiltWithheld.length} prorations=${JSON.stringify(rebuiltWithheld.map((step) => step.input?.request?.proration_behavior))}`,
 );
+const billingOk =
+	wantBilling === "checkout"
+		? after.invoice_mode === undefined && after.redirect_mode === "always"
+		: wantBilling === "charge_directly"
+			? after.invoice_mode === undefined
+			: invoice.enabled === true &&
+				invoice.finalize === (wantBilling === "finalized_invoice") &&
+				invoice.enable_plan_immediately === wantImmediate;
+const toolOk =
+	TOOL !== "updateSubscription" ||
+	(rebuilt.tool_name === "updateSubscription" &&
+		after.cancel_action === "cancel_end_of_cycle");
+const accessOk =
+	TOOL === "updateSubscription"
+		? after.enable_plan_immediately === undefined
+		: after.enable_plan_immediately === wantImmediate;
 const ok =
 	groupOk &&
+	toolOk &&
+	accessOk &&
 	after.proration_behavior === expectedProrationBehavior &&
-	after.enable_plan_immediately === wantImmediate &&
-	(wantBilling === "checkout"
-		? after.invoice_mode === undefined && after.redirect_mode === "always"
-		: invoice.enabled === true &&
-			invoice.finalize === (wantBilling === "finalized_invoice") &&
-			invoice.enable_plan_immediately === wantImmediate);
+	billingOk;
 console.log(
 	ok
 		? `✅ edit honoured: ${wantBilling}, ${wantImmediate ? "immediate" : "after payment"}, proration=${wantProration}`

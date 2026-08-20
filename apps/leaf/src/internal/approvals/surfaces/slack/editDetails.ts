@@ -7,9 +7,12 @@ import { approvalDetailsModal } from "../../../../ui/blocks.js";
 import { withheldWritesFromToolArgs } from "../../../agentRuntime/eve/parkedInput.js";
 import { normalizeToolName } from "../../../agentRuntime/tools/toolPolicy.js";
 import {
-	applyAttachBillingEdits,
-	attachBillingEditsSchema,
-} from "../../domain/attachBillingEdits.js";
+	applyBillingEdits,
+	billingEditsSchema,
+	billingOptionsFor,
+	EDITABLE_BILLING_TOOLS,
+	type EditableBillingTool,
+} from "../../domain/billingEdits.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import {
 	publicToolArgs,
@@ -27,7 +30,9 @@ const editableApproval = async ({
 	return approval?.status === "pending" &&
 		isFuture(approval.expires_at) &&
 		approval.provider_user_id === providerUserId &&
-		approval.tool_name === "attach"
+		(EDITABLE_BILLING_TOOLS as ReadonlyArray<string>).includes(
+			approval.tool_name,
+		)
 		? approval
 		: undefined;
 };
@@ -45,6 +50,7 @@ export const handleEditApprovalDetailsAction = async (event: ActionEvent) => {
 		approvalDetailsModal({
 			approvalId,
 			toolArgs: publicToolArgs(approval.tool_args),
+			toolName: approval.tool_name as EditableBillingTool,
 		}),
 	);
 };
@@ -52,7 +58,7 @@ export const handleEditApprovalDetailsAction = async (event: ActionEvent) => {
 export const handleEditApprovalDetailsSubmit = async (
 	event: ModalSubmitEvent,
 ) => {
-	const parsed = attachBillingEditsSchema.safeParse(event.values);
+	const parsed = billingEditsSchema.safeParse(event.values);
 	if (!parsed.success) {
 		return {
 			action: "errors" as const,
@@ -86,13 +92,18 @@ export const handleEditApprovalDetailsSubmit = async (
 	];
 	for (const write of groupedWrites) {
 		const stepRequest = toolRequestFromArgs(write.input) ?? {};
-		if (normalizeToolName(write.toolName) !== "attach") {
+		const stepTool = normalizeToolName(write.toolName) as EditableBillingTool;
+		if (
+			!(EDITABLE_BILLING_TOOLS as ReadonlyArray<string>).includes(stepTool) ||
+			!billingOptionsFor(stepTool).includes(parsed.data.billing)
+		) {
 			steps.push({ request: stepRequest, toolName: write.toolName });
 			continue;
 		}
-		const updated = applyAttachBillingEdits({
+		const updated = applyBillingEdits({
 			edits: parsed.data,
 			request: stepRequest,
+			toolName: stepTool,
 		});
 		if (!updated.success) {
 			return {
@@ -100,7 +111,7 @@ export const handleEditApprovalDetailsSubmit = async (
 				errors: { billing: "These settings are not valid for this request." },
 			};
 		}
-		steps.push({ request: updated.data, toolName: "attach" });
+		steps.push({ request: updated.data, toolName: stepTool });
 	}
 	// The user chose these billing settings by hand, so they override the
 	// skill's defaults (which would otherwise re-enable immediate provisioning
@@ -108,7 +119,7 @@ export const handleEditApprovalDetailsSubmit = async (
 	const text = [
 		steps.length > 1
 			? `Preview these exact ${steps.length} requests and request approval again, issuing ALL writes together in ONE tool batch so they stay on one approval card.`
-			: "Preview this exact attach request and request approval again.",
+			: `Preview this exact ${steps[0]?.toolName ?? "billing"} request and request approval again.`,
 		"Do not add, remove, or change any field — in particular keep `enable_plan_immediately`, `invoice_mode`, `proration_behavior`, and `redirect_mode` exactly as given; they are the user's explicit choices and override the default billing settings.",
 		...steps.map((step) => `${step.toolName}: ${JSON.stringify(step.request)}`),
 	].join("\n");
@@ -116,7 +127,7 @@ export const handleEditApprovalDetailsSubmit = async (
 	void dispatchSlackAgentMessage({
 		channelId: thread.channelId,
 		clientContext: {
-			approvalEdit: { steps, toolName: "attach" },
+			approvalEdit: { steps, toolName: approval.tool_name },
 		},
 		providerUserId: event.user.userId,
 		raw: { team_id: approval.workspace_id },
