@@ -30,7 +30,12 @@ export const prepareAgentTurn = async ({
 		await onAction?.("Loading context");
 		return {
 			existingSession: undefined,
-			orgContext: await autumnOrgContextService.load({ env, logger, token }),
+			orgContext: await autumnOrgContextService.load({
+				env,
+				logger,
+				orgId: org.id,
+				token,
+			}),
 		} as const;
 	}
 
@@ -56,7 +61,12 @@ export const prepareAgentTurn = async ({
 		await onAction?.("Loading context");
 		return {
 			existingSession: undefined,
-			orgContext: await autumnOrgContextService.load({ env, logger, token }),
+			orgContext: await autumnOrgContextService.load({
+				env,
+				logger,
+				orgId: org.id,
+				token,
+			}),
 		} as const;
 	}
 	return { existingSession, orgContext: undefined } as const;
