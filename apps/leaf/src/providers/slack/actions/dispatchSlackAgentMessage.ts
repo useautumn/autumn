@@ -25,6 +25,7 @@ import {
 	RUN_STOPPED_FOR_TIME_MESSAGE,
 	RUN_TIMED_OUT_MESSAGE,
 	runStoppedByUserNotice,
+	TRANSIENT_CONNECTION_MESSAGE,
 } from "../../../ui/messages.js";
 import type { ReplyTarget } from "../../../ui/progress.js";
 import { createRunProgress } from "../../../ui/runProgress.js";
@@ -41,10 +42,18 @@ import { runSlackAgentTurn } from "./runSlackAgentTurn.js";
 
 const ERROR_NOTICE_MAX = 160;
 
+const TRANSIENT_NETWORK_PATTERN =
+	/socket connection was closed|unable to connect|connection ?refused|connection reset|fetch failed|other side closed|econnreset|econnrefused/i;
+
 const errorNotice = (error: unknown) => {
 	const message = error instanceof Error ? error.message : String(error);
 	if (/invalid_blocks/i.test(message)) return POST_FORMATTING_FAILED_MESSAGE;
 	if (/timed out|timeout/i.test(message)) return RUN_TIMED_OUT_MESSAGE;
+	// Transport internals (Bun fetch text and friends) mean nothing to the
+	// user and read as our bug — collapse them to one friendly line.
+	if (TRANSIENT_NETWORK_PATTERN.test(message)) {
+		return TRANSIENT_CONNECTION_MESSAGE;
+	}
 	const detail = message.replace(/\s+/g, " ").trim().slice(0, ERROR_NOTICE_MAX);
 	return detail ? genericFailureWithDetail(detail) : GENERIC_FAILURE_MESSAGE;
 };

@@ -58,6 +58,9 @@ export const RUN_ALREADY_FINISHED_MESSAGE = "_This run already finished._";
 export const POST_FORMATTING_FAILED_MESSAGE =
 	"I hit a formatting error posting that reply — the run itself may have succeeded. Ask me to summarize where things stand.";
 
+export const TRANSIENT_CONNECTION_MESSAGE =
+	"I hit a temporary connection problem — please send that again.";
+
 export const GENERIC_FAILURE_MESSAGE =
 	"Something went wrong — please try again.";
 

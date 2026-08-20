@@ -107,25 +107,42 @@ export const postEveMessage = async ({
 	message?: EveMessageContent;
 	session?: EveSessionRef;
 }) => {
-	const response = await fetch(
-		session
-			? eveUrl(`/eve/v1/session/${session.sessionId}`)
-			: eveUrl("/eve/v1/session"),
-		{
-			method: "POST",
-			headers: eveHeaders(auth, { "content-type": "application/json" }),
-			body: JSON.stringify(
-				session
-					? {
-							clientContext,
-							continuationToken: session.state.continuationToken,
-							inputResponses,
-							message,
-						}
-					: { clientContext, message },
-			),
-		},
-	);
+	const post = () =>
+		fetch(
+			session
+				? eveUrl(`/eve/v1/session/${session.sessionId}`)
+				: eveUrl("/eve/v1/session"),
+			{
+				method: "POST",
+				headers: eveHeaders(auth, { "content-type": "application/json" }),
+				body: JSON.stringify(
+					session
+						? {
+								clientContext,
+								continuationToken: session.state.continuationToken,
+								inputResponses,
+								message,
+							}
+						: { clientContext, message },
+				),
+			},
+		);
+	let response: Response;
+	try {
+		response = await post();
+	} catch (error) {
+		// A request that never reached eve is always safe to retry; an
+		// ambiguous mid-flight drop is only retried for a NEW session, where a
+		// duplicate creates an orphan rather than a double-delivered message.
+		const neverReached = /unable to connect|connection ?refused/i.test(
+			error instanceof Error ? error.message : String(error),
+		);
+		const retryable =
+			neverReached || (!session && isRetryableEveStreamError(error));
+		if (!retryable) throw error;
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		response = await post();
+	}
 	return parseSessionResponse({ existing: session, response });
 };
 
