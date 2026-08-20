@@ -11,6 +11,7 @@ import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdRead
 import { buildCorePlanUpdatePreview } from "@/internal/product/actions/previewUpdatePlan/buildCorePlanUpdatePreview.js";
 import { ProductService } from "../ProductService.js";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse.js";
+import { resolveBasePlanId } from "../productUtils/resolveBasePlanId.js";
 import { buildProductDataCatalogLicenses } from "./buildProductDataCatalogLicenses.js";
 
 const GetProductInternalQuerySchema = z.object({
@@ -47,10 +48,15 @@ export const handleGetProductInternal = createRoute({
 			}),
 		]);
 
-		const productV2 = mapToProductV2({
-			product: product,
-			features: features,
-		});
+		const productV2 = {
+			...mapToProductV2({ product, features }),
+			base_id: await resolveBasePlanId({
+				db,
+				orgId: org.id,
+				env,
+				baseInternalProductId: product.base_internal_product_id ?? null,
+			}),
+		};
 
 		const variantProducts = await ProductService.listVariantsByParent({
 			db,

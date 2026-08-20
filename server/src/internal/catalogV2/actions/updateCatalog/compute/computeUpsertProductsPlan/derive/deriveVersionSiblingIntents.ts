@@ -105,7 +105,7 @@ const siblingPlanParams = ({
 
 /**
  * Version edge: a folded direct intent extends to every other existing version
- * of the same plan — `all_versions` content, and/or `unlink` on the pointer.
+ * of the same plan — `all_versions` content, and/or a base pointer write.
  */
 export const deriveVersionSiblingIntents = ({
 	intent,
@@ -118,7 +118,8 @@ export const deriveVersionSiblingIntents = ({
 }): ProductUpsertIntent[] => {
 	if (intent.source !== "direct") return [];
 	const inheritAllVersions = intent.planParams.versioning === "all_versions";
-	if (!inheritAllVersions && !upsert.unlink) return [];
+	const relinks = upsert.basePlanLink !== undefined;
+	if (!inheritAllVersions && !relinks) return [];
 
 	const contentEdit = inheritAllVersions
 		? contentEditFromLatest({ upsert })
@@ -146,7 +147,7 @@ export const deriveVersionSiblingIntents = ({
 					: { plan_id: product.id, version: product.version },
 				source: inheritAllVersions ? ("all_versions" as const) : "repoint",
 				...(editDiff ? { editDiff } : {}),
-				...(upsert.unlink ? { unlink: true } : {}),
+				...(relinks ? { basePlanLink: upsert.basePlanLink } : {}),
 			};
 		});
 };

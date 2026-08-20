@@ -7,6 +7,7 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
+	useHasContentChanges,
 	useIsCusPlanEditor,
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
@@ -43,8 +44,12 @@ export const SaveChangesBar = ({
 	const setProduct = useProductStore((s) => s.setProduct);
 	const { type: sheetType } = useSheetStore();
 	const planHasChanges = useHasChanges();
+	const planHasContentChanges = useHasContentChanges();
 	const licenseHasChanges = useHasLicenseChanges();
 	const hasChanges = planHasChanges || licenseHasChanges;
+	// Linking rewrites a pointer column, so it never versions.
+	const isBasePlanLinkOnly =
+		planHasChanges && !planHasContentChanges && !licenseHasChanges;
 	const planLicenses = catalogLicenses.map(({ planLicense }) => planLicense);
 	const { features = [] } = useFeaturesQuery();
 	const fetchPreviewUpdateCatalog = useFetchPreviewUpdateCatalog();
@@ -62,7 +67,7 @@ export const SaveChangesBar = ({
 	}
 
 	const handleSaveClicked = async () => {
-		if (planHasChanges) {
+		if (planHasContentChanges) {
 			for (const item of product.items) {
 				if (!checkItemCurrenciesValid(item)) return;
 			}
@@ -90,7 +95,7 @@ export const SaveChangesBar = ({
 				editedProduct: product,
 				features,
 				licenses,
-				includeContent: planHasChanges,
+				includeContent: planHasContentChanges,
 			});
 		} catch (error) {
 			toast.error(
@@ -99,7 +104,7 @@ export const SaveChangesBar = ({
 			return;
 		}
 
-		if (!isOnboarding && hasChanges) {
+		if (!isOnboarding && hasChanges && !isBasePlanLinkOnly) {
 			setSaving(true);
 			try {
 				const preview = await fetchPreviewUpdateCatalog({

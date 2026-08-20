@@ -26,6 +26,7 @@ const payloadPlanIds = ({
 		...params.plans.flatMap((entry) => [
 			entry.plan_id,
 			...(entry.new_plan_id ? [entry.new_plan_id] : []),
+			...(entry.base_plan_id ? [entry.base_plan_id] : []),
 			...(entry.licenses?.map((license) => license.license_plan_id) ?? []),
 			...(entry.variants?.map((variant) => variant.variant_plan_id) ?? []),
 			...(entry.propagate?.variants?.map((target) => target.plan_id) ?? []),

@@ -4,13 +4,10 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 export function useVariantLinkVisibility(product: ProductV2) {
 	const { products } = useProductsQuery();
 
-	// base_id lives on the products-list entry, not the store product.
-	const listedProduct = products.find((p) => p.id === product.id);
-	const listedBasePlanId = listedProduct?.base_id || null;
-	// A plan whose base row is another of its own versions resolves to its own id.
-	const isSelfReferentialBase = listedBasePlanId === product.id;
-	const basePlanId = isSelfReferentialBase ? null : listedBasePlanId;
-	const basePlan = products.find((p) => p.id === basePlanId) ?? null;
+	// A plan whose base row is another of its own versions is not a variant.
+	const selectedBasePlanId =
+		product.base_id && product.base_id !== product.id ? product.base_id : null;
+	const basePlan = products.find((p) => p.id === selectedBasePlanId) ?? null;
 	const hasVariants = products.some(
 		(p) => p.id !== product.id && p.base_id === product.id,
 	);
@@ -20,18 +17,8 @@ export function useVariantLinkVisibility(product: ProductV2) {
 			candidate.id !== product.id && !candidate.base_id && !candidate.archived,
 	);
 
-	// The editor leaves base_id undefined until edited; null means detach.
-	// A self-link is never a real link, so it reads as the persisted value.
-	const editedBasePlanId = product.base_id;
-	const selectedBasePlanId =
-		editedBasePlanId === undefined || editedBasePlanId === product.id
-			? basePlanId
-			: editedBasePlanId;
-
 	return {
-		isVariant: basePlanId !== null,
 		hasVariants,
-		basePlanId,
 		selectedBasePlanId,
 		basePlan,
 		basePlanOptions,

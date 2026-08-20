@@ -191,7 +191,7 @@ describe("buildUpdateCatalogPlanParams", () => {
 
 	test("a variant is updated as its own plan row, not as customize overlay on the base", () => {
 		const params = buildUpdateCatalogPlanParams({
-			baseProduct: { ...baseProduct, id: "pro_eu", version: 1 },
+			baseProduct: { ...baseProduct, id: "pro_eu", version: 1, base_id: "pro" },
 			editedProduct: {
 				...editedProduct,
 				id: "pro_eu",
@@ -201,11 +201,50 @@ describe("buildUpdateCatalogPlanParams", () => {
 		});
 		expect(params.plan_id).toBe("pro_eu");
 		expect(params.variants).toBeUndefined();
+		expect(params.base_plan_id).toBeUndefined();
 		expect(params.items).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({ feature_id: "messages", included: 500 }),
 			]),
 		);
+	});
+
+	test("linking to a base sends base_plan_id", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct: { ...baseProduct, id: "pro_yearly", base_id: null },
+			editedProduct: { ...editedProduct, id: "pro_yearly", base_id: "pro" },
+			features,
+		});
+		expect(params.base_plan_id).toBe("pro");
+		expect(() =>
+			UpdateCatalogPlanParamsSchema.parse(JSON.parse(JSON.stringify(params))),
+		).not.toThrow();
+	});
+
+	test("detaching from a base sends base_plan_id null", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct: { ...baseProduct, id: "pro_yearly", base_id: "pro" },
+			editedProduct: { ...editedProduct, id: "pro_yearly", base_id: null },
+			features,
+		});
+		expect(params.base_plan_id).toBeNull();
+	});
+
+	test("an unlinked plan left unlinked omits base_plan_id", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, base_id: null },
+			features,
+		});
+		expect(params.base_plan_id).toBeUndefined();
+	});
+
+	test("creates have no persisted product to diff the link against", () => {
+		const params = buildUpdateCatalogPlanParams({
+			editedProduct: { ...editedProduct, base_id: "pro" },
+			features,
+		});
+		expect(params.base_plan_id).toBeUndefined();
 	});
 
 	test("strips stripe_price_id off price and items", () => {

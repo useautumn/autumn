@@ -87,6 +87,17 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 	}),
 
 	// ── Variants & licenses ───────────────────────────────────────────────
+	base_plan_id: z
+		.string()
+		.nonempty()
+		.regex(idRegex)
+		.nullable()
+		.optional()
+		.meta({
+			internal: true,
+			description:
+				"Link this plan as a variant of `base_plan_id`; null detaches it. Omit to leave the link unchanged. Applies to every version row of this plan.",
+		}),
 	variants: z.array(CatalogVariantParamsSchema).optional().meta({
 		internal: true,
 		description:

@@ -48,6 +48,17 @@ const planItemsToCatalogParams = (
 const pinsVersion = (versioning: CatalogPlanVersioningStrategy | undefined) =>
 	versioning == null || versioning === "existing";
 
+/** Unchanged links stay off the payload — the server fans a pointer write over every version row. */
+const basePlanLinkChanged = ({
+	baseProduct,
+	editedProduct,
+}: {
+	baseProduct?: FrontendProduct | null;
+	editedProduct: FrontendProduct;
+}): boolean =>
+	!!baseProduct &&
+	(editedProduct.base_id ?? null) !== (baseProduct.base_id ?? null);
+
 export const buildUpdateCatalogPlanParams = ({
 	baseProduct,
 	editedProduct,
@@ -101,6 +112,9 @@ export const buildUpdateCatalogPlanParams = ({
 			: {}),
 		config: plan.config,
 		billing_controls: plan.billing_controls,
+		...(basePlanLinkChanged({ baseProduct, editedProduct })
+			? { base_plan_id: editedProduct.base_id ?? null }
+			: {}),
 		...(licenses !== undefined ? { licenses } : {}),
 		...(propagate !== undefined ? { propagate } : {}),
 		...(migration !== undefined ? { migration } : {}),

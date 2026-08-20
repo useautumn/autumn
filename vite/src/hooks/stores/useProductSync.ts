@@ -1,12 +1,8 @@
 import type { FrontendProduct, ProductV2 } from "@autumn/shared";
-import {
-	productsAreSame,
-	productV2ToFrontendProduct,
-	sortPlanItems,
-} from "@autumn/shared";
+import { productV2ToFrontendProduct, sortPlanItems } from "@autumn/shared";
 import { useEffect, useRef } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductStore } from "./useProductStore";
+import { productHasUnsavedEdits, useProductStore } from "./useProductStore";
 
 /**
  * Syncs product store with backend data (single product query)
@@ -46,11 +42,11 @@ export const useProductSync = ({
 			const baseBeforeSync = useProductStore.getState().baseProduct;
 			const editorIsClean =
 				!!baseBeforeSync &&
-				productsAreSame({
-					newProductV2: currentProduct,
-					curProductV2: baseBeforeSync,
+				!productHasUnsavedEdits({
+					product: currentProduct,
+					baseProduct: baseBeforeSync,
 					features,
-				}).same;
+				});
 
 			// Always update baseProduct to reflect backend state
 			setBaseProduct(frontendProduct);
