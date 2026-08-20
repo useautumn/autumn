@@ -1,6 +1,7 @@
 import { ErrCode, RecaseError, type UpdateCatalogParams } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 
 const rejectBasePlanLink = (message: string): never => {
 	throw new RecaseError({
@@ -30,11 +31,18 @@ export const handleBasePlanLinkErrors = ({
 			rejectBasePlanLink("A plan cannot be linked to itself as a base plan.");
 		}
 
-		const base = productStatesContext.versionsByPlanId[plan.base_plan_id]?.[0];
-		if (!base || base.archived) {
+		const base = activeFullProductForPlan({
+			planId: plan.base_plan_id,
+			productStatesContext,
+		});
+		if (!base) {
+			rejectBasePlanLink(`Invalid base plan: ${plan.base_plan_id}`);
+			continue;
+		}
+		if (base.archived) {
 			rejectBasePlanLink(`Invalid base plan: ${plan.base_plan_id}`);
 		}
-		if (base.base_internal_product_id !== null) {
+		if (base.base_internal_product_id != null) {
 			rejectBasePlanLink("A variant plan cannot be used as a base plan.");
 		}
 

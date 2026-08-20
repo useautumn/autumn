@@ -105,6 +105,11 @@ export const computeAttachPlan = ({
 					ctx,
 					newCustomerProducts: [newCustomerProduct],
 					deletedCustomerProduct: currentCustomerProduct,
+					// Plans dropped via `remove_plan_ids` are expired mid-cycle, so they
+					// owe the same unused-time credit as a same-group replacement.
+					deletedCustomerProducts: removeCustomerProducts.map(
+						(update) => update.customerProduct,
+					),
 					billingContext: attachBillingContext,
 					includeArrearLineItems,
 				})

@@ -44,17 +44,15 @@ import { PriceService } from "./prices/PriceService.js";
 import { isDefaultTrialFullProduct } from "./productUtils/classifyProduct.js";
 import { applyStripeResourceReuseForProduct } from "./stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 
-export const getLatestProducts = <T extends { id: string; version: number }>(
+export const getActiveProducts = <T extends { id: string; active: boolean }>(
 	products: T[],
 ): T[] => {
-	const latestById = new Map<string, T>();
+	const activeById = new Map<string, T>();
 	for (const product of products) {
-		const existing = latestById.get(product.id);
-		if (!existing || product.version > existing.version) {
-			latestById.set(product.id, product);
-		}
+		if (!product.active) continue;
+		activeById.set(product.id, product);
 	}
-	return [...latestById.values()];
+	return [...activeById.values()];
 };
 
 const getProductVersionCounts = (products: FullProduct[]) => {

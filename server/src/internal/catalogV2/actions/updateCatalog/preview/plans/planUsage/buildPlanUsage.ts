@@ -13,6 +13,7 @@ import type {
 	PreviewCatalogContext,
 	ProductStatesContext,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 
 const toCappedBucket = ({
 	samples,
@@ -84,8 +85,11 @@ const variantSamples = ({
 	if (baseInternalIds.size === 0) return [];
 
 	const latest: FullProduct[] = [];
-	for (const versions of Object.values(productStatesContext.versionsByPlanId)) {
-		const product = versions[0];
+	for (const planId of Object.keys(productStatesContext.versionsByPlanId)) {
+		const product = activeFullProductForPlan({
+			planId,
+			productStatesContext,
+		});
 		if (!product?.base_internal_product_id) continue;
 		if (!baseInternalIds.has(product.base_internal_product_id)) continue;
 		latest.push(product);

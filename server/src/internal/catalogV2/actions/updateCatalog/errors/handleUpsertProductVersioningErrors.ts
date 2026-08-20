@@ -5,6 +5,7 @@ import {
 	type UpdateCatalogParams,
 } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 
 const rejectStrategyPlusExplicitVersion = ({
 	planId,
@@ -135,7 +136,10 @@ export const handleUpsertProductVersioningErrors = ({
 			}
 			seenPinned.add(pinKey);
 
-			const maxVersion = existingVersions[0]?.version ?? 0;
+			const maxVersion = maxVersionForPlan({
+				planId: planParams.plan_id,
+				productStatesContext,
+			});
 			if (planParams.version > maxVersion + 1) {
 				throw new RecaseError({
 					message: `Version gap: plan_id=${planParams.plan_id} version=${planParams.version} exceeds max existing version ${maxVersion} + 1`,

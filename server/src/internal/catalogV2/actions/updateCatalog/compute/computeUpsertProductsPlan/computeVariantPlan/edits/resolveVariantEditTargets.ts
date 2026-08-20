@@ -3,6 +3,7 @@ import { productKeyToString } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { latestVariantsOfBase } from "../variantPlanUtils";
+import { activeVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeVersionForPlan";
 
 /** One existing variant row (plan_id@version) the base edit must touch. */
 export type VariantEditTarget = {
@@ -37,7 +38,11 @@ const targetVersionsFor = ({
 		return versions.map((product) => product.version);
 	}
 	if (version === undefined) {
-		return versions[0] !== undefined ? [versions[0].version] : [];
+		const activeVersion = activeVersionForPlan({
+			planId,
+			productStatesContext,
+		});
+		return activeVersion !== undefined ? [activeVersion] : [];
 	}
 	return versions.some((product) => product.version === version)
 		? [version]

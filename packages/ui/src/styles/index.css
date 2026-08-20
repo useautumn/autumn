@@ -356,6 +356,20 @@ html {
 	--sidebar-border: #526a62;
 }
 
+.preset-scraps [data-slot="main-sidebar"] {
+	color: var(--sidebar-foreground);
+	--foreground: #fffdf4;
+	--muted-foreground: #f7f3e7;
+	--tertiary-foreground: #d8cdb8;
+	--primary: #f4dfb8;
+}
+
+.preset-scraps:not(.dark) [data-slot="main-sidebar"] .bg-interactive-secondary {
+	--foreground: #2a241c;
+	--muted-foreground: #5c5142;
+	--tertiary-foreground: #6b5f4c;
+}
+
 .preset-scraps [class~="bg-outer-background"] {
 	background-image:
 		radial-gradient(

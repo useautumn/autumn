@@ -127,6 +127,7 @@ export const MainSidebar = ({
 	return (
 		<SidebarContext.Provider value={{ expanded, setExpanded, onNavigate }}>
 			<div
+				data-slot="main-sidebar"
 				className={cn(
 					`h-full py-4 flex flex-col justify-between transition-all duration-150 relative`,
 					isMobileSheet

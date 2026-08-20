@@ -1,5 +1,5 @@
 import { type AppEnv, products } from "@autumn/shared";
-import { and, desc, eq, exists, inArray, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export type StripeReuseFamilyId = {
@@ -42,22 +42,6 @@ export const listStripeReuseFamilyIds = async ({
 	const uniqueBaseInternalProductIds = [...new Set(baseInternalProductIds)];
 	if (uniqueBaseInternalProductIds.length === 0) return [];
 
-	const latestVersionsSubquery = db
-		.select({
-			id: products.id,
-			maxVersion: sql<number>`MAX(${products.version})`.as("max_version"),
-		})
-		.from(products)
-		.where(
-			familyFilter({
-				orgId,
-				env,
-				baseInternalProductIds: uniqueBaseInternalProductIds,
-			}),
-		)
-		.groupBy(products.id)
-		.as("latest_versions");
-
 	const rows = await db
 		.select({
 			baseInternalProductId:
@@ -72,19 +56,7 @@ export const listStripeReuseFamilyIds = async ({
 					env,
 					baseInternalProductIds: uniqueBaseInternalProductIds,
 				}),
-				returnAll
-					? undefined
-					: exists(
-							db
-								.select()
-								.from(latestVersionsSubquery)
-								.where(
-									and(
-										eq(latestVersionsSubquery.id, products.id),
-										eq(latestVersionsSubquery.maxVersion, products.version),
-									),
-								),
-						),
+				returnAll ? undefined : eq(products.active, true),
 			),
 		)
 		.orderBy(desc(products.version));

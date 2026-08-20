@@ -12,6 +12,7 @@ import {
 	resolveVariantEditTargets,
 	type VariantEditTarget,
 } from "./resolveVariantEditTargets";
+import { activeVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeVersionForPlan";
 
 const variantProductAt = ({
 	planId,
@@ -25,15 +26,6 @@ const variantProductAt = ({
 	(productStatesContext.versionsByPlanId[planId] ?? []).find(
 		(product) => product.version === version,
 	);
-
-const latestVersionOf = ({
-	planId,
-	productStatesContext,
-}: {
-	planId: string;
-	productStatesContext: ProductStatesContext;
-}): number | undefined =>
-	productStatesContext.versionsByPlanId[planId]?.[0]?.version;
 
 /** One target row → one intent, or undefined when nothing would change. */
 const buildVariantEditIntent = ({
@@ -80,7 +72,7 @@ const buildVariantEditIntent = ({
 	const repointToNewBase =
 		newBasePointer !== undefined &&
 		target.version ===
-			latestVersionOf({ planId: target.planId, productStatesContext });
+			activeVersionForPlan({ planId: target.planId, productStatesContext });
 	const pointerIsOnlyChange =
 		!target.follow && !editDiff && !hasSettings && repointToNewBase;
 

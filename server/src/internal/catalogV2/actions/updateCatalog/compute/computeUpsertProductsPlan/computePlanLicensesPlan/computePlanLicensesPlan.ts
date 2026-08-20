@@ -98,11 +98,13 @@ export const computePlanLicensesPlan = ({
 				ctx,
 				parent: upsert,
 				upsertProducts,
+				productStatesContext,
 			}),
 			...computePropagatedPlanLicenses({
 				ctx,
 				parent: upsert,
 				upsertProducts,
+				productStatesContext,
 			}),
 		];
 		if (planLicenses.length === 0) return upsert;

@@ -7,18 +7,13 @@ import type {
 	ProductUpsertIntent,
 	ResolvedPlanParams,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
+import { activeVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeVersionForPlan";
+import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 
 const hasExplicitVersion = (
 	planParams: UpdateCatalogPlanParams,
 ): planParams is ResolvedPlanParams => planParams.version !== undefined;
-
-const latestVersionForPlan = ({
-	planId,
-	productStatesContext,
-}: {
-	planId: string;
-	productStatesContext: ProductStatesContext;
-}): number => productStatesContext.versionsByPlanId[planId]?.[0]?.version ?? 0;
 
 const resolveBaseInternalProductId = ({
 	basePlanId,
@@ -30,7 +25,10 @@ const resolveBaseInternalProductId = ({
 	if (basePlanId === undefined) return undefined;
 	if (basePlanId === null) return null;
 	return (
-		productStatesContext.versionsByPlanId[basePlanId]?.[0]?.internal_id ?? null
+		activeFullProductForPlan({
+			planId: basePlanId,
+			productStatesContext,
+		})?.internal_id ?? null
 	);
 };
 
@@ -48,7 +46,7 @@ const groupPlanParamsByPlanId = ({
 	return byPlanId;
 };
 
-/** Explicit versions ascending, then omit→latest (or v1 if plan absent).
+/** Explicit versions ascending, then omit→active (or v1 if plan absent).
  * `new_version` always mints at max+1 (requires an existing plan — guarded elsewhere). */
 const resolveVersionsForPlan = ({
 	planId,
@@ -63,15 +61,16 @@ const resolveVersionsForPlan = ({
 		.filter(hasExplicitVersion)
 		.sort((a, b) => a.version - b.version);
 
-	const maxVersion = latestVersionForPlan({ planId, productStatesContext });
-	const latestOrV1 = maxVersion || 1;
+	const maxVersion = maxVersionForPlan({ planId, productStatesContext });
+	const activeOrV1 =
+		activeVersionForPlan({ planId, productStatesContext }) ?? (maxVersion || 1);
 
 	const targetingLatest = planParamsList
 		.filter((planParams) => !hasExplicitVersion(planParams))
 		.map((planParams) => ({
 			...planParams,
 			version:
-				planParams.versioning === "new_version" ? maxVersion + 1 : latestOrV1,
+				planParams.versioning === "new_version" ? maxVersion + 1 : activeOrV1,
 		}));
 
 	return [...withExplicitVersion, ...targetingLatest];
