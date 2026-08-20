@@ -195,7 +195,7 @@ export const AppearanceSection = () => {
 	const { mode, setMode, preset, setPreset, isDark } = useTheme();
 	const { isAdmin } = useAdmin();
 	const presetOptions = PRESET_OPTIONS.filter(
-		(p) => p.id !== "cursed" || isAdmin,
+		(p) => !["cursed", "scraps"].includes(p.id) || isAdmin,
 	);
 
 	return (
