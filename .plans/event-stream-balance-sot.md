@@ -4,6 +4,8 @@ Research note. Not an implementation plan. The goal is to decide *what* would ha
 
 Design target that landed later in the discussion: **up to ~1M events/s ingest**, plus **real-time remaining reads** (check ~50ms) on our infra. That split is worked in §15.
 
+Base-substrate design (log vs queue, FIFO scope, how "insert/mutate" works without rewriting history): [event-stream-sot/01-durable-log.md](./event-stream-sot/01-durable-log.md).
+
 Related existing work in this repo:
 
 - [check-reserve/01_mutation_logs.md](./check-reserve/01_mutation_logs.md) — mutation receipts + Redis Streams as the durability path for Postgres sync
