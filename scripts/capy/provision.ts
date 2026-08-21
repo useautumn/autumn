@@ -473,10 +473,10 @@ function ensureTriggerProject(): {
 		undefined;
 	let accessToken = readTriggerAccessToken();
 	if (key?.startsWith("tr_dev_") && accessToken) {
-		return { secretKey: key, accessToken };
+		log("repairing Trigger.dev local user and Autumn project");
+	} else {
+		log("seeding Trigger.dev local user and Autumn project");
 	}
-
-	log("seeding Trigger.dev local user and Autumn project");
 	accessToken ??= `tr_pat_${randomBytes(20).toString("hex")}`;
 	saveTriggerAccessToken(accessToken);
 	key ??= `tr_dev_${randomBytes(12).toString("hex")}`;

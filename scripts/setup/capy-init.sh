@@ -16,6 +16,9 @@ die() { echo "[capy-init] ERROR: $*" >&2; exit 1; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+COMPOSE_FILE="$REPO_ROOT/scripts/setup/dw.compose.yml"
+TRIGGER_COMPOSE_FILE="$REPO_ROOT/scripts/setup/trigger.compose.yml"
+. "$SCRIPT_DIR/capy-trigger-image.sh"
 
 command -v bun >/dev/null 2>&1 || die "bun is required"
 docker info >/dev/null 2>&1 || die "Docker Engine is required (use a Capy v2 VM)"
@@ -78,12 +81,11 @@ log "pulling local service images"
   DRAGONFLY_PORT=6379 \
   ELASTICMQ_PORT=9324 \
   DYNAMODB_PORT=8000 \
-    docker compose -f scripts/setup/dw.compose.yml pull \
+    docker compose -f "$COMPOSE_FILE" pull \
       dragonfly elasticmq dynamodb
 )
 
-export TRIGGER_IMAGE_TAG="v$(bun -e 'console.log(require("./package.json").devDependencies["trigger.dev"])')"
-docker compose -f scripts/setup/trigger.compose.yml config --images \
+docker compose -f "$TRIGGER_COMPOSE_FILE" config --images \
   | sort -u \
   | xargs -n1 docker pull
 

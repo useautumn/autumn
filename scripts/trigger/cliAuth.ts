@@ -26,9 +26,7 @@ export function readTriggerCliAuth(): {
 	if (accessToken) {
 		return {
 			accessToken,
-			apiUrl: (
-				process.env.TRIGGER_API_URL ?? "https://api.trigger.dev"
-			).replace(/\/$/, ""),
+			apiUrl: process.env.TRIGGER_API_URL?.trim() || "https://api.trigger.dev",
 		};
 	}
 
@@ -39,9 +37,10 @@ export function readTriggerCliAuth(): {
 		const profile = config.profiles?.[profileName] ?? config.profiles?.default;
 		const accessToken = profile?.accessToken?.trim();
 		if (!accessToken) continue;
+		const apiUrl = profile?.apiUrl?.trim() || "https://api.trigger.dev";
 		return {
 			accessToken,
-			apiUrl: (profile?.apiUrl ?? "https://api.trigger.dev").replace(/\/$/, ""),
+			apiUrl: apiUrl.replace(/\/$/, ""),
 		};
 	}
 	throw new Error(

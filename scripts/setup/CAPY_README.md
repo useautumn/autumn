@@ -13,6 +13,7 @@ Configure this repository under **Settings → Project → Dev environment**:
 | Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies and `neonctl`, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
 | Update after checkout | `bun install --frozen-lockfile` | reconciles dependencies when a reused or snapshotted VM checks out another commit |
 | Startup | `bash scripts/setup/capy-startup.sh` | idempotently starts local infrastructure, provisions or resumes the VM's Neon branch, applies pending migrations and SQL functions, and writes local env files |
+| App | `bun capy` | runs Startup if needed, ensures emulate/portless are live, and starts the app in a detached tmux session |
 
 Initialize does not start services or create per-VM state, so it is safe to run
 during a snapshot build. Startup is blocking but bounded: its containers detach,
@@ -81,8 +82,8 @@ without repository preview configuration.
 
 `scripts/capy/provision.ts` reads the VM's `bindingId` from the file referenced
 by `CAPY_MACHINE_CONFIG`, hashes it into a `capy-<hash>` Neon branch name, and
-stores non-secret branch metadata plus generated local auth secrets in
-the mode-`0600` file `~/.autumn-capy/state.json`. A resumed VM reuses that
+stores non-secret branch metadata plus generated local auth secrets in the
+mode-`0600` file `~/.autumn-capy/state.json`. A resumed VM reuses that
 branch and refreshes its connection string. A new VM gets a new branch.
 
 The script writes managed values into:

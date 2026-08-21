@@ -143,7 +143,7 @@
 		"setup:test": "infisical run --env=dev --recursive -- bun scripts/setup/setup-test.ts",
 		"stripe:link-test": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/setup/link-test-stripe-account.ts",
 		"agent:bootstrap": "bash scripts/setup/agent-bootstrap.sh",
-		"dev:agent": "bash scripts/setup/devAgent.sh",
+		"capy": "bun scripts/capy/index.ts",
 		"migrate-functions": "infisical run --env=dev --recursive -- bun scripts/migrations/migrate-functions.ts",
 		"migrate-functions:test": "infisical run --env=test --recursive -- bun scripts/migrations/migrate-functions.ts",
 		"migrate-functions:prod": "infisical run --env=prod --recursive -- bun scripts/migrations/migrate-functions.ts",

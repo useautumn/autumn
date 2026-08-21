@@ -18,6 +18,9 @@ die() { echo "[capy-startup] ERROR: $*" >&2; exit 1; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+COMPOSE_FILE="$REPO_ROOT/scripts/setup/dw.compose.yml"
+TRIGGER_COMPOSE_FILE="$REPO_ROOT/scripts/setup/trigger.compose.yml"
+. "$SCRIPT_DIR/capy-trigger-image.sh"
 
 export PATH="$HOME/.bun/bin:$PATH"
 
@@ -45,7 +48,6 @@ cd "$REPO_ROOT"
 
 CAPY_PREFIX="${CAPY_PREFIX:-$HOME/.autumn-capy}"
 TRIGGER_ENV="$CAPY_PREFIX/trigger.env"
-export TRIGGER_IMAGE_TAG="v$(bun -e 'console.log(require("./package.json").devDependencies["trigger.dev"])')"
 mkdir -p "$CAPY_PREFIX"
 
 if [ ! -f "$TRIGGER_ENV" ]; then
@@ -70,10 +72,10 @@ COMPOSE_PROJECT_NAME=autumn-capy \
 DRAGONFLY_PORT=6379 \
 ELASTICMQ_PORT=9324 \
 DYNAMODB_PORT=8000 \
-  docker compose -f scripts/setup/dw.compose.yml -p autumn-capy up -d \
+  docker compose -f "$COMPOSE_FILE" -p autumn-capy up -d \
     dragonfly elasticmq dynamodb
 
 docker compose --env-file "$TRIGGER_ENV" \
-  -f scripts/setup/trigger.compose.yml -p autumn-capy-trigger up -d
+  -f "$TRIGGER_COMPOSE_FILE" -p autumn-capy-trigger up -d
 
 exec bun scripts/capy/provision.ts "$@"
