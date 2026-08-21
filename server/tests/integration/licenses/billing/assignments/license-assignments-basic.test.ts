@@ -102,7 +102,7 @@ const expectCustomerViewExcludesLicenseAssignment = async ({
 	const productsPage = await CusService.getProductsPage({
 		ctx,
 		idOrInternalId: customerId,
-		params: { start_cursor: "", limit: 10, show_expired: false },
+		params: { start_cursor: "", limit: 10, status: "active" },
 	});
 	expect(
 		productsPage.list.some(({ product }) => product.id === licensePlanId),
