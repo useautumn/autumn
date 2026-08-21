@@ -73,7 +73,7 @@ Use this resource for billing actions: attaching plans, updating subscriptions, 
   - If the prepaid quantity is known, include `feature_quantities`.
   - `feature_quantities.quantity` is inclusive of the plan item's included amount. Example: if 5,000 credits are included and $10/100 credits after, passing 6,000 means only the extra 1,000 credits are charged.
 - `updateSubscription`
-  - If intent is ambiguous, clarify before previewing; e.g. cancel now vs cancel at end of cycle.
+  - Clarify ONLY for cancel timing (cancel now vs end of cycle) when unstated. Never ask which price component a change targets — "$X/mo" means the base recurring price unless another component is named; preview that and let the card do the asking.
   - Quantity change: include `feature_quantities`.
   - Cancel or uncancel: include `cancel_action`.
   - Custom terms: include `customize`.
