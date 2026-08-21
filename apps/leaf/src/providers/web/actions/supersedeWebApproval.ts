@@ -73,7 +73,7 @@ export const supersedeWebApproval = async ({
 		});
 	}
 
-	void settleCardRemotely({
+	await settleCardRemotely({
 		approval: cancelled,
 		status: "superseded",
 		statusLine: "Applied from the dashboard",
