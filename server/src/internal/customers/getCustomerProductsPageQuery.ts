@@ -2,6 +2,7 @@ import {
 	CusProductStatus,
 	CustomerProductKind,
 	type CustomerProductsCursorFields,
+	type CustomerProductsStatusFilter,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
@@ -9,7 +10,7 @@ import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssign
 
 export type CustomerProductsPageQueryArgs = {
 	internalCustomerId: string;
-	showExpired: boolean;
+	status: CustomerProductsStatusFilter;
 	entityId?: string;
 	kind?: CustomerProductKind;
 	limit: number;
@@ -141,18 +142,27 @@ const freeTrialLateral = sql`
 		WHERE ft.id = cp.free_trial_id
 	) ft_data ON true`;
 
+const statusFilterSql = (status: CustomerProductsStatusFilter) => {
+	switch (status) {
+		case "expired":
+			return cpStatusInClause([CusProductStatus.Expired]);
+		case "active":
+			return sql`AND cp.status <> ${CusProductStatus.Expired}`;
+		case "all":
+			return sql``;
+	}
+};
+
 const buildFilters = ({
-	showExpired,
+	status,
 	entityId,
 	kind,
 }: {
-	showExpired: boolean;
+	status: CustomerProductsStatusFilter;
 	entityId?: string;
 	kind?: CustomerProductKind;
 }) => {
-	const statusFilter = showExpired
-		? cpStatusInClause([CusProductStatus.Expired])
-		: sql`AND cp.status <> ${CusProductStatus.Expired}`;
+	const statusFilter = statusFilterSql(status);
 
 	const entityFilter = entityId
 		? sql`AND (cp.entity_id = ${entityId} OR cp.internal_entity_id = ${entityId} OR (cp.entity_id IS NULL AND cp.internal_entity_id IS NULL))`
@@ -167,13 +177,13 @@ const buildFilters = ({
 
 export const getCustomerProductsPageQuery = ({
 	internalCustomerId,
-	showExpired,
+	status,
 	entityId,
 	kind,
 	limit,
 	cursor,
 }: CustomerProductsPageQueryArgs) => {
-	const filters = buildFilters({ showExpired, entityId, kind });
+	const filters = buildFilters({ status, entityId, kind });
 
 	const cursorPredicate = cursor
 		? sql`AND (
@@ -213,11 +223,11 @@ export const getCustomerProductsPageQuery = ({
 
 export const getCustomerProductsCountQuery = ({
 	internalCustomerId,
-	showExpired,
+	status,
 	entityId,
 	kind,
 }: Omit<CustomerProductsPageQueryArgs, "limit" | "cursor">) => {
-	const filters = buildFilters({ showExpired, entityId, kind });
+	const filters = buildFilters({ status, entityId, kind });
 
 	return sql`
 		SELECT COUNT(*)::int AS total_count

@@ -1,5 +1,6 @@
 import { ms } from "@autumn/shared";
 import { differenceInMilliseconds } from "date-fns";
+import { logger } from "../lib/logger.js";
 import { formatTypingStatus } from "./progress.js";
 
 const THINKING_VERBS = [
@@ -44,7 +45,10 @@ export const createStatusTicker = (target: TypingTarget): StatusTicker => {
 		sendChain = sendChain
 			.then(() => target.startTyping(text))
 			.catch((error) => {
-				console.warn("[chat] Could not update status", error);
+				logger.warn("Could not update typing status", {
+					data: { error },
+					event: "leaf.status_update_failed",
+				});
 			});
 	};
 

@@ -27,6 +27,7 @@ const dropEveSession = async ({ approval }: { approval: ChatApproval }) => {
 		db,
 		env: session.env,
 		orgId: approval.org_id,
+		reason: "approval_session_gone",
 		sessionId: session.sessionId,
 		threadKey: session.threadKey,
 	});

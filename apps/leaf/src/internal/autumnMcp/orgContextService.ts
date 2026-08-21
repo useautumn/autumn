@@ -3,6 +3,7 @@ import { parsePreviewPayload } from "@autumn/render";
 import { type AppEnv, ms } from "@autumn/shared";
 import { createTtlCache } from "../../lib/ttlCache.js";
 import { executeAutumnMcpTool } from "./client.js";
+import { autumnMcpErrorText } from "./errorResult.js";
 import {
 	compactFeatures,
 	compactPlans,
@@ -99,67 +100,86 @@ export const loadAutumnOrgContext = async ({
 }): Promise<AutumnOrgContext | undefined> => {
 	const intent =
 		"Preload the org's identity, agent rules, plans, and features at session start so they are ready for the user's first request.";
-	const args = { intent, request: {} };
-	const organizationArgs = { intent };
-	const [organizationResult, agentRulesResult, plansResult, featuresResult] =
-		await Promise.allSettled([
-			executeTool({
-				env,
-				token,
-				toolName: "getCurrentOrganization",
-				args: organizationArgs,
-			}),
-			executeTool({ env, token, toolName: "getAgentRules", args }),
-			executeTool({ env, token, toolName: "listPlans", args }),
-			executeTool({ env, token, toolName: "listFeatures", args }),
-		]);
-
-	const outcomes: Record<string, string> = {};
-	for (const [toolName, result] of [
-		["getCurrentOrganization", organizationResult],
-		["getAgentRules", agentRulesResult],
-		["listPlans", plansResult],
-		["listFeatures", featuresResult],
-	] as const) {
+	const requestArgs = { intent, request: {} };
+	const preloadTool = async (
+		toolName: string,
+		callArgs: Record<string, unknown>,
+	) => {
+		const startedAt = Date.now();
+		const value = await executeTool({ args: callArgs, env, token, toolName });
+		return {
+			bytes: JSON.stringify(value).length,
+			durationMs: Date.now() - startedAt,
+			errorText: autumnMcpErrorText(value),
+			toolName,
+			value,
+		};
+	};
+	const settled = await Promise.allSettled([
+		preloadTool("getCurrentOrganization", { intent }),
+		preloadTool("getAgentRules", requestArgs),
+		preloadTool("listPlans", requestArgs),
+		preloadTool("listFeatures", requestArgs),
+	]);
+	const toolNames = [
+		"getCurrentOrganization",
+		"getAgentRules",
+		"listPlans",
+		"listFeatures",
+	];
+	const preloads = settled.map((result, index) => {
 		if (result.status === "rejected") {
-			outcomes[toolName] = "rejected";
+			return { status: "rejected", tool: toolNames[index] };
+		}
+		const { bytes, durationMs, errorText, toolName } = result.value;
+		return {
+			bytes,
+			duration_ms: durationMs,
+			status: errorText ? "error" : "ok",
+			tool: toolName,
+		};
+	});
+	const preloadedValue = (index: number) => {
+		const result = settled[index];
+		if (!result) return;
+		if (result.status === "rejected") {
+			// A throw can predate the MCP call (pool/connect), so it is not
+			// guaranteed to have been logged at the tool boundary.
 			logger.warn("Could not preload Autumn org context", {
 				event: "leaf.autumn_mcp_org_context_preload_failed",
-				data: {
-					error:
-						result.reason instanceof Error
-							? result.reason.message
-							: String(result.reason),
-					tool: toolName,
-				},
+				data: { error: result.reason, tool: toolNames[index] },
 			});
-		} else {
-			outcomes[toolName] = JSON.stringify(result.value).length.toString();
+			return;
 		}
-	}
-	logger.debug("Preloaded Autumn org context", {
+		if (result.value.errorText) {
+			// executeAutumnMcpTool already warned with the error detail.
+			logger.debug("Skipping failed Autumn org context preload", {
+				event: "leaf.autumn_mcp_org_context_preload_failed",
+				data: { tool: toolNames[index] },
+			});
+			return;
+		}
+		return result.value.value;
+	};
+
+	const organization = preloadedValue(0);
+	const agentRules = preloadedValue(1);
+	const plans = preloadedValue(2);
+	const features = preloadedValue(3);
+
+	logger.info("Preloaded Autumn org context", {
 		event: "leaf.autumn_mcp_org_context_preloaded",
-		outcomes,
+		data: { preloads },
 	});
 
 	const text = formatAutumnOrgContext({
-		agentRules:
-			agentRulesResult.status === "fulfilled"
-				? agentRulesResult.value
-				: undefined,
-		features:
-			featuresResult.status === "fulfilled" ? featuresResult.value : undefined,
-		organization:
-			organizationResult.status === "fulfilled"
-				? organizationResult.value
-				: undefined,
-		plans: plansResult.status === "fulfilled" ? plansResult.value : undefined,
+		agentRules,
+		features,
+		organization,
+		plans,
 	});
 
-	const instructions =
-		agentRulesResult.status === "fulfilled"
-			? getNotes(agentRulesResult.value)
-			: undefined;
+	const instructions = getNotes(agentRules);
 	return text || instructions ? { instructions, text } : undefined;
 };
 

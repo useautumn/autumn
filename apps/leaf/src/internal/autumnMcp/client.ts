@@ -2,7 +2,9 @@ import { isSecretKeyPrefix } from "@autumn/auth";
 import { type AppEnv, ms } from "@autumn/shared";
 import { MCPClient } from "@mastra/mcp";
 import { env } from "../../lib/env.js";
+import { logger } from "../../lib/logger.js";
 import { createTtlCache } from "../../lib/ttlCache.js";
+import { autumnMcpErrorText } from "./errorResult.js";
 
 type AutumnTool = {
 	execute?: (
@@ -118,7 +120,7 @@ const pooledAutumnClient = ({
 
 export const executeAutumnMcpTool = async ({
 	args,
-	env,
+	env: appEnv,
 	token,
 	toolName,
 }: {
@@ -127,12 +129,37 @@ export const executeAutumnMcpTool = async ({
 	token: string;
 	toolName: string;
 }) => {
-	const pooled = await pooledAutumnClient({ appEnv: env, token });
+	const pooled = await pooledAutumnClient({ appEnv, token });
 	const tool = pooled.tools[toolName.replace(/^autumn_/, "")];
 	if (!tool?.execute) throw new Error(`Unknown Autumn MCP tool: ${toolName}`);
 	pooled.inUse += 1;
+	const startedAt = Date.now();
 	try {
-		return await tool.execute(args);
+		const result = await tool.execute(args);
+		const errorText = autumnMcpErrorText(result);
+		if (errorText) {
+			logger.warn("Autumn MCP tool returned an error result", {
+				data: {
+					duration_ms: Date.now() - startedAt,
+					env: appEnv,
+					error: errorText,
+					tool: toolName,
+				},
+				event: "leaf.autumn_mcp_tool_error",
+			});
+		}
+		return result;
+	} catch (error) {
+		logger.warn("Autumn MCP tool call failed", {
+			data: {
+				duration_ms: Date.now() - startedAt,
+				env: appEnv,
+				tool: toolName,
+			},
+			error,
+			event: "leaf.autumn_mcp_tool_failed",
+		});
+		throw error;
 	} finally {
 		pooled.inUse -= 1;
 		if (pooled.disconnectRequested) disconnectPooledClient(pooled);

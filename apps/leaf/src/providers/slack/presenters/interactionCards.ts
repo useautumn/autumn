@@ -3,6 +3,7 @@ import { formatMoney } from "@autumn/render";
 import { AppEnv, type CatalogPlanPreview } from "@autumn/shared";
 import { Actions, Button, Card, type CardChild, CardText } from "chat";
 import { z } from "zod";
+import { logger } from "../../../lib/logger.js";
 
 const questionButtonPayloadSchema = z.strictObject({
 	e: z.nativeEnum(AppEnv),
@@ -29,6 +30,21 @@ type CatalogDecisionButtonPayload = z.infer<
 	typeof catalogDecisionButtonPayloadSchema
 >;
 
+/** A malformed button value makes the click a silent no-op — Slack caps
+ * action values at 255 chars, so truncation is a live risk. */
+const logInvalidPayload = ({
+	detail,
+	value,
+}: {
+	detail: string;
+	value: string;
+}) => {
+	logger.warn("Slack action payload failed to parse", {
+		event: "leaf.slack_action_payload_invalid",
+		data: { detail, value: value.slice(0, 300) },
+	});
+};
+
 const parsePayload = <T>({
 	schema,
 	value,
@@ -39,8 +55,16 @@ const parsePayload = <T>({
 	if (!value) return null;
 	try {
 		const parsed = schema.safeParse(JSON.parse(value));
-		return parsed.success ? parsed.data : null;
-	} catch {
+		if (!parsed.success) {
+			logInvalidPayload({ detail: parsed.error.message, value });
+			return null;
+		}
+		return parsed.data;
+	} catch (error) {
+		logInvalidPayload({
+			detail: error instanceof Error ? error.message : String(error),
+			value,
+		});
 		return null;
 	}
 };

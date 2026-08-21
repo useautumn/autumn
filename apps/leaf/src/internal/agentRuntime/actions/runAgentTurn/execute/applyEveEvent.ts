@@ -1,8 +1,8 @@
 import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
+import { db } from "../../../../../lib/db.js";
 import { toolRequestFromArgs } from "../../../../approvals/utils/toolRequest.js";
 import { executeAutumnMcpTool } from "../../../../autumnMcp/client.js";
-import { db } from "../../../../../lib/db.js";
 import type { AgentActionProgress } from "../../../domain/agentTurnContext.js";
 import type { EveEvent } from "../../../eve/eveEventSchemas.js";
 import { isPreviewToolName } from "../../../eve/events.js";
@@ -84,6 +84,7 @@ const applyEveEffect = async ({
 				db,
 				env: session.env,
 				orgId,
+				reason: "session_failed",
 				sessionId: session.sessionId,
 				threadKey: session.threadKey,
 			});
