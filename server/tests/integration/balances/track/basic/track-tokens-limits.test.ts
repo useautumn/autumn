@@ -156,11 +156,11 @@ test.concurrent(
 );
 
 // ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-LIM-4: unlimited balance never rejects or deducts
+// TRACK-TOKENS-LIM-4: unlimited balance never rejects, usage accumulates
 // ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("track-tokens-lim-4: unlimited AI credit balance never rejects or deducts")}`,
+	`${chalk.yellowBright("track-tokens-lim-4: unlimited AI credit balance never rejects, usage accumulates")}`,
 	async () => {
 		const aiCreditsItem = items.unlimited({ featureId: TestFeature.AiCredits });
 		const freeProd = products.base({ id: "free", items: [aiCreditsItem] });
@@ -186,7 +186,7 @@ test.concurrent(
 		expect(trackRes.balance).toMatchObject({
 			feature_id: TestFeature.AiCredits,
 			unlimited: true,
-			usage: 0,
+			usage: 0.125,
 		});
 
 		// Second track: still no deduction, never rejected
@@ -201,7 +201,7 @@ test.concurrent(
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		expect(customer.balances[TestFeature.AiCredits]).toMatchObject({
 			unlimited: true,
-			usage: 0,
+			usage: 0.375,
 		});
 	},
 );
