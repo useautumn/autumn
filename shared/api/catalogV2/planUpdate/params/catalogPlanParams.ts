@@ -99,7 +99,8 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 	}),
 	create_in_stripe: z.boolean().optional().meta({
 		internal: true,
-		description: "When false, skip Stripe product/price creation on create.",
+		description:
+			"True creates Stripe resources immediately; false skips Stripe entirely. Omitted: created lazily at billing time.",
 	}),
 
 	// ── Variants & licenses ───────────────────────────────────────────────

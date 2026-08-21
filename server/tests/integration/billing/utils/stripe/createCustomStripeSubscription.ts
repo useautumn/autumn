@@ -1,8 +1,8 @@
 import { msToSeconds } from "@autumn/shared";
+import { fetchFullProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
-import { ProductService } from "@/internal/products/ProductService";
 
 /**
  * Creates a Stripe subscription for a customer using an inline price
@@ -27,12 +27,7 @@ export const createCustomStripeSubscription = async ({
 }): Promise<Stripe.Subscription> => {
 	const [fullCustomer, fullProduct] = await Promise.all([
 		CusService.getFull({ ctx, idOrInternalId: customerId }),
-		ProductService.getFull({
-			db: ctx.db,
-			idOrInternalId: productId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		}),
+		fetchFullProduct({ ctx, productId }),
 	]);
 
 	const stripeCustomerId = fullCustomer.processor.id ?? "";

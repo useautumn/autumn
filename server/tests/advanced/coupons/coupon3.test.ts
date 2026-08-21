@@ -67,9 +67,7 @@ test(chalk.yellow(`${testCase} - Testing attach coupon`), async () => {
 	// Create reward manually (s.reward calls createReward internally but we need to
 	// match the exact original behavior with the test-case-prefixed product ID)
 	await createReward({
-		orgId: testCtx.org.id,
-		env: testCtx.env,
-		db: testCtx.db,
+		ctx: testCtx,
 		autumn,
 		reward,
 		productId: pro.id,

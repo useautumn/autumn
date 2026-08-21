@@ -29,6 +29,7 @@ import {
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -36,11 +37,11 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { expectVariantProductCorrect } from "./utils/expectVariantProductCorrect.js";
 import {
 	expectPreviewItemChangeCorrect,
 	expectPreviewVariantsCorrect,
 } from "./utils/expectVariantPreviewCorrect.js";
+import { expectVariantProductCorrect } from "./utils/expectVariantProductCorrect.js";
 import { readableVariantTestId } from "./utils/readableVariantTestId.js";
 import { createVariantPlan } from "./utils/variantTestPlanUtils.js";
 
@@ -620,6 +621,7 @@ test.concurrent(
 			price: monthlyPrice,
 			disable_version: true,
 		});
+		await materializePlanInStripe({ ctx, planId: variantId });
 
 		const variantV1 = await getFull(ctx, variantId);
 		const v1PriceIds = new Map(
@@ -634,6 +636,8 @@ test.concurrent(
 			force_version: true,
 			update_variant_ids: [variantId],
 		});
+		// Versioning carries ids in the DB; materialize fills the new feature's price.
+		await materializePlanInStripe({ ctx, planId: variantId });
 
 		const variantV2 = await getFull(ctx, variantId);
 		expect(variantV2.version).toBe(2);

@@ -1,7 +1,7 @@
 /**
  * catalogV2.update — Stripe id carry on versioning: "new_version", active: true mint.
  *
- * Pre-seeds real Stripe resources via initPlanStripeResources, then mints v2
+ * Pre-seeds real Stripe resources via materializePlanInStripe, then mints v2
  * and asserts reuse levels. Plan-level processor.id is copied onto the v2 row.
  */
 
@@ -18,7 +18,7 @@ import {
 	expectProductProcessorCorrect,
 	findFeaturePrice,
 } from "@tests/integration/utils/expectStripePriceResources.js";
-import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -84,7 +84,7 @@ test.concurrent(
 				],
 			});
 
-			const before = await initPlanStripeResources({ ctx, planId });
+			const before = await materializePlanInStripe({ ctx, planId });
 			const paidBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -135,7 +135,7 @@ test.concurrent(
 				],
 			});
 
-			const before = await initPlanStripeResources({ ctx, planId });
+			const before = await materializePlanInStripe({ ctx, planId });
 			const paidBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -185,7 +185,7 @@ test.concurrent(
 				],
 			});
 
-			const before = await initPlanStripeResources({ ctx, planId });
+			const before = await materializePlanInStripe({ ctx, planId });
 			expectProductProcessorCorrect({ product: before, present: true });
 			const processorId = before.processor?.id ?? null;
 
@@ -201,6 +201,8 @@ test.concurrent(
 					},
 				],
 			});
+			// The mint carries reused ids; the new item's ids only exist once materialized.
+			await materializePlanInStripe({ ctx, planId });
 
 			const after = await getFull({ ctx, planId, version: 2 });
 			expectPriceStripeResourcesPresent({

@@ -2,13 +2,13 @@
  * The effective customized license reuses the base license's stripe_price_id even though the request carries no internal IDs. */
 import { expect, test } from "bun:test";
 import { productToBasePrice } from "@autumn/shared";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { ProductService } from "@/internal/products/ProductService.js";
 import { getFullLicenseProduct } from "../utils/getFullLicenseProduct.js";
 
 test.concurrent(
@@ -33,14 +33,12 @@ test.concurrent(
 			],
 			actions: [],
 		});
-		const baseLicense = await ProductService.getFull({
-			db: ctx.db,
-			idOrInternalId: devSeat.id,
-			orgId: ctx.org.id,
-			env: ctx.env,
+		const baseLicense = await materializePlanInStripe({
+			ctx,
+			planId: devSeat.id,
 		});
 		const basePrice = productToBasePrice({ product: baseLicense });
-		expect(basePrice?.config.stripe_price_id).toBeDefined();
+		expect(basePrice?.config.stripe_price_id).toBeTruthy();
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: parent.id,

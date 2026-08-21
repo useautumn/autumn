@@ -8,7 +8,7 @@
 import { expect, test } from "bun:test";
 import { BillingInterval, BillingMethod } from "@autumn/shared";
 import { expectProductProcessorCorrect } from "@tests/integration/utils/expectStripePriceResources.js";
-import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -57,7 +57,7 @@ test.concurrent(
 					},
 				],
 			});
-			const before = await initPlanStripeResources({ ctx, planId });
+			const before = await materializePlanInStripe({ ctx, planId });
 			expectProductProcessorCorrect({ product: before, present: true });
 
 			await autumnV2_3.catalogV2.update({
