@@ -6,7 +6,7 @@ import {
 	withGroupedWritePreviews,
 } from "../../../src/internal/approvals/utils/fetchApprovalPreview.js";
 
-const silentLogger = { warn: () => {} };
+const silentLogger = { debug: () => {}, warn: () => {} };
 
 describe("fetchApprovalPreview", () => {
 	test("refreshes catalog previews for the exact post-decision write", () => {

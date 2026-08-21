@@ -1,4 +1,5 @@
 import { $ } from "bun";
+import { logger } from "../../../lib/logger.js";
 
 const EVE_PORT = process.env.EVE_PORT ?? "3999";
 // Leaf's own listen port — eve's MCP connection dials leaf back on loopback.
@@ -37,8 +38,12 @@ export const startEmbeddedEveServer = async () => {
 		stdout: "inherit",
 	});
 	// Fail fast so the supervisor restarts the task with both servers in sync.
-	eve.exited.then((code) => {
-		console.error(`Embedded eve server exited (code ${code})`);
+	eve.exited.then(async (code) => {
+		logger.error("Embedded eve server exited", {
+			data: { code },
+			event: "leaf.eve_process_exited",
+		});
+		await logger.flush?.();
 		process.exit(code === 0 ? 0 : 1);
 	});
 };

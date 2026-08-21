@@ -1,5 +1,6 @@
 import type { Message, Thread } from "chat";
 import type { AgentContextMessage } from "../../internal/agentRuntime/domain/agentTurnContext.js";
+import { logger } from "../../lib/logger.js";
 
 const isPlanBlock = (block: unknown) =>
 	typeof block === "object" &&
@@ -21,7 +22,10 @@ export const getRecentMessages = async (
 	try {
 		await thread.refresh();
 	} catch (error) {
-		console.warn("[chat] Could not refresh thread context", error);
+		logger.warn("Could not refresh thread context", {
+			data: { error },
+			event: "leaf.slack_thread_context_refresh_failed",
+		});
 	}
 
 	const seen = new Set<string>();
