@@ -40,6 +40,7 @@ import {
 	ensureChatDatabase,
 	ensureTemplateBranch,
 	findBranchByName,
+	waitForNeonBranchOperations,
 } from "../dw/helpers/neon.ts";
 
 // ---------------------------------------------------------------------------
@@ -626,6 +627,7 @@ function ensureNeonBranch(
 	);
 	ensureTemplateBranch();
 	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
+	waitForNeonBranchOperations(branch);
 	const pooledUrl = connectionString(branchName, { pooled: true });
 	return {
 		state: {
