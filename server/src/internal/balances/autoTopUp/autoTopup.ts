@@ -122,6 +122,7 @@ export const autoTopup = async ({
 				ctx,
 				billingContext: autoTopupContext,
 				billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
+				clearCache: false,
 			});
 		} catch (error) {
 			// A throw here means the attempt still reached Stripe (and may have

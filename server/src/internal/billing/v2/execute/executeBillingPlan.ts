@@ -17,11 +17,13 @@ export const executeBillingPlan = async ({
 	billingContext,
 	billingPlan,
 	checkoutLockParamsHash,
+	clearCache = true,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 	checkoutLockParamsHash?: string;
+	clearCache?: boolean;
 }): Promise<BillingResult> => {
 	const stripeBillingResult: StripeBillingPlanResult =
 		billingContext.skipBillingChanges
@@ -77,6 +79,7 @@ export const executeBillingPlan = async ({
 		stripeInvoice: stripeBillingResult.stripeInvoice,
 		stripeInvoiceItems: stripeBillingResult.stripeInvoiceItems,
 		autumnInvoice: stripeBillingResult.autumnInvoice,
+		clearCache,
 	});
 
 	// Queue webhooks after Autumn billing plan is executed
