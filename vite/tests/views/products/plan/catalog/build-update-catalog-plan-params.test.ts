@@ -6,6 +6,7 @@ import {
 	FeatureUsageType,
 	type FrontendProduct,
 	ProductItemInterval,
+	RolloverExpiryDurationType,
 	UpdateCatalogPlanParamsSchema,
 } from "@autumn/shared";
 import {
@@ -243,6 +244,38 @@ describe("buildUpdateCatalogPlanParams", () => {
 			expect(item.stripe_price_id).toBeUndefined();
 			expect(item.price?.stripe_price_id).toBeUndefined();
 		}
+	});
+
+	/** Red: legacy max 0 is rejected on save. Green: serialize it as uncapped rollover. */
+	test("normalizes a legacy zero rollover cap", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: {
+				...editedProduct,
+				items: [
+					{
+						feature_id: "messages",
+						included_usage: 500,
+						interval: ProductItemInterval.Month,
+						interval_count: 1,
+						config: {
+							rollover: {
+								max: 0,
+								max_percentage: null,
+								duration: RolloverExpiryDurationType.Month,
+								length: 1,
+							},
+						},
+					},
+				],
+			},
+			features,
+		});
+
+		expect(params.items?.[0]?.rollover).toEqual({
+			expiry_duration_type: RolloverExpiryDurationType.Month,
+			expiry_duration_length: 1,
+		});
 	});
 
 	test("create omits version and versioning", () => {
