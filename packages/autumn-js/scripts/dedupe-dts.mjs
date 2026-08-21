@@ -2,94 +2,97 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 const distDir = path.resolve(import.meta.dirname, "../dist");
+const sdkTypesEntry = path.join(distDir, "sdk-types", "index.js");
+
+// sdk-types is the canonical type tree, standalone is runtime-only, and sdk's
+// declarations are replaced whole — none of them need per-file processing.
+const untouchedTopLevelDirs = new Set(["sdk-types", "standalone", "sdk"]);
+
+const listDeclarationFiles = () =>
+	fs
+		.readdirSync(distDir, { recursive: true })
+		.map((entry) => entry.toString())
+		.filter((entry) => !untouchedTopLevelDirs.has(entry.split(/[\\/]/)[0]))
+		.filter((entry) => /\.d\.(ts|mts)$/.test(entry))
+		.map((entry) => path.join(distDir, entry));
 
 // The root export is a pure `export * from "@useautumn/sdk"`, so its
-// declarations can point at the tsc-emitted per-file tree instead of a rollup.
-const sdkEntryDir = path.join(distDir, "sdk");
-fs.mkdirSync(sdkEntryDir, { recursive: true });
-const rootShim = 'export * from "../sdk-types/index.js";\n';
-fs.writeFileSync(path.join(sdkEntryDir, "index.d.ts"), rootShim);
-fs.writeFileSync(path.join(sdkEntryDir, "index.d.mts"), rootShim);
+// declarations can point at the tsc-emitted tree instead of a 2 MB rollup.
+const writeRootDeclarationShims = () => {
+	const shim = 'export * from "../sdk-types/index.js";\n';
+	fs.mkdirSync(path.join(distDir, "sdk"), { recursive: true });
+	fs.writeFileSync(path.join(distDir, "sdk", "index.d.ts"), shim);
+	fs.writeFileSync(path.join(distDir, "sdk", "index.d.mts"), shim);
+};
+
+const toRelativeImportSpecifier = ({ fromFile, toFile }) => {
+	const relative = path
+		.relative(path.dirname(fromFile), toFile)
+		.replaceAll("\\", "/");
+	return relative.startsWith(".") ? relative : `./${relative}`;
+};
 
 // The dts rollup keeps "@useautumn/sdk" imports external (see tsup.config.ts);
 // consumers can't resolve that workspace name, so point them at dist/sdk-types.
-const skipDirs = new Set(["sdk-types", "standalone", "sdk"]);
-const sdkTypesEntry = path.join(distDir, "sdk-types", "index.js");
-let rewritten = 0;
-const rewriteSdkImports = (dir) => {
-	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-		const fullPath = path.join(dir, entry.name);
-		if (entry.isDirectory()) {
-			if (dir === distDir && skipDirs.has(entry.name)) continue;
-			rewriteSdkImports(fullPath);
-			continue;
-		}
-		if (!/\.d\.(ts|mts)$/.test(entry.name)) continue;
-		const content = fs.readFileSync(fullPath, "utf8");
+const rewriteWorkspaceSdkImports = (declarationFiles) => {
+	let rewrittenCount = 0;
+	for (const file of declarationFiles) {
+		const content = fs.readFileSync(file, "utf8");
 		if (!content.includes("@useautumn/sdk")) continue;
-		const relative = path
-			.relative(path.dirname(fullPath), sdkTypesEntry)
-			.replaceAll("\\", "/");
-		const specifier = relative.startsWith(".") ? relative : `./${relative}`;
+		const specifier = toRelativeImportSpecifier({
+			fromFile: file,
+			toFile: sdkTypesEntry,
+		});
 		fs.writeFileSync(
-			fullPath,
+			file,
 			content
 				.replaceAll('"@useautumn/sdk"', `"${specifier}"`)
 				.replaceAll("'@useautumn/sdk'", `'${specifier}'`),
 		);
-		rewritten++;
+		rewrittenCount++;
 	}
+	return rewrittenCount;
 };
-rewriteSdkImports(distDir);
 
-// ESM declarations duplicate their CJS siblings byte-for-byte (modulo chunk
-// extensions); a re-export shim serves the same types. No entry has a default
-// export, so `export *` is lossless.
-let shimmed = 0;
-const walk = (dir) => {
-	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-		const fullPath = path.join(dir, entry.name);
-		if (entry.isDirectory()) {
-			if (dir === distDir && skipDirs.has(entry.name)) continue;
-			walk(fullPath);
-			continue;
-		}
-		if (!entry.name.endsWith(".d.mts")) continue;
-		const base = entry.name.slice(0, -".d.mts".length);
-		if (!fs.existsSync(path.join(dir, `${base}.d.ts`))) continue;
-		fs.writeFileSync(fullPath, `export * from "./${base}.js";\n`);
-		shimmed++;
-	}
-};
-walk(distDir);
+const cjsTwinOf = (esmDeclarationFile) =>
+	`${esmDeclarationFile.slice(0, -".d.mts".length)}.d.ts`;
 
-// ESM-only declaration chunks (hash differs from the CJS twin) become
-// unreferenced once every entry .d.mts is a shim onto the .d.ts world.
-const declarationFiles = [];
-const collect = (dir) => {
-	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-		const fullPath = path.join(dir, entry.name);
-		if (entry.isDirectory()) {
-			if (dir === distDir && skipDirs.has(entry.name)) continue;
-			collect(fullPath);
-		} else if (/\.d\.(ts|mts)$/.test(entry.name)) {
-			declarationFiles.push(fullPath);
-		}
+// Paired .d.mts files duplicate their .d.ts twin byte-for-byte (modulo chunk
+// extensions). No entry has a default export, so `export *` is lossless.
+const shimEsmDeclarationDuplicates = (declarationFiles) => {
+	const duplicates = declarationFiles.filter(
+		(file) => file.endsWith(".d.mts") && fs.existsSync(cjsTwinOf(file)),
+	);
+	for (const file of duplicates) {
+		const twinBaseName = path.basename(file).slice(0, -".d.mts".length);
+		fs.writeFileSync(file, `export * from "./${twinBaseName}.js";\n`);
 	}
+	return duplicates.length;
 };
-collect(distDir);
-const allDeclarationText = declarationFiles
-	.map((file) => fs.readFileSync(file, "utf8"))
-	.join("\n");
-let deleted = 0;
-for (const file of declarationFiles) {
-	if (!file.endsWith(".d.mts")) continue;
-	const base = path.basename(file).slice(0, -".d.mts".length);
-	if (fs.existsSync(path.join(path.dirname(file), `${base}.d.ts`))) continue;
-	if (allDeclarationText.includes(base)) continue;
-	fs.unlinkSync(file);
-	deleted++;
-}
+
+// An ESM-only declaration chunk (its hash differs from the CJS twin's) loses
+// its last importer once every paired .d.mts above becomes a shim.
+const deleteOrphanedEsmDeclarationChunks = (declarationFiles) => {
+	const allDeclarationText = declarationFiles
+		.map((file) => fs.readFileSync(file, "utf8"))
+		.join("\n");
+	const orphans = declarationFiles.filter((file) => {
+		if (!file.endsWith(".d.mts")) return false;
+		if (fs.existsSync(cjsTwinOf(file))) return false;
+		const chunkName = path.basename(file).slice(0, -".d.mts".length);
+		return !allDeclarationText.includes(chunkName);
+	});
+	for (const file of orphans) {
+		fs.unlinkSync(file);
+	}
+	return orphans.length;
+};
+
+const declarationFiles = listDeclarationFiles();
+writeRootDeclarationShims();
+const rewrittenCount = rewriteWorkspaceSdkImports(declarationFiles);
+const shimmedCount = shimEsmDeclarationDuplicates(declarationFiles);
+const deletedCount = deleteOrphanedEsmDeclarationChunks(declarationFiles);
 console.log(
-	`dedupe-dts: wrote sdk root shims, rewrote ${rewritten} SDK imports, shimmed ${shimmed} .d.mts files, deleted ${deleted} orphaned declaration chunks`,
+	`dedupe-dts: wrote sdk root shims, rewrote ${rewrittenCount} SDK imports, shimmed ${shimmedCount} .d.mts files, deleted ${deletedCount} orphaned declaration chunks`,
 );
