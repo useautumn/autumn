@@ -46,6 +46,7 @@ export const useApprovalSheetFromUrl = ({
 			sheetType === "attach-product"
 				? attachFormOverridesFromRequestBody
 				: updateSubscriptionFormOverridesFromRequestBody;
+		const cancelAction = resolved?.request.cancel_action;
 		if (approval && resolutionFailed) {
 			toast.warning("Couldn't prefill the form from the approval.");
 		}
@@ -70,7 +71,14 @@ export const useApprovalSheetFromUrl = ({
 			);
 			if (!itemId) return;
 			openedRef.current = true;
-			setSheet({ type: "subscription-update", itemId, data });
+			// A cancel request is a different decision than a plan edit — route it
+			// to the dashboard's native cancel flow.
+			const type =
+				cancelAction === "cancel_immediately" ||
+				cancelAction === "cancel_end_of_cycle"
+					? "subscription-cancel"
+					: "subscription-update";
+			setSheet({ type, itemId, data });
 		}
 		void setParams({ approval_id: null, plan_id: null, sheet: null });
 	}, [
