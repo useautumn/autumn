@@ -36,6 +36,8 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { useEnv } from "@/utils/envUtils";
+import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
+import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
@@ -353,22 +355,29 @@ function CreateScheduleSheetBody() {
 
 export function CreateScheduleSheet() {
 	const { closeSheet } = useSheetStore();
+	const sheetData = useSheetStore((s) => s.data);
+	const approvalSeed = approvalSeedFromSheetData(sheetData);
+	const onApplied = useSettleApprovalOnApply();
 	const { customer, testClockFrozenTimeMs } = useCusQuery({ schedule: true });
 	const fullCustomer = customer as FullCustomer | undefined;
 
 	const { products } = useProductsQuery();
 	const schedules = useCustomerSchedules();
 
-	const initialValues = useMemo(
-		() =>
-			buildInitialValues({
-				customer: fullCustomer,
-				schedules,
-				products,
-				nowMs: testClockFrozenTimeMs,
-			}),
-		[fullCustomer, schedules, products, testClockFrozenTimeMs],
-	);
+	const seedOverrides = approvalSeed?.defaultOverrides as
+		| Partial<CreateScheduleForm>
+		| undefined;
+	const initialValues = useMemo(() => {
+		const base = buildInitialValues({
+			customer: fullCustomer,
+			schedules,
+			products,
+			nowMs: testClockFrozenTimeMs,
+		});
+		// An approval seed is the proposed schedule itself — it replaces the
+		// customer's current schedule as the starting point.
+		return seedOverrides?.phases ? { ...base, ...seedOverrides } : base;
+	}, [fullCustomer, schedules, products, testClockFrozenTimeMs, seedOverrides]);
 
 	const existingPlans = useMemo(
 		() => getActiveCustomerPlans({ customer: fullCustomer, products }),
@@ -385,6 +394,7 @@ export function CreateScheduleSheet() {
 				navigator.clipboard.writeText(checkoutUrl);
 				toast.success("Checkout URL copied to clipboard");
 			}}
+			onApplied={onApplied}
 			onSuccess={closeSheet}
 		>
 			<CreateScheduleSheetBody />

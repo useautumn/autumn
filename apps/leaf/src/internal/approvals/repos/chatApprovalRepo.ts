@@ -9,7 +9,7 @@ import { listPendingChatApprovalsForRun } from "./listPendingChatApprovalsForRun
 import { moveChatApprovalToRun } from "./moveChatApprovalToRun.js";
 import { releaseChatApproval } from "./releaseChatApproval.js";
 import { setChatApprovalMessageTs } from "./setChatApprovalMessageTs.js";
-import { setChatApprovalToolArgs } from "./setChatApprovalToolArgs.js";
+import { setChatApprovalPreview } from "./setChatApprovalPreview.js";
 
 export const chatApprovalRepo = {
 	cancel: cancelChatApproval,
@@ -23,5 +23,5 @@ export const chatApprovalRepo = {
 	moveToRun: moveChatApprovalToRun,
 	release: releaseChatApproval,
 	setMessageTs: setChatApprovalMessageTs,
-	setToolArgs: setChatApprovalToolArgs,
+	setPreview: setChatApprovalPreview,
 } as const;

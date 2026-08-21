@@ -159,6 +159,7 @@ describe("Eve turn reducer", () => {
 					_eveSiblingRequestIds: ["req_2"],
 					_eveWithheldWrites: [
 						{
+							denyOptionId: "deny",
 							input: undefined,
 							requestId: "req_2",
 							toolName: "autumn__updateSubscription",

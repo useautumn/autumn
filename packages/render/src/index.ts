@@ -12,6 +12,7 @@ export {
 	buildPlanItemChangeDisplay,
 	type LineItemDisplay,
 	type MoneyDisplay,
+	phaseTimingText,
 	removedPlanChanges,
 	type SchedulePhaseDisplay,
 } from "./billing/previewDisplay.js";

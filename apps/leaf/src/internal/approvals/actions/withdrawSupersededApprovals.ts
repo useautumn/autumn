@@ -2,14 +2,8 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { APPROVAL_STILL_OPEN_MESSAGE } from "../../../ui/messages.js";
-import { drainParkedAgentTurn } from "../../agentRuntime/actions/submitAgentInput/drainParkedAgentTurn.js";
 import type { AgentThreadRef } from "../../agentRuntime/domain/agentTurnContext.js";
-import { adoptPostedEveSession } from "../../agentRuntime/eve/adoptPostedSession.js";
-import {
-	EveSessionGoneError,
-	postEveInputResponse,
-} from "../../agentRuntime/eve/client.js";
-import { siblingRequestIdsFromToolArgs } from "../../agentRuntime/eve/parkedInput.js";
+import { EveSessionGoneError } from "../../agentRuntime/eve/client.js";
 import { saveEveSessionState } from "../../agentRuntime/eve/sessionState.js";
 import type {
 	EveAuthContext,
@@ -17,7 +11,7 @@ import type {
 } from "../../agentRuntime/eve/types.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
-import { denyOptionFromApproval } from "./approvalOptions.js";
+import { denyApprovalParkAndDrain } from "./denyApprovalParkAndDrain.js";
 
 const withdrawnNote = (toolName: string) =>
 	`(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; their new message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one.${
@@ -43,16 +37,12 @@ const withdrewInEve = async ({
 }): Promise<WithdrawOutcome> => {
 	if (!approval.tool_call_id) return "withdrawn";
 	try {
-		const posted = await postEveInputResponse({
+		await denyApprovalParkAndDrain({
+			approval,
 			auth,
 			note: withdrawnNote(approval.tool_name),
-			optionId: denyOptionFromApproval(approval),
-			requestId: approval.tool_call_id,
 			session,
-			siblingRequestIds: siblingRequestIdsFromToolArgs(approval.tool_args),
 		});
-		adoptPostedEveSession({ posted, session, status: "running" });
-		await drainParkedAgentTurn({ auth, orgId, session });
 		return "withdrawn";
 	} catch (error) {
 		// A session eve has lost can never decide this card; the card is dead

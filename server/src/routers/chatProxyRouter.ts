@@ -48,6 +48,8 @@ export const createChatProxyRouter = (
 	// Plan-preview / approval interactions for the dashboard chat (state-backed,
 	// fetched + resolved beside the text-only stream).
 	router.get("/agent/interactions", proxy);
+	router.get("/agent/approvals/:approvalId", proxy);
+	router.post("/agent/approvals/:approvalId/supersede", proxy);
 	router.post("/agent/approve", proxy);
 	router.post("/agent/reject", proxy);
 
