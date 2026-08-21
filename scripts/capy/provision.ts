@@ -94,20 +94,8 @@ function shortHash(input: string): string {
 }
 
 function getMachineId(): string {
-	const configPath = process.env.CAPY_MACHINE_CONFIG?.trim();
-	if (configPath && existsSync(configPath)) {
-		try {
-			const config = JSON.parse(readFileSync(configPath, "utf-8")) as {
-				bindingId?: string;
-			};
-			if (config.bindingId?.trim()) return config.bindingId.trim();
-		} catch {
-			log(`machine config at ${configPath} is unreadable, using hostname`);
-		}
-	}
-	// Local repros do not have Capy's machine config. The hostname keeps the
-	// branch stable for the lifetime of that host.
-	return (process.env.HOSTNAME ?? hostname() ?? "unknown").trim();
+	// The hostname is assigned at runtime and remains stable when a VM wakes.
+	return process.env.HOSTNAME?.trim() || hostname();
 }
 
 function deriveBranchName(machineId: string): string {
