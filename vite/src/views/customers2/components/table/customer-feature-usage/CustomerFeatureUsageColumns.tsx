@@ -1,4 +1,9 @@
-import { AllowanceType, type Feature, FeatureType } from "@autumn/shared";
+import {
+	AllowanceType,
+	cusEntsToUnlimitedUsage,
+	type Feature,
+	FeatureType,
+} from "@autumn/shared";
 import { CaretDownIcon, CaretRightIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
@@ -128,6 +133,7 @@ export const CustomerFeatureUsageColumns = [
 			let isSubRow: boolean;
 			let creditAmount: number | undefined;
 			let subRows: CustomerFeatureUsageRowData[] | undefined;
+			let unlimitedUsage: number;
 
 			if (subRowData) {
 				const { meteredCusEnt, credit_amount } = subRowData;
@@ -144,6 +150,9 @@ export const CustomerFeatureUsageColumns = [
 				quantity = meteredCusEnt.customer_product?.quantity || 1;
 				isSubRow = true;
 				creditAmount = credit_amount;
+				unlimitedUsage = cusEntsToUnlimitedUsage({
+					cusEnts: [meteredCusEnt],
+				});
 			} else {
 				// Not a subrow, so cusEnt is FullCusEntWithSubRows
 				const parentEnt = cusEnt as FullCusEntWithSubRows;
@@ -155,6 +164,9 @@ export const CustomerFeatureUsageColumns = [
 				quantity = parentEnt.customer_product?.quantity || 1;
 				isSubRow = false;
 				subRows = parentEnt.subRows;
+				unlimitedUsage = cusEntsToUnlimitedUsage({
+					cusEnts: [parentEnt],
+				});
 			}
 
 			return (
@@ -167,6 +179,7 @@ export const CustomerFeatureUsageColumns = [
 					isSubRow={isSubRow}
 					creditAmount={creditAmount}
 					subRows={subRows}
+					unlimitedUsage={unlimitedUsage}
 				/>
 			);
 		},

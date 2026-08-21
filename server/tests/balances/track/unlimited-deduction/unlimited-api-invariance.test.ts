@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
 	ApiVersion,
-	type CheckResponseV2,
+	type CheckResponseV3,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -12,32 +12,36 @@ import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js"
 import { findCustomerEntitlement } from "../../utils/findCustomerEntitlement.js";
 
 /**
- * Unlimited-deduction feature: tracking on an unlimited cusEnt should really
- * deduct — raw `customer_entitlements.balance` drifts negative as a usage
- * counter — while the external API contract stays byte-for-byte unchanged.
+ * Unlimited-deduction feature: tracking on an unlimited cusEnt really
+ * deducts — raw `customer_entitlements.balance` drifts negative as a usage
+ * counter — and the LATEST API version (V2_3) surfaces that counter as real
+ * usage: `usage = -(raw balance)` while `granted`/`remaining` stay 0 and
+ * `unlimited: true`. GET /balances/list stays clamped to 0, and older API
+ * versions stay fully masked.
  *
  * Red (current):  the raw-DB test — track on unlimited short-circuits, so
- *                 `customer_entitlements.balance` stays 0 instead of -5.
- * Green (after):  raw balance is -5 AND all three invariance guards still pass.
+ *                 `customer_entitlements.balance` stays 0 instead of -5 —
+ *                 and guards 2/3 — V2_3 still masks usage to 0 instead of 5.
+ * Green (after):  raw balance is -5 AND all three guards pass.
  *
- * The three invariance guards are GREEN today and are regression guards for
- * the implementation:
+ * The three API guards:
  *   1. GET /balances/list returns balance 0 for an unlimited loose cusEnt.
  *      NOTE: this spreads the raw DB row today, so it goes RED
  *      mid-implementation (leaking -5) until the hard-coded clamp lands in
  *      handleListBalances — that red is the signal to add the clamp, not to
  *      touch this assertion.
- *   2. check still returns allowed + unlimited with the masked (0) balance.
- *   3. the customer object's feature block still reports unlimited with
- *      granted/remaining/usage masked to 0.
+ *   2. V2_3 check returns allowed + unlimited with usage = tracked total (5)
+ *      and granted/remaining 0.
+ *   3. the V2_3 customer object's feature block reports unlimited with
+ *      usage 5 and granted/remaining 0.
  */
 
 const customerId = "unlim-api-invariance";
 const TRACKED = 5;
 
-describe(`${chalk.yellowBright("unlimited-api-invariance: track on unlimited keeps API responses unchanged")}`, () => {
+describe(`${chalk.yellowBright("unlimited-api-invariance: track on unlimited — balances.list clamped, V2_3 surfaces usage")}`, () => {
 	const autumnV1 = new AutumnInt({ version: ApiVersion.V1_2 });
-	const autumnV2 = new AutumnInt({ version: ApiVersion.V2_0 });
+	const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 	beforeAll(async () => {
 		await initCustomerV3({
@@ -82,27 +86,27 @@ describe(`${chalk.yellowBright("unlimited-api-invariance: track on unlimited kee
 		expect(row?.balance).toBe(0);
 	});
 
-	test("guard 2: check response unchanged (allowed, unlimited, masked balance)", async () => {
-		const res = (await autumnV2.check({
+	test("guard 2: V2_3 check response surfaces real usage (allowed, unlimited, usage = tracked)", async () => {
+		const res = (await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-		})) as unknown as CheckResponseV2;
+		})) as unknown as CheckResponseV3;
 
 		expect(res.allowed).toBe(true);
 		expect(res.balance?.unlimited).toBe(true);
-		expect(res.balance?.granted_balance).toBe(0);
-		expect(res.balance?.current_balance).toBe(0);
-		expect(res.balance?.usage).toBe(0);
+		expect(res.balance?.granted).toBe(0);
+		expect(res.balance?.remaining).toBe(0);
+		expect(res.balance?.usage).toBe(TRACKED);
 	});
 
-	test("guard 3: customer object's feature block unchanged (unlimited, masked to 0)", async () => {
-		const customer = await autumnV2.customers.get<ApiCustomerV5>(customerId);
+	test("guard 3: V2_3 customer feature block surfaces real usage (unlimited, granted/remaining 0)", async () => {
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 
 		expect(customer.balances[TestFeature.Messages]).toMatchObject({
 			unlimited: true,
-			granted_balance: 0,
-			current_balance: 0,
-			usage: 0,
+			granted: 0,
+			remaining: 0,
+			usage: TRACKED,
 		});
 	});
 

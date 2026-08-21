@@ -1,8 +1,10 @@
 import {
 	computeGrantedBalanceInput,
+	cusEntsToUnlimitedUsage,
 	customerEntitlementToBillingCycleEnd,
 	EntInterval,
 	type Entity,
+	type FullCusEntWithFullCusProduct,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
@@ -141,10 +143,15 @@ function UnlimitedBalanceInfo({
 	billingCycleEnd,
 }: {
 	entity: Entity | undefined;
-	selectedCusEnt: FullCustomerEntitlement;
+	selectedCusEnt: FullCusEntWithFullCusProduct;
 	cusProduct: FullCusProduct | undefined;
 	billingCycleEnd: number | null;
 }) {
+	// Customer-wide usage on the unlimited balance (includes per-entity slices)
+	const unlimitedUsage = cusEntsToUnlimitedUsage({
+		cusEnts: [selectedCusEnt],
+	});
+
 	return (
 		<div className="flex-1 overflow-y-auto">
 			<SheetSection withSeparator={false}>
@@ -153,6 +160,7 @@ function UnlimitedBalanceInfo({
 					selectedCusEnt={selectedCusEnt}
 					cusProduct={cusProduct}
 					isUnlimited
+					unlimitedUsage={unlimitedUsage}
 					billingCycleEnd={billingCycleEnd}
 				/>
 			</SheetSection>
@@ -289,12 +297,14 @@ function EntitlementInfoRows({
 	selectedCusEnt,
 	cusProduct,
 	isUnlimited,
+	unlimitedUsage = 0,
 	billingCycleEnd,
 }: {
 	entity: Entity | undefined;
 	selectedCusEnt: FullCustomerEntitlement;
 	cusProduct: FullCusProduct | undefined;
 	isUnlimited: boolean;
+	unlimitedUsage?: number;
 	billingCycleEnd: number | null;
 }) {
 	return (
@@ -354,6 +364,9 @@ function EntitlementInfoRows({
 						</span>
 					}
 				/>
+			)}
+			{isUnlimited && unlimitedUsage > 0 && (
+				<InfoRow label="Used" value={numberWithCommas(unlimitedUsage)} />
 			)}
 			{billingCycleEnd && (
 				<InfoRow

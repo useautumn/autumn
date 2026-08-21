@@ -19,11 +19,27 @@ export const mergeAggregatedBalanceIntoApiBalanceV2 = ({
 	if (!aggregatedFeatureBalance) return apiBalance;
 
 	if (apiBalance.unlimited || aggregatedFeatureBalance.unlimited) {
+		// Unlimited cusEnts still deduct: their raw balance drifts negative as a
+		// usage counter. The aggregate row covers only entity-level cusEnts — a
+		// set disjoint from the in-memory customer-level ones — so ADD its usage
+		// to the in-memory value, and only negate the aggregate balance when the
+		// aggregate itself is unlimited (a finite aggregate balance is a
+		// remaining amount, not a usage counter).
+		const aggregatedUnlimitedUsage = aggregatedFeatureBalance.unlimited
+			? Object.values(aggregatedFeatureBalance.entities ?? {})
+					.reduce(
+						(total, entityBalance) => total.add(entityBalance.balance ?? 0),
+						new Decimal(aggregatedFeatureBalance.balance ?? 0),
+					)
+					.neg()
+			: new Decimal(0);
+		const usage = aggregatedUnlimitedUsage.add(apiBalance.usage).toNumber();
+
 		return {
 			...apiBalance,
 			granted: 0,
 			remaining: 0,
-			usage: 0,
+			usage,
 			unlimited: true,
 			overage_allowed: false,
 			breakdown: apiBalance.breakdown ?? [],
