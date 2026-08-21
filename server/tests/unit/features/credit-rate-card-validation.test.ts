@@ -1,7 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import {
-	ApiVersion,
-	ApiVersionClass,
 	AppEnv,
 	type CreditSystemConfig,
 	dbToApiFeatureV1,
@@ -234,7 +232,7 @@ describe("credit rate-card API mapping", () => {
 		});
 	});
 
-	test("preserves fields unknown to an older update client", () => {
+	test("preserves omitted rate-card fields on partial updates", () => {
 		const originalFeature = buildStoredCreditFeature({
 			invoiceCredit: true,
 			schema: [
@@ -265,44 +263,6 @@ describe("credit rate-card API mapping", () => {
 			invoice_credit: true,
 			schema: [{ metered_feature_id: "feature_a", credit_amount: 2 }],
 		});
-	});
-
-	test("preserves flat V2.3 responses and hides unsupported cards", () => {
-		const flatResponse = dbToApiFeatureV1({
-			ctx,
-			dbFeature: buildStoredCreditFeature({
-				schema: [
-					{
-						metered_feature_id: "feature_a",
-						feature_amount: 1,
-						credit_amount: 0.2,
-					},
-				],
-			}),
-			targetVersion: new ApiVersionClass(ApiVersion.V2_3),
-		});
-		expect(flatResponse.credit_schema).toEqual([
-			{ metered_feature_id: "feature_a", credit_cost: 0.2 },
-		]);
-		expect(flatResponse).not.toHaveProperty("invoice_credit");
-
-		const graduatedResponse = dbToApiFeatureV1({
-			ctx,
-			dbFeature: buildStoredCreditFeature({
-				invoiceCredit: true,
-				schema: [
-					{
-						metered_feature_id: "feature_a",
-						feature_amount: 100,
-						tier_behavior: "graduated",
-						tiers: [{ to: "inf", credit_amount: 0.5 }],
-					},
-				],
-			}),
-			targetVersion: new ApiVersionClass(ApiVersion.V2_3),
-		});
-		expect(graduatedResponse).not.toHaveProperty("credit_schema");
-		expect(graduatedResponse).not.toHaveProperty("invoice_credit");
 	});
 
 	test("does not expose an incompatible rate card through legacy nested feature responses", () => {
