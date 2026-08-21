@@ -80,6 +80,14 @@ export const featureToCreditSystem = ({
 
 	for (const schemaItem of schema) {
 		if (schemaItem.metered_feature_id === featureId) {
+			if (schemaItem.tier_behavior === "graduated") {
+				throw new RecaseError({
+					message: "Graduated credit rating is not supported yet",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+					data: { featureId, creditSystemId: creditSystem.id },
+				});
+			}
 			const creditAmount = schemaItem.credit_amount;
 			const featureAmount = schemaItem.feature_amount ?? 1;
 
@@ -121,6 +129,14 @@ export const getCreditCost = ({
 	const schema: CreditSchemaItem[] = creditSystem.config.schema;
 	for (const schemaItem of schema) {
 		if (schemaItem.metered_feature_id === featureId) {
+			if (schemaItem.tier_behavior === "graduated") {
+				throw new RecaseError({
+					message: "Graduated credit rating is not supported yet",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+					data: { featureId, creditSystemId: creditSystem.id },
+				});
+			}
 			return new Decimal(schemaItem.credit_amount)
 				.div(schemaItem.feature_amount ?? 1)
 				.mul(amount)
