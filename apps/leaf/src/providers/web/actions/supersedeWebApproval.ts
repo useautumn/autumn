@@ -1,13 +1,19 @@
+import { drainParkedAgentTurn } from "../../../internal/agentRuntime/actions/submitAgentInput/drainParkedAgentTurn.js";
+import { adoptPostedEveSession } from "../../../internal/agentRuntime/eve/adoptPostedSession.js";
 import { postEveInputResponse } from "../../../internal/agentRuntime/eve/client.js";
 import { getEveSessionBySessionId } from "../../../internal/agentRuntime/eve/repo.js";
-import { denyOptionOf } from "../../../internal/approvals/domain/approvalRecord.js";
+import {
+	denyOptionOf,
+	siblingRequestIdsOf,
+} from "../../../internal/approvals/domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
+import { chatApprovalStepsRepo } from "../../../internal/approvals/repos/chatApprovalStepsRepo.js";
 import { settleCardRemotely } from "../../../internal/approvals/surfaces/slack/settleCardRemotely.js";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
 
 const SUPERSEDED_NOTE =
-	"The user applied this write from the dashboard instead, so this pending request is superseded. Do NOT re-issue it; nothing further is needed.";
+	"The user applied this write from the dashboard instead, so this pending request is superseded. Do NOT re-issue it and do not reply — the change is already made. Handle any future user messages normally.";
 
 export type SupersedeWebApprovalResult =
 	| { superseded: true }
@@ -17,7 +23,9 @@ export type SupersedeWebApprovalResult =
 	  };
 
 /** Cancels a pending approval whose write the user applied from the
- * dashboard: card settles as superseded, the eve park is denied with a note. */
+ * dashboard: card settles as superseded, the eve park is denied and the
+ * resumed turn drained — leaving the stream index stale would replay the
+ * model's ack as the reply to the user's NEXT message. */
 export const supersedeWebApproval = async ({
 	approvalId,
 	orgId,
@@ -50,21 +58,32 @@ export const supersedeWebApproval = async ({
 				})
 			: undefined;
 		if (session && cancelled.tool_call_id) {
-			await postEveInputResponse({
-				auth: {
-					appEnv: cancelled.env,
-					channelId: cancelled.channel_id,
-					orgId: cancelled.org_id,
-					provider: cancelled.provider,
-					providerUserId: userId,
-					threadId: cancelled.channel_id,
-					workspaceId: cancelled.workspace_id,
-				},
+			const auth = {
+				appEnv: cancelled.env,
+				channelId: cancelled.channel_id,
+				orgId: cancelled.org_id,
+				provider: cancelled.provider,
+				providerUserId: userId,
+				threadId: cancelled.channel_id,
+				workspaceId: cancelled.workspace_id,
+			};
+			const stepRows = await chatApprovalStepsRepo.list({
+				approvalId: cancelled.id,
+				db,
+			});
+			const posted = await postEveInputResponse({
+				auth,
 				note: SUPERSEDED_NOTE,
 				optionId: denyOptionOf(cancelled),
 				requestId: cancelled.tool_call_id,
 				session,
+				siblingRequestIds: siblingRequestIdsOf({
+					approval: cancelled,
+					steps: stepRows,
+				}),
 			});
+			adoptPostedEveSession({ posted, session, status: "running" });
+			await drainParkedAgentTurn({ auth, orgId: cancelled.org_id, session });
 		}
 	} catch (error) {
 		logger.warn("Could not deny superseded approval in eve", {
