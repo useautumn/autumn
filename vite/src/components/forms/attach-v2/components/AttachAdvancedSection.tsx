@@ -469,6 +469,7 @@ export function AttachAdvancedSection() {
 					customAnchor={billingCycleAnchorDate}
 					minUnixDate={endDateMin}
 					maxUnixDate={endDate ? endDate - 1_000 : undefined}
+					allowCustomAnchor={!isMultiPlan}
 					onEnabledChange={(enabled) => {
 						form.setFieldValue("resetBillingCycle", enabled);
 						if (enabled && billingCycleAnchorMode === "now") {

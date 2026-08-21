@@ -90,7 +90,7 @@ describe("dashboardLinkableApproval", () => {
 		).toBe(false);
 	});
 
-	test("excludes grouped, unresolvable customize, internal, and non-sheet tools", () => {
+	test("excludes grouped, unresolvable customize, and non-sheet tools (internal admin links too)", () => {
 		expect(
 			dashboardLinkableApproval({
 				approval: { ...base, tool_name: "attach" },
@@ -121,7 +121,7 @@ describe("dashboardLinkableApproval", () => {
 				},
 				groupedStepCount: 0,
 			}),
-		).toBe(false);
+		).toBe(true);
 		expect(
 			dashboardLinkableApproval({
 				approval: { ...base, tool_name: "updateCatalog" },

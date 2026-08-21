@@ -497,6 +497,7 @@ export function AttachFormProvider({
 		discounts,
 		currency: attachCurrency.requestCurrency,
 		startDate,
+		resetBillingCycle,
 		hasInvalidPlanScopes: additionalPlans.hasInvalidPlanScopes,
 	});
 	const billingOperation = isMultiPlan

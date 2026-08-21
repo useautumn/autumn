@@ -7,6 +7,7 @@ import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../common/entityData";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
+import { ImmediateBillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { InvoiceModeParamsSchema } from "../common/invoiceModeParams";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
@@ -91,6 +92,11 @@ export const MultiAttachParamsV0Schema = z.object({
 			"List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
 	}),
 	billing_behavior: BillingBehaviorSchema.optional(),
+
+	billing_cycle_anchor: ImmediateBillingCycleAnchorSchema.optional().meta({
+		description:
+			"Pass 'now' to reset the billing cycle of every plan on the subscription to the time of this request.",
+	}),
 
 	success_url: z.string().optional().meta({
 		description: "URL to redirect to after successful checkout.",
