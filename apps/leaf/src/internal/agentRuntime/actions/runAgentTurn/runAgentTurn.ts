@@ -50,12 +50,15 @@ export const runAgentTurn = async ({
 	const titlePromise = titleSourceText?.trim()
 		? generateThreadTitle({ logger, text: titleSourceText })
 		: undefined;
+	const startedAt = Date.now();
+	let firstEventAt: number | undefined;
 
 	try {
 		const { existingSession, orgContext } = await prepareAgentTurn({
 			auth,
 			context: ctx,
 		});
+		const preparedAt = Date.now();
 		const session = await startAgentTurn({
 			auth: { ...auth, orgInstructions: orgContext?.instructions },
 			env,
@@ -80,6 +83,9 @@ export const runAgentTurn = async ({
 			env,
 			logger,
 			onAction,
+			onFirstStreamEvent: () => {
+				firstEventAt ??= Date.now();
+			},
 			onReasoning,
 			onThinking,
 			orgId: org.id,
@@ -88,13 +94,27 @@ export const runAgentTurn = async ({
 			token,
 		});
 
-		return await resolveAgentTurnOutcome({
+		const result = await resolveAgentTurnOutcome({
 			env,
 			logger,
 			orgId: org.id,
 			outcome,
 			session,
 		});
+		logger.info("Agent turn completed", {
+			event: "leaf.agent_turn_completed",
+			data: {
+				duration_ms: Date.now() - startedAt,
+				new_session: !existingSession,
+				outcome_kind: result.kind,
+				prepare_ms: preparedAt - startedAt,
+				session_id: session.sessionId,
+				time_to_first_event_ms: firstEventAt
+					? firstEventAt - startedAt
+					: undefined,
+			},
+		});
+		return result;
 	} finally {
 		if (titlePromise) {
 			void persistThreadTitle({

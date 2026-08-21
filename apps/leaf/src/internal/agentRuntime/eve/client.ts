@@ -1,5 +1,6 @@
 import { ms } from "@autumn/shared";
 import { env } from "../../../lib/env.js";
+import { logger } from "../../../lib/logger.js";
 import { withRetry } from "../../../lib/withRetry.js";
 import { type EveEvent, parseEveEvent } from "./eveEventSchemas.js";
 import {
@@ -140,6 +141,19 @@ export const postEveMessage = async ({
 	const response = await withRetry({
 		attempts: POST_RETRY_ATTEMPTS,
 		baseDelayMs: POST_RETRY_BASE_DELAY_MS,
+		onRecovered: ({ attempt }) => {
+			logger.info("Eve session post recovered after retry", {
+				event: "leaf.eve_post_recovered",
+				data: { attempts_used: attempt, session_id: session?.sessionId },
+			});
+		},
+		onRetry: ({ attempt, error }) => {
+			logger.warn("Eve session post failed; retrying", {
+				data: { attempt, session_id: session?.sessionId },
+				error,
+				event: "leaf.eve_post_retry",
+			});
+		},
 		operation: post,
 		shouldRetry: (error) =>
 			isConnectionRefusedError(error) ||
@@ -313,8 +327,14 @@ const countEveReplayableEvents = async ({
 				if (line) count += 1;
 			}
 		}
-	} catch {
+	} catch (error) {
 		// Aborting on the quiet gap is the normal exit.
+		if (!(error instanceof Error && error.name === "AbortError")) {
+			logger.warn("Eve replay recount failed", {
+				data: { error, session_id: sessionId },
+				event: "leaf.eve_replay_count_failed",
+			});
+		}
 	} finally {
 		clearTimeout(quietTimer);
 	}

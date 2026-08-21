@@ -114,7 +114,7 @@ export const resolveCatalogDecision = async ({
 	} catch (error) {
 		logger.warn("Could not deny updateCatalog pending decision", {
 			event: "leaf.eve_catalog_decision_deny_failed",
-			data: { error: error instanceof Error ? error.message : String(error) },
+			data: { error },
 		});
 		return undefined;
 	}

@@ -37,7 +37,7 @@ export const generateThreadTitle = async ({
 	} catch (error) {
 		logger.warn("Thread title generation failed", {
 			event: "leaf.thread_title_failed",
-			data: { error: String(error) },
+			data: { error },
 		});
 		return undefined;
 	}
@@ -71,7 +71,7 @@ export const persistThreadTitle = async ({
 	} catch (error) {
 		logger.warn("Thread title persist failed", {
 			event: "leaf.thread_title_persist_failed",
-			data: { error: String(error) },
+			data: { error },
 		});
 	}
 };

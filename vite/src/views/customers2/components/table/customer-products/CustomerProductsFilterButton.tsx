@@ -1,7 +1,17 @@
 import { CustomerProductKind } from "@autumn/shared";
 import { FilterButton } from "@/views/customers/components/filter-dropdown/FilterButton";
+import {
+	type FilterCheckboxOption,
+	FilterCheckboxSubMenu,
+	toggleFilterValue,
+} from "@/views/customers/components/filter-dropdown/FilterCheckboxSubMenu";
 import { FilterRadioSubMenu } from "@/views/customers/components/filter-dropdown/FilterRadioSubMenu";
-import type { CustomerProductsKindFilter } from "@/views/customers2/hooks/useCustomerProductsTableState";
+import {
+	type CustomerProductsKindFilter,
+	type CustomerProductsStatusOption,
+	DEFAULT_PRODUCT_STATUSES,
+	isDefaultProductStatuses,
+} from "@/views/customers2/hooks/useCustomerProductsTableState";
 
 const KIND_OPTIONS: { label: string; value: CustomerProductsKindFilter }[] = [
 	{ label: "All types", value: "all" },
@@ -10,30 +20,30 @@ const KIND_OPTIONS: { label: string; value: CustomerProductsKindFilter }[] = [
 	{ label: "Add-ons", value: CustomerProductKind.AddOn },
 ];
 
-const STATUS_OPTIONS = [
-	{ label: "Active", value: false },
-	{ label: "Show expired", value: true },
+const STATUS_OPTIONS: FilterCheckboxOption[] = [
+	{ label: "Active", value: "active" },
+	{ label: "Expired", value: "expired" },
 ];
 
 export function CustomerProductsFilterButton({
 	kind,
 	setKind,
-	showExpired,
-	setShowExpired,
+	statuses,
+	setStatuses,
 }: {
 	kind: CustomerProductsKindFilter;
 	setKind: (kind: CustomerProductsKindFilter) => void;
-	showExpired: boolean;
-	setShowExpired: (showExpired: boolean) => void;
+	statuses: CustomerProductsStatusOption[];
+	setStatuses: (statuses: CustomerProductsStatusOption[]) => void;
 }) {
 	const kindLabel = KIND_OPTIONS.find((option) => option.value === kind)?.label;
 
 	return (
 		<FilterButton
-			hasActiveFilters={kind !== "all" || showExpired}
+			hasActiveFilters={kind !== "all" || !isDefaultProductStatuses(statuses)}
 			onClear={() => {
 				setKind("all");
-				setShowExpired(false);
+				setStatuses(DEFAULT_PRODUCT_STATUSES);
 			}}
 		>
 			<FilterRadioSubMenu
@@ -43,12 +53,18 @@ export function CustomerProductsFilterButton({
 				onChange={setKind}
 				activeBadge={kind !== "all" ? kindLabel : undefined}
 			/>
-			<FilterRadioSubMenu
+			<FilterCheckboxSubMenu
 				label="Status"
 				options={STATUS_OPTIONS}
-				value={showExpired}
-				onChange={setShowExpired}
-				activeBadge={showExpired ? "Expired" : undefined}
+				selected={statuses}
+				onToggle={(value) =>
+					setStatuses(
+						toggleFilterValue(
+							statuses,
+							value,
+						) as CustomerProductsStatusOption[],
+					)
+				}
 			/>
 		</FilterButton>
 	);
