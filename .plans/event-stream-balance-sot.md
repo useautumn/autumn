@@ -2,6 +2,8 @@
 
 Research note. Not an implementation plan. The goal is to decide *what* would have to be true for an event stream to replace Redis as the durability source of truth, without pretending deduction is a simple decrement.
 
+Design target that landed later in the discussion: **up to ~1M events/s ingest**, plus **real-time remaining reads** (check ~50ms) on our infra. That split is worked in §15.
+
 Related existing work in this repo:
 
 - [check-reserve/01_mutation_logs.md](./check-reserve/01_mutation_logs.md) — mutation receipts + Redis Streams as the durability path for Postgres sync
@@ -552,73 +554,109 @@ If we had instead loaded Postgres remaining and replayed the original 40 *tracks
 
 ---
 
-## 15. Better fit for this stack: wallet WAL, not worker-served remaining
+## 15. 1M events/s changes the ingest path, not the read path
 
-If the requirements are **high track QPS** and **real-time remaining on our infra** (check, check+track, `customers.get` balances), I would not put a balance worker on the read/write path.
+A million events a second cannot land on request-path Lua. It also cannot land on today's async track: `runAsyncTrack` → SQS → `runQueuedTrack` → `runTrackV3` still runs **one full deduction per event**. SQS will not take 1M/s, and one Lua waterfall per event will not either.
 
-I would keep Redis as the serving layer and make a **fact WAL** the durability SoT. Recovery is still `snapshot(S) + tail`. The "worker" is Redis Lua, which we already run. Postgres and Tinybird stay projectors.
+At that number the user is right: **the ingest SoT is an event stream** (Kafka / Redpanda / WarpStream class). Redis is the remaining serving layer. Workers come back — as **batch appliers**, not as the thing check calls.
 
 ```text
-check / track / lock
+1M/s track (async, default cap)
         │
         ▼
-Redis Lua          apply + XADD facts in one script
+event log          durable ingest (intents)
         │
-        ├── hashes ──► real-time reads (existing replica pool)
+        ├──► Tinybird / Neon          analytics at ingest rate
         │
-        └── fact WAL (Redis Streams, relayed to Kafka/Redpanda if we want)
-                ├──► Postgres projector   dashboard, billing, snapshot(S)
-                └──► Tinybird / Neon      analytics
+        └──► apply workers            coalesce 50–200ms by customer + credit graph
+                    │
+                    ▼
+              Redis remaining         real-time check / customers.get
+                    │
+                    └──► Postgres     watermarked snapshot(S)
+
+check / reject / lock  (<< 1M/s)
+        └──► Redis wallet (sync). Do not put this on the firehose.
 ```
 
-That is how a database is built: pages for reads, WAL for durability, replicas for QPS. We already have the pages and the replica reads. We are missing the WAL.
+This is the split we already started (`overage_behavior` defaults to `cap`; `runAsyncTrack` returns 202 and shards a customer across 8 groups). The upgrade is: real log instead of SQS, and **sum-then-apply** instead of Lua-per-message.
 
-### 15.1 Why this matches the two constraints
+### 15.1 Why 1M Lua applies/s is not a thing
 
-**Real-time reads.** `getCachedFullSubject`, partial subjects, and `getCachedFeatureBalances` already go through `useReadPool: true`. Check's SLO is ~50ms and it fail-opens when Redis is down. A worker that *owns* remaining forces every check onto sticky routing, a warm snapshot, and a process hop. Kafka Streams interactive queries and "ask the customer partition owner" are the slow way to serve a point read we already serve from a Redis replica.
+A full `deductFromSubjectBalances` is not an `INCR`. It reads several hashes, runs two passes + rollovers + windows + epoch + JSON. Call it ~1ms of Redis CPU as a generous floor.
 
-**High throughput.** Lua on a cluster slot is a good apply engine for this shape: no extra network mid-apply, pipelined hash reads, different credit graphs can proceed on different key sets. A customer-partitioned worker serializes *all* of that customer's features, including ones that do not share a credit graph, and adds enqueue + ownership + cold-start. Streams are excellent at *fan-out* of facts after apply (Tinybird, PG, webhooks). They are a bad place to *serve* remaining.
+1M × 1ms = 1000 Redis-seconds per wall second. That is a thousand hot shards doing nothing else, before credit-graph coupling and hot customers. Request-path "apply + XADD in Lua" was the right design for today's QPS. It is the wrong ingest design at 1M/s.
 
-**Replay.** Identical to the worker-death story. Redis evicted or a node died: load watermarked Postgres remaining at `S`, fold WAL `(S, tip]`, write hashes, resume. We do not need a new actor to get that.
+A log *is* the thing that takes 1M/s: sequential append, partitioned, batched produce from the API (202). Tinybird/ClickHouse can ingest that with enough partitions. Redis hashes cannot be the place 1M events *arrive*.
 
-### 15.2 What I would not use this constraint set to justify
+### 15.2 Batch apply is the only way the allocator survives
 
-| Approach | Why it loses here |
-| --- | --- |
-| Balance workers serve check/track | Extra hop, coarser serialization, cold-start replay on the SLO path |
-| Tinybird / CH as remaining | OLAP, no reject isolation, ingest lag |
-| Postgres as apply | Already the fallback. Kills the 50ms path. |
-| Intent stream as SoT | Replay is the allocator, not addition |
-| TigerBeetle / new ledger DB | Simple transfers, not a waterfall allocator. New infra, same apply problem in front of it |
+Workers consume the log, keyed by `org + env + customer` (credit graph, not feature). Every 50–200ms they fold the window:
 
-Workers are still the right *projector* (the thing that folds facts into Postgres). They should not be the thing the API calls for remaining.
+```text
+50 tracks of messages, values 1,1,3,...  →  one deduct(47) on that snapshot
+```
 
-### 15.3 When I *would* move apply off Redis
+Then one Lua (or one TS apply) writes Redis remaining and emits **one fact** (or one fact per bucket) for that window.
 
-Only if Redis itself is the problem: Lua/SQL/TS drift, multi-region lock owners, 10k-entity subject blobs, cost. That is a serving-layer rewrite. It is not required for "we need a log we can replay" or for Tinybird to stop being a second write path.
+That is how 1M intents become far fewer remaining mutations — **if** traffic is Pareto (a few customers produce most events). LLM/API metering usually is.
 
-If we do it later, I would still keep a Redis (or similar) **read cache** in front of the worker. High QPS real-time reads and single-writer apply want different hardware. We already split that (write on primary, read on replica pool). A worker that is both is a regression.
+If the 1M is 1M distinct customers × 1 event, batching does not reduce apply count. Then the current waterfall cannot be the apply engine at all. Remaining has to become a cheaper counter (or apply is allowed to lag and check is stale by seconds). That is a product constraint, not just an infra one.
 
-### 15.4 What this changes vs today's mental model
+Property-filtered usage windows and per-event credit costs (AI tokens) also break naive summing. The worker has to bucket by the dimensions the allocator actually keys on, not only `feature_id`.
 
-Say "the WAL is the SoT, Redis remaining is a serving projection we apply into synchronously." Do not say "the event stream is the SoT, and we read remaining from it."
+### 15.3 Two SoTs, on purpose
 
-We never serve remaining from the stream, same way Postgres does not answer `SELECT` by scanning `pg_wal`. The stream exists so Redis can die.
+At 1M/s you do not get one log that is both "every intent" and "every bucket delta" unless you like 1M fat facts/s.
 
-The existing mutation-log plan is this architecture. The missing pieces are: `XADD` in Lua, stop snapshot-flushing Postgres, watermark PG remaining, relay the same WAL to Tinybird, emit grant/reset facts onto it.
+| Log | Rate | Role |
+| --- | --- | --- |
+| Intent stream | 1M/s | SoT for "this usage happened." Tinybird, replay of *usage*, billing meter |
+| Fact / apply log | apply rate after coalesce | SoT for remaining deltas. Replay of *wallet*. Watermarks Postgres + Redis |
+
+Worker dies: `snapshot(S)` from Postgres/Redis checkpoint + fold **apply facts** after `S`. Do not replay 86B intents/day through the allocator.
+
+Redis dies: same. Rebuild hashes from snapshot + apply-fact tail. The intent stream is how we prove usage; it is not how we rebuild remaining.
+
+### 15.4 Real-time reads stay on Redis
+
+Check still hits the replica pool. Workers **write** Redis; they do not **serve** check. That keeps the 50ms path.
+
+Remaining is only as fresh as the coalesce window (50–200ms) plus worker lag. That is the price of 1M/s. For `cap` / async track that is the contract we already have (202, apply later). For `reject` / lock / `send_event` check, keep the sync Redis path and **do not promise 1M/s of those**.
+
+Putting reject on the firehose means either overspend (apply later) or a 1M/s sync wallet (no).
+
+### 15.5 What this is not
+
+- Not "SQS but bigger." FIFO + one `runTrackV3` per message is the current async path. It will not grow 3–4 orders of magnitude.
+- Not Redis Streams as the 1M/s bus. Fine as a per-customer apply WAL. Wrong as the global ingest log (memory, fan-out, Tinybird).
+- Not Tinybird as remaining. Still OLAP.
+- Not genesis replay of intents. Checkpoints are mandatory at this rate.
+
+### 15.6 Revised recommendation
+
+1. **Ingest:** event stream at 1M/s. API acks from the log (async track). Tinybird consumes this.
+2. **Apply:** partitioned workers, coalesce, one deduct per window, write Redis remaining, append compact facts.
+3. **Read:** Redis replica pool for check / balances. Never serve remaining from the stream.
+4. **Recover:** watermarked Postgres (or hash dump) + apply-fact tail.
+5. **Sync wallet:** reject/lock stay on Redis, small QPS, separate from the firehose.
+
+The mutation-log plan is still the apply/recovery side. It is no longer the ingest side.
 
 ---
 
 ## 16. Bottom line
 
-The instinct is right: **remaining should be a fold of a durable log; Redis/Postgres/Tinybird should be projections; apply should be a single writer that holds a snapshot.** Worker death (or Redis death) is `snapshot(S) + fold(facts after S)`, and Postgres is a good place to keep `snapshot(S)` once it has a watermark.
+At **1M events/s** the ingest SoT is an event stream. Request-path Redis Lua cannot be where those events arrive. Today's async track (SQS → one `runTrackV3` each) cannot either.
 
-For *this* stack — high track QPS plus 50ms remaining reads — I would not introduce balance workers on the request path. I would add a **fact WAL behind the Redis we already serve from**. Redis Lua stays the apply engine and the real-time read layer. The WAL is what we replay. Postgres and Tinybird consume it.
+The serving split that fits both 1M/s and 50ms remaining reads:
 
-The first-idea version is wrong in three places:
+- Stream: durable intents, Tinybird, 202 ingest.
+- Workers: coalesce a window, one apply, write Redis, emit compact facts.
+- Redis: real-time check/balances (replica pool). Workers write it; check does not call workers.
+- Postgres: watermarked `snapshot(S)` for Redis/worker death.
+- Reject/lock: stay on a sync Redis wallet at much smaller QPS.
 
-1. It treats today's track events as that log. They are intents. Remaining needs facts, and also grant/reset/shape facts we do not emit. Replay is addition of deltas, not re-running deduction.
-2. It puts Tinybird on the SoT path. Tinybird is a projector. Worker recovery does not read it.
-3. It under-specifies apply. Check/reject/lock cannot wait on an eventually consistent worker unless that worker *is* the synchronous owner of the customer — and even then, that is the wrong serving layer for our read SLO.
+Recovery is still `snapshot(S) + fold(apply facts after S)`. Do not rebuild remaining by replaying a day of intents through the allocator.
 
-We already have the allocator, the mutation receipt shape, the subject epoch fence, the replica read pool, and a written plan to stream those receipts. The missing piece is the WAL, not a new fleet of snapshot owners.
+The first-idea version is still wrong if it (1) replays track intents as if they were remaining deltas, (2) serves check from Tinybird, or (3) puts reject on the firehose. It is right that the firehose is a stream, not Redis.
