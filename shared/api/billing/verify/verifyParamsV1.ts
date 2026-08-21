@@ -182,6 +182,9 @@ export const SharedStripeCustomerMismatchSchema = z.object({
 	severity,
 	stripe_customer_id: z.string(),
 	other_customer_ids: z.array(z.string()),
+	other_customers: z
+		.array(z.object({ id: z.string(), name: z.string().nullable() }))
+		.optional(),
 });
 export type SharedStripeCustomerMismatch = z.infer<
 	typeof SharedStripeCustomerMismatchSchema
