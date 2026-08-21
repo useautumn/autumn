@@ -3,6 +3,7 @@ import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubject
 import type { CustomerEntitlementFilters } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
+import { isCusEntExpired } from "../cusEntUtils/classifyCusEnt/isCusEntExpired.js";
 import { isPooledBalanceSourceCustomerEntitlement } from "../cusEntUtils/classifyCusEnt/isPooledBalanceCustomerEntitlement.js";
 import { cusEntMatchesEntity } from "../cusEntUtils/filterCusEntUtils.js";
 import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
@@ -72,7 +73,7 @@ export const fullSubjectToCustomerEntitlements = ({
 	const now = Date.now();
 	customerEntitlements = customerEntitlements.filter(
 		(customerEntitlement) =>
-			!customerEntitlement.expires_at || customerEntitlement.expires_at > now,
+			!isCusEntExpired({ cusEnt: customerEntitlement, now }),
 	);
 
 	sortCusEntsForDeduction({
