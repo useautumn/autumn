@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
+
+process.env.AUTUMN_DASHBOARD_URL = "https://app.useautumn.com";
+
 import { cardToBlockKit } from "@chat-adapter/slack";
 import {
 	approvalCard,
