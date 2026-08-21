@@ -14,6 +14,8 @@ export type ApprovalDetailWrite = {
  * stored request. */
 export type ApprovalDetail = {
 	id: string;
+	/** Effective status — pending past its expiry reads as expired. */
+	status: ChatApprovalStatus | "expired";
 	plan_id: string | null;
 	writes: ApprovalDetailWrite[];
 	tool_name: string;

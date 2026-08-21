@@ -1585,7 +1585,9 @@ export const approvalStatusCard = ({
 			env,
 			groupedWrites,
 			preview,
-			statusLabel: "🔄 Updated",
+			statusLabel: statusLine
+				? `🔄 ${statusLine}`
+				: "🔄 Withdrawn — superseded by a newer request in this thread",
 			toolArgs,
 			toolName,
 		});

@@ -47,6 +47,11 @@ export const useApprovalSheetFromUrl = ({
 		if (approval && resolutionFailed) {
 			toast.warning("Couldn't prefill the form from the approval.");
 		}
+		if (approval && approval.status !== "pending") {
+			toast.warning(
+				`This Slack request was already ${approval.status === "cancelled" ? "withdrawn" : approval.status} — applying here runs a new action.`,
+			);
+		}
 		const data = {
 			approvalId: approval?.id ?? null,
 			defaultOverrides:

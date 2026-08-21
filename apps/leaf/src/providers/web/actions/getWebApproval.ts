@@ -48,6 +48,10 @@ export const getWebApproval = async ({
 	return {
 		approval: {
 			id: approval.id,
+			status:
+				approval.status === "pending" && approval.expires_at <= Date.now()
+					? "expired"
+					: approval.status,
 			plan_id:
 				requestStringField(
 					approval.tool_args as Record<string, unknown>,
