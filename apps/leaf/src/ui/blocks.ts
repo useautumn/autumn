@@ -1215,6 +1215,21 @@ const approvalPreviewBlocks = ({
 	if (intentLabel) {
 		blocks.push(CardText(intentLabel));
 	}
+	// The timeline is the subject of a schedule — it reads before the
+	// customization detail and the money it produces.
+	if (display.phases.length) {
+		blocks.push(
+			Table({
+				align: ["left", "left"],
+				caption: "Schedule",
+				headers: ["Starts", "Plans"],
+				rows: display.phases.map((phase) => [
+					phase.timingText,
+					phase.plansText,
+				]),
+			}),
+		);
+	}
 	if (changeRows.length) {
 		blocks.push(changeTable({ caption: "Plan changes", rows: changeRows }));
 	}
@@ -1277,19 +1292,6 @@ const approvalPreviewBlocks = ({
 		blocks.push(CardText("No charge now", { style: "muted" }));
 	} else if (!zeroNoCharge) {
 		pushMoney();
-	}
-	if (display.phases.length) {
-		blocks.push(
-			Table({
-				align: ["left", "left"],
-				caption: "Schedule",
-				headers: ["Starts", "Plans"],
-				rows: display.phases.map((phase) => [
-					phase.timingText,
-					phase.plansText,
-				]),
-			}),
-		);
 	}
 	const badges = [
 		...display.badges,
