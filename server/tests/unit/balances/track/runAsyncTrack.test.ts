@@ -14,6 +14,10 @@ const trackAsyncQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
 
 import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
+import {
+	clearTrackProducerQueueUrls,
+	pinTrackProducerQueueToFifo,
+} from "./trackAsyncQueueTestEnv.js";
 
 const buildCtx = ({ requestId = "req_async_1" }: { requestId?: string } = {}) =>
 	({
@@ -36,12 +40,14 @@ const body = {
 };
 
 describe("runAsyncTrack", () => {
-	const originalEnv = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+	let restoreQueueEnv: (() => void) | undefined;
 
 	beforeEach(() => {
 		mockState.queueCommands = [];
 		mockState.queueFailureIndex = null;
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
+		restoreQueueEnv = pinTrackProducerQueueToFifo({
+			fifoQueueUrl: trackAsyncQueueUrl,
+		}).restore;
 
 		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
@@ -66,7 +72,8 @@ describe("runAsyncTrack", () => {
 			const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
 		}
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalEnv;
+		restoreQueueEnv?.();
+		restoreQueueEnv = undefined;
 	});
 
 	test("queues track with TRACK_ASYNC_SQS_QUEUE_URL and resolves without throwing", async () => {
@@ -140,9 +147,7 @@ describe("runAsyncTrack", () => {
 	});
 
 	test("throws 503 RecaseError when no track queue URL is set", async () => {
-		const originalTrackUrl = process.env.TRACK_SQS_QUEUE_URL;
-		delete process.env.TRACK_ASYNC_SQS_QUEUE_URL;
-		delete process.env.TRACK_SQS_QUEUE_URL;
+		const { restore } = clearTrackProducerQueueUrls();
 		const ctx = buildCtx();
 
 		try {
@@ -155,11 +160,7 @@ describe("runAsyncTrack", () => {
 			expect(mockState.queueCommands).toHaveLength(0);
 			expect(ctx.logger.warn).toHaveBeenCalled();
 		} finally {
-			if (originalTrackUrl === undefined) {
-				delete process.env.TRACK_SQS_QUEUE_URL;
-			} else {
-				process.env.TRACK_SQS_QUEUE_URL = originalTrackUrl;
-			}
+			restore();
 		}
 	});
 

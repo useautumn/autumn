@@ -50,13 +50,12 @@ const resolveServerPort = (): number => {
 const main = async (): Promise<void> => {
 	const serverPort = resolveServerPort();
 
-	const { TEST_ORG_CONFIG } = await import(
-		"../../setupTestUtils/createTestOrg.js"
-	);
-	const orgId =
-		process.env.ORG_ID && process.env.ORG_ID.length > 0
-			? process.env.ORG_ID
-			: TEST_ORG_CONFIG.id;
+	const orgId = process.env.ORG_ID;
+	if (!orgId) {
+		throw new Error(
+			"[tw-fsboot] ORG_ID is required — the orchestrator must inject the test org id",
+		);
+	}
 
 	const stripeAccountId = process.env.STRIPE_ACCOUNT_ID;
 	if (!stripeAccountId) {

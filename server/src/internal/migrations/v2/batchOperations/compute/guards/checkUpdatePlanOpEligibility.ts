@@ -95,6 +95,19 @@ export const checkUpdatePlanOpEligibility = ({
 }): BatchMigrationRejection[] => {
 	const rejections: BatchMigrationRejection[] = [];
 
+	if (
+		op.version !== undefined &&
+		(op.customize?.add_items?.length ?? 0) === 0 &&
+		(op.customize?.remove_items?.length ?? 0) === 0
+	) {
+		rejections.push({
+			code: "unsupported_version_only",
+			opIndex,
+			message:
+				"update_plan version-only (no add_items or remove_items) has no batch execute path; only the per-customer lane applies it.",
+		});
+	}
+
 	if (op.proration === true) {
 		rejections.push({
 			code: "proration_enabled",

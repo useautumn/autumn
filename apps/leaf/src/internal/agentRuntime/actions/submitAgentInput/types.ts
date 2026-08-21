@@ -7,7 +7,7 @@ export type ResumedAgentTurn = Readonly<{
 	chained?: ChainedPendingRequest;
 	chainedSiblingRequestIds: ReadonlyArray<string>;
 	approvedWriteFailed: boolean;
-	steps: ReadonlyArray<{
+	writes: ReadonlyArray<{
 		status: "applied" | "failed" | "pending";
 		toolName: string;
 	}>;

@@ -9,12 +9,14 @@ export function useAttachForm({
 	initialItems,
 	initialIsCustom,
 	initialVersion,
+	defaultOverrides,
 }: {
 	initialProductId?: string;
 	initialPrepaidOptions?: Record<string, number>;
 	initialItems?: ProductItem[] | null;
 	initialIsCustom?: boolean;
 	initialVersion?: number;
+	defaultOverrides?: Partial<AttachForm>;
 } = {}) {
 	return useAppForm({
 		defaultValues: {
@@ -52,6 +54,7 @@ export function useAttachForm({
 			carryOverUsages: false,
 			carryOverUsageFeatureIds: [],
 			customLineItems: [],
+			...defaultOverrides,
 		} as AttachForm,
 		validators: {
 			onChange: AttachFormSchema,

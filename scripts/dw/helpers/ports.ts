@@ -1,23 +1,31 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { MAX_WORKTREE } from "../constants.ts";
 import type { WorktreeAliases } from "../types.ts";
 import { log, sh } from "./shell.ts";
 
 const PORTLESS_PROXY_PORT_FILE = join(homedir(), ".portless", "proxy.port");
 
+/** bun d owns 6379/6380/8000. wt-1 compose sits past slot 50. */
+const worktree1ComposeSlot = MAX_WORKTREE + 1;
+
+function composeSlot(worktreeNum: number): number {
+	return worktreeNum === 1 ? worktree1ComposeSlot : worktreeNum;
+}
+
 export function dragonflyPortFor(worktreeNum: number): number {
-	return 6379 + (worktreeNum - 1) * 100;
+	return 6379 + (composeSlot(worktreeNum) - 1) * 100;
 }
 
 export function elasticMqPortFor(worktreeNum: number): number {
-	return 9324 + (worktreeNum - 1) * 100;
+	return 9324 + (composeSlot(worktreeNum) - 1) * 100;
 }
 
 // DynamoDB Local's default port. Base 8000 never collides with the server's
 // 8080 base: 8000 + k*100 and 8080 + k*100 stay 80 apart for every worktree.
 export function dynamoDbPortFor(worktreeNum: number): number {
-	return 8000 + (worktreeNum - 1) * 100;
+	return 8000 + (composeSlot(worktreeNum) - 1) * 100;
 }
 
 export function serverPortFor(worktreeNum: number): number {

@@ -1,3 +1,4 @@
+import type { PlanItemFilter } from "@api/products/items/filter/planItemFilter.js";
 import type { CustomizePlanLicense } from "@models/licenseModels/licenseModels";
 import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums";
 import { basePriceToKey } from "@utils/planV1Utils/convertCustomize/basePriceToKey";
@@ -10,6 +11,9 @@ import {
 const ABSENT = "";
 
 const sortedJoin = (keys: string[]): string => [...keys].sort().join(",");
+
+const removeItemToKey = (filter: PlanItemFilter): string =>
+	`${planItemFilterMatchKey(filter)}|included:${filter.included ?? ""}`;
 
 const priceToKey = ({
 	price,
@@ -64,7 +68,7 @@ export const customizeToKey = ({
 	[
 		`price:${priceToKey({ price: customize.price })}`,
 		`add_items:${sortedJoin((customize.add_items ?? []).map((item) => createPlanItemToKey({ item })))}`,
-		`remove_items:${sortedJoin((customize.remove_items ?? []).map(planItemFilterMatchKey))}`,
+		`remove_items:${sortedJoin((customize.remove_items ?? []).map(removeItemToKey))}`,
 		`free_trial:${freeTrialSegment({ freeTrial: customize.free_trial })}`,
 		`upsert_licenses:${sortedJoin((customize.upsert_licenses ?? []).map((license) => upsertLicenseToKey({ license })))}`,
 		`remove_licenses:${sortedJoin((customize.remove_licenses ?? []).map((entry) => entry.license_plan_id))}`,

@@ -84,11 +84,20 @@ describe("isAllowedOrigin", () => {
 			).toBe("https://autumn-wt45-ee5aa7.autumnworktree.com");
 		});
 
+		test("allows capysandbox hosts", () => {
+			process.env.NODE_ENV = "development";
+			expect(isAllowedOrigin("https://capy-1.capysandbox.net")).toBe(
+				"https://capy-1.capysandbox.net",
+			);
+		});
+
 		test("rejects external origins", () => {
 			process.env.NODE_ENV = "development";
 			expect(isAllowedOrigin("https://evil.com")).toBeUndefined();
 			expect(isAllowedOrigin("http://evil.com:3000")).toBeUndefined();
-			expect(isAllowedOrigin("https://evil.ngrok.app.evil.com")).toBeUndefined();
+			expect(
+				isAllowedOrigin("https://evil.ngrok.app.evil.com"),
+			).toBeUndefined();
 		});
 
 		test("rejects localhost with path or query", () => {
@@ -100,9 +109,7 @@ describe("isAllowedOrigin", () => {
 		test("rejects look-alike domains posing as localhost", () => {
 			process.env.NODE_ENV = "development";
 			expect(isAllowedOrigin("https://localhost.evil.com")).toBeUndefined();
-			expect(
-				isAllowedOrigin("https://wt8.localhost.evil.com"),
-			).toBeUndefined();
+			expect(isAllowedOrigin("https://wt8.localhost.evil.com")).toBeUndefined();
 		});
 	});
 });

@@ -153,3 +153,11 @@ export const expectBillingUpdatedCorrect = ({
 		}
 	}
 };
+
+export const expectBillingUpdatedAbsent = ({
+	data,
+}: {
+	data: BillingChangeResponse | null;
+}) => {
+	expect(data).toBeNull();
+};

@@ -41,8 +41,6 @@ export type EveTurnProgress = Readonly<{
 	lastPreview?: CapturedPreview;
 	pendingText: string;
 	reasoningStreamId?: string;
-	/** Child sessions spawned by delegated subagents — the pointer for
-	 * attributing proxied approvals and following child streams. */
 	subagentChildSessionIds: ReadonlySet<string>;
 	subagentStartedAtByCallId: ReadonlyMap<string, number>;
 	toolInputs: ReadonlyMap<string, Record<string, unknown>>;

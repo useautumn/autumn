@@ -1,18 +1,17 @@
 import type { TestGroup } from "./types";
 
 const activeTempPaths: string[] = [
-	"integration/billing/migrations-v2/batch-migrations/licenses/batch-license-customize-priced-base-item.test.ts",
-	"integration/billing/migrations-v2/batch-migrations/licenses/batch-license-released-seat-pool-repoint.test.ts",
-	"integration/billing/migrations-v2/batch-migrations/licenses/list-distinct-license-entitlements-for-page.test.ts",
-	"integration/billing/migrations-v2/batch-migrations/licenses/batch-license-over-allocated-pool.test.ts",
-	"integration/billing/migrations-v2/batch-migrations/replace-items/batch-replace-item-events-webhooks.test.ts",
-	"integration/billing/migrations-v2/batch-migrations/remove-items/batch-delete-item-events-webhooks.test.ts",
-	"integration/billing/migrations-v2/batch-migrations/version-repoint/events/version-repoint-webhooks-cache.test.ts",
+	"integration/billing/migrations-v2/update-plan-operation/feature-quantity-strategy/round-to-lowest-price-topology.test.ts",
+	"integration/billing/migrations-v2/update-plan-operation/feature-quantity-strategy/round-to-lowest-price-below-cheapest-tier.test.ts",
+	"integration/billing/migrations-v2/update-plan-operation/feature-quantity-strategy/end-to-end-multi-feature-isolation.test.ts",
+	"integration/billing/migrations-v2/update-plan-operation/feature-quantity-strategy/base-tier-bump-regression.test.ts",
+	"integration/billing/migrations-v2/update-plan-operation/feature-quantity-strategy/round-to-lowest-price-baseline.test.ts",
+	"integration/billing/migrations-v2/update-plan-operation/feature-quantity-strategy/end-to-end-multi-entity-schedule-usage.test.ts",
 ];
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Remaining batch-migration integration failures",
+	description: "This round: FQS update_plan failures after included-filter pairing",
 	tier: "domain",
 	paths: activeTempPaths,
 	maxConcurrency: 2,

@@ -153,6 +153,11 @@ export enum PlanItemMatchPrecision {
 	FeatureCadence = "feature_cadence",
 }
 
+export enum PlanItemFilterPrecision {
+	Identity = "identity",
+	IdentityAndIncluded = "identity_and_included",
+}
+
 export const buildPlanItemKey = ({
 	item,
 	matchPrecision = PlanItemMatchPrecision.FeatureBillingMethodCadence,
@@ -190,7 +195,13 @@ export const planItemFilterMatchKey = (filter: PlanItemFilter): string =>
 		},
 	)}`;
 
-const buildRemoveFilter = (item: ApiPlanItem): PlanItemFilter => {
+const buildRemoveFilter = ({
+	item,
+	filterPrecision,
+}: {
+	item: ApiPlanItem;
+	filterPrecision: PlanItemFilterPrecision;
+}): PlanItemFilter => {
 	const filter: PlanItemFilter = { feature_id: item.feature_id };
 	if (item.price?.billing_method !== undefined)
 		filter.billing_method = item.price.billing_method;
@@ -200,6 +211,14 @@ const buildRemoveFilter = (item: ApiPlanItem): PlanItemFilter => {
 	const intervalCount =
 		item.price?.interval_count ?? item.reset?.interval_count;
 	if (interval !== undefined) filter.interval_count = intervalCount ?? 1;
+	if (
+		filterPrecision === PlanItemFilterPrecision.IdentityAndIncluded &&
+		typeof item.included === "number" &&
+		item.unlimited !== true &&
+		(item.reset != null || item.price != null)
+	) {
+		filter.included = item.included;
+	}
 	return filter;
 };
 
@@ -261,10 +280,12 @@ export const diffPlanV1 = ({
 	from,
 	to,
 	includeAdds = false,
+	filterPrecision = PlanItemFilterPrecision.Identity,
 }: {
 	from: DiffablePlanV1;
 	to: DiffablePlanV1;
 	includeAdds?: boolean;
+	filterPrecision?: PlanItemFilterPrecision;
 }): DiffedCustomizePlanV1 => {
 	const diff: DiffedCustomizePlanV1 = {};
 
@@ -288,7 +309,7 @@ export const diffPlanV1 = ({
 	for (const fromItem of from.items) {
 		const toItem = toByKey.get(composeMatchKey(fromItem));
 		if (!toItem || !itemsEqual(fromItem, toItem)) {
-			removeItems.push(buildRemoveFilter(fromItem));
+			removeItems.push(buildRemoveFilter({ item: fromItem, filterPrecision }));
 		}
 	}
 	if (removeItems.length > 0) diff.remove_items = removeItems;

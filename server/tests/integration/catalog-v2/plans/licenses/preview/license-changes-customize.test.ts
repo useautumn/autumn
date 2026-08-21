@@ -5,6 +5,8 @@
  *   - customize on an existing link → updated + nested core plan_change
  *   - new link with customize → created, no nested plan_change
  *   - parent name + included compose onto one plan_change
+ *   - after new_version + license customize, a later preview_update parses
+ *     and echoes the overlay (Dashboard) on latest
  */
 
 import { test } from "bun:test";
@@ -19,6 +21,11 @@ import {
 	parsePlanPreview,
 } from "../../preview/utils/expectPlanPreview.js";
 import {
+	expectLatestPlanVersion,
+	expectLicenseLinkCorrect,
+} from "../utils/expectLicenseLinkCorrect.js";
+import {
+	dashboardItem,
 	messagesItem,
 	seedLinkedChildParent,
 	withCatalogPlans,
@@ -205,6 +212,74 @@ test.concurrent(
 						customize: {
 							upsert_licenses: [{ license_plan_id: childId, included: 5 }],
 						},
+					},
+				});
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 license_changes: preview after versioned license customize")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const parentId = uniqueTestId("cv2_lc_vrcust_p");
+		const childId = uniqueTestId("cv2_lc_vrcust_c");
+		await withCatalogPlans({
+			ctx,
+			planIds: [parentId, childId],
+			run: async () => {
+				await seedLinkedChildParent({
+					autumn: autumnV2_3,
+					parentId,
+					childId,
+				});
+
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: parentId,
+							versioning: "new_version",
+							licenses: [
+								{
+									license_plan_id: childId,
+									included: 2,
+									customize: { add_items: [dashboardItem()] },
+								},
+							],
+						},
+					],
+				});
+
+				await expectLatestPlanVersion({ ctx, planId: parentId, version: 2 });
+				await expectLicenseLinkCorrect({
+					ctx,
+					parentPlanId: parentId,
+					parentVersion: 2,
+					licensePlanId: childId,
+					included: 2,
+					customized: true,
+					entitlements: [{ feature_id: TestFeature.Dashboard }],
+				});
+
+				const preview = parsePlanPreview(
+					await autumnV2_3.catalogV2.previewUpdate({
+						plans: [{ plan_id: parentId }],
+					}),
+				);
+				expectPlanPreviewRowCorrect({
+					preview,
+					expected: {
+						planId: parentId,
+						action: "none",
+						licenses: [
+							{
+								license_plan_id: childId,
+								version: 1,
+								included: 2,
+								prepaid_only: true,
+							},
+						],
 					},
 				});
 			},

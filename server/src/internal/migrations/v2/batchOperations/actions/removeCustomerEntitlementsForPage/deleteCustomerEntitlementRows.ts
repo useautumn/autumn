@@ -8,29 +8,26 @@ import {
 } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
 
 /** Re-asserts row-level pooled, rollover, paid, and operation scope after
- * candidate selection's snapshot. */
+ * candidate selection's snapshot. One DELETE for the whole page of row ids. */
 export const deleteCustomerEntitlementRows = async ({
 	db,
-	customerProductIds,
-	entitlementIds,
+	customerEntitlementIds,
 	scope,
 }: {
 	db: DrizzleCli;
-	customerProductIds: string[];
-	entitlementIds: string[];
+	customerEntitlementIds: string[];
 	scope: OperationScope;
 }): Promise<string[]> => {
-	if (customerProductIds.length === 0 || entitlementIds.length === 0) return [];
+	if (customerEntitlementIds.length === 0) return [];
 
-	const deleted = await db.execute<{ customer_product_id: string }>(sql`
+	const deleted = await db.execute<{ id: string }>(sql`
 		WITH dropped AS (
 			DELETE FROM customer_entitlements AS target
 			USING customer_products AS cp, entitlements AS definition
 			WHERE cp.id = target.customer_product_id
 				AND definition.id = target.entitlement_id
 				AND ${operationScopeSql({ scope })}
-				AND target.customer_product_id IN (${sqlList({ values: customerProductIds })})
-				AND target.entitlement_id IN (${sqlList({ values: entitlementIds })})
+				AND target.id IN (${sqlList({ values: customerEntitlementIds })})
 				AND definition.pooled IS NOT TRUE
 				AND NOT target.is_pooled_balance
 				AND target.pooled_contribution_id IS NULL
@@ -41,10 +38,10 @@ export const deleteCustomerEntitlementRows = async ({
 					customerProductId: sql`target.customer_product_id`,
 					entitlementId: sql`target.entitlement_id`,
 				})}
-			RETURNING target.customer_product_id
+			RETURNING target.id
 		)
-		SELECT customer_product_id FROM dropped
+		SELECT id FROM dropped
 	`);
 
-	return deleted.map((row) => row.customer_product_id);
+	return deleted.map((row) => row.id);
 };

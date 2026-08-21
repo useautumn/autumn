@@ -35,7 +35,6 @@ const domain = {
 			id: "previewCreateBalance",
 			description:
 				"Preview a standalone balance grant before createBalance. Use when a user asks to give, add, grant, or provision credits/balance to a customer or entity. Use for one-time credit grants, referral/promotional credits, and entity-scoped credits. Does not mutate Autumn. For relative expiries like '2 months', use calendar months. expires_at accepts epoch milliseconds or ISO/date strings.",
-			writeToolName: "createBalance",
 			preview: (request) => ({
 				action: "createBalance",
 				request,

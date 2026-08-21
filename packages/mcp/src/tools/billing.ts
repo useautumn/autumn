@@ -69,7 +69,6 @@ const domain = {
 - Preview attaching a plan before attach.
 - Follow the Billing resource.
 `.trim(),
-			writeToolName: "attach",
 		}),
 		billingPreview({
 			id: "previewUpdateSubscription",
@@ -77,7 +76,6 @@ const domain = {
 - Preview updating a subscription before updateSubscription.
 - Follow the Billing resource.
 `.trim(),
-			writeToolName: "updateSubscription",
 		}),
 		billingPreview({
 			id: "previewCreateSchedule",
@@ -85,7 +83,6 @@ const domain = {
 - Preview billing impact of a multi-phase schedule or multi-year order form before createSchedule.
 - Follow the Billing resource.
 `.trim(),
-			writeToolName: "createSchedule",
 		}),
 	],
 	confirmedWrites: [

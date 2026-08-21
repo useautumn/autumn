@@ -105,5 +105,10 @@ export const planItemFilterMatchesCustomerPair = ({
 		if (!priceMatches && !resetMatches) return false;
 	}
 
+	if (filter.included !== undefined) {
+		if (customerEntitlement?.entitlement.allowance !== filter.included)
+			return false;
+	}
+
 	return true;
 };

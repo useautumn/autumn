@@ -8,7 +8,7 @@
 # script instead of bash. This wrapper handles shell-only lifecycle work:
 #
 #   - Surface bun's global bin so neonctl is reachable.
-#   - Start Dragonfly, ElasticMQ, and DynamoDB Local with Docker Compose.
+#   - Start Autumn's local services and the Trigger.dev control plane.
 #   - Run the bounded provisioning script and exit; Startup must not remain
 #     attached to a long-running process.
 set -euo pipefail
@@ -18,6 +18,9 @@ die() { echo "[capy-startup] ERROR: $*" >&2; exit 1; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+COMPOSE_FILE="$REPO_ROOT/scripts/setup/dw.compose.yml"
+TRIGGER_COMPOSE_FILE="$REPO_ROOT/scripts/setup/trigger.compose.yml"
+. "$SCRIPT_DIR/capy-trigger-image.sh"
 
 export PATH="$HOME/.bun/bin:$PATH"
 
@@ -43,12 +46,36 @@ fi
 
 cd "$REPO_ROOT"
 
+CAPY_PREFIX="${CAPY_PREFIX:-$HOME/.autumn-capy}"
+TRIGGER_ENV="$CAPY_PREFIX/trigger.env"
+mkdir -p "$CAPY_PREFIX"
+
+if [ ! -f "$TRIGGER_ENV" ]; then
+  log "minting per-machine Trigger.dev secrets"
+  umask 077
+  cat > "$TRIGGER_ENV" <<EOF
+TRIGGER_POSTGRES_PASSWORD=$(openssl rand -hex 16)
+TRIGGER_SESSION_SECRET=$(openssl rand -hex 16)
+TRIGGER_MAGIC_LINK_SECRET=$(openssl rand -hex 16)
+TRIGGER_ENCRYPTION_KEY=$(openssl rand -hex 16)
+TRIGGER_PROVIDER_SECRET=$(openssl rand -hex 16)
+TRIGGER_COORDINATOR_SECRET=$(openssl rand -hex 16)
+TRIGGER_MANAGED_WORKER_SECRET=$(openssl rand -hex 16)
+TRIGGER_CLICKHOUSE_PASSWORD=$(openssl rand -hex 16)
+TRIGGER_OBJECT_STORE_ACCESS_KEY_ID=admin
+TRIGGER_OBJECT_STORE_SECRET_ACCESS_KEY=$(openssl rand -hex 16)
+EOF
+fi
+
 log "starting local infrastructure with Docker Compose"
 COMPOSE_PROJECT_NAME=autumn-capy \
 DRAGONFLY_PORT=6379 \
 ELASTICMQ_PORT=9324 \
 DYNAMODB_PORT=8000 \
-  docker compose -f scripts/setup/dw.compose.yml -p autumn-capy up -d \
+  docker compose -f "$COMPOSE_FILE" -p autumn-capy up -d \
     dragonfly elasticmq dynamodb
+
+docker compose --env-file "$TRIGGER_ENV" \
+  -f "$TRIGGER_COMPOSE_FILE" -p autumn-capy-trigger up -d
 
 exec bun scripts/capy/provision.ts "$@"

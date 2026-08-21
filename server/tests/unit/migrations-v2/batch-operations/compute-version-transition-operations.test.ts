@@ -90,7 +90,9 @@ describe("catalog version transition lowering", () => {
 
 		expect(operations.replaceEntitlements).toHaveLength(1);
 		expect(
-			operations.replaceEntitlements[0]?.fromEntitlementPrice.entitlement.id,
+			operations.replaceEntitlements[0]?.by === "definition"
+				? operations.replaceEntitlements[0].fromEntitlementPrice.entitlement.id
+				: undefined,
 		).toBe("ent_messages_v1");
 		expect(
 			operations.replaceEntitlements[0]?.entitlementPrice.entitlement.id,

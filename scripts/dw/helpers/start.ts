@@ -33,6 +33,7 @@ function applyLocalInfra(
 	const next = { ...env };
 	const infra = provisionedInfraEnv(worktreeNum);
 	Object.assign(next, infra);
+	delete next.MISC_CACHE_DRAGONFLY_PRIVATE_URL;
 	for (const key of Object.keys(next)) {
 		if (key.includes("SQS_QUEUE_URL") && !(key in infra)) delete next[key];
 	}

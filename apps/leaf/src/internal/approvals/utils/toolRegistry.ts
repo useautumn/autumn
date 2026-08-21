@@ -1,22 +1,16 @@
+import { GATED_WRITES } from "../../../../agent/lib/gatedWrites.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 
-/** Single source for write tool → preview tool. A new approval-gated write only
- * needs an entry here (plus a `destructiveHint` on the MCP tool). */
-const writePreviewTools: Record<string, string> = {
-	attach: "previewAttach",
-	createBalance: "previewCreateBalance",
-	createPlan: "previewUpdateCatalog",
-	createReward: "previewUpdateCatalog",
-	createSchedule: "previewCreateSchedule",
-	updatePlan: "previewUpdateCatalog",
-	updateCatalog: "previewUpdateCatalog",
-	updateSubscription: "previewUpdateSubscription",
-};
+const writePreviewTools = new Map(
+	GATED_WRITES.flatMap((write) =>
+		write.previewTool ? [[write.toolName, write.previewTool] as const] : [],
+	),
+);
 
-const previewToolNames = new Set(Object.values(writePreviewTools));
+const previewToolNames = new Set(writePreviewTools.values());
 
 export const writeToPreviewTool = (toolName: string): string | undefined =>
-	writePreviewTools[normalizeToolName(toolName)];
+	writePreviewTools.get(normalizeToolName(toolName));
 
 export const isPreviewTool = (toolName: string): boolean =>
 	previewToolNames.has(normalizeToolName(toolName));

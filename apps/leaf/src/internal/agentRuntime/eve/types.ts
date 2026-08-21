@@ -23,8 +23,6 @@ export type EveSessionRef = {
 
 export type EveAuthContext = {
 	appEnv: AppEnv | string;
-	/** Resolved Autumn dashboard user (per-user OAuth credential owner). Absent
-	 * for legacy/admin callers, which fall back to the installer's credential. */
 	autumnUserId?: string;
 	channelId: string;
 	chatInstallationId?: string;

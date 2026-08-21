@@ -9,15 +9,26 @@ export const toolRequestFromArgs = (
 		? (args.request as Record<string, unknown>)
 		: args;
 
-/** Transport the harness threads through `toolArgs`. Option ids and request ids
- * are dropped before display; the grouped writes are kept because the card
- * renders them as the request's other steps. */
-const DISPLAYED_HARNESS_KEYS = new Set([WITHHELD_WRITES_KEY]);
+/** A string field from the tool call's request payload (nested or flat). */
+export const requestStringField = (
+	toolArgs: Record<string, unknown> | undefined,
+	key: string,
+): string | undefined => {
+	const value = toolRequestFromArgs(toolArgs)?.[key];
+	return typeof value === "string" ? value : undefined;
+};
 
-export const publicToolArgs = (args: Record<string, unknown>) =>
+/** Strips harness transport (option/request ids) before display; legacy rows
+ * keep the grouped-writes marker their cards still render from. */
+export const publicToolArgs = (
+	args: Record<string, unknown>,
+	{ includeWithheld = true }: { includeWithheld?: boolean } = {},
+) =>
 	Object.fromEntries(
 		Object.entries(args).filter(
-			([key]) => !key.startsWith("_eve") || DISPLAYED_HARNESS_KEYS.has(key),
+			([key]) =>
+				!key.startsWith("_eve") ||
+				(includeWithheld && key === WITHHELD_WRITES_KEY),
 		),
 	);
 
@@ -32,9 +43,8 @@ const canonicalJson = (value: unknown) =>
 			: nested,
 	);
 
-/** Whether two tool calls carry the same payload, ignoring key order — the
- * model emits its JSON arguments in whatever order it likes. Both payloads are
- * required: an absent one is unknown, not equal to another absent one. */
+/** Payload equality ignoring key order; an absent payload is unknown, never
+ * equal to another absent one. */
 export const isSameToolRequest = (
 	left: Record<string, unknown>,
 	right: Record<string, unknown>,

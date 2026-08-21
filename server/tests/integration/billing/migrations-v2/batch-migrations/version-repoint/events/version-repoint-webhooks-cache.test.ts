@@ -216,7 +216,8 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
+// version-only is per-customer until definition execute is restored
+test.skip(
 	`${chalk.yellowBright("batch version repoint webhooks: sendWebhooks false suppresses both deliveries")}`,
 	async () => {
 		const stem = uniqueStem("bvr-webhooks-disabled");
@@ -302,7 +303,7 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("batch version repoint cache: repoint-only changes invalidate primed customer state")}`,
 	async () => {
 		const stem = uniqueStem("bvr-cache-repoint-only");

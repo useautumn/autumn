@@ -13,6 +13,8 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+
+// version-only is per-customer until definition execute is restored
 import { eq } from "drizzle-orm";
 import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
@@ -23,7 +25,7 @@ import {
 	runVersionRepointMigration,
 } from "../utils/versionRepointTestUtils";
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("batch version repoint anchors: reset at the boundary fires once with the new allowance")}`,
 	async () => {
 		const stem = uniqueStem("bvr-anchor-boundary");

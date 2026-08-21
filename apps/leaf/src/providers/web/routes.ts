@@ -2,8 +2,10 @@ import type { HttpBindings } from "@hono/node-server";
 import { type Context, Hono } from "hono";
 import { db } from "../../lib/db.js";
 import { decideWebApproval } from "./actions/decideWebApproval.js";
+import { getWebApproval } from "./actions/getWebApproval.js";
 import { getWebChatMessages } from "./actions/getWebChatMessages.js";
 import { listWebApprovals } from "./actions/listWebApprovals.js";
+import { supersedeWebApproval } from "./actions/supersedeWebApproval.js";
 import { authDashboard } from "./authDashboard.js";
 import { resolveDashboardEnv } from "./dashboardEnv.js";
 import { streamWebChat } from "./streamWebChat.js";
@@ -118,3 +120,30 @@ const decideRoute =
 
 webRoutes.post("/approve", decideRoute("approve"));
 webRoutes.post("/reject", decideRoute("reject"));
+
+webRoutes.get("/approvals/:approvalId", async (c) => {
+	const authenticated = await authenticate(c);
+	if ("response" in authenticated) return authenticated.response;
+	const result = await getWebApproval({
+		approvalId: c.req.param("approvalId"),
+		orgId: authenticated.auth.orgId,
+	});
+	if ("error" in result) {
+		return c.json(
+			result.error,
+			result.error.code === "org_mismatch" ? 403 : 404,
+		);
+	}
+	return c.json({ approval: result.approval });
+});
+
+webRoutes.post("/approvals/:approvalId/supersede", async (c) => {
+	const authenticated = await authenticate(c);
+	if ("response" in authenticated) return authenticated.response;
+	const result = await supersedeWebApproval({
+		approvalId: c.req.param("approvalId"),
+		orgId: authenticated.auth.orgId,
+		userId: authenticated.auth.userId,
+	});
+	return c.json(result, result.superseded ? 200 : 409);
+});

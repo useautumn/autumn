@@ -38,6 +38,7 @@ export * from "./orgUtils/convertOrgUtils";
 export * from "./planV1Utils/convertCustomize/basePriceToKey";
 export * from "./planV1Utils/convertCustomize/customizeToKey";
 export * from "./planV1Utils/convertPlanItem/createPlanItemToKey";
+export * from "./planV1Utils/customize";
 export * from "./planV1Utils/diff/applyDiff";
 // Plan V1 diff/apply utils
 export * from "./planV1Utils/diff/deduplicateAddPlanItems";

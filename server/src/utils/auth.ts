@@ -49,6 +49,7 @@ if (process.env.EMULATE_GOOGLE_URL && process.env.NODE_ENV !== "production") {
 		process.env.EMULATE_GOOGLE_FETCH_URL || process.env.EMULATE_GOOGLE_URL
 	).replace(/\/$/, "");
 	const originalFetch = globalThis.fetch;
+	// biome-ignore lint/suspicious/noExplicitAny: preserve the upstream shim shape.
 	globalThis.fetch = ((input: any, init?: any) => {
 		const url =
 			typeof input === "string"
@@ -89,6 +90,23 @@ const browserAuthBaseUrl = isProductionAuth
 		? publicAuthBaseUrl
 		: authBaseUrl;
 const isHttpsBaseUrl = browserAuthBaseUrl?.startsWith("https://");
+const isCapyDev =
+	process.env.CAPY_DEV === "1" && process.env.NODE_ENV !== "production";
+const configuredAuthBaseUrl = isCapyDev
+	? {
+			allowedHosts: [
+				"localhost:*",
+				"127.0.0.1:*",
+				"*.localhost",
+				"*.autumnworktree.com",
+				"*.ngrok.app",
+				"*.ngrok-free.app",
+				"*.capysandbox.net",
+			],
+			fallback: browserAuthBaseUrl,
+			protocol: "auto" as const,
+		}
+	: browserAuthBaseUrl;
 
 /**
  * Passkey (WebAuthn) is bound to the FRONTEND origin where the browser calls
@@ -126,7 +144,7 @@ if (
 }
 
 const options = {
-	baseURL: browserAuthBaseUrl,
+	baseURL: configuredAuthBaseUrl,
 	telemetry: {
 		enabled: false,
 	},
@@ -203,6 +221,13 @@ const options = {
 		) {
 			origins.push(origin);
 		}
+		if (
+			isCapyDev &&
+			origin &&
+			/^https:\/\/(?:[a-zA-Z0-9-]+\.)*capysandbox\.net$/.test(origin)
+		) {
+			origins.push(origin);
+		}
 		if (process.env.CLIENT_URL) origins.push(process.env.CLIENT_URL);
 		if (authBaseUrl) origins.push(authBaseUrl);
 		return origins;
@@ -221,9 +246,10 @@ const options = {
 		google: {
 			clientId: process.env.GOOGLE_CLIENT_ID!,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-			redirectURI: browserAuthBaseUrl
-				? `${browserAuthBaseUrl}/api/auth/callback/google`
-				: undefined,
+			redirectURI:
+				browserAuthBaseUrl && !isCapyDev
+					? `${browserAuthBaseUrl}/api/auth/callback/google`
+					: undefined,
 			...(emulateGoogleUrl
 				? {
 						// HS256-signed id_tokens from emulate fail real Google's RS256 JWKS check.
@@ -235,6 +261,7 @@ const options = {
 	},
 	plugins: [
 		emailOTP({
+			// biome-ignore lint/correctness/noUnusedFunctionParameters: preserve the upstream callback signature.
 			async sendVerificationOTP({ email, otp, type }) {
 				// Implement the sendVerificationOTP method to send the OTP to the user's email address
 

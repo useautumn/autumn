@@ -54,7 +54,10 @@ export const DashboardGate = () => {
 	]);
 
 	if (!sessionLoading && !session) {
-		return <Navigate to="/sign-in" replace />;
+		const destination = `${pathname}${search}`;
+		const next =
+			destination !== "/" ? `?next=${encodeURIComponent(destination)}` : "";
+		return <Navigate to={`/sign-in${next}`} replace />;
 	}
 	if (orgError) {
 		return (
