@@ -82,7 +82,7 @@ The table below shows what maps to what:
 | Subscription | Subscription |
 
 <Note>
-  In production, Stripe products and prices are lazily created — only on the first `attach` that uses them, not when you create or update a plan in Autumn. This means you can pre-map an Autumn plan to an existing Stripe product/price before the first attach, and Autumn will reuse it instead of creating a duplicate.
+  Stripe products and prices are lazily created in both sandbox and production — only on the first `attach` that uses them, not when you create or update a plan in Autumn. This means you can pre-map an Autumn plan to an existing Stripe product/price before the first attach, and Autumn will reuse it instead of creating a duplicate.
 </Note>
 
 ### Fixed prices

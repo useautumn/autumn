@@ -24,10 +24,8 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { buildFullProductFromV2 } from "@/internal/products/productUtils/productV2Utils/buildFullProductFromV2.js";
-import {
-	constructProduct,
-	initProductInStripe,
-} from "@/internal/products/productUtils.js";
+import { constructProduct } from "@/internal/products/productUtils.js";
+import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
@@ -134,8 +132,9 @@ export const createProduct = async ({
 		});
 	}
 
+	// Stripe products/prices are created lazily at billing time; only reuse here.
 	if (data.create_in_stripe !== false) {
-		await initProductInStripe({
+		await applyStripeResourceReuseForProduct({
 			ctx,
 			product: newFullProduct,
 		});
