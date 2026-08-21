@@ -349,3 +349,26 @@ export const resyncEveStreamIndex = async ({
 		session.state.streamIndex = replayCount;
 	}
 };
+
+/** A new user message makes anything already in eve's log a previous turn's
+ * leftovers — fast-forward a stale cursor so old text can never replay as
+ * this turn's reply. Best-effort: a failed count keeps the stored cursor. */
+export const fastForwardEveStreamIndex = async ({
+	auth,
+	session,
+}: {
+	auth: EveAuthContext;
+	session: EveSessionRef;
+}) => {
+	try {
+		const replayCount = await countEveReplayableEvents({
+			auth,
+			sessionId: session.sessionId,
+		});
+		if (replayCount > session.state.streamIndex) {
+			session.state.streamIndex = replayCount;
+		}
+	} catch {
+		return;
+	}
+};

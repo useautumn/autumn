@@ -1,13 +1,6 @@
-import { drainParkedAgentTurn } from "../../../internal/agentRuntime/actions/submitAgentInput/drainParkedAgentTurn.js";
-import { adoptPostedEveSession } from "../../../internal/agentRuntime/eve/adoptPostedSession.js";
-import { postEveInputResponse } from "../../../internal/agentRuntime/eve/client.js";
 import { getEveSessionBySessionId } from "../../../internal/agentRuntime/eve/repo.js";
-import {
-	denyOptionOf,
-	siblingRequestIdsOf,
-} from "../../../internal/approvals/domain/approvalRecord.js";
+import { denyApprovalParkAndDrain } from "../../../internal/approvals/actions/denyApprovalParkAndDrain.js";
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
-import { chatApprovalStepsRepo } from "../../../internal/approvals/repos/chatApprovalStepsRepo.js";
 import { settleCardRemotely } from "../../../internal/approvals/surfaces/slack/settleCardRemotely.js";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
@@ -57,33 +50,21 @@ export const supersedeWebApproval = async ({
 					sessionId: cancelled.run_id,
 				})
 			: undefined;
-		if (session && cancelled.tool_call_id) {
-			const auth = {
-				appEnv: cancelled.env,
-				channelId: cancelled.channel_id,
-				orgId: cancelled.org_id,
-				provider: cancelled.provider,
-				providerUserId: userId,
-				threadId: cancelled.channel_id,
-				workspaceId: cancelled.workspace_id,
-			};
-			const stepRows = await chatApprovalStepsRepo.list({
-				approvalId: cancelled.id,
-				db,
-			});
-			const posted = await postEveInputResponse({
-				auth,
+		if (session) {
+			await denyApprovalParkAndDrain({
+				approval: cancelled,
+				auth: {
+					appEnv: cancelled.env,
+					channelId: cancelled.channel_id,
+					orgId: cancelled.org_id,
+					provider: cancelled.provider,
+					providerUserId: userId,
+					threadId: cancelled.channel_id,
+					workspaceId: cancelled.workspace_id,
+				},
 				note: SUPERSEDED_NOTE,
-				optionId: denyOptionOf(cancelled),
-				requestId: cancelled.tool_call_id,
 				session,
-				siblingRequestIds: siblingRequestIdsOf({
-					approval: cancelled,
-					steps: stepRows,
-				}),
 			});
-			adoptPostedEveSession({ posted, session, status: "running" });
-			await drainParkedAgentTurn({ auth, orgId: cancelled.org_id, session });
 		}
 	} catch (error) {
 		logger.warn("Could not deny superseded approval in eve", {
