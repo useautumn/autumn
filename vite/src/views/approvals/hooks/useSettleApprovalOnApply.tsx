@@ -1,7 +1,6 @@
 import { isAxiosError } from "axios";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { toast } from "sonner";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useApprovalSeedStore } from "../stores/useApprovalSeedStore";
 
@@ -12,13 +11,6 @@ export const useSettleApprovalOnApply = () => {
 	const approvalId = useApprovalSeedStore((state) => state.approvalId);
 	const clearApprovalId = useApprovalSeedStore(
 		(state) => state.clearApprovalId,
-	);
-	useEffect(
-		() => () => {
-			// Only a real close drops the seed — a sheet swap must keep it.
-			if (!useSheetStore.getState().type) clearApprovalId();
-		},
-		[clearApprovalId],
 	);
 	return useCallback(() => {
 		if (!approvalId) return;
