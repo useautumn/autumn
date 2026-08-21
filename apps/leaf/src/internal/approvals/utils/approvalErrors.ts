@@ -3,11 +3,12 @@ import { ACTION_FAILED_MESSAGE } from "../../../ui/messages.js";
 export const isErrorResult = (result: unknown): boolean =>
 	typeof result === "object" &&
 	result !== null &&
-	("error" in result ||
+	(Boolean((result as { error?: unknown }).error) ||
+		"cause" in result ||
 		(result as { isError?: unknown }).isError === true ||
 		(result as { id?: unknown }).id === "TOOL_EXECUTION_FAILED" ||
-		(typeof (result as { code?: unknown }).code === "string" &&
-			typeof (result as { message?: unknown }).message === "string"));
+		(typeof (result as { message?: unknown }).message === "string" &&
+			("code" in result || "domain" in result)));
 
 const MAX_ERROR_MESSAGE_LENGTH = 700;
 

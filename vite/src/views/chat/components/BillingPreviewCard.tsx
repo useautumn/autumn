@@ -1,3 +1,4 @@
+import { billingActionBadges } from "@autumn/render";
 import {
 	type ApiPlanV1,
 	AppEnv,
@@ -18,7 +19,6 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useEnv } from "@/utils/envUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { BillingCustomizeDiff } from "./BillingCustomizeDiff";
-import { billingActionBadges } from "./billingParams";
 import { PlanPreviewCard, PlansBackdrop } from "./PlanPreviewCard";
 
 const asString = (value: unknown): string | undefined =>

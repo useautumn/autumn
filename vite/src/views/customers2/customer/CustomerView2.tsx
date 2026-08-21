@@ -1,6 +1,11 @@
 "use client";
 
-import { AppEnv, ProcessorType } from "@autumn/shared";
+import {
+	AppEnv,
+	CusProductStatus,
+	type FullCusProduct,
+	ProcessorType,
+} from "@autumn/shared";
 import {
 	Tooltip,
 	TooltipContent,
@@ -20,6 +25,7 @@ import ErrorScreen from "@/views/general/ErrorScreen";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { useOnboardingVisibility } from "@/views/onboarding4/hooks/useOnboardingProgress";
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
+import { useApprovalSheetFromUrl } from "../../approvals/hooks/useApprovalSheetFromUrl";
 import { useCusQuery } from "../../customers/customer/hooks/useCusQuery";
 import { useCusReferralQuery } from "../../customers/customer/hooks/useCusReferralQuery";
 import { CustomerBillingControlsSection } from "../components/CustomerBillingControlsSection";
@@ -48,6 +54,16 @@ export default function CustomerView2() {
 	useCusReferralQuery();
 	useCusRewardsQuery();
 	const { entityId, setEntityId } = useEntity();
+	useApprovalSheetFromUrl({
+		resolveSubscriptionItemId: (planId) =>
+			planId
+				? customer?.customer_products?.find(
+						(product: FullCusProduct) =>
+							product.product_id === planId &&
+							product.status !== CusProductStatus.Expired,
+					)?.id
+				: undefined,
+	});
 
 	const [isInlineEditorOpen, setIsInlineEditorOpen] = useState(false);
 

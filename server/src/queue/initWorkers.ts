@@ -97,10 +97,10 @@ const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
 		dispatch: "inline",
 		timeoutMs: BATCH_RESET_MESSAGE_TIMEOUT_MS,
 	},
-	// Hold this message past the 5-minute billing lock so the 30s queue
-	// visibility cannot redeliver while Stripe is still in flight.
+	// Longer than a typical billing call, short enough that lock-miss retries
+	// redeliver in minutes (not hours) so oldest-message age stays bounded.
 	[JobName.AutoTopUp]: {
-		visibilityTimeoutSeconds: seconds.hours(3),
+		visibilityTimeoutSeconds: seconds.minutes(2),
 	},
 };
 

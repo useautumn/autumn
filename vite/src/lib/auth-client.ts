@@ -8,8 +8,10 @@ import {
 } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 export const authClient = createAuthClient({
-	baseURL: import.meta.env.VITE_BACKEND_URL,
+	baseURL: backendUrl?.startsWith("/") ? window.location.origin : backendUrl,
 	plugins: [
 		emailOTPClient(),
 		organizationClient({ ac, roles }),

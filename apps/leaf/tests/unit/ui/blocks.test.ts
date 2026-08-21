@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
+
+process.env.AUTUMN_DASHBOARD_URL = "https://app.useautumn.com";
+
 import { cardToBlockKit } from "@chat-adapter/slack";
 import {
 	approvalCard,
@@ -288,7 +291,9 @@ describe("approval card", () => {
 		expect(json).toContain('["now","Pro"]');
 		expect(json).toContain('["after 2 years","Enterprise"]');
 		expect(json).toContain('["🟢 Add","Pro · 100 messages","—"]');
-		expect(json).toContain('["🔴 Remove","Enterprise · 12 workflows","—"]');
+		expect(json).toContain(
+			'["🔴 Remove","Enterprise (after 2 years) · 12 workflows","—"]',
+		);
 		expect(json).not.toContain("[object Object]");
 	});
 
@@ -1109,7 +1114,9 @@ describe("approval status card", () => {
 		);
 		expect(supersededJson).toContain("Due now");
 		expect(supersededJson).toContain("$400.00");
-		expect(supersededJson).toContain("🔄 Updated");
+		expect(supersededJson).toContain(
+			"🔄 Withdrawn — superseded by a newer request in this thread",
+		);
 		// Settled state is a non-interactive status line, not a (fake) button row.
 		expect(superseded.children.at(-1)?.type).toBe("text");
 		expect(supersededJson).not.toContain('"type":"actions"');
@@ -1180,7 +1187,7 @@ describe("grouped step outcomes", () => {
 		const card = approvalStatusCard({
 			env: AppEnv.Sandbox,
 			status: "failed",
-			steps: [
+			outcomes: [
 				{ status: "applied", toolName: "updateCustomer" },
 				{ status: "failed", toolName: "attach" },
 			],
@@ -1198,7 +1205,7 @@ describe("grouped step outcomes", () => {
 		const card = approvalStatusCard({
 			env: AppEnv.Sandbox,
 			status: "failed",
-			steps: [{ status: "failed", toolName: "attach" }],
+			outcomes: [{ status: "failed", toolName: "attach" }],
 			toolArgs: { request: { customer_id: "cus_1" } },
 			toolName: "attach",
 		});
@@ -1208,7 +1215,7 @@ describe("grouped step outcomes", () => {
 });
 
 // On a grouped card the primary write may be the one with no preview, so the
-// money facts must still reach the user via the included steps.
+// money facts must still reach the user via the included writes.
 describe("grouped card with a preview-less primary write", () => {
 	test("still names the attach that carries the billing impact", () => {
 		const card = approvalCard({
@@ -1541,7 +1548,7 @@ describe("resolved fan-out card keeps the whole group", () => {
 
 // A grouped step must speak in the card's tense: "Attached" once resolved, not
 // a permanent "Attaching" that reads as still pending.
-describe("grouped steps follow the card state", () => {
+describe("grouped writes follow the card state", () => {
 	const mixedGroup = {
 		env: AppEnv.Sandbox,
 		toolArgs: {

@@ -2,20 +2,19 @@ import { chatApprovals } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
 
-/** Writes backfilled tool_args (grouped step previews) onto a still-pending
- * row; a resolved approval keeps whatever it was approved with. */
-export const setChatApprovalToolArgs = async ({
+/** Pending-guarded: a resolved card keeps the preview it was approved with. */
+export const setChatApprovalPreview = async ({
 	approvalId,
 	db,
-	toolArgs,
+	preview,
 }: {
 	approvalId: string;
 	db: ChatDb;
-	toolArgs: Record<string, unknown>;
+	preview: unknown;
 }) => {
 	const updated = await db
 		.update(chatApprovals)
-		.set({ tool_args: toolArgs })
+		.set({ preview })
 		.where(
 			and(
 				eq(chatApprovals.id, approvalId),

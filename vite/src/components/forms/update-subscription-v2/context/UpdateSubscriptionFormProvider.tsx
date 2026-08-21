@@ -119,6 +119,7 @@ interface UpdateSubscriptionFormProviderProps {
 	onPlanEditorOpen?: () => void;
 	onPlanEditorClose?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
+	onApplied?: () => void;
 	onSuccess?: () => void;
 	children: ReactNode;
 }
@@ -151,6 +152,7 @@ export function UpdateSubscriptionFormProvider({
 	onPlanEditorOpen,
 	onPlanEditorClose,
 	onCheckoutRedirect,
+	onApplied,
 	onSuccess,
 	children,
 }: UpdateSubscriptionFormProviderProps) {
@@ -349,6 +351,7 @@ export function UpdateSubscriptionFormProvider({
 		useUpdateSubscriptionMutation({
 			updateSubscriptionFormContext: formContext,
 			buildRequestBody,
+			onApplied,
 			onCheckoutRedirect,
 			onSuccess,
 		});

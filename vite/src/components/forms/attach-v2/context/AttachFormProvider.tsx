@@ -125,9 +125,11 @@ interface AttachFormProviderProps {
 	customerId: string | undefined;
 	entityId: string | undefined;
 	initialProductId?: string;
+	defaultOverrides?: Partial<AttachForm>;
 	onPlanEditorOpen?: () => void;
 	onPlanEditorClose?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
+	onApplied?: () => void;
 	onSuccess?: () => void;
 	onScopeChange?: (entityId: string | undefined) => void;
 	allowMultiplePlans?: boolean;
@@ -138,9 +140,11 @@ export function AttachFormProvider({
 	customerId,
 	entityId,
 	initialProductId,
+	defaultOverrides,
 	onPlanEditorOpen,
 	onPlanEditorClose,
 	onCheckoutRedirect,
+	onApplied,
 	onSuccess,
 	onScopeChange,
 	allowMultiplePlans = false,
@@ -150,7 +154,10 @@ export function AttachFormProvider({
 		Record<string, number>
 	>({});
 
-	const form = useAttachForm({ initialProductId });
+	const form = useAttachForm({
+		defaultOverrides,
+		initialProductId: defaultOverrides?.productId ?? initialProductId,
+	});
 
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();
@@ -324,6 +331,8 @@ export function AttachFormProvider({
 
 	// Track product changes and initialize prepaid options
 	const previousProductIdRef = useRef<string | undefined>(undefined);
+	// Seeded defaults must survive this effect's first pass — the plan's own trial/prepaid init would stomp them.
+	const seededRef = useRef(Boolean(defaultOverrides));
 	useEffect(() => {
 		if (!product) return;
 		// Only trigger when productId actually changes (not on initial mount with same value)
@@ -336,6 +345,8 @@ export function AttachFormProvider({
 			previousProductIdRef.current !== productId;
 
 		previousProductIdRef.current = productId;
+		const seededFirstRun = seededRef.current && !isProductChange;
+		seededRef.current = false;
 
 		if (isProductChange) {
 			form.setFieldValue("items", null);
@@ -363,7 +374,7 @@ export function AttachFormProvider({
 		form.setFieldValue("prepaidOptions", resolvedPrepaidOptions);
 		setInitialPrepaidOptions(resolvedPrepaidOptions as Record<string, number>);
 
-		if (product.free_trial) {
+		if (product.free_trial && !seededFirstRun) {
 			form.setFieldValue("trialEnabled", true);
 			form.setFieldValue("trialLength", Number(product.free_trial.length));
 			form.setFieldValue(
@@ -554,6 +565,7 @@ export function AttachFormProvider({
 		customerId,
 		buildRequestBody: buildOperationRequestBody,
 		path: billingOperation.path,
+		onApplied,
 		onCheckoutRedirect,
 		onSuccess,
 	});

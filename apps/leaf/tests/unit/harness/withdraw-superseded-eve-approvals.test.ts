@@ -12,7 +12,13 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 // `db` opens a Postgres pool, so neither has a real namespace to restore — and
 // stubbing them is what makes every module below importable, hence restorable.
 mock.module("../../../src/lib/env.js", () => ({ env: {} }));
-mock.module("../../../src/lib/db.js", () => ({ db: {} }));
+// denyApprovalParkAndDrain lists step rows; an empty result set suffices.
+const emptySelect = () => ({
+	from: () => ({ where: () => ({ orderBy: async () => [] }) }),
+});
+mock.module("../../../src/lib/db.js", () => ({
+	db: { select: emptySelect },
+}));
 
 const mockLeafModule = ({
 	factory,
