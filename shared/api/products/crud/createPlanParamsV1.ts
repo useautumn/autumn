@@ -64,8 +64,10 @@ export const CreatePlanParamsV1Schema = z.object({
 			"Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan.",
 	}),
 
-	create_in_stripe: z.boolean().default(true).meta({
+	create_in_stripe: z.boolean().optional().meta({
 		internal: true,
+		description:
+			"True creates Stripe resources immediately; false skips Stripe entirely. Omitted: created lazily at billing time.",
 	}),
 });
 

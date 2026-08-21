@@ -169,7 +169,7 @@ const buildPlan = ({
 					op: "create",
 					nextFullProduct,
 				},
-				...(createInStripe === false ? { createInStripe: false } : {}),
+				...(createInStripe !== undefined ? { createInStripe } : {}),
 			},
 		],
 		projected: {
@@ -198,6 +198,21 @@ describe("initStripeResourcesForCatalog creation guards", () => {
 		expect(mockState.familyReuseCalls).toBe(0);
 		expect(mockState.productCreateCalls).toBe(0);
 		expect(mockState.priceCreateCalls).toBe(0);
+	});
+
+	test("explicit create_in_stripe true creates Stripe objects immediately", async () => {
+		const product = unInitedProduct({ env: AppEnv.Sandbox });
+		await initStripeResourcesForCatalog({
+			ctx: buildCtx({ env: AppEnv.Sandbox, stripeConnected: true }),
+			updateCatalogPlan: buildPlan({
+				nextFullProduct: product,
+				createInStripe: true,
+			}),
+		});
+
+		expect(mockState.reuseCalls).toBeGreaterThan(0);
+		expect(mockState.productCreateCalls).toBeGreaterThan(0);
+		expect(mockState.priceCreateCalls).toBeGreaterThan(0);
 	});
 
 	test("Live runs in-memory reuse but never creates Stripe objects", async () => {

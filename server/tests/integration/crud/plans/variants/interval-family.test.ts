@@ -26,6 +26,7 @@ import {
 	resetIntvToEntIntv,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -223,6 +224,7 @@ test.concurrent(
 		const cid = readableVariantTestId("if_create_family");
 		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
+		await materializePlanInStripe({ ctx, planId: baseId });
 		const variantIds = await create5Variants(rpc, baseId, cid);
 		const baseFull = await getFull(ctx, baseId);
 

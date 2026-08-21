@@ -28,6 +28,7 @@ import {
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -738,6 +739,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
+		await materializePlanInStripe({ ctx, planId: base.id });
 		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,

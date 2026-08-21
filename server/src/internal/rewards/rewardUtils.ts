@@ -164,17 +164,15 @@ export const getOriginalCouponId = (couponId: string) => {
 	return couponId;
 };
 
-export const initRewardStripePrices = async ({
+/** Fills reusable Stripe ids and stitches each price's product for the coupon
+ * builder; genuinely uninitialized plans surface ProductNotInStripe downstream. */
+export const applyStripeReuseForRewardPrices = async ({
 	ctx,
 	prices,
 }: {
 	ctx: AutumnContext;
 	prices: (Price & { product: Product })[];
 }) => {
-	if (prices.every((price) => !nullish(price.config.stripe_price_id))) {
-		return;
-	}
-
 	const internalProductIds = getUnique(
 		prices.map((p: Price) => p.internal_product_id).filter(notNullish),
 	);

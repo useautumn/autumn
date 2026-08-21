@@ -213,6 +213,11 @@ export const expectPriceStripeReuseCorrect = ({
 	});
 
 	if (reuse === "full") {
+		// A reuse claim over unmaterialized ids passes vacuously (null === null).
+		expect(
+			beforePrice,
+			`${prefix}full: before stripe_price_id must be materialized — call materializePlanInStripe first`,
+		).toBeTruthy();
 		if (beforeProduct) {
 			expect(afterProduct, `${prefix}full: stripe_product_id`).toBe(
 				beforeProduct,
@@ -226,6 +231,10 @@ export const expectPriceStripeReuseCorrect = ({
 	}
 
 	if (reuse === "stripeProductOnly") {
+		expect(
+			beforeProduct,
+			`${prefix}product-only: before stripe_product_id must be materialized — call materializePlanInStripe first`,
+		).toBeTruthy();
 		if (beforeProduct) {
 			expect(afterProduct, `${prefix}product-only: stripe_product_id`).toBe(
 				beforeProduct,

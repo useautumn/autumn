@@ -40,7 +40,10 @@ await mockModuleWithRestore("@/internal/products/productUtils", () => ({
 	},
 }));
 
-import { initStripeResourcesForBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
+import {
+	initStripeResourcesForBillingPlan,
+	initStripeResourcesForProducts,
+} from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
 import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
@@ -409,6 +412,59 @@ describe("initStripeResourcesForBillingPlan", () => {
 		});
 
 		expect(mockState.currencies).toEqual(["eur"]);
+	});
+});
+
+describe("initStripeResourcesForProducts allowCreate seam", () => {
+	beforeEach(() => {
+		mockState.priceIds = [];
+		mockState.currencies = [];
+		mockState.productCalls = 0;
+	});
+
+	const buildFullProduct = () =>
+		({
+			...customerProduct({ customerPrices: [] }).product,
+			prices: [fixedPrice({ id: "price_seam" })],
+			entitlements: [],
+			free_trial: null,
+		}) as unknown as Parameters<
+			typeof initStripeResourcesForProducts
+		>[0]["products"][number];
+
+	const buildCtx = () =>
+		({
+			db: {},
+			env: "sandbox",
+			org: {
+				id: "org_1",
+				config: { disable_stripe_writes: false },
+				stripe_config: { test_api_key: "sk_test_x" },
+			},
+			logger: { debug: () => undefined, info: () => undefined },
+		}) as unknown as AutumnContext;
+
+	test("without allowCreate stops after the reuse phase", async () => {
+		await initStripeResourcesForProducts({
+			ctx: buildCtx(),
+			products: [buildFullProduct()],
+			lookupVariantFamilies: false,
+		});
+
+		expect(mockState.productCalls).toBe(0);
+		expect(mockState.priceIds).toEqual([]);
+	});
+
+	test("allowCreate: true creates the product and its prices", async () => {
+		await initStripeResourcesForProducts({
+			ctx: buildCtx(),
+			products: [buildFullProduct()],
+			allowCreate: true,
+			lookupVariantFamilies: false,
+		});
+
+		expect(mockState.productCalls).toBe(1);
+		expect(mockState.priceIds).toEqual(["price_seam"]);
 	});
 });
 

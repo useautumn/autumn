@@ -3,7 +3,7 @@ import { isFixedPrice } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
-import { ProductService } from "@/internal/products/ProductService";
+import { fetchFullProduct } from "./syncProductHelpers.js";
 
 /**
  * Creates a Stripe subscription using the REAL Stripe price IDs stored on
@@ -57,14 +57,7 @@ export const createStripeSubscriptionFromProducts = async ({
 	}
 
 	const fullProducts = await Promise.all(
-		productIds.map((productId) =>
-			ProductService.getFull({
-				db: ctx.db,
-				idOrInternalId: productId,
-				orgId: ctx.org.id,
-				env: ctx.env,
-			}),
-		),
+		productIds.map((productId) => fetchFullProduct({ ctx, productId })),
 	);
 
 	const stripePriceIds = fullProducts.flatMap((fullProduct) =>

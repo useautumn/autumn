@@ -17,6 +17,7 @@ import {
 import { customerProductToBasePrice } from "@shared/utils/cusProductUtils/convertCusProduct/customerProductToPrice";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { materializeProductsInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
@@ -27,7 +28,6 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
-import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
 import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
 
@@ -88,7 +88,7 @@ const initializeCurrency = async ({
 	currency: string;
 }) => {
 	let product = await getProduct({ planId });
-	await initStripeResourcesForProducts({ ctx, products: [product] });
+	await materializeProductsInStripe({ ctx, products: [product] });
 	product = await getProduct({ planId });
 
 	for (const price of product.prices) {

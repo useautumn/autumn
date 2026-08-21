@@ -1,9 +1,8 @@
 /**
  * catalogV2.update — Stripe id carry-forward on entitlement/price rows.
  *
- * Seeds real Stripe resources via `initStripeResourcesForProducts` (the same
- * production path `updateProduct` uses), then updates via catalogV2 and
- * asserts reuse levels with shared expect helpers.
+ * Seeds real Stripe resources via `materializePlanInStripe`, then updates via
+ * catalogV2 and asserts reuse levels with shared expect helpers.
  *
  * Full carry (stripe_price_id + stripe_product_id + meter) when price AND
  * entitlement definitions match; product-only carry when same usage feature +
@@ -27,7 +26,7 @@ import {
 	findFeaturePrice,
 	stripeConfigValue,
 } from "@tests/integration/utils/expectStripePriceResources.js";
-import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -84,7 +83,7 @@ test.concurrent(
 				],
 			});
 
-			const before = await initPlanStripeResources({ ctx, planId });
+			const before = await materializePlanInStripe({ ctx, planId });
 			const paidBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -139,7 +138,7 @@ test.concurrent(
 				],
 			});
 
-			const before = await initPlanStripeResources({ ctx, planId });
+			const before = await materializePlanInStripe({ ctx, planId });
 			const paidBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -201,7 +200,7 @@ test.concurrent(
 				],
 			});
 
-			const before = await initPlanStripeResources({ ctx, planId });
+			const before = await materializePlanInStripe({ ctx, planId });
 			const paidBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -261,7 +260,7 @@ test.concurrent(
 				],
 			});
 
-			const before = await initPlanStripeResources({ ctx, planId });
+			const before = await materializePlanInStripe({ ctx, planId });
 			const paidBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -323,7 +322,7 @@ test.concurrent(
 				],
 			});
 
-			const before = await initPlanStripeResources({ ctx, planId });
+			const before = await materializePlanInStripe({ ctx, planId });
 			const paidBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -389,7 +388,7 @@ test.concurrent(
 				],
 			});
 
-			const before = await initPlanStripeResources({ ctx, planId });
+			const before = await materializePlanInStripe({ ctx, planId });
 			const baseBefore = findBasePrice({ product: before })!;
 
 			await autumnV2_3.catalogV2.update({
@@ -401,10 +400,10 @@ test.concurrent(
 				],
 			});
 
-			const after = await getFull({ ctx, planId });
+			// No carry ("none"): the replacement row gets a FRESH Stripe Price
+			// once materialized, under the plan's own (unchanged) Stripe Product.
+			const after = await materializePlanInStripe({ ctx, planId });
 			const baseAfter = findBasePrice({ product: after });
-			// No carry ("none"): execute init mints a FRESH Stripe Price for the
-			// replacement row, under the plan's own (unchanged) Stripe Product.
 			expectPriceStripeResourcesPresent({
 				price: baseAfter,
 				label: "new base row",
@@ -450,7 +449,7 @@ test.concurrent(
 				],
 			});
 
-			const after = await getFull({ ctx, planId });
+			const after = await materializePlanInStripe({ ctx, planId });
 			expectPriceStripeResourcesPresent({
 				price: findFeaturePrice({
 					product: after,
@@ -480,7 +479,7 @@ test.concurrent(
 					},
 				],
 			});
-			const before = await initPlanStripeResources({ ctx, planId });
+			const before = await materializePlanInStripe({ ctx, planId });
 			const priceBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,

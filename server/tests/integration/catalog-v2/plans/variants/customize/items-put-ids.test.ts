@@ -18,11 +18,11 @@ import {
 	isFixedPrice,
 } from "@autumn/shared";
 import {
-	expectPriceStripeReuseCorrect,
 	expectPriceStripeResourcesPresent,
+	expectPriceStripeReuseCorrect,
 	findFeaturePrice,
 } from "@tests/integration/utils/expectStripePriceResources.js";
-import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -125,7 +125,7 @@ test.concurrent(
 					},
 				],
 			});
-			const base = await initPlanStripeResources({ ctx, planId: baseId });
+			const base = await materializePlanInStripe({ ctx, planId: baseId });
 
 			await autumnV2_3.catalogV2.update({
 				plans: [
@@ -227,8 +227,8 @@ test.concurrent(
 					},
 				],
 			});
-			await initPlanStripeResources({ ctx, planId: baseId });
-			const before = await initPlanStripeResources({ ctx, planId: variantId });
+			await materializePlanInStripe({ ctx, planId: baseId });
+			const before = await materializePlanInStripe({ ctx, planId: variantId });
 			const beforePrice = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -292,8 +292,8 @@ test.concurrent(
 					},
 				],
 			});
-			await initPlanStripeResources({ ctx, planId: baseId });
-			const before = await initPlanStripeResources({ ctx, planId: variantId });
+			await materializePlanInStripe({ ctx, planId: baseId });
+			const before = await materializePlanInStripe({ ctx, planId: variantId });
 			const beforePrice = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -361,7 +361,7 @@ test.concurrent(
 					},
 				],
 			});
-			const base = await initPlanStripeResources({ ctx, planId: baseId });
+			const base = await materializePlanInStripe({ ctx, planId: baseId });
 
 			await autumnV2_3.catalogV2.update({
 				plans: [

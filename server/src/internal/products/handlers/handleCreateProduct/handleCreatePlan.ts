@@ -17,6 +17,7 @@ import {
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { captureOrgEvent } from "@/utils/posthog.js";
@@ -30,7 +31,6 @@ import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 import { constructProduct } from "../../productUtils.js";
-import { applyStripeResourceReuseForProduct } from "../../stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 
 /**
  * Route: POST /products - Create a product
@@ -133,11 +133,14 @@ export const handleCreatePlan = createRoute({
 			free_trial: newFreeTrial,
 		};
 
-		// Stripe products/prices are created lazily at billing time; only reuse here.
+		// Stripe products/prices are created lazily at billing time; an explicit
+		// create_in_stripe: true opts into immediate creation.
 		if (v1_2Body.create_in_stripe !== false) {
-			await applyStripeResourceReuseForProduct({
+			await initStripeResourcesForProducts({
 				ctx,
-				product: newFullProduct,
+				products: [newFullProduct],
+				allowCreate: v1_2Body.create_in_stripe === true,
+				lookupVariantFamilies: false,
 			});
 		}
 
