@@ -8,7 +8,7 @@ import {
 	registerPortlessAliases,
 	unregisterPortlessAliases,
 } from "../dw/helpers/portless.ts";
-import { fatal, sh } from "../dw/helpers/shell.ts";
+import { fatal, sh, shInherit } from "../dw/helpers/shell.ts";
 import { spawnDevInTmux, tmuxSessionExists } from "../dw/helpers/tmux.ts";
 
 const SCRIPT_DIR = fileURLToPath(new URL(".", import.meta.url));
@@ -29,8 +29,8 @@ export function capyHandoffText(): string {
 		"Capy is ready.",
 		`tmux session: ${CAPY_SESSION}`,
 		"local ports: 3000 dashboard, 8080 server, 3001 checkout, 3099 leaf/chat, 4000 emulate",
-		"browser API: expose 8080 too; use the browser against http://localhost:3000 and keep API calls same-origin only if 8080 is also exposed",
-		"VM/Desktop-local emulate URL: http://google.emulate.localhost",
+		"browser API uses /__autumn_api via the Capy Vite proxy; expose only port 3000",
+		"VM/Desktop-local emulate URL: https://google.emulate.localhost",
 		`logs: bun capy logs | attach: tmux attach -t ${CAPY_SESSION}`,
 	].join("\n");
 }
@@ -61,11 +61,15 @@ async function waitForReady(): Promise<void> {
 }
 
 function ensureStartup(): void {
-	const res = sh("bash", [join(REPO_ROOT, "scripts/setup/capy-startup.sh")], {
-		cwd: REPO_ROOT,
-	});
-	if (res.code !== 0) {
-		fatal(res.stderr || res.stdout || "capy startup failed");
+	const code = shInherit(
+		"bash",
+		[join(REPO_ROOT, "scripts/setup/capy-startup.sh")],
+		{
+			cwd: REPO_ROOT,
+		},
+	);
+	if (code !== 0) {
+		fatal("capy startup failed");
 	}
 }
 
@@ -75,10 +79,11 @@ function ensureAppProcess(): void {
 	ensureStartup();
 	ensureEmulateRunning();
 	registerPortlessAliases(1);
-	const env: Record<string, string> = { ...process.env } as Record<
-		string,
-		string
-	>;
+	const env: Record<string, string> = {
+		...process.env,
+		CAPY_DEV: "1",
+		VITE_BACKEND_URL: "/__autumn_api",
+	} as Record<string, string>;
 	spawnDevInTmux(
 		CAPY_SESSION,
 		env,

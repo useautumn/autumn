@@ -26,7 +26,9 @@ export function readTriggerCliAuth(): {
 	if (accessToken) {
 		return {
 			accessToken,
-			apiUrl: process.env.TRIGGER_API_URL?.trim() || "https://api.trigger.dev",
+			apiUrl: (
+				process.env.TRIGGER_API_URL?.trim() || "https://api.trigger.dev"
+			).replace(/\/$/, ""),
 		};
 	}
 
