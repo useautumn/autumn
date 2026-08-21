@@ -10,7 +10,7 @@ export const termsSections: LegalSection[] = [
 	{
 		title: "1. Acceptance of Terms",
 		content:
-			'By accessing or using the Autumn platform, APIs, SDKs, or any related services (collectively, the "Services") provided by Rebase, Inc., a Delaware corporation ("Autumn," "we," "us," or "our"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use our Services.',
+			'By accessing or using the Autumn platform, APIs, SDKs, or any related services (collectively, the "Services") provided by Recase, Inc., a Delaware corporation ("Autumn," "we," "us," or "our"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use our Services.',
 		isUppercase: false,
 	},
 	{
@@ -100,7 +100,7 @@ export const termsSections: LegalSection[] = [
 	{
 		title: "16. Contact Information",
 		content:
-			"For questions about these Terms, please contact us at security@useautumn.com or at: Rebase, Inc. (d/b/a Autumn), Email: security@useautumn.com, Website: https://useautumn.com",
+			"For questions about these Terms, please contact us at security@useautumn.com or at: Recase, Inc. (d/b/a Autumn), Email: security@useautumn.com, Website: https://useautumn.com",
 		isUppercase: false,
 	},
 ];

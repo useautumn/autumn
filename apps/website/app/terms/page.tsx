@@ -52,7 +52,7 @@ export default function TermsOfService() {
 							<div className="hidden md:block w-1/8 lg:w-1/6 border-r border-[#292929]" />
 							<div className="flex-1 px-4 sm:px-8 py-12 md:py-16 text-white text-[16px] font-light leading-[1.6] tracking-[-2%] font-sans pb-32">
 								<p className="mb-10">
-									Autumn (Rebase, Inc.)
+									Autumn (Recase, Inc.)
 									<br />
 									Effective Date: {TERMS_EFFECTIVE_DATE}
 								</p>

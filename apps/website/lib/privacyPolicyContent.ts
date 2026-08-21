@@ -6,7 +6,7 @@ export const privacyPolicySections: LegalSection[] = [
 	{
 		title: "1. Introduction",
 		content:
-			'This Privacy Policy explains how Rebase, Inc., a Delaware corporation doing business as Autumn ("Autumn," "we," "us," or "our"), collects, uses, discloses, and protects personal information when you use our platform, APIs, SDKs, website, and related services (collectively, the "Services"). By using the Services, you agree to the practices described in this Policy.',
+			'This Privacy Policy explains how Recase, Inc., a Delaware corporation doing business as Autumn ("Autumn," "we," "us," or "our"), collects, uses, discloses, and protects personal information when you use our platform, APIs, SDKs, website, and related services (collectively, the "Services"). By using the Services, you agree to the practices described in this Policy.',
 		isUppercase: false,
 	},
 	{
@@ -84,7 +84,7 @@ export const privacyPolicySections: LegalSection[] = [
 	{
 		title: "14. Contact Us",
 		content:
-			"For questions about this Privacy Policy or our data practices, contact us at security@useautumn.com or at: Rebase, Inc. (d/b/a Autumn), Email: security@useautumn.com, Website: https://useautumn.com",
+			"For questions about this Privacy Policy or our data practices, contact us at security@useautumn.com or at: Recase, Inc. (d/b/a Autumn), Email: security@useautumn.com, Website: https://useautumn.com",
 		isUppercase: false,
 	},
 ];
