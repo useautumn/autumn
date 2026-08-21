@@ -30,6 +30,7 @@ import { getItemType } from "../../product-items/productItemUtils/getItemType.js
 import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { getAttachScenario } from "./getAttachScenario.js";
+import { resolveTrialCardRequired } from "./resolveTrialCardRequired.js";
 
 export const getProductItemResponse = ({
 	item,
@@ -96,11 +97,7 @@ const getFreeTrialResponse = async ({
 	fullCus?: FullCustomer;
 	attachScenario: AttachScenario;
 }) => {
-	// Free plans have no card gate (attach branches on price count), so a stored
-	// `true` is inert and only misleads API consumers.
-	const cardRequired = isFreeProduct({ product })
-		? false
-		: (product.free_trial?.card_required ?? false);
+	const cardRequired = resolveTrialCardRequired({ product });
 
 	if (!db) {
 		return product.free_trial

@@ -54,8 +54,8 @@ export function frontendProductToApiPlanV1(
 			}
 		: null;
 
-	// Derived rather than read off `product.planType` so a plan toggled paid ->
-	// free can't smuggle through a stale `card_required: true`.
+	// planType is derived from items; the stored planType field can be stale
+	// after item edits.
 	const { planType } = productV2ToFrontendProduct({ product });
 
 	const freeTrial: ApiPlanV1["free_trial"] = product.free_trial

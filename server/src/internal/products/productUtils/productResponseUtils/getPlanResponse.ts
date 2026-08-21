@@ -10,7 +10,6 @@ import {
 	type FullCustomer,
 	type FullProduct,
 	getProductItemDisplay,
-	isFreeProduct,
 	itemToBillingInterval,
 	itemToBillingIntervalCount,
 	productItemsToPlanItemsV1,
@@ -24,6 +23,7 @@ import { buildApiPlanLicense } from "./buildApiPlanLicense.js";
 import { buildApiPlanVariant } from "./buildApiPlanVariant.js";
 import { buildCustomerEligibility } from "./buildCustomerEligibility.js";
 import { buildVariantDetails } from "./buildVariantDetails.js";
+import { resolveTrialCardRequired } from "./resolveTrialCardRequired.js";
 
 /**
  * Get free trial response in Plan V2 format
@@ -35,14 +35,10 @@ const getFreeTrialV2Response = ({
 }): ApiFreeTrialV2 | undefined => {
 	if (!product.free_trial) return undefined;
 
-	// Free plans have no card gate (attach branches on price count), so a stored
-	// `true` is inert and only misleads API consumers.
 	return ApiFreeTrialV2Schema.parse({
 		duration_type: product.free_trial.duration,
 		duration_length: product.free_trial.length,
-		card_required: isFreeProduct({ product })
-			? false
-			: (product.free_trial.card_required ?? false),
+		card_required: resolveTrialCardRequired({ product }),
 		on_end: product.free_trial.on_end ?? null,
 	});
 };
