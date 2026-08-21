@@ -1,33 +1,16 @@
-import { isSecretKeyPrefix } from "@autumn/auth";
 import { type AppEnv, ms } from "@autumn/shared";
 import { MCPClient } from "@mastra/mcp";
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
 import { createTtlCache } from "../../lib/ttlCache.js";
 import { autumnMcpErrorText } from "./errorResult.js";
+import { autumnMcpHeaders } from "./headers.js";
 
 type AutumnTool = {
 	execute?: (
 		args: Record<string, unknown>,
 		...rest: unknown[]
 	) => Promise<unknown>;
-};
-
-export const autumnMcpHeaders = ({
-	appEnv,
-	token,
-}: {
-	appEnv: AppEnv;
-	token: string;
-}) => {
-	const headers: Record<string, string> = {
-		Authorization: `Bearer ${token}`,
-		"x-autumn-environment": appEnv,
-	};
-	if (isSecretKeyPrefix({ token })) {
-		headers["secret-key"] = token;
-	}
-	return headers;
 };
 
 const withAuthFetch =
