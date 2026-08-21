@@ -53,6 +53,7 @@
 		"@autumn/auth": "workspace:*",
 		"@autumn/env": "workspace:*",
 		"@autumn/ksuid": "workspace:*",
+		"@autumn/logging": "workspace:*",
 		"@autumn/shared": "workspace:*",
 		"@autumn/stripe-sync": "workspace:*",
 		"@aws-sdk/client-dynamodb": "^3.1095.0",
