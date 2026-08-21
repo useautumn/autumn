@@ -1,7 +1,6 @@
 import type { HttpBindings } from "@hono/node-server";
 import { type Context, Hono } from "hono";
 import { db } from "../../lib/db.js";
-import { applyWebApproval } from "./actions/applyWebApproval.js";
 import { decideWebApproval } from "./actions/decideWebApproval.js";
 import { getWebApproval } from "./actions/getWebApproval.js";
 import { getWebChatMessages } from "./actions/getWebChatMessages.js";
@@ -137,17 +136,6 @@ webRoutes.get("/approvals/:approvalId", async (c) => {
 		);
 	}
 	return c.json({ approval: result.approval });
-});
-
-webRoutes.post("/approvals/:approvalId/apply", async (c) => {
-	const authenticated = await authenticate(c);
-	if ("response" in authenticated) return authenticated.response;
-	const result = await applyWebApproval({
-		approvalId: c.req.param("approvalId"),
-		orgId: authenticated.auth.orgId,
-		userId: authenticated.auth.userId,
-	});
-	return c.json(result, result.applied ? 200 : 409);
 });
 
 webRoutes.post("/approvals/:approvalId/supersede", async (c) => {

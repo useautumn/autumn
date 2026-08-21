@@ -129,6 +129,7 @@ interface AttachFormProviderProps {
 	onPlanEditorOpen?: () => void;
 	onPlanEditorClose?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
+	onApplied?: () => void;
 	onSuccess?: () => void;
 	onScopeChange?: (entityId: string | undefined) => void;
 	allowMultiplePlans?: boolean;
@@ -143,6 +144,7 @@ export function AttachFormProvider({
 	onPlanEditorOpen,
 	onPlanEditorClose,
 	onCheckoutRedirect,
+	onApplied,
 	onSuccess,
 	onScopeChange,
 	allowMultiplePlans = false,
@@ -564,6 +566,7 @@ export function AttachFormProvider({
 		customerId,
 		buildRequestBody: buildOperationRequestBody,
 		path: billingOperation.path,
+		onApplied,
 		onCheckoutRedirect,
 		onSuccess,
 	});

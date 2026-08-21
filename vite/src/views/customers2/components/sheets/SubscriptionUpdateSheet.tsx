@@ -31,8 +31,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
-import { ApprovalSheetBanner } from "@/views/approvals/components/ApprovalSheetBanner";
-import { useApprovalAwareOnSuccess } from "@/views/approvals/hooks/useApprovalAwareOnSuccess";
+import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
 import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
@@ -167,9 +166,8 @@ export function SubscriptionUpdateSheet() {
 		| undefined;
 
 	const approvalSeed = approvalSeedFromSheetData(sheetData ?? null);
-	const onSuccess = useApprovalAwareOnSuccess({
+	const onApplied = useSettleApprovalOnApply({
 		approvalId: approvalSeed?.approvalId,
-		onDone: closeSheet,
 	});
 	const defaultOverrides = useMemo((): Partial<UpdateSubscriptionForm> => {
 		if (!productV2) return {};
@@ -258,9 +256,9 @@ export function SubscriptionUpdateSheet() {
 			onCheckoutRedirect={(checkoutUrl) => {
 				window.location.href = checkoutUrl;
 			}}
-			onSuccess={onSuccess}
+			onApplied={onApplied}
+			onSuccess={closeSheet}
 		>
-			<ApprovalSheetBanner />
 			<SheetContent />
 		</UpdateSubscriptionFormProvider>
 	);

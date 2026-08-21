@@ -98,7 +98,11 @@ export const surfaceRendersGroup = (provider: string) =>
 
 const SHEET_LINKABLE_TOOLS = new Set(["attach", "updateSubscription"]);
 
-const UNSEEDABLE_CUSTOMIZE_KEYS = ["remove_licenses", "update_items"] as const;
+const UNSEEDABLE_CUSTOMIZE_KEYS = [
+	"billing_controls",
+	"remove_licenses",
+	"update_items",
+] as const;
 
 /** Mirrors the server's billing_request_resolution `unrepresentable` set:
  * keys with no V0-dialect slot cannot be shown or edit-preserved in a sheet. */

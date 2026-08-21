@@ -10,10 +10,7 @@ import {
 } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import { normalizeToolName } from "../../../internal/agentRuntime/tools/toolPolicy.js";
-import {
-	allWritesOf,
-	dashboardLinkableApproval,
-} from "../../../internal/approvals/domain/approvalRecord.js";
+import { allWritesOf } from "../../../internal/approvals/domain/approvalRecord.js";
 import { summarizeStepResult } from "../../../internal/approvals/domain/stepResultSummary.js";
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
 import { chatApprovalStepsRepo } from "../../../internal/approvals/repos/chatApprovalStepsRepo.js";
@@ -124,13 +121,6 @@ export const getWebApproval = async ({
 
 	return {
 		approval: {
-			can_apply:
-				approval.status === "pending" &&
-				!expired &&
-				dashboardLinkableApproval({
-					approval,
-					groupedStepCount: steps.length - 1,
-				}),
 			created_at: approval.created_at,
 			customer_id: requestString(approval, "customer_id"),
 			decided_at: approval.decided_at,

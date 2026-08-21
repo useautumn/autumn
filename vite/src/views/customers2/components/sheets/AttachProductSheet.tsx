@@ -47,8 +47,7 @@ import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useEnv } from "@/utils/envUtils";
-import { ApprovalSheetBanner } from "@/views/approvals/components/ApprovalSheetBanner";
-import { useApprovalAwareOnSuccess } from "@/views/approvals/hooks/useApprovalAwareOnSuccess";
+import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
 import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
@@ -416,7 +415,6 @@ function SheetContent() {
 	return (
 		<LayoutGroup>
 			<div className="flex flex-col h-full overflow-y-auto">
-				<ApprovalSheetBanner />
 				<StageContent />
 
 				{planEditorProduct && (
@@ -446,9 +444,8 @@ export function AttachProductSheet() {
 		customer as FullCustomer | undefined,
 	);
 	const approvalSeed = approvalSeedFromSheetData(sheetData);
-	const onSuccess = useApprovalAwareOnSuccess({
+	const onApplied = useSettleApprovalOnApply({
 		approvalId: approvalSeed?.approvalId,
-		onDone: closeSheet,
 	});
 
 	return (
@@ -465,7 +462,8 @@ export function AttachProductSheet() {
 				navigator.clipboard.writeText(checkoutUrl);
 				toast.success("Checkout URL copied to clipboard");
 			}}
-			onSuccess={onSuccess}
+			onApplied={onApplied}
+			onSuccess={closeSheet}
 			onScopeChange={setScopeEntityId}
 			allowMultiplePlans
 		>

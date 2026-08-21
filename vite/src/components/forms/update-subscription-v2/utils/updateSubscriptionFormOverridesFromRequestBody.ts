@@ -61,14 +61,12 @@ const anchorOverridesFrom = (
 	return {};
 };
 
-const FORMLESS_REQUEST_KEYS = ["billing_controls"] as const;
-
 /** Inverse of useUpdateSubscriptionRequestBody's builder: maps a V0 update
  * request into form overrides. Stage-scoped keys (invoice*) are skipped —
  * the review stage re-collects them. */
 export const updateSubscriptionFormOverridesFromRequestBody = (
 	request: RequestBody,
-): { overrides: Partial<UpdateSubscriptionForm>; unmapped: string[] } => {
+): Partial<UpdateSubscriptionForm> => {
 	const overrides: Partial<UpdateSubscriptionForm> = {};
 
 	const prepaid = quantityRecordFrom(request.options, "feature_id");
@@ -112,11 +110,8 @@ export const updateSubscriptionFormOverridesFromRequestBody = (
 	}
 
 	return {
-		overrides: {
-			...overrides,
-			...anchorOverridesFrom(request.billing_cycle_anchor),
-			...trialOverridesFrom(request.free_trial),
-		},
-		unmapped: FORMLESS_REQUEST_KEYS.filter((key) => request[key] !== undefined),
+		...overrides,
+		...anchorOverridesFrom(request.billing_cycle_anchor),
+		...trialOverridesFrom(request.free_trial),
 	};
 };

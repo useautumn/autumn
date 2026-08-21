@@ -33,7 +33,6 @@ describe("dashboardLinkableApproval", () => {
 			{ items: [] },
 			{ add_items: [], remove_items: [{ feature_id: "seats" }] },
 			{ free_trial: { duration_length: 7, duration_type: "day" } },
-			{ billing_controls: { spend_limits: [] } },
 		]) {
 			expect(
 				dashboardLinkableApproval({
@@ -46,6 +45,24 @@ describe("dashboardLinkableApproval", () => {
 				}),
 			).toBe(true);
 		}
+	});
+
+	test("excludes billing_controls customize (no sheet control for it)", () => {
+		expect(
+			dashboardLinkableApproval({
+				approval: {
+					...base,
+					tool_args: {
+						request: {
+							customer_id: "cus_1",
+							customize: { billing_controls: { spend_limits: [] } },
+						},
+					},
+					tool_name: "attach",
+				},
+				groupedStepCount: 0,
+			}),
+		).toBe(false);
 	});
 
 	test("excludes grouped, unresolvable customize, internal, and non-sheet tools", () => {

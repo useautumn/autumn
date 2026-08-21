@@ -49,7 +49,6 @@ export const createChatProxyRouter = (
 	// fetched + resolved beside the text-only stream).
 	router.get("/agent/interactions", proxy);
 	router.get("/agent/approvals/:approvalId", proxy);
-	router.post("/agent/approvals/:approvalId/apply", proxy);
 	router.post("/agent/approvals/:approvalId/supersede", proxy);
 	router.post("/agent/approve", proxy);
 	router.post("/agent/reject", proxy);

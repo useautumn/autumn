@@ -1,8 +1,6 @@
 export type ApprovalSheetSeed = {
 	approvalId: string | null;
 	defaultOverrides: Record<string, unknown>;
-	prefillFailed: boolean;
-	unmappedRequestKeys: string[];
 };
 
 export const approvalSeedFromSheetData = (
@@ -15,11 +13,5 @@ export const approvalSeedFromSheetData = (
 			data.defaultOverrides && typeof data.defaultOverrides === "object"
 				? (data.defaultOverrides as Record<string, unknown>)
 				: {},
-		prefillFailed: data.prefillFailed === true,
-		unmappedRequestKeys: Array.isArray(data.unmappedRequestKeys)
-			? data.unmappedRequestKeys.filter(
-					(key): key is string => typeof key === "string",
-				)
-			: [],
 	};
 };

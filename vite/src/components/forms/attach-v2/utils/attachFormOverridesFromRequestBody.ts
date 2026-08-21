@@ -75,16 +75,12 @@ const carryOverOverridesFrom = (
 	};
 };
 
-/** Form fields the V0 dialect can express but the attach form has no control
- * for. Reported so callers can surface them instead of dropping silently. */
-const FORMLESS_REQUEST_KEYS = ["billing_controls"] as const;
-
 /** Inverse of buildAttachRequestBody: maps a V0 attach request into form
  * overrides. Stage-scoped keys (invoice*, redirect_mode, checkout params) are
  * intentionally skipped — the review stage re-collects them. */
 export const attachFormOverridesFromRequestBody = (
 	request: RequestBody,
-): { overrides: Partial<AttachForm>; unmapped: string[] } => {
+): Partial<AttachForm> => {
 	const overrides: Partial<AttachForm> = {};
 
 	if (typeof request.product_id === "string") {
@@ -158,7 +154,7 @@ export const attachFormOverridesFromRequestBody = (
 		);
 	}
 
-	const merged = {
+	return {
 		...overrides,
 		...anchorOverridesFrom(request.billing_cycle_anchor),
 		...carryOverOverridesFrom(request.carry_over_balances, {
@@ -170,10 +166,5 @@ export const attachFormOverridesFromRequestBody = (
 			featureIds: "carryOverUsageFeatureIds",
 		}),
 		...trialOverridesFrom(request.free_trial),
-	};
-
-	return {
-		overrides: merged,
-		unmapped: FORMLESS_REQUEST_KEYS.filter((key) => request[key] !== undefined),
 	};
 };

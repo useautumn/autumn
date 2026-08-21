@@ -7,7 +7,7 @@ import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
 
 const SUPERSEDED_NOTE =
-	"The user applied an EDITED version of this write from the dashboard, so this pending request is superseded. Do NOT re-issue it; nothing further is needed.";
+	"The user applied this write from the dashboard instead, so this pending request is superseded. Do NOT re-issue it; nothing further is needed.";
 
 export type SupersedeWebApprovalResult =
 	| { superseded: true }
@@ -16,7 +16,7 @@ export type SupersedeWebApprovalResult =
 			code: "already_decided" | "not_found" | "org_mismatch";
 	  };
 
-/** Cancels a pending approval whose write the user applied (edited) from the
+/** Cancels a pending approval whose write the user applied from the
  * dashboard: card settles as superseded, the eve park is denied with a note. */
 export const supersedeWebApproval = async ({
 	approvalId,
@@ -77,7 +77,7 @@ export const supersedeWebApproval = async ({
 	void settleCardRemotely({
 		approval: cancelled,
 		status: "superseded",
-		statusLine: "Applied from the dashboard with changes",
+		statusLine: "Applied from the dashboard",
 	});
 	logger.info("Superseded approval from dashboard", {
 		event: "leaf.approval_superseded_from_dashboard",

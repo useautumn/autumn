@@ -25,9 +25,6 @@ export type ApprovalDetailStep = {
 };
 
 export type ApprovalDetail = {
-	/** Pending, unexpired, single-step attach/updateSubscription — the shapes
-	 * the dashboard sheets can render and apply. */
-	can_apply: boolean;
 	created_at: number;
 	customer_id: string | null;
 	decided_at: number | null;

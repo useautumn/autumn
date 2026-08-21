@@ -26,6 +26,7 @@ export function useBillingMutation<
 	buildRequestBody,
 	successMessage,
 	errorMessage,
+	onApplied,
 	onCheckoutRedirect,
 	onSuccess,
 }: {
@@ -34,6 +35,9 @@ export function useBillingMutation<
 	buildRequestBody: (params?: BillingStageParams) => TRequest | null;
 	successMessage: string;
 	errorMessage: string;
+	/** Fires on EVERY successful write — including invoice and checkout stages
+	 * that skip onSuccess — for side effects that must not miss a path. */
+	onApplied?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 }) {
@@ -60,6 +64,7 @@ export function useBillingMutation<
 			};
 		},
 		onSuccess: ({ data, useInvoice, skipDefaultSuccess }) => {
+			onApplied?.();
 			if (skipDefaultSuccess) {
 				invalidateBillingQueries();
 				return;

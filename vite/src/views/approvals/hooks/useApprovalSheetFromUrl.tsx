@@ -1,5 +1,6 @@
 import { parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { attachFormOverridesFromRequestBody } from "@/components/forms/attach-v2/utils/attachFormOverridesFromRequestBody";
 import { updateSubscriptionFormOverridesFromRequestBody } from "@/components/forms/update-subscription-v2/utils/updateSubscriptionFormOverridesFromRequestBody";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -46,13 +47,13 @@ export const useApprovalSheetFromUrl = ({
 			sheetType === "attach-product"
 				? attachFormOverridesFromRequestBody
 				: updateSubscriptionFormOverridesFromRequestBody;
-		const seeded =
-			approval && resolved ? mapOverrides(resolved.request) : undefined;
+		if (approval && resolutionFailed) {
+			toast.warning("Couldn't prefill the form from the approval.");
+		}
 		const data = {
 			approvalId: approval?.id ?? null,
-			defaultOverrides: seeded?.overrides ?? {},
-			prefillFailed: Boolean(approval && resolutionFailed),
-			unmappedRequestKeys: seeded?.unmapped ?? [],
+			defaultOverrides:
+				approval && resolved ? mapOverrides(resolved.request) : {},
 		};
 
 		if (sheetType === "attach-product") {

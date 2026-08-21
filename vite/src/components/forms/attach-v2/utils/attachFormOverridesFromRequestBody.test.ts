@@ -3,7 +3,7 @@ import { attachFormOverridesFromRequestBody } from "./attachFormOverridesFromReq
 
 describe("attachFormOverridesFromRequestBody", () => {
 	test("maps a resolved V0 request into form overrides", () => {
-		const { overrides, unmapped } = attachFormOverridesFromRequestBody({
+		const overrides = attachFormOverridesFromRequestBody({
 			billing_behavior: "none",
 			currency: "eur",
 			customer_id: "cus_1",
@@ -35,11 +35,10 @@ describe("attachFormOverridesFromRequestBody", () => {
 			trialLength: 7,
 			version: 3,
 		});
-		expect(unmapped).toEqual([]);
 	});
 
 	test("null free_trial disables the trial", () => {
-		const { overrides } = attachFormOverridesFromRequestBody({
+		const overrides = attachFormOverridesFromRequestBody({
 			free_trial: null,
 			product_id: "scale",
 		});
@@ -47,7 +46,7 @@ describe("attachFormOverridesFromRequestBody", () => {
 	});
 
 	test("maps billing cycle anchor and carry-overs", () => {
-		const { overrides } = attachFormOverridesFromRequestBody({
+		const overrides = attachFormOverridesFromRequestBody({
 			billing_cycle_anchor: 1755000000000,
 			carry_over_balances: { enabled: true, feature_ids: ["credits"] },
 			carry_over_usages: { enabled: true },
@@ -61,13 +60,5 @@ describe("attachFormOverridesFromRequestBody", () => {
 			carryOverUsages: true,
 			resetBillingCycle: true,
 		});
-	});
-
-	test("reports formless keys instead of dropping them", () => {
-		const { unmapped } = attachFormOverridesFromRequestBody({
-			billing_controls: { spend_limits: [] },
-			product_id: "scale",
-		});
-		expect(unmapped).toEqual(["billing_controls"]);
 	});
 });
