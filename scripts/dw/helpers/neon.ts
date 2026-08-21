@@ -227,7 +227,7 @@ export function ensureTemplateBranch(): void {
 	// Wipe the inherited schema so children start truly empty.
 	const url = connectionString(NEON_TEMPLATE_BRANCH);
 	const reset = sh("psql", [url, "-v", "ON_ERROR_STOP=1"], {
-		stdin: `DROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public;\nCREATE EXTENSION IF NOT EXISTS pg_trgm;\n`,
+		stdin: `DROP SCHEMA IF EXISTS drizzle CASCADE;\nDROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public;\nCREATE EXTENSION IF NOT EXISTS pg_trgm;\n`,
 	});
 	if (reset.code !== 0) {
 		fatal(`failed to reset ${NEON_TEMPLATE_BRANCH}:\n${reset.stderr}`);
