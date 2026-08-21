@@ -19,8 +19,9 @@
  * Green (after): balances move (negative) and receipts carry real items;
  *   the window skip assertions are regression guards that must stay green.
  *
- * API output stays masked (unlimited), so all balance assertions here read
- * the RAW customer_entitlements.balance via ctx.db, never the API.
+ * This file asserts the RAW customer_entitlements.balance via ctx.db, never
+ * the API (the latest API version surfaces the counter as `usage`; that
+ * surface is covered in unlimited-usage-in-api.test.ts).
  */
 
 import { expect, test } from "bun:test";
