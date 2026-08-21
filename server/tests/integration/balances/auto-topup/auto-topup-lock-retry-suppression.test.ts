@@ -109,7 +109,7 @@ test("auto-topup lock retry preserves burst suppression", async () => {
 	});
 
 	expect(calls.clearPending).toBe(0);
-	expect(calls.keepPending).toEqual([10 * 60 * 1000]);
+	expect(calls.keepPending).toEqual([25 * 60 * 1000]);
 	expect(calls.failureWebhook).toBe(0);
 	expect(calls.lockTtlMs).toEqual([5 * 60 * 1000]);
 });
@@ -121,6 +121,6 @@ test("auto-topup purchase limit preserves burst suppression", async () => {
 	await autoTopup({ ctx, payload });
 
 	expect(calls.clearPending).toBe(0);
-	expect(calls.keepPending).toEqual([10 * 60 * 1000]);
+	expect(calls.keepPending).toEqual([25 * 60 * 1000]);
 	expect(calls.failureWebhook).toBe(1);
 });
