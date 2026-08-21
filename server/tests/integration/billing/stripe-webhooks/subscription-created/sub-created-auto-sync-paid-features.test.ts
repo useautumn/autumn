@@ -1,5 +1,6 @@
 import { test } from "bun:test";
 import type { ApiCustomerV3, FullProduct, Price } from "@autumn/shared";
+import { fetchFullProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers.js";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -13,7 +14,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
-import { ProductService } from "@/internal/products/ProductService";
 
 const testRunId = Date.now().toString(36);
 
@@ -23,13 +23,7 @@ const getFullProduct = async ({
 }: {
 	ctx: TestContext;
 	productId: string;
-}) =>
-	ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: productId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
+}) => fetchFullProduct({ ctx, productId: productId });
 
 const getFeaturePrice = ({
 	fullProduct,

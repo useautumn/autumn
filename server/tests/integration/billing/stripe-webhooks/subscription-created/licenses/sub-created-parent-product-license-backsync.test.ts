@@ -16,6 +16,7 @@ import {
 import { createVariantPlan } from "@tests/integration/crud/plans/variants/utils/variantTestPlanUtils";
 import { getFullLicenseProduct } from "@tests/integration/licenses/catalog-update/utils/getFullLicenseProduct";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
@@ -51,6 +52,9 @@ const expectCustomizedPriceUnderLicenseProduct = async ({
 	parentPlanId: string;
 	licensePlanId: string;
 }) => {
+	// Child first so the parent's custom overlay reuses the child's product.
+	await materializePlanInStripe({ ctx, planId: licensePlanId });
+	await materializePlanInStripe({ ctx, planId: parentPlanId });
 	const customized = await getFullLicenseProduct({
 		ctx,
 		parentPlanId,
@@ -202,18 +206,17 @@ test(`${chalk.yellowBright("license back-sync: equal shapes under one license pr
 		interval: BillingInterval.Month,
 	});
 
-	const [customA, customB] = await Promise.all([
-		expectCustomizedPriceUnderLicenseProduct({
-			ctx: scenario.ctx,
-			parentPlanId: parentA.id,
-			licensePlanId: teamSeat.id,
-		}),
-		expectCustomizedPriceUnderLicenseProduct({
-			ctx: scenario.ctx,
-			parentPlanId: parentB.id,
-			licensePlanId: teamSeat.id,
-		}),
-	]);
+	// Sequential: concurrent materialization of the shared seat could double-create.
+	const customA = await expectCustomizedPriceUnderLicenseProduct({
+		ctx: scenario.ctx,
+		parentPlanId: parentA.id,
+		licensePlanId: teamSeat.id,
+	});
+	const customB = await expectCustomizedPriceUnderLicenseProduct({
+		ctx: scenario.ctx,
+		parentPlanId: parentB.id,
+		licensePlanId: teamSeat.id,
+	});
 	expect(customA.stripeProductId).toBe(customB.stripeProductId);
 	expect(customA.stripePriceId).not.toBe(customB.stripePriceId);
 

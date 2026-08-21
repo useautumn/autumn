@@ -3,7 +3,10 @@
 import { test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
 import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
-import { getBaseStripePriceId } from "@tests/integration/billing/sync/utils/syncProductHelpers";
+import {
+	fetchFullProduct,
+	getBaseStripePriceId,
+} from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
 import { items } from "@tests/utils/fixtures/items";
@@ -12,7 +15,6 @@ import { timeout } from "@tests/utils/genUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { ProductService } from "@/internal/products/ProductService";
 
 const PAID_SEATS = 3;
 
@@ -80,12 +82,7 @@ const setupBackSyncedLicenseSubscription = async ({
 			}),
 		],
 	});
-	const fullDevSeat = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: devSeat.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
+	const fullDevSeat = await fetchFullProduct({ ctx, productId: devSeat.id });
 	const stripeSubscription = await createExternalStripeSubscription({
 		ctx,
 		customerId,

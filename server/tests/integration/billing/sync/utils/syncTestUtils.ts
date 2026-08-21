@@ -56,9 +56,11 @@ export const createStripeSubscriptionFromProducts = async ({
 		throw new Error(`Customer ${customerId} has no Stripe customer ID`);
 	}
 
-	const fullProducts = await Promise.all(
-		productIds.map((productId) => fetchFullProduct({ ctx, productId })),
-	);
+	// Sequential: concurrent materialization of family members could double-create.
+	const fullProducts: FullProduct[] = [];
+	for (const productId of productIds) {
+		fullProducts.push(await fetchFullProduct({ ctx, productId }));
+	}
 
 	const stripePriceIds = fullProducts.flatMap((fullProduct) =>
 		getAllStripePriceIds({ fullProduct }),

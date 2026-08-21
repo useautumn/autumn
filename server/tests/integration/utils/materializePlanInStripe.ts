@@ -34,10 +34,12 @@ export const materializeProductsInStripe = async ({
 export const materializePlanInStripe = async ({
 	ctx,
 	planId,
+	version,
 	candidateProducts = [],
 }: {
 	ctx: AutumnContext;
 	planId: string;
+	version?: number;
 	candidateProducts?: FullProduct[];
 }): Promise<FullProduct> => {
 	const product = await ProductService.getFull({
@@ -45,6 +47,7 @@ export const materializePlanInStripe = async ({
 		idOrInternalId: planId,
 		orgId: ctx.org.id,
 		env: ctx.env,
+		version,
 	});
 
 	await materializeProductsInStripe({
@@ -58,5 +61,6 @@ export const materializePlanInStripe = async ({
 		idOrInternalId: planId,
 		orgId: ctx.org.id,
 		env: ctx.env,
+		version,
 	});
 };
