@@ -24,6 +24,7 @@ export const evaluateSharedStripeCustomer = async ({
 		.map((customer) => ({
 			id: customer.id ?? customer.internal_id,
 			name: customer.name ?? null,
+			email: customer.email ?? null,
 		}));
 
 	if (otherCustomers.length === 0) return [];

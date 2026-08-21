@@ -9,7 +9,11 @@ export function SharedStripeCustomerDetails({
 }) {
 	const otherCustomers =
 		mismatch.other_customers ??
-		mismatch.other_customer_ids.map((id) => ({ id, name: null }));
+		mismatch.other_customer_ids.map((id) => ({
+			id,
+			name: null,
+			email: null,
+		}));
 
 	return (
 		<span className="block whitespace-normal break-words text-tertiary-foreground py-2">
@@ -27,7 +31,7 @@ export function SharedStripeCustomerDetails({
 						rel="noopener"
 						className="text-foreground underline underline-offset-2 hover:text-primary"
 					>
-						{customer.name ?? customer.id}
+						{customer.name ?? customer.email ?? customer.id}
 					</a>
 				</Fragment>
 			))}
