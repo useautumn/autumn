@@ -9,6 +9,15 @@ export const toolRequestFromArgs = (
 		? (args.request as Record<string, unknown>)
 		: args;
 
+/** A string field from the tool call's request payload (nested or flat). */
+export const requestStringField = (
+	toolArgs: Record<string, unknown> | undefined,
+	key: string,
+): string | undefined => {
+	const value = toolRequestFromArgs(toolArgs)?.[key];
+	return typeof value === "string" ? value : undefined;
+};
+
 /** Transport the harness threads through `toolArgs`. Option ids and request
  * ids are dropped before display; legacy rows keep the grouped writes marker
  * because their cards render steps from it (new rows use step rows). */

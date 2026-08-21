@@ -6,7 +6,7 @@ export type ApprovalDecidability =
 
 /** Every surface must refuse decided or expired cards the same way; the Slack
  * claim enforces this in SQL, other surfaces call this before acting. */
-export const assertDecidableApproval = ({
+export const approvalDecidability = ({
 	approval,
 	now = Date.now(),
 }: {

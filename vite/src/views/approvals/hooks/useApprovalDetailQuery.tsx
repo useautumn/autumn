@@ -4,7 +4,7 @@ import { isAxiosError } from "axios";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-export const approvalDetailErrorFrom = (
+const approvalDetailErrorFrom = (
 	error: unknown,
 ): ApprovalDetailError | undefined => {
 	if (!isAxiosError(error)) return undefined;
@@ -20,7 +20,7 @@ export const useApprovalDetailQuery = ({
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
-	const { data, error, isLoading, refetch } = useQuery<{
+	const { data, error } = useQuery<{
 		approval: ApprovalDetail;
 	}>({
 		enabled: Boolean(approvalId),
@@ -40,7 +40,5 @@ export const useApprovalDetailQuery = ({
 	return {
 		approval: data?.approval,
 		approvalError: approvalDetailErrorFrom(error),
-		isLoading,
-		refetchApproval: refetch,
 	};
 };

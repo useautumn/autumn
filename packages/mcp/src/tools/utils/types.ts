@@ -1,18 +1,5 @@
 import type * as z from "zod/v4";
 
-/** Tool names that mutate billing state through a preview-first flow. */
-export const CONFIRMED_WRITE_TOOL_NAMES = [
-	"attach",
-	"updateSubscription",
-	"createPlan",
-	"createReward",
-	"createSchedule",
-	"createBalance",
-] as const;
-
-export type ConfirmedWriteToolName =
-	(typeof CONFIRMED_WRITE_TOOL_NAMES)[number];
-
 /** A tool that calls a single Autumn endpoint with the parsed request. */
 export type OperationToolConfig = {
 	id: string;
@@ -29,7 +16,6 @@ export type BillingPreviewToolConfig = {
 	description: string;
 	schema: z.ZodType;
 	previewEndpoint: string;
-	writeToolName: ConfirmedWriteToolName;
 };
 
 /** A preview tool computed locally (no Autumn call). */
@@ -37,7 +23,6 @@ export type LocalPreviewToolConfig = {
 	id: string;
 	description: string;
 	schema: z.ZodType;
-	writeToolName: ConfirmedWriteToolName;
 	preview: (request: unknown) => unknown;
 };
 

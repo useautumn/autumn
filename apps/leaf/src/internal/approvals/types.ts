@@ -51,6 +51,13 @@ export type ApprovalRunResult =
 			toolName?: string;
 	  };
 
+/** A resume outcome — every ApprovalRunResult except drift, which only the
+ * pre-execution guard can produce. */
+export type SubmittedApprovalResult = Exclude<
+	ApprovalRunResult,
+	{ drifted: true }
+>;
+
 export type ApprovalAuthorization =
 	| { allowed: true }
 	| { allowed: false; text: string };

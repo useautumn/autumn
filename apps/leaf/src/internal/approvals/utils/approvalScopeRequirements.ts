@@ -7,10 +7,9 @@ import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
  * Entries without scopes are intentionally absent — they fail closed here. */
 export const approvalScopeRequirements: Record<string, RouteScopeRequirement> =
 	Object.fromEntries(
-		GATED_WRITES.filter((write) => write.scopes).map((write) => [
-			write.toolName,
-			write.scopes as RouteScopeRequirement,
-		]),
+		GATED_WRITES.flatMap((write) =>
+			write.scopes ? [[write.toolName, write.scopes] as const] : [],
+		),
 	);
 
 /** Only plain and ALL requirements can be unioned; an ANY requirement has no

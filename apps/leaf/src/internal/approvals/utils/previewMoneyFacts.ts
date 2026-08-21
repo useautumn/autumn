@@ -56,7 +56,7 @@ export const previewMoneyFactsDrifted = ({
 }: {
 	current: unknown;
 	stored: unknown;
-}): { drifted: boolean; reason?: string } => {
+}): { drifted: true; reason: string } | { drifted: false } => {
 	const storedFacts = moneyFactsOf(stored);
 	const currentFacts = moneyFactsOf(current);
 	if (!storedFacts || !currentFacts) return { drifted: false };

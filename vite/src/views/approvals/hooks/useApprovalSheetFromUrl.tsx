@@ -81,6 +81,4 @@ export const useApprovalSheetFromUrl = ({
 		setSheet,
 		sheetType,
 	]);
-
-	return { approval, approvalError };
 };

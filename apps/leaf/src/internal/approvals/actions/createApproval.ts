@@ -7,6 +7,7 @@ import {
 	type WithheldWrite,
 	withheldWritesFromToolArgs,
 } from "../../agentRuntime/eve/parkedInput.js";
+import { markerString } from "../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { chatApprovalStepsRepo } from "../repos/chatApprovalStepsRepo.js";
 import {
@@ -18,11 +19,6 @@ import {
 	withStepPreviews,
 } from "../utils/fetchApprovalPreview.js";
 import { publicToolArgs, toolRequestFromArgs } from "../utils/toolRequest.js";
-
-const markerString = (args: Record<string, unknown>, key: string) => {
-	const value = args[key];
-	return typeof value === "string" ? value : undefined;
-};
 
 /** Grouped step previews are N MCP round trips; the card posts without waiting
  * and re-renders when they land. Step updates are pending-guarded (step AND
@@ -134,20 +130,12 @@ export const createApproval = async ({
 			provider,
 			providerUserId,
 			runId: turn.sessionId,
-			steps: [
-				{
-					preview,
-					requestId: approval.toolCallId,
-					toolArgs: storedToolArgs,
-					toolName: approval.toolName,
-				},
-				...withheld.map((write) => ({
-					denyOptionId: write.denyOptionId,
-					requestId: write.requestId,
-					toolArgs: write.input ?? {},
-					toolName: write.toolName,
-				})),
-			],
+			groupedSteps: withheld.map((write) => ({
+				denyOptionId: write.denyOptionId,
+				requestId: write.requestId,
+				toolArgs: write.input ?? {},
+				toolName: write.toolName,
+			})),
 			toolArgs: storedToolArgs,
 			toolCallId: approval.toolCallId,
 			toolName: approval.toolName,

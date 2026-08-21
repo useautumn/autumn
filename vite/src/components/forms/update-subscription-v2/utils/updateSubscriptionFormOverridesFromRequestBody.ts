@@ -6,36 +6,20 @@ import type {
 	ProductItem,
 } from "@autumn/shared";
 import type { FormDiscount } from "@/components/forms/attach-v2/utils/discountUtils";
+import {
+	anchorOverridesFrom,
+	quantityRecordFrom,
+	requestRecord,
+} from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
 
 type RequestBody = Record<string, unknown>;
-
-const record = (value: unknown): RequestBody | undefined =>
-	value && typeof value === "object" && !Array.isArray(value)
-		? (value as RequestBody)
-		: undefined;
-
-const quantityRecordFrom = (
-	value: unknown,
-	idKey: string,
-): Record<string, number> => {
-	if (!Array.isArray(value)) return {};
-	return Object.fromEntries(
-		value.flatMap((entry) => {
-			const id = record(entry)?.[idKey];
-			const quantity = record(entry)?.quantity;
-			return typeof id === "string" && typeof quantity === "number"
-				? [[id, quantity]]
-				: [];
-		}),
-	);
-};
 
 const trialOverridesFrom = (
 	value: unknown,
 ): Partial<UpdateSubscriptionForm> => {
 	if (value === null) return { removeTrial: true, trialEnabled: false };
-	const trial = record(value);
+	const trial = requestRecord(value);
 	if (!trial || typeof trial.length !== "number") return {};
 	return {
 		trialCardRequired: trial.card_required !== false,
@@ -43,22 +27,6 @@ const trialOverridesFrom = (
 		trialEnabled: true,
 		trialLength: trial.length,
 	};
-};
-
-const anchorOverridesFrom = (
-	value: unknown,
-): Partial<UpdateSubscriptionForm> => {
-	if (value === "now") {
-		return { billingCycleAnchorMode: "now", resetBillingCycle: true };
-	}
-	if (typeof value === "number") {
-		return {
-			billingCycleAnchorDate: value,
-			billingCycleAnchorMode: "custom",
-			resetBillingCycle: true,
-		};
-	}
-	return {};
 };
 
 /** Inverse of useUpdateSubscriptionRequestBody's builder: maps a V0 update
@@ -92,7 +60,7 @@ export const updateSubscriptionFormOverridesFromRequestBody = (
 	if (typeof request.no_billing_changes === "boolean") {
 		overrides.noBillingChanges = request.no_billing_changes;
 	}
-	if (record(request.carry_over_usages)?.enabled === false) {
+	if (requestRecord(request.carry_over_usages)?.enabled === false) {
 		overrides.resetUsage = true;
 	}
 	if (typeof request.refund_last_payment === "string") {

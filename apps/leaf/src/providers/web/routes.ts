@@ -127,7 +127,6 @@ webRoutes.get("/approvals/:approvalId", async (c) => {
 	const result = await getWebApproval({
 		approvalId: c.req.param("approvalId"),
 		orgId: authenticated.auth.orgId,
-		userId: authenticated.auth.userId,
 	});
 	if ("error" in result) {
 		return c.json(

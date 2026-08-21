@@ -12,21 +12,14 @@ import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import { questionCard } from "../../../../providers/slack/presenters/interactionCards.js";
 import { resolveSlackCallerAuth } from "../../../../providers/slack/setup/resolveSlackCallerAuth.js";
-import {
-	approvalCard,
-	approvalSheetUrl,
-	approvalStatusCard,
-} from "../../../../ui/blocks.js";
+import { approvalCard, approvalStatusCard } from "../../../../ui/blocks.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
 import type { WithheldWrite } from "../../../agentRuntime/eve/parkedInput.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import { discardApproval } from "../../actions/discardApproval.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
-import {
-	dashboardLinkableApproval,
-	withheldStepsOf,
-} from "../../domain/approvalRecord.js";
+import { withheldStepsOf } from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import { chatApprovalStepsRepo } from "../../repos/chatApprovalStepsRepo.js";
 import type {
@@ -41,11 +34,8 @@ import {
 } from "../../utils/approvalErrors.js";
 import { formatElapsed } from "../../utils/approvalProgress.js";
 import { requiredScopesForApproval } from "../../utils/approvalScopeRequirements.js";
-import {
-	publicToolArgs,
-	toolRequestFromArgs,
-} from "../../utils/toolRequest.js";
-import { postApprovalCardForRow } from "./present.js";
+import { publicToolArgs } from "../../utils/toolRequest.js";
+import { dashboardUrlFor, postApprovalCardForRow } from "./present.js";
 
 const APPROVAL_PROGRESS_DELAY_MS = ms.seconds(10);
 
@@ -80,7 +70,6 @@ const cardDetailsForApproval = async ({
 	};
 };
 
-/** URL only for cards the dashboard sheet can actually open. */
 const approvalDashboardUrl = ({
 	approval,
 	groupedSteps,
@@ -88,24 +77,14 @@ const approvalDashboardUrl = ({
 	approval: ChatApproval;
 	groupedSteps?: ReadonlyArray<WithheldWrite>;
 }) =>
-	dashboardLinkableApproval({
-		approval,
+	dashboardUrlFor({
+		approvalId: approval.id,
+		env: approval.env,
 		groupedStepCount: groupedSteps?.length ?? 0,
-	})
-		? approvalSheetUrl({
-				approvalId: approval.id,
-				customerId: requestField(approval, "customer_id"),
-				env: approval.env,
-				planId: requestField(approval, "plan_id"),
-				toolName: approval.tool_name,
-			})
-		: undefined;
-
-const requestField = (approval: ChatApproval, key: string) => {
-	const request = toolRequestFromArgs(approval.tool_args);
-	const value = request?.[key];
-	return typeof value === "string" ? value : undefined;
-};
+		provider: approval.provider,
+		toolArgs: approval.tool_args as Record<string, unknown>,
+		toolName: approval.tool_name,
+	});
 
 const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	toolName: approval?.tool_name ?? "billing action",
@@ -381,6 +360,41 @@ export const handleApprovalActionWithDeps = async ({
 			});
 			return;
 		}
+		// The resumed turn can park again (chained write or a question) where
+		// nothing streams — surface those as fresh cards or they stay invisible,
+		// even when an earlier step failed: the re-issued write is how the user
+		// recovers from that failure.
+		const surfaceResumedOutcome = async ({
+			resumed,
+		}: {
+			resumed: ApprovalRunResult;
+		}) => {
+			if (!event.thread) return;
+			if ("chainedApprovalId" in resumed && resumed.chainedApprovalId) {
+				const chained = await deps.getApproval({
+					approvalId: resumed.chainedApprovalId,
+				});
+				if (chained) {
+					await postApprovalCardForRow({
+						approval: chained,
+						logger: rootLogger,
+						target: event.thread,
+					});
+				}
+			}
+			if ("question" in resumed && resumed.question) {
+				await event.thread.post(
+					questionCard({
+						env: claimed.env,
+						options: resumed.question.options,
+						orgId: claimed.org_id,
+						prompt: resumed.question.prompt,
+						requestId: resumed.question.requestId,
+						sessionId: resumed.question.sessionId,
+					}),
+				);
+			}
+		};
 		const details = await cardDetailsForApproval({ approval: claimed });
 		const startedAt = Date.now();
 		let statusText: string | undefined;
@@ -428,18 +442,19 @@ export const handleApprovalActionWithDeps = async ({
 			// re-render the PENDING card and tell the thread why.
 			const refreshed = await deps.getApproval({ approvalId });
 			if (refreshed) {
+				const groupedSteps = await groupedStepsForApproval({
+					approval: refreshed,
+				});
 				await deps.editActionMessage({
 					content: approvalCard({
 						dashboardUrl: approvalDashboardUrl({
 							approval: refreshed,
-							groupedSteps: await groupedStepsForApproval({
-								approval: refreshed,
-							}),
+							groupedSteps,
 						}),
 						id: refreshed.id,
 						env: refreshed.env,
 						preview: refreshed.preview ?? undefined,
-						steps: await groupedStepsForApproval({ approval: refreshed }),
+						steps: groupedSteps,
 						toolArgs: publicToolArgs(
 							refreshed.tool_args as Record<string, unknown>,
 						),
@@ -489,41 +504,6 @@ export const handleApprovalActionWithDeps = async ({
 				});
 			}
 		}
-		// The resumed turn can park again (chained write or a question) where
-		// nothing streams — surface those as fresh cards or they stay invisible,
-		// even when an earlier step failed: the re-issued write is how the user
-		// recovers from that failure.
-		const surfaceResumedOutcome = async ({
-			resumed,
-		}: {
-			resumed: ApprovalRunResult;
-		}) => {
-			if (!event.thread) return;
-			if ("chainedApprovalId" in resumed && resumed.chainedApprovalId) {
-				const chained = await deps.getApproval({
-					approvalId: resumed.chainedApprovalId,
-				});
-				if (chained) {
-					await postApprovalCardForRow({
-						approval: chained,
-						logger: rootLogger,
-						target: event.thread,
-					});
-				}
-			}
-			if ("question" in resumed && resumed.question) {
-				await event.thread.post(
-					questionCard({
-						env: claimed.env,
-						options: resumed.question.options,
-						orgId: claimed.org_id,
-						prompt: resumed.question.prompt,
-						requestId: resumed.question.requestId,
-						sessionId: resumed.question.sessionId,
-					}),
-				);
-			}
-		};
 		if (event.thread) {
 			try {
 				await surfaceResumedOutcome({ resumed: result });

@@ -86,6 +86,9 @@ export const formatAutumnOrgContext = ({
 	return sections.join("\n\n");
 };
 
+const settledValue = <T>(result: PromiseSettledResult<T>) =>
+	result.status === "fulfilled" ? result.value : undefined;
+
 export const loadAutumnOrgContext = async ({
 	env,
 	executeTool = executeAutumnMcpTool,
@@ -143,17 +146,10 @@ export const loadAutumnOrgContext = async ({
 	});
 
 	const text = formatAutumnOrgContext({
-		agentRules:
-			agentRulesResult.status === "fulfilled"
-				? agentRulesResult.value
-				: undefined,
-		features:
-			featuresResult.status === "fulfilled" ? featuresResult.value : undefined,
-		organization:
-			organizationResult.status === "fulfilled"
-				? organizationResult.value
-				: undefined,
-		plans: plansResult.status === "fulfilled" ? plansResult.value : undefined,
+		agentRules: settledValue(agentRulesResult),
+		features: settledValue(featuresResult),
+		organization: settledValue(organizationResult),
+		plans: settledValue(plansResult),
 	});
 
 	const instructions =

@@ -15,21 +15,10 @@ import {
 } from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import { chatApprovalStepsRepo } from "../../repos/chatApprovalStepsRepo.js";
-import { publicToolArgs } from "../../utils/toolRequest.js";
+import { publicToolArgs, requestStringField } from "../../utils/toolRequest.js";
 
-const requestField = (
-	toolArgs: Record<string, unknown> | undefined,
-	key: string,
-) => {
-	const request = toolArgs?.request;
-	const value =
-		request && typeof request === "object"
-			? (request as Record<string, unknown>)[key]
-			: toolArgs?.[key];
-	return typeof value === "string" ? value : undefined;
-};
-
-const dashboardUrlFor = ({
+/** URL only for cards the dashboard sheet can actually open. */
+export const dashboardUrlFor = ({
 	approvalId,
 	env,
 	groupedStepCount,
@@ -46,7 +35,7 @@ const dashboardUrlFor = ({
 }) =>
 	dashboardLinkableApproval({
 		approval: {
-			provider: provider as ChatApproval["provider"],
+			provider,
 			tool_args: toolArgs ?? {},
 			tool_name: toolName,
 		},
@@ -54,9 +43,9 @@ const dashboardUrlFor = ({
 	})
 		? approvalSheetUrl({
 				approvalId,
-				customerId: requestField(toolArgs, "customer_id"),
+				customerId: requestStringField(toolArgs, "customer_id"),
 				env,
-				planId: requestField(toolArgs, "plan_id"),
+				planId: requestStringField(toolArgs, "plan_id"),
 				toolName,
 			})
 		: undefined;

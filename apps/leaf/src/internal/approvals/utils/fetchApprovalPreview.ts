@@ -1,6 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
+import { errorMessage } from "../../../lib/errorMessage.js";
 import type { WithheldWrite } from "../../agentRuntime/eve/parkedInput.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
@@ -8,6 +9,7 @@ import {
 	resolveApprovalDisplay,
 	withApprovalDisplay,
 } from "./approvalDisplay.js";
+import { isErrorResult } from "./approvalErrors.js";
 import { writeToPreviewTool } from "./toolRegistry.js";
 import { toolRequestFromArgs } from "./toolRequest.js";
 
@@ -121,24 +123,15 @@ export const fetchApprovalPreview = async ({
 			toolName: previewTool,
 			args: { request: previewRequestForWrite({ request, toolName }) },
 		});
-		// Failed previews use two response shapes; neither should replace the
-		// card's params-only fallback.
-		if (result && typeof result === "object") {
-			const record = result as Record<string, unknown>;
-			const isErrorShape =
-				Boolean(record.error) ||
-				"cause" in record ||
-				(typeof record.message === "string" &&
-					("code" in record || "domain" in record));
-			if (isErrorShape) return FAILED_APPROVAL_PREVIEW;
-		}
+		// A failed preview must not replace the card's params-only fallback.
+		if (isErrorResult(result)) return FAILED_APPROVAL_PREVIEW;
 		return result;
 	} catch (error) {
 		logger.warn("Could not backfill approval preview", {
 			event: "leaf.approval_preview_backfill_failed",
 			tool: toolName,
 			data: {
-				error: error instanceof Error ? error.message : String(error),
+				error: errorMessage(error),
 			},
 		});
 		return FAILED_APPROVAL_PREVIEW;

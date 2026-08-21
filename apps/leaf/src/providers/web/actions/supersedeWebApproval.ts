@@ -3,6 +3,7 @@ import { denyApprovalParkAndDrain } from "../../../internal/approvals/actions/de
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
 import { settleCardRemotely } from "../../../internal/approvals/surfaces/slack/settleCardRemotely.js";
 import { db } from "../../../lib/db.js";
+import { errorMessage } from "../../../lib/errorMessage.js";
 import { logger } from "../../../lib/logger.js";
 
 const SUPERSEDED_NOTE =
@@ -70,7 +71,7 @@ export const supersedeWebApproval = async ({
 		logger.warn("Could not deny superseded approval in eve", {
 			event: "leaf.approval_dashboard_supersede_deny_failed",
 			approval_id: approvalId,
-			data: { error },
+			data: { error: errorMessage(error) },
 		});
 	}
 

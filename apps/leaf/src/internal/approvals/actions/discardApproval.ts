@@ -1,6 +1,6 @@
 import type { ChatApproval } from "@autumn/shared";
+import { denyOptionOf } from "../domain/approvalRecord.js";
 import type { ApprovalRunResult } from "../types.js";
-import { denyOptionFromApproval } from "./approvalOptions.js";
 import { submitApprovalInput } from "./submitApprovalInput.js";
 
 export const discardApproval = async ({
@@ -13,6 +13,6 @@ export const discardApproval = async ({
 	submitApprovalInput({
 		approval,
 		note: "(Dashboard: the user clicked Discard on this change. Acknowledge briefly and ask what they'd like different — they are NOT waiting on any further approval.)",
-		optionId: denyOptionFromApproval(approval),
+		optionId: denyOptionOf(approval),
 		providerUserId,
 	});

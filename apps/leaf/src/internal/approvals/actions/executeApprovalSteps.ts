@@ -1,5 +1,6 @@
 import type { ChatApproval, ChatApprovalStep } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
+import { errorMessage } from "../../../lib/errorMessage.js";
 import { logger } from "../../../lib/logger.js";
 import {
 	normalizeToolName,
@@ -43,7 +44,7 @@ const detectPreviewDrift = async ({
 	const checkable = steps.filter(
 		(step) => step.preview && writeToPreviewTool(step.tool_name),
 	);
-	if (!checkable.length) return { drifted: false as const };
+	if (!checkable.length) return { drifted: false } as const;
 	const fresh = await withStepPreviews({
 		env,
 		getToken: async () => token,
@@ -54,35 +55,54 @@ const detectPreviewDrift = async ({
 			toolName: step.tool_name,
 		})),
 	});
-	const drifted = checkable.some(
-		(step, index) =>
-			previewMoneyFactsDrifted({
+	const reason = checkable
+		.map((step, index) => {
+			const verdict = previewMoneyFactsDrifted({
 				current: fresh[index]?.preview,
 				stored: step.preview,
-			}).drifted,
-	);
+			});
+			return verdict.drifted ? verdict.reason : undefined;
+		})
+		.find(Boolean);
+	if (!reason) return { drifted: false } as const;
 	return {
-		drifted,
+		drifted: true,
+		reason,
 		refresh: async () => {
 			await Promise.all(
-				checkable.map(async (step, index) => {
-					await chatApprovalStepsRepo.setPreview({
-						approvalId: step.approval_id,
-						db,
+				checkable.map((step, index) =>
+					setStepPreviewEverywhere({
 						preview: fresh[index]?.preview,
-						stepId: step.id,
-					});
-					if (step.position === 0) {
-						await chatApprovalRepo.setPreview({
-							approvalId: step.approval_id,
-							db,
-							preview: fresh[index]?.preview,
-						});
-					}
-				}),
+						step,
+					}),
+				),
 			);
 		},
-	};
+	} as const;
+};
+
+/** The primary write is mirrored on the parent row for card rendering, so a
+ * refreshed preview must land on both copies or they drift apart. */
+const setStepPreviewEverywhere = async ({
+	preview,
+	step,
+}: {
+	preview: unknown;
+	step: ChatApprovalStep;
+}) => {
+	await chatApprovalStepsRepo.setPreview({
+		approvalId: step.approval_id,
+		db,
+		preview,
+		stepId: step.id,
+	});
+	if (step.position === 0) {
+		await chatApprovalRepo.setPreview({
+			approvalId: step.approval_id,
+			db,
+			preview,
+		});
+	}
 };
 
 const executeSteps = async ({
@@ -196,7 +216,6 @@ export const executeApprovalSteps = async ({
 		env: approval.env,
 		orgId: approval.org_id,
 		provider: approval.provider,
-		userId: approval.provider === "web" ? providerUserId : undefined,
 		workspaceId: approval.workspace_id,
 	});
 
@@ -213,10 +232,11 @@ export const executeApprovalSteps = async ({
 			db,
 			providerUserId,
 		});
-		await drift.refresh?.();
+		await drift.refresh();
 		logger.info("Approval drifted; card refreshed instead of executing", {
 			event: "leaf.approval_drift_refreshed",
 			approval_id: approval.id,
+			data: { reason: drift.reason },
 		});
 		return { drifted: true, message: DRIFT_MESSAGE };
 	}
@@ -253,14 +273,6 @@ export const executeApprovalSteps = async ({
 	// Notification only, fired async — execution is already durable and the
 	// card must not wait on a model turn; failures (even session-gone) only log.
 	const notifyEve = async () => {
-		const stepDenyOptions = new Map(
-			steps
-				.filter((step) => step.request_id && step.deny_option_id)
-				.map((step) => [
-					step.request_id as string,
-					step.deny_option_id as string,
-				]),
-		);
 		const appliedArgs = executed
 			.filter(({ outcome }) => outcome.status === "applied")
 			.map(({ step }) => ({
@@ -284,8 +296,6 @@ export const executeApprovalSteps = async ({
 				)
 					? "This write was already applied by the system when the user approved — do not re-issue it; reply with a short confirmation instead."
 					: undefined,
-			siblingOptionIdFor: (siblingRequestId) =>
-				stepDenyOptions.get(siblingRequestId),
 			suppressSiblingWithheldNote: true,
 		});
 		await onResumed?.(resumed);
@@ -294,7 +304,7 @@ export const executeApprovalSteps = async ({
 		logger.warn("Could not notify eve after executing approved steps", {
 			event: "leaf.approval_notify_failed",
 			approval_id: approval.id,
-			data: { error },
+			data: { error: errorMessage(error) },
 		});
 	});
 

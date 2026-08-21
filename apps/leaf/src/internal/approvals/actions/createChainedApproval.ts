@@ -102,21 +102,13 @@ export const createChainedApproval = async ({
 			provider,
 			providerUserId,
 			runId: sessionId,
-			steps: [
-				{
-					preview,
-					requestId: chained.requestId,
-					toolArgs,
-					toolName: chained.toolName,
-				},
-				...previewedWithheld.map((write) => ({
-					denyOptionId: write.denyOptionId,
-					preview: write.preview,
-					requestId: write.requestId,
-					toolArgs: write.input ?? {},
-					toolName: write.toolName,
-				})),
-			],
+			groupedSteps: previewedWithheld.map((write) => ({
+				denyOptionId: write.denyOptionId,
+				preview: write.preview,
+				requestId: write.requestId,
+				toolArgs: write.input ?? {},
+				toolName: write.toolName,
+			})),
 			toolArgs,
 			toolCallId: chained.requestId,
 			toolName: chained.toolName,

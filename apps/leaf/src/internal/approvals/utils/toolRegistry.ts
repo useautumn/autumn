@@ -2,10 +2,9 @@ import { GATED_WRITES } from "../../../../agent/lib/gatedWrites.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 
 const writePreviewTools = new Map(
-	GATED_WRITES.filter((write) => write.previewTool).map((write) => [
-		write.toolName,
-		write.previewTool as string,
-	]),
+	GATED_WRITES.flatMap((write) =>
+		write.previewTool ? [[write.toolName, write.previewTool] as const] : [],
+	),
 );
 
 const previewToolNames = new Set(writePreviewTools.values());

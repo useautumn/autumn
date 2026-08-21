@@ -22,7 +22,14 @@ await mockLeafModule({
 		chatApprovalRepo: {
 			insert: async ({ data }: { data: Record<string, unknown> }) => {
 				inserted.push(data);
-				const steps = data.steps as Array<Record<string, unknown>>;
+				const steps = [
+					{
+						requestId: data.toolCallId,
+						toolArgs: data.toolArgs,
+						toolName: data.toolName,
+					},
+					...(data.groupedSteps as Array<Record<string, unknown>>),
+				];
 				insertedSteps.push(
 					...steps.map((step, position) => ({
 						...step,
@@ -157,15 +164,16 @@ describe("createApproval persists the grouped steps", () => {
 			approveOptionId?: string;
 			childSessionIds?: string[];
 			denyOptionId?: string;
-			steps: Array<{ requestId?: string; toolName: string }>;
+			groupedSteps: Array<{ requestId?: string; toolName: string }>;
 			toolArgs: Record<string, unknown>;
+			toolName: string;
 		};
-		expect(data.steps.map((step) => step.toolName)).toEqual([
-			"autumn__attach",
+		expect(data.toolName).toBe("autumn__attach");
+		expect(data.groupedSteps.map((step) => step.toolName)).toEqual([
 			"autumn__attach",
 			"autumn__attach",
 		]);
-		expect(data.steps.slice(1).map((step) => step.requestId)).toEqual([
+		expect(data.groupedSteps.map((step) => step.requestId)).toEqual([
 			"req_leaf-0002",
 			"req_leaf-0003",
 		]);

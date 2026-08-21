@@ -13,19 +13,28 @@ import { publicToolArgs } from "../utils/toolRequest.js";
  * cover pending rows inserted before the columns existed (≤15-min window per
  * deploy) and can be deleted once no such rows remain. */
 
-const markerString = (approval: ChatApproval, key: string) => {
-	const value = (approval.tool_args as Record<string, unknown>)[key];
+export const markerString = (
+	toolArgs: Record<string, unknown>,
+	key: string,
+) => {
+	const value = toolArgs[key];
 	return typeof value === "string" ? value : undefined;
 };
 
 export const approveOptionOf = (approval: ChatApproval): string =>
 	approval.approve_option_id ??
-	markerString(approval, "_eveApproveOptionId") ??
+	markerString(
+		approval.tool_args as Record<string, unknown>,
+		"_eveApproveOptionId",
+	) ??
 	"approve";
 
 export const denyOptionOf = (approval: ChatApproval): string =>
 	approval.deny_option_id ??
-	markerString(approval, "_eveDenyOptionId") ??
+	markerString(
+		approval.tool_args as Record<string, unknown>,
+		"_eveDenyOptionId",
+	) ??
 	"deny";
 
 /** Sibling park ids are the grouped steps' request ids — derived, not stored
@@ -43,6 +52,19 @@ export const siblingRequestIdsOf = ({
 	return grouped.length
 		? grouped
 		: siblingRequestIdsFromToolArgs(approval.tool_args);
+};
+
+/** Deny option id per grouped sibling request — eve rejects option ids
+ * absent from a request, so each sibling's own deny option must be used. */
+export const siblingDenyOptionFor = (
+	steps: ReadonlyArray<ChatApprovalStep>,
+): ((siblingRequestId: string) => string | undefined) => {
+	const denyOptions = new Map(
+		steps
+			.filter((step) => step.position > 0 && step.request_id)
+			.map((step) => [step.request_id as string, step.deny_option_id]),
+	);
+	return (siblingRequestId) => denyOptions.get(siblingRequestId) ?? undefined;
 };
 
 export const childSessionIdsOf = (
@@ -104,8 +126,9 @@ const UNSEEDABLE_CUSTOMIZE_KEYS = [
 	"update_items",
 ] as const;
 
-/** Mirrors the server's billing_request_resolution `unrepresentable` set:
- * keys with no V0-dialect slot cannot be shown or edit-preserved in a sheet. */
+/** update_items/remove_licenses have no V0-dialect slot; billing_controls has
+ * no sheet control — a seed would silently drop them, so those cards stay
+ * Slack-only. */
 const sheetSeedableCustomize = (customize: unknown) => {
 	if (!customize) return true;
 	if (typeof customize !== "object") return false;
@@ -122,7 +145,11 @@ export const dashboardLinkableApproval = ({
 	approval,
 	groupedStepCount,
 }: {
-	approval: Pick<ChatApproval, "provider" | "tool_args" | "tool_name">;
+	approval: {
+		provider: string;
+		tool_args: ChatApproval["tool_args"];
+		tool_name: string;
+	};
 	groupedStepCount: number;
 }) => {
 	const request = approval.tool_args?.request;
@@ -134,6 +161,7 @@ export const dashboardLinkableApproval = ({
 		groupedStepCount === 0 &&
 		sheetSeedableCustomize(customize) &&
 		SHEET_LINKABLE_TOOLS.has(normalizeToolName(approval.tool_name)) &&
+		// The column is notNull, but test fixtures construct partial rows.
 		!isInternalAutumnSlackProvider({ provider: approval.provider ?? "" })
 	);
 };

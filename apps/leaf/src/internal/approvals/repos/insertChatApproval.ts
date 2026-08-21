@@ -16,14 +16,15 @@ export type InsertChatApprovalData = {
 	childSessionIds?: ReadonlyArray<string>;
 	denyOptionId?: string;
 	env: AppEnv;
+	/** Withheld writes beyond the primary, in execution order. The primary
+	 * step (position 0) is derived from the top-level tool fields. */
+	groupedSteps?: ReadonlyArray<InsertApprovalStep>;
 	harness: "eve";
 	orgId: string;
 	preview?: unknown;
 	provider: ChatProvider;
 	providerUserId: string;
 	runId?: string;
-	/** Every write on the card in execution order, primary first. */
-	steps?: ReadonlyArray<InsertApprovalStep>;
 	toolArgs: Record<string, unknown>;
 	toolCallId?: string;
 	toolName: string;
@@ -38,33 +39,45 @@ export const insertChatApproval = async ({
 	db: ChatDb;
 }) => {
 	const id = `chat_app_${crypto.randomUUID().replace(/-/g, "")}`;
-	await db.insert(chatApprovals).values({
-		id,
-		org_id: data.orgId,
-		provider: data.provider,
-		workspace_id: data.workspaceId,
-		channel_id: data.channelId,
-		provider_user_id: data.providerUserId,
-		env: data.env,
-		harness: data.harness,
-		run_id: data.runId,
-		tool_call_id: data.toolCallId,
-		tool_name: normalizeToolName(data.toolName),
-		tool_args: data.toolArgs,
-		preview: data.preview,
-		status: "pending",
-		child_session_ids: data.childSessionIds ? [...data.childSessionIds] : null,
-		approve_option_id: data.approveOptionId,
-		deny_option_id: data.denyOptionId,
-		created_at: Date.now(),
-		expires_at: addMinutes(Date.now(), APPROVAL_TTL_MINUTES).getTime(),
-	});
-	if (data.steps?.length) {
+	const steps: InsertApprovalStep[] = [
+		{
+			denyOptionId: data.denyOptionId,
+			preview: data.preview,
+			requestId: data.toolCallId,
+			toolArgs: data.toolArgs,
+			toolName: data.toolName,
+		},
+		...(data.groupedSteps ?? []),
+	];
+	await db.transaction(async (tx) => {
+		await tx.insert(chatApprovals).values({
+			id,
+			org_id: data.orgId,
+			provider: data.provider,
+			workspace_id: data.workspaceId,
+			channel_id: data.channelId,
+			provider_user_id: data.providerUserId,
+			env: data.env,
+			harness: data.harness,
+			run_id: data.runId,
+			tool_call_id: data.toolCallId,
+			tool_name: normalizeToolName(data.toolName),
+			tool_args: data.toolArgs,
+			preview: data.preview,
+			status: "pending",
+			child_session_ids: data.childSessionIds
+				? [...data.childSessionIds]
+				: null,
+			approve_option_id: data.approveOptionId,
+			deny_option_id: data.denyOptionId,
+			created_at: Date.now(),
+			expires_at: addMinutes(Date.now(), APPROVAL_TTL_MINUTES).getTime(),
+		});
 		await chatApprovalStepsRepo.insert({
 			approvalId: id,
-			db,
-			steps: data.steps,
+			db: tx as unknown as ChatDb,
+			steps,
 		});
-	}
+	});
 	return id;
 };

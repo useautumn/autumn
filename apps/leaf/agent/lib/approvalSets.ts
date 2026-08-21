@@ -4,7 +4,7 @@ import type { LeafAgentConnection } from "./toolAllowlists.js";
 const setForAgent = (agent: LeafAgentConnection): ReadonlySet<string> =>
 	new Set(
 		GATED_WRITES.filter((write) =>
-			(write.agents as readonly string[]).includes(agent),
+			write.agents.some((agentName) => agentName === agent),
 		).map((write) => write.toolName),
 	);
 

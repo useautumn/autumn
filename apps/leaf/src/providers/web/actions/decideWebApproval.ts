@@ -1,7 +1,7 @@
 import { discardApproval } from "../../../internal/approvals/actions/discardApproval.js";
 import { resolveApproval } from "../../../internal/approvals/actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
-import { assertDecidableApproval } from "../../../internal/approvals/utils/assertDecidableApproval.js";
+import { approvalDecidability } from "../../../internal/approvals/utils/approvalDecidability.js";
 import { WEB_CHAT_PROVIDER } from "../../../internal/installations/actions/ensureWebChatAuth.js";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
@@ -32,7 +32,7 @@ export const decideWebApproval = async ({
 	) {
 		return { error: "Approval not found" };
 	}
-	const decidability = assertDecidableApproval({ approval });
+	const decidability = approvalDecidability({ approval });
 	if (!decidability.decidable) {
 		return {
 			error:

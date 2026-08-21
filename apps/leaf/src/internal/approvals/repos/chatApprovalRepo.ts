@@ -10,7 +10,6 @@ import { moveChatApprovalToRun } from "./moveChatApprovalToRun.js";
 import { releaseChatApproval } from "./releaseChatApproval.js";
 import { setChatApprovalMessageTs } from "./setChatApprovalMessageTs.js";
 import { setChatApprovalPreview } from "./setChatApprovalPreview.js";
-import { setChatApprovalToolArgs } from "./setChatApprovalToolArgs.js";
 
 export const chatApprovalRepo = {
 	cancel: cancelChatApproval,
@@ -25,5 +24,4 @@ export const chatApprovalRepo = {
 	release: releaseChatApproval,
 	setMessageTs: setChatApprovalMessageTs,
 	setPreview: setChatApprovalPreview,
-	setToolArgs: setChatApprovalToolArgs,
 } as const;

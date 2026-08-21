@@ -7,7 +7,11 @@ import type {
 	EveAuthContext,
 	EveSessionRef,
 } from "../../agentRuntime/eve/types.js";
-import { denyOptionOf, siblingRequestIdsOf } from "../domain/approvalRecord.js";
+import {
+	denyOptionOf,
+	siblingDenyOptionFor,
+	siblingRequestIdsOf,
+} from "../domain/approvalRecord.js";
 import { chatApprovalStepsRepo } from "../repos/chatApprovalStepsRepo.js";
 
 /** The one way to deny an eve park without carding it: answers the primary
@@ -37,6 +41,7 @@ export const denyApprovalParkAndDrain = async ({
 		optionId: denyOptionOf(approval),
 		requestId: approval.tool_call_id,
 		session,
+		siblingOptionIdFor: siblingDenyOptionFor(stepRows),
 		siblingRequestIds: siblingRequestIdsOf({ approval, steps: stepRows }),
 	});
 	adoptPostedEveSession({ posted, session, status: "running" });

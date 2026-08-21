@@ -7,34 +7,18 @@ import type {
 	ProductItem,
 	TrialOnEnd,
 } from "@autumn/shared";
+import {
+	anchorOverridesFrom,
+	quantityRecordFrom,
+	requestRecord,
+} from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
 import type { AttachForm, FormCustomLineItem } from "../attachFormSchema";
 
 type RequestBody = Record<string, unknown>;
 
-const record = (value: unknown): RequestBody | undefined =>
-	value && typeof value === "object" && !Array.isArray(value)
-		? (value as RequestBody)
-		: undefined;
-
-const quantityRecordFrom = (
-	value: unknown,
-	idKey: string,
-): Record<string, number> => {
-	if (!Array.isArray(value)) return {};
-	return Object.fromEntries(
-		value.flatMap((entry) => {
-			const id = record(entry)?.[idKey];
-			const quantity = record(entry)?.quantity;
-			return typeof id === "string" && typeof quantity === "number"
-				? [[id, quantity]]
-				: [];
-		}),
-	);
-};
-
 const trialOverridesFrom = (value: unknown): Partial<AttachForm> => {
 	if (value === null) return { trialEnabled: false };
-	const trial = record(value);
+	const trial = requestRecord(value);
 	if (!trial || typeof trial.length !== "number") return {};
 	return {
 		trialCardRequired: trial.card_required !== false,
@@ -47,25 +31,11 @@ const trialOverridesFrom = (value: unknown): Partial<AttachForm> => {
 	};
 };
 
-const anchorOverridesFrom = (value: unknown): Partial<AttachForm> => {
-	if (value === "now") {
-		return { billingCycleAnchorMode: "now", resetBillingCycle: true };
-	}
-	if (typeof value === "number") {
-		return {
-			billingCycleAnchorDate: value,
-			billingCycleAnchorMode: "custom",
-			resetBillingCycle: true,
-		};
-	}
-	return {};
-};
-
 const carryOverOverridesFrom = (
 	value: unknown,
 	overrides: { enabled: keyof AttachForm; featureIds: keyof AttachForm },
 ): Partial<AttachForm> => {
-	const carryOver = record(value);
+	const carryOver = requestRecord(value);
 	if (!carryOver?.enabled) return {};
 	return {
 		[overrides.enabled]: true,
@@ -139,7 +109,7 @@ export const attachFormOverridesFromRequestBody = (
 	if (Array.isArray(request.custom_line_items)) {
 		overrides.customLineItems = request.custom_line_items.flatMap(
 			(item, index): FormCustomLineItem[] => {
-				const lineItem = record(item);
+				const lineItem = requestRecord(item);
 				return typeof lineItem?.amount === "number" &&
 					typeof lineItem.description === "string"
 					? [

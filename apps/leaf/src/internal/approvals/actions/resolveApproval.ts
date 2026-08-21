@@ -10,7 +10,7 @@ import {
 } from "../../agentRuntime/eve/repo.js";
 import { surfaceRendersGroup } from "../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
-import type { ApprovalRunResult } from "../types.js";
+import type { ApprovalRunResult, SubmittedApprovalResult } from "../types.js";
 import { approvalErrorResult } from "../utils/approvalErrors.js";
 import { executeApprovalSteps } from "./executeApprovalSteps.js";
 import { resumeApproval } from "./resumeApproval.js";
@@ -53,6 +53,16 @@ const releaseClaim = async ({
 	}
 };
 
+/** Deterministic executor gate: flag-controlled (default on outside
+ * production) and Slack-surface-only — the dashboard shows a group's primary
+ * write alone, so it must never execute the whole group. */
+const approvalExecutorEnabled = ({ provider }: { provider: string }) => {
+	const flag =
+		env.LEAF_APPROVAL_EXECUTOR ??
+		(process.env.NODE_ENV === "production" ? "0" : "1");
+	return flag === "1" && surfaceRendersGroup(provider);
+};
+
 export const resolveApproval = async ({
 	approval,
 	onResumed,
@@ -75,15 +85,7 @@ export const resolveApproval = async ({
 		);
 	}
 
-	// Deterministic executor: the claimed row's stored steps run directly and
-	// eve is resumed as notification only. Slack-only — the dashboard shows a
-	// group's primary write alone, so it must not execute the whole group.
-	const executorFlag =
-		env.LEAF_APPROVAL_EXECUTOR ??
-		(process.env.NODE_ENV === "production" ? "0" : "1");
-	const executorEnabled =
-		executorFlag === "1" && surfaceRendersGroup(approval.provider ?? "");
-	if (executorEnabled) {
+	if (approvalExecutorEnabled({ provider: approval.provider ?? "" })) {
 		try {
 			const executed = await executeApprovalSteps({
 				approval,
@@ -103,7 +105,7 @@ export const resolveApproval = async ({
 		}
 	}
 
-	let result: ApprovalRunResult;
+	let result: SubmittedApprovalResult;
 	try {
 		result = await resumeApproval({
 			approval,
@@ -141,10 +143,6 @@ export const resolveApproval = async ({
 	}
 
 	// Retryable errors return the row to pending; everything else is finalized.
-	if ("drifted" in result) {
-		await releaseClaim({ approval, providerUserId });
-		return result;
-	}
 	if ("error" in result && result.retryable) {
 		await releaseClaim({ approval, providerUserId });
 	} else {

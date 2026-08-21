@@ -2,6 +2,7 @@ import type { ChatApproval } from "@autumn/shared";
 import { bot } from "../../../../bot.js";
 import { decrypt } from "../../../../lib/crypto.js";
 import { db } from "../../../../lib/db.js";
+import { errorMessage } from "../../../../lib/errorMessage.js";
 import { logger } from "../../../../lib/logger.js";
 import { findSlackInstallationForWorkspace } from "../../../../providers/slack/installations.js";
 import {
@@ -10,7 +11,6 @@ import {
 } from "../../../../ui/blocks.js";
 import { withheldStepsOf } from "../../domain/approvalRecord.js";
 import { chatApprovalStepsRepo } from "../../repos/chatApprovalStepsRepo.js";
-import type { ApprovalStepOutcome } from "../../types.js";
 
 /** Edits an approval's Slack card without a live event — used when the
  * decision happened on another surface (dashboard apply). Multi-workspace
@@ -20,12 +20,10 @@ export const settleCardRemotely = async ({
 	approval,
 	statusLine,
 	status,
-	steps,
 }: {
 	approval: ChatApproval;
 	status: ApprovalCardStatus;
 	statusLine?: string;
-	steps?: ReadonlyArray<ApprovalStepOutcome>;
 }) => {
 	if (!approval.message_ts) {
 		logger.warn("No message_ts to settle approval card remotely", {
@@ -64,7 +62,6 @@ export const settleCardRemotely = async ({
 						preview: approval.preview ?? undefined,
 						status,
 						statusLine,
-						steps,
 						toolArgs: approval.tool_args,
 						toolName: approval.tool_name,
 					}) as never,
@@ -75,7 +72,7 @@ export const settleCardRemotely = async ({
 		logger.warn("Could not settle approval card remotely", {
 			event: "leaf.approval_remote_settle_failed",
 			approval_id: approval.id,
-			data: { error },
+			data: { error: errorMessage(error) },
 		});
 	}
 };

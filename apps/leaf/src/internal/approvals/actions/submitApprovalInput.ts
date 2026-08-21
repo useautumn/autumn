@@ -1,5 +1,5 @@
 import type { ChatApproval } from "@autumn/shared";
-import { db as chatDb, db } from "../../../lib/db.js";
+import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
 import {
 	ACTION_FAILED_MESSAGE,
@@ -12,12 +12,13 @@ import { getEveSessionBySessionId } from "../../agentRuntime/eve/repo.js";
 import type { EveAuthContext } from "../../agentRuntime/eve/types.js";
 import {
 	childSessionIdsOf,
+	siblingDenyOptionFor,
 	siblingRequestIdsOf,
 	surfaceRendersGroup,
 	withheldStepsOf,
 } from "../domain/approvalRecord.js";
 import { chatApprovalStepsRepo } from "../repos/chatApprovalStepsRepo.js";
-import type { ApprovalRunResult } from "../types.js";
+import type { SubmittedApprovalResult } from "../types.js";
 import { createChainedApproval } from "./createChainedApproval.js";
 
 const approvalAuth = ({
@@ -43,7 +44,6 @@ export const submitApprovalInput = async ({
 	optionId,
 	providerUserId,
 	shouldAbsorbChained,
-	siblingOptionIdFor,
 	suppressSiblingWithheldNote,
 }: {
 	approval: ChatApproval;
@@ -57,9 +57,8 @@ export const submitApprovalInput = async ({
 		input?: Record<string, unknown>;
 		toolName: string;
 	}) => string | undefined;
-	siblingOptionIdFor?: (siblingRequestId: string) => string | undefined;
 	suppressSiblingWithheldNote?: boolean;
-}): Promise<ApprovalRunResult> => {
+}): Promise<SubmittedApprovalResult> => {
 	if (!(approval.run_id && approval.tool_call_id)) {
 		return {
 			error: true,
@@ -82,7 +81,7 @@ export const submitApprovalInput = async ({
 	const auth = approvalAuth({ approval, providerUserId });
 	const stepRows = await chatApprovalStepsRepo.list({
 		approvalId: approval.id,
-		db: chatDb,
+		db,
 	});
 	const withheldSteps = withheldStepsOf({ approval, steps: stepRows });
 	const siblingRequestIds = siblingRequestIdsOf({ approval, steps: stepRows });
@@ -110,7 +109,7 @@ export const submitApprovalInput = async ({
 		orgId: approval.org_id,
 		requestId: approval.tool_call_id,
 		session,
-		siblingOptionIdFor,
+		siblingOptionIdFor: siblingDenyOptionFor(stepRows),
 		siblingRequestIds,
 		suppressSiblingWithheldNote,
 	});
