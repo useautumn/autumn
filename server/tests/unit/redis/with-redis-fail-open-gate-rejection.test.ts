@@ -97,12 +97,15 @@ const { runTrackWithRollout } = await import(
 );
 const { ParsedCheckParamsSchema } = await import("@autumn/shared");
 
-// queueTrack prefers TRACK_ASYNC_SQS_QUEUE_URL — stub both so a real URL from
-// local env can't leak in and route the mocked enqueue at actual SQS.
+// queueTrack prefers TRACK_ASYNC_STANDARD then TRACK_ASYNC — stub so a real
+// URL from local .env.local can't leak in and route the mocked enqueue at SQS.
 const originalTrackQueueUrl = process.env.TRACK_SQS_QUEUE_URL;
 const originalTrackAsyncQueueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+const originalTrackAsyncStandardQueueUrl =
+	process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL;
 process.env.TRACK_SQS_QUEUE_URL = "https://sqs.test/queue";
 process.env.TRACK_ASYNC_SQS_QUEUE_URL = "https://sqs.test/queue";
+delete process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL;
 
 const restoreEnv = (key: string, value: string | undefined) => {
 	if (value === undefined) delete process.env[key];
@@ -112,6 +115,10 @@ const restoreEnv = (key: string, value: string | undefined) => {
 afterAll(() => {
 	restoreEnv("TRACK_SQS_QUEUE_URL", originalTrackQueueUrl);
 	restoreEnv("TRACK_ASYNC_SQS_QUEUE_URL", originalTrackAsyncQueueUrl);
+	restoreEnv(
+		"TRACK_ASYNC_STANDARD_SQS_QUEUE_URL",
+		originalTrackAsyncStandardQueueUrl,
+	);
 	mock.module(
 		"@/external/redis/availabilityMonitor/redisV2Availability.js",
 		() => realRedisV2Availability,

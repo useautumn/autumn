@@ -51,6 +51,7 @@ await mockModuleWithRestore(
 import { runBatchTrackTokens } from "@/internal/balances/track/runBatchTrackTokens.js";
 
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
+import { pinTrackProducerQueueToFifo } from "./trackAsyncQueueTestEnv.js";
 
 const buildCtx = () =>
 	({
@@ -66,12 +67,14 @@ const buildCtx = () =>
 	}) as unknown as AutumnContext;
 
 describe("runBatchTrackTokens", () => {
-	const originalEnv = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+	let restoreQueueEnv: (() => void) | undefined;
 
 	beforeEach(() => {
 		mockState.modelNames = [];
 		mockState.queueCommands = [];
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
+		restoreQueueEnv = pinTrackProducerQueueToFifo({
+			fifoQueueUrl: trackAsyncQueueUrl,
+		}).restore;
 
 		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
@@ -91,7 +94,8 @@ describe("runBatchTrackTokens", () => {
 			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
 			mockState.originalSend = null;
 		}
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalEnv;
+		restoreQueueEnv?.();
+		restoreQueueEnv = undefined;
 	});
 
 	test("converts token items to queued track bodies with per-item idempotency keys", async () => {
