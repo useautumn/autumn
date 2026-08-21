@@ -66,6 +66,9 @@ export const useCusQuery = ({
 	const fetcher = async () => {
 		try {
 			const searchParams = new URLSearchParams();
+			// Detail page always shows expired loose entitlements (rendered greyed
+			// out, excluded from all balance math on the client).
+			searchParams.set("include_expired_loose", "true");
 			if (effectiveEntityId) searchParams.set("entity_id", effectiveEntityId);
 			const query = searchParams.toString();
 			const { data } = await axiosInstance.get(
