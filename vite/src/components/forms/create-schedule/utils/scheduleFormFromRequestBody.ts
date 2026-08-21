@@ -1,6 +1,12 @@
+import type { BillingBehavior, ProductItem } from "@autumn/shared";
 import { addMonths, addYears } from "date-fns";
 import {
-	quantityRecordFrom,
+	type FieldReaders,
+	overridesFromRequest,
+	readArray,
+	readNumber,
+	readQuantities,
+	readString,
 	requestRecord,
 } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
 import type {
@@ -10,17 +16,25 @@ import type {
 
 type RequestBody = Record<string, unknown>;
 
+const PLAN_FIELD_READERS: FieldReaders<SchedulePlan> = {
+	entityId: readString("entity_id"),
+	items: readArray<ProductItem>("items"),
+	productId: readString("plan_id"),
+	version: readNumber("version"),
+};
+
 const planFrom = (value: unknown): SchedulePlan | undefined => {
 	const plan = requestRecord(value);
 	if (!plan || typeof plan.plan_id !== "string") return undefined;
-	const items = Array.isArray(plan.items) ? plan.items : null;
+	const overrides = overridesFromRequest(plan, PLAN_FIELD_READERS);
 	return {
-		entityId: typeof plan.entity_id === "string" ? plan.entity_id : null,
-		isCustom: Boolean(items),
-		items: items as SchedulePlan["items"],
-		prepaidOptions: quantityRecordFrom(plan.feature_quantities, "feature_id"),
+		entityId: overrides.entityId ?? null,
+		isCustom: Array.isArray(plan.items),
+		items: overrides.items ?? null,
+		prepaidOptions:
+			readQuantities("feature_quantities", "feature_id")(plan) ?? {},
 		productId: plan.plan_id,
-		version: typeof plan.version === "number" ? plan.version : undefined,
+		version: overrides.version,
 	};
 };
 
@@ -72,7 +86,7 @@ export const scheduleFormFromRequestBody = (
 	return {
 		billingBehavior:
 			typeof request.billing_behavior === "string"
-				? (request.billing_behavior as CreateScheduleForm["billingBehavior"])
+				? (request.billing_behavior as BillingBehavior)
 				: null,
 		enablePlanImmediately: request.enable_plan_immediately === true,
 		phases,
