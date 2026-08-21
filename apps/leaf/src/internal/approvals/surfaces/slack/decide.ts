@@ -12,7 +12,7 @@ import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import { questionCard } from "../../../../providers/slack/presenters/interactionCards.js";
 import { resolveSlackCallerAuth } from "../../../../providers/slack/setup/resolveSlackCallerAuth.js";
-import { approvalStatusCard } from "../../../../ui/blocks.js";
+import { approvalCard, approvalStatusCard } from "../../../../ui/blocks.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
@@ -25,6 +25,7 @@ import type {
 	ApprovalActionDeps,
 	ApprovalAuthorization,
 	ApprovalCardStatus,
+	ApprovalRunResult,
 } from "../../types.js";
 import {
 	approvalErrorResult,
@@ -32,6 +33,7 @@ import {
 } from "../../utils/approvalErrors.js";
 import { formatElapsed } from "../../utils/approvalProgress.js";
 import { requiredScopesForApproval } from "../../utils/approvalScopeRequirements.js";
+import { publicToolArgs } from "../../utils/toolRequest.js";
 import { postApprovalCardForRow } from "./present.js";
 
 const APPROVAL_PROGRESS_DELAY_MS = ms.seconds(10);
@@ -364,6 +366,9 @@ export const handleApprovalActionWithDeps = async ({
 		try {
 			result = await deps.resolveApproval({
 				approval: claimed,
+				onResumed: async (resumed) => {
+					await surfaceResumedOutcome({ resumed });
+				},
 				onProgress: (line) => {
 					statusText = line;
 					editor.requestEdit();
@@ -373,6 +378,45 @@ export const handleApprovalActionWithDeps = async ({
 		} finally {
 			clearInterval(heartbeat);
 			await editor.finalize();
+		}
+		if ("drifted" in result) {
+			// Nothing executed; the row is back in pending with fresh previews —
+			// re-render the PENDING card and tell the thread why.
+			const refreshed = await deps.getApproval({ approvalId });
+			if (refreshed) {
+				await deps.editActionMessage({
+					content: approvalCard({
+						id: refreshed.id,
+						env: refreshed.env,
+						preview: refreshed.preview ?? undefined,
+						steps: await groupedStepsForApproval({ approval: refreshed }),
+						toolArgs: publicToolArgs(
+							refreshed.tool_args as Record<string, unknown>,
+						),
+						toolName: refreshed.tool_name,
+					}),
+					event,
+				});
+			}
+			try {
+				await deps.postThreadReply({
+					event,
+					markdown: `:warning: ${result.message}`,
+				});
+			} catch (error) {
+				deps.logger.warn("Could not post drift notice", {
+					event: "leaf.approval_drift_notice_failed",
+					approval_id: approvalId,
+					error,
+				});
+			}
+			deps.logger.info("Completed approval action", {
+				event: "leaf.approval_completed",
+				approval_id: approvalId,
+				status: "drift_refreshed",
+				tool: details.toolName,
+			});
+			return;
 		}
 		const failed = isErrorResult(result);
 		deps.logger.info("Completed approval action", {
@@ -399,32 +443,40 @@ export const handleApprovalActionWithDeps = async ({
 		// nothing streams — surface those as fresh cards or they stay invisible,
 		// even when an earlier step failed: the re-issued write is how the user
 		// recovers from that failure.
+		const surfaceResumedOutcome = async ({
+			resumed,
+		}: {
+			resumed: ApprovalRunResult;
+		}) => {
+			if (!event.thread) return;
+			if ("chainedApprovalId" in resumed && resumed.chainedApprovalId) {
+				const chained = await deps.getApproval({
+					approvalId: resumed.chainedApprovalId,
+				});
+				if (chained) {
+					await postApprovalCardForRow({
+						approval: chained,
+						logger: rootLogger,
+						target: event.thread,
+					});
+				}
+			}
+			if ("question" in resumed && resumed.question) {
+				await event.thread.post(
+					questionCard({
+						env: claimed.env,
+						options: resumed.question.options,
+						orgId: claimed.org_id,
+						prompt: resumed.question.prompt,
+						requestId: resumed.question.requestId,
+						sessionId: resumed.question.sessionId,
+					}),
+				);
+			}
+		};
 		if (event.thread) {
 			try {
-				if ("chainedApprovalId" in result && result.chainedApprovalId) {
-					const chained = await deps.getApproval({
-						approvalId: result.chainedApprovalId,
-					});
-					if (chained) {
-						await postApprovalCardForRow({
-							approval: chained,
-							logger: rootLogger,
-							target: event.thread,
-						});
-					}
-				}
-				if ("question" in result && result.question) {
-					await event.thread.post(
-						questionCard({
-							env: claimed.env,
-							options: result.question.options,
-							orgId: claimed.org_id,
-							prompt: result.question.prompt,
-							requestId: result.question.requestId,
-							sessionId: result.question.sessionId,
-						}),
-					);
-				}
+				await surfaceResumedOutcome({ resumed: result });
 			} catch (error) {
 				deps.logger.warn("Could not surface chained interaction", {
 					event: "leaf.approval_chained_surface_failed",

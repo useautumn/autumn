@@ -5,6 +5,7 @@ import {
 	type WithheldWrite,
 	withheldWritesFromToolArgs,
 } from "../../agentRuntime/eve/parkedInput.js";
+import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 import { publicToolArgs } from "../utils/toolRequest.js";
 
 /** Column-first accessors for approval rows. The `_eve*` marker fallbacks
@@ -87,3 +88,9 @@ export const allWritesOf = ({
 	},
 	...withheldStepsOf({ approval, steps }),
 ];
+
+/** Slack cards render every write in a parked batch, so approving the card
+ * approves the group; the dashboard shows the primary write alone. Internal
+ * Slack threads use the `slack_admin:<client>` provider and the same card. */
+export const surfaceRendersGroup = (provider: string) =>
+	provider === "slack" || isInternalAutumnSlackProvider({ provider });

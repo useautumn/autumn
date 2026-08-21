@@ -11,11 +11,17 @@ export type ActionMessageContent = Parameters<
 
 /** Outcome of one write on a grouped card, in apply order. */
 export type ApprovalStepOutcome = {
-	status: "applied" | "failed" | "pending";
+	status: "applied" | "failed" | "pending" | "skipped" | "unknown";
 	toolName: string;
 };
 
 export type ApprovalRunResult =
+	// The money facts changed since the card was shown; nothing executed and
+	// the refreshed card must be re-approved.
+	| {
+			drifted: true;
+			message: string;
+	  }
 	// `retryable` means the write never ran to completion (a session crash /
 	// interruption), so the approval stays pending and the user can re-apply.
 	| {
@@ -52,6 +58,7 @@ export type ApprovalAuthorization =
 export type ApprovalActionDeps = {
 	resolveApproval: (input: {
 		approval: ChatApproval;
+		onResumed?: (result: ApprovalRunResult) => Promise<void> | void;
 		onProgress?: (statusLine: string) => void;
 		providerUserId: string;
 	}) => Promise<ApprovalRunResult>;

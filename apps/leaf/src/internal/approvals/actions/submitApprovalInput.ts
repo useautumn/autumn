@@ -6,12 +6,14 @@ import {
 	APPROVAL_NOT_EXECUTED_MESSAGE,
 } from "../../../ui/messages.js";
 import { submitAgentInput } from "../../agentRuntime/actions/submitAgentInput/submitAgentInput.js";
+import { postEveInputResponse } from "../../agentRuntime/eve/client.js";
+import { approvalOptionIds } from "../../agentRuntime/eve/events.js";
 import { getEveSessionBySessionId } from "../../agentRuntime/eve/repo.js";
 import type { EveAuthContext } from "../../agentRuntime/eve/types.js";
-import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 import {
 	childSessionIdsOf,
 	siblingRequestIdsOf,
+	surfaceRendersGroup,
 	withheldStepsOf,
 } from "../domain/approvalRecord.js";
 import { chatApprovalStepsRepo } from "../repos/chatApprovalStepsRepo.js";
@@ -34,24 +36,29 @@ const approvalAuth = ({
 	workspaceId: approval.workspace_id,
 });
 
-/** Slack cards render every write in a parked batch, so approving the card
- * approves the group; the dashboard shows the primary write alone. Internal
- * Slack threads use the `slack_admin:<client>` provider and the same card. */
-const surfaceRendersGroup = (provider: string) =>
-	provider === "slack" || isInternalAutumnSlackProvider({ provider });
-
 export const submitApprovalInput = async ({
 	approval,
 	expectExecution,
 	note,
 	optionId,
 	providerUserId,
+	shouldAbsorbChained,
+	siblingOptionIdFor,
+	suppressSiblingWithheldNote,
 }: {
 	approval: ChatApproval;
 	expectExecution?: boolean;
 	note?: string;
 	optionId: string;
 	providerUserId: string;
+	/** Absorbs a re-issued duplicate of an already-applied write: returns the
+	 * deny note when the chained park should be auto-denied instead of carded. */
+	shouldAbsorbChained?: (chained: {
+		input?: Record<string, unknown>;
+		toolName: string;
+	}) => string | undefined;
+	siblingOptionIdFor?: (siblingRequestId: string) => string | undefined;
+	suppressSiblingWithheldNote?: boolean;
 }): Promise<ApprovalRunResult> => {
 	if (!(approval.run_id && approval.tool_call_id)) {
 		return {
@@ -103,20 +110,47 @@ export const submitApprovalInput = async ({
 		orgId: approval.org_id,
 		requestId: approval.tool_call_id,
 		session,
+		siblingOptionIdFor,
 		siblingRequestIds,
+		suppressSiblingWithheldNote,
 	});
-	const chainedApprovalId = chained
-		? await createChainedApproval({
-				auth,
-				chained,
-				providerUserId,
-				sessionId: session.sessionId,
-				withheld: chainedWithheld,
-			})
-		: undefined;
+	const absorbNote =
+		chained && !chainedWithheld?.length
+			? shouldAbsorbChained?.({
+					input: chained.input,
+					toolName: chained.toolName,
+				})
+			: undefined;
+	if (chained && absorbNote) {
+		// A re-issued duplicate of a write the system just applied — deny it in
+		// eve with the reason instead of asking the user again.
+		await postEveInputResponse({
+			auth,
+			note: absorbNote,
+			optionId: approvalOptionIds({ options: chained.options }).deny,
+			requestId: chained.requestId,
+			session,
+			siblingRequestIds: chainedSiblingRequestIds,
+		});
+		logger.info("Absorbed duplicate re-issued write", {
+			event: "leaf.approval_duplicate_absorbed",
+			approval_id: approval.id,
+			data: { tool: chained.toolName },
+		});
+	}
+	const chainedApprovalId =
+		chained && !absorbNote
+			? await createChainedApproval({
+					auth,
+					chained,
+					providerUserId,
+					sessionId: session.sessionId,
+					withheld: chainedWithheld,
+				})
+			: undefined;
 	// Eve may execute the approved call before the resumed stream opens, so a
 	// turn that did real work without echoing the result still counts as run.
-	const settled = !(chained || question);
+	const settled = !((chained && !absorbNote) || question);
 	const notExecuted =
 		expectExecution &&
 		(deferredEmptyTurn || (settled && approvedWriteUnverified && !text));

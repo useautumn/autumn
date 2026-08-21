@@ -9,6 +9,7 @@ import { listPendingChatApprovalsForRun } from "./listPendingChatApprovalsForRun
 import { moveChatApprovalToRun } from "./moveChatApprovalToRun.js";
 import { releaseChatApproval } from "./releaseChatApproval.js";
 import { setChatApprovalMessageTs } from "./setChatApprovalMessageTs.js";
+import { setChatApprovalPreview } from "./setChatApprovalPreview.js";
 import { setChatApprovalToolArgs } from "./setChatApprovalToolArgs.js";
 
 export const chatApprovalRepo = {
@@ -23,5 +24,6 @@ export const chatApprovalRepo = {
 	moveToRun: moveChatApprovalToRun,
 	release: releaseChatApproval,
 	setMessageTs: setChatApprovalMessageTs,
+	setPreview: setChatApprovalPreview,
 	setToolArgs: setChatApprovalToolArgs,
 } as const;

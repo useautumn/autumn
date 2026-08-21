@@ -1513,7 +1513,7 @@ export const approvalStatusCard = ({
 	status: ApprovalCardStatus;
 	/** Per-write outcomes on a grouped card. */
 	steps?: ReadonlyArray<{
-		status: "applied" | "failed" | "pending";
+		status: "applied" | "failed" | "pending" | "skipped" | "unknown";
 		toolName: string;
 	}>;
 	statusLine?: string;

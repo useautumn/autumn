@@ -85,6 +85,9 @@ export const decideWebApproval = async ({
 	}
 
 	const result = await resolveApproval({ approval, providerUserId });
+	if ("drifted" in result) {
+		return { error: result.message };
+	}
 	if ("error" in result) {
 		return { error: result.message };
 	}

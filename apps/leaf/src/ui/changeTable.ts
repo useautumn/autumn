@@ -123,6 +123,8 @@ const stepStatusLabels = {
 	applied: "🟢 Applied",
 	failed: "🔴 Failed",
 	pending: "⚪️ Not run",
+	skipped: "⏭️ Skipped",
+	unknown: "🟠 Unverified",
 } as const;
 
 /** Which writes on a grouped card actually landed. Only worth rendering when

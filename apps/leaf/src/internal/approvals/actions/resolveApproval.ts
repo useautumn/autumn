@@ -1,5 +1,6 @@
 import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
+import { env } from "../../../lib/env.js";
 import { logger } from "../../../lib/logger.js";
 import { APPROVAL_SESSION_GONE_MESSAGE } from "../../../ui/messages.js";
 import { EveSessionGoneError } from "../../agentRuntime/eve/client.js";
@@ -7,9 +8,11 @@ import {
 	deleteEveSession,
 	getEveSessionBySessionId,
 } from "../../agentRuntime/eve/repo.js";
+import { surfaceRendersGroup } from "../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import type { ApprovalRunResult } from "../types.js";
 import { approvalErrorResult } from "../utils/approvalErrors.js";
+import { executeApprovalSteps } from "./executeApprovalSteps.js";
 import { resumeApproval } from "./resumeApproval.js";
 
 const dropEveSession = async ({ approval }: { approval: ChatApproval }) => {
@@ -52,9 +55,12 @@ const releaseClaim = async ({
 
 export const resolveApproval = async ({
 	approval,
+	onResumed,
 	providerUserId,
 }: {
 	approval: ChatApproval;
+	/** Resumed-turn outcome arriving after an executor approve (async). */
+	onResumed?: (result: ApprovalRunResult) => Promise<void> | void;
 	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
 }): Promise<ApprovalRunResult> => {
@@ -67,6 +73,34 @@ export const resolveApproval = async ({
 		return approvalErrorResult(
 			new Error(`Unsupported legacy approval harness "${approval.harness}"`),
 		);
+	}
+
+	// Deterministic executor: the claimed row's stored steps run directly and
+	// eve is resumed as notification only. Slack-only — the dashboard shows a
+	// group's primary write alone, so it must not execute the whole group.
+	const executorFlag =
+		env.LEAF_APPROVAL_EXECUTOR ??
+		(process.env.NODE_ENV === "production" ? "0" : "1");
+	const executorEnabled =
+		executorFlag === "1" && surfaceRendersGroup(approval.provider ?? "");
+	if (executorEnabled) {
+		try {
+			const executed = await executeApprovalSteps({
+				approval,
+				onResumed,
+				providerUserId,
+			});
+			if (executed) return executed;
+		} catch (error) {
+			// Nothing has executed when this throws (token mint / step listing),
+			// so releasing the claim is safe.
+			logger.error("[chat] Approval executor failed before executing", error, {
+				event: "leaf.approval_executor_failed",
+				approval_id: approval.id,
+			});
+			await releaseClaim({ approval, providerUserId });
+			return approvalErrorResult(error, { retryable: true });
+		}
 	}
 
 	let result: ApprovalRunResult;
@@ -107,6 +141,10 @@ export const resolveApproval = async ({
 	}
 
 	// Retryable errors return the row to pending; everything else is finalized.
+	if ("drifted" in result) {
+		await releaseClaim({ approval, providerUserId });
+		return result;
+	}
 	if ("error" in result && result.retryable) {
 		await releaseClaim({ approval, providerUserId });
 	} else {

@@ -160,7 +160,9 @@ export const postEveInputResponse = async ({
 	optionId,
 	requestId,
 	session,
+	siblingOptionIdFor,
 	siblingRequestIds,
+	suppressSiblingWithheldNote,
 }: {
 	/** Answer the whole batch with `optionId` — a grouped card approves every
 	 * write it showed, rather than withholding all but the first. */
@@ -172,8 +174,14 @@ export const postEveInputResponse = async ({
 	optionId: string;
 	requestId: string;
 	session: EveSessionRef;
+	/** Each sibling's own option id — eve rejects ids absent from the request,
+	 * so a denied sibling must be answered with its real deny option. */
+	siblingOptionIdFor?: (siblingRequestId: string) => string | undefined;
 	/** The rest of the parked batch this answer belongs to. */
 	siblingRequestIds?: ReadonlyArray<string>;
+	/** The withheld note tells the model to RE-ISSUE the siblings; a caller
+	 * that already executed them must suppress it. */
+	suppressSiblingWithheldNote?: boolean;
 }) => {
 	// Eve defers every delivery while ANY request in the parked batch is
 	// unanswered: answering only the carded one wedges the session on empty
@@ -189,12 +197,14 @@ export const postEveInputResponse = async ({
 			inputResponses: [
 				{ optionId, requestId },
 				...siblings.map((siblingRequestId) => ({
-					optionId: approveSiblings ? optionId : "deny",
+					optionId: approveSiblings
+						? optionId
+						: (siblingOptionIdFor?.(siblingRequestId) ?? "deny"),
 					requestId: siblingRequestId,
 				})),
 			],
 			message:
-				siblings.length && !approveSiblings
+				siblings.length && !approveSiblings && !suppressSiblingWithheldNote
 					? [note, SIBLING_WITHHELD_NOTE].filter(Boolean).join("\n\n")
 					: note,
 		}),
