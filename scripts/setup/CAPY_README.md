@@ -96,6 +96,18 @@ The script writes managed values into:
 The Bun preload in `scripts/preload-env.ts` loads those files for direct commands,
 so Capy does not need Infisical for the local stack.
 
+## Logs
+
+Startup appends all output to `~/.autumn-capy/startup.log` (or
+`$CAPY_PREFIX/startup.log` when `CAPY_PREFIX` is set). Each run has a UTC
+delimiter, including failures before tmux or the application starts. The app
+process writes to `~/.autumn-capy/app.log` (or `$CAPY_PREFIX/app.log`), which is
+truncated only when a new app session launches. Both files are mode `0600`.
+
+Use `bun capy logs` to print the Startup log followed by the app log. It works
+after a Startup failure before the tmux session exists; when `app.log` is absent,
+it uses tmux's capture pane only as a fallback.
+
 ## Troubleshooting
 
 Inspect local infrastructure with:
