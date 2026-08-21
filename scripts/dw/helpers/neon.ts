@@ -13,6 +13,24 @@ import { fatal, log, sh } from "./shell.ts";
 
 let neonCmd: string | undefined;
 
+type NeonOperation = {
+	branch_id: string;
+	action: string;
+	status: string;
+};
+
+const REQUIRED_BRANCH_OPERATION_ACTIONS = [
+	"create_branch",
+	"start_compute",
+] as const;
+const TERMINAL_FAILURE_OPERATION_STATUSES = new Set([
+	"failed",
+	"cancelled",
+	"canceled",
+]);
+const NEON_OPERATION_TIMEOUT_MS = 120_000;
+const NEON_OPERATION_POLL_INTERVAL_MS = 1_000;
+
 function resolveNeonCmd(): string {
 	if (neonCmd) return neonCmd;
 	for (const candidate of ["neon", "neonctl"]) {
@@ -102,6 +120,82 @@ export function createBranch(name: string, parent: string): NeonBranch {
 	} catch {
 		fatal(`could not parse neon create output:\n${res.stdout}`);
 	}
+}
+
+function listOperations(branchName: string): NeonOperation[] {
+	const res = neon([
+		"operations",
+		"list",
+		"--project-id",
+		neonProjectId(),
+		"--output",
+		"json",
+	]);
+	if (res.code !== 0) {
+		fatal(
+			`neon operations list for ${branchName} failed: ${res.stderr || res.stdout}`,
+		);
+	}
+	try {
+		const operations = JSON.parse(res.stdout);
+		if (!Array.isArray(operations)) {
+			fatal(
+				`unexpected neon operations list output for ${branchName}:\n${res.stdout}`,
+			);
+		}
+		return operations as NeonOperation[];
+	} catch {
+		fatal(
+			`could not parse neon operations list for ${branchName} output:\n${res.stdout}`,
+		);
+	}
+}
+
+function pendingOperationsMessage(operations: NeonOperation[]): string {
+	const missing = REQUIRED_BRANCH_OPERATION_ACTIONS.filter(
+		(action) => !operations.some((operation) => operation.action === action),
+	).map((action) => `missing ${action}`);
+	const pending = operations
+		.filter((operation) => operation.status !== "finished")
+		.map((operation) => `${operation.action} (${operation.status})`);
+	return [...missing, ...pending].join(", ");
+}
+
+export function waitForNeonBranchOperations(branch: NeonBranch): void {
+	const deadline = Date.now() + NEON_OPERATION_TIMEOUT_MS;
+	let branchOperations: NeonOperation[] = [];
+
+	while (Date.now() < deadline) {
+		branchOperations = listOperations(branch.name).filter(
+			(operation) => operation.branch_id === branch.id,
+		);
+		const failedOperation = branchOperations.find((operation) =>
+			TERMINAL_FAILURE_OPERATION_STATUSES.has(operation.status.toLowerCase()),
+		);
+		if (failedOperation) {
+			fatal(
+				`neon branch ${branch.name} operation ${failedOperation.action} entered terminal failure status ${failedOperation.status}`,
+			);
+		}
+
+		const requiredOperationsAppeared = REQUIRED_BRANCH_OPERATION_ACTIONS.every(
+			(action) =>
+				branchOperations.some((operation) => operation.action === action),
+		);
+		if (
+			requiredOperationsAppeared &&
+			branchOperations.every((operation) => operation.status === "finished")
+		) {
+			log(`neon branch ${branch.name} operations ready`);
+			return;
+		}
+
+		Bun.sleepSync(NEON_OPERATION_POLL_INTERVAL_MS);
+	}
+
+	fatal(
+		`neon branch ${branch.name} did not become ready within ${NEON_OPERATION_TIMEOUT_MS / 1_000}s: ${pendingOperationsMessage(branchOperations)}`,
+	);
 }
 
 export function deleteBranch(
