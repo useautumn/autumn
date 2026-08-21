@@ -431,14 +431,135 @@ This is the user's sketch. It is phase 5, not phase 1.
 
 ---
 
-## 14. Bottom line
+## 14. Worker death and replay
 
-The instinct is right: **remaining should be a fold of a durable log; Redis/Postgres/Tinybird should be projections; apply should be a single writer that holds a snapshot.**
+Yes. If the stream is the durability SoT, a dead worker is not an incident. It is "load a snapshot, fold the tail, resume." The snapshot can live in Postgres. The trap is *what* you fold, and *from which starting remaining*.
+
+### 14.1 The only replay formula that works
+
+```text
+snapshot(S)  +  fold(facts where subject_seq > S)  =  remaining
+```
+
+`S` is a watermark: a stream offset, Redis Stream ID, or per-customer `subject_seq`. The snapshot and `S` must be captured together. A remaining vector without a watermark is not a snapshot. It is a rumor.
+
+You almost never replay from customer creation on the hot path. Genesis replay is for audit, backfill, and "we lost every snapshot." Live failover is checkpoint + tail. That is how Kafka Streams state stores, event-sourced aggregates, and TigerBeetle accounts work: the log is SoT, the in-memory map is a cache of the fold.
+
+### 14.2 What "fold" means
+
+Folding a **fact** is addition:
+
+```text
+ce_2.balance += -2
+ro_1.balance += -3
+uw_9.usage   +=  5
+```
+
+No sort order. No credit schema. No `now`. No Lua. Two workers folding the same fact tail from the same `snapshot(S)` get the same remaining. That is why the stream must be a fact ledger.
+
+Folding an **intent** ("used 5 messages") is re-running `prepareFeatureDeductionV2` + the allocator against whatever snapshot you just loaded. That is a different customer if:
+
+- a reset happened between intents
+- attach/cancel changed the grant graph
+- credit costs or AI markups changed
+- a lock was finalized
+- Postgres remaining already includes some of those tracks
+
+So: worker dies → replay **facts**. Do not replay today's `events` table through the deduction engine.
+
+### 14.3 What Postgres is allowed to be
+
+"Replay from the stream and maybe Postgres" is correct if Postgres is one of these, and only these:
+
+**A. Watermarked snapshot store (the practical one).**
+
+Postgres already has the grant graph (`customer_entitlements`, products, rollovers, usage windows). Give that row set a `subject_seq` (or `last_applied_stream_id`) meaning "this remaining already includes every fact `<= S`."
+
+Recovery:
+
+1. New worker takes ownership of the customer.
+2. Read Postgres structure + remaining where `subject_seq = S`.
+3. Read stream `(S, tip]`.
+4. Fold those facts into the snapshot in memory.
+5. Resume apply. New facts append at `tip+1`.
+
+This is the "maybe Postgres." It is not "Postgres is also SoT." It is "Postgres is the cheapest place we already store a checkpoint." The projector that keeps Postgres current (Phase 2) *is* the checkpoint writer. Worker failover and dashboard freshness become the same job.
+
+**B. Structure only, remaining only on the stream.**
+
+Postgres has which ents exist, allowances, intervals. Remaining starts at zero / grant facts. The stream has every usage, reset, and adjustment fact from genesis (or from the last stream-compacted snapshot). Recovery does not read Postgres remaining at all. Useful if we do not trust PG remaining. More stream retention.
+
+**C. Not this: current Postgres remaining + replay all events.**
+
+That double-applies every fact the snapshot flush already absorbed, and then applies intents the flush never saw, through an allocator that sees *today's* grant graph. This is the current `syncItemV5` bug rotated 90 degrees.
+
+Today's Postgres remaining cannot be `snapshot(S)` because it has no `S`. That is the whole point of the mutation-log watermark.
+
+### 14.4 What must already be on the stream before this works
+
+A worker that dies after a month of tracks cannot rebuild from Tinybird `events` + current `customer_entitlements`. Missing:
+
+- grant/shape facts (attach created `ce_9` last Tuesday)
+- reset facts (cron restored balance and minted rollovers)
+- admin / `set_usage` / `target_balance`
+- lock reserve/finalize
+- usage-window counter mutations
+- the watermark
+
+Until Phase 3, "replay the event stream" is not an operation we can run. Until Phase 1, the stream does not even have facts.
+
+### 14.5 Crash points (the worker is a state machine)
+
+Assume the apply path is: validate → append facts → ack API → fold into memory → (async) checkpoint Postgres.
+
+| Die after… | What is true | Recovery |
+| --- | --- | --- |
+| Validate, before append | Stream unchanged. Client will retry. | Nothing to replay. Idempotency on command id if the retry races a new owner. |
+| Append, before API ack | Fact is SoT. Client may retry. | New worker folds the fact. Retry is a no-op via `mutation_id` / command id. |
+| Ack, before memory fold | Same as above. | Fold from watermark. |
+| Memory fold, before PG checkpoint | Worker snapshot was ahead of Postgres. | New worker: `snapshot(S_pg)` + tail, which includes the fact. Postgres catches up as projector. |
+| PG checkpoint, stream truncated too early | Cannot rebuild. | Retention must outlive the oldest snapshot we are willing to recover from. |
+
+The ordering that makes death boring: **the fact hits the log before we tell the caller it happened.** Memory and Postgres are allowed to lag the log. The log is not allowed to lag memory. That is the opposite of today (Lua mutates hashes, then we hope a sync job copies them).
+
+If we keep Redis Lua as the apply engine, the equivalent is: Lua `XADD` facts in the same script as the hash writes (or XADD first, hashes as a projection). Worker death and Redis flush are the same recovery path: `snapshot(S) + tail`.
+
+### 14.6 You do not rebuild Tinybird to recover a worker
+
+Tinybird is a projector of intents + allocation for analytics. Worker recovery reads the **ledger topic** (or Redis Stream) and a watermarked snapshot. If those are gone, Tinybird cannot substitute: different schema, missing shape facts, eventual ingest, no `subject_seq`.
+
+### 14.7 How long is the tail
+
+Hot customer, 1k tracks/s, facts of a few hundred bytes: a 10-minute tail is cheap. A 90-day genesis replay is not a failover strategy. So:
+
+- Checkpoint remaining + structure every N seconds or every M facts (Postgres or a compacted snapshot topic).
+- Keep the fact log at least as long as `checkpoint_interval + projector_lag + ops_reaction`.
+- Offload older facts to object storage for audit, not for failover.
+
+This is why Phase 2 (Postgres as fact projector with a watermark) is the recovery mechanism, not a dashboard convenience.
+
+### 14.8 Worked example
+
+Customer has `ce_messages = 100`. Worker has applied facts 1..40. Postgres projector is at 37. Stream tip is 40.
+
+Worker dies.
+
+1. New owner reads Postgres: remaining 100 + deltas(1..37), `S = 37`.
+2. Reads facts 38, 39, 40. Folds. Memory now matches what the dead worker had.
+3. Track arrives. Allocator runs against that snapshot, appends fact 41, acks.
+
+If we had instead loaded Postgres remaining and replayed the original 40 *tracks* through Lua, we would re-allocate 38–40 against a graph that already included 1–37, and we would re-allocate 1–37 that Postgres already had. Remaining would be wrong in both directions.
+
+---
+
+## 15. Bottom line
+
+The instinct is right: **remaining should be a fold of a durable log; Redis/Postgres/Tinybird should be projections; apply should be a single writer that holds a snapshot.** Worker death is `snapshot(S) + fold(facts after S)`, and Postgres is a good place to keep `snapshot(S)` once it has a watermark.
 
 The first-idea version is wrong in three places:
 
-1. It treats today's track events as that log. They are intents. Remaining needs facts, and also grant/reset/shape facts we do not emit.
-2. It puts Tinybird on the SoT path. Tinybird is a projector.
+1. It treats today's track events as that log. They are intents. Remaining needs facts, and also grant/reset/shape facts we do not emit. Replay is addition of deltas, not re-running deduction.
+2. It puts Tinybird on the SoT path. Tinybird is a projector. Worker recovery does not read it.
 3. It under-specifies apply. Check/reject/lock cannot wait on an eventually consistent worker unless that worker *is* the synchronous owner of the customer.
 
 We already have the allocator, the mutation receipt shape, the subject epoch fence, and a written plan to stream those receipts. The missing piece is not a new conceptual architecture. It is making the **fact ledger** real, pointing Postgres and Tinybird at it, and only then deciding whether the process that folds the ledger is still Redis Lua or a worker we own.
