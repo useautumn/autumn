@@ -51,6 +51,7 @@ local function process_deduction_pass(params)
 
     local ent_id = ent_obj.customer_entitlement_id
     local credit_cost = ent_obj.credit_cost
+    local rate_card = ent_obj.rate_card
     local ent_feature_id = ent_obj.feature_id
     if credit_cost == cjson.null or credit_cost == nil or credit_cost == 0 then
       credit_cost = 1
@@ -105,6 +106,9 @@ local function process_deduction_pass(params)
         context = context,
         ent_feature_id = ent_feature_id,
         credit_cost = credit_cost,
+        rate_card = rate_card,
+        current_units = get_credit_rate_current_units(context, ent_id, rate_card),
+        requested_units = remaining_amount,
       })
       if not is_nil(available_from_usage_windows)
           and available_from_usage_windows < ent_amount then
@@ -119,22 +123,90 @@ local function process_deduction_pass(params)
     if not should_process then
       logger.log("%s skipping %s - %s", pass_name, ent_id, skip_reason)
     else
-      local deducted = deduct_from_main_balance({
-        context = context,
-        ent_id = ent_id,
-        target_entity_id = target_entity_id,
-        amount = ent_amount,
-        credit_cost = credit_cost,
-        pass_number = pass_number,
-        available_overage = available_overage,
-        min_balance = ent_obj.min_balance,
-        max_balance = ent_obj.max_balance,
-        alter_granted_balance = alter_granted_balance,
-        overage_behavior_is_allow = overage_behavior_is_allow,
-        log_prefix = pass_name,
-      })
+      local current_rate_units = get_credit_rate_current_units(
+        context,
+        ent_id,
+        rate_card
+      )
+      local effective_credit_cost = credit_cost
+      local requested_credit_change = nil
+      if not is_nil(rate_card) then
+        requested_credit_change = credit_rate_cost_for_units(
+          rate_card,
+          current_rate_units,
+          ent_amount
+        )
+        if math.abs(ent_amount) > CREDIT_RATE_EPSILON then
+          effective_credit_cost = requested_credit_change / ent_amount
+        end
+      end
+
+      local mutation_log_start = #(context.mutation_logs or {})
+      local deducted = 0
+      if is_nil(rate_card)
+          or math.abs(requested_credit_change or 0) > CREDIT_RATE_EPSILON
+      then
+        deducted = deduct_from_main_balance({
+          context = context,
+          ent_id = ent_id,
+          target_entity_id = target_entity_id,
+          amount = ent_amount,
+          credit_cost = effective_credit_cost,
+          pass_number = pass_number,
+          available_overage = available_overage,
+          min_balance = ent_obj.min_balance,
+          max_balance = ent_obj.max_balance,
+          alter_granted_balance = alter_granted_balance,
+          overage_behavior_is_allow = overage_behavior_is_allow,
+          log_prefix = pass_name,
+        })
+      end
 
       local deducted_units = deducted / credit_cost
+      if not is_nil(rate_card) then
+        deducted_units = credit_rate_units_for_credit_change({
+          rate_card = rate_card,
+          current_units = current_rate_units,
+          requested_units = ent_amount,
+          allowed_credit_change = deducted,
+        })
+
+        if math.abs(deducted_units) > CREDIT_RATE_EPSILON then
+          apply_credit_rate_attribution_change({
+            context = context,
+            customer_entitlement_id = ent_id,
+            rate_card = rate_card,
+            units = deducted_units,
+            credits = deducted,
+          })
+
+          if math.abs(deducted) <= CREDIT_RATE_EPSILON then
+            append_mutation_log({
+              context = context,
+              target_type = 'customer_entitlement',
+              customer_entitlement_id = ent_id,
+              credit_cost = 0,
+              balance_delta = 0,
+              adjustment_delta = 0,
+              usage_delta = 0,
+              value_delta = deducted_units,
+            })
+          else
+            for log_index = mutation_log_start + 1, #context.mutation_logs do
+              local mutation_log = context.mutation_logs[log_index]
+              if mutation_log.customer_entitlement_id == ent_id then
+                local log_credit_change = -safe_number(mutation_log.balance_delta)
+                local log_units = deducted_units * log_credit_change / deducted
+                mutation_log.value_delta = log_units
+                mutation_log.credit_cost = math.abs(log_units) > CREDIT_RATE_EPSILON
+                    and log_credit_change / log_units
+                  or 0
+              end
+            end
+          end
+        end
+      end
+
       remaining_amount = remaining_amount - deducted_units
 
       -- Settle the gate: record what this ent actually drained against every
@@ -144,9 +216,10 @@ local function process_deduction_pass(params)
         ent_feature_id = ent_feature_id,
         credit_cost = credit_cost,
         units = deducted_units,
+        credits = deducted,
       })
 
-      if deducted ~= 0 then
+      if deducted ~= 0 or deducted_units ~= 0 then
         if not updates[ent_id] then
           updates[ent_id] = { deducted = 0, additional_deducted = 0 }
         end
@@ -489,6 +562,7 @@ local function run_deduction_on_context(params)
 
       update.adjustment = ent_data.adjustment or 0
       update.additional_balance = 0
+      update.usage_attribution = ent_data.subject_balance.usage_attribution or {}
     end
   end
 

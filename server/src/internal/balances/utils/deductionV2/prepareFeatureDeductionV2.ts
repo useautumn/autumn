@@ -1,6 +1,7 @@
 import {
 	AllowanceType,
 	cusEntToStartingBalance,
+	ErrCode,
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
@@ -14,6 +15,7 @@ import {
 	isFreeCustomerEntitlement,
 	notNullish,
 	orgToInStatuses,
+	RecaseError,
 	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -140,11 +142,14 @@ export const prepareFeatureDeductionV2 = ({
 	const getCreditCostForEnt = computeCreditCosts({
 		cusEnts: customerEntitlements,
 		deduction,
+		catalogFeatures: ctx.features,
 	});
 
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
 		customerEntitlements.map((customerEntitlement) => {
-			const creditCost = getCreditCostForEnt(customerEntitlement.id);
+			const { creditCost, rateCard } = getCreditCostForEnt(
+				customerEntitlement.id,
+			);
 
 			const maxOverage = getMaxOverage({
 				cusEnt: customerEntitlement,
@@ -182,6 +187,7 @@ export const prepareFeatureDeductionV2 = ({
 			return {
 				customer_entitlement_id: customerEntitlement.id,
 				credit_cost: creditCost,
+				...(rateCard ? { rate_card: rateCard } : {}),
 				feature_id: customerEntitlement.entitlement.feature.id,
 				entity_feature_id:
 					customerEntitlement.entitlement.entity_feature_id ?? null,
@@ -192,6 +198,19 @@ export const prepareFeatureDeductionV2 = ({
 				...(isUnlimited ? { unlimited: true } : {}),
 			};
 		});
+
+	if (
+		lock?.enabled &&
+		customerEntitlementDeductions.some(
+			(entry) => entry.rate_card?.tier_behavior === "graduated",
+		)
+	) {
+		throw new RecaseError({
+			message: "Graduated credit rate cards do not support balance locks yet",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
 
 	// The deduction sort only prefers unlimited within a tier (entity level and
 	// credit systems sort first/last regardless), but the sink contract is that
@@ -210,7 +229,7 @@ export const prepareFeatureDeductionV2 = ({
 	}
 
 	const rolloverArrays = customerEntitlements.map((customerEntitlement) => {
-		const creditCost = getCreditCostForEnt(customerEntitlement.id);
+		const { creditCost } = getCreditCostForEnt(customerEntitlement.id);
 		return (customerEntitlement.rollovers || []).map((rollover) => ({
 			...rollover,
 			credit_cost: creditCost,

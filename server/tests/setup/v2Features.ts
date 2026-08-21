@@ -26,6 +26,8 @@ export enum TestFeature {
 
 	Action3 = "action3", // single use (pay per use)
 	Credits2 = "credits2", // credit system
+	TieredAction = "tiered_action",
+	TieredCredits = "tiered_credits",
 
 	Credits3 = "credits3", // credit system (overlaps with credits on action1)
 
@@ -130,6 +132,41 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 			},
 		],
 	}),
+	[TestFeature.TieredAction]: constructMeteredFeature({
+		featureId: TestFeature.TieredAction,
+		orgId,
+		env: AppEnv.Sandbox,
+		usageType: FeatureUsageType.Single,
+	}),
+	[TestFeature.TieredCredits]: {
+		...constructCreditSystem({
+			featureId: TestFeature.TieredCredits,
+			orgId,
+			env: AppEnv.Sandbox,
+			schema: [
+				{
+					metered_feature_id: TestFeature.TieredAction,
+					credit_cost: 1,
+				},
+			],
+		}),
+		config: {
+			usage_type: FeatureUsageType.Single,
+			invoice_credit: true,
+			schema: [
+				{
+					metered_feature_id: TestFeature.TieredAction,
+					feature_amount: 100,
+					tier_behavior: "graduated" as const,
+					tiers: [
+						{ to: 10_000, credit_amount: 1 },
+						{ to: 50_000, credit_amount: 0.8 },
+						{ to: "inf" as const, credit_amount: 0.5 },
+					],
+				},
+			],
+		},
+	},
 	// Overlaps with Credits on action1, and is seeded after it in the catalog
 	[TestFeature.Credits3]: constructCreditSystem({
 		featureId: TestFeature.Credits3,
