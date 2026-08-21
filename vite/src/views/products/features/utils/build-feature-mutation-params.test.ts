@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
-import { FeatureType, Infinite } from "@autumn/shared";
-import { buildFeatureMarkupParams } from "./buildFeatureMutationParams";
+import { FeatureType, FeatureUsageType, Infinite } from "@autumn/shared";
+import {
+	buildFeatureMarkupParams,
+	featureToCatalogFeatureParams,
+} from "./buildFeatureMutationParams";
 
 test("classic credit systems preserve graduated rate cards and invoice credits", () => {
 	const result = buildFeatureMarkupParams({
@@ -56,4 +59,35 @@ test("AI credit systems never send classic rate-card fields", () => {
 	});
 	expect(result.default_markup).toBe(10);
 	expect(result.provider_markups).toEqual({ openai: { markup: 15 } });
+});
+
+test("catalog feature params include invoice-credit configuration", () => {
+	const result = featureToCatalogFeatureParams({
+		feature: {
+			id: "credits",
+			name: "Credits",
+			type: FeatureType.CreditSystem,
+			config: {
+				usage_type: FeatureUsageType.Single,
+				invoice_credit: true,
+				schema: [
+					{
+						metered_feature_id: "tokens",
+						feature_amount: 100,
+						credit_amount: 1,
+					},
+				],
+			},
+			event_names: [],
+		},
+	});
+
+	expect(result.invoice_credit).toBe(true);
+	expect(result.credit_schema).toEqual([
+		{
+			metered_feature_id: "tokens",
+			billing_units: 100,
+			credit_cost: 1,
+		},
+	]);
 });

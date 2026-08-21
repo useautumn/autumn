@@ -1,26 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { FeatureType } from "../../models/featureModels/featureEnums.js";
-import { ApiVersion } from "../versionUtils/ApiVersion.js";
-import { createdAtToVersion } from "../versionUtils/convertVersionUtils.js";
 import { ApiFeatureV1Schema } from "./apiFeatureV1.js";
 import { CreateFeatureV2ParamsSchema } from "./crud/createFeatureParams.js";
 import { UpdateFeatureV2ParamsSchema } from "./crud/updateFeatureParams.js";
-import { UpdateFeatureRpcV2_3ParamsSchema } from "./prevVersions/featureV2_3OpModels.js";
 
 describe("credit rate-card feature API schemas", () => {
-	test("makes V2.4 the default for new organizations", () => {
-		expect(
-			createdAtToVersion({
-				createdAt: new Date("2026-08-20T00:00:00Z").getTime(),
-			}).value,
-		).toBe(ApiVersion.V2_4);
-		expect(
-			createdAtToVersion({
-				createdAt: new Date("2026-08-18T00:00:00Z").getTime(),
-			}).value,
-		).toBe(ApiVersion.V2_3);
-	});
-
 	test("keeps the existing flat request shape valid", () => {
 		const result = CreateFeatureV2ParamsSchema.parse({
 			feature_id: "credits",
@@ -108,31 +92,6 @@ describe("credit rate-card feature API schemas", () => {
 
 		expect(result.invoice_credit).toBe(false);
 		expect(result.credit_schema?.[0]).toMatchObject({ billing_units: 100 });
-	});
-
-	test("keeps V2.3 updates on the legacy flat contract", () => {
-		const result = UpdateFeatureRpcV2_3ParamsSchema.parse({
-			feature_id: "credits",
-			name: "Renamed credits",
-			invoice_credit: true,
-		});
-
-		expect(result).toEqual({
-			feature_id: "credits",
-			name: "Renamed credits",
-		});
-		expect(
-			UpdateFeatureRpcV2_3ParamsSchema.safeParse({
-				feature_id: "credits",
-				credit_schema: [
-					{
-						metered_feature_id: "feature_a",
-						tier_behavior: "graduated",
-						tiers: [{ to: "inf", credit_cost: 0.5 }],
-					},
-				],
-			}).success,
-		).toBe(false);
 	});
 
 	test("rejects ambiguous or incomplete graduated tiers", () => {

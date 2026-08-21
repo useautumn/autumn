@@ -1,6 +1,7 @@
 import {
 	type ApiCreditSchemaItem,
 	type CreditSchemaItem,
+	dbCreditSchemaItemToApi,
 	Infinite,
 } from "@autumn/shared";
 
@@ -119,20 +120,23 @@ export const creditSchemaToApi = (
 	schema.map((item) => {
 		const base = {
 			metered_feature_id: item.metered_feature_id,
-			billing_units:
+			feature_amount:
 				item.feature_amount === undefined ? 1 : toNumber(item.feature_amount),
 		};
 
 		if (!isGraduated(item)) {
-			return { ...base, credit_cost: toNumber(item.credit_amount) };
+			return dbCreditSchemaItemToApi({
+				...base,
+				credit_amount: toNumber(item.credit_amount),
+			});
 		}
 
-		return {
+		return dbCreditSchemaItemToApi({
 			...base,
-			tier_behavior: "graduated" as const,
+			tier_behavior: "graduated",
 			tiers: item.tiers.map((tier) => ({
 				to: tier.to === Infinite ? Infinite : toNumber(tier.to),
-				credit_cost: toNumber(tier.credit_amount),
+				credit_amount: toNumber(tier.credit_amount),
 			})),
-		};
+		});
 	});

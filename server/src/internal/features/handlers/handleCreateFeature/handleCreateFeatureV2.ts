@@ -1,7 +1,7 @@
 import {
 	AffectedResource,
 	ApiVersion,
-	CreateFeatureRpcV2_3ParamsSchema,
+	ApiVersionClass,
 	CreateFeatureV2ParamsSchema,
 	dbToApiFeatureV1,
 	featureV1ToDbFeature,
@@ -13,10 +13,7 @@ import { createFeature } from "@/internal/features/featureActions/createFeature.
 
 export const handleCreateFeatureV2 = createRoute({
 	scopes: [Scopes.Features.Write],
-	versionedBody: {
-		latest: CreateFeatureV2ParamsSchema,
-		[ApiVersion.V2_3]: CreateFeatureRpcV2_3ParamsSchema,
-	},
+	body: CreateFeatureV2ParamsSchema,
 	resource: AffectedResource.Feature,
 	handler: async (c) => {
 		const body = c.req.valid("json");
@@ -45,7 +42,7 @@ export const handleCreateFeatureV2 = createRoute({
 			dbToApiFeatureV1({
 				ctx,
 				dbFeature,
-				targetVersion: ctx.apiVersion,
+				targetVersion: new ApiVersionClass(ApiVersion.V2_1),
 			}),
 		);
 	},

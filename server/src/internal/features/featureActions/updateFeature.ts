@@ -251,6 +251,31 @@ export const updateFeature = async ({
 		}
 	})();
 
+	const isCreditSystem = isAnyCreditSystem(feature.type);
+	const rateCardChanged =
+		isCreditSystem &&
+		updates.config != null &&
+		hasCreditRateCardChanged({
+			oldConfig: feature.config,
+			newConfig,
+		});
+	const markupsChanged =
+		isCreditSystem &&
+		updates.model_markups !== undefined &&
+		!areModelMarkupsEqual({
+			a: updates.model_markups,
+			b: feature.model_markups,
+		});
+	const aiMarkupConfigChanged =
+		isAiCreditSystem(feature.type) &&
+		updates.config != null &&
+		hasAiMarkupConfigChanged({
+			oldConfig: feature.config,
+			newConfig,
+		});
+	const shouldClearCreditSystemCustomerCache =
+		rateCardChanged || markupsChanged || aiMarkupConfigChanged;
+
 	// Update the feature
 	const updatedFeature = await FeatureService.update({
 		db: ctx.db,
@@ -278,41 +303,15 @@ export const updateFeature = async ({
 		});
 	}
 
-	// Queue cache clear if the credit rate card or AI pricing markups changed.
-	const isCreditSystem = isAnyCreditSystem(feature.type);
-	if (isCreditSystem && updatedFeature) {
-		const rateCardChanged =
-			updates.config != null &&
-			hasCreditRateCardChanged({
-				oldConfig: feature.config,
-				newConfig,
-			});
-
-		const markupsChanged =
-			updates.model_markups !== undefined &&
-			!areModelMarkupsEqual({
-				a: updates.model_markups,
-				b: feature.model_markups,
-			});
-
-		const aiMarkupConfigChanged =
-			isAiCreditSystem(feature.type) &&
-			updates.config != null &&
-			hasAiMarkupConfigChanged({
-				oldConfig: feature.config,
-				newConfig,
-			});
-
-		if (rateCardChanged || markupsChanged || aiMarkupConfigChanged) {
-			await addTaskToQueue({
-				jobName: JobName.ClearCreditSystemCustomerCache,
-				payload: {
-					orgId: ctx.org.id,
-					env: ctx.env,
-					internalFeatureId: feature.internal_id,
-				} satisfies ClearCreditSystemCachePayload,
-			});
-		}
+	if (shouldClearCreditSystemCustomerCache && updatedFeature) {
+		await addTaskToQueue({
+			jobName: JobName.ClearCreditSystemCustomerCache,
+			payload: {
+				orgId: ctx.org.id,
+				env: ctx.env,
+				internalFeatureId: feature.internal_id,
+			} satisfies ClearCreditSystemCachePayload,
+		});
 	}
 
 	return updatedFeature;
