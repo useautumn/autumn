@@ -8,9 +8,9 @@
  * silently no-op every older-version customer, which this test would catch.
  */
 import { expect, test } from "bun:test";
+import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
-import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -19,21 +19,21 @@ import { expectCustomerEntitlementRowCount } from "../batchTestUtils";
 
 const MESSAGES_INCLUDED = 100;
 
-test(`${chalk.yellowBright("batch migration: a version-less delete reaches every plan version")}`, async () => {
-	const v1CustomerId = "batch-delete-versions-v1";
-	const v2CustomerId = "batch-delete-versions-v2";
+test(`${chalk.yellowBright("batch plan-item delete: a version-less delete reaches every plan version")}`, async () => {
+	const v1CustomerId = "bpid-delete-versions-v1";
+	const v2CustomerId = "bpid-delete-versions-v2";
 	const plan = products.base({
-		id: "batch-delete-versions-plan",
+		id: "bpid-delete-versions-plan",
 		items: [
-			itemsV2.dashboard(),
-			itemsV2.monthlyMessages({ included: MESSAGES_INCLUDED }),
+			items.dashboard(),
+			items.monthlyMessages({ includedUsage: MESSAGES_INCLUDED }),
 		],
 	});
 
-	const { ctx, autumnV1, autumnV2_2 } = await initScenario({
+	const { ctx, autumnV1, autumnV2_3 } = await initScenario({
 		customerId: v1CustomerId,
 		setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
-		actions: [s.attach({ productId: plan.id })],
+		actions: [s.billing.attach({ productId: plan.id })],
 	});
 
 	// v2 keeps both items; only the version number moves, so the v2 customer
@@ -46,7 +46,7 @@ test(`${chalk.yellowBright("batch migration: a version-less delete reaches every
 	});
 
 	await autumnV1.customers.create({ id: v2CustomerId });
-	await autumnV2_2.billing.attach({
+	await autumnV2_3.billing.attach({
 		customer_id: v2CustomerId,
 		plan_id: plan.id,
 	});
@@ -63,8 +63,8 @@ test(`${chalk.yellowBright("batch migration: a version-less delete reaches every
 
 	const { result } = await runChunkedMigration({
 		ctx,
-		migrationClient: autumnV2_2,
-		migrationId: "batch-delete-versions-migration",
+		migrationClient: autumnV2_3,
+		migrationId: "bpid-delete-versions-migration",
 		filter: { customer: { plan: { plan_id: plan.id, custom: false } } },
 		operations: {
 			customer: [
@@ -72,7 +72,12 @@ test(`${chalk.yellowBright("batch migration: a version-less delete reaches every
 					type: "update_plan",
 					plan_filter: { plan_id: plan.id, custom: false },
 					customize: {
-						remove_items: [{ feature_id: TestFeature.Messages }],
+						remove_items: [
+							{
+								feature_id: TestFeature.Messages,
+								interval: ResetInterval.Month,
+							},
+						],
 					},
 				},
 			],

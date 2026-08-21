@@ -4,17 +4,17 @@ import {
 	isResettingEntitlement,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-	computeCustomerEntitlementInitialState,
-	computeCustomerEntitlementPatch,
-} from "@/internal/billing/v2/actions/batchTransition/compute/operations/entitlementPriceOperations/computeCustomerEntitlementPatch.js";
 import type { CustomerEntitlementPatch } from "@/internal/billing/v2/actions/batchTransition/types/entitlementPriceOperationTypes.js";
 import { iterateCustomerProductPages } from "../../execute/customerProductPagination/iterateCustomerProductPages.js";
 import type {
 	BatchMigrationInsertedItem,
 	BatchMigrationRemovedItem,
 } from "../../execute/types/batchMigrationExecutionTypes.js";
-import { BATCH_MIGRATION_CANDIDATE_ROW_BATCH } from "../../execute/utils/batchMigrationExecutionConstants.js";
+import {
+	BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
+	BATCH_MIGRATION_PATCH_GROUP_CONCURRENCY,
+} from "../../execute/utils/batchMigrationExecutionConstants.js";
+import { mapWithConcurrency } from "../../execute/utils/mapWithConcurrency.js";
 import {
 	type BatchMigrationPagePhases,
 	timePhase,
@@ -22,8 +22,9 @@ import {
 import type { OperationScope } from "../../scope/operationScope.js";
 import type { BatchMigrationExecutionReplace } from "../../types/batchMigrationExecutionPlan.js";
 import { enrichCustomerEntitlementCycles } from "../../utils/enrichCustomerEntitlementCycles.js";
-import { resolveRemovableEntitlementIds } from "../removeCustomerEntitlementsForPage/resolveRemovableEntitlementIds.js";
 import { remainingAfterBalancePatch } from "../replaceLicenseEntitlementsForPage/remainingAfterBalancePatch.js";
+import { groupFilterReplaceRows } from "../utils/groupFilterReplaceRows.js";
+import { toRemovedItem } from "../utils/toRemovedItem.js";
 import { applyReplacePatches, type ReplaceRow } from "./applyReplacePatches.js";
 import { selectReplaceCandidateRows } from "./selectReplaceCandidateRows.js";
 
@@ -66,43 +67,9 @@ const toInsertedItem = ({
 	trialEndsAt: row.trialEndsAt,
 });
 
-/** The from-half of the replace: the definition the row held plus its
- * pre-write balance state, so finalize can diff before → after honestly. */
-const toRemovedItem = ({
-	row,
-	planId,
-	replace,
-}: {
-	row: ReplaceRow;
-	planId: string;
-	replace: BatchMigrationExecutionReplace;
-}): BatchMigrationRemovedItem => {
-	const fromInitialState = computeCustomerEntitlementInitialState({
-		entitlement: replace.fromEntitlement,
-	});
-	return {
-		internalCustomerId: row.internalCustomerId,
-		customerProductId: row.customerProductId,
-		entityId: row.entityId,
-		planId,
-		featureId: replace.fromEntitlement.feature.id,
-		entitlement: replace.fromEntitlement,
-		granted: fromInitialState.granted,
-		remaining: row.liveBalance,
-		unlimited: fromInitialState.unlimited === true,
-		nextResetAt: row.liveNextResetAt,
-		status: row.status,
-		startsAt: row.startsAt,
-		canceledAt: row.canceledAt,
-		endedAt: row.endedAt,
-		trialEndsAt: row.trialEndsAt,
-	};
-};
-
 /**
- * Replaces live rows whose definition matches the catalog from-entitlement
- * with the minted to-definition, carrying the consumed balance across.
- * Bounded per customer-product page like the add and remove actions.
+ * Replaces live rows matching a compiled filter with the minted to-definition,
+ * carrying consumed balance across. Bounded per customer-product page.
  */
 export const replaceCustomerEntitlementsForPage = async ({
 	db,
@@ -114,6 +81,7 @@ export const replaceCustomerEntitlementsForPage = async ({
 	now,
 	phases,
 	candidateRowBatchSize = BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
+	patchGroupConcurrency = BATCH_MIGRATION_PATCH_GROUP_CONCURRENCY,
 }: {
 	db: DrizzleCli;
 	features: Feature[];
@@ -124,6 +92,7 @@ export const replaceCustomerEntitlementsForPage = async ({
 	now: number;
 	phases?: BatchMigrationPagePhases;
 	candidateRowBatchSize?: number;
+	patchGroupConcurrency?: number;
 }): Promise<ReplaceCustomerEntitlementsForPageResult> => {
 	const toEntitlement = replace.entitlement;
 	const resetting = isResettingEntitlement({ entitlement: toEntitlement });
@@ -131,29 +100,6 @@ export const replaceCustomerEntitlementsForPage = async ({
 	const replacedIds = new Set<string>();
 	const insertedItems: BatchMigrationInsertedItem[] = [];
 	const removedItems: BatchMigrationRemovedItem[] = [];
-
-	// Resolved once per page: a customer can hold a custom or older-version
-	// definition of the same item, which the catalog id alone would miss.
-	// The to-id is excluded so replays never re-apply the balance patch.
-	const fromEntitlementIds = (
-		await timePhase({
-			phases,
-			phase: "distinct",
-			run: () =>
-				resolveRemovableEntitlementIds({
-					db,
-					features,
-					internalCustomerIds,
-					scope,
-					entitlement: replace.fromEntitlement,
-				}),
-		})
-	).filter((entitlementId) => entitlementId !== toEntitlement.id);
-
-	const customerEntitlementPatch = computeCustomerEntitlementPatch({
-		fromEntitlement: replace.fromEntitlement,
-		toEntitlement,
-	});
 
 	const { rowCount } = await iterateCustomerProductPages({
 		db,
@@ -173,7 +119,9 @@ export const replaceCustomerEntitlementsForPage = async ({
 						internalCustomerIds,
 						scope,
 						entitlement: toEntitlement,
-						fromEntitlementIds,
+						filter: replace.from,
+						excludeEntitlementId: toEntitlement.id,
+						features,
 						includeAnchorSources: resetting,
 						afterCustomerProductId,
 						limit,
@@ -198,24 +146,44 @@ export const replaceCustomerEntitlementsForPage = async ({
 					};
 			for (const id of excludedInternalCustomerIds) excludedIds.add(id);
 
-			const patched = await timePhase({
+			const groups = groupFilterReplaceRows({ rows, toEntitlement });
+			const patchedGroups = await timePhase({
 				phases,
 				phase: "replace",
 				run: () =>
-					applyReplacePatches({
-						db: transaction,
-						rows,
-						scope,
-						toEntitlement,
-						customerEntitlementPatch,
+					mapWithConcurrency({
+						items: groups,
+						concurrency: patchGroupConcurrency,
+						run: (group) =>
+							applyReplacePatches({
+								db: transaction,
+								rows: group.rows,
+								scope,
+								toEntitlement,
+								customerEntitlementPatch: group.patch,
+							}),
 					}),
 			});
-			const updatedIdSet = new Set(patched.updatedIds);
-			for (const id of patched.internalCustomerIds) replacedIds.add(id);
+
+			const updatedIdToPatch = new Map<string, CustomerEntitlementPatch>();
+			for (const [index, patched] of patchedGroups.entries()) {
+				const group = groups[index];
+				if (!group) continue;
+				for (const id of patched.internalCustomerIds) replacedIds.add(id);
+				for (const id of patched.updatedIds) {
+					updatedIdToPatch.set(id, group.patch);
+				}
+			}
+
 			for (const row of rows) {
-				if (!updatedIdSet.has(row.customerEntitlementId)) continue;
+				const customerEntitlementPatch = updatedIdToPatch.get(
+					row.customerEntitlementId,
+				);
+				if (!customerEntitlementPatch) continue;
+				const fromEntitlement = row.liveDefinition;
+				if (!fromEntitlement) continue;
 				removedItems.push(
-					toRemovedItem({ row, planId: fromProduct.id, replace }),
+					toRemovedItem({ row, planId: fromProduct.id, fromEntitlement }),
 				);
 				insertedItems.push(
 					toInsertedItem({
