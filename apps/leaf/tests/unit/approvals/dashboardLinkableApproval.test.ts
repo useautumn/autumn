@@ -18,6 +18,31 @@ describe("dashboardLinkableApproval", () => {
 		}
 	});
 
+	test("links createSchedule (per-plan customize is schema-restricted to seedable keys)", () => {
+		expect(
+			dashboardLinkableApproval({
+				approval: {
+					...base,
+					tool_args: {
+						request: {
+							customer_id: "cus_1",
+							phases: [
+								{
+									plans: [
+										{ customize: { price: { amount: 900 } }, plan_id: "scale" },
+									],
+									starts_at: "now",
+								},
+							],
+						},
+					},
+					tool_name: "autumn__createSchedule",
+				},
+				groupedStepCount: 0,
+			}),
+		).toBe(true);
+	});
+
 	test("links updateSubscription", () => {
 		expect(
 			dashboardLinkableApproval({

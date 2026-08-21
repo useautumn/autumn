@@ -1367,10 +1367,13 @@ export const approvalSheetUrl = ({
 }) => {
 	if (!customerId) return null;
 	const base = `${autumnDashboardBase()}${env === "live" ? "" : "/sandbox"}`;
+	const normalizedToolName = normalizeToolName(toolName);
 	const sheet =
-		normalizeToolName(toolName) === "updateSubscription"
+		normalizedToolName === "updateSubscription"
 			? `sheet=subscription-update${planId ? `&plan_id=${encodeURIComponent(planId)}` : ""}`
-			: "sheet=attach-product";
+			: normalizedToolName === "createSchedule"
+				? "sheet=create-schedule"
+				: "sheet=attach-product";
 	return `${base}/customers/${encodeURIComponent(customerId)}?${sheet}&approval_id=${encodeURIComponent(approvalId)}`;
 };
 

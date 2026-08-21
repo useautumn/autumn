@@ -2,13 +2,18 @@ import { parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { attachFormOverridesFromRequestBody } from "@/components/forms/attach-v2/utils/attachFormOverridesFromRequestBody";
+import { scheduleFormFromRequestBody } from "@/components/forms/create-schedule/utils/scheduleFormFromRequestBody";
 import { updateSubscriptionFormOverridesFromRequestBody } from "@/components/forms/update-subscription-v2/utils/updateSubscriptionFormOverridesFromRequestBody";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useApprovalSeedStore } from "../stores/useApprovalSeedStore";
 import { useApprovalDetailQuery } from "./useApprovalDetailQuery";
 import { useResolvedApprovalRequest } from "./useResolvedApprovalRequest";
 
-const APPROVAL_SHEETS = ["attach-product", "subscription-update"] as const;
+const APPROVAL_SHEETS = [
+	"attach-product",
+	"create-schedule",
+	"subscription-update",
+] as const;
 type ApprovalSheet = (typeof APPROVAL_SHEETS)[number];
 
 const isApprovalSheet = (value: string | null): value is ApprovalSheet =>
@@ -45,7 +50,10 @@ export const useApprovalSheetFromUrl = ({
 		const mapOverrides =
 			sheetType === "attach-product"
 				? attachFormOverridesFromRequestBody
-				: updateSubscriptionFormOverridesFromRequestBody;
+				: sheetType === "create-schedule"
+					? (request: Record<string, unknown>) =>
+							scheduleFormFromRequestBody(request) ?? {}
+					: updateSubscriptionFormOverridesFromRequestBody;
 		const cancelAction = resolved?.request.cancel_action;
 		if (approval && resolutionFailed) {
 			toast.warning("Couldn't prefill the form from the approval.");
@@ -62,9 +70,9 @@ export const useApprovalSheetFromUrl = ({
 				approval && resolved ? mapOverrides(resolved.request) : {},
 		};
 
-		if (sheetType === "attach-product") {
+		if (sheetType === "attach-product" || sheetType === "create-schedule") {
 			openedRef.current = true;
-			setSheet({ type: "attach-product", data });
+			setSheet({ type: sheetType, data });
 		} else {
 			const itemId = resolveSubscriptionItemId(
 				approval?.plan_id ?? params.plan_id,

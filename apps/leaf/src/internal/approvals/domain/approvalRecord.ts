@@ -116,7 +116,11 @@ export const allWritesOf = ({
 export const surfaceRendersGroup = (provider: string) =>
 	provider === "slack" || isInternalAutumnSlackProvider({ provider });
 
-const SHEET_LINKABLE_TOOLS = new Set(["attach", "updateSubscription"]);
+const SHEET_LINKABLE_TOOLS = new Set([
+	"attach",
+	"createSchedule",
+	"updateSubscription",
+]);
 
 const UNSEEDABLE_CUSTOMIZE_KEYS = [
 	"billing_controls",
