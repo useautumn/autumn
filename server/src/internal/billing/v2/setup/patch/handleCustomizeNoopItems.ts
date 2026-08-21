@@ -4,7 +4,9 @@ import {
 	type Feature,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
+	type FullCustomerPrice,
 	type FullProduct,
+	type PlanItemFilter,
 	type SharedContext,
 	findCustomerEntitlementByFeature,
 	findFeatureById,
@@ -13,6 +15,7 @@ import {
 } from "@autumn/shared";
 import { planItemV1ToPriceAndEnt } from "@shared/api/products/items/mappers/planItemV1ToPriceAndEnt";
 import { planItemFilterMatchesCustomerPair } from "@shared/api/products/items/utils/match";
+import { customerPriceToCustomerEntitlement } from "@shared/utils/cusPriceUtils/convertCustomerPrice/customerPriceToCustomerEntitlement";
 
 const addItemToEntitlementPrice = ({
 	ctx,
@@ -43,6 +46,42 @@ const addItemToEntitlementPrice = ({
 	};
 };
 
+const filterMatchedDeletedPair = ({
+	filter,
+	deletedCustomerPrices,
+	deletedCustomerEntitlements,
+}: {
+	filter: PlanItemFilter;
+	deletedCustomerPrices: FullCustomerPrice[];
+	deletedCustomerEntitlements: FullCustomerEntitlement[];
+}) => {
+	if (
+		deletedCustomerPrices.some((customerPrice) =>
+			planItemFilterMatchesCustomerPair({
+				filter,
+				customerPrice,
+				customerEntitlement: customerPriceToCustomerEntitlement({
+					customerPrice,
+					customerEntitlements: deletedCustomerEntitlements,
+				}),
+			}),
+		)
+	)
+		return true;
+
+	return deletedCustomerEntitlements.some((customerEntitlement) =>
+		planItemFilterMatchesCustomerPair({
+			filter,
+			customerEntitlement,
+			customerPrice: deletedCustomerPrices.find(
+				(customerPrice) =>
+					customerPrice.price.entitlement_id ===
+					customerEntitlement.entitlement.id,
+			),
+		}),
+	);
+};
+
 const isBooleanAlreadyPresent = ({
 	item,
 	targetCustomerProduct,
@@ -70,12 +109,14 @@ export const handleCustomizeNoopItems = ({
 	ctx,
 	customize,
 	targetCustomerProduct,
+	deletedCustomerPrices,
 	deletedCustomerEntitlements,
 	fullProduct,
 }: {
 	ctx: SharedContext;
 	customize: CustomizePlanV1;
 	targetCustomerProduct: FullCusProduct;
+	deletedCustomerPrices: FullCustomerPrice[];
 	deletedCustomerEntitlements: FullCustomerEntitlement[];
 	fullProduct: Pick<FullProduct, "org_id" | "internal_id">;
 }): {
@@ -94,12 +135,11 @@ export const handleCustomizeNoopItems = ({
 			removeItems: customize.remove_items ?? [],
 			addEntitlementPrices: pairable,
 			removeFilterMatchedLive: ({ filter }) =>
-				deletedCustomerEntitlements.some((customerEntitlement) =>
-					planItemFilterMatchesCustomerPair({
-						filter,
-						customerEntitlement,
-					}),
-				),
+				filterMatchedDeletedPair({
+					filter,
+					deletedCustomerPrices,
+					deletedCustomerEntitlements,
+				}),
 		}),
 	);
 

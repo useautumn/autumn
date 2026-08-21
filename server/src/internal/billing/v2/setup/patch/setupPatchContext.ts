@@ -190,6 +190,7 @@ export const setupPatchContext = ({
 		ctx,
 		customize,
 		targetCustomerProduct: finalCustomerProduct,
+		deletedCustomerPrices: deleteCustomerPrices,
 		deletedCustomerEntitlements: deleteCustomerEntitlements,
 		fullProduct: patchFullProduct,
 	});
