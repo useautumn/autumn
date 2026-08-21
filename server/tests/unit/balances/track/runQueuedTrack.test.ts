@@ -35,6 +35,15 @@ await mockModuleWithRestore(
 	}),
 );
 
+// Local Dynamo may already hold sticky keys from prior runs — claim must not
+// 409 and skip the replay body under test.
+await mockModuleWithRestore(
+	"@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js",
+	() => ({
+		claimDynamoIdempotencyKey: async () => "claimed",
+	}),
+);
+
 // CI has no misc cache env — the idempotency claim's getMiscRedis() would throw.
 const fakeMiscRedis = {
 	status: "ready",

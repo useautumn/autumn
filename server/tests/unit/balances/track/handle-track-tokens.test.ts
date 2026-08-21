@@ -79,6 +79,14 @@ await mockModuleWithRestore(
 	}),
 );
 
+// Sticky Dynamo keys from prior local runs must not 409 the async path.
+await mockModuleWithRestore(
+	"@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js",
+	() => ({
+		claimDynamoIdempotencyKey: async () => "claimed",
+	}),
+);
+
 await mockModuleWithRestore(
 	"@/internal/balances/track/runTrackWithRollout.js",
 	() => ({
