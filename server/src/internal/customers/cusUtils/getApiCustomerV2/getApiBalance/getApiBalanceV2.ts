@@ -161,6 +161,7 @@ export const getApiBalanceV2 = ({
 				apiBalance: getUnlimitedApiBalance({
 					apiFeature,
 					cusEnts: customerEntitlements,
+					entityId,
 				}),
 				aggregatedFeatureBalance,
 			}),
