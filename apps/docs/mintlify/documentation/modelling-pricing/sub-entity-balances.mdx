@@ -5,25 +5,32 @@ description: Grant individual usage limits to entities like users or workspaces 
 
 Sub-entity balances let you set usage limits that apply to each entity (user, workspace, project, etc.) individually under a parent customer. Instead of a single shared pool, each entity gets its own independent balance.
 
+You model this with a **license plan**: a plan that describes everything one entity gets. The parent plan offers a pool of those licenses, and you assign a license to an entity to hand it its own balance.
+
 > **Example** <br />
 > A team plan costs $30/seat/month. Each seat gets 50 AI meeting summaries per month. If a team has 5 users, each user has their own balance of 50 summaries — they can't use each other's allocation.
+
+## How it works
+
+```
+team plan  ──licenses: [{ seat, included: 1 }]──►  pool of seats
+                                                     │
+                                    licenses.attach  │  licenses.release
+                                                     ▼
+                              entity "user_alice"  ──►  own balance: 50 summaries/mo
+```
+
+The pool has a `granted` size (included seats plus any paid seats), a `usage` count (seats currently assigned), and a `remaining` count. Assigning a license consumes one seat; releasing gives it back.
 
 ## Setting up
 
 <Tabs>
 <Tab title="CLI">
 
-Create features for both the entity count (e.g., seats) and the per-entity feature (e.g., summaries). Then link them via `entityFeatureId` on the plan item:
+Create the feature each seat consumes, then a license plan holding what one seat gets. Link it from the parent plan via `licenses`:
 
 ```ts autumn.config.ts
 import { feature, item, plan } from 'atmn';
-
-export const seats = feature({
-  id: 'seats',
-  name: 'Seats',
-  type: 'metered',
-  consumable: false,
-});
 
 export const summaries = feature({
   id: 'summaries',
@@ -32,51 +39,52 @@ export const summaries = feature({
   consumable: true,
 });
 
-export const team = plan({
-  id: 'team',
-  name: 'Team',
+// Everything one seat gets, priced per seat.
+export const seat = plan({
+  id: 'seat',
+  name: 'Seat',
+  group: 'licenses',
   price: { amount: 30, interval: 'month' },
   items: [
-    item({
-      featureId: seats.id,
-      included: 1,
-      price: {
-        amount: 30,
-        interval: 'month',
-        billingUnits: 1,
-        billingMethod: 'usage_based',
-      },
-    }),
     item({
       featureId: summaries.id,
       included: 50,
       reset: { interval: 'month' },
-      entityFeatureId: seats.id,
     }),
+  ],
+});
+
+export const team = plan({
+  id: 'team',
+  name: 'Team',
+  licenses: [
+    { licensePlanId: seat.id, included: 1 },
   ],
 });
 ```
 
-The `entityFeatureId` links the summaries feature to the seats feature — each seat (entity) will receive its own balance of 50 summaries.
+`included: 1` means the Team plan comes with one free seat. Seats beyond that are paid at the license plan's own price.
 
 Push changes with `atmn push`.
+
+<Note>
+Give the license plan its own `group`. Attaching a plan replaces other plans in the same group, so a license plan sharing a group with its parent would knock the parent off.
+</Note>
 
 </Tab>
 <Tab title="Dashboard">
 
-1. Navigate to **Plans** and create or edit a plan
-2. Add the entity feature (e.g., "Seats") — this is the feature that counts entities
-3. Add the per-entity feature (e.g., "Meeting Summaries")
-4. Under **Advanced** for the per-entity feature, set **Entity Feature** to point to the entity feature (e.g., "Seats")
-5. Set the grant amount and reset interval for the per-entity feature
-6. Save the plan
+1. Navigate to **Plans** and create the license plan (e.g. "Seat") — give it its own group, its per-seat price, and the features one seat receives (e.g. 50 Meeting Summaries per month)
+2. Create or edit the parent plan (e.g. "Team")
+3. Under **Licenses**, add the Seat plan and set how many seats are **included**
+4. Save the plan
 
 </Tab>
 </Tabs>
 
-## Creating entities
+## Buying seats
 
-When a new team member joins, create an entity. This automatically increments the entity feature count (e.g., seats) and provisions the per-entity balance:
+Seats are bought on the parent plan. Pass `licenseQuantities` on attach — `quantity` is the **total** number of seats, including the plan's free `included` amount:
 
 <CodeGroup>
 
@@ -85,11 +93,13 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_..." });
 
-await autumn.entities.create({
+await autumn.billing.attach({
   customerId: "org_123",
-  entityId: "user_alice",
-  featureId: "seats",
-  name: "Alice",
+  planId: "team",
+  licenseQuantities: [{
+    licensePlanId: "seat",
+    quantity: 5,
+  }],
 });
 ```
 
@@ -98,27 +108,79 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_...")
 
-await autumn.entities.create(
+await autumn.billing.attach(
     customer_id="org_123",
-    entity_id="user_alice",
-    feature_id="seats",
-    name="Alice",
+    plan_id="team",
+    license_quantities=[{
+        "license_plan_id": "seat",
+        "quantity": 5,
+    }],
 )
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/entities" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": "org_123",
-    "entity_id": "user_alice",
-    "feature_id": "seats",
-    "name": "Alice"
+    "plan_id": "team",
+    "license_quantities": [
+      { "license_plan_id": "seat", "quantity": 5 }
+    ]
   }'
 ```
 
 </CodeGroup>
+
+With 1 included seat and `quantity: 5`, the customer gets 5 seats and pays for 4 of them.
+
+## Assigning a license
+
+When a team member joins, assign them a license. This is what provisions their individual balance — creating an entity on its own does not:
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.licenses.attach({
+  customerId: "org_123",
+  planId: "seat",
+  entities: [
+    { entityId: "user_alice", name: "Alice", featureId: "users" },
+  ],
+});
+```
+
+```python Python
+await autumn.licenses.attach(
+    customer_id="org_123",
+    plan_id="seat",
+    entities=[
+        {"entity_id": "user_alice", "name": "Alice", "feature_id": "users"},
+    ],
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/licenses.attach" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "plan_id": "seat",
+    "entities": [
+      { "entity_id": "user_alice", "name": "Alice", "feature_id": "users" }
+    ]
+  }'
+```
+
+</CodeGroup>
+
+`feature_id` is the entity type (e.g. a non-consumable `users` feature) and is required when the entity doesn't exist yet — Autumn creates it for you. You can pass several entities in one call.
+
+<Note>
+Assignment is idempotent. Re-assigning an entity that already holds an active license for the same plan succeeds without consuming another seat.
+</Note>
 
 ## Checking and tracking per entity
 
@@ -207,34 +269,53 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 | **Customer-level** | Omit `entity_id` | Returns the total balance across all entities |
 
 <Note>
-When tracking at the customer level (without `entity_id`), usage is deducted from the first-created entity to keep entity-level totals in sync with the customer-level total.
+When tracking at the customer level (without `entity_id`), usage is deducted from the first-assigned entity to keep entity-level totals in sync with the customer-level total.
 </Note>
 
-## Deleting entities
+## Releasing a license
 
-When a team member leaves, delete the entity. This decrements the entity feature count and removes their balance:
+When a team member leaves, release their license. The seat returns to the pool and can be reassigned:
 
 <CodeGroup>
 
 ```typescript TypeScript
-await autumn.entities.delete({
+await autumn.licenses.release({
   customerId: "org_123",
-  entityId: "user_alice",
+  licensePlanId: "seat",
+  entityIds: ["user_alice"],
 });
 ```
 
 ```python Python
-await autumn.entities.delete(
+await autumn.licenses.release(
     customer_id="org_123",
-    entity_id="user_alice",
+    license_plan_id="seat",
+    entity_ids=["user_alice"],
 )
 ```
 
 ```bash cURL
-curl -X DELETE "https://api.useautumn.com/v1/entities/user_alice" \
+curl -X POST "https://api.useautumn.com/v1/licenses.release" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "license_plan_id": "seat",
+    "entity_ids": ["user_alice"]
+  }'
+```
+
+</CodeGroup>
+
+`license_plan_id` is optional, and only needed to disambiguate when an entity holds licenses from more than one plan.
+
+## Inspecting seats
+
+[`licenses.list`](/api-reference/licenses/listLicenses) returns each pool with its `granted`, `usage`, and `remaining` seat counts. [`licenses.list_assignments`](/api-reference/licenses/listLicenseAssignments) returns which entities currently hold a license.
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/licenses.list" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{ "customer_id": "org_123" }'
 ```
-
-</CodeGroup>
