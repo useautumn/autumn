@@ -13,6 +13,7 @@ import {
 	productItemsToPlanItemsV1,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
+	productV2ToFrontendProduct,
 	sortProductItems,
 } from "@autumn/shared";
 import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
@@ -53,11 +54,18 @@ export function frontendProductToApiPlanV1(
 			}
 		: null;
 
+	// planType is derived from items; the stored planType field can be stale
+	// after item edits.
+	const { planType } = productV2ToFrontendProduct({ product });
+
 	const freeTrial: ApiPlanV1["free_trial"] = product.free_trial
 		? {
 				duration_type: product.free_trial.duration,
 				duration_length: product.free_trial.length,
-				card_required: product.free_trial.card_required ?? false,
+				card_required:
+					planType === "free"
+						? false
+						: (product.free_trial.card_required ?? false),
 				...(product.free_trial.on_end
 					? { on_end: product.free_trial.on_end }
 					: {}),

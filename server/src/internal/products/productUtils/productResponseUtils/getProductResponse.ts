@@ -30,6 +30,7 @@ import { getItemType } from "../../product-items/productItemUtils/getItemType.js
 import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { getAttachScenario } from "./getAttachScenario.js";
+import { resolveTrialCardRequired } from "./resolveTrialCardRequired.js";
 
 export const getProductItemResponse = ({
 	item,
@@ -96,7 +97,13 @@ const getFreeTrialResponse = async ({
 	fullCus?: FullCustomer;
 	attachScenario: AttachScenario;
 }) => {
-	if (!db) return product.free_trial;
+	const cardRequired = resolveTrialCardRequired({ product });
+
+	if (!db) {
+		return product.free_trial
+			? { ...product.free_trial, card_required: cardRequired }
+			: product.free_trial;
+	}
 
 	if (product.free_trial && fullCus) {
 		let trial = await getFreeTrialAfterFingerprint({
@@ -115,7 +122,7 @@ const getFreeTrialResponse = async ({
 			length: product.free_trial?.length,
 			unique_fingerprint: product.free_trial?.unique_fingerprint,
 			trial_available: notNullish(trial) ? true : false,
-			card_required: product.free_trial?.card_required,
+			card_required: cardRequired,
 		});
 	}
 
@@ -124,7 +131,7 @@ const getFreeTrialResponse = async ({
 			duration: product.free_trial?.duration,
 			length: product.free_trial?.length,
 			unique_fingerprint: product.free_trial?.unique_fingerprint,
-			card_required: product.free_trial?.card_required,
+			card_required: cardRequired,
 		});
 	}
 
