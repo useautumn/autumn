@@ -24,13 +24,14 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiPlanItemV1,
-	type CreatePlanItemParamsV1,
 	BillingInterval,
 	BillingMethod,
+	type CreatePlanItemParamsV1,
 	type Price,
 	priceStripeObjectsMatch,
 	TierInfinite,
 } from "@autumn/shared";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
@@ -76,195 +77,198 @@ const findPriceForFeature = (
 // TEST 1: version a plan with same paid items + new boolean → all reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("versioning: add boolean entitlement → all paid Stripe IDs reused on new version")}`, async () => {
-	const customerId = "reuse-version-add-bool";
+test.concurrent(
+	`${chalk.yellowBright("versioning: add boolean entitlement → all paid Stripe IDs reused on new version")}`,
+	async () => {
+		const customerId = "reuse-version-add-bool";
 
-	const proPlan = products.pro({
-		id: "pro-version-add-bool",
-		items: [
+		const proPlan = products.pro({
+			id: "pro-version-add-bool",
+			items: [
+				items.monthlyMessages({ includedUsage: 100 }),
+				items.prepaidUsers({ billingUnits: 1 }),
+				items.consumableWords({ includedUsage: 0 }),
+				items.allocatedWorkflows({ includedUsage: 0 }),
+			],
+		});
+
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
+			],
+			actions: [s.billing.attach({ productId: proPlan.id })],
+		});
+
+		const beforeProduct = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: proPlan.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		const beforeIds = collectStripeIdsByFeatureKey(beforeProduct.prices);
+
+		const updatedItems = [
+			items.monthlyPrice({ price: 20 }),
 			items.monthlyMessages({ includedUsage: 100 }),
 			items.prepaidUsers({ billingUnits: 1 }),
 			items.consumableWords({ includedUsage: 0 }),
 			items.allocatedWorkflows({ includedUsage: 0 }),
-		],
-	});
+			items.dashboard(),
+		];
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [s.billing.attach({ productId: proPlan.id })],
-	});
+		await autumnV1.products.update(proPlan.id, { items: updatedItems });
 
-	const beforeProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: proPlan.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-	const beforeIds = collectStripeIdsByFeatureKey(beforeProduct.prices);
+		const afterProduct = await materializePlanInStripe({
+			ctx,
+			planId: proPlan.id,
+		});
 
-	const updatedItems = [
-		items.monthlyPrice({ price: 20 }),
-		items.monthlyMessages({ includedUsage: 100 }),
-		items.prepaidUsers({ billingUnits: 1 }),
-		items.consumableWords({ includedUsage: 0 }),
-		items.allocatedWorkflows({ includedUsage: 0 }),
-		items.dashboard(),
-	];
+		expect(afterProduct.version).toBe(beforeProduct.version + 1);
 
-	await autumnV1.products.update(proPlan.id, { items: updatedItems });
+		const afterIds = collectStripeIdsByFeatureKey(afterProduct.prices);
 
-	const afterProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: proPlan.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-
-	expect(afterProduct.version).toBe(beforeProduct.version + 1);
-
-	const afterIds = collectStripeIdsByFeatureKey(afterProduct.prices);
-
-	for (const [key, before] of beforeIds.entries()) {
-		const after = afterIds.get(key);
-		expect(after).toBeDefined();
-		if (!after) continue;
-		expect(before.stripe_price_id).not.toBeNull();
-		expect(after.stripe_product_id).toBe(before.stripe_product_id);
-		expect(after.stripe_price_id).toBe(before.stripe_price_id);
-		expect(after.stripe_empty_price_id).toBe(before.stripe_empty_price_id);
-		expect(after.stripe_meter_id).toBe(before.stripe_meter_id);
-		expect(after.stripe_prepaid_price_v2_id).toBe(
-			before.stripe_prepaid_price_v2_id,
-		);
-		expect(after.stripe_placeholder_price_id).toBe(
-			before.stripe_placeholder_price_id,
-		);
-	}
-});
+		for (const [key, before] of beforeIds.entries()) {
+			const after = afterIds.get(key);
+			expect(after).toBeDefined();
+			if (!after) continue;
+			expect(before.stripe_price_id).not.toBeNull();
+			expect(after.stripe_product_id).toBe(before.stripe_product_id);
+			expect(after.stripe_price_id).toBe(before.stripe_price_id);
+			expect(after.stripe_empty_price_id).toBe(before.stripe_empty_price_id);
+			expect(after.stripe_meter_id).toBe(before.stripe_meter_id);
+			expect(after.stripe_prepaid_price_v2_id).toBe(
+				before.stripe_prepaid_price_v2_id,
+			);
+			expect(after.stripe_placeholder_price_id).toBe(
+				before.stripe_placeholder_price_id,
+			);
+		}
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2 (negative): versioning with prepaid amount change → stripe_price_id not reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("versioning: prepaid amount change → stripe_price_id NOT reused on new version")}`, async () => {
-	const customerId = "reuse-version-amount-change";
+test.concurrent(
+	`${chalk.yellowBright("versioning: prepaid amount change → stripe_price_id NOT reused on new version")}`,
+	async () => {
+		const customerId = "reuse-version-amount-change";
 
-	const proPlan = products.pro({
-		id: "pro-version-amount-change",
-		items: [items.prepaidMessages({ includedUsage: 0, billingUnits: 100 })],
-	});
+		const proPlan = products.pro({
+			id: "pro-version-amount-change",
+			items: [items.prepaidMessages({ includedUsage: 0, billingUnits: 100 })],
+		});
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [s.billing.attach({ productId: proPlan.id })],
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
+			],
+			actions: [s.billing.attach({ productId: proPlan.id })],
+		});
 
-	const beforeProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: proPlan.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-	const beforeMessages = findPriceForFeature(
-		beforeProduct.prices,
-		TestFeature.Messages,
-	);
-	expect(beforeMessages).toBeDefined();
+		const beforeProduct = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: proPlan.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		const beforeMessages = findPriceForFeature(
+			beforeProduct.prices,
+			TestFeature.Messages,
+		);
+		expect(beforeMessages).toBeDefined();
 
-	const updatedItems = [
-		items.monthlyPrice({ price: 20 }),
-		items.prepaidMessages({ includedUsage: 0, billingUnits: 100, price: 25 }),
-	];
+		const updatedItems = [
+			items.monthlyPrice({ price: 20 }),
+			items.prepaidMessages({ includedUsage: 0, billingUnits: 100, price: 25 }),
+		];
 
-	await autumnV1.products.update(proPlan.id, { items: updatedItems });
+		await autumnV1.products.update(proPlan.id, { items: updatedItems });
 
-	const afterProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: proPlan.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-	expect(afterProduct.version).toBe(beforeProduct.version + 1);
+		const afterProduct = await materializePlanInStripe({
+			ctx,
+			planId: proPlan.id,
+		});
+		expect(afterProduct.version).toBe(beforeProduct.version + 1);
 
-	const afterMessages = findPriceForFeature(
-		afterProduct.prices,
-		TestFeature.Messages,
-	);
-	expect(afterMessages).toBeDefined();
-	if (!afterMessages || !beforeMessages) return;
+		const afterMessages = findPriceForFeature(
+			afterProduct.prices,
+			TestFeature.Messages,
+		);
+		expect(afterMessages).toBeDefined();
+		if (!afterMessages || !beforeMessages) return;
 
-	const beforeConfig = beforeMessages.config as Record<string, unknown>;
-	const afterConfig = afterMessages.config as Record<string, unknown>;
-	expect(beforeConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(afterConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(afterConfig.stripe_price_id).not.toBe(beforeConfig.stripe_price_id);
-});
+		const beforeConfig = beforeMessages.config as Record<string, unknown>;
+		const afterConfig = afterMessages.config as Record<string, unknown>;
+		expect(beforeConfig.stripe_price_id ?? null).not.toBeNull();
+		expect(afterConfig.stripe_price_id ?? null).not.toBeNull();
+		expect(afterConfig.stripe_price_id).not.toBe(beforeConfig.stripe_price_id);
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3 (negative): versioning with tier_behavior change → stripe_price_id not reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("versioning: graduated → volume tier_behavior → stripe_price_id NOT reused on new version")}`, async () => {
-	const customerId = "reuse-version-tier-behavior";
+test.concurrent(
+	`${chalk.yellowBright("versioning: graduated → volume tier_behavior → stripe_price_id NOT reused on new version")}`,
+	async () => {
+		const customerId = "reuse-version-tier-behavior";
 
-	const proPlan = products.pro({
-		id: "pro-version-tier-behavior",
-		items: [items.tieredPrepaidMessages({ includedUsage: 0 })],
-	});
+		const proPlan = products.pro({
+			id: "pro-version-tier-behavior",
+			items: [items.tieredPrepaidMessages({ includedUsage: 0 })],
+		});
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
-		],
-		actions: [s.billing.attach({ productId: proPlan.id })],
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proPlan] }),
+			],
+			actions: [s.billing.attach({ productId: proPlan.id })],
+		});
 
-	const beforeProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: proPlan.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-	const beforeMessages = findPriceForFeature(
-		beforeProduct.prices,
-		TestFeature.Messages,
-	);
+		const beforeProduct = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: proPlan.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		const beforeMessages = findPriceForFeature(
+			beforeProduct.prices,
+			TestFeature.Messages,
+		);
 
-	const updatedItems = [
-		items.monthlyPrice({ price: 20 }),
-		items.volumePrepaidMessages({ includedUsage: 0 }),
-	];
+		const updatedItems = [
+			items.monthlyPrice({ price: 20 }),
+			items.volumePrepaidMessages({ includedUsage: 0 }),
+		];
 
-	await autumnV1.products.update(proPlan.id, { items: updatedItems });
+		await autumnV1.products.update(proPlan.id, { items: updatedItems });
 
-	const afterProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: proPlan.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-	expect(afterProduct.version).toBe(beforeProduct.version + 1);
+		const afterProduct = await materializePlanInStripe({
+			ctx,
+			planId: proPlan.id,
+		});
+		expect(afterProduct.version).toBe(beforeProduct.version + 1);
 
-	const afterMessages = findPriceForFeature(
-		afterProduct.prices,
-		TestFeature.Messages,
-	);
-	expect(afterMessages).toBeDefined();
-	if (!afterMessages || !beforeMessages) return;
+		const afterMessages = findPriceForFeature(
+			afterProduct.prices,
+			TestFeature.Messages,
+		);
+		expect(afterMessages).toBeDefined();
+		if (!afterMessages || !beforeMessages) return;
 
-	const beforeConfig = beforeMessages.config as Record<string, unknown>;
-	const afterConfig = afterMessages.config as Record<string, unknown>;
-	expect(beforeConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(afterConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(afterConfig.stripe_price_id).not.toBe(beforeConfig.stripe_price_id);
-});
+		const beforeConfig = beforeMessages.config as Record<string, unknown>;
+		const afterConfig = afterMessages.config as Record<string, unknown>;
+		expect(beforeConfig.stripe_price_id ?? null).not.toBeNull();
+		expect(afterConfig.stripe_price_id ?? null).not.toBeNull();
+		expect(afterConfig.stripe_price_id).not.toBe(beforeConfig.stripe_price_id);
+	},
+);

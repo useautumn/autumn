@@ -34,6 +34,7 @@ import {
 import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
 import {
 	createStripeFixedPriceUnderProduct,
+	fetchFullProduct,
 	getBaseStripePriceId,
 } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
@@ -47,7 +48,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { ProductService } from "@/internal/products/ProductService";
 
 const INCLUDED_SEATS = 1;
 
@@ -141,12 +141,7 @@ const setupLicenseSubscription = async ({
 		],
 	});
 
-	const seatFull = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: devSeat.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
+	const seatFull = await fetchFullProduct({ ctx, productId: devSeat.id });
 	let seatStripePriceId = getBaseStripePriceId({ fullProduct: seatFull });
 	if (customSeatPrice) {
 		const seatStripeProductId = seatFull.processor?.id;
@@ -289,11 +284,12 @@ test(`${chalk.yellowBright("sub.updated license back-sync: current schedule quan
 		paidQuantity: 3,
 	});
 
-	const updatedSchedule =
-		await ctx.stripeCli.subscriptionSchedules.retrieve(schedule.id);
-	expect(updatedSchedule.phases.map((phase) => phase.items[0]?.quantity)).toEqual([
-		3, 1,
-	]);
+	const updatedSchedule = await ctx.stripeCli.subscriptionSchedules.retrieve(
+		schedule.id,
+	);
+	expect(
+		updatedSchedule.phases.map((phase) => phase.items[0]?.quantity),
+	).toEqual([3, 1]);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

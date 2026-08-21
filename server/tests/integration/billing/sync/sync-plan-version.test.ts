@@ -8,6 +8,7 @@ import {
 	isFixedPrice,
 	type SyncParamsV1,
 } from "@autumn/shared";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -65,17 +66,9 @@ const setupVersionedPlan = async ({
 		],
 	});
 
-	const [v1, v2] = await Promise.all(
-		[1, 2].map((version) =>
-			ProductService.getFull({
-				db: ctx.db,
-				orgId: ctx.org.id,
-				env: ctx.env,
-				idOrInternalId: planId,
-				version,
-			}),
-		),
-	);
+	// Sequential: each version mints its own Stripe identity once materialized.
+	const v1 = await materializePlanInStripe({ ctx, planId, version: 1 });
+	const v2 = await materializePlanInStripe({ ctx, planId, version: 2 });
 
 	const v1PriceId = getBaseStripePriceId({ fullProduct: v1 });
 	const v2BasePrice = v2.prices[0];
