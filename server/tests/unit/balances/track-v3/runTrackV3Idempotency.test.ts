@@ -17,7 +17,7 @@ import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 const mockState = {
 	fullSubjectReads: [] as FullSubject[],
-	getOrSetCachedFullSubjectCalls: [] as Record<string, unknown>[],
+	getOrSetCachedPartialFullSubjectCalls: [] as Record<string, unknown>[],
 	runRedisTrackV3Calls: [] as Record<string, unknown>[],
 	runRedisTrackV3Errors: [] as Error[],
 	refreshSubjectViewOnNextRun: false,
@@ -40,19 +40,19 @@ const replacementFullSubject = {
 } as FullSubject;
 
 await mockModuleWithRestore(
-	"@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js",
+	"@/internal/customers/cache/fullSubject/actions/partial/getOrSetCachedPartialFullSubject.js",
 	() => ({
-		getOrSetCachedFullSubject: async (args: Record<string, unknown>) => {
-			mockState.getOrSetCachedFullSubjectCalls.push(args);
+		getOrSetCachedPartialFullSubject: async (args: Record<string, unknown>) => {
+			mockState.getOrSetCachedPartialFullSubjectCalls.push(args);
 			return mockState.fullSubjectReads.shift() ?? fullSubject;
 		},
 	}),
 );
 
 await mockModuleWithRestore(
-	"@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js",
+	"@/internal/customers/cache/fullSubject/actions/partial/getOrCreateCachedPartialFullSubject.js",
 	() => ({
-		getOrCreateCachedFullSubject: async () => fullSubject,
+		getOrCreateCachedPartialFullSubject: async () => fullSubject,
 	}),
 );
 
@@ -96,6 +96,7 @@ const ctx = {
 	env: AppEnv.Sandbox,
 	org: { id: "org_123" },
 	id: "req_123",
+	features: [{ id: "messages" }, { id: "credits" }],
 } as AutumnContext;
 
 const buildFeatureDeduction = (featureId: string): FeatureDeduction =>
@@ -115,7 +116,7 @@ const subjectViewChangedError = () =>
 describe("runTrackV3 idempotency routing", () => {
 	beforeEach(() => {
 		mockState.fullSubjectReads = [];
-		mockState.getOrSetCachedFullSubjectCalls = [];
+		mockState.getOrSetCachedPartialFullSubjectCalls = [];
 		mockState.runRedisTrackV3Calls = [];
 		mockState.runRedisTrackV3Errors = [];
 		mockState.refreshSubjectViewOnNextRun = false;
@@ -141,6 +142,9 @@ describe("runTrackV3 idempotency routing", () => {
 		expect(mockState.runRedisTrackV3Calls[0]?.idempotencyKey).toBe(
 			"track:req_123",
 		);
+		expect(
+			mockState.getOrSetCachedPartialFullSubjectCalls[0]?.featureIds,
+		).toEqual(["messages", "credits"]);
 	});
 
 	test("uses atomic Redis idempotency for single-feature requests", async () => {
@@ -199,7 +203,7 @@ describe("runTrackV3 idempotency routing", () => {
 			apiVersion: ApiVersion.V2_1,
 		});
 
-		expect(mockState.getOrSetCachedFullSubjectCalls).toHaveLength(2);
+		expect(mockState.getOrSetCachedPartialFullSubjectCalls).toHaveLength(2);
 		expect(mockState.runRedisTrackV3Calls).toHaveLength(1);
 		expect(mockState.runRedisTrackV3Calls[0]?.fullSubject).toBe(fullSubject);
 		expect(mockState.runRedisTrackV3Calls[0]?.idempotencyKey).toBe(
@@ -227,7 +231,7 @@ describe("runTrackV3 idempotency routing", () => {
 			code: "SUBJECT_VIEW_CHANGED",
 		});
 
-		expect(mockState.getOrSetCachedFullSubjectCalls).toHaveLength(1);
+		expect(mockState.getOrSetCachedPartialFullSubjectCalls).toHaveLength(1);
 		expect(mockState.runRedisTrackV3Calls).toHaveLength(1);
 	});
 });

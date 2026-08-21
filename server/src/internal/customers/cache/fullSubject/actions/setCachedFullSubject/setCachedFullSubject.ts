@@ -3,11 +3,16 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
+import { buildRuntimeSubjectKey } from "../../builders/buildRuntimeSubjectKey.js";
 import {
 	FULL_SUBJECT_CACHE_TTL_SECONDS,
 	FULL_SUBJECT_EPOCH_TTL_SECONDS,
 } from "../../config/fullSubjectCacheConfig.js";
 import { normalizedToCachedFullSubject } from "../../fullSubjectCacheModel.js";
+import {
+	buildRuntimeSubjectProjection,
+	runtimeSubjectProjectionToHashFields,
+} from "../../runtimeSubject/runtimeSubjectModel.js";
 import { assertPrimarySourced } from "../../subjectProvenance.js";
 import type { SetCachedFullSubjectResult } from "./fullSubjectWriteTypes.js";
 import { buildSharedBalanceWrites } from "./setSharedFullSubjectBalances.js";
@@ -43,6 +48,19 @@ export const setCachedFullSubject = async ({
 		env,
 		customerId,
 	});
+	const runtimeSubjectKey = buildRuntimeSubjectKey({
+		orgId: org.id,
+		env,
+		customerId,
+		entityId,
+	});
+	const runtimeFields = runtimeSubjectProjectionToHashFields({
+		projection: buildRuntimeSubjectProjection({
+			normalized,
+			subjectViewEpoch: fetchedSubjectViewEpoch,
+			knownFeatureIds: ctx.features.map((feature) => feature.id),
+		}),
+	});
 
 	const balanceWrites = buildSharedBalanceWrites({
 		orgId: org.id,
@@ -55,16 +73,19 @@ export const setCachedFullSubject = async ({
 		usageWindowFeatureIds: cached.usageWindowFeatureIds,
 	});
 
-	const keys: string[] = [subjectKey, epochKey];
+	const keys: string[] = [subjectKey, epochKey, runtimeSubjectKey];
 	for (const { balanceKey } of balanceWrites) {
 		keys.push(balanceKey);
 	}
 
+	const cachedRaw = JSON.stringify(cached);
 	const argv: string[] = [
 		String(fetchedSubjectViewEpoch),
 		String(FULL_SUBJECT_CACHE_TTL_SECONDS),
 		String(FULL_SUBJECT_EPOCH_TTL_SECONDS),
-		JSON.stringify(cached),
+		cachedRaw,
+		String(Object.keys(runtimeFields).length),
+		...Object.entries(runtimeFields).flat(),
 		String(balanceWrites.length),
 	];
 

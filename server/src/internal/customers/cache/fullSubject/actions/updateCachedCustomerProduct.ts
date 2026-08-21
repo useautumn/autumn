@@ -2,6 +2,7 @@ import type { InsertCustomerProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
+import { buildRuntimeSubjectKey } from "../builders/buildRuntimeSubjectKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "../config/fullSubjectCacheConfig.js";
 
 type UpdateCachedSubjectCustomerProductResult = {
@@ -38,6 +39,11 @@ export const updateCachedCustomerProductV2 = async ({
 			env,
 			customerId,
 		});
+		const runtimeSubjectKey = buildRuntimeSubjectKey({
+			orgId: org.id,
+			env,
+			customerId,
+		});
 		const paramsJson = JSON.stringify({
 			cus_product_id: customerProductId,
 			updates,
@@ -47,6 +53,7 @@ export const updateCachedCustomerProductV2 = async ({
 			() =>
 				redisV2.updateFullSubjectCustomerProductV2(
 					subjectKey,
+					runtimeSubjectKey,
 					paramsJson,
 					String(FULL_SUBJECT_CACHE_TTL_SECONDS),
 					String(Date.now()),

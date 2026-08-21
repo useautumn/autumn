@@ -4,6 +4,7 @@
   Atomically updates top-level entity fields in the cached FullSubject JSON.
 
   KEYS[1] = FullSubject cache key (entity-specific)
+  KEYS[2] = runtime subject hash key
 
   ARGV[1] = updates JSON object
   ARGV[2] = cache TTL in seconds
@@ -18,6 +19,7 @@
 ]]
 
 local subject_key = KEYS[1]
+local runtime_subject_key = KEYS[2]
 local updates = cjson.decode(ARGV[1])
 local cache_ttl = tonumber(ARGV[2])
 local now_ms = tonumber(ARGV[3])
@@ -79,5 +81,6 @@ if updates.usage_limits ~= nil then
 end
 
 redis.call("SET", subject_key, cjson.encode(cached), "EX", cache_ttl)
+redis.call("UNLINK", runtime_subject_key)
 
 return cjson.encode({ success = true, updated_fields = updated_fields })

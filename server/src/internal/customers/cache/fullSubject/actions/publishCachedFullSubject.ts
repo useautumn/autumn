@@ -7,6 +7,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../builders/buildFullSubjectViewEpochKey.js";
+import { buildRuntimeSubjectKey } from "../builders/buildRuntimeSubjectKey.js";
 import { buildSharedFullSubjectBalanceKey } from "../builders/buildSharedFullSubjectBalanceKey.js";
 import {
 	FULL_SUBJECT_CACHE_TTL_SECONDS,
@@ -246,6 +247,12 @@ export const publishCachedFullSubject = async ({
 			orgId: ctx.org.id,
 			env: ctx.env,
 			customerId,
+		}),
+		buildRuntimeSubjectKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+			entityId,
 		}),
 		`${subjectKey}:balance_transition:${balanceTransitionId}`,
 		...publications.map((publication) => publication.balanceKey),

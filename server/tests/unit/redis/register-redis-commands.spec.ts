@@ -10,6 +10,7 @@ const expectedCommands = new Set([
 	"deductFromSubjectBalances",
 	"updateSubjectBalances",
 	"setCachedFullSubject",
+	"setRuntimeSubjectIfCurrent",
 	"publishCachedFullSubject",
 	"updateFullSubjectCustomerDataV2",
 	"updateFullSubjectEntityDataV2",
