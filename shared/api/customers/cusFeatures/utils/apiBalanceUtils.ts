@@ -1,48 +1,11 @@
 import type { ApiFeatureV1 } from "@api/features/apiFeatureV1";
 import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct";
-import { AllowanceType } from "@models/productModels/entModels/entModels.js";
-import { cusEntsToPlanId, cusEntsToRollovers } from "@utils/index.js";
-import { Decimal } from "decimal.js";
+import {
+	cusEntsToPlanId,
+	cusEntsToRollovers,
+	cusEntsToUnlimitedUsage,
+} from "@utils/index.js";
 import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../apiBalanceV1";
-
-const isUnlimitedUsageCusEnt = (cusEnt: FullCusEntWithFullCusProduct) =>
-	cusEnt.entitlement.allowance_type === AllowanceType.Unlimited ||
-	Boolean(cusEnt.unlimited);
-
-const getUnlimitedUsage = ({
-	cusEnts,
-	entityId,
-}: {
-	cusEnts: FullCusEntWithFullCusProduct[];
-	entityId?: string;
-}): number => {
-	let totalBalance = new Decimal(0);
-
-	for (const cusEnt of cusEnts.filter(isUnlimitedUsageCusEnt)) {
-		const isEntityScoped = Boolean(cusEnt.entitlement.entity_feature_id);
-
-		if (entityId && isEntityScoped) {
-			// Entity view: only this entity's slice of an entity-scoped cusEnt
-			totalBalance = totalBalance.add(
-				cusEnt.entities?.[entityId]?.balance ?? 0,
-			);
-			continue;
-		}
-
-		// Customer view (or a customer-level pool seen from an entity view):
-		// top-level balance plus every per-entity balance
-		totalBalance = totalBalance.add(cusEnt.balance ?? 0);
-		if (!entityId) {
-			for (const entityBalance of Object.values(cusEnt.entities ?? {})) {
-				totalBalance = totalBalance.add(entityBalance.balance ?? 0);
-			}
-		}
-	}
-
-	// Usage is the negated balance; no clamping so refund overshoot
-	// (positive balance) reports negative usage faithfully
-	return totalBalance.neg().toNumber();
-};
 
 export const getBooleanApiBalance = ({
 	cusEnts,
@@ -103,7 +66,7 @@ export const getUnlimitedApiBalance = ({
 	const feature = cusEnts[0].entitlement.feature;
 	const planId = cusEntsToPlanId({ cusEnts });
 	const id = cusEnts[0].id;
-	const usage = getUnlimitedUsage({ cusEnts, entityId });
+	const usage = cusEntsToUnlimitedUsage({ cusEnts, entityId });
 
 	return {
 		object: "balance",
