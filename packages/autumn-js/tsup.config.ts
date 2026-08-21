@@ -45,6 +45,7 @@ const reactConfigs: Options[] = [
 		noExternal: [...noExternal, "@tanstack/react-query"],
 		bundle: true,
 		minify: true,
+		keepNames: true,
 		skipNodeModulesBundle: false,
 		banner: {
 			js: '"use client";',
@@ -109,6 +110,7 @@ export default defineConfig([
 		splitting: true,
 		treeshake: true,
 		minify: true,
+		keepNames: true,
 		target: "es2020",
 		esbuildOptions(options) {
 			options.plugins = options.plugins || [];
@@ -137,6 +139,7 @@ export default defineConfig([
 		splitting: true,
 		treeshake: true,
 		minify: true,
+		keepNames: true,
 		skipNodeModulesBundle: true,
 		target: "es2020",
 		onSuccess: async () => {
