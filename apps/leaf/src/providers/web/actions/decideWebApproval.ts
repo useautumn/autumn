@@ -1,6 +1,7 @@
 import { discardApproval } from "../../../internal/approvals/actions/discardApproval.js";
 import { resolveApproval } from "../../../internal/approvals/actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
+import { assertDecidableApproval } from "../../../internal/approvals/utils/assertDecidableApproval.js";
 import { WEB_CHAT_PROVIDER } from "../../../internal/installations/actions/ensureWebChatAuth.js";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
@@ -31,8 +32,14 @@ export const decideWebApproval = async ({
 	) {
 		return { error: "Approval not found" };
 	}
-	if (approval.status !== "pending") {
-		return { error: `Approval already ${approval.status}` };
+	const decidability = assertDecidableApproval({ approval });
+	if (!decidability.decidable) {
+		return {
+			error:
+				decidability.reason === "expired"
+					? "Approval expired"
+					: `Approval ${decidability.reason}`,
+		};
 	}
 
 	if (action === "reject") {

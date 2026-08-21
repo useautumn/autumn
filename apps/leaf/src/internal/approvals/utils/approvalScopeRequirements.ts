@@ -1,24 +1,17 @@
-import {
-	type RouteScopeRequirement,
-	type ScopeString,
-	Scopes,
-} from "@autumn/shared";
+import type { RouteScopeRequirement, ScopeString } from "@autumn/shared";
+import { GATED_WRITES } from "../../../../agent/lib/gatedWrites.js";
 import { withheldWritesFromToolArgs } from "../../agentRuntime/eve/parkedInput.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 
-/** Per-user Slack approval scopes; tests enforce coverage for gated MCP tools. */
+/** Per-user approval scopes, derived from the authoritative gated-write table.
+ * Entries without scopes are intentionally absent — they fail closed here. */
 export const approvalScopeRequirements: Record<string, RouteScopeRequirement> =
-	{
-		attach: [Scopes.Billing.Write],
-		createBalance: [Scopes.Balances.Write],
-		createPlan: [Scopes.Plans.Write],
-		createReward: [Scopes.Rewards.Write],
-		createSchedule: [Scopes.Billing.Write],
-		updateCatalog: { ALL: [Scopes.Plans.Write, Scopes.Features.Write] },
-		updateCustomer: [Scopes.Customers.Write],
-		updatePlan: [Scopes.Plans.Write],
-		updateSubscription: [Scopes.Billing.Write],
-	};
+	Object.fromEntries(
+		GATED_WRITES.filter((write) => write.scopes).map((write) => [
+			write.toolName,
+			write.scopes as RouteScopeRequirement,
+		]),
+	);
 
 /** Only plain and ALL requirements can be unioned; an ANY requirement has no
  * sound merge, so a group containing one fails closed. */
