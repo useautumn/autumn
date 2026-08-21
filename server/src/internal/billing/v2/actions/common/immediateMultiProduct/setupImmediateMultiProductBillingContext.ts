@@ -25,6 +25,7 @@ import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
+import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
@@ -309,6 +310,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		newFullProduct: firstProduct,
 		trialContext,
 		currentEpochMs,
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
 		billingStartsAt,
 		billingStartsAtToleranceMs,
 	});
@@ -376,6 +378,13 @@ export const setupImmediateMultiProductBillingContext = async ({
 		billingStartsAt,
 		subscriptionBackdateStartMs,
 		requestedProrationBehavior: params.billing_behavior,
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		// Multi-attach has no carry_over_balances param, so there is no reset
+		// cycle to round the refund to — only the no-partial-refund flag applies.
+		anchorResetRefund: setupAnchorResetRefund({
+			billingCycleAnchor: params.billing_cycle_anchor,
+			prorationBehavior: params.billing_behavior,
+		}),
 		stripeCustomer,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
