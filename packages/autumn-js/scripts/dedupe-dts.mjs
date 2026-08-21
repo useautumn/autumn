@@ -1,6 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+// tsup emits every type declaration twice (.d.ts for require, .d.mts for
+// import). This keeps one real copy; a "pointer" is a one-line re-export of it.
 const distDir = path.resolve(import.meta.dirname, "../dist");
 const sdkTypesEntry = path.join(distDir, "sdk-types", "index.js");
 
@@ -18,11 +20,11 @@ const listDeclarationFiles = () =>
 
 // The root export is a pure `export * from "@useautumn/sdk"`, so its
 // declarations can point at the tsc-emitted tree instead of a 2 MB rollup.
-const writeRootDeclarationShims = () => {
-	const shim = 'export * from "../sdk-types/index.js";\n';
+const pointRootDeclarationsAtSdkTypesTree = () => {
+	const pointer = 'export * from "../sdk-types/index.js";\n';
 	fs.mkdirSync(path.join(distDir, "sdk"), { recursive: true });
-	fs.writeFileSync(path.join(distDir, "sdk", "index.d.ts"), shim);
-	fs.writeFileSync(path.join(distDir, "sdk", "index.d.mts"), shim);
+	fs.writeFileSync(path.join(distDir, "sdk", "index.d.ts"), pointer);
+	fs.writeFileSync(path.join(distDir, "sdk", "index.d.mts"), pointer);
 };
 
 const toRelativeImportSpecifier = ({ fromFile, toFile }) => {
@@ -59,7 +61,7 @@ const cjsTwinOf = (esmDeclarationFile) =>
 
 // Paired .d.mts files duplicate their .d.ts twin byte-for-byte (modulo chunk
 // extensions). No entry has a default export, so `export *` is lossless.
-const shimEsmDeclarationDuplicates = (declarationFiles) => {
+const replaceDuplicateEsmDeclarationsWithPointers = (declarationFiles) => {
 	const duplicates = declarationFiles.filter(
 		(file) => file.endsWith(".d.mts") && fs.existsSync(cjsTwinOf(file)),
 	);
@@ -71,8 +73,8 @@ const shimEsmDeclarationDuplicates = (declarationFiles) => {
 };
 
 // An ESM-only declaration chunk (its hash differs from the CJS twin's) loses
-// its last importer once every paired .d.mts above becomes a shim.
-const deleteOrphanedEsmDeclarationChunks = (declarationFiles) => {
+// its last importer once every paired .d.mts above becomes a pointer.
+const deleteUnreferencedEsmDeclarationChunks = (declarationFiles) => {
 	const allDeclarationText = declarationFiles
 		.map((file) => fs.readFileSync(file, "utf8"))
 		.join("\n");
@@ -89,10 +91,11 @@ const deleteOrphanedEsmDeclarationChunks = (declarationFiles) => {
 };
 
 const declarationFiles = listDeclarationFiles();
-writeRootDeclarationShims();
+pointRootDeclarationsAtSdkTypesTree();
 const rewrittenCount = rewriteWorkspaceSdkImports(declarationFiles);
-const shimmedCount = shimEsmDeclarationDuplicates(declarationFiles);
-const deletedCount = deleteOrphanedEsmDeclarationChunks(declarationFiles);
+const pointerCount =
+	replaceDuplicateEsmDeclarationsWithPointers(declarationFiles);
+const deletedCount = deleteUnreferencedEsmDeclarationChunks(declarationFiles);
 console.log(
-	`dedupe-dts: wrote sdk root shims, rewrote ${rewrittenCount} SDK imports, shimmed ${shimmedCount} .d.mts files, deleted ${deletedCount} orphaned declaration chunks`,
+	`dedupe-dts: pointed root declarations at sdk-types, rewrote ${rewrittenCount} SDK imports, replaced ${pointerCount} duplicate .d.mts files with pointers, deleted ${deletedCount} unreferenced declaration chunks`,
 );
