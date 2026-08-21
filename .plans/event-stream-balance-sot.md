@@ -633,30 +633,46 @@ Putting reject on the firehose means either overspend (apply later) or a 1M/s sy
 - Not Tinybird as remaining. Still OLAP.
 - Not genesis replay of intents. Checkpoints are mandatory at this rate.
 
-### 15.6 Revised recommendation
+### 15.6 Redis is not the source of truth
 
-1. **Ingest:** event stream at 1M/s. API acks from the log (async track). Tinybird consumes this.
-2. **Apply:** partitioned workers, coalesce, one deduct per window, write Redis remaining, append compact facts.
-3. **Read:** Redis replica pool for check / balances. Never serve remaining from the stream.
-4. **Recover:** watermarked Postgres (or hash dump) + apply-fact tail.
-5. **Sync wallet:** reject/lock stay on Redis, small QPS, separate from the firehose.
+This needs to be unambiguous, because "check still reads Redis" is easy to hear as "Redis is still SoT."
 
-The mutation-log plan is still the apply/recovery side. It is no longer the ingest side.
+| Role | Where | If it disappears |
+| --- | --- | --- |
+| Source of truth | Event stream (intents at ingest; apply facts at coalesce rate) | We are down. Nothing else can reconstruct. |
+| Serving projection | Redis remaining hashes (or worker memory) | Rebuild: `snapshot(S) + fold(facts after S)`. Check is stale or fail-opens until rebuilt. |
+| Checkpoint | Postgres remaining + `subject_seq` | Rebuild from an older snapshot + a longer tail. Slower failover, not data loss. |
+| Analytics | Tinybird | Re-consume the intent stream. |
+
+Redis must not be in the durability path for 1M/s. Events do not land there. A successful track is "appended to the log," not "Lua returned OK." Remaining in Redis is a cache of the fold, same as a Kafka Streams state store: discardable, rebuildable, never the copy you are afraid to lose.
+
+That is the opposite of today, where Redis hashes *are* the copy we are afraid to lose and Postgres/Tinybird try to catch up.
+
+Reject/lock can still *read* the Redis projection for a 50ms decision. The decision becomes durable only when the resulting fact is on the stream. If Redis is empty, the owner rebuilds from the stream first — it does not treat empty hashes as "full balance" (today's cache-miss rebuild-from-Postgres bug).
+
+### 15.7 Revised recommendation
+
+1. **SoT:** event stream. 1M/s intents land here. API acks from the log.
+2. **Apply:** partitioned workers consume the log, coalesce, deduct once, append compact facts, *then* refresh the serving projection.
+3. **Serve:** Redis (or equivalent) for check / balances. Workers write it. Check does not call the stream. Losing Redis is a cache miss, not a ledger miss.
+4. **Checkpoint:** watermarked Postgres so rebuild tails stay short.
+5. **Sync reject/lock:** small QPS, may read the projection, must commit on the stream. Not 1M/s.
+
+The mutation-log plan is the apply-fact side of this ledger. It is not permission to keep Redis as SoT.
 
 ---
 
 ## 16. Bottom line
 
-At **1M events/s** the ingest SoT is an event stream. Request-path Redis Lua cannot be where those events arrive. Today's async track (SQS → one `runTrackV3` each) cannot either.
+**Redis is not the source of truth.** It cannot be, at 1M events/s. The stream is. Redis is a serving projection of remaining: fast to read, legal to drop, rebuilt with `snapshot(S) + fold(facts after S)`.
 
-The serving split that fits both 1M/s and 50ms remaining reads:
+Today we have that backwards. Hashes are the copy we cannot lose; Postgres and Tinybird chase them.
 
-- Stream: durable intents, Tinybird, 202 ingest.
-- Workers: coalesce a window, one apply, write Redis, emit compact facts.
-- Redis: real-time check/balances (replica pool). Workers write it; check does not call workers.
-- Postgres: watermarked `snapshot(S)` for Redis/worker death.
-- Reject/lock: stay on a sync Redis wallet at much smaller QPS.
+At 1M/s:
 
-Recovery is still `snapshot(S) + fold(apply facts after S)`. Do not rebuild remaining by replaying a day of intents through the allocator.
+- Events land on the log. API acks the log. Tinybird consumes the log.
+- Workers fold the log into remaining and refresh Redis.
+- Check reads Redis because it is a cache, not because it is the ledger.
+- Reject/lock may read that cache; they commit on the stream.
 
-The first-idea version is still wrong if it (1) replays track intents as if they were remaining deltas, (2) serves check from Tinybird, or (3) puts reject on the firehose. It is right that the firehose is a stream, not Redis.
+Do not replay a day of intents through the allocator to rebuild remaining. Do not serve check from Tinybird. Do not put 1M/s reject on the firehose. Do not treat a Redis miss as "recompute from current Postgres balances" with no watermark.
