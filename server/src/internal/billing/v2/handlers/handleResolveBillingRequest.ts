@@ -2,7 +2,7 @@ import {
 	AttachParamsV1Schema,
 	billingParamsV1ToV0,
 	CreateScheduleParamsV0Schema,
-	type CreateSchedulePlanSchema,
+	type CreateSchedulePlanV0,
 	cusProductToProduct,
 	customizePlanV1ToV0,
 	type FullProduct,
@@ -10,9 +10,6 @@ import {
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
-
-type CreateSchedulePlan = z.infer<typeof CreateSchedulePlanSchema>;
-
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { findTargetCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/setup/findTargetCustomerProduct";
@@ -36,7 +33,7 @@ const resolveSchedulePlan = async ({
 	plan,
 }: {
 	ctx: AutumnContext;
-	plan: CreateSchedulePlan;
+	plan: CreateSchedulePlanV0;
 }) => {
 	if (!plan.customize) return plan;
 	const fullProduct = await ProductService.getFull({
@@ -68,7 +65,7 @@ export const handleResolveBillingRequest = createRoute({
 		const body = c.req.valid("json");
 
 		if (body.tool === "create_schedule") {
-			const resolvePlans = (plans: ReadonlyArray<CreateSchedulePlan>) =>
+			const resolvePlans = (plans: ReadonlyArray<CreateSchedulePlanV0>) =>
 				Promise.all(plans.map((plan) => resolveSchedulePlan({ ctx, plan })));
 			const request = {
 				...body.request,
