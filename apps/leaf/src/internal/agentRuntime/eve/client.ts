@@ -37,9 +37,8 @@ const eveHeaders = (auth: EveAuthContext, init?: HeadersInit) => {
 	return headers;
 };
 
-/** Eve no longer has the session behind our continuation token — every
- * further post to it fails the same way, so callers should drop the session
- * rather than retry or block on it. */
+/** Eve lost the session behind our continuation token — every further post
+ * fails identically, so drop the session rather than retry. */
 export class EveSessionGoneError extends Error {
 	constructor(message: string) {
 		super(message);
@@ -86,7 +85,6 @@ const parseSessionResponse = async ({
 };
 
 export type EveFilePart = {
-	/** base64 `data:` URL — eve stages it for the model call. */
 	data: string;
 	filename?: string;
 	mediaType: string;
@@ -105,12 +103,7 @@ export const postEveMessage = async ({
 	session,
 }: {
 	auth: EveAuthContext;
-	/** One-turn structured context for the model (e.g. a submitted catalog
-	 * decision) — not persisted to session history, per eve's `clientContext`. */
 	clientContext?: Record<string, unknown>;
-	/** Structured answers to pending ask_question/approval requests. Text
-	 * matching can't answer for us — the harness wraps messages in
-	 * <user_message> tags, so option-label matching never fires. */
 	inputResponses?: { optionId: string; requestId: string }[];
 	message?: EveMessageContent;
 	session?: EveSessionRef;
@@ -135,8 +128,7 @@ export const postEveMessage = async ({
 				),
 			},
 		);
-	// A request that never reached eve is always safe to retry; an ambiguous
-	// mid-flight drop is only retried for a NEW session, where a duplicate
+	// Mid-flight drops are only retried for NEW sessions, where a duplicate
 	// creates an orphan rather than a double-delivered message.
 	const response = await withRetry({
 		attempts: POST_RETRY_ATTEMPTS,
@@ -167,6 +159,8 @@ export const postEveMessage = async ({
 export const SIBLING_WITHHELD_NOTE =
 	"(The other pending write approvals in this batch were withheld, not rejected on their merits — approvals are shown to the user one at a time. Re-issue each withheld write as its own separate step so the user can approve it individually.)";
 
+/** Answers a parked request AND its siblings (eve defers all deliveries until
+ * the whole batch is answered); each sibling needs its own valid option id. */
 export const postEveInputResponse = async ({
 	approveSiblings,
 	auth,
@@ -174,24 +168,20 @@ export const postEveInputResponse = async ({
 	optionId,
 	requestId,
 	session,
+	siblingOptionIdFor,
 	siblingRequestIds,
+	suppressSiblingWithheldNote,
 }: {
-	/** Answer the whole batch with `optionId` — a grouped card approves every
-	 * write it showed, rather than withholding all but the first. */
 	approveSiblings?: boolean;
 	auth: EveAuthContext;
-	/** Context sent with the answer — a gate-deny and a user-discard are
-	 * indistinguishable to the model without it. */
 	note?: string;
 	optionId: string;
 	requestId: string;
 	session: EveSessionRef;
-	/** The rest of the parked batch this answer belongs to. */
+	siblingOptionIdFor?: (siblingRequestId: string) => string | undefined;
 	siblingRequestIds?: ReadonlyArray<string>;
+	suppressSiblingWithheldNote?: boolean;
 }) => {
-	// Eve defers every delivery while ANY request in the parked batch is
-	// unanswered: answering only the carded one wedges the session on empty
-	// turns forever, so the siblings are denied here rather than left open.
 	const siblings = [...new Set(siblingRequestIds ?? [])].filter(
 		(siblingRequestId) => siblingRequestId && siblingRequestId !== requestId,
 	);
@@ -203,12 +193,14 @@ export const postEveInputResponse = async ({
 			inputResponses: [
 				{ optionId, requestId },
 				...siblings.map((siblingRequestId) => ({
-					optionId: approveSiblings ? optionId : "deny",
+					optionId: approveSiblings
+						? optionId
+						: (siblingOptionIdFor?.(siblingRequestId) ?? "deny"),
 					requestId: siblingRequestId,
 				})),
 			],
 			message:
-				siblings.length && !approveSiblings
+				siblings.length && !approveSiblings && !suppressSiblingWithheldNote
 					? [note, SIBLING_WITHHELD_NOTE].filter(Boolean).join("\n\n")
 					: note,
 		}),
@@ -247,9 +239,8 @@ export async function* streamEveEvents({
 	const streamUrl = eveUrl(
 		`/eve/v1/session/${session.sessionId}/stream?startIndex=${session.state.streamIndex}`,
 	);
-	// A stream positioned past eve's replay buffer stays open and silent
-	// forever, so the connection is watchdogged: no bytes within the idle
-	// window aborts it and surfaces EveStreamIdleTimeoutError.
+	// A stream past eve's replay buffer stays open and silent forever — no
+	// bytes within the idle window aborts as EveStreamIdleTimeoutError.
 	const controller = new AbortController();
 	const abortUpstream = () => controller.abort();
 	signal?.addEventListener("abort", abortUpstream, { once: true });
@@ -341,8 +332,7 @@ const countEveReplayableEvents = async ({
 	return count;
 };
 
-/** Heals cursor overshoot: eve streams some events it never persists, so a
- * locally-counted streamIndex can drift past the replay buffer. Only ever
+/** Heals cursor overshoot (eve streams events it never persists). Only ever
  * lowers the cursor — a zero/failed recount must not force a full replay. */
 export const resyncEveStreamIndex = async ({
 	auth,
@@ -357,5 +347,27 @@ export const resyncEveStreamIndex = async ({
 	});
 	if (replayCount > 0 && replayCount < session.state.streamIndex) {
 		session.state.streamIndex = replayCount;
+	}
+};
+
+/** A new message makes everything in eve's log a previous turn's leftovers —
+ * fast-forward so stale text can never replay as this turn's reply. */
+export const fastForwardEveStreamIndex = async ({
+	auth,
+	session,
+}: {
+	auth: EveAuthContext;
+	session: EveSessionRef;
+}) => {
+	try {
+		const replayCount = await countEveReplayableEvents({
+			auth,
+			sessionId: session.sessionId,
+		});
+		if (replayCount > session.state.streamIndex) {
+			session.state.streamIndex = replayCount;
+		}
+	} catch {
+		return;
 	}
 };

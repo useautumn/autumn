@@ -13,3 +13,4 @@ Role — billing:
 <part file="../references/subagent-speed.md" />
 
 - After a clean preview, call the write in the SAME turn as your reasoning — never send a message first; the approval card shows the money facts.
+- An approval response may carry a system note saying the write(s) were already applied (or partially applied). Follow it exactly: report the stated outcome to the user and NEVER re-issue those writes.

@@ -16,6 +16,9 @@ const vitePort = process.env.VITE_PORT
 	? Number.parseInt(process.env.VITE_PORT, 10)
 	: 3000;
 const frontendUrl = process.env.VITE_FRONTEND_URL || "";
+const isCapyDev = process.env.CAPY_DEV === "1";
+const backendUrl = process.env.VITE_BACKEND_URL || "";
+const useSameOriginProxy = isCapyDev && backendUrl.startsWith("/");
 
 function printPortlessUrl(): Plugin {
 	return {
@@ -140,14 +143,32 @@ export default defineConfig({
 			"localhost",
 			".localhost",
 			".autumnworktree.com",
+			".capysandbox.net",
 			".ngrok.app",
 			".ngrok-free.app",
 		],
+		proxy: useSameOriginProxy
+			? {
+					"/__autumn_api": {
+						target: "http://127.0.0.1:8080",
+						changeOrigin: false,
+						rewrite: (path) => path.replace(/^\/__autumn_api/, ""),
+					},
+					"/api/auth": {
+						target: "http://127.0.0.1:8080",
+						changeOrigin: false,
+					},
+				}
+			: undefined,
 		watch: {
 			usePolling: true, // Required for file watching in Docker on Windows
 			interval: 1000,
 		},
-		hmr: viteHmrClient({ frontendUrl, vitePort }),
+		hmr: viteHmrClient({
+			frontendUrl,
+			vitePort,
+			...(isCapyDev && { clientPort: 443 }),
+		}),
 		fs: {
 			// Allow serving files from workspace root (monorepo support)
 			allow: [".."],

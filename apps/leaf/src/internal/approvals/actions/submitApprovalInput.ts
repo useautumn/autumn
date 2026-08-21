@@ -6,15 +6,19 @@ import {
 	APPROVAL_NOT_EXECUTED_MESSAGE,
 } from "../../../ui/messages.js";
 import { submitAgentInput } from "../../agentRuntime/actions/submitAgentInput/submitAgentInput.js";
-import {
-	childSessionIdsFromToolArgs,
-	siblingRequestIdsFromToolArgs,
-	withheldWritesFromToolArgs,
-} from "../../agentRuntime/eve/parkedInput.js";
+import { postEveInputResponse } from "../../agentRuntime/eve/client.js";
+import { approvalOptionIds } from "../../agentRuntime/eve/events.js";
 import { getEveSessionBySessionId } from "../../agentRuntime/eve/repo.js";
 import type { EveAuthContext } from "../../agentRuntime/eve/types.js";
-import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
-import type { ApprovalRunResult } from "../types.js";
+import {
+	childSessionIdsOf,
+	siblingDenyOptionFor,
+	siblingRequestIdsOf,
+	surfaceRendersGroup,
+	withheldWritesOf,
+} from "../domain/approvalRecord.js";
+import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
+import type { SubmittedApprovalResult } from "../types.js";
 import { createChainedApproval } from "./createChainedApproval.js";
 
 const approvalAuth = ({
@@ -33,25 +37,28 @@ const approvalAuth = ({
 	workspaceId: approval.workspace_id,
 });
 
-/** Slack cards render every write in a parked batch, so approving the card
- * approves the group; the dashboard shows the primary write alone. Internal
- * Slack threads use the `slack_admin:<client>` provider and the same card. */
-const surfaceRendersGroup = (provider: string) =>
-	provider === "slack" || isInternalAutumnSlackProvider({ provider });
-
+/** Answers the park in eve and consumes the resumed turn; re-issued duplicates
+ * of already-applied writes can be absorbed instead of carded again. */
 export const submitApprovalInput = async ({
 	approval,
 	expectExecution,
 	note,
 	optionId,
 	providerUserId,
+	shouldAbsorbChained,
+	suppressSiblingWithheldNote,
 }: {
 	approval: ChatApproval;
 	expectExecution?: boolean;
 	note?: string;
 	optionId: string;
 	providerUserId: string;
-}): Promise<ApprovalRunResult> => {
+	shouldAbsorbChained?: (chained: {
+		input?: Record<string, unknown>;
+		toolName: string;
+	}) => string | undefined;
+	suppressSiblingWithheldNote?: boolean;
+}): Promise<SubmittedApprovalResult> => {
 	if (!(approval.run_id && approval.tool_call_id)) {
 		logger.warn("Approval is missing Eve session state", {
 			event: "leaf.approval_session_missing",
@@ -89,7 +96,15 @@ export const submitApprovalInput = async ({
 	}
 	const startedAt = Date.now();
 	const auth = approvalAuth({ approval, providerUserId });
-	const siblingRequestIds = siblingRequestIdsFromToolArgs(approval.tool_args);
+	const writeRows = await chatApprovalWritesRepo.list({
+		approvalId: approval.id,
+		db,
+	});
+	const withheldSteps = withheldWritesOf({ approval, writes: writeRows });
+	const siblingRequestIds = siblingRequestIdsOf({
+		approval,
+		writes: writeRows,
+	});
 	const approvalLogData = {
 		session_id: session.sessionId,
 		tool: approval.tool_name,
@@ -101,7 +116,7 @@ export const submitApprovalInput = async ({
 		chainedSiblingRequestIds,
 		chainedWithheld,
 		deferredEmptyTurn,
-		steps,
+		writes,
 		question,
 		text,
 	} = await submitAgentInput({
@@ -109,35 +124,56 @@ export const submitApprovalInput = async ({
 		// Only a surface that rendered the whole group may approve it; the
 		// dashboard shows the primary write alone, so its siblings stay withheld.
 		approveSiblings: expectExecution && surfaceRendersGroup(approval.provider),
-		childSessionIds: childSessionIdsFromToolArgs(approval.tool_args),
+		childSessionIds: childSessionIdsOf(approval),
 		expectedToolNames: expectExecution
-			? [
-					approval.tool_name,
-					...withheldWritesFromToolArgs(approval.tool_args).map(
-						(write) => write.toolName,
-					),
-				]
+			? [approval.tool_name, ...withheldSteps.map((write) => write.toolName)]
 			: undefined,
 		note,
 		optionId,
 		orgId: approval.org_id,
 		requestId: approval.tool_call_id,
 		session,
+		siblingOptionIdFor: siblingDenyOptionFor(writeRows),
 		siblingRequestIds,
+		suppressSiblingWithheldNote,
 	});
-	const chainedApprovalId = chained
-		? await createChainedApproval({
-				auth,
-				chained,
-				providerUserId,
-				sessionId: session.sessionId,
-				siblingRequestIds: chainedSiblingRequestIds,
-				withheld: chainedWithheld,
-			})
-		: undefined;
+	const absorbNote =
+		chained && !chainedWithheld?.length
+			? shouldAbsorbChained?.({
+					input: chained.input,
+					toolName: chained.toolName,
+				})
+			: undefined;
+	if (chained && absorbNote) {
+		// A re-issued duplicate of a write the system just applied — deny it in
+		// eve with the reason instead of asking the user again.
+		await postEveInputResponse({
+			auth,
+			note: absorbNote,
+			optionId: approvalOptionIds({ options: chained.options }).deny,
+			requestId: chained.requestId,
+			session,
+			siblingRequestIds: chainedSiblingRequestIds,
+		});
+		logger.info("Absorbed duplicate re-issued write", {
+			event: "leaf.approval_duplicate_absorbed",
+			approval_id: approval.id,
+			data: { tool: chained.toolName },
+		});
+	}
+	const chainedApprovalId =
+		chained && !absorbNote
+			? await createChainedApproval({
+					auth,
+					chained,
+					providerUserId,
+					sessionId: session.sessionId,
+					withheld: chainedWithheld,
+				})
+			: undefined;
 	// Eve may execute the approved call before the resumed stream opens, so a
 	// turn that did real work without echoing the result still counts as run.
-	const settled = !(chained || question);
+	const settled = !((chained && !absorbNote) || question);
 	const notExecuted =
 		expectExecution &&
 		(deferredEmptyTurn || (settled && approvedWriteUnverified && !text));
@@ -152,7 +188,7 @@ export const submitApprovalInput = async ({
 			error: true,
 			message: text || ACTION_FAILED_MESSAGE,
 			retryable: false,
-			steps,
+			writes,
 		};
 	}
 	if (notExecuted) {
@@ -186,7 +222,7 @@ export const submitApprovalInput = async ({
 			? { ...question, sessionId: session.sessionId }
 			: undefined,
 		result: {},
-		steps,
+		writes,
 		text,
 		toolName: approval.tool_name,
 	};

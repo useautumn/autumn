@@ -1,5 +1,6 @@
 import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
+import { env } from "../../../lib/env.js";
 import { logger } from "../../../lib/logger.js";
 import { APPROVAL_SESSION_GONE_MESSAGE } from "../../../ui/messages.js";
 import { EveSessionGoneError } from "../../agentRuntime/eve/client.js";
@@ -7,9 +8,11 @@ import {
 	deleteEveSession,
 	getEveSessionBySessionId,
 } from "../../agentRuntime/eve/repo.js";
+import { surfaceRendersGroup } from "../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
-import type { ApprovalRunResult } from "../types.js";
+import type { ApprovalRunResult, SubmittedApprovalResult } from "../types.js";
 import { approvalErrorResult } from "../utils/approvalErrors.js";
+import { executeApprovalWrites } from "./executeApprovalWrites.js";
 import { resumeApproval } from "./resumeApproval.js";
 
 const dropEveSession = async ({ approval }: { approval: ChatApproval }) => {
@@ -51,11 +54,22 @@ const releaseClaim = async ({
 	}
 };
 
+/** Slack-surface-only: the dashboard shows a group's primary write alone, so
+ * it must never execute the whole group. */
+const approvalExecutorEnabled = ({ provider }: { provider: string }) => {
+	const flag =
+		env.LEAF_APPROVAL_EXECUTOR ??
+		(process.env.NODE_ENV === "production" ? "0" : "1");
+	return flag === "1" && surfaceRendersGroup(provider);
+};
+
 export const resolveApproval = async ({
 	approval,
+	onResumed,
 	providerUserId,
 }: {
 	approval: ChatApproval;
+	onResumed?: (result: ApprovalRunResult) => Promise<void> | void;
 	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
 }): Promise<ApprovalRunResult> => {
@@ -70,7 +84,27 @@ export const resolveApproval = async ({
 		);
 	}
 
-	let result: ApprovalRunResult;
+	if (approvalExecutorEnabled({ provider: approval.provider ?? "" })) {
+		try {
+			const executed = await executeApprovalWrites({
+				approval,
+				onResumed,
+				providerUserId,
+			});
+			if (executed) return executed;
+		} catch (error) {
+			// Nothing has executed when this throws (token mint / step listing),
+			// so releasing the claim is safe.
+			logger.error("[chat] Approval executor failed before executing", error, {
+				event: "leaf.approval_executor_failed",
+				approval_id: approval.id,
+			});
+			await releaseClaim({ approval, providerUserId });
+			return approvalErrorResult(error, { retryable: true });
+		}
+	}
+
+	let result: SubmittedApprovalResult;
 	try {
 		result = await resumeApproval({
 			approval,

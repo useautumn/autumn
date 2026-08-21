@@ -35,7 +35,8 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 ## Rules
 
 - **A mutating billing action requires approval before it takes effect. The approval mechanism is the write tool call itself: calling `attach`/`updateSubscription`/`createSchedule` pauses for the user's approval before executing. Do NOT pre-confirm with `ask_question` or prose — that double-prompts the user.**
-- **Apply the default billing params on every action unless the user explicitly asks otherwise — invoice mode (draft), enable immediately, and no proration. The full rules and field names are in the Billing behavior section below; follow them exactly.**
+- **The preview IS the question. When your best reading of the request is probably right, be confident: build it and preview it. A card the human can see, correct, or reject always beats asking a question you would likely have answered correctly yourself.**
+- **Apply the default billing params on every action unless the user explicitly asks otherwise — invoice mode (draft), enable immediately, and no proration. For a customer with NO existing subscription, OMIT `proration_behavior` entirely — the write endpoint rejects `"none"` on new subscriptions. The full rules and field names are in the Billing behavior section below; follow them exactly.**
 - Don't propose or promise steps outside what your tools can do. If the goal isn't reachable, say so plainly rather than inventing a workaround.
 - Read this full resource before billing work and follow sections in order; later sections can define params that must be resolved before previewing.
 - Monetary amounts are major currency units: `$1,150` -> `1150`, not `115000`.
@@ -109,7 +110,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
   - If the prepaid quantity is known, include `feature_quantities`.
   - `feature_quantities.quantity` is inclusive of the plan item's included amount. Example: if 5,000 credits are included and $10/100 credits after, passing 6,000 means only the extra 1,000 credits are charged.
 - `updateSubscription`
-  - If intent is ambiguous, clarify before previewing; e.g. cancel now vs cancel at end of cycle.
+  - Clarify ONLY for cancel timing (cancel now vs end of cycle) when unstated. Never ask which price component a change targets — "$X/mo" means the base recurring price unless another component is named; preview that and let the card do the asking.
   - Quantity change: include `feature_quantities`.
   - Cancel or uncancel: include `cancel_action`.
   - Custom terms: include `customize`.

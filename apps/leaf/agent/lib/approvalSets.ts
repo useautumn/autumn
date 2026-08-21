@@ -1,56 +1,23 @@
+import { GATED_WRITES } from "./gatedWrites.js";
 import type { LeafAgentConnection } from "./toolAllowlists.js";
 
-/** Every gated write, exactly as the pre-split connection guarded them. */
-const ALL_APPROVAL_TOOL_NAMES = [
-	"attach",
-	"confirmBillingAction",
-	"createBalance",
-	"createEntity",
-	"createPlan",
-	"createReward",
-	"createSchedule",
-	"updateAgentRules",
-	"updateCatalog",
-	"updateCustomer",
-	"updatePlan",
-	"updateSubscription",
-] as const;
+const setForAgent = (agent: LeafAgentConnection): ReadonlySet<string> =>
+	new Set(
+		GATED_WRITES.filter((write) =>
+			write.agents.some((agentName) => agentName === agent),
+		).map((write) => write.toolName),
+	);
 
 export const approvalSets: Record<LeafAgentConnection, ReadonlySet<string>> = {
-	billing: new Set([
-		"attach",
-		"createBalance",
-		"createEntity",
-		"createSchedule",
-		"updateCustomer",
-		"updateSubscription",
-	]),
-	catalog: new Set([
-		"createPlan",
-		"createReward",
-		"updateCatalog",
-		"updatePlan",
-	]),
-	investigator: new Set(),
-	orchestrator: new Set([
-		"confirmBillingAction",
-		"createPlan",
-		"createReward",
-		"updateAgentRules",
-		"updateCatalog",
-		"updatePlan",
-	]),
+	billing: setForAgent("billing"),
+	catalog: setForAgent("catalog"),
+	investigator: setForAgent("investigator"),
+	orchestrator: setForAgent("orchestrator"),
 };
 
-const splitUnion = new Set([
-	...approvalSets.billing,
-	...approvalSets.catalog,
-	...approvalSets.investigator,
-	...approvalSets.orchestrator,
-]);
-for (const name of ALL_APPROVAL_TOOL_NAMES) {
-	// The split must never quietly drop a gate the monolith enforced.
-	if (!splitUnion.has(name)) {
-		throw new Error(`Approval gate lost in the agent split: ${name}`);
+for (const write of GATED_WRITES) {
+	// A gated write no agent exposes would silently lose its approval gate.
+	if (write.agents.length === 0) {
+		throw new Error(`Approval gate lost in the agent split: ${write.toolName}`);
 	}
 }

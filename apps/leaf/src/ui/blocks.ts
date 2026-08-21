@@ -8,6 +8,7 @@ import {
 	formatMoney,
 	freeTrialText,
 	parsePreviewPayload,
+	phaseTimingText,
 	removedPlanChanges,
 } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
@@ -26,7 +27,10 @@ import {
 	SelectOption,
 	Table,
 } from "chat";
-import { withheldWritesFromToolArgs } from "../internal/agentRuntime/eve/parkedInput.js";
+import {
+	type WithheldWrite,
+	withheldWritesFromToolArgs,
+} from "../internal/agentRuntime/eve/parkedInput.js";
 import {
 	normalizeToolName,
 	toolLabel,
@@ -42,7 +46,7 @@ import {
 	fanOutTable,
 	planItemChangeTableRow,
 	sortByChangeKind,
-	stepOutcomeTable,
+	writeOutcomeTable,
 } from "./changeTable.js";
 import {
 	ACTION_FAILED_MESSAGE,
@@ -202,9 +206,8 @@ const formatDay = (epochMs: number) =>
 		timeZone: "UTC",
 	}).format(new Date(epochMs));
 
+/** Labels resolved once: linked for sentences, plain for table cells. */
 type ActionPhrases = {
-	/** Customer + plan labels resolved once: linked for sentences, plain for
-	 * table cells, which render raw text. */
 	labels: {
 		customer: string;
 		plainCustomer: string;
@@ -402,7 +405,7 @@ const pendingActionPrompt = ({
 // MCP content blocks; unwrap both layers before reading money facts.
 const getPreviewBody = (preview: unknown) => {
 	const body = getResultBody(preview);
-	// A stored step preview may still be the raw MCP envelope nested under the
+	// A stored write preview may still be the raw MCP envelope nested under the
 	// display wrapper, so the inner value gets the same unwrapping as the outer.
 	const inner = getResultBody(body.preview);
 	return Object.keys(inner).length ? inner : body;
@@ -846,40 +849,39 @@ const BILLING_ACTION_TOOLS = new Set([
 	"updateSubscription",
 ]);
 
-// Pending, running, and resolved cards share this body so in-place edits keep
-// the facts the reviewer approved.
-/** Every grouped step targets the same operation, so the card can show one
- * heading and one row per target instead of repeating the whole body. */
+/** A homogeneous group shows one heading and one row per target instead of
+ * repeating the whole body. */
 const isHomogeneousGroup = ({
-	steps,
+	writes,
 	toolName,
 }: {
-	steps: ReadonlyArray<{ toolName: string }>;
+	writes: ReadonlyArray<{ toolName: string }>;
 	toolName: string;
 }) =>
-	steps.length > 1 &&
-	steps.every(
-		(step) => normalizeToolName(step.toolName) === normalizeToolName(toolName),
+	writes.length > 1 &&
+	writes.every(
+		(write) =>
+			normalizeToolName(write.toolName) === normalizeToolName(toolName),
 	);
 
-const stepTotal = (preview?: unknown) =>
+const writeTotal = (preview?: unknown) =>
 	getNumber(getPreviewBody(preview).total) ?? 0;
 
-const stepCurrency = (preview?: unknown) =>
+const writeCurrency = (preview?: unknown) =>
 	getString(getPreviewBody(preview).currency) ?? undefined;
 
 /** One row per target for a fan-out, using the same name resolution and money
- * formatting the per-step sections use. */
+ * formatting the per-write sections use. */
 const fanOutBlocks = ({
 	env,
 	preview,
-	steps,
+	writes,
 	toolArgs,
 	toolName,
 }: {
 	env?: AppEnv;
 	preview?: unknown;
-	steps: ReadonlyArray<{
+	writes: ReadonlyArray<{
 		input?: Record<string, unknown>;
 		preview?: unknown;
 		toolName: string;
@@ -887,22 +889,22 @@ const fanOutBlocks = ({
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }): CardChild[] => {
-	const all = [{ input: toolArgs, preview, toolName }, ...steps];
-	const rows = all.map((step) => {
+	const all = [{ input: toolArgs, preview, toolName }, ...writes];
+	const rows = all.map((write) => {
 		const phrases = actionPhrases({
 			env,
-			preview: step.preview,
-			toolArgs: step.input,
-			toolName: step.toolName,
+			preview: write.preview,
+			toolArgs: write.input,
+			toolName: write.toolName,
 		});
-		const amount = stepTotal(step.preview);
+		const amount = writeTotal(write.preview);
 		return [
 			phrases.labels.plainCustomer,
 			phrases.labels.plainPlan,
-			formatMoney({ amount, currency: stepCurrency(step.preview) }),
+			formatMoney({ amount, currency: writeCurrency(write.preview) }),
 		] as [string, string, string];
 	});
-	const total = all.reduce((sum, step) => sum + stepTotal(step.preview), 0);
+	const total = all.reduce((sum, write) => sum + writeTotal(write.preview), 0);
 	return [
 		// The card header already names the operation, so the table only labels
 		// how many targets it covers.
@@ -912,28 +914,25 @@ const fanOutBlocks = ({
 			rows,
 		}),
 		CardText(
-			`*Total*  *${formatMoney({ amount: total, currency: stepCurrency(preview) })}*`,
+			`*Total*  *${formatMoney({ amount: total, currency: writeCurrency(preview) })}*`,
 		),
 	];
 };
 
-/** The other writes approving this card will apply, in issue order. Each one
- * renders through the same body builder as a standalone card, so a grouped
- * attach looks exactly like an attach. */
-/** Which tense a grouped step's sentence uses. Pending and running cards read
- * as in-progress; a resolved card reports what happened. */
+/** Grouped writes render through the same body builder as standalone cards;
+ * the tense tracks whether the card is still in progress. */
 type StepTense = "done" | "failed" | "running";
 
-const withheldStepBlocks = ({
+const withheldWriteBlocks = ({
 	env,
+	writes,
 	tense,
-	toolArgs,
 }: {
 	env?: AppEnv;
+	writes: ReadonlyArray<WithheldWrite>;
 	tense: StepTense;
-	toolArgs?: Record<string, unknown>;
 }): CardChild[] =>
-	withheldWritesFromToolArgs(toolArgs).flatMap((write) => {
+	writes.flatMap((write) => {
 		const phrases = actionPhrases({
 			env,
 			preview: write.preview,
@@ -941,7 +940,7 @@ const withheldStepBlocks = ({
 			toolName: write.toolName,
 		});
 		return [
-			// Same heading the write would carry as its own card, so each step in
+			// Same heading the write would carry as its own card, so each write in
 			// a group reads as a distinct operation.
 			CardText(
 				`*${approvalTitle({ preview: write.preview, toolName: write.toolName })}*`,
@@ -956,35 +955,36 @@ const withheldStepBlocks = ({
 		];
 	});
 
-/** The card body every state shares — pending, running, and resolved all edit
- * the same message, so they must describe the same set of writes. A fan-out
- * collapses to one table; mixed writes keep a titled section each. */
+/** Shared by every card state (they edit the same message); a fan-out
+ * collapses to one table, mixed writes keep a titled section each. */
 const approvalBodyBlocks = ({
 	env,
 	preview,
+	writes,
 	tense = "running",
 	toolArgs,
 	toolName,
 }: {
 	env?: AppEnv;
 	preview?: unknown;
+	writes?: ReadonlyArray<WithheldWrite>;
 	tense?: StepTense;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }): CardChild[] => {
-	const groupedSteps = withheldWritesFromToolArgs(toolArgs);
-	if (isHomogeneousGroup({ steps: groupedSteps, toolName })) {
+	const groupedWrites = writes ?? withheldWritesFromToolArgs(toolArgs);
+	if (isHomogeneousGroup({ writes: groupedWrites, toolName })) {
 		return fanOutBlocks({
 			env,
 			preview,
-			steps: groupedSteps,
+			writes: groupedWrites,
 			toolArgs,
 			toolName,
 		});
 	}
 	return [
 		...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
-		...withheldStepBlocks({ env, tense, toolArgs }),
+		...withheldWriteBlocks({ env, writes: groupedWrites, tense }),
 	];
 };
 
@@ -1064,11 +1064,8 @@ const approvalPreviewBlocks = ({
 	if (changeSummary) {
 		blocks.push(CardText(changeSummary));
 	}
-	// Every customize row is an add or a remove against the customer's current
-	// plan — the same diff the dashboard renders, so the two surfaces agree.
-	// A prepaid item's quantity is the money decision: shown on its own row it
-	// reads as "100 Project Slots (prepaid) · $10.00 / unit" instead of an
-	// unquantified add plus a detached "Quantities" line.
+	// Same add/remove diff the dashboard renders, so the two surfaces agree; a
+	// prepaid quantity is folded into its item row — it IS the money decision.
 	const prepaidByFeature = new Map(
 		display.prepaid.map((entry) => [entry.featureId, entry] as const),
 	);
@@ -1149,15 +1146,27 @@ const approvalPreviewBlocks = ({
 			},
 		);
 	};
+	// Future-phase customizations must carry their timing or they read as the
+	// immediate change the "Due now" money describes.
 	const schedulePlans = [
 		...(Array.isArray(request?.phases)
-			? request.phases.flatMap((value) => {
-					const plans = getRecord(value).plans;
-					return Array.isArray(plans) ? plans.map(getRecord) : [];
+			? request.phases.flatMap((value, index) => {
+					const phase = getRecord(value);
+					const plans = Array.isArray(phase.plans)
+						? phase.plans.map(getRecord)
+						: [];
+					const timing = phaseTimingText({ index, phase });
+					return plans.map((plan) => ({
+						plan,
+						timing: timing === "now" ? null : timing,
+					}));
 				})
 			: []),
 		...(Array.isArray(request?.unscheduled_plans)
-			? request.unscheduled_plans.map(getRecord)
+			? request.unscheduled_plans.map((value) => ({
+					plan: getRecord(value),
+					timing: null,
+				}))
 			: []),
 	];
 	const planNames = new Map([
@@ -1187,12 +1196,13 @@ const approvalPreviewBlocks = ({
 			currentPlan: primaryCurrentPlan,
 			customize: request?.customize,
 		}),
-		...schedulePlans.flatMap((plan) => {
+		...schedulePlans.flatMap(({ plan, timing }) => {
 			const planId = getString(plan.plan_id) ?? "Plan";
+			const planLabel = planNames.get(planId) ?? planId;
 			return customizeRows({
 				currentPlan: currentPlanFor(planId),
 				customize: plan.customize,
-				plan: planNames.get(planId) ?? planId,
+				plan: timing ? `${planLabel} (${timing})` : planLabel,
 			});
 		}),
 	];
@@ -1204,6 +1214,21 @@ const approvalPreviewBlocks = ({
 			: null;
 	if (intentLabel) {
 		blocks.push(CardText(intentLabel));
+	}
+	// The timeline is the subject of a schedule — it reads before the
+	// customization detail and the money it produces.
+	if (display.phases.length) {
+		blocks.push(
+			Table({
+				align: ["left", "left"],
+				caption: "Schedule",
+				headers: ["Starts", "Plans"],
+				rows: display.phases.map((phase) => [
+					phase.timingText,
+					phase.plansText,
+				]),
+			}),
+		);
 	}
 	if (changeRows.length) {
 		blocks.push(changeTable({ caption: "Plan changes", rows: changeRows }));
@@ -1268,19 +1293,6 @@ const approvalPreviewBlocks = ({
 	} else if (!zeroNoCharge) {
 		pushMoney();
 	}
-	if (display.phases.length) {
-		blocks.push(
-			Table({
-				align: ["left", "left"],
-				caption: "Schedule",
-				headers: ["Starts", "Plans"],
-				rows: display.phases.map((phase) => [
-					phase.timingText,
-					phase.plansText,
-				]),
-			}),
-		);
-	}
 	const badges = [
 		...display.badges,
 		...(display.redirectToCheckout &&
@@ -1320,13 +1332,17 @@ const approvalPreviewBlocks = ({
 // Settled cards keep their pending body; Slack cannot disable buttons, so the
 // action row becomes a status line.
 const settledStatusCard = ({
+	dashboardUrl,
 	env,
+	groupedWrites,
 	preview,
 	statusLabel,
 	toolArgs,
 	toolName,
 }: {
+	dashboardUrl?: string | null;
 	env?: AppEnv;
+	groupedWrites?: ReadonlyArray<WithheldWrite>;
 	preview?: unknown;
 	statusLabel: string;
 	toolArgs?: Record<string, unknown>;
@@ -1338,22 +1354,62 @@ const settledStatusCard = ({
 		title: approvalTitle({ preview, toolName }),
 		children: [
 			...(prompt ? [CardText(prompt)] : []),
-			...approvalBodyBlocks({ env, preview, toolArgs, toolName }),
+			...approvalBodyBlocks({
+				env,
+				preview,
+				writes: groupedWrites,
+				toolArgs,
+				toolName,
+			}),
 			CardText(statusLabel),
+			...(dashboardUrl ? [Actions(viewInDashboardButton(dashboardUrl))] : []),
 		],
 	});
 };
 
+/** Deep link into the dashboard sheet prefilled from this approval. */
+export const approvalSheetUrl = ({
+	approvalId,
+	customerId,
+	env,
+	planId,
+	toolName,
+}: {
+	approvalId: string;
+	customerId?: string;
+	env?: AppEnv;
+	planId?: string;
+	toolName: string;
+}) => {
+	if (!customerId) return null;
+	const base = `${autumnDashboardBase()}${env === "live" ? "" : "/sandbox"}`;
+	const normalizedToolName = normalizeToolName(toolName);
+	const sheet =
+		normalizedToolName === "updateSubscription"
+			? `sheet=subscription-update${planId ? `&plan_id=${encodeURIComponent(planId)}` : ""}`
+			: normalizedToolName === "createSchedule"
+				? "sheet=create-schedule"
+				: "sheet=attach-product";
+	return `${base}/customers/${encodeURIComponent(customerId)}?${sheet}&approval_id=${encodeURIComponent(approvalId)}`;
+};
+
+const viewInDashboardButton = (url: string | null | undefined) =>
+	url ? [LinkButton({ label: "View in dashboard", url })] : [];
+
 export const approvalCard = ({
+	dashboardUrl,
 	env,
 	id,
 	preview,
+	writes,
 	toolArgs,
 	toolName,
 }: {
+	dashboardUrl?: string | null;
 	env?: AppEnv;
 	id: string;
 	preview?: unknown;
+	writes?: ReadonlyArray<WithheldWrite>;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }) => {
@@ -1364,9 +1420,10 @@ export const approvalCard = ({
 			? phrases.running
 			: pendingActionPrompt({ phrases, toolName });
 	const editable = normalizeToolName(toolName) === "attach";
+	const groupedWrites = writes ?? withheldWritesFromToolArgs(toolArgs);
 
 	const fanOut = isHomogeneousGroup({
-		steps: withheldWritesFromToolArgs(toolArgs),
+		writes: groupedWrites,
 		toolName,
 	});
 
@@ -1374,7 +1431,13 @@ export const approvalCard = ({
 		title: approvalTitle({ preview, toolName }),
 		children: [
 			...(prompt && !fanOut ? [CardText(prompt)] : []),
-			...approvalBodyBlocks({ env, preview, toolArgs, toolName }),
+			...approvalBodyBlocks({
+				env,
+				preview,
+				writes: groupedWrites,
+				toolArgs,
+				toolName,
+			}),
 			Actions([
 				Button({
 					id: "approve_billing_action",
@@ -1397,6 +1460,7 @@ export const approvalCard = ({
 							}),
 						]
 					: []),
+				...viewInDashboardButton(dashboardUrl),
 			]),
 			CardText(
 				"Need a change? Reply in this thread and I’ll refresh the preview.",
@@ -1472,23 +1536,26 @@ export const approvalDetailsModal = ({
 
 export const approvalStatusCard = ({
 	actorId,
+	dashboardUrl,
 	env,
+	groupedWrites,
 	preview,
 	result,
 	status,
 	statusLine,
-	steps,
+	outcomes,
 	toolArgs,
 	toolName,
 }: {
 	actorId?: string;
+	dashboardUrl?: string | null;
 	env?: AppEnv;
+	groupedWrites?: ReadonlyArray<WithheldWrite>;
 	preview?: unknown;
 	result?: unknown;
 	status: ApprovalCardStatus;
-	/** Per-write outcomes on a grouped card. */
-	steps?: ReadonlyArray<{
-		status: "applied" | "failed" | "pending";
+	outcomes?: ReadonlyArray<{
+		status: "applied" | "failed" | "pending" | "skipped" | "unknown";
 		toolName: string;
 	}>;
 	statusLine?: string;
@@ -1505,7 +1572,13 @@ export const approvalStatusCard = ({
 			title: approvalTitle({ preview, toolName }),
 			children: [
 				CardText(`${phrases.running}…`),
-				...approvalBodyBlocks({ env, preview, toolArgs, toolName }),
+				...approvalBodyBlocks({
+					env,
+					preview,
+					writes: groupedWrites,
+					toolArgs,
+					toolName,
+				}),
 				...(statusLine
 					? [CardText(`▸ ${statusLine}`, { style: "muted" })]
 					: []),
@@ -1515,7 +1588,9 @@ export const approvalStatusCard = ({
 
 	if (status === "cancelled") {
 		return settledStatusCard({
+			dashboardUrl,
 			env,
+			groupedWrites,
 			preview,
 			statusLabel: `Dismissed${actor ? ` by ${actor}` : ""}`,
 			toolArgs,
@@ -1525,9 +1600,13 @@ export const approvalStatusCard = ({
 
 	if (status === "superseded") {
 		return settledStatusCard({
+			dashboardUrl,
 			env,
+			groupedWrites,
 			preview,
-			statusLabel: "🔄 Updated",
+			statusLabel: statusLine
+				? `🔄 ${statusLine}`
+				: "🔄 Withdrawn — superseded by a newer request in this thread",
 			toolArgs,
 			toolName,
 		});
@@ -1557,6 +1636,7 @@ export const approvalStatusCard = ({
 	const resolvedBody = approvalBodyBlocks({
 		env,
 		preview,
+		writes: groupedWrites,
 		tense: status === "failed" ? "failed" : "done",
 		toolArgs,
 		toolName,
@@ -1566,25 +1646,26 @@ export const approvalStatusCard = ({
 		const lines = outcome.lines.length
 			? outcome.lines
 			: [ACTION_FAILED_MESSAGE];
-		// A half-applied group needs the per-step breakdown; a lone failed write
+		// A half-applied group needs the per-write breakdown; a lone failed write
 		// is already fully described by the message.
-		const partial = (steps?.length ?? 0) > 1;
+		const partial = (outcomes?.length ?? 0) > 1;
 		return Card({
 			title: approvalTitle({ preview, toolName }),
 			children: [
 				CardText(`⚠️ ${phrases.failed}`),
 				...resolvedBody,
-				...(partial && steps
+				...(partial && outcomes
 					? [
-							stepOutcomeTable({
-								steps: steps.map((step) => ({
-									status: step.status,
-									summary: toolLabel(step.toolName),
+							writeOutcomeTable({
+								writes: outcomes.map((write) => ({
+									status: write.status,
+									summary: toolLabel(write.toolName),
 								})),
 							}),
 						]
 					: []),
 				CardText(lines.join("\n")),
+				...(dashboardUrl ? [Actions(viewInDashboardButton(dashboardUrl))] : []),
 			],
 		});
 	}
@@ -1595,13 +1676,14 @@ export const approvalStatusCard = ({
 			CardText(`✅ ${phrases.done}`),
 			...resolvedBody,
 			...(outcome.lines.length ? [CardText(outcome.lines.join("\n"))] : []),
-			...(outcome.links.length
+			...(outcome.links.length || dashboardUrl
 				? [
-						Actions(
-							outcome.links.map((link) =>
+						Actions([
+							...outcome.links.map((link) =>
 								LinkButton({ label: link.label, url: link.url }),
 							),
-						),
+							...viewInDashboardButton(dashboardUrl),
+						]),
 					]
 				: []),
 		],

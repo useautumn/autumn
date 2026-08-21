@@ -235,6 +235,7 @@ export type CreateScheduleParamsV0Input = z.input<
 	typeof CreateScheduleParamsV0Schema
 >;
 export type CreateSchedulePhaseV0 = CreateScheduleParamsV0["phases"][number];
+export type CreateSchedulePlanV0 = CreateSchedulePhaseV0["plans"][number];
 export type ResolvedCreateSchedulePhaseV0 = Omit<
 	CreateSchedulePhaseV0,
 	"starts_at" | "starting_after"

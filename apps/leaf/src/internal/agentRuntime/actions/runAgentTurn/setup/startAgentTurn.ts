@@ -5,7 +5,11 @@ import type {
 	AgentTurnParams,
 } from "../../../domain/agentTurnContext.js";
 import { adoptPostedEveSession } from "../../../eve/adoptPostedSession.js";
-import { type EveMessageContent, postEveMessage } from "../../../eve/client.js";
+import {
+	type EveMessageContent,
+	fastForwardEveStreamIndex,
+	postEveMessage,
+} from "../../../eve/client.js";
 import { deleteEveSession } from "../../../eve/repo.js";
 import {
 	initialEveSessionState,
@@ -34,6 +38,9 @@ export const startAgentTurn = async ({
 	// Sending chip answers as messages would replay them as a second user turn.
 	const inputResponses =
 		session && params.questionResponse ? [params.questionResponse] : undefined;
+	if (session && !inputResponses) {
+		await fastForwardEveStreamIndex({ auth, session });
+	}
 	const posted = await postEveMessage({
 		auth,
 		clientContext: params.clientContext,
