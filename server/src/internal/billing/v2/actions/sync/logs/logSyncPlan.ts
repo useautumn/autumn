@@ -12,10 +12,8 @@ const formatSubscriptionIds = (subscriptions?: Subscription[]) => {
 	return subscriptions.map((subscription) => subscription.stripe_id).join(", ");
 };
 
-const formatCustomerProduct = (cp: {
-	product_id: string;
-	product: { name: string };
-}) => `${cp.product.name} (${cp.product_id})`;
+const formatCustomerProduct = (cp: { product: { id: string; name: string } }) =>
+	`${cp.product.name} (${cp.product.id})`;
 
 export const logSyncPlan = ({
 	ctx,

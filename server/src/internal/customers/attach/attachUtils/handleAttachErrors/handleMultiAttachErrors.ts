@@ -47,14 +47,14 @@ export const handleMultiAttachErrors = async ({
 		const curCusQuantity =
 			cusProducts.find(
 				(cp) =>
-					cp.product_id === prodOptions.product_id &&
+					cp.product.id === prodOptions.product_id &&
 					nullish(cp.internal_entity_id),
 			)?.quantity || 0;
 
 		const curEntityQuantity =
 			cusProducts.filter(
 				(cp) =>
-					cp.product_id === prodOptions.product_id &&
+					cp.product.id === prodOptions.product_id &&
 					notNullish(cp.internal_entity_id),
 			)?.length || 0;
 

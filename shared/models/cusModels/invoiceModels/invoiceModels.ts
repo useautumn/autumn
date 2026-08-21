@@ -32,6 +32,8 @@ export const InvoiceSchema = z.object({
 	internal_entity_id: z.string().nullable(),
 	product_ids: z.array(z.string()),
 	internal_product_ids: z.array(z.string()),
+	/** Read-time only: current public plan ids from internal_product_ids. */
+	resolved_product_ids: z.array(z.string()).nullish(),
 
 	// Stripe fields
 	stripe_id: z.string(),
