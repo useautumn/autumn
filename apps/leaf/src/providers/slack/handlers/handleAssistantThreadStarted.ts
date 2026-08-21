@@ -34,7 +34,7 @@ export const handleAssistantThreadStarted = async (event: {
 	} catch (error) {
 		logger.warn("Assistant thread prewarm failed", {
 			event: "leaf.assistant_prewarm_failed",
-			data: { error: error instanceof Error ? error.message : String(error) },
+			data: { error },
 		});
 	}
 };

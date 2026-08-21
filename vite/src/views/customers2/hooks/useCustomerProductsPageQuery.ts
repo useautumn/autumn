@@ -8,21 +8,23 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { throwBackendError } from "@/utils/genUtils";
-import type {
-	CustomerProductsKindFilter,
-	CustomerProductsPageSize,
+import {
+	type CustomerProductsKindFilter,
+	type CustomerProductsPageSize,
+	type CustomerProductsStatusOption,
+	isDefaultProductStatuses,
 } from "./useCustomerProductsTableState";
 
 export function useCustomerProductsPageQuery({
 	cursor,
 	pageSize,
-	showExpired,
+	statuses,
 	kind,
 	initialPage,
 }: {
 	cursor: string;
 	pageSize: CustomerProductsPageSize;
-	showExpired: boolean;
+	statuses: CustomerProductsStatusOption[];
 	kind: CustomerProductsKindFilter;
 	initialPage?: CustomerProductsPage;
 }) {
@@ -31,10 +33,12 @@ export function useCustomerProductsPageQuery({
 	const buildKey = useQueryKeyFactory();
 	const { entityId } = useEntity();
 
+	const status = statuses.length === 1 ? statuses[0] : "all";
+
 	const isUnfilteredFirstPage =
 		cursor === "" &&
 		kind === "all" &&
-		!showExpired &&
+		isDefaultProductStatuses(statuses) &&
 		!entityId &&
 		pageSize === CUSTOMER_PRODUCTS_DEFAULT_LIMIT;
 	const seedPage = isUnfilteredFirstPage ? initialPage : undefined;
@@ -47,7 +51,7 @@ export function useCustomerProductsPageQuery({
 					params: {
 						start_cursor: cursor,
 						limit: pageSize,
-						show_expired: showExpired,
+						status,
 						...(kind !== "all" ? { kind } : {}),
 						...(entityId ? { entity_id: entityId } : {}),
 					},
@@ -68,7 +72,7 @@ export function useCustomerProductsPageQuery({
 				"products",
 				cursor,
 				pageSize,
-				showExpired,
+				status,
 				kind,
 				entityId,
 			]),

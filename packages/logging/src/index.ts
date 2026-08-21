@@ -21,7 +21,10 @@ export {
 	mirrorLogger,
 	withLogPrefix,
 } from "./logger/loggerWrappers.js";
-export { resolveLoggerOptions } from "./logger/resolveLoggerOptions.js";
+export {
+	resolveDeployment,
+	resolveLoggerOptions,
+} from "./logger/resolveLoggerOptions.js";
 export { asAxiomMap } from "./payload/asAxiomMap.js";
 export {
 	type GuardLogPayloadOptions,

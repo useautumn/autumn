@@ -41,6 +41,8 @@ export type AutumnLogger = {
 	warn: (...args: LogArgs) => void;
 	warning: (...args: LogArgs) => void;
 	error: (...args: LogArgs) => void;
+	/** Drains buffered transport output (Axiom); call before process exit. */
+	flush?: () => Promise<void>;
 	child: (params: {
 		context: Record<string, unknown>;
 		onlyProd?: boolean;

@@ -52,6 +52,7 @@ export const prepareAgentTurn = async ({
 			db,
 			env,
 			orgId: org.id,
+			reason: "session_gone",
 			sessionId: existingSession.sessionId,
 			threadKey: existingSession.threadKey,
 		});

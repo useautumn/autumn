@@ -2,6 +2,7 @@ import { AppEnv, harnessSessions } from "@autumn/shared";
 import { all } from "better-all";
 import { and, desc, eq, isNull, like } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
+import { logger } from "../../../lib/logger.js";
 import type { AgentThreadRef } from "../domain/agentTurnContext.js";
 import { buildAgentThreadKey } from "../sessions/agentThreadKey.js";
 import {
@@ -139,19 +140,32 @@ export const upsertEveSession = async ({
 
 /** Forgets a session id eve no longer streams anything for. The row is the only
  * pointer to it, so keeping it replays the same dead resume on every message. */
+export type EveSessionDeleteReason =
+	| "approval_session_gone"
+	| "post_failed"
+	| "session_failed"
+	| "session_gone"
+	| "turn_unusable";
+
 export const deleteEveSession = async ({
 	db,
 	env,
 	orgId,
+	reason,
 	sessionId,
 	threadKey,
 }: {
 	db: ChatDb;
 	env: AppEnv;
 	orgId: string;
+	reason: EveSessionDeleteReason;
 	sessionId: string;
 	threadKey: string;
 }) => {
+	logger.warn("Deleting Eve session", {
+		event: "leaf.eve_session_deleted",
+		data: { reason, session_id: sessionId },
+	});
 	await db
 		.delete(harnessSessions)
 		.where(

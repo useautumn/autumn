@@ -132,11 +132,23 @@
 		},
 		"apps/leaf": {
 			"entry": [
-				"tests/**/*.ts"
+				"tests/**/*.ts",
+				"agent/**/*.ts"
 			],
 			"project": [
 				"src/**/*.ts",
-				"tests/**/*.ts"
+				"tests/**/*.ts",
+				"agent/**/*.ts"
+			]
+		},
+		"packages/agent-docs": {
+			"entry": [
+				"**/*.test.ts",
+				"scripts/**/*.ts"
+			],
+			"project": [
+				"src/**/*.ts",
+				"scripts/**/*.ts"
 			]
 		},
 		"packages/gateway": {
@@ -165,9 +177,6 @@
 		"packages/render": {
 			"project": [
 				"src/**/*.ts"
-			],
-			"ignore": [
-				"src/billing/planDisplay.ts"
 			]
 		},
 		"packages/env": {

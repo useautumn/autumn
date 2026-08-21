@@ -2,6 +2,7 @@ import type { SubscriptionMismatch } from "@autumn/shared";
 import { WarningCircleIcon } from "@phosphor-icons/react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
+import { SharedStripeCustomerDetails } from "./SharedStripeCustomerDetails";
 
 const ISSUE_LABELS: Record<SubscriptionMismatch["type"], string> = {
 	base_price_mismatch: "Base price",
@@ -46,10 +47,16 @@ export const createVerifyMismatchColumns = (): ColumnDef<
 	{
 		header: "Details",
 		id: "details",
-		cell: ({ row }: { row: Row<SubscriptionMismatch> }) => (
-			<span className="block whitespace-normal break-words text-tertiary-foreground py-2">
-				{row.original.message}
-			</span>
-		),
+		cell: ({ row }: { row: Row<SubscriptionMismatch> }) => {
+			const mismatch = row.original;
+			if (mismatch.type === "shared_stripe_customer") {
+				return <SharedStripeCustomerDetails mismatch={mismatch} />;
+			}
+			return (
+				<span className="block whitespace-normal break-words text-tertiary-foreground py-2">
+					{mismatch.message}
+				</span>
+			);
+		},
 	},
 ];

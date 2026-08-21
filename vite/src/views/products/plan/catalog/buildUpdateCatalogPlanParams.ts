@@ -35,7 +35,7 @@ const planItemsToCatalogParams = (
 						rollover: {
 							expiry_duration_type: rollover.expiry_duration_type,
 							expiry_duration_length: rollover.expiry_duration_length,
-							...(rollover.max != null ? { max: rollover.max } : {}),
+							...(rollover.max ? { max: rollover.max } : {}),
 							...(rollover.max_percentage != null
 								? { max_percentage: rollover.max_percentage }
 								: {}),

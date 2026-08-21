@@ -53,6 +53,11 @@ export const submitApprovalInput = async ({
 	providerUserId: string;
 }): Promise<ApprovalRunResult> => {
 	if (!(approval.run_id && approval.tool_call_id)) {
+		logger.warn("Approval is missing Eve session state", {
+			event: "leaf.approval_session_missing",
+			approval_id: approval.id,
+			data: { org_id: approval.org_id, tool: approval.tool_name },
+		});
 		return {
 			error: true,
 			message: "Eve approval is missing session state.",
@@ -65,13 +70,30 @@ export const submitApprovalInput = async ({
 		sessionId: approval.run_id,
 	});
 	if (!session) {
+		// Retryable, so the row returns to pending — the "button does nothing"
+		// symptom starts here.
+		logger.warn("Eve session not found for approval", {
+			event: "leaf.approval_eve_session_not_found",
+			approval_id: approval.id,
+			data: {
+				org_id: approval.org_id,
+				run_id: approval.run_id,
+				tool: approval.tool_name,
+			},
+		});
 		return {
 			error: true,
 			message: "Eve session not found.",
 			retryable: true,
 		};
 	}
+	const startedAt = Date.now();
 	const auth = approvalAuth({ approval, providerUserId });
+	const siblingRequestIds = siblingRequestIdsFromToolArgs(approval.tool_args);
+	const approvalLogData = {
+		session_id: session.sessionId,
+		tool: approval.tool_name,
+	};
 	const {
 		approvedWriteFailed,
 		approvedWriteUnverified,
@@ -101,7 +123,7 @@ export const submitApprovalInput = async ({
 		orgId: approval.org_id,
 		requestId: approval.tool_call_id,
 		session,
-		siblingRequestIds: siblingRequestIdsFromToolArgs(approval.tool_args),
+		siblingRequestIds,
 	});
 	const chainedApprovalId = chained
 		? await createChainedApproval({
@@ -123,7 +145,7 @@ export const submitApprovalInput = async ({
 		logger.error("Approved Eve action failed", undefined, {
 			event: "leaf.eve_approval_failed",
 			approval_id: approval.id,
-			data: { session_id: session.sessionId, tool: approval.tool_name },
+			data: approvalLogData,
 		});
 		return {
 			chainedApprovalId,
@@ -137,13 +159,26 @@ export const submitApprovalInput = async ({
 		logger.error("Approved Eve action was not executed", undefined, {
 			event: "leaf.eve_approval_not_executed",
 			approval_id: approval.id,
-			data: { session_id: session.sessionId, tool: approval.tool_name },
+			data: approvalLogData,
 		});
 		return {
 			error: true,
 			message: APPROVAL_NOT_EXECUTED_MESSAGE,
 			retryable: true,
 		};
+	}
+	if (expectExecution) {
+		logger.info("Approved action applied", {
+			event: "leaf.approval_applied",
+			approval_id: approval.id,
+			data: {
+				...approvalLogData,
+				chained_approval_id: chainedApprovalId,
+				duration_ms: Date.now() - startedAt,
+				sibling_count: siblingRequestIds.length,
+				verified: !approvedWriteUnverified,
+			},
+		});
 	}
 	return {
 		chainedApprovalId,
