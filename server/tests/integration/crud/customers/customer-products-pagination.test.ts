@@ -49,7 +49,7 @@ const setupCustomer = async (customerId: string) =>
 const defaultParams = {
 	start_cursor: "",
 	limit: 10,
-	show_expired: false,
+	status: "active" as const,
 };
 
 test(`${chalk.yellowBright("customer products page: returns all with total_count and no next_cursor")}`, async () => {
@@ -159,7 +159,7 @@ test(`${chalk.yellowBright("customer products page: cursor paginates without ove
 		const page = await CusService.getProductsPage({
 			ctx,
 			idOrInternalId: customerId,
-			params: { start_cursor: cursor, limit: 2, show_expired: false },
+			params: { start_cursor: cursor, limit: 2, status: "active" },
 		});
 
 		expect(page.list.length).toBeLessThanOrEqual(2);

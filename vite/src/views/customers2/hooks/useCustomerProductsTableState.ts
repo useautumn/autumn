@@ -2,7 +2,7 @@ import {
 	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
 	CustomerProductKind,
 } from "@autumn/shared";
-import { parseAsBoolean, parseAsStringEnum, useQueryState } from "nuqs";
+import { parseAsArrayOf, parseAsStringEnum, useQueryState } from "nuqs";
 import { useCallback, useState } from "react";
 import { useCursorPagination } from "@/components/general/table";
 
@@ -15,6 +15,16 @@ const DEFAULT_PAGE_SIZE: CustomerProductsPageSize =
 
 export type CustomerProductsKindFilter = CustomerProductKind | "all";
 
+export type CustomerProductsStatusOption = "active" | "expired";
+
+export const DEFAULT_PRODUCT_STATUSES: CustomerProductsStatusOption[] = [
+	"active",
+];
+
+export const isDefaultProductStatuses = (
+	statuses: CustomerProductsStatusOption[],
+) => statuses.length === 1 && statuses[0] === "active";
+
 export function useCustomerProductsTableState({
 	entityId,
 }: {
@@ -23,9 +33,11 @@ export function useCustomerProductsTableState({
 	const [pageSize, setPageSize] =
 		useState<CustomerProductsPageSize>(DEFAULT_PAGE_SIZE);
 
-	const [showExpired, setShowExpired] = useQueryState(
-		"customerProductsShowExpired",
-		parseAsBoolean.withDefault(false),
+	const [statuses, setStatuses] = useQueryState(
+		"customerProductsStatuses",
+		parseAsArrayOf(
+			parseAsStringEnum<CustomerProductsStatusOption>(["active", "expired"]),
+		).withDefault(DEFAULT_PRODUCT_STATUSES),
 	);
 	const [kind, setKind] = useQueryState(
 		"customerProductsKind",
@@ -40,7 +52,7 @@ export function useCustomerProductsTableState({
 	const { currentCursor, currentPage, canPrev, pushCursor, popCursor } =
 		useCursorPagination({
 			pageSize,
-			resetKey: `${pageSize}|${showExpired}|${kind}|${entityId ?? ""}`,
+			resetKey: `${pageSize}|${statuses.join(",")}|${kind}|${entityId ?? ""}`,
 		});
 
 	const changePageSize = useCallback(
@@ -56,8 +68,8 @@ export function useCustomerProductsTableState({
 		popCursor,
 		pageSize,
 		changePageSize,
-		showExpired: showExpired ?? false,
-		setShowExpired,
+		statuses: statuses ?? DEFAULT_PRODUCT_STATUSES,
+		setStatuses,
 		kind: kind ?? "all",
 		setKind,
 	};

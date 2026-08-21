@@ -68,6 +68,7 @@ export const resolveAgentTurnOutcome = async ({
 			db,
 			env,
 			orgId,
+			reason: "turn_unusable",
 			sessionId,
 			threadKey: session.threadKey,
 		});

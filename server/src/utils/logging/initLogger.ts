@@ -1,4 +1,6 @@
+import { hostname } from "node:os";
 import { Writable } from "node:stream";
+import { resolveDeployment } from "@autumn/logging";
 import pino from "pino";
 import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
 
@@ -8,6 +10,7 @@ import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
  * request envelopes, and high-cardinality structured data.
  */
 const FORMATTED_LOG_EXCLUDE_FIELDS = new Set([
+	"deployment",
 	// pino housekeeping
 	"time",
 	"level",
@@ -181,6 +184,9 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 	const isRunningInEcs = Boolean(process.env.ECS_CONTAINER_METADATA_URI_V4);
 	const shouldUseFirelens =
 		configuredTransport === "firelens" && !isDevOrTest && isRunningInEcs;
+	// Dev/test stays out of the prod dataset unless explicitly opted in.
+	const shipToAxiom = !isDevOrTest || process.env.AXIOM_DEV_LOGS === "1";
+	const deployment = resolveDeployment();
 
 	if (mode === "dual") {
 		streams.push({
@@ -194,7 +200,7 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 					? process.stdout
 					: createConsoleJsonStream(),
 		});
-		if (!shouldUseFirelens && process.env.AXIOM_TOKEN) {
+		if (!shouldUseFirelens && process.env.AXIOM_TOKEN && shipToAxiom) {
 			streams.push({
 				level: "info",
 				stream: pino.transport({
@@ -207,7 +213,8 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 			});
 		}
 	} else {
-		// DEFAULT FLOW — exact prior behavior. DO NOT MODIFY.
+		// DEFAULT FLOW — exact prior behavior, except dev/test no longer ships
+		// to Axiom without AXIOM_DEV_LOGS=1.
 		if (isDev || isTest) {
 			streams.push({
 				level: "debug",
@@ -220,7 +227,7 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 				level: "info",
 				stream: process.stdout,
 			});
-		} else if (process.env.AXIOM_TOKEN) {
+		} else if (process.env.AXIOM_TOKEN && shipToAxiom) {
 			streams.push({
 				level: "info",
 				stream: pino.transport({
@@ -244,6 +251,11 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 	const logger = pino(
 		{
 			level: isDev || isTest || mode === "dual" ? "debug" : "info",
+			base: {
+				deployment,
+				hostname: hostname(),
+				pid: process.pid,
+			},
 			// Tag every log line with this process's AWS task identity so Axiom
 			// can distinguish blue/green task sets. Returns {} until
 			// `resolveAwsTaskIdentity` finishes (~100ms after boot) and on

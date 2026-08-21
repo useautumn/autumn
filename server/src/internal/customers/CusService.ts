@@ -328,7 +328,7 @@ export class CusService {
 
 		const sharedArgs = {
 			internalCustomerId: resolvedInternalId,
-			showExpired: params.show_expired,
+			status: params.status,
 			entityId: params.entity_id,
 			kind: params.kind,
 		};
@@ -372,7 +372,7 @@ export class CusService {
 			params: {
 				start_cursor: "",
 				limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
-				show_expired: false,
+				status: "active",
 			},
 		});
 	}

@@ -6,6 +6,10 @@ import type { WithheldWrite } from "../../agentRuntime/eve/parkedInput.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
 import {
+	autumnMcpErrorText,
+	rawErrorShapeText,
+} from "../../autumnMcp/errorResult.js";
+import {
 	resolveApprovalDisplay,
 	withApprovalDisplay,
 } from "./approvalDisplay.js";
@@ -109,7 +113,7 @@ export const fetchApprovalPreview = async ({
 }: {
 	env: AppEnv;
 	executeTool?: typeof executeAutumnMcpTool;
-	logger: Pick<AutumnLogger, "warn">;
+	logger: Pick<AutumnLogger, "debug" | "warn">;
 	request: Record<string, unknown>;
 	token: string;
 	toolName: string;
@@ -124,15 +128,21 @@ export const fetchApprovalPreview = async ({
 			args: { request: previewRequestForWrite({ request, toolName }) },
 		});
 		// A failed preview must not replace the card's params-only fallback.
-		if (isErrorResult(result)) return FAILED_APPROVAL_PREVIEW;
+		if (isErrorResult(result)) {
+			// executeAutumnMcpTool already warned with the error detail.
+			logger.debug("Approval preview returned an error result", {
+				data: { env },
+				event: "leaf.approval_preview_failed",
+				tool: toolName,
+			});
+			return FAILED_APPROVAL_PREVIEW;
+		}
 		return result;
 	} catch (error) {
 		logger.warn("Could not backfill approval preview", {
+			data: { env, error: errorMessage(error) },
 			event: "leaf.approval_preview_backfill_failed",
 			tool: toolName,
-			data: {
-				error: errorMessage(error),
-			},
 		});
 		return FAILED_APPROVAL_PREVIEW;
 	}
@@ -150,7 +160,7 @@ export const resolveApprovalPreview = async ({
 	env: AppEnv;
 	executeTool?: typeof executeAutumnMcpTool;
 	getToken: () => Promise<string>;
-	logger: Pick<AutumnLogger, "warn">;
+	logger: Pick<AutumnLogger, "debug" | "warn">;
 	preview: unknown;
 	request?: Record<string, unknown>;
 	toolName: string;
@@ -174,7 +184,7 @@ export const resolveApprovalPreview = async ({
 	} catch (error) {
 		logger.warn("Could not backfill approval preview", {
 			event: "leaf.approval_preview_backfill_failed",
-			error,
+			data: { env, error },
 			tool: toolName,
 		});
 		return preview;
@@ -194,7 +204,7 @@ export const withStepPreviews = async ({
 	env: AppEnv;
 	executeTool?: typeof executeAutumnMcpTool;
 	getToken: () => Promise<string>;
-	logger: Pick<AutumnLogger, "warn">;
+	logger: Pick<AutumnLogger, "debug" | "warn">;
 	steps: ReadonlyArray<WithheldWrite>;
 }): Promise<ReadonlyArray<WithheldWrite>> =>
 	Promise.all(

@@ -14,8 +14,12 @@ if (embedEve === "1") {
 	const { startEmbeddedEveServer } = await import(
 		"./internal/agentRuntime/eve/embeddedServer.js"
 	);
-	startEmbeddedEveServer().catch((error) => {
-		console.error("Embedded eve server failed to start", error);
+	const { logger } = await import("./lib/logger.js");
+	startEmbeddedEveServer().catch(async (error) => {
+		logger.error("Embedded eve server failed to start", error, {
+			event: "leaf.eve_process_start_failed",
+		});
+		await logger.flush?.();
 		process.exit(1);
 	});
 }

@@ -189,6 +189,20 @@ const defaultApprovalActionDeps: ApprovalActionDeps = {
 	},
 };
 
+/** Every decide-path log line carries the click's identifiers, so approval
+ * incidents reconstruct from logs without a DB lookup first. */
+const contextualApprovalLogger = ({
+	base,
+	fields,
+}: {
+	base: ApprovalActionDeps["logger"];
+	fields: Record<string, unknown>;
+}): ApprovalActionDeps["logger"] => ({
+	error: (...args) => base.error(...args, fields),
+	info: (...args) => base.info(...args, fields),
+	warn: (...args) => base.warn(...args, fields),
+});
+
 // Maps a DB row to the card state shown when a click can no longer act on it.
 const cardStatusForApproval = ({
 	approval,
@@ -204,7 +218,7 @@ const cardStatusForApproval = ({
 };
 
 export const handleApprovalActionWithDeps = async ({
-	deps = defaultApprovalActionDeps,
+	deps: providedDeps = defaultApprovalActionDeps,
 	event,
 }: {
 	deps?: ApprovalActionDeps;
@@ -213,6 +227,18 @@ export const handleApprovalActionWithDeps = async ({
 	const approvalId = event.value;
 	if (!approvalId) return;
 	const providerUserId = event.user.userId;
+	const deps: ApprovalActionDeps = {
+		...providedDeps,
+		logger: contextualApprovalLogger({
+			base: providedDeps.logger,
+			fields: {
+				approval_id: approvalId,
+				provider_user_id: providerUserId,
+				slack_message_id: event.messageId,
+				slack_thread_id: event.threadId,
+			},
+		}),
+	};
 
 	const editToCurrentStatus = async () => {
 		const current = await deps.getApproval({ approvalId });

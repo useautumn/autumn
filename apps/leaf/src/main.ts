@@ -6,7 +6,7 @@ import { logger } from "./lib/logger.js";
 
 const app = createLeafApp();
 
-serve(
+const server = serve(
 	{
 		fetch: app.fetch,
 		hostname: "0.0.0.0",
@@ -22,3 +22,20 @@ serve(
 		});
 	},
 );
+
+let shuttingDown = false;
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+	process.on(signal, () => {
+		if (shuttingDown) return;
+		shuttingDown = true;
+		void (async () => {
+			logger.info("Chat shutting down", {
+				event: "leaf.server_stopping",
+				data: { signal },
+			});
+			await new Promise<void>((resolve) => server.close(() => resolve()));
+			await logger.flush?.().catch(() => undefined);
+			process.exit(signal === "SIGTERM" ? 143 : 130);
+		})();
+	});
+}

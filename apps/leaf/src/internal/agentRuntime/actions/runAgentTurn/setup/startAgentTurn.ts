@@ -53,6 +53,7 @@ export const startAgentTurn = async ({
 				db,
 				env,
 				orgId,
+				reason: "post_failed",
 				sessionId: session.sessionId,
 				threadKey: session.threadKey,
 			});

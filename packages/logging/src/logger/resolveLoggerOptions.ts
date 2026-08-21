@@ -28,6 +28,12 @@ const parseOutputs = (
 	return undefined;
 };
 
+export const resolveDeployment = (env: NodeJS.ProcessEnv = process.env) => {
+	if (env.NODE_ENV === "development") return "dev";
+	if (env.NODE_ENV === "test") return "test";
+	return "prod";
+};
+
 export const resolveLoggerOptions = ({
 	options,
 	env = process.env,
@@ -45,7 +51,7 @@ export const resolveLoggerOptions = ({
 		else if (preset === "axiom-only") outputs = ["axiom"];
 		else if (preset === "dual")
 			outputs = [isDevOrTest ? "console-pretty" : "console-json", "axiom"];
-		else if (isDevOrTest) outputs = ["console-pretty", "axiom"];
+		else if (isDevOrTest) outputs = ["console-pretty"];
 		else outputs = ["axiom"];
 	}
 

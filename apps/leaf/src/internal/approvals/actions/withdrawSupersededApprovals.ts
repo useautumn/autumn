@@ -58,7 +58,7 @@ const withdrewInEve = async ({
 		logger.warn("Could not deny superseded Eve approval", {
 			event: "leaf.eve_superseded_approval_deny_failed",
 			approval_id: approval.id,
-			data: { error: error instanceof Error ? error.message : String(error) },
+			data: { error },
 		});
 		return "undecided";
 	}
