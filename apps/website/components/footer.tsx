@@ -12,32 +12,22 @@ type FooterColumn = {
 };
 
 const footerColumns: FooterColumn[] = [
-	// {
-	// 	title: "PRODUCT",
-	// 	links: [
-	// 		{ label: "FEATURES", href: "#" },
-	// 		{ label: "INTEGRATIONS", href: "#" },
-	// 		{ label: "PRICING", href: "#" },
-	// 		{ label: "CHANGELOG", href: "#" },
-	// 		{ label: "ROADMAP", href: "#" },
-	// 	],
-	// },
-	// {
-	// 	title: "COMPANY",
-	// 	links: [
-	// 		{ label: "OUR TEAM", href: "#" },
-	// 		{ label: "OUR VALUES", href: "/privacy" },
-	// 		{ label: "BLOG", href: "/blog" },
-	// 	],
-	// },
-	// {
-	// 	title: "RESOURCES",
-	// 	links: [
-	// 		{ label: "DOWNLOADS", href: "https://useautumn.com/" },
-	// 		{ label: "DOCUMENTATION", href: "https://docs.useautumn.com/welcome" },
-	// 		{ label: "CONTACT", href: "https://cal.com/ayrod/a?user=ayrod" },
-	// 	],
-	// },
+	{
+		title: "COMPANY",
+		links: [
+			{ label: "ABOUT", href: "/about" },
+			{ label: "CONTACT", href: "/contact" },
+			{ label: "BLOG", href: "/blog" },
+		],
+	},
+	{
+		title: "DEVELOPERS",
+		links: [
+			{ label: "RESOURCES", href: "/developers" },
+			{ label: "DOCUMENTATION", href: "https://docs.useautumn.com/welcome" },
+			{ label: "OPENAPI", href: "/openapi.yml" },
+		],
+	},
 ];
 
 export default function Footer() {
@@ -83,7 +73,14 @@ export default function Footer() {
 											<li key={link.href} className="group/strip">
 												<Link
 													href={link.href}
-													target="_blank"
+													target={
+														link.href.startsWith("http") ? "_blank" : undefined
+													}
+													rel={
+														link.href.startsWith("http")
+															? "noreferrer"
+															: undefined
+													}
 													className="group/strip flex items-center gap-3 text-[14px] font-mono uppercase tracking-[-1%] transition-colors duration-300"
 												>
 													<span className="w-1 h-1 bg-[#FFFFFF99] group-hover/strip:bg-white group-active/strip:bg-white transition-colors duration-300 shrink-0" />

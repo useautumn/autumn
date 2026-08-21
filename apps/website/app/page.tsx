@@ -3,6 +3,7 @@ import ElasticRecoil from "@/components/elastic-footer";
 import HomeSections from "@/components/home-sections";
 import JsonLd from "@/components/json-ld";
 import Navbar from "@/components/navbar";
+import { buildHomeMarkdown } from "@/lib/agentContent";
 import {
 	faqPageSchema,
 	organizationSchema,
@@ -23,6 +24,11 @@ export default function Home() {
 				{ "--page-pad": "max(2.5rem, calc((100vw - 1440px) / 2))" } as PageStyle
 			}
 		>
+			<noscript>
+				<pre className="mx-auto max-w-4xl whitespace-pre-wrap bg-black p-6 font-sans text-sm leading-6 text-white">
+					{buildHomeMarkdown()}
+				</pre>
+			</noscript>
 			<JsonLd
 				data={[
 					organizationSchema(),
