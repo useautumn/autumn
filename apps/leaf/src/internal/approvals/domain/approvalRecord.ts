@@ -5,6 +5,7 @@ import {
 	type WithheldWrite,
 	withheldWritesFromToolArgs,
 } from "../../agentRuntime/eve/parkedInput.js";
+import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 import { publicToolArgs } from "../utils/toolRequest.js";
 
@@ -118,7 +119,7 @@ export const dashboardLinkableApproval = ({
 	return (
 		groupedStepCount === 0 &&
 		!hasCustomize &&
-		SHEET_LINKABLE_TOOLS.has(approval.tool_name) &&
+		SHEET_LINKABLE_TOOLS.has(normalizeToolName(approval.tool_name)) &&
 		!isInternalAutumnSlackProvider({ provider: approval.provider ?? "" })
 	);
 };
