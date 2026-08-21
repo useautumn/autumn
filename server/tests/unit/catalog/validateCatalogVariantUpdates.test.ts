@@ -15,6 +15,7 @@ const product = ({
 	({
 		id,
 		version,
+		active: true,
 		base_internal_product_id: baseInternalProductId,
 	}) as FullProduct;
 
