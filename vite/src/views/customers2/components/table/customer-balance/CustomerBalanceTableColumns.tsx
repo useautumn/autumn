@@ -9,6 +9,7 @@ import {
 	cusEntsToPrepaidQuantity,
 	cusEntsToUnlimitedUsage,
 	getRolloverFields,
+	isCusEntExpired,
 	isFreeCustomerEntitlement,
 	isPrepaidCustomerEntitlement,
 	isSyntheticPooledBalanceCustomerEntitlement,
@@ -50,6 +51,19 @@ import {
 	canRecalculateCustomerBalances,
 	getCustomerBalanceSourceParts,
 } from "./customerBalanceUtils";
+
+/**
+ * The entitlements a row's aggregation math may see: expired entitlements are
+ * display-only and must never feed useFeatureUsageBalance or any sums.
+ */
+function getActiveRowEntitlements(
+	row: Row<CustomerBalanceRowData>,
+): FullCusEntWithFullCusProduct[] {
+	const ents = row.original.subRows?.length
+		? row.original.subRows
+		: [row.original];
+	return ents.filter((ent) => !isCusEntExpired({ cusEnt: ent }));
+}
 
 function getBalanceBillingIcon({
 	balance,
@@ -226,6 +240,20 @@ function SubRowUsageCell({
 	);
 }
 
+/**
+ * View-only cell for expired balances: shows the frozen balance greyed out,
+ * without running any of the aggregation hooks.
+ */
+function ExpiredUsageCell({ ent }: { ent: FullCusEntWithFullCusProduct }) {
+	return (
+		<span className="text-tertiary-foreground opacity-50">
+			{ent.unlimited
+				? "Unlimited"
+				: new Intl.NumberFormat().format(ent.balance ?? 0)}
+		</span>
+	);
+}
+
 function UsageCell({
 	row,
 	fullCustomer,
@@ -237,6 +265,9 @@ function UsageCell({
 	entityId: string | null;
 	customerEntitlements?: FullCusEntWithFullCusProduct[];
 }) {
+	if (isCusEntExpired({ cusEnt: row.original })) {
+		return <ExpiredUsageCell ent={row.original} />;
+	}
 	if (row.depth > 0) {
 		return <SubRowUsageCell ent={row.original} entityId={entityId} />;
 	}
@@ -263,14 +294,23 @@ function BalanceExpiryIcon({
 }: {
 	expiresAt: number | null | undefined;
 }) {
+	const hasExpired = expiresAt != null && expiresAt <= Date.now();
+
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<div className="shrink-0 text-amber-500">
+				<div
+					className={cn(
+						"shrink-0",
+						hasExpired ? "text-tertiary-foreground" : "text-amber-500",
+					)}
+				>
 					<ClockCountdownIcon size={14} weight="duotone" />
 				</div>
 			</TooltipTrigger>
-			<TooltipContent>Expires {formatChipDate(expiresAt)}</TooltipContent>
+			<TooltipContent>
+				{hasExpired ? "Expired" : "Expires"} {formatChipDate(expiresAt)}
+			</TooltipContent>
 		</Tooltip>
 	);
 }
@@ -377,6 +417,21 @@ function SubRowBarCell({
 	);
 }
 
+/**
+ * View-only bar cell for expired balances: just the greyed expiry icon in the
+ * same layout slot, no reset chip and no usage bar.
+ */
+function ExpiredBarCell({ ent }: { ent: FullCusEntWithFullCusProduct }) {
+	return (
+		<div className="flex gap-3 items-center opacity-50">
+			<div className="flex items-center justify-end gap-1.5 shrink-0 min-w-44">
+				<BalanceExpiryIcon expiresAt={ent.expires_at} />
+			</div>
+			<div className="w-full max-w-50 min-w-16" />
+		</div>
+	);
+}
+
 function BarCell({
 	row,
 	fullCustomer,
@@ -388,6 +443,9 @@ function BarCell({
 	entityId: string | null;
 	customerEntitlements?: FullCusEntWithFullCusProduct[];
 }) {
+	if (isCusEntExpired({ cusEnt: row.original })) {
+		return <ExpiredBarCell ent={row.original} />;
+	}
 	if (row.depth > 0) {
 		return <SubRowBarCell ent={row.original} entityId={entityId} />;
 	}
@@ -418,6 +476,9 @@ function BalanceActionsCell({
 	onCheckBalanceClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecalculateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 }) {
+	// Expired balances are view-only: no record/check/recalculate/delete
+	if (isCusEntExpired({ cusEnt: row.original })) return null;
+
 	const isParentRow = row.depth === 0;
 	const canDelete =
 		!row.getCanExpand() && canDeleteCustomerBalance({ balance: row.original });
@@ -431,10 +492,11 @@ function BalanceActionsCell({
 			featureId: row.original.entitlement.feature.id,
 			entityId,
 		});
-	const customerEntitlements =
+	const customerEntitlements = (
 		row.subRows.length > 0
 			? row.subRows.map((subRow) => subRow.original)
-			: [row.original];
+			: [row.original]
+	).filter((ent) => !isCusEntExpired({ cusEnt: ent }));
 
 	if (!canDelete && !canRecordUsage && !canCheckBalance && !canRecalculate)
 		return null;
@@ -530,6 +592,28 @@ function MobileBalanceBar({
 	entityId: string | null;
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 }) {
+	if (isCusEntExpired({ cusEnt: ent })) return null;
+	return (
+		<MobileBalanceBarContent
+			ent={ent}
+			fullCustomer={fullCustomer}
+			entityId={entityId}
+			customerEntitlements={customerEntitlements}
+		/>
+	);
+}
+
+function MobileBalanceBarContent({
+	ent,
+	fullCustomer,
+	entityId,
+	customerEntitlements,
+}: {
+	ent: FullCusEntWithFullCusProduct;
+	fullCustomer: FullCustomer | null | undefined;
+	entityId: string | null;
+	customerEntitlements: FullCusEntWithFullCusProduct[];
+}) {
 	const { allowance, balance, quantity } = useFeatureUsageBalance({
 		fullCustomer,
 		featureId: ent.entitlement.feature.id,
@@ -560,9 +644,7 @@ function MobileUsageWithBar({
 	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
 }) {
-	const customerEntitlements = row.original.subRows?.length
-		? row.original.subRows
-		: [row.original];
+	const customerEntitlements = getActiveRowEntitlements(row);
 
 	return (
 		<div className="flex items-center justify-between gap-3">
@@ -609,6 +691,7 @@ export const CustomerBalanceTableColumns = ({
 		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => {
 			const ent = row.original;
 			const isSubRow = row.depth > 0;
+			const isExpired = isCusEntExpired({ cusEnt: ent });
 
 			if (isSubRow) {
 				const isPooledBalance = isSyntheticPooledBalanceCustomerEntitlement({
@@ -624,7 +707,12 @@ export const CustomerBalanceTableColumns = ({
 
 				if (!hasPlan && !isPooledBalance) {
 					return (
-						<div className="flex items-center gap-2 min-w-0">
+						<div
+							className={cn(
+								"flex items-center gap-2 min-w-0",
+								isExpired && "opacity-50",
+							)}
+						>
 							<BalanceBillingIcon balance={ent} />
 							<AdminHover
 								texts={getCusEntHoverTexts({
@@ -641,7 +729,12 @@ export const CustomerBalanceTableColumns = ({
 				}
 
 				return (
-					<div className="flex flex-col gap-0.5 min-w-0">
+					<div
+						className={cn(
+							"flex flex-col gap-0.5 min-w-0",
+							isExpired && "opacity-50",
+						)}
+					>
 						<div className="flex items-center gap-2">
 							<BalanceBillingIcon balance={ent} />
 							<AdminHover
@@ -666,7 +759,9 @@ export const CustomerBalanceTableColumns = ({
 			const isExpanded = row.getIsExpanded();
 
 			return (
-				<div className="flex items-center gap-2">
+				<div
+					className={cn("flex items-center gap-2", isExpired && "opacity-50")}
+				>
 					{canExpand && (
 						<span
 							className={cn(
@@ -709,9 +804,7 @@ export const CustomerBalanceTableColumns = ({
 				row={row}
 				fullCustomer={fullCustomer}
 				entityId={entityId}
-				customerEntitlements={
-					row.original.subRows?.length ? row.original.subRows : [row.original]
-				}
+				customerEntitlements={getActiveRowEntitlements(row)}
 			/>
 		),
 	},
@@ -725,9 +818,7 @@ export const CustomerBalanceTableColumns = ({
 				row={row}
 				fullCustomer={fullCustomer}
 				entityId={entityId}
-				customerEntitlements={
-					row.original.subRows?.length ? row.original.subRows : [row.original]
-				}
+				customerEntitlements={getActiveRowEntitlements(row)}
 			/>
 		),
 	},
