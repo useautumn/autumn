@@ -27,7 +27,28 @@ describe("dashboardLinkableApproval", () => {
 		).toBe(true);
 	});
 
-	test("excludes grouped, customized, internal, and non-sheet tools", () => {
+	test("links seedable customize (price, items, add/remove, trial)", () => {
+		for (const customize of [
+			{ price: { amount: 1000, interval: "month" } },
+			{ items: [] },
+			{ add_items: [], remove_items: [{ feature_id: "seats" }] },
+			{ free_trial: { duration_length: 7, duration_type: "day" } },
+			{ billing_controls: { spend_limits: [] } },
+		]) {
+			expect(
+				dashboardLinkableApproval({
+					approval: {
+						...base,
+						tool_args: { request: { customer_id: "cus_1", customize } },
+						tool_name: "attach",
+					},
+					groupedStepCount: 0,
+				}),
+			).toBe(true);
+		}
+	});
+
+	test("excludes grouped, unresolvable customize, internal, and non-sheet tools", () => {
 		expect(
 			dashboardLinkableApproval({
 				approval: { ...base, tool_name: "attach" },
@@ -38,7 +59,12 @@ describe("dashboardLinkableApproval", () => {
 			dashboardLinkableApproval({
 				approval: {
 					...base,
-					tool_args: { request: { customer_id: "cus_1", customize: [{}] } },
+					tool_args: {
+						request: {
+							customer_id: "cus_1",
+							customize: { update_items: [{ filter: {}, included: 5 }] },
+						},
+					},
 					tool_name: "attach",
 				},
 				groupedStepCount: 0,

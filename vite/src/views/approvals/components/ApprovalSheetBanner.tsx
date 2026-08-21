@@ -73,11 +73,22 @@ export function ApprovalSheetBanner() {
 		0,
 		Math.round((approval.expires_at - Date.now()) / 60_000),
 	);
+	const notes = [
+		seed.prefillFailed &&
+			'Couldn\'t prefill the form from the approval — "Apply approved change" still applies the exact approved request.',
+		seed.unmappedRequestKeys.includes("billing_controls") &&
+			'Includes billing controls not shown in this form — they apply only with "Apply approved change".',
+	].filter((note): note is string => typeof note === "string");
 	return (
 		<div className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-3 py-2">
 			<div className="text-sm text-muted-foreground">
 				From a Slack approval — expires in ~{minutesLeft}m. Applying here
 				resolves the Slack card; editing first applies your version instead.
+				{notes.map((note) => (
+					<span className="mt-1 block text-warning" key={note}>
+						{note}
+					</span>
+				))}
 			</div>
 			<Button
 				disabled={applyMutation.isPending}

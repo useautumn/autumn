@@ -98,11 +98,22 @@ export const surfaceRendersGroup = (provider: string) =>
 
 const SHEET_LINKABLE_TOOLS = new Set(["attach", "updateSubscription"]);
 
+const UNSEEDABLE_CUSTOMIZE_KEYS = ["remove_licenses", "update_items"] as const;
+
+/** Mirrors the server's billing_request_resolution `unrepresentable` set:
+ * keys with no V0-dialect slot cannot be shown or edit-preserved in a sheet. */
+const sheetSeedableCustomize = (customize: unknown) => {
+	if (!customize) return true;
+	if (typeof customize !== "object") return false;
+	return UNSEEDABLE_CUSTOMIZE_KEYS.every(
+		(key) => (customize as Record<string, unknown>)[key] === undefined,
+	);
+};
+
 /** Single-step attach/updateSubscription cards from real customer workspaces
  * can deep-link to the dashboard sheet. Excluded: internal admin threads (they
- * hop orgs, the link would 403) and customized requests (the sheet cannot
- * faithfully seed a `customize` patch yet — linking would show a different
- * preview than the card). */
+ * hop orgs, the link would 403) and requests the sheet cannot faithfully
+ * represent (see sheetSeedableCustomize). */
 export const dashboardLinkableApproval = ({
 	approval,
 	groupedStepCount,
@@ -111,14 +122,13 @@ export const dashboardLinkableApproval = ({
 	groupedStepCount: number;
 }) => {
 	const request = approval.tool_args?.request;
-	const hasCustomize = Boolean(
-		request &&
-			typeof request === "object" &&
-			(request as Record<string, unknown>).customize,
-	);
+	const customize =
+		request && typeof request === "object"
+			? (request as Record<string, unknown>).customize
+			: undefined;
 	return (
 		groupedStepCount === 0 &&
-		!hasCustomize &&
+		sheetSeedableCustomize(customize) &&
 		SHEET_LINKABLE_TOOLS.has(normalizeToolName(approval.tool_name)) &&
 		!isInternalAutumnSlackProvider({ provider: approval.provider ?? "" })
 	);
