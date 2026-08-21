@@ -8,11 +8,19 @@ const calls = {
 	clearPending: 0,
 	keepPending: [] as number[],
 	failureWebhook: 0,
+	lockTtlMs: [] as number[],
 };
 const state = { lockContention: true, preflightBlocked: false };
 
 mock.module("@/external/redis/utils/lockUtils/withLock.js", () => ({
-	withLock: async ({ fn }: { fn: () => Promise<void> }) => {
+	withLock: async ({
+		fn,
+		ttlMs,
+	}: {
+		fn: () => Promise<void>;
+		ttlMs?: number;
+	}) => {
+		if (ttlMs != null) calls.lockTtlMs.push(ttlMs);
 		if (state.lockContention) throw { code: ErrCode.LockAlreadyExists };
 		return fn();
 	},
@@ -77,6 +85,7 @@ beforeEach(() => {
 	calls.clearPending = 0;
 	calls.keepPending = [];
 	calls.failureWebhook = 0;
+	calls.lockTtlMs = [];
 	state.lockContention = true;
 	state.preflightBlocked = false;
 });
@@ -102,6 +111,7 @@ test("auto-topup lock retry preserves burst suppression", async () => {
 	expect(calls.clearPending).toBe(0);
 	expect(calls.keepPending).toEqual([10 * 60 * 1000]);
 	expect(calls.failureWebhook).toBe(0);
+	expect(calls.lockTtlMs).toEqual([5 * 60 * 1000]);
 });
 
 test("auto-topup purchase limit preserves burst suppression", async () => {
