@@ -11,7 +11,29 @@ import {
 	ApiFeatureType,
 	ApiFeatureV0Schema,
 } from "../prevVersions/apiFeatureV0.js";
-import { apiCreditSchemaToV2_3 } from "./V2.3_FeatureRateCardChange.js";
+
+export const apiCreditSchemaToV0 = ({
+	creditSchema,
+}: {
+	creditSchema: z.infer<typeof ApiFeatureV1Schema>["credit_schema"];
+}): z.infer<typeof ApiFeatureV0Schema>["credit_schema"] => {
+	if (!creditSchema) return null;
+
+	const legacyCreditSchema: NonNullable<
+		z.infer<typeof ApiFeatureV0Schema>["credit_schema"]
+	> = [];
+	for (const item of creditSchema) {
+		if (item.tier_behavior === "graduated" || (item.billing_units ?? 1) !== 1) {
+			return null;
+		}
+		legacyCreditSchema.push({
+			metered_feature_id: item.metered_feature_id,
+			credit_cost: item.credit_cost,
+		});
+	}
+
+	return legacyCreditSchema;
+};
 
 /**
  * V1_2_FeatureChange: Transforms feature response between V1 and V0
@@ -74,7 +96,7 @@ export const V1_2_FeatureChange = defineVersionChange({
 		} else {
 			v0Type = ApiFeatureType.Boolean;
 		}
-		const legacyCreditSchema = apiCreditSchemaToV2_3({
+		const legacyCreditSchema = apiCreditSchemaToV0({
 			creditSchema: input.credit_schema,
 		});
 

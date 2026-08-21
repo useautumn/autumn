@@ -9,7 +9,6 @@ import {
 	nullish,
 	RecaseError,
 	Scopes,
-	UpdateFeatureRestV2_3ParamsSchema,
 	UpdateFeatureV0ParamsSchema,
 	UpdateFeatureV1ParamsSchema,
 } from "@autumn/shared";
@@ -22,7 +21,6 @@ export const handleUpdateFeatureV1 = createRoute({
 	scopes: [Scopes.Features.Write],
 	versionedBody: {
 		latest: UpdateFeatureV1ParamsSchema,
-		[ApiVersion.V2_3]: UpdateFeatureRestV2_3ParamsSchema,
 		[ApiVersion.V1_Beta]: UpdateFeatureV0ParamsSchema,
 	},
 	resource: AffectedResource.Feature,

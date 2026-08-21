@@ -273,7 +273,6 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		name: "list_customers",
 		limit: 5,
 		versionedLimit: {
-			[ApiVersion.V2_4]: 50,
 			[ApiVersion.V2_3]: 50,
 			[ApiVersion.V2_2]: 5,
 		},

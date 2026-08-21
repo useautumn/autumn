@@ -83,6 +83,7 @@ export const featureToCatalogFeatureParams = ({
 			defaultMarkup: feature.config?.default_markup,
 			providerMarkups: feature.config?.provider_markups,
 			schema: feature.config?.schema,
+			invoiceCredit: feature.config?.invoice_credit,
 		}),
 		...(archived !== undefined ? { archived } : {}),
 	};

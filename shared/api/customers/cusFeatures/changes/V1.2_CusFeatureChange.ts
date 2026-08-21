@@ -1,4 +1,4 @@
-import { apiCreditSchemaToV2_3 } from "@api/features/changes/V2.3_FeatureRateCardChange.js";
+import { apiCreditSchemaToV0 } from "@api/features/changes/V1.2_FeatureChange.js";
 import { ApiFeatureType } from "@api/features/prevVersions/apiFeatureV0";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import { resetIntvToEntIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals";
@@ -236,7 +236,7 @@ export function transformBalanceToCusFeatureV3({
 	}
 
 	// 1. Included usage: granted_balance, or if prepaid, granted_balance + purchased_balance (?)
-	const legacyCreditSchema = apiCreditSchemaToV2_3({
+	const legacyCreditSchema = apiCreditSchemaToV0({
 		creditSchema: input.feature?.credit_schema,
 	});
 
