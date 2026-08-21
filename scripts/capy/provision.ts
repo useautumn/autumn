@@ -703,9 +703,7 @@ async function main(): Promise<void> {
 		trigger.accessToken,
 	);
 
-	if (created) {
-		runSetupTest(["--yes"], directUrl);
-	}
+	runSetupTest(["--ensure"], directUrl);
 	runSetupTest(["--ensure-key"], directUrl);
 
 	log(
