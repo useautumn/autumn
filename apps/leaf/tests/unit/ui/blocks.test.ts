@@ -291,7 +291,9 @@ describe("approval card", () => {
 		expect(json).toContain('["now","Pro"]');
 		expect(json).toContain('["after 2 years","Enterprise"]');
 		expect(json).toContain('["🟢 Add","Pro · 100 messages","—"]');
-		expect(json).toContain('["🔴 Remove","Enterprise · 12 workflows","—"]');
+		expect(json).toContain(
+			'["🔴 Remove","Enterprise (after 2 years) · 12 workflows","—"]',
+		);
 		expect(json).not.toContain("[object Object]");
 	});
 
@@ -1112,7 +1114,9 @@ describe("approval status card", () => {
 		);
 		expect(supersededJson).toContain("Due now");
 		expect(supersededJson).toContain("$400.00");
-		expect(supersededJson).toContain("🔄 Withdrawn — superseded by a newer request in this thread");
+		expect(supersededJson).toContain(
+			"🔄 Withdrawn — superseded by a newer request in this thread",
+		);
 		// Settled state is a non-interactive status line, not a (fake) button row.
 		expect(superseded.children.at(-1)?.type).toBe("text");
 		expect(supersededJson).not.toContain('"type":"actions"');

@@ -8,6 +8,7 @@ import {
 	formatMoney,
 	freeTrialText,
 	parsePreviewPayload,
+	phaseTimingText,
 	removedPlanChanges,
 } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
@@ -1145,15 +1146,27 @@ const approvalPreviewBlocks = ({
 			},
 		);
 	};
+	// Future-phase customizations must carry their timing or they read as the
+	// immediate change the "Due now" money describes.
 	const schedulePlans = [
 		...(Array.isArray(request?.phases)
-			? request.phases.flatMap((value) => {
-					const plans = getRecord(value).plans;
-					return Array.isArray(plans) ? plans.map(getRecord) : [];
+			? request.phases.flatMap((value, index) => {
+					const phase = getRecord(value);
+					const plans = Array.isArray(phase.plans)
+						? phase.plans.map(getRecord)
+						: [];
+					const timing = phaseTimingText({ index, phase });
+					return plans.map((plan) => ({
+						plan,
+						timing: timing === "now" ? null : timing,
+					}));
 				})
 			: []),
 		...(Array.isArray(request?.unscheduled_plans)
-			? request.unscheduled_plans.map(getRecord)
+			? request.unscheduled_plans.map((value) => ({
+					plan: getRecord(value),
+					timing: null,
+				}))
 			: []),
 	];
 	const planNames = new Map([
@@ -1183,12 +1196,13 @@ const approvalPreviewBlocks = ({
 			currentPlan: primaryCurrentPlan,
 			customize: request?.customize,
 		}),
-		...schedulePlans.flatMap((plan) => {
+		...schedulePlans.flatMap(({ plan, timing }) => {
 			const planId = getString(plan.plan_id) ?? "Plan";
+			const planLabel = planNames.get(planId) ?? planId;
 			return customizeRows({
 				currentPlan: currentPlanFor(planId),
 				customize: plan.customize,
-				plan: planNames.get(planId) ?? planId,
+				plan: timing ? `${planLabel} (${timing})` : planLabel,
 			});
 		}),
 	];
