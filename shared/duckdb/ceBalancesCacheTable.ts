@@ -38,6 +38,11 @@ export const ceBalanceTotalsCache = pgTable("ce_balance_totals", {
 		scale: 10,
 		mode: "number",
 	}).notNull(),
+	/** Usage over ALL rows: finite rows contribute granted−balance, unlimited
+	 * rows contribute −balance (real deductions drive them negative). */
+	usage_total: numeric({ precision: 38, scale: 10, mode: "number" }).notNull(),
+	/** Rows with a countable remaining/granted; 0 = pure-unlimited holder. */
+	finite_rows: numeric({ precision: 38, scale: 0, mode: "number" }).notNull(),
 });
 
 export type DbCeBalanceTotalsCache = typeof ceBalanceTotalsCache.$inferSelect;

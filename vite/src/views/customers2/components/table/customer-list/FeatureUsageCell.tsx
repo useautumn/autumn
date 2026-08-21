@@ -46,8 +46,15 @@ export function FeatureUsageCell({
 	}
 
 	if (isUnlimited) {
+		// allowance − balance spans every row: unlimited rows' real deductions
+		// drive balance negative, so this is total consumption incl. unlimited.
+		const usedAcrossAllRows = allowance - balance;
 		return (
-			<span className="text-tertiary-foreground text-tiny px-1">Unlimited</span>
+			<span className="text-tertiary-foreground text-tiny px-1">
+				Unlimited
+				{usedAcrossAllRows > 0 &&
+					` · ${Intl.NumberFormat("en-US").format(usedAcrossAllRows)} used`}
+			</span>
 		);
 	}
 

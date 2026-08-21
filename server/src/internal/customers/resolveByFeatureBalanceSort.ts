@@ -29,14 +29,32 @@ export type FeatureBalanceSortRow = {
 	total: number;
 };
 
-/** Lake column/expression for each basis. Mirrors PG: remaining=SUM(balance),
- * granted≈SUM(allowance+adjustment), usage=granted−remaining (prepaid quantity
- * and legacy entity multipliers are PG-verify refinements, not lake ones). */
+/** Lake column/expression for each basis. Mirrors PG: remaining=SUM(balance)
+ * finite-only, granted≈SUM(allowance+adjustment) finite-only, usage=all-rows
+ * consumption incl. unlimited deductions (prepaid quantity and legacy entity
+ * multipliers are PG-verify refinements, not lake ones). */
 export const basisExprSql = (basis: FeatureBalanceSortBasis): SQL => {
 	if (basis === "granted") return sql.raw("granted_total");
-	if (basis === "usage") return sql.raw("(granted_total - total)");
+	if (basis === "usage") return sql.raw("usage_total");
 	return sql.raw("total");
 };
+
+/** Remaining/granted are statements about finite numbers — a pure-unlimited
+ * holder (no finite rows) has neither, so those thresholds exclude them.
+ * Usage is real on every row, unlimited included. */
+export const thresholdRequiresFiniteRows = (
+	basis: FeatureBalanceSortBasis,
+): boolean => basis !== "usage";
+
+/** The unlimited stripe orders remaining/granted sorts (no number to rank
+ * unlimited customers by); usage ranks everyone by their real number. */
+export const stripeSuppressed = ({
+	basis,
+	remainingFilter,
+}: {
+	basis: FeatureBalanceSortBasis;
+	remainingFilter?: BalanceThresholdFilter;
+}): boolean => basis === "usage" || Boolean(remainingFilter);
 
 /** Lake nominations per top-up iteration; sized so one batch usually fills a
  * 250 page even after expired-row inflation (~12% table-wide) and filters. */
@@ -72,26 +90,27 @@ export type BalanceThresholdFilter = {
 	basis: FeatureBalanceSortBasis;
 };
 
-/** The scalar a threshold compares in the chosen basis. */
+/** The scalar a threshold compares in the chosen basis. Usage spans ALL rows:
+ * finite consumption plus unlimited-row deductions. */
 export const basisValueOf = ({
 	basis,
 	remaining,
 	granted,
+	unlimitedUsage,
 }: {
 	basis: FeatureBalanceSortBasis;
 	remaining: number;
 	granted: number;
+	unlimitedUsage: number;
 }): number =>
 	basis === "granted"
 		? granted
 		: basis === "usage"
-			? granted - remaining
+			? granted - remaining + unlimitedUsage
 			: remaining;
 
-/** Thresholds compare the FINITE value only (sums exclude unlimited rows):
- * mixed unlimited+finite customers are judged on their finite side, and
- * pure-unlimited customers (finite 0) fail both directions — a threshold is a
- * statement about numbers, and unlimited is not a number. */
+/** Remaining/granted thresholds compare finite sums (see
+ * `thresholdRequiresFiniteRows`); usage thresholds compare all-rows usage. */
 export const passesBalanceFilter = ({
 	total,
 	op,
@@ -166,12 +185,16 @@ const verifyExactBalances = async ({
 		is_unlimited: boolean;
 		remaining: string | number;
 		granted: string | number;
+		unlimited_used: string | number;
+		finite_rows: string | number;
 	}>(sql`
 		SELECT
 			${customers.internal_id} AS internal_customer_id,
 			COALESCE(b.is_unlimited, false) AS is_unlimited,
 			COALESCE(b.remaining, 0) AS remaining,
-			COALESCE(b.granted, 0) AS granted
+			COALESCE(b.granted, 0) AS granted,
+			COALESCE(b.unlimited_used, 0) AS unlimited_used,
+			COALESCE(b.finite_rows, 0) AS finite_rows
 		FROM customers
 		LEFT JOIN (
 			SELECT
@@ -181,7 +204,9 @@ const verifyExactBalances = async ({
 				SUM(
 					COALESCE(e.allowance, 0) * COALESCE(cp.quantity, 1)
 					+ COALESCE(ce.adjustment, 0)
-				) FILTER (WHERE ce.unlimited IS NOT TRUE) AS granted
+				) FILTER (WHERE ce.unlimited IS NOT TRUE) AS granted,
+				SUM(-ce.balance) FILTER (WHERE ce.unlimited IS TRUE) AS unlimited_used,
+				COUNT(*) FILTER (WHERE ce.unlimited IS NOT TRUE) AS finite_rows
 			FROM customer_entitlements ce
 			LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
 			LEFT JOIN entitlements e ON e.id = ce.entitlement_id
@@ -199,26 +224,36 @@ const verifyExactBalances = async ({
 	for (const row of rows) {
 		const remaining = Number(row.remaining);
 		const granted = Number(row.granted);
-		if (
-			remainingFilter &&
-			!passesBalanceFilter({
-				total: basisValueOf({
-					basis: remainingFilter.basis,
-					remaining,
-					granted,
-				}),
-				op: remainingFilter.op,
-				value: remainingFilter.value,
-			})
-		) {
-			continue;
+		const unlimitedUsage = Number(row.unlimited_used);
+		const finiteRows = Number(row.finite_rows);
+		if (remainingFilter) {
+			if (
+				thresholdRequiresFiniteRows(remainingFilter.basis) &&
+				finiteRows === 0
+			) {
+				continue;
+			}
+			if (
+				!passesBalanceFilter({
+					total: basisValueOf({
+						basis: remainingFilter.basis,
+						remaining,
+						granted,
+						unlimitedUsage,
+					}),
+					op: remainingFilter.op,
+					value: remainingFilter.value,
+				})
+			) {
+				continue;
+			}
 		}
 		mapped.push({
 			internalId: row.internal_customer_id,
-			// Under a threshold filter, rows pass on finite merit — suppress the
-			// unlimited stripe so the page orders by the filtered values.
-			isUnlimited: remainingFilter ? false : Boolean(row.is_unlimited),
-			total: basisValueOf({ basis, remaining, granted }),
+			isUnlimited: stripeSuppressed({ basis, remainingFilter })
+				? false
+				: Boolean(row.is_unlimited),
+			total: basisValueOf({ basis, remaining, granted, unlimitedUsage }),
 		});
 	}
 	return mapped;
@@ -384,11 +419,12 @@ export const nominationQuery = ({
 				}
 		`
 		: sql``;
-	// Under a threshold filter the stripe is suppressed (verify emits u=false),
-	// so the cursor/order tuple must drop is_unlimited — a (false, ...) tuple
-	// would otherwise exclude every mixed customer from later batches.
+	// When the stripe is suppressed (verify emits u=false), the cursor/order
+	// tuple must drop is_unlimited — a (false, ...) tuple would otherwise
+	// exclude every mixed customer from later batches.
+	const suppressStripe = stripeSuppressed({ basis, remainingFilter });
 	const cursorPredicate = after
-		? remainingFilter
+		? suppressStripe
 			? sortOrder === "asc"
 				? sql`AND (${basisExpr}, internal_customer_id) > (${after.b}, ${after.id})`
 				: sql`AND (${basisExpr}, internal_customer_id) < (${after.b}, ${after.id})`
@@ -404,9 +440,13 @@ export const nominationQuery = ({
 				totalExpr: basisExprSql(remainingFilter.basis),
 				op: remainingFilter.op,
 				value: remainingFilter.value,
-			})}`
+			})}${
+				thresholdRequiresFiniteRows(remainingFilter.basis)
+					? sql` AND finite_rows > 0`
+					: sql``
+			}`
 		: sql``;
-	const orderBy = remainingFilter
+	const orderBy = suppressStripe
 		? sql`${basisExpr} ${direction}, internal_customer_id ${direction}`
 		: sql`is_unlimited ${direction}, ${basisExpr} ${direction}, internal_customer_id ${direction}`;
 
