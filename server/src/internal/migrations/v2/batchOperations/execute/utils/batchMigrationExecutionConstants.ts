@@ -34,6 +34,11 @@ export const BATCH_MIGRATION_FEATURE_OP_CONCURRENCY = Number(
 	process.env.BATCH_MIGRATION_FEATURE_OP_CONCURRENCY ?? 3,
 );
 
+/** Concurrent applyReplacePatches groups (distinct grant deltas) on one page. */
+export const BATCH_MIGRATION_PATCH_GROUP_CONCURRENCY = Number(
+	process.env.BATCH_MIGRATION_PATCH_GROUP_CONCURRENCY ?? 50,
+);
+
 /** Concurrent Redis full-customer cache invalidations during finalize. */
 export const BATCH_MIGRATION_CACHE_BUST_CONCURRENCY = 20;
 

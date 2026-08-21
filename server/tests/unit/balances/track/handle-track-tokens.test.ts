@@ -79,6 +79,14 @@ await mockModuleWithRestore(
 	}),
 );
 
+// Sticky Dynamo keys from prior local runs must not 409 the async path.
+await mockModuleWithRestore(
+	"@/external/aws/dynamodb/idempotencyKeys/operations/claimDynamoIdempotencyKey.js",
+	() => ({
+		claimDynamoIdempotencyKey: async () => "claimed",
+	}),
+);
+
 await mockModuleWithRestore(
 	"@/internal/balances/track/runTrackWithRollout.js",
 	() => ({
@@ -104,6 +112,7 @@ await mockModuleWithRestore(
 import { handleTrackTokens } from "@/internal/balances/handlers/handleTrackTokens.js";
 
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
+import { pinTrackProducerQueueToFifo } from "./trackAsyncQueueTestEnv.js";
 
 const requestBody = {
 	customer_id: "cus_123",
@@ -144,7 +153,7 @@ const createCtx = (): AutumnContext =>
 	}) as unknown as AutumnContext;
 
 describe("handleTrackTokens", () => {
-	const originalEnv = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+	let restoreQueueEnv: (() => void) | undefined;
 
 	afterEach(() => {
 		if (mockState.originalSend) {
@@ -152,7 +161,8 @@ describe("handleTrackTokens", () => {
 			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
 			mockState.originalSend = null;
 		}
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalEnv;
+		restoreQueueEnv?.();
+		restoreQueueEnv = undefined;
 	});
 
 	beforeEach(() => {
@@ -185,7 +195,9 @@ describe("handleTrackTokens", () => {
 	});
 
 	test("returns 202 and queues when async passthrough is true", async () => {
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
+		restoreQueueEnv = pinTrackProducerQueueToFifo({
+			fifoQueueUrl: trackAsyncQueueUrl,
+		}).restore;
 		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {

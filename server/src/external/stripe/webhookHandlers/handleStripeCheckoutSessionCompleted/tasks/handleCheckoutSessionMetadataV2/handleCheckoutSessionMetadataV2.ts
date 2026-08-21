@@ -17,6 +17,7 @@ import {
 } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { publishBillingTransition } from "@/internal/billing/v2/publish/publishBillingTransition.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { withBillingLock } from "@/internal/billing/v2/utils/billingLock/withBillingLock";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
@@ -172,6 +173,11 @@ const executeCheckoutSessionMetadataV2 = async ({
 	});
 
 	await persistDeferredCreateSchedule({
+		ctx,
+		billingContext: updatedDeferredData.billingContext,
+		billingPlan: updatedDeferredData.billingPlan,
+	});
+	await publishBillingTransition({
 		ctx,
 		billingContext: updatedDeferredData.billingContext,
 		billingPlan: updatedDeferredData.billingPlan,

@@ -35,16 +35,22 @@ await mockModuleWithRestore(
 import { queueTrack } from "@/internal/balances/track/utils/queueTrack.js";
 
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
+import {
+	clearTrackProducerQueueUrls,
+	pinTrackProducerQueueToFifo,
+} from "./trackAsyncQueueTestEnv.js";
 
 describe("queueTrack", () => {
 	const originalTrackQueueUrl = process.env.TRACK_SQS_QUEUE_URL;
-	const originalAsyncQueueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+	let restoreQueueEnv: (() => void) | undefined;
 
 	beforeEach(() => {
 		mockState.queueCommands = [];
 		// The async URL is the canonical shared track queue; the deprecated
 		// TRACK_SQS_QUEUE_URL is unset so resolution is deterministic.
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackQueueUrl;
+		restoreQueueEnv = pinTrackProducerQueueToFifo({
+			fifoQueueUrl: trackQueueUrl,
+		}).restore;
 		delete process.env.TRACK_SQS_QUEUE_URL;
 		const sqsClient = getSqsClient({ queueUrl: trackQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
@@ -147,6 +153,7 @@ describe("queueTrack", () => {
 	});
 
 	test("falls back to the deprecated TRACK_SQS_QUEUE_URL when the async URL is unset", async () => {
+		delete process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL;
 		delete process.env.TRACK_ASYNC_SQS_QUEUE_URL;
 		process.env.TRACK_SQS_QUEUE_URL = trackQueueUrl;
 
@@ -176,30 +183,33 @@ describe("queueTrack", () => {
 	});
 
 	test("returns null when no queueUrl option and both env vars are unset", async () => {
-		delete process.env.TRACK_ASYNC_SQS_QUEUE_URL;
-		delete process.env.TRACK_SQS_QUEUE_URL;
+		const { restore } = clearTrackProducerQueueUrls();
 
-		const warnSpy = mock(() => {});
-		const ctx = {
-			id: "req_no_queue",
-			org: { id: "org_123" },
-			env: AppEnv.Sandbox,
-			apiVersion: new ApiVersionClass(ApiVersion.V2_1),
-			logger: { warn: warnSpy },
-		} as unknown as AutumnContext;
+		try {
+			const warnSpy = mock(() => {});
+			const ctx = {
+				id: "req_no_queue",
+				org: { id: "org_123" },
+				env: AppEnv.Sandbox,
+				apiVersion: new ApiVersionClass(ApiVersion.V2_1),
+				logger: { warn: warnSpy },
+			} as unknown as AutumnContext;
 
-		const result = await queueTrack({
-			ctx,
-			body: {
-				customer_id: "cus_123",
-				feature_id: "messages",
-				value: 1,
-			},
-		});
+			const result = await queueTrack({
+				ctx,
+				body: {
+					customer_id: "cus_123",
+					feature_id: "messages",
+					value: 1,
+				},
+			});
 
-		expect(result).toBeNull();
-		expect(mockState.queueCommands).toHaveLength(0);
-		expect(warnSpy).toHaveBeenCalled();
+			expect(result).toBeNull();
+			expect(mockState.queueCommands).toHaveLength(0);
+			expect(warnSpy).toHaveBeenCalled();
+		} finally {
+			restore();
+		}
 	});
 
 	afterEach(() => {
@@ -212,11 +222,8 @@ describe("queueTrack", () => {
 		} else {
 			process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
 		}
-		if (originalAsyncQueueUrl === undefined) {
-			delete process.env.TRACK_ASYNC_SQS_QUEUE_URL;
-		} else {
-			process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalAsyncQueueUrl;
-		}
+		restoreQueueEnv?.();
+		restoreQueueEnv = undefined;
 	});
 });
 

@@ -384,8 +384,36 @@ describe("add_items + remove_items (replace) through the same gate", () => {
 		});
 
 		expect(result.computable).toBe(true);
-		expect(result.replaceFromIds).toEqual(["ent_from"]);
+		expect(result.replaceBy).toEqual(["filter"]);
+		expect(result.replaceFromIds).toEqual([]);
 		expect(result.replaceToIds).toEqual(["ent_new"]);
+		expect(result.addIds).toEqual([]);
+		expect(result.removeIds).toEqual([]);
+	});
+
+	test("a rewritten catalog still lowers a filter replace", () => {
+		const item = monthlyMessages({ included: 30 });
+		const result = runLane({
+			customize: {
+				add_items: [item],
+				remove_items: [{ feature_id: "messages" }],
+			},
+			fromEntitlements: [fromEntitlement({ allowance: 30 })],
+			preparedAdds: [
+				{
+					item,
+					entitlement: entitlementRow({
+						id: "ent_new",
+						allowance: 30,
+					}),
+				},
+			],
+		});
+
+		expect(result.computable).toBe(true);
+		expect(result.replaceBy).toEqual(["filter"]);
+		expect(result.replaceToIds).toEqual(["ent_new"]);
+		expect(result.replaceFromIds).toEqual([]);
 		expect(result.addIds).toEqual([]);
 		expect(result.removeIds).toEqual([]);
 	});

@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
+import { buildFullSubjectViewEpochKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectViewEpochKey.js";
 
 describe("buildDeductFromSubjectBalancesKeys", () => {
-	test("declares the idempotency key before balance keys", () => {
+	test("declares idempotency and subject-view epoch keys before balance keys", () => {
 		const { keys, balanceKeyIndexByFeatureId } =
 			buildDeductFromSubjectBalancesKeys({
 				orgId: "org_123",
@@ -22,7 +23,14 @@ describe("buildDeductFromSubjectBalancesKeys", () => {
 		expect(keys[0]).toBe("routing-key");
 		expect(keys[1]).toBe("lock-key");
 		expect(keys[2]).toBe("idem-key");
-		expect(balanceKeyIndexByFeatureId.messages).toBe(4);
-		expect(balanceKeyIndexByFeatureId.emails).toBe(5);
+		expect(keys[3]).toBe(
+			buildFullSubjectViewEpochKey({
+				orgId: "org_123",
+				env: AppEnv.Sandbox,
+				customerId: "cus_123",
+			}),
+		);
+		expect(balanceKeyIndexByFeatureId.messages).toBe(5);
+		expect(balanceKeyIndexByFeatureId.emails).toBe(6);
 	});
 });

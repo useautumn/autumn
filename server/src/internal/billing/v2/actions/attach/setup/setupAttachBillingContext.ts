@@ -33,6 +33,7 @@ import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantit
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
 import { setupIgnoreProrationBehavior } from "../../../setup/setupIgnoreProrationBehavior";
 import { getAttachAccessStartsAt } from "./getAttachAccessStartsAt";
+import { overlayAttachRuntimeBalances } from "./overlayAttachRuntimeBalances.js";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachProductContext } from "./setupAttachProductContext";
@@ -58,12 +59,19 @@ export const setupAttachBillingContext = async ({
 	// fullCustomer must resolve before the product context so patch-style customize
 	// (add_items/remove_items) routes through setupAttachPatchProductContext, matching
 	// multiAttach (setupImmediateMultiProductBillingContext) and createSchedule.
-	const fullCustomer =
+	const postgresFullCustomer =
 		fullCustomerOverride ??
 		(await setupFullCustomerContext({
 			ctx,
 			params,
 		}));
+	const fullCustomer = fullCustomerOverride
+		? postgresFullCustomer
+		: await overlayAttachRuntimeBalances({
+				ctx,
+				fullCustomer: postgresFullCustomer,
+				entityId: params.entity_id,
+			});
 
 	const {
 		fullProduct: attachProduct,

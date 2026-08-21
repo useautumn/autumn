@@ -5,27 +5,14 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { OperationScopeSchema } from "../scope/operationScope.js";
+import {
+	BatchMigrationExecutionAddSchema,
+	BatchMigrationExecutionRemoveSchema,
+	BatchMigrationExecutionReplaceSchema,
+	BatchMigrationInitialStateSchema,
+} from "./batchMigrationExecutionOps.js";
 
-export const BatchMigrationInitialStateSchema = z.object({
-	granted: z.number(),
-	tracksBalance: z.boolean(),
-	unlimited: z.boolean().nullable(),
-});
-
-export const BatchMigrationExecutionAddSchema = z.object({
-	entitlement: EntitlementWithFeatureSchema,
-	initialState: BatchMigrationInitialStateSchema,
-});
-
-export const BatchMigrationExecutionRemoveSchema = z.object({
-	entitlement: EntitlementWithFeatureSchema,
-});
-
-export const BatchMigrationExecutionReplaceSchema = z.object({
-	fromEntitlement: EntitlementWithFeatureSchema,
-	entitlement: EntitlementWithFeatureSchema,
-	initialState: BatchMigrationInitialStateSchema,
-});
+export * from "./batchMigrationExecutionOps.js";
 
 export const BatchMigrationExecutionRepointProductSchema = z.object({
 	fromInternalProductId: z.string(),
@@ -88,15 +75,6 @@ export const BatchMigrationExecutionPlanSchema = z.object({
 	patches: z.array(BatchMigrationExecutionPatchSchema),
 });
 
-export type BatchMigrationExecutionAdd = z.infer<
-	typeof BatchMigrationExecutionAddSchema
->;
-export type BatchMigrationExecutionRemove = z.infer<
-	typeof BatchMigrationExecutionRemoveSchema
->;
-export type BatchMigrationExecutionReplace = z.infer<
-	typeof BatchMigrationExecutionReplaceSchema
->;
 export type BatchMigrationMintedLicenseOp = z.infer<
 	typeof BatchMigrationLicenseMintedSchema
 > & { type: "add_license_entitlement" | "replace_license_entitlement" };

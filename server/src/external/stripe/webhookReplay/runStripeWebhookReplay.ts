@@ -86,7 +86,7 @@ export const runStripeWebhookReplay = async ({
 	if (claim === "claimed") await completeStripeWebhookEvent({ eventKey });
 
 	// Post-processing mirrors the route's refresh + sync middlewares (best-effort).
-	if (routedCtx.fullCustomer?.id) {
+	if (routedCtx.fullCustomer?.id && !routedCtx.skipSubjectCacheDeletion) {
 		await tryCatch(
 			deleteCachedFullCustomer({
 				customerId: routedCtx.fullCustomer.id,

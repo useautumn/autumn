@@ -103,6 +103,7 @@ export const runRedisTrackV3 = async ({
 	overageBehavior,
 	body,
 	idempotencyKey,
+	refreshFullSubject,
 }: {
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
@@ -110,6 +111,7 @@ export const runRedisTrackV3 = async ({
 	overageBehavior: "cap" | "reject" | "overflow";
 	body: TrackParams;
 	idempotencyKey?: string;
+	refreshFullSubject?: () => Promise<FullSubject>;
 }): Promise<TrackResponseV3> => {
 	const { data: result, error } = await tryCatch(
 		executeRedisDeductionV2({
@@ -118,6 +120,8 @@ export const runRedisTrackV3 = async ({
 			entityId: fullSubject.entity?.id ?? undefined,
 			deductions: featureDeductions,
 			idempotencyKey,
+			expectedSubjectViewEpoch: fullSubject.subjectViewEpoch,
+			refreshFullSubject,
 			deductionOptions: {
 				overageBehaviour: overageBehavior,
 				triggerAutoTopUp: true,
@@ -143,6 +147,7 @@ export const runRedisTrackV3 = async ({
 		modifiedCusEntIdsByFeatureId,
 		mutationLogs,
 		usageWindowUpdates,
+		mutationLogCustomerEntitlements,
 	} = result;
 
 	queueSyncItem({
@@ -157,11 +162,13 @@ export const runRedisTrackV3 = async ({
 	const deductions = projectMutationLogsToTrackDeductionsV2({
 		fullSubject: updatedFullSubject,
 		mutationLogs,
+		customerEntitlements: mutationLogCustomerEntitlements,
 	});
 
 	const internalProductId = resolveInternalProductIdForEvent({
 		fullSubject: updatedFullSubject,
 		mutationLogs,
+		customerEntitlements: mutationLogCustomerEntitlements,
 	});
 
 	const aiCreditCost = buildAiCreditCostProperty({
@@ -175,7 +182,13 @@ export const runRedisTrackV3 = async ({
 		body.properties = { ...(body.properties ?? {}), credit_cost: aiCreditCost };
 	}
 
-	queueEvent({ ctx, body, fullSubject, deductions, internalProductId });
+	queueEvent({
+		ctx,
+		body,
+		fullSubject: updatedFullSubject,
+		deductions,
+		internalProductId,
+	});
 
 	const { balance, balances } = await deductionToTrackResponseV2({
 		ctx,

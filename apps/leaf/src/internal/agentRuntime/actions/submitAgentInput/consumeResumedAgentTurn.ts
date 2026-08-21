@@ -28,6 +28,10 @@ const parsedResultText = (output: unknown): unknown => {
 	try {
 		return JSON.parse(text);
 	} catch {
+		logger.warn("Autumn MCP result text was not JSON", {
+			event: "leaf.autumn_mcp_result_parse_failed",
+			data: { text: text.slice(0, 300) },
+		});
 		return undefined;
 	}
 };
@@ -313,7 +317,7 @@ export const consumeResumedAgentTurn = async ({
 				event: "leaf.eve_child_verification_failed",
 				data: {
 					child_session_id: childSessionId,
-					error: error instanceof Error ? error.message : String(error),
+					error,
 				},
 			});
 		}

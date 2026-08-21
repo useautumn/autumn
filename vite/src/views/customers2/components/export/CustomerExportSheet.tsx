@@ -32,6 +32,7 @@ export function CustomerExportSheet({
 		handleOpenChange,
 		hasActiveFilters,
 		hasFilters,
+		isExportCountApproximate,
 		isExportCountLoading,
 		isExportsInitialError,
 		isExportsLoading,
@@ -63,6 +64,7 @@ export function CustomerExportSheet({
 										{(field) => (
 											<CustomerExportOverview
 												exportTotalCount={exportTotalCount}
+												isCountApproximate={isExportCountApproximate}
 												isCountLoading={isExportCountLoading}
 												isFilteredExport={isFilteredExport}
 												columnsAction={

@@ -54,6 +54,7 @@ import type { SendMessageBatchCommand, SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runBatchTrack } from "@/internal/balances/track/runBatchTrack.js";
 import { getSqsClient } from "@/queue/initSqs.js";
+import { pinTrackProducerQueueToFifo } from "./trackAsyncQueueTestEnv.js";
 
 type BatchEntry = {
 	Id?: string;
@@ -114,11 +115,13 @@ const body: BatchTrackParams = [
 ];
 
 describe("runBatchTrack — retry-dedup regression pin (cubic P1)", () => {
-	const originalEnv = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+	let restoreQueueEnv: (() => void) | undefined;
 
 	beforeEach(() => {
 		mockState.queueCommands = [];
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
+		restoreQueueEnv = pinTrackProducerQueueToFifo({
+			fifoQueueUrl: trackAsyncQueueUrl,
+		}).restore;
 
 		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
@@ -137,7 +140,8 @@ describe("runBatchTrack — retry-dedup regression pin (cubic P1)", () => {
 			const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
 		}
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalEnv;
+		restoreQueueEnv?.();
+		restoreQueueEnv = undefined;
 	});
 
 	test("two requests with the same body produce DIFFERENT MessageDeduplicationId values per index (current accepted behavior — client retry duplicates)", async () => {

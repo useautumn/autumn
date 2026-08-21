@@ -200,6 +200,45 @@ describe("customizeToKey", () => {
 		});
 	});
 
+	describe("remove_items filter — included (grant stamp)", () => {
+		test("omitted is a wildcard; 0 vs 100 vs omitted all differ", () => {
+			expectSame(
+				customize({ remove_items: [{ feature_id: "messages" }] }),
+				customize({
+					remove_items: [{ feature_id: "messages", included: 100 }],
+				}),
+				false,
+			);
+			expectSame(
+				customize({
+					remove_items: [{ feature_id: "messages", included: 100 }],
+				}),
+				customize({
+					remove_items: [{ feature_id: "messages", included: 200 }],
+				}),
+				false,
+			);
+			expectSame(
+				customize({
+					remove_items: [{ feature_id: "messages", included: 0 }],
+				}),
+				customize({
+					remove_items: [{ feature_id: "messages", included: 100 }],
+				}),
+				false,
+			);
+			expectSame(
+				customize({
+					remove_items: [{ feature_id: "messages", included: 100 }],
+				}),
+				customize({
+					remove_items: [{ feature_id: "messages", included: 100 }],
+				}),
+				true,
+			);
+		});
+	});
+
 	describe("remove_items filter — interval (unset collapses)", () => {
 		test("unset vs a real interval differ; equal intervals are same", () => {
 			expectSame(

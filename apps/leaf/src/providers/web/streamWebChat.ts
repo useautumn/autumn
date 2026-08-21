@@ -240,7 +240,7 @@ export const streamWebChat = async ({
 		onError: (error) => {
 			logger.error("Web chat stream failed", {
 				event: "leaf.web_chat_stream_failed",
-				data: { error: String(error) },
+				data: { error },
 			});
 			return GENERIC_FAILURE_MESSAGE;
 		},

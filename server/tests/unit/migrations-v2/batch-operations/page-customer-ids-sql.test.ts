@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { EntInterval, type EntitlementWithFeature } from "@autumn/shared";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { buildAddCandidateRowsQuery } from "@/internal/migrations/v2/batchOperations/actions/addCustomerEntitlementsForPage/selectAddCandidateRows.js";
+import { buildRemoveCandidateRowsQuery } from "@/internal/migrations/v2/batchOperations/actions/removeCustomerEntitlementsForPage/selectRemoveCandidateRows.js";
 import { buildReplaceCandidateRowsQuery } from "@/internal/migrations/v2/batchOperations/actions/replaceCustomerEntitlementsForPage/selectReplaceCandidateRows.js";
 import { buildLicenseCandidateRowsQuery } from "@/internal/migrations/v2/batchOperations/actions/selectLicenseCandidateRows.js";
 import { pageCustomerIdsCte } from "@/internal/migrations/v2/batchOperations/actions/utils/pageCustomerIdsSql.js";
@@ -45,7 +46,9 @@ describe("page-scoped candidate selects", () => {
 				internalCustomerIds: ["cus_1", "cus_2"],
 				scope,
 				entitlement,
-				fromEntitlementIds: ["ent_from"],
+				filter: { feature_id: "emails", interval: EntInterval.Month },
+				excludeEntitlementId: "ent_to",
+				features: [],
 				includeAnchorSources: true,
 				limit: 10000,
 			}),
@@ -56,6 +59,32 @@ describe("page-scoped candidate selects", () => {
 		expect(sql).toContain(
 			"INNER JOIN customer_products AS cp ON cp.internal_customer_id = page.internal_customer_id",
 		);
+		expect(sql).not.toMatch(/internal_customer_id = ANY/);
+	});
+
+	test("remove drives from the page CTE and joins live definitions", () => {
+		const sql = render(
+			buildRemoveCandidateRowsQuery({
+				internalCustomerIds: ["cus_1", "cus_2"],
+				scope,
+				filter: { feature_id: "emails", interval: EntInterval.Month },
+				limit: 10000,
+			}),
+		);
+
+		expect(sql).toContain("page AS MATERIALIZED");
+		expect(sql).toContain("FROM page");
+		expect(sql).toContain(
+			"INNER JOIN customer_products AS cp ON cp.internal_customer_id = page.internal_customer_id",
+		);
+		expect(sql).toContain("INNER JOIN customer_entitlements AS live");
+		expect(sql).toContain("INNER JOIN entitlements AS definition");
+		expect(sql).toContain("TO_JSONB(definition) AS definition");
+		expect(sql).toContain("definition.feature_id = $");
+		expect(sql).toContain("definition.pooled IS NOT TRUE");
+		expect(sql).toContain("FROM rollovers");
+		expect(sql).not.toMatch(/entitlement_id IN/i);
+		expect(sql).not.toContain("INNER JOIN customers AS customer");
 		expect(sql).not.toMatch(/internal_customer_id = ANY/);
 	});
 

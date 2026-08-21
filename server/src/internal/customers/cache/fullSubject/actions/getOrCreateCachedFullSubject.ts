@@ -81,6 +81,7 @@ export const getOrCreateCachedFullSubject = async ({
 		});
 		if (normalizedResult) {
 			fullSubject = normalizedResult.fullSubject;
+			fullSubject.subjectViewEpoch = fetchedSubjectViewEpoch;
 		}
 	}
 
@@ -150,6 +151,7 @@ export const getOrCreateCachedFullSubject = async ({
 				);
 			}
 			fullSubject = normalizedResult.fullSubject;
+			fullSubject.subjectViewEpoch = fetchedSubjectViewEpoch;
 		}
 	}
 

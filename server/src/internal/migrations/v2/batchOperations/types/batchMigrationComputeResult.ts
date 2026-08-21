@@ -13,6 +13,7 @@ export type BatchMigrationRejectionCode =
 	| "deprecated_update_items"
 	| "unsupported_remove_items"
 	| "unsupported_upsert_licenses"
+	| "unsupported_version_only"
 	| "base_price_customize"
 	| "priced_add_item"
 	| "priced_remove_item"

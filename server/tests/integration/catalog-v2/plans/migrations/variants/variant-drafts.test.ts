@@ -195,7 +195,10 @@ test.concurrent(
 							operations: [
 								childItemOp({
 									planFilter: variantFilter,
-									customize: messagesItemDelta({ included: 300 }),
+									customize: messagesItemDelta({
+										included: 300,
+										fromIncluded: 200,
+									}),
 								}),
 							],
 						},

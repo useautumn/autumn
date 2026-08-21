@@ -33,7 +33,7 @@ export const createLoggerAnalyticsSink = ({
 	dataset: string;
 }): AnalyticsSink | null => {
 	if (!token) return null;
-	const logger = createLogger({
+	const { flushTransports, logger } = createLogger({
 		service: "mcp",
 		dataset,
 		preset: "axiom-only",
@@ -46,13 +46,7 @@ export const createLoggerAnalyticsSink = ({
 		emit(event) {
 			logger.info(toLoggerRecord(event), "MCP tool call");
 		},
-		flush: async () => {
-			await new Promise<void>((resolve) => {
-				const flush = logger.flush;
-				if (typeof flush !== "function") return resolve();
-				flush.call(logger, () => resolve());
-			});
-		},
+		flush: flushTransports,
 	};
 };
 
