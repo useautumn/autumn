@@ -2,17 +2,64 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval, ChatInstallation } from "@autumn/shared";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
-import { approvalCard } from "../../../../ui/blocks.js";
+import { approvalCard, approvalSheetUrl } from "../../../../ui/blocks.js";
 import type { ReplyTarget } from "../../../../ui/progress.js";
 import type { AgentApprovalTurn } from "../../../agentRuntime/domain/agentTurn.js";
 import type { WithheldWrite } from "../../../agentRuntime/eve/parkedInput.js";
 import { toolLabel } from "../../../agentRuntime/tools/toolPolicy.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { createApproval } from "../../actions/createApproval.js";
-import { withheldStepsOf } from "../../domain/approvalRecord.js";
+import {
+	dashboardLinkableApproval,
+	withheldStepsOf,
+} from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import { chatApprovalStepsRepo } from "../../repos/chatApprovalStepsRepo.js";
 import { publicToolArgs } from "../../utils/toolRequest.js";
+
+const requestField = (
+	toolArgs: Record<string, unknown> | undefined,
+	key: string,
+) => {
+	const request = toolArgs?.request;
+	const value =
+		request && typeof request === "object"
+			? (request as Record<string, unknown>)[key]
+			: toolArgs?.[key];
+	return typeof value === "string" ? value : undefined;
+};
+
+const dashboardUrlFor = ({
+	approvalId,
+	env,
+	groupedStepCount,
+	provider,
+	toolArgs,
+	toolName,
+}: {
+	approvalId: string;
+	env: ChatApproval["env"];
+	groupedStepCount: number;
+	provider: string;
+	toolArgs?: Record<string, unknown>;
+	toolName: string;
+}) =>
+	dashboardLinkableApproval({
+		approval: {
+			provider: provider as ChatApproval["provider"],
+			tool_args: toolArgs ?? {},
+			tool_name: toolName,
+		},
+		groupedStepCount,
+	})
+		? approvalSheetUrl({
+				approvalId,
+				customerId: requestField(toolArgs, "customer_id"),
+				env,
+				planId: requestField(toolArgs, "plan_id"),
+				toolName,
+			})
+		: undefined;
 
 export const postApprovalCardForRow = async ({
 	approval,
@@ -32,12 +79,21 @@ export const postApprovalCardForRow = async ({
 		approvalId: approval.id,
 		db,
 	});
+	const grouped = withheldStepsOf({ approval, steps });
 	const sent = await target.post(
 		approvalCard({
+			dashboardUrl: dashboardUrlFor({
+				approvalId: approval.id,
+				env: approval.env,
+				groupedStepCount: grouped.length,
+				provider: approval.provider,
+				toolArgs,
+				toolName: approval.tool_name,
+			}),
 			id: approval.id,
 			env: approval.env,
 			preview: approval.preview ?? undefined,
-			steps: withheldStepsOf({ approval, steps }),
+			steps: grouped,
 			toolArgs: publicToolArgs(toolArgs),
 			toolName: approval.tool_name,
 		}),
@@ -73,6 +129,7 @@ const renderBackfilledGroupCard = async ({
 	channelId: string;
 	created: {
 		approvalId: string;
+		dashboardUrl?: string | null;
 		preview: unknown;
 		toolArgs: Record<string, unknown>;
 		toolName: string;
@@ -101,6 +158,7 @@ const renderBackfilledGroupCard = async ({
 			channelId,
 			messageId,
 			approvalCard({
+				dashboardUrl: created.dashboardUrl,
 				id: created.approvalId,
 				env,
 				preview: created.preview,
@@ -154,8 +212,17 @@ export const presentApproval = async ({
 	if (!created) return false;
 
 	await logAction(`Waiting for approval: ${toolLabel(created.toolName)}`);
+	const dashboardUrl = dashboardUrlFor({
+		approvalId: created.approvalId,
+		env,
+		groupedStepCount: created.withheld.length,
+		provider: installation.provider,
+		toolArgs: created.toolArgs,
+		toolName: created.toolName,
+	});
 	const sent = await target.post(
 		approvalCard({
+			dashboardUrl,
 			id: created.approvalId,
 			env,
 			preview: created.preview,
@@ -182,7 +249,7 @@ export const presentApproval = async ({
 		void renderBackfilledGroupCard({
 			backfill: created.backfillGroupedPreviews,
 			channelId,
-			created,
+			created: { ...created, dashboardUrl },
 			env,
 			logger,
 			messageId: sent.id,

@@ -9,6 +9,7 @@ import {
 import { sqlNow } from "../../db/utils.js";
 import type { AppEnv } from "../genModels/genEnums.js";
 import { organizations } from "../orgModels/orgTable.js";
+import type { ChatApprovalStatus } from "./chatApprovalApi.js";
 import type { ChatAuthMode } from "./chatEnums.js";
 
 export type ChatProvider =
@@ -75,7 +76,7 @@ export const chatApprovals = pgTable(
 		tool_name: text("tool_name").notNull(),
 		tool_args: jsonb("tool_args").$type<Record<string, unknown>>().notNull(),
 		preview: jsonb().$type<unknown>(),
-		status: text("status").notNull(),
+		status: text("status").$type<ChatApprovalStatus>().notNull(),
 		child_session_ids: text("child_session_ids").array(),
 		approve_option_id: text("approve_option_id"),
 		deny_option_id: text("deny_option_id"),

@@ -94,3 +94,31 @@ export const allWritesOf = ({
  * Slack threads use the `slack_admin:<client>` provider and the same card. */
 export const surfaceRendersGroup = (provider: string) =>
 	provider === "slack" || isInternalAutumnSlackProvider({ provider });
+
+const SHEET_LINKABLE_TOOLS = new Set(["attach", "updateSubscription"]);
+
+/** Single-step attach/updateSubscription cards from real customer workspaces
+ * can deep-link to the dashboard sheet. Excluded: internal admin threads (they
+ * hop orgs, the link would 403) and customized requests (the sheet cannot
+ * faithfully seed a `customize` patch yet — linking would show a different
+ * preview than the card). */
+export const dashboardLinkableApproval = ({
+	approval,
+	groupedStepCount,
+}: {
+	approval: Pick<ChatApproval, "provider" | "tool_args" | "tool_name">;
+	groupedStepCount: number;
+}) => {
+	const request = approval.tool_args?.request;
+	const hasCustomize = Boolean(
+		request &&
+			typeof request === "object" &&
+			(request as Record<string, unknown>).customize,
+	);
+	return (
+		groupedStepCount === 0 &&
+		!hasCustomize &&
+		SHEET_LINKABLE_TOOLS.has(approval.tool_name) &&
+		!isInternalAutumnSlackProvider({ provider: approval.provider ?? "" })
+	);
+};

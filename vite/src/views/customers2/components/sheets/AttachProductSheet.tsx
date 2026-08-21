@@ -47,6 +47,9 @@ import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useEnv } from "@/utils/envUtils";
+import { ApprovalSheetBanner } from "@/views/approvals/components/ApprovalSheetBanner";
+import { useApprovalAwareOnSuccess } from "@/views/approvals/hooks/useApprovalAwareOnSuccess";
+import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { CreateEntity } from "@/views/customers2/customer/components/CreateEntity";
@@ -413,6 +416,7 @@ function SheetContent() {
 	return (
 		<LayoutGroup>
 			<div className="flex flex-col h-full overflow-y-auto">
+				<ApprovalSheetBanner />
 				<StageContent />
 
 				{planEditorProduct && (
@@ -434,16 +438,25 @@ function SheetContent() {
 
 export function AttachProductSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
+	const sheetData = useSheetStore((s) => s.data);
 	const { closeSheet } = useSheetStore();
 	const { customer } = useCusQuery();
 	const { setIsInlineEditorOpen } = useCustomerContext();
 	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(
 		customer as FullCustomer | undefined,
 	);
+	const approvalSeed = approvalSeedFromSheetData(sheetData);
+	const onSuccess = useApprovalAwareOnSuccess({
+		approvalId: approvalSeed?.approvalId,
+		onDone: closeSheet,
+	});
 
 	return (
 		<AttachFormProvider
 			customerId={customer?.id ?? customer?.internal_id ?? ""}
+			defaultOverrides={
+				approvalSeed?.defaultOverrides as Partial<AttachForm> | undefined
+			}
 			entityId={scopeEntityId}
 			initialProductId={itemId ?? undefined}
 			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
@@ -452,7 +465,7 @@ export function AttachProductSheet() {
 				navigator.clipboard.writeText(checkoutUrl);
 				toast.success("Checkout URL copied to clipboard");
 			}}
-			onSuccess={closeSheet}
+			onSuccess={onSuccess}
 			onScopeChange={setScopeEntityId}
 			allowMultiplePlans
 		>

@@ -1325,6 +1325,7 @@ const approvalPreviewBlocks = ({
 // Settled cards keep their pending body; Slack cannot disable buttons, so the
 // action row becomes a status line.
 const settledStatusCard = ({
+	dashboardUrl,
 	env,
 	groupedSteps,
 	preview,
@@ -1332,6 +1333,7 @@ const settledStatusCard = ({
 	toolArgs,
 	toolName,
 }: {
+	dashboardUrl?: string | null;
 	env?: AppEnv;
 	groupedSteps?: ReadonlyArray<WithheldWrite>;
 	preview?: unknown;
@@ -1353,11 +1355,39 @@ const settledStatusCard = ({
 				toolName,
 			}),
 			CardText(statusLabel),
+			...(dashboardUrl ? [Actions(viewInDashboardButton(dashboardUrl))] : []),
 		],
 	});
 };
 
+/** Deep link into the dashboard sheet prefilled from this approval. */
+export const approvalSheetUrl = ({
+	approvalId,
+	customerId,
+	env,
+	planId,
+	toolName,
+}: {
+	approvalId: string;
+	customerId?: string;
+	env?: AppEnv;
+	planId?: string;
+	toolName: string;
+}) => {
+	if (!customerId) return null;
+	const base = `${autumnDashboardBase()}${env === "live" ? "" : "/sandbox"}`;
+	const sheet =
+		normalizeToolName(toolName) === "updateSubscription"
+			? `sheet=subscription-update${planId ? `&plan_id=${encodeURIComponent(planId)}` : ""}`
+			: "sheet=attach-product";
+	return `${base}/customers/${encodeURIComponent(customerId)}?${sheet}&approval_id=${encodeURIComponent(approvalId)}`;
+};
+
+const viewInDashboardButton = (url: string | null | undefined) =>
+	url ? [LinkButton({ label: "View in dashboard", url })] : [];
+
 export const approvalCard = ({
+	dashboardUrl,
 	env,
 	id,
 	preview,
@@ -1365,6 +1395,7 @@ export const approvalCard = ({
 	toolArgs,
 	toolName,
 }: {
+	dashboardUrl?: string | null;
 	env?: AppEnv;
 	id: string;
 	preview?: unknown;
@@ -1419,6 +1450,7 @@ export const approvalCard = ({
 							}),
 						]
 					: []),
+				...viewInDashboardButton(dashboardUrl),
 			]),
 			CardText(
 				"Need a change? Reply in this thread and I’ll refresh the preview.",
@@ -1494,6 +1526,7 @@ export const approvalDetailsModal = ({
 
 export const approvalStatusCard = ({
 	actorId,
+	dashboardUrl,
 	env,
 	groupedSteps,
 	preview,
@@ -1505,6 +1538,7 @@ export const approvalStatusCard = ({
 	toolName,
 }: {
 	actorId?: string;
+	dashboardUrl?: string | null;
 	env?: AppEnv;
 	/** The grouped writes rendered in the card body (step rows). */
 	groupedSteps?: ReadonlyArray<WithheldWrite>;
@@ -1546,6 +1580,7 @@ export const approvalStatusCard = ({
 
 	if (status === "cancelled") {
 		return settledStatusCard({
+			dashboardUrl,
 			env,
 			groupedSteps,
 			preview,
@@ -1557,6 +1592,7 @@ export const approvalStatusCard = ({
 
 	if (status === "superseded") {
 		return settledStatusCard({
+			dashboardUrl,
 			env,
 			groupedSteps,
 			preview,
@@ -1619,6 +1655,7 @@ export const approvalStatusCard = ({
 						]
 					: []),
 				CardText(lines.join("\n")),
+				...(dashboardUrl ? [Actions(viewInDashboardButton(dashboardUrl))] : []),
 			],
 		});
 	}
@@ -1629,13 +1666,14 @@ export const approvalStatusCard = ({
 			CardText(`✅ ${phrases.done}`),
 			...resolvedBody,
 			...(outcome.lines.length ? [CardText(outcome.lines.join("\n"))] : []),
-			...(outcome.links.length
+			...(outcome.links.length || dashboardUrl
 				? [
-						Actions(
-							outcome.links.map((link) =>
+						Actions([
+							...outcome.links.map((link) =>
 								LinkButton({ label: link.label, url: link.url }),
 							),
-						),
+							...viewInDashboardButton(dashboardUrl),
+						]),
 					]
 				: []),
 		],
