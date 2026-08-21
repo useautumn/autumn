@@ -844,6 +844,7 @@ Seed via DB `customer_licenses.plan_license_id`. `seedVersionableCustomer` is th
 | Customize existing link → updated + nested core `plan_change` | ✓ `license-changes-customize.test.ts` |
 | New customized link → created, no nested `plan_change` | ✓ `license-changes-customize.test.ts` |
 | Name + included compose on one `plan_change` | ✓ `license-changes-customize.test.ts` |
+| After `new_version` + license customize add Dashboard, later `preview_update` parses and echoes the overlay | ✓ `license-changes-customize.test.ts` |
 | In-batch pin → updated freeze, no nested `plan_change` | ✓ `license-changes-follow.test.ts` |
 | In-batch propagate → updated + nested item `plan_change` | ✓ `license-changes-follow.test.ts` |
 | Child `new_version` + pin → `previous_attributes.version` | ✓ `license-changes-follow.test.ts` |

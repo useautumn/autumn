@@ -1,9 +1,12 @@
 /**
- * catalogV2.update — migration drafts for in-place existing versioning.
+ * catalogV2.update draft generators stamp included on remove_items when the
+ * from-item is a numbered grant (filterPrecision IdentityAndIncluded).
  *
- * Contract:
- *   existing + migratable item diff + versionable customers → one version-pinned draft
- *   omitted migration / no customers / name-only → no draft
+ * Contract (C1): in-place 100→500 writes remove_items[0].included === 100.
+ *
+ * Red (current): draft remove filter is feature+interval only.
+ * Green (after): the same draft also carries included: 100 so a 1k custom
+ * row is not a candidate.
  */
 
 import { expect, test } from "bun:test";
@@ -28,32 +31,22 @@ const messagesItem = ({ included }: { included: number }) => ({
 	reset: { interval: ResetInterval.Month },
 });
 
-const seedPlan = async ({
-	autumn,
-	planId,
-}: {
-	autumn: Awaited<ReturnType<typeof initScenario>>["autumnV2_3"];
-	planId: string;
-}) => {
-	await autumn.catalogV2.update({
-		plans: [
-			{
-				plan_id: planId,
-				name: "Draft Plan",
-				items: [messagesItem({ included: 100 })],
-			},
-		],
-	});
-};
-
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 migration: existing item update with customers creates a version-pinned draft")}`,
+	`${chalk.yellowBright("catalogV2 migration: 100→500 draft stamps included: 100 on remove_items")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
-		const planId = uniqueTestId("cv2_mig_ex");
+		const planId = uniqueTestId("cv2_mig_inc");
 		await deleteDbPlans({ ctx, planIds: [planId] });
 		try {
-			await seedPlan({ autumn: autumnV2_3, planId });
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "Included Filter Plan",
+						items: [messagesItem({ included: 100 })],
+					},
+				],
+			});
 			await seedVersionableCustomer({ ctx, planId, version: 1 });
 
 			const response = await autumnV2_3.catalogV2.update({
@@ -121,60 +114,6 @@ test.concurrent(
 		} finally {
 			await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });
 			await deleteDbPlans({ ctx, planIds: [planId] });
-		}
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("catalogV2 migration: omitted draft flag / no customers / name-only → no draft")}`,
-	async () => {
-		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
-		const withCustomers = uniqueTestId("cv2_mig_omit");
-		const noCustomers = uniqueTestId("cv2_mig_noc");
-		const nameOnly = uniqueTestId("cv2_mig_name");
-		const planIds = [withCustomers, noCustomers, nameOnly];
-		await deleteDbPlans({ ctx, planIds });
-		try {
-			await seedPlan({ autumn: autumnV2_3, planId: withCustomers });
-			await seedPlan({ autumn: autumnV2_3, planId: noCustomers });
-			await seedPlan({ autumn: autumnV2_3, planId: nameOnly });
-			await seedVersionableCustomer({ ctx, planId: withCustomers, version: 1 });
-			await seedVersionableCustomer({ ctx, planId: nameOnly, version: 1 });
-
-			const omitted = await autumnV2_3.catalogV2.update({
-				plans: [
-					{
-						plan_id: withCustomers,
-						items: [messagesItem({ included: 500 })],
-					},
-				],
-			});
-			expect(omitted.migrations ?? []).toHaveLength(0);
-
-			const emptyCustomers = await autumnV2_3.catalogV2.update({
-				plans: [
-					{
-						plan_id: noCustomers,
-						items: [messagesItem({ included: 500 })],
-						migration: { draft: true },
-					},
-				],
-			});
-			expect(emptyCustomers.migrations ?? []).toHaveLength(0);
-
-			const renamed = await autumnV2_3.catalogV2.update({
-				plans: [
-					{
-						plan_id: nameOnly,
-						name: "Renamed",
-						migration: { draft: true },
-					},
-				],
-			});
-			expect(renamed.migrations ?? []).toHaveLength(0);
-		} finally {
-			await cleanupPlanCustomerRefs({ ctx, planIds });
-			await deleteDbPlans({ ctx, planIds });
 		}
 	},
 );

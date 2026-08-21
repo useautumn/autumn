@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { BillingInterval, BillingMethod } from "@autumn/shared";
-import { checkUpdatePlanOpEligibility } from "@/internal/migrations/v2/batchOperations/compute/guards/checkUpdatePlanOpEligibility.js";
+import { BillingInterval, BillingMethod, ResetInterval } from "@autumn/shared";
+import {
+	checkUpdatePlanOpEligibility,
+	isModifyInPlaceOnly,
+} from "@/internal/migrations/v2/batchOperations/compute/guards/checkUpdatePlanOpEligibility.js";
 
 describe("checkUpdatePlanOpEligibility", () => {
 	test("version-only with no add_items or remove_items is not batch-lowered", () => {
@@ -141,5 +144,27 @@ describe("checkUpdatePlanOpEligibility", () => {
 		expect(rejections.map((rejection) => rejection.code)).toContain(
 			"priced_add_item",
 		);
+	});
+
+	test("included on a remove filter does not break in-place match keys", () => {
+		expect(
+			isModifyInPlaceOnly({
+				addItems: [
+					{
+						feature_id: "messages",
+						included: 200,
+						reset: { interval: ResetInterval.Month },
+					},
+				],
+				removeItems: [
+					{
+						feature_id: "messages",
+						interval: ResetInterval.Month,
+						interval_count: 1,
+						included: 100,
+					},
+				],
+			}),
+		).toBe(true);
 	});
 });

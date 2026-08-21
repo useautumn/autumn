@@ -4,6 +4,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	Input,
 	Sheet,
 	SheetContent,
 } from "@autumn/ui";
@@ -17,8 +18,10 @@ import {
 	BillingMethodDropdown,
 	filterToProductItem,
 	getFilterSummary,
+	includedFilterInputValue,
 	INTERVAL_OPTIONS,
 	type ItemFilter,
+	setItemFilterIncluded,
 } from "./operationItemUtils";
 
 export function RemoveItemRows({
@@ -131,8 +134,8 @@ function RemoveItemSheetContent({
 						Remove Item
 					</h3>
 					<p className="text-xs text-tertiary-foreground">
-						Select a feature to remove from the plan. Use interval and billing
-						method to narrow the match.
+						Select a feature to remove from the plan. Use interval, included,
+						and billing method to narrow the match.
 					</p>
 				</div>
 
@@ -195,6 +198,41 @@ function RemoveItemSheetContent({
 						<p className="text-xs text-tertiary-foreground">
 							Narrow the match when the same feature appears at multiple
 							intervals.
+						</p>
+					</div>
+
+					<div className="flex flex-col gap-1.5">
+						<label className="text-xs font-medium text-foreground">
+							Included
+						</label>
+						<Input
+							type="number"
+							min={0}
+							placeholder="Any included"
+							value={includedFilterInputValue(draft.included)}
+							onChange={(event) => {
+								const raw = event.target.value.trim();
+								if (raw === "") {
+									setDraft(
+										setItemFilterIncluded({
+											filter: draft,
+											included: undefined,
+										}),
+									);
+									return;
+								}
+								const parsed = Number(raw);
+								if (!Number.isFinite(parsed)) return;
+								setDraft(
+									setItemFilterIncluded({
+										filter: draft,
+										included: parsed,
+									}),
+								);
+							}}
+						/>
+						<p className="text-xs text-tertiary-foreground">
+							Empty matches any grant. 0 matches a zero included grant.
 						</p>
 					</div>
 

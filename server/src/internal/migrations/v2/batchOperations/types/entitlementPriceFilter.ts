@@ -15,6 +15,7 @@ export const EntitlementPriceFilterSchema = z.object({
 	interval: z.nativeEnum(EntInterval).optional(),
 	interval_count: z.number().int().positive().optional(),
 	billing_method: z.nativeEnum(BillingMethod).optional(),
+	included: z.number().optional(),
 });
 
 export type EntitlementPriceFilter = z.infer<
@@ -55,6 +56,13 @@ export const entitlementPriceFilterMatchesEntitlementPrice = ({
 	if (
 		filter.interval_count !== undefined &&
 		(entitlement.interval_count ?? 1) !== filter.interval_count
+	) {
+		return false;
+	}
+
+	if (
+		filter.included !== undefined &&
+		entitlement.allowance !== filter.included
 	) {
 		return false;
 	}

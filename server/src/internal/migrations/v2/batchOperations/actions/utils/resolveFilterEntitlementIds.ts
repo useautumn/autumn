@@ -27,8 +27,12 @@ export const entitlementPriceFilterSql = ({
 		filter.interval_count === undefined
 			? sql``
 			: sql`AND COALESCE(definition.interval_count, 1) = ${filter.interval_count}`;
+	const included =
+		filter.included === undefined
+			? sql``
+			: sql`AND definition.allowance = ${filter.included}`;
 
-	return sql`${featureId} ${interval} ${intervalCount}`;
+	return sql`${featureId} ${interval} ${intervalCount} ${included}`;
 };
 
 /** Distinct live entitlement ids whose compiled filter matches.

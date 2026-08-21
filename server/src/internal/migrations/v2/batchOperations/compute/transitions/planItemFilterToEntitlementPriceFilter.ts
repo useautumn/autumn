@@ -25,6 +25,9 @@ export const planItemFilterToEntitlementPriceFilter = ({
 	} else if (filter.interval_count !== undefined) {
 		compiled.interval_count = filter.interval_count;
 	}
+	if (filter.included !== undefined) {
+		compiled.included = filter.included;
+	}
 
 	return compiled;
 };

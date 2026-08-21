@@ -35,6 +35,12 @@ const matchesRemoveFilter = ({
 	) {
 		return false;
 	}
+	if (
+		filter.included !== undefined &&
+		entitlement.allowance !== filter.included
+	) {
+		return false;
+	}
 	return true;
 };
 

@@ -3,6 +3,7 @@ import {
 	BillWhen,
 	BillingInterval,
 	BillingType,
+	type EntInterval,
 	customerEntitlements,
 	customerPrices,
 	customerProducts,
@@ -13,7 +14,7 @@ import {
 	products as productsTable,
 	PriceType,
 } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { generateId } from "@/utils/genUtils.js";
 import type { ScenarioCtx } from "./batchTestUtils";
 
@@ -23,10 +24,12 @@ export const readScopedFeatureRow = async ({
 	ctx,
 	customerId,
 	featureId,
+	interval,
 }: {
 	ctx: ScenarioCtx;
 	customerId: string;
 	featureId: string;
+	interval?: EntInterval | null;
 }) => {
 	const [result] = await ctx.db
 		.select({ row: customerEntitlements })
@@ -39,12 +42,21 @@ export const readScopedFeatureRow = async ({
 			customersTable,
 			eq(customerProducts.internal_customer_id, customersTable.internal_id),
 		)
+		.innerJoin(
+			entitlements,
+			eq(customerEntitlements.entitlement_id, entitlements.id),
+		)
 		.where(
 			and(
 				eq(customersTable.org_id, ctx.org.id),
 				eq(customersTable.env, ctx.env),
 				eq(customersTable.id, customerId),
 				eq(customerEntitlements.feature_id, featureId),
+				interval === undefined
+					? undefined
+					: interval === null
+						? isNull(entitlements.interval)
+						: eq(entitlements.interval, interval),
 			),
 		);
 	if (!result) {
@@ -260,6 +272,7 @@ export const expectReplacedFeatureRowCorrect = async ({
 	beforeRowId,
 	beforeEntitlementId,
 	balance,
+	interval,
 }: {
 	ctx: ScenarioCtx;
 	customerId: string;
@@ -267,11 +280,45 @@ export const expectReplacedFeatureRowCorrect = async ({
 	beforeRowId: string;
 	beforeEntitlementId: string;
 	balance: number;
+	interval?: EntInterval | null;
 }) => {
-	const after = await readScopedFeatureRow({ ctx, customerId, featureId });
+	const after = await readScopedFeatureRow({
+		ctx,
+		customerId,
+		featureId,
+		interval,
+	});
 	expect(after.id, `expected in-place replace for ${customerId}`).toBe(
 		beforeRowId,
 	);
 	expect(after.entitlement_id).not.toBe(beforeEntitlementId);
+	expect(after.balance).toBe(balance);
+};
+
+export const expectFeatureRowUnchanged = async ({
+	ctx,
+	customerId,
+	featureId,
+	beforeRowId,
+	beforeEntitlementId,
+	balance,
+	interval,
+}: {
+	ctx: ScenarioCtx;
+	customerId: string;
+	featureId: string;
+	beforeRowId: string;
+	beforeEntitlementId: string;
+	balance: number;
+	interval?: EntInterval | null;
+}) => {
+	const after = await readScopedFeatureRow({
+		ctx,
+		customerId,
+		featureId,
+		interval,
+	});
+	expect(after.id, `expected spared row for ${customerId}`).toBe(beforeRowId);
+	expect(after.entitlement_id).toBe(beforeEntitlementId);
 	expect(after.balance).toBe(balance);
 };
