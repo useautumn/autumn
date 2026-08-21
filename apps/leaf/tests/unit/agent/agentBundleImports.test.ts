@@ -4,11 +4,6 @@ import { dirname, resolve } from "node:path";
 
 const LEAF_ROOT = resolve(import.meta.dir, "../../..");
 
-/** Externals that must never enter the eve agent bundle: they are transitive
- * workspace deps the deployed image cannot resolve from the authored-modules
- * cache, so a single import breaks leaf boot in production. */
-const FORBIDDEN_EXTERNALS = ["@autumn/logging", "pino", "@axiomhq/pino"];
-
 const tsFilesUnder = (dir: string): string[] =>
 	readdirSync(dir).flatMap((entry) => {
 		const path = resolve(dir, entry);
@@ -31,33 +26,48 @@ const resolveRelative = (fromFile: string, specifier: string) => {
 	return null;
 };
 
+const packageNameOf = (specifier: string) =>
+	specifier.startsWith("@")
+		? specifier.split("/").slice(0, 2).join("/")
+		: specifier.split("/")[0];
+
+/** The eve agent bundle resolves imports from a cache path where only leaf's
+ * OWN dependencies are guaranteed present — a transitive workspace dep (pino
+ * via @autumn/logging broke prod boot) resolves only by image-layout luck. */
 describe("agent bundle import closure", () => {
-	test("never reaches server-only logging deps", () => {
+	test("every runtime external is a declared leaf dependency", () => {
+		const manifest = JSON.parse(
+			readFileSync(resolve(LEAF_ROOT, "package.json"), "utf8"),
+		) as { dependencies?: Record<string, string> };
+		const declared = new Set(Object.keys(manifest.dependencies ?? {}));
 		const queue = tsFilesUnder(resolve(LEAF_ROOT, "agent"));
 		const seen = new Set<string>();
-		const offenders: string[] = [];
+		const offenders = new Set<string>();
 		while (queue.length) {
 			const file = queue.pop() as string;
 			if (seen.has(file)) continue;
 			seen.add(file);
 			const source = readFileSync(file, "utf8");
-			for (const match of source.matchAll(/from "([^"]+)"/g)) {
-				const specifier = match[1];
+			for (const match of source.matchAll(
+				/import\s+(type\s+)?[^;]*?from\s+"([^"]+)"/g,
+			)) {
+				const [, typeOnly, specifier] = match;
+				if (typeOnly) continue;
 				if (specifier.startsWith(".")) {
 					const resolved = resolveRelative(file, specifier);
 					if (resolved) queue.push(resolved);
 					continue;
 				}
-				if (
-					FORBIDDEN_EXTERNALS.some(
-						(name) => specifier === name || specifier.startsWith(`${name}/`),
-					)
-				) {
-					offenders.push(`${file.slice(LEAF_ROOT.length + 1)} -> ${specifier}`);
+				if (specifier.startsWith("node:")) continue;
+				const packageName = packageNameOf(specifier);
+				if (!declared.has(packageName)) {
+					offenders.add(
+						`${file.slice(LEAF_ROOT.length + 1)} -> ${packageName}`,
+					);
 				}
 			}
 		}
 		expect(seen.size).toBeGreaterThan(30);
-		expect(offenders).toEqual([]);
+		expect([...offenders].sort()).toEqual([]);
 	});
 });
