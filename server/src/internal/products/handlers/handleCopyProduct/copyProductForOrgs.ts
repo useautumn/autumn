@@ -9,10 +9,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCreditSystemMeteredFeatureIds } from "@/internal/features/creditSystemUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import {
-	copyProduct,
-	initProductInStripe,
-} from "@/internal/products/productUtils.js";
+import { copyProduct } from "@/internal/products/productUtils.js";
+import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { copyBaseVariants } from "./copyBaseVariants.js";
 import { copyLicenseLinksForPlanCopy } from "./copyLicenseLinksForPlanCopy.js";
@@ -128,7 +126,7 @@ export const copyProductForOrgs = async ({
 		});
 	}
 
-	// 4. Copy the base and init its Stripe resources
+	// 4. Copy the base and apply Stripe resource reuse
 	const toBaseInternalId = await copyProduct({
 		source,
 		ctx: toContext,
@@ -142,7 +140,10 @@ export const copyProductForOrgs = async ({
 		orgId: toOrg.id,
 		env: toEnv,
 	});
-	await initProductInStripe({ ctx: toContext, product: copiedBase });
+	await applyStripeResourceReuseForProduct({
+		ctx: toContext,
+		product: copiedBase,
+	});
 
 	// 5. Copy the base's variants, relinked to the copied base
 	const copiedVariantIds = await copyBaseVariants({

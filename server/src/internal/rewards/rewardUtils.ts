@@ -24,7 +24,7 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { generateId, getUnique, nullish } from "@/utils/genUtils.js";
 import { ProductService } from "../products/ProductService.js";
-import { initProductInStripe } from "../products/productUtils.js";
+import { applyStripeResourceReuseForProduct } from "../products/stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 
 export const constructReward = ({
 	internalId,
@@ -186,7 +186,7 @@ export const initRewardStripePrices = async ({
 	const batchInit: Promise<void>[] = [];
 	for (const product of products) {
 		batchInit.push(
-			initProductInStripe({
+			applyStripeResourceReuseForProduct({
 				ctx,
 				product,
 			}),

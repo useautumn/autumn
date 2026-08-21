@@ -5,7 +5,7 @@ import {
 	copyProduct,
 	type PlanCopySource,
 } from "@/internal/products/productUtils.js";
-import { initVariantsInStripe } from "@/internal/products/stripeResourceUtils/initVariantsInStripe.js";
+import { applyStripeReuseForVariants } from "@/internal/products/stripeResourceUtils/applyStripeReuseForVariants.js";
 import { listExistingTargetPlanIds } from "./listExistingTargetPlanIds.js";
 
 /**
@@ -61,7 +61,10 @@ export const copyBaseVariants = async ({
 		env: toEnv,
 		inIds: copiedVariantIds,
 	});
-	await initVariantsInStripe({ ctx: toContext, products: copiedVariants });
+	await applyStripeReuseForVariants({
+		ctx: toContext,
+		products: copiedVariants,
+	});
 
 	return copiedVariantIds;
 };

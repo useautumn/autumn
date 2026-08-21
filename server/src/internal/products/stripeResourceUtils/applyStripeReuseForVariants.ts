@@ -1,13 +1,13 @@
 import type { FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { initProductInStripe } from "../productUtils.js";
+import { applyStripeResourceReuseForProduct } from "./applyStripeResourceReuseForProduct.js";
 import { applyStripeReuseFromVariantFamilies } from "./applyStripeReuseFromVariantFamilies.js";
 
 /**
- * Inits created variants' Stripe resources: family reuse first, then one
- * product at a time so siblings can't double-create a shared price.
+ * Applies Stripe resource reuse to created variants: family reuse first, then
+ * one product at a time so siblings see ids copied onto earlier products.
  */
-export const initVariantsInStripe = async ({
+export const applyStripeReuseForVariants = async ({
 	ctx,
 	products,
 }: {
@@ -18,6 +18,6 @@ export const initVariantsInStripe = async ({
 
 	await applyStripeReuseFromVariantFamilies({ ctx, products });
 	for (const product of products) {
-		await initProductInStripe({ ctx, product });
+		await applyStripeResourceReuseForProduct({ ctx, product });
 	}
 };
