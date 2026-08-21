@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { attachFormOverridesFromRequestBody } from "@/components/forms/attach-v2/utils/attachFormOverridesFromRequestBody";
 import { updateSubscriptionFormOverridesFromRequestBody } from "@/components/forms/update-subscription-v2/utils/updateSubscriptionFormOverridesFromRequestBody";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useApprovalSeedStore } from "../stores/useApprovalSeedStore";
 import { useApprovalDetailQuery } from "./useApprovalDetailQuery";
 import { useResolvedApprovalRequest } from "./useResolvedApprovalRequest";
 
@@ -26,6 +27,7 @@ export const useApprovalSheetFromUrl = ({
 		sheet: parseAsString,
 	});
 	const setSheet = useSheetStore((state) => state.setSheet);
+	const setApprovalId = useApprovalSeedStore((state) => state.setApprovalId);
 	const openedRef = useRef(false);
 
 	const sheetType = isApprovalSheet(params.sheet) ? params.sheet : null;
@@ -52,6 +54,7 @@ export const useApprovalSheetFromUrl = ({
 				`This Slack request was already ${approval.status === "cancelled" ? "withdrawn" : approval.status} — applying here runs a new action.`,
 			);
 		}
+		setApprovalId(approval?.id ?? null);
 		const data = {
 			approvalId: approval?.id ?? null,
 			defaultOverrides:
@@ -79,6 +82,7 @@ export const useApprovalSheetFromUrl = ({
 		resolutionPending,
 		resolved,
 		resolveSubscriptionItemId,
+		setApprovalId,
 		setParams,
 		setSheet,
 		sheetType,

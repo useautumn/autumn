@@ -166,9 +166,7 @@ export function SubscriptionUpdateSheet() {
 		| undefined;
 
 	const approvalSeed = approvalSeedFromSheetData(sheetData ?? null);
-	const onApplied = useSettleApprovalOnApply({
-		approvalId: approvalSeed?.approvalId,
-	});
+	const onApplied = useSettleApprovalOnApply();
 	const defaultOverrides = useMemo((): Partial<UpdateSubscriptionForm> => {
 		if (!productV2) return {};
 		return {

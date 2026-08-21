@@ -444,9 +444,7 @@ export function AttachProductSheet() {
 		customer as FullCustomer | undefined,
 	);
 	const approvalSeed = approvalSeedFromSheetData(sheetData);
-	const onApplied = useSettleApprovalOnApply({
-		approvalId: approvalSeed?.approvalId,
-	});
+	const onApplied = useSettleApprovalOnApply();
 
 	return (
 		<AttachFormProvider
