@@ -42,26 +42,50 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
 	return newConfig as MeteredConfig;
 };
 
+export const validateInvoiceCreditFeatureType = ({
+	invoiceCredit,
+	featureType,
+}: {
+	invoiceCredit: boolean | undefined;
+	featureType: FeatureType;
+}) => {
+	if (invoiceCredit !== undefined && featureType !== FeatureType.CreditSystem) {
+		throw new RecaseError({
+			message: "Invoice credits are only supported for classic credit systems.",
+			code: ErrCode.InvalidFeature,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+};
+
 export const validateCreditSystem = (
 	config: CreditSystemConfig,
 	featureType: FeatureType = FeatureType.CreditSystem,
 ) => {
 	const schema = Array.isArray(config?.schema) ? config.schema : [];
+	const invalidCreditSystem = (message: string): never => {
+		throw new RecaseError({
+			message,
+			code: ErrCode.InvalidFeature,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	};
+
+	validateInvoiceCreditFeatureType({
+		invoiceCredit: config.invoice_credit,
+		featureType,
+	});
 
 	if (!isAiCreditSystem(featureType) && schema.length === 0) {
-		throw new RecaseError({
-			message: `At least one metered feature is required for credit system`,
-			code: ErrCode.InvalidFeature,
-			statusCode: 400,
-		});
+		invalidCreditSystem(
+			"At least one metered feature is required for credit system",
+		);
 	}
 
 	if (isAiCreditSystem(featureType) && schema.length > 0) {
-		throw new RecaseError({
-			message: `AI credit systems are leaf features and cannot define a schema. Model rates live in model_markups.`,
-			code: ErrCode.InvalidFeature,
-			statusCode: 400,
-		});
+		invalidCreditSystem(
+			"AI credit systems are leaf features and cannot define a schema. Model rates live in model_markups.",
+		);
 	}
 
 	const meteredFeatureIds = schema.map(
@@ -69,11 +93,9 @@ export const validateCreditSystem = (
 	);
 	const uniqueMeteredFeatureIds = Array.from(new Set(meteredFeatureIds));
 	if (meteredFeatureIds.length !== uniqueMeteredFeatureIds.length) {
-		throw new RecaseError({
-			message: `Credit system contains multiple of the same metered_feature_id`,
-			code: ErrCode.InvalidFeature,
-			statusCode: 400,
-		});
+		invalidCreditSystem(
+			"Credit system contains multiple of the same metered_feature_id",
+		);
 	}
 
 	const newConfig = { ...config, schema, usage_type: FeatureUsageType.Single };
@@ -108,18 +130,65 @@ export const validateCreditSystem = (
 	}
 
 	for (const schemaItem of newConfig.schema) {
-		if (schemaItem.tier_behavior === "graduated") continue;
-
-		const creditAmount = parseFloat(schemaItem.credit_amount.toString());
-
-		if (Number.isNaN(creditAmount)) {
-			throw new RecaseError({
-				message: `Credit amount should be a number`,
-				code: ErrCode.InvalidFeature,
-				statusCode: 400,
-			});
+		if (schemaItem.feature_amount !== undefined) {
+			const featureAmount = Number(schemaItem.feature_amount);
+			if (!Number.isFinite(featureAmount) || featureAmount <= 0) {
+				invalidCreditSystem("Billing units must be greater than zero.");
+			}
+			schemaItem.feature_amount = featureAmount;
 		}
 
+		if (schemaItem.tier_behavior === "graduated") {
+			if (!Array.isArray(schemaItem.tiers) || schemaItem.tiers.length === 0) {
+				invalidCreditSystem(
+					"Graduated credit schemas require at least one tier.",
+				);
+			}
+
+			let previousBoundary = 0;
+			for (const [index, tier] of schemaItem.tiers.entries()) {
+				const creditAmount = Number(tier.credit_amount);
+				if (!Number.isFinite(creditAmount) || creditAmount < 0) {
+					invalidCreditSystem("Tier credit costs must be zero or greater.");
+				}
+				tier.credit_amount = creditAmount;
+
+				const isLastTier = index === schemaItem.tiers.length - 1;
+				if (tier.to === "inf") {
+					if (!isLastTier) {
+						invalidCreditSystem(
+							"Only the final graduated tier may use an infinity boundary.",
+						);
+					}
+					continue;
+				}
+
+				const boundary = Number(tier.to);
+				if (
+					!Number.isFinite(boundary) ||
+					boundary <= 0 ||
+					boundary <= previousBoundary
+				) {
+					invalidCreditSystem(
+						"Graduated tier boundaries must be positive and strictly increasing.",
+					);
+				}
+				if (isLastTier) {
+					invalidCreditSystem(
+						"The final graduated tier must use an infinity boundary.",
+					);
+				}
+
+				tier.to = boundary;
+				previousBoundary = boundary;
+			}
+			continue;
+		}
+
+		const creditAmount = Number(schemaItem.credit_amount);
+		if (!Number.isFinite(creditAmount) || creditAmount < 0) {
+			invalidCreditSystem("Credit cost must be zero or greater.");
+		}
 		schemaItem.credit_amount = creditAmount;
 	}
 

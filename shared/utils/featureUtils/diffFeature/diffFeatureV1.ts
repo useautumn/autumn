@@ -27,18 +27,48 @@ const displaysEqual = (left: FeatureDisplay, right: FeatureDisplay) =>
 	(left?.singular ?? null) === (right?.singular ?? null) &&
 	(left?.plural ?? null) === (right?.plural ?? null);
 
+const creditSchemaItemsEqual = ({
+	left,
+	right,
+}: {
+	left: NonNullable<CreditSchema>[number];
+	right: NonNullable<CreditSchema>[number];
+}) => {
+	if ((left.billing_units ?? 1) !== (right.billing_units ?? 1)) return false;
+	if (left.tier_behavior !== right.tier_behavior) return false;
+
+	if (
+		left.tier_behavior !== "graduated" ||
+		right.tier_behavior !== "graduated"
+	) {
+		return left.credit_cost === right.credit_cost;
+	}
+
+	return (
+		left.tiers.length === right.tiers.length &&
+		left.tiers.every(
+			(tier, index) =>
+				tier.to === right.tiers[index]?.to &&
+				tier.credit_cost === right.tiers[index]?.credit_cost,
+		)
+	);
+};
+
 const creditSchemasEqual = (left: CreditSchema, right: CreditSchema) => {
 	const leftEntries = left ?? [];
 	const rightEntries = right ?? [];
-	const costByFeatureId = new Map(
-		leftEntries.map((entry) => [entry.metered_feature_id, entry.credit_cost]),
+	const leftByFeatureId = new Map(
+		leftEntries.map((entry) => [entry.metered_feature_id, entry]),
 	);
 	return (
 		leftEntries.length === rightEntries.length &&
-		rightEntries.every(
-			(entry) =>
-				costByFeatureId.get(entry.metered_feature_id) === entry.credit_cost,
-		)
+		rightEntries.every((rightEntry) => {
+			const leftEntry = leftByFeatureId.get(rightEntry.metered_feature_id);
+			return (
+				leftEntry !== undefined &&
+				creditSchemaItemsEqual({ left: leftEntry, right: rightEntry })
+			);
+		})
 	);
 };
 
@@ -109,6 +139,11 @@ const fieldComparisons: FieldComparison[] = [
 		key: "credit_schema",
 		isSame: (from, to) =>
 			creditSchemasEqual(from.credit_schema, to.credit_schema),
+	},
+	{
+		key: "invoice_credit",
+		isSame: (from, to) =>
+			(from.invoice_credit ?? false) === (to.invoice_credit ?? false),
 	},
 	{
 		key: "default_markup",

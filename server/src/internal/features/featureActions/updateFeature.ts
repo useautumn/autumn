@@ -1,5 +1,4 @@
 import {
-	type CreditSchemaItem,
 	type CreditSystemConfig,
 	ErrCode,
 	type Feature,
@@ -27,6 +26,7 @@ import { getObjectsUsingFeature } from "../utils/updateFeatureUtils/getObjectsUs
 import { handleFeatureIdChanged } from "../utils/updateFeatureUtils/handleFeatureIdChanged.js";
 import { handleFeatureTypeChanged } from "../utils/updateFeatureUtils/handleFeatureTypeChanged.js";
 import { handleFeatureUsageTypeChanged } from "../utils/updateFeatureUtils/handleFeatureUsageTypeChanged.js";
+import { hasCreditRateCardChanged } from "./hasCreditRateCardChanged.js";
 import type { ClearCreditSystemCachePayload } from "./runClearCreditSystemCacheTask.js";
 
 interface UpdateFeatureParams {
@@ -86,37 +86,6 @@ const areProviderMarkupsEqual = ({
 	areMarkupRecordsEqual<
 		NonNullable<CreditSystemConfig["provider_markups"]>[string]
 	>(a, b, (aEntry, bEntry) => aEntry.markup === bEntry.markup);
-
-/**
- * Checks if the credit schema has changed between old and new config.
- * Returns true if schema changed (different items or different credit amounts).
- */
-const hasCreditSchemaChanged = ({
-	oldSchema,
-	newSchema,
-}: {
-	oldSchema: CreditSchemaItem[] | undefined;
-	newSchema: CreditSchemaItem[] | undefined;
-}): boolean => {
-	if (!oldSchema && !newSchema) return false;
-	if (!oldSchema || !newSchema) return true;
-	if (oldSchema.length !== newSchema.length) return true;
-
-	// Create a map of old schema for quick lookup
-	const oldSchemaMap = new Map(
-		oldSchema.map((item) => [item.metered_feature_id, item.credit_amount]),
-	);
-
-	// Check if any item has changed
-	for (const newItem of newSchema) {
-		const oldAmount = oldSchemaMap.get(newItem.metered_feature_id);
-		if (oldAmount === undefined || oldAmount !== newItem.credit_amount) {
-			return true;
-		}
-	}
-
-	return false;
-};
 
 const hasAiMarkupConfigChanged = ({
 	oldConfig,
@@ -282,6 +251,31 @@ export const updateFeature = async ({
 		}
 	})();
 
+	const isCreditSystem = isAnyCreditSystem(feature.type);
+	const rateCardChanged =
+		isCreditSystem &&
+		updates.config != null &&
+		hasCreditRateCardChanged({
+			oldConfig: feature.config,
+			newConfig,
+		});
+	const markupsChanged =
+		isCreditSystem &&
+		updates.model_markups !== undefined &&
+		!areModelMarkupsEqual({
+			a: updates.model_markups,
+			b: feature.model_markups,
+		});
+	const aiMarkupConfigChanged =
+		isAiCreditSystem(feature.type) &&
+		updates.config != null &&
+		hasAiMarkupConfigChanged({
+			oldConfig: feature.config,
+			newConfig,
+		});
+	const shouldClearCreditSystemCustomerCache =
+		rateCardChanged || markupsChanged || aiMarkupConfigChanged;
+
 	// Update the feature
 	const updatedFeature = await FeatureService.update({
 		db: ctx.db,
@@ -309,41 +303,15 @@ export const updateFeature = async ({
 		});
 	}
 
-	// Queue cache clear for credit system if schema or model markups changed
-	const isCreditSystem = isAnyCreditSystem(feature.type);
-	if (isCreditSystem && updatedFeature) {
-		const schemaChanged =
-			updates.config != null &&
-			hasCreditSchemaChanged({
-				oldSchema: feature.config?.schema,
-				newSchema: updates.config.schema,
-			});
-
-		const markupsChanged =
-			updates.model_markups !== undefined &&
-			!areModelMarkupsEqual({
-				a: updates.model_markups,
-				b: feature.model_markups,
-			});
-
-		const aiMarkupConfigChanged =
-			isAiCreditSystem(feature.type) &&
-			updates.config != null &&
-			hasAiMarkupConfigChanged({
-				oldConfig: feature.config,
-				newConfig,
-			});
-
-		if (schemaChanged || markupsChanged || aiMarkupConfigChanged) {
-			await addTaskToQueue({
-				jobName: JobName.ClearCreditSystemCustomerCache,
-				payload: {
-					orgId: ctx.org.id,
-					env: ctx.env,
-					internalFeatureId: feature.internal_id,
-				} satisfies ClearCreditSystemCachePayload,
-			});
-		}
+	if (shouldClearCreditSystemCustomerCache && updatedFeature) {
+		await addTaskToQueue({
+			jobName: JobName.ClearCreditSystemCustomerCache,
+			payload: {
+				orgId: ctx.org.id,
+				env: ctx.env,
+				internalFeatureId: feature.internal_id,
+			} satisfies ClearCreditSystemCachePayload,
+		});
 	}
 
 	return updatedFeature;
