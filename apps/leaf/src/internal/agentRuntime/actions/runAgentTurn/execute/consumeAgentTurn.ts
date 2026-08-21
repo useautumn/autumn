@@ -209,6 +209,9 @@ export const consumeAgentTurn = async ({
 	let idleRetries = 0;
 	let disconnectRetries = 0;
 
+	const abortForRunStop = () => abortController.abort();
+	if (run) run.abortTurnStream = abortForRunStop;
+
 	try {
 		while (idleRetries < MAX_IDLE_RETRIES) {
 			// Eve cannot be interrupted server-side.
@@ -228,6 +231,13 @@ export const consumeAgentTurn = async ({
 			turn = { ...turn, progress: pass.progress };
 			streamedAnyEvent ||= pass.sawEvent;
 			if (pass.outcome) return pass.outcome;
+
+			if (run?.stop) {
+				return await abandonForStop({
+					progress: turn.progress,
+					stop: run.stop,
+				});
+			}
 
 			if (pass.error instanceof EveStreamDisconnectedError) {
 				disconnectRetries += 1;
@@ -264,6 +274,8 @@ export const consumeAgentTurn = async ({
 			);
 		}
 	} finally {
+		if (run?.abortTurnStream === abortForRunStop)
+			run.abortTurnStream = undefined;
 		abortController.abort();
 	}
 

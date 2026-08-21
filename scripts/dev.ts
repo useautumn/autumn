@@ -82,9 +82,10 @@ const viteAppEnv = envFile.includes(".env.prod")
 		? "staging"
 		: "dev";
 const useLocalAuthUrls = viteAppEnv === "dev" && !isProductionMode;
-// `bun dev:services up` runs Dragonfly on :6379; use it instead of the shared
-// cloud cache. Worktrees provision their own and set this in their env file.
+// `bun dev:services up` runs misc-cache Dragonfly on :6379 and cache-v2 on
+// :6380. Worktrees provision their own and set these in their env file.
 const LOCAL_MISC_CACHE_URL = "redis://localhost:6379";
+const LOCAL_CACHE_V2_URL = "redis://localhost:6380";
 const useLocalMiscCache =
 	viteAppEnv === "dev" && !isProductionMode && worktreeNum === 1;
 const localUrl = (value: string | undefined, fallback: string) =>
@@ -423,8 +424,8 @@ async function startDev() {
 				}),
 				...(useLocalMiscCache && {
 					MISC_CACHE_DRAGONFLY_PUBLIC_URL: LOCAL_MISC_CACHE_URL,
-					CACHE_V2_DRAGONFLY_URL: LOCAL_MISC_CACHE_URL,
-					CACHE_V2_DRAGONFLY_PUBLIC_URL: LOCAL_MISC_CACHE_URL,
+					CACHE_V2_DRAGONFLY_URL: LOCAL_CACHE_V2_URL,
+					CACHE_V2_DRAGONFLY_PUBLIC_URL: LOCAL_CACHE_V2_URL,
 					REDIS_URL: LOCAL_MISC_CACHE_URL,
 				}),
 				...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
