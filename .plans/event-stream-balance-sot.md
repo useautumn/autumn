@@ -552,14 +552,73 @@ If we had instead loaded Postgres remaining and replayed the original 40 *tracks
 
 ---
 
-## 15. Bottom line
+## 15. Better fit for this stack: wallet WAL, not worker-served remaining
 
-The instinct is right: **remaining should be a fold of a durable log; Redis/Postgres/Tinybird should be projections; apply should be a single writer that holds a snapshot.** Worker death is `snapshot(S) + fold(facts after S)`, and Postgres is a good place to keep `snapshot(S)` once it has a watermark.
+If the requirements are **high track QPS** and **real-time remaining on our infra** (check, check+track, `customers.get` balances), I would not put a balance worker on the read/write path.
+
+I would keep Redis as the serving layer and make a **fact WAL** the durability SoT. Recovery is still `snapshot(S) + tail`. The "worker" is Redis Lua, which we already run. Postgres and Tinybird stay projectors.
+
+```text
+check / track / lock
+        │
+        ▼
+Redis Lua          apply + XADD facts in one script
+        │
+        ├── hashes ──► real-time reads (existing replica pool)
+        │
+        └── fact WAL (Redis Streams, relayed to Kafka/Redpanda if we want)
+                ├──► Postgres projector   dashboard, billing, snapshot(S)
+                └──► Tinybird / Neon      analytics
+```
+
+That is how a database is built: pages for reads, WAL for durability, replicas for QPS. We already have the pages and the replica reads. We are missing the WAL.
+
+### 15.1 Why this matches the two constraints
+
+**Real-time reads.** `getCachedFullSubject`, partial subjects, and `getCachedFeatureBalances` already go through `useReadPool: true`. Check's SLO is ~50ms and it fail-opens when Redis is down. A worker that *owns* remaining forces every check onto sticky routing, a warm snapshot, and a process hop. Kafka Streams interactive queries and "ask the customer partition owner" are the slow way to serve a point read we already serve from a Redis replica.
+
+**High throughput.** Lua on a cluster slot is a good apply engine for this shape: no extra network mid-apply, pipelined hash reads, different credit graphs can proceed on different key sets. A customer-partitioned worker serializes *all* of that customer's features, including ones that do not share a credit graph, and adds enqueue + ownership + cold-start. Streams are excellent at *fan-out* of facts after apply (Tinybird, PG, webhooks). They are a bad place to *serve* remaining.
+
+**Replay.** Identical to the worker-death story. Redis evicted or a node died: load watermarked Postgres remaining at `S`, fold WAL `(S, tip]`, write hashes, resume. We do not need a new actor to get that.
+
+### 15.2 What I would not use this constraint set to justify
+
+| Approach | Why it loses here |
+| --- | --- |
+| Balance workers serve check/track | Extra hop, coarser serialization, cold-start replay on the SLO path |
+| Tinybird / CH as remaining | OLAP, no reject isolation, ingest lag |
+| Postgres as apply | Already the fallback. Kills the 50ms path. |
+| Intent stream as SoT | Replay is the allocator, not addition |
+| TigerBeetle / new ledger DB | Simple transfers, not a waterfall allocator. New infra, same apply problem in front of it |
+
+Workers are still the right *projector* (the thing that folds facts into Postgres). They should not be the thing the API calls for remaining.
+
+### 15.3 When I *would* move apply off Redis
+
+Only if Redis itself is the problem: Lua/SQL/TS drift, multi-region lock owners, 10k-entity subject blobs, cost. That is a serving-layer rewrite. It is not required for "we need a log we can replay" or for Tinybird to stop being a second write path.
+
+If we do it later, I would still keep a Redis (or similar) **read cache** in front of the worker. High QPS real-time reads and single-writer apply want different hardware. We already split that (write on primary, read on replica pool). A worker that is both is a regression.
+
+### 15.4 What this changes vs today's mental model
+
+Say "the WAL is the SoT, Redis remaining is a serving projection we apply into synchronously." Do not say "the event stream is the SoT, and we read remaining from it."
+
+We never serve remaining from the stream, same way Postgres does not answer `SELECT` by scanning `pg_wal`. The stream exists so Redis can die.
+
+The existing mutation-log plan is this architecture. The missing pieces are: `XADD` in Lua, stop snapshot-flushing Postgres, watermark PG remaining, relay the same WAL to Tinybird, emit grant/reset facts onto it.
+
+---
+
+## 16. Bottom line
+
+The instinct is right: **remaining should be a fold of a durable log; Redis/Postgres/Tinybird should be projections; apply should be a single writer that holds a snapshot.** Worker death (or Redis death) is `snapshot(S) + fold(facts after S)`, and Postgres is a good place to keep `snapshot(S)` once it has a watermark.
+
+For *this* stack — high track QPS plus 50ms remaining reads — I would not introduce balance workers on the request path. I would add a **fact WAL behind the Redis we already serve from**. Redis Lua stays the apply engine and the real-time read layer. The WAL is what we replay. Postgres and Tinybird consume it.
 
 The first-idea version is wrong in three places:
 
 1. It treats today's track events as that log. They are intents. Remaining needs facts, and also grant/reset/shape facts we do not emit. Replay is addition of deltas, not re-running deduction.
 2. It puts Tinybird on the SoT path. Tinybird is a projector. Worker recovery does not read it.
-3. It under-specifies apply. Check/reject/lock cannot wait on an eventually consistent worker unless that worker *is* the synchronous owner of the customer.
+3. It under-specifies apply. Check/reject/lock cannot wait on an eventually consistent worker unless that worker *is* the synchronous owner of the customer — and even then, that is the wrong serving layer for our read SLO.
 
-We already have the allocator, the mutation receipt shape, the subject epoch fence, and a written plan to stream those receipts. The missing piece is not a new conceptual architecture. It is making the **fact ledger** real, pointing Postgres and Tinybird at it, and only then deciding whether the process that folds the ledger is still Redis Lua or a worker we own.
+We already have the allocator, the mutation receipt shape, the subject epoch fence, the replica read pool, and a written plan to stream those receipts. The missing piece is the WAL, not a new fleet of snapshot owners.
