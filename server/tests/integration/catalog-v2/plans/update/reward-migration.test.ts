@@ -22,6 +22,7 @@ import {
 	type Reward,
 	RewardType,
 } from "@autumn/shared";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -98,13 +99,17 @@ const getFull = ({
 
 const createPlanScopedCoupon = async ({
 	autumn,
+	ctx,
 	planId,
 	suffix,
 }: {
 	autumn: { post: (path: string, body: unknown) => Promise<unknown> };
+	ctx: AutumnContext;
 	planId: string;
 	suffix: string;
 }): Promise<string> => {
+	// Plan-scoped coupons resolve Stripe ids at create time — materialize first.
+	await materializePlanInStripe({ ctx, planId });
 	const rewardId = `coupon_rmig_${suffix}`;
 	const params: CreateRewardParams = {
 		coupon: {
@@ -141,6 +146,7 @@ test.concurrent(
 
 		const rewardId = await createPlanScopedCoupon({
 			autumn: autumnV2_3,
+			ctx,
 			planId: pro.id,
 			suffix: `ip${suffix}`,
 		});
@@ -191,6 +197,7 @@ test.concurrent(
 
 		const rewardId = await createPlanScopedCoupon({
 			autumn: autumnV2_3,
+			ctx,
 			planId: pro.id,
 			suffix: `nv${suffix}`,
 		});

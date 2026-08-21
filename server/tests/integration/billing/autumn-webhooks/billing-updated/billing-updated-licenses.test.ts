@@ -9,7 +9,10 @@ import type {
 	UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
-import { getBaseStripePriceId } from "@tests/integration/billing/sync/utils/syncProductHelpers";
+import {
+	fetchFullProduct,
+	getBaseStripePriceId,
+} from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import {
 	getTestSvixAppId,
@@ -22,7 +25,6 @@ import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { ProductService } from "@/internal/products/ProductService";
 
 type BillingUpdatedPayload = {
 	type: string;
@@ -179,11 +181,9 @@ const setupLicenseSubscription = async ({
 		idPrefix,
 	});
 
-	const developerSeatFull = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: developerSeat.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
+	const developerSeatFull = await fetchFullProduct({
+		ctx,
+		productId: developerSeat.id,
 	});
 	const stripeSubscription = await createExternalStripeSubscription({
 		ctx,

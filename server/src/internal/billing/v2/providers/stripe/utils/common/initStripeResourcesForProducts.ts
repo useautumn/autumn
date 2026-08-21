@@ -1,5 +1,4 @@
 import {
-	AppEnv,
 	type AutumnBillingPlan,
 	type BillingContext,
 	billingContextToCurrency,
@@ -35,15 +34,15 @@ export const initStripeResourcesForProducts = async ({
 	products,
 	candidateProducts = [],
 	internalEntityId,
-	allowLiveCreate = false,
+	allowCreate = false,
 	lookupVariantFamilies = true,
 }: {
 	ctx: AutumnContext;
 	products: FullProduct[];
 	candidateProducts?: FullProduct[];
 	internalEntityId?: string;
-	/** Live is reuse-only unless set — catalog edits must not mint Stripe prices. */
-	allowLiveCreate?: boolean;
+	/** Reuse-only unless set — Stripe resources are created lazily at billing time. */
+	allowCreate?: boolean;
 	/** False when the caller already passed the family as candidateProducts. */
 	lookupVariantFamilies?: boolean;
 }) => {
@@ -58,7 +57,7 @@ export const initStripeResourcesForProducts = async ({
 		await applyStripeReuseFromVariantFamilies({ ctx, products });
 	}
 
-	if (env === AppEnv.Live && !allowLiveCreate) return;
+	if (!allowCreate) return;
 	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;
 	// No Stripe account (e.g. fresh sandbox sub-orgs) — resources are
 	// created lazily once one is connected.

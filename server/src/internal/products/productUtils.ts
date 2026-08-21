@@ -1,5 +1,5 @@
 import {
-	AppEnv,
+	type AppEnv,
 	BillingInterval,
 	BillingType,
 	type CreateProductV2Params,
@@ -23,7 +23,6 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { createStripeCli } from "@server/external/connect/createStripeCli.js";
-import { createStripePriceIFNotExist } from "@server/external/stripe/createStripePrice/createStripePrice.js";
 import { assertNoPreviewStripeIdsOnProduct } from "@server/external/stripe/previewStripeResourceIds.js";
 import { getBillingType } from "@server/internal/products/prices/priceUtils.js";
 import RecaseError from "@server/utils/errorUtils.js";
@@ -34,15 +33,12 @@ import type {
 	AttachParams,
 	InsertCusProductParams,
 } from "../customers/cusProducts/AttachParams.js";
-import { orgDisableStripeWrites } from "../orgs/orgUtils/convertOrgUtils.js";
-import { isStripeConnected } from "../orgs/orgUtils.js";
 import { EntitlementService } from "./entitlements/EntitlementService.js";
 import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
 import { FreeTrialService } from "./free-trials/FreeTrialService.js";
 import { ProductService } from "./ProductService.js";
 import { PriceService } from "./prices/PriceService.js";
 import { isDefaultTrialFullProduct } from "./productUtils/classifyProduct.js";
-import { applyStripeResourceReuseForProduct } from "./stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 
 export const getActiveProducts = <T extends { id: string; active: boolean }>(
 	products: T[],
@@ -530,44 +526,6 @@ export const isOneOff = (prices: Price[]) => {
 			}
 		})
 	);
-};
-
-export const initProductInStripe = async ({
-	ctx,
-	product,
-}: {
-	ctx: AutumnContext;
-	product: FullProduct;
-}): Promise<undefined> => {
-	const { org, env, logger, db } = ctx;
-	await applyStripeResourceReuseForProduct({ ctx, product });
-
-	if (env === AppEnv.Live) return;
-	if (!isStripeConnected({ org, env })) return;
-	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;
-
-	await checkStripeProductExists({
-		db,
-		org,
-		env,
-		product,
-		logger,
-	});
-
-	const batchPriceUpdate = [];
-
-	for (const price of product.prices) {
-		batchPriceUpdate.push(
-			createStripePriceIFNotExist({
-				ctx,
-				price,
-				entitlements: product.entitlements,
-				product: product,
-			}),
-		);
-	}
-
-	await Promise.all(batchPriceUpdate);
 };
 
 export const getGroupToDefaults = ({

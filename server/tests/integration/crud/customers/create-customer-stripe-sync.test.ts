@@ -4,6 +4,7 @@ import {
 	type ApiCustomerV5,
 	CusProductStatus,
 } from "@autumn/shared";
+import { fetchFullProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers.js";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectCustomerProductStatuses } from "@tests/integration/billing/utils/expectCustomerProductStatuses";
@@ -16,24 +17,18 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
-import { ProductService } from "@/internal/products/ProductService";
 import { attachPaymentMethod } from "@/utils/scriptUtils/initCustomer";
 
 const runId = Date.now().toString(36);
 
+// Self-materializing: these tests build external Stripe subs pre-attach.
 const getFullProduct = ({
 	ctx,
 	productId,
 }: {
 	ctx: TestContext;
 	productId: string;
-}) =>
-	ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: productId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
+}) => fetchFullProduct({ ctx, productId });
 
 const getBasePriceId = async ({
 	ctx,

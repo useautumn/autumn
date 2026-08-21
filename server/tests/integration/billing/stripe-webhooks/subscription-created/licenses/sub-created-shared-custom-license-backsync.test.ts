@@ -9,6 +9,7 @@ import {
 import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
 import {
 	createStripeFixedPriceUnderProduct,
+	fetchFullProduct,
 	getProductStripeProductId,
 } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import {
@@ -130,12 +131,7 @@ const setupSharedCustomizedLicense = async ({
 		],
 	});
 
-	const devSeatFull = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: devSeat.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
+	const devSeatFull = await fetchFullProduct({ ctx, productId: devSeat.id });
 	const stripeProductId = getProductStripeProductId({
 		fullProduct: devSeatFull,
 	});

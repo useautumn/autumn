@@ -6,9 +6,11 @@ import {
 	isUsagePrice,
 	planLicenses,
 } from "@autumn/shared";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { eq, inArray, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
 	rewardProgramRepo,
@@ -155,27 +157,31 @@ export const createProducts = async ({
 };
 
 export const createReward = async ({
-	db,
-	orgId,
-	env,
+	ctx,
 	autumn,
 	reward,
 	productId,
 	onlyUsage = false,
 }: {
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
+	ctx: AutumnContext;
 	autumn: AutumnInt;
 	reward: CreateReward;
 	productId?: string;
 	onlyUsage?: boolean;
 }) => {
+	const { db, org, env } = ctx;
+
+	// Price-scoped discounts resolve Stripe product ids at create time, and the
+	// server 400s (product_not_in_stripe) until the plan is materialized.
+	if (productId && reward.discount_config?.apply_to_all !== true) {
+		await materializePlanInStripe({ ctx, planId: productId });
+	}
+
 	// Only fetch product if we need usage prices
 	if (onlyUsage && productId) {
 		const fullProduct = await ProductService.getFull({
 			db,
-			orgId,
+			orgId: org.id,
 			env,
 			idOrInternalId: productId,
 		});
@@ -188,7 +194,7 @@ export const createReward = async ({
 	} else if (productId) {
 		const fullProduct = await ProductService.getFull({
 			db,
-			orgId,
+			orgId: org.id,
 			env,
 			idOrInternalId: productId,
 		});
@@ -205,29 +211,26 @@ export const createReward = async ({
 };
 
 export const createReferralProgram = async ({
-	db,
-	orgId,
-	env,
+	ctx,
 	autumn,
 	reward,
 	rewardProgram,
 	productId,
 	onlyUsage = false,
 }: {
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
+	ctx: AutumnContext;
 	autumn: AutumnInt;
 	reward: CreateReward;
 	rewardProgram: CreateRewardProgram;
 	productId?: string;
 	onlyUsage?: boolean;
 }) => {
+	const { db, org, env } = ctx;
+	const orgId = org.id;
+
 	// Create reward first
 	await createReward({
-		db,
-		orgId,
-		env,
+		ctx,
 		autumn,
 		reward,
 		productId,

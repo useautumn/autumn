@@ -13,14 +13,14 @@ import {
 	type FullProduct,
 } from "@autumn/shared";
 import {
-	expectPriceStripeReuseCorrect,
 	expectPriceStripeResourcesPresent,
+	expectPriceStripeReuseCorrect,
 	expectProductProcessorCorrect,
 	findBasePrice,
 	findFeaturePrice,
 	stripeConfigValue,
 } from "@tests/integration/utils/expectStripePriceResources.js";
-import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -73,7 +73,7 @@ const seedTeamWithStripe = async ({
 			},
 		],
 	});
-	return initPlanStripeResources({ ctx, planId: baseId });
+	return materializePlanInStripe({ ctx, planId: baseId });
 };
 
 test.concurrent(

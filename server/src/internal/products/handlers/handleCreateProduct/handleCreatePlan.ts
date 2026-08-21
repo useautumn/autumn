@@ -17,6 +17,7 @@ import {
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { captureOrgEvent } from "@/utils/posthog.js";
@@ -29,7 +30,7 @@ import {
 import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
-import { constructProduct, initProductInStripe } from "../../productUtils.js";
+import { constructProduct } from "../../productUtils.js";
 
 /**
  * Route: POST /products - Create a product
@@ -132,10 +133,15 @@ export const handleCreatePlan = createRoute({
 			free_trial: newFreeTrial,
 		};
 
+		// Stripe products/prices are created lazily at billing time; only reuse
+		// here. Published SDKs bake create_in_stripe: true into every request,
+		// so an explicit true is indistinguishable from the default on this
+		// route — force-create is only honored on catalogV2 updates.
 		if (v1_2Body.create_in_stripe !== false) {
-			await initProductInStripe({
+			await initStripeResourcesForProducts({
 				ctx,
-				product: newFullProduct,
+				products: [newFullProduct],
+				lookupVariantFamilies: false,
 			});
 		}
 

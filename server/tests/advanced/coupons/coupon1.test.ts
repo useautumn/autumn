@@ -141,9 +141,7 @@ test(
 		});
 
 		await createReward({
-			orgId: testCtx.org.id,
-			env: testCtx.env,
-			db: testCtx.db,
+			ctx: testCtx,
 			autumn,
 			reward,
 			productId: pro.id,

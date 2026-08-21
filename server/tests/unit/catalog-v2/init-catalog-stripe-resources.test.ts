@@ -2,8 +2,9 @@
  * initStripeResourcesForCatalog — creation guards (G-matrix) + no product reads.
  *
  * Carry is compute-side and env-independent; this asserts the execute step:
- * reuse always runs against in-memory family candidates, Stripe CREATION is
- * skipped in Live / disconnected, and ProductService.getFull is never called.
+ * reuse always runs against in-memory family candidates, Stripe creation
+ * never happens here (resources are created lazily at billing time in both
+ * envs), and ProductService.getFull is never called.
  */
 
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
@@ -168,7 +169,7 @@ const buildPlan = ({
 					op: "create",
 					nextFullProduct,
 				},
-				...(createInStripe === false ? { createInStripe: false } : {}),
+				...(createInStripe !== undefined ? { createInStripe } : {}),
 			},
 		],
 		projected: {
@@ -186,7 +187,7 @@ describe("initStripeResourcesForCatalog creation guards", () => {
 		mockState.reuseCandidateIds = [];
 	});
 
-	test("sandbox + connected creates missing Stripe objects without getFull", async () => {
+	test("sandbox + connected runs reuse but never creates Stripe objects", async () => {
 		const product = unInitedProduct({ env: AppEnv.Sandbox });
 		await initStripeResourcesForCatalog({
 			ctx: buildCtx({ env: AppEnv.Sandbox, stripeConnected: true }),
@@ -195,6 +196,21 @@ describe("initStripeResourcesForCatalog creation guards", () => {
 
 		expect(mockState.reuseCalls).toBeGreaterThan(0);
 		expect(mockState.familyReuseCalls).toBe(0);
+		expect(mockState.productCreateCalls).toBe(0);
+		expect(mockState.priceCreateCalls).toBe(0);
+	});
+
+	test("explicit create_in_stripe true creates Stripe objects immediately", async () => {
+		const product = unInitedProduct({ env: AppEnv.Sandbox });
+		await initStripeResourcesForCatalog({
+			ctx: buildCtx({ env: AppEnv.Sandbox, stripeConnected: true }),
+			updateCatalogPlan: buildPlan({
+				nextFullProduct: product,
+				createInStripe: true,
+			}),
+		});
+
+		expect(mockState.reuseCalls).toBeGreaterThan(0);
 		expect(mockState.productCreateCalls).toBeGreaterThan(0);
 		expect(mockState.priceCreateCalls).toBeGreaterThan(0);
 	});

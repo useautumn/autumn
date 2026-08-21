@@ -7,9 +7,10 @@ import {
 	BillingMethod,
 	CusProductStatus,
 	cusProductToPrices,
-	findPriceByFeatureId,
-	type FullProduct,
 	type FullCusProduct,
+	type FullProduct,
+	findPriceByFeatureId,
+	hasMissingStripeResourcesForProduct,
 	isFixedPrice,
 	type Price,
 	ProductItemFeatureType,
@@ -17,13 +18,14 @@ import {
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
+import { createStripeFixedPriceUnderProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import {
 	expectCustomerProducts,
 	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { createStripeFixedPriceUnderProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import { createVariantPlan } from "@tests/integration/crud/plans/variants/utils/variantTestPlanUtils";
+import { materializeProductsInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -61,27 +63,47 @@ export const apiUsageItem = ({
 	},
 });
 
-export const getFullProduct = ({
+/** Sandbox creates Stripe resources lazily, but these helpers simulate
+ * subscriptions that already exist in Stripe — so materialize on fetch. */
+export const getFullProduct = async ({
 	ctx,
 	productId,
 }: {
 	ctx: TestContext;
 	productId: string;
-}) =>
-	ProductService.getFull({
+}) => {
+	const product = await ProductService.getFull({
 		db: ctx.db,
 		idOrInternalId: productId,
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
+	if (!hasMissingStripeResourcesForProduct({ product })) return product;
 
-export const requireBasePrice = ({ fullProduct }: { fullProduct: FullProduct }) => {
+	await materializeProductsInStripe({ ctx, products: [product] });
+	return ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: productId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+};
+
+export const requireBasePrice = ({
+	fullProduct,
+}: {
+	fullProduct: FullProduct;
+}) => {
 	const price = fullProduct.prices.find(isFixedPrice);
 	if (!price) throw new Error(`Product ${fullProduct.id} has no base price`);
 	return price;
 };
 
-export const requireUsagePrice = ({ fullProduct }: { fullProduct: FullProduct }) => {
+export const requireUsagePrice = ({
+	fullProduct,
+}: {
+	fullProduct: FullProduct;
+}) => {
 	const price = findPriceByFeatureId({
 		prices: fullProduct.prices,
 		featureId: TestFeature.Messages,
@@ -181,11 +203,14 @@ export const trackCustomerUsage = async ({
 	featureId: TestFeature;
 	value: number;
 }) => {
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: featureId,
-		value,
-	}, { skipCache: true });
+	await autumnV1.track(
+		{
+			customer_id: customerId,
+			feature_id: featureId,
+			value,
+		},
+		{ skipCache: true },
+	);
 
 	const deadline = Date.now() + 35_000;
 	let lastError: unknown;
@@ -318,7 +343,9 @@ export const expectActiveLinkedCustomerProducts = async ({
 		env: ctx.env,
 		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 	});
-	expect(linked.map((cp) => cp.product_id).sort()).toEqual([...productIds].sort());
+	expect(linked.map((cp) => cp.product_id).sort()).toEqual(
+		[...productIds].sort(),
+	);
 	return linked;
 };
 

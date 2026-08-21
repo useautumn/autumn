@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { type ApiCustomerV3, AppEnv } from "@autumn/shared";
+import { fetchFullProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers.js";
 import {
 	createStripeSubscriptionFromProduct,
 	createStripeSubscriptionFromProducts,
@@ -176,12 +177,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: links produ
 		actions: [],
 	});
 
-	const fullProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: pro.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
+	const fullProduct = await fetchFullProduct({ ctx, productId: pro.id });
 	const stripePriceId = getFirstStripePriceId({ fullProduct });
 
 	const fullCustomer = await CusService.getFull({
