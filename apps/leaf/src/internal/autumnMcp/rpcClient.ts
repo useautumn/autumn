@@ -1,5 +1,5 @@
 import type { AppEnv } from "@autumn/shared";
-import { autumnMcpHeaders } from "./client.js";
+import { autumnMcpHeaders } from "./headers.js";
 
 export type JsonValue =
 	| string
