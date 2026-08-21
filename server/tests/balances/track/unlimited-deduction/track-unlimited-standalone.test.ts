@@ -8,14 +8,15 @@
  *     raw `customer_entitlements.balance` -= tracked value, absorbed with no
  *     floor, so the balance drifts negative as a usage counter and the track
  *     request always succeeds.
- *   Unchanged: API responses stay masked — track/check/customer keep
- *     reporting unlimited: true with balance 0.
+ *   Latest API (V2_3): unlimited balances now surface real usage —
+ *     `usage = -(raw balance)` while `granted`/`remaining` stay 0 and
+ *     `unlimited: true`. Older API versions stay fully masked.
  *
  * Red (current): the skip means no deduction anywhere — raw DB balance stays
  *   0 after tracking, so the -5 / -8 assertions fail with `Expected: -5,
- *   Received: 0`.
- * Green (after): track 5 → raw balance -5; track 3 more → -8; API responses
- *   unchanged (still masked).
+ *   Received: 0`, and V2_3 responses still mask usage to 0.
+ * Green (after): track 5 → raw balance -5; track 3 more → -8; V2_3
+ *   check/customer report usage 8 with granted/remaining 0.
  */
 
 import { expect, test } from "bun:test";
@@ -91,7 +92,7 @@ test.concurrent(
 		});
 		expect(rowAfter8?.balance).toBe(-8);
 
-		// ---- API surfaces stay masked (unchanged from today) ----------------
+		// ---- Latest API surfaces real usage (granted/remaining stay 0) ------
 		const checkRes = (await autumnV2_3.check({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -100,13 +101,14 @@ test.concurrent(
 		expect(checkRes.allowed).toBe(true);
 		expect(checkRes.balance?.unlimited).toBe(true);
 		expect(checkRes.balance?.remaining).toBe(0);
-		expect(checkRes.balance?.usage).toBe(0);
+		expect(checkRes.balance?.usage).toBe(8);
 
 		const customerAfter =
 			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		const messagesBalance = customerAfter.balances[TestFeature.Messages];
 		expect(messagesBalance?.unlimited).toBe(true);
 		expect(messagesBalance?.remaining).toBe(0);
+		expect(messagesBalance?.usage).toBe(8);
 	},
 	{ timeout: 90_000 },
 );

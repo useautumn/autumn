@@ -372,6 +372,11 @@ function writeEnvFiles(
 		// Login flow that works without external services: dev `sendOTPEmail`
 		// prints the OTP to the server log. The README documents this path.
 		NODE_ENV: "development",
+		TESTS_ORG: "unit-test-org",
+		TESTS_ORG_ID: "org_2sWv2S8LJ9iaTjLI6UtNsfL88Kt",
+		AUTUMN_TEST_BASE_URL: serverUrl,
+		AUTUMN_TEST_VITE_URL: viteUrl,
+		CACHE_V2_DRAGONFLY_PUBLIC_URL: redisUrl,
 	};
 
 	const viteEnv: Record<string, string> = {
@@ -390,6 +395,28 @@ function writeEnvFiles(
 	log(`wrote .env.local for server/, vite/, apps/checkout/`);
 	log(`  server: ${serverUrl}`);
 	log(`  vite:   ${viteUrl}`);
+}
+
+function runSetupTest(args: string[], databaseUrl: string): void {
+	log(`running setup-test ${args.join(" ")}`);
+	const result = Bun.spawnSync(
+		["bun", "scripts/setup/setup-test.ts", ...args],
+		{
+			cwd: PROJECT_ROOT,
+			env: {
+				...process.env,
+				DATABASE_URL: databaseUrl,
+				DATABASE_CRITICAL_URL: databaseUrl,
+			},
+			stdout: "inherit",
+			stderr: "inherit",
+		},
+	);
+	if (result.exitCode !== 0) {
+		fatal(
+			`setup-test ${args.join(" ")} exited with code ${result.exitCode ?? 1}`,
+		);
+	}
 }
 
 function triggerCompose(args: string[]) {
@@ -564,7 +591,10 @@ function ensureNeonAuth(): void {
 	}
 }
 
-function ensureNeonBranch(machineId: string, state: State | null): State {
+function ensureNeonBranch(
+	machineId: string,
+	state: State | null,
+): { state: State; created: boolean } {
 	const branchName = deriveBranchName(machineId);
 
 	// Branch already provisioned in state file and still exists on Neon →
@@ -574,7 +604,10 @@ function ensureNeonBranch(machineId: string, state: State | null): State {
 		if (existing) {
 			log(`reusing existing Neon branch ${branchName} (${state.branchId})`);
 			const pooledUrl = connectionString(branchName, { pooled: true });
-			return { ...state, databaseUrl: pooledUrl };
+			return {
+				state: { ...state, databaseUrl: pooledUrl },
+				created: false,
+			};
 		}
 		log(
 			`state references ${branchName} but Neon no longer has it — reprovisioning`,
@@ -588,11 +621,14 @@ function ensureNeonBranch(machineId: string, state: State | null): State {
 		log(`adopting existing Neon branch ${branchName} (${existingByName.id})`);
 		const pooledUrl = connectionString(branchName, { pooled: true });
 		return {
-			machineId,
-			branchName,
-			branchId: existingByName.id,
-			databaseUrl: pooledUrl,
-			createdAt: state?.createdAt ?? Date.now(),
+			state: {
+				machineId,
+				branchName,
+				branchId: existingByName.id,
+				databaseUrl: pooledUrl,
+				createdAt: state?.createdAt ?? Date.now(),
+			},
+			created: false,
 		};
 	}
 
@@ -604,11 +640,14 @@ function ensureNeonBranch(machineId: string, state: State | null): State {
 	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
 	const pooledUrl = connectionString(branchName, { pooled: true });
 	return {
-		machineId,
-		branchName,
-		branchId: branch.id,
-		databaseUrl: pooledUrl,
-		createdAt: Date.now(),
+		state: {
+			machineId,
+			branchName,
+			branchId: branch.id,
+			databaseUrl: pooledUrl,
+			createdAt: Date.now(),
+		},
+		created: true,
 	};
 }
 
@@ -637,7 +676,7 @@ async function main(): Promise<void> {
 	// 2. Neon auth + branch + migrations.
 	ensureNeonAuth();
 	const priorState = loadState();
-	const nextState = ensureNeonBranch(machineId, priorState);
+	const { state: nextState, created } = ensureNeonBranch(machineId, priorState);
 	if (!nextState.branchName) fatal("provisioning produced no branchName");
 	const directUrl = connectionString(nextState.branchName, { pooled: false });
 	applyCommittedMigrations(nextState.branchName, directUrl);
@@ -664,7 +703,14 @@ async function main(): Promise<void> {
 		trigger.accessToken,
 	);
 
-	log("capy provision complete — run `bun dev` to start the stack");
+	if (created) {
+		runSetupTest(["--yes"], directUrl);
+	}
+	runSetupTest(["--ensure-key"], directUrl);
+
+	log(
+		`capy provision complete — run \`bun capy\` to start the stack (fresh=${created})`,
+	);
 }
 
 await main();

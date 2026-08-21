@@ -3,7 +3,8 @@
  * entity-scoped items, the set_usage (POST /usage) path, and negative-value
  * (refund) tracks. Tracking on an unlimited cusEnt should really deduct:
  * `balance -= value` with no clamp, so the raw DB row drifts negative as a
- * usage counter while API output stays masked as unlimited.
+ * usage counter (surfaced as `usage` on the latest API version; older
+ * versions stay masked). This file asserts the RAW DB counters only.
  *
  * Contract under test (raw `customer_entitlements` rows, never API values):
  *   1. Entity-scoped unlimited item: track 5 against an entity moves that

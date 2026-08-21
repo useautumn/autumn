@@ -40,6 +40,10 @@ export const handleProrationBehaviorErrors = ({
 
 	const chargeResult = billingPlanWillCharge({ billingPlan });
 
+	// Proration is an update-time concept — a brand-new subscription has
+	// nothing to prorate, so 'none' is a documented no-op there, not an error.
+	if (chargeResult.reason === "subscription_create") return;
+
 	if (chargeResult.willCharge) {
 		throw new RecaseError({
 			message: `Cannot set proration_behavior to 'none' when ${getChargeReasonMessage(chargeResult.reason)}`,
