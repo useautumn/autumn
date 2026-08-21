@@ -31,7 +31,12 @@ import {
 	normalizeToolName,
 	toolLabel,
 } from "../internal/agentRuntime/tools/toolPolicy.js";
-import { attachBillingEditsFromRequest } from "../internal/approvals/domain/attachBillingEdits.js";
+import {
+	billingEditsFromRequest,
+	billingOptionsFor,
+	EDITABLE_BILLING_TOOLS,
+	type EditableBillingTool,
+} from "../internal/approvals/domain/billingEdits.js";
 import { isFailedApprovalPreview } from "../internal/approvals/utils/fetchApprovalPreview.js";
 import { toolRequestFromArgs } from "../internal/approvals/utils/toolRequest.js";
 import {
@@ -1363,7 +1368,9 @@ export const approvalCard = ({
 		normalizeToolName(toolName) === "attach"
 			? phrases.running
 			: pendingActionPrompt({ phrases, toolName });
-	const editable = normalizeToolName(toolName) === "attach";
+	const editable = (EDITABLE_BILLING_TOOLS as ReadonlyArray<string>).includes(
+		normalizeToolName(toolName),
+	);
 
 	const fanOut = isHomogeneousGroup({
 		steps: withheldWritesFromToolArgs(toolArgs),
@@ -1406,15 +1413,24 @@ export const approvalCard = ({
 	});
 };
 
+const BILLING_OPTION_LABELS: Record<string, string> = {
+	charge_directly: "Charge directly",
+	checkout: "Checkout link",
+	draft_invoice: "Draft invoice",
+	finalized_invoice: "Finalized invoice",
+};
+
 export const approvalDetailsModal = ({
 	approvalId,
 	toolArgs,
+	toolName,
 }: {
 	approvalId: string;
 	toolArgs?: Record<string, unknown>;
+	toolName: EditableBillingTool;
 }) => {
 	const request = toolRequestFromArgs(toolArgs) ?? {};
-	const edits = attachBillingEditsFromRequest(request);
+	const edits = billingEditsFromRequest({ request, toolName });
 
 	return Modal({
 		callbackId: EDIT_APPROVAL_DETAILS_MODAL_ID,
@@ -1427,14 +1443,9 @@ export const approvalDetailsModal = ({
 				id: "billing",
 				initialOption: edits.billing,
 				label: "Billing mode",
-				options: [
-					SelectOption({ label: "Checkout link", value: "checkout" }),
-					SelectOption({ label: "Draft invoice", value: "draft_invoice" }),
-					SelectOption({
-						label: "Finalized invoice",
-						value: "finalized_invoice",
-					}),
-				],
+				options: billingOptionsFor(toolName).map((value) =>
+					SelectOption({ label: BILLING_OPTION_LABELS[value], value }),
+				),
 			}),
 			Select({
 				id: "access",
