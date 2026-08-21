@@ -1112,7 +1112,7 @@ describe("approval status card", () => {
 		);
 		expect(supersededJson).toContain("Due now");
 		expect(supersededJson).toContain("$400.00");
-		expect(supersededJson).toContain("🔄 Updated");
+		expect(supersededJson).toContain("🔄 Withdrawn — superseded by a newer request in this thread");
 		// Settled state is a non-interactive status line, not a (fake) button row.
 		expect(superseded.children.at(-1)?.type).toBe("text");
 		expect(supersededJson).not.toContain('"type":"actions"');
