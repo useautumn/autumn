@@ -12,6 +12,7 @@ interface CustomerFeatureUsageDisplayProps {
 	isSubRow?: boolean;
 	creditAmount?: number;
 	subRows?: CustomerFeatureUsageRowData[];
+	unlimitedUsage?: number;
 }
 
 export function CustomerFeatureUsageDisplay({
@@ -23,6 +24,7 @@ export function CustomerFeatureUsageDisplay({
 	isSubRow = false,
 	creditAmount,
 	subRows = [],
+	unlimitedUsage = 0,
 }: CustomerFeatureUsageDisplayProps) {
 	if (!isSubRow && featureType === FeatureType.Boolean) {
 		return null;
@@ -38,6 +40,7 @@ export function CustomerFeatureUsageDisplay({
 				}
 			>
 				Unlimited
+				{unlimitedUsage > 0 && ` · ${unlimitedUsage} used`}
 			</div>
 		);
 	}
