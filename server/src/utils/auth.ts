@@ -49,13 +49,14 @@ if (process.env.EMULATE_GOOGLE_URL && process.env.NODE_ENV !== "production") {
 		process.env.EMULATE_GOOGLE_FETCH_URL || process.env.EMULATE_GOOGLE_URL
 	).replace(/\/$/, "");
 	const originalFetch = globalThis.fetch;
-	globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+	// biome-ignore lint/suspicious/noExplicitAny: preserve the upstream shim shape.
+	globalThis.fetch = ((input: any, init?: any) => {
 		const url =
 			typeof input === "string"
 				? input
 				: input instanceof URL
 					? input.href
-					: input.url;
+					: (input as Request).url;
 		if (url.startsWith("https://oauth2.googleapis.com")) {
 			return originalFetch(
 				url.replace("https://oauth2.googleapis.com", `${emulate}/oauth2`),
@@ -91,6 +92,21 @@ const browserAuthBaseUrl = isProductionAuth
 const isHttpsBaseUrl = browserAuthBaseUrl?.startsWith("https://");
 const isCapyDev =
 	process.env.CAPY_DEV === "1" && process.env.NODE_ENV !== "production";
+const configuredAuthBaseUrl = isCapyDev
+	? {
+			allowedHosts: [
+				"localhost:*",
+				"127.0.0.1:*",
+				"*.localhost",
+				"*.autumnworktree.com",
+				"*.ngrok.app",
+				"*.ngrok-free.app",
+				"*.capysandbox.net",
+			],
+			fallback: browserAuthBaseUrl,
+			protocol: "auto" as const,
+		}
+	: browserAuthBaseUrl;
 
 /**
  * Passkey (WebAuthn) is bound to the FRONTEND origin where the browser calls
@@ -128,7 +144,7 @@ if (
 }
 
 const options = {
-	baseURL: browserAuthBaseUrl,
+	baseURL: configuredAuthBaseUrl,
 	telemetry: {
 		enabled: false,
 	},
@@ -206,6 +222,7 @@ const options = {
 			origins.push(origin);
 		}
 		if (
+			isCapyDev &&
 			origin &&
 			/^https:\/\/(?:[a-zA-Z0-9-]+\.)*capysandbox\.net$/.test(origin)
 		) {
@@ -244,7 +261,8 @@ const options = {
 	},
 	plugins: [
 		emailOTP({
-			async sendVerificationOTP({ email, otp, type: _type }) {
+			// biome-ignore lint/correctness/noUnusedFunctionParameters: preserve the upstream callback signature.
+			async sendVerificationOTP({ email, otp, type }) {
 				// Implement the sendVerificationOTP method to send the OTP to the user's email address
 
 				await sendOTPEmail({
