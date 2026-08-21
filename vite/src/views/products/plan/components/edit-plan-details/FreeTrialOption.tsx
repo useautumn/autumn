@@ -19,7 +19,11 @@ export const FreeTrialOption = () => {
 					onCheckedChange={(checked) =>
 						setProduct({
 							...product,
-							free_trial: checked ? (getDefaultFreeTrial() as FreeTrial) : null,
+							free_trial: checked
+								? (getDefaultFreeTrial({
+										planType: product.planType,
+									}) as FreeTrial)
+								: null,
 						})
 					}
 				/>
