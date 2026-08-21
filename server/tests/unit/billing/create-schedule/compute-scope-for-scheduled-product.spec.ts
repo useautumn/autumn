@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type {
 	Entity,
+	FullCustomer,
 	FullProduct,
 	MultiAttachProductContext,
 } from "@autumn/shared";
@@ -46,10 +47,26 @@ const immediatePlan = ({
 		unscheduled,
 	}) as unknown as MultiAttachProductContext;
 
+type ComputeScopeArgs = Parameters<typeof computeScopeForScheduledProduct>[0];
+
+/** Defaults the customer to one holding both test entities. */
+const computeScope = (
+	args: Omit<ComputeScopeArgs, "fullCustomer"> & {
+		fullCustomer?: FullCustomer;
+	},
+) =>
+	computeScopeForScheduledProduct({
+		fullCustomer: {
+			id: "cus_1",
+			entities: [entity("ent_1"), entity("ent_2")],
+		} as unknown as FullCustomer,
+		...args,
+	});
+
 describe(chalk.yellowBright("computeScopeForScheduledProduct"), () => {
 	test("later phases inherit the immediate phase's entity for their slot", () => {
 		expect(
-			computeScopeForScheduledProduct({
+			computeScope({
 				fullProduct: product({ id: "premium", group: "main" }),
 				immediatePhaseProductContexts: [
 					immediatePlan({
@@ -64,7 +81,7 @@ describe(chalk.yellowBright("computeScopeForScheduledProduct"), () => {
 
 	test("a customer-level immediate plan keeps later phases customer-level", () => {
 		expect(
-			computeScopeForScheduledProduct({
+			computeScope({
 				fullProduct: product({ id: "premium", group: "main" }),
 				immediatePhaseProductContexts: [
 					immediatePlan({ id: "pro", group: "main" }),
@@ -86,14 +103,14 @@ describe(chalk.yellowBright("computeScopeForScheduledProduct"), () => {
 		];
 
 		expect(
-			computeScopeForScheduledProduct({
+			computeScope({
 				fullProduct: product({ id: "enterprise", group: "main" }),
 				immediatePhaseProductContexts,
 				fallbackEntity: entity("ent_1"),
 			})?.internal_id,
 		).toBe("ent_1");
 		expect(
-			computeScopeForScheduledProduct({
+			computeScope({
 				fullProduct: product({ id: "credits", isAddOn: true }),
 				immediatePhaseProductContexts,
 				fallbackEntity: entity("ent_1"),
@@ -103,7 +120,7 @@ describe(chalk.yellowBright("computeScopeForScheduledProduct"), () => {
 
 	test("slots absent from the immediate phase fall back to the request scope", () => {
 		expect(
-			computeScopeForScheduledProduct({
+			computeScope({
 				fullProduct: product({ id: "extra", group: "other" }),
 				immediatePhaseProductContexts: [
 					immediatePlan({
@@ -124,13 +141,13 @@ describe(chalk.yellowBright("computeScopeForScheduledProduct"), () => {
 		];
 
 		expect(
-			computeScopeForScheduledProduct({
+			computeScope({
 				fullProduct: product({ id: "starter" }),
 				immediatePhaseProductContexts,
 			})?.internal_id,
 		).toBe("ent_1");
 		expect(
-			computeScopeForScheduledProduct({
+			computeScope({
 				fullProduct: product({ id: "growth" }),
 				immediatePhaseProductContexts,
 				fallbackEntity: entity("ent_1"),
@@ -140,7 +157,7 @@ describe(chalk.yellowBright("computeScopeForScheduledProduct"), () => {
 
 	test("unscheduled plans are never inherited from", () => {
 		expect(
-			computeScopeForScheduledProduct({
+			computeScope({
 				fullProduct: product({ id: "premium", group: "main" }),
 				immediatePhaseProductContexts: [
 					immediatePlan({
@@ -155,9 +172,9 @@ describe(chalk.yellowBright("computeScopeForScheduledProduct"), () => {
 		).toBe("ent_2");
 	});
 
-	test("the first plan wins when one slot spans several scopes", () => {
+	test("the first plan wins when a scopeless plan's slot spans several scopes", () => {
 		expect(
-			computeScopeForScheduledProduct({
+			computeScope({
 				fullProduct: product({ id: "premium", group: "main" }),
 				immediatePhaseProductContexts: [
 					immediatePlan({ id: "pro", group: "main", scope: entity("ent_1") }),
@@ -165,5 +182,54 @@ describe(chalk.yellowBright("computeScopeForScheduledProduct"), () => {
 				],
 			})?.internal_id,
 		).toBe("ent_1");
+	});
+
+	test("a stated entity wins over the slot it shares with another scope", () => {
+		expect(
+			computeScope({
+				fullProduct: product({ id: "pro", group: "main" }),
+				entityId: "ent_2",
+				immediatePhaseProductContexts: [
+					immediatePlan({ id: "pro", group: "main", scope: entity("ent_1") }),
+					immediatePlan({ id: "pro", group: "main", scope: entity("ent_2") }),
+				],
+			})?.internal_id,
+		).toBe("ent_2");
+	});
+
+	test("a stated null is customer-level, not the inherited scope", () => {
+		expect(
+			computeScope({
+				fullProduct: product({ id: "premium", group: "main" }),
+				entityId: null,
+				immediatePhaseProductContexts: [
+					immediatePlan({ id: "pro", group: "main", scope: entity("ent_1") }),
+				],
+			}),
+		).toBeUndefined();
+	});
+
+	test("a stated entity the immediate phase never used is still honored", () => {
+		expect(
+			computeScope({
+				fullProduct: product({ id: "premium", group: "main" }),
+				entityId: "ent_2",
+				immediatePhaseProductContexts: [
+					immediatePlan({ id: "pro", group: "main", scope: entity("ent_1") }),
+				],
+			})?.internal_id,
+		).toBe("ent_2");
+	});
+
+	test("an entity the customer does not have is rejected", () => {
+		expect(() =>
+			computeScope({
+				fullProduct: product({ id: "premium", group: "main" }),
+				entityId: "ent_9",
+				immediatePhaseProductContexts: [
+					immediatePlan({ id: "pro", group: "main", scope: entity("ent_1") }),
+				],
+			}),
+		).toThrow("not found for customer");
 	});
 });

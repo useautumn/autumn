@@ -31,7 +31,7 @@ const queuedCounts = new Map<string, number>();
 export const hasQueuedThreadMessage = (runKey: string) =>
 	(queuedCounts.get(runKey) ?? 0) > 0;
 
-export const dispatchThreadMessage = async ({
+export const dispatchThreadMessage = async <Result>({
 	hasAttachments,
 	onFollowUpInjected,
 	providerUserId,
@@ -43,9 +43,9 @@ export const dispatchThreadMessage = async ({
 	onFollowUpInjected?: () => Promise<void> | void;
 	providerUserId: string;
 	runKey: string;
-	runNewMessage: () => Promise<void>;
+	runNewMessage: () => Promise<Result>;
 	text: string;
-}) => {
+}): Promise<Result | undefined> => {
 	const active = getRun(runKey);
 	if (active && !(active.closed || active.stop)) {
 		if (isStopMessage(text)) {
@@ -53,7 +53,6 @@ export const dispatchThreadMessage = async ({
 				event: "leaf.run_stop_keyword",
 				data: { run_key: runKey },
 			});
-			await active.logAction?.(`Stopping — requested by <@${providerUserId}>…`);
 			await active.requestStop({ byUserId: providerUserId, reason: "user" });
 			return;
 		}
@@ -87,17 +86,16 @@ export const dispatchThreadMessage = async ({
 	// run — the engine can't drive two turns on one session.
 	const tail = newRunTails.get(runKey) ?? Promise.resolve();
 	queuedCounts.set(runKey, (queuedCounts.get(runKey) ?? 0) + 1);
-	const next = tail
-		.then(() => {
-			const remaining = (queuedCounts.get(runKey) ?? 1) - 1;
-			if (remaining > 0) queuedCounts.set(runKey, remaining);
-			else queuedCounts.delete(runKey);
-			return runNewMessage();
-		})
-		.catch(() => {});
+	const result = tail.then(() => {
+		const remaining = (queuedCounts.get(runKey) ?? 1) - 1;
+		if (remaining > 0) queuedCounts.set(runKey, remaining);
+		else queuedCounts.delete(runKey);
+		return runNewMessage();
+	});
+	const next = result.then(() => undefined).catch(() => {});
 	newRunTails.set(runKey, next);
 	try {
-		await next;
+		return await result.catch(() => undefined);
 	} finally {
 		if (newRunTails.get(runKey) === next) newRunTails.delete(runKey);
 	}

@@ -1,3 +1,5 @@
+import { clientIdsFromEnv } from "@autumn/auth/oauth";
+import { parseOAuthClientMetadata } from "@autumn/shared/utils/auth/oauthClientMetadata";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { oauthClientRepo } from "../repos/index.js";
 
@@ -28,34 +30,14 @@ const ATMN_OAUTH_SCOPES = new Set<string>([
 	"rewards:write",
 ]);
 
-const configuredAtmnClientIds = () =>
-	new Set(
-		(process.env.ATMN_OAUTH_CLIENT_IDS ?? "")
-			.split(",")
-			.map((id) => id.trim())
-			.filter(Boolean),
-	);
-
 const metadataMarksAtmn = (metadata: unknown) => {
-	if (!metadata) return false;
-	let metadataObject = metadata;
-	if (typeof metadata === "string") {
-		try {
-			metadataObject = JSON.parse(metadata);
-		} catch {
-			return false;
-		}
-	}
-
-	if (!metadataObject || typeof metadataObject !== "object") return false;
-
-	const metadataRecord = metadataObject as Record<string, unknown>;
+	const parsed = parseOAuthClientMetadata(metadata);
 	return (
-		metadataRecord.kind === "atmn" ||
-		metadataRecord.client === "atmn" ||
-		metadataRecord.clientType === "atmn" ||
-		metadataRecord.client_type === "atmn" ||
-		metadataRecord.source === "autumn-cli"
+		parsed.kind === "atmn" ||
+		parsed.client === "atmn" ||
+		parsed.clientType === "atmn" ||
+		parsed.client_type === "atmn" ||
+		parsed.source === "autumn-cli"
 	);
 };
 
@@ -68,7 +50,12 @@ export const isAtmnOAuthClientRecord = ({
 	name: string | null | undefined;
 	metadata?: unknown;
 }) => {
-	if (clientId && configuredAtmnClientIds().has(clientId)) return true;
+	if (
+		clientId &&
+		clientIdsFromEnv("ATMN_OAUTH_CLIENT_IDS").includes(clientId)
+	) {
+		return true;
+	}
 	if (metadataMarksAtmn(metadata)) return true;
 
 	const normalizedName = name?.trim().toLowerCase();

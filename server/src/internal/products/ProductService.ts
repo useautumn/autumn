@@ -8,6 +8,7 @@ import {
 	freeTrials,
 	type Product,
 	ProductNotFoundError,
+	planLicenses,
 	prices,
 	products,
 } from "@autumn/shared";
@@ -19,6 +20,7 @@ import {
 	desc,
 	eq,
 	exists,
+	gt,
 	inArray,
 	isNull,
 	ne,
@@ -32,8 +34,12 @@ import {
 	getCachedProducts,
 	setCachedProducts,
 } from "@/external/redis/actions/productsCache/productsCache.js";
-import { getLatestProducts, isFreeProduct } from "./productUtils";
+import { getActiveProducts, isFreeProduct } from "./productUtils";
 import { sortFullProducts } from "./productUtils/sortProductUtils";
+import {
+	deleteProductRowAndHandoffActive,
+	type ProductWriteDb,
+} from "./repos/activateHighestRemainingProduct";
 import {
 	composeFullProductQuery,
 	normalizeFullProductLicenses,
@@ -61,6 +67,18 @@ const parseFreeTrials = ({
 				: null;
 	}
 	return product;
+};
+
+const parseRelatedFreeTrials = ({ product }: { product: FullProduct }) => {
+	if (product.base_product) {
+		parseFreeTrials({ product: product.base_product });
+	}
+	if (product.variants) {
+		parseFreeTrials({ products: product.variants });
+	}
+	for (const link of product.parent_plan_licenses ?? []) {
+		parseFreeTrials({ product: link.product });
+	}
 };
 
 export class ProductService {
@@ -97,9 +115,7 @@ export class ProductService {
 
 		parseFreeTrials({ products: fullProducts });
 
-		const latestProducts = getLatestProducts(fullProducts);
-
-		return latestProducts;
+		return getActiveProducts(fullProducts);
 	}
 
 	static async getByStripeProductIds({
@@ -277,19 +293,51 @@ export class ProductService {
 
 		parseFreeTrials({ products: prods });
 
-		const latestProducts = getLatestProducts(prods);
+		const activeProducts = getActiveProducts(prods);
 
 		if (onlyFree) {
-			return latestProducts.filter((p) =>
+			return activeProducts.filter((p) =>
 				isFreeProduct(p.prices),
 			) as FullProduct[];
 		}
 
-		return latestProducts as FullProduct[];
+		return activeProducts as FullProduct[];
 	}
 
 	static async insert({ db, product }: { db: DrizzleCli; product: Product }) {
-		const prod = await db.insert(products).values(product).returning();
+		// Dual-write version identity; omit-version reads resolve `active`.
+		// A row only self-activates when no higher version exists.
+		const row = {
+			...product,
+			version_slug: product.version_slug ?? `v${product.version}`,
+		};
+		const samePlan = and(
+			eq(products.org_id, row.org_id),
+			eq(products.id, row.id),
+			eq(products.env, row.env),
+		);
+
+		const prod = await db.transaction(async (tx) => {
+			let activate = false;
+			if (product.active) {
+				const higherVersion = await tx
+					.select({ internal_id: products.internal_id })
+					.from(products)
+					.where(and(samePlan, gt(products.version, row.version)))
+					.limit(1);
+				activate = higherVersion.length === 0;
+			}
+			if (activate) {
+				await tx
+					.update(products)
+					.set({ active: false })
+					.where(and(samePlan, eq(products.active, true)));
+			}
+			return await tx
+				.insert(products)
+				.values({ ...row, active: activate })
+				.returning();
+		});
 
 		if (!prod || prod.length === 0) {
 			throw new RecaseError({
@@ -320,7 +368,7 @@ export class ProductService {
 				eq(products.id, id),
 				eq(products.org_id, orgId),
 				eq(products.env, env),
-				version ? eq(products.version, version) : undefined,
+				version ? eq(products.version, version) : eq(products.active, true),
 			),
 			orderBy: [desc(products.version)],
 		});
@@ -376,8 +424,8 @@ export class ProductService {
 		inIds,
 		returnAll = false,
 		version,
-		excludeEnts = false,
 		archived,
+		skipCache = false,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
@@ -385,11 +433,12 @@ export class ProductService {
 		inIds?: string[];
 		returnAll?: boolean;
 		version?: number;
-		excludeEnts?: boolean;
 		archived?: boolean;
+		/** Read straight from the DB — for writes deciding off the result. */
+		skipCache?: boolean;
 	}): Promise<FullProduct[]> {
-		// Use caching for simple queries (no inIds, returnAll, version, or excludeEnts)
-		const canCache = !inIds && !returnAll && !version && !excludeEnts;
+		// Use caching for simple queries (no inIds, returnAll, or version)
+		const canCache = !inIds && !returnAll && !version && !skipCache;
 
 		if (canCache) {
 			const cacheKey = buildProductsCacheKey({
@@ -418,7 +467,6 @@ export class ProductService {
 			inIds,
 			returnAll,
 			version,
-			excludeEnts,
 			archived,
 		});
 	}
@@ -430,7 +478,6 @@ export class ProductService {
 		inIds,
 		returnAll = false,
 		version,
-		excludeEnts = false,
 		archived,
 	}: {
 		db: DrizzleCli;
@@ -439,52 +486,17 @@ export class ProductService {
 		inIds?: string[];
 		returnAll?: boolean;
 		version?: number;
-		excludeEnts?: boolean;
 		archived?: boolean;
 	}): Promise<FullProduct[]> {
-		// Optimization: Use a subquery to only fetch the latest version of each product
-		const latestVersionsSubquery =
-			!returnAll && !version
-				? db
-						.select({
-							id: products.id,
-							maxVersion: sql<number>`MAX(${products.version})`.as(
-								"max_version",
-							),
-						})
-						.from(products)
-						.where(
-							and(
-								eq(products.org_id, orgId),
-								eq(products.env, env),
-								inIds ? inArray(products.id, inIds) : undefined,
-							),
-						)
-						.groupBy(products.id)
-						.as("latest_versions")
-				: undefined;
-
 		const rows = (await db.query.products.findMany({
 			where: and(
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 				inIds ? inArray(products.id, inIds) : undefined,
 				version ? eq(products.version, version) : undefined,
-				latestVersionsSubquery
-					? exists(
-							db
-								.select()
-								.from(latestVersionsSubquery)
-								.where(
-									and(
-										eq(latestVersionsSubquery.id, products.id),
-										eq(latestVersionsSubquery.maxVersion, products.version),
-									),
-								),
-						)
-					: undefined,
+				!returnAll && !version ? eq(products.active, true) : undefined,
 			),
-			with: composeFullProductQuery({ excludeEnts }),
+			with: composeFullProductQuery(),
 		})) as ProductWithLicenseRelations[];
 
 		const data = rows.map((product) =>
@@ -492,12 +504,15 @@ export class ProductService {
 		);
 
 		parseFreeTrials({ products: data });
+		for (const product of data) {
+			parseRelatedFreeTrials({ product });
+		}
 
 		if (returnAll) {
 			return data;
 		}
 
-		const latestProducts: FullProduct[] = getLatestProducts(data);
+		const latestProducts: FullProduct[] = getActiveProducts(data);
 
 		if (inIds) {
 			const newProducts: FullProduct[] = [];
@@ -534,42 +549,13 @@ export class ProductService {
 	}): Promise<FullProduct[]> {
 		if (baseInternalProductIds.length === 0) return [];
 
-		const latestVersionsSubquery = db
-			.select({
-				id: products.id,
-				maxVersion: sql<number>`MAX(${products.version})`.as("max_version"),
-			})
-			.from(products)
-			.where(
-				and(
-					eq(products.org_id, orgId),
-					eq(products.env, env),
-					inArray(products.base_internal_product_id, baseInternalProductIds),
-					ne(products.archived, true),
-				),
-			)
-			.groupBy(products.id)
-			.as("latest_versions");
-
 		const data = (await db.query.products.findMany({
 			where: and(
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 				ne(products.archived, true),
 				inArray(products.base_internal_product_id, baseInternalProductIds),
-				returnAll
-					? undefined
-					: exists(
-							db
-								.select()
-								.from(latestVersionsSubquery)
-								.where(
-									and(
-										eq(latestVersionsSubquery.id, products.id),
-										eq(latestVersionsSubquery.maxVersion, products.version),
-									),
-								),
-						),
+				returnAll ? undefined : eq(products.active, true),
 			),
 			with: {
 				entitlements: {
@@ -585,7 +571,7 @@ export class ProductService {
 
 		parseFreeTrials({ products: data });
 
-		return returnAll ? data : getLatestProducts(data);
+		return returnAll ? data : getActiveProducts(data);
 	}
 
 	static async getFull({
@@ -612,6 +598,12 @@ export class ProductService {
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 				version ? eq(products.version, version) : undefined,
+				!version
+					? or(
+							eq(products.internal_id, idOrInternalId),
+							eq(products.active, true),
+						)
+					: undefined,
 			),
 			orderBy: [desc(products.version)],
 			with: composeFullProductQuery(),
@@ -622,8 +614,10 @@ export class ProductService {
 			throw new ProductNotFoundError({ productId: idOrInternalId, version });
 		}
 
-		parseFreeTrials({ product: data as FullProduct });
-		return normalizeFullProductLicenses({ product: data });
+		const product = normalizeFullProductLicenses({ product: data });
+		parseFreeTrials({ product });
+		parseRelatedFreeTrials({ product });
+		return product;
 	}
 
 	static async getProductVersionCount({
@@ -675,6 +669,29 @@ export class ProductService {
 
 	// DELETES
 
+	static async archiveByInternalId({
+		db,
+		internalId,
+		orgId,
+		env,
+	}: {
+		db: ProductWriteDb;
+		internalId: string;
+		orgId: string;
+		env: AppEnv;
+	}) {
+		await db
+			.update(products)
+			.set({ archived: true })
+			.where(
+				and(
+					eq(products.internal_id, internalId),
+					eq(products.org_id, orgId),
+					eq(products.env, env),
+				),
+			);
+	}
+
 	static async deleteByInternalId({
 		db,
 		internalId,
@@ -686,15 +703,14 @@ export class ProductService {
 		orgId: string;
 		env: AppEnv;
 	}) {
-		await db
-			.delete(products)
-			.where(
-				and(
-					eq(products.internal_id, internalId),
-					eq(products.org_id, orgId),
-					eq(products.env, env),
-				),
-			);
+		await db.transaction(async (tx) => {
+			await deleteProductRowAndHandoffActive({
+				db: tx,
+				internalId,
+				orgId,
+				env,
+			});
+		});
 	}
 
 	static async deleteByProductId({
@@ -729,6 +745,16 @@ export class ProductService {
 				statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
 			});
 		}
+
+		// license_entitlements/license_prices RESTRICT item rows; drop plan_license first.
+		await db
+			.delete(planLicenses)
+			.where(
+				or(
+					inArray(planLicenses.parent_internal_product_id, internalIds),
+					inArray(planLicenses.license_internal_product_id, internalIds),
+				),
+			);
 
 		await db.delete(products).where(inArray(products.internal_id, internalIds));
 	}

@@ -1,6 +1,6 @@
 /**
  * Image-attachment e2e for both chat surfaces against the local dev stack
- * (eve :3999, main server :8080). Slack path drives runMessage in-process;
+ * (eve :3999, main server :8080). Slack path drives runSlackAgentTurn in-process;
  * web path drives streamWebChat with a data-URL file part.
  *
  * Run from apps/leaf:
@@ -8,16 +8,17 @@
  *     infisical run --env=dev --recursive -- bun tests/e2e/eveImage.e2e.ts
  */
 import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
-import { runMessage } from "../../src/agent/runMessage/runMessage.js";
 import { db } from "../../src/lib/db.js";
 import { logger } from "../../src/lib/logger.js";
+import { runSlackAgentTurn } from "../../src/providers/slack/actions/runSlackAgentTurn.js";
+import type { SlackChatInstallation } from "../../src/providers/slack/domain/slackAgentTurn.js";
 import { createEveSlackPresenter } from "../../src/providers/slack/evePresenter.js";
 import { findInstallationWithOrg } from "../../src/providers/slack/installations.js";
 import { streamWebChat } from "../../src/providers/web/streamWebChat.js";
-import type { LeafChatInstallation } from "../../src/types.js";
 import { createStatusTicker } from "../../src/ui/statusTicker.js";
 
 const WORKSPACE_ID = process.env.E2E_SLACK_WORKSPACE ?? "T07NPTDCU69";
+let SLACK_USER_ID = process.env.E2E_SLACK_USER ?? "";
 const RUN_TAG = Date.now().toString(36);
 
 const RED_PIXEL_PNG = Buffer.from(
@@ -37,7 +38,7 @@ const check = (name: string, ok: boolean, detail?: string) => {
 const runSlackImageTurn = async ({
 	installation,
 }: {
-	installation: LeafChatInstallation;
+	installation: SlackChatInstallation;
 }) => {
 	const statuses: string[] = [];
 	const target = {
@@ -47,9 +48,9 @@ const runSlackImageTurn = async ({
 		},
 	};
 	const ticker = createStatusTicker(target as never);
-	const presenter = createEveSlackPresenter({ ticker });
+	const presenter = createEveSlackPresenter({ setStatus: ticker.activity });
 	const threadId = `e2e-img-${RUN_TAG}-slack`;
-	const output = await runMessage({
+	const output = await runSlackAgentTurn({
 		attachments: [
 			{
 				data: RED_PIXEL_PNG,
@@ -63,10 +64,9 @@ const runSlackImageTurn = async ({
 		installation,
 		logger,
 		onAction: (message) => presenter.onAction(message),
-		onActionKeyed: ({ message }) => presenter.onActionError(message),
 		onReasoning: presenter.onReasoning,
 		onThinking: ticker.thinking,
-		providerUserId: "U_E2E_ALICE",
+		providerUserId: SLACK_USER_ID,
 		text: PROMPT,
 		threadId,
 	});
@@ -77,7 +77,7 @@ const runSlackImageTurn = async ({
 const runWebImageTurn = async ({
 	installation,
 }: {
-	installation: LeafChatInstallation;
+	installation: SlackChatInstallation;
 }) => {
 	const userId = installation.installed_by_user_id;
 	if (!userId) {
@@ -169,16 +169,19 @@ const main = async () => {
 	const installation = (await findInstallationWithOrg(
 		"slack",
 		WORKSPACE_ID,
-	)) as LeafChatInstallation | null;
+	)) as SlackChatInstallation | null;
 	if (!installation) {
 		throw new Error(`No slack installation for workspace ${WORKSPACE_ID}`);
 	}
+	SLACK_USER_ID ||= installation.installed_by_provider_user_id ?? "";
+	if (!SLACK_USER_ID)
+		throw new Error("No Slack user configured for the E2E run");
 	console.log(`Installation org=${installation.org_id}`);
 
 	if (process.env.E2E_ONLY !== "web") {
 		console.log("--- slack surface");
 		const slack = await runSlackImageTurn({ installation });
-		const slackText = slack.output.text ?? "";
+		const slackText = slack.output.kind === "empty" ? "" : slack.output.text;
 		check(
 			"slack: model saw the image",
 			/red/i.test(slackText),

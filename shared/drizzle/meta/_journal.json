@@ -449,6 +449,27 @@
       "when": 1786477215400,
       "tag": "0063_youthful_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1786543222434,
+      "tag": "0064_tidy_kang",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1787142211653,
+      "tag": "0065_normal_crusher_hogan",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1787219495927,
+      "tag": "0066_outstanding_princess_powerful",
+      "breakpoints": true
     }
   ]
 }

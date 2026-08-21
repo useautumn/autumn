@@ -17,8 +17,13 @@ const oauthErrorResponse = (c: LeafMcpContext, error: OAuthHttpError) => {
 		c.header("WWW-Authenticate", error.wwwAuthenticate);
 	}
 
+	// A challenge no credentials answered carries no code, so the body must not
+	// invent one the WWW-Authenticate header deliberately left out.
 	return c.json(
-		{ error: error.error, error_description: error.message },
+		{
+			...(error.error ? { error: error.error } : {}),
+			error_description: error.message,
+		},
 		{ status: error.status as 400 | 401 | 403 },
 	);
 };
@@ -38,6 +43,7 @@ export const createHandleMcp =
 		try {
 			auth = await buildAuthForRequest({
 				headers: c.req.raw.headers,
+				db: options.db,
 				flags: options,
 				logger: options.logger,
 				resourceUrl: options.resourceUrl,

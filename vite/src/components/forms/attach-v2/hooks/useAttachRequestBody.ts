@@ -13,6 +13,10 @@ import type {
 import { useMemo } from "react";
 import type { BillingStageParams } from "@/components/forms/shared/utils/billingStageParams";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
+import {
+	type BillingCycleAnchorMode,
+	resolveBillingCycleAnchor,
+} from "@/components/forms/shared/utils/resolveBillingCycleAnchor";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
 import { convertLicenseQuantitiesToParams } from "@/utils/billing/licenseQuantityUtils";
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
@@ -46,6 +50,8 @@ export interface BuildAttachRequestBodyParams {
 	redirectMode: RedirectMode;
 	newBillingSubscription: boolean;
 	resetBillingCycle: boolean;
+	billingCycleAnchorMode: BillingCycleAnchorMode;
+	billingCycleAnchorDate: number | null;
 	discounts: FormDiscount[];
 	noBillingChanges: boolean;
 	enablePlanImmediately: boolean;
@@ -82,6 +88,8 @@ export function buildAttachRequestBody({
 	redirectMode,
 	newBillingSubscription,
 	resetBillingCycle,
+	billingCycleAnchorMode,
+	billingCycleAnchorDate,
 	discounts,
 	noBillingChanges,
 	enablePlanImmediately,
@@ -193,8 +201,13 @@ export function buildAttachRequestBody({
 		body.new_billing_subscription = true;
 	}
 
-	if (resetBillingCycle) {
-		body.billing_cycle_anchor = "now";
+	const billingCycleAnchor = resolveBillingCycleAnchor({
+		resetBillingCycle,
+		billingCycleAnchorMode,
+		billingCycleAnchorDate,
+	});
+	if (billingCycleAnchor !== undefined) {
+		body.billing_cycle_anchor = billingCycleAnchor;
 	}
 
 	const validDiscounts = filterValidDiscounts(discounts);
@@ -264,6 +277,8 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		redirectMode,
 		newBillingSubscription,
 		resetBillingCycle,
+		billingCycleAnchorMode,
+		billingCycleAnchorDate,
 		discounts,
 		noBillingChanges,
 		enablePlanImmediately,
@@ -301,6 +316,8 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				redirectMode,
 				newBillingSubscription,
 				resetBillingCycle,
+				billingCycleAnchorMode,
+				billingCycleAnchorDate,
 				discounts,
 				noBillingChanges,
 				enablePlanImmediately,
@@ -335,6 +352,8 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			redirectMode,
 			newBillingSubscription,
 			resetBillingCycle,
+			billingCycleAnchorMode,
+			billingCycleAnchorDate,
 			discounts,
 			noBillingChanges,
 			enablePlanImmediately,

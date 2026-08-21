@@ -17,9 +17,11 @@ import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBilling
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
+import { publishBillingTransition } from "@/internal/billing/v2/publish/publishBillingTransition.js";
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
+import { preserveSubjectCache } from "@/internal/customers/cache/fullSubject/actions/preserveSubjectCache.js";
 import { hashJson } from "@/utils/hash/hashJson";
 import {
 	type CreateAutumnCheckoutResult,
@@ -74,6 +76,7 @@ export async function attach({
 		ctx,
 		attachBillingContext: billingContext,
 		params,
+		hasFullCustomerOverride: Boolean(contextOverride?.fullCustomer),
 	});
 
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
@@ -127,6 +130,9 @@ export async function attach({
 		!skipAutumnCheckout;
 
 	if (shouldCreateLongLivedCheckout) {
+		// Creating a checkout changes no Autumn balance state. Keep any accepted
+		// Redis-only tracks for the later confirmation request to consume.
+		preserveSubjectCache({ ctx });
 		return createAutumnCheckout<AttachBillingContext>({
 			ctx,
 			action: CheckoutAction.Attach,
@@ -151,13 +157,17 @@ export async function attach({
 			existingLock: checkoutReservation,
 		});
 
-		if (cachedResult) return cachedResult;
+		if (cachedResult) {
+			preserveSubjectCache({ ctx });
+			return cachedResult;
+		}
 	}
 
 	if (
 		billingContext.checkoutMode === "autumn_checkout" &&
 		!skipAutumnCheckout
 	) {
+		preserveSubjectCache({ ctx });
 		return createAutumnCheckout<AttachBillingContext>({
 			ctx,
 			action: CheckoutAction.Attach,
@@ -175,6 +185,17 @@ export async function attach({
 		checkoutLockParamsHash: !skipAutumnCheckout
 			? hashJson({ value: autumnCheckoutParams })
 			: undefined,
+	});
+	if (billingResult.stripe.deferred) {
+		preserveSubjectCache({ ctx });
+	}
+
+	// 7. Publish the compute-time balance transition
+	await publishBillingTransition({
+		ctx,
+		billingContext,
+		billingPlan,
+		executionDeferred: billingResult.stripe.deferred === true,
 	});
 
 	logStripeBillingResult({ ctx, result: billingResult.stripe });

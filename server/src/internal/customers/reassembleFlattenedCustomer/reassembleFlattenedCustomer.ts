@@ -92,6 +92,11 @@ export const reassembleFlattenedCustomer = (
 			pooled_customer_entitlements: pooledCesByCusId.get(internalId) ?? [],
 			subscriptions: subsByCusId.get(internalId) ?? [],
 		};
+		if (flat.base_price_totals !== undefined) {
+			hydrated.base_price_total = Number(
+				flat.base_price_totals[internalId] ?? 0,
+			);
+		}
 		if (flat.entities !== undefined) {
 			hydrated.entities = entitiesByCusId.get(internalId) ?? [];
 		}

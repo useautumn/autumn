@@ -5,7 +5,9 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useCustomerCountQuery } from "./useCustomerCountQuery";
 import {
+	balanceFilterQueryKey,
 	buildCustomerFilterPayload,
+	featureSortQueryKey,
 	useCustomerFilters,
 } from "./useCustomerFilters";
 
@@ -22,6 +24,15 @@ export const useCusSearchQuery = () => {
 			cursor: currentCursor,
 			limit: queryStates.pageSize,
 			filters: buildCustomerFilterPayload(queryStates),
+			sort_by: queryStates.sortBy,
+			sort_feature_id:
+				queryStates.sortBy === "feature_balance"
+					? queryStates.sortFeature || undefined
+					: undefined,
+			sort_basis:
+				queryStates.sortBy === "feature_balance"
+					? queryStates.sortBasis
+					: undefined,
 			sort_order: queryStates.sort,
 		});
 		return {
@@ -52,6 +63,9 @@ export const useCusSearchQuery = () => {
 			queryStates.joinedFrom,
 			queryStates.joinedTo,
 			queryStates.sort,
+			queryStates.sortBy,
+			featureSortQueryKey(queryStates),
+			balanceFilterQueryKey(queryStates),
 			trimmedSearch,
 		]),
 		queryFn: fetcher,
@@ -59,13 +73,11 @@ export const useCusSearchQuery = () => {
 		placeholderData: keepPreviousData,
 	});
 
-	const { data: totalCount, isLoading: isCountLoading } = useCustomerCountQuery(
-		{
-			search: trimmedSearch,
-			filters: buildCustomerFilterPayload(queryStates),
-			enabled: isInitialized,
-		},
-	);
+	const { data: countData, isLoading: isCountLoading } = useCustomerCountQuery({
+		search: trimmedSearch,
+		filters: buildCustomerFilterPayload(queryStates),
+		enabled: isInitialized,
+	});
 
 	const isFetchingUncached = Boolean(
 		isPending || (isFetching && isPlaceholderData),
@@ -74,7 +86,8 @@ export const useCusSearchQuery = () => {
 	return {
 		customers: data?.customers || [],
 		nextCursor: data?.next_cursor ?? null,
-		totalCount: totalCount ?? 0,
+		totalCount: countData?.totalCount ?? 0,
+		totalCountApproximate: countData?.approximate ?? false,
 		isLoading: isLoading || isCountLoading,
 		error,
 		refetch,

@@ -1,3 +1,4 @@
+import { backfillProductVersionIdentityInTree } from "@/internal/products/productUtils/backfillProductVersionIdentity.js";
 import { repairCachedProductCollections } from "../../repairCachedProductCollections.js";
 import {
 	type CachedFullSubject,
@@ -15,6 +16,11 @@ export const sanitizeCachedFullSubject = ({
 }: {
 	cachedFullSubject: CachedFullSubject;
 }): CachedFullSubject => {
+	// Must run BEFORE the walker: version_slug is nullable, so the walker
+	// fills a missing key with null — after that, "absent" is no longer
+	// distinguishable from a real value.
+	backfillProductVersionIdentityInTree({ value: cachedFullSubject });
+
 	const normalized = normalizeFromSchema<CachedFullSubject>({
 		schema: CachedFullSubjectSchema,
 		data: cachedFullSubject,

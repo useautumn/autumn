@@ -2,7 +2,7 @@ import { oauthRefreshToken } from "@autumn/shared";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-export const deleteOAuthRefreshTokensByClientAndReference = async ({
+const deleteOAuthRefreshTokensByClientAndReference = async ({
 	db,
 	clientId,
 	referenceId,
@@ -22,21 +22,7 @@ export const deleteOAuthRefreshTokensByClientAndReference = async ({
 			),
 		);
 
-export const updateOAuthRefreshTokenScopes = async ({
-	db,
-	id,
-	scopes,
-}: {
-	db: DrizzleCli;
-	id: string;
-	scopes: string[];
-}) =>
-	db
-		.update(oauthRefreshToken)
-		.set({ scopes })
-		.where(eq(oauthRefreshToken.id, id));
-
-export const getOAuthRefreshTokenByTokenValues = async ({
+const getOAuthRefreshTokenByTokenValues = async ({
 	db,
 	tokenValues,
 }: {
@@ -52,23 +38,31 @@ export const getOAuthRefreshTokenByTokenValues = async ({
 	return token ?? null;
 };
 
-export const updateOAuthRefreshTokenConsent = async ({
+/** Null consent/resource leave the stored value alone; a grant is never blanked. */
+const updateOAuthRefreshTokenGrant = async ({
 	db,
 	id,
 	oauthConsentId,
+	resource,
+	scopes,
 }: {
-	db: DrizzleCli;
+	db: Pick<DrizzleCli, "update">;
 	id: string;
-	oauthConsentId: string;
+	oauthConsentId: string | null;
+	resource: string | null;
+	scopes: string[];
 }) =>
 	db
 		.update(oauthRefreshToken)
-		.set({ oauthConsentId })
+		.set({
+			scopes,
+			...(oauthConsentId ? { oauthConsentId } : {}),
+			...(resource ? { resource } : {}),
+		})
 		.where(eq(oauthRefreshToken.id, id));
 
 export const oauthRefreshTokenRepo = {
 	deleteByClientAndReference: deleteOAuthRefreshTokensByClientAndReference,
-	updateScopes: updateOAuthRefreshTokenScopes,
 	getByTokenValues: getOAuthRefreshTokenByTokenValues,
-	updateConsent: updateOAuthRefreshTokenConsent,
+	updateGrant: updateOAuthRefreshTokenGrant,
 };

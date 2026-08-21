@@ -4,6 +4,8 @@ import {
 	type FullProduct,
 	findFeatureById,
 	type Price,
+	productKeyToString,
+	productToProductKey,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import { basePriceToProductItem } from "@autumn/shared/api/products/components/basePrice/basePriceToProductItem.js";
@@ -132,12 +134,35 @@ const getMatchedProducts = async ({
 	// Row-decidable fields (custom/paid/recurring/price) are stripped: prepare
 	// must cover every product the batch lane's catalog matching can target,
 	// and row constraints never change which PRODUCTS need prepared rows.
-	return products.filter((product) =>
+	const matchedProducts = products.filter((product) =>
 		planFilterMatchesProduct({
 			filter: toCatalogPlanFilter(op.plan_filter),
 			product,
 		}),
 	);
+	if (op.version === undefined) return matchedProducts;
+
+	const productsByPlanVersion = new Map<string, FullProduct>();
+	for (const product of products) {
+		productsByPlanVersion.set(
+			productKeyToString({
+				productKey: productToProductKey({ product }),
+			}),
+			product,
+		);
+	}
+
+	const preparedProducts = new Map<string, FullProduct>();
+	for (const product of matchedProducts) {
+		preparedProducts.set(product.internal_id, product);
+		const target = productsByPlanVersion.get(
+			productKeyToString({
+				productKey: { planId: product.id, version: op.version },
+			}),
+		);
+		if (target) preparedProducts.set(target.internal_id, target);
+	}
+	return [...preparedProducts.values()];
 };
 
 /**
@@ -258,7 +283,8 @@ const buildProductsWithPreparedRows = ({
 
 export const ensurePricesAndEntitlements: PrepareModule<
 	EnsurePricesAndEntitlementsInput,
-	EnsurePricesAndEntitlementsResult
+	EnsurePricesAndEntitlementsResult,
+	"ensure_prices_and_entitlements"
 > = {
 	kind: "ensure_prices_and_entitlements",
 
@@ -442,7 +468,11 @@ export const ensurePricesAndEntitlements: PrepareModule<
 							candidateProducts: resolved,
 							reuseProcessor: false,
 						});
-						await initStripeResourcesForProducts({ ctx, products: [product] });
+						await initStripeResourcesForProducts({
+							ctx,
+							products: [product],
+							allowLiveCreate: true,
+						});
 						resolved.push(product);
 					}
 				}),

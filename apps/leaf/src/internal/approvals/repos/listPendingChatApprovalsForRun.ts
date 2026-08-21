@@ -1,5 +1,5 @@
 import { type AppEnv, type ChatProvider, chatApprovals } from "@autumn/shared";
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
 
 export const listPendingChatApprovalsForRun = async ({
@@ -29,6 +29,5 @@ export const listPendingChatApprovalsForRun = async ({
 			eq(chatApprovals.env, env),
 			eq(chatApprovals.run_id, runId),
 			eq(chatApprovals.status, "pending"),
-			gt(chatApprovals.expires_at, Date.now()),
 		),
 	});

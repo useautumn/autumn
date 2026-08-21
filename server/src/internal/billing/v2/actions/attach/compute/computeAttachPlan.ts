@@ -5,12 +5,14 @@ import {
 	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { applyBillingCycleAnchorToSharedSubscription } from "@/internal/billing/v2/compute/computeAutumnUtils/applyBillingCycleAnchorToSharedSubscription";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { computeAttachPooledBalancePlan } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalancePlan";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
-import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
+import { computeAttachBalanceTransitionPlan } from "./computeAttachBalanceTransitionPlan.js";
+import { computeAttachNewCustomerProductWithBalanceTransitions } from "./computeAttachNewCustomerProduct.js";
 import { computeAttachRemovals } from "./computeAttachRemovals";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
 import { computeOneOffPurchaseRebalance } from "./computeOneOffPurchaseRebalance";
@@ -22,10 +24,12 @@ export const computeAttachPlan = ({
 	ctx,
 	attachBillingContext,
 	params,
+	hasFullCustomerOverride = false,
 }: {
 	ctx: AutumnContext;
 	attachBillingContext: AttachBillingContext;
 	params: AttachParamsV1;
+	hasFullCustomerOverride?: boolean;
 }): AutumnBillingPlan => {
 	const {
 		currentCustomerProduct,
@@ -37,7 +41,10 @@ export const computeAttachPlan = ({
 		trialContext,
 	} = attachBillingContext;
 
-	const newCustomerProduct = computeAttachNewCustomerProduct({
+	const {
+		customerProduct: newCustomerProduct,
+		balanceTransitionPlan: computedBalanceTransitionPlan,
+	} = computeAttachNewCustomerProductWithBalanceTransitions({
 		ctx,
 		attachBillingContext,
 		params,
@@ -104,6 +111,11 @@ export const computeAttachPlan = ({
 					ctx,
 					newCustomerProducts: [newCustomerProduct],
 					deletedCustomerProduct: currentCustomerProduct,
+					// Plans dropped via `remove_plan_ids` are expired mid-cycle, so they
+					// owe the same unused-time credit as a same-group replacement.
+					deletedCustomerProducts: removeCustomerProducts.map(
+						(update) => update.customerProduct,
+					),
 					billingContext: attachBillingContext,
 					includeArrearLineItems,
 				})
@@ -164,6 +176,20 @@ export const computeAttachPlan = ({
 		plan,
 		attachBillingContext,
 		params,
+	});
+	plan = applyBillingCycleAnchorToSharedSubscription({
+		plan,
+		billingContext: attachBillingContext,
+		stripeSubscriptionId:
+			attachBillingContext.stripeSubscription?.id ??
+			attachBillingContext.currentCustomerProduct?.subscription_ids?.[0],
+	});
+	plan.balanceTransitionPlan = computeAttachBalanceTransitionPlan({
+		attachBillingContext,
+		params,
+		balanceTransitionPlan: computedBalanceTransitionPlan,
+		autumnBillingPlan: plan,
+		hasFullCustomerOverride,
 	});
 
 	return plan;

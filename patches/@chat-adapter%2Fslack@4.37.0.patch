@@ -1,0 +1,39 @@
+diff --git a/dist/blocks.js b/dist/blocks.js
+index 770dc6f3db52e2297da0c71ed44a18502508acc1..2fb8e7bb8f8a237878960849145473b9cfbb03dc 100644
+--- a/dist/blocks.js
++++ b/dist/blocks.js
+@@ -451,7 +451,7 @@ ${markdownBoldToSlackMrkdwn(convertEmoji(field.value))}`,
+ }
+ function tableToBlocks(element, state) {
+   const cellCharCount = [element.headers, ...element.rows].flat().reduce((total, cell) => total + cell.length, 0);
+-  if (state.usedTable || element.rows.length + 1 > LIMITS.tableRows || element.headers.length > LIMITS.tableColumns || cellCharCount > LIMITS.tableChars) {
++  if (element.rows.length + 1 > LIMITS.tableRows || element.headers.length > LIMITS.tableColumns || cellCharCount > LIMITS.tableChars) {
+     return [
+       {
+         text: fencedFallbackText(tableToAscii(element)),
+@@ -459,7 +459,6 @@ function tableToBlocks(element, state) {
+       }
+     ];
+   }
+-  state.usedTable = true;
+   const rows = [
+     element.headers.map((header) => rawText(header, state.convertEmoji)),
+     ...element.rows.map(
+diff --git a/dist/index.js b/dist/index.js
+index b41717425871152307a87326b7d2f8178b7484cb..5bd19bbbf02aec8987874054f6b103f47a3d7108 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -332,12 +332,11 @@ var DATA_TABLE_MIN_PAGE_SIZE = 1;
+ var DATA_TABLE_MAX_PAGE_SIZE = 100;
+ function convertTableToBlocks(element, state) {
+   const cellCharCount = [element.headers, ...element.rows].flat().reduce((total, cell) => total + cell.length, 0);
+-  if (state.usedNativeTable || element.rows.length > DATA_TABLE_MAX_ROWS || element.headers.length > DATA_TABLE_MAX_COLS || cellCharCount > DATA_TABLE_MAX_CHARS) {
++  if (element.rows.length > DATA_TABLE_MAX_ROWS || element.headers.length > DATA_TABLE_MAX_COLS || cellCharCount > DATA_TABLE_MAX_CHARS) {
+     return [
+       asciiFallbackBlock(tableElementToAscii(element.headers, element.rows))
+     ];
+   }
+-  state.usedNativeTable = true;
+   const headerRow = element.headers.map((header) => ({
+     type: "raw_text",
+     text: convertEmoji(header) || " "

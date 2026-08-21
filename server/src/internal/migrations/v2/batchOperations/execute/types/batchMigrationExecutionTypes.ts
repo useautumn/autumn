@@ -1,4 +1,8 @@
-import type { CusProductStatus } from "@autumn/shared";
+import type {
+	CusProductStatus,
+	EntitlementWithFeature,
+	FullProductWithoutLicenses,
+} from "@autumn/shared";
 
 /** One claimed customer flowing through a page. Preview fields feed the
  * Tinybird item events; `id` also keys the cache bust. */
@@ -21,6 +25,8 @@ export type BatchMigrationInsertedItem = {
 	planId: string;
 	featureId: string;
 	granted: number | null;
+	/** After-write remaining; omit when remaining equals granted. */
+	remaining?: number | null;
 	unlimited: boolean;
 	nextResetAt: number | null;
 	/** Public id of the owning entity when the customer product is entity-level. */
@@ -34,6 +40,31 @@ export type BatchMigrationInsertedItem = {
 	trialEndsAt: number | null;
 };
 
+export type BatchMigrationRemovedItem = Omit<
+	BatchMigrationInsertedItem,
+	"granted" | "unlimited" | "nextResetAt" | "remaining"
+> & {
+	entitlement: EntitlementWithFeature;
+	/** Before-state, set when the removal is the from-half of a replace. */
+	granted?: number | null;
+	remaining?: number | null;
+	unlimited?: boolean;
+	nextResetAt?: number | null;
+};
+
+export type BatchMigrationRepointedProduct = {
+	internalCustomerId: string;
+	customerProductId: string;
+	entityId: string | null;
+	status: CusProductStatus;
+	startsAt: number | null;
+	canceledAt: number | null;
+	endedAt: number | null;
+	trialEndsAt: number | null;
+	fromProduct: FullProductWithoutLicenses;
+	toProduct: FullProductWithoutLicenses;
+};
+
 export type BatchMigrationPageResult = {
 	/** Customers with a matching customer product — mutated and marked succeeded. */
 	succeeded: BatchMigrationPageCustomer[];
@@ -42,6 +73,8 @@ export type BatchMigrationPageResult = {
 	skipped: BatchMigrationPageCustomer[];
 	/** Rows inserted this page, in patch order. */
 	insertedItems: BatchMigrationInsertedItem[];
+	removedItems: BatchMigrationRemovedItem[];
+	repointedProducts?: BatchMigrationRepointedProduct[];
 };
 
 export type BatchMigrationExecutionSummary = {

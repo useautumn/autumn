@@ -1,10 +1,12 @@
-import { normalizeToolName } from "../../../agent/tools/toolPolicy.js";
+import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 
 /** Single source for write tool → preview tool. A new approval-gated write only
  * needs an entry here (plus a `destructiveHint` on the MCP tool). */
 const writePreviewTools: Record<string, string> = {
 	attach: "previewAttach",
 	createBalance: "previewCreateBalance",
+	createPlan: "previewUpdateCatalog",
+	createReward: "previewUpdateCatalog",
 	createSchedule: "previewCreateSchedule",
 	updatePlan: "previewUpdateCatalog",
 	updateCatalog: "previewUpdateCatalog",

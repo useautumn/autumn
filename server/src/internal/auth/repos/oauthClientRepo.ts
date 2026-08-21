@@ -22,10 +22,10 @@ const oauthClientSelect = {
 	createdAt: oauthClient.createdAt,
 };
 
-export const listOAuthClients = async ({ db }: { db: DrizzleCli }) =>
+const listOAuthClients = async ({ db }: { db: DrizzleCli }) =>
 	db.select(oauthClientSelect).from(oauthClient);
 
-export const listOAuthClientsForAdmin = async ({ db }: { db: DrizzleCli }) =>
+const listOAuthClientsForAdmin = async ({ db }: { db: DrizzleCli }) =>
 	db
 		.select({
 			id: oauthClient.id,
@@ -45,7 +45,7 @@ export const listOAuthClientsForAdmin = async ({ db }: { db: DrizzleCli }) =>
 		.from(oauthClient)
 		.orderBy(desc(oauthClient.createdAt));
 
-export const getOAuthClientByClientId = async ({
+const getOAuthClientByClientId = async ({
 	db,
 	clientId,
 }: {
@@ -61,7 +61,7 @@ export const getOAuthClientByClientId = async ({
 	return client ?? null;
 };
 
-export const updateOAuthClientById = async ({
+const updateOAuthClientById = async ({
 	db,
 	id,
 	updates,
@@ -90,39 +90,32 @@ export const updateOAuthClientById = async ({
 	return client ?? null;
 };
 
-export const upsertOAuthClient = async ({
+export type OAuthClientInsert = typeof oauthClient.$inferInsert;
+
+const insertOAuthClient = async ({
+	db,
+	values,
+}: {
+	db: DrizzleCli;
+	values: OAuthClientInsert;
+}) => {
+	const [client] = await db
+		.insert(oauthClient)
+		.values(values)
+		.returning(oauthClientSelect);
+
+	if (!client) throw new Error("Failed to insert OAuth client");
+	return client;
+};
+
+const upsertOAuthClient = async ({
 	db,
 	insert,
 	update,
 }: {
 	db: DrizzleCli;
-	insert: {
-		id: string;
-		clientId: string;
-		name: string;
-		redirectUris: string[];
-		scopes: string[];
-		tokenEndpointAuthMethod: string;
-		grantTypes: string[];
-		responseTypes: string[];
-		public: boolean;
-		type: string;
-		metadata: unknown;
-		createdAt: Date;
-		updatedAt: Date;
-	};
-	update: {
-		name: string;
-		redirectUris: string[];
-		scopes: string[];
-		tokenEndpointAuthMethod: string;
-		grantTypes: string[];
-		responseTypes: string[];
-		public: boolean;
-		type: string;
-		metadata: unknown;
-		updatedAt: Date;
-	};
+	insert: OAuthClientInsert;
+	update: Omit<OAuthClientInsert, "id" | "clientId" | "createdAt">;
 }) => {
 	await db.insert(oauthClient).values(insert).onConflictDoUpdate({
 		target: oauthClient.clientId,
@@ -132,7 +125,7 @@ export const upsertOAuthClient = async ({
 	return getOAuthClientByClientId({ db, clientId: insert.clientId });
 };
 
-export const addOAuthClientScopesByClientId = async ({
+const addOAuthClientScopesByClientId = async ({
 	db,
 	clientId,
 	scopes,
@@ -169,6 +162,7 @@ export const oauthClientRepo = {
 	list: listOAuthClients,
 	listForAdmin: listOAuthClientsForAdmin,
 	getByClientId: getOAuthClientByClientId,
+	insert: insertOAuthClient,
 	updateById: updateOAuthClientById,
 	addScopesByClientId: addOAuthClientScopesByClientId,
 	upsert: upsertOAuthClient,

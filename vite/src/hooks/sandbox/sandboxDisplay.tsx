@@ -18,6 +18,15 @@ const COLOR_PILL_MAP: Record<SandboxColor, string> = {
 	pink: "text-pink-500 bg-pink-500/10 border-pink-500",
 };
 
+const COLOR_VALUE_MAP: Record<SandboxColor, string> = {
+	gray: "#6a7282",
+	blue: "#2b7fff",
+	green: "#00c950",
+	amber: "#f0b100",
+	red: "#fb2c36",
+	pink: "#f6339a",
+};
+
 export const sandboxColorClass = (color: string | null | undefined): string =>
 	COLOR_CLASS_MAP[color as SandboxColor] ??
 	COLOR_CLASS_MAP[DEFAULT_SANDBOX_COLOR];
@@ -25,3 +34,7 @@ export const sandboxColorClass = (color: string | null | undefined): string =>
 export const sandboxPillClass = (color: string | null | undefined): string =>
 	COLOR_PILL_MAP[color as SandboxColor] ??
 	COLOR_PILL_MAP[DEFAULT_SANDBOX_COLOR];
+
+export const sandboxColorValue = (color: string | null | undefined): string =>
+	COLOR_VALUE_MAP[color as SandboxColor] ??
+	COLOR_VALUE_MAP[DEFAULT_SANDBOX_COLOR];

@@ -99,17 +99,20 @@ const entitlementPricesMatchAtPrecision = ({
 	}
 };
 
-/** Returns the first unclaimed candidate at the strongest available precision. */
+/** Returns the first unclaimed candidate at the strongest available precision.
+ * Pass `matchPrecisions` to restrict the ladder (e.g. one rung at a time). */
 export const findEntitlementPriceSuccessor = ({
 	sourceEntitlementPrice,
 	candidateEntitlementPrices,
 	excludedEntitlementIds,
+	matchPrecisions = ENTITLEMENT_PRICE_MATCH_PRECISIONS,
 }: {
 	sourceEntitlementPrice: EntitlementPrice;
 	candidateEntitlementPrices: EntitlementPrice[];
 	excludedEntitlementIds?: Set<string>;
+	matchPrecisions?: readonly EntitlementPriceMatchPrecision[];
 }): EntitlementPrice | undefined => {
-	for (const matchPrecision of ENTITLEMENT_PRICE_MATCH_PRECISIONS) {
+	for (const currentMatchPrecision of matchPrecisions) {
 		const candidate = candidateEntitlementPrices.find(
 			(candidateEntitlementPrice) => {
 				const candidateEntitlementId =
@@ -119,7 +122,7 @@ export const findEntitlementPriceSuccessor = ({
 				return entitlementPricesMatchAtPrecision({
 					sourceEntitlementPrice,
 					candidateEntitlementPrice,
-					matchPrecision,
+					matchPrecision: currentMatchPrecision,
 				});
 			},
 		);

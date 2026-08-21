@@ -8,7 +8,7 @@ import type { CheckoutSessionCompletedContext } from "../../setupCheckoutSession
 
 /**
  * Updates the billing plan with checkout-specific data:
- * 1. Adds upsertSubscription from Stripe subscription
+ * 1. Adds upsertSubscriptions from Stripe subscription
  * 2. Adds upsertInvoice from Stripe invoice
  * 3. (Future) Captures prepaid quantities from checkout line items
  *
@@ -29,15 +29,15 @@ export const updateBillingPlanFromCheckout = async ({
 	// Create a shallow copy of the autumn billing plan
 	const updatedAutumnPlan = { ...billingPlan.autumn };
 
-	// 1. Build upsertSubscription from Stripe subscription
+	// 1. Build upsertSubscriptions from Stripe subscription
 	if (stripeSubscription) {
 		const subscription = initSubscriptionFromStripe({
 			ctx,
 			stripeSubscription,
 		});
-		updatedAutumnPlan.upsertSubscription = subscription;
+		updatedAutumnPlan.upsertSubscriptions = [subscription];
 		ctx.logger.debug(
-			`[checkout.completed] Added upsertSubscription: ${subscription.stripe_id}`,
+			`[checkout.completed] Added upsertSubscriptions: ${subscription.stripe_id}`,
 		);
 	}
 

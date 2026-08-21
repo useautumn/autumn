@@ -4,8 +4,13 @@ import { PgTable } from "drizzle-orm/pg-core";
 import { logger } from "../external/logtail/logtailUtils";
 import type { DrizzleCli } from "./initDrizzle";
 
-// eventsNeon lives on the Neon DB — validated by the dedicated neon-events pass, not the main one.
-const SKIP_TABLES = ["migrationErrors", "eventsNeon"];
+// eventsNeon lives on the Neon DB; the balance caches live in DuckDB.
+const SKIP_TABLES = [
+	"migrationErrors",
+	"eventsNeon",
+	"ceBalancesCache",
+	"ceBalanceTotalsCache",
+];
 
 type TableEntry = {
 	name: string;

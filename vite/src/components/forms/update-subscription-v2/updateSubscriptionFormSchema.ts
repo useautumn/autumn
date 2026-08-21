@@ -28,6 +28,8 @@ export const UpdateSubscriptionFormSchema = z.object({
 	cancelAction: CancelActionSchema.nullable(),
 	billingBehavior: BillingBehaviorSchema.nullable(),
 	resetBillingCycle: z.boolean(),
+	billingCycleAnchorMode: z.enum(["now", "custom"]),
+	billingCycleAnchorDate: z.number().nullable(),
 	resetUsage: z.boolean(),
 	refundBehavior: RefundBehaviorSchema.nullable(),
 	refundAmount: z.enum(["prorated", "full"]).nullable(),

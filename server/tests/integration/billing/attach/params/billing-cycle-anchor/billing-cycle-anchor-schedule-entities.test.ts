@@ -23,7 +23,7 @@ import { addDays } from "date-fns";
 
 const PREPAID_BILLING_UNITS = 100;
 
-test.skip(`${chalk.yellowBright("billing-cycle-anchor-schedule-entities 1: single entity scheduled anchor before next cycle")}`, async () => {
+test(`${chalk.yellowBright("billing-cycle-anchor-schedule-entities 1: single entity scheduled anchor before next cycle")}`, async () => {
 	const customerId = "anchor-sched-ent-single";
 	const proQuantity = 300;
 	const premiumQuantity = 500;
@@ -84,11 +84,10 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-schedule-entities 1: singl
 		feature_quantities: [
 			{ feature_id: TestFeature.Messages, quantity: premiumQuantity },
 		],
-		// @ts-ignore scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 	});
 
-	expect(preview.total).toBe(0);
+	expect(preview.total).toBe(55);
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: expectedNextCycle.startsAt,
@@ -102,12 +101,11 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-schedule-entities 1: singl
 		feature_quantities: [
 			{ feature_id: TestFeature.Messages, quantity: premiumQuantity },
 		],
-		// @ts-ignore scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 		redirect_mode: "if_required",
 	});
 
-	expect(result.invoice).toBeUndefined();
+	expect(result.invoice).toBeDefined();
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 
 	const entity = await autumnV2_2.entities.get<ApiEntityV2>(
@@ -127,8 +125,8 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-schedule-entities 1: singl
 
 	await expectCustomerInvoiceCorrect({
 		customerId,
-		count: 1,
-		latestTotal: 40,
+		count: 2,
+		latestTotal: preview.total,
 	});
 
 	await advanceToAnchor({
@@ -156,14 +154,14 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-schedule-entities 1: singl
 
 	await expectCustomerInvoiceCorrect({
 		customerId,
-		count: 2,
+		count: 3,
 		latestTotal: expectedNextCycle.total,
 	});
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-test.skip(`${chalk.yellowBright("billing-cycle-anchor-schedule-entities 2: two entities shared sub, upgrade one resets both cycles")}`, async () => {
+test(`${chalk.yellowBright("billing-cycle-anchor-schedule-entities 2: two entities shared sub, upgrade one resets both cycles")}`, async () => {
 	const customerId = "anchor-sched-ent-shared";
 	const entity1ProQuantity = 300;
 	const entity2ProQuantity = 500;
@@ -232,11 +230,10 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-schedule-entities 2: two e
 		feature_quantities: [
 			{ feature_id: TestFeature.Messages, quantity: entity1PremiumQuantity },
 		],
-		// @ts-ignore scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 	});
 
-	expect(preview.total).toBe(0);
+	expect(preview.total).toBe(55);
 
 	const result = await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
@@ -245,12 +242,11 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-schedule-entities 2: two e
 		feature_quantities: [
 			{ feature_id: TestFeature.Messages, quantity: entity1PremiumQuantity },
 		],
-		// @ts-ignore scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 		redirect_mode: "if_required",
 	});
 
-	expect(result.invoice).toBeUndefined();
+	expect(result.invoice).toBeDefined();
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 
 	const entity1BeforeReset = await autumnV2_2.entities.get<ApiEntityV2>(

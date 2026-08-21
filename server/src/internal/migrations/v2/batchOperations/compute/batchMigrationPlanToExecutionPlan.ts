@@ -3,9 +3,6 @@ import type {
 	BatchMigrationPlan,
 } from "../types/index.js";
 
-/** Lowers the computed plan to the serializable form chunk tasks execute —
- * the from-product rides along (licenses stripped) so execution and finalize
- * derive ids and price facts with the shared product utils. */
 export const batchMigrationPlanToExecutionPlan = ({
 	plan,
 }: {
@@ -17,10 +14,25 @@ export const batchMigrationPlanToExecutionPlan = ({
 			opIndex: patch.opIndex,
 			scope: patch.scope,
 			fromProduct,
-			addEntitlementOps: patch.operations.entitlements.map((operation) => ({
+			toProduct: patch.toProduct,
+			addEntitlementOps: patch.operations.addEntitlements.map((operation) => ({
 				entitlement: operation.entitlementPrice.entitlement,
 				initialState: operation.initialState,
 			})),
+			removeEntitlementOps: patch.operations.removeEntitlements.map(
+				(operation) => ({
+					entitlement: operation.entitlementPrice.entitlement,
+				}),
+			),
+			replaceEntitlementOps: patch.operations.replaceEntitlements.map(
+				(operation) => ({
+					fromEntitlement: operation.fromEntitlementPrice.entitlement,
+					entitlement: operation.entitlementPrice.entitlement,
+					initialState: operation.initialState,
+				}),
+			),
+			licenseEntitlementOps: patch.operations.licenseEntitlements,
+			repointCustomerProduct: patch.operations.repointCustomerProduct,
 		};
 	}),
 });

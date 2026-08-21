@@ -5,6 +5,7 @@ import type {
 	ApiCustomerV3,
 	ApiCustomerV5,
 	ApiEntityV2,
+	ApiPlanExpandedV1,
 	ApiPlanV1,
 	AttachParamsV1Input,
 } from "@autumn/shared";
@@ -72,7 +73,7 @@ test(`${chalk.yellowBright("license attach: persisted parent customization contr
 	const [parentPlan, baseChildPlan] = (await Promise.all([
 		autumnV2_2.post("/plans.get", { plan_id: pro.id }),
 		autumnV2_2.post("/plans.get", { plan_id: devSeat.id }),
-	])) as [ApiPlanV1, ApiPlanV1];
+	])) as [ApiPlanExpandedV1, ApiPlanV1];
 	expect(parentPlan.licenses?.[0]?.customize).toMatchObject({
 		price: {
 			amount: CUSTOM_SEAT_PRICE,

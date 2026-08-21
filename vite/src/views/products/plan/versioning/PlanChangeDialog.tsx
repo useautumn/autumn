@@ -1,4 +1,4 @@
-import type { FrontendProduct, PlanUpdatePreview } from "@autumn/shared";
+import type { FrontendProduct } from "@autumn/shared";
 import {
 	AreaRadioGroupItem,
 	Dialog,
@@ -21,61 +21,43 @@ import {
 	TicketIcon,
 } from "@phosphor-icons/react";
 import { motion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PlanPriceHeader } from "@/components/forms/shared/plan-items/PlanPriceHeader";
+import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
-import { usePlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useMeasuredHeight } from "@/hooks/useMeasuredHeight";
-import { ProductService } from "@/services/products/ProductService";
+import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { useVariantLinkVisibility } from "../hooks/useVariantLinkVisibility";
 import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
+import type { CatalogVersionChoice } from "../catalog/catalogPlanPreview";
+import { usePlanChangeCatalogPreview } from "../catalog/usePlanChangeCatalogPreview";
 import {
 	commitLicenseChanges,
 	getLicenseUpdatePayload,
-	useHasLicenseChanges,
 } from "../components/plan-licenses/useLicenseSaveRegistry";
-import {
-	buildMigrateTargets,
-	buildSelectedLicenseParentUpdates,
-	getLicenseParentTargetId,
-} from "./buildMigrateTargets";
-import {
-	buildInPlaceUpdatePlanParams,
-	buildPreviewUpdatePlanParams,
-	buildVersionUpdatePlanParams,
-} from "./buildMigrationDraft";
-import { getDefaultPropagationTargetIds } from "./getDefaultPropagationTargetIds";
 import { LicenseChangeList } from "./LicenseChangeList";
+import { LicenseParentTargetsStep } from "./LicenseParentTargetsStep";
 import { MigrateTargetsStep } from "./MigrateTargetsStep";
-import { PlanItemChanges } from "./PlanItemChanges";
-import {
-	PlanSettingsChanges,
-	previousAttributesToSettingChanges,
-} from "./PlanSettingsChanges";
-import {
-	type PropagationTarget,
-	PropagationTargetsStep,
-} from "./PropagationTargetsStep";
+import { PlanSettingsChanges } from "./PlanSettingsChanges";
 import { getPlanPriceChange } from "./planMigrationDiff";
-import { previewHasVersionableTargets } from "./previewHasAffectedCustomers";
 import { Stepper, type StepperStep } from "./Stepper";
-import type { VariantConflictInfo } from "./variantConflicts";
+import { VariantTargetsStep } from "./VariantTargetsStep";
 
-type VersionChoice = "new" | "update" | "all";
 type StepKey =
 	| "review"
 	| "variant_scope"
@@ -83,7 +65,99 @@ type StepKey =
 	| "strategy"
 	| "migrate";
 
-const EMPTY_SELECTION: string[] = [];
+const buildPlanChangeSteps = ({
+	showVersionStrategy,
+	showVariantScope,
+	showLicenseParentScope,
+}: {
+	showVersionStrategy: boolean;
+	showVariantScope: boolean;
+	showLicenseParentScope: boolean;
+}): StepperStep[] => [
+	{ key: "review", label: "Changes", icon: SlidersIcon },
+	...(!showVersionStrategy
+		? []
+		: [{ key: "strategy", label: "Versions", icon: StackIcon }]),
+	...(showVariantScope
+		? [{ key: "variant_scope", label: "Variants", icon: GitForkIcon }]
+		: []),
+	...(showLicenseParentScope
+		? [{ key: "license_scope", label: "Parents", icon: TicketIcon }]
+		: []),
+	{ key: "migrate", label: "Review", icon: SealCheckIcon },
+];
+
+const planChangePrimaryText = ({
+	isFinalStep,
+	migrateNeeded,
+	isMetadataOnly,
+	showVersionStrategy,
+	effectiveVersionChoice,
+	versionChoiceOnlyAffectsParents,
+	isLatest,
+}: {
+	isFinalStep: boolean;
+	migrateNeeded: boolean;
+	isMetadataOnly: boolean;
+	showVersionStrategy: boolean;
+	effectiveVersionChoice: CatalogVersionChoice;
+	versionChoiceOnlyAffectsParents: boolean;
+	isLatest: boolean;
+}) => {
+	if (!isFinalStep) return "Next";
+	if (migrateNeeded) return "Apply & migrate";
+	if (isMetadataOnly || !showVersionStrategy) return "Save changes";
+	if (effectiveVersionChoice === "new") {
+		if (versionChoiceOnlyAffectsParents) return "Create parent versions";
+		return "Create version";
+	}
+	if (effectiveVersionChoice === "all") return "Update all versions";
+	if (isLatest) return "Update version";
+	return "Update this version";
+};
+
+const planChangeDescription = ({
+	step,
+	migrateNeeded,
+}: {
+	step: StepKey;
+	migrateNeeded: boolean;
+}) => {
+	if (step === "review") return "Review what's changing before you save.";
+	if (step === "strategy") return "Choose how this applies across versions.";
+	if (step === "variant_scope") {
+		return "Pick which variants to update alongside this plan.";
+	}
+	if (step === "license_scope") {
+		return "Pick which parent plans receive this license update.";
+	}
+	if (migrateNeeded) return "Confirm and migrate existing customers.";
+	return "Confirm the changes you're about to save.";
+};
+
+const planChangeMigrateSubtitle = ({
+	isMetadataOnly,
+	migrateNeeded,
+}: {
+	isMetadataOnly: boolean;
+	migrateNeeded: boolean;
+}) => {
+	if (isMetadataOnly) return "Applies across every version and variant.";
+	if (migrateNeeded) {
+		return "Customers you don't migrate stay on their current version.";
+	}
+	return "Existing customers stay on their current version.";
+};
+
+const planChangeSaveSuccessText = ({
+	choice,
+}: {
+	choice: CatalogVersionChoice;
+}) => {
+	if (choice === "new") return "New version created";
+	if (choice === "all") return "All versions updated";
+	return "Plan updated";
+};
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
 	return (
@@ -122,45 +196,6 @@ function ConfirmInput({
 	);
 }
 
-// A version needs a migration only when it has customers to move AND a
-// migratable diff (item/price changes; free-trial edits version without one).
-const entryNeedsMigration = (
-	entry: Pick<
-		PlanUpdatePreview,
-		"item_changes" | "price_change" | "has_customers"
-	>,
-) =>
-	entry.has_customers &&
-	((entry.item_changes?.length ?? 0) > 0 || entry.price_change !== undefined);
-
-const hasMigrationTargets = ({
-	preview,
-	selectedVariantIds,
-	versionChoice,
-}: {
-	preview: PlanUpdatePreview | undefined;
-	selectedVariantIds: string[];
-	versionChoice: VersionChoice;
-}): boolean => {
-	// New-version grandfathers everyone; update/all patch live versions.
-	if (!preview || versionChoice === "new") return false;
-	const includeHistorical = versionChoice === "all";
-
-	const baseEntries = [
-		preview,
-		...(includeHistorical ? (preview.other_versions ?? []) : []),
-	];
-	if (baseEntries.some(entryNeedsMigration)) return true;
-
-	return selectedVariantIds.some((variantId) => {
-		const entries = preview.variants
-			.filter((variant) => variant.plan_id === variantId)
-			.sort((a, b) => b.version - a.version);
-		const candidates = includeHistorical ? entries : entries.slice(0, 1);
-		return candidates.some(entryNeedsMigration);
-	});
-};
-
 export default function PlanChangeDialog({
 	open,
 	setOpen,
@@ -173,6 +208,7 @@ export default function PlanChangeDialog({
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
+	const { basePlanId: persistedBasePlanId } = useVariantLinkVisibility(product);
 	const { features = [] } = useFeaturesQuery();
 	const { catalogLicenses } = useProductContext();
 	const {
@@ -184,13 +220,12 @@ export default function PlanChangeDialog({
 	const { setQueryStates } = useProductQueryState();
 	const { invalidate: invalidateProducts } = useProductsQuery();
 	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
-	const planLicenses = catalogLicenses.map(({ planLicense }) => planLicense);
-	const licenseHasChanges = useHasLicenseChanges();
 	const { invalidate: invalidateMigrations } = useMigrationsQuery();
 	const { org } = useOrg();
 
 	const [step, setStep] = useState<StepKey>("review");
-	const [versionChoice, setVersionChoice] = useState<VersionChoice>("new");
+	const [versionChoice, setVersionChoice] =
+		useState<CatalogVersionChoice>("new");
 	const [includeCustom, setIncludeCustom] = useState(false);
 	const [confirmText, setConfirmText] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
@@ -205,199 +240,65 @@ export default function PlanChangeDialog({
 
 	const confirmed = confirmText === product.id;
 	const currency = org?.default_currency ?? "USD";
-
-	const priceChange = useMemo(
-		() => getPlanPriceChange({ baseProduct, product, currency }),
-		[baseProduct, product, currency],
-	);
-	const licenseUpdates = useMemo(
-		() =>
-			open
-				? getLicenseUpdatePayload({ persistedLinks: planLicenses })
-				: undefined,
-		[open, licenseHasChanges, planLicenses],
-	);
-
-	// Preview the in-place update so versioning, customer impact, item changes
-	// and variant conflicts come from the backend. A malformed draft (e.g. a
-	// half-entered price) must degrade to "no preview", never throw during render.
-	const previewParams = useMemo(() => {
-		try {
-			return buildPreviewUpdatePlanParams({
-				baseProduct,
-				editedProduct: product,
-				features,
-				licenses: licenseUpdates,
-			});
-		} catch {
-			return null;
-		}
-	}, [baseProduct, product, features, licenseUpdates]);
-
-	const { data: preview } = usePlanUpdatePreview({
-		planId: product.id,
-		params: previewParams,
-		enabled: open,
-	});
-	const hasHistoricalVersions =
-		(preview?.other_versions?.length ?? 0) > 0 ||
-		(preview?.variants ?? []).some(
-			(variant) => (variant.other_versions?.length ?? 0) > 0,
-		);
-
-	const settingsChanges = useMemo(
-		() => previousAttributesToSettingChanges(preview?.previous_attributes),
-		[preview],
-	);
-	const hasPlanVersionableChange = !!preview?.customize;
-	const hasLicenseChanges = (preview?.license_changes.length ?? 0) > 0;
-	const isVersionableChange = hasPlanVersionableChange || hasLicenseChanges;
-	const isMetadataOnly = !!preview && !isVersionableChange;
-
-	const customCount = useMemo(
-		() =>
-			Object.values(versionCounts).reduce(
-				(sum, vc) => sum + (vc.custom ?? 0),
-				0,
-			),
-		[versionCounts],
-	);
-
-	// The latest version is numVersions; older versions can't patch variants at a
-	// matching version, so "update this version" never propagates to them.
 	const isLatest = product.version >= numVersions;
+	const priceChange = getPlanPriceChange({ baseProduct, product, currency });
+	const licenses = open
+		? getLicenseUpdatePayload({
+				persistedLinks: catalogLicenses.map(({ planLicense }) => planLicense),
+			})
+		: undefined;
+
 	const { data: variants = [] } = usePlanVariants(product.id, open);
-	const hasVariants = variants.length > 0;
-	const showVersionStrategy =
-		!isMetadataOnly && !!preview && previewHasVersionableTargets(preview);
-	const effectiveVersionChoice = showVersionStrategy ? versionChoice : "update";
-	// Only main-plan changes propagate to variants; license-link edits stay on
-	// the selected parent version.
-	const showVariantScope =
-		hasPlanVersionableChange &&
-		hasVariants &&
-		(isLatest || effectiveVersionChoice === "all");
-
-	const variantConflicts = useMemo<VariantConflictInfo[]>(
-		() =>
-			variants.map((variant) => {
-				const previewVariant =
-					preview?.variants.find(
-						(v) =>
-							v.plan_id === variant.id && v.version === variant.latest_version,
-					) ?? preview?.variants.find((v) => v.plan_id === variant.id);
-				return {
-					variant,
-					conflicts: previewVariant?.conflicts ?? [],
-					itemChanges: previewVariant?.item_changes ?? [],
-				};
-			}),
-		[variants, preview],
-	);
-	const variantTargets = useMemo<PropagationTarget[]>(
-		() =>
-			variantConflicts.map(({ variant, conflicts, itemChanges }) => ({
-				id: variant.id,
-				name: variant.name,
-				detail: variant.id,
-				conflicts,
-				itemChanges,
-			})),
-		[variantConflicts],
-	);
-	const defaultVariantIds = useMemo(
-		() => getDefaultPropagationTargetIds({ targets: variantTargets }),
-		[variantTargets],
-	);
-	const selectedVariantIds = variantSelection ?? defaultVariantIds;
-	const effectiveVariantIds = showVariantScope
-		? selectedVariantIds
-		: EMPTY_SELECTION;
-
-	const licenseParentTargets = useMemo<PropagationTarget[]>(
-		() =>
-			(preview?.license_parents ?? []).map((parent) => ({
-				id: getLicenseParentTargetId(parent),
-				name: parent.name,
-				detail: `${parent.plan_id} · v${parent.version}`,
-				conflicts: parent.conflicts,
-				itemChanges:
-					parent.license_changes[0]?.plan_changes?.item_changes ?? [],
-			})),
-		[preview],
-	);
-	const defaultLicenseParentIds = useMemo(
-		() => getDefaultPropagationTargetIds({ targets: licenseParentTargets }),
-		[licenseParentTargets],
-	);
-	const selectedLicenseParentIds =
-		licenseParentSelection ?? defaultLicenseParentIds;
-	const showLicenseParentScope = licenseParentTargets.length > 0;
-	const versionChoiceOnlyAffectsParents =
-		!preview?.versionable &&
-		(preview?.license_parents ?? []).some((parent) => parent.versionable);
-	const effectiveLicenseParentIds = showLicenseParentScope
-		? selectedLicenseParentIds
-		: EMPTY_SELECTION;
-
-	const migrateNeeded = useMemo(
-		() =>
-			hasMigrationTargets({
-				preview,
-				selectedVariantIds: effectiveVariantIds,
-				versionChoice: effectiveVersionChoice,
-			}),
-		[preview, effectiveVariantIds, effectiveVersionChoice],
+	const namesByPlanId = Object.fromEntries(
+		variants.map((variant) => [variant.id, variant.name]),
 	);
 
-	// Metadata-only edits always apply across all versions; there's no strategy
-	// step, so pin the choice.
-	useEffect(() => {
-		if (isMetadataOnly && versionChoice !== "all") setVersionChoice("all");
-	}, [isMetadataOnly, versionChoice]);
-
-	// "Create new version" isn't offered for a past version, so fall back to
-	// updating in place (also corrects once numVersions resolves).
-	useEffect(() => {
-		if (!(isMetadataOnly || isLatest) && versionChoice === "new") {
-			setVersionChoice("update");
-		}
-	}, [isMetadataOnly, isLatest, versionChoice]);
-
-	const migrateTargets = useMemo(() => {
-		if (!preview) return [];
-		return buildMigrateTargets({
-			preview,
-			selectedVariantIds: effectiveVariantIds,
-			selectedLicenseParentIds: effectiveLicenseParentIds,
-			versionChoice: effectiveVersionChoice,
-			currentVersion: product.version,
-			baseName: product.name ?? product.id,
-		});
-	}, [
+	const {
 		preview,
-		effectiveVariantIds,
-		effectiveLicenseParentIds,
+		isMetadataOnly,
+		showNewOption,
+		showAllOption,
+		showUpdateOption,
 		effectiveVersionChoice,
+		strategy,
+		variantTargets,
+		defaultVariantIds,
+		selectedVariantIds,
+		showVersionStrategy,
+		showVariantScope,
+		licenseParentTargets,
+		selectedLicenseParentKeys,
+		showLicenseParentScope,
+		versionChoiceOnlyAffectsParents,
+		settingsChanges,
+		migrateNeeded,
+		migrateTargets,
+		buildSaveParams,
+	} = usePlanChangeCatalogPreview({
+		open,
+		baseProduct,
 		product,
-	]);
+		features,
+		licenses,
+		versionChoice,
+		variantSelection,
+		licenseParentSelection,
+		includeCustom,
+		isLatest,
+		namesByPlanId,
+		persistedBasePlanId,
+	});
 
-	const steps: StepperStep[] = useMemo(
-		() => [
-			{ key: "review", label: "Changes", icon: SlidersIcon },
-			...(!showVersionStrategy
-				? []
-				: [{ key: "strategy", label: "Versions", icon: StackIcon }]),
-			...(showVariantScope
-				? [{ key: "variant_scope", label: "Variants", icon: GitForkIcon }]
-				: []),
-			...(showLicenseParentScope
-				? [{ key: "license_scope", label: "Parents", icon: TicketIcon }]
-				: []),
-			{ key: "migrate", label: "Review", icon: SealCheckIcon },
-		],
-		[showVariantScope, showLicenseParentScope, showVersionStrategy],
+	const customCount = Object.values(versionCounts).reduce(
+		(sum, vc) => sum + (vc.custom ?? 0),
+		0,
 	);
+
+	const steps = buildPlanChangeSteps({
+		showVersionStrategy,
+		showVariantScope,
+		showLicenseParentScope,
+	});
 	const stepKeys = steps.map((s) => s.key as StepKey);
 	const currentIndex = stepKeys.indexOf(step);
 	const isFinalStep = currentIndex === stepKeys.length - 1;
@@ -424,80 +325,25 @@ export default function PlanChangeDialog({
 		resetState();
 	};
 
-	// Apply the base edit (in-place, new version, or all versions) + propagate to
-	// selected variants. plans.update creates the migration server-side.
 	const applyChanges = async ({ migrate }: { migrate: boolean }) => {
-		// Type-to-confirm only gates the migration step (the only point where
-		// existing customers are moved). Lower-impact applies skip it.
-		if (step === "migrate" && migrateNeeded && !confirmed) {
+		if (step === "migrate" && !confirmed) {
 			toast.error("Confirmation text is incorrect");
 			return;
 		}
 		setIsLoading(true);
 		try {
-			const willMigrate = migrateNeeded && migrate;
-			let updateParams: ReturnType<typeof buildInPlaceUpdatePlanParams>;
-			if (
-				effectiveVersionChoice === "update" ||
-				effectiveVersionChoice === "all"
-			) {
-				if (!baseProduct) return;
-				if (product.id !== baseProduct.id) {
-					throw new Error(
-						"Plan IDs cannot be changed when updating the current version",
-					);
-				}
-				updateParams = buildInPlaceUpdatePlanParams({
-					baseProduct,
-					editedProduct: product,
-					features,
-					licenses: licenseUpdates,
-				});
-				if (effectiveVersionChoice === "all") {
-					delete updateParams.disable_version;
-					updateParams.all_versions = true;
-				}
-			} else {
-				updateParams = buildVersionUpdatePlanParams({
-					baseProduct: baseProduct ?? product,
-					editedProduct: product,
-					features,
-					licenses: licenseUpdates,
-				});
-			}
-			if (effectiveVariantIds.length > 0) {
-				updateParams.update_variant_ids = effectiveVariantIds;
-			}
-			if ((preview?.license_parents.length ?? 0) > 0) {
-				updateParams.update_license_parents = buildSelectedLicenseParentUpdates(
-					{
-						parents: preview?.license_parents ?? [],
-						selectedIds: effectiveLicenseParentIds,
-					},
-				);
-			}
-			if (willMigrate) {
-				updateParams.migration = {
-					draft: true,
-					include_custom: includeCustom,
-				};
-			}
-
-			const result = await ProductService.updatePlan(
-				axiosInstance,
-				updateParams,
-			);
-			if (licenseUpdates) {
+			const willMigrate =
+				migrateNeeded && migrate && strategy !== "new_version";
+			const result = await CatalogV2Service.update(axiosInstance, {
+				plans: buildSaveParams({ migrate }),
+			});
+			if (licenses) {
 				commitLicenseChanges();
 				void invalidateLicenseProducts();
 			}
 			markSaved();
 			toast.success(
-				effectiveVersionChoice === "new"
-					? "New version created"
-					: effectiveVersionChoice === "all"
-						? "All versions updated"
-						: "Plan updated",
+				planChangeSaveSuccessText({ choice: effectiveVersionChoice }),
 			);
 			void invalidateProduct();
 			void invalidateProducts();
@@ -507,9 +353,7 @@ export default function PlanChangeDialog({
 
 			if (willMigrate) {
 				void invalidateMigrations();
-				const migrationId = (
-					result as { migration?: { id?: string } } | undefined
-				)?.migration?.id;
+				const migrationId = result.migrations?.[0]?.id;
 				navigateTo(
 					migrationId
 						? `/migrations/${migrationId}?step=live&run=true`
@@ -542,51 +386,22 @@ export default function PlanChangeDialog({
 		if (!nextOpen) resetState();
 	};
 
-	const primaryText = useMemo(() => {
-		if (!isFinalStep) return "Next";
-		if (migrateNeeded) return "Apply & migrate";
-		if (isMetadataOnly) return "Save changes";
-		if (!showVersionStrategy) return "Save changes";
-		if (effectiveVersionChoice === "new") {
-			return versionChoiceOnlyAffectsParents
-				? "Create parent versions"
-				: "Create version";
-		}
-		if (effectiveVersionChoice === "all") return "Update all versions";
-		return isLatest ? "Update version" : "Update this version";
-	}, [
+	const primaryText = planChangePrimaryText({
 		isFinalStep,
 		migrateNeeded,
 		isMetadataOnly,
+		showVersionStrategy,
 		effectiveVersionChoice,
 		versionChoiceOnlyAffectsParents,
 		isLatest,
-		showVersionStrategy,
-	]);
+	});
 
 	const title = "Save plan changes";
-	const description = useMemo(() => {
-		switch (step) {
-			case "review":
-				return "Review what's changing before you save.";
-			case "strategy":
-				return "Choose how this applies across versions.";
-			case "variant_scope":
-				return "Pick which variants to update alongside this plan.";
-			case "license_scope":
-				return "Pick which parent plans receive this license update.";
-			default:
-				return migrateNeeded
-					? "Confirm and migrate existing customers."
-					: "Confirm the changes you're about to save.";
-		}
-	}, [step, migrateNeeded]);
-	const migrateSubtitle = useMemo(() => {
-		if (isMetadataOnly) return "Applies across every version and variant.";
-		if (migrateNeeded)
-			return "Customers you don't migrate stay on their current version.";
-		return "Existing customers stay on their current version.";
-	}, [isMetadataOnly, migrateNeeded]);
+	const description = planChangeDescription({ step, migrateNeeded });
+	const migrateSubtitle = planChangeMigrateSubtitle({
+		isMetadataOnly,
+		migrateNeeded,
+	});
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
@@ -631,15 +446,12 @@ export default function PlanChangeDialog({
 													currency={currency}
 												/>
 											)}
-											<PlanItemChanges
-												product={product}
-												originalItems={baseProduct?.items}
-												features={features}
-												currency={currency}
+											<ItemChangeList
+												itemChanges={preview?.plan_change?.item_changes ?? []}
 											/>
 											<PlanSettingsChanges changes={settingsChanges} />
 											<LicenseChangeList
-												changes={preview?.license_changes ?? []}
+												changes={preview?.plan_change?.license_changes ?? []}
 												features={features}
 											/>
 										</div>
@@ -660,7 +472,8 @@ export default function PlanChangeDialog({
 												variants stay as they are.
 											</span>
 										</div>
-										<PropagationTargetsStep
+										<VariantTargetsStep
+											features={features}
 											targets={variantTargets}
 											selectedIds={selectedVariantIds}
 											onToggle={(id) =>
@@ -680,22 +493,16 @@ export default function PlanChangeDialog({
 										<div className="flex flex-col gap-0.5">
 											<FieldLabel>Apply to parent plans</FieldLabel>
 											<span className="text-tertiary-foreground text-xs">
-												Selected parents receive this child-plan update.
-												Unselected parents keep their current effective license
-												configuration.
+												Pick which parents receive this update, and how far
+												back. Unselected versions keep their current effective
+												license configuration.
 											</span>
 										</div>
-										<PropagationTargetsStep
+										<LicenseParentTargetsStep
+											features={features}
 											targets={licenseParentTargets}
-											selectedIds={selectedLicenseParentIds}
-											onToggle={(id) =>
-												setLicenseParentSelection((current) => {
-													const selected = current ?? defaultLicenseParentIds;
-													return selected.includes(id)
-														? selected.filter((value) => value !== id)
-														: [...selected, id];
-												})
-											}
+											selectedKeys={selectedLicenseParentKeys}
+											onChange={(next) => setLicenseParentSelection(next)}
 										/>
 									</div>
 								)}
@@ -704,12 +511,12 @@ export default function PlanChangeDialog({
 									<div className="flex flex-col gap-2.5">
 										<FieldLabel>How should this apply?</FieldLabel>
 										<RadioGroup
-											value={versionChoice}
+											value={effectiveVersionChoice}
 											onValueChange={(val) =>
-												setVersionChoice(val as VersionChoice)
+												setVersionChoice(val as CatalogVersionChoice)
 											}
 										>
-											{isLatest && (
+											{showNewOption && (
 												<AreaRadioGroupItem
 													value="new"
 													label={
@@ -724,34 +531,34 @@ export default function PlanChangeDialog({
 													}
 												/>
 											)}
-											<AreaRadioGroupItem
-												value="update"
-												label={
-													versionChoiceOnlyAffectsParents
-														? "Update parent versions in place"
-														: isLatest
-															? "Update existing version"
-															: "Update this version"
-												}
-												description={
-													versionChoiceOnlyAffectsParents
-														? "Updates selected parents in place while current customers retain their license definitions."
-														: isLatest
-															? hasVariants
-																? "Updates the latest version of this plan and the variants you select next. You can migrate current customers after."
-																: "Updates the latest version of this plan. You can migrate current customers after."
-															: `Updates only v${product.version}. Other versions and variants stay as they are.`
-												}
-											/>
-											{!hasLicenseChanges &&
-												licenseParentTargets.length === 0 &&
-												(!isLatest || hasHistoricalVersions) && (
-													<AreaRadioGroupItem
-														value="all"
-														label="Update all versions"
-														description="Applies this change to every version of this plan and its variants."
-													/>
-												)}
+											{showUpdateOption && (
+												<AreaRadioGroupItem
+													value="update"
+													label={
+														versionChoiceOnlyAffectsParents
+															? "Update parent versions in place"
+															: isLatest
+																? "Update existing version"
+																: "Update this version"
+													}
+													description={
+														versionChoiceOnlyAffectsParents
+															? "Updates selected parents in place while current customers retain their license definitions."
+															: isLatest
+																? variantTargets.length > 0
+																	? "Updates the latest version of this plan and the variants you select next. You can migrate current customers after."
+																	: "Updates the latest version of this plan. You can migrate current customers after."
+																: `Updates only v${product.version}. Other versions and variants stay as they are.`
+													}
+												/>
+											)}
+											{showAllOption && (
+												<AreaRadioGroupItem
+													value="all"
+													label="Update all versions"
+													description="Applies this change to every version of this plan and its variants."
+												/>
+											)}
 										</RadioGroup>
 									</div>
 								)}
@@ -774,12 +581,6 @@ export default function PlanChangeDialog({
 															currency={currency}
 														/>
 													)}
-													<PlanItemChanges
-														product={product}
-														originalItems={baseProduct?.items}
-														features={features}
-														currency={currency}
-													/>
 													<PlanSettingsChanges changes={settingsChanges} />
 												</div>
 											) : (
@@ -821,6 +622,7 @@ export default function PlanChangeDialog({
 															</div>
 														)}
 														<MigrateTargetsStep
+															features={features}
 															showCustomers={migrateNeeded}
 															showSettings={false}
 															targets={migrateTargets}
@@ -855,7 +657,7 @@ export default function PlanChangeDialog({
 					</motion.div>
 				</div>
 
-				{step === "migrate" && migrateNeeded && (
+				{step === "migrate" && (
 					<div className="px-4 pt-3 pb-2">
 						<ConfirmInput
 							productId={product.id}
@@ -888,9 +690,7 @@ export default function PlanChangeDialog({
 						metaShortcut="enter"
 						onClick={advance}
 						isLoading={isLoading}
-						disabled={
-							isLoading || (step === "migrate" && migrateNeeded && !confirmed)
-						}
+						disabled={isLoading || (step === "migrate" && !confirmed)}
 						className="flex-1 justify-center"
 					>
 						{primaryText}

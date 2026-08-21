@@ -44,17 +44,15 @@ import { PriceService } from "./prices/PriceService.js";
 import { isDefaultTrialFullProduct } from "./productUtils/classifyProduct.js";
 import { applyStripeResourceReuseForProduct } from "./stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 
-export const getLatestProducts = <T extends { id: string; version: number }>(
+export const getActiveProducts = <T extends { id: string; active: boolean }>(
 	products: T[],
 ): T[] => {
-	const latestById = new Map<string, T>();
+	const activeById = new Map<string, T>();
 	for (const product of products) {
-		const existing = latestById.get(product.id);
-		if (!existing || product.version > existing.version) {
-			latestById.set(product.id, product);
-		}
+		if (!product.active) continue;
+		activeById.set(product.id, product);
 	}
-	return [...latestById.values()];
+	return [...activeById.values()];
 };
 
 const getProductVersionCounts = (products: FullProduct[]) => {
@@ -96,6 +94,10 @@ export const constructProduct = ({
 		is_add_on: productData.is_add_on,
 		is_default: productData.is_default,
 		version: version,
+		version_slug: `v${version}`,
+		// "Activate if this is the plan's max version" — ProductService.insert
+		// gates the actual flip.
+		active: true,
 		group: productData.group || "",
 
 		env,
@@ -482,7 +484,11 @@ export const copyProduct = async ({
 		product: {
 			...ProductSchema.parse(newProduct),
 			// group: newProduct.group || "",
+			// Fresh v1 in the target org/env: the source row's version identity
+			// (slug, active) must not ride along on the spread.
 			version: 1,
+			version_slug: "v1",
+			active: true,
 		},
 	});
 

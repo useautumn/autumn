@@ -7,7 +7,6 @@ process.env.ENCRYPTION_PASSWORD ??= "test";
 process.env.SLACK_CLIENT_ID ??= "test";
 process.env.SLACK_CLIENT_SECRET ??= "test";
 process.env.SLACK_SIGNING_SECRET ??= "test";
-process.env.FIRECRAWL_API_KEY ??= "fc_test";
 
 const { formatAutumnOrgContext, loadAutumnOrgContext } = await import(
 	"../../../../src/internal/autumnMcp/orgContextService.js"
@@ -18,6 +17,7 @@ const createLogger = () => {
 	return {
 		logger: {
 			debug: () => undefined,
+			info: () => undefined,
 			warn: (_message: string, input: unknown) => warnings.push(input),
 		},
 		warnings,
@@ -27,7 +27,10 @@ const createLogger = () => {
 describe("Autumn org context service", () => {
 	test("formats preloaded tool results as raw JSON blocks", () => {
 		const text = formatAutumnOrgContext({
-			agentRules: { entityRules: "workspace scoped" },
+			agentRules: {
+				entityRules: "workspace scoped",
+				notes: "Always use invoice mode.",
+			},
 			features: {
 				features: [
 					{
@@ -51,21 +54,41 @@ describe("Autumn org context service", () => {
 		});
 
 		expect(text).toContain("getAgentRules:");
-		expect(text).toContain("listPlans:");
-		expect(text).toContain("listFeatures:");
+		expect(text).toContain("listPlans (compact index");
+		expect(text).toContain("listFeatures (compact index)");
 		expect(text).toContain("```json");
 		expect(text).toContain("workspace scoped");
-		expect(text).toContain('"rollover": true');
-		expect(text).toContain('"id": "enterprise"');
-		expect(text).toContain('"type": "boolean"');
+		expect(text).not.toContain("Always use invoice mode.");
+		expect(text).toContain('"items":["credits"]');
+		expect(text).toContain('"id":"enterprise"');
+		expect(text).toContain('"type":"boolean"');
 	});
 
-	test("preloads rules, plans, and features in parallel and keeps partial context", async () => {
+	test("separates custom instructions from preloaded context", async () => {
+		const { logger } = createLogger();
+		const context = await loadAutumnOrgContext({
+			env: AppEnv.Sandbox,
+			executeTool: (async ({ toolName }: { toolName: string }) =>
+				toolName === "getAgentRules"
+					? { entity_rules: {}, notes: "Always use invoice mode." }
+					: []) as never,
+			logger: logger as never,
+			token: "test",
+		});
+
+		expect(context?.instructions).toBe("Always use invoice mode.");
+		expect(context?.text).not.toContain("Always use invoice mode.");
+	});
+
+	test("preloads org identity, rules, plans, and features in parallel and keeps partial context", async () => {
 		const calls: string[] = [];
 		const { logger, warnings } = createLogger();
 		const executeTool = async ({ toolName }: { toolName: string }) => {
 			calls.push(toolName);
 			if (toolName === "getAgentRules") throw new Error("rules unavailable");
+			if (toolName === "getCurrentOrganization") {
+				return { id: "org_123", name: "Resend", slug: "resend" };
+			}
 			return [{ id: "launch", name: "Launch" }];
 		};
 
@@ -78,10 +101,13 @@ describe("Autumn org context service", () => {
 
 		expect(calls.sort()).toEqual([
 			"getAgentRules",
+			"getCurrentOrganization",
 			"listFeatures",
 			"listPlans",
 		]);
-		expect(context?.text).toContain('"id": "launch"');
+		expect(context?.text).toContain("getCurrentOrganization:");
+		expect(context?.text).toContain('"slug": "resend"');
+		expect(context?.text).toContain('"id":"launch"');
 		expect(warnings).toHaveLength(1);
 	});
 
@@ -100,7 +126,7 @@ describe("Autumn org context service", () => {
 		});
 
 		expect(context?.text).toContain("getAgentRules:");
-		expect(context?.text).toContain("listPlans:");
+		expect(context?.text).toContain("listPlans (compact index");
 		expect(context?.text).not.toContain("listFeatures:");
 		expect(warnings).toHaveLength(1);
 	});

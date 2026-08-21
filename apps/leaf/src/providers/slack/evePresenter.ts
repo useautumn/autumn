@@ -1,6 +1,7 @@
-import type { StatusTicker } from "../../ui/statusTicker.js";
+import { ms } from "@autumn/shared";
+import type { AgentActionProgress } from "../../internal/agentRuntime/domain/agentTurnContext.js";
 
-const REASONING_STATUS_INTERVAL_MS = 3000;
+const REASONING_STATUS_INTERVAL_MS = ms.seconds(3);
 const REASONING_STATUS_MAX_CHARS = 100;
 
 const reasoningSnippet = (text: string) => {
@@ -10,30 +11,24 @@ const reasoningSnippet = (text: string) => {
 		: flattened;
 };
 
-/**
- * Slack progress for an eve run lives entirely in the assistant status line
- * (Slack's AI-app convention): tool labels and reasoning snippets while the
- * run works, nothing posted until the reply. Cards appear only for
- * interactive moments (approvals, questions, decisions).
- */
+/** Eve progress stays in Slack's assistant status until an interactive card or reply. */
 export const createEveSlackPresenter = ({
-	ticker,
+	setStatus,
 }: {
-	ticker: StatusTicker;
+	setStatus: (message: string) => void;
 }) => {
 	let lastReasoningAt = 0;
 	return {
-		onAction: (label: string) => ticker.activity(label),
-		onActionError: (message: string) => ticker.activity(message),
-		onThinking: () => ticker.thinking(),
+		onAction: (progress: AgentActionProgress | string) => {
+			if (typeof progress === "string") setStatus(progress);
+			else if (progress.phase === "started") setStatus(progress.label);
+		},
 		onReasoning: ({ text }: { id: string; text: string }) => {
 			if (!text.trim()) return;
 			const now = Date.now();
 			if (now - lastReasoningAt < REASONING_STATUS_INTERVAL_MS) return;
 			lastReasoningAt = now;
-			ticker.activity(reasoningSnippet(text));
+			setStatus(reasoningSnippet(text));
 		},
 	};
 };
-
-export type EveSlackPresenter = ReturnType<typeof createEveSlackPresenter>;

@@ -1,15 +1,12 @@
 import {
 	type AutumnBillingPlan,
 	CusProductStatus,
-	EntInterval,
-	getCycleEnd,
-	isBooleanEntitlement,
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { computeRetainedCustomerEntitlementUpdates } from "@/internal/billing/v2/compute/computeAutumnUtils/computeRetainedCustomerEntitlementUpdates";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
-import { entitlementToResetCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
 import { initPatchCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
 
 export const computePatchCustomerProductPlan = ({
@@ -70,7 +67,7 @@ export const computePatchCustomerProductPlan = ({
 		customerLicenseTransitions,
 		lineItems: allLineItems,
 		insertCustomerEntitlements: oneOffPrepaidCarryOverCustomerEntitlements,
-		updateCustomerEntitlements: computeAnchorResetEntitlementUpdates({
+		updateCustomerEntitlements: computeRetainedCustomerEntitlementUpdates({
 			updateSubscriptionContext,
 			finalCustomerProduct,
 		}),
@@ -119,40 +116,4 @@ export const computePatchCustomerProductPlan = ({
 			},
 		],
 	} satisfies AutumnBillingPlan;
-};
-
-const computeAnchorResetEntitlementUpdates = ({
-	updateSubscriptionContext,
-	finalCustomerProduct,
-}: {
-	updateSubscriptionContext: UpdateSubscriptionBillingContext;
-	finalCustomerProduct: UpdateSubscriptionBillingContext["customerProduct"];
-}): AutumnBillingPlan["updateCustomerEntitlements"] => {
-	if (updateSubscriptionContext.requestedBillingCycleAnchor !== "now")
-		return [];
-
-	return finalCustomerProduct.customer_entitlements
-		.filter((customerEntitlement) => {
-			const { entitlement } = customerEntitlement;
-			return (
-				!isBooleanEntitlement({ entitlement }) && entitlement.allowance !== null
-			);
-		})
-		.map((customerEntitlement) => ({
-			customerEntitlement,
-			updates: {
-				reset_cycle_anchor: entitlementToResetCycleAnchor({
-					entitlement: customerEntitlement.entitlement,
-					resetCycleAnchor: updateSubscriptionContext.resetCycleAnchorMs,
-					now: updateSubscriptionContext.currentEpochMs,
-				}),
-				next_reset_at: getCycleEnd({
-					anchor: updateSubscriptionContext.resetCycleAnchorMs,
-					interval:
-						customerEntitlement.entitlement.interval ?? EntInterval.Month,
-					intervalCount: customerEntitlement.entitlement.interval_count,
-					now: updateSubscriptionContext.currentEpochMs,
-				}),
-			},
-		}));
 };

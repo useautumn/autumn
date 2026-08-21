@@ -5,7 +5,13 @@ import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
 import { getRequestListener } from "@hono/node-server";
-import { client, clientCritical, clientReplica, db } from "./db/initDrizzle.js";
+import {
+	client,
+	clientCritical,
+	clientReplica,
+	clientReplicaSlow,
+	db,
+} from "./db/initDrizzle.js";
 import {
 	initPgHealthMonitor,
 	shutdownPgHealthMonitor,
@@ -366,6 +372,7 @@ async function gracefulShutdown() {
 			client.end(),
 			clientCritical.end(),
 			clientReplica?.end(),
+			clientReplicaSlow?.end(),
 			closeStripeSyncEngine(),
 		]);
 		console.log("Shutdown complete. Exiting process.");

@@ -1,6 +1,9 @@
 import { member } from "@autumn/shared";
-import type { GenericEndpointContext } from "@better-auth/core";
-import type { BetterAuthOptions, Session } from "better-auth";
+import type {
+	BetterAuthOptions,
+	GenericEndpointContext,
+	Session,
+} from "better-auth";
 import { APIError } from "better-auth/api";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";

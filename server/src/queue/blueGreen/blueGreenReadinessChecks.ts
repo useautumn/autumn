@@ -1,3 +1,4 @@
+import { withTimeout } from "@autumn/shared";
 import { GetQueueAttributesCommand, SQSClient } from "@aws-sdk/client-sqs";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
@@ -6,7 +7,6 @@ import {
 } from "@/external/aws/awsRegionUtils.js";
 import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
-import { withTimeout } from "@/utils/withTimeout.js";
 import { QUEUE_URL } from "../initSqs.js";
 import { getTrackAndUpdateBalanceWorkerQueueUrls } from "../trackAsyncQueueUrls.js";
 import type { BlueGreenProbeResult } from "./blueGreenSchemas.js";

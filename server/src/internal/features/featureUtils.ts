@@ -160,6 +160,17 @@ export const validateCreditSystemSchemaReferences = ({
 				statusCode: 400,
 			});
 		}
+
+		if (
+			referenced.type === FeatureType.Metered &&
+			referenced.config?.usage_type === FeatureUsageType.Continuous
+		) {
+			throw new RecaseError({
+				message: `Credit system schema cannot reference continuous feature ${referencedId}. Only consumable (single-use) metered features are allowed.`,
+				code: ErrCode.InvalidFeature,
+				statusCode: 400,
+			});
+		}
 	}
 };
 

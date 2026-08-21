@@ -1,7 +1,8 @@
-import { formatTypingStatus, type ReplyTarget } from "./progress.js";
+import { ms } from "@autumn/shared";
+import { differenceInMilliseconds } from "date-fns";
+import { logger } from "../lib/logger.js";
+import { formatTypingStatus } from "./progress.js";
 
-// Generic "still working" verbs cycled during model inference, when there's no
-// concrete tool action to show — a calm rotation like the dashboard's.
 const THINKING_VERBS = [
 	"Thinking",
 	"Reasoning",
@@ -10,24 +11,24 @@ const THINKING_VERBS = [
 	"Putting it together",
 ];
 
-// Anti-flash pacing: a fast tool would otherwise blink its label for ~200ms
-// between two "Thinking…" renders. Every status change holds long enough to
-// read, and renders stay well under Slack's status rate limit.
-const MIN_RENDER_INTERVAL_MS = 2500;
-const ACTIVITY_HOLD_MS = 4000;
-const VERB_CYCLE_MS = 5000;
-const HEARTBEAT_MS = 500;
+// Prevent fast tools from flashing status labels while staying under Slack's
+// status rate limit.
+const MIN_RENDER_INTERVAL_MS = ms.seconds(2.5);
+const ACTIVITY_HOLD_MS = ms.seconds(4);
+const VERB_CYCLE_MS = ms.seconds(5);
+const HEARTBEAT_MS = ms.seconds(0.5);
 
 export type StatusTicker = {
-	/** Agent is mid-inference with nothing concrete to show — cycle generic verbs. */
 	thinking: () => void;
-	/** A tool/action ran — pin its label until the next inference settles. */
 	activity: (message: string) => void;
-	/** Tear down the interval; further updates are ignored. */
 	stop: () => void;
 };
 
-export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
+/** Structural minimum: the ticker only drives the typing indicator, so any
+ * target with startTyping fits — including test fakes. */
+type TypingTarget = Pick<import("./progress.js").ReplyTarget, "startTyping">;
+
+export const createStatusTicker = (target: TypingTarget): StatusTicker => {
 	let stopped = false;
 	let timer: ReturnType<typeof setInterval> | null = null;
 	let mode: "activity" | "idle" | "thinking" = "idle";
@@ -37,6 +38,19 @@ export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
 	let lastRendered = "";
 	let lastVerbAt = 0;
 	let verbIndex = 0;
+	// Serialized so the stop() clear can never be overtaken by an in-flight update.
+	let sendChain: Promise<void> = Promise.resolve();
+
+	const enqueue = (text: string) => {
+		sendChain = sendChain
+			.then(() => target.startTyping(text))
+			.catch((error) => {
+				logger.warn("Could not update typing status", {
+					data: { error },
+					event: "leaf.status_update_failed",
+				});
+			});
+	};
 
 	const send = (text: string) => {
 		if (stopped || text === lastRendered) return;
@@ -44,20 +58,16 @@ export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
 		lastRenderAt = Date.now();
 		// formatTypingStatus enforces Slack's length cap; the empty-string clear
 		// in stop() stays raw because the formatter swaps "" for a default label.
-		target.startTyping(formatTypingStatus(text)).catch((error) => {
-			console.warn("[chat] Could not update status", error);
-		});
+		enqueue(formatTypingStatus(text));
 	};
 
-	// One slow loop instead of eager renders: changes wait out the minimum
-	// interval, so rapid activity→thinking→activity flips never flash.
 	const tick = () => {
 		if (stopped) return;
 		const now = Date.now();
 		if (
 			mode === "thinking" &&
-			now - lastActivityAt >= ACTIVITY_HOLD_MS &&
-			now - lastVerbAt >= VERB_CYCLE_MS
+			differenceInMilliseconds(now, lastActivityAt) >= ACTIVITY_HOLD_MS &&
+			differenceInMilliseconds(now, lastVerbAt) >= VERB_CYCLE_MS
 		) {
 			desired = `${THINKING_VERBS[verbIndex % THINKING_VERBS.length]}…`;
 			verbIndex += 1;
@@ -66,7 +76,7 @@ export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
 		if (
 			desired &&
 			desired !== lastRendered &&
-			now - lastRenderAt >= MIN_RENDER_INTERVAL_MS
+			differenceInMilliseconds(now, lastRenderAt) >= MIN_RENDER_INTERVAL_MS
 		) {
 			send(desired);
 		}
@@ -98,7 +108,10 @@ export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
 			ensureLoop();
 			// Concrete work renders eagerly (respecting the minimum interval via
 			// the loop); the first one always lands immediately.
-			if (Date.now() - lastRenderAt >= MIN_RENDER_INTERVAL_MS) {
+			if (
+				differenceInMilliseconds(Date.now(), lastRenderAt) >=
+				MIN_RENDER_INTERVAL_MS
+			) {
 				send(desired);
 			}
 		},
@@ -111,9 +124,7 @@ export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
 			}
 			// Explicitly clear the status: without this, a snippet rendered just
 			// before stop() outlives the run as a stuck "thinking" line.
-			if (lastRendered) {
-				target.startTyping("").catch(() => {});
-			}
+			if (lastRendered) enqueue("");
 		},
 	};
 };

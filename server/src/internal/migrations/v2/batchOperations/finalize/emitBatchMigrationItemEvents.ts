@@ -30,8 +30,7 @@ export const emitBatchMigrationItemEvents = async ({
 }): Promise<{ eventCount: number }> => {
 	const responses = buildBatchMigrationItemResponses({
 		plan,
-		customers: pageResult.succeeded,
-		insertedItems: pageResult.insertedItems,
+		pageResult,
 		features: ctx.features,
 	});
 

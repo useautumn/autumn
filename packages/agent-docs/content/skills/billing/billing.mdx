@@ -6,7 +6,7 @@ description: Performing Autumn billing actions — attaching plans, updating or 
 # Billing
 
 Use this resource for billing actions: attaching plans, updating subscriptions, creating schedules, canceling or uncanceling subscriptions, and changing customer billing state.
-Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Plan, Subscription, Purchase, Balance, Flag, and Billing Controls.
+<skill name="autumn-concepts" text="Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Plan, Subscription, Purchase, Balance, Flag, and Billing Controls." />
 
 ## Goal
 
@@ -44,6 +44,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - Ask independent missing questions together in one concise message, using one bullet point per question.
 - While gathering params, ask only for values needed to build the billing request; do not explain plan internals unless the user asks.
 - If a customization is inferred, surface it for confirmation before previewing or writing. If its intent is ambiguous, ask before building — don't resolve it silently. When surfacing a customization, describe it as a patch (what was added/removed/changed vs the catalog plan), not a full restatement of every feature.
+- A follow-up that refines an attach customization remains customer-specific; use catalog tools only when the user explicitly asks to change the shared plan.
 - If the plan prices a feature as prepaid, a bare amount for that feature ("put them on 4.5k credits") means `feature_quantities` — NOT an item customization. Never remove or replace a prepaid item to set how many units a customer gets; customize the item only when the user explicitly changes its pricing or included allowance.
 - Before any trial action, re-read the Trials section in `autumn://docs/concepts`.
 - Adding a trial for a customer who already has a paid subscription resets the Stripe billing cycle; warn the user and offer the `on_end: "revert"` flow, then let them choose.
@@ -67,8 +68,8 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - After target resolution, collect the params specific to the selected action.
 - Before previewing, resolve any required `customize` params identified in Customizations.
 - `attach`
-  - If the plan has prepaid items and quantity is missing, ask for the quantity before previewing. Undefined quantity silently grants 0 units — never proceed on this default without asking.
-  - If the prepaid quantity is known, include `feature_quantities`. Undefined `feature_quantities` defaults to 0 for that feature.
+  - Omit `feature_quantities` to use the plan's configured prepaid quantity. Ask only when the user wants a different quantity.
+  - If the prepaid quantity is known, include `feature_quantities`.
   - `feature_quantities.quantity` is inclusive of the plan item's included amount. Example: if 5,000 credits are included and $10/100 credits after, passing 6,000 means only the extra 1,000 credits are charged.
 - `updateSubscription`
   - If intent is ambiguous, clarify before previewing; e.g. cancel now vs cancel at end of cycle.
@@ -185,7 +186,7 @@ Carry the whole ladder over; don't replace it with just the custom tier or a fla
 ## Completion response
 
 - After the billing action succeeds, respond as concisely as possible: say the action completed successfully.
-- Surface any returned customer-facing URL, especially `payment_url` or `invoice.hosted_invoice_url`.
+- Surface any returned customer-facing URL, especially `payment_url` or `invoice.hosted_invoice_url`, as a markdown link so it is clickable: `[Checkout link](url)`, `[Invoice](url)`.
 - If an `invoice` is returned, mention its `status`, `stripe_id`, and hosted URL when present.
 - If `invoice.hosted_invoice_url` is missing but `invoice.stripe_id` exists, surface the Stripe dashboard invoice URL: sandbox `https://dashboard.stripe.com/test/invoices/{stripe_id}`, live `https://dashboard.stripe.com/invoices/{stripe_id}`.
 - If `required_action` is returned, explain the required payment action and include `payment_url` if present.

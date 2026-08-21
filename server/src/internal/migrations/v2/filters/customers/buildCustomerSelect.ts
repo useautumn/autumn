@@ -165,7 +165,9 @@ const buildCustomerListWhere = ({
 		search,
 		statusFilters: parseDashboardStatusFilter(customerFilters?.status),
 		noneFilter: customerFilters?.none,
-		productVersionFilters: parseDashboardVersionFilter(customerFilters?.version),
+		productVersionFilters: parseDashboardVersionFilter(
+			customerFilters?.version,
+		),
 		processors: parseDashboardProcessorFilter(customerFilters?.processor),
 	});
 
@@ -179,10 +181,9 @@ const buildProcessedIn = (includeProcessed: IncludeProcessed): SQL => sql`
 
 const buildExecutionScope = (
 	migrationInternalId: string,
-	filter: Pick<
-		CustomerExecutionStatusFilter,
-		"migrationRunId" | "dryRun"
-	> | undefined,
+	filter:
+		| Pick<CustomerExecutionStatusFilter, "migrationRunId" | "dryRun">
+		| undefined,
 ): SQL => {
 	const dryRunScope =
 		filter?.dryRun !== undefined
@@ -271,6 +272,8 @@ const buildExecutionStatusWhere = (
 	}
 
 	if (includeNotRun && filter.statuses.includes("not_run")) {
+		// Not run = no item-run row. Queued is a subset of that during an
+		// active Run All; excluding queue targets made Not Run empty.
 		clauses.push(sql`
 			NOT EXISTS (
 				SELECT 1
@@ -278,7 +281,6 @@ const buildExecutionStatusWhere = (
 				WHERE ${buildExecutionScope(includeProcessed.migrationInternalId, filter)}
 					AND mir.item_id = c.internal_id
 			)
-			AND NOT (${buildQueuedTargetWhere(filter.queuedRun)})
 		`);
 	}
 

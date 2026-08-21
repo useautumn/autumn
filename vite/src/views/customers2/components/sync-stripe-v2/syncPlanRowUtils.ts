@@ -1,13 +1,14 @@
 import {
 	type CustomizePlanV1,
 	type Feature,
+	type FeatureQuantityParamsV0,
 	formatAmount,
 	formatInterval,
 	isPriceItem,
-	planItemV0ToProductItem,
-	planItemV1ToV0,
 	type ProductItem,
 	type ProductV2,
+	planItemV0ToProductItem,
+	planItemV1ToV0,
 	type SharedContext,
 } from "@autumn/shared";
 
@@ -42,7 +43,7 @@ export const applyCustomizeToProduct = ({
 					];
 				} catch {
 					// Conversion throws if the feature referenced in `customize` has been
-				// deleted since it was saved; drop that item instead of crashing the editor.
+					// deleted since it was saved; drop that item instead of crashing the editor.
 					return [];
 				}
 			})
@@ -64,6 +65,40 @@ export const applyCustomizeToProduct = ({
 	}
 
 	return { ...product, items: [...priceItems, ...featureItems] };
+};
+
+export const featureQuantitiesToRecord = ({
+	featureQuantities,
+}: {
+	featureQuantities?: FeatureQuantityParamsV0[];
+}): Record<string, number | undefined> =>
+	Object.fromEntries(
+		(featureQuantities ?? []).map((entry) => [
+			entry.feature_id,
+			entry.quantity,
+		]),
+	);
+
+/** Keeps the detected `stripe_price_id` so an edited quantity still bills under
+ * the Stripe price the subscription actually references. */
+export const withFeatureQuantity = ({
+	featureQuantities = [],
+	featureId,
+	quantity,
+}: {
+	featureQuantities?: FeatureQuantityParamsV0[];
+	featureId: string;
+	quantity: number | undefined;
+}): FeatureQuantityParamsV0[] => {
+	const existing = featureQuantities.find(
+		(entry) => entry.feature_id === featureId,
+	);
+	if (!existing)
+		return [...featureQuantities, { feature_id: featureId, quantity }];
+
+	return featureQuantities.map((entry) =>
+		entry.feature_id === featureId ? { ...entry, quantity } : entry,
+	);
 };
 
 /**

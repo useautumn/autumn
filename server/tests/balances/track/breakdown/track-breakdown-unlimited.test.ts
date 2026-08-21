@@ -115,7 +115,7 @@ describe(`${chalk.yellowBright("track-breakdown-unlimited: limited + unlimited p
 		});
 	});
 
-	test("track on unlimited feature: allowed but no balance change", async () => {
+	test("track on unlimited feature: allowed, API balance stays masked", async () => {
 		const trackRes: TrackResponseV2 = await autumnV2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,

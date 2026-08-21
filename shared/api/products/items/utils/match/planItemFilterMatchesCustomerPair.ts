@@ -2,8 +2,20 @@ import { BillingMethod } from "@api/products/components/billingMethod";
 import type { PlanItemFilter } from "@api/products/items/filter/planItemFilter";
 import type { FullCustomerEntitlement } from "@models/cusProductModels/cusEntModels/cusEntModels";
 import type { FullCustomerPrice } from "@models/cusProductModels/cusPriceModels/cusPriceModels";
+import { BillingInterval } from "@models/productModels/intervals/billingInterval";
+import type { ProductItemInterval } from "@models/productModels/intervals/productItemInterval";
+import { ResetInterval } from "@models/productModels/intervals/resetInterval";
 import { BillingType } from "@models/productModels/priceModels/priceEnums";
+import { resetIntvToItemIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals";
+import {
+	billingToItemInterval,
+	entToItemInterval,
+} from "@utils/productV2Utils/productItemUtils/itemIntervalUtils";
 import { getBillingType } from "@utils/productUtils/priceUtils";
+
+const filterToItemInterval = (
+	interval: NonNullable<PlanItemFilter["interval"]>,
+): ProductItemInterval | null => resetIntvToItemIntv(interval as ResetInterval);
 
 const customerPriceToBillingMethod = ({
 	customerPrice,
@@ -24,17 +36,17 @@ const customerPriceToBillingMethod = ({
 };
 
 const intervalSideMatchesFilter = ({
-	interval,
+	itemInterval,
 	intervalCount,
 	filter,
 }: {
-	interval?: string | null;
+	itemInterval: ProductItemInterval | null;
 	intervalCount?: number | null;
 	filter: PlanItemFilter;
 }) => {
 	if (
 		filter.interval !== undefined &&
-		String(interval) !== String(filter.interval)
+		itemInterval !== filterToItemInterval(filter.interval)
 	)
 		return false;
 
@@ -73,14 +85,19 @@ export const planItemFilterMatchesCustomerPair = ({
 		const priceMatches =
 			!!customerPrice &&
 			intervalSideMatchesFilter({
-				interval: customerPrice.price.config.interval,
+				itemInterval: billingToItemInterval({
+					billingInterval:
+						customerPrice.price.config.interval ?? BillingInterval.OneOff,
+				}),
 				intervalCount: customerPrice.price.config.interval_count,
 				filter,
 			});
 		const resetMatches =
 			!!customerEntitlement &&
 			intervalSideMatchesFilter({
-				interval: customerEntitlement.entitlement.interval,
+				itemInterval: entToItemInterval({
+					entInterval: customerEntitlement.entitlement.interval,
+				}),
 				intervalCount: customerEntitlement.entitlement.interval_count,
 				filter,
 			});

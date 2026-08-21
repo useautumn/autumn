@@ -16,8 +16,8 @@ export type IterateScopeSummary<T> = {
 	cursor: string | null;
 };
 
-/** Iterates scope items; a scheduler forces sequential execution and ends between items.
- * Errors are collected by default or rethrown when `onError` is `throw`. */
+/** Iterates scope items up to `concurrency` in flight. A scheduler ends the
+ * slice between items after the time budget. Errors continue or rethrow. */
 export const iterateScope = async <T>({
 	iterate,
 	perItem,
@@ -36,7 +36,7 @@ export const iterateScope = async <T>({
 	const results: IterateScopeItemResult<T>[] = [];
 	let succeeded = 0;
 	let failed = 0;
-	const maxParallel = scheduler ? 1 : Math.max(1, Math.floor(concurrency));
+	const maxParallel = Math.max(1, Math.floor(concurrency));
 	const sliceStartedAtMs = scheduler?.now();
 	let hasProcessedScheduledItem = false;
 	const summarize = (
@@ -60,6 +60,8 @@ export const iterateScope = async <T>({
 			results.push({ status: "failed", item, error });
 			failed++;
 			if (onError === "throw") throw error;
+		} finally {
+			hasProcessedScheduledItem = true;
 		}
 	};
 
@@ -75,7 +77,6 @@ export const iterateScope = async <T>({
 				if (shouldStop?.()) return summarize("stopped");
 				if (scheduledSliceIsComplete()) return summarize("slice_complete");
 				await runItem(item);
-				hasProcessedScheduledItem = true;
 				if (shouldStop?.()) return summarize("stopped");
 			}
 		}
@@ -90,19 +91,20 @@ export const iterateScope = async <T>({
 		inflight.add(p);
 	};
 
+	const drain = async (completion: IterateScopeCompletion) => {
+		await Promise.all(inflight);
+		return summarize(completion);
+	};
+
 	for await (const batch of iterate()) {
 		for (const item of batch) {
-			if (shouldStop?.()) {
-				await Promise.all(inflight);
-				return summarize("stopped");
-			}
+			if (shouldStop?.()) return drain("stopped");
+			if (scheduledSliceIsComplete()) return drain("slice_complete");
 			schedule(item);
 			if (inflight.size >= maxParallel) {
 				await Promise.race(inflight);
-				if (shouldStop?.()) {
-					await Promise.all(inflight);
-					return summarize("stopped");
-				}
+				if (shouldStop?.()) return drain("stopped");
+				if (scheduledSliceIsComplete()) return drain("slice_complete");
 			}
 		}
 	}

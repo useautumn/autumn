@@ -17,6 +17,7 @@
 	"scripts": {
 		"gen": "bun run scripts/generate.ts",
 		"build": "bun run gen && tsc",
+		"test": "bun test",
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {

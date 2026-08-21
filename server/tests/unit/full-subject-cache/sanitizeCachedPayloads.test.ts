@@ -1169,6 +1169,118 @@ describe("normalizeFromSchema — empty-array-as-object regression (commit ce100
 	});
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// version_slug / active — version-identity cache backfill
+//
+// Entries cached before the version-identity migration lack both fields.
+// The backfill runs BEFORE the walker (version_slug is nullable, so the
+// walker would turn a missing key into null and destroy the "absent"
+// signal) and fills ONLY absent keys: slug → `v{version}` (same rule as the
+// DB backfill), active → false (a cached subject can't know the plan's
+// active version). Real cached values — including explicit null slug and
+// active=false — must always pass through untouched.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("sanitizeCachedFullSubject — version identity backfill", () => {
+	const subjectWithProduct = (
+		productOverrides: Record<string, unknown>,
+	): CachedFullSubject => {
+		const subject = buildBaseCachedFullSubjectForSanitize() as unknown as Record<
+			string,
+			unknown
+		>;
+		subject.products = [
+			{
+				...buildBaseProductForSanitize("plan_version_identity"),
+				config: {},
+				...productOverrides,
+			},
+		];
+		return subject as unknown as CachedFullSubject;
+	};
+
+	test("fills absent version_slug and active (pre-migration cache entry)", () => {
+		const result = sanitizeCachedFullSubject({
+			// buildBaseProductForSanitize has version: 1 and neither new field.
+			cachedFullSubject: subjectWithProduct({}),
+		});
+		expect(result.products[0].version_slug).toBe("v1");
+		expect(result.products[0].active).toBe(false);
+	});
+
+	test("slug fill derives from the row's own version", () => {
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: subjectWithProduct({ version: 3 }),
+		});
+		expect(result.products[0].version_slug).toBe("v3");
+	});
+
+	test("preserves real cached values (no over-correction)", () => {
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: subjectWithProduct({
+				version_slug: "launch",
+				active: true,
+			}),
+		});
+		expect(result.products[0].version_slug).toBe("launch");
+		expect(result.products[0].active).toBe(true);
+	});
+
+	test("preserves explicit active=false", () => {
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: subjectWithProduct({
+				version_slug: "v2",
+				active: false,
+			}),
+		});
+		expect(result.products[0].active).toBe(false);
+	});
+
+	test("passes through explicit null version_slug unchanged (only undefined is filled)", () => {
+		// Note: through real Upstash, an explicit null is cjson-dropped and
+		// comes back absent — indistinguishable from a pre-migration entry, so
+		// it would be filled. This test documents the sanitizer's own contract
+		// for a null that survives serialization (e.g. plain JSON caches).
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: subjectWithProduct({
+				version_slug: null,
+				active: true,
+			}),
+		});
+		expect(result.products[0].version_slug).toBeNull();
+	});
+
+	test("fills nested customer_licenses[].planLicense.product (not joined from products[])", () => {
+		const subject = buildBaseCachedFullSubjectForSanitize() as unknown as Record<
+			string,
+			unknown
+		>;
+		subject.customer_licenses = [
+			{
+				planLicense: {
+					product: buildBaseProductForSanitize("license_plan"),
+					base_product: {
+						...buildBaseProductForSanitize("license_base"),
+						version: 2,
+					},
+				},
+			},
+		];
+
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: subject as unknown as CachedFullSubject,
+		});
+
+		expect(result.customer_licenses[0].planLicense?.product.version_slug).toBe(
+			"v1",
+		);
+		expect(result.customer_licenses[0].planLicense?.product.active).toBe(false);
+		expect(
+			result.customer_licenses[0].planLicense?.base_product?.version_slug,
+		).toBe("v2");
+	});
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Generic fuzz: mutate every field of a sample subject across multiple
 // "Upstash-style" corruption modes and assert sanitization always returns a

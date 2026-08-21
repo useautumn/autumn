@@ -1,4 +1,6 @@
-const DEFAULT_MIN_EDIT_INTERVAL_MS = 1500;
+import { ms } from "@autumn/shared";
+
+const DEFAULT_MIN_EDIT_INTERVAL_MS = ms.seconds(1.5);
 
 // Slack tolerates ~1 chat.update/sec per channel; coalesce bursts into a
 // leading edit plus one trailing edit per interval.

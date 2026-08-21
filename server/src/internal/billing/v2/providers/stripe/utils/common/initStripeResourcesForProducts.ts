@@ -35,11 +35,17 @@ export const initStripeResourcesForProducts = async ({
 	products,
 	candidateProducts = [],
 	internalEntityId,
+	allowLiveCreate = false,
+	lookupVariantFamilies = true,
 }: {
 	ctx: AutumnContext;
 	products: FullProduct[];
 	candidateProducts?: FullProduct[];
 	internalEntityId?: string;
+	/** Live is reuse-only unless set — catalog edits must not mint Stripe prices. */
+	allowLiveCreate?: boolean;
+	/** False when the caller already passed the family as candidateProducts. */
+	lookupVariantFamilies?: boolean;
 }) => {
 	const { db, org, env, logger } = ctx;
 
@@ -48,16 +54,26 @@ export const initStripeResourcesForProducts = async ({
 			applyStripeResourceReuseForProduct({ ctx, product, candidateProducts }),
 		),
 	);
-	await applyStripeReuseFromVariantFamilies({ ctx, products });
+	if (lookupVariantFamilies) {
+		await applyStripeReuseFromVariantFamilies({ ctx, products });
+	}
 
-	if (env === AppEnv.Live) return;
+	if (env === AppEnv.Live && !allowLiveCreate) return;
 	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;
 	// No Stripe account (e.g. fresh sandbox sub-orgs) — resources are
 	// created lazily once one is connected.
 	if (!isStripeConnected({ org, env })) return;
 
+	const customLicenseProducts = products.flatMap((parentProduct) =>
+		(parentProduct.licenses ?? [])
+			.map((planLicense) =>
+				planLicenseToCustomStripeInitProduct({ planLicense }),
+			)
+			.filter((licenseProduct) => licenseProduct !== null),
+	);
+
 	const batchProductUpdates = [];
-	for (const product of products) {
+	for (const product of [...products, ...customLicenseProducts]) {
 		if (product.processor?.id != null) continue;
 
 		batchProductUpdates.push(
@@ -71,14 +87,6 @@ export const initStripeResourcesForProducts = async ({
 		);
 	}
 	await Promise.all(batchProductUpdates);
-
-	const customLicenseProducts = products.flatMap((parentProduct) =>
-		(parentProduct.licenses ?? [])
-			.map((planLicense) =>
-				planLicenseToCustomStripeInitProduct({ planLicense }),
-			)
-			.filter((licenseProduct) => licenseProduct !== null),
-	);
 
 	const batchPriceUpdates = [];
 

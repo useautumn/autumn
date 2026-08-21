@@ -119,6 +119,11 @@ const upsertFullCustomer = async ({
 			customerData.fingerprint !== existing.fingerprint
 		)
 			update.fingerprint = customerData.fingerprint;
+		if (
+			customerData?.created_at !== undefined &&
+			customerData.created_at !== existing.created_at
+		)
+			update.created_at = customerData.created_at;
 
 		if (Object.keys(update).length > 0) {
 			await CusService.update({
@@ -145,6 +150,7 @@ const upsertFullCustomer = async ({
 				: undefined,
 			send_email_receipts: false,
 		},
+		createdAt: params.customer_data?.created_at,
 		createDefaultProducts: false,
 	});
 

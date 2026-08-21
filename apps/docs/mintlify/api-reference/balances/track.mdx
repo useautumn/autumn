@@ -24,12 +24,14 @@ await autumn.balances.track({
 ```
 
 ```typescript Track with idempotency
-await autumn.balances.track({
-  customerId: "cus_123",
-  featureId: "api_calls",
-  value: 1,
-  idempotencyKey: "request_abc123" // Prevents duplicate tracking on retry
-});
+await autumn.balances.track(
+  {
+    customerId: "cus_123",
+    featureId: "api_calls",
+    value: 1
+  },
+  { headers: { "Idempotency-Key": "request_abc123" } } // Retries with the same key are rejected with a 409
+);
 ```
 
 ```typescript Credit balance (negative value)
@@ -66,10 +68,6 @@ await autumn.balances.track({
 
 <DynamicParamField body="properties" type="object">
   Additional properties to attach to this usage event.
-</DynamicParamField>
-
-<DynamicParamField body="idempotency_key" type="string">
-  Unique key to prevent duplicate event recording. Safely retry requests without creating duplicate usage.
 </DynamicParamField>
 
 

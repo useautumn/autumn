@@ -275,8 +275,144 @@ local function run_deduction_on_context(params)
   local bypass_usage_windows = overage_behaviour == 'overflow'
   local updates = {}
 
+  -- Unlimited entries arrive sorted first and act as an infinite sink; the
+  -- rollover and additional-balance steps are intentionally bypassed for them
+  -- (remaining hits 0 before those steps run).
+  local first_ent = customer_entitlement_deductions[1]
+  local first_unlimited = first_ent and first_ent.unlimited
+  if first_unlimited == cjson.null or first_unlimited == nil then
+    first_unlimited = false
+  end
+  local unlimited_ent_data = nil
+  local unlimited_credit_cost = 1
+  if first_unlimited then
+    unlimited_ent_data =
+      context.customer_entitlements[first_ent.customer_entitlement_id]
+    local first_credit_cost = first_ent.credit_cost
+    if first_credit_cost ~= cjson.null
+        and first_credit_cost ~= nil
+        and first_credit_cost ~= 0
+    then
+      unlimited_credit_cost = first_credit_cost
+    end
+  end
+
+  local set_balance_to_target = function(set_params)
+    local old_balance = set_params.old_balance
+    local to_change = old_balance - params.target_balance
+    if to_change == 0 then
+      return 0
+    end
+
+    queue_customer_entitlement_mutation({
+      context = context,
+      balance_delta = -to_change,
+      adjustment_delta = 0,
+      customer_entitlement_id = set_params.ent_id,
+      entity_id = set_params.entity_id,
+      credit_cost = unlimited_credit_cost,
+      value_delta = to_change / unlimited_credit_cost,
+    })
+
+    update_in_memory_customer_entitlement_mutation({
+      target = set_params.target,
+      entity_id = set_params.entity_id,
+      balance_delta = -to_change,
+      adjustment_delta = 0,
+    })
+
+    return to_change
+  end
+
   local remaining_amount
-  if not is_nil(params.target_balance) then
+  if unlimited_ent_data and not is_nil(params.target_balance) then
+    local ent_id = first_ent.customer_entitlement_id
+    local total_change = 0
+
+    if unlimited_ent_data.has_entity_scope and not is_nil(target_entity_id) then
+      local entities = unlimited_ent_data.entities or {}
+      local entity_obj = entities[target_entity_id]
+      total_change = set_balance_to_target({
+        ent_id = ent_id,
+        entity_id = target_entity_id,
+        target = entities,
+        old_balance = entity_obj and safe_number(entity_obj.balance) or 0,
+      })
+    elseif unlimited_ent_data.has_entity_scope then
+      -- Aggregate semantics (matches the finite set_usage path): with no target
+      -- entity, target_balance is the TOTAL across entities. Convert it to a
+      -- delta and let the sink distribute it sequentially — never sync each
+      -- entity to the target.
+      local entities = unlimited_ent_data.entities or {}
+      local old_total = 0
+      for _, entity_key in ipairs(sorted_keys(entities)) do
+        local entity_obj = entities[entity_key]
+        old_total = old_total + (entity_obj and safe_number(entity_obj.balance) or 0)
+      end
+      local aggregate_amount = round_to_precision(
+        (old_total - params.target_balance) / unlimited_credit_cost,
+        10
+      )
+      total_change = deduct_from_main_balance({
+        context = context,
+        ent_id = ent_id,
+        target_entity_id = target_entity_id,
+        amount = aggregate_amount,
+        credit_cost = unlimited_credit_cost,
+        pass_number = 2,
+        available_overage = nil,
+        min_balance = nil,
+        max_balance = nil,
+        alter_granted_balance = alter_granted_balance,
+        overage_behavior_is_allow = overage_behavior_is_allow,
+        log_prefix = "UNLIMITED",
+      })
+    else
+      total_change = set_balance_to_target({
+        ent_id = ent_id,
+        entity_id = nil,
+        target = unlimited_ent_data,
+        old_balance = safe_number(unlimited_ent_data.balance),
+      })
+    end
+
+    if total_change ~= 0 then
+      updates[ent_id] = { deducted = total_change, additional_deducted = 0 }
+    end
+
+    context.logger.log(
+      "UNLIMITED target_balance: ent %s target=%s deducted=%s",
+      ent_id, params.target_balance, total_change
+    )
+    remaining_amount = 0
+  elseif unlimited_ent_data then
+    local ent_id = first_ent.customer_entitlement_id
+    remaining_amount = params.amount_to_deduct or 0
+
+    local deducted = deduct_from_main_balance({
+      context = context,
+      ent_id = ent_id,
+      target_entity_id = target_entity_id,
+      amount = remaining_amount,
+      credit_cost = unlimited_credit_cost,
+      pass_number = 2,
+      available_overage = nil,
+      min_balance = nil,
+      max_balance = nil,
+      alter_granted_balance = alter_granted_balance,
+      overage_behavior_is_allow = overage_behavior_is_allow,
+      log_prefix = "UNLIMITED",
+    })
+
+    if deducted ~= 0 then
+      updates[ent_id] = { deducted = deducted, additional_deducted = 0 }
+    end
+
+    remaining_amount = round_to_precision(
+      remaining_amount - deducted / unlimited_credit_cost,
+      10
+    )
+  elseif not is_nil(params.target_balance) then
     local current_total = get_total_balance({
       context = context,
       sorted_entitlements = customer_entitlement_deductions,

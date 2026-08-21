@@ -60,6 +60,18 @@ test("$or of plan matchers decodes back to mixed keys", () => {
 	).toEqual(["free", "pro:2"]);
 });
 
+test("$or of plan matchers plus custom still decodes to plan keys", () => {
+	expect(
+		planFilterToPlanKeys({
+			$or: [
+				{ plan_id: "qa-eus-eu", version: 1 },
+				{ plan_id: "qa-eus-team", version: 1 },
+			],
+			custom: false,
+		}),
+	).toEqual(["qa-eus-eu:1", "qa-eus-team:1"]);
+});
+
 test("a non-selection plan filter is not treated as plan keys", () => {
 	expect(planFilterToPlanKeys({ paid: true })).toBeNull();
 });
@@ -102,5 +114,28 @@ test("mixed $or selection round-trips to one plan row", () => {
 	const rules = buildGroups(filter).flatMap((g) => g.rules);
 	expect(rules).toEqual([
 		{ field: "plan_id", operator: "in", values: ["free", "pro:2"] },
+	]);
+});
+
+test("$or plan selection plus custom:false shows both plans", () => {
+	const filter: MigrationFilter = {
+		customer: {
+			plan: {
+				$or: [
+					{ plan_id: "qa-eus-eu", version: 1 },
+					{ plan_id: "qa-eus-team", version: 1 },
+				],
+				custom: false,
+			},
+		},
+	};
+	const rules = buildGroups(filter).flatMap((g) => g.rules);
+	expect(rules).toEqual([
+		{
+			field: "plan_id",
+			operator: "in",
+			values: ["qa-eus-eu:1", "qa-eus-team:1"],
+		},
+		{ field: "custom", operator: "is", values: ["false"] },
 	]);
 });

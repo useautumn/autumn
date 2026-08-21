@@ -38,9 +38,13 @@ export const composeDocument = ({
 	const { body } = parseFrontmatter({ path, text });
 	return body
 		.replace(SKILL_TAG, (_match, raw: string) => {
-			const { name, reason } = parseAttrs(raw);
+			const { name, reason, text } = parseAttrs(raw);
 			if (!name) {
 				throw new Error(`<skill> in ${path} is missing a name`);
+			}
+			// `text` renders verbatim, for prose that already names the prerequisite.
+			if (text) {
+				return text;
 			}
 			return reason
 				? `First read the \`${name}\` knowledge — ${reason}.`

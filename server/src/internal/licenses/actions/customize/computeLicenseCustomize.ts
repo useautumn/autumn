@@ -1,5 +1,6 @@
 import {
 	applyDiff,
+	deduplicateAddPlanItems,
 	type Entitlement,
 	type FullProduct,
 	type LicenseCustomize,
@@ -24,14 +25,26 @@ export const derivePlanLicenseItemRefs = (effectiveProduct: FullProduct) => {
 			.map((price) => price.entitlement_id)
 			.filter((id): id is string => Boolean(id)),
 	);
+	const featureByEntitlementId = new Map(
+		effectiveProduct.entitlements.map((ent) => [
+			ent.id,
+			ent.internal_feature_id,
+		]),
+	);
 	return [
 		...effectiveProduct.prices.map((price) => ({
 			entitlementId: price.entitlement_id ?? undefined,
 			priceId: price.id,
+			internalFeatureId: price.entitlement_id
+				? featureByEntitlementId.get(price.entitlement_id)
+				: undefined,
 		})),
 		...effectiveProduct.entitlements
 			.filter((ent) => !priceReferencedEntitlementIds.has(ent.id))
-			.map((ent) => ({ entitlementId: ent.id })),
+			.map((ent) => ({
+				entitlementId: ent.id,
+				internalFeatureId: ent.internal_feature_id,
+			})),
 	];
 };
 
@@ -50,7 +63,13 @@ export const computeLicenseCustomize = async ({
 		product: licenseProduct,
 		features: ctx.features,
 	});
-	const applied = applyDiff({ base: basePlan, diff: customize });
+	const applied = applyDiff({
+		base: deduplicateAddPlanItems({
+			base: basePlan,
+			addItems: customize.add_items,
+		}),
+		diff: customize,
+	});
 	const custom = await setupCustomFullProduct({
 		ctx,
 		currentFullProduct: licenseProduct,

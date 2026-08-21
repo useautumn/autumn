@@ -1,0 +1,47 @@
+import { handleArchivedPropagationErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleArchivedPropagationErrors";
+import { handleDefaultFlagErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleDefaultFlagErrors";
+import { handleFreeTrialErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleFreeTrialErrors";
+import { handleLicenseParentPropagationErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleLicenseParentPropagationErrors";
+import { handlePlanLicenseErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handlePlanLicenseErrors";
+import { handleVariantErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleVariantErrors";
+import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
+import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
+
+/** Projected-state guards for each upsertProducts row. */
+export const handleUpsertProductErrors = ({
+	updateCatalogPlan,
+	productStatesContext,
+}: {
+	updateCatalogPlan: UpdateCatalogPlan;
+	productStatesContext: ProductStatesContext;
+}): void => {
+	const directPlanIds = new Set(
+		updateCatalogPlan.upsertProducts
+			.filter((upsert) => upsert.row.source === "direct")
+			.map((upsert) => upsert.row.planId),
+	);
+
+	for (const upsert of updateCatalogPlan.upsertProducts) {
+		const { nextFullProduct } = upsert.row;
+		const maxVersion = maxVersionForPlan({
+			planId: upsert.row.planId,
+			productStatesContext,
+		});
+		const latestExistingVersion = maxVersion === 0 ? undefined : maxVersion;
+
+		// 1. Free trial errors (one-off products cannot trial)
+		handleFreeTrialErrors({ nextFullProduct });
+
+		// 2. Default flag errors (historical version; paid default; never on a variant)
+		handleDefaultFlagErrors({ nextFullProduct, latestExistingVersion });
+
+		// 3. Declared variants[] create / nest / id-collision
+		handleVariantErrors({ upsert, productStatesContext, directPlanIds });
+		handleArchivedPropagationErrors({ upsert, productStatesContext });
+		handleLicenseParentPropagationErrors({ upsert });
+
+		// 4. Declared plan_license link guards
+		handlePlanLicenseErrors({ upsert });
+	}
+};

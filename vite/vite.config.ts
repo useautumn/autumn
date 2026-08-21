@@ -4,12 +4,18 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { viteHmrClient } from "../packages/env/src/viteDev.js";
 
 // Defaults so the app works when no .env.local is present
 // (e.g. after `bun dw disable`). Real values from .env / infisical /
 // process.env still take precedence.
 process.env.VITE_BACKEND_URL ||= "http://localhost:8080";
 process.env.VITE_FRONTEND_URL ||= "http://localhost:3000";
+
+const vitePort = process.env.VITE_PORT
+	? Number.parseInt(process.env.VITE_PORT, 10)
+	: 3000;
+const frontendUrl = process.env.VITE_FRONTEND_URL || "";
 
 function printPortlessUrl(): Plugin {
 	return {
@@ -69,7 +75,6 @@ export default defineConfig({
 				__dirname,
 				"../packages/atmn/src/prompts/skills/index.ts",
 			),
-
 		},
 	},
 
@@ -124,21 +129,17 @@ export default defineConfig({
 
 	server: {
 		host: "0.0.0.0", // Required for Docker
-		port: process.env.VITE_PORT
-			? Number.parseInt(process.env.VITE_PORT, 10)
-			: 3000,
+		port: vitePort,
 		strictPort: false, // Allow fallback to next available port
-		// Make the printed "Local:" URL reflect portless when available.
-		...(process.env.VITE_FRONTEND_URL && {
-			origin: process.env.VITE_FRONTEND_URL,
+		...(frontendUrl && {
+			origin: frontendUrl,
 		}),
 		allowedHosts: [
 			"dev.useautumn.com",
 			"client.dev.useautumn.com",
 			"localhost",
 			".localhost",
-			// Cloud sandboxes reach the dashboard through a per-worktree ngrok
-			// tunnel; without this Vite answers 403 "This host is not allowed".
+			".autumnworktree.com",
 			".ngrok.app",
 			".ngrok-free.app",
 		],
@@ -146,11 +147,7 @@ export default defineConfig({
 			usePolling: true, // Required for file watching in Docker on Windows
 			interval: 1000,
 		},
-		hmr: {
-			port: process.env.VITE_PORT
-				? Number.parseInt(process.env.VITE_PORT)
-				: 3000,
-		},
+		hmr: viteHmrClient({ frontendUrl, vitePort }),
 		fs: {
 			// Allow serving files from workspace root (monorepo support)
 			allow: [".."],

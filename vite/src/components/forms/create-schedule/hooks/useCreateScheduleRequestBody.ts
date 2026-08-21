@@ -59,8 +59,7 @@ export function buildCreateScheduleRequestBody({
 							items: plan.items,
 							version: plan.version,
 							isCustom: plan.isCustom,
-							// Scope is per plan and always explicit; later phases inherit it.
-							entityId: index === 0 ? (plan.entityId ?? null) : undefined,
+							entityId: plan.entityId ?? null,
 							product: products.find(
 								(product) => product.id === plan.productId,
 							),

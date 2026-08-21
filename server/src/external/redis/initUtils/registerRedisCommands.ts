@@ -9,6 +9,7 @@ import {
 	ADJUST_SUBJECT_BALANCE_SCRIPT,
 	DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT,
 	GETDEL_SHARED_BALANCE_FIELDS_SCRIPT,
+	PUBLISH_CACHED_FULL_SUBJECT_SCRIPT,
 	ROLL_USAGE_WINDOWS_SCRIPT,
 	SET_CACHED_FULL_SUBJECT_SCRIPT,
 	UPDATE_CACHED_INVOICE_V2_SCRIPT,
@@ -74,6 +75,10 @@ export const registerRedisCommands = ({
 
 	redisInstance.defineCommand("setCachedFullSubject", {
 		lua: SET_CACHED_FULL_SUBJECT_SCRIPT,
+	});
+
+	redisInstance.defineCommand("publishCachedFullSubject", {
+		lua: PUBLISH_CACHED_FULL_SUBJECT_SCRIPT,
 	});
 
 	redisInstance.defineCommand("updateFullSubjectCustomerDataV2", {

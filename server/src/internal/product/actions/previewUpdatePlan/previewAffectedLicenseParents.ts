@@ -1,6 +1,8 @@
 import {
 	type ApiPlanLicenseV1,
 	type ApiPlanV1,
+	applyLicenseCustomizeToBasePlan,
+	diffLicensePlanCustomize,
 	type FullProduct,
 	type PlanUpdatePreviewLicenseChange,
 	PlanUpdatePreviewLicenseChangeSchema,
@@ -12,16 +14,13 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
-import { applyLicenseCustomizeToBasePlan } from "@/internal/licenses/actions/customize/rebaseCatalogPlanLicenses.js";
-import {
-	diffLicensePlanCustomize,
-	toApiPlanLicenseWithCustomize,
-} from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
+import { buildLicenseParentTargetCustomize } from "@/internal/licenses/actions/propagation/buildLicenseParentCustomize.js";
 import { listLicenseParentContexts } from "@/internal/licenses/actions/propagation/listLicenseParentContexts.js";
 import {
 	licenseParentTargetKey,
 	resolveLicenseParentTargets,
 } from "@/internal/licenses/actions/propagation/resolveLicenseParentTargets.js";
+import { buildApiPlanLicense } from "@/internal/products/productUtils/productResponseUtils/buildApiPlanLicense.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import { getApiPlanDiff } from "../common/planTransformUtils.js";
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
@@ -73,16 +72,11 @@ export const previewAffectedLicenseParents = async ({
 	});
 	if (parentContexts.length === 0) return [];
 	const parentProducts = parentContexts.map(({ parent }) => parent);
-	const latestVersionByPlanId = new Map<string, number>();
-	for (const parent of parentProducts) {
-		latestVersionByPlanId.set(
-			parent.id,
-			Math.max(latestVersionByPlanId.get(parent.id) ?? 0, parent.version),
-		);
-	}
 	const usageByInternalId = await customerProductRepo.getVersioningUsage({
 		db: ctx.db,
 		internalProductIds: parentProducts.map((parent) => parent.internal_id),
+		orgId: ctx.org.id,
+		env: ctx.env,
 	});
 	const selectedTargets = new Set(
 		selectedContexts.map(({ parent }) =>
@@ -111,30 +105,19 @@ export const previewAffectedLicenseParents = async ({
 						product: currentLink.product,
 						features: ctx.features,
 					}),
-					toApiPlanLicenseWithCustomize({
+					buildApiPlanLicense({
+						ctx,
 						license: currentLink,
-						resolvePlan: (product) =>
-							getPlanResponse({
-								ctx,
-								product,
-								features: ctx.features,
-							}),
+						features: ctx.features,
 					}),
 				]);
-			const currentCustomize = getApiPlanDiff({
-				from: currentChildPlan,
-				to: currentEffectivePlan,
-			});
-			const targetEffectivePlan = currentLink.customized
-				? applyLicenseCustomizeToBasePlan({
-						basePlan: editedChildPlan,
-						customize: currentCustomize,
-					})
-				: editedChildPlan;
-			const targetCustomize = diffLicensePlanCustomize({
-				basePlan: editedChildPlan,
-				effectivePlan: targetEffectivePlan,
-			});
+			const { targetEffectivePlan, targetCustomize } =
+				buildLicenseParentTargetCustomize({
+					currentChildPlan,
+					editedChildPlan,
+					currentEffectivePlan,
+					customized: currentLink.customized,
+				});
 			const targetLicense: ApiPlanLicenseV1 = {
 				license_plan_id: child.id,
 				version: childWillVersion ? child.version + 1 : child.version,
@@ -159,7 +142,7 @@ export const previewAffectedLicenseParents = async ({
 			const usage = usageByInternalId.get(parent.internal_id);
 			const hasCustomers = usage?.hasVersionableCustomerProducts ?? false;
 			const customerCount = usage?.versionableCustomerCount ?? 0;
-			const isLatest = parent.version === latestVersionByPlanId.get(parent.id);
+			const isLatest = parent.active;
 			const hasChanges =
 				licenseChange.previous_attributes !== null ||
 				licenseChange.plan_changes !== null;

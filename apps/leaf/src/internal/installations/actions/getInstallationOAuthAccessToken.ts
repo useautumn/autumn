@@ -1,4 +1,5 @@
-import type { AppEnv, ChatInstallation } from "@autumn/shared";
+import { type AppEnv, type ChatInstallation, ms } from "@autumn/shared";
+import { addHours, addSeconds, isAfter, subMilliseconds } from "date-fns";
 import { decrypt, encrypt } from "../../../lib/crypto.js";
 import { db } from "../../../lib/db.js";
 import { env as leafEnv } from "../../../lib/env.js";
@@ -14,12 +15,12 @@ import {
 } from "../utils/oauthTokenResponse.js";
 import { replaceInstallationOAuthCredentials } from "./replaceInstallationOAuthCredentials.js";
 
-const TOKEN_EXPIRY_SKEW_MS = 60_000;
+const TOKEN_EXPIRY_SKEW_MS = ms.minutes(1);
 
 const getTokenEndpoint = () =>
 	new URL("/api/auth/oauth2/token", leafEnv.AUTUMN_API_URL).href;
 
-const getDefaultExpiresAt = () => Date.now() + 60 * 60 * 1000;
+const getDefaultExpiresAt = () => addHours(new Date(), 1).getTime();
 
 const resolveCredentialUserId = ({
 	installation,
@@ -69,27 +70,33 @@ export const getInstallationOAuthAccessToken = async ({
 		orgId,
 		userId: credentialUserId,
 	});
-
-	if (
-		isInternalAutumnSlackProvider({ provider: installation.provider }) &&
-		(!credential || credential.org_id !== orgId)
-	) {
-		await db.transaction(async (tx) => {
-			await replaceInstallationOAuthCredentials({
+	const remintCredential = async (agentScopes?: string[]) => {
+		await db.transaction((tx) =>
+			replaceInstallationOAuthCredentials({
 				tx,
 				installation,
 				orgId,
 				userId: credentialUserId,
-			});
-		});
-
-		credential = await getChatOAuthCredentialByInstallationEnv({
+				agentScopes,
+			}),
+		);
+		const replacement = await getChatOAuthCredentialByInstallationEnv({
 			db,
 			chatInstallationId: installation.id,
 			env,
 			orgId,
 			userId: credentialUserId,
 		});
+		if (!replacement)
+			throw new Error(`Could not mint ${env} Autumn OAuth token`);
+		return replacement;
+	};
+
+	if (
+		isInternalAutumnSlackProvider({ provider: installation.provider }) &&
+		(!credential || credential.org_id !== orgId)
+	) {
+		credential = await remintCredential();
 	}
 
 	if (!credential) {
@@ -98,7 +105,12 @@ export const getInstallationOAuthAccessToken = async ({
 		);
 	}
 
-	if (credential.access_token_expires_at - TOKEN_EXPIRY_SKEW_MS > Date.now()) {
+	if (
+		isAfter(
+			subMilliseconds(credential.access_token_expires_at, TOKEN_EXPIRY_SKEW_MS),
+			new Date(),
+		)
+	) {
 		return decrypt(credential.access_token);
 	}
 
@@ -115,17 +127,16 @@ export const getInstallationOAuthAccessToken = async ({
 			"Content-Type": "application/x-www-form-urlencoded",
 		},
 		body,
-	});
+	}).catch(() => null);
 
-	if (!response.ok) {
-		throw new Error(
-			`Could not refresh ${env} Autumn OAuth token for ${installation.provider} install`,
-		);
+	if (!response?.ok) {
+		const replacement = await remintCredential(credential.scopes);
+		return decrypt(replacement.access_token);
 	}
 
 	const parsed = parseOAuthTokenResponse({ body: await response.json() });
 	const accessTokenExpiresAt = parsed.expires_in
-		? Date.now() + parsed.expires_in * 1000
+		? addSeconds(new Date(), parsed.expires_in).getTime()
 		: getDefaultExpiresAt();
 	const nextRefreshToken = parsed.refresh_token ?? refreshToken;
 	const scopes = parseOAuthScopeString({ scope: parsed.scope });

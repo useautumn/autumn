@@ -9,21 +9,19 @@ const EXECUTION_ORDER: CustomerOperation["type"][] = [
 	"update_plan",
 ];
 
-const processors: Record<
-	CustomerOperation["type"],
-	OperationProcessor<CustomerOperation>
-> = {
-	add_plan: processAddPlan as OperationProcessor<CustomerOperation>,
-	update_plan: processUpdatePlan as OperationProcessor<CustomerOperation>,
-};
-
 export function getProcessor({
 	type,
-}: { type: string }): OperationProcessor<CustomerOperation> {
-	const processor = processors[type as CustomerOperation["type"]];
-	if (!processor)
-		throw new Error(`No processor registered for operation type "${type}"`);
-	return processor;
+}: {
+	type: string;
+}): OperationProcessor<CustomerOperation> {
+	switch (type as CustomerOperation["type"]) {
+		case "add_plan":
+			return processAddPlan as OperationProcessor<CustomerOperation>;
+		case "update_plan":
+			return processUpdatePlan as OperationProcessor<CustomerOperation>;
+		default:
+			throw new Error(`No processor registered for operation type "${type}"`);
+	}
 }
 
 export function executionPriority({ type }: { type: string }): number {

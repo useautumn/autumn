@@ -22,6 +22,17 @@ type ExecutableTool = {
 	execute?: (input: unknown, context: unknown) => Promise<unknown>;
 };
 
+const parseToolInput = ({
+	tool,
+	input,
+}: {
+	tool: { inputSchema?: unknown };
+	input: unknown;
+}) => {
+	const schema = tool.inputSchema as { parse: (value: unknown) => unknown };
+	return schema.parse(input);
+};
+
 const auth: AutumnMcpAuth = {
 	apiKey: "sk_test",
 	env: "sandbox",
@@ -66,6 +77,46 @@ describe("Autumn operation tools", () => {
 		expect(tools.previewAttach.description).toContain("Billing resource");
 		expect(tools.attach.description).toContain("Billing resource");
 		expect(tools.getCurrentOrganization.description).toContain("organization");
+	});
+
+	test("external toolset requires an intent on every call", () => {
+		const tools = createRawAutumnOperationTools();
+
+		expect(() =>
+			parseToolInput({ input: { request: {} }, tool: tools.getAgentRules }),
+		).toThrow();
+		expect(() =>
+			parseToolInput({ input: {}, tool: tools.getCurrentOrganization }),
+		).toThrow();
+		expect(
+			parseToolInput({
+				input: { intent: "Check the org's billing rules.", request: {} },
+				tool: tools.getAgentRules,
+			}),
+		).toMatchObject({ request: {} });
+	});
+
+	test("internal toolset accepts a call with or without an intent", () => {
+		const tools = createRawAutumnOperationTools({ requireIntent: false });
+
+		expect(
+			parseToolInput({ input: { request: {} }, tool: tools.getAgentRules }),
+		).toMatchObject({ request: {} });
+		expect(
+			parseToolInput({
+				input: { intent: "Preload org context.", request: {} },
+				tool: tools.getAgentRules,
+			}),
+		).toMatchObject({ intent: "Preload org context." });
+		expect(
+			parseToolInput({ input: {}, tool: tools.getCurrentOrganization }),
+		).toEqual({});
+		expect(
+			parseToolInput({
+				input: { intent: "Preload org context." },
+				tool: tools.getCurrentOrganization,
+			}),
+		).toEqual({ intent: "Preload org context." });
 	});
 
 	test("write tools are annotated as destructive", () => {

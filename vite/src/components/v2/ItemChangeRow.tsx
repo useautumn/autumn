@@ -1,4 +1,4 @@
-import type { Feature, PlanUpdatePreviewItemChange } from "@autumn/shared";
+import type { Feature, PlanItemChangeV0 } from "@autumn/shared";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { planItemV1ToProductItem } from "@/utils/product/productItemUtils/planItemV1ToProductItem";
@@ -7,7 +7,7 @@ export function ItemChangeRow({
 	change,
 	features: featureOverride,
 }: {
-	change: PlanUpdatePreviewItemChange;
+	change: PlanItemChangeV0;
 	features?: Feature[];
 }) {
 	const { features: orgFeatures = [] } = useFeaturesQuery();

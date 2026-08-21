@@ -1,11 +1,12 @@
+import { leafSkillsText, leafSystemPrompt } from "@autumn/agent-docs/agent";
 import { AppEnv } from "@autumn/shared";
-import type { ToolsInput } from "@mastra/core/agent";
+import { Agent, type ToolsInput } from "@mastra/core/agent";
 import type { MessageListItem } from "@mastra/core/agent/message-list";
 import { Mastra } from "@mastra/core/mastra";
 import { InMemoryStore } from "@mastra/core/storage";
 import { MCPClient } from "@mastra/mcp";
 import { createRequestContext } from "../../../../../../packages/mcp/src/server/auth/auth.js";
-import { createAutumnChatAgent } from "../../../../src/agent/runMessage/engines/autumnChatAgent.js";
+import { createRawAutumnOperationTools } from "../../../../../../packages/mcp/src/tools/index.js";
 import { createLeafTracingOptions } from "../../../../src/internal/observability/leafTracingOptions.js";
 import { createMastraBraintrustObservability } from "../../../../src/providers/braintrust/index.js";
 import { defaultGenericMcpAgentConfig } from "../configs/genericMcpAgentConfig.js";
@@ -23,6 +24,7 @@ type LeafAgentDriverConfig = {
 
 type ToolWithApproval = {
 	execute?: unknown;
+	inputSchema?: unknown;
 	mcp?: { annotations?: { destructiveHint?: boolean } };
 	needsApprovalFn?: unknown;
 	requireApproval?: unknown;
@@ -33,6 +35,20 @@ const applyToolApprovalPolicy = (tools: Record<string, ToolWithApproval>) => {
 		const requiresApproval = tool.mcp?.annotations?.destructiveHint === true;
 		tool.requireApproval = requiresApproval;
 		if (!requiresApproval) tool.needsApprovalFn = undefined;
+	}
+};
+
+/** The MCP client rebuilds each tool's JSON Schema into zod and back, which
+ * inlines every nullable branch (~50 KB -> ~875 KB for attach). The eval server
+ * is in-process, so the agent can use the registry's zod schemas directly. */
+const restoreSourceSchemas = (tools: Record<string, ToolWithApproval>) => {
+	const sourceTools = createRawAutumnOperationTools() as Record<
+		string,
+		{ inputSchema?: unknown }
+	>;
+	for (const [name, tool] of Object.entries(tools)) {
+		const source = sourceTools[name]?.inputSchema;
+		if (source) tool.inputSchema = source;
 	}
 };
 
@@ -101,11 +117,28 @@ export const createLeafAgentDriver = ({
 		const env = context.auth.env === AppEnv.Live ? AppEnv.Live : AppEnv.Sandbox;
 		const tools = (toolsets.autumn ?? {}) as Record<string, ToolWithApproval>;
 		applyToolApprovalPolicy(tools);
+		restoreSourceSchemas(tools);
 		const toolCalls: EvalToolCall[] = [];
 		instrumentToolCalls({ toolCalls, tools, trace });
 
-		const agent = createAutumnChatAgent({
-			env,
+		const agent = new Agent({
+			id: "autumn-chat-eval",
+			name: "Autumn Chat Eval",
+			instructions: [
+				{
+					content: [
+						leafSystemPrompt("dashboard"),
+						`Current Autumn environment: ${env}.`,
+						leafSkillsText(),
+					].join("\n\n"),
+					// One breakpoint here caches the whole static prefix (tool schemas +
+					// instructions, ~140k tokens) across every call and case.
+					providerOptions: {
+						anthropic: { cacheControl: { type: "ephemeral" } },
+					},
+					role: "system",
+				},
+			],
 			model,
 			tools: tools as ToolsInput,
 		});
@@ -130,6 +163,9 @@ export const createLeafAgentDriver = ({
 						},
 					]
 				: undefined,
+			// Exponential backoff from 2s; six attempts ride out a per-minute
+			// token-rate limit on a 140k-token prefix instead of failing the case.
+			maxRetries: 6,
 			maxSteps: stepLimit ?? maxSteps,
 			requestContext: createRequestContext(context.auth),
 			tracingOptions: createLeafTracingOptions({

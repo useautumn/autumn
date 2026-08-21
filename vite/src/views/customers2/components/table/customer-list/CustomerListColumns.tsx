@@ -1,4 +1,5 @@
 import {
+	BillingInterval,
 	CusProductStatus,
 	type CustomerSchema,
 	type FullCusProduct,
@@ -20,6 +21,7 @@ import {
 	idSkeleton,
 	statusSkeleton,
 } from "@/components/general/table";
+import { useOrg } from "@/hooks/common/useOrg";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { CustomerProductsStatus } from "../customer-products/CustomerProductsStatus";
 import { CustomerListRowToolbar } from "./CustomerListRowToolbar";
@@ -267,6 +269,90 @@ export const createProductVersionColumn = (): ColumnDef<
 
 		return <span className="text-placeholder">v{version}</span>;
 	},
+});
+
+const MONTHLY_INTERVAL_FACTORS: Partial<Record<BillingInterval, number>> = {
+	[BillingInterval.Week]: 52 / 12,
+	[BillingInterval.Month]: 1,
+	[BillingInterval.Quarter]: 1 / 3,
+	[BillingInterval.SemiAnnual]: 1 / 6,
+	[BillingInterval.Year]: 1 / 12,
+};
+
+/** Mirrors resolveByBasePriceSort: active/past_due products, fixed recurring
+ * prices only, normalized to a monthly figure. */
+const computeMonthlyBasePrice = (fullCustomer: FullCustomer): number => {
+	let total = 0;
+	for (const cusProduct of fullCustomer.customer_products ?? []) {
+		const isActive =
+			cusProduct.status === CusProductStatus.Active ||
+			cusProduct.status === CusProductStatus.PastDue;
+		if (!isActive) continue;
+
+		for (const cusPrice of cusProduct.customer_prices ?? []) {
+			const config = cusPrice.price?.config as
+				| { amount?: number; interval?: string; interval_count?: number }
+				| undefined;
+			const factor =
+				MONTHLY_INTERVAL_FACTORS[config?.interval as BillingInterval];
+			if (typeof config?.amount !== "number" || factor === undefined) continue;
+			total += (config.amount * factor) / (config.interval_count || 1);
+		}
+	}
+	return total;
+};
+
+function BasePriceCell({
+	fullCustomer,
+	isFullDataLoading,
+}: {
+	fullCustomer?: FullCustomer;
+	isFullDataLoading?: boolean;
+}) {
+	const { org } = useOrg();
+
+	if (!fullCustomer) {
+		if (!isFullDataLoading) return null;
+		return <div className="h-2 w-12 bg-secondary animate-pulse rounded my-1" />;
+	}
+
+	// Server total covers ALL products; client compute only sees the
+	// cusProductLimit-capped preview, so it can undercount.
+	const total =
+		fullCustomer.base_price_total ?? computeMonthlyBasePrice(fullCustomer);
+	const formatted = new Intl.NumberFormat("en-US", {
+		style: "currency",
+		currency: org?.default_currency || "USD",
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 2,
+	}).format(total);
+
+	return (
+		<span className="text-tertiary-foreground tabular-nums">
+			{formatted}
+			<span className="text-placeholder">/mo</span>
+		</span>
+	);
+}
+
+/**
+ * Base price column (hidden by default): the same monthly-normalized total
+ * the base_price sort orders by, for eyeballing sort correctness.
+ */
+export const createBasePriceColumn = (): ColumnDef<
+	CustomerWithProducts,
+	unknown
+> => ({
+	id: "base_price",
+	header: "Base price",
+	size: 90,
+	enableSorting: false,
+	cell: ({ row }: { row: Row<CustomerWithProducts> }) => (
+		<BasePriceCell
+			fullCustomer={row.original.fullCustomer}
+			isFullDataLoading={row.original.isFullDataLoading}
+		/>
+	),
 });
 
 /**

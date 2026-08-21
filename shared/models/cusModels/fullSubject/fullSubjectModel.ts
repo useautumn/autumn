@@ -23,6 +23,7 @@ export const FullSubjectSchema = z.object({
 	internalCustomerId: z.string(),
 	entityId: z.string().optional(),
 	internalEntityId: z.string().optional(),
+	subjectViewEpoch: z.number().optional(),
 
 	customer: CustomerSchema,
 	entity: EntitySchema.optional(),

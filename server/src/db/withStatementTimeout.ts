@@ -12,10 +12,14 @@ export const withStatementTimeout = async <T>(
 	db: DrizzleCli,
 	fn: (tx: DrizzleCli) => Promise<T>,
 	timeoutMs: number = CRON_STATEMENT_TIMEOUT_MS,
+	options?: { forceCustomPlan?: boolean },
 ): Promise<T> =>
 	db.transaction(async (tx) => {
 		await tx.execute(
 			sql.raw(`SET LOCAL statement_timeout = ${Math.floor(timeoutMs)}`),
 		);
+		if (options?.forceCustomPlan) {
+			await tx.execute(sql.raw("SET LOCAL plan_cache_mode = force_custom_plan"));
+		}
 		return fn(tx as unknown as DrizzleCli);
 	});

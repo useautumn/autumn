@@ -1171,6 +1171,151 @@ function SwarmLogHint({ logFile }: { logFile: string }) {
 // Reusable entrypoint (the §8 seam)
 // ============================================================================
 
+const formatDuration = (ms: number) =>
+	ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
+
+/**
+ * Same sliding-window + retry orchestration as the Ink TUI, but plain stdout
+ * lines — for agent/CI logs that choke on ANSI redraws.
+ */
+async function runHeadlessWithExecutor(
+	testFiles: string[],
+	executor: TestExecutor,
+	opts: { maxParallel: number; verbose?: boolean },
+): Promise<number> {
+	const { maxParallel, verbose = false } = opts;
+	const startTime = performance.now();
+	const results = new Map<string, TestFileResult>();
+
+	const runWithReschedule = async ({
+		limit,
+		file,
+		attempt,
+		failedTestNames,
+	}: {
+		limit: ReturnType<typeof pLimit>;
+		file: string;
+		attempt: number;
+		failedTestNames?: string[];
+	}): Promise<TestFileResult> => {
+		let lastWorkerDeath: WorkerDeathError | undefined;
+		for (
+			let rescheduleCount = 0;
+			rescheduleCount <= MAX_WORKER_DEATH_RESCHEDULES;
+			rescheduleCount++
+		) {
+			try {
+				return await limit(() =>
+					runTestFile({
+						file,
+						onUpdate: (result) => {
+							results.set(result.file, result);
+						},
+						attempt,
+						failedTestNames,
+						verbose,
+						executor,
+					}),
+				);
+			} catch (error) {
+				if (!(error instanceof WorkerDeathError)) throw error;
+				lastWorkerDeath = error;
+			}
+		}
+
+		const cappedResult: TestFileResult = {
+			file,
+			status: "failed",
+			tests: [],
+			duration: 0,
+			attempt,
+			passedOnRetry: false,
+			crashError: `Worker died repeatedly (>${MAX_WORKER_DEATH_RESCHEDULES} reschedules): ${
+				lastWorkerDeath?.message ?? "worker death"
+			}`,
+		};
+		results.set(file, cappedResult);
+		return cappedResult;
+	};
+
+	console.log(
+		`Running ${testFiles.length} file(s) headless (max=${maxParallel})\n`,
+	);
+
+	const limit = pLimit(maxParallel);
+	await Promise.all(
+		testFiles.map((file) => runWithReschedule({ limit, file, attempt: 1 })),
+	);
+
+	const failedFirstPass = [...results.values()].filter(
+		(result) => result.status === "failed" && result.attempt === 1,
+	);
+
+	if (failedFirstPass.length > 0) {
+		console.log(
+			`\nRetrying ${failedFirstPass.length} failed file(s)…\n`,
+		);
+		const retryLimit = pLimit(maxParallel);
+		await Promise.all(
+			failedFirstPass.map(async (result) => {
+				const firstAttemptFailures = result.tests.filter(
+					(test) => test.status === "failed",
+				);
+				const retryResult = await runWithReschedule({
+					limit: retryLimit,
+					file: result.file,
+					attempt: 2,
+					failedTestNames: [],
+				});
+				if (retryResult.status === "passed") {
+					retryResult.passedOnRetry = true;
+				}
+				retryResult.firstAttemptFailures = firstAttemptFailures;
+				results.set(result.file, retryResult);
+			}),
+		);
+	}
+
+	const finalResults = [...results.values()];
+	let passedTests = 0;
+	let failedTests = 0;
+	const failedFiles: TestFileResult[] = [];
+
+	for (const result of finalResults) {
+		const filePassed = result.tests.filter((test) => test.status === "passed");
+		const fileFailed = result.tests.filter((test) => test.status === "failed");
+		passedTests += filePassed.length;
+		failedTests += fileFailed.length;
+
+		if (result.status === "passed") {
+			const retryNote = result.passedOnRetry ? " (passed on retry)" : "";
+			console.log(
+				`✓ ${basename(result.file)} (✓${filePassed.length}${retryNote}) [${formatDuration(result.duration)}]`,
+			);
+			continue;
+		}
+
+		failedFiles.push(result);
+		console.log(
+			`✗ ${basename(result.file)} (✓${filePassed.length} ✗${fileFailed.length || (result.crashError ? 1 : 0)}) [${formatDuration(result.duration)}]`,
+		);
+		if (result.crashError) {
+			console.log(`  crash: ${result.crashError.split("\n")[0]}`);
+		}
+		for (const test of fileFailed) {
+			console.log(`  ✗ ${test.name}`);
+			if (test.error?.location) console.log(`    ${test.error.location}`);
+			if (test.error?.message) console.log(`    ${test.error.message}`);
+		}
+	}
+
+	const totalDuration = performance.now() - startTime;
+	console.log(
+		`\nSUMMARY: ${passedTests} passed | ${failedTests} failed | ${formatDuration(totalDuration)}`,
+	);
+	return failedFiles.length > 0 ? 1 : 0;
+}
+
 /**
  * Run the existing sliding-window + retry + Ink TUI using an injected
  * {@link TestExecutor}. `bun t` calls this with a {@link LocalExecutor} (so it
@@ -1184,8 +1329,25 @@ function SwarmLogHint({ logFile }: { logFile: string }) {
 export function runWithExecutor(
 	testFiles: string[],
 	executor: TestExecutor,
-	opts: { maxParallel: number; verbose?: boolean; swarm?: SwarmRunMeta },
+	opts: {
+		maxParallel: number;
+		verbose?: boolean;
+		headless?: boolean;
+		swarm?: SwarmRunMeta;
+	},
 ): void {
+	const headless = opts.headless ?? false;
+
+	if (headless) {
+		void runHeadlessWithExecutor(testFiles, executor, {
+			maxParallel: opts.maxParallel,
+			verbose: opts.verbose,
+		}).then((exitCode) => {
+			process.exit(exitCode);
+		});
+		return;
+	}
+
 	const onComplete = (exitCode: number): void => {
 		// Tear down Ink so the process can exit cleanly. The flush `setInterval`
 		// is cleared by the app's effect cleanup on unmount; explicitly unmounting
@@ -1222,6 +1384,12 @@ async function main() {
 		? Number.parseInt(process.env.TEST_FILE_CONCURRENCY, 10)
 		: testRunConfig.legacyConcurrency;
 	let verbose = process.env.TEST_VERBOSE === "1";
+	// Agents/CI: prefer plain logs. Interactive terminals keep the Ink TUI.
+	let headless =
+		process.env.TEST_HEADLESS === "1" ||
+		process.env.CI === "true" ||
+		process.env.CI === "1" ||
+		!process.stdout.isTTY;
 
 	for (const arg of args) {
 		if (arg.startsWith("--max=")) {
@@ -1231,10 +1399,14 @@ async function main() {
 				: testRunConfig.legacyConcurrency;
 		} else if (arg === "--verbose" || arg === "-v") {
 			verbose = true;
+		} else if (arg === "--headless") {
+			headless = true;
+		} else if (arg === "--tui") {
+			headless = false;
 		} else if (arg.startsWith("-")) {
 			console.error(`Unknown option: ${arg}`);
 			console.log(
-				"Usage: bun scripts/testScripts/runTestsV2.tsx <path1> [path2] [...] [--max=N] [--verbose]",
+				"Usage: bun scripts/testScripts/runTestsV2.tsx <path1> [path2] [...] [--max=N] [--verbose] [--headless|--tui]",
 			);
 			process.exit(1);
 		} else {
@@ -1292,7 +1464,11 @@ async function main() {
 	// SIGINT handler here (NOT at module import) so it never fires when the runner
 	// is driven by the `bun tw` orchestrator via `runWithExecutor`.
 	process.on("SIGINT", localSigintHandler);
-	runWithExecutor(testFiles, new LocalExecutor(), { maxParallel, verbose });
+	runWithExecutor(testFiles, new LocalExecutor(), {
+		maxParallel,
+		verbose,
+		headless,
+	});
 }
 
 // Only auto-run as the direct `bun t` entrypoint. The `bun tw` orchestrator

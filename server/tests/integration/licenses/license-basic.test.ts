@@ -194,7 +194,7 @@ test.concurrent(
 		const page = await CusService.getProductsPage({
 			ctx,
 			idOrInternalId: customerId,
-			params: { start_cursor: "", limit: 10, show_expired: false },
+			params: { start_cursor: "", limit: 10, status: "active" },
 		});
 		expect(page.list.some((item) => item.product.id === license.id)).toBe(
 			false,

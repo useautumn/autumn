@@ -46,6 +46,24 @@ const workspacePackageStubs = workspacePackageDirs.map((dir) => {
 	};
 });
 
+const listFilesRecursive = ({ dir }: { dir: string }): string[] => {
+	if (!existsSync(dir)) return [];
+	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+		const path = `${dir}/${entry.name}`;
+		if (entry.isDirectory()) return listFilesRecursive({ dir: path });
+		return entry.isFile() ? [path] : [];
+	});
+};
+
+// Trigger copies patchedDependencies in package.json but only COPY package.json
+// before bun install, so the patch files must already exist in the base image.
+const bunPatchInstallCommands = listFilesRecursive({ dir: "patches" }).map(
+	(path) => {
+		const encoded = readFileSync(path).toString("base64");
+		return `mkdir -p "$(dirname -- '${path}')" && printf '%s' '${encoded}' | base64 -d > '${path}'`;
+	},
+);
+
 export default defineConfig({
 	project: "proj_cwiutfmpdzfcshxevkok",
 	runtime: "bun",
@@ -70,6 +88,7 @@ export default defineConfig({
 		// and breaks platform-specific binaries (pg, ioredis, etc.).
 		external: [
 			"@aws-sdk/client-s3",
+			"@duckdb/node-api",
 			"@google-cloud/bigquery",
 			"ioredis",
 			"pino",
@@ -78,6 +97,9 @@ export default defineConfig({
 			"postgres",
 			"pg",
 			"zod",
+			"@duckdb/node-api",
+			"@duckdb/node-bindings",
+			"@duckdbfan/drizzle-duckdb",
 		],
 		extensions: [
 			{
@@ -96,6 +118,17 @@ export default defineConfig({
 							],
 						},
 					});
+					if (bunPatchInstallCommands.length > 0) {
+						context.addLayer({
+							id: "bun-patched-dependencies",
+							image: {
+								instructions: [
+									"WORKDIR /app",
+									`RUN ${bunPatchInstallCommands.join(" && ")} && chown -R bun:bun /app/patches`,
+								],
+							},
+						});
+					}
 				},
 			},
 			// Server runtime imports `*.lua` as raw text via Bun's loader. esbuild
@@ -122,6 +155,7 @@ export default defineConfig({
 			additionalPackages({
 				packages: [
 					"@axiomhq/pino",
+					"@duckdb/node-api@1.5.5-r.4",
 					"postgres",
 					"pg",
 					"drizzle-orm",

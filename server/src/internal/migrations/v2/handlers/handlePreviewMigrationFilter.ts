@@ -12,10 +12,8 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import {
-	countCustomers,
-	getCustomerPage,
-} from "@/internal/migrations/v2/filters/customers/filterCustomers.js";
+import { countCustomersCached } from "@/internal/migrations/v2/actions/countCustomersCached.js";
+import { getCustomerPage } from "@/internal/migrations/v2/filters/customers/filterCustomers.js";
 import type { IncludeProcessed } from "../filters/customers/buildCustomerSelect.js";
 import {
 	migrationItemRunRepo,
@@ -42,7 +40,14 @@ const PreviewFilterBody = z.object({
 	migrationId: z.string().optional(),
 	executionStatuses: z
 		.array(
-			z.enum(["queued", "running", "succeeded", "skipped", "failed", "not_run"]),
+			z.enum([
+				"queued",
+				"running",
+				"succeeded",
+				"skipped",
+				"failed",
+				"not_run",
+			]),
 		)
 		.optional()
 		.default([]),
@@ -122,12 +127,18 @@ export const handlePreviewMigrationFilter = createRoute({
 		}
 
 		const countPromise = includeCount
-			? countCustomers({
+			? countCustomersCached({
 					ctx,
 					filter,
 					search: searchTerm,
 					customerFilters,
 					includeProcessed,
+					cacheScope: {
+						migrationId,
+						executionStatuses,
+						migrationRunId,
+						migrationRunDryRun,
+					},
 				})
 			: Promise.resolve(null);
 		const pagePromise = countOnly

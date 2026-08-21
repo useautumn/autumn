@@ -23,6 +23,7 @@ import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateB
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
 import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
 import { syncItemV5 } from "@/internal/balances/utils/sync/syncItemV5.js";
+import { persistPublishedBalanceTransitions } from "@/internal/billing/v2/publish/persistPublishedBalanceTransitions.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
 import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/storeDeferredInvoiceLineItems/storeDeferredInvoiceLineItems.js";
@@ -73,6 +74,8 @@ export const shouldRetrySqsJobError = ({
 	error: unknown;
 }) => {
 	switch (jobName) {
+		case JobName.PersistPublishedBalanceTransitions:
+			return true;
 		case JobName.CustomerCreationRecovery:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
 		case JobName.SyncBalanceBatchV4:
@@ -154,6 +157,15 @@ export const processMessage = async ({
 				db,
 				logger: workerLogger,
 				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.PersistPublishedBalanceTransitions) {
+			await persistPublishedBalanceTransitions({
+				db,
+				logger: workerLogger,
+				balanceTransitions: job.data.balanceTransitions,
 			});
 			return;
 		}

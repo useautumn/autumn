@@ -14,6 +14,7 @@ import LUA_UTILS from "./luaUtils.lua";
 
 import adjustSubjectBalanceMainScript from "./fullSubject/adjustSubjectBalance.lua";
 import getDelSharedBalanceFieldsScript from "./fullSubject/getDelSharedBalanceFields.lua";
+import publishCachedFullSubjectScript from "./fullSubject/publishCachedFullSubject.lua";
 import setCachedFullSubjectScript from "./fullSubject/setCachedFullSubject.lua";
 import updateCachedInvoiceV2Script from "./fullSubject/updateCachedInvoice.lua";
 import updateCustomerDataV2Script from "./fullSubject/updateCustomerDataV2.lua";
@@ -47,6 +48,9 @@ import UPDATE_SUBJECT_BALANCES_MAIN from "./fullSubject/updateSubjectBalances/up
 
 /** Atomically set a FullSubject cache: subject view + all balance hashes. */
 export const SET_CACHED_FULL_SUBJECT_SCRIPT = `${setCachedFullSubjectScript}`;
+
+/** Atomically replace a cached FullSubject while preserving unrelated balances. */
+export const PUBLISH_CACHED_FULL_SUBJECT_SCRIPT = `${publishCachedFullSubjectScript}`;
 
 /** Atomically update top-level customer fields in the cached FullSubject. */
 export const UPDATE_CUSTOMER_DATA_V2_SCRIPT = `${updateCustomerDataV2Script}`;

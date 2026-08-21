@@ -1,8 +1,7 @@
 import crypto from "node:crypto";
 import { type AppEnv, type ChatProvider, chatApprovals } from "@autumn/shared";
 import { addMinutes } from "date-fns";
-import { normalizeToolName } from "../../../agent/tools/toolPolicy.js";
-import type { AgentHarnessName } from "../../../lib/chatAgentConfig.js";
+import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import type { ChatDb } from "../../../lib/db.js";
 
 const APPROVAL_TTL_MINUTES = 15;
@@ -10,7 +9,7 @@ const APPROVAL_TTL_MINUTES = 15;
 export type InsertChatApprovalData = {
 	channelId: string;
 	env: AppEnv;
-	harness: AgentHarnessName;
+	harness: "eve";
 	orgId: string;
 	preview?: unknown;
 	provider: ChatProvider;

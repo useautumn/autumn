@@ -95,6 +95,15 @@ export const filterCustomers = ({
 		batchSize:
 			limit === undefined ? batchSize : Math.min(batchSize ?? limit, limit),
 		afterInternalId,
+		onRetry: ({ error, attempt, maxAttempts }) => {
+			ctx.logger.warn("filter: retrying page after transient db error", {
+				data: {
+					attempt,
+					maxAttempts,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			});
+		},
 	});
 	return limit === undefined ? source : takeRows(source, limit);
 };

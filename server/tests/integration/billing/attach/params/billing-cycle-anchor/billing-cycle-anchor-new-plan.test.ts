@@ -13,7 +13,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addDays, addMonths } from "date-fns";
 
-test.skip(`${chalk.yellowBright("billing-cycle-anchor-new-plan 1: free -> pro, scheduled anchor before next cycle end")}`, async () => {
+test(`${chalk.yellowBright("billing-cycle-anchor-new-plan 1: free -> pro, scheduled anchor before next cycle end")}`, async () => {
 	const customerId = "anchor-new-plan-free-pro-scheduled";
 
 	const free = products.base({
@@ -26,7 +26,7 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-new-plan 1: free -> pro, s
 		items: [items.monthlyMessages({ includedUsage: 100 })],
 	});
 
-	const { autumnV2_2, ctx, advancedTo, testClockId } = await initScenario({
+	const { autumnV2_3, ctx, advancedTo, testClockId } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -37,19 +37,17 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-new-plan 1: free -> pro, s
 
 	const scheduledAnchorMs = addDays(advancedTo, 10).getTime();
 
-	const preview = await autumnV2_2.billing.previewAttach<AttachParamsV1Input>({
+	const preview = await autumnV2_3.billing.previewAttach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: pro.id,
-		// @ts-ignore scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 	});
 
 	expect(preview.total).toBe(20);
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+	await autumnV2_3.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: pro.id,
-		// @ts-ignore scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 		redirect_mode: "if_required",
 	});
@@ -57,7 +55,7 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-new-plan 1: free -> pro, s
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 
 	const customerAfterAttach =
-		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 
 	await expectCustomerProducts({
 		customer: customerAfterAttach,
@@ -88,7 +86,7 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-new-plan 1: free -> pro, s
 	});
 
 	const customerAfterReset =
-		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 
 	await expectCustomerProducts({
 		customer: customerAfterReset,
@@ -111,7 +109,7 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-new-plan 1: free -> pro, s
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-test.skip(`${chalk.yellowBright("billing-cycle-anchor-new-plan 2: no plan -> pro, scheduled anchor")}`, async () => {
+test(`${chalk.yellowBright("billing-cycle-anchor-new-plan 2: no plan -> pro, scheduled anchor")}`, async () => {
 	const customerId = "anchor-new-plan-none-pro-scheduled";
 
 	const pro = products.pro({
@@ -133,7 +131,6 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-new-plan 2: no plan -> pro
 	const preview = await autumnV2_2.billing.previewAttach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: pro.id,
-		// @ts-ignore scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 	});
 
@@ -142,7 +139,6 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-new-plan 2: no plan -> pro
 	await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: pro.id,
-		// @ts-ignore scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 		redirect_mode: "if_required",
 	});
@@ -203,66 +199,71 @@ test.skip(`${chalk.yellowBright("billing-cycle-anchor-new-plan 2: no plan -> pro
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-new-plan 3: free -> pro, anchor now")}`, async () => {
-	const customerId = "anchor-new-plan-free-pro-now";
+test.concurrent(
+	`${chalk.yellowBright("billing-cycle-anchor-new-plan 3: free -> pro, anchor now")}`,
+	async () => {
+		const customerId = "anchor-new-plan-free-pro-now";
 
-	const free = products.base({
-		id: "free",
-		items: [items.monthlyMessages({ includedUsage: 50 })],
-	});
+		const free = products.base({
+			id: "free",
+			items: [items.monthlyMessages({ includedUsage: 50 })],
+		});
 
-	const pro = products.pro({
-		id: "pro",
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-	});
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
 
-	const { autumnV2_2, ctx, advancedTo } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [free, pro] }),
-		],
-		actions: [s.billing.attach({ productId: free.id })],
-	});
+		const { autumnV2_2, ctx, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [free, pro] }),
+			],
+			actions: [s.billing.attach({ productId: free.id })],
+		});
 
-	const preview = await autumnV2_2.billing.previewAttach<AttachParamsV1Input>({
-		customer_id: customerId,
-		plan_id: pro.id,
-		billing_cycle_anchor: "now",
-	});
+		const preview = await autumnV2_2.billing.previewAttach<AttachParamsV1Input>(
+			{
+				customer_id: customerId,
+				plan_id: pro.id,
+				billing_cycle_anchor: "now",
+			},
+		);
 
-	expect(preview.total).toBe(20);
-	expectPreviewNextCycleCorrect({ preview, expectDefined: false });
+		expect(preview.total).toBe(20);
+		expectPreviewNextCycleCorrect({ preview, expectDefined: false });
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>({
-		customer_id: customerId,
-		plan_id: pro.id,
-		billing_cycle_anchor: "now",
-		redirect_mode: "if_required",
-	});
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			billing_cycle_anchor: "now",
+			redirect_mode: "if_required",
+		});
 
-	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 
-	await expectCustomerProducts({
-		customer,
-		active: [pro.id],
-		notPresent: [free.id],
-	});
+		await expectCustomerProducts({
+			customer,
+			active: [pro.id],
+			notPresent: [free.id],
+		});
 
-	expectBalanceCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		remaining: 100,
-		usage: 0,
-		planId: pro.id,
-		nextResetAt: addMonths(advancedTo, 1).getTime(),
-	});
+		expectBalanceCorrect({
+			customer,
+			featureId: TestFeature.Messages,
+			remaining: 100,
+			usage: 0,
+			planId: pro.id,
+			nextResetAt: addMonths(advancedTo, 1).getTime(),
+		});
 
-	await expectCustomerInvoiceCorrect({
-		customerId,
-		count: 1,
-		latestTotal: 20,
-	});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 1,
+			latestTotal: 20,
+		});
 
-	await expectStripeSubscriptionCorrect({ ctx, customerId });
-});
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);

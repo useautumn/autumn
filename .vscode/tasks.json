@@ -2,6 +2,24 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "View PR stack",
+			"detail": "Cmd+Shift+H — sync This Stack in the GitHub Pull Requests sidebar",
+			"type": "shell",
+			"command": "python3 \"${workspaceFolder}/.vscode/scripts/sync-this-stack-query.py\"",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "silent",
+				"echo": false,
+				"focus": false,
+				"panel": "dedicated",
+				"showReuseMessage": false,
+				"close": true
+			}
+		},
+		{
 			"label": "Run Test Pattern",
 			"type": "shell",
 			"command": "./run.sh \"${file}\" -t \"${input:testPattern}\"",

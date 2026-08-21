@@ -1,7 +1,7 @@
 import type { Feature, FullProduct } from "@autumn/shared";
 import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilter.js";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
-import { computePatchProductTransitions } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computePatchProductTransitions.js";
+import { computeProductTransitions } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computeProductTransitions.js";
 import type { MigrationRuntime } from "@/internal/migrations/v2/types/migrationDefinition.js";
 import { resolveOperationScope } from "../scope/resolveOperationScope.js";
 import type {
@@ -10,10 +10,13 @@ import type {
 } from "../types/index.js";
 import { checkUpdatePlanTransitionEligibility } from "./guards/index.js";
 import { computeBatchMigrationOperations } from "./operations/index.js";
-import { resolvePreparedAddItemEntitlements } from "./utils/resolvePreparedAddItemEntitlements.js";
+import { resolvePlanLicenseTransitions } from "./transitions/resolvePlanLicenseTransitions.js";
+import { resolveTargetFullProduct } from "./transitions/resolveTargetFullProduct.js";
+import { resolveVersionTargetProduct } from "./transitions/resolveVersionTargetProduct.js";
 
-/** Computes one (op, fromProduct) pair into an add-only batch patch: resolve
- * prepared rows → diff → lower → guard. No patch and no rejections = no-op. */
+/** Computes one (op, fromProduct) pair into a batch patch: resolve the target
+ * product → diff items and licenses → lower → guard. No patch and no
+ * rejections = no-op. */
 export const computeUpdatePlanPatch = ({
 	migration,
 	op,
@@ -21,6 +24,7 @@ export const computeUpdatePlanPatch = ({
 	fromProduct,
 	planFilters,
 	features,
+	productsByPlanVersion,
 }: {
 	migration: MigrationRuntime;
 	op: UpdatePlanOp;
@@ -29,38 +33,77 @@ export const computeUpdatePlanPatch = ({
 	/** The matched disjunct's $or-free conjunct filters. */
 	planFilters: PlanFilter[];
 	features: Feature[];
+	productsByPlanVersion: ReadonlyMap<string, FullProduct>;
 }): { patch?: BatchMigrationPatch; rejections: BatchMigrationRejection[] } => {
-	if (!op.customize) return { rejections: [] };
+	const { targetProduct, rejections: targetRejections } =
+		resolveVersionTargetProduct({
+			productsByPlanVersion,
+			fromProduct,
+			targetVersion: op.version,
+			opIndex,
+		});
+	if (!targetProduct) return { rejections: targetRejections };
 
-	const { entitlements: addItemEntitlements, rejections: preparedRejections } =
-		resolvePreparedAddItemEntitlements({
+	const {
+		toProduct,
+		hasItemChanges,
+		rejections: targetFullProductRejections,
+	} = resolveTargetFullProduct({
+		migration,
+		op,
+		opIndex,
+		fromProduct,
+		targetProduct,
+		features,
+	});
+	if (!toProduct) return { rejections: targetFullProductRejections };
+
+	const { links: licenseLinks, rejections: licenseRejections } =
+		resolvePlanLicenseTransitions({
 			migration,
 			op,
 			opIndex,
 			fromProduct,
+			toProduct,
 			features,
 		});
-	if (preparedRejections.length > 0) return { rejections: preparedRejections };
+	if (licenseRejections.length > 0) return { rejections: licenseRejections };
 
-	if (addItemEntitlements.length === 0) return { rejections: [] };
+	if (
+		op.version === undefined &&
+		!hasItemChanges &&
+		licenseLinks.length === 0
+	) {
+		return { rejections: [] };
+	}
 
-	const productTransitions = computePatchProductTransitions({
+	const productTransitions = computeProductTransitions({
 		fromProduct,
-		addEntitlements: addItemEntitlements,
+		toProduct,
 	});
 
 	const operations = computeBatchMigrationOperations({
-		addedEntitlementPrices: productTransitions.entitlementPrices.added,
+		productTransitions,
+		licenseLinks,
 	});
 
 	const rejections = checkUpdatePlanTransitionEligibility({
 		opIndex,
 		fromProduct,
 		productTransitions,
-		operations,
+		licenseLinks,
+		operations: operations.addEntitlements,
 	});
 	if (rejections.length > 0) return { rejections };
-	if (operations.length === 0) return { rejections: [] };
+	if (
+		operations.addEntitlements.length === 0 &&
+		operations.removeEntitlements.length === 0 &&
+		operations.replaceEntitlements.length === 0 &&
+		operations.licenseEntitlements.length === 0 &&
+		operations.repointCustomerProduct === undefined
+	) {
+		return { rejections: [] };
+	}
 
 	// Adds are additive, so customization is not an implicit exclusion — the
 	// scope narrows only when the filter says so.
@@ -89,7 +132,7 @@ export const computeUpdatePlanPatch = ({
 			planId: fromProduct.id,
 			fromProduct,
 			toProduct: productTransitions.toProduct,
-			operations: { entitlements: operations },
+			operations,
 		},
 	};
 };

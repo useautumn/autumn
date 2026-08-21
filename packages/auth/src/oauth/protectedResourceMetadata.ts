@@ -12,7 +12,7 @@ export const getProtectedResourceMetadata = ({
 }) => ({
 	resource: resourceUrl,
 	authorization_servers: [getOAuthIssuerUrl({ baseUrl: issuerBaseUrl })],
-	scopes_supported: [...DEFAULT_OAUTH_RESOURCE_SCOPES, "offline_access"],
+	scopes_supported: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
 	bearer_methods_supported: ["header"],
 	resource_name: resourceName,
 });

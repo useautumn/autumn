@@ -52,6 +52,22 @@ export const mergeAutumnBillingPlans = ({
 		base: base.customEntitlements,
 		incoming: incoming.customEntitlements,
 	}),
+	insertPlanLicenses: mergeByKey({
+		base: base.insertPlanLicenses,
+		incoming: incoming.insertPlanLicenses,
+		getKey: (spec) => spec.row.id,
+	}),
+	customerLicenseUpdates: mergeByKey({
+		base: base.customerLicenseUpdates,
+		incoming: incoming.customerLicenseUpdates,
+		getKey: (update) =>
+			update.customerLicenseId ?? update.customerLicenseLinkId ?? "",
+	}),
+	customerLicenseTransitions: mergeByKey({
+		base: base.customerLicenseTransitions,
+		incoming: incoming.customerLicenseTransitions,
+		getKey: (transition) => transition.incomingCustomerLicense.id,
+	}),
 	customFreeTrial: incoming.customFreeTrial ?? base.customFreeTrial,
 	lineItems: mergeById({
 		base: base.lineItems,
@@ -139,7 +155,11 @@ export const mergeAutumnBillingPlans = ({
 						}) ?? [],
 				}
 			: undefined,
-	upsertSubscription: incoming.upsertSubscription ?? base.upsertSubscription,
+	upsertSubscriptions: mergeByKey({
+		base: base.upsertSubscriptions,
+		incoming: incoming.upsertSubscriptions,
+		getKey: (subscription) => subscription.stripe_id ?? subscription.id,
+	}),
 	upsertInvoice: incoming.upsertInvoice ?? base.upsertInvoice,
 	refundPlan: incoming.refundPlan ?? base.refundPlan,
 });

@@ -21,28 +21,35 @@ import {
 	GitBranchIcon,
 	PlusIcon,
 } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import {
+	parsePlanKey,
+	planFilterToPlanKeys,
+	planKeysToFilter,
+} from "../filters/filterRowTypes";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
 import {
 	migrationItemToProductItem,
 	productItemToMigrationItem,
 } from "../shared/migrationItemUtils";
-import { buildPlanSuggestions } from "../shared/planSuggestions";
+import { PlanVersionPicker } from "../shared/PlanVersionPicker";
 import { RemoveButton } from "../shared/RemoveButton";
-import { ValuePicker } from "../shared/ValuePicker";
 import { ItemSummaryRow } from "./ItemSummaryRow";
 import {
 	MigrationOperationSheet,
 	type OperationSheetMode,
 } from "./MigrationOperationSheet";
 import { RemoveItemRows } from "./RemoveItemRows";
+import { UpsertLicenseRows } from "./UpsertLicenseRows";
 
 function useVersionOptions(planFilter: UpdatePlanOp["plan_filter"]) {
 	const { products } = useProductsQuery({ allVersions: true });
 
-	const targetIds = extractPlanIds(planFilter.plan_id);
+	const targetIds = planIdsFromFilter(planFilter);
 	const idSet = new Set(targetIds);
 
 	const matchingProducts =
@@ -73,9 +80,9 @@ export function UpdatePlanOpForm({
 	onRemove: () => void;
 	defaultOpenPicker?: boolean;
 }) {
-	const { products } = useProductsQuery();
 	const versionOptions = useVersionOptions(value.plan_filter);
 	const { features } = useFeaturesQuery();
+	const { licenseProducts } = useLicenseProductsQuery();
 
 	const [sheetOpen, setSheetOpen] = useState(false);
 	const [sheetMode, setSheetMode] = useState<OperationSheetMode>("add-feature");
@@ -84,32 +91,21 @@ export function UpdatePlanOpForm({
 	const update = (patch: Partial<UpdatePlanOp>) =>
 		onChange({ ...value, ...patch });
 
-	const planSuggestions = useMemo(
-		() => buildPlanSuggestions(products),
-		[products],
-	);
-
-	const selectedPlanIds = extractPlanIds(value.plan_filter.plan_id);
-
-	const handlePlanToggle = (planId: string) => {
-		const next = selectedPlanIds.includes(planId)
-			? selectedPlanIds.filter((id) => id !== planId)
-			: [...selectedPlanIds, planId];
-		update({
-			plan_filter: { ...value.plan_filter, plan_id: toPlanIdMatcher(next) },
-		});
-	};
-
-	const handlePlanRemove = (planId: string) => {
-		const next = selectedPlanIds.filter((id) => id !== planId);
-		update({
-			plan_filter: { ...value.plan_filter, plan_id: toPlanIdMatcher(next) },
-		});
-	};
+	const selectedPlanKeys = planFilterToPlanKeys(value.plan_filter) ?? [];
+	const selectedPlanIds = planIdsFromFilter(value.plan_filter);
 
 	const customize = value.customize;
 	const addItems = customize?.add_items ?? [];
 	const planVersionActionLabel = getPlanVersionActionLabel(value);
+
+	const customizedLicenseIds = new Set(
+		(customize?.upsert_licenses ?? []).map(
+			(license) => license.license_plan_id,
+		),
+	);
+	const licenseSuggestions = licenseProducts.filter(
+		(license) => !customizedLicenseIds.has(license.id),
+	);
 
 	const openSheet = (mode: OperationSheetMode, itemIndex?: number) => {
 		setSheetMode(mode);
@@ -194,12 +190,13 @@ export function UpdatePlanOpForm({
 			</div>
 
 			<div className="flex items-center gap-2 group/row">
-				<ValuePicker
-					suggestions={planSuggestions}
-					selectedValues={selectedPlanIds}
-					onToggle={handlePlanToggle}
-					onRemove={handlePlanRemove}
-					placeholder="Select plans..."
+				<PlanVersionPicker
+					values={selectedPlanKeys}
+					onChange={(next) =>
+						update({
+							plan_filter: replacePlanSelection(value.plan_filter, next),
+						})
+					}
 					className="flex-1"
 					defaultOpen={defaultOpenPicker}
 				/>
@@ -280,6 +277,30 @@ export function UpdatePlanOpForm({
 				</div>
 			))}
 
+			{(customize?.upsert_licenses ?? []).map((license, index) => (
+				<UpsertLicenseRows
+					initialProduct={initialProduct}
+					key={`license-${license.license_plan_id}`}
+					license={license}
+					onChange={(updated) => {
+						const licenses = [...(customize?.upsert_licenses ?? [])];
+						licenses[index] = updated;
+						update({ customize: { ...customize, upsert_licenses: licenses } });
+					}}
+					onRemove={() => {
+						const licenses = (customize?.upsert_licenses ?? []).filter(
+							(_, i) => i !== index,
+						);
+						update({
+							customize: {
+								...customize,
+								upsert_licenses: licenses.length > 0 ? licenses : undefined,
+							},
+						});
+					}}
+				/>
+			))}
+
 			{(customize?.remove_items ?? []).map((item, index) => (
 				<RemoveItemRows
 					key={`remove-${index}`}
@@ -347,6 +368,26 @@ export function UpdatePlanOpForm({
 					>
 						Remove Item
 					</DropdownMenuItem>
+					{licenseSuggestions.map((license) => (
+						<DropdownMenuItem
+							closeOnClick
+							key={license.id}
+							onClick={() =>
+								update({
+									customize: {
+										...customize,
+										upsert_licenses: [
+											...(customize?.upsert_licenses ?? []),
+											{ license_plan_id: license.id, customize: {} },
+										],
+									},
+								})
+							}
+						>
+							<LicenseIcon size={14} className="shrink-0" />
+							Customize {license.name ?? license.id}
+						</DropdownMenuItem>
+					))}
 				</DropdownMenuContent>
 			</DropdownMenu>
 
@@ -362,6 +403,15 @@ export function UpdatePlanOpForm({
 	);
 }
 
+export function planIdsFromFilter(
+	filter: UpdatePlanOp["plan_filter"],
+): string[] {
+	const keys = planFilterToPlanKeys(filter);
+	if (keys)
+		return [...new Set(keys.map((key) => parsePlanKey(key).planId))];
+	return extractPlanIds(filter.plan_id);
+}
+
 export function extractPlanIds(
 	planId: UpdatePlanOp["plan_filter"]["plan_id"],
 ): string[] {
@@ -371,6 +421,20 @@ export function extractPlanIds(
 		return planId.$in.filter((v): v is string => typeof v === "string");
 	if (planId.$eq) return typeof planId.$eq === "string" ? [planId.$eq] : [];
 	return [];
+}
+
+function replacePlanSelection(
+	filter: UpdatePlanOp["plan_filter"],
+	keys: string[],
+): UpdatePlanOp["plan_filter"] {
+	const { custom, paid, recurring, price } = filter;
+	return {
+		...planKeysToFilter(keys),
+		...(custom !== undefined ? { custom } : {}),
+		...(paid !== undefined ? { paid } : {}),
+		...(recurring !== undefined ? { recurring } : {}),
+		...(price !== undefined ? { price } : {}),
+	};
 }
 
 export function isSameVersionReset(value: UpdatePlanOp): boolean {
@@ -386,14 +450,6 @@ export function getPlanVersionActionLabel(value: UpdatePlanOp): string {
 	return isSameVersionReset(value)
 		? "Reset to Plan Version"
 		: "Set Plan Version";
-}
-
-function toPlanIdMatcher(
-	ids: string[],
-): UpdatePlanOp["plan_filter"]["plan_id"] {
-	if (ids.length === 0) return undefined;
-	if (ids.length === 1) return ids[0];
-	return { $in: ids };
 }
 
 function buildInitialProduct(value: UpdatePlanOp): Partial<FrontendProduct> {

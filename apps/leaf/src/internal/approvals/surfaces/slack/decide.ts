@@ -2,19 +2,20 @@ import {
 	type ChatApproval,
 	chatInstallations,
 	checkScopes,
+	ms,
 } from "@autumn/shared";
 import type { ActionEvent } from "chat";
+import { differenceInMilliseconds } from "date-fns";
 import { and, eq } from "drizzle-orm";
-import { resolveSlackCallerAuth } from "../../../../agent/runMessage/setup/resolveSlackCallerAuth.js";
-import { denyEveApproval } from "../../../../harness/eve/approval.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
+import { questionCard } from "../../../../providers/slack/presenters/interactionCards.js";
+import { resolveSlackCallerAuth } from "../../../../providers/slack/setup/resolveSlackCallerAuth.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";
-import { questionCard } from "../../../../ui/eveCards.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
-import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
+import { discardApproval } from "../../actions/discardApproval.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import type {
@@ -27,8 +28,10 @@ import {
 	isErrorResult,
 } from "../../utils/approvalErrors.js";
 import { formatElapsed } from "../../utils/approvalProgress.js";
-import { approvalScopeRequirements } from "../../utils/approvalScopeRequirements.js";
+import { requiredScopesForApproval } from "../../utils/approvalScopeRequirements.js";
 import { postApprovalCardForRow } from "./present.js";
+
+const APPROVAL_PROGRESS_DELAY_MS = ms.seconds(10);
 
 const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	toolName: approval?.tool_name ?? "billing action",
@@ -55,7 +58,10 @@ const authorizeSlackApprovalClicker = async ({
 	}
 
 	// A gated tool without a declared scope requirement fails closed.
-	const required = approvalScopeRequirements[approval.tool_name];
+	const required = requiredScopesForApproval({
+		toolArgs: approval.tool_args,
+		toolName: approval.tool_name,
+	});
 	if (!required) {
 		rootLogger.warn("Approval tool missing scope requirement", {
 			event: "leaf.approval_scope_requirement_missing",
@@ -105,14 +111,7 @@ const authorizeSlackApprovalClicker = async ({
 		};
 	}
 
-	const approverToken = await getInstallationOAuthAccessToken({
-		installation,
-		env: approval.env,
-		orgId: approval.org_id,
-		userId: callerAuth.userId,
-	});
-
-	return { allowed: true, approverToken };
+	return { allowed: true };
 };
 
 const defaultApprovalActionDeps: ApprovalActionDeps = {
@@ -134,6 +133,20 @@ const defaultApprovalActionDeps: ApprovalActionDeps = {
 	},
 };
 
+/** Every decide-path log line carries the click's identifiers, so approval
+ * incidents reconstruct from logs without a DB lookup first. */
+const contextualApprovalLogger = ({
+	base,
+	fields,
+}: {
+	base: ApprovalActionDeps["logger"];
+	fields: Record<string, unknown>;
+}): ApprovalActionDeps["logger"] => ({
+	error: (...args) => base.error(...args, fields),
+	info: (...args) => base.info(...args, fields),
+	warn: (...args) => base.warn(...args, fields),
+});
+
 // Maps a DB row to the card state shown when a click can no longer act on it.
 const cardStatusForApproval = ({
 	approval,
@@ -149,7 +162,7 @@ const cardStatusForApproval = ({
 };
 
 export const handleApprovalActionWithDeps = async ({
-	deps = defaultApprovalActionDeps,
+	deps: providedDeps = defaultApprovalActionDeps,
 	event,
 }: {
 	deps?: ApprovalActionDeps;
@@ -158,6 +171,18 @@ export const handleApprovalActionWithDeps = async ({
 	const approvalId = event.value;
 	if (!approvalId) return;
 	const providerUserId = event.user.userId;
+	const deps: ApprovalActionDeps = {
+		...providedDeps,
+		logger: contextualApprovalLogger({
+			base: providedDeps.logger,
+			fields: {
+				approval_id: approvalId,
+				provider_user_id: providerUserId,
+				slack_message_id: event.messageId,
+				slack_thread_id: event.threadId,
+			},
+		}),
+	};
 
 	const editToCurrentStatus = async () => {
 		const current = await deps.getApproval({ approvalId });
@@ -202,11 +227,32 @@ export const handleApprovalActionWithDeps = async ({
 		}
 
 		if (event.actionId === "cancel_billing_action") {
+			// Cancel first so exactly one click wins: the Eve denial below takes
+			// seconds, and a second click in that window would otherwise read the
+			// row as still pending and discard (and reply) all over again.
+			const cancelled = await deps.cancelApproval({
+				approvalId,
+				providerUserId,
+			});
+			if (!cancelled) {
+				deps.logger.warn("Approval cancellation ignored", {
+					event: "leaf.approval_cancel_ignored",
+					approval_id: approvalId,
+				});
+				await editToCurrentStatus();
+				return;
+			}
 			// Eve parks the whole turn on the approval — deny it in the session too,
 			// or it keeps waiting, holds the next message behind the stale approval,
 			// and the discarded write can still run later.
-			if (approval.harness === "eve" && approval.status === "pending") {
-				const denied = await denyEveApproval({ approval, providerUserId });
+			if (cancelled.harness === "eve") {
+				const discard = deps.discardApproval ?? discardApproval;
+				// The row is already cancelled, so a deny eve drops would leave its
+				// turn parked behind a card nobody can click — one retry is cheap.
+				let denied = await discard({ approval: cancelled, providerUserId });
+				if ("error" in denied && denied.error) {
+					denied = await discard({ approval: cancelled, providerUserId });
+				}
 				if ("error" in denied && denied.error) {
 					deps.logger.warn("Could not deny Eve approval on dismiss", {
 						event: "leaf.eve_dismiss_deny_failed",
@@ -220,18 +266,6 @@ export const handleApprovalActionWithDeps = async ({
 						// The acknowledgement reply is cosmetic.
 					}
 				}
-			}
-			const cancelled = await deps.cancelApproval({
-				approvalId,
-				providerUserId,
-			});
-			if (!cancelled) {
-				deps.logger.warn("Approval cancellation ignored", {
-					event: "leaf.approval_cancel_ignored",
-					approval_id: approvalId,
-				});
-				await editToCurrentStatus();
-				return;
 			}
 			await deps.editActionMessage({
 				content: approvalStatusCard({
@@ -305,7 +339,8 @@ export const handleApprovalActionWithDeps = async ({
 				...details,
 				actorId: providerUserId,
 				statusLine: statusText
-					? Date.now() - startedAt >= 10_000
+					? differenceInMilliseconds(Date.now(), startedAt) >=
+						APPROVAL_PROGRESS_DELAY_MS
 						? `${statusText} · ${formatElapsed(startedAt)}`
 						: statusText
 					: undefined,
@@ -316,7 +351,10 @@ export const handleApprovalActionWithDeps = async ({
 		});
 		editor.requestEdit();
 
-		const heartbeat = setInterval(() => editor.requestEdit(), 10_000);
+		const heartbeat = setInterval(
+			() => editor.requestEdit(),
+			APPROVAL_PROGRESS_DELAY_MS,
+		);
 		let result: Awaited<ReturnType<ApprovalActionDeps["resolveApproval"]>>;
 		try {
 			result = await deps.resolveApproval({
@@ -326,9 +364,6 @@ export const handleApprovalActionWithDeps = async ({
 					editor.requestEdit();
 				},
 				providerUserId,
-				approverToken: authorization?.allowed
-					? authorization.approverToken
-					: undefined,
 			});
 		} finally {
 			clearInterval(heartbeat);
@@ -356,8 +391,10 @@ export const handleApprovalActionWithDeps = async ({
 			}
 		}
 		// The resumed turn can park again (chained write or a question) where
-		// nothing streams — surface those as fresh cards or they stay invisible.
-		if (!failed && event.thread) {
+		// nothing streams — surface those as fresh cards or they stay invisible,
+		// even when an earlier step failed: the re-issued write is how the user
+		// recovers from that failure.
+		if (event.thread) {
 			try {
 				if ("chainedApprovalId" in result && result.chainedApprovalId) {
 					const chained = await deps.getApproval({
@@ -398,6 +435,7 @@ export const handleApprovalActionWithDeps = async ({
 				...details,
 				actorId: providerUserId,
 				result,
+				steps: "steps" in result ? result.steps : undefined,
 			}),
 			event,
 		});

@@ -7,7 +7,7 @@ type RegisteredPool = {
 	max: number;
 };
 
-type AcquireStats = {
+export type AcquireStats = {
 	count: number;
 	timeouts: number;
 	errors: number;
@@ -22,7 +22,7 @@ const registry = new Map<string, RegisteredPool>();
 const acquireStats = new Map<string, AcquireStats>();
 let snapshotInterval: ReturnType<typeof setInterval> | null = null;
 
-const emptyAcquireStats = (): AcquireStats => ({
+export const emptyAcquireStats = (): AcquireStats => ({
 	count: 0,
 	timeouts: 0,
 	errors: 0,
@@ -134,11 +134,11 @@ const timeAcquires = ({ pool, name }: { pool: Pool; name: string }): void => {
 	pool.connect = timed as Pool["connect"];
 };
 
-const percentileOf = (sorted: number[], p: number): number =>
+export const percentileOf = (sorted: number[], p: number): number =>
 	sorted[Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length))] ??
 	0;
 
-const getRole = (): string => {
+export const getRole = (): string => {
 	if (process.env.WORKER === "true") return "worker";
 	if (process.env.CRON === "true") return "cron";
 	return "http";
@@ -165,6 +165,11 @@ export const attachPoolErrorHandlers = ({
 	pool: Pool;
 	name: string;
 }): void => {
+	const activeClientErrorHandlers = new WeakMap<
+		PoolClient,
+		(error: Error & { code?: string }) => void
+	>();
+
 	pool.on("error", (err: Error & { code?: string }) => {
 		logger.warn("pg_pool_error", {
 			type: "pg_pool_error",
@@ -175,6 +180,31 @@ export const attachPoolErrorHandlers = ({
 			error_name: err.name,
 			error_message: err.message,
 		});
+	});
+
+	pool.on("acquire", (client) => {
+		const handleError = (err: Error & { code?: string }) => {
+			logger.warn("pg_client_error", {
+				type: "pg_client_error",
+				pool: name,
+				pid: process.pid,
+				role: getRole(),
+				error_code: err.code,
+				error_name: err.name,
+				error_message: err.message,
+			});
+		};
+
+		activeClientErrorHandlers.set(client, handleError);
+		client.on("error", handleError);
+	});
+
+	pool.on("release", (_error, client) => {
+		const handleError = activeClientErrorHandlers.get(client);
+		if (!handleError) return;
+
+		client.off("error", handleError);
+		activeClientErrorHandlers.delete(client);
 	});
 };
 

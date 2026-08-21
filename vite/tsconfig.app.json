@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"baseUrl": ".",
 		"paths": {
 			"*": ["./*"],
 			"@/*": ["./src/*"],
@@ -31,5 +32,5 @@
 		"noFallthroughCasesInSwitch": false,
 		"noUncheckedSideEffectImports": true
 	},
-	"include": ["src"]
+	"include": ["src", "tests"]
 }

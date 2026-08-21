@@ -13,295 +13,124 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@autumn/ui";
-import type { AxiosError } from "axios";
-import { useState } from "react";
-import { toast } from "sonner";
-import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
-import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
-import { ProductService } from "@/services/products/ProductService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
-import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
-import { useProductQuery } from "../../product/hooks/useProductQuery";
+import {
+	type DeletePlanScope,
+	useDeletePlanDialog,
+} from "./useDeletePlanDialog";
+
+// Base UI projects the trigger label from the Root's `items` map — without it
+// the trigger renders the raw scope value.
+const SCOPE_LABELS: Record<DeletePlanScope, string> = {
+	latest: "Latest version",
+	all: "All versions",
+};
 
 export const DeletePlanDialog = ({
 	propProduct,
 	open,
 	setOpen,
+	dropdownOpen,
 	onDeleteSuccess,
 }: {
 	propProduct?: ProductV2;
 	open: boolean;
 	setOpen: (open: boolean) => void;
+	dropdownOpen?: boolean;
 	onDeleteSuccess?: () => Promise<void>;
 }) => {
-	const axiosInstance = useAxiosInstance();
 	const storeProduct = useProductStore((s) => s.product);
-
-	let product: ProductV2;
-	if (propProduct) {
-		product = propProduct;
-	} else {
-		product = storeProduct;
-	}
-
-	const [loading, setLoading] = useState(false);
-	const [deleteAllVersions, setDeleteAllVersions] = useState(false);
-	const { products, invalidate: invalidateProducts } = useProductsQuery();
-	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
-	const { invalidate: invalidateProduct } = useProductQuery();
-
-	// A base variant is a plan that other variants point to via base_id.
-	const isBaseVariant = products.some(
-		(p) => p.base_id === product.id && p.id !== product.id,
-	);
-	const willDetachVariants =
-		isBaseVariant && (deleteAllVersions || product.version === 1);
-
-	const { data: productInfo, isLoading } = useGeneralQuery({
-		url: `/products/${product.id}/info`,
-		queryKey: ["productInfo", product.id],
-		enabled: open,
-		method: "GET",
+	const product = propProduct ?? storeProduct;
+	const {
+		archived,
+		canChooseScope,
+		isLoading,
+		isPending,
+		previewError,
+		reasons,
+		scope,
+		setScope,
+		titleAction,
+		willArchive,
+		handleConfirm,
+		handleOpenChange,
+	} = useDeletePlanDialog({
+		product,
+		open,
+		dropdownOpen,
+		onDeleteSuccess,
+		setOpen,
 	});
 
-	const handleDelete = async () => {
-		setLoading(true);
-		try {
-			await ProductService.deleteProduct(
-				axiosInstance,
-				product.id,
-				deleteAllVersions,
-			);
-
-			// Close dialog and show toast immediately
-			setOpen(false);
-			toast.success("Plan deleted successfully");
-
-			// Invalidate in background (don't await - let table update async)
-			Promise.all([
-				invalidateProducts(),
-				invalidateProduct(),
-				invalidateLicenseProducts(),
-			]);
-
-			// Call onDeleteSuccess callback if provided (for navigation)
-			if (onDeleteSuccess) {
-				await onDeleteSuccess();
-			}
-		} catch (error: unknown) {
-			toast.error(getBackendErr(error as AxiosError, "Error deleting plan"));
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleArchive = async () => {
-		setLoading(true);
-		try {
-			await ProductService.updateProduct(axiosInstance, product.id, {
-				archived: true,
-			});
-
-			// Close dialog and show toast immediately
-			setOpen(false);
-			toast.success(`${product.name} archived successfully`);
-
-			// Invalidate in background (don't await)
-			Promise.all([
-				invalidateProducts(),
-				invalidateProduct(),
-				invalidateLicenseProducts(),
-			]);
-
-			if (onDeleteSuccess) {
-				await onDeleteSuccess();
-			}
-		} catch (error) {
-			toast.error(getBackendErr(error, "Error archiving plan"));
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleUnarchive = async () => {
-		setLoading(true);
-		try {
-			await ProductService.updateProduct(axiosInstance, product.id, {
-				archived: false,
-			});
-
-			// Close dialog and show toast immediately
-			setOpen(false);
-			toast.success(`${product.name} unarchived successfully`);
-
-			// Invalidate in background (don't await)
-			Promise.all([
-				invalidateProducts(),
-				invalidateProduct(),
-				invalidateLicenseProducts(),
-			]);
-
-			if (onDeleteSuccess) {
-				await onDeleteSuccess();
-			}
-		} catch (error) {
-			toast.error(getBackendErr(error, "Error unarchiving plan"));
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const hasCusProductsAll = productInfo?.hasCusProducts;
-	const hasCusProductsLatest = productInfo?.hasCusProductsLatest;
-
-	const hasCusProducts = deleteAllVersions
-		? hasCusProductsAll
-		: hasCusProductsLatest;
-
-	const getDeleteMessage = () => {
-		if (product.archived) {
-			return `Are you sure you want to unarchive ${product.name}? This will make it visible in your list of plans.`;
-		}
-
-		// \n\nNote: If there are multiple versions, this will unarchive all versions at once.
-
-		const isMultipleVersions = productInfo?.numVersion > 1;
-		const versionText = deleteAllVersions ? "plan" : "version";
-		const productText = isMultipleVersions ? versionText : "plan";
-
-		const messageTemplates = {
-			withCustomers: {
-				single: (customerName: string, productText: string) =>
-					`${customerName} is on this ${productText}. Are you sure you want to archive it?`,
-				multiple: (
-					customerName: string,
-					otherCount: number,
-					productText: string,
-				) =>
-					`${customerName} and ${otherCount} other customer${otherCount > 1 ? "s" : ""} are on this ${productText}. Are you sure you want to archive this plan?`,
-				fallback: (productText: string) =>
-					`There are customers on this ${productText}. Deleting this ${productText} will remove it from their accounts. Are you sure you want to continue? You can also archive the plan instead.`,
-			},
-			withoutCustomers: (productText: string) =>
-				`Are you sure you want to delete this ${productText}? This action cannot be undone.`,
-		};
-
-		if (hasCusProducts) {
-			if (productInfo?.customerName && productInfo?.totalCount) {
-				const totalCount = parseInt(productInfo.totalCount);
-
-				if (Number.isNaN(totalCount) || totalCount <= 0) {
-					return messageTemplates.withCustomers.fallback(productText);
-				} else if (totalCount === 1) {
-					return messageTemplates.withCustomers.single(
-						productInfo.customerName,
-						productText,
-					);
-				} else {
-					const otherCount = totalCount - 1;
-					return messageTemplates.withCustomers.multiple(
-						productInfo.customerName,
-						otherCount,
-						productText,
-					);
-				}
-			} else {
-				return messageTemplates.withCustomers.fallback(productText);
-			}
-		} else {
-			return messageTemplates.withoutCustomers(productText);
-		}
-	};
-
-	if (!productInfo || isLoading) return;
+	if (isLoading && !archived) return null;
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
+		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent
 				className="bg-background"
 				onClick={(e) => e.stopPropagation()}
 			>
 				<DialogHeader className="max-w-full">
 					<DialogTitle className="truncate max-w-[400px]">
-						{product.archived
-							? "Unarchive"
-							: hasCusProducts
-								? "Archive"
-								: "Delete"}{" "}
-						{product.name}
+						{titleAction} {product.name}
 					</DialogTitle>
-					<DialogDescription className="max-w-[400px] wrap-break-word">
-						{getDeleteMessage()
-							.split("\n")
-							.map((line, index) => (
-								<span key={index}>
-									{line}
-									{index < getDeleteMessage().split("\n").length - 1 && <br />}
-								</span>
-							))}
+					<DialogDescription asChild>
+						<div className="max-w-[400px] wrap-break-word space-y-2">
+							{archived && (
+								<p>
+									Are you sure you want to unarchive {product.name}? This will
+									make it visible in your list of plans.
+								</p>
+							)}
+							{!archived && previewError && <p>{previewError}</p>}
+							{!archived &&
+								!previewError &&
+								reasons.map((reason) => (
+									<p key={reason.message}>{reason.message}</p>
+								))}
+							{!archived && !previewError && reasons.length === 0 && (
+								<p>
+									Are you sure you want to delete this plan? This action cannot
+									be undone.
+								</p>
+							)}
+						</div>
 					</DialogDescription>
 				</DialogHeader>
 
-				{willDetachVariants && !hasCusProducts && !product.archived && (
-					<InfoBox variant="warning">
-						This is a base variant. Deleting this plan will convert variants of
-						this plan into base plans.
-					</InfoBox>
+				{canChooseScope && !archived && (
+					<Select
+						value={scope}
+						onValueChange={(value) =>
+							setScope(value === "all" ? "all" : "latest")
+						}
+						items={SCOPE_LABELS}
+					>
+						<SelectTrigger className="w-6/12">
+							<SelectValue placeholder="Select a version" />
+						</SelectTrigger>
+						<SelectContent>
+							{Object.entries(SCOPE_LABELS).map(([value, label]) => (
+								<SelectItem key={value} value={value}>
+									{label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 				)}
-
-				{productInfo.numVersion > 1 &&
-					!product.archived &&
-					!productInfo.hasCusProductsLatest && (
-						<Select
-							value={deleteAllVersions ? "all" : "latest"}
-							onValueChange={(value) => setDeleteAllVersions(value === "all")}
-							items={{ latest: "Delete latest version", all: "Archive plan" }}
-						>
-							<SelectTrigger className="w-6/12">
-								<SelectValue placeholder="Select a version" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="latest">Delete latest version</SelectItem>
-								<SelectItem value="all">Archive plan</SelectItem>
-							</SelectContent>
-						</Select>
-					)}
 
 				<DialogFooter>
 					<Button variant="secondary" onClick={() => setOpen(false)}>
 						Cancel
 					</Button>
-					{product.archived && (
-						<Button
-							variant="primary"
-							onClick={handleUnarchive}
-							isLoading={loading}
-						>
-							Unarchive
-						</Button>
-					)}
-					{hasCusProducts && !product.archived && (
-						<Button
-							variant="primary"
-							onClick={handleArchive}
-							isLoading={loading}
-						>
-							Archive
-						</Button>
-					)}
-
-					{!hasCusProducts && !product.archived && (
-						<Button
-							variant="destructive"
-							onClick={handleDelete}
-							isLoading={loading}
-						>
-							Delete
-						</Button>
-					)}
+					<Button
+						variant={archived || willArchive ? "primary" : "destructive"}
+						onClick={handleConfirm}
+						isLoading={isPending}
+						disabled={Boolean(previewError)}
+					>
+						{titleAction}
+					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

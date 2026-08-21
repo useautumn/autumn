@@ -11,6 +11,7 @@ import { SendMessageCommand } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
 import type { StripeWebhookReplayPayload } from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
 import type { BatchResetCustomerEntitlementsV2Payload } from "@/internal/balances/batchReset/types.js";
+import type { PublishedBalanceTransition } from "@/internal/customers/cache/fullSubject/actions/publishCachedFullSubject.js";
 import type { CustomerCreationRecoveryPayload } from "@/internal/customers/recovery/customerCreationRecoveryTypes.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
@@ -84,6 +85,13 @@ export interface Payloads {
 		region?: string;
 		redisInstance: string;
 		timestamp: number;
+	};
+	[JobName.PersistPublishedBalanceTransitions]: {
+		orgId: string;
+		env: AppEnv;
+		customerId: string;
+		requestId: string;
+		balanceTransitions: PublishedBalanceTransition[];
 	};
 	[JobName.CustomerCreationRecovery]: CustomerCreationRecoveryPayload;
 	[JobName.StripeWebhookReplay]: StripeWebhookReplayPayload;

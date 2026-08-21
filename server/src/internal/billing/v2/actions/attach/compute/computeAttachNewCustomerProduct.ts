@@ -1,5 +1,6 @@
 import type { AttachBillingContext, AttachParamsV1 } from "@autumn/shared";
 import {
+	type BalanceTransitionPlan,
 	CollectionMethod,
 	deduplicateArray,
 	type ExistingUsagesConfig,
@@ -7,28 +8,50 @@ import {
 	isFutureStartDate,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
-import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
+import { initFullCustomerProductWithBalanceTransitions } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 type NewCustomerProductParams = Partial<
 	Pick<AttachParamsV1, "carry_over_usages" | "ends_at" | "no_billing_changes">
 >;
 
-const getScheduledBillingCycleAnchorResetAt = ({
-	requestedBillingCycleAnchor,
-	currentEpochMs,
+export const resolveAttachExistingUsagesConfig = ({
+	ctx,
+	attachBillingContext,
+	params,
 }: {
-	requestedBillingCycleAnchor?: number | "now";
-	currentEpochMs: number;
-}) => {
-	if (
-		typeof requestedBillingCycleAnchor === "number" &&
-		requestedBillingCycleAnchor > currentEpochMs
-	) {
-		return requestedBillingCycleAnchor;
+	ctx: AutumnContext;
+	attachBillingContext: AttachBillingContext;
+	params: NewCustomerProductParams;
+}): ExistingUsagesConfig | undefined => {
+	const { currentCustomerProduct, carryOverSourceCustomerProduct, planTiming } =
+		attachBillingContext;
+	const carryOverSource =
+		carryOverSourceCustomerProduct ?? currentCustomerProduct;
+
+	if (planTiming === "end_of_cycle" || !carryOverSource) return undefined;
+
+	const consumableFeatureIdsToCarry = deduplicateArray(
+		carryOverSource.customer_entitlements
+			.filter((customerEntitlement) =>
+				Boolean(customerEntitlement.entitlement.carry_from_previous),
+			)
+			.map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
+	);
+
+	if (params.carry_over_usages?.enabled) {
+		return carryOverUsagesToExistingUsagesConfig({
+			ctx,
+			params,
+			currentCustomerProduct: carryOverSource,
+		});
 	}
 
-	return null;
+	return {
+		fromCustomerProduct: carryOverSource,
+		consumableFeatureIdsToCarry,
+	};
 };
 
 /**
@@ -37,15 +60,20 @@ const getScheduledBillingCycleAnchorResetAt = ({
  * For upgrades (planTiming === "immediate"): creates an active product
  * For downgrades (planTiming === "end_of_cycle"): creates a scheduled product that starts at endOfCycleMs
  */
-export const computeAttachNewCustomerProduct = ({
-	ctx,
-	attachBillingContext,
-	params = {},
-}: {
+type ComputeAttachNewCustomerProductParams = {
 	ctx: AutumnContext;
 	attachBillingContext: AttachBillingContext;
 	params?: NewCustomerProductParams;
-}): FullCusProduct => {
+};
+
+const computeAttachNewCustomerProductResult = ({
+	ctx,
+	attachBillingContext,
+	params = {},
+}: ComputeAttachNewCustomerProductParams): {
+	customerProduct: FullCusProduct;
+	balanceTransitionPlan?: BalanceTransitionPlan;
+} => {
 	const {
 		attachProduct,
 		fullCustomer,
@@ -63,7 +91,6 @@ export const computeAttachNewCustomerProduct = ({
 		billingVersion,
 		transitionConfig,
 		externalId,
-		requestedBillingCycleAnchor,
 		resetCycleAnchorMs,
 		accessStartsAt,
 		billingStartsAt,
@@ -76,19 +103,6 @@ export const computeAttachNewCustomerProduct = ({
 	const carryOverSource =
 		carryOverSourceCustomerProduct ?? currentCustomerProduct;
 
-	const currentCustomerEntitlements =
-		carryOverSource?.customer_entitlements ?? [];
-	const carryOverUsages = params.carry_over_usages;
-
-	// LEGACY: carry_from_previous flag on entitlements
-	const featuresToCarryUsagesFor = deduplicateArray(
-		currentCustomerEntitlements
-			.filter((ce) => {
-				return ce.entitlement.carry_from_previous;
-			})
-			.map((ce) => ce.entitlement.feature.id),
-	);
-
 	const isScheduled = planTiming === "end_of_cycle";
 	const startsAt = billingStartsAt ?? (isScheduled ? endOfCycleMs : undefined);
 	const hasAutoChargePaymentMethod =
@@ -99,13 +113,11 @@ export const computeAttachNewCustomerProduct = ({
 		? CollectionMethod.SendInvoice
 		: undefined;
 
-	let existingUsagesConfig: ExistingUsagesConfig | undefined =
-		!isScheduled && carryOverSource
-			? {
-					fromCustomerProduct: carryOverSource,
-					consumableFeatureIdsToCarry: featuresToCarryUsagesFor,
-				}
-			: undefined;
+	const existingUsagesConfig = resolveAttachExistingUsagesConfig({
+		ctx,
+		attachBillingContext,
+		params,
+	});
 
 	const existingRolloversConfig =
 		!isScheduled && carryOverSource
@@ -114,21 +126,13 @@ export const computeAttachNewCustomerProduct = ({
 				}
 			: undefined;
 
-	if (!isScheduled && carryOverSource && carryOverUsages?.enabled) {
-		existingUsagesConfig = carryOverUsagesToExistingUsagesConfig({
-			ctx,
-			params,
-			currentCustomerProduct: carryOverSource,
-		});
-	}
-
 	const isRevertTrial =
 		trialContext?.onEnd === "revert" && planTiming === "immediate";
 	const preservedBillingLinkage = params.no_billing_changes
 		? currentCustomerProduct
 		: undefined;
 
-	const newFullCustomerProduct = initFullCustomerProduct({
+	return initFullCustomerProductWithBalanceTransitions({
 		ctx,
 		initContext: {
 			fullCustomer,
@@ -148,7 +152,8 @@ export const computeAttachNewCustomerProduct = ({
 		initOptions: {
 			isCustom,
 			subscriptionId:
-				stripeSubscription?.id ?? preservedBillingLinkage?.subscription_ids?.[0],
+				stripeSubscription?.id ??
+				preservedBillingLinkage?.subscription_ids?.[0],
 			subscriptionScheduleId:
 				stripeSubscriptionSchedule?.id ??
 				preservedBillingLinkage?.scheduled_ids?.[0],
@@ -158,9 +163,9 @@ export const computeAttachNewCustomerProduct = ({
 			collectionMethod,
 			externalId,
 			processorType: processorTypeOverride,
-			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
-				requestedBillingCycleAnchor,
-				currentEpochMs,
+			billingCycleAnchorResetsAt: getRequestedBillingCycleAnchorResetAt({
+				requestedBillingCycleAnchor:
+					attachBillingContext.requestedBillingCycleAnchor,
 			}),
 			...(isRevertTrial && {
 				previousCustomerProductId: currentCustomerProduct?.id,
@@ -168,6 +173,13 @@ export const computeAttachNewCustomerProduct = ({
 			}),
 		},
 	});
-
-	return newFullCustomerProduct;
 };
+
+export const computeAttachNewCustomerProductWithBalanceTransitions = (
+	params: ComputeAttachNewCustomerProductParams,
+) => computeAttachNewCustomerProductResult(params);
+
+export const computeAttachNewCustomerProduct = (
+	params: ComputeAttachNewCustomerProductParams,
+): FullCusProduct =>
+	computeAttachNewCustomerProductResult(params).customerProduct;

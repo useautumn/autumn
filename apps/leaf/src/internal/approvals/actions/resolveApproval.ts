@@ -1,57 +1,116 @@
 import type { ChatApproval } from "@autumn/shared";
-import type { AgentHarnessName } from "../../../lib/chatAgentConfig.js";
 import { db } from "../../../lib/db.js";
-import { env as chatEnv } from "../../../lib/env.js";
 import { logger } from "../../../lib/logger.js";
+import { APPROVAL_SESSION_GONE_MESSAGE } from "../../../ui/messages.js";
+import { EveSessionGoneError } from "../../agentRuntime/eve/client.js";
+import {
+	deleteEveSession,
+	getEveSessionBySessionId,
+} from "../../agentRuntime/eve/repo.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
-import { approvalRuntimes } from "../runtimes.js";
 import type { ApprovalRunResult } from "../types.js";
 import { approvalErrorResult } from "../utils/approvalErrors.js";
+import { resumeApproval } from "./resumeApproval.js";
 
-// Routes an approval to the resumer for the harness that produced it (falling
-// back to the configured harness for pre-column rows), then finalizes the row.
+const dropEveSession = async ({ approval }: { approval: ChatApproval }) => {
+	if (!approval.run_id) return;
+	const session = await getEveSessionBySessionId({
+		db,
+		orgId: approval.org_id,
+		sessionId: approval.run_id,
+	});
+	if (!session) return;
+	await deleteEveSession({
+		db,
+		env: session.env,
+		orgId: approval.org_id,
+		reason: "approval_session_gone",
+		sessionId: session.sessionId,
+		threadKey: session.threadKey,
+	});
+};
+
+const releaseClaim = async ({
+	approval,
+	providerUserId,
+}: {
+	approval: ChatApproval;
+	providerUserId: string;
+}) => {
+	try {
+		await chatApprovalRepo.release({
+			approvalId: approval.id,
+			db,
+			providerUserId,
+		});
+	} catch (error) {
+		logger.error("[chat] Could not release approval claim", error, {
+			event: "leaf.approval_release_failed",
+			approval_id: approval.id,
+		});
+	}
+};
+
 export const resolveApproval = async ({
 	approval,
-	onProgress,
 	providerUserId,
-	approverToken,
 }: {
 	approval: ChatApproval;
 	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
-	approverToken?: string;
 }): Promise<ApprovalRunResult> => {
-	const harness =
-		(approval.harness as AgentHarnessName | null) ??
-		chatEnv.SLACK_AGENT_HARNESS;
-	const resume = approvalRuntimes[harness];
-	if (!resume) {
-		// Config error, not transient — fail terminally so it doesn't retry forever.
-		logger.error("[chat] No approval resumer for harness", undefined, {
+	if (approval.harness && approval.harness !== "eve") {
+		logger.error("[chat] Unsupported legacy approval harness", undefined, {
 			event: "leaf.approval_no_resumer",
 			approval_id: approval.id,
-			data: { harness },
+			data: { harness: approval.harness },
 		});
 		return approvalErrorResult(
-			new Error(`No approval resumer for harness "${harness}"`),
+			new Error(`Unsupported legacy approval harness "${approval.harness}"`),
 		);
 	}
 
 	let result: ApprovalRunResult;
 	try {
-		result = await resume({ approval, onProgress, providerUserId, approverToken });
+		result = await resumeApproval({
+			approval,
+			providerUserId,
+		});
 	} catch (error) {
-		// A thrown resumer error means the write never ran — keep the approval
-		// pending so the user can retry.
+		if (error instanceof EveSessionGoneError) {
+			// Eve lost the session this card belongs to; no retry can run it, and
+			// leaving it pending would block the thread behind a dead card.
+			logger.error("[chat] Approval session is gone", error, {
+				event: "leaf.approval_session_gone",
+				approval_id: approval.id,
+			});
+			await chatApprovalRepo.finalize({
+				approvalId: approval.id,
+				db,
+				providerUserId,
+				status: "failed",
+			});
+			await dropEveSession({ approval });
+			return {
+				error: true,
+				message: APPROVAL_SESSION_GONE_MESSAGE,
+				retryable: false,
+			};
+		}
+		// A thrown resumer error means the write never ran — release the claim so
+		// the row returns to pending and the card stays clickable.
 		logger.error("[chat] Approval run failed", error, {
 			event: "leaf.approval_run_failed",
 			approval_id: approval.id,
 		});
+		await releaseClaim({ approval, providerUserId });
 		return approvalErrorResult(error, { retryable: true });
 	}
 
-	// Retryable errors leave the row pending; everything else is finalized.
-	if (!("error" in result && result.retryable)) {
+	// Retryable errors return the row to pending; everything else is finalized.
+	if ("error" in result && result.retryable) {
+		await releaseClaim({ approval, providerUserId });
+	} else {
 		await chatApprovalRepo.finalize({
 			approvalId: approval.id,
 			db,

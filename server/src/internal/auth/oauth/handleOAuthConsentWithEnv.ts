@@ -1,39 +1,19 @@
 import { AppEnv, RecaseError } from "@autumn/shared";
+import {
+	asNonEmptyString,
+	type OAuthRequestFields,
+	parseOAuthRequestFields,
+	rebuildOAuthRequest,
+} from "@autumn/shared/utils/auth/oauthRequestBody";
+import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
 import type { Context } from "hono";
-import { db } from "@/db/initDrizzle.js";
+import { type DrizzleCli, db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
 import { oauthConsentRepo } from "../repos/index.js";
 import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
 import { getOAuthConsentScopeGrant } from "./oauthConsentScopes.js";
 import { runBetterAuthHandler } from "./runBetterAuthHandler.js";
 import { isSummerOAuthClientId } from "./summerOAuthClient.js";
-
-type RequestFields = Record<string, unknown>;
-
-const parseRequestFields = async (request: Request) => {
-	const contentType = request.headers.get("content-type") ?? "";
-	const rawBody = await request.text();
-	if (!rawBody) return { contentType, fields: {}, rawBody };
-
-	if (contentType.includes("application/json")) {
-		try {
-			const body = JSON.parse(rawBody);
-			return {
-				contentType,
-				fields: body && typeof body === "object" ? (body as RequestFields) : {},
-				rawBody,
-			};
-		} catch {
-			return { contentType, fields: {}, rawBody };
-		}
-	}
-
-	const params = new URLSearchParams(rawBody);
-	return { contentType, fields: Object.fromEntries(params.entries()), rawBody };
-};
-
-const getString = (value: unknown) =>
-	typeof value === "string" && value.length > 0 ? value : null;
 
 const parseEnv = (value: unknown) => {
 	if (value === AppEnv.Live || value === AppEnv.Sandbox) return value;
@@ -47,166 +27,210 @@ const getNestedOAuthField = (value: unknown, key: string) => {
 
 	if (typeof value === "string") {
 		try {
-			return getString(JSON.parse(value)?.[key]);
+			return asNonEmptyString(JSON.parse(value)?.[key]);
 		} catch {
 			return new URLSearchParams(value).get(key);
 		}
 	}
 
 	if (typeof value === "object") {
-		return getString((value as Record<string, unknown>)[key]);
+		return asNonEmptyString((value as Record<string, unknown>)[key]);
 	}
 
 	return null;
 };
 
-const getClientIdFromFields = (fields: RequestFields) =>
-	getString(fields.client_id) ??
+const getClientIdFromFields = (fields: OAuthRequestFields) =>
+	asNonEmptyString(fields.client_id) ??
 	getNestedOAuthField(fields.oauth_query, "client_id");
 
-const getRedirectUriFromFields = (fields: RequestFields) =>
-	getString(fields.redirect_uri) ??
-	getString(fields.redirectUri) ??
+const getRedirectUriFromFields = (fields: OAuthRequestFields) =>
+	asNonEmptyString(fields.redirect_uri) ??
+	asNonEmptyString(fields.redirectUri) ??
 	getNestedOAuthField(fields.oauth_query, "redirect_uri");
 
-const splitScopes = (value: unknown) =>
-	typeof value === "string" ? value.split(/\s+/).filter(Boolean) : [];
-
 export const getOAuthConsentRequestedScopesFromFields = (
-	fields: RequestFields,
+	fields: OAuthRequestFields,
 ) => {
 	if ("scope" in fields) {
 		return {
 			explicit: true,
-			scopes: splitScopes(fields.scope),
+			scopes: splitOAuthScopeString(fields.scope),
 		};
 	}
 
 	const rawScope = getNestedOAuthField(fields.oauth_query, "scope");
 	return {
 		explicit: false,
-		scopes: rawScope ? splitScopes(rawScope) : null,
+		scopes: rawScope ? splitOAuthScopeString(rawScope) : null,
 	};
 };
 
-const getFieldsWithScope = ({
-	fields,
-	scope,
+const jsonOAuthError = ({
+	code,
+	description,
+	status,
 }: {
-	fields: RequestFields;
-	scope: string;
-}) => {
-	return { ...fields, scope };
-};
-
-const withScope = ({
-	contentType,
-	request,
-	fields,
-	scope,
-}: {
-	contentType: string;
-	request: Request;
-	fields: RequestFields;
-	scope: string;
-}) => {
-	const scopedFields = getFieldsWithScope({ fields, scope });
-	if (contentType.includes("application/json")) {
-		return new Request(request, {
-			body: JSON.stringify(scopedFields),
-		});
-	}
-
-	const params = new URLSearchParams();
-	for (const [key, value] of Object.entries(scopedFields)) {
-		if (typeof value === "string") params.set(key, value);
-	}
-
-	return new Request(request, { body: params });
-};
-
-const jsonOAuthError = ({ error }: { error: RecaseError }) =>
+	code: string;
+	description: string;
+	status: number;
+}) =>
+	// `message` duplicates `error_description` because better-auth's client reads
+	// the body's `message`, and the consent view toasts that; without it the
+	// reason a consent was refused never reaches the person who submitted it.
 	new Response(
 		JSON.stringify({
-			error: "invalid_scope",
-			error_description: error.message,
+			error: code,
+			error_description: description,
+			message: description,
 		}),
 		{
-			status: error.statusCode,
+			status,
 			headers: { "Content-Type": "application/json" },
 		},
 	);
 
-export const handleOAuthConsentWithEnv = async (c: Context) => {
-	const { contentType, fields } = await parseRequestFields(c.req.raw.clone());
-	const clientId = getClientIdFromFields(fields);
-	const redirectUri = getRedirectUriFromFields(fields);
-	const env =
+type ConsentPrincipal = { orgId: string; userId: string };
+
+/** Only a session with an active organization can narrow or persist a grant. */
+const resolveConsentPrincipal = async (
+	headers: Headers,
+): Promise<ConsentPrincipal | null> => {
+	const session = await auth.api.getSession({ headers });
+	const userId = session?.user?.id;
+	const orgId = session?.session?.activeOrganizationId;
+
+	return userId && orgId ? { orgId, userId } : null;
+};
+
+/** better-auth records whatever `scope` it is handed, so post it the narrowed set. */
+const narrowConsentScopes = async ({
+	fields,
+	isJson,
+	principal,
+	request,
+}: {
+	fields: OAuthRequestFields;
+	isJson: boolean;
+	principal: ConsentPrincipal;
+	request: Request;
+}) => {
+	const requested = getOAuthConsentRequestedScopesFromFields(fields);
+	const grantedScopes = await getOAuthConsentScopeGrant({
+		db,
+		organizationId: principal.orgId,
+		requestedScopes: requested.scopes,
+		requireRequestedResourceScopes: requested.explicit,
+		userId: principal.userId,
+	});
+
+	return {
+		grantedScopes,
+		request: rebuildOAuthRequest({
+			fields: { ...fields, scope: grantedScopes.join(" ") },
+			isJson,
+			request,
+		}),
+	};
+};
+
+/**
+ * Only atmn clients may consent without an environment: every other client
+ * exchanges its grant for an env-scoped api key, so an env-less consent issues
+ * a code that mints a token no request can use.
+ */
+export const resolveOAuthConsentEnv = async ({
+	clientId,
+	db,
+	fields,
+}: {
+	clientId: string;
+	db: DrizzleCli;
+	fields: OAuthRequestFields;
+}) => ({
+	env:
 		parseEnv(fields.env) ??
-		(isSummerOAuthClientId({ clientId }) ? AppEnv.Sandbox : null);
+		(isSummerOAuthClientId({ clientId }) ? AppEnv.Sandbox : null),
+	envRequired: !(await isAtmnOAuthClientId({ db, clientId })),
+});
 
-	let request = c.req.raw;
-	let grantedScopes: string[] | undefined;
-	if (acceptedConsent(fields.accept) && clientId) {
-		const session = await auth.api.getSession({
-			headers: c.req.raw.headers,
+export const handleOAuthConsentWithEnv = async (c: Context) => {
+	const { fields, isJson } = await parseOAuthRequestFields(c.req.raw.clone());
+	const clientId = getClientIdFromFields(fields);
+
+	// A denial (or a request that names no client) carries no scopes or env to
+	// narrow and persist — better-auth turns it straight into a redirect.
+	if (!acceptedConsent(fields.accept) || !clientId) {
+		return runBetterAuthHandler({
+			request: c.req.raw,
+			route: "oauth2/consent",
+			context: { clientId },
 		});
+	}
 
-		const userId = session?.user?.id;
-		const orgId = session?.session?.activeOrganizationId;
-		if (userId && orgId) {
-			try {
-				const requested = getOAuthConsentRequestedScopesFromFields(fields);
-				const scopeGrant = await getOAuthConsentScopeGrant({
-					db,
-					organizationId: orgId,
-					requestedScopes: requested.scopes,
-					requireRequestedResourceScopes: requested.explicit,
-					userId,
-				});
-				grantedScopes = scopeGrant;
-				request = withScope({
-					contentType,
-					request,
-					fields,
-					scope: scopeGrant.join(" "),
-				});
-			} catch (error) {
-				if (error instanceof RecaseError) {
-					return jsonOAuthError({ error });
-				}
-				throw error;
-			}
+	// better-auth's consent endpoint only requires a session, not an active
+	// organization, so forwarding an accept we cannot narrow would let it record
+	// the client's full requested scopes and issue a code.
+	const principal = await resolveConsentPrincipal(c.req.raw.headers);
+	if (!principal) {
+		return jsonOAuthError({
+			code: "access_denied",
+			description:
+				"Sign in and select an active organization to authorize this application.",
+			status: 403,
+		});
+	}
+
+	const { env, envRequired } = await resolveOAuthConsentEnv({
+		clientId,
+		db,
+		fields,
+	});
+	if (envRequired && !env) {
+		return jsonOAuthError({
+			code: "invalid_request",
+			description:
+				"Select an environment (live or sandbox) to authorize this application.",
+			status: 400,
+		});
+	}
+
+	let narrowed: { grantedScopes: string[]; request: Request };
+	try {
+		narrowed = await narrowConsentScopes({
+			fields,
+			isJson,
+			principal,
+			request: c.req.raw,
+		});
+	} catch (error) {
+		if (error instanceof RecaseError) {
+			return jsonOAuthError({
+				code: "invalid_scope",
+				description: error.message,
+				status: error.statusCode,
+			});
 		}
+		throw error;
 	}
 
 	const response = await runBetterAuthHandler({
-		request,
+		request: narrowed.request,
 		route: "oauth2/consent",
 		context: { clientId },
 	});
+	if (!response.ok) return response;
 
-	if (!response.ok || !acceptedConsent(fields.accept)) {
-		return response;
-	}
-
-	if (!clientId || !env || (await isAtmnOAuthClientId({ db, clientId }))) {
-		return response;
-	}
-
-	const session = await auth.api.getSession({ headers: c.req.raw.headers });
-	const userId = session?.user?.id;
-	const orgId = session?.session?.activeOrganizationId;
-	if (!userId || !orgId) return response;
+	if (!env || !envRequired) return response;
 
 	await oauthConsentRepo.updateEnv({
 		db,
 		clientId,
-		userId,
-		referenceId: orgId,
+		userId: principal.userId,
+		referenceId: principal.orgId,
 		env,
-		redirectUri,
-		scopes: grantedScopes,
+		redirectUri: getRedirectUriFromFields(fields),
+		scopes: narrowed.grantedScopes,
 	});
 
 	return response;

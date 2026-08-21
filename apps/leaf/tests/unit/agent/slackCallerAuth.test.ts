@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, type ChatInstallation } from "@autumn/shared";
 import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
-import { resolveSlackCallerAuth } from "../../../src/agent/runMessage/setup/resolveSlackCallerAuth.js";
-import { resolveSlackUserAuth } from "../../../src/agent/runMessage/setup/resolveSlackUserAuth.js";
+import { resolveSlackCallerAuth } from "../../../src/providers/slack/setup/resolveSlackCallerAuth.js";
+import { resolveSlackUserAuth } from "../../../src/providers/slack/setup/resolveSlackUserAuth.js";
 
 const installation = ({ botAccessToken }: { botAccessToken: string }) =>
 	({

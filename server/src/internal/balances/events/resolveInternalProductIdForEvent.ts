@@ -1,7 +1,7 @@
 import {
+	cusEntToInternalProductId,
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
-	cusEntToInternalProductId,
 	fullSubjectToCustomerEntitlements,
 } from "@autumn/shared";
 import type { MutationLogItem } from "../utils/types/mutationLogItem.js";
@@ -9,13 +9,16 @@ import type { MutationLogItem } from "../utils/types/mutationLogItem.js";
 export const resolveInternalProductIdForEvent = ({
 	fullSubject,
 	mutationLogs,
+	customerEntitlements,
 }: {
 	fullSubject: FullSubject;
 	mutationLogs: MutationLogItem[];
+	customerEntitlements?: FullCusEntWithFullCusProduct[];
 }): string | null => {
 	if (mutationLogs.length === 0) return null;
 
-	const cusEnts = fullSubjectToCustomerEntitlements({ fullSubject });
+	const cusEnts =
+		customerEntitlements ?? fullSubjectToCustomerEntitlements({ fullSubject });
 	const cusEntById = new Map<string, FullCusEntWithFullCusProduct>();
 	const rolloverIdToCusEnt = new Map<string, FullCusEntWithFullCusProduct>();
 
@@ -34,7 +37,10 @@ export const resolveInternalProductIdForEvent = ({
 		if (log.balance_delta === 0) continue;
 
 		let cusEnt: FullCusEntWithFullCusProduct | undefined;
-		if (log.target_type === "customer_entitlement" && log.customer_entitlement_id) {
+		if (
+			log.target_type === "customer_entitlement" &&
+			log.customer_entitlement_id
+		) {
 			cusEnt = cusEntById.get(log.customer_entitlement_id);
 		} else if (log.target_type === "rollover" && log.rollover_id) {
 			cusEnt = rolloverIdToCusEnt.get(log.rollover_id);

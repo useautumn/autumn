@@ -38,6 +38,8 @@ export * from "./api/versionUtils/versionUtils";
 export * from "./api/webhooks/index";
 // Auth Models
 export * from "./db/auth-schema";
+// DuckDB / MotherDuck cache schemas
+export * from "./duckdb/ceBalancesCacheTable";
 export * from "./enums/APIVersion";
 export * from "./enums/AttachErrCode";
 export * from "./enums/ErrCode";
@@ -254,6 +256,8 @@ export * from "./utils/billingUtils/index";
 export * from "./utils/checkoutUtils/index";
 export * from "./utils/common/formatUtils/formatAmount";
 export * from "./utils/common/index";
+export * from "./utils/planV1Utils/convertPlanV1/planV1ToEntitlementPrices";
+export * from "./utils/planV1Utils/convertPlanV1/productItemsToEntitlementPrices";
 export * from "./utils/cusEntUtils/balanceUtils/cusEntsToUsage";
 export * from "./utils/cusEntUtils/balanceUtils/cusEntToMinBalance";
 export * from "./utils/cusEntUtils/balanceUtils/cusEntToUsageAllowed";

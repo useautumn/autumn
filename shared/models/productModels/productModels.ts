@@ -24,6 +24,9 @@ export const ProductSchema = z.object({
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number(),
+	// Missing keys parse as null/false; hydrate still fills slug to v{version}.
+	version_slug: z.string().nullable().default(null),
+	active: z.boolean().default(false),
 	group: z.string(),
 
 	env: z.enum(AppEnv),
@@ -39,7 +42,7 @@ export const ProductSchema = z.object({
 		})
 		.nullish(),
 	base_variant_id: z.string().nullable(),
-	base_internal_product_id: z.string().nullable().optional(),
+	base_internal_product_id: z.string().nullish(),
 	archived: z.boolean().default(false),
 	config: ProductConfigSchema.default(() => ({ ignore_past_due: false })),
 	...DbBillingControlsSchema.shape,
@@ -84,10 +87,18 @@ export type FullProductWithoutLicenses = z.infer<
 	typeof FullProductWithoutLicensesSchema
 >;
 
-export type FullProduct = FullProductWithoutLicenses & {
+/** Items + this plan's `licenses[]`. No reverse `parent_plan_licenses` — that nest hits the alias limit. */
+export type FullProductWithoutParentLicenses = FullProductWithoutLicenses & {
 	licenses?: FullPlanLicense[];
-	/** Catalog links where THIS product is the license; product = parent plan. */
+};
+
+export type FullProduct = FullProductWithoutParentLicenses & {
+	/** Reverse links (this product is the license). Every parent version, not latest-only — `deriveLicenseParentIntents` pins from this. */
 	parent_plan_licenses?: ParentPlanLicense[];
+	/** Parent base plan via `base_internal_product_id`; null if not a variant. */
+	base_product?: FullProduct | null;
+	/** Child variants pointing at this row's `internal_id` (empty when not a base). */
+	variants?: FullProduct[];
 };
 
 export const FullProductSchema: z.ZodType<FullProduct> =
@@ -97,6 +108,8 @@ export const FullProductSchema: z.ZodType<FullProduct> =
 		parent_plan_licenses: z
 			.array(z.lazy(() => ParentPlanLicenseSchema))
 			.optional(),
+		base_product: z.lazy(() => FullProductSchema).nullish(),
+		variants: z.array(z.lazy(() => FullProductSchema)).optional(),
 	});
 
 export type ProductCounts = {

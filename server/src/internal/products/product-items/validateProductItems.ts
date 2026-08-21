@@ -34,10 +34,12 @@ const validateProductItem = ({
 	item,
 	features,
 	multiCurrencyEnabled,
+	validateRollover,
 }: {
 	item: ProductItem;
 	features: Feature[];
 	multiCurrencyEnabled: boolean;
+	validateRollover: boolean;
 }) => {
 	item = ProductItemSchema.parse(item);
 	const feature = features.find((f) => f.id === item.feature_id);
@@ -312,43 +314,45 @@ const validateProductItem = ({
 		});
 	}
 
-	// Rollover validation
-	if (item.config?.rollover) {
-		const rollover = item.config.rollover as RolloverConfig;
+	if (!item.config?.rollover) return;
+	const rollover = item.config.rollover as RolloverConfig;
 
-		const rolloverIssue = rolloverConfigToIssue({ rollover });
-		if (rolloverIssue) {
+	// Set length to 0 for forever duration
+	if (rollover.duration === RolloverExpiryDurationType.Forever) {
+		rollover.length = 0;
+	}
+
+	// Authoring-time checks only: billing paths revalidate items round-tripped
+	// from persisted entitlements, which no longer answer for their own shape.
+	if (!validateRollover) return;
+
+	const rolloverIssue = rolloverConfigToIssue({ rollover });
+	if (rolloverIssue) {
+		throw new RecaseError({
+			message: rolloverIssue,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	// Validate rollover length for monthly durations
+	if (rollover.duration === RolloverExpiryDurationType.Month) {
+		if (typeof rollover.length !== "number" || rollover.length < 0) {
 			throw new RecaseError({
-				message: rolloverIssue,
+				message:
+					"Rollover length must be a positive number for monthly durations",
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
+	}
 
-		// Validate rollover length for monthly durations
-		if (rollover.duration === RolloverExpiryDurationType.Month) {
-			if (typeof rollover.length !== "number" || rollover.length < 0) {
-				throw new RecaseError({
-					message:
-						"Rollover length must be a positive number for monthly durations",
-					code: ErrCode.InvalidInputs,
-					statusCode: StatusCodes.BAD_REQUEST,
-				});
-			}
-		}
-
-		// Set length to 0 for forever duration
-		if (rollover.duration === RolloverExpiryDurationType.Forever) {
-			rollover.length = 0;
-		}
-
-		if (notNullish(item.usage_limit) && item.usage_limit <= 0) {
-			throw new RecaseError({
-				message: `Usage limit must be greater than 0`,
-				code: ErrCode.InvalidInputs,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
+	if (notNullish(item.usage_limit) && item.usage_limit <= 0) {
+		throw new RecaseError({
+			message: `Usage limit must be greater than 0`,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
 	}
 };
 
@@ -358,12 +362,15 @@ export const validateProductItems = ({
 	orgId,
 	env,
 	multiCurrencyEnabled,
+	validateRollover = true,
 }: {
 	newItems: ProductItem[];
 	features: Feature[];
 	orgId: string;
 	env: AppEnv;
 	multiCurrencyEnabled: boolean;
+	/** Off for billing paths, whose items come from already-persisted plans. */
+	validateRollover?: boolean;
 }) => {
 	const { allFeatures, newFeatures } = createFeaturesFromItems({
 		items: newItems,
@@ -387,6 +394,7 @@ export const validateProductItems = ({
 			item: newItems[index],
 			features,
 			multiCurrencyEnabled,
+			validateRollover,
 		});
 		const feature = features.find((f) => f.id === newItems[index].feature_id);
 

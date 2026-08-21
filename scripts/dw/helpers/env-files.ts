@@ -7,22 +7,28 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { isCloudAgent } from "@autumn/env";
 import {
 	ENV_LOCAL_DISABLED_SUFFIX,
 	ENV_LOCAL_TARGETS,
 	PROJECT_ROOT,
 } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
+import { emulateGoogleUrl } from "./emulate.ts";
 import { isProvisioned } from "./entry.ts";
-import { isHeadless } from "./headless.ts";
 import {
 	aliasesFor,
+	checkoutPortFor,
 	dragonflyPortFor,
 	dynamoDbPortFor,
 	elasticMqPortFor,
-	portlessHttpsUrl,
 	serverPortFor,
 } from "./ports.ts";
+import {
+	entryPublicServiceUrls,
+	laptopDevEnv,
+	publicDevEnv,
+} from "./publicUrls.ts";
 import { log } from "./shell.ts";
 import { forceSslVerifyFull } from "./url.ts";
 
@@ -101,18 +107,43 @@ export function provisionedInfraEnv(
 	};
 }
 
-function urlsForEntry(entry: RegistryEntry): {
+export function urlsForEntry(entry: RegistryEntry): {
 	apiUrl: string;
+	browserApiUrl: string;
+	checkoutUrl: string;
+	publicApiUrl: string;
 	viteUrl: string;
 } {
-	if (isProvisioned(entry) && !isHeadless()) {
-		const aliases = aliasesFor(entry.worktreeNum);
-		return { apiUrl: aliases.apiUrl, viteUrl: aliases.viteUrl };
-	}
 	const serverPort = serverPortFor(entry.worktreeNum);
+	const loopbackApi = `http://localhost:${serverPort}`;
+	const loopbackCheckout = `http://localhost:${checkoutPortFor(entry.worktreeNum)}`;
+	if (isProvisioned(entry) && !isCloudAgent()) {
+		const aliases = aliasesFor(entry.worktreeNum);
+		const publicUrls = entryPublicServiceUrls(entry);
+		return {
+			apiUrl: aliases.apiUrl,
+			browserApiUrl: aliases.apiUrl,
+			checkoutUrl: loopbackCheckout,
+			publicApiUrl: publicUrls?.api ?? aliases.apiUrl,
+			viteUrl: aliases.viteUrl,
+		};
+	}
+	const publicUrls = entryPublicServiceUrls(entry);
+	if (publicUrls) {
+		return {
+			apiUrl: loopbackApi,
+			browserApiUrl: publicUrls.api,
+			checkoutUrl: publicUrls.checkout,
+			publicApiUrl: publicUrls.api,
+			viteUrl: publicUrls.vite,
+		};
+	}
 	const vitePort = 3000 + (entry.worktreeNum - 1) * 100;
 	return {
-		apiUrl: `http://localhost:${serverPort}`,
+		apiUrl: loopbackApi,
+		browserApiUrl: loopbackApi,
+		checkoutUrl: loopbackCheckout,
+		publicApiUrl: loopbackApi,
 		viteUrl: `http://localhost:${vitePort}`,
 	};
 }
@@ -123,7 +154,9 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		log("writeEnvLocalFiles: entry missing databaseUrl, skipping");
 		return;
 	}
-	const { apiUrl, viteUrl } = urlsForEntry(entry);
+	const { apiUrl, browserApiUrl, checkoutUrl, publicApiUrl, viteUrl } =
+		urlsForEntry(entry);
+	const publicUrls = entryPublicServiceUrls(entry);
 	const serverPort = serverPortFor(worktreeNum);
 	const portlessCa = join(homedir(), ".portless", "ca.pem");
 
@@ -132,13 +165,36 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		DATABASE_URL: dbUrl,
 		DATABASE_CRITICAL_URL: dbUrl,
 		AUTUMN_API_URL: apiUrl,
-		AUTUMN_PUBLIC_API_URL: entry.ngrokUrl ?? apiUrl,
+		AUTUMN_PUBLIC_API_URL: publicApiUrl,
 		CLIENT_URL: viteUrl,
-		EMULATE_GOOGLE_URL: portlessHttpsUrl("google.emulate.localhost"),
+		EMULATE_GOOGLE_URL: emulateGoogleUrl({
+			origin: isCloudAgent() ? publicUrls?.emulate : undefined,
+		}),
 		AUTUMN_TEST_BASE_URL: `http://localhost:${serverPort}`,
 		AUTUMN_TEST_VITE_URL: viteUrl,
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 	};
+	if (isCloudAgent() && publicUrls) {
+		Object.assign(
+			serverEnv,
+			publicDevEnv({
+				urls: publicUrls,
+				worktreeNum,
+			}),
+		);
+		serverEnv.AUTUMN_TEST_BASE_URL = `http://localhost:${serverPort}`;
+		serverEnv.AUTUMN_TEST_VITE_URL = viteUrl;
+	} else if (isProvisioned(entry) && !isCloudAgent()) {
+		Object.assign(
+			serverEnv,
+			laptopDevEnv({
+				aliases: aliasesFor(worktreeNum),
+				publicUrls,
+			}),
+		);
+		serverEnv.AUTUMN_TEST_BASE_URL = `http://localhost:${serverPort}`;
+		serverEnv.AUTUMN_TEST_VITE_URL = viteUrl;
+	}
 	if (isProvisioned(entry)) {
 		Object.assign(serverEnv, provisionedInfraEnv(worktreeNum));
 	}
@@ -146,12 +202,13 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		serverEnv.NODE_EXTRA_CA_CERTS = portlessCa;
 	}
 	const viteEnv: Record<string, string> = {
-		VITE_BACKEND_URL: apiUrl,
+		VITE_BACKEND_URL: browserApiUrl,
 		VITE_FRONTEND_URL: viteUrl,
 	};
 
 	const checkoutEnv: Record<string, string> = {
-		VITE_API_URL: apiUrl,
+		VITE_API_URL: browserApiUrl,
+		VITE_CHECKOUT_URL: checkoutUrl,
 	};
 
 	const writeOne = (relPath: string, managed: Record<string, string>) => {
@@ -163,6 +220,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		}
 		const existing = existsSync(abs) ? readFileSync(abs, "utf-8") : null;
 		const merged = mergeEnvFile(existing, managed);
+		if (existing === merged) return;
 		writeFileSync(abs, merged);
 	};
 

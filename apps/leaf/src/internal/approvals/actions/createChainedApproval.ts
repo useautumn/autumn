@@ -1,0 +1,116 @@
+import type { ChatApproval } from "@autumn/shared";
+import { db } from "../../../lib/db.js";
+import { logger } from "../../../lib/logger.js";
+import { approvalOptionIds } from "../../agentRuntime/eve/events.js";
+import {
+	type ChainedPendingRequest,
+	siblingRequestIdsToolArgs,
+	type WithheldWrite,
+	withheldWritesToolArgs,
+} from "../../agentRuntime/eve/parkedInput.js";
+import type { EveAuthContext } from "../../agentRuntime/eve/types.js";
+import { getOrgInstallationToken } from "../../installations/actions/getOrgInstallationToken.js";
+import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
+import {
+	resolveApprovalDisplay,
+	withApprovalDisplay,
+} from "../utils/approvalDisplay.js";
+import {
+	fetchApprovalPreview,
+	isFailedApprovalPreview,
+	withGroupedWritePreviews,
+} from "../utils/fetchApprovalPreview.js";
+import { toolRequestFromArgs } from "../utils/toolRequest.js";
+
+export const createChainedApproval = async ({
+	auth,
+	chained,
+	providerUserId,
+	sessionId,
+	siblingRequestIds,
+	withheld = [],
+}: {
+	auth: EveAuthContext;
+	chained: ChainedPendingRequest;
+	providerUserId: string;
+	sessionId: string;
+	siblingRequestIds: ReadonlyArray<string>;
+	withheld?: ReadonlyArray<WithheldWrite>;
+}) => {
+	const env = auth.appEnv as ChatApproval["env"];
+	const provider = auth.provider as ChatApproval["provider"];
+	const options = approvalOptionIds({ options: chained.options });
+	let preview: unknown;
+	let getAccessToken: (() => Promise<string>) | undefined;
+	try {
+		const credentialUserId =
+			provider === "web" ? providerUserId : auth.autumnUserId;
+		const { accessToken } = await getOrgInstallationToken({
+			env,
+			orgId: auth.orgId,
+			provider,
+			userId: credentialUserId,
+			workspaceId: auth.workspaceId,
+		});
+		getAccessToken = async () => accessToken;
+		const request = toolRequestFromArgs(chained.input) ?? {};
+		const resolvedPreview = await fetchApprovalPreview({
+			env,
+			logger,
+			request,
+			token: accessToken,
+			toolName: chained.toolName,
+		});
+		if (isFailedApprovalPreview(resolvedPreview)) {
+			preview = resolvedPreview;
+		} else {
+			const display = await resolveApprovalDisplay({
+				env,
+				getToken: async () => accessToken,
+				preview: resolvedPreview,
+				request,
+			});
+			preview = withApprovalDisplay({ display, preview: resolvedPreview });
+		}
+	} catch (error) {
+		logger.warn("Could not backfill chained approval preview", {
+			event: "leaf.eve_chained_preview_backfill_failed",
+			tool: chained.toolName,
+			data: {
+				error,
+			},
+		});
+	}
+	let toolArgs: Record<string, unknown> = {
+		...(chained.input ?? {}),
+		_eveApproveOptionId: options.approve,
+		_eveDenyOptionId: options.deny,
+		...siblingRequestIdsToolArgs(siblingRequestIds),
+		...withheldWritesToolArgs(withheld),
+	};
+	if (getAccessToken) {
+		toolArgs = await withGroupedWritePreviews({
+			env,
+			getToken: getAccessToken,
+			logger,
+			toolArgs,
+		});
+	}
+	return chatApprovalRepo.insert({
+		db,
+		data: {
+			channelId: auth.channelId,
+			env,
+			harness: "eve",
+			orgId: auth.orgId,
+			preview,
+			provider,
+			providerUserId,
+			runId: sessionId,
+			toolArgs,
+			toolCallId: chained.requestId,
+			toolName: chained.toolName,
+			workspaceId: auth.workspaceId,
+		},
+	});
+};

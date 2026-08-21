@@ -1,3 +1,4 @@
+import { formatMoney, parsePreviewPayload } from "@autumn/render";
 import type { CardChild } from "chat";
 import { CardText, Table } from "chat";
 import { format } from "date-fns";
@@ -11,53 +12,8 @@ const asRecord = (value: unknown): LooseRecord | null =>
 		? (value as LooseRecord)
 		: null;
 
-const parseJson = (text: string): unknown => {
-	try {
-		return JSON.parse(text);
-	} catch {
-		return null;
-	}
-};
-
 export const formatEpochDate = (epochMs: number) =>
 	format(epochMs, "MMM d, yyyy");
-
-// Amounts are major currency units (the schema's "in cents" wording is stale —
-// the dashboard renders these values directly).
-const formatMoney = (amount: number, currency: string) => {
-	try {
-		return new Intl.NumberFormat("en-US", {
-			currency: currency.toUpperCase(),
-			currencyDisplay: "narrowSymbol",
-			style: "currency",
-		}).format(amount);
-	} catch {
-		return `$${amount.toFixed(2)}`;
-	}
-};
-
-// Unwraps MCP transport shapes around the preview payload: JSON strings,
-// [{text}] content arrays, {content} results, and the {preview, pending} wrapper.
-export const parsePreviewPayload = (preview: unknown): LooseRecord | null => {
-	if (typeof preview === "string") {
-		const parsed = parseJson(preview.trim());
-		return parsed ? parsePreviewPayload(parsed) : null;
-	}
-	if (Array.isArray(preview)) {
-		for (const entry of preview) {
-			const record = asRecord(entry);
-			if (typeof record?.text !== "string") continue;
-			const parsed = parsePreviewPayload(record.text);
-			if (parsed) return parsed;
-		}
-		return null;
-	}
-	const record = asRecord(preview);
-	if (!record) return null;
-	if (Array.isArray(record.content)) return parsePreviewPayload(record.content);
-	if ("preview" in record) return parsePreviewPayload(record.preview);
-	return record;
-};
 
 const UPDATE_INTENT_LABELS: Record<string, string> = {
 	cancel_end_of_cycle: "Cancel at end of cycle",
@@ -84,7 +40,7 @@ const lineItemRows = ({
 
 	const rows = items
 		.slice(0, MAX_LINE_ITEM_ROWS)
-		.map((item) => [item.name, formatMoney(item.total, currency)]);
+		.map((item) => [item.name, formatMoney({ amount: item.total, currency })]);
 	if (items.length > MAX_LINE_ITEM_ROWS) {
 		rows.push([`+${items.length - MAX_LINE_ITEM_ROWS} more items`, ""]);
 	}
@@ -108,14 +64,17 @@ const billingPreviewElements = (payload: LooseRecord): CardChild[] => {
 			? UPDATE_INTENT_LABELS[payload.intent]
 			: undefined;
 
-	rows.push(["Due now", formatMoney(payload.total as number, currency)]);
+	rows.push([
+		"Due now",
+		formatMoney({ amount: payload.total as number, currency }),
+	]);
 	if (
 		typeof nextCycle?.total === "number" &&
 		typeof nextCycle.starts_at === "number"
 	) {
 		rows.push([
 			`Next cycle · ${formatEpochDate(nextCycle.starts_at)}`,
-			formatMoney(nextCycle.total, currency),
+			formatMoney({ amount: nextCycle.total, currency }),
 		]);
 	}
 
