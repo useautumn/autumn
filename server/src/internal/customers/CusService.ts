@@ -87,6 +87,7 @@ export class CusService {
 		explain = false,
 		skipReset = false,
 		cusProductLimit: cusProductLimitOverride,
+		includeExpiredLooseEntitlements = false,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
@@ -101,6 +102,11 @@ export class CusService {
 		skipReset?: boolean;
 		/** Overrides the org-configured customer-product page size. */
 		cusProductLimit?: number;
+		/**
+		 * Internal dashboard only: also hydrate EXPIRED loose entitlements into
+		 * extra_customer_entitlements. Must stay false for public API paths.
+		 */
+		includeExpiredLooseEntitlements?: boolean;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
 		const orgId = org.id;
@@ -139,7 +145,10 @@ export class CusService {
 					}) &&
 					!withTrialsUsed &&
 					!withEvents &&
-					!entityId;
+					!entityId &&
+					// The flat-model query has no expired-loose hydration; fall back to
+					// the legacy query so the flag takes effect.
+					!includeExpiredLooseEntitlements;
 
 				const query = useFlatModel
 					? getCursorPaginatedFullCusQuery({
@@ -168,6 +177,7 @@ export class CusService {
 							entityId,
 							cusProductLimit,
 							entitiesLimit,
+							includeExpiredLooseEntitlements,
 						});
 
 				if (explain) {

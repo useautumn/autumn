@@ -29,6 +29,8 @@ export const handleGetCustomer = createRoute({
 
 		const expandParam = c.req.query("expand");
 		const entityId = c.req.query("entity_id");
+		const includeExpiredLooseEntitlements =
+			c.req.query("include_expired_loose") === "true";
 		const extraExpands = expandParam
 			? (expandParam.split(",").filter(Boolean) as CustomerExpand[])
 			: [];
@@ -41,6 +43,7 @@ export const handleGetCustomer = createRoute({
 			expand,
 			inStatuses: ALL_STATUSES,
 			entityId: entityId || undefined,
+			includeExpiredLooseEntitlements,
 		});
 
 		const [

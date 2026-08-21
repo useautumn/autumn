@@ -389,7 +389,23 @@ const buildSubscriptionsCTE = (
   `;
 };
 
-const buildExtraEntitlementsCTE = () => {
+// Expiry predicate for LOOSE (extra) customer entitlements only. Internal
+// dashboard reads can bypass it to surface expired loose balances; public
+// hydration paths always keep it.
+const looseEntitlementExpiryFilterSql = ({
+	includeExpiredLooseEntitlements,
+}: {
+	includeExpiredLooseEntitlements: boolean;
+}) =>
+	includeExpiredLooseEntitlements
+		? sql``
+		: sql`AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)`;
+
+const buildExtraEntitlementsCTE = ({
+	includeExpiredLooseEntitlements = false,
+}: {
+	includeExpiredLooseEntitlements?: boolean;
+} = {}) => {
 	return sql`
     extra_customer_entitlements AS (
       SELECT
@@ -407,7 +423,7 @@ const buildExtraEntitlementsCTE = () => {
           AND ce.customer_product_id IS NULL
 		  AND ce.pooled_balance_id IS NULL
 		  AND ce.pooled_contribution_id IS NULL
-          AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+          ${looseEntitlementExpiryFilterSql({ includeExpiredLooseEntitlements })}
           AND ${looseEntitlementIsLiveSql()}
         ORDER BY ce.id DESC
 		LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
@@ -481,6 +497,7 @@ export const getFullCusQuery = ({
 	entityId,
 	cusProductLimit,
 	entitiesLimit = 300,
+	includeExpiredLooseEntitlements = false,
 }: {
 	idOrInternalId: string;
 	orgId: string;
@@ -494,6 +511,8 @@ export const getFullCusQuery = ({
 	entityId?: string;
 	cusProductLimit: number;
 	entitiesLimit?: number;
+	/** Internal dashboard only: also hydrate EXPIRED loose entitlements. */
+	includeExpiredLooseEntitlements?: boolean;
 }) => {
 	const sqlChunks: SQL[] = [];
 
@@ -544,7 +563,9 @@ export const getFullCusQuery = ({
 
 	// Unconditionally add extra entitlements CTE
 	sqlChunks.push(sql`, `);
-	sqlChunks.push(buildExtraEntitlementsCTE());
+	sqlChunks.push(
+		buildExtraEntitlementsCTE({ includeExpiredLooseEntitlements }),
+	);
 
 	// Unconditionally add synthetic pooled customer entitlements.
 	sqlChunks.push(sql`, `);
@@ -766,7 +787,7 @@ export const getPaginatedFullCusQuery = ({
         AND ce.customer_product_id IS NULL
 		AND ce.pooled_balance_id IS NULL
 		AND ce.pooled_contribution_id IS NULL
-        AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+        ${looseEntitlementExpiryFilterSql({ includeExpiredLooseEntitlements: false })}
         AND ${looseEntitlementIsLiveSql()}
       ORDER BY ce.id DESC
 	  LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
