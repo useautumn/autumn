@@ -39,7 +39,9 @@ const reactConfigs: Options[] = [
 		dts: true,
 		clean: false,
 		outDir: "./dist/react",
-		external: ["react", "react/jsx-runtime", "react-dom"],
+		// noExternal wins for the JS bundle; the external entry only stops the
+		// dts rollup from re-inlining the SDK types shipped in dist/sdk-types.
+		external: ["react", "react/jsx-runtime", "react-dom", "@useautumn/sdk"],
 		noExternal: [...noExternal, "@tanstack/react-query"],
 		bundle: true,
 		minify: true,
@@ -75,6 +77,8 @@ export default defineConfig([
 			"better-auth/index": "src/better-auth/index.ts",
 		},
 		skipNodeModulesBundle: true,
+		// noExternal wins for the JS bundle; the @useautumn/sdk entry only stops
+		// the dts rollup from re-inlining the SDK types shipped in dist/sdk-types.
 		external: [
 			"react",
 			"react/jsx-runtime",
@@ -83,6 +87,7 @@ export default defineConfig([
 			"hono",
 			"better-auth",
 			"better-call",
+			"@useautumn/sdk",
 		],
 		noExternal,
 		// sdk/index declarations are hand-shimmed onto the tsc-emitted

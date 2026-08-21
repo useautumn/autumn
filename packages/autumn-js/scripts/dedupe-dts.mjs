@@ -11,10 +11,40 @@ const rootShim = 'export * from "../sdk-types/index.js";\n';
 fs.writeFileSync(path.join(sdkEntryDir, "index.d.ts"), rootShim);
 fs.writeFileSync(path.join(sdkEntryDir, "index.d.mts"), rootShim);
 
+// The dts rollup keeps "@useautumn/sdk" imports external (see tsup.config.ts);
+// consumers can't resolve that workspace name, so point them at dist/sdk-types.
+const skipDirs = new Set(["sdk-types", "standalone", "sdk"]);
+const sdkTypesEntry = path.join(distDir, "sdk-types", "index.js");
+let rewritten = 0;
+const rewriteSdkImports = (dir) => {
+	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+		const fullPath = path.join(dir, entry.name);
+		if (entry.isDirectory()) {
+			if (dir === distDir && skipDirs.has(entry.name)) continue;
+			rewriteSdkImports(fullPath);
+			continue;
+		}
+		if (!/\.d\.(ts|mts)$/.test(entry.name)) continue;
+		const content = fs.readFileSync(fullPath, "utf8");
+		if (!content.includes("@useautumn/sdk")) continue;
+		const relative = path
+			.relative(path.dirname(fullPath), sdkTypesEntry)
+			.replaceAll("\\", "/");
+		const specifier = relative.startsWith(".") ? relative : `./${relative}`;
+		fs.writeFileSync(
+			fullPath,
+			content
+				.replaceAll('"@useautumn/sdk"', `"${specifier}"`)
+				.replaceAll("'@useautumn/sdk'", `'${specifier}'`),
+		);
+		rewritten++;
+	}
+};
+rewriteSdkImports(distDir);
+
 // ESM declarations duplicate their CJS siblings byte-for-byte (modulo chunk
 // extensions); a re-export shim serves the same types. No entry has a default
 // export, so `export *` is lossless.
-const skipDirs = new Set(["sdk-types", "standalone", "sdk"]);
 let shimmed = 0;
 const walk = (dir) => {
 	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -61,5 +91,5 @@ for (const file of declarationFiles) {
 	deleted++;
 }
 console.log(
-	`dedupe-dts: wrote sdk root shims, shimmed ${shimmed} .d.mts files, deleted ${deleted} orphaned declaration chunks`,
+	`dedupe-dts: wrote sdk root shims, rewrote ${rewritten} SDK imports, shimmed ${shimmed} .d.mts files, deleted ${deleted} orphaned declaration chunks`,
 );
