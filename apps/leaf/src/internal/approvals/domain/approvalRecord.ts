@@ -138,8 +138,8 @@ const sheetSeedableCustomize = (customize: unknown) => {
 	);
 };
 
-/** Excludes internal admin threads (they hop orgs — the link would 403) and
- * requests the sheet cannot faithfully represent. */
+/** Excludes requests the sheet cannot faithfully represent; internal admin
+ * threads link too — the URL carries org_id and the dashboard switches org. */
 export const dashboardLinkableApproval = ({
 	approval,
 	groupedStepCount,
@@ -159,8 +159,6 @@ export const dashboardLinkableApproval = ({
 	return (
 		groupedStepCount === 0 &&
 		sheetSeedableCustomize(customize) &&
-		SHEET_LINKABLE_TOOLS.has(normalizeToolName(approval.tool_name)) &&
-		// The column is notNull, but test fixtures construct partial rows.
-		!isInternalAutumnSlackProvider({ provider: approval.provider ?? "" })
+		SHEET_LINKABLE_TOOLS.has(normalizeToolName(approval.tool_name))
 	);
 };

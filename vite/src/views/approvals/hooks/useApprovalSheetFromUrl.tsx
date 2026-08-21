@@ -5,6 +5,8 @@ import { attachFormOverridesFromRequestBody } from "@/components/forms/attach-v2
 import { scheduleFormFromRequestBody } from "@/components/forms/create-schedule/utils/scheduleFormFromRequestBody";
 import { updateSubscriptionFormOverridesFromRequestBody } from "@/components/forms/update-subscription-v2/utils/updateSubscriptionFormOverridesFromRequestBody";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useListOrganizations, useSession } from "@/lib/auth-client";
+import { setActiveOrg } from "@/lib/orgSync";
 import { useApprovalSeedStore } from "../stores/useApprovalSeedStore";
 import { useApprovalDetailQuery } from "./useApprovalDetailQuery";
 import { useResolvedApprovalRequest } from "./useResolvedApprovalRequest";
@@ -28,6 +30,7 @@ export const useApprovalSheetFromUrl = ({
 }) => {
 	const [params, setParams] = useQueryStates({
 		approval_id: parseAsString,
+		org_id: parseAsString,
 		plan_id: parseAsString,
 		sheet: parseAsString,
 	});
@@ -36,14 +39,53 @@ export const useApprovalSheetFromUrl = ({
 	const openedRef = useRef(false);
 
 	const sheetType = isApprovalSheet(params.sheet) ? params.sheet : null;
+	const { data: session } = useSession();
+	const { data: organizations, isPending: organizationsPending } =
+		useListOrganizations();
+	const activeOrgId = session?.session.activeOrganizationId;
+	// Internal admin cards carry org_id: the link targets another org, so the
+	// session must switch before any org-scoped fetch can resolve.
+	const orgMismatch = Boolean(
+		params.org_id && activeOrgId && params.org_id !== activeOrgId,
+	);
 	const { approval, approvalError } = useApprovalDetailQuery({
-		approvalId: sheetType ? params.approval_id : null,
+		approvalId: sheetType && !orgMismatch ? params.approval_id : null,
 	});
 	const { resolved, resolutionFailed, resolutionPending } =
 		useResolvedApprovalRequest({ approval });
 
 	useEffect(() => {
 		if (!sheetType || openedRef.current) return;
+		if (orgMismatch) {
+			if (organizationsPending) return;
+			openedRef.current = true;
+			const target = organizations?.find(
+				(organization) => organization.id === params.org_id,
+			);
+			if (!target) {
+				toast.error(
+					"This approval belongs to an organization you don't have access to.",
+				);
+				void setParams({
+					approval_id: null,
+					org_id: null,
+					plan_id: null,
+					sheet: null,
+				});
+				return;
+			}
+			void setActiveOrg(target.id).then((result) => {
+				if (result.error) {
+					toast.error("Couldn't switch organization for this approval.");
+					return;
+				}
+				toast.info(`Switched to ${target.name} for this approval.`);
+				// Reload with the deep-link params intact — the flow resumes
+				// under the right org.
+				window.location.reload();
+			});
+			return;
+		}
 		if (params.approval_id && !approval && !approvalError) return;
 		if (resolutionPending) return;
 
@@ -88,10 +130,20 @@ export const useApprovalSheetFromUrl = ({
 					: "subscription-update";
 			setSheet({ type, itemId, data });
 		}
-		void setParams({ approval_id: null, plan_id: null, sheet: null });
+		void setParams({
+			approval_id: null,
+			org_id: null,
+			plan_id: null,
+			sheet: null,
+		});
 	}, [
+		activeOrgId,
 		approval,
 		approvalError,
+		organizations,
+		organizationsPending,
+		orgMismatch,
+		params.org_id,
 		params.approval_id,
 		params.plan_id,
 		resolutionFailed,

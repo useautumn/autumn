@@ -22,6 +22,7 @@ export const dashboardUrlFor = ({
 	approvalId,
 	env,
 	groupedStepCount,
+	orgId,
 	provider,
 	toolArgs,
 	toolName,
@@ -29,6 +30,7 @@ export const dashboardUrlFor = ({
 	approvalId: string;
 	env: ChatApproval["env"];
 	groupedStepCount: number;
+	orgId: string;
 	provider: string;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
@@ -45,6 +47,7 @@ export const dashboardUrlFor = ({
 				approvalId,
 				customerId: requestStringField(toolArgs, "customer_id"),
 				env,
+				orgId,
 				planId: requestStringField(toolArgs, "plan_id"),
 				toolName,
 			})
@@ -74,6 +77,7 @@ export const postApprovalCardForRow = async ({
 				approvalId: approval.id,
 				env: approval.env,
 				groupedStepCount: grouped.length,
+				orgId: approval.org_id,
 				provider: approval.provider,
 				toolArgs,
 				toolName: approval.tool_name,
@@ -203,6 +207,7 @@ export const presentApproval = async ({
 		approvalId: created.approvalId,
 		env,
 		groupedStepCount: created.withheld.length,
+		orgId,
 		provider: installation.provider,
 		toolArgs: created.toolArgs,
 		toolName: created.toolName,
