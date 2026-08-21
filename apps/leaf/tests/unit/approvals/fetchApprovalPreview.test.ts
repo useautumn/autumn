@@ -3,7 +3,7 @@ import { AppEnv } from "@autumn/shared";
 import {
 	fetchApprovalPreview,
 	shouldRefreshApprovalPreview,
-	withStepPreviews,
+	withWritePreviews,
 } from "../../../src/internal/approvals/utils/fetchApprovalPreview.js";
 
 const silentLogger = { debug: () => {}, warn: () => {} };
@@ -214,12 +214,12 @@ describe("failed billing previews are not silently swallowed", () => {
 	});
 });
 
-// A grouped card renders one money cell per step; a step stored without a
-// preview silently shows $0.00, so every grouped step must be backfilled.
-describe("withStepPreviews", () => {
-	test("backfills a preview onto every step", async () => {
+// A grouped card renders one money cell per write; a write stored without a
+// preview silently shows $0.00, so every grouped write must be backfilled.
+describe("withWritePreviews", () => {
+	test("backfills a preview onto every write", async () => {
 		const previewedCustomers: string[] = [];
-		const previewed = await withStepPreviews({
+		const previewed = await withWritePreviews({
 			env: AppEnv.Sandbox,
 			executeTool: async ({ args }: { args: Record<string, unknown> }) => {
 				const request = (args as { request: { customer_id: string } }).request;
@@ -228,7 +228,7 @@ describe("withStepPreviews", () => {
 			},
 			getToken: async () => "tok",
 			logger: silentLogger,
-			steps: [
+			writes: [
 				{
 					input: { request: { customer_id: "cus_2", plan_id: "pack" } },
 					requestId: "req_2",
@@ -244,15 +244,15 @@ describe("withStepPreviews", () => {
 
 		expect(previewedCustomers.sort()).toEqual(["cus_2", "cus_3"]);
 		expect(previewed).toHaveLength(2);
-		for (const step of previewed as unknown as Array<{
+		for (const write of previewed as unknown as Array<{
 			preview?: { preview?: { total?: number } };
 		}>) {
-			expect(step.preview?.preview?.total).toBe(2400);
+			expect(write.preview?.preview?.total).toBe(2400);
 		}
 	});
 
-	test("keeps the step and card alive when one preview fails", async () => {
-		const previewed = await withStepPreviews({
+	test("keeps the write and card alive when one preview fails", async () => {
+		const previewed = await withWritePreviews({
 			env: AppEnv.Sandbox,
 			executeTool: async ({ args }: { args: Record<string, unknown> }) => {
 				const request = (args as { request: { customer_id: string } }).request;
@@ -261,7 +261,7 @@ describe("withStepPreviews", () => {
 			},
 			getToken: async () => "tok",
 			logger: silentLogger,
-			steps: [
+			writes: [
 				{
 					input: { request: { customer_id: "cus_2", plan_id: "pack" } },
 					requestId: "req_2",

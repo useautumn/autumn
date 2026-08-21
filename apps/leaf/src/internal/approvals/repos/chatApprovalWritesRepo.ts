@@ -1,15 +1,15 @@
 import crypto from "node:crypto";
 import {
-	type ChatApprovalStep,
-	type ChatApprovalStepStatus,
-	chatApprovalSteps,
+	type ChatApprovalWrite,
+	type ChatApprovalWriteStatus,
 	chatApprovals,
+	chatApprovalWrites,
 } from "@autumn/shared";
 import { and, asc, eq, exists } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 
-export type InsertApprovalStep = {
+export type InsertApprovalWrite = {
 	denyOptionId?: string;
 	preview?: unknown;
 	requestId?: string;
@@ -24,12 +24,12 @@ const insertSteps = async ({
 }: {
 	approvalId: string;
 	db: ChatDb;
-	steps: ReadonlyArray<InsertApprovalStep>;
+	steps: ReadonlyArray<InsertApprovalWrite>;
 }) => {
 	if (!steps.length) return;
-	await db.insert(chatApprovalSteps).values(
+	await db.insert(chatApprovalWrites).values(
 		steps.map((step, position) => ({
-			id: `chat_stp_${crypto.randomUUID().replace(/-/g, "")}`,
+			id: `chat_apw_${crypto.randomUUID().replace(/-/g, "")}`,
 			approval_id: approvalId,
 			position,
 			request_id: step.requestId,
@@ -50,12 +50,12 @@ const listSteps = async ({
 }: {
 	approvalId: string;
 	db: ChatDb;
-}): Promise<ChatApprovalStep[]> =>
+}): Promise<ChatApprovalWrite[]> =>
 	db
 		.select()
-		.from(chatApprovalSteps)
-		.where(eq(chatApprovalSteps.approval_id, approvalId))
-		.orderBy(asc(chatApprovalSteps.position));
+		.from(chatApprovalWrites)
+		.where(eq(chatApprovalWrites.approval_id, approvalId))
+		.orderBy(asc(chatApprovalWrites.position));
 
 const parentIsPending = (db: ChatDb, approvalId: string) =>
 	exists(
@@ -76,24 +76,24 @@ const setStepPreview = async ({
 	approvalId,
 	db,
 	preview,
-	stepId,
+	writeId,
 }: {
 	approvalId: string;
 	db: ChatDb;
 	preview: unknown;
-	stepId: string;
+	writeId: string;
 }) => {
 	const updated = await db
-		.update(chatApprovalSteps)
+		.update(chatApprovalWrites)
 		.set({ preview, updated_at: Date.now() })
 		.where(
 			and(
-				eq(chatApprovalSteps.id, stepId),
-				eq(chatApprovalSteps.status, "pending"),
+				eq(chatApprovalWrites.id, writeId),
+				eq(chatApprovalWrites.status, "pending"),
 				parentIsPending(db, approvalId),
 			),
 		)
-		.returning({ id: chatApprovalSteps.id });
+		.returning({ id: chatApprovalWrites.id });
 	return updated.length > 0;
 };
 
@@ -101,20 +101,20 @@ const setStepStatus = async ({
 	db,
 	result,
 	status,
-	stepId,
+	writeId,
 }: {
 	db: ChatDb;
 	result?: unknown;
-	status: ChatApprovalStepStatus;
-	stepId: string;
+	status: ChatApprovalWriteStatus;
+	writeId: string;
 }) => {
 	await db
-		.update(chatApprovalSteps)
+		.update(chatApprovalWrites)
 		.set({ result, status, updated_at: Date.now() })
-		.where(eq(chatApprovalSteps.id, stepId));
+		.where(eq(chatApprovalWrites.id, writeId));
 };
 
-export const chatApprovalStepsRepo = {
+export const chatApprovalWritesRepo = {
 	insert: insertSteps,
 	list: listSteps,
 	setPreview: setStepPreview,

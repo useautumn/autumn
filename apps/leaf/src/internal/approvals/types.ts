@@ -10,7 +10,7 @@ export type ActionMessageContent = Parameters<
 >[2];
 
 /** Outcome of one write on a grouped card, in apply order. */
-export type ApprovalStepOutcome = {
+export type ApprovalWriteOutcome = {
 	status: "applied" | "failed" | "pending" | "skipped" | "unknown";
 	toolName: string;
 };
@@ -25,20 +25,17 @@ export type ApprovalRunResult =
 	// `retryable` means the write never ran to completion (a session crash /
 	// interruption), so the approval stays pending and the user can re-apply.
 	| {
-			/** A write the resumed turn re-issued after a step failed — it still
-			 * needs its own card, or the session waits on it in silence. */
 			chainedApprovalId?: string;
 			error: true;
 			message: string;
 			retryable?: boolean;
-			steps?: ReadonlyArray<ApprovalStepOutcome>;
+			writes?: ReadonlyArray<ApprovalWriteOutcome>;
 	  }
+	// chainedApprovalId: the resumed turn parked on another gated write (a
+	// re-issue after failure still needs its own card, or the session waits in
+	// silence); question: it parked on an ask_question instead.
 	| {
-			/** The resumed turn parked on another gated write — surfaces that mimic
-			 * chat (Slack) post this row's card; the dashboard picks it up by poll. */
 			chainedApprovalId?: string;
-			/** The resumed turn parked on an ask_question — rich surfaces render
-			 * the options as buttons. */
 			question?: {
 				options: ReadonlyArray<Readonly<{ id?: string; label?: string }>>;
 				prompt: string;
@@ -46,7 +43,7 @@ export type ApprovalRunResult =
 				sessionId: string;
 			};
 			result: unknown;
-			steps?: ReadonlyArray<ApprovalStepOutcome>;
+			writes?: ReadonlyArray<ApprovalWriteOutcome>;
 			text: string;
 			toolName?: string;
 	  };

@@ -29,7 +29,6 @@ export const requiredScopesForApproval = ({
 	toolArgs,
 	toolName,
 }: {
-	/** Grouped step tool names from step rows; falls back to legacy markers. */
 	groupedToolNames?: ReadonlyArray<string>;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;

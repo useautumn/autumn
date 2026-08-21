@@ -1,6 +1,6 @@
 import {
 	type ChatApproval,
-	type ChatApprovalStep,
+	type ChatApprovalWrite,
 	chatInstallations,
 	checkScopes,
 	ms,
@@ -19,9 +19,9 @@ import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import { discardApproval } from "../../actions/discardApproval.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
-import { withheldStepsOf } from "../../domain/approvalRecord.js";
+import { withheldWritesOf } from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
-import { chatApprovalStepsRepo } from "../../repos/chatApprovalStepsRepo.js";
+import { chatApprovalWritesRepo } from "../../repos/chatApprovalWritesRepo.js";
 import type {
 	ApprovalActionDeps,
 	ApprovalAuthorization,
@@ -43,14 +43,14 @@ const APPROVAL_PROGRESS_DELAY_MS = ms.seconds(10);
  * degrade to the legacy marker fallback rather than blocking the click. */
 const groupedStepsForApproval = async ({
 	approval,
-	listSteps = (approvalId) => chatApprovalStepsRepo.list({ approvalId, db }),
+	listSteps = (approvalId) => chatApprovalWritesRepo.list({ approvalId, db }),
 }: {
 	approval: ChatApproval;
-	listSteps?: (approvalId: string) => Promise<ChatApprovalStep[]>;
+	listSteps?: (approvalId: string) => Promise<ChatApprovalWrite[]>;
 }) =>
-	withheldStepsOf({
+	withheldWritesOf({
 		approval,
-		steps: await listSteps(approval.id).catch(() => []),
+		writes: await listSteps(approval.id).catch(() => []),
 	});
 
 const cardDetailsForApproval = async ({
@@ -58,29 +58,29 @@ const cardDetailsForApproval = async ({
 }: {
 	approval?: ChatApproval;
 }) => {
-	const groupedSteps = approval
+	const groupedWrites = approval
 		? await groupedStepsForApproval({ approval })
 		: undefined;
 	return {
 		...detailsFromApproval({ approval }),
 		dashboardUrl: approval
-			? approvalDashboardUrl({ approval, groupedSteps })
+			? approvalDashboardUrl({ approval, groupedWrites })
 			: undefined,
-		groupedSteps,
+		groupedWrites,
 	};
 };
 
 const approvalDashboardUrl = ({
 	approval,
-	groupedSteps,
+	groupedWrites,
 }: {
 	approval: ChatApproval;
-	groupedSteps?: ReadonlyArray<WithheldWrite>;
+	groupedWrites?: ReadonlyArray<WithheldWrite>;
 }) =>
 	dashboardUrlFor({
 		approvalId: approval.id,
 		env: approval.env,
-		groupedStepCount: groupedSteps?.length ?? 0,
+		groupedStepCount: groupedWrites?.length ?? 0,
 		provider: approval.provider,
 		toolArgs: approval.tool_args as Record<string, unknown>,
 		toolName: approval.tool_name,
@@ -468,19 +468,19 @@ export const handleApprovalActionWithDeps = async ({
 			// re-render the PENDING card and tell the thread why.
 			const refreshed = await deps.getApproval({ approvalId });
 			if (refreshed) {
-				const groupedSteps = await groupedStepsForApproval({
+				const groupedWrites = await groupedStepsForApproval({
 					approval: refreshed,
 				});
 				await deps.editActionMessage({
 					content: approvalCard({
 						dashboardUrl: approvalDashboardUrl({
 							approval: refreshed,
-							groupedSteps,
+							groupedWrites,
 						}),
 						id: refreshed.id,
 						env: refreshed.env,
 						preview: refreshed.preview ?? undefined,
-						steps: groupedSteps,
+						writes: groupedWrites,
 						toolArgs: publicToolArgs(
 							refreshed.tool_args as Record<string, unknown>,
 						),
@@ -548,7 +548,20 @@ export const handleApprovalActionWithDeps = async ({
 				...details,
 				actorId: providerUserId,
 				result,
-				steps: "steps" in result ? result.steps : undefined,
+				outcomes:
+					"writes" in result
+						? (result.writes as
+								| ReadonlyArray<{
+										status:
+											| "applied"
+											| "failed"
+											| "pending"
+											| "skipped"
+											| "unknown";
+										toolName: string;
+								  }>
+								| undefined)
+						: undefined,
 			}),
 			event,
 		});

@@ -94,7 +94,7 @@ export const chatApprovals = pgTable(
 	],
 );
 
-export type ChatApprovalStepStatus =
+export type ChatApprovalWriteStatus =
 	| "pending"
 	| "running"
 	| "applied"
@@ -104,8 +104,8 @@ export type ChatApprovalStepStatus =
 
 /** One gated write within an approval; position 0 is the primary write the
  * parent row mirrors, later positions are the grouped siblings. */
-export const chatApprovalSteps = pgTable(
-	"chat_approval_steps",
+export const chatApprovalWrites = pgTable(
+	"chat_approval_writes",
 	{
 		id: text().primaryKey().notNull(),
 		approval_id: text("approval_id").notNull(),
@@ -115,7 +115,7 @@ export const chatApprovalSteps = pgTable(
 		tool_name: text("tool_name").notNull(),
 		tool_args: jsonb("tool_args").$type<Record<string, unknown>>().notNull(),
 		preview: jsonb().$type<unknown>(),
-		status: text("status").$type<ChatApprovalStepStatus>().notNull(),
+		status: text("status").$type<ChatApprovalWriteStatus>().notNull(),
 		result: jsonb().$type<unknown>(),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 		updated_at: numeric({ mode: "number" }).notNull().default(sqlNow),
@@ -124,9 +124,9 @@ export const chatApprovalSteps = pgTable(
 		foreignKey({
 			columns: [table.approval_id],
 			foreignColumns: [chatApprovals.id],
-			name: "chat_approval_steps_approval_id_fkey",
+			name: "chat_approval_writes_approval_id_fkey",
 		}).onDelete("cascade"),
-		unique("chat_approval_steps_approval_position_key").on(
+		unique("chat_approval_writes_approval_position_key").on(
 			table.approval_id,
 			table.position,
 		),
@@ -181,5 +181,5 @@ export const chatOAuthCredentials = pgTable(
 
 export type ChatInstallation = typeof chatInstallations.$inferSelect;
 export type ChatApproval = typeof chatApprovals.$inferSelect;
-export type ChatApprovalStep = typeof chatApprovalSteps.$inferSelect;
+export type ChatApprovalWrite = typeof chatApprovalWrites.$inferSelect;
 export type ChatOAuthCredential = typeof chatOAuthCredentials.$inferSelect;

@@ -17,12 +17,8 @@ export type PendingQuestion = Readonly<{
 }>;
 
 export type WithheldWrite = Readonly<{
-	/** The step's own deny option — sibling parks are each answered with their
-	 * own option id, never the primary's. */
 	denyOptionId?: string;
 	input?: Record<string, unknown>;
-	/** Backfilled when the approval is created, so the card can render this
-	 * step with the same body as a standalone write. */
 	preview?: unknown;
 	requestId: string;
 	toolName: string;

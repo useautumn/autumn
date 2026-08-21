@@ -1,10 +1,10 @@
 /**
- * The deterministic executor: approve executes the stored steps directly —
+ * The deterministic executor: approve executes the stored writes directly —
  * fast, exactly-once, drift-guarded — and eve is only notified.
  *
  *   bun tests/e2e/approveExecutor.e2e.ts
  */
-import { AppEnv, chatApprovalSteps, chatApprovals } from "@autumn/shared";
+import { AppEnv, chatApprovals, chatApprovalWrites } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { createApproval } from "../../src/internal/approvals/actions/createApproval.js";
 import { resolveApproval } from "../../src/internal/approvals/actions/resolveApproval.js";
@@ -144,15 +144,15 @@ check(
 	(await customerHasLaunch(customerA)) && (await customerHasLaunch(customerB)),
 );
 
-const steps = await db
+const writes = await db
 	.select()
-	.from(chatApprovalSteps)
-	.where(eq(chatApprovalSteps.approval_id, approval.id))
-	.orderBy(chatApprovalSteps.position);
+	.from(chatApprovalWrites)
+	.where(eq(chatApprovalWrites.approval_id, approval.id))
+	.orderBy(chatApprovalWrites.position);
 check(
-	"every step row is applied",
-	steps.length === 2 && steps.every((step) => step.status === "applied"),
-	steps.map((step) => step.status).join(","),
+	"every write row is applied",
+	writes.length === 2 && writes.every((write) => write.status === "applied"),
+	writes.map((write) => write.status).join(","),
 );
 const [finalRow] = await db
 	.select()
@@ -226,23 +226,23 @@ if (!driftCreated) throw new Error("no drift approval");
 // matches what a fresh preview computes.
 const [primaryStep] = await db
 	.select()
-	.from(chatApprovalSteps)
-	.where(eq(chatApprovalSteps.approval_id, driftCreated.approvalId))
-	.orderBy(chatApprovalSteps.position);
-if (!primaryStep) throw new Error("drift step missing");
+	.from(chatApprovalWrites)
+	.where(eq(chatApprovalWrites.approval_id, driftCreated.approvalId))
+	.orderBy(chatApprovalWrites.position);
+if (!primaryStep) throw new Error("drift write missing");
 // The stored inner preview may be an MCP envelope; replace it wholesale with
 // a parsed-shape record whose money facts cannot match a fresh preview.
 const tampered = {
 	preview: { currency: "usd", line_items: [], total: 999_999 },
 };
-const { chatApprovalStepsRepo } = await import(
-	"../../src/internal/approvals/repos/chatApprovalStepsRepo.js"
+const { chatApprovalWritesRepo } = await import(
+	"../../src/internal/approvals/repos/chatApprovalWritesRepo.js"
 );
-await chatApprovalStepsRepo.setPreview({
+await chatApprovalWritesRepo.setPreview({
 	approvalId: driftCreated.approvalId,
 	db,
 	preview: tampered,
-	stepId: primaryStep.id,
+	writeId: primaryStep.id,
 });
 const driftApproval = await chatApprovalRepo.claim({
 	approvalId: driftCreated.approvalId,

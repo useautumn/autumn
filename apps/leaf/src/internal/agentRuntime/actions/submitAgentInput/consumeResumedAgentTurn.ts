@@ -119,11 +119,7 @@ export const consumeResumedAgentTurn = async ({
 	skipRequestId,
 }: {
 	auth: EveAuthContext;
-	/** The writes the user approved, in apply order; their results are the only
-	 * proof each one ran. */
 	expectedToolNames?: ReadonlyArray<string>;
-	/** Child sessions the turn delegated to before parking. A proxied write
-	 * executes there, so its proof lives on the child stream. */
 	childSessionIds?: ReadonlyArray<string>;
 	orgId: string;
 	session: EveSessionRef;
@@ -138,7 +134,7 @@ export const consumeResumedAgentTurn = async ({
 	let sawEvent = false;
 	let sawTurnActivity = false;
 	let turnStarted = false;
-	const expectedSteps = (expectedToolNames ?? []).map((toolName) => ({
+	const expectedWrites = (expectedToolNames ?? []).map((toolName) => ({
 		normalized: normalizeToolName(toolName),
 		reserved: false,
 		status: "pending" as "applied" | "failed" | "pending",
@@ -146,14 +142,14 @@ export const consumeResumedAgentTurn = async ({
 	}));
 	const approvedCallIds = new Map<string, number>();
 	// Each requested call reserves the next free step of its tool, so N calls
-	// of one tool map to N distinct steps rather than all onto the first.
+	// of one tool map to N distinct writes rather than all onto the first.
 	const reserveStepFor = (name?: string) => {
 		if (!name) return -1;
 		const normalized = normalizeToolName(name);
-		const index = expectedSteps.findIndex(
+		const index = expectedWrites.findIndex(
 			(step) => !step.reserved && step.normalized === normalized,
 		);
-		if (index >= 0) expectedSteps[index].reserved = true;
+		if (index >= 0) expectedWrites[index].reserved = true;
 		return index;
 	};
 	// A result with an unknown callId (Eve executed before the stream opened,
@@ -161,7 +157,7 @@ export const consumeResumedAgentTurn = async ({
 	const unresolvedStepFor = (name?: string) => {
 		if (!name) return -1;
 		const normalized = normalizeToolName(name);
-		return expectedSteps.findIndex(
+		return expectedWrites.findIndex(
 			(step) => step.status !== "applied" && step.normalized === normalized,
 		);
 	};
@@ -183,7 +179,7 @@ export const consumeResumedAgentTurn = async ({
 			? (approvedCallIds.get(callId) ??
 				unresolvedStepFor(labelForResult(event.result)))
 			: unresolvedStepFor(labelForResult(event.result));
-		const step = index >= 0 ? expectedSteps[index] : undefined;
+		const step = index >= 0 ? expectedWrites[index] : undefined;
 		if (step) {
 			step.status = isFailedActionResult(event) ? "failed" : "applied";
 		}
@@ -301,9 +297,9 @@ export const consumeResumedAgentTurn = async ({
 		});
 	}
 	// Writes delegated to a subagent report their results on the child's
-	// stream only; replay each child to prove the approved steps ran there.
+	// stream only; replay each child to prove the approved writes ran there.
 	for (const childSessionId of childSessionIds) {
-		if (expectedSteps.every((step) => step.status === "applied")) break;
+		if (expectedWrites.every((step) => step.status === "applied")) break;
 		try {
 			await applyChildStreamResults({
 				auth,
@@ -313,7 +309,7 @@ export const consumeResumedAgentTurn = async ({
 				session,
 			});
 		} catch (error) {
-			logger.warn("Could not verify steps from the child session", {
+			logger.warn("Could not verify writes from the child session", {
 				event: "leaf.eve_child_verification_failed",
 				data: {
 					child_session_id: childSessionId,
@@ -322,23 +318,23 @@ export const consumeResumedAgentTurn = async ({
 			});
 		}
 	}
-	const steps = expectedSteps.map(({ status, toolName }) => ({
+	const writes = expectedWrites.map(({ status, toolName }) => ({
 		status,
 		toolName,
 	}));
 	return {
-		approvedWriteFailed: steps.some((step) => step.status === "failed"),
+		approvedWriteFailed: writes.some((step) => step.status === "failed"),
 		// Without a result for the approved tool there is no proof it ran, so an
 		// unrelated tool or a bare reply must not read as success.
 		approvedWriteUnverified:
-			expectedSteps.length > 0 &&
-			!expectedSteps.some((step) => step.status === "applied"),
+			expectedWrites.length > 0 &&
+			!expectedWrites.some((step) => step.status === "applied"),
 		chained,
 		chainedSiblingRequestIds,
 		chainedWithheld,
 		deferredEmptyTurn: turnStarted && !(sawTurnActivity || text || pendingText),
 		question,
-		steps,
+		writes,
 		text: text || pendingText,
 	};
 };

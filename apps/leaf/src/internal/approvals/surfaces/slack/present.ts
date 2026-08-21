@@ -11,10 +11,10 @@ import { getInstallationOAuthAccessToken } from "../../../installations/actions/
 import { createApproval } from "../../actions/createApproval.js";
 import {
 	dashboardLinkableApproval,
-	withheldStepsOf,
+	withheldWritesOf,
 } from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
-import { chatApprovalStepsRepo } from "../../repos/chatApprovalStepsRepo.js";
+import { chatApprovalWritesRepo } from "../../repos/chatApprovalWritesRepo.js";
 import { publicToolArgs, requestStringField } from "../../utils/toolRequest.js";
 
 /** URL only for cards the dashboard sheet can actually open. */
@@ -57,18 +57,17 @@ export const postApprovalCardForRow = async ({
 }: {
 	approval: ChatApproval;
 	logger?: AutumnLogger;
-	/** Structural post-only view so ActionEvent threads (unknown state generic) fit. */
 	target: { post: (message: unknown) => Promise<{ id: string }> };
 }) => {
 	const toolArgs =
 		approval.tool_args && typeof approval.tool_args === "object"
 			? (approval.tool_args as Record<string, unknown>)
 			: {};
-	const steps = await chatApprovalStepsRepo.list({
+	const writes = await chatApprovalWritesRepo.list({
 		approvalId: approval.id,
 		db,
 	});
-	const grouped = withheldStepsOf({ approval, steps });
+	const grouped = withheldWritesOf({ approval, writes });
 	const sent = await target.post(
 		approvalCard({
 			dashboardUrl: dashboardUrlFor({
@@ -82,7 +81,7 @@ export const postApprovalCardForRow = async ({
 			id: approval.id,
 			env: approval.env,
 			preview: approval.preview ?? undefined,
-			steps: grouped,
+			writes: grouped,
 			toolArgs: publicToolArgs(toolArgs),
 			toolName: approval.tool_name,
 		}),
@@ -151,7 +150,7 @@ const renderBackfilledGroupCard = async ({
 				id: created.approvalId,
 				env,
 				preview: created.preview,
-				steps: previewedSteps,
+				writes: previewedSteps,
 				toolArgs: created.toolArgs,
 				toolName: created.toolName,
 			}),
@@ -215,7 +214,7 @@ export const presentApproval = async ({
 			id: created.approvalId,
 			env,
 			preview: created.preview,
-			steps: created.withheld,
+			writes: created.withheld,
 			toolArgs: created.toolArgs,
 			toolName: created.toolName,
 		}),

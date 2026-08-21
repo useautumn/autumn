@@ -12,7 +12,7 @@ import {
 	siblingDenyOptionFor,
 	siblingRequestIdsOf,
 } from "../domain/approvalRecord.js";
-import { chatApprovalStepsRepo } from "../repos/chatApprovalStepsRepo.js";
+import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 
 /** The one way to deny an eve park without carding it: answers the primary
  * AND every sibling request (eve defers all deliveries until the whole batch
@@ -31,7 +31,7 @@ export const denyApprovalParkAndDrain = async ({
 	session: EveSessionRef;
 }) => {
 	if (!approval.tool_call_id) return;
-	const stepRows = await chatApprovalStepsRepo.list({
+	const writeRows = await chatApprovalWritesRepo.list({
 		approvalId: approval.id,
 		db,
 	});
@@ -41,8 +41,8 @@ export const denyApprovalParkAndDrain = async ({
 		optionId: denyOptionOf(approval),
 		requestId: approval.tool_call_id,
 		session,
-		siblingOptionIdFor: siblingDenyOptionFor(stepRows),
-		siblingRequestIds: siblingRequestIdsOf({ approval, steps: stepRows }),
+		siblingOptionIdFor: siblingDenyOptionFor(writeRows),
+		siblingRequestIds: siblingRequestIdsOf({ approval, writes: writeRows }),
 	});
 	adoptPostedEveSession({ posted, session, status: "running" });
 	await drainParkedAgentTurn({ auth, orgId: approval.org_id, session });

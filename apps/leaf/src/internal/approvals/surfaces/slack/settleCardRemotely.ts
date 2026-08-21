@@ -9,8 +9,8 @@ import {
 	type ApprovalCardStatus,
 	approvalStatusCard,
 } from "../../../../ui/blocks.js";
-import { withheldStepsOf } from "../../domain/approvalRecord.js";
-import { chatApprovalStepsRepo } from "../../repos/chatApprovalStepsRepo.js";
+import { withheldWritesOf } from "../../domain/approvalRecord.js";
+import { chatApprovalWritesRepo } from "../../repos/chatApprovalWritesRepo.js";
 
 /** Edits an approval's Slack card without a live event — used when the
  * decision happened on another surface (dashboard apply). Multi-workspace
@@ -45,7 +45,7 @@ export const settleCardRemotely = async ({
 		}
 		await bot.initialize();
 		const adapter = bot.getAdapter("slack");
-		const stepRows = await chatApprovalStepsRepo.list({
+		const writeRows = await chatApprovalWritesRepo.list({
 			approvalId: approval.id,
 			db,
 		});
@@ -58,7 +58,7 @@ export const settleCardRemotely = async ({
 					approvalStatusCard({
 						actorId: approval.decided_by_provider_user_id ?? undefined,
 						env: approval.env,
-						groupedSteps: withheldStepsOf({ approval, steps: stepRows }),
+						groupedWrites: withheldWritesOf({ approval, writes: writeRows }),
 						preview: approval.preview ?? undefined,
 						status,
 						statusLine,

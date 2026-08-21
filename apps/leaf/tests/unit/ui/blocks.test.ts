@@ -1183,7 +1183,7 @@ describe("grouped step outcomes", () => {
 		const card = approvalStatusCard({
 			env: AppEnv.Sandbox,
 			status: "failed",
-			steps: [
+			outcomes: [
 				{ status: "applied", toolName: "updateCustomer" },
 				{ status: "failed", toolName: "attach" },
 			],
@@ -1201,7 +1201,7 @@ describe("grouped step outcomes", () => {
 		const card = approvalStatusCard({
 			env: AppEnv.Sandbox,
 			status: "failed",
-			steps: [{ status: "failed", toolName: "attach" }],
+			outcomes: [{ status: "failed", toolName: "attach" }],
 			toolArgs: { request: { customer_id: "cus_1" } },
 			toolName: "attach",
 		});
@@ -1211,7 +1211,7 @@ describe("grouped step outcomes", () => {
 });
 
 // On a grouped card the primary write may be the one with no preview, so the
-// money facts must still reach the user via the included steps.
+// money facts must still reach the user via the included writes.
 describe("grouped card with a preview-less primary write", () => {
 	test("still names the attach that carries the billing impact", () => {
 		const card = approvalCard({
@@ -1544,7 +1544,7 @@ describe("resolved fan-out card keeps the whole group", () => {
 
 // A grouped step must speak in the card's tense: "Attached" once resolved, not
 // a permanent "Attaching" that reads as still pending.
-describe("grouped steps follow the card state", () => {
+describe("grouped writes follow the card state", () => {
 	const mixedGroup = {
 		env: AppEnv.Sandbox,
 		toolArgs: {

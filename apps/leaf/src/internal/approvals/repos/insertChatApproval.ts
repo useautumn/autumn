@@ -4,21 +4,21 @@ import { addMinutes } from "date-fns";
 import type { ChatDb } from "../../../lib/db.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import {
-	chatApprovalStepsRepo,
-	type InsertApprovalStep,
-} from "./chatApprovalStepsRepo.js";
+	chatApprovalWritesRepo,
+	type InsertApprovalWrite,
+} from "./chatApprovalWritesRepo.js";
 
 const APPROVAL_TTL_MINUTES = 15;
 
+/** The primary write (position 0) is derived from the top-level tool fields;
+ * `groupedWrites` carries only the withheld rest, in execution order. */
 export type InsertChatApprovalData = {
 	approveOptionId?: string;
 	channelId: string;
 	childSessionIds?: ReadonlyArray<string>;
 	denyOptionId?: string;
 	env: AppEnv;
-	/** Withheld writes beyond the primary, in execution order. The primary
-	 * step (position 0) is derived from the top-level tool fields. */
-	groupedSteps?: ReadonlyArray<InsertApprovalStep>;
+	groupedWrites?: ReadonlyArray<InsertApprovalWrite>;
 	harness: "eve";
 	orgId: string;
 	preview?: unknown;
@@ -39,7 +39,7 @@ export const insertChatApproval = async ({
 	db: ChatDb;
 }) => {
 	const id = `chat_app_${crypto.randomUUID().replace(/-/g, "")}`;
-	const steps: InsertApprovalStep[] = [
+	const steps: InsertApprovalWrite[] = [
 		{
 			denyOptionId: data.denyOptionId,
 			preview: data.preview,
@@ -47,7 +47,7 @@ export const insertChatApproval = async ({
 			toolArgs: data.toolArgs,
 			toolName: data.toolName,
 		},
-		...(data.groupedSteps ?? []),
+		...(data.groupedWrites ?? []),
 	];
 	await db.transaction(async (tx) => {
 		await tx.insert(chatApprovals).values({
@@ -73,7 +73,7 @@ export const insertChatApproval = async ({
 			created_at: Date.now(),
 			expires_at: addMinutes(Date.now(), APPROVAL_TTL_MINUTES).getTime(),
 		});
-		await chatApprovalStepsRepo.insert({
+		await chatApprovalWritesRepo.insert({
 			approvalId: id,
 			db: tx as unknown as ChatDb,
 			steps,

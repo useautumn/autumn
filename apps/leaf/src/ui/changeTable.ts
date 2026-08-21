@@ -119,7 +119,7 @@ export const sortByChangeKind = (rows: ReturnType<typeof changeTableRow>[]) =>
 		(left, right) => changes[left.change].order - changes[right.change].order,
 	);
 
-const stepStatusLabels = {
+const writeStatusLabels = {
 	applied: "🟢 Applied",
 	failed: "🔴 Failed",
 	pending: "⚪️ Not run",
@@ -129,11 +129,11 @@ const stepStatusLabels = {
 
 /** Which writes on a grouped card actually landed. Only worth rendering when
  * the group was partly applied — a clean run says so in one line. */
-export const stepOutcomeTable = ({
-	steps,
+export const writeOutcomeTable = ({
+	writes,
 }: {
-	steps: ReadonlyArray<{
-		status: keyof typeof stepStatusLabels;
+	writes: ReadonlyArray<{
+		status: keyof typeof writeStatusLabels;
 		summary: string;
 	}>;
 }) =>
@@ -141,8 +141,8 @@ export const stepOutcomeTable = ({
 		align: ["left", "left"],
 		caption: "Steps",
 		headers: ["Result", "Action"],
-		rows: steps.map(({ status, summary }) => [
-			stepStatusLabels[status],
+		rows: writes.map(({ status, summary }) => [
+			writeStatusLabels[status],
 			summary,
 		]),
 	});

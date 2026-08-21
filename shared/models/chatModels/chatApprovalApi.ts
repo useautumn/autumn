@@ -5,7 +5,7 @@ export type ChatApprovalStatus =
 	| "failed"
 	| "cancelled";
 
-export type ApprovalDetailStep = {
+export type ApprovalDetailWrite = {
 	/** The step's stored request args (withheld markers stripped). */
 	params: Record<string, unknown>;
 };
@@ -15,7 +15,7 @@ export type ApprovalDetailStep = {
 export type ApprovalDetail = {
 	id: string;
 	plan_id: string | null;
-	steps: ApprovalDetailStep[];
+	writes: ApprovalDetailWrite[];
 	tool_name: string;
 };
 

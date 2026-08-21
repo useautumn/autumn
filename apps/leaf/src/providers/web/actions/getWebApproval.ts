@@ -1,13 +1,13 @@
 import type {
 	ApprovalDetail,
 	ApprovalDetailError,
-	ApprovalDetailStep,
+	ApprovalDetailWrite,
 	ChatApproval,
 } from "@autumn/shared";
 import { normalizeToolName } from "../../../internal/agentRuntime/tools/toolPolicy.js";
 import { allWritesOf } from "../../../internal/approvals/domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
-import { chatApprovalStepsRepo } from "../../../internal/approvals/repos/chatApprovalStepsRepo.js";
+import { chatApprovalWritesRepo } from "../../../internal/approvals/repos/chatApprovalWritesRepo.js";
 import {
 	publicToolArgs,
 	requestStringField,
@@ -18,8 +18,8 @@ export type GetWebApprovalResult =
 	| { approval: ApprovalDetail }
 	| { error: ApprovalDetailError };
 
-/** Legacy rows (pre step-table) synthesize steps from the parent + markers. */
-const legacySteps = (approval: ChatApproval): ApprovalDetailStep[] =>
+/** Legacy rows (pre write-table) synthesize writes from the parent + markers. */
+const legacyWrites = (approval: ChatApproval): ApprovalDetailWrite[] =>
 	allWritesOf({ approval }).map((write) => ({
 		params: publicToolArgs(write.input ?? {}, { includeWithheld: false }),
 	}));
@@ -38,12 +38,12 @@ export const getWebApproval = async ({
 		return { error: { code: "org_mismatch" } };
 	}
 
-	const stepRows = await chatApprovalStepsRepo.list({ approvalId, db });
-	const steps = stepRows.length
-		? stepRows.map((step) => ({
-				params: publicToolArgs(step.tool_args, { includeWithheld: false }),
+	const writeRows = await chatApprovalWritesRepo.list({ approvalId, db });
+	const writes = writeRows.length
+		? writeRows.map((write) => ({
+				params: publicToolArgs(write.tool_args, { includeWithheld: false }),
 			}))
-		: legacySteps(approval);
+		: legacyWrites(approval);
 
 	return {
 		approval: {
@@ -53,7 +53,7 @@ export const getWebApproval = async ({
 					approval.tool_args as Record<string, unknown>,
 					"plan_id",
 				) ?? null,
-			steps,
+			writes,
 			tool_name: normalizeToolName(approval.tool_name),
 		},
 	};

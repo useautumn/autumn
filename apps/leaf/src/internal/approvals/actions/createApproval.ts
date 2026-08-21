@@ -9,19 +9,19 @@ import {
 } from "../../agentRuntime/eve/parkedInput.js";
 import { markerString } from "../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
-import { chatApprovalStepsRepo } from "../repos/chatApprovalStepsRepo.js";
+import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 import {
 	resolveApprovalDisplay,
 	withApprovalDisplay,
 } from "../utils/approvalDisplay.js";
 import {
 	resolveApprovalPreview,
-	withStepPreviews,
+	withWritePreviews,
 } from "../utils/fetchApprovalPreview.js";
 import { publicToolArgs, toolRequestFromArgs } from "../utils/toolRequest.js";
 
-/** Grouped step previews are N MCP round trips; the card posts without waiting
- * and re-renders when they land. Step updates are pending-guarded (step AND
+/** Grouped write previews are N MCP round trips; the card posts without waiting
+ * and re-renders when they land. Step updates are pending-guarded (write AND
  * parent) so an already-resolved approval keeps what it was approved with. */
 const createStepPreviewBackfill =
 	({
@@ -36,27 +36,27 @@ const createStepPreviewBackfill =
 		logger: AutumnLogger;
 	}) =>
 	async (): Promise<ReadonlyArray<WithheldWrite> | undefined> => {
-		const steps = await chatApprovalStepsRepo.list({ approvalId, db });
-		const grouped = steps.filter((step) => step.position > 0);
+		const writes = await chatApprovalWritesRepo.list({ approvalId, db });
+		const grouped = writes.filter((write) => write.position > 0);
 		if (!grouped.length) return undefined;
-		const previewed = await withStepPreviews({
+		const previewed = await withWritePreviews({
 			env,
 			getToken,
 			logger,
-			steps: grouped.map((step) => ({
-				input: step.tool_args,
-				requestId: step.request_id ?? "",
-				toolName: step.tool_name,
+			writes: grouped.map((write) => ({
+				input: write.tool_args,
+				requestId: write.request_id ?? "",
+				toolName: write.tool_name,
 			})),
 		});
 		let allStored = true;
 		await Promise.all(
-			grouped.map(async (step, index) => {
-				const stored = await chatApprovalStepsRepo.setPreview({
+			grouped.map(async (write, index) => {
+				const stored = await chatApprovalWritesRepo.setPreview({
 					approvalId,
 					db,
 					preview: previewed[index]?.preview,
-					stepId: step.id,
+					writeId: write.id,
 				});
 				allStored &&= stored;
 			}),
@@ -130,7 +130,7 @@ export const createApproval = async ({
 			provider,
 			providerUserId,
 			runId: turn.sessionId,
-			groupedSteps: withheld.map((write) => ({
+			groupedWrites: withheld.map((write) => ({
 				denyOptionId: write.denyOptionId,
 				requestId: write.requestId,
 				toolArgs: write.input ?? {},

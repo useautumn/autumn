@@ -1,4 +1,4 @@
-import type { ChatApproval, ChatApprovalStep } from "@autumn/shared";
+import type { ChatApproval, ChatApprovalWrite } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { errorMessage } from "../../../lib/errorMessage.js";
 import { logger } from "../../../lib/logger.js";
@@ -10,9 +10,9 @@ import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
 import { getOrgInstallationToken } from "../../installations/actions/getOrgInstallationToken.js";
 import { denyOptionOf } from "../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
-import { chatApprovalStepsRepo } from "../repos/chatApprovalStepsRepo.js";
-import type { ApprovalRunResult, ApprovalStepOutcome } from "../types.js";
-import { withStepPreviews } from "../utils/fetchApprovalPreview.js";
+import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
+import type { ApprovalRunResult, ApprovalWriteOutcome } from "../types.js";
+import { withWritePreviews } from "../utils/fetchApprovalPreview.js";
 import { previewMoneyFactsDrifted } from "../utils/previewMoneyFacts.js";
 import { writeToPreviewTool } from "../utils/toolRegistry.js";
 import { isSameToolRequest, publicToolArgs } from "../utils/toolRequest.js";
@@ -25,41 +25,65 @@ import { submitApprovalInput } from "./submitApprovalInput.js";
 const DRIFT_MESSAGE =
 	"Prices changed since this card was shown — nothing was applied. Review the updated preview and approve again.";
 
-type ExecutedStep = {
-	outcome: WriteExecutionOutcome | { status: "skipped" };
-	step: ChatApprovalStep;
+/** Runs one gated write and classifies the result — a throw is a terminal
+ * `unknown` (never blindly retried against a billing API). */
+const runWrite = async ({
+	env,
+	token,
+	write,
+}: {
+	env: ChatApproval["env"];
+	token: string;
+	write: ChatApprovalWrite;
+}): Promise<WriteExecutionOutcome> => {
+	try {
+		const result = await executeAutumnMcpTool({
+			args: write.tool_args,
+			env,
+			token,
+			toolName: write.tool_name,
+		});
+		return classifyWriteExecution({ result });
+	} catch (error) {
+		return classifyWriteExecution({ error });
+	}
 };
 
-/** Re-previews every step and compares money facts against what the card
+type ExecutedWrite = {
+	outcome: WriteExecutionOutcome | { status: "skipped" };
+	write: ChatApprovalWrite;
+};
+
+/** Re-previews every write and compares money facts against what the card
  * showed. Fail closed: an unfetchable preview counts as drifted. */
 const detectPreviewDrift = async ({
 	env,
-	steps,
+	writes,
 	token,
 }: {
 	env: ChatApproval["env"];
-	steps: ReadonlyArray<ChatApprovalStep>;
+	writes: ReadonlyArray<ChatApprovalWrite>;
 	token: string;
 }) => {
-	const checkable = steps.filter(
-		(step) => step.preview && writeToPreviewTool(step.tool_name),
+	const checkable = writes.filter(
+		(write) => write.preview && writeToPreviewTool(write.tool_name),
 	);
 	if (!checkable.length) return { drifted: false } as const;
-	const fresh = await withStepPreviews({
+	const fresh = await withWritePreviews({
 		env,
 		getToken: async () => token,
 		logger,
-		steps: checkable.map((step) => ({
-			input: step.tool_args,
-			requestId: step.request_id ?? "",
-			toolName: step.tool_name,
+		writes: checkable.map((write) => ({
+			input: write.tool_args,
+			requestId: write.request_id ?? "",
+			toolName: write.tool_name,
 		})),
 	});
 	const reason = checkable
-		.map((step, index) => {
+		.map((write, index) => {
 			const verdict = previewMoneyFactsDrifted({
 				current: fresh[index]?.preview,
-				stored: step.preview,
+				stored: write.preview,
 			});
 			return verdict.drifted ? verdict.reason : undefined;
 		})
@@ -70,10 +94,10 @@ const detectPreviewDrift = async ({
 		reason,
 		refresh: async () => {
 			await Promise.all(
-				checkable.map((step, index) =>
-					setStepPreviewEverywhere({
+				checkable.map((write, index) =>
+					setWritePreviewEverywhere({
 						preview: fresh[index]?.preview,
-						step,
+						write,
 					}),
 				),
 			);
@@ -83,75 +107,67 @@ const detectPreviewDrift = async ({
 
 /** The primary write is mirrored on the parent row for card rendering, so a
  * refreshed preview must land on both copies or they drift apart. */
-const setStepPreviewEverywhere = async ({
+const setWritePreviewEverywhere = async ({
 	preview,
-	step,
+	write,
 }: {
 	preview: unknown;
-	step: ChatApprovalStep;
+	write: ChatApprovalWrite;
 }) => {
-	await chatApprovalStepsRepo.setPreview({
-		approvalId: step.approval_id,
+	await chatApprovalWritesRepo.setPreview({
+		approvalId: write.approval_id,
 		db,
 		preview,
-		stepId: step.id,
+		writeId: write.id,
 	});
-	if (step.position === 0) {
+	if (write.position === 0) {
 		await chatApprovalRepo.setPreview({
-			approvalId: step.approval_id,
+			approvalId: write.approval_id,
 			db,
 			preview,
 		});
 	}
 };
 
-const executeSteps = async ({
+const executeWrites = async ({
 	env,
-	steps,
+	writes,
 	token,
 }: {
 	env: ChatApproval["env"];
-	steps: ReadonlyArray<ChatApprovalStep>;
+	writes: ReadonlyArray<ChatApprovalWrite>;
 	token: string;
-}): Promise<ExecutedStep[]> => {
-	const executed: ExecutedStep[] = [];
+}): Promise<ExecutedWrite[]> => {
+	const executed: ExecutedWrite[] = [];
 	let stopped = false;
-	for (const step of steps) {
+	for (const write of writes) {
 		if (stopped) {
-			await chatApprovalStepsRepo.setStatus({
+			await chatApprovalWritesRepo.setStatus({
 				db,
 				status: "skipped",
-				stepId: step.id,
+				writeId: write.id,
 			});
-			executed.push({ outcome: { status: "skipped" }, step });
+			executed.push({ outcome: { status: "skipped" }, write });
 			continue;
 		}
 		// The durable running marker splits "never started" from "outcome
 		// unknown" if the process dies mid-call.
-		await chatApprovalStepsRepo.setStatus({
+		await chatApprovalWritesRepo.setStatus({
 			db,
 			status: "running",
-			stepId: step.id,
+			writeId: write.id,
 		});
-		const outcome = await executeAutumnMcpTool({
-			args: step.tool_args,
-			env,
-			token,
-			toolName: step.tool_name,
-		}).then(
-			(result) => classifyWriteExecution({ result }),
-			(error) => classifyWriteExecution({ error }),
-		);
-		await chatApprovalStepsRepo.setStatus({
+		const outcome = await runWrite({ env, token, write: write });
+		await chatApprovalWritesRepo.setStatus({
 			db,
 			result:
 				outcome.status === "applied"
 					? outcome.result
 					: { message: outcome.detail },
 			status: outcome.status,
-			stepId: step.id,
+			writeId: write.id,
 		});
-		executed.push({ outcome, step });
+		executed.push({ outcome, write });
 		if (outcome.status !== "applied") stopped = true;
 	}
 	return executed;
@@ -160,10 +176,10 @@ const executeSteps = async ({
 const outcomeNote = ({
 	executed,
 }: {
-	executed: ReadonlyArray<ExecutedStep>;
+	executed: ReadonlyArray<ExecutedWrite>;
 }) => {
-	const lines = executed.map(({ outcome, step }) => {
-		const label = `${toolLabel(step.tool_name)} (${step.tool_name})`;
+	const lines = executed.map(({ outcome, write }) => {
+		const label = `${toolLabel(write.tool_name)} (${write.tool_name})`;
 		if (outcome.status === "applied") return `- ${label}: applied`;
 		if (outcome.status === "skipped") {
 			return `- ${label}: NOT applied (skipped after an earlier failure)`;
@@ -183,34 +199,32 @@ const outcomeNote = ({
 };
 
 const stepOutcomes = (
-	executed: ReadonlyArray<ExecutedStep>,
-): ApprovalStepOutcome[] =>
-	executed.map(({ outcome, step }) => ({
+	executed: ReadonlyArray<ExecutedWrite>,
+): ApprovalWriteOutcome[] =>
+	executed.map(({ outcome, write }) => ({
 		status: outcome.status,
-		toolName: step.tool_name,
+		toolName: write.tool_name,
 	}));
 
-/** Deterministic approve: executes the claimed row's stored steps directly and
+/** Deterministic approve: executes the claimed row's stored writes directly and
  * resumes eve as notification only. Returns undefined for legacy rows without
- * steps, which fall back to the resume-executes path. */
-export const executeApprovalSteps = async ({
+ * writes, which fall back to the resume-executes path.
+ * The model's TEXT is never surfaced — the card and write outcomes are ground
+ * truth; `onResumed` gets only chained parks and questions. */
+export const executeApprovalWrites = async ({
 	approval,
 	onResumed,
 	providerUserId,
 }: {
 	approval: ChatApproval;
-	/** Receives the resumed turn's outcome (chained parks, questions) once the
-	 * async eve notification completes. The model's TEXT is deliberately not
-	 * surfaced — the card and step outcomes are the ground truth, and a model
-	 * that misreads the procedural denials must not contradict them. */
 	onResumed?: (result: ApprovalRunResult) => Promise<void> | void;
 	providerUserId: string;
 }): Promise<ApprovalRunResult | undefined> => {
-	const steps = await chatApprovalStepsRepo.list({
+	const writes = await chatApprovalWritesRepo.list({
 		approvalId: approval.id,
 		db,
 	});
-	if (!steps.length) return undefined;
+	if (!writes.length) return undefined;
 
 	const { accessToken } = await getOrgInstallationToken({
 		env: approval.env,
@@ -221,7 +235,7 @@ export const executeApprovalSteps = async ({
 
 	const drift = await detectPreviewDrift({
 		env: approval.env,
-		steps,
+		writes,
 		token: accessToken,
 	});
 	if (drift.drifted) {
@@ -241,9 +255,9 @@ export const executeApprovalSteps = async ({
 		return { drifted: true, message: DRIFT_MESSAGE };
 	}
 
-	const executed = await executeSteps({
+	const executed = await executeWrites({
 		env: approval.env,
-		steps,
+		writes,
 		token: accessToken,
 	});
 	const allApplied = executed.every(
@@ -259,13 +273,13 @@ export const executeApprovalSteps = async ({
 		providerUserId,
 		status: allApplied ? "approved" : "failed",
 	});
-	logger.info("Executed approved steps", {
-		event: "leaf.approval_steps_executed",
+	logger.info("Executed approved writes", {
+		event: "leaf.approval_writes_executed",
 		approval_id: approval.id,
 		data: {
-			outcomes: executed.map(({ outcome, step }) => ({
+			outcomes: executed.map(({ outcome, write }) => ({
 				status: outcome.status,
-				tool: step.tool_name,
+				tool: write.tool_name,
 			})),
 		},
 	});
@@ -275,9 +289,9 @@ export const executeApprovalSteps = async ({
 	const notifyEve = async () => {
 		const appliedArgs = executed
 			.filter(({ outcome }) => outcome.status === "applied")
-			.map(({ step }) => ({
-				toolArgs: step.tool_args,
-				toolName: step.tool_name,
+			.map(({ write }) => ({
+				toolArgs: write.tool_args,
+				toolName: write.tool_name,
 			}));
 		const resumed = await submitApprovalInput({
 			approval,
@@ -301,7 +315,7 @@ export const executeApprovalSteps = async ({
 		await onResumed?.(resumed);
 	};
 	void notifyEve().catch((error) => {
-		logger.warn("Could not notify eve after executing approved steps", {
+		logger.warn("Could not notify eve after executing approved writes", {
 			event: "leaf.approval_notify_failed",
 			approval_id: approval.id,
 			data: { error: errorMessage(error) },
@@ -314,14 +328,14 @@ export const executeApprovalSteps = async ({
 			message:
 				(failedDetail && "detail" in failedDetail
 					? failedDetail.detail
-					: undefined) ?? "Some steps were not applied.",
+					: undefined) ?? "Some writes were not applied.",
 			retryable: false,
-			steps: stepOutcomes(executed),
+			writes: stepOutcomes(executed),
 		};
 	}
 	return {
 		result: {},
-		steps: stepOutcomes(executed),
+		writes: stepOutcomes(executed),
 		text: "",
 		toolName: approval.tool_name,
 	};

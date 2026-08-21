@@ -10,9 +10,9 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 mock.module("../../../src/lib/env.js", () => ({ env: {} }));
 mock.module("../../../src/lib/db.js", () => ({ db: {} }));
 mock.module(
-	"../../../src/internal/approvals/repos/chatApprovalStepsRepo.js",
+	"../../../src/internal/approvals/repos/chatApprovalWritesRepo.js",
 	() => ({
-		chatApprovalStepsRepo: {
+		chatApprovalWritesRepo: {
 			insert: async () => undefined,
 			list: async () => [],
 			setPreview: async () => true,
@@ -237,7 +237,7 @@ describe("resumeApproval", () => {
 		]);
 	});
 
-	// A turn that opens and closes without a step, a word, or a park means eve
+	// A turn that opens and closes without a write, a word, or a park means eve
 	// deferred the delivery — the write never ran, so the card must not say done.
 	test("fails the approval when the resumed turn did nothing at all", async () => {
 		const result = await resumeApproval({
@@ -366,9 +366,9 @@ describe("resumeApproval verifies the approved write actually ran", () => {
 });
 
 // One card can carry several writes, so a half-applied group must say which
-// step failed rather than reporting a blanket success or failure.
-describe("grouped approvals report per-step outcomes", () => {
-	test("reports the failing step when a later write errors", async () => {
+// write failed rather than reporting a blanket success or failure.
+describe("grouped approvals report per-write outcomes", () => {
+	test("reports the failing write when a later write errors", async () => {
 		streamedEvents = [
 			{ type: "turn.started" },
 			{ type: "step.started" },
@@ -400,14 +400,14 @@ describe("grouped approvals report per-step outcomes", () => {
 
 		expect(result).toMatchObject({
 			error: true,
-			steps: [
+			writes: [
 				{ status: "applied", toolName: "autumn__updateCustomer" },
 				{ status: "failed", toolName: "autumn__attach" },
 			],
 		});
 	});
 
-	test("reports every step applied when the whole group succeeds", async () => {
+	test("reports every write applied when the whole group succeeds", async () => {
 		streamedEvents = [
 			{ type: "turn.started" },
 			{ type: "step.started" },
@@ -438,7 +438,7 @@ describe("grouped approvals report per-step outcomes", () => {
 		});
 
 		expect(result).toMatchObject({
-			steps: [
+			writes: [
 				{ status: "applied", toolName: "autumn__updateCustomer" },
 				{ status: "applied", toolName: "autumn__attach" },
 			],
@@ -449,7 +449,7 @@ describe("grouped approvals report per-step outcomes", () => {
 // A failed write comes back with status "completed" and the error buried in
 // the MCP result text — treating that as success is how a lost write hid.
 describe("resumeApproval detects errors inside a completed MCP result", () => {
-	test("marks the step failed when the tool text is an API error", async () => {
+	test("marks the write failed when the tool text is an API error", async () => {
 		streamedEvents = [
 			{ type: "turn.started" },
 			{ type: "step.started" },
@@ -487,7 +487,7 @@ describe("resumeApproval detects errors inside a completed MCP result", () => {
 
 // The model may retry a write that errored; the successful retry must win.
 describe("a retried write that succeeds counts as applied", () => {
-	test("later success overrides an earlier failure for the same step", async () => {
+	test("later success overrides an earlier failure for the same write", async () => {
 		const failed = {
 			result: {
 				callId: "c1",
@@ -529,15 +529,15 @@ describe("a retried write that succeeds counts as applied", () => {
 
 		expect(result).not.toMatchObject({ error: true });
 		expect(result).toMatchObject({
-			steps: [{ status: "applied", toolName: "autumn__updateSubscription" }],
+			writes: [{ status: "applied", toolName: "autumn__updateSubscription" }],
 		});
 	});
 });
 
-// A fan-out is N calls of the same tool. Each result must land on its OWN step
+// A fan-out is N calls of the same tool. Each result must land on its OWN write
 // by callId — matching by name alone lets a middle failure be overwritten by
 // the next success and reported as a clean run.
-describe("same-tool groups attribute each result to its own step", () => {
+describe("same-tool groups attribute each result to its own write", () => {
 	const fanOutApproval = () =>
 		({
 			channel_id: "C1",
@@ -601,7 +601,7 @@ describe("same-tool groups attribute each result to its own step", () => {
 
 		expect(result).toMatchObject({
 			error: true,
-			steps: [
+			writes: [
 				{ status: "applied" },
 				{ status: "failed" },
 				{ status: "applied" },
@@ -718,10 +718,10 @@ describe("grouped approvals on internal Slack threads", () => {
 	});
 });
 
-// A sibling that eve rejected gets re-issued by the model as its own step; the
+// A sibling that eve rejected gets re-issued by the model as its own write; the
 // card for that re-park must still reach the surface even though the approval
 // itself is reported failed — otherwise the session waits on it in silence.
-describe("grouped approvals that fail a step and park again", () => {
+describe("grouped approvals that fail a write and park again", () => {
 	beforeEach(() => {
 		postedResponses.length = 0;
 		chainedInserts.length = 0;
@@ -781,7 +781,7 @@ describe("grouped approvals that fail a step and park again", () => {
 		expect(result).toMatchObject({
 			chainedApprovalId: "chained_1",
 			error: true,
-			steps: [
+			writes: [
 				{ status: "applied", toolName: "autumn__updateCustomer" },
 				{ status: "failed", toolName: "autumn__attach" },
 			],
@@ -892,7 +892,7 @@ describe("delegated writes are verified on the child stream", () => {
 		};
 	});
 
-	test("a child-stream success proves the step and keeps the reply", async () => {
+	test("a child-stream success proves the write and keeps the reply", async () => {
 		streamedEventsBySession = { child_1: childResult(false) };
 
 		const result = await resumeApproval({
@@ -903,7 +903,7 @@ describe("delegated writes are verified on the child stream", () => {
 		expect(streamedSessionIds).toEqual(["eve_session_1", "child_1"]);
 		expect(result).not.toMatchObject({ error: true });
 		expect(result).toMatchObject({
-			steps: [{ status: "applied", toolName: "autumn__attach" }],
+			writes: [{ status: "applied", toolName: "autumn__attach" }],
 			text: "Attached the plan.",
 		});
 	});
@@ -918,7 +918,7 @@ describe("delegated writes are verified on the child stream", () => {
 
 		expect(result).toMatchObject({
 			error: true,
-			steps: [{ status: "failed", toolName: "autumn__attach" }],
+			writes: [{ status: "failed", toolName: "autumn__attach" }],
 		});
 	});
 
@@ -936,7 +936,7 @@ describe("delegated writes are verified on the child stream", () => {
 		});
 
 		expect(result).toMatchObject({
-			steps: [{ status: "applied", toolName: "autumn__attach" }],
+			writes: [{ status: "applied", toolName: "autumn__attach" }],
 		});
 	});
 

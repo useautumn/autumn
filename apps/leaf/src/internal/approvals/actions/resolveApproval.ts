@@ -12,7 +12,7 @@ import { surfaceRendersGroup } from "../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import type { ApprovalRunResult, SubmittedApprovalResult } from "../types.js";
 import { approvalErrorResult } from "../utils/approvalErrors.js";
-import { executeApprovalSteps } from "./executeApprovalSteps.js";
+import { executeApprovalWrites } from "./executeApprovalWrites.js";
 import { resumeApproval } from "./resumeApproval.js";
 
 const dropEveSession = async ({ approval }: { approval: ChatApproval }) => {
@@ -70,7 +70,6 @@ export const resolveApproval = async ({
 	providerUserId,
 }: {
 	approval: ChatApproval;
-	/** Resumed-turn outcome arriving after an executor approve (async). */
 	onResumed?: (result: ApprovalRunResult) => Promise<void> | void;
 	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
@@ -88,7 +87,7 @@ export const resolveApproval = async ({
 
 	if (approvalExecutorEnabled({ provider: approval.provider ?? "" })) {
 		try {
-			const executed = await executeApprovalSteps({
+			const executed = await executeApprovalWrites({
 				approval,
 				onResumed,
 				providerUserId,

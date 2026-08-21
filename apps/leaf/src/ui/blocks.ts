@@ -45,7 +45,7 @@ import {
 	fanOutTable,
 	planItemChangeTableRow,
 	sortByChangeKind,
-	stepOutcomeTable,
+	writeOutcomeTable,
 } from "./changeTable.js";
 import {
 	ACTION_FAILED_MESSAGE,
@@ -205,9 +205,8 @@ const formatDay = (epochMs: number) =>
 		timeZone: "UTC",
 	}).format(new Date(epochMs));
 
+/** Labels resolved once: linked for sentences, plain for table cells. */
 type ActionPhrases = {
-	/** Customer + plan labels resolved once: linked for sentences, plain for
-	 * table cells, which render raw text. */
 	labels: {
 		customer: string;
 		plainCustomer: string;
@@ -405,7 +404,7 @@ const pendingActionPrompt = ({
 // MCP content blocks; unwrap both layers before reading money facts.
 const getPreviewBody = (preview: unknown) => {
 	const body = getResultBody(preview);
-	// A stored step preview may still be the raw MCP envelope nested under the
+	// A stored write preview may still be the raw MCP envelope nested under the
 	// display wrapper, so the inner value gets the same unwrapping as the outer.
 	const inner = getResultBody(body.preview);
 	return Object.keys(inner).length ? inner : body;
@@ -851,38 +850,39 @@ const BILLING_ACTION_TOOLS = new Set([
 
 // Pending, running, and resolved cards share this body so in-place edits keep
 // the facts the reviewer approved.
-/** Every grouped step targets the same operation, so the card can show one
+/** Every grouped write targets the same operation, so the card can show one
  * heading and one row per target instead of repeating the whole body. */
 const isHomogeneousGroup = ({
-	steps,
+	writes,
 	toolName,
 }: {
-	steps: ReadonlyArray<{ toolName: string }>;
+	writes: ReadonlyArray<{ toolName: string }>;
 	toolName: string;
 }) =>
-	steps.length > 1 &&
-	steps.every(
-		(step) => normalizeToolName(step.toolName) === normalizeToolName(toolName),
+	writes.length > 1 &&
+	writes.every(
+		(write) =>
+			normalizeToolName(write.toolName) === normalizeToolName(toolName),
 	);
 
-const stepTotal = (preview?: unknown) =>
+const writeTotal = (preview?: unknown) =>
 	getNumber(getPreviewBody(preview).total) ?? 0;
 
-const stepCurrency = (preview?: unknown) =>
+const writeCurrency = (preview?: unknown) =>
 	getString(getPreviewBody(preview).currency) ?? undefined;
 
 /** One row per target for a fan-out, using the same name resolution and money
- * formatting the per-step sections use. */
+ * formatting the per-write sections use. */
 const fanOutBlocks = ({
 	env,
 	preview,
-	steps,
+	writes,
 	toolArgs,
 	toolName,
 }: {
 	env?: AppEnv;
 	preview?: unknown;
-	steps: ReadonlyArray<{
+	writes: ReadonlyArray<{
 		input?: Record<string, unknown>;
 		preview?: unknown;
 		toolName: string;
@@ -890,22 +890,22 @@ const fanOutBlocks = ({
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }): CardChild[] => {
-	const all = [{ input: toolArgs, preview, toolName }, ...steps];
-	const rows = all.map((step) => {
+	const all = [{ input: toolArgs, preview, toolName }, ...writes];
+	const rows = all.map((write) => {
 		const phrases = actionPhrases({
 			env,
-			preview: step.preview,
-			toolArgs: step.input,
-			toolName: step.toolName,
+			preview: write.preview,
+			toolArgs: write.input,
+			toolName: write.toolName,
 		});
-		const amount = stepTotal(step.preview);
+		const amount = writeTotal(write.preview);
 		return [
 			phrases.labels.plainCustomer,
 			phrases.labels.plainPlan,
-			formatMoney({ amount, currency: stepCurrency(step.preview) }),
+			formatMoney({ amount, currency: writeCurrency(write.preview) }),
 		] as [string, string, string];
 	});
-	const total = all.reduce((sum, step) => sum + stepTotal(step.preview), 0);
+	const total = all.reduce((sum, write) => sum + writeTotal(write.preview), 0);
 	return [
 		// The card header already names the operation, so the table only labels
 		// how many targets it covers.
@@ -915,7 +915,7 @@ const fanOutBlocks = ({
 			rows,
 		}),
 		CardText(
-			`*Total*  *${formatMoney({ amount: total, currency: stepCurrency(preview) })}*`,
+			`*Total*  *${formatMoney({ amount: total, currency: writeCurrency(preview) })}*`,
 		),
 	];
 };
@@ -923,20 +923,20 @@ const fanOutBlocks = ({
 /** The other writes approving this card will apply, in issue order. Each one
  * renders through the same body builder as a standalone card, so a grouped
  * attach looks exactly like an attach. */
-/** Which tense a grouped step's sentence uses. Pending and running cards read
+/** Which tense a grouped write's sentence uses. Pending and running cards read
  * as in-progress; a resolved card reports what happened. */
 type StepTense = "done" | "failed" | "running";
 
-const withheldStepBlocks = ({
+const withheldWriteBlocks = ({
 	env,
-	steps,
+	writes,
 	tense,
 }: {
 	env?: AppEnv;
-	steps: ReadonlyArray<WithheldWrite>;
+	writes: ReadonlyArray<WithheldWrite>;
 	tense: StepTense;
 }): CardChild[] =>
-	steps.flatMap((write) => {
+	writes.flatMap((write) => {
 		const phrases = actionPhrases({
 			env,
 			preview: write.preview,
@@ -944,7 +944,7 @@ const withheldStepBlocks = ({
 			toolName: write.toolName,
 		});
 		return [
-			// Same heading the write would carry as its own card, so each step in
+			// Same heading the write would carry as its own card, so each write in
 			// a group reads as a distinct operation.
 			CardText(
 				`*${approvalTitle({ preview: write.preview, toolName: write.toolName })}*`,
@@ -965,31 +965,31 @@ const withheldStepBlocks = ({
 const approvalBodyBlocks = ({
 	env,
 	preview,
-	steps,
+	writes,
 	tense = "running",
 	toolArgs,
 	toolName,
 }: {
 	env?: AppEnv;
 	preview?: unknown;
-	steps?: ReadonlyArray<WithheldWrite>;
+	writes?: ReadonlyArray<WithheldWrite>;
 	tense?: StepTense;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }): CardChild[] => {
-	const groupedSteps = steps ?? withheldWritesFromToolArgs(toolArgs);
-	if (isHomogeneousGroup({ steps: groupedSteps, toolName })) {
+	const groupedWrites = writes ?? withheldWritesFromToolArgs(toolArgs);
+	if (isHomogeneousGroup({ writes: groupedWrites, toolName })) {
 		return fanOutBlocks({
 			env,
 			preview,
-			steps: groupedSteps,
+			writes: groupedWrites,
 			toolArgs,
 			toolName,
 		});
 	}
 	return [
 		...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
-		...withheldStepBlocks({ env, steps: groupedSteps, tense }),
+		...withheldWriteBlocks({ env, writes: groupedWrites, tense }),
 	];
 };
 
@@ -1327,7 +1327,7 @@ const approvalPreviewBlocks = ({
 const settledStatusCard = ({
 	dashboardUrl,
 	env,
-	groupedSteps,
+	groupedWrites,
 	preview,
 	statusLabel,
 	toolArgs,
@@ -1335,7 +1335,7 @@ const settledStatusCard = ({
 }: {
 	dashboardUrl?: string | null;
 	env?: AppEnv;
-	groupedSteps?: ReadonlyArray<WithheldWrite>;
+	groupedWrites?: ReadonlyArray<WithheldWrite>;
 	preview?: unknown;
 	statusLabel: string;
 	toolArgs?: Record<string, unknown>;
@@ -1350,7 +1350,7 @@ const settledStatusCard = ({
 			...approvalBodyBlocks({
 				env,
 				preview,
-				steps: groupedSteps,
+				writes: groupedWrites,
 				toolArgs,
 				toolName,
 			}),
@@ -1391,7 +1391,7 @@ export const approvalCard = ({
 	env,
 	id,
 	preview,
-	steps,
+	writes,
 	toolArgs,
 	toolName,
 }: {
@@ -1399,7 +1399,7 @@ export const approvalCard = ({
 	env?: AppEnv;
 	id: string;
 	preview?: unknown;
-	steps?: ReadonlyArray<WithheldWrite>;
+	writes?: ReadonlyArray<WithheldWrite>;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }) => {
@@ -1410,10 +1410,10 @@ export const approvalCard = ({
 			? phrases.running
 			: pendingActionPrompt({ phrases, toolName });
 	const editable = normalizeToolName(toolName) === "attach";
-	const groupedSteps = steps ?? withheldWritesFromToolArgs(toolArgs);
+	const groupedWrites = writes ?? withheldWritesFromToolArgs(toolArgs);
 
 	const fanOut = isHomogeneousGroup({
-		steps: groupedSteps,
+		writes: groupedWrites,
 		toolName,
 	});
 
@@ -1424,7 +1424,7 @@ export const approvalCard = ({
 			...approvalBodyBlocks({
 				env,
 				preview,
-				steps: groupedSteps,
+				writes: groupedWrites,
 				toolArgs,
 				toolName,
 			}),
@@ -1528,25 +1528,23 @@ export const approvalStatusCard = ({
 	actorId,
 	dashboardUrl,
 	env,
-	groupedSteps,
+	groupedWrites,
 	preview,
 	result,
 	status,
 	statusLine,
-	steps,
+	outcomes,
 	toolArgs,
 	toolName,
 }: {
 	actorId?: string;
 	dashboardUrl?: string | null;
 	env?: AppEnv;
-	/** The grouped writes rendered in the card body (step rows). */
-	groupedSteps?: ReadonlyArray<WithheldWrite>;
+	groupedWrites?: ReadonlyArray<WithheldWrite>;
 	preview?: unknown;
 	result?: unknown;
 	status: ApprovalCardStatus;
-	/** Per-write outcomes on a grouped card. */
-	steps?: ReadonlyArray<{
+	outcomes?: ReadonlyArray<{
 		status: "applied" | "failed" | "pending" | "skipped" | "unknown";
 		toolName: string;
 	}>;
@@ -1567,7 +1565,7 @@ export const approvalStatusCard = ({
 				...approvalBodyBlocks({
 					env,
 					preview,
-					steps: groupedSteps,
+					writes: groupedWrites,
 					toolArgs,
 					toolName,
 				}),
@@ -1582,7 +1580,7 @@ export const approvalStatusCard = ({
 		return settledStatusCard({
 			dashboardUrl,
 			env,
-			groupedSteps,
+			groupedWrites,
 			preview,
 			statusLabel: `Dismissed${actor ? ` by ${actor}` : ""}`,
 			toolArgs,
@@ -1594,7 +1592,7 @@ export const approvalStatusCard = ({
 		return settledStatusCard({
 			dashboardUrl,
 			env,
-			groupedSteps,
+			groupedWrites,
 			preview,
 			statusLabel: "🔄 Updated",
 			toolArgs,
@@ -1626,7 +1624,7 @@ export const approvalStatusCard = ({
 	const resolvedBody = approvalBodyBlocks({
 		env,
 		preview,
-		steps: groupedSteps,
+		writes: groupedWrites,
 		tense: status === "failed" ? "failed" : "done",
 		toolArgs,
 		toolName,
@@ -1636,20 +1634,20 @@ export const approvalStatusCard = ({
 		const lines = outcome.lines.length
 			? outcome.lines
 			: [ACTION_FAILED_MESSAGE];
-		// A half-applied group needs the per-step breakdown; a lone failed write
+		// A half-applied group needs the per-write breakdown; a lone failed write
 		// is already fully described by the message.
-		const partial = (steps?.length ?? 0) > 1;
+		const partial = (outcomes?.length ?? 0) > 1;
 		return Card({
 			title: approvalTitle({ preview, toolName }),
 			children: [
 				CardText(`⚠️ ${phrases.failed}`),
 				...resolvedBody,
-				...(partial && steps
+				...(partial && outcomes
 					? [
-							stepOutcomeTable({
-								steps: steps.map((step) => ({
-									status: step.status,
-									summary: toolLabel(step.toolName),
+							writeOutcomeTable({
+								writes: outcomes.map((write) => ({
+									status: write.status,
+									summary: toolLabel(write.toolName),
 								})),
 							}),
 						]

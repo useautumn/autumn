@@ -1,4 +1,4 @@
-import type { ChatApproval, ChatApprovalStep } from "@autumn/shared";
+import type { ChatApproval, ChatApprovalWrite } from "@autumn/shared";
 import {
 	childSessionIdsFromToolArgs,
 	siblingRequestIdsFromToolArgs,
@@ -37,18 +37,18 @@ export const denyOptionOf = (approval: ChatApproval): string =>
 	) ??
 	"deny";
 
-/** Sibling park ids are the grouped steps' request ids — derived, not stored
+/** Sibling park ids are the grouped writes' request ids — derived, not stored
  * twice. Legacy rows fall back to the marker. */
 export const siblingRequestIdsOf = ({
 	approval,
-	steps,
+	writes,
 }: {
 	approval: ChatApproval;
-	steps?: ReadonlyArray<ChatApprovalStep>;
+	writes?: ReadonlyArray<ChatApprovalWrite>;
 }): ReadonlyArray<string> => {
-	const grouped = (steps ?? [])
-		.filter((step) => step.position > 0 && step.request_id)
-		.map((step) => step.request_id as string);
+	const grouped = (writes ?? [])
+		.filter((write) => write.position > 0 && write.request_id)
+		.map((write) => write.request_id as string);
 	return grouped.length
 		? grouped
 		: siblingRequestIdsFromToolArgs(approval.tool_args);
@@ -57,12 +57,12 @@ export const siblingRequestIdsOf = ({
 /** Deny option id per grouped sibling request — eve rejects option ids
  * absent from a request, so each sibling's own deny option must be used. */
 export const siblingDenyOptionFor = (
-	steps: ReadonlyArray<ChatApprovalStep>,
+	writes: ReadonlyArray<ChatApprovalWrite>,
 ): ((siblingRequestId: string) => string | undefined) => {
 	const denyOptions = new Map(
-		steps
-			.filter((step) => step.position > 0 && step.request_id)
-			.map((step) => [step.request_id as string, step.deny_option_id]),
+		writes
+			.filter((write) => write.position > 0 && write.request_id)
+			.map((write) => [write.request_id as string, write.deny_option_id]),
 	);
 	return (siblingRequestId) => denyOptions.get(siblingRequestId) ?? undefined;
 };
@@ -72,23 +72,23 @@ export const childSessionIdsOf = (
 ): ReadonlyArray<string> =>
 	approval.child_session_ids ?? childSessionIdsFromToolArgs(approval.tool_args);
 
-/** The grouped writes beyond the primary, in execution order. Prefers step
+/** The grouped writes beyond the primary, in execution order. Prefers write
  * rows; falls back to the legacy `_eveWithheldWrites` marker. */
-export const withheldStepsOf = ({
+export const withheldWritesOf = ({
 	approval,
-	steps,
+	writes,
 }: {
 	approval: ChatApproval;
-	steps?: ReadonlyArray<ChatApprovalStep>;
+	writes?: ReadonlyArray<ChatApprovalWrite>;
 }): ReadonlyArray<WithheldWrite> => {
-	const grouped = (steps ?? []).filter((step) => step.position > 0);
+	const grouped = (writes ?? []).filter((write) => write.position > 0);
 	if (grouped.length) {
-		return grouped.map((step) => ({
-			denyOptionId: step.deny_option_id ?? undefined,
-			input: step.tool_args,
-			preview: step.preview ?? undefined,
-			requestId: step.request_id ?? "",
-			toolName: step.tool_name,
+		return grouped.map((write) => ({
+			denyOptionId: write.deny_option_id ?? undefined,
+			input: write.tool_args,
+			preview: write.preview ?? undefined,
+			requestId: write.request_id ?? "",
+			toolName: write.tool_name,
 		}));
 	}
 	return withheldWritesFromToolArgs(approval.tool_args);
@@ -97,10 +97,10 @@ export const withheldStepsOf = ({
 /** Every write on the card — primary first — in execution order. */
 export const allWritesOf = ({
 	approval,
-	steps,
+	writes,
 }: {
 	approval: ChatApproval;
-	steps?: ReadonlyArray<ChatApprovalStep>;
+	writes?: ReadonlyArray<ChatApprovalWrite>;
 }): ReadonlyArray<WithheldWrite> => [
 	{
 		denyOptionId: denyOptionOf(approval),
@@ -109,7 +109,7 @@ export const allWritesOf = ({
 		requestId: approval.tool_call_id ?? "",
 		toolName: approval.tool_name,
 	},
-	...withheldStepsOf({ approval, steps }),
+	...withheldWritesOf({ approval, writes }),
 ];
 
 /** Slack cards render every write in a parked batch, so approving the card
@@ -137,7 +137,7 @@ const sheetSeedableCustomize = (customize: unknown) => {
 	);
 };
 
-/** Single-step attach/updateSubscription cards from real customer workspaces
+/** Single-write attach/updateSubscription cards from real customer workspaces
  * can deep-link to the dashboard sheet. Excluded: internal admin threads (they
  * hop orgs, the link would 403) and requests the sheet cannot faithfully
  * represent (see sheetSeedableCustomize). */

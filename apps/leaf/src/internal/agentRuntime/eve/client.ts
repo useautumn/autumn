@@ -86,7 +86,6 @@ const parseSessionResponse = async ({
 };
 
 export type EveFilePart = {
-	/** base64 `data:` URL — eve stages it for the model call. */
 	data: string;
 	filename?: string;
 	mediaType: string;
@@ -105,12 +104,7 @@ export const postEveMessage = async ({
 	session,
 }: {
 	auth: EveAuthContext;
-	/** One-turn structured context for the model (e.g. a submitted catalog
-	 * decision) — not persisted to session history, per eve's `clientContext`. */
 	clientContext?: Record<string, unknown>;
-	/** Structured answers to pending ask_question/approval requests. Text
-	 * matching can't answer for us — the harness wraps messages in
-	 * <user_message> tags, so option-label matching never fires. */
 	inputResponses?: { optionId: string; requestId: string }[];
 	message?: EveMessageContent;
 	session?: EveSessionRef;
@@ -167,6 +161,8 @@ export const postEveMessage = async ({
 export const SIBLING_WITHHELD_NOTE =
 	"(The other pending write approvals in this batch were withheld, not rejected on their merits — approvals are shown to the user one at a time. Re-issue each withheld write as its own separate step so the user can approve it individually.)";
 
+/** Answers a parked request AND its siblings (eve defers all deliveries until
+ * the whole batch is answered); each sibling needs its own valid option id. */
 export const postEveInputResponse = async ({
 	approveSiblings,
 	auth,
@@ -178,28 +174,16 @@ export const postEveInputResponse = async ({
 	siblingRequestIds,
 	suppressSiblingWithheldNote,
 }: {
-	/** Answer the whole batch with `optionId` — a grouped card approves every
-	 * write it showed, rather than withholding all but the first. */
 	approveSiblings?: boolean;
 	auth: EveAuthContext;
-	/** Context sent with the answer — a gate-deny and a user-discard are
-	 * indistinguishable to the model without it. */
 	note?: string;
 	optionId: string;
 	requestId: string;
 	session: EveSessionRef;
-	/** Each sibling's own option id — eve rejects ids absent from the request,
-	 * so a denied sibling must be answered with its real deny option. */
 	siblingOptionIdFor?: (siblingRequestId: string) => string | undefined;
-	/** The rest of the parked batch this answer belongs to. */
 	siblingRequestIds?: ReadonlyArray<string>;
-	/** The withheld note tells the model to RE-ISSUE the siblings; a caller
-	 * that already executed them must suppress it. */
 	suppressSiblingWithheldNote?: boolean;
 }) => {
-	// Eve defers every delivery while ANY request in the parked batch is
-	// unanswered: answering only the carded one wedges the session on empty
-	// turns forever, so the siblings are denied here rather than left open.
 	const siblings = [...new Set(siblingRequestIds ?? [])].filter(
 		(siblingRequestId) => siblingRequestId && siblingRequestId !== requestId,
 	);

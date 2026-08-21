@@ -24,7 +24,7 @@ export const useResolvedApprovalRequest = ({
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const tool = approval ? RESOLVE_TOOLS[approval.tool_name] : undefined;
-	const request = approval?.steps[0]?.params.request;
+	const request = approval?.writes[0]?.params.request;
 
 	const { data, error, isLoading } = useQuery<ResolvedApprovalRequest>({
 		enabled: Boolean(tool && request),

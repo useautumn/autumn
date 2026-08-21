@@ -15,30 +15,30 @@ const mockLeafModule = ({
 
 const inserted: Array<Record<string, unknown>> = [];
 const insertedSteps: Array<Record<string, unknown>> = [];
-const storedStepPreviews: Array<{ preview: unknown; stepId: string }> = [];
+const storedStepPreviews: Array<{ preview: unknown; writeId: string }> = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/approvals/repos/chatApprovalRepo.js",
 	factory: () => ({
 		chatApprovalRepo: {
 			insert: async ({ data }: { data: Record<string, unknown> }) => {
 				inserted.push(data);
-				const steps = [
+				const writes = [
 					{
 						requestId: data.toolCallId,
 						toolArgs: data.toolArgs,
 						toolName: data.toolName,
 					},
-					...(data.groupedSteps as Array<Record<string, unknown>>),
+					...(data.groupedWrites as Array<Record<string, unknown>>),
 				];
 				insertedSteps.push(
-					...steps.map((step, position) => ({
-						...step,
-						id: `chat_stp_${position}`,
+					...writes.map((write, position) => ({
+						...write,
+						id: `chat_apw_${position}`,
 						position,
-						request_id: step.requestId,
+						request_id: write.requestId,
 						status: "pending",
-						tool_args: step.toolArgs,
-						tool_name: step.toolName,
+						tool_args: write.toolArgs,
+						tool_name: write.toolName,
 					})),
 				);
 				return "chat_app_1";
@@ -47,19 +47,19 @@ await mockLeafModule({
 	}),
 });
 await mockLeafModule({
-	specifier: "../../../src/internal/approvals/repos/chatApprovalStepsRepo.js",
+	specifier: "../../../src/internal/approvals/repos/chatApprovalWritesRepo.js",
 	factory: () => ({
-		chatApprovalStepsRepo: {
+		chatApprovalWritesRepo: {
 			insert: async () => undefined,
 			list: async () => insertedSteps,
 			setPreview: async ({
 				preview,
-				stepId,
+				writeId,
 			}: {
 				preview: unknown;
-				stepId: string;
+				writeId: string;
 			}) => {
-				storedStepPreviews.push({ preview, stepId });
+				storedStepPreviews.push({ preview, writeId });
 				return true;
 			},
 			setStatus: async () => undefined,
@@ -91,14 +91,14 @@ await mockLeafModule({
 			request?: { customer_id?: string };
 		}) => previewFor(request?.customer_id ?? "unknown"),
 		shouldRefreshApprovalPreview: () => true,
-		withStepPreviews: async ({
-			steps,
+		withWritePreviews: async ({
+			writes,
 		}: {
-			steps: Array<{ input?: { request?: { customer_id?: string } } }>;
+			writes: Array<{ input?: { request?: { customer_id?: string } } }>;
 		}) =>
-			steps.map((step) => ({
-				...step,
-				preview: previewFor(step.input?.request?.customer_id ?? "unknown"),
+			writes.map((write) => ({
+				...write,
+				preview: previewFor(write.input?.request?.customer_id ?? "unknown"),
 			})),
 	}),
 });
@@ -116,9 +116,9 @@ const { createApproval } = await import(
 
 // Every card after the first post — running, resolved, superseded, and the
 // dashboard poll — renders from the stored rows, so the group must persist as
-// step rows with previews, and the stored tool_args must carry no markers.
-describe("createApproval persists the grouped steps", () => {
-	test("steps persist per write and backfill stores every preview", async () => {
+// write rows with previews, and the stored tool_args must carry no markers.
+describe("createApproval persists the grouped writes", () => {
+	test("writes persist per write and backfill stores every preview", async () => {
 		inserted.length = 0;
 		insertedSteps.length = 0;
 		storedStepPreviews.length = 0;
@@ -164,16 +164,16 @@ describe("createApproval persists the grouped steps", () => {
 			approveOptionId?: string;
 			childSessionIds?: string[];
 			denyOptionId?: string;
-			groupedSteps: Array<{ requestId?: string; toolName: string }>;
+			groupedWrites: Array<{ requestId?: string; toolName: string }>;
 			toolArgs: Record<string, unknown>;
 			toolName: string;
 		};
 		expect(data.toolName).toBe("autumn__attach");
-		expect(data.groupedSteps.map((step) => step.toolName)).toEqual([
+		expect(data.groupedWrites.map((write) => write.toolName)).toEqual([
 			"autumn__attach",
 			"autumn__attach",
 		]);
-		expect(data.groupedSteps.map((step) => step.requestId)).toEqual([
+		expect(data.groupedWrites.map((write) => write.requestId)).toEqual([
 			"req_leaf-0002",
 			"req_leaf-0003",
 		]);
@@ -185,7 +185,7 @@ describe("createApproval persists the grouped steps", () => {
 		).toEqual([]);
 
 		// The card posts before the N preview round trips; the deferred backfill
-		// persists them onto the pending step rows.
+		// persists them onto the pending write rows.
 		expect(created?.backfillGroupedPreviews).toBeDefined();
 		const previewed = await created?.backfillGroupedPreviews?.();
 		expect(previewed).toHaveLength(2);

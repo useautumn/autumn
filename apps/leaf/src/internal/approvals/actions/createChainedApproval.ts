@@ -16,7 +16,7 @@ import {
 import {
 	fetchApprovalPreview,
 	isFailedApprovalPreview,
-	withStepPreviews,
+	withWritePreviews,
 } from "../utils/fetchApprovalPreview.js";
 import { toolRequestFromArgs } from "../utils/toolRequest.js";
 
@@ -71,11 +71,11 @@ export const createChainedApproval = async ({
 			preview = withApprovalDisplay({ display, preview: resolvedPreview });
 		}
 		if (withheld.length) {
-			previewedWithheld = await withStepPreviews({
+			previewedWithheld = await withWritePreviews({
 				env,
 				getToken,
 				logger,
-				steps: withheld,
+				writes: withheld,
 			});
 		}
 	} catch (error) {
@@ -102,7 +102,7 @@ export const createChainedApproval = async ({
 			provider,
 			providerUserId,
 			runId: sessionId,
-			groupedSteps: previewedWithheld.map((write) => ({
+			groupedWrites: previewedWithheld.map((write) => ({
 				denyOptionId: write.denyOptionId,
 				preview: write.preview,
 				requestId: write.requestId,

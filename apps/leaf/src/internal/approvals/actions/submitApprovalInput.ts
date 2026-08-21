@@ -15,9 +15,9 @@ import {
 	siblingDenyOptionFor,
 	siblingRequestIdsOf,
 	surfaceRendersGroup,
-	withheldStepsOf,
+	withheldWritesOf,
 } from "../domain/approvalRecord.js";
-import { chatApprovalStepsRepo } from "../repos/chatApprovalStepsRepo.js";
+import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 import type { SubmittedApprovalResult } from "../types.js";
 import { createChainedApproval } from "./createChainedApproval.js";
 
@@ -37,6 +37,9 @@ const approvalAuth = ({
 	workspaceId: approval.workspace_id,
 });
 
+/** Answers the park in eve and consumes the resumed turn. `shouldAbsorbChained`
+ * auto-denies a re-issued duplicate of an already-applied write instead of
+ * carding it again. */
 export const submitApprovalInput = async ({
 	approval,
 	expectExecution,
@@ -51,8 +54,6 @@ export const submitApprovalInput = async ({
 	note?: string;
 	optionId: string;
 	providerUserId: string;
-	/** Absorbs a re-issued duplicate of an already-applied write: returns the
-	 * deny note when the chained park should be auto-denied instead of carded. */
 	shouldAbsorbChained?: (chained: {
 		input?: Record<string, unknown>;
 		toolName: string;
@@ -96,12 +97,15 @@ export const submitApprovalInput = async ({
 	}
 	const startedAt = Date.now();
 	const auth = approvalAuth({ approval, providerUserId });
-	const stepRows = await chatApprovalStepsRepo.list({
+	const writeRows = await chatApprovalWritesRepo.list({
 		approvalId: approval.id,
 		db,
 	});
-	const withheldSteps = withheldStepsOf({ approval, steps: stepRows });
-	const siblingRequestIds = siblingRequestIdsOf({ approval, steps: stepRows });
+	const withheldSteps = withheldWritesOf({ approval, writes: writeRows });
+	const siblingRequestIds = siblingRequestIdsOf({
+		approval,
+		writes: writeRows,
+	});
 	const approvalLogData = {
 		session_id: session.sessionId,
 		tool: approval.tool_name,
@@ -113,7 +117,7 @@ export const submitApprovalInput = async ({
 		chainedSiblingRequestIds,
 		chainedWithheld,
 		deferredEmptyTurn,
-		steps,
+		writes,
 		question,
 		text,
 	} = await submitAgentInput({
@@ -130,7 +134,7 @@ export const submitApprovalInput = async ({
 		orgId: approval.org_id,
 		requestId: approval.tool_call_id,
 		session,
-		siblingOptionIdFor: siblingDenyOptionFor(stepRows),
+		siblingOptionIdFor: siblingDenyOptionFor(writeRows),
 		siblingRequestIds,
 		suppressSiblingWithheldNote,
 	});
@@ -185,7 +189,7 @@ export const submitApprovalInput = async ({
 			error: true,
 			message: text || ACTION_FAILED_MESSAGE,
 			retryable: false,
-			steps,
+			writes,
 		};
 	}
 	if (notExecuted) {
@@ -219,7 +223,7 @@ export const submitApprovalInput = async ({
 			? { ...question, sessionId: session.sessionId }
 			: undefined,
 		result: {},
-		steps,
+		writes,
 		text,
 		toolName: approval.tool_name,
 	};

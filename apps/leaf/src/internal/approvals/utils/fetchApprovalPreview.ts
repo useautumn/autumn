@@ -192,24 +192,24 @@ export const resolveApprovalPreview = async ({
 };
 
 /** Each grouped write gets the same preview + display backfill as the primary
- * one, so the card can render every step with the standard body. */
-/** Fetches each grouped step's preview (card-quality: parsed + display). */
-export const withStepPreviews = async ({
+ * one, so the card can render every write with the standard body. */
+/** Fetches each grouped write's preview (card-quality: parsed + display). */
+export const withWritePreviews = async ({
 	env,
 	executeTool,
 	getToken,
 	logger,
-	steps,
+	writes,
 }: {
 	env: AppEnv;
 	executeTool?: typeof executeAutumnMcpTool;
 	getToken: () => Promise<string>;
 	logger: Pick<AutumnLogger, "debug" | "warn">;
-	steps: ReadonlyArray<WithheldWrite>;
+	writes: ReadonlyArray<WithheldWrite>;
 }): Promise<ReadonlyArray<WithheldWrite>> =>
 	Promise.all(
-		steps.map(async (step) => {
-			const request = toolRequestFromArgs(step.input);
+		writes.map(async (write) => {
+			const request = toolRequestFromArgs(write.input);
 			// The primary write's preview is parsed at capture time; a backfilled
 			// one arrives as the raw MCP envelope and needs the same treatment.
 			const preview = parsePreviewPayload(
@@ -220,7 +220,7 @@ export const withStepPreviews = async ({
 					logger,
 					preview: undefined,
 					request,
-					toolName: step.toolName,
+					toolName: write.toolName,
 				}),
 			);
 			const display = await resolveApprovalDisplay({
@@ -229,6 +229,6 @@ export const withStepPreviews = async ({
 				preview,
 				request,
 			});
-			return { ...step, preview: withApprovalDisplay({ display, preview }) };
+			return { ...write, preview: withApprovalDisplay({ display, preview }) };
 		}),
 	);
