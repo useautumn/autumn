@@ -205,4 +205,6 @@ producers ──► usage.intents   │   append only, FIFO per customer
 4. **Idempotency key** = `event_id` (client or server). Unique per `(org, env, customer, event_id)`.
 5. **Retention vs snapshot interval.** Example: 7–30d hot log, snapshots every 1–5 min per active customer, cold intents on object storage.
 
+S2 as a candidate substrate (not a default): [02-s2-vs-kafka.md](./02-s2-vs-kafka.md). Same log category as Kafka; different resource model (unlimited streams, fencing). Not a drop-in for the analytics firehose.
+
 Next design layer (not this doc): the apply engine and the serving projection. Those sit *on* this log. They are not the log.
