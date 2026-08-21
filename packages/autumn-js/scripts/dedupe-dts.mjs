@@ -59,15 +59,24 @@ const rewriteWorkspaceSdkImports = (declarationFiles) => {
 const cjsTwinOf = (esmDeclarationFile) =>
 	`${esmDeclarationFile.slice(0, -".d.mts".length)}.d.ts`;
 
+const hasDefaultExport = (declarationText) =>
+	/\bexport default\b|\bas default\b/.test(declarationText);
+
 // Paired .d.mts files duplicate their .d.ts twin byte-for-byte (modulo chunk
-// extensions). No entry has a default export, so `export *` is lossless.
+// extensions). `export *` skips default exports, so those are forwarded explicitly.
 const replaceDuplicateEsmDeclarationsWithPointers = (declarationFiles) => {
 	const duplicates = declarationFiles.filter(
 		(file) => file.endsWith(".d.mts") && fs.existsSync(cjsTwinOf(file)),
 	);
 	for (const file of duplicates) {
 		const twinBaseName = path.basename(file).slice(0, -".d.mts".length);
-		fs.writeFileSync(file, `export * from "./${twinBaseName}.js";\n`);
+		const pointer = `export * from "./${twinBaseName}.js";\n`;
+		const defaultForward = hasDefaultExport(
+			fs.readFileSync(cjsTwinOf(file), "utf8"),
+		)
+			? `export { default } from "./${twinBaseName}.js";\n`
+			: "";
+		fs.writeFileSync(file, pointer + defaultForward);
 	}
 	return duplicates.length;
 };
