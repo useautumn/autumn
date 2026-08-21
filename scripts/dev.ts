@@ -72,6 +72,10 @@ const AUTUMN_PUBLIC_API_URL =
 const publicApiUrl = AUTUMN_PUBLIC_API_URL.replace(/\/$/, "");
 const CHAT_URL = process.env.CHAT_URL ?? publicApiUrl;
 const SLACK_BOT_URL = process.env.SLACK_BOT_URL ?? publicApiUrl;
+const TRIGGER_API_URL =
+	(process.env.TRIGGER_API_URL ?? "https://api.trigger.dev")
+		.trim()
+		.replace(/\/$/, "") || "https://api.trigger.dev";
 const skipWorkers = false;
 const isProductionMode = process.argv.includes("--production");
 
@@ -280,8 +284,8 @@ async function startDev() {
 			// Run the installed CLI, not bunx — bunx resolves latest and can
 			// mismatch the pinned @trigger.dev/* packages.
 			const triggerCmd = isWindows
-				? `set AXIOM_TOKEN= && bun run trigger dev --branch ${triggerDevBranch} --api-url ${process.env.TRIGGER_API_URL ?? "https://api.trigger.dev"}`
-				: `env -u AXIOM_TOKEN bun run trigger dev --branch ${triggerDevBranch} --api-url ${process.env.TRIGGER_API_URL ?? "https://api.trigger.dev"}`;
+				? `set AXIOM_TOKEN= && bun run trigger dev --branch ${triggerDevBranch} --api-url "%TRIGGER_API_URL%"`
+				: `env -u AXIOM_TOKEN bun run trigger dev --branch ${triggerDevBranch} --api-url "$TRIGGER_API_URL"`;
 			cmds.push(`"${triggerCmd}"`);
 
 			names.push("vite", "checkout");
@@ -375,79 +379,83 @@ async function startDev() {
 			}
 
 			shellArgs = [
-				isWindows ? "cmd" : "sh",
-				isWindows ? "/c" : "-c",
-				`bunx concurrently -n ${names.join(",")} -c ${colors.join(",")} ${cmds.join(" ")}`,
+				"bunx",
+				"concurrently",
+				"-n",
+				names.join(","),
+				"-c",
+				colors.join(","),
+				...cmds.map((cmd) => cmd.slice(1, -1)),
 			];
 		}
 
 		const spawnEnv: Record<string, string> = {
-				...process.env,
-				TRIGGER_DEV_BRANCH: triggerDevBranch,
-				// Sandbox key only. `stripe listen` reads STRIPE_API_KEY, so no
-				// `stripe login` is needed on a Cloud agent.
-				...(process.env.STRIPE_SANDBOX_SECRET_KEY
-					? { STRIPE_API_KEY: process.env.STRIPE_SANDBOX_SECRET_KEY }
-					: {}),
-				VITE_PORT: VITE_PORT.toString(),
-				SERVER_PORT: SERVER_PORT.toString(),
-				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
-				CHAT_PORT: CHAT_PORT.toString(),
-				EVE_PORT: EVE_PORT.toString(),
-				EVE_SERVER_URL,
-				EVE_INTERNAL_AUTH_TOKEN,
-				MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
-				// CMA runs in Anthropic's cloud and can't reach localhost — prefer the
-				// public API origin (proxied to leaf's /mcp) so Slack → CMA works locally.
-				MCP_SERVER_URL: process.env.MCP_SERVER_URL ?? AUTUMN_PUBLIC_API_URL,
-				CHAT_SERVER_URL:
-					process.env.CHAT_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
-				MCP_RESOURCE_URLS:
-					process.env.MCP_RESOURCE_URLS ?? `http://localhost:${CHAT_PORT}/mcp`,
-				AUTUMN_API_URL,
-				AUTUMN_PUBLIC_API_URL,
-				CHAT_URL,
-				SLACK_BOT_URL,
-				SLACK_REDIRECT_URI,
-				DISCORD_BOT_URL: process.env.DISCORD_BOT_URL ?? LOCAL_CHAT_URL,
-				VITE_APP_ENV: viteAppEnv,
-				...(useLocalAuthUrls && {
-					CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
-					VITE_BACKEND_URL: localUrl(
-						process.env.VITE_BACKEND_URL,
-						LOCAL_SERVER_URL,
-					),
-					VITE_FRONTEND_URL: localUrl(
-						process.env.VITE_FRONTEND_URL,
-						LOCAL_CLIENT_URL,
-					),
-				}),
-				...(useLocalMiscCache && {
-					MISC_CACHE_DRAGONFLY_PUBLIC_URL: LOCAL_MISC_CACHE_URL,
-					CACHE_V2_DRAGONFLY_URL: LOCAL_CACHE_V2_URL,
-					CACHE_V2_DRAGONFLY_PUBLIC_URL: LOCAL_CACHE_V2_URL,
-					REDIS_URL: LOCAL_MISC_CACHE_URL,
-				}),
-				...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
-				...(worktreeNum > 1 && {
-					CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
-					VITE_BACKEND_URL: localUrl(
-						process.env.VITE_BACKEND_URL,
-						LOCAL_SERVER_URL,
-					),
-					VITE_FRONTEND_URL: localUrl(
-						process.env.VITE_FRONTEND_URL,
-						LOCAL_CLIENT_URL,
-					),
-					EMULATE_GOOGLE_URL:
-						process.env.EMULATE_GOOGLE_URL ??
-						"https://google.emulate.localhost",
-					STRIPE_WEBHOOK_SKIP_VERIFY: "true",
-				}),
-			};
-			if (useLocalMiscCache) {
-				delete spawnEnv.MISC_CACHE_DRAGONFLY_PRIVATE_URL;
-			}
+			...process.env,
+			TRIGGER_DEV_BRANCH: triggerDevBranch,
+			TRIGGER_API_URL,
+			// Sandbox key only. `stripe listen` reads STRIPE_API_KEY, so no
+			// `stripe login` is needed on a Cloud agent.
+			...(process.env.STRIPE_SANDBOX_SECRET_KEY
+				? { STRIPE_API_KEY: process.env.STRIPE_SANDBOX_SECRET_KEY }
+				: {}),
+			VITE_PORT: VITE_PORT.toString(),
+			SERVER_PORT: SERVER_PORT.toString(),
+			CHECKOUT_PORT: CHECKOUT_PORT.toString(),
+			CHAT_PORT: CHAT_PORT.toString(),
+			EVE_PORT: EVE_PORT.toString(),
+			EVE_SERVER_URL,
+			EVE_INTERNAL_AUTH_TOKEN,
+			MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
+			// CMA runs in Anthropic's cloud and can't reach localhost — prefer the
+			// public API origin (proxied to leaf's /mcp) so Slack → CMA works locally.
+			MCP_SERVER_URL: process.env.MCP_SERVER_URL ?? AUTUMN_PUBLIC_API_URL,
+			CHAT_SERVER_URL:
+				process.env.CHAT_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
+			MCP_RESOURCE_URLS:
+				process.env.MCP_RESOURCE_URLS ?? `http://localhost:${CHAT_PORT}/mcp`,
+			AUTUMN_API_URL,
+			AUTUMN_PUBLIC_API_URL,
+			CHAT_URL,
+			SLACK_BOT_URL,
+			SLACK_REDIRECT_URI,
+			DISCORD_BOT_URL: process.env.DISCORD_BOT_URL ?? LOCAL_CHAT_URL,
+			VITE_APP_ENV: viteAppEnv,
+			...(useLocalAuthUrls && {
+				CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
+				VITE_BACKEND_URL: localUrl(
+					process.env.VITE_BACKEND_URL,
+					LOCAL_SERVER_URL,
+				),
+				VITE_FRONTEND_URL: localUrl(
+					process.env.VITE_FRONTEND_URL,
+					LOCAL_CLIENT_URL,
+				),
+			}),
+			...(useLocalMiscCache && {
+				MISC_CACHE_DRAGONFLY_PUBLIC_URL: LOCAL_MISC_CACHE_URL,
+				CACHE_V2_DRAGONFLY_URL: LOCAL_CACHE_V2_URL,
+				CACHE_V2_DRAGONFLY_PUBLIC_URL: LOCAL_CACHE_V2_URL,
+				REDIS_URL: LOCAL_MISC_CACHE_URL,
+			}),
+			...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
+			...(worktreeNum > 1 && {
+				CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
+				VITE_BACKEND_URL: localUrl(
+					process.env.VITE_BACKEND_URL,
+					LOCAL_SERVER_URL,
+				),
+				VITE_FRONTEND_URL: localUrl(
+					process.env.VITE_FRONTEND_URL,
+					LOCAL_CLIENT_URL,
+				),
+				EMULATE_GOOGLE_URL:
+					process.env.EMULATE_GOOGLE_URL ?? "https://google.emulate.localhost",
+				STRIPE_WEBHOOK_SKIP_VERIFY: "true",
+			}),
+		};
+		if (useLocalMiscCache) {
+			delete spawnEnv.MISC_CACHE_DRAGONFLY_PRIVATE_URL;
+		}
 
 		const concurrentlyProc = Bun.spawn(shellArgs, {
 			cwd: projectRoot,
