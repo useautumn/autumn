@@ -32,58 +32,6 @@ for (const file of fs.readdirSync(path.join(sdkSrcDir, "funcs"))) {
 }
 
 const reactConfigs: Options[] = [
-	// New Backend (src/backend)
-	{
-		entry: {
-			index: "src/backend/index.ts",
-			"adapters/express": "src/backend/adapters/express.ts",
-			"adapters/fetch": "src/backend/adapters/fetch.ts",
-			"adapters/hono": "src/backend/adapters/hono.ts",
-			"adapters/next": "src/backend/adapters/next.ts",
-		},
-		format: ["cjs", "esm"],
-		dts: true,
-		clean: false,
-		outDir: "./dist/backend",
-		external: ["react", "react/jsx-runtime", "react-dom", "next", "hono"],
-		noExternal,
-		bundle: true,
-		splitting: true,
-		treeshake: true,
-		minify: true,
-		skipNodeModulesBundle: true,
-		esbuildOptions(options) {
-			options.plugins = options.plugins || [];
-			options.plugins.push(alias(pathAliases));
-			options.define = {
-				...options.define,
-			};
-		},
-	},
-
-	// Better Auth Plugin (src/better-auth)
-	{
-		entry: { index: "src/better-auth/index.ts" },
-		format: ["cjs", "esm"],
-		dts: true,
-		clean: false,
-		outDir: "./dist/better-auth",
-		external: ["better-auth", "better-call"],
-		noExternal,
-		bundle: true,
-		splitting: true,
-		treeshake: true,
-		minify: true,
-		skipNodeModulesBundle: true,
-		esbuildOptions(options) {
-			options.plugins = options.plugins || [];
-			options.plugins.push(alias(pathAliases));
-			options.define = {
-				...options.define,
-			};
-		},
-	},
-
 	// New React (src/react) - TanStack Query based (bundled)
 	{
 		entry: { index: "src/react/index.ts" },
@@ -112,17 +60,48 @@ const reactConfigs: Options[] = [
 ];
 
 export default defineConfig([
-	// Main SDK entry point (re-exports @useautumn/sdk)
+	// SDK root + backend + better-auth in one config, so the bundled
+	// @useautumn/sdk is emitted as one shared chunk per format instead of
+	// one embedded copy per entry.
 	{
 		format: ["cjs", "esm"],
-		entry: ["./src/sdk/index.ts"],
+		entry: {
+			"sdk/index": "./src/sdk/index.ts",
+			"backend/index": "src/backend/index.ts",
+			"backend/adapters/express": "src/backend/adapters/express.ts",
+			"backend/adapters/fetch": "src/backend/adapters/fetch.ts",
+			"backend/adapters/hono": "src/backend/adapters/hono.ts",
+			"backend/adapters/next": "src/backend/adapters/next.ts",
+			"better-auth/index": "src/better-auth/index.ts",
+		},
 		skipNodeModulesBundle: true,
+		external: [
+			"react",
+			"react/jsx-runtime",
+			"react-dom",
+			"next",
+			"hono",
+			"better-auth",
+			"better-call",
+		],
 		noExternal,
-		dts: true,
+		// sdk/index declarations are hand-shimmed onto the tsc-emitted
+		// dist/sdk-types tree by scripts/dedupe-dts.mjs — a rollup here would
+		// re-inline the full 2 MB SDK type surface.
+		dts: {
+			entry: {
+				"backend/index": "src/backend/index.ts",
+				"backend/adapters/express": "src/backend/adapters/express.ts",
+				"backend/adapters/fetch": "src/backend/adapters/fetch.ts",
+				"backend/adapters/hono": "src/backend/adapters/hono.ts",
+				"backend/adapters/next": "src/backend/adapters/next.ts",
+				"better-auth/index": "src/better-auth/index.ts",
+			},
+		},
 		shims: true,
 		clean: false,
-		outDir: "./dist/sdk",
-		splitting: false,
+		outDir: "./dist",
+		splitting: true,
 		treeshake: true,
 		minify: true,
 		target: "es2020",

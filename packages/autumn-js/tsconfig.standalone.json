@@ -9,7 +9,7 @@
 		"declaration": true,
 		"emitDeclarationOnly": true,
 		"rootDir": "../sdk/src",
-		"outDir": "./dist/standalone",
+		"outDir": "./dist/sdk-types",
 		"types": ["node"]
 	},
 	"include": ["../sdk/src/**/*.ts"]
