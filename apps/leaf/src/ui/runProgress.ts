@@ -1,5 +1,6 @@
 import { Plan } from "chat";
 import type { AgentActionProgress } from "../internal/agentRuntime/domain/agentTurnContext.js";
+import { logger } from "../lib/logger.js";
 import { actionProgressResult } from "./actionProgress.js";
 import type { ReplyTarget } from "./progress.js";
 import { createStatusTicker } from "./statusTicker.js";
@@ -56,7 +57,10 @@ export const createRunProgress = ({
 			await update(plan);
 		} catch (error) {
 			planAvailable = false;
-			console.warn("[chat] Could not update run plan", error);
+			logger.warn("Could not update run plan", {
+				data: { error },
+				event: "leaf.run_plan_update_failed",
+			});
 		}
 	};
 
@@ -121,7 +125,10 @@ export const createRunProgress = ({
 				planStarted = true;
 			} catch (error) {
 				planAvailable = false;
-				console.warn("[chat] Could not post run plan", error);
+				logger.warn("Could not post run plan", {
+					data: { error },
+					event: "leaf.run_plan_post_failed",
+				});
 			}
 		},
 		status: ticker.activity,

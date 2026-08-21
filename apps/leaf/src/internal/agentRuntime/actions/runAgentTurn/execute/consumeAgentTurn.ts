@@ -48,6 +48,7 @@ const closeReasoningOutput = ({
 
 const streamPassEvents = async ({
 	abandonForStop,
+	onFirstStreamEvent,
 	run,
 	signal,
 	turn,
@@ -56,6 +57,7 @@ const streamPassEvents = async ({
 		progress: EveTurnProgress;
 		stop: NonNullable<ActiveRun["stop"]>;
 	}) => Promise<EveTurnOutcome>;
+	onFirstStreamEvent?: () => void;
 	run?: ActiveRun;
 	signal: AbortSignal;
 	turn: EveTurnContext;
@@ -65,6 +67,7 @@ const streamPassEvents = async ({
 	let sawEvent = false;
 	try {
 		for await (const event of streamEveEvents({ auth, session, signal })) {
+			if (!sawEvent) onFirstStreamEvent?.();
 			sawEvent = true;
 			session.state.streamIndex += 1;
 			session.state.lastEventAt = Date.now();
@@ -157,6 +160,7 @@ export const consumeAgentTurn = async ({
 	env,
 	logger,
 	onAction,
+	onFirstStreamEvent,
 	onReasoning,
 	onThinking,
 	orgId,
@@ -168,6 +172,7 @@ export const consumeAgentTurn = async ({
 	env: AppEnv;
 	logger: AutumnLogger;
 	onAction?: EveEventContext["onAction"];
+	onFirstStreamEvent?: () => void;
 	onReasoning?: EveEventContext["onReasoning"];
 	onThinking?: EveEventContext["onThinking"];
 	orgId: string;
@@ -224,6 +229,7 @@ export const consumeAgentTurn = async ({
 
 			const pass = await streamPassEvents({
 				abandonForStop,
+				onFirstStreamEvent: streamedAnyEvent ? undefined : onFirstStreamEvent,
 				run,
 				signal: abortController.signal,
 				turn,

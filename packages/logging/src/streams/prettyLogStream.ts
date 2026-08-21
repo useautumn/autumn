@@ -1,6 +1,7 @@
 import { Writable } from "node:stream";
 
 const FORMATTED_LOG_EXCLUDE_FIELDS = new Set([
+	"deployment",
 	"time",
 	"level",
 	"msg",

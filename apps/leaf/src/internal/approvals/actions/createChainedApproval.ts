@@ -77,7 +77,7 @@ export const createChainedApproval = async ({
 			event: "leaf.eve_chained_preview_backfill_failed",
 			tool: chained.toolName,
 			data: {
-				error: error instanceof Error ? error.message : String(error),
+				error,
 			},
 		});
 	}
