@@ -10,8 +10,8 @@ Configure this repository under **Settings → Project → Dev environment**:
 
 | Lifecycle | Command | Responsibility |
 | --- | --- | --- |
-| Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies and `neonctl`, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
-| Update after checkout | `bun install --frozen-lockfile` | reconciles dependencies when a reused or snapshotted VM checks out another commit |
+| Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies, refreshes repo-pinned AI skills in `.agents/skills/`, installs `neonctl` and the pinned Stripe CLI, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
+| Update after checkout | `bash scripts/setup/capy-init.sh` | re-runs the same deterministic refresh so reused or snapshotted VMs pick up pinned skills and tooling after checkout |
 | Startup | `bash scripts/setup/capy-startup.sh` | idempotently starts local infrastructure, provisions or resumes the VM's Neon branch, applies pending migrations and SQL functions, and writes local env files |
 | App | `bun capy` | runs Startup if needed, ensures emulate/portless are live, and starts the app in a detached tmux session |
 
@@ -38,7 +38,8 @@ Setup command or repository file.
 Optional integration variables such as `STRIPE_SANDBOX_SECRET_KEY`,
 `STRIPE_SANDBOX_WEBHOOK_SECRET`, `STRIPE_SANDBOX_CLIENT_ID`,
 `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `POSTHOG_API_KEY`, and
-`SLACK_BOT_TOKEN` pass through when configured.
+`SLACK_BOT_TOKEN` pass through when configured. `STRIPE_SANDBOX_SECRET_KEY`
+authenticates the Stripe CLI without interactive login.
 
 ## Runtime services
 
