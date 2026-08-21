@@ -3,7 +3,11 @@ import type {
 	FullCusEntWithFullCusProduct,
 	FullCustomerEntitlement,
 } from "@autumn/shared";
-import { FeatureType, type FullCusProduct } from "@autumn/shared";
+import {
+	FeatureType,
+	type FullCusProduct,
+	isCusEntExpired,
+} from "@autumn/shared";
 import { Button, SectionTag } from "@autumn/ui";
 import { LegoIcon, PlusIcon } from "@phosphor-icons/react";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
@@ -117,6 +121,10 @@ export function CustomerFeatureUsageTable() {
 				cusEnts: deduplicatedCusEnts,
 				featuresMap,
 			}).sort((a, b) => {
+				// Expired (view-only) rows sink to the bottom of the table
+				const aExpired = isCusEntExpired({ cusEnt: a });
+				const bExpired = isCusEntExpired({ cusEnt: b });
+				if (aExpired !== bExpired) return aExpired ? 1 : -1;
 				const aAllowance = a.entitlement.allowance ?? 0;
 				const bAllowance = b.entitlement.allowance ?? 0;
 				if (aAllowance > 0 && bAllowance <= 0) return -1;
@@ -157,10 +165,14 @@ export function CustomerFeatureUsageTable() {
 		[meteredEnts],
 	);
 
+	// Expired entitlements never surface as flags — the flags section has no
+	// greyed-out state, and an expired boolean grant should read as not granted.
 	const booleanEnts = useMemo(
 		() =>
 			deduplicatedCusEnts.filter(
-				(ent) => ent.entitlement.feature.type === FeatureType.Boolean,
+				(ent) =>
+					ent.entitlement.feature.type === FeatureType.Boolean &&
+					!isCusEntExpired({ cusEnt: ent }),
 			),
 		[deduplicatedCusEnts],
 	);

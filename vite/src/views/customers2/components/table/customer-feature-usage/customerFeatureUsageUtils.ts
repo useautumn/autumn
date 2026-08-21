@@ -5,7 +5,7 @@ import type {
 	FullCusProduct,
 	FullCustomerEntitlement,
 } from "@autumn/shared";
-import { FeatureType } from "@autumn/shared";
+import { FeatureType, isCusEntExpired } from "@autumn/shared";
 import type { FullCusEntWithSubRows } from "./customerFeatureUsageTypes";
 
 /**
@@ -92,32 +92,46 @@ export function deduplicateEntitlements({
 				combined.push(ent);
 			}
 		} else {
-			// Combine multiple entitlements
-			const first = ents[0];
+			// Combine multiple entitlements. Expired entitlements stay visible as
+			// sub-rows (via aggregatedMap) but must not contribute to any sums —
+			// only active entitlements feed the combined parent row's math.
+			const activeEnts = ents.filter(
+				(ent) => !isCusEntExpired({ cusEnt: ent }),
+			);
+			const expiredEnts = ents.filter((ent) =>
+				isCusEntExpired({ cusEnt: ent }),
+			);
 
-			// Store the original entitlements for this aggregated feature
-			aggregatedMap.set(featureId, ents);
+			// When every entitlement for the feature is expired, the parent row is
+			// itself expired (view-only, greyed out) and just mirrors the expired
+			// values for display.
+			const mathEnts = activeEnts.length > 0 ? activeEnts : expiredEnts;
+			const first = mathEnts[0];
+
+			// Store the original entitlements for this aggregated feature,
+			// active first so expired sub-rows render last.
+			aggregatedMap.set(featureId, [...activeEnts, ...expiredEnts]);
 
 			// When entityId is present, use entity-specific balances
 			let summedBalance: number;
 			if (entityId) {
-				summedBalance = ents.reduce((sum, e) => {
+				summedBalance = mathEnts.reduce((sum, e) => {
 					const entityBalance = e.entities?.[entityId]?.balance;
 					return sum + (entityBalance ?? e.balance ?? 0);
 				}, 0);
 			} else {
-				summedBalance = ents.reduce((sum, e) => sum + (e.balance ?? 0), 0);
+				summedBalance = mathEnts.reduce((sum, e) => sum + (e.balance ?? 0), 0);
 			}
 
-			const summedAllowance = ents.reduce(
+			const summedAllowance = mathEnts.reduce(
 				(sum, e) => sum + (e.entitlement.allowance ?? 0),
 				0,
 			);
-			const summedQuantity = ents.reduce(
+			const summedQuantity = mathEnts.reduce(
 				(sum, e) => sum + (e.customer_product?.quantity ?? 1),
 				0,
 			);
-			const earliestReset = ents.reduce(
+			const earliestReset = mathEnts.reduce(
 				(earliest, e) => {
 					if (!e.next_reset_at) return earliest;
 					if (!earliest) return e.next_reset_at;
