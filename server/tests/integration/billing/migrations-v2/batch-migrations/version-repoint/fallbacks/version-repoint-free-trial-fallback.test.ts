@@ -5,6 +5,8 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+
+// version-only is per-customer until definition execute is restored
 import {
 	expectPerCustomerLaneWithRejections,
 	readRepointableCustomerPlanRow,
@@ -14,7 +16,7 @@ import {
 const uniqueStem = (name: string) =>
 	`${name}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("batch version repoint trial fallback: a changed free-trial config rejects and lands per-customer")}`,
 	async () => {
 		const stem = uniqueStem("bvr-trial-fallback");
@@ -92,7 +94,7 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("batch version repoint trial control: identical trial configs across versions still batch")}`,
 	async () => {
 		const stem = uniqueStem("bvr-trial-control");

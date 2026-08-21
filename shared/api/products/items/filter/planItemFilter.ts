@@ -1,4 +1,5 @@
 import { BillingMethod } from "@api/products/components/billingMethod";
+import { IncludedUsageParamsSchema } from "@api/products/items/crud/createPlanItemParamsV1";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
 import { z } from "zod/v4";
@@ -22,6 +23,10 @@ export const PlanItemFilterSchema = z
 		interval_count: z.number().int().positive().optional().meta({
 			description:
 				"Match items with this interval_count. Disambiguates between items that share an interval but differ in count.",
+		}),
+		included: IncludedUsageParamsSchema.optional().meta({
+			description:
+				"Match items whose grant equals this included usage. Omitted is a wildcard.",
 		}),
 	})
 	.refine(

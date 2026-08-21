@@ -187,9 +187,12 @@ export const setupPatchContext = ({
 	patchFullProduct.prices.push(...updateNewPrices, ...customPricePrices);
 
 	const { addItems: nonNoopAddItems } = handleCustomizeNoopItems({
+		ctx,
 		customize,
 		targetCustomerProduct: finalCustomerProduct,
-		features: ctx.features,
+		deletedCustomerPrices: deleteCustomerPrices,
+		deletedCustomerEntitlements: deleteCustomerEntitlements,
+		fullProduct: patchFullProduct,
 	});
 
 	const { prices: customItemPrices, entitlements: customEntitlements } =

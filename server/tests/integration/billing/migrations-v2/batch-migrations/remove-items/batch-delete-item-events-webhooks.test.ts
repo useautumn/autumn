@@ -1,16 +1,30 @@
 /**
- * Batch remove finalization must describe the same deleted plan items in the
- * migration event and billing.updated, while products.updated shows post-state.
+ * Filter-mode batch remove stamps each customer's live from-definition onto
+ * item_changes and webhooks — not catalog ids[0].
+ *
+ * Contract:
+ *   customerA live 100/mo, customerB live 200/mo
+ *   after batch remove, each customer's item_changes / billing.updated carries
+ *   THAT customer's from allowance (100 vs 200)
+ *   a customize-attach (custom product) is still skipped by custom: false
+ *
+ * Red (catalog ids[0]): customerB deleted.included = 100
+ * Green: 100 vs 200
  */
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, test } from "bun:test";
+import { ResetInterval } from "@autumn/shared";
 import {
-	expectBillingUpdatedCorrect,
+	expectBillingUpdatedAbsent,
 	waitForBillingUpdatedWebhook,
 } from "@tests/integration/billing/autumn-webhooks/utils/expectBillingUpdatedWebhook";
+import { waitForProductsUpdatedWebhook } from "@tests/integration/billing/autumn-webhooks/utils/expectProductsUpdatedWebhook";
+import { expectBatchLane } from "@tests/integration/billing/migrations-v2/batch-migrations/version-repoint/utils/versionRepointTestUtils";
+import { expectFilterLiveDefinitionCorrect } from "@tests/integration/billing/migrations-v2/utils/expectFilterLiveDefinitionCorrect";
 import {
-	expectProductsUpdatedCorrect,
-	waitForProductsUpdatedWebhook,
-} from "@tests/integration/billing/autumn-webhooks/utils/expectProductsUpdatedWebhook";
+	expectMigrationItemEventCorrect,
+	getMigrationItemEvents,
+} from "@tests/integration/billing/migrations-v2/utils/expectMigrationItemEvent";
+import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import {
 	getTestSvixAppId,
 	setupWebhookTest,
@@ -23,11 +37,9 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import {
-	expectMigrationEventBillingPlanChangesEqual,
-	expectMigrationItemEventCorrect,
-	getMigrationItemEvents,
-} from "../../utils/expectMigrationItemEvent";
-import { runChunkedMigration } from "../../utils/runChunkedMigration";
+	repointToCustomEntitlement,
+	setScopedFeatureBalance,
+} from "../paidRowTestUtils";
 
 let webhook: WebhookTestSetup;
 
@@ -42,133 +54,168 @@ afterAll(async () => {
 	await webhook?.cleanup();
 });
 
-test(`${chalk.yellowBright("batch delete item events: event and webhooks share the deleted item diff")}`, async () => {
-	const suffix = Date.now();
-	const customerId = `batch-delete-events-${suffix}`;
-	const skippedCustomerId = `batch-delete-events-skipped-${suffix}`;
-	const plan = products.base({
-		id: `batch-delete-events-plan-${suffix}`,
-		items: [items.monthlyMessages({ includedUsage: 100 }), items.dashboard()],
-	});
-	const { autumnV2_3, ctx: scenarioCtx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false, skipWebhooks: true }),
-			s.otherCustomers([{ id: skippedCustomerId }]),
-			s.products({ list: [plan] }),
-		],
-		actions: [
-			s.parallel(
-				s.billing.attach({ productId: plan.id }),
-				s.billing.attach({
-					customerId: skippedCustomerId,
-					productId: plan.id,
-					items: [
-						items.monthlyMessages({ includedUsage: 50 }),
-						items.dashboard(),
-					],
-				}),
-			),
-		],
-	});
+test.concurrent(
+	`${chalk.yellowBright("batch delete item events: each customer's live from-definition is stamped on item_changes")}`,
+	async () => {
+		const suffix = Date.now();
+		const customerA = `batch-delete-live-100-${suffix}`;
+		const customerB = `batch-delete-live-200-${suffix}`;
+		const skippedCustomerId = `batch-delete-live-skipped-${suffix}`;
+		const cases = [
+			{ customerId: customerA, fromIncluded: 100 },
+			{ customerId: customerB, fromIncluded: 200 },
+		];
 
-	const { migration, migrationRunId, result } = await runChunkedMigration({
-		ctx: scenarioCtx,
-		migrationClient: autumnV2_3,
-		migrationId: `batch-delete-events-migration-${suffix}`,
-		filter: { customer: { plan: { plan_id: plan.id } } },
-		operations: {
-			customer: [
-				{
-					type: "update_plan",
-					plan_filter: { plan_id: plan.id, custom: false },
-					customize: {
-						remove_items: [
-							{ feature_id: TestFeature.Messages },
-							{ feature_id: TestFeature.Dashboard },
-						],
-					},
-				},
+		const plan = products.base({
+			id: `batch-delete-live-plan-${suffix}`,
+			items: [
+				items.monthlyMessages({ includedUsage: 100 }),
+				items.dashboard(),
 			],
-		},
-		noBillingChanges: true,
-		controls: { webhooks: { sendWebhooks: true } },
-	});
-	expect(result?.lane).toBe("batch");
+		});
+		const { autumnV2_3, ctx: scenarioCtx } = await initScenario({
+			customerId: customerA,
+			setup: [
+				s.customer({ testClock: false, skipWebhooks: true }),
+				s.otherCustomers([
+					{ id: customerB },
+					{ id: skippedCustomerId },
+				]),
+				s.products({ list: [plan] }),
+			],
+			actions: [
+				s.parallel(
+					s.billing.attach({ productId: plan.id }),
+					s.billing.attach({
+						customerId: customerB,
+						productId: plan.id,
+					}),
+					s.billing.attach({
+						customerId: skippedCustomerId,
+						productId: plan.id,
+						items: [
+							items.monthlyMessages({ includedUsage: 50 }),
+							items.dashboard(),
+						],
+					}),
+				),
+			],
+		});
 
-	const run = {
-		ctx: scenarioCtx,
-		migrationInternalId: migration.internal_id,
-		migrationRunId,
-	};
-	const [events, billingUpdated, productsUpdated, skippedBillingUpdated] =
-		await Promise.all([
-			getMigrationItemEvents({ ...run, expectedCount: 2 }),
-			waitForBillingUpdatedWebhook({
-				playToken: webhook.playToken,
-				customerId,
-				entityId: null,
-			}),
-			waitForProductsUpdatedWebhook({
-				playToken: webhook.playToken,
-				customerId,
-				scenario: "new",
-				entityId: null,
-				absentFeatureIds: [TestFeature.Messages, TestFeature.Dashboard],
-			}),
-			waitForBillingUpdatedWebhook({
-				playToken: webhook.playToken,
-				customerId: skippedCustomerId,
-				timeoutMs: 4_000,
-			}),
-		]);
+		await repointToCustomEntitlement({
+			ctx: scenarioCtx,
+			customerId: customerB,
+			featureId: TestFeature.Messages,
+			overrides: { allowance: 200 },
+		});
+		await setScopedFeatureBalance({
+			ctx: scenarioCtx,
+			customerId: customerB,
+			featureId: TestFeature.Messages,
+			balance: 200,
+		});
 
-	expectBillingUpdatedCorrect({
-		data: billingUpdated,
-		customerId,
-		entityId: null,
-		planChanges: [
-			{
-				planId: plan.id,
-				itemChanges: [
-					{ action: "deleted", featureId: TestFeature.Messages, included: 100 },
-					{ action: "deleted", featureId: TestFeature.Dashboard },
+		const { migration, migrationRunId, result } = await runChunkedMigration({
+			ctx: scenarioCtx,
+			migrationClient: autumnV2_3,
+			migrationId: `batch-delete-live-migration-${suffix}`,
+			filter: { customer: { plan: { plan_id: plan.id } } },
+			operations: {
+				customer: [
+					{
+						type: "update_plan",
+						plan_filter: { plan_id: plan.id, custom: false },
+						customize: {
+							remove_items: [
+								{
+									feature_id: TestFeature.Messages,
+									interval: ResetInterval.Month,
+								},
+								{ feature_id: TestFeature.Dashboard },
+							],
+						},
+					},
 				],
 			},
-		],
-	});
-	expectProductsUpdatedCorrect({
-		data: productsUpdated,
-		customerId,
-		planId: plan.id,
-		entityId: null,
-		absentFeatureIds: [TestFeature.Messages, TestFeature.Dashboard],
-	});
-	expect(skippedBillingUpdated).toBeNull();
+			noBillingChanges: true,
+			controls: { webhooks: { sendWebhooks: true } },
+		});
+		expectBatchLane({ result });
 
-	if (!events) return;
-	await expectMigrationItemEventCorrect({
-		ctx: scenarioCtx,
-		events,
-		customerId,
-		status: "succeeded",
-		planChangeActions: ["updated"],
-		planChangePlanIds: [plan.id],
-		itemChangeCount: 2,
-		balanceFeatureIds: [],
-		flagChanges: [{ action: "deleted", featureId: TestFeature.Dashboard }],
-	});
-	await expectMigrationEventBillingPlanChangesEqual({
-		ctx: scenarioCtx,
-		events,
-		customerId,
-		billingUpdated,
-	});
-	await expectMigrationItemEventCorrect({
-		ctx: scenarioCtx,
-		events,
-		customerId: skippedCustomerId,
-		status: "skipped",
-		reason: "no_batch_changes",
-	});
-});
+		const run = {
+			ctx: scenarioCtx,
+			migrationInternalId: migration.internal_id,
+			migrationRunId,
+		};
+		const eventsPromise = getMigrationItemEvents({
+			...run,
+			expectedCount: 3,
+		});
+		const skippedPromise = waitForBillingUpdatedWebhook({
+			playToken: webhook.playToken,
+			customerId: skippedCustomerId,
+			timeoutMs: 4_000,
+		});
+		const deliveredPromise = Promise.all(
+			cases.map(async (row) => {
+				const [billingUpdated, productsUpdated] = await Promise.all([
+					waitForBillingUpdatedWebhook({
+						playToken: webhook.playToken,
+						customerId: row.customerId,
+						entityId: null,
+					}),
+					waitForProductsUpdatedWebhook({
+						playToken: webhook.playToken,
+						customerId: row.customerId,
+						scenario: "new",
+						entityId: null,
+						absentFeatureIds: [
+							TestFeature.Messages,
+							TestFeature.Dashboard,
+						],
+					}),
+				]);
+				return { ...row, billingUpdated, productsUpdated };
+			}),
+		);
+		const [events, skippedBillingUpdated, delivered] = await Promise.all([
+			eventsPromise,
+			skippedPromise,
+			deliveredPromise,
+		]);
+
+		expectBillingUpdatedAbsent({ data: skippedBillingUpdated });
+		if (events) {
+			await expectMigrationItemEventCorrect({
+				ctx: scenarioCtx,
+				events,
+				customerId: skippedCustomerId,
+				status: "skipped",
+				reason: "no_batch_changes",
+			});
+		}
+
+		for (const row of delivered) {
+			await expectFilterLiveDefinitionCorrect({
+				ctx: scenarioCtx,
+				events,
+				billingUpdated: row.billingUpdated,
+				productsUpdated: row.productsUpdated,
+				customerId: row.customerId,
+				planId: plan.id,
+				itemChanges: [
+					{
+						action: "deleted",
+						featureId: TestFeature.Messages,
+						included: row.fromIncluded,
+					},
+					{ action: "deleted", featureId: TestFeature.Dashboard },
+				],
+				absentFeatureIds: [TestFeature.Messages, TestFeature.Dashboard],
+				flagChanges: [
+					{ action: "deleted", featureId: TestFeature.Dashboard },
+				],
+			});
+		}
+	},
+);

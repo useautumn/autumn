@@ -5,6 +5,7 @@ import type {
 } from "@autumn/shared";
 import type { computeCustomerEntitlementInitialState } from "@/internal/billing/v2/actions/batchTransition/compute/operations/entitlementPriceOperations/computeCustomerEntitlementPatch.js";
 import type { CustomerProductTransition } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computeCustomerProductTransition.js";
+import type { EntitlementPriceFilter } from "./entitlementPriceFilter.js";
 
 export type CustomerEntitlementInitialState = ReturnType<
 	typeof computeCustomerEntitlementInitialState
@@ -17,18 +18,23 @@ export type BatchMigrationAddEntitlementOp = {
 	initialState: CustomerEntitlementInitialState;
 };
 
-/** Drops one free entitlement's rows across the patch's customer products. */
-export type BatchMigrationRemoveEntitlementOp = {
-	entitlementPrice: EntitlementPrice;
-};
+export type BatchMigrationRemoveEntitlementOp =
+	| { by: "definition"; entitlementPrice: EntitlementPrice }
+	| { by: "filter"; from: EntitlementPriceFilter };
 
-/** Moves live rows off the definition they hold and onto the minted one,
- * carrying the balance across rather than re-granting it. */
-export type BatchMigrationReplaceEntitlementOp = {
-	fromEntitlementPrice: EntitlementPrice;
-	entitlementPrice: EntitlementPrice;
-	initialState: CustomerEntitlementInitialState;
-};
+export type BatchMigrationReplaceEntitlementOp =
+	| {
+			by: "definition";
+			fromEntitlementPrice: EntitlementPrice;
+			entitlementPrice: EntitlementPrice;
+			initialState: CustomerEntitlementInitialState;
+	  }
+	| {
+			by: "filter";
+			from: EntitlementPriceFilter;
+			entitlementPrice: EntitlementPrice;
+			initialState: CustomerEntitlementInitialState;
+	  };
 
 type BatchMigrationLicenseOpTarget = {
 	licensePlanId: string;

@@ -87,7 +87,10 @@ const useLocalAuthUrls = viteAppEnv === "dev" && !isProductionMode;
 const LOCAL_MISC_CACHE_URL = "redis://localhost:6379";
 const LOCAL_CACHE_V2_URL = "redis://localhost:6380";
 const useLocalMiscCache =
-	viteAppEnv === "dev" && !isProductionMode && worktreeNum === 1;
+	viteAppEnv === "dev" &&
+	!isProductionMode &&
+	worktreeNum === 1 &&
+	!process.env.CACHE_V2_DRAGONFLY_URL;
 const localUrl = (value: string | undefined, fallback: string) =>
 	value && !value.includes(".useautumn.com") ? value : fallback;
 const AUTUMN_API_URL = useLocalAuthUrls
