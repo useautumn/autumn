@@ -2,11 +2,9 @@ import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
 import { approvalOptionIds } from "../../agentRuntime/eve/events.js";
-import {
-	type ChainedPendingRequest,
-	siblingRequestIdsToolArgs,
-	type WithheldWrite,
-	withheldWritesToolArgs,
+import type {
+	ChainedPendingRequest,
+	WithheldWrite,
 } from "../../agentRuntime/eve/parkedInput.js";
 import type { EveAuthContext } from "../../agentRuntime/eve/types.js";
 import { getOrgInstallationToken } from "../../installations/actions/getOrgInstallationToken.js";
@@ -18,13 +16,14 @@ import {
 import {
 	fetchApprovalPreview,
 	isFailedApprovalPreview,
-	withGroupedWritePreviews,
+	withStepPreviews,
 } from "../utils/fetchApprovalPreview.js";
 import { toolRequestFromArgs } from "../utils/toolRequest.js";
 
 export const createChainedApproval = async ({
 	auth,
 	chained,
+	childSessionIds = [],
 	providerUserId,
 	sessionId,
 	siblingRequestIds,
@@ -32,6 +31,7 @@ export const createChainedApproval = async ({
 }: {
 	auth: EveAuthContext;
 	chained: ChainedPendingRequest;
+	childSessionIds?: ReadonlyArray<string>;
 	providerUserId: string;
 	sessionId: string;
 	siblingRequestIds: ReadonlyArray<string>;
@@ -41,7 +41,7 @@ export const createChainedApproval = async ({
 	const provider = auth.provider as ChatApproval["provider"];
 	const options = approvalOptionIds({ options: chained.options });
 	let preview: unknown;
-	let getAccessToken: (() => Promise<string>) | undefined;
+	let previewedWithheld = withheld;
 	try {
 		const credentialUserId =
 			provider === "web" ? providerUserId : auth.autumnUserId;
@@ -52,7 +52,7 @@ export const createChainedApproval = async ({
 			userId: credentialUserId,
 			workspaceId: auth.workspaceId,
 		});
-		getAccessToken = async () => accessToken;
+		const getToken = async () => accessToken;
 		const request = toolRequestFromArgs(chained.input) ?? {};
 		const resolvedPreview = await fetchApprovalPreview({
 			env,
@@ -66,11 +66,19 @@ export const createChainedApproval = async ({
 		} else {
 			const display = await resolveApprovalDisplay({
 				env,
-				getToken: async () => accessToken,
+				getToken,
 				preview: resolvedPreview,
 				request,
 			});
 			preview = withApprovalDisplay({ display, preview: resolvedPreview });
+		}
+		if (withheld.length) {
+			previewedWithheld = await withStepPreviews({
+				env,
+				getToken,
+				logger,
+				steps: withheld,
+			});
 		}
 	} catch (error) {
 		logger.warn("Could not backfill chained approval preview", {
@@ -81,25 +89,14 @@ export const createChainedApproval = async ({
 			},
 		});
 	}
-	let toolArgs: Record<string, unknown> = {
-		...(chained.input ?? {}),
-		_eveApproveOptionId: options.approve,
-		_eveDenyOptionId: options.deny,
-		...siblingRequestIdsToolArgs(siblingRequestIds),
-		...withheldWritesToolArgs(withheld),
-	};
-	if (getAccessToken) {
-		toolArgs = await withGroupedWritePreviews({
-			env,
-			getToken: getAccessToken,
-			logger,
-			toolArgs,
-		});
-	}
+	const toolArgs: Record<string, unknown> = { ...(chained.input ?? {}) };
 	return chatApprovalRepo.insert({
 		db,
 		data: {
+			approveOptionId: options.approve,
 			channelId: auth.channelId,
+			childSessionIds,
+			denyOptionId: options.deny,
 			env,
 			harness: "eve",
 			orgId: auth.orgId,
@@ -107,6 +104,22 @@ export const createChainedApproval = async ({
 			provider,
 			providerUserId,
 			runId: sessionId,
+			siblingRequestIds,
+			steps: [
+				{
+					preview,
+					requestId: chained.requestId,
+					toolArgs,
+					toolName: chained.toolName,
+				},
+				...previewedWithheld.map((write) => ({
+					denyOptionId: write.denyOptionId,
+					preview: write.preview,
+					requestId: write.requestId,
+					toolArgs: write.input ?? {},
+					toolName: write.toolName,
+				})),
+			],
 			toolArgs,
 			toolCallId: chained.requestId,
 			toolName: chained.toolName,

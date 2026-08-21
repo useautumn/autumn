@@ -1,19 +1,20 @@
 import type { ChatApproval } from "@autumn/shared";
-import { db } from "../../../lib/db.js";
+import { db as chatDb, db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
 import {
 	ACTION_FAILED_MESSAGE,
 	APPROVAL_NOT_EXECUTED_MESSAGE,
 } from "../../../ui/messages.js";
 import { submitAgentInput } from "../../agentRuntime/actions/submitAgentInput/submitAgentInput.js";
-import {
-	childSessionIdsFromToolArgs,
-	siblingRequestIdsFromToolArgs,
-	withheldWritesFromToolArgs,
-} from "../../agentRuntime/eve/parkedInput.js";
 import { getEveSessionBySessionId } from "../../agentRuntime/eve/repo.js";
 import type { EveAuthContext } from "../../agentRuntime/eve/types.js";
 import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
+import {
+	childSessionIdsOf,
+	siblingRequestIdsOf,
+	withheldStepsOf,
+} from "../domain/approvalRecord.js";
+import { chatApprovalStepsRepo } from "../repos/chatApprovalStepsRepo.js";
 import type { ApprovalRunResult } from "../types.js";
 import { createChainedApproval } from "./createChainedApproval.js";
 
@@ -72,6 +73,11 @@ export const submitApprovalInput = async ({
 		};
 	}
 	const auth = approvalAuth({ approval, providerUserId });
+	const stepRows = await chatApprovalStepsRepo.list({
+		approvalId: approval.id,
+		db: chatDb,
+	});
+	const withheldSteps = withheldStepsOf({ approval, steps: stepRows });
 	const {
 		approvedWriteFailed,
 		approvedWriteUnverified,
@@ -87,21 +93,16 @@ export const submitApprovalInput = async ({
 		// Only a surface that rendered the whole group may approve it; the
 		// dashboard shows the primary write alone, so its siblings stay withheld.
 		approveSiblings: expectExecution && surfaceRendersGroup(approval.provider),
-		childSessionIds: childSessionIdsFromToolArgs(approval.tool_args),
+		childSessionIds: childSessionIdsOf(approval),
 		expectedToolNames: expectExecution
-			? [
-					approval.tool_name,
-					...withheldWritesFromToolArgs(approval.tool_args).map(
-						(write) => write.toolName,
-					),
-				]
+			? [approval.tool_name, ...withheldSteps.map((write) => write.toolName)]
 			: undefined,
 		note,
 		optionId,
 		orgId: approval.org_id,
 		requestId: approval.tool_call_id,
 		session,
-		siblingRequestIds: siblingRequestIdsFromToolArgs(approval.tool_args),
+		siblingRequestIds: siblingRequestIdsOf(approval),
 	});
 	const chainedApprovalId = chained
 		? await createChainedApproval({

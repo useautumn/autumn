@@ -3,6 +3,7 @@
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
 import {
+	chatApprovalSteps,
 	chatApprovals,
 	chatInstallations,
 	chatOAuthCredentials,
@@ -142,6 +143,7 @@ export {
 	customerJwtFamilies,
 	autoTopupLimitStates as autoTopupLimits,
 	chatApprovals,
+	chatApprovalSteps,
 	chatInstallations,
 	chatOAuthCredentials,
 	chatResults,

@@ -1,50 +1,72 @@
 import type { AutumnLogger } from "@autumn/logging";
-import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv, ChatProvider } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import type { AgentApprovalTurn } from "../../agentRuntime/domain/agentTurn.js";
-import { withheldWritesFromToolArgs } from "../../agentRuntime/eve/parkedInput.js";
+import {
+	childSessionIdsFromToolArgs,
+	siblingRequestIdsFromToolArgs,
+	type WithheldWrite,
+	withheldWritesFromToolArgs,
+} from "../../agentRuntime/eve/parkedInput.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
+import { chatApprovalStepsRepo } from "../repos/chatApprovalStepsRepo.js";
 import {
 	resolveApprovalDisplay,
 	withApprovalDisplay,
 } from "../utils/approvalDisplay.js";
 import {
 	resolveApprovalPreview,
-	withGroupedWritePreviews,
+	withStepPreviews,
 } from "../utils/fetchApprovalPreview.js";
 import { publicToolArgs, toolRequestFromArgs } from "../utils/toolRequest.js";
 
-/** Grouped step previews are N MCP round trips; the card posts without
- * waiting and re-renders when they land. The row update is pending-guarded so
- * an already-resolved approval keeps what it was approved with. */
-const createGroupedPreviewBackfill =
+const markerString = (args: Record<string, unknown>, key: string) => {
+	const value = args[key];
+	return typeof value === "string" ? value : undefined;
+};
+
+/** Grouped step previews are N MCP round trips; the card posts without waiting
+ * and re-renders when they land. Step updates are pending-guarded (step AND
+ * parent) so an already-resolved approval keeps what it was approved with. */
+const createStepPreviewBackfill =
 	({
 		approvalId,
 		env,
 		getToken,
 		logger,
-		toolArgs,
 	}: {
 		approvalId: string;
 		env: AppEnv;
 		getToken: () => Promise<string>;
 		logger: AutumnLogger;
-		toolArgs: Record<string, unknown>;
 	}) =>
-	async () => {
-		const enriched = await withGroupedWritePreviews({
+	async (): Promise<ReadonlyArray<WithheldWrite> | undefined> => {
+		const steps = await chatApprovalStepsRepo.list({ approvalId, db });
+		const grouped = steps.filter((step) => step.position > 0);
+		if (!grouped.length) return undefined;
+		const previewed = await withStepPreviews({
 			env,
 			getToken,
 			logger,
-			toolArgs,
+			steps: grouped.map((step) => ({
+				input: step.tool_args,
+				requestId: step.request_id ?? "",
+				toolName: step.tool_name,
+			})),
 		});
-		const stored = await chatApprovalRepo.setToolArgs({
-			approvalId,
-			db,
-			toolArgs: enriched,
-		});
-		return stored ? publicToolArgs(enriched) : undefined;
+		let allStored = true;
+		await Promise.all(
+			grouped.map(async (step, index) => {
+				const stored = await chatApprovalStepsRepo.setPreview({
+					approvalId,
+					db,
+					preview: previewed[index]?.preview,
+					stepId: step.id,
+				});
+				allStored &&= stored;
+			}),
+		);
+		return allStored ? previewed : undefined;
 	};
 
 export const createApproval = async ({
@@ -78,7 +100,10 @@ export const createApproval = async ({
 		return undefined;
 	}
 
-	const request = toolRequestFromArgs(publicToolArgs(approval.toolArgs));
+	const storedToolArgs = publicToolArgs(approval.toolArgs, {
+		includeWithheld: false,
+	});
+	const request = toolRequestFromArgs(storedToolArgs);
 	const resolvedPreview = await resolveApprovalPreview({
 		env,
 		getToken,
@@ -94,12 +119,15 @@ export const createApproval = async ({
 		request,
 	});
 	const preview = withApprovalDisplay({ display, preview: resolvedPreview });
-	const storedToolArgs = approval.toolArgs;
+	const withheld = withheldWritesFromToolArgs(approval.toolArgs);
 
 	const approvalId = await chatApprovalRepo.insert({
 		db,
 		data: {
+			approveOptionId: markerString(approval.toolArgs, "_eveApproveOptionId"),
 			channelId,
+			childSessionIds: childSessionIdsFromToolArgs(approval.toolArgs),
+			denyOptionId: markerString(approval.toolArgs, "_eveDenyOptionId"),
 			env,
 			harness: "eve",
 			orgId,
@@ -107,6 +135,21 @@ export const createApproval = async ({
 			provider,
 			providerUserId,
 			runId: turn.sessionId,
+			siblingRequestIds: siblingRequestIdsFromToolArgs(approval.toolArgs),
+			steps: [
+				{
+					preview,
+					requestId: approval.toolCallId,
+					toolArgs: storedToolArgs,
+					toolName: approval.toolName,
+				},
+				...withheld.map((write) => ({
+					denyOptionId: write.denyOptionId,
+					requestId: write.requestId,
+					toolArgs: write.input ?? {},
+					toolName: write.toolName,
+				})),
+			],
 			toolArgs: storedToolArgs,
 			toolCallId: approval.toolCallId,
 			toolName: approval.toolName,
@@ -119,23 +162,16 @@ export const createApproval = async ({
 		approval_id: approvalId,
 		tool: approval.toolName,
 	});
-	const hasGroupedWrites =
-		withheldWritesFromToolArgs(approval.toolArgs).length > 0;
 
 	return {
 		approvalId,
-		backfillGroupedPreviews: hasGroupedWrites
-			? createGroupedPreviewBackfill({
-					approvalId,
-					env,
-					getToken,
-					logger,
-					toolArgs: approval.toolArgs,
-				})
+		backfillGroupedPreviews: withheld.length
+			? createStepPreviewBackfill({ approvalId, env, getToken, logger })
 			: undefined,
 		params: request,
 		preview,
-		toolArgs: publicToolArgs(storedToolArgs),
+		toolArgs: storedToolArgs,
 		toolName: approval.toolName,
+		withheld,
 	} as const;
 };

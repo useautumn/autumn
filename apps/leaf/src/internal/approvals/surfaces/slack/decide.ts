@@ -1,5 +1,6 @@
 import {
 	type ChatApproval,
+	type ChatApprovalStep,
 	chatInstallations,
 	checkScopes,
 	ms,
@@ -17,7 +18,9 @@ import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import { discardApproval } from "../../actions/discardApproval.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
+import { withheldStepsOf } from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
+import { chatApprovalStepsRepo } from "../../repos/chatApprovalStepsRepo.js";
 import type {
 	ApprovalActionDeps,
 	ApprovalAuthorization,
@@ -32,6 +35,31 @@ import { requiredScopesForApproval } from "../../utils/approvalScopeRequirements
 import { postApprovalCardForRow } from "./present.js";
 
 const APPROVAL_PROGRESS_DELAY_MS = ms.seconds(10);
+
+/** Grouped writes for card bodies and scope checks; step-listing failures
+ * degrade to the legacy marker fallback rather than blocking the click. */
+const groupedStepsForApproval = async ({
+	approval,
+	listSteps = (approvalId) => chatApprovalStepsRepo.list({ approvalId, db }),
+}: {
+	approval: ChatApproval;
+	listSteps?: (approvalId: string) => Promise<ChatApprovalStep[]>;
+}) =>
+	withheldStepsOf({
+		approval,
+		steps: await listSteps(approval.id).catch(() => []),
+	});
+
+const cardDetailsForApproval = async ({
+	approval,
+}: {
+	approval?: ChatApproval;
+}) => ({
+	...detailsFromApproval({ approval }),
+	groupedSteps: approval
+		? await groupedStepsForApproval({ approval })
+		: undefined,
+});
 
 const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	toolName: approval?.tool_name ?? "billing action",
@@ -59,6 +87,9 @@ const authorizeSlackApprovalClicker = async ({
 
 	// A gated tool without a declared scope requirement fails closed.
 	const required = requiredScopesForApproval({
+		groupedToolNames: (await groupedStepsForApproval({ approval })).map(
+			(write) => write.toolName,
+		),
 		toolArgs: approval.tool_args,
 		toolName: approval.tool_name,
 	});
@@ -163,7 +194,7 @@ export const handleApprovalActionWithDeps = async ({
 		await deps.editActionMessage({
 			content: approvalStatusCard({
 				status: cardStatusForApproval({ approval: current }),
-				...detailsFromApproval({ approval: current }),
+				...(await cardDetailsForApproval({ approval: current })),
 				actorId: current?.decided_by_provider_user_id ?? undefined,
 			}),
 			event,
@@ -244,7 +275,7 @@ export const handleApprovalActionWithDeps = async ({
 			await deps.editActionMessage({
 				content: approvalStatusCard({
 					status: "cancelled",
-					...detailsFromApproval({ approval: cancelled }),
+					...(await cardDetailsForApproval({ approval: cancelled })),
 					actorId: providerUserId,
 				}),
 				event,
@@ -304,7 +335,7 @@ export const handleApprovalActionWithDeps = async ({
 			});
 			return;
 		}
-		const details = detailsFromApproval({ approval: claimed });
+		const details = await cardDetailsForApproval({ approval: claimed });
 		const startedAt = Date.now();
 		let statusText: string | undefined;
 		const renderRunningCard = () =>
@@ -423,7 +454,7 @@ export const handleApprovalActionWithDeps = async ({
 		await deps.editActionMessage({
 			content: approvalStatusCard({
 				status: cardStatusForApproval({ approval: current }),
-				...detailsFromApproval({ approval: current }),
+				...(await cardDetailsForApproval({ approval: current })),
 				result: approvalErrorResult(error),
 			}),
 			event,

@@ -26,7 +26,10 @@ import {
 	SelectOption,
 	Table,
 } from "chat";
-import { withheldWritesFromToolArgs } from "../internal/agentRuntime/eve/parkedInput.js";
+import {
+	type WithheldWrite,
+	withheldWritesFromToolArgs,
+} from "../internal/agentRuntime/eve/parkedInput.js";
 import {
 	normalizeToolName,
 	toolLabel,
@@ -926,14 +929,14 @@ type StepTense = "done" | "failed" | "running";
 
 const withheldStepBlocks = ({
 	env,
+	steps,
 	tense,
-	toolArgs,
 }: {
 	env?: AppEnv;
+	steps: ReadonlyArray<WithheldWrite>;
 	tense: StepTense;
-	toolArgs?: Record<string, unknown>;
 }): CardChild[] =>
-	withheldWritesFromToolArgs(toolArgs).flatMap((write) => {
+	steps.flatMap((write) => {
 		const phrases = actionPhrases({
 			env,
 			preview: write.preview,
@@ -962,17 +965,19 @@ const withheldStepBlocks = ({
 const approvalBodyBlocks = ({
 	env,
 	preview,
+	steps,
 	tense = "running",
 	toolArgs,
 	toolName,
 }: {
 	env?: AppEnv;
 	preview?: unknown;
+	steps?: ReadonlyArray<WithheldWrite>;
 	tense?: StepTense;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }): CardChild[] => {
-	const groupedSteps = withheldWritesFromToolArgs(toolArgs);
+	const groupedSteps = steps ?? withheldWritesFromToolArgs(toolArgs);
 	if (isHomogeneousGroup({ steps: groupedSteps, toolName })) {
 		return fanOutBlocks({
 			env,
@@ -984,7 +989,7 @@ const approvalBodyBlocks = ({
 	}
 	return [
 		...approvalPreviewBlocks({ env, preview, toolArgs, toolName }),
-		...withheldStepBlocks({ env, tense, toolArgs }),
+		...withheldStepBlocks({ env, steps: groupedSteps, tense }),
 	];
 };
 
@@ -1321,12 +1326,14 @@ const approvalPreviewBlocks = ({
 // action row becomes a status line.
 const settledStatusCard = ({
 	env,
+	groupedSteps,
 	preview,
 	statusLabel,
 	toolArgs,
 	toolName,
 }: {
 	env?: AppEnv;
+	groupedSteps?: ReadonlyArray<WithheldWrite>;
 	preview?: unknown;
 	statusLabel: string;
 	toolArgs?: Record<string, unknown>;
@@ -1338,7 +1345,13 @@ const settledStatusCard = ({
 		title: approvalTitle({ preview, toolName }),
 		children: [
 			...(prompt ? [CardText(prompt)] : []),
-			...approvalBodyBlocks({ env, preview, toolArgs, toolName }),
+			...approvalBodyBlocks({
+				env,
+				preview,
+				steps: groupedSteps,
+				toolArgs,
+				toolName,
+			}),
 			CardText(statusLabel),
 		],
 	});
@@ -1348,12 +1361,14 @@ export const approvalCard = ({
 	env,
 	id,
 	preview,
+	steps,
 	toolArgs,
 	toolName,
 }: {
 	env?: AppEnv;
 	id: string;
 	preview?: unknown;
+	steps?: ReadonlyArray<WithheldWrite>;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }) => {
@@ -1364,9 +1379,10 @@ export const approvalCard = ({
 			? phrases.running
 			: pendingActionPrompt({ phrases, toolName });
 	const editable = normalizeToolName(toolName) === "attach";
+	const groupedSteps = steps ?? withheldWritesFromToolArgs(toolArgs);
 
 	const fanOut = isHomogeneousGroup({
-		steps: withheldWritesFromToolArgs(toolArgs),
+		steps: groupedSteps,
 		toolName,
 	});
 
@@ -1374,7 +1390,13 @@ export const approvalCard = ({
 		title: approvalTitle({ preview, toolName }),
 		children: [
 			...(prompt && !fanOut ? [CardText(prompt)] : []),
-			...approvalBodyBlocks({ env, preview, toolArgs, toolName }),
+			...approvalBodyBlocks({
+				env,
+				preview,
+				steps: groupedSteps,
+				toolArgs,
+				toolName,
+			}),
 			Actions([
 				Button({
 					id: "approve_billing_action",
@@ -1473,6 +1495,7 @@ export const approvalDetailsModal = ({
 export const approvalStatusCard = ({
 	actorId,
 	env,
+	groupedSteps,
 	preview,
 	result,
 	status,
@@ -1483,6 +1506,8 @@ export const approvalStatusCard = ({
 }: {
 	actorId?: string;
 	env?: AppEnv;
+	/** The grouped writes rendered in the card body (step rows). */
+	groupedSteps?: ReadonlyArray<WithheldWrite>;
 	preview?: unknown;
 	result?: unknown;
 	status: ApprovalCardStatus;
@@ -1505,7 +1530,13 @@ export const approvalStatusCard = ({
 			title: approvalTitle({ preview, toolName }),
 			children: [
 				CardText(`${phrases.running}…`),
-				...approvalBodyBlocks({ env, preview, toolArgs, toolName }),
+				...approvalBodyBlocks({
+					env,
+					preview,
+					steps: groupedSteps,
+					toolArgs,
+					toolName,
+				}),
 				...(statusLine
 					? [CardText(`▸ ${statusLine}`, { style: "muted" })]
 					: []),
@@ -1516,6 +1547,7 @@ export const approvalStatusCard = ({
 	if (status === "cancelled") {
 		return settledStatusCard({
 			env,
+			groupedSteps,
 			preview,
 			statusLabel: `Dismissed${actor ? ` by ${actor}` : ""}`,
 			toolArgs,
@@ -1526,6 +1558,7 @@ export const approvalStatusCard = ({
 	if (status === "superseded") {
 		return settledStatusCard({
 			env,
+			groupedSteps,
 			preview,
 			statusLabel: "🔄 Updated",
 			toolArgs,
@@ -1557,6 +1590,7 @@ export const approvalStatusCard = ({
 	const resolvedBody = approvalBodyBlocks({
 		env,
 		preview,
+		steps: groupedSteps,
 		tense: status === "failed" ? "failed" : "done",
 		toolArgs,
 		toolName,

@@ -1,13 +1,20 @@
 import crypto from "node:crypto";
 import { type AppEnv, type ChatProvider, chatApprovals } from "@autumn/shared";
 import { addMinutes } from "date-fns";
-import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import type { ChatDb } from "../../../lib/db.js";
+import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
+import {
+	chatApprovalStepsRepo,
+	type InsertApprovalStep,
+} from "./chatApprovalStepsRepo.js";
 
 const APPROVAL_TTL_MINUTES = 15;
 
 export type InsertChatApprovalData = {
+	approveOptionId?: string;
 	channelId: string;
+	childSessionIds?: ReadonlyArray<string>;
+	denyOptionId?: string;
 	env: AppEnv;
 	harness: "eve";
 	orgId: string;
@@ -15,6 +22,9 @@ export type InsertChatApprovalData = {
 	provider: ChatProvider;
 	providerUserId: string;
 	runId?: string;
+	siblingRequestIds?: ReadonlyArray<string>;
+	/** Every write on the card in execution order, primary first. */
+	steps?: ReadonlyArray<InsertApprovalStep>;
 	toolArgs: Record<string, unknown>;
 	toolCallId?: string;
 	toolName: string;
@@ -44,8 +54,21 @@ export const insertChatApproval = async ({
 		tool_args: data.toolArgs,
 		preview: data.preview,
 		status: "pending",
+		sibling_request_ids: data.siblingRequestIds
+			? [...data.siblingRequestIds]
+			: null,
+		child_session_ids: data.childSessionIds ? [...data.childSessionIds] : null,
+		approve_option_id: data.approveOptionId,
+		deny_option_id: data.denyOptionId,
 		created_at: Date.now(),
 		expires_at: addMinutes(Date.now(), APPROVAL_TTL_MINUTES).getTime(),
 	});
+	if (data.steps?.length) {
+		await chatApprovalStepsRepo.insert({
+			approvalId: id,
+			db,
+			steps: data.steps,
+		});
+	}
 	return id;
 };

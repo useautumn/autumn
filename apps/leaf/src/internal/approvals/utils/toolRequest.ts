@@ -9,15 +9,18 @@ export const toolRequestFromArgs = (
 		? (args.request as Record<string, unknown>)
 		: args;
 
-/** Transport the harness threads through `toolArgs`. Option ids and request ids
- * are dropped before display; the grouped writes are kept because the card
- * renders them as the request's other steps. */
-const DISPLAYED_HARNESS_KEYS = new Set([WITHHELD_WRITES_KEY]);
-
-export const publicToolArgs = (args: Record<string, unknown>) =>
+/** Transport the harness threads through `toolArgs`. Option ids and request
+ * ids are dropped before display; legacy rows keep the grouped writes marker
+ * because their cards render steps from it (new rows use step rows). */
+export const publicToolArgs = (
+	args: Record<string, unknown>,
+	{ includeWithheld = true }: { includeWithheld?: boolean } = {},
+) =>
 	Object.fromEntries(
 		Object.entries(args).filter(
-			([key]) => !key.startsWith("_eve") || DISPLAYED_HARNESS_KEYS.has(key),
+			([key]) =>
+				!key.startsWith("_eve") ||
+				(includeWithheld && key === WITHHELD_WRITES_KEY),
 		),
 	);
 

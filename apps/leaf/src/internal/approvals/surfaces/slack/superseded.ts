@@ -1,7 +1,10 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval } from "@autumn/shared";
+import { db } from "../../../../lib/db.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";
 import type { ReplyTarget } from "../../../../ui/progress.js";
+import { withheldStepsOf } from "../../domain/approvalRecord.js";
+import { chatApprovalStepsRepo } from "../../repos/chatApprovalStepsRepo.js";
 import type { ActionMessageContent } from "../../types.js";
 
 /** Replaces auto-cancelled approval cards in place so stale Approve buttons disappear. */
@@ -22,6 +25,13 @@ export const editSupersededApprovalCards = async ({
 				approval.message_ts,
 				approvalStatusCard({
 					env: approval.env,
+					groupedSteps: withheldStepsOf({
+						approval,
+						steps: await chatApprovalStepsRepo.list({
+							approvalId: approval.id,
+							db,
+						}),
+					}),
 					preview: approval.preview ?? undefined,
 					status: "superseded",
 					toolArgs:

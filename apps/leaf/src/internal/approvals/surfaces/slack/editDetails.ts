@@ -4,13 +4,14 @@ import { db } from "../../../../lib/db.js";
 import { logger } from "../../../../lib/logger.js";
 import { dispatchSlackAgentMessage } from "../../../../providers/slack/actions/dispatchSlackAgentMessage.js";
 import { approvalDetailsModal } from "../../../../ui/blocks.js";
-import { withheldWritesFromToolArgs } from "../../../agentRuntime/eve/parkedInput.js";
 import { normalizeToolName } from "../../../agentRuntime/tools/toolPolicy.js";
+import { withheldStepsOf } from "../../domain/approvalRecord.js";
 import {
 	applyAttachBillingEdits,
 	attachBillingEditsSchema,
 } from "../../domain/attachBillingEdits.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
+import { chatApprovalStepsRepo } from "../../repos/chatApprovalStepsRepo.js";
 import {
 	publicToolArgs,
 	toolRequestFromArgs,
@@ -77,12 +78,16 @@ export const handleEditApprovalDetailsSubmit = async (
 	// attach step so the rebuilt card keeps the full group.
 	const steps: Array<{ request: Record<string, unknown>; toolName: string }> =
 		[];
+	const stepRows = await chatApprovalStepsRepo.list({
+		approvalId: approval.id,
+		db,
+	});
 	const groupedWrites = [
 		{
 			input: publicToolArgs(approval.tool_args),
 			toolName: approval.tool_name,
 		},
-		...withheldWritesFromToolArgs(approval.tool_args),
+		...withheldStepsOf({ approval, steps: stepRows }),
 	];
 	for (const write of groupedWrites) {
 		const stepRequest = toolRequestFromArgs(write.input) ?? {};

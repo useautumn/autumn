@@ -1,7 +1,7 @@
 import { WAITING_FOR_INPUT_MESSAGE } from "../../../ui/messages.js";
 import { normalizeToolName } from "../tools/toolPolicy.js";
 import type { EveInputRequest } from "./eveEventSchemas.js";
-import { textForInputRequests } from "./events.js";
+import { approvalOptionIds, textForInputRequests } from "./events.js";
 
 export type ChainedPendingRequest = Readonly<{
 	input?: Record<string, unknown>;
@@ -17,6 +17,9 @@ export type PendingQuestion = Readonly<{
 }>;
 
 export type WithheldWrite = Readonly<{
+	/** The step's own deny option — sibling parks are each answered with their
+	 * own option id, never the primary's. */
+	denyOptionId?: string;
 	input?: Record<string, unknown>;
 	/** Backfilled when the approval is created, so the card can render this
 	 * step with the same body as a standalone write. */
@@ -141,6 +144,7 @@ export const classifyParkedEveInput = ({
 			kind: "gated",
 			siblingRequestIds: siblings.map((request) => request.requestId),
 			withheld: siblings.map((request) => ({
+				denyOptionId: approvalOptionIds(request).deny,
 				input: request.action.input,
 				requestId: request.requestId,
 				toolName: request.action.toolName,

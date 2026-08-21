@@ -9,6 +9,17 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 // stubbing them is what makes every module below importable, hence restorable.
 mock.module("../../../src/lib/env.js", () => ({ env: {} }));
 mock.module("../../../src/lib/db.js", () => ({ db: {} }));
+mock.module(
+	"../../../src/internal/approvals/repos/chatApprovalStepsRepo.js",
+	() => ({
+		chatApprovalStepsRepo: {
+			insert: async () => undefined,
+			list: async () => [],
+			setPreview: async () => true,
+			setStatus: async () => undefined,
+		},
+	}),
+);
 
 const mockLeafModule = ({
 	factory,
@@ -824,7 +835,11 @@ describe("delegated writes are verified on the child stream", () => {
 	// already closed the turn, so activity alone must unlock the terminal break.
 	const parentContinuation: EveEvent[] = [
 		{ type: "subagent.completed", subagentName: "billing" },
-		{ finishReason: "stop", message: "Attached the plan.", type: "message.completed" },
+		{
+			finishReason: "stop",
+			message: "Attached the plan.",
+			type: "message.completed",
+		},
 		{ type: "session.waiting" },
 	];
 

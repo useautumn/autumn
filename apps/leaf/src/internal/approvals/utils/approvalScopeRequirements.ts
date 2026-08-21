@@ -26,25 +26,30 @@ const allScopesIn = (
 /** Approving a grouped card applies every step, so it requires every step's
  * scopes. An unrecognised step fails closed. */
 export const requiredScopesForApproval = ({
+	groupedToolNames,
 	toolArgs,
 	toolName,
 }: {
+	/** Grouped step tool names from step rows; falls back to legacy markers. */
+	groupedToolNames?: ReadonlyArray<string>;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }): RouteScopeRequirement | undefined => {
 	const primary = approvalScopeRequirements[normalizeToolName(toolName)];
 	if (!primary) return undefined;
 
-	const grouped = withheldWritesFromToolArgs(toolArgs);
+	const grouped =
+		groupedToolNames ??
+		withheldWritesFromToolArgs(toolArgs).map((write) => write.toolName);
 	if (!grouped.length) return primary;
 
 	const primaryScopes = allScopesIn(primary);
 	if (!primaryScopes) return undefined;
 
 	const scopes = new Set<ScopeString>(primaryScopes);
-	for (const step of grouped) {
+	for (const stepToolName of grouped) {
 		const stepRequirement =
-			approvalScopeRequirements[normalizeToolName(step.toolName)];
+			approvalScopeRequirements[normalizeToolName(stepToolName)];
 		if (!stepRequirement) return undefined;
 		const stepScopes = allScopesIn(stepRequirement);
 		if (!stepScopes) return undefined;

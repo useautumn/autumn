@@ -5,10 +5,13 @@ import { logger as rootLogger } from "../../../../lib/logger.js";
 import { approvalCard } from "../../../../ui/blocks.js";
 import type { ReplyTarget } from "../../../../ui/progress.js";
 import type { AgentApprovalTurn } from "../../../agentRuntime/domain/agentTurn.js";
+import type { WithheldWrite } from "../../../agentRuntime/eve/parkedInput.js";
 import { toolLabel } from "../../../agentRuntime/tools/toolPolicy.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { createApproval } from "../../actions/createApproval.js";
+import { withheldStepsOf } from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
+import { chatApprovalStepsRepo } from "../../repos/chatApprovalStepsRepo.js";
 import { publicToolArgs } from "../../utils/toolRequest.js";
 
 export const postApprovalCardForRow = async ({
@@ -25,11 +28,16 @@ export const postApprovalCardForRow = async ({
 		approval.tool_args && typeof approval.tool_args === "object"
 			? (approval.tool_args as Record<string, unknown>)
 			: {};
+	const steps = await chatApprovalStepsRepo.list({
+		approvalId: approval.id,
+		db,
+	});
 	const sent = await target.post(
 		approvalCard({
 			id: approval.id,
 			env: approval.env,
 			preview: approval.preview ?? undefined,
+			steps: withheldStepsOf({ approval, steps }),
 			toolArgs: publicToolArgs(toolArgs),
 			toolName: approval.tool_name,
 		}),
@@ -61,17 +69,22 @@ const renderBackfilledGroupCard = async ({
 	messageId,
 	target,
 }: {
-	backfill: () => Promise<Record<string, unknown> | undefined>;
+	backfill: () => Promise<ReadonlyArray<WithheldWrite> | undefined>;
 	channelId: string;
-	created: { approvalId: string; preview: unknown; toolName: string };
+	created: {
+		approvalId: string;
+		preview: unknown;
+		toolArgs: Record<string, unknown>;
+		toolName: string;
+	};
 	env: ChatApproval["env"];
 	logger: AutumnLogger;
 	messageId: string;
 	target: ReplyTarget;
 }) => {
 	try {
-		const enrichedToolArgs = await backfill();
-		if (!enrichedToolArgs) return;
+		const previewedSteps = await backfill();
+		if (!previewedSteps) return;
 		if (!target.adapter?.editMessage) {
 			logger.warn("No adapter to re-render the backfilled card", {
 				event: "leaf.approval_group_preview_render_skipped",
@@ -91,7 +104,8 @@ const renderBackfilledGroupCard = async ({
 				id: created.approvalId,
 				env,
 				preview: created.preview,
-				toolArgs: enrichedToolArgs,
+				steps: previewedSteps,
+				toolArgs: created.toolArgs,
 				toolName: created.toolName,
 			}),
 		);
@@ -145,6 +159,7 @@ export const presentApproval = async ({
 			id: created.approvalId,
 			env,
 			preview: created.preview,
+			steps: created.withheld,
 			toolArgs: created.toolArgs,
 			toolName: created.toolName,
 		}),

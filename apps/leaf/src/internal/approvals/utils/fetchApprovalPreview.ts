@@ -1,10 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
-import {
-	WITHHELD_WRITES_KEY,
-	withheldWritesFromToolArgs,
-} from "../../agentRuntime/eve/parkedInput.js";
+import type { WithheldWrite } from "../../agentRuntime/eve/parkedInput.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
 import {
@@ -193,24 +190,23 @@ export const resolveApprovalPreview = async ({
 
 /** Each grouped write gets the same preview + display backfill as the primary
  * one, so the card can render every step with the standard body. */
-export const withGroupedWritePreviews = async ({
+/** Fetches each grouped step's preview (card-quality: parsed + display). */
+export const withStepPreviews = async ({
 	env,
 	executeTool,
 	getToken,
 	logger,
-	toolArgs,
+	steps,
 }: {
 	env: AppEnv;
 	executeTool?: typeof executeAutumnMcpTool;
 	getToken: () => Promise<string>;
 	logger: Pick<AutumnLogger, "warn">;
-	toolArgs: Record<string, unknown>;
-}) => {
-	const withheld = withheldWritesFromToolArgs(toolArgs);
-	if (!withheld.length) return toolArgs;
-	const resolved = await Promise.all(
-		withheld.map(async (write) => {
-			const request = toolRequestFromArgs(write.input);
+	steps: ReadonlyArray<WithheldWrite>;
+}): Promise<ReadonlyArray<WithheldWrite>> =>
+	Promise.all(
+		steps.map(async (step) => {
+			const request = toolRequestFromArgs(step.input);
 			// The primary write's preview is parsed at capture time; a backfilled
 			// one arrives as the raw MCP envelope and needs the same treatment.
 			const preview = parsePreviewPayload(
@@ -221,7 +217,7 @@ export const withGroupedWritePreviews = async ({
 					logger,
 					preview: undefined,
 					request,
-					toolName: write.toolName,
+					toolName: step.toolName,
 				}),
 			);
 			const display = await resolveApprovalDisplay({
@@ -230,11 +226,6 @@ export const withGroupedWritePreviews = async ({
 				preview,
 				request,
 			});
-			return {
-				...write,
-				preview: withApprovalDisplay({ display, preview }),
-			};
+			return { ...step, preview: withApprovalDisplay({ display, preview }) };
 		}),
 	);
-	return { ...toolArgs, [WITHHELD_WRITES_KEY]: resolved };
-};
