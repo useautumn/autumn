@@ -81,6 +81,91 @@ count="$(grep -c 'environments: \[cloud\]' "$tmp/user-skills/tdd/SKILL.md" || tr
 [[ "$count" == "1" ]] || fail "mark-skills should be idempotent, got $count"
 pass "mark-skills adds environments: [cloud] once"
 
+# --- Stripe helper refreshes mismatched installs and keeps exact matches ----
+stripe_tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp" "$stripe_tmp"' EXIT
+mkdir -p "$stripe_tmp/bin" "$stripe_tmp/src-1.33.0" "$stripe_tmp/src-1.34.0"
+cat >"$stripe_tmp/src-1.33.0/stripe" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = version ]; then
+	echo "Stripe version 1.33.0"
+else
+	echo "stripe stub"
+fi
+SH
+chmod +x "$stripe_tmp/src-1.33.0/stripe"
+( cd "$stripe_tmp/src-1.33.0" && tar -czf "$stripe_tmp/stripe_1.33.0_linux_x86_64.tar.gz" stripe )
+cat >"$stripe_tmp/src-1.34.0/stripe" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = version ]; then
+	echo "Stripe version 1.34.0"
+else
+	echo "stripe stub"
+fi
+SH
+chmod +x "$stripe_tmp/src-1.34.0/stripe"
+( cd "$stripe_tmp/src-1.34.0" && tar -czf "$stripe_tmp/stripe_1.34.0_linux_x86_64.tar.gz" stripe )
+cat >"$stripe_tmp/bin/curl" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+args=("$@")
+out=""
+for ((i=0; i<$#; i++)); do
+	if [ "${args[i]}" = "-o" ]; then
+		out="${args[i+1]}"
+		break
+	fi
+done
+cp "$STRIPE_ARCHIVE" "$out"
+SH
+chmod +x "$stripe_tmp/bin/curl"
+cat >"$stripe_tmp/bin/tar" <<'SH'
+#!/usr/bin/env bash
+exec /usr/bin/tar "$@"
+SH
+chmod +x "$stripe_tmp/bin/tar"
+cat >"$stripe_tmp/bin/install" <<'SH'
+#!/usr/bin/env bash
+exec /usr/bin/install "$@"
+SH
+chmod +x "$stripe_tmp/bin/install"
+cat >"$stripe_tmp/bin/sudo" <<'SH'
+#!/usr/bin/env bash
+exec "$@"
+SH
+chmod +x "$stripe_tmp/bin/sudo"
+source "$ROOT/scripts/setup/install-stripe-cli.sh"
+old_target="$stripe_tmp/stripe"
+cat >"$old_target" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = version ]; then
+	echo "Stripe version 1.33.0"
+else
+	echo "old stripe"
+fi
+SH
+chmod +x "$old_target"
+PATH="$stripe_tmp/bin:$PATH" STRIPE_ARCHIVE="$stripe_tmp/stripe_1.33.0_linux_x86_64.tar.gz" install_stripe_cli "[test]" "$old_target" 1.33.0
+[[ "$("$old_target" version)" == "Stripe version 1.33.0" ]] || fail "same-version stripe should stay in place"
+cat >"$old_target" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = version ]; then
+	echo "Stripe version 0.99.0"
+else
+	echo "old stripe"
+fi
+SH
+chmod +x "$old_target"
+PATH="$stripe_tmp/bin:$PATH" STRIPE_ARCHIVE="$stripe_tmp/stripe_1.34.0_linux_x86_64.tar.gz" install_stripe_cli "[test]" "$old_target" 1.34.0
+[[ "$("$old_target" version)" == "Stripe version 1.34.0" ]] || fail "mismatched stripe should be replaced"
+pass "stripe helper refreshes mismatched installs"
+
+# --- stripe version parser handles edge cases -------------------------------
+[[ "$(parse_stripe_version "Stripe version 11.22.33")" == "11.22.33" ]] || fail "parser must keep a two-digit major"
+parser_output=$'Stripe version 1.33.0\nGo version go1.22.5'
+[[ "$(parse_stripe_version "$parser_output")" == "1.33.0" ]] || fail "parser must stop at first semver"
+pass "stripe parser extracts the first semantic version"
+
 if grep -q 'repositoryDependencies' "$ROOT/.cursor/environment.json"; then
 	fail "environment.json must not declare useautumn/ai as a sibling repo — it is a submodule"
 fi
