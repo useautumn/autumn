@@ -81,6 +81,7 @@ const approvalDashboardUrl = ({
 		approvalId: approval.id,
 		env: approval.env,
 		groupedStepCount: groupedWrites?.length ?? 0,
+		orgId: approval.org_id,
 		provider: approval.provider,
 		toolArgs: approval.tool_args as Record<string, unknown>,
 		toolName: approval.tool_name,
