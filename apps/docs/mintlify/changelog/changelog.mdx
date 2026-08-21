@@ -4,6 +4,48 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="August 21st 2026">
+  ## License plan customize migrations
+
+  You can now edit a linked license plan in the [plan editor](/documentation/concepts/plans) and Autumn drafts the right migrations automatically. The license plan itself gets a child migration for its own customers, and every plan that links it gets a parent migration for that link's customers — the two run independently, so you don't have to hand-roll separate drafts anymore. Free-license changes fan out on the batch lane; paid, rollover, pooled, or entity-scoped changes fall back to the per-customer lane. `update_plan` operations now carry `upsert_licenses` end to end.
+
+  ## Link an existing plan as a variant from the editor
+
+  The plan editor's **Base plan** selector now shows every eligible plan by name and lets you link (or detach) an existing plan as a variant without leaving the page. Archived plans, existing variants, and the plan itself are filtered out, and the link is saved as part of the same request as your other edits — with no forced version bump for a base-plan-only change. See [plan variants](/documentation/modelling-pricing/plan-variants).
+
+  ## Override plan-managed billing controls on a customer
+
+  Clicking a billing control that comes from a plan used to open a dead-end subscription sheet. It now opens a plan-managed sheet that names the source plan, shows the control read-only, and offers **Add Override**. Add Override launches the matching billing-control sheet pre-populated from the plan's values, so saving creates a customer-level control that replaces the inherited row. See [billing controls](/documentation/customers/billing-controls).
+
+  ## Custom billing cycle anchors in the dashboard
+
+  The plan editor now exposes controls for the billing cycle anchor, so you can align a plan's invoice cadence to a specific date instead of the customer's signup day.
+
+  ## Plan version identity
+
+  Plans now carry a stable `version_slug` (default `v{n}`) and an `active` flag, with exactly one active version per plan enforced at the database level. Product reads are unchanged; writes mint fresh version identity on insert or copy, and activation of a new version deactivates the previous one in a single transaction. This unblocks cleaner version pinning and rollback flows.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Expired OAuth bearer tokens are now challenged with `401 invalid_token` and the protected-resource `WWW-Authenticate` header at the MCP boundary, so OAuth-capable clients trigger their refresh flow instead of failing inside a tool call. Insufficient scope returns `403`, and tokens are audience-checked per RFC 8707 — [#2678](https://github.com/useautumn/autumn/pull/2678)
+      - `plans.list` responses at `X-API-Version: 2.1.0` once again include the plan's `licenses` (and `variants`) edges — [#2911](https://github.com/useautumn/autumn/pull/2911)
+      - Plans persist additional currency definitions and only compare or claim base and entitlement prices when the currency definitions match, keeping multi-currency plans consistent — [#2920](https://github.com/useautumn/autumn/pull/2920)
+      - Rewards routes now validate updates against a strict schema and scope `getRedemptionById` by org and environment via the linked customer or program, preventing cross-tenant reads — [#2920](https://github.com/useautumn/autumn/pull/2920)
+      - RevenueCat renewals and non-renewing purchases auto-create the customer and validate the product before creation — [#2931](https://github.com/useautumn/autumn/pull/2931)
+      - Migrations run scheduled customers concurrently with slice-based yielding, cutting the wall time of large drafts — [#2819](https://github.com/useautumn/autumn/pull/2819)
+      - Attach reads live balances from the Redis cache, reducing attach latency on hot customers — [#2815](https://github.com/useautumn/autumn/pull/2815)
+    </Accordion>
+    <Accordion title="Fixes">
+      - Migration plan-item filters now compare intervals in a unified plan-item interval space, so `one_off` remove-and-add filters correctly match `lifetime` entitlements. Same-item lifetime and monthly replacements carry existing usage and no longer stack a duplicate item — [#2819](https://github.com/useautumn/autumn/pull/2819)
+      - Version + customize migrations stay on the batch lane when the catalog remints the same Stripe base price or re-adds a feature that already exists on the plan — [#2936](https://github.com/useautumn/autumn/pull/2936)
+      - Scheduled customer products activating earlier than their scheduled start now persist `starts_at` at the actual activation time instead of a future date. On-time or late activations keep the scheduled timestamp — [#2814](https://github.com/useautumn/autumn/pull/2814)
+      - All organization roles (including sales) can now read agent rules; the endpoint's scope was widened from `organisation:read` to `plans:read`, which every role holds — [#2946](https://github.com/useautumn/autumn/pull/2946)
+      - MCP tools no longer reject calls that include an intent field when intent is optional, and org tools are built per toolset so shared schemas can't collide — [#2920](https://github.com/useautumn/autumn/pull/2920)
+      - The migration delete dialog no longer overflows on long migration names — [#2945](https://github.com/useautumn/autumn/pull/2945)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="August 14th 2026">
   ## Deduction aggregations on events.aggregate
 
