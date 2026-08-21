@@ -14,7 +14,6 @@ CREATE TABLE "chat_approval_steps" (
 	CONSTRAINT "chat_approval_steps_approval_position_key" UNIQUE("approval_id","position")
 );
 --> statement-breakpoint
-ALTER TABLE "chat_approvals" ADD COLUMN "sibling_request_ids" text[];--> statement-breakpoint
 ALTER TABLE "chat_approvals" ADD COLUMN "child_session_ids" text[];--> statement-breakpoint
 ALTER TABLE "chat_approvals" ADD COLUMN "approve_option_id" text;--> statement-breakpoint
 ALTER TABLE "chat_approvals" ADD COLUMN "deny_option_id" text;--> statement-breakpoint

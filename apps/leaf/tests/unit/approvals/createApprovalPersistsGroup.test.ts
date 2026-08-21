@@ -157,8 +157,7 @@ describe("createApproval persists the grouped steps", () => {
 			approveOptionId?: string;
 			childSessionIds?: string[];
 			denyOptionId?: string;
-			siblingRequestIds?: string[];
-			steps: Array<{ toolName: string }>;
+			steps: Array<{ requestId?: string; toolName: string }>;
 			toolArgs: Record<string, unknown>;
 		};
 		expect(data.steps.map((step) => step.toolName)).toEqual([
@@ -166,9 +165,12 @@ describe("createApproval persists the grouped steps", () => {
 			"autumn__attach",
 			"autumn__attach",
 		]);
+		expect(data.steps.slice(1).map((step) => step.requestId)).toEqual([
+			"req_leaf-0002",
+			"req_leaf-0003",
+		]);
 		expect(data.approveOptionId).toBe("approve");
 		expect(data.denyOptionId).toBe("deny");
-		expect(data.siblingRequestIds).toEqual(["req_leaf-0002", "req_leaf-0003"]);
 		expect(data.childSessionIds).toEqual(["wrun_1"]);
 		expect(
 			Object.keys(data.toolArgs).filter((key) => key.startsWith("_eve")),

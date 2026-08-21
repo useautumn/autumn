@@ -4,7 +4,6 @@ import { db } from "../../../lib/db.js";
 import type { AgentApprovalTurn } from "../../agentRuntime/domain/agentTurn.js";
 import {
 	childSessionIdsFromToolArgs,
-	siblingRequestIdsFromToolArgs,
 	type WithheldWrite,
 	withheldWritesFromToolArgs,
 } from "../../agentRuntime/eve/parkedInput.js";
@@ -135,7 +134,6 @@ export const createApproval = async ({
 			provider,
 			providerUserId,
 			runId: turn.sessionId,
-			siblingRequestIds: siblingRequestIdsFromToolArgs(approval.toolArgs),
 			steps: [
 				{
 					preview,

@@ -22,7 +22,6 @@ export type InsertChatApprovalData = {
 	provider: ChatProvider;
 	providerUserId: string;
 	runId?: string;
-	siblingRequestIds?: ReadonlyArray<string>;
 	/** Every write on the card in execution order, primary first. */
 	steps?: ReadonlyArray<InsertApprovalStep>;
 	toolArgs: Record<string, unknown>;
@@ -54,9 +53,6 @@ export const insertChatApproval = async ({
 		tool_args: data.toolArgs,
 		preview: data.preview,
 		status: "pending",
-		sibling_request_ids: data.siblingRequestIds
-			? [...data.siblingRequestIds]
-			: null,
 		child_session_ids: data.childSessionIds ? [...data.childSessionIds] : null,
 		approve_option_id: data.approveOptionId,
 		deny_option_id: data.denyOptionId,

@@ -76,7 +76,6 @@ export const chatApprovals = pgTable(
 		tool_args: jsonb("tool_args").$type<Record<string, unknown>>().notNull(),
 		preview: jsonb().$type<unknown>(),
 		status: text("status").notNull(),
-		sibling_request_ids: text("sibling_request_ids").array(),
 		child_session_ids: text("child_session_ids").array(),
 		approve_option_id: text("approve_option_id"),
 		deny_option_id: text("deny_option_id"),

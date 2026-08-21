@@ -26,7 +26,6 @@ export const createChainedApproval = async ({
 	childSessionIds = [],
 	providerUserId,
 	sessionId,
-	siblingRequestIds,
 	withheld = [],
 }: {
 	auth: EveAuthContext;
@@ -34,7 +33,6 @@ export const createChainedApproval = async ({
 	childSessionIds?: ReadonlyArray<string>;
 	providerUserId: string;
 	sessionId: string;
-	siblingRequestIds: ReadonlyArray<string>;
 	withheld?: ReadonlyArray<WithheldWrite>;
 }) => {
 	const env = auth.appEnv as ChatApproval["env"];
@@ -104,7 +102,6 @@ export const createChainedApproval = async ({
 			provider,
 			providerUserId,
 			runId: sessionId,
-			siblingRequestIds,
 			steps: [
 				{
 					preview,

@@ -26,11 +26,22 @@ export const denyOptionOf = (approval: ChatApproval): string =>
 	markerString(approval, "_eveDenyOptionId") ??
 	"deny";
 
-export const siblingRequestIdsOf = (
-	approval: ChatApproval,
-): ReadonlyArray<string> =>
-	approval.sibling_request_ids ??
-	siblingRequestIdsFromToolArgs(approval.tool_args);
+/** Sibling park ids are the grouped steps' request ids — derived, not stored
+ * twice. Legacy rows fall back to the marker. */
+export const siblingRequestIdsOf = ({
+	approval,
+	steps,
+}: {
+	approval: ChatApproval;
+	steps?: ReadonlyArray<ChatApprovalStep>;
+}): ReadonlyArray<string> => {
+	const grouped = (steps ?? [])
+		.filter((step) => step.position > 0 && step.request_id)
+		.map((step) => step.request_id as string);
+	return grouped.length
+		? grouped
+		: siblingRequestIdsFromToolArgs(approval.tool_args);
+};
 
 export const childSessionIdsOf = (
 	approval: ChatApproval,

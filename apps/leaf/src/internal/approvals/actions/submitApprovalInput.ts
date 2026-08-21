@@ -78,6 +78,7 @@ export const submitApprovalInput = async ({
 		db: chatDb,
 	});
 	const withheldSteps = withheldStepsOf({ approval, steps: stepRows });
+	const siblingRequestIds = siblingRequestIdsOf({ approval, steps: stepRows });
 	const {
 		approvedWriteFailed,
 		approvedWriteUnverified,
@@ -102,7 +103,7 @@ export const submitApprovalInput = async ({
 		orgId: approval.org_id,
 		requestId: approval.tool_call_id,
 		session,
-		siblingRequestIds: siblingRequestIdsOf(approval),
+		siblingRequestIds,
 	});
 	const chainedApprovalId = chained
 		? await createChainedApproval({
@@ -110,7 +111,6 @@ export const submitApprovalInput = async ({
 				chained,
 				providerUserId,
 				sessionId: session.sessionId,
-				siblingRequestIds: chainedSiblingRequestIds,
 				withheld: chainedWithheld,
 			})
 		: undefined;
