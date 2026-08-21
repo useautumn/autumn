@@ -13,11 +13,8 @@ type BillingParamsV1Common = Pick<
 	plan_id?: string;
 } & Record<string, unknown>;
 
-/** Inverse of the V1.2 billing params version change: maps a V1 request back
- * into the V0 dialect, resolving `customize` into a concrete `items` array
- * against the plan's catalog (or current subscription) items. Keys that have
- * no V0 representation are reported in `unrepresentable`, never dropped
- * silently. */
+/** Resolves `customize` into concrete V0 items against the plan's catalog (or
+ * current subscription); keys with no V0 form land in `unrepresentable`, never silently dropped. */
 export const billingParamsV1ToV0 = ({
 	ctx,
 	fullProduct,

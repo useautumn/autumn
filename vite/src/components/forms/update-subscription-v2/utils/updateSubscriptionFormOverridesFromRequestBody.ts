@@ -29,9 +29,8 @@ const trialOverridesFrom = (
 	};
 };
 
-/** Inverse of useUpdateSubscriptionRequestBody's builder: maps a V0 update
- * request into form overrides. Stage-scoped keys (invoice*) are skipped —
- * the review stage re-collects them. */
+/** Stage-scoped keys (invoice*) are intentionally skipped — the review stage
+ * re-collects them. */
 export const updateSubscriptionFormOverridesFromRequestBody = (
 	request: RequestBody,
 ): Partial<UpdateSubscriptionForm> => {

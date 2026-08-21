@@ -31,9 +31,8 @@ export type ApprovalRunResult =
 			retryable?: boolean;
 			writes?: ReadonlyArray<ApprovalWriteOutcome>;
 	  }
-	// chainedApprovalId: the resumed turn parked on another gated write (a
-	// re-issue after failure still needs its own card, or the session waits in
-	// silence); question: it parked on an ask_question instead.
+	// The resumed turn parked again — a chained gated write or a question —
+	// and needs its own card, or the session waits in silence.
 	| {
 			chainedApprovalId?: string;
 			question?: {

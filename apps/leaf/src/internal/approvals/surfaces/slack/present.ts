@@ -101,9 +101,8 @@ export const postApprovalCardForRow = async ({
 	}
 };
 
-/** Grouped step previews land after the card is already visible; once they
- * persist, the card re-renders — unless the approval resolved meanwhile, whose
- * card must not be overwritten. */
+/** Re-renders the card once backfilled previews persist — unless the approval
+ * resolved meanwhile, whose card must not be overwritten. */
 const renderBackfilledGroupCard = async ({
 	backfill,
 	channelId,

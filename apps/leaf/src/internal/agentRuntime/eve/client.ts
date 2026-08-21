@@ -37,9 +37,8 @@ const eveHeaders = (auth: EveAuthContext, init?: HeadersInit) => {
 	return headers;
 };
 
-/** Eve no longer has the session behind our continuation token — every
- * further post to it fails the same way, so callers should drop the session
- * rather than retry or block on it. */
+/** Eve lost the session behind our continuation token — every further post
+ * fails identically, so drop the session rather than retry. */
 export class EveSessionGoneError extends Error {
 	constructor(message: string) {
 		super(message);
@@ -129,8 +128,7 @@ export const postEveMessage = async ({
 				),
 			},
 		);
-	// A request that never reached eve is always safe to retry; an ambiguous
-	// mid-flight drop is only retried for a NEW session, where a duplicate
+	// Mid-flight drops are only retried for NEW sessions, where a duplicate
 	// creates an orphan rather than a double-delivered message.
 	const response = await withRetry({
 		attempts: POST_RETRY_ATTEMPTS,
@@ -241,9 +239,8 @@ export async function* streamEveEvents({
 	const streamUrl = eveUrl(
 		`/eve/v1/session/${session.sessionId}/stream?startIndex=${session.state.streamIndex}`,
 	);
-	// A stream positioned past eve's replay buffer stays open and silent
-	// forever, so the connection is watchdogged: no bytes within the idle
-	// window aborts it and surfaces EveStreamIdleTimeoutError.
+	// A stream past eve's replay buffer stays open and silent forever — no
+	// bytes within the idle window aborts as EveStreamIdleTimeoutError.
 	const controller = new AbortController();
 	const abortUpstream = () => controller.abort();
 	signal?.addEventListener("abort", abortUpstream, { once: true });
@@ -335,8 +332,7 @@ const countEveReplayableEvents = async ({
 	return count;
 };
 
-/** Heals cursor overshoot: eve streams some events it never persists, so a
- * locally-counted streamIndex can drift past the replay buffer. Only ever
+/** Heals cursor overshoot (eve streams events it never persists). Only ever
  * lowers the cursor — a zero/failed recount must not force a full replay. */
 export const resyncEveStreamIndex = async ({
 	auth,
@@ -354,9 +350,8 @@ export const resyncEveStreamIndex = async ({
 	}
 };
 
-/** A new user message makes anything already in eve's log a previous turn's
- * leftovers — fast-forward a stale cursor so old text can never replay as
- * this turn's reply. Best-effort: a failed count keeps the stored cursor. */
+/** A new message makes everything in eve's log a previous turn's leftovers —
+ * fast-forward so stale text can never replay as this turn's reply. */
 export const fastForwardEveStreamIndex = async ({
 	auth,
 	session,

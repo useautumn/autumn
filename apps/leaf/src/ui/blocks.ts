@@ -848,10 +848,8 @@ const BILLING_ACTION_TOOLS = new Set([
 	"updateSubscription",
 ]);
 
-// Pending, running, and resolved cards share this body so in-place edits keep
-// the facts the reviewer approved.
-/** Every grouped write targets the same operation, so the card can show one
- * heading and one row per target instead of repeating the whole body. */
+/** A homogeneous group shows one heading and one row per target instead of
+ * repeating the whole body. */
 const isHomogeneousGroup = ({
 	writes,
 	toolName,
@@ -920,11 +918,8 @@ const fanOutBlocks = ({
 	];
 };
 
-/** The other writes approving this card will apply, in issue order. Each one
- * renders through the same body builder as a standalone card, so a grouped
- * attach looks exactly like an attach. */
-/** Which tense a grouped write's sentence uses. Pending and running cards read
- * as in-progress; a resolved card reports what happened. */
+/** Grouped writes render through the same body builder as standalone cards;
+ * the tense tracks whether the card is still in progress. */
 type StepTense = "done" | "failed" | "running";
 
 const withheldWriteBlocks = ({
@@ -959,9 +954,8 @@ const withheldWriteBlocks = ({
 		];
 	});
 
-/** The card body every state shares — pending, running, and resolved all edit
- * the same message, so they must describe the same set of writes. A fan-out
- * collapses to one table; mixed writes keep a titled section each. */
+/** Shared by every card state (they edit the same message); a fan-out
+ * collapses to one table, mixed writes keep a titled section each. */
 const approvalBodyBlocks = ({
 	env,
 	preview,
@@ -1069,11 +1063,8 @@ const approvalPreviewBlocks = ({
 	if (changeSummary) {
 		blocks.push(CardText(changeSummary));
 	}
-	// Every customize row is an add or a remove against the customer's current
-	// plan — the same diff the dashboard renders, so the two surfaces agree.
-	// A prepaid item's quantity is the money decision: shown on its own row it
-	// reads as "100 Project Slots (prepaid) · $10.00 / unit" instead of an
-	// unquantified add plus a detached "Quantities" line.
+	// Same add/remove diff the dashboard renders, so the two surfaces agree; a
+	// prepaid quantity is folded into its item row — it IS the money decision.
 	const prepaidByFeature = new Map(
 		display.prepaid.map((entry) => [entry.featureId, entry] as const),
 	);

@@ -10,7 +10,6 @@ export type OperationToolConfig = {
 	idempotent?: boolean;
 };
 
-/** A preview tool that calls the write's preview endpoint. */
 export type BillingPreviewToolConfig = {
 	id: string;
 	description: string;
@@ -18,7 +17,6 @@ export type BillingPreviewToolConfig = {
 	previewEndpoint: string;
 };
 
-/** A preview tool computed locally (no Autumn call). */
 export type LocalPreviewToolConfig = {
 	id: string;
 	description: string;

@@ -16,10 +16,8 @@ export type SupersedeWebApprovalResult =
 			code: "already_decided" | "not_found" | "org_mismatch";
 	  };
 
-/** Cancels a pending approval whose write the user applied from the
- * dashboard: card settles as superseded, the eve park is denied and the
- * resumed turn drained — leaving the stream index stale would replay the
- * model's ack as the reply to the user's NEXT message. */
+/** The user applied the write from the dashboard: settle the card as
+ * superseded and deny + drain the eve park. */
 export const supersedeWebApproval = async ({
 	approvalId,
 	orgId,

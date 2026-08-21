@@ -18,9 +18,8 @@ export const requestStringField = (
 	return typeof value === "string" ? value : undefined;
 };
 
-/** Transport the harness threads through `toolArgs`. Option ids and request
- * ids are dropped before display; legacy rows keep the grouped writes marker
- * because their cards render steps from it (new rows use step rows). */
+/** Strips harness transport (option/request ids) before display; legacy rows
+ * keep the grouped-writes marker their cards still render from. */
 export const publicToolArgs = (
 	args: Record<string, unknown>,
 	{ includeWithheld = true }: { includeWithheld?: boolean } = {},
@@ -44,9 +43,8 @@ const canonicalJson = (value: unknown) =>
 			: nested,
 	);
 
-/** Whether two tool calls carry the same payload, ignoring key order — the
- * model emits its JSON arguments in whatever order it likes. Both payloads are
- * required: an absent one is unknown, not equal to another absent one. */
+/** Payload equality ignoring key order; an absent payload is unknown, never
+ * equal to another absent one. */
 export const isSameToolRequest = (
 	left: Record<string, unknown>,
 	right: Record<string, unknown>,

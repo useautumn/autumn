@@ -44,7 +44,6 @@ export const createDomainTools = <
 		idempotent,
 	});
 
-	/** A read-only preview tool for a gated billing write. */
 	const billingPreview = ({
 		id,
 		description,

@@ -14,11 +14,8 @@ import {
 } from "../domain/approvalRecord.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 
-/** The one way to deny an eve park without carding it: answers the primary
- * AND every sibling request (eve defers all deliveries until the whole batch
- * is answered), then drains the resumed turn and persists the cursor —
- * skipping the drain leaves the model's ack to replay as the reply to the
- * user's next message. */
+/** Denies the whole parked batch (primary + siblings), then drains the resumed
+ * turn — an undrained ack would replay as the reply to the user's next message. */
 export const denyApprovalParkAndDrain = async ({
 	approval,
 	auth,

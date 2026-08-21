@@ -12,10 +12,8 @@ import {
 import { withheldWritesOf } from "../../domain/approvalRecord.js";
 import { chatApprovalWritesRepo } from "../../repos/chatApprovalWritesRepo.js";
 
-/** Edits an approval's Slack card without a live event — used when the
- * decision happened on another surface (dashboard apply). Multi-workspace
- * mode has no webhook token context here, so the workspace's bot token is
- * resolved explicitly. */
+/** Edits the Slack card without a live event (decided on another surface) —
+ * no webhook token context exists, so the workspace bot token is resolved. */
 export const settleCardRemotely = async ({
 	approval,
 	statusLine,

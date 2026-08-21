@@ -20,9 +20,8 @@ import {
 } from "../utils/fetchApprovalPreview.js";
 import { publicToolArgs, toolRequestFromArgs } from "../utils/toolRequest.js";
 
-/** Grouped write previews are N MCP round trips; the card posts without waiting
- * and re-renders when they land. Step updates are pending-guarded (write AND
- * parent) so an already-resolved approval keeps what it was approved with. */
+/** Previews are N MCP round trips — the card posts first and re-renders when
+ * they land; pending-guarded so a resolved approval keeps what it showed. */
 const createStepPreviewBackfill =
 	({
 		approvalId,

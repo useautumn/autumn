@@ -191,9 +191,8 @@ export const resolveApprovalPreview = async ({
 	}
 };
 
-/** Each grouped write gets the same preview + display backfill as the primary
- * one, so the card can render every write with the standard body. */
-/** Fetches each grouped write's preview (card-quality: parsed + display). */
+/** Fetches each grouped write's preview with the same parse + display
+ * treatment as the primary, so every write renders with the standard body. */
 export const withWritePreviews = async ({
 	env,
 	executeTool,

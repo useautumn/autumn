@@ -54,9 +54,8 @@ const releaseClaim = async ({
 	}
 };
 
-/** Deterministic executor gate: flag-controlled (default on outside
- * production) and Slack-surface-only — the dashboard shows a group's primary
- * write alone, so it must never execute the whole group. */
+/** Slack-surface-only: the dashboard shows a group's primary write alone, so
+ * it must never execute the whole group. */
 const approvalExecutorEnabled = ({ provider }: { provider: string }) => {
 	const flag =
 		env.LEAF_APPROVAL_EXECUTOR ??

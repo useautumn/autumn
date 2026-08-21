@@ -206,11 +206,8 @@ const stepOutcomes = (
 		toolName: write.tool_name,
 	}));
 
-/** Deterministic approve: executes the claimed row's stored writes directly and
- * resumes eve as notification only. Returns undefined for legacy rows without
- * writes, which fall back to the resume-executes path.
- * The model's TEXT is never surfaced — the card and write outcomes are ground
- * truth; `onResumed` gets only chained parks and questions. */
+/** Deterministic approve: runs the stored writes, resumes eve as notification
+ * only — outcomes are ground truth, the model's text is never surfaced. */
 export const executeApprovalWrites = async ({
 	approval,
 	onResumed,

@@ -65,9 +65,8 @@ const CHILD_REPLAY_IDLE_TIMEOUT_MS = ms.seconds(15);
  * can be quiet for minutes before the next park or result arrives. */
 const RESUME_IDLE_TIMEOUT_MS = ms.minutes(5);
 
-/** Replays a completed child session's stream from the start, feeding its
- * action events to the caller. Task-mode children end with session.completed,
- * so the replay is finite; a live child ends at the idle timeout instead. */
+/** Replays a child session's stream from the start — finite for task-mode
+ * children (session.completed); a live child ends at the idle timeout. */
 const applyChildStreamResults = async ({
 	auth,
 	childSessionId,

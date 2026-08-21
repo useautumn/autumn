@@ -5,13 +5,13 @@ export type ChatApprovalStatus =
 	| "failed"
 	| "cancelled";
 
+/** A gated write's stored request args, with withheld markers stripped. */
 export type ApprovalDetailWrite = {
-	/** The step's stored request args (withheld markers stripped). */
 	params: Record<string, unknown>;
 };
 
-/** Wire contract for the dashboard's approval deep-link seed: just enough to
- * target the sheet and resolve the stored request. */
+/** Deliberately minimal: just enough to target a sheet and resolve the
+ * stored request. */
 export type ApprovalDetail = {
 	id: string;
 	plan_id: string | null;

@@ -37,9 +37,8 @@ const approvalAuth = ({
 	workspaceId: approval.workspace_id,
 });
 
-/** Answers the park in eve and consumes the resumed turn. `shouldAbsorbChained`
- * auto-denies a re-issued duplicate of an already-applied write instead of
- * carding it again. */
+/** Answers the park in eve and consumes the resumed turn; re-issued duplicates
+ * of already-applied writes can be absorbed instead of carded again. */
 export const submitApprovalInput = async ({
 	approval,
 	expectExecution,

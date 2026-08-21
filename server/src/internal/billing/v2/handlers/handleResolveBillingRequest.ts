@@ -20,9 +20,8 @@ const ResolveBillingRequestParamsSchema = z.discriminatedUnion("tool", [
 	}),
 ]);
 
-/** Maps a stored V1 billing request into the dashboard's V0 dialect, with
- * `customize` resolved into concrete items against the target plan — catalog
- * items for attach, the customer's live subscription for updates. */
+/** Maps a stored V1 billing request into the dashboard's V0 dialect —
+ * `customize` resolves against catalog items for attach, the live subscription for updates. */
 export const handleResolveBillingRequest = createRoute({
 	scopes: [Scopes.Billing.Read],
 	body: ResolveBillingRequestParamsSchema,

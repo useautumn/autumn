@@ -11,9 +11,8 @@ type GatedWrite = {
 	toolName: string;
 };
 
-/** The one authoritative table of approval-gated writes. Everything else —
- * per-agent approval sets, decide-time scope requirements, write→preview
- * mapping — derives from here. */
+/** The one authoritative table of approval-gated writes — approval sets,
+ * scope requirements, and write→preview mapping all derive from here. */
 export const GATED_WRITES: readonly GatedWrite[] = [
 	{
 		agents: ["billing"],

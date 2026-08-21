@@ -13,14 +13,11 @@ type ApprovalSheet = (typeof APPROVAL_SHEETS)[number];
 const isApprovalSheet = (value: string | null): value is ApprovalSheet =>
 	APPROVAL_SHEETS.includes((value ?? "") as ApprovalSheet);
 
-/** Opens the native billing sheet from a Slack approval deep link:
- * `?sheet=attach-product&approval_id=…` — fetches the approval, resolves its
- * stored V1 request into the sheet's V0 dialect server-side, seeds the form
- * overrides, lands on the sheet, then strips the params. */
+/** Opens a billing sheet from a Slack approval deep link: resolves the stored
+ * V1 request to V0 server-side, seeds the form overrides, strips the params. */
 export const useApprovalSheetFromUrl = ({
 	resolveSubscriptionItemId,
 }: {
-	/** FullCusProduct id for the plan the approval updates (client-resolved). */
 	resolveSubscriptionItemId: (planId: string | null) => string | undefined;
 }) => {
 	const [params, setParams] = useQueryStates({

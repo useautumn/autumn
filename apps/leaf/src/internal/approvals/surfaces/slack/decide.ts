@@ -283,9 +283,8 @@ export const handleApprovalActionWithDeps = async ({
 		}
 
 		if (event.actionId === "cancel_billing_action") {
-			// Cancel first so exactly one click wins: the Eve denial below takes
-			// seconds, and a second click in that window would otherwise read the
-			// row as still pending and discard (and reply) all over again.
+			// Cancel first so exactly one click wins — the eve denial takes seconds
+			// and a second click in that window would discard and reply again.
 			const cancelled = await deps.cancelApproval({
 				approvalId,
 				providerUserId,
@@ -298,9 +297,8 @@ export const handleApprovalActionWithDeps = async ({
 				await editToCurrentStatus();
 				return;
 			}
-			// Eve parks the whole turn on the approval — deny it in the session too,
-			// or it keeps waiting, holds the next message behind the stale approval,
-			// and the discarded write can still run later.
+			// Deny in the session too, or eve keeps waiting and the discarded write
+			// can still run later.
 			if (cancelled.harness === "eve") {
 				const discard = deps.discardApproval ?? discardApproval;
 				// The row is already cancelled, so a deny eve drops would leave its
@@ -386,10 +384,8 @@ export const handleApprovalActionWithDeps = async ({
 			});
 			return;
 		}
-		// The resumed turn can park again (chained write or a question) where
-		// nothing streams — surface those as fresh cards or they stay invisible,
-		// even when an earlier step failed: the re-issued write is how the user
-		// recovers from that failure.
+		// A resumed turn can park again where nothing streams — surface chained
+		// writes and questions as fresh cards or they stay invisible.
 		const surfaceResumedOutcome = async ({
 			resumed,
 		}: {

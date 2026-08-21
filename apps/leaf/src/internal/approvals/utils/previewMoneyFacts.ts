@@ -47,9 +47,8 @@ const moneyFactsOf = (preview: unknown): MoneyFacts | undefined => {
 	};
 };
 
-/** Whether the money the user approved still matches what would execute now.
- * Comparing derived facts (not raw payloads) keeps benign field churn from
- * blocking approvals. */
+/** Whether the approved money facts still match what would execute — derived
+ * facts, not raw payloads, so benign field churn never blocks approvals. */
 export const previewMoneyFactsDrifted = ({
 	current,
 	stored,

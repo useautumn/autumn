@@ -331,8 +331,7 @@ export function AttachFormProvider({
 
 	// Track product changes and initialize prepaid options
 	const previousProductIdRef = useRef<string | undefined>(undefined);
-	// Seeded defaults (deep-linked approvals) must survive the first pass of
-	// this effect — the plan's own trial/prepaid init would stomp them.
+	// Seeded defaults must survive this effect's first pass — the plan's own trial/prepaid init would stomp them.
 	const seededRef = useRef(Boolean(defaultOverrides));
 	useEffect(() => {
 		if (!product) return;

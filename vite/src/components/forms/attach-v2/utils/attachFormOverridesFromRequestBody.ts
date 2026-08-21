@@ -45,8 +45,7 @@ const carryOverOverridesFrom = (
 	};
 };
 
-/** Inverse of buildAttachRequestBody: maps a V0 attach request into form
- * overrides. Stage-scoped keys (invoice*, redirect_mode, checkout params) are
+/** Stage-scoped keys (invoice*, redirect_mode, checkout params) are
  * intentionally skipped — the review stage re-collects them. */
 export const attachFormOverridesFromRequestBody = (
 	request: RequestBody,

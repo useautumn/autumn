@@ -9,9 +9,8 @@ import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 import { publicToolArgs } from "../utils/toolRequest.js";
 
-/** Column-first accessors for approval rows. The `_eve*` marker fallbacks
- * cover pending rows inserted before the columns existed (≤15-min window per
- * deploy) and can be deleted once no such rows remain. */
+/** Column-first accessors; the `_eve*` marker fallbacks cover pre-column
+ * pending rows and can be deleted once no such rows remain. */
 
 export const markerString = (
 	toolArgs: Record<string, unknown>,
@@ -112,9 +111,8 @@ export const allWritesOf = ({
 	...withheldWritesOf({ approval, writes }),
 ];
 
-/** Slack cards render every write in a parked batch, so approving the card
- * approves the group; the dashboard shows the primary write alone. Internal
- * Slack threads use the `slack_admin:<client>` provider and the same card. */
+/** Slack cards render the whole parked batch, so approving approves the
+ * group; the dashboard shows the primary write alone. */
 export const surfaceRendersGroup = (provider: string) =>
 	provider === "slack" || isInternalAutumnSlackProvider({ provider });
 
@@ -126,9 +124,8 @@ const UNSEEDABLE_CUSTOMIZE_KEYS = [
 	"update_items",
 ] as const;
 
-/** update_items/remove_licenses have no V0-dialect slot; billing_controls has
- * no sheet control — a seed would silently drop them, so those cards stay
- * Slack-only. */
+/** These keys have no sheet representation — a seed would silently drop
+ * them, so their cards stay Slack-only. */
 const sheetSeedableCustomize = (customize: unknown) => {
 	if (!customize) return true;
 	if (typeof customize !== "object") return false;
@@ -137,10 +134,8 @@ const sheetSeedableCustomize = (customize: unknown) => {
 	);
 };
 
-/** Single-write attach/updateSubscription cards from real customer workspaces
- * can deep-link to the dashboard sheet. Excluded: internal admin threads (they
- * hop orgs, the link would 403) and requests the sheet cannot faithfully
- * represent (see sheetSeedableCustomize). */
+/** Excludes internal admin threads (they hop orgs — the link would 403) and
+ * requests the sheet cannot faithfully represent. */
 export const dashboardLinkableApproval = ({
 	approval,
 	groupedStepCount,
