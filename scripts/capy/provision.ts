@@ -357,6 +357,10 @@ function writeEnvFiles(
 		AUTUMN_API_URL: serverUrl,
 		AUTUMN_PUBLIC_API_URL: serverUrl,
 		CLIENT_URL: viteUrl,
+		EMULATE_GOOGLE_URL: "http://localhost:4000",
+		EMULATE_GOOGLE_FETCH_URL: "http://127.0.0.1:4000",
+		GOOGLE_CLIENT_ID: "capy-emulate",
+		GOOGLE_CLIENT_SECRET: "capy-emulate",
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 		// Login flow that works without external services: dev `sendOTPEmail`
 		// prints the OTP to the server log. The README documents this path.

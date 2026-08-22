@@ -17,8 +17,7 @@ const vitePort = process.env.VITE_PORT
 	: 3000;
 const frontendUrl = process.env.VITE_FRONTEND_URL || "";
 const isCapyDev = process.env.CAPY_DEV === "1";
-const backendUrl = process.env.VITE_BACKEND_URL || "";
-const useSameOriginProxy = isCapyDev && backendUrl.startsWith("/");
+if (isCapyDev) process.env.VITE_BACKEND_URL = "/__autumn_api";
 
 function printPortlessUrl(): Plugin {
 	return {
@@ -147,7 +146,7 @@ export default defineConfig({
 			".ngrok.app",
 			".ngrok-free.app",
 		],
-		proxy: useSameOriginProxy
+		proxy: isCapyDev
 			? {
 					"/__autumn_api": {
 						target: "http://127.0.0.1:8080",
@@ -156,6 +155,14 @@ export default defineConfig({
 					},
 					"/api/auth": {
 						target: "http://127.0.0.1:8080",
+						changeOrigin: false,
+					},
+					"/o/oauth2": {
+						target: "http://127.0.0.1:4000",
+						changeOrigin: false,
+					},
+					"/_emulate": {
+						target: "http://127.0.0.1:4000",
 						changeOrigin: false,
 					},
 				}

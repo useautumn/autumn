@@ -7,6 +7,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
+import { googleOAuthUrlForBrowser } from "@/lib/googleOAuthProxy";
 import { isSafeSsoRedirectUrl } from "@/lib/sso/ssoCallback";
 import { getSsoHint } from "@/lib/sso/ssoHint";
 import { resolveSso } from "@/lib/sso/ssoResolve";
@@ -140,13 +141,24 @@ export const SignIn = () => {
 				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
 			const googleNewUserUrl =
 				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
-			const { error } = await signIn.social({
+			const useEmulateProxy = import.meta.env.VITE_EMULATE_GOOGLE_PROXY === "1";
+			const { data, error } = await signIn.social({
 				provider: "google",
 				callbackURL: googleCallbackUrl,
 				newUserCallbackURL: googleNewUserUrl,
+				disableRedirect: useEmulateProxy,
 			});
 			if (error) {
 				toast.error(error.message || "Failed to sign in with Google");
+				return;
+			}
+			if (useEmulateProxy && data?.url) {
+				window.location.assign(
+					googleOAuthUrlForBrowser({
+						providerUrl: data.url,
+						browserOrigin: frontendUrl,
+					}),
+				);
 			}
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to sign in with Google"));
