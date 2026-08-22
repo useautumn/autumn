@@ -76,7 +76,8 @@ export const handleCapyLogin = async (c: Context) => {
 			path: cookie.path,
 			httpOnly: cookie.httpOnly,
 			secure,
-			sameSite: cookie.sameSite,
+			sameSite: secure ? "None" : cookie.sameSite,
+			partitioned: secure,
 			expires: cookie.expires ? new Date(cookie.expires * 1000) : undefined,
 		});
 	}
