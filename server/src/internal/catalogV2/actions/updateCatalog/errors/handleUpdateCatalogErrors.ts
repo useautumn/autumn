@@ -10,7 +10,7 @@ import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCa
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
 /** Throws on anything that should fail the whole batch before any write. */
-export const handleUpdateCatalogErrors = ({
+export const handleUpdateCatalogErrors = async ({
 	ctx,
 	catalogContext,
 	updateCatalogPlan,
@@ -20,7 +20,7 @@ export const handleUpdateCatalogErrors = ({
 	catalogContext: UpdateCatalogContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 	params: UpdateCatalogParams;
-}): void => {
+}): Promise<void> => {
 	handleUpdateFeatureErrors({ ctx, catalogContext, updateCatalogPlan });
 	handleRemoveFeatureErrors({ updateCatalogPlan });
 	handleRemovePlanErrors({
@@ -31,7 +31,8 @@ export const handleUpdateCatalogErrors = ({
 		params,
 		productStatesContext: catalogContext.productStatesContext,
 	});
-	handleUpsertProductRenameErrors({
+	await handleUpsertProductRenameErrors({
+		ctx,
 		params,
 		productStatesContext: catalogContext.productStatesContext,
 		updateCatalogPlan,

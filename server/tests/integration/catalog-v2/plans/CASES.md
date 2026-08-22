@@ -148,6 +148,14 @@ free vs priced so the billing-model matrix stays navigable.
 | `new_plan_id` clean rename (no customers): id changes, versions & rows intact | ✓ |
 | auto_enable true on free plan → `is_default` persisted; auto_enable false clears | ✓ |
 
+### Rename with references — `update/rename-plan-refs.test.ts`
+
+| Case | Status |
+|---|---|
+| Rename with customers: every version row renamed (incl. siblings outside the batch); `customer_products.product_id` snapshot untouched, `internal_product_id` link intact | ✓ |
+| Rename rewrites `reward_programs.product_ids`, and `rewards.free_product_id` + `discount_config.product_ids` on ONE row (merged single UPDATE) | ✓ |
+| Rename rewrites `revenuecat_mappings.autumn_product_id` key | ✓ |
+
 ## 5. Item/price update lanes — `update/update-plan-items.test.ts`
 
 Omit-semantics + per-facet shape changes, no customers. Assert via
@@ -334,8 +342,7 @@ Preview `options` include `new_version` when the latest version has customers
 | Two unpinned entries for same plan_id → error | ✓ |
 | Version gap (declare v3 when max is v1) → error | ✓ |
 | Create without `name` → error | ✓ |
-| `new_plan_id` rename blocked when plan has customers | ✓ |
-| `new_plan_id` rename blocked when reward program references plan | ✓ |
+| `new_plan_id` rename blocked when a Vercel install is on the plan; allowed for other plans on the same Vercel org | ✓ |
 | Invalid item shape passes through Zod errors (amount+tiers both set; volume flat_amount on graduated; `tiers[0].to <= included`; proration on usage_based; reset/price interval mismatch on non-prepaid) | ✓ |
 
 ## 11. Plan × plan batch — `batch/batch-ops.test.ts`

@@ -56,7 +56,7 @@ export async function updateCatalogV2({
 	});
 
 	// 3. Errors
-	handleUpdateCatalogErrors({
+	await handleUpdateCatalogErrors({
 		ctx,
 		catalogContext,
 		updateCatalogPlan,
