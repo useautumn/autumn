@@ -16,6 +16,7 @@ import { executeRemovePlans } from "@/internal/catalogV2/execute/executeRemovePl
 import { executeRenamePlans } from "@/internal/catalogV2/execute/executeRenamePlans";
 import { executeUpsertProducts } from "@/internal/catalogV2/execute/executeUpsertProducts/executeUpsertProducts";
 import { queueRewardMigrations } from "@/internal/catalogV2/execute/queueRewardMigrations";
+import { rewritePublicPlanIdsAfterRename } from "@/internal/catalogV2/execute/rewritePublicPlanIdsAfterRename";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache";
@@ -167,6 +168,7 @@ export const executeUpdateCatalogPlan = async ({
 		phase: "execute.rename_plans",
 		run: () => executeRenamePlans({ ctx, updateCatalogPlan }),
 	});
+	rewritePublicPlanIdsAfterRename({ updateCatalogPlan });
 	await timeCatalogPhase({
 		ctx,
 		phases,
