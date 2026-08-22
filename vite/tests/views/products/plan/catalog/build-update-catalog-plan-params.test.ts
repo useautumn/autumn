@@ -129,6 +129,16 @@ describe("buildUpdateCatalogPlanParams", () => {
 		expect(() => UpdateCatalogPlanParamsSchema.parse(body)).not.toThrow();
 	});
 
+	test("rename sends new_plan_id and keeps the original plan_id", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, id: "pro_plus" },
+			features,
+		});
+		expect(params.plan_id).toBe("pro");
+		expect(params.new_plan_id).toBe("pro_plus");
+	});
+
 	test("new_version and all_versions omit the version pin", () => {
 		const minted = buildUpdateCatalogPlanParams({
 			baseProduct,

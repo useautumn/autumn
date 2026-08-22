@@ -91,6 +91,7 @@ export const computeUpdateCatalogPlan = ({
 		renamePlans: computeRenameProductIdsPlan({
 			params,
 			productStatesContext: catalogContext.productStatesContext,
+			aliases: ctx.org.planAliases,
 		}),
 		migrationDrafts: computeMigrationDraftPlans({
 			upsertProductPlans: plan.upsertProducts,

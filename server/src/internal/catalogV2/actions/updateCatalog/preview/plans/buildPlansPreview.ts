@@ -3,6 +3,7 @@ import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/bu
 import { buildLicenseParentsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicenseParentsPreview";
 import { buildLicensesPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicensesPreview";
 import { buildRemovePlansPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildRemovePlansPreview";
+import { aliasReplacementForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/aliasReplacementForPlan";
 import { buildVariantsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildVariantsPreview";
 import { buildPlanVersioning } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildPlanVersioning";
 import { buildSiblingVersionsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildSiblingVersionsPreview";
@@ -62,6 +63,12 @@ export const buildPlansPreview = ({
 			upsertProducts,
 			productStatesContext,
 			previewContext: catalogContext.previewContext,
+			renamePlans: updateCatalogPlan.renamePlans,
+		});
+		const aliasReplacement = aliasReplacementForPlan({
+			planId: upsert.row.planId,
+			upsert,
+			renamePlans: updateCatalogPlan.renamePlans,
 		});
 
 		return [
@@ -104,6 +111,7 @@ export const buildPlansPreview = ({
 					: {}),
 				...(variants.length > 0 ? { variants } : {}),
 				...(licenses.length > 0 ? { licenses } : {}),
+				...(aliasReplacement ? { alias_replacement: aliasReplacement } : {}),
 			},
 		];
 	});

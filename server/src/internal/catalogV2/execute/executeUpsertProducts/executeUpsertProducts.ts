@@ -1,8 +1,10 @@
 import type { CatalogAction } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import type { CatalogAppliedResult } from "@/internal/catalogV2/execute/executeUpdateCatalogPlan";
+import { deleteClaimedPlanAliases } from "@/internal/catalogV2/execute/deleteClaimedPlanAliases.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { applyEntitlementPricesPlan } from "./applyEntitlementPricesPlan";
 import { applyFreeTrialPlan } from "./applyFreeTrialPlan";
@@ -20,7 +22,16 @@ const executeUpsertProduct = async ({
 }) => {
 	if (upsert.row.op === "create") {
 		const product = upsert.details?.product ?? upsert.row.nextFullProduct;
-		await ProductService.insert({ db: ctx.db, product });
+		await ctx.db.transaction(async (tx) => {
+			const db = tx as unknown as DrizzleCli;
+			await deleteClaimedPlanAliases({
+				ctx: { ...ctx, db },
+				aliasIds: upsert.aliasReplacement
+					? [upsert.aliasReplacement.alias_id]
+					: [],
+			});
+			await ProductService.insert({ db, product });
+		});
 		await clearDefaultFlagFromOtherVersions({ ctx, product });
 	}
 

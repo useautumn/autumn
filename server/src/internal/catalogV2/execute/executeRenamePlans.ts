@@ -19,6 +19,10 @@ const buildPlanRenameSql = ({
 	renamePlan: RenameProductPlan;
 }): SQL => {
 	const { planId, toId } = renamePlan;
+	const vercelAllowlistKey =
+		env === "live"
+			? "allowed_product_ids_live"
+			: "allowed_product_ids_sandbox";
 
 	return sql`
 		WITH upd_products AS (
@@ -67,6 +71,43 @@ const buildPlanRenameSql = ({
 			SET autumn_product_id = ${toId}
 			WHERE org_id = ${orgId} AND env = ${env}
 				AND autumn_product_id = ${planId}
+			RETURNING 1
+		),
+		upd_vercel_allowlists AS (
+			UPDATE organizations
+			SET processor_configs = jsonb_set(
+				processor_configs,
+				ARRAY['vercel', ${vercelAllowlistKey}]::text[],
+				(
+					SELECT to_jsonb(array_agg(
+						CASE WHEN elem = ${planId} THEN ${toId} ELSE elem END
+					))
+					FROM jsonb_array_elements_text(
+						processor_configs -> 'vercel' -> ${vercelAllowlistKey}
+					) AS elem
+				)
+			)
+			WHERE id = ${orgId}
+				AND processor_configs -> 'vercel' -> ${vercelAllowlistKey} ? ${planId}
+			RETURNING 1
+		),
+		del_aliases AS (
+			DELETE FROM product_aliases
+			WHERE org_id = ${orgId} AND env = ${env}
+				AND (canonical_plan_id = ${planId} OR alias_id = ${toId})
+			RETURNING 1
+		),
+		ins_aliases AS (
+			INSERT INTO product_aliases (
+				org_id, env, alias_id, canonical_plan_id, created_at
+			)
+			VALUES (
+				${orgId},
+				${env},
+				${planId},
+				${toId},
+				ROUND(date_part('epoch', NOW()) * 1000)::BIGINT
+			)
 			RETURNING 1
 		)
 		SELECT 1

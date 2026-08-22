@@ -9,6 +9,7 @@ import {
 	type Organization,
 	OrgConfigSchema,
 	organizations,
+	productAliases,
 	user,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
@@ -26,6 +27,7 @@ import {
 	sql,
 } from "drizzle-orm";
 import { FeatureService } from "../features/FeatureService.js";
+import { toPlanAliasMap } from "../catalogV2/productAliases/toPlanAliasMap.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 
 export class OrgService {
@@ -123,10 +125,14 @@ export class OrgService {
 				features: {
 					where: eq(features.env, env),
 				},
+				product_aliases: {
+					where: eq(productAliases.env, env),
+				},
 				master: true,
 			},
 		})) as Organization & {
 			features?: Feature[];
+			product_aliases?: { alias_id: string; canonical_plan_id: string }[];
 		};
 
 		if (!result) {
@@ -143,11 +149,13 @@ export class OrgService {
 
 		const org = structuredClone(result);
 		delete org.features;
+		delete org.product_aliases;
 
 		return {
 			org: {
 				...org,
 				config: OrgConfigSchema.parse(org.config || {}),
+				planAliases: toPlanAliasMap({ rows: result.product_aliases }),
 			},
 			features: result.features || [],
 		};
@@ -227,11 +235,15 @@ export class OrgService {
 				features: {
 					where: eq(features.env, env),
 				},
+				product_aliases: {
+					where: eq(productAliases.env, env),
+				},
 			},
 		});
 
-		return org as Organization & {
+		return org as unknown as Organization & {
 			features: Feature[];
+			product_aliases: { alias_id: string; canonical_plan_id: string }[];
 		};
 	}
 
@@ -373,12 +385,19 @@ export class OrgService {
 			orgId: result?.id || "",
 			env,
 		});
+		const aliasRows = await db.query.productAliases.findMany({
+			where: and(
+				eq(productAliases.org_id, result.id),
+				eq(productAliases.env, env),
+			),
+		});
 
 		return {
 			features,
 			org: {
 				...(result as Organization),
 				config: OrgConfigSchema.parse(result.config || {}),
+				planAliases: toPlanAliasMap({ rows: aliasRows }),
 			},
 			env,
 		};

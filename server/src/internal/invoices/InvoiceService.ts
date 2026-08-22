@@ -166,6 +166,7 @@ export class InvoiceService {
 				invoice: invoices,
 				resolved_product_ids: resolvedProductIdsForColumn({
 					internalProductIds: invoices.internal_product_ids,
+					productIds: invoices.product_ids,
 				}),
 				customer_id: customers.id,
 				entity_id: entities.id,
@@ -263,6 +264,7 @@ export class InvoiceService {
 				invoice: invoices,
 				resolved_product_ids: resolvedProductIdsForColumn({
 					internalProductIds: invoices.internal_product_ids,
+					productIds: invoices.product_ids,
 				}),
 			})
 			.from(invoices)

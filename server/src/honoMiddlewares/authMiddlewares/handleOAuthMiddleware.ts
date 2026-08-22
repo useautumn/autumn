@@ -16,6 +16,7 @@ import {
 	oauthAccessToken,
 	oauthConsent,
 	organizations,
+	productAliases,
 	RecaseError,
 	sortFeatures,
 } from "@autumn/shared";
@@ -25,6 +26,7 @@ import { alias } from "drizzle-orm/pg-core";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { isServedOAuthAudience } from "@/internal/auth/oauth/oauthResourceAudiences.js";
+import { toPlanAliasMap } from "@/internal/catalogV2/productAliases/toPlanAliasMap.js";
 
 const masterOrg = alias(organizations, "master_org");
 
@@ -112,6 +114,7 @@ const getOAuthRequestContext = async ({
 			org: organizations,
 			masterOrg,
 			feature: features,
+			productAlias: productAliases,
 		})
 		.from(oauthAccessToken)
 		.innerJoin(
@@ -128,6 +131,13 @@ const getOAuthRequestContext = async ({
 			and(
 				eq(features.org_id, organizations.id),
 				eq(features.env, oauthConsent.env),
+			),
+		)
+		.leftJoin(
+			productAliases,
+			and(
+				eq(productAliases.org_id, organizations.id),
+				eq(productAliases.env, oauthConsent.env),
 			),
 		)
 		.where(
@@ -169,14 +179,27 @@ const getOAuthRequestContext = async ({
 				config: OrgConfigSchema.parse(first.masterOrg.config || {}),
 			}
 		: null;
+	// Features × aliases is a cartesian product; keep one of each.
+	const orgFeatures: Feature[] = [];
+	const seenFeatureIds = new Set<string>();
+	const aliasRows: { alias_id: string; canonical_plan_id: string }[] = [];
+	const seenAliasIds = new Set<string>();
+	for (const row of rows) {
+		if (row.feature && !seenFeatureIds.has(row.feature.id)) {
+			seenFeatureIds.add(row.feature.id);
+			orgFeatures.push(row.feature as unknown as Feature);
+		}
+		if (row.productAlias && !seenAliasIds.has(row.productAlias.alias_id)) {
+			seenAliasIds.add(row.productAlias.alias_id);
+			aliasRows.push(row.productAlias);
+		}
+	}
 	const org: Organization = {
 		...first.org,
 		master,
 		config: OrgConfigSchema.parse(first.org.config || {}),
+		planAliases: toPlanAliasMap({ rows: aliasRows }),
 	};
-	const orgFeatures = rows.flatMap((row) =>
-		row.feature ? [row.feature] : [],
-	) as unknown as Feature[];
 
 	return {
 		env,
