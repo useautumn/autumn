@@ -42,7 +42,14 @@ export const stripeConnectSeederMiddleware = async (
 		return c.json({ error: "Failed to initialize stripe client" }, 500);
 	}
 
-	// Step 2: Verify webhook signature
+	// Step 2: Get webhook secret
+	const webhookSecret = await getStripeWebhookSecret({
+		db,
+		orgId: c.req.query("org_id"),
+		env,
+	});
+
+	// Step 3: Verify webhook signature
 	const rawBody = await c.req.text();
 	const signature = c.req.header("stripe-signature") || "";
 
@@ -64,11 +71,6 @@ export const stripeConnectSeederMiddleware = async (
 		}
 	} else {
 		try {
-			const webhookSecret = await getStripeWebhookSecret({
-				db,
-				orgId: c.req.query("org_id"),
-				env,
-			});
 			event = await masterStripe.webhooks.constructEventAsync(
 				rawBody,
 				signature,

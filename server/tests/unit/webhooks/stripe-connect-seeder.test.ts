@@ -7,7 +7,6 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const mockState = {
 	getByAccountId: undefined as (() => Promise<unknown>) | undefined,
-	getWebhookSecretCalls: 0,
 };
 
 await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
@@ -21,10 +20,7 @@ await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 
 await mockModuleWithRestore("@/external/connect/initStripeCli.js", () => ({
 	initMasterStripe: () => ({}),
-	getStripeWebhookSecret: async () => {
-		mockState.getWebhookSecretCalls++;
-		return "whsec_test";
-	},
+	getStripeWebhookSecret: async () => "whsec_test",
 }));
 
 await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
@@ -78,7 +74,6 @@ describe("stripeConnectSeederMiddleware org resolution", () => {
 	beforeEach(() => {
 		process.env.STRIPE_WEBHOOK_SKIP_VERIFY = "true";
 		mockState.getByAccountId = undefined;
-		mockState.getWebhookSecretCalls = 0;
 	});
 
 	afterAll(() => {
@@ -124,6 +119,5 @@ describe("stripeConnectSeederMiddleware org resolution", () => {
 
 		expect(response.status).toBe(200);
 		expect(didHandlerRun()).toBe(true);
-		expect(mockState.getWebhookSecretCalls).toBe(0);
 	});
 });
