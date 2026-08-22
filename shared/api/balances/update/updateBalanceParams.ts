@@ -12,7 +12,7 @@ export const ExtUpdateBalanceParamsV0Schema = BalanceParamsBaseSchema.extend({
 	}),
 	add_to_balance: z.number().optional().meta({
 		description:
-			"Add this amount to the current balance. Use negative values to subtract. Cannot be combined with current_balance.",
+			"Add this amount to the current balance. The granted balance is adjusted by the same amount, so refunds via track can restore the added balance. Use negative values to subtract. Cannot be combined with current_balance.",
 	}),
 
 	usage: z.number().optional().meta({
