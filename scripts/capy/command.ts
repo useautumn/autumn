@@ -174,7 +174,7 @@ function ensureAppProcess(): void {
 	const env: Record<string, string> = {
 		...process.env,
 		CAPY_DEV: "1",
-		VITE_BACKEND_URL: "/__autumn_api",
+		VITE_EMULATE_GOOGLE_PROXY: "1",
 	} as Record<string, string>;
 	const { app: appLog } = capyLogPaths();
 	mkdirSync(dirname(appLog), { recursive: true, mode: 0o700 });
