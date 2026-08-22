@@ -190,11 +190,9 @@ export default defineConfig({
 			usePolling: true, // Required for file watching in Docker on Windows
 			interval: 1000,
 		},
-		hmr: viteHmrClient({
-			frontendUrl,
-			vitePort,
-			...(isCapyDev && { clientPort: 443 }),
-		}),
+		hmr: isCapyDev
+			? { clientPort: 443 }
+			: viteHmrClient({ frontendUrl, vitePort }),
 		fs: {
 			// Allow serving files from workspace root (monorepo support)
 			allow: [".."],
