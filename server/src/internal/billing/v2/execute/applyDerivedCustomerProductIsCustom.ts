@@ -3,13 +3,18 @@ import type {
 	FullCusProduct,
 	FullProduct,
 } from "@autumn/shared";
-import { deriveCustomerProductIsCustom } from "@autumn/shared";
+import {
+	deriveCustomerProductIsCustom,
+	orgToCurrency,
+	resolveCustomerCurrency,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	getPatchCustomerProducts,
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { applyCustomerProductItemsPatch } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
+import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
 
 /**
@@ -33,6 +38,36 @@ export const applyDerivedCustomerProductIsCustom = async ({
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
 	const baseProductByInternalId = new Map<string, FullProduct | null>();
+	const orgDefaultCurrency = orgToCurrency({ org: ctx.org });
+
+	// CURRENCY PROJECTION — the comparison runs in the customer's own currency,
+	// so adding a currency to a plan never makes its existing customers look
+	// custom, while editing the one they are billed in does. A plan targets a
+	// single customer, so this resolves once per billing plan.
+	let billingCurrency: string | undefined;
+	const resolveBillingCurrency = async (customerProduct: FullCusProduct) => {
+		if (billingCurrency) return billingCurrency;
+
+		let customer = customerProduct.customer ?? null;
+		if (!customer) {
+			try {
+				customer = await CusService.get({
+					db: ctx.db,
+					idOrInternalId: customerProduct.internal_customer_id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+				});
+			} catch (error) {
+				// Falls through to the org default rather than failing the write.
+				ctx.logger.warn("[isCustom] could not load customer for currency", {
+					error,
+				});
+			}
+		}
+
+		billingCurrency = resolveCustomerCurrency({ customer, org: ctx.org });
+		return billingCurrency;
+	};
 
 	const loadBaseProduct = async (internalProductId?: string | null) => {
 		if (!internalProductId) return null;
@@ -69,6 +104,8 @@ export const applyDerivedCustomerProductIsCustom = async ({
 			customerProduct,
 			baseProduct: await loadBaseProduct(customerProduct.internal_product_id),
 			features: ctx.features,
+			currency: await resolveBillingCurrency(customerProduct),
+			orgDefaultCurrency,
 		});
 
 	// New rows are inserted wholesale, so stamping the object is enough.
