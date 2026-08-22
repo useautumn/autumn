@@ -88,6 +88,8 @@ type ExpectedPlanPreviewRow = {
 	licenseParents?: ExpectedLicenseParent[] | null;
 	/** Containment over variants; pass `null` to assert the lane is omitted. */
 	variants?: ExpectedVariant[] | null;
+	/** Exact match; pass `null` to assert absent. */
+	aliasReplacement?: PlanPreviewRow["alias_replacement"] | null;
 };
 
 type ExpectedVariant = {
@@ -104,6 +106,8 @@ type ExpectedVariant = {
 	licenseChanges?: ExpectedLicenseChange[] | null;
 	nestedItemChanges?: Array<Record<string, unknown>>;
 	siblingVersions?: ExpectedSiblingVersion[] | null;
+	/** Exact match; pass `null` to assert absent. */
+	aliasReplacement?: CatalogVariantPreview["alias_replacement"] | null;
 };
 
 const expectAbsent = (value: unknown) => {
@@ -274,6 +278,13 @@ export const expectPlanPreviewRowCorrect = ({
 	}
 	if (expected.name !== undefined) {
 		expect(row.name).toBe(expected.name);
+	}
+	if (expected.aliasReplacement !== undefined) {
+		if (expected.aliasReplacement === null) {
+			expect(row.alias_replacement).toBeUndefined();
+		} else {
+			expect(row.alias_replacement).toEqual(expected.aliasReplacement);
+		}
 	}
 	if (expected.hasCustomers !== undefined) {
 		expect(row.state.has_customers).toBe(expected.hasCustomers);
@@ -459,6 +470,15 @@ export const expectPlanPreviewRowCorrect = ({
 				).toBeDefined();
 				if (expectedVariant.variantAction !== undefined) {
 					expect(variant?.variant_action).toBe(expectedVariant.variantAction);
+				}
+				if (expectedVariant.aliasReplacement !== undefined) {
+					if (expectedVariant.aliasReplacement === null) {
+						expect(variant?.alias_replacement).toBeUndefined();
+					} else {
+						expect(variant?.alias_replacement).toEqual(
+							expectedVariant.aliasReplacement,
+						);
+					}
 				}
 				if (expectedVariant.versioning !== undefined) {
 					expect(

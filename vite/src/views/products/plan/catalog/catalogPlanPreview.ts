@@ -7,6 +7,7 @@ import type {
 	CatalogPropagateParams,
 	CatalogVariantPreview,
 	CatalogVariantVersionPreview,
+	PlanAliasReplacement,
 	PlanChangeV0,
 	PlanItemChangeV0,
 	PlanLicenseChangeV0,
@@ -40,14 +41,25 @@ export const previewOpensStrategyStep = ({
 	preview: CatalogPlanUpdatePreview | undefined;
 }): boolean => (preview?.versioning?.options.length ?? 0) > 0;
 
-export const catalogPreviewOpensDialog = ({
+export const catalogPreviewAliasReplacements = ({
 	preview,
 }: {
 	preview: CatalogPlanUpdatePreview | undefined;
-}): boolean =>
-	previewOpensStrategyStep({ preview }) ||
-	(preview?.variants?.length ?? 0) > 0 ||
-	(preview?.license_parents?.length ?? 0) > 0;
+}): PlanAliasReplacement[] => {
+	if (!preview) return [];
+	const replacements: PlanAliasReplacement[] = [];
+	if (preview.alias_replacement) replacements.push(preview.alias_replacement);
+	for (const variant of preview.variants ?? []) {
+		if (variant.alias_replacement) replacements.push(variant.alias_replacement);
+	}
+	return replacements;
+};
+
+export const catalogPreviewHasAliasReplacement = ({
+	preview,
+}: {
+	preview: CatalogPlanUpdatePreview | undefined;
+}): boolean => catalogPreviewAliasReplacements({ preview }).length > 0;
 
 export const isCatalogMetadataOnly = ({
 	preview,
@@ -57,6 +69,75 @@ export const isCatalogMetadataOnly = ({
 	!!preview &&
 	!preview.plan_change?.customize &&
 	(preview.plan_change?.license_changes?.length ?? 0) === 0;
+
+export const catalogPreviewHasPlanIdChange = ({
+	preview,
+}: {
+	preview: CatalogPlanUpdatePreview | undefined;
+}): boolean => typeof preview?.plan_change?.previous_attributes?.id === "string";
+
+export const catalogPreviewPlanIdChange = ({
+	preview,
+	nextPlanId,
+}: {
+	preview: CatalogPlanUpdatePreview | undefined;
+	nextPlanId?: string;
+}): { from: string; to: string } | undefined => {
+	const from = preview?.plan_change?.previous_attributes?.id;
+	if (typeof from !== "string" || !nextPlanId || from === nextPlanId) {
+		return undefined;
+	}
+	return { from, to: nextPlanId };
+};
+
+export const catalogPreviewOpensDialog = ({
+	preview,
+}: {
+	preview: CatalogPlanUpdatePreview | undefined;
+}): boolean => {
+	if (catalogPreviewHasAliasReplacement({ preview })) return true;
+	if (isCatalogMetadataOnly({ preview })) {
+		return catalogPreviewHasPlanIdChange({ preview });
+	}
+	return (
+		previewOpensStrategyStep({ preview }) ||
+		(preview?.variants?.length ?? 0) > 0 ||
+		(preview?.license_parents?.length ?? 0) > 0
+	);
+};
+
+export const isConfirmOnlyPlanChangeDialog = ({
+	preview,
+	showVersionStrategy,
+	showVariantScope,
+	showLicenseParentScope,
+}: {
+	preview: CatalogPlanUpdatePreview | undefined;
+	showVersionStrategy: boolean;
+	showVariantScope: boolean;
+	showLicenseParentScope: boolean;
+}): boolean =>
+	(catalogPreviewHasAliasReplacement({ preview }) ||
+		catalogPreviewHasPlanIdChange({ preview })) &&
+	!showVersionStrategy &&
+	!showVariantScope &&
+	!showLicenseParentScope;
+
+export const isAliasOnlyPlanChangeDialog = ({
+	preview,
+	showVersionStrategy,
+	showVariantScope,
+	showLicenseParentScope,
+}: {
+	preview: CatalogPlanUpdatePreview | undefined;
+	showVersionStrategy: boolean;
+	showVariantScope: boolean;
+	showLicenseParentScope: boolean;
+}): boolean =>
+	catalogPreviewHasAliasReplacement({ preview }) &&
+	!showVersionStrategy &&
+	!showVariantScope &&
+	!showLicenseParentScope;
 
 export const strategyForCatalogPreview = ({
 	choice,

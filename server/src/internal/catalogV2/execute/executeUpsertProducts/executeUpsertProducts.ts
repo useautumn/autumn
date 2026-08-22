@@ -3,6 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import type { CatalogAppliedResult } from "@/internal/catalogV2/execute/executeUpdateCatalogPlan";
+import { deleteClaimedPlanAliases } from "@/internal/catalogV2/execute/deleteClaimedPlanAliases";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { applyEntitlementPricesPlan } from "./applyEntitlementPricesPlan";
 import { applyFreeTrialPlan } from "./applyFreeTrialPlan";
@@ -22,6 +23,12 @@ const executeUpsertProduct = async ({
 		const product = upsert.details?.product ?? upsert.row.nextFullProduct;
 		await ProductService.insert({ db: ctx.db, product });
 		await clearDefaultFlagFromOtherVersions({ ctx, product });
+		if (upsert.aliasReplacement) {
+			await deleteClaimedPlanAliases({
+				ctx,
+				aliasIds: [upsert.aliasReplacement.alias_id],
+			});
+		}
 	}
 
 	await applyEntitlementPricesPlan({ ctx, upsert });

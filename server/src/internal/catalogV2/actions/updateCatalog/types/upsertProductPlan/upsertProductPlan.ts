@@ -4,6 +4,7 @@ import type {
 	CatalogVariantParams,
 	CustomizePlanLicense,
 	FullProduct,
+	PlanAliasReplacement,
 	PlanLicenseParams,
 	RemovePlanLicense,
 } from "@autumn/shared";
@@ -68,6 +69,8 @@ export type UpsertProductPlan = {
 	planLicenses?: PlanLicensePlan[];
 	/** false = execute may reuse Stripe ids but never create objects. */
 	createInStripe?: boolean;
+	/** Set when this row's id claims a reserved alias — execute deletes that row. */
+	aliasReplacement?: PlanAliasReplacement;
 
 	state: { hasCustomers: boolean };
 };
