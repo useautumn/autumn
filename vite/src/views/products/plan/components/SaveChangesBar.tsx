@@ -1,6 +1,7 @@
 import { isFeaturePriceItem, type PlanLicenseParams } from "@autumn/shared";
 import { Button, ShortcutButton } from "@autumn/ui";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useFetchPreviewUpdateCatalog } from "@/hooks/queries/catalog/usePreviewUpdateCatalog";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -14,7 +15,7 @@ import {
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
+import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { buildCatalogUpdatePlans } from "../catalog/buildUpdateCatalogPlanParams";
@@ -38,6 +39,7 @@ export const SaveChangesBar = ({
 	isOnboarding = false,
 }: SaveChangesBarProps) => {
 	const axiosInstance = useAxiosInstance();
+	const navigate = useNavigate();
 	const { setShowNewVersionDialog, catalogLicenses } = useProductContext();
 
 	const product = useProductStore((s) => s.product);
@@ -137,9 +139,11 @@ export const SaveChangesBar = ({
 			await CatalogV2Service.update(axiosInstance, { plans });
 			if (licenses) commitLicenseChanges();
 			setBaseProduct(product);
-			await queryRefetch();
+			const renamed = Boolean(baseProduct && product.id !== baseProduct.id);
+			if (!renamed) await queryRefetch();
 			await Promise.all([invalidateProduct(), invalidateProducts()]);
 			toast.success("Changes saved successfully");
+			if (renamed) navigateTo(`/products/${product.id}`, navigate);
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to save plan"));
 		}

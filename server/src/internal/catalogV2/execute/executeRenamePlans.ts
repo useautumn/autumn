@@ -68,6 +68,25 @@ const buildPlanRenameSql = ({
 			WHERE org_id = ${orgId} AND env = ${env}
 				AND autumn_product_id = ${planId}
 			RETURNING 1
+		),
+		del_aliases AS (
+			DELETE FROM product_aliases
+			WHERE org_id = ${orgId} AND env = ${env}
+				AND (canonical_plan_id = ${planId} OR alias_id = ${toId})
+			RETURNING 1
+		),
+		ins_aliases AS (
+			INSERT INTO product_aliases (
+				org_id, env, alias_id, canonical_plan_id, created_at
+			)
+			VALUES (
+				${orgId},
+				${env},
+				${planId},
+				${toId},
+				ROUND(date_part('epoch', NOW()) * 1000)::BIGINT
+			)
+			RETURNING 1
 		)
 		SELECT 1
 	`;

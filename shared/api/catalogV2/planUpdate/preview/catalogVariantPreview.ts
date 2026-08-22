@@ -3,6 +3,7 @@ import { CatalogConflictPreviewSchema } from "./catalogConflictPreview.js";
 import { CatalogCorePreviewSchema } from "./catalogCorePreview.js";
 import { CatalogSiblingVersionPreviewSchema } from "./catalogSiblingVersionPreview.js";
 import { CatalogPlanVersioningSchema } from "./catalogVersioningPreview.js";
+import { PlanAliasReplacementSchema } from "./planAliasReplacement.js";
 
 export const CatalogVariantActionSchema = z
 	.enum(["unchanged", "propagated", "explicit"])
@@ -48,6 +49,10 @@ export const CatalogVariantPreviewSchema = CatalogCorePreviewSchema.extend({
 			description:
 				"Other existing versions of this variant that could receive the base edit. Each version reports whether it is unchanged, propagated, or explicit.",
 		}),
+	alias_replacement: PlanAliasReplacementSchema.optional().meta({
+		description:
+			"This variant create/rename claims a reserved alias. Omitted when the id is free.",
+	}),
 });
 
 export type CatalogVariantAction = z.infer<typeof CatalogVariantActionSchema>;

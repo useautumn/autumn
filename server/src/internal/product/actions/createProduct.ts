@@ -10,6 +10,7 @@ import {
 	ProductAlreadyExistsError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { throwIfPlanIdReservedAsAlias } from "@/internal/catalogV2/productAliases/throwIfPlanIdReservedAsAlias.js";
 import {
 	applyPreparedPlanLicenseSync,
 	preparePlanLicenseSync,
@@ -39,6 +40,8 @@ export const createProduct = async ({
 	data: CreateProductV2Params;
 }) => {
 	const { logger, org, features, env, db } = ctx;
+
+	await throwIfPlanIdReservedAsAlias({ ctx, planId: data.id });
 
 	const existing = await ProductService.get({
 		db,

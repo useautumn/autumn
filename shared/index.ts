@@ -220,6 +220,8 @@ export * from "./models/productModels/productConfig/productConfig";
 export * from "./models/productModels/productEnums";
 export * from "./models/productModels/productMetadata";
 export * from "./models/productModels/productModels";
+export * from "./models/productModels/productAliasRelations";
+export * from "./models/productModels/productAliasTable";
 export * from "./models/productModels/productRelations";
 export * from "./models/productModels/productTable";
 export * from "./models/productV2Models/productItemModels/featureItem";

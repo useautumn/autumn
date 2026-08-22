@@ -3,6 +3,7 @@ import { member } from "../../db/auth-schema.js";
 import { apiKeys } from "../devModels/apiKeyTable.js";
 import { features } from "../featureModels/featureTable.js";
 import { migrationRuns } from "../migrationV2Models/migrationRunTable.js";
+import { productAliases } from "../productModels/productAliasTable.js";
 import { organizations } from "./orgTable.js";
 
 export const organizationsRelations = relations(
@@ -10,6 +11,7 @@ export const organizationsRelations = relations(
 	({ many, one }) => ({
 		api_keys: many(apiKeys),
 		features: many(features),
+		product_aliases: many(productAliases),
 		members: many(member),
 		migration_runs: many(migrationRuns),
 		master: one(organizations, {

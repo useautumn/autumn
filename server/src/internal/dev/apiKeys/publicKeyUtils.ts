@@ -1,6 +1,7 @@
 import type { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { toPlanAliasMap } from "@/internal/catalogV2/productAliases/toPlanAliasMap.js";
 
 export const verifyPublicKey = async ({
 	db,
@@ -21,9 +22,13 @@ export const verifyPublicKey = async ({
 
 	const org = structuredClone(data);
 	delete (org as any).features;
+	delete (org as any).product_aliases;
 
 	return {
-		org,
+		org: {
+			...org,
+			planAliases: toPlanAliasMap({ rows: data.product_aliases }),
+		},
 		features: data.features,
 	};
 };
