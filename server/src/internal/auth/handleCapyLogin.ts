@@ -9,6 +9,11 @@ import { generateId } from "@/utils/genUtils.js";
 
 const CAPY_USER_EMAIL = "capy@autumn.test";
 
+const safeRedirectPath = (path?: string) =>
+	path?.startsWith("/") && !path.startsWith("//") && path[1] !== "\\"
+		? path
+		: "/";
+
 export const handleCapyLogin = async (c: Context) => {
 	if (!isCapyDev) return c.notFound();
 
@@ -82,5 +87,5 @@ export const handleCapyLogin = async (c: Context) => {
 		});
 	}
 
-	return c.redirect("/");
+	return c.redirect(safeRedirectPath(c.req.query("next")));
 };

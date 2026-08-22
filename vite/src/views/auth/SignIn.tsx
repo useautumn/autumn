@@ -66,8 +66,10 @@ export const SignIn = () => {
 
 	useEffect(() => {
 		if (!isCapyDev || sessionLoading || session) return;
-		window.location.replace("/api/auth/capy-login");
-	}, [isCapyDev, session, sessionLoading]);
+		window.location.replace(
+			`/api/auth/capy-login?next=${encodeURIComponent(defaultPath)}`,
+		);
+	}, [defaultPath, isCapyDev, session, sessionLoading]);
 
 	// Passkey Conditional UI: browsers surface saved passkeys directly in the
 	// email field's autocomplete dropdown (no extra button needed). Requires
