@@ -31,6 +31,7 @@
 		"server": {
 			"entry": [
 				"src/workers.ts",
+				"src/metering-worker.ts",
 				"src/internal/customers/cusUtils/createNewCustomer.ts",
 				"src/utils/importUtils/addProductFromSubs.ts",
 				"src/utils/scriptUtils/readOnlyStripe.ts",
