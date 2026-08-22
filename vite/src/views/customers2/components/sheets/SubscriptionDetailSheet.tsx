@@ -5,7 +5,7 @@ import {
 	type Entity,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
-import { Button, CopyButton, InfoRow } from "@autumn/ui";
+import { Badge, Button, CopyButton, InfoRow } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	CreditCardIcon,
@@ -177,7 +177,16 @@ export function SubscriptionDetailSheet() {
 						<InfoRow
 							icon={<CubeIcon size={16} weight="duotone" />}
 							label="Plan"
-							value={cusProduct.product.name}
+							value={
+								<span className="flex items-center gap-1.5 min-w-0">
+									<span className="truncate">{cusProduct.product.name}</span>
+									{cusProduct.is_custom && (
+										<Badge variant="green" size="sm">
+											Custom
+										</Badge>
+									)}
+								</span>
+							}
 						/>
 						<InfoRow
 							icon={<HashIcon size={16} />}

@@ -87,7 +87,6 @@ const computeAttachNewCustomerProductResult = ({
 		featureQuantities,
 		customerLicenseQuantities,
 		trialContext,
-		isCustom,
 		billingVersion,
 		transitionConfig,
 		externalId,
@@ -150,7 +149,6 @@ const computeAttachNewCustomerProductResult = ({
 			transitionConfig,
 		},
 		initOptions: {
-			isCustom,
 			subscriptionId:
 				stripeSubscription?.id ??
 				preservedBillingLinkage?.subscription_ids?.[0],
