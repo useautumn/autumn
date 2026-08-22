@@ -114,13 +114,14 @@ const MainContent = ({
 	const env = useEnv();
 	const { org, isLoading: orgLoading } = useOrg();
 	const [showDeployDialog, setShowDeployDialog] = useState(false);
+	const isCapyDev = import.meta.env.VITE_CAPY_DEV === "1";
 
 	useDevQuery();
 	useAutumnFlags();
 	useFeatureFlags();
 	useFeaturesQuery();
 	useRewardsQuery();
-	useEventNames();
+	useEventNames({ enabled: !isCapyDev });
 
 	const showLoading = orgLoading || !org;
 

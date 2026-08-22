@@ -90,7 +90,7 @@ const browserAuthBaseUrl = isProductionAuth
 		? publicAuthBaseUrl
 		: authBaseUrl;
 const isHttpsBaseUrl = browserAuthBaseUrl?.startsWith("https://");
-const isCapyDev =
+export const isCapyDev =
 	process.env.CAPY_DEV === "1" && process.env.NODE_ENV !== "production";
 const configuredAuthBaseUrl = isCapyDev
 	? {

@@ -7,10 +7,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-	ensureEmulateRunning,
-	stopEmulateAndPortless,
-} from "../dw/helpers/emulate.ts";
+import { stopEmulateAndPortless } from "../dw/helpers/emulate.ts";
 import {
 	registerPortlessAliases,
 	unregisterPortlessAliases,
@@ -120,9 +117,8 @@ export function capyHandoffText(): string {
 	return [
 		"Capy is ready.",
 		`tmux session: ${CAPY_SESSION}`,
-		"local ports: 3000 dashboard, 8080 server, 3001 checkout, 3099 leaf/chat, 4000 emulate",
+		"local ports: 3000 dashboard, 8080 server, 3001 checkout, 3099 leaf/chat",
 		"browser API uses /__autumn_api via the Capy Vite proxy; expose only port 3000",
-		"VM/Desktop-local emulate URL: https://google.emulate.localhost",
 		`logs: bun capy logs | attach: tmux attach -t ${CAPY_SESSION}`,
 	].join("\n");
 }
@@ -169,7 +165,6 @@ function ensureAppProcess(): void {
 	ensureBunGlobalBin();
 	if (tmuxSessionExists(CAPY_SESSION)) return;
 	ensureStartup();
-	ensureEmulateRunning();
 	registerPortlessAliases(1);
 	const env: Record<string, string> = {
 		...process.env,
