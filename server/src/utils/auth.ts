@@ -148,13 +148,16 @@ const options = {
 	telemetry: {
 		enabled: false,
 	},
-	...(isHttpsBaseUrl && {
+	...((isHttpsBaseUrl || isCapyDev) && {
 		advanced: {
-			useSecureCookies: true,
-			defaultCookieAttributes: {
-				sameSite: "none" as const,
-				secure: true,
-			},
+			...(isCapyDev && { trustedProxyHeaders: true }),
+			...(isHttpsBaseUrl && {
+				useSecureCookies: true,
+				defaultCookieAttributes: {
+					sameSite: "none" as const,
+					secure: true,
+				},
+			}),
 		},
 	}),
 
