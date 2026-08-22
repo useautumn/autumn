@@ -17,7 +17,10 @@ const vitePort = process.env.VITE_PORT
 	: 3000;
 const frontendUrl = process.env.VITE_FRONTEND_URL || "";
 const isCapyDev = process.env.CAPY_DEV === "1";
-if (isCapyDev) process.env.VITE_BACKEND_URL = "/__autumn_api";
+if (isCapyDev) {
+	process.env.VITE_BACKEND_URL = "/__autumn_api";
+	process.env.VITE_CAPY_DEV = "1";
+}
 
 function relativeRedirectLocation(location: string): string {
 	try {
