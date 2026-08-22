@@ -19,6 +19,15 @@ const frontendUrl = process.env.VITE_FRONTEND_URL || "";
 const isCapyDev = process.env.CAPY_DEV === "1";
 if (isCapyDev) process.env.VITE_BACKEND_URL = "/__autumn_api";
 
+function relativeRedirectLocation(location: string): string {
+	try {
+		const url = new URL(location);
+		return `${url.pathname}${url.search}${url.hash}`;
+	} catch {
+		return location;
+	}
+}
+
 function printPortlessUrl(): Plugin {
 	return {
 		name: "print-portless-url",
@@ -160,6 +169,13 @@ export default defineConfig({
 					"/o/oauth2": {
 						target: "http://127.0.0.1:4000",
 						changeOrigin: false,
+						configure: (proxy) => {
+							proxy.on("proxyRes", (response) => {
+								const location = response.headers.location;
+								if (!location) return;
+								response.headers.location = relativeRedirectLocation(location);
+							});
+						},
 					},
 					"/_emulate": {
 						target: "http://127.0.0.1:4000",
