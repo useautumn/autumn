@@ -1,27 +1,40 @@
-import { type AnyColumn, sql } from "drizzle-orm";
+import { type AnyColumn, type SQL, sql } from "drizzle-orm";
 
 /**
- * Current public plan ids for an invoice row, resolved from
- * `internal_product_ids` via the products table. NULL when nothing
- * resolves (legacy rows / deleted products) — consumers fall back to
- * the `product_ids` snapshot.
+ * Live public id when the product row exists; snapshot id when that
+ * internal id is gone. Partial resolve is not treated as complete.
  */
+const resolvedProductIdsMergeSql = ({
+	internalProductIds,
+	productIds,
+}: {
+	internalProductIds: SQL | AnyColumn;
+	productIds: SQL | AnyColumn;
+}) => sql<string[] | null>`(
+	SELECT array_agg(COALESCE(rp.id, snap.product_id) ORDER BY snap.ord)
+	FROM unnest(${internalProductIds}, ${productIds})
+		WITH ORDINALITY AS snap(internal_id, product_id, ord)
+	LEFT JOIN products rp ON rp.internal_id = snap.internal_id
+)`;
+
 export const resolvedProductIdsSql = ({
 	invoiceAlias,
 }: {
 	invoiceAlias: string;
-}) => sql<string[] | null>`(
-	SELECT array_agg(DISTINCT rp.id)
-	FROM products rp
-	WHERE rp.internal_id = ANY(${sql.raw(`${invoiceAlias}.internal_product_ids`)})
-)`;
+}) =>
+	resolvedProductIdsMergeSql({
+		internalProductIds: sql.raw(`${invoiceAlias}.internal_product_ids`),
+		productIds: sql.raw(`${invoiceAlias}.product_ids`),
+	});
 
 export const resolvedProductIdsForColumn = ({
 	internalProductIds,
+	productIds,
 }: {
 	internalProductIds: AnyColumn;
-}) => sql<string[] | null>`(
-	SELECT array_agg(DISTINCT rp.id)
-	FROM products rp
-	WHERE rp.internal_id = ANY(${internalProductIds})
-)`;
+	productIds: AnyColumn;
+}) =>
+	resolvedProductIdsMergeSql({
+		internalProductIds,
+		productIds,
+	});
