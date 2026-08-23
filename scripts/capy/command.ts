@@ -7,11 +7,6 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { stopEmulateAndPortless } from "../dw/helpers/emulate.ts";
-import {
-	registerPortlessAliases,
-	unregisterPortlessAliases,
-} from "../dw/helpers/portless.ts";
 import { fatal, sh, shInherit } from "../dw/helpers/shell.ts";
 import { spawnDevInTmux, tmuxSessionExists } from "../dw/helpers/tmux.ts";
 
@@ -165,7 +160,6 @@ function ensureAppProcess(): void {
 	ensureBunGlobalBin();
 	if (tmuxSessionExists(CAPY_SESSION)) return;
 	ensureStartup();
-	registerPortlessAliases(1);
 	const env: Record<string, string> = {
 		...process.env,
 		CAPY_DEV: "1",
@@ -215,8 +209,6 @@ export function cmdCapyStop(): void {
 	if (tmuxSessionExists(CAPY_SESSION)) {
 		sh("tmux", ["kill-session", "-t", CAPY_SESSION]);
 	}
-	stopEmulateAndPortless();
-	unregisterPortlessAliases(1);
 }
 
 export async function cmdCapyRestart(): Promise<void> {
