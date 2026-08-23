@@ -4,10 +4,7 @@ import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { notNullish } from "@/utils/genUtils";
 
 export const useAutumnFlags = () => {
-	const isCapyDev = import.meta.env.VITE_CAPY_DEV === "1";
-	const { data: customer } = useCustomer({
-		queryOptions: { enabled: !isCapyDev },
-	});
+	const { data: customer } = useCustomer();
 
 	const [flags, setFlags] = useLocalStorage("autumn.flags", {
 		pkey: false,
