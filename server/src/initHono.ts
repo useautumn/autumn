@@ -16,6 +16,7 @@ import { replicaDbMiddleware } from "./honoMiddlewares/replicaDbMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
 import { handleReadyCheck } from "./honoUtils/handleReadyCheck.js";
+import { handleCapyLogin } from "./internal/auth/handleCapyLogin.js";
 import { handleListAuthOrganizations } from "./internal/auth/handleListAuthOrganizations.js";
 import { oauthRouter } from "./internal/auth/oauth/oauthRouter.js";
 import { withTrustedSsoOrigin } from "./internal/auth/sso/ssoTrustedOrigins.js";
@@ -27,7 +28,7 @@ import { apiRouter } from "./routers/apiRouter.js";
 import { createChatProxyRouter } from "./routers/chatProxyRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
 import { publicRouter } from "./routers/publicRouter.js";
-import { auth } from "./utils/auth.js";
+import { auth, isCapyDev } from "./utils/auth.js";
 import { isAllowedOrigin } from "./utils/corsOrigins.js";
 
 const ALLOWED_HEADERS = [
@@ -88,6 +89,7 @@ export const createHonoApp = () => {
 
 	// Better Auth's joined Drizzle query defaults to 100 memberships.
 	app.get("/api/auth/organization/list", handleListAuthOrganizations);
+	if (isCapyDev) app.get("/api/auth/capy-login", handleCapyLogin);
 
 	app.on(["POST", "GET"], ["/api/auth/*"], async (c) => {
 		if (FACADE_ONLY_SSO_PATHS.has(c.req.path)) {
