@@ -25,6 +25,7 @@ import { Autumn } from "autumn-js";
 import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { resolvedProductIdsForColumn } from "./resolvedProductIdsSql.js";
 
 export const processInvoice = ({
 	invoice,
@@ -39,8 +40,10 @@ export const processInvoice = ({
 	const isStripe = processorType === ProcessorType.Stripe;
 
 	return {
-		// product_ids: invoice.product_ids,
-		plan_ids: invoice.product_ids,
+		// Current ids from the hydration query; snapshot if nothing resolved.
+		plan_ids: invoice.resolved_product_ids?.length
+			? invoice.resolved_product_ids
+			: (invoice.product_ids ?? []),
 		stripe_id: invoice.stripe_id,
 		processor_type: processorType,
 		status: invoice.status ?? "",
@@ -161,6 +164,9 @@ export class InvoiceService {
 		const results = await ctx.db
 			.select({
 				invoice: invoices,
+				resolved_product_ids: resolvedProductIdsForColumn({
+					internalProductIds: invoices.internal_product_ids,
+				}),
 				customer_id: customers.id,
 				entity_id: entities.id,
 			})
@@ -175,11 +181,16 @@ export class InvoiceService {
 			.limit(query.limit + 1);
 
 		const hasMore = results.length > query.limit;
-		const rows = (hasMore ? results.slice(0, query.limit) : results) as {
-			invoice: Invoice;
-			customer_id: string | null;
-			entity_id: string | null;
-		}[];
+		const rows = (hasMore ? results.slice(0, query.limit) : results).map(
+			(row) => ({
+				invoice: {
+					...row.invoice,
+					resolved_product_ids: row.resolved_product_ids,
+				} as Invoice,
+				customer_id: row.customer_id,
+				entity_id: row.entity_id,
+			}),
+		);
 
 		const last = rows[rows.length - 1];
 		const nextCursor =
@@ -247,18 +258,31 @@ export class InvoiceService {
 		internalEntityId?: string;
 		limit?: number;
 	}) {
-		return (await db.query.invoices.findMany({
-			where: and(
-				eq(invoices.internal_customer_id, internalCustomerId),
-				internalEntityId
-					? or(
-							eq(invoices.internal_entity_id, internalEntityId),
-							isNull(invoices.internal_entity_id),
-						)
-					: undefined,
-			),
-			orderBy: [desc(invoices.created_at), desc(invoices.id)],
-			limit,
+		const rows = await db
+			.select({
+				invoice: invoices,
+				resolved_product_ids: resolvedProductIdsForColumn({
+					internalProductIds: invoices.internal_product_ids,
+				}),
+			})
+			.from(invoices)
+			.where(
+				and(
+					eq(invoices.internal_customer_id, internalCustomerId),
+					internalEntityId
+						? or(
+								eq(invoices.internal_entity_id, internalEntityId),
+								isNull(invoices.internal_entity_id),
+							)
+						: undefined,
+				),
+			)
+			.orderBy(desc(invoices.created_at), desc(invoices.id))
+			.limit(limit);
+
+		return rows.map((row) => ({
+			...row.invoice,
+			resolved_product_ids: row.resolved_product_ids,
 		})) as Invoice[];
 	}
 

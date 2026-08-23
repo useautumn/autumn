@@ -21,9 +21,8 @@ export const logAutumnBillingPlan = ({
 	});
 
 	const formatCustomerProduct = (cp: {
-		product_id: string;
-		product: { name: string };
-	}) => `${cp.product.name} (${cp.product_id})`;
+		product: { id: string; name: string };
+	}) => `${cp.product.name} (${cp.product.id})`;
 
 	addToExtraLogs({
 		ctx,
