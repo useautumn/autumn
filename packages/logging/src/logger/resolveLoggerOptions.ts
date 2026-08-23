@@ -2,6 +2,7 @@ import type {
 	CreateLoggerParams,
 	LoggerLevel,
 	LoggerOutput,
+	LoggerPreset,
 	ResolvedLoggerOptions,
 } from "../types.js";
 
@@ -28,6 +29,21 @@ const parseOutputs = (
 	return undefined;
 };
 
+// A FireLens sidecar tails the task's stdout, so shipping to Axiom in-process
+// would double-deliver every line.
+const shipsThroughFireLensSidecar = ({
+	env,
+	isDevOrTest,
+	preset,
+}: {
+	env: NodeJS.ProcessEnv;
+	isDevOrTest: boolean;
+	preset: LoggerPreset;
+}) =>
+	preset === "firelens" &&
+	!isDevOrTest &&
+	Boolean(env.ECS_CONTAINER_METADATA_URI_V4);
+
 export const resolveDeployment = (env: NodeJS.ProcessEnv = process.env) => {
 	if (env.NODE_ENV === "development") return "dev";
 	if (env.NODE_ENV === "test") return "test";
@@ -51,6 +67,8 @@ export const resolveLoggerOptions = ({
 		else if (preset === "axiom-only") outputs = ["axiom"];
 		else if (preset === "dual")
 			outputs = [isDevOrTest ? "console-pretty" : "console-json", "axiom"];
+		else if (shipsThroughFireLensSidecar({ env, isDevOrTest, preset }))
+			outputs = ["console-json"];
 		else if (isDevOrTest) outputs = ["console-pretty"];
 		else outputs = ["axiom"];
 	}

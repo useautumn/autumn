@@ -21,6 +21,7 @@
 		"workers": "bun $BUN_PROF_FLAGS src/workers.ts",
 		"cron": "bun src/cron.ts",
 		"leaf": "bun ../apps/leaf/src/index.ts",
+		"ledger": "bun ../apps/ledger/src/index.ts",
 		"check": "bun src/check.ts",
 		"t": "cd ../ && bun t $* && cd ./server",
 		"parallel-tests": "ENV_FILE=.env infisical run --env=dev --recursive -- bun tests/testRunner/runParallelGroupsV3.ts",

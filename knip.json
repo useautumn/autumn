@@ -141,6 +141,29 @@
 				"agent/**/*.ts"
 			]
 		},
+		"apps/ledger": {
+			"entry": [
+				"src/index.ts",
+				"client/index.ts",
+				"tests/**/*.ts"
+			],
+			"project": [
+				"src/**/*.ts",
+				"client/**/*.ts",
+				"tests/**/*.ts"
+			],
+			"ignore": [
+				"src/external/redpanda/createRedpandaJournal.ts",
+				"src/internal/journal/types/journalContext.ts",
+				"src/internal/subjects/actions/importSubject.ts",
+				"src/internal/subjects/types/subjectContext.ts",
+				"src/lib/getPostgres.ts",
+				"src/sqlite/customerEntitlements/repos/index.ts",
+				"src/sqlite/customerEntitlements/repos/insertMany.ts",
+				"src/sqlite/customerProducts/repos/index.ts",
+				"src/sqlite/customerProducts/repos/insertMany.ts"
+			]
+		},
 		"packages/agent-docs": {
 			"entry": [
 				"**/*.test.ts",
