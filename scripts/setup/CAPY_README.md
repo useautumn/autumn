@@ -13,7 +13,7 @@ Configure this repository under **Settings → Project → Dev environment**:
 | Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies, refreshes repo-pinned AI skills in `.agents/skills/`, installs `neonctl` and the pinned Stripe CLI, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
 | Update after checkout | `bash scripts/setup/capy-init.sh` | re-runs the same deterministic refresh so reused or snapshotted VMs pick up pinned skills and tooling after checkout |
 | Startup | `bash scripts/setup/capy-startup.sh` | idempotently starts local infrastructure, provisions or resumes the VM's Neon branch, applies pending migrations and SQL functions, and writes local env files |
-| App | `bun capy` | runs Startup if needed, ensures emulate/portless are live, and starts the app in a detached tmux session |
+| App | `bun capy` | runs Startup if needed and starts the app in a detached tmux session |
 
 Initialize does not start services or create per-VM state, so it is safe to run
 during a snapshot build. Startup is blocking but bounded: its containers detach,

@@ -1,16 +1,16 @@
 #!/usr/bin/env node
-import chalk from "chalk";
-import inquirer from "inquirer";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import chalk from "chalk";
+import inquirer from "inquirer";
+import { PROJECT_ROOT } from "../dw/constants.js";
+import { mergeEnvFile } from "../dw/helpers/env-files.js";
 import {
 	createTestOrg,
 	TEST_ORG_CONFIG,
 	TEST_ORG_PUBLISHABLE_KEY,
 } from "../setupTestUtils/createTestOrg.js";
 import { ensureTestOrgSecretKey } from "../setupTestUtils/ensureTestOrgSecretKey.js";
-import { mergeEnvFile } from "../dw/helpers/env-files.js";
-import { PROJECT_ROOT } from "../dw/constants.js";
 
 // Worktree .env.local loading happens in scripts/preload-env.ts (auto-run by
 // Bun via bunfig.toml's `preload`). DATABASE_URL flips to the worktree branch
@@ -96,9 +96,8 @@ async function runEnsureKey(): Promise<void> {
 	);
 
 	const { db } = await import("@server/db/initDrizzle.js");
-	const { key } = await ensureTestOrgSecretKey({ db });
-	// Never create .env.local here — only refresh keys if dw/tw already made one.
-	persistTestKeysToEnvLocal({ secretKey: key, allowCreate: false });
+	const { key, generated } = await ensureTestOrgSecretKey({ db });
+	persistTestKeysToEnvLocal({ secretKey: key, allowCreate: generated });
 
 	console.log(chalk.greenBright("\n✅ ensure-test-org-key complete"));
 	console.log(chalk.whiteBright(`  key:  ${key}\n`));
@@ -149,15 +148,7 @@ async function runEnsure(): Promise<void> {
 		await runFullSetup({ yes: true });
 		return;
 	}
-	if (process.env.UNIT_TEST_AUTUMN_SECRET_KEY?.trim()) {
-		await runEnsureKey();
-		return;
-	}
-	console.log(
-		chalk.cyan(
-			`[setup-test] ${TEST_ORG_CONFIG.slug} already present; UNIT_TEST_AUTUMN_SECRET_KEY unset — skipping key ensure`,
-		),
-	);
+	await runEnsureKey();
 }
 
 async function main() {
