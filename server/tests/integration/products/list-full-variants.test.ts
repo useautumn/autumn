@@ -37,7 +37,7 @@ test.concurrent(
 					{
 						plan_id: variantId,
 						name: "Pro v2",
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});

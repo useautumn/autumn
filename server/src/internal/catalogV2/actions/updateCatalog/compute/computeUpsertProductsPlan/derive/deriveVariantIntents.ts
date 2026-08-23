@@ -11,6 +11,7 @@ import type {
  * Nested bases emit nothing.
  */
 export const deriveVariantIntents = ({
+	intent,
 	upsert,
 	projectedProductStatesContext,
 }: {
@@ -21,6 +22,7 @@ export const deriveVariantIntents = ({
 	if (upsert.row.nextFullProduct.base_internal_product_id) return [];
 
 	return computeVariantPlan({
+		intent,
 		upsert,
 		projectedProductStatesContext,
 	});

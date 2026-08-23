@@ -90,7 +90,7 @@ const setupVersionedPlan = async (testId: string) => {
 				plan_id: base.id,
 				name: "V2",
 				items: [monthlyMessagesItem(200)],
-				versioning: "new_version",
+				versioning: "new_version", active: true,
 			},
 		],
 	});

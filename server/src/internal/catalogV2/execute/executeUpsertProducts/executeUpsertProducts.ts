@@ -8,10 +8,11 @@ import { deleteClaimedPlanAliases } from "@/internal/catalogV2/execute/deleteCla
 import { ProductService } from "@/internal/products/ProductService.js";
 import { applyEntitlementPricesPlan } from "./applyEntitlementPricesPlan";
 import { applyFreeTrialPlan } from "./applyFreeTrialPlan";
-import { executePlanLicensesPlan } from "./executePlanLicensesPlan";
 import { applyProductDetailsUpdate } from "./applyProductDetailsUpdate";
 import { clearDefaultFlagFromOtherVersions } from "./clearDefaultFlagFromOtherVersions";
+import { executePlanLicensesPlan } from "./executePlanLicensesPlan";
 import { syncPlanMetadataAcrossVersions } from "./syncPlanMetadataAcrossVersions";
+import { vacateRenamedVersionSlugs } from "./vacateRenamedVersionSlugs";
 
 const executeUpsertProduct = async ({
 	ctx,
@@ -59,21 +60,29 @@ export const executeUpsertProducts = async ({
 	ctx: AutumnContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 }): Promise<CatalogAppliedResult[]> => {
-	const results: CatalogAppliedResult[] = [];
+	return await ctx.db.transaction(async (tx) => {
+		const txCtx = { ...ctx, db: tx as unknown as DrizzleCli };
+		const results: CatalogAppliedResult[] = [];
 
-	// Pass 1: write product rows (details, items, trial).
-	for (const upsert of updateCatalogPlan.upsertProducts) {
-		await executeUpsertProduct({ ctx, upsert });
-		results.push({
-			id: upsert.row.planId,
-			action: upsertOpToAction({ op: upsert.row.op }),
+		await vacateRenamedVersionSlugs({
+			ctx: txCtx,
+			upsertProducts: updateCatalogPlan.upsertProducts,
 		});
-	}
 
-	// Pass 2: replay plan_license writes after every child row exists.
-	for (const upsert of updateCatalogPlan.upsertProducts) {
-		await executePlanLicensesPlan({ ctx, upsert });
-	}
+		// Pass 1: write product rows (details, items, trial).
+		for (const upsert of updateCatalogPlan.upsertProducts) {
+			await executeUpsertProduct({ ctx: txCtx, upsert });
+			results.push({
+				id: upsert.row.planId,
+				action: upsertOpToAction({ op: upsert.row.op }),
+			});
+		}
 
-	return results;
+		// Pass 2: replay plan_license writes after every child row exists.
+		for (const upsert of updateCatalogPlan.upsertProducts) {
+			await executePlanLicensesPlan({ ctx: txCtx, upsert });
+		}
+
+		return results;
+	});
 };

@@ -77,12 +77,16 @@ describe("variant preview + params", () => {
 		const parsed = CatalogVariantPreviewSchema.parse({
 			plan_id: "team-eu",
 			version: 2,
+			version_slug: "v2",
+			active: true,
 			state: { has_customers: false, will_archive: false },
 			variant_action: "propagated",
 			sibling_versions: [
 				{
 					plan_id: "team-eu",
 					version: 1,
+					version_slug: "v1",
+					active: false,
 					state: { has_customers: false, will_archive: false },
 					variant_action: "unchanged",
 				},
@@ -94,6 +98,8 @@ describe("variant preview + params", () => {
 		const plan = CatalogPlanUpdatePreviewSchema.parse({
 			plan_id: "team",
 			version: 1,
+			version_slug: "v1",
+			active: true,
 			action: "update",
 			state: { has_customers: false, will_archive: false },
 			versioning: null,

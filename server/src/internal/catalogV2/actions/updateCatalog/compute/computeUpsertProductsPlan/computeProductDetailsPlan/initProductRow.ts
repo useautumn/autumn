@@ -34,15 +34,16 @@ export const initProductRow = ({
 			planParams,
 			current: base,
 		});
+		const willBeActive = planParams.active === true;
 		return {
 			...base,
 			...patch,
 			version,
-			// Mint fresh version identity — the base's slug/active must not ride
-			// along on the spread (a cloned slug would collide with the base row
-			// on unique_product_version_slug).
-			version_slug: `v${version}`,
-			active: true,
+			// Fresh slug/active — cloning the base's would collide on
+			// unique_product_version_slug / unique_active_product.
+			version_slug: planParams.new_version_slug ?? `v${version}`,
+			active: willBeActive,
+			is_default: willBeActive ? (patch.is_default ?? base.is_default) : false,
 			internal_id: generateId("prod"),
 			created_at: Date.now(),
 			group: (patch.group ?? base.group) || "",
@@ -60,8 +61,8 @@ export const initProductRow = ({
 		is_add_on: patch.is_add_on ?? false,
 		is_default: patch.is_default ?? false,
 		version,
-		version_slug: `v${version}`,
-		active: true,
+		version_slug: planParams.new_version_slug ?? `v${version}`,
+		active: planParams.active !== false,
 		group: patch.group || "",
 
 		env: ctx.env,

@@ -12,9 +12,11 @@ import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/ut
 const licenseParentMintIntent = ({
 	planId,
 	productStatesContext,
+	sourceActive,
 }: {
 	planId: string;
 	productStatesContext: ProductStatesContext;
+	sourceActive: boolean;
 }): ProductUpsertIntent | undefined => {
 	const active = activeFullProductForPlan({ planId, productStatesContext });
 	if (!active) return undefined;
@@ -32,6 +34,7 @@ const licenseParentMintIntent = ({
 			plan_id: planId,
 			version,
 			versioning: "new_version",
+			...(sourceActive ? { active: true } : {}),
 		},
 		source: "license_adopt",
 	};
@@ -39,9 +42,11 @@ const licenseParentMintIntent = ({
 
 /** `propagate.license_parents` `new_version` → mint the parent. Direct claims win. */
 export const deriveLicenseParentMintIntents = ({
+	intent,
 	upsert,
 	productStatesContext,
 }: {
+	intent: ProductUpsertIntent;
 	upsert: UpsertProductPlan;
 	productStatesContext: ProductStatesContext;
 }): ProductUpsertIntent[] => {
@@ -55,6 +60,7 @@ export const deriveLicenseParentMintIntents = ({
 		const mintIntent = licenseParentMintIntent({
 			planId: target.plan_id,
 			productStatesContext,
+			sourceActive: intent.planParams.active === true,
 		});
 		if (!mintIntent) continue;
 

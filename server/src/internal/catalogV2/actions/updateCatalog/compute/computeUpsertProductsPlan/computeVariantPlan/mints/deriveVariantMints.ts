@@ -59,9 +59,11 @@ const mintablePlanIds = ({
 
 /** Parent `new_version` → mint max+1 when the active row has customers. */
 export const deriveVariantMints = ({
+	intent,
 	upsert,
 	projectedProductStatesContext,
 }: {
+	intent: ProductUpsertIntent;
 	upsert: UpsertProductPlan;
 	projectedProductStatesContext: ProductStatesContext;
 }): ProductUpsertIntent[] => {
@@ -126,6 +128,7 @@ export const deriveVariantMints = ({
 				plan_id: planId,
 				version,
 				versioning: "new_version",
+				...(intent.planParams.active === true ? { active: true } : {}),
 				...settingsPatch,
 			},
 			source: "variant_propagation",

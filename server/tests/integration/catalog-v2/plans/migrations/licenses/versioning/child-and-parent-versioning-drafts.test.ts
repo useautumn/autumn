@@ -291,7 +291,7 @@ test.concurrent(
 						{
 							plan_id: childId,
 							items: [messagesItem(200)],
-							versioning: "new_version",
+							versioning: "new_version", active: true,
 							propagate: {
 								license_parents: [
 									{ plan_id: teamId, versioning: "all_versions" },
@@ -342,7 +342,7 @@ test.concurrent(
 						},
 						{
 							plan_id: teamId,
-							versioning: "new_version",
+							versioning: "new_version", active: true,
 							name: "Team v2",
 						},
 					],

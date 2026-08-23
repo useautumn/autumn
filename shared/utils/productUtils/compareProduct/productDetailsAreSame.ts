@@ -14,6 +14,7 @@ export const PRODUCT_DETAIL_KEYS = [
 	"is_add_on",
 	"is_default",
 	"archived",
+	"version_slug",
 	"config",
 	"metadata",
 	"auto_topups",
@@ -87,6 +88,7 @@ export const productDetailComparators: {
 	is_add_on: strictEqual(),
 	is_default: strictEqual(),
 	archived: strictEqual(),
+	version_slug: ({ left, right }) => (left ?? null) === (right ?? null),
 	config: ({ left, right }) =>
 		compareConfig({ newConfig: left, curConfig: right }),
 	metadata: ({ left, right }) =>

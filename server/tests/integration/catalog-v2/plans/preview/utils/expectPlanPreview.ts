@@ -62,6 +62,12 @@ type ExpectedPlanPreviewRow = {
 	currentVersion?: number;
 	action?: PlanPreviewRow["action"];
 	name?: string;
+	versionSlug?: string;
+	/** Pass `null` to assert `new_version_slug` is omitted. */
+	newVersionSlug?: string | null;
+	/** Pass `null` to assert `new_plan_id` is omitted. */
+	newPlanId?: string | null;
+	active?: boolean;
 	hasCustomers?: boolean;
 	customerCount?: number;
 	willArchive?: boolean;
@@ -285,6 +291,26 @@ export const expectPlanPreviewRowCorrect = ({
 		} else {
 			expect(row.alias_replacement).toEqual(expected.aliasReplacement);
 		}
+	}
+	if (expected.versionSlug !== undefined) {
+		expect(row.version_slug).toBe(expected.versionSlug);
+	}
+	if (expected.newVersionSlug !== undefined) {
+		if (expected.newVersionSlug === null) {
+			expect(row.new_version_slug).toBeUndefined();
+		} else {
+			expect(row.new_version_slug).toBe(expected.newVersionSlug);
+		}
+	}
+	if (expected.newPlanId !== undefined) {
+		if (expected.newPlanId === null) {
+			expect(row.new_plan_id).toBeUndefined();
+		} else {
+			expect(row.new_plan_id).toBe(expected.newPlanId);
+		}
+	}
+	if (expected.active !== undefined) {
+		expect(row.active).toBe(expected.active);
 	}
 	if (expected.hasCustomers !== undefined) {
 		expect(row.state.has_customers).toBe(expected.hasCustomers);

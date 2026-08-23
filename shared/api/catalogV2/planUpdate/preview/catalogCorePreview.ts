@@ -17,7 +17,20 @@ export const CatalogPreviewStateSchema = z.object({
 /** Shared kernel for a plan row in catalog preview (direct, sibling, or license parent). */
 export const CatalogCorePreviewSchema = z.object({
 	plan_id: z.string(),
+	new_plan_id: z.string().optional().meta({
+		description: "Present only when this row's public plan id changes.",
+	}),
 	version: z.number().int().min(1),
+	version_slug: z.string().meta({
+		description:
+			"Current slug of this row. On mint, the default `v{n}` it would receive.",
+	}),
+	new_version_slug: z.string().optional().meta({
+		description: "Present only when this row's version slug changes.",
+	}),
+	active: z.boolean().meta({
+		description: "Whether this row holds the active pointer after apply.",
+	}),
 	state: CatalogPreviewStateSchema,
 	plan_change: PlanChangeV0Schema.nullish().meta({
 		description:

@@ -112,7 +112,7 @@ test.concurrent(
 				plans: [{ plan_id: planId, name: "Historical" }],
 			});
 			await autumnV2_3.catalogV2.update({
-				plans: [{ plan_id: planId, versioning: "new_version" }],
+				plans: [{ plan_id: planId, versioning: "new_version", active: true }],
 			});
 
 			const params = { remove_plans: [{ plan_id: planId, version: 1 }] };

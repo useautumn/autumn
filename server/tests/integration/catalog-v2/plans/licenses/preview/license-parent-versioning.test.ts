@@ -55,7 +55,7 @@ test.concurrent(
 								items: [messagesItem(200)],
 								propagate: {
 									license_parents: [
-										{ plan_id: parentId, versioning: "new_version" },
+										{ plan_id: parentId, versioning: "new_version", active: true },
 									],
 								},
 							},
@@ -122,7 +122,7 @@ test.concurrent(
 								items: [messagesItem(200)],
 								propagate: {
 									license_parents: [
-										{ plan_id: parentId, versioning: "new_version" },
+										{ plan_id: parentId, versioning: "new_version", active: true },
 									],
 								},
 							},

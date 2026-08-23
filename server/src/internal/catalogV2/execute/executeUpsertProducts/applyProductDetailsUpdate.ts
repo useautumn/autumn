@@ -34,6 +34,7 @@ export const applyProductDetailsUpdate = async ({
 			is_add_on: product.is_add_on,
 			is_default: product.is_default,
 			archived: product.archived,
+			version_slug: product.version_slug,
 			config: product.config,
 			metadata: product.metadata,
 			auto_topups: product.auto_topups,

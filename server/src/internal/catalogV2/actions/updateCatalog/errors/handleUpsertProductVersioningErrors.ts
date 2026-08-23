@@ -6,19 +6,22 @@ import {
 } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
+import { versionForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/versionForSlug";
 
 const rejectStrategyPlusExplicitVersion = ({
 	planId,
 	versioning,
 	version,
+	versionSlug,
 }: {
 	planId: string;
 	versioning: CatalogPlanVersioningStrategy | undefined;
 	version: number | undefined;
+	versionSlug?: string;
 }): void => {
 	if (
 		(versioning === "all_versions" || versioning === "new_version") &&
-		version !== undefined
+		(version !== undefined || versionSlug !== undefined)
 	) {
 		throw new RecaseError({
 			message: `versioning "${versioning}" cannot be combined with an explicit version (plan_id=${planId}). Omit version to target latest.`,
@@ -26,6 +29,26 @@ const rejectStrategyPlusExplicitVersion = ({
 			statusCode: 400,
 		});
 	}
+};
+
+const claimPinnedVersion = ({
+	planId,
+	version,
+	seenPinned,
+}: {
+	planId: string;
+	version: number;
+	seenPinned: Set<string>;
+}): void => {
+	const pinKey = `${planId}@${version}`;
+	if (seenPinned.has(pinKey)) {
+		throw new RecaseError({
+			message: `Duplicate plan entry for plan_id=${planId} version=${version}`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+	seenPinned.add(pinKey);
 };
 
 const rejectNewVersionOnMissingPlan = ({
@@ -63,6 +86,7 @@ export const handleUpsertProductVersioningErrors = ({
 			planId: planParams.plan_id,
 			versioning: planParams.versioning,
 			version: planParams.version,
+			versionSlug: planParams.version_slug,
 		});
 
 		const existingVersions =
@@ -126,15 +150,11 @@ export const handleUpsertProductVersioningErrors = ({
 		}
 
 		if (planParams.version !== undefined) {
-			const pinKey = `${planParams.plan_id}@${planParams.version}`;
-			if (seenPinned.has(pinKey)) {
-				throw new RecaseError({
-					message: `Duplicate plan entry for plan_id=${planParams.plan_id} version=${planParams.version}`,
-					code: ErrCode.InvalidRequest,
-					statusCode: 400,
-				});
-			}
-			seenPinned.add(pinKey);
+			claimPinnedVersion({
+				planId: planParams.plan_id,
+				version: planParams.version,
+				seenPinned,
+			});
 
 			const maxVersion = maxVersionForPlan({
 				planId: planParams.plan_id,
@@ -147,6 +167,24 @@ export const handleUpsertProductVersioningErrors = ({
 					statusCode: 400,
 				});
 			}
+		} else if (planParams.version_slug !== undefined) {
+			const version = versionForSlug({
+				planId: planParams.plan_id,
+				versionSlug: planParams.version_slug,
+				productStatesContext,
+			});
+			if (version === undefined) {
+				throw new RecaseError({
+					message: `Unknown version_slug "${planParams.version_slug}" for plan_id=${planParams.plan_id}`,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+			claimPinnedVersion({
+				planId: planParams.plan_id,
+				version,
+				seenPinned,
+			});
 		} else {
 			if (unpinnedPlanIds.has(planParams.plan_id)) {
 				throw new RecaseError({

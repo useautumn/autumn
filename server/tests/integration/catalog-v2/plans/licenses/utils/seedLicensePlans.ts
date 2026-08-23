@@ -141,7 +141,7 @@ export const seedParentVersionWithLicense = async ({
 		plans: [
 			{
 				plan_id: parentId,
-				versioning: "new_version",
+				versioning: "new_version", active: true,
 				licenses: [{ license_plan_id: childId, included }],
 			},
 		],
@@ -235,6 +235,7 @@ export const bumpChild = async ({
 				plan_id: childId,
 				items: items ?? [messagesItem(included)],
 				...(versioning ? { versioning } : {}),
+				...(versioning === "new_version" ? { active: true } : {}),
 				...(propagate ? { propagate } : {}),
 			},
 			...(parentPlans ?? []),

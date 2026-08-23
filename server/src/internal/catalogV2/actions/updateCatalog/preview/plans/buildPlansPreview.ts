@@ -6,6 +6,7 @@ import { buildRemovePlansPreview } from "@/internal/catalogV2/actions/updateCata
 import { aliasReplacementForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/aliasReplacementForPlan";
 import { buildVariantsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildVariantsPreview";
 import { buildPlanVersioning } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildPlanVersioning";
+import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 import { buildSiblingVersionsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildSiblingVersionsPreview";
 import { buildPlanUsage } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
@@ -73,8 +74,12 @@ export const buildPlansPreview = ({
 
 		return [
 			{
-				plan_id: upsert.row.planId,
-				version: upsert.row.version,
+				...catalogRowIdentity({
+					planId: upsert.row.planId,
+					version: upsert.row.version,
+					current: upsert.row.currentFullProduct,
+					next: upsert.row.nextFullProduct,
+				}),
 				name: upsert.row.nextFullProduct.name,
 				action: upsertOpToAction({ op: upsert.row.op }),
 				state: {

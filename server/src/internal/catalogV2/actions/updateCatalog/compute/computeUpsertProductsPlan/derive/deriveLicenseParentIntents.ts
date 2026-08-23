@@ -8,6 +8,7 @@ import type {
 
 /** Links-only pin for parent versions not already in the batch. Skip all_versions plans — siblings cover them. */
 export const deriveLicenseParentIntents = ({
+	intent,
 	upsert,
 	projectedProductStatesContext,
 	allVersionsPlanIds,
@@ -26,6 +27,7 @@ export const deriveLicenseParentIntents = ({
 
 	return [
 		...deriveLicenseParentMintIntents({
+			intent,
 			upsert,
 			productStatesContext: projectedProductStatesContext,
 		}),

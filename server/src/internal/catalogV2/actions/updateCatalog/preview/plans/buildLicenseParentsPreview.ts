@@ -8,6 +8,7 @@ import type {
 } from "@autumn/shared";
 import { productToProductKey } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
+import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 import { childPropagatesToParent } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
 import { withCatalogConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withCatalogConflicts";
 import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
@@ -202,8 +203,15 @@ const buildParentVersionPreview = ({
 	});
 	const planChange = parentPlanChange({ parentUpsert });
 	const preview = {
-		plan_id: stateKey.planId,
-		version: previewVersion,
+		...catalogRowIdentity({
+			planId: stateKey.planId,
+			version: previewVersion,
+			current:
+				parentUpsert?.row.op === "create"
+					? null
+					: (parentUpsert?.row.currentFullProduct ?? parentProduct),
+			next: parentUpsert?.row.nextFullProduct ?? parentProduct,
+		}),
 		name: parentProduct.name,
 		state: {
 			has_customers: parentState.customerUsage.hasVersionableCustomerProducts,

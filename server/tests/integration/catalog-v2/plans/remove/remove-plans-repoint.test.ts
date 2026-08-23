@@ -38,7 +38,7 @@ const seedBaseV2WithVariant = async ({
 }) => {
 	await seedBaseWithVariant({ autumn, baseId, variantId });
 	await autumn.catalogV2.update({
-		plans: [{ plan_id: baseId, versioning: "new_version" }],
+		plans: [{ plan_id: baseId, versioning: "new_version", active: true }],
 	});
 };
 

@@ -154,7 +154,7 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
-							versioning: "new_version",
+							versioning: "new_version", active: true,
 							propagate: { variants: [{ plan_id: variantId }] },
 						},
 					],
@@ -198,7 +198,7 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
-							versioning: "new_version",
+							versioning: "new_version", active: true,
 							propagate: { variants: [{ plan_id: variantId }] },
 						},
 					],
@@ -280,7 +280,7 @@ test.concurrent(
 					variantId,
 				});
 				await autumnV2_3.catalogV2.update({
-					plans: [{ plan_id: baseId, versioning: "new_version" }],
+					plans: [{ plan_id: baseId, versioning: "new_version", active: true }],
 				});
 				await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
 				await autumnV2_3.catalogV2.update({

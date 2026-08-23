@@ -96,7 +96,7 @@ test.concurrent(
 					{
 						plan_id: planA,
 						name: "A V3",
-						versioning: "new_version" as const,
+						versioning: "new_version", active: true as const,
 					},
 					{
 						plan_id: planB,
@@ -214,7 +214,7 @@ test.concurrent(
 						{
 							plan_id: planA,
 							name: "A V3",
-							versioning: "new_version",
+							versioning: "new_version", active: true,
 						},
 						{
 							plan_id: planB,

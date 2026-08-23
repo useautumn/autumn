@@ -76,7 +76,7 @@ const setupVersionedPlan = async (testId: string) => {
 			{
 				plan_id: base.id,
 				items: [monthlyMessagesItem(500)],
-				versioning: "new_version",
+				versioning: "new_version", active: true,
 			},
 		],
 	});
@@ -101,7 +101,7 @@ test.concurrent(
 				{
 					plan_id: base.id,
 					items: [monthlyMessagesItem(500)],
-					versioning: "new_version",
+					versioning: "new_version", active: true,
 				},
 			],
 		});

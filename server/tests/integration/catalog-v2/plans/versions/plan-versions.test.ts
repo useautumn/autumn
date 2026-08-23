@@ -577,7 +577,7 @@ test.concurrent(
 								reset: { interval: ResetInterval.Month },
 							},
 						],
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});

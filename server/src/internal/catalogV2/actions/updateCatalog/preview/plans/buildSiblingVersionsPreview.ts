@@ -1,6 +1,7 @@
 import type { CatalogSiblingVersionPreview, FullProduct } from "@autumn/shared";
 import { productToProductKey } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
+import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 import { withCatalogConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withCatalogConflicts";
 import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
 import type {
@@ -33,8 +34,12 @@ const selectedSiblingFromUpsert = ({
 
 	return withCatalogConflicts({
 		preview: {
-			plan_id: sibling.row.planId,
-			version: sibling.row.version,
+			...catalogRowIdentity({
+				planId: sibling.row.planId,
+				version: sibling.row.version,
+				current: sibling.row.currentFullProduct,
+				next: sibling.row.nextFullProduct,
+			}),
 			state: {
 				has_customers: sibling.state.hasCustomers,
 				will_archive: false,
@@ -67,8 +72,12 @@ const unselectedSiblingFromVersion = ({
 }): CatalogSiblingVersionPreview =>
 	withCatalogConflicts({
 		preview: {
-			plan_id: product.id,
-			version: product.version,
+			...catalogRowIdentity({
+				planId: product.id,
+				version: product.version,
+				current: product,
+				next: product,
+			}),
 			state: {
 				has_customers: productKeyToState({
 					productKey: productToProductKey({ product }),

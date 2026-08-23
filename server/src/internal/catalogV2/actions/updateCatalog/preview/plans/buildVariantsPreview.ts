@@ -7,6 +7,7 @@ import type {
 	FullProduct,
 } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
+import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 import { latestVariantsOfBase } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/variantPlanUtils";
 import { withVariantConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withVariantConflicts";
 import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
@@ -211,8 +212,12 @@ const siblingVersionsForVariant = ({
 			});
 			const planChange = variantPlanChange({ variantUpsert: siblingUpsert });
 			const preview: CatalogVariantVersionPreview = {
-				plan_id: product.id,
-				version: product.version,
+				...catalogRowIdentity({
+					planId: product.id,
+					version: product.version,
+					current: product,
+					next: siblingUpsert?.row.nextFullProduct ?? product,
+				}),
 				state: variantPreviewState({
 					planId: product.id,
 					version: product.version,
@@ -293,8 +298,12 @@ export const buildVariantsPreview = ({
 				base: directUpsert,
 			});
 			const preview = {
-				plan_id: variant.id,
-				version: previewVersion,
+				...catalogRowIdentity({
+					planId: variant.id,
+					version: previewVersion,
+					current: mintUpsert ? null : variant,
+					next: variantUpsert?.row.nextFullProduct ?? variant,
+				}),
 				versioning: variantVersioning({
 					variant,
 					mintUpsert,
