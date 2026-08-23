@@ -1,5 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { SqliteDb } from "../../../sqlite/createSqliteDb.js";
+import type { SqliteDb } from "../../../sqlite/common/createSqliteDb.js";
 import type { Journal } from "../../journal/types/journal.js";
 
 export type ShardContext = {

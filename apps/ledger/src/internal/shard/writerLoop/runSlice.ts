@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { CommandResult } from "../../../../client/types/command.js";
-import { serialRepo } from "../../../sqlite/serials/repos/index.js";
+import { serialStore } from "../../../sqlite/serials/store/serialStore.js";
 import type { QueuedCommand } from "../commandQueue/types/queuedCommand.js";
 import type { CommandRunner } from "../types/commandRunner.js";
 import type { ShardContext } from "../types/shardContext.js";
@@ -28,7 +28,7 @@ const stageCommand = ({
 	try {
 		const outcome = runCommand({ ctx, command: item.command });
 		if (isSerializable({ result: outcome.result })) {
-			serialRepo.putSerial({
+			serialStore.putSerial({
 				ctx,
 				commandId: item.command.id,
 				result: outcome.result,
@@ -68,7 +68,7 @@ export const runSlice = ({
 		if (isOverBudget({ startedAt })) break;
 
 		const item = arrived[index];
-		const stored = serialRepo.getSerial({ ctx, commandId: item.command.id });
+		const stored = serialStore.getSerial({ ctx, commandId: item.command.id });
 		if (stored) {
 			item.resolve(stored);
 			continue;
