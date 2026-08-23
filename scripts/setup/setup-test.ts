@@ -99,8 +99,7 @@ async function runEnsureKey(): Promise<void> {
 	const { key, generated } = await ensureTestOrgSecretKey({ db });
 	persistTestKeysToEnvLocal({ secretKey: key, allowCreate: generated });
 
-	console.log(chalk.greenBright("\n✅ ensure-test-org-key complete"));
-	console.log(chalk.whiteBright(`  key:  ${key}\n`));
+	console.log(chalk.greenBright("\n✅ ensure-test-org-key complete\n"));
 }
 
 async function runFullSetup({ yes }: { yes: boolean }): Promise<void> {
@@ -132,8 +131,7 @@ async function runFullSetup({ yes }: { yes: boolean }): Promise<void> {
 	console.log(chalk.greenBright("\n✅ setup-test complete"));
 	console.log(chalk.cyan("Org:"));
 	console.log(chalk.whiteBright(`  slug: ${TEST_ORG_CONFIG.slug}`));
-	console.log(chalk.whiteBright(`  id:   ${TEST_ORG_CONFIG.id}`));
-	console.log(chalk.whiteBright(`  key:  ${autumnSecretKey}\n`));
+	console.log(chalk.whiteBright(`  id:   ${TEST_ORG_CONFIG.id}\n`));
 }
 
 /** Create unit-test-org if missing; if present, only ensure the API key. */
