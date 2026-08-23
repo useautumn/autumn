@@ -148,15 +148,7 @@ async function runEnsure(): Promise<void> {
 		await runFullSetup({ yes: true });
 		return;
 	}
-	if (process.env.UNIT_TEST_AUTUMN_SECRET_KEY?.trim()) {
-		await runEnsureKey();
-		return;
-	}
-	console.log(
-		chalk.cyan(
-			`[setup-test] ${TEST_ORG_CONFIG.slug} already present; UNIT_TEST_AUTUMN_SECRET_KEY unset — skipping key ensure`,
-		),
-	);
+	await runEnsureKey();
 }
 
 async function main() {
