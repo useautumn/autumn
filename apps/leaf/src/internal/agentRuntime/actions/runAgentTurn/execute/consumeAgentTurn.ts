@@ -3,12 +3,11 @@ import { type AppEnv, ms } from "@autumn/shared";
 import { AGENT_UNREACHABLE_MESSAGE } from "../../../../../ui/messages.js";
 import type { ActiveRun } from "../../../../runs/runRegistry.js";
 import {
-	EveStreamDisconnectedError,
 	EveStreamIdleTimeoutError,
 	resyncEveStreamIndex,
-	streamEveEvents,
 } from "../../../eve/client.js";
 import { saveEveSessionState } from "../../../eve/sessionState.js";
+import { streamEveEventsWithReconnect } from "../../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 import { applyEveEvent, type EveEventContext } from "./applyEveEvent.js";
 import {
@@ -21,7 +20,6 @@ import {
 // Eve can close empty while asynchronously resuming a turn.
 const MAX_IDLE_RETRIES = 20;
 const STREAM_RETRY_DELAY_MS = ms.seconds(0.5);
-const MAX_STREAM_DISCONNECT_RETRIES = 5;
 const PERSIST_CURSOR_EVERY_EVENTS = 10;
 
 type EveTurnContext = Omit<EveEventContext, "event"> & { auth: EveAuthContext };
@@ -66,7 +64,11 @@ const streamPassEvents = async ({
 	let progress = turn.progress;
 	let sawEvent = false;
 	try {
-		for await (const event of streamEveEvents({ auth, session, signal })) {
+		for await (const event of streamEveEventsWithReconnect({
+			auth,
+			session,
+			signal,
+		})) {
 			if (!sawEvent) onFirstStreamEvent?.();
 			sawEvent = true;
 			session.state.streamIndex += 1;
@@ -212,7 +214,6 @@ export const consumeAgentTurn = async ({
 	let streamedAnyEvent = false;
 	let healedSilentCursor = false;
 	let idleRetries = 0;
-	let disconnectRetries = 0;
 
 	const abortForRunStop = () => abortController.abort();
 	if (run) run.abortTurnStream = abortForRunStop;
@@ -245,21 +246,6 @@ export const consumeAgentTurn = async ({
 				});
 			}
 
-			if (pass.error instanceof EveStreamDisconnectedError) {
-				disconnectRetries += 1;
-				logger.warn("Eve stream disconnected; reconnecting", {
-					event: "leaf.eve_stream_disconnected",
-					data: {
-						attempt: disconnectRetries,
-						error: pass.error.message,
-						session_id: session.sessionId,
-						stream_index: session.state.streamIndex,
-					},
-				});
-				if (disconnectRetries >= MAX_STREAM_DISCONNECT_RETRIES)
-					throw pass.error;
-				continue;
-			}
 			if (pass.error instanceof EveStreamIdleTimeoutError) {
 				return await recoverFromIdleStream({ logger, turn });
 			}

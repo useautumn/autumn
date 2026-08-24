@@ -594,6 +594,7 @@
       "dependencies": {
         "@ai-sdk/anthropic": "^3.0.9",
         "@anthropic-ai/sdk": "^0.32.1",
+        "@autumn/agent-docs": "workspace:*",
         "@autumn/auth": "workspace:*",
         "@autumn/env": "workspace:*",
         "@autumn/ksuid": "workspace:*",
@@ -724,6 +725,7 @@
         "@types/react-dom": "^19.2.3",
         "@types/ws": "^8.18.1",
         "artillery": "^2.0.30",
+        "braintrust": "^3.28.0",
         "cross-env": "^7.0.3",
         "drizzle-kit": "catalog:",
         "mocha": "^11.1.0",

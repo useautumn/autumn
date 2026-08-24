@@ -2,14 +2,15 @@ import { ms } from "@autumn/shared";
 import { db } from "../../../../lib/db.js";
 import { adoptPostedEveSession } from "../../eve/adoptPostedSession.js";
 import {
+	EveStreamDisconnectedError,
 	EveStreamIdleTimeoutError,
 	postEveInputResponse,
 	resyncEveStreamIndex,
-	streamEveEvents,
 } from "../../eve/client.js";
 import { approvalOptionIds } from "../../eve/events.js";
 import { classifyParkedEveInput } from "../../eve/parkedInput.js";
 import { upsertEveSession } from "../../eve/repo.js";
+import { streamEveEventsWithReconnect } from "../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { QUEUED_TURN_WITHDRAWAL_NOTE } from "./agentInputNotes.js";
 
@@ -30,7 +31,7 @@ export const drainParkedAgentTurn = async ({
 		let parkedAgain = false;
 		let turnStarted = false;
 		try {
-			for await (const event of streamEveEvents({
+			for await (const event of streamEveEventsWithReconnect({
 				auth,
 				idleTimeoutMs: DRAIN_IDLE_TIMEOUT_MS,
 				session,
@@ -83,7 +84,10 @@ export const drainParkedAgentTurn = async ({
 				}
 			}
 		} catch (error) {
-			if (!(error instanceof EveStreamIdleTimeoutError)) throw error;
+			const transportLost =
+				error instanceof EveStreamDisconnectedError ||
+				error instanceof EveStreamIdleTimeoutError;
+			if (!transportLost) throw error;
 			await resyncEveStreamIndex({ auth, session });
 			session.state.status = "waiting";
 		}

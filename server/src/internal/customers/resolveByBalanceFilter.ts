@@ -23,6 +23,9 @@ import {
 	getDeflationExceptionRows,
 	liveCusEntPredicate,
 	passesBalanceFilter,
+	thresholdRequiresFiniteRows,
+	unlimitedPassesThreshold,
+	unlimitedUsedSumSql,
 } from "./resolveByFeatureBalanceSort.js";
 
 /** Above this many lake matches the candidate IN-list stops being viable and
@@ -51,7 +54,16 @@ const exactRemainingByCustomer = async ({
 	internalFeatureId: string;
 	internalCustomerIds: string[];
 }): Promise<
-	Map<string, { remaining: number; granted: number; isUnlimited: boolean }>
+	Map<
+		string,
+		{
+			remaining: number;
+			granted: number;
+			unlimitedUsage: number;
+			finiteRows: number;
+			isUnlimited: boolean;
+		}
+	>
 > => {
 	if (internalCustomerIds.length === 0) return new Map();
 
@@ -59,6 +71,8 @@ const exactRemainingByCustomer = async ({
 		internal_customer_id: string;
 		remaining: string | number;
 		granted: string | number;
+		unlimited_used: string | number;
+		finite_rows: string | number;
 		is_unlimited: boolean;
 	}>(sql`
 		SELECT
@@ -68,6 +82,8 @@ const exactRemainingByCustomer = async ({
 				COALESCE(e.allowance, 0) * COALESCE(cp.quantity, 1)
 				+ COALESCE(ce.adjustment, 0)
 			) FILTER (WHERE ce.unlimited IS NOT TRUE), 0) AS granted,
+			COALESCE(${unlimitedUsedSumSql()}, 0) AS unlimited_used,
+			COUNT(*) FILTER (WHERE ce.unlimited IS NOT TRUE) AS finite_rows,
 			COALESCE(BOOL_OR(ce.unlimited), false) AS is_unlimited
 		FROM customer_entitlements ce
 		LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
@@ -88,6 +104,8 @@ const exactRemainingByCustomer = async ({
 			{
 				remaining: Number(row.remaining),
 				granted: Number(row.granted),
+				unlimitedUsage: Number(row.unlimited_used),
+				finiteRows: Number(row.finite_rows),
 				isUnlimited: Boolean(row.is_unlimited),
 			},
 		]),
@@ -121,13 +139,18 @@ const getLakeMatch = async ({
 
 	try {
 		const md = await getMotherDuckResolverDb();
-		const matchWhere = sql`internal_feature_id = ${internalFeatureId} AND ${balanceThresholdSql(
-			{
-				totalExpr: basisExprSql(balance.basis),
-				op: balance.op,
-				value: balance.value,
-			},
-		)}`;
+		const thresholdSql = balanceThresholdSql({
+			totalExpr: basisExprSql(balance.basis),
+			op: balance.op,
+			value: balance.value,
+		});
+		const matchWhere = unlimitedPassesThreshold(balance)
+			? sql`internal_feature_id = ${internalFeatureId} AND (${thresholdSql} OR is_unlimited)`
+			: sql`internal_feature_id = ${internalFeatureId} AND ${thresholdSql}${
+					thresholdRequiresFiniteRows(balance)
+						? sql` AND finite_rows > 0`
+						: sql``
+				}`;
 
 		const countRows = rowsOf<{ n: number | string }>(
 			await runMdWithTimeout({
@@ -187,6 +210,9 @@ const exactBalanceLateralSql = (internalFeatureId: string): SQL => sql`
 				COALESCE(e.allowance, 0) * COALESCE(cp.quantity, 1)
 				+ COALESCE(ce.adjustment, 0)
 			) FILTER (WHERE ce.unlimited IS NOT TRUE), 0) AS granted,
+			COALESCE(${unlimitedUsedSumSql()}, 0) AS unlimited_used,
+			COALESCE(BOOL_OR(ce.unlimited), false) AS is_unlimited,
+			COUNT(*) FILTER (WHERE ce.unlimited IS NOT TRUE) AS finite_rows,
 			COUNT(*) AS live_rows
 		FROM customer_entitlements ce
 		LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
@@ -200,8 +226,25 @@ const exactBalanceBasisExpr = (basis: BalanceFilter["basis"]): SQL =>
 	basis === "granted"
 		? sql.raw("bal.granted")
 		: basis === "usage"
-			? sql.raw("(bal.granted - bal.total)")
+			? sql.raw("(bal.granted - bal.total + bal.unlimited_used)")
 			: sql.raw("bal.total");
+
+/** Exact-side threshold: basis comparison plus the per-op unlimited rules
+ * (see `unlimitedPassesThreshold` / `thresholdRequiresFiniteRows`). */
+const exactThresholdSql = (balance: BalanceFilter): SQL => {
+	const thresholdSql = balanceThresholdSql({
+		totalExpr: exactBalanceBasisExpr(balance.basis),
+		op: balance.op,
+		value: balance.value,
+	});
+	return unlimitedPassesThreshold(balance)
+		? sql`(${thresholdSql} OR bal.is_unlimited)`
+		: sql`${thresholdSql}${
+				thresholdRequiresFiniteRows(balance)
+					? sql` AND bal.finite_rows > 0`
+					: sql``
+			}`;
+};
 
 /**
  * Header count for a balance-filtered list. Sparse thresholds count exactly in
@@ -252,11 +295,7 @@ export const countCustomersByBalanceFilter = async ({
 		)})
 			AND ${predicates.whereRaw}
 			AND bal.live_rows > 0
-			AND ${balanceThresholdSql({
-				totalExpr: exactBalanceBasisExpr(balance.basis),
-				op: balance.op,
-				value: balance.value,
-			})}
+			AND ${exactThresholdSql(balance)}
 		${planetScaleTag({ query: "balanceFilterExactCount" })}
 	`);
 	return { totalCount: Number(rows[0]?.n ?? 0), approximate: false };
@@ -350,15 +389,31 @@ export const resolveInternalIdsByBalanceFilter = async ({
 				const exactRow = exact.get(row.internal_customer_id);
 				// Absent = no live rows → non-holder → excluded by definition.
 				if (exactRow === undefined) continue;
-				if (
-					passesBalanceFilter({
-						total: basisValueOf({ basis: balance.basis, ...exactRow }),
-						op: balance.op,
-						value: balance.value,
-					})
-				) {
-					internalIds.push(row.internal_customer_id);
+				const admittedAsUnlimited =
+					exactRow.isUnlimited && unlimitedPassesThreshold(balance);
+				if (!admittedAsUnlimited) {
+					if (
+						thresholdRequiresFiniteRows(balance) &&
+						exactRow.finiteRows === 0
+					) {
+						continue;
+					}
+					if (
+						!passesBalanceFilter({
+							total: basisValueOf({
+								basis: balance.basis,
+								remaining: exactRow.remaining,
+								granted: exactRow.granted,
+								unlimitedUsage: exactRow.unlimitedUsage,
+							}),
+							op: balance.op,
+							value: balance.value,
+						})
+					) {
+						continue;
+					}
 				}
+				internalIds.push(row.internal_customer_id);
 			}
 
 			if (internalIds.length > limit) {
@@ -386,11 +441,7 @@ export const resolveInternalIdsByBalanceFilter = async ({
 		WHERE ${predicates.whereRaw}
 			${cursorPredicate(cursor ?? null)}
 			AND bal.live_rows > 0
-			AND ${balanceThresholdSql({
-				totalExpr: exactBalanceBasisExpr(balance.basis),
-				op: balance.op,
-				value: balance.value,
-			})}
+			AND ${exactThresholdSql(balance)}
 		ORDER BY ${customers.created_at} ${direction}, ${customers.id} ${direction}
 		LIMIT ${limit + 1}
 		${planetScaleTag({ query: "balanceFilterDenseWalk" })}

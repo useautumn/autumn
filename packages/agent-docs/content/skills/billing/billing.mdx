@@ -38,7 +38,7 @@ Use this resource for billing actions: attaching plans, updating subscriptions, 
 - **The preview IS the question. When your best reading of the request is probably right, be confident: build it and preview it. A card the human can see, correct, or reject always beats asking a question you would likely have answered correctly yourself.**
 - **Apply the default billing params on every action unless the user explicitly asks otherwise — invoice mode (draft), enable immediately, and no proration. For a customer with NO existing subscription, OMIT `proration_behavior` entirely — it is an update-time concept and meaningless on a new subscription. The full rules and field names are in the Billing behavior section below; follow them exactly.**
 - Don't propose or promise steps outside what your tools can do. If the goal isn't reachable, say so plainly rather than inventing a workaround.
-- Read this full resource before billing work and follow sections in order; later sections can define params that must be resolved before previewing.
+- Read this full resource before building params and follow sections in order; later sections can define params that must be resolved before previewing.
 - Monetary amounts are major currency units: `$1,150` -> `1150`, not `115000`.
 - Slack billing requests usually expect immediate effect; use `plan_schedule: "immediate"` unless the user asks for end-of-cycle or future timing.
 - If using `invoice_mode` and the customer has no email, ask for the email and call `updateCustomer` before previewing.
@@ -47,6 +47,7 @@ Use this resource for billing actions: attaching plans, updating subscriptions, 
 - If a customization is inferred, surface it for confirmation before previewing or writing. If its intent is ambiguous, ask before building — don't resolve it silently. When surfacing a customization, describe it as a patch (what was added/removed/changed vs the catalog plan), not a full restatement of every feature.
 - A follow-up that refines an attach customization remains customer-specific; use catalog tools only when the user explicitly asks to change the shared plan.
 - If the plan prices a feature as prepaid, a bare amount for that feature ("put them on 4.5k credits") means `feature_quantities` — NOT an item customization. Never remove or replace a prepaid item to set how many units a customer gets; customize the item only when the user explicitly changes its pricing or included allowance.
+- The word "included" means free allowance, not a purchase: "N included credits" sets `included: N` on the item via `customize` (carrying the rest of the item over unchanged) and does NOT add `feature_quantities`. Only combine both when the user asks for extra prepaid units on top of the new allowance.
 - Before any trial action, re-read the Trials section in `autumn://docs/concepts`.
 - Adding a trial for a customer who already has a paid subscription resets the Stripe billing cycle; warn the user and offer the `on_end: "revert"` flow, then let them choose.
 

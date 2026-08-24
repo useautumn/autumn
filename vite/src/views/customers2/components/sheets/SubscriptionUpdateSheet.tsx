@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 
 import { useMemo } from "react";
+import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import {
 	EditPlanSection,
@@ -14,6 +15,7 @@ import {
 	type UpdateSubscriptionForm,
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
+	UpdateSubscriptionGenerationBar,
 	UpdateSubscriptionPlanOptions,
 	UpdateSubscriptionPreviewSection,
 	useUpdateSubscriptionFormContext,
@@ -89,7 +91,12 @@ function EditContent() {
 						},
 					]}
 					itemId={customerProduct.id}
+					action={<BillingPromptToggle />}
 				/>
+
+				<div className="px-4 pt-4">
+					<UpdateSubscriptionGenerationBar />
+				</div>
 
 				<div
 					className={cn(

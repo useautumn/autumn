@@ -130,6 +130,15 @@ export const executeAutumnMcpTool = async ({
 				},
 				event: "leaf.autumn_mcp_tool_error",
 			});
+		} else {
+			logger.info("Autumn MCP tool call completed", {
+				data: {
+					duration_ms: Date.now() - startedAt,
+					env: appEnv,
+					tool: toolName,
+				},
+				event: "leaf.autumn_mcp_tool_completed",
+			});
 		}
 		return result;
 	} catch (error) {

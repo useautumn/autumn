@@ -4,6 +4,7 @@
 export * from "./attachFormSchema";
 export * from "./components/AttachAdvancedSection";
 export * from "./components/AttachFooterV3";
+export * from "./components/AttachGenerationBar";
 export * from "./components/AttachLicenseLossWarning";
 export * from "./components/AttachMultiPlanSection";
 export * from "./components/AttachPlanOptions";
