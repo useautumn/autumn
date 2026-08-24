@@ -9,6 +9,7 @@
  */
 
 import type { FullProduct } from "@autumn/shared";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -28,6 +29,10 @@ export const materializeProductsInStripe = async ({
 		candidateProducts,
 		allowCreate: true,
 	});
+
+	// Writes land straight in the DB, so the server would keep serving its
+	// cached pre-materialization rows and fail to match the new Stripe ids.
+	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 };
 
 /** Load plan → create Stripe resources → re-fetch so configs have real ids. */
