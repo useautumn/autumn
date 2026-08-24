@@ -4,11 +4,14 @@ import type { AgentActionProgress } from "../../internal/agentRuntime/domain/age
 const REASONING_STATUS_INTERVAL_MS = ms.seconds(3);
 const REASONING_STATUS_MAX_CHARS = 100;
 
+// Head-anchored, broken on a word: the opening of the text reads as a
+// sentence, where a sliding tail shows mid-word fragments.
 const reasoningSnippet = (text: string) => {
 	const flattened = text.replace(/\s+/g, " ").trim();
-	return flattened.length > REASONING_STATUS_MAX_CHARS
-		? `…${flattened.slice(-REASONING_STATUS_MAX_CHARS)}`
-		: flattened;
+	if (flattened.length <= REASONING_STATUS_MAX_CHARS) return flattened;
+	const head = flattened.slice(0, REASONING_STATUS_MAX_CHARS);
+	const lastSpace = head.lastIndexOf(" ");
+	return `${lastSpace > REASONING_STATUS_MAX_CHARS / 2 ? head.slice(0, lastSpace) : head}…`;
 };
 
 /** Eve progress stays in Slack's assistant status until an interactive card or reply. */

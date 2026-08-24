@@ -4,9 +4,9 @@ const STORAGE_KEY = "autumn.billing_prompt_bar_visible";
 
 const readStoredVisibility = (): boolean => {
 	try {
-		return localStorage.getItem(STORAGE_KEY) !== "0";
+		return localStorage.getItem(STORAGE_KEY) === "1";
 	} catch {
-		return true;
+		return false;
 	}
 };
 

@@ -9,7 +9,7 @@ import { useEnv } from "@/utils/envUtils";
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsBarChart } from "./AnalyticsGraph";
-import { colors } from "./components/analytics-types";
+import { colors, type EventRow } from "./components/analytics-types";
 import { ChartLegend, type ChartLegendEntry } from "./components/ChartLegend";
 import { ChartSkeleton } from "./components/ChartSkeleton";
 import { EventsTable } from "./components/EventsTable";
@@ -31,7 +31,9 @@ import {
 	CUSTOMER_BALANCE_SUFFIX,
 	deductionsToEventsData,
 } from "./utils/deductionsToEventsData";
+import { dropZeroRowsKeepingPeriods } from "./utils/dropZeroRowsKeepingPeriods";
 import { extractPropertyKeys } from "./utils/extractPropertyKeys";
+import { fillMissingPeriods } from "./utils/fillMissingPeriods";
 import {
 	generateChartConfig,
 	parseSeriesKey,
@@ -144,11 +146,18 @@ export const AnalyticsView = () => {
 		const chartGroupBy = isDeducted
 			? (groupBy ?? "source_feature_id")
 			: groupBy;
-		const chartSource = isDeducted
-			? deductions?.length
-				? deductionsToEventsData({ deductions, splitSpillover })
-				: null
-			: events;
+		// The deductions pipe only emits buckets it has rows for; the events
+		// aggregation beside it is already zero-filled over the same window.
+		const deductionEvents =
+			isDeducted && deductions?.length
+				? fillMissingPeriods({
+						events: deductionsToEventsData({ deductions, splitSpillover }),
+						periods: (events?.data ?? []).map((row: EventRow) =>
+							String(row.period),
+						),
+					})
+				: null;
+		const chartSource = isDeducted ? deductionEvents : events;
 
 		if (!chartSource) {
 			return { chartData: null, chartConfig: null };
@@ -176,15 +185,13 @@ export const AnalyticsView = () => {
 					},
 				);
 				const keptColumns = keptMeta.map(({ name }: { name: string }) => name);
-				const filteredData = chartSource.data.map(
-					(row: Record<string, string | number>) => {
-						const slim: Record<string, string | number> = {};
-						for (const column of keptColumns) {
-							slim[column] = row[column];
-						}
-						return slim;
-					},
-				);
+				const filteredData = chartSource.data.map((row: EventRow) => {
+					const slim: EventRow = {};
+					for (const column of keptColumns) {
+						slim[column] = row[column];
+					}
+					return slim;
+				});
 				filteredEvents = {
 					...chartSource,
 					meta: keptMeta,
@@ -193,8 +200,7 @@ export const AnalyticsView = () => {
 			}
 		} else if (groupBy === "plan_id" && planDeselected.size > 0) {
 			const filteredData = chartSource.data.filter(
-				(row: Record<string, string | number>) =>
-					!planDeselected.has(String(row.plan_id ?? "")),
+				(row: EventRow) => !planDeselected.has(String(row.plan_id ?? "")),
 			);
 			filteredEvents = {
 				...chartSource,
@@ -207,8 +213,7 @@ export const AnalyticsView = () => {
 					? groupBy
 					: `properties.${groupBy}`;
 			const filteredData = chartSource.data.filter(
-				(row: Record<string, string | number>) =>
-					String(row[groupByColumn]) === groupFilter,
+				(row: EventRow) => String(row[groupByColumn]) === groupFilter,
 			);
 			filteredEvents = {
 				...chartSource,
@@ -217,8 +222,8 @@ export const AnalyticsView = () => {
 			};
 		}
 
-		// 1. Drop raw rows where every feature column is zero — cuts ~95%
-		//    of rows before the pivot so it runs on hundreds, not thousands.
+		// 1. Drop all-zero rows before the pivot — ~95% of the grouped response,
+		//    so the pivot runs on hundreds of rows rather than thousands.
 		const groupCol =
 			groupBy === "customer_id" ||
 			groupBy === "entity_id" ||
@@ -227,20 +232,10 @@ export const AnalyticsView = () => {
 				: groupBy
 					? `properties.${groupBy}`
 					: null;
-		const skipKeys = new Set(["period", groupCol].filter(Boolean) as string[]);
-		const nonZeroData = filteredEvents.data.filter(
-			(row: Record<string, string | number>) => {
-				for (const key in row) {
-					if (skipKeys.has(key)) continue;
-					if (Number(row[key]) !== 0) return true;
-				}
-				return false;
-			},
-		);
-		const nonZeroEvents =
-			nonZeroData.length === filteredEvents.data.length
-				? filteredEvents
-				: { ...filteredEvents, data: nonZeroData, rows: nonZeroData.length };
+		const nonZeroEvents = dropZeroRowsKeepingPeriods({
+			events: filteredEvents,
+			groupColumn: groupCol,
+		});
 
 		// 2. Pivot into one column per group×feature
 		const transformed = transformGroupedData({
@@ -305,8 +300,7 @@ export const AnalyticsView = () => {
 		if ((groupBy || isDeducted) && chartConfig) {
 			entries = chartConfig.map((s) => {
 				const sum = chartData.data.reduce(
-					(acc, row) =>
-						acc + Number((row as Record<string, string | number>)[s.yKey] ?? 0),
+					(acc, row) => acc + Number((row as EventRow)[s.yKey] ?? 0),
 					0,
 				);
 				return {

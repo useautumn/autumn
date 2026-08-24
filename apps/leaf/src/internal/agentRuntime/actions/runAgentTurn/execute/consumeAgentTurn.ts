@@ -16,6 +16,7 @@ import {
 	type EveTurnProgress,
 	eveTurnProducedOutput,
 } from "./eveTurnReducer.js";
+import { watchSubagentProgress } from "./watchSubagentProgress.js";
 
 // Eve can close empty while asynchronously resuming a turn.
 const MAX_IDLE_RETRIES = 20;
@@ -86,6 +87,17 @@ const streamPassEvents = async ({
 			progress = result.progress;
 			if (result.outcome) {
 				return { outcome: result.outcome, progress, sawEvent };
+			}
+
+			if (event.type === "subagent.called" && event.childSessionId) {
+				watchSubagentProgress({
+					auth,
+					childSessionId: event.childSessionId,
+					onAction: turn.onAction,
+					onReasoning: turn.onReasoning,
+					session,
+					signal,
+				});
 			}
 
 			if (session.state.streamIndex % PERSIST_CURSOR_EVERY_EVENTS === 0) {

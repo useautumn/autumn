@@ -1,24 +1,25 @@
 import { logger } from "../../lib/logger.js";
 import { getRun } from "./runRegistry.js";
 
-const STOP_KEYWORDS = new Set([
-	"abort",
-	"cancel",
-	"cancel that",
-	"stop",
-	"stop it",
-	"stop please",
-]);
-
 const MAX_PENDING_TURNS = 5;
 
-export const isStopMessage = (text: string) =>
-	STOP_KEYWORDS.has(
-		text
-			.trim()
-			.toLowerCase()
-			.replace(/[.!]+$/, ""),
-	);
+/** Stops the thread's in-flight run, if any; returns whether one was stopped. */
+export const stopActiveThreadRun = async ({
+	byUserId,
+	runKey,
+}: {
+	byUserId: string;
+	runKey: string;
+}) => {
+	const active = getRun(runKey);
+	if (!active || active.closed || active.stop) return false;
+	logger.info("Stopping active run for thread opt-out", {
+		event: "leaf.run_stop_opt_out",
+		data: { run_key: runKey },
+	});
+	await active.requestStop({ byUserId, reason: "user" });
+	return true;
+};
 
 // Replaces the chat SDK queue under `concurrency: "concurrent"`: new runs are
 // serialized per thread, while messages arriving mid-run are routed live —
@@ -48,15 +49,6 @@ export const dispatchThreadMessage = async <Result>({
 }): Promise<Result | undefined> => {
 	const active = getRun(runKey);
 	if (active && !(active.closed || active.stop)) {
-		if (isStopMessage(text)) {
-			logger.info("Stop keyword received for active run", {
-				event: "leaf.run_stop_keyword",
-				data: { run_key: runKey },
-			});
-			await active.requestStop({ byUserId: providerUserId, reason: "user" });
-			return;
-		}
-
 		const injectable =
 			active.kind === "message" &&
 			active.ownerProviderUserId === providerUserId &&

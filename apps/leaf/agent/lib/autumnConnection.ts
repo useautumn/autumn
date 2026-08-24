@@ -13,8 +13,7 @@ const descriptions: Record<LeafAgentConnection, string> = {
 		"Autumn pricing catalog tools: create and update plans, features, and rewards, with catalog previews.",
 	investigator:
 		"Read-only Autumn tools: customers, entities, subscriptions, plans, rewards, and request logs.",
-	orchestrator:
-		"Autumn organization context and catalog reads: agent rules, plans, features, and rewards.",
+	orchestrator: "Autumn agent-rules administration.",
 };
 
 /** One Autumn MCP connection definition per agent: same server, same auth,

@@ -131,3 +131,83 @@ describe("Autumn org context service", () => {
 		expect(warnings).toHaveLength(1);
 	});
 });
+
+describe("org context stale-while-revalidate cache", () => {
+	const { setSystemTime } = require("bun:test") as {
+		setSystemTime: (time?: Date) => void;
+	};
+
+	const makeExecuteTool = () => {
+		let rounds = 0;
+		const executeTool = async ({ toolName }: { toolName: string }) => {
+			if (toolName === "getCurrentOrganization") rounds += 1;
+			return { round: rounds, tool: toolName };
+		};
+		return { executeTool, rounds: () => rounds };
+	};
+
+	const loadFor = (orgId: string, executeTool: unknown) => {
+		const { logger } = createLogger();
+		const {
+			autumnOrgContextService,
+		} = require("../../../../src/internal/autumnMcp/orgContextService.js");
+		return autumnOrgContextService.load({
+			env: AppEnv.Sandbox,
+			executeTool,
+			logger,
+			orgId,
+			token: "tok",
+		}) as Promise<{ text: string } | undefined>;
+	};
+
+	const flushBackground = () =>
+		new Promise((resolve) => setTimeout(resolve, 5));
+
+	test("fresh window shares one load across threads", async () => {
+		setSystemTime(new Date("2026-08-24T10:00:00Z"));
+		try {
+			const { executeTool, rounds } = makeExecuteTool();
+			const first = await loadFor("org_swr_fresh", executeTool);
+			const second = await loadFor("org_swr_fresh", executeTool);
+			expect(rounds()).toBe(1);
+			expect(second?.text).toBe(first?.text ?? "");
+		} finally {
+			setSystemTime();
+		}
+	});
+
+	test("stale window serves the old snapshot and refreshes in background", async () => {
+		try {
+			setSystemTime(new Date("2026-08-24T11:00:00Z"));
+			const { executeTool, rounds } = makeExecuteTool();
+			const first = await loadFor("org_swr_stale", executeTool);
+
+			setSystemTime(new Date("2026-08-24T11:02:00Z"));
+			const stale = await loadFor("org_swr_stale", executeTool);
+			expect(stale?.text).toBe(first?.text ?? "");
+
+			await flushBackground();
+			expect(rounds()).toBe(2);
+
+			const refreshed = await loadFor("org_swr_stale", executeTool);
+			expect(refreshed?.text).toContain('"round": 2');
+		} finally {
+			setSystemTime();
+		}
+	});
+
+	test("past the stale window the load blocks on a fresh fetch", async () => {
+		try {
+			setSystemTime(new Date("2026-08-24T12:00:00Z"));
+			const { executeTool, rounds } = makeExecuteTool();
+			await loadFor("org_swr_expired", executeTool);
+
+			setSystemTime(new Date("2026-08-24T12:20:00Z"));
+			const reloaded = await loadFor("org_swr_expired", executeTool);
+			expect(rounds()).toBe(2);
+			expect(reloaded?.text).toContain('"round": 2');
+		} finally {
+			setSystemTime();
+		}
+	});
+});
