@@ -29,9 +29,15 @@ plans/
     create-plan-items-free.test.ts
     create-plan-items-priced.test.ts
     utils/createAndAssert.ts
+  aliases/
+    alias-billing-endpoints.test.ts
+    alias-catalog-endpoints.test.ts
+    alias-customer-license-endpoints.test.ts
+    alias-vercel-endpoints.test.ts
   update/
     idempotent-plans.test.ts
     update-plan-details.test.ts
+    rename-plan-aliases.test.ts
     update-plan-items.test.ts
     update-plan-rows.test.ts
     update-plan-free-trial.test.ts
@@ -147,6 +153,106 @@ free vs priced so the billing-model matrix stays navigable.
 | archive / unarchive; omitted `archived` preserves | ✓ |
 | `new_plan_id` clean rename (no customers): id changes, versions & rows intact | ✓ |
 | auto_enable true on free plan → `is_default` persisted; auto_enable false clears | ✓ |
+
+### Rename with references — `update/rename-plan-refs.test.ts`
+
+| Case | Status |
+|---|---|
+| Rename with customers: every version row renamed (incl. siblings outside the batch); `customer_products.product_id` snapshot untouched, `internal_product_id` link intact | ✓ |
+| Rename rewrites `reward_programs.product_ids`, and `rewards.free_product_id` + `discount_config.product_ids` on ONE row (merged single UPDATE) | ✓ |
+| Rename rewrites `revenuecat_mappings.autumn_product_id` key | ✓ |
+
+### Plan id aliases — `update/rename-plan-aliases.test.ts`
+
+Ingress mapping (every route/field): `server/tests/unit/catalogV2/plan-id-alias-ingress.md`.
+Unit tests: `server/tests/unit/catalogV2/plan-id-alias-rewrite.test.ts`.
+
+Ingress only: after `pro → proNew`, requests with `pro` rewrite to `proNew`
+before handlers. Responses stay canonical. One alias per plan; re-rename
+replaces (old alias dies). Catalog create / `new_plan_id` onto another plan's
+alias succeeds and deletes that alias row (`alias_replacement` on preview).
+REST `POST /products` of a reserved id stays 400. Reclaiming this plan's own
+alias is allowed.
+
+| Case | Status |
+|---|---|
+| Rename writes `product_aliases` (`alias_id` = old id, `canonical_plan_id` = new) | ✓ t1 |
+| Re-rename replaces the alias row; the original alias no longer resolves | ✓ t1 |
+| Attach / `plans.get` with the old id succeeds; GET plan id is canonical (no `alias_id` field) | ✓ t2 |
+| REST create a plan whose id is another plan's alias → 400 | ✓ t3 |
+| Catalog `new_plan_id` onto another plan's alias → succeeds; alias row deleted; `alias_replacement` on preview | ✓ t3 |
+| `new_plan_id` reclaiming this plan's own alias → allowed | ✓ `rename-plan-alias-reclaim.test.ts` |
+
+### Own-alias reclaim roundtrip — `update/rename-plan-alias-reclaim.test.ts`
+
+| Case | Status |
+|---|---|
+| Rename `pro → proNew` then reclaim `proNew → pro`: live id returns to `pro`; `proNew` is the alias; old `pro → proNew` gone; attach/GET both ids; REST create of `proNew` is 400; `customer_products.product_id` snapshot untouched | ✓ t1 |
+
+Ingress field mapping (unit): `server/tests/unit/catalogV2/plan-id-alias-ingress.md`.
+Endpoint behavior below: send the OLD id, assert canonical side effects.
+
+### Plan id aliases — endpoint × field — `aliases/*.test.ts`
+
+Status: ✓ written (run when server is up). Invoice `plan_ids` SQL is layer 1 — not re-tested.
+
+| Endpoint | Field | Test | Status |
+|---|---|---|---|
+| `POST /billing.attach` | `plan_id` | `alias-billing-endpoints` attach | ✓ |
+| `POST /billing.preview_attach` | `plan_id` | `alias-billing-endpoints` attach | ✓ |
+| `POST /billing.attach` | `remove_plan_ids` | `alias-billing-endpoints` attach | ✓ |
+| `POST /attach` (legacy) | `product_id` | `alias-billing-endpoints` attach | ✓ |
+| `POST /cancel` | `product_id` | `alias-billing-endpoints` attach | ✓ |
+| `POST /billing.update` | `plan_id` | `alias-billing-endpoints` update | ✓ |
+| `POST /billing.preview_update` | `plan_id` | `alias-billing-endpoints` update | ✓ |
+| `POST /billing.multi_update` | `updates[].plan_id` | `alias-billing-endpoints` update | ✓ |
+| `POST /billing.preview_multi_update` | `updates[].plan_id` | `alias-billing-endpoints` update | ✓ |
+| `POST /billing.multi_attach` | `plans[].plan_id` | `alias-billing-endpoints` multi | ✓ |
+| `POST /billing.preview_multi_attach` | `plans[].plan_id` | `alias-billing-endpoints` multi | ✓ |
+| `POST /billing.create_schedule` | `phases[].plans[].plan_id` | `alias-billing-endpoints` multi | ✓ |
+| `POST /billing.preview_create_schedule` | `phases[].plans[].plan_id` | `alias-billing-endpoints` multi | ✓ |
+| `GET /products/:product_id` | path `product_id` | `alias-catalog-endpoints` GET + t2 | ✓ |
+| `POST /plans.get` | `plan_id` | `alias-catalog-endpoints` GET | ✓ |
+| `POST /plans.has_customers` | `plan_id` | `alias-catalog-endpoints` GET | ✓ |
+| `POST /products/:product_id/has_customers` | path `product_id` | `alias-catalog-endpoints` GET | ✓ |
+| dashboard `GET /products/:id` | skip rewrite | unit `planAliasMiddleware skips dashboard` | ✓ unit (secret-key client cannot send `x-client-type: dashboard`) |
+| `POST /catalogV2.update` | `plans[].plan_id` | `alias-catalog-endpoints` update | ✓ |
+| `POST /catalogV2.preview_update` | `plans[].plan_id` | `alias-catalog-endpoints` update | ✓ |
+| `PATCH /products/:product_id` | path `product_id` | `alias-catalog-endpoints` update | ✓ |
+| `POST /catalogV2.update` | `licenses[].license_plan_id` | `alias-catalog-endpoints` update | ✓ |
+| `DELETE /products/:product_id` | path `product_id` | `alias-catalog-endpoints` delete | ✓ |
+| `POST /catalogV2.update` | `remove_plans[].plan_id` | `alias-catalog-endpoints` delete | ✓ |
+| `POST /plans.delete` | `plan_id` | `alias-catalog-endpoints` delete | ✓ |
+| `POST /plans.create_variant` | `base_plan_id` | `alias-catalog-endpoints` delete | ✓ |
+| `POST /catalogV2.update` | `new_plan_id` not rewritten | `alias-catalog-endpoints` delete + t3 | ✓ |
+| `POST /products` create | `id` reserved (not rewritten) | t3 | ✓ |
+| `POST /customers` | `auto_enable_plan_id` | `alias-customer-license-endpoints` customer | ✓ |
+| `POST /customers/:id/transfer` | `product_id` | `alias-customer-license-endpoints` customer | ✓ |
+| `POST /check` | `product_id` | `alias-customer-license-endpoints` customer | ✓ |
+| `POST /licenses.attach` | `plan_id` | `alias-customer-license-endpoints` licenses | ✓ |
+| `POST /licenses.release` | `license_plan_id` | `alias-customer-license-endpoints` licenses | ✓ |
+| `POST /billing.attach` | `license_quantities[].license_plan_id` | `alias-customer-license-endpoints` licenses | ✓ |
+| `POST /billing.update` | `customize.upsert_licenses[].license_plan_id` | `alias-customer-license-endpoints` licenses | ✓ |
+| Vercel `POST .../resources` | `billingPlanId` | `alias-vercel-endpoints` | ✓ |
+| Vercel `PATCH .../installations/:id` | `billingPlanId` | `alias-vercel-endpoints` | ✓ |
+
+Gaps (rewrite key exists, no endpoint test here):
+
+| Endpoint | Field | Why |
+|---|---|---|
+| `POST /billing.sync` / `sync_v2` | `plan_id` | admin/import, not CORE attach |
+| `POST /billing.setup_payment` | `plan_id` | checkout-adjacent; attach covers the same key |
+| `POST /billing.resolve_request` | nested bodies | same rewrite as attach/update/schedule |
+| `POST /billing.dfu.flash` | `plan_id` | internal |
+| `POST /catalog.update` (v1) | `plan_id` / `skip_plan_ids` | v1 catalog; v2 covered |
+| `POST /plans.update` RPC | `plan_id` | catalogV2.update covers the same key |
+| `POST /attach/preview` | `product_id` | legacy; v2 preview_attach covered |
+| `POST /rewards` / reward_programs | `plan_ids` / `free_product_id` | admin catalog, not CORE billing |
+| `migrations.*` | `plan_id` | admin |
+| `customers.list` `plans[].id` | `id` | **not a rewrite key** — list filter uses `id` |
+| Vercel body `productId` | marketplace resource id | intentional skip (ingress.md) |
+| Invoice `plan_ids` | snapshot SQL | layer 1, do not re-test |
+| Stripe checkout metadata | manual rewrite | webhook, not public request |
 
 ## 5. Item/price update lanes — `update/update-plan-items.test.ts`
 
@@ -334,8 +440,7 @@ Preview `options` include `new_version` when the latest version has customers
 | Two unpinned entries for same plan_id → error | ✓ |
 | Version gap (declare v3 when max is v1) → error | ✓ |
 | Create without `name` → error | ✓ |
-| `new_plan_id` rename blocked when plan has customers | ✓ |
-| `new_plan_id` rename blocked when reward program references plan | ✓ |
+| `new_plan_id` rename blocked when a Vercel install is on the plan; allowed for other plans on the same Vercel org | ✓ |
 | Invalid item shape passes through Zod errors (amount+tiers both set; volume flat_amount on graduated; `tiers[0].to <= included`; proration on usage_based; reset/price interval mismatch on non-prepaid) | ✓ |
 
 ## 11. Plan × plan batch — `batch/batch-ops.test.ts`
@@ -844,6 +949,7 @@ Seed via DB `customer_licenses.plan_license_id`. `seedVersionableCustomer` is th
 | Customize existing link → updated + nested core `plan_change` | ✓ `license-changes-customize.test.ts` |
 | New customized link → created, no nested `plan_change` | ✓ `license-changes-customize.test.ts` |
 | Name + included compose on one `plan_change` | ✓ `license-changes-customize.test.ts` |
+| After `new_version` + license customize add Dashboard, later `preview_update` parses and echoes the overlay | ✓ `license-changes-customize.test.ts` |
 | In-batch pin → updated freeze, no nested `plan_change` | ✓ `license-changes-follow.test.ts` |
 | In-batch propagate → updated + nested item `plan_change` | ✓ `license-changes-follow.test.ts` |
 | Child `new_version` + pin → `previous_attributes.version` | ✓ `license-changes-follow.test.ts` |
@@ -1171,4 +1277,27 @@ sends `all_versions`).
 |---|---|
 | `archived: false` + `all_versions` → every version unarchived | ✓ |
 | `archived: false` alone → latest unarchived, older versions stay archived | ✓ |
+
+## 23. Alias replacement preview — `update/rename-plan-alias-replacement.test.ts`
+
+After `pro → proNew`, `pro` is an alias of `proNew`. Catalog preview/update
+claiming `pro` (create `plan_id` or `new_plan_id`, including
+`variants[].new_plan_id`) surfaces `alias_replacement` on that plan/variant
+and proceeds — the alias row is deleted so `pro` is a real id again.
+REST `POST /products` / `POST /plans` / `plans.create` stay 400.
+
+Own-reclaim (`proNew → pro`) still allowed; preview includes
+`alias_replacement` because that alias row dies.
+
+| Case | Status |
+|---|---|
+| Preview create `pro` while alias of `proNew` → field on plan, not a blocking error | ✓ t1 |
+| Preview rename other `starter → pro` → same field on that plan op | ✓ t1 |
+| Preview `variants[n].new_plan_id: "pro"` → field on THAT variant, not only the parent | ✓ t1 |
+| Preview own-reclaim `proNew → pro` → allowed; `alias_replacement` present (alias dies) | ✓ t1 |
+| Preview no collision → field absent/`undefined` | ✓ t1 |
+| Execute create-`pro` → alias row gone; GET/attach `pro` hits the NEW plan | ✓ t2 |
+| Execute rename `starter → pro` → starter is `pro`; alias `pro→proNew` gone | ✓ t2 |
+| Execute variant `new_plan_id` → `products.id` + alias CTE; `customer_products.product_id` untouched | ✓ t2 |
+| REST create of reserved id still 400 | ✓ t3 |
 

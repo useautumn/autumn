@@ -2,6 +2,7 @@ import {
 	diffPlanV1,
 	type FullProductWithoutLicenses,
 	type LicenseCustomize,
+	PlanItemFilterPrecision,
 } from "@autumn/shared";
 import { toMigratableCustomize } from "@/internal/catalogV2/actions/buildMigrationDraft/toMigratableCustomize";
 import { fullProductToApiPlanV1Sync } from "@/internal/catalogV2/actions/buildPlanChange";
@@ -18,6 +19,7 @@ export const licenseEffectiveMigratableCustomize = ({
 		customize: diffPlanV1({
 			from: fullProductToApiPlanV1Sync({ product: fromProduct }),
 			to: fullProductToApiPlanV1Sync({ product: toProduct }),
+			filterPrecision: PlanItemFilterPrecision.IdentityAndIncluded,
 		}),
 	});
 	const { price, add_items, remove_items } = customize;

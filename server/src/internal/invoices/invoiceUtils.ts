@@ -109,17 +109,14 @@ export const insertInvoiceFromAttach = async ({
 	}
 };
 
-export const invoicesToResponse = ({ invoices }: { invoices: Invoice[] }) => {
-	const response = invoices.map((i) =>
+export const invoicesToResponse = ({ invoices }: { invoices: Invoice[] }) =>
+	invoices.map((i) =>
 		processInvoice({
 			invoice: i,
 			withItems: false,
 			features: [],
 		}),
 	);
-
-	return response;
-};
 
 export const getInvoiceItems = async ({
 	stripeInvoice,

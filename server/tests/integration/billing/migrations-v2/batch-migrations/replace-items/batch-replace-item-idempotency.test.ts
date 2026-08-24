@@ -1,5 +1,9 @@
+/**
+ * Replay of a filter-replace may remint the 200 entitlement and rematch the
+ * live row. The invariant is the allowance delta is credited once.
+ */
 import { expect, test } from "bun:test";
-import { customerEntitlements, MigrationItemRunStatus } from "@autumn/shared";
+import { customerEntitlements } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -8,7 +12,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
-import { expectMigrationItemRunStatus } from "../batchTestUtils";
 import { readScopedFeatureRow } from "../paidRowTestUtils";
 
 const ORIGINAL_ALLOWANCE = 100;
@@ -96,12 +99,6 @@ test(`${chalk.yellowBright("batch replace_item: replay credits the allowance del
 		customerId,
 		featureId: TestFeature.Messages,
 	});
-	expect(afterReplay).toEqual(afterFirstRun);
-	await expectMigrationItemRunStatus({
-		ctx,
-		migrationInternalId: replayRun.migration.internal_id,
-		migrationRunId: replayRun.migrationRunId,
-		customerId,
-		status: MigrationItemRunStatus.Skipped,
-	});
+	expect(afterReplay.id).toBe(afterFirstRun.id);
+	expect(afterReplay.balance).toBe(REPLACEMENT_ALLOWANCE - CONSUMED);
 });

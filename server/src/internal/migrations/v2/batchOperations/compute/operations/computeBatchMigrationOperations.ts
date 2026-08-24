@@ -9,7 +9,7 @@ import type {
 } from "../../types/index.js";
 import type { LicenseLinkTransitions } from "../transitions/resolvePlanLicenseTransitions.js";
 
-const toLicenseOps = (
+export const toLicenseOps = (
 	link: LicenseLinkTransitions,
 ): BatchMigrationLicenseEntitlementOp[] => {
 	const target = {
@@ -83,7 +83,10 @@ export const computeBatchMigrationOperations = ({
 	const removeEntitlements: BatchMigrationRemoveEntitlementOp[] =
 		productTransitions.entitlementPrices.deleted
 			.filter((entitlementPrice) => !entitlementPrice.price)
-			.map((entitlementPrice) => ({ entitlementPrice }));
+			.map((entitlementPrice) => ({
+				by: "definition" as const,
+				entitlementPrice,
+			}));
 
 	const replaceEntitlements: BatchMigrationReplaceEntitlementOp[] =
 		productTransitions.entitlementPrices.transitions
@@ -93,6 +96,7 @@ export const computeBatchMigrationOperations = ({
 					!transition.toEntitlementPrice.price,
 			)
 			.map((transition) => ({
+				by: "definition" as const,
 				fromEntitlementPrice: transition.fromEntitlementPrice,
 				entitlementPrice: transition.toEntitlementPrice,
 				initialState: computeCustomerEntitlementInitialState({

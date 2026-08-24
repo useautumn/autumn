@@ -6,6 +6,7 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const isDev = import.meta.env.DEV;
+const isCapyDev = import.meta.env.VITE_CAPY_DEV === "1";
 const REFETCH_INTERVAL = 5000;
 const DISMISSED_STORAGE_KEY = "autumn_products_onboarding_dismissed";
 
@@ -109,6 +110,7 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 		rawEvents: { data: unknown[] };
 	}>({
 		queryKey: buildKey(["onboarding-events"]),
+		enabled: !isCapyDev,
 		queryFn: async () => {
 			const { data } = await axiosInstance.post("/query/raw", {
 				customer_id: null,

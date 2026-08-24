@@ -19,6 +19,7 @@ import { planParamsFromEditDiff } from "@/internal/catalogV2/actions/updateCatal
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
+import { resolveAliasReplacement } from "@/internal/catalogV2/productAliases/resolveAliasReplacement";
 
 const planHasVersionableCustomers = ({
 	planId,
@@ -135,6 +136,10 @@ export const computeUpsertProductPlan = ({
 		features: ctx.features,
 		currentFullProduct: baseFullProduct,
 	});
+	const aliasReplacement = resolveAliasReplacement({
+		claimedId: nextFullProduct.id,
+		aliases: ctx.org.planAliases,
+	});
 
 	const op = resolveUpsertOp({
 		currentFullProduct,
@@ -184,6 +189,7 @@ export const computeUpsertProductPlan = ({
 		...(planParams.create_in_stripe !== undefined
 			? { createInStripe: planParams.create_in_stripe }
 			: {}),
+		...(aliasReplacement ? { aliasReplacement } : {}),
 		state: {
 			hasCustomers:
 				versioning === "new_version"

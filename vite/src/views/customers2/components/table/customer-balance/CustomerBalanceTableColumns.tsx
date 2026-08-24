@@ -7,6 +7,7 @@ import {
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
+	cusEntsToUnlimitedUsage,
 	getRolloverFields,
 	isFreeCustomerEntitlement,
 	isPrepaidCustomerEntitlement,
@@ -153,6 +154,7 @@ function ParentUsageCell({
 		usageType,
 		shouldShowOutOfBalance,
 		shouldShowUsed,
+		unlimitedUsage,
 	} = useFeatureUsageBalance({
 		fullCustomer,
 		featureId: ent.entitlement.feature.id,
@@ -161,7 +163,13 @@ function ParentUsageCell({
 	});
 
 	if (ent.unlimited) {
-		return <span className="text-subtle">Unlimited</span>;
+		return (
+			<span className="text-subtle">
+				Unlimited
+				{unlimitedUsage > 0 &&
+					` · ${new Intl.NumberFormat().format(unlimitedUsage)} used`}
+			</span>
+		);
 	}
 
 	return (
@@ -185,7 +193,17 @@ function SubRowUsageCell({
 	entityId: string | null;
 }) {
 	if (ent.unlimited) {
-		return <span className="text-subtle">Unlimited</span>;
+		const unlimitedUsage = cusEntsToUnlimitedUsage({
+			cusEnts: [ent],
+			entityId: entityId ?? undefined,
+		});
+		return (
+			<span className="text-subtle">
+				Unlimited
+				{unlimitedUsage > 0 &&
+					` · ${new Intl.NumberFormat().format(unlimitedUsage)} used`}
+			</span>
+		);
 	}
 
 	const { balance, allowance, rolloverBalance } = getIndividualEntValues({

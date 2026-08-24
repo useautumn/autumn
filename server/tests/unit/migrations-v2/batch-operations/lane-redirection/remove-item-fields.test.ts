@@ -24,7 +24,9 @@ describe("remove_items field → batch lane", () => {
 		});
 
 		expect(result.computable).toBe(true);
-		expect(result.removeIds).toEqual(["ent_from"]);
+		expect(result.removeBy).toEqual(["filter"]);
+		expect(result.removeFrom).toEqual([{ feature_id: "messages" }]);
+		expect(result.removeIds).toEqual([]);
 		expect(result.addIds).toEqual([]);
 	});
 
@@ -48,7 +50,15 @@ describe("remove_items field → batch lane", () => {
 		});
 
 		expect(result.computable).toBe(true);
-		expect(result.removeIds).toEqual(["ent_quarterly"]);
+		expect(result.removeBy).toEqual(["filter"]);
+		expect(result.removeFrom).toEqual([
+			{
+				feature_id: "messages",
+				interval: EntInterval.Month,
+				interval_count: 3,
+			},
+		]);
+		expect(result.removeIds).toEqual([]);
 	});
 
 	test("interval_count alone (with feature_id) does not widen to other cadences", () => {
@@ -65,7 +75,11 @@ describe("remove_items field → batch lane", () => {
 		});
 
 		expect(result.computable).toBe(true);
-		expect(result.removeIds).toEqual(["ent_quarterly"]);
+		expect(result.removeBy).toEqual(["filter"]);
+		expect(result.removeFrom).toEqual([
+			{ feature_id: "messages", interval_count: 3 },
+		]);
+		expect(result.removeIds).toEqual([]);
 	});
 
 	test("interval: one_off matches a lifetime entitlement", () => {
@@ -81,7 +95,15 @@ describe("remove_items field → batch lane", () => {
 		});
 
 		expect(result.computable).toBe(true);
-		expect(result.removeIds).toEqual(["ent_lifetime"]);
+		expect(result.removeBy).toEqual(["filter"]);
+		expect(result.removeFrom).toEqual([
+			{
+				feature_id: "messages",
+				interval: EntInterval.Lifetime,
+				interval_count: 1,
+			},
+		]);
+		expect(result.removeIds).toEqual([]);
 	});
 
 	test("interval: month with feature_id matches the monthly sibling", () => {
@@ -103,7 +125,15 @@ describe("remove_items field → batch lane", () => {
 		});
 
 		expect(result.computable).toBe(true);
-		expect(result.removeIds).toEqual(["ent_monthly"]);
+		expect(result.removeBy).toEqual(["filter"]);
+		expect(result.removeFrom).toEqual([
+			{
+				feature_id: "messages",
+				interval: EntInterval.Month,
+				interval_count: 1,
+			},
+		]);
+		expect(result.removeIds).toEqual([]);
 	});
 });
 

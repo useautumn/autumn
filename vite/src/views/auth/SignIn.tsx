@@ -7,6 +7,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
+import { googleOAuthUrlForBrowser } from "@/lib/googleOAuthProxy";
 import { isSafeSsoRedirectUrl } from "@/lib/sso/ssoCallback";
 import { getSsoHint } from "@/lib/sso/ssoHint";
 import { resolveSso } from "@/lib/sso/ssoResolve";
@@ -42,9 +43,10 @@ export const SignIn = () => {
 	const [ssoHint, setSsoHint] = useState<SsoOrgHint | null>(() => getSsoHint());
 	const [emailFallback, setEmailFallback] = useState(false);
 
-	const { data: session } = useSession();
+	const { data: session, isPending: sessionLoading } = useSession();
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
+	const isCapyDev = import.meta.env.VITE_CAPY_DEV === "1";
 
 	const oauthRedirectUrl = useMemo(
 		() => getOAuthRedirectUrl(searchParams),
@@ -62,12 +64,19 @@ export const SignIn = () => {
 		}
 	}, [session, navigate, oauthRedirectUrl, defaultPath]);
 
+	useEffect(() => {
+		if (!isCapyDev || sessionLoading || session) return;
+		window.location.replace(
+			`/api/auth/capy-login?next=${encodeURIComponent(defaultPath)}`,
+		);
+	}, [defaultPath, isCapyDev, session, sessionLoading]);
+
 	// Passkey Conditional UI: browsers surface saved passkeys directly in the
 	// email field's autocomplete dropdown (no extra button needed). Requires
 	// the `webauthn` token in autoComplete and `autoFill: true` on signIn.
 	// Skipped during OAuth flows since the post-auth redirect would be lost.
 	useEffect(() => {
-		if (oauthRedirectUrl || session) return;
+		if (isCapyDev || oauthRedirectUrl || session) return;
 		if (typeof window === "undefined") return;
 		// Some browsers (notably Firefox) don't support Conditional UI; signIn
 		// gracefully no-ops in that case. We still call it on supported browsers.
@@ -85,7 +94,9 @@ export const SignIn = () => {
 		return () => {
 			controller.abort();
 		};
-	}, [oauthRedirectUrl, session]);
+	}, [isCapyDev, oauthRedirectUrl, session]);
+
+	if (isCapyDev) return null;
 
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -140,13 +151,24 @@ export const SignIn = () => {
 				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
 			const googleNewUserUrl =
 				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
-			const { error } = await signIn.social({
+			const useEmulateProxy = import.meta.env.VITE_EMULATE_GOOGLE_PROXY === "1";
+			const { data, error } = await signIn.social({
 				provider: "google",
 				callbackURL: googleCallbackUrl,
 				newUserCallbackURL: googleNewUserUrl,
+				disableRedirect: useEmulateProxy,
 			});
 			if (error) {
 				toast.error(error.message || "Failed to sign in with Google");
+				return;
+			}
+			if (useEmulateProxy && data?.url) {
+				window.location.assign(
+					googleOAuthUrlForBrowser({
+						providerUrl: data.url,
+						browserOrigin: frontendUrl,
+					}),
+				);
 			}
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to sign in with Google"));

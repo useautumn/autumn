@@ -15,7 +15,9 @@ import type {
 	PreviewCatalogContext,
 	ProductStatesContext,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import type { RenameProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/renameProductPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { aliasReplacementForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/aliasReplacementForPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
 const byPlanThenVersion = (
@@ -236,11 +238,13 @@ export const buildVariantsPreview = ({
 	upsertProducts,
 	productStatesContext,
 	previewContext,
+	renamePlans,
 }: {
 	directUpsert: UpsertProductPlan;
 	upsertProducts: UpsertProductPlan[];
 	productStatesContext: ProductStatesContext;
 	previewContext: PreviewCatalogContext | undefined;
+	renamePlans: RenameProductPlan[];
 }): CatalogVariantPreview[] => {
 	const variants = latestVariantsOfBase({
 		upsert: directUpsert,
@@ -273,6 +277,11 @@ export const buildVariantsPreview = ({
 				base: directUpsert,
 			});
 			const planChange = variantPlanChange({ variantUpsert });
+			const aliasReplacement = aliasReplacementForPlan({
+				planId: variant.id,
+				upsert: variantUpsert,
+				renamePlans,
+			});
 			const siblingVersions = siblingVersionsForVariant({
 				variant,
 				upsertProducts,
@@ -303,6 +312,7 @@ export const buildVariantsPreview = ({
 				...(siblingVersions.length > 0
 					? { sibling_versions: siblingVersions }
 					: {}),
+				...(aliasReplacement ? { alias_replacement: aliasReplacement } : {}),
 			};
 			if (variantAction === "explicit") return preview;
 			return withVariantConflicts({

@@ -11,6 +11,7 @@ import { customerJwtVersionMiddleware } from "../honoMiddlewares/customerJwtVers
 import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware.js";
 import { orgConfigMiddleware } from "../honoMiddlewares/orgConfigMiddleware.js";
 import { orgRedisMiddleware } from "../honoMiddlewares/orgRedisMiddleware.js";
+import { planAliasMiddleware } from "../honoMiddlewares/planAliasMiddleware.js";
 import { queryMiddleware } from "../honoMiddlewares/queryMiddleware.js";
 import { rateLimitMiddleware } from "../honoMiddlewares/rateLimitMiddleware.js";
 import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddleware.js";
@@ -47,6 +48,7 @@ export const apiRouter = new Hono<HonoEnv>();
 apiRouter.use("*", criticalDbMiddleware);
 apiRouter.use("*", responseFilterMiddleware);
 apiRouter.use("*", secretKeyMiddleware);
+apiRouter.use("*", planAliasMiddleware);
 apiRouter.use("*", requestBlockMiddleware);
 apiRouter.use("*", orgConfigMiddleware);
 apiRouter.use("*", rolloutMiddleware);

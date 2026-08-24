@@ -1372,12 +1372,14 @@ export const approvalSheetUrl = ({
 	approvalId,
 	customerId,
 	env,
+	orgId,
 	planId,
 	toolName,
 }: {
 	approvalId: string;
 	customerId?: string;
 	env?: AppEnv;
+	orgId?: string;
 	planId?: string;
 	toolName: string;
 }) => {
@@ -1390,7 +1392,8 @@ export const approvalSheetUrl = ({
 			: normalizedToolName === "createSchedule"
 				? "sheet=create-schedule"
 				: "sheet=attach-product";
-	return `${base}/customers/${encodeURIComponent(customerId)}?${sheet}&approval_id=${encodeURIComponent(approvalId)}`;
+	const orgParam = orgId ? `&org_id=${encodeURIComponent(orgId)}` : "";
+	return `${base}/customers/${encodeURIComponent(customerId)}?${sheet}&approval_id=${encodeURIComponent(approvalId)}${orgParam}`;
 };
 
 const viewInDashboardButton = (url: string | null | undefined) =>

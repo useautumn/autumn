@@ -15,6 +15,7 @@ const mockState = {
 };
 
 import { handleTrack } from "@/internal/balances/handlers/handleTrack.js";
+import { pinTrackProducerQueueToFifo } from "./trackAsyncQueueTestEnv.js";
 
 const createCtx = ({
 	orgId = "org_123",
@@ -48,12 +49,14 @@ const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 };
 
 describe("handleTrack", () => {
-	const originalEnv = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+	let restoreQueueEnv: (() => void) | undefined;
 
 	beforeEach(() => {
 		mockState.queueCommands = [];
 		_setAsyncTrackConfigForTesting({ config: { enabledOrgIds: [] } });
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
+		restoreQueueEnv = pinTrackProducerQueueToFifo({
+			fifoQueueUrl: trackAsyncQueueUrl,
+		}).restore;
 		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
@@ -72,7 +75,8 @@ describe("handleTrack", () => {
 			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
 			mockState.originalSend = null;
 		}
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalEnv;
+		restoreQueueEnv?.();
+		restoreQueueEnv = undefined;
 	});
 
 	test("returns 202 success for async track", async () => {

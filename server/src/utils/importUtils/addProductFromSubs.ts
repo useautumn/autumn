@@ -48,7 +48,7 @@ export const addProductFromSubs = async ({
 	const mainCusProduct = cusProducts.find(
 		(cp) =>
 			!cp.product.is_add_on &&
-			cp.product_id === autumnProduct.id &&
+			cp.product.id === autumnProduct.id &&
 			(notNullish(entity)
 				? cp.internal_entity_id === entity!.internal_id
 				: true),

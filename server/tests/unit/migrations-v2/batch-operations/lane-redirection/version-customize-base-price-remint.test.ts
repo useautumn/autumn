@@ -219,7 +219,7 @@ describe("version + customize base-price remint", () => {
 		).toEqual(["ent_domains_custom"]);
 	});
 
-	test("a real base-price amount change still rejects", () => {
+	test("a version-only op is not batch-lowered even when the target also changes base price", () => {
 		const result = computeBatchMigration({
 			migration: {
 				id: "mig_amount",
@@ -253,7 +253,7 @@ describe("version + customize base-price remint", () => {
 		expect(result.computable).toBe(false);
 		if (result.computable) throw new Error("expected rejection");
 		expect(result.rejections.map((rejection) => rejection.code)).toContain(
-			"base_price_transition",
+			"unsupported_version_only",
 		);
 	});
 });

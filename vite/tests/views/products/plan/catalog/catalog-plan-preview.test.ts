@@ -8,8 +8,12 @@ import {
 	buildCatalogMigrateTargets,
 	buildCatalogPropagate,
 	buildSelectedLicenseParentPropagate,
+	catalogPreviewAliasReplacements,
+	catalogPreviewHasPlanIdChange,
 	catalogPreviewOpensDialog,
+	catalogPreviewPlanIdChange,
 	emptyCatalogPlanChangeDiff,
+	isConfirmOnlyPlanChangeDialog,
 	hasCatalogMigrationTargets,
 	isCatalogMetadataOnly,
 	planChangeToTargetDiff,
@@ -85,12 +89,113 @@ describe("catalog plan preview helpers", () => {
 		).toBeUndefined();
 	});
 
-	test("catalogPreviewOpensDialog follows options, variants, and license parents", () => {
+	test("catalogPreviewOpensDialog follows options, variants, license parents, alias replacement, and plan id change", () => {
 		expect(catalogPreviewOpensDialog({ preview: undefined })).toBe(false);
 		expect(catalogPreviewOpensDialog({ preview: planPreview() })).toBe(false);
 		expect(
-			previewOpensStrategyStep({
+			catalogPreviewOpensDialog({
 				preview: planPreview({
+					alias_replacement: { alias_id: "pro", plan_id: "pro_new" },
+				}),
+			}),
+		).toBe(true);
+		expect(
+			catalogPreviewOpensDialog({
+				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						previous_attributes: { id: "pro" },
+					},
+				}),
+			}),
+		).toBe(true);
+		expect(
+			catalogPreviewOpensDialog({
+				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						previous_attributes: { name: "Pro" },
+					},
+				}),
+			}),
+		).toBe(false);
+		expect(
+			catalogPreviewHasPlanIdChange({
+				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						previous_attributes: { id: "pro" },
+					},
+				}),
+			}),
+		).toBe(true);
+		expect(
+			catalogPreviewPlanIdChange({
+				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						previous_attributes: { id: "pro" },
+					},
+				}),
+				nextPlanId: "pro_plus",
+			}),
+		).toEqual({ from: "pro", to: "pro_plus" });
+		expect(
+			isConfirmOnlyPlanChangeDialog({
+				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						previous_attributes: { id: "pro" },
+					},
+				}),
+				showVersionStrategy: false,
+				showVariantScope: false,
+				showLicenseParentScope: false,
+			}),
+		).toBe(true);
+		expect(
+			isConfirmOnlyPlanChangeDialog({
+				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						customize: { items: [] },
+						previous_attributes: { id: "pro" },
+					},
+				}),
+				showVersionStrategy: true,
+				showVariantScope: false,
+				showLicenseParentScope: false,
+			}),
+		).toBe(false);
+		expect(
+			catalogPreviewAliasReplacements({
+				preview: planPreview({
+					variants: [
+						{
+							plan_id: "pro_eu",
+							version: 1,
+							state: { has_customers: false, will_archive: false },
+							alias_replacement: { alias_id: "pro", plan_id: "pro_new" },
+						},
+					],
+				}),
+			}),
+		).toEqual([{ alias_id: "pro", plan_id: "pro_new" }]);
+		const versioningOnly = planPreview({
+			versioning: {
+				current_version: 1,
+				new_version: null,
+				resolved: "existing",
+				options: ["existing"],
+			},
+		});
+		expect(previewOpensStrategyStep({ preview: versioningOnly })).toBe(true);
+		expect(isCatalogMetadataOnly({ preview: versioningOnly })).toBe(true);
+		expect(catalogPreviewOpensDialog({ preview: versioningOnly })).toBe(false);
+		expect(
+			catalogPreviewOpensDialog({
+				preview: planPreview({
+					plan_change: { item_changes: [], customize: { items: [] } },
 					versioning: {
 						current_version: 1,
 						new_version: null,
@@ -103,6 +208,7 @@ describe("catalog plan preview helpers", () => {
 		expect(
 			catalogPreviewOpensDialog({
 				preview: planPreview({
+					plan_change: { item_changes: [], customize: { items: [] } },
 					variants: [
 						{
 							plan_id: "pro_eu",
@@ -116,6 +222,16 @@ describe("catalog plan preview helpers", () => {
 		expect(
 			catalogPreviewOpensDialog({
 				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						license_changes: [
+							{
+								license_plan_id: "seat",
+								action: "updated",
+								previous_attributes: null,
+							},
+						],
+					},
 					license_parents: [
 						{
 							plan_id: "team",

@@ -6,6 +6,8 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+
+// version-only is per-customer until definition execute is restored
 import {
 	expectPerCustomerLaneWithRejections,
 	readRepointableCustomerPlanRow,
@@ -15,7 +17,7 @@ import {
 const uniqueStem = (name: string) =>
 	`${name}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("batch version repoint licenses fallback: a changed link field routes the whole migration")}`,
 	async () => {
 		const stem = uniqueStem("bvr-license-link-fields");

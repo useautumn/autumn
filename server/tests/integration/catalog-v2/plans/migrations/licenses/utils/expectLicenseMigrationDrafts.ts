@@ -23,12 +23,20 @@ import {
 } from "../../utils/expectMigrationDrafts.js";
 import type { CatalogV2Client } from "../../../licenses/utils/seedLicensePlans.js";
 
-export const messagesItemDelta = ({ included }: { included: number }) => ({
+/** Catalog draft generators stamp the from-item grant on remove. Default 10 matches `messagesItem(10)`. */
+export const messagesItemDelta = ({
+	included,
+	fromIncluded = 10,
+}: {
+	included: number;
+	fromIncluded?: number;
+}) => ({
 	remove_items: [
 		{
 			feature_id: TestFeature.Messages,
 			interval: ResetInterval.Month,
 			interval_count: 1,
+			included: fromIncluded,
 		},
 	],
 	add_items: [
@@ -54,14 +62,17 @@ export const dashboardRemoveCustomize = {
 /** Delete Messages and add Words — same replace across every child. */
 export const messagesToWordsDelta = ({
 	included = 100,
+	fromIncluded = 10,
 }: {
 	included?: number;
+	fromIncluded?: number;
 } = {}) => ({
 	remove_items: [
 		{
 			feature_id: TestFeature.Messages,
 			interval: ResetInterval.Month,
 			interval_count: 1,
+			included: fromIncluded,
 		},
 	],
 	add_items: [

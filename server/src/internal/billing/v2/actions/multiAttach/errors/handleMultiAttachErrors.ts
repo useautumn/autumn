@@ -9,6 +9,7 @@ import { handleRevertTrialErrors } from "@/internal/billing/v2/actions/attach/er
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
+import { handleMultiAttachBillingCycleAnchorErrors } from "./handleMultiAttachBillingCycleAnchorErrors";
 import { handleMultiAttachCurrentProductErrors } from "./handleMultiAttachCurrentProductErrors";
 import { handleMultiAttachRedirectErrors } from "./handleMultiAttachRedirectErrors";
 import { handleMultiAttachStartDateErrors } from "./handleMultiAttachStartDateErrors";
@@ -37,6 +38,8 @@ export const handleMultiAttachErrors = async ({
 	});
 
 	handleRevertTrialErrors({ billingContext });
+
+	handleMultiAttachBillingCycleAnchorErrors({ billingContext });
 
 	// Subscription ID uniqueness
 	await handleSubscriptionIdErrors({

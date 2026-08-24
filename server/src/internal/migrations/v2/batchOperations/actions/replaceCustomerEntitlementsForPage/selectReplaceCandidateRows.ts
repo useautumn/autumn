@@ -1,49 +1,35 @@
 import {
-	CusProductStatus,
 	EntInterval,
 	type EntitlementWithFeature,
+	type Feature,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
 import { cycleAnchorSourcesSql } from "@/internal/migrations/v2/batchOperations/actions/utils/cycleAnchorSql.js";
-import { pageCustomerIdsCte } from "@/internal/migrations/v2/batchOperations/actions/utils/pageCustomerIdsSql.js";
-import { rowIsUnpaidSql } from "@/internal/migrations/v2/batchOperations/actions/utils/rowIsUnpaidSql.js";
 import {
-	type OperationScope,
-	operationScopeSql,
-} from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
+	buildLiveFilterCandidateQuery,
+	LiveFilterCandidateCoreSchema,
+	nullableNumeric,
+	toLiveFilterCandidateRow,
+} from "@/internal/migrations/v2/batchOperations/actions/utils/liveFilterCandidateSql.js";
+import type { OperationScope } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
+import type { EntitlementPriceFilter } from "@/internal/migrations/v2/batchOperations/types/entitlementPriceFilter.js";
 import type { CycleEnrichmentCandidate } from "@/internal/migrations/v2/batchOperations/utils/enrichCustomerEntitlementCycles.js";
 
-const nullableNumeric = z.preprocess(
-	(value) => (value === null || value === undefined ? null : Number(value)),
-	z.number().nullable(),
-);
-
-const ReplaceCandidateRowSchema = z.object({
-	customerEntitlementId: z.string(),
-	customerProductId: z.string(),
-	internalCustomerId: z.string(),
+const ReplaceCandidateRowSchema = LiveFilterCandidateCoreSchema.extend({
 	customerId: z.string().nullable(),
-	entityId: z.string().nullable(),
-	status: z.enum(CusProductStatus),
-	startsAt: nullableNumeric,
-	canceledAt: nullableNumeric,
-	endedAt: nullableNumeric,
-	trialEndsAt: nullableNumeric,
 	isPaidRecurring: z.boolean(),
 	billingCycleAnchor: nullableNumeric,
 	subscriptionCycleAnchor: nullableNumeric,
 	siblingResetCycleAnchor: nullableNumeric,
-	liveBalance: nullableNumeric,
-	liveNextResetAt: nullableNumeric,
 });
 
 export type ReplaceCandidateRow = CycleEnrichmentCandidate & {
 	customerEntitlementId: string;
 	liveBalance: number | null;
 	liveNextResetAt: number | null;
+	liveDefinition?: EntitlementWithFeature;
 };
 
 type SelectReplaceCandidateRowsArgs = {
@@ -51,19 +37,21 @@ type SelectReplaceCandidateRowsArgs = {
 	scope: OperationScope;
 	/** The minted to-entitlement; drives the sibling anchor's interval match. */
 	entitlement: EntitlementWithFeature;
-	fromEntitlementIds: string[];
+	filter: EntitlementPriceFilter;
+	excludeEntitlementId: string;
+	features: Feature[];
 	includeAnchorSources: boolean;
 	afterCustomerProductId?: string;
 	limit: number;
 };
 
-/** Selects scoped live from-rows and cycle anchors; selecting by from-id
- * makes replay idempotent. */
+/** Selects scoped live from-rows matching the compiled filter and cycle anchors. */
 export const buildReplaceCandidateRowsQuery = ({
 	internalCustomerIds,
 	scope,
 	entitlement,
-	fromEntitlementIds,
+	filter,
+	excludeEntitlementId,
 	includeAnchorSources,
 	afterCustomerProductId,
 	limit,
@@ -79,46 +67,27 @@ export const buildReplaceCandidateRowsQuery = ({
 		keepLiveRowAnchor: true,
 	});
 
-	return sql`
-		WITH ${pageCustomerIdsCte({ internalCustomerIds })}
-		SELECT
-			live.id AS "customerEntitlementId",
-			cp.id AS "customerProductId",
-			cp.internal_customer_id AS "internalCustomerId",
+	return buildLiveFilterCandidateQuery({
+		internalCustomerIds,
+		scope,
+		filter,
+		extraSelect: sql`,
 			customer.id AS "customerId",
-			entity.id AS "entityId",
-			cp.status AS "status",
-			cp.starts_at AS "startsAt",
-			cp.canceled_at AS "canceledAt",
-			cp.ended_at AS "endedAt",
-			cp.trial_ends_at AS "trialEndsAt",
 			${anchors.paidRecurringColumn} AS "isPaidRecurring",
 			cp.billing_cycle_anchor AS "billingCycleAnchor",
 			${anchors.subscriptionAnchorColumn} AS "subscriptionCycleAnchor",
-			${anchors.siblingAnchorColumn} AS "siblingResetCycleAnchor",
-			live.balance AS "liveBalance",
-			live.next_reset_at AS "liveNextResetAt"
-		FROM page
-		INNER JOIN customer_products AS cp
-			ON cp.internal_customer_id = page.internal_customer_id
-		INNER JOIN customer_entitlements AS live
-			ON live.customer_product_id = cp.id
-			AND live.entitlement_id IN (${sqlList({ values: fromEntitlementIds })})
-		INNER JOIN customers AS customer
-			ON customer.internal_id = cp.internal_customer_id
-		LEFT JOIN entities AS entity
-			ON entity.internal_id = cp.internal_entity_id
-		${anchors.siblingJoin}
-		${anchors.subscriptionJoin}
-		WHERE ${operationScopeSql({ scope })}
-			AND ${rowIsUnpaidSql({
-				customerProductId: sql`cp.id`,
-				entitlementId: sql`live.entitlement_id`,
-			})}
-			${afterCustomerProductId ? sql`AND cp.id > ${afterCustomerProductId}` : sql``}
-		ORDER BY cp.id
-		LIMIT ${limit}
-	`;
+			${anchors.siblingAnchorColumn} AS "siblingResetCycleAnchor"
+		`,
+		extraJoins: sql`
+			INNER JOIN customers AS customer
+				ON customer.internal_id = cp.internal_customer_id
+			${anchors.siblingJoin}
+			${anchors.subscriptionJoin}
+		`,
+		extraWhere: sql`AND live.entitlement_id <> ${excludeEntitlementId}`,
+		afterCustomerProductId,
+		limit,
+	});
 };
 
 export const selectReplaceCandidateRows = async ({
@@ -127,34 +96,23 @@ export const selectReplaceCandidateRows = async ({
 }: SelectReplaceCandidateRowsArgs & {
 	db: DrizzleCli;
 }): Promise<ReplaceCandidateRow[]> => {
-	if (
-		args.internalCustomerIds.length === 0 ||
-		args.fromEntitlementIds.length === 0
-	) {
-		return [];
-	}
+	if (args.internalCustomerIds.length === 0) return [];
 
 	const rows = await db.execute(buildReplaceCandidateRowsQuery(args));
 
 	return rows.map((row) => {
 		const parsed = ReplaceCandidateRowSchema.parse(row);
+		const live = toLiveFilterCandidateRow({
+			parsed,
+			features: args.features,
+		});
 		return {
-			customerEntitlementId: parsed.customerEntitlementId,
-			customerProductId: parsed.customerProductId,
-			internalCustomerId: parsed.internalCustomerId,
+			...live,
 			customerId: parsed.customerId,
-			entityId: parsed.entityId,
-			status: parsed.status,
-			startsAt: parsed.startsAt,
-			canceledAt: parsed.canceledAt,
-			endedAt: parsed.endedAt,
-			trialEndsAt: parsed.trialEndsAt,
 			isPaidRecurring: parsed.isPaidRecurring,
 			billingCycleAnchor: parsed.billingCycleAnchor,
 			subscriptionCycleAnchor: parsed.subscriptionCycleAnchor,
 			siblingResetCycleAnchor: parsed.siblingResetCycleAnchor,
-			liveBalance: parsed.liveBalance,
-			liveNextResetAt: parsed.liveNextResetAt,
 		};
 	});
 };

@@ -32,12 +32,14 @@ function OverviewRow({
 
 export function CustomerExportOverview({
 	exportTotalCount,
+	isCountApproximate,
 	isCountLoading,
 	isFilteredExport,
 	columnsAction,
 	scopeRow,
 }: {
 	exportTotalCount: number | undefined;
+	isCountApproximate: boolean;
 	isCountLoading: boolean;
 	isFilteredExport: boolean;
 	columnsAction: ReactNode;
@@ -52,7 +54,7 @@ export function CustomerExportOverview({
 					<span className="tabular-nums">
 						{exportTotalCount === undefined
 							? "All customers"
-							: `${exportTotalCount.toLocaleString()} ${exportTotalCount === 1 ? "customer" : "customers"}`}
+							: `${isCountApproximate ? "~" : ""}${exportTotalCount.toLocaleString()} ${exportTotalCount === 1 ? "customer" : "customers"}`}
 					</span>
 				)}
 			</OverviewRow>

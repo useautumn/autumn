@@ -1,8 +1,58 @@
 import { describe, expect, test } from "bun:test";
-import { BillingInterval, BillingMethod } from "@autumn/shared";
-import { checkUpdatePlanOpEligibility } from "@/internal/migrations/v2/batchOperations/compute/guards/checkUpdatePlanOpEligibility.js";
+import { BillingInterval, BillingMethod, ResetInterval } from "@autumn/shared";
+import {
+	checkUpdatePlanOpEligibility,
+	isModifyInPlaceOnly,
+} from "@/internal/migrations/v2/batchOperations/compute/guards/checkUpdatePlanOpEligibility.js";
 
 describe("checkUpdatePlanOpEligibility", () => {
+	test("version-only with no add_items or remove_items is not batch-lowered", () => {
+		const rejections = checkUpdatePlanOpEligibility({
+			opIndex: 0,
+			op: {
+				type: "update_plan",
+				plan_filter: { plan_id: "pro" },
+				version: 2,
+			},
+		});
+
+		expect(rejections.map((rejection) => rejection.code)).toContain(
+			"unsupported_version_only",
+		);
+	});
+
+	test("version plus add_items is not rejected as version-only", () => {
+		const rejections = checkUpdatePlanOpEligibility({
+			opIndex: 0,
+			op: {
+				type: "update_plan",
+				plan_filter: { plan_id: "pro" },
+				version: 2,
+				customize: { add_items: [{ feature_id: "dashboard" }] },
+			},
+		});
+
+		expect(rejections.map((rejection) => rejection.code)).not.toContain(
+			"unsupported_version_only",
+		);
+	});
+
+	test("version plus remove_items is not rejected as version-only", () => {
+		const rejections = checkUpdatePlanOpEligibility({
+			opIndex: 0,
+			op: {
+				type: "update_plan",
+				plan_filter: { plan_id: "pro" },
+				version: 2,
+				customize: { remove_items: [{ feature_id: "dashboard" }] },
+			},
+		});
+
+		expect(rejections.map((rejection) => rejection.code)).not.toContain(
+			"unsupported_version_only",
+		);
+	});
+
 	test("upsert_licenses with free add_items is batch-lowered", () => {
 		const rejections = checkUpdatePlanOpEligibility({
 			opIndex: 0,
@@ -94,5 +144,27 @@ describe("checkUpdatePlanOpEligibility", () => {
 		expect(rejections.map((rejection) => rejection.code)).toContain(
 			"priced_add_item",
 		);
+	});
+
+	test("included on a remove filter does not break in-place match keys", () => {
+		expect(
+			isModifyInPlaceOnly({
+				addItems: [
+					{
+						feature_id: "messages",
+						included: 200,
+						reset: { interval: ResetInterval.Month },
+					},
+				],
+				removeItems: [
+					{
+						feature_id: "messages",
+						interval: ResetInterval.Month,
+						interval_count: 1,
+						included: 100,
+					},
+				],
+			}),
+		).toBe(true);
 	});
 });

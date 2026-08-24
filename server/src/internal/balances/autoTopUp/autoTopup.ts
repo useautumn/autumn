@@ -199,7 +199,7 @@ export const autoTopup = async ({
 				env,
 				customerId,
 			}),
-			ttlMs: 60_000,
+			ttlMs: ms.minutes(5),
 			errorMessage: `Another billing operation is already in progress for customer ${customerId}`,
 			fn: executeAutoTopup,
 		});

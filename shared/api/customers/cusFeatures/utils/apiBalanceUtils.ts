@@ -1,6 +1,10 @@
 import type { ApiFeatureV1 } from "@api/features/apiFeatureV1";
 import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct";
-import { cusEntsToPlanId, cusEntsToRollovers } from "@utils/index.js";
+import {
+	cusEntsToPlanId,
+	cusEntsToRollovers,
+	cusEntsToUnlimitedUsage,
+} from "@utils/index.js";
 import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../apiBalanceV1";
 
 export const getBooleanApiBalance = ({
@@ -53,14 +57,16 @@ export const getBooleanApiBalance = ({
 export const getUnlimitedApiBalance = ({
 	apiFeature,
 	cusEnts,
+	entityId,
 }: {
 	apiFeature?: ApiFeatureV1;
 	cusEnts: FullCusEntWithFullCusProduct[];
+	entityId?: string;
 }): ApiBalanceV1 => {
 	const feature = cusEnts[0].entitlement.feature;
 	const planId = cusEntsToPlanId({ cusEnts });
 	const id = cusEnts[0].id;
-	const entityId = undefined;
+	const usage = cusEntsToUnlimitedUsage({ cusEnts, entityId });
 
 	return {
 		object: "balance",
@@ -71,7 +77,7 @@ export const getUnlimitedApiBalance = ({
 
 		granted: 0,
 		remaining: 0,
-		usage: 0,
+		usage,
 
 		next_reset_at: null,
 		max_purchase: null,
@@ -85,7 +91,7 @@ export const getUnlimitedApiBalance = ({
 				included_grant: 0,
 				prepaid_grant: 0,
 				remaining: 0,
-				usage: 0,
+				usage,
 				unlimited: true,
 				reset: null,
 				expires_at: null,

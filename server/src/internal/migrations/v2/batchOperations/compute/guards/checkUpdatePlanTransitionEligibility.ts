@@ -1,11 +1,100 @@
-import type { EntitlementPrice, FullProduct } from "@autumn/shared";
+import {
+	type EntitlementPrice,
+	type FullProduct,
+	productToEntitlementPrices,
+} from "@autumn/shared";
 import { freeTrialsAreSame } from "@autumn/shared/utils/productUtils/freeTrialUtils.js";
 import type { ProductTransitions } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computeProductTransitions.js";
+import { entitlementPriceFilterMatchesEntitlementPrice } from "../../types/entitlementPriceFilter.js";
 import type {
 	BatchMigrationAddEntitlementOp,
 	BatchMigrationRejection,
+	EntitlementPriceFilter,
+	PatchProductTransition,
 } from "../../types/index.js";
 import type { LicenseLinkTransitions } from "../transitions/resolvePlanLicenseTransitions.js";
+
+const rejectEntitlementPrice = ({
+	entitlementPrice,
+	opIndex,
+	planId,
+	details,
+	paidCode,
+	includeRollover,
+}: {
+	entitlementPrice: EntitlementPrice;
+	opIndex: number;
+	planId: string;
+	details: Record<string, unknown>;
+	paidCode: "paid_entitlement_transition" | "priced_remove_item";
+	includeRollover: boolean;
+}): BatchMigrationRejection[] => {
+	const { entitlement, price } = entitlementPrice;
+	const rejections: BatchMigrationRejection[] = [];
+
+	if (price) {
+		rejections.push({
+			code: paidCode,
+			opIndex,
+			planId,
+			message:
+				paidCode === "priced_remove_item"
+					? "A paid item needs a Stripe write; only free entitlements are batch-lowered."
+					: "A paid item needs a Stripe write; only free entitlement replaces are batch-lowered.",
+			details,
+		});
+	}
+
+	if (includeRollover && entitlement.rollover) {
+		rejections.push({
+			code: "rollover_remove_item",
+			opIndex,
+			planId,
+			message:
+				"A rollover balance outlives the row it hangs off, so dropping the row strands it.",
+			details,
+		});
+	}
+
+	if (entitlement.entity_feature_id) {
+		rejections.push({
+			code: "entity_scoped_entitlement",
+			opIndex,
+			planId,
+			message:
+				"Entity-scoped rows carry per-entity sub-balances; row counts vary per customer.",
+			details,
+		});
+	}
+
+	if (entitlement.pooled === true) {
+		rejections.push({
+			code: "pooled_add_item",
+			opIndex,
+			planId,
+			message:
+				"A pooled item's anchor row hangs off no customer product, so the set-based writes never reach it.",
+			details,
+		});
+	}
+
+	return rejections;
+};
+
+const catalogEntitlementPricesMatching = ({
+	fromProduct,
+	filter,
+}: {
+	fromProduct: FullProduct;
+	filter: EntitlementPriceFilter;
+}): EntitlementPrice[] =>
+	productToEntitlementPrices({ product: fromProduct }).filter(
+		(entitlementPrice) =>
+			entitlementPriceFilterMatchesEntitlementPrice({
+				filter,
+				entitlementPrice,
+			}),
+	);
 
 /** Guards the computed transitions of one patch: anything beyond uniform,
  * free adds/removes/replaces rejects the patch to the per-customer lane. */
@@ -13,25 +102,32 @@ export const checkUpdatePlanTransitionEligibility = ({
 	opIndex,
 	fromProduct,
 	productTransitions,
+	toProduct,
+	patchTransition,
 	licenseLinks,
 	operations,
 }: {
 	opIndex: number;
 	fromProduct: FullProduct;
-	productTransitions: ProductTransitions;
+	productTransitions?: ProductTransitions;
+	toProduct?: FullProduct;
+	patchTransition?: PatchProductTransition;
 	licenseLinks: LicenseLinkTransitions[];
 	operations: BatchMigrationAddEntitlementOp[];
 }): BatchMigrationRejection[] => {
 	const rejections: BatchMigrationRejection[] = [];
-	const paidAdded: EntitlementPrice[] =
-		productTransitions.entitlementPrices.added.filter(
-			(entitlementPrice) => entitlementPrice.price,
-		);
+	const targetProduct = toProduct ?? productTransitions?.toProduct;
+	const paidAdded: EntitlementPrice[] = (
+		productTransitions?.entitlementPrices.added ??
+		patchTransition?.added ??
+		[]
+	).filter((entitlementPrice) => entitlementPrice.price);
 
 	if (
+		targetProduct &&
 		!freeTrialsAreSame({
 			ft1: fromProduct.free_trial,
-			ft2: productTransitions.toProduct.free_trial,
+			ft2: targetProduct.free_trial,
 		})
 	) {
 		rejections.push({
@@ -43,7 +139,7 @@ export const checkUpdatePlanTransitionEligibility = ({
 		});
 	}
 
-	if (productTransitions.basePrice) {
+	if (productTransitions?.basePrice) {
 		rejections.push({
 			code: "base_price_transition",
 			opIndex,
@@ -54,7 +150,10 @@ export const checkUpdatePlanTransitionEligibility = ({
 		});
 	}
 
-	const { transitions, deleted } = productTransitions.entitlementPrices;
+	const { transitions, deleted } = productTransitions?.entitlementPrices ?? {
+		transitions: [],
+		deleted: [],
+	};
 	for (const transition of transitions) {
 		const { fromEntitlementPrice, toEntitlementPrice } = transition;
 		const sides = [fromEntitlementPrice, toEntitlementPrice];
@@ -109,51 +208,67 @@ export const checkUpdatePlanTransitionEligibility = ({
 	}
 
 	for (const entitlementPrice of deleted) {
-		const { entitlement, price } = entitlementPrice;
-		const details = { featureId: entitlement.feature.id };
-
-		if (price) {
-			rejections.push({
-				code: "priced_remove_item",
+		rejections.push(
+			...rejectEntitlementPrice({
+				entitlementPrice,
 				opIndex,
 				planId: fromProduct.id,
-				message:
-					"A paid item needs a Stripe write; only free entitlements are batch-lowered.",
-				details,
-			});
+				details: { featureId: entitlementPrice.entitlement.feature.id },
+				paidCode: "priced_remove_item",
+				includeRollover: true,
+			}),
+		);
+	}
+
+	if (patchTransition) {
+		for (const pair of patchTransition.replaced) {
+			const details = {
+				fromFeatureId: pair.from.feature_id,
+				toFeatureId: pair.to.entitlement.feature.id,
+			};
+			rejections.push(
+				...rejectEntitlementPrice({
+					entitlementPrice: pair.to,
+					opIndex,
+					planId: fromProduct.id,
+					details,
+					paidCode: "paid_entitlement_transition",
+					includeRollover: true,
+				}),
+			);
+			for (const from of catalogEntitlementPricesMatching({
+				fromProduct,
+				filter: pair.from,
+			})) {
+				rejections.push(
+					...rejectEntitlementPrice({
+						entitlementPrice: from,
+						opIndex,
+						planId: fromProduct.id,
+						details,
+						paidCode: "paid_entitlement_transition",
+						includeRollover: true,
+					}),
+				);
+			}
 		}
 
-		if (entitlement.rollover) {
-			rejections.push({
-				code: "rollover_remove_item",
-				opIndex,
-				planId: fromProduct.id,
-				message:
-					"A rollover balance outlives the row it hangs off, so dropping the row strands it.",
-				details,
-			});
-		}
-
-		if (entitlement.entity_feature_id) {
-			rejections.push({
-				code: "entity_scoped_entitlement",
-				opIndex,
-				planId: fromProduct.id,
-				message:
-					"Entity-scoped rows carry per-entity sub-balances; row counts vary per customer.",
-				details,
-			});
-		}
-
-		if (entitlement.pooled === true) {
-			rejections.push({
-				code: "pooled_add_item",
-				opIndex,
-				planId: fromProduct.id,
-				message:
-					"A pooled item's anchor row hangs off no customer product, so the set-based writes never reach it.",
-				details,
-			});
+		for (const { filter } of patchTransition.removed) {
+			for (const entitlementPrice of catalogEntitlementPricesMatching({
+				fromProduct,
+				filter,
+			})) {
+				rejections.push(
+					...rejectEntitlementPrice({
+						entitlementPrice,
+						opIndex,
+						planId: fromProduct.id,
+						details: { featureId: entitlementPrice.entitlement.feature.id },
+						paidCode: "priced_remove_item",
+						includeRollover: true,
+					}),
+				);
+			}
 		}
 	}
 

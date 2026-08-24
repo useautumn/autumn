@@ -35,6 +35,7 @@ const messagesCustomize = ({ included }: { included: number }) => ({
 			feature_id: TestFeature.Messages,
 			interval: ResetInterval.Month,
 			interval_count: 1,
+			included: 100,
 		},
 	],
 	add_items: [
@@ -212,6 +213,7 @@ test.concurrent(
 											feature_id: TestFeature.Messages,
 											interval: ResetInterval.Month,
 											interval_count: 1,
+											included: 200,
 										},
 									],
 									add_items: [

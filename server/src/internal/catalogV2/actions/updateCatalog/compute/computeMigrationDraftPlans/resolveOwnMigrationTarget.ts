@@ -1,6 +1,7 @@
 import {
 	diffPlanV1,
 	planDiffHasBillingChanges,
+	PlanItemFilterPrecision,
 	toBasePriceParams,
 	type UpdateCatalogParams,
 } from "@autumn/shared";
@@ -40,7 +41,11 @@ export const resolveOwnMigrationTarget = ({
 	const toPlan = fullProductToApiPlanV1Sync({ product: nextFullProduct });
 
 	const customize = toMigratableCustomize({
-		customize: diffPlanV1({ from: fromPlan, to: toPlan }),
+		customize: diffPlanV1({
+			from: fromPlan,
+			to: toPlan,
+			filterPrecision: PlanItemFilterPrecision.IdentityAndIncluded,
+		}),
 	});
 	if (Object.keys(customize).length === 0) return null;
 
