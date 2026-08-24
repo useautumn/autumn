@@ -206,9 +206,9 @@ test.concurrent(
 	},
 );
 
-// RED — flip card_required false→true on default plan → 400
+// Update on an existing default preserves auto_enable even when trial becomes carded.
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 free-trial validation: default trial card_required false→true → 400")}`,
+	`${chalk.yellowBright("catalogV2 free-trial validation: default trial card_required false→true → OK")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ftv_flip");
@@ -233,17 +233,23 @@ test.concurrent(
 					},
 				],
 			});
-			await expectAutumnError({
-				errCode: ErrCode.InvalidRequest,
-				func: () =>
-					autumnV2_3.catalogV2.update({
-						plans: [
-							{
-								plan_id: planId,
-								free_trial: trialDay({ cardRequired: true }),
-							},
-						],
-					}),
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						free_trial: trialDay({ cardRequired: true }),
+					},
+				],
+			});
+			await expectCatalogPlansCorrect({
+				autumn: autumnV2_3,
+				expected: [
+					{
+						id: planId,
+						isDefault: true,
+						freeTrial: trialDay({ cardRequired: true }),
+					},
+				],
 			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
@@ -251,9 +257,9 @@ test.concurrent(
 	},
 );
 
-// RED — remove trial from default paid plan (no longer default-trial eligible)
+// Update on an existing default preserves auto_enable when trial is removed.
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 free-trial validation: remove trial from default paid → 400")}`,
+	`${chalk.yellowBright("catalogV2 free-trial validation: remove trial from default paid → OK")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ftv_rm_def");
@@ -278,12 +284,18 @@ test.concurrent(
 					},
 				],
 			});
-			await expectAutumnError({
-				errCode: ErrCode.InvalidRequest,
-				func: () =>
-					autumnV2_3.catalogV2.update({
-						plans: [{ plan_id: planId, free_trial: null }],
-					}),
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, free_trial: null }],
+			});
+			await expectCatalogPlansCorrect({
+				autumn: autumnV2_3,
+				expected: [
+					{
+						id: planId,
+						isDefault: true,
+						freeTrial: null,
+					},
+				],
 			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });

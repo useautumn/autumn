@@ -336,7 +336,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 preview-versioning: new_version mint → create row with new_version + plan_change")}`,
+	`${chalk.yellowBright("catalogV2 preview-versioning: new_version mint → update row with new_version + plan_change")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_pv_nv");
@@ -359,7 +359,7 @@ test.concurrent(
 				}),
 			);
 			const row = findPlanPreviewRow({ preview, planId });
-			expect(row.action).toBe("create");
+			expect(row.action).toBe("update");
 			expect(row.state.has_customers).toBe(true);
 			expect(row.versioning).toEqual({
 				current_version: 1,

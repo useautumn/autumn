@@ -91,7 +91,13 @@ test.concurrent(
 		});
 		await rpc.post("/plans.update", {
 			plan_id: annualProId,
-			licenses: [{ license_plan_id: annualSeatId, included: INCLUDED_SEATS }],
+			licenses: [
+				{
+					license_plan_id: quarterlySeat.id,
+					included: INCLUDED_SEATS,
+					customize: { price: { amount: 200, interval: BillingInterval.Year } },
+				},
+			],
 		});
 
 		const quarterlySeatFull = await fetchFullProduct({
@@ -157,7 +163,7 @@ test.concurrent(
 			plan_id: annualProId,
 			redirect_mode: "if_required",
 			license_quantities: [
-				{ license_plan_id: annualSeatId, quantity: SEAT_QUANTITY },
+				{ license_plan_id: quarterlySeat.id, quantity: SEAT_QUANTITY },
 			],
 		});
 
@@ -172,7 +178,7 @@ test.concurrent(
 			count: 1,
 			licenses: [
 				{
-					license_plan_id: annualSeatId,
+					license_plan_id: quarterlySeat.id,
 					parent_plan_id: annualProId,
 					paid_quantity: SEAT_QUANTITY,
 					granted: SEAT_QUANTITY,
@@ -184,7 +190,7 @@ test.concurrent(
 		const annualAssignments = await listLicenseAssignments({
 			autumn: autumnV2_3,
 			customerId,
-			licensePlanId: annualSeatId,
+			licensePlanId: quarterlySeat.id,
 			active: true,
 		});
 		expect(annualAssignments).toHaveLength(entities.length);
@@ -193,19 +199,12 @@ test.concurrent(
 				entities.map((entity) =>
 					expect.objectContaining({
 						entity_id: entity.id,
-						license_plan_id: annualSeatId,
+						license_plan_id: quarterlySeat.id,
 						ended_at: null,
 					}),
 				),
 			),
 		);
-		const activeQuarterlyAssignments = await listLicenseAssignments({
-			autumn: autumnV2_3,
-			customerId,
-			licensePlanId: quarterlySeat.id,
-			active: true,
-		});
-		expect(activeQuarterlyAssignments).toHaveLength(0);
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );

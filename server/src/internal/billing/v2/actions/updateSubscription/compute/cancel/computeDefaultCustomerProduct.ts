@@ -11,17 +11,24 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 const hasOtherEffectivePaidMainProduct = ({
-	billingContext,
+	customerProduct,
+	customerProducts,
+	deletedCustomerProducts = [],
 	effectiveAt,
 }: {
-	billingContext: UpdateSubscriptionBillingContext;
+	customerProduct: FullCusProduct;
+	customerProducts: FullCusProduct[];
+	deletedCustomerProducts?: FullCusProduct[];
 	effectiveAt: number;
 }) => {
-	const { customerProduct, fullCustomer } = billingContext;
 	const internalEntityId = customerProduct.internal_entity_id ?? undefined;
+	const deletedCustomerProductIds = new Set(
+		deletedCustomerProducts.map((deletedCustomerProduct) => deletedCustomerProduct.id),
+	);
 
-	return fullCustomer.customer_products.some((candidate) => {
+	return customerProducts.some((candidate) => {
 		if (candidate.id === customerProduct.id) return false;
+		if (deletedCustomerProductIds.has(candidate.id)) return false;
 
 		const inScope = cp(candidate)
 			.hasRelevantStatus()
@@ -51,10 +58,12 @@ export const computeDefaultCustomerProduct = ({
 	ctx,
 	billingContext,
 	endOfCycleMs,
+	deletedCustomerProducts = [],
 }: {
 	ctx: AutumnContext;
 	billingContext: UpdateSubscriptionBillingContext;
 	endOfCycleMs: number;
+	deletedCustomerProducts?: FullCusProduct[];
 }): FullCusProduct | undefined => {
 	const {
 		cancelAction,
@@ -81,7 +90,9 @@ export const computeDefaultCustomerProduct = ({
 
 	if (
 		hasOtherEffectivePaidMainProduct({
-			billingContext,
+			customerProduct,
+			customerProducts: fullCustomer.customer_products,
+			deletedCustomerProducts,
 			effectiveAt: startsAt,
 		})
 	) {

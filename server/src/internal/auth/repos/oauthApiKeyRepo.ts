@@ -20,7 +20,6 @@ export const isOAuthConsentLinkedApiKey = ({
 	consentId,
 	clientId,
 	redirectUri,
-	orgId,
 	userId,
 	env,
 }: {
@@ -28,12 +27,10 @@ export const isOAuthConsentLinkedApiKey = ({
 	consentId: string;
 	clientId: string;
 	redirectUri: string | null;
-	orgId: string;
 	userId: string;
 	env: AppEnv;
 }) => {
 	if (
-		apiKey.orgId !== orgId ||
 		apiKey.userId !== userId ||
 		apiKey.env !== env ||
 		!isRecord(apiKey.meta)
@@ -56,7 +53,6 @@ export const deleteOAuthConsentLinkedApiKey = async ({
 	consentId,
 	clientId,
 	redirectUri,
-	orgId,
 	userId,
 	env,
 }: {
@@ -65,7 +61,6 @@ export const deleteOAuthConsentLinkedApiKey = async ({
 	consentId: string;
 	clientId: string;
 	redirectUri: string | null;
-	orgId: string;
 	userId: string;
 	env: AppEnv;
 }) => {
@@ -90,7 +85,6 @@ export const deleteOAuthConsentLinkedApiKey = async ({
 			consentId,
 			clientId,
 			redirectUri,
-			orgId,
 			userId,
 			env,
 		})

@@ -1,11 +1,12 @@
-// TDD contract: exact quarterly/annual license variants share one Stripe product.
-// Each price selects its matching parent and syncs quantity 3 into the seat pool.
+// TDD contract: seat plan variants share one Stripe product; the base license
+// plan links to each parent with a matching customized price shape.
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
 	type ApiCustomerV5,
 	ApiVersion,
 	BillingInterval,
+	productToBasePrice,
 } from "@autumn/shared";
 import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
 import {
@@ -18,6 +19,7 @@ import {
 	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { createVariantPlan } from "@tests/integration/crud/plans/variants/utils/variantTestPlanUtils";
+import { getFullLicenseProduct } from "@tests/integration/licenses/catalog-update/utils/getFullLicenseProduct";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
 import { expectLicenseDefinitionCorrect } from "@tests/integration/licenses/utils/expectLicenseDefinitionCorrect";
 import { items } from "@tests/utils/fixtures/items";
@@ -91,7 +93,13 @@ const setupVariantLicenseFamily = async ({
 	});
 	await rpc.post("/plans.update", {
 		plan_id: annualProId,
-		licenses: [{ license_plan_id: annualSeatId, included: 0 }],
+		licenses: [
+			{
+				license_plan_id: quarterlySeat.id,
+				included: 0,
+				customize: { price: { amount: 200, interval: BillingInterval.Year } },
+			},
+		],
 	});
 
 	const quarterlySeatFull = await fetchFullProduct({
@@ -117,6 +125,20 @@ const setupVariantLicenseFamily = async ({
 	});
 	expect(annualStripePriceId).not.toBe(quarterlyStripePriceId);
 
+	const annualLicense = await getFullLicenseProduct({
+		ctx,
+		parentPlanId: annualProId,
+		licensePlanId: quarterlySeat.id,
+	});
+	const annualLicenseBasePrice = productToBasePrice({
+		product: annualLicense.fullLicenseProduct,
+	});
+	const annualLicenseStripePriceId =
+		annualLicenseBasePrice?.config.stripe_price_id;
+	if (!annualLicenseStripePriceId) {
+		throw new Error("Annual parent license has no Stripe price id");
+	}
+
 	return {
 		autumnV1,
 		autumnV2_3,
@@ -126,6 +148,7 @@ const setupVariantLicenseFamily = async ({
 		annualSeatId,
 		quarterlyStripePriceId,
 		annualStripePriceId,
+		annualLicenseStripePriceId,
 	};
 };
 
@@ -182,7 +205,9 @@ test(`${chalk.yellowBright("sub.created license variant back-sync: annual seat q
 	const stripeSubscription = await createExternalStripeSubscription({
 		ctx,
 		customerId,
-		items: [{ price: family.annualStripePriceId, quantity: PAID_SEATS }],
+		items: [
+			{ price: family.annualLicenseStripePriceId, quantity: PAID_SEATS },
+		],
 	});
 	expect(stripeSubscription.status).toBe("active");
 	await timeout(12_000);
@@ -205,7 +230,7 @@ test(`${chalk.yellowBright("sub.created license variant back-sync: annual seat q
 		count: 1,
 		licenses: [
 			{
-				license_plan_id: family.annualSeatId,
+				license_plan_id: family.quarterlySeatId,
 				parent_plan_id: family.annualProId,
 				paid_quantity: PAID_SEATS,
 				granted: PAID_SEATS,
@@ -220,6 +245,11 @@ test(`${chalk.yellowBright("sub.created license variant back-sync: annual seat q
 		parentPlanId: family.annualProId,
 		subscriptionId: stripeSubscription.id,
 		isCustom: false,
-		basePrice: { amount: 200, interval: BillingInterval.Year },
+		isCustomized: true,
+		basePrice: {
+			amount: 200,
+			interval: BillingInterval.Year,
+			stripePriceId: family.annualLicenseStripePriceId,
+		},
 	});
 });

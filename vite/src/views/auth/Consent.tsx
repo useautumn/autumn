@@ -21,6 +21,7 @@ import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { ScopeSelector } from "@/components/v2/scope-selector";
+import { useSandboxesQuery } from "@/hooks/queries/useSandboxesQuery";
 import {
 	authClient,
 	useListOrganizations,
@@ -183,7 +184,9 @@ export const Consent = () => {
 	const [scopeOverride, setScopeOverride] = useState<ScopeString[] | null>(
 		null,
 	);
-	const [envOverride, setEnvOverride] = useState<AppEnv | null>(null);
+	const [environmentOverride, setEnvironmentOverride] = useState<string | null>(
+		null,
+	);
 
 	const clientId = searchParams.get("client_id");
 	const redirectUri = searchParams.get("redirect_uri");
@@ -196,10 +199,15 @@ export const Consent = () => {
 		(session as SessionWithScopes | null | undefined)?.scopes ?? [];
 	const clientInfoQuery = useQuery({
 		queryKey: ["oauth-client-info", clientId, redirectUri],
-		queryFn: () => fetchOAuthClientInfo({ clientId: clientId!, redirectUri }),
+		queryFn: () =>
+			fetchOAuthClientInfo({ clientId: clientId ?? "", redirectUri }),
 		enabled: !!clientId,
 	});
 	const clientInfo = clientInfoQuery.data ?? null;
+	const currentOrg = activeOrganization || orgs?.[0];
+	const { sandboxes } = useSandboxesQuery({
+		enabled: !!currentOrg && clientInfo?.is_atmn === false,
+	});
 	const defaultScopes = getGrantableOAuthScopes({
 		requestedScopes,
 		sessionScopes,
@@ -208,11 +216,17 @@ export const Consent = () => {
 		getSelectableOAuthResourceScopes(requestedScopes),
 	);
 	const selectedScopes = scopeOverride ?? defaultScopes;
-	const selectedEnv = envOverride ?? clientInfo?.default_env ?? initialEnv;
+	const selectedEnvironment =
+		environmentOverride ?? clientInfo?.default_env ?? initialEnv;
+	const selectedEnv =
+		selectedEnvironment === AppEnv.Live ? AppEnv.Live : AppEnv.Sandbox;
+	const selectedSandboxOrgId =
+		selectedEnvironment === AppEnv.Live ||
+		selectedEnvironment === AppEnv.Sandbox
+			? undefined
+			: selectedEnvironment;
 	const isLoading = !!clientId && clientInfoQuery.isLoading;
 	const canAuthorize = selectedScopes.length > 0;
-
-	const currentOrg = activeOrganization || orgs?.[0];
 
 	const handleStopImpersonating = async () => {
 		setIsEndingImpersonation(true);
@@ -266,10 +280,12 @@ export const Consent = () => {
 				client_id: clientId,
 				redirect_uri: redirectUri,
 				env: clientInfo.is_atmn ? undefined : selectedEnv,
+				sandbox_org_id: clientInfo.is_atmn ? undefined : selectedSandboxOrgId,
 			} as Parameters<typeof authClient.oauth2.consent>[0] & {
 				client_id: string | null;
 				redirect_uri: string | null;
 				env?: AppEnv;
+				sandbox_org_id?: string;
 			});
 
 			if (error) {
@@ -489,12 +505,8 @@ export const Consent = () => {
 									Environment
 								</span>
 								<Select
-									value={selectedEnv}
-									onValueChange={(value) => setEnvOverride(value as AppEnv)}
-									items={{
-										[AppEnv.Sandbox]: "Sandbox",
-										[AppEnv.Live]: "Production",
-									}}
+									value={selectedEnvironment}
+									onValueChange={setEnvironmentOverride}
 								>
 									<SelectTrigger className="w-[200px]">
 										<SelectValue />
@@ -502,6 +514,11 @@ export const Consent = () => {
 									<SelectContent>
 										<SelectItem value={AppEnv.Sandbox}>Sandbox</SelectItem>
 										<SelectItem value={AppEnv.Live}>Production</SelectItem>
+										{sandboxes.map((sandbox) => (
+											<SelectItem key={sandbox.id} value={sandbox.id}>
+												{sandbox.name}
+											</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 							</div>

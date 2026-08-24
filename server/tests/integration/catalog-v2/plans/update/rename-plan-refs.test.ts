@@ -83,6 +83,7 @@ test.concurrent(
 					{
 						plan_id: planId,
 						versioning: "new_version",
+						active: true,
 						items: [
 							{
 								feature_id: TestFeature.Messages,

@@ -198,6 +198,33 @@ test("buildCatalogUpdateParams maps authoritative plan licenses", () => {
 	expect(params.plans[1]?.licenses).toEqual([]);
 });
 
+test("buildCatalogUpdateParams forwards archived plans", () => {
+	const params = buildCatalogUpdateParams({
+		features: [],
+		plans: [{ id: "pro", name: "Pro", archived: true }],
+	});
+
+	expect(params.plans[0]).toMatchObject({ plan_id: "pro", archived: true });
+});
+
+test("buildCatalogUpdateParams forwards explicitly unarchived plans", () => {
+	const params = buildCatalogUpdateParams({
+		features: [],
+		plans: [{ id: "pro", name: "Pro", archived: false }],
+	});
+
+	expect(params.plans[0]).toMatchObject({ plan_id: "pro", archived: false });
+});
+
+test("buildCatalogUpdateParams omits archived when the plan does not set it", () => {
+	const params = buildCatalogUpdateParams({
+		features: [],
+		plans: [{ id: "pro", name: "Pro" }],
+	});
+
+	expect(params.plans[0]).not.toHaveProperty("archived");
+});
+
 test("buildCatalogUpdateParams maps direct variant update-current migration controls", () => {
 	const params = buildCatalogUpdateParams({
 		features: [],
