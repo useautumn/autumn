@@ -1,5 +1,5 @@
 import { logger } from "../../lib/logger.js";
-import { createSqliteDb } from "../../sqlite/createSqliteDb.js";
+import { createSqliteDb } from "../../sqlite/common/createSqliteDb.js";
 import { getJournal } from "../journal/getJournal.js";
 import { createShard } from "./createShard.js";
 import type { Shard } from "./types/shard.js";
