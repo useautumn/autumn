@@ -1,6 +1,13 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI, openai } from "@ai-sdk/openai";
 import type { LeafAgentConnection } from "./toolAllowlists.js";
+
+// .chat pins chat-completions — OpenRouter does not serve the responses API.
+const openrouter = (model: string) =>
+	createOpenAI({
+		apiKey: process.env.OPENROUTER_API_KEY,
+		baseURL: "https://openrouter.ai/api/v1",
+	}).chat(model);
 
 const resolveModel = (value: string | undefined) => {
 	if (!value) return undefined;
@@ -8,6 +15,7 @@ const resolveModel = (value: string | undefined) => {
 	const model = rest.join("/");
 	if (provider === "openai" && model) return openai(model);
 	if (provider === "anthropic" && model) return anthropic(model);
+	if (provider === "openrouter" && model) return openrouter(model);
 	// Any other prefix is treated as a Vercel AI Gateway model id string.
 	return value;
 };
@@ -17,7 +25,7 @@ const resolveModel = (value: string | undefined) => {
  * (gateway string) and EVE_ANTHROPIC_MODEL move everyone together. */
 export const leafModel = (agent: LeafAgentConnection) =>
 	resolveModel(process.env[`EVE_MODEL_${agent.toUpperCase()}`]) ??
-	process.env.EVE_MODEL ??
+	resolveModel(process.env.EVE_MODEL) ??
 	(process.env.EVE_OPENAI_MODEL
 		? openai(process.env.EVE_OPENAI_MODEL)
 		: anthropic(process.env.EVE_ANTHROPIC_MODEL ?? "claude-sonnet-5"));
