@@ -194,7 +194,7 @@ const outcomeNote = ({
 		"Your subagent saw only the procedural denials and may report these writes as denied or failed — that report is WRONG and must be ignored. This note is the ground truth:",
 		allApplied ? "Every write below is APPLIED and live:" : "Actual outcomes:",
 		...lines,
-		"Do NOT re-issue any of these writes, do NOT re-delegate to verify, and NEVER describe an applied write as denied or rejected. Reply to the user with a short summary of these actual outcomes only.",
+		"Do NOT re-issue any of these writes, do NOT re-delegate to verify, and NEVER describe an applied write as denied or rejected. The approval card in the thread already shows these outcomes — do not reply; end your turn silently.",
 	].join("\n");
 };
 
@@ -305,7 +305,7 @@ export const executeApprovalWrites = async ({
 							publicToolArgs(input ?? {}),
 						),
 				)
-					? "This write was already applied by the system when the user approved — do not re-issue it; reply with a short confirmation instead."
+					? "This write was already applied by the system when the user approved — do not re-issue it and do not reply; the card already confirms it."
 					: undefined,
 			suppressSiblingWithheldNote: true,
 		});
