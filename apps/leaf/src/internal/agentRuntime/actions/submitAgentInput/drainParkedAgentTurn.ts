@@ -25,8 +25,9 @@ export const drainParkedAgentTurn = async ({
 	auth: EveAuthContext;
 	orgId: string;
 	session: EveSessionRef;
-}) => {
+}): Promise<{ stuck: boolean }> => {
 	let denies = 0;
+	let stuck = false;
 	while (true) {
 		let parkedAgain = false;
 		let turnStarted = false;
@@ -69,6 +70,9 @@ export const drainParkedAgentTurn = async ({
 						parkedAgain = true;
 						break;
 					}
+					// A gated park past the deny cap is a turn that rebuilds after
+					// every denial; leaving it parked would hang the session.
+					stuck = parked?.kind === "gated";
 					session.state.status = "waiting";
 					break;
 				} else if (
@@ -101,4 +105,5 @@ export const drainParkedAgentTurn = async ({
 		state: session.state,
 		threadKey: session.threadKey,
 	});
+	return { stuck };
 };

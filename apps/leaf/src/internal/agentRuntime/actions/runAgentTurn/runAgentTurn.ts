@@ -5,7 +5,8 @@ import type {
 	AgentTurnContext,
 	AgentTurnParams,
 } from "../../domain/agentTurnContext.js";
-import { EveSessionGoneError } from "../../eve/client.js";
+import { EveSessionDeadError, EveSessionGoneError } from "../../eve/client.js";
+import { deleteEveSession } from "../../eve/repo.js";
 import type { EveAuthContext } from "../../eve/types.js";
 import {
 	generateThreadTitle,
@@ -111,22 +112,55 @@ export const runAgentTurn = async ({
 				}),
 			});
 		}
-		run?.resolveSessionId(session.sessionId);
-		const outcome = await consumeAgentTurn({
-			auth,
-			env,
-			logger,
-			onAction,
-			onFirstStreamEvent: () => {
-				firstEventAt ??= Date.now();
-			},
-			onReasoning,
-			onThinking,
-			orgId: org.id,
-			run,
-			session,
-			token,
-		});
+		const consume = () => {
+			run?.resolveSessionId(session.sessionId);
+			return consumeAgentTurn({
+				auth,
+				env,
+				logger,
+				onAction,
+				onFirstStreamEvent: () => {
+					firstEventAt ??= Date.now();
+				},
+				onReasoning,
+				onThinking,
+				orgId: org.id,
+				run,
+				session,
+				token,
+			});
+		};
+		let outcome: Awaited<ReturnType<typeof consume>>;
+		try {
+			outcome = await consume();
+		} catch (error) {
+			if (!(existingSession && error instanceof EveSessionDeadError)) {
+				throw error;
+			}
+			// A dead session poisons every later message in the thread; drop it
+			// and answer this message from a fresh one instead of failing.
+			logger.warn("Eve session is dead; restarting the thread fresh", {
+				event: "leaf.eve_session_dead_restarted",
+				data: { session_id: session.sessionId },
+			});
+			await deleteEveSession({
+				db,
+				env,
+				orgId: org.id,
+				reason: "session_dead",
+				sessionId: session.sessionId,
+				threadKey: session.threadKey,
+			});
+			session = await startTurn({
+				orgContext: await autumnOrgContextService.load({
+					env,
+					logger,
+					orgId: org.id,
+					token,
+				}),
+			});
+			outcome = await consume();
+		}
 
 		const result = await resolveAgentTurnOutcome({
 			env,

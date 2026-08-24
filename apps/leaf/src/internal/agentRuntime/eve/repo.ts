@@ -143,6 +143,7 @@ export const upsertEveSession = async ({
 export type EveSessionDeleteReason =
 	| "approval_session_gone"
 	| "post_failed"
+	| "session_dead"
 	| "session_failed"
 	| "session_gone"
 	| "turn_unusable";
