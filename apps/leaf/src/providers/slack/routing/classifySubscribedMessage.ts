@@ -14,7 +14,7 @@ const routingSchema = z.strictObject({
 	disposition: z.enum(["respond", "ignore"]),
 });
 
-import { isExplicitOptOut } from "./explicitOptOut.js";
+import { controlMessageFrom } from "./controlMessage.js";
 
 const applyMentionRouting = ({
 	disposition,
@@ -37,12 +37,20 @@ export const classifySubscribedMessage = async ({
 	recentMessages: ReadonlyArray<AgentContextMessage>;
 	text: string;
 }) => {
-	if (isExplicitOptOut(text)) {
+	const control = controlMessageFrom(text);
+	if (control === "opt_out") {
 		logger.debug("Classified subscribed Slack message", {
 			event: "leaf.slack_message_classified",
 			data: { disposition: "unsubscribe", source: "explicit_opt_out" },
 		});
 		return "unsubscribe" as const;
+	}
+	if (control === "stop") {
+		logger.debug("Classified subscribed Slack message", {
+			event: "leaf.slack_message_classified",
+			data: { disposition: "respond", source: "stop_control" },
+		});
+		return "respond" as const;
 	}
 
 	try {

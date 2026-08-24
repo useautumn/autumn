@@ -36,7 +36,7 @@ import {
 } from "../files.js";
 import { findSlackInstallationForWorkspace } from "../installations.js";
 import { presentSlackAgentTurn } from "../presenters/presentSlackAgentTurn.js";
-import { isExplicitOptOut } from "../routing/explicitOptOut.js";
+import { controlMessageFrom } from "../routing/controlMessage.js";
 import { runSlackAgentTurn } from "./runSlackAgentTurn.js";
 
 type DispatchSlackAgentMessageInput = {
@@ -272,9 +272,10 @@ export const dispatchSlackAgentMessage = async (
 		threadId: input.threadId,
 		workspaceId: getSlackWorkspaceId(input.raw),
 	});
-	// "stop replying" and friends must never start a run — mentions and DMs
-	// skip the subscribed-message classifier, so the opt-out is checked here.
-	if (isExplicitOptOut(input.text)) {
+	// Control commands must never start a run, however the bot was addressed:
+	// "stop" halts the active run; "stop replying" also mutes the thread.
+	const control = controlMessageFrom(input.text);
+	if (control) {
 		await stopActiveThreadRun({
 			byUserId: input.providerUserId,
 			runKey,
@@ -283,9 +284,9 @@ export const dispatchSlackAgentMessage = async (
 			await input.react?.({ action: "remove", emoji: "eyes" });
 			await input.react?.({ action: "add", emoji: "white_check_mark" });
 		} catch {
-			// Reactions are best-effort; the opt-out must still close the thread.
+			// Reactions are best-effort; the control must still take effect.
 		}
-		return "close";
+		return control === "opt_out" ? "close" : "keep";
 	}
 	return (
 		(await dispatchThreadMessage({
