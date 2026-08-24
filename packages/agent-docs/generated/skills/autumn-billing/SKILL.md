@@ -26,8 +26,8 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - Resolve timing (see Timing and schedules).
 - Resolve invoice, checkout, and proration behavior (see Billing behavior).
 - If one ambiguity changes which of the other questions apply, resolve it first on its own before gathering the rest.
-- Resolve every remaining checklist gap with its decisive default (see Rules); ask ONLY when a fact has no defensible default at all, and ask those together.
-- Then call the preview tool.
+- Gather all remaining missing questions from the checklist and ask them together.
+- If there are no missing questions, call the preview tool.
 - Surface the preview's immediate billing impact in one line, then immediately call the write tool — the write tool call itself IS the approval mechanism (it triggers your client's approval prompt/card before executing). Never ask for confirmation with a question tool or in prose.
 - If params change, update them and repeat from the relevant checklist step.
 - Once approved, apply the exact previewed billing action.
@@ -36,15 +36,15 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 
 - **A mutating billing action requires approval before it takes effect. The approval mechanism is the write tool call itself: calling `attach`/`updateSubscription`/`createSchedule` pauses for the user's approval before executing. Do NOT pre-confirm with `ask_question` or prose — that double-prompts the user.**
 - **The preview IS the question. When your best reading of the request is probably right, be confident: build it and preview it. A card the human can see, correct, or reject always beats asking a question you would likely have answered correctly yourself.**
-- **Decisive defaults — resolve, never ask. A bare plan name among sibling variants means the variant matching the stated interval or amount, defaulting to the monthly one. Ramps and multipliers read literally as compounding phases from the base price. A stated price for a plan is that plan's base price via customize — including enterprise/custom placeholder plans. State the assumption in one clause of your preview line; the approval card is where the user corrects it. The ONLY facts worth a question are ones with no defensible default: which customer, or a missing email needed for invoicing.**
 - **Apply the default billing params on every action unless the user explicitly asks otherwise — invoice mode (draft), enable immediately, and no proration. For a customer with NO existing subscription, OMIT `proration_behavior` entirely — it is an update-time concept and meaningless on a new subscription. The full rules and field names are in the Billing behavior section below; follow them exactly.**
 - Don't propose or promise steps outside what your tools can do. If the goal isn't reachable, say so plainly rather than inventing a workaround.
 - Read this full resource before building params and follow sections in order; later sections can define params that must be resolved before previewing.
 - Monetary amounts are major currency units: `$1,150` -> `1150`, not `115000`.
 - Slack billing requests usually expect immediate effect; use `plan_schedule: "immediate"` unless the user asks for end-of-cycle or future timing.
 - If using `invoice_mode` and the customer has no email, ask for the email and call `updateCustomer` before previewing.
-- On the rare question that survives the decisive defaults, ask the independent ones together in one concise message, one bullet each, and only for values needed to build the request; do not explain plan internals unless the user asks.
-- If a customization is inferred, take its most literal reading and build it — the preview surfaces it for correction. When surfacing a customization, describe it as a patch (what was added/removed/changed vs the catalog plan), not a full restatement of every feature.
+- Ask independent missing questions together in one concise message, using one bullet point per question.
+- While gathering params, ask only for values needed to build the billing request; do not explain plan internals unless the user asks.
+- If a customization is inferred, surface it for confirmation before previewing or writing. If its intent is ambiguous, ask before building — don't resolve it silently. When surfacing a customization, describe it as a patch (what was added/removed/changed vs the catalog plan), not a full restatement of every feature.
 - A follow-up that refines an attach customization remains customer-specific; use catalog tools only when the user explicitly asks to change the shared plan.
 - If the plan prices a feature as prepaid, a bare amount for that feature ("put them on 4.5k credits") means `feature_quantities` — NOT an item customization. Never remove or replace a prepaid item to set how many units a customer gets; customize the item only when the user explicitly changes its pricing or included allowance.
 - The word "included" means free allowance, not a purchase: "N included credits" sets `included: N` on the item via `customize` (carrying the rest of the item over unchanged) and does NOT add `feature_quantities`. Only combine both when the user asks for extra prepaid units on top of the new allowance.
