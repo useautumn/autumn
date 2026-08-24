@@ -82,7 +82,7 @@ test.concurrent(
 					expected: {
 						planId,
 						action: "update",
-						previousAttributes: { billing_controls: { [key]: [] } },
+						previousAttributes: null,
 						customize: null,
 						itemChanges: [],
 						priceChange: null,
@@ -163,7 +163,7 @@ test.concurrent(
 				preview.plans[0]?.plan_change?.previous_attributes
 					?.billing_controls ?? {};
 			expect(JSON.stringify(billingControls)).not.toContain("null");
-			expect(billingControls.spend_limits).toEqual([]);
+			expect(billingControls.spend_limits).toBeUndefined();
 			PreviewUpdateCatalogResponseSchema.parse(preview);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });

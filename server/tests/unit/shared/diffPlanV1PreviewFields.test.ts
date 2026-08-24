@@ -300,27 +300,29 @@ const createdLanes = {
 } as const;
 
 for (const key of BILLING_CONTROL_KEYS) {
-	test(`billing_controls: creating ${key} from unset previous is [] (not null)`, () => {
+	test(`billing_controls: creating ${key} from unset omits the lane`, () => {
 		const diff = diffPlanV1PreviewFields({
 			from: plan({ billing_controls: {} }),
 			to: plan({ billing_controls: { [key]: createdLanes[key] } }),
 		});
 
-		expect(diff.previous_attributes).toEqual({
-			billing_controls: { [key]: [] },
-		});
-		expect(
-			PlanPreviousAttributesV0Schema.parse(diff.previous_attributes),
-		).toEqual({
-			billing_controls: { [key]: [] },
-		});
+		expect(diff.previous_attributes).toBeNull();
 	});
 
-	test(`billing_controls: creating ${key} from a null lane is [] (not null)`, () => {
+	test(`billing_controls: creating ${key} from a null lane omits the lane`, () => {
 		const diff = diffPlanV1PreviewFields({
 			from: plan({
 				billing_controls: { [key]: null } as ApiPlanV1["billing_controls"],
 			}),
+			to: plan({ billing_controls: { [key]: createdLanes[key] } }),
+		});
+
+		expect(diff.previous_attributes).toBeNull();
+	});
+
+	test(`billing_controls: creating ${key} from an empty array keeps []`, () => {
+		const diff = diffPlanV1PreviewFields({
+			from: plan({ billing_controls: { [key]: [] } }),
 			to: plan({ billing_controls: { [key]: createdLanes[key] } }),
 		});
 

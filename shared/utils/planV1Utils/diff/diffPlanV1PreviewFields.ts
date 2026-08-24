@@ -103,8 +103,8 @@ export const diffPlanV1PreviousAttributes = ({
 		// Nested billing_controls: only emit keys that actually changed.
 		if (key === "billing_controls") {
 			const sparse = sparsePreviousBillingControls({
-				from: (fromValue ?? {}) as Record<string, unknown>,
-				to: (toValue ?? {}) as Record<string, unknown>,
+				from: (from.billing_controls ?? {}) as Record<string, unknown>,
+				to: (to.billing_controls ?? {}) as Record<string, unknown>,
 			});
 			if (Object.keys(sparse).length > 0) {
 				previous.billing_controls = sparse;
@@ -120,10 +120,7 @@ export const diffPlanV1PreviousAttributes = ({
 	return Object.keys(previous).length > 0 ? previous : null;
 };
 
-/** Unset/null lanes become `[]` — the preview schema rejects null arrays. */
-const previousBillingControlLane = (value: unknown): unknown[] =>
-	Array.isArray(value) ? value : [];
-
+/** Unset lanes stay omitted. `[]` only when the previous lane was actually empty. */
 const sparsePreviousBillingControls = ({
 	from,
 	to,
@@ -134,8 +131,9 @@ const sparsePreviousBillingControls = ({
 	const previous: Record<string, unknown> = {};
 	const keys = new Set([...Object.keys(from), ...Object.keys(to)]);
 	for (const key of keys) {
+		if (from[key] == null) continue;
 		if (!valuesEqual(from[key], to[key])) {
-			previous[key] = previousBillingControlLane(from[key]);
+			previous[key] = from[key];
 		}
 	}
 	return previous;
