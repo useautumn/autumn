@@ -188,10 +188,6 @@ const runAndReply = async ({
 			return "close";
 		}
 
-		const outputInstallation =
-			output.kind === "blocked" ? installation : output.installation;
-		const orgId =
-			output.kind === "blocked" ? outputInstallation.org_id : output.org.id;
 		if (output.kind === "blocked") {
 			await progress.fail(output.text);
 			await target.post({ markdown: output.text });

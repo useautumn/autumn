@@ -27,7 +27,7 @@ export const denyApprovalParkAndDrain = async ({
 	note: string;
 	session: EveSessionRef;
 }) => {
-	if (!approval.tool_call_id) return;
+	if (!approval.tool_call_id) return { stuck: false };
 	const writeRows = await chatApprovalWritesRepo.list({
 		approvalId: approval.id,
 		db,
@@ -42,5 +42,6 @@ export const denyApprovalParkAndDrain = async ({
 		siblingRequestIds: siblingRequestIdsOf({ approval, writes: writeRows }),
 	});
 	adoptPostedEveSession({ posted, session, status: "running" });
-	await drainParkedAgentTurn({ auth, orgId: approval.org_id, session });
+	session.state.pendingRequests = [];
+	return drainParkedAgentTurn({ auth, orgId: approval.org_id, session });
 };

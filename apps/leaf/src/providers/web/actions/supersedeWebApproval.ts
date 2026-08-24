@@ -1,3 +1,4 @@
+import { abandonEveSession } from "../../../internal/agentRuntime/eve/abandonSession.js";
 import { getEveSessionBySessionId } from "../../../internal/agentRuntime/eve/repo.js";
 import { denyApprovalParkAndDrain } from "../../../internal/approvals/actions/denyApprovalParkAndDrain.js";
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
@@ -50,7 +51,7 @@ export const supersedeWebApproval = async ({
 				})
 			: undefined;
 		if (session) {
-			await denyApprovalParkAndDrain({
+			const { stuck } = await denyApprovalParkAndDrain({
 				approval: cancelled,
 				auth: {
 					appEnv: cancelled.env,
@@ -64,6 +65,23 @@ export const supersedeWebApproval = async ({
 				note: SUPERSEDED_NOTE,
 				session,
 			});
+			// A run that keeps re-parking after every denial can never be driven
+			// again; abandon it so the thread's next message starts fresh.
+			if (stuck) {
+				await abandonEveSession({
+					env: cancelled.env,
+					orgId: cancelled.org_id,
+					providerUserId: userId,
+					reason: "session_dead",
+					session,
+					thread: {
+						channelId: cancelled.channel_id,
+						provider: cancelled.provider,
+						threadId: cancelled.channel_id,
+						workspaceId: cancelled.workspace_id,
+					},
+				});
+			}
 		}
 	} catch (error) {
 		logger.warn("Could not deny superseded approval in eve", {

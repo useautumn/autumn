@@ -45,6 +45,7 @@ const existingSession: EveSessionRef = {
 		streamIndex: 57,
 		status: "waiting",
 		lastEventAt: 0,
+		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",
 };
@@ -107,16 +108,17 @@ await mockLeafModule({
 
 const deletedSessions: Array<{ reason: string; sessionId: string }> = [];
 await mockLeafModule({
-	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
+	specifier: "../../../src/internal/agentRuntime/eve/abandonSession.js",
 	factory: () => ({
-		deleteEveSession: async ({
+		abandonEveSession: async ({
 			reason,
-			sessionId,
+			session,
 		}: {
 			reason: string;
-			sessionId: string;
+			session: EveSessionRef;
 		}) => {
-			deletedSessions.push({ reason, sessionId });
+			deletedSessions.push({ reason, sessionId: session.sessionId });
+			return { orphanedApprovals: [] };
 		},
 	}),
 });

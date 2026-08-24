@@ -10,6 +10,7 @@ export const initialEveSessionState = (
 	streamIndex: 0,
 	status: "running",
 	lastEventAt: Date.now(),
+	pendingRequests: [],
 });
 
 /** Merges a patch into the live session ref, then persists the whole row. */

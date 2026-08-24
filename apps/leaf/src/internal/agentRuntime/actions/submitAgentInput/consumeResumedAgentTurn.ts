@@ -16,6 +16,7 @@ import { upsertEveSession } from "../../eve/repo.js";
 import { streamEveEventsWithReconnect } from "../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { normalizeToolName } from "../../tools/toolPolicy.js";
+import { pendingGatedRequests } from "../runAgentTurn/execute/eveTurnReducer.js";
 import type { ResumedAgentTurn } from "./types.js";
 
 const FAILED_ACTION_STATUSES = new Set(["error", "failed", "rejected"]);
@@ -242,6 +243,8 @@ export const consumeResumedAgentTurn = async ({
 					chained = parkedInput.chained;
 					chainedSiblingRequestIds = parkedInput.siblingRequestIds;
 					chainedWithheld = parkedInput.withheld;
+					session.state.pendingRequests = pendingGatedRequests(parkedInput);
+					session.state.status = "waiting";
 					break;
 				}
 				if (parkedInput?.kind === "question") {

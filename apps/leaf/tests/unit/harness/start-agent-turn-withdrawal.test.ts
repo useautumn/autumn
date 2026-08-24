@@ -57,6 +57,7 @@ await mockLeafModule({
 			streamIndex: 0,
 			status: "running",
 			lastEventAt: 0,
+			pendingRequests: [],
 		}),
 		saveEveSessionState: async () => undefined,
 	}),
@@ -89,6 +90,7 @@ const makeSession = (): EveSessionRef => ({
 		streamIndex: 7,
 		status: "waiting",
 		lastEventAt: 0,
+		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",
 });

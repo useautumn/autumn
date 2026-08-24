@@ -12,6 +12,7 @@ import { classifyParkedEveInput } from "../../eve/parkedInput.js";
 import { upsertEveSession } from "../../eve/repo.js";
 import { streamEveEventsWithReconnect } from "../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
+import { pendingGatedRequests } from "../runAgentTurn/execute/eveTurnReducer.js";
 import { QUEUED_TURN_WITHDRAWAL_NOTE } from "./agentInputNotes.js";
 
 const MAX_DRAIN_DENIES = 3;
@@ -67,8 +68,12 @@ export const drainParkedAgentTurn = async ({
 							siblingRequestIds: parked.siblingRequestIds,
 						});
 						adoptPostedEveSession({ posted, session });
+						session.state.pendingRequests = [];
 						parkedAgain = true;
 						break;
+					}
+					if (parked?.kind === "gated") {
+						session.state.pendingRequests = pendingGatedRequests(parked);
 					}
 					// A gated park past the deny cap is a turn that rebuilds after
 					// every denial; leaving it parked would hang the session.

@@ -44,6 +44,7 @@ export const submitAgentInput = async ({
 		suppressSiblingWithheldNote,
 	});
 	adoptPostedEveSession({ posted, session, status: "running" });
+	session.state.pendingRequests = [];
 	await upsertEveSession({
 		db,
 		env: session.env,

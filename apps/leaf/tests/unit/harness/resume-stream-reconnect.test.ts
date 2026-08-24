@@ -136,6 +136,7 @@ const makeSession = (): EveSessionRef => ({
 		streamIndex: 0,
 		status: "waiting",
 		lastEventAt: 0,
+		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",
 });
