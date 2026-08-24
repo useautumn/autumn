@@ -336,12 +336,13 @@ test.concurrent(
 				],
 			});
 
+			// Draft mint — omit active so v1 is not demoted (demotion upsert inits v1 too).
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{
 						plan_id: planId,
 						price: { amount: 30, interval: BillingInterval.Month },
-						versioning: "new_version", active: true,
+						versioning: "new_version",
 					},
 				],
 			});

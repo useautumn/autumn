@@ -3,7 +3,7 @@
  *
  * Contract:
  *   child new_version omit active + propagate.license_parents new_version
- *     → minted parent is draft
+ *     → child draft mint only; parent stays on active until child takes the pointer
  *   same with child active:true → minted parent is active
  */
 
@@ -65,13 +65,6 @@ test.concurrent(
 					planId: parentId,
 					version: 2,
 					active: true,
-				});
-				await expectVersionIdentityCorrect({
-					ctx,
-					planId: parentId,
-					version: 3,
-					active: false,
-					isDefault: false,
 				});
 			},
 		});

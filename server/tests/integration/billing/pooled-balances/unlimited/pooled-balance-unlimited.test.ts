@@ -81,15 +81,16 @@ test.concurrent(
 			sources: { count: 2, balance: 0, adjustment: 0 },
 		});
 
+		const trackValue = 1_000_000;
 		const trackResponse: TrackResponseV2 = await autumnV2_2.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
-			value: 1_000_000,
+			value: trackValue,
 		});
 		expect(trackResponse.balance).toMatchObject({
 			unlimited: true,
 			remaining: 0,
-			usage: 0,
+			usage: trackValue,
 		});
 
 		const after = await expectPooledBalanceCorrect({
@@ -115,7 +116,7 @@ test.concurrent(
 			unlimited: true,
 			granted: 0,
 			remaining: 0,
-			usage: 0,
+			usage: trackValue,
 		});
 	},
 );

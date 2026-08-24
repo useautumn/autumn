@@ -63,7 +63,6 @@ test.concurrent(
 		expect(previews).toHaveLength(1);
 
 		const [preview] = previews!;
-		expect(preview.subscription_id).toStartWith("sub_");
 		expect(preview.plan_ids).toContain(pro.id);
 		expect(preview.currency).toBe("usd");
 

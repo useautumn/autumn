@@ -6,18 +6,23 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiPlanV1, ErrCode } from "@autumn/shared";
+import { type ApiPlanV1 } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { expectLicenseLinkCorrect } from "../licenses/utils/expectLicenseLinkCorrect.js";
 import {
+	parsePlanPreview,
+	expectPlanPreviewRowCorrect,
+} from "../preview/utils/expectPlanPreview.js";
+import {
 	deleteDbPlans,
 	expectCatalogPlansCorrect,
 } from "../utils/expectCatalogPlans.js";
 import {
 	deleteAliases,
+	listAliases,
 	renamePlan,
 } from "../utils/planAliasTestUtils.js";
 
@@ -197,14 +202,28 @@ test.concurrent(
 			const variant = await autumnV2_3.products.get<ApiPlanV1>(variantId);
 			expect(variant.id).toBe(variantId);
 
-			await expectAutumnError({
-				errCode: ErrCode.InvalidRequest,
-				errMessage: "reserved as an alias",
-				func: () =>
-					autumnV2_3.catalogV2.update({
-						plans: [{ plan_id: variantId, new_plan_id: baseOld }],
-					}),
+			const claimPreview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [{ plan_id: variantId, new_plan_id: baseOld }],
+				}),
+			);
+			expectPlanPreviewRowCorrect({
+				preview: claimPreview,
+				expected: {
+					planId: variantId,
+					action: "update",
+					aliasReplacement: { alias_id: baseOld, plan_id: baseNew },
+				},
 			});
+
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: variantId, new_plan_id: baseOld }],
+			});
+			const afterClaim = await listAliases({ ctx, planIds });
+			expect(afterClaim.some((row) => row.alias_id === baseOld)).toBe(false);
+			const claimed = await autumnV2_3.products.get<ApiPlanV1>(baseOld);
+			expect(claimed.id).toBe(baseOld);
+			expect(claimed.name).toBe("EU");
 		} finally {
 			await deleteAliases({ ctx, planIds });
 			await deleteDbPlans({ ctx, planIds });

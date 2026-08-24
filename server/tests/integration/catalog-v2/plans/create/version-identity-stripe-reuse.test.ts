@@ -4,6 +4,7 @@
  * Contract:
  *   v2 active → new variant reuses v2 stripe product
  *   v1 forced active → new variant reuses v1 stripe product
+ *   sibling versions share one plan-level Stripe Product (processor.id)
  */
 
 import { expect, test } from "bun:test";
@@ -124,9 +125,7 @@ test.concurrent(
 			});
 
 			const v1 = await getFull({ ctx, planId: baseId, version: 1 });
-			const v2 = await getFull({ ctx, planId: baseId, version: 2 });
 			const variant = await getFull({ ctx, planId: variantId });
-			expect(v1.processor?.id).not.toBe(v2.processor?.id);
 			expectProductProcessorCorrect({
 				product: variant,
 				processorId: v1.processor?.id,

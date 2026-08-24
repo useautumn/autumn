@@ -2,7 +2,7 @@
  * catalogV2.update — propagate.license_parents versioning:new_version.
  * Parent absent from plans[].
  *
- * Latest has customers → mint, follow the mint, freeze old.
+ * Active has customers → mint, follow the mint, freeze old.
  * No customers → fall back to existing (in-place latest, no mint).
  */
 import { expect, test } from "bun:test";
@@ -22,7 +22,7 @@ import {
 } from "../utils/seedLicensePlans.js";
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: new_version mints when parent latest has customers")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: new_version mints when parent active has customers")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_pnv_p");
@@ -46,6 +46,7 @@ test.concurrent(
 				await bumpChild({
 					autumn: autumnV2_3,
 					childId,
+					versioning: "new_version",
 					propagate: {
 						license_parents: [
 							{ plan_id: parentId, versioning: "new_version" },
