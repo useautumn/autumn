@@ -40,12 +40,19 @@ const compactItem = (item: unknown) => {
 	}
 	const price = asRecord(record.price) ?? {};
 	if (price.billing_method) parts.push(String(price.billing_method));
+	if (typeof price.amount === "number") {
+		const units =
+			typeof price.billing_units === "number" && price.billing_units > 1
+				? `/${price.billing_units}`
+				: "";
+		parts.push(`price=${price.amount}${units}`);
+	}
 	return parts.join(" ");
 };
 
 /** The 30KB pretty-printed listPlans/listFeatures dump is ~89% whitespace and
- * display noise; the orchestrator only routes and answers trivial questions,
- * so it gets a compact index and fetches details with its own tools. */
+ * display noise; the orchestrator only routes and answers trivial questions
+ * from this compact index — anything beyond it is delegated, never fetched. */
 export const compactPlans = (plans: unknown) =>
 	listOf(plans).map((plan) => ({
 		...(plan.add_on === true ? { add_on: true } : {}),
