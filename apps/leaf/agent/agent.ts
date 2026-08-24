@@ -1,5 +1,9 @@
 import { defineAgent } from "eve";
-import { leafModel, leafReasoning } from "./lib/model.js";
+import {
+	leafModel,
+	leafModelContextWindowTokens,
+	leafReasoning,
+} from "./lib/model.js";
 
 const workflowWorld =
 	process.env.EVE_WORKFLOW_WORLD ??
@@ -7,6 +11,7 @@ const workflowWorld =
 
 export default defineAgent({
 	model: leafModel("orchestrator"),
+	modelContextWindowTokens: leafModelContextWindowTokens("orchestrator"),
 	reasoning: leafReasoning("orchestrator"),
 	...(workflowWorld
 		? {
