@@ -112,7 +112,6 @@ const buildCustomerProduct = ({
 			startsAt: resolvedStartsAt,
 			processorType,
 			internalEntityId,
-			isCustom: false,
 		},
 	});
 

@@ -1,5 +1,5 @@
 /**
- * catalogV2.update — Stripe id carry on versioning: "new_version" mint.
+ * catalogV2.update — Stripe id carry on versioning: "new_version", active: true mint.
  *
  * Pre-seeds real Stripe resources via initPlanStripeResources, then mints v2
  * and asserts reuse levels. Plan-level processor.id is copied onto the v2 row.
@@ -97,7 +97,7 @@ test.concurrent(
 						plan_id: planId,
 						name: "Stripe Mint Same V2",
 						items: [prepaidMessagesItem({ amount: 10 })],
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});
@@ -146,7 +146,7 @@ test.concurrent(
 					{
 						plan_id: planId,
 						items: [usageMessagesItem({ amount: 0.9 })],
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});
@@ -197,7 +197,7 @@ test.concurrent(
 							{ feature_id: TestFeature.Dashboard },
 							prepaidMessagesItem({ amount: 10 }),
 						],
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});

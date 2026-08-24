@@ -89,6 +89,8 @@ export const mapToProductV2 = ({
 		is_add_on: product.is_add_on,
 		is_default: product.is_default,
 		version: product.version,
+		version_slug: product.version_slug ?? null,
+		active: product.active ?? false,
 		group: product.group || null,
 		free_trial: product.free_trial,
 		created_at: product.created_at,

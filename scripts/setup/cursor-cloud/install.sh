@@ -7,6 +7,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
 log() { echo "[cursor-cloud-install] $*"; }
+. scripts/setup/install-stripe-cli.sh
 
 export CLOUD_AGENT=1
 export DW_HEADLESS=1
@@ -38,13 +39,13 @@ fi
 log "bun $($BUN --version) at $BUN"
 
 log "init ai submodule (skills + MCP sync source)"
-git submodule update --init --recursive
+git -C . submodule update --init --recursive
 
 # Copy skills before apt / workspace install. Cloud freezes available_skills
 # when the first chat starts; JIT agents often open that chat mid-install.
 if [ -f ai/package.json ]; then
 	log "ai deps + bun ai sync --copy (skills into ~/.cursor/skills)"
-	(cd ai && "$BUN" install)
+	(cd ai && "$BUN" install --frozen-lockfile)
 	"$BUN" ai/src/cli.ts sync --copy
 	"$BUN" scripts/setup/cursor-cloud/cursorCloud.ts mark-skills
 	if [ ! -f "${HOME}/.cursor/skills/tdd/SKILL.md" ]; then
@@ -60,23 +61,8 @@ bash scripts/setup/agent-bootstrap.sh
 log "workspace install"
 "$BUN" install --frozen-lockfile
 
-if [ ! -x /usr/local/bin/stripe ]; then
-	log "installing Stripe CLI (stripe listen → localhost webhooks)"
-	arch="$(uname -m)"
-	case "$arch" in
-		x86_64) stripe_arch="x86_64" ;;
-		aarch64|arm64) stripe_arch="arm64" ;;
-		*) stripe_arch="x86_64" ;;
-	esac
-	tmp="$(mktemp -d)"
-	stripe_ver="1.33.0"
-	curl -fsSL -o "$tmp/stripe.tar.gz" \
-		"https://github.com/stripe/stripe-cli/releases/download/v${stripe_ver}/stripe_${stripe_ver}_linux_${stripe_arch}.tar.gz"
-	tar -xzf "$tmp/stripe.tar.gz" -C "$tmp"
-	sudo install -m 0755 "$tmp/stripe" /usr/local/bin/stripe
-	rm -rf "$tmp"
-	stripe version
-fi
+log "installing Stripe CLI (stripe listen → localhost webhooks)"
+install_stripe_cli "[cursor-cloud-install]"
 
 if [ ! -x /usr/local/bin/cloudflared ]; then
 	log "installing cloudflared (per-service public hosts)"

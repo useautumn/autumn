@@ -10,10 +10,10 @@ Configure this repository under **Settings → Project → Dev environment**:
 
 | Lifecycle | Command | Responsibility |
 | --- | --- | --- |
-| Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies and `neonctl`, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
-| Update after checkout | `bun install --frozen-lockfile` | reconciles dependencies when a reused or snapshotted VM checks out another commit |
+| Initialize | `bash scripts/setup/capy-init.sh` | installs workspace dependencies, refreshes repo-pinned AI skills in `.agents/skills/`, installs `neonctl` and the pinned Stripe CLI, then pulls the Autumn and Trigger.dev infrastructure images for snapshot reuse |
+| Update after checkout | `bash scripts/setup/capy-init.sh` | re-runs the same deterministic refresh so reused or snapshotted VMs pick up pinned skills and tooling after checkout |
 | Startup | `bash scripts/setup/capy-startup.sh` | idempotently starts local infrastructure, provisions or resumes the VM's Neon branch, applies pending migrations and SQL functions, and writes local env files |
-| App | `bun capy` | runs Startup if needed, ensures emulate/portless are live, and starts the app in a detached tmux session |
+| App | `bun capy` | runs Startup if needed and starts the app in a detached tmux session |
 
 Initialize does not start services or create per-VM state, so it is safe to run
 during a snapshot build. Startup is blocking but bounded: its containers detach,
@@ -38,7 +38,8 @@ Setup command or repository file.
 Optional integration variables such as `STRIPE_SANDBOX_SECRET_KEY`,
 `STRIPE_SANDBOX_WEBHOOK_SECRET`, `STRIPE_SANDBOX_CLIENT_ID`,
 `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `POSTHOG_API_KEY`, and
-`SLACK_BOT_TOKEN` pass through when configured.
+`SLACK_BOT_TOKEN` pass through when configured. `STRIPE_SANDBOX_SECRET_KEY`
+authenticates the Stripe CLI without interactive login.
 
 ## Runtime services
 
@@ -80,11 +81,11 @@ without repository preview configuration.
 
 ## Provisioning model
 
-`scripts/capy/provision.ts` reads the VM's `bindingId` from the file referenced
-by `CAPY_MACHINE_CONFIG`, hashes it into a `capy-<hash>` Neon branch name, and
-stores non-secret branch metadata plus generated local auth secrets in the
-mode-`0600` file `~/.autumn-capy/state.json`. A resumed VM reuses that
-branch and refreshes its connection string. A new VM gets a new branch.
+`scripts/capy/provision.ts` hashes the VM's runtime hostname into a
+`capy-<hash>` Neon branch name, and stores non-secret branch metadata plus
+generated local auth secrets in the mode-`0600` file `~/.autumn-capy/state.json`.
+A resumed VM keeps its hostname and reuses that branch; a new VM derives a new
+branch even if it inherits a stale state file.
 
 The script writes managed values into:
 
@@ -94,6 +95,18 @@ The script writes managed values into:
 
 The Bun preload in `scripts/preload-env.ts` loads those files for direct commands,
 so Capy does not need Infisical for the local stack.
+
+## Logs
+
+Startup appends all output to `~/.autumn-capy/startup.log` (or
+`$CAPY_PREFIX/startup.log` when `CAPY_PREFIX` is set). Each run has a UTC
+delimiter, including failures before tmux or the application starts. The app
+process writes to `~/.autumn-capy/app.log` (or `$CAPY_PREFIX/app.log`), which is
+truncated only when a new app session launches. Both files are mode `0600`.
+
+Use `bun capy logs` to print the Startup log followed by the app log. It works
+after a Startup failure before the tmux session exists; when `app.log` is absent,
+it uses tmux's capture pane only as a fallback.
 
 ## Troubleshooting
 

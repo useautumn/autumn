@@ -42,6 +42,8 @@ export const API_PLAN_V1_EXAMPLE = {
 	description: null,
 	group: null,
 	version: 1,
+	version_slug: "v1",
+	active: true,
 	addOn: false,
 	autoEnable: false,
 	price: {
@@ -85,6 +87,14 @@ export const ApiPlanV1Schema = z.object({
 	version: z.number().meta({
 		description:
 			"Version number of the plan. Incremented when plan configuration changes.",
+	}),
+	version_slug: z.string().nullable().optional().meta({
+		description:
+			"User-facing version identity. Defaults to v{n} when the version is minted.",
+	}),
+	active: z.boolean().optional().meta({
+		description:
+			"Whether this is the active version of the plan. At most one version is active.",
 	}),
 	add_on: z.boolean().meta({
 		description:

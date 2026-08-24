@@ -79,5 +79,6 @@ export const projectProductStatesContext = ({
 		versionsByPlanId,
 		usageByInternalId,
 		rewardProgramsByPlanId,
+		maxVersionByPlanId: original.maxVersionByPlanId,
 	});
 };

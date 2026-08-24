@@ -19,6 +19,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/scripts/setup/dw.compose.yml"
 TRIGGER_COMPOSE_FILE="$REPO_ROOT/scripts/setup/trigger.compose.yml"
 . "$SCRIPT_DIR/capy-trigger-image.sh"
+. "$SCRIPT_DIR/install-stripe-cli.sh"
 
 command -v bun >/dev/null 2>&1 || die "bun is required"
 docker info >/dev/null 2>&1 || die "Docker Engine is required (use a Capy v2 VM)"
@@ -66,6 +67,25 @@ command -v neonctl >/dev/null 2>&1 || command -v neon >/dev/null 2>&1 || \
   die "neonctl installation did not put a binary on PATH"
 log "neonctl ready"
 log "psql ready"
+
+# Sync the repo-pinned AI submodule, install its deps, and refresh repo skills.
+log "initializing ai submodule"
+git -C "$REPO_ROOT" submodule update --init --recursive
+if [ -f "$REPO_ROOT/ai/package.json" ]; then
+  log "installing ai deps"
+  ( cd "$REPO_ROOT/ai" && bun install --frozen-lockfile )
+  log "syncing repo skills from ai"
+  ( cd "$REPO_ROOT/ai" && bun sync )
+  if [ ! -f "$REPO_ROOT/.agents/skills/tdd/SKILL.md" ]; then
+    die "bun sync did not write .agents/skills/tdd/SKILL.md"
+  fi
+  log "repo skills ready at .agents/skills"
+fi
+
+log "installing Stripe CLI (stripe listen → localhost webhooks)"
+install_stripe_cli "[capy-init]"
+command -v stripe >/dev/null 2>&1 || die "stripe installation did not put a binary on PATH"
+stripe version >/dev/null
 
 # Bun workspace deps. Frozen-lockfile so a stale node_modules from a
 # Capy snapshot is repaired without churn.

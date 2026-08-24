@@ -5,6 +5,7 @@
 
 import { expect, test } from "bun:test";
 import {
+	type CustomerBillingControls,
 	PreviewUpdateCatalogResponseSchema,
 	ResetInterval,
 } from "@autumn/shared";
@@ -68,6 +69,8 @@ test.concurrent(
 				plans: [{ plan_id: planId, name: "BC Lanes" }],
 			});
 
+			const clearedLanes: CustomerBillingControls = {};
+
 			for (const [key, items] of Object.entries(lanes)) {
 				const createPreview = parsePlanPreview(
 					await autumnV2_3.catalogV2.previewUpdate({
@@ -128,9 +131,10 @@ test.concurrent(
 					response: deleted,
 					plans: [{ id: planId, action: "update" }],
 				});
+				clearedLanes[key as keyof CustomerBillingControls] = [];
 				await expectCatalogPlansCorrect({
 					autumn: autumnV2_3,
-					expected: [{ id: planId, billingControlsExact: { [key]: [] } }],
+					expected: [{ id: planId, billingControlsExact: { ...clearedLanes } }],
 				});
 			}
 		} finally {

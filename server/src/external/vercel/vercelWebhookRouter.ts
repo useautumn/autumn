@@ -2,6 +2,7 @@ import { AppEnv } from "@autumn/shared";
 import { Hono } from "hono";
 import { handleRotateResourceSecret } from "@/external/vercel/handlers/resources/handleRotateResourceSecret.js";
 import { analyticsMiddleware } from "@/honoMiddlewares/analyticsMiddleware.js";
+import { planAliasMiddleware } from "@/honoMiddlewares/planAliasMiddleware.js";
 import { traceEnrichMiddleware } from "@/honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { logCaughtError } from "@/utils/logging/logCaughtError.js";
@@ -42,6 +43,7 @@ export const vercelWebhookRouter = new Hono<HonoEnv>();
 vercelWebhookRouter.use(
 	"/:orgId/:env/*",
 	vercelSeederMiddleware,
+	planAliasMiddleware,
 	analyticsMiddleware,
 	traceEnrichMiddleware,
 );

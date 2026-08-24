@@ -1,4 +1,9 @@
-import type { FrontendProduct } from "@autumn/shared";
+import type {
+	CatalogPlanUpdatePreview,
+	FrontendProduct,
+	UpdateCatalogPlanParamsInput,
+	UpdateCatalogResponse,
+} from "@autumn/shared";
 import {
 	AreaRadioGroupItem,
 	Dialog,
@@ -38,25 +43,48 @@ import { useMeasuredHeight } from "@/hooks/useMeasuredHeight";
 import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
-import { useVariantLinkVisibility } from "../hooks/useVariantLinkVisibility";
 import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
-import { useProductContext } from "../../product/ProductContext";
-import type { CatalogVersionChoice } from "../catalog/catalogPlanPreview";
+import { useOptionalProductContext } from "../../product/ProductContext";
+import {
+	type CatalogVersionChoice,
+	catalogPreviewAliasReplacements,
+	catalogPreviewPlanIdChange,
+	catalogPreviewVersionSlugChange,
+	isConfirmOnlyPlanChangeDialog,
+} from "../catalog/catalogPlanPreview";
 import { usePlanChangeCatalogPreview } from "../catalog/usePlanChangeCatalogPreview";
 import {
 	commitLicenseChanges,
 	getLicenseUpdatePayload,
 } from "../components/plan-licenses/useLicenseSaveRegistry";
+import { defaultVersionSlug } from "../components/versionLabel";
+import { useVariantLinkVisibility } from "../hooks/useVariantLinkVisibility";
+import { mintVersionSlugError } from "../utils/versionSlug";
 import { LicenseChangeList } from "./LicenseChangeList";
 import { LicenseParentTargetsStep } from "./LicenseParentTargetsStep";
 import { MigrateTargetsStep } from "./MigrateTargetsStep";
-import { PlanSettingsChanges } from "./PlanSettingsChanges";
+import { MintVersionSlugInput } from "./MintVersionSlugInput";
+import {
+	emptyMintSlugSelection,
+	type MintSlugSelection,
+	mintTargetSlugConflicts,
+	withMintSlugOverride,
+} from "./mintTargetSlugs";
+import { PlanChangeFieldLabel } from "./PlanChangeFieldLabel";
+import { PlanIdChangeNotice } from "./PlanIdChangeNotice";
+import {
+	PlanSettingsChanges,
+	previousAttributesToSettingChanges,
+} from "./PlanSettingsChanges";
+import { PromoteReviewSection } from "./PromoteReviewSection";
 import { getPlanPriceChange } from "./planMigrationDiff";
 import { Stepper, type StepperStep } from "./Stepper";
+import { savedVersionPin } from "./savedVersionPin";
 import { VariantTargetsStep } from "./VariantTargetsStep";
+import { VersionSlugChangeNotice } from "./VersionSlugChangeNotice";
 
 type StepKey =
 	| "review"
@@ -86,6 +114,26 @@ const buildPlanChangeSteps = ({
 		: []),
 	{ key: "migrate", label: "Review", icon: SealCheckIcon },
 ];
+
+/** A slug problem blocks the step that shows it, so Next never hides its own cause. */
+const stepBlocksPlanChangeAdvance = ({
+	step,
+	confirmed,
+	baseSlugInvalid,
+	hasSlugConflicts,
+}: {
+	step: StepKey;
+	confirmed: boolean;
+	baseSlugInvalid: boolean;
+	hasSlugConflicts: boolean;
+}): boolean => {
+	if (step === "strategy") return baseSlugInvalid;
+	if (step === "variant_scope") return hasSlugConflicts;
+	if (step === "migrate") {
+		return !confirmed || baseSlugInvalid || hasSlugConflicts;
+	}
+	return false;
+};
 
 const planChangePrimaryText = ({
 	isFinalStep,
@@ -117,12 +165,32 @@ const planChangePrimaryText = ({
 };
 
 const planChangeDescription = ({
+	aliasOnly,
+	planIdChangeOnly,
+	versionSlugChangeOnly,
+	promotionOnly,
 	step,
 	migrateNeeded,
 }: {
+	aliasOnly: boolean;
+	planIdChangeOnly: boolean;
+	versionSlugChangeOnly: boolean;
+	promotionOnly: boolean;
 	step: StepKey;
 	migrateNeeded: boolean;
 }) => {
+	if (planIdChangeOnly) {
+		return "Confirm you want to change this plan's ID.";
+	}
+	if (versionSlugChangeOnly) {
+		return "Confirm you want to rename this version's slug.";
+	}
+	if (aliasOnly) {
+		return "This plan ID is currently an alias of another plan.";
+	}
+	if (promotionOnly) {
+		return "Confirm which version this plan resolves to by default.";
+	}
 	if (step === "review") return "Review what's changing before you save.";
 	if (step === "strategy") return "Choose how this applies across versions.";
 	if (step === "variant_scope") {
@@ -159,12 +227,6 @@ const planChangeSaveSuccessText = ({
 	return "Plan updated";
 };
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-	return (
-		<span className="text-[13px] font-medium text-foreground">{children}</span>
-	);
-}
-
 function ConfirmInput({
 	productId,
 	value,
@@ -196,10 +258,22 @@ function ConfirmInput({
 	);
 }
 
+export type PlanChangeCreateConfirm = {
+	preview: CatalogPlanUpdatePreview;
+	plans: UpdateCatalogPlanParamsInput[];
+	onSaved?: (result: UpdateCatalogResponse) => void | Promise<void>;
+	title?: string;
+	successText?: string;
+	errorText?: string;
+	confirmLabel?: string;
+};
+
 export default function PlanChangeDialog({
+	createConfirm,
 	open,
 	setOpen,
 }: {
+	createConfirm?: PlanChangeCreateConfirm;
 	open: boolean;
 	setOpen: (open: boolean) => void;
 }) {
@@ -210,7 +284,7 @@ export default function PlanChangeDialog({
 	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
 	const { basePlanId: persistedBasePlanId } = useVariantLinkVisibility(product);
 	const { features = [] } = useFeaturesQuery();
-	const { catalogLicenses } = useProductContext();
+	const catalogLicenses = useOptionalProductContext()?.catalogLicenses ?? [];
 	const {
 		refetch,
 		invalidate: invalidateProduct,
@@ -218,7 +292,7 @@ export default function PlanChangeDialog({
 		numVersions,
 	} = useProductQuery();
 	const { setQueryStates } = useProductQueryState();
-	const { invalidate: invalidateProducts } = useProductsQuery();
+	const { products, invalidate: invalidateProducts } = useProductsQuery();
 	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
 	const { invalidate: invalidateMigrations } = useMigrationsQuery();
 	const { org } = useOrg();
@@ -228,6 +302,9 @@ export default function PlanChangeDialog({
 		useState<CatalogVersionChoice>("new");
 	const [includeCustom, setIncludeCustom] = useState(false);
 	const [confirmText, setConfirmText] = useState("");
+	const [slugSelection, setSlugSelection] = useState<MintSlugSelection>(
+		emptyMintSlugSelection,
+	);
 	const [isLoading, setIsLoading] = useState(false);
 	const [variantSelection, setVariantSelection] = useState<string[] | null>(
 		null,
@@ -242,16 +319,20 @@ export default function PlanChangeDialog({
 	const currency = org?.default_currency ?? "USD";
 	const isLatest = product.version >= numVersions;
 	const priceChange = getPlanPriceChange({ baseProduct, product, currency });
-	const licenses = open
+	const editorOpen = open && !createConfirm;
+	const licenses = editorOpen
 		? getLicenseUpdatePayload({
 				persistedLinks: catalogLicenses.map(({ planLicense }) => planLicense),
 			})
 		: undefined;
 
-	const { data: variants = [] } = usePlanVariants(product.id, open);
-	const namesByPlanId = Object.fromEntries(
-		variants.map((variant) => [variant.id, variant.name]),
-	);
+	const { data: variants = [] } = usePlanVariants(product.id, editorOpen);
+	const namesByPlanId = {
+		...Object.fromEntries(products.map((entry) => [entry.id, entry.name])),
+		...Object.fromEntries(
+			variants.map((variant) => [variant.id, variant.name]),
+		),
+	};
 
 	const {
 		preview,
@@ -266,6 +347,7 @@ export default function PlanChangeDialog({
 		selectedVariantIds,
 		showVersionStrategy,
 		showVariantScope,
+		effectiveVariantIds,
 		licenseParentTargets,
 		selectedLicenseParentKeys,
 		showLicenseParentScope,
@@ -275,7 +357,7 @@ export default function PlanChangeDialog({
 		migrateTargets,
 		buildSaveParams,
 	} = usePlanChangeCatalogPreview({
-		open,
+		open: editorOpen,
 		baseProduct,
 		product,
 		features,
@@ -294,11 +376,58 @@ export default function PlanChangeDialog({
 		0,
 	);
 
-	const steps = buildPlanChangeSteps({
-		showVersionStrategy,
-		showVariantScope,
-		showLicenseParentScope,
+	const planPreview = createConfirm?.preview ?? preview;
+	const aliasReplacements = catalogPreviewAliasReplacements({
+		preview: planPreview,
 	});
+	const planIdChange = createConfirm
+		? undefined
+		: catalogPreviewPlanIdChange({
+				preview: planPreview,
+				nextPlanId: product.id,
+			});
+	// On a mint the typed slug names the new row, so only an in-place save renames.
+	const versionSlugRename =
+		createConfirm || strategy === "new_version"
+			? undefined
+			: catalogPreviewVersionSlugChange({ preview: planPreview });
+	const mintsNewVersion = strategy === "new_version";
+	const mintedVersionDefaultSlug = defaultVersionSlug({
+		version: preview?.versioning?.new_version ?? product.version + 1,
+	});
+	const baseSlugInvalid =
+		mintsNewVersion && !!mintVersionSlugError({ slug: slugSelection.base });
+	const slugConflicts = mintsNewVersion
+		? mintTargetSlugConflicts({
+				targets: variantTargets,
+				selectedIds: effectiveVariantIds,
+				selection: slugSelection,
+			})
+		: [];
+	const mintSlugsBlocked = baseSlugInvalid || slugConflicts.length > 0;
+	const stepBlocksAdvance = createConfirm
+		? false
+		: stepBlocksPlanChangeAdvance({
+				step,
+				confirmed,
+				baseSlugInvalid,
+				hasSlugConflicts: slugConflicts.length > 0,
+			});
+	const confirmOnlyDialog =
+		!!createConfirm ||
+		isConfirmOnlyPlanChangeDialog({
+			preview: planPreview,
+			showVersionStrategy,
+			showVariantScope,
+			showLicenseParentScope,
+		});
+	const steps = confirmOnlyDialog
+		? [{ key: "review", label: "Review", icon: SealCheckIcon }]
+		: buildPlanChangeSteps({
+				showVersionStrategy,
+				showVariantScope,
+				showLicenseParentScope,
+			});
 	const stepKeys = steps.map((s) => s.key as StepKey);
 	const currentIndex = stepKeys.indexOf(step);
 	const isFinalStep = currentIndex === stepKeys.length - 1;
@@ -308,12 +437,13 @@ export default function PlanChangeDialog({
 		setVersionChoice(isLatest ? "new" : "update");
 		setIncludeCustom(false);
 		setConfirmText("");
+		setSlugSelection(emptyMintSlugSelection());
 		setVariantSelection(null);
 		setLicenseParentSelection(null);
 	};
 
-	const syncToLatestVersion = async () => {
-		await setQueryStates({ version: null });
+	const syncToSavedVersion = async (version: number | null) => {
+		await setQueryStates({ version });
 		await refetch();
 		await Promise.all([invalidateProduct(), invalidateProducts()]);
 	};
@@ -326,16 +456,26 @@ export default function PlanChangeDialog({
 	};
 
 	const applyChanges = async ({ migrate }: { migrate: boolean }) => {
-		if (step === "migrate" && !confirmed) {
+		if (!createConfirm && step === "migrate" && !confirmed) {
 			toast.error("Confirmation text is incorrect");
 			return;
 		}
 		setIsLoading(true);
 		try {
+			if (createConfirm) {
+				const result = await CatalogV2Service.update(axiosInstance, {
+					plans: createConfirm.plans,
+				});
+				toast.success(createConfirm.successText ?? "Plan created");
+				closeDialog();
+				await createConfirm.onSaved?.(result);
+				return;
+			}
+
 			const willMigrate =
 				migrateNeeded && migrate && strategy !== "new_version";
 			const result = await CatalogV2Service.update(axiosInstance, {
-				plans: buildSaveParams({ migrate }),
+				plans: buildSaveParams({ migrate, slugSelection }),
 			});
 			if (licenses) {
 				commitLicenseChanges();
@@ -348,8 +488,20 @@ export default function PlanChangeDialog({
 			void invalidateProduct();
 			void invalidateProducts();
 			closeDialog();
-			if (effectiveVersionChoice === "new") void syncToLatestVersion();
-			else void refetch();
+			const renamed = Boolean(baseProduct && product.id !== baseProduct.id);
+			const versionPin = savedVersionPin({
+				plans: result.plans,
+				planId: product.id,
+			});
+			if (renamed) {
+				const versionQuery =
+					versionPin === null ? "" : `?version=${versionPin}`;
+				navigateTo(`/products/${product.id}${versionQuery}`, navigate);
+			} else if (effectiveVersionChoice === "new") {
+				void syncToSavedVersion(versionPin);
+			} else {
+				void refetch();
+			}
 
 			if (willMigrate) {
 				void invalidateMigrations();
@@ -362,7 +514,14 @@ export default function PlanChangeDialog({
 				);
 			}
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to save plan"));
+			toast.error(
+				getBackendErr(
+					error,
+					createConfirm
+						? (createConfirm.errorText ?? "Failed to create plan")
+						: "Failed to save plan",
+				),
+			);
 		} finally {
 			setIsLoading(false);
 		}
@@ -386,18 +545,42 @@ export default function PlanChangeDialog({
 		if (!nextOpen) resetState();
 	};
 
-	const primaryText = planChangePrimaryText({
-		isFinalStep,
-		migrateNeeded,
-		isMetadataOnly,
-		showVersionStrategy,
-		effectiveVersionChoice,
-		versionChoiceOnlyAffectsParents,
-		isLatest,
-	});
+	const primaryText =
+		createConfirm?.confirmLabel && isFinalStep
+			? createConfirm.confirmLabel
+			: planChangePrimaryText({
+					isFinalStep,
+					migrateNeeded,
+					isMetadataOnly,
+					showVersionStrategy,
+					effectiveVersionChoice,
+					versionChoiceOnlyAffectsParents,
+					isLatest,
+				});
 
-	const title = "Save plan changes";
-	const description = planChangeDescription({ step, migrateNeeded });
+	const title =
+		createConfirm?.title ??
+		(createConfirm ? "Create plan" : "Save plan changes");
+	const hasPromotion = Boolean(planPreview?.promotion_details);
+	const hasAliasReplacements = aliasReplacements.length > 0;
+	const isPromotionOnlyConfirm =
+		confirmOnlyDialog &&
+		hasPromotion &&
+		!planIdChange &&
+		!versionSlugRename &&
+		!hasAliasReplacements;
+	const confirmOnlySettings = previousAttributesToSettingChanges(
+		planPreview?.plan_change?.previous_attributes,
+	);
+	const description = planChangeDescription({
+		aliasOnly: confirmOnlyDialog && hasAliasReplacements,
+		planIdChangeOnly: confirmOnlyDialog && !!planIdChange,
+		versionSlugChangeOnly:
+			confirmOnlyDialog && !!versionSlugRename && !planIdChange,
+		promotionOnly: isPromotionOnlyConfirm,
+		step,
+		migrateNeeded,
+	});
 	const migrateSubtitle = planChangeMigrateSubtitle({
 		isMetadataOnly,
 		migrateNeeded,
@@ -435,9 +618,31 @@ export default function PlanChangeDialog({
 								transition={{ duration: 0.15, ease: "easeOut" }}
 								className="text-sm flex flex-col gap-4"
 							>
-								{step === "review" && (
+								{step === "review" && confirmOnlyDialog && (
+									<>
+										<PlanIdChangeNotice
+											from={planIdChange?.from}
+											to={planIdChange?.to}
+											namesByPlanId={namesByPlanId}
+											replacements={aliasReplacements}
+										/>
+										<VersionSlugChangeNotice
+											from={versionSlugRename?.from}
+											to={versionSlugRename?.to}
+										/>
+										<PromoteReviewSection preview={planPreview} />
+										{confirmOnlySettings.length > 0 && (
+											<div className="rounded-lg bg-secondary/40 px-3 py-2.5">
+												<PlanSettingsChanges changes={confirmOnlySettings} />
+											</div>
+										)}
+									</>
+								)}
+
+								{step === "review" && !confirmOnlyDialog && (
 									<div className="flex flex-col gap-2.5">
-										<FieldLabel>Preview changes</FieldLabel>
+										<PromoteReviewSection preview={planPreview} />
+										<PlanChangeFieldLabel>Preview changes</PlanChangeFieldLabel>
 										<div className="rounded-lg bg-secondary/40 px-3 py-2.5 flex flex-col gap-2">
 											{priceChange && (
 												<PlanPriceHeader
@@ -466,16 +671,24 @@ export default function PlanChangeDialog({
 								{step === "variant_scope" && (
 									<div className="flex flex-col gap-2.5">
 										<div className="flex flex-col gap-0.5">
-											<FieldLabel>Apply to variants</FieldLabel>
+											<PlanChangeFieldLabel>
+												Apply to variants
+											</PlanChangeFieldLabel>
 											<span className="text-tertiary-foreground text-xs">
 												Select which variants receive this change. Unselected
 												variants stay as they are.
 											</span>
+											{slugConflicts.length > 0 && (
+												<span className="text-amber-600 text-xs dark:text-amber-500">
+													Rename the highlighted version slugs to continue.
+												</span>
+											)}
 										</div>
 										<VariantTargetsStep
 											features={features}
 											targets={variantTargets}
 											selectedIds={selectedVariantIds}
+											slugSelection={slugSelection}
 											onToggle={(id) =>
 												setVariantSelection((current) => {
 													const selected = current ?? defaultVariantIds;
@@ -484,6 +697,15 @@ export default function PlanChangeDialog({
 														: [...selected, id];
 												})
 											}
+											onSlugChange={({ planId, slug }) =>
+												setSlugSelection((current) =>
+													withMintSlugOverride({
+														selection: current,
+														planId,
+														slug,
+													}),
+												)
+											}
 										/>
 									</div>
 								)}
@@ -491,7 +713,9 @@ export default function PlanChangeDialog({
 								{step === "license_scope" && (
 									<div className="flex flex-col gap-2.5">
 										<div className="flex flex-col gap-0.5">
-											<FieldLabel>Apply to parent plans</FieldLabel>
+											<PlanChangeFieldLabel>
+												Apply to parent plans
+											</PlanChangeFieldLabel>
 											<span className="text-tertiary-foreground text-xs">
 												Pick which parents receive this update, and how far
 												back. Unselected versions keep their current effective
@@ -509,7 +733,9 @@ export default function PlanChangeDialog({
 
 								{step === "strategy" && (
 									<div className="flex flex-col gap-2.5">
-										<FieldLabel>How should this apply?</FieldLabel>
+										<PlanChangeFieldLabel>
+											How should this apply?
+										</PlanChangeFieldLabel>
 										<RadioGroup
 											value={effectiveVersionChoice}
 											onValueChange={(val) =>
@@ -560,14 +786,36 @@ export default function PlanChangeDialog({
 												/>
 											)}
 										</RadioGroup>
+										{mintsNewVersion && (
+											<MintVersionSlugInput
+												defaultSlug={mintedVersionDefaultSlug}
+												onChange={(base) =>
+													setSlugSelection((current) => ({ ...current, base }))
+												}
+												value={slugSelection.base}
+											/>
+										)}
 									</div>
 								)}
 
 								{step === "migrate" && (
 									<>
+										<PlanIdChangeNotice
+											from={planIdChange?.from}
+											to={planIdChange?.to}
+											namesByPlanId={namesByPlanId}
+											replacements={aliasReplacements}
+										/>
+										<VersionSlugChangeNotice
+											from={versionSlugRename?.from}
+											to={versionSlugRename?.to}
+										/>
+										<PromoteReviewSection preview={planPreview} />
 										<div className="flex flex-col gap-2.5">
 											<div className="flex flex-col gap-0.5">
-												<FieldLabel>Review &amp; confirm</FieldLabel>
+												<PlanChangeFieldLabel>
+													Review &amp; confirm
+												</PlanChangeFieldLabel>
 												<span className="text-tertiary-foreground text-xs">
 													{migrateSubtitle}
 												</span>
@@ -658,7 +906,7 @@ export default function PlanChangeDialog({
 				</div>
 
 				{step === "migrate" && (
-					<div className="px-4 pt-3 pb-2">
+					<div className="flex flex-col gap-3 px-4 pt-3 pb-2">
 						<ConfirmInput
 							productId={product.id}
 							value={confirmText}
@@ -680,7 +928,7 @@ export default function PlanChangeDialog({
 						<ShortcutButton
 							variant="secondary"
 							onClick={() => applyChanges({ migrate: false })}
-							disabled={isLoading || !confirmed}
+							disabled={isLoading || !confirmed || mintSlugsBlocked}
 						>
 							Skip
 						</ShortcutButton>
@@ -690,7 +938,7 @@ export default function PlanChangeDialog({
 						metaShortcut="enter"
 						onClick={advance}
 						isLoading={isLoading}
-						disabled={isLoading || (step === "migrate" && !confirmed)}
+						disabled={isLoading || stepBlocksAdvance}
 						className="flex-1 justify-center"
 					>
 						{primaryText}

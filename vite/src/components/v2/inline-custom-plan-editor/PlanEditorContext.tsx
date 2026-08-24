@@ -23,6 +23,7 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
+import { versionSlugRenamed } from "@/views/products/plan/utils/versionSlug";
 
 type SetProduct = (
 	product: FrontendProduct | ((prev: FrontendProduct) => FrontendProduct),
@@ -244,6 +245,7 @@ export function usePlanSheet(sheetType: string | null): PlanSheetState {
 
 	const hasChanges = useMemo(() => {
 		if (!initialProduct) return false;
+		if (versionSlugRenamed({ product, previous: initialProduct })) return true;
 
 		const {
 			itemsSame,

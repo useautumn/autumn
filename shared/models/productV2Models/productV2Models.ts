@@ -15,6 +15,8 @@ export const ProductV2Schema = z.object({
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
 	version: z.number().default(1),
+	version_slug: z.string().nullable().optional(),
+	active: z.boolean().optional(),
 	group: z.string().nullable(),
 	env: z.nativeEnum(AppEnv),
 

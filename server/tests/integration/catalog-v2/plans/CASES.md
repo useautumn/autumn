@@ -29,9 +29,15 @@ plans/
     create-plan-items-free.test.ts
     create-plan-items-priced.test.ts
     utils/createAndAssert.ts
+  aliases/
+    alias-billing-endpoints.test.ts
+    alias-catalog-endpoints.test.ts
+    alias-customer-license-endpoints.test.ts
+    alias-vercel-endpoints.test.ts
   update/
     idempotent-plans.test.ts
     update-plan-details.test.ts
+    rename-plan-aliases.test.ts
     update-plan-items.test.ts
     update-plan-rows.test.ts
     update-plan-free-trial.test.ts
@@ -147,6 +153,106 @@ free vs priced so the billing-model matrix stays navigable.
 | archive / unarchive; omitted `archived` preserves | ✓ |
 | `new_plan_id` clean rename (no customers): id changes, versions & rows intact | ✓ |
 | auto_enable true on free plan → `is_default` persisted; auto_enable false clears | ✓ |
+
+### Rename with references — `update/rename-plan-refs.test.ts`
+
+| Case | Status |
+|---|---|
+| Rename with customers: every version row renamed (incl. siblings outside the batch); `customer_products.product_id` snapshot untouched, `internal_product_id` link intact | ✓ |
+| Rename rewrites `reward_programs.product_ids`, and `rewards.free_product_id` + `discount_config.product_ids` on ONE row (merged single UPDATE) | ✓ |
+| Rename rewrites `revenuecat_mappings.autumn_product_id` key | ✓ |
+
+### Plan id aliases — `update/rename-plan-aliases.test.ts`
+
+Ingress mapping (every route/field): `server/tests/unit/catalogV2/plan-id-alias-ingress.md`.
+Unit tests: `server/tests/unit/catalogV2/plan-id-alias-rewrite.test.ts`.
+
+Ingress only: after `pro → proNew`, requests with `pro` rewrite to `proNew`
+before handlers. Responses stay canonical. One alias per plan; re-rename
+replaces (old alias dies). Catalog create / `new_plan_id` onto another plan's
+alias succeeds and deletes that alias row (`alias_replacement` on preview).
+REST `POST /products` of a reserved id stays 400. Reclaiming this plan's own
+alias is allowed.
+
+| Case | Status |
+|---|---|
+| Rename writes `product_aliases` (`alias_id` = old id, `canonical_plan_id` = new) | ✓ t1 |
+| Re-rename replaces the alias row; the original alias no longer resolves | ✓ t1 |
+| Attach / `plans.get` with the old id succeeds; GET plan id is canonical (no `alias_id` field) | ✓ t2 |
+| REST create a plan whose id is another plan's alias → 400 | ✓ t3 |
+| Catalog `new_plan_id` onto another plan's alias → succeeds; alias row deleted; `alias_replacement` on preview | ✓ t3 |
+| `new_plan_id` reclaiming this plan's own alias → allowed | ✓ `rename-plan-alias-reclaim.test.ts` |
+
+### Own-alias reclaim roundtrip — `update/rename-plan-alias-reclaim.test.ts`
+
+| Case | Status |
+|---|---|
+| Rename `pro → proNew` then reclaim `proNew → pro`: live id returns to `pro`; `proNew` is the alias; old `pro → proNew` gone; attach/GET both ids; REST create of `proNew` is 400; `customer_products.product_id` snapshot untouched | ✓ t1 |
+
+Ingress field mapping (unit): `server/tests/unit/catalogV2/plan-id-alias-ingress.md`.
+Endpoint behavior below: send the OLD id, assert canonical side effects.
+
+### Plan id aliases — endpoint × field — `aliases/*.test.ts`
+
+Status: ✓ written (run when server is up). Invoice `plan_ids` SQL is layer 1 — not re-tested.
+
+| Endpoint | Field | Test | Status |
+|---|---|---|---|
+| `POST /billing.attach` | `plan_id` | `alias-billing-endpoints` attach | ✓ |
+| `POST /billing.preview_attach` | `plan_id` | `alias-billing-endpoints` attach | ✓ |
+| `POST /billing.attach` | `remove_plan_ids` | `alias-billing-endpoints` attach | ✓ |
+| `POST /attach` (legacy) | `product_id` | `alias-billing-endpoints` attach | ✓ |
+| `POST /cancel` | `product_id` | `alias-billing-endpoints` attach | ✓ |
+| `POST /billing.update` | `plan_id` | `alias-billing-endpoints` update | ✓ |
+| `POST /billing.preview_update` | `plan_id` | `alias-billing-endpoints` update | ✓ |
+| `POST /billing.multi_update` | `updates[].plan_id` | `alias-billing-endpoints` update | ✓ |
+| `POST /billing.preview_multi_update` | `updates[].plan_id` | `alias-billing-endpoints` update | ✓ |
+| `POST /billing.multi_attach` | `plans[].plan_id` | `alias-billing-endpoints` multi | ✓ |
+| `POST /billing.preview_multi_attach` | `plans[].plan_id` | `alias-billing-endpoints` multi | ✓ |
+| `POST /billing.create_schedule` | `phases[].plans[].plan_id` | `alias-billing-endpoints` multi | ✓ |
+| `POST /billing.preview_create_schedule` | `phases[].plans[].plan_id` | `alias-billing-endpoints` multi | ✓ |
+| `GET /products/:product_id` | path `product_id` | `alias-catalog-endpoints` GET + t2 | ✓ |
+| `POST /plans.get` | `plan_id` | `alias-catalog-endpoints` GET | ✓ |
+| `POST /plans.has_customers` | `plan_id` | `alias-catalog-endpoints` GET | ✓ |
+| `POST /products/:product_id/has_customers` | path `product_id` | `alias-catalog-endpoints` GET | ✓ |
+| dashboard `GET /products/:id` | skip rewrite | unit `planAliasMiddleware skips dashboard` | ✓ unit (secret-key client cannot send `x-client-type: dashboard`) |
+| `POST /catalogV2.update` | `plans[].plan_id` | `alias-catalog-endpoints` update | ✓ |
+| `POST /catalogV2.preview_update` | `plans[].plan_id` | `alias-catalog-endpoints` update | ✓ |
+| `PATCH /products/:product_id` | path `product_id` | `alias-catalog-endpoints` update | ✓ |
+| `POST /catalogV2.update` | `licenses[].license_plan_id` | `alias-catalog-endpoints` update | ✓ |
+| `DELETE /products/:product_id` | path `product_id` | `alias-catalog-endpoints` delete | ✓ |
+| `POST /catalogV2.update` | `remove_plans[].plan_id` | `alias-catalog-endpoints` delete | ✓ |
+| `POST /plans.delete` | `plan_id` | `alias-catalog-endpoints` delete | ✓ |
+| `POST /plans.create_variant` | `base_plan_id` | `alias-catalog-endpoints` delete | ✓ |
+| `POST /catalogV2.update` | `new_plan_id` not rewritten | `alias-catalog-endpoints` delete + t3 | ✓ |
+| `POST /products` create | `id` reserved (not rewritten) | t3 | ✓ |
+| `POST /customers` | `auto_enable_plan_id` | `alias-customer-license-endpoints` customer | ✓ |
+| `POST /customers/:id/transfer` | `product_id` | `alias-customer-license-endpoints` customer | ✓ |
+| `POST /check` | `product_id` | `alias-customer-license-endpoints` customer | ✓ |
+| `POST /licenses.attach` | `plan_id` | `alias-customer-license-endpoints` licenses | ✓ |
+| `POST /licenses.release` | `license_plan_id` | `alias-customer-license-endpoints` licenses | ✓ |
+| `POST /billing.attach` | `license_quantities[].license_plan_id` | `alias-customer-license-endpoints` licenses | ✓ |
+| `POST /billing.update` | `customize.upsert_licenses[].license_plan_id` | `alias-customer-license-endpoints` licenses | ✓ |
+| Vercel `POST .../resources` | `billingPlanId` | `alias-vercel-endpoints` | ✓ |
+| Vercel `PATCH .../installations/:id` | `billingPlanId` | `alias-vercel-endpoints` | ✓ |
+
+Gaps (rewrite key exists, no endpoint test here):
+
+| Endpoint | Field | Why |
+|---|---|---|
+| `POST /billing.sync` / `sync_v2` | `plan_id` | admin/import, not CORE attach |
+| `POST /billing.setup_payment` | `plan_id` | checkout-adjacent; attach covers the same key |
+| `POST /billing.resolve_request` | nested bodies | same rewrite as attach/update/schedule |
+| `POST /billing.dfu.flash` | `plan_id` | internal |
+| `POST /catalog.update` (v1) | `plan_id` / `skip_plan_ids` | v1 catalog; v2 covered |
+| `POST /plans.update` RPC | `plan_id` | catalogV2.update covers the same key |
+| `POST /attach/preview` | `product_id` | legacy; v2 preview_attach covered |
+| `POST /rewards` / reward_programs | `plan_ids` / `free_product_id` | admin catalog, not CORE billing |
+| `migrations.*` | `plan_id` | admin |
+| `customers.list` `plans[].id` | `id` | **not a rewrite key** — list filter uses `id` |
+| Vercel body `productId` | marketplace resource id | intentional skip (ingress.md) |
+| Invoice `plan_ids` | snapshot SQL | layer 1, do not re-test |
+| Stripe checkout metadata | manual rewrite | webhook, not public request |
 
 ## 5. Item/price update lanes — `update/update-plan-items.test.ts`
 
@@ -334,8 +440,7 @@ Preview `options` include `new_version` when the latest version has customers
 | Two unpinned entries for same plan_id → error | ✓ |
 | Version gap (declare v3 when max is v1) → error | ✓ |
 | Create without `name` → error | ✓ |
-| `new_plan_id` rename blocked when plan has customers | ✓ |
-| `new_plan_id` rename blocked when reward program references plan | ✓ |
+| `new_plan_id` rename blocked when a Vercel install is on the plan; allowed for other plans on the same Vercel org | ✓ |
 | Invalid item shape passes through Zod errors (amount+tiers both set; volume flat_amount on graduated; `tiers[0].to <= included`; proration on usage_based; reset/price interval mismatch on non-prepaid) | ✓ |
 
 ## 11. Plan × plan batch — `batch/batch-ops.test.ts`
@@ -1120,9 +1225,8 @@ applied customize. Same customize `$or`s; different customize stays split.
 ## 22. Remove / archive plans — `remove/`
 
 `remove_plans: [{ plan_id, version? }]`. Omit version = every version (shared
-verdict). Pin version = that row only, and **only the latest version may be
-pinned** — removing a historical version would leave a gap in the sequence, so
-it is 400. `willArchive` from customers (expired included), reward programs, and
+verdict). Pin version = that row only (live or historical). `willArchive` from
+customers (expired included), reward programs, and
 license parents that still exist after the batch. Same-call upsert+remove is
 400. Preview `reasons` are dialog-ready.
 
@@ -1132,16 +1236,17 @@ license parents that still exist after the batch. Same-call upsert+remove is
 | Already-archived unreferenced → hard delete | ✓ `remove/remove-plans.test.ts` |
 | Preview: action `delete` + `will_archive` verdict, writes nothing | ✓ `remove/remove-plans.test.ts` |
 | Customer on the plan → archive; `has_customers` | ✓ `remove/remove-plans.test.ts` |
-| Expired customer → archive | ✓ `remove/remove-plans.test.ts` |
+| Expired-only customers → tombstone (`will_archive: false`); names omitted from reasons | ✓ `remove/tombstone-verdict.test.ts`, `remove/remove-plans-preview.test.ts` |
 | Reward program ref → archive | ✓ `remove/remove-plans.test.ts` |
 | License parent still offering this child → archive | ✓ `remove/remove-plans.test.ts` |
 | Pin latest `version` with no customers → delete that version only | ✓ `remove/remove-plans.test.ts` |
 | Omit version; any version has customers → archive ALL versions | ✓ `remove/remove-plans.test.ts` |
 | Unknown plan id → 404 (update AND preview) | ✓ `remove/remove-plans-errors.test.ts` |
 | Unknown pinned version → 404 | ✓ `remove/remove-plans-errors.test.ts` |
-| Pinned NON-latest version → 400 (update AND preview), nothing removed | ✓ `remove/remove-plans-errors.test.ts` |
+| Pinned unused historical version → hard-delete that row | ✓ `remove/remove-plans-errors.test.ts` |
 | Upsert + remove same plan_id → 400, atomic | ✓ `remove/remove-plans-errors.test.ts` |
 | Customer sample → `Attached to customer "X".` + archive headline | ✓ `remove/remove-plans-preview.test.ts` |
+| Expired-only pin → delete confirmation; no `Attached to` name | ✓ `remove/remove-plans-preview.test.ts` |
 | Two customers → `"X" and 1 more` | ✓ `remove/remove-plans-preview.test.ts` |
 | Unreferenced → delete confirmation; no archive headline | ✓ `remove/remove-plans-preview.test.ts` |
 | Unpinned delete of a base that still has variants → 400 | ✓ `remove/remove-plans-variants.test.ts` |
@@ -1149,7 +1254,7 @@ license parents that still exist after the batch. Same-call upsert+remove is
 | Preview of unpinned delete with variants → 400, not detach warning | ✓ `remove/remove-plans-preview.test.ts` |
 | Same-call remove base + variant (no customers) → both hard delete | ✓ `remove/remove-plans-variants.test.ts` |
 | Pin-delete latest base version; variant repoints at surviving v1 | ✓ `remove/remove-plans-repoint.test.ts` |
-| Pin-delete an old base version the variant does not point at → 400 (non-latest) | ✓ `remove/remove-plans-repoint.test.ts` |
+| Pin-delete an old base version the variant does not point at → v1 gone, pointer stays | ✓ `remove/remove-plans-repoint.test.ts` |
 | Pin-delete last remaining base version while a variant survives → 400 | ✓ `remove/remove-plans-repoint.test.ts` |
 | Remove parent + child (no customers) → both hard delete | ✓ `remove/remove-plans-same-call.test.ts` |
 | Remove parent (has customers) + child → parent archives, child archives | ✓ `remove/remove-plans-same-call.test.ts` |
@@ -1173,3 +1278,97 @@ sends `all_versions`).
 | `archived: false` + `all_versions` → every version unarchived | ✓ |
 | `archived: false` alone → latest unarchived, older versions stay archived | ✓ |
 
+## 23. Alias replacement preview — `update/rename-plan-alias-replacement.test.ts`
+
+After `pro → proNew`, `pro` is an alias of `proNew`. Catalog preview/update
+claiming `pro` (create `plan_id` or `new_plan_id`, including
+`variants[].new_plan_id`) surfaces `alias_replacement` on that plan/variant
+and proceeds — the alias row is deleted so `pro` is a real id again.
+REST `POST /products` / `POST /plans` / `plans.create` stay 400.
+
+Own-reclaim (`proNew → pro`) still allowed; preview includes
+`alias_replacement` because that alias row dies.
+
+| Case | Status |
+|---|---|
+| Preview create `pro` while alias of `proNew` → field on plan, not a blocking error | ✓ t1 |
+| Preview rename other `starter → pro` → same field on that plan op | ✓ t1 |
+| Preview `variants[n].new_plan_id: "pro"` → field on THAT variant, not only the parent | ✓ t1 |
+| Preview own-reclaim `proNew → pro` → allowed; `alias_replacement` present (alias dies) | ✓ t1 |
+| Preview no collision → field absent/`undefined` | ✓ t1 |
+| Execute create-`pro` → alias row gone; GET/attach `pro` hits the NEW plan | ✓ t2 |
+| Execute rename `starter → pro` → starter is `pro`; alias `pro→proNew` gone | ✓ t2 |
+| Execute variant `new_plan_id` → `products.id` + alias CTE; `customer_products.product_id` untouched | ✓ t2 |
+| REST create of reserved id still 400 | ✓ t3 |
+
+## 24. Unit 5 — Promote / active pointer
+
+`active: true` on an existing row takes the unique pointer; the vacated sibling
+folds `active: false`. Default follows only when `isEligibleDefaultProduct`.
+Draft mint (`new_version` without `active`) does not take the pointer.
+
+| Case | Status |
+|---|---|
+| Back-promote v1 while v2 is live — one pointer; default stays on latest | ✓ `versions/promote-pointer.test.ts` |
+| `active: false` on the pointer with no successor → 400 | ✓ `versions/promote-pointer.test.ts` |
+| Same-call rename of the taker still demotes the old pointer | ✓ `versions/promote-pointer.test.ts` |
+| `active: false` is ok when another entry takes the pointer | ✓ `versions/promote-pointer.test.ts` |
+| Numeric `{ version: 1, active: true }` promotes the same as `version_slug` | ✓ `versions/promote-pointer.test.ts` |
+| Preview: promote draft v2 → v2 `active: true`, sibling v1 `active: false` | ✓ `versions/promote-preview.test.ts` |
+| Preview back-promote: v1 `active: true`, sibling v2 `active: false` | ✓ `versions/promote-preview.test.ts` |
+| Promote does not mint a new version number | ✓ `versions/promote-preview.test.ts` |
+| Idempotent `active: true` on already-active v1 (draft still idle) | ✓ `versions/promote-preview.test.ts` |
+| Idempotent `active: true` on already-active v2 | ✓ `versions/promote-preview.test.ts` |
+| Two `active: true` same `plan_id` in one call → 400 | ✓ `versions/promote-guards.test.ts` |
+| Two different plans promoting in one batch → both succeed | ✓ `versions/promote-guards.test.ts` |
+| `versioning: "all_versions"` + `active: true` → 400 | ✓ `versions/promote-guards.test.ts` |
+| Free auto_enable draft promote → default follows the pointer | ✓ `versions/default-follows-active.test.ts` |
+| Custom slug promote moves pointer and default | ✓ `versions/default-follows-active.test.ts` |
+| Paid draft promote: pointer moves, default stays on free v1 | ✓ `versions/default-follows-active.test.ts` |
+| Cardless-trial paid draft: default follows (`isEligibleDefaultProduct`) | ✓ `versions/default-follows-active.test.ts` |
+| Explicit `auto_enable: true` on historical promote → `HistoricalPlanVersionCannotBeDefault` | ✓ `versions/default-follows-active.test.ts` |
+| Base promote re-points follow variant; no variant mint | ✓ `variants/pointer/pointer-on-base-promote.test.ts` |
+| Base promote leaves historical variant v1 on the old row | ✓ `variants/pointer/pointer-on-base-promote.test.ts` |
+| Promote leaves a pin at a historical non-active base | ✓ `variants/pointer/pointer-on-base-promote.test.ts` |
+| Child promote freezes uncustomized parent; propagate follows v2 | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
+| Customized parent is left on child promote | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
+| Parent promote (licenses omitted): child identity unchanged; v2 stays empty | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
+| Declared `licenses[]` on child promote re-links to newly active child | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
+| Preview `promotion_details` present when a row takes the pointer | ✓ `versions/promote-preview.test.ts` + `promote-preview-details.test.ts` |
+| Preview `promotion_details` omitted on no-op / draft mint / first create | ✓ `versions/promote-preview-details.test.ts` |
+| Preview rename + promote returns both rename fields and `promotion_details` | ✓ `versions/promote-preview-details.test.ts` |
+| Preview two-plan batch: each promoting plan has its own `promotion_details` | ✓ `versions/promote-preview-batch.test.ts` |
+| Preview custom-slug / paid-over-free still include `promotion_details` | ✓ `versions/promote-preview-batch.test.ts` |
+| Preview variant rows on base promote (follow + historical, no mint) | ✓ `versions/promote-preview-followers.test.ts` |
+| Preview license_action freeze vs follow on child promote | ✓ `versions/promote-preview-followers.test.ts` |
+
+## 25. Unit 1 — Tombstone hide / occupancy
+
+`deleted_at` hides a version from catalog reads. Occupancy (`listFull` +
+`includeDeleted`, catalog compute setup) still sees the row so mint
+`max(version)+1` does not collide with `unique_product`. Slug is nulled;
+`previous_version_slug` remembers it.
+
+| Case | Status |
+|---|---|
+| get / listFull / catalog.get omit tombstoned draft | `versions/tombstone-hide.test.ts` |
+| `includeDeleted` occupancy still returns the row + previous slug | `versions/tombstone-hide.test.ts` |
+| `new_version` after tombstoned v2 mints v3 | `versions/tombstone-hide.test.ts` |
+| Pin expired-only draft → preview `will_archive: false`; unpinned expired-only also tombstones | `remove/tombstone-verdict.test.ts` |
+| Pin expired-only draft execute writes `deleted_at` and keeps expired CPs | `remove/tombstone-execute.test.ts` |
+| Tombstone all versions → same `plan_id` preview/update is `create` at max+1 | `remove/tombstone-execute.test.ts` |
+
+## 26. Unit 3 — `new_version_slug` on propagate targets
+
+A derived mint is named by its own propagate target, never by the saved plan's slug —
+inheritance would silently collide with a slug the target already holds. `variants[]`
+overrides the target per variant; unnamed targets fall back to `v{n}`.
+
+| Case | Status |
+|---|---|
+| `propagate.variants[].new_version_slug` → names that variant's minted row, drift preserved | `versions/version-identity-propagate-slug.test.ts` |
+| base slug set, target unnamed → base row named, variant falls back to `v{n}` | `versions/version-identity-propagate-slug.test.ts` |
+| `variants[].new_version_slug` → overrides the propagate target's slug | `versions/version-identity-propagate-slug.test.ts` |
+| variant target following in place → existing row's slug untouched | `versions/version-identity-propagate-slug.test.ts` |
+| target slug another version of that target holds → `DuplicateVersionSlug` | `versions/version-identity-propagate-slug.test.ts` |
+| `license_parents[].new_version_slug` with `new_version` → names the parent's minted row | `versions/version-identity-propagate-slug.test.ts` |

@@ -13,6 +13,16 @@
 #     attached to a long-running process.
 set -euo pipefail
 
+CAPY_PREFIX="${CAPY_PREFIX:-$HOME/.autumn-capy}"
+export CAPY_PREFIX
+STARTUP_LOG="$CAPY_PREFIX/startup.log"
+umask 077
+mkdir -p "$CAPY_PREFIX"
+touch "$STARTUP_LOG"
+chmod 600 "$STARTUP_LOG"
+printf '\n===== Capy Startup %s UTC =====\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$STARTUP_LOG"
+exec > >(tee -a "$STARTUP_LOG") 2> >(tee -a "$STARTUP_LOG" >&2)
+
 log() { echo "[capy-startup] $*"; }
 die() { echo "[capy-startup] ERROR: $*" >&2; exit 1; }
 
@@ -46,9 +56,7 @@ fi
 
 cd "$REPO_ROOT"
 
-CAPY_PREFIX="${CAPY_PREFIX:-$HOME/.autumn-capy}"
 TRIGGER_ENV="$CAPY_PREFIX/trigger.env"
-mkdir -p "$CAPY_PREFIX"
 
 if [ ! -f "$TRIGGER_ENV" ]; then
   log "minting per-machine Trigger.dev secrets"

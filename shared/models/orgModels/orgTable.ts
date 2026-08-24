@@ -153,6 +153,8 @@ export const organizations = pgTable(
 export type Organization = typeof organizations.$inferSelect & {
 	master: Organization | null;
 	pendingMigrations?: PendingMigration[];
+	/** alias_id → live plan id. Empty (or omitted) for orgs with no renames. */
+	planAliases?: Record<string, string>;
 };
 
 // Multi tenancy flow <-> stripe connect...

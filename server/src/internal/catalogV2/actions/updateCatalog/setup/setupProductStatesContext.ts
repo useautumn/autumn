@@ -71,6 +71,7 @@ export const setupProductStatesContext = async ({
 				env,
 				inIds: loadedPlanIds,
 				returnAll: true,
+				includeDeleted: true,
 				skipCache: true,
 			}),
 	});

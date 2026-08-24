@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
+import { applyDerivedCustomerProductIsCustom } from "@/internal/billing/v2/execute/applyDerivedCustomerProductIsCustom";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
 import { executeCustomerLicenseTransitions } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseTransitions";
 import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseUpdates";
@@ -41,6 +42,12 @@ export const executeAutumnBillingPlan = async ({
 	autumnInvoice?: Invoice;
 }) => {
 	const { db } = ctx;
+
+	// Before anything is read off the plan: `is_custom` is derived from the
+	// customer product's own items, never from request input, and this may add
+	// an update entry to persist it.
+	await applyDerivedCustomerProductIsCustom({ ctx, autumnBillingPlan });
+
 	const {
 		insertCustomerProducts,
 		customPrices,

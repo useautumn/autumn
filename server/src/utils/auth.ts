@@ -90,7 +90,7 @@ const browserAuthBaseUrl = isProductionAuth
 		? publicAuthBaseUrl
 		: authBaseUrl;
 const isHttpsBaseUrl = browserAuthBaseUrl?.startsWith("https://");
-const isCapyDev =
+export const isCapyDev =
 	process.env.CAPY_DEV === "1" && process.env.NODE_ENV !== "production";
 const configuredAuthBaseUrl = isCapyDev
 	? {
@@ -148,13 +148,16 @@ const options = {
 	telemetry: {
 		enabled: false,
 	},
-	...(isHttpsBaseUrl && {
+	...((isHttpsBaseUrl || isCapyDev) && {
 		advanced: {
-			useSecureCookies: true,
-			defaultCookieAttributes: {
-				sameSite: "none" as const,
-				secure: true,
-			},
+			...(isCapyDev && { trustedProxyHeaders: true }),
+			...(isHttpsBaseUrl && {
+				useSecureCookies: true,
+				defaultCookieAttributes: {
+					sameSite: "none" as const,
+					secure: true,
+				},
+			}),
 		},
 	}),
 

@@ -239,7 +239,7 @@ test.concurrent(
 					plans: [
 						{
 							plan_id: parentId,
-							versioning: "new_version",
+							versioning: "new_version", active: true,
 							licenses: [
 								{
 									license_plan_id: childId,

@@ -129,6 +129,97 @@ describe("buildUpdateCatalogPlanParams", () => {
 		expect(() => UpdateCatalogPlanParamsSchema.parse(body)).not.toThrow();
 	});
 
+	test("rename sends new_plan_id and keeps the original plan_id", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, id: "pro_plus" },
+			features,
+		});
+		expect(params.plan_id).toBe("pro");
+		expect(params.new_plan_id).toBe("pro_plus");
+	});
+
+	test("renaming the version slug sends new_version_slug", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, version_slug: "beta" },
+			features,
+		});
+		expect(params.version).toBe(3);
+		expect(params.new_version_slug).toBe("beta");
+	});
+
+	test("retyping the implicit v{n} slug is not a rename", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, version_slug: "v3" },
+			features,
+		});
+		expect(params.new_version_slug).toBeUndefined();
+	});
+
+	test("a blank version slug is an unfinished edit, not a rename", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct: { ...baseProduct, version_slug: "beta" },
+			editedProduct: { ...editedProduct, version_slug: "  " },
+			features,
+		});
+		expect(params.new_version_slug).toBeUndefined();
+	});
+
+	test("a mint sends the slug typed for its new row", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct,
+			features,
+			versioning: "new_version",
+			newVersionSlug: { source: "minted_row", slug: "  summer  " },
+		});
+		expect(params.versioning).toBe("new_version");
+		expect(params.new_version_slug).toBe("summer");
+	});
+
+	test("a mint with no typed slug omits new_version_slug so the server stamps v{n}", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct,
+			features,
+			versioning: "new_version",
+			newVersionSlug: { source: "minted_row" },
+		});
+		expect(params.new_version_slug).toBeUndefined();
+	});
+
+	test("a mint with a blank typed slug falls back to a slug edit on the plan", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, version_slug: "beta" },
+			features,
+			versioning: "new_version",
+			newVersionSlug: { source: "minted_row", slug: "" },
+		});
+		expect(params.new_version_slug).toBe("beta");
+	});
+
+	test("all_versions never sends new_version_slug — one slug can't name every row", () => {
+		const renamed = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, version_slug: "beta" },
+			features,
+			versioning: "all_versions",
+		});
+		expect(renamed.new_version_slug).toBeUndefined();
+
+		const minted = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct,
+			features,
+			versioning: "all_versions",
+			newVersionSlug: { source: "minted_row", slug: "summer" },
+		});
+		expect(minted.new_version_slug).toBeUndefined();
+	});
+
 	test("new_version and all_versions omit the version pin", () => {
 		const minted = buildUpdateCatalogPlanParams({
 			baseProduct,

@@ -40,6 +40,7 @@ import {
 	ensureChatDatabase,
 	ensureTemplateBranch,
 	findBranchByName,
+	waitForNeonBranchOperations,
 } from "../dw/helpers/neon.ts";
 
 // ---------------------------------------------------------------------------
@@ -94,20 +95,8 @@ function shortHash(input: string): string {
 }
 
 function getMachineId(): string {
-	const configPath = process.env.CAPY_MACHINE_CONFIG?.trim();
-	if (configPath && existsSync(configPath)) {
-		try {
-			const config = JSON.parse(readFileSync(configPath, "utf-8")) as {
-				bindingId?: string;
-			};
-			if (config.bindingId?.trim()) return config.bindingId.trim();
-		} catch {
-			log(`machine config at ${configPath} is unreadable, using hostname`);
-		}
-	}
-	// Local repros do not have Capy's machine config. The hostname keeps the
-	// branch stable for the lifetime of that host.
-	return (process.env.HOSTNAME ?? hostname() ?? "unknown").trim();
+	// The hostname is assigned at runtime and remains stable when a VM wakes.
+	return process.env.HOSTNAME?.trim() || hostname();
 }
 
 function deriveBranchName(machineId: string): string {
@@ -368,6 +357,10 @@ function writeEnvFiles(
 		AUTUMN_API_URL: serverUrl,
 		AUTUMN_PUBLIC_API_URL: serverUrl,
 		CLIENT_URL: viteUrl,
+		EMULATE_GOOGLE_URL: "http://localhost:4000",
+		EMULATE_GOOGLE_FETCH_URL: "http://127.0.0.1:4000",
+		GOOGLE_CLIENT_ID: "capy-emulate",
+		GOOGLE_CLIENT_SECRET: "capy-emulate",
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 		// Login flow that works without external services: dev `sendOTPEmail`
 		// prints the OTP to the server log. The README documents this path.
@@ -638,6 +631,7 @@ function ensureNeonBranch(
 	);
 	ensureTemplateBranch();
 	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
+	waitForNeonBranchOperations(branch);
 	const pooledUrl = connectionString(branchName, { pooled: true });
 	return {
 		state: {
@@ -703,9 +697,7 @@ async function main(): Promise<void> {
 		trigger.accessToken,
 	);
 
-	if (created) {
-		runSetupTest(["--yes"], directUrl);
-	}
+	runSetupTest(["--ensure"], directUrl);
 	runSetupTest(["--ensure-key"], directUrl);
 
 	log(

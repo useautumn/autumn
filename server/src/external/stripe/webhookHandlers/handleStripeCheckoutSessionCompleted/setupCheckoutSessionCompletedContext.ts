@@ -11,6 +11,7 @@ import {
 	getExpandedStripeSubscription,
 } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
+import { rewritePlanIdAliasValues } from "@/internal/catalogV2/productAliases/rewritePlanIdAliasValues.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 
 type CheckoutSessionExpansions = ["line_items"];
@@ -43,6 +44,12 @@ export const setupCheckoutSessionCompletedContext = async ({
 		stripeCheckoutSession,
 		db,
 	);
+	if (metadata?.data) {
+		rewritePlanIdAliasValues({
+			value: metadata.data,
+			aliases: ctx.org.planAliases ?? {},
+		});
+	}
 
 	// Extract subscription and invoice IDs
 	const subscriptionId =

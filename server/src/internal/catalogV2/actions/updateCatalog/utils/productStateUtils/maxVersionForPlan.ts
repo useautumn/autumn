@@ -8,4 +8,6 @@ export const maxVersionForPlan = ({
 	planId: string;
 	productStatesContext: ProductStatesContext;
 }): number =>
-	productStatesContext.versionsByPlanId[planId]?.[0]?.version ?? 0;
+	productStatesContext.maxVersionByPlanId?.[planId] ??
+	productStatesContext.versionsByPlanId[planId]?.[0]?.version ??
+	0;

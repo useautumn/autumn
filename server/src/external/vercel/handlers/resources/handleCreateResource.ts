@@ -104,7 +104,8 @@ export const handleCreateResource = createRoute({
 		const { orgId, env, integrationConfigurationId } = c.req.param();
 		const ctx = c.get("ctx");
 		const { db, org, logger, fullCustomer: customer } = ctx;
-		const { productId, name, metadata, billingPlanId } = c.req.valid("json");
+		const { productId, name, metadata, billingPlanId } =
+			c.req.valid("json");
 		const appEnv = env as AppEnv;
 
 		if (!customer) {
@@ -199,7 +200,7 @@ export const handleCreateResource = createRoute({
 
 			if (existing) {
 				const product = installationCusProduct
-					? await loadProduct(installationCusProduct.product_id)
+					? await loadProduct(installationCusProduct.product.id)
 					: requestedProduct;
 				return c.json(
 					buildResourceResponse({ resourceId: existing.id, product }),
@@ -234,7 +235,7 @@ export const handleCreateResource = createRoute({
 					});
 				if (!winner) throw error;
 				const product = installationCusProduct
-					? await loadProduct(installationCusProduct.product_id)
+					? await loadProduct(installationCusProduct.product.id)
 					: requestedProduct;
 				return c.json(
 					buildResourceResponse({ resourceId: winner.id, product }),
@@ -242,9 +243,9 @@ export const handleCreateResource = createRoute({
 			}
 
 			const product = installationCusProduct
-				? installationCusProduct.product_id === billingPlanId
+				? installationCusProduct.product.id === billingPlanId
 					? requestedProduct
-					: await loadProduct(installationCusProduct.product_id)
+					: await loadProduct(installationCusProduct.product.id)
 				: (
 						await provisionVercelCusProduct({
 							ctx,
@@ -266,7 +267,7 @@ export const handleCreateResource = createRoute({
 							resourceId,
 							installationCusProductId: installationCusProduct.id,
 							requestedBillingPlanId: billingPlanId,
-							actualProductId: installationCusProduct.product_id,
+							actualProductId: installationCusProduct.product.id,
 							installationId: integrationConfigurationId,
 						},
 					},

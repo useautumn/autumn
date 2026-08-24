@@ -207,7 +207,7 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: variantId,
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 						metadata: { stamp: "v2" },
 					},
 				],

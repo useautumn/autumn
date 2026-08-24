@@ -1,5 +1,5 @@
 /**
- * catalogV2.update — versioning: "new_version" mint mechanics.
+ * catalogV2.update — versioning: "new_version", active: true mint mechanics.
  *
  * Clones latest (same id, version max+1, new internal_id), copies ents/prices
  * with fresh row ids, applies param changes on top. Old version is untouched.
@@ -90,13 +90,13 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Mint V2",
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});
 			expectCatalogResultsCorrect({
 				response,
-				plans: [{ id: planId, action: "create" }],
+				plans: [{ id: planId, action: "update" }],
 			});
 
 			await expectPlanRowsCorrect({
@@ -164,7 +164,7 @@ test.concurrent(
 					{
 						plan_id: planId,
 						items: [messagesItem(200), dashboardItem],
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});
@@ -232,7 +232,7 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Carry V2",
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});
@@ -308,7 +308,7 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Default V2",
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});
@@ -347,13 +347,13 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "No Cus V2",
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});
 			expectCatalogResultsCorrect({
 				response,
-				plans: [{ id: planId, action: "create" }],
+				plans: [{ id: planId, action: "update" }],
 			});
 			await expectPlanVersionsCorrect({
 				ctx,
@@ -389,11 +389,11 @@ test.concurrent(
 			await autumnV2_3.catalogV2.update({ plans: [seed] });
 
 			const response = await autumnV2_3.catalogV2.update({
-				plans: [{ ...seed, versioning: "new_version" }],
+				plans: [{ ...seed, versioning: "new_version", active: true }],
 			});
 			expectCatalogResultsCorrect({
 				response,
-				plans: [{ id: planId, action: "create" }],
+				plans: [{ id: planId, action: "update" }],
 			});
 			await expectPlanVersionsCorrect({
 				ctx,

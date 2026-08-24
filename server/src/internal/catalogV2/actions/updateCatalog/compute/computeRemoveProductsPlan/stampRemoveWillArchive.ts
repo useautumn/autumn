@@ -41,7 +41,12 @@ const pass1FromCustomersAndRewards = ({
 	return shareUnpinnedVerdict({
 		rows: targets.map((target) => {
 			if (!target.current) {
-				return { ...target, willArchive: false, hasCustomers: false };
+				return {
+					...target,
+					willArchive: false,
+					willTombstone: false,
+					hasCustomers: false,
+				};
 			}
 			const { customerUsage } = productKeyToState({
 				productKey: {
@@ -51,13 +56,23 @@ const pass1FromCustomersAndRewards = ({
 				productStatesContext,
 			});
 			const hasCustomers = customerUsage.hasAnyCustomerProducts;
+			const hasVersionableCustomers =
+				customerUsage.hasVersionableCustomerProducts;
+			const hasExpiredOnlyCustomers =
+				hasCustomers && !hasVersionableCustomers;
 			const hasRewards =
 				(productStatesContext.rewardProgramsByPlanId[target.planId] ?? [])
 					.length > 0;
+			const isWholePlan = target.allVersions;
+			const isLiveVersion = target.current.active;
+			const pinBlocksLive = !isWholePlan && isLiveVersion;
+			const willTombstone =
+				hasExpiredOnlyCustomers && !hasRewards && !pinBlocksLive;
 			return {
 				...target,
 				hasCustomers,
-				willArchive: hasCustomers || hasRewards,
+				willTombstone,
+				willArchive: !willTombstone && (hasCustomers || hasRewards),
 			};
 		}),
 	});
@@ -83,7 +98,9 @@ const pass2FromSurvivingLicenseParents = ({
 }): RemovePlanPlan[] => {
 	const hardDeletedKeys = new Set(
 		rows
-			.filter((row) => row.current && !row.willArchive)
+			.filter(
+				(row) => row.current && !row.willArchive && !row.willTombstone,
+			)
 			.map((row) => rowKey({ planId: row.planId, version: row.version })),
 	);
 
@@ -103,7 +120,9 @@ const pass2FromSurvivingLicenseParents = ({
 					childPlanId: row.planId,
 				});
 			});
-			return hasSurvivingParent ? { ...row, willArchive: true } : row;
+			return hasSurvivingParent
+				? { ...row, willArchive: true, willTombstone: false }
+				: row;
 		}),
 	});
 };

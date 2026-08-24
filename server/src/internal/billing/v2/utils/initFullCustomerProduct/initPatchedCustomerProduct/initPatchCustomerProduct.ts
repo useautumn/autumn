@@ -76,12 +76,11 @@ export const initPatchCustomerProduct = ({
 		customerEntitlements,
 		oneOffPrepaidCarryOverEntitlements,
 		oneOffPrepaidCarryOverCustomerEntitlements,
-	} =
-		initPatchedCustomerEntitlementsAndPrices({
-			ctx,
-			billingContext,
-			patchContext,
-		});
+	} = initPatchedCustomerEntitlementsAndPrices({
+		ctx,
+		billingContext,
+		patchContext,
+	});
 
 	const patchedCustomerProduct = applyCustomerProductItemsPatch({
 		customerProduct: patchContext.finalCustomerProduct,
@@ -107,22 +106,14 @@ export const initPatchCustomerProduct = ({
 		cusProduct: patchContext.finalCustomerProduct,
 	});
 
-	// Patch-style customization always carries custom items (setupPatchContext
-	// only runs when isCustomizePlanPatchStyle is true). Flip is_custom on the
-	// customer_product so version migrations skip it.
-	const customUpdates = billingContext.isCustom
-		? { is_custom: true }
-		: {};
-	if (billingContext.isCustom) {
-		patchContext.finalCustomerProduct.is_custom = true;
-	}
+	// `is_custom` is not set here: it is derived from the resulting item set in
+	// applyDerivedCustomerProductIsCustom, once the plan reaches the executor.
 
 	return {
 		finalCustomerProduct: patchContext.finalCustomerProduct,
 		customerProductUpdates: {
 			options: patchContext.finalCustomerProduct.options,
 			...trialUpdates,
-			...customUpdates,
 		},
 		oneOffPrepaidCarryOverCustomerEntitlements,
 	};

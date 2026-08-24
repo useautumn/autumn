@@ -1,4 +1,8 @@
 import { productKeyToString, productToProductKey } from "@autumn/shared";
+import {
+	childTriggersLicenseRewrite,
+	reverseLinksForChild,
+} from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
 import { deriveLicenseParentMintIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveLicenseParentMintIntents";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type {
@@ -8,6 +12,7 @@ import type {
 
 /** Links-only pin for parent versions not already in the batch. Skip all_versions plans — siblings cover them. */
 export const deriveLicenseParentIntents = ({
+	intent,
 	upsert,
 	projectedProductStatesContext,
 	allVersionsPlanIds,
@@ -17,15 +22,17 @@ export const deriveLicenseParentIntents = ({
 	projectedProductStatesContext: ProductStatesContext;
 	allVersionsPlanIds: Set<string>;
 }): ProductUpsertIntent[] => {
-	if (!upsert.entitlementPricesPlan) return [];
+	const rewritesLicenses = childTriggersLicenseRewrite({ child: upsert });
+	if (!rewritesLicenses) return [];
 
-	const reverseLinks =
-		upsert.row.currentFullProduct?.parent_plan_licenses ??
-		upsert.row.baseFullProduct?.parent_plan_licenses ??
-		[];
+	const reverseLinks = reverseLinksForChild({
+		upsert,
+		productStatesContext: projectedProductStatesContext,
+	});
 
 	return [
 		...deriveLicenseParentMintIntents({
+			intent,
 			upsert,
 			productStatesContext: projectedProductStatesContext,
 		}),
