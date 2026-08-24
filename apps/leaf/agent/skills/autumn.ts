@@ -1,5 +1,5 @@
 import { namedSkills } from "../lib/subagentSkills.js";
 
-// Catalog writes are not exposed on the orchestrator; it keeps only the
-// shared concepts skill for answering catalog read questions.
+// The orchestrator routes and answers from preloaded context; it keeps only
+// the shared concepts skill for conceptual pricing-model questions.
 export default namedSkills({ names: ["autumn-concepts"] });
