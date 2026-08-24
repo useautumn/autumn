@@ -75,5 +75,9 @@ export type UpsertProductPlan = {
 	/** Product that currently holds `active` — pairs a demoted product plan. */
 	previousActiveInternalId?: string;
 
-	state: { hasCustomers: boolean };
+	state: {
+		hasCustomers: boolean;
+		/** Plan already had a live version — distinguishes a mint from a new plan. */
+		planHadLiveVersions: boolean;
+	};
 };

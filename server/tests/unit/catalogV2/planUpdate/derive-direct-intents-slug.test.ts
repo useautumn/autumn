@@ -64,4 +64,22 @@ describe("deriveDirectIntents version_slug targeting", () => {
 		});
 		expect(intent?.productKey).toEqual({ planId: "pro", version: 2 });
 	});
+
+	test("no live versions mints the next free version", () => {
+		const [intent] = deriveDirectIntents({
+			params: {
+				plans: [{ plan_id: "pro", name: "Reborn" }],
+				features: [],
+				remove_features: [],
+				remove_plans: [],
+			},
+			productStatesContext: {
+				statesByPlanVersion: {},
+				versionsByPlanId: { pro: [] },
+				maxVersionByPlanId: { pro: 2 },
+				rewardProgramsByPlanId: {},
+			},
+		});
+		expect(intent?.productKey).toEqual({ planId: "pro", version: 3 });
+	});
 });

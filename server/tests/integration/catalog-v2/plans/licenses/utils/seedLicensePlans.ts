@@ -219,6 +219,7 @@ export const bumpChild = async ({
 	items,
 	propagate,
 	versioning,
+	newVersionSlug,
 	parentPlans,
 }: {
 	autumn: CatalogV2Client;
@@ -227,6 +228,7 @@ export const bumpChild = async ({
 	items?: CatalogTestItem[];
 	propagate?: CatalogPropagateParams;
 	versioning?: CatalogPlanVersioningStrategy;
+	newVersionSlug?: string;
 	parentPlans?: UpdateCatalogPlanParams[];
 }) => {
 	await autumn.catalogV2.update({
@@ -236,6 +238,7 @@ export const bumpChild = async ({
 				items: items ?? [messagesItem(included)],
 				...(versioning ? { versioning } : {}),
 				...(versioning === "new_version" ? { active: true } : {}),
+				...(newVersionSlug ? { new_version_slug: newVersionSlug } : {}),
 				...(propagate ? { propagate } : {}),
 			},
 			...(parentPlans ?? []),

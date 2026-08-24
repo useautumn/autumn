@@ -73,6 +73,9 @@ const resolveVersionsForPlan = ({
 		.sort((a, b) => a.version - b.version);
 
 	const maxVersion = maxVersionForPlan({ planId, productStatesContext });
+	const hasLiveVersions =
+		(productStatesContext.versionsByPlanId[planId] ?? []).length > 0;
+	const nextFreeVersion = maxVersion + 1;
 	const activeOrV1 =
 		activeVersionForPlan({ planId, productStatesContext }) ??
 		(maxVersion || 1);
@@ -86,8 +89,8 @@ const resolveVersionsForPlan = ({
 		.map((planParams) => ({
 			...planParams,
 			version:
-				planParams.versioning === "new_version"
-					? maxVersion + 1
+				planParams.versioning === "new_version" || !hasLiveVersions
+					? nextFreeVersion
 					: activeOrV1,
 		}));
 

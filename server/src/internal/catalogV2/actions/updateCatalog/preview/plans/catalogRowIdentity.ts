@@ -7,6 +7,25 @@ type IdentityProduct = {
 	active: boolean;
 };
 
+type PreviousActiveProduct = {
+	version: number;
+	version_slug?: string | null;
+};
+
+/** Object presence means this row is taking the active pointer. */
+export const promotionDetailsForPlan = ({
+	previousActive,
+}: {
+	previousActive?: PreviousActiveProduct | null;
+}): { previous_active_version_slug: string } | undefined => {
+	if (!previousActive) return undefined;
+	return {
+		previous_active_version_slug:
+			previousActive.version_slug ??
+			defaultVersionSlug({ version: previousActive.version }),
+	};
+};
+
 /** Identity trio for a preview row — `new_*` only when that field actually changes. */
 export const catalogRowIdentity = ({
 	planId,

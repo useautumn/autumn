@@ -96,7 +96,7 @@ test.concurrent(
 			});
 			expectCatalogResultsCorrect({
 				response,
-				plans: [{ id: planId, action: "create" }],
+				plans: [{ id: planId, action: "update" }],
 			});
 
 			await expectPlanRowsCorrect({
@@ -353,7 +353,7 @@ test.concurrent(
 			});
 			expectCatalogResultsCorrect({
 				response,
-				plans: [{ id: planId, action: "create" }],
+				plans: [{ id: planId, action: "update" }],
 			});
 			await expectPlanVersionsCorrect({
 				ctx,
@@ -393,7 +393,7 @@ test.concurrent(
 			});
 			expectCatalogResultsCorrect({
 				response,
-				plans: [{ id: planId, action: "create" }],
+				plans: [{ id: planId, action: "update" }],
 			});
 			await expectPlanVersionsCorrect({
 				ctx,

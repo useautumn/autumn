@@ -3,6 +3,7 @@
  *
  * Contract:
  *   preview: promoted row active:true; sibling (old pointer) active:false
+ *   preview includes promotion_details with the previous pointer's slug
  *   preview back-promote: v1 active:true while v2 is live; sibling v2 inactive
  *   promote does not mint — still exactly versions [1, 2]
  *   active:true on the already-active row is a no-op (v1 draft case and live v2)
@@ -78,6 +79,7 @@ test.concurrent(
 					action: "update",
 					versionSlug: "v2",
 					active: true,
+					promotionDetails: { previous_active_version_slug: "v1" },
 					siblingVersions: [{ version: 1, active: false }],
 				},
 			});
@@ -202,6 +204,7 @@ test.concurrent(
 					action: "update",
 					versionSlug: "v1",
 					active: true,
+					promotionDetails: { previous_active_version_slug: "v2" },
 					siblingVersions: [{ version: 2, active: false }],
 				},
 			});

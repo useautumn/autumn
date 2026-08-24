@@ -9,7 +9,10 @@ import type {
 import { productToProductKey } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
 import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
-import { childPropagatesToParent } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
+import {
+	childPropagatesToParent,
+	reverseLinksForChild,
+} from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
 import { withCatalogConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withCatalogConflicts";
 import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
 import { computeVersioningOptionsForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/versioningOptions/computeVersioningOptionsForPlan";
@@ -298,10 +301,10 @@ export const buildLicenseParentsPreview = ({
 	productStatesContext: ProductStatesContext;
 	previewContext: PreviewCatalogContext | undefined;
 }): CatalogLicenseParentPreview[] => {
-	const reverseLinks =
-		directUpsert.row.currentFullProduct?.parent_plan_licenses ??
-		directUpsert.row.baseFullProduct?.parent_plan_licenses ??
-		[];
+	const reverseLinks = reverseLinksForChild({
+		upsert: directUpsert,
+		productStatesContext,
+	});
 	if (reverseLinks.length === 0) return [];
 
 	const existingVersions = reverseLinks

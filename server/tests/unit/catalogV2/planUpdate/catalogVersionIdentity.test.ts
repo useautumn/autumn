@@ -3,7 +3,10 @@ import {
 	CatalogCorePreviewSchema,
 	UpdateCatalogPlanParamsSchema,
 } from "@autumn/shared";
-import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
+import {
+	catalogRowIdentity,
+	promotionDetailsForPlan,
+} from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 
 const previewState = { has_customers: false };
 
@@ -91,6 +94,43 @@ describe("CatalogCorePreview version identity", () => {
 		expect(parsed.new_plan_id).toBe("pro_2");
 		expect(parsed.new_version_slug).toBe("summer");
 	});
+
+	test("accepts promotion_details when this row takes the pointer", () => {
+		const parsed = CatalogCorePreviewSchema.parse({
+			plan_id: "pro",
+			version: 2,
+			version_slug: "v2",
+			active: true,
+			promotion_details: { previous_active_version_slug: "v1" },
+			state: previewState,
+		});
+		expect(parsed.promotion_details).toEqual({
+			previous_active_version_slug: "v1",
+		});
+	});
+
+	test("omits promotion_details when the row is not taking the pointer", () => {
+		const parsed = CatalogCorePreviewSchema.parse({
+			plan_id: "pro",
+			version: 1,
+			version_slug: "v1",
+			active: true,
+			state: previewState,
+		});
+		expect(parsed.promotion_details).toBeUndefined();
+	});
+
+	test("rejects promotion_details: null", () => {
+		const result = CatalogCorePreviewSchema.safeParse({
+			plan_id: "pro",
+			version: 1,
+			version_slug: "v1",
+			active: true,
+			promotion_details: null,
+			state: previewState,
+		});
+		expect(result.success).toBe(false);
+	});
 });
 
 describe("catalogRowIdentity", () => {
@@ -142,6 +182,20 @@ describe("catalogRowIdentity", () => {
 			new_version_slug: "newSlug",
 			active: true,
 		});
+	});
+
+	test("promotion details use the previous active slug, falling back to v{n}", () => {
+		expect(
+			promotionDetailsForPlan({
+				previousActive: { version: 1, version_slug: "summer" },
+			}),
+		).toEqual({ previous_active_version_slug: "summer" });
+		expect(
+			promotionDetailsForPlan({
+				previousActive: { version: 3, version_slug: null },
+			}),
+		).toEqual({ previous_active_version_slug: "v3" });
+		expect(promotionDetailsForPlan({ previousActive: null })).toBeUndefined();
 	});
 
 	test("plan id rename emits new_plan_id only", () => {

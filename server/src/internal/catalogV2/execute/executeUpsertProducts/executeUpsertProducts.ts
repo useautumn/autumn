@@ -1,8 +1,8 @@
-import type { CatalogAction } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { upsertToCatalogAction } from "@/internal/catalogV2/actions/updateCatalog/utils/upsertToCatalogAction";
 import type { CatalogAppliedResult } from "@/internal/catalogV2/execute/executeUpdateCatalogPlan";
 import { deleteClaimedPlanAliases } from "@/internal/catalogV2/execute/deleteClaimedPlanAliases.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -42,16 +42,6 @@ const executeUpsertProduct = async ({
 	await applyFreeTrialPlan({ ctx, upsert });
 };
 
-const upsertOpToAction = ({
-	op,
-}: {
-	op: UpsertProductPlan["row"]["op"];
-}): CatalogAction => {
-	if (op === "create") return "create";
-	if (op === "update") return "update";
-	return "none";
-};
-
 /** Persist upsertProducts — product rows first, then plan_license writes. */
 export const executeUpsertProducts = async ({
 	ctx,
@@ -74,7 +64,7 @@ export const executeUpsertProducts = async ({
 			await executeUpsertProduct({ ctx: txCtx, upsert });
 			results.push({
 				id: upsert.row.planId,
-				action: upsertOpToAction({ op: upsert.row.op }),
+				action: upsertToCatalogAction({ upsert }),
 			});
 		}
 

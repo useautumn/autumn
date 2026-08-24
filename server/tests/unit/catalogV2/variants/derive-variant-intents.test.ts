@@ -64,7 +64,7 @@ const mintVariantFromBase = ({
 				nextFullProduct: newBase,
 			},
 			propagate: { variants: [{ plan_id: "team-eu" }] },
-			state: { hasCustomers: false },
+			state: { hasCustomers: false, planHadLiveVersions: true },
 		} as UpsertProductPlan,
 		projectedProductStatesContext: {
 			...emptyStates({ planIds: ["team", "team-eu"] }),
@@ -108,7 +108,7 @@ describe("deriveVariantIntents", () => {
 					nextFullProduct: baseProduct,
 				},
 				declaredVariants: [{ variant_plan_id: "team-eu", name: "Team EU" }],
-				state: { hasCustomers: false },
+				state: { hasCustomers: false, planHadLiveVersions: true },
 			} as UpsertProductPlan,
 			projectedProductStatesContext: emptyStates({
 				planIds: ["team", "team-eu"],
@@ -140,7 +140,7 @@ describe("deriveVariantIntents", () => {
 					nextFullProduct: baseProduct,
 				},
 				declaredVariants: [{ variant_plan_id: "team-eu" }],
-				state: { hasCustomers: false },
+				state: { hasCustomers: false, planHadLiveVersions: true },
 			} as UpsertProductPlan,
 			projectedProductStatesContext: {
 				...emptyStates({ planIds: ["team", "team-eu"] }),
@@ -186,7 +186,7 @@ describe("deriveVariantIntents", () => {
 					nextFullProduct: baseProduct,
 				},
 				declaredVariants: [{ variant_plan_id: "team-eu" }],
-				state: { hasCustomers: false },
+				state: { hasCustomers: false, planHadLiveVersions: true },
 			} as UpsertProductPlan,
 			projectedProductStatesContext: {
 				...emptyStates({ planIds: ["team", "team-eu"] }),
@@ -230,7 +230,7 @@ describe("deriveVariantIntents", () => {
 				declaredVariants: [
 					{ variant_plan_id: "team-eu", base_variant_id: null },
 				],
-				state: { hasCustomers: false },
+				state: { hasCustomers: false, planHadLiveVersions: true },
 			} as UpsertProductPlan,
 			projectedProductStatesContext: {
 				...emptyStates({ planIds: ["team", "team-eu"] }),
@@ -274,7 +274,7 @@ describe("deriveVariantIntents", () => {
 					baseFullProduct: null,
 					nextFullProduct: next,
 				},
-				state: { hasCustomers: false },
+				state: { hasCustomers: false, planHadLiveVersions: true },
 			} as UpsertProductPlan,
 			projectedProductStatesContext: {
 				...emptyStates({ planIds: ["team", "team-eu"] }),
@@ -326,7 +326,7 @@ describe("deriveVariantIntents", () => {
 					baseFullProduct: oldBase,
 					nextFullProduct: newBase,
 				},
-				state: { hasCustomers: false },
+				state: { hasCustomers: false, planHadLiveVersions: true },
 			} as UpsertProductPlan,
 			projectedProductStatesContext: {
 				...emptyStates({ planIds: ["team", "team-eu"] }),

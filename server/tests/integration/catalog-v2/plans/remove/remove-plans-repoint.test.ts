@@ -4,7 +4,7 @@
  *
  * Contract:
  *   Pin-delete Team v2 while v1 lives → EU points at v1
- *   Pin-delete Team v1 while v2 is latest → 400 (historical versions stay)
+ *   Pin-delete Team v1 while EU points at v2 → v1 gone, pointer stays on v2
  *   Pin-delete last remaining Team version while EU survives → 400
  */
 
@@ -84,7 +84,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 remove plans: pin-delete of a non-latest base version is 400")}`,
+	`${chalk.yellowBright("catalogV2 remove plans: pin-delete of an unused old base version leaves the variant on v2")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const baseId = uniqueTestId("cv2_rmp_rp_old");
@@ -97,19 +97,14 @@ test.concurrent(
 				variantId,
 			});
 
-			await expectAutumnError({
-				errCode: ErrCode.InvalidRequest,
-				errMessage: `only the latest version (2) can be removed`,
-				func: () =>
-					autumnV2_3.catalogV2.update({
-						remove_plans: [{ plan_id: baseId, version: 1 }],
-					}),
+			await autumnV2_3.catalogV2.update({
+				remove_plans: [{ plan_id: baseId, version: 1 }],
 			});
 
 			await expectPlanVersionsCorrect({
 				ctx,
 				planId: baseId,
-				versions: [1, 2],
+				versions: [2],
 			});
 			await expectVariantPointerCorrect({
 				ctx,

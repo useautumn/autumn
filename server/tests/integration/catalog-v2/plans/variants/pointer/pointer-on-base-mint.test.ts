@@ -49,7 +49,7 @@ test.concurrent(
 			expectCatalogResultsCorrect({
 				response,
 				plans: [
-					{ id: baseId, action: "create" },
+					{ id: baseId, action: "update" },
 					{ id: variantId, action: "update" },
 				],
 			});

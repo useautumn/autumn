@@ -245,7 +245,7 @@ test.concurrent(
 				preview,
 				expected: {
 					planId: draftId,
-					action: "create",
+					action: "update",
 					versionSlug: "v2",
 					newVersionSlug: null,
 					newPlanId: null,
@@ -256,7 +256,7 @@ test.concurrent(
 				preview,
 				expected: {
 					planId: liveId,
-					action: "create",
+					action: "update",
 					versionSlug: "v2",
 					newVersionSlug: "summer",
 					newPlanId: null,

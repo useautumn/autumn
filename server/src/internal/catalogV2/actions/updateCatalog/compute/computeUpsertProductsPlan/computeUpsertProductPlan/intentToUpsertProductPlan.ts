@@ -214,6 +214,9 @@ export const intentToUpsertProductPlan = ({
 							productStatesContext,
 						})
 					: customerUsage.hasVersionableCustomerProducts,
+			planHadLiveVersions:
+				(productStatesContext.versionsByPlanId[productKey.planId] ?? []).length >
+				0,
 		},
 	};
 };

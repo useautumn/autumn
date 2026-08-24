@@ -3,7 +3,6 @@
  */
 
 import { test } from "bun:test";
-import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -13,17 +12,6 @@ import {
 	expectCatalogPlansCorrect,
 	expectPlanVersionsCorrect,
 } from "../utils/expectCatalogPlans.js";
-
-const cannotRemoveOldVersion = ({
-	planId,
-	version,
-	latestVersion,
-}: {
-	planId: string;
-	version: number;
-	latestVersion: number;
-}) =>
-	`Cannot remove version ${version} of plan ${planId}: only the latest version (${latestVersion}) can be removed. Omit "version" to remove the whole plan.`;
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 remove plans: upserting and removing the same plan in one call throws")}`,
@@ -102,7 +90,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 remove plans: pinning a non-latest version is a 400")}`,
+	`${chalk.yellowBright("catalogV2 remove plans: pin-delete of an unused old version hard-deletes it")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_rmperr_old");
@@ -115,25 +103,11 @@ test.concurrent(
 				plans: [{ plan_id: planId, versioning: "new_version", active: true }],
 			});
 
-			const params = { remove_plans: [{ plan_id: planId, version: 1 }] };
-			const errMessage = cannotRemoveOldVersion({
-				planId,
-				version: 1,
-				latestVersion: 2,
+			await autumnV2_3.catalogV2.update({
+				remove_plans: [{ plan_id: planId, version: 1 }],
 			});
 
-			await expectAutumnError({
-				errCode: ErrCode.InvalidRequest,
-				errMessage,
-				func: () => autumnV2_3.catalogV2.update(params),
-			});
-			await expectAutumnError({
-				errCode: ErrCode.InvalidRequest,
-				errMessage,
-				func: () => autumnV2_3.catalogV2.previewUpdate(params),
-			});
-
-			await expectPlanVersionsCorrect({ ctx, planId, versions: [1, 2] });
+			await expectPlanVersionsCorrect({ ctx, planId, versions: [2] });
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}

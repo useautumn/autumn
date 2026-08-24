@@ -1,11 +1,14 @@
-import type {
-	CatalogPropagateTargetParams,
-	FullPlanLicense,
-	LicenseCustomize,
+import {
+	type CatalogPropagateTargetParams,
+	type FullPlanLicense,
+	type LicenseCustomize,
+	productKeyToString,
+	productToProductKey,
 } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { activeVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeVersionForPlan";
+import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 
 /** Current plan_license links on this row. Minted versions fall back to the clone source. */
 export const upsertProductPlanToLicenses = ({
@@ -31,6 +34,38 @@ const childSourceInternalIds = ({
 		].filter((internalId): internalId is string => internalId !== undefined),
 	),
 ];
+
+/** Incoming links on the upserted child plus the demoted pointer (promote). */
+export const reverseLinksForChild = ({
+	upsert,
+	productStatesContext,
+}: {
+	upsert: UpsertProductPlan;
+	productStatesContext: ProductStatesContext;
+}) => {
+	const previousActive = upsert.previousActiveInternalId
+		? findFullProductByInternalId({
+				internalId: upsert.previousActiveInternalId,
+				productStatesContext,
+			})
+		: null;
+	const seen = new Set<string>();
+	return [
+		upsert.row.currentFullProduct,
+		upsert.row.baseFullProduct,
+		previousActive,
+	].flatMap((product) => {
+		if (!product) return [];
+		return (product.parent_plan_licenses ?? []).filter((link) => {
+			const key = productKeyToString({
+				productKey: productToProductKey({ product: link.product }),
+			});
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+	});
+};
 
 export const parentLicenseLinkForChild = ({
 	parent,

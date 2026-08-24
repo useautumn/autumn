@@ -1,16 +1,16 @@
 import type { CatalogVariantParams, FullProduct } from "@autumn/shared";
 import { productToProductKey } from "@autumn/shared";
-import { buildVariantEditDiff } from "../editDiff/buildVariantEditDiff";
-import { variantSettingsPlanParams } from "../editDiff/variantSettingsPlanParams";
-import { baseRowMinted } from "../variantPlanUtils";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type {
 	ProductUpsertIntent,
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
-import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
+import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
+import { buildVariantEditDiff } from "../editDiff/buildVariantEditDiff";
+import { variantSettingsPlanParams } from "../editDiff/variantSettingsPlanParams";
+import { baseRowMinted } from "../variantPlanUtils";
 
 const latestHasCustomers = ({
 	latest,
@@ -24,7 +24,8 @@ const latestHasCustomers = ({
 		productStatesContext,
 	}).customerUsage.hasVersionableCustomerProducts;
 
-const declaredCustomizeForLatest = ({
+/** At most one entry per variant plan, so plan id plus version resolves it. */
+const declaredVariantForLatest = ({
 	planId,
 	latestVersion,
 	declaredVariants,
@@ -32,13 +33,12 @@ const declaredCustomizeForLatest = ({
 	planId: string;
 	latestVersion: number;
 	declaredVariants: CatalogVariantParams[];
-}): CatalogVariantParams["customize"] =>
+}): CatalogVariantParams | undefined =>
 	declaredVariants.find(
 		(variant) =>
 			variant.variant_plan_id === planId &&
-			(variant.version === undefined || variant.version === latestVersion) &&
-			variant.customize,
-	)?.customize;
+			(variant.version === undefined || variant.version === latestVersion),
+	);
 
 const mintablePlanIds = ({
 	upsert,
@@ -100,19 +100,20 @@ export const deriveVariantMints = ({
 			continue;
 		}
 
-		const follow = (upsert.propagate?.variants ?? []).some(
+		const propagateTarget = (upsert.propagate?.variants ?? []).find(
 			(target) => target.plan_id === planId,
 		);
+		const declaredVariant = declaredVariantForLatest({
+			planId,
+			latestVersion: active.version,
+			declaredVariants: upsert.declaredVariants ?? [],
+		});
 		const editDiff = buildVariantEditDiff({
 			variantProduct: active,
 			baseCurrent,
 			baseNext: upsert.row.nextFullProduct,
-			follow,
-			customize: declaredCustomizeForLatest({
-				planId,
-				latestVersion: active.version,
-				declaredVariants: upsert.declaredVariants ?? [],
-			}),
+			follow: propagateTarget !== undefined,
+			customize: declaredVariant?.customize,
 			declaredLicenses: upsert.declaredLicenses,
 		});
 
@@ -121,6 +122,9 @@ export const deriveVariantMints = ({
 				planId,
 				productStatesContext: projectedProductStatesContext,
 			}) + 1;
+		// Declared over propagated, matching how `variant_action` ranks the two lanes.
+		const newVersionSlug =
+			declaredVariant?.new_version_slug ?? propagateTarget?.new_version_slug;
 		mintedPlanIds.add(planId);
 		intents.push({
 			productKey: { planId, version },
@@ -129,6 +133,7 @@ export const deriveVariantMints = ({
 				version,
 				versioning: "new_version",
 				...(intent.planParams.active === true ? { active: true } : {}),
+				...(newVersionSlug ? { new_version_slug: newVersionSlug } : {}),
 				...settingsPatch,
 			},
 			source: "variant_propagation",

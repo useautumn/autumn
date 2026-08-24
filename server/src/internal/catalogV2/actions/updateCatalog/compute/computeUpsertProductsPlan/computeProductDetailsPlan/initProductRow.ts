@@ -46,6 +46,8 @@ export const initProductRow = ({
 			is_default: willBeActive ? (patch.is_default ?? base.is_default) : false,
 			internal_id: generateId("prod"),
 			created_at: Date.now(),
+			deleted_at: null,
+			previous_version_slug: null,
 			group: (patch.group ?? base.group) || "",
 			base_internal_product_id:
 				baseInternalProductId ?? base.base_internal_product_id ?? null,
@@ -77,6 +79,8 @@ export const initProductRow = ({
 		base_variant_id: null,
 		base_internal_product_id: baseInternalProductId ?? null,
 		archived: patch.archived ?? false,
+		deleted_at: null,
+		previous_version_slug: null,
 		config: { ignore_past_due: patch.config?.ignore_past_due ?? false },
 		metadata: patch.metadata ?? {},
 		auto_topups: patch.auto_topups ?? null,

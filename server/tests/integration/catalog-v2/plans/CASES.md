@@ -1225,9 +1225,8 @@ applied customize. Same customize `$or`s; different customize stays split.
 ## 22. Remove / archive plans — `remove/`
 
 `remove_plans: [{ plan_id, version? }]`. Omit version = every version (shared
-verdict). Pin version = that row only, and **only the latest version may be
-pinned** — removing a historical version would leave a gap in the sequence, so
-it is 400. `willArchive` from customers (expired included), reward programs, and
+verdict). Pin version = that row only (live or historical). `willArchive` from
+customers (expired included), reward programs, and
 license parents that still exist after the batch. Same-call upsert+remove is
 400. Preview `reasons` are dialog-ready.
 
@@ -1237,16 +1236,17 @@ license parents that still exist after the batch. Same-call upsert+remove is
 | Already-archived unreferenced → hard delete | ✓ `remove/remove-plans.test.ts` |
 | Preview: action `delete` + `will_archive` verdict, writes nothing | ✓ `remove/remove-plans.test.ts` |
 | Customer on the plan → archive; `has_customers` | ✓ `remove/remove-plans.test.ts` |
-| Expired customer → archive | ✓ `remove/remove-plans.test.ts` |
+| Expired-only customers → tombstone (`will_archive: false`); names omitted from reasons | ✓ `remove/tombstone-verdict.test.ts`, `remove/remove-plans-preview.test.ts` |
 | Reward program ref → archive | ✓ `remove/remove-plans.test.ts` |
 | License parent still offering this child → archive | ✓ `remove/remove-plans.test.ts` |
 | Pin latest `version` with no customers → delete that version only | ✓ `remove/remove-plans.test.ts` |
 | Omit version; any version has customers → archive ALL versions | ✓ `remove/remove-plans.test.ts` |
 | Unknown plan id → 404 (update AND preview) | ✓ `remove/remove-plans-errors.test.ts` |
 | Unknown pinned version → 404 | ✓ `remove/remove-plans-errors.test.ts` |
-| Pinned NON-latest version → 400 (update AND preview), nothing removed | ✓ `remove/remove-plans-errors.test.ts` |
+| Pinned unused historical version → hard-delete that row | ✓ `remove/remove-plans-errors.test.ts` |
 | Upsert + remove same plan_id → 400, atomic | ✓ `remove/remove-plans-errors.test.ts` |
 | Customer sample → `Attached to customer "X".` + archive headline | ✓ `remove/remove-plans-preview.test.ts` |
+| Expired-only pin → delete confirmation; no `Attached to` name | ✓ `remove/remove-plans-preview.test.ts` |
 | Two customers → `"X" and 1 more` | ✓ `remove/remove-plans-preview.test.ts` |
 | Unreferenced → delete confirmation; no archive headline | ✓ `remove/remove-plans-preview.test.ts` |
 | Unpinned delete of a base that still has variants → 400 | ✓ `remove/remove-plans-variants.test.ts` |
@@ -1254,7 +1254,7 @@ license parents that still exist after the batch. Same-call upsert+remove is
 | Preview of unpinned delete with variants → 400, not detach warning | ✓ `remove/remove-plans-preview.test.ts` |
 | Same-call remove base + variant (no customers) → both hard delete | ✓ `remove/remove-plans-variants.test.ts` |
 | Pin-delete latest base version; variant repoints at surviving v1 | ✓ `remove/remove-plans-repoint.test.ts` |
-| Pin-delete an old base version the variant does not point at → 400 (non-latest) | ✓ `remove/remove-plans-repoint.test.ts` |
+| Pin-delete an old base version the variant does not point at → v1 gone, pointer stays | ✓ `remove/remove-plans-repoint.test.ts` |
 | Pin-delete last remaining base version while a variant survives → 400 | ✓ `remove/remove-plans-repoint.test.ts` |
 | Remove parent + child (no customers) → both hard delete | ✓ `remove/remove-plans-same-call.test.ts` |
 | Remove parent (has customers) + child → parent archives, child archives | ✓ `remove/remove-plans-same-call.test.ts` |
@@ -1334,4 +1334,41 @@ Draft mint (`new_version` without `active`) does not take the pointer.
 | Customized parent is left on child promote | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
 | Parent promote (licenses omitted): child identity unchanged; v2 stays empty | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
 | Declared `licenses[]` on child promote re-links to newly active child | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
+| Preview `promotion_details` present when a row takes the pointer | ✓ `versions/promote-preview.test.ts` + `promote-preview-details.test.ts` |
+| Preview `promotion_details` omitted on no-op / draft mint / first create | ✓ `versions/promote-preview-details.test.ts` |
+| Preview rename + promote returns both rename fields and `promotion_details` | ✓ `versions/promote-preview-details.test.ts` |
+| Preview two-plan batch: each promoting plan has its own `promotion_details` | ✓ `versions/promote-preview-batch.test.ts` |
+| Preview custom-slug / paid-over-free still include `promotion_details` | ✓ `versions/promote-preview-batch.test.ts` |
+| Preview variant rows on base promote (follow + historical, no mint) | ✓ `versions/promote-preview-followers.test.ts` |
+| Preview license_action freeze vs follow on child promote | ✓ `versions/promote-preview-followers.test.ts` |
 
+## 25. Unit 1 — Tombstone hide / occupancy
+
+`deleted_at` hides a version from catalog reads. Occupancy (`listFull` +
+`includeDeleted`, catalog compute setup) still sees the row so mint
+`max(version)+1` does not collide with `unique_product`. Slug is nulled;
+`previous_version_slug` remembers it.
+
+| Case | Status |
+|---|---|
+| get / listFull / catalog.get omit tombstoned draft | `versions/tombstone-hide.test.ts` |
+| `includeDeleted` occupancy still returns the row + previous slug | `versions/tombstone-hide.test.ts` |
+| `new_version` after tombstoned v2 mints v3 | `versions/tombstone-hide.test.ts` |
+| Pin expired-only draft → preview `will_archive: false`; unpinned expired-only also tombstones | `remove/tombstone-verdict.test.ts` |
+| Pin expired-only draft execute writes `deleted_at` and keeps expired CPs | `remove/tombstone-execute.test.ts` |
+| Tombstone all versions → same `plan_id` preview/update is `create` at max+1 | `remove/tombstone-execute.test.ts` |
+
+## 26. Unit 3 — `new_version_slug` on propagate targets
+
+A derived mint is named by its own propagate target, never by the saved plan's slug —
+inheritance would silently collide with a slug the target already holds. `variants[]`
+overrides the target per variant; unnamed targets fall back to `v{n}`.
+
+| Case | Status |
+|---|---|
+| `propagate.variants[].new_version_slug` → names that variant's minted row, drift preserved | `versions/version-identity-propagate-slug.test.ts` |
+| base slug set, target unnamed → base row named, variant falls back to `v{n}` | `versions/version-identity-propagate-slug.test.ts` |
+| `variants[].new_version_slug` → overrides the propagate target's slug | `versions/version-identity-propagate-slug.test.ts` |
+| variant target following in place → existing row's slug untouched | `versions/version-identity-propagate-slug.test.ts` |
+| target slug another version of that target holds → `DuplicateVersionSlug` | `versions/version-identity-propagate-slug.test.ts` |
+| `license_parents[].new_version_slug` with `new_version` → names the parent's minted row | `versions/version-identity-propagate-slug.test.ts` |

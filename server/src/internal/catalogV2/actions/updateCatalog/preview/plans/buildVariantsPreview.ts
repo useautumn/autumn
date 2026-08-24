@@ -44,6 +44,21 @@ const findVariantUpsert = ({
 		(upsert) => upsert.row.planId === planId && upsert.row.version === version,
 	);
 
+/** Mints land at max+1, which is not active+1 once a plan has an older active row. */
+const findVariantMintUpsert = ({
+	upsertProducts,
+	planId,
+}: {
+	upsertProducts: UpsertProductPlan[];
+	planId: string;
+}): UpsertProductPlan | undefined =>
+	upsertProducts.find(
+		(upsert) =>
+			upsert.row.planId === planId &&
+			upsert.row.op === "create" &&
+			upsert.row.source === "variant_propagation",
+	);
+
 const resolveVariantAction = ({
 	variantPlanId,
 	version,
@@ -262,10 +277,9 @@ export const buildVariantsPreview = ({
 
 	return variants
 		.map((variant) => {
-			const mintUpsert = findVariantUpsert({
+			const mintUpsert = findVariantMintUpsert({
 				upsertProducts,
 				planId: variant.id,
-				version: variant.version + 1,
 			});
 			const variantUpsert =
 				mintUpsert ??
