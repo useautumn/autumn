@@ -4,6 +4,8 @@ import {
 	drizzle,
 	isPool,
 } from "@duckdbfan/drizzle-duckdb";
+import { SpanKind } from "@opentelemetry/api";
+import { withActiveSpan } from "@/utils/otel/withActiveSpan.js";
 import { logger } from "../logtail/logtailUtils.js";
 import { registerMdPool, startMdPoolMonitor } from "./mdPoolMonitor.js";
 
@@ -82,6 +84,8 @@ export const isMotherDuckConfigured = (): boolean =>
 	Boolean(process.env.MOTHERDUCK_TOKEN);
 
 let resolverDbPromise: Promise<MotherDuckDb> | null = null;
+let resolverDbState: "uninitialized" | "initializing" | "ready" =
+	"uninitialized";
 
 /** Lazy pooled singleton on the read-only token: only processes that actually
  * serve balance sorts open MotherDuck connections. */
@@ -93,41 +97,64 @@ export const getMotherDuckResolverDb = (): Promise<MotherDuckDb> => {
 		);
 	}
 
-	if (!resolverDbPromise) {
-		const poolSize = poolSizeFromEnv();
-		const warning = computeMotherDuckPoolWarning({
-			poolSize,
-			fleetProcesses: Number(process.env.MOTHERDUCK_FLEET_PROCESSES ?? 20),
-		});
-		if (warning) logger.warn(warning);
+	const initialState = resolverDbState;
+	return withActiveSpan({
+		name: "motherduck.resolver.get",
+		attributes: {
+			"motherduck.resolver.initial_state": initialState,
+		},
+		fn: async (span) => {
+			if (!resolverDbPromise) {
+				const poolSize = poolSizeFromEnv();
+				const warning = computeMotherDuckPoolWarning({
+					poolSize,
+					fleetProcesses: Number(process.env.MOTHERDUCK_FLEET_PROCESSES ?? 20),
+				});
+				if (warning) logger.warn(warning);
 
-		resolverDbPromise = initMotherDuck({ token, poolSize })
-			.then((db) => {
-				if (isPool(db.$client)) {
-					registerMdPool({
-						pool: db.$client,
-						name: "md-resolver",
-						max: poolSize,
-					});
-					startMdPoolMonitor();
-				}
-				return db;
-			})
-			.catch((error) => {
-				// Failed init must not poison the singleton — next request retries.
-				resolverDbPromise = null;
-				throw error;
-			});
-	}
-	return resolverDbPromise;
+				resolverDbState = "initializing";
+				resolverDbPromise = withActiveSpan({
+					name: "motherduck.resolver.initialize",
+					attributes: {
+						"db.namespace": DEFAULT_DATABASE,
+						"motherduck.pool.max": poolSize,
+					},
+					fn: async (initializeSpan) => {
+						const db = await initMotherDuck({ token, poolSize });
+						const pooled = isPool(db.$client);
+						initializeSpan.setAttribute("motherduck.pool.enabled", pooled);
+						if (pooled) {
+							registerMdPool({
+								pool: db.$client,
+								name: "md-resolver",
+								max: poolSize,
+							});
+							startMdPoolMonitor();
+						}
+						resolverDbState = "ready";
+						return db;
+					},
+				}).catch((error) => {
+					resolverDbPromise = null;
+					resolverDbState = "uninitialized";
+					throw error;
+				});
+			}
+			const db = await resolverDbPromise;
+			span.setAttribute("motherduck.resolver.final_state", resolverDbState);
+			return db;
+		},
+	});
 };
 
 export const closeMotherDuckResolverDb = async (): Promise<void> => {
 	const pending = resolverDbPromise;
 	resolverDbPromise = null;
+	resolverDbState = "uninitialized";
 	if (!pending) return;
 	const db = await pending.catch(() => null);
 	await db?.close();
+	resolverDbState = "uninitialized";
 };
 
 /** One-shot RW session for the cache refresh cron: single connection,
@@ -163,19 +190,48 @@ export const runMdWithTimeout = async <T>({
 	timeoutMs?: number;
 	label: string;
 }): Promise<T> => {
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	const timeout = new Promise<never>((_, reject) => {
-		timer = setTimeout(
-			() =>
-				reject(
-					new Error(`[motherduck] ${label} exceeded ${timeoutMs}ms timeout`),
-				),
-			timeoutMs,
-		);
+	return withActiveSpan({
+		name: "motherduck.query",
+		kind: SpanKind.CLIENT,
+		attributes: {
+			"db.system": "duckdb",
+			"db.namespace": DEFAULT_DATABASE,
+			"motherduck.query.label": label,
+			"motherduck.query.timeout_ms": timeoutMs,
+		},
+		fn: async (span) => {
+			let timer: ReturnType<typeof setTimeout> | undefined;
+			const timeout = new Promise<never>((_, reject) => {
+				timer = setTimeout(
+					() =>
+						reject(
+							new Error(
+								`[motherduck] ${label} exceeded ${timeoutMs}ms timeout`,
+							),
+						),
+					timeoutMs,
+				);
+			});
+			try {
+				const result = await Promise.race([run(), timeout]);
+				const rows = Array.isArray(result)
+					? result
+					: result && typeof result === "object" && "rows" in result
+						? result.rows
+						: null;
+				if (Array.isArray(rows)) {
+					span.setAttribute("db.response.returned_rows", rows.length);
+				}
+				return result;
+			} catch (error) {
+				span.setAttribute(
+					"motherduck.query.timed_out",
+					error instanceof Error && error.message.includes("exceeded"),
+				);
+				throw error;
+			} finally {
+				clearTimeout(timer);
+			}
+		},
 	});
-	try {
-		return await Promise.race([run(), timeout]);
-	} finally {
-		clearTimeout(timer);
-	}
 };
