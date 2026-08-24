@@ -31,13 +31,13 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		toolName: "createEntity",
 	},
 	{
-		agents: ["catalog", "orchestrator"],
+		agents: ["catalog"],
 		previewTool: "previewUpdateCatalog",
 		scopes: ["plans:write"],
 		toolName: "createPlan",
 	},
 	{
-		agents: ["catalog", "orchestrator"],
+		agents: ["catalog"],
 		previewTool: "previewUpdateCatalog",
 		scopes: ["rewards:write"],
 		toolName: "createReward",
@@ -53,7 +53,7 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		toolName: "updateAgentRules",
 	},
 	{
-		agents: ["catalog", "orchestrator"],
+		agents: ["catalog"],
 		previewTool: "previewUpdateCatalog",
 		scopes: { ALL: ["plans:write", "features:write"] },
 		toolName: "updateCatalog",
@@ -64,7 +64,7 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		toolName: "updateCustomer",
 	},
 	{
-		agents: ["catalog", "orchestrator"],
+		agents: ["catalog"],
 		previewTool: "previewUpdateCatalog",
 		scopes: ["plans:write"],
 		toolName: "updatePlan",
