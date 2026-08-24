@@ -28,10 +28,11 @@ to OUR AWS account (credits) at $0.01/GB — invisible on the MD invoice.
 2. Package: **`packages/ducklake`**.
 3. **One FC service**, 20-min schedule, internal gating: cold mirrors +
    headline rollup only every 3rd run (hourly).
-4. Scratch: `s3://autumn-lake-prod-us-east-2/lake-cache-scratch/` + lifecycle
-   expiry (~1 day). Bucket has NO expiry rules today, only abort-incomplete-MPU
-   (`abort-incomplete-mpu`) — lifecycle PUT replaces the whole config, so the
-   new rule must be added ALONGSIDE the existing one.
+4. Scratch: `s3://autumn-lake-prod-us-east-2/internal/lake-cache-scratch/` —
+   INSIDE `internal/` so MotherDuck's `lake_s3` secret (scoped internal/*) can
+   read_parquet it. Lifecycle rule `expire-lake-cache-scratch` (1 day) applied
+   2026-08-24 alongside the pre-existing `abort-incomplete-mpu` rule (PUT
+   replaces the whole config; both rules verified present).
 5. **Auto-deploy**: register in infra `PRODUCTION_CONFIG.internal.services` so
    `/api/deploy/github` bumps it every main merge. NOT in blue-green lists,
    NOT in staging (exclusion is passive).
@@ -124,8 +125,13 @@ swap semantics).
 ## Status
 
 - [x] Cadence interim: cron PR #3034 (open), flights hourly/weekly (live)
-- [ ] packages/ducklake scaffold (workspace + Dockerfile + lockfile hygiene)
-- [ ] Fetchset-tables phase
+- [x] packages/ducklake scaffold (workspace + Dockerfile + lockfile hygiene) —
+      draft PR #3038
+- [x] Fetchset-tables phase BUILT in shadow mode — draft PR #3039 (stack
+      #3040); scratch lifecycle rule applied. NEXT: manual shadow run
+      (`cd server && infisical run --env=prod --recursive -- bun src/ducklake.ts`,
+      DUCKLAKE_SHADOW defaults on) → diff `ce_balance_totals__ducklake` vs
+      incumbent → flip DUCKLAKE_SHADOW=0 at cutover
 - [ ] Hot-mirror phase
 - [ ] Cold-mirror phase
 - [ ] Flight deletion + Pulse flip
