@@ -4,7 +4,7 @@ import type { RemovePlanPlan } from "@/internal/catalogV2/actions/updateCatalog/
 
 export type RemovePlanTarget = Omit<
 	RemovePlanPlan,
-	"willArchive" | "hasCustomers"
+	"willArchive" | "willTombstone" | "hasCustomers"
 >;
 
 /** Expand each remove_plans entry to one target per version (or the pinned row). */

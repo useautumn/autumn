@@ -102,7 +102,6 @@ export const computeDefaultCustomerProduct = ({
 			freeTrial: null,
 		},
 		initOptions: {
-			isCustom: false,
 			startsAt,
 			status,
 		},

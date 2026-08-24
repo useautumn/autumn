@@ -46,6 +46,10 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 	archived: z.boolean().optional().meta({
 		description: "Archive or unarchive the plan.",
 	}),
+	active: z.boolean().optional().meta({
+		description:
+			"Take the active pointer. On `new_version`, omit to mint a draft; `true` promotes the minted row immediately.",
+	}),
 	price: BasePriceParamsSchema.nullable().optional().meta({
 		description:
 			"Base recurring price. Omit to leave unchanged; null removes it.",
@@ -69,11 +73,20 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 	// ── Catalog update ────────────────────────────────────────────────────
 	version: z.number().int().min(1).optional().meta({
 		description:
-			"Explicit version row this entry declares — an existing row to edit, or a version to create (versions must stay contiguous from 1). Repeat plan_id with different versions to declare multiple rows; at most one entry per plan_id may omit version (targets latest).",
+			"Deprecated. Use `version_slug` to target a row. Omit both to target the active row.",
+		deprecated: true,
+	}),
+	version_slug: z.string().nonempty().regex(idRegex).optional().meta({
+		description:
+			"Target this version row by slug. At most one of `version` / `version_slug`; omit both to target the active row.",
+	}),
+	new_version_slug: z.string().nonempty().regex(idRegex).optional().meta({
+		description:
+			"Set or rename this row's version slug. On `new_version`, stamps the minted row (default `v{n}`).",
 	}),
 	versioning: CatalogPlanVersioningStrategySchema.optional().meta({
 		description:
-			"How this entry applies across versions. Omit or `existing` = the resolved row only; `all_versions` = also apply to every other existing version of this plan; `new_version` = mint max+1 cloned from latest (customers stay on old).",
+			"How this entry applies across versions. Omit or `existing` = the resolved row only; `all_versions` = also apply to every other existing version of this plan; `new_version` = mint max+1 as a draft unless `active` is true (customers stay on old).",
 	}),
 	propagate: CatalogPropagateParamsSchema.optional().meta({
 		internal: true,
@@ -105,7 +118,14 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 		description:
 			"Base plan id to attach this plan to. `null` detaches it from its base. Omit to leave the pointer unchanged. Nesting under the base's variants[] also links.",
 	}),
-});
+}).refine(
+	(data) => data.version === undefined || data.version_slug === undefined,
+	{
+		message:
+			"Cannot specify both version and version_slug. Use one, or omit both to target the active row.",
+		path: ["version_slug"],
+	},
+);
 
 export type UpdateCatalogPlanParams = z.infer<
 	typeof UpdateCatalogPlanParamsSchema

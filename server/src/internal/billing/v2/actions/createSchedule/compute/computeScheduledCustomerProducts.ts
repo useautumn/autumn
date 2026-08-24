@@ -44,9 +44,6 @@ export const computeScheduledCustomerProducts = ({
 					phaseContext.billingCycleAnchor === "phase_start"
 						? phaseContext.startsAt
 						: null,
-				isCustom:
-					productContext.customPrices.length > 0 ||
-					productContext.customEntitlements.length > 0,
 			});
 			insertCustomerProducts.push(customerProduct);
 			phaseCustomerProductIds.push(customerProduct.id);

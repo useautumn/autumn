@@ -2,6 +2,7 @@ import { expect } from "bun:test";
 import type {
 	ApiPlanLicenseV1,
 	CatalogConflictPreview,
+	CatalogCorePreview,
 	CatalogLicenseAction,
 	CatalogPlanVersioningStrategy,
 	CatalogSiblingVersionPreview,
@@ -25,7 +26,11 @@ type ExpectedLicenseChange = Partial<
 
 type ExpectedSiblingVersion = {
 	version: number;
+	versionSlug?: string;
+	/** Pass `null` to assert `new_version_slug` is omitted. */
+	newVersionSlug?: string | null;
 	selected?: boolean;
+	active?: boolean;
 	hasCustomers?: boolean;
 	/** true = plan_change present; false/null = absent. */
 	hasPlanChange?: boolean;
@@ -41,6 +46,9 @@ type ExpectedSiblingVersion = {
 type ExpectedLicenseParent = {
 	planId: string;
 	version?: number;
+	versionSlug?: string;
+	/** Pass `null` to assert `new_version_slug` is omitted. */
+	newVersionSlug?: string | null;
 	licenseAction?: CatalogLicenseAction;
 	versioning?: PlanPreviewVersioning;
 	name?: string;
@@ -62,6 +70,14 @@ type ExpectedPlanPreviewRow = {
 	currentVersion?: number;
 	action?: PlanPreviewRow["action"];
 	name?: string;
+	versionSlug?: string;
+	/** Pass `null` to assert `new_version_slug` is omitted. */
+	newVersionSlug?: string | null;
+	/** Pass `null` to assert `new_plan_id` is omitted. */
+	newPlanId?: string | null;
+	active?: boolean;
+	/** Object = promoting. Explicit `undefined` asserts the field is omitted. */
+	promotionDetails?: { previous_active_version_slug: string };
 	hasCustomers?: boolean;
 	customerCount?: number;
 	willArchive?: boolean;
@@ -95,6 +111,9 @@ type ExpectedPlanPreviewRow = {
 type ExpectedVariant = {
 	planId: string;
 	version?: number;
+	versionSlug?: string;
+	/** Pass `null` to assert `new_version_slug` is omitted. */
+	newVersionSlug?: string | null;
 	variantAction?: CatalogVariantAction;
 	versioning?: PlanPreviewVersioning;
 	hasCustomers?: boolean;
@@ -116,6 +135,26 @@ const expectAbsent = (value: unknown) => {
 
 const expectPresent = (value: unknown) => {
 	expect(value != null).toBe(true);
+};
+
+/** Slug identity of one preview row — direct, variant, or license parent. */
+const expectVersionSlugMatch = ({
+	actual,
+	versionSlug,
+	newVersionSlug,
+}: {
+	actual: Pick<CatalogCorePreview, "version_slug" | "new_version_slug">;
+	versionSlug?: string;
+	newVersionSlug?: string | null;
+}) => {
+	if (versionSlug !== undefined) {
+		expect(actual.version_slug).toBe(versionSlug);
+	}
+	if (newVersionSlug === null) {
+		expect(actual.new_version_slug).toBeUndefined();
+	} else if (newVersionSlug !== undefined) {
+		expect(actual.new_version_slug).toBe(newVersionSlug);
+	}
 };
 
 const expectConflictsMatch = ({
@@ -200,8 +239,18 @@ const expectSiblingVersionsMatch = ({
 			sibling,
 			`missing ${label} entry for v${expectedSibling.version}`,
 		).toBeDefined();
+		if (sibling) {
+			expectVersionSlugMatch({
+				actual: sibling,
+				versionSlug: expectedSibling.versionSlug,
+				newVersionSlug: expectedSibling.newVersionSlug,
+			});
+		}
 		if (expectedSibling.selected !== undefined) {
 			expect(sibling?.selected).toBe(expectedSibling.selected);
+		}
+		if (expectedSibling.active !== undefined) {
+			expect(sibling?.active).toBe(expectedSibling.active);
 		}
 		if (expectedSibling.licenseAction !== undefined) {
 			expect(sibling?.license_action).toBe(expectedSibling.licenseAction);
@@ -284,6 +333,28 @@ export const expectPlanPreviewRowCorrect = ({
 			expect(row.alias_replacement).toBeUndefined();
 		} else {
 			expect(row.alias_replacement).toEqual(expected.aliasReplacement);
+		}
+	}
+	expectVersionSlugMatch({
+		actual: row,
+		versionSlug: expected.versionSlug,
+		newVersionSlug: expected.newVersionSlug,
+	});
+	if (expected.newPlanId !== undefined) {
+		if (expected.newPlanId === null) {
+			expect(row.new_plan_id).toBeUndefined();
+		} else {
+			expect(row.new_plan_id).toBe(expected.newPlanId);
+		}
+	}
+	if (expected.active !== undefined) {
+		expect(row.active).toBe(expected.active);
+	}
+	if ("promotionDetails" in expected) {
+		if (expected.promotionDetails === undefined) {
+			expect(row.promotion_details).toBeUndefined();
+		} else {
+			expect(row.promotion_details).toEqual(expected.promotionDetails);
 		}
 	}
 	if (expected.hasCustomers !== undefined) {
@@ -391,6 +462,13 @@ export const expectPlanPreviewRowCorrect = ({
 					parent,
 					`missing license_parents entry for ${expectedParent.planId}`,
 				).toBeDefined();
+				if (parent) {
+					expectVersionSlugMatch({
+						actual: parent,
+						versionSlug: expectedParent.versionSlug,
+						newVersionSlug: expectedParent.newVersionSlug,
+					});
+				}
 				if (expectedParent.licenseAction !== undefined) {
 					expect(parent?.license_action).toBe(expectedParent.licenseAction);
 				}
@@ -468,6 +546,13 @@ export const expectPlanPreviewRowCorrect = ({
 					variant,
 					`missing variants entry for ${expectedVariant.planId}`,
 				).toBeDefined();
+				if (variant) {
+					expectVersionSlugMatch({
+						actual: variant,
+						versionSlug: expectedVariant.versionSlug,
+						newVersionSlug: expectedVariant.newVersionSlug,
+					});
+				}
 				if (expectedVariant.variantAction !== undefined) {
 					expect(variant?.variant_action).toBe(expectedVariant.variantAction);
 				}

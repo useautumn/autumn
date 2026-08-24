@@ -333,13 +333,24 @@ const main = async (): Promise<void> => {
 	//     fast-forwarded lockfile (missing newly-added packages). Frozen
 	//     install is a no-op in seconds when node_modules is current.
 	log("reconciling node_modules (bun install --frozen-lockfile)");
-	const installProc = spawn(["bun", "install", "--frozen-lockfile"], {
+	const installEnv = process.env as Record<string, string>;
+	let installExit = await spawn(["bun", "install", "--frozen-lockfile"], {
 		cwd: repoRoot,
 		stdout: "inherit",
 		stderr: "inherit",
-		env: process.env as Record<string, string>,
-	});
-	const installExit = await installProc.exited;
+		env: installEnv,
+	}).exited;
+	if (installExit !== 0) {
+		// Stale warm + fast-forward can land on a lockfile that drifted from the
+		// baked node_modules — regenerate in-sandbox instead of failing the fan-out.
+		log("frozen install failed — regenerating lockfile (bun install)");
+		installExit = await spawn(["bun", "install"], {
+			cwd: repoRoot,
+			stdout: "inherit",
+			stderr: "inherit",
+			env: installEnv,
+		}).exited;
+	}
 	if (installExit !== 0) {
 		throw new Error(
 			`[tw-boot] bun install exited with code ${installExit} — dependency self-heal failed`,

@@ -67,7 +67,7 @@ const seedPaidBaseAndV2 = async ({
 		plans: [
 			{
 				plan_id: baseId,
-				versioning: "new_version",
+				versioning: "new_version", active: true,
 				price: { amount: 30, interval: BillingInterval.Month },
 			},
 		],

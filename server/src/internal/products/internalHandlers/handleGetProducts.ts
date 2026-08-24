@@ -14,6 +14,7 @@ import { mapToProductV2 } from "@/internal/products/productV2Utils";
 
 const GetProductsQuerySchema = z.object({
 	all_versions: z.boolean().default(false),
+	product_id: z.string().optional(),
 });
 
 /** Resolve a variant's base_internal_product_id to the stable public base id
@@ -61,13 +62,14 @@ export const handleGetProducts = createRoute({
 	query: GetProductsQuerySchema,
 	handler: async (c) => {
 		const { db, org, env, features } = c.get("ctx");
-		const { all_versions } = c.req.valid("query");
+		const { all_versions, product_id } = c.req.valid("query");
 
 		const products = await ProductService.listFull({
 			db,
 			orgId: org.id,
 			env,
 			returnAll: all_versions,
+			inIds: product_id ? [product_id] : undefined,
 		});
 
 		// `groupToDefaults` only cares about the latest version of each plan; if

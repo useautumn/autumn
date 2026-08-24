@@ -84,7 +84,6 @@ export const computeCustomPlanNewCustomerProduct = ({
 		},
 
 		initOptions: {
-			isCustom: updateSubscriptionContext.isCustom,
 			billingCycleAnchorResetsAt: getRequestedBillingCycleAnchorResetAt({
 				requestedBillingCycleAnchor:
 					updateSubscriptionContext.requestedBillingCycleAnchor,

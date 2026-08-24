@@ -1,4 +1,4 @@
-import type { ProductV2 } from "@autumn/shared";
+import type { PreviewUpdateCatalogResponse, ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
 import { useState } from "react";
@@ -6,11 +6,17 @@ import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useProductQuery } from "@/views/products/product/hooks/useProductQuery";
 import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-
-export type DeletePlanScope = "latest" | "all";
+import {
+	canChooseDeleteScope,
+	canDeleteThisVersion,
+	type DeletePlanScope,
+	hasMultiplePlanVersions,
+	shouldRemoveThisVersion,
+} from "./deletePlanScope";
 
 const titleActionFor = ({
 	archived,
@@ -36,6 +42,14 @@ const confirmErrorFallback = ({
 	return "Error deleting plan";
 };
 
+const planPreviewEntry = ({
+	preview,
+	planId,
+}: {
+	preview: PreviewUpdateCatalogResponse | undefined;
+	planId: string;
+}) => preview?.plans.find((candidate) => candidate.plan_id === planId);
+
 export const useDeletePlanDialog = ({
 	product,
 	open,
@@ -52,41 +66,72 @@ export const useDeletePlanDialog = ({
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const { products } = useProductsQuery();
+	const { numVersions } = useProductQuery();
 	const { mutateAsync: updateCatalog, isPending } = useUpdateCatalogMutation();
-	const [scope, setScope] = useState<DeletePlanScope>("latest");
+	const [scope, setScope] = useState<DeletePlanScope>("version");
 
 	const archived = product.archived ?? false;
-	const latestVersion =
-		products.find((candidate) => candidate.id === product.id)?.version ??
-		product.version;
-	// Only the latest version can be removed on its own, so a historical version
-	// offers whole-plan removal instead of a scope choice.
-	const canChooseScope = latestVersion > 1 && product.version === latestVersion;
-	const removeAllVersions = !canChooseScope || scope === "all";
+	const previewEnabled = (open || dropdownOpen) && !archived;
+	const listedVersion = products.find(
+		(candidate) => candidate.id === product.id,
+	)?.version;
+	const hasMultipleVersions = hasMultiplePlanVersions({
+		viewedVersion: product.version,
+		listedVersion,
+		numVersions,
+	});
 
-	const {
-		data: preview,
-		error: previewQueryError,
-		isLoading,
-		refetch: refetchPreview,
-	} = useQuery({
+	const thisVersionQuery = useQuery({
 		queryKey: buildKey([
 			"catalogV2PlanDeletePreview",
 			product.id,
-			removeAllVersions ? "all" : product.version,
+			product.version,
 		]),
 		queryFn: () =>
 			CatalogV2Service.previewUpdate(axiosInstance, {
-				remove_plans: removeAllVersions
-					? [{ plan_id: product.id }]
-					: [{ plan_id: product.id, version: product.version }],
+				remove_plans: [{ plan_id: product.id, version: product.version }],
 			}),
-		enabled: (open || dropdownOpen) && !archived,
+		enabled: previewEnabled,
 	});
 
-	const entry = preview?.plans.find(
-		(candidate) => candidate.plan_id === product.id,
-	);
+	const allVersionsQuery = useQuery({
+		queryKey: buildKey(["catalogV2PlanDeletePreview", product.id, "all"]),
+		queryFn: () =>
+			CatalogV2Service.previewUpdate(axiosInstance, {
+				remove_plans: [{ plan_id: product.id }],
+			}),
+		enabled: previewEnabled,
+	});
+
+	const thisVersionEntry = planPreviewEntry({
+		preview: thisVersionQuery.data,
+		planId: product.id,
+	});
+	const allVersionsEntry = planPreviewEntry({
+		preview: allVersionsQuery.data,
+		planId: product.id,
+	});
+
+	const thisVersionDeletable = canDeleteThisVersion({
+		hasPreview: thisVersionEntry != null,
+		previewFailed: Boolean(thisVersionQuery.error),
+		willArchive: thisVersionEntry?.state.will_archive ?? true,
+	});
+	const willArchiveAll = allVersionsEntry?.state.will_archive ?? false;
+	const canChooseScope = canChooseDeleteScope({
+		thisVersionDeletable,
+		hasMultipleVersions,
+		willArchiveAll,
+	});
+	const removeThisVersion = shouldRemoveThisVersion({
+		thisVersionDeletable,
+		scope,
+	});
+
+	const entry = removeThisVersion ? thisVersionEntry : allVersionsEntry;
+	const previewQueryError = removeThisVersion
+		? thisVersionQuery.error
+		: allVersionsQuery.error;
 	const willArchive = entry?.state.will_archive ?? false;
 	const reasons = entry?.state.reasons ?? [];
 	const previewError = previewQueryError
@@ -96,12 +141,14 @@ export const useDeletePlanDialog = ({
 		archived,
 		willArchive,
 	});
+	const isLoading = thisVersionQuery.isLoading || allVersionsQuery.isLoading;
 
 	const handleOpenChange = (nextOpen: boolean) => {
 		setOpen(nextOpen);
 		if (!nextOpen) return;
-		setScope("latest");
-		void refetchPreview();
+		setScope("version");
+		void thisVersionQuery.refetch();
+		void allVersionsQuery.refetch();
 	};
 
 	const handleConfirm = async () => {
@@ -120,9 +167,9 @@ export const useDeletePlanDialog = ({
 				toast.success(`${product.name} unarchived successfully`);
 			} else {
 				await updateCatalog({
-					remove_plans: removeAllVersions
-						? [{ plan_id: product.id }]
-						: [{ plan_id: product.id, version: product.version }],
+					remove_plans: removeThisVersion
+						? [{ plan_id: product.id, version: product.version }]
+						: [{ plan_id: product.id }],
 				});
 				if (willArchive) {
 					toast.success(`${product.name} archived successfully`);
@@ -152,10 +199,12 @@ export const useDeletePlanDialog = ({
 		isPending,
 		previewError,
 		reasons,
+		removeThisVersion,
 		scope,
 		setScope,
 		titleAction,
 		willArchive,
+		willArchiveAll,
 		handleConfirm,
 		handleOpenChange,
 	};

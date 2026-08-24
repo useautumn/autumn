@@ -134,22 +134,29 @@ function SelectLabel({
 function SelectItem({
 	className,
 	children,
+	indicator = true,
 	...props
-}: SelectPrimitive.Item.Props) {
+}: SelectPrimitive.Item.Props & {
+	/** Opt out when the row already reads as selected without a checkmark. */
+	indicator?: boolean;
+}) {
 	return (
 		<SelectPrimitive.Item
 			data-slot="select-item"
 			className={cn(
-				"data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:**:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+				"data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:**:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+				indicator ? "pr-8" : "pr-1.5",
 				className,
 			)}
 			{...props}
 		>
-			<span className="pointer-events-none absolute right-2 flex items-center justify-center">
-				<SelectPrimitive.ItemIndicator>
-					<CheckIcon className="size-4" />
-				</SelectPrimitive.ItemIndicator>
-			</span>
+			{indicator ? (
+				<span className="pointer-events-none absolute right-2 flex items-center justify-center">
+					<SelectPrimitive.ItemIndicator>
+						<CheckIcon className="size-4" />
+					</SelectPrimitive.ItemIndicator>
+				</span>
+			) : null}
 			<SelectPrimitive.ItemText className="flex items-center gap-2">
 				{children}
 			</SelectPrimitive.ItemText>

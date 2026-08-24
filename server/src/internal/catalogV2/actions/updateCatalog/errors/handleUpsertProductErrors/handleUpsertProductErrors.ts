@@ -34,12 +34,19 @@ export const handleUpsertProductErrors = ({
 		handleFreeTrialErrors({ nextFullProduct });
 
 		// 2. Default flag errors (historical version; paid default; never on a variant)
-		handleDefaultFlagErrors({ nextFullProduct, latestExistingVersion });
+		handleDefaultFlagErrors({
+			nextFullProduct,
+			currentFullProduct: upsert.row.currentFullProduct,
+			latestExistingVersion,
+		});
 
 		// 3. Declared variants[] create / nest / id-collision
 		handleVariantErrors({ upsert, productStatesContext, directPlanIds });
 		handleArchivedPropagationErrors({ upsert, productStatesContext });
-		handleLicenseParentPropagationErrors({ upsert });
+		handleLicenseParentPropagationErrors({
+			upsert,
+			productStatesContext,
+		});
 
 		// 4. Declared plan_license link guards
 		handlePlanLicenseErrors({ upsert });

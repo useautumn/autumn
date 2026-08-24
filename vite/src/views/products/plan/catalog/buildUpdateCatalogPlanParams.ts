@@ -9,7 +9,9 @@ import type {
 	ProductItem,
 	UpdateCatalogPlanParamsInput,
 } from "@autumn/shared";
+import { toCatalogBillingControls } from "@/components/billing-controls/clearedBillingControls";
 import { alignTierCurrencyShapes } from "../utils/currencyUtils";
+import { versionSlugRenamed } from "../utils/versionSlug";
 import { frontendProductToApiPlanV1 } from "../versioning/buildMigrationDraft";
 
 const omitStripePriceId = <T extends object>(
@@ -48,11 +50,50 @@ const planItemsToCatalogParams = (
 const pinsVersion = (versioning: CatalogPlanVersioningStrategy | undefined) =>
 	versioning == null || versioning === "existing";
 
+/** The two things `new_version_slug` can mean on one save. Never both at once. */
+export type NewVersionSlugSource =
+	/** Rename the row this save targets — derived from the edited product. */
+	| { source: "renamed_row" }
+	/** Name the row a `new_version` save mints. Blank falls back to a slug edit. */
+	| { source: "minted_row"; slug?: string };
+
+const renamedRowSlug = ({
+	baseProduct,
+	editedProduct,
+}: {
+	baseProduct?: FrontendProduct | null;
+	editedProduct: FrontendProduct;
+}): string | undefined =>
+	versionSlugRenamed({ product: editedProduct, previous: baseProduct })
+		? editedProduct.version_slug?.trim()
+		: undefined;
+
+/** `all_versions` names no single row, so it never carries a slug. */
+const resolveNewVersionSlug = ({
+	newVersionSlug,
+	baseProduct,
+	editedProduct,
+	versioning,
+}: {
+	newVersionSlug: NewVersionSlugSource;
+	baseProduct?: FrontendProduct | null;
+	editedProduct: FrontendProduct;
+	versioning?: CatalogPlanVersioningStrategy;
+}): string | undefined => {
+	if (versioning === "all_versions") return undefined;
+	const renamed = renamedRowSlug({ baseProduct, editedProduct });
+	if (newVersionSlug.source === "minted_row") {
+		return newVersionSlug.slug?.trim() || renamed;
+	}
+	return renamed;
+};
+
 export const buildUpdateCatalogPlanParams = ({
 	baseProduct,
 	editedProduct,
 	features,
 	versioning,
+	newVersionSlug = { source: "renamed_row" },
 	propagate,
 	licenses,
 	migration,
@@ -62,6 +103,7 @@ export const buildUpdateCatalogPlanParams = ({
 	editedProduct: FrontendProduct;
 	features: Feature[];
 	versioning?: CatalogPlanVersioningStrategy;
+	newVersionSlug?: NewVersionSlugSource;
 	propagate?: CatalogPropagateParams;
 	licenses?: PlanLicenseParams[];
 	migration?: MigrationParamsInput;
@@ -73,6 +115,12 @@ export const buildUpdateCatalogPlanParams = ({
 		baseProduct && editedProduct.id !== baseProduct.id
 			? editedProduct.id
 			: undefined;
+	const resolvedVersionSlug = resolveNewVersionSlug({
+		newVersionSlug,
+		baseProduct,
+		editedProduct,
+		versioning,
+	});
 	const plan = frontendProductToApiPlanV1(
 		{
 			...editedProduct,
@@ -86,6 +134,7 @@ export const buildUpdateCatalogPlanParams = ({
 	return {
 		plan_id: source.id,
 		...(newPlanId ? { new_plan_id: newPlanId } : {}),
+		...(resolvedVersionSlug ? { new_version_slug: resolvedVersionSlug } : {}),
 		...(pinsVersion(versioning) && baseProduct?.version
 			? { version: baseProduct.version }
 			: {}),
@@ -105,7 +154,7 @@ export const buildUpdateCatalogPlanParams = ({
 				}
 			: {}),
 		config: plan.config,
-		billing_controls: plan.billing_controls,
+		billing_controls: toCatalogBillingControls(plan.billing_controls),
 		...(licenses !== undefined ? { licenses } : {}),
 		...(propagate !== undefined ? { propagate } : {}),
 		...(migration !== undefined ? { migration } : {}),

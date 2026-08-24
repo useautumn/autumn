@@ -492,7 +492,7 @@ test.concurrent(
 						plan_id: planId,
 						name: "Stripe Mint V2",
 						items: [prepaidMessagesItem({ amount: 10 })],
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});

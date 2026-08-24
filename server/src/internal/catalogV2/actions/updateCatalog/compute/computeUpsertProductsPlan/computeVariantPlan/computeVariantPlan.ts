@@ -10,13 +10,16 @@ import { deriveVariantMints } from "./mints/deriveVariantMints";
 
 /** Creates + mints + edits for a folded base. Nested-base skip lives in derive. */
 export const computeVariantPlan = ({
+	intent,
 	upsert,
 	projectedProductStatesContext,
 }: {
+	intent: ProductUpsertIntent;
 	upsert: UpsertProductPlan;
 	projectedProductStatesContext: ProductStatesContext;
 }): ProductUpsertIntent[] => {
 	const mints = deriveVariantMints({
+		intent,
 		upsert,
 		projectedProductStatesContext,
 	});

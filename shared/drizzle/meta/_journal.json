@@ -484,6 +484,13 @@
       "when": 1787335364987,
       "tag": "0068_petite_bug",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1787568392799,
+      "tag": "0069_panoramic_romulus",
+      "breakpoints": true
     }
   ]
 }

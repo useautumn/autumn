@@ -139,6 +139,87 @@ describe("buildUpdateCatalogPlanParams", () => {
 		expect(params.new_plan_id).toBe("pro_plus");
 	});
 
+	test("renaming the version slug sends new_version_slug", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, version_slug: "beta" },
+			features,
+		});
+		expect(params.version).toBe(3);
+		expect(params.new_version_slug).toBe("beta");
+	});
+
+	test("retyping the implicit v{n} slug is not a rename", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, version_slug: "v3" },
+			features,
+		});
+		expect(params.new_version_slug).toBeUndefined();
+	});
+
+	test("a blank version slug is an unfinished edit, not a rename", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct: { ...baseProduct, version_slug: "beta" },
+			editedProduct: { ...editedProduct, version_slug: "  " },
+			features,
+		});
+		expect(params.new_version_slug).toBeUndefined();
+	});
+
+	test("a mint sends the slug typed for its new row", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct,
+			features,
+			versioning: "new_version",
+			newVersionSlug: { source: "minted_row", slug: "  summer  " },
+		});
+		expect(params.versioning).toBe("new_version");
+		expect(params.new_version_slug).toBe("summer");
+	});
+
+	test("a mint with no typed slug omits new_version_slug so the server stamps v{n}", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct,
+			features,
+			versioning: "new_version",
+			newVersionSlug: { source: "minted_row" },
+		});
+		expect(params.new_version_slug).toBeUndefined();
+	});
+
+	test("a mint with a blank typed slug falls back to a slug edit on the plan", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, version_slug: "beta" },
+			features,
+			versioning: "new_version",
+			newVersionSlug: { source: "minted_row", slug: "" },
+		});
+		expect(params.new_version_slug).toBe("beta");
+	});
+
+	test("all_versions never sends new_version_slug — one slug can't name every row", () => {
+		const renamed = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: { ...editedProduct, version_slug: "beta" },
+			features,
+			versioning: "all_versions",
+		});
+		expect(renamed.new_version_slug).toBeUndefined();
+
+		const minted = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct,
+			features,
+			versioning: "all_versions",
+			newVersionSlug: { source: "minted_row", slug: "summer" },
+		});
+		expect(minted.new_version_slug).toBeUndefined();
+	});
+
 	test("new_version and all_versions omit the version pin", () => {
 		const minted = buildUpdateCatalogPlanParams({
 			baseProduct,
@@ -286,6 +367,134 @@ describe("buildUpdateCatalogPlanParams", () => {
 			expiry_duration_type: RolloverExpiryDurationType.Month,
 			expiry_duration_length: 1,
 		});
+	});
+
+	test("populated billing_controls pass through without filling other lanes", () => {
+		const spendLimits = [
+			{
+				feature_id: "messages",
+				enabled: true,
+				limit_type: "absolute" as const,
+				overage_limit: 0,
+				skip_overage_billing: true,
+			},
+		];
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: {
+				...editedProduct,
+				billing_controls: { spend_limits: spendLimits },
+			},
+			features,
+		});
+		expect(params.billing_controls).toEqual({ spend_limits: spendLimits });
+	});
+
+	test("creating each billing-control lane sends that array only", () => {
+		const created = {
+			auto_topups: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					threshold: 10,
+					quantity: 100,
+				},
+			],
+			spend_limits: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					limit_type: "absolute" as const,
+					overage_limit: 50,
+				},
+			],
+			usage_limits: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					limit: 1000,
+					interval: "month" as const,
+				},
+			],
+			usage_alerts: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					threshold: 80,
+					threshold_type: "usage_percentage" as const,
+				},
+			],
+			overage_allowed: [{ feature_id: "messages", enabled: true }],
+		} as const;
+
+		for (const [key, items] of Object.entries(created)) {
+			const params = buildUpdateCatalogPlanParams({
+				baseProduct,
+				editedProduct: {
+					...editedProduct,
+					billing_controls: { [key]: items },
+				},
+				features,
+			});
+			expect(params.billing_controls).toEqual({ [key]: items });
+			expect(
+				JSON.stringify(params.billing_controls).includes("null"),
+			).toBe(false);
+		}
+	});
+
+	test("cleared billing_controls send empty arrays so every lane is removed", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct: {
+				...baseProduct,
+				billing_controls: {
+					spend_limits: [
+						{
+							feature_id: "messages",
+							enabled: true,
+							limit_type: "absolute",
+							overage_limit: 0,
+							skip_overage_billing: true,
+						},
+					],
+				},
+			},
+			editedProduct: {
+				...baseProduct,
+				billing_controls: {},
+			},
+			features,
+		});
+
+		expect(params.billing_controls).toEqual({
+			auto_topups: [],
+			spend_limits: [],
+			usage_limits: [],
+			usage_alerts: [],
+			overage_allowed: [],
+		});
+
+		const afterDeletingLast = buildUpdateCatalogPlanParams({
+			baseProduct: {
+				...baseProduct,
+				billing_controls: {
+					spend_limits: [
+						{
+							feature_id: "messages",
+							enabled: true,
+							limit_type: "absolute",
+							overage_limit: 0,
+						},
+					],
+				},
+			},
+			editedProduct: {
+				...baseProduct,
+				billing_controls: { spend_limits: [] },
+			},
+			features,
+		});
+		expect(afterDeletingLast.billing_controls).toEqual(params.billing_controls);
 	});
 
 	test("create omits version and versioning", () => {
