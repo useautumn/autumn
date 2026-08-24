@@ -2,14 +2,24 @@ import { SCRATCH_BASE } from "./buildCeBalanceTotals.js";
 import { getLakeMetadataLocation } from "./lakeMetadata.js";
 import type { DuckDbConnection } from "./localDuckDb.js";
 
-/** Full-copy mirrors consumed by the revenue dives. Cold tables join this
- * list in phase 3. */
+/** Full-copy mirrors consumed by the revenue dives. */
 export const HOT_MIRROR_TABLES = [
 	"invoices",
 	"customers",
 	"organizations",
 	"products",
 	"customer_products",
+] as const;
+
+/** No dive consumers today — produced for ad-hoc analytics; freshness bar is
+ * soft, so a failed cold table skips rather than failing the run. */
+export const COLD_MIRROR_TABLES = [
+	"prices",
+	"features",
+	"entitlements",
+	"invoice_line_items",
+	"customer_prices",
+	"customer_entitlements",
 ] as const;
 
 export type MirrorParquet = {

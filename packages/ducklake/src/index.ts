@@ -11,6 +11,7 @@ import { headlineTotalsSql } from "./headlineTotals.js";
 import { openLocalLakeConnection } from "./localDuckDb.js";
 import {
 	buildMirrorParquet,
+	COLD_MIRROR_TABLES,
 	HOT_MIRROR_TABLES,
 	type MirrorParquet,
 } from "./mirrorTables.js";
@@ -41,6 +42,25 @@ const isShadowMode = (): boolean => process.env.DUCKLAKE_SHADOW !== "0";
 const isHourlyRun = (): boolean =>
 	process.env.DUCKLAKE_FORCE_HOURLY === "1" || new Date().getMinutes() < 20;
 
+type MirrorGroup = {
+	tables: readonly string[];
+	statusTable: string;
+	withRollup: boolean;
+};
+
+const MIRROR_GROUPS: MirrorGroup[] = [
+	{
+		tables: HOT_MIRROR_TABLES,
+		statusTable: "refresh_status",
+		withRollup: true,
+	},
+	{
+		tables: COLD_MIRROR_TABLES,
+		statusTable: "refresh_status_cold",
+		withRollup: false,
+	},
+];
+
 export const runDucklake = async ({
 	logger,
 }: {
@@ -49,6 +69,7 @@ export const runDucklake = async ({
 	const runId = `${Date.now()}`;
 	const shadow = isShadowMode();
 	const hourly = isHourlyRun();
+	const skipped: string[] = [];
 	const producedName = (table: string): string =>
 		shadow ? `${table}__ducklake` : table;
 
@@ -61,10 +82,24 @@ export const runDucklake = async ({
 	});
 
 	// Sequential: one embedded engine; each scan already parallelizes inside.
-	const mirrors: MirrorParquet[] = [];
+	// A failed table skips (stale-but-present, the flights' own behavior) so
+	// one bad manifest can't take down the whole refresh.
+	const mirrorsByGroup = new Map<string, MirrorParquet[]>();
 	if (hourly) {
-		for (const table of HOT_MIRROR_TABLES) {
-			mirrors.push(await buildMirrorParquet({ connection, table, runId }));
+		for (const group of MIRROR_GROUPS) {
+			const mirrors: MirrorParquet[] = [];
+			for (const table of group.tables) {
+				try {
+					mirrors.push(await buildMirrorParquet({ connection, table, runId }));
+				} catch (error) {
+					skipped.push(table);
+					logger.warn(
+						{ type: "ducklake_skip" },
+						`[ducklake] scan failed for ${table}, leaving it stale: ${error}`,
+					);
+				}
+			}
+			mirrorsByGroup.set(group.statusTable, mirrors);
 		}
 	}
 	const scanMs = Math.round(performance.now() - tScanStart);
@@ -83,41 +118,59 @@ export const runDucklake = async ({
 			});
 			refreshed.push(`${totalsTable}:${totalsRows}`);
 
-			const statusRows: { tbl: string; snapshot: string; rowCount: number }[] =
-				[];
-			for (const mirror of mirrors) {
-				const table = producedName(mirror.table);
-				const { rowCount } = await swapInParquetTable({
-					connection: md,
-					table,
-					parquetUrl: mirror.parquetUrl,
-					logger,
-				});
-				statusRows.push({
-					tbl: mirror.table,
-					snapshot: mirror.snapshot,
-					rowCount,
-				});
-				refreshed.push(`${table}:${rowCount}`);
-			}
+			for (const group of MIRROR_GROUPS) {
+				const mirrors = mirrorsByGroup.get(group.statusTable) ?? [];
+				if (mirrors.length === 0) continue;
 
-			if (mirrors.length > 0) {
-				// Rollup runs on MD because fx_rates only exists there; reads the
-				// just-swapped mirrors (shadow-suffixed in shadow mode).
-				await md.run(
-					headlineTotalsSql({
-						targetTable: producedName("headline_totals"),
-						sourceName: producedName,
-					}),
-				);
-				refreshed.push(producedName("headline_totals"));
+				const statusRows: {
+					tbl: string;
+					snapshot: string;
+					rowCount: number;
+				}[] = [];
+				for (const mirror of mirrors) {
+					try {
+						const table = producedName(mirror.table);
+						const { rowCount } = await swapInParquetTable({
+							connection: md,
+							table,
+							parquetUrl: mirror.parquetUrl,
+							logger,
+						});
+						statusRows.push({
+							tbl: mirror.table,
+							snapshot: mirror.snapshot,
+							rowCount,
+						});
+						refreshed.push(`${table}:${rowCount}`);
+					} catch (error) {
+						skipped.push(mirror.table);
+						logger.warn(
+							{ type: "ducklake_skip" },
+							`[ducklake] ingest failed for ${mirror.table}, leaving it stale: ${error}`,
+						);
+					}
+				}
 
-				await writeRefreshStatus({
-					connection: md,
-					statusTable: producedName("refresh_status"),
-					rows: statusRows,
-				});
-				refreshed.push(producedName("refresh_status"));
+				if (group.withRollup && statusRows.length > 0) {
+					// Rollup runs on MD because fx_rates only exists there; reads the
+					// just-swapped mirrors (shadow-suffixed in shadow mode).
+					await md.run(
+						headlineTotalsSql({
+							targetTable: producedName("headline_totals"),
+							sourceName: producedName,
+						}),
+					);
+					refreshed.push(producedName("headline_totals"));
+				}
+
+				if (statusRows.length > 0) {
+					await writeRefreshStatus({
+						connection: md,
+						statusTable: producedName(group.statusTable),
+						rows: statusRows,
+					});
+					refreshed.push(producedName(group.statusTable));
+				}
 			}
 
 			return refreshed;
@@ -125,17 +178,18 @@ export const runDucklake = async ({
 	});
 	const ingestMs = Math.round(performance.now() - tIngestStart);
 
+	if (tablesRefreshed.length === 0) {
+		throw new Error("[ducklake] zero tables refreshed");
+	}
+
 	// Reuse existing Axiom fields (durationMs); breakdown stays in msg.
 	logger.info(
 		{
 			type: "ducklake_phase",
 			durationMs: scanMs + ingestMs,
 		},
-		`[ducklake] refreshed ${tablesRefreshed.join(", ")} (shadow=${shadow} hourly=${hourly} scan=${scanMs}ms ingest=${ingestMs}ms)`,
+		`[ducklake] refreshed ${tablesRefreshed.join(", ")} (shadow=${shadow} hourly=${hourly} skipped=[${skipped.join(",")}] scan=${scanMs}ms ingest=${ingestMs}ms)`,
 	);
 
-	return {
-		tablesRefreshed,
-		skipped: hourly ? [] : [...HOT_MIRROR_TABLES],
-	};
+	return { tablesRefreshed, skipped };
 };
