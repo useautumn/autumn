@@ -134,7 +134,7 @@
 		"d:prod": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dev.ts --production",
 		"dx": "bun scripts/dx.ts",
 		"d:test": "ENV_FILE=.env infisical run --env=test --recursive -- bun scripts/dev.ts",
-		"p": "ENV_FILE=.env.prod infisical run --env=prod --recursive -- bun scripts/dev.ts",
+		"p": "ENV_FILE=.env.prod EVE_ALLOW_SHARED_WORLD=1 infisical run --env=prod --recursive -- bun scripts/dev.ts",
 		"s": "ENV_FILE=.env.staging infisical run --env=staging --recursive -- bun scripts/dev.ts",
 		"pw": "PW_MODE=1 ENV_FILE=.env.prod infisical run --env=prod --recursive -- bun scripts/pw/index.ts",
 		"reset-v2": "bun server/src/cron/resetV2.ts",
