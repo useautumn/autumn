@@ -36,9 +36,12 @@ const itemMatchesFilter = (
 ): boolean => {
 	if (filter.feature_id !== undefined && item.feature_id !== filter.feature_id)
 		return false;
-	if (filter.billing_method !== undefined) {
-		if (item.price?.billing_method !== filter.billing_method) return false;
-	} else if (item.price?.billing_method !== undefined) {
+	// Omitted billing_method is a wildcard — same rule as the engine's
+	// matchesPlanItemFilter, so a feature_id-only filter matches priced items.
+	if (
+		filter.billing_method !== undefined &&
+		item.price?.billing_method !== filter.billing_method
+	) {
 		return false;
 	}
 	if (filter.interval !== undefined) {
@@ -228,10 +231,7 @@ const applyLicenses = ({
 		(diff.remove_licenses ?? []).map((entry) => entry.license_plan_id),
 	);
 	const pending = new Map(
-		(diff.upsert_licenses ?? []).map((entry) => [
-			entry.license_plan_id,
-			entry,
-		]),
+		(diff.upsert_licenses ?? []).map((entry) => [entry.license_plan_id, entry]),
 	);
 
 	const next: ApiPlanLicenseV1[] = [];
