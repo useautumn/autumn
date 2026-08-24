@@ -111,7 +111,7 @@ export const refreshCeBalancesCache = async ({
 							COALESCE(SUM(COALESCE(a.allowance, 0) + COALESCE(b.adjustment, 0))
 								FILTER (WHERE b.unlimited IS NOT TRUE), 0) AS granted_total,
 							COALESCE(SUM(CASE
-								WHEN b.unlimited IS TRUE THEN -COALESCE(b.balance, 0)
+								WHEN b.unlimited IS TRUE THEN -(COALESCE(b.balance, 0) + COALESCE(b.entities_balance, 0))
 								ELSE COALESCE(a.allowance, 0) + COALESCE(b.adjustment, 0) - COALESCE(b.balance, 0)
 							END), 0) AS usage_total,
 							COUNT(*) FILTER (WHERE b.unlimited IS NOT TRUE) AS finite_rows

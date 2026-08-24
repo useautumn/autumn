@@ -25,6 +25,7 @@ import {
 	passesBalanceFilter,
 	thresholdRequiresFiniteRows,
 	unlimitedPassesThreshold,
+	unlimitedUsedSumSql,
 } from "./resolveByFeatureBalanceSort.js";
 
 /** Above this many lake matches the candidate IN-list stops being viable and
@@ -81,7 +82,7 @@ const exactRemainingByCustomer = async ({
 				COALESCE(e.allowance, 0) * COALESCE(cp.quantity, 1)
 				+ COALESCE(ce.adjustment, 0)
 			) FILTER (WHERE ce.unlimited IS NOT TRUE), 0) AS granted,
-			COALESCE(SUM(-ce.balance) FILTER (WHERE ce.unlimited IS TRUE), 0) AS unlimited_used,
+			COALESCE(${unlimitedUsedSumSql()}, 0) AS unlimited_used,
 			COUNT(*) FILTER (WHERE ce.unlimited IS NOT TRUE) AS finite_rows,
 			COALESCE(BOOL_OR(ce.unlimited), false) AS is_unlimited
 		FROM customer_entitlements ce
@@ -209,7 +210,7 @@ const exactBalanceLateralSql = (internalFeatureId: string): SQL => sql`
 				COALESCE(e.allowance, 0) * COALESCE(cp.quantity, 1)
 				+ COALESCE(ce.adjustment, 0)
 			) FILTER (WHERE ce.unlimited IS NOT TRUE), 0) AS granted,
-			COALESCE(SUM(-ce.balance) FILTER (WHERE ce.unlimited IS TRUE), 0) AS unlimited_used,
+			COALESCE(${unlimitedUsedSumSql()}, 0) AS unlimited_used,
 			COALESCE(BOOL_OR(ce.unlimited), false) AS is_unlimited,
 			COUNT(*) FILTER (WHERE ce.unlimited IS NOT TRUE) AS finite_rows,
 			COUNT(*) AS live_rows

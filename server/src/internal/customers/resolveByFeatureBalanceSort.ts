@@ -149,6 +149,18 @@ export const balanceThresholdSql = ({
 }): SQL =>
 	op === ">" ? sql`${totalExpr} > ${value}` : sql`${totalExpr} < ${value}`;
 
+/** Entity-scoped unlimited deductions land in entities[*].balance while the
+ * top-level balance stays 0 — count both (mirrors cusEntsToUnlimitedUsage). */
+export const unlimitedUsedSumSql = (): SQL => sql`SUM(
+	-(COALESCE(ce.balance, 0) + CASE
+		WHEN jsonb_typeof(ce.entities) = 'object' THEN COALESCE((
+			SELECT SUM((ent.value->>'balance')::numeric)
+			FROM jsonb_each(ce.entities) AS ent
+		), 0)
+		ELSE 0
+	END)
+) FILTER (WHERE ce.unlimited IS TRUE)`;
+
 /** "Live" must match what the Usage column sums (cusEnts of ACTIVE_STATUSES
  * products + non-drained loose rows) — NOT `ce.expired`, whose NULL→true
  * backfill lags and leaves churned-product rows looking live. Requires `cp`
@@ -220,7 +232,7 @@ const verifyExactBalances = async ({
 					COALESCE(e.allowance, 0) * COALESCE(cp.quantity, 1)
 					+ COALESCE(ce.adjustment, 0)
 				) FILTER (WHERE ce.unlimited IS NOT TRUE) AS granted,
-				SUM(-ce.balance) FILTER (WHERE ce.unlimited IS TRUE) AS unlimited_used,
+				${unlimitedUsedSumSql()} AS unlimited_used,
 				COUNT(*) FILTER (WHERE ce.unlimited IS NOT TRUE) AS finite_rows
 			FROM customer_entitlements ce
 			LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
