@@ -138,6 +138,13 @@ swap semantics).
       refresh_status w/ BIGINT row_count, wall-clock hourly gate
       (`DUCKLAKE_FORCE_HOURLY=1` to force in manual runs). Cutover: shadow
       diff → DUCKLAKE_SHADOW=0 → unschedule flight lake-cache-refresh.
-- [ ] Cold-mirror phase
-- [ ] Flight deletion + Pulse flip
-- [ ] Axiom monitor + runbook
+- [x] Cold-mirror phase BUILT in shadow mode — draft PR #3042 (per-table
+      skip-on-failure; zero-tables-refreshed still throws). FC task size:
+      4 vCPU / 16 GB.
+- [ ] Flight deletion + Pulse flip (endgame, after quiet cutover)
+- [x] Axiom monitor + runbook — draft infra PR useautumn/infra#11
+      (ducklake-staleness, Major, 90-min absence of `ducklake_phase`; deploy
+      via `bun monitors:deploy` AFTER the FC service is live)
+- [ ] Infra registry entry — BLOCKED on FC service creation (needs the
+      FC-generated serviceId); same PR should special-case the dashboard UI
+      card (scheduler has no standing ECS service → renders NOT_FOUND today)
