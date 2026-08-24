@@ -132,7 +132,12 @@ swap semantics).
       (`cd server && infisical run --env=prod --recursive -- bun src/ducklake.ts`,
       DUCKLAKE_SHADOW defaults on) → diff `ce_balance_totals__ducklake` vs
       incumbent → flip DUCKLAKE_SHADOW=0 at cutover
-- [ ] Hot-mirror phase
+- [x] Hot-mirror phase BUILT in shadow mode — draft PR #3041: generic mirror
+      module (phase 3 = +6 table names), single MD session per run,
+      headline_totals rollup executed on MD (fx_rates lives only there),
+      refresh_status w/ BIGINT row_count, wall-clock hourly gate
+      (`DUCKLAKE_FORCE_HOURLY=1` to force in manual runs). Cutover: shadow
+      diff → DUCKLAKE_SHADOW=0 → unschedule flight lake-cache-refresh.
 - [ ] Cold-mirror phase
 - [ ] Flight deletion + Pulse flip
 - [ ] Axiom monitor + runbook
