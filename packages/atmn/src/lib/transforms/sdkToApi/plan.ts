@@ -27,6 +27,7 @@ export interface ApiPlanParams {
 	group?: string;
 	add_on?: boolean;
 	auto_enable?: boolean;
+	archived?: boolean;
 	price?: {
 		amount: number;
 		interval: string;
@@ -220,6 +221,10 @@ export function transformPlanToApi(plan: Plan): ApiPlanParams {
 
 	if (plan.autoEnable !== undefined) {
 		result.auto_enable = plan.autoEnable;
+	}
+
+	if (plan.archived !== undefined) {
+		result.archived = plan.archived;
 	}
 
 	if (plan.price) {
