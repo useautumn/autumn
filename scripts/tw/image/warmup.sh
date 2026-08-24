@@ -107,12 +107,15 @@ if [ -n "$LOCK_HASH" ] && [ -f "$LOCK_STAMP" ] \
   log "lockfile unchanged ($LOCK_FILE) — skipping bun install"
 else
   log "bun install --frozen-lockfile"
-  # Self-repair: a failing lifecycle script (native-dep rebuild on a delta
-  # install) must not abort the warm-up — deps land, optional builds are skipped.
+  # Self-repair: lockfile drift on a fast-forwarded ref regenerates in-sandbox;
+  # lifecycle-script failures skip optional native rebuilds.
   if ! bun install --frozen-lockfile; then
-    log "install failed — retrying with --ignore-scripts"
-    bun install --frozen-lockfile --ignore-scripts \
-      || die "bun install FAILED even with --ignore-scripts"
+    log "frozen install failed — regenerating lockfile (bun install)"
+    if ! bun install; then
+      log "install failed — retrying with --ignore-scripts"
+      bun install --ignore-scripts \
+        || die "bun install FAILED even with --ignore-scripts"
+    fi
   fi
   if [ -n "$LOCK_HASH" ]; then
     echo "$LOCK_HASH" > "$LOCK_STAMP"
