@@ -288,10 +288,44 @@ const verifyExactBalances = async ({
 	return mapped;
 };
 
+/** Search/full_customers/count fire together, so a cold cache otherwise runs
+ * N copies of the multi-second scan — concurrent callers share one compute. */
+const deflationInFlight = new Map<string, Promise<FeatureBalanceSortRow[]>>();
+
 /** Cached exact rows for the deflation-exception customers. Values are up to
  * TTL stale, but they only steer RANKING — displayed numbers come from
  * hydration. Recompute is a feature-index scan (~seconds on whale features). */
-export const getDeflationExceptionRows = async ({
+export const getDeflationExceptionRows = ({
+	db,
+	orgId,
+	env,
+	internalFeatureId,
+	basis,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	internalFeatureId: string;
+	basis: FeatureBalanceSortBasis;
+}): Promise<FeatureBalanceSortRow[]> => {
+	const key = deflationSetCacheKey({ internalFeatureId, basis });
+	const inFlight = deflationInFlight.get(key);
+	if (inFlight) return inFlight;
+
+	const compute = computeDeflationExceptionRows({
+		db,
+		orgId,
+		env,
+		internalFeatureId,
+		basis,
+	}).finally(() => {
+		deflationInFlight.delete(key);
+	});
+	deflationInFlight.set(key, compute);
+	return compute;
+};
+
+const computeDeflationExceptionRows = async ({
 	db,
 	orgId,
 	env,

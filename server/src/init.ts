@@ -48,6 +48,7 @@ import "./internal/misc/asyncTrack/asyncTrackStore.js";
 // Side-effect: configures trigger.dev SDK to use TRIGGER_SERVER_SECRET_KEY.
 import "./trigger/configureTrigger.js";
 import { closeStripeSyncEngine } from "@autumn/stripe-sync";
+import { prewarmMotherDuckResolver } from "./external/motherduck/initMotherDuck.js";
 import { primeRedisMonitor } from "./external/redis/availabilityMonitor/redisAvailability.js";
 import {
 	primeRedisV2Monitor,
@@ -119,6 +120,9 @@ const init = async ({
 	// Observed immediately: awaits run before the bounded wait consumes it, and
 	// an early rejection would otherwise hit the fatal unhandledRejection exit.
 	void redisWarmup.catch(() => {});
+
+	// Pay the MotherDuck handshake at boot, not inside the first balance sort.
+	prewarmMotherDuckResolver();
 
 	await startAllEdgeConfigPolling({ logger });
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);

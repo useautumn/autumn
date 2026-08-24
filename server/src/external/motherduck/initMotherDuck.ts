@@ -25,6 +25,9 @@ const CONNECTION_MAX_LIFETIME_MS = 10 * 60_000;
 const IDLE_TIMEOUT_MS = 60_000;
 
 export const MOTHERDUCK_QUERY_TIMEOUT_MS = 5_000;
+/** The MD extension handshake has no interrupt; a network blip once serialized
+ * every balance request behind a 100s init. Fail into the PG fallbacks instead. */
+const INIT_TIMEOUT_MS = 15_000;
 
 const poolSizeFromEnv = (): number => {
 	const parsed = Number(process.env.MOTHERDUCK_POOL_MAX);
@@ -87,6 +90,40 @@ let resolverDbPromise: Promise<MotherDuckDb> | null = null;
 let resolverDbState: "uninitialized" | "initializing" | "ready" =
 	"uninitialized";
 
+/** A timed-out init can't be interrupted — close its connection when it
+ * eventually lands so the retry's pool is the only one standing. */
+const raceInitTimeout = async ({
+	init,
+}: {
+	init: Promise<MotherDuckDb>;
+}): Promise<MotherDuckDb> => {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const timeout = new Promise<never>((_, reject) => {
+		timer = setTimeout(() => {
+			init.then((db) => db.close()).catch(() => {});
+			reject(
+				new Error(
+					`[initMotherDuck] resolver init exceeded ${INIT_TIMEOUT_MS}ms`,
+				),
+			);
+		}, INIT_TIMEOUT_MS);
+	});
+	try {
+		return await Promise.race([init, timeout]);
+	} finally {
+		clearTimeout(timer);
+	}
+};
+
+/** Boot-time warm-up: pay the MD handshake before the first dashboard request
+ * instead of inside it. Fire-and-forget — failure just means lazy init later. */
+export const prewarmMotherDuckResolver = (): void => {
+	if (!isMotherDuckConfigured()) return;
+	getMotherDuckResolverDb().catch((error) => {
+		logger.warn(`[initMotherDuck] resolver pre-warm failed: ${error}`);
+	});
+};
+
 /** Lazy pooled singleton on the read-only token: only processes that actually
  * serve balance sorts open MotherDuck connections. */
 export const getMotherDuckResolverDb = (): Promise<MotherDuckDb> => {
@@ -120,7 +157,9 @@ export const getMotherDuckResolverDb = (): Promise<MotherDuckDb> => {
 						"motherduck.pool.max": poolSize,
 					},
 					fn: async (initializeSpan) => {
-						const db = await initMotherDuck({ token, poolSize });
+						const db = await raceInitTimeout({
+							init: initMotherDuck({ token, poolSize }),
+						});
 						const pooled = isPool(db.$client);
 						initializeSpan.setAttribute("motherduck.pool.enabled", pooled);
 						if (pooled) {
