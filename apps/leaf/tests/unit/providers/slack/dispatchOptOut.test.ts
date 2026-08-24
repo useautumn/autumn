@@ -18,7 +18,7 @@ describe("dispatchSlackAgentMessage opt-out", () => {
 				reactions.push(`${action}:${emoji}`);
 			},
 			target: target as never,
-			text: "<@U0BOT> stop replying",
+			text: "@U0B66PD6MKQ stop replying now",
 			threadId: "slack:C9:1",
 		});
 

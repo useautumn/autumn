@@ -7,7 +7,7 @@ export const isExplicitOptOut = (text: string) =>
 			.trim()
 			.replace(/^(?:hey|hi)\s+/i, "")
 			.replace(
-				/^(?:<@[^>]+>|@?autumn(?:\s+chat(?:\s+local)?)?|(?:this|the)\s+bot)[,:\s-]*/i,
+				/^(?:<@[^>]+>|@[UW][A-Z0-9]{4,}|@?autumn(?:\s+chat(?:\s+local)?)?|(?:this|the)\s+bot)[,:\s-]*/i,
 				"",
 			)
 			.replace(
