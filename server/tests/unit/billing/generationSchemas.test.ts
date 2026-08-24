@@ -21,7 +21,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	normalizeGeneratedValue,
 	toGenerationOutputSchema,
-} from "@/internal/billing/v2/actions/generateRequest/generateBillingParams";
+} from "@/internal/billing/v2/actions/generateRequest/compute/decodeGeneratedValue";
 import {
 	attachGenerationSchema,
 	createScheduleGenerationSchema,

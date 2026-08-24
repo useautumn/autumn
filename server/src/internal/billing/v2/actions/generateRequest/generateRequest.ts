@@ -5,20 +5,12 @@ import {
 	ResolveBillingRequestParamsSchema,
 	resolveBillingRequest,
 } from "@/internal/billing/v2/actions/resolveBillingRequest";
-import { composeMultiAttachRequest } from "./composeMultiAttachRequest";
-import { generateBillingParams } from "./generateBillingParams";
-import { buildGenerationContext } from "./generationContext";
-import type { GenerateBillingTool } from "./generationSchemas";
+import { composeMultiAttachRequest } from "./compute/composeMultiAttachRequest";
+import { computeGeneratedParams } from "./compute/computeGeneratedParams";
+import type { GenerateBillingRequestParams } from "./generationSchemas";
+import { setupGenerationContext } from "./setup/setupGenerationContext";
 
-export type GenerateBillingRequestParams = {
-	tool: GenerateBillingTool;
-	prompt: string;
-	customer_id: string;
-	customer_product_id?: string;
-	current_request?: Record<string, unknown>;
-};
-
-export const generateBillingRequest = async ({
+export const generateRequest = async ({
 	ctx,
 	params,
 }: {
@@ -28,7 +20,7 @@ export const generateBillingRequest = async ({
 	request: Record<string, unknown>;
 	unrepresentable: string[];
 }> => {
-	const { context } = await buildGenerationContext({
+	const { context } = await setupGenerationContext({
 		ctx,
 		customerId: params.customer_id,
 	});
@@ -38,7 +30,7 @@ export const generateBillingRequest = async ({
 		repaired,
 		repairReason,
 		salvaged,
-	} = await generateBillingParams({
+	} = await computeGeneratedParams({
 		context,
 		currentRequest: params.current_request,
 		prompt: params.prompt,

@@ -1,15 +1,15 @@
 /**
  * Braintrust evals for the billing-request generation endpoint's LLM core.
- * Runs `generateBillingParams` directly (no server, no DB) against fixture
+ * Runs `computeGeneratedParams` directly (no server, no DB) against fixture
  * contexts, scoring schema validity and expected-field extraction.
  *
  * Run: bun eval:generation  (needs ANTHROPIC_API_KEY + BRAINTRUST_API_KEY)
  */
 
 import { Eval } from "braintrust";
-import { generateBillingParams } from "@/internal/billing/v2/actions/generateRequest/generateBillingParams";
-import type { GenerationContext } from "@/internal/billing/v2/actions/generateRequest/generationContext";
+import { computeGeneratedParams } from "@/internal/billing/v2/actions/generateRequest/compute/computeGeneratedParams";
 import type { GenerateBillingTool } from "@/internal/billing/v2/actions/generateRequest/generationSchemas";
+import type { GenerationContext } from "@/internal/billing/v2/actions/generateRequest/setup/setupGenerationContext";
 import {
 	creditLadderContext,
 	saasContext,
@@ -394,7 +394,7 @@ Eval("generate-billing-request", {
 	scores: [schemaFirstTry, expectedParams],
 	task: async (input: EvalInput): Promise<EvalOutput> => {
 		try {
-			const { params, repaired, repairReason } = await generateBillingParams({
+			const { params, repaired, repairReason } = await computeGeneratedParams({
 				context: input.context,
 				currentRequest: input.currentRequest,
 				prompt: input.prompt,

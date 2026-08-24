@@ -139,3 +139,27 @@ export const generationRegistry: Record<
 		schema: updateSubscriptionGenerationSchema,
 	},
 };
+
+export const GenerateBillingRequestParamsSchema = z.object({
+	current_request: z.record(z.string(), z.unknown()).optional().meta({
+		description:
+			"The request currently seeded in the sheet. When present, generation edits it instead of starting from scratch.",
+	}),
+	customer_id: z.string().min(1).meta({
+		description: "The ID of the customer the generated request targets.",
+	}),
+	customer_product_id: z.string().optional().meta({
+		description:
+			"For update_subscription: the customer product the sheet is anchored to.",
+	}),
+	prompt: z.string().min(1).max(2000).meta({
+		description: "Natural-language description of the billing change.",
+	}),
+	tool: z.enum(GENERATE_BILLING_TOOLS).meta({
+		description: "Which billing operation to generate parameters for.",
+	}),
+});
+
+export type GenerateBillingRequestParams = z.infer<
+	typeof GenerateBillingRequestParamsSchema
+>;

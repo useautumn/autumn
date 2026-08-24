@@ -48,7 +48,7 @@ const compactCustomerProduct = (customerProduct: FullCusProduct) => ({
 		: {}),
 });
 
-export const buildGenerationContext = async ({
+export const setupGenerationContext = async ({
 	ctx,
 	customerId,
 }: {
@@ -90,5 +90,5 @@ export const buildGenerationContext = async ({
 };
 
 export type GenerationContext = Awaited<
-	ReturnType<typeof buildGenerationContext>
+	ReturnType<typeof setupGenerationContext>
 >["context"];

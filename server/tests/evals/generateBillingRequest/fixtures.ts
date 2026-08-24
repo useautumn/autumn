@@ -1,4 +1,4 @@
-import type { GenerationContext } from "@/internal/billing/v2/actions/generateRequest/generationContext";
+import type { GenerationContext } from "@/internal/billing/v2/actions/generateRequest/setup/setupGenerationContext";
 
 const NOW_MS = Date.UTC(2026, 7, 24, 12, 0, 0);
 
