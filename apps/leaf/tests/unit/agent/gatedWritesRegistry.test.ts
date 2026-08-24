@@ -23,13 +23,7 @@ describe("gated-write registry derivations", () => {
 			"updatePlan",
 		]);
 		expect([...approvalSets.investigator]).toEqual([]);
-		expect([...approvalSets.orchestrator].sort()).toEqual([
-			"createPlan",
-			"createReward",
-			"updateAgentRules",
-			"updateCatalog",
-			"updatePlan",
-		]);
+		expect([...approvalSets.orchestrator].sort()).toEqual(["updateAgentRules"]);
 	});
 
 	test("scope requirements match the pre-consolidation record", () => {

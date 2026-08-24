@@ -98,6 +98,41 @@ export function AttachProductSelection({
 		grantFree: formValues.grantFree,
 	});
 
+	const productSelectField = (
+		<form.AppField name="productId">
+			{(field) => (
+				<field.SelectField
+					label=""
+					searchable
+					defaultOpen={!productId}
+					options={availableProducts.map((product) => {
+						const optionState = getProductOptionState({
+							product,
+							entityId,
+						});
+
+						return {
+							label: product.name,
+							value: product.id,
+							...optionState,
+						};
+					})}
+					placeholder="Select Product"
+					searchPlaceholder="Search plans..."
+					emptyText="No products found"
+					hideFieldInfo
+					selectValueAfter={
+						hasCustomizations && productId ? (
+							<span className="rounded-md bg-green-500/10 px-1 py-0 text-xs text-green-500">
+								Custom
+							</span>
+						) : undefined
+					}
+				/>
+			)}
+		</form.AppField>
+	);
+
 	return (
 		<div className="space-y-2">
 			{isMultiPlan && productId ? (
@@ -117,38 +152,7 @@ export function AttachProductSelection({
 					/>
 				</div>
 			) : (
-				<form.AppField name="productId">
-					{(field) => (
-						<field.SelectField
-							label=""
-							searchable
-							defaultOpen={!productId}
-							options={availableProducts.map((product) => {
-								const optionState = getProductOptionState({
-									product,
-									entityId,
-								});
-
-								return {
-									label: product.name,
-									value: product.id,
-									...optionState,
-								};
-							})}
-							placeholder="Select Product"
-							searchPlaceholder="Search plans..."
-							emptyText="No products found"
-							hideFieldInfo
-							selectValueAfter={
-								hasCustomizations && productId ? (
-									<span className="rounded-md bg-green-500/10 px-1 py-0 text-xs text-green-500">
-										Custom
-									</span>
-								) : undefined
-							}
-						/>
-					)}
-				</form.AppField>
+				productSelectField
 			)}
 
 			{additionalPlanValues.map((plan) => (

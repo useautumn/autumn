@@ -10,6 +10,7 @@
 - Each remove entry is a filter. Include `billing_method`, `interval`, or `interval_count` when `feature_id` alone could match multiple items.
 - Replace an item by removing the old item and adding the new one in the same patch.
 - Prefer the smallest diff that preserves the plan's existing structure.
+- When raising `included` on a tiered item, keep the ladder valid: every tier boundary (`to`) must be strictly greater than the new `included`. Drop or shift any boundary at or below it instead of zeroing its price.
 
 ## API examples
 

@@ -58,6 +58,24 @@ export const leafSkillsFor = (id: LeafAgentId): Skill[] => {
 	return names.map((name) => findLeafSkill(name));
 };
 
+/** One reference file's contents from a leaf skill — the shared source for
+ * prompts that need a single doc (e.g. billing-request generation). */
+export const leafSkillReference = ({
+	skill,
+	path,
+}: {
+	skill: string;
+	path: string;
+}): string => {
+	const reference = findLeafSkill(skill).references.find(
+		(candidate) => candidate.path === path,
+	);
+	if (!reference) {
+		throw new Error(`Unknown reference "${path}" in leaf skill "${skill}"`);
+	}
+	return reference.contents;
+};
+
 /** Inline a skill's full content (SKILL.md body + references) for engines that
  * can't attach skills natively (mastra). */
 export const skillToText = (skill: Skill): string =>

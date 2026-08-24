@@ -185,25 +185,41 @@ export const postEveInputResponse = async ({
 	const siblings = [...new Set(siblingRequestIds ?? [])].filter(
 		(siblingRequestId) => siblingRequestId && siblingRequestId !== requestId,
 	);
-	const response = await fetch(eveUrl(`/eve/v1/session/${session.sessionId}`), {
-		method: "POST",
-		headers: eveHeaders(auth, { "content-type": "application/json" }),
-		body: JSON.stringify({
-			continuationToken: session.state.continuationToken,
-			inputResponses: [
-				{ optionId, requestId },
-				...siblings.map((siblingRequestId) => ({
-					optionId: approveSiblings
-						? optionId
-						: (siblingOptionIdFor?.(siblingRequestId) ?? "deny"),
-					requestId: siblingRequestId,
-				})),
-			],
-			message:
-				siblings.length && !approveSiblings && !suppressSiblingWithheldNote
-					? [note, SIBLING_WITHHELD_NOTE].filter(Boolean).join("\n\n")
-					: note,
-		}),
+	const post = () =>
+		fetch(eveUrl(`/eve/v1/session/${session.sessionId}`), {
+			method: "POST",
+			headers: eveHeaders(auth, { "content-type": "application/json" }),
+			body: JSON.stringify({
+				continuationToken: session.state.continuationToken,
+				inputResponses: [
+					{ optionId, requestId },
+					...siblings.map((siblingRequestId) => ({
+						optionId: approveSiblings
+							? optionId
+							: (siblingOptionIdFor?.(siblingRequestId) ?? "deny"),
+						requestId: siblingRequestId,
+					})),
+				],
+				message:
+					siblings.length && !approveSiblings && !suppressSiblingWithheldNote
+						? [note, SIBLING_WITHHELD_NOTE].filter(Boolean).join("\n\n")
+						: note,
+			}),
+		});
+	// Only connection-refused is retried: the answer provably never arrived, so
+	// a retry cannot double-answer the park. Mid-flight drops stay ambiguous.
+	const response = await withRetry({
+		attempts: POST_RETRY_ATTEMPTS,
+		baseDelayMs: POST_RETRY_BASE_DELAY_MS,
+		onRetry: ({ attempt, error }) => {
+			logger.warn("Eve input response post failed; retrying", {
+				data: { attempt, session_id: session.sessionId },
+				error,
+				event: "leaf.eve_post_retry",
+			});
+		},
+		operation: post,
+		shouldRetry: isConnectionRefusedError,
 	});
 	return parseSessionResponse({ existing: session, response });
 };
