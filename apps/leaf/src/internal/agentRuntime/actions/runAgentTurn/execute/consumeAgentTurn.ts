@@ -3,6 +3,8 @@ import { type AppEnv, ms } from "@autumn/shared";
 import { AGENT_UNREACHABLE_MESSAGE } from "../../../../../ui/messages.js";
 import type { ActiveRun } from "../../../../runs/runRegistry.js";
 import {
+	EveSessionDeadError,
+	EveStreamDisconnectedError,
 	EveStreamIdleTimeoutError,
 	resyncEveStreamIndex,
 } from "../../../eve/client.js";
@@ -260,6 +262,14 @@ export const consumeAgentTurn = async ({
 
 			if (pass.error instanceof EveStreamIdleTimeoutError) {
 				return await recoverFromIdleStream({ logger, turn });
+			}
+			// Exhausting every reconnect without a single event is not a flaky
+			// link — the session is dead, and reusing it fails every later turn.
+			if (
+				pass.error instanceof EveStreamDisconnectedError &&
+				!streamedAnyEvent
+			) {
+				throw new EveSessionDeadError(session.sessionId);
 			}
 			if (pass.error !== undefined) throw pass.error;
 

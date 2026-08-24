@@ -241,6 +241,15 @@ export class EveStreamDisconnectedError extends Error {
 	}
 }
 
+/** The session answers on the wire but never emits again: reconnects exhaust
+ * with zero events. Distinct from a flaky transport — it will never recover. */
+export class EveSessionDeadError extends Error {
+	constructor(sessionId: string) {
+		super(`Eve session ${sessionId} is dead: no events across every reconnect`);
+		this.name = "EveSessionDeadError";
+	}
+}
+
 export async function* streamEveEvents({
 	auth,
 	idleTimeoutMs = STREAM_IDLE_TIMEOUT_MS,
