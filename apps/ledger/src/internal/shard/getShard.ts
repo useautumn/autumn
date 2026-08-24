@@ -1,6 +1,8 @@
+import { getPostgres } from "../../lib/getPostgres.js";
 import { logger } from "../../lib/logger.js";
 import { createSqliteDb } from "../../sqlite/common/createSqliteDb.js";
 import { getJournal } from "../journal/getJournal.js";
+import { createSubjectResidency } from "../subjects/residency/createSubjectResidency.js";
 import { createShard } from "./createShard.js";
 import type { Shard } from "./types/shard.js";
 import type { ShardContext } from "./types/shardContext.js";
@@ -10,7 +12,9 @@ const shards = new Map<number, Shard>();
 const createShardContext = ({ id }: { id: number }): ShardContext => ({
 	shardId: id,
 	sqlite: createSqliteDb(),
+	postgres: getPostgres(),
 	journal: getJournal(),
+	subjects: createSubjectResidency(),
 	logger,
 });
 

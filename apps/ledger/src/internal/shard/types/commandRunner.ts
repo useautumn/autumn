@@ -1,4 +1,4 @@
-import type { Command } from "../../../../client/types/command.js";
+import type { Command } from "../../../api/types/command.js";
 import type { CommandOutcome } from "./commandOutcome.js";
 import type { ShardContext } from "./shardContext.js";
 

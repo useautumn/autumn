@@ -1,13 +1,76 @@
-import type { AppEnv } from "@autumn/shared";
-import { LedgerNotImplementedError } from "../../../lib/ledgerNotImplementedError.js";
-import type { SubjectContext } from "../types/subjectContext.js";
+import {
+	customerEntitlementRepo,
+	customerProductRepo,
+	customerRepo,
+	entitlementRepo,
+	featureRepo,
+	productRepo,
+} from "@autumn/postgres";
+import { type AppEnv, CustomerNotFoundError } from "@autumn/shared";
+import type { ShardContext } from "../../shard/types/shardContext.js";
+import { subjectToKey } from "../subjectToKey.js";
+import type { SubjectImport } from "../types/subjectImport.js";
 
-// First sight of a customer: the Postgres selects that seed subject state.
-export const importSubject = (_params: {
-	ctx: SubjectContext;
-	customerId: string;
+const distinct = (values: string[]): string[] => [...new Set(values)];
+
+// First sight of a customer in this shard: the Postgres reads that seed subject
+// state. Fetch only — the rows are written between writer-loop transactions.
+export const importSubject = async ({
+	ctx,
+	orgId,
+	env,
+	customerId,
+}: {
+	ctx: ShardContext;
 	orgId: string;
 	env: AppEnv;
-}): Promise<void> => {
-	throw new LedgerNotImplementedError("subject import");
+	customerId: string;
+}): Promise<SubjectImport> => {
+	const db = ctx.postgres;
+	const customer = await customerRepo.getByCustomerId({
+		db,
+		orgId,
+		env,
+		customerId,
+	});
+	if (!customer) throw new CustomerNotFoundError({ customerId });
+
+	const internalCustomerId = customer.internal_id;
+	const [customerProducts, customerEntitlements, features] = await Promise.all([
+		customerProductRepo.listByInternalCustomerId({ db, internalCustomerId }),
+		customerEntitlementRepo.listRowsByInternalCustomerId({
+			db,
+			internalCustomerId,
+		}),
+		featureRepo.listByOrgEnv({ db, orgId, env }),
+	]);
+
+	const [entitlements, products] = await Promise.all([
+		entitlementRepo.listByIds({
+			db,
+			ids: distinct(
+				customerEntitlements.map(
+					(customerEntitlement) => customerEntitlement.entitlement_id,
+				),
+			),
+		}),
+		productRepo.listByInternalIds({
+			db,
+			internalIds: distinct(
+				customerProducts.map(
+					(customerProduct) => customerProduct.internal_product_id,
+				),
+			),
+		}),
+	]);
+
+	return {
+		key: subjectToKey({ orgId, env, customerId }),
+		customers: [customer],
+		customerProducts,
+		customerEntitlements,
+		entitlements,
+		features,
+		products,
+	};
 };

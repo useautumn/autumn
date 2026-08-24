@@ -16,13 +16,3 @@ export const CommandSchema = z.object({
 export type Command = z.infer<typeof CommandSchema>;
 
 export const CommandBatchSchema = z.array(CommandSchema).min(1).max(100);
-
-export const CommandResultSchema = z.object({
-	id: z.string().min(1),
-	status: z.number().int(),
-	body: z.unknown(),
-});
-
-export type CommandResult = z.infer<typeof CommandResultSchema>;
-
-export const CommandResultBatchSchema = z.array(CommandResultSchema);

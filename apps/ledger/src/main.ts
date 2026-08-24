@@ -1,4 +1,4 @@
-import type { Command } from "../client/types/command.js";
+import type { Command } from "./api/types/command.js";
 import { createLedgerApp } from "./http/createLedgerApp.js";
 import { getShard, stopShards } from "./internal/shard/getShard.js";
 import { resolveShardId } from "./internal/shard/resolveShardId.js";
@@ -10,7 +10,10 @@ const resolveShard = ({ command }: { command: Command }): Shard =>
 	getShard({ id: resolveShardId({ command }) });
 
 const server = Bun.serve({
-	fetch: createLedgerApp({ resolveShard }).fetch,
+	fetch: createLedgerApp({
+		resolveShard,
+		exposeDebugRoutes: env.NODE_ENV !== "production",
+	}).fetch,
 	hostname: "0.0.0.0",
 	port: env.LEDGER_PORT,
 });

@@ -1,5 +1,5 @@
+import type { Command } from "../src/api/types/command.js";
 import { trackCommand } from "./trackCommand.js";
-import type { Command } from "./types/command.js";
 import type {
 	LedgerClient,
 	LedgerClientContext,

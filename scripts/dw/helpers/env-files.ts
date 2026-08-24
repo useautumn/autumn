@@ -212,6 +212,10 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		VITE_CHECKOUT_URL: checkoutUrl,
 	};
 
+	const ledgerEnv: Record<string, string> = {
+		DATABASE_URL: dbUrl,
+	};
+
 	const writeOne = (relPath: string, managed: Record<string, string>) => {
 		const abs = join(PROJECT_ROOT, relPath);
 		const dir = dirname(abs);
@@ -228,6 +232,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	writeOne("server/.env.local", serverEnv);
 	writeOne("vite/.env.local", viteEnv);
 	writeOne("apps/checkout/.env.local", checkoutEnv);
+	writeOne("apps/ledger/.env.local", ledgerEnv);
 	log(`wrote .env.local for ${ENV_LOCAL_TARGETS.length} workspace(s)`);
 }
 
