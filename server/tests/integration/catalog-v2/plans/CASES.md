@@ -1301,3 +1301,37 @@ Own-reclaim (`proNew → pro`) still allowed; preview includes
 | Execute variant `new_plan_id` → `products.id` + alias CTE; `customer_products.product_id` untouched | ✓ t2 |
 | REST create of reserved id still 400 | ✓ t3 |
 
+## 24. Unit 5 — Promote / active pointer
+
+`active: true` on an existing row takes the unique pointer; the vacated sibling
+folds `active: false`. Default follows only when `isEligibleDefaultProduct`.
+Draft mint (`new_version` without `active`) does not take the pointer.
+
+| Case | Status |
+|---|---|
+| Back-promote v1 while v2 is live — one pointer; default stays on latest | ✓ `versions/promote-pointer.test.ts` |
+| `active: false` on the pointer with no successor → 400 | ✓ `versions/promote-pointer.test.ts` |
+| Same-call rename of the taker still demotes the old pointer | ✓ `versions/promote-pointer.test.ts` |
+| `active: false` is ok when another entry takes the pointer | ✓ `versions/promote-pointer.test.ts` |
+| Numeric `{ version: 1, active: true }` promotes the same as `version_slug` | ✓ `versions/promote-pointer.test.ts` |
+| Preview: promote draft v2 → v2 `active: true`, sibling v1 `active: false` | ✓ `versions/promote-preview.test.ts` |
+| Preview back-promote: v1 `active: true`, sibling v2 `active: false` | ✓ `versions/promote-preview.test.ts` |
+| Promote does not mint a new version number | ✓ `versions/promote-preview.test.ts` |
+| Idempotent `active: true` on already-active v1 (draft still idle) | ✓ `versions/promote-preview.test.ts` |
+| Idempotent `active: true` on already-active v2 | ✓ `versions/promote-preview.test.ts` |
+| Two `active: true` same `plan_id` in one call → 400 | ✓ `versions/promote-guards.test.ts` |
+| Two different plans promoting in one batch → both succeed | ✓ `versions/promote-guards.test.ts` |
+| `versioning: "all_versions"` + `active: true` → 400 | ✓ `versions/promote-guards.test.ts` |
+| Free auto_enable draft promote → default follows the pointer | ✓ `versions/default-follows-active.test.ts` |
+| Custom slug promote moves pointer and default | ✓ `versions/default-follows-active.test.ts` |
+| Paid draft promote: pointer moves, default stays on free v1 | ✓ `versions/default-follows-active.test.ts` |
+| Cardless-trial paid draft: default follows (`isEligibleDefaultProduct`) | ✓ `versions/default-follows-active.test.ts` |
+| Explicit `auto_enable: true` on historical promote → `HistoricalPlanVersionCannotBeDefault` | ✓ `versions/default-follows-active.test.ts` |
+| Base promote re-points follow variant; no variant mint | ✓ `variants/pointer/pointer-on-base-promote.test.ts` |
+| Base promote leaves historical variant v1 on the old row | ✓ `variants/pointer/pointer-on-base-promote.test.ts` |
+| Promote leaves a pin at a historical non-active base | ✓ `variants/pointer/pointer-on-base-promote.test.ts` |
+| Child promote freezes uncustomized parent; propagate follows v2 | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
+| Customized parent is left on child promote | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
+| Parent promote (licenses omitted): child identity unchanged; v2 stays empty | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
+| Declared `licenses[]` on child promote re-links to newly active child | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
+

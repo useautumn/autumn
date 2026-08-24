@@ -149,14 +149,26 @@ export const buildSiblingVersionsPreview = ({
 
 	return (productStatesContext.versionsByPlanId[planId] ?? [])
 		.filter((product) => product.version !== version)
-		.map((product) =>
-			unselectedSiblingFromVersion({
-				product,
-				productStatesContext,
-				editedCurrent,
-				editedNext,
-				previewContext,
-			}),
-		)
+		.map((product) => {
+			const sibling = upsertProducts.find(
+				(upsert) =>
+					upsert.row.planId === product.id &&
+					upsert.row.version === product.version,
+			);
+			return sibling
+				? selectedSiblingFromUpsert({
+						sibling,
+						editedCurrent,
+						editedNext,
+						previewContext,
+					})
+				: unselectedSiblingFromVersion({
+						product,
+						productStatesContext,
+						editedCurrent,
+						editedNext,
+						previewContext,
+					});
+		})
 		.sort(byVersionAscending);
 };

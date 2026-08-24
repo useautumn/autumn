@@ -21,8 +21,8 @@ const executeUpsertProduct = async ({
 	ctx: AutumnContext;
 	upsert: UpsertProductPlan;
 }) => {
+	const product = upsert.details?.product ?? upsert.row.nextFullProduct;
 	if (upsert.row.op === "create") {
-		const product = upsert.details?.product ?? upsert.row.nextFullProduct;
 		await ctx.db.transaction(async (tx) => {
 			const db = tx as unknown as DrizzleCli;
 			await deleteClaimedPlanAliases({
@@ -33,11 +33,11 @@ const executeUpsertProduct = async ({
 			});
 			await ProductService.insert({ db, product });
 		});
-		await clearDefaultFlagFromOtherVersions({ ctx, product });
 	}
 
 	await applyEntitlementPricesPlan({ ctx, upsert });
 	await applyProductDetailsUpdate({ ctx, upsert });
+	await clearDefaultFlagFromOtherVersions({ ctx, product });
 	await syncPlanMetadataAcrossVersions({ ctx, upsert });
 	await applyFreeTrialPlan({ ctx, upsert });
 };

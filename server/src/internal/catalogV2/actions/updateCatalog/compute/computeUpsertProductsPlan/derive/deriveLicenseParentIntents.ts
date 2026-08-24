@@ -1,10 +1,44 @@
 import { productKeyToString, productToProductKey } from "@autumn/shared";
+import { childTriggersLicenseRewrite } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
 import { deriveLicenseParentMintIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveLicenseParentMintIntents";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type {
 	ProductUpsertIntent,
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
+
+/** Incoming links on the upserted child plus the demoted pointer (promote). */
+const reverseLinksForChild = ({
+	upsert,
+	productStatesContext,
+}: {
+	upsert: UpsertProductPlan;
+	productStatesContext: ProductStatesContext;
+}) => {
+	const previousActive = upsert.previousActiveInternalId
+		? findFullProductByInternalId({
+				internalId: upsert.previousActiveInternalId,
+				productStatesContext,
+			})
+		: null;
+	const seen = new Set<string>();
+	return [
+		upsert.row.currentFullProduct,
+		upsert.row.baseFullProduct,
+		previousActive,
+	].flatMap((product) => {
+		if (!product) return [];
+		return (product.parent_plan_licenses ?? []).filter((link) => {
+			const key = productKeyToString({
+				productKey: productToProductKey({ product: link.product }),
+			});
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+	});
+};
 
 /** Links-only pin for parent versions not already in the batch. Skip all_versions plans — siblings cover them. */
 export const deriveLicenseParentIntents = ({
@@ -18,12 +52,13 @@ export const deriveLicenseParentIntents = ({
 	projectedProductStatesContext: ProductStatesContext;
 	allVersionsPlanIds: Set<string>;
 }): ProductUpsertIntent[] => {
-	if (!upsert.entitlementPricesPlan) return [];
+	const rewritesLicenses = childTriggersLicenseRewrite({ child: upsert });
+	if (!rewritesLicenses) return [];
 
-	const reverseLinks =
-		upsert.row.currentFullProduct?.parent_plan_licenses ??
-		upsert.row.baseFullProduct?.parent_plan_licenses ??
-		[];
+	const reverseLinks = reverseLinksForChild({
+		upsert,
+		productStatesContext: projectedProductStatesContext,
+	});
 
 	return [
 		...deriveLicenseParentMintIntents({

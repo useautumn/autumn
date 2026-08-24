@@ -56,6 +56,17 @@ describe("productDetailsAreSame / diffProductDetails", () => {
 		});
 	});
 
+	test("active change diffs with previous value", () => {
+		const current = row({ active: false });
+		const next = row({ active: true });
+		expect(productDetailsAreSame({ product1: current, product2: next })).toBe(
+			false,
+		);
+		expect(diffProductDetails({ current, next })).toEqual({
+			active: false,
+		});
+	});
+
 	test("version_slug change diffs with previous value", () => {
 		const current = row({ version_slug: "v1" });
 		const next = row({ version_slug: "summer" });

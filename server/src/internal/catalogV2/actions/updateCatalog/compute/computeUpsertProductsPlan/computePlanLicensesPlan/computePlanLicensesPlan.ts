@@ -93,20 +93,19 @@ export const computePlanLicensesPlan = ({
 			});
 		}
 
-		const planLicenses = [
-			...computePinnedPlanLicenses({
-				ctx,
-				parent: upsert,
-				upsertProducts,
-				productStatesContext,
-			}),
-			...computePropagatedPlanLicenses({
-				ctx,
-				parent: upsert,
-				upsertProducts,
-				productStatesContext,
-			}),
-		];
+		const pinned = computePinnedPlanLicenses({
+			ctx,
+			parent: upsert,
+			upsertProducts,
+			productStatesContext,
+		});
+		const propagated = computePropagatedPlanLicenses({
+			ctx,
+			parent: upsert,
+			upsertProducts,
+			productStatesContext,
+		});
+		const planLicenses = [...pinned, ...propagated];
 		if (planLicenses.length === 0) return upsert;
 
 		return withPlanLicenseRowPlans({

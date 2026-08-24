@@ -26,6 +26,7 @@ type ExpectedLicenseChange = Partial<
 type ExpectedSiblingVersion = {
 	version: number;
 	selected?: boolean;
+	active?: boolean;
 	hasCustomers?: boolean;
 	/** true = plan_change present; false/null = absent. */
 	hasPlanChange?: boolean;
@@ -208,6 +209,9 @@ const expectSiblingVersionsMatch = ({
 		).toBeDefined();
 		if (expectedSibling.selected !== undefined) {
 			expect(sibling?.selected).toBe(expectedSibling.selected);
+		}
+		if (expectedSibling.active !== undefined) {
+			expect(sibling?.active).toBe(expectedSibling.active);
 		}
 		if (expectedSibling.licenseAction !== undefined) {
 			expect(sibling?.license_action).toBe(expectedSibling.licenseAction);

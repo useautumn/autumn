@@ -39,6 +39,27 @@ export const expectVersionIdentityCorrect = async ({
 	}
 };
 
+/** Exactly one row of this plan holds `active`. Returns that row. */
+export const expectExactlyOneActiveVersion = async ({
+	ctx,
+	planId,
+}: {
+	ctx: AutumnContext;
+	planId: string;
+}) => {
+	const versions = await ProductService.listFull({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		inIds: [planId],
+		returnAll: true,
+		skipCache: true,
+	});
+	const actives = versions.filter((product) => product.active);
+	expect(actives, `${planId}: unique_active_product`).toHaveLength(1);
+	return actives[0];
+};
+
 /** Flip the active pointer in DB (test-only — not a catalogV2 promote). */
 export const forceActiveVersion = async ({
 	ctx,

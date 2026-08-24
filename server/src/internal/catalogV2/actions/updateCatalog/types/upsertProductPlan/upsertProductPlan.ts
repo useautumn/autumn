@@ -22,7 +22,8 @@ export type UpsertProductSource =
 	| "variant_link"
 	| "license_pin"
 	| "license_adopt"
-	| "repoint";
+	| "repoint"
+	| "demoted_product";
 
 /** Which product row this plan writes, and its before/after FullProduct. */
 export type UpsertProductRow = {
@@ -71,6 +72,8 @@ export type UpsertProductPlan = {
 	createInStripe?: boolean;
 	/** Set when this row's id claims a reserved alias — execute deletes that row. */
 	aliasReplacement?: PlanAliasReplacement;
+	/** Product that currently holds `active` — pairs a demoted product plan. */
+	previousActiveInternalId?: string;
 
 	state: { hasCustomers: boolean };
 };
