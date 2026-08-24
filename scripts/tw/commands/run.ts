@@ -37,6 +37,7 @@ import {
 } from "@tests/_groups/index.ts";
 import chalk from "chalk";
 import pLimit from "p-limit";
+import { detachProcessSignal } from "../../detachProcessSignal";
 import { TEST_ORG_CONFIG } from "../../setupTestUtils/createTestOrg.ts";
 import type { TestExecutor } from "../../testScripts/testExecutor.ts";
 import {
@@ -1970,8 +1971,8 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			log(`full run log: ${runLogFile}`);
 		}
 	} finally {
-		process.off("SIGINT", sigintHandler);
-		process.off("SIGTERM", sigtermHandler);
+		detachProcessSignal("SIGINT", sigintHandler);
+		detachProcessSignal("SIGTERM", sigtermHandler);
 		// Always restore the terminal (idempotent) — on an error path the TUI may
 		// still be mounted; tear it down so the error/teardown logs are visible.
 		tui?.unmountTui();

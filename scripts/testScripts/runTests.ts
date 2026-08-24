@@ -8,6 +8,7 @@ import { spawn } from "bun";
 import chalk from "chalk";
 import dotenv from "dotenv";
 import pLimit from "p-limit";
+import { detachProcessSignal } from "../detachProcessSignal";
 
 loadLocalEnv();
 
@@ -563,7 +564,7 @@ class TestRunner {
 		await Promise.all(promises);
 
 		// Remove SIGINT handler
-		process.off("SIGINT", sigintHandler);
+		detachProcessSignal("SIGINT", sigintHandler);
 
 		// Final render
 		this.cleanup();
