@@ -163,7 +163,7 @@ end
 
 local function append_mutation_log(params)
   local context = params.context
-  table.insert(context.mutation_logs, {
+  local mutation_log = {
     target_type = params.target_type,
     customer_entitlement_id = params.customer_entitlement_id or cjson.null,
     rollover_id = params.rollover_id or cjson.null,
@@ -173,7 +173,13 @@ local function append_mutation_log(params)
     adjustment_delta = params.adjustment_delta or 0,
     usage_delta = params.usage_delta or 0,
     value_delta = params.value_delta or 0,
-  })
+  }
+
+  if not is_nil(params.usage_attribution_delta) then
+    mutation_log.usage_attribution_delta = params.usage_attribution_delta
+  end
+
+  table.insert(context.mutation_logs, mutation_log)
 end
 
 local function update_in_memory_customer_entitlement_mutation(params)
@@ -249,7 +255,10 @@ local function queue_customer_entitlement_mutation(params)
     adjustment_delta = params.alter_granted_balance and balance_delta or 0
   end
 
-  if balance_delta == 0 and adjustment_delta == 0 then
+  if balance_delta == 0
+      and adjustment_delta == 0
+      and is_nil(params.usage_attribution_delta)
+  then
     return
   end
 
@@ -269,6 +278,7 @@ local function queue_customer_entitlement_mutation(params)
     adjustment_delta = adjustment_delta,
     usage_delta = 0,
     value_delta = params.value_delta or 0,
+    usage_attribution_delta = params.usage_attribution_delta,
   })
 end
 
@@ -278,7 +288,10 @@ local function queue_rollover_mutation(params)
   local usage_delta = params.usage_delta or 0
   local rollover_id = params.rollover_id
 
-  if balance_delta == 0 and usage_delta == 0 then
+  if balance_delta == 0
+      and usage_delta == 0
+      and is_nil(params.usage_attribution_delta)
+  then
     return
   end
 
@@ -300,6 +313,7 @@ local function queue_rollover_mutation(params)
     adjustment_delta = 0,
     usage_delta = usage_delta,
     value_delta = params.value_delta or 0,
+    usage_attribution_delta = params.usage_attribution_delta,
   })
 end
 
@@ -314,6 +328,7 @@ local function queue_rollover_update(params)
     balance_delta = -deduct_amount,
     usage_delta = deduct_amount,
     value_delta = params.value_delta or 0,
+    usage_attribution_delta = params.usage_attribution_delta,
   })
 end
 

@@ -66,6 +66,8 @@ DECLARE
 
   remaining_amount numeric;
   rollover_deducted numeric := 0;
+  attribution_entitlement_id text;
+  attribution_value jsonb;
   ent_obj jsonb;
   -- Entitlement properties
   ent_id text;
@@ -204,7 +206,7 @@ BEGIN
     has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
 
     IF rate_card IS NOT NULL THEN
-      RAISE EXCEPTION 'UNSUPPORTED_GRADUATED_CREDIT_RATE_CARD_UNLIMITED';
+      RAISE EXCEPTION 'UNSUPPORTED_CREDIT_RATE_CARD_UNLIMITED';
     END IF;
 
     SELECT
@@ -350,7 +352,7 @@ BEGIN
     -- untouched (reset windows are TS-suppressed).
     IF is_unlimited THEN
       IF rate_card IS NOT NULL THEN
-        RAISE EXCEPTION 'UNSUPPORTED_GRADUATED_CREDIT_RATE_CARD_UNLIMITED';
+        RAISE EXCEPTION 'UNSUPPORTED_CREDIT_RATE_CARD_UNLIMITED';
       END IF;
 
       -- Fetch current state (rows already locked in STEP 0)
@@ -442,6 +444,51 @@ BEGIN
         'has_entity_scope', has_entity_scope
       ));
       mutation_logs_json := mutation_logs_json || COALESCE(step_mutation_logs, '[]'::jsonb);
+
+      FOR attribution_entitlement_id IN
+        SELECT DISTINCT mutation_log->>'customer_entitlement_id'
+        FROM jsonb_array_elements(
+          COALESCE(step_mutation_logs, '[]'::jsonb)
+        ) AS mutation_log
+        WHERE mutation_log ? 'usage_attribution_delta'
+          AND NULLIF(mutation_log->>'customer_entitlement_id', '') IS NOT NULL
+      LOOP
+        SELECT
+          ce.balance,
+          COALESCE(ce.additional_balance, 0),
+          COALESCE(ce.adjustment, 0),
+          COALESCE(ce.entities, '{}'::jsonb),
+          COALESCE(ce.usage_attribution, '{}'::jsonb)
+        INTO
+          current_balance,
+          current_additional_balance,
+          current_adjustment,
+          current_entities,
+          attribution_value
+        FROM customer_entitlements ce
+        WHERE ce.id = attribution_entitlement_id;
+
+        updates_json := jsonb_set(
+          updates_json,
+          ARRAY[attribution_entitlement_id],
+          jsonb_build_object(
+            'balance', current_balance,
+            'additional_balance', current_additional_balance,
+            'adjustment', current_adjustment,
+            'entities', current_entities,
+            'usage_attribution', attribution_value,
+            'deducted', COALESCE(
+              (updates_json->attribution_entitlement_id->>'deducted')::numeric,
+              0
+            ),
+            'additional_deducted', COALESCE(
+              (updates_json->attribution_entitlement_id->>'additional_deducted')::numeric,
+              0
+            )
+          ),
+          true
+        );
+      END LOOP;
       -- rollover_deducted is returned in feature units, so can subtract directly
       remaining_amount := remaining_amount - rollover_deducted;
     END IF;
@@ -466,13 +513,18 @@ BEGIN
       ABS(current_additional_balance) > 0.0000000001
       OR EXISTS (
         SELECT 1
-        FROM jsonb_each(current_entities) entity_entry
+        FROM jsonb_each(
+          CASE
+            WHEN jsonb_typeof(current_entities) = 'object' THEN current_entities
+            ELSE '{}'::jsonb
+          END
+        ) entity_entry
         WHERE ABS(
           COALESCE((entity_entry.value->>'additional_balance')::numeric, 0)
         ) > 0.0000000001
       )
     ) THEN
-      RAISE EXCEPTION 'UNSUPPORTED_GRADUATED_CREDIT_RATE_CARD_ADDITIONAL_BALANCE';
+      RAISE EXCEPTION 'UNSUPPORTED_CREDIT_RATE_CARD_ADDITIONAL_BALANCE';
     END IF;
 
     -- STEP 2: Deduct from additional_balance (customer-level and entity-level) [TODO: add max balance here?]

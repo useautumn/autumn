@@ -1,3 +1,4 @@
+import type { UsageAttribution } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { ResetCusEntParam } from "@/internal/balances/utils/sql/client.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
@@ -11,6 +12,7 @@ interface SubjectBalanceUpdate {
 	additional_balance: number | null;
 	adjustment: number | null;
 	entities: Record<string, unknown> | null;
+	usage_attribution: UsageAttribution;
 	next_reset_at: number | null;
 	expected_next_reset_at: number | null;
 	pooled_granted: number | null;
@@ -63,6 +65,7 @@ export const resetSubjectCache = async ({
 				additional_balance: reset.additional_balance,
 				adjustment: reset.adjustment,
 				entities: reset.entities,
+				usage_attribution: reset.usage_attribution,
 				next_reset_at: reset.next_reset_at,
 				expected_next_reset_at: oldNextResetAts[reset.cus_ent_id] ?? null,
 				pooled_granted: pooledGrantedByCusEntId?.[reset.cus_ent_id] ?? null,

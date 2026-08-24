@@ -28,13 +28,7 @@ export const cusProductToExistingUsages = ({
 
 	const cusEnts = cusProduct.customer_entitlements;
 
-	const existingUsages: Record<
-		string,
-		{
-			usage: number;
-			entityUsages: Record<string, number>;
-		}
-	> = {};
+	const existingUsages: ExistingUsages = {};
 
 	for (const cusEnt of cusEnts) {
 		if (isBooleanCusEnt({ cusEnt })) continue;
@@ -70,6 +64,29 @@ export const cusProductToExistingUsages = ({
 		}
 
 		const currentExistingUsage = existingUsages[internalFeatureId];
+
+		if (
+			carryConsumableFeature &&
+			Object.keys(cusEnt.usage_attribution ?? {}).length > 0
+		) {
+			const mergedUsageAttribution =
+				currentExistingUsage.usageAttribution ?? {};
+			for (const [sourceInternalFeatureId, attribution] of Object.entries(
+				cusEnt.usage_attribution ?? {},
+			)) {
+				const currentAttribution =
+					mergedUsageAttribution[sourceInternalFeatureId];
+				mergedUsageAttribution[sourceInternalFeatureId] = {
+					units: new Decimal(currentAttribution?.units ?? 0)
+						.add(attribution.units)
+						.toNumber(),
+					credits: new Decimal(currentAttribution?.credits ?? 0)
+						.add(attribution.credits)
+						.toNumber(),
+				};
+			}
+			currentExistingUsage.usageAttribution = mergedUsageAttribution;
+		}
 
 		// 1. If it's entity scoped
 		if (isEntityScopedCusEnt(cusEnt)) {

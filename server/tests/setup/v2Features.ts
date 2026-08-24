@@ -28,6 +28,7 @@ export enum TestFeature {
 	Credits2 = "credits2", // credit system
 	TieredAction = "tiered_action",
 	TieredCredits = "tiered_credits",
+	InvoiceCredits = "invoice_credits",
 
 	Credits3 = "credits3", // credit system (overlaps with credits on action1)
 
@@ -163,6 +164,39 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 						{ to: 50_000, credit_amount: 0.8 },
 						{ to: "inf" as const, credit_amount: 0.5 },
 					],
+				},
+			],
+		},
+	},
+	[TestFeature.InvoiceCredits]: {
+		...constructCreditSystem({
+			featureId: TestFeature.InvoiceCredits,
+			orgId,
+			env: AppEnv.Sandbox,
+			schema: [
+				{
+					metered_feature_id: TestFeature.Action1,
+					credit_cost: 0.2,
+				},
+				{
+					metered_feature_id: TestFeature.Action2,
+					credit_cost: 0.6,
+				},
+			],
+		}),
+		config: {
+			usage_type: FeatureUsageType.Single,
+			invoice_credit: true,
+			schema: [
+				{
+					metered_feature_id: TestFeature.Action1,
+					feature_amount: 1,
+					credit_amount: 0.2,
+				},
+				{
+					metered_feature_id: TestFeature.Action2,
+					feature_amount: 1,
+					credit_amount: 0.6,
 				},
 			],
 		},

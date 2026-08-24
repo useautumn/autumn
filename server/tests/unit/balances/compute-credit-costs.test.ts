@@ -124,22 +124,25 @@ describe("computeCreditCosts", () => {
 		});
 	});
 
-	test("rejects graduated cards backed by an unlimited credit entitlement", () => {
-		const deduction: FeatureDeduction = { feature: messages, deduction: 10 };
-		const unlimitedEntitlement = {
-			...makeCusEnt("ce_graduated", graduatedCredits),
-			unlimited: true,
-		} as FullCusEntWithFullCusProduct;
+	test.concurrent(
+		"rejects rate cards backed by an unlimited credit entitlement",
+		() => {
+			const deduction: FeatureDeduction = { feature: messages, deduction: 10 };
+			const unlimitedEntitlement = {
+				...makeCusEnt("ce_graduated", graduatedCredits),
+				unlimited: true,
+			} as FullCusEntWithFullCusProduct;
 
-		expect(() =>
-			computeCreditCosts({
-				cusEnts: [unlimitedEntitlement],
-				deduction,
-			}),
-		).toThrow(/graduated credit rate cards.*unlimited/i);
-	});
+			expect(() =>
+				computeCreditCosts({
+					cusEnts: [unlimitedEntitlement],
+					deduction,
+				}),
+			).toThrow(/credit rate cards.*unlimited/i);
+		},
+	);
 
-	test("rejects graduated cards backed by additional balances", () => {
+	test.concurrent("rejects rate cards backed by additional balances", () => {
 		const deduction: FeatureDeduction = { feature: messages, deduction: 10 };
 		const customerAdditionalBalance = {
 			...makeCusEnt("ce_customer_additional", graduatedCredits),
@@ -166,7 +169,28 @@ describe("computeCreditCosts", () => {
 					cusEnts: [customerEntitlement],
 					deduction,
 				}),
-			).toThrow(/graduated credit rate cards.*additional balances/i);
+			).toThrow(/credit rate cards.*additional balances/i);
 		}
 	});
+
+	test.concurrent(
+		"rejects direct invoice-credit tracks backed by additional balance",
+		() => {
+			const deduction: FeatureDeduction = {
+				feature: currentInvoiceCredits,
+				deduction: 10,
+			};
+			const customerEntitlement = {
+				...makeCusEnt("ce_invoice_credits", currentInvoiceCredits),
+				additional_balance: 1,
+			} as FullCusEntWithFullCusProduct;
+
+			expect(() =>
+				computeCreditCosts({
+					cusEnts: [customerEntitlement],
+					deduction,
+				}),
+			).toThrow(/credit rate cards.*additional balances/i);
+		},
+	);
 });

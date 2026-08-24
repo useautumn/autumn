@@ -190,17 +190,36 @@ local function process_deduction_pass(params)
               adjustment_delta = 0,
               usage_delta = 0,
               value_delta = deducted_units,
+              usage_attribution_delta = build_credit_rate_attribution_delta({
+                rate_card = rate_card,
+                units = deducted_units,
+                credits = deducted,
+              }),
             })
           else
+            local log_units_before = current_rate_units
+            local remaining_log_units = deducted_units
             for log_index = mutation_log_start + 1, #context.mutation_logs do
               local mutation_log = context.mutation_logs[log_index]
               if mutation_log.customer_entitlement_id == ent_id then
                 local log_credit_change = -safe_number(mutation_log.balance_delta)
-                local log_units = deducted_units * log_credit_change / deducted
+                local log_units = credit_rate_units_for_credit_change({
+                  rate_card = rate_card,
+                  current_units = log_units_before,
+                  requested_units = remaining_log_units,
+                  allowed_credit_change = log_credit_change,
+                })
                 mutation_log.value_delta = log_units
                 mutation_log.credit_cost = math.abs(log_units) > CREDIT_RATE_EPSILON
                     and log_credit_change / log_units
                   or 0
+                mutation_log.usage_attribution_delta = build_credit_rate_attribution_delta({
+                  rate_card = rate_card,
+                  units = log_units,
+                  credits = log_credit_change,
+                })
+                log_units_before = log_units_before + log_units
+                remaining_log_units = remaining_log_units - log_units
               end
             end
           end
@@ -563,6 +582,27 @@ local function run_deduction_on_context(params)
       update.adjustment = ent_data.adjustment or 0
       update.additional_balance = 0
       update.usage_attribution = ent_data.subject_balance.usage_attribution or {}
+    end
+  end
+
+  -- Rollover-only rate changes need a zero-deduction entitlement update so
+  -- TypeScript receives the changed attribution.
+  for _, ent_id in ipairs(context.pending_writes or {}) do
+    if is_nil(updates[ent_id]) then
+      local ent_data = context.customer_entitlements[ent_id]
+      if ent_data then
+        updates[ent_id] = {
+          balance = ent_data.has_entity_scope and 0 or ent_data.balance,
+          additional_balance = safe_number(
+            ent_data.subject_balance.additional_balance
+          ),
+          adjustment = ent_data.adjustment or 0,
+          entities = ent_data.entities or {},
+          usage_attribution = ent_data.subject_balance.usage_attribution or {},
+          deducted = 0,
+          additional_deducted = 0,
+        }
+      end
     end
   end
 

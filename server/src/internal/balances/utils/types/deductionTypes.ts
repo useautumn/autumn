@@ -45,6 +45,7 @@ export type CustomerEntitlementDeduction = {
 export type RolloverDeduction = {
 	id: string;
 	credit_cost: number;
+	rate_card?: CreditRateCard;
 };
 
 /** Prepared input for executing a feature deduction */

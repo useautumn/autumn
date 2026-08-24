@@ -53,15 +53,18 @@ const free = ({
 	featureId,
 	includedUsage = 100,
 	entityFeatureId,
+	rolloverConfig,
 }: {
 	featureId: string;
 	includedUsage?: number;
 	entityFeatureId?: string;
+	rolloverConfig?: RolloverConfig;
 }): LimitedItem =>
 	constructFeatureItem({
 		featureId,
 		includedUsage,
 		entityFeatureId,
+		rolloverConfig,
 	}) as LimitedItem;
 
 /**

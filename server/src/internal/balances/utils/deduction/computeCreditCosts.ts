@@ -47,32 +47,22 @@ export const computeCreditCosts = ({
 			continue;
 		}
 
+		let rateCard: CreditRateCard | undefined;
 		try {
-			const rateCard = !deduction.tokens
+			rateCard = !deduction.tokens
 				? getCreditRateCard({
 						sourceFeature: deduction.feature,
 						creditSystem: ce.entitlement.feature,
 					})
 				: undefined;
 			if (
-				rateCard?.tier_behavior === "graduated" &&
+				rateCard &&
 				(ce.unlimited ||
 					ce.entitlement.allowance_type === AllowanceType.Unlimited)
 			) {
 				throw new RecaseError({
 					message:
-						"Graduated credit rate cards with unlimited credit balances are not supported yet",
-					code: ErrCode.InvalidRequest,
-					statusCode: 400,
-				});
-			}
-			if (
-				rateCard?.tier_behavior === "graduated" &&
-				(ce.rollovers?.length ?? 0) > 0
-			) {
-				throw new RecaseError({
-					message:
-						"Graduated credit rate cards with rollover balances are not supported yet",
+						"Credit rate cards with unlimited credit balances are not supported yet",
 					code: ErrCode.InvalidRequest,
 					statusCode: 400,
 				});
@@ -83,10 +73,10 @@ export const computeCreditCosts = ({
 					(entityBalance) =>
 						Math.abs(entityBalance.additional_balance ?? 0) > 0,
 				);
-			if (rateCard?.tier_behavior === "graduated" && hasAdditionalBalance) {
+			if (rateCard && hasAdditionalBalance) {
 				throw new RecaseError({
 					message:
-						"Graduated credit rate cards with additional balances are not supported yet",
+						"Credit rate cards with additional balances are not supported yet",
 					code: ErrCode.InvalidRequest,
 					statusCode: 400,
 				});
@@ -103,6 +93,7 @@ export const computeCreditCosts = ({
 		} catch (error) {
 			// A configured rate that cannot be evaluated must fail closed.
 			if (
+				rateCard ||
 				creditSystemContainsFeature({
 					creditSystem: ce.entitlement.feature,
 					meteredFeatureId: deduction.feature.id,

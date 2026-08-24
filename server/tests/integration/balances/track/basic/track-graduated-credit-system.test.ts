@@ -69,7 +69,7 @@ const getPersistedCreditEntitlement = async ({
 	return rows[0];
 };
 
-test(
+test.concurrent(
 	`${chalk.yellowBright("graduated-credit-rating: Redis handles checks, concurrent boundary crossing, and refunds")}`,
 	async () => {
 		const customerId = "graduated-credit-rating-redis";
@@ -143,22 +143,82 @@ test(
 			credits: 99.5,
 		});
 
+		// Reserve across the first tier boundary, then finalize below the
+		// reservation. Only the final 100 source units (0.8 credits) unwind.
+		await autumnV2_3.check({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			required_balance: 200,
+			lock: {
+				enabled: true,
+				lock_id: `${customerId}-partial`,
+			},
+		});
+		await autumnV2_3.balances.finalize({
+			lock_id: `${customerId}-partial`,
+			action: "confirm",
+			override_value: 100,
+		});
+		const afterPartialFinalize =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(
-			autumnV2_3.check({
-				customer_id: customerId,
-				feature_id: TestFeature.TieredAction,
-				required_balance: 100,
-				lock: {
-					enabled: true,
-					lock_id: "graduated-credit-rating-lock",
-				},
-			}),
-		).rejects.toThrow(/graduated credit.*lock/i);
+			afterPartialFinalize.features[TestFeature.TieredCredits].balance,
+		).toBeCloseTo(899.6, 10);
+
+		// Finalizing above the reservation keeps the reserve and rates the extra
+		// units from the already-advanced tier position.
+		await autumnV2_3.check({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			required_balance: 50,
+			lock: {
+				enabled: true,
+				lock_id: `${customerId}-higher`,
+			},
+		});
+		await autumnV2_3.balances.finalize({
+			lock_id: `${customerId}-higher`,
+			action: "confirm",
+			override_value: 100,
+		});
+
+		// A release is a full unwind of both the balance and attribution entry.
+		await autumnV2_3.check({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			required_balance: 100,
+			lock: {
+				enabled: true,
+				lock_id: `${customerId}-release`,
+			},
+		});
+		await autumnV2_3.balances.finalize({
+			lock_id: `${customerId}-release`,
+			action: "release",
+		});
+
+		const afterLockLifecycle =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expect(
+			afterLockLifecycle.features[TestFeature.TieredCredits].balance,
+		).toBeCloseTo(898.8, 10);
+
+		await timeout(3_000);
+		const afterLockPersisted = await getPersistedCreditEntitlement({
+			ctx,
+			internalCustomerId: customer.internal_id,
+		});
+		expect(
+			afterLockPersisted?.usageAttribution[sourceInternalFeatureId!],
+		).toEqual({
+			units: 10_150,
+			credits: 101.2,
+		});
 	},
 	{ timeout: 120_000 },
 );
 
-test(
+test.concurrent(
 	`${chalk.yellowBright("graduated-credit-rating: only usage spilling past the source allowance enters the card")}`,
 	async () => {
 		const customerId = "graduated-credit-rating-spill";
@@ -204,12 +264,78 @@ test(
 	{ timeout: 120_000 },
 );
 
-test(
+test.concurrent(
+	`${chalk.yellowBright("graduated-credit-rating: releasing a lock reprices from the current tier position")}`,
+	async () => {
+		const customerId = "graduated-credit-rating-lock-current-position";
+		const product = makeCreditProduct({
+			id: "graduated-credit-lock-current-position",
+		});
+		const { autumnV1, autumnV2_3, customer, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [product] }),
+			],
+			actions: [s.attach({ productId: product.id })],
+		});
+
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			value: 9_900,
+		});
+		await autumnV2_3.check({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			required_balance: 50,
+			lock: {
+				enabled: true,
+				lock_id: `${customerId}-release`,
+			},
+		});
+
+		// Releasing the earlier 50 units removes the current marginal tail (0.4
+		// credits), leaving cost(10,000), rather than its original 0.5-credit cost.
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			value: 100,
+		});
+		await autumnV2_3.balances.finalize({
+			lock_id: `${customerId}-release`,
+			action: "release",
+		});
+
+		const response = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expect(response.features[TestFeature.TieredCredits].balance).toBeCloseTo(
+			900,
+			10,
+		);
+
+		await timeout(3_000);
+		const persisted = await getPersistedCreditEntitlement({
+			ctx,
+			internalCustomerId: customer.internal_id,
+		});
+		const sourceInternalFeatureId = ctx.features.find(
+			(feature) => feature.id === TestFeature.TieredAction,
+		)?.internal_id;
+		expect(sourceInternalFeatureId).toBeDefined();
+		expect(persisted?.usageAttribution[sourceInternalFeatureId!]).toEqual({
+			units: 10_000,
+			credits: 100,
+		});
+	},
+	{ timeout: 120_000 },
+);
+
+test.concurrent(
 	`${chalk.yellowBright("graduated-credit-rating: Postgres fallback matches marginal rating")}`,
 	async () => {
 		const customerId = "graduated-credit-rating-postgres";
 		const product = makeCreditProduct({ id: "graduated-credit-postgres" });
-		const { customer, ctx } = await initScenario({
+		const { autumnV2_3, customer, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ testClock: false }),
@@ -263,6 +389,39 @@ test(
 				cached.value.balances[0]?.usage_attribution?.[sourceInternalFeatureId],
 			).toEqual({ units: 10_050, credits: 100.4 });
 		}
+
+		const lockId = `${customerId}-postgres-release`;
+		await executePostgresDeductionV2({
+			ctx,
+			fullSubject,
+			customerId,
+			deductions: [
+				{
+					feature: feature!,
+					deduction: 50,
+					lock: { enabled: true, lock_id: lockId },
+				},
+			],
+		});
+		await executePostgresDeductionV2({
+			ctx,
+			fullSubject,
+			customerId,
+			deductions: [{ feature: feature!, deduction: 100 }],
+		});
+		await autumnV2_3.balances.finalize(
+			{ lock_id: lockId, action: "release" },
+			{ skipCache: true },
+		);
+
+		const afterPostgresRelease = await getPersistedCreditEntitlement({
+			ctx,
+			internalCustomerId: customer.internal_id,
+		});
+		expect(afterPostgresRelease?.balance).toBeCloseTo(898.8, 10);
+		expect(
+			afterPostgresRelease?.usageAttribution[sourceInternalFeatureId],
+		).toEqual({ units: 10_150, credits: 101.2 });
 	},
 	{ timeout: 120_000 },
 );

@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { type ApiCustomer, RolloverExpiryDurationType } from "@autumn/shared";
+import {
+	type ApiCustomer,
+	type ApiCustomerV5,
+	RolloverExpiryDurationType,
+} from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expireCusEntForReset } from "@tests/utils/cusProductUtils/resetTestUtils.js";
@@ -8,6 +12,8 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { executePostgresDeductionV2 } from "@/internal/balances/utils/deductionV2/executePostgresDeductionV2.js";
+import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 
 // ─────────────────────────────────────────────────────────────────
 // Lazy reset with rollovers (DB path) — GET /customers skip_cache
@@ -147,3 +153,157 @@ test.concurrent(`${chalk.yellowBright("lazy reset rollover (cache): caps rollove
 	expect(cusEntAfter).toBeDefined();
 	expect(cusEntAfter!.next_reset_at).toBeGreaterThan(Date.now());
 });
+
+test.concurrent(
+	`${chalk.yellowBright("invoice-credit cached reset: clears prior attribution and rates new-cycle rollover usage from zero")}`,
+	async () => {
+		const tieredCreditsItem = items.free({
+			featureId: TestFeature.TieredCredits,
+			includedUsage: 1_000,
+			rolloverConfig: {
+				max: 1_000,
+				length: 1,
+				duration: RolloverExpiryDurationType.Month,
+			},
+		});
+		const product = products.base({
+			id: "invoice-credit-reset-rollover",
+			items: [tieredCreditsItem],
+		});
+
+		const { customerId, autumnV2_3, ctx } = await initScenario({
+			customerId: "invoice-credit-reset-rollover",
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [product] }),
+			],
+			actions: [s.billing.attach({ productId: product.id })],
+		});
+		const sourceInternalFeatureId = ctx.features.find(
+			(feature) => feature.id === TestFeature.TieredAction,
+		)?.internal_id;
+		expect(sourceInternalFeatureId).toBeDefined();
+
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			value: 5_000,
+		});
+		await timeout(2_000);
+		const beforeReset = await findCustomerEntitlement({
+			ctx,
+			customerId,
+			featureId: TestFeature.TieredCredits,
+		});
+		expect(beforeReset?.usage_attribution?.[sourceInternalFeatureId!]).toEqual({
+			units: 5_000,
+			credits: 50,
+		});
+
+		await expireCusEntForReset({
+			ctx,
+			customerId,
+			featureId: TestFeature.TieredCredits,
+		});
+		const afterReset =
+			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		expect(afterReset.balances[TestFeature.TieredCredits].remaining).toBe(
+			1_950,
+		);
+		const resetCustomerEntitlement = await findCustomerEntitlement({
+			ctx,
+			customerId,
+			featureId: TestFeature.TieredCredits,
+		});
+		expect(resetCustomerEntitlement?.usage_attribution).toEqual({});
+
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			value: 100,
+		});
+		await timeout(2_000);
+		const afterRolloverSpend = await findCustomerEntitlement({
+			ctx,
+			customerId,
+			featureId: TestFeature.TieredCredits,
+		});
+		expect(
+			afterRolloverSpend?.usage_attribution?.[sourceInternalFeatureId!],
+		).toEqual({
+			units: 100,
+			credits: 1,
+		});
+		expect(afterRolloverSpend?.rollovers[0]?.balance).toBe(949);
+	},
+	{ timeout: 120_000 },
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoice-credit rollover: Postgres fallback advances new-cycle attribution atomically")}`,
+	async () => {
+		const tieredCreditsItem = items.free({
+			featureId: TestFeature.TieredCredits,
+			includedUsage: 1_000,
+			rolloverConfig: {
+				max: 1_000,
+				length: 1,
+				duration: RolloverExpiryDurationType.Month,
+			},
+		});
+		const product = products.base({
+			id: "invoice-credit-postgres-rollover",
+			items: [tieredCreditsItem],
+		});
+		const { customerId, autumnV2_3, ctx } = await initScenario({
+			customerId: "invoice-credit-postgres-rollover",
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [product] }),
+			],
+			actions: [s.billing.attach({ productId: product.id })],
+		});
+
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			value: 5_000,
+		});
+		await timeout(2_000);
+		await expireCusEntForReset({
+			ctx,
+			customerId,
+			featureId: TestFeature.TieredCredits,
+		});
+		await autumnV2_3.customers.get<ApiCustomerV5>(customerId, {
+			skip_cache: "true",
+		});
+
+		const fullSubject = await getOrSetCachedFullSubject({
+			ctx,
+			customerId,
+			source: "invoice-credit-postgres-rollover-test",
+		});
+		const sourceFeature = ctx.features.find(
+			(feature) => feature.id === TestFeature.TieredAction,
+		);
+		expect(sourceFeature).toBeDefined();
+		await executePostgresDeductionV2({
+			ctx,
+			fullSubject,
+			customerId,
+			deductions: [{ feature: sourceFeature!, deduction: 100 }],
+		});
+
+		const customerEntitlement = await findCustomerEntitlement({
+			ctx,
+			customerId,
+			featureId: TestFeature.TieredCredits,
+		});
+		expect(
+			customerEntitlement?.usage_attribution?.[sourceFeature!.internal_id],
+		).toEqual({ units: 100, credits: 1 });
+		expect(customerEntitlement?.rollovers[0]?.balance).toBe(949);
+	},
+	{ timeout: 120_000 },
+);

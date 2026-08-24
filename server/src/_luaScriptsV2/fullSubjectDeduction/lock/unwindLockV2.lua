@@ -39,6 +39,58 @@ local function calculate_unwind_iteration_value(params)
   return math.min(item_value_magnitude, remaining_unwind_value)
 end
 
+-- Rate-card releases reprice the source's current marginal tail so attribution
+-- credits remain equal to its cumulative cost.
+local function calculate_rate_card_unwind_change(params)
+  local item = params.item or {}
+  local attribution_delta = item.usage_attribution_delta
+  if is_nil(attribution_delta) or is_nil(attribution_delta.rate_card) then
+    return nil
+  end
+
+  if not params.context.customer_entitlements[params.customer_entitlement_id] then
+    return nil
+  end
+
+  local original_units = safe_number(attribution_delta.units)
+  local original_magnitude = math.abs(original_units)
+  if original_magnitude <= CREDIT_RATE_EPSILON then
+    return nil
+  end
+
+  local unwind_magnitude = math.min(
+    original_magnitude,
+    safe_number(params.unwind_iteration_value)
+  )
+  local direction = original_units >= 0 and 1 or -1
+  local current_units = math.max(
+    0,
+    get_credit_rate_current_units(
+      params.context,
+      params.customer_entitlement_id,
+      attribution_delta.rate_card
+    )
+  )
+  local attribution_unwind_magnitude = direction > 0
+      and math.min(unwind_magnitude, current_units)
+    or unwind_magnitude
+  local inverse_units = -direction * attribution_unwind_magnitude
+  local restored_units = math.max(0, current_units + inverse_units)
+  local inverse_credits = credit_rate_cost_at_usage(
+    attribution_delta.rate_card,
+    restored_units
+  ) - credit_rate_cost_at_usage(
+    attribution_delta.rate_card,
+    current_units
+  )
+
+  return build_credit_rate_attribution_delta({
+    rate_card = attribution_delta.rate_card,
+    units = inverse_units,
+    credits = inverse_credits,
+  })
+end
+
 -- ============================================================================
 -- STEP 1: Calculate the current signed lock value from receipt items
 -- ============================================================================
@@ -144,7 +196,18 @@ local function unwind_lock_item_iteration(params)
     item = item,
   })
 
-  -- Calculate the amount of credits to unwind
+  local customer_entitlement_id = normalize_lock_item_id(
+    item.customer_entitlement_id
+  )
+  local rate_card_unwind_change = calculate_rate_card_unwind_change({
+    context = context,
+    customer_entitlement_id = customer_entitlement_id,
+    item = item,
+    unwind_iteration_value = unwind_iteration_value,
+  })
+
+  -- Legacy receipts use their fixed credit_cost. New rate-card receipts use
+  -- exact marginal credits from the stored source-unit segment.
   local credits_to_unwind =
     unwind_iteration_value * safe_number(item.credit_cost or 1)
   local inverse_balance_delta = -signs.balance_sign * credits_to_unwind
@@ -155,11 +218,20 @@ local function unwind_lock_item_iteration(params)
       and (-signs.usage_sign * credits_to_unwind)
     or 0 --[[ default to 0 if usage_delta is not set ]]
   local inverse_value_delta = -signs.value_sign * unwind_iteration_value
+  local unwind_credit_cost = safe_number(item.credit_cost or 1)
+  if not is_nil(rate_card_unwind_change) then
+    inverse_balance_delta = -rate_card_unwind_change.credits
+    inverse_usage_delta = safe_number(item.usage_delta) ~= 0
+        and rate_card_unwind_change.credits
+      or 0
+    inverse_value_delta = rate_card_unwind_change.units
+    unwind_credit_cost = math.abs(rate_card_unwind_change.units) > CREDIT_RATE_EPSILON
+        and rate_card_unwind_change.credits / rate_card_unwind_change.units
+      or 0
+  end
   local entity_id = normalize_lock_item_id(item.entity_id)
 
   if item.target_type == 'customer_entitlement' then
-    local customer_entitlement_id =
-      normalize_lock_item_id(item.customer_entitlement_id)
     local ent_data = context.customer_entitlements[customer_entitlement_id]
     if not ent_data then
       -- Entitlement no longer exists (e.g. product upgraded mid-flight).
@@ -177,10 +249,11 @@ local function unwind_lock_item_iteration(params)
       context = context,
       customer_entitlement_id = customer_entitlement_id,
       entity_id = entity_id,
-      credit_cost = safe_number(item.credit_cost or 1),
+      credit_cost = unwind_credit_cost,
       balance_delta = inverse_balance_delta,
       adjustment_delta = inverse_adjustment_delta,
       value_delta = inverse_value_delta,
+      usage_attribution_delta = rate_card_unwind_change,
     })
 
     update_in_memory_customer_entitlement_mutation({
@@ -189,6 +262,16 @@ local function unwind_lock_item_iteration(params)
       balance_delta = inverse_balance_delta,
       adjustment_delta = inverse_adjustment_delta,
     })
+
+    if not is_nil(rate_card_unwind_change) then
+      apply_credit_rate_attribution_change({
+        context = context,
+        customer_entitlement_id = customer_entitlement_id,
+        rate_card = rate_card_unwind_change.rate_card,
+        units = rate_card_unwind_change.units,
+        credits = rate_card_unwind_change.credits,
+      })
+    end
 
     return {
       applied = true,
@@ -212,14 +295,27 @@ local function unwind_lock_item_iteration(params)
       }
     end
 
+    if not is_nil(item.usage_attribution_delta)
+        and not is_nil(item.usage_attribution_delta.rate_card)
+        and not context.customer_entitlements[customer_entitlement_id]
+    then
+      return {
+        applied = false,
+        unwind_iteration_value = 0,
+        remaining_unwind_value = remaining_unwind_value,
+        error = 'LOCK_ATTRIBUTION_OWNER_MISSING',
+      }
+    end
+
     queue_rollover_mutation({
       context = context,
       rollover_id = rollover_id,
       entity_id = entity_id,
-      credit_cost = safe_number(item.credit_cost or 1),
+      credit_cost = unwind_credit_cost,
       balance_delta = inverse_balance_delta,
       usage_delta = inverse_usage_delta,
       value_delta = inverse_value_delta,
+      usage_attribution_delta = rate_card_unwind_change,
     })
 
     update_in_memory_rollover_mutation({
@@ -228,6 +324,16 @@ local function unwind_lock_item_iteration(params)
       balance_delta = inverse_balance_delta,
       usage_delta = inverse_usage_delta,
     })
+
+    if not is_nil(rate_card_unwind_change) then
+      apply_credit_rate_attribution_change({
+        context = context,
+        customer_entitlement_id = customer_entitlement_id,
+        rate_card = rate_card_unwind_change.rate_card,
+        units = rate_card_unwind_change.units,
+        credits = rate_card_unwind_change.credits,
+      })
+    end
 
     return {
       applied = true,

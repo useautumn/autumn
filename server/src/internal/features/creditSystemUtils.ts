@@ -192,28 +192,44 @@ export const getCreditRateCard = ({
 	sourceFeature: Feature;
 	creditSystem: Feature;
 }): CreditRateCard | undefined => {
-	if (
-		creditSystem.type !== FeatureType.CreditSystem ||
-		sourceFeature.id === creditSystem.id
-	) {
+	if (creditSystem.type !== FeatureType.CreditSystem) {
 		return undefined;
+	}
+
+	if (sourceFeature.id === creditSystem.id) {
+		return creditSystem.config.invoice_credit
+			? {
+					source_internal_feature_id: sourceFeature.internal_id,
+					feature_amount: 1,
+					credit_amount: 1,
+				}
+			: undefined;
 	}
 
 	const schemaItem = getCreditSchemaItem({
 		featureId: sourceFeature.id,
 		creditSystem,
 	});
-	if (!schemaItem || schemaItem.tier_behavior !== "graduated") return undefined;
+	if (!schemaItem) return undefined;
 
 	const base = {
 		source_internal_feature_id: sourceFeature.internal_id,
 		feature_amount: schemaItem.feature_amount ?? 1,
 	};
-	return {
-		...base,
-		tier_behavior: "graduated",
-		tiers: schemaItem.tiers,
-	};
+	if (schemaItem.tier_behavior === "graduated") {
+		return {
+			...base,
+			tier_behavior: "graduated",
+			tiers: schemaItem.tiers,
+		};
+	}
+
+	return creditSystem.config.invoice_credit
+		? {
+				...base,
+				credit_amount: schemaItem.credit_amount,
+			}
+		: undefined;
 };
 
 const creditSystemContainsFeature = ({

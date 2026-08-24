@@ -70,6 +70,13 @@ export const applyExistingUsages = ({
 			cusProducts: [customerProduct],
 			internalFeatureIds: [internalFeatureId],
 		});
+		const attributionOwnerId = existingUsage.usageAttribution
+			? (cusEnts.find(
+					(customerEntitlement) =>
+						customerEntitlement.entitlement.feature.config?.invoice_credit ===
+						true,
+				)?.id ?? cusEnts[0]?.id)
+			: undefined;
 
 		// 1. Deduct entity usages
 		for (const [entityId, entityUsage] of Object.entries(
@@ -100,6 +107,11 @@ export const applyExistingUsages = ({
 				original.balance = newCusEnt.balance;
 				original.entities = newCusEnt.entities;
 				original.adjustment = newCusEnt.adjustment;
+				if (newCusEnt.id === attributionOwnerId) {
+					original.usage_attribution = structuredClone(
+						existingUsage.usageAttribution ?? {},
+					);
+				}
 
 				ctx.logger.debug(`Deduction for feature ${newCusEnt.feature_id}:`, {
 					balance: newCusEnt.balance,

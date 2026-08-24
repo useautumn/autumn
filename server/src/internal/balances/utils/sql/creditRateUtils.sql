@@ -1,5 +1,23 @@
 DROP FUNCTION IF EXISTS credit_rate_cost_at_usage(jsonb, numeric);
 
+DROP FUNCTION IF EXISTS build_credit_rate_attribution_delta(jsonb, numeric, numeric);
+
+CREATE FUNCTION build_credit_rate_attribution_delta(
+  rate_card jsonb,
+  units numeric,
+  credits numeric
+)
+RETURNS jsonb
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT jsonb_build_object(
+    'units', units,
+    'credits', credits,
+    'rate_card', rate_card
+  );
+$$;
+
 CREATE FUNCTION credit_rate_cost_at_usage(rate_card jsonb, usage numeric)
 RETURNS numeric
 LANGUAGE plpgsql
@@ -229,47 +247,184 @@ BEGIN
 END;
 $$;
 
-DROP FUNCTION IF EXISTS reprice_credit_rate_mutation_logs(jsonb, text, numeric, numeric);
+DROP FUNCTION IF EXISTS credit_rate_unwind_attribution_delta(jsonb, jsonb, numeric);
+
+CREATE FUNCTION credit_rate_unwind_attribution_delta(
+  attribution_delta jsonb,
+  current_usage_attribution jsonb,
+  unwind_value numeric
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+DECLARE
+  epsilon numeric := 0.0000000001;
+  rate_card jsonb := attribution_delta->'rate_card';
+  original_units numeric := COALESCE((attribution_delta->>'units')::numeric, 0);
+  original_magnitude numeric := ABS(original_units);
+  unwind_magnitude numeric;
+  attribution_unwind_magnitude numeric;
+  direction integer;
+  current_units numeric;
+  restored_units numeric;
+  inverse_units numeric;
+  inverse_credits numeric;
+BEGIN
+  IF attribution_delta IS NULL
+    OR jsonb_typeof(attribution_delta) != 'object'
+    OR rate_card IS NULL
+    OR jsonb_typeof(rate_card) != 'object'
+    OR original_magnitude <= epsilon
+  THEN
+    RETURN NULL;
+  END IF;
+
+  unwind_magnitude := LEAST(original_magnitude, GREATEST(0, unwind_value));
+  direction := CASE WHEN original_units >= 0 THEN 1 ELSE -1 END;
+  current_units := GREATEST(
+    0,
+    credit_rate_current_units(current_usage_attribution, rate_card)
+  );
+  attribution_unwind_magnitude := CASE
+    WHEN direction > 0 THEN LEAST(unwind_magnitude, current_units)
+    ELSE unwind_magnitude
+  END;
+  inverse_units := -direction * attribution_unwind_magnitude;
+  restored_units := GREATEST(0, current_units + inverse_units);
+  inverse_credits := credit_rate_cost_at_usage(rate_card, restored_units)
+    - credit_rate_cost_at_usage(rate_card, current_units);
+
+  RETURN build_credit_rate_attribution_delta(
+    rate_card,
+    inverse_units,
+    inverse_credits
+  );
+END;
+$$;
+
+DROP FUNCTION IF EXISTS credit_rate_rollover_change(jsonb, jsonb, numeric, numeric);
+
+CREATE FUNCTION credit_rate_rollover_change(
+  usage_attribution jsonb,
+  rate_card jsonb,
+  requested_units numeric,
+  available_credits numeric
+)
+RETURNS TABLE (
+  funded_units numeric,
+  funded_credits numeric,
+  new_usage_attribution jsonb,
+  usage_attribution_delta jsonb
+)
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+DECLARE
+  current_units numeric := credit_rate_current_units(
+    usage_attribution,
+    rate_card
+  );
+  requested_credits numeric;
+  allowed_credits numeric;
+BEGIN
+  requested_credits := GREATEST(
+    0,
+    credit_rate_cost_at_usage(
+      rate_card,
+      GREATEST(0, current_units + requested_units)
+    ) - credit_rate_cost_at_usage(rate_card, current_units)
+  );
+  allowed_credits := LEAST(
+    GREATEST(0, available_credits),
+    requested_credits
+  );
+  funded_units := credit_rate_units_for_credit_change(
+    rate_card,
+    current_units,
+    requested_units,
+    allowed_credits
+  );
+  funded_credits := credit_rate_cost_at_usage(
+    rate_card,
+    current_units + funded_units
+  ) - credit_rate_cost_at_usage(rate_card, current_units);
+  new_usage_attribution := apply_credit_rate_attribution(
+    usage_attribution,
+    rate_card,
+    funded_units,
+    funded_credits
+  );
+  usage_attribution_delta := build_credit_rate_attribution_delta(
+    rate_card,
+    funded_units,
+    funded_credits
+  );
+
+  RETURN NEXT;
+END;
+$$;
+
+DROP FUNCTION IF EXISTS reprice_credit_rate_mutation_logs(jsonb, text, numeric, numeric, jsonb, numeric);
 
 CREATE FUNCTION reprice_credit_rate_mutation_logs(
   mutation_logs jsonb,
   customer_entitlement_id text,
   deducted_credits numeric,
-  deducted_units numeric
+  deducted_units numeric,
+  rate_card jsonb,
+  current_units numeric
 )
 RETURNS jsonb
-LANGUAGE sql
+LANGUAGE plpgsql
 IMMUTABLE
 AS $$
-  SELECT COALESCE(
-    jsonb_agg(
-      CASE
-        WHEN log_item->>'customer_entitlement_id' = customer_entitlement_id
-          AND deducted_credits != 0
-        THEN jsonb_set(
-          jsonb_set(
-            log_item,
-            '{value_delta}',
-            to_jsonb(
-              deducted_units
-                * (-(log_item->>'balance_delta')::numeric)
-                / deducted_credits
-            )
-          ),
-          '{credit_cost}',
-          to_jsonb(
-            CASE
-              WHEN deducted_units = 0 THEN 0
-              ELSE deducted_credits / deducted_units
-            END
-          )
+DECLARE
+  epsilon numeric := 0.0000000001;
+  result jsonb := '[]'::jsonb;
+  log_item jsonb;
+  log_credit_change numeric;
+  log_units numeric;
+  log_units_before numeric := current_units;
+  remaining_log_units numeric := deducted_units;
+BEGIN
+  FOR log_item IN
+    SELECT value FROM jsonb_array_elements(COALESCE(mutation_logs, '[]'::jsonb))
+  LOOP
+    IF log_item->>'customer_entitlement_id' = customer_entitlement_id
+      AND ABS(deducted_credits) > epsilon
+    THEN
+      log_credit_change := -COALESCE(
+        (log_item->>'balance_delta')::numeric,
+        0
+      );
+      log_units := credit_rate_units_for_credit_change(
+        rate_card,
+        log_units_before,
+        remaining_log_units,
+        log_credit_change
+      );
+      log_item := log_item || jsonb_build_object(
+        'value_delta', log_units,
+        'credit_cost', CASE
+          WHEN ABS(log_units) <= epsilon THEN 0
+          ELSE log_credit_change / log_units
+        END,
+        'usage_attribution_delta', build_credit_rate_attribution_delta(
+          rate_card,
+          log_units,
+          log_credit_change
         )
-        ELSE log_item
-      END
-    ),
-    '[]'::jsonb
-  )
-  FROM jsonb_array_elements(COALESCE(mutation_logs, '[]'::jsonb)) log_item;
+      );
+      log_units_before := log_units_before + log_units;
+      remaining_log_units := remaining_log_units - log_units;
+    END IF;
+
+    result := result || jsonb_build_array(log_item);
+  END LOOP;
+
+  RETURN result;
+END;
 $$;
 
 DROP FUNCTION IF EXISTS deduct_from_credit_rate_main_balance(jsonb);
@@ -379,14 +534,21 @@ BEGIN
         'balance_delta', 0,
         'adjustment_delta', 0,
         'usage_delta', 0,
-        'value_delta', deducted_units
+        'value_delta', deducted_units,
+        'usage_attribution_delta', build_credit_rate_attribution_delta(
+          rate_card,
+          deducted_units,
+          deducted
+        )
       ));
     ELSE
       mutation_logs := reprice_credit_rate_mutation_logs(
         mutation_logs,
         customer_entitlement_id,
         deducted,
-        deducted_units
+        deducted_units,
+        rate_card,
+        current_units
       );
     END IF;
   END IF;

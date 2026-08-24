@@ -1,7 +1,6 @@
 import {
 	AllowanceType,
 	cusEntToStartingBalance,
-	ErrCode,
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
@@ -15,7 +14,6 @@ import {
 	isFreeCustomerEntitlement,
 	notNullish,
 	orgToInStatuses,
-	RecaseError,
 	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -199,19 +197,6 @@ export const prepareFeatureDeductionV2 = ({
 			};
 		});
 
-	if (
-		lock?.enabled &&
-		customerEntitlementDeductions.some(
-			(entry) => entry.rate_card?.tier_behavior === "graduated",
-		)
-	) {
-		throw new RecaseError({
-			message: "Graduated credit rate cards do not support balance locks yet",
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
-
 	// The deduction sort only prefers unlimited within a tier (entity level and
 	// credit systems sort first/last regardless), but the sink contract is that
 	// an unlimited entitlement absorbs everything and finite siblings stay
@@ -229,10 +214,13 @@ export const prepareFeatureDeductionV2 = ({
 	}
 
 	const rolloverArrays = customerEntitlements.map((customerEntitlement) => {
-		const { creditCost } = getCreditCostForEnt(customerEntitlement.id);
+		const { creditCost, rateCard } = getCreditCostForEnt(
+			customerEntitlement.id,
+		);
 		return (customerEntitlement.rollovers || []).map((rollover) => ({
 			...rollover,
 			credit_cost: creditCost,
+			...(rateCard ? { rate_card: rateCard } : {}),
 		}));
 	});
 
@@ -286,6 +274,7 @@ export const prepareFeatureDeductionV2 = ({
 		rollovers: sortedRollovers.map((rollover) => ({
 			id: rollover.id,
 			credit_cost: rollover.credit_cost,
+			...(rollover.rate_card ? { rate_card: rollover.rate_card } : {}),
 		})),
 		lock: preparedLock,
 	};

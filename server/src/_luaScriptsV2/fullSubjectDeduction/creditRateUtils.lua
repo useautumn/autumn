@@ -3,6 +3,14 @@
 
 local CREDIT_RATE_EPSILON = 1e-10
 
+local function build_credit_rate_attribution_delta(params)
+  return {
+    units = params.units,
+    credits = params.credits,
+    rate_card = params.rate_card,
+  }
+end
+
 local function credit_rate_cost_at_usage(rate_card, usage)
   local bounded_usage = math.max(0, safe_number(usage))
   local feature_amount = safe_number(rate_card.feature_amount)

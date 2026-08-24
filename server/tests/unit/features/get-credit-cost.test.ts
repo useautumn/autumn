@@ -18,7 +18,7 @@ await mockModuleWithRestore(
 const { getModelCreditCost, getModelCreditCostBreakdown } = await import(
 	"@/internal/features/aiCreditSystemUtils.js"
 );
-const { getCreditCost } = await import(
+const { getCreditCost, getCreditRateCard } = await import(
 	"@/internal/features/creditSystemUtils.js"
 );
 
@@ -64,6 +64,85 @@ const graduatedCreditFeature: Feature = {
 	},
 	model_markups: null,
 };
+
+const sourceFeature: Feature = {
+	...aiCreditFeature,
+	internal_id: "fe_messages",
+	id: "messages",
+	name: "Messages",
+	type: FeatureType.Metered,
+	config: {
+		usage_type: FeatureUsageType.Single,
+	},
+	model_markups: null,
+};
+
+const flatInvoiceCreditFeature: Feature = {
+	...graduatedCreditFeature,
+	config: {
+		usage_type: FeatureUsageType.Single,
+		invoice_credit: true,
+		schema: [
+			{
+				metered_feature_id: sourceFeature.id,
+				feature_amount: 100,
+				credit_amount: 2,
+			},
+		],
+	},
+};
+
+describe("getCreditRateCard — invoice attribution descriptors", () => {
+	test.concurrent(
+		"returns a flat descriptor for source usage on invoice credits",
+		() => {
+			expect(
+				getCreditRateCard({
+					sourceFeature,
+					creditSystem: flatInvoiceCreditFeature,
+				}),
+			).toEqual({
+				source_internal_feature_id: sourceFeature.internal_id,
+				feature_amount: 100,
+				credit_amount: 2,
+			});
+		},
+	);
+
+	test.concurrent(
+		"attributes direct invoice-credit tracks to the credit feature at 1:1",
+		() => {
+			expect(
+				getCreditRateCard({
+					sourceFeature: flatInvoiceCreditFeature,
+					creditSystem: flatInvoiceCreditFeature,
+				}),
+			).toEqual({
+				source_internal_feature_id: flatInvoiceCreditFeature.internal_id,
+				feature_amount: 1,
+				credit_amount: 1,
+			});
+		},
+	);
+
+	test.concurrent(
+		"does not add attribution state to ordinary flat credit systems",
+		() => {
+			expect(
+				getCreditRateCard({
+					sourceFeature,
+					creditSystem: {
+						...flatInvoiceCreditFeature,
+						config: {
+							...flatInvoiceCreditFeature.config,
+							invoice_credit: false,
+						},
+					},
+				}),
+			).toBeUndefined();
+		},
+	);
+});
 
 describe("getCreditCost — graduated rate cards", () => {
 	test("charges the marginal cost when usage crosses one tier", () => {
