@@ -3,8 +3,8 @@
  *
  * Stripe objects are created lazily at billing time in every env; catalog
  * writes only reuse ids. An explicit `create_in_stripe: true` opts into
- * immediate creation, `false` skips Stripe entirely, and free / zero-amount
- * plans never mint a Stripe Product of their own.
+ * immediate creation, `false` still reuses but never creates, and free /
+ * zero-amount plans never mint a Stripe Product of their own.
  */
 
 import { expect, test } from "bun:test";

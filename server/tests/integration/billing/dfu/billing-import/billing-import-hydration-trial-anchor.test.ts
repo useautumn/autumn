@@ -5,19 +5,17 @@
 
 import { expect, test } from "bun:test";
 import {
-	getAllStripePriceIds,
-} from "@tests/integration/billing/sync/utils/syncTestUtils.js";
-import {
-	type FlashClient,
 	callFlash,
+	type FlashClient,
 	getFlashedCustomerProduct,
 } from "@tests/integration/billing/dfu/billing-import/utils/flashTestUtils.js";
+import { fetchFullProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers.js";
+import { getAllStripePriceIds } from "@tests/integration/billing/sync/utils/syncTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
-import { ProductService } from "@/internal/products/ProductService.js";
 
 test.concurrent(
 	`${chalk.yellowBright("dfu.flash: trial + anchor hydrated from Stripe current_period_end")}`,
@@ -37,12 +35,7 @@ test.concurrent(
 			actions: [],
 		});
 
-		const fullProduct = await ProductService.getFull({
-			db: ctx.db,
-			idOrInternalId: pro.id,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
+		const fullProduct = await fetchFullProduct({ ctx, productId: pro.id });
 		const priceIds = getAllStripePriceIds({ fullProduct });
 		const fullCustomer = await CusService.getFull({
 			ctx,

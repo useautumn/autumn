@@ -2,6 +2,7 @@
 
 import { expect, test } from "bun:test";
 import { findPriceByFeatureId } from "@autumn/shared";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -62,6 +63,7 @@ const removeUsageItem = async ({
 	});
 };
 
+/** Materializes because callers borrow a price from a plan Autumn never attached. */
 const featurePriceIdFor = async ({
 	ctx,
 	productId,
@@ -71,11 +73,9 @@ const featurePriceIdFor = async ({
 	productId: string;
 	featureId: string;
 }): Promise<string> => {
-	const fullProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: productId,
-		orgId: ctx.org.id,
-		env: ctx.env,
+	const fullProduct = await materializePlanInStripe({
+		ctx,
+		planId: productId,
 	});
 	const price = findPriceByFeatureId({
 		prices: fullProduct.prices,

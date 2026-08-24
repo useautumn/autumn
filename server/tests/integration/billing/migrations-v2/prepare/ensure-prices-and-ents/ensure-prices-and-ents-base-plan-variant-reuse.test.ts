@@ -29,6 +29,7 @@
 
 import { expect, test } from "bun:test";
 import { products as productsTable } from "@autumn/shared";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
@@ -83,8 +84,7 @@ test.concurrent(`${chalk.yellowBright("migrations prepare runtime: variant plan 
 
 	// Pre-seed: add the new tier ladder to `pro`'s CURRENT version via ordinary
 	// (non-custom) catalog editing — exactly what Mintlify will do before
-	// running the real migration. This creates a real Stripe price/product/v2
-	// prepaid price through the normal billing path.
+	// running the real migration.
 	await autumnV1.products.update(pro.id, {
 		items: [
 			items.volumePrepaidMessages({
@@ -96,6 +96,10 @@ test.concurrent(`${chalk.yellowBright("migrations prepare runtime: variant plan 
 			}),
 		],
 	});
+
+	// `products.update` is reuse-only, and the new tier ladder has no reuse
+	// candidate — the pre-seeded price only gets real Stripe ids at billing time.
+	await materializePlanInStripe({ ctx, planId: pro.id });
 
 	const latestProVersion = await ctx.db.query.products.findFirst({
 		where: (p, { eq: eqOp, and: andOp }) =>

@@ -4,9 +4,10 @@ import {
 	type BillingPreviewResponse,
 	type PreviewLineItem,
 } from "@autumn/shared";
+import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import type Stripe from "stripe";
@@ -82,6 +83,8 @@ export const customLicensePrice = ({
 	customize: customLicensePriceConfig({ amount }),
 });
 
+/** Sandbox creates Stripe resources lazily, so a plan that was only registered
+ * has no Stripe product to restrict a coupon to until something materializes it. */
 export const getPlanStripeProductId = async ({
 	ctx,
 	planId,
@@ -96,11 +99,15 @@ export const getPlanStripeProductId = async ({
 		env: ctx.env,
 	});
 
-	if (!product.processor?.id) {
+	const stripeProductId =
+		product.processor?.id ??
+		(await materializePlanInStripe({ ctx, planId })).processor?.id;
+
+	if (!stripeProductId) {
 		throw new Error(`Plan ${planId} has no Stripe product`);
 	}
 
-	return product.processor.id;
+	return stripeProductId;
 };
 
 export const findPreviewLine = ({

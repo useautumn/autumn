@@ -8,6 +8,10 @@
  * `stripe_*_id` fields from the matching catalog price so we don't mint
  * duplicate Stripe Price objects.
  *
+ * Every test materializes the catalog plan first: a customize attach only mints
+ * Stripe resources for the fresh is_custom rows, so without it the catalog rows
+ * these assertions compare against would stay null and pass vacuously.
+ *
  * Contract under test:
  *   - Adding an unrelated boolean entitlement (dashboard) keeps every existing
  *     price's Stripe IDs intact.
@@ -45,6 +49,7 @@ import {
 	expectStripePriceIdNotReused,
 	loadCustomerAndCatalogPrices,
 } from "@tests/integration/billing/misc/utils/findCatalogAndCustomPrices";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
@@ -72,6 +77,8 @@ test.concurrent(`${chalk.yellowBright("custom plan: add boolean entitlement → 
 		],
 		actions: [],
 	});
+
+	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -123,6 +130,8 @@ test.concurrent(`${chalk.yellowBright("custom plan: paid feature shapes unchange
 		actions: [],
 	});
 
+	await materializePlanInStripe({ ctx, planId: proPlan.id });
+
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: proPlan.id,
@@ -170,6 +179,8 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid → consumable on sa
 		actions: [],
 	});
 
+	await materializePlanInStripe({ ctx, planId: proPlan.id });
+
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: proPlan.id,
@@ -216,6 +227,8 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid amount change → st
 		actions: [],
 	});
 
+	await materializePlanInStripe({ ctx, planId: proPlan.id });
+
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: proPlan.id,
@@ -256,6 +269,8 @@ test.concurrent(`${chalk.yellowBright("custom plan: tier amount change → strip
 		],
 		actions: [],
 	});
+
+	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -304,6 +319,8 @@ test.concurrent(`${chalk.yellowBright("custom plan: graduated → volume tier_be
 		],
 		actions: [],
 	});
+
+	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -360,6 +377,8 @@ test.concurrent(`${chalk.yellowBright("custom plan: add flat_amount to tier → 
 		],
 		actions: [],
 	});
+
+	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -419,6 +438,8 @@ test.concurrent(`${chalk.yellowBright("custom plan: prorated allocated → arrea
 		actions: [],
 	});
 
+	await materializePlanInStripe({ ctx, planId: proPlan.id });
+
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: proPlan.id,
@@ -459,6 +480,8 @@ test.concurrent(`${chalk.yellowBright("custom plan: change prepaid billing_units
 		],
 		actions: [],
 	});
+
+	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -514,6 +537,8 @@ test.concurrent(`${chalk.yellowBright("custom plan: change rollover config → b
 		actions: [],
 	});
 
+	await materializePlanInStripe({ ctx, planId: proPlan.id });
+
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
 		plan_id: proPlan.id,
@@ -567,6 +592,8 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid + consumable pair on
 		],
 		actions: [],
 	});
+
+	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,

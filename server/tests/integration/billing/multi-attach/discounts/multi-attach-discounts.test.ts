@@ -7,11 +7,11 @@ import {
 } from "@tests/integration/billing/utils/discounts/discountTestUtils";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { ProductService } from "@/internal/products/ProductService";
 
 test.concurrent(
 	chalk.yellowBright(
@@ -35,12 +35,8 @@ test.concurrent(
 			],
 			actions: [],
 		});
-		const fullPlanB = await ProductService.getFull({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			idOrInternalId: planB.id,
-		});
+		// The scoped coupon needs planB's Stripe product before multiAttach mints it.
+		const fullPlanB = await materializePlanInStripe({ ctx, planId: planB.id });
 		const [globalCoupon, scopedCoupon] = await Promise.all([
 			createPercentCoupon({ stripeCli: ctx.stripeCli, percentOff: 20 }),
 			createAmountCoupon({

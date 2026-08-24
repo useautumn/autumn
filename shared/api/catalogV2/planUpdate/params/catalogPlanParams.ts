@@ -100,7 +100,7 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 	create_in_stripe: z.boolean().optional().meta({
 		internal: true,
 		description:
-			"True creates Stripe resources immediately; false skips Stripe entirely. Omitted: created lazily at billing time.",
+			"True creates Stripe resources immediately; false or omitted only reuses existing ids, leaving creation to billing time.",
 	}),
 
 	// ── Variants & licenses ───────────────────────────────────────────────

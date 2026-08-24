@@ -19,11 +19,11 @@ import {
 	calculateProratedDiff,
 	calculateProration,
 } from "@tests/integration/billing/utils/proration";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { ProductService } from "@/internal/products/ProductService";
 
 const previewCreateSchedule = async ({
 	autumnV1,
@@ -56,12 +56,8 @@ test.concurrent(
 			],
 			actions: [],
 		});
-		const fullPlanB = await ProductService.getFull({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			idOrInternalId: planB.id,
-		});
+		// The scoped coupon needs planB's Stripe product before createSchedule mints it.
+		const fullPlanB = await materializePlanInStripe({ ctx, planId: planB.id });
 		const globalCoupon = await createPercentCoupon({
 			stripeCli: ctx.stripeCli,
 			percentOff: 20,

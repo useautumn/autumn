@@ -16,6 +16,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -47,6 +48,7 @@ const stripeCustomerIdFor = async ({
 	return stripeCustomerId;
 };
 
+/** Materializes because callers build a raw Stripe sub from a plan Autumn never attached. */
 const firstStripePriceIdFor = async ({
 	ctx,
 	productId,
@@ -54,11 +56,9 @@ const firstStripePriceIdFor = async ({
 	ctx: TestContext;
 	productId: string;
 }) => {
-	const fullProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: productId,
-		orgId: ctx.org.id,
-		env: ctx.env,
+	const fullProduct = await materializePlanInStripe({
+		ctx,
+		planId: productId,
 	});
 	for (const price of fullProduct.prices) {
 		const id =

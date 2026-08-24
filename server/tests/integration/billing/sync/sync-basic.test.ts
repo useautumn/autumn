@@ -41,7 +41,7 @@ import type {
 	SyncProposalsResponse,
 } from "@/internal/billing/v2/actions/sync/syncProposals";
 import { CusService } from "@/internal/customers/CusService";
-import { ProductService } from "@/internal/products/ProductService";
+import { fetchFullProduct } from "./utils/syncProductHelpers";
 import {
 	createStripeSubscriptionFromProduct,
 	createStripeSubscriptionFromProducts,
@@ -496,12 +496,7 @@ test.concurrent(`${chalk.yellowBright("sync-basic: sync trialing Stripe subscrip
 	// 1. Get the Stripe customer ID and price IDs for manual sub creation with trial
 	const [fullCustomer, fullProduct] = await Promise.all([
 		CusService.getFull({ ctx, idOrInternalId: customerId }),
-		ProductService.getFull({
-			db: ctx.db,
-			idOrInternalId: pro.id,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		}),
+		fetchFullProduct({ ctx, productId: pro.id }),
 	]);
 
 	const stripeCustomerId = fullCustomer.processor!.id!;
