@@ -28,6 +28,14 @@ export type CreditRateCard = {
 	  }
 );
 
+export const isInvoiceCreditFeature = ({
+	feature,
+}: {
+	feature?: Feature;
+}): boolean =>
+	feature?.type === FeatureType.CreditSystem &&
+	feature.config?.invoice_credit === true;
+
 const invalidCreditRateCard = ({
 	featureId,
 	creditSystemId,

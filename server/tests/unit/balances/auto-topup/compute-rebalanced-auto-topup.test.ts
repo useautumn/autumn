@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
-	BillWhen,
 	BillingInterval,
+	BillWhen,
 	type EntityBalance,
+	FeatureType,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	PriceType,
@@ -18,6 +19,7 @@ const createCustomerEntitlement = ({
 	createdAt = 1,
 	allowance = 0,
 	entityFeatureId = null,
+	invoiceCredit = false,
 }: {
 	id: string;
 	balance: number;
@@ -27,6 +29,7 @@ const createCustomerEntitlement = ({
 	createdAt?: number;
 	allowance?: number;
 	entityFeatureId?: string | null;
+	invoiceCredit?: boolean;
 }): FullCusEntWithFullCusProduct => {
 	const entitlementId = `ent-${id}`;
 	const customerProductId = `cus-prod-${id}`;
@@ -72,8 +75,8 @@ const createCustomerEntitlement = ({
 				id: "messages",
 				internal_id: "internal-feature-messages",
 				name: "Messages",
-				type: "metered",
-				config: {},
+				type: invoiceCredit ? FeatureType.CreditSystem : FeatureType.Metered,
+				config: invoiceCredit ? { invoice_credit: true } : {},
 				org_id: "org-1",
 				env: "sandbox",
 				created_at: 1,
@@ -210,6 +213,24 @@ const buildFullCustomer = (
 };
 
 describe("computeRebalancedAutoTopUp", () => {
+	test("rejects invoice-credit balance rebalances", () => {
+		const prepaid = createCustomerEntitlement({
+			id: "prepaid",
+			balance: 0,
+			invoiceCredit: true,
+		});
+		const fullCustomer = buildFullCustomer([prepaid]);
+
+		expect(() =>
+			computeRebalancedAutoTopUp({
+				fullCustomer,
+				featureId: "messages",
+				quantity: 100,
+				prepaidCustomerEntitlementId: prepaid.id,
+			}),
+		).toThrow(/invoice-credit/i);
+	});
+
 	test("1. no overage: single delta to prepaid for full quantity", () => {
 		const prepaid = createCustomerEntitlement({ id: "prepaid", balance: 0 });
 		const base = createCustomerEntitlement({

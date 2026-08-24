@@ -1,6 +1,7 @@
 import {
 	addCusProductToCusEnt,
 	cusEntsToUsage,
+	ErrCode,
 	type ExistingUsages,
 	type FullCusProduct,
 	featureUtils,
@@ -8,6 +9,7 @@ import {
 	isEntityScopedCusEnt,
 	isOneOffPrepaidConsumableCustomerEntitlement,
 	isUnlimitedCusEnt,
+	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
@@ -76,13 +78,20 @@ export const cusProductToExistingUsages = ({
 			)) {
 				const currentAttribution =
 					mergedUsageAttribution[sourceInternalFeatureId];
+				if (currentAttribution) {
+					throw new RecaseError({
+						message: `carry_over_usages cannot merge multiple attribution positions for credit feature '${cusEnt.entitlement.feature.id}'.`,
+						code: ErrCode.InvalidRequest,
+						statusCode: 400,
+						data: {
+							featureId: cusEnt.entitlement.feature.id,
+							sourceInternalFeatureId,
+						},
+					});
+				}
 				mergedUsageAttribution[sourceInternalFeatureId] = {
-					units: new Decimal(currentAttribution?.units ?? 0)
-						.add(attribution.units)
-						.toNumber(),
-					credits: new Decimal(currentAttribution?.credits ?? 0)
-						.add(attribution.credits)
-						.toNumber(),
+					units: attribution.units,
+					credits: attribution.credits,
 				};
 			}
 			currentExistingUsage.usageAttribution = mergedUsageAttribution;

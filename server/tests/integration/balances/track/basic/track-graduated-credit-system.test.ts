@@ -7,6 +7,7 @@ import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
 	customerEntitlements,
+	findFeatureById,
 	fullSubjectToCustomerEntitlements,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -326,6 +327,59 @@ test.concurrent(
 			units: 10_000,
 			credits: 100,
 		});
+	},
+	{ timeout: 120_000 },
+);
+
+test.concurrent(
+	`${chalk.yellowBright("graduated-credit-rating: lock release keeps net-negative usage floored at zero")}`,
+	async () => {
+		const customerId = "graduated-credit-rating-lock-zero-floor";
+		const product = makeCreditProduct({
+			id: "graduated-credit-lock-zero-floor",
+		});
+		const { autumnV1, autumnV2_3, customer, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [product] }),
+			],
+			actions: [s.attach({ productId: product.id })],
+		});
+		const lockId = `${customerId}-release`;
+
+		await autumnV2_3.check({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			required_balance: 100,
+			lock: { enabled: true, lock_id: lockId },
+		});
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			value: -100,
+		});
+		await autumnV2_3.balances.finalize({
+			lock_id: lockId,
+			action: "release",
+		});
+
+		const response = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expect(response.features[TestFeature.TieredCredits].balance).toBe(1_000);
+
+		await timeout(3_000);
+		const persisted = await getPersistedCreditEntitlement({
+			ctx,
+			internalCustomerId: customer.internal_id,
+		});
+		const sourceInternalFeatureId = findFeatureById({
+			features: ctx.features,
+			featureId: TestFeature.TieredAction,
+			errorOnNotFound: true,
+		}).internal_id;
+		expect(
+			persisted?.usageAttribution[sourceInternalFeatureId],
+		).toBeUndefined();
 	},
 	{ timeout: 120_000 },
 );

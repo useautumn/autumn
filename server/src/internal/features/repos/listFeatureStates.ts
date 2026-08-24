@@ -10,6 +10,7 @@ export const FeatureStateRowSchema = z.object({
 	internal_feature_id: z.string(),
 	feature_id: z.string(),
 	has_entitlements: z.boolean(),
+	has_pooled_entitlements: z.boolean(),
 	has_loose_entitlements: z.boolean(),
 	has_entity_feature_entitlements: z.boolean(),
 	has_loose_entity_feature_entitlements: z.boolean(),
@@ -49,6 +50,7 @@ export const buildFeatureStatesQuery = ({
 			candidate.internal_feature_id,
 			candidate.feature_id,
 			entitlement_product.found IS NOT NULL AS has_entitlements,
+			pooled_entitlement.found IS NOT NULL AS has_pooled_entitlements,
 			entitlement_loose.found IS NOT NULL AS has_loose_entitlements,
 			entity_product.found IS NOT NULL AS has_entity_feature_entitlements,
 			entity_loose.found IS NOT NULL AS has_loose_entity_feature_entitlements,
@@ -78,6 +80,19 @@ export const buildFeatureStatesQuery = ({
 				AND entitlement.internal_product_id IS NOT NULL
 			LIMIT 1
 		) entitlement_product ON true
+		LEFT JOIN LATERAL (
+			SELECT 1 AS found
+			FROM entitlements entitlement
+			JOIN features feature
+				ON feature.internal_id = entitlement.internal_feature_id
+			WHERE entitlement.internal_feature_id COLLATE "C"
+				= candidate.internal_feature_id
+				AND feature.org_id = ${orgId}
+				AND feature.env = ${env}
+				AND entitlement.internal_product_id IS NOT NULL
+				AND entitlement.pooled
+			LIMIT 1
+		) pooled_entitlement ON true
 		LEFT JOIN LATERAL (
 			SELECT 1 AS found
 			FROM entitlements entitlement

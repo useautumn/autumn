@@ -74,6 +74,8 @@ local function calculate_rate_card_unwind_change(params)
   local attribution_unwind_magnitude = direction > 0
       and math.min(unwind_magnitude, current_units)
     or unwind_magnitude
+  -- Attribution stops at zero, but the caller consumes the full receipt segment;
+  -- any excess is net-negative usage, which rate cards do not credit.
   local inverse_units = -direction * attribution_unwind_magnitude
   local restored_units = math.max(0, current_units + inverse_units)
   local inverse_credits = credit_rate_cost_at_usage(

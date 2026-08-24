@@ -1,11 +1,11 @@
 import type { Feature, UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { featureUpdateCanRewriteReferences } from "@/internal/catalogV2/actions/updateCatalog/utils/featureUpdateUtils/featureUpdateCanRewriteReferences";
-import { paramsToTouchedFeatures } from "@/internal/catalogV2/actions/updateCatalog/utils/featureUpdateUtils/paramsToTouchedFeatures";
 import type {
 	FeatureState,
 	UpdateCatalogContext,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { featureUpdateCanRewriteReferences } from "@/internal/catalogV2/actions/updateCatalog/utils/featureUpdateUtils/featureUpdateCanRewriteReferences";
+import { paramsToTouchedFeatures } from "@/internal/catalogV2/actions/updateCatalog/utils/featureUpdateUtils/paramsToTouchedFeatures";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import { listFeatureStates } from "@/internal/features/repos/listFeatureStates.js";
 
@@ -16,6 +16,7 @@ const emptyFeatureState = ({
 }): FeatureState => ({
 	has_customers: false,
 	has_entitlements: false,
+	has_pooled_entitlements: false,
 	has_loose_entitlements: false,
 	has_entity_feature_entitlements: false,
 	has_loose_entity_feature_entitlements: false,
@@ -88,6 +89,7 @@ export const setupFeatureStatesContext = async ({
 			...base,
 			has_customers: row?.has_customers ?? false,
 			has_entitlements: row?.has_entitlements ?? false,
+			has_pooled_entitlements: row?.has_pooled_entitlements ?? false,
 			has_loose_entitlements: row?.has_loose_entitlements ?? false,
 			has_entity_feature_entitlements:
 				row?.has_entity_feature_entitlements ?? false,

@@ -13,6 +13,7 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters";
 import { reapplyFeatureUsageDeduction } from "../utils/reapplyFeatureUsageDeduction";
+import { validateInvoiceCreditBalanceMutation } from "../utils/validateInvoiceCreditBalanceMutation.js";
 import {
 	findOverageCusEnt,
 	markCusProductCustom,
@@ -60,6 +61,10 @@ export const deleteBalance = async ({
 	}
 
 	for (const cusEnt of customerEntitlements) {
+		validateInvoiceCreditBalanceMutation({
+			feature: cusEnt.entitlement.feature,
+		});
+
 		if (isPaidCustomerEntitlement(cusEnt)) {
 			throw new RecaseError({
 				message: `Cannot delete paid balance for feature ${feature_id} and customer ${customer_id}`,

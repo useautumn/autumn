@@ -10,6 +10,46 @@ import { handleUpsertProductVersioningErrors } from "@/internal/catalogV2/action
 import { handleUpsertProductVersionSlugErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductVersionSlugErrors";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
+import { validateInvoiceCreditPooling } from "@/internal/features/validateInvoiceCreditPooling.js";
+
+const validateProjectedInvoiceCreditPooling = ({
+	catalogContext,
+	updateCatalogPlan,
+}: {
+	catalogContext: UpdateCatalogContext;
+	updateCatalogPlan: UpdateCatalogPlan;
+}): void => {
+	for (const updateFeaturePlan of updateCatalogPlan.updateFeatures) {
+		const { current, next: feature } = updateFeaturePlan;
+		const hasPooledPlanItem = updateCatalogPlan.projected.products.some(
+			(product) =>
+				product.entitlements.some(
+					(entitlement) =>
+						entitlement.internal_feature_id === feature.internal_id &&
+						entitlement.pooled,
+				),
+		);
+		validateInvoiceCreditPooling({
+			feature,
+			pooled:
+				hasPooledPlanItem ||
+				catalogContext.featureStatesContext[current.id]
+					?.has_pooled_entitlements,
+		});
+	}
+
+	for (const feature of updateCatalogPlan.insertFeatures) {
+		const hasPooledPlanItem = updateCatalogPlan.projected.products.some(
+			(product) =>
+				product.entitlements.some(
+					(entitlement) =>
+						entitlement.internal_feature_id === feature.internal_id &&
+						entitlement.pooled,
+				),
+		);
+		validateInvoiceCreditPooling({ feature, pooled: hasPooledPlanItem });
+	}
+};
 
 /** Throws on anything that should fail the whole batch before any write. */
 export const handleUpdateCatalogErrors = async ({
@@ -24,6 +64,7 @@ export const handleUpdateCatalogErrors = async ({
 	params: UpdateCatalogParams;
 }): Promise<void> => {
 	handleUpdateFeatureErrors({ ctx, catalogContext, updateCatalogPlan });
+	validateProjectedInvoiceCreditPooling({ catalogContext, updateCatalogPlan });
 	handleRemoveFeatureErrors({ updateCatalogPlan });
 	handleRemovePlanErrors({
 		updateCatalogPlan,

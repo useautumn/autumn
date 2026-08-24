@@ -22,6 +22,7 @@ await mockModuleWithRestore("@/queue/createWorkerContext.js", () => ({
 			id: "req_123",
 			org: { id: "org_123", slug: "test-org" },
 			env: AppEnv.Sandbox,
+			features: [],
 			customerId: "cus_123",
 			logger: {
 				error: mock(() => {}),

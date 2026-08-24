@@ -26,6 +26,7 @@ import { getObjectsUsingFeature } from "../utils/updateFeatureUtils/getObjectsUs
 import { handleFeatureIdChanged } from "../utils/updateFeatureUtils/handleFeatureIdChanged.js";
 import { handleFeatureTypeChanged } from "../utils/updateFeatureUtils/handleFeatureTypeChanged.js";
 import { handleFeatureUsageTypeChanged } from "../utils/updateFeatureUtils/handleFeatureUsageTypeChanged.js";
+import { validateInvoiceCreditPooling } from "../validateInvoiceCreditPooling.js";
 import { hasCreditRateCardChanged } from "./hasCreditRateCardChanged.js";
 import type { ClearCreditSystemCachePayload } from "./runClearCreditSystemCacheTask.js";
 
@@ -165,11 +166,33 @@ export const updateFeature = async ({
 		feature.config?.usage_type !== updates.config?.usage_type;
 
 	const isChangingName = updates.name && feature.name !== updates.name;
+	const isEnablingInvoiceCredits =
+		feature.config?.invoice_credit !== true &&
+		(updates.type ?? feature.type) === FeatureType.CreditSystem &&
+		updates.config?.invoice_credit === true;
 
-	if (isChangingType || isChangingId || isChangingUsageType) {
+	if (
+		isChangingType ||
+		isChangingId ||
+		isChangingUsageType ||
+		isEnablingInvoiceCredits
+	) {
 		const objectsUsingFeature = await getObjectsUsingFeature({
 			ctx,
 			feature,
+		});
+
+		validateInvoiceCreditPooling({
+			feature: {
+				...feature,
+				type: updates.type ?? feature.type,
+				config: updates.config ?? feature.config,
+			},
+			pooled:
+				isEnablingInvoiceCredits &&
+				objectsUsingFeature.entitlements.some(
+					(entitlement) => entitlement.pooled,
+				),
 		});
 
 		// Validate the whole change before any mutation so it stays atomic.

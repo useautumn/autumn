@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
-import { FeatureType, FeatureUsageType } from "@autumn/shared";
+import { ErrCode, FeatureType, FeatureUsageType } from "@autumn/shared";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { deleteDbPlans } from "../plans/utils/expectCatalogPlans.js";
 import {
 	deleteDbFeatures,
 	expectDbFeaturesCorrect,
@@ -149,6 +151,90 @@ test.concurrent(
 				],
 			});
 		} finally {
+			await deleteDbFeatures({ ctx, featureIds });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 credit rate card: rejects enabling invoice credits on a pooled feature")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const meteredFeatureId = uniqueTestId("rate_pooled_metered");
+		const creditSystemId = uniqueTestId("rate_pooled_credits");
+		const planId = uniqueTestId("rate_pooled_plan");
+		const featureIds = [meteredFeatureId, creditSystemId];
+		const creditSchema = [
+			{
+				metered_feature_id: meteredFeatureId,
+				credit_cost: 1,
+			},
+		];
+
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		await deleteDbFeatures({ ctx, featureIds });
+
+		try {
+			await autumnV2_3.catalogV2.update({
+				features: [
+					{
+						feature_id: meteredFeatureId,
+						name: meteredFeatureId,
+						type: FeatureType.Metered,
+						consumable: true,
+					},
+					{
+						feature_id: creditSystemId,
+						name: creditSystemId,
+						type: FeatureType.CreditSystem,
+						invoice_credit: false,
+						credit_schema: creditSchema,
+					},
+				],
+				plans: [
+					{
+						plan_id: planId,
+						name: planId,
+						items: [
+							{
+								feature_id: creditSystemId,
+								included: 100,
+								pooled: true,
+							},
+						],
+					},
+				],
+			});
+
+			await expectAutumnError({
+				errCode: ErrCode.InvalidProductItem,
+				errMessage: "Invoice-credit features cannot use pooled plan items",
+				func: () =>
+					autumnV2_3.catalogV2.update({
+						features: [
+							{
+								feature_id: creditSystemId,
+								name: creditSystemId,
+								type: FeatureType.CreditSystem,
+								invoice_credit: true,
+								credit_schema: creditSchema,
+							},
+						],
+					}),
+			});
+
+			await expectAutumnError({
+				errCode: ErrCode.InvalidProductItem,
+				errMessage: "Invoice-credit features cannot use pooled plan items",
+				func: () =>
+					autumnV2_3.post("/features.update", {
+						feature_id: creditSystemId,
+						invoice_credit: true,
+						credit_schema: creditSchema,
+					}),
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
 			await deleteDbFeatures({ ctx, featureIds });
 		}
 	},

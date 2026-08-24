@@ -121,7 +121,7 @@ describe("credit-rate usage attribution carry-over", () => {
 	);
 
 	test.concurrent(
-		"sums duplicate source entries from multiple credit entitlements",
+		"rejects duplicate source positions from multiple credit entitlements",
 		() => {
 			const customerProduct = customerProducts.create({
 				customerEntitlements: [
@@ -142,19 +142,14 @@ describe("credit-rate usage attribution carry-over", () => {
 				],
 			});
 
-			const existingUsages = cusProductToExistingUsages({
-				cusProduct: customerProduct,
-				carryAllConsumableFeatures: true,
-			});
-
-			expect(existingUsages[CREDIT_INTERNAL_FEATURE_ID]).toEqual({
-				usage: 20,
-				entityUsages: {},
-				usageAttribution: {
-					[SOURCE_A_INTERNAL_ID]: { units: 1_500, credits: 15 },
-					[SOURCE_B_INTERNAL_ID]: { units: 50, credits: 5 },
-				},
-			});
+			expect(() =>
+				cusProductToExistingUsages({
+					cusProduct: customerProduct,
+					carryAllConsumableFeatures: true,
+				}),
+			).toThrow(
+				"carry_over_usages cannot merge multiple attribution positions for credit feature 'invoice_credits'.",
+			);
 		},
 	);
 

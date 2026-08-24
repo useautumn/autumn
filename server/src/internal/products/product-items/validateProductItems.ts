@@ -23,6 +23,7 @@ import {
 } from "@autumn/shared";
 import { createFeaturesFromItems } from "@server/internal/products/product-items/createFeaturesFromItems";
 import { StatusCodes } from "http-status-codes";
+import { validateInvoiceCreditPooling } from "@/internal/features/validateInvoiceCreditPooling.js";
 import {
 	isBooleanFeatureItem,
 	isFeatureItem,
@@ -67,6 +68,8 @@ const validateProductItem = ({
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
+
+	validateInvoiceCreditPooling({ feature, pooled: item.pooled });
 
 	if (
 		item.pooled &&

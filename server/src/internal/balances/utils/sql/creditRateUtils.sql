@@ -290,6 +290,8 @@ BEGIN
     WHEN direction > 0 THEN LEAST(unwind_magnitude, current_units)
     ELSE unwind_magnitude
   END;
+  -- Attribution stops at zero, but the caller consumes the full receipt segment;
+  -- any excess is net-negative usage, which rate cards do not credit.
   inverse_units := -direction * attribution_unwind_magnitude;
   restored_units := GREATEST(0, current_units + inverse_units);
   inverse_credits := credit_rate_cost_at_usage(rate_card, restored_units)
