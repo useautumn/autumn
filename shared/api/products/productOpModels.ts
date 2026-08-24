@@ -126,7 +126,7 @@ export const CreateProductV2ParamsSchema = z
 		create_in_stripe: z.boolean().optional().meta({
 			internal: true,
 			description:
-				"False skips Stripe id reuse on create. Stripe resources are created lazily at billing time either way.",
+				"False skips Stripe id reuse on create; true carries no intent here because published SDKs bake it into every request, so Stripe resources are created lazily at billing time either way.",
 		}),
 
 		archived: z.boolean().optional().meta({

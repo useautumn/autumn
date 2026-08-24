@@ -156,115 +156,105 @@ const initializeResourcesAndGetUsageConfig = async ({
 	return config;
 };
 
-test.concurrent(
-	`${chalk.yellowBright("stripe resources: usage price uses feature-level stripe meter")}`,
-	async () => {
-		const suffix = uniqueSuffix();
-		const featureId = `feature_meter_${suffix}`;
-		const productId = `feature_meter_product_${suffix}`;
+test.concurrent(`${chalk.yellowBright("stripe resources: usage price uses feature-level stripe meter")}`, async () => {
+	const suffix = uniqueSuffix();
+	const featureId = `feature_meter_${suffix}`;
+	const productId = `feature_meter_product_${suffix}`;
 
-		const { autumnV2_2, ctx } = await initScenario({
-			setup: [],
-			actions: [],
-		});
+	const { autumnV2_2, ctx } = await initScenario({
+		setup: [],
+		actions: [],
+	});
 
-		await createUsageProductWithoutStripeResources({
-			autumn: autumnV2_2,
-			ctx,
-			featureId,
-			productId,
-		});
+	await createUsageProductWithoutStripeResources({
+		autumn: autumnV2_2,
+		ctx,
+		featureId,
+		productId,
+	});
 
-		const stripeMeter = await ctx.stripeCli.billing.meters.create({
-			display_name: `Feature meter ${suffix}`,
-			event_name: `feature_meter_event_${suffix}`,
-			default_aggregation: { formula: "sum" },
-		});
+	const stripeMeter = await ctx.stripeCli.billing.meters.create({
+		display_name: `Feature meter ${suffix}`,
+		event_name: `feature_meter_event_${suffix}`,
+		default_aggregation: { formula: "sum" },
+	});
 
-		await setFeatureStripeMeter({
-			ctx,
-			featureId,
-			stripeMeter: {
-				id: stripeMeter.id,
-				event_name: stripeMeter.event_name,
-			},
-		});
+	await setFeatureStripeMeter({
+		ctx,
+		featureId,
+		stripeMeter: {
+			id: stripeMeter.id,
+			event_name: stripeMeter.event_name,
+		},
+	});
 
-		const config = await initializeResourcesAndGetUsageConfig({
-			ctx,
-			productId,
-			featureId,
-		});
+	const config = await initializeResourcesAndGetUsageConfig({
+		ctx,
+		productId,
+		featureId,
+	});
 
-		expect(config.stripe_meter_id).toBe(stripeMeter.id);
-		expect(config.stripe_event_name).toBe(stripeMeter.event_name);
+	expect(config.stripe_meter_id).toBe(stripeMeter.id);
+	expect(config.stripe_event_name).toBe(stripeMeter.event_name);
 
-		if (!config.stripe_price_id || !config.stripe_product_id) {
-			throw new Error("Expected initialized Stripe price and product IDs");
-		}
+	if (!config.stripe_price_id || !config.stripe_product_id) {
+		throw new Error("Expected initialized Stripe price and product IDs");
+	}
 
-		const stripePrice = await ctx.stripeCli.prices.retrieve(
-			config.stripe_price_id,
-		);
-		expect(stripePrice.product).toBe(config.stripe_product_id);
-		expect(stripePrice.recurring?.usage_type).toBe("metered");
-		expect(stripePrice.recurring?.meter).toBe(stripeMeter.id);
-	},
-);
+	const stripePrice = await ctx.stripeCli.prices.retrieve(config.stripe_price_id);
+	expect(stripePrice.product).toBe(config.stripe_product_id);
+	expect(stripePrice.recurring?.usage_type).toBe("metered");
+	expect(stripePrice.recurring?.meter).toBe(stripeMeter.id);
+});
 
-test.concurrent(
-	`${chalk.yellowBright("stripe resources: missing feature-level stripe meter falls back to a new meter")}`,
-	async () => {
-		const suffix = uniqueSuffix();
-		const featureId = `feature_meter_missing_${suffix}`;
-		const productId = `feature_meter_missing_product_${suffix}`;
-		const missingStripeMeter = {
-			id: `mtr_missing_${suffix}`,
-			event_name: `feature_meter_missing_event_${suffix}`,
-		};
+test.concurrent(`${chalk.yellowBright("stripe resources: missing feature-level stripe meter falls back to a new meter")}`, async () => {
+	const suffix = uniqueSuffix();
+	const featureId = `feature_meter_missing_${suffix}`;
+	const productId = `feature_meter_missing_product_${suffix}`;
+	const missingStripeMeter = {
+		id: `mtr_missing_${suffix}`,
+		event_name: `feature_meter_missing_event_${suffix}`,
+	};
 
-		const { autumnV2_2, ctx } = await initScenario({
-			setup: [],
-			actions: [],
-		});
+	const { autumnV2_2, ctx } = await initScenario({
+		setup: [],
+		actions: [],
+	});
 
-		await createUsageProductWithoutStripeResources({
-			autumn: autumnV2_2,
-			ctx,
-			featureId,
-			productId,
-		});
+	await createUsageProductWithoutStripeResources({
+		autumn: autumnV2_2,
+		ctx,
+		featureId,
+		productId,
+	});
 
-		await setFeatureStripeMeter({
-			ctx,
-			featureId,
-			stripeMeter: missingStripeMeter,
-		});
+	await setFeatureStripeMeter({
+		ctx,
+		featureId,
+		stripeMeter: missingStripeMeter,
+	});
 
-		const config = await initializeResourcesAndGetUsageConfig({
-			ctx,
-			productId,
-			featureId,
-		});
+	const config = await initializeResourcesAndGetUsageConfig({
+		ctx,
+		productId,
+		featureId,
+	});
 
-		expect(config.stripe_meter_id).toBeString();
-		expect(config.stripe_event_name).toBeString();
-		expect(config.stripe_meter_id).not.toBe(missingStripeMeter.id);
-		expect(config.stripe_event_name).not.toBe(missingStripeMeter.event_name);
+	expect(config.stripe_meter_id).toBeString();
+	expect(config.stripe_event_name).toBeString();
+	expect(config.stripe_meter_id).not.toBe(missingStripeMeter.id);
+	expect(config.stripe_event_name).not.toBe(missingStripeMeter.event_name);
 
-		if (!config.stripe_meter_id || !config.stripe_price_id) {
-			throw new Error("Expected fallback Stripe meter and price IDs");
-		}
+	if (!config.stripe_meter_id || !config.stripe_price_id) {
+		throw new Error("Expected fallback Stripe meter and price IDs");
+	}
 
-		const fallbackMeter = await ctx.stripeCli.billing.meters.retrieve(
-			config.stripe_meter_id,
-		);
-		expect(fallbackMeter.id).toBe(config.stripe_meter_id);
+	const fallbackMeter = await ctx.stripeCli.billing.meters.retrieve(
+		config.stripe_meter_id,
+	);
+	expect(fallbackMeter.id).toBe(config.stripe_meter_id);
 
-		const stripePrice = await ctx.stripeCli.prices.retrieve(
-			config.stripe_price_id,
-		);
-		expect(stripePrice.recurring?.usage_type).toBe("metered");
-		expect(stripePrice.recurring?.meter).toBe(config.stripe_meter_id);
-	},
-);
+	const stripePrice = await ctx.stripeCli.prices.retrieve(config.stripe_price_id);
+	expect(stripePrice.recurring?.usage_type).toBe("metered");
+	expect(stripePrice.recurring?.meter).toBe(config.stripe_meter_id);
+});

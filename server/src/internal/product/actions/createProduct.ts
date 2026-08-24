@@ -132,8 +132,6 @@ export const createProduct = async ({
 		});
 	}
 
-	// Published SDKs bake create_in_stripe: true into every request, so an
-	// explicit true carries no intent here — reuse only, never create.
 	if (data.create_in_stripe !== false) {
 		await initStripeResourcesForProducts({
 			ctx,

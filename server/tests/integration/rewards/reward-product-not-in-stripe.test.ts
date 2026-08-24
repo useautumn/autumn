@@ -10,6 +10,7 @@ import {
 	type CreateReward,
 	RewardType,
 } from "@autumn/shared";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -38,7 +39,7 @@ test.concurrent(
 		});
 
 		const reward: CreateReward = {
-			id: `reward-not-in-stripe-${Date.now().toString(36)}`,
+			id: uniqueTestId("reward-not-in-stripe"),
 			name: "Scoped pre-attach",
 			type: RewardType.PercentageDiscount,
 			promo_codes: [],

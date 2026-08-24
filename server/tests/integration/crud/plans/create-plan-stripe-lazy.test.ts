@@ -4,8 +4,9 @@
  * force Stripe creation — force-create is only honored on catalogV2 updates.
  */
 
-import { expect, test } from "bun:test";
+import { test } from "bun:test";
 import { ApiVersion, BillingInterval, BillingMethod } from "@autumn/shared";
+import { uniqueTestId } from "@tests/integration/catalog-v2/utils/uniqueTestId.js";
 import {
 	expectPriceStripeResourcesAbsent,
 	expectProductProcessorCorrect,
@@ -23,7 +24,7 @@ const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 test.concurrent(
 	`${chalk.yellowBright("plans.create: create_in_stripe true (the SDK default) still creates nothing in Stripe")}`,
 	async () => {
-		const planId = `plan_create_lazy_${Math.random().toString(36).slice(2, 9)}`;
+		const planId = uniqueTestId("plan_create_lazy");
 		try {
 			await autumnRpc.plans.create({
 				plan_id: planId,

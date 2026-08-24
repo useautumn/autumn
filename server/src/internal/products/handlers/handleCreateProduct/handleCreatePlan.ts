@@ -136,8 +136,6 @@ export const handleCreatePlan = createRoute({
 			free_trial: newFreeTrial,
 		};
 
-		// Published SDKs bake create_in_stripe: true into every request, so an
-		// explicit true carries no intent here — reuse only, never create.
 		if (v1_2Body.create_in_stripe !== false) {
 			await initStripeResourcesForProducts({
 				ctx,

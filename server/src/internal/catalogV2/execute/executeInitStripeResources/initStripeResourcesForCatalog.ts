@@ -3,7 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
-import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
 import { hydratePlanLicenseProcessor } from "./hydratePlanLicenseProcessor";
 import {
 	catalogProductsByInternalId,
@@ -58,15 +57,6 @@ export const initStripeResourcesForCatalog = async ({
 			product,
 			catalogByInternalId,
 		});
-
-		if (upsert.createInStripe === false) {
-			await applyStripeResourceReuseForProduct({
-				ctx,
-				product,
-				candidateProducts,
-			});
-			continue;
-		}
 
 		await initStripeResourcesForProducts({
 			ctx,
