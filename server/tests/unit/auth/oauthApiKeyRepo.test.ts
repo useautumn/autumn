@@ -27,7 +27,6 @@ const matchesConsent = (apiKey: GuardApiKey) =>
 		consentId: "consent_123",
 		clientId: "oauth_client_2abcDEF",
 		redirectUri: "cursor://anysphere.cursor-retrieval/callback",
-		orgId: "org_123",
 		userId: "user_123",
 		env: AppEnv.Sandbox,
 	});
@@ -65,15 +64,17 @@ describe("isOAuthConsentLinkedApiKey", () => {
 				consentId: "consent_123",
 				clientId: "oauth_client_2abcDEF",
 				redirectUri: "cursor://oauth/other-callback",
-				orgId: "org_123",
 				userId: "user_123",
 				env: AppEnv.Sandbox,
 			}),
 		).toBe(false);
 	});
 
-	test("rejects an OAuth key with different ownership or env", () => {
-		expect(matchesConsent({ ...baseApiKey, orgId: "org_other" })).toBe(false);
+	test("allows a key from the consent's previous environment target", () => {
+		expect(matchesConsent({ ...baseApiKey, orgId: "org_other" })).toBe(true);
+	});
+
+	test("rejects an OAuth key with different user ownership or env", () => {
 		expect(matchesConsent({ ...baseApiKey, userId: "user_other" })).toBe(false);
 		expect(matchesConsent({ ...baseApiKey, env: AppEnv.Live })).toBe(false);
 	});
