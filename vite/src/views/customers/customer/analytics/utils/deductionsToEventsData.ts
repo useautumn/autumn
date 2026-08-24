@@ -1,12 +1,5 @@
 import type { DeductionPeriod } from "@autumn/shared";
-
-type EventRow = Record<string, string | number>;
-
-interface EventsData {
-	meta: Array<{ name: string }>;
-	rows: number;
-	data: EventRow[];
-}
+import type { EventRow, EventsData } from "../components/analytics-types";
 
 const pad = (value: number): string => String(value).padStart(2, "0");
 
@@ -24,6 +17,9 @@ const toPeriodString = (epochMs: number): string => {
 		`${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`
 	);
 };
+
+/** Suffix appended to a group's series when it spent from a balance it doesn't own. */
+export const CUSTOMER_BALANCE_SUFFIX = " · customer";
 
 /**
  * Pivots the `deductions` response into the exact EventsData shape the existing
@@ -43,9 +39,6 @@ const toPeriodString = (epochMs: number): string => {
  * (e.g. a property group_by, which deductions don't serve) columns fall back to
  * one per balance-owning feature.
  */
-/** Suffix appended to a group's series when it spent from a balance it doesn't own. */
-export const CUSTOMER_BALANCE_SUFFIX = " · customer";
-
 export function deductionsToEventsData({
 	deductions,
 	splitSpillover = false,
