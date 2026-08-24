@@ -108,6 +108,11 @@ export const createDualLogger = () => {
 };
 
 export const logger = createLogger();
+export const flushLogger = async (): Promise<void> => {
+	await new Promise<void>((resolve, reject) => {
+		pinoLogger.flush((error) => (error ? reject(error) : resolve()));
+	});
+};
 export type Logger = {
 	debug: (...args: any[]) => void;
 	info: (...args: any[]) => void;

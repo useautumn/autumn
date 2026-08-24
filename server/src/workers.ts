@@ -9,6 +9,7 @@ import {
 	startAllEdgeConfigPolling,
 	stopAllEdgeConfigPolling,
 } from "./internal/misc/edgeConfig/edgeConfigRegistry.js";
+import { assertSqsWorkerRuntime } from "./queue/assertSqsWorkerRuntime.js";
 import "./internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import "./internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import "./internal/misc/requestBlocks/requestBlockStore.js";
@@ -30,6 +31,7 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 if (cluster.isPrimary) {
 	await initInfisical();
 	getAutumnEnv();
+	await assertSqsWorkerRuntime();
 
 	// const { initHatchetWorker } = await import("./queue/initWorkers.js");
 	// await initHatchetWorker();
