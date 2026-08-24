@@ -41,3 +41,15 @@ const REASONING_BY_AGENT: Record<LeafAgentConnection, "minimal" | "none"> = {
 
 export const leafReasoning = (agent: LeafAgentConnection) =>
 	REASONING_BY_AGENT[agent];
+
+const DEFAULT_OPENROUTER_CONTEXT_WINDOW_TOKENS = 1_000_000;
+
+/** Eve resolves context windows from AI Gateway metadata, which has no entries
+ * for OpenRouter models — supply the window explicitly to keep compaction alive. */
+export const leafModelContextWindowTokens = (agent: LeafAgentConnection) => {
+	const value =
+		process.env[`EVE_MODEL_${agent.toUpperCase()}`] ?? process.env.EVE_MODEL;
+	if (!value?.startsWith("openrouter/")) return undefined;
+	const configured = Number(process.env.EVE_MODEL_CONTEXT_WINDOW ?? "");
+	return configured > 0 ? configured : DEFAULT_OPENROUTER_CONTEXT_WINDOW_TOKENS;
+};
