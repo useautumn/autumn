@@ -5,7 +5,9 @@ top-level `agent/`) — creating one IS wiring it. The `catalog` specialist is
 prepared but intentionally absent: its prompt (`leafAgentPrompt("catalog")`),
 tool allowlist, approval set, and skill bundle all exist in `agent/lib` and
 `@autumn/agent-docs`. Catalog writes are exposed to no live agent — the
-orchestrator only keeps catalog reads. To wire the specialist, mirror the
+orchestrator is a pure router (its only Autumn tool is the gated
+`updateAgentRules`); catalog reads live on the investigator and the preloaded
+org-context index. To wire the specialist, mirror the
 `investigator` directory shape with `agent: "catalog"` and reintroduce a
 `catalog` routing rule (and the `catalog-decisions` part include) in
 `content/instructions/orchestrator.md` in `@autumn/agent-docs`.

@@ -1,53 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
 	dispatchThreadMessage,
-	isStopMessage,
+	stopActiveThreadRun,
 } from "../../../src/internal/runs/runCoordinator.js";
 import {
 	closeRun,
 	registerRun,
 } from "../../../src/internal/runs/runRegistry.js";
 
-describe("isStopMessage", () => {
-	test("matches exact stop keywords only", () => {
-		expect(isStopMessage("stop")).toBe(true);
-		expect(isStopMessage("  STOP!!")).toBe(true);
-		expect(isStopMessage("cancel that.")).toBe(true);
-		expect(isStopMessage("stop the attach for cus_1")).toBe(false);
-		expect(isStopMessage("don't stop")).toBe(false);
-	});
-});
-
 describe("dispatchThreadMessage", () => {
-	test("routes stop keywords to the active run", async () => {
-		const interrupts: string[] = [];
-		const run = registerRun({
-			key: "co1",
-			kind: "message",
-			ownerProviderUserId: "U1",
-			sendInterrupt: async (sessionId) => {
-				interrupts.push(sessionId);
-			},
-		});
-		run.resolveSessionId("sesn_1");
-		let newRuns = 0;
-
-		await dispatchThreadMessage({
-			hasAttachments: false,
-			providerUserId: "U1",
-			runKey: "co1",
-			runNewMessage: async () => {
-				newRuns += 1;
-			},
-			text: "stop",
-		});
-
-		expect(run.stop).toEqual({ byUserId: "U1", reason: "user" });
-		expect(interrupts).toEqual(["sesn_1"]);
-		expect(newRuns).toBe(0);
-		closeRun({ key: "co1", run });
-	});
-
 	test("injects follow-ups into the active run with an interrupt first", async () => {
 		const sent: string[] = [];
 		const run = registerRun({
@@ -206,5 +167,36 @@ describe("dispatchThreadMessage", () => {
 		expect(run.pendingTurns).toBe(0);
 		expect(newRuns).toBe(1);
 		closeRun({ key: "co6", run });
+	});
+});
+
+describe("stopActiveThreadRun", () => {
+	test("stops the thread's active run", async () => {
+		const interrupts: string[] = [];
+		const run = registerRun({
+			key: "co-opt-out",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendInterrupt: async (sessionId) => {
+				interrupts.push(sessionId);
+			},
+		});
+		run.resolveSessionId("sesn_opt_out");
+
+		const stopped = await stopActiveThreadRun({
+			byUserId: "U2",
+			runKey: "co-opt-out",
+		});
+
+		expect(stopped).toBe(true);
+		expect(run.stop).toEqual({ byUserId: "U2", reason: "user" });
+		expect(interrupts).toEqual(["sesn_opt_out"]);
+		closeRun({ key: "co-opt-out", run });
+	});
+
+	test("returns false when the thread has no active run", async () => {
+		expect(
+			await stopActiveThreadRun({ byUserId: "U1", runKey: "co-none" }),
+		).toBe(false);
 	});
 });

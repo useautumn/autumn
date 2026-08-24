@@ -861,6 +861,9 @@
     "sharp",
     "unrs-resolver",
   ],
+  "patchedDependencies": {
+    "@chat-adapter/slack@4.38.1": "patches/@chat-adapter%2Fslack@4.38.1.patch",
+  },
   "overrides": {
     "@better-auth/passkey": "1.6.25",
     "@isaacs/brace-expansion": "5.0.1",
