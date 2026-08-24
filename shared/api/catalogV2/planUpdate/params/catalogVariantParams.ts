@@ -22,6 +22,10 @@ export const CatalogVariantParamsSchema = z.object({
 	name: z.string().nonempty().optional().meta({
 		description: "Display name when creating the variant if it does not exist.",
 	}),
+	new_plan_id: z.string().nonempty().regex(idRegex).optional().meta({
+		description:
+			"Rename this variant to this id. Same execute path as a top-level new_plan_id.",
+	}),
 	archived: z.boolean().optional().meta({
 		description:
 			"Archive or unarchive this variant. Omit to leave archived state unchanged.",

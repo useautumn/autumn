@@ -7,6 +7,7 @@ import { computeInsertFeaturesPlan } from "@/internal/catalogV2/actions/updateCa
 import { computeMigrationDraftPlans } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/computeMigrationDraftPlans";
 import { computeRemoveFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRemoveFeaturesPlan/computeRemoveFeaturesPlan";
 import { computeRemoveProductsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRemoveProductsPlan/computeRemoveProductsPlan";
+import { computeRenameProductIdsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeRenameProductIdsPlan/computeRenameProductIdsPlan";
 import { computeUpdateFeaturesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpdateFeaturesPlan/computeUpdateFeaturesPlan";
 import { computeUpsertProductsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductsPlan";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
@@ -87,6 +88,11 @@ export const computeUpdateCatalogPlan = ({
 	const plan = compute.toPlan();
 	return {
 		...plan,
+		renamePlans: computeRenameProductIdsPlan({
+			params,
+			productStatesContext: catalogContext.productStatesContext,
+			aliases: ctx.org.planAliases,
+		}),
 		migrationDrafts: computeMigrationDraftPlans({
 			upsertProductPlans: plan.upsertProducts,
 			params,

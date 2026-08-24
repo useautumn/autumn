@@ -1,4 +1,7 @@
-import { productV2ToBasePrice } from "@autumn/shared";
+import {
+	productV2ToBasePrice,
+	type UpdateCatalogResponse,
+} from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import type { AxiosError } from "axios";
 import { useState } from "react";
@@ -13,12 +16,17 @@ import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
+import { useFetchPreviewUpdateCatalog } from "@/hooks/queries/catalog/usePreviewUpdateCatalog";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { buildUpdateCatalogPlanParams } from "../../plan/catalog/buildUpdateCatalogPlanParams";
+import { catalogPreviewOpensDialog } from "../../plan/catalog/catalogPlanPreview";
+import PlanChangeDialog, {
+	type PlanChangeCreateConfirm,
+} from "../../plan/versioning/PlanChangeDialog";
 import { AdditionalOptions } from "../../plan/components/edit-plan-details/AdditionalOptions";
 import { BasePriceSection } from "../../plan/components/edit-plan-details/BasePriceSection";
 import { MoreSettingsSection } from "../../plan/components/edit-plan-details/MoreSettingsSection";
@@ -142,6 +150,8 @@ function CreateProductFormContent({
 	setOpen: (open: boolean) => void;
 }) {
 	const [loading, setLoading] = useState(false);
+	const [createConfirm, setCreateConfirm] =
+		useState<PlanChangeCreateConfirm | null>(null);
 	const { product } = useProduct();
 	const basePrice = productV2ToBasePrice({ product });
 	const { features = [] } = useFeaturesQuery();
@@ -149,8 +159,25 @@ function CreateProductFormContent({
 	const axiosInstance = useAxiosInstance();
 	const navigate = useNavigate();
 	const { invalidate } = useProductsQuery();
+	const fetchPreviewUpdateCatalog = useFetchPreviewUpdateCatalog();
 
 	const { title, description, submit } = sheetCopy({ isAddOn, isLicense });
+
+	const finishCreate = async (response: UpdateCatalogResponse) => {
+		const created = response.plans[0];
+		if (!created) {
+			throw new Error("Plan was not created");
+		}
+
+		invalidate();
+
+		if (onSuccess) {
+			await onSuccess(created);
+		} else {
+			navigateTo(`/products/${created.id}`, navigate);
+		}
+		setOpen(false);
+	};
 
 	const handleCreateClicked = async () => {
 		const productName = product.name?.trim() || "";
@@ -160,33 +187,34 @@ function CreateProductFormContent({
 			return;
 		}
 
+		const plans = [
+			buildUpdateCatalogPlanParams({
+				editedProduct: product,
+				features,
+			}),
+		];
+
 		setLoading(true);
 		try {
-			const response = await CatalogV2Service.update(axiosInstance, {
-				plans: [
-					buildUpdateCatalogPlanParams({
-						editedProduct: product,
-						features,
-					}),
-				],
-			});
-			const created = response.plans[0];
-			if (!created) {
-				throw new Error("Plan was not created");
+			const preview = await fetchPreviewUpdateCatalog({ plans });
+			const planPreview = preview.plans[0];
+			if (planPreview && catalogPreviewOpensDialog({ preview: planPreview })) {
+				setCreateConfirm({
+					preview: planPreview,
+					plans,
+					onSaved: finishCreate,
+				});
+				return;
 			}
 
-			invalidate();
-
-			if (onSuccess) {
-				await onSuccess(created);
-			} else {
-				navigateTo(`/products/${created.id}`, navigate);
-			}
-			setOpen(false);
+			await finishCreate(
+				await CatalogV2Service.update(axiosInstance, { plans }),
+			);
 		} catch (error) {
 			toast.error(getBackendErr(error as AxiosError, "Failed to create plan"));
+		} finally {
+			setLoading(false);
 		}
-		setLoading(false);
 	};
 
 	return (
@@ -205,6 +233,16 @@ function CreateProductFormContent({
 				)}
 			</div>
 
+			{createConfirm && (
+				<PlanChangeDialog
+					createConfirm={createConfirm}
+					open
+					setOpen={(nextOpen) => {
+						if (!nextOpen) setCreateConfirm(null);
+					}}
+				/>
+			)}
+
 			<SheetFooter>
 				<ShortcutButton
 					variant="secondary"
@@ -216,6 +254,7 @@ function CreateProductFormContent({
 				</ShortcutButton>
 				<ShortcutButton
 					disabled={
+						!!createConfirm ||
 						(product.planType === "paid" &&
 							product.basePriceType !== "usage" &&
 							!basePrice?.price) ||

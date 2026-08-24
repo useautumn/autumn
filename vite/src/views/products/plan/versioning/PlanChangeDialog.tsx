@@ -1,4 +1,9 @@
-import type { FrontendProduct } from "@autumn/shared";
+import type {
+	CatalogPlanUpdatePreview,
+	FrontendProduct,
+	UpdateCatalogPlanParamsInput,
+	UpdateCatalogResponse,
+} from "@autumn/shared";
 import {
 	AreaRadioGroupItem,
 	Dialog,
@@ -43,13 +48,19 @@ import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
-import { useProductContext } from "../../product/ProductContext";
-import type { CatalogVersionChoice } from "../catalog/catalogPlanPreview";
+import { useOptionalProductContext } from "../../product/ProductContext";
+import {
+	type CatalogVersionChoice,
+	catalogPreviewAliasReplacements,
+	catalogPreviewPlanIdChange,
+	isConfirmOnlyPlanChangeDialog,
+} from "../catalog/catalogPlanPreview";
 import { usePlanChangeCatalogPreview } from "../catalog/usePlanChangeCatalogPreview";
 import {
 	commitLicenseChanges,
 	getLicenseUpdatePayload,
 } from "../components/plan-licenses/useLicenseSaveRegistry";
+import { PlanIdChangeNotice } from "./PlanIdChangeNotice";
 import { LicenseChangeList } from "./LicenseChangeList";
 import { LicenseParentTargetsStep } from "./LicenseParentTargetsStep";
 import { MigrateTargetsStep } from "./MigrateTargetsStep";
@@ -117,12 +128,22 @@ const planChangePrimaryText = ({
 };
 
 const planChangeDescription = ({
+	aliasOnly,
+	planIdChangeOnly,
 	step,
 	migrateNeeded,
 }: {
+	aliasOnly: boolean;
+	planIdChangeOnly: boolean;
 	step: StepKey;
 	migrateNeeded: boolean;
 }) => {
+	if (planIdChangeOnly) {
+		return "Confirm you want to change this plan's ID.";
+	}
+	if (aliasOnly) {
+		return "This plan ID is currently an alias of another plan.";
+	}
 	if (step === "review") return "Review what's changing before you save.";
 	if (step === "strategy") return "Choose how this applies across versions.";
 	if (step === "variant_scope") {
@@ -196,10 +217,18 @@ function ConfirmInput({
 	);
 }
 
+export type PlanChangeCreateConfirm = {
+	preview: CatalogPlanUpdatePreview;
+	plans: UpdateCatalogPlanParamsInput[];
+	onSaved?: (result: UpdateCatalogResponse) => void | Promise<void>;
+};
+
 export default function PlanChangeDialog({
+	createConfirm,
 	open,
 	setOpen,
 }: {
+	createConfirm?: PlanChangeCreateConfirm;
 	open: boolean;
 	setOpen: (open: boolean) => void;
 }) {
@@ -210,7 +239,8 @@ export default function PlanChangeDialog({
 	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
 	const { basePlanId: persistedBasePlanId } = useVariantLinkVisibility(product);
 	const { features = [] } = useFeaturesQuery();
-	const { catalogLicenses } = useProductContext();
+	const catalogLicenses =
+		useOptionalProductContext()?.catalogLicenses ?? [];
 	const {
 		refetch,
 		invalidate: invalidateProduct,
@@ -218,7 +248,7 @@ export default function PlanChangeDialog({
 		numVersions,
 	} = useProductQuery();
 	const { setQueryStates } = useProductQueryState();
-	const { invalidate: invalidateProducts } = useProductsQuery();
+	const { products, invalidate: invalidateProducts } = useProductsQuery();
 	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
 	const { invalidate: invalidateMigrations } = useMigrationsQuery();
 	const { org } = useOrg();
@@ -242,16 +272,18 @@ export default function PlanChangeDialog({
 	const currency = org?.default_currency ?? "USD";
 	const isLatest = product.version >= numVersions;
 	const priceChange = getPlanPriceChange({ baseProduct, product, currency });
-	const licenses = open
+	const editorOpen = open && !createConfirm;
+	const licenses = editorOpen
 		? getLicenseUpdatePayload({
 				persistedLinks: catalogLicenses.map(({ planLicense }) => planLicense),
 			})
 		: undefined;
 
-	const { data: variants = [] } = usePlanVariants(product.id, open);
-	const namesByPlanId = Object.fromEntries(
-		variants.map((variant) => [variant.id, variant.name]),
-	);
+	const { data: variants = [] } = usePlanVariants(product.id, editorOpen);
+	const namesByPlanId = {
+		...Object.fromEntries(products.map((entry) => [entry.id, entry.name])),
+		...Object.fromEntries(variants.map((variant) => [variant.id, variant.name])),
+	};
 
 	const {
 		preview,
@@ -275,7 +307,7 @@ export default function PlanChangeDialog({
 		migrateTargets,
 		buildSaveParams,
 	} = usePlanChangeCatalogPreview({
-		open,
+		open: editorOpen,
 		baseProduct,
 		product,
 		features,
@@ -294,11 +326,31 @@ export default function PlanChangeDialog({
 		0,
 	);
 
-	const steps = buildPlanChangeSteps({
-		showVersionStrategy,
-		showVariantScope,
-		showLicenseParentScope,
+	const planPreview = createConfirm?.preview ?? preview;
+	const aliasReplacements = catalogPreviewAliasReplacements({
+		preview: planPreview,
 	});
+	const planIdChange = createConfirm
+		? undefined
+		: catalogPreviewPlanIdChange({
+				preview: planPreview,
+				nextPlanId: product.id,
+			});
+	const confirmOnlyDialog =
+		!!createConfirm ||
+		isConfirmOnlyPlanChangeDialog({
+			preview: planPreview,
+			showVersionStrategy,
+			showVariantScope,
+			showLicenseParentScope,
+		});
+	const steps = confirmOnlyDialog
+		? [{ key: "review", label: "Review", icon: SealCheckIcon }]
+		: buildPlanChangeSteps({
+				showVersionStrategy,
+				showVariantScope,
+				showLicenseParentScope,
+			});
 	const stepKeys = steps.map((s) => s.key as StepKey);
 	const currentIndex = stepKeys.indexOf(step);
 	const isFinalStep = currentIndex === stepKeys.length - 1;
@@ -326,12 +378,22 @@ export default function PlanChangeDialog({
 	};
 
 	const applyChanges = async ({ migrate }: { migrate: boolean }) => {
-		if (step === "migrate" && !confirmed) {
+		if (!createConfirm && step === "migrate" && !confirmed) {
 			toast.error("Confirmation text is incorrect");
 			return;
 		}
 		setIsLoading(true);
 		try {
+			if (createConfirm) {
+				const result = await CatalogV2Service.update(axiosInstance, {
+					plans: createConfirm.plans,
+				});
+				toast.success("Plan created");
+				closeDialog();
+				await createConfirm.onSaved?.(result);
+				return;
+			}
+
 			const willMigrate =
 				migrateNeeded && migrate && strategy !== "new_version";
 			const result = await CatalogV2Service.update(axiosInstance, {
@@ -348,8 +410,14 @@ export default function PlanChangeDialog({
 			void invalidateProduct();
 			void invalidateProducts();
 			closeDialog();
-			if (effectiveVersionChoice === "new") void syncToLatestVersion();
-			else void refetch();
+			const renamed = Boolean(baseProduct && product.id !== baseProduct.id);
+			if (renamed) {
+				navigateTo(`/products/${product.id}`, navigate);
+			} else if (effectiveVersionChoice === "new") {
+				void syncToLatestVersion();
+			} else {
+				void refetch();
+			}
 
 			if (willMigrate) {
 				void invalidateMigrations();
@@ -362,7 +430,12 @@ export default function PlanChangeDialog({
 				);
 			}
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to save plan"));
+			toast.error(
+				getBackendErr(
+					error,
+					createConfirm ? "Failed to create plan" : "Failed to save plan",
+				),
+			);
 		} finally {
 			setIsLoading(false);
 		}
@@ -396,8 +469,13 @@ export default function PlanChangeDialog({
 		isLatest,
 	});
 
-	const title = "Save plan changes";
-	const description = planChangeDescription({ step, migrateNeeded });
+	const title = createConfirm ? "Create plan" : "Save plan changes";
+	const description = planChangeDescription({
+		aliasOnly: confirmOnlyDialog && aliasReplacements.length > 0,
+		planIdChangeOnly: confirmOnlyDialog && !!planIdChange,
+		step,
+		migrateNeeded,
+	});
 	const migrateSubtitle = planChangeMigrateSubtitle({
 		isMetadataOnly,
 		migrateNeeded,
@@ -435,7 +513,16 @@ export default function PlanChangeDialog({
 								transition={{ duration: 0.15, ease: "easeOut" }}
 								className="text-sm flex flex-col gap-4"
 							>
-								{step === "review" && (
+								{step === "review" && confirmOnlyDialog && (
+									<PlanIdChangeNotice
+										from={planIdChange?.from}
+										to={planIdChange?.to}
+										namesByPlanId={namesByPlanId}
+										replacements={aliasReplacements}
+									/>
+								)}
+
+								{step === "review" && !confirmOnlyDialog && (
 									<div className="flex flex-col gap-2.5">
 										<FieldLabel>Preview changes</FieldLabel>
 										<div className="rounded-lg bg-secondary/40 px-3 py-2.5 flex flex-col gap-2">
@@ -565,6 +652,12 @@ export default function PlanChangeDialog({
 
 								{step === "migrate" && (
 									<>
+										<PlanIdChangeNotice
+											from={planIdChange?.from}
+											to={planIdChange?.to}
+											namesByPlanId={namesByPlanId}
+											replacements={aliasReplacements}
+										/>
 										<div className="flex flex-col gap-2.5">
 											<div className="flex flex-col gap-0.5">
 												<FieldLabel>Review &amp; confirm</FieldLabel>

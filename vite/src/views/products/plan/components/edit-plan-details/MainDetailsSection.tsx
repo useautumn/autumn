@@ -1,6 +1,7 @@
 import { FormLabel, Input } from "@autumn/ui";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { PlanIdField } from "./PlanIdField";
 
 export const MainDetailsSection = () => {
 	const { product, setProduct } = useProduct();
@@ -17,14 +18,7 @@ export const MainDetailsSection = () => {
 							onChange={(e) => setProduct({ ...product, name: e.target.value })}
 						/>
 					</div>
-					<div>
-						<FormLabel>ID</FormLabel>
-						<Input
-							placeholder="fills automatically"
-							disabled
-							value={product.id}
-						/>
-					</div>
+					<PlanIdField />
 				</div>
 				{/* <div>
 					<div className="text-form-label block mb-1">Description</div>

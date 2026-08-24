@@ -14,6 +14,7 @@ import {
 	initProductInStripe,
 } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { throwIfPlanIdReservedAsAlias } from "@/internal/catalogV2/productAliases/throwIfPlanIdReservedAsAlias.js";
 import { copyBaseVariants } from "./copyBaseVariants.js";
 import { copyLicenseLinksForPlanCopy } from "./copyLicenseLinksForPlanCopy.js";
 import { copyMissingFeatures } from "./copyMissingFeatures.js";
@@ -69,6 +70,13 @@ export const copyProductForOrgs = async ({
 			message: `Product ${toId} already exists in ${toEnv}`,
 		});
 	}
+
+	await throwIfPlanIdReservedAsAlias({
+		ctx,
+		planId: toId,
+		orgId: toOrg.id,
+		env: toEnv,
+	});
 
 	// 1. Load the source plan and both sides' features
 	const [fromFullProduct, fromFeatures, toFeatures] = await Promise.all([

@@ -69,6 +69,10 @@ export const buildUpdateCatalogPlanParams = ({
 	includeContent?: boolean;
 }): UpdateCatalogPlanParamsInput => {
 	const source = baseProduct ?? editedProduct;
+	const newPlanId =
+		baseProduct && editedProduct.id !== baseProduct.id
+			? editedProduct.id
+			: undefined;
 	const plan = frontendProductToApiPlanV1(
 		{
 			...editedProduct,
@@ -81,6 +85,7 @@ export const buildUpdateCatalogPlanParams = ({
 
 	return {
 		plan_id: source.id,
+		...(newPlanId ? { new_plan_id: newPlanId } : {}),
 		...(pinsVersion(versioning) && baseProduct?.version
 			? { version: baseProduct.version }
 			: {}),
