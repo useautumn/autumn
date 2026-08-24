@@ -9,6 +9,7 @@ import type {
 	ProductItem,
 	UpdateCatalogPlanParamsInput,
 } from "@autumn/shared";
+import { toCatalogBillingControls } from "@/components/billing-controls/clearedBillingControls";
 import { alignTierCurrencyShapes } from "../utils/currencyUtils";
 import { frontendProductToApiPlanV1 } from "../versioning/buildMigrationDraft";
 
@@ -100,7 +101,7 @@ export const buildUpdateCatalogPlanParams = ({
 				}
 			: {}),
 		config: plan.config,
-		billing_controls: plan.billing_controls,
+		billing_controls: toCatalogBillingControls(plan.billing_controls),
 		...(licenses !== undefined ? { licenses } : {}),
 		...(propagate !== undefined ? { propagate } : {}),
 		...(migration !== undefined ? { migration } : {}),
