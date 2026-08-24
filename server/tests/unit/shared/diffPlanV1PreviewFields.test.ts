@@ -3,8 +3,10 @@ import {
 	ApiFeatureType,
 	type ApiPlanV1,
 	BillingInterval,
+	BILLING_CONTROL_KEYS,
 	diffPlanV1,
 	diffPlanV1PreviewFields,
+	PlanPreviousAttributesV0Schema,
 	ResetInterval,
 } from "@autumn/shared";
 
@@ -265,3 +267,85 @@ test("billing_controls: skip_overage_billing true vs unset is a change", () => {
 		billing_controls: from.billing_controls,
 	});
 });
+
+const createdLanes = {
+	auto_topups: [
+		{
+			feature_id: "messages",
+			enabled: true,
+			threshold: 10,
+			quantity: 100,
+		},
+	],
+	spend_limits: [
+		{ feature_id: "messages", enabled: true, overage_limit: 50 },
+	],
+	usage_limits: [
+		{
+			feature_id: "messages",
+			enabled: true,
+			limit: 1000,
+			interval: ResetInterval.Month,
+		},
+	],
+	usage_alerts: [
+		{
+			feature_id: "messages",
+			enabled: true,
+			threshold: 80,
+			threshold_type: "usage_percentage" as const,
+		},
+	],
+	overage_allowed: [{ feature_id: "messages", enabled: true }],
+} as const;
+
+for (const key of BILLING_CONTROL_KEYS) {
+	test(`billing_controls: creating ${key} from unset omits the lane`, () => {
+		const diff = diffPlanV1PreviewFields({
+			from: plan({ billing_controls: {} }),
+			to: plan({ billing_controls: { [key]: createdLanes[key] } }),
+		});
+
+		expect(diff.previous_attributes).toBeNull();
+	});
+
+	test(`billing_controls: creating ${key} from a null lane omits the lane`, () => {
+		const diff = diffPlanV1PreviewFields({
+			from: plan({
+				billing_controls: { [key]: null } as ApiPlanV1["billing_controls"],
+			}),
+			to: plan({ billing_controls: { [key]: createdLanes[key] } }),
+		});
+
+		expect(diff.previous_attributes).toBeNull();
+	});
+
+	test(`billing_controls: creating ${key} from an empty array keeps []`, () => {
+		const diff = diffPlanV1PreviewFields({
+			from: plan({ billing_controls: { [key]: [] } }),
+			to: plan({ billing_controls: { [key]: createdLanes[key] } }),
+		});
+
+		expect(diff.previous_attributes).toEqual({
+			billing_controls: { [key]: [] },
+		});
+		expect(() =>
+			PlanPreviousAttributesV0Schema.parse(diff.previous_attributes),
+		).not.toThrow();
+	});
+
+	test(`billing_controls: deleting ${key} keeps the previous array`, () => {
+		const previous = createdLanes[key];
+		const diff = diffPlanV1PreviewFields({
+			from: plan({ billing_controls: { [key]: previous } }),
+			to: plan({ billing_controls: { [key]: [] } }),
+		});
+
+		expect(diff.previous_attributes).toEqual({
+			billing_controls: { [key]: previous },
+		});
+		expect(() =>
+			PlanPreviousAttributesV0Schema.parse(diff.previous_attributes),
+		).not.toThrow();
+	});
+}

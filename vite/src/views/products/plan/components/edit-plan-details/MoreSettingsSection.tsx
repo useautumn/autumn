@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 import { useParams } from "react-router";
 import { hasBillingControls } from "@/components/billing-controls/BillingControlsDisplay";
+import { EMPTY_BILLING_CONTROLS } from "@/components/billing-controls/clearedBillingControls";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useVariantLinkVisibility } from "../../hooks/useVariantLinkVisibility";
@@ -201,7 +202,10 @@ export const MoreSettingsSection = () => {
 											setBillingControlsOpened(true);
 										} else {
 											setBillingControlsOpened(false);
-											setProduct({ ...product, billing_controls: {} });
+											setProduct({
+												...product,
+												billing_controls: { ...EMPTY_BILLING_CONTROLS },
+											});
 										}
 									}}
 								/>

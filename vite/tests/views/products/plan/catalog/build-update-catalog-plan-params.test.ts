@@ -369,6 +369,134 @@ describe("buildUpdateCatalogPlanParams", () => {
 		});
 	});
 
+	test("populated billing_controls pass through without filling other lanes", () => {
+		const spendLimits = [
+			{
+				feature_id: "messages",
+				enabled: true,
+				limit_type: "absolute" as const,
+				overage_limit: 0,
+				skip_overage_billing: true,
+			},
+		];
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct,
+			editedProduct: {
+				...editedProduct,
+				billing_controls: { spend_limits: spendLimits },
+			},
+			features,
+		});
+		expect(params.billing_controls).toEqual({ spend_limits: spendLimits });
+	});
+
+	test("creating each billing-control lane sends that array only", () => {
+		const created = {
+			auto_topups: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					threshold: 10,
+					quantity: 100,
+				},
+			],
+			spend_limits: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					limit_type: "absolute" as const,
+					overage_limit: 50,
+				},
+			],
+			usage_limits: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					limit: 1000,
+					interval: "month" as const,
+				},
+			],
+			usage_alerts: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					threshold: 80,
+					threshold_type: "usage_percentage" as const,
+				},
+			],
+			overage_allowed: [{ feature_id: "messages", enabled: true }],
+		} as const;
+
+		for (const [key, items] of Object.entries(created)) {
+			const params = buildUpdateCatalogPlanParams({
+				baseProduct,
+				editedProduct: {
+					...editedProduct,
+					billing_controls: { [key]: items },
+				},
+				features,
+			});
+			expect(params.billing_controls).toEqual({ [key]: items });
+			expect(
+				JSON.stringify(params.billing_controls).includes("null"),
+			).toBe(false);
+		}
+	});
+
+	test("cleared billing_controls send empty arrays so every lane is removed", () => {
+		const params = buildUpdateCatalogPlanParams({
+			baseProduct: {
+				...baseProduct,
+				billing_controls: {
+					spend_limits: [
+						{
+							feature_id: "messages",
+							enabled: true,
+							limit_type: "absolute",
+							overage_limit: 0,
+							skip_overage_billing: true,
+						},
+					],
+				},
+			},
+			editedProduct: {
+				...baseProduct,
+				billing_controls: {},
+			},
+			features,
+		});
+
+		expect(params.billing_controls).toEqual({
+			auto_topups: [],
+			spend_limits: [],
+			usage_limits: [],
+			usage_alerts: [],
+			overage_allowed: [],
+		});
+
+		const afterDeletingLast = buildUpdateCatalogPlanParams({
+			baseProduct: {
+				...baseProduct,
+				billing_controls: {
+					spend_limits: [
+						{
+							feature_id: "messages",
+							enabled: true,
+							limit_type: "absolute",
+							overage_limit: 0,
+						},
+					],
+				},
+			},
+			editedProduct: {
+				...baseProduct,
+				billing_controls: { spend_limits: [] },
+			},
+			features,
+		});
+		expect(afterDeletingLast.billing_controls).toEqual(params.billing_controls);
+	});
+
 	test("create omits version and versioning", () => {
 		const params = buildUpdateCatalogPlanParams({
 			editedProduct: { ...editedProduct, is_default: true },

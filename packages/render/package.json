@@ -16,7 +16,7 @@
 		"@autumn/shared": "workspace:*"
 	},
 	"devDependencies": {
-		"@types/bun": "^1.2.13",
+		"@types/bun": "1.3.14",
 		"typescript": "~5.8.3"
 	}
 }
