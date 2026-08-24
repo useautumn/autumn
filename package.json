@@ -228,6 +228,6 @@
 		"@infisical/cli"
 	],
 	"patchedDependencies": {
-		"@chat-adapter/slack@4.37.0": "patches/@chat-adapter%2Fslack@4.37.0.patch"
+		"@chat-adapter/slack@4.38.1": "patches/@chat-adapter%2Fslack@4.38.1.patch"
 	}
 }
