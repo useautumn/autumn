@@ -39,22 +39,37 @@ export const basisExprSql = (basis: FeatureBalanceSortBasis): SQL => {
 	return sql.raw("total");
 };
 
-/** Remaining/granted are statements about finite numbers — a pure-unlimited
- * holder (no finite rows) has neither, so those thresholds exclude them.
- * Usage is real on every row, unlimited included. */
-export const thresholdRequiresFiniteRows = (
-	basis: FeatureBalanceSortBasis,
-): boolean => basis !== "usage";
+/** ∞ > x is true, 5 < ∞ is false: `>` on remaining/granted ADMITS every
+ * unlimited holder (exports must include them); `<` excludes pure-unlimited.
+ * Usage is real on every row, so neither rule applies there. */
+export const unlimitedPassesThreshold = ({
+	basis,
+	op,
+}: {
+	basis: FeatureBalanceSortBasis;
+	op: BalanceFilterOp;
+}): boolean => basis !== "usage" && op === ">";
+
+export const thresholdRequiresFiniteRows = ({
+	basis,
+	op,
+}: {
+	basis: FeatureBalanceSortBasis;
+	op: BalanceFilterOp;
+}): boolean => basis !== "usage" && op === "<";
 
 /** The unlimited stripe orders remaining/granted sorts (no number to rank
- * unlimited customers by); usage ranks everyone by their real number. */
+ * unlimited customers by); usage ranks everyone by their real number, and a
+ * `<` filter passes rows on finite merit so the stripe stands down there too. */
 export const stripeSuppressed = ({
 	basis,
 	remainingFilter,
 }: {
 	basis: FeatureBalanceSortBasis;
 	remainingFilter?: BalanceThresholdFilter;
-}): boolean => basis === "usage" || Boolean(remainingFilter);
+}): boolean =>
+	basis === "usage" ||
+	(remainingFilter !== undefined && !unlimitedPassesThreshold(remainingFilter));
 
 /** Lake nominations per top-up iteration; sized so one batch usually fills a
  * 250 page even after expired-row inflation (~12% table-wide) and filters. */
@@ -227,25 +242,26 @@ const verifyExactBalances = async ({
 		const unlimitedUsage = Number(row.unlimited_used);
 		const finiteRows = Number(row.finite_rows);
 		if (remainingFilter) {
-			if (
-				thresholdRequiresFiniteRows(remainingFilter.basis) &&
-				finiteRows === 0
-			) {
-				continue;
-			}
-			if (
-				!passesBalanceFilter({
-					total: basisValueOf({
-						basis: remainingFilter.basis,
-						remaining,
-						granted,
-						unlimitedUsage,
-					}),
-					op: remainingFilter.op,
-					value: remainingFilter.value,
-				})
-			) {
-				continue;
+			const admittedAsUnlimited =
+				Boolean(row.is_unlimited) && unlimitedPassesThreshold(remainingFilter);
+			if (!admittedAsUnlimited) {
+				if (thresholdRequiresFiniteRows(remainingFilter) && finiteRows === 0) {
+					continue;
+				}
+				if (
+					!passesBalanceFilter({
+						total: basisValueOf({
+							basis: remainingFilter.basis,
+							remaining,
+							granted,
+							unlimitedUsage,
+						}),
+						op: remainingFilter.op,
+						value: remainingFilter.value,
+					})
+				) {
+					continue;
+				}
 			}
 		}
 		mapped.push({
@@ -436,15 +452,21 @@ export const nominationQuery = ({
 	// threshold against a desc sort otherwise burns every batch on giants that
 	// all fail verify — 0-row pages after the full top-up budget.
 	const thresholdPredicate = remainingFilter
-		? sql`AND ${balanceThresholdSql({
-				totalExpr: basisExprSql(remainingFilter.basis),
-				op: remainingFilter.op,
-				value: remainingFilter.value,
-			})}${
-				thresholdRequiresFiniteRows(remainingFilter.basis)
-					? sql` AND finite_rows > 0`
-					: sql``
-			}`
+		? unlimitedPassesThreshold(remainingFilter)
+			? sql`AND (${balanceThresholdSql({
+					totalExpr: basisExprSql(remainingFilter.basis),
+					op: remainingFilter.op,
+					value: remainingFilter.value,
+				})} OR is_unlimited)`
+			: sql`AND ${balanceThresholdSql({
+					totalExpr: basisExprSql(remainingFilter.basis),
+					op: remainingFilter.op,
+					value: remainingFilter.value,
+				})}${
+					thresholdRequiresFiniteRows(remainingFilter)
+						? sql` AND finite_rows > 0`
+						: sql``
+				}`
 		: sql``;
 	const orderBy = suppressStripe
 		? sql`${basisExpr} ${direction}, internal_customer_id ${direction}`
