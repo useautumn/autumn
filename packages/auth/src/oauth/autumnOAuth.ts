@@ -3,8 +3,8 @@ import {
 	OAUTH_PROTOCOL_SCOPES,
 } from "@autumn/shared/utils/auth/autumnOAuthScopes";
 import {
-	getOAuthProtocolScopes as getSharedOAuthProtocolScopes,
 	getRequestedOAuthResourceScopes,
+	getOAuthProtocolScopes as getSharedOAuthProtocolScopes,
 	isOAuthProtocolScope,
 } from "@autumn/shared/utils/auth/oauthScopeUtils";
 
@@ -22,7 +22,19 @@ export const getDefaultOAuthScopes = (requestedScopes?: string[] | null) => {
 	return [...new Set([...resourceScopes, ...OAUTH_PROTOCOL_SCOPES])];
 };
 
-export const getOAuthResourceScopes = <T extends string>(scopes: readonly T[]) =>
-	scopes.filter((scope) => !isOAuthProtocolScope(scope));
+export const getOAuthResourceScopes = <T extends string>(
+	scopes: readonly T[],
+) => scopes.filter((scope) => !isOAuthProtocolScope(scope));
 
 export const getOAuthProtocolScopes = getSharedOAuthProtocolScopes;
+
+export const getOAuthConsentOrgId = ({
+	metadata,
+	referenceId,
+}: {
+	metadata: Record<string, unknown> | null;
+	referenceId: string;
+}) =>
+	typeof metadata?.sandboxOrgId === "string" && metadata.sandboxOrgId
+		? metadata.sandboxOrgId
+		: referenceId;

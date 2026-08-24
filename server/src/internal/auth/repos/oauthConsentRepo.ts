@@ -156,6 +156,7 @@ export const updateOAuthConsentEnv = async ({
 	userId,
 	referenceId,
 	env,
+	sandboxOrgId,
 	redirectUri,
 	scopes,
 }: {
@@ -164,6 +165,7 @@ export const updateOAuthConsentEnv = async ({
 	userId: string;
 	referenceId: string;
 	env: AppEnv;
+	sandboxOrgId: string | null;
 	redirectUri: string | null;
 	scopes?: string[];
 }) =>
@@ -171,6 +173,9 @@ export const updateOAuthConsentEnv = async ({
 		.update(oauthConsent)
 		.set({
 			env,
+			metadata: sandboxOrgId
+				? sql`COALESCE(${oauthConsent.metadata}, '{}'::jsonb) || jsonb_build_object('sandboxOrgId', ${sandboxOrgId}::text)`
+				: sql`COALESCE(${oauthConsent.metadata}, '{}'::jsonb) - 'sandboxOrgId'`,
 			redirectUri,
 			...(scopes ? { scopes } : {}),
 			updatedAt: new Date(),

@@ -111,7 +111,6 @@ export const rotateOAuthConsentApiKey = async ({
 			consentId: consent.id,
 			clientId: tokenRecord.clientId,
 			redirectUri: consent.redirectUri,
-			orgId: tokenRecord.referenceId,
 			userId: tokenRecord.userId,
 			env,
 		});
