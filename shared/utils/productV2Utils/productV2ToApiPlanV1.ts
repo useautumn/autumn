@@ -95,6 +95,8 @@ export const productV2ToApiPlanV1 = ({
 		description: product.description || null,
 		group: product.group || null,
 		version: product.version ?? 1,
+		version_slug: product.version_slug ?? null,
+		active: product.active ?? false,
 		add_on: product.is_add_on ?? false,
 		auto_enable: product.is_default ?? false,
 		price: basePrice,

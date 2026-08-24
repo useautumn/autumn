@@ -150,6 +150,8 @@ const buildProduct = ({
 	version: 1,
 	version_slug: "v1",
 	active: true,
+deleted_at: null,
+previous_version_slug: null,
 	processor: null,
 	base_variant_id: null,
 	base_internal_product_id: null,

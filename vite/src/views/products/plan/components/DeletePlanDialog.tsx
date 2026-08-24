@@ -15,16 +15,12 @@ import {
 } from "@autumn/ui";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import {
+	allVersionsScopeLabel,
+	DELETE_PLAN_SCOPE_LABELS,
+	DELETE_THIS_VERSION_WARNING,
 	type DeletePlanScope,
-	useDeletePlanDialog,
-} from "./useDeletePlanDialog";
-
-// Base UI projects the trigger label from the Root's `items` map — without it
-// the trigger renders the raw scope value.
-const SCOPE_LABELS: Record<DeletePlanScope, string> = {
-	latest: "Latest version",
-	all: "All versions",
-};
+} from "./deletePlanScope";
+import { useDeletePlanDialog } from "./useDeletePlanDialog";
 
 export const DeletePlanDialog = ({
 	propProduct,
@@ -48,10 +44,12 @@ export const DeletePlanDialog = ({
 		isPending,
 		previewError,
 		reasons,
+		removeThisVersion,
 		scope,
 		setScope,
 		titleAction,
 		willArchive,
+		willArchiveAll,
 		handleConfirm,
 		handleOpenChange,
 	} = useDeletePlanDialog({
@@ -63,6 +61,11 @@ export const DeletePlanDialog = ({
 	});
 
 	if (isLoading && !archived) return null;
+
+	const scopeLabels: Record<DeletePlanScope, string> = {
+		...DELETE_PLAN_SCOPE_LABELS,
+		all: allVersionsScopeLabel({ willArchiveAll }),
+	};
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
@@ -90,8 +93,9 @@ export const DeletePlanDialog = ({
 								))}
 							{!archived && !previewError && reasons.length === 0 && (
 								<p>
-									Are you sure you want to delete this plan? This action cannot
-									be undone.
+									{removeThisVersion
+										? DELETE_THIS_VERSION_WARNING
+										: "Are you sure you want to delete this plan? This action cannot be undone."}
 								</p>
 							)}
 						</div>
@@ -102,15 +106,15 @@ export const DeletePlanDialog = ({
 					<Select
 						value={scope}
 						onValueChange={(value) =>
-							setScope(value === "all" ? "all" : "latest")
+							setScope(value === "all" ? "all" : "version")
 						}
-						items={SCOPE_LABELS}
+						items={scopeLabels}
 					>
 						<SelectTrigger className="w-6/12">
 							<SelectValue placeholder="Select a version" />
 						</SelectTrigger>
 						<SelectContent>
-							{Object.entries(SCOPE_LABELS).map(([value, label]) => (
+							{Object.entries(scopeLabels).map(([value, label]) => (
 								<SelectItem key={value} value={value}>
 									{label}
 								</SelectItem>

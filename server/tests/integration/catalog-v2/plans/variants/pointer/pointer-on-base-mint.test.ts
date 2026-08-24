@@ -41,7 +41,7 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: baseId,
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 						items: [messagesItem(100), dashboardItem()],
 					},
 				],
@@ -49,7 +49,7 @@ test.concurrent(
 			expectCatalogResultsCorrect({
 				response,
 				plans: [
-					{ id: baseId, action: "create" },
+					{ id: baseId, action: "update" },
 					{ id: variantId, action: "update" },
 				],
 			});
@@ -87,7 +87,7 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: baseId,
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 						items: [messagesItem(100), dashboardItem()],
 						propagate: { variants: [{ plan_id: variantId }] },
 					},
@@ -128,7 +128,7 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: baseId,
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 						items: [messagesItem(100), dashboardItem()],
 					},
 				],

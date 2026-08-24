@@ -5,6 +5,8 @@
  *   r1  v1+v2, v2 active (lockstep) → omit get/list/catalog.get returns v2
  *   r2  v1 forced active → omit get/list/catalog.get returns v1
  *   Explicit version lookups are unchanged.
+ *   GET product/plan includes version_slug and active on the active row
+ *   and on every all_versions row.
  */
 
 import { expect, test } from "bun:test";
@@ -16,6 +18,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { expectApiPlanVersionIdentityCorrect } from "./utils/expectApiPlanVersionIdentity.js";
 
 type TestContext = Awaited<ReturnType<typeof initScenario>>["ctx"];
 
@@ -76,7 +79,7 @@ const setupVersionedPlan = async (testId: string) => {
 			{
 				plan_id: base.id,
 				items: [monthlyMessagesItem(500)],
-				versioning: "new_version",
+				versioning: "new_version", active: true,
 			},
 		],
 	});
@@ -101,7 +104,7 @@ test.concurrent(
 				{
 					plan_id: base.id,
 					items: [monthlyMessagesItem(500)],
-					versioning: "new_version",
+					versioning: "new_version", active: true,
 				},
 			],
 		});
@@ -189,5 +192,64 @@ test.concurrent(
 		const listed = await autumnV2_3.products.list<ApiPlanV1[]>();
 		const listedPlan = listed.list.find((item) => item.id === planId);
 		expect(listedPlan?.version).toBe(1);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("version identity fetch: GET product/plan includes version_slug and active on the active row and all_versions rows")}`,
+	async () => {
+		const base = products.base({
+			id: "version_identity_fetch_api_fields",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { autumnV2_3 } = await initScenario({
+			customerId: "version-identity-fetch-api-fields",
+			setup: [s.customer({}), s.products({ list: [base] })],
+			actions: [],
+		});
+		await autumnV2_3.catalogV2.update({
+			plans: [
+				{
+					plan_id: base.id,
+					items: [monthlyMessagesItem(500)],
+					versioning: "new_version",
+					active: true,
+				},
+			],
+		});
+
+		const plan = await autumnV2_3.products.get<ApiPlanV1>(base.id);
+		expectApiPlanVersionIdentityCorrect({
+			plan,
+			version: 2,
+			versionSlug: "v2",
+			active: true,
+		});
+
+		const catalog = await autumnV2_3.catalogV2.get({
+			include_archived: true,
+		});
+		expectApiPlanVersionIdentityCorrect({
+			plan: catalog.plans.find((item) => item.id === base.id),
+			version: 2,
+			versionSlug: "v2",
+			active: true,
+		});
+
+		const listed = await autumnV2_3.products.list<ApiPlanV1[]>({
+			all_versions: true,
+		});
+		const rows = listed.list.filter((item) => item.id === base.id);
+		expect(rows).toHaveLength(2);
+		expectApiPlanVersionIdentityCorrect({
+			plan: rows.find((item) => item.version === 2),
+			versionSlug: "v2",
+			active: true,
+		});
+		expectApiPlanVersionIdentityCorrect({
+			plan: rows.find((item) => item.version === 1),
+			versionSlug: "v1",
+			active: false,
+		});
 	},
 );

@@ -46,7 +46,7 @@ test.concurrent(
 											{
 												plan_id: variantId,
 												version: 1,
-												versioning: "new_version",
+												versioning: "new_version", active: true,
 											},
 										],
 									},
@@ -132,7 +132,7 @@ test.concurrent(
 									items: [messagesItem(100), dashboardItem()],
 									propagate: {
 										variants: [
-											{ plan_id: missingId, versioning: "new_version" },
+											{ plan_id: missingId, versioning: "new_version", active: true },
 										],
 									},
 								},
@@ -171,7 +171,7 @@ test.concurrent(
 									items: [messagesItem(100), dashboardItem()],
 									propagate: {
 										variants: [
-											{ plan_id: variantId, versioning: "new_version" },
+											{ plan_id: variantId, versioning: "new_version", active: true },
 										],
 									},
 									migration: { draft: true },

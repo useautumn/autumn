@@ -8,7 +8,11 @@ import type {
 } from "@autumn/shared";
 import { productToProductKey } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
-import { childPropagatesToParent } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
+import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
+import {
+	childPropagatesToParent,
+	reverseLinksForChild,
+} from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
 import { withCatalogConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withCatalogConflicts";
 import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
 import { computeVersioningOptionsForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/versioningOptions/computeVersioningOptionsForPlan";
@@ -202,8 +206,15 @@ const buildParentVersionPreview = ({
 	});
 	const planChange = parentPlanChange({ parentUpsert });
 	const preview = {
-		plan_id: stateKey.planId,
-		version: previewVersion,
+		...catalogRowIdentity({
+			planId: stateKey.planId,
+			version: previewVersion,
+			current:
+				parentUpsert?.row.op === "create"
+					? null
+					: (parentUpsert?.row.currentFullProduct ?? parentProduct),
+			next: parentUpsert?.row.nextFullProduct ?? parentProduct,
+		}),
 		name: parentProduct.name,
 		state: {
 			has_customers: parentState.customerUsage.hasVersionableCustomerProducts,
@@ -290,10 +301,10 @@ export const buildLicenseParentsPreview = ({
 	productStatesContext: ProductStatesContext;
 	previewContext: PreviewCatalogContext | undefined;
 }): CatalogLicenseParentPreview[] => {
-	const reverseLinks =
-		directUpsert.row.currentFullProduct?.parent_plan_licenses ??
-		directUpsert.row.baseFullProduct?.parent_plan_licenses ??
-		[];
+	const reverseLinks = reverseLinksForChild({
+		upsert: directUpsert,
+		productStatesContext,
+	});
 	if (reverseLinks.length === 0) return [];
 
 	const existingVersions = reverseLinks

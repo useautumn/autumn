@@ -1,5 +1,5 @@
 import { type AppEnv, products } from "@autumn/shared";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export type ProductWriteDb = {
@@ -22,6 +22,30 @@ const samePlan = ({
 		eq(products.env, env),
 		eq(products.id, productId),
 	);
+
+/** Clear every other `active` row of this plan so a later activate cannot unique-violate. */
+export const deactivateOtherActiveProducts = async ({
+	db,
+	product,
+}: {
+	db: ProductWriteDb;
+	product: { internal_id: string; id: string; org_id: string; env: AppEnv };
+}): Promise<void> => {
+	await db
+		.update(products)
+		.set({ active: false })
+		.where(
+			and(
+				samePlan({
+					orgId: product.org_id,
+					env: product.env,
+					productId: product.id,
+				}),
+				eq(products.active, true),
+				ne(products.internal_id, product.internal_id),
+			),
+		);
+};
 
 /**
  * Point `active` at the highest non-archived version of this plan, if any.

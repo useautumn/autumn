@@ -87,6 +87,7 @@ export const useProductQuery = () => {
 		await queryClient.invalidateQueries({ queryKey: ["product"] });
 		await Promise.all([
 			queryClient.invalidateQueries({ queryKey: ["product_counts"] }),
+			queryClient.invalidateQueries({ queryKey: ["product_versions"] }),
 			queryClient.invalidateQueries({ queryKey: ["migrations"] }),
 		]);
 	};

@@ -96,20 +96,59 @@ export function appPortsFor(worktreeNum: number): number[] {
 	];
 }
 
+function parentPidOf(pid: number): number | undefined {
+	const ppid = Number(sh("ps", ["-o", "ppid=", "-p", String(pid)]).stdout);
+	if (!Number.isInteger(ppid) || ppid <= 1) return undefined;
+	return ppid;
+}
+
+function isNodemonPid(pid: number): boolean {
+	return sh("ps", ["-o", "args=", "-p", String(pid)]).stdout.includes(
+		"nodemon",
+	);
+}
+
+/**
+ * Local `bun dw run` only. Killing the port holder without nodemon just
+ * makes nodemon respawn another server — that is how leftover trees pile up.
+ */
 export function killOwnPorts(worktreeNum: number): void {
+	if (process.env.NODE_ENV === "production") return;
 	const ports = appPortsFor(worktreeNum);
 	if (process.platform === "win32") return;
 	const lsof = sh(
 		"lsof",
 		ports.flatMap((p) => ["-ti", `:${p}`]),
 	);
-	const pids = lsof.stdout.split("\n").filter(Boolean);
-	for (const pid of pids) {
+	const listeners = [
+		...new Set(
+			lsof.stdout
+				.split("\n")
+				.map((pid) => Number(pid))
+				.filter((pid) => Number.isInteger(pid) && pid > 1),
+		),
+	];
+	const supervisors = [
+		...new Set(
+			listeners.flatMap((pid) => {
+				const ppid = parentPidOf(pid);
+				if (
+					ppid === undefined ||
+					ppid === process.pid ||
+					!isNodemonPid(ppid)
+				) {
+					return [];
+				}
+				return [ppid];
+			}),
+		),
+	];
+	for (const pid of [...supervisors, ...listeners]) {
 		try {
-			process.kill(Number(pid), "SIGKILL");
+			process.kill(pid, "SIGKILL");
 		} catch {}
 	}
-	if (pids.length > 0) {
-		log(`killed ${pids.length} process(es) on ports ${ports.join(", ")}`);
+	if (listeners.length > 0) {
+		log(`killed ${listeners.length} process(es) on ports ${ports.join(", ")}`);
 	}
 }

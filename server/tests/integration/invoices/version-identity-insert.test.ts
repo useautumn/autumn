@@ -54,7 +54,7 @@ test.concurrent(
 		});
 
 		await autumnV2_3.catalogV2.update({
-			plans: [{ plan_id: pro.id, versioning: "new_version" }],
+			plans: [{ plan_id: pro.id, versioning: "new_version", active: true }],
 		});
 
 		await autumnV2_3.post("/invoices.insert", {
@@ -99,7 +99,7 @@ test.concurrent(
 		});
 
 		await autumnV2_3.catalogV2.update({
-			plans: [{ plan_id: pro.id, versioning: "new_version" }],
+			plans: [{ plan_id: pro.id, versioning: "new_version", active: true }],
 		});
 		await forceActiveVersion({ ctx, planId: pro.id, version: 1 });
 

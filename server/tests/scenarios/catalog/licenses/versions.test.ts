@@ -34,7 +34,7 @@ test(`${chalk.yellowBright("catalog-qa: Team v1+v2 both offer Seat")}`, async ()
 		plans: [
 			{
 				plan_id: teamId,
-				versioning: "new_version",
+				versioning: "new_version", active: true,
 				items: [messagesItem(200)],
 				licenses: [{ license_plan_id: seatId, included: 2 }],
 			},

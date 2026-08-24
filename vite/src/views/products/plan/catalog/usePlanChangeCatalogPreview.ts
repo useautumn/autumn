@@ -6,6 +6,10 @@ import type {
 } from "@autumn/shared";
 import { usePreviewUpdateCatalog } from "@/hooks/queries/catalog/usePreviewUpdateCatalog";
 import {
+	type MintSlugSelection,
+	propagateWithMintSlugs,
+} from "../versioning/mintTargetSlugs";
+import {
 	buildCatalogUpdatePlans,
 	tryBuildUpdateCatalogPlanParams,
 } from "./buildUpdateCatalogPlanParams";
@@ -132,13 +136,30 @@ export const usePlanChangeCatalogPreview = ({
 			})
 		: [];
 
-	const buildSaveParams = ({ migrate }: { migrate: boolean }) =>
-		buildCatalogUpdatePlans({
+	/** Typed slugs are save-only — sending them to preview would surface collisions early. */
+	const buildSaveParams = ({
+		migrate,
+		slugSelection,
+	}: {
+		migrate: boolean;
+		slugSelection: MintSlugSelection;
+	}) => {
+		const mints = model.strategy === "new_version";
+		const slug = mints ? slugSelection.base.trim() || undefined : undefined;
+		return buildCatalogUpdatePlans({
 			baseProduct,
 			editedProduct: product,
 			features,
 			versioning: model.strategy,
-			propagate: model.propagate,
+			newVersionSlug: mints
+				? { source: "minted_row", slug }
+				: { source: "renamed_row" },
+			propagate: mints
+				? propagateWithMintSlugs({
+						propagate: model.propagate,
+						selection: slugSelection,
+					})
+				: model.propagate,
 			licenses,
 			migration:
 				migrate && migrateNeeded && model.strategy !== "new_version"
@@ -146,6 +167,7 @@ export const usePlanChangeCatalogPreview = ({
 					: undefined,
 			persistedBasePlanId,
 		});
+	};
 
 	return {
 		...model,

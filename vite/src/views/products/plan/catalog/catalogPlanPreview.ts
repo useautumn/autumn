@@ -74,7 +74,14 @@ export const catalogPreviewHasPlanIdChange = ({
 	preview,
 }: {
 	preview: CatalogPlanUpdatePreview | undefined;
-}): boolean => typeof preview?.plan_change?.previous_attributes?.id === "string";
+}): boolean =>
+	typeof preview?.plan_change?.previous_attributes?.id === "string";
+
+export const catalogPreviewHasPromotion = ({
+	preview,
+}: {
+	preview: CatalogPlanUpdatePreview | undefined;
+}): boolean => Boolean(preview?.promotion_details);
 
 export const catalogPreviewPlanIdChange = ({
 	preview,
@@ -90,14 +97,35 @@ export const catalogPreviewPlanIdChange = ({
 	return { from, to: nextPlanId };
 };
 
+/** The server reports a slug rename on the row identity, not in previous_attributes. */
+export const catalogPreviewVersionSlugChange = ({
+	preview,
+}: {
+	preview: CatalogPlanUpdatePreview | undefined;
+}): { from: string; to: string } | undefined => {
+	const to = preview?.new_version_slug;
+	if (!to || !preview?.version_slug) return undefined;
+	return { from: preview.version_slug, to };
+};
+
+export const catalogPreviewHasVersionSlugChange = ({
+	preview,
+}: {
+	preview: CatalogPlanUpdatePreview | undefined;
+}): boolean => catalogPreviewVersionSlugChange({ preview }) !== undefined;
+
 export const catalogPreviewOpensDialog = ({
 	preview,
 }: {
 	preview: CatalogPlanUpdatePreview | undefined;
 }): boolean => {
+	if (catalogPreviewHasPromotion({ preview })) return true;
 	if (catalogPreviewHasAliasReplacement({ preview })) return true;
 	if (isCatalogMetadataOnly({ preview })) {
-		return catalogPreviewHasPlanIdChange({ preview });
+		return (
+			catalogPreviewHasPlanIdChange({ preview }) ||
+			catalogPreviewHasVersionSlugChange({ preview })
+		);
 	}
 	return (
 		previewOpensStrategyStep({ preview }) ||
@@ -118,7 +146,9 @@ export const isConfirmOnlyPlanChangeDialog = ({
 	showLicenseParentScope: boolean;
 }): boolean =>
 	(catalogPreviewHasAliasReplacement({ preview }) ||
-		catalogPreviewHasPlanIdChange({ preview })) &&
+		catalogPreviewHasPlanIdChange({ preview }) ||
+		catalogPreviewHasVersionSlugChange({ preview }) ||
+		catalogPreviewHasPromotion({ preview })) &&
 	!showVersionStrategy &&
 	!showVariantScope &&
 	!showLicenseParentScope;
@@ -184,6 +214,45 @@ export const buildCatalogPropagate = ({
 	};
 };
 
+/** A variant or license-parent lane entry, as far as mint detection cares. */
+type FollowerVersioningPreview = {
+	versioning?: { resolved: CatalogPlanVersioningStrategy };
+	state: { has_customers: boolean };
+};
+
+/** This follower gets a new row: the server resolved one, or the base mint cascades. */
+export const followerMintsNewVersion = ({
+	follower,
+	baseMintsNewVersion,
+}: {
+	follower: FollowerVersioningPreview;
+	baseMintsNewVersion: boolean;
+}): boolean => {
+	if (follower.versioning?.resolved === "new_version") return true;
+	return (
+		follower.versioning === undefined &&
+		baseMintsNewVersion &&
+		follower.state.has_customers
+	);
+};
+
+/**
+ * Would following this base mint give the variant its own new row? The variant lane
+ * always reports `versioning`, and the discover preview sends no propagate, so its
+ * `resolved` reads `existing` even when the save would mint. Mirrors the server's
+ * gate: the base mints and this variant's active row has versionable customers.
+ */
+export const variantFollowMintsNewVersion = ({
+	variant,
+	baseMintsNewVersion,
+}: {
+	variant: FollowerVersioningPreview;
+	baseMintsNewVersion: boolean;
+}): boolean => {
+	if (variant.versioning?.resolved === "new_version") return true;
+	return baseMintsNewVersion && variant.state.has_customers;
+};
+
 export const getLicenseParentVersionKey = ({
 	plan_id,
 	version,
@@ -222,6 +291,12 @@ export type PropagationTarget = {
 	name: string;
 	detail: string;
 	conflicts: CatalogConflictPreview[];
+	/** This target gets its own new row, so the save can name it. */
+	mintsNewVersion: boolean;
+	/** The version that row lands at — max+1, not active+1. */
+	mintVersion: number;
+	/** Display slugs this plan's versions already hold. */
+	takenSlugs: string[];
 } & CatalogPlanChangeDiff;
 
 export const emptyCatalogPlanChangeDiff = (): CatalogPlanChangeDiff => ({
@@ -330,50 +405,40 @@ export const applyLicenseParentScopedDiffs = ({
 		}),
 	}));
 
-const toPropagationTarget = ({
-	id,
-	name,
-	detail,
-	conflicts,
-	planChange,
-}: {
-	id: string;
-	name: string;
-	detail: string;
-	conflicts?: CatalogConflictPreview[];
-	planChange?: PlanChangeV0 | null;
-}): PropagationTarget => ({
-	id,
-	name,
-	detail,
-	conflicts: conflicts ?? [],
-	...planChangeToTargetDiff({ planChange }),
-});
-
 export const toVariantPropagationTargets = ({
 	variants,
 	namesByPlanId,
 	includeHistoricalVersions = false,
+	baseMintsNewVersion = false,
 }: {
 	variants: CatalogVariantPreview[] | undefined;
 	namesByPlanId: Record<string, string>;
 	includeHistoricalVersions?: boolean;
+	baseMintsNewVersion?: boolean;
 }): PropagationTarget[] =>
-	(variants ?? []).map((variant) =>
-		toPropagationTarget({
+	(variants ?? []).map((variant) => {
+		const versions = variantVersions({ variant });
+		return {
 			id: variant.plan_id,
 			name: namesByPlanId[variant.plan_id] ?? variant.plan_id,
 			detail: variant.plan_id,
 			conflicts: dedupeBy(
-				(includeHistoricalVersions
-					? variantVersions({ variant })
-					: [variant]
-				).flatMap((entry) => entry.conflicts ?? []),
+				(includeHistoricalVersions ? versions : [variant]).flatMap(
+					(entry) => entry.conflicts ?? [],
+				),
 				(conflict) => JSON.stringify(conflict),
 			),
-			planChange: variant.plan_change,
-		}),
-	);
+			mintsNewVersion: variantFollowMintsNewVersion({
+				variant,
+				baseMintsNewVersion,
+			}),
+			mintVersion:
+				Math.max(...versions.map((entry) => entry.version), variant.version) +
+				1,
+			takenSlugs: versions.map((entry) => entry.version_slug).filter(Boolean),
+			...planChangeToTargetDiff({ planChange: variant.plan_change }),
+		};
+	});
 
 /** One parent plan and every version of it that offers the edited child. */
 export type LicenseParentTarget = {
@@ -526,11 +591,10 @@ const buildLicenseParentMigrateTargets = ({
 		const selected = changed.length > 0 ? changed : selectedByScope;
 		if (selected.length === 0) continue;
 
-		const mints =
-			parent.versioning?.resolved === "new_version" ||
-			(parent.versioning === undefined &&
-				isNewVersion &&
-				parent.state.has_customers);
+		const mints = followerMintsNewVersion({
+			follower: parent,
+			baseMintsNewVersion: isNewVersion,
+		});
 		const rows = mints
 			? [
 					migrateRowFromPlanChange({
@@ -622,11 +686,10 @@ export const buildCatalogMigrateTargets = ({
 			(entry) => entry.plan_id === variantId,
 		);
 		if (!variant) continue;
-		const createsNewVersion =
-			variant.versioning?.resolved === "new_version" ||
-			(variant.versioning === undefined &&
-				isNewVersion &&
-				variant.state.has_customers);
+		const createsNewVersion = followerMintsNewVersion({
+			follower: variant,
+			baseMintsNewVersion: isNewVersion,
+		});
 		const affectedVersions = variantVersions({ variant }).filter(
 			(entry) => entry.variant_action !== "unchanged",
 		);

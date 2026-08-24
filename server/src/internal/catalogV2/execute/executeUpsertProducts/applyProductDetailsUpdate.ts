@@ -1,6 +1,7 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { deactivateOtherActiveProducts } from "@/internal/products/repos/activateHighestRemainingProduct";
 import { updateStripeProductNames } from "@/internal/products/stripeResourceUtils/updateStripeProductNames.js";
 
 /** Rename syncs to Stripe only for bases — variants share the base's Stripe Product. */
@@ -23,6 +24,10 @@ export const applyProductDetailsUpdate = async ({
 	if (!details || upsert.row.op !== "update") return;
 
 	const { product } = details;
+	if (product.active) {
+		await deactivateOtherActiveProducts({ db: ctx.db, product });
+	}
+
 	await ProductService.updateByInternalId({
 		db: ctx.db,
 		internalId: product.internal_id,
@@ -34,6 +39,8 @@ export const applyProductDetailsUpdate = async ({
 			is_add_on: product.is_add_on,
 			is_default: product.is_default,
 			archived: product.archived,
+			active: product.active,
+			version_slug: product.version_slug,
 			config: product.config,
 			metadata: product.metadata,
 			auto_topups: product.auto_topups,
