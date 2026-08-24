@@ -1,7 +1,6 @@
 import type * as z from "zod/v4";
 import type {
 	BillingPreviewToolConfig,
-	ConfirmedWriteToolName,
 	LocalPreviewToolConfig,
 	OperationToolConfig,
 } from "./types.js";
@@ -45,21 +44,17 @@ export const createDomainTools = <
 		idempotent,
 	});
 
-	/** A preview tool that stages a pending billing write via its preview endpoint. */
 	const billingPreview = ({
 		id,
 		description,
-		writeToolName,
 	}: {
 		id: EndpointId;
 		description: string;
-		writeToolName: ConfirmedWriteToolName;
 	}): BillingPreviewToolConfig => ({
 		id,
 		description,
 		schema: schemas[id],
 		previewEndpoint: endpoints[id],
-		writeToolName,
 	});
 
 	/** A destructive write applied only after the user confirms a preview. */
@@ -81,18 +76,15 @@ export const createDomainTools = <
 	const localPreview = ({
 		id,
 		description,
-		writeToolName,
 		preview,
 	}: {
 		id: SchemaId;
 		description: string;
-		writeToolName: ConfirmedWriteToolName;
 		preview: (request: unknown) => unknown;
 	}): LocalPreviewToolConfig => ({
 		id,
 		description,
 		schema: schemas[id],
-		writeToolName,
 		preview,
 	});
 

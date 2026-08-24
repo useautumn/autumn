@@ -3,25 +3,22 @@ import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/bu
 import { buildLicenseParentsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicenseParentsPreview";
 import { buildLicensesPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicensesPreview";
 import { buildRemovePlansPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildRemovePlansPreview";
+import { aliasReplacementForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/aliasReplacementForPlan";
 import { buildVariantsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildVariantsPreview";
 import { buildPlanVersioning } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildPlanVersioning";
+import {
+	catalogRowIdentity,
+	promotionDetailsForPlan,
+} from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
+import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { buildSiblingVersionsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildSiblingVersionsPreview";
 import { buildPlanUsage } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { upsertToCatalogAction } from "@/internal/catalogV2/actions/updateCatalog/utils/upsertToCatalogAction";
 
 type PlanPreview = PreviewUpdateCatalogResponse["plans"][number];
-
-const upsertOpToAction = ({
-	op,
-}: {
-	op: UpsertProductPlan["row"]["op"];
-}): PlanPreview["action"] => {
-	if (op === "create") return "create";
-	if (op === "update") return "update";
-	return "none";
-};
 
 /** Pure map: direct upsertProducts + removePlans → preview plan rows. */
 export const buildPlansPreview = ({
@@ -62,14 +59,34 @@ export const buildPlansPreview = ({
 			upsertProducts,
 			productStatesContext,
 			previewContext: catalogContext.previewContext,
+			renamePlans: updateCatalogPlan.renamePlans,
+		});
+		const aliasReplacement = aliasReplacementForPlan({
+			planId: upsert.row.planId,
+			upsert,
+			renamePlans: updateCatalogPlan.renamePlans,
+		});
+		const previousActive = upsert.previousActiveInternalId
+			? findFullProductByInternalId({
+					internalId: upsert.previousActiveInternalId,
+					productStatesContext,
+				})
+			: null;
+		const promotionDetails = promotionDetailsForPlan({
+			previousActive,
 		});
 
 		return [
 			{
-				plan_id: upsert.row.planId,
-				version: upsert.row.version,
+				...catalogRowIdentity({
+					planId: upsert.row.planId,
+					version: upsert.row.version,
+					current: upsert.row.currentFullProduct,
+					next: upsert.row.nextFullProduct,
+				}),
+				...(promotionDetails ? { promotion_details: promotionDetails } : {}),
 				name: upsert.row.nextFullProduct.name,
-				action: upsertOpToAction({ op: upsert.row.op }),
+				action: upsertToCatalogAction({ upsert }),
 				state: {
 					has_customers: upsert.state.hasCustomers,
 					will_archive: false,
@@ -80,6 +97,7 @@ export const buildPlansPreview = ({
 								version: upsert.row.version,
 								current: upsert.row.currentFullProduct,
 								willArchive: false,
+								willTombstone: false,
 								hasCustomers: upsert.state.hasCustomers,
 								allVersions: false,
 							},
@@ -104,6 +122,7 @@ export const buildPlansPreview = ({
 					: {}),
 				...(variants.length > 0 ? { variants } : {}),
 				...(licenses.length > 0 ? { licenses } : {}),
+				...(aliasReplacement ? { alias_replacement: aliasReplacement } : {}),
 			},
 		];
 	});

@@ -469,6 +469,7 @@ export function AttachAdvancedSection() {
 					customAnchor={billingCycleAnchorDate}
 					minUnixDate={endDateMin}
 					maxUnixDate={endDate ? endDate - 1_000 : undefined}
+					allowCustomAnchor={!isMultiPlan}
 					onEnabledChange={(enabled) => {
 						form.setFieldValue("resetBillingCycle", enabled);
 						if (enabled && billingCycleAnchorMode === "now") {
@@ -504,12 +505,13 @@ export function AttachAdvancedSection() {
 		</>
 	);
 
+	// A multi-plan attach drops "More Options" entirely unless something in it
+	// is still visible.
+	const hasMoreOptions =
+		!isMultiPlan || rules.startDate.visible || rules.resetBillingCycle.visible;
+
 	return (
-		<AdvancedSection
-			moreOptions={
-				isMultiPlan && !rules.startDate.visible ? undefined : moreOptions
-			}
-		>
+		<AdvancedSection moreOptions={hasMoreOptions ? moreOptions : undefined}>
 			<DiscountsConfigRow
 				discounts={discounts}
 				description="Apply percentage or fixed-amount discounts to this plan"

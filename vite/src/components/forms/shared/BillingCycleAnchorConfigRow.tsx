@@ -9,6 +9,7 @@ export function BillingCycleAnchorConfigRow({
 	customAnchor,
 	minUnixDate = Date.now(),
 	maxUnixDate,
+	allowCustomAnchor = true,
 	onEnabledChange,
 	onModeChange,
 	onCustomAnchorChange,
@@ -18,6 +19,7 @@ export function BillingCycleAnchorConfigRow({
 	customAnchor: number | null;
 	minUnixDate?: number;
 	maxUnixDate?: number;
+	allowCustomAnchor?: boolean;
 	onEnabledChange: (enabled: boolean) => void;
 	onModeChange: (mode: BillingCycleAnchorMode) => void;
 	onCustomAnchorChange: (anchor: number | null) => void;
@@ -36,7 +38,11 @@ export function BillingCycleAnchorConfigRow({
 	return (
 		<ConfigRow
 			title="Set Billing Cycle Anchor"
-			description="Restart the billing cycle now or on a future date"
+			description={
+				allowCustomAnchor
+					? "Restart the billing cycle now or on a future date"
+					: "Restart the billing cycle now"
+			}
 			expanded={enabled}
 			action={
 				<Switch
@@ -46,16 +52,18 @@ export function BillingCycleAnchorConfigRow({
 			}
 		>
 			<div className="space-y-2">
-				<GroupedTabButton
-					value={mode}
-					className="w-full"
-					onValueChange={handleModeChange}
-					options={[
-						{ value: "now", label: "Now" },
-						{ value: "custom", label: "Custom" },
-					]}
-				/>
-				{mode === "custom" && (
+				{allowCustomAnchor && (
+					<GroupedTabButton
+						value={mode}
+						className="w-full"
+						onValueChange={handleModeChange}
+						options={[
+							{ value: "now", label: "Now" },
+							{ value: "custom", label: "Custom" },
+						]}
+					/>
+				)}
+				{allowCustomAnchor && mode === "custom" && (
 					<DateInputUnix
 						unixDate={customAnchor}
 						setUnixDate={onCustomAnchorChange}

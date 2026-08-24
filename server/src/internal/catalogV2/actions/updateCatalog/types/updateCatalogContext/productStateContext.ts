@@ -17,11 +17,14 @@ export type ProductStatesContext = {
 	statesByPlanVersion: Record<string, ProductState>;
 	/** Existing versions per plan_id, newest first (empty = plan absent). */
 	versionsByPlanId: Record<string, FullProduct[]>;
+	/** `MAX(version)` including tombstones — mint occupancy. */
+	maxVersionByPlanId?: Record<string, number>;
 	rewardProgramsByPlanId: Record<string, RewardProgram[]>;
 };
 
 export const emptyProductStatesContext = (): ProductStatesContext => ({
 	statesByPlanVersion: {},
 	versionsByPlanId: {},
+	maxVersionByPlanId: {},
 	rewardProgramsByPlanId: {},
 });

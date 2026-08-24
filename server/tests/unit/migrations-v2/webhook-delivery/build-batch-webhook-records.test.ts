@@ -108,7 +108,8 @@ const buildReplacePlan = ({
 			licenseEntitlementOps: [],
 			replaceEntitlementOps: [
 				{
-					fromEntitlement,
+					by: "filter",
+					from: { feature_id: fromEntitlement.feature.id },
 					entitlement: toEntitlement,
 					initialState: {
 						granted: toEntitlement.allowance ?? 0,

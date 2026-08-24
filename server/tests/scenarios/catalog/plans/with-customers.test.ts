@@ -114,7 +114,7 @@ test(`${chalk.yellowBright("catalog-qa: plans with customers")}`, async () => {
 		steps: [
 			`Delete "QA Alice Plan" → Archive. Copy: Attached to customer "Alice".`,
 			`Delete "QA Two-Customer Plan" → Archive. Copy includes "and 1 more".`,
-			`Delete "QA Expired Plan" → Archive (expired still counts).`,
+			`Delete "QA Expired Plan" → tombstone. Copy does not name "Expired Casey".`,
 			`Delete "QA Rewarded Plan" → Archive. Copy mentions the reward program.`,
 			`Rename "QA Alice Plan" → blocked (has customers).`,
 			`Drafts — bump messages 100→200, then in PlanChangeDialog:`,

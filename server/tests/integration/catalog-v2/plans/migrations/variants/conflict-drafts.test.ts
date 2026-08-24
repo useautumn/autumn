@@ -2,13 +2,13 @@
  * catalogV2.update — preview conflicts never block or omit a variant draft.
  *
  * Contract:
- *   follow 100→150 vs 200 lists value_divergence; draft customize is 150
+ *   follow 100→150 vs 200 lists value_divergence; from-grant splits the ops
  *   follow + declare 300 → two ops (150 vs 300); explicit swallows the list
- *   license follow 100→150 vs 200 stamps license_plan_id; one $or upsert_licenses op
+ *   license follow 100→150 vs 200 stamps license_plan_id; from-grant splits
  *   license follow + declare 300 → two upsert_licenses ops (150 vs 300)
  *   pin lists the clash and still omits the variant op
  *   license pin lists license_plan_id and omits the variant license op
- *   both lanes: plan-body + Seat clash → one $or item op + one $or license op
+ *   both lanes: plan-body + Seat clash → two item ops + two license ops
  */
 
 import { test } from "bun:test";
@@ -88,9 +88,8 @@ test.concurrent(
 					},
 				});
 
-				const planFilter = orVersionPinnedFilter({
-					branches: [{ planId: baseId }, { planId: variantId }],
-				});
+				const baseFilter = versionPinnedFilter({ planId: baseId });
+				const variantFilter = versionPinnedFilter({ planId: variantId });
 				await expectLicenseDraftCase({
 					autumn: autumnV2_3,
 					ctx,
@@ -105,11 +104,27 @@ test.concurrent(
 						{
 							planIds: [baseId, variantId],
 							noBillingChanges: true,
-							filter: { customer: { plan: planFilter } },
+							filter: {
+								customer: {
+									plan: orVersionPinnedFilter({
+										branches: [{ planId: baseId }, { planId: variantId }],
+									}),
+								},
+							},
 							operations: [
 								childItemOp({
-									planFilter,
-									customize: messagesItemDelta({ included: 150 }),
+									planFilter: baseFilter,
+									customize: messagesItemDelta({
+										included: 150,
+										fromIncluded: 100,
+									}),
+								}),
+								childItemOp({
+									planFilter: variantFilter,
+									customize: messagesItemDelta({
+										included: 150,
+										fromIncluded: 200,
+									}),
 								}),
 							],
 						},
@@ -198,11 +213,17 @@ test.concurrent(
 							operations: [
 								childItemOp({
 									planFilter: baseFilter,
-									customize: messagesItemDelta({ included: 150 }),
+									customize: messagesItemDelta({
+										included: 150,
+										fromIncluded: 100,
+									}),
 								}),
 								childItemOp({
 									planFilter: variantFilter,
-									customize: messagesItemDelta({ included: 300 }),
+									customize: messagesItemDelta({
+										included: 300,
+										fromIncluded: 200,
+									}),
 								}),
 							],
 						},
@@ -269,10 +290,8 @@ test.concurrent(
 					},
 				});
 
-				const planFilter = orVersionPinnedFilter({
-					branches: [{ planId: baseId }, { planId: variantId }],
-				});
-				const messages150 = messagesItemDelta({ included: 150 });
+				const baseFilter = versionPinnedFilter({ planId: baseId });
+				const variantFilter = versionPinnedFilter({ planId: variantId });
 				await expectLicenseDraftCase({
 					autumn: autumnV2_3,
 					ctx,
@@ -288,12 +307,29 @@ test.concurrent(
 							planIds: [baseId, variantId],
 							omitPlanIds: [childId],
 							noBillingChanges: true,
-							filter: { customer: { plan: planFilter } },
+							filter: {
+								customer: {
+									plan: orVersionPinnedFilter({
+										branches: [{ planId: baseId }, { planId: variantId }],
+									}),
+								},
+							},
 							operations: [
 								parentLicenseOp({
-									planFilter,
+									planFilter: baseFilter,
 									childId,
-									customize: messages150,
+									customize: messagesItemDelta({
+										included: 150,
+										fromIncluded: 100,
+									}),
+								}),
+								parentLicenseOp({
+									planFilter: variantFilter,
+									childId,
+									customize: messagesItemDelta({
+										included: 150,
+										fromIncluded: 200,
+									}),
 								}),
 							],
 						},
@@ -361,7 +397,10 @@ test.concurrent(
 							operations: [
 								childItemOp({
 									planFilter: baseFilter,
-									customize: messagesItemDelta({ included: 150 }),
+									customize: messagesItemDelta({
+										included: 150,
+										fromIncluded: 100,
+									}),
 								}),
 							],
 						},
@@ -462,12 +501,18 @@ test.concurrent(
 								parentLicenseOp({
 									planFilter: versionPinnedFilter({ planId: baseId }),
 									childId,
-									customize: messagesItemDelta({ included: 150 }),
+									customize: messagesItemDelta({
+										included: 150,
+										fromIncluded: 100,
+									}),
 								}),
 								parentLicenseOp({
 									planFilter: versionPinnedFilter({ planId: variantId }),
 									childId,
-									customize: messagesItemDelta({ included: 300 }),
+									customize: messagesItemDelta({
+										included: 300,
+										fromIncluded: 200,
+									}),
 								}),
 							],
 						},
@@ -549,7 +594,10 @@ test.concurrent(
 								parentLicenseOp({
 									planFilter: baseFilter,
 									childId,
-									customize: messagesItemDelta({ included: 150 }),
+									customize: messagesItemDelta({
+										included: 150,
+										fromIncluded: 100,
+									}),
 								}),
 							],
 						},
@@ -561,7 +609,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 variants drafts: both lanes draft the item $or and two license ops")}`,
+	`${chalk.yellowBright("catalogV2 variants drafts: both lanes draft two item ops and two license ops")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const baseId = uniqueTestId("cv2_var_dr_cf_both");
@@ -618,10 +666,8 @@ test.concurrent(
 					},
 				});
 
-				const planFilter = orVersionPinnedFilter({
-					branches: [{ planId: baseId }, { planId: variantId }],
-				});
-				const messages150 = messagesItemDelta({ included: 150 });
+				const baseFilter = versionPinnedFilter({ planId: baseId });
+				const variantFilter = versionPinnedFilter({ planId: variantId });
 				await expectLicenseDraftCase({
 					autumn: autumnV2_3,
 					ctx,
@@ -637,16 +683,43 @@ test.concurrent(
 							planIds: [baseId, variantId],
 							omitPlanIds: [childId],
 							noBillingChanges: true,
-							filter: { customer: { plan: planFilter } },
+							filter: {
+								customer: {
+									plan: orVersionPinnedFilter({
+										branches: [{ planId: baseId }, { planId: variantId }],
+									}),
+								},
+							},
 							operations: [
 								childItemOp({
-									planFilter,
-									customize: messages150,
+									planFilter: baseFilter,
+									customize: messagesItemDelta({
+										included: 150,
+										fromIncluded: 100,
+									}),
+								}),
+								childItemOp({
+									planFilter: variantFilter,
+									customize: messagesItemDelta({
+										included: 150,
+										fromIncluded: 200,
+									}),
 								}),
 								parentLicenseOp({
-									planFilter,
+									planFilter: baseFilter,
 									childId,
-									customize: messages150,
+									customize: messagesItemDelta({
+										included: 150,
+										fromIncluded: 100,
+									}),
+								}),
+								parentLicenseOp({
+									planFilter: variantFilter,
+									childId,
+									customize: messagesItemDelta({
+										included: 150,
+										fromIncluded: 200,
+									}),
 								}),
 							],
 						},

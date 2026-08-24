@@ -33,7 +33,6 @@ export const initCustomerProduct = ({
 		subscriptionId,
 		subscriptionScheduleId,
 		collectionMethod,
-		isCustom,
 		apiSemver,
 		externalId,
 		billingCycleAnchorResetsAt,
@@ -130,7 +129,9 @@ export const initCustomerProduct = ({
 
 		quantity: 1,
 
-		is_custom: isCustom ?? false,
+		// Placeholder: derived from the resulting item set in
+		// applyDerivedCustomerProductIsCustom before this row is written.
+		is_custom: false,
 		customer_license_link_id: initOptions?.customerLicenseLinkId ?? null,
 		released_at: null,
 

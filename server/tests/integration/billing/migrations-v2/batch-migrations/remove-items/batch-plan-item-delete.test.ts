@@ -16,9 +16,9 @@
  *  - a customer whose only change was the delete is not reported as skipped
  */
 import { expect, test } from "bun:test";
-import { MigrationItemRunStatus } from "@autumn/shared";
+import { MigrationItemRunStatus, ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
-import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
+import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { pollUntil } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -31,20 +31,20 @@ import {
 
 const MESSAGES_INCLUDED = 100;
 
-test(`${chalk.yellowBright("batch migration: deleting a free plan item batch-lowers and drops the rows")}`, async () => {
-	const customerId = "batch-plan-item-delete-customer";
+test(`${chalk.yellowBright("batch plan-item delete: deleting a free plan item batch-lowers and drops the rows")}`, async () => {
+	const customerId = "bpid-delete-plain-customer";
 	const plan = products.base({
-		id: "batch-plan-item-delete-plan",
+		id: "bpid-delete-plain-plan",
 		items: [
-			itemsV2.dashboard(),
-			itemsV2.monthlyMessages({ included: MESSAGES_INCLUDED }),
+			items.dashboard(),
+			items.monthlyMessages({ includedUsage: MESSAGES_INCLUDED }),
 		],
 	});
 
-	const { ctx, autumnV2_2 } = await initScenario({
+	const { ctx, autumnV2_3 } = await initScenario({
 		customerId,
 		setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
-		actions: [s.attach({ productId: plan.id })],
+		actions: [s.billing.attach({ productId: plan.id })],
 	});
 
 	await expectCustomerEntitlementRowCount({
@@ -57,8 +57,8 @@ test(`${chalk.yellowBright("batch migration: deleting a free plan item batch-low
 
 	const { result, migration, migrationRunId } = await runChunkedMigration({
 		ctx,
-		migrationClient: autumnV2_2,
-		migrationId: "batch-plan-item-delete-migration",
+		migrationClient: autumnV2_3,
+		migrationId: "bpid-delete-plain-migration",
 		filter: { customer: { plan: { plan_id: plan.id, custom: false } } },
 		operations: {
 			customer: [
@@ -66,7 +66,12 @@ test(`${chalk.yellowBright("batch migration: deleting a free plan item batch-low
 					type: "update_plan",
 					plan_filter: { plan_id: plan.id, custom: false },
 					customize: {
-						remove_items: [{ feature_id: TestFeature.Messages }],
+						remove_items: [
+							{
+								feature_id: TestFeature.Messages,
+								interval: ResetInterval.Month,
+							},
+						],
 					},
 				},
 			],
@@ -88,7 +93,7 @@ test(`${chalk.yellowBright("batch migration: deleting a free plan item batch-low
 
 	await pollUntil({
 		fetch: async () => {
-			const customer = await autumnV2_2.customers.get(customerId);
+			const customer = await autumnV2_3.customers.get(customerId);
 			return customer;
 		},
 		until: (customer) => !customer.features?.[TestFeature.Messages],

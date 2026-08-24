@@ -341,7 +341,7 @@ test.concurrent(
 					{
 						plan_id: planId,
 						price: { amount: 30, interval: BillingInterval.Month },
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});

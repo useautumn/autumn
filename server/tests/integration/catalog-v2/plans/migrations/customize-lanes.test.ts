@@ -200,6 +200,7 @@ test.concurrent(
 											billing_method: BillingMethod.Prepaid,
 											interval: BillingInterval.Month,
 											interval_count: 1,
+											included: 0,
 										},
 									],
 								},
@@ -336,6 +337,7 @@ test.concurrent(
 											feature_id: TestFeature.Messages,
 											interval: ResetInterval.Month,
 											interval_count: 1,
+											included: 100,
 										},
 									],
 									add_items: [

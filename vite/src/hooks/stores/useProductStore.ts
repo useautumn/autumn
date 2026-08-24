@@ -18,6 +18,7 @@ import { itemToFeature } from "@/utils/product/productItemUtils/convertItem";
 import { getVersionCounts } from "@/utils/productUtils";
 import { useVariantLinkVisibility } from "@/views/products/plan/hooks/useVariantLinkVisibility";
 import { DEFAULT_PRODUCT } from "@/views/products/plan/utils/defaultProduct";
+import { versionSlugRenamed } from "@/views/products/plan/utils/versionSlug";
 import { useSheetStore } from "./useSheetStore";
 
 interface ProductState {
@@ -87,6 +88,7 @@ export const useHasChanges = () => {
 			!comparison.configSame ||
 			!comparison.billingControlsSame ||
 			!comparison.metadataSame ||
+			versionSlugRenamed({ product, previous: baseProduct }) ||
 			selectedBasePlanId !== basePlanId;
 
 		return hasChanges;
@@ -127,6 +129,7 @@ export const useHasContentChanges = () => {
 
 	return useMemo(() => {
 		if (!baseProduct) return false;
+		if (versionSlugRenamed({ product, previous: baseProduct })) return true;
 		return !productsAreSame({
 			newProductV2: product,
 			curProductV2: baseProduct,

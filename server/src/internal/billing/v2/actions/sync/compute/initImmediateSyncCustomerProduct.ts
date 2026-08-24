@@ -39,7 +39,6 @@ export const initImmediateSyncCustomerProduct = ({
 	existingUsagesConfig?: ExistingUsagesConfig;
 }): FullCusProduct => {
 	const {
-		plan,
 		fullProduct,
 		featureQuantities,
 		customerLicenseQuantities,
@@ -71,7 +70,6 @@ export const initImmediateSyncCustomerProduct = ({
 		},
 		initOptions: {
 			subscriptionId: stripeSubscription.id,
-			isCustom: Boolean(plan.customize),
 			canceledAt,
 			endedAt,
 			startsAt: stripeSubscription.start_date

@@ -9,10 +9,12 @@ import type { BillingStageParams } from "@/components/forms/shared/utils/billing
 export function useCreateScheduleMutation({
 	customerId,
 	buildRequestBody,
+	onApplied,
 	onCheckoutRedirect,
 	onSuccess,
 }: {
 	customerId: string | undefined;
+	onApplied?: () => void;
 	buildRequestBody: (
 		params?: BillingStageParams,
 	) => CreateScheduleParamsV0 | null;
@@ -28,6 +30,7 @@ export function useCreateScheduleMutation({
 		buildRequestBody,
 		successMessage: "Schedule created successfully",
 		errorMessage: "Failed to create schedule",
+		onApplied,
 		onCheckoutRedirect,
 		onSuccess,
 	});

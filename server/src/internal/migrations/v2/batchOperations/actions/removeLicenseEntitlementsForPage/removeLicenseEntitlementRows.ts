@@ -50,6 +50,10 @@ export const removeLicenseEntitlementRows = async ({
 			? sql``
 			: sql`AND COALESCE(definition.interval, ${EntInterval.Lifetime}) = ${filter.interval}
 				AND COALESCE(definition.interval_count, 1) = ${filter.interval_count ?? 1}`;
+	const includedCondition =
+		filter.included === undefined
+			? sql``
+			: sql`AND definition.allowance = ${filter.included}`;
 
 	const removed = await db.execute<{
 		id: string;
@@ -78,6 +82,7 @@ export const removeLicenseEntitlementRows = async ({
 				AND definition.id = target.entitlement_id
 				AND definition.feature_id = ${filter.feature_id}
 				${intervalCondition}
+				${includedCondition}
 				AND assignment.internal_customer_id = page.internal_customer_id
 				AND assignment.internal_entity_id IS NOT NULL
 				AND assignment.status IN (${sqlList({ values: [...MIGRATABLE_STATUSES] })})

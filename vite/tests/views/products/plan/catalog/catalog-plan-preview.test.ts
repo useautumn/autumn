@@ -8,10 +8,17 @@ import {
 	buildCatalogMigrateTargets,
 	buildCatalogPropagate,
 	buildSelectedLicenseParentPropagate,
+	catalogPreviewAliasReplacements,
+	catalogPreviewHasPlanIdChange,
+	catalogPreviewHasPromotion,
+	catalogPreviewHasVersionSlugChange,
 	catalogPreviewOpensDialog,
+	catalogPreviewPlanIdChange,
+	catalogPreviewVersionSlugChange,
 	emptyCatalogPlanChangeDiff,
 	hasCatalogMigrationTargets,
 	isCatalogMetadataOnly,
+	isConfirmOnlyPlanChangeDialog,
 	planChangeToTargetDiff,
 	previewOpensStrategyStep,
 	strategyForCatalogPreview,
@@ -85,12 +92,113 @@ describe("catalog plan preview helpers", () => {
 		).toBeUndefined();
 	});
 
-	test("catalogPreviewOpensDialog follows options, variants, and license parents", () => {
+	test("catalogPreviewOpensDialog follows options, variants, license parents, alias replacement, and plan id change", () => {
 		expect(catalogPreviewOpensDialog({ preview: undefined })).toBe(false);
 		expect(catalogPreviewOpensDialog({ preview: planPreview() })).toBe(false);
 		expect(
-			previewOpensStrategyStep({
+			catalogPreviewOpensDialog({
 				preview: planPreview({
+					alias_replacement: { alias_id: "pro", plan_id: "pro_new" },
+				}),
+			}),
+		).toBe(true);
+		expect(
+			catalogPreviewOpensDialog({
+				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						previous_attributes: { id: "pro" },
+					},
+				}),
+			}),
+		).toBe(true);
+		expect(
+			catalogPreviewOpensDialog({
+				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						previous_attributes: { name: "Pro" },
+					},
+				}),
+			}),
+		).toBe(false);
+		expect(
+			catalogPreviewHasPlanIdChange({
+				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						previous_attributes: { id: "pro" },
+					},
+				}),
+			}),
+		).toBe(true);
+		expect(
+			catalogPreviewPlanIdChange({
+				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						previous_attributes: { id: "pro" },
+					},
+				}),
+				nextPlanId: "pro_plus",
+			}),
+		).toEqual({ from: "pro", to: "pro_plus" });
+		expect(
+			isConfirmOnlyPlanChangeDialog({
+				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						previous_attributes: { id: "pro" },
+					},
+				}),
+				showVersionStrategy: false,
+				showVariantScope: false,
+				showLicenseParentScope: false,
+			}),
+		).toBe(true);
+		expect(
+			isConfirmOnlyPlanChangeDialog({
+				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						customize: { items: [] },
+						previous_attributes: { id: "pro" },
+					},
+				}),
+				showVersionStrategy: true,
+				showVariantScope: false,
+				showLicenseParentScope: false,
+			}),
+		).toBe(false);
+		expect(
+			catalogPreviewAliasReplacements({
+				preview: planPreview({
+					variants: [
+						{
+							plan_id: "pro_eu",
+							version: 1,
+							state: { has_customers: false, will_archive: false },
+							alias_replacement: { alias_id: "pro", plan_id: "pro_new" },
+						},
+					],
+				}),
+			}),
+		).toEqual([{ alias_id: "pro", plan_id: "pro_new" }]);
+		const versioningOnly = planPreview({
+			versioning: {
+				current_version: 1,
+				new_version: null,
+				resolved: "existing",
+				options: ["existing"],
+			},
+		});
+		expect(previewOpensStrategyStep({ preview: versioningOnly })).toBe(true);
+		expect(isCatalogMetadataOnly({ preview: versioningOnly })).toBe(true);
+		expect(catalogPreviewOpensDialog({ preview: versioningOnly })).toBe(false);
+		expect(
+			catalogPreviewOpensDialog({
+				preview: planPreview({
+					plan_change: { item_changes: [], customize: { items: [] } },
 					versioning: {
 						current_version: 1,
 						new_version: null,
@@ -103,6 +211,7 @@ describe("catalog plan preview helpers", () => {
 		expect(
 			catalogPreviewOpensDialog({
 				preview: planPreview({
+					plan_change: { item_changes: [], customize: { items: [] } },
 					variants: [
 						{
 							plan_id: "pro_eu",
@@ -116,6 +225,16 @@ describe("catalog plan preview helpers", () => {
 		expect(
 			catalogPreviewOpensDialog({
 				preview: planPreview({
+					plan_change: {
+						item_changes: [],
+						license_changes: [
+							{
+								license_plan_id: "seat",
+								action: "updated",
+								previous_attributes: null,
+							},
+						],
+					},
 					license_parents: [
 						{
 							plan_id: "team",
@@ -124,6 +243,69 @@ describe("catalog plan preview helpers", () => {
 							state: { has_customers: true, will_archive: false },
 						},
 					],
+				}),
+			}),
+		).toBe(true);
+	});
+
+	test("a version slug rename opens a confirm-only Review on its own", () => {
+		const renamed = planPreview({
+			version_slug: "v1",
+			new_version_slug: "beta",
+		});
+		expect(catalogPreviewVersionSlugChange({ preview: renamed })).toEqual({
+			from: "v1",
+			to: "beta",
+		});
+		expect(catalogPreviewHasVersionSlugChange({ preview: renamed })).toBe(true);
+		expect(catalogPreviewOpensDialog({ preview: renamed })).toBe(true);
+		expect(
+			isConfirmOnlyPlanChangeDialog({
+				preview: renamed,
+				showVersionStrategy: false,
+				showVariantScope: false,
+				showLicenseParentScope: false,
+			}),
+		).toBe(true);
+
+		const unchanged = planPreview({ version_slug: "v1" });
+		expect(
+			catalogPreviewVersionSlugChange({ preview: unchanged }),
+		).toBeUndefined();
+		expect(catalogPreviewOpensDialog({ preview: unchanged })).toBe(false);
+	});
+
+	test("promotion_details presence opens a confirm-only Review", () => {
+		const promotePreview = planPreview({
+			promotion_details: { previous_active_version_slug: "v1" },
+		});
+		expect(catalogPreviewHasPromotion({ preview: planPreview() })).toBe(false);
+		expect(catalogPreviewHasPromotion({ preview: promotePreview })).toBe(true);
+		expect(catalogPreviewOpensDialog({ preview: promotePreview })).toBe(true);
+		expect(
+			isConfirmOnlyPlanChangeDialog({
+				preview: promotePreview,
+				showVersionStrategy: false,
+				showVariantScope: false,
+				showLicenseParentScope: false,
+			}),
+		).toBe(true);
+		expect(
+			isConfirmOnlyPlanChangeDialog({
+				preview: promotePreview,
+				showVersionStrategy: true,
+				showVariantScope: false,
+				showLicenseParentScope: false,
+			}),
+		).toBe(false);
+		expect(
+			catalogPreviewOpensDialog({
+				preview: planPreview({
+					promotion_details: { previous_active_version_slug: "v1" },
+					plan_change: {
+						item_changes: [],
+						previous_attributes: { name: "Pro" },
+					},
 				}),
 			}),
 		).toBe(true);
@@ -182,6 +364,55 @@ describe("catalog plan preview helpers", () => {
 		).toBe(true);
 	});
 
+	test("a variant with customers mints on the discover preview, which reports resolved: existing", () => {
+		const [withCustomers, withoutCustomers] = toVariantPropagationTargets({
+			variants: [
+				{
+					plan_id: "pro_eu",
+					version: 1,
+					version_slug: "v1",
+					state: { has_customers: true, will_archive: false },
+					// The discover preview sends no propagate, so no mint is resolved yet.
+					versioning: {
+						current_version: 1,
+						new_version: null,
+						resolved: "existing",
+						options: [],
+					},
+					sibling_versions: [
+						{
+							plan_id: "pro_eu",
+							version: 2,
+							version_slug: "add-dashboard",
+							state: { has_customers: false, will_archive: false },
+						},
+					],
+				},
+				{
+					plan_id: "pro_uk",
+					version: 1,
+					version_slug: "v1",
+					state: { has_customers: false, will_archive: false },
+					versioning: {
+						current_version: 1,
+						new_version: null,
+						resolved: "existing",
+						options: [],
+					},
+				},
+			],
+			namesByPlanId: {},
+			baseMintsNewVersion: true,
+		} as Parameters<typeof toVariantPropagationTargets>[0]);
+
+		// Active v1 with customers, max v2 → the mint lands at v3, not active+1.
+		expect(withCustomers.mintsNewVersion).toBe(true);
+		expect(withCustomers.mintVersion).toBe(3);
+		expect(withCustomers.takenSlugs).toEqual(["add-dashboard", "v1"]);
+		// No customers means the base edit lands in place, so there is nothing to name.
+		expect(withoutCustomers.mintsNewVersion).toBe(false);
+	});
+
 	test("maps variants and license parents onto propagate targets", () => {
 		expect(
 			toVariantPropagationTargets({
@@ -189,6 +420,7 @@ describe("catalog plan preview helpers", () => {
 					{
 						plan_id: "pro_eu",
 						version: 1,
+						version_slug: "v1",
 						state: { has_customers: false, will_archive: false },
 						conflicts: [],
 						plan_change: { item_changes: [] },
@@ -202,6 +434,9 @@ describe("catalog plan preview helpers", () => {
 				name: "Pro EU",
 				detail: "pro_eu",
 				conflicts: [],
+				mintsNewVersion: false,
+				mintVersion: 2,
+				takenSlugs: ["v1"],
 				...emptyCatalogPlanChangeDiff(),
 			},
 		]);

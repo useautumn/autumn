@@ -37,7 +37,7 @@ test.concurrent(
 					variantId,
 				});
 				await autumnV2_3.catalogV2.update({
-					plans: [{ plan_id: baseId, versioning: "new_version" }],
+					plans: [{ plan_id: baseId, versioning: "new_version", active: true }],
 				});
 				await seedVersionableCustomer({
 					ctx,

@@ -5,6 +5,7 @@ import { cmdDefault } from "./commands/default.ts";
 import { cmdDisable } from "./commands/disable.ts";
 import { cmdEnable } from "./commands/enable.ts";
 import { cmdIdentify } from "./commands/identify.ts";
+import { cmdKill } from "./commands/kill.ts";
 import { cmdList } from "./commands/list.ts";
 import { cmdLogs } from "./commands/logs.ts";
 import { cmdReset } from "./commands/reset.ts";
@@ -29,6 +30,9 @@ async function main(): Promise<void> {
 			break;
 		case "run":
 			await cmdRun();
+			break;
+		case "kill":
+			cmdKill();
 			break;
 		case "teardown":
 			await cmdTeardown({ all: process.argv.includes("--all") });
@@ -62,7 +66,7 @@ async function main(): Promise<void> {
 			break;
 		default:
 			fatal(
-				`unknown subcommand: ${sub} (use: setup | start | run | teardown | cleanup | list | reset | logs | attach | identify | enable | disable | admin)`,
+				`unknown subcommand: ${sub} (use: setup | start | run | kill | teardown | cleanup | list | reset | logs | attach | identify | enable | disable | admin)`,
 			);
 	}
 }

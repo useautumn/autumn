@@ -80,7 +80,7 @@ function attachRules(state: BillingOptionState): BillingOptionRules {
 		carryOverUsages: show(!!state.hasCustomerEntitlements),
 		overrideLineItems: show(true),
 		newBillingSubscription: show(!!state.canChooseBillingCycle),
-		resetBillingCycle: show(singlePlanOnly && !!state.hasActiveSubscription),
+		resetBillingCycle: show(!!state.hasActiveSubscription),
 		skipBilling: show(singlePlanOnly),
 		resetUsage: HIDDEN,
 	};

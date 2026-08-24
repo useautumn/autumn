@@ -48,12 +48,20 @@ export const drainParkedAgentTurn = async ({
 						const options = approvalOptionIds({
 							options: parked.chained.options,
 						});
+						const siblingDenyOptions = new Map(
+							parked.withheld.map((write) => [
+								write.requestId,
+								write.denyOptionId,
+							]),
+						);
 						const posted = await postEveInputResponse({
 							auth,
 							note: QUEUED_TURN_WITHDRAWAL_NOTE,
 							optionId: options.deny,
 							requestId: parked.chained.requestId,
 							session,
+							siblingOptionIdFor: (siblingRequestId) =>
+								siblingDenyOptions.get(siblingRequestId) ?? undefined,
 							siblingRequestIds: parked.siblingRequestIds,
 						});
 						adoptPostedEveSession({ posted, session });

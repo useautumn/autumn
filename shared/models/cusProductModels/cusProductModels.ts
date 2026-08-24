@@ -33,6 +33,9 @@ export const BillingCycleAnchorConfig = z.object({
 export const CusProductSchema = z.object({
 	id: z.string(),
 	internal_product_id: z.string(),
+	/** @deprecated Snapshot of the public plan id at write time. Do not
+	 * read or match on this — use `internal_product_id`, or the live
+	 * `product.id` from the products join. */
 	product_id: z.string(),
 	internal_customer_id: z.string(),
 	customer_id: z.string().nullish(),

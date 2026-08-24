@@ -1,10 +1,8 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
-import {
-	WITHHELD_WRITES_KEY,
-	withheldWritesFromToolArgs,
-} from "../../agentRuntime/eve/parkedInput.js";
+import { errorMessage } from "../../../lib/errorMessage.js";
+import type { WithheldWrite } from "../../agentRuntime/eve/parkedInput.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
 import {
@@ -15,6 +13,7 @@ import {
 	resolveApprovalDisplay,
 	withApprovalDisplay,
 } from "./approvalDisplay.js";
+import { isErrorResult } from "./approvalErrors.js";
 import { writeToPreviewTool } from "./toolRegistry.js";
 import { toolRequestFromArgs } from "./toolRequest.js";
 
@@ -128,10 +127,9 @@ export const fetchApprovalPreview = async ({
 			toolName: previewTool,
 			args: { request: previewRequestForWrite({ request, toolName }) },
 		});
-		// Failed previews use two response shapes; neither should replace the
-		// card's params-only fallback.
-		// executeAutumnMcpTool already warned with the error detail.
-		if (autumnMcpErrorText(result) ?? rawErrorShapeText(result)) {
+		// A failed preview must not replace the card's params-only fallback.
+		if (isErrorResult(result)) {
+			// executeAutumnMcpTool already warned with the error detail.
 			logger.debug("Approval preview returned an error result", {
 				data: { env },
 				event: "leaf.approval_preview_failed",
@@ -142,7 +140,7 @@ export const fetchApprovalPreview = async ({
 		return result;
 	} catch (error) {
 		logger.warn("Could not backfill approval preview", {
-			data: { env, error },
+			data: { env, error: errorMessage(error) },
 			event: "leaf.approval_preview_backfill_failed",
 			tool: toolName,
 		});
@@ -193,25 +191,23 @@ export const resolveApprovalPreview = async ({
 	}
 };
 
-/** Each grouped write gets the same preview + display backfill as the primary
- * one, so the card can render every step with the standard body. */
-export const withGroupedWritePreviews = async ({
+/** Fetches each grouped write's preview with the same parse + display
+ * treatment as the primary, so every write renders with the standard body. */
+export const withWritePreviews = async ({
 	env,
 	executeTool,
 	getToken,
 	logger,
-	toolArgs,
+	writes,
 }: {
 	env: AppEnv;
 	executeTool?: typeof executeAutumnMcpTool;
 	getToken: () => Promise<string>;
 	logger: Pick<AutumnLogger, "debug" | "warn">;
-	toolArgs: Record<string, unknown>;
-}) => {
-	const withheld = withheldWritesFromToolArgs(toolArgs);
-	if (!withheld.length) return toolArgs;
-	const resolved = await Promise.all(
-		withheld.map(async (write) => {
+	writes: ReadonlyArray<WithheldWrite>;
+}): Promise<ReadonlyArray<WithheldWrite>> =>
+	Promise.all(
+		writes.map(async (write) => {
 			const request = toolRequestFromArgs(write.input);
 			// The primary write's preview is parsed at capture time; a backfilled
 			// one arrives as the raw MCP envelope and needs the same treatment.
@@ -232,11 +228,6 @@ export const withGroupedWritePreviews = async ({
 				preview,
 				request,
 			});
-			return {
-				...write,
-				preview: withApprovalDisplay({ display, preview }),
-			};
+			return { ...write, preview: withApprovalDisplay({ display, preview }) };
 		}),
 	);
-	return { ...toolArgs, [WITHHELD_WRITES_KEY]: resolved };
-};

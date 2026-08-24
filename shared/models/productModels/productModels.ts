@@ -27,6 +27,8 @@ export const ProductSchema = z.object({
 	// Missing keys parse as null/false; hydrate still fills slug to v{version}.
 	version_slug: z.string().nullable().default(null),
 	active: z.boolean().default(false),
+	deleted_at: z.number().nullable().default(null),
+	previous_version_slug: z.string().nullable().default(null),
 	group: z.string(),
 
 	env: z.enum(AppEnv),

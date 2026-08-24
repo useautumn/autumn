@@ -10,6 +10,7 @@ export * from "./balanceUtils/cusEntsToPrepaidQuantity";
 export * from "./balanceUtils/cusEntsToPurchasedBalance";
 export * from "./balanceUtils/cusEntsToReset";
 export * from "./balanceUtils/cusEntsToRollovers";
+export * from "./balanceUtils/cusEntsToUnlimitedUsage";
 export * from "./balanceUtils/cusEntsToUsage";
 export * from "./balanceUtils/cusEntToMinBalance";
 export * from "./balanceUtils/cusEntToUsageAllowed";

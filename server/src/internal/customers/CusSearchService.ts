@@ -29,7 +29,13 @@ const dashboardProductFilterToRawSql = ({
 	env: AppEnv;
 }) =>
 	isCustomDashboardProductFilter(filter)
-		? sql`(${customerProducts.product_id} = ${filter.productId} AND ${customerProducts.is_custom} = true)`
+		? sql`(${customerProducts.internal_product_id} IN (
+				SELECT p_lookup.internal_id
+				FROM products p_lookup
+				WHERE p_lookup.org_id = ${orgId}
+					AND p_lookup.env = ${env}
+					AND p_lookup.id = ${filter.productId}
+			) AND ${customerProducts.is_custom} = true)`
 		: sql`(${customerProducts.internal_product_id} IN (
 				SELECT p_lookup.internal_id
 				FROM products p_lookup
@@ -244,10 +250,17 @@ export const buildSearchPredicates = ({
 							case "free_trial":
 								return sql`(${customerProducts.trial_ends_at} > ${Date.now()} AND ${customerProducts.free_trial_id} IS NOT NULL AND ${customerProducts.canceled_at} IS NULL AND ${activeProdRaw})`;
 							case CusProductStatus.Expired:
+								// "Same plan" = same public product id (any version), resolved
+								// through the products join rather than the denormalized
+								// customer_products.product_id snapshot.
 								return sql`(${customerProducts.status} = ${CusProductStatus.Expired} AND ${customerProducts.canceled_at} IS NULL AND NOT EXISTS (
 									SELECT 1 FROM customer_products cp_alias
+									JOIN products p_alias ON p_alias.internal_id = cp_alias.internal_product_id
+									JOIN products p_cur ON p_cur.internal_id = ${customerProducts.internal_product_id}
 									WHERE cp_alias.internal_customer_id = ${customerProducts.internal_customer_id}
-									  AND cp_alias.product_id = ${customerProducts.product_id}
+									  AND p_alias.id = p_cur.id
+									  AND p_alias.org_id = p_cur.org_id
+									  AND p_alias.env = p_cur.env
 									  AND (cp_alias.status = ${CusProductStatus.Active} OR cp_alias.status = ${CusProductStatus.PastDue})
 								))`;
 							default:

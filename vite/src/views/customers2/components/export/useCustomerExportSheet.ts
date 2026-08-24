@@ -166,8 +166,10 @@ export function useCustomerExportSheet({
 		countQuery.isPending ||
 		countQuery.isFetching ||
 		countQuery.isPlaceholderData;
-	const exportTotalCount =
+	const exportCountData =
 		isExportCountLoading || countQuery.isError ? undefined : countQuery.data;
+	const exportTotalCount = exportCountData?.totalCount ?? undefined;
+	const isExportCountApproximate = exportCountData?.approximate ?? false;
 	const hasNothingToExport = exportTotalCount === 0;
 
 	const handleOpenChange = (nextOpen: boolean) => {
@@ -187,6 +189,7 @@ export function useCustomerExportSheet({
 		handleOpenChange,
 		hasActiveFilters,
 		hasFilters,
+		isExportCountApproximate,
 		isExportCountLoading,
 		submitBlockedReason: getSubmitBlockedReason({
 			activeExport,

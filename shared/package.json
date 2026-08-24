@@ -103,7 +103,7 @@
 		"zod": "^3.25.23"
 	},
 	"devDependencies": {
-		"@types/bun": "latest",
+		"@types/bun": "1.3.14",
 		"@types/node": "^24.0.3",
 		"cross-env": "^7.0.3",
 		"tsx": "^4.21.0",

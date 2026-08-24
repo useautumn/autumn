@@ -1,107 +1,66 @@
-import { CusProductStatus } from "@autumn/shared";
+import type { Feature } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { sqlList } from "@/internal/billing/v2/actions/batchTransition/execute/sql/batchTransitionSqlUtils.js";
-import { pageCustomerIdsCte } from "@/internal/migrations/v2/batchOperations/actions/utils/pageCustomerIdsSql.js";
-import { rowIsUnpaidSql } from "@/internal/migrations/v2/batchOperations/actions/utils/rowIsUnpaidSql.js";
 import {
-	type OperationScope,
-	operationScopeSql,
-} from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
+	buildLiveFilterCandidateQuery,
+	LiveFilterCandidateCoreSchema,
+	type LiveFilterCandidateRow,
+	toLiveFilterCandidateRow,
+} from "@/internal/migrations/v2/batchOperations/actions/utils/liveFilterCandidateSql.js";
+import type { OperationScope } from "@/internal/migrations/v2/batchOperations/scope/operationScope.js";
+import type { EntitlementPriceFilter } from "@/internal/migrations/v2/batchOperations/types/entitlementPriceFilter.js";
 
-const CandidateRowSchema = z.object({
-	customer_product_id: z.string(),
-	internal_customer_id: z.string(),
-	entity_id: z.string().nullable(),
-	status: z.enum(CusProductStatus),
-	starts_at: z.coerce.number().nullable(),
-	canceled_at: z.coerce.number().nullable(),
-	ended_at: z.coerce.number().nullable(),
-	trial_ends_at: z.coerce.number().nullable(),
-});
+export type RemoveCandidateRow = LiveFilterCandidateRow;
 
-export type RemoveCandidateRow = {
-	customerProductId: string;
-	internalCustomerId: string;
-	entityId: string | null;
-	status: CusProductStatus;
-	startsAt: number | null;
-	canceledAt: number | null;
-	endedAt: number | null;
-	trialEndsAt: number | null;
-};
-
-/** Narrows the page to customer products that still hold one of the target
- * definitions, so the delete never visits a product with nothing to drop. */
-export const selectRemoveCandidateRows = async ({
-	db,
-	internalCustomerIds,
-	scope,
-	entitlementIds,
-	afterCustomerProductId,
-	limit,
-}: {
-	db: DrizzleCli;
+type SelectRemoveCandidateRowsArgs = {
 	internalCustomerIds: string[];
 	scope: OperationScope;
-	entitlementIds: string[];
+	filter: EntitlementPriceFilter;
+	features: Feature[];
 	afterCustomerProductId?: string;
-	limit?: number;
-}): Promise<RemoveCandidateRow[]> => {
-	if (entitlementIds.length === 0) return [];
+	limit: number;
+};
 
-	const rows = await db.execute(sql`
-		WITH ${pageCustomerIdsCte({ internalCustomerIds })}
-		SELECT
-			cp.id AS customer_product_id,
-			cp.internal_customer_id,
-			entity.id AS entity_id,
-			cp.status,
-			cp.starts_at,
-			cp.canceled_at,
-			cp.ended_at,
-			cp.trial_ends_at
-		FROM page
-		INNER JOIN customer_products AS cp
-			ON cp.internal_customer_id = page.internal_customer_id
-		LEFT JOIN entities AS entity
-			ON entity.internal_id = cp.internal_entity_id
-		WHERE ${operationScopeSql({ scope })}
-			${afterCustomerProductId ? sql`AND cp.id > ${afterCustomerProductId}` : sql``}
-			AND EXISTS (
-				SELECT 1
-				FROM customer_entitlements AS existing
-				INNER JOIN entitlements AS definition
-					ON definition.id = existing.entitlement_id
-				WHERE existing.customer_product_id = cp.id
-					AND existing.entitlement_id IN (${sqlList({ values: entitlementIds })})
-					AND definition.pooled IS NOT TRUE
-					AND NOT existing.is_pooled_balance
-					AND existing.pooled_contribution_id IS NULL
-					AND NOT EXISTS (
-						SELECT 1 FROM rollovers WHERE rollovers.cus_ent_id = existing.id
-					)
-					AND ${rowIsUnpaidSql({
-						customerProductId: sql`cp.id`,
-						entitlementId: sql`existing.entitlement_id`,
-					})}
-			)
-		ORDER BY cp.id
-		${limit !== undefined ? sql`LIMIT ${limit}` : sql``}
-	`);
+/** Pooled/rollover rows are license-owned; product remove must not touch them. */
+const rowIsRemovableSql = sql`
+	AND definition.pooled IS NOT TRUE
+	AND NOT live.is_pooled_balance
+	AND live.pooled_contribution_id IS NULL
+	AND NOT EXISTS (
+		SELECT 1 FROM rollovers WHERE rollovers.cus_ent_id = live.id
+	)
+`;
+
+/** Selects scoped live from-rows matching the compiled filter. */
+export const buildRemoveCandidateRowsQuery = ({
+	internalCustomerIds,
+	scope,
+	filter,
+	afterCustomerProductId,
+	limit,
+}: Omit<SelectRemoveCandidateRowsArgs, "features">) =>
+	buildLiveFilterCandidateQuery({
+		internalCustomerIds,
+		scope,
+		filter,
+		extraWhere: rowIsRemovableSql,
+		afterCustomerProductId,
+		limit,
+	});
+
+export const selectRemoveCandidateRows = async ({
+	db,
+	features,
+	...args
+}: SelectRemoveCandidateRowsArgs & {
+	db: DrizzleCli;
+}): Promise<RemoveCandidateRow[]> => {
+	if (args.internalCustomerIds.length === 0) return [];
+
+	const rows = await db.execute(buildRemoveCandidateRowsQuery(args));
 
 	return rows.map((row) => {
-		const parsed = CandidateRowSchema.parse(row);
-		return {
-			customerProductId: parsed.customer_product_id,
-			internalCustomerId: parsed.internal_customer_id,
-			entityId: parsed.entity_id,
-			status: parsed.status,
-			startsAt: parsed.starts_at,
-			canceledAt: parsed.canceled_at,
-			endedAt: parsed.ended_at,
-			trialEndsAt: parsed.trial_ends_at,
-		};
+		const parsed = LiveFilterCandidateCoreSchema.parse(row);
+		return toLiveFilterCandidateRow({ parsed, features });
 	});
 };

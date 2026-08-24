@@ -120,7 +120,9 @@ describe("plain plan item removal lowering", () => {
 		expect(rejections).toHaveLength(0);
 		expect(operations.removeEntitlements).toHaveLength(1);
 		expect(
-			operations.removeEntitlements[0]?.entitlementPrice.entitlement.id,
+			operations.removeEntitlements[0]?.by === "definition"
+				? operations.removeEntitlements[0].entitlementPrice.entitlement.id
+				: undefined,
 		).toBe("ent_messages");
 		expect(operations.addEntitlements).toHaveLength(0);
 	});
@@ -198,8 +200,10 @@ describe("plain plan item removal lowering", () => {
 
 		expect(rejections).toHaveLength(0);
 		expect(
-			operations.removeEntitlements.map(
-				(operation) => operation.entitlementPrice.entitlement.id,
+			operations.removeEntitlements.flatMap((operation) =>
+				operation.by === "definition"
+					? [operation.entitlementPrice.entitlement.id]
+					: [],
 			),
 		).toEqual(["ent_lifetime"]);
 	});
@@ -214,8 +218,10 @@ describe("plain plan item removal lowering", () => {
 		});
 
 		expect(
-			operations.removeEntitlements.map(
-				(operation) => operation.entitlementPrice.entitlement.id,
+			operations.removeEntitlements.flatMap((operation) =>
+				operation.by === "definition"
+					? [operation.entitlementPrice.entitlement.id]
+					: [],
 			),
 		).toEqual(["ent_quarterly"]);
 	});
@@ -237,8 +243,10 @@ describe("plain plan item removal lowering", () => {
 
 		expect(rejections).toHaveLength(0);
 		expect(
-			operations.removeEntitlements.map(
-				(operation) => operation.entitlementPrice.entitlement.id,
+			operations.removeEntitlements.flatMap((operation) =>
+				operation.by === "definition"
+					? [operation.entitlementPrice.entitlement.id]
+					: [],
 			),
 		).toEqual(["ent_monthly"]);
 	});
@@ -271,8 +279,10 @@ describe("plain plan item removal lowering", () => {
 
 		expect(rejections).toHaveLength(0);
 		expect(
-			operations.removeEntitlements.map(
-				(operation) => operation.entitlementPrice.entitlement.id,
+			operations.removeEntitlements.flatMap((operation) =>
+				operation.by === "definition"
+					? [operation.entitlementPrice.entitlement.id]
+					: [],
 			),
 		).toEqual(["ent_quarterly"]);
 	});

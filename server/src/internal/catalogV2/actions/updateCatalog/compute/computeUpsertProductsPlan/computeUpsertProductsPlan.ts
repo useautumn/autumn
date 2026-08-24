@@ -1,7 +1,7 @@
 import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computePlanLicensesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/computePlanLicensesPlan";
-import { computeUpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductPlan";
+import { computeUpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductPlan/computeUpsertProductPlan";
 import { indexDeclaredVariantPlanIds } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/shouldUnlinkDirectVariant";
 import { deriveDirectIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveDirectIntents";
 import { deriveIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveIntents";
@@ -47,20 +47,23 @@ export const computeUpsertProductsPlan = ({
 
 	// Apply each plan's own changes: direct entries plus derived versions/variants.
 	for (const intent of pendingIntents) {
-		const upsert = computeUpsertProductPlan({
+		const { targetProductPlan, upsertProductPlans } = computeUpsertProductPlan({
 			ctx,
 			intent,
 			productStatesContext: fold.projected,
+			claimedProductKeys,
 			declaredVariantPlanIdsByBasePlanId,
 		});
 
-		upsertProducts.push(upsert);
-		fold.advance({ upsert });
+		for (const upsert of upsertProductPlans) {
+			upsertProducts.push(upsert);
+			fold.advance({ upsert });
+		}
 
 		pendingIntents.push(
 			...deriveIntents({
 				intent,
-				upsert,
+				upsert: targetProductPlan,
 				projectedProductStatesContext: fold.projected,
 				claimedProductKeys,
 				allVersionsPlanIds,

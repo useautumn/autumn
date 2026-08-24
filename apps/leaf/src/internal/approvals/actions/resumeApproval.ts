@@ -1,6 +1,6 @@
 import type { ChatApproval } from "@autumn/shared";
-import type { ApprovalRunResult } from "../types.js";
-import { approveOptionFromApproval } from "./approvalOptions.js";
+import { approveOptionOf } from "../domain/approvalRecord.js";
+import type { SubmittedApprovalResult } from "../types.js";
 import { submitApprovalInput } from "./submitApprovalInput.js";
 
 export const resumeApproval = async ({
@@ -9,10 +9,10 @@ export const resumeApproval = async ({
 }: {
 	approval: ChatApproval;
 	providerUserId: string;
-}): Promise<ApprovalRunResult> =>
+}): Promise<SubmittedApprovalResult> =>
 	submitApprovalInput({
 		approval,
 		expectExecution: true,
-		optionId: approveOptionFromApproval(approval),
+		optionId: approveOptionOf(approval),
 		providerUserId,
 	});

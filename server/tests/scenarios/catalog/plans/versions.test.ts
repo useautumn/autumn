@@ -42,7 +42,7 @@ test(`${chalk.yellowBright("catalog-qa: multi-version plans")}`, async () => {
 			plans: [
 				{
 					plan_id: planId,
-					versioning: "new_version",
+					versioning: "new_version", active: true,
 					items: [messagesItem(200)],
 				},
 			],

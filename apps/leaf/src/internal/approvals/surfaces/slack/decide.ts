@@ -1,5 +1,6 @@
 import {
 	type ChatApproval,
+	type ChatApprovalWrite,
 	chatInstallations,
 	checkScopes,
 	ms,
@@ -11,17 +12,21 @@ import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import { questionCard } from "../../../../providers/slack/presenters/interactionCards.js";
 import { resolveSlackCallerAuth } from "../../../../providers/slack/setup/resolveSlackCallerAuth.js";
-import { approvalStatusCard } from "../../../../ui/blocks.js";
+import { approvalCard, approvalStatusCard } from "../../../../ui/blocks.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
+import type { WithheldWrite } from "../../../agentRuntime/eve/parkedInput.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import { discardApproval } from "../../actions/discardApproval.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
+import { withheldWritesOf } from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
+import { chatApprovalWritesRepo } from "../../repos/chatApprovalWritesRepo.js";
 import type {
 	ApprovalActionDeps,
 	ApprovalAuthorization,
 	ApprovalCardStatus,
+	ApprovalRunResult,
 } from "../../types.js";
 import {
 	approvalErrorResult,
@@ -29,9 +34,58 @@ import {
 } from "../../utils/approvalErrors.js";
 import { formatElapsed } from "../../utils/approvalProgress.js";
 import { requiredScopesForApproval } from "../../utils/approvalScopeRequirements.js";
-import { postApprovalCardForRow } from "./present.js";
+import { publicToolArgs } from "../../utils/toolRequest.js";
+import { dashboardUrlFor, postApprovalCardForRow } from "./present.js";
 
 const APPROVAL_PROGRESS_DELAY_MS = ms.seconds(10);
+
+/** Grouped writes for card bodies and scope checks; step-listing failures
+ * degrade to the legacy marker fallback rather than blocking the click. */
+const groupedStepsForApproval = async ({
+	approval,
+	listSteps = (approvalId) => chatApprovalWritesRepo.list({ approvalId, db }),
+}: {
+	approval: ChatApproval;
+	listSteps?: (approvalId: string) => Promise<ChatApprovalWrite[]>;
+}) =>
+	withheldWritesOf({
+		approval,
+		writes: await listSteps(approval.id).catch(() => []),
+	});
+
+const cardDetailsForApproval = async ({
+	approval,
+}: {
+	approval?: ChatApproval;
+}) => {
+	const groupedWrites = approval
+		? await groupedStepsForApproval({ approval })
+		: undefined;
+	return {
+		...detailsFromApproval({ approval }),
+		dashboardUrl: approval
+			? approvalDashboardUrl({ approval, groupedWrites })
+			: undefined,
+		groupedWrites,
+	};
+};
+
+const approvalDashboardUrl = ({
+	approval,
+	groupedWrites,
+}: {
+	approval: ChatApproval;
+	groupedWrites?: ReadonlyArray<WithheldWrite>;
+}) =>
+	dashboardUrlFor({
+		approvalId: approval.id,
+		env: approval.env,
+		groupedStepCount: groupedWrites?.length ?? 0,
+		orgId: approval.org_id,
+		provider: approval.provider,
+		toolArgs: approval.tool_args as Record<string, unknown>,
+		toolName: approval.tool_name,
+	});
 
 const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	toolName: approval?.tool_name ?? "billing action",
@@ -59,6 +113,9 @@ const authorizeSlackApprovalClicker = async ({
 
 	// A gated tool without a declared scope requirement fails closed.
 	const required = requiredScopesForApproval({
+		groupedToolNames: (await groupedStepsForApproval({ approval })).map(
+			(write) => write.toolName,
+		),
 		toolArgs: approval.tool_args,
 		toolName: approval.tool_name,
 	});
@@ -189,7 +246,7 @@ export const handleApprovalActionWithDeps = async ({
 		await deps.editActionMessage({
 			content: approvalStatusCard({
 				status: cardStatusForApproval({ approval: current }),
-				...detailsFromApproval({ approval: current }),
+				...(await cardDetailsForApproval({ approval: current })),
 				actorId: current?.decided_by_provider_user_id ?? undefined,
 			}),
 			event,
@@ -227,9 +284,8 @@ export const handleApprovalActionWithDeps = async ({
 		}
 
 		if (event.actionId === "cancel_billing_action") {
-			// Cancel first so exactly one click wins: the Eve denial below takes
-			// seconds, and a second click in that window would otherwise read the
-			// row as still pending and discard (and reply) all over again.
+			// Cancel first so exactly one click wins — the eve denial takes seconds
+			// and a second click in that window would discard and reply again.
 			const cancelled = await deps.cancelApproval({
 				approvalId,
 				providerUserId,
@@ -242,9 +298,8 @@ export const handleApprovalActionWithDeps = async ({
 				await editToCurrentStatus();
 				return;
 			}
-			// Eve parks the whole turn on the approval — deny it in the session too,
-			// or it keeps waiting, holds the next message behind the stale approval,
-			// and the discarded write can still run later.
+			// Deny in the session too, or eve keeps waiting and the discarded write
+			// can still run later.
 			if (cancelled.harness === "eve") {
 				const discard = deps.discardApproval ?? discardApproval;
 				// The row is already cancelled, so a deny eve drops would leave its
@@ -270,7 +325,7 @@ export const handleApprovalActionWithDeps = async ({
 			await deps.editActionMessage({
 				content: approvalStatusCard({
 					status: "cancelled",
-					...detailsFromApproval({ approval: cancelled }),
+					...(await cardDetailsForApproval({ approval: cancelled })),
 					actorId: providerUserId,
 				}),
 				event,
@@ -330,7 +385,40 @@ export const handleApprovalActionWithDeps = async ({
 			});
 			return;
 		}
-		const details = detailsFromApproval({ approval: claimed });
+		// A resumed turn can park again where nothing streams — surface chained
+		// writes and questions as fresh cards or they stay invisible.
+		const surfaceResumedOutcome = async ({
+			resumed,
+		}: {
+			resumed: ApprovalRunResult;
+		}) => {
+			if (!event.thread) return;
+			if ("chainedApprovalId" in resumed && resumed.chainedApprovalId) {
+				const chained = await deps.getApproval({
+					approvalId: resumed.chainedApprovalId,
+				});
+				if (chained) {
+					await postApprovalCardForRow({
+						approval: chained,
+						logger: rootLogger,
+						target: event.thread,
+					});
+				}
+			}
+			if ("question" in resumed && resumed.question) {
+				await event.thread.post(
+					questionCard({
+						env: claimed.env,
+						options: resumed.question.options,
+						orgId: claimed.org_id,
+						prompt: resumed.question.prompt,
+						requestId: resumed.question.requestId,
+						sessionId: resumed.question.sessionId,
+					}),
+				);
+			}
+		};
+		const details = await cardDetailsForApproval({ approval: claimed });
 		const startedAt = Date.now();
 		let statusText: string | undefined;
 		const renderRunningCard = () =>
@@ -359,6 +447,9 @@ export const handleApprovalActionWithDeps = async ({
 		try {
 			result = await deps.resolveApproval({
 				approval: claimed,
+				onResumed: async (resumed) => {
+					await surfaceResumedOutcome({ resumed });
+				},
 				onProgress: (line) => {
 					statusText = line;
 					editor.requestEdit();
@@ -368,6 +459,52 @@ export const handleApprovalActionWithDeps = async ({
 		} finally {
 			clearInterval(heartbeat);
 			await editor.finalize();
+		}
+		if ("drifted" in result) {
+			// Nothing executed; the row is back in pending with fresh previews —
+			// re-render the PENDING card and tell the thread why.
+			const refreshed = await deps.getApproval({ approvalId });
+			if (refreshed) {
+				const groupedWrites = await groupedStepsForApproval({
+					approval: refreshed,
+				});
+				await deps.editActionMessage({
+					content: approvalCard({
+						dashboardUrl: approvalDashboardUrl({
+							approval: refreshed,
+							groupedWrites,
+						}),
+						id: refreshed.id,
+						env: refreshed.env,
+						preview: refreshed.preview ?? undefined,
+						writes: groupedWrites,
+						toolArgs: publicToolArgs(
+							refreshed.tool_args as Record<string, unknown>,
+						),
+						toolName: refreshed.tool_name,
+					}),
+					event,
+				});
+			}
+			try {
+				await deps.postThreadReply({
+					event,
+					markdown: `:warning: ${result.message}`,
+				});
+			} catch (error) {
+				deps.logger.warn("Could not post drift notice", {
+					event: "leaf.approval_drift_notice_failed",
+					approval_id: approvalId,
+					error,
+				});
+			}
+			deps.logger.info("Completed approval action", {
+				event: "leaf.approval_completed",
+				approval_id: approvalId,
+				status: "drift_refreshed",
+				tool: details.toolName,
+			});
+			return;
 		}
 		const failed = isErrorResult(result);
 		deps.logger.info("Completed approval action", {
@@ -390,36 +527,9 @@ export const handleApprovalActionWithDeps = async ({
 				});
 			}
 		}
-		// The resumed turn can park again (chained write or a question) where
-		// nothing streams — surface those as fresh cards or they stay invisible,
-		// even when an earlier step failed: the re-issued write is how the user
-		// recovers from that failure.
 		if (event.thread) {
 			try {
-				if ("chainedApprovalId" in result && result.chainedApprovalId) {
-					const chained = await deps.getApproval({
-						approvalId: result.chainedApprovalId,
-					});
-					if (chained) {
-						await postApprovalCardForRow({
-							approval: chained,
-							logger: rootLogger,
-							target: event.thread,
-						});
-					}
-				}
-				if ("question" in result && result.question) {
-					await event.thread.post(
-						questionCard({
-							env: claimed.env,
-							options: result.question.options,
-							orgId: claimed.org_id,
-							prompt: result.question.prompt,
-							requestId: result.question.requestId,
-							sessionId: result.question.sessionId,
-						}),
-					);
-				}
+				await surfaceResumedOutcome({ resumed: result });
 			} catch (error) {
 				deps.logger.warn("Could not surface chained interaction", {
 					event: "leaf.approval_chained_surface_failed",
@@ -435,7 +545,20 @@ export const handleApprovalActionWithDeps = async ({
 				...details,
 				actorId: providerUserId,
 				result,
-				steps: "steps" in result ? result.steps : undefined,
+				outcomes:
+					"writes" in result
+						? (result.writes as
+								| ReadonlyArray<{
+										status:
+											| "applied"
+											| "failed"
+											| "pending"
+											| "skipped"
+											| "unknown";
+										toolName: string;
+								  }>
+								| undefined)
+						: undefined,
 			}),
 			event,
 		});
@@ -449,7 +572,7 @@ export const handleApprovalActionWithDeps = async ({
 		await deps.editActionMessage({
 			content: approvalStatusCard({
 				status: cardStatusForApproval({ approval: current }),
-				...detailsFromApproval({ approval: current }),
+				...(await cardDetailsForApproval({ approval: current })),
 				result: approvalErrorResult(error),
 			}),
 			event,

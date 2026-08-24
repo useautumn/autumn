@@ -99,7 +99,7 @@ export const executeBatchMigrationPage = async ({
 				data: {
 					opIndex: patch.opIndex,
 					planId: patch.fromProduct.id,
-					featureId: remove.entitlement.feature.id,
+					featureId: remove.from.feature_id,
 					candidateCount: result.candidateCount,
 					affected: result.affected,
 				},
@@ -133,7 +133,7 @@ export const executeBatchMigrationPage = async ({
 				data: {
 					opIndex: patch.opIndex,
 					planId: patch.fromProduct.id,
-					fromFeatureId: replace.fromEntitlement.feature.id,
+					fromFeatureId: replace.from.feature_id,
 					featureId: replace.entitlement.feature.id,
 					candidateCount: result.candidateCount,
 					affected: result.affected,

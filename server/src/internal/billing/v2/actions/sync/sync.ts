@@ -223,7 +223,6 @@ const processSyncMapping = async ({
 		},
 		initOptions: {
 			subscriptionId: stripeSubscription.id,
-			isCustom: Boolean(customizePlan),
 			canceledAt,
 			endedAt,
 			startsAt: stripeSubscription?.start_date

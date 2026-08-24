@@ -51,8 +51,9 @@ function EditedRow({
 	);
 }
 
-/** A removal is a filter (feature + optional interval/billing method), not a
- * concrete item, so it has no quantity — show the matched feature, not "0". */
+/** A removal is a filter (feature + optional interval / included / billing
+ * method), not a concrete item, so it has no quantity — show the matched
+ * feature, not "0". */
 function RemovedFilterRow({ filter }: { filter: ItemFilter }) {
 	const { features } = useFeaturesQuery();
 	return (

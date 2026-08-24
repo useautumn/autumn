@@ -40,6 +40,9 @@ export const customerProducts = pgTable(
 		starts_at: numeric({ mode: "number" }),
 		access_starts_at: numeric({ mode: "number" }),
 		options: jsonb().array(),
+		/** @deprecated Snapshot of the public plan id at write time. Do not
+		 * read or match on this — use `internal_product_id`, or the live
+		 * `product.id` from the products join. */
 		product_id: text("product_id"),
 		free_trial_id: text("free_trial_id"),
 		trial_ends_at: numeric({ mode: "number" }),

@@ -776,11 +776,14 @@ export class AutumnInt {
 
 		list: async <T = any[]>({
 			customer_id,
+			all_versions,
 		}: {
 			customer_id?: string;
+			all_versions?: boolean;
 		} = {}): Promise<{ list: T }> => {
 			const params = new URLSearchParams();
 			if (customer_id) params.set("customer_id", customer_id);
+			if (all_versions) params.set("all_versions", "true");
 			const query = params.toString();
 			const data = await this.get(`/products${query ? `?${query}` : ""}`);
 			return data as { list: T };

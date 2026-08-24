@@ -22,6 +22,16 @@
 	"interaction": {
 		"drilldown": true
 	},
+	"redirects": [
+		{
+			"source": "/documentation/modelling-pricing/sub-entity-balances",
+			"destination": "/documentation/modelling-pricing/entity-plans"
+		},
+		{
+			"source": "/documentation/modelling-pricing/sub-entity-plans",
+			"destination": "/documentation/modelling-pricing/entity-plans"
+		}
+	],
 	"navigation": {
 		"global": {
 			"anchors": [
@@ -95,8 +105,7 @@
 							"documentation/modelling-pricing/add-ons",
 							"documentation/modelling-pricing/graduated-pricing",
 							"documentation/modelling-pricing/volume-based-tiers",
-							"documentation/modelling-pricing/sub-entity-balances",
-							"documentation/modelling-pricing/sub-entity-plans",
+							"documentation/modelling-pricing/entity-plans",
 							"documentation/modelling-pricing/rewards"
 						]
 					},
@@ -195,7 +204,9 @@
 								"group": "Licenses",
 								"pages": [
 									"api-reference/licenses/attachLicense",
-									"api-reference/licenses/releaseLicense"
+									"api-reference/licenses/releaseLicense",
+									"api-reference/licenses/listLicenses",
+									"api-reference/licenses/listLicenseAssignments"
 								]
 							}
 						]

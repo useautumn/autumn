@@ -10,6 +10,7 @@ import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptio
 export function useUpdateSubscriptionMutation({
 	updateSubscriptionFormContext,
 	buildRequestBody,
+	onApplied,
 	onCheckoutRedirect,
 	onSuccess,
 }: {
@@ -17,6 +18,7 @@ export function useUpdateSubscriptionMutation({
 	buildRequestBody: (
 		params?: BillingStageParams,
 	) => UpdateSubscriptionV0Params | null;
+	onApplied?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 }) {
@@ -31,6 +33,7 @@ export function useUpdateSubscriptionMutation({
 		buildRequestBody,
 		successMessage: "Subscription updated successfully",
 		errorMessage: "Failed to update subscription",
+		onApplied,
 		onCheckoutRedirect,
 		onSuccess,
 	});

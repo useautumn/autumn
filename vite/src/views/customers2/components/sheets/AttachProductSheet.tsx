@@ -47,6 +47,8 @@ import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useEnv } from "@/utils/envUtils";
+import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
+import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { CreateEntity } from "@/views/customers2/customer/components/CreateEntity";
@@ -434,16 +436,22 @@ function SheetContent() {
 
 export function AttachProductSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
+	const sheetData = useSheetStore((s) => s.data);
 	const { closeSheet } = useSheetStore();
 	const { customer } = useCusQuery();
 	const { setIsInlineEditorOpen } = useCustomerContext();
 	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(
 		customer as FullCustomer | undefined,
 	);
+	const approvalSeed = approvalSeedFromSheetData(sheetData);
+	const onApplied = useSettleApprovalOnApply();
 
 	return (
 		<AttachFormProvider
 			customerId={customer?.id ?? customer?.internal_id ?? ""}
+			defaultOverrides={
+				approvalSeed?.defaultOverrides as Partial<AttachForm> | undefined
+			}
 			entityId={scopeEntityId}
 			initialProductId={itemId ?? undefined}
 			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
@@ -452,6 +460,7 @@ export function AttachProductSheet() {
 				navigator.clipboard.writeText(checkoutUrl);
 				toast.success("Checkout URL copied to clipboard");
 			}}
+			onApplied={onApplied}
 			onSuccess={closeSheet}
 			onScopeChange={setScopeEntityId}
 			allowMultiplePlans

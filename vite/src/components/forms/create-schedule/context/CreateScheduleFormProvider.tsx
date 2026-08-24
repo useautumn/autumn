@@ -113,6 +113,7 @@ interface CreateScheduleFormProviderProps {
 	nowMs?: number;
 	initialValues?: CreateScheduleForm;
 	existingPlans?: SchedulePlan[];
+	onApplied?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 	children: ReactNode;
@@ -125,6 +126,7 @@ export function CreateScheduleFormProvider({
 	nowMs: nowMsProp,
 	initialValues,
 	existingPlans = NO_EXISTING_PLANS,
+	onApplied,
 	onCheckoutRedirect,
 	onSuccess,
 	children,
@@ -318,6 +320,7 @@ export function CreateScheduleFormProvider({
 		useCreateScheduleMutation({
 			customerId,
 			buildRequestBody,
+			onApplied,
 			onCheckoutRedirect,
 			onSuccess,
 		});

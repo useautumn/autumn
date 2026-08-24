@@ -7,6 +7,7 @@ import type {
 	FullProduct,
 } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
+import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 import { latestVariantsOfBase } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/variantPlanUtils";
 import { withVariantConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withVariantConflicts";
 import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
@@ -15,7 +16,9 @@ import type {
 	PreviewCatalogContext,
 	ProductStatesContext,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import type { RenameProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/renameProductPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { aliasReplacementForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/aliasReplacementForPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
 const byPlanThenVersion = (
@@ -39,6 +42,21 @@ const findVariantUpsert = ({
 }): UpsertProductPlan | undefined =>
 	upsertProducts.find(
 		(upsert) => upsert.row.planId === planId && upsert.row.version === version,
+	);
+
+/** Mints land at max+1, which is not active+1 once a plan has an older active row. */
+const findVariantMintUpsert = ({
+	upsertProducts,
+	planId,
+}: {
+	upsertProducts: UpsertProductPlan[];
+	planId: string;
+}): UpsertProductPlan | undefined =>
+	upsertProducts.find(
+		(upsert) =>
+			upsert.row.planId === planId &&
+			upsert.row.op === "create" &&
+			upsert.row.source === "variant_propagation",
 	);
 
 const resolveVariantAction = ({
@@ -209,8 +227,12 @@ const siblingVersionsForVariant = ({
 			});
 			const planChange = variantPlanChange({ variantUpsert: siblingUpsert });
 			const preview: CatalogVariantVersionPreview = {
-				plan_id: product.id,
-				version: product.version,
+				...catalogRowIdentity({
+					planId: product.id,
+					version: product.version,
+					current: product,
+					next: siblingUpsert?.row.nextFullProduct ?? product,
+				}),
 				state: variantPreviewState({
 					planId: product.id,
 					version: product.version,
@@ -236,11 +258,13 @@ export const buildVariantsPreview = ({
 	upsertProducts,
 	productStatesContext,
 	previewContext,
+	renamePlans,
 }: {
 	directUpsert: UpsertProductPlan;
 	upsertProducts: UpsertProductPlan[];
 	productStatesContext: ProductStatesContext;
 	previewContext: PreviewCatalogContext | undefined;
+	renamePlans: RenameProductPlan[];
 }): CatalogVariantPreview[] => {
 	const variants = latestVariantsOfBase({
 		upsert: directUpsert,
@@ -253,10 +277,9 @@ export const buildVariantsPreview = ({
 
 	return variants
 		.map((variant) => {
-			const mintUpsert = findVariantUpsert({
+			const mintUpsert = findVariantMintUpsert({
 				upsertProducts,
 				planId: variant.id,
-				version: variant.version + 1,
 			});
 			const variantUpsert =
 				mintUpsert ??
@@ -273,6 +296,11 @@ export const buildVariantsPreview = ({
 				base: directUpsert,
 			});
 			const planChange = variantPlanChange({ variantUpsert });
+			const aliasReplacement = aliasReplacementForPlan({
+				planId: variant.id,
+				upsert: variantUpsert,
+				renamePlans,
+			});
 			const siblingVersions = siblingVersionsForVariant({
 				variant,
 				upsertProducts,
@@ -284,8 +312,12 @@ export const buildVariantsPreview = ({
 				base: directUpsert,
 			});
 			const preview = {
-				plan_id: variant.id,
-				version: previewVersion,
+				...catalogRowIdentity({
+					planId: variant.id,
+					version: previewVersion,
+					current: mintUpsert ? null : variant,
+					next: variantUpsert?.row.nextFullProduct ?? variant,
+				}),
 				versioning: variantVersioning({
 					variant,
 					mintUpsert,
@@ -303,6 +335,7 @@ export const buildVariantsPreview = ({
 				...(siblingVersions.length > 0
 					? { sibling_versions: siblingVersions }
 					: {}),
+				...(aliasReplacement ? { alias_replacement: aliasReplacement } : {}),
 			};
 			if (variantAction === "explicit") return preview;
 			return withVariantConflicts({

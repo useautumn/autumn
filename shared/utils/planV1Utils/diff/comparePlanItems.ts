@@ -174,7 +174,8 @@ export const planItemFiltersEqual = (
 		normalizeIntervalCount({
 			interval: b.interval,
 			intervalCount: b.interval_count,
-		});
+		}) &&
+	(a.included ?? null) === (b.included ?? null);
 
 /** Omitted and `[]` are the same empty list. Order does not matter. */
 export const arraysEqual = <T>({

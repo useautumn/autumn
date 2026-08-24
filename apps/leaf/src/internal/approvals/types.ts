@@ -10,29 +10,31 @@ export type ActionMessageContent = Parameters<
 >[2];
 
 /** Outcome of one write on a grouped card, in apply order. */
-export type ApprovalStepOutcome = {
-	status: "applied" | "failed" | "pending";
+export type ApprovalWriteOutcome = {
+	status: "applied" | "failed" | "pending" | "skipped" | "unknown";
 	toolName: string;
 };
 
 export type ApprovalRunResult =
+	// The money facts changed since the card was shown; nothing executed and
+	// the refreshed card must be re-approved.
+	| {
+			drifted: true;
+			message: string;
+	  }
 	// `retryable` means the write never ran to completion (a session crash /
 	// interruption), so the approval stays pending and the user can re-apply.
 	| {
-			/** A write the resumed turn re-issued after a step failed — it still
-			 * needs its own card, or the session waits on it in silence. */
 			chainedApprovalId?: string;
 			error: true;
 			message: string;
 			retryable?: boolean;
-			steps?: ReadonlyArray<ApprovalStepOutcome>;
+			writes?: ReadonlyArray<ApprovalWriteOutcome>;
 	  }
+	// The resumed turn parked again — a chained gated write or a question —
+	// and needs its own card, or the session waits in silence.
 	| {
-			/** The resumed turn parked on another gated write — surfaces that mimic
-			 * chat (Slack) post this row's card; the dashboard picks it up by poll. */
 			chainedApprovalId?: string;
-			/** The resumed turn parked on an ask_question — rich surfaces render
-			 * the options as buttons. */
 			question?: {
 				options: ReadonlyArray<Readonly<{ id?: string; label?: string }>>;
 				prompt: string;
@@ -40,10 +42,17 @@ export type ApprovalRunResult =
 				sessionId: string;
 			};
 			result: unknown;
-			steps?: ReadonlyArray<ApprovalStepOutcome>;
+			writes?: ReadonlyArray<ApprovalWriteOutcome>;
 			text: string;
 			toolName?: string;
 	  };
+
+/** A resume outcome — every ApprovalRunResult except drift, which only the
+ * pre-execution guard can produce. */
+export type SubmittedApprovalResult = Exclude<
+	ApprovalRunResult,
+	{ drifted: true }
+>;
 
 export type ApprovalAuthorization =
 	| { allowed: true }
@@ -52,6 +61,7 @@ export type ApprovalAuthorization =
 export type ApprovalActionDeps = {
 	resolveApproval: (input: {
 		approval: ChatApproval;
+		onResumed?: (result: ApprovalRunResult) => Promise<void> | void;
 		onProgress?: (statusLine: string) => void;
 		providerUserId: string;
 	}) => Promise<ApprovalRunResult>;

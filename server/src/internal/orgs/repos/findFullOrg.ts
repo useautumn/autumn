@@ -8,9 +8,11 @@ import {
 	OrgConfigSchema,
 	organizations,
 	type PendingMigration,
+	productAliases,
 } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { toPlanAliasMap } from "@/internal/catalogV2/productAliases/toPlanAliasMap.js";
 
 export const findFullOrg = async ({
 	db,
@@ -30,6 +32,7 @@ export const findFullOrg = async ({
 		where: eq(organizations.id, orgId),
 		with: {
 			features: { where: eq(features.env, env) },
+			product_aliases: { where: eq(productAliases.env, env) },
 			master: true,
 			migration_runs: {
 				where: and(
@@ -48,6 +51,7 @@ export const findFullOrg = async ({
 	const cloned = structuredClone(row);
 	const {
 		features: rawFeatures,
+		product_aliases: rawProductAliases,
 		migration_runs: rawMigrationRuns,
 		master: rawMaster,
 		...orgCore
@@ -58,6 +62,7 @@ export const findFullOrg = async ({
 	// Same trade-off as `OrgService.getWithFeatures` — bridged with one cast.
 	const orgFeatures = (rawFeatures ?? []) as unknown as Feature[];
 	const pendingMigrations: PendingMigration[] = rawMigrationRuns ?? [];
+	const planAliases = toPlanAliasMap({ rows: rawProductAliases });
 
 	const master: Organization | null = rawMaster
 		? {
@@ -72,6 +77,7 @@ export const findFullOrg = async ({
 		master,
 		config: OrgConfigSchema.parse(orgCore.config || {}),
 		pendingMigrations,
+		planAliases,
 	};
 
 	const fullOrg: FullOrg = {

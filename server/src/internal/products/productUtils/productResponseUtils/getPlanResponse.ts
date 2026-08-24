@@ -23,6 +23,7 @@ import { buildApiPlanLicense } from "./buildApiPlanLicense.js";
 import { buildApiPlanVariant } from "./buildApiPlanVariant.js";
 import { buildCustomerEligibility } from "./buildCustomerEligibility.js";
 import { buildVariantDetails } from "./buildVariantDetails.js";
+import { resolveTrialCardRequired } from "./resolveTrialCardRequired.js";
 
 /**
  * Get free trial response in Plan V2 format
@@ -37,7 +38,7 @@ const getFreeTrialV2Response = ({
 	return ApiFreeTrialV2Schema.parse({
 		duration_type: product.free_trial.duration,
 		duration_length: product.free_trial.length,
-		card_required: product.free_trial.card_required ?? false,
+		card_required: resolveTrialCardRequired({ product }),
 		on_end: product.free_trial.on_end ?? null,
 	});
 };
@@ -179,6 +180,8 @@ export async function getPlanResponse({
 		description: product.description || null,
 		group: product.group || null,
 		version: product.version,
+		version_slug: product.version_slug ?? null,
+		active: product.active ?? false,
 
 		add_on: product.is_add_on ?? false,
 		auto_enable: product.is_default ?? false,

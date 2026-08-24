@@ -37,6 +37,7 @@ const messagesCustomize = ({ included }: { included: number }) => ({
 			feature_id: TestFeature.Messages,
 			interval: ResetInterval.Month,
 			interval_count: 1,
+			included: 100,
 		},
 	],
 	add_items: [
@@ -86,7 +87,7 @@ test.concurrent(
 				included: 100,
 			});
 			await autumnV2_3.catalogV2.update({
-				plans: [{ plan_id: planId, versioning: "new_version" }],
+				plans: [{ plan_id: planId, versioning: "new_version", active: true }],
 			});
 			await seedVersionableCustomer({ ctx, planId, version: 1 });
 

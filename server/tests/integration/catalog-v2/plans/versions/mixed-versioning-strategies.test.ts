@@ -96,7 +96,7 @@ test.concurrent(
 					{
 						plan_id: planA,
 						name: "A V3",
-						versioning: "new_version" as const,
+						versioning: "new_version", active: true as const,
 					},
 					{
 						plan_id: planB,
@@ -116,7 +116,7 @@ test.concurrent(
 			expectCatalogResultsCorrect({
 				response,
 				plans: [
-					{ id: planA, action: "create" },
+					{ id: planA, action: "update" },
 					{ id: planB, action: "update" },
 					{ id: planC, action: "update" },
 					{ id: planD, action: "create" },
@@ -214,7 +214,7 @@ test.concurrent(
 						{
 							plan_id: planA,
 							name: "A V3",
-							versioning: "new_version",
+							versioning: "new_version", active: true,
 						},
 						{
 							plan_id: planB,
@@ -235,7 +235,7 @@ test.concurrent(
 				preview,
 				expected: {
 					planId: planA,
-					action: "create",
+					action: "update",
 					versioning: {
 						current_version: 2,
 						new_version: 3,

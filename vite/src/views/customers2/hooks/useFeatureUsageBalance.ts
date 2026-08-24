@@ -4,6 +4,7 @@ import {
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
+	cusEntsToUnlimitedUsage,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
@@ -27,6 +28,7 @@ export interface FeatureUsageBalanceResult {
 	shouldShowOutOfBalance: boolean;
 	shouldShowUsed: boolean;
 	isUnlimited: boolean;
+	unlimitedUsage: number;
 	usageType: string | undefined;
 	quantity: number;
 	cusEntsCount: number;
@@ -89,6 +91,10 @@ export function useFeatureUsageBalance({
 	);
 
 	const isUnlimited = cusEnts.some((e) => e.unlimited);
+	const unlimitedUsage = cusEntsToUnlimitedUsage({
+		cusEnts,
+		entityId: entityId ?? undefined,
+	});
 	const usageType = cusEnts[0]?.entitlement?.feature?.config?.usage_type;
 	const quantity = cusEnts.reduce(
 		(sum, e) => sum + (e.customer_product?.quantity ?? 1),
@@ -103,6 +109,7 @@ export function useFeatureUsageBalance({
 		shouldShowOutOfBalance,
 		shouldShowUsed,
 		isUnlimited,
+		unlimitedUsage,
 		usageType,
 		quantity,
 		cusEntsCount: cusEnts.length,

@@ -76,6 +76,11 @@ export const wasThresholdCrossed = ({
 	oldApiBalance: ApiBalanceV1;
 	newApiBalance: ApiBalanceV1;
 }) => {
+	// Unlimited balances report real usage now, but alerts on them never fired
+	// when usage was masked to 0 — keep that semantic: no usage alerts for
+	// unlimited features.
+	if (oldApiBalance.unlimited || newApiBalance.unlimited) return false;
+
 	if (alert.threshold_type === "usage") {
 		const shldAlert =
 			oldApiBalance.usage < alert.threshold &&

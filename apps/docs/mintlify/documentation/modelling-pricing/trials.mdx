@@ -438,7 +438,7 @@ Trial extensions are **replacement**, not additive. If a customer is 5 days into
 
 ## Trials with shared subscriptions
 
-When using [entities](/documentation/modelling-pricing/sub-entity-plans) or add-ons, trial state is shared across the same Stripe subscription. This is because Stripe manages trials at the subscription level.
+When using [entities](/documentation/modelling-pricing/entity-plans) or add-ons, trial state is shared across the same Stripe subscription. This is because Stripe manages trials at the subscription level.
 
 <Tip>
 You can pass in `newBillingSubscription: true` to create a new subscription for each plan, rather than merging into the existing subscription.

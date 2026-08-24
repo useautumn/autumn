@@ -1,6 +1,6 @@
 import type { FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { computeUpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductPlan";
+import { intentToUpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductPlan/intentToUpsertProductPlan";
 import type { ProjectedCatalog } from "@/internal/catalogV2/actions/updateCatalog/types/catalogComputeState";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { RemovePlanPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
@@ -152,7 +152,7 @@ export const mergeRemoveRepointUpserts = ({
 						upsert: existing,
 						baseInternalProductId: surviving.internal_id,
 					})
-				: computeUpsertProductPlan({
+				: intentToUpsertProductPlan({
 						ctx,
 						productStatesContext: catalogContext.productStatesContext,
 						intent: {

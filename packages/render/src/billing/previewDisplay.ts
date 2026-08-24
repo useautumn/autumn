@@ -144,7 +144,7 @@ const lineItemDisplays = ({
 		];
 	});
 
-const phaseTimingText = ({
+export const phaseTimingText = ({
 	index,
 	phase,
 }: {

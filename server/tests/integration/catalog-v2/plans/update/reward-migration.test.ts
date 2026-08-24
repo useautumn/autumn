@@ -204,7 +204,7 @@ test.concurrent(
 				{
 					plan_id: pro.id,
 					price: { amount: 50, interval: "month" },
-					versioning: "new_version" as const,
+					versioning: "new_version", active: true as const,
 				},
 			],
 		});

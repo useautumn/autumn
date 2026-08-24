@@ -76,7 +76,6 @@ export interface InitCustomerEntitlementContext {
 export interface InitFullCustomerProductOptions {
 	subscriptionId?: string;
 	subscriptionScheduleId?: string;
-	isCustom?: boolean;
 	canceledAt?: number;
 	status?: CusProductStatus; // Used for scheduling product
 	startsAt?: number; // Used for scheduling product

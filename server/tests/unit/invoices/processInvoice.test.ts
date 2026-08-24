@@ -125,3 +125,33 @@ describe("processInvoice — hosted_invoice_url processor gating", () => {
 		);
 	});
 });
+
+describe("processInvoice — plan_ids from hydration", () => {
+	test("resolved_product_ids wins over the snapshot", () => {
+		const wire = processInvoice({
+			invoice: buildBaseInvoice({
+				product_ids: ["pro"],
+				internal_product_ids: ["prod_abc"],
+				resolved_product_ids: ["pro-new"],
+			}),
+		});
+		expect(wire.plan_ids).toEqual(["pro-new"]);
+	});
+
+	test("empty resolved_product_ids falls back to the snapshot", () => {
+		const wire = processInvoice({
+			invoice: buildBaseInvoice({
+				product_ids: ["pro"],
+				resolved_product_ids: [],
+			}),
+		});
+		expect(wire.plan_ids).toEqual(["pro"]);
+	});
+
+	test("missing resolved_product_ids falls back to the snapshot", () => {
+		const wire = processInvoice({
+			invoice: buildBaseInvoice({ product_ids: ["pro"] }),
+		});
+		expect(wire.plan_ids).toEqual(["pro"]);
+	});
+});

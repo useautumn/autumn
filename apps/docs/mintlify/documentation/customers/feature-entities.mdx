@@ -7,17 +7,19 @@ Entities are sub accounts of a customer. For example, you may have a product tha
 
 ## Product setup
 
-There are two ways you can handle entities depending on your use case.
+An entity can hold its own plan, with its own balances, while the parent customer pays. There are two ways to provision that, differing in where capacity comes from:
 
-1. **Entity-level balances**: this is the simplest way of handling entities, and keeps everything under 1 subscription. This is useful when all entities get the same features and limits.
-2. **Entity-level subscriptions**: if an entity can have its own subscription tiers (ie basic seats, pro seats), then you can attach a product directly at the entity level by passing the [entity ID](/api-reference/billing/attach#body-entity-id) into an attach function. Each will be under its own subscription in Stripe with the billing cycles synced.
+1. **Attach directly**: pass the [entity ID](/api-reference/billing/attach#body-entity-id) into an attach call. The entity gets its own subscription in Stripe, with billing cycles synced to the parent. Use this when entities appear and you bill for them as they do.
+2. **Licenses**: the parent plan offers a pool of seats that the customer buys upfront, and you assign one to an entity to give it its plan. Use this when customers commit to a seat count before you know who fills it.
+
+Both support different tiers per entity. See [entity plans](/documentation/modelling-pricing/entity-plans) for the full setup of either.
 
 <Info>
 **Example**
 
-Max has a team product, where each seat under the team gets access to 30 meeting note summaries per month. Since his seats all cost the same and get access to the same features, he can create a product with entity items.
+Max has a team product where each seat gets 30 meeting note summaries per month, and teams buy their seat count upfront. He creates a Seat license plan holding the 30 summaries, offers it under his Team plan, and assigns a license each time someone joins.
 
-Jamie's also has a team product, but each user can either be under a Free tier or a Pro tier, where the pro tier gives the seat access to more meeting note summaries. In this case, Jamie can create a free tier and pro tier as normal, without entity items, and just `attach` these products at the entity level.
+Jamie also has a team product, but workspaces are created ad hoc and each can be on a Free or Pro tier. She creates the two tiers as normal and attaches them at the entity level as workspaces appear.
 
 </Info>
 
@@ -28,6 +30,10 @@ You can manage feature entities via the `entities` route. This can be used to cr
 When you create an entity, a **usage event** will automatically be sent that increments the count of the number of entities (eg seats) being used.
 
 This means if you create 2 entities for "seats", your usage of "seats" will be 2, allowing Autumn to bill accordingly if there's a price set.
+
+<Note>
+This is how seats are counted when you attach plans directly. With [licenses](/documentation/modelling-pricing/entity-plans#licenses), seats are counted by the license pool instead, and the entity's feature only identifies its type.
+</Note>
 
 <CodeGroup>
 

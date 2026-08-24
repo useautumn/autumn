@@ -11,6 +11,7 @@ import {
 import { CatalogSiblingVersionPreviewSchema } from "./catalogSiblingVersionPreview.js";
 import { CatalogVariantPreviewSchema } from "./catalogVariantPreview.js";
 import { CatalogPlanVersioningSchema } from "./catalogVersioningPreview.js";
+import { PlanAliasReplacementSchema } from "./planAliasReplacement.js";
 
 /**
  * One direct `plans[]` entry from the request.
@@ -53,6 +54,10 @@ export const CatalogPlanUpdatePreviewSchema = CatalogCorePreviewSchema.extend({
 	licenses: z.array(ApiPlanLicenseV1Schema).optional().meta({
 		description:
 			"planLicenses on this plan after the update. Omitted when there are none.",
+	}),
+	alias_replacement: PlanAliasReplacementSchema.optional().meta({
+		description:
+			"This create/rename claims a reserved alias. Omitted when the id is free.",
 	}),
 });
 

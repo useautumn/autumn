@@ -115,10 +115,17 @@ export const resolvePlanChangePreview = ({
 		showAllOption,
 	});
 
+	const strategy = strategyForCatalogPreview({
+		choice: effectiveVersionChoice,
+		options: versioningOptions,
+		isLatest,
+	});
+
 	const variantTargets = toVariantPropagationTargets({
 		variants: preview?.variants,
 		namesByPlanId,
 		includeHistoricalVersions: effectiveVersionChoice === "all",
+		baseMintsNewVersion: strategy === "new_version",
 	});
 	const defaultVariantIds = getDefaultPropagationTargetIds({
 		targets: variantTargets,
@@ -152,11 +159,7 @@ export const resolvePlanChangePreview = ({
 		showAllOption,
 		showUpdateOption,
 		effectiveVersionChoice,
-		strategy: strategyForCatalogPreview({
-			choice: effectiveVersionChoice,
-			options: versioningOptions,
-			isLatest,
-		}),
+		strategy,
 		variantTargets,
 		defaultVariantIds,
 		selectedVariantIds,

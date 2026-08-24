@@ -15,7 +15,9 @@ export const submitAgentInput = async ({
 	orgId,
 	requestId,
 	session,
+	siblingOptionIdFor,
 	siblingRequestIds,
+	suppressSiblingWithheldNote,
 }: {
 	approveSiblings?: boolean;
 	auth: EveAuthContext;
@@ -26,7 +28,9 @@ export const submitAgentInput = async ({
 	orgId: string;
 	requestId: string;
 	session: EveSessionRef;
+	siblingOptionIdFor?: (siblingRequestId: string) => string | undefined;
 	siblingRequestIds?: ReadonlyArray<string>;
+	suppressSiblingWithheldNote?: boolean;
 }) => {
 	const posted = await postEveInputResponse({
 		approveSiblings,
@@ -35,7 +39,9 @@ export const submitAgentInput = async ({
 		optionId,
 		requestId,
 		session,
+		siblingOptionIdFor,
 		siblingRequestIds,
+		suppressSiblingWithheldNote,
 	});
 	adoptPostedEveSession({ posted, session, status: "running" });
 	await upsertEveSession({

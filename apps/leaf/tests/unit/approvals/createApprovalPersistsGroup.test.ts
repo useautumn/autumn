@@ -14,23 +14,55 @@ const mockLeafModule = ({
 }) => mockModuleWithRestore({ baseUrl: import.meta.url, factory, specifier });
 
 const inserted: Array<Record<string, unknown>> = [];
-const updatedToolArgs: Array<Record<string, unknown>> = [];
+const insertedSteps: Array<Record<string, unknown>> = [];
+const storedStepPreviews: Array<{ preview: unknown; writeId: string }> = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/approvals/repos/chatApprovalRepo.js",
 	factory: () => ({
 		chatApprovalRepo: {
 			insert: async ({ data }: { data: Record<string, unknown> }) => {
 				inserted.push(data);
+				const writes = [
+					{
+						requestId: data.toolCallId,
+						toolArgs: data.toolArgs,
+						toolName: data.toolName,
+					},
+					...(data.groupedWrites as Array<Record<string, unknown>>),
+				];
+				insertedSteps.push(
+					...writes.map((write, position) => ({
+						...write,
+						id: `chat_apw_${position}`,
+						position,
+						request_id: write.requestId,
+						status: "pending",
+						tool_args: write.toolArgs,
+						tool_name: write.toolName,
+					})),
+				);
 				return "chat_app_1";
 			},
-			setToolArgs: async ({
-				toolArgs,
+		},
+	}),
+});
+await mockLeafModule({
+	specifier: "../../../src/internal/approvals/repos/chatApprovalWritesRepo.js",
+	factory: () => ({
+		chatApprovalWritesRepo: {
+			insert: async () => undefined,
+			list: async () => insertedSteps,
+			setPreview: async ({
+				preview,
+				writeId,
 			}: {
-				toolArgs: Record<string, unknown>;
+				preview: unknown;
+				writeId: string;
 			}) => {
-				updatedToolArgs.push(toolArgs);
+				storedStepPreviews.push({ preview, writeId });
 				return true;
 			},
+			setStatus: async () => undefined,
 		},
 	}),
 });
@@ -52,13 +84,22 @@ await mockLeafModule({
 	specifier: "../../../src/internal/approvals/utils/fetchApprovalPreview.js",
 	factory: () => ({
 		FAILED_APPROVAL_PREVIEW: { failed: true },
-		fetchApprovalPreview: async ({
+		isFailedApprovalPreview: () => false,
+		resolveApprovalPreview: async ({
 			request,
 		}: {
-			request: { customer_id: string };
-		}) => previewFor(request.customer_id),
-		isFailedApprovalPreview: () => false,
+			request?: { customer_id?: string };
+		}) => previewFor(request?.customer_id ?? "unknown"),
 		shouldRefreshApprovalPreview: () => true,
+		withWritePreviews: async ({
+			writes,
+		}: {
+			writes: Array<{ input?: { request?: { customer_id?: string } } }>;
+		}) =>
+			writes.map((write) => ({
+				...write,
+				preview: previewFor(write.input?.request?.customer_id ?? "unknown"),
+			})),
 	}),
 });
 await mockLeafModule({
@@ -74,12 +115,13 @@ const { createApproval } = await import(
 );
 
 // Every card after the first post — running, resolved, superseded, and the
-// dashboard poll — renders from the stored row, so the step previews backfilled
-// for the pending card must be persisted, not only returned.
-describe("createApproval persists the grouped-step previews", () => {
-	test("the stored tool_args carry a preview for every grouped write", async () => {
+// dashboard poll — renders from the stored rows, so the group must persist as
+// write rows with previews, and the stored tool_args must carry no markers.
+describe("createApproval persists the grouped writes", () => {
+	test("writes persist per write and backfill stores every preview", async () => {
 		inserted.length = 0;
-		updatedToolArgs.length = 0;
+		insertedSteps.length = 0;
+		storedStepPreviews.length = 0;
 		const created = await createApproval({
 			channelId: "C1",
 			env: AppEnv.Sandbox,
@@ -92,10 +134,12 @@ describe("createApproval persists the grouped-step previews", () => {
 				approval: {
 					toolArgs: {
 						_eveApproveOptionId: "approve",
+						_eveChildSessionIds: ["wrun_1"],
 						_eveDenyOptionId: "deny",
 						_eveSiblingRequestIds: ["req_leaf-0002", "req_leaf-0003"],
 						_eveWithheldWrites: ["leaf-0002", "leaf-0003"].map(
 							(customerId) => ({
+								denyOptionId: "deny",
 								input: {
 									request: {
 										customer_id: customerId,
@@ -116,24 +160,38 @@ describe("createApproval persists the grouped-step previews", () => {
 			workspaceId: "T1",
 		});
 
-		// The card posts before the N preview round trips; the deferred backfill
-		// persists them onto the pending row.
-		expect(created?.backfillGroupedPreviews).toBeDefined();
-		await created?.backfillGroupedPreviews?.();
-		const stored = updatedToolArgs[0] as {
-			_eveApproveOptionId?: string;
-			_eveSiblingRequestIds?: string[];
-			_eveWithheldWrites: Array<{ preview?: unknown }>;
+		const data = inserted[0] as {
+			approveOptionId?: string;
+			childSessionIds?: string[];
+			denyOptionId?: string;
+			groupedWrites: Array<{ requestId?: string; toolName: string }>;
+			toolArgs: Record<string, unknown>;
+			toolName: string;
 		};
-		expect(stored._eveWithheldWrites).toHaveLength(2);
-		for (const step of stored._eveWithheldWrites) {
-			expect(step.preview).toBeDefined();
-		}
-		// The approve click reads these off the row; enriching must not strip them.
-		expect(stored._eveApproveOptionId).toBe("approve");
-		expect(stored._eveSiblingRequestIds).toEqual([
+		expect(data.toolName).toBe("autumn__attach");
+		expect(data.groupedWrites.map((write) => write.toolName)).toEqual([
+			"autumn__attach",
+			"autumn__attach",
+		]);
+		expect(data.groupedWrites.map((write) => write.requestId)).toEqual([
 			"req_leaf-0002",
 			"req_leaf-0003",
 		]);
+		expect(data.approveOptionId).toBe("approve");
+		expect(data.denyOptionId).toBe("deny");
+		expect(data.childSessionIds).toEqual(["wrun_1"]);
+		expect(
+			Object.keys(data.toolArgs).filter((key) => key.startsWith("_eve")),
+		).toEqual([]);
+
+		// The card posts before the N preview round trips; the deferred backfill
+		// persists them onto the pending write rows.
+		expect(created?.backfillGroupedPreviews).toBeDefined();
+		const previewed = await created?.backfillGroupedPreviews?.();
+		expect(previewed).toHaveLength(2);
+		expect(storedStepPreviews).toHaveLength(2);
+		for (const stored of storedStepPreviews) {
+			expect(stored.preview).toBeDefined();
+		}
 	});
 });
