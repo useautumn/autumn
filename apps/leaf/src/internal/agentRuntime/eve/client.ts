@@ -8,6 +8,11 @@ import {
 	isRetryableEveStreamError,
 } from "./streamErrors.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
+import {
+	hasWorkflowWorld,
+	readSessionEvents,
+	sessionEventCount,
+} from "./world.js";
 
 const eveUrl = (path: string) => new URL(path, env.EVE_SERVER_URL).href;
 
@@ -261,6 +266,66 @@ export async function* streamEveEvents({
 	session: EveSessionRef;
 	signal?: AbortSignal;
 }): AsyncGenerator<EveEvent> {
+	if (hasWorkflowWorld()) {
+		yield* streamEveEventsFromWorld({ idleTimeoutMs, session, signal });
+		return;
+	}
+	yield* streamEveEventsOverHttp({ auth, idleTimeoutMs, session, signal });
+}
+
+/** The journal read straight from Postgres: no HTTP socket for an idle
+ * reaper to cut. Transport errors are surfaced as disconnects so the shared
+ * reconnect loop handles a blip the same way. */
+async function* streamEveEventsFromWorld({
+	idleTimeoutMs,
+	session,
+	signal,
+}: {
+	idleTimeoutMs: number;
+	session: EveSessionRef;
+	signal?: AbortSignal;
+}): AsyncGenerator<EveEvent> {
+	const controller = new AbortController();
+	const abortUpstream = () => controller.abort();
+	signal?.addEventListener("abort", abortUpstream, { once: true });
+	let timedOut = false;
+	const armIdleTimer = () =>
+		setTimeout(() => {
+			timedOut = true;
+			controller.abort();
+		}, idleTimeoutMs);
+	let idleTimer = armIdleTimer();
+	try {
+		for await (const event of readSessionEvents({
+			sessionId: session.sessionId,
+			signal: controller.signal,
+			startIndex: session.state.streamIndex,
+		})) {
+			clearTimeout(idleTimer);
+			idleTimer = armIdleTimer();
+			yield event;
+		}
+	} catch (error) {
+		if (timedOut) throw new EveStreamIdleTimeoutError(session.sessionId);
+		if (signal?.aborted) throw error;
+		throw new EveStreamDisconnectedError(error);
+	} finally {
+		clearTimeout(idleTimer);
+		signal?.removeEventListener("abort", abortUpstream);
+	}
+}
+
+async function* streamEveEventsOverHttp({
+	auth,
+	idleTimeoutMs,
+	session,
+	signal,
+}: {
+	auth: EveAuthContext;
+	idleTimeoutMs: number;
+	session: EveSessionRef;
+	signal?: AbortSignal;
+}): AsyncGenerator<EveEvent> {
 	const streamUrl = eveUrl(
 		`/eve/v1/session/${session.sessionId}/stream?startIndex=${session.state.streamIndex}`,
 	);
@@ -366,6 +431,13 @@ export const resyncEveStreamIndex = async ({
 	auth: EveAuthContext;
 	session: EveSessionRef;
 }) => {
+	const exact = await sessionEventCount(session.sessionId).catch(
+		() => undefined,
+	);
+	if (exact !== undefined) {
+		session.state.streamIndex = Math.min(session.state.streamIndex, exact);
+		return;
+	}
 	const replayCount = await countEveReplayableEvents({
 		auth,
 		sessionId: session.sessionId,
@@ -385,6 +457,11 @@ export const fastForwardEveStreamIndex = async ({
 	session: EveSessionRef;
 }) => {
 	try {
+		const exact = await sessionEventCount(session.sessionId);
+		if (exact !== undefined) {
+			session.state.streamIndex = exact;
+			return;
+		}
 		const replayCount = await countEveReplayableEvents({
 			auth,
 			sessionId: session.sessionId,
