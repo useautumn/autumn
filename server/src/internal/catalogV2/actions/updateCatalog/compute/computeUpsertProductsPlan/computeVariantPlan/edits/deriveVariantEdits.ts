@@ -109,7 +109,12 @@ export const deriveVariantEdits = ({
 		current: baseCurrent,
 		next: upsert.row.nextFullProduct,
 	});
-	const newBasePointer = baseRowMinted({ upsert })
+	const nextIsActive = upsert.row.nextFullProduct.active;
+	const mintedNewBase = baseRowMinted({ upsert });
+	const promotedExisting = upsert.previousActiveInternalId != null;
+	const movesActiveBasePointer =
+		nextIsActive && (mintedNewBase || promotedExisting);
+	const newBasePointer = movesActiveBasePointer
 		? upsert.row.nextFullProduct.internal_id
 		: undefined;
 

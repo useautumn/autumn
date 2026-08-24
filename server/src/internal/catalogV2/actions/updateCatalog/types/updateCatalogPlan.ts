@@ -20,6 +20,8 @@ export type RemovePlanPlan = {
 	current: FullProduct | null;
 	/** Archive instead of hard delete — some reference survives the batch. */
 	willArchive: boolean;
+	/** Hide the row (`deleted_at`) — expired-only customers on a non-live pin. */
+	willTombstone: boolean;
 	hasCustomers: boolean;
 	/** True when the request omitted version (every version of this plan_id). */
 	allVersions: boolean;

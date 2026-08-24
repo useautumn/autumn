@@ -1,4 +1,4 @@
-import { AppEnv, RecaseError } from "@autumn/shared";
+import { AppEnv, organizations, RecaseError } from "@autumn/shared";
 import {
 	asNonEmptyString,
 	type OAuthRequestFields,
@@ -6,6 +6,7 @@ import {
 	rebuildOAuthRequest,
 } from "@autumn/shared/utils/auth/oauthRequestBody";
 import { splitOAuthScopeString } from "@autumn/shared/utils/auth/oauthScopeUtils";
+import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { type DrizzleCli, db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
@@ -195,6 +196,30 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 		});
 	}
 
+	const requestedSandboxOrgId = asNonEmptyString(fields.sandbox_org_id);
+	let sandboxOrgId: string | null = null;
+	if (requestedSandboxOrgId) {
+		const [sandbox] = await db
+			.select({ id: organizations.id })
+			.from(organizations)
+			.where(
+				and(
+					eq(organizations.id, requestedSandboxOrgId),
+					eq(organizations.created_by, principal.orgId),
+					eq(organizations.is_sandbox, true),
+				),
+			)
+			.limit(1);
+		if (!sandbox || env !== AppEnv.Sandbox) {
+			return jsonOAuthError({
+				code: "invalid_request",
+				description: "Select a sandbox owned by the active organization.",
+				status: 400,
+			});
+		}
+		sandboxOrgId = sandbox.id;
+	}
+
 	let narrowed: { grantedScopes: string[]; request: Request };
 	try {
 		narrowed = await narrowConsentScopes({
@@ -229,6 +254,7 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 		userId: principal.userId,
 		referenceId: principal.orgId,
 		env,
+		sandboxOrgId,
 		redirectUri: getRedirectUriFromFields(fields),
 		scopes: narrowed.grantedScopes,
 	});

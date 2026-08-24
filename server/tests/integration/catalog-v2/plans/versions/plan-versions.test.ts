@@ -301,7 +301,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 versions: mint ladder v1 update + v2 create")}`,
+	`${chalk.yellowBright("catalogV2 versions: mint ladder v1 update + v2 mint")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_ver_mint");
@@ -352,7 +352,7 @@ test.concurrent(
 					},
 				],
 			});
-			expect(response.results.plans.some((p) => p.action === "create")).toBe(
+			expect(response.results.plans.some((p) => p.action === "update")).toBe(
 				true,
 			);
 
@@ -577,7 +577,7 @@ test.concurrent(
 								reset: { interval: ResetInterval.Month },
 							},
 						],
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});

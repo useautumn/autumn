@@ -5,12 +5,15 @@ import {
 	DEFAULT_OAUTH_RESOURCE_SCOPES,
 	oauthAccessToken,
 	oauthClient,
+	oauthConsent,
+	oauthRefreshToken,
 } from "@autumn/shared";
 import { hashOAuthToken } from "@autumn/shared/utils/auth/oauthAccessTokens";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import {
 	createDashboardSession,
 	type DashboardSession,
+	dashboardFetch,
 } from "@tests/utils/testInitUtils/dashboardSession.js";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
@@ -130,11 +133,13 @@ const sessionHeaders = ({
 const authorizeWithConsent = async ({
 	clientId,
 	resource,
+	sandboxOrgId,
 	scopes,
 	session,
 }: {
 	clientId: string;
 	resource: string;
+	sandboxOrgId?: string;
 	scopes: string[];
 	session: DashboardSession;
 }) => {
@@ -181,6 +186,7 @@ const authorizeWithConsent = async ({
 		body: JSON.stringify({
 			accept: true,
 			env: "sandbox",
+			...(sandboxOrgId ? { sandbox_org_id: sandboxOrgId } : {}),
 			oauth_query: oauthQuery,
 			scope: new URLSearchParams(oauthQuery).get("scope") ?? undefined,
 		}),
@@ -226,6 +232,31 @@ const exchangeCode = async ({
 	};
 };
 
+const exchangeRefreshToken = async ({
+	clientId,
+	refreshToken,
+	resource,
+}: {
+	clientId: string;
+	refreshToken: string;
+	resource: string;
+}) => {
+	const response = await fetch(`${baseUrl}/api/auth/oauth2/token`, {
+		method: "POST",
+		headers: { "Content-Type": "application/x-www-form-urlencoded" },
+		body: new URLSearchParams({
+			client_id: clientId,
+			grant_type: "refresh_token",
+			refresh_token: refreshToken,
+			resource,
+		}),
+	});
+	return {
+		body: (await response.json()) as Record<string, unknown>,
+		status: response.status,
+	};
+};
+
 const getCallbackCode = (consentBody: Record<string, unknown>) => {
 	const redirect = consentBody.url ?? consentBody.redirect_uri;
 	if (typeof redirect !== "string") {
@@ -242,17 +273,20 @@ const getCallbackCode = (consentBody: Record<string, unknown>) => {
 const grantTokenForResource = async ({
 	clientId,
 	resource,
+	sandboxOrgId,
 	scopes,
 	session,
 }: {
 	clientId: string;
 	resource: string;
+	sandboxOrgId?: string;
 	scopes: string[];
 	session: DashboardSession;
 }) => {
 	const consent = await authorizeWithConsent({
 		clientId,
 		resource,
+		sandboxOrgId,
 		scopes,
 		session,
 	});
@@ -270,6 +304,7 @@ const grantTokenForResource = async ({
 test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call", async () => {
 	const session = await createDashboardSession(defaultCtx);
 	let clientId: string | null = null;
+	let sandboxId: string | null = null;
 
 	try {
 		// 1. Unauthenticated challenge
@@ -325,14 +360,56 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 		expect(registration.status).toBe(201);
 		expect(typeof registration.body.client_id).toBe("string");
 		clientId = registration.body.client_id as string;
+		const sandbox = await dashboardFetch<{ id: string }>(
+			defaultCtx,
+			session,
+			"/v1/sandboxes.create",
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"x-client-type": "dashboard",
+				},
+				body: JSON.stringify({
+					name: `MCP OAuth E2E ${randomBytes(4).toString("hex")}`,
+				}),
+			},
+		);
+		expect(sandbox.status).toBe(200);
+		sandboxId = sandbox.data.id;
 
 		// 4-5. Authorize, consent, token exchange bound to the MCP resource.
 		// The client asks for exactly what discovery advertised — the server adds
 		// offline_access for MCP clients, so the grant is still renewable.
 		const requestedScopes = [...challengeScopes];
+		const sandboxList = await dashboardFetch<{ list: { id: string }[] }>(
+			defaultCtx,
+			session,
+			"/v1/sandboxes.list",
+			{
+				method: "POST",
+				headers: { "x-client-type": "dashboard" },
+			},
+		);
+		expect(sandboxList.status).toBe(200);
+		expect(sandboxList.data.list).toContainEqual(
+			expect.objectContaining({ id: sandboxId }),
+		);
+
+		const invalidSandbox = await authorizeWithConsent({
+			clientId,
+			resource: mcpUrl,
+			sandboxOrgId: defaultCtx.org.id,
+			scopes: requestedScopes,
+			session,
+		});
+		expect(invalidSandbox.consentStatus).toBe(400);
+		expect(invalidSandbox.consentBody.error).toBe("invalid_request");
+
 		const granted = await grantTokenForResource({
 			clientId,
 			resource: mcpUrl,
+			sandboxOrgId: sandboxId,
 			scopes: requestedScopes,
 			session,
 		});
@@ -352,6 +429,13 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 			),
 		});
 		expect(tokenRow?.resource).toBe(mcpUrl);
+		expect(tokenRow?.referenceId).toBe(sandboxId);
+		const consent = tokenRow?.oauthConsentId
+			? await db.query.oauthConsent.findFirst({
+					where: eq(oauthConsent.id, tokenRow.oauthConsentId),
+				})
+			: null;
+		expect(consent?.metadata).toMatchObject({ sandboxOrgId: sandboxId });
 
 		// 6. Real MCP traffic
 		const initialize = await postMcp({
@@ -399,7 +483,11 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 		};
 		expect(toolResult?.isError).toBeFalsy();
 		expect(Array.isArray(toolResult?.content)).toBe(true);
-		expect(toolResult?.content?.[0]?.text).toContain(defaultCtx.org.id);
+		const currentOrganization = JSON.parse(
+			toolResult?.content?.[0]?.text ?? "{}",
+		) as { id?: string };
+		expect(currentOrganization.id).toBe(sandboxId);
+		expect(currentOrganization.id).not.toBe(defaultCtx.org.id);
 
 		// 7. Audience negative: an MCP client asking for the API root is refused at
 		// the token endpoint, so no grant can be stamped for an audience /mcp
@@ -408,15 +496,73 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 		const foreign = await grantTokenForResource({
 			clientId,
 			resource: apiRoot,
+			sandboxOrgId: sandboxId,
 			scopes: requestedScopes,
 			session,
 		});
 		expect(foreign.token.status).toBe(400);
 		expect(foreign.token.body.error).toBe("invalid_target");
 		expect(foreign.token.body.access_token).toBeUndefined();
+
+		const refreshToken = granted.token.body.refresh_token as string;
+		const refreshed = await exchangeRefreshToken({
+			clientId,
+			refreshToken,
+			resource: mcpUrl,
+		});
+		expect(refreshed.status).toBe(200);
+		const refreshedAccessToken = refreshed.body.access_token as string;
+		const refreshedTokenRow = await db.query.oauthAccessToken.findFirst({
+			where: eq(
+				oauthAccessToken.token,
+				hashOAuthToken(stripOAuthTokenPrefix({ token: refreshedAccessToken })),
+			),
+		});
+		expect(refreshedTokenRow?.referenceId).toBe(sandboxId);
+
+		const organization = await fetch(`${baseUrl}/v1/organization`, {
+			headers: { Authorization: `Bearer ${refreshedAccessToken}` },
+		});
+		expect(organization.status).toBe(200);
+		expect(await organization.json()).toMatchObject({ id: sandboxId });
+
+		const consentId = refreshedTokenRow?.oauthConsentId;
+		if (!consentId) throw new Error("Refreshed token missing consent");
+		const revoked = await dashboardFetch(
+			defaultCtx,
+			session,
+			`/consents/${consentId}`,
+			{ method: "DELETE" },
+		);
+		expect(revoked.status).toBe(200);
+		expect(
+			await db.query.oauthAccessToken.findFirst({
+				where: eq(oauthAccessToken.oauthConsentId, consentId),
+			}),
+		).toBeUndefined();
+		expect(
+			await db.query.oauthRefreshToken.findFirst({
+				where: eq(oauthRefreshToken.oauthConsentId, consentId),
+			}),
+		).toBeUndefined();
+		expect(
+			await fetch(`${baseUrl}/v1/organization`, {
+				headers: { Authorization: `Bearer ${refreshedAccessToken}` },
+			}),
+		).toHaveProperty("status", 401);
 	} finally {
 		if (clientId) {
 			await db.delete(oauthClient).where(eq(oauthClient.clientId, clientId));
+		}
+		if (sandboxId) {
+			await dashboardFetch(defaultCtx, session, "/v1/sandboxes.delete", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"x-client-type": "dashboard",
+				},
+				body: JSON.stringify({ id: sandboxId }),
+			});
 		}
 		await session.cleanup();
 	}

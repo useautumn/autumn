@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { SUMMER_OAUTH_CLIENT_ID } from "@autumn/auth/oauth";
+import {
+	getOAuthConsentOrgId,
+	SUMMER_OAUTH_CLIENT_ID,
+} from "@autumn/auth/oauth";
 import { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { resolveOAuthConsentEnv } from "@/internal/auth/oauth/handleOAuthConsentWithEnv.js";
@@ -83,5 +86,22 @@ describe("resolveOAuthConsentEnv", () => {
 			env: null,
 			envRequired: false,
 		});
+	});
+});
+
+describe("getOAuthConsentOrgId", () => {
+	test("uses a consent's named sandbox", () => {
+		expect(
+			getOAuthConsentOrgId({
+				metadata: { sandboxOrgId: "sandbox_org" },
+				referenceId: "main_org",
+			}),
+		).toBe("sandbox_org");
+	});
+
+	test("falls back to the consent's main organization", () => {
+		expect(
+			getOAuthConsentOrgId({ metadata: {}, referenceId: "main_org" }),
+		).toBe("main_org");
 	});
 });

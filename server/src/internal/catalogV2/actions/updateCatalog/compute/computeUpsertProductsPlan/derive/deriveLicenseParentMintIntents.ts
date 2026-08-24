@@ -4,17 +4,21 @@ import type {
 	ProductUpsertIntent,
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
-import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
+import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
 /** Mint max+1 when the active row has customers; otherwise skip (follow in place). */
 const licenseParentMintIntent = ({
 	planId,
 	productStatesContext,
+	sourceActive,
+	newVersionSlug,
 }: {
 	planId: string;
 	productStatesContext: ProductStatesContext;
+	sourceActive: boolean;
+	newVersionSlug?: string;
 }): ProductUpsertIntent | undefined => {
 	const active = activeFullProductForPlan({ planId, productStatesContext });
 	if (!active) return undefined;
@@ -32,6 +36,8 @@ const licenseParentMintIntent = ({
 			plan_id: planId,
 			version,
 			versioning: "new_version",
+			...(sourceActive ? { active: true } : {}),
+			...(newVersionSlug ? { new_version_slug: newVersionSlug } : {}),
 		},
 		source: "license_adopt",
 	};
@@ -39,9 +45,11 @@ const licenseParentMintIntent = ({
 
 /** `propagate.license_parents` `new_version` → mint the parent. Direct claims win. */
 export const deriveLicenseParentMintIntents = ({
+	intent,
 	upsert,
 	productStatesContext,
 }: {
+	intent: ProductUpsertIntent;
 	upsert: UpsertProductPlan;
 	productStatesContext: ProductStatesContext;
 }): ProductUpsertIntent[] => {
@@ -55,6 +63,8 @@ export const deriveLicenseParentMintIntents = ({
 		const mintIntent = licenseParentMintIntent({
 			planId: target.plan_id,
 			productStatesContext,
+			sourceActive: intent.planParams.active === true,
+			newVersionSlug: target.new_version_slug,
 		});
 		if (!mintIntent) continue;
 

@@ -87,7 +87,7 @@ export const seedVariantNewVersion = async ({
 	variantId: string;
 }) => {
 	await autumn.catalogV2.update({
-		plans: [{ plan_id: variantId, versioning: "new_version" }],
+		plans: [{ plan_id: variantId, versioning: "new_version", active: true }],
 	});
 };
 

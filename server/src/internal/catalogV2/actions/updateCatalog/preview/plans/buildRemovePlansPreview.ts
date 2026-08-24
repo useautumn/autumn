@@ -1,4 +1,8 @@
 import type { PreviewUpdateCatalogResponse } from "@autumn/shared";
+import {
+	catalogRowIdentity,
+	defaultVersionSlug,
+} from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 import { buildPlanUsage } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
 import { formatPlanUsageMessages } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/formatPlanUsageMessages";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
@@ -41,9 +45,18 @@ const buildRemovePlanPreview = ({
 		productStatesContext: catalogContext.productStatesContext,
 	});
 	const name = first.current?.name ?? first.planId;
+	const current = first.current;
 	return {
-		plan_id: first.planId,
-		version: first.version,
+		...catalogRowIdentity({
+			planId: first.planId,
+			version: first.version,
+			current,
+			next: current ?? {
+				id: first.planId,
+				version_slug: defaultVersionSlug({ version: first.version }),
+				active: false,
+			},
+		}),
 		name,
 		action: "delete",
 		state: {

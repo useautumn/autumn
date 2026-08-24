@@ -34,6 +34,7 @@ export const expectLicenseLinkCorrect = async ({
 	price,
 	overlayEntitlementCount,
 	licenseInternalProductId,
+	licenseVersion,
 	parentProductVersion,
 	omitFeatureIds,
 	planLicenseId,
@@ -42,6 +43,7 @@ export const expectLicenseLinkCorrect = async ({
 	parentPlanId: string;
 	licensePlanId: string;
 	parentVersion?: number;
+	licenseVersion?: number;
 	included?: number;
 	customized?: boolean;
 	prepaidOnly?: boolean;
@@ -59,6 +61,7 @@ export const expectLicenseLinkCorrect = async ({
 		parentPlanId,
 		parentVersion,
 		licensePlanId,
+		licenseVersion,
 	});
 
 	if (included !== undefined) {

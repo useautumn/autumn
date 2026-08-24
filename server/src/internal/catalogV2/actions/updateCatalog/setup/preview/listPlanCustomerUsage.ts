@@ -1,4 +1,4 @@
-import type { AppEnv } from "@autumn/shared";
+import { type AppEnv, CusProductStatus } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -29,10 +29,7 @@ export type PlanCustomerUsageCandidate = {
 
 /**
  * One round-trip: capped distinct-customer counts and name samples per
- * remove_plans group. The scan arm reads ≤ scanLimit customer_products index
- * rows per key, so cost stays flat regardless of how many customers sit on
- * the plan. A count is capped when it exceeds countCap or the scan window
- * saturated.
+ * remove_plans group. Expired rows are omitted so they don't appear in dialog copy.
  */
 export const buildPlanCustomerUsageQuery = ({
 	candidates,
@@ -84,6 +81,7 @@ export const buildPlanCustomerUsageQuery = ({
 					FROM ids
 					WHERE ids.usage_key = keys.usage_key
 				)
+					AND customer_product.status <> ${sql.param(CusProductStatus.Expired)}
 				LIMIT ${scanLimit}
 			)
 			SELECT

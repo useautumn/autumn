@@ -42,6 +42,7 @@ test.concurrent(
 				await bumpChild({
 					autumn: autumnV2_3,
 					childId,
+					versioning: "new_version",
 					propagate: {
 						license_parents: [
 							{ plan_id: withCustomersId, versioning: "new_version" },

@@ -15,24 +15,35 @@ export const buildProductStatesContext = ({
 	versionsByPlanId,
 	usageByInternalId,
 	rewardProgramsByPlanId,
+	maxVersionByPlanId,
 }: {
 	planIds: string[];
 	versionsByPlanId: Map<string, FullProduct[]>;
 	usageByInternalId: Map<string, CustomerProductVersioningFlags>;
 	rewardProgramsByPlanId: Map<string, RewardProgram[]>;
+	maxVersionByPlanId?: Record<string, number>;
 }): ProductStatesContext => {
 	const statesByPlanVersion: Record<string, ProductState> = {};
 	const versionsByPlanIdRecord: ProductStatesContext["versionsByPlanId"] = {};
+	const maxVersionByPlanIdRecord: ProductStatesContext["maxVersionByPlanId"] =
+		{};
 	const rewardProgramsByPlanIdRecord: ProductStatesContext["rewardProgramsByPlanId"] =
 		{};
 
 	for (const planId of planIds) {
 		const versions = versionsByPlanId.get(planId) ?? [];
-		versionsByPlanIdRecord[planId] = versions;
+		const liveVersions = versions.filter(
+			(product) => product.deleted_at == null,
+		);
+		versionsByPlanIdRecord[planId] = liveVersions;
+		maxVersionByPlanIdRecord[planId] = Math.max(
+			maxVersionByPlanId?.[planId] ?? 0,
+			...versions.map((product) => product.version),
+		);
 		rewardProgramsByPlanIdRecord[planId] =
 			rewardProgramsByPlanId.get(planId) ?? [];
 
-		for (const currentFullProduct of versions) {
+		for (const currentFullProduct of liveVersions) {
 			const productKey = productToProductKey({ product: currentFullProduct });
 			statesByPlanVersion[productKeyToString({ productKey })] = {
 				productKey,
@@ -47,6 +58,7 @@ export const buildProductStatesContext = ({
 	return {
 		statesByPlanVersion,
 		versionsByPlanId: versionsByPlanIdRecord,
+		maxVersionByPlanId: maxVersionByPlanIdRecord,
 		rewardProgramsByPlanId: rewardProgramsByPlanIdRecord,
 	};
 };

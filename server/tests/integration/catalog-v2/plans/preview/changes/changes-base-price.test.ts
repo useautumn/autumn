@@ -3,7 +3,7 @@
  *
  * Spec asserts BOTH price_change { previous, current } and customize.price
  * (toBasePriceParams shape). Additional currencies: amount change for shared
- * currency diffs; add/remove alone should not (still RED).
+ * currency diffs; add/remove alone still updates price rows (no plan diff lane).
  */
 
 import { expect, test } from "bun:test";
@@ -293,9 +293,9 @@ test.concurrent(
 	},
 );
 
-// Currency add/remove alone is NOT a price diff (compatible rule)
+// Currency add/remove remints price rows even when the plan diff lane is empty.
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 changes-base-price: currency add/remove only → no price diff")}`,
+	`${chalk.yellowBright("catalogV2 changes-base-price: currency add/remove only → update, no plan diff")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cbp_fxn");
@@ -327,7 +327,7 @@ test.concurrent(
 				preview,
 				expected: {
 					planId,
-					action: "none",
+					action: "update",
 					planChange: null,
 				},
 			});

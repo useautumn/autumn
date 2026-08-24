@@ -2,7 +2,7 @@
  * catalogV2.preview_update — remove_plans dialog reasons.
  */
 
-import { ErrCode } from "@autumn/shared";
+import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import { test } from "bun:test";
@@ -42,6 +42,56 @@ test.concurrent(
 						reasonsInclude: [
 							`Cannot delete plan "Pro", archive it instead.`,
 							`Attached to customer "${customerId}".`,
+						],
+					},
+				],
+			});
+		} finally {
+			await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 remove plans preview: expired customers are omitted from attached-to reasons")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_rmp_prev_exp");
+		await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, name: "Draft" }],
+			});
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						versioning: "new_version",
+						name: "Draft v2",
+					},
+				],
+			});
+			await seedVersionableCustomer({
+				ctx,
+				planId,
+				version: 2,
+				status: CusProductStatus.Expired,
+			});
+
+			expectCatalogPreviewCorrect({
+				preview: await autumnV2_3.catalogV2.previewUpdate({
+					remove_plans: [{ plan_id: planId, version: 2 }],
+				}),
+				plans: [
+					{
+						planId,
+						action: "delete",
+						willArchive: false,
+						hasCustomers: true,
+						reasonMessages: [
+							"Are you sure you want to delete this version? This action cannot be undone.",
 						],
 					},
 				],

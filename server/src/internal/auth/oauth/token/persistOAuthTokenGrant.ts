@@ -9,6 +9,7 @@ export const persistOAuthTokenGrant = async ({
 	accessTokenId,
 	db,
 	oauthConsentId,
+	referenceId,
 	refreshTokenId,
 	resource,
 	scopes,
@@ -16,6 +17,7 @@ export const persistOAuthTokenGrant = async ({
 	accessTokenId?: string | null;
 	db: DrizzleCli;
 	oauthConsentId: string | null;
+	referenceId?: string;
 	refreshTokenId?: string | null;
 	resource: string | null;
 	scopes: string[];
@@ -28,6 +30,7 @@ export const persistOAuthTokenGrant = async ({
 				db: tx,
 				id: accessTokenId,
 				oauthConsentId,
+				referenceId,
 				resource,
 				scopes,
 			});

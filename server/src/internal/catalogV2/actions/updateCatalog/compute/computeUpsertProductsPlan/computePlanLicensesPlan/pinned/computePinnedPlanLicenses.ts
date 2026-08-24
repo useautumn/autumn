@@ -1,18 +1,27 @@
-import type { FullPlanLicense } from "@autumn/shared";
+import type { FullPlanLicense, FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type {
 	PlanLicensePlan,
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
+import { isExistingRowPromote } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/isExistingRowPromote";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import {
+	childTriggersLicenseRewrite,
 	needsRepoint,
 	parentLicenseLinkForChild,
 	shouldPropagate,
 	upsertProductPlansToChildPlans,
 } from "../licensePlanUtils";
 import { cloneFrozenChildAsLicenseOverlay } from "./cloneFrozenChildAsLicenseOverlay";
+
+const childIsPromote = ({ child }: { child: UpsertProductPlan }): boolean =>
+	isExistingRowPromote({
+		current: child.row.currentFullProduct,
+		next: child.row.nextFullProduct,
+	});
 
 const shouldPin = ({
 	parent,
@@ -25,28 +34,57 @@ const shouldPin = ({
 	currentPlanLicense: FullPlanLicense;
 	productStatesContext: ProductStatesContext;
 }): boolean => {
-	if (parent.declaredLicenses !== undefined) return false;
-	if (!child.entitlementPricesPlan) return false;
-	if (shouldPropagate({ parent, child, productStatesContext })) return false;
+	const hasDeclaredLicenses = parent.declaredLicenses !== undefined;
+	const rewritesLicenses = childTriggersLicenseRewrite({ child });
+	const promote = childIsPromote({ child });
+	const followsViaPropagate = shouldPropagate({
+		parent,
+		child,
+		productStatesContext,
+	});
+	const alreadyCustomized = currentPlanLicense.customized;
+	const alreadyPinnedToNext = !needsRepoint({ currentPlanLicense, child });
 
-	if (
-		currentPlanLicense.customized &&
-		!needsRepoint({ currentPlanLicense, child })
-	)
-		return false;
+	if (hasDeclaredLicenses) return false;
+	if (followsViaPropagate) return false;
+	if (!rewritesLicenses) return false;
+	if (promote && alreadyCustomized) return false;
+	if (alreadyCustomized && alreadyPinnedToNext) return false;
 	return true;
+};
+
+const pinTargetProduct = ({
+	child,
+	productStatesContext,
+}: {
+	child: UpsertProductPlan;
+	productStatesContext: ProductStatesContext;
+}): FullProduct => {
+	const promote = childIsPromote({ child });
+	const demotedInternalId = child.previousActiveInternalId;
+	if (promote && demotedInternalId) {
+		return (
+			findFullProductByInternalId({
+				internalId: demotedInternalId,
+				productStatesContext,
+			}) ?? child.row.nextFullProduct
+		);
+	}
+	return child.row.nextFullProduct;
 };
 
 const pinnedPlanLicense = ({
 	ctx,
 	currentPlanLicense,
 	child,
+	productStatesContext,
 }: {
 	ctx: AutumnContext;
 	currentPlanLicense: FullPlanLicense;
 	child: UpsertProductPlan;
+	productStatesContext: ProductStatesContext;
 }): PlanLicensePlan | undefined => {
-	const childProduct = child.row.nextFullProduct;
+	const childProduct = pinTargetProduct({ child, productStatesContext });
 	const entitlementPricesPlan = currentPlanLicense.customized
 		? undefined
 		: cloneFrozenChildAsLicenseOverlay({
@@ -54,11 +92,10 @@ const pinnedPlanLicense = ({
 				frozenChildProduct: currentPlanLicense.product,
 				childProduct,
 			});
-	if (
-		!needsRepoint({ currentPlanLicense, child }) &&
-		!entitlementPricesPlan
-	)
-		return undefined;
+	const writesLink =
+		currentPlanLicense.license_internal_product_id !==
+		childProduct.internal_id;
+	if (!writesLink && !entitlementPricesPlan) return undefined;
 
 	return {
 		op: "update",
@@ -112,6 +149,7 @@ export const computePinnedPlanLicenses = ({
 			ctx,
 			currentPlanLicense,
 			child,
+			productStatesContext,
 		});
 		if (planLicense) pinned.push(planLicense);
 	}

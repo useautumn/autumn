@@ -47,6 +47,7 @@ const followDashboard = ({
 	propagate: { variants: [{ plan_id: variantId }] },
 	migration: { draft: true as const },
 	...(versioning ? { versioning } : {}),
+	...(versioning === "new_version" ? { active: true } : {}),
 });
 
 test.concurrent(

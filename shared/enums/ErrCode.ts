@@ -201,6 +201,7 @@ export const ErrCode = {
 	NestedVariantNotAllowed: "nested_variant_not_allowed",
 	CannotForkArchivedBase: "cannot_fork_archived_base",
 	ProductIdAlreadyExists: "product_id_already_exists",
+	DuplicateVersionSlug: "duplicate_version_slug",
 	CannotPreviewOnVariant: "cannot_preview_on_variant",
 	InvalidPropagationTarget: "invalid_propagation_target",
 	TooManyVariants: "too_many_variants",

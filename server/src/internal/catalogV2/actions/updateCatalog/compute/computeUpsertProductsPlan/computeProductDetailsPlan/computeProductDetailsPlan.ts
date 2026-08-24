@@ -1,11 +1,13 @@
 import {
 	type FullProduct,
+	isEligibleDefaultProduct,
 	isEmptyObject,
 	type Product,
 	type UpdateCatalogPlanParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { ProductDetailsPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { isExistingRowPromote } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/isExistingRowPromote";
 import { diffProductDetails } from "./diffProductDetails";
 import { initProductRow } from "./initProductRow";
 import { planParamsToProductRowPatch } from "./planParamsToProductRowPatch";
@@ -22,6 +24,8 @@ export const computeProductDetailsPlan = ({
 	baseFullProduct,
 	baseInternalProductId,
 	baseProcessor,
+	currentActive,
+	latestExistingVersion,
 }: {
 	ctx: AutumnContext;
 	planParams: UpdateCatalogPlanParams;
@@ -33,6 +37,9 @@ export const computeProductDetailsPlan = ({
 	baseInternalProductId?: string | null;
 	/** Variant create: share the base's Stripe Product. */
 	baseProcessor?: Product["processor"];
+	/** Pre-fold pointer — default follows only when this row is eligible. */
+	currentActive?: FullProduct | null;
+	latestExistingVersion?: number;
 }): ProductDetailsPlan => {
 	if (!currentFullProduct) {
 		return {
@@ -54,6 +61,20 @@ export const computeProductDetailsPlan = ({
 		planParams,
 		current: currentFullProduct,
 	});
+	if (
+		isExistingRowPromote({
+			current: currentFullProduct,
+			next: { ...currentFullProduct, ...patch },
+		}) &&
+		planParams.is_default === undefined &&
+		currentActive?.is_default &&
+		isEligibleDefaultProduct({
+			product: currentFullProduct,
+			latestExistingVersion,
+		})
+	) {
+		patch.is_default = true;
+	}
 	const next: Product = {
 		...currentFullProduct,
 		...patch,

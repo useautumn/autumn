@@ -97,8 +97,8 @@ export const refreshCeBalancesCache = async ({
 				// Aggregate once here (~1s/feature at query time otherwise); expiry
 				// is baked at refresh, which the 5-min staleness window already covers.
 				// granted ≈ allowance + adjustment (quantity lives only in PG).
-				// Sums cover FINITE rows only — unlimited rows contribute the flag,
-				// not numbers (mixed unlimited+finite customers keep finite values).
+				// remaining/granted sums cover FINITE rows only; usage covers ALL rows
+				// (unlimited rows track real deductions, so −balance = their usage).
 				// The ORDER BY clusters row groups so per-feature top-N prunes.
 				await db.execute(
 					sql.raw(`
@@ -109,7 +109,12 @@ export const refreshCeBalancesCache = async ({
 							COALESCE(BOOL_OR(b.unlimited), false) AS is_unlimited,
 							COALESCE(SUM(b.balance) FILTER (WHERE b.unlimited IS NOT TRUE), 0) AS total,
 							COALESCE(SUM(COALESCE(a.allowance, 0) + COALESCE(b.adjustment, 0))
-								FILTER (WHERE b.unlimited IS NOT TRUE), 0) AS granted_total
+								FILTER (WHERE b.unlimited IS NOT TRUE), 0) AS granted_total,
+							COALESCE(SUM(CASE
+								WHEN b.unlimited IS TRUE THEN -(COALESCE(b.balance, 0) + COALESCE(b.entities_balance, 0))
+								ELSE COALESCE(a.allowance, 0) + COALESCE(b.adjustment, 0) - COALESCE(b.balance, 0)
+							END), 0) AS usage_total,
+							COUNT(*) FILTER (WHERE b.unlimited IS NOT TRUE) AS finite_rows
 						FROM main.ce_balances b
 						LEFT JOIN main.ent_allowances a ON a.id = b.entitlement_id
 						WHERE (b.expires_at IS NULL OR b.expires_at > epoch_ms(now()))

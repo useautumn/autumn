@@ -9,6 +9,7 @@ import type {
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { activeVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeVersionForPlan";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
+import { versionForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/versionForSlug";
 
 const hasExplicitVersion = (
 	planParams: UpdateCatalogPlanParams,
@@ -28,8 +29,27 @@ const groupPlanParamsByPlanId = ({
 	return byPlanId;
 };
 
-/** Explicit versions ascending, then omit→active (or v1 if plan absent).
- * `new_version` always mints at max+1 (requires an existing plan — guarded elsewhere). */
+/** Numeric pin, or the version that owns `version_slug`. Unknown slugs stay unresolved. */
+const resolvePinnedVersion = ({
+	planParams,
+	planId,
+	productStatesContext,
+}: {
+	planParams: UpdateCatalogPlanParams;
+	planId: string;
+	productStatesContext: ProductStatesContext;
+}): number | undefined => {
+	if (planParams.version !== undefined) return planParams.version;
+	if (planParams.version_slug === undefined) return undefined;
+	return versionForSlug({
+		planId,
+		versionSlug: planParams.version_slug,
+		productStatesContext,
+	});
+};
+
+/** Explicit pins first (incl. resolved slugs), then omit→active / new_version max+1.
+ * Unknown `version_slug` is excluded here; versioning errors reject it. */
 const resolveVersionsForPlan = ({
 	planId,
 	planParamsList,
@@ -39,22 +59,38 @@ const resolveVersionsForPlan = ({
 	planParamsList: UpdateCatalogPlanParams[];
 	productStatesContext: ProductStatesContext;
 }): ResolvedPlanParams[] => {
-	const withExplicitVersion = planParamsList
+	const resolved = planParamsList.map((planParams) => {
+		const version = resolvePinnedVersion({
+			planParams,
+			planId,
+			productStatesContext,
+		});
+		return version !== undefined ? { ...planParams, version } : planParams;
+	});
+
+	const withExplicitVersion = resolved
 		.filter(hasExplicitVersion)
 		.sort((a, b) => a.version - b.version);
 
 	const maxVersion = maxVersionForPlan({ planId, productStatesContext });
+	const hasLiveVersions =
+		(productStatesContext.versionsByPlanId[planId] ?? []).length > 0;
+	const nextFreeVersion = maxVersion + 1;
 	const activeOrV1 =
 		activeVersionForPlan({ planId, productStatesContext }) ??
 		(maxVersion || 1);
 
-	const targetingLatest = planParamsList
-		.filter((planParams) => !hasExplicitVersion(planParams))
+	const targetingLatest = resolved
+		.filter(
+			(planParams) =>
+				!hasExplicitVersion(planParams) &&
+				planParams.version_slug === undefined,
+		)
 		.map((planParams) => ({
 			...planParams,
 			version:
-				planParams.versioning === "new_version"
-					? maxVersion + 1
+				planParams.versioning === "new_version" || !hasLiveVersions
+					? nextFreeVersion
 					: activeOrV1,
 		}));
 

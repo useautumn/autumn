@@ -47,7 +47,7 @@ test.concurrent(
 								plan_id: planId,
 								version: 1,
 								name: "Next",
-								versioning: "new_version",
+								versioning: "new_version", active: true,
 							},
 						],
 					}),
@@ -77,7 +77,7 @@ test.concurrent(
 						plans: [
 							{
 								plan_id: planId,
-								versioning: "new_version",
+								versioning: "new_version", active: true,
 								name: "Next",
 								migration: { draft: true },
 							},
@@ -106,7 +106,7 @@ test.concurrent(
 							{
 								plan_id: planId,
 								name: "Ghost",
-								versioning: "new_version",
+								versioning: "new_version", active: true,
 							},
 						],
 					}),

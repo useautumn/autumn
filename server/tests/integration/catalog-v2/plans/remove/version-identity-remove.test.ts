@@ -47,7 +47,7 @@ const seedV1AndV2 = async ({
 		plans: [{ plan_id: planId, name: "V1" }],
 	});
 	await autumn.catalogV2.update({
-		plans: [{ plan_id: planId, versioning: "new_version", name: "V2" }],
+		plans: [{ plan_id: planId, versioning: "new_version", active: true, name: "V2" }],
 	});
 };
 

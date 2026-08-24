@@ -18,6 +18,7 @@ import type {
 import { planParamsFromEditDiff } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/planParamsFromEditDiff";
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
+import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 import { resolveAliasReplacement } from "@/internal/catalogV2/productAliases/resolveAliasReplacement";
 
@@ -36,8 +37,8 @@ const planHasVersionableCustomers = ({
 			}).customerUsage.hasVersionableCustomerProducts,
 	);
 
-/** One intent → UpsertProductPlan against productStatesContext. */
-export const computeUpsertProductPlan = ({
+/** One intent → one UpsertProductPlan. Demoted sibling attaches in `computeUpsertProductPlan`. */
+export const intentToUpsertProductPlan = ({
 	ctx,
 	intent,
 	productStatesContext,
@@ -92,12 +93,22 @@ export const computeUpsertProductPlan = ({
 				})
 			: null;
 
+	const currentActive = activeFullProductForPlan({
+		planId: productKey.planId,
+		productStatesContext,
+	});
+	const maxVersion = maxVersionForPlan({
+		planId: productKey.planId,
+		productStatesContext,
+	});
 	const details = computeProductDetailsPlan({
 		ctx,
 		planParams,
 		currentFullProduct,
 		version: productKey.version,
 		baseFullProduct,
+		currentActive,
+		latestExistingVersion: maxVersion === 0 ? undefined : maxVersion,
 		...(pointer !== undefined ? { baseInternalProductId: pointer } : {}),
 		...(variantBaseFullProduct
 			? { baseProcessor: variantBaseFullProduct.processor }
@@ -190,6 +201,11 @@ export const computeUpsertProductPlan = ({
 			? { createInStripe: planParams.create_in_stripe }
 			: {}),
 		...(aliasReplacement ? { aliasReplacement } : {}),
+		...(details.product.active &&
+		currentActive &&
+		currentActive.internal_id !== details.product.internal_id
+			? { previousActiveInternalId: currentActive.internal_id }
+			: {}),
 		state: {
 			hasCustomers:
 				versioning === "new_version"
@@ -198,6 +214,9 @@ export const computeUpsertProductPlan = ({
 							productStatesContext,
 						})
 					: customerUsage.hasVersionableCustomerProducts,
+			planHadLiveVersions:
+				(productStatesContext.versionsByPlanId[productKey.planId] ?? []).length >
+				0,
 		},
 	};
 };

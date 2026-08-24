@@ -7,7 +7,7 @@
  *   F1 propagate latest; Team v1+v2, customers only on v1 → no parent op
  *   F2 propagate version:1, customers on v1 → parent op pinned to 1
  *   F3 all_versions: customers on v1 only → pin v1; v1+v2 same delta → collapse
- *   F4 new_version: mint empty, old pins → no parent op
+ *   F4 new_version: mints parent v2; v1 customers get child + parent license ops
  */
 
 import { test } from "bun:test";
@@ -27,6 +27,7 @@ import {
 	collapsedPlanFilter,
 	expectLicenseDraftCase,
 	messagesItemDelta,
+	orPlanFilter,
 	parentLicenseOp,
 	versionPinnedFilter,
 } from "../utils/expectLicenseMigrationDrafts.js";
@@ -258,6 +259,7 @@ test.concurrent(
 				await seedVersionableCustomer({ ctx, planId: teamId, version: 1 });
 
 				const childFilter = versionPinnedFilter({ planId: childId });
+				const teamFilter = versionPinnedFilter({ planId: teamId });
 				await expectLicenseDraftCase({
 					autumn: autumnV2_3,
 					ctx,
@@ -273,16 +275,34 @@ test.concurrent(
 							migration: { draft: true },
 						},
 					],
-					responsePlans: [[{ plan_id: childId, versions: [1] }]],
+					responsePlans: [
+						[
+							{ plan_id: childId, versions: [1] },
+							{ plan_id: teamId, versions: [1] },
+						],
+					],
 					expected: [
 						{
-							planIds: [childId],
-							omitPlanIds: [teamId],
+							planIds: [childId, teamId],
 							noBillingChanges: true,
-							filter: { customer: { plan: childFilter } },
+							filter: {
+								customer: {
+									plan: orPlanFilter({
+										branches: [
+											{ plan_id: childId, version: 1 },
+											{ plan_id: teamId, version: 1 },
+										],
+									}),
+								},
+							},
 							operations: [
 								childItemOp({
 									planFilter: childFilter,
+									customize: messagesItemDelta({ included: 200 }),
+								}),
+								parentLicenseOp({
+									planFilter: teamFilter,
+									childId,
 									customize: messagesItemDelta({ included: 200 }),
 								}),
 							],
