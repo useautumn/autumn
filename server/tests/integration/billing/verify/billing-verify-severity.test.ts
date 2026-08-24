@@ -48,7 +48,6 @@ const stripeCustomerIdFor = async ({
 	return stripeCustomerId;
 };
 
-/** Materializes because callers build a raw Stripe sub from a plan Autumn never attached. */
 const firstStripePriceIdFor = async ({
 	ctx,
 	productId,

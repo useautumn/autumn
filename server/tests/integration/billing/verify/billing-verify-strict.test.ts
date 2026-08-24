@@ -63,7 +63,6 @@ const removeUsageItem = async ({
 	});
 };
 
-/** Materializes because callers borrow a price from a plan Autumn never attached. */
 const featurePriceIdFor = async ({
 	ctx,
 	productId,

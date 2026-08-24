@@ -66,8 +66,7 @@ const basePriceIdFor = async ({
 	throw new Error(`No base Stripe price id on product ${productId}`);
 };
 
-/** Finds a feature-linked price's Stripe id for a product (first match).
- * Materializes because callers build a raw Stripe sub from a plan Autumn never attached. */
+/** Finds a feature-linked price's Stripe id for a product (first match). */
 const firstStripePriceIdFor = async ({
 	ctx,
 	productId,

@@ -63,8 +63,7 @@ export const apiUsageItem = ({
 	},
 });
 
-/** Sandbox creates Stripe resources lazily, but these helpers simulate
- * subscriptions that already exist in Stripe — so materialize on fetch. */
+/** These helpers simulate subscriptions that already exist in Stripe, so materialize on fetch. */
 export const getFullProduct = async ({
 	ctx,
 	productId,

@@ -83,8 +83,7 @@ export const customLicensePrice = ({
 	customize: customLicensePriceConfig({ amount }),
 });
 
-/** Sandbox creates Stripe resources lazily, so a plan that was only registered
- * has no Stripe product to restrict a coupon to until something materializes it. */
+/** A registered-but-never-billed plan has no Stripe product to restrict a coupon to. */
 export const getPlanStripeProductId = async ({
 	ctx,
 	planId,

@@ -136,10 +136,8 @@ export const handleCreatePlan = createRoute({
 			free_trial: newFreeTrial,
 		};
 
-		// Stripe products/prices are created lazily at billing time; only reuse
-		// here. Published SDKs bake create_in_stripe: true into every request,
-		// so an explicit true is indistinguishable from the default on this
-		// route — force-create is only honored on catalogV2 updates.
+		// Published SDKs bake create_in_stripe: true into every request, so an
+		// explicit true carries no intent here — reuse only, never create.
 		if (v1_2Body.create_in_stripe !== false) {
 			await initStripeResourcesForProducts({
 				ctx,

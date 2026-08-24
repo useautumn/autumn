@@ -1,11 +1,9 @@
 /**
- * Test-side Stripe materialization. Since sandbox creates Stripe resources
- * lazily (at billing time, like live), tests whose precondition is "this
- * plan already exists in Stripe" opt into creation explicitly here.
+ * Explicit opt-in to Stripe creation for tests whose precondition is "this plan
+ * already exists in Stripe".
  *
- * Uses the same creation body billing runs at attach time, minus attach's
- * zero-amount-price skip and currency resolution — fine for preconditions,
- * not byte-identical to post-attach state.
+ * Uses billing's attach-time creation body minus the zero-amount-price skip and
+ * currency resolution — fine for preconditions, not byte-identical to post-attach.
  */
 
 import type { FullProduct } from "@autumn/shared";

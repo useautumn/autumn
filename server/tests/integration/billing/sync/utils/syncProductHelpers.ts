@@ -10,8 +10,7 @@ import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
 
-/** Sandbox creates Stripe resources lazily, but these helpers simulate
- * subscriptions that already exist in Stripe — so materialize on fetch. */
+/** These helpers simulate subscriptions that already exist in Stripe, so materialize on fetch. */
 export const fetchFullProduct = async ({
 	ctx,
 	productId,

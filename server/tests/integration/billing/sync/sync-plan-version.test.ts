@@ -66,7 +66,6 @@ const setupVersionedPlan = async ({
 		],
 	});
 
-	// Sequential: each version mints its own Stripe identity once materialized.
 	const v1 = await materializePlanInStripe({ ctx, planId, version: 1 });
 	const v2 = await materializePlanInStripe({ ctx, planId, version: 2 });
 

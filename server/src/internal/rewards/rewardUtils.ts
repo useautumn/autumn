@@ -164,8 +164,7 @@ export const getOriginalCouponId = (couponId: string) => {
 	return couponId;
 };
 
-/** Fills reusable Stripe ids and stitches each price's product for the coupon
- * builder; genuinely uninitialized plans surface ProductNotInStripe downstream. */
+/** Stitches each price's product so fixed-price coupons resolve a Stripe product id. */
 export const applyStripeReuseForRewardPrices = async ({
 	ctx,
 	prices,
