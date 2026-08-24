@@ -7,6 +7,7 @@
 		"./client": "./client/index.ts"
 	},
 	"scripts": {
+		"bench": "bun benchmarks/track.bench.ts",
 		"dev": "bun --watch src/index.ts",
 		"start": "bun src/index.ts",
 		"test": "bun test tests/unit",

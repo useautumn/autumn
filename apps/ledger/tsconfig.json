@@ -21,5 +21,10 @@
 			"drizzle-orm/*": ["../../node_modules/drizzle-orm/*"]
 		}
 	},
-	"include": ["client/**/*.ts", "src/**/*.ts", "tests/**/*.ts"]
+	"include": [
+		"benchmarks/**/*.ts",
+		"client/**/*.ts",
+		"src/**/*.ts",
+		"tests/**/*.ts"
+	]
 }

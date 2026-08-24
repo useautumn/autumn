@@ -30,6 +30,7 @@ export const ENV_LOCAL_TARGETS = [
 	"server/.env.local",
 	"vite/.env.local",
 	"apps/checkout/.env.local",
+	"apps/ledger/.env.local",
 ] as const;
 
 export const ENV_LOCAL_DISABLED_SUFFIX = ".disabled";

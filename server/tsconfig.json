@@ -33,6 +33,7 @@
 
 			// From shared package?
 			"@autumn/ksuid": ["../packages/ksuid/src/index.ts"],
+			"@autumn/ledger/client": ["../apps/ledger/client/index.ts"],
 			"@autumn/shared": ["../shared/index.ts"],
 			"@autumn/shared/*": ["../shared/*"],
 			"@api/*": ["../shared/api/*"],

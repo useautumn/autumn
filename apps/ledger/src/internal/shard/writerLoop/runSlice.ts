@@ -1,10 +1,12 @@
 import { sql } from "drizzle-orm";
-import type { CommandResult } from "../../../../client/types/command.js";
+import type { CommandResult } from "../../../api/types/commandResult.js";
 import { serialStore } from "../../../sqlite/serials/store/serialStore.js";
+import { subjectToKey } from "../../subjects/subjectToKey.js";
 import type { QueuedCommand } from "../commandQueue/types/queuedCommand.js";
 import type { CommandRunner } from "../types/commandRunner.js";
 import type { ShardContext } from "../types/shardContext.js";
-import { toErrorResult } from "./toErrorResult.js";
+import { admitLoadedSubjects } from "./admitLoadedSubjects.js";
+import { errorToCommandResult } from "./errorToCommandResult.js";
 import type { StagedCommand } from "./types/stagedCommand.js";
 
 // Bounds the synchronous fold section so the event loop keeps serving
@@ -13,6 +15,19 @@ const SLICE_BUDGET_MS = 1;
 
 const isSerializable = ({ result }: { result: CommandResult }) =>
 	result.status >= 200 && result.status < 300;
+
+const isResident = ({
+	ctx,
+	item,
+}: {
+	ctx: ShardContext;
+	item: QueuedCommand;
+}) => {
+	const { org_id: orgId, env, customer_id: customerId } = item.command;
+	return ctx.subjects.isResident({
+		key: subjectToKey({ orgId, env, customerId }),
+	});
+};
 
 const stageCommand = ({
 	ctx,
@@ -43,7 +58,10 @@ const stageCommand = ({
 			event: "ledger.command_failed",
 			data: { command_id: item.command.id, kind: item.command.kind },
 		});
-		return { item, result: toErrorResult({ command: item.command, error }) };
+		return {
+			item,
+			result: errorToCommandResult({ command: item.command, error }),
+		};
 	}
 };
 
@@ -58,10 +76,16 @@ export const runSlice = ({
 	ctx: ShardContext;
 	arrived: QueuedCommand[];
 	runCommand: CommandRunner;
-}): { staged: StagedCommand[]; deferred: QueuedCommand[] } => {
+}): {
+	staged: StagedCommand[];
+	deferred: QueuedCommand[];
+	awaitingImport: QueuedCommand[];
+} => {
+	admitLoadedSubjects({ ctx });
 	ctx.sqlite.run(sql`BEGIN`);
 	const startedAt = performance.now();
 	const staged: StagedCommand[] = [];
+	const awaitingImport: QueuedCommand[] = [];
 
 	let index = 0;
 	for (; index < arrived.length; index++) {
@@ -73,8 +97,12 @@ export const runSlice = ({
 			item.resolve(stored);
 			continue;
 		}
+		if (!isResident({ ctx, item })) {
+			awaitingImport.push(item);
+			continue;
+		}
 		staged.push(stageCommand({ ctx, item, runCommand }));
 	}
 
-	return { staged, deferred: arrived.slice(index) };
+	return { staged, deferred: arrived.slice(index), awaitingImport };
 };

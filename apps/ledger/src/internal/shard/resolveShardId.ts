@@ -1,4 +1,4 @@
-import type { Command } from "../../../client/types/command.js";
+import type { Command } from "../../api/types/command.js";
 
 export const SHARD_COUNT = 256;
 

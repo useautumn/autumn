@@ -1,7 +1,5 @@
-import type {
-	Command,
-	CommandResult,
-} from "../../../../../client/types/command.js";
+import type { Command } from "../../../../api/types/command.js";
+import type { CommandResult } from "../../../../api/types/commandResult.js";
 
 export type QueuedCommand = {
 	command: Command;
