@@ -282,7 +282,10 @@ test.concurrent(
 				],
 			});
 
-			const variant = await getFull({ ctx, planId: variantId });
+			const variant = await materializePlanInStripe({
+				ctx,
+				planId: variantId,
+			});
 			expectPriceStripeReuseCorrect({
 				before: findFeaturePrice({
 					product: base,

@@ -14,7 +14,6 @@ import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { ProductService } from "@/internal/products/ProductService.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
 
@@ -95,12 +94,10 @@ test.concurrent(
 					},
 				],
 			});
-			const base = await ProductService.getFull({
-				db: ctx.db,
-				idOrInternalId: baseId,
-				orgId: ctx.org.id,
-				env: ctx.env,
-			});
+			// Base first so the variant reuses its Stripe Product rather than
+			// minting one — sharing is what the rename must not disturb.
+			const base = await materializePlanInStripe({ ctx, planId: baseId });
+			await materializePlanInStripe({ ctx, planId: variantId });
 			expectProductProcessorCorrect({ product: base, present: true });
 
 			await autumnV2_3.catalogV2.update({

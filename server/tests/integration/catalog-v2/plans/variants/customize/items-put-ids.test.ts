@@ -323,7 +323,7 @@ test.concurrent(
 				],
 			});
 
-			const edited = await getFull({ ctx, planId: variantId });
+			const edited = await materializePlanInStripe({ ctx, planId: variantId });
 			const editedPrice = findFeaturePrice({
 				product: edited,
 				featureId: TestFeature.Messages,

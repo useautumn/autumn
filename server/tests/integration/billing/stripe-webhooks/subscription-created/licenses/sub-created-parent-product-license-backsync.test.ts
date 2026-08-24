@@ -377,20 +377,16 @@ test(`${chalk.yellowBright("license back-sync: parent and child sharing a produc
 		],
 		actions: [],
 	});
-	const [parentFull, childFull] = await Promise.all([
-		ProductService.getFull({
-			db: scenario.ctx.db,
-			idOrInternalId: parent.id,
-			orgId: scenario.ctx.org.id,
-			env: scenario.ctx.env,
-		}),
-		ProductService.getFull({
-			db: scenario.ctx.db,
-			idOrInternalId: teamSeat.id,
-			orgId: scenario.ctx.org.id,
-			env: scenario.ctx.env,
-		}),
-	]);
+	// Both must exist in Stripe before the child can be pointed at the
+	// parent's Stripe Product — that sharing is the case under test.
+	const parentFull = await materializePlanInStripe({
+		ctx: scenario.ctx,
+		planId: parent.id,
+	});
+	const childFull = await materializePlanInStripe({
+		ctx: scenario.ctx,
+		planId: teamSeat.id,
+	});
 	await ProductService.updateByInternalId({
 		db: scenario.ctx.db,
 		internalId: childFull.internal_id,

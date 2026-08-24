@@ -682,7 +682,13 @@ test.concurrent(
 		const variantVersions = await getAllVersions(variantId);
 		expect(variantVersions.length).toBe(2);
 
-		const v2 = variantVersions.find((v: any) => v.version === 2)!;
+		// A rollover edit is only a product-level reuse, so v2's price ids are
+		// minted fresh at billing time rather than carried from v1.
+		const v2 = await materializePlanInStripe({
+			ctx,
+			planId: variantId,
+			version: 2,
+		});
 		const v2PrepaidPrice = v2.prices.find(
 			(p: any) =>
 				p.config?.feature_id === TestFeature.Credits &&

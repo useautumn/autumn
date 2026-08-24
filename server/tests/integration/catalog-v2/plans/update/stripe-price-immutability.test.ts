@@ -104,7 +104,7 @@ test.concurrent(
 				],
 			});
 
-			const after = await getFull({ ctx, planId });
+			const after = await materializePlanInStripe({ ctx, planId });
 			const afterPrice = findFeaturePrice({
 				product: after,
 				featureId: TestFeature.Messages,
