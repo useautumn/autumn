@@ -196,133 +196,63 @@ describe("withdrawSupersededApprovals", () => {
 		};
 	});
 
-	test("withdraws each card in eve before cancelling it locally", async () => {
+	test("collects deny responses and cancels cards without touching eve", async () => {
 		pendingApprovals = [approval("a_1", "tc_1"), approval("a_2", "tc_2")];
 
-		await withdraw();
+		const { withdrawal } = await withdraw();
 
-		expect(postedRequestIds).toEqual(["tc_1", "tc_2"]);
-		expect(postedNotes[0]).toContain(
-			"Keep an attach refinement customer-specific",
-		);
-		expect(drainedSessionIds).toEqual(["eve_rehomed_tc_1", "eve_rehomed_tc_2"]);
+		expect(withdrawal?.inputResponses).toEqual([
+			{ optionId: "deny", requestId: "tc_1" },
+			{ optionId: "deny", requestId: "tc_2" },
+		]);
+		expect(withdrawal?.note.length ?? 0).toBeGreaterThan(0);
 		expect(cancelledApprovalIds).toEqual(["a_1", "a_2"]);
-		expect(supersededBatches).toEqual([pendingApprovals]);
+		expect(supersededBatches).toHaveLength(1);
+		expect(postedRequestIds).toHaveLength(0);
+		expect(drainedSessionIds).toHaveLength(0);
 	});
 
-	test("withdraws expired cards because eve remains suspended", async () => {
-		pendingApprovals = [
-			{ ...approval("a_1", "tc_1"), expires_at: Date.now() - 1 },
-		];
+	test("sibling parks are denied in the same bundle", async () => {
+		const withSiblings = approval("a_1", "tc_1");
+		(withSiblings.tool_args as Record<string, unknown>)._eveSiblingRequestIds =
+			["tc_1b", "tc_1c"];
 
-		await withdraw();
+		pendingApprovals = [withSiblings];
 
-		expect(cancelledApprovalIds).toEqual(["a_1"]);
-	});
+		const { withdrawal } = await withdraw();
 
-	test("cancels a card eve never registered without posting to eve", async () => {
-		pendingApprovals = [approval("a_1")];
-
-		await withdraw();
-
-		expect(postedRequestIds).toEqual([]);
-		expect(cancelledApprovalIds).toEqual(["a_1"]);
-	});
-
-	test("a failed withdrawal aborts the turn instead of replying empty", async () => {
-		pendingApprovals = [approval("a_1", "tc_1")];
-		failingRequestIds.add("tc_1");
-
-		await expect(withdraw()).rejects.toThrow(/open approval card/);
-	});
-
-	test("a failed withdrawal leaves the card decidable", async () => {
-		pendingApprovals = [approval("a_1", "tc_1")];
-		failingRequestIds.add("tc_1");
-
-		await withdraw().catch(() => {});
-
-		expect(cancelledApprovalIds).toEqual([]);
-		expect(supersededBatches).toEqual([]);
-	});
-
-	test("reports the cards it did cancel before aborting", async () => {
-		pendingApprovals = [approval("a_1", "tc_1"), approval("a_2", "tc_2")];
-		failingRequestIds.add("tc_2");
-
-		await withdraw().catch(() => {});
-
-		expect(cancelledApprovalIds).toEqual(["a_1"]);
-		expect(supersededBatches).toEqual([[pendingApprovals[0] as ChatApproval]]);
-	});
-
-	test("persists the re-homed session before aborting", async () => {
-		pendingApprovals = [approval("a_1", "tc_1"), approval("a_2", "tc_2")];
-		failingRequestIds.add("tc_2");
-
-		await withdraw().catch(() => {});
-
-		expect(savedSessionIds).toEqual(["eve_rehomed_tc_1"]);
-	});
-
-	test("moves the card it could not withdraw onto the re-homed run", async () => {
-		pendingApprovals = [approval("a_1", "tc_1"), approval("a_2", "tc_2")];
-		failingRequestIds.add("tc_2");
-
-		await withdraw().catch(() => {});
-
-		// Guarded on the run it was listed under, so a concurrent re-home wins.
-		expect(rehomedRuns).toEqual([
-			{
-				approvalId: "a_2",
-				fromRunId: "eve_session_1",
-				toRunId: "eve_rehomed_tc_1",
-			},
+		expect(withdrawal?.inputResponses).toEqual([
+			{ optionId: "deny", requestId: "tc_1" },
+			{ optionId: "deny", requestId: "tc_1b" },
+			{ optionId: "deny", requestId: "tc_1c" },
 		]);
 	});
 
-	test("leaves the card alone when the run was never re-homed", async () => {
-		pendingApprovals = [approval("a_1", "tc_1")];
-		failingRequestIds.add("tc_1");
+	test("an approval with no park cancels without a deny response", async () => {
+		pendingApprovals = [approval("a_1", undefined)];
 
-		await withdraw().catch(() => {});
+		const { withdrawal } = await withdraw();
 
-		expect(rehomedRuns).toEqual([]);
-	});
-
-	test("does nothing when the thread has no pending cards", async () => {
-		await withdraw();
-
-		expect(postedRequestIds).toEqual([]);
-		expect(cancelledApprovalIds).toEqual([]);
-		expect(supersededBatches).toEqual([]);
-	});
-});
-
-// Eve has lost the session (its transcript broke terminally): the card can
-// never be decided through it, so blocking the thread on it would deadlock
-// the conversation until the card expires.
-describe("withdrawSupersededApprovals when eve has lost the session", () => {
-	beforeEach(() => {
-		goneRequestIds.clear();
-		cancelledApprovalIds.length = 0;
-		supersededBatches = [];
-	});
-
-	test("cancels the card, does not block the turn, and reports the dead session", async () => {
-		pendingApprovals = [approval("a_1", "tc_1")];
-		goneRequestIds.add("tc_1");
-
-		const result = await withdraw();
-
-		expect(result).toEqual({ sessionGone: true });
+		expect(withdrawal).toBeUndefined();
 		expect(cancelledApprovalIds).toEqual(["a_1"]);
 		expect(supersededBatches).toHaveLength(1);
 	});
 
-	test("reports a live session when every withdrawal went through", async () => {
-		pendingApprovals = [approval("a_1", "tc_1")];
+	test("a foreign-run approval is rehomed and blocks the turn", async () => {
+		const foreign = approval("a_2", "tc_2");
+		(foreign as unknown as { run_id: string }).run_id = "eve_session_OLD";
+		pendingApprovals = [approval("a_1", "tc_1"), foreign];
 
-		expect(await withdraw()).toEqual({ sessionGone: false });
+		await expect(withdraw()).rejects.toThrow();
+
+		expect(cancelledApprovalIds).toEqual(["a_1"]);
+		expect(rehomedRuns).toEqual([
+			{
+				approvalId: "a_2",
+				fromRunId: "eve_session_OLD",
+				toRunId: "eve_session_1",
+			},
+		]);
+		expect(postedRequestIds).toHaveLength(0);
 	});
 });

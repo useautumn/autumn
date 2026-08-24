@@ -1,9 +1,11 @@
 import { db } from "../../../../lib/db.js";
+import { autumnOrgContextService } from "../../../autumnMcp/orgContextService.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import type {
 	AgentTurnContext,
 	AgentTurnParams,
 } from "../../domain/agentTurnContext.js";
+import { EveSessionGoneError } from "../../eve/client.js";
 import type { EveAuthContext } from "../../eve/types.js";
 import {
 	generateThreadTitle,
@@ -54,29 +56,61 @@ export const runAgentTurn = async ({
 	let firstEventAt: number | undefined;
 
 	try {
-		const { existingSession, orgContext } = await prepareAgentTurn({
+		const { existingSession, orgContext, withdrawal } = await prepareAgentTurn({
 			auth,
 			context: ctx,
 		});
 		const preparedAt = Date.now();
-		const session = await startAgentTurn({
-			auth: { ...auth, orgInstructions: orgContext?.instructions },
-			env,
-			message: buildAgentTurnMessage({
+		const startTurn = (start: {
+			orgContext?: typeof orgContext;
+			session?: typeof existingSession;
+			withdrawal?: typeof withdrawal;
+		}) =>
+			startAgentTurn({
+				auth: { ...auth, orgInstructions: start.orgContext?.instructions },
 				env,
-				isAdminInstall: isInternalAutumnSlackProvider({
-					provider: thread.provider,
+				message: buildAgentTurnMessage({
+					env,
+					isAdminInstall: isInternalAutumnSlackProvider({
+						provider: thread.provider,
+					}),
+					newSession: !start.session,
+					orgContext: start.orgContext,
+					orgSlug: org.slug,
+					params,
 				}),
-				newSession: !existingSession,
-				orgContext,
-				orgSlug: org.slug,
+				orgId: org.id,
 				params,
-			}),
-			orgId: org.id,
-			params,
-			session: existingSession,
-			thread,
-		});
+				session: start.session,
+				thread,
+				withdrawal: start.withdrawal,
+			});
+		let session: Awaited<ReturnType<typeof startAgentTurn>>;
+		try {
+			session = await startTurn({
+				orgContext,
+				session: existingSession,
+				withdrawal,
+			});
+		} catch (error) {
+			if (!(existingSession && error instanceof EveSessionGoneError)) {
+				throw error;
+			}
+			// Eve lost the session; its row was already deleted at the failed
+			// post, and its parked writes died with it — restart fresh.
+			logger.warn("Eve session gone at message post; starting fresh", {
+				event: "leaf.eve_session_gone_restarted",
+				data: { session_id: existingSession.sessionId },
+			});
+			session = await startTurn({
+				orgContext: await autumnOrgContextService.load({
+					env,
+					logger,
+					orgId: org.id,
+					token,
+				}),
+			});
+		}
 		run?.resolveSessionId(session.sessionId);
 		const outcome = await consumeAgentTurn({
 			auth,

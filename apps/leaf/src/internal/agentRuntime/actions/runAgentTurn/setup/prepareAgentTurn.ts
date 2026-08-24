@@ -2,7 +2,7 @@ import { db } from "../../../../../lib/db.js";
 import { withdrawSupersededApprovals } from "../../../../approvals/actions/withdrawSupersededApprovals.js";
 import { autumnOrgContextService } from "../../../../autumnMcp/orgContextService.js";
 import type { AgentTurnContext } from "../../../domain/agentTurnContext.js";
-import { deleteEveSession, getEveSession } from "../../../eve/repo.js";
+import { getEveSession } from "../../../eve/repo.js";
 import type { EveAuthContext } from "../../../eve/types.js";
 
 export const prepareAgentTurn = async ({
@@ -33,10 +33,14 @@ export const prepareAgentTurn = async ({
 		return {
 			existingSession: undefined,
 			orgContext: await loadOrgContext(),
+			withdrawal: undefined,
 		} as const;
 	}
 
-	const { sessionGone } = await withdrawSupersededApprovals({
+	// Pending cards are cancelled here; their deny responses ride the message
+	// post itself, so superseding costs no separate eve turn. A session eve has
+	// lost surfaces at that post and is recovered there.
+	const { withdrawal } = await withdrawSupersededApprovals({
 		auth,
 		logger,
 		onApprovalsSuperseded,
@@ -45,22 +49,5 @@ export const prepareAgentTurn = async ({
 		session: existingSession,
 		thread,
 	});
-	if (sessionGone) {
-		// Eve lost the session; keeping its row would replay the same dead
-		// resume on every message, so this turn starts a fresh conversation.
-		await deleteEveSession({
-			db,
-			env,
-			orgId: org.id,
-			reason: "session_gone",
-			sessionId: existingSession.sessionId,
-			threadKey: existingSession.threadKey,
-		});
-		await onAction?.("Loading context");
-		return {
-			existingSession: undefined,
-			orgContext: await loadOrgContext(),
-		} as const;
-	}
-	return { existingSession, orgContext: undefined } as const;
+	return { existingSession, orgContext: undefined, withdrawal } as const;
 };
