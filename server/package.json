@@ -54,6 +54,7 @@
 		"@autumn/auth": "workspace:*",
 		"@autumn/env": "workspace:*",
 		"@autumn/ksuid": "workspace:*",
+		"@autumn/ducklake": "workspace:*",
 		"@autumn/logging": "workspace:*",
 		"@autumn/agent-docs": "workspace:*",
 		"@autumn/shared": "workspace:*",

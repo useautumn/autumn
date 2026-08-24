@@ -29,7 +29,8 @@
 			"packages/stripe-sync",
 			"packages/gateway",
 			"packages/render",
-			"packages/ui"
+			"packages/ui",
+			"packages/ducklake"
 		],
 		"catalog": {
 			"stripe": "19.3.0-beta.1",
