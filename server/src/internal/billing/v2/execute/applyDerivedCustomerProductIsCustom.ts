@@ -3,19 +3,109 @@ import type {
 	FullCusProduct,
 	FullProduct,
 } from "@autumn/shared";
-import {
-	deriveCustomerProductIsCustom,
-	orgToCurrency,
-	resolveCustomerCurrency,
-} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	getPatchCustomerProducts,
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { applyCustomerProductItemsPatch } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
-import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
+import { deriveCustomerProductIsCustom } from "./deriveCustomerProductIsCustom";
+
+/** A customer product to derive for, and where the result has to land. */
+type DerivationTarget = {
+	/** The state to compare — for a patch, the reconstructed post-patch product. */
+	customerProduct: FullCusProduct;
+	/** The row the flag belongs to, which for a patch is the pre-patch object. */
+	target: FullCusProduct;
+	/** Inserts carry the flag on the row itself; patches persist it through the
+	 * plan's update entry for the same row. */
+	via: "insert" | "update";
+};
+
+/**
+ * A patch entry carries the PRE-patch customer product, with the changes in its
+ * insert/delete arrays, so the post-patch item set has to be reconstructed
+ * before diffing.
+ *
+ * Known gap: one-off prepaid carry-overs land on the patched row via the plan's
+ * own `insertCustomerEntitlements`, in DB-insert shape with no hydrated
+ * entitlement, so they are not reconstructed here. A patch that carries credits
+ * can read non-custom now and custom on the next write. The drift is towards
+ * custom — the safe direction — and it self-corrects the next time the row is
+ * touched.
+ */
+const collectDerivationTargets = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}): DerivationTarget[] => [
+	...(autumnBillingPlan.insertCustomerProducts ?? []).map(
+		(customerProduct): DerivationTarget => ({
+			customerProduct,
+			target: customerProduct,
+			via: "insert",
+		}),
+	),
+	...getPatchCustomerProducts({ autumnBillingPlan }).map(
+		(patch): DerivationTarget => ({
+			customerProduct: applyCustomerProductItemsPatch({
+				customerProduct: patch.customerProduct,
+				insertCustomerPrices: patch.insertCustomerPrices,
+				insertCustomerEntitlements: patch.insertCustomerEntitlements,
+				deleteCustomerPrices: patch.deleteCustomerPrices,
+				deleteCustomerEntitlements: patch.deleteCustomerEntitlements,
+			}),
+			target: patch.customerProduct,
+			via: "update",
+		}),
+	),
+];
+
+/** Every distinct catalog version the plan touches, fetched in one pass so the
+ * derivation itself runs with no further IO. An unresolved product resolves to
+ * null, which the derivation reads as custom — the safe direction — rather than
+ * failing the billing write. */
+const loadBaseProducts = async ({
+	ctx,
+	targets,
+}: {
+	ctx: AutumnContext;
+	targets: DerivationTarget[];
+}): Promise<Map<string, FullProduct | null>> => {
+	const internalProductIds = [
+		...new Set(
+			targets.flatMap(({ customerProduct }) =>
+				customerProduct.internal_product_id
+					? [customerProduct.internal_product_id]
+					: [],
+			),
+		),
+	];
+
+	const loaded = await Promise.all(
+		internalProductIds.map(async (internalProductId) => {
+			try {
+				const product = await ProductService.getFull({
+					db: ctx.db,
+					idOrInternalId: internalProductId,
+					orgId: ctx.org.id,
+					env: ctx.env,
+					allowNotFound: true,
+				});
+				return [internalProductId, product] as const;
+			} catch (error) {
+				ctx.logger.warn(
+					`[isCustom] could not load base product ${internalProductId}`,
+					{ error },
+				);
+				return [internalProductId, null] as const;
+			}
+		}),
+	);
+
+	return new Map(loaded);
+};
 
 /**
  * Stamps the derived `is_custom` onto every customer product this plan creates
@@ -37,113 +127,32 @@ export const applyDerivedCustomerProductIsCustom = async ({
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
-	const baseProductByInternalId = new Map<string, FullProduct | null>();
-	const orgDefaultCurrency = orgToCurrency({ org: ctx.org });
+	const targets = collectDerivationTargets({ autumnBillingPlan });
+	if (targets.length === 0) return;
 
-	// CURRENCY PROJECTION — the comparison runs in the customer's own currency,
-	// so adding a currency to a plan never makes its existing customers look
-	// custom, while editing the one they are billed in does. A plan targets a
-	// single customer, so this resolves once per billing plan.
-	let billingCurrency: string | undefined;
-	const resolveBillingCurrency = async (customerProduct: FullCusProduct) => {
-		if (billingCurrency) return billingCurrency;
+	const baseProducts = await loadBaseProducts({ ctx, targets });
 
-		let customer = customerProduct.customer ?? null;
-		if (!customer) {
-			try {
-				customer = await CusService.get({
-					db: ctx.db,
-					idOrInternalId: customerProduct.internal_customer_id,
-					orgId: ctx.org.id,
-					env: ctx.env,
-				});
-			} catch (error) {
-				// Falls through to the org default rather than failing the write.
-				ctx.logger.warn("[isCustom] could not load customer for currency", {
-					error,
-				});
-			}
-		}
-
-		billingCurrency = resolveCustomerCurrency({ customer, org: ctx.org });
-		return billingCurrency;
-	};
-
-	const loadBaseProduct = async (internalProductId?: string | null) => {
-		if (!internalProductId) return null;
-		const cached = baseProductByInternalId.get(internalProductId);
-		if (cached !== undefined) return cached;
-
-		let baseProduct: FullProduct | null = null;
-		try {
-			// Resolves the exact version the row points at, and the underlying
-			// query already excludes custom prices/entitlements — so this is the
-			// clean catalog definition to compare against.
-			baseProduct = await ProductService.getFull({
-				db: ctx.db,
-				idOrInternalId: internalProductId,
-				orgId: ctx.org.id,
-				env: ctx.env,
-				allowNotFound: true,
-			});
-		} catch (error) {
-			// Never fail a billing write over the flag; an unresolved base makes
-			// the derivation fall back to `custom`, which is the safe direction.
-			ctx.logger.warn(
-				`[isCustom] could not load base product ${internalProductId}`,
-				{ error },
-			);
-		}
-
-		baseProductByInternalId.set(internalProductId, baseProduct);
-		return baseProduct;
-	};
-
-	const derive = async (customerProduct: FullCusProduct) =>
-		deriveCustomerProductIsCustom({
-			customerProduct,
-			baseProduct: await loadBaseProduct(customerProduct.internal_product_id),
-			features: ctx.features,
-			currency: await resolveBillingCurrency(customerProduct),
-			orgDefaultCurrency,
-		});
-
-	// New rows are inserted wholesale, so stamping the object is enough.
-	for (const customerProduct of autumnBillingPlan.insertCustomerProducts ??
-		[]) {
-		customerProduct.is_custom = await derive(customerProduct);
-	}
-
-	// A patch entry carries the PRE-patch customer product, with the changes in
-	// its insert/delete arrays — so the post-patch item set has to be
-	// reconstructed before comparing. Patch execution only writes
-	// customer_prices / customer_entitlements, so the column itself is persisted
-	// through the plan's update entry for the same row.
-	//
-	// Known gap: one-off prepaid carry-overs land on the patched row via the
-	// plan's own `insertCustomerEntitlements`, in DB-insert shape with no
-	// hydrated entitlement, so they are not reconstructed here. A patch that
-	// carries credits can therefore read non-custom now and custom on the next
-	// update that re-derives. The drift is towards custom — the safe direction —
-	// and it self-corrects the next time the row is touched.
+	// Every load is done, so the rest is pure — no IO inside the loop.
 	const updateEntries = getUpdateCustomerProducts({ autumnBillingPlan });
 
-	for (const patch of getPatchCustomerProducts({ autumnBillingPlan })) {
-		const { customerProduct } = patch;
-		const isCustom = await derive(
-			applyCustomerProductItemsPatch({
-				customerProduct,
-				insertCustomerPrices: patch.insertCustomerPrices,
-				insertCustomerEntitlements: patch.insertCustomerEntitlements,
-				deleteCustomerPrices: patch.deleteCustomerPrices,
-				deleteCustomerEntitlements: patch.deleteCustomerEntitlements,
-			}),
-		);
+	for (const { customerProduct, target, via } of targets) {
+		const isCustom = deriveCustomerProductIsCustom({
+			customerProduct,
+			baseProduct: customerProduct.internal_product_id
+				? baseProducts.get(customerProduct.internal_product_id)
+				: null,
+			features: ctx.features,
+		});
 
-		if (isCustom === customerProduct.is_custom) continue;
+		if (via === "insert") {
+			target.is_custom = isCustom;
+			continue;
+		}
+
+		if (isCustom === target.is_custom) continue;
 
 		const updateEntry = updateEntries.find(
-			(entry) => entry.customerProduct.id === customerProduct.id,
+			(entry) => entry.customerProduct.id === target.id,
 		);
 
 		if (updateEntry) {
@@ -156,7 +165,7 @@ export const applyDerivedCustomerProductIsCustom = async ({
 		// derived value would be silently dropped.
 		autumnBillingPlan.updateCustomerProducts = [
 			...(autumnBillingPlan.updateCustomerProducts ?? []),
-			{ customerProduct, updates: { is_custom: isCustom } },
+			{ customerProduct: target, updates: { is_custom: isCustom } },
 		];
 	}
 };

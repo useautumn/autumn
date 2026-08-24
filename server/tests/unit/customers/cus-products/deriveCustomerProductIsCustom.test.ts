@@ -1,20 +1,24 @@
 import { describe, expect, test } from "bun:test";
 import type { FullCusProduct, FullProduct } from "@autumn/shared";
-import {
-	AllowanceType,
-	deriveCustomerProductIsCustom,
-	EntInterval,
-	FeatureType,
-} from "@autumn/shared";
+import { AllowanceType, EntInterval, FeatureType } from "@autumn/shared";
+import { deriveCustomerProductIsCustom } from "@/internal/billing/v2/execute/deriveCustomerProductIsCustom";
 
 /**
- * `is_custom` is derived by comparing a customer product's own price and
- * entitlement rows against the catalog version it points at.
+ * `is_custom` is derived by diffing a customer product's own plan against the
+ * catalog version it points at, via `diffPlanV1`.
  *
  * The false-negative cases matter most: a customer product wrongly read as
  * non-custom is swept into version migrations, which overwrite the very rows
  * that made it custom. False positives only mean the customer is skipped.
  */
+
+const seatsFeature = {
+	id: "seats",
+	name: "Seats",
+	type: FeatureType.Metered,
+	config: { usage_type: "single_use" },
+	internal_id: "fe_seats",
+} as never;
 
 const seatsEntitlement = ({
 	allowance = 5,
@@ -27,9 +31,9 @@ const seatsEntitlement = ({
 } = {}) =>
 	({
 		id,
-		internal_feature_id: "if_seats",
+		internal_feature_id: "fe_seats",
 		feature_id: "seats",
-		feature: { id: "seats", type: FeatureType.Metered },
+		feature: seatsFeature,
 		allowance,
 		allowance_type: AllowanceType.Fixed,
 		interval: EntInterval.Month,
@@ -37,6 +41,7 @@ const seatsEntitlement = ({
 		entity_feature_id: null,
 		pooled: false,
 		carry_from_previous: false,
+		usage_limit: null,
 		rollover,
 		created_at: 1,
 	}) as never;
@@ -56,6 +61,7 @@ const basePrice = ({
 		proration_config: null,
 		billing_type: null,
 		tier_behavior: null,
+		created_at: 1,
 		config: {
 			type: "fixed",
 			amount,
@@ -68,25 +74,78 @@ const basePrice = ({
 		},
 	}) as never;
 
+/** A link granting `included` seats of another plan. */
+const planLicense = ({
+	included = 2,
+	licensePlanId = "seat_plan",
+}: {
+	included?: number;
+	licensePlanId?: string;
+} = {}) =>
+	({
+		id: `plan_lic_${licensePlanId}`,
+		included,
+		prepaid_only: true,
+		is_custom: false,
+		customized: false,
+		parent_internal_product_id: "prod_internal_pro",
+		license_internal_product_id: `prod_internal_${licensePlanId}`,
+		metadata: {},
+		created_at: 1,
+		updated_at: 1,
+		product: {
+			id: licensePlanId,
+			internal_id: `prod_internal_${licensePlanId}`,
+			name: "Seat plan",
+			version: 1,
+			env: "sandbox",
+			created_at: 1,
+			archived: false,
+			is_add_on: false,
+			is_default: false,
+			group: "",
+			description: null,
+			config: { ignore_past_due: false },
+			metadata: {},
+			prices: [],
+			entitlements: [],
+			free_trial: null,
+		},
+	}) as never;
+
+const productShape = ({ name = "Pro" }: { name?: string } = {}) => ({
+	id: "pro",
+	internal_id: "prod_internal_pro",
+	name,
+	version: 3,
+	env: "sandbox",
+	created_at: 1,
+	archived: false,
+	is_add_on: false,
+	is_default: false,
+	group: "",
+	description: null,
+	config: { ignore_past_due: false },
+	metadata: {},
+});
+
 const baseProduct = ({
 	entitlements,
 	freeTrial = null,
 	prices = [],
+	licenses = [],
 }: {
 	entitlements: unknown[];
 	freeTrial?: unknown;
 	prices?: unknown[];
+	licenses?: unknown[];
 }) =>
 	({
-		id: "pro",
-		internal_id: "prod_internal_pro",
-		name: "Pro",
-		version: 3,
-		is_add_on: false,
-		is_default: false,
+		...productShape(),
 		prices,
 		entitlements,
 		free_trial: freeTrial,
+		licenses,
 	}) as unknown as FullProduct;
 
 const customerProduct = ({
@@ -94,52 +153,51 @@ const customerProduct = ({
 	freeTrial = null,
 	name = "Pro",
 	prices = [],
+	licenses = [],
 }: {
 	entitlements: unknown[];
 	freeTrial?: unknown;
 	name?: string;
 	prices?: unknown[];
+	licenses?: unknown[];
 }) =>
 	({
 		id: "cus_prod_1",
 		internal_product_id: "prod_internal_pro",
-		product: {
-			id: "pro",
-			internal_id: "prod_internal_pro",
-			name,
-			version: 3,
-			is_add_on: false,
-			is_default: false,
-		},
+		product: productShape({ name }),
 		customer_prices: prices.map((price) => ({ price })),
 		customer_entitlements: entitlements.map((entitlement) => ({ entitlement })),
 		free_trial: freeTrial,
-		customer_licenses: [],
+		customer_licenses: licenses.map((planLicenseRow) => ({
+			planLicense: planLicenseRow,
+		})),
 	}) as unknown as FullCusProduct;
 
 const derive = ({
 	customer,
 	base,
-	currency = "usd",
 }: {
 	customer: FullCusProduct;
 	base?: FullProduct | null;
-	currency?: string;
 }) =>
 	deriveCustomerProductIsCustom({
 		customerProduct: customer,
 		baseProduct: base,
-		features: [{ id: "seats", type: FeatureType.Metered }] as never,
-		currency,
-		orgDefaultCurrency: "usd",
+		features: [seatsFeature],
 	});
 
 describe("deriveCustomerProductIsCustom", () => {
 	test("matches the catalog plan → not custom", () => {
 		expect(
 			derive({
-				customer: customerProduct({ entitlements: [seatsEntitlement()] }),
-				base: baseProduct({ entitlements: [seatsEntitlement()] }),
+				customer: customerProduct({
+					entitlements: [seatsEntitlement()],
+					prices: [basePrice()],
+				}),
+				base: baseProduct({
+					entitlements: [seatsEntitlement()],
+					prices: [basePrice()],
+				}),
 			}),
 		).toBe(false);
 	});
@@ -178,7 +236,7 @@ describe("deriveCustomerProductIsCustom", () => {
 				customer: customerProduct({
 					entitlements: [
 						seatsEntitlement(),
-						seatsEntitlement({ id: "ent_extra" }),
+						seatsEntitlement({ id: "ent_extra", allowance: 9 }),
 					],
 				}),
 				base: baseProduct({ entitlements: [seatsEntitlement()] }),
@@ -195,18 +253,123 @@ describe("deriveCustomerProductIsCustom", () => {
 		).toBe(true);
 	});
 
-	// Deliberately excluded dimensions — these must NOT flip the flag.
+	test("base price amount differs → custom", () => {
+		expect(
+			derive({
+				customer: customerProduct({
+					entitlements: [seatsEntitlement()],
+					prices: [basePrice({ amount: 8 })],
+				}),
+				base: baseProduct({
+					entitlements: [seatsEntitlement()],
+					prices: [basePrice({ amount: 10 })],
+				}),
+			}),
+		).toBe(true);
+	});
+
+	// Licenses — the gap the old hand-rolled comparison left open.
+
+	test("license included amount differs → custom", () => {
+		expect(
+			derive({
+				customer: customerProduct({
+					entitlements: [seatsEntitlement()],
+					licenses: [planLicense({ included: 20 })],
+				}),
+				base: baseProduct({
+					entitlements: [seatsEntitlement()],
+					licenses: [planLicense({ included: 2 })],
+				}),
+			}),
+		).toBe(true);
+	});
+
+	test("customer holds a license the plan does not → custom", () => {
+		expect(
+			derive({
+				customer: customerProduct({
+					entitlements: [seatsEntitlement()],
+					licenses: [planLicense(), planLicense({ licensePlanId: "extra" })],
+				}),
+				base: baseProduct({
+					entitlements: [seatsEntitlement()],
+					licenses: [planLicense()],
+				}),
+			}),
+		).toBe(true);
+	});
+
+	test("identical licenses → not custom", () => {
+		expect(
+			derive({
+				customer: customerProduct({
+					entitlements: [seatsEntitlement()],
+					licenses: [planLicense()],
+				}),
+				base: baseProduct({
+					entitlements: [seatsEntitlement()],
+					licenses: [planLicense()],
+				}),
+			}),
+		).toBe(false);
+	});
+
+	// Currency — a plan's other currencies are a purchase-time option for new
+	// buyers, so gaining one must not mark the customers already on it custom.
+
+	test("plan gains a currency the customer does not have → not custom", () => {
+		expect(
+			derive({
+				customer: customerProduct({
+					entitlements: [seatsEntitlement()],
+					prices: [basePrice()],
+				}),
+				base: baseProduct({
+					entitlements: [seatsEntitlement()],
+					prices: [basePrice({ currencies: { gbp: { amount: 6 } } })],
+				}),
+			}),
+		).toBe(false);
+	});
+
+	test("a currency present on both sides changes amount → custom", () => {
+		expect(
+			derive({
+				customer: customerProduct({
+					entitlements: [seatsEntitlement()],
+					prices: [basePrice({ currencies: { gbp: { amount: 6 } } })],
+				}),
+				base: baseProduct({
+					entitlements: [seatsEntitlement()],
+					prices: [basePrice({ currencies: { gbp: { amount: 7 } } })],
+				}),
+			}),
+		).toBe(true);
+	});
+
+	// Deliberately excluded — these must NOT flip the flag.
 
 	test("longer free trial with identical items → not custom", () => {
 		expect(
 			derive({
 				customer: customerProduct({
 					entitlements: [seatsEntitlement()],
-					freeTrial: { length: 60, duration: "day", unique_fingerprint: false },
+					freeTrial: {
+						length: 60,
+						duration: "day",
+						unique_fingerprint: false,
+						card_required: false,
+					},
 				}),
 				base: baseProduct({
 					entitlements: [seatsEntitlement()],
-					freeTrial: { length: 14, duration: "day", unique_fingerprint: false },
+					freeTrial: {
+						length: 14,
+						duration: "day",
+						unique_fingerprint: false,
+						card_required: false,
+					},
 				}),
 			}),
 		).toBe(false);
@@ -222,89 +385,6 @@ describe("deriveCustomerProductIsCustom", () => {
 				base: baseProduct({ entitlements: [seatsEntitlement()] }),
 			}),
 		).toBe(false);
-	});
-
-	// Currency projection — the comparison runs in the customer's own currency,
-	// so a plan's other currencies are a purchase-time option, not a divergence.
-
-	test("plan gains a currency the customer is not on → not custom", () => {
-		expect(
-			derive({
-				currency: "usd",
-				customer: customerProduct({
-					entitlements: [seatsEntitlement()],
-					prices: [basePrice()],
-				}),
-				base: baseProduct({
-					entitlements: [seatsEntitlement()],
-					prices: [basePrice({ currencies: { gbp: { amount: 6 } } })],
-				}),
-			}),
-		).toBe(false);
-	});
-
-	test("plan edits the currency the customer IS on → custom", () => {
-		expect(
-			derive({
-				currency: "usd",
-				customer: customerProduct({
-					entitlements: [seatsEntitlement()],
-					prices: [basePrice({ amount: 8 })],
-				}),
-				base: baseProduct({
-					entitlements: [seatsEntitlement()],
-					prices: [basePrice({ amount: 10 })],
-				}),
-			}),
-		).toBe(true);
-	});
-
-	test("plan edits a currency the customer is not on → not custom", () => {
-		expect(
-			derive({
-				currency: "usd",
-				customer: customerProduct({
-					entitlements: [seatsEntitlement()],
-					prices: [basePrice({ currencies: { gbp: { amount: 6 } } })],
-				}),
-				base: baseProduct({
-					entitlements: [seatsEntitlement()],
-					prices: [basePrice({ currencies: { gbp: { amount: 7 } } })],
-				}),
-			}),
-		).toBe(false);
-	});
-
-	test("customer on a non-base currency, that currency edited → custom", () => {
-		expect(
-			derive({
-				currency: "gbp",
-				customer: customerProduct({
-					entitlements: [seatsEntitlement()],
-					prices: [basePrice({ currencies: { gbp: { amount: 6 } } })],
-				}),
-				base: baseProduct({
-					entitlements: [seatsEntitlement()],
-					prices: [basePrice({ currencies: { gbp: { amount: 7 } } })],
-				}),
-			}),
-		).toBe(true);
-	});
-
-	test("plan drops the currency the customer is on → custom", () => {
-		expect(
-			derive({
-				currency: "gbp",
-				customer: customerProduct({
-					entitlements: [seatsEntitlement()],
-					prices: [basePrice({ currencies: { gbp: { amount: 6 } } })],
-				}),
-				base: baseProduct({
-					entitlements: [seatsEntitlement()],
-					prices: [basePrice()],
-				}),
-			}),
-		).toBe(true);
 	});
 
 	// Conservative fallbacks — uncertainty resolves to custom.
