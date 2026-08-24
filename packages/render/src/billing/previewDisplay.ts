@@ -318,11 +318,25 @@ export const buildBillingPreviewDisplay = ({
 	const payload = preview ?? {};
 	const currency = getString(payload.currency) ?? "usd";
 	const planNames = new Map(Object.entries(knownPlanNames ?? {}));
-	const incoming = getArray(payload.incoming).flatMap(
-		(value) => changeDisplay({ planNames, value }) ?? [],
+	// Schedule previews repeat a plan once per phase; the change list is
+	// about which plans change, so each plan renders once.
+	const uniqueByPlanId = (changes: BillingChangeDisplay[]) => {
+		const seen = new Set<string>();
+		return changes.filter(({ planId }) => {
+			if (seen.has(planId)) return false;
+			seen.add(planId);
+			return true;
+		});
+	};
+	const incoming = uniqueByPlanId(
+		getArray(payload.incoming).flatMap(
+			(value) => changeDisplay({ planNames, value }) ?? [],
+		),
 	);
-	const outgoing = getArray(payload.outgoing).flatMap(
-		(value) => changeDisplay({ planNames, value }) ?? [],
+	const outgoing = uniqueByPlanId(
+		getArray(payload.outgoing).flatMap(
+			(value) => changeDisplay({ planNames, value }) ?? [],
+		),
 	);
 	for (const { name, planId } of [...incoming, ...outgoing]) {
 		planNames.set(planId, name);
