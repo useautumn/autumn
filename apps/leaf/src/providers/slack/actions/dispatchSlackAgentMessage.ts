@@ -6,6 +6,7 @@ import { editSupersededApprovalCards } from "../../../internal/approvals/surface
 import {
 	dispatchThreadMessage,
 	hasQueuedThreadMessage,
+	stopActiveThreadRun,
 } from "../../../internal/runs/runCoordinator.js";
 import {
 	type ActiveRun,
@@ -35,6 +36,7 @@ import {
 } from "../files.js";
 import { findSlackInstallationForWorkspace } from "../installations.js";
 import { presentSlackAgentTurn } from "../presenters/presentSlackAgentTurn.js";
+import { isExplicitOptOut } from "../routing/explicitOptOut.js";
 import { runSlackAgentTurn } from "./runSlackAgentTurn.js";
 
 type DispatchSlackAgentMessageInput = {
@@ -270,6 +272,21 @@ export const dispatchSlackAgentMessage = async (
 		threadId: input.threadId,
 		workspaceId: getSlackWorkspaceId(input.raw),
 	});
+	// "stop replying" and friends must never start a run — mentions and DMs
+	// skip the subscribed-message classifier, so the opt-out is checked here.
+	if (isExplicitOptOut(input.text)) {
+		await stopActiveThreadRun({
+			byUserId: input.providerUserId,
+			runKey,
+		});
+		try {
+			await input.react?.({ action: "remove", emoji: "eyes" });
+			await input.react?.({ action: "add", emoji: "white_check_mark" });
+		} catch {
+			// Reactions are best-effort; the opt-out must still close the thread.
+		}
+		return "close";
+	}
 	return (
 		(await dispatchThreadMessage({
 			hasAttachments: Boolean(input.attachments?.length),

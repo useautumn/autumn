@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Message, Thread } from "chat";
+import {
+	closeRun,
+	registerRun,
+} from "../../../../src/internal/runs/runRegistry.js";
 import { createSlackMessageHandlers } from "../../../../src/providers/slack/handlers/handleSlackMessage.js";
 
 let disposition: "close" | "keep" = "close";
@@ -141,5 +145,24 @@ describe("handleSlackMessage", () => {
 
 		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
 		expect(unsubscribe).not.toHaveBeenCalled();
+	});
+});
+
+describe("opt-out stops the active run", () => {
+	test("unsubscribe disposition stops the thread's in-flight run", async () => {
+		routingDisposition = "unsubscribe";
+		const { thread, unsubscribe } = createThread();
+		const run = registerRun({
+			key: "slack:T1:C1:slack:C1:1",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
+		run.resolveSessionId("sesn_1");
+
+		await handleSubscribedSlackMessage(thread, createMessage());
+
+		expect(run.stop).toEqual({ byUserId: "U1", reason: "user" });
+		expect(unsubscribe).toHaveBeenCalledTimes(1);
+		closeRun({ key: run.key, run });
 	});
 });

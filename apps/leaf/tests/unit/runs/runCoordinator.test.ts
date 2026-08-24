@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	dispatchThreadMessage,
 	isStopMessage,
+	stopActiveThreadRun,
 } from "../../../src/internal/runs/runCoordinator.js";
 import {
 	closeRun,
@@ -206,5 +207,36 @@ describe("dispatchThreadMessage", () => {
 		expect(run.pendingTurns).toBe(0);
 		expect(newRuns).toBe(1);
 		closeRun({ key: "co6", run });
+	});
+});
+
+describe("stopActiveThreadRun", () => {
+	test("stops the thread's active run", async () => {
+		const interrupts: string[] = [];
+		const run = registerRun({
+			key: "co-opt-out",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendInterrupt: async (sessionId) => {
+				interrupts.push(sessionId);
+			},
+		});
+		run.resolveSessionId("sesn_opt_out");
+
+		const stopped = await stopActiveThreadRun({
+			byUserId: "U2",
+			runKey: "co-opt-out",
+		});
+
+		expect(stopped).toBe(true);
+		expect(run.stop).toEqual({ byUserId: "U2", reason: "user" });
+		expect(interrupts).toEqual(["sesn_opt_out"]);
+		closeRun({ key: "co-opt-out", run });
+	});
+
+	test("returns false when the thread has no active run", async () => {
+		expect(
+			await stopActiveThreadRun({ byUserId: "U1", runKey: "co-none" }),
+		).toBe(false);
 	});
 });

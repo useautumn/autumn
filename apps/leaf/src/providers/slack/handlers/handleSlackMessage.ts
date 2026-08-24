@@ -1,6 +1,9 @@
 import type { Message, Thread } from "chat";
+import { stopActiveThreadRun } from "../../../internal/runs/runCoordinator.js";
+import { runKeyForThread } from "../../../internal/runs/runRegistry.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
 import { dispatchSlackAgentMessage } from "../actions/dispatchSlackAgentMessage.js";
+import { getSlackWorkspaceId } from "../context.js";
 import { classifySubscribedMessage } from "../routing/classifySubscribedMessage.js";
 import { getRecentMessages } from "../threadContext.js";
 
@@ -107,7 +110,19 @@ export const createSlackMessageHandlers = ({
 			text: message.text,
 		});
 		if (disposition === "ignore") return;
-		if (disposition === "unsubscribe") return unsubscribe(thread);
+		if (disposition === "unsubscribe") {
+			// Unsubscribing alone leaves an in-flight run streaming replies.
+			await stopActiveThreadRun({
+				byUserId: message.author.userId,
+				runKey: runKeyForThread({
+					channelId: thread.channelId,
+					provider: "slack",
+					threadId: thread.id,
+					workspaceId: getSlackWorkspaceId(message.raw),
+				}),
+			});
+			return unsubscribe(thread);
+		}
 		await dispatchMessage({
 			dispatch,
 			message,

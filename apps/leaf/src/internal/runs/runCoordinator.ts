@@ -20,6 +20,24 @@ export const isStopMessage = (text: string) =>
 			.replace(/[.!]+$/, ""),
 	);
 
+/** Stops the thread's in-flight run, if any; returns whether one was stopped. */
+export const stopActiveThreadRun = async ({
+	byUserId,
+	runKey,
+}: {
+	byUserId: string;
+	runKey: string;
+}) => {
+	const active = getRun(runKey);
+	if (!active || active.closed || active.stop) return false;
+	logger.info("Stopping active run for thread opt-out", {
+		event: "leaf.run_stop_opt_out",
+		data: { run_key: runKey },
+	});
+	await active.requestStop({ byUserId, reason: "user" });
+	return true;
+};
+
 // Replaces the chat SDK queue under `concurrency: "concurrent"`: new runs are
 // serialized per thread, while messages arriving mid-run are routed live —
 // stop keywords interrupt, everything else is injected as the next turn.
