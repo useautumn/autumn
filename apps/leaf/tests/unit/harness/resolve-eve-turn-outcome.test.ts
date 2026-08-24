@@ -34,6 +34,7 @@ const session = {
 		streamIndex: 4,
 		status: "waiting" as const,
 		lastEventAt: 0,
+		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",
 };

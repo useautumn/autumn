@@ -5,8 +5,8 @@ import type {
 	AgentTurnContext,
 	AgentTurnParams,
 } from "../../domain/agentTurnContext.js";
+import { abandonEveSession } from "../../eve/abandonSession.js";
 import { EveSessionDeadError, EveSessionGoneError } from "../../eve/client.js";
-import { deleteEveSession } from "../../eve/repo.js";
 import type { EveAuthContext } from "../../eve/types.js";
 import {
 	generateThreadTitle,
@@ -143,13 +143,13 @@ export const runAgentTurn = async ({
 				event: "leaf.eve_session_dead_restarted",
 				data: { session_id: session.sessionId },
 			});
-			await deleteEveSession({
-				db,
+			await abandonEveSession({
 				env,
 				orgId: org.id,
+				providerUserId,
 				reason: "session_dead",
-				sessionId: session.sessionId,
-				threadKey: session.threadKey,
+				session,
+				thread,
 			});
 			session = await startTurn({
 				orgContext: await autumnOrgContextService.load({

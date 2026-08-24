@@ -7,6 +7,7 @@ import type {
 import { adoptPostedEveSession } from "../../../eve/adoptPostedSession.js";
 import {
 	type EveMessageContent,
+	EveSessionGoneError,
 	fastForwardEveStreamIndex,
 	postEveMessage,
 } from "../../../eve/client.js";
@@ -16,7 +17,33 @@ import {
 	saveEveSessionState,
 } from "../../../eve/sessionState.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
+import { isContinuationTokenAlive } from "../../../eve/world.js";
 import { buildAgentThreadKey } from "../../../sessions/agentThreadKey.js";
+
+const OUTSTANDING_PARK_NOTE =
+	"(Pending write approvals in this thread were withdrawn because the user moved on with a new message. Do not rebuild, retry, or ask about them — act on the user's message.)";
+
+/** Parks eve is still waiting on that nothing in this post answers. A message
+ * posted over an open gated park is silently deferred by eve — the thread
+ * would go dead — so every one of them is denied in the same post. */
+const outstandingGatedDenies = ({
+	answered,
+	session,
+}: {
+	answered: ReadonlyArray<{ requestId: string }>;
+	session: EveSessionRef;
+}) => {
+	const answeredIds = new Set(answered.map((response) => response.requestId));
+	return session.state.pendingRequests
+		.filter(
+			(request) =>
+				request.kind === "gated" && !answeredIds.has(request.requestId),
+		)
+		.map((request) => ({
+			optionId: request.denyOptionId ?? "deny",
+			requestId: request.requestId,
+		}));
+};
 
 const withNotePrefix = (
 	message: EveMessageContent,
@@ -54,17 +81,45 @@ export const startAgentTurn = async ({
 	// Withdrawal denies ride the same post as the message, so superseding a
 	// pending card never spends a separate eve turn winding the old work down.
 	const withdrawalResponses = session ? withdrawal?.inputResponses : undefined;
+	const explicitResponses = [
+		...(withdrawalResponses ?? []),
+		...(chipResponses ?? []),
+	];
+	const outstanding = session
+		? outstandingGatedDenies({ answered: explicitResponses, session })
+		: [];
 	const inputResponses =
-		chipResponses || withdrawalResponses
-			? [...(withdrawalResponses ?? []), ...(chipResponses ?? [])]
+		explicitResponses.length || outstanding.length
+			? [...explicitResponses, ...outstanding]
 			: undefined;
+	if (
+		session &&
+		(await isContinuationTokenAlive(session.state.continuationToken)) === false
+	) {
+		// Posting would make eve silently start a new run under this token;
+		// drop the row so the caller restarts the thread on a fresh session.
+		await deleteEveSession({
+			db,
+			env,
+			orgId,
+			reason: "session_gone",
+			sessionId: session.sessionId,
+			threadKey: session.threadKey,
+		});
+		throw new EveSessionGoneError(
+			`Eve no longer holds the delivery hook for session ${session.sessionId}`,
+		);
+	}
 	if (session && !inputResponses) {
 		await fastForwardEveStreamIndex({ auth, session });
 	}
+	const note =
+		withdrawal?.note ??
+		(outstanding.length ? OUTSTANDING_PARK_NOTE : undefined);
 	const outboundMessage = chipResponses
 		? undefined
-		: withdrawalResponses && withdrawal
-			? withNotePrefix(message, withdrawal.note)
+		: note && inputResponses
+			? withNotePrefix(message, note)
 			: message;
 	const posted = await postEveMessage({
 		auth,
@@ -87,6 +142,7 @@ export const startAgentTurn = async ({
 	});
 	if (session) {
 		adoptPostedEveSession({ posted, session, status: "running" });
+		if (inputResponses) session.state.pendingRequests = [];
 	}
 	const started: EveSessionRef = session ?? {
 		env,
