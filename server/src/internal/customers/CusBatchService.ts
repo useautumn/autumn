@@ -26,6 +26,7 @@ import {
 import * as Sentry from "@sentry/bun";
 import { isMotherDuckConfigured } from "@/external/motherduck/initMotherDuck.js";
 import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
+import { withActiveSpan } from "@/utils/otel/withActiveSpan.js";
 import {
 	getOrgCusProductLimit,
 	getOrgEntitiesLimit,
@@ -365,17 +366,38 @@ export class CusBatchService {
 		});
 
 		if (sortBy === "feature_balance") {
-			return await CusBatchService.getFeatureBalanceSortedPage({
-				ctx,
-				search,
-				filters,
-				sortFeatureId,
-				sortBasis,
-				cursor: featureBalanceCursor ?? null,
-				limit,
-				sortOrder,
-				cusProductLimit,
-				entitiesLimit,
+			return withActiveSpan({
+				name: "customer.dashboard.feature_balance",
+				attributes: {
+					"customer.balance_sort.feature_id": sortFeatureId ?? "missing",
+					"customer.balance_sort.basis": sortBasis ?? "remaining",
+					"customer.balance_sort.order": sortOrder ?? "desc",
+					"customer.balance_sort.limit": limit,
+					"customer.balance_sort.has_cursor": Boolean(featureBalanceCursor),
+					"customer.balance_sort.has_search": Boolean(search.trim()),
+					"customer.balance_sort.has_filters": Boolean(filters),
+				},
+				fn: async (span) => {
+					const result = await CusBatchService.getFeatureBalanceSortedPage({
+						ctx,
+						search,
+						filters,
+						sortFeatureId,
+						sortBasis,
+						cursor: featureBalanceCursor ?? null,
+						limit,
+						sortOrder,
+						cusProductLimit,
+						entitiesLimit,
+					});
+					span.setAttributes({
+						"customer.balance_sort.result_rows": result.fullCustomers.length,
+						"customer.balance_sort.has_next_cursor": Boolean(
+							result.next_cursor,
+						),
+					});
+					return result;
+				},
 			});
 		}
 
@@ -596,12 +618,23 @@ export class CusBatchService {
 			return { fullCustomers: [], next_cursor: null };
 		}
 
-		const fullCustomers = await CusBatchService.hydrateResolvedPage({
-			ctx,
-			internalIds,
-			cusProductLimit,
-			entitiesLimit,
-			balanceFeatureInternalIds: [feature.internal_id],
+		const fullCustomers = await withActiveSpan({
+			name: "customer.balance_filter.hydrate",
+			attributes: {
+				"customer.balance_filter.input_rows": internalIds.length,
+				"customer.balance_filter.feature_internal_id": feature.internal_id,
+			},
+			fn: async (span) => {
+				const result = await CusBatchService.hydrateResolvedPage({
+					ctx,
+					internalIds,
+					cusProductLimit,
+					entitiesLimit,
+					balanceFeatureInternalIds: [feature.internal_id],
+				});
+				span.setAttribute("customer.balance_filter.result_rows", result.length);
+				return result;
+			},
 		});
 
 		ctx.logger.info(
@@ -782,12 +815,23 @@ export class CusBatchService {
 		}
 
 		const internalIds = rows.map((row) => row.internalId);
-		const fullCustomers = await CusBatchService.hydrateResolvedPage({
-			ctx,
-			internalIds,
-			cusProductLimit,
-			entitiesLimit,
-			balanceFeatureInternalIds: [feature.internal_id],
+		const fullCustomers = await withActiveSpan({
+			name: "customer.balance_sort.hydrate",
+			attributes: {
+				"customer.balance_sort.input_rows": internalIds.length,
+				"customer.balance_sort.feature_internal_id": feature.internal_id,
+			},
+			fn: async (span) => {
+				const result = await CusBatchService.hydrateResolvedPage({
+					ctx,
+					internalIds,
+					cusProductLimit,
+					entitiesLimit,
+					balanceFeatureInternalIds: [feature.internal_id],
+				});
+				span.setAttribute("customer.balance_sort.result_rows", result.length);
+				return result;
+			},
 		});
 
 		ctx.logger.info(
