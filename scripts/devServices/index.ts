@@ -21,12 +21,14 @@ const localConfig = {
 	miscCachePort: 6379,
 	dragonflyPort: 6380,
 	dynamoDbPort: 8000,
+	redpandaPort: 19092,
 	apiServerPort: 8080,
 	databaseUrl: "postgresql://postgres:postgres@localhost:5432/autumn",
 	chatStateDatabaseUrl: "postgresql://postgres:postgres@localhost:5432/chat",
 	miscCacheUrl: "redis://localhost:6379",
 	dragonflyUrl: "redis://localhost:6380",
 	dynamoDbEndpoint: "http://localhost:8000",
+	kafkaBrokers: "localhost:19092",
 };
 
 const command = process.argv[2] ?? "help";
@@ -225,6 +227,7 @@ const removeVolumes = ({
 			? [
 					"autumn-dev-dragonfly-misc",
 					"autumn-dev-dragonfly",
+					"autumn-dev-redpanda",
 					"autumn-dev-localstack",
 					// Left behind by the pre-Dragonfly misc cache.
 					"autumn-dev-redis-stack",
@@ -284,6 +287,11 @@ const doctor = async () => {
 			label: "DynamoDB :8000",
 			fn: () =>
 				waitForTcp({ port: localConfig.dynamoDbPort, label: "DynamoDB" }),
+		}),
+		check({
+			label: "Redpanda :19092",
+			fn: () =>
+				waitForTcp({ port: localConfig.redpandaPort, label: "Redpanda" }),
 		}),
 	]);
 
@@ -385,6 +393,7 @@ const up = async () => {
 		}),
 		waitForTcp({ port: localConfig.dragonflyPort, label: "Dragonfly" }),
 		waitForTcp({ port: localConfig.dynamoDbPort, label: "DynamoDB" }),
+		waitForTcp({ port: localConfig.redpandaPort, label: "Redpanda" }),
 		waitForTcp({ port: localConfig.ngrokApiPort, label: "ngrok" }),
 	]);
 
@@ -428,7 +437,7 @@ const help = () => {
 	console.log(`Usage: bun dev:services <command>
 
 Commands:
-  up                         Start local Postgres, Dragonfly (misc cache + cache v2), DynamoDB, and ngrok
+  up                         Start local Postgres, Dragonfly (misc cache + cache v2), DynamoDB, Redpanda, and ngrok
   down                       Stop local services and keep all data
   down --volumes             Stop services and delete Dragonfly data
   down --postgres            Stop services and delete Postgres data
@@ -443,6 +452,7 @@ Local service values:
   MISC_CACHE_DRAGONFLY_PUBLIC_URL=${localConfig.miscCacheUrl}
   CACHE_V2_DRAGONFLY_URL=${localConfig.dragonflyUrl}
   DYNAMODB_ENDPOINT=${localConfig.dynamoDbEndpoint}
+  LEDGER_KAFKA_BROKERS=${localConfig.kafkaBrokers}
 `);
 };
 

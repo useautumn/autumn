@@ -5,10 +5,10 @@ import {
 	type TrackResponseV3,
 } from "@autumn/shared";
 import { eq } from "drizzle-orm";
+import { trackResultToTrackResponse } from "../../../../../../src/api/track/trackResultToTrackResponse.js";
+import { TrackResultSchema } from "../../../../../../src/api/track/types/trackResult.js";
 import type { Command } from "../../../../../../src/api/types/command.js";
 import type { CommandResult } from "../../../../../../src/api/types/commandResult.js";
-import { TrackResultSchema } from "../../../../../../src/api/track/types/trackResult.js";
-import { trackResultToTrackResponse } from "../../../../../../src/api/track/trackResultToTrackResponse.js";
 import { createMemoryJournal } from "../../../../../../src/internal/journal/createMemoryJournal.js";
 import { createShard } from "../../../../../../src/internal/shard/createShard.js";
 import type { ShardContext } from "../../../../../../src/internal/shard/types/shardContext.js";
@@ -140,7 +140,15 @@ describe("track", () => {
 		expect(journal.entries).toHaveLength(1);
 		expect(journal.entries[0]).toMatchObject({
 			version: 1,
-			command_id: "cmd_1",
+			kind: "balance_deducted",
+			command: { id: "cmd_1", kind: "track" },
+			changes: [
+				{
+					table: "customer_entitlements",
+					op: "update",
+					set: { balance: 95 },
+				},
+			],
 		});
 
 		await shard.stop();

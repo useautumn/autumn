@@ -1,0 +1,6 @@
+import { getAutumnEnv } from "@autumn/env";
+import { initInfisical } from "@autumn/shared/utils/infisical";
+
+await initInfisical();
+getAutumnEnv();
+await import("./projectorMain.js");

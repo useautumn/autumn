@@ -9,6 +9,9 @@ import type { products } from "../../../sqlite/common/schema/products.js";
 // until the writer loop is between transactions.
 export type SubjectImport = {
 	key: string;
+	internalCustomerId: string;
+	// The journal version the projection has already applied for this subject.
+	version: number;
 	customers: (typeof customers.$inferInsert)[];
 	customerProducts: (typeof customerProducts.$inferInsert)[];
 	customerEntitlements: (typeof customerEntitlements.$inferInsert)[];

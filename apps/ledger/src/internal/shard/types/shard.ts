@@ -4,5 +4,6 @@ import type { CommandResult } from "../../../api/types/commandResult.js";
 export type Shard = {
 	id: number;
 	run: (command: Command) => Promise<CommandResult>;
+	markStale: (params: { key: string }) => void;
 	stop: () => Promise<void>;
 };

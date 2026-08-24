@@ -43,6 +43,29 @@ services:
       - "8000:8000"
     command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
 
+  # Journal for apps/ledger. Single node, dev-container mode (no raft quorum,
+  # no fsync). The ledger creates `subject-events` itself on first connect.
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --default-log-level=warn
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+    ports:
+      - "19092:19092"
+      - "9644:9644"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - autumn-dev-redpanda:/var/lib/redpanda/data
+
   ngrok:
     image: ngrok/ngrok:latest
     profiles:
@@ -64,3 +87,4 @@ volumes:
   autumn-dev-postgres-18:
   autumn-dev-dragonfly-misc:
   autumn-dev-dragonfly:
+  autumn-dev-redpanda:

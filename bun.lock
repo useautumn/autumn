@@ -136,11 +136,13 @@
       "version": "0.0.1",
       "dependencies": {
         "@autumn/env": "workspace:*",
+        "@autumn/ksuid": "workspace:*",
         "@autumn/logging": "workspace:*",
         "@autumn/postgres": "workspace:*",
         "@autumn/shared": "workspace:*",
         "drizzle-orm": "catalog:",
         "hono": "4.12.27",
+        "kafkajs": "2.2.4",
         "zod": "3.25.76",
       },
       "devDependencies": {

@@ -66,6 +66,7 @@ const startLoop = ({
 	return {
 		appends,
 		importedKeys,
+		markStale: () => ctx.subjects.markStale({ key: SUBJECT_KEY }),
 		submit: (command: Command) =>
 			new Promise<CommandResult>((resolve) => {
 				queue.push({ command, resolve });
@@ -160,6 +161,20 @@ describe("runWriterLoop", () => {
 		expect(results.map(({ status }) => status)).toEqual([200, 200]);
 		expect(applied.sort()).toEqual(["cmd_1", "cmd_2"]);
 		expect(loop.importedKeys).toEqual([SUBJECT_KEY, SUBJECT_KEY]);
+
+		await loop.stop();
+	});
+
+	it("re-imports a subject a structural write marked stale", async () => {
+		const loop = startLoop({ runCommand: okRunner });
+
+		await loop.submit(commandWithId("cmd_1"));
+		expect(loop.importedKeys).toEqual([]);
+
+		loop.markStale();
+		await loop.submit(commandWithId("cmd_2"));
+
+		expect(loop.importedKeys).toEqual([SUBJECT_KEY]);
 
 		await loop.stop();
 	});

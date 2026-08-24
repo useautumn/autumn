@@ -12,6 +12,7 @@
 		"paths": {
 			"@autumn/shared": ["../../shared/index.ts"],
 			"@autumn/shared/*": ["../../shared/*"],
+			"@autumn/ksuid": ["../../packages/ksuid/src/index.ts"],
 			"@autumn/logging": ["../../packages/logging/src/index.ts"],
 			"@autumn/postgres": ["../../packages/postgres/src/index.ts"],
 			"@api/*": ["../../shared/api/*"],

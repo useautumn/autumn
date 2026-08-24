@@ -20,5 +20,10 @@ export const createShard = ({ ctx }: { ctx: ShardContext }): Shard => {
 		await loop;
 	};
 
-	return { id: ctx.shardId, run, stop };
+	return {
+		id: ctx.shardId,
+		run,
+		markStale: (params) => ctx.subjects.markStale(params),
+		stop,
+	};
 };

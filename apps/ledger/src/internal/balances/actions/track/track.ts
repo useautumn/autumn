@@ -2,6 +2,7 @@ import type { Command } from "../../../../api/types/command.js";
 import type { CommandOutcome } from "../../../shard/types/commandOutcome.js";
 import type { ShardContext } from "../../../shard/types/shardContext.js";
 import { applyBalancePlan } from "../../execute/applyBalancePlan.js";
+import { balancePlanToLedgerEntry } from "../../execute/balancePlanToLedgerEntry.js";
 import { setupBalanceContext } from "../../setup/setupBalanceContext.js";
 import { computeTrackPlan } from "./compute/computeTrackPlan.js";
 import { handleTrackComputeErrors } from "./errors/handleTrackComputeErrors.js";
@@ -30,7 +31,16 @@ export const track = ({
 	handleTrackComputeErrors({ trackContext, plan });
 
 	// 4. Execute
-	const entry = applyBalancePlan({ ctx, balanceContext: trackContext, plan });
+	const version = applyBalancePlan({ ctx, balanceContext: trackContext, plan });
+	const entry =
+		version === undefined
+			? undefined
+			: balancePlanToLedgerEntry({
+					trackContext,
+					plan,
+					shardId: ctx.shardId,
+					version,
+				});
 
 	// 5. Result
 	return {

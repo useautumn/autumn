@@ -76,6 +76,7 @@ export * from "./models/leafModels/cmaSessionsTable";
 export * from "./models/leafModels/cmaVaultsTable";
 export * from "./models/leafModels/harnessSessionsTable";
 export * from "./models/leafModels/slackAdminThreadsTable";
+export * from "./models/ledgerModels/ledgerSubjectVersionTable";
 export * from "./models/licenseModels/fullCustomerLicense";
 export * from "./models/licenseModels/fullPlanLicenseModel";
 export * from "./models/licenseModels/licenseModels";

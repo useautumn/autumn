@@ -26,3 +26,10 @@ export const createPostgresDb = ({
 };
 
 export type PostgresDb = ReturnType<typeof createPostgresDb>["db"];
+
+export type PostgresTransaction = Parameters<
+	Parameters<PostgresDb["transaction"]>[0]
+>[0];
+
+/** The pool handle or a transaction handle — repos take whichever the caller holds. */
+export type PostgresClient = PostgresDb | PostgresTransaction;

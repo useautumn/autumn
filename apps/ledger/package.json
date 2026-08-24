@@ -9,17 +9,21 @@
 	"scripts": {
 		"bench": "bun benchmarks/track.bench.ts",
 		"dev": "bun --watch src/index.ts",
+		"projector": "bun src/projector.ts",
+		"projector:dev": "bun --watch src/projector.ts",
 		"start": "bun src/index.ts",
 		"test": "bun test tests/unit",
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@autumn/env": "workspace:*",
+		"@autumn/ksuid": "workspace:*",
 		"@autumn/logging": "workspace:*",
 		"@autumn/postgres": "workspace:*",
 		"@autumn/shared": "workspace:*",
 		"drizzle-orm": "catalog:",
 		"hono": "4.12.27",
+		"kafkajs": "2.2.4",
 		"zod": "3.25.76"
 	},
 	"devDependencies": {

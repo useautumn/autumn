@@ -92,6 +92,7 @@
 		"apps/ledger": {
 			"entry": [
 				"src/index.ts",
+				"src/projector.ts",
 				"client/index.ts",
 				"tests/**/*.ts",
 				"benchmarks/**/*.ts"
@@ -101,10 +102,6 @@
 				"client/**/*.ts",
 				"tests/**/*.ts",
 				"benchmarks/**/*.ts"
-			],
-			"ignore": [
-				"src/external/redpanda/createRedpandaJournal.ts",
-				"src/internal/journal/types/journalContext.ts"
 			]
 		},
 		"packages/agent-docs": {

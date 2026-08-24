@@ -1,5 +1,5 @@
+import type { LedgerEntry } from "../../api/journal/types/ledgerEntry.js";
 import type { Journal } from "./types/journal.js";
-import type { LedgerEntry } from "./types/ledgerEntry.js";
 
 export type MemoryJournal = Journal & { readonly entries: LedgerEntry[] };
 

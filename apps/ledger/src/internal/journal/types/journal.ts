@@ -1,4 +1,4 @@
-import type { LedgerEntry } from "./ledgerEntry.js";
+import type { LedgerEntry } from "../../../api/journal/types/ledgerEntry.js";
 
 export interface Journal {
 	append(params: { entries: LedgerEntry[] }): Promise<void>;

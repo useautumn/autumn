@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { AppEnv } from "@autumn/shared";
+import { TrackResultSchema } from "../../../src/api/track/types/trackResult.js";
 import type { Command } from "../../../src/api/types/command.js";
 import type { CommandResult } from "../../../src/api/types/commandResult.js";
-import { TrackResultSchema } from "../../../src/api/track/types/trackResult.js";
 import { createLedgerApp } from "../../../src/http/createLedgerApp.js";
 import { createShard } from "../../../src/internal/shard/createShard.js";
 import type { Shard } from "../../../src/internal/shard/types/shard.js";
@@ -34,7 +34,11 @@ describe("createLedgerApp", () => {
 			entitlements: [{ featureId: "messages", balance: 100, allowance: 100 }],
 		});
 		shard = createShard({ ctx });
-		app = createLedgerApp({ resolveShard: () => shard });
+		app = createLedgerApp({
+			resolveShard: () => shard,
+			getJournal: () => ctx.journal,
+			exposeDebugRoutes: true,
+		});
 	});
 
 	afterAll(async () => {

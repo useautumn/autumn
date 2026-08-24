@@ -1,10 +1,8 @@
 import { customerEntitlementStore } from "../../../sqlite/customerEntitlements/store/customerEntitlementStore.js";
 import { subjectVersionStore } from "../../../sqlite/subjectVersions/store/subjectVersionStore.js";
-import type { LedgerEntry } from "../../journal/types/ledgerEntry.js";
 import type { ShardContext } from "../../shard/types/shardContext.js";
 import type { BalanceContext } from "../types/balanceContext.js";
 import type { BalancePlan } from "../types/balancePlan.js";
-import { balancePlanToLedgerEntry } from "./balancePlanToLedgerEntry.js";
 
 // A plan that moved nothing is not a fact about the subject: no rows change,
 // the version stays put, and the journal gets no entry.
@@ -16,7 +14,7 @@ export const applyBalancePlan = ({
 	ctx: ShardContext;
 	balanceContext: BalanceContext;
 	plan: BalancePlan;
-}): LedgerEntry | undefined => {
+}): number | undefined => {
 	if (plan.mutations.length === 0) return undefined;
 
 	for (const [id, settled] of Object.entries(plan.after)) {
@@ -28,13 +26,8 @@ export const applyBalancePlan = ({
 		});
 	}
 
-	return balancePlanToLedgerEntry({
-		command: balanceContext.command,
-		plan,
-		shardId: ctx.shardId,
-		version: subjectVersionStore.bumpVersion({
-			ctx,
-			internalCustomerId: balanceContext.subject.customer.internal_id,
-		}),
+	return subjectVersionStore.bumpVersion({
+		ctx,
+		internalCustomerId: balanceContext.subject.customer.internal_id,
 	});
 };

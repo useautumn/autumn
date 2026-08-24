@@ -51,6 +51,7 @@ import { cmaVaults } from "../models/leafModels/cmaVaultsTable.js";
 import { harnessSessions } from "../models/leafModels/harnessSessionsTable.js";
 import { leafSchema } from "../models/leafModels/leafSchema.js";
 import { slackAdminThreads } from "../models/leafModels/slackAdminThreadsTable.js";
+import { ledgerSubjectVersions } from "../models/ledgerModels/ledgerSubjectVersionTable.js";
 import {
 	customerLicenses,
 	licenseEntitlements,
@@ -181,6 +182,7 @@ export {
 	invoiceRelations,
 	invoiceTemplates,
 	invoices,
+	ledgerSubjectVersions,
 	customerLicenses,
 	licenseEntitlements,
 	licensePrices,

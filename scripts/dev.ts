@@ -335,6 +335,18 @@ async function startDev() {
 					: `"cd apps/ledger && LEDGER_PORT=${LEDGER_PORT} bun dev"`,
 			);
 
+			// Only worth running against a broker — without one the ledger keeps
+			// its journal in memory and there is nothing to project.
+			if (process.env.LEDGER_KAFKA_BROKERS) {
+				names.push("projector");
+				colors.push("yellowBright");
+				cmds.push(`"cd apps/ledger && bun projector:dev"`);
+			} else {
+				console.error(
+					"LEDGER_KAFKA_BROKERS unset — skipping the ledger projector (run `bun dev:services up` for Redpanda)\n",
+				);
+			}
+
 			// Stripe CLI webhook tunnel — skip if CLI absent.
 			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
 			const stripeBin = existsSync("/usr/local/bin/stripe")

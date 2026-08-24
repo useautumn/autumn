@@ -3,10 +3,18 @@ import type { SubjectResidency } from "./types/subjectResidency.js";
 
 export const createSubjectResidency = (): SubjectResidency => {
 	const resident = new Set<string>();
+	const stale = new Set<string>();
 	const inFlight = new Map<string, Promise<void>>();
 	const loaded: SubjectImport[] = [];
 
-	const isResident = ({ key }: { key: string }) => resident.has(key);
+	// A stale subject keeps its rows until the re-import replaces them, so the
+	// writer loop's synchronous fold never reads a half-cleared subject.
+	const isResident = ({ key }: { key: string }) =>
+		resident.has(key) && !stale.has(key);
+
+	const markStale = ({ key }: { key: string }) => {
+		if (resident.has(key)) stale.add(key);
+	};
 
 	// The settled promise stays cached until the rows are admitted, so a command
 	// arriving in that window joins the finished load instead of re-reading.
@@ -37,8 +45,9 @@ export const createSubjectResidency = (): SubjectResidency => {
 
 	const markResident = ({ key }: { key: string }) => {
 		resident.add(key);
+		stale.delete(key);
 		inFlight.delete(key);
 	};
 
-	return { isResident, loadOnce, takeLoaded, markResident };
+	return { isResident, markStale, loadOnce, takeLoaded, markResident };
 };

@@ -4,6 +4,8 @@ import type { SubjectImport } from "../../../../../src/internal/subjects/types/s
 
 const importOf = (key: string): SubjectImport => ({
 	key,
+	internalCustomerId: "icus_1",
+	version: 0,
 	customers: [],
 	customerProducts: [],
 	customerEntitlements: [],
@@ -39,6 +41,26 @@ describe("createSubjectResidency", () => {
 
 		expect(residency.isResident({ key: "k" })).toBe(false);
 		residency.markResident({ key: "k" });
+		expect(residency.isResident({ key: "k" })).toBe(true);
+	});
+
+	it("drops a stale subject out of residency until it is re-imported", () => {
+		const residency = createSubjectResidency();
+		residency.markResident({ key: "k" });
+
+		residency.markStale({ key: "k" });
+		expect(residency.isResident({ key: "k" })).toBe(false);
+
+		residency.markResident({ key: "k" });
+		expect(residency.isResident({ key: "k" })).toBe(true);
+	});
+
+	it("ignores a stale mark for a subject this process never loaded", () => {
+		const residency = createSubjectResidency();
+
+		residency.markStale({ key: "k" });
+		residency.markResident({ key: "k" });
+
 		expect(residency.isResident({ key: "k" })).toBe(true);
 	});
 
