@@ -11,7 +11,6 @@ import {
 	productV2ToFrontendProduct,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
-
 import {
 	createContext,
 	type ReactNode,
@@ -20,6 +19,7 @@ import {
 	useMemo,
 	useState,
 } from "react";
+import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import {
 	licenseRowHasBillingChanges,
 	usePlanLicenseRows,
@@ -42,6 +42,7 @@ import {
 	type UseUpdateSubscriptionForm,
 	useUpdateSubscriptionForm,
 } from "../hooks/useUpdateSubscriptionForm";
+import { useUpdateSubscriptionGeneration } from "../hooks/useUpdateSubscriptionGeneration";
 import { useUpdateSubscriptionMutation } from "../hooks/useUpdateSubscriptionMutation";
 import {
 	type UseUpdateSubscriptionPreviewReturn,
@@ -85,6 +86,8 @@ interface UpdateSubscriptionFormContextValue {
 
 	// Preview
 	previewQuery: UseUpdateSubscriptionPreviewReturn;
+
+	generation: BillingGenerationState;
 
 	// Plan editor state
 	showPlanEditor: boolean;
@@ -347,6 +350,16 @@ export function UpdateSubscriptionFormProvider({
 		enabled: !!(formContext.customerId && formContext.product),
 	});
 
+	const generation = useUpdateSubscriptionGeneration({
+		currentRequest: previewBody as Record<string, unknown> | null,
+		customerId: formContext.customerId,
+		customerProductId:
+			formContext.customerProduct.id ??
+			formContext.customerProduct.internal_product_id ??
+			undefined,
+		form,
+	});
+
 	const { handleConfirm, handleInvoiceUpdate, isPending } =
 		useUpdateSubscriptionMutation({
 			updateSubscriptionFormContext: formContext,
@@ -435,6 +448,7 @@ export function UpdateSubscriptionFormProvider({
 			hasChanges,
 			hasNoBillingChanges,
 			previewQuery,
+			generation,
 			showPlanEditor,
 			handleEditPlan,
 			handlePlanEditorSave,
@@ -457,6 +471,7 @@ export function UpdateSubscriptionFormProvider({
 			hasChanges,
 			hasNoBillingChanges,
 			previewQuery,
+			generation,
 			showPlanEditor,
 			handleEditPlan,
 			handlePlanEditorSave,

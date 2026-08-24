@@ -23,12 +23,14 @@ import { useStore } from "@tanstack/react-form";
 import {
 	createContext,
 	type ReactNode,
+	useCallback,
 	useContext,
 	useEffect,
 	useMemo,
 	useRef,
 	useState,
 } from "react";
+import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
 import { getProductWithSupportedPlanFormValues } from "@/components/forms/shared/utils/planCustomizationUtils";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -49,6 +51,7 @@ import {
 	useAttachCurrency,
 } from "../hooks/useAttachCurrency";
 import { type UseAttachForm, useAttachForm } from "../hooks/useAttachForm";
+import { useAttachGeneration } from "../hooks/useAttachGeneration";
 import { useAttachMultiRequestBody } from "../hooks/useAttachMultiRequestBody";
 import { useAttachMutation } from "../hooks/useAttachMutation";
 import { useAttachPlanEditor } from "../hooks/useAttachPlanEditor";
@@ -91,6 +94,8 @@ interface AttachFormContextValue {
 
 	previewQuery: UseAttachPreviewReturn;
 	previewDiff: UsePreviewDiffReturn;
+
+	generation: BillingGenerationState;
 
 	planEditorProduct: FrontendProduct | undefined;
 	showPlanEditor: boolean;
@@ -333,6 +338,19 @@ export function AttachFormProvider({
 	const previousProductIdRef = useRef<string | undefined>(undefined);
 	// Seeded defaults must survive this effect's first pass — the plan's own trial/prepaid init would stomp them.
 	const seededRef = useRef(Boolean(defaultOverrides));
+	// AI generation applies whole configs, including productId — the reset/init pass below would stomp them.
+	const programmaticProductChangeRef = useRef(false);
+	const markProgrammaticProductChange = useCallback(
+		(nextProductId: string | undefined) => {
+			if (
+				nextProductId !== undefined &&
+				nextProductId !== form.store.state.values.productId
+			) {
+				programmaticProductChangeRef.current = true;
+			}
+		},
+		[form],
+	);
 	useEffect(() => {
 		if (!product) return;
 		// Only trigger when productId actually changes (not on initial mount with same value)
@@ -345,6 +363,11 @@ export function AttachFormProvider({
 			previousProductIdRef.current !== productId;
 
 		previousProductIdRef.current = productId;
+
+		if (programmaticProductChangeRef.current) {
+			programmaticProductChangeRef.current = false;
+			return;
+		}
 		const seededFirstRun = seededRef.current && !isProductChange;
 		seededRef.current = false;
 
@@ -508,6 +531,14 @@ export function AttachFormProvider({
 		? buildMultiRequestBody
 		: buildRequestBody;
 
+	const generation = useAttachGeneration({
+		form,
+		customerId,
+		currentRequest: requestBody as Record<string, unknown> | null,
+		markProgrammaticProductChange,
+		onScopeChange,
+	});
+
 	const previewQuery = useAttachPreview({
 		path: billingOperation.previewPath,
 		requestBody: operationRequestBody,
@@ -595,6 +626,7 @@ export function AttachFormProvider({
 			attachCurrency,
 			previewQuery,
 			previewDiff,
+			generation,
 			planEditorProduct,
 			showPlanEditor,
 			handleEditPlan,
@@ -628,6 +660,7 @@ export function AttachFormProvider({
 			attachCurrency,
 			previewQuery,
 			previewDiff,
+			generation,
 			planEditorProduct,
 			showPlanEditor,
 			handleEditPlan,
