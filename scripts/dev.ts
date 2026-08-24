@@ -60,6 +60,9 @@ const CHAT_PORT = process.env.CHAT_PORT
 const EVE_PORT = process.env.EVE_PORT
 	? Number.parseInt(process.env.EVE_PORT, 10)
 	: 3999 + portOffset;
+const LEDGER_PORT = process.env.LEDGER_PORT
+	? Number.parseInt(process.env.LEDGER_PORT, 10)
+	: 7000 + portOffset;
 const LOCAL_CLIENT_URL = `http://localhost:${VITE_PORT}`;
 const LOCAL_SERVER_URL = `http://localhost:${SERVER_PORT}`;
 const LOCAL_CHAT_URL = `http://localhost:${CHAT_PORT}`;
@@ -226,7 +229,8 @@ async function startDev() {
 		console.log(`  checkout: http://localhost:${CHECKOUT_PORT}`);
 		console.log(`  leaf:     http://localhost:${CHAT_PORT}/health`);
 		console.log(`  eve:      ${EVE_SERVER_URL}/eve/v1/info`);
-		console.log(`  mcp:      http://localhost:${CHAT_PORT}/mcp\n`);
+		console.log(`  mcp:      http://localhost:${CHAT_PORT}/mcp`);
+		console.log(`  ledger:   http://localhost:${LEDGER_PORT}/health\n`);
 
 		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
@@ -321,6 +325,14 @@ async function startDev() {
 				isWindows
 					? `"cd apps/leaf && set PORT=${CHAT_PORT} && bun dev"`
 					: `"cd apps/leaf && PORT=${CHAT_PORT} bun dev"`,
+			);
+
+			names.push("ledger");
+			colors.push("greenBright");
+			cmds.push(
+				isWindows
+					? `"cd apps/ledger && set LEDGER_PORT=${LEDGER_PORT} && bun dev"`
+					: `"cd apps/ledger && LEDGER_PORT=${LEDGER_PORT} bun dev"`,
 			);
 
 			// Stripe CLI webhook tunnel — skip if CLI absent.

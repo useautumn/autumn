@@ -1,11 +1,12 @@
 # syntax=docker/dockerfile:1
 
-# Shared runtime image for server + workers + cron + leaf.
+# Shared runtime image for server + workers + cron + leaf + ledger.
 # Each FlightControl service runs the same image with a different command:
 #   server  -> bun start            (cwd /app/server)
 #   workers -> bun src/workers.ts   (cwd /app/server)
 #   cron    -> bun src/cron.ts      (cwd /app/server)
 #   leaf    -> bun leaf             (cwd /app/server; serves chat + MCP routes)
+#   ledger  -> bun ledger           (cwd /app/server; serves the subject engine)
 FROM oven/bun:1.3.14 AS deps
 WORKDIR /app
 
@@ -24,6 +25,7 @@ COPY shared/package.json shared/
 COPY vite/package.json vite/
 COPY scripts/package.json scripts/
 COPY apps/leaf/package.json apps/leaf/
+COPY apps/ledger/package.json apps/ledger/
 COPY apps/checkout/package.json apps/checkout/
 COPY apps/docs/package.json apps/docs/
 COPY apps/sdk-test/package.json apps/sdk-test/

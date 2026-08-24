@@ -1,7 +1,12 @@
 import type pino from "pino";
 
 export type LoggerOutput = "console-pretty" | "console-json" | "axiom";
-export type LoggerPreset = "default" | "dual" | "console-only" | "axiom-only";
+export type LoggerPreset =
+	| "default"
+	| "dual"
+	| "console-only"
+	| "axiom-only"
+	| "firelens";
 export type LoggerLevel =
 	| "trace"
 	| "debug"
