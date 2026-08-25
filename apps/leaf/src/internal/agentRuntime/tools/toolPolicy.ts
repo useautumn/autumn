@@ -18,10 +18,19 @@ const labels: Record<string, string> = {
 	updateSubscription: "Update subscription",
 };
 
-// Pure utility tools the agent calls constantly — not worth a progress line.
+// Plumbing the user should never see: date maths, file rummaging, and the
+// agent's own bookkeeping. A status line is for what is being done to their
+// billing, not how the agent gets there.
 const silentTools = new Set([
 	"dateToEpochMilliseconds",
 	"epochMillisecondsToDate",
+	"bash",
+	"glob",
+	"grep",
+	"read",
+	"read_file",
+	"todo",
+	"connection_search",
 ]);
 
 export const isSilentTool = (toolName: string) =>
@@ -73,7 +82,8 @@ const gerunds: Record<string, string> = {
 	updateAgentRules: "Updating your agent rules",
 	updatePlan: "Updating the plan",
 	listBalances: "Checking balances",
-	connection_search: "Finding the right tool",
+	listRewards: "Looking through your rewards",
+	load_skill: "Reading a playbook",
 };
 
 export const toolGerund = (toolName: string) =>

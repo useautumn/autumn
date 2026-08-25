@@ -71,7 +71,7 @@ const replaySession = async (sessionId: string) => {
 				id: event.id,
 				type: "data-step",
 			});
-		} else if (event.type === "agent.tool_use") {
+		} else if (event.type === "agent.tool_use" && !isSilentTool(event.name)) {
 			assistant().msg.parts.push({
 				data: {
 					label: sandboxToolLabel(event.name, event.input),
