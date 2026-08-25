@@ -258,6 +258,64 @@ describe("invoice credit line items", () => {
 		).toEqual([1_200, -1_000]);
 	});
 
+	test("renders attribution for a removed source feature without aborting renewal", () => {
+		const fixture = makeFixture({
+			balance: 990,
+			usageAttribution: {
+				[SOURCE_A_INTERNAL_ID]: { units: 50, credits: 10 },
+			},
+		});
+		fixture.ctx.features = [];
+
+		const result = customerProductToArrearLineItems({
+			...fixture,
+			options: { invoiceCredits: { idempotencyScope: "invoice_removed" } },
+		});
+
+		expect(
+			result.invoiceCreditLineItems.map((lineItem) => ({
+				amount: lineItem.amount,
+				description: lineItem.description,
+				featureId: lineItem.context.feature?.id,
+			})),
+		).toEqual([
+			{
+				amount: 10,
+				description: "Removed feature, 50 units",
+				featureId: "invoice_credits",
+			},
+			{
+				amount: -10,
+				description: "Credits applied",
+				featureId: "invoice_credits",
+			},
+		]);
+	});
+
+	test("balances fully funded fractional credits in Stripe minor units", () => {
+		const fixture = makeFixture({
+			balance: 999.988,
+			usageAttribution: {
+				[SOURCE_A_INTERNAL_ID]: { units: 1, credits: 0.006 },
+				[SOURCE_B_INTERNAL_ID]: { units: 1, credits: 0.006 },
+			},
+		});
+
+		const result = customerProductToArrearLineItems({
+			...fixture,
+			options: { invoiceCredits: { idempotencyScope: "invoice_rounding" } },
+		});
+		const stripeInvoiceItems = lineItemsToCreateInvoiceItemsParams({
+			stripeCustomerId: "stripe_customer",
+			stripeInvoiceId: "stripe_invoice",
+			lineItems: result.invoiceCreditLineItems,
+		});
+
+		expect(stripeInvoiceItems.map((invoiceItem) => invoiceItem.amount)).toEqual(
+			[1, 1, -2],
+		);
+	});
+
 	test("emits no lines for empty attribution but still prepares the reset", () => {
 		const fixture = makeFixture({ balance: 1_000 });
 

@@ -5,11 +5,27 @@ import type { FullCusEntWithFullCusProduct } from "../../../../models/cusProduct
 import type { Feature } from "../../../../models/featureModels/featureModels.js";
 import { cusEntToInvoiceOverage } from "../../../cusEntUtils/overageUtils/cusEntToInvoiceOverage.js";
 import { findFeatureByInternalId } from "../../../featureUtils/findFeatureUtils.js";
+import {
+	atmnToStripeAmount,
+	stripeToAtmnAmount,
+} from "../../../productUtils/priceUtils/convertAmountUtils.js";
 import { buildLineItem } from "./buildLineItem.js";
 
 const creditQuantityFormatter = new Intl.NumberFormat("en-US", {
 	maximumFractionDigits: 12,
 });
+
+const roundToCurrency = ({
+	amount,
+	currency,
+}: {
+	amount: number;
+	currency: string;
+}): number =>
+	stripeToAtmnAmount({
+		amount: atmnToStripeAmount({ amount, currency }),
+		currency,
+	});
 
 const withStableInvoiceCreditId = ({
 	lineItem,
@@ -42,6 +58,7 @@ export const invoiceCreditCustomerEntitlementToLineItems = ({
 	fullyOffsetOverage?: boolean;
 }): LineItem[] => {
 	const lineItems: LineItem[] = [];
+	const invoiceCreditFeature = customerEntitlement.entitlement.feature;
 	const attribution = Object.entries(
 		customerEntitlement.usage_attribution ?? {},
 	)
@@ -51,21 +68,27 @@ export const invoiceCreditCustomerEntitlementToLineItems = ({
 		);
 
 	let totalCredits = new Decimal(0);
+	let totalRoundedCredits = new Decimal(0);
 	for (const [sourceInternalFeatureId, sourceAttribution] of attribution) {
 		const sourceFeature = findFeatureByInternalId({
 			features,
 			internalId: sourceInternalFeatureId,
-			errorOnNotFound: true,
+			errorOnNotFound: false,
 		});
 		totalCredits = totalCredits.add(sourceAttribution.credits);
+		const roundedCredits = roundToCurrency({
+			amount: sourceAttribution.credits,
+			currency: context.currency,
+		});
+		totalRoundedCredits = totalRoundedCredits.add(roundedCredits);
 		const sourceLineItem = buildLineItem({
 			context: {
 				...context,
-				feature: sourceFeature,
+				feature: sourceFeature ?? invoiceCreditFeature,
 				direction: "charge",
 			},
-			amount: sourceAttribution.credits,
-			description: `${sourceFeature.name}, ${creditQuantityFormatter.format(sourceAttribution.units)} units`,
+			amount: roundedCredits,
+			description: `${sourceFeature?.name ?? "Removed feature"}, ${creditQuantityFormatter.format(sourceAttribution.units)} units`,
 			shouldProrate: false,
 			usage: sourceAttribution.units,
 		});
@@ -78,12 +101,17 @@ export const invoiceCreditCustomerEntitlementToLineItems = ({
 		);
 	}
 
-	const invoiceCreditFeature = customerEntitlement.entitlement.feature;
 	const overage = cusEntToInvoiceOverage({ cusEnt: customerEntitlement });
 	const creditsApplied = fullyOffsetOverage
 		? totalCredits
 		: Decimal.max(totalCredits.sub(overage), 0);
 	if (creditsApplied.isZero()) return lineItems;
+	const roundedCreditsApplied = creditsApplied.eq(totalCredits)
+		? totalRoundedCredits.toNumber()
+		: roundToCurrency({
+				amount: creditsApplied.toNumber(),
+				currency: context.currency,
+			});
 
 	const offsetLineItem = buildLineItem({
 		context: {
@@ -91,7 +119,7 @@ export const invoiceCreditCustomerEntitlementToLineItems = ({
 			feature: invoiceCreditFeature,
 			direction: "refund",
 		},
-		amount: creditsApplied.toNumber(),
+		amount: roundedCreditsApplied,
 		description: "Credits applied",
 		shouldProrate: false,
 	});

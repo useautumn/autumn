@@ -4,6 +4,7 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const createInvoiceItemCalls: Array<{
 	idempotencyKeys?: string[];
+	invoiceItems?: Array<{ metadata?: { autumn_line_item_id?: string } }>;
 }> = [];
 
 const regularLineItems = [
@@ -36,10 +37,16 @@ await mockModuleWithRestore("@/external/stripe/webhookHandlers/common", () => ({
 await mockModuleWithRestore(
 	"@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams",
 	() => ({
-		lineItemsToCreateInvoiceItemsParams: () => [
-			{ customer: "stripe_customer", amount: 100 },
-			{ customer: "stripe_customer", amount: 200 },
-		],
+		lineItemsToCreateInvoiceItemsParams: ({
+			lineItems,
+		}: {
+			lineItems: Array<{ id: string }>;
+		}) =>
+			lineItems.map((lineItem, index) => ({
+				customer: "stripe_customer",
+				amount: (index + 1) * 100,
+				metadata: { autumn_line_item_id: lineItem.id },
+			})),
 	}),
 );
 
@@ -68,12 +75,22 @@ const { processConsumablePricesForInvoiceCreated } = await import(
 	"@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processConsumablePricesForInvoiceCreated.js?idempotency"
 );
 
-const makeEventContext = () =>
+const makeEventContext = ({
+	existingLineItemIds = [],
+}: {
+	existingLineItemIds?: string[];
+} = {}) =>
 	({
 		stripeInvoice: {
 			id: "invoice_retry",
 			billing_reason: "subscription_cycle",
 			period_end: 2_000,
+			lines: {
+				has_more: false,
+				data: existingLineItemIds.map((lineItemId) => ({
+					metadata: { autumn_line_item_id: lineItemId },
+				})),
+			},
 		},
 		stripeSubscription: {
 			billing_cycle_anchor: 1_000,
@@ -117,6 +134,35 @@ describe("invoice.created consumable idempotency", () => {
 			true,
 		);
 		expect(retryKeys).toEqual(firstKeys);
+	});
+
+	test("does not recreate an invoice item already added by a partial delivery", async () => {
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext(),
+		});
+		const firstCall = createInvoiceItemCalls[0];
+		const firstLineItemIds = firstCall?.invoiceItems?.map(
+			(invoiceItem) => invoiceItem.metadata?.autumn_line_item_id,
+		);
+
+		createInvoiceItemCalls.length = 0;
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext({
+				existingLineItemIds: [firstLineItemIds?.[0] ?? ""],
+			}),
+		});
+
+		expect(createInvoiceItemCalls).toHaveLength(1);
+		expect(createInvoiceItemCalls[0]?.invoiceItems).toHaveLength(1);
+		expect(
+			createInvoiceItemCalls[0]?.invoiceItems?.[0]?.metadata
+				?.autumn_line_item_id,
+		).toBe(firstLineItemIds?.[1]);
+		expect(createInvoiceItemCalls[0]?.idempotencyKeys).toEqual(
+			firstCall?.idempotencyKeys?.slice(1),
+		);
 	});
 });
 

@@ -1,6 +1,8 @@
 import {
 	entToPrice,
+	type Feature,
 	isConsumablePrice,
+	toProductItem,
 	type UpdateCatalogParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -16,6 +18,7 @@ import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCa
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import {
 	validateInvoiceCreditPooling,
+	validateInvoiceCreditPrice,
 	validateInvoiceCreditUsageBasedPricing,
 } from "@/internal/features/validateInvoiceCreditPooling.js";
 
@@ -36,6 +39,26 @@ const planItemsForFeatureAreUsageBased = ({
 				return price !== undefined && isConsumablePrice(price);
 			}),
 	);
+
+const validateProjectedInvoiceCreditPrices = ({
+	feature,
+	updateCatalogPlan,
+}: {
+	feature: Feature;
+	updateCatalogPlan: UpdateCatalogPlan;
+}): void => {
+	for (const product of updateCatalogPlan.projected.products) {
+		for (const entitlement of product.entitlements) {
+			if (entitlement.internal_feature_id !== feature?.internal_id) continue;
+			const price = entToPrice({ ent: entitlement, prices: product.prices });
+			if (!price) continue;
+			validateInvoiceCreditPrice({
+				feature,
+				item: toProductItem({ ent: entitlement, price }),
+			});
+		}
+	}
+};
 
 const validateProjectedInvoiceCreditPooling = ({
 	catalogContext,
@@ -71,6 +94,7 @@ const validateProjectedInvoiceCreditPooling = ({
 					updateCatalogPlan,
 				}),
 		});
+		validateProjectedInvoiceCreditPrices({ feature, updateCatalogPlan });
 	}
 
 	for (const feature of updateCatalogPlan.insertFeatures) {
@@ -90,6 +114,7 @@ const validateProjectedInvoiceCreditPooling = ({
 				updateCatalogPlan,
 			}),
 		});
+		validateProjectedInvoiceCreditPrices({ feature, updateCatalogPlan });
 	}
 };
 

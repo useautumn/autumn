@@ -7,6 +7,7 @@ import {
 	type LineItem,
 	secondsToMs,
 } from "@autumn/shared";
+import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems.js";
 import { getLatestPeriodStart } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers/common";
 import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling";
@@ -37,6 +38,25 @@ const hasTrialJustEnded = ({
 	const periodStart = getLatestPeriodStart({ sub: stripeSubscription });
 	return trialEnd === periodStart;
 };
+
+const getUsageLineItemHash = ({
+	invoiceId,
+	lineItem,
+}: {
+	invoiceId: string;
+	lineItem: LineItem;
+}): string =>
+	createHash("sha256")
+		.update(
+			[
+				invoiceId,
+				lineItem.context.customerProduct?.id,
+				lineItem.context.customerPrice?.id,
+				lineItem.context.customerEntitlement?.id,
+				lineItem.context.entity?.id,
+			].join(":"),
+		)
+		.digest("hex");
 
 /**
  * Processes consumable (usage-in-arrear) prices for an invoice.
@@ -118,42 +138,57 @@ export const processConsumablePricesForInvoiceCreated = async ({
 			includeLineItems: !trialJustEnded,
 		},
 	});
+	const stableConsumableLineItems = consumableLineItems.map((lineItem) => ({
+		...lineItem,
+		id: `invoice_li_usage_${getUsageLineItemHash({
+			invoiceId: stripeInvoice.id,
+			lineItem,
+		})}`,
+	}));
+	const stripeLineItems = stripeInvoice.lines.has_more
+		? await getStripeInvoiceLineItems({
+				stripeClient: ctx.stripeCli,
+				invoiceId: stripeInvoice.id,
+			})
+		: stripeInvoice.lines.data;
+	const existingAutumnLineItemIds = new Set(
+		stripeLineItems
+			.map((lineItem) => lineItem.metadata?.autumn_line_item_id)
+			.filter((lineItemId): lineItemId is string => Boolean(lineItemId)),
+	);
+	const pendingConsumableLineItems = stableConsumableLineItems.filter(
+		(lineItem) => !existingAutumnLineItemIds.has(lineItem.id),
+	);
+	const pendingInvoiceCreditLineItems = invoiceCreditLineItems.filter(
+		(lineItem) => !existingAutumnLineItemIds.has(lineItem.id),
+	);
 
-	if (disableOverageBilling && consumableLineItems.length > 0) {
+	if (disableOverageBilling && stableConsumableLineItems.length > 0) {
 		addToExtraLogs({ ctx, extras: { overageBillingDisabledByConfig: true } });
 	}
-	if (consumableLineItems.length > 0 && !disableOverageBilling) {
+	if (pendingConsumableLineItems.length > 0 && !disableOverageBilling) {
 		await createStripeInvoiceItems({
 			ctx,
 			invoiceItems: lineItemsToCreateInvoiceItemsParams({
 				stripeCustomerId: eventContext.stripeCustomer.id,
 				stripeInvoiceId: stripeInvoice.id,
-				lineItems: consumableLineItems,
+				lineItems: pendingConsumableLineItems,
 			}),
-			idempotencyKeys: consumableLineItems.map(
+			idempotencyKeys: pendingConsumableLineItems.map(
 				(lineItem) =>
-					`autumn:usage:${createHash("sha256")
-						.update(
-							[
-								stripeInvoice.id,
-								lineItem.context.customerProduct?.id,
-								lineItem.context.customerPrice?.id,
-								lineItem.context.customerEntitlement?.id,
-							].join(":"),
-						)
-						.digest("hex")}`,
+					`autumn:usage:${lineItem.id.slice("invoice_li_usage_".length)}`,
 			),
 		});
 	}
-	if (invoiceCreditLineItems.length > 0) {
+	if (pendingInvoiceCreditLineItems.length > 0) {
 		await createStripeInvoiceItems({
 			ctx,
 			invoiceItems: lineItemsToCreateInvoiceItemsParams({
 				stripeCustomerId: eventContext.stripeCustomer.id,
 				stripeInvoiceId: stripeInvoice.id,
-				lineItems: invoiceCreditLineItems,
+				lineItems: pendingInvoiceCreditLineItems,
 			}),
-			idempotencyKeys: invoiceCreditLineItems.map(
+			idempotencyKeys: pendingInvoiceCreditLineItems.map(
 				(lineItem) =>
 					`autumn:invoice-credit:${createHash("sha256")
 						.update(lineItem.id)
@@ -194,5 +229,5 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		}),
 	);
 
-	return [...consumableLineItems, ...invoiceCreditLineItems];
+	return [...stableConsumableLineItems, ...invoiceCreditLineItems];
 };

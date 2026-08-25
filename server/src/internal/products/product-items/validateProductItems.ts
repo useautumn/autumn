@@ -25,6 +25,7 @@ import { createFeaturesFromItems } from "@server/internal/products/product-items
 import { StatusCodes } from "http-status-codes";
 import {
 	validateInvoiceCreditPooling,
+	validateInvoiceCreditPrice,
 	validateInvoiceCreditUsageBasedPricing,
 } from "@/internal/features/validateInvoiceCreditPooling.js";
 import {
@@ -78,6 +79,7 @@ const validateProductItem = ({
 		usageBased:
 			isFeaturePriceItem(item) && item.usage_model === UsageModel.PayPerUse,
 	});
+	validateInvoiceCreditPrice({ feature, item });
 
 	if (
 		item.pooled &&
