@@ -120,6 +120,16 @@ export const anchorOverridesFrom = (
 	return {};
 };
 
+/** The trial is documented at the top level of a billing request and defined
+ * inside `customize`; the server honours both, so seeding a form must too.
+ * `customize.free_trial` wins when both are present, matching the server. */
+export const freeTrialFromRequest = (request: Record<string, unknown>) => {
+	const customize = requestRecord(request.customize);
+	return customize?.free_trial !== undefined
+		? customize.free_trial
+		: request.free_trial;
+};
+
 /** V0 trial shape → trial form fields; null means the trial is removed. */
 export const trialOverridesFrom = (
 	value: unknown,
@@ -138,14 +148,23 @@ export const trialOverridesFrom = (
 			: { trialEnabled: false };
 	}
 	const trial = requestRecord(value);
-	if (!trial || typeof trial.length !== "number") return {};
+	// V1 names these duration_length/duration_type; V0 used length/duration.
+	const length =
+		typeof trial?.duration_length === "number"
+			? trial.duration_length
+			: trial?.length;
+	const duration =
+		typeof trial?.duration_type === "string"
+			? trial.duration_type
+			: trial?.duration;
+	if (!trial || typeof length !== "number") return {};
 	return {
 		trialCardRequired: trial.card_required !== false,
-		trialDuration: (typeof trial.duration === "string"
-			? trial.duration
+		trialDuration: (typeof duration === "string"
+			? duration
 			: "day") as FreeTrialDuration,
 		trialEnabled: true,
-		trialLength: trial.length,
+		trialLength: length,
 		...(trial.on_end === "bill" || trial.on_end === "revert"
 			? { trialOnEnd: trial.on_end }
 			: {}),

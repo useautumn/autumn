@@ -73,6 +73,17 @@ export const billingActionBadges = (
 	if (asRecord(params?.recalculate_balances)?.enabled === true) {
 		badges.push({ active: true, label: "Reset usage" });
 	}
+	// A trial that collects a card behaves very differently at trial end, so
+	// the approver sees which one this is whenever a trial is set.
+	const freeTrial =
+		asRecord(asRecord(params?.customize)?.free_trial) ??
+		asRecord(params?.free_trial);
+	if (freeTrial) {
+		badges.push({
+			active: freeTrial.card_required === true,
+			label: "Card required",
+		});
+	}
 	if (cancelAction) {
 		badges.push({ active: true, label: cancelAction });
 	}
