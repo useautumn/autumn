@@ -140,7 +140,9 @@ new CronJob(
 );
 
 new CronJob(
-	"*/5 * * * *", // Refresh the MotherDuck balance cache every 5 minutes
+	// Each run bills full-rebuild duckling time + cross-region S3 for the whole
+	// scan, so cadence is the cost knob; 20min stays inside the sort disclaimer.
+	"*/20 * * * *",
 	mdCacheRefreshTick,
 	null, // onComplete
 	true, // start immediately
