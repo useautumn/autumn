@@ -195,11 +195,12 @@ export const runDucklake = async ({
 	if (tablesRefreshed.length === 0) {
 		throw new Error("[ducklake] zero tables refreshed");
 	}
-	// Totals alone succeeding must not mask a mirror-wide failure: the
+	// A quietly-successful run must not mask a mirror-wide failure: the
 	// staleness monitor only sees the success line, so escalate instead.
-	if (hourly && skipped.length > 0 && tablesRefreshed.length === 1) {
+	const allMirrors = [...HOT_MIRROR_TABLES, ...COLD_MIRROR_TABLES];
+	if (hourly && allMirrors.every((t) => skipped.includes(t))) {
 		throw new Error(
-			`[ducklake] every mirror failed (skipped: ${skipped.join(", ")}); only ce_balance_totals refreshed`,
+			`[ducklake] every mirror failed (skipped: ${skipped.join(", ")})`,
 		);
 	}
 
