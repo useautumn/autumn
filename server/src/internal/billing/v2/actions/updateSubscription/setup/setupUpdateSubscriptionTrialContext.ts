@@ -1,5 +1,5 @@
 import type {
-	CustomizePlanV1,
+	FreeTrialParamsSource,
 	FullCusProduct,
 	FullProduct,
 	TrialContext,
@@ -20,7 +20,7 @@ import {
  * Sets up trial context for update subscription operations.
  *
  * Logic:
- * 1. If customize.free_trial param passed → Use it (null removes trial, value sets fresh trial)
+ * 1. If a free_trial param passed (customize.free_trial or the shorthand) → Use it (null removes trial, value sets fresh trial)
  * 2. If paid product with trialing subscription → Inherit from subscription
  * 3. If customer product is trialing (free product case) → Inherit from customer product
  * 4. Otherwise → No trial context
@@ -36,10 +36,7 @@ export const setupUpdateSubscriptionTrialContext = ({
 	customerProduct?: FullCusProduct;
 	currentEpochMs: number;
 	fullProduct: FullProduct;
-	params: {
-		customize?: CustomizePlanV1;
-		free_trial?: CustomizePlanV1["free_trial"];
-	};
+	params: FreeTrialParamsSource;
 }): TrialContext | undefined => {
 	// Handle explicit free_trial param (null or value), in either shape
 	const freeTrialParam = resolveFreeTrialParam(params);
