@@ -153,14 +153,24 @@ export const runDucklake = async ({
 
 				if (group.withRollup && statusRows.length > 0) {
 					// Rollup runs on MD because fx_rates only exists there; reads the
-					// just-swapped mirrors (shadow-suffixed in shadow mode).
-					await md.run(
-						headlineTotalsSql({
-							targetTable: producedName("headline_totals"),
-							sourceName: producedName,
-						}),
-					);
-					refreshed.push(producedName("headline_totals"));
+					// just-swapped mirrors (shadow-suffixed in shadow mode). Stale
+					// sources are tolerated (incumbent semantics: rollup always reads
+					// whatever is live), but a rollup failure must not fail the run.
+					try {
+						await md.run(
+							headlineTotalsSql({
+								targetTable: producedName("headline_totals"),
+								sourceName: producedName,
+							}),
+						);
+						refreshed.push(producedName("headline_totals"));
+					} catch (error) {
+						skipped.push("headline_totals");
+						logger.warn(
+							{ type: "ducklake_skip" },
+							`[ducklake] headline_totals rollup failed, leaving it stale: ${error}`,
+						);
+					}
 				}
 
 				if (statusRows.length > 0) {
@@ -180,6 +190,13 @@ export const runDucklake = async ({
 
 	if (tablesRefreshed.length === 0) {
 		throw new Error("[ducklake] zero tables refreshed");
+	}
+	// Totals alone succeeding must not mask a mirror-wide failure: the
+	// staleness monitor only sees the success line, so escalate instead.
+	if (hourly && skipped.length > 0 && tablesRefreshed.length === 1) {
+		throw new Error(
+			`[ducklake] every mirror failed (skipped: ${skipped.join(", ")}); only ce_balance_totals refreshed`,
+		);
 	}
 
 	// Reuse existing Axiom fields (durationMs); breakdown stays in msg.
