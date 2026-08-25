@@ -63,4 +63,23 @@ describeWithDb("world reader (real Postgres)", () => {
 		}
 		expect(seen).toEqual(["message.completed", "session.waiting"]);
 	});
+
+	test("a run the world does not hold is not read from it", async () => {
+		const { sessionEventCount } = await import(
+			"../../src/internal/agentRuntime/eve/world/sessionStream.js"
+		);
+		const { isContinuationTokenAlive } = await import(
+			"../../src/internal/agentRuntime/eve/world/sessionRun.js"
+		);
+		const { workflowWorldHoldingRun } = await import(
+			"../../src/internal/agentRuntime/eve/world/workflowWorld.js"
+		);
+		const foreignRun = `wrun_elsewhere_${Date.now()}`;
+		expect(await workflowWorldHoldingRun(foreignRun)).toBeUndefined();
+		expect(await sessionEventCount(foreignRun)).toBeUndefined();
+		expect(
+			await isContinuationTokenAlive({ sessionId: foreignRun, token: "t" }),
+		).toBeUndefined();
+		expect(await workflowWorldHoldingRun(runId)).toBeDefined();
+	});
 });

@@ -1,5 +1,8 @@
 import { logger } from "../../../../lib/logger.js";
-import { type WorkflowWorld, workflowWorld } from "./workflowWorld.js";
+import {
+	type WorkflowWorld,
+	workflowWorldHoldingRun,
+} from "./workflowWorld.js";
 
 export const sessionStreamName = (sessionId: string) =>
 	`${sessionId.replace(/^wrun_/, "strm_")}_user`;
@@ -48,7 +51,7 @@ export const journaledEventCount = async ({
 export const sessionEventCount = async (
 	sessionId: string,
 ): Promise<number | undefined> => {
-	const world = workflowWorld();
+	const world = await workflowWorldHoldingRun(sessionId);
 	if (!world) return undefined;
 	const streamName = await resolveStreamName({ sessionId, world });
 	return journaledEventCount({ sessionId, streamName, world });
