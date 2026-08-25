@@ -2,8 +2,7 @@ import { createWorld } from "@workflow/world-postgres";
 
 export type WorkflowWorld = ReturnType<typeof createWorld>;
 
-const worldConnectionString = () =>
-	process.env.WORKFLOW_POSTGRES_URL ?? process.env.CHAT_DATABASE_URL;
+const worldConnectionString = () => process.env.CHAT_DATABASE_URL;
 
 let world: WorkflowWorld | undefined;
 

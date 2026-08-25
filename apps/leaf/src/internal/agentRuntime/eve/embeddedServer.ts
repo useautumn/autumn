@@ -1,6 +1,7 @@
 import { $ } from "bun";
 import { logger } from "../../../lib/logger.js";
 import { setEmbeddedEveStatus } from "./embeddedStatus.js";
+import { verifyNotifyDelivery } from "./world/verifyNotifyDelivery.js";
 
 const EVE_PORT = process.env.EVE_PORT ?? "3999";
 const CHAT_PORT = process.env.CHAT_PORT ?? process.env.PORT ?? "3099";
@@ -53,38 +54,52 @@ const waitForEveReady = async () => {
 	});
 };
 
+/** The chat database is eve's durable world only once NOTIFY delivery is
+ * proven on it; otherwise eve runs on its local world and leaf logs why. */
+const durableWorldUrl = async () => {
+	const chatDatabaseUrl = process.env.CHAT_DATABASE_URL;
+	if (!chatDatabaseUrl) return undefined;
+	const delivered = await verifyNotifyDelivery({
+		connectionString: chatDatabaseUrl,
+	});
+	return delivered ? chatDatabaseUrl : undefined;
+};
+
+/** eve derives its world from CHAT_DATABASE_URL, so an unproven URL is
+ * withheld from it entirely; the world package reads WORKFLOW_POSTGRES_URL. */
+const eveProcessEnv = (worldUrl: string | undefined) => {
+	const { CHAT_DATABASE_URL: _chatDatabaseUrl, ...base } = process.env;
+	return worldUrl
+		? { ...base, CHAT_DATABASE_URL: worldUrl, WORKFLOW_POSTGRES_URL: worldUrl }
+		: base;
+};
+
 /** Runs eve inside the leaf task over loopback, so prod needs no extra
- * service. CHAT_PORT must be set at build time: eve bakes it into the manifest. */
+ * service. Build and runtime get the same env: eve picks its world at build. */
 export const startEmbeddedEveServer = async () => {
 	setEmbeddedEveStatus("starting");
 	const leafRoot = new URL("../../../../", import.meta.url).pathname;
-	const workflowPostgresUrl =
-		process.env.WORKFLOW_POSTGRES_URL ?? process.env.CHAT_DATABASE_URL;
+	const worldUrl = await durableWorldUrl();
 	logger.info("Starting embedded eve server", {
 		event: "leaf.eve_server_starting",
 		data: {
-			allow_shared_world: process.env.EVE_ALLOW_SHARED_WORLD === "1",
-			durable_journal: Boolean(workflowPostgresUrl),
+			durable_journal: Boolean(worldUrl),
 			queue_namespace: process.env.WORKFLOW_QUEUE_NAMESPACE,
 		},
 	});
+	const eveEnv = eveProcessEnv(worldUrl);
 	await $`bunx eve build`
 		.cwd(leafRoot)
-		.env({ ...process.env, CHAT_PORT, NITRO_PRESET: EVE_SERVER_PRESET });
+		.env({ ...eveEnv, CHAT_PORT, NITRO_PRESET: EVE_SERVER_PRESET });
 	await logBuiltServerPreset(leafRoot);
-	if (workflowPostgresUrl) {
-		await $`bunx workflow-postgres-setup`
-			.cwd(leafRoot)
-			.env({ ...process.env, WORKFLOW_POSTGRES_URL: workflowPostgresUrl });
+	if (worldUrl) {
+		await $`bunx workflow-postgres-setup`.cwd(leafRoot).env(eveEnv);
 	}
 	const eve = Bun.spawn({
 		cmd: ["bun", ".output/server/index.mjs"],
 		cwd: leafRoot,
 		env: {
-			...process.env,
-			...(workflowPostgresUrl
-				? { WORKFLOW_POSTGRES_URL: workflowPostgresUrl }
-				: {}),
+			...eveEnv,
 			CHAT_PORT,
 			NITRO_HOST: EVE_HOST,
 			NITRO_PORT: EVE_PORT,

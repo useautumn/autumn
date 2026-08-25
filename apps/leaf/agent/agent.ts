@@ -8,22 +8,17 @@ import {
 const isProduction =
 	process.env.NODE_ENV === "production" || process.env.EVE_EMBEDDED === "1";
 
-// A shared world's queue worker EXECUTES that database's jobs: a laptop
-// pointed at prod would run prod turns with local code.
-const sharedWorldAllowed =
-	isProduction || process.env.EVE_ALLOW_SHARED_WORLD === "1";
-if (process.env.WORKFLOW_POSTGRES_URL && !sharedWorldAllowed) {
-	throw new Error(
-		"WORKFLOW_POSTGRES_URL is set outside production. Unset it to use the local world, or set EVE_ALLOW_SHARED_WORLD=1 to knowingly share that database's workflow tables (the queue stays namespaced to this machine).",
-	);
-}
+// The chat database is the durable workflow world; the world package reads
+// its own variable, so it is derived here rather than configured separately.
+const chatDatabaseUrl = process.env.CHAT_DATABASE_URL;
+if (chatDatabaseUrl) process.env.WORKFLOW_POSTGRES_URL = chatDatabaseUrl;
 if (!isProduction && !process.env.WORKFLOW_QUEUE_NAMESPACE) {
 	process.env.WORKFLOW_QUEUE_NAMESPACE = `local_${process.env.USER ?? "dev"}`;
 }
 
 const workflowWorld =
 	process.env.EVE_WORKFLOW_WORLD ??
-	(process.env.WORKFLOW_POSTGRES_URL ? "@workflow/world-postgres" : undefined);
+	(chatDatabaseUrl ? "@workflow/world-postgres" : undefined);
 
 export default defineAgent({
 	model: leafModel("orchestrator"),

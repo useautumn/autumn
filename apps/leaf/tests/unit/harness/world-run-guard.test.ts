@@ -65,7 +65,7 @@ mock.module("@workflow/world-postgres", () => ({
 	}),
 }));
 
-process.env.WORKFLOW_POSTGRES_URL = "postgresql://world.test/postgres";
+process.env.CHAT_DATABASE_URL = "postgresql://world.test/postgres";
 
 const { streamEveEvents, fastForwardEveStreamIndex } = await import(
 	"../../../src/internal/agentRuntime/eve/client.js"

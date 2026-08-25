@@ -1,13 +1,13 @@
 /**
  * The journal reader against a real Postgres workflow world: exact event
  * count and cursor-based replay straight from the tables eve writes.
- * Needs WORKFLOW_POSTGRES_URL pointing at a database with the workflow schema.
+ * Needs CHAT_DATABASE_URL pointing at a database with the workflow schema.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { SQL } from "bun";
 
-const url = process.env.WORKFLOW_POSTGRES_URL;
+const url = process.env.CHAT_DATABASE_URL;
 const describeWithDb = url ? describe : describe.skip;
 
 describeWithDb("world reader (real Postgres)", () => {
@@ -62,6 +62,15 @@ describeWithDb("world reader (real Postgres)", () => {
 			seen.push(event.type);
 		}
 		expect(seen).toEqual(["message.completed", "session.waiting"]);
+	});
+
+	test("NOTIFY delivery is proven on a direct connection", async () => {
+		const { verifyNotifyDelivery } = await import(
+			"../../src/internal/agentRuntime/eve/world/verifyNotifyDelivery.js"
+		);
+		expect(
+			await verifyNotifyDelivery({ connectionString: url as string }),
+		).toBe(true);
 	});
 
 	test("a run the world does not hold is not read from it", async () => {
