@@ -11,6 +11,8 @@ import { startFixedTickLoop } from "./internal/metering/loadtest/tickScheduler.j
 const TICK_INTERVAL_MS = 50;
 const LOADTEST_FEATURE_ID = "lt_feature_0";
 const NETWORK_ERROR_STATUS_KEY = "error";
+const NETWORK_TIMEOUT_STATUS_KEY = "timeout";
+const FETCH_TIMEOUT_MS = 5000;
 
 const requireEnv = ({ name }: { name: string }): string => {
 	const value = process.env[name];
@@ -32,6 +34,13 @@ const recordStatus = ({ key }: { key: string }): void => {
 	statusCounts[key] = (statusCounts[key] ?? 0) + 1;
 };
 
+// AbortSignal.timeout() aborts with a DOMException named "TimeoutError"; a
+// plain AbortError can also surface depending on runtime, so treat both as
+// a timeout rather than a generic network error.
+const isTimeoutError = (error: unknown): boolean =>
+	error instanceof Error &&
+	(error.name === "TimeoutError" || error.name === "AbortError");
+
 const sendOne = async (): Promise<void> => {
 	const customerId = `lt_cus_${Math.floor(Math.random() * customerCount)}`;
 	const url = `${targetUrl}/check?customer_id=${encodeURIComponent(customerId)}&feature_id=${LOADTEST_FEATURE_ID}`;
@@ -39,12 +48,18 @@ const sendOne = async (): Promise<void> => {
 	sent++;
 
 	try {
-		const response = await fetch(url);
+		const response = await fetch(url, {
+			signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+		});
 		latencyMsSamples.push(performance.now() - startedAt);
 		recordStatus({ key: String(response.status) });
-	} catch {
+	} catch (error) {
 		latencyMsSamples.push(performance.now() - startedAt);
-		recordStatus({ key: NETWORK_ERROR_STATUS_KEY });
+		recordStatus({
+			key: isTimeoutError(error)
+				? NETWORK_TIMEOUT_STATUS_KEY
+				: NETWORK_ERROR_STATUS_KEY,
+		});
 	}
 };
 

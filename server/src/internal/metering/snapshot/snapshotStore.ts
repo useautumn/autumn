@@ -37,4 +37,10 @@ export interface SnapshotStore {
 		data: string;
 	}): Promise<void>;
 	getLatest(params: { partition: number }): Promise<MeteringSnapshot | null>;
+	// Durably claims the next epoch for a partition and returns it. Must never
+	// hand out the same epoch twice for the same partition, even to concurrent
+	// callers racing on ownership after a crash — including a claim that was
+	// never followed by a snapshot write, which `put()`'s fencing alone can't
+	// see coming.
+	claimEpoch(params: { partition: number }): Promise<number>;
 }

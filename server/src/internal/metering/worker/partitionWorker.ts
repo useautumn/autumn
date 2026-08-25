@@ -9,9 +9,17 @@ import {
 } from "../fold/meterState.js";
 import type { MeteringLog } from "../log/meteringLog.js";
 import type { SnapshotStore } from "../snapshot/snapshotStore.js";
+import { createSliceRunner, yieldToEventLoop } from "./sliceRunner.js";
 
 export const DEFAULT_SNAPSHOT_INTERVAL = 1000;
 const READ_BATCH_SIZE = 500;
+
+// A fold turn processes at most this many events, or runs for at most this
+// long, before yielding the event loop — so a long backlog (a full Kafka
+// batch, or a crash-restore replay) doesn't starve concurrent /check
+// requests or kafkajs's own background heartbeat loop.
+const DEFAULT_FOLD_SLICE_BUDGET_EVENTS = 32;
+const DEFAULT_FOLD_SLICE_BUDGET_MS = 1;
 
 export class PartitionWorker {
 	readonly partition: number;
@@ -19,6 +27,9 @@ export class PartitionWorker {
 	private readonly snapshotStore: SnapshotStore;
 	private readonly snapshotInterval: number;
 	private readonly dedupeCapacity: number;
+	private readonly foldSliceBudgetEvents: number;
+	private readonly foldSliceBudgetMs: number;
+	private readonly yieldFn: () => Promise<void>;
 	private meterState: MeterState;
 	private nextOffset = 0;
 	private currentEpoch = 0;
@@ -30,18 +41,27 @@ export class PartitionWorker {
 		snapshotStore,
 		snapshotInterval = DEFAULT_SNAPSHOT_INTERVAL,
 		dedupeCapacity = DEFAULT_DEDUPE_CAPACITY,
+		foldSliceBudgetEvents = DEFAULT_FOLD_SLICE_BUDGET_EVENTS,
+		foldSliceBudgetMs = DEFAULT_FOLD_SLICE_BUDGET_MS,
+		yieldFn = yieldToEventLoop,
 	}: {
 		partition: number;
 		log: MeteringLog;
 		snapshotStore: SnapshotStore;
 		snapshotInterval?: number;
 		dedupeCapacity?: number;
+		foldSliceBudgetEvents?: number;
+		foldSliceBudgetMs?: number;
+		yieldFn?: () => Promise<void>;
 	}) {
 		this.partition = partition;
 		this.log = log;
 		this.snapshotStore = snapshotStore;
 		this.snapshotInterval = Math.max(1, snapshotInterval);
 		this.dedupeCapacity = dedupeCapacity;
+		this.foldSliceBudgetEvents = foldSliceBudgetEvents;
+		this.foldSliceBudgetMs = foldSliceBudgetMs;
+		this.yieldFn = yieldFn;
 		this.meterState = createMeterState({ dedupeCapacity });
 	}
 
@@ -62,7 +82,9 @@ export class PartitionWorker {
 			partition: this.partition,
 		});
 
-		this.currentEpoch = (latest?.epoch ?? 0) + 1;
+		this.currentEpoch = await this.snapshotStore.claimEpoch({
+			partition: this.partition,
+		});
 		this.meterState = latest
 			? deserializeMeterState({ serialized: latest.data })
 			: createMeterState({ dedupeCapacity: this.dedupeCapacity });
@@ -75,6 +97,11 @@ export class PartitionWorker {
 		offset: number;
 	}> {
 		let applied = 0;
+		const sliceRunner = createSliceRunner({
+			budgetMs: this.foldSliceBudgetMs,
+			budgetEvents: this.foldSliceBudgetEvents,
+			yieldFn: this.yieldFn,
+		});
 
 		while (upTo === undefined || this.nextOffset <= upTo) {
 			const limit =
@@ -99,6 +126,11 @@ export class PartitionWorker {
 				if (this.eventsSinceSnapshot >= this.snapshotInterval) {
 					await this.writeSnapshot();
 				}
+
+				// Snapshot cadence and offset accounting above are unaffected by
+				// this: the slice runner only decides when to hand the event loop
+				// a turn, never how many events get folded or when they snapshot.
+				await sliceRunner.tick();
 			}
 		}
 

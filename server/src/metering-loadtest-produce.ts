@@ -15,6 +15,8 @@ import { partitionForEvent } from "./internal/metering/log/kafkaMeteringLog.js";
 const TICK_INTERVAL_MS = 50;
 const LOADTEST_ORG_ID = "org_loadtest";
 const LOADTEST_ENV = "sandbox";
+const DEDUCT_VALUE = 1;
+const GRANT_VALUE = 500;
 // The deployed metering-worker only ever owns partition 0 today (see
 // metering-worker.ts), so the producer targets a single partition to keep
 // generated load meaningful against the currently running worker.
@@ -34,6 +36,13 @@ const rate = Number(process.env.LT_RATE ?? 500);
 const durationS = Number(process.env.LT_DURATION_S ?? 180);
 const customerCount = Number(process.env.LT_CUSTOMERS ?? 15000);
 const featureCount = Number(process.env.LT_FEATURES ?? 3);
+// Fraction of emitted events that are `grant`s instead of `deduct`s, so folds
+// actually create and mutate real balances rather than deducting against an
+// always-empty meter.
+const grantRatio = Math.min(
+	1,
+	Math.max(0, Number(process.env.LT_GRANT_RATIO ?? 0.05)),
+);
 
 const kafka = new Kafka({
 	clientId: `autumn-metering-loadtest-produce-${envName}`,
@@ -61,19 +70,23 @@ const runId = Date.now();
 let eventCounter = 0;
 let sent = 0;
 let errors = 0;
+let grants = 0;
 const ackLatencyMsSamples: number[] = [];
 
 const buildEvent = (): MeteringEvent => {
 	eventCounter++;
+	const isGrant = Math.random() < grantRatio;
+	if (isGrant) grants++;
+
 	return {
 		v: 1,
 		id: `lt_evt_${runId}_${eventCounter}`,
-		type: "deduct",
+		type: isGrant ? "grant" : "deduct",
 		org_id: LOADTEST_ORG_ID,
 		env: LOADTEST_ENV,
 		customer_id: `lt_cus_${Math.floor(Math.random() * customerCount)}`,
 		feature_id: `lt_feature_${Math.floor(Math.random() * featureCount)}`,
-		value: 1,
+		value: isGrant ? GRANT_VALUE : DEDUCT_VALUE,
 		event_ts: Date.now(),
 	};
 };
@@ -126,6 +139,7 @@ const summarizeAndExit = async (): Promise<void> => {
 			achievedRate: elapsedS > 0 ? sent / elapsedS : 0,
 			ackLatencyMs: computeLatencyStats({ samplesMs: ackLatencyMsSamples }),
 			errors,
+			grants,
 		},
 	});
 
