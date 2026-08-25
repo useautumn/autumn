@@ -7,7 +7,11 @@ import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 import { toolGerund } from "../../../tools/toolPolicy.js";
 import type { EveEventContext } from "./applyEveEvent.js";
 
+/** A delegated child can think for minutes between events, so the relay
+ * reconnects through quiet windows and ends only when the child session
+ * terminates — while it lives, it vouches for the parent turn. */
 const CHILD_WATCH_IDLE_TIMEOUT_MS = ms.minutes(2);
+const MAX_CHILD_IDLE_RECONNECTS = 10;
 
 /** Relays a delegated child session's live progress — tool starts and partial
  * text — onto the parent turn's status channel, which otherwise freezes on
@@ -17,6 +21,8 @@ export const watchSubagentProgress = ({
 	auth,
 	childSessionId,
 	onAction,
+	onChildActivity,
+	onChildEnded,
 	onReasoning,
 	session,
 	signal,
@@ -24,11 +30,12 @@ export const watchSubagentProgress = ({
 	auth: EveAuthContext;
 	childSessionId: string;
 	onAction?: EveEventContext["onAction"];
+	onChildActivity?: () => void;
+	onChildEnded?: () => void;
 	onReasoning?: EveEventContext["onReasoning"];
 	session: EveSessionRef;
 	signal: AbortSignal;
 }) => {
-	if (!(onAction || onReasoning)) return;
 	const childSession: EveSessionRef = {
 		env: session.env,
 		newSession: false,
@@ -37,7 +44,7 @@ export const watchSubagentProgress = ({
 		threadKey: session.threadKey,
 	};
 
-	const relay = async () => {
+	const relayPass = async () => {
 		for await (const event of streamEveEventsWithReconnect({
 			auth,
 			idleTimeoutMs: CHILD_WATCH_IDLE_TIMEOUT_MS,
@@ -45,6 +52,7 @@ export const watchSubagentProgress = ({
 			signal,
 		})) {
 			childSession.state.streamIndex += 1;
+			onChildActivity?.();
 			if (event.type === "actions.requested") {
 				for (const action of event.actions) {
 					const label = labelForAction(action);
@@ -69,17 +77,32 @@ export const watchSubagentProgress = ({
 				event.type === "session.completed" ||
 				event.type === "session.failed"
 			) {
-				return;
+				return true;
 			}
+		}
+		return false;
+	};
+
+	/** Quiet is not the end: reopen at the cursor until the child terminates. */
+	const relay = async () => {
+		for (let attempt = 0; attempt <= MAX_CHILD_IDLE_RECONNECTS; attempt += 1) {
+			try {
+				if (await relayPass()) return;
+			} catch (error) {
+				if (!(error instanceof EveStreamIdleTimeoutError)) throw error;
+			}
+			if (signal.aborted) return;
 		}
 	};
 
-	void relay().catch((error) => {
-		if (error instanceof EveStreamIdleTimeoutError) return;
-		if (error instanceof Error && error.name === "AbortError") return;
-		logger.debug("Subagent progress relay ended", {
-			event: "leaf.subagent_progress_relay_ended",
-			data: { child_session_id: childSessionId, error: String(error) },
+	void relay()
+		.finally(() => onChildEnded?.())
+		.catch((error) => {
+			if (error instanceof EveStreamIdleTimeoutError) return;
+			if (error instanceof Error && error.name === "AbortError") return;
+			logger.debug("Subagent progress relay ended", {
+				event: "leaf.subagent_progress_relay_ended",
+				data: { child_session_id: childSessionId, error: String(error) },
+			});
 		});
-	});
 };
