@@ -35,7 +35,7 @@ export const readShadowTapConfig = ({
 	if (env.METERING_SHADOW_ENABLED !== "true") return null;
 
 	const brokers = splitList({ value: env.KAFKA_BOOTSTRAP });
-	const topic = env.EVENTS_TOPIC?.trim() ?? "";
+	const topic = env.EVENTS_TOPIC?.trim() || "metering-events-v1";
 	if (brokers.length === 0 || topic.length === 0) return null;
 
 	return {
