@@ -9,14 +9,15 @@ export default defineEval({
 		);
 		t.event("subagent.called", { data: { name: "billing" } });
 		t.notEvent("subagent.called", { data: { name: "investigator" } });
-		// The eval harness has no Autumn auth, so billing cannot build and park
-		// the real approval here; the guarded contract is that nobody converts
-		// ambiguity into a question park (question parks carry no action).
+		// Ambiguity must never become a question park. An approval park is
+		// fine — its requests carry an action; a question park does not.
 		t.eventsSatisfy("never parks a clarifying question", (events) =>
 			events.every(
 				(event) =>
 					event.type !== "input.requested" ||
-					event.requests.every((request) => request.action !== undefined),
+					(event.data.requests ?? []).every(
+						(request) => request.action !== undefined,
+					),
 			),
 		);
 	},
