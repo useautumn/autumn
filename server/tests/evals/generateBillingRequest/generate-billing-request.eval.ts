@@ -21,6 +21,7 @@ import type {
 import type { GenerationContext } from "@/internal/billing/v2/actions/generateRequest/setup/setupGenerationContext";
 import {
 	creditLadderContext,
+	entityScaleContext,
 	rolloverCreditsBaseItems,
 	rolloverCreditsContext,
 	saasContext,
@@ -479,6 +480,15 @@ const cases: EvalCase[] = [
 				remove_items: [{ feature_id: "credits" }],
 			},
 		},
+	},
+	{
+		name: "attach: entity scoping read from current_plans",
+		input: {
+			context: entityScaleContext(),
+			prompt: "attach scale to the entity that doesn't have it yet",
+			tool: "attach",
+		},
+		expected: { entity_id: "beta", plan_id: "scale" },
 	},
 	{
 		name: "schedule: switch plan next month",

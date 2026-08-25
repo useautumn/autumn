@@ -75,12 +75,18 @@ export const generateRequest = async ({
 		delete generated.entity_id;
 	}
 
+	const anchoredEntityId =
+		params.tool === "update_subscription" &&
+		typeof params.current_request?.entity_id === "string"
+			? params.current_request.entity_id
+			: undefined;
 	const injected = {
 		...generated,
 		customer_id: params.customer_id,
 		...(params.tool === "update_subscription" && params.customer_product_id
 			? { customer_product_id: params.customer_product_id }
 			: {}),
+		...(anchoredEntityId ? { entity_id: anchoredEntityId } : {}),
 	};
 
 	const parsedResolveParams = ResolveBillingRequestParamsSchema.safeParse({

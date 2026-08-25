@@ -325,3 +325,41 @@ export const tieredScaleBaseItems = (): ApiPlanV1["items"] =>
 			unlimited: false,
 		},
 	] as unknown as ApiPlanV1["items"];
+
+/** Two entities where only one holds the plan — the model must read
+ * current_plans entity scoping to target the other. */
+export const entityScaleContext = (): GenerationContext =>
+	({
+		customer: {
+			id: "cus_entities",
+			name: "Entities Co",
+			current_plans: [
+				{
+					customer_product_id: "cp_scale_alpha",
+					entity_id: "alpha",
+					plan_id: "scale",
+					status: "active",
+				},
+			],
+			entities: [
+				{ id: "alpha", name: "Alpha Site" },
+				{ id: "beta", name: "Beta Site" },
+			],
+		},
+		features: [{ id: "credits", name: "Credits", type: "single_use" }],
+		now,
+		plans: [
+			{
+				id: "scale",
+				name: "Scale",
+				price: { amount: 500, interval: "month" },
+				items: [
+					{
+						feature_id: "credits",
+						included: 1000,
+						reset: { interval: "month" },
+					},
+				],
+			},
+		],
+	}) as unknown as GenerationContext;
