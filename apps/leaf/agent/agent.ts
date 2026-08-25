@@ -8,10 +8,17 @@ import {
 const isProduction =
 	process.env.NODE_ENV === "production" || process.env.EVE_EMBEDDED === "1";
 
-// The chat database is the durable workflow world; the world package reads
-// its own variable, so it is derived here rather than configured separately.
-const chatDatabaseUrl = process.env.CHAT_DATABASE_URL;
+// A shared world's queue worker EXECUTES that database's jobs: a laptop
+// pointed at prod would run prod turns with local code.
+const sharedWorldAllowed =
+	isProduction || process.env.EVE_ALLOW_SHARED_WORLD === "1";
+const chatDatabaseUrl = sharedWorldAllowed
+	? process.env.CHAT_DATABASE_URL
+	: undefined;
+// The world package reads its own variable, derived here so nothing else
+// configures a second URL.
 if (chatDatabaseUrl) process.env.WORKFLOW_POSTGRES_URL = chatDatabaseUrl;
+else delete process.env.WORKFLOW_POSTGRES_URL;
 if (!isProduction && !process.env.WORKFLOW_QUEUE_NAMESPACE) {
 	process.env.WORKFLOW_QUEUE_NAMESPACE = `local_${process.env.USER ?? "dev"}`;
 }

@@ -57,7 +57,12 @@ const waitForEveReady = async () => {
 /** The chat database is eve's durable world only once NOTIFY delivery is
  * proven on it; otherwise eve runs on its local world and leaf logs why. */
 const durableWorldUrl = async () => {
-	const chatDatabaseUrl = process.env.CHAT_DATABASE_URL;
+	const sharedWorldAllowed =
+		process.env.NODE_ENV === "production" ||
+		process.env.EVE_ALLOW_SHARED_WORLD === "1";
+	const chatDatabaseUrl = sharedWorldAllowed
+		? process.env.CHAT_DATABASE_URL
+		: undefined;
 	if (!chatDatabaseUrl) return undefined;
 	const delivered = await verifyNotifyDelivery({
 		connectionString: chatDatabaseUrl,

@@ -75,7 +75,11 @@ export async function* readSessionEvents({
 	const abort = () => void reader.cancel().catch(() => undefined);
 	signal?.addEventListener("abort", abort, { once: true });
 	let cursor = startIndex;
+	let delivered = false;
 	const probeGap = async () => {
+		// A fresh open replays the backlog from the cursor inside its first read,
+		// so a quiet gap only means a lost notification once events have flowed.
+		if (!delivered) return;
 		const tail = await journaledEventCount({ sessionId, streamName, world });
 		if (tail <= cursor) return;
 		logger.warn("Eve journal moved on while the live stream stayed quiet", {
@@ -89,6 +93,7 @@ export async function* readSessionEvents({
 			chunksWithGapProbe({ probeGap, reader }),
 		)) {
 			cursor += 1;
+			delivered = true;
 			yield parseEveEvent(JSON.parse(line));
 		}
 	} finally {

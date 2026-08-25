@@ -25,6 +25,7 @@ describe("workflow world selection", () => {
 		delete process.env.NODE_ENV;
 		delete process.env.EVE_EMBEDDED;
 		delete process.env.WORKFLOW_QUEUE_NAMESPACE;
+		process.env.EVE_ALLOW_SHARED_WORLD = "1";
 		process.env.CHAT_DATABASE_URL = "postgres://chat-host/chat";
 
 		const agent = (await importAgent()).default as {
@@ -44,6 +45,20 @@ describe("workflow world selection", () => {
 
 		await importAgent();
 		expect(process.env.WORKFLOW_QUEUE_NAMESPACE).toBeUndefined();
+	});
+
+	test("a shared chat database outside production needs an explicit opt-in", async () => {
+		delete process.env.NODE_ENV;
+		delete process.env.EVE_EMBEDDED;
+		delete process.env.EVE_ALLOW_SHARED_WORLD;
+		process.env.CHAT_DATABASE_URL = "postgres://prod-host/chat";
+		process.env.WORKFLOW_POSTGRES_URL = "postgres://prod-host/chat";
+
+		const agent = (await importAgent()).default as {
+			experimental?: { workflow?: { world?: string } };
+		};
+		expect(agent.experimental?.workflow?.world).toBeUndefined();
+		expect(process.env.WORKFLOW_POSTGRES_URL).toBeUndefined();
 	});
 
 	test("no chat database means the local file world", async () => {
