@@ -114,6 +114,7 @@ export const handleSyncPreviewPricing = createRoute({
 					type: dbFeature.type,
 					config: dbFeature.config,
 					event_names: dbFeature.event_names,
+					model_markups: dbFeature.model_markups,
 				},
 				skipGenerateDisplay: true,
 			});

@@ -53,4 +53,22 @@ describe("pricing-agent credit rate-card schema", () => {
 			creditFeature,
 		);
 	});
+
+	test("preserves AI credit-system markup fields", () => {
+		const aiCreditFeature = {
+			id: "ai_credits",
+			name: "AI credits",
+			type: "ai_credit_system" as const,
+			display: { singular: "credit", plural: "credits" },
+			model_markups: {
+				"anthropic/claude-sonnet-4": { markup: 25 },
+			},
+			default_markup: 10,
+			provider_markups: { anthropic: { markup: 15 } },
+		};
+
+		expect(PricingAgentFeatureInputSchema.parse(aiCreditFeature)).toMatchObject(
+			aiCreditFeature,
+		);
+	});
 });

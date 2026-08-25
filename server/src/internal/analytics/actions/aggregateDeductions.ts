@@ -8,14 +8,17 @@ import type {
 	FullCustomer,
 	RangeEnum,
 } from "@autumn/shared";
-import { isAnyCreditSystem, notNullish } from "@autumn/shared";
+import { findFeatureById, isAnyCreditSystem, notNullish } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import type { AggregateDeductionsPipeRow } from "@/external/tinybird/initTinybird.js";
 import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
 import { assertDeductionGroupingUnambiguous } from "@/external/tinybird/pipes/aggregateDeductionsPipe.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import {
+	getCreditCost,
+	getCreditRateCard,
+} from "@/internal/features/creditSystemUtils.js";
 import { calculateDateRange } from "./aggregate.js";
 
 /** The pipe buckets overflow groups here; the API surfaces the same label as the grouped list. */
@@ -123,7 +126,7 @@ const buildBalanceLookups = ({
  * number would be a lie. Reflects the CURRENT credit schema, not the rate at
  * deduction time: credit systems are edited in place rather than versioned.
  */
-const resolveCreditCost = ({
+export const resolveCreditCost = ({
 	ctx,
 	sourceFeatureId,
 	balanceFeatureId,
@@ -136,6 +139,14 @@ const resolveCreditCost = ({
 
 	const creditSystem = ctx.features.find((f) => f.id === balanceFeatureId);
 	if (!creditSystem || !isAnyCreditSystem(creditSystem.type)) return null;
+	const sourceFeature = findFeatureById({
+		features: ctx.features,
+		featureId: sourceFeatureId,
+		errorOnNotFound: false,
+	});
+	if (!sourceFeature) return null;
+	const rateCard = getCreditRateCard({ sourceFeature, creditSystem });
+	if (rateCard?.tier_behavior === "graduated") return null;
 
 	try {
 		return getCreditCost({

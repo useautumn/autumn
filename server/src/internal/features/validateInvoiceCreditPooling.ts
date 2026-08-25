@@ -63,7 +63,11 @@ export const validateInvoiceCreditPrice = ({
 							tier.flat_amount === undefined ||
 							tier.flat_amount === 0) &&
 						(tier.additional_currencies ?? []).every(
-							(currency) => currency.amount === billingUnits,
+							(currency) =>
+								currency.amount === billingUnits &&
+								(currency.flat_amount === null ||
+									currency.flat_amount === undefined ||
+									currency.flat_amount === 0),
 						),
 				));
 

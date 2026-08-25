@@ -60,6 +60,7 @@ export const handlePushOrganisationConfiguration = createRoute({
 						type: dbFeature.type,
 						config: dbFeature.config,
 						event_names: dbFeature.event_names,
+						model_markups: dbFeature.model_markups,
 					},
 				});
 			}

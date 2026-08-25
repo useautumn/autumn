@@ -61,14 +61,12 @@ const validateProjectedInvoiceCreditPrices = ({
 };
 
 const validateProjectedInvoiceCreditPooling = ({
-	catalogContext,
 	updateCatalogPlan,
 }: {
-	catalogContext: UpdateCatalogContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 }): void => {
 	for (const updateFeaturePlan of updateCatalogPlan.updateFeatures) {
-		const { current, next: feature } = updateFeaturePlan;
+		const { next: feature } = updateFeaturePlan;
 		const hasPooledPlanItem = updateCatalogPlan.projected.products.some(
 			(product) =>
 				product.entitlements.some(
@@ -79,20 +77,14 @@ const validateProjectedInvoiceCreditPooling = ({
 		);
 		validateInvoiceCreditPooling({
 			feature,
-			pooled:
-				hasPooledPlanItem ||
-				catalogContext.featureStatesContext[current.id]
-					?.has_pooled_entitlements,
+			pooled: hasPooledPlanItem,
 		});
 		validateInvoiceCreditUsageBasedPricing({
 			feature,
-			usageBased:
-				!catalogContext.featureStatesContext[current.id]
-					?.has_non_consumable_entitlements &&
-				planItemsForFeatureAreUsageBased({
-					internalFeatureId: feature.internal_id,
-					updateCatalogPlan,
-				}),
+			usageBased: planItemsForFeatureAreUsageBased({
+				internalFeatureId: feature.internal_id,
+				updateCatalogPlan,
+			}),
 		});
 		validateProjectedInvoiceCreditPrices({ feature, updateCatalogPlan });
 	}
@@ -131,7 +123,7 @@ export const handleUpdateCatalogErrors = async ({
 	params: UpdateCatalogParams;
 }): Promise<void> => {
 	handleUpdateFeatureErrors({ ctx, catalogContext, updateCatalogPlan });
-	validateProjectedInvoiceCreditPooling({ catalogContext, updateCatalogPlan });
+	validateProjectedInvoiceCreditPooling({ updateCatalogPlan });
 	handleRemoveFeatureErrors({ updateCatalogPlan });
 	handleRemovePlanErrors({
 		updateCatalogPlan,

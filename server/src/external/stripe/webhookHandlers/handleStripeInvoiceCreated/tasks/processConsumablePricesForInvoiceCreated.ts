@@ -39,25 +39,6 @@ const hasTrialJustEnded = ({
 	return trialEnd === periodStart;
 };
 
-const getUsageLineItemHash = ({
-	invoiceId,
-	lineItem,
-}: {
-	invoiceId: string;
-	lineItem: LineItem;
-}): string =>
-	createHash("sha256")
-		.update(
-			[
-				invoiceId,
-				lineItem.context.customerProduct?.id,
-				lineItem.context.customerPrice?.id,
-				lineItem.context.customerEntitlement?.id,
-				lineItem.context.entity?.id,
-			].join(":"),
-		)
-		.digest("hex");
-
 /**
  * Processes consumable (usage-in-arrear) prices for an invoice.
  * Adds usage line items to the invoice for the billing period.
@@ -138,46 +119,33 @@ export const processConsumablePricesForInvoiceCreated = async ({
 			includeLineItems: !trialJustEnded,
 		},
 	});
-	const stableConsumableLineItems = consumableLineItems.map((lineItem) => ({
-		...lineItem,
-		id: `invoice_li_usage_${getUsageLineItemHash({
-			invoiceId: stripeInvoice.id,
-			lineItem,
-		})}`,
-	}));
-	const stripeLineItems = stripeInvoice.lines.has_more
-		? await getStripeInvoiceLineItems({
-				stripeClient: ctx.stripeCli,
-				invoiceId: stripeInvoice.id,
-			})
-		: stripeInvoice.lines.data;
+	const stripeLineItems =
+		invoiceCreditLineItems.length > 0
+			? await getStripeInvoiceLineItems({
+					stripeClient: ctx.stripeCli,
+					invoiceId: stripeInvoice.id,
+				})
+			: [];
 	const existingAutumnLineItemIds = new Set(
 		stripeLineItems
 			.map((lineItem) => lineItem.metadata?.autumn_line_item_id)
 			.filter((lineItemId): lineItemId is string => Boolean(lineItemId)),
 	);
-	const pendingConsumableLineItems = stableConsumableLineItems.filter(
-		(lineItem) => !existingAutumnLineItemIds.has(lineItem.id),
-	);
 	const pendingInvoiceCreditLineItems = invoiceCreditLineItems.filter(
 		(lineItem) => !existingAutumnLineItemIds.has(lineItem.id),
 	);
 
-	if (disableOverageBilling && stableConsumableLineItems.length > 0) {
+	if (disableOverageBilling && consumableLineItems.length > 0) {
 		addToExtraLogs({ ctx, extras: { overageBillingDisabledByConfig: true } });
 	}
-	if (pendingConsumableLineItems.length > 0 && !disableOverageBilling) {
+	if (consumableLineItems.length > 0 && !disableOverageBilling) {
 		await createStripeInvoiceItems({
 			ctx,
 			invoiceItems: lineItemsToCreateInvoiceItemsParams({
 				stripeCustomerId: eventContext.stripeCustomer.id,
 				stripeInvoiceId: stripeInvoice.id,
-				lineItems: pendingConsumableLineItems,
+				lineItems: consumableLineItems,
 			}),
-			idempotencyKeys: pendingConsumableLineItems.map(
-				(lineItem) =>
-					`autumn:usage:${lineItem.id.slice("invoice_li_usage_".length)}`,
-			),
 		});
 	}
 	if (pendingInvoiceCreditLineItems.length > 0) {
@@ -229,5 +197,5 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		}),
 	);
 
-	return [...stableConsumableLineItems, ...invoiceCreditLineItems];
+	return [...consumableLineItems, ...invoiceCreditLineItems];
 };

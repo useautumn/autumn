@@ -74,4 +74,28 @@ describe("invoice-credit product item validation", () => {
 			"Invoice-credit features require a price of one currency unit per credit",
 		);
 	});
+
+	test("rejects flat fees in an additional currency tier", () => {
+		const item: ProductItem = {
+			feature_id: invoiceCreditFeature.id,
+			included_usage: 100,
+			interval: ProductItemInterval.Month,
+			usage_model: UsageModel.PayPerUse,
+			billing_units: 1,
+			base_currency: "usd",
+			tiers: [
+				{
+					to: "inf",
+					amount: 1,
+					additional_currencies: [
+						{ currency: "eur", amount: 1, flat_amount: 2 },
+					],
+				},
+			],
+		};
+
+		expect(() => validate(item)).toThrow(
+			"Invoice-credit features require a price of one currency unit per credit",
+		);
+	});
 });

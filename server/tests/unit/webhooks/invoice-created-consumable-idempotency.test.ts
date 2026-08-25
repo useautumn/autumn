@@ -26,13 +26,27 @@ const regularLineItems = [
 	},
 ];
 
+let consumableLineItems = regularLineItems;
+let invoiceCreditLineItems: typeof regularLineItems = [];
+let liveStripeLineItemIds: string[] = [];
+
 await mockModuleWithRestore("@/external/stripe/webhookHandlers/common", () => ({
 	eventContextToArrearLineItems: async () => ({
-		lineItems: regularLineItems,
-		invoiceCreditLineItems: [],
+		lineItems: consumableLineItems,
+		invoiceCreditLineItems,
 		updateCustomerEntitlements: [],
 	}),
 }));
+
+await mockModuleWithRestore(
+	"@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems.js",
+	() => ({
+		getStripeInvoiceLineItems: async () =>
+			liveStripeLineItemIds.map((lineItemId) => ({
+				metadata: { autumn_line_item_id: lineItemId },
+			})),
+	}),
+);
 
 await mockModuleWithRestore(
 	"@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams",
@@ -112,57 +126,61 @@ const ctx = {
 describe("invoice.created consumable idempotency", () => {
 	beforeEach(() => {
 		createInvoiceItemCalls.length = 0;
+		consumableLineItems = regularLineItems;
+		invoiceCreditLineItems = [];
+		liveStripeLineItemIds = [];
 	});
 
-	test("uses stable unique keys for ordinary usage items across webhook retries", async () => {
+	test("keeps ordinary usage items on the existing creation path", async () => {
 		await processConsumablePricesForInvoiceCreated({
 			ctx,
 			eventContext: makeEventContext(),
 		});
-		const firstKeys = createInvoiceItemCalls[0]?.idempotencyKeys;
 
-		createInvoiceItemCalls.length = 0;
-		await processConsumablePricesForInvoiceCreated({
-			ctx,
-			eventContext: makeEventContext(),
-		});
-		const retryKeys = createInvoiceItemCalls[0]?.idempotencyKeys;
-
-		expect(firstKeys).toHaveLength(2);
-		expect(new Set(firstKeys).size).toBe(2);
-		expect(firstKeys?.every((key) => key.startsWith("autumn:usage:"))).toBe(
-			true,
-		);
-		expect(retryKeys).toEqual(firstKeys);
-	});
-
-	test("does not recreate an invoice item already added by a partial delivery", async () => {
-		await processConsumablePricesForInvoiceCreated({
-			ctx,
-			eventContext: makeEventContext(),
-		});
-		const firstCall = createInvoiceItemCalls[0];
-		const firstLineItemIds = firstCall?.invoiceItems?.map(
-			(invoiceItem) => invoiceItem.metadata?.autumn_line_item_id,
-		);
-
-		createInvoiceItemCalls.length = 0;
-		await processConsumablePricesForInvoiceCreated({
-			ctx,
-			eventContext: makeEventContext({
-				existingLineItemIds: [firstLineItemIds?.[0] ?? ""],
-			}),
-		});
-
-		expect(createInvoiceItemCalls).toHaveLength(1);
-		expect(createInvoiceItemCalls[0]?.invoiceItems).toHaveLength(1);
+		expect(createInvoiceItemCalls[0]?.idempotencyKeys).toBeUndefined();
 		expect(
-			createInvoiceItemCalls[0]?.invoiceItems?.[0]?.metadata
-				?.autumn_line_item_id,
-		).toBe(firstLineItemIds?.[1]);
-		expect(createInvoiceItemCalls[0]?.idempotencyKeys).toEqual(
-			firstCall?.idempotencyKeys?.slice(1),
-		);
+			createInvoiceItemCalls[0]?.invoiceItems?.map(
+				(invoiceItem) => invoiceItem.metadata?.autumn_line_item_id,
+			),
+		).toEqual(regularLineItems.map((lineItem) => lineItem.id));
+	});
+
+	test("reads current Stripe lines before retrying an invoice-credit item", async () => {
+		const existingLineItem = {
+			...regularLineItems[0],
+			id: "invoice_li_credit_invoice_retry_entitlement_source",
+		};
+		consumableLineItems = [];
+		invoiceCreditLineItems = [existingLineItem];
+		liveStripeLineItemIds = [existingLineItem.id];
+
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext(),
+		});
+
+		expect(createInvoiceItemCalls).toEqual([]);
+	});
+
+	test("uses stable keys for new invoice-credit items", async () => {
+		const invoiceCreditLineItem = {
+			...regularLineItems[0],
+			id: "invoice_li_credit_invoice_retry_entitlement_source",
+		};
+		consumableLineItems = [];
+		invoiceCreditLineItems = [invoiceCreditLineItem];
+
+		await processConsumablePricesForInvoiceCreated({
+			ctx,
+			eventContext: makeEventContext(),
+		});
+
+		expect(createInvoiceItemCalls[0]?.idempotencyKeys).toHaveLength(1);
+		expect(
+			createInvoiceItemCalls[0]?.idempotencyKeys?.[0]?.startsWith(
+				"autumn:invoice-credit:",
+			),
+		).toBe(true);
 	});
 });
 

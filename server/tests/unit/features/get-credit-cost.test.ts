@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
+	AllowanceType,
 	ErrCode,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
+	type FullSubject,
 } from "@autumn/shared";
 
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
@@ -18,9 +20,8 @@ await mockModuleWithRestore(
 const { getModelCreditCost, getModelCreditCostBreakdown } = await import(
 	"@/internal/features/aiCreditSystemUtils.js"
 );
-const { getCreditCost, getCreditRateCard } = await import(
-	"@/internal/features/creditSystemUtils.js"
-);
+const { getCreditCost, getCreditRateCard, getCreditRateRequiredBalance } =
+	await import("@/internal/features/creditSystemUtils.js");
 
 // custom/* models price from model_markups; pricing data is mocked empty.
 const CUSTOM_MODEL = "custom/foo";
@@ -145,6 +146,77 @@ describe("getCreditRateCard — invoice attribution descriptors", () => {
 });
 
 describe("getCreditCost — graduated rate cards", () => {
+	test("rates a check across each entitlement's independent tier position", () => {
+		const makeCustomerEntitlement = ({
+			id,
+			balance,
+			currentUsage,
+		}: {
+			id: string;
+			balance: number;
+			currentUsage: number;
+		}) => ({
+			id,
+			balance,
+			additional_balance: 0,
+			rollovers: [],
+			usage_attribution: {
+				[sourceFeature.internal_id]: {
+					units: currentUsage,
+					credits: getCreditCost({
+						featureId: sourceFeature.id,
+						creditSystem: graduatedCreditFeature,
+						amount: currentUsage,
+					}),
+				},
+			},
+			entitlement: {
+				feature: graduatedCreditFeature,
+				allowance_type: AllowanceType.Fixed,
+				entity_feature_id: null,
+				interval: null,
+				interval_count: 1,
+			},
+		});
+		const fullSubject = {
+			subjectType: "customer",
+			entity: null,
+			customer_products: [
+				{
+					status: "active",
+					customer_entitlements: [
+						makeCustomerEntitlement({
+							id: "base_credits",
+							balance: 0.5,
+							currentUsage: 9_950,
+						}),
+					],
+				},
+				{
+					status: "active",
+					customer_entitlements: [
+						makeCustomerEntitlement({
+							id: "addon_credits",
+							balance: 0.9,
+							currentUsage: 0,
+						}),
+					],
+				},
+			],
+			extra_customer_entitlements: [],
+			pooled_customer_entitlements: [],
+		} as unknown as FullSubject;
+
+		expect(
+			getCreditRateRequiredBalance({
+				fullSubject,
+				sourceFeature,
+				creditSystem: graduatedCreditFeature,
+				amount: 100,
+			}),
+		).toBeCloseTo(1, 10);
+	});
+
 	test("charges the marginal cost when usage crosses one tier", () => {
 		const cost = getCreditCost({
 			featureId: "messages",

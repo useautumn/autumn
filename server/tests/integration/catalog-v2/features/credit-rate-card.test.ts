@@ -1,5 +1,12 @@
 import { expect, test } from "bun:test";
-import { ErrCode, FeatureType, FeatureUsageType } from "@autumn/shared";
+import {
+	BillingInterval,
+	BillingMethod,
+	ErrCode,
+	FeatureType,
+	FeatureUsageType,
+	ResetInterval,
+} from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -312,6 +319,182 @@ test.concurrent(
 						credit_schema: creditSchema,
 					}),
 			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+			await deleteDbFeatures({ ctx, featureIds });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 credit rate card: allows unpooling and enabling invoice credits atomically")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const meteredFeatureId = uniqueTestId("rate_atomic_pool_metered");
+		const creditSystemId = uniqueTestId("rate_atomic_pool_credits");
+		const planId = uniqueTestId("rate_atomic_pool_plan");
+		const featureIds = [meteredFeatureId, creditSystemId];
+		const creditSchema = [
+			{ metered_feature_id: meteredFeatureId, credit_cost: 1 },
+		];
+		const usagePrice = {
+			amount: 1,
+			interval: BillingInterval.Month,
+			billing_method: BillingMethod.UsageBased,
+			billing_units: 1,
+		};
+
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		await deleteDbFeatures({ ctx, featureIds });
+
+		try {
+			await autumnV2_3.catalogV2.update({
+				features: [
+					{
+						feature_id: meteredFeatureId,
+						name: meteredFeatureId,
+						type: FeatureType.Metered,
+						consumable: true,
+					},
+					{
+						feature_id: creditSystemId,
+						name: creditSystemId,
+						type: FeatureType.CreditSystem,
+						invoice_credit: false,
+						credit_schema: creditSchema,
+					},
+				],
+				plans: [
+					{
+						plan_id: planId,
+						name: planId,
+						items: [
+							{
+								feature_id: creditSystemId,
+								included: 100,
+								pooled: true,
+								reset: { interval: ResetInterval.Month },
+								price: usagePrice,
+							},
+						],
+					},
+				],
+			});
+
+			const response = await autumnV2_3.catalogV2.update({
+				features: [
+					{
+						feature_id: creditSystemId,
+						name: creditSystemId,
+						type: FeatureType.CreditSystem,
+						invoice_credit: true,
+						credit_schema: creditSchema,
+					},
+				],
+				plans: [
+					{
+						plan_id: planId,
+						name: planId,
+						items: [
+							{
+								feature_id: creditSystemId,
+								included: 100,
+								pooled: false,
+								reset: { interval: ResetInterval.Month },
+								price: usagePrice,
+							},
+						],
+					},
+				],
+			});
+
+			expect(response.features[0]).toMatchObject({ invoice_credit: true });
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+			await deleteDbFeatures({ ctx, featureIds });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 credit rate card: allows converting included usage to priced usage while enabling invoice credits")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const meteredFeatureId = uniqueTestId("rate_atomic_price_metered");
+		const creditSystemId = uniqueTestId("rate_atomic_price_credits");
+		const planId = uniqueTestId("rate_atomic_price_plan");
+		const featureIds = [meteredFeatureId, creditSystemId];
+		const creditSchema = [
+			{ metered_feature_id: meteredFeatureId, credit_cost: 1 },
+		];
+
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		await deleteDbFeatures({ ctx, featureIds });
+
+		try {
+			await autumnV2_3.catalogV2.update({
+				features: [
+					{
+						feature_id: meteredFeatureId,
+						name: meteredFeatureId,
+						type: FeatureType.Metered,
+						consumable: true,
+					},
+					{
+						feature_id: creditSystemId,
+						name: creditSystemId,
+						type: FeatureType.CreditSystem,
+						invoice_credit: false,
+						credit_schema: creditSchema,
+					},
+				],
+				plans: [
+					{
+						plan_id: planId,
+						name: planId,
+						items: [
+							{
+								feature_id: creditSystemId,
+								included: 100,
+								reset: { interval: ResetInterval.Month },
+							},
+						],
+					},
+				],
+			});
+
+			const response = await autumnV2_3.catalogV2.update({
+				features: [
+					{
+						feature_id: creditSystemId,
+						name: creditSystemId,
+						type: FeatureType.CreditSystem,
+						invoice_credit: true,
+						credit_schema: creditSchema,
+					},
+				],
+				plans: [
+					{
+						plan_id: planId,
+						name: planId,
+						items: [
+							{
+								feature_id: creditSystemId,
+								included: 100,
+								reset: { interval: ResetInterval.Month },
+								price: {
+									amount: 1,
+									interval: BillingInterval.Month,
+									billing_method: BillingMethod.UsageBased,
+									billing_units: 1,
+								},
+							},
+						],
+					},
+				],
+			});
+
+			expect(response.features[0]).toMatchObject({ invoice_credit: true });
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 			await deleteDbFeatures({ ctx, featureIds });

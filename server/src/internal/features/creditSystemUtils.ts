@@ -1,6 +1,8 @@
 import {
 	type CreditSchemaItem,
 	type CreditTier,
+	type CusProductStatus,
+	cusEntToCurrentBalance,
 	ErrCode,
 	type Feature,
 	FeatureType,
@@ -308,24 +310,128 @@ export const getCreditSystemsFromFeature = ({
 	);
 };
 
-export const getCreditRateCurrentUsage = ({
+const getCreditRateFundedUnits = ({
+	featureId,
+	creditSystem,
+	currentUsage,
+	requestedUnits,
+	availableCredits,
+}: {
+	featureId: string;
+	creditSystem: Feature;
+	currentUsage: number;
+	requestedUnits: number;
+	availableCredits: number;
+}): number => {
+	if (requestedUnits <= 0) return 0;
+	const requestedCredits = featureToCreditSystem({
+		featureId,
+		creditSystem,
+		amount: requestedUnits,
+		currentUsage,
+	});
+	if (requestedCredits <= availableCredits) return requestedUnits;
+	if (availableCredits <= 0) return 0;
+
+	let lowerBound = 0;
+	let upperBound = requestedUnits;
+	for (let iteration = 0; iteration < 60; iteration++) {
+		const candidateUnits = new Decimal(lowerBound)
+			.add(upperBound)
+			.div(2)
+			.toNumber();
+		const candidateCredits = featureToCreditSystem({
+			featureId,
+			creditSystem,
+			amount: candidateUnits,
+			currentUsage,
+		});
+		if (candidateCredits <= availableCredits) {
+			lowerBound = candidateUnits;
+		} else {
+			upperBound = candidateUnits;
+		}
+	}
+
+	return lowerBound;
+};
+
+export const getCreditRateRequiredBalance = ({
 	fullSubject,
-	creditSystemId,
-	sourceInternalFeatureId,
+	sourceFeature,
+	creditSystem,
+	amount,
+	reverseOrder = false,
+	inStatuses,
 }: {
 	fullSubject: FullSubject;
-	creditSystemId: string;
-	sourceInternalFeatureId: string;
-}) => {
-	const customerEntitlement = fullSubjectToCustomerEntitlements({
+	sourceFeature: Feature;
+	creditSystem: Feature;
+	amount: number;
+	reverseOrder?: boolean;
+	inStatuses?: CusProductStatus[];
+}): number => {
+	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
-		featureIds: [creditSystemId],
-	})[0];
+		featureIds: [creditSystem.id],
+		reverseOrder,
+		inStatuses,
+	});
+	if (customerEntitlements.length === 0) {
+		return featureToCreditSystem({
+			featureId: sourceFeature.id,
+			creditSystem,
+			amount,
+		});
+	}
 
-	return (
-		customerEntitlement?.usage_attribution?.[sourceInternalFeatureId]?.units ??
-		0
-	);
+	let remainingUnits = new Decimal(amount);
+	let requiredCredits = new Decimal(0);
+	let finalUsage = 0;
+	let finalCreditSystem = creditSystem;
+
+	for (const customerEntitlement of customerEntitlements) {
+		if (remainingUnits.lte(0)) break;
+		const entitlementCreditSystem = customerEntitlement.entitlement.feature;
+		const currentUsage =
+			customerEntitlement.usage_attribution?.[sourceFeature.internal_id]
+				?.units ?? 0;
+		const availableCredits = cusEntToCurrentBalance({
+			cusEnt: customerEntitlement,
+			entityId: fullSubject.entity?.id ?? undefined,
+			withRollovers: true,
+		});
+		const fundedUnits = getCreditRateFundedUnits({
+			featureId: sourceFeature.id,
+			creditSystem: entitlementCreditSystem,
+			currentUsage,
+			requestedUnits: remainingUnits.toNumber(),
+			availableCredits,
+		});
+		const fundedCredits = featureToCreditSystem({
+			featureId: sourceFeature.id,
+			creditSystem: entitlementCreditSystem,
+			amount: fundedUnits,
+			currentUsage,
+		});
+		requiredCredits = requiredCredits.add(fundedCredits);
+		remainingUnits = remainingUnits.sub(fundedUnits);
+		finalUsage = currentUsage + fundedUnits;
+		finalCreditSystem = entitlementCreditSystem;
+
+		if (remainingUnits.lte(1e-10)) return requiredCredits.toNumber();
+	}
+
+	return requiredCredits
+		.add(
+			featureToCreditSystem({
+				featureId: sourceFeature.id,
+				creditSystem: finalCreditSystem,
+				amount: remainingUnits.toNumber(),
+				currentUsage: finalUsage,
+			}),
+		)
+		.toNumber();
 };
 
 export const featureToCreditSystem = ({

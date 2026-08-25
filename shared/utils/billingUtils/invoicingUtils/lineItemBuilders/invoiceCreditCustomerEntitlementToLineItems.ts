@@ -102,16 +102,17 @@ export const invoiceCreditCustomerEntitlementToLineItems = ({
 	}
 
 	const overage = cusEntToInvoiceOverage({ cusEnt: customerEntitlement });
+	const roundedOverage = roundToCurrency({
+		amount: overage,
+		currency: context.currency,
+	});
 	const creditsApplied = fullyOffsetOverage
 		? totalCredits
 		: Decimal.max(totalCredits.sub(overage), 0);
 	if (creditsApplied.isZero()) return lineItems;
-	const roundedCreditsApplied = creditsApplied.eq(totalCredits)
+	const roundedCreditsApplied = fullyOffsetOverage
 		? totalRoundedCredits.toNumber()
-		: roundToCurrency({
-				amount: creditsApplied.toNumber(),
-				currency: context.currency,
-			});
+		: Decimal.max(totalRoundedCredits.sub(roundedOverage), 0).toNumber();
 
 	const offsetLineItem = buildLineItem({
 		context: {

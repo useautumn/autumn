@@ -1,6 +1,8 @@
 import {
 	ApiCreditSchemaItemSchema,
 	CreateFeatureV0ParamsSchema,
+	ModelMarkupsSchema,
+	ProviderMarkupsSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 
@@ -62,6 +64,9 @@ export const PricingAgentFeatureInputSchema =
 		type: AgentFeatureType,
 		credit_schema: z.array(ApiCreditSchemaItemSchema).nullish(),
 		invoice_credit: z.boolean().optional(),
+		model_markups: ModelMarkupsSchema.optional(),
+		default_markup: z.number().min(-100).optional(),
+		provider_markups: ProviderMarkupsSchema.optional(),
 	});
 
 const ProductItemInterval = z.enum([

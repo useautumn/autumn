@@ -24,12 +24,17 @@ import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/
 const makeCreditProduct = ({
 	id,
 	withOwnAllowance = false,
+	isAddOn = false,
+	creditAllowance = 1_000,
 }: {
 	id: string;
 	withOwnAllowance?: boolean;
+	isAddOn?: boolean;
+	creditAllowance?: number;
 }) =>
 	products.base({
 		id,
+		isAddOn,
 		items: [
 			...(withOwnAllowance
 				? [
@@ -41,7 +46,7 @@ const makeCreditProduct = ({
 				: []),
 			items.free({
 				featureId: TestFeature.TieredCredits,
-				includedUsage: 1_000,
+				includedUsage: creditAllowance,
 			}),
 		],
 	});
@@ -69,6 +74,49 @@ const getPersistedCreditEntitlement = async ({
 
 	return rows[0];
 };
+
+test.concurrent(
+	`${chalk.yellowBright("graduated-credit-rating: check rates each credit entitlement from its own tier position")}`,
+	async () => {
+		const customerId = "graduated-credit-rating-multiple-entitlements";
+		const baseProduct = makeCreditProduct({
+			id: "graduated-credit-multiple-base",
+			creditAllowance: 100,
+		});
+		const addOnProduct = makeCreditProduct({
+			id: "graduated-credit-multiple-addon",
+			isAddOn: true,
+			creditAllowance: 0.9,
+		});
+		const { autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [baseProduct, addOnProduct] }),
+			],
+			actions: [
+				s.attach({ productId: baseProduct.id }),
+				s.attach({ productId: addOnProduct.id }),
+			],
+		});
+
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			value: 10_000,
+		});
+
+		const check = await autumnV2_3.check({
+			customer_id: customerId,
+			feature_id: TestFeature.TieredAction,
+			required_balance: 100,
+		});
+
+		expect(check.allowed).toBe(false);
+		expect(check.required_balance).toBeCloseTo(1, 10);
+	},
+	{ timeout: 120_000 },
+);
 
 test.concurrent(
 	`${chalk.yellowBright("graduated-credit-rating: Redis handles checks, concurrent boundary crossing, and refunds")}`,

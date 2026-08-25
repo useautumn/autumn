@@ -13,6 +13,7 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts.js";
 import { features } from "@tests/utils/fixtures/db/features.js";
 import { prices } from "@tests/utils/fixtures/db/prices.js";
 import { products } from "@tests/utils/fixtures/db/products.js";
+import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems.js";
 import { lineItemsToCreateInvoiceItemsParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams.js";
 import { billingPlanToNextCycleLineItems } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/billingPlanToNextCycleLineItems.js";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems.js";
@@ -316,6 +317,30 @@ describe("invoice credit line items", () => {
 		);
 	});
 
+	test("balances partially funded fractional credits in Stripe minor units", () => {
+		const fixture = makeFixture({
+			balance: -0.012,
+			usageAttribution: {
+				[SOURCE_A_INTERNAL_ID]: { units: 1, credits: 0.506 },
+				[SOURCE_B_INTERNAL_ID]: { units: 1, credits: 0.506 },
+			},
+		});
+
+		const result = customerProductToArrearLineItems({
+			...fixture,
+			options: { invoiceCredits: { idempotencyScope: "invoice_partial" } },
+		});
+		const stripeInvoiceItems = lineItemsToCreateInvoiceItemsParams({
+			stripeCustomerId: "stripe_customer",
+			stripeInvoiceId: "stripe_invoice",
+			lineItems: result.invoiceCreditLineItems,
+		});
+
+		expect(stripeInvoiceItems.map((invoiceItem) => invoiceItem.amount)).toEqual(
+			[51, 51, -101],
+		);
+	});
+
 	test("emits no lines for empty attribution but still prepares the reset", () => {
 		const fixture = makeFixture({ balance: 1_000 });
 
@@ -341,6 +366,35 @@ describe("invoice credit line items", () => {
 		expect(result.lineItems).toEqual([]);
 		expect(result.invoiceCreditLineItems).toEqual([]);
 		expect(result.updateCustomerEntitlements).toHaveLength(1);
+	});
+
+	test("includes invoice-credit usage when a plan is replaced immediately", () => {
+		const fixture = makeFixture({
+			balance: 960,
+			usageAttribution: {
+				[SOURCE_A_INTERNAL_ID]: { units: 200, credits: 40 },
+			},
+		});
+
+		const result = buildAutumnLineItems({
+			ctx: fixture.ctx,
+			newCustomerProducts: [],
+			deletedCustomerProducts: [fixture.customerProduct],
+			billingContext: fixture.billingContext,
+			includeArrearLineItems: true,
+		});
+
+		expect(
+			result.allLineItems
+				.filter((lineItem) => lineItem.context.billingTiming === "in_arrear")
+				.map((lineItem) => ({
+					amount: lineItem.amount,
+					description: lineItem.description,
+				})),
+		).toEqual([
+			{ amount: 40, description: "Feature A, 200 units" },
+			{ amount: -40, description: "Credits applied" },
+		]);
 	});
 
 	test("fully offsets overage when overage billing is disabled", () => {
