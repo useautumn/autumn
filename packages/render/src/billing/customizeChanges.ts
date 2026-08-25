@@ -107,6 +107,19 @@ export const customizeWithFreeTrial = (request: unknown): unknown => {
 	};
 };
 
+/** Whether diffing this customize needs the current plan as its baseline.
+ * Kept beside buildCustomizeChanges so the two can't drift apart. */
+export const customizeNeedsCurrentPlan = (customize: unknown): boolean => {
+	const patch = asRecord(customize);
+	if (!patch) return false;
+	return (
+		"price" in patch ||
+		"free_trial" in patch ||
+		Array.isArray(patch.items) ||
+		Array.isArray(patch.remove_items)
+	);
+};
+
 export const buildCustomizeChanges = ({
 	currentPlan,
 	customize,
