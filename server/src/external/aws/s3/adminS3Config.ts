@@ -24,6 +24,8 @@ export const ADMIN_FULL_SUBJECT_GATE_CONFIG_KEY =
 export const ADMIN_ASYNC_BALANCE_UPDATE_CONFIG_KEY =
 	"admin/async-balance-update-config.json";
 export const ADMIN_ASYNC_TRACK_CONFIG_KEY = "admin/async-track-config.json";
+export const ADMIN_METERING_SHADOW_CONFIG_KEY =
+	"admin/metering-shadow-config.json";
 export const ADMIN_EDGE_CONFIG_TIMESTAMP_KEY =
 	"admin/edge-config-timestamp.json";
 export const BLUE_GREEN_ACTIVE_SLOT_KEY = "admin/blue-green-active-slot.json";
@@ -125,6 +127,11 @@ export const getAdminEdgeConfigSources = () => ({
 			id: "async-track",
 			label: "Async Track",
 			key: ADMIN_ASYNC_TRACK_CONFIG_KEY,
+		},
+		{
+			id: "metering-shadow",
+			label: "Metering Shadow Tap",
+			key: ADMIN_METERING_SHADOW_CONFIG_KEY,
 		},
 		{
 			id: "stripe-sync",

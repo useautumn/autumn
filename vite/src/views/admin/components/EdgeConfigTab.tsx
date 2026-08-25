@@ -10,6 +10,7 @@ import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { EDGE_CONFIG_SECTIONS, type EdgeConfigCardId } from "./edgeConfigCards";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
 import { FullSubjectGateDialog } from "./FullSubjectGateDialog";
+import { MeteringShadowDialog } from "./MeteringShadowDialog";
 import { MiscellaneousEdgeConfigDialog } from "./MiscellaneousEdgeConfigDialog";
 import { MiscRedisDialog } from "./MiscRedisDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
@@ -114,6 +115,11 @@ export function EdgeConfigTab() {
 
 			<AsyncTrackDialog
 				open={openConfig === "async-track"}
+				onOpenChange={closeDialog}
+			/>
+
+			<MeteringShadowDialog
+				open={openConfig === "metering-shadow"}
 				onOpenChange={closeDialog}
 			/>
 

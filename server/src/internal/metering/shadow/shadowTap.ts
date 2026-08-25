@@ -103,7 +103,12 @@ export class ShadowTap {
 	/** Synchronous by contract: the serving path must never await the mirror. */
 	record(params: ShadowDeductParams): void {
 		if (this.disabled) return;
-		if (!isOrgTapped({ config: this.config, orgId: params.orgId })) return;
+
+		// Re-read per deduction so the admin toggle takes effect within one edge
+		// config poll, without ever blocking on S3.
+		const enablement = this.config.readEnablement();
+		if (!enablement.enabled) return;
+		if (!isOrgTapped({ enablement, orgId: params.orgId })) return;
 
 		const event = buildShadowDeductEvent(params);
 		if (!event) return;

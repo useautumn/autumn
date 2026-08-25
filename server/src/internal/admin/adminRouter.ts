@@ -29,6 +29,7 @@ import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsCo
 import { handleGetAdminFullSubjectGateConfig } from "./handleGetAdminFullSubjectGateConfig";
 import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
 import { handleGetAdminMainRedisCacheConfig } from "./handleGetAdminMainRedisCacheConfig";
+import { handleGetAdminMeteringShadowConfig } from "./handleGetAdminMeteringShadowConfig";
 import { handleGetAdminMiscellaneousEdgeConfig } from "./handleGetAdminMiscellaneousEdgeConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
@@ -62,6 +63,7 @@ import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureF
 import { handleUpsertAdminFullSubjectGateConfig } from "./handleUpsertAdminFullSubjectGateConfig";
 import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
 import { handleUpsertAdminMainRedisCacheConfig } from "./handleUpsertAdminMainRedisCacheConfig";
+import { handleUpsertAdminMeteringShadowConfig } from "./handleUpsertAdminMeteringShadowConfig";
 import { handleUpsertAdminMiscellaneousEdgeConfig } from "./handleUpsertAdminMiscellaneousEdgeConfig";
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
@@ -145,6 +147,14 @@ honoAdminRouter.get("/async-track-config", ...handleGetAdminAsyncTrackConfig);
 honoAdminRouter.put(
 	"/async-track-config",
 	...handleUpsertAdminAsyncTrackConfig,
+);
+honoAdminRouter.get(
+	"/metering-shadow-config",
+	...handleGetAdminMeteringShadowConfig,
+);
+honoAdminRouter.put(
+	"/metering-shadow-config",
+	...handleUpsertAdminMeteringShadowConfig,
 );
 honoAdminRouter.get(
 	"/full-subject-gate-config",

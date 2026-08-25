@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { ADMIN_METERING_SHADOW_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
 import { parseMeteringEvent } from "@/internal/metering/events/meteringEventSchema.js";
 import {
 	buildShadowDeductEvent,
@@ -17,15 +18,35 @@ import {
 	isOrgTapped,
 	readShadowTapConfig,
 	type ShadowTapConfig,
+	toShadowTapEnablement,
 } from "@/internal/metering/shadow/shadowTapConfig.js";
+import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
+import {
+	type MeteringShadowConfig,
+	MeteringShadowConfigSchema,
+} from "@/internal/misc/meteringShadow/meteringShadowSchemas.js";
 
 const BASE_CONFIG: ShadowTapConfig = {
 	brokers: ["b-1.example.amazonaws.com:9098"],
 	topic: "metering-events",
 	region: "us-east-1",
 	clientId: "autumn-metering-shadow-tap-test",
-	allowedOrgIds: null,
+	readEnablement: () =>
+		toShadowTapEnablement({ config: { enabled: true, orgs: [] } }),
 };
+
+/** Same transport, enablement served from an injected `metering-shadow` config
+ *  instead of the real edge config store. */
+const configFor = ({
+	config,
+}: {
+	config: MeteringShadowConfig;
+}): ShadowTapConfig => ({
+	...BASE_CONFIG,
+	readEnablement: () => toShadowTapEnablement({ config }),
+});
+
+const KAFKA_ENV = { KAFKA_BOOTSTRAP: "b-1:9098" };
 
 const BASE_PARAMS = {
 	orgId: "org_1",
@@ -161,72 +182,104 @@ describe("shadow tap event mapping", () => {
 });
 
 describe("shadow tap configuration", () => {
-	test("is disabled unless explicitly enabled with kafka wired up", () => {
+	test("there is no tap at all without kafka wired up", () => {
 		expect(readShadowTapConfig({ env: {} })).toBeNull();
+		expect(readShadowTapConfig({ env: { KAFKA_BOOTSTRAP: "  " } })).toBeNull();
 		expect(
-			readShadowTapConfig({ env: { METERING_SHADOW_ENABLED: "true" } }),
-		).toBeNull();
-		expect(
-			readShadowTapConfig({
-				env: {
-					METERING_SHADOW_ENABLED: "true",
-					KAFKA_BOOTSTRAP: "b-1:9098",
-				},
-			}),
-		).toBeNull();
-		expect(
-			readShadowTapConfig({
-				env: {
-					METERING_SHADOW_ENABLED: "false",
-					KAFKA_BOOTSTRAP: "b-1:9098",
-					EVENTS_TOPIC: "metering-events",
-				},
-			}),
+			readShadowTapConfig({ env: { EVENTS_TOPIC: "metering-events" } }),
 		).toBeNull();
 	});
 
-	test("reads brokers and the org allowlist", () => {
+	test("reads brokers from env and defaults the topic", () => {
 		const config = readShadowTapConfig({
-			env: {
-				METERING_SHADOW_ENABLED: "true",
-				KAFKA_BOOTSTRAP: " b-1:9098 , b-2:9098 ",
-				EVENTS_TOPIC: "metering-events",
-				METERING_SHADOW_ORGS: "org_a, org_b",
-			},
+			env: { KAFKA_BOOTSTRAP: " b-1:9098 , b-2:9098 " },
 		});
 
 		expect(config?.brokers).toEqual(["b-1:9098", "b-2:9098"]);
-		expect(config?.topic).toBe("metering-events");
-		expect([...(config?.allowedOrgIds ?? [])]).toEqual(["org_a", "org_b"]);
+		expect(config?.topic).toBe("metering-events-v1");
+		expect(
+			readShadowTapConfig({
+				env: { ...KAFKA_ENV, EVENTS_TOPIC: "metering-events" },
+			})?.topic,
+		).toBe("metering-events");
 	});
 
-	test("an unset or wildcard allowlist means every org", () => {
-		const enabled = {
-			METERING_SHADOW_ENABLED: "true",
-			KAFKA_BOOTSTRAP: "b-1:9098",
-			EVENTS_TOPIC: "metering-events",
-		};
+	test("enablement and the org allowlist come from the edge config", () => {
+		const readEnablementFor = ({ config }: { config: MeteringShadowConfig }) =>
+			readShadowTapConfig({
+				env: KAFKA_ENV,
+				readConfig: () => config,
+			})?.readEnablement();
 
-		expect(readShadowTapConfig({ env: enabled })?.allowedOrgIds).toBeNull();
 		expect(
-			readShadowTapConfig({ env: { ...enabled, METERING_SHADOW_ORGS: "*" } })
-				?.allowedOrgIds,
+			readEnablementFor({ config: { enabled: false, orgs: ["org_a"] } }),
+		).toMatchObject({ enabled: false });
+
+		const scoped = readEnablementFor({
+			config: { enabled: true, orgs: ["org_a", "org_b"] },
+		});
+		expect(scoped?.enabled).toBeTrue();
+		expect([...(scoped?.allowedOrgIds ?? [])]).toEqual(["org_a", "org_b"]);
+	});
+
+	test("an empty or wildcard org list means every org", () => {
+		expect(
+			toShadowTapEnablement({ config: { enabled: true, orgs: [] } })
+				.allowedOrgIds,
 		).toBeNull();
 		expect(
-			readShadowTapConfig({ env: { ...enabled, METERING_SHADOW_ORGS: "  " } })
-				?.allowedOrgIds,
+			toShadowTapEnablement({ config: { enabled: true, orgs: ["*"] } })
+				.allowedOrgIds,
+		).toBeNull();
+		expect(
+			toShadowTapEnablement({ config: { enabled: true, orgs: ["  "] } })
+				.allowedOrgIds,
 		).toBeNull();
 	});
 
 	test("shadowTapDeduct is a no-op when the tap is disabled", async () => {
-		const previous = process.env.METERING_SHADOW_ENABLED;
-		delete process.env.METERING_SHADOW_ENABLED;
 		await resetShadowTapForTests();
 
 		expect(() => shadowTapDeduct(BASE_PARAMS)).not.toThrow();
 		expect(shadowTapDeduct(BASE_PARAMS)).toBeUndefined();
+	});
 
-		if (previous !== undefined) process.env.METERING_SHADOW_ENABLED = previous;
+	test("an edge config that has not loaded yet keeps the tap a no-op", async () => {
+		// A real store that has never refreshed: `get()` serves the default, which
+		// is exactly what every process sees before the first S3 poll lands.
+		const store = createEdgeConfigStore<MeteringShadowConfig>({
+			s3Key: ADMIN_METERING_SHADOW_CONFIG_KEY,
+			schema: MeteringShadowConfigSchema,
+			defaultValue: () => MeteringShadowConfigSchema.parse({}),
+		});
+		const { producer, sent, calls } = createFakeProducer();
+		const tap = trackTap(
+			createTap({
+				producer,
+				config: {
+					...BASE_CONFIG,
+					readEnablement: () => toShadowTapEnablement({ config: store.get() }),
+				},
+			}),
+		);
+
+		tap.record(BASE_PARAMS);
+		await tap.flushPending();
+
+		expect(tap.queueDepth).toBe(0);
+		expect(sent).toHaveLength(0);
+		// Nothing queued means no producer is dialled either.
+		expect(calls.connect).toBe(0);
+
+		// The enablement is re-read per deduction, so a later load starts mirroring
+		// without rebuilding the tap.
+		store._setRuntimeConfigForTesting({ enabled: true, orgs: [] });
+		tap.record(BASE_PARAMS);
+		await tap.flushPending();
+
+		expect(sentEventIds({ sent })).toEqual([
+			buildShadowDeductEventId(BASE_PARAMS),
+		]);
 	});
 });
 
@@ -259,7 +312,7 @@ describe("shadow tap delivery", () => {
 		const tap = trackTap(
 			createTap({
 				producer,
-				config: { ...BASE_CONFIG, allowedOrgIds: new Set(["org_1"]) },
+				config: configFor({ config: { enabled: true, orgs: ["org_1"] } }),
 			}),
 		);
 
@@ -273,7 +326,29 @@ describe("shadow tap delivery", () => {
 		expect(sentEventIds({ sent })).toEqual([
 			buildShadowDeductEventId(BASE_PARAMS),
 		]);
-		expect(isOrgTapped({ config: BASE_CONFIG, orgId: "anything" })).toBeTrue();
+		expect(
+			isOrgTapped({
+				enablement: BASE_CONFIG.readEnablement(),
+				orgId: "anything",
+			}),
+		).toBeTrue();
+	});
+
+	test("drops every event while the config is off", async () => {
+		const { producer, sent, calls } = createFakeProducer();
+		const tap = trackTap(
+			createTap({
+				producer,
+				config: configFor({ config: { enabled: false, orgs: [] } }),
+			}),
+		);
+
+		tap.record(BASE_PARAMS);
+		await tap.flushPending();
+
+		expect(tap.queueDepth).toBe(0);
+		expect(sent).toHaveLength(0);
+		expect(calls.connect).toBe(0);
 	});
 
 	test("bounded queue drops the oldest events and counts them", async () => {

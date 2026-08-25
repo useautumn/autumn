@@ -8,6 +8,7 @@ import {
 	Layers,
 	ListChecks,
 	type LucideIcon,
+	Radio,
 	RefreshCw,
 	Settings2,
 	ShieldBan,
@@ -29,6 +30,7 @@ export type EdgeConfigCardId =
 	| "feature-flags"
 	| "async-balance-update"
 	| "async-track"
+	| "metering-shadow"
 	| "request-block"
 	| "customer-block"
 	| "org-limits"
@@ -321,6 +323,29 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 								label: `${pluralize({ count, noun: "org" })} enabled`,
 								tone: "active",
 							};
+				},
+			},
+			{
+				id: "metering-shadow",
+				title: "Metering Shadow Tap",
+				description:
+					"Mirror committed deductions onto the metering events topic, by org.",
+				icon: Radio,
+				endpoint: "/admin/metering-shadow-config",
+				deriveStatus: (data) => {
+					const config = asRecord(data);
+					if (config.enabled !== true) return { label: "Off", tone: "neutral" };
+
+					const orgs = config.orgs;
+					const count = Array.isArray(orgs) ? orgs.length : 0;
+
+					return {
+						label:
+							count === 0
+								? "Mirroring all orgs"
+								: `Mirroring ${pluralize({ count, noun: "org" })}`,
+						tone: "active",
+					};
 				},
 			},
 			{
