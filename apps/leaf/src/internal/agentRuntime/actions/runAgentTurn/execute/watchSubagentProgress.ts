@@ -1,10 +1,10 @@
 import { ms } from "@autumn/shared";
 import { logger } from "../../../../../lib/logger.js";
 import { EveStreamIdleTimeoutError } from "../../../eve/client.js";
-import { labelForAction } from "../../../eve/events.js";
+import { displayEveToolLabel, labelForAction } from "../../../eve/events.js";
 import { streamEveEventsWithReconnect } from "../../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
-import { toolGerund } from "../../../tools/toolPolicy.js";
+import { isSilentTool } from "../../../tools/toolPolicy.js";
 import type { EveEventContext } from "./applyEveEvent.js";
 
 /** A delegated child can think for minutes between events, so the relay
@@ -56,8 +56,9 @@ export const watchSubagentProgress = ({
 			if (event.type === "actions.requested") {
 				for (const action of event.actions) {
 					const label = labelForAction(action);
+					if (isSilentTool(label)) continue;
 					await onAction?.({
-						label: toolGerund(label),
+						label: displayEveToolLabel(action),
 						phase: "started",
 						toolName: label,
 					});

@@ -1,11 +1,14 @@
 import {
+	type AttachParamsV0,
 	AttachParamsV1Schema,
 	billingParamsV1ToV0,
+	type CreateScheduleParamsV0,
 	CreateScheduleParamsV0Schema,
 	type CreateSchedulePlanV0,
 	cusProductToProduct,
 	customizePlanV1ToV0,
 	type FullProduct,
+	type UpdateSubscriptionV0Params,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -29,6 +32,11 @@ export const ResolveBillingRequestParamsSchema = z.discriminatedUnion("tool", [
 export type ResolveBillingRequestParams = z.infer<
 	typeof ResolveBillingRequestParamsSchema
 >;
+
+export type ResolvedBillingRequestV0 =
+	| AttachParamsV0
+	| CreateScheduleParamsV0
+	| UpdateSubscriptionV0Params;
 
 /** Resolves one plan's `customize` patch into concrete V0 items against its
  * catalog plan — shared by schedule resolution and multi-attach generation. */
@@ -67,7 +75,7 @@ export const resolveBillingRequest = async ({
 	ctx: AutumnContext;
 	params: ResolveBillingRequestParams;
 }): Promise<{
-	request: Record<string, unknown>;
+	request: ResolvedBillingRequestV0;
 	unrepresentable: string[];
 }> => {
 	if (params.tool === "create_schedule") {
@@ -89,7 +97,10 @@ export const resolveBillingRequest = async ({
 					}
 				: {}),
 		};
-		return { request, unrepresentable: [] };
+		return {
+			request: request as CreateScheduleParamsV0,
+			unrepresentable: [],
+		};
 	}
 
 	let fullProduct: FullProduct;
@@ -117,9 +128,16 @@ export const resolveBillingRequest = async ({
 		});
 	}
 
-	return billingParamsV1ToV0({
+	const { request, unrepresentable } = billingParamsV1ToV0({
 		ctx,
 		fullProduct,
 		params: params.request,
 	});
+	return {
+		request:
+			params.tool === "attach"
+				? (request as AttachParamsV0)
+				: (request as UpdateSubscriptionV0Params),
+		unrepresentable,
+	};
 };
