@@ -3,6 +3,7 @@ import {
 	buildBillingPreviewDisplay,
 	buildCustomizeChanges,
 	buildPlanItemChangeDisplay,
+	customizeWithFreeTrial,
 	customPriceText,
 	formatCount,
 	formatMoney,
@@ -1194,14 +1195,14 @@ const approvalPreviewBlocks = ({
 	const changeRows = [
 		...customizeRows({
 			currentPlan: primaryCurrentPlan,
-			customize: request?.customize,
+			customize: customizeWithFreeTrial(request),
 		}),
 		...schedulePlans.flatMap(({ plan, timing }) => {
 			const planId = getString(plan.plan_id) ?? "Plan";
 			const planLabel = planNames.get(planId) ?? planId;
 			return customizeRows({
 				currentPlan: currentPlanFor(planId),
-				customize: plan.customize,
+				customize: customizeWithFreeTrial(plan),
 				plan: timing ? `${planLabel} (${timing})` : planLabel,
 			});
 		}),
