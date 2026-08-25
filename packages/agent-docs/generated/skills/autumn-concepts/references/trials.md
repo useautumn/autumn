@@ -15,7 +15,7 @@
 - Card-required trial: attach with `free_trial` and `card_required: true`. If the customer has no payment method, the attach returns a checkout URL (or an invoice URL when `invoice_mode.enabled`) to collect a card; they are charged when the trial ends.
 - No-card trial (the default): attach with `free_trial` and leave `card_required` unset. The subscription starts with no card and ends at trial end if none is added. While on it, the customer cannot upgrade or attach another plan until they add a card via the Stripe billing portal.
 - Limited-time trial plan: a separate free, no-card plan in the catalog (e.g. `pro_trial`) that grants temporary access, expires automatically, then routes the customer into the normal checkout for the real plan. See `<trial-behavior>` in the Plan concept for modeling. Some orgs configure this — recognize and use it when present.
-- `card_required` defaults to false: a trial collects no card unless the user asks for one. Set `card_required: true` only when they say the customer must add a card up front.
+- `card_required` defaults to false on the tools you use: a trial collects no card unless the user asks for one. Set `card_required: true` only when they say the customer must add a card up front.
 
 </no-existing-plan>
 
