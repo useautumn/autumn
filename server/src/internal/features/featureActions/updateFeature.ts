@@ -7,6 +7,7 @@ import {
 	type FeatureUpdateBlocker,
 	isAiCreditSystem,
 	isAnyCreditSystem,
+	isConsumablePrice,
 	type ModelMarkups,
 	notNullish,
 } from "@autumn/shared";
@@ -26,7 +27,10 @@ import { getObjectsUsingFeature } from "../utils/updateFeatureUtils/getObjectsUs
 import { handleFeatureIdChanged } from "../utils/updateFeatureUtils/handleFeatureIdChanged.js";
 import { handleFeatureTypeChanged } from "../utils/updateFeatureUtils/handleFeatureTypeChanged.js";
 import { handleFeatureUsageTypeChanged } from "../utils/updateFeatureUtils/handleFeatureUsageTypeChanged.js";
-import { validateInvoiceCreditPooling } from "../validateInvoiceCreditPooling.js";
+import {
+	validateInvoiceCreditPooling,
+	validateInvoiceCreditUsageBasedPricing,
+} from "../validateInvoiceCreditPooling.js";
 import { hasCreditRateCardChanged } from "./hasCreditRateCardChanged.js";
 import type { ClearCreditSystemCachePayload } from "./runClearCreditSystemCacheTask.js";
 
@@ -193,6 +197,19 @@ export const updateFeature = async ({
 				objectsUsingFeature.entitlements.some(
 					(entitlement) => entitlement.pooled,
 				),
+		});
+		validateInvoiceCreditUsageBasedPricing({
+			feature: {
+				...feature,
+				type: updates.type ?? feature.type,
+				config: updates.config ?? feature.config,
+			},
+			usageBased: objectsUsingFeature.entitlements.every((entitlement) =>
+				objectsUsingFeature.prices.some(
+					(price) =>
+						price.entitlement_id === entitlement.id && isConsumablePrice(price),
+				),
+			),
 		});
 
 		// Validate the whole change before any mutation so it stays atomic.

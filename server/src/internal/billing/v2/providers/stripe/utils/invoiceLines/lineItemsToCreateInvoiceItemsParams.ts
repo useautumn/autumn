@@ -1,7 +1,7 @@
 import { atmnToStripeAmount, type LineItem, msToSeconds } from "@autumn/shared";
 import type Stripe from "stripe";
-import { lineItemToMetadata } from "./lineItemToMetadata";
-import { lineItemToStripeProductId } from "./lineItemToStripeProductId";
+import { lineItemToMetadata } from "./lineItemToMetadata.js";
+import { lineItemToStripeProductId } from "./lineItemToStripeProductId.js";
 
 /**
  * Converts a single LineItem to Stripe.InvoiceItemCreateParams

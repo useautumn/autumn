@@ -1,12 +1,15 @@
 import type { BillingContext, UpdateCustomerEntitlement } from "@autumn/shared";
 import {
 	billingContextToCurrency,
+	buildLineItem,
+	cusEntToInvoiceOverage,
 	cusPriceToCusEntWithCusProduct,
-	cusProductToPrices,
 	customerProductToEntity,
 	EntInterval,
 	type FullCusEntWithFullCusProduct,
 	type FullCusProduct,
+	findFeatureByInternalId,
+	fullCustomerToSkipOverageBilling,
 	getCycleEnd,
 	isAllocatedV2CustomerEntitlement,
 	isConsumablePrice,
@@ -15,9 +18,32 @@ import {
 	type LineItemContext,
 	usagePriceToLineItem,
 } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
+import { isInvoiceCreditFeature } from "@/internal/features/creditSystemUtils.js";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
+
+const creditQuantityFormatter = new Intl.NumberFormat("en-US", {
+	maximumFractionDigits: 12,
+});
+
+const withStableInvoiceCreditId = ({
+	lineItem,
+	idempotencyScope,
+	position,
+}: {
+	lineItem: LineItem;
+	idempotencyScope?: string;
+	position: string;
+}) =>
+	idempotencyScope
+		? {
+				...lineItem,
+				amountAfterDiscountsFinalized: true,
+				id: `invoice_li_credit_${idempotencyScope}_${position}`,
+			}
+		: { ...lineItem, amountAfterDiscountsFinalized: true };
 
 export const customerProductToArrearLineItems = ({
 	ctx,
@@ -37,116 +63,206 @@ export const customerProductToArrearLineItems = ({
 		onlyV4Usage?: boolean;
 		/** Optional filter to skip specific entitlements (e.g., for multi-interval billing) */
 		cusEntFilter?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
+		invoiceCreditCusEntFilter?: (
+			cusEnt: FullCusEntWithFullCusProduct,
+		) => boolean;
 	};
 	options?: {
 		includePeriodDescription?: boolean;
 		updateNextResetAt?: boolean;
 		discountable?: boolean;
 		includeZeroAmounts?: boolean;
+		invoiceCredits?: {
+			idempotencyScope?: string;
+			fullyOffsetOverage?: boolean;
+			includeLineItems?: boolean;
+		};
 	};
 }): {
 	lineItems: LineItem[];
+	invoiceCreditLineItems: LineItem[];
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
 } => {
 	const lineItems: LineItem[] = [];
+	const invoiceCreditLineItems: LineItem[] = [];
+	const updateCustomerEntitlements: UpdateCustomerEntitlement[] = [];
 	const entity = customerProductToEntity({
 		customerProduct,
 		entities: billingContext.fullCustomer.entities,
 	});
 
-	let filteredPrices = cusProductToPrices({ cusProduct: customerProduct });
-
-	if (filters.onlyV4Usage) {
-		filteredPrices = filteredPrices.filter((price) =>
-			isV4Usage({ price, cusProduct: customerProduct }),
-		);
-	}
-
-	const updateCustomerEntitlements: UpdateCustomerEntitlement[] = [];
-
-	// If is trialing, or trial just ended, skip this...?
-
-	for (const cusPrice of customerProduct.customer_prices) {
-		const price = cusPrice.price;
-
+	for (const customerPrice of customerProduct.customer_prices) {
+		const price = customerPrice.price;
 		if (!isConsumablePrice(price)) continue;
+		if (
+			filters.onlyV4Usage &&
+			!isV4Usage({ price, cusProduct: customerProduct })
+		) {
+			continue;
+		}
 
-		const cusEnt = cusPriceToCusEntWithCusProduct({
+		const customerEntitlement = cusPriceToCusEntWithCusProduct({
 			cusProduct: customerProduct,
-			cusPrice,
+			cusPrice: customerPrice,
 			cusEnts: customerProduct.customer_entitlements,
 		});
-
-		if (!cusEnt) {
+		if (!customerEntitlement) {
 			throw new Error(
-				`[customerProductToArrearLineItems] No cusEnt found for cusPrice: ${cusPrice.id}`,
+				`[customerProductToArrearLineItems] No cusEnt found for cusPrice: ${customerPrice.id}`,
 			);
 		}
 
-		// Apply optional filter (e.g., for multi-interval billing check)
-		if (filters.cusEntFilter && !filters.cusEntFilter(cusEnt)) continue;
-
-		// Calculate billing period
-		const billingPeriod = getLineItemBillingPeriod({
-			billingContext,
-			price,
+		const isInvoiceCredit = isInvoiceCreditFeature({
+			feature: customerEntitlement.entitlement.feature,
 		});
+		const invoiceCreditOptions = options.invoiceCredits;
+		if (isInvoiceCredit) {
+			const invoiceCreditFilter =
+				filters.invoiceCreditCusEntFilter ?? filters.cusEntFilter;
+			if (invoiceCreditFilter && !invoiceCreditFilter(customerEntitlement)) {
+				continue;
+			}
+		} else if (
+			filters.cusEntFilter &&
+			!filters.cusEntFilter(customerEntitlement)
+		) {
+			continue;
+		}
 
+		const billingPeriod = getLineItemBillingPeriod({ billingContext, price });
 		const context: LineItemContext = {
 			price,
 			product: customerProduct.product,
-			feature: cusEnt.entitlement.feature,
-
+			feature: customerEntitlement.entitlement.feature,
 			billingPeriod,
 			direction: "charge",
 			billingTiming: "in_arrear",
 			now: billingContext.currentEpochMs,
 			currency: billingContextToCurrency({ org: ctx.org, billingContext }),
+			discountable: isInvoiceCredit ? false : options.discountable,
 			entity,
 			customerProduct,
-			customerPrice: cusPrice,
+			customerPrice,
+			customerEntitlement: isInvoiceCredit ? customerEntitlement : undefined,
 		};
 
-		const lineItem = usagePriceToLineItem({
-			cusEnt,
-			context,
-			options: {
-				includePeriodDescription: options.includePeriodDescription,
-				discountable: options.discountable,
-			},
-		});
+		if (isInvoiceCredit) {
+			const attribution = Object.entries(
+				customerEntitlement.usage_attribution ?? {},
+			)
+				.filter(([, value]) => value.credits > 0)
+				.sort(([firstInternalId], [secondInternalId]) =>
+					firstInternalId.localeCompare(secondInternalId),
+				);
 
-		// Only include line items with non-zero amounts
-		if (options.includeZeroAmounts || lineItem.amount !== 0) {
-			lineItems.push(lineItem);
+			if (
+				invoiceCreditOptions &&
+				invoiceCreditOptions.includeLineItems !== false &&
+				attribution.length > 0
+			) {
+				let totalCredits = new Decimal(0);
+				for (const [
+					sourceInternalFeatureId,
+					sourceAttribution,
+				] of attribution) {
+					const sourceFeature = findFeatureByInternalId({
+						features: ctx.features,
+						internalId: sourceInternalFeatureId,
+						errorOnNotFound: true,
+					});
+					totalCredits = totalCredits.add(sourceAttribution.credits);
+					const sourceLineItem = buildLineItem({
+						context: {
+							...context,
+							feature: sourceFeature,
+							direction: "charge",
+						},
+						amount: sourceAttribution.credits,
+						description: `${sourceFeature.name}, ${creditQuantityFormatter.format(sourceAttribution.units)} units`,
+						shouldProrate: false,
+						usage: sourceAttribution.units,
+					});
+					invoiceCreditLineItems.push(
+						withStableInvoiceCreditId({
+							lineItem: sourceLineItem,
+							idempotencyScope: invoiceCreditOptions.idempotencyScope,
+							position: `${customerEntitlement.id}_${sourceInternalFeatureId}`,
+						}),
+					);
+				}
+
+				const invoiceCreditFeature = customerEntitlement.entitlement.feature;
+				const overage = cusEntToInvoiceOverage({
+					cusEnt: customerEntitlement,
+				});
+				const skipInvoiceCreditOverage = fullCustomerToSkipOverageBilling({
+					fullCustomer: billingContext.fullCustomer,
+					featureId: invoiceCreditFeature.id,
+					internalEntityId: entity?.internal_id,
+				});
+				const creditsApplied =
+					invoiceCreditOptions.fullyOffsetOverage || skipInvoiceCreditOverage
+						? totalCredits
+						: Decimal.max(totalCredits.sub(overage), 0);
+				if (!creditsApplied.isZero()) {
+					const offsetLineItem = buildLineItem({
+						context: {
+							...context,
+							feature: invoiceCreditFeature,
+							direction: "refund",
+						},
+						amount: creditsApplied.toNumber(),
+						description: "Credits applied",
+						shouldProrate: false,
+					});
+					invoiceCreditLineItems.push(
+						withStableInvoiceCreditId({
+							lineItem: offsetLineItem,
+							idempotencyScope: invoiceCreditOptions.idempotencyScope,
+							position: `${customerEntitlement.id}_applied`,
+						}),
+					);
+				}
+			}
+		} else {
+			const lineItem = usagePriceToLineItem({
+				cusEnt: customerEntitlement,
+				context,
+				options: {
+					includePeriodDescription: options.includePeriodDescription,
+					discountable: options.discountable,
+				},
+			});
+			if (options.includeZeroAmounts || lineItem.amount !== 0) {
+				lineItems.push(lineItem);
+			}
 		}
 
-		// Allocated v2 (continuous-use) balances are never reset — the customer
-		// is re-billed for current holdings each cycle. Skipping the update also
-		// keeps next_reset_at null and skips rollovers.
-		if (isAllocatedV2CustomerEntitlement(cusEnt)) continue;
+		if (isAllocatedV2CustomerEntitlement(customerEntitlement)) continue;
 
-		// Update to make to customer entitlement.
 		const resetBalancesUpdate = getResetBalancesUpdate({
-			cusEnt,
-			allowance: cusEnt.entitlement.allowance ?? 0,
+			cusEnt: customerEntitlement,
+			allowance: customerEntitlement.entitlement.allowance ?? 0,
 		});
-
 		const nextResetAt = getCycleEnd({
 			anchor: billingContext.billingCycleAnchorMs,
-			interval: cusEnt.entitlement.interval ?? EntInterval.Month,
-			intervalCount: cusEnt.entitlement.interval_count,
+			interval: customerEntitlement.entitlement.interval ?? EntInterval.Month,
+			intervalCount: customerEntitlement.entitlement.interval_count,
 			now: billingPeriod?.end ?? billingContext.currentEpochMs,
 		});
-
 		updateCustomerEntitlements.push({
-			customerEntitlement: cusEnt,
+			customerEntitlement,
 			updates: {
 				...resetBalancesUpdate,
-				next_reset_at: options.updateNextResetAt ? nextResetAt : undefined,
+				next_reset_at:
+					options.updateNextResetAt === false ? undefined : nextResetAt,
 			},
 		});
 	}
 
-	return { lineItems, updateCustomerEntitlements };
+	return {
+		lineItems,
+		invoiceCreditLineItems,
+		updateCustomerEntitlements,
+	};
 };

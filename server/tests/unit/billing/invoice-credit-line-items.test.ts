@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	type AutumnBillingPlan,
 	BillingVersion,
+	type CreditSchemaItem,
 	EntInterval,
 	FeatureType,
 	type UsageAttribution,
@@ -12,8 +13,9 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts.js";
 import { features } from "@tests/utils/fixtures/db/features.js";
 import { prices } from "@tests/utils/fixtures/db/prices.js";
 import { products } from "@tests/utils/fixtures/db/products.js";
+import { lineItemsToCreateInvoiceItemsParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams.js";
 import { billingPlanToNextCycleLineItems } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/billingPlanToNextCycleLineItems.js";
-import { customerProductToInvoiceCreditLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToInvoiceCreditLineItems.js";
+import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems.js";
 
 const SOURCE_A_INTERNAL_ID = "internal_feature_a";
 const SOURCE_B_INTERNAL_ID = "internal_feature_b";
@@ -34,9 +36,11 @@ const sourceB = features.create({
 const makeFixture = ({
 	balance,
 	usageAttribution,
+	creditSchema = [],
 }: {
 	balance: number;
 	usageAttribution?: UsageAttribution;
+	creditSchema?: CreditSchemaItem[];
 }) => {
 	const customerEntitlement = customerEntitlements.create({
 		id: "customer_entitlement_invoice_credits",
@@ -44,7 +48,7 @@ const makeFixture = ({
 		internalFeatureId: "internal_invoice_credits",
 		featureName: "Invoice credits",
 		featureType: FeatureType.CreditSystem,
-		featureConfig: { invoice_credit: true, schema: [] },
+		featureConfig: { invoice_credit: true, schema: creditSchema },
 		allowance: 1_000,
 		balance,
 		interval: EntInterval.Month,
@@ -55,10 +59,16 @@ const makeFixture = ({
 	}
 
 	const fixedPrice = prices.createFixed({ id: "price_enterprise" });
+	const invoiceCreditPrice = prices.createConsumable({
+		id: "price_invoice_credits",
+		featureId: "invoice_credits",
+		internalFeatureId: "internal_invoice_credits",
+		entitlementId: customerEntitlement.entitlement.id,
+	});
 	const fullProduct = products.createFull({
 		id: "enterprise",
 		name: "Enterprise",
-		prices: [fixedPrice],
+		prices: [fixedPrice, invoiceCreditPrice],
 		entitlements: [customerEntitlement.entitlement],
 		stripeProductId: "stripe_product_enterprise",
 	});
@@ -67,7 +77,10 @@ const makeFixture = ({
 		productId: fullProduct.id,
 		product: fullProduct,
 		customerEntitlements: [customerEntitlement],
-		customerPrices: [prices.createCustomer({ price: fixedPrice })],
+		customerPrices: [
+			prices.createCustomer({ price: fixedPrice }),
+			prices.createCustomer({ price: invoiceCreditPrice }),
+		],
 	});
 	const ctx = contexts.create({
 		features: [sourceA, sourceB],
@@ -88,6 +101,88 @@ const makeFixture = ({
 };
 
 describe("invoice credit line items", () => {
+	test("describes flat usage with its unit quantity", () => {
+		const fixture = makeFixture({
+			balance: 990,
+			creditSchema: [
+				{
+					metered_feature_id: sourceA.id,
+					feature_amount: 1,
+					credit_amount: 0.2,
+				},
+			],
+			usageAttribution: {
+				[SOURCE_A_INTERNAL_ID]: { units: 50, credits: 10 },
+			},
+		});
+
+		const result = customerProductToArrearLineItems({
+			...fixture,
+			options: {
+				invoiceCredits: { idempotencyScope: "invoice_flat_description" },
+			},
+		});
+		const stripeInvoiceItem = lineItemsToCreateInvoiceItemsParams({
+			stripeCustomerId: "stripe_customer",
+			stripeInvoiceId: "stripe_invoice",
+			lineItems: result.invoiceCreditLineItems,
+		})[0];
+
+		expect(result.invoiceCreditLineItems[0]?.description).toBe(
+			"Feature A, 50 units",
+		);
+		expect(stripeInvoiceItem).toMatchObject({
+			description: "Feature A, 50 units",
+			amount: 1_000,
+		});
+		expect(stripeInvoiceItem?.quantity).toBeUndefined();
+		expect(stripeInvoiceItem?.price_data).toBeUndefined();
+	});
+
+	test("describes graduated usage with its unit quantity", () => {
+		const fixture = makeFixture({
+			balance: 860,
+			creditSchema: [
+				{
+					metered_feature_id: sourceA.id,
+					feature_amount: 100,
+					tier_behavior: "graduated",
+					tiers: [
+						{ to: 10_000, credit_amount: 1 },
+						{ to: "inf", credit_amount: 0.8 },
+					],
+				},
+			],
+			usageAttribution: {
+				[SOURCE_A_INTERNAL_ID]: { units: 15_000, credits: 140 },
+			},
+		});
+
+		const result = customerProductToArrearLineItems({
+			...fixture,
+			options: {
+				invoiceCredits: {
+					idempotencyScope: "invoice_graduated_description",
+				},
+			},
+		});
+		const stripeInvoiceItem = lineItemsToCreateInvoiceItemsParams({
+			stripeCustomerId: "stripe_customer",
+			stripeInvoiceId: "stripe_invoice",
+			lineItems: result.invoiceCreditLineItems,
+		})[0];
+
+		expect(result.invoiceCreditLineItems[0]?.description).toBe(
+			"Feature A, 15,000 units",
+		);
+		expect(stripeInvoiceItem).toMatchObject({
+			description: "Feature A, 15,000 units",
+			amount: 14_000,
+		});
+		expect(stripeInvoiceItem?.quantity).toBeUndefined();
+		expect(stripeInvoiceItem?.price_data).toBeUndefined();
+	});
+
 	test("renders source debits and offsets the funded credits", () => {
 		const fixture = makeFixture({
 			balance: 240,
@@ -97,13 +192,13 @@ describe("invoice credit line items", () => {
 			},
 		});
 
-		const result = customerProductToInvoiceCreditLineItems({
+		const result = customerProductToArrearLineItems({
 			...fixture,
-			idempotencyScope: "invoice_123",
+			options: { invoiceCredits: { idempotencyScope: "invoice_123" } },
 		});
 
 		expect(
-			result.lineItems.map((lineItem) => ({
+			result.invoiceCreditLineItems.map((lineItem) => ({
 				amount: lineItem.amount,
 				description: lineItem.description,
 				featureId: lineItem.context.feature?.id,
@@ -112,13 +207,13 @@ describe("invoice credit line items", () => {
 		).toEqual([
 			{
 				amount: 260,
-				description: "Feature A",
+				description: "Feature A, 30,000 units",
 				featureId: "feature_a",
 				discountable: false,
 			},
 			{
 				amount: 500,
-				description: "Feature B",
+				description: "Feature B, 5,000 units",
 				featureId: "feature_b",
 				discountable: false,
 			},
@@ -131,7 +226,7 @@ describe("invoice credit line items", () => {
 		]);
 		expect(result.updateCustomerEntitlements).toHaveLength(1);
 		expect(
-			result.lineItems.every(
+			result.invoiceCreditLineItems.every(
 				(lineItem) => lineItem.amountAfterDiscountsFinalized === true,
 			),
 		).toBe(true);
@@ -152,25 +247,40 @@ describe("invoice credit line items", () => {
 			},
 		});
 
-		const result = customerProductToInvoiceCreditLineItems({
+		const result = customerProductToArrearLineItems({
 			...fixture,
-			idempotencyScope: "invoice_overage",
+			options: { invoiceCredits: { idempotencyScope: "invoice_overage" } },
 		});
 
-		expect(result.lineItems.map((lineItem) => lineItem.amount)).toEqual([
-			1_200, -1_000,
-		]);
+		expect(
+			result.invoiceCreditLineItems.map((lineItem) => lineItem.amount),
+		).toEqual([1_200, -1_000]);
 	});
 
 	test("emits no lines for empty attribution but still prepares the reset", () => {
 		const fixture = makeFixture({ balance: 1_000 });
 
-		const result = customerProductToInvoiceCreditLineItems({
+		const result = customerProductToArrearLineItems({
 			...fixture,
-			idempotencyScope: "invoice_empty",
+			options: { invoiceCredits: { idempotencyScope: "invoice_empty" } },
 		});
 
+		expect(result.invoiceCreditLineItems).toEqual([]);
+		expect(result.updateCustomerEntitlements).toHaveLength(1);
+	});
+
+	test("does not fall back to a normal usage charge when invoice credit rendering is omitted", () => {
+		const fixture = makeFixture({
+			balance: -10,
+			usageAttribution: {
+				[SOURCE_A_INTERNAL_ID]: { units: 5_050, credits: 1_010 },
+			},
+		});
+
+		const result = customerProductToArrearLineItems(fixture);
+
 		expect(result.lineItems).toEqual([]);
+		expect(result.invoiceCreditLineItems).toEqual([]);
 		expect(result.updateCustomerEntitlements).toHaveLength(1);
 	});
 
@@ -182,14 +292,14 @@ describe("invoice credit line items", () => {
 			},
 		});
 
-		const result = customerProductToInvoiceCreditLineItems({
+		const result = customerProductToArrearLineItems({
 			...fixture,
-			fullyOffsetOverage: true,
+			options: { invoiceCredits: { fullyOffsetOverage: true } },
 		});
 
-		expect(result.lineItems.map((lineItem) => lineItem.amount)).toEqual([
-			1_200, -1_200,
-		]);
+		expect(
+			result.invoiceCreditLineItems.map((lineItem) => lineItem.amount),
+		).toEqual([1_200, -1_200]);
 	});
 
 	test("uses stable line IDs for the same invoice", () => {
@@ -200,24 +310,31 @@ describe("invoice credit line items", () => {
 			},
 		});
 
-		const first = customerProductToInvoiceCreditLineItems({
+		const first = customerProductToArrearLineItems({
 			...fixture,
-			idempotencyScope: "invoice_retry",
+			options: { invoiceCredits: { idempotencyScope: "invoice_retry" } },
 		});
-		const second = customerProductToInvoiceCreditLineItems({
+		const second = customerProductToArrearLineItems({
 			...fixture,
-			idempotencyScope: "invoice_retry",
+			options: { invoiceCredits: { idempotencyScope: "invoice_retry" } },
 		});
 
-		expect(first.lineItems).toHaveLength(2);
-		expect(first.lineItems.map((lineItem) => lineItem.id)).toEqual(
-			second.lineItems.map((lineItem) => lineItem.id),
+		expect(first.invoiceCreditLineItems).toHaveLength(2);
+		expect(first.invoiceCreditLineItems.map((lineItem) => lineItem.id)).toEqual(
+			second.invoiceCreditLineItems.map((lineItem) => lineItem.id),
 		);
 	});
 
 	test("projects the same debit and offset lines into the next invoice preview", () => {
 		const fixture = makeFixture({
 			balance: 960,
+			creditSchema: [
+				{
+					metered_feature_id: sourceA.id,
+					feature_amount: 1,
+					credit_amount: 0.2,
+				},
+			],
 			usageAttribution: {
 				[SOURCE_A_INTERNAL_ID]: { units: 200, credits: 40 },
 			},
@@ -242,7 +359,7 @@ describe("invoice credit line items", () => {
 		).toEqual([
 			{
 				featureId: "feature_a",
-				description: "Feature A",
+				description: "Feature A, 200 units",
 				subtotal: 40,
 			},
 			{

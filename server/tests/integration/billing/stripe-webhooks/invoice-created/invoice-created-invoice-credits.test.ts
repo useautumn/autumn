@@ -11,9 +11,10 @@ import chalk from "chalk";
 test.concurrent(
 	`${chalk.yellowBright("invoice.created invoice credits: renders attribution without changing the funded invoice total")}`,
 	async () => {
-		const invoiceCreditItem = items.free({
+		const invoiceCreditItem = items.consumable({
 			featureId: TestFeature.InvoiceCredits,
 			includedUsage: 100,
+			price: 1,
 		});
 		const product = products.pro({
 			id: "invoice-credit-renewal",
@@ -75,8 +76,16 @@ test.concurrent(
 			renewalInvoice!.stripe_id,
 		);
 		expect(stripeInvoice.total).toBe(2_000);
-		expect(stripeInvoice.lines.data.map((line) => line.description)).toEqual(
-			expect.arrayContaining(["Action1", "Action2", "Credits applied"]),
+		const action1Line = stripeInvoice.lines.data.find(
+			(line) => line.description === "Action1, 50 units",
+		);
+		const action2Line = stripeInvoice.lines.data.find(
+			(line) => line.description === "Action2, 50 units",
+		);
+		expect(action1Line?.quantity).toBe(1);
+		expect(action2Line?.quantity).toBe(1);
+		expect(stripeInvoice.lines.data.map((line) => line.description)).toContain(
+			"Credits applied",
 		);
 
 		expect(customer.balances[TestFeature.InvoiceCredits].remaining).toBe(100);

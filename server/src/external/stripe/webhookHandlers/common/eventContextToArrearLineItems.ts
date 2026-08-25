@@ -41,14 +41,22 @@ export const eventContextToArrearLineItems = async ({
 	periodEndMs,
 	cusEntFilter,
 	stripeDiscountable = true,
+	invoiceCredits,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: BaseWebhookEventContext;
 	periodEndMs?: number;
 	cusEntFilter?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
 	stripeDiscountable?: boolean;
+	invoiceCredits?: {
+		cusEntFilter?: (cusEnt: FullCusEntWithFullCusProduct) => boolean;
+		idempotencyScope?: string;
+		fullyOffsetOverage?: boolean;
+		includeLineItems?: boolean;
+	};
 }): Promise<{
 	lineItems: LineItem[];
+	invoiceCreditLineItems: LineItem[];
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
 	billingContext: BillingContext;
 }> => {
@@ -59,17 +67,32 @@ export const eventContextToArrearLineItems = async ({
 
 	// Collect line items from all customer products
 	let lineItems: LineItem[] = [];
+	const invoiceCreditLineItems: LineItem[] = [];
 	const updateCustomerEntitlements: UpdateCustomerEntitlement[] = [];
 	for (const customerProduct of eventContext.customerProducts) {
 		const {
 			lineItems: productLineItems,
+			invoiceCreditLineItems: productInvoiceCreditLineItems,
 			updateCustomerEntitlements: productUpdates,
 		} = customerProductToArrearLineItems({
 			ctx,
 			customerProduct,
 			billingContext,
-			filters: { cusEntFilter },
-			options: { updateNextResetAt: true, discountable: stripeDiscountable },
+			filters: {
+				cusEntFilter,
+				invoiceCreditCusEntFilter: invoiceCredits?.cusEntFilter,
+			},
+			options: {
+				updateNextResetAt: true,
+				discountable: stripeDiscountable,
+				invoiceCredits: invoiceCredits
+					? {
+							idempotencyScope: invoiceCredits.idempotencyScope,
+							fullyOffsetOverage: invoiceCredits.fullyOffsetOverage,
+							includeLineItems: invoiceCredits.includeLineItems,
+						}
+					: undefined,
+			},
 		});
 		for (const update of productUpdates) {
 			const nextResetAt = update.updates?.next_reset_at;
@@ -86,6 +109,7 @@ export const eventContextToArrearLineItems = async ({
 			};
 		}
 		lineItems.push(...productLineItems);
+		invoiceCreditLineItems.push(...productInvoiceCreditLineItems);
 		updateCustomerEntitlements.push(...productUpdates);
 	}
 
@@ -123,6 +147,7 @@ export const eventContextToArrearLineItems = async ({
 
 	return {
 		lineItems: billableLineItems,
+		invoiceCreditLineItems,
 		updateCustomerEntitlements,
 		billingContext,
 	};

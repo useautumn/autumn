@@ -50,7 +50,6 @@ const getAutumnCustomerId = async ({ ctx }: { ctx: StripeWebhookContext }) => {
 		withSubs: true,
 		inStatuses: RELEVANT_STATUSES,
 		allowNotFound: true,
-		skipReset: stripeEvent.type === "invoice.created",
 	});
 
 	ctx.fullCustomer = fullCustomer;

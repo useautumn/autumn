@@ -23,7 +23,10 @@ import {
 } from "@autumn/shared";
 import { createFeaturesFromItems } from "@server/internal/products/product-items/createFeaturesFromItems";
 import { StatusCodes } from "http-status-codes";
-import { validateInvoiceCreditPooling } from "@/internal/features/validateInvoiceCreditPooling.js";
+import {
+	validateInvoiceCreditPooling,
+	validateInvoiceCreditUsageBasedPricing,
+} from "@/internal/features/validateInvoiceCreditPooling.js";
 import {
 	isBooleanFeatureItem,
 	isFeatureItem,
@@ -70,6 +73,11 @@ const validateProductItem = ({
 	}
 
 	validateInvoiceCreditPooling({ feature, pooled: item.pooled });
+	validateInvoiceCreditUsageBasedPricing({
+		feature,
+		usageBased:
+			isFeaturePriceItem(item) && item.usage_model === UsageModel.PayPerUse,
+	});
 
 	if (
 		item.pooled &&

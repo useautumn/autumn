@@ -17,6 +17,7 @@ const emptyFeatureState = ({
 	has_customers: false,
 	has_entitlements: false,
 	has_pooled_entitlements: false,
+	has_non_consumable_entitlements: false,
 	has_loose_entitlements: false,
 	has_entity_feature_entitlements: false,
 	has_loose_entity_feature_entitlements: false,
@@ -90,6 +91,8 @@ export const setupFeatureStatesContext = async ({
 			has_customers: row?.has_customers ?? false,
 			has_entitlements: row?.has_entitlements ?? false,
 			has_pooled_entitlements: row?.has_pooled_entitlements ?? false,
+			has_non_consumable_entitlements:
+				row?.has_non_consumable_entitlements ?? false,
 			has_loose_entitlements: row?.has_loose_entitlements ?? false,
 			has_entity_feature_entitlements:
 				row?.has_entity_feature_entitlements ?? false,

@@ -9,11 +9,9 @@ import {
 } from "@autumn/shared";
 import { getLatestPeriodStart } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers/common";
-import { buildBillingContextForArrearInvoice } from "@/external/stripe/webhookHandlers/common/buildBillingContextFromWebhook.js";
 import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling";
 import { lineItemsToCreateInvoiceItemsParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
-import { customerProductToInvoiceCreditLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToInvoiceCreditLineItems.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
@@ -96,52 +94,30 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		customerConfig: eventContext.fullCustomer.config,
 	});
 
-	let consumableLineItems: LineItem[] = [];
-	let consumableUpdates: Awaited<
-		ReturnType<typeof eventContextToArrearLineItems>
-	>["updateCustomerEntitlements"] = [];
-	if (!trialJustEnded) {
-		const result = await eventContextToArrearLineItems({
-			ctx,
-			eventContext,
-			periodEndMs: invoicePeriodEndMs,
-			cusEntFilter: consumableCustomerEntitlementFilter,
-		});
-		consumableLineItems = result.lineItems;
-		consumableUpdates = result.updateCustomerEntitlements;
-	} else {
+	if (trialJustEnded) {
 		ctx.logger.info(
 			"[invoice.created] Trial just ended, skipping consumable charges",
 		);
 	}
 
-	const billingContext = buildBillingContextForArrearInvoice({
+	const {
+		lineItems: consumableLineItems,
+		invoiceCreditLineItems,
+		updateCustomerEntitlements,
+	} = await eventContextToArrearLineItems({
+		ctx,
 		eventContext,
 		periodEndMs: invoicePeriodEndMs,
+		cusEntFilter: trialJustEnded
+			? () => false
+			: consumableCustomerEntitlementFilter,
+		invoiceCredits: {
+			cusEntFilter: invoiceCreditCustomerEntitlementFilter,
+			idempotencyScope: stripeInvoice.id,
+			fullyOffsetOverage: disableOverageBilling,
+			includeLineItems: !trialJustEnded,
+		},
 	});
-	const invoiceCreditResults = eventContext.customerProducts.map(
-		(customerProduct) =>
-			customerProductToInvoiceCreditLineItems({
-				ctx,
-				customerProduct,
-				billingContext,
-				filters: {
-					customerEntitlementFilter: invoiceCreditCustomerEntitlementFilter,
-				},
-				idempotencyScope: stripeInvoice.id,
-				fullyOffsetOverage: disableOverageBilling,
-				includeLineItems: !trialJustEnded,
-			}),
-	);
-	const invoiceCreditLineItems = invoiceCreditResults.flatMap(
-		(result) => result.lineItems,
-	);
-	const updateCustomerEntitlements = [
-		...consumableUpdates,
-		...invoiceCreditResults.flatMap(
-			(result) => result.updateCustomerEntitlements,
-		),
-	];
 
 	if (disableOverageBilling && consumableLineItems.length > 0) {
 		addToExtraLogs({ ctx, extras: { overageBillingDisabledByConfig: true } });

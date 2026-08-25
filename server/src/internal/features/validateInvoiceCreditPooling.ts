@@ -16,3 +16,19 @@ export const validateInvoiceCreditPooling = ({
 		statusCode: 400,
 	});
 };
+
+export const validateInvoiceCreditUsageBasedPricing = ({
+	feature,
+	usageBased,
+}: {
+	feature?: Feature;
+	usageBased: boolean;
+}): void => {
+	if (usageBased || !isInvoiceCreditFeature({ feature })) return;
+
+	throw new RecaseError({
+		message: "Invoice-credit features require usage-based pricing",
+		code: ErrCode.InvalidProductItem,
+		statusCode: 400,
+	});
+};

@@ -239,3 +239,82 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 credit rate card: rejects enabling invoice credits on an included-only plan item")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const meteredFeatureId = uniqueTestId("rate_included_metered");
+		const creditSystemId = uniqueTestId("rate_included_credits");
+		const planId = uniqueTestId("rate_included_plan");
+		const featureIds = [meteredFeatureId, creditSystemId];
+		const creditSchema = [
+			{
+				metered_feature_id: meteredFeatureId,
+				credit_cost: 1,
+			},
+		];
+
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		await deleteDbFeatures({ ctx, featureIds });
+
+		try {
+			await autumnV2_3.catalogV2.update({
+				features: [
+					{
+						feature_id: meteredFeatureId,
+						name: meteredFeatureId,
+						type: FeatureType.Metered,
+						consumable: true,
+					},
+					{
+						feature_id: creditSystemId,
+						name: creditSystemId,
+						type: FeatureType.CreditSystem,
+						invoice_credit: false,
+						credit_schema: creditSchema,
+					},
+				],
+				plans: [
+					{
+						plan_id: planId,
+						name: planId,
+						items: [{ feature_id: creditSystemId, included: 100 }],
+					},
+				],
+			});
+
+			const expectedError = {
+				errCode: ErrCode.InvalidProductItem,
+				errMessage: "Invoice-credit features require usage-based pricing",
+			};
+			await expectAutumnError({
+				...expectedError,
+				func: () =>
+					autumnV2_3.catalogV2.update({
+						features: [
+							{
+								feature_id: creditSystemId,
+								name: creditSystemId,
+								type: FeatureType.CreditSystem,
+								invoice_credit: true,
+								credit_schema: creditSchema,
+							},
+						],
+					}),
+			});
+			await expectAutumnError({
+				...expectedError,
+				func: () =>
+					autumnV2_3.post("/features.update", {
+						feature_id: creditSystemId,
+						invoice_credit: true,
+						credit_schema: creditSchema,
+					}),
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+			await deleteDbFeatures({ ctx, featureIds });
+		}
+	},
+);

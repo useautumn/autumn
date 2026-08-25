@@ -151,3 +151,17 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	"invoice-credit item validation: rejects included-only plan items",
+	async () => {
+		await expectPooledItemRejected({
+			planId: `included-only-invoice-credit-${crypto.randomUUID()}`,
+			item: {
+				feature_id: TestFeature.InvoiceCredits,
+				included: 100,
+			},
+			errMessage: "Invoice-credit features require usage-based pricing",
+		});
+	},
+);

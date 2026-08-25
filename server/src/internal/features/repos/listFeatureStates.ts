@@ -11,6 +11,7 @@ export const FeatureStateRowSchema = z.object({
 	feature_id: z.string(),
 	has_entitlements: z.boolean(),
 	has_pooled_entitlements: z.boolean(),
+	has_non_consumable_entitlements: z.boolean(),
 	has_loose_entitlements: z.boolean(),
 	has_entity_feature_entitlements: z.boolean(),
 	has_loose_entity_feature_entitlements: z.boolean(),
@@ -51,6 +52,8 @@ export const buildFeatureStatesQuery = ({
 			candidate.feature_id,
 			entitlement_product.found IS NOT NULL AS has_entitlements,
 			pooled_entitlement.found IS NOT NULL AS has_pooled_entitlements,
+			non_consumable_entitlement.found IS NOT NULL
+				AS has_non_consumable_entitlements,
 			entitlement_loose.found IS NOT NULL AS has_loose_entitlements,
 			entity_product.found IS NOT NULL AS has_entity_feature_entitlements,
 			entity_loose.found IS NOT NULL AS has_loose_entity_feature_entitlements,
@@ -93,6 +96,24 @@ export const buildFeatureStatesQuery = ({
 				AND entitlement.pooled
 			LIMIT 1
 		) pooled_entitlement ON true
+		LEFT JOIN LATERAL (
+			SELECT 1 AS found
+			FROM entitlements entitlement
+			JOIN features feature
+				ON feature.internal_id = entitlement.internal_feature_id
+			WHERE entitlement.internal_feature_id COLLATE "C"
+				= candidate.internal_feature_id
+				AND feature.org_id = ${orgId}
+				AND feature.env = ${env}
+				AND entitlement.internal_product_id IS NOT NULL
+				AND NOT EXISTS (
+					SELECT 1
+					FROM prices price
+					WHERE price.entitlement_id = entitlement.id
+						AND price.billing_type = 'usage_in_arrear'
+				)
+			LIMIT 1
+		) non_consumable_entitlement ON true
 		LEFT JOIN LATERAL (
 			SELECT 1 AS found
 			FROM entitlements entitlement

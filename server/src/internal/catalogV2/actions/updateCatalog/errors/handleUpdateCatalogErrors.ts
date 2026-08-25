@@ -1,4 +1,8 @@
-import type { UpdateCatalogParams } from "@autumn/shared";
+import {
+	entToPrice,
+	isConsumablePrice,
+	type UpdateCatalogParams,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleRemoveFeatureErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRemoveFeatureErrors/handleRemoveFeatureErrors";
 import { handleRemovePlanErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRemovePlanErrors/handleRemovePlanErrors";
@@ -10,7 +14,28 @@ import { handleUpsertProductVersioningErrors } from "@/internal/catalogV2/action
 import { handleUpsertProductVersionSlugErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductVersionSlugErrors";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
-import { validateInvoiceCreditPooling } from "@/internal/features/validateInvoiceCreditPooling.js";
+import {
+	validateInvoiceCreditPooling,
+	validateInvoiceCreditUsageBasedPricing,
+} from "@/internal/features/validateInvoiceCreditPooling.js";
+
+const planItemsForFeatureAreUsageBased = ({
+	internalFeatureId,
+	updateCatalogPlan,
+}: {
+	internalFeatureId: string;
+	updateCatalogPlan: UpdateCatalogPlan;
+}): boolean =>
+	updateCatalogPlan.projected.products.every((product) =>
+		product.entitlements
+			.filter(
+				(entitlement) => entitlement.internal_feature_id === internalFeatureId,
+			)
+			.every((entitlement) => {
+				const price = entToPrice({ ent: entitlement, prices: product.prices });
+				return price !== undefined && isConsumablePrice(price);
+			}),
+	);
 
 const validateProjectedInvoiceCreditPooling = ({
 	catalogContext,
@@ -36,6 +61,16 @@ const validateProjectedInvoiceCreditPooling = ({
 				catalogContext.featureStatesContext[current.id]
 					?.has_pooled_entitlements,
 		});
+		validateInvoiceCreditUsageBasedPricing({
+			feature,
+			usageBased:
+				!catalogContext.featureStatesContext[current.id]
+					?.has_non_consumable_entitlements &&
+				planItemsForFeatureAreUsageBased({
+					internalFeatureId: feature.internal_id,
+					updateCatalogPlan,
+				}),
+		});
 	}
 
 	for (const feature of updateCatalogPlan.insertFeatures) {
@@ -48,6 +83,13 @@ const validateProjectedInvoiceCreditPooling = ({
 				),
 		);
 		validateInvoiceCreditPooling({ feature, pooled: hasPooledPlanItem });
+		validateInvoiceCreditUsageBasedPricing({
+			feature,
+			usageBased: planItemsForFeatureAreUsageBased({
+				internalFeatureId: feature.internal_id,
+				updateCatalogPlan,
+			}),
+		});
 	}
 };
 
