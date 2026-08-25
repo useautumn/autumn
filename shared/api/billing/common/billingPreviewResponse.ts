@@ -134,6 +134,11 @@ export const ExtBillingPreviewResponseSchema = z.object({
 			"The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).",
 	}),
 
+	resets_usage: z.boolean().optional().meta({
+		description:
+			"True when this change clears the customer's usage balances, so the approver can see usage will reset.",
+	}),
+
 	next_cycle: z
 		.object({
 			starts_at: z.number().meta({

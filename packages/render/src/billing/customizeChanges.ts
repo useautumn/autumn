@@ -94,6 +94,19 @@ const itemChanges = ({
 
 /** The customer-specific terms of a billing action as adds and removes
  * against the current plan. Removes precede adds so a table reads old → new. */
+/** The trial is documented at the top level of a billing request and defined
+ * inside `customize`; the server honours both, so previews must too. */
+export const customizeWithFreeTrial = (request: unknown): unknown => {
+	const record = asRecord(request);
+	if (!record) return undefined;
+	const customize = asRecord(record.customize);
+	if (record.free_trial === undefined) return record.customize;
+	return {
+		...customize,
+		free_trial: customize?.free_trial ?? record.free_trial,
+	};
+};
+
 export const buildCustomizeChanges = ({
 	currentPlan,
 	customize,
