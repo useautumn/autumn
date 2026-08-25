@@ -6,7 +6,11 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { buildCustomizeChanges, customizeWithFreeTrial } from "@autumn/render";
+import {
+	billingActionBadges,
+	buildCustomizeChanges,
+	customizeWithFreeTrial,
+} from "@autumn/render";
 
 const trial = {
 	card_required: true,
@@ -48,5 +52,32 @@ describe("customizeWithFreeTrial", () => {
 		}) as Record<string, unknown>;
 		expect(folded.price).toEqual({ amount: 500, interval: "month" });
 		expect(folded.free_trial).toEqual(trial);
+	});
+});
+
+describe("card required badge", () => {
+	const badgeLabels = (params: Record<string, unknown>) =>
+		billingActionBadges(params).map(
+			({ active, label }) => `${label}:${active}`,
+		);
+
+	test("a trial that collects a card is marked as such", () => {
+		expect(
+			badgeLabels({ free_trial: { ...trial, card_required: true } }),
+		).toContain("Card required:true");
+	});
+
+	test("a no-card trial is marked inactive, not hidden", () => {
+		expect(
+			badgeLabels({
+				customize: { free_trial: { ...trial, card_required: false } },
+			}),
+		).toContain("Card required:false");
+	});
+
+	test("a request with no trial has no card badge", () => {
+		expect(badgeLabels({ plan_id: "scale" }).join(",")).not.toContain(
+			"Card required",
+		);
 	});
 });
