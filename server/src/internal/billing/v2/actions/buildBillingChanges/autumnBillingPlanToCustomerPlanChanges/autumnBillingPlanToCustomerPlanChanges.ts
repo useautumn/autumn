@@ -21,7 +21,12 @@ export const autumnBillingPlanToCustomerPlanChanges = ({
 	});
 
 	const changes = transitions
-		.map((transition) => buildCustomerPlanChange(transition))
+		.map((transition) =>
+			buildCustomerPlanChange({
+				...transition,
+				entities: originalFullCustomer?.entities,
+			}),
+		)
 		.filter((change): change is CustomerPlanChange => change !== undefined);
 
 	return mergeUpdatedPlanChanges(changes);

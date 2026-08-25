@@ -21,7 +21,11 @@ const sendBillingUpdated = async ({
 			object: "billing.updated",
 			customer_id: record.customerId,
 			...(record.entityId ? { entity_id: record.entityId } : {}),
-			plan_changes: record.planChanges,
+			// Records are already grouped per (customer, entity).
+			plan_changes: record.planChanges.map((planChange) => ({
+				...planChange,
+				entity_id: record.entityId,
+			})),
 			tags: [],
 		} satisfies BillingChangeResponse,
 		tags: customerToSvixTags({

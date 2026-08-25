@@ -7,6 +7,7 @@ const updatedChangeMergeKey = (
 		const subscription = change.subscription;
 		return [
 			"subscription",
+			change.entity_id ?? "",
 			subscription.plan_id,
 			subscription.status,
 			subscription.started_at,
@@ -20,6 +21,7 @@ const updatedChangeMergeKey = (
 		const purchase = change.purchase;
 		return [
 			"purchase",
+			change.entity_id ?? "",
 			purchase.plan_id,
 			purchase.status,
 			purchase.expires_at,
@@ -28,7 +30,8 @@ const updatedChangeMergeKey = (
 };
 
 /** Dedupes `updated` changes that describe the same post-change snapshot
- * (e.g. a patch and a license update touching the same product). */
+ * (e.g. a patch and a license update touching the same product). Keyed by
+ * entity too, so identical plans on different entities stay separate. */
 export const mergeUpdatedPlanChanges = (
 	changes: CustomerPlanChange[],
 ): CustomerPlanChange[] => {
