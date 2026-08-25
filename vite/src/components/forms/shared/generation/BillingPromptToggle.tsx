@@ -5,12 +5,16 @@ import {
 	TooltipTrigger,
 } from "@autumn/ui";
 import { SparkleIcon } from "@phosphor-icons/react";
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useBillingPromptVisibility } from "./useBillingPromptVisibility";
 
 export function BillingPromptToggle() {
 	const { visible, setVisible } = useBillingPromptVisibility();
 	const label = visible ? "Hide assistant" : "Show assistant";
+
+	// Each sheet opens with the assistant hidden until the user asks for it.
+	useEffect(() => () => setVisible(false), [setVisible]);
 
 	return (
 		<Tooltip>

@@ -1,15 +1,5 @@
 import { create } from "zustand";
 
-const STORAGE_KEY = "autumn.billing_prompt_bar_visible";
-
-const readStoredVisibility = (): boolean => {
-	try {
-		return localStorage.getItem(STORAGE_KEY) === "1";
-	} catch {
-		return false;
-	}
-};
-
 type BillingPromptVisibilityState = {
 	visible: boolean;
 	setVisible: (visible: boolean) => void;
@@ -18,12 +8,7 @@ type BillingPromptVisibilityState = {
 /** One preference shared by every billing sheet's AI prompt bar. */
 export const useBillingPromptVisibility = create<BillingPromptVisibilityState>(
 	(set) => ({
-		setVisible: (visible) => {
-			try {
-				localStorage.setItem(STORAGE_KEY, visible ? "1" : "0");
-			} catch {}
-			set({ visible });
-		},
-		visible: readStoredVisibility(),
+		setVisible: (visible) => set({ visible }),
+		visible: false,
 	}),
 );
