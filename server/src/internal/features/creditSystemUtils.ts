@@ -371,6 +371,18 @@ export const getCreditRateRequiredBalance = ({
 	reverseOrder?: boolean;
 	inStatuses?: CusProductStatus[];
 }): number => {
+	const schemaItem = getCreditSchemaItem({
+		featureId: sourceFeature.id,
+		creditSystem,
+	});
+	if (schemaItem?.tier_behavior !== "graduated") {
+		return featureToCreditSystem({
+			featureId: sourceFeature.id,
+			creditSystem,
+			amount,
+		});
+	}
+
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
 		featureIds: [creditSystem.id],

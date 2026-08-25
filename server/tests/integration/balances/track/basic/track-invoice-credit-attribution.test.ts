@@ -17,9 +17,11 @@ test.concurrent(
 		const product = products.base({
 			id: "invoice-credit-flat-attribution",
 			items: [
-				items.free({
+				items.consumable({
 					featureId: TestFeature.InvoiceCredits,
 					includedUsage: 1_000,
+					price: 1,
+					billingUnits: 1,
 				}),
 			],
 		});

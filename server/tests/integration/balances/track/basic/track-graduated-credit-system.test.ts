@@ -44,9 +44,11 @@ const makeCreditProduct = ({
 						}),
 					]
 				: []),
-			items.free({
+			items.consumable({
 				featureId: TestFeature.TieredCredits,
 				includedUsage: creditAllowance,
+				price: 1,
+				billingUnits: 1,
 			}),
 		],
 	});

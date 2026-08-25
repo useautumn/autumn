@@ -145,6 +145,66 @@ describe("getCreditRateCard — invoice attribution descriptors", () => {
 	);
 });
 
+describe("getCreditRateRequiredBalance — flat rate cards", () => {
+	test("keeps flat required credit totals exact above the available balance", () => {
+		const flatCreditFeature: Feature = {
+			...flatInvoiceCreditFeature,
+			config: {
+				usage_type: FeatureUsageType.Single,
+				schema: [
+					{
+						metered_feature_id: sourceFeature.id,
+						feature_amount: 1,
+						credit_amount: 0.6,
+					},
+				],
+			},
+		};
+		const fullSubject = {
+			subjectType: "customer",
+			entity: null,
+			customer_products: [
+				{
+					status: "active",
+					customer_entitlements: [
+						{
+							id: "flat_credits",
+							balance: 100,
+							additional_balance: 0,
+							rollovers: [],
+							usage_attribution: {},
+							entitlement: {
+								feature: flatCreditFeature,
+								allowance_type: AllowanceType.Fixed,
+								entity_feature_id: null,
+								interval: null,
+								interval_count: 1,
+							},
+						},
+					],
+				},
+			],
+			extra_customer_entitlements: [],
+			pooled_customer_entitlements: [],
+		} as unknown as FullSubject;
+
+		expect(
+			getCreditRateRequiredBalance({
+				fullSubject,
+				sourceFeature,
+				creditSystem: flatCreditFeature,
+				amount: 167.33,
+			}),
+		).toBe(
+			getCreditCost({
+				featureId: sourceFeature.id,
+				creditSystem: flatCreditFeature,
+				amount: 167.33,
+			}),
+		);
+	});
+});
+
 describe("getCreditCost — graduated rate cards", () => {
 	test("rates a check across each entitlement's independent tier position", () => {
 		const makeCustomerEntitlement = ({

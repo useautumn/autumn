@@ -157,9 +157,11 @@ test.concurrent(`${chalk.yellowBright("lazy reset rollover (cache): caps rollove
 test.concurrent(
 	`${chalk.yellowBright("invoice-credit cached reset: clears prior attribution and rates new-cycle rollover usage from zero")}`,
 	async () => {
-		const tieredCreditsItem = items.free({
+		const tieredCreditsItem = items.consumable({
 			featureId: TestFeature.TieredCredits,
 			includedUsage: 1_000,
+			price: 1,
+			billingUnits: 1,
 			rolloverConfig: {
 				max: 1_000,
 				length: 1,
@@ -242,9 +244,11 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("invoice-credit rollover: Postgres fallback advances new-cycle attribution atomically")}`,
 	async () => {
-		const tieredCreditsItem = items.free({
+		const tieredCreditsItem = items.consumable({
 			featureId: TestFeature.TieredCredits,
 			includedUsage: 1_000,
+			price: 1,
+			billingUnits: 1,
 			rolloverConfig: {
 				max: 1_000,
 				length: 1,

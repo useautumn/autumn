@@ -15,9 +15,11 @@ test.concurrent(
 		const product = products.base({
 			id: "invoice-credit-mutation-guards",
 			items: [
-				items.free({
+				items.consumable({
 					featureId: TestFeature.InvoiceCredits,
 					includedUsage: 100,
+					price: 1,
+					billingUnits: 1,
 				}),
 			],
 		});

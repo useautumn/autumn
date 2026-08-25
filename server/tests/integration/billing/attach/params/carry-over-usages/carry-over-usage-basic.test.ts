@@ -83,13 +83,17 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("carry-over-usage invoice credit: tier position follows the carried balance usage")}`,
 	async () => {
-		const oldCredits = items.free({
+		const oldCredits = items.consumable({
 			featureId: TestFeature.InvoiceCredits,
 			includedUsage: 1_000,
+			price: 1,
+			billingUnits: 1,
 		});
-		const newCredits = items.free({
+		const newCredits = items.consumable({
 			featureId: TestFeature.InvoiceCredits,
 			includedUsage: 2_000,
+			price: 1,
+			billingUnits: 1,
 		});
 		const oldPlan = products.pro({
 			id: "invoice-credit-carry-old",

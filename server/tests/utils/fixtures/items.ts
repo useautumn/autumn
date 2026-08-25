@@ -613,6 +613,7 @@ const tieredOneOffMessages = ({
  * @param entityFeatureId - Entity feature ID for per-entity balances
  * @param interval - Billing interval (default: month)
  * @param maxPurchase - Maximum overage allowed (usage_limit = maxPurchase + includedUsage)
+ * @param rolloverConfig - Optional balance rollover configuration
  */
 const consumable = ({
 	featureId,
@@ -622,6 +623,7 @@ const consumable = ({
 	entityFeatureId,
 	interval = ProductItemInterval.Month,
 	maxPurchase,
+	rolloverConfig,
 }: {
 	featureId: string;
 	includedUsage?: number;
@@ -630,6 +632,7 @@ const consumable = ({
 	entityFeatureId?: string;
 	interval?: ProductItemInterval;
 	maxPurchase?: number;
+	rolloverConfig?: RolloverConfig;
 }): LimitedItem =>
 	constructArrearItem({
 		featureId,
@@ -638,6 +641,7 @@ const consumable = ({
 		billingUnits,
 		entityFeatureId,
 		interval,
+		rolloverConfig,
 		usageLimit:
 			maxPurchase !== undefined ? maxPurchase + includedUsage : undefined,
 	}) as LimitedItem;
