@@ -6,6 +6,7 @@
 #   workers -> bun src/workers.ts   (cwd /app/server)
 #   cron    -> bun src/cron.ts      (cwd /app/server)
 #   leaf    -> bun leaf             (cwd /app/server; serves chat + MCP routes)
+#   ducklake -> bun src/ducklake.ts (cwd /app/server; FC job-scheduler one-shot)
 FROM oven/bun:1.3.14 AS deps
 WORKDIR /app
 
@@ -41,6 +42,7 @@ COPY packages/logging/package.json packages/logging/
 COPY packages/mcp/package.json packages/mcp/
 COPY packages/openapi/package.json packages/openapi/
 COPY packages/render/package.json packages/render/
+COPY packages/ducklake/package.json packages/ducklake/
 COPY packages/sdk/package.json packages/sdk/
 COPY packages/stripe-sync/package.json packages/stripe-sync/
 COPY packages/ui/package.json packages/ui/
