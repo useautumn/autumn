@@ -155,7 +155,7 @@ test.concurrent(`${chalk.yellowBright("lazy reset rollover (cache): caps rollove
 });
 
 test.concurrent(
-	`${chalk.yellowBright("invoice-credit cached reset: clears prior attribution and rates new-cycle rollover usage from zero")}`,
+	`${chalk.yellowBright("invoice-credit cached renewal: clears prior attribution and rates new-cycle rollover usage from zero")}`,
 	async () => {
 		const tieredCreditsItem = items.consumable({
 			featureId: TestFeature.TieredCredits,
@@ -176,37 +176,24 @@ test.concurrent(
 		const { customerId, autumnV2_3, ctx } = await initScenario({
 			customerId: "invoice-credit-reset-rollover",
 			setup: [
-				s.customer({ paymentMethod: "success", testClock: false }),
+				s.customer({ paymentMethod: "success" }),
 				s.products({ list: [product] }),
 			],
-			actions: [s.billing.attach({ productId: product.id })],
+			actions: [
+				s.billing.attach({ productId: product.id }),
+				s.track({
+					featureId: TestFeature.TieredAction,
+					value: 5_000,
+					timeout: 2_000,
+				}),
+				s.advanceToNextInvoice({ withPause: true }),
+			],
 		});
 		const sourceInternalFeatureId = ctx.features.find(
 			(feature) => feature.id === TestFeature.TieredAction,
 		)?.internal_id;
 		expect(sourceInternalFeatureId).toBeDefined();
 
-		await autumnV2_3.track({
-			customer_id: customerId,
-			feature_id: TestFeature.TieredAction,
-			value: 5_000,
-		});
-		await timeout(2_000);
-		const beforeReset = await findCustomerEntitlement({
-			ctx,
-			customerId,
-			featureId: TestFeature.TieredCredits,
-		});
-		expect(beforeReset?.usage_attribution?.[sourceInternalFeatureId!]).toEqual({
-			units: 5_000,
-			credits: 50,
-		});
-
-		await expireCusEntForReset({
-			ctx,
-			customerId,
-			featureId: TestFeature.TieredCredits,
-		});
 		const afterReset =
 			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expect(afterReset.balances[TestFeature.TieredCredits].remaining).toBe(
@@ -262,23 +249,20 @@ test.concurrent(
 		const { customerId, autumnV2_3, ctx } = await initScenario({
 			customerId: "invoice-credit-postgres-rollover",
 			setup: [
-				s.customer({ paymentMethod: "success", testClock: false }),
+				s.customer({ paymentMethod: "success" }),
 				s.products({ list: [product] }),
 			],
-			actions: [s.billing.attach({ productId: product.id })],
+			actions: [
+				s.billing.attach({ productId: product.id }),
+				s.track({
+					featureId: TestFeature.TieredAction,
+					value: 5_000,
+					timeout: 2_000,
+				}),
+				s.advanceToNextInvoice({ withPause: true }),
+			],
 		});
 
-		await autumnV2_3.track({
-			customer_id: customerId,
-			feature_id: TestFeature.TieredAction,
-			value: 5_000,
-		});
-		await timeout(2_000);
-		await expireCusEntForReset({
-			ctx,
-			customerId,
-			featureId: TestFeature.TieredCredits,
-		});
 		await autumnV2_3.customers.get<ApiCustomerV5>(customerId, {
 			skip_cache: "true",
 		});
