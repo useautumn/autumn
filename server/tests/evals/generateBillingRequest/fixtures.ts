@@ -361,5 +361,16 @@ export const entityScaleContext = (): GenerationContext =>
 					},
 				],
 			},
+			{
+				id: "enterprise",
+				name: "Enterprise",
+				items: [
+					{
+						feature_id: "credits",
+						included: 5000,
+						reset: { interval: "month" },
+					},
+				],
+			},
 		],
 	}) as unknown as GenerationContext;

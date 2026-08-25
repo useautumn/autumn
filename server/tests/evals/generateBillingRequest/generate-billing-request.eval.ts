@@ -531,6 +531,53 @@ const cases: EvalCase[] = [
 			],
 		},
 	},
+	{
+		name: "schedule: per-plan entity scoping and customize stay independent",
+		input: {
+			context: entityScaleContext(),
+			prompt:
+				"starting next month, put enterprise on the alpha entity at $10k per year and scale on the beta entity",
+			tool: "create_schedule",
+		},
+		expected: {
+			phases: [
+				{
+					plans: [
+						{
+							customize: { price: { amount: 10000, interval: "year" } },
+							entity_id: "alpha",
+							plan_id: "enterprise",
+						},
+						{ entity_id: "beta", plan_id: "scale" },
+					],
+				},
+			],
+		},
+	},
+	{
+		name: "schedule: per-plan item customize uses remove+add",
+		input: {
+			context: entityScaleContext(),
+			prompt:
+				"next month move them onto scale but with 2k credits included instead of 1k",
+			tool: "create_schedule",
+		},
+		expected: {
+			phases: [
+				{
+					plans: [
+						{
+							customize: {
+								add_items: [{ feature_id: "credits", included: 2000 }],
+								remove_items: [{ feature_id: "credits" }],
+							},
+							plan_id: "scale",
+						},
+					],
+				},
+			],
+		},
+	},
 ];
 
 Eval("generate-billing-request", {

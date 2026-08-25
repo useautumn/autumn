@@ -66,7 +66,6 @@ describe("assertNoDuplicateAddItems", () => {
 						],
 					},
 				},
-				tool: "update_subscription",
 			}),
 		).toThrow(/pair a remove_items filter/);
 	});
@@ -93,7 +92,6 @@ describe("assertNoDuplicateAddItems", () => {
 						remove_items: [{ feature_id: "AI_CREDITS", included: 10_000 }],
 					},
 				},
-				tool: "update_subscription",
 			}),
 		).not.toThrow();
 	});
@@ -106,7 +104,6 @@ describe("assertNoDuplicateAddItems", () => {
 					customize: { add_items: [{ feature_id: "SEATS", included: 5 }] },
 					plan_id: "pro",
 				},
-				tool: "attach",
 			}),
 		).not.toThrow();
 	});
@@ -146,7 +143,6 @@ describe("assertNoDuplicateAddItems", () => {
 					},
 					plan_id: "pro",
 				},
-				tool: "attach",
 			}),
 		).not.toThrow();
 	});
@@ -159,8 +155,121 @@ describe("assertNoDuplicateAddItems", () => {
 					customize: {
 						add_items: [{ feature_id: "AI_CREDITS", included: 12_000 }],
 					},
+					plan_id: "unknown_plan",
 				},
-				tool: "attach",
+			}),
+		).not.toThrow();
+	});
+
+	test("additional_plans are checked against their own catalog plans", () => {
+		expect(() =>
+			assertNoDuplicateAddItems({
+				context,
+				generated: {
+					additional_plans: [
+						{
+							customize: {
+								add_items: [
+									{
+										feature_id: "AI_CREDITS",
+										included: 12_000,
+										reset: { interval: ResetInterval.Month },
+									},
+								],
+							},
+							plan_id: "pro",
+						},
+					],
+					plan_id: "unknown_plan",
+				} as never,
+			}),
+		).toThrow(/pair a remove_items filter/);
+	});
+});
+
+describe("assertNoDuplicateAddItems — schedules", () => {
+	const scheduleContext = {
+		customer: { id: "cus_1", current_plans: [] },
+		features: [],
+		now: { epoch_ms: 0, iso: "1970-01-01T00:00:00.000Z" },
+		plans: [
+			{
+				id: "scale",
+				name: "Scale",
+				items: [
+					{
+						feature_id: "credits",
+						included: 1000,
+						reset: { interval: ResetInterval.Month },
+					},
+				],
+			},
+		],
+	} as unknown as GenerationContext;
+
+	test("a bare add on a scheduled plan is rejected", () => {
+		expect(() =>
+			assertNoDuplicateAddItems({
+				context: scheduleContext,
+				generated: {
+					phases: [
+						{
+							plans: [
+								{
+									customize: {
+										add_items: [{ feature_id: "credits", included: 2000 }],
+									},
+									plan_id: "scale",
+								},
+							],
+						},
+					],
+				} as never,
+			}),
+		).toThrow(/pair a remove_items filter/);
+	});
+
+	test("a paired remove+add on a scheduled plan passes", () => {
+		expect(() =>
+			assertNoDuplicateAddItems({
+				context: scheduleContext,
+				generated: {
+					phases: [
+						{
+							plans: [
+								{
+									customize: {
+										add_items: [{ feature_id: "credits", included: 2000 }],
+										remove_items: [{ feature_id: "credits" }],
+									},
+									plan_id: "scale",
+								},
+							],
+						},
+					],
+				} as never,
+			}),
+		).not.toThrow();
+	});
+
+	test("an unknown scheduled plan id passes conservatively", () => {
+		expect(() =>
+			assertNoDuplicateAddItems({
+				context: scheduleContext,
+				generated: {
+					phases: [
+						{
+							plans: [
+								{
+									customize: {
+										add_items: [{ feature_id: "credits", included: 2000 }],
+									},
+									plan_id: "unknown_plan",
+								},
+							],
+						},
+					],
+				} as never,
 			}),
 		).not.toThrow();
 	});

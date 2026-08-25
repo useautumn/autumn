@@ -1,8 +1,18 @@
-import type { CreateSchedulePlanV0 } from "@autumn/shared";
+import type {
+	CreateSchedulePlanV0,
+	MultiAttachParamsV0Input,
+} from "@autumn/shared";
 import { freeTrialParamsV1ToV0 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { resolveCustomizedPlan } from "@/internal/billing/v2/actions/resolveBillingRequest";
 import type { AttachGenerationParams } from "../generationSchemas";
+
+/** The composed multi-attach dialect the sheet seeds: MultiAttach params with
+ * the free trial already converted to its V0 shape. */
+export type GeneratedMultiAttachRequestV0 = Omit<
+	MultiAttachParamsV0Input,
+	"free_trial"
+> & { free_trial?: ReturnType<typeof freeTrialParamsV1ToV0> };
 
 const SINGLE_ATTACH_ONLY_FIELDS = [
 	"billing_cycle_anchor",
@@ -28,7 +38,7 @@ export const composeMultiAttachRequest = async ({
 	generated: AttachGenerationParams;
 	customerId: string;
 }): Promise<{
-	request: Record<string, unknown>;
+	request: GeneratedMultiAttachRequestV0;
 	unrepresentable: string[];
 }> => {
 	const additionalPlans = generated.additional_plans ?? [];

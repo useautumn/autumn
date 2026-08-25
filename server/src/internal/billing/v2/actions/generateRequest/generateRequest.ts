@@ -1,15 +1,27 @@
+import type { AttachParamsV0 } from "@autumn/shared";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	ResolveBillingRequestParamsSchema,
+	type ResolvedBillingRequestV0,
 	resolveBillingRequest,
 } from "@/internal/billing/v2/actions/resolveBillingRequest";
-import { composeMultiAttachRequest } from "./compute/composeMultiAttachRequest";
+import {
+	composeMultiAttachRequest,
+	type GeneratedMultiAttachRequestV0,
+} from "./compute/composeMultiAttachRequest";
 import { computeGeneratedParams } from "./compute/computeGeneratedParams";
 import { assertNoDuplicateAddItems } from "./compute/validateGeneratedAddItems";
 import type { GenerateBillingRequestParams } from "./generationSchemas";
 import { setupGenerationContext } from "./setup/setupGenerationContext";
+
+/** Attach requests keep an explicit `entity_id: null` — the sheet reads it as
+ * "clear the entity anchor", unlike an omitted key. */
+export type GeneratedBillingRequestV0 =
+	| ResolvedBillingRequestV0
+	| GeneratedMultiAttachRequestV0
+	| (Omit<AttachParamsV0, "entity_id"> & { entity_id?: string | null });
 
 export const generateRequest = async ({
 	ctx,
@@ -18,7 +30,7 @@ export const generateRequest = async ({
 	ctx: AutumnContext;
 	params: GenerateBillingRequestParams;
 }): Promise<{
-	request: Record<string, unknown>;
+	request: GeneratedBillingRequestV0;
 	unrepresentable: string[];
 }> => {
 	const { context } = await setupGenerationContext({
@@ -41,7 +53,6 @@ export const generateRequest = async ({
 				context,
 				customerProductId: params.customer_product_id,
 				generated: candidate,
-				tool: params.tool,
 			}),
 	});
 	if (repaired) {
@@ -57,11 +68,7 @@ export const generateRequest = async ({
 		);
 	}
 
-	if (
-		"additional_plans" in generated &&
-		generated.additional_plans !== undefined &&
-		generated.additional_plans.length > 0
-	) {
+	if ("additional_plans" in generated && generated.additional_plans?.length) {
 		return composeMultiAttachRequest({
 			ctx,
 			customerId: params.customer_id,
@@ -71,10 +78,6 @@ export const generateRequest = async ({
 
 	const explicitEntityScope =
 		"entity_id" in generated ? generated.entity_id : undefined;
-	if ("entity_id" in generated && generated.entity_id === null) {
-		delete generated.entity_id;
-	}
-
 	const anchoredEntityId =
 		params.tool === "update_subscription" &&
 		typeof params.current_request?.entity_id === "string"
@@ -82,6 +85,7 @@ export const generateRequest = async ({
 			: undefined;
 	const injected = {
 		...generated,
+		...(explicitEntityScope === null ? { entity_id: undefined } : {}),
 		customer_id: params.customer_id,
 		...(params.tool === "update_subscription" && params.customer_product_id
 			? { customer_product_id: params.customer_product_id }
@@ -106,7 +110,13 @@ export const generateRequest = async ({
 		params: parsedResolveParams.data,
 	});
 	if (params.tool === "attach" && explicitEntityScope !== undefined) {
-		resolved.request.entity_id = explicitEntityScope;
+		return {
+			request: {
+				...(resolved.request as AttachParamsV0),
+				entity_id: explicitEntityScope,
+			},
+			unrepresentable: resolved.unrepresentable,
+		};
 	}
 	return resolved;
 };
