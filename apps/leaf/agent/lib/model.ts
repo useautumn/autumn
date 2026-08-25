@@ -49,12 +49,11 @@ export const leafModel = (agent: LeafAgentConnection) => {
 	);
 };
 
-const REASONING_BY_AGENT: Record<LeafAgentConnection, "minimal" | "none"> = {
-	billing: "minimal",
-	catalog: "minimal",
-	investigator: "minimal",
-	// Routing needs no deliberation: "minimal" still emits thinking blocks
-	// before the delegation call; "none" disables them entirely.
+// Routing needs no deliberation; "none" disables thinking blocks entirely.
+const REASONING_BY_AGENT: Record<LeafAgentConnection, "low" | "none"> = {
+	billing: "low",
+	catalog: "low",
+	investigator: "low",
 	orchestrator: "none",
 };
 
