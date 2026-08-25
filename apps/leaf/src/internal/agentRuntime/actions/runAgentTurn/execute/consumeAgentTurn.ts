@@ -29,9 +29,9 @@ const MAX_IDLE_RETRIES = 20;
 /** Each idle window is 2 minutes, so this bounds a quiet turn at ~6 minutes
  * before leaf answers with whatever it has. */
 const MAX_IDLE_RESYNCS = 3;
-/** A delegated child holds the parent open only while it keeps reporting;
- * a child that goes silent this long stops vouching for the turn. */
-const TURN_ACTIVITY_TIMEOUT_MS = ms.minutes(3);
+/** The ceiling on a single turn however busy it looks: a stream that dribbles
+ * one event per idle window would otherwise reset the resync budget forever. */
+const MAX_TURN_DURATION_MS = ms.minutes(15);
 const STREAM_RETRY_DELAY_MS = ms.seconds(0.5);
 const PERSIST_CURSOR_EVERY_EVENTS = 10;
 
@@ -153,9 +153,11 @@ const resyncAfterIdleStream = async ({
 };
 
 const settleExhaustedTurn = ({
+	activity,
 	logger,
 	turn,
 }: {
+	activity: TurnActivity;
 	logger: AutumnLogger;
 	turn: EveTurnContext;
 }): EveTurnOutcome => {
@@ -167,6 +169,7 @@ const settleExhaustedTurn = ({
 			has_partial_text: Boolean(partialText),
 			session_id: session.sessionId,
 			stream_index: session.state.streamIndex,
+			turn_ms: activity.msSinceStart(),
 		},
 	});
 	if (!partialText) throw new Error(AGENT_UNREACHABLE_MESSAGE);
@@ -302,15 +305,17 @@ export const consumeAgentTurn = async ({
 			}
 
 			if (pass.error instanceof EveStreamIdleTimeoutError) {
-				// Work delegated to a subagent runs on the child's stream, so a
-				// quiet parent is only evidence of a dead turn when nothing
-				// anywhere in the turn has produced an event.
-				const turnIsWorking =
-					activity.activeChildren() > 0 &&
-					activity.msSinceActivity() < TURN_ACTIVITY_TIMEOUT_MS;
+				// Work delegated to a subagent runs on the child's stream, so the
+				// parent is not evidence of a dead turn while a child is live.
+				// The child relay owns when a child stops counting: it reconnects
+				// through quiet windows and ends when the session terminates.
+				const turnIsWorking = activity.activeChildren() > 0;
 				idleRetries = pass.sawEvent || turnIsWorking ? 0 : idleRetries + 1;
-				if (idleRetries >= MAX_IDLE_RESYNCS) {
-					return settleExhaustedTurn({ logger, turn });
+				if (
+					idleRetries >= MAX_IDLE_RESYNCS ||
+					activity.msSinceStart() >= MAX_TURN_DURATION_MS
+				) {
+					return settleExhaustedTurn({ activity, logger, turn });
 				}
 				await resyncAfterIdleStream({ attempt: idleRetries, logger, turn });
 				continue;

@@ -46,10 +46,15 @@ export const setupAttachTrialContext = async ({
 		currentCustomerProduct,
 	} = currentContext;
 
-	// Handle explicit free_trial param (null or value)
-	if (params.customize?.free_trial !== undefined) {
+	// The trial is documented at the top level and defined inside customize;
+	// both are honoured so a documented request cannot silently lose it.
+	const freeTrialParams =
+		params.customize?.free_trial !== undefined
+			? params.customize.free_trial
+			: params.free_trial;
+	if (freeTrialParams !== undefined) {
 		return handleFreeTrialParam({
-			freeTrialParams: params.customize.free_trial,
+			freeTrialParams,
 			stripeSubscription,
 			fullProduct: attachProduct,
 			currentEpochMs,
