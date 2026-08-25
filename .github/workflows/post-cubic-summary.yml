@@ -130,7 +130,7 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           SLACK_SHIPPED_WEBHOOK_URL: ${{ secrets.SLACK_SHIPPED_WEBHOOK_URL }}
         run: |
-          if [ "$(node -e 'process.stdout.write(String(require("node:crypto").randomInt(100)))')" -ne 0 ]; then
+          if [ "$(node -e 'process.stdout.write(String(require("node:crypto").randomInt(100)))')" -ge 5 ]; then
             echo "No Honest Burgers trip for this merge"
             exit 0
           fi
