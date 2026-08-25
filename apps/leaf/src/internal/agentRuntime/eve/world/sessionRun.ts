@@ -1,5 +1,8 @@
 import { logger } from "../../../../lib/logger.js";
-import { isWorldNotFoundError, workflowWorld } from "./workflowWorld.js";
+import {
+	isWorldNotFoundError,
+	workflowWorldHoldingRun,
+} from "./workflowWorld.js";
 
 /** False means eve no longer holds the delivery hook: a message post would
  * silently start a new run under the same token. */
@@ -10,7 +13,7 @@ export const isContinuationTokenAlive = async ({
 	sessionId: string;
 	token: string;
 }): Promise<boolean | undefined> => {
-	const world = workflowWorld();
+	const world = await workflowWorldHoldingRun(sessionId);
 	if (!world) return undefined;
 	try {
 		await world.hooks.getByToken(token);
@@ -27,7 +30,7 @@ export const isContinuationTokenAlive = async ({
 };
 
 export const cancelSessionRun = async (sessionId: string) => {
-	const world = workflowWorld();
+	const world = await workflowWorldHoldingRun(sessionId);
 	if (!world) return false;
 	try {
 		const run = await world.runs.get(sessionId, { resolveData: "none" });

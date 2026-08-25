@@ -1,5 +1,5 @@
 export async function* ndjsonLines(
-	chunks: AsyncIterable<Uint8Array> | Iterable<Uint8Array>,
+	chunks: AsyncIterable<Uint8Array>,
 ): AsyncGenerator<string> {
 	const decoder = new TextDecoder();
 	let buffer = "";

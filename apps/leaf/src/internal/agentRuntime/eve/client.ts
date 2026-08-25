@@ -12,7 +12,7 @@ import {
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 import { readSessionEvents } from "./world/readSessionEvents.js";
 import { sessionEventCount } from "./world/sessionStream.js";
-import { hasWorkflowWorld } from "./world/workflowWorld.js";
+import { workflowWorldHoldingRun } from "./world/workflowWorld.js";
 
 const eveUrl = (path: string) => new URL(path, env.EVE_SERVER_URL).href;
 
@@ -266,7 +266,9 @@ export async function* streamEveEvents({
 	session: EveSessionRef;
 	signal?: AbortSignal;
 }): AsyncGenerator<EveEvent> {
-	const source = hasWorkflowWorld() ? "world" : "http";
+	const source = (await workflowWorldHoldingRun(session.sessionId))
+		? "world"
+		: "http";
 	logger.info("Opening eve event stream", {
 		event: "leaf.eve_stream_opened",
 		data: {
@@ -382,11 +384,14 @@ const countEveReplayableEvents = async ({
 			{ headers: eveHeaders(auth), signal: controller.signal },
 		);
 		if (!response.ok || !response.body) return count;
-		for await (const chunk of response.body as AsyncIterable<Uint8Array>) {
-			clearTimeout(quietTimer);
-			quietTimer = setTimeout(() => controller.abort(), REPLAY_QUIET_GAP_MS);
-			for await (const _line of ndjsonLines([chunk])) count += 1;
-		}
+		const chunks = async function* () {
+			for await (const chunk of response.body as AsyncIterable<Uint8Array>) {
+				clearTimeout(quietTimer);
+				quietTimer = setTimeout(() => controller.abort(), REPLAY_QUIET_GAP_MS);
+				yield chunk;
+			}
+		};
+		for await (const _line of ndjsonLines(chunks())) count += 1;
 	} catch (error) {
 		const quietGapReached =
 			error instanceof Error && error.name === "AbortError";
