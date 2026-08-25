@@ -30,9 +30,11 @@ export const withMotherDuckSession = async <T>({
 	}
 };
 
-/** Staged swap (the flights' pattern): build `__new`, drop the live object
- * (tolerating VIEW — it has been one before), rename. Live readers of the
- * shared database never observe a missing table. */
+/** Single-statement atomic replace: readers observe the old table or the new
+ * one, never a gap — stronger than the flights' drop+rename dance, and immune
+ * to concurrent writers racing on a shared staging name. One legacy wrinkle:
+ * these objects have historically been VIEWs, which CREATE OR REPLACE TABLE
+ * cannot replace across object types. */
 export const swapInParquetTable = async ({
 	connection,
 	table,
@@ -44,14 +46,6 @@ export const swapInParquetTable = async ({
 	parquetUrl: string;
 	logger: DucklakeLogger;
 }): Promise<{ rowCount: number }> => {
-	const staging = `${table}__new`;
-	// MotherDuck pulls the parquet from S3 itself via its lake_s3 secret —
-	// bytes never flow through this task's connection.
-	await connection.run(`
-		CREATE OR REPLACE TABLE "${MD_DATABASE}".main."${staging}" AS
-		SELECT * FROM read_parquet('${parquetUrl}')
-	`);
-
 	const existing = await connection.run(
 		`SELECT table_type FROM information_schema.tables
 		 WHERE table_catalog = '${MD_DATABASE}' AND table_schema = 'main' AND table_name = '${table}'`,
@@ -59,13 +53,16 @@ export const swapInParquetTable = async ({
 	const existingRows = await existing.getRows();
 	if (existingRows.length > 0) {
 		const isView = String(existingRows[0][0]).toUpperCase().includes("VIEW");
-		await connection.run(
-			`DROP ${isView ? "VIEW" : "TABLE"} "${MD_DATABASE}".main."${table}"`,
-		);
+		if (isView) {
+			await connection.run(`DROP VIEW "${MD_DATABASE}".main."${table}"`);
+		}
 	}
-	await connection.run(
-		`ALTER TABLE "${MD_DATABASE}".main."${staging}" RENAME TO "${table}"`,
-	);
+	// MotherDuck pulls the parquet from S3 itself via its lake_s3 secret —
+	// bytes never flow through this task's connection.
+	await connection.run(`
+		CREATE OR REPLACE TABLE "${MD_DATABASE}".main."${table}" AS
+		SELECT * FROM read_parquet('${parquetUrl}')
+	`);
 
 	const counted = await connection.run(
 		`SELECT COUNT(*) AS n FROM "${MD_DATABASE}".main."${table}"`,
