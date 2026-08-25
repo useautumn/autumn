@@ -1,0 +1,23 @@
+import { BraintrustExporter } from "@braintrust/otel";
+import { registerOTel } from "@vercel/otel";
+import { defineInstrumentation } from "eve/instrumentation";
+
+/** Braintrust traces the model loop — prompts, tool calls and results, token
+ * usage, subagent spans. Axiom keeps session lifecycle (parks, reconnects,
+ * cursors); the two join on the session id, which eve already puts on every
+ * span as `eve.session.id` — the same value Axiom logs as `session_id`.
+ *
+ * Without BRAINTRUST_API_KEY no exporter is registered, so a missing key
+ * costs traces, never turns. */
+export default defineInstrumentation({
+	setup: ({ agentName }) => {
+		if (!process.env.BRAINTRUST_API_KEY) return;
+		registerOTel({
+			serviceName: agentName,
+			traceExporter: new BraintrustExporter({
+				filterAISpans: true,
+				parent: `project_name:${process.env.BRAINTRUST_PROJECT ?? "leaf"}`,
+			}),
+		});
+	},
+});

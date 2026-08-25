@@ -220,6 +220,74 @@ describe("resolveApprovalDisplay", () => {
 		});
 	});
 
+	test("fetches the base plan for a price-only customize so the old price renders as a remove", async () => {
+		const calls: string[] = [];
+		const display = await resolveApprovalDisplay({
+			env: AppEnv.Sandbox,
+			executeTool: async ({ toolName }) => {
+				calls.push(toolName);
+				return toolName === "getPlan"
+					? {
+							name: "Transactional Pro",
+							price: { amount: 25, interval: "month" },
+						}
+					: {
+							email: "test@example.com",
+							name: "testmail",
+							subscriptions: [
+								{
+									plan: {
+										id: "transactional_pro",
+										name: "Transactional Pro",
+										price: { amount: 20, interval: "month" },
+									},
+									plan_id: "transactional_pro",
+								},
+							],
+						};
+			},
+			getToken: async () => "token",
+			preview: {
+				incoming: [
+					{ plan_id: "transactional_pro", plan: { name: "Transactional Pro" } },
+				],
+			},
+			request: {
+				customer_id: "cus_1",
+				customize: { price: { amount: 40, interval: "month" } },
+				plan_id: "transactional_pro",
+			},
+		});
+
+		expect(calls).toContain("getPlan");
+		expect(display.currentPlan).toEqual({
+			id: "transactional_pro",
+			name: "Transactional Pro",
+			price: { amount: 20, interval: "month" },
+		});
+	});
+
+	test("a top-level free trial also fetches the base plan for the diff", async () => {
+		const calls: string[] = [];
+		await resolveApprovalDisplay({
+			env: AppEnv.Sandbox,
+			executeTool: async ({ toolName }) => {
+				calls.push(toolName);
+				return { name: "Pro" };
+			},
+			getToken: async () => "token",
+			preview: {
+				incoming: [{ plan_id: "pro", plan: { name: "Pro" } }],
+			},
+			request: {
+				free_trial: { duration_length: 14, duration_type: "day" },
+				plan_id: "pro",
+			},
+		});
+
+		expect(calls).toContain("getPlan");
+	});
+
 	test("resolves schedule plan items needed for removal rows", async () => {
 		const display = await resolveApprovalDisplay({
 			env: AppEnv.Sandbox,
