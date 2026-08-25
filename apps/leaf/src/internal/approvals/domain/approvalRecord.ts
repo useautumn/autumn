@@ -1,10 +1,12 @@
 import type { ChatApproval, ChatApprovalWrite } from "@autumn/shared";
+import type { AgentThreadRef } from "../../agentRuntime/domain/agentTurnContext.js";
 import {
 	childSessionIdsFromToolArgs,
 	siblingRequestIdsFromToolArgs,
 	type WithheldWrite,
 	withheldWritesFromToolArgs,
 } from "../../agentRuntime/eve/parkedInput.js";
+import type { EveAuthContext } from "../../agentRuntime/eve/types.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 import { publicToolArgs } from "../utils/toolRequest.js";
@@ -162,3 +164,38 @@ export const dashboardLinkableApproval = ({
 		SHEET_LINKABLE_TOOLS.has(normalizeToolName(approval.tool_name))
 	);
 };
+
+/** The full answer that releases a parked batch: the primary deny plus the
+ * option that denies each grouped sibling. */
+export const approvalDenyPlan = ({
+	approval,
+	writes,
+}: {
+	approval: ChatApproval & { tool_call_id: string };
+	writes: ReadonlyArray<ChatApprovalWrite>;
+}) => ({
+	optionId: denyOptionOf(approval),
+	requestId: approval.tool_call_id,
+	siblingOptionIdFor: siblingDenyOptionFor(writes),
+	siblingRequestIds: siblingRequestIdsOf({ approval, writes }),
+});
+
+export const approvalThreadRef = (approval: ChatApproval): AgentThreadRef => ({
+	channelId: approval.channel_id,
+	provider: approval.provider,
+	threadId: approval.channel_id,
+	workspaceId: approval.workspace_id,
+});
+
+export const approvalAuthContext = ({
+	approval,
+	providerUserId,
+}: {
+	approval: ChatApproval;
+	providerUserId: string;
+}): EveAuthContext => ({
+	appEnv: approval.env,
+	orgId: approval.org_id,
+	providerUserId,
+	...approvalThreadRef(approval),
+});

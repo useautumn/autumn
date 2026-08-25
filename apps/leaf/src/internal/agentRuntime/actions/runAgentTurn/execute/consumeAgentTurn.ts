@@ -3,10 +3,15 @@ import { type AppEnv, ms } from "@autumn/shared";
 import { AGENT_UNREACHABLE_MESSAGE } from "../../../../../ui/messages.js";
 import type { ActiveRun } from "../../../../runs/runRegistry.js";
 import {
+	EveSessionDeadError,
+	EveStreamDisconnectedError,
 	EveStreamIdleTimeoutError,
 	resyncEveStreamIndex,
 } from "../../../eve/client.js";
-import { saveEveSessionState } from "../../../eve/sessionState.js";
+import {
+	advanceStreamCursor,
+	saveEveSessionState,
+} from "../../../eve/sessionState.js";
 import { streamEveEventsWithReconnect } from "../../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 import { applyEveEvent, type EveEventContext } from "./applyEveEvent.js";
@@ -72,8 +77,7 @@ const streamPassEvents = async ({
 		})) {
 			if (!sawEvent) onFirstStreamEvent?.();
 			sawEvent = true;
-			session.state.streamIndex += 1;
-			session.state.lastEventAt = Date.now();
+			advanceStreamCursor(session);
 
 			if (run?.stop) {
 				return {
@@ -260,6 +264,21 @@ export const consumeAgentTurn = async ({
 
 			if (pass.error instanceof EveStreamIdleTimeoutError) {
 				return await recoverFromIdleStream({ logger, turn });
+			}
+			if (
+				pass.error instanceof EveStreamDisconnectedError &&
+				!streamedAnyEvent
+			) {
+				logger.error("Eve session produced no events across every reconnect", {
+					event: "leaf.eve_session_dead",
+					data: {
+						new_session: session.newSession,
+						session_id: session.sessionId,
+						stream_index: session.state.streamIndex,
+					},
+					error: pass.error,
+				});
+				throw new EveSessionDeadError(session.sessionId);
 			}
 			if (pass.error !== undefined) throw pass.error;
 

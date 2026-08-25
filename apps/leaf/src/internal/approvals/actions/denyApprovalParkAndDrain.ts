@@ -1,21 +1,16 @@
 import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { drainParkedAgentTurn } from "../../agentRuntime/actions/submitAgentInput/drainParkedAgentTurn.js";
-import { adoptPostedEveSession } from "../../agentRuntime/eve/adoptPostedSession.js";
-import { postEveInputResponse } from "../../agentRuntime/eve/client.js";
+import { answerEveInput } from "../../agentRuntime/eve/answerEveInput.js";
 import type {
 	EveAuthContext,
 	EveSessionRef,
 } from "../../agentRuntime/eve/types.js";
-import {
-	denyOptionOf,
-	siblingDenyOptionFor,
-	siblingRequestIdsOf,
-} from "../domain/approvalRecord.js";
+import { approvalDenyPlan } from "../domain/approvalRecord.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 
-/** Denies the whole parked batch (primary + siblings), then drains the resumed
- * turn — an undrained ack would replay as the reply to the user's next message. */
+/** Denies the whole parked batch, then drains the resumed turn — an undrained
+ * ack would replay as the reply to the user's next message. */
 export const denyApprovalParkAndDrain = async ({
 	approval,
 	auth,
@@ -27,20 +22,20 @@ export const denyApprovalParkAndDrain = async ({
 	note: string;
 	session: EveSessionRef;
 }) => {
-	if (!approval.tool_call_id) return;
-	const writeRows = await chatApprovalWritesRepo.list({
+	const toolCallId = approval.tool_call_id;
+	if (!toolCallId) return { stuck: false };
+	const writes = await chatApprovalWritesRepo.list({
 		approvalId: approval.id,
 		db,
 	});
-	const posted = await postEveInputResponse({
+	await answerEveInput({
 		auth,
 		note,
-		optionId: denyOptionOf(approval),
-		requestId: approval.tool_call_id,
 		session,
-		siblingOptionIdFor: siblingDenyOptionFor(writeRows),
-		siblingRequestIds: siblingRequestIdsOf({ approval, writes: writeRows }),
+		...approvalDenyPlan({
+			approval: { ...approval, tool_call_id: toolCallId },
+			writes,
+		}),
 	});
-	adoptPostedEveSession({ posted, session, status: "running" });
-	await drainParkedAgentTurn({ auth, orgId: approval.org_id, session });
+	return drainParkedAgentTurn({ auth, orgId: approval.org_id, session });
 };

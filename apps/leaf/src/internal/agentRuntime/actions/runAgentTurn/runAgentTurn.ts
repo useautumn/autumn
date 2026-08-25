@@ -4,15 +4,20 @@ import type {
 	AgentTurnContext,
 	AgentTurnParams,
 } from "../../domain/agentTurnContext.js";
-import type { EveAuthContext } from "../../eve/types.js";
+import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import {
 	generateThreadTitle,
 	persistThreadTitle,
 } from "../../sessions/agentThreadTitle.js";
+import { recoverLostSession } from "./errors/recoverLostSession.js";
 import { consumeAgentTurn } from "./execute/consumeAgentTurn.js";
 import { resolveAgentTurnOutcome } from "./finalize/resolveAgentTurnOutcome.js";
 import { buildAgentTurnMessage } from "./setup/buildAgentTurnMessage.js";
-import { prepareAgentTurn } from "./setup/prepareAgentTurn.js";
+import {
+	loadAgentOrgContext,
+	type PreparedAgentTurn,
+	prepareAgentTurn,
+} from "./setup/prepareAgentTurn.js";
 import { startAgentTurn } from "./setup/startAgentTurn.js";
 
 export const runAgentTurn = async ({
@@ -36,7 +41,6 @@ export const runAgentTurn = async ({
 		thread,
 		token,
 	} = ctx;
-
 	const auth: EveAuthContext = {
 		appEnv: env,
 		autumnUserId: ctx.autumnUserId,
@@ -52,33 +56,35 @@ export const runAgentTurn = async ({
 		: undefined;
 	const startedAt = Date.now();
 	let firstEventAt: number | undefined;
+	let restarted = false;
 
-	try {
-		const { existingSession, orgContext } = await prepareAgentTurn({
-			auth,
-			context: ctx,
-		});
-		const preparedAt = Date.now();
-		const session = await startAgentTurn({
-			auth: { ...auth, orgInstructions: orgContext?.instructions },
+	const startTurn = (prepared: Partial<PreparedAgentTurn>) =>
+		startAgentTurn({
+			auth: { ...auth, orgInstructions: prepared.orgContext?.instructions },
 			env,
 			message: buildAgentTurnMessage({
 				env,
 				isAdminInstall: isInternalAutumnSlackProvider({
 					provider: thread.provider,
 				}),
-				newSession: !existingSession,
-				orgContext,
+				newSession: !prepared.existingSession,
+				orgContext: prepared.orgContext,
 				orgSlug: org.slug,
 				params,
 			}),
 			orgId: org.id,
 			params,
-			session: existingSession,
+			session: prepared.existingSession,
 			thread,
+			withdrawal: prepared.withdrawal,
 		});
+	const startFresh = async () => {
+		restarted = true;
+		return startTurn({ orgContext: await loadAgentOrgContext(ctx) });
+	};
+	const consume = (session: EveSessionRef) => {
 		run?.resolveSessionId(session.sessionId);
-		const outcome = await consumeAgentTurn({
+		return consumeAgentTurn({
 			auth,
 			env,
 			logger,
@@ -93,7 +99,27 @@ export const runAgentTurn = async ({
 			session,
 			token,
 		});
+	};
 
+	try {
+		const prepared = await prepareAgentTurn(ctx);
+		const { existingSession } = prepared;
+		const preparedAt = Date.now();
+		let session = await startTurn(prepared).catch(async (error) => {
+			if (!existingSession) throw error;
+			await recoverLostSession({
+				ctx,
+				error,
+				existingSession,
+				session: existingSession,
+			});
+			return startFresh();
+		});
+		const outcome = await consume(session).catch(async (error) => {
+			await recoverLostSession({ ctx, error, existingSession, session });
+			session = await startFresh();
+			return consume(session);
+		});
 		const result = await resolveAgentTurnOutcome({
 			env,
 			logger,
@@ -108,6 +134,7 @@ export const runAgentTurn = async ({
 				new_session: !existingSession,
 				outcome_kind: result.kind,
 				prepare_ms: preparedAt - startedAt,
+				restarted,
 				session_id: session.sessionId,
 				time_to_first_event_ms: firstEventAt
 					? firstEventAt - startedAt

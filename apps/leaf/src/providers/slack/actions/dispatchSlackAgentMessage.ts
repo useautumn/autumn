@@ -1,5 +1,4 @@
 import type { Attachment } from "chat";
-import { withdrawAgentTurnApproval } from "../../../internal/agentRuntime/actions/withdrawAgentTurnApproval/withdrawAgentTurnApproval.js";
 import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { isTransientNetworkError } from "../../../internal/agentRuntime/eve/streamErrors.js";
 import { editSupersededApprovalCards } from "../../../internal/approvals/surfaces/slack/superseded.js";
@@ -189,10 +188,6 @@ const runAndReply = async ({
 			return "close";
 		}
 
-		const outputInstallation =
-			output.kind === "blocked" ? installation : output.installation;
-		const orgId =
-			output.kind === "blocked" ? outputInstallation.org_id : output.org.id;
 		if (output.kind === "blocked") {
 			await progress.fail(output.text);
 			await target.post({ markdown: output.text });
@@ -200,29 +195,8 @@ const runAndReply = async ({
 		}
 
 		if (hasQueuedThreadMessage(runKey)) {
-			if (output.kind === "approval") {
-				try {
-					await withdrawAgentTurnApproval({
-						approval: output.approval,
-						auth: {
-							appEnv: output.env,
-							channelId,
-							orgId,
-							provider: outputInstallation.provider,
-							providerUserId,
-							threadId,
-							workspaceId: outputInstallation.workspace_id,
-						},
-						orgId,
-						sessionId: output.sessionId,
-					});
-				} catch (error) {
-					logger.warn("Could not withdraw suspension for queued message", {
-						event: "leaf.eve_queued_withdraw_failed",
-						error,
-					});
-				}
-			}
+			// A pending approval left here is withdrawn by the queued message's own
+			// turn: its denies ride that message's eve post, with no drain turn.
 			logger.info("Suppressed reply; newer message queued", {
 				event: "leaf.slack_reply_suppressed",
 				data: { had_suspension: output.kind === "approval" },

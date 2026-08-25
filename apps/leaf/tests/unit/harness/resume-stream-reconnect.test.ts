@@ -59,6 +59,9 @@ await mockLeafModule({
 	factory: () => ({
 		EveStreamDisconnectedError: MockEveStreamDisconnectedError,
 		EveStreamIdleTimeoutError: MockEveStreamIdleTimeoutError,
+		isEveTransportLost: (error: unknown) =>
+			error instanceof MockEveStreamDisconnectedError ||
+			error instanceof MockEveStreamIdleTimeoutError,
 		postEveInputResponse: async () => ({
 			continuationToken: "token_2",
 			sessionId: "eve_session_1",
@@ -136,6 +139,7 @@ const makeSession = (): EveSessionRef => ({
 		streamIndex: 0,
 		status: "waiting",
 		lastEventAt: 0,
+		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",
 });
@@ -300,5 +304,44 @@ describe("drainParkedAgentTurn stream resilience", () => {
 
 		expect(session.state.status).toBe("waiting");
 		expect(upsertedStates).toEqual(["waiting"]);
+	});
+});
+
+describe("drainParkedAgentTurn re-park cap", () => {
+	beforeEach(() => {
+		streamPasses = [];
+		streamCalls.length = 0;
+		upsertedStates.length = 0;
+	});
+
+	test("a child that re-parks after every deny is reported stuck, never left parked", async () => {
+		const gatedPark = {
+			requests: [
+				{
+					action: { input: {}, toolName: "autumn__attach" },
+					options: [
+						{ id: "approve", label: "Approve" },
+						{ id: "deny", label: "Deny" },
+					],
+					requestId: "tc_1",
+				},
+			],
+			type: "input.requested",
+		} as unknown as EveEvent;
+		streamPasses = [
+			{ events: [{ type: "turn.started" }, gatedPark] as EveEvent[] },
+			{ events: [gatedPark] },
+			{ events: [gatedPark] },
+			{ events: [gatedPark] },
+		];
+
+		const result = await drainParkedAgentTurn({
+			auth,
+			orgId: "org_1",
+			session: makeSession(),
+		});
+
+		expect(streamCalls).toHaveLength(4);
+		expect(result?.stuck).toBe(true);
 	});
 });

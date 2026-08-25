@@ -17,6 +17,7 @@ import {
 	childSessionIdsToolArgs,
 	classifyParkedEveInput,
 	type PendingQuestion,
+	pendingGatedRequests,
 	siblingRequestIdsToolArgs,
 	type WithheldWrite,
 	withheldWritesToolArgs,
@@ -25,6 +26,7 @@ import {
 	type CapturedPreview,
 	previewForParkedWrite,
 } from "../../../eve/parkedWritePreview.js";
+import type { EvePendingRequest } from "../../../eve/types.js";
 import { isSilentTool, toolGerund } from "../../../tools/toolPolicy.js";
 import { catalogPlanNeedingDecision } from "../../resolveCatalogDecision/catalogDecisionPolicy.js";
 
@@ -54,6 +56,7 @@ export type EveTurnEffect =
 	| Readonly<{ id: string; kind: "reasoning"; text: string }>
 	| Readonly<{
 			kind: "save_session";
+			pendingRequests?: ReadonlyArray<EvePendingRequest>;
 			status: "completed" | "failed" | "waiting";
 	  }>
 	| Readonly<{ kind: "thinking" }>
@@ -267,7 +270,13 @@ const reduceInputRequest = ({
 	});
 	if (parked?.kind === "gated") {
 		return {
-			effects: [{ kind: "save_session", status: "waiting" }],
+			effects: [
+				{
+					kind: "save_session",
+					pendingRequests: pendingGatedRequests(parked),
+					status: "waiting",
+				},
+			],
 			outcome: {
 				approval: approvalForGatedWrite({
 					chained: parked.chained,
@@ -286,7 +295,17 @@ const reduceInputRequest = ({
 		? accumulatedText
 		: textForInputRequests(event.requests) || WAITING_FOR_INPUT_MESSAGE;
 	return {
-		effects: [{ kind: "save_session", status: "waiting" }],
+		effects: [
+			{
+				kind: "save_session",
+				pendingRequests: event.requests.flatMap((request) =>
+					request.requestId
+						? [{ kind: "question" as const, requestId: request.requestId }]
+						: [],
+				),
+				status: "waiting",
+			},
+		],
 		outcome: {
 			kind: "parked",
 			question: parked?.kind === "question" ? parked.question : undefined,

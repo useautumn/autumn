@@ -1,7 +1,5 @@
-import { db } from "../../../../lib/db.js";
-import { adoptPostedEveSession } from "../../eve/adoptPostedSession.js";
-import { postEveInputResponse } from "../../eve/client.js";
-import { upsertEveSession } from "../../eve/repo.js";
+import { answerEveInput } from "../../eve/answerEveInput.js";
+import { saveEveSessionState } from "../../eve/sessionState.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { consumeResumedAgentTurn } from "./consumeResumedAgentTurn.js";
 
@@ -32,7 +30,7 @@ export const submitAgentInput = async ({
 	siblingRequestIds?: ReadonlyArray<string>;
 	suppressSiblingWithheldNote?: boolean;
 }) => {
-	const posted = await postEveInputResponse({
+	await answerEveInput({
 		approveSiblings,
 		auth,
 		note,
@@ -43,15 +41,7 @@ export const submitAgentInput = async ({
 		siblingRequestIds,
 		suppressSiblingWithheldNote,
 	});
-	adoptPostedEveSession({ posted, session, status: "running" });
-	await upsertEveSession({
-		db,
-		env: session.env,
-		orgId,
-		sessionId: session.sessionId,
-		state: session.state,
-		threadKey: session.threadKey,
-	});
+	await saveEveSessionState({ orgId, session });
 	return consumeResumedAgentTurn({
 		auth,
 		childSessionIds,

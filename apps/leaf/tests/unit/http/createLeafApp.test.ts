@@ -17,7 +17,7 @@ describe("Leaf HTTP app", () => {
 	test("serves health and credentialed CORS preflights", async () => {
 		const health = await app.request("/health");
 		expect(health.status).toBe(200);
-		expect(await health.json()).toEqual({ ok: true });
+		expect(await health.json()).toEqual({ eve: "external", ok: true });
 		expect(health.headers.get("access-control-allow-origin")).toBe("*");
 
 		const preflight = await app.request("/agent/chat", {

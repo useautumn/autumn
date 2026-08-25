@@ -147,8 +147,18 @@ describe("Eve turn reducer", () => {
 			},
 			progress: requested.progress,
 		});
-		expect(suspended.effects).toEqual([
-			{ kind: "save_session", status: "waiting" },
+		// The park is persisted with the option that releases each request, so a
+		// later message can never be posted over it unanswered.
+		expect(suspended.effects).toHaveLength(1);
+		expect(suspended.effects[0]).toMatchObject({
+			kind: "save_session",
+			status: "waiting",
+		});
+		expect(
+			(suspended.effects[0] as { pendingRequests?: unknown[] }).pendingRequests,
+		).toEqual([
+			{ denyOptionId: "cancel", kind: "gated", requestId: "req_1" },
+			{ denyOptionId: "deny", kind: "gated", requestId: "req_2" },
 		]);
 		expect(suspended.outcome).toEqual({
 			approval: {

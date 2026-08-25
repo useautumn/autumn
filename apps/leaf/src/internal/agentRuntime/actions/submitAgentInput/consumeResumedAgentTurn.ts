@@ -1,18 +1,22 @@
 import { ms } from "@autumn/shared";
-import { db } from "../../../../lib/db.js";
 import { logger } from "../../../../lib/logger.js";
 import { isErrorResult } from "../../../approvals/utils/approvalErrors.js";
 import {
-	EveStreamDisconnectedError,
 	EveStreamIdleTimeoutError,
+	isEveTransportLost,
 } from "../../eve/client.js";
 import type { EveEvent } from "../../eve/eveEventSchemas.js";
 import { labelForAction, labelForResult } from "../../eve/events.js";
 import {
 	classifyParkedEveInput,
+	pendingGatedRequests,
 	type WithheldWrite,
 } from "../../eve/parkedInput.js";
-import { upsertEveSession } from "../../eve/repo.js";
+import {
+	advanceStreamCursor,
+	saveEveSessionState,
+	statusAfterTerminalEvent,
+} from "../../eve/sessionState.js";
 import { streamEveEventsWithReconnect } from "../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { normalizeToolName } from "../../tools/toolPolicy.js";
@@ -192,8 +196,7 @@ export const consumeResumedAgentTurn = async ({
 			session,
 		})) {
 			sawEvent = true;
-			session.state.streamIndex += 1;
-			session.state.lastEventAt = Date.now();
+			advanceStreamCursor(session);
 			if (
 				event.type === "step.started" ||
 				event.type === "actions.requested" ||
@@ -242,6 +245,8 @@ export const consumeResumedAgentTurn = async ({
 					chained = parkedInput.chained;
 					chainedSiblingRequestIds = parkedInput.siblingRequestIds;
 					chainedWithheld = parkedInput.withheld;
+					session.state.pendingRequests = pendingGatedRequests(parkedInput);
+					session.state.status = "waiting";
 					break;
 				}
 				if (parkedInput?.kind === "question") {
@@ -277,8 +282,7 @@ export const consumeResumedAgentTurn = async ({
 				(turnStarted || sawTurnActivity) &&
 				(event.type === "session.waiting" || event.type === "session.completed")
 			) {
-				session.state.status =
-					event.type === "session.completed" ? "completed" : "waiting";
+				session.state.status = statusAfterTerminalEvent(event.type);
 				break;
 			} else if (
 				(turnStarted || sawTurnActivity) &&
@@ -289,31 +293,17 @@ export const consumeResumedAgentTurn = async ({
 			}
 		}
 	} catch (error) {
-		const transportLost =
-			error instanceof EveStreamDisconnectedError ||
-			error instanceof EveStreamIdleTimeoutError;
-		if (!transportLost) throw error;
-		// The write may well have run; the evidence checks below decide the
-		// outcome, so a dead socket must not fail the approval on its own.
+		if (!isEveTransportLost(error)) throw error;
 		logger.warn("Resumed stream lost; settling from write evidence", {
 			event: "leaf.eve_resumed_stream_lost",
 			data: {
-				error: error.message,
 				session_id: session.sessionId,
 				stream_index: session.state.streamIndex,
 			},
+			error,
 		});
 	}
-	if (sawEvent) {
-		await upsertEveSession({
-			db,
-			env: session.env,
-			orgId,
-			sessionId: session.sessionId,
-			state: session.state,
-			threadKey: session.threadKey,
-		});
-	}
+	if (sawEvent) await saveEveSessionState({ orgId, session });
 	// Writes delegated to a subagent report their results on the child's
 	// stream only; replay each child to prove the approved writes ran there.
 	for (const childSessionId of childSessionIds) {
