@@ -62,6 +62,7 @@ export type BillingPreviewDisplay = {
 	lineItems: LineItemDisplay[];
 	prepaid: PrepaidQuantityDisplay[];
 	nextCycle: (MoneyDisplay & { startsAtText: string | null }) | null;
+	resetsUsage: boolean;
 	phases: SchedulePhaseDisplay[];
 	redirectToCheckout: boolean;
 	refund: MoneyDisplay | null;
@@ -378,6 +379,7 @@ export const buildBillingPreviewDisplay = ({
 			currency,
 			lineItems: getArray(payload.line_items),
 		}),
+		resetsUsage: payload.resets_usage === true,
 		nextCycle:
 			nextCycleTotal === null
 				? null

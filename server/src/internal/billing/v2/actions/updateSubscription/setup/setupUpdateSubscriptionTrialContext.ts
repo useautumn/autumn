@@ -4,7 +4,10 @@ import type {
 	FullProduct,
 	TrialContext,
 } from "@autumn/shared";
-import { isProductPaidAndRecurring } from "@autumn/shared";
+import {
+	isProductPaidAndRecurring,
+	resolveFreeTrialParam,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import {
@@ -33,12 +36,16 @@ export const setupUpdateSubscriptionTrialContext = ({
 	customerProduct?: FullCusProduct;
 	currentEpochMs: number;
 	fullProduct: FullProduct;
-	params: { customize?: CustomizePlanV1 };
+	params: {
+		customize?: CustomizePlanV1;
+		free_trial?: CustomizePlanV1["free_trial"];
+	};
 }): TrialContext | undefined => {
-	// Handle explicit free_trial param (null or value)
-	if (params.customize?.free_trial !== undefined) {
+	// Handle explicit free_trial param (null or value), in either shape
+	const freeTrialParam = resolveFreeTrialParam(params);
+	if (freeTrialParam !== undefined) {
 		return handleFreeTrialParam({
-			freeTrialParams: params.customize.free_trial,
+			freeTrialParams: freeTrialParam,
 			stripeSubscription,
 			customerProduct,
 			fullProduct,

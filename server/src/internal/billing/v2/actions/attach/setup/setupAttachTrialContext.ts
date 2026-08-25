@@ -4,6 +4,7 @@ import {
 	type FullCustomer,
 	type FullProduct,
 	isProductPaidAndRecurring,
+	resolveFreeTrialParam,
 	type TrialContext,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -46,12 +47,7 @@ export const setupAttachTrialContext = async ({
 		currentCustomerProduct,
 	} = currentContext;
 
-	// The trial is documented at the top level and defined inside customize;
-	// both are honoured so a documented request cannot silently lose it.
-	const freeTrialParams =
-		params.customize?.free_trial !== undefined
-			? params.customize.free_trial
-			: params.free_trial;
+	const freeTrialParams = resolveFreeTrialParam(params);
 	if (freeTrialParams !== undefined) {
 		return handleFreeTrialParam({
 			freeTrialParams,

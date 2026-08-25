@@ -285,6 +285,10 @@ export const consumeAgentTurn = async ({
 				});
 			}
 
+			if (activity.msSinceStart() >= MAX_TURN_DURATION_MS) {
+				return settleExhaustedTurn({ activity, logger, turn });
+			}
+
 			const pass = await streamPassEvents({
 				abandonForStop,
 				activity,
@@ -311,10 +315,7 @@ export const consumeAgentTurn = async ({
 				// through quiet windows and ends when the session terminates.
 				const turnIsWorking = activity.activeChildren() > 0;
 				idleRetries = pass.sawEvent || turnIsWorking ? 0 : idleRetries + 1;
-				if (
-					idleRetries >= MAX_IDLE_RESYNCS ||
-					activity.msSinceStart() >= MAX_TURN_DURATION_MS
-				) {
+				if (idleRetries >= MAX_IDLE_RESYNCS) {
 					return settleExhaustedTurn({ activity, logger, turn });
 				}
 				await resyncAfterIdleStream({ attempt: idleRetries, logger, turn });
