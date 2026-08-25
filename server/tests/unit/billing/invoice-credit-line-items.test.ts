@@ -16,6 +16,7 @@ import { products } from "@tests/utils/fixtures/db/products.js";
 import { lineItemsToCreateInvoiceItemsParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams.js";
 import { billingPlanToNextCycleLineItems } from "@/internal/billing/v2/utils/billingPlan/toNextCyclePreview/billingPlanToNextCycleLineItems.js";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems.js";
+import { getFinalUsageInvoicePreview } from "@/internal/customers/cusUtils/cusResponseUtils/getFinalUsageInvoicePreview.js";
 
 const SOURCE_A_INTERNAL_ID = "internal_feature_a";
 const SOURCE_B_INTERNAL_ID = "internal_feature_b";
@@ -370,5 +371,51 @@ describe("invoice credit line items", () => {
 		]);
 		expect(result.subtotal).toBe(0);
 		expect(result.total).toBe(0);
+	});
+
+	test("projects invoice-credit lines into the final cancellation preview", () => {
+		const fixture = makeFixture({
+			balance: 960,
+			usageAttribution: {
+				[SOURCE_A_INTERNAL_ID]: { units: 200, credits: 40 },
+			},
+		});
+		const subscriptionId = "subscription_canceling";
+		const stripeSubscription = {
+			id: subscriptionId,
+			items: {
+				data: [{ current_period_end: PERIOD_END / 1_000 }],
+			},
+		} as never;
+
+		const result = getFinalUsageInvoicePreview({
+			ctx: fixture.ctx,
+			billingContext: {
+				...fixture.billingContext,
+				stripeSubscription,
+			},
+			customerProducts: [fixture.customerProduct],
+			subscriptionId,
+		});
+
+		expect(
+			result?.line_items.map((lineItem) => ({
+				featureId: lineItem.feature_id,
+				description: lineItem.description,
+				subtotal: lineItem.subtotal,
+			})),
+		).toEqual([
+			{
+				featureId: "feature_a",
+				description: "Feature A, 200 units",
+				subtotal: 40,
+			},
+			{
+				featureId: "invoice_credits",
+				description: "Credits applied",
+				subtotal: -40,
+			},
+		]);
+		expect(result?.total).toBe(0);
 	});
 });

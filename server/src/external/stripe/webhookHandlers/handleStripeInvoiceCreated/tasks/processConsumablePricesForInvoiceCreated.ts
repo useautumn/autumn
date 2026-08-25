@@ -130,6 +130,19 @@ export const processConsumablePricesForInvoiceCreated = async ({
 				stripeInvoiceId: stripeInvoice.id,
 				lineItems: consumableLineItems,
 			}),
+			idempotencyKeys: consumableLineItems.map(
+				(lineItem) =>
+					`autumn:usage:${createHash("sha256")
+						.update(
+							[
+								stripeInvoice.id,
+								lineItem.context.customerProduct?.id,
+								lineItem.context.customerPrice?.id,
+								lineItem.context.customerEntitlement?.id,
+							].join(":"),
+						)
+						.digest("hex")}`,
+			),
 		});
 	}
 	if (invoiceCreditLineItems.length > 0) {

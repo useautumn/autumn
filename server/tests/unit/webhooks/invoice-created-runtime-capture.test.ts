@@ -123,18 +123,13 @@ describe("invoice.created runtime customer capture", () => {
 		expect(cachedFullSubjectCalls).toHaveLength(0);
 	});
 
-	test("reads live state for invoice-credit subscriptions", async () => {
+	test("keeps invoice-credit subscriptions on the existing hydration path", async () => {
 		await setupInvoiceCreatedContext({
 			ctx: makeContext({ invoiceCredit: true }),
 			event,
 		});
 
-		expect(cachedFullSubjectCalls).toHaveLength(1);
-		expect(cachedFullSubjectCalls[0]).toMatchObject({
-			customerId: "customer_test",
-			runLazyResets: false,
-			source: "invoice-created-capture",
-		});
+		expect(cachedFullSubjectCalls).toHaveLength(0);
 	});
 });
 

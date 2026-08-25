@@ -1,7 +1,6 @@
 import {
 	type FullCusProduct,
 	type FullCustomer,
-	fullSubjectToFullCustomer,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
@@ -24,9 +23,7 @@ import {
 	stripeSubscriptionToNowMs,
 	stripeSubscriptionToScheduleId,
 } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
-import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject.js";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
-import { isInvoiceCreditFeature } from "@/internal/features/creditSystemUtils.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 
 export interface InvoiceCreatedContext {
@@ -53,7 +50,7 @@ export const setupInvoiceCreatedContext = async ({
 	event: Stripe.InvoiceCreatedEvent;
 }): Promise<InvoiceCreatedContext | null> => {
 	const { stripeCli, logger } = ctx;
-	let fullCustomer = ctx.fullCustomer;
+	const fullCustomer = ctx.fullCustomer;
 
 	// 1. Get expanded invoice
 	const stripeInvoice = await getStripeInvoice({
@@ -77,34 +74,13 @@ export const setupInvoiceCreatedContext = async ({
 		return null;
 	}
 
-	// 4. Capture live invoice-credit attribution before the cycle reset
-	const hasInvoiceCredit = fullCustomer.customer_products.some(
-		(customerProduct) =>
-			customerProduct.customer_entitlements.some((customerEntitlement) =>
-				isInvoiceCreditFeature({
-					feature: customerEntitlement.entitlement.feature,
-				}),
-			),
-	);
-	if (hasInvoiceCredit) {
-		const { fullSubject } = await getCachedFullSubject({
-			ctx,
-			customerId: fullCustomer.id ?? fullCustomer.internal_id,
-			source: "invoice-created-capture",
-			runLazyResets: false,
-		});
-		if (fullSubject) {
-			fullCustomer = fullSubjectToFullCustomer({ fullSubject });
-		}
-	}
-
-	// 5. Get expanded stripe subscription
+	// 4. Get expanded stripe subscription
 	const stripeSubscription = await getExpandedStripeSubscription({
 		ctx,
 		subscriptionId: stripeSubscriptionId,
 	});
 
-	// 6. Get customer products by subscription ID
+	// 5. Get customer products by subscription ID
 	const currentCustomerProducts = fullCustomer.customer_products.filter(
 		(cp) => {
 			const onStripeSubscription = isCustomerProductOnStripeSubscription({
@@ -140,13 +116,13 @@ export const setupInvoiceCreatedContext = async ({
 		return null;
 	}
 
-	// 7. Update fullCustomer.customer_products with fresh data
+	// 6. Update fullCustomer.customer_products with fresh data
 	fullCustomer.customer_products = [
 		...customerProducts,
 		...scheduledCustomerProducts,
 	];
 
-	// 8. Get expanded stripe customer (for discount info)
+	// 7. Get expanded stripe customer (for discount info)
 	const stripeCustomer = await getExpandedStripeCustomer({
 		ctx,
 		stripeCustomerId: stripeSubscription.customer.id,
@@ -157,13 +133,13 @@ export const setupInvoiceCreatedContext = async ({
 		return null;
 	}
 
-	// 9. Get current time (respecting test clocks)
+	// 8. Get current time (respecting test clocks)
 	const nowMs = await stripeSubscriptionToNowMs({
 		stripeSubscription,
 		stripeCli: ctx.stripeCli,
 	});
 
-	// 10. Get payment method for arrear invoices
+	// 9. Get payment method for arrear invoices
 	const paymentMethod = await getCusPaymentMethod({
 		stripeCli: ctx.stripeCli,
 		stripeId: stripeSubscription.customer.id,
