@@ -103,6 +103,18 @@ export const createScheduleGenerationSchema = z
 		}
 	});
 
+export type AttachGenerationParams = z.infer<typeof attachGenerationSchema>;
+export type UpdateSubscriptionGenerationParams = z.infer<
+	typeof updateSubscriptionGenerationSchema
+>;
+export type CreateScheduleGenerationParams = z.infer<
+	typeof createScheduleGenerationSchema
+>;
+export type GeneratedBillingParams =
+	| AttachGenerationParams
+	| UpdateSubscriptionGenerationParams
+	| CreateScheduleGenerationParams;
+
 export const GENERATE_BILLING_TOOLS = [
 	"attach",
 	"create_schedule",

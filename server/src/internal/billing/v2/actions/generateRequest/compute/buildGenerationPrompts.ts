@@ -26,8 +26,13 @@ export const buildSystemPrompt = (tool: GenerateBillingTool) => {
 		"- The operation always targets the customer in the context. Ignore any other customer mentioned in the request.",
 		"- Compute timestamps yourself from `now` in the context (epoch milliseconds).",
 		"- Your output schema is a subset of the full billing params: invoice mode, redirect/checkout params, and the approval flow are handled by the system. Omit anything the schema does not define.",
+		"- customize.add_items strictly appends and never replaces — re-adding a feature the plan already has duplicates it. To CHANGE an existing item, emit BOTH: a remove_items filter matching exactly that one item, AND an add_items entry copying that item's ENTIRE definition from the context (rollover, pooled, reset, price with all its tiers, billing_units — every field) with only the requested change applied. A field you drop is a setting you delete.",
+		"- When a feature has several items (e.g. an included allowance plus a usage price), the remove_items filter must single one out: add billing_method, or included set to the item's current included amount from the context.",
+		"- Context plans carry `price` (the base price) and `items` in EXACTLY the shape customize.add_items and customize.items accept — copy item fields verbatim, no renaming or restructuring.",
+		"- Prepaid tier boundaries (price.tiers[].to) span included plus paid usage. When changing `included` on a tiered item, shift every numeric `to` by the same delta so each paid tier keeps its size (e.g. raising included 1000 -> 2000 turns to 3000/6000 into 4000/7000). Never drop or reprice tiers you were not asked to change.",
 		"- Free trials must set both duration_length and duration_type explicitly (e.g. a 14 day trial is duration_length 14, duration_type 'day').",
 		"- Set only the fields the request asks for; unset fields may be omitted or set to JSON null.",
+		"- Never emit keys your output schema does not define — in particular never copy customer_id or customer_product_id from the current request; the system injects identifiers.",
 	];
 
 	return rules.join("\n");

@@ -7,6 +7,7 @@ import {
 } from "@/internal/billing/v2/actions/resolveBillingRequest";
 import { composeMultiAttachRequest } from "./compute/composeMultiAttachRequest";
 import { computeGeneratedParams } from "./compute/computeGeneratedParams";
+import { assertNoDuplicateAddItems } from "./compute/validateGeneratedAddItems";
 import type { GenerateBillingRequestParams } from "./generationSchemas";
 import { setupGenerationContext } from "./setup/setupGenerationContext";
 
@@ -35,6 +36,13 @@ export const generateRequest = async ({
 		currentRequest: params.current_request,
 		prompt: params.prompt,
 		tool: params.tool,
+		validate: (candidate) =>
+			assertNoDuplicateAddItems({
+				context,
+				customerProductId: params.customer_product_id,
+				generated: candidate,
+				tool: params.tool,
+			}),
 	});
 	if (repaired) {
 		ctx.logger.warn(
@@ -50,8 +58,8 @@ export const generateRequest = async ({
 	}
 
 	if (
-		params.tool === "attach" &&
-		Array.isArray(generated.additional_plans) &&
+		"additional_plans" in generated &&
+		generated.additional_plans !== undefined &&
 		generated.additional_plans.length > 0
 	) {
 		return composeMultiAttachRequest({
@@ -61,8 +69,9 @@ export const generateRequest = async ({
 		});
 	}
 
-	const explicitEntityScope = generated.entity_id;
-	if (generated.entity_id === null) {
+	const explicitEntityScope =
+		"entity_id" in generated ? generated.entity_id : undefined;
+	if ("entity_id" in generated && generated.entity_id === null) {
 		delete generated.entity_id;
 	}
 

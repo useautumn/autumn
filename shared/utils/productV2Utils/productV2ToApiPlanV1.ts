@@ -28,12 +28,16 @@ export const productV2ToApiPlanV1 = ({
 	currency,
 	customerEligibility,
 	licenses,
+	includeProration = false,
 }: {
 	product: ProductV2;
 	features: Feature[];
 	currency?: string;
 	customerEligibility?: ApiPlanV1["customer_eligibility"];
 	licenses?: ApiPlanLicenseV1[];
+	/** Proration is internal and stripped from plan responses; diff and patch
+	 * bases need it kept or every rebuilt item silently loses the config. */
+	includeProration?: boolean;
 }): ApiPlanV1 & { licenses?: ApiPlanLicenseV1[] } => {
 	const sortedItems = sortProductItems(product.items, features);
 
@@ -76,7 +80,9 @@ export const productV2ToApiPlanV1 = ({
 		items: featureItems,
 		features,
 		currency,
-	}).map((item) => ({ ...item, proration: undefined }));
+	}).map((item) =>
+		includeProration ? item : { ...item, proration: undefined },
+	);
 
 	const freeTrial: ApiPlanV1["free_trial"] = product.free_trial
 		? {

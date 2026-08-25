@@ -4,6 +4,7 @@ import { generateObject } from "ai";
 import { generationErrorMessage } from "../errors/handleGenerationErrors";
 import {
 	type GenerateBillingTool,
+	type GeneratedBillingParams,
 	generationRegistry,
 } from "../generationSchemas";
 import type { GenerationContext } from "../setup/setupGenerationContext";
@@ -25,13 +26,15 @@ export const computeGeneratedParams = async ({
 	prompt,
 	context,
 	currentRequest,
+	validate,
 }: {
 	tool: GenerateBillingTool;
 	prompt: string;
 	context: GenerationContext;
 	currentRequest?: Record<string, unknown>;
+	validate?: (params: GeneratedBillingParams) => Promise<void> | void;
 }): Promise<{
-	params: Record<string, unknown>;
+	params: GeneratedBillingParams;
 	repaired: boolean;
 	repairReason?: string;
 	salvaged: boolean;
@@ -76,7 +79,9 @@ export const computeGeneratedParams = async ({
 			inputTokens: result.usage.inputTokens ?? 0,
 			outputTokens: result.usage.outputTokens ?? 0,
 		};
-		return result.object as Record<string, unknown>;
+		const params = result.object as GeneratedBillingParams;
+		await validate?.(params);
+		return params;
 	};
 
 	let lastUsage: GenerationUsage | undefined;

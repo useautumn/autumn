@@ -44,6 +44,7 @@ export * from "./planV1Utils/diff/applyDiff";
 export * from "./planV1Utils/diff/deduplicateAddPlanItems";
 export * from "./planV1Utils/diff/diffPlanV1";
 export * from "./planV1Utils/diff/diffPlanV1PreviewFields";
+export * from "./planV1Utils/diff/planItemMatchesFilter";
 export * from "./planV1Utils/diff/replayPlanDiff";
 export * from "./planV1Utils/licenses/applyLicenseCustomizeToBasePlan";
 export * from "./planV1Utils/licenses/diffLicensePlanCustomize";
@@ -68,8 +69,8 @@ export * from "./productUtils/priceUtils/index";
 // Price match utils
 export * from "./productUtils/priceUtils/match/copyStripeResourcesToMatchingPrice";
 export * from "./productUtils/priceUtils/match/getPriceStripeReuseLevel";
-export * from "./productUtils/priceUtils/match/stripePriceIdForInitializedPrice";
 export * from "./productUtils/priceUtils/match/priceStripeObjectsMatch";
+export * from "./productUtils/priceUtils/match/stripePriceIdForInitializedPrice";
 export * from "./productV2Utils/mapToProductV2";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils";
 export * from "./productV2Utils/productItemUtils/getItemType";
