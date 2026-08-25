@@ -29,6 +29,7 @@
 				"src/metering-worker.ts",
 				"src/metering-loadtest-produce.ts",
 				"src/metering-loadtest-check.ts",
+				"src/metering-shadow-diff.ts",
 				"src/internal/customers/cusUtils/createNewCustomer.ts",
 				"src/utils/importUtils/addProductFromSubs.ts",
 				"src/utils/scriptUtils/readOnlyStripe.ts",
