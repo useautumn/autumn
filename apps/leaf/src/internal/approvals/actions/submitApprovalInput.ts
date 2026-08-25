@@ -9,8 +9,8 @@ import { submitAgentInput } from "../../agentRuntime/actions/submitAgentInput/su
 import { postEveInputResponse } from "../../agentRuntime/eve/client.js";
 import { approvalOptionIds } from "../../agentRuntime/eve/events.js";
 import { getEveSessionBySessionId } from "../../agentRuntime/eve/repo.js";
-import type { EveAuthContext } from "../../agentRuntime/eve/types.js";
 import {
+	approvalAuthContext,
 	childSessionIdsOf,
 	siblingDenyOptionFor,
 	siblingRequestIdsOf,
@@ -20,22 +20,6 @@ import {
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 import type { SubmittedApprovalResult } from "../types.js";
 import { createChainedApproval } from "./createChainedApproval.js";
-
-const approvalAuth = ({
-	approval,
-	providerUserId,
-}: {
-	approval: ChatApproval;
-	providerUserId: string;
-}): EveAuthContext => ({
-	appEnv: approval.env,
-	channelId: approval.channel_id,
-	orgId: approval.org_id,
-	provider: approval.provider,
-	providerUserId,
-	threadId: approval.channel_id,
-	workspaceId: approval.workspace_id,
-});
 
 /** Answers the park in eve and consumes the resumed turn; re-issued duplicates
  * of already-applied writes can be absorbed instead of carded again. */
@@ -95,7 +79,7 @@ export const submitApprovalInput = async ({
 		};
 	}
 	const startedAt = Date.now();
-	const auth = approvalAuth({ approval, providerUserId });
+	const auth = approvalAuthContext({ approval, providerUserId });
 	const writeRows = await chatApprovalWritesRepo.list({
 		approvalId: approval.id,
 		db,

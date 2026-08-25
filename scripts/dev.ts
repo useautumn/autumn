@@ -441,6 +441,9 @@ async function startDev() {
 				REDIS_URL: LOCAL_MISC_CACHE_URL,
 			}),
 			...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
+			WORKFLOW_QUEUE_NAMESPACE:
+				process.env.WORKFLOW_QUEUE_NAMESPACE ??
+				`local_${process.env.USER ?? "dev"}`,
 			...(worktreeNum > 1 && {
 				CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
 				VITE_BACKEND_URL: localUrl(

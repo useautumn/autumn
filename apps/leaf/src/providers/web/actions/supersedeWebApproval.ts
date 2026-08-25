@@ -1,9 +1,7 @@
-import { getEveSessionBySessionId } from "../../../internal/agentRuntime/eve/repo.js";
-import { denyApprovalParkAndDrain } from "../../../internal/approvals/actions/denyApprovalParkAndDrain.js";
+import { releaseSupersededPark } from "../../../internal/approvals/actions/releaseSupersededPark.js";
 import { chatApprovalRepo } from "../../../internal/approvals/repos/chatApprovalRepo.js";
 import { settleCardRemotely } from "../../../internal/approvals/surfaces/slack/settleCardRemotely.js";
 import { db } from "../../../lib/db.js";
-import { errorMessage } from "../../../lib/errorMessage.js";
 import { logger } from "../../../lib/logger.js";
 
 const SUPERSEDED_NOTE =
@@ -16,8 +14,6 @@ export type SupersedeWebApprovalResult =
 			code: "already_decided" | "not_found" | "org_mismatch";
 	  };
 
-/** The user applied the write from the dashboard: settle the card as
- * superseded and deny + drain the eve park. */
 export const supersedeWebApproval = async ({
 	approvalId,
 	orgId,
@@ -39,40 +35,11 @@ export const supersedeWebApproval = async ({
 	});
 	if (!cancelled) return { superseded: false, code: "already_decided" };
 
-	// Best-effort: releasing the eve park keeps the session from waiting on a
-	// dead card; a gone session changes nothing for the applied write.
-	try {
-		const session = cancelled.run_id
-			? await getEveSessionBySessionId({
-					db,
-					orgId: cancelled.org_id,
-					sessionId: cancelled.run_id,
-				})
-			: undefined;
-		if (session) {
-			await denyApprovalParkAndDrain({
-				approval: cancelled,
-				auth: {
-					appEnv: cancelled.env,
-					channelId: cancelled.channel_id,
-					orgId: cancelled.org_id,
-					provider: cancelled.provider,
-					providerUserId: userId,
-					threadId: cancelled.channel_id,
-					workspaceId: cancelled.workspace_id,
-				},
-				note: SUPERSEDED_NOTE,
-				session,
-			});
-		}
-	} catch (error) {
-		logger.warn("Could not deny superseded approval in eve", {
-			event: "leaf.approval_dashboard_supersede_deny_failed",
-			approval_id: approvalId,
-			data: { error: errorMessage(error) },
-		});
-	}
-
+	await releaseSupersededPark({
+		approval: cancelled,
+		note: SUPERSEDED_NOTE,
+		providerUserId: userId,
+	});
 	await settleCardRemotely({
 		approval: cancelled,
 		status: "superseded",

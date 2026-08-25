@@ -216,6 +216,7 @@ describe("resumeApproval", () => {
 				streamIndex: 4,
 				status: "waiting",
 				lastEventAt: 0,
+				pendingRequests: [],
 			},
 			threadKey: "sandbox:slack:T1:C1:thread_1",
 		};
@@ -887,6 +888,7 @@ describe("delegated writes are verified on the child stream", () => {
 				streamIndex: 4,
 				status: "waiting",
 				lastEventAt: 0,
+				pendingRequests: [],
 			},
 			threadKey: "sandbox:slack:T1:C1:thread_1",
 		};
