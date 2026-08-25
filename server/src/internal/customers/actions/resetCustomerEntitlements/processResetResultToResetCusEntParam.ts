@@ -16,6 +16,7 @@ export const processResetResultToResetCusEntParam = ({
 		additional_balance: updates.additional_balance,
 		adjustment: updates.adjustment,
 		entities: updates.entities,
+		usage_attribution: updates.usage_attribution,
 		next_reset_at: updates.next_reset_at,
 		rollover_insert: result.rolloverInsert?.rows[0] ?? null,
 	};

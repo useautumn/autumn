@@ -1,14 +1,9 @@
-import {
-	type CreditSchemaItem,
-	type Feature,
-	isAiCreditSystem,
-} from "@autumn/shared";
-import { FormLabel, IconButton, Input } from "@autumn/ui";
+import type { CreditSchemaItem, Feature } from "@autumn/shared";
+import { FormLabel, IconButton, Switch } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
-import { X } from "lucide-react";
 import { useCreditSchema } from "../hooks/useCreditSchema";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
-import { FeatureSelectDropdown } from "./FeatureSelectDropdown";
+import { CreditRateCardRow } from "./CreditRateCardRow";
 
 interface ClassicCreditSchemaProps {
 	form: CreditSystemFormInstance;
@@ -19,19 +14,32 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 		schema,
 		schemaKeys,
 		allSchemaCandidateFeatures,
-		handleSchemaChange,
+		invoiceCredit,
+		setInvoiceCredit,
+		setSchemaItem,
 		addSchemaItem,
 		removeSchemaItem,
 	} = useCreditSchema(form);
 
 	return (
-		<div className="flex flex-col gap-0">
-			<div className="grid grid-cols-2 gap-2">
-				<FormLabel>Feature</FormLabel>
-				<FormLabel>Credit Cost</FormLabel>
+		<div className="flex flex-col gap-4">
+			<div className="flex items-center justify-between gap-4">
+				<div className="flex flex-col gap-0.5">
+					<span className="text-sm font-medium">Invoice credits</span>
+					<span className="text-xs text-muted-foreground">
+						Itemize usage of this credit system as credits on the invoice.
+					</span>
+				</div>
+				<Switch
+					aria-label="Invoice credits"
+					checked={invoiceCredit}
+					onCheckedChange={setInvoiceCredit}
+				/>
 			</div>
 
 			<div className="flex flex-col gap-2">
+				<FormLabel>Rate card</FormLabel>
+
 				{schema.map((item: CreditSchemaItem, index: number) => {
 					const availableFeatures = allSchemaCandidateFeatures.filter(
 						(feature: Feature) =>
@@ -42,66 +50,25 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 							),
 					);
 
-					const selectedFeature = allSchemaCandidateFeatures.find(
-						(f: Feature) => f.id === item.metered_feature_id,
-					);
-					const isAiChild = isAiCreditSystem(selectedFeature?.type);
-
 					return (
-						<div
+						<CreditRateCardRow
 							key={schemaKeys[index]}
-							className="grid grid-cols-1 lg:grid-cols-2 gap-2"
-						>
-							<FeatureSelectDropdown
-								value={item.metered_feature_id}
-								onValueChange={(featureId) =>
-									handleSchemaChange(index, "metered_feature_id", featureId)
-								}
-								availableFeatures={availableFeatures}
-								allFeatures={allSchemaCandidateFeatures}
-							/>
-
-							<div className="flex flex-col gap-1">
-								<div className="flex gap-1">
-									<Input
-										type="number"
-										lang="en"
-										value={item.credit_amount ?? ""}
-										onChange={(e) =>
-											handleSchemaChange(index, "credit_amount", e.target.value)
-										}
-										onBlur={(e) =>
-											handleSchemaChange(
-												index,
-												"credit_amount",
-												Number(e.target.value) || 0,
-											)
-										}
-										placeholder="eg. 10"
-									/>
-									<IconButton
-										variant="skeleton"
-										iconOrientation="center"
-										icon={<X />}
-										onClick={() => removeSchemaItem(index)}
-									/>
-								</div>
-								{isAiChild && (
-									<span className="text-xs text-muted-foreground">
-										credits per $1 of AI usage
-									</span>
-								)}
-							</div>
-						</div>
+							item={item}
+							availableFeatures={availableFeatures}
+							allFeatures={allSchemaCandidateFeatures}
+							onChange={(next) => setSchemaItem({ index, item: next })}
+							onRemove={() => removeSchemaItem(index)}
+						/>
 					);
 				})}
 			</div>
 
 			<IconButton
+				type="button"
 				variant="muted"
 				onClick={addSchemaItem}
 				disabled={schema.length >= allSchemaCandidateFeatures.length}
-				className="w-fit mt-4"
+				className="w-fit"
 				icon={<PlusIcon />}
 			>
 				Add

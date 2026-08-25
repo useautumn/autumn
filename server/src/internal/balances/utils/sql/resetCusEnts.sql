@@ -9,6 +9,7 @@
 --     - additional_balance: numeric (null if entity-scoped)
 --     - adjustment: numeric
 --     - entities: jsonb (null if non-entity)
+--     - usage_attribution: jsonb (cleared to {} for the new cycle)
 --     - next_reset_at: bigint (new next_reset_at value)
 --     - rollover_insert: jsonb object or null, with fields:
 --         id, cus_ent_id, balance, usage, expires_at, entities
@@ -21,6 +22,7 @@
 --         "additional_balance": number,
 --         "adjustment": number,
 --         "entities": jsonb,
+--         "usage_attribution": jsonb,
 --         "next_reset_at": number,
 --         "rollover": jsonb or null
 --       }
@@ -43,6 +45,7 @@ DECLARE
   new_additional_balance numeric;
   new_adjustment numeric;
   new_entities jsonb;
+  new_usage_attribution jsonb;
   new_next_reset_at bigint;
   rollover_obj jsonb;
 
@@ -63,6 +66,11 @@ BEGIN
     new_additional_balance := (reset_obj->>'additional_balance')::numeric;
     new_adjustment := (reset_obj->>'adjustment')::numeric;
     new_entities := reset_obj->'entities';
+    new_usage_attribution := CASE
+      WHEN jsonb_typeof(reset_obj->'usage_attribution') = 'object'
+        THEN reset_obj->'usage_attribution'
+      ELSE '{}'::jsonb
+    END;
     new_next_reset_at := (reset_obj->>'next_reset_at')::bigint;
     rollover_obj := reset_obj->'rollover_insert';
 
@@ -91,9 +99,11 @@ BEGIN
       additional_balance = COALESCE(new_additional_balance, ce.additional_balance),
       adjustment = COALESCE(new_adjustment, ce.adjustment),
       entities = COALESCE(new_entities, ce.entities),
+      usage_attribution = new_usage_attribution,
       next_reset_at = new_next_reset_at
     WHERE ce.id = ent_id
     RETURNING ce.balance, ce.additional_balance, ce.adjustment, ce.entities,
+              ce.usage_attribution,
               ce.next_reset_at, ce.cache_version
     INTO updated_row;
 
@@ -119,6 +129,7 @@ BEGIN
         'additional_balance', updated_row.additional_balance,
         'adjustment', updated_row.adjustment,
         'entities', updated_row.entities,
+        'usage_attribution', updated_row.usage_attribution,
         'next_reset_at', updated_row.next_reset_at,
         'rollover', CASE
           WHEN rollover_obj IS NOT NULL AND rollover_obj != 'null'::jsonb THEN rollover_obj

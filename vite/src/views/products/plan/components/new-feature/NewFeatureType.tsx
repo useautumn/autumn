@@ -9,6 +9,7 @@ import { BarcodeIcon, CoinsIcon } from "@phosphor-icons/react";
 import { BooleanIcon } from "@/components/v2/icons/AutumnIcons";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
+import { createSchemaItem } from "@/views/products/features/credit-systems/utils/creditSchemaUtils";
 
 export function NewFeatureType({
 	feature,
@@ -64,13 +65,7 @@ export function NewFeatureType({
 									...feature,
 									type: APIFeatureType.CreditSystem,
 									config: {
-										schema: [
-											{
-												metered_feature_id: "",
-												feature_amount: 1,
-												credit_amount: 0,
-											},
-										],
+										schema: [createSchemaItem()],
 										usage_type: FeatureUsageType.Single,
 									},
 								});

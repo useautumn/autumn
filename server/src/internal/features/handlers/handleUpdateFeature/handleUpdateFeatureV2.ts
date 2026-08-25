@@ -14,6 +14,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { updateFeature } from "@/internal/features/featureActions/updateFeature.js";
+import { validateInvoiceCreditFeatureType } from "../../featureUtils.js";
 
 export const handleUpdateFeatureV2 = createRoute({
 	scopes: [Scopes.Features.Write],
@@ -28,6 +29,10 @@ export const handleUpdateFeatureV2 = createRoute({
 			features: ctx.features,
 			featureId: feature_id,
 			errorOnNotFound: true,
+		});
+		validateInvoiceCreditFeatureType({
+			invoiceCredit: body.invoice_credit,
+			featureType: body.type ?? originalFeature.type,
 		});
 
 		// If changing type and consumable not provided, throw error

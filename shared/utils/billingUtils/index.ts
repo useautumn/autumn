@@ -12,6 +12,7 @@ export * from "./invoicingUtils/billingConstants.js";
 export * from "./invoicingUtils/filterUnchangedPricesFromLineItems.js";
 export * from "./invoicingUtils/lineItemBuilders/buildLineItem.js";
 export * from "./invoicingUtils/lineItemBuilders/fixedPriceToLineItem.js";
+export * from "./invoicingUtils/lineItemBuilders/invoiceCreditCustomerEntitlementToLineItems.js";
 export * from "./invoicingUtils/lineItemBuilders/usagePriceToLineItem.js";
 export * from "./invoicingUtils/lineItemUtils/billingLineItemMatchesStripeLineItem.js";
 export * from "./invoicingUtils/lineItemUtils/filterBillingLineItemsByStripeLineItem.js";

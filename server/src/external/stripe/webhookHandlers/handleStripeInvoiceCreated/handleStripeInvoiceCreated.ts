@@ -1,5 +1,6 @@
 import { secondsToMs } from "@autumn/shared";
 import type Stripe from "stripe";
+import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import {
 	storeRenewalLineItems,
 	upsertAutumnInvoice,
@@ -43,11 +44,16 @@ export const handleStripeInvoiceCreated = async ({
 	const shouldStoreScheduleProrationInvoice =
 		eventContext.stripeInvoice.billing_reason === "subscription_update" &&
 		!!eventContext.stripeSubscription.schedule;
+	const updatedStripeInvoice = await getStripeInvoice({
+		stripeClient: ctx.stripeCli,
+		invoiceId: eventContext.stripeInvoice.id,
+		expand: ["discounts.source.coupon", "total_discount_amounts"],
+	});
 
 	// Upsert Autumn invoice record
 	const autumnInvoice = await upsertAutumnInvoice({
 		ctx,
-		stripeInvoice: eventContext.stripeInvoice,
+		stripeInvoice: updatedStripeInvoice,
 		stripeSubscription: eventContext.stripeSubscription,
 		customerProducts: eventContext.customerProducts,
 		options: { skipNonCycleInvoices: !shouldStoreScheduleProrationInvoice },

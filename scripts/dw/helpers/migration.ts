@@ -43,8 +43,9 @@ export function loadDbFunctions(branchName: string, databaseUrl: string): void {
 		"sql",
 	);
 	const sqlFiles = [
-		"deductFromRollovers.sql",
 		"deductFromMainBalance.sql",
+		"creditRateUtils.sql",
+		"deductFromRollovers.sql",
 		"unwindFromLockReceipt.sql",
 		"getTotalBalance.sql",
 		"deductFromAdditionalBalance.sql",

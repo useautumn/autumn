@@ -51,9 +51,13 @@ export const buildAutumnLineItems = ({
 				options: {
 					includePeriodDescription: true,
 					updateNextResetAt: true,
+					invoiceCredits: {},
 				},
 			});
-			arrearLineItems.push(...arrearResult.lineItems);
+			arrearLineItems.push(
+				...arrearResult.lineItems,
+				...arrearResult.invoiceCreditLineItems,
+			);
 			updateCustomerEntitlements.push(
 				...arrearResult.updateCustomerEntitlements,
 			);

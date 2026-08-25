@@ -1,4 +1,5 @@
 import { type Feature, FeatureType } from "@autumn/shared";
+import { isEnablingInvoiceCreditFeature } from "@/internal/features/creditSystemUtils.js";
 
 /** Which blockable dimensions a resolved current → next update touches. */
 export const featureChangeFlags = ({
@@ -14,4 +15,8 @@ export const featureChangeFlags = ({
 		current.type !== FeatureType.Boolean &&
 		next.type !== FeatureType.Boolean &&
 		current.config?.usage_type !== next.config?.usage_type,
+	isEnablingInvoiceCredits: isEnablingInvoiceCreditFeature({
+		currentFeature: current,
+		nextFeature: next,
+	}),
 });

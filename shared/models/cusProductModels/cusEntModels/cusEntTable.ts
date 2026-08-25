@@ -14,7 +14,7 @@ import { entities } from "../../cusModels/entityModels/entityTable.js";
 import { features } from "../../featureModels/featureTable.js";
 import { entitlements } from "../../productModels/entModels/entTable.js";
 import { customerProducts } from "../cusProductTable.js";
-import type { EntityBalance } from "./cusEntModels.js";
+import type { EntityBalance, UsageAttribution } from "./cusEntModels.js";
 
 export const customerEntitlements = pgTable(
 	"customer_entitlements",
@@ -28,6 +28,10 @@ export const customerEntitlements = pgTable(
 
 		unlimited: boolean("unlimited").default(false),
 		balance: numeric({ mode: "number" }).notNull().default(0),
+		usage_attribution: jsonb("usage_attribution")
+			.$type<UsageAttribution>()
+			.notNull()
+			.default({}),
 		created_at: numeric({ mode: "number" }).notNull(),
 		reset_cycle_anchor: numeric({ mode: "number" }),
 		next_reset_at: numeric({ mode: "number" }),

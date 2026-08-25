@@ -6,6 +6,7 @@ import {
 	orgPersistFreeOverage,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { validateInvoiceCreditBalanceMutation } from "@/internal/balances/utils/validateInvoiceCreditBalanceMutation.js";
 import { oneOffPrepaidCusEntsByFeatureId } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 
 export type OneOffPurchaseRebalance = {
@@ -33,6 +34,10 @@ export const computeOneOffPurchaseRebalance = ({
 	).flatMap(([featureId, customerEntitlement]) => {
 		const quantity = customerEntitlement.balance ?? 0;
 		if (quantity <= 0) return [];
+
+		validateInvoiceCreditBalanceMutation({
+			feature: customerEntitlement.entitlement.feature,
+		});
 
 		customerEntitlement.balance = 0;
 		return [

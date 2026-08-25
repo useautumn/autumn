@@ -1,7 +1,6 @@
 import {
 	AppEnv,
-	apiFeatureToDbFeature,
-	CreateFeatureV0ParamsSchema,
+	agentFeatureToFeature,
 	CreateFreeTrialSchema,
 	CreateProductItemParamsSchema,
 	CreateProductSchema,
@@ -16,10 +15,11 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { PricingAgentFeatureInputSchema } from "../pricingAgentSchemas.js";
 import { getSessionPreviewOrg } from "./previewOrgUtils.js";
 
 const SyncPreviewPricingSchema = z.object({
-	features: z.array(CreateFeatureV0ParamsSchema).optional().default([]),
+	features: z.array(PricingAgentFeatureInputSchema).optional().default([]),
 	products: z.array(
 		CreateProductSchema.extend({
 			items: z.array(CreateProductItemParamsSchema).optional().default([]),
@@ -105,7 +105,7 @@ export const handleSyncPreviewPricing = createRoute({
 
 		// Create features sequentially to avoid race conditions
 		for (const apiFeature of uniqueFeatures) {
-			const dbFeature = apiFeatureToDbFeature({ apiFeature });
+			const dbFeature = agentFeatureToFeature(apiFeature);
 			await createFeature({
 				ctx: previewCtx,
 				data: {
@@ -114,6 +114,7 @@ export const handleSyncPreviewPricing = createRoute({
 					type: dbFeature.type,
 					config: dbFeature.config,
 					event_names: dbFeature.event_names,
+					model_markups: dbFeature.model_markups,
 				},
 				skipGenerateDisplay: true,
 			});

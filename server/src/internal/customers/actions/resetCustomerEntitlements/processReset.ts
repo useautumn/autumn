@@ -7,6 +7,7 @@ import {
 	isUnlimitedEntitlement,
 	orgPersistFreeOverage,
 	type Rollover,
+	type UsageAttribution,
 } from "@autumn/shared";
 import { logger } from "better-auth";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -20,6 +21,7 @@ export type ResetUpdates = {
 	additional_balance: number | null;
 	adjustment: number;
 	entities: Record<string, EntityBalance> | null;
+	usage_attribution: UsageAttribution;
 	next_reset_at: number;
 };
 
@@ -119,6 +121,7 @@ export const processReset = async ({
 					additional_balance: null,
 					adjustment: 0,
 					entities: resetBalanceUpdate.entities,
+					usage_attribution: resetBalanceUpdate.usage_attribution,
 					next_reset_at: nextResetAt,
 				}
 			: {
@@ -126,6 +129,7 @@ export const processReset = async ({
 					additional_balance: resetBalanceUpdate.additional_balance,
 					adjustment: 0,
 					entities: null,
+					usage_attribution: resetBalanceUpdate.usage_attribution,
 					next_reset_at: nextResetAt,
 				};
 
