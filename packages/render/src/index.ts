@@ -2,6 +2,7 @@ export { type BillingBadge, billingActionBadges } from "./billing/badges.js";
 export {
 	buildCustomizeChanges,
 	type CustomizeChange,
+	customizeNeedsCurrentPlan,
 	customizeWithFreeTrial,
 	customPriceText,
 	freeTrialText,

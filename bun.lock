@@ -100,6 +100,7 @@
         "@autumn/mcp": "workspace:*",
         "@autumn/render": "workspace:*",
         "@autumn/shared": "workspace:*",
+        "@braintrust/otel": "^0.3.0",
         "@chat-adapter/slack": "^4.31.0",
         "@chat-adapter/state-pg": "^4.31.0",
         "@chat-adapter/web": "^4.31.0",
@@ -109,6 +110,7 @@
         "@mastra/mcp": "^1.8.0",
         "@mastra/observability": "^1.14.1",
         "@mendable/firecrawl-js": "^4.25.1",
+        "@vercel/otel": "^2.1.3",
         "@workflow/world-postgres": "5.0.0-beta.19",
         "ai": "7.0.9",
         "autoevals": "^0.0.132",
@@ -1322,6 +1324,8 @@
     "@braintrust/bt-win32-arm64": ["@braintrust/bt-win32-arm64@0.12.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-+7PkdBAmiqEJsWteGHP/Zs62F75PkHPA8m/ej4TOz/mHGKulUU0bZibw91KRqIB7J7jGi5ItvCiqkiGaLKLnyw=="],
 
     "@braintrust/bt-win32-x64": ["@braintrust/bt-win32-x64@0.12.0", "", { "os": "win32", "cpu": "x64" }, "sha512-Q0c+pVUGm82n/7N8QJ5s6j/G/Q0GFzqOaTipHjkmElLbAOOEcfRH/uljdtIPNBiEQcrzqirS0GmOgiFkeQ3Txg=="],
+
+    "@braintrust/otel": ["@braintrust/otel@0.3.0", "", { "peerDependencies": { "@opentelemetry/api": ">=1.9.0", "@opentelemetry/core": ">=1.9.0", "@opentelemetry/exporter-trace-otlp-http": ">=0.35.0", "@opentelemetry/sdk-trace-base": ">=1.9.0", "braintrust": ">=1.0.0-0" } }, "sha512-QTlvCleJ41MCleOt7BhwfYaIEVLrRZIp9xoSQcTjhdl91yLURyqieFNBA3FP3m1GxAxZmK6cSKgxW9q52iGTHA=="],
 
     "@bufbuild/protobuf": ["@bufbuild/protobuf@2.14.0", "", {}, "sha512-C3UGsiCwSprE2NKIIFA3hCDlpXTMCAXRZuEVp88L1GY36Y41+rYL5fryE+nOFhp4p4JPQvdV8PQ4DWgHgeTE+w=="],
 
@@ -3166,6 +3170,8 @@
     "@vercel/functions": ["@vercel/functions@1.6.0", "", { "peerDependencies": { "@aws-sdk/credential-provider-web-identity": "*" }, "optionalPeers": ["@aws-sdk/credential-provider-web-identity"] }, "sha512-R6FKQrYT5MZs5IE1SqeCJWxMuBdHawFcCZboKKw8p7s+6/mcd55Gx6tWmyKnQTyrSEA04NH73Tc9CbqpEle8RA=="],
 
     "@vercel/oidc": ["@vercel/oidc@3.2.0", "", {}, "sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug=="],
+
+    "@vercel/otel": ["@vercel/otel@2.1.3", "", { "peerDependencies": { "@opentelemetry/api": ">=1.9.0 <2.0.0", "@opentelemetry/api-logs": ">=0.200.0 <0.300.0", "@opentelemetry/instrumentation": ">=0.200.0 <0.300.0", "@opentelemetry/resources": ">=2.0.0 <3.0.0", "@opentelemetry/sdk-logs": ">=0.200.0 <0.300.0", "@opentelemetry/sdk-metrics": ">=2.0.0 <3.0.0", "@opentelemetry/sdk-trace-base": ">=2.0.0 <3.0.0" } }, "sha512-Ofvzs9qhftRD1YMLuPnhbXjQZG6IKrJ9AmEKmRHRGfoWlV89ed2gAOkvddkFiZDFZJm2rrFNdeZKRVxoCdnWiw=="],
 
     "@vercel/queue": ["@vercel/queue@0.3.1", "", { "dependencies": { "@vercel/oidc": "^3.0.5", "minimatch": "^10.2.4", "mixpart": "0.0.6", "picocolors": "^1.1.1" } }, "sha512-6pjdXyNfdCQnj1nyeB1rPtll/XUhmciyeZJD0rpIUUwmcIfR+utDl6+iFvlHvsBdqAVT8UC6ydObT0v+xldfUQ=="],
 
