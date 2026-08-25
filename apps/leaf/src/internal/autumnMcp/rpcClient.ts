@@ -139,6 +139,22 @@ const withPooledRpcSession = async <T>(
 
 class McpRpcToolError extends Error {}
 
+/** The server no longer knows the pooled session (restart or expiry); the
+ * pool must open a fresh one rather than surface this as a tool failure. */
+class McpRpcSessionStaleError extends Error {}
+
+const STALE_SESSION_CODE = -32000;
+
+const isStaleSessionError = (error: unknown) => {
+	const { code, message } = (error ?? {}) as {
+		code?: number;
+		message?: string;
+	};
+	return (
+		code === STALE_SESSION_CODE || /session not found/i.test(message ?? "")
+	);
+};
+
 export const callAutumnMcpTool = async ({
 	args,
 	baseUrl,
@@ -157,6 +173,9 @@ export const callAutumnMcpTool = async ({
 			arguments: args,
 			name: toolName,
 		});
+		if (isStaleSessionError(response.error)) {
+			throw new McpRpcSessionStaleError("Autumn MCP session is stale");
+		}
 		if (response.error) {
 			throw new McpRpcToolError(
 				`Autumn MCP tools/call failed: ${JSON.stringify(response.error).slice(0, 400)}`,
