@@ -2,6 +2,7 @@
 // Everything (Infisical included) sits inside the try so a startup failure
 // still surfaces diagnostics: console.error lands in the `ecs` dataset via
 // firelens even when the structured logger never came up.
+export {}; // all imports are dynamic; this keeps the file a module for TLA
 const startedAt = performance.now();
 
 try {
