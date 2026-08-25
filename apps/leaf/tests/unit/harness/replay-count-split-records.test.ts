@@ -79,7 +79,7 @@ describe("replay recount across chunk boundaries", () => {
 		globalThis.fetch = (async () =>
 			new Response(
 				streamOf(['{"type":"turn.started"}', '\n{"type":"session.waiting"}\n']),
-			)) as typeof fetch;
+			)) as unknown as typeof fetch;
 		const current = session();
 		await fastForwardEveStreamIndex({ auth: {} as never, session: current });
 		expect(current.state.streamIndex).toBe(2);
