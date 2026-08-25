@@ -1,24 +1,25 @@
-import type {
-	GenerateBillingTool,
-	GeneratedBillingParams,
-} from "../generationSchemas";
+import type { CreatePlanItemParamsV1, PlanItemFilter } from "@autumn/shared";
+import type { GeneratedBillingParams } from "../generationSchemas";
 import type { GenerationContext } from "../setup/setupGenerationContext";
 
-type GenerationPlanItem = GenerationContext["plans"][number]["items"][number];
+type PlanCustomization = {
+	planId: string | undefined;
+	customize:
+		| {
+				add_items?: CreatePlanItemParamsV1[];
+				remove_items?: PlanItemFilter[];
+		  }
+		| null
+		| undefined;
+};
 
-const targetPlanId = ({
+const anchoredPlanId = ({
 	context,
 	customerProductId,
-	planId,
-	tool,
 }: {
 	context: GenerationContext;
 	customerProductId?: string;
-	planId?: string;
-	tool: GenerateBillingTool;
 }): string | undefined => {
-	if (planId !== undefined) return planId;
-	if (tool === "attach") return undefined;
 	const currentPlans = context.customer.current_plans;
 	const anchored = currentPlans.find(
 		(plan) =>
@@ -29,51 +30,84 @@ const targetPlanId = ({
 	return currentPlans.length === 1 ? currentPlans[0]?.plan_id : undefined;
 };
 
-const itemIsPriced = (item: GenerationPlanItem): boolean =>
-	"price" in item && item.price != null;
-
-export const assertNoDuplicateAddItems = ({
+/** Every generated request normalizes to plan customizations: schedule
+ * phases and unscheduled plans, or the primary plan plus additional_plans. */
+const planCustomizations = ({
 	context,
 	customerProductId,
 	generated,
-	tool,
 }: {
 	context: GenerationContext;
 	customerProductId?: string;
 	generated: GeneratedBillingParams;
-	tool: GenerateBillingTool;
-}): void => {
-	if (!("customize" in generated) || !generated.customize) return;
-	const { add_items: addItems, remove_items: removeFilters } =
-		generated.customize;
-	if (!addItems?.length) return;
+}): PlanCustomization[] => {
+	if ("phases" in generated) {
+		return [
+			...generated.phases.flatMap((phase) => phase.plans),
+			...(generated.unscheduled_plans ?? []),
+		].map((plan) => ({ planId: plan.plan_id, customize: plan.customize }));
+	}
+	return [
+		{
+			planId:
+				generated.plan_id ?? anchoredPlanId({ context, customerProductId }),
+			customize: generated.customize,
+		},
+		...("additional_plans" in generated
+			? (generated.additional_plans ?? []).map((plan) => ({
+					planId: plan.plan_id,
+					customize: plan.customize,
+				}))
+			: []),
+	];
+};
 
-	const planId = targetPlanId({
-		context,
-		customerProductId,
-		planId: generated.plan_id,
-		tool,
-	});
+const assertCustomizationAgainstCatalog = ({
+	context,
+	customization,
+}: {
+	context: GenerationContext;
+	customization: PlanCustomization;
+}): void => {
+	const { customize, planId } = customization;
 	const baseItems = context.plans.find((plan) => plan.id === planId)?.items;
-	if (!baseItems) return;
+	const addItems = customize?.add_items;
+	if (!baseItems || !addItems?.length) return;
 
 	const removedFeatureIds = new Set(
-		(removeFilters ?? [])
+		(customize?.remove_items ?? [])
 			.map((filter) => filter.feature_id)
 			.filter((id): id is string => id !== undefined),
 	);
 	for (const addItem of addItems) {
 		if (removedFeatureIds.has(addItem.feature_id)) continue;
-		const addIsPriced = addItem.price != null;
 		const duplicates = baseItems.some(
 			(item) =>
 				item.feature_id === addItem.feature_id &&
-				itemIsPriced(item) === addIsPriced,
+				(item.price != null) === (addItem.price != null),
 		);
 		if (duplicates) {
 			throw new Error(
 				`add_items entry for '${addItem.feature_id}' duplicates an item the plan already has — add_items only appends. To change the existing item, pair a remove_items filter matching it with an add_items entry copying its full definition (rollover, pooled, reset, price) with only the requested change.`,
 			);
 		}
+	}
+};
+
+export const assertNoDuplicateAddItems = ({
+	context,
+	customerProductId,
+	generated,
+}: {
+	context: GenerationContext;
+	customerProductId?: string;
+	generated: GeneratedBillingParams;
+}): void => {
+	for (const customization of planCustomizations({
+		context,
+		customerProductId,
+		generated,
+	})) {
+		assertCustomizationAgainstCatalog({ context, customization });
 	}
 };

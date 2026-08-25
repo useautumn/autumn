@@ -1,4 +1,9 @@
-import type { Feature, FullCusProduct, FullProduct } from "@autumn/shared";
+import type {
+	Entity,
+	Feature,
+	FullCusProduct,
+	FullProduct,
+} from "@autumn/shared";
 import {
 	mapToProductV2,
 	productV2ToApiPlanV1,
@@ -44,18 +49,30 @@ const compactPlan = ({
 	};
 };
 
-const compactCustomerProduct = (customerProduct: FullCusProduct) => ({
-	customer_product_id: customerProduct.id,
-	plan_id: customerProduct.product.id,
-	status: customerProduct.status,
-	...(customerProduct.canceled ? { canceled: true } : {}),
-	...(customerProduct.trial_ends_at
-		? { trial_ends_at: customerProduct.trial_ends_at }
-		: {}),
-	...(customerProduct.options?.length
-		? { prepaid_quantities: customerProduct.options }
-		: {}),
-});
+export const compactCustomerProduct = ({
+	customerProduct,
+	entities,
+}: {
+	customerProduct: FullCusProduct;
+	entities: Entity[];
+}) => {
+	const entity = entities.find(
+		(candidate) => candidate.internal_id === customerProduct.internal_entity_id,
+	);
+	return {
+		customer_product_id: customerProduct.id,
+		plan_id: customerProduct.product.id,
+		status: customerProduct.status,
+		...(entity?.id ? { entity_id: entity.id } : {}),
+		...(customerProduct.canceled ? { canceled: true } : {}),
+		...(customerProduct.trial_ends_at
+			? { trial_ends_at: customerProduct.trial_ends_at }
+			: {}),
+		...(customerProduct.options?.length
+			? { prepaid_quantities: customerProduct.options }
+			: {}),
+	};
+};
 
 export const setupGenerationContext = async ({
 	ctx,
@@ -77,8 +94,11 @@ export const setupGenerationContext = async ({
 			customer: {
 				id: fullCustomer.id,
 				...(fullCustomer.name ? { name: fullCustomer.name } : {}),
-				current_plans: fullCustomer.customer_products.map(
-					compactCustomerProduct,
+				current_plans: fullCustomer.customer_products.map((customerProduct) =>
+					compactCustomerProduct({
+						customerProduct,
+						entities: fullCustomer.entities ?? [],
+					}),
 				),
 				entities: (fullCustomer.entities ?? []).map((entity) => ({
 					id: entity.id,
