@@ -1,6 +1,4 @@
-import { billingActionBadges
-	customizeWithFreeTrial,
-} from "@autumn/render";
+import { billingActionBadges, customizeWithFreeTrial } from "@autumn/render";
 import {
 	type ApiPlanV1,
 	AppEnv,
