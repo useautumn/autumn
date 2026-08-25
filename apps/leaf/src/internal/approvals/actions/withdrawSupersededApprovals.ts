@@ -10,7 +10,7 @@ import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 
 const withdrawnNote = (toolName: string) =>
-	`(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild, retry, or ask anything about the withdrawn change — the user's message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one. If it is a QUESTION about the withdrawn change, answer it briefly and then re-issue that same write unchanged so the user gets the card back to decide on.${
+	`(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild, retry, or ask anything about the withdrawn change — the user's message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one. If it is a QUESTION, just answer it — do NOT re-issue the write or show a card; say the change is still pending and wait for them to confirm it.${
 		normalizeToolName(toolName) === "attach"
 			? " Keep an attach refinement customer-specific; use catalog tools only if they explicitly ask to change the shared plan."
 			: ""
