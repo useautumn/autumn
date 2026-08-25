@@ -1331,6 +1331,7 @@ const approvalPreviewBlocks = ({
 				return active ? "Provision immediately" : "Provision after payment";
 			if (label === "Prorations") return active ? label : "No prorations";
 			if (label === "Reset usage") return "Usage will reset";
+			if (label === "Card required") return active ? label : "No card required";
 			if (label === "Checkout link")
 				return "Customer completes payment in checkout";
 			return label;
