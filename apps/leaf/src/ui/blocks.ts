@@ -1451,6 +1451,7 @@ export const approvalCard = ({
 				Button({
 					id: "cancel_billing_action",
 					label: "Dismiss",
+					style: "danger",
 					value: id,
 				}),
 				...(editable
