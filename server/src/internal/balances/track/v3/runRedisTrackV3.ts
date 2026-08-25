@@ -12,12 +12,14 @@ import {
 	initEvent,
 } from "@/internal/balances/events/initEvent.js";
 import { resolveInternalProductIdForEvent } from "@/internal/balances/events/resolveInternalProductIdForEvent.js";
+import { getTrackQueueIdempotencyKey } from "@/internal/balances/idempotency/trackQueueIdempotency.js";
 import {
 	deductionToTrackResponseV2,
 	executeRedisDeductionV2,
 	projectMutationLogsToTrackDeductionsV2,
 } from "@/internal/balances/utils/deductionV2/index.js";
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
+import { shadowTapDeduct } from "@/internal/metering/shadow/shadowTap.js";
 import { isSyncCoalesceEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
@@ -94,6 +96,42 @@ const queueEvent = ({
 			internalProductId,
 		}),
 	);
+};
+
+/** Shadow only: mirrors what Redis actually committed into the metering topic
+ *  so the metering worker can be reconciled against the live engine. One event
+ *  per (request, feature), the same unit the deduction Lua claims idempotency
+ *  on, so a redelivered track folds as a duplicate instead of double-counting.
+ *  Fire-and-forget by construction; it cannot fail the track. */
+const mirrorToMeteringShadow = ({
+	ctx,
+	body,
+	deductions,
+	idempotencyKey,
+}: {
+	ctx: AutumnContext;
+	body: TrackParams;
+	deductions: TrackDeduction[];
+	idempotencyKey: string;
+}): void => {
+	const valueByFeatureId = new Map<string, number>();
+	for (const deduction of deductions) {
+		valueByFeatureId.set(
+			deduction.feature_id,
+			(valueByFeatureId.get(deduction.feature_id) ?? 0) + deduction.value,
+		);
+	}
+
+	for (const [featureId, value] of valueByFeatureId) {
+		shadowTapDeduct({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId: body.customer_id,
+			featureId,
+			value,
+			idempotencyKey,
+		});
+	}
 };
 
 export const runRedisTrackV3 = async ({
@@ -188,6 +226,13 @@ export const runRedisTrackV3 = async ({
 		fullSubject: updatedFullSubject,
 		deductions,
 		internalProductId,
+	});
+
+	mirrorToMeteringShadow({
+		ctx,
+		body,
+		deductions,
+		idempotencyKey: idempotencyKey ?? getTrackQueueIdempotencyKey({ ctx }),
 	});
 
 	const { balance, balances } = await deductionToTrackResponseV2({
