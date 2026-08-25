@@ -2,16 +2,19 @@ import {
 	type AutumnBillingPlan,
 	type BillingContext,
 	type FullCusProduct,
+	isCustomerEntitlementDueAtInvoice,
 	type LineItem,
 	ms,
 	sumValues,
 	timestampsMatch,
 } from "@autumn/shared";
 import { partitionSkippedOverageLineItems } from "@/external/stripe/webhookHandlers/common/filterSkippedOverageLineItems";
+import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { filterStripeDiscountsForNextCycle } from "@/internal/billing/v2/providers/stripe/utils/discounts/filterStripeDiscountsForNextCycle";
 import { customerProductToArrearLineItems } from "../../lineItems/customerProductToArrearLineItems";
+import { customerProductToInvoiceCreditLineItems } from "../../lineItems/customerProductToInvoiceCreditLineItems.js";
 import { getLineItemsForDirection } from "../../lineItems/getLineItemsForDirection";
 import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLineItem";
 import { lineItemToPreviewUsageLineItem } from "../../lineItems/lineItemToPreviewUsageLineItem";
@@ -123,6 +126,32 @@ export const billingPlanToNextCycleLineItems = ({
 	const previewUsageLineItems = arrearLineItems.map(
 		lineItemToPreviewUsageLineItem,
 	);
+	const disableOverageBilling = shouldDisableOverageBilling({
+		org: ctx.org,
+		customerId: billingContext.fullCustomer.id,
+		customerConfig: billingContext.fullCustomer.config,
+	});
+	const invoiceCreditLineItems = options.chargeUsageLineItems
+		? productsForUsageLineItems.flatMap(
+				(customerProduct) =>
+					customerProductToInvoiceCreditLineItems({
+						ctx,
+						customerProduct,
+						billingContext: {
+							...billingContext,
+							currentEpochMs: nextCycleStart - ms.minutes(30),
+						},
+						filters: {
+							customerEntitlementFilter: (customerEntitlement) =>
+								isCustomerEntitlementDueAtInvoice({
+									customerEntitlement,
+									invoicePeriodEndMs: nextCycleStart,
+								}),
+						},
+						fullyOffsetOverage: disableOverageBilling,
+					}).lineItems,
+			)
+		: [];
 
 	let nextCycleAutumnLineItems = lineItemSpecs.flatMap((spec) =>
 		buildLineItemsForSpec({
@@ -146,6 +175,7 @@ export const billingPlanToNextCycleLineItems = ({
 		nextCycleAutumnLineItems = [
 			...nextCycleAutumnLineItems,
 			...billableLineItems,
+			...invoiceCreditLineItems,
 		];
 	}
 
