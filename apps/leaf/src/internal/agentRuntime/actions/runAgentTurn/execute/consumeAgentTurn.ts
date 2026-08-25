@@ -21,6 +21,7 @@ import {
 	type EveTurnProgress,
 	eveTurnProducedOutput,
 } from "./eveTurnReducer.js";
+import { createTurnActivity, type TurnActivity } from "./turnActivity.js";
 import { watchSubagentProgress } from "./watchSubagentProgress.js";
 
 // Eve can close empty while asynchronously resuming a turn.
@@ -28,6 +29,9 @@ const MAX_IDLE_RETRIES = 20;
 /** Each idle window is 2 minutes, so this bounds a quiet turn at ~6 minutes
  * before leaf answers with whatever it has. */
 const MAX_IDLE_RESYNCS = 3;
+/** A delegated child holds the parent open only while it keeps reporting;
+ * a child that goes silent this long stops vouching for the turn. */
+const TURN_ACTIVITY_TIMEOUT_MS = ms.minutes(3);
 const STREAM_RETRY_DELAY_MS = ms.seconds(0.5);
 const PERSIST_CURSOR_EVERY_EVENTS = 10;
 
@@ -55,11 +59,13 @@ const closeReasoningOutput = ({
 
 const streamPassEvents = async ({
 	abandonForStop,
+	activity,
 	onFirstStreamEvent,
 	run,
 	signal,
 	turn,
 }: {
+	activity: TurnActivity;
 	abandonForStop: (input: {
 		progress: EveTurnProgress;
 		stop: NonNullable<ActiveRun["stop"]>;
@@ -80,6 +86,7 @@ const streamPassEvents = async ({
 		})) {
 			if (!sawEvent) onFirstStreamEvent?.();
 			sawEvent = true;
+			activity.touch();
 			advanceStreamCursor(session);
 
 			if (run?.stop) {
@@ -97,10 +104,13 @@ const streamPassEvents = async ({
 			}
 
 			if (event.type === "subagent.called" && event.childSessionId) {
+				activity.childStarted();
 				watchSubagentProgress({
 					auth,
 					childSessionId: event.childSessionId,
 					onAction: turn.onAction,
+					onChildActivity: activity.touch,
+					onChildEnded: activity.childFinished,
 					onReasoning: turn.onReasoning,
 					session,
 					signal,
@@ -257,6 +267,7 @@ export const consumeAgentTurn = async ({
 	let streamedAnyEvent = false;
 	let healedSilentCursor = false;
 	let idleRetries = 0;
+	const activity = createTurnActivity();
 
 	const abortForRunStop = () => abortController.abort();
 	if (run) run.abortTurnStream = abortForRunStop;
@@ -273,6 +284,7 @@ export const consumeAgentTurn = async ({
 
 			const pass = await streamPassEvents({
 				abandonForStop,
+				activity,
 				onFirstStreamEvent: streamedAnyEvent ? undefined : onFirstStreamEvent,
 				run,
 				signal: abortController.signal,
@@ -290,7 +302,13 @@ export const consumeAgentTurn = async ({
 			}
 
 			if (pass.error instanceof EveStreamIdleTimeoutError) {
-				idleRetries = pass.sawEvent ? 0 : idleRetries + 1;
+				// Work delegated to a subagent runs on the child's stream, so a
+				// quiet parent is only evidence of a dead turn when nothing
+				// anywhere in the turn has produced an event.
+				const turnIsWorking =
+					activity.activeChildren() > 0 &&
+					activity.msSinceActivity() < TURN_ACTIVITY_TIMEOUT_MS;
+				idleRetries = pass.sawEvent || turnIsWorking ? 0 : idleRetries + 1;
 				if (idleRetries >= MAX_IDLE_RESYNCS) {
 					return settleExhaustedTurn({ logger, turn });
 				}

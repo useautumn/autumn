@@ -131,7 +131,9 @@ describe("watchSubagentProgress", () => {
 		expect(reasoning).toEqual(["Attaching now…"]);
 	});
 
-	test("a dead child stream never throws out of the relay", async () => {
+	test("a quiet child is reopened, not abandoned, and never throws out", async () => {
+		// A subagent can think for minutes between events; the relay reconnects
+		// through those windows so it keeps vouching for the parent turn.
 		streamedEvents = [
 			{ messageDelta: "partial", type: "message.appended" },
 		] as EveEvent[];
@@ -148,18 +150,46 @@ describe("watchSubagentProgress", () => {
 			}),
 		).not.toThrow();
 		await flush();
-		expect(reasoning).toEqual(["partial"]);
+		expect(streamedSessionIds.length).toBeGreaterThan(1);
+		expect(reasoning.every((text) => text === "partial")).toBe(true);
 	});
 
-	test("does nothing when no status channel is attached", async () => {
-		streamedEvents = [{ type: "session.completed" }] as EveEvent[];
+	test("child reconnects are bounded so a dead child stops vouching", async () => {
+		streamedEvents = [];
+		thenThrow = "idle";
+
+		let ended = false;
 		watchSubagentProgress({
 			auth,
-			childSessionId: "child_3",
+			childSessionId: "child_4",
+			onChildEnded: () => {
+				ended = true;
+			},
 			session,
 			signal: new AbortController().signal,
 		});
 		await flush();
-		expect(streamedSessionIds).toHaveLength(0);
+		expect(ended).toBe(true);
+		expect(streamedSessionIds.length).toBeLessThanOrEqual(11);
+	});
+
+	test("watches the child even with no status channel, to vouch for the turn", async () => {
+		streamedEvents = [
+			{ type: "actions.requested", actions: [{ toolName: "autumn__attach" }] },
+			{ type: "session.completed" },
+		] as EveEvent[];
+		const seen: string[] = [];
+		watchSubagentProgress({
+			auth,
+			childSessionId: "child_3",
+			onChildActivity: () => seen.push("activity"),
+			onChildEnded: () => seen.push("ended"),
+			session,
+			signal: new AbortController().signal,
+		});
+		await flush();
+		expect(streamedSessionIds).toContain("child_3");
+		expect(seen).toContain("activity");
+		expect(seen.at(-1)).toBe("ended");
 	});
 });
