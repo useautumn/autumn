@@ -12,7 +12,7 @@ import {
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 import { readSessionEvents } from "./world/readSessionEvents.js";
 import { sessionEventCount } from "./world/sessionStream.js";
-import { hasWorkflowWorld } from "./world/workflowWorld.js";
+import { workflowWorldHoldingRun } from "./world/workflowWorld.js";
 
 const eveUrl = (path: string) => new URL(path, env.EVE_SERVER_URL).href;
 
@@ -266,7 +266,9 @@ export async function* streamEveEvents({
 	session: EveSessionRef;
 	signal?: AbortSignal;
 }): AsyncGenerator<EveEvent> {
-	const source = hasWorkflowWorld() ? "world" : "http";
+	const source = (await workflowWorldHoldingRun(session.sessionId))
+		? "world"
+		: "http";
 	logger.info("Opening eve event stream", {
 		event: "leaf.eve_stream_opened",
 		data: {

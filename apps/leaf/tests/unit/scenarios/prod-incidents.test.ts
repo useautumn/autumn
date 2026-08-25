@@ -221,7 +221,10 @@ await mockLeafModule({
 });
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/world/workflowWorld.js",
-	factory: () => ({ hasWorkflowWorld: () => false }),
+	factory: () => ({
+		hasWorkflowWorld: () => false,
+		workflowWorldHoldingRun: async () => undefined,
+	}),
 });
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/world/sessionStream.js",
