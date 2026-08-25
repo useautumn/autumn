@@ -245,7 +245,7 @@ export function CustomerListSortButton() {
 									sortBy: field.value,
 									sort: order,
 									sortFeature: "",
-									sortBasis: "remaining",
+									sortBasis: "usage",
 								});
 								setOpen(false);
 							}}
@@ -270,7 +270,7 @@ export function CustomerListSortButton() {
 							sortBy: "created_at",
 							sort: "desc",
 							sortFeature: "",
-							sortBasis: "remaining",
+							sortBasis: "usage",
 						});
 						setOpen(false);
 					}}

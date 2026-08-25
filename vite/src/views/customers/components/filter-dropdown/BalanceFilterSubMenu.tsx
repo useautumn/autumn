@@ -87,7 +87,7 @@ export const BalanceFilterSubMenu = ({
 			balanceFeature: "",
 			balanceOp: ">",
 			balanceValue: "",
-			balanceBasis: "remaining",
+			balanceBasis: "usage",
 		});
 	};
 

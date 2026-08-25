@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildBillingChanges } from "./buildBillingChanges";
+import { planChangesToEntityId } from "./planChangesToEntityId";
 
 export const buildBillingChangeResponse = ({
 	ctx: _ctx,
@@ -18,13 +19,15 @@ export const buildBillingChangeResponse = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	tags?: string[];
 }): BillingChangeResponse => {
-	// entity_id comes from the enriched FullCustomer (set when the operation
-	// is scoped to a single entity via `enrichFullCustomerWithEntity`).
-	const entityId = originalFullCustomer.entity?.id ?? undefined;
 	const { planChanges } = buildBillingChanges({
 		autumnBillingPlan,
 		originalFullCustomer,
 	});
+
+	// Prefer the request's entity scope; webhook-driven flows have none, so fall
+	// back to the changes themselves when they all share one entity.
+	const entityId =
+		originalFullCustomer.entity?.id ?? planChangesToEntityId({ planChanges });
 
 	return BillingChangeResponseSchema.parse({
 		object: "billing.updated",

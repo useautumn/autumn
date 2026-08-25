@@ -112,14 +112,14 @@ function buildRestoredState({
 				: null,
 		sortFeature: filters?.sortFeature || null,
 		sortBasis:
-			filters?.sortBasis && filters.sortBasis !== "remaining"
+			filters?.sortBasis && filters.sortBasis !== "usage"
 				? filters.sortBasis
 				: null,
 		balanceFeature: filters?.balanceFeature || null,
 		balanceOp: filters?.balanceOp === "<" ? filters.balanceOp : null,
 		balanceValue: filters?.balanceValue || null,
 		balanceBasis:
-			filters?.balanceBasis && filters.balanceBasis !== "remaining"
+			filters?.balanceBasis && filters.balanceBasis !== "usage"
 				? filters.balanceBasis
 				: null,
 		joinedFrom: filters?.joinedFrom ?? null,
@@ -142,7 +142,7 @@ const queryStatesConfig = {
 	sortFeature: parseAsString.withDefault(""),
 	sortBasis: parseAsStringLiteral(
 		FeatureBalanceSortBasisSchema.options,
-	).withDefault("remaining"),
+	).withDefault("usage"),
 	balanceFeature: parseAsString.withDefault(""),
 	balanceOp: parseAsStringLiteral(BalanceFilterOpSchema.options).withDefault(
 		">",
@@ -151,7 +151,7 @@ const queryStatesConfig = {
 	balanceValue: parseAsString.withDefault(""),
 	balanceBasis: parseAsStringLiteral(
 		FeatureBalanceSortBasisSchema.options,
-	).withDefault("remaining"),
+	).withDefault("usage"),
 	joinedFrom: parseAsInteger,
 	joinedTo: parseAsInteger,
 };

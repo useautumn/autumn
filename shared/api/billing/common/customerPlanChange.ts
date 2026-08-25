@@ -83,6 +83,10 @@ export const CustomerPlanPreviousAttributesSchema =
 	}).partial();
 
 export const CustomerPlanChangeSchema = z.object({
+	entity_id: z.string().nullable().optional().meta({
+		description:
+			"The ID of the entity this plan is scoped to, or null when the plan is customer-level. A single event can carry changes for several entities.",
+	}),
 	action: PlanChangeActionEnum.meta({
 		description:
 			"The lifecycle action applied to this plan: activated (newly active on the customer), scheduled (queued for a future start), updated (mutated in place), or expired (ended).",
