@@ -1,29 +1,9 @@
-import { asRecord } from "../records.js";
+import { loosePlanItemMatchesFilter } from "@autumn/shared";
 
-/** Whether a plan item satisfies a `remove_items` filter. Every field the
- * filter names must match; fields it omits are wildcards. */
 export const itemMatchesFilter = ({
 	filter,
 	item,
 }: {
 	filter: unknown;
 	item: unknown;
-}): boolean => {
-	const itemRecord = asRecord(item);
-	const filterRecord = asRecord(filter);
-	if (!(itemRecord && filterRecord)) return false;
-	const price = asRecord(itemRecord.price);
-	const reset = asRecord(itemRecord.reset);
-	return [
-		[filterRecord.feature_id, itemRecord.feature_id],
-		[filterRecord.billing_method, price?.billing_method],
-		[filterRecord.interval, price?.interval ?? reset?.interval],
-		[
-			filterRecord.interval_count,
-			// An item that omits interval_count means 1, so a filter saying 1 matches.
-			price?.interval_count ?? reset?.interval_count ?? 1,
-		],
-	].every(
-		([expected, actual]) => expected === undefined || expected === actual,
-	);
-};
+}): boolean => loosePlanItemMatchesFilter({ item, filter });
