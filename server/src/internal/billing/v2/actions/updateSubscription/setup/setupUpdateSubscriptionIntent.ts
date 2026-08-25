@@ -5,6 +5,7 @@ import {
 	customerProductHasPrepaidPrice,
 	type FullCusProduct,
 	isCustomerProductOneOff,
+	resolveFreeTrialParam,
 	UpdateSubscriptionIntent,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -26,7 +27,7 @@ export const setupUpdateSubscriptionIntent = ({
 	const itemsChanged = hasCustomItems(params.customize);
 	const licensesChanged = params.customize?.upsert_licenses !== undefined;
 	const versionChanged = params.version !== undefined;
-	const freeTrialChanged = params.customize?.free_trial !== undefined;
+	const freeTrialChanged = resolveFreeTrialParam(params) !== undefined;
 
 	if (itemsChanged || licensesChanged || versionChanged || freeTrialChanged)
 		return UpdateSubscriptionIntent.UpdatePlan;

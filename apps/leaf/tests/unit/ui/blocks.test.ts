@@ -166,11 +166,11 @@ describe("approval card", () => {
 
 		const json = JSON.stringify(card);
 		expect(json).toContain("Update **charlie**'s subscription to **pro**?");
-		expect(json).toContain('"caption":"Plan changes"');
+		expect(json).toContain('"caption":"pro customizations"');
 		// No current plan in the preview, so setting a price is an add.
 		expect(json).toContain('["🟢 Add","Base price","$200.00 per month"]');
 		expect(json).not.toContain('Update","Base price');
-		expect(json).not.toContain("custom");
+		expect(json).not.toContain("Custom plan");
 		expect(json).not.toContain('"customize"');
 	});
 
@@ -324,7 +324,7 @@ describe("approval card", () => {
 		const json = JSON.stringify(card);
 		expect(json).toContain("Finalized invoice");
 		expect(json).toContain("Provision after payment");
-		expect(json).toContain("Reset usage");
+		expect(json).toContain("Usage will reset");
 		expect(json).toContain("Customer completes payment in checkout");
 		expect(json).not.toContain("Draft invoice");
 	});
@@ -439,9 +439,9 @@ describe("approval card", () => {
 
 		const json = JSON.stringify(card);
 		const slackJson = JSON.stringify(cardToBlockKit(card));
-		expect(json).toContain('"caption":"Plan changes"');
+		expect(json).toContain('"caption":"enterprise customizations"');
 		expect(slackJson).toContain('"type":"data_table"');
-		expect(slackJson).toContain('"caption":"Plan changes"');
+		expect(slackJson).toContain('"caption":"enterprise customizations"');
 		expect(json).toContain('"headers":["Change","Details","Pricing"]');
 		expect(json).toContain('["🟢 Add","Dashboard","—"]');
 		expect(json).toContain('["🟢 Add","Unlimited seats","—"]');
@@ -1443,7 +1443,7 @@ describe("update-subscription card avoids restating itself", () => {
 
 	test("drops the generic intent label when a changes table renders", () => {
 		const rendered = JSON.stringify(cardToBlockKit(updateWithChanges()));
-		expect(rendered).toContain("Plan changes");
+		expect(rendered).toContain("customizations");
 		expect(rendered).not.toContain('"Update plan"');
 	});
 

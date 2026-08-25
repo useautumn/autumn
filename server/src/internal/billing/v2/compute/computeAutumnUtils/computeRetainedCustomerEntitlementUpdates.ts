@@ -1,13 +1,13 @@
 import {
 	type AutumnBillingPlan,
 	addCusProductToCusEnt,
+	billingContextResetsUsage,
 	cusProductToProduct,
 	featureUtils,
 	isBooleanEntitlement,
 	isOneOffPrepaidConsumableCustomerEntitlement,
 	isUnlimitedEntitlement,
 	type UpdateSubscriptionBillingContext,
-	UpdateSubscriptionIntent,
 } from "@autumn/shared";
 import { computeBillingCycleAnchorEntitlementUpdates } from "@/internal/billing/v2/compute/computeAutumnUtils/computeBillingCycleAnchorEntitlementUpdates";
 import { initCustomerEntitlementBalance } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlementBalance";
@@ -23,10 +23,9 @@ export const computeRetainedCustomerEntitlementUpdates = ({
 		billingContext: updateSubscriptionContext,
 		customerProduct: finalCustomerProduct,
 	});
-	const resetsUsage =
-		updateSubscriptionContext.intent === UpdateSubscriptionIntent.UpdatePlan &&
-		updateSubscriptionContext.carryOverUsages?.enabled === false;
-	if (!resetsUsage) return billingCycleUpdates;
+	if (!billingContextResetsUsage(updateSubscriptionContext)) {
+		return billingCycleUpdates;
+	}
 
 	const billingCycleUpdateByEntitlementId = new Map(
 		billingCycleUpdates.map((update) => [
