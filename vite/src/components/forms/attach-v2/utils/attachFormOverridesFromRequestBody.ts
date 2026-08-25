@@ -8,6 +8,7 @@ import type {
 import {
 	anchorOverridesFrom,
 	type FieldReaders,
+	freeTrialFromRequest,
 	overridesFromRequest,
 	quantityRecordFrom,
 	readArray,
@@ -144,7 +145,7 @@ const multiAttachOverridesFromRequestBody = (
 					),
 				}
 			: {}),
-		...trialOverridesFrom(request.free_trial),
+		...trialOverridesFrom(freeTrialFromRequest(request)),
 	};
 };
 
@@ -173,5 +174,5 @@ const singleAttachOverridesFromRequestBody = (
 		enabled: "carryOverUsages",
 		featureIds: "carryOverUsageFeatureIds",
 	}),
-	...trialOverridesFrom(request.free_trial),
+	...trialOverridesFrom(freeTrialFromRequest(request)),
 });

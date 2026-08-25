@@ -2,6 +2,7 @@
 
 - A trial gives a customer temporary access to a plan before billing begins.
 - Set a trial with `free_trial` on attach: `{ duration_length, duration_type (day|month|year), card_required, on_end }`.
+- There is no `week` unit: express weeks as days — "2 weeks" is `{ duration_length: 14, duration_type: "day" }`, "6 weeks" is 42 days. Never round a week to a month.
 - `on_end`: `bill` charges when the trial ends (default); `revert` expires the trial and restores the customer's previous plan.
 
 </intro>
