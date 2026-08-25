@@ -119,8 +119,10 @@ export const runDucklake = async ({
 			refreshed.push(`${totalsTable}:${totalsRows}`);
 
 			for (const group of MIRROR_GROUPS) {
+				// Gate on "this run attempted mirrors" (hourly), not on scan success:
+				// the rollup below must still run when every scan failed.
+				if (!mirrorsByGroup.has(group.statusTable)) continue;
 				const mirrors = mirrorsByGroup.get(group.statusTable) ?? [];
-				if (mirrors.length === 0) continue;
 
 				const statusRows: {
 					tbl: string;
@@ -151,7 +153,9 @@ export const runDucklake = async ({
 					}
 				}
 
-				if (group.withRollup && statusRows.length > 0) {
+				// Unconditional on hourly runs: the rollup reads whatever is live;
+				// cross-table snapshot consistency is explicitly not a goal here.
+				if (group.withRollup) {
 					// Rollup runs on MD because fx_rates only exists there; reads the
 					// just-swapped mirrors (shadow-suffixed in shadow mode). Stale
 					// sources are tolerated (incumbent semantics: rollup always reads
