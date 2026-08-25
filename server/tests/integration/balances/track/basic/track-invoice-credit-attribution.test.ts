@@ -28,7 +28,7 @@ test.concurrent(
 		const { autumnV2_3, customer, ctx } = await initScenario({
 			customerId,
 			setup: [
-				s.customer({ testClock: false }),
+				s.customer({ paymentMethod: "success", testClock: false }),
 				s.products({ list: [product] }),
 			],
 			actions: [s.billing.attach({ productId: product.id })],

@@ -26,7 +26,7 @@ test.concurrent(
 		const { autumnV2, customerId } = await initScenario({
 			customerId: "invoice-credit-mutation-guards",
 			setup: [
-				s.customer({ testClock: false }),
+				s.customer({ paymentMethod: "success", testClock: false }),
 				s.products({ list: [product] }),
 			],
 			actions: [

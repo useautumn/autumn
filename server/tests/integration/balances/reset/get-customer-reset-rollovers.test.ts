@@ -176,7 +176,7 @@ test.concurrent(
 		const { customerId, autumnV2_3, ctx } = await initScenario({
 			customerId: "invoice-credit-reset-rollover",
 			setup: [
-				s.customer({ testClock: false }),
+				s.customer({ paymentMethod: "success", testClock: false }),
 				s.products({ list: [product] }),
 			],
 			actions: [s.billing.attach({ productId: product.id })],
@@ -262,7 +262,7 @@ test.concurrent(
 		const { customerId, autumnV2_3, ctx } = await initScenario({
 			customerId: "invoice-credit-postgres-rollover",
 			setup: [
-				s.customer({ testClock: false }),
+				s.customer({ paymentMethod: "success", testClock: false }),
 				s.products({ list: [product] }),
 			],
 			actions: [s.billing.attach({ productId: product.id })],
