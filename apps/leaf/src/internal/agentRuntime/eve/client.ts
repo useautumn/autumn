@@ -3,16 +3,16 @@ import { env } from "../../../lib/env.js";
 import { logger } from "../../../lib/logger.js";
 import { withRetry } from "../../../lib/withRetry.js";
 import { type EveEvent, parseEveEvent } from "./eveEventSchemas.js";
+import { idleGuardedStream } from "./idleGuardedStream.js";
+import { ndjsonLines } from "./ndjson.js";
 import {
 	isConnectionRefusedError,
 	isRetryableEveStreamError,
 } from "./streamErrors.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
-import {
-	hasWorkflowWorld,
-	readSessionEvents,
-	sessionEventCount,
-} from "./world.js";
+import { readSessionEvents } from "./world/readSessionEvents.js";
+import { sessionEventCount } from "./world/sessionStream.js";
+import { hasWorkflowWorld } from "./world/workflowWorld.js";
 
 const eveUrl = (path: string) => new URL(path, env.EVE_SERVER_URL).href;
 
@@ -133,8 +133,6 @@ export const postEveMessage = async ({
 				),
 			},
 		);
-	// Mid-flight drops are only retried for NEW sessions, where a duplicate
-	// creates an orphan rather than a double-delivered message.
 	const response = await withRetry({
 		attempts: POST_RETRY_ATTEMPTS,
 		baseDelayMs: POST_RETRY_BASE_DELAY_MS,
@@ -211,8 +209,6 @@ export const postEveInputResponse = async ({
 						: note,
 			}),
 		});
-	// Only connection-refused is retried: the answer provably never arrived, so
-	// a retry cannot double-answer the park. Mid-flight drops stay ambiguous.
 	const response = await withRetry({
 		attempts: POST_RETRY_ATTEMPTS,
 		baseDelayMs: POST_RETRY_BASE_DELAY_MS,
@@ -255,6 +251,10 @@ export class EveSessionDeadError extends Error {
 	}
 }
 
+export const isEveTransportLost = (error: unknown) =>
+	error instanceof EveStreamDisconnectedError ||
+	error instanceof EveStreamIdleTimeoutError;
+
 export async function* streamEveEvents({
 	auth,
 	idleTimeoutMs = STREAM_IDLE_TIMEOUT_MS,
@@ -266,16 +266,24 @@ export async function* streamEveEvents({
 	session: EveSessionRef;
 	signal?: AbortSignal;
 }): AsyncGenerator<EveEvent> {
-	if (hasWorkflowWorld()) {
-		yield* streamEveEventsFromWorld({ idleTimeoutMs, session, signal });
-		return;
-	}
-	yield* streamEveEventsOverHttp({ auth, idleTimeoutMs, session, signal });
+	const source = hasWorkflowWorld() ? "world" : "http";
+	logger.info("Opening eve event stream", {
+		event: "leaf.eve_stream_opened",
+		data: {
+			session_id: session.sessionId,
+			source,
+			start_index: session.state.streamIndex,
+		},
+	});
+	const stream =
+		source === "world"
+			? streamEveEventsFromWorld({ idleTimeoutMs, session, signal })
+			: streamEveEventsOverHttp({ auth, idleTimeoutMs, session, signal });
+	yield* stream;
 }
 
-/** The journal read straight from Postgres: no HTTP socket for an idle
- * reaper to cut. Transport errors are surfaced as disconnects so the shared
- * reconnect loop handles a blip the same way. */
+/** Reads the journal straight from Postgres; transport errors surface as
+ * disconnects so the shared reconnect loop handles them uniformly. */
 async function* streamEveEventsFromWorld({
 	idleTimeoutMs,
 	session,
@@ -285,35 +293,46 @@ async function* streamEveEventsFromWorld({
 	session: EveSessionRef;
 	signal?: AbortSignal;
 }): AsyncGenerator<EveEvent> {
-	const controller = new AbortController();
-	const abortUpstream = () => controller.abort();
-	signal?.addEventListener("abort", abortUpstream, { once: true });
-	let timedOut = false;
-	const armIdleTimer = () =>
-		setTimeout(() => {
-			timedOut = true;
-			controller.abort();
-		}, idleTimeoutMs);
-	let idleTimer = armIdleTimer();
 	try {
-		for await (const event of readSessionEvents({
-			sessionId: session.sessionId,
-			signal: controller.signal,
-			startIndex: session.state.streamIndex,
-		})) {
-			clearTimeout(idleTimer);
-			idleTimer = armIdleTimer();
-			yield event;
-		}
+		yield* idleGuardedStream({
+			idleTimeoutMs,
+			onIdleTimeout: () => new EveStreamIdleTimeoutError(session.sessionId),
+			open: (upstreamSignal) =>
+				readSessionEvents({
+					sessionId: session.sessionId,
+					signal: upstreamSignal,
+					startIndex: session.state.streamIndex,
+				}),
+			signal,
+		});
 	} catch (error) {
-		if (timedOut) throw new EveStreamIdleTimeoutError(session.sessionId);
-		if (signal?.aborted) throw error;
+		if (error instanceof EveStreamIdleTimeoutError || signal?.aborted) {
+			throw error;
+		}
 		throw new EveStreamDisconnectedError(error);
-	} finally {
-		clearTimeout(idleTimer);
-		signal?.removeEventListener("abort", abortUpstream);
 	}
 }
+
+const openEveHttpStream = async ({
+	auth,
+	session,
+	signal,
+}: {
+	auth: EveAuthContext;
+	session: EveSessionRef;
+	signal: AbortSignal;
+}) => {
+	const response = await fetch(
+		eveUrl(
+			`/eve/v1/session/${session.sessionId}/stream?startIndex=${session.state.streamIndex}`,
+		),
+		{ headers: eveHeaders(auth), signal },
+	);
+	if (!response.ok || !response.body) {
+		throw new Error(`Eve stream failed: ${response.status}`);
+	}
+	return response.body as AsyncIterable<Uint8Array>;
+};
 
 async function* streamEveEventsOverHttp({
 	auth,
@@ -326,53 +345,22 @@ async function* streamEveEventsOverHttp({
 	session: EveSessionRef;
 	signal?: AbortSignal;
 }): AsyncGenerator<EveEvent> {
-	const streamUrl = eveUrl(
-		`/eve/v1/session/${session.sessionId}/stream?startIndex=${session.state.streamIndex}`,
-	);
-	// A stream past eve's replay buffer stays open and silent forever — no
-	// bytes within the idle window aborts as EveStreamIdleTimeoutError.
-	const controller = new AbortController();
-	const abortUpstream = () => controller.abort();
-	signal?.addEventListener("abort", abortUpstream, { once: true });
-	let timedOut = false;
-	const armIdleTimer = () =>
-		setTimeout(() => {
-			timedOut = true;
-			controller.abort();
-		}, idleTimeoutMs);
-	let idleTimer = armIdleTimer();
 	try {
-		const response = await fetch(streamUrl, {
-			headers: eveHeaders(auth),
-			signal: controller.signal,
+		const chunks = idleGuardedStream({
+			idleTimeoutMs,
+			onIdleTimeout: () => new EveStreamIdleTimeoutError(session.sessionId),
+			open: (upstreamSignal) =>
+				openEveHttpStream({ auth, session, signal: upstreamSignal }),
+			signal,
 		});
-		if (!response.ok || !response.body) {
-			throw new Error(`Eve stream failed: ${response.status}`);
-		}
-
-		const decoder = new TextDecoder();
-		let buffer = "";
-		for await (const chunk of response.body as AsyncIterable<Uint8Array>) {
-			clearTimeout(idleTimer);
-			idleTimer = armIdleTimer();
-			buffer += decoder.decode(chunk, { stream: true });
-			let newlineIndex = buffer.indexOf("\n");
-			while (newlineIndex >= 0) {
-				const line = buffer.slice(0, newlineIndex).trim();
-				buffer = buffer.slice(newlineIndex + 1);
-				newlineIndex = buffer.indexOf("\n");
-				if (line) yield parseEveEvent(JSON.parse(line));
-			}
+		for await (const line of ndjsonLines(chunks)) {
+			yield parseEveEvent(JSON.parse(line));
 		}
 	} catch (error) {
-		if (timedOut) throw new EveStreamIdleTimeoutError(session.sessionId);
 		if (isRetryableEveStreamError(error)) {
 			throw new EveStreamDisconnectedError(error);
 		}
 		throw error;
-	} finally {
-		clearTimeout(idleTimer);
-		signal?.removeEventListener("abort", abortUpstream);
 	}
 }
 
@@ -394,25 +382,18 @@ const countEveReplayableEvents = async ({
 			{ headers: eveHeaders(auth), signal: controller.signal },
 		);
 		if (!response.ok || !response.body) return count;
-		const decoder = new TextDecoder();
-		let buffer = "";
 		for await (const chunk of response.body as AsyncIterable<Uint8Array>) {
 			clearTimeout(quietTimer);
 			quietTimer = setTimeout(() => controller.abort(), REPLAY_QUIET_GAP_MS);
-			buffer += decoder.decode(chunk, { stream: true });
-			let newlineIndex = buffer.indexOf("\n");
-			while (newlineIndex >= 0) {
-				const line = buffer.slice(0, newlineIndex).trim();
-				buffer = buffer.slice(newlineIndex + 1);
-				newlineIndex = buffer.indexOf("\n");
-				if (line) count += 1;
-			}
+			for await (const _line of ndjsonLines([chunk])) count += 1;
 		}
 	} catch (error) {
-		// Aborting on the quiet gap is the normal exit.
-		if (!(error instanceof Error && error.name === "AbortError")) {
+		const quietGapReached =
+			error instanceof Error && error.name === "AbortError";
+		if (!quietGapReached) {
 			logger.warn("Eve replay recount failed", {
-				data: { error, session_id: sessionId },
+				data: { session_id: sessionId },
+				error,
 				event: "leaf.eve_replay_count_failed",
 			});
 		}
@@ -420,6 +401,48 @@ const countEveReplayableEvents = async ({
 		clearTimeout(quietTimer);
 	}
 	return count;
+};
+
+/** Exact from the journal when the world is reachable, else counted from a
+ * replay of eve's in-memory buffer (which may be short or empty). */
+const journaledEventCount = async ({
+	auth,
+	sessionId,
+}: {
+	auth: EveAuthContext;
+	sessionId: string;
+}): Promise<{ count: number; exact: boolean }> => {
+	const exact = await sessionEventCount(sessionId).catch((error: unknown) => {
+		logger.warn("Eve journal count failed; falling back to replay count", {
+			event: "leaf.eve_event_count_failed",
+			data: { session_id: sessionId },
+			error,
+		});
+		return undefined;
+	});
+	if (exact !== undefined) return { count: exact, exact: true };
+	return {
+		count: await countEveReplayableEvents({ auth, sessionId }),
+		exact: false,
+	};
+};
+
+const moveStreamCursor = ({
+	event,
+	session,
+	to,
+}: {
+	event: string;
+	session: EveSessionRef;
+	to: number;
+}) => {
+	const from = session.state.streamIndex;
+	if (from === to) return;
+	session.state.streamIndex = to;
+	logger.info("Moved eve stream cursor", {
+		event,
+		data: { from, session_id: session.sessionId, to },
+	});
 };
 
 /** Heals cursor overshoot (eve streams events it never persists). Only ever
@@ -431,20 +454,16 @@ export const resyncEveStreamIndex = async ({
 	auth: EveAuthContext;
 	session: EveSessionRef;
 }) => {
-	const exact = await sessionEventCount(session.sessionId).catch(
-		() => undefined,
-	);
-	if (exact !== undefined) {
-		session.state.streamIndex = Math.min(session.state.streamIndex, exact);
-		return;
-	}
-	const replayCount = await countEveReplayableEvents({
+	const { count, exact } = await journaledEventCount({
 		auth,
 		sessionId: session.sessionId,
 	});
-	if (replayCount > 0 && replayCount < session.state.streamIndex) {
-		session.state.streamIndex = replayCount;
-	}
+	if (!exact && count === 0) return;
+	moveStreamCursor({
+		event: "leaf.eve_cursor_resynced",
+		session,
+		to: Math.min(session.state.streamIndex, count),
+	});
 };
 
 /** A new message makes everything in eve's log a previous turn's leftovers —
@@ -456,20 +475,13 @@ export const fastForwardEveStreamIndex = async ({
 	auth: EveAuthContext;
 	session: EveSessionRef;
 }) => {
-	try {
-		const exact = await sessionEventCount(session.sessionId);
-		if (exact !== undefined) {
-			session.state.streamIndex = exact;
-			return;
-		}
-		const replayCount = await countEveReplayableEvents({
-			auth,
-			sessionId: session.sessionId,
-		});
-		if (replayCount > session.state.streamIndex) {
-			session.state.streamIndex = replayCount;
-		}
-	} catch {
-		return;
-	}
+	const { count, exact } = await journaledEventCount({
+		auth,
+		sessionId: session.sessionId,
+	});
+	moveStreamCursor({
+		event: "leaf.eve_cursor_fast_forwarded",
+		session,
+		to: exact ? count : Math.max(session.state.streamIndex, count),
+	});
 };

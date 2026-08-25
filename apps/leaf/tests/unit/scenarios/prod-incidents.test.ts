@@ -210,16 +210,22 @@ await mockLeafModule({
 let tokenAlive: boolean | undefined;
 const cancelledRuns: string[] = [];
 await mockLeafModule({
-	specifier: "../../../src/internal/agentRuntime/eve/world.js",
+	specifier: "../../../src/internal/agentRuntime/eve/world/sessionRun.js",
 	factory: () => ({
 		cancelSessionRun: async (sessionId: string) => {
 			cancelledRuns.push(sessionId);
 			return true;
 		},
-		hasWorkflowWorld: () => false,
 		isContinuationTokenAlive: async () => tokenAlive,
-		sessionEventCount: async () => undefined,
 	}),
+});
+await mockLeafModule({
+	specifier: "../../../src/internal/agentRuntime/eve/world/workflowWorld.js",
+	factory: () => ({ hasWorkflowWorld: () => false }),
+});
+await mockLeafModule({
+	specifier: "../../../src/internal/agentRuntime/eve/world/sessionStream.js",
+	factory: () => ({ sessionEventCount: async () => undefined }),
 });
 
 let storedSession: EveSessionRef | undefined;

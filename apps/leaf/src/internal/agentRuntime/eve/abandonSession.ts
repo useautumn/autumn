@@ -5,11 +5,10 @@ import { chatApprovalRepo } from "../../approvals/repos/chatApprovalRepo.js";
 import type { AgentThreadRef } from "../domain/agentTurnContext.js";
 import { deleteEveSession, type EveSessionDeleteReason } from "./repo.js";
 import type { EveSessionRef } from "./types.js";
-import { cancelSessionRun } from "./world.js";
+import { cancelSessionRun } from "./world/sessionRun.js";
 
-/** Drops a session leaf can no longer drive: the row, the eve run behind it
- * (so its hooks and parks release instead of leaking), and any cards that
- * could only ever have been decided through it. */
+/** Drops the row, cancels the eve run behind it so its hooks and parks
+ * release, and cancels every card that could only be decided through it. */
 export const abandonEveSession = async ({
 	env,
 	orgId,
@@ -54,10 +53,9 @@ export const abandonEveSession = async ({
 		event: "leaf.eve_session_abandoned",
 		data: {
 			cancelled_run: cancelledRun,
-			orphaned_approvals: orphaned.length,
+			orphaned_approval_ids: orphaned.map((approval) => approval.id),
 			reason,
 			session_id: session.sessionId,
 		},
 	});
-	return { orphanedApprovals: orphaned };
 };

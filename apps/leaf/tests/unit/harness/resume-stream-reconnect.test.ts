@@ -59,6 +59,9 @@ await mockLeafModule({
 	factory: () => ({
 		EveStreamDisconnectedError: MockEveStreamDisconnectedError,
 		EveStreamIdleTimeoutError: MockEveStreamIdleTimeoutError,
+		isEveTransportLost: (error: unknown) =>
+			error instanceof MockEveStreamDisconnectedError ||
+			error instanceof MockEveStreamIdleTimeoutError,
 		postEveInputResponse: async () => ({
 			continuationToken: "token_2",
 			sessionId: "eve_session_1",

@@ -17,6 +17,7 @@ import {
 	childSessionIdsToolArgs,
 	classifyParkedEveInput,
 	type PendingQuestion,
+	pendingGatedRequests,
 	siblingRequestIdsToolArgs,
 	type WithheldWrite,
 	withheldWritesToolArgs,
@@ -250,27 +251,6 @@ const reduceCompletedMessage = ({
 		},
 	};
 };
-
-/** Every request in a gated batch (primary + withheld siblings) with the
- * option that releases it. */
-export const pendingGatedRequests = (parked: {
-	chained: {
-		options?: ReadonlyArray<{ id?: string; label?: string }>;
-		requestId: string;
-	};
-	withheld: ReadonlyArray<{ denyOptionId?: string; requestId: string }>;
-}): EvePendingRequest[] => [
-	{
-		denyOptionId: approvalOptionIds({ options: parked.chained.options }).deny,
-		kind: "gated",
-		requestId: parked.chained.requestId,
-	},
-	...parked.withheld.map((write) => ({
-		denyOptionId: write.denyOptionId ?? "deny",
-		kind: "gated" as const,
-		requestId: write.requestId,
-	})),
-];
 
 const reduceInputRequest = ({
 	event,

@@ -8,10 +8,8 @@ import {
 const isProduction =
 	process.env.NODE_ENV === "production" || process.env.EVE_EMBEDDED === "1";
 
-// A shared Postgres world means this process's queue worker claims and
-// EXECUTES that database's workflow jobs — a laptop pointed at prod would run
-// prod turns with local code. Outside production the world must be opted into,
-// and it always gets its own queue namespace.
+// A shared world's queue worker EXECUTES that database's jobs: a laptop
+// pointed at prod would run prod turns with local code.
 const sharedWorldAllowed =
 	isProduction || process.env.EVE_ALLOW_SHARED_WORLD === "1";
 if (process.env.WORKFLOW_POSTGRES_URL && !sharedWorldAllowed) {

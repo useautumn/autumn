@@ -37,8 +37,12 @@ describeWithDb("world reader (real Postgres)", () => {
 	});
 
 	test("exact event count and cursor-based replay", async () => {
-		const { readSessionEvents, sessionEventCount, sessionStreamName } =
-			await import("../../src/internal/agentRuntime/eve/world.js");
+		const { readSessionEvents } = await import(
+			"../../src/internal/agentRuntime/eve/world/readSessionEvents.js"
+		);
+		const { sessionEventCount, sessionStreamName } = await import(
+			"../../src/internal/agentRuntime/eve/world/sessionStream.js"
+		);
 		expect(sessionStreamName(runId)).toBe(streamId);
 
 		await insertEvent({ type: "turn.started" });

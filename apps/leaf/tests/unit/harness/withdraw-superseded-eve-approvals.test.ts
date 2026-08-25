@@ -2,10 +2,7 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
 import type { AgentThreadRef } from "../../../src/internal/agentRuntime/domain/agentTurnContext.js";
-import type {
-	EveAuthContext,
-	EveSessionRef,
-} from "../../../src/internal/agentRuntime/eve/types.js";
+import type { EveSessionRef } from "../../../src/internal/agentRuntime/eve/types.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 // Stubbed first and left stubbed: `env` parses leaf's whole schema at import and
@@ -134,16 +131,6 @@ const approval = (id: string, toolCallId?: string) =>
 		tool_name: "attach",
 	}) as unknown as ChatApproval;
 
-const auth = {
-	appEnv: AppEnv.Sandbox,
-	channelId: "C1",
-	orgId: "org_1",
-	provider: "slack",
-	providerUserId: "U1",
-	threadId: "thread_1",
-	workspaceId: "T1",
-} satisfies EveAuthContext;
-
 const thread = {
 	channelId: "C1",
 	provider: "slack",
@@ -151,14 +138,13 @@ const thread = {
 	workspaceId: "T1",
 } as AgentThreadRef;
 
-const logger = { warn: () => {} } as unknown as AutumnLogger;
+const logger = { info: () => {}, warn: () => {} } as unknown as AutumnLogger;
 
 let session: EveSessionRef;
 let supersededBatches: ChatApproval[][];
 
 const withdraw = () =>
 	withdrawSupersededApprovals({
-		auth,
 		logger,
 		onApprovalsSuperseded: async (approvals) => {
 			supersededBatches.push(approvals);

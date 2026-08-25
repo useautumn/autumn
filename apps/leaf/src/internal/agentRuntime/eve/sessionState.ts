@@ -33,3 +33,13 @@ export const saveEveSessionState = async ({
 		threadKey: session.threadKey,
 	});
 };
+
+export const advanceStreamCursor = (session: EveSessionRef) => {
+	session.state.streamIndex += 1;
+	session.state.lastEventAt = Date.now();
+};
+
+export const statusAfterTerminalEvent = (
+	eventType: string,
+): EveSessionState["status"] =>
+	eventType === "session.completed" ? "completed" : "waiting";

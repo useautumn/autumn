@@ -3,16 +3,9 @@ import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { APPROVAL_STILL_OPEN_MESSAGE } from "../../../ui/messages.js";
 import type { AgentThreadRef } from "../../agentRuntime/domain/agentTurnContext.js";
-import type {
-	EveAuthContext,
-	EveSessionRef,
-} from "../../agentRuntime/eve/types.js";
+import type { EveSessionRef } from "../../agentRuntime/eve/types.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
-import {
-	denyOptionOf,
-	siblingDenyOptionFor,
-	siblingRequestIdsOf,
-} from "../domain/approvalRecord.js";
+import { approvalDenyPlan } from "../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 
@@ -34,26 +27,29 @@ export type ApprovalWithdrawal = {
 const denyResponsesFor = async (
 	approval: ChatApproval,
 ): Promise<ApprovalWithdrawal["inputResponses"]> => {
-	if (!approval.tool_call_id) return [];
+	const toolCallId = approval.tool_call_id;
+	if (!toolCallId) return [];
 	const writes = await chatApprovalWritesRepo.list({
 		approvalId: approval.id,
 		db,
 	});
-	const siblingDenyOption = siblingDenyOptionFor(writes);
+	const plan = approvalDenyPlan({
+		approval: { ...approval, tool_call_id: toolCallId },
+		writes,
+	});
 	return [
-		{ optionId: denyOptionOf(approval), requestId: approval.tool_call_id },
-		...siblingRequestIdsOf({ approval, writes })
-			.filter((siblingRequestId) => siblingRequestId !== approval.tool_call_id)
+		{ optionId: plan.optionId, requestId: plan.requestId },
+		...plan.siblingRequestIds
+			.filter((siblingRequestId) => siblingRequestId !== plan.requestId)
 			.map((siblingRequestId) => ({
-				optionId: siblingDenyOption(siblingRequestId) ?? "deny",
+				optionId: plan.siblingOptionIdFor(siblingRequestId) ?? "deny",
 				requestId: siblingRequestId,
 			})),
 	];
 };
 
-/** Supersede without a drain: pending cards are cancelled here, and their deny
- * responses are returned to ride the SAME eve post as the user's new message —
- * the withdrawn turn never gets a model turn of its own to wind down. */
+/** Cancels the pending cards and returns their deny responses to ride the
+ * SAME eve post as the user's new message — no wind-down turn of its own. */
 export const withdrawSupersededApprovals = async ({
 	logger,
 	onApprovalsSuperseded,
@@ -62,7 +58,6 @@ export const withdrawSupersededApprovals = async ({
 	session,
 	thread,
 }: {
-	auth?: EveAuthContext;
 	logger: AutumnLogger;
 	onApprovalsSuperseded?: (approvals: ChatApproval[]) => Promise<void> | void;
 	orgId: string;
@@ -81,8 +76,6 @@ export const withdrawSupersededApprovals = async ({
 	});
 	if (pendingApprovals.length === 0) return {};
 
-	// A park living in another run cannot be answered through this session's
-	// continuation; bundling its request id would invalidate the whole post.
 	const foreignApprovals = pendingApprovals.filter(
 		(approval) => approval.run_id && approval.run_id !== session.sessionId,
 	);
@@ -126,6 +119,14 @@ export const withdrawSupersededApprovals = async ({
 	}
 
 	if (inputResponses.length === 0) return {};
+	logger.info("Withdrew pending approvals for the user's new message", {
+		event: "leaf.eve_approvals_superseded",
+		data: {
+			approval_ids: cancelledApprovals.map((approval) => approval.id),
+			request_ids: inputResponses.map((response) => response.requestId),
+			session_id: session.sessionId,
+		},
+	});
 	const note =
 		cancelledApprovals.length === 1 && cancelledApprovals[0]
 			? withdrawnNote(cancelledApprovals[0].tool_name)

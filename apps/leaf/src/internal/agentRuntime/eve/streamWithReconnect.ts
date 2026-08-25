@@ -29,8 +29,6 @@ export async function* streamEveEventsWithReconnect({
 				session,
 				signal,
 			})) {
-				// A recurring idle reaper cuts every quiet gap, so each gap gets a
-				// fresh reconnect budget rather than exhausting one shared counter.
 				disconnects = 0;
 				yield event;
 			}
@@ -38,16 +36,24 @@ export async function* streamEveEventsWithReconnect({
 		} catch (error) {
 			if (!(error instanceof EveStreamDisconnectedError)) throw error;
 			disconnects += 1;
+			const data = {
+				attempt: disconnects,
+				session_id: session.sessionId,
+				stream_index: session.state.streamIndex,
+			};
+			if (disconnects >= MAX_RECONNECTS) {
+				logger.error("Eve stream reconnects exhausted", {
+					event: "leaf.eve_stream_reconnect_exhausted",
+					data,
+					error,
+				});
+				throw error;
+			}
 			logger.warn("Eve stream disconnected; reconnecting", {
 				event: "leaf.eve_stream_disconnected",
-				data: {
-					attempt: disconnects,
-					error: error.message,
-					session_id: session.sessionId,
-					stream_index: session.state.streamIndex,
-				},
+				data,
+				error,
 			});
-			if (disconnects >= MAX_RECONNECTS) throw error;
 			await new Promise((resolve) => setTimeout(resolve, RECONNECT_DELAY_MS));
 		}
 	}

@@ -118,7 +118,7 @@ await mockLeafModule({
 			session: EveSessionRef;
 		}) => {
 			deletedSessions.push({ reason, sessionId: session.sessionId });
-			return { orphanedApprovals: [] };
+			return undefined;
 		},
 	}),
 });

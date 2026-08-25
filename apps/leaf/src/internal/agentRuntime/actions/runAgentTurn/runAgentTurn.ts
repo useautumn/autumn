@@ -1,21 +1,23 @@
 import { db } from "../../../../lib/db.js";
-import { autumnOrgContextService } from "../../../autumnMcp/orgContextService.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import type {
 	AgentTurnContext,
 	AgentTurnParams,
 } from "../../domain/agentTurnContext.js";
-import { abandonEveSession } from "../../eve/abandonSession.js";
-import { EveSessionDeadError, EveSessionGoneError } from "../../eve/client.js";
-import type { EveAuthContext } from "../../eve/types.js";
+import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import {
 	generateThreadTitle,
 	persistThreadTitle,
 } from "../../sessions/agentThreadTitle.js";
+import { recoverLostSession } from "./errors/recoverLostSession.js";
 import { consumeAgentTurn } from "./execute/consumeAgentTurn.js";
 import { resolveAgentTurnOutcome } from "./finalize/resolveAgentTurnOutcome.js";
 import { buildAgentTurnMessage } from "./setup/buildAgentTurnMessage.js";
-import { prepareAgentTurn } from "./setup/prepareAgentTurn.js";
+import {
+	loadAgentOrgContext,
+	type PreparedAgentTurn,
+	prepareAgentTurn,
+} from "./setup/prepareAgentTurn.js";
 import { startAgentTurn } from "./setup/startAgentTurn.js";
 
 export const runAgentTurn = async ({
@@ -39,7 +41,6 @@ export const runAgentTurn = async ({
 		thread,
 		token,
 	} = ctx;
-
 	const auth: EveAuthContext = {
 		appEnv: env,
 		autumnUserId: ctx.autumnUserId,
@@ -55,113 +56,70 @@ export const runAgentTurn = async ({
 		: undefined;
 	const startedAt = Date.now();
 	let firstEventAt: number | undefined;
+	let restarted = false;
+
+	const startTurn = (prepared: Partial<PreparedAgentTurn>) =>
+		startAgentTurn({
+			auth: { ...auth, orgInstructions: prepared.orgContext?.instructions },
+			env,
+			message: buildAgentTurnMessage({
+				env,
+				isAdminInstall: isInternalAutumnSlackProvider({
+					provider: thread.provider,
+				}),
+				newSession: !prepared.existingSession,
+				orgContext: prepared.orgContext,
+				orgSlug: org.slug,
+				params,
+			}),
+			orgId: org.id,
+			params,
+			session: prepared.existingSession,
+			thread,
+			withdrawal: prepared.withdrawal,
+		});
+	const startFresh = async () => {
+		restarted = true;
+		return startTurn({ orgContext: await loadAgentOrgContext(ctx) });
+	};
+	const consume = (session: EveSessionRef) => {
+		run?.resolveSessionId(session.sessionId);
+		return consumeAgentTurn({
+			auth,
+			env,
+			logger,
+			onAction,
+			onFirstStreamEvent: () => {
+				firstEventAt ??= Date.now();
+			},
+			onReasoning,
+			onThinking,
+			orgId: org.id,
+			run,
+			session,
+			token,
+		});
+	};
 
 	try {
-		const { existingSession, orgContext, withdrawal } = await prepareAgentTurn({
-			auth,
-			context: ctx,
-		});
+		const prepared = await prepareAgentTurn(ctx);
+		const { existingSession } = prepared;
 		const preparedAt = Date.now();
-		const startTurn = (start: {
-			orgContext?: typeof orgContext;
-			session?: typeof existingSession;
-			withdrawal?: typeof withdrawal;
-		}) =>
-			startAgentTurn({
-				auth: { ...auth, orgInstructions: start.orgContext?.instructions },
-				env,
-				message: buildAgentTurnMessage({
-					env,
-					isAdminInstall: isInternalAutumnSlackProvider({
-						provider: thread.provider,
-					}),
-					newSession: !start.session,
-					orgContext: start.orgContext,
-					orgSlug: org.slug,
-					params,
-				}),
-				orgId: org.id,
-				params,
-				session: start.session,
-				thread,
-				withdrawal: start.withdrawal,
-			});
-		let session: Awaited<ReturnType<typeof startAgentTurn>>;
-		try {
-			session = await startTurn({
-				orgContext,
+		let session = await startTurn(prepared).catch(async (error) => {
+			if (!existingSession) throw error;
+			await recoverLostSession({
+				ctx,
+				error,
+				existingSession,
 				session: existingSession,
-				withdrawal,
 			});
-		} catch (error) {
-			if (!(existingSession && error instanceof EveSessionGoneError)) {
-				throw error;
-			}
-			// Eve lost the session; its row was already deleted at the failed
-			// post, and its parked writes died with it — restart fresh.
-			logger.warn("Eve session gone at message post; starting fresh", {
-				event: "leaf.eve_session_gone_restarted",
-				data: { session_id: existingSession.sessionId },
-			});
-			session = await startTurn({
-				orgContext: await autumnOrgContextService.load({
-					env,
-					logger,
-					orgId: org.id,
-					token,
-				}),
-			});
-		}
-		const consume = () => {
-			run?.resolveSessionId(session.sessionId);
-			return consumeAgentTurn({
-				auth,
-				env,
-				logger,
-				onAction,
-				onFirstStreamEvent: () => {
-					firstEventAt ??= Date.now();
-				},
-				onReasoning,
-				onThinking,
-				orgId: org.id,
-				run,
-				session,
-				token,
-			});
-		};
-		let outcome: Awaited<ReturnType<typeof consume>>;
-		try {
-			outcome = await consume();
-		} catch (error) {
-			if (!(existingSession && error instanceof EveSessionDeadError)) {
-				throw error;
-			}
-			// A dead session poisons every later message in the thread; drop it
-			// and answer this message from a fresh one instead of failing.
-			logger.warn("Eve session is dead; restarting the thread fresh", {
-				event: "leaf.eve_session_dead_restarted",
-				data: { session_id: session.sessionId },
-			});
-			await abandonEveSession({
-				env,
-				orgId: org.id,
-				providerUserId,
-				reason: "session_dead",
-				session,
-				thread,
-			});
-			session = await startTurn({
-				orgContext: await autumnOrgContextService.load({
-					env,
-					logger,
-					orgId: org.id,
-					token,
-				}),
-			});
-			outcome = await consume();
-		}
-
+			return startFresh();
+		});
+		const outcome = await consume(session).catch(async (error) => {
+			await recoverLostSession({ ctx, error, existingSession, session });
+			session = await startFresh();
+			return consume(session);
+		});
 		const result = await resolveAgentTurnOutcome({
 			env,
 			logger,
@@ -176,6 +134,7 @@ export const runAgentTurn = async ({
 				new_session: !existingSession,
 				outcome_kind: result.kind,
 				prepare_ms: preparedAt - startedAt,
+				restarted,
 				session_id: session.sessionId,
 				time_to_first_event_ms: firstEventAt
 					? firstEventAt - startedAt

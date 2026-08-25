@@ -3,57 +3,74 @@ import { logger } from "../../../lib/logger.js";
 import { setEmbeddedEveStatus } from "./embeddedStatus.js";
 
 const EVE_PORT = process.env.EVE_PORT ?? "3999";
-// Leaf's own listen port — eve's MCP connection dials leaf back on loopback.
 const CHAT_PORT = process.env.CHAT_PORT ?? process.env.PORT ?? "3099";
+const EVE_HOST = process.env.EVE_HOST ?? "127.0.0.1";
+/** srvx's Bun adapter is Bun.serve, whose idle timeout reaps quiet streams. */
+const EVE_SERVER_PRESET = "node-server";
+const READY_POLL_MS = 1000;
+const NOT_READY_WARN_EVERY_MS = 30_000;
 
-/** Runs eve inside the leaf task: leaf reaches it over loopback, matching
- * EVE_SERVER_URL's default, so prod needs no extra service or domain. */
 const logBuiltServerPreset = async (leafRoot: string) => {
 	try {
 		const manifest = (await Bun.file(
 			`${leafRoot}.output/nitro.json`,
-		).json()) as {
-			preset?: string;
-		};
-		logger.info("Built embedded eve server", {
+		).json()) as { preset?: string };
+		const level = manifest.preset === EVE_SERVER_PRESET ? "info" : "warn";
+		logger[level]("Built embedded eve server", {
 			event: "leaf.eve_server_built",
-			data: { preset: manifest.preset },
+			data: { expected_preset: EVE_SERVER_PRESET, preset: manifest.preset },
 		});
 	} catch (error) {
 		logger.warn("Could not read the embedded eve build manifest", {
 			event: "leaf.eve_server_build_manifest_unreadable",
-			data: { error: String(error) },
+			error,
 		});
 	}
 };
 
 const waitForEveReady = async () => {
-	const url = `http://${process.env.EVE_HOST ?? "127.0.0.1"}:${EVE_PORT}/eve/v1/info`;
+	const url = `http://${EVE_HOST}:${EVE_PORT}/eve/v1/info`;
+	const startedAt = Date.now();
+	let lastWarnedAt = startedAt;
 	while (true) {
 		try {
 			const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
 			if (response.status < 500) break;
 		} catch {}
-		await Bun.sleep(1000);
+		if (Date.now() - lastWarnedAt >= NOT_READY_WARN_EVERY_MS) {
+			lastWarnedAt = Date.now();
+			logger.warn("Embedded eve server still not ready", {
+				event: "leaf.eve_server_not_ready",
+				data: { elapsed_ms: Date.now() - startedAt },
+			});
+		}
+		await Bun.sleep(READY_POLL_MS);
 	}
 	setEmbeddedEveStatus("ready");
-	logger.info("Embedded eve server ready", { event: "leaf.eve_server_ready" });
+	logger.info("Embedded eve server ready", {
+		event: "leaf.eve_server_ready",
+		data: { ready_ms: Date.now() - startedAt },
+	});
 };
 
+/** Runs eve inside the leaf task over loopback, so prod needs no extra
+ * service. CHAT_PORT must be set at build time: eve bakes it into the manifest. */
 export const startEmbeddedEveServer = async () => {
 	setEmbeddedEveStatus("starting");
 	const leafRoot = new URL("../../../../", import.meta.url).pathname;
-	// Session journals go to the chat DB (namespaced schemas) so they survive
-	// redeploys; unset both vars and sessions fall back to ephemeral local files.
 	const workflowPostgresUrl =
 		process.env.WORKFLOW_POSTGRES_URL ?? process.env.CHAT_DATABASE_URL;
-	// eve build bakes the connection URL into the manifest, so CHAT_PORT must
-	// be set here — setting it only on the runtime spawn below is too late.
-	// Pin the node adapter: srvx's Bun adapter is Bun.serve, whose default
-	// idleTimeout reaps every quiet session stream after ~12s.
+	logger.info("Starting embedded eve server", {
+		event: "leaf.eve_server_starting",
+		data: {
+			allow_shared_world: process.env.EVE_ALLOW_SHARED_WORLD === "1",
+			durable_journal: Boolean(workflowPostgresUrl),
+			queue_namespace: process.env.WORKFLOW_QUEUE_NAMESPACE,
+		},
+	});
 	await $`bunx eve build`
 		.cwd(leafRoot)
-		.env({ ...process.env, CHAT_PORT, NITRO_PRESET: "node-server" });
+		.env({ ...process.env, CHAT_PORT, NITRO_PRESET: EVE_SERVER_PRESET });
 	await logBuiltServerPreset(leafRoot);
 	if (workflowPostgresUrl) {
 		await $`bunx workflow-postgres-setup`
@@ -69,7 +86,7 @@ export const startEmbeddedEveServer = async () => {
 				? { WORKFLOW_POSTGRES_URL: workflowPostgresUrl }
 				: {}),
 			CHAT_PORT,
-			NITRO_HOST: process.env.EVE_HOST ?? "127.0.0.1",
+			NITRO_HOST: EVE_HOST,
 			NITRO_PORT: EVE_PORT,
 			PORT: EVE_PORT,
 		},
@@ -77,13 +94,15 @@ export const startEmbeddedEveServer = async () => {
 		stdout: "inherit",
 	});
 	void waitForEveReady();
-	// Fail fast so the supervisor restarts the task with both servers in sync.
 	eve.exited.then(async (code) => {
 		setEmbeddedEveStatus("down");
-		logger.error("Embedded eve server exited", {
-			data: { code },
-			event: "leaf.eve_process_exited",
-		});
+		logger.error(
+			"Embedded eve server exited; leaf follows so the task restarts",
+			{
+				data: { code },
+				event: "leaf.eve_process_exited",
+			},
+		);
 		await logger.flush?.();
 		process.exit(code === 0 ? 0 : 1);
 	});
