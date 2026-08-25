@@ -1,16 +1,14 @@
 import type { BillingContext, UpdateCustomerEntitlement } from "@autumn/shared";
 import {
 	billingContextToCurrency,
-	buildLineItem,
-	cusEntToInvoiceOverage,
 	cusPriceToCusEntWithCusProduct,
 	customerProductToEntity,
 	EntInterval,
 	type FullCusEntWithFullCusProduct,
 	type FullCusProduct,
-	findFeatureByInternalId,
 	fullCustomerToSkipOverageBilling,
 	getCycleEnd,
+	invoiceCreditCustomerEntitlementToLineItems,
 	isAllocatedV2CustomerEntitlement,
 	isConsumablePrice,
 	isV4Usage,
@@ -18,32 +16,10 @@ import {
 	type LineItemContext,
 	usagePriceToLineItem,
 } from "@autumn/shared";
-import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
 import { isInvoiceCreditFeature } from "@/internal/features/creditSystemUtils.js";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
-
-const creditQuantityFormatter = new Intl.NumberFormat("en-US", {
-	maximumFractionDigits: 12,
-});
-
-const withStableInvoiceCreditId = ({
-	lineItem,
-	idempotencyScope,
-	position,
-}: {
-	lineItem: LineItem;
-	idempotencyScope?: string;
-	position: string;
-}) =>
-	idempotencyScope
-		? {
-				...lineItem,
-				amountAfterDiscountsFinalized: true,
-				id: `invoice_li_credit_${idempotencyScope}_${position}`,
-			}
-		: { ...lineItem, amountAfterDiscountsFinalized: true };
 
 export const customerProductToArrearLineItems = ({
 	ctx,
@@ -147,82 +123,27 @@ export const customerProductToArrearLineItems = ({
 		};
 
 		if (isInvoiceCredit) {
-			const attribution = Object.entries(
-				customerEntitlement.usage_attribution ?? {},
-			)
-				.filter(([, value]) => value.credits > 0)
-				.sort(([firstInternalId], [secondInternalId]) =>
-					firstInternalId.localeCompare(secondInternalId),
-				);
-
 			if (
 				invoiceCreditOptions &&
-				invoiceCreditOptions.includeLineItems !== false &&
-				attribution.length > 0
+				invoiceCreditOptions.includeLineItems !== false
 			) {
-				let totalCredits = new Decimal(0);
-				for (const [
-					sourceInternalFeatureId,
-					sourceAttribution,
-				] of attribution) {
-					const sourceFeature = findFeatureByInternalId({
-						features: ctx.features,
-						internalId: sourceInternalFeatureId,
-						errorOnNotFound: true,
-					});
-					totalCredits = totalCredits.add(sourceAttribution.credits);
-					const sourceLineItem = buildLineItem({
-						context: {
-							...context,
-							feature: sourceFeature,
-							direction: "charge",
-						},
-						amount: sourceAttribution.credits,
-						description: `${sourceFeature.name}, ${creditQuantityFormatter.format(sourceAttribution.units)} units`,
-						shouldProrate: false,
-						usage: sourceAttribution.units,
-					});
-					invoiceCreditLineItems.push(
-						withStableInvoiceCreditId({
-							lineItem: sourceLineItem,
-							idempotencyScope: invoiceCreditOptions.idempotencyScope,
-							position: `${customerEntitlement.id}_${sourceInternalFeatureId}`,
-						}),
-					);
-				}
-
 				const invoiceCreditFeature = customerEntitlement.entitlement.feature;
-				const overage = cusEntToInvoiceOverage({
-					cusEnt: customerEntitlement,
-				});
 				const skipInvoiceCreditOverage = fullCustomerToSkipOverageBilling({
 					fullCustomer: billingContext.fullCustomer,
 					featureId: invoiceCreditFeature.id,
 					internalEntityId: entity?.internal_id,
 				});
-				const creditsApplied =
-					invoiceCreditOptions.fullyOffsetOverage || skipInvoiceCreditOverage
-						? totalCredits
-						: Decimal.max(totalCredits.sub(overage), 0);
-				if (!creditsApplied.isZero()) {
-					const offsetLineItem = buildLineItem({
-						context: {
-							...context,
-							feature: invoiceCreditFeature,
-							direction: "refund",
-						},
-						amount: creditsApplied.toNumber(),
-						description: "Credits applied",
-						shouldProrate: false,
-					});
-					invoiceCreditLineItems.push(
-						withStableInvoiceCreditId({
-							lineItem: offsetLineItem,
-							idempotencyScope: invoiceCreditOptions.idempotencyScope,
-							position: `${customerEntitlement.id}_applied`,
-						}),
-					);
-				}
+				invoiceCreditLineItems.push(
+					...invoiceCreditCustomerEntitlementToLineItems({
+						customerEntitlement,
+						context,
+						features: ctx.features,
+						idempotencyScope: invoiceCreditOptions.idempotencyScope,
+						fullyOffsetOverage:
+							invoiceCreditOptions.fullyOffsetOverage ||
+							skipInvoiceCreditOverage,
+					}),
+				);
 			}
 		} else {
 			const lineItem = usagePriceToLineItem({
