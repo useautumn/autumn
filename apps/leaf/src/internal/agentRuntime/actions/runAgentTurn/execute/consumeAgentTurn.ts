@@ -25,6 +25,9 @@ import { watchSubagentProgress } from "./watchSubagentProgress.js";
 
 // Eve can close empty while asynchronously resuming a turn.
 const MAX_IDLE_RETRIES = 20;
+/** Each idle window is 2 minutes, so this bounds a quiet turn at ~6 minutes
+ * before leaf answers with whatever it has. */
+const MAX_IDLE_RESYNCS = 3;
 const STREAM_RETRY_DELAY_MS = ms.seconds(0.5);
 const PERSIST_CURSOR_EVERY_EVENTS = 10;
 
@@ -114,24 +117,48 @@ const streamPassEvents = async ({
 	return { progress, sawEvent };
 };
 
-const recoverFromIdleStream = async ({
+/** An idle window is a gap, not an ending: eve holds the turn durably and
+ * resumes on its own, so leaf resyncs and reopens at the cursor. Only an
+ * exhausted budget settles the turn from whatever text arrived. */
+const resyncAfterIdleStream = async ({
+	attempt,
 	logger,
 	turn,
 }: {
+	attempt: number;
 	logger: AutumnLogger;
 	turn: EveTurnContext;
-}): Promise<EveTurnOutcome> => {
-	const { auth, onReasoning, orgId, progress, session } = turn;
+}) => {
+	const { auth, orgId, session } = turn;
 	logger.warn("Eve stream went idle; resyncing cursor", {
 		event: "leaf.eve_stream_idle_timeout",
 		data: {
+			attempt,
 			session_id: session.sessionId,
 			stream_index: session.state.streamIndex,
 		},
 	});
 	await resyncEveStreamIndex({ auth, session });
 	await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
+};
+
+const settleExhaustedTurn = ({
+	logger,
+	turn,
+}: {
+	logger: AutumnLogger;
+	turn: EveTurnContext;
+}): EveTurnOutcome => {
+	const { onReasoning, progress, session } = turn;
 	const partialText = progress.finalText || progress.pendingText;
+	logger.error("Eve never resumed the turn", {
+		event: "leaf.eve_turn_abandoned",
+		data: {
+			has_partial_text: Boolean(partialText),
+			session_id: session.sessionId,
+			stream_index: session.state.streamIndex,
+		},
+	});
 	if (!partialText) throw new Error(AGENT_UNREACHABLE_MESSAGE);
 	closeReasoningOutput({ onReasoning, progress });
 	return { kind: "answered", text: partialText };
@@ -263,7 +290,12 @@ export const consumeAgentTurn = async ({
 			}
 
 			if (pass.error instanceof EveStreamIdleTimeoutError) {
-				return await recoverFromIdleStream({ logger, turn });
+				idleRetries = pass.sawEvent ? 0 : idleRetries + 1;
+				if (idleRetries >= MAX_IDLE_RESYNCS) {
+					return settleExhaustedTurn({ logger, turn });
+				}
+				await resyncAfterIdleStream({ attempt: idleRetries, logger, turn });
+				continue;
 			}
 			if (
 				pass.error instanceof EveStreamDisconnectedError &&
