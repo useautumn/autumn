@@ -148,7 +148,7 @@ export const refreshCeBalancesCache = async ({
 				metadataLocation: ceMetadataLocation,
 				durationMs: Math.round(performance.now() - startedAt),
 			},
-			"[refreshCeBalancesCache] rebuilt lake_cache.main.ce_balances",
+			"[refreshCeBalancesCache] rebuilt balance cache tables",
 		);
 	})();
 
