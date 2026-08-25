@@ -19,6 +19,10 @@ const consoleLogger = {
 
 console.log("Refreshing lake_cache_v2 balance tables...");
 const startedAt = performance.now();
-await refreshCeBalancesCache({ logger: consoleLogger });
+const { ok } = await refreshCeBalancesCache({ logger: consoleLogger });
+if (!ok) {
+	console.error("Refresh FAILED — v2 is not seeded; do not merge/deploy.");
+	process.exit(1);
+}
 console.log(`Done in ${((performance.now() - startedAt) / 1000).toFixed(1)}s`);
 process.exit(0);
