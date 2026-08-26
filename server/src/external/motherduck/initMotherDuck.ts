@@ -14,7 +14,11 @@ const mdSchema = { ceBalancesCache };
 export type MotherDuckDb = DuckDBDatabase<typeof mdSchema>;
 
 const DEFAULT_POOL_SIZE = 4;
-const DEFAULT_DATABASE = "lake_cache";
+// v2 is a TRANSIENT database (no historical snapshots, 1-day failsafe):
+// CREATE OR REPLACE churn on the old lake_cache parked every prior version in
+// a 7-day failsafe window and billed it. This is a cache rebuilt from Iceberg;
+// nothing in it ever needs recovery.
+const DEFAULT_DATABASE = "lake_cache_v2";
 /** Shed to the caller's unavailable-path instead of queueing behind a
  * saturated pool — a lesson from the PgBouncer era. */
 const ACQUIRE_TIMEOUT_MS = 2_000;

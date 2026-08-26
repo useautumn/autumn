@@ -1,7 +1,8 @@
 import { DuckDBInstance } from "@duckdb/node-api";
 import type { DucklakeLogger } from "./index.js";
 
-const MD_DATABASE = "lake_cache";
+/** TRANSIENT database — see initMotherDuck.ts in the server for why. */
+export const MD_DATABASE = "lake_cache_v2";
 
 type MdConnection = Awaited<
 	ReturnType<Awaited<ReturnType<typeof DuckDBInstance.create>>["connect"]>
