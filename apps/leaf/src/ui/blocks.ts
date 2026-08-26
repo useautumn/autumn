@@ -348,8 +348,17 @@ const actionPhrases = ({
 				};
 			}
 			case "updateCustomer": {
+				const renamedId = getString(request.id);
+				const renamedLabel = renamedId
+					? autumnDashboardLabel({
+							env,
+							id: renamedId,
+							label: customerText ?? renamedId,
+							resource: "customers",
+						})
+					: customerLabel;
 				return {
-					done: `Updated ${customerLabel}`,
+					done: `Updated ${renamedLabel}`,
 					failed: `Couldn't update ${customerLabel}`,
 					pending: `Update ${customerLabel}`,
 					running: `Updating ${customerLabel}`,

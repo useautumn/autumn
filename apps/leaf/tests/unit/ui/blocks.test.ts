@@ -1373,6 +1373,36 @@ describe("homogeneous fan-out", () => {
 		expect(rendered).toContain("Name: Beta");
 	});
 
+	test("a completed id change links the new customer id, pending links the old", () => {
+		const toolArgs = {
+			request: { customer_id: "edge-mt33ohxl", id: "user_fresh" },
+		};
+		const pending = JSON.stringify(
+			cardToBlockKit(
+				approvalCard({
+					id: "rename-pending",
+					env: AppEnv.Sandbox,
+					toolArgs,
+					toolName: "updateCustomer",
+				}),
+			),
+		);
+		expect(pending).toContain("customers/edge-mt33ohxl");
+
+		const done = JSON.stringify(
+			cardToBlockKit(
+				approvalStatusCard({
+					env: AppEnv.Sandbox,
+					status: "approved",
+					toolArgs,
+					toolName: "updateCustomer",
+				}),
+			),
+		);
+		expect(done).toContain("customers/user_fresh");
+		expect(done).not.toContain("customers/edge-mt33ohxl");
+	});
+
 	test("keeps per-step sections when the writes differ", () => {
 		const card = approvalCard({
 			id: "mixed",
