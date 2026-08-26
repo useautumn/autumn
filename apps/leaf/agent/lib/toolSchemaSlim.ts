@@ -30,8 +30,7 @@ const slimProperties = (properties: JsonSchemaObject, depth: number) => {
 	return { dropped, properties: kept };
 };
 
-// Descriptions below the request's own fields add tokens, not accuracy, and the
-// model must never set internal fields. Model-facing only; the MCP wire is untouched.
+// Model-facing only; the MCP wire keeps the full schema.
 export const slimToolSchema = (
 	value: JsonSchemaObject,
 	depth = 0,
