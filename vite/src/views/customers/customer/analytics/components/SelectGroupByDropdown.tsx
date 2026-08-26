@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
 import { customerDisplayLabel } from "../utils/customerDisplayLabel";
+import { entityDisplayLabel } from "../utils/entityDisplayLabel";
 
 export const SelectGroupByDropdown = ({
 	propertyKeys,
@@ -455,7 +456,10 @@ export const SelectGroupByDropdown = ({
 											value === "AUTUMN_RESERVED"
 												? "Other values"
 												: currentGroupBy === "entity_id"
-													? (entityNames?.[value] ?? value)
+													? entityDisplayLabel({
+															entityId: value,
+															entityNames,
+														})
 													: currentGroupBy === "customer_id"
 														? customerDisplayLabel({
 																customerId: value,

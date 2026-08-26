@@ -17,7 +17,10 @@ import {
 	type CustomerDisplayInfo,
 	getCustomerNames,
 } from "@/internal/analytics/actions/getCustomerNames.js";
-import { getEntityNames } from "@/internal/analytics/actions/getEntityNames.js";
+import {
+	type EntityDisplayInfo,
+	getEntityNames,
+} from "@/internal/analytics/actions/getEntityNames.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { eventActions } from "../actions/eventActions.js";
@@ -227,7 +230,7 @@ export const handleInternalAggregateEvents = createRoute({
 		}
 
 		// When grouping by entity_id, resolve entity names from ClickHouse
-		let entityNames: Record<string, string> | undefined;
+		let entityNames: Record<string, EntityDisplayInfo> | undefined;
 		if (resolvedGroupBy === "entity_id" && events?.data) {
 			const entityIds = [
 				...new Set(

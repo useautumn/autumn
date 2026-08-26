@@ -29,6 +29,8 @@ type TooltipEntry = {
 	value: number;
 	color: string;
 	customerId?: string;
+	entityId?: string;
+	entityCustomerId?: string;
 };
 
 const MAX_TOOLTIP_ITEMS = 5;
@@ -43,11 +45,24 @@ const Y_TICK = {
 	dy: -3,
 } as const;
 
-const customerPageHref = ({ customerId }: { customerId: string }): string =>
-	getRedirectUrl(
-		`/customers/${customerId}`,
-		getEnvFromPath(window.location.pathname),
-	);
+const dashboardHref = ({ path }: { path: string }): string =>
+	getRedirectUrl(path, getEnvFromPath(window.location.pathname));
+
+const tooltipItemHref = ({
+	item,
+}: {
+	item: TooltipEntry;
+}): string | undefined => {
+	if (item.customerId) {
+		return dashboardHref({ path: `/customers/${item.customerId}` });
+	}
+	if (item.entityId && item.entityCustomerId) {
+		return dashboardHref({
+			path: `/customers/${item.entityCustomerId}?entity_id=${item.entityId}`,
+		});
+	}
+	return undefined;
+};
 
 function TooltipItem({
 	item,
@@ -317,6 +332,8 @@ export const EventsBarChart = memo(function EventsBarChart({
 				value: Number(activeRow[s.yKey] ?? 0),
 				color: s.fill,
 				customerId: s.customerId,
+				entityId: s.entityId,
+				entityCustomerId: s.entityCustomerId,
 			}))
 			.filter((i) => i.value !== 0);
 		// A stale or zero-valued hoveredKey must not blank the tooltip while the
@@ -467,11 +484,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 										(rechartsConfig[item.dataKey]?.label as string) ??
 										item.dataKey
 									}
-									href={
-										pinned && item.customerId
-											? customerPageHref({ customerId: item.customerId })
-											: undefined
-									}
+									href={pinned ? tooltipItemHref({ item }) : undefined}
 								/>
 							))}
 							{overflow > 0 && (

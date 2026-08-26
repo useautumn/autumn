@@ -3,10 +3,16 @@ import { escapeChString } from "../clickhouseUtils.js";
 
 type EntityNameRow = {
 	id: string;
-	name: string;
+	name: string | null;
+	internal_customer_id: string;
 };
 
-/** Looks up entity names from the entities datasource by their IDs. Returns a map of id -> name (or id if name is null/empty). */
+export type EntityDisplayInfo = {
+	name: string | null;
+	internal_customer_id: string;
+};
+
+/** Looks up entity display fields from the entities datasource by their IDs. Returns a map of id -> { name, internal_customer_id }; ids with no row are omitted. */
 export const getEntityNames = async ({
 	entityIds,
 	orgId,
@@ -15,7 +21,7 @@ export const getEntityNames = async ({
 	entityIds: string[];
 	orgId: string;
 	env: string;
-}): Promise<Record<string, string>> => {
+}): Promise<Record<string, EntityDisplayInfo>> => {
 	if (entityIds.length === 0) return {};
 
 	const ch = getClickhouseClient();
@@ -27,7 +33,7 @@ export const getEntityNames = async ({
 		.join(",");
 
 	const query = `
-		SELECT id, name
+		SELECT id, name, internal_customer_id
 		FROM entities FINAL
 		WHERE org_id = {org_id:String}
 			AND env = {env:String}
@@ -46,17 +52,14 @@ export const getEntityNames = async ({
 
 	const resultJson = (await result.json()) as { data: EntityNameRow[] };
 
-	const nameMap: Record<string, string> = {};
+	const displayMap: Record<string, EntityDisplayInfo> = {};
 	for (const row of resultJson.data) {
-		nameMap[row.id] = row.name || row.id;
+		if (!row.id) continue;
+		displayMap[row.id] = {
+			name: row.name || null,
+			internal_customer_id: row.internal_customer_id,
+		};
 	}
 
-	// For any IDs not found in the datasource, fall back to the ID itself
-	for (const id of entityIds) {
-		if (!nameMap[id]) {
-			nameMap[id] = id;
-		}
-	}
-
-	return nameMap;
+	return displayMap;
 };

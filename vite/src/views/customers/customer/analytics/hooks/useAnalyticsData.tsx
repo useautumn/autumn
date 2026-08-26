@@ -6,6 +6,7 @@ import { useSearchParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import type { CustomerDisplayInfo } from "../utils/customerDisplayLabel";
+import type { EntityDisplayInfo } from "../utils/entityDisplayLabel";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { useSelectedEventNames } from "./useSelectedEventNames";
 
@@ -121,7 +122,8 @@ export const useAnalyticsData = ({
 		bcExclusionFlag: data?.bcExclusionFlag ?? false,
 		groupBy,
 		truncated: data?.truncated ?? false,
-		entityNames: (data?.entityNames as Record<string, string>) ?? undefined,
+		entityNames:
+			(data?.entityNames as Record<string, EntityDisplayInfo>) ?? undefined,
 		customerNames:
 			(data?.customerNames as Record<string, CustomerDisplayInfo>) ?? undefined,
 		planNames: (data?.planNames as Record<string, string>) ?? undefined,

@@ -6,6 +6,10 @@ import {
 	customerDisplayLabel,
 } from "./customerDisplayLabel";
 import { CUSTOMER_BALANCE_SUFFIX } from "./deductionsToEventsData";
+import {
+	type EntityDisplayInfo,
+	entityDisplayLabel,
+} from "./entityDisplayLabel";
 
 /**
  * Chart series configuration
@@ -19,6 +23,9 @@ export interface ChartSeriesConfig {
 	fill: string;
 	/** Only set when grouping by customer, for a real customer id. */
 	customerId?: string;
+	/** Both only set when grouping by entity, for a real entity id we resolved. */
+	entityId?: string;
+	entityCustomerId?: string;
 }
 
 /**
@@ -249,7 +256,7 @@ export function generateChartConfig({
 	features: Feature[];
 	groupBy: string | null;
 	originalColors: string[];
-	entityNames?: Record<string, string>;
+	entityNames?: Record<string, EntityDisplayInfo>;
 	customerNames?: Record<string, CustomerDisplayInfo>;
 	planNames?: Record<string, string>;
 }): ChartSeriesConfig[] {
@@ -283,19 +290,28 @@ export function generateChartConfig({
 		const { featureKey, groupValue } = parsed;
 
 		const featureName = getFeatureName({ key: featureKey, features });
+		// Spillover series are the base entity's, tagged with a display suffix.
+		const isSpilloverSeries =
+			groupBy === "entity_id" && groupValue.endsWith(CUSTOMER_BALANCE_SUFFIX);
+		const baseEntityId = isSpilloverSeries
+			? groupValue.slice(0, -CUSTOMER_BALANCE_SUFFIX.length)
+			: groupValue;
+
 		let displayGroupValue: string;
 		if (groupValue === "AUTUMN_RESERVED") {
 			displayGroupValue = "Other values";
 		} else if (groupBy === "plan_id" && groupValue === "") {
 			displayGroupValue = "No plan";
-		} else if (
-			groupBy === "entity_id" &&
-			groupValue.endsWith(CUSTOMER_BALANCE_SUFFIX)
-		) {
-			const base = groupValue.slice(0, -CUSTOMER_BALANCE_SUFFIX.length);
-			displayGroupValue = `${entityNames?.[base] ?? base}${CUSTOMER_BALANCE_SUFFIX}`;
-		} else if (groupBy === "entity_id" && entityNames?.[groupValue]) {
-			displayGroupValue = entityNames[groupValue];
+		} else if (isSpilloverSeries) {
+			displayGroupValue = `${entityDisplayLabel({
+				entityId: baseEntityId,
+				entityNames,
+			})}${CUSTOMER_BALANCE_SUFFIX}`;
+		} else if (groupBy === "entity_id") {
+			displayGroupValue = entityDisplayLabel({
+				entityId: groupValue,
+				entityNames,
+			});
 		} else if (groupBy === "customer_id") {
 			displayGroupValue = customerDisplayLabel({
 				customerId: groupValue,
@@ -312,6 +328,14 @@ export function generateChartConfig({
 			groupValue !== "" &&
 			groupValue !== "AUTUMN_RESERVED";
 
+		const isRealEntityGroup =
+			groupBy === "entity_id" &&
+			baseEntityId !== "" &&
+			baseEntityId !== "AUTUMN_RESERVED";
+		const entityCustomerId = isRealEntityGroup
+			? entityNames?.[baseEntityId]?.internal_customer_id
+			: undefined;
+
 		config.push({
 			xKey: "period",
 			yKey: meta.name,
@@ -320,6 +344,7 @@ export function generateChartConfig({
 			yName: `${featureName} (${displayGroupValue})`,
 			fill: colorsToUse[colorIndex % colorsToUse.length],
 			...(isRealCustomerGroup ? { customerId: groupValue } : {}),
+			...(entityCustomerId ? { entityId: baseEntityId, entityCustomerId } : {}),
 		});
 
 		colorIndex++;
