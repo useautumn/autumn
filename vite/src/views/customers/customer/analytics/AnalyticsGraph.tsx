@@ -254,7 +254,8 @@ export const EventsBarChart = memo(function EventsBarChart({
 			const row = resolveRowAt(e.clientX - rect.left);
 			if (!row) return;
 			pinnedAnchorRef.current = { clientX: e.clientX, clientY: e.clientY };
-			setHoveredKey(null);
+			// hoveredKey is deliberately left alone: the pin must show exactly what
+			// the hover tooltip showed — one segment, or the stack from empty space.
 			setActiveRow(row);
 			setPinned(true);
 		},
