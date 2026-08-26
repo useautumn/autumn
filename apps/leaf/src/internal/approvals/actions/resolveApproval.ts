@@ -54,9 +54,9 @@ const releaseClaim = async ({
 	}
 };
 
-/** The eve session is gone, so the deterministic executor is the only way to
- * honor the approval — Slack-surface-only, since only a surface that rendered
- * the whole group may execute it. */
+/** Dead-session fallback, reached only after guardApprovalDrift passed in this
+ * same resolve — Slack-only, since only a surface that rendered the group may
+ * execute it. */
 const executeWithoutSession = async ({
 	approval,
 	providerUserId,
