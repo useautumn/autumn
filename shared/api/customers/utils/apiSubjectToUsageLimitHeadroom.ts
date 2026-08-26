@@ -64,7 +64,11 @@ export const apiSubjectToUsageLimitHeadroom = ({
 					0,
 					new Decimal(capOnOriginal.limit).sub(capOnOriginal.usage ?? 0),
 				);
-				headrooms.push(headroomUnits.mul(schemaItem.credit_amount ?? 1));
+				headrooms.push(
+					headroomUnits
+						.mul(schemaItem.credit_amount ?? 1)
+						.div(schemaItem.feature_amount ?? 1),
+				);
 			}
 		}
 	}

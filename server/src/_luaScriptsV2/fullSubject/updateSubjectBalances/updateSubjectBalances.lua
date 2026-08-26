@@ -30,6 +30,7 @@
         additional_balance: number | null,
         adjustment: number | null,
         entities: object | null,
+        usage_attribution: object | null,
         reset_cycle_anchor: number | null,
         next_reset_at: number | null,
         expected_next_reset_at: number | null,
@@ -108,6 +109,7 @@ for _, update in ipairs(updates) do
 
       apply_balance_and_adjustment_update(helper_params)
       apply_entities_update(helper_params)
+      apply_usage_attribution_update(helper_params)
       apply_reset_cycle_anchor_update(helper_params)
       apply_next_reset_at_update(helper_params)
       apply_pooled_granted_update(helper_params)

@@ -15,6 +15,13 @@ export const CreateFeatureV1ParamsSchema = BaseFeatureV1ParamsSchema.refine(
 			"Please specify whether the feature is consumable (eg. API tokens, credits, etc.) or not.",
 		path: ["consumable"],
 	},
+).refine(
+	(data) =>
+		data.invoice_credit === undefined || data.type === FeatureType.CreditSystem,
+	{
+		message: "Invoice credits are only supported for classic credit systems.",
+		path: ["invoice_credit"],
+	},
 );
 
 export const CreateFeatureV2ParamsSchema = CreateFeatureV1ParamsSchema.omit({
@@ -53,6 +60,15 @@ export const CreateFeatureV2ParamsSchema = CreateFeatureV1ParamsSchema.omit({
 		{
 			message: "Credit system features must be consumable.",
 			path: ["consumable"],
+		},
+	)
+	.refine(
+		(data) =>
+			data.invoice_credit === undefined ||
+			data.type === FeatureType.CreditSystem,
+		{
+			message: "Invoice credits are only supported for classic credit systems.",
+			path: ["invoice_credit"],
 		},
 	);
 

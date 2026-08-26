@@ -1,9 +1,13 @@
+import { createHash } from "node:crypto";
 import {
 	customerEntitlementShouldBeBilled,
+	type FullCusEntWithFullCusProduct,
 	type FullCusEntWithProduct,
+	isCustomerEntitlementDueAtInvoice,
 	type LineItem,
 	secondsToMs,
 } from "@autumn/shared";
+import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems.js";
 import { getLatestPeriodStart } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers/common";
 import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling";
@@ -65,47 +69,99 @@ export const processConsumablePricesForInvoiceCreated = async ({
 
 	if (!isPeriodicInvoice) return [];
 
-	if (trialJustEnded) {
-		ctx.logger.info(
-			"[invoice.created] Trial just ended, skipping consumable charges",
-		);
-		return [];
-	}
-
 	const invoicePeriodEndMs = secondsToMs(stripeInvoice.period_end);
 	const billingCycleAnchorMs = secondsToMs(
 		stripeSubscription.billing_cycle_anchor,
 	);
 
-	const { lineItems, updateCustomerEntitlements } =
-		await eventContextToArrearLineItems({
-			ctx,
-			eventContext,
-			periodEndMs: invoicePeriodEndMs,
-			// Multi-interval filter: only bill entitlements whose cycle ends at this invoice
-			cusEntFilter: (cusEnt) =>
-				customerEntitlementShouldBeBilled({
-					cusEnt,
-					invoicePeriodEndMs,
-					billingCycleAnchorMs,
-				}),
+	const consumableCustomerEntitlementFilter = (
+		cusEnt: FullCusEntWithFullCusProduct,
+	) =>
+		customerEntitlementShouldBeBilled({
+			cusEnt,
+			invoicePeriodEndMs,
+			billingCycleAnchorMs,
+		});
+	const invoiceCreditCustomerEntitlementFilter = (
+		customerEntitlement: FullCusEntWithFullCusProduct,
+	) =>
+		isCustomerEntitlementDueAtInvoice({
+			customerEntitlement,
+			invoicePeriodEndMs,
 		});
 	const disableOverageBilling = shouldDisableOverageBilling({
 		org: ctx.org,
 		customerId: eventContext.fullCustomer.id,
 		customerConfig: eventContext.fullCustomer.config,
 	});
-	if (disableOverageBilling && lineItems.length > 0) {
+
+	if (trialJustEnded) {
+		ctx.logger.info(
+			"[invoice.created] Trial just ended, skipping consumable charges",
+		);
+	}
+
+	const {
+		lineItems: consumableLineItems,
+		invoiceCreditLineItems,
+		updateCustomerEntitlements,
+	} = await eventContextToArrearLineItems({
+		ctx,
+		eventContext,
+		periodEndMs: invoicePeriodEndMs,
+		cusEntFilter: trialJustEnded
+			? () => false
+			: consumableCustomerEntitlementFilter,
+		invoiceCredits: {
+			cusEntFilter: invoiceCreditCustomerEntitlementFilter,
+			idempotencyScope: stripeInvoice.id,
+			fullyOffsetOverage: disableOverageBilling,
+			includeLineItems: !trialJustEnded,
+		},
+	});
+	const stripeLineItems =
+		invoiceCreditLineItems.length > 0
+			? await getStripeInvoiceLineItems({
+					stripeClient: ctx.stripeCli,
+					invoiceId: stripeInvoice.id,
+				})
+			: [];
+	const existingAutumnLineItemIds = new Set(
+		stripeLineItems
+			.map((lineItem) => lineItem.metadata?.autumn_line_item_id)
+			.filter((lineItemId): lineItemId is string => Boolean(lineItemId)),
+	);
+	const pendingInvoiceCreditLineItems = invoiceCreditLineItems.filter(
+		(lineItem) => !existingAutumnLineItemIds.has(lineItem.id),
+	);
+
+	if (disableOverageBilling && consumableLineItems.length > 0) {
 		addToExtraLogs({ ctx, extras: { overageBillingDisabledByConfig: true } });
 	}
-	if (lineItems.length > 0 && !disableOverageBilling) {
+	if (consumableLineItems.length > 0 && !disableOverageBilling) {
 		await createStripeInvoiceItems({
 			ctx,
 			invoiceItems: lineItemsToCreateInvoiceItemsParams({
 				stripeCustomerId: eventContext.stripeCustomer.id,
 				stripeInvoiceId: stripeInvoice.id,
-				lineItems,
+				lineItems: consumableLineItems,
 			}),
+		});
+	}
+	if (pendingInvoiceCreditLineItems.length > 0) {
+		await createStripeInvoiceItems({
+			ctx,
+			invoiceItems: lineItemsToCreateInvoiceItemsParams({
+				stripeCustomerId: eventContext.stripeCustomer.id,
+				stripeInvoiceId: stripeInvoice.id,
+				lineItems: pendingInvoiceCreditLineItems,
+			}),
+			idempotencyKeys: pendingInvoiceCreditLineItems.map(
+				(lineItem) =>
+					`autumn:invoice-credit:${createHash("sha256")
+						.update(lineItem.id)
+						.digest("hex")}`,
+			),
 		});
 	}
 
@@ -121,24 +177,25 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		source: "invoice-created-consumable-reset",
 	});
 
-	// Handle rollovers
-	updateCustomerEntitlements.forEach(async (update) => {
-		const rolloverUpdates = getRolloverUpdates({
-			cusEnt: update.customerEntitlement,
-			nextResetAt: invoicePeriodEndMs,
-		});
+	await Promise.all(
+		updateCustomerEntitlements.map(async (update) => {
+			const rolloverUpdates = getRolloverUpdates({
+				cusEnt: update.customerEntitlement,
+				nextResetAt: invoicePeriodEndMs,
+			});
 
-		const fullCusEnt: FullCusEntWithProduct = {
-			...update.customerEntitlement,
-			customer_product: null,
-		};
+			const fullCusEnt: FullCusEntWithProduct = {
+				...update.customerEntitlement,
+				customer_product: null,
+			};
 
-		await RolloverService.insert({
-			ctx,
-			rows: rolloverUpdates.toInsert,
-			fullCusEnt,
-		});
-	});
+			await RolloverService.insert({
+				ctx,
+				rows: rolloverUpdates.toInsert,
+				fullCusEnt,
+			});
+		}),
+	);
 
-	return lineItems;
+	return [...consumableLineItems, ...invoiceCreditLineItems];
 };

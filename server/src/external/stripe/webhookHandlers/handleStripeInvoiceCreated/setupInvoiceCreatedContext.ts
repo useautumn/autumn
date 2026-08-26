@@ -49,7 +49,8 @@ export const setupInvoiceCreatedContext = async ({
 	ctx: StripeWebhookContext;
 	event: Stripe.InvoiceCreatedEvent;
 }): Promise<InvoiceCreatedContext | null> => {
-	const { stripeCli, fullCustomer, logger } = ctx;
+	const { stripeCli, logger } = ctx;
+	const fullCustomer = ctx.fullCustomer;
 
 	// 1. Get expanded invoice
 	const stripeInvoice = await getStripeInvoice({
@@ -67,13 +68,13 @@ export const setupInvoiceCreatedContext = async ({
 		return null;
 	}
 
-	// 4. Check fullCustomer exists
+	// 3. Check fullCustomer exists
 	if (!fullCustomer) {
 		logger.info("[invoice.created] fullCustomer not found, skipping");
 		return null;
 	}
 
-	// 3. Get expanded stripe subscription
+	// 4. Get expanded stripe subscription
 	const stripeSubscription = await getExpandedStripeSubscription({
 		ctx,
 		subscriptionId: stripeSubscriptionId,
@@ -121,7 +122,7 @@ export const setupInvoiceCreatedContext = async ({
 		...scheduledCustomerProducts,
 	];
 
-	// 4. Get expanded stripe customer (for discount info)
+	// 7. Get expanded stripe customer (for discount info)
 	const stripeCustomer = await getExpandedStripeCustomer({
 		ctx,
 		stripeCustomerId: stripeSubscription.customer.id,
@@ -132,13 +133,13 @@ export const setupInvoiceCreatedContext = async ({
 		return null;
 	}
 
-	// 5. Get current time (respecting test clocks)
+	// 8. Get current time (respecting test clocks)
 	const nowMs = await stripeSubscriptionToNowMs({
 		stripeSubscription,
 		stripeCli: ctx.stripeCli,
 	});
 
-	// 6. Get payment method for arrear invoices
+	// 9. Get payment method for arrear invoices
 	const paymentMethod = await getCusPaymentMethod({
 		stripeCli: ctx.stripeCli,
 		stripeId: stripeSubscription.customer.id,

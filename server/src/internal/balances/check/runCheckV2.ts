@@ -32,6 +32,7 @@ export const runCheckV2 = async ({
 					checkData,
 				})
 			: await getCheckResponseV2({
+					ctx,
 					checkData,
 					requiredBalance,
 					properties: body.properties,

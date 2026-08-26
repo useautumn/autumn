@@ -16,6 +16,127 @@ local function calculate_rollover_change(balance, amount)
   return math.min(balance, amount)
 end
 
+-- Rate-card rollovers resolve units against the owner's current-cycle tier
+-- position; ordinary rollovers retain their fixed credit costs.
+local function calculate_rollover_rate_change(params)
+  local rollover_obj = params.rollover_obj
+  local rate_card = rollover_obj.rate_card
+  local requested_units = safe_number(params.requested_units)
+  local available_credits = math.max(0, safe_number(params.available_credits))
+
+  if is_nil(rate_card) then
+    local credit_cost = is_nil(rollover_obj.credit_cost)
+        and 1
+      or safe_number(rollover_obj.credit_cost)
+    if credit_cost == 0 then
+      return {
+        units = requested_units,
+        credits = 0,
+        rate_card = nil,
+      }
+    end
+
+    local credits = calculate_rollover_change(
+      available_credits,
+      requested_units * credit_cost
+    )
+    return {
+      units = credits / credit_cost,
+      credits = credits,
+      rate_card = nil,
+    }
+  end
+
+  local customer_entitlement_id = params.customer_entitlement_id
+  if is_nil(customer_entitlement_id)
+      or not params.context.customer_entitlements[customer_entitlement_id]
+  then
+    error('ROLLOVER_ATTRIBUTION_OWNER_MISSING')
+  end
+  local current_units = get_credit_rate_current_units(
+    params.context,
+    customer_entitlement_id,
+    rate_card
+  )
+  local requested_credits = math.max(
+    0,
+    credit_rate_cost_for_units(rate_card, current_units, requested_units)
+  )
+  local allowed_credits = math.min(available_credits, requested_credits)
+  local funded_units = credit_rate_units_for_credit_change({
+    rate_card = rate_card,
+    current_units = current_units,
+    requested_units = requested_units,
+    allowed_credit_change = allowed_credits,
+  })
+  local funded_credits = credit_rate_cost_for_units(
+    rate_card,
+    current_units,
+    funded_units
+  )
+
+  return {
+    units = funded_units,
+    credits = funded_credits,
+    rate_card = rate_card,
+  }
+end
+
+local function apply_rollover_rate_change(params)
+  local change = params.change
+  local rollover_obj = params.rollover_obj
+  local credit_cost = is_nil(rollover_obj.credit_cost)
+      and 1
+    or safe_number(rollover_obj.credit_cost)
+
+  if math.abs(change.units) <= CREDIT_RATE_EPSILON then
+    return 0
+  end
+
+  if not is_nil(change.rate_card) then
+    credit_cost = math.abs(change.units) > CREDIT_RATE_EPSILON
+        and change.credits / change.units
+      or 0
+  end
+
+  local usage_attribution_delta = nil
+  if not is_nil(change.rate_card) then
+    usage_attribution_delta = build_credit_rate_attribution_delta({
+      rate_card = change.rate_card,
+      units = change.units,
+      credits = change.credits,
+    })
+  end
+
+  queue_rollover_update({
+    context = params.context,
+    deduct_amount = change.credits,
+    rollover_id = rollover_obj.id,
+    entity_id = params.entity_id,
+    credit_cost = credit_cost,
+    value_delta = change.units,
+    usage_attribution_delta = usage_attribution_delta,
+  })
+
+  update_in_memory_rollover({
+    target = params.target,
+    entity_id = params.entity_id,
+    deduct_amount = change.credits,
+  })
+
+  if not is_nil(change.rate_card) then
+    apply_credit_rate_attribution_change({
+      context = params.context,
+      customer_entitlement_id = params.customer_entitlement_id,
+      rate_card = change.rate_card,
+      units = change.units,
+      credits = change.credits,
+    })
+  end
+
+  return change.units
+end
+
 --[[
   deduct_from_rollovers(params)
 
@@ -73,11 +194,10 @@ local function deduct_from_rollovers(params)
     if remaining <= 0 then break end
 
     local rollover_id = rollover_obj.id
-    local credit_cost = rollover_obj.credit_cost
-    if is_nil(credit_cost) then
-      credit_cost = 1
-    end
-    if credit_cost == 0 then
+    local credit_cost = is_nil(rollover_obj.credit_cost)
+        and 1
+      or safe_number(rollover_obj.credit_cost)
+    if is_nil(rollover_obj.rate_card) and credit_cost == 0 then
       -- Zero credit cost (e.g. -100% markup AI model): usage is free, leave rollovers untouched.
       logger.log("  Rollover %s credit_cost=0 - free deduction, skipping", rollover_id)
       remaining = 0
@@ -88,9 +208,6 @@ local function deduct_from_rollovers(params)
     if not rollover_data then
       logger.log("  Rollover %s not found in context", rollover_id)
     else
-      -- Convert remaining (feature units) to credits for this rollover
-      local remaining_credits = remaining * credit_cost
-
       -- ========================================================================
       -- CASE 1: Entity-scoped with specific target entity
       -- ========================================================================
@@ -99,29 +216,26 @@ local function deduct_from_rollovers(params)
         local entity_obj = entities[target_entity_id]
         local balance = entity_obj and safe_number(entity_obj.balance) or 0
 
-        local to_change = calculate_rollover_change(balance, remaining_credits)
+        local change = calculate_rollover_rate_change({
+          context = context,
+          rollover_obj = rollover_obj,
+          customer_entitlement_id = rollover_data.cus_ent_id,
+          requested_units = remaining,
+          available_credits = balance,
+        })
 
         logger.log("  Rollover %s entity %s: balance=%s, credit_cost=%s, to_change=%s",
-          rollover_id, target_entity_id, balance, credit_cost, to_change)
+          rollover_id, target_entity_id, balance, credit_cost, change.credits)
 
-        if to_change > 0 then
-          queue_rollover_update({
+        if math.abs(change.units) > CREDIT_RATE_EPSILON then
+          local features = apply_rollover_rate_change({
             context = context,
-            deduct_amount = to_change,
-            rollover_id = rollover_id,
-            entity_id = target_entity_id,
-            credit_cost = credit_cost,
-            value_delta = to_change / credit_cost,
-          })
-
-          update_in_memory_rollover({
+            rollover_obj = rollover_obj,
+            customer_entitlement_id = rollover_data.cus_ent_id,
             target = entities,
             entity_id = target_entity_id,
-            deduct_amount = to_change,
+            change = change,
           })
-
-          -- Convert credits deducted back to features
-          local features = to_change / credit_cost
           deducted = deducted + features
           remaining = remaining - features
         end
@@ -136,34 +250,29 @@ local function deduct_from_rollovers(params)
         for _, entity_key in ipairs(entity_keys) do
           if remaining <= 0 then break end
 
-          -- Recalculate remaining_credits (remaining may have changed)
-          remaining_credits = remaining * credit_cost
-
           local entity_obj = entities[entity_key]
           local balance = entity_obj and safe_number(entity_obj.balance) or 0
 
-          local to_change = calculate_rollover_change(balance, remaining_credits)
+          local change = calculate_rollover_rate_change({
+            context = context,
+            rollover_obj = rollover_obj,
+            customer_entitlement_id = rollover_data.cus_ent_id,
+            requested_units = remaining,
+            available_credits = balance,
+          })
 
           logger.log("  Rollover %s entity %s: balance=%s, credit_cost=%s, to_change=%s",
-            rollover_id, entity_key, balance, credit_cost, to_change)
+            rollover_id, entity_key, balance, credit_cost, change.credits)
 
-          if to_change > 0 then
-            queue_rollover_update({
+          if math.abs(change.units) > CREDIT_RATE_EPSILON then
+            local features = apply_rollover_rate_change({
               context = context,
-              deduct_amount = to_change,
-              rollover_id = rollover_id,
-              entity_id = entity_key,
-              credit_cost = credit_cost,
-              value_delta = to_change / credit_cost,
-            })
-
-            update_in_memory_rollover({
+              rollover_obj = rollover_obj,
+              customer_entitlement_id = rollover_data.cus_ent_id,
               target = entities,
               entity_id = entity_key,
-              deduct_amount = to_change,
+              change = change,
             })
-
-            local features = to_change / credit_cost
             deducted = deducted + features
             remaining = remaining - features
           end
@@ -175,28 +284,26 @@ local function deduct_from_rollovers(params)
       else
         local balance = safe_number(rollover_data.balance)
 
-        local to_change = calculate_rollover_change(balance, remaining_credits)
+        local change = calculate_rollover_rate_change({
+          context = context,
+          rollover_obj = rollover_obj,
+          customer_entitlement_id = rollover_data.cus_ent_id,
+          requested_units = remaining,
+          available_credits = balance,
+        })
 
         logger.log("  Rollover %s top-level: balance=%s, credit_cost=%s, to_change=%s",
-          rollover_id, balance, credit_cost, to_change)
+          rollover_id, balance, credit_cost, change.credits)
 
-        if to_change > 0 then
-          queue_rollover_update({
+        if math.abs(change.units) > CREDIT_RATE_EPSILON then
+          local features = apply_rollover_rate_change({
             context = context,
-            deduct_amount = to_change,
-            rollover_id = rollover_id,
-            entity_id = nil,
-            credit_cost = credit_cost,
-            value_delta = to_change / credit_cost,
-          })
-
-          update_in_memory_rollover({
+            rollover_obj = rollover_obj,
+            customer_entitlement_id = rollover_data.cus_ent_id,
             target = rollover_data,
             entity_id = nil,
-            deduct_amount = to_change,
+            change = change,
           })
-
-          local features = to_change / credit_cost
           deducted = deducted + features
           remaining = remaining - features
         end

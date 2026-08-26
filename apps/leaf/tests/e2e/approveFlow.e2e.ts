@@ -1,8 +1,9 @@
 /**
- * The deterministic executor: approve executes the stored writes directly —
- * fast, exactly-once, drift-guarded — and eve is only notified.
+ * The approve flow: approve resumes eve, which executes the parked writes
+ * itself; outcomes stream back onto the write rows. Drift is guarded
+ * pre-resume — a drifted card refreshes instead of executing.
  *
- *   bun tests/e2e/approveExecutor.e2e.ts
+ *   bun tests/e2e/approveFlow.e2e.ts
  */
 import { AppEnv, chatApprovals, chatApprovalWrites } from "@autumn/shared";
 import { eq } from "drizzle-orm";
@@ -98,16 +99,6 @@ const customerHasLaunch = async (customerId: string) =>
 		}),
 	).includes("launch");
 
-const requireApplied = (label: string, result: unknown) => {
-	const text = JSON.stringify(result);
-	if (text.includes('"isError":true') || text.includes("errorMessage")) {
-		throw new Error(`${label} failed: ${text.slice(0, 300)}`);
-	}
-	if (text.includes("payment_url")) {
-		throw new Error(`${label} redirected to checkout instead of applying`);
-	}
-};
-
 const approval = await parkGroupedAttach();
 
 // Concurrent double-click: the SQL claim admits exactly one.
@@ -122,23 +113,20 @@ check(
 
 const claimed = claimA ?? claimB;
 if (!claimed) throw new Error("no claim won");
-let resumedOutcome: Record<string, unknown> | undefined;
-const startedAt = Date.now();
 const result = await resolveApproval({
 	approval: claimed,
-	onResumed: (resumed) => {
-		resumedOutcome = resumed as Record<string, unknown>;
-	},
 	providerUserId,
 });
-const durationMs = Date.now() - startedAt;
 
 check(
-	"approve executed deterministically",
+	"approve resumed eve and applied",
 	!("drifted" in result) && !("error" in result),
 	JSON.stringify(result).slice(0, 200),
 );
-check("approve→applied is fast", durationMs < 60_000, `${durationMs}ms total`);
+check(
+	"resumed turn did not chain a new card",
+	!("chainedApprovalId" in result && result.chainedApprovalId),
+);
 check(
 	"both customers received the plan (bulk)",
 	(await customerHasLaunch(customerA)) && (await customerHasLaunch(customerB)),
@@ -150,24 +138,19 @@ const writes = await db
 	.where(eq(chatApprovalWrites.approval_id, approval.id))
 	.orderBy(chatApprovalWrites.position);
 check(
-	"every write row is applied",
+	"every write row is applied from stream evidence",
 	writes.length === 2 && writes.every((write) => write.status === "applied"),
 	writes.map((write) => write.status).join(","),
+);
+check(
+	"write rows carry the streamed results",
+	writes.every((write) => write.result != null),
 );
 const [finalRow] = await db
 	.select()
 	.from(chatApprovals)
 	.where(eq(chatApprovals.id, approval.id));
 check("row finalized approved", finalRow?.status === "approved");
-
-// The eve notification resolves async, off the approve critical path. The
-// model's text is never surfaced; only chained parks/questions would be.
-await new Promise((resolve) => setTimeout(resolve, 45_000));
-check(
-	"async resume settled without re-issued writes",
-	resumedOutcome !== undefined && !resumedOutcome.chainedApprovalId,
-	JSON.stringify(resumedOutcome ?? {}).slice(0, 140),
-);
 
 // Re-click after apply: the claim refuses a decided row.
 const reclaim = await chatApprovalRepo.claim({

@@ -5,6 +5,7 @@ import {
 	keyToTitle,
 	notNullish,
 } from "@autumn/shared";
+import { isEnablingInvoiceCreditFeature } from "../../creditSystemUtils.js";
 import type { ObjectsUsingFeature } from "./getObjectsUsingFeature.js";
 
 const isCreditSystemSwitch = (from: FeatureType, to: FeatureType): boolean =>
@@ -26,7 +27,20 @@ export const isBlockableFeatureChange = ({
 		feature.type !== FeatureType.Boolean &&
 		updates.type !== FeatureType.Boolean &&
 		feature.config?.usage_type !== updates.config?.usage_type;
-	return isChangingType || isChangingId || isChangingUsageType;
+	const isEnablingInvoiceCredits = isEnablingInvoiceCreditFeature({
+		currentFeature: feature,
+		nextFeature: {
+			...feature,
+			type: updates.type ?? feature.type,
+			config: updates.config ?? feature.config,
+		},
+	});
+	return (
+		isChangingType ||
+		isChangingId ||
+		isChangingUsageType ||
+		isEnablingInvoiceCredits
+	);
 };
 
 /**
@@ -56,6 +70,14 @@ export const detectFeatureUpdateBlockers = ({
 		feature.type !== FeatureType.Boolean &&
 		updates.type !== FeatureType.Boolean &&
 		feature.config?.usage_type !== updates.config?.usage_type;
+	const isEnablingInvoiceCredits = isEnablingInvoiceCreditFeature({
+		currentFeature: feature,
+		nextFeature: {
+			...feature,
+			type: updates.type ?? feature.type,
+			config: updates.config ?? feature.config,
+		},
+	});
 
 	if (isChangingType && updates.type) {
 		const newType = updates.type;
@@ -148,6 +170,14 @@ export const detectFeatureUpdateBlockers = ({
 				message: `Cannot set to ${usageTypeTitle} because it is / was used by customers`,
 			});
 		}
+	}
+
+	if (isEnablingInvoiceCredits && cusEnts.length > 0) {
+		blockers.push({
+			field: "invoice_credit",
+			code: "attached_to_customer",
+			message: `Cannot enable invoice credits for feature ${feature.id} because it has been attached to a customer before`,
+		});
 	}
 
 	return blockers;

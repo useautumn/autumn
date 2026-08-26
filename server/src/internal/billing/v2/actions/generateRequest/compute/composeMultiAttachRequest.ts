@@ -1,7 +1,18 @@
-import type { CreateSchedulePlanV0 } from "@autumn/shared";
+import type {
+	CreateSchedulePlanV0,
+	MultiAttachParamsV0Input,
+} from "@autumn/shared";
 import { freeTrialParamsV1ToV0 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { resolveCustomizedPlan } from "@/internal/billing/v2/actions/resolveBillingRequest";
+import type { AttachGenerationParams } from "../generationSchemas";
+
+/** The composed multi-attach dialect the sheet seeds: MultiAttach params with
+ * the free trial already converted to its V0 shape. */
+export type GeneratedMultiAttachRequestV0 = Omit<
+	MultiAttachParamsV0Input,
+	"free_trial"
+> & { free_trial?: ReturnType<typeof freeTrialParamsV1ToV0> };
 
 const SINGLE_ATTACH_ONLY_FIELDS = [
 	"billing_cycle_anchor",
@@ -13,7 +24,7 @@ const SINGLE_ATTACH_ONLY_FIELDS = [
 	"no_billing_changes",
 	"plan_schedule",
 	"remove_plan_ids",
-] as const;
+] as const satisfies readonly (keyof AttachGenerationParams)[];
 
 /** Maps a generated attach with `additional_plans` into the resolved
  * multi-attach dialect: `plans[]` with customize resolved to concrete items,
@@ -24,21 +35,18 @@ export const composeMultiAttachRequest = async ({
 	customerId,
 }: {
 	ctx: AutumnContext;
-	generated: Record<string, unknown>;
+	generated: AttachGenerationParams;
 	customerId: string;
 }): Promise<{
-	request: Record<string, unknown>;
+	request: GeneratedMultiAttachRequestV0;
 	unrepresentable: string[];
 }> => {
-	const additionalPlans = generated.additional_plans as CreateSchedulePlanV0[];
-	const primaryCustomize = generated.customize as
-		| Record<string, unknown>
-		| undefined;
+	const additionalPlans = generated.additional_plans ?? [];
 	const {
 		free_trial: primaryFreeTrial,
 		upsert_licenses: primaryLicenses,
 		...planCustomize
-	} = primaryCustomize ?? {};
+	} = generated.customize ?? {};
 
 	const primaryPlan = {
 		plan_id: generated.plan_id,
@@ -61,7 +69,7 @@ export const composeMultiAttachRequest = async ({
 	);
 
 	const freeTrial = freeTrialParamsV1ToV0({
-		freeTrialParamsV1: primaryFreeTrial as never,
+		freeTrialParamsV1: primaryFreeTrial,
 	});
 
 	const unrepresentable = SINGLE_ATTACH_ONLY_FIELDS.filter(

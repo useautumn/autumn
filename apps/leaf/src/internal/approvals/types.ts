@@ -61,7 +61,6 @@ export type ApprovalAuthorization =
 export type ApprovalActionDeps = {
 	resolveApproval: (input: {
 		approval: ChatApproval;
-		onResumed?: (result: ApprovalRunResult) => Promise<void> | void;
 		onProgress?: (statusLine: string) => void;
 		providerUserId: string;
 	}) => Promise<ApprovalRunResult>;

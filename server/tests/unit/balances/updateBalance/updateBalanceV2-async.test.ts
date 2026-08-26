@@ -5,6 +5,9 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	ApiVersionClass,
 	AppEnv,
+	ErrCode,
+	type Feature,
+	FeatureType,
 	LATEST_VERSION,
 	type UpdateBalanceParamsV0,
 } from "@autumn/shared";
@@ -75,7 +78,7 @@ await mockModuleWithRestore(
 	() => ({ updateExpiresAtV2: async () => {} }),
 );
 
-const { updateBalanceV2 } = await import(
+const { runUpdateBalanceV2, updateBalanceV2 } = await import(
 	// @ts-expect-error - Bun cache-busting query isolates module mocks.
 	"@/internal/balances/updateBalance/v2/updateBalanceV2.js?asyncUpdate"
 );
@@ -104,6 +107,18 @@ const params = {
 	feature_id: "messages",
 	remaining: 40,
 } satisfies UpdateBalanceParamsV0;
+
+const invoiceCreditFeature = {
+	id: "invoice_credits",
+	type: FeatureType.CreditSystem,
+	config: { invoice_credit: true },
+} as Feature;
+
+const createInvoiceCreditCtx = () => {
+	const ctx = createCtx();
+	ctx.features = [invoiceCreditFeature];
+	return ctx;
+};
 
 describe("updateBalanceV2 async routing", () => {
 	const originalQueueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
@@ -223,6 +238,72 @@ describe("updateBalanceV2 async routing", () => {
 		).rejects.toMatchObject({ statusCode: 503 });
 
 		expect(state.getFullSubjectCalls).toHaveLength(0);
+		expect(state.updateRemainingCalls).toHaveLength(0);
+	});
+
+	test("rejects invoice-credit balance mutations before enqueue", async () => {
+		_setAsyncBalanceUpdateConfigForTesting({
+			config: { enabledOrgIds: ["test-org"] },
+		});
+
+		for (const mutation of [
+			{ remaining: 40 },
+			{ add_to_balance: 10 },
+			{ add_to_balance: -10 },
+			{ usage: 60 },
+			{ included_grant: 100 },
+		] satisfies Partial<UpdateBalanceParamsV0>[]) {
+			await expect(
+				updateBalanceV2({
+					ctx: createInvoiceCreditCtx(),
+					params: {
+						customer_id: "cus_123",
+						feature_id: invoiceCreditFeature.id,
+						...mutation,
+					},
+					targetBalance: mutation.remaining,
+				}),
+			).rejects.toMatchObject({
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		expect(state.queueCommands).toHaveLength(0);
+		expect(state.getFullSubjectCalls).toHaveLength(0);
+		expect(state.updateRemainingCalls).toHaveLength(0);
+	});
+
+	test("rejects invoice-credit balance mutations in the worker core", async () => {
+		await expect(
+			runUpdateBalanceV2({
+				ctx: createInvoiceCreditCtx(),
+				params: {
+					customer_id: "cus_123",
+					feature_id: invoiceCreditFeature.id,
+					usage: 60,
+				},
+			}),
+		).rejects.toMatchObject({
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+
+		expect(state.getFullSubjectCalls).toHaveLength(0);
+		expect(state.updateRemainingCalls).toHaveLength(0);
+	});
+
+	test("allows metadata-only invoice-credit updates", async () => {
+		await runUpdateBalanceV2({
+			ctx: createInvoiceCreditCtx(),
+			params: {
+				customer_id: "cus_123",
+				feature_id: invoiceCreditFeature.id,
+				next_reset_at: Date.now() + 60_000,
+			},
+		});
+
+		expect(state.getFullSubjectCalls).toHaveLength(1);
 		expect(state.updateRemainingCalls).toHaveLength(0);
 	});
 });

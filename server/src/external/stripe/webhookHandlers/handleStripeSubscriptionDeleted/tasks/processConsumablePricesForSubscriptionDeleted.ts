@@ -69,32 +69,48 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 		return;
 	}
 
+	const disableOverageBilling = shouldDisableOverageBilling({
+		org: ctx.org,
+		customerId: eventContext.fullCustomer.id,
+		customerConfig: eventContext.fullCustomer.config,
+	});
+
 	// 1. Generate arrear line items
 	// Use ended_at (when subscription was actually deleted) as the period end.
 	// This handles mid-cycle cancellations correctly - we bill up to when they canceled,
 	// not up to when the cycle would have ended.
 	// Falls back to nowMs if ended_at is not available.
-	const { lineItems, updateCustomerEntitlements, billingContext } =
-		await eventContextToArrearLineItems({
-			ctx,
-			eventContext,
-			periodEndMs: stripeSubscription.ended_at
-				? secondsToMs(stripeSubscription.ended_at)
-				: undefined,
-			stripeDiscountable: false,
-			// No cusEntFilter - bill all consumable entitlements on cancellation
-		});
-
-	const disableOverageBilling = shouldDisableOverageBilling({
-		org: ctx.org,
-		customerId: eventContext.fullCustomer.id,
+	const {
+		lineItems,
+		invoiceCreditLineItems,
+		updateCustomerEntitlements,
+		billingContext,
+	} = await eventContextToArrearLineItems({
+		ctx,
+		eventContext,
+		periodEndMs: stripeSubscription.ended_at
+			? secondsToMs(stripeSubscription.ended_at)
+			: undefined,
+		stripeDiscountable: false,
+		invoiceCredits: {
+			idempotencyScope: stripeSubscription.id,
+			fullyOffsetOverage: disableOverageBilling,
+		},
+		// No cusEntFilter - bill all consumable entitlements on cancellation
 	});
+
 	if (disableOverageBilling && lineItems.length > 0) {
 		addToExtraLogs({ ctx, extras: { overageBillingDisabledByConfig: true } });
 	}
-	if (lineItems.length > 0 && !disableOverageBilling) {
+	const invoiceLineItems = [
+		...(disableOverageBilling ? [] : lineItems),
+		...invoiceCreditLineItems,
+	];
+	if (invoiceLineItems.length > 0) {
 		// 2. Create, finalize, and pay a single invoice with all line items
-		const invoiceLines = lineItemsToInvoiceAddLinesParams({ lineItems });
+		const invoiceLines = lineItemsToInvoiceAddLinesParams({
+			lineItems: invoiceLineItems,
+		});
 
 		const { paid, invoice } = await createInvoiceForBilling({
 			ctx,

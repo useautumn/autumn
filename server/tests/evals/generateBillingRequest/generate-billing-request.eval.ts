@@ -6,13 +6,27 @@
  * Run: bun eval:generation  (needs ANTHROPIC_API_KEY + BRAINTRUST_API_KEY)
  */
 
+import {
+	type ApiPlanV1,
+	applyCustomizeToPlan,
+	composeMatchKey,
+	type DiffablePlanV1,
+} from "@autumn/shared";
 import { Eval } from "braintrust";
 import { computeGeneratedParams } from "@/internal/billing/v2/actions/generateRequest/compute/computeGeneratedParams";
-import type { GenerateBillingTool } from "@/internal/billing/v2/actions/generateRequest/generationSchemas";
+import type {
+	GenerateBillingTool,
+	GeneratedBillingParams,
+} from "@/internal/billing/v2/actions/generateRequest/generationSchemas";
 import type { GenerationContext } from "@/internal/billing/v2/actions/generateRequest/setup/setupGenerationContext";
 import {
 	creditLadderContext,
+	entityScaleContext,
+	rolloverCreditsBaseItems,
+	rolloverCreditsContext,
 	saasContext,
+	tieredScaleBaseItems,
+	tieredScaleContext,
 	variantLadderContext,
 } from "./fixtures";
 
@@ -22,10 +36,12 @@ type EvalInput = {
 	context: GenerationContext;
 	currentRequest?: Record<string, unknown>;
 	forbiddenKeys?: string[];
+	applyToItems?: ApiPlanV1["items"];
+	expectedApplied?: Record<string, unknown>[];
 };
 
 type EvalOutput = {
-	params: Record<string, unknown> | null;
+	params: GeneratedBillingParams | null;
 	repaired: boolean;
 	repairReason?: string;
 	error?: string;
@@ -120,7 +136,10 @@ const expectedParams = ({
 	const mismatches: string[] = [];
 	subsetMatches(expected ?? {}, output.params, "params", mismatches);
 	for (const key of input.forbiddenKeys ?? []) {
-		if (output.params[key] !== undefined) {
+		const value = Object.entries(output.params).find(
+			([paramKey]) => paramKey === key,
+		)?.[1];
+		if (value !== undefined) {
 			mismatches.push(`params.${key}: expected to be absent`);
 		}
 	}
@@ -131,6 +150,54 @@ const expectedParams = ({
 	}
 	return {
 		name: "expected_params",
+		score: mismatches.length === 0 ? 1 : 0,
+		...(mismatches.length ? { metadata: { mismatches } } : {}),
+	};
+};
+
+const appliedPlan = ({
+	input,
+	output,
+}: {
+	input: EvalInput;
+	output: EvalOutput;
+}) => {
+	if (!input.applyToItems || !output.params) return null;
+	const mismatches: string[] = [];
+	const customize =
+		"customize" in output.params ? output.params.customize : undefined;
+	if (!customize) {
+		mismatches.push("applied: no customize in output");
+	}
+	const applied = customize
+		? applyCustomizeToPlan({
+				customize,
+				plan: { items: input.applyToItems, price: null } as DiffablePlanV1,
+			})
+		: { items: input.applyToItems };
+	const keyCounts = new Map<string, number>();
+	for (const item of applied.items) {
+		const key = composeMatchKey(item);
+		keyCounts.set(key, (keyCounts.get(key) ?? 0) + 1);
+	}
+	for (const [key, count] of keyCounts) {
+		if (count > 1) {
+			mismatches.push(`applied: ${count} items share identity ${key}`);
+		}
+	}
+	subsetMatches(
+		input.expectedApplied ?? [],
+		applied.items,
+		"applied",
+		mismatches,
+	);
+	if (mismatches.length) {
+		console.warn(
+			`[applied_plan] ${input.tool}: "${input.prompt}"\n  ${mismatches.join("\n  ")}`,
+		);
+	}
+	return {
+		name: "applied_plan",
 		score: mismatches.length === 0 ? 1 : 0,
 		...(mismatches.length ? { metadata: { mismatches } } : {}),
 	};
@@ -340,6 +407,90 @@ const cases: EvalCase[] = [
 		},
 	},
 	{
+		name: "update: change credits allowance preserves rollover (live-incident shape)",
+		input: {
+			applyToItems: rolloverCreditsBaseItems(),
+			context: rolloverCreditsContext(),
+			currentRequest: {
+				customer_id: "cus_mintlify_like",
+				customer_product_id: "cp_pro_1",
+				product_id: "pro",
+			},
+			expectedApplied: [
+				{
+					feature_id: "AI_CREDITS",
+					included: 12_000,
+					pooled: true,
+					reset: { interval: "month" },
+					rollover: { max_percentage: 50 },
+				},
+				{ feature_id: "AI_CREDITS", price: { amount: 0.01 } },
+			],
+			prompt: "update credits to 12k",
+			tool: "update_subscription",
+		},
+		expected: {
+			customize: {
+				add_items: [
+					{
+						feature_id: "AI_CREDITS",
+						included: 12_000,
+						pooled: true,
+						reset: { interval: "month" },
+						rollover: { max_percentage: 50 },
+					},
+				],
+				remove_items: [{ feature_id: "AI_CREDITS" }],
+			},
+		},
+	},
+	{
+		name: "update: raising included on a tiered item shifts boundaries and keeps tiers",
+		input: {
+			applyToItems: tieredScaleBaseItems(),
+			context: tieredScaleContext(),
+			currentRequest: {
+				customer_id: "cus_scale",
+				customer_product_id: "cp_scale_1",
+				product_id: "scale",
+			},
+			expectedApplied: [
+				{
+					feature_id: "credits",
+					included: 2000,
+					price: {
+						billing_method: "prepaid",
+						billing_units: 1000,
+						tiers: [
+							{ amount: 0, flat_amount: 200, to: 4000 },
+							{ amount: 0, flat_amount: 400, to: 7000 },
+							{ amount: 0, flat_amount: 600, to: "inf" },
+						],
+					},
+					reset: { interval: "month" },
+				},
+				{ feature_id: "credits", price: { amount: 0.1 } },
+			],
+			prompt: "lets do 2k credits included",
+			tool: "update_subscription",
+		},
+		expected: {
+			customize: {
+				add_items: [{ feature_id: "credits", included: 2000 }],
+				remove_items: [{ feature_id: "credits" }],
+			},
+		},
+	},
+	{
+		name: "attach: entity scoping read from current_plans",
+		input: {
+			context: entityScaleContext(),
+			prompt: "attach scale to the entity that doesn't have it yet",
+			tool: "attach",
+		},
+		expected: { entity_id: "beta", plan_id: "scale" },
+	},
+	{
 		name: "schedule: switch plan next month",
 		input: {
 			context: saasContext({ onPro: true }),
@@ -380,6 +531,53 @@ const cases: EvalCase[] = [
 			],
 		},
 	},
+	{
+		name: "schedule: per-plan entity scoping and customize stay independent",
+		input: {
+			context: entityScaleContext(),
+			prompt:
+				"starting next month, put enterprise on the alpha entity at $10k per year and scale on the beta entity",
+			tool: "create_schedule",
+		},
+		expected: {
+			phases: [
+				{
+					plans: [
+						{
+							customize: { price: { amount: 10000, interval: "year" } },
+							entity_id: "alpha",
+							plan_id: "enterprise",
+						},
+						{ entity_id: "beta", plan_id: "scale" },
+					],
+				},
+			],
+		},
+	},
+	{
+		name: "schedule: per-plan item customize uses remove+add",
+		input: {
+			context: entityScaleContext(),
+			prompt:
+				"next month move them onto scale but with 2k credits included instead of 1k",
+			tool: "create_schedule",
+		},
+		expected: {
+			phases: [
+				{
+					plans: [
+						{
+							customize: {
+								add_items: [{ feature_id: "credits", included: 2000 }],
+								remove_items: [{ feature_id: "credits" }],
+							},
+							plan_id: "scale",
+						},
+					],
+				},
+			],
+		},
+	},
 ];
 
 Eval("generate-billing-request", {
@@ -391,7 +589,7 @@ Eval("generate-billing-request", {
 			tags: [input.tool],
 			// biome-ignore lint/suspicious/noExplicitAny: braintrust's case type is looser than ours
 		})) as any,
-	scores: [schemaFirstTry, expectedParams],
+	scores: [schemaFirstTry, expectedParams, appliedPlan],
 	task: async (input: EvalInput): Promise<EvalOutput> => {
 		try {
 			const { params, repaired, repairReason } = await computeGeneratedParams({

@@ -48,7 +48,7 @@ export type CatalogPlanPreview = z.infer<typeof CatalogPlanPreviewSchema>;
 
 /** Reason a feature update would be rejected, surfaced before the write is attempted. */
 export const FeatureUpdateBlockerSchema = z.object({
-	field: z.enum(["type", "id", "usage_type"]),
+	field: z.enum(["type", "id", "usage_type", "invoice_credit"]),
 	code: z.enum([
 		"type_switch_credit_system",
 		"attached_to_customer",

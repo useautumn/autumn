@@ -64,6 +64,9 @@ export const OrgConfigSchema = z.object({
 
 	// Unset/null = Stripe's own invoice settings apply; never add a default.
 	allowed_payment_methods: z.array(InvoicePaymentMethodSchema).min(1).nullish(),
+
+	// Unset/null = downstream 30-day fallback applies; never add a default.
+	default_invoice_net_terms_days: z.number().int().positive().nullish(),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;

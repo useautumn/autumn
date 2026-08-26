@@ -1,7 +1,5 @@
-import { Scopes } from "@autumn/shared";
+import { agentFeatureToFeature, Scopes } from "@autumn/shared";
 import {
-	apiFeatureToDbFeature,
-	CreateFeatureV0ParamsSchema,
 	CreateFreeTrialSchema,
 	CreateProductItemParamsSchema,
 	CreateProductSchema,
@@ -14,9 +12,10 @@ import { FeatureService } from "@/internal/features/FeatureService";
 import { createFeature } from "@/internal/features/featureActions/createFeature";
 import { createProduct } from "@/internal/product/actions/createProduct";
 import { ProductService } from "@/internal/products/ProductService";
+import { PricingAgentFeatureInputSchema } from "../../pricingAgent/pricingAgentSchemas.js";
 
 const OrganisationConfigurationSchema = z.object({
-	features: z.array(CreateFeatureV0ParamsSchema).optional().default([]),
+	features: z.array(PricingAgentFeatureInputSchema).optional().default([]),
 	products: z.array(
 		CreateProductSchema.extend({
 			items: z.array(CreateProductItemParamsSchema).optional().default([]),
@@ -51,9 +50,7 @@ export const handlePushOrganisationConfiguration = createRoute({
 					continue;
 				}
 
-				const dbFeature = apiFeatureToDbFeature({
-					apiFeature,
-				});
+				const dbFeature = agentFeatureToFeature(apiFeature);
 
 				await createFeature({
 					ctx: txCtx,
@@ -63,6 +60,7 @@ export const handlePushOrganisationConfiguration = createRoute({
 						type: dbFeature.type,
 						config: dbFeature.config,
 						event_names: dbFeature.event_names,
+						model_markups: dbFeature.model_markups,
 					},
 				});
 			}

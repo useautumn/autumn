@@ -19,6 +19,7 @@ import {
 	SubscriptionSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import { UsageAttributionSchema } from "../../cusProductModels/cusEntModels/cusEntModels.js";
 import type { InsertReplaceable } from "../../cusProductModels/cusEntModels/replaceableTable";
 import type { BillingContext } from "../context/billingContext";
 import { LineItemSchema } from "../lineItem/lineItem";
@@ -42,6 +43,7 @@ export const UpdateCustomerEntitlementSchema = z.object({
 			adjustment: z.number().optional(),
 			entities: z.record(z.string(), EntityBalanceSchema).optional(),
 			balance: z.number().optional(),
+			usage_attribution: UsageAttributionSchema.optional(),
 		})
 		.optional(),
 

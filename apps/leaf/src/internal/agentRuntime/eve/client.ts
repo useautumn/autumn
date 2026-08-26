@@ -173,7 +173,6 @@ export const postEveInputResponse = async ({
 	session,
 	siblingOptionIdFor,
 	siblingRequestIds,
-	suppressSiblingWithheldNote,
 }: {
 	approveSiblings?: boolean;
 	auth: EveAuthContext;
@@ -183,7 +182,6 @@ export const postEveInputResponse = async ({
 	session: EveSessionRef;
 	siblingOptionIdFor?: (siblingRequestId: string) => string | undefined;
 	siblingRequestIds?: ReadonlyArray<string>;
-	suppressSiblingWithheldNote?: boolean;
 }) => {
 	const siblings = [...new Set(siblingRequestIds ?? [])].filter(
 		(siblingRequestId) => siblingRequestId && siblingRequestId !== requestId,
@@ -204,7 +202,7 @@ export const postEveInputResponse = async ({
 					})),
 				],
 				message:
-					siblings.length && !approveSiblings && !suppressSiblingWithheldNote
+					siblings.length && !approveSiblings
 						? [note, SIBLING_WITHHELD_NOTE].filter(Boolean).join("\n\n")
 						: note,
 			}),

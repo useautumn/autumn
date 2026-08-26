@@ -3,6 +3,8 @@
  * its inputs (fx_rates + the just-swapped mirrors) only exist in MotherDuck —
  * unlike the scan SQL, which runs on the local embedded engine. `sourceName`
  * maps mirror names through the shadow suffix; fx_rates is always real. */
+import { MD_DATABASE } from "./motherduckIngest.js";
+
 export const headlineTotalsSql = ({
 	targetTable,
 	sourceName,
@@ -10,13 +12,13 @@ export const headlineTotalsSql = ({
 	targetTable: string;
 	sourceName: (table: string) => string;
 }): string => `
-	CREATE OR REPLACE TABLE lake_cache.main."${targetTable}" AS
+	CREATE OR REPLACE TABLE ${MD_DATABASE}.main."${targetTable}" AS
 	WITH base AS (
 		SELECT i.total / coalesce(fx.per_usd, 1) AS usd, i.created_at
-		FROM lake_cache.main."${sourceName("invoices")}" i
-		JOIN lake_cache.main."${sourceName("customers")}" c ON c.internal_id = i.internal_customer_id
-		JOIN lake_cache.main."${sourceName("organizations")}" o ON o.id = c.org_id
-		LEFT JOIN lake_cache.main.fx_rates fx ON fx.currency = lower(i.currency)
+		FROM ${MD_DATABASE}.main."${sourceName("invoices")}" i
+		JOIN ${MD_DATABASE}.main."${sourceName("customers")}" c ON c.internal_id = i.internal_customer_id
+		JOIN ${MD_DATABASE}.main."${sourceName("organizations")}" o ON o.id = c.org_id
+		LEFT JOIN ${MD_DATABASE}.main.fx_rates fx ON fx.currency = lower(i.currency)
 		WHERE c.env = 'live' AND i.status = 'paid'
 			AND i.hosted_invoice_url LIKE '%live%'
 			AND o.slug NOT IN ('welcome-back-1747670264')

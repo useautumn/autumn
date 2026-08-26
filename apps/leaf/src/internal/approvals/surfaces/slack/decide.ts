@@ -447,9 +447,6 @@ export const handleApprovalActionWithDeps = async ({
 		try {
 			result = await deps.resolveApproval({
 				approval: claimed,
-				onResumed: async (resumed) => {
-					await surfaceResumedOutcome({ resumed });
-				},
 				onProgress: (line) => {
 					statusText = line;
 					editor.requestEdit();
