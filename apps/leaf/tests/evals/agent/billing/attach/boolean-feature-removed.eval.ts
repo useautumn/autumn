@@ -17,10 +17,7 @@ type EvalMetadata = {
 const experimentName = "attach-boolean-feature-removed";
 const customPrice = 2000;
 
-// Scale carries approval_chains as a boolean. Withholding it is a removal —
-// the two ways to express it as a quantity both grant it instead: an
-// `add_items` entry with `included: 0` adds the feature with a zero allowance,
-// and a `feature_quantities` entry prices it as prepaid.
+// approval_chains is a boolean on Scale, so withholding it is a removal.
 const setup = withCustomers({
 	setup: orgSetups.knowledgePlatform(),
 	customers: ({ customers }) => ({
@@ -72,9 +69,7 @@ initEval<EvalMetadata>({
 					body: expectedAttachRequest,
 					write: "attach",
 				}),
-				// A zero allowance grants the feature; a prepaid quantity prices a
-				// boolean. Either would read as "removed" on the card and provision
-				// the opposite.
+				// Both wrong shapes read as "removed" but provision the opposite.
 				api.bodyExcludes({
 					fields: ["feature_quantities", "customize.add_items"],
 					toolName: "previewAttach",

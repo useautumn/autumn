@@ -76,8 +76,7 @@ const runAndReply = async ({
 	const evePresenter = createEveSlackPresenter({ setStatus: progress.status });
 	const reactSafely = (input: { action: "add" | "remove"; emoji: string }) =>
 		react?.(input).catch(() => undefined);
-	// Everything before runAgentTurn is invisible to Braintrust and to the turn's
-	// own prepare_ms, so the slowest part of a request can hide here.
+	// Invisible to Braintrust and to the turn's own prepare_ms.
 	const ingressStartedAt = Date.now();
 	let historyMs = 0;
 	try {

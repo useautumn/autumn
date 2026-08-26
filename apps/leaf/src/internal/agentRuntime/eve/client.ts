@@ -364,8 +364,7 @@ async function* streamEveEventsOverHttp({
 	}
 }
 
-/** Only has to spot the end of an already-buffered replay, not wait out model
- * latency: every resumed turn pays this before its first event. */
+// Spots the end of a buffered replay; every resumed turn pays it up front.
 const REPLAY_QUIET_GAP_MS = ms.seconds(0.25);
 
 const countEveReplayableEvents = async ({

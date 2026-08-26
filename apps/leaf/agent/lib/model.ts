@@ -3,27 +3,22 @@ import { createOpenAI, openai } from "@ai-sdk/openai";
 import type { LeafAgentConnection } from "./toolAllowlists.js";
 
 type ModelFamily = {
-	/** Honours an OpenRouter `cache_control` breakpoint on the system message.
-	 * Eve only marks anthropic-direct models, so without this the static prefix
-	 * is re-sent uncached: measured 1/7 cache hits in prod versus 109,086 of
-	 * 109,093 tokens cached once the breakpoint is added. */
+	// Gemini caches only where a breakpoint is sent: 1/7 hits in prod without
+	// one, 109,086 of 109,093 tokens with.
 	cacheControlOnSystem?: boolean;
-	/** First-party OpenRouter backends. Default routing spreads across
-	 * resellers whose time-to-first-token spikes to ~11s; pinning held the
-	 * measured worst case to ~2s. */
+	// Default routing spreads across resellers that spiked to ~11s TTFT.
 	openrouterProviders?: readonly string[];
 };
 
-/** The one table describing model families. Keyed by the segment after any
- * `openrouter/` prefix, so `google/x` and `openrouter/google/x` share an entry. */
+// Keyed after any `openrouter/` prefix, so `google/x` and `openrouter/google/x`
+// share one entry. Absent means eve caches it already, or nothing can.
 const MODEL_FAMILIES: Record<string, ModelFamily> = {
 	anthropic: {},
 	google: {
 		cacheControlOnSystem: true,
 		openrouterProviders: ["google-vertex", "google-ai-studio"],
 	},
-	// xAI serves grok itself and caches the prefix automatically; adding a
-	// breakpoint measured worse ($0.024/call vs $0.009), so neither flag.
+	// xAI serves grok itself and caches on its own; a breakpoint measured worse.
 	"x-ai": {},
 };
 
@@ -35,9 +30,8 @@ type ChatBody = {
 	[key: string]: unknown;
 };
 
-/** OpenRouter reads only the LAST breakpoint for Gemini, and treats the system
- * message as immutable — so one marker on the system prompt caches the whole
- * static prefix. Anything dynamic must live in a later message. */
+// OpenRouter reads only the last breakpoint for Gemini and treats the system
+// message as immutable, so one marker there caches the whole static prefix.
 const markSystemForCaching = (body: ChatBody) => {
 	const system = body.messages?.find((message) => message.role === "system");
 	if (!system || typeof system.content !== "string") return;
@@ -48,30 +42,28 @@ const markSystemForCaching = (body: ChatBody) => {
 			type: "text",
 		},
 	];
+	// OpenRouter omits token accounting unless asked, which reads as a dead cache.
+	body.usage = { include: true };
 };
 
-/** Eve has no passthrough for OpenRouter's vendor fields, so the request body
- * is rewritten on the way out: provider pinning plus the cache breakpoint. */
+const pinProviders = (body: ChatBody, order: readonly string[]) => {
+	body.provider = { allow_fallbacks: true, order: [...order] };
+};
+
+// Eve has no passthrough for OpenRouter's vendor fields, so the body is
+// rewritten on the way out.
 const withOpenrouterRequestTuning = (model: string): typeof fetch => {
 	const family = familyOf(model);
-	if (!family?.openrouterProviders && !family?.cacheControlOnSystem) {
+	if (!(family?.openrouterProviders || family?.cacheControlOnSystem)) {
 		return fetch;
 	}
 	const tuned: typeof fetch = (input, init) => {
 		if (!init?.body) return fetch(input, init);
 		const body = JSON.parse(String(init.body)) as ChatBody;
 		if (family.openrouterProviders) {
-			body.provider = {
-				allow_fallbacks: true,
-				order: [...family.openrouterProviders],
-			};
+			pinProviders(body, family.openrouterProviders);
 		}
-		if (family.cacheControlOnSystem) {
-			markSystemForCaching(body);
-			// Without this OpenRouter omits token accounting, so traces report
-			// zero cached tokens and the cache looks broken when it is not.
-			body.usage = { include: true };
-		}
+		if (family.cacheControlOnSystem) markSystemForCaching(body);
 		return fetch(input, { ...init, body: JSON.stringify(body) });
 	};
 	tuned.preconnect = fetch.preconnect;
@@ -97,9 +89,7 @@ const resolveModel = (value: string | undefined) => {
 	return value;
 };
 
-/** Eve only attaches cache breakpoints to anthropic-direct models, so an
- * override caches only if its family is listed above — either because we inject
- * a breakpoint or because the provider caches on its own. Warn for the rest. */
+// An override caches only if its family is listed above; warn for the rest.
 const warnWhenPromptCacheDisabled = (
 	agent: LeafAgentConnection,
 	value: string | undefined,
@@ -111,19 +101,30 @@ const warnWhenPromptCacheDisabled = (
 	);
 };
 
-/** One model resolution for every leaf agent. `EVE_MODEL_<AGENT>` overrides a
- * single agent ("openai/gpt-5-mini", "anthropic/claude-haiku-4-5"); EVE_MODEL
- * (gateway string) and EVE_ANTHROPIC_MODEL move everyone together. */
+// Benchmarked on the production payload. Routing (10 cases x 5 reps, bare and
+// mid-thread): grok-4.20 50/50 at 0.83s, sonnet-5 45/50 at 4.09s — sonnet asks
+// "to confirm?" instead of delegating. Billing (4 attach/update flows):
+// gemini-3-flash 12/12 at 2.33s, sonnet-5 12/12 at 17.22s.
+const MODEL_BY_AGENT: Partial<Record<LeafAgentConnection, string>> = {
+	billing: "openrouter/google/gemini-3-flash-preview",
+	orchestrator: "openrouter/x-ai/grok-4.20",
+};
+
+const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-5";
+
+// `EVE_MODEL_<AGENT>` overrides one agent; EVE_MODEL (gateway string) and
+// EVE_ANTHROPIC_MODEL move everyone together.
 export const leafModel = (agent: LeafAgentConnection) => {
 	const override =
-		process.env[`EVE_MODEL_${agent.toUpperCase()}`] ?? process.env.EVE_MODEL;
+		process.env[`EVE_MODEL_${agent.toUpperCase()}`] ??
+		process.env.EVE_MODEL ??
+		MODEL_BY_AGENT[agent];
 	warnWhenPromptCacheDisabled(agent, override);
 	return (
-		resolveModel(process.env[`EVE_MODEL_${agent.toUpperCase()}`]) ??
-		resolveModel(process.env.EVE_MODEL) ??
+		resolveModel(override) ??
 		(process.env.EVE_OPENAI_MODEL
 			? openai(process.env.EVE_OPENAI_MODEL)
-			: anthropic(process.env.EVE_ANTHROPIC_MODEL ?? "claude-sonnet-5"))
+			: anthropic(process.env.EVE_ANTHROPIC_MODEL ?? DEFAULT_ANTHROPIC_MODEL))
 	);
 };
 
@@ -140,11 +141,13 @@ export const leafReasoning = (agent: LeafAgentConnection) =>
 
 const DEFAULT_OPENROUTER_CONTEXT_WINDOW_TOKENS = 1_000_000;
 
-/** Eve resolves context windows from AI Gateway metadata, which has no entries
- * for OpenRouter models — supply the window explicitly to keep compaction alive. */
+// Eve reads context windows from AI Gateway metadata, which has no OpenRouter
+// entries — without an explicit window it throws at build time.
 export const leafModelContextWindowTokens = (agent: LeafAgentConnection) => {
 	const value =
-		process.env[`EVE_MODEL_${agent.toUpperCase()}`] ?? process.env.EVE_MODEL;
+		process.env[`EVE_MODEL_${agent.toUpperCase()}`] ??
+		process.env.EVE_MODEL ??
+		MODEL_BY_AGENT[agent];
 	if (!value?.startsWith("openrouter/")) return undefined;
 	const configured = Number(process.env.EVE_MODEL_CONTEXT_WINDOW ?? "");
 	return configured > 0 ? configured : DEFAULT_OPENROUTER_CONTEXT_WINDOW_TOKENS;
