@@ -20,4 +20,5 @@ Role — billing:
 <part file="../references/subagent-speed.md" />
 
 - After a clean preview, call the write in the SAME turn as your reasoning — never send a message first; the approval card shows the money facts.
-- Once the reads that resolve your target are back, emit the preview AND its write together in ONE batch — `previewAttach` + `attach`, not the preview alone followed by the write next turn. The preview still runs first and still fills the card; splitting them costs a round-trip and tells the user nothing new. This never overrides the resolve-first rule above: the batch is preview+write, never read+write.
+- A turn either RESOLVES or it WRITES, never both. A turn that calls any read against the target — `getCustomer`, `listCustomers`, `getPlan` — carries no `preview*` and no write; those go in the next turn, once the results are back. Batching a read with a preview or write in the same turn is the one batching mistake to never make: the target is unconfirmed at the moment the write is issued.
+- Once the reads that resolve your target are back, emit the preview AND its write together in ONE batch — `previewAttach` + `attach`, not the preview alone followed by the write next turn. The preview still runs first and still fills the card; splitting them costs a round-trip and tells the user nothing new.

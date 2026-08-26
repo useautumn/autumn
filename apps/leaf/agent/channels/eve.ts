@@ -39,6 +39,12 @@ const leafInternalAuth = (): AuthFn<Request> => async (request) => {
 			"base64url",
 		).toString("utf8");
 	}
+	const encodedCatalog = request.headers.get("x-leaf-org-catalog");
+	if (encodedCatalog) {
+		attributes.orgCatalog = Buffer.from(encodedCatalog, "base64url").toString(
+			"utf8",
+		);
+	}
 
 	return {
 		attributes,

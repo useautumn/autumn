@@ -39,6 +39,12 @@ const eveHeaders = (auth: EveAuthContext, init?: HeadersInit) => {
 			Buffer.from(auth.orgInstructions).toString("base64url"),
 		);
 	}
+	if (auth.orgCatalog) {
+		headers.set(
+			"x-leaf-org-catalog",
+			Buffer.from(auth.orgCatalog).toString("base64url"),
+		);
+	}
 	return headers;
 };
 
