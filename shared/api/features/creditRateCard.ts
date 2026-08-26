@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 
 const ApiCreditSchemaItemBaseSchema = z.object({
-	metered_feature_id: z.string().meta({
+	metered_feature_id: z.string().nonempty().meta({
 		description:
 			"ID of the metered feature that draws from this credit system.",
 	}),
@@ -74,6 +74,16 @@ export const ApiGraduatedCreditSchemaItemSchema =
 export const ApiCreditSchemaItemSchema = z.union([
 	ApiFlatCreditSchemaItemSchema,
 	ApiGraduatedCreditSchemaItemSchema,
+]);
+
+const ApiLegacyFlatCreditSchemaItemSchema =
+	ApiFlatCreditSchemaItemSchema.extend({
+		metered_feature_id: z.literal(""),
+	});
+
+export const ApiCreditSchemaResponseItemSchema = z.union([
+	ApiCreditSchemaItemSchema,
+	ApiLegacyFlatCreditSchemaItemSchema,
 ]);
 
 export type ApiCreditSchemaItem = z.infer<typeof ApiCreditSchemaItemSchema>;
