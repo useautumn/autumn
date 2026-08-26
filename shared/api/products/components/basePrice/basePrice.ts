@@ -5,7 +5,8 @@ import { DisplaySchema } from "../display";
 
 export const BasePriceSchema = z.object({
 	amount: z.number().meta({
-		description: "Base price amount for the plan.",
+		description:
+			"Base price amount for the plan, in major currency units (e.g. dollars).",
 	}),
 	interval: z.enum(BillingInterval).meta({
 		description: "Billing interval (e.g. 'month', 'year').",
