@@ -630,7 +630,8 @@ const humanizeKey = (key: string) =>
 	key.replace(/_/g, " ").replace(/^./, (char) => char.toUpperCase());
 
 const compactValue = (value: unknown): string | null => {
-	if (value === null || value === undefined) return null;
+	if (value === null) return "cleared";
+	if (value === undefined) return null;
 	if (typeof value === "string") {
 		if (!value.trim()) return null;
 		return value.length > REQUEST_FIELD_VALUE_MAX
@@ -662,6 +663,28 @@ const requestSummaryFields = (
 		if (fields.length >= MAX_REQUEST_FIELDS) break;
 	}
 	return fields;
+};
+
+/** One-line summary of a bare write's fields, for fan-out rows where the
+ * per-card field list has no room. */
+const requestChangesText = (
+	toolArgs?: Record<string, unknown>,
+): string | null => {
+	const request = toolRequestFromArgs(toolArgs) ?? {};
+	const parts: string[] = [];
+	let overflow = 0;
+	for (const [key, value] of Object.entries(request)) {
+		if (HIDDEN_REQUEST_KEYS.has(key) || key.startsWith("_")) continue;
+		const rendered = compactValue(value);
+		if (rendered === null) continue;
+		if (parts.length >= MAX_REQUEST_FIELDS) {
+			overflow += 1;
+			continue;
+		}
+		parts.push(`${humanizeKey(key)}: ${rendered}`);
+	}
+	if (overflow > 0) parts.push(`+${overflow} more`);
+	return parts.length ? parts.join(" · ") : null;
 };
 
 const catalogApprovalContext = (preview: unknown) => {
@@ -891,6 +914,24 @@ const fanOutBlocks = ({
 	toolName: string;
 }): CardChild[] => {
 	const all = [{ input: toolArgs, preview, toolName }, ...writes];
+	if (!BILLING_ACTION_TOOLS.has(normalizeToolName(toolName))) {
+		return [
+			fanOutTable({
+				align: ["left", "left"],
+				caption: `${all.length} customers`,
+				headers: ["Customer", "Update"],
+				rows: all.map((write) => [
+					actionPhrases({
+						env,
+						preview: write.preview,
+						toolArgs: write.input,
+						toolName: write.toolName,
+					}).labels.plainCustomer,
+					requestChangesText(write.input) ?? "—",
+				]),
+			}),
+		];
+	}
 	const rows = all.map((write) => {
 		const phrases = actionPhrases({
 			env,
@@ -924,6 +965,12 @@ const fanOutBlocks = ({
  * the tense tracks whether the card is still in progress. */
 type StepTense = "done" | "failed" | "running";
 
+const STEP_TENSE_ICONS: Record<StepTense, string> = {
+	done: "✅ ",
+	failed: "⚠️ ",
+	running: "",
+};
+
 const withheldWriteBlocks = ({
 	env,
 	writes,
@@ -946,7 +993,9 @@ const withheldWriteBlocks = ({
 			CardText(
 				`*${approvalTitle({ preview: write.preview, toolName: write.toolName })}*`,
 			),
-			CardText(phrases[tense]),
+			// Every write in a resolved group carries its own marker; without one
+			// the later writes read as unapplied next to the first write's tick.
+			CardText(`${STEP_TENSE_ICONS[tense]}${phrases[tense]}`),
 			...approvalPreviewBlocks({
 				env,
 				preview: write.preview,
@@ -1698,10 +1747,18 @@ export const approvalStatusCard = ({
 		});
 	}
 
+	// A mixed group already states each write with its own marker; the card-level
+	// line would just repeat the first one.
+	const resolvedWrites =
+		groupedWrites ?? withheldWritesFromToolArgs(toolArgs) ?? [];
+	const groupStatesEachWrite =
+		resolvedWrites.length > 1 &&
+		!isHomogeneousGroup({ writes: resolvedWrites, toolName });
+
 	return Card({
 		title: approvalTitle({ preview, toolName }),
 		children: [
-			CardText(`✅ ${phrases.done}`),
+			...(groupStatesEachWrite ? [] : [CardText(`✅ ${phrases.done}`)]),
 			...resolvedBody,
 			...(outcome.lines.length ? [CardText(outcome.lines.join("\n"))] : []),
 			...(outcome.links.length || dashboardUrl

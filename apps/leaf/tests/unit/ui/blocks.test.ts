@@ -1296,6 +1296,83 @@ describe("homogeneous fan-out", () => {
 		expect(rendered).toContain("1,200");
 	});
 
+	test("non-billing fan-outs show each write's fields instead of money", () => {
+		const updateStep = (email: string, id: string) => ({
+			input: { request: { customer_id: email, id } },
+			requestId: `req_${email}`,
+			toolName: "autumn__updateCustomer",
+		});
+		const card = approvalCard({
+			id: "fanout-update",
+			env: AppEnv.Sandbox,
+			toolArgs: {
+				_eveWithheldWrites: [
+					updateStep("ilvernon32@gmail.com", "user_beta"),
+					updateStep("greaterinvestments@gmail.com", "user_gamma"),
+				],
+				request: {
+					customer_id: "cassidy2flawless@yahoo.com",
+					id: "user_alpha",
+				},
+			},
+			toolName: "updateCustomer",
+		});
+
+		const rendered = JSON.stringify(cardToBlockKit(card));
+		expect(rendered).toContain("Update");
+		expect(rendered).toContain("Id: user_alpha");
+		expect(rendered).toContain("Id: user_beta");
+		expect(rendered).toContain("Id: user_gamma");
+		expect(rendered).not.toContain("Due now");
+		expect(rendered).not.toContain("Total");
+		expect(rendered).not.toContain("$0.00");
+	});
+
+	test("fan-out rows render every field kind: sets, clears, objects, overflow", () => {
+		const card = approvalCard({
+			id: "fanout-fields",
+			env: AppEnv.Sandbox,
+			toolArgs: {
+				_eveWithheldWrites: [
+					{
+						input: {
+							request: { customer_id: "b@x.com", email: null, name: "Beta" },
+						},
+						requestId: "req_b",
+						toolName: "autumn__updateCustomer",
+					},
+					{
+						input: {
+							request: { customer_id: "c@x.com", id: "user_gamma" },
+						},
+						requestId: "req_c",
+						toolName: "autumn__updateCustomer",
+					},
+				],
+				request: {
+					customer_id: "a@x.com",
+					email: "new@x.com",
+					fingerprint: "fp_1",
+					id: "user_alpha",
+					metadata: { source: "revenuecat" },
+					name: "Alpha",
+					stripe_id: "cus_stripe1",
+					tax_exempt: true,
+				},
+			},
+			toolName: "updateCustomer",
+		});
+
+		const rendered = JSON.stringify(cardToBlockKit(card));
+		expect(rendered).toContain("Email: new@x.com");
+		expect(rendered).toContain("Id: user_alpha");
+		expect(rendered).toContain("Metadata: {");
+		expect(rendered).toContain("revenuecat");
+		expect(rendered).toContain("+1 more");
+		expect(rendered).toContain("Email: cleared");
+		expect(rendered).toContain("Name: Beta");
+	});
+
 	test("keeps per-step sections when the writes differ", () => {
 		const card = approvalCard({
 			id: "mixed",
