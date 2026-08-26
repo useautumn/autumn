@@ -90,7 +90,9 @@ export const createStripeSub2 = async ({
 
 			add_invoice_items: invoiceItems,
 			collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
-			days_until_due: invoiceOnly ? 30 : undefined,
+			days_until_due: invoiceOnly
+				? (org.config.default_net_terms_days ?? 30)
+				: undefined,
 			billing_cycle_anchor: billingCycleAnchorUnix
 				? Math.floor(billingCycleAnchorUnix / 1000)
 				: undefined,

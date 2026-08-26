@@ -9,6 +9,7 @@ import {
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -133,6 +134,7 @@ export function SendInvoiceStage({
 	scheduledStartDate?: number | null;
 }) {
 	const { customer, refetch } = useCusQuery();
+	const { org } = useOrg();
 	const axiosInstance = useAxiosInstance();
 
 	const [emailValue, setEmailValue] = useState("");
@@ -141,7 +143,7 @@ export function SendInvoiceStage({
 	const [enableImmediately, setEnableImmediately] = useState(true);
 	const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
 		templateId: null,
-		netTermsDays: DEFAULT_NET_TERMS_DAYS,
+		netTermsDays: org?.config?.default_net_terms_days ?? DEFAULT_NET_TERMS_DAYS,
 	});
 	const [completedInvoiceUrl, setCompletedInvoiceUrl] = useState<string | null>(
 		null,

@@ -30,7 +30,11 @@ export const setupInvoiceModeContext = async ({
 		enableProductImmediately: params.invoice_mode.enable_plan_immediately,
 		footer: template?.footer,
 		memo: template?.memo,
-		daysUntilDue: net_terms_days ?? template?.net_terms_days,
+		daysUntilDue:
+			net_terms_days ??
+			template?.net_terms_days ??
+			ctx.org.config.default_net_terms_days ??
+			undefined,
 		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
 	};
 };
