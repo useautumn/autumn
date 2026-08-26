@@ -12,6 +12,7 @@ import {
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { PriceService } from "@server/internal/products/prices/PriceService";
 import type Stripe from "stripe";
+import { buildStripePriceIdempotencyKey } from "../prices/utils/buildIdempotencyKey";
 import { billingIntervalToStripe } from "../stripePriceUtils";
 
 export const createStripeFixedPrice = async ({
@@ -48,19 +49,28 @@ export const createStripeFixedPrice = async ({
 		currency,
 	});
 
-	const stripePrice = await stripeCli.prices.create({
-		product: product.processor!.id,
-		unit_amount: amount,
-		currency,
-		recurring: {
-			...(billingIntervalToStripe({
-				interval: config.interval,
-				intervalCount: config.interval_count,
-			}) as any),
-		},
+	const stripePrice = await stripeCli.prices.create(
+		{
+			product: product.processor!.id,
+			unit_amount: amount,
+			currency,
+			recurring: {
+				...(billingIntervalToStripe({
+					interval: config.interval,
+					intervalCount: config.interval_count,
+				}) as any),
+			},
 
-		nickname: `Autumn Price (Fixed)`,
-	});
+			nickname: `Autumn Price (Fixed)`,
+		},
+		{
+			idempotencyKey: buildStripePriceIdempotencyKey({
+				priceId: price.id!,
+				slot: "stripe_price_id",
+				currency,
+			}),
+		},
+	);
 
 	setPriceCurrencyStripeId({
 		config,

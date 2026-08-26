@@ -12,6 +12,7 @@ import {
 import { PriceService } from "@server/internal/products/prices/PriceService";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { buildStripePriceIdempotencyKey } from "@/external/stripe/prices/utils/buildIdempotencyKey";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 export const createStripePrepaidPriceV2 = async ({
@@ -42,19 +43,19 @@ export const createStripePrepaidPriceV2 = async ({
 		entitlements: product.entitlements,
 	});
 
-	// No allowance → V2 price is identical to V1. Reuse the same Stripe price.
-	if (!entitlement?.allowance) {
+	const existingV1PriceId = getPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_price_id",
+	});
+	if (!entitlement?.allowance && existingV1PriceId) {
 		setPriceCurrencyStripeId({
 			config,
 			currency,
 			orgDefault,
 			slot: "stripe_prepaid_price_v2_id",
-			id: getPriceCurrencyStripeId({
-				config,
-				currency,
-				orgDefault,
-				slot: "stripe_price_id",
-			}),
+			id: existingV1PriceId,
 		});
 		price.config = config;
 
@@ -67,7 +68,10 @@ export const createStripePrepaidPriceV2 = async ({
 		return;
 	}
 
-	if (entitlement.allowance % (price.config.billing_units ?? 1) !== 0) {
+	if (
+		entitlement?.allowance &&
+		entitlement.allowance % (price.config.billing_units ?? 1) !== 0
+	) {
 		throw new RecaseError({
 			code: ErrCode.InvalidRequest,
 			message:
@@ -85,7 +89,13 @@ export const createStripePrepaidPriceV2 = async ({
 
 	const stripeCli = createStripeCli({ org, env });
 
-	const stripePrice = await stripeCli.prices.create(stripeCreatePriceParams);
+	const stripePrice = await stripeCli.prices.create(stripeCreatePriceParams, {
+		idempotencyKey: buildStripePriceIdempotencyKey({
+			priceId: price.id!,
+			slot: "stripe_prepaid_price_v2_id",
+			currency,
+		}),
+	});
 
 	setPriceCurrencyStripeId({
 		config,

@@ -269,6 +269,7 @@ export const initStripeResourcesForBillingPlan = async ({
 					internalEntityId,
 					useCheckout: false,
 					currency,
+					billingVersion: billingContext.billingVersion,
 				}),
 			);
 		}

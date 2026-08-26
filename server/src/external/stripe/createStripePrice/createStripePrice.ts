@@ -1,13 +1,17 @@
 import {
 	BillingType,
+	type BillingVersion,
 	type EntitlementWithFeature,
 	ErrCode,
 	type FullProduct,
 	getPriceCurrencyStripeId,
+	LATEST_BILLING_VERSION,
 	type Price,
 	priceHasCurrencyAmounts,
+	priceToRequiredStripeSlots,
 	priceUtils,
 	RecaseError,
+	type RequiredStripeResourceSlot,
 	setPriceCurrencyStripeId,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -158,6 +162,7 @@ export const createStripePriceIFNotExist = async ({
 	internalEntityId,
 	useCheckout = false,
 	currency: targetCurrency,
+	billingVersion = LATEST_BILLING_VERSION,
 }: {
 	ctx: AutumnContext;
 	price: Price;
@@ -166,6 +171,7 @@ export const createStripePriceIFNotExist = async ({
 	internalEntityId?: string;
 	useCheckout?: boolean;
 	currency?: string;
+	billingVersion?: BillingVersion;
 }) => {
 	// Fetch latest price data...
 
@@ -182,6 +188,11 @@ export const createStripePriceIFNotExist = async ({
 	).toLowerCase();
 
 	const billingType = getBillingType(price.config!);
+	const requiredSlots = new Set(
+		priceToRequiredStripeSlots({ price, product, billingVersion }),
+	);
+	const requiresSlot = (slot: RequiredStripeResourceSlot) =>
+		requiredSlots.has(slot);
 
 	const isFixed =
 		billingType === BillingType.FixedCycle ||
@@ -218,7 +229,7 @@ export const createStripePriceIFNotExist = async ({
 		billingType === BillingType.FixedCycle ||
 		billingType === BillingType.OneOff
 	) {
-		if (!stripePrice) {
+		if (requiresSlot("stripe_price_id") && !stripePrice) {
 			await createStripeFixedPrice({
 				db,
 				stripeCli,
@@ -232,7 +243,7 @@ export const createStripePriceIFNotExist = async ({
 
 	// 2. If prepaid
 	if (billingType === BillingType.UsageInAdvance) {
-		if (isOneOffAndTiered && !stripeProd) {
+		if (isOneOffAndTiered && requiresSlot("stripe_product_id") && !stripeProd) {
 			logger.info(`Creating stripe one off tiered product`);
 			await createStripeOneOffTieredProduct({
 				db,
@@ -243,7 +254,7 @@ export const createStripePriceIFNotExist = async ({
 			});
 		}
 
-		if (!isOneOffAndTiered && !stripePrice) {
+		if (!isOneOffAndTiered && requiresSlot("stripe_price_id") && !stripePrice) {
 			logger.info(`Creating stripe prepaid price`);
 			await createStripePrepaid({
 				db,
@@ -257,7 +268,11 @@ export const createStripePriceIFNotExist = async ({
 			});
 		}
 
-		if (!isOneOffAndTiered && !stripePrepaidPriceV2) {
+		if (
+			!isOneOffAndTiered &&
+			requiresSlot("stripe_prepaid_price_v2_id") &&
+			!stripePrepaidPriceV2
+		) {
 			logger.info(`Creating stripe v2 prepaid price`);
 			await createStripePrepaidPriceV2({
 				ctx,
@@ -276,7 +291,7 @@ export const createStripePriceIFNotExist = async ({
 			orgDefault,
 			slot: "stripe_placeholder_price_id",
 		});
-		if (!stripePrice) {
+		if (requiresSlot("stripe_price_id") && !stripePrice) {
 			logger.info(`Creating stripe in arrear prorated product`);
 			await createStripeArrearProrated({
 				db,
@@ -287,8 +302,12 @@ export const createStripePriceIFNotExist = async ({
 				org,
 				curStripeProd: stripeProd,
 				currency,
+				mintPlaceholder: requiresSlot("stripe_placeholder_price_id"),
 			});
-		} else if (!placeholderPriceId) {
+		} else if (
+			requiresSlot("stripe_placeholder_price_id") &&
+			!placeholderPriceId
+		) {
 			logger.info(`Creating stripe placeholder price`);
 			const placeholderPrice = await createStripeMeteredPrice({
 				stripeCli,

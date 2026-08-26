@@ -17,6 +17,7 @@ import {
 } from "@server/internal/products/prices/priceUtils";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
+import { buildStripePriceIdempotencyKey } from "../prices/utils/buildIdempotencyKey";
 import { billingIntervalToStripe } from "../stripePriceUtils";
 import { priceToInArrearTiers } from "./createStripeInArrear";
 
@@ -163,6 +164,7 @@ export const createStripeArrearProrated = async ({
 	curStripeProd,
 	stripeCli,
 	currency: targetCurrency,
+	mintPlaceholder = true,
 }: {
 	db: DrizzleCli;
 	price: Price;
@@ -172,6 +174,7 @@ export const createStripeArrearProrated = async ({
 	curStripeProd: Stripe.Product | null;
 	stripeCli: Stripe;
 	currency?: string;
+	mintPlaceholder?: boolean;
 }) => {
 	const relatedEnt = getPriceEntitlement(price, entitlements);
 
@@ -225,15 +228,24 @@ export const createStripeArrearProrated = async ({
 		};
 	}
 
-	const stripePrice = await stripeCli.prices.create({
-		...productData,
-		currency,
-		...priceAmountData,
-		recurring: {
-			...(recurringData as any),
+	const stripePrice = await stripeCli.prices.create(
+		{
+			...productData,
+			currency,
+			...priceAmountData,
+			recurring: {
+				...(recurringData as any),
+			},
+			nickname: `Autumn Price (${relatedEnt.feature.name})`,
 		},
-		nickname: `Autumn Price (${relatedEnt.feature.name})`,
-	});
+		{
+			idempotencyKey: buildStripePriceIdempotencyKey({
+				priceId: price.id!,
+				slot: "stripe_price_id",
+				currency,
+			}),
+		},
+	);
 
 	setPriceCurrencyStripeId({
 		config,
@@ -245,8 +257,7 @@ export const createStripeArrearProrated = async ({
 	config.stripe_product_id = stripePrice.product as string;
 	const billingType = getBillingType(price.config);
 
-	// CREATE PLACEHOLDER PRICE FOR INARREAR PRORATED PRICING
-	if (billingType === BillingType.InArrearProrated) {
+	if (mintPlaceholder && billingType === BillingType.InArrearProrated) {
 		const placeholderPrice = await createStripeMeteredPrice({
 			stripeCli,
 			price,

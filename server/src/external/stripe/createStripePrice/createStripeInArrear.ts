@@ -19,6 +19,10 @@ import RecaseError from "@server/utils/errorUtils";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
+import {
+	buildStripeMeterIdempotencyKey,
+	buildStripePriceIdempotencyKey,
+} from "../prices/utils/buildIdempotencyKey";
 import { billingIntervalToStripe } from "../stripePriceUtils";
 
 const searchStripeMeter = async ({
@@ -127,13 +131,18 @@ const getStripeMeter = async ({
 		}
 	} catch (_error) {}
 
-	const meter = await stripeCli.billing.meters.create({
-		display_name: `${product.name} - ${feature!.name}`,
-		event_name: price.id!,
-		default_aggregation: {
-			formula: "sum",
+	const meter = await stripeCli.billing.meters.create(
+		{
+			display_name: `${product.name} - ${feature!.name}`,
+			event_name: price.id!,
+			default_aggregation: {
+				formula: "sum",
+			},
 		},
-	});
+		{
+			idempotencyKey: buildStripeMeterIdempotencyKey({ priceId: price.id! }),
+		},
+	);
 	return meter;
 };
 
@@ -333,20 +342,29 @@ export const createStripeInArrearPrice = async ({
 		intervalCount: price.config.interval_count,
 	});
 
-	const stripePrice = await stripeCli.prices.create({
-		...productData,
-		...priceAmountData,
-		currency,
-		recurring: recurringData?.interval
-			? {
-					interval: recurringData.interval,
-					interval_count: recurringData.interval_count,
-					meter: meter.id,
-					usage_type: "metered",
-				}
-			: undefined,
-		nickname: `Autumn Price (${relatedEnt.feature.name})`,
-	});
+	const stripePrice = await stripeCli.prices.create(
+		{
+			...productData,
+			...priceAmountData,
+			currency,
+			recurring: recurringData?.interval
+				? {
+						interval: recurringData.interval,
+						interval_count: recurringData.interval_count,
+						meter: meter.id,
+						usage_type: "metered",
+					}
+				: undefined,
+			nickname: `Autumn Price (${relatedEnt.feature.name})`,
+		},
+		{
+			idempotencyKey: buildStripePriceIdempotencyKey({
+				priceId: price.id!,
+				slot: "stripe_price_id",
+				currency,
+			}),
+		},
+	);
 
 	setPriceCurrencyStripeId({
 		config,
