@@ -5,7 +5,6 @@ import {
 	isAiCreditSystem,
 } from "@autumn/shared";
 import { GroupedTabButton, IconButton } from "@autumn/ui";
-import { WarningCircleIcon } from "@phosphor-icons/react";
 import { X } from "lucide-react";
 import {
 	isGraduated,
@@ -27,6 +26,7 @@ interface CreditRateCardRowProps {
 	allFeatures: Feature[];
 	onChange: (item: CreditSchemaItem) => void;
 	onRemove: () => void;
+	showRateCardControls: boolean;
 }
 
 export function CreditRateCardRow({
@@ -35,6 +35,7 @@ export function CreditRateCardRow({
 	allFeatures,
 	onChange,
 	onRemove,
+	showRateCardControls,
 }: CreditRateCardRowProps) {
 	const selectedFeature = allFeatures.find(
 		(f: Feature) => f.id === item.metered_feature_id,
@@ -72,46 +73,46 @@ export function CreditRateCardRow({
 				/>
 			</div>
 
-			<div className="flex items-center gap-2">
-				<span className="text-tertiary-foreground text-xs shrink-0 w-14">
-					per
-				</span>
-				{isAiChild && (
-					<span className="text-tertiary-foreground text-xs">$</span>
-				)}
-				<CreditNumberInput
-					ariaLabel="Billing units"
-					className="w-26 shrink-0"
-					placeholder="eg. 100"
-					value={item.feature_amount}
-					onValueChange={(feature_amount) =>
-						onChange({ ...item, feature_amount })
-					}
-				/>
-				<span className="text-tertiary-foreground text-xs truncate">
-					{unitName}
-				</span>
-				<GroupedTabButton
-					className="ml-auto shrink-0"
-					value={rateTypeOf(item)}
-					onValueChange={(rateType) =>
-						onChange(
-							setRateType({ item, rateType: rateType as "flat" | "graduated" }),
-						)
-					}
-					options={RATE_TYPE_OPTIONS}
-				/>
-			</div>
+			{showRateCardControls && (
+				<div className="flex items-center gap-2">
+					<span className="text-tertiary-foreground text-xs shrink-0 w-14">
+						per
+					</span>
+					{isAiChild && (
+						<span className="text-tertiary-foreground text-xs">$</span>
+					)}
+					<CreditNumberInput
+						ariaLabel="Billing units"
+						className="w-26 shrink-0"
+						placeholder="eg. 100"
+						value={item.feature_amount}
+						onValueChange={(feature_amount) =>
+							onChange({ ...item, feature_amount })
+						}
+					/>
+					<span className="text-tertiary-foreground text-xs truncate">
+						{unitName}
+					</span>
+					<GroupedTabButton
+						className="ml-auto shrink-0"
+						value={rateTypeOf(item)}
+						onValueChange={(rateType) =>
+							onChange(
+								setRateType({
+									item,
+									rateType: rateType as "flat" | "graduated",
+								}),
+							)
+						}
+						options={RATE_TYPE_OPTIONS}
+					/>
+				</div>
+			)}
 
 			{isGraduated(item) ? (
-				<>
+				showRateCardControls ? (
 					<CreditTierRows item={item} onChange={onChange} />
-					<div className="flex items-center gap-1.5 text-amber-500 text-xs">
-						<WarningCircleIcon size={12} />
-						Tiered rating is not live yet — tracking usage for this feature will
-						be rejected.
-					</div>
-				</>
+				) : null
 			) : (
 				<div className="flex items-center gap-2">
 					<span className="text-tertiary-foreground text-xs shrink-0 w-14">
