@@ -13,7 +13,7 @@ export const DefaultNetTermsSubsection = () => {
 	const { mutate, isPending, variables } = useMutation({
 		mutationFn: async (days: number | null) => {
 			await axiosInstance.patch("/organization/config", {
-				default_net_terms_days: days,
+				default_invoice_net_terms_days: days,
 			});
 		},
 		onSuccess: async () => {
@@ -25,7 +25,8 @@ export const DefaultNetTermsSubsection = () => {
 
 	// While a save is in flight, reflect the value being saved.
 	const savedDays =
-		(isPending ? variables : org?.config?.default_net_terms_days) ?? null;
+		(isPending ? variables : org?.config?.default_invoice_net_terms_days) ??
+		null;
 	const inputValue = draft ?? (savedDays === null ? "" : String(savedDays));
 
 	const commit = () => {

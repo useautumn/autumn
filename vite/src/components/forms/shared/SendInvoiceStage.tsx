@@ -180,7 +180,7 @@ export function SendInvoiceStage({
 	): SendInvoiceSubmitParams => {
 		const resolvedNetTermsDays =
 			invoiceSettings.netTermsDays ??
-			org?.config?.default_net_terms_days ??
+			org?.config?.default_invoice_net_terms_days ??
 			DEFAULT_NET_TERMS_DAYS;
 		return {
 			enableProductImmediately: enableImmediately,
@@ -314,7 +314,7 @@ export function SendInvoiceStage({
 				value={invoiceSettings}
 				onChange={setInvoiceSettings}
 				disabled={needsEmail}
-				defaultNetTermsDays={org?.config?.default_net_terms_days}
+				defaultNetTermsDays={org?.config?.default_invoice_net_terms_days}
 			/>
 
 			<PreviewSection previewQuery={previewQuery} />

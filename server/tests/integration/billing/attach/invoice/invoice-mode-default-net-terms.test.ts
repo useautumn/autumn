@@ -1,9 +1,9 @@
 /**
- * Regression coverage for org-level `default_net_terms_days` on invoice-mode
+ * Regression coverage for org-level `default_invoice_net_terms_days` on invoice-mode
  * attaches.
  *
  * Contract under test:
- *   - `org.config.default_net_terms_days` is applied as `days_until_due` on
+ *   - `org.config.default_invoice_net_terms_days` is applied as `days_until_due` on
  *     invoice-mode (send_invoice) subscription creation.
  *   - It is also applied to the standalone invoice a one-off attach creates.
  *   - Unset config keeps the historical 30-day due window, so existing orgs
@@ -39,7 +39,7 @@ test.concurrent(
 			setup: [
 				s.platform.create({
 					configOverrides: {
-						default_net_terms_days: ORG_DEFAULT_NET_TERMS_DAYS,
+						default_invoice_net_terms_days: ORG_DEFAULT_NET_TERMS_DAYS,
 					},
 					setupDefaultFeatures: true,
 				}),
@@ -92,7 +92,7 @@ test.concurrent(
 			setup: [
 				s.platform.create({
 					configOverrides: {
-						default_net_terms_days: ORG_DEFAULT_NET_TERMS_DAYS,
+						default_invoice_net_terms_days: ORG_DEFAULT_NET_TERMS_DAYS,
 					},
 					setupDefaultFeatures: true,
 				}),

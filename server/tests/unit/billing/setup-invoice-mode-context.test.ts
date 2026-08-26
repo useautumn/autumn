@@ -50,7 +50,7 @@ const makeCtx = ({
 			id: "org_123",
 			config: {
 				allowed_payment_methods: allowedPaymentMethods,
-				default_net_terms_days: defaultNetTermsDays,
+				default_invoice_net_terms_days: defaultNetTermsDays,
 			},
 		},
 	}) as unknown as AutumnContext;
@@ -176,25 +176,28 @@ describe("allowed_payment_methods org config schema", () => {
 	});
 });
 
-describe("default_net_terms_days org config schema", () => {
+describe("default_invoice_net_terms_days org config schema", () => {
 	test("rejects zero, negative and fractional values but allows null or omitted", () => {
 		expect(
-			OrgConfigSchema.safeParse({ default_net_terms_days: 0 }).success,
+			OrgConfigSchema.safeParse({ default_invoice_net_terms_days: 0 }).success,
 		).toBe(false);
 		expect(
-			OrgConfigSchema.safeParse({ default_net_terms_days: -1 }).success,
+			OrgConfigSchema.safeParse({ default_invoice_net_terms_days: -1 }).success,
 		).toBe(false);
 		expect(
-			OrgConfigSchema.safeParse({ default_net_terms_days: 1.5 }).success,
+			OrgConfigSchema.safeParse({ default_invoice_net_terms_days: 1.5 })
+				.success,
 		).toBe(false);
 		expect(
-			OrgConfigSchema.parse({ default_net_terms_days: null })
-				.default_net_terms_days,
+			OrgConfigSchema.parse({ default_invoice_net_terms_days: null })
+				.default_invoice_net_terms_days,
 		).toBeNull();
-		expect(OrgConfigSchema.parse({}).default_net_terms_days).toBeUndefined();
 		expect(
-			OrgConfigSchema.parse({ default_net_terms_days: 45 })
-				.default_net_terms_days,
+			OrgConfigSchema.parse({}).default_invoice_net_terms_days,
+		).toBeUndefined();
+		expect(
+			OrgConfigSchema.parse({ default_invoice_net_terms_days: 45 })
+				.default_invoice_net_terms_days,
 		).toBe(45);
 	});
 });

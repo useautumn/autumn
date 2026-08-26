@@ -33,7 +33,7 @@ export const setupInvoiceModeContext = async ({
 		daysUntilDue:
 			net_terms_days ??
 			template?.net_terms_days ??
-			ctx.org.config.default_net_terms_days ??
+			ctx.org.config.default_invoice_net_terms_days ??
 			undefined,
 		paymentMethodTypes: ctx.org.config.allowed_payment_methods ?? undefined,
 	};

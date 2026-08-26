@@ -152,7 +152,7 @@ export const handleOneOffFunction = async ({
 		discounts: rewards ? rewards.map((r) => ({ coupon: r.id })) : undefined,
 		collection_method: attachParams.invoiceOnly ? "send_invoice" : undefined,
 		days_until_due: attachParams.invoiceOnly
-			? (org.config.default_net_terms_days ?? 30)
+			? (org.config.default_invoice_net_terms_days ?? 30)
 			: undefined,
 		...(shouldMemo ? { description: invoiceMemo } : {}),
 		...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
