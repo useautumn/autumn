@@ -195,7 +195,7 @@ describe("consumeResumedAgentTurn stream resilience", () => {
 		expect(result.approvedWriteFailed).toBe(false);
 		expect(result.approvedWriteUnverified).toBe(false);
 		expect(result.writes).toEqual([
-			{ status: "applied", toolName: "autumn__attach" },
+			{ result: { ok: true }, status: "applied", toolName: "autumn__attach" },
 		]);
 		expect(result.text).toBe("Attached the plan.");
 	});
@@ -248,7 +248,7 @@ describe("consumeResumedAgentTurn stream resilience", () => {
 		expect(result.approvedWriteFailed).toBe(false);
 		expect(result.approvedWriteUnverified).toBe(false);
 		expect(result.writes).toEqual([
-			{ status: "applied", toolName: "autumn__attach" },
+			{ result: { ok: true }, status: "applied", toolName: "autumn__attach" },
 		]);
 	});
 
@@ -265,7 +265,7 @@ describe("consumeResumedAgentTurn stream resilience", () => {
 		expect(result.approvedWriteFailed).toBe(false);
 		expect(result.approvedWriteUnverified).toBe(false);
 		expect(result.writes).toEqual([
-			{ status: "applied", toolName: "autumn__attach" },
+			{ result: { ok: true }, status: "applied", toolName: "autumn__attach" },
 		]);
 	});
 });

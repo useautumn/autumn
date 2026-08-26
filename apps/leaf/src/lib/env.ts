@@ -24,7 +24,6 @@ const envSchema = z
 			.transform((value) => value === "true" || value === "1"),
 		EVE_INTERNAL_AUTH_TOKEN: optionalString,
 		EVE_SERVER_URL: z.string().url().default("http://127.0.0.1:3999"),
-		LEAF_APPROVAL_EXECUTOR: z.string().optional(),
 		MCP_OAUTH_ENVIRONMENT: z.enum(["live", "sandbox"]).default("sandbox"),
 		PORT: z.coerce.number().int().positive().default(3099),
 		SLACK_CLIENT_ID: z.string().min(1),

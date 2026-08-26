@@ -15,7 +15,6 @@ export const submitAgentInput = async ({
 	session,
 	siblingOptionIdFor,
 	siblingRequestIds,
-	suppressSiblingWithheldNote,
 }: {
 	approveSiblings?: boolean;
 	auth: EveAuthContext;
@@ -28,7 +27,6 @@ export const submitAgentInput = async ({
 	session: EveSessionRef;
 	siblingOptionIdFor?: (siblingRequestId: string) => string | undefined;
 	siblingRequestIds?: ReadonlyArray<string>;
-	suppressSiblingWithheldNote?: boolean;
 }) => {
 	await answerEveInput({
 		approveSiblings,
@@ -39,7 +37,6 @@ export const submitAgentInput = async ({
 		session,
 		siblingOptionIdFor,
 		siblingRequestIds,
-		suppressSiblingWithheldNote,
 	});
 	await saveEveSessionState({ orgId, session });
 	return consumeResumedAgentTurn({
