@@ -77,6 +77,39 @@ describe("credit rate-card feature API schemas", () => {
 		expect(result.credit_schema).toHaveLength(2);
 	});
 
+	test("accepts legacy response rates with an empty metered feature ID", () => {
+		const result = ApiFeatureV1Schema.parse({
+			id: "credits",
+			name: "Credits",
+			type: FeatureType.CreditSystem,
+			consumable: true,
+			credit_schema: [{ metered_feature_id: "", credit_cost: 0 }],
+			archived: false,
+		});
+
+		expect(result.credit_schema).toEqual([
+			{ metered_feature_id: "", credit_cost: 0 },
+		]);
+	});
+
+	test("rejects empty metered feature IDs in create and update requests", () => {
+		expect(
+			CreateFeatureV2ParamsSchema.safeParse({
+				feature_id: "credits",
+				name: "Credits",
+				type: FeatureType.CreditSystem,
+				credit_schema: [{ metered_feature_id: "", credit_cost: 0 }],
+			}).success,
+		).toBe(false);
+
+		expect(
+			UpdateFeatureV2ParamsSchema.safeParse({
+				feature_id: "credits",
+				credit_schema: [{ metered_feature_id: "", credit_cost: 0 }],
+			}).success,
+		).toBe(false);
+	});
+
 	test("supports partial rate-card updates", () => {
 		const result = UpdateFeatureV2ParamsSchema.parse({
 			feature_id: "credits",

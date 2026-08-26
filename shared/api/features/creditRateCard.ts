@@ -76,4 +76,14 @@ export const ApiCreditSchemaItemSchema = z.union([
 	ApiGraduatedCreditSchemaItemSchema,
 ]);
 
+const ApiLegacyFlatCreditSchemaItemSchema =
+	ApiFlatCreditSchemaItemSchema.extend({
+		metered_feature_id: z.literal(""),
+	});
+
+export const ApiCreditSchemaResponseItemSchema = z.union([
+	ApiCreditSchemaItemSchema,
+	ApiLegacyFlatCreditSchemaItemSchema,
+]);
+
 export type ApiCreditSchemaItem = z.infer<typeof ApiCreditSchemaItemSchema>;
