@@ -1,10 +1,12 @@
-import type { Feature } from "@autumn/shared";
+import type {
+	CustomerDisplayInfo,
+	EntityDisplayInfo,
+	Feature,
+} from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
 import type { EventRow, EventsData } from "../components/analytics-types";
 import { CUSTOMER_BALANCE_SUFFIX } from "./deductionsToEventsData";
 import {
-	type CustomerDisplayInfo,
-	type EntityDisplayInfo,
 	entityDisplayLabel,
 	groupValueLabel,
 	RESERVED_GROUP,

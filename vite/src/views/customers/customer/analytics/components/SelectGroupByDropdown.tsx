@@ -394,12 +394,11 @@ export const SelectGroupByDropdown = ({
 									<DropdownMenuSeparator />
 									<div className="max-h-64 overflow-y-auto overflow-x-visible">
 										{availableGroupValues.map((value: string) => {
-											const displayValue =
-												value === "AUTUMN_RESERVED"
-													? "Other values"
-													: value === ""
-														? "No plan"
-														: (planNames?.[value] ?? value);
+											const displayValue = groupValueLabel({
+												groupValue: value,
+												groupBy: "plan_id",
+												planNames,
+											});
 											const isChecked = !planDeselected?.has(value);
 											const wouldDeselectLast =
 												isChecked && selectedPlanCount === 1;

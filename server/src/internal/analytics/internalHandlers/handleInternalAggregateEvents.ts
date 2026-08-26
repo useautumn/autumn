@@ -1,4 +1,6 @@
 import {
+	type CustomerDisplayInfo,
+	type EntityDisplayInfo,
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
@@ -13,14 +15,8 @@ import { z } from "zod/v4";
 import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { aggregateDeductions } from "@/internal/analytics/actions/aggregateDeductions.js";
-import {
-	type CustomerDisplayInfo,
-	getCustomerNames,
-} from "@/internal/analytics/actions/getCustomerNames.js";
-import {
-	type EntityDisplayInfo,
-	getEntityNames,
-} from "@/internal/analytics/actions/getEntityNames.js";
+import { getCustomerNames } from "@/internal/analytics/actions/getCustomerNames.js";
+import { getEntityNames } from "@/internal/analytics/actions/getEntityNames.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { eventActions } from "../actions/eventActions.js";

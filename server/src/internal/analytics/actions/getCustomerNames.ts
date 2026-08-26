@@ -1,3 +1,4 @@
+import type { CustomerDisplayInfo } from "@autumn/shared";
 import { getClickhouseClient } from "@/external/tinybird/initClickhouse.js";
 import { escapeChString } from "../clickhouseUtils.js";
 
@@ -5,11 +6,6 @@ import { escapeChString } from "../clickhouseUtils.js";
 // public id.
 type CustomerNameRow = {
 	id: string;
-	name: string | null;
-	email: string | null;
-};
-
-export type CustomerDisplayInfo = {
 	name: string | null;
 	email: string | null;
 };

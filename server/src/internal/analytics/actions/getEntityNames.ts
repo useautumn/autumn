@@ -1,3 +1,4 @@
+import type { EntityDisplayInfo } from "@autumn/shared";
 import { getClickhouseClient } from "@/external/tinybird/initClickhouse.js";
 import { escapeChString } from "../clickhouseUtils.js";
 
@@ -5,11 +6,6 @@ import { escapeChString } from "../clickhouseUtils.js";
 // id, `internal_customer_id` is the customer that owns it.
 type EntityNameRow = {
 	id: string;
-	name: string | null;
-	internal_customer_id: string;
-};
-
-export type EntityDisplayInfo = {
 	name: string | null;
 	internal_customer_id: string;
 };

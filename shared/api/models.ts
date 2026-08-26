@@ -21,10 +21,10 @@ export * from "./catalogV2/planUpdate/preview/catalogCorePreview.js";
 export * from "./catalogV2/planUpdate/preview/catalogLicenseParentPreview.js";
 export * from "./catalogV2/planUpdate/preview/catalogPlanPreview.js";
 export * from "./catalogV2/planUpdate/preview/catalogPlanUsage.js";
-export * from "./catalogV2/planUpdate/preview/planAliasReplacement.js";
-export * from "./catalogV2/planUpdate/preview/catalogVariantPreview.js";
 export * from "./catalogV2/planUpdate/preview/catalogSiblingVersionPreview.js";
+export * from "./catalogV2/planUpdate/preview/catalogVariantPreview.js";
 export * from "./catalogV2/planUpdate/preview/catalogVersioningPreview.js";
+export * from "./catalogV2/planUpdate/preview/planAliasReplacement.js";
 export * from "./catalogV2/planUpdate/versioning.js";
 export * from "./catalogV2/previewUpdateCatalogParams.js";
 export * from "./catalogV2/previewUpdateCatalogResponse.js";
@@ -105,6 +105,7 @@ export * from "./entities/apiBaseEntity.js";
 // Errors
 export * from "./errors/index.js";
 // Events
+export * from "./events/aggregate/eventsAggregateDisplayInfo.js";
 export * from "./events/aggregate/eventsAggregateParams.js";
 export * from "./events/aggregate/eventsAggregateResponseV0.js";
 export * from "./events/aggregate/eventsAggregateResponseV1.js";

@@ -1,15 +1,7 @@
+import type { CustomerDisplayInfo, EntityDisplayInfo } from "@autumn/shared";
+
 /** Bucket the analytics pipe folds every group value beyond the top N into. */
 export const RESERVED_GROUP = "AUTUMN_RESERVED";
-
-export type CustomerDisplayInfo = {
-	name?: string | null;
-	email?: string | null;
-};
-
-export type EntityDisplayInfo = {
-	name?: string | null;
-	internal_customer_id?: string | null;
-};
 
 /** Resolves the label shown for a customer group: name → email → id. */
 export function customerDisplayLabel({

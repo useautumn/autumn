@@ -1,14 +1,14 @@
-import type { DeductionPeriod } from "@autumn/shared";
+import type {
+	CustomerDisplayInfo,
+	DeductionPeriod,
+	EntityDisplayInfo,
+} from "@autumn/shared";
 import { ErrCode } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import type {
-	CustomerDisplayInfo,
-	EntityDisplayInfo,
-} from "../utils/displayLabels";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { useSelectedEventNames } from "./useSelectedEventNames";
 
