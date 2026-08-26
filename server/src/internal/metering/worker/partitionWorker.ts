@@ -1,3 +1,4 @@
+import type { MeteringEvent } from "../events/meteringEventSchema.js";
 import { applyEvent } from "../fold/applyEvent.js";
 import { canonicalSerialize } from "../fold/canonicalSerialize.js";
 import {
@@ -135,6 +136,44 @@ export class PartitionWorker {
 		}
 
 		return { applied, offset: this.nextOffset };
+	}
+
+	/**
+	 * Command path: the worker owns this write instead of only observing it.
+	 * Appends to the log, waits for the broker to ack, then folds the event
+	 * into local state so the reply already reflects it.
+	 *
+	 * `nextOffset` is deliberately left alone. The consumer still walks every
+	 * offset in order and will read this same event back; `applyEvent` answers
+	 * "duplicate" for it because the id is already in the dedupe window, and
+	 * that window is part of the serialized state, so the swallow survives a
+	 * snapshot restore too.
+	 *
+	 * A rejected deduct follows the fold's own semantics: the balance is left
+	 * alone, the id is still consumed, and `allowed` is false.
+	 */
+	async command({ event }: { event: MeteringEvent }): Promise<{
+		balance: number;
+		allowed: boolean;
+		duplicate: boolean;
+	}> {
+		await this.log.append({ event });
+
+		const { state, result } = applyEvent({ state: this.meterState, event });
+		this.meterState = state;
+
+		return {
+			// A duplicate already got its answer under this id; re-reporting it as
+			// rejected would make a retry look like a failure.
+			allowed: result !== "rejected_insufficient",
+			balance:
+				readFeatureMeter({
+					state: this.meterState,
+					customerId: event.customer_id,
+					featureId: event.feature_id,
+				})?.balance ?? 0,
+			duplicate: result === "duplicate",
+		};
 	}
 
 	check({ customerId, featureId }: { customerId: string; featureId: string }): {

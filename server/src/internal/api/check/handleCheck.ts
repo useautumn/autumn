@@ -91,7 +91,8 @@ export const handleCheck = createRoute({
 			requiredBalance,
 		});
 		if (!result.checkData) {
-			return c.json(result.response, 202);
+			// A routed answer is a real one; only the degraded paths are 202.
+			return c.json(result.response, result.routed ? 200 : 202);
 		}
 
 		const { checkData, response } = result;

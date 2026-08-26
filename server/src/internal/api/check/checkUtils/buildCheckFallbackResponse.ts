@@ -11,17 +11,25 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 
-export const buildCheckFallbackResponse = ({
+/**
+ * A check answered without ever loading check data, so it carries the verdict
+ * and nothing else: `balance` is null and there is no breakdown, reset window
+ * or flag. Both callers are deliberate about that — the fail-open path has no
+ * balance to report, and the metering worker's fold only projects a number.
+ */
+const buildCheckResponseWithoutBalance = ({
 	ctx,
 	body,
 	requiredBalance,
+	allowed,
 }: {
 	ctx: AutumnContext;
 	body: ParsedCheckParams | (CheckParams & { feature_id: string });
 	requiredBalance: number;
+	allowed: boolean;
 }) => {
-	const fallbackResponse = CheckResponseV3Schema.parse({
-		allowed: true,
+	const response = CheckResponseV3Schema.parse({
+		allowed,
 		customer_id: body.customer_id || "",
 		entity_id: body.entity_id,
 		required_balance: requiredBalance,
@@ -49,7 +57,7 @@ export const buildCheckFallbackResponse = ({
 	};
 
 	return applyResponseVersionChanges<CheckResponseV3>({
-		input: fallbackResponse,
+		input: response,
 		targetVersion: ctx.apiVersion,
 		resource: AffectedResource.Check,
 		legacyData: {
@@ -59,3 +67,39 @@ export const buildCheckFallbackResponse = ({
 		ctx,
 	});
 };
+
+export const buildCheckFallbackResponse = ({
+	ctx,
+	body,
+	requiredBalance,
+}: {
+	ctx: AutumnContext;
+	body: ParsedCheckParams | (CheckParams & { feature_id: string });
+	requiredBalance: number;
+}) =>
+	buildCheckResponseWithoutBalance({
+		ctx,
+		body,
+		requiredBalance,
+		allowed: true,
+	});
+
+/** The worker's fold answers with a bare number, so the verdict is decided
+ *  here against the same required balance the Redis path would have used. */
+export const buildWorkerCheckResponse = ({
+	ctx,
+	body,
+	requiredBalance,
+	workerBalance,
+}: {
+	ctx: AutumnContext;
+	body: ParsedCheckParams | (CheckParams & { feature_id: string });
+	requiredBalance: number;
+	workerBalance: number;
+}) =>
+	buildCheckResponseWithoutBalance({
+		ctx,
+		body,
+		requiredBalance,
+		allowed: workerBalance >= requiredBalance,
+	});

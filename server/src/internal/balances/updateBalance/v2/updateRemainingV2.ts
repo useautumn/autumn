@@ -8,9 +8,44 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeRedisDeductionV2 } from "@/internal/balances/utils/deductionV2/executeRedisDeductionV2.js";
 import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
+import { shadowTapGrant } from "@/internal/metering/shadow/shadowTap.js";
 import { buildCustomerEntitlementFilters } from "../../utils/buildCustomerEntitlementFilters.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { handleUpdateBalanceDeductionErrorV2 } from "./handleUpdateBalanceDeductionErrorV2.js";
+
+/** Seeded from the request id rather than a client key so an SQS replay of the
+ *  same balances.update mirrors under the same event id (a replay reuses
+ *  `ctx.id`), matching how the deduct tap seeds its own key. */
+const getBalanceUpdateMutationId = ({ ctx }: { ctx: AutumnContext }): string =>
+	`balance_update:${ctx.id}`;
+
+/** Shadow only: `add_to_balance` is the one branch of balances.update that
+ *  strictly increases the balance, so it is the only one the v1 event schema's
+ *  "grant" can express. The `remaining` / `current_balance` branch sets an
+ *  absolute value, which the fold has no event for, so it stays unmirrored.
+ *  Fire-and-forget by construction; it cannot fail the update. */
+const mirrorGrantToMeteringShadow = ({
+	ctx,
+	fullSubject,
+	featureId,
+	addToBalance,
+}: {
+	ctx: AutumnContext;
+	fullSubject: FullSubject;
+	featureId: string;
+	addToBalance: number | null | undefined;
+}): void => {
+	if (!notNullish(addToBalance) || addToBalance <= 0) return;
+
+	shadowTapGrant({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		customerId: fullSubject.customerId,
+		featureId,
+		value: addToBalance,
+		idempotencyKey: getBalanceUpdateMutationId({ ctx }),
+	});
+};
 
 /** Updates remaining balance using the FullSubject cache path. */
 export const updateRemainingV2 = async ({
@@ -66,6 +101,13 @@ export const updateRemainingV2 = async ({
 			customerEntitlementFilters,
 		});
 	}
+
+	mirrorGrantToMeteringShadow({
+		ctx,
+		fullSubject,
+		featureId,
+		addToBalance,
+	});
 
 	const { rolloverUpdates, modifiedCusEntIdsByFeatureId, usageWindowUpdates } =
 		result;

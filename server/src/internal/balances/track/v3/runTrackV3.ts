@@ -15,6 +15,7 @@ import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSub
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { runRedisTrackV3 } from "./runRedisTrackV3.js";
+import { runWorkerTrackV3 } from "./runWorkerTrackV3.js";
 
 const getTrackFullSubject = async ({
 	ctx,
@@ -68,17 +69,34 @@ export const runTrackV3 = async ({
 	});
 
 	const redisIdempotencyKey = getTrackQueueIdempotencyKey({ ctx });
+	const overageBehavior = body.overage_behavior || "cap";
+	const refreshFullSubject = () =>
+		getTrackFullSubject({ ctx, body, forceFresh: true });
 
-	const response: TrackResponseV3 = await runRedisTrackV3({
+	// `null` whenever routing is off, unreachable, or this shape has no worker
+	// equivalent — which is every request on a deploy without the routing env
+	// var and edge config both in place.
+	const routed = await runWorkerTrackV3({
 		ctx,
 		fullSubject,
 		featureDeductions,
-		overageBehavior: body.overage_behavior || "cap",
+		overageBehavior,
 		body,
 		idempotencyKey: redisIdempotencyKey,
-		refreshFullSubject: () =>
-			getTrackFullSubject({ ctx, body, forceFresh: true }),
+		refreshFullSubject,
 	});
+
+	const response: TrackResponseV3 =
+		routed ??
+		(await runRedisTrackV3({
+			ctx,
+			fullSubject,
+			featureDeductions,
+			overageBehavior,
+			body,
+			idempotencyKey: redisIdempotencyKey,
+			refreshFullSubject,
+		}));
 
 	return applyResponseVersionChanges<TrackResponseV3>({
 		input: response,

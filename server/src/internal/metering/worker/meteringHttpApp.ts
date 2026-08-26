@@ -1,5 +1,19 @@
 import { Hono } from "hono";
+import { z } from "zod/v4";
+import { buildShadowEvent } from "../shadow/shadowEvent.js";
 import type { PartitionWorker } from "./partitionWorker.js";
+
+/** Same field names the API-side shadow tap already speaks, so a routed track
+ *  and its mirrored twin derive the same event id and the fold dedupes one of
+ *  them instead of double-counting. */
+export const workerTrackRequestSchema = z.object({
+	org_id: z.string().min(1),
+	env: z.string().min(1),
+	customer_id: z.string().min(1),
+	feature_id: z.string().min(1),
+	value: z.number().finite().positive(),
+	idempotency_key: z.string().min(1),
+});
 
 export const createMeteringHttpApp = ({
 	worker,
@@ -21,6 +35,40 @@ export const createMeteringHttpApp = ({
 		}
 
 		return c.json(worker.check({ customerId, featureId }));
+	});
+
+	app.post("/track", async (c) => {
+		const raw = await c.req.json().catch(() => null);
+		const parsed = workerTrackRequestSchema.safeParse(raw);
+
+		if (!parsed.success) {
+			return c.json({ error: "invalid track body" }, 400);
+		}
+
+		const { org_id, env, customer_id, feature_id, value, idempotency_key } =
+			parsed.data;
+
+		const event = buildShadowEvent({
+			type: "deduct",
+			orgId: org_id,
+			env,
+			customerId: customer_id,
+			featureId: feature_id,
+			value,
+			idempotencyKey: idempotency_key,
+		});
+		if (!event) return c.json({ error: "invalid track body" }, 400);
+
+		try {
+			return c.json(await worker.command({ event }));
+		} catch (error) {
+			// The append never acked, so nothing was folded: telling the caller the
+			// write failed is what lets it fall back to Redis.
+			return c.json(
+				{ error: error instanceof Error ? error.message : "append failed" },
+				502,
+			);
+		}
 	});
 
 	return app;

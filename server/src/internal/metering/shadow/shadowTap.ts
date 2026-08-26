@@ -1,12 +1,12 @@
-import { generateAuthToken } from "aws-msk-iam-sasl-signer-js";
 import { Kafka, logLevel } from "kafkajs";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import type { MeteringEvent } from "../events/meteringEventSchema.js";
+import type {
+	MeteringEvent,
+	MeteringEventType,
+} from "../events/meteringEventSchema.js";
 import { partitionForEvent } from "../log/kafkaMeteringLog.js";
-import {
-	buildShadowDeductEvent,
-	type ShadowDeductParams,
-} from "./shadowDeductEvent.js";
+import { createMskOauthBearerProvider } from "../log/mskOauthBearer.js";
+import { buildShadowEvent, type ShadowTapParams } from "./shadowEvent.js";
 import {
 	isOrgTapped,
 	readShadowTapConfig,
@@ -42,6 +42,20 @@ export type ShadowTapWarning = {
 	queueDepth: number;
 };
 
+export type ShadowProducerState = "idle" | "connected" | "disabled";
+
+/** What the admin route reports. Deliberately plain JSON: the admin module
+ *  reads it through a getter and never touches the tap itself. */
+export type ShadowTapRuntimeStatus = {
+	tapBuilt: boolean;
+	producerState: ShadowProducerState;
+	queueDepth: number;
+	dropped: number;
+	mirrored: number;
+	lastError: string | null;
+	lastSendAt: string | null;
+};
+
 const logShadowTapWarning = ({
 	message,
 	error,
@@ -56,10 +70,10 @@ const logShadowTapWarning = ({
 };
 
 /**
- * Mirrors committed balance deductions onto the metering events topic without
+ * Mirrors committed balance mutations onto the metering events topic without
  * ever standing between the caller and its response: `record` only appends to
  * a bounded in-memory queue, and a detached interval does the Kafka work. Any
- * failure degrades to dropped mirror events, never to a failed track.
+ * failure degrades to dropped mirror events, never to a failed mutation.
  */
 export class ShadowTap {
 	private readonly config: ShadowTapConfig;
@@ -72,6 +86,9 @@ export class ShadowTap {
 	private flushing = false;
 	private disabled = false;
 	private droppedCount = 0;
+	private mirroredCount = 0;
+	private lastErrorMessage: string | null = null;
+	private lastSendAtMs: number | null = null;
 	private lastWarnAtMs = 0;
 
 	constructor({
@@ -96,21 +113,44 @@ export class ShadowTap {
 		return this.droppedCount;
 	}
 
+	get mirrored(): number {
+		return this.mirroredCount;
+	}
+
 	get isDisabled(): boolean {
 		return this.disabled;
 	}
 
+	get producerState(): ShadowProducerState {
+		if (this.disabled) return "disabled";
+		return this.producer ? "connected" : "idle";
+	}
+
+	get status(): Omit<ShadowTapRuntimeStatus, "tapBuilt"> {
+		return {
+			producerState: this.producerState,
+			queueDepth: this.queue.length,
+			dropped: this.droppedCount,
+			mirrored: this.mirroredCount,
+			lastError: this.lastErrorMessage,
+			lastSendAt:
+				this.lastSendAtMs === null
+					? null
+					: new Date(this.lastSendAtMs).toISOString(),
+		};
+	}
+
 	/** Synchronous by contract: the serving path must never await the mirror. */
-	record(params: ShadowDeductParams): void {
+	record(params: ShadowTapParams & { type: MeteringEventType }): void {
 		if (this.disabled) return;
 
-		// Re-read per deduction so the admin toggle takes effect within one edge
+		// Re-read per mutation so the admin toggle takes effect within one edge
 		// config poll, without ever blocking on S3.
 		const enablement = this.config.readEnablement();
 		if (!enablement.enabled) return;
 		if (!isOrgTapped({ enablement, orgId: params.orgId })) return;
 
-		const event = buildShadowDeductEvent(params);
+		const event = buildShadowEvent(params);
 		if (!event) return;
 
 		if (this.queue.length >= SHADOW_TAP_QUEUE_CAPACITY) {
@@ -144,6 +184,8 @@ export class ShadowTap {
 							value: JSON.stringify(event),
 						})),
 					});
+					this.mirroredCount += batch.length;
+					this.lastSendAtMs = Date.now();
 				} catch (error) {
 					// Dropped, not retried: holding a backlog for a broken broker
 					// only buys a bigger drop later.
@@ -198,7 +240,7 @@ export class ShadowTap {
 			this.producer = producer;
 		} catch (error) {
 			// A tap that cannot reach Kafka at all stays off for the life of the
-			// process rather than re-dialling on every deduction.
+			// process rather than re-dialling on every mutation.
 			this.disable({ error });
 		} finally {
 			this.connecting = null;
@@ -212,8 +254,14 @@ export class ShadowTap {
 	}
 
 	/** One warn per window per process, not one per dropped event: a broker
-	 *  outage would otherwise turn every deduction into a log line. */
+	 *  outage would otherwise turn every mutation into a log line. The counters
+	 *  and `lastError` are updated on every call, so introspection still sees
+	 *  what the log line suppressed. */
 	private warn({ message, error }: { message: string; error: unknown }): void {
+		this.lastErrorMessage = `${message}: ${
+			error instanceof Error ? error.message : String(error)
+		}`;
+
 		const now = Date.now();
 		if (this.lastWarnAtMs !== 0 && now - this.lastWarnAtMs < WARN_INTERVAL_MS) {
 			return;
@@ -245,10 +293,9 @@ const createKafkaProducer = ({
 		logLevel: logLevel.WARN,
 		sasl: {
 			mechanism: "oauthbearer",
-			oauthBearerProvider: async () => {
-				const { token } = await generateAuthToken({ region: config.region });
-				return { value: token };
-			},
+			oauthBearerProvider: createMskOauthBearerProvider({
+				region: config.region,
+			}),
 		},
 	});
 
@@ -277,17 +324,65 @@ const getShadowTap = (): ShadowTap | null => {
 	return tap;
 };
 
+const NO_TAP_STATUS: ShadowTapRuntimeStatus = {
+	tapBuilt: false,
+	producerState: "disabled",
+	queueDepth: 0,
+	dropped: 0,
+	mirrored: 0,
+	lastError: null,
+	lastSendAt: null,
+};
+
 /**
- * Mirrors one committed deduction into the metering topic. Returns immediately
- * and never throws: with the tap off (the default) it is a bare no-op.
+ * Read-only view of this process's tap for the admin route. Resolving the tap
+ * here is deliberate and cheap — the constructor only stores config, and no
+ * producer is dialled until something is actually queued — so an admin read
+ * reports "built" the same way the serving path would see it.
  */
-export const shadowTapDeduct = (params: ShadowDeductParams): void => {
+export const getShadowTapRuntimeStatus = (): ShadowTapRuntimeStatus => {
 	try {
-		getShadowTap()?.record(params);
+		const tap = getShadowTap();
+		if (!tap) return NO_TAP_STATUS;
+
+		return { tapBuilt: true, ...tap.status };
+	} catch (error) {
+		return {
+			...NO_TAP_STATUS,
+			lastError: error instanceof Error ? error.message : String(error),
+		};
+	}
+};
+
+const recordShadowMutation = ({
+	type,
+	params,
+}: {
+	type: MeteringEventType;
+	params: ShadowTapParams;
+}): void => {
+	try {
+		getShadowTap()?.record({ ...params, type });
 	} catch {
 		// The mirror is never allowed to affect the request that fed it.
 	}
 };
+
+/**
+ * Mirrors one committed deduction into the metering topic. Returns immediately
+ * and never throws: with the tap off (the default) it is a bare no-op.
+ */
+export const shadowTapDeduct = (params: ShadowTapParams): void =>
+	recordShadowMutation({ type: "deduct", params });
+
+/** Mirrors one committed balance increase (attach grant, top-up, manual add). */
+export const shadowTapGrant = (params: ShadowTapParams): void =>
+	recordShadowMutation({ type: "grant", params });
+
+/** Mirrors one committed cycle/manual reset. `value` is the amount the balance
+ *  resets to; the fold restores the meter's granted total and ignores it. */
+export const shadowTapReset = (params: ShadowTapParams): void =>
+	recordShadowMutation({ type: "reset", params });
 
 export const resetShadowTapForTests = async (): Promise<void> => {
 	const tap = cachedTap;

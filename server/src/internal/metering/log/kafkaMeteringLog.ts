@@ -1,10 +1,10 @@
-import { generateAuthToken } from "aws-msk-iam-sasl-signer-js";
 import { type Consumer, Kafka, logLevel, type Producer } from "kafkajs";
 import {
 	type MeteringEvent,
 	parseMeteringEvent,
 } from "../events/meteringEventSchema.js";
 import type { MeteringLog, MeteringLogRecord } from "./meteringLog.js";
+import { createMskOauthBearerProvider } from "./mskOauthBearer.js";
 
 const FNV_OFFSET_BASIS = 2_166_136_261;
 const FNV_PRIME = 16_777_619;
@@ -64,10 +64,7 @@ export class KafkaMeteringLog implements MeteringLog {
 			logLevel: logLevel.WARN,
 			sasl: {
 				mechanism: "oauthbearer",
-				oauthBearerProvider: async () => {
-					const { token } = await generateAuthToken({ region });
-					return { value: token };
-				},
+				oauthBearerProvider: createMskOauthBearerProvider({ region }),
 			},
 		});
 

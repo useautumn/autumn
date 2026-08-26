@@ -10,6 +10,7 @@ import {
 	type LucideIcon,
 	Radio,
 	RefreshCw,
+	Route,
 	Settings2,
 	ShieldBan,
 	SlidersHorizontal,
@@ -31,6 +32,7 @@ export type EdgeConfigCardId =
 	| "async-balance-update"
 	| "async-track"
 	| "metering-shadow"
+	| "metering-routing"
 	| "request-block"
 	| "customer-block"
 	| "org-limits"
@@ -346,6 +348,40 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 								: `Mirroring ${pluralize({ count, noun: "org" })}`,
 						tone: "active",
 					};
+				},
+			},
+			{
+				id: "metering-routing",
+				title: "Metering Worker Routing",
+				description:
+					"Move check and track onto the metering worker, by org mode.",
+				icon: Route,
+				endpoint: "/admin/metering-routing-config",
+				deriveStatus: (data) => {
+					const config = asRecord(data);
+					if (config.workerUrlConfigured === false) {
+						return { label: "No worker URL", tone: "neutral" };
+					}
+
+					const defaultMode =
+						typeof config.defaultMode === "string" ? config.defaultMode : "off";
+					const routingOrgs = Object.values(asRecord(config.orgModes)).filter(
+						(mode) => mode === "serve_reads" || mode === "full",
+					).length;
+
+					if (defaultMode === "full") {
+						return { label: "All orgs full", tone: "warning" };
+					}
+					if (defaultMode === "serve_reads") {
+						return { label: "All orgs serving reads", tone: "active" };
+					}
+
+					return routingOrgs === 0
+						? { label: "Off", tone: "neutral" }
+						: {
+								label: `Routing ${pluralize({ count: routingOrgs, noun: "org" })}`,
+								tone: "active",
+							};
 				},
 			},
 			{

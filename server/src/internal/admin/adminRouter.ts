@@ -29,6 +29,7 @@ import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsCo
 import { handleGetAdminFullSubjectGateConfig } from "./handleGetAdminFullSubjectGateConfig";
 import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
 import { handleGetAdminMainRedisCacheConfig } from "./handleGetAdminMainRedisCacheConfig";
+import { handleGetAdminMeteringRoutingConfig } from "./handleGetAdminMeteringRoutingConfig";
 import { handleGetAdminMeteringShadowConfig } from "./handleGetAdminMeteringShadowConfig";
 import { handleGetAdminMiscellaneousEdgeConfig } from "./handleGetAdminMiscellaneousEdgeConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
@@ -63,6 +64,7 @@ import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureF
 import { handleUpsertAdminFullSubjectGateConfig } from "./handleUpsertAdminFullSubjectGateConfig";
 import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
 import { handleUpsertAdminMainRedisCacheConfig } from "./handleUpsertAdminMainRedisCacheConfig";
+import { handleUpsertAdminMeteringRoutingConfig } from "./handleUpsertAdminMeteringRoutingConfig";
 import { handleUpsertAdminMeteringShadowConfig } from "./handleUpsertAdminMeteringShadowConfig";
 import { handleUpsertAdminMiscellaneousEdgeConfig } from "./handleUpsertAdminMiscellaneousEdgeConfig";
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
@@ -155,6 +157,14 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/metering-shadow-config",
 	...handleUpsertAdminMeteringShadowConfig,
+);
+honoAdminRouter.get(
+	"/metering-routing-config",
+	...handleGetAdminMeteringRoutingConfig,
+);
+honoAdminRouter.put(
+	"/metering-routing-config",
+	...handleUpsertAdminMeteringRoutingConfig,
 );
 honoAdminRouter.get(
 	"/full-subject-gate-config",

@@ -10,6 +10,7 @@ import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { EDGE_CONFIG_SECTIONS, type EdgeConfigCardId } from "./edgeConfigCards";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
 import { FullSubjectGateDialog } from "./FullSubjectGateDialog";
+import { MeteringRoutingDialog } from "./MeteringRoutingDialog";
 import { MeteringShadowDialog } from "./MeteringShadowDialog";
 import { MiscellaneousEdgeConfigDialog } from "./MiscellaneousEdgeConfigDialog";
 import { MiscRedisDialog } from "./MiscRedisDialog";
@@ -120,6 +121,11 @@ export function EdgeConfigTab() {
 
 			<MeteringShadowDialog
 				open={openConfig === "metering-shadow"}
+				onOpenChange={closeDialog}
+			/>
+
+			<MeteringRoutingDialog
+				open={openConfig === "metering-routing"}
 				onOpenChange={closeDialog}
 			/>
 

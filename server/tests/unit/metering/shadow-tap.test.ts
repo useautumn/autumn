@@ -2,10 +2,15 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { ADMIN_METERING_SHADOW_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
 import { parseMeteringEvent } from "@/internal/metering/events/meteringEventSchema.js";
 import {
-	buildShadowDeductEvent,
-	buildShadowDeductEventId,
-} from "@/internal/metering/shadow/shadowDeductEvent.js";
+	createMskOauthBearerProvider,
+	hasContainerCredentials,
+} from "@/internal/metering/log/mskOauthBearer.js";
 import {
+	buildShadowEvent,
+	buildShadowEventId,
+} from "@/internal/metering/shadow/shadowEvent.js";
+import {
+	getShadowTapRuntimeStatus,
 	resetShadowTapForTests,
 	SHADOW_TAP_QUEUE_CAPACITY,
 	type ShadowProducer,
@@ -13,6 +18,8 @@ import {
 	ShadowTap,
 	type ShadowTapWarning,
 	shadowTapDeduct,
+	shadowTapGrant,
+	shadowTapReset,
 } from "@/internal/metering/shadow/shadowTap.js";
 import {
 	isOrgTapped,
@@ -49,6 +56,7 @@ const configFor = ({
 const KAFKA_ENV = { KAFKA_BOOTSTRAP: "b-1:9098" };
 
 const BASE_PARAMS = {
+	type: "deduct" as const,
 	orgId: "org_1",
 	env: "sandbox",
 	customerId: "cus_1",
@@ -56,6 +64,10 @@ const BASE_PARAMS = {
 	value: 3,
 	idempotencyKey: "track:req_1",
 };
+
+/** The tap params without the mutation type, i.e. what the fire-and-forget
+ *  helpers take. */
+const { type: _baseType, ...BASE_MUTATION } = BASE_PARAMS;
 
 const createFakeProducer = ({
 	failConnect = false,
@@ -123,7 +135,7 @@ afterEach(async () => {
 
 describe("shadow tap event mapping", () => {
 	test("maps a deduction onto the v1 metering event schema", () => {
-		const event = buildShadowDeductEvent({ ...BASE_PARAMS, eventTs: 1234 });
+		const event = buildShadowEvent({ ...BASE_PARAMS, eventTs: 1234 });
 
 		expect(event).not.toBeNull();
 		expect(parseMeteringEvent({ input: event })).toMatchObject({
@@ -139,45 +151,89 @@ describe("shadow tap event mapping", () => {
 	});
 
 	test("the same idempotency key maps to the same event id", () => {
-		const first = buildShadowDeductEvent({ ...BASE_PARAMS, eventTs: 1 });
+		const first = buildShadowEvent({ ...BASE_PARAMS, eventTs: 1 });
 		// A redelivered track re-runs with a different value/timestamp only if the
 		// request itself changed; the id must survive both.
-		const replay = buildShadowDeductEvent({ ...BASE_PARAMS, eventTs: 99_999 });
+		const replay = buildShadowEvent({ ...BASE_PARAMS, eventTs: 99_999 });
 
 		expect(first?.id).toBe(replay?.id as string);
-		expect(first?.id).toBe(buildShadowDeductEventId(BASE_PARAMS));
+		expect(first?.id).toBe(buildShadowEventId(BASE_PARAMS));
 	});
 
 	test("a different request or feature maps to a different event id", () => {
-		const base = buildShadowDeductEventId(BASE_PARAMS);
+		const base = buildShadowEventId(BASE_PARAMS);
 
 		expect(
-			buildShadowDeductEventId({
+			buildShadowEventId({
 				...BASE_PARAMS,
 				idempotencyKey: "track:req_2",
 			}),
 		).not.toBe(base);
-		expect(
-			buildShadowDeductEventId({ ...BASE_PARAMS, featureId: "words" }),
-		).not.toBe(base);
-		expect(
-			buildShadowDeductEventId({ ...BASE_PARAMS, orgId: "org_2" }),
-		).not.toBe(base);
-		expect(buildShadowDeductEventId({ ...BASE_PARAMS, env: "live" })).not.toBe(
+		expect(buildShadowEventId({ ...BASE_PARAMS, featureId: "words" })).not.toBe(
 			base,
 		);
+		expect(buildShadowEventId({ ...BASE_PARAMS, orgId: "org_2" })).not.toBe(
+			base,
+		);
+		expect(buildShadowEventId({ ...BASE_PARAMS, env: "live" })).not.toBe(base);
+	});
+
+	test("maps a grant and a reset onto their own event types", () => {
+		const grant = buildShadowEvent({
+			...BASE_PARAMS,
+			type: "grant",
+			value: 500,
+			idempotencyKey: "cus_ent:ce_1:balance:500",
+			eventTs: 1234,
+		});
+		const reset = buildShadowEvent({
+			...BASE_PARAMS,
+			type: "reset",
+			value: 100,
+			idempotencyKey: "cus_ent:ce_1:reset:1700000000000",
+			eventTs: 1234,
+		});
+
+		expect(parseMeteringEvent({ input: grant })).toMatchObject({
+			type: "grant",
+			value: 500,
+			feature_id: "messages",
+		});
+		expect(parseMeteringEvent({ input: reset })).toMatchObject({
+			type: "reset",
+			value: 100,
+			feature_id: "messages",
+		});
+	});
+
+	test("the type is part of the id, so a shared key never collides", () => {
+		const ids = (["deduct", "grant", "reset"] as const).map((type) =>
+			buildShadowEventId({ ...BASE_PARAMS, type }),
+		);
+
+		expect(new Set(ids).size).toBe(3);
+		// The deduct id is unchanged by grants and resets existing: it is still
+		// the digest under the original prefix.
+		expect(ids[0].startsWith("shd_")).toBeTrue();
+		expect(ids[1].startsWith("shg_")).toBeTrue();
+		expect(ids[2].startsWith("shr_")).toBeTrue();
+		expect(ids[1].slice(4)).toBe(ids[0].slice(4));
+	});
+
+	test("a reset back to zero cannot be represented and is dropped", () => {
+		// The v1 schema demands a positive value; the fold ignores it for resets,
+		// so nothing is lost beyond the event itself.
+		expect(
+			buildShadowEvent({ ...BASE_PARAMS, type: "reset", value: 0 }),
+		).toBeNull();
 	});
 
 	test("refunds and empty identifiers never become events", () => {
-		expect(buildShadowDeductEvent({ ...BASE_PARAMS, value: 0 })).toBeNull();
-		expect(buildShadowDeductEvent({ ...BASE_PARAMS, value: -5 })).toBeNull();
-		expect(
-			buildShadowDeductEvent({ ...BASE_PARAMS, value: Number.NaN }),
-		).toBeNull();
-		expect(buildShadowDeductEvent({ ...BASE_PARAMS, orgId: "" })).toBeNull();
-		expect(
-			buildShadowDeductEvent({ ...BASE_PARAMS, idempotencyKey: "" }),
-		).toBeNull();
+		expect(buildShadowEvent({ ...BASE_PARAMS, value: 0 })).toBeNull();
+		expect(buildShadowEvent({ ...BASE_PARAMS, value: -5 })).toBeNull();
+		expect(buildShadowEvent({ ...BASE_PARAMS, value: Number.NaN })).toBeNull();
+		expect(buildShadowEvent({ ...BASE_PARAMS, orgId: "" })).toBeNull();
+		expect(buildShadowEvent({ ...BASE_PARAMS, idempotencyKey: "" })).toBeNull();
 	});
 });
 
@@ -237,11 +293,13 @@ describe("shadow tap configuration", () => {
 		).toBeNull();
 	});
 
-	test("shadowTapDeduct is a no-op when the tap is disabled", async () => {
+	test("every tap helper is a no-op when the tap is disabled", async () => {
 		await resetShadowTapForTests();
 
-		expect(() => shadowTapDeduct(BASE_PARAMS)).not.toThrow();
-		expect(shadowTapDeduct(BASE_PARAMS)).toBeUndefined();
+		for (const tap of [shadowTapDeduct, shadowTapGrant, shadowTapReset]) {
+			expect(() => tap(BASE_MUTATION)).not.toThrow();
+			expect(tap(BASE_MUTATION)).toBeUndefined();
+		}
 	});
 
 	test("an edge config that has not loaded yet keeps the tap a no-op", async () => {
@@ -277,9 +335,7 @@ describe("shadow tap configuration", () => {
 		tap.record(BASE_PARAMS);
 		await tap.flushPending();
 
-		expect(sentEventIds({ sent })).toEqual([
-			buildShadowDeductEventId(BASE_PARAMS),
-		]);
+		expect(sentEventIds({ sent })).toEqual([buildShadowEventId(BASE_PARAMS)]);
 	});
 });
 
@@ -323,9 +379,7 @@ describe("shadow tap delivery", () => {
 
 		await tap.flushPending();
 
-		expect(sentEventIds({ sent })).toEqual([
-			buildShadowDeductEventId(BASE_PARAMS),
-		]);
+		expect(sentEventIds({ sent })).toEqual([buildShadowEventId(BASE_PARAMS)]);
 		expect(
 			isOrgTapped({
 				enablement: BASE_CONFIG.readEnablement(),
@@ -374,7 +428,7 @@ describe("shadow tap delivery", () => {
 		// Oldest dropped, newest retained.
 		expect(
 			ids.has(
-				buildShadowDeductEventId({
+				buildShadowEventId({
 					...BASE_PARAMS,
 					idempotencyKey: "track:req_0",
 				}),
@@ -382,7 +436,7 @@ describe("shadow tap delivery", () => {
 		).toBeFalse();
 		expect(
 			ids.has(
-				buildShadowDeductEventId({
+				buildShadowEventId({
 					...BASE_PARAMS,
 					idempotencyKey: `track:req_${SHADOW_TAP_QUEUE_CAPACITY + overflowBy - 1}`,
 				}),
@@ -449,5 +503,118 @@ describe("shadow tap delivery", () => {
 		expect(tap.isDisabled).toBeTrue();
 		expect(warnings).toHaveLength(1);
 		expect(() => tap.record(BASE_PARAMS)).not.toThrow();
+	});
+});
+
+describe("msk signer credentials", () => {
+	test("a task definition is detected from either container env var", () => {
+		expect(
+			hasContainerCredentials({
+				env: { AWS_CONTAINER_CREDENTIALS_RELATIVE_URI: "/v2/credentials/abc" },
+			}),
+		).toBeTrue();
+		expect(
+			hasContainerCredentials({
+				env: { AWS_CONTAINER_CREDENTIALS_FULL_URI: "http://169.254.170.2/x" },
+			}),
+		).toBeTrue();
+	});
+
+	test("local dev has neither, so the default chain still applies", () => {
+		expect(hasContainerCredentials({ env: {} })).toBeFalse();
+		expect(
+			hasContainerCredentials({
+				env: { AWS_CONTAINER_CREDENTIALS_RELATIVE_URI: "  " },
+			}),
+		).toBeFalse();
+	});
+
+	test("both branches produce a provider without dialling anything", () => {
+		for (const env of [
+			{},
+			{ AWS_CONTAINER_CREDENTIALS_RELATIVE_URI: "/v2/credentials/abc" },
+		]) {
+			expect(
+				typeof createMskOauthBearerProvider({ region: "us-east-1", env }),
+			).toBe("function");
+		}
+	});
+});
+
+describe("shadow tap introspection", () => {
+	test("an untouched tap reports idle with nothing mirrored", () => {
+		const { producer } = createFakeProducer();
+		const tap = trackTap(createTap({ producer }));
+
+		expect(tap.status).toEqual({
+			producerState: "idle",
+			queueDepth: 0,
+			dropped: 0,
+			mirrored: 0,
+			lastError: null,
+			lastSendAt: null,
+		});
+	});
+
+	test("a successful flush reports connected, the count, and a send time", async () => {
+		const { producer } = createFakeProducer();
+		const tap = trackTap(createTap({ producer }));
+
+		tap.record(BASE_PARAMS);
+		tap.record({ ...BASE_PARAMS, type: "grant", value: 100 });
+		await tap.flushPending();
+
+		const status = tap.status;
+		expect(status.producerState).toBe("connected");
+		expect(status.mirrored).toBe(2);
+		expect(status.dropped).toBe(0);
+		expect(status.lastError).toBeNull();
+		expect(Number.isNaN(Date.parse(status.lastSendAt ?? ""))).toBeFalse();
+	});
+
+	test("a broken producer surfaces the error even when the warn is rate limited", async () => {
+		const warnings: ShadowTapWarning[] = [];
+		const { producer } = createFakeProducer({ failSend: true });
+		const tap = trackTap(createTap({ producer, warnings }));
+
+		for (let index = 0; index < 3; index++) {
+			tap.record({ ...BASE_PARAMS, idempotencyKey: `track:req_${index}` });
+			await tap.flushPending();
+		}
+
+		expect(warnings).toHaveLength(1);
+		expect(tap.status.dropped).toBe(3);
+		expect(tap.status.mirrored).toBe(0);
+		expect(tap.status.lastError).toContain("send boom");
+		expect(tap.status.lastSendAt).toBeNull();
+	});
+
+	test("a disabled tap reports disabled", async () => {
+		const { producer } = createFakeProducer({ failConnect: true });
+		const tap = trackTap(createTap({ producer }));
+
+		tap.record(BASE_PARAMS);
+		await tap.flushPending();
+
+		expect(tap.status.producerState).toBe("disabled");
+		expect(tap.status.lastError).toContain("connect boom");
+	});
+
+	test("the process-level accessor always answers the documented shape", async () => {
+		await resetShadowTapForTests();
+
+		const status = getShadowTapRuntimeStatus();
+
+		expect(Object.keys(status).sort()).toEqual([
+			"dropped",
+			"lastError",
+			"lastSendAt",
+			"mirrored",
+			"producerState",
+			"queueDepth",
+			"tapBuilt",
+		]);
+		expect(typeof status.tapBuilt).toBe("boolean");
+		expect(["idle", "connected", "disabled"]).toContain(status.producerState);
 	});
 });

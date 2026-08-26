@@ -2,6 +2,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { ResetCusEntParam } from "@/internal/balances/utils/sql/client.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
+import { shadowTapReset } from "@/internal/metering/shadow/shadowTap.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import type { RolloverClearingInfo } from "../resetCustomerEntitlements/applyResetResults.js";
 
@@ -20,6 +21,39 @@ interface SubjectBalanceUpdate {
 	new_replaceables: unknown[] | null;
 	deleted_replaceable_ids: string[] | null;
 }
+
+/** Shadow only: mirrors the resets the Lua reported as applied, keyed by the
+ *  cycle anchor it CAS'd against. That pair is stable across a retry of the
+ *  same lazy reset — the second attempt CASes against the same old anchor and
+ *  is skipped, so a replay never mints a second event id. Fire-and-forget by
+ *  construction; it cannot fail the reset. */
+const mirrorResetsToMeteringShadow = ({
+	ctx,
+	customerId,
+	featureId,
+	updates,
+	applied,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	featureId: string;
+	updates: SubjectBalanceUpdate[];
+	applied: Record<string, boolean>;
+}): void => {
+	for (const update of updates) {
+		if (!applied[update.cus_ent_id]) continue;
+		if (update.balance === null) continue;
+
+		shadowTapReset({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+			featureId,
+			value: update.balance,
+			idempotencyKey: `cus_ent:${update.cus_ent_id}:reset:${update.expected_next_reset_at ?? "none"}`,
+		});
+	}
+};
 
 /**
  * Patches shared FullSubject balance hashes after a lazy reset.
@@ -87,8 +121,12 @@ export const resetSubjectCache = async ({
 
 		if (Object.keys(updatesByFeatureId).length === 0) return;
 
+		// Kept as an array so a pipeline result can be mapped back to the feature
+		// (and the updates) that produced it; `exec` answers in queue order.
+		const queued = Object.entries(updatesByFeatureId);
+
 		const pipeline = redisV2.pipeline();
-		for (const [featureId, updates] of Object.entries(updatesByFeatureId)) {
+		for (const [featureId, updates] of queued) {
 			const balanceKey = buildSharedFullSubjectBalanceKey({
 				orgId: org.id,
 				env,
@@ -107,7 +145,7 @@ export const resetSubjectCache = async ({
 		const pipelineResults = await tryRedisWrite(() => pipeline.exec(), redisV2);
 
 		if (pipelineResults) {
-			for (const [, resultRaw] of pipelineResults) {
+			for (const [index, [, resultRaw]] of pipelineResults.entries()) {
 				if (typeof resultRaw !== "string") continue;
 				try {
 					const parsed = JSON.parse(resultRaw) as {
@@ -120,6 +158,17 @@ export const resetSubjectCache = async ({
 							`[resetSubjectCache] Lua logs:\n${parsed.logs.join("\n")}`,
 						);
 					}
+
+					const [featureId, updates] = queued[index] ?? [];
+					if (!featureId || !updates) continue;
+
+					mirrorResetsToMeteringShadow({
+						ctx,
+						customerId,
+						featureId,
+						updates,
+						applied: parsed.applied ?? {},
+					});
 				} catch {}
 			}
 		}

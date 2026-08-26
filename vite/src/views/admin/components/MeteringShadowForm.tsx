@@ -184,6 +184,39 @@ export const MeteringShadowForm = ({
 
 				<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
 					<Separator />
+					<div className="flex flex-col gap-1">
+						<div className="text-xs font-medium uppercase text-tertiary-foreground">
+							This server's tap
+						</div>
+						<div className="flex flex-wrap items-center gap-2">
+							<Badge variant="muted">
+								{config.runtime.tapBuilt
+									? `Producer ${config.runtime.producerState}`
+									: "No tap built"}
+							</Badge>
+							<span className="tabular-nums">
+								{config.runtime.mirrored} mirrored · {config.runtime.dropped}{" "}
+								dropped · {config.runtime.queueDepth} queued
+							</span>
+							{config.runtime.lastSendAt && (
+								<span className="tabular-nums">
+									Last send:{" "}
+									{new Date(config.runtime.lastSendAt).toLocaleString()}
+								</span>
+							)}
+						</div>
+						{config.runtime.lastError && (
+							<p className="text-pretty text-destructive">
+								{config.runtime.lastError}
+							</p>
+						)}
+						<p className="text-pretty">
+							Counters come from whichever server answered this request, so a
+							zero is not fleet-wide.
+						</p>
+					</div>
+
+					<Separator />
 					<div className="flex flex-wrap items-center gap-2">
 						<Badge variant="muted">
 							{config.configHealthy ? "Config healthy" : "Config unavailable"}
