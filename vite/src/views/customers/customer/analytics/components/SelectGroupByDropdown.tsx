@@ -29,6 +29,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
+import { groupValueLabel } from "../utils/displayLabels";
 
 export const SelectGroupByDropdown = ({
 	propertyKeys,
@@ -393,12 +394,11 @@ export const SelectGroupByDropdown = ({
 									<DropdownMenuSeparator />
 									<div className="max-h-64 overflow-y-auto overflow-x-visible">
 										{availableGroupValues.map((value: string) => {
-											const displayValue =
-												value === "AUTUMN_RESERVED"
-													? "Other values"
-													: value === ""
-														? "No plan"
-														: (planNames?.[value] ?? value);
+											const displayValue = groupValueLabel({
+												groupValue: value,
+												groupBy: "plan_id",
+												planNames,
+											});
 											const isChecked = !planDeselected?.has(value);
 											const wouldDeselectLast =
 												isChecked && selectedPlanCount === 1;
@@ -450,14 +450,12 @@ export const SelectGroupByDropdown = ({
 										)}
 									</DropdownMenuItem>
 									{availableGroupValues.map((value: string) => {
-										const displayValue =
-											value === "AUTUMN_RESERVED"
-												? "Other values"
-												: currentGroupBy === "entity_id"
-													? (entityNames?.[value] ?? value)
-													: currentGroupBy === "customer_id"
-														? (customerNames?.[value] ?? value)
-														: value;
+										const displayValue = groupValueLabel({
+											groupValue: value,
+											groupBy: currentGroupBy,
+											entityNames,
+											customerNames,
+										});
 										return (
 											<DropdownMenuItem
 												key={value}

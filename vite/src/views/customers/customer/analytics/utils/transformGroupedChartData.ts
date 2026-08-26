@@ -1,18 +1,32 @@
-import type { Feature } from "@autumn/shared";
+import type {
+	CustomerDisplayInfo,
+	EntityDisplayInfo,
+	Feature,
+} from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
 import type { EventRow, EventsData } from "../components/analytics-types";
 import { CUSTOMER_BALANCE_SUFFIX } from "./deductionsToEventsData";
+import {
+	entityDisplayLabel,
+	groupValueLabel,
+	RESERVED_GROUP,
+} from "./displayLabels";
 
 /**
  * Chart series configuration
  */
-interface ChartSeriesConfig {
+export interface ChartSeriesConfig {
 	xKey: string;
 	yKey: string;
 	type: "bar";
 	stacked: boolean;
 	yName: string;
 	fill: string;
+	/** Set only when grouping by customer, for a real customer id. */
+	customerId?: string;
+	/** Both set only when grouping by entity and the owning customer resolved. */
+	entityId?: string;
+	entityCustomerId?: string;
 }
 
 /**
@@ -243,8 +257,8 @@ export function generateChartConfig({
 	features: Feature[];
 	groupBy: string | null;
 	originalColors: string[];
-	entityNames?: Record<string, string>;
-	customerNames?: Record<string, string>;
+	entityNames?: Record<string, EntityDisplayInfo>;
+	customerNames?: Record<string, CustomerDisplayInfo>;
 	planNames?: Record<string, string>;
 }): ChartSeriesConfig[] {
 	const colorsToUse = groupBy ? CHART_COLORS : originalColors;
@@ -277,26 +291,41 @@ export function generateChartConfig({
 		const { featureKey, groupValue } = parsed;
 
 		const featureName = getFeatureName({ key: featureKey, features });
+		// Spillover series are the base entity's, tagged with a display suffix.
+		const isSpilloverSeries =
+			groupBy === "entity_id" && groupValue.endsWith(CUSTOMER_BALANCE_SUFFIX);
+		const baseEntityId = isSpilloverSeries
+			? groupValue.slice(0, -CUSTOMER_BALANCE_SUFFIX.length)
+			: groupValue;
+
 		let displayGroupValue: string;
-		if (groupValue === "AUTUMN_RESERVED") {
-			displayGroupValue = "Other values";
-		} else if (groupBy === "plan_id" && groupValue === "") {
-			displayGroupValue = "No plan";
-		} else if (
-			groupBy === "entity_id" &&
-			groupValue.endsWith(CUSTOMER_BALANCE_SUFFIX)
-		) {
-			const base = groupValue.slice(0, -CUSTOMER_BALANCE_SUFFIX.length);
-			displayGroupValue = `${entityNames?.[base] ?? base}${CUSTOMER_BALANCE_SUFFIX}`;
-		} else if (groupBy === "entity_id" && entityNames?.[groupValue]) {
-			displayGroupValue = entityNames[groupValue];
-		} else if (groupBy === "customer_id" && customerNames?.[groupValue]) {
-			displayGroupValue = customerNames[groupValue];
-		} else if (groupBy === "plan_id" && planNames?.[groupValue]) {
-			displayGroupValue = planNames[groupValue];
+		if (isSpilloverSeries) {
+			displayGroupValue = `${entityDisplayLabel({
+				entityId: baseEntityId,
+				entityNames,
+			})}${CUSTOMER_BALANCE_SUFFIX}`;
 		} else {
-			displayGroupValue = groupValue;
+			displayGroupValue = groupValueLabel({
+				groupValue,
+				groupBy,
+				entityNames,
+				customerNames,
+				planNames,
+			});
 		}
+
+		const isRealCustomerGroup =
+			groupBy === "customer_id" &&
+			groupValue !== "" &&
+			groupValue !== RESERVED_GROUP;
+
+		const isRealEntityGroup =
+			groupBy === "entity_id" &&
+			baseEntityId !== "" &&
+			baseEntityId !== RESERVED_GROUP;
+		const entityCustomerId = isRealEntityGroup
+			? (entityNames?.[baseEntityId]?.internal_customer_id ?? undefined)
+			: undefined;
 
 		config.push({
 			xKey: "period",
@@ -305,6 +334,9 @@ export function generateChartConfig({
 			stacked: true,
 			yName: `${featureName} (${displayGroupValue})`,
 			fill: colorsToUse[colorIndex % colorsToUse.length],
+			customerId: isRealCustomerGroup ? groupValue : undefined,
+			entityId: entityCustomerId ? baseEntityId : undefined,
+			entityCustomerId,
 		});
 
 		colorIndex++;
