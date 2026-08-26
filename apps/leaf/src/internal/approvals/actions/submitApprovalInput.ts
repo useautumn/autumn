@@ -8,6 +8,7 @@ import {
 import { submitAgentInput } from "../../agentRuntime/actions/submitAgentInput/submitAgentInput.js";
 import type { ResumedAgentTurn } from "../../agentRuntime/actions/submitAgentInput/types.js";
 import { getEveSessionBySessionId } from "../../agentRuntime/eve/repo.js";
+import { rawErrorShapeText } from "../../autumnMcp/errorResult.js";
 import {
 	approvalAuthContext,
 	childSessionIdsOf,
@@ -161,10 +162,19 @@ export const submitApprovalInput = async ({
 		expectExecution &&
 		(deferredEmptyTurn || (settled && approvedWriteUnverified && !text));
 	if (expectExecution && approvedWriteFailed) {
+		const failedWrite = writes.find((write) => write.status === "failed");
 		logger.error("Approved Eve action failed", undefined, {
 			event: "leaf.eve_approval_failed",
 			approval_id: approval.id,
-			data: approvalLogData,
+			data: {
+				...approvalLogData,
+				failed_tool: failedWrite?.toolName,
+				failure: rawErrorShapeText(failedWrite?.result),
+				writes: writes.map((write) => ({
+					status: write.status,
+					tool: write.toolName,
+				})),
+			},
 		});
 		return {
 			chainedApprovalId,
