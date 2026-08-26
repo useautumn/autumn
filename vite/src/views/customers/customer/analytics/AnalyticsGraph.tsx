@@ -130,6 +130,9 @@ export const EventsBarChart = memo(function EventsBarChart({
 	const pinnedAnchorRef = useRef<{ clientX: number; clientY: number } | null>(
 		null,
 	);
+	// What `hoveredKey` would be if a pin were not freezing it — a re-pin reads
+	// this so it adopts the segment the cursor is actually over.
+	const liveHoveredKeyRef = useRef<string | null>(null);
 
 	const resolveAnchor = useCallback(() => {
 		if (pinnedAnchorRef.current) return pinnedAnchorRef.current;
@@ -202,12 +205,14 @@ export const EventsBarChart = memo(function EventsBarChart({
 	// in this setup, which is exactly the bug this replaces.
 	const handleBarMouseEnter = useCallback(
 		(dataKey: string) => () => {
+			liveHoveredKeyRef.current = dataKey;
 			if (pinned) return;
 			startTransition(() => setHoveredKey(dataKey));
 		},
 		[pinned],
 	);
 	const handleBarMouseLeave = useCallback(() => {
+		liveHoveredKeyRef.current = null;
 		if (pinned) return;
 		startTransition(() => setHoveredKey(null));
 	}, [pinned]);
@@ -254,17 +259,22 @@ export const EventsBarChart = memo(function EventsBarChart({
 			const row = resolveRowAt(e.clientX - rect.left);
 			if (!row) return;
 			pinnedAnchorRef.current = { clientX: e.clientX, clientY: e.clientY };
-			// hoveredKey is deliberately left alone: the pin must show exactly what
-			// the hover tooltip showed — one segment, or the stack from empty space.
+			// The pin must show exactly what the hover tooltip showed — one segment,
+			// or the whole stack when the click landed on empty column space.
+			setHoveredKey(liveHoveredKeyRef.current);
 			setActiveRow(row);
 			setPinned(true);
+			// Re-pinning to the same row and segment changes no state, so the
+			// reposition effect would not fire and the card would sit at the old anchor.
+			positionTooltip();
 		},
-		[resolveRowAt],
+		[positionTooltip, resolveRowAt],
 	);
 
 	const unpin = useCallback(() => {
 		pinnedAnchorRef.current = null;
 		lastMousePos.current = null;
+		liveHoveredKeyRef.current = null;
 		setPinned(false);
 		setHoveredKey(null);
 		setActiveRow(null);
@@ -275,6 +285,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 		setHoveredKey(null);
 		setActiveRow(null);
 		lastMousePos.current = null;
+		liveHoveredKeyRef.current = null;
 	}, [pinned]);
 
 	// The tooltip is fixed in viewport coords; scrolling moves the chart out
