@@ -831,6 +831,35 @@ describe("approval details modal", () => {
 });
 
 describe("approval status card", () => {
+	test("a mixed resolved group keeps the primary's applied marker", () => {
+		const card = approvalStatusCard({
+			status: "approved",
+			env: AppEnv.Sandbox,
+			toolName: "updateCustomer",
+			toolArgs: {
+				_eveWithheldWrites: [
+					{
+						input: { request: { customer_id: "cus_1", plan_id: "pro" } },
+						requestId: "req_2",
+						toolName: "autumn__attach",
+					},
+					{
+						input: { request: { customer_id: "cus_2", plan_id: "pro" } },
+						requestId: "req_3",
+						toolName: "autumn__attach",
+					},
+				],
+				request: { customer_id: "cus_1", name: "Renamed" },
+			},
+			actorId: "U1",
+			result: { result: wrapMcpResult({ customer_id: "cus_1" }) },
+		});
+
+		const json = JSON.stringify(card);
+		// Primary marker plus one per withheld write — nothing reads as unapplied.
+		expect(json.split("✅").length - 1).toBe(3);
+	});
+
 	test("shows no progress line until the action reports progress", () => {
 		const card = approvalStatusCard({
 			status: "running",
@@ -1327,6 +1356,30 @@ describe("homogeneous fan-out", () => {
 		expect(rendered).not.toContain("Due now");
 		expect(rendered).not.toContain("Total");
 		expect(rendered).not.toContain("$0.00");
+	});
+
+	test("grouped catalog writes keep their structured sections", () => {
+		const catalogStep = (planId: string) => ({
+			input: { request: { plans: [{ items: [], plan_id: planId }] } },
+			requestId: `req_${planId}`,
+			toolName: "autumn__updateCatalog",
+		});
+		const card = approvalCard({
+			id: "fanout-catalog",
+			env: AppEnv.Sandbox,
+			toolArgs: {
+				_eveWithheldWrites: [catalogStep("growth"), catalogStep("scale")],
+				request: { plans: [{ items: [], plan_id: "launch" }] },
+			},
+			toolName: "updateCatalog",
+		});
+
+		const rendered = JSON.stringify(cardToBlockKit(card));
+		expect(rendered).not.toContain("3 customers");
+		// One titled section per grouped write, not one fan-out row.
+		expect(rendered.split("Update catalog").length - 1).toBeGreaterThanOrEqual(
+			2,
+		);
 	});
 
 	test("fan-out rows render every field kind: sets, clears, objects, overflow", () => {

@@ -733,7 +733,7 @@ const approvalTitle = ({
 	toolName: string;
 }) => {
 	const fallback = toolLabel(toolName);
-	if (!["updateCatalog", "updatePlan"].includes(normalizeToolName(toolName))) {
+	if (!CATALOG_TOOLS.has(normalizeToolName(toolName))) {
 		return fallback;
 	}
 	const { plan, planName } = catalogApprovalContext(preview);
@@ -885,6 +885,8 @@ const BILLING_ACTION_TOOLS = new Set([
 	"updateSubscription",
 ]);
 
+const CATALOG_TOOLS = new Set(["updateCatalog", "updatePlan"]);
+
 /** A homogeneous group shows one heading and one row per target instead of
  * repeating the whole body. */
 const isHomogeneousGroup = ({
@@ -899,6 +901,18 @@ const isHomogeneousGroup = ({
 		(write) =>
 			normalizeToolName(write.toolName) === normalizeToolName(toolName),
 	);
+
+/** Catalog writes carry structured previews a fan-out row cannot hold, so a
+ * grouped catalog card keeps a titled section per write. */
+const rendersAsFanOut = ({
+	writes,
+	toolName,
+}: {
+	writes: ReadonlyArray<{ toolName: string }>;
+	toolName: string;
+}) =>
+	isHomogeneousGroup({ writes, toolName }) &&
+	!CATALOG_TOOLS.has(normalizeToolName(toolName));
 
 const writeTotal = (preview?: unknown) =>
 	getNumber(getPreviewBody(preview).total) ?? 0;
@@ -1035,7 +1049,7 @@ const approvalBodyBlocks = ({
 	toolName: string;
 }): CardChild[] => {
 	const groupedWrites = writes ?? withheldWritesFromToolArgs(toolArgs);
-	if (isHomogeneousGroup({ writes: groupedWrites, toolName })) {
+	if (rendersAsFanOut({ writes: groupedWrites, toolName })) {
 		return fanOutBlocks({
 			env,
 			preview,
@@ -1509,7 +1523,7 @@ export const approvalCard = ({
 	const editable = normalizeToolName(toolName) === "attach";
 	const groupedWrites = writes ?? withheldWritesFromToolArgs(toolArgs);
 
-	const fanOut = isHomogeneousGroup({
+	const fanOut = rendersAsFanOut({
 		writes: groupedWrites,
 		toolName,
 	});
@@ -1758,18 +1772,10 @@ export const approvalStatusCard = ({
 		});
 	}
 
-	// A mixed group already states each write with its own marker; the card-level
-	// line would just repeat the first one.
-	const resolvedWrites =
-		groupedWrites ?? withheldWritesFromToolArgs(toolArgs) ?? [];
-	const groupStatesEachWrite =
-		resolvedWrites.length > 1 &&
-		!isHomogeneousGroup({ writes: resolvedWrites, toolName });
-
 	return Card({
 		title: approvalTitle({ preview, toolName }),
 		children: [
-			...(groupStatesEachWrite ? [] : [CardText(`✅ ${phrases.done}`)]),
+			CardText(`✅ ${phrases.done}`),
 			...resolvedBody,
 			...(outcome.lines.length ? [CardText(outcome.lines.join("\n"))] : []),
 			...(outcome.links.length || dashboardUrl
