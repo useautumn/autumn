@@ -143,7 +143,7 @@ export function SendInvoiceStage({
 	const [enableImmediately, setEnableImmediately] = useState(true);
 	const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
 		templateId: null,
-		netTermsDays: org?.config?.default_net_terms_days ?? DEFAULT_NET_TERMS_DAYS,
+		netTermsDays: null,
 	});
 	const [completedInvoiceUrl, setCompletedInvoiceUrl] = useState<string | null>(
 		null,
@@ -177,15 +177,18 @@ export function SendInvoiceStage({
 
 	const buildSubmitParams = (
 		finalizeInvoice: boolean,
-	): SendInvoiceSubmitParams => ({
-		enableProductImmediately: enableImmediately,
-		finalizeInvoice,
-		invoiceTemplateId: invoiceSettings.templateId ?? undefined,
-		netTermsDays:
-			invoiceSettings.netTermsDays > 0
-				? invoiceSettings.netTermsDays
-				: undefined,
-	});
+	): SendInvoiceSubmitParams => {
+		const resolvedNetTermsDays =
+			invoiceSettings.netTermsDays ??
+			org?.config?.default_net_terms_days ??
+			DEFAULT_NET_TERMS_DAYS;
+		return {
+			enableProductImmediately: enableImmediately,
+			finalizeInvoice,
+			invoiceTemplateId: invoiceSettings.templateId ?? undefined,
+			netTermsDays: resolvedNetTermsDays > 0 ? resolvedNetTermsDays : undefined,
+		};
+	};
 
 	const handleDraft = async () => {
 		setActiveAction("draft");
@@ -311,6 +314,7 @@ export function SendInvoiceStage({
 				value={invoiceSettings}
 				onChange={setInvoiceSettings}
 				disabled={needsEmail}
+				defaultNetTermsDays={org?.config?.default_net_terms_days}
 			/>
 
 			<PreviewSection previewQuery={previewQuery} />
