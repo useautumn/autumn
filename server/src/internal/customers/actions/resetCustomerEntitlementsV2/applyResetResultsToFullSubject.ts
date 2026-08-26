@@ -76,6 +76,7 @@ export const applyResetResultsToFullSubject = async ({
 			original.additional_balance = updates.additional_balance;
 		original.adjustment = updates.adjustment;
 		if (updates.entities !== null) original.entities = updates.entities;
+		original.usage_attribution = updates.usage_attribution;
 		original.next_reset_at = updates.next_reset_at;
 
 		if (!result.rolloverInsert) continue;
@@ -126,6 +127,7 @@ export const applyResetResultsToNormalized = ({
 			subjectBalance.additional_balance = updates.additional_balance;
 		subjectBalance.adjustment = updates.adjustment;
 		if (updates.entities !== null) subjectBalance.entities = updates.entities;
+		subjectBalance.usage_attribution = updates.usage_attribution;
 		subjectBalance.next_reset_at = updates.next_reset_at;
 		if (result.pooledGranted !== undefined && subjectBalance.pooled_balance) {
 			subjectBalance.pooled_balance.granted = result.pooledGranted;

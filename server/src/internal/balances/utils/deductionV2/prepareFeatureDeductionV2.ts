@@ -140,11 +140,14 @@ export const prepareFeatureDeductionV2 = ({
 	const getCreditCostForEnt = computeCreditCosts({
 		cusEnts: customerEntitlements,
 		deduction,
+		catalogFeatures: ctx.features,
 	});
 
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
 		customerEntitlements.map((customerEntitlement) => {
-			const creditCost = getCreditCostForEnt(customerEntitlement.id);
+			const { creditCost, rateCard } = getCreditCostForEnt(
+				customerEntitlement.id,
+			);
 
 			const maxOverage = getMaxOverage({
 				cusEnt: customerEntitlement,
@@ -182,6 +185,7 @@ export const prepareFeatureDeductionV2 = ({
 			return {
 				customer_entitlement_id: customerEntitlement.id,
 				credit_cost: creditCost,
+				...(rateCard ? { rate_card: rateCard } : {}),
 				feature_id: customerEntitlement.entitlement.feature.id,
 				entity_feature_id:
 					customerEntitlement.entitlement.entity_feature_id ?? null,
@@ -210,10 +214,13 @@ export const prepareFeatureDeductionV2 = ({
 	}
 
 	const rolloverArrays = customerEntitlements.map((customerEntitlement) => {
-		const creditCost = getCreditCostForEnt(customerEntitlement.id);
+		const { creditCost, rateCard } = getCreditCostForEnt(
+			customerEntitlement.id,
+		);
 		return (customerEntitlement.rollovers || []).map((rollover) => ({
 			...rollover,
 			credit_cost: creditCost,
+			...(rateCard ? { rate_card: rateCard } : {}),
 		}));
 	});
 
@@ -267,6 +274,7 @@ export const prepareFeatureDeductionV2 = ({
 		rollovers: sortedRollovers.map((rollover) => ({
 			id: rollover.id,
 			credit_cost: rollover.credit_cost,
+			...(rollover.rate_card ? { rate_card: rollover.rate_card } : {}),
 		})),
 		lock: preparedLock,
 	};

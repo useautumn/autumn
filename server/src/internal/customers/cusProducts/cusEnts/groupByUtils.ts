@@ -1,10 +1,15 @@
-import type { EntityBalance, FullCustomerEntitlement } from "@autumn/shared";
+import type {
+	EntityBalance,
+	FullCustomerEntitlement,
+	UsageAttribution,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { notNullish } from "@/utils/genUtils.js";
 
-export type ResetBalancesUpdate =
+export type ResetBalancesUpdate = (
 	| { entities: Record<string, EntityBalance> }
-	| { balance: number; additional_balance: number; adjustment: number };
+	| { balance: number; additional_balance: number; adjustment: number }
+) & { usage_attribution: UsageAttribution };
 
 /** Returns the overage amount to deduct: max(0, -balance). */
 const computeOverageDeduction = ({ balance }: { balance: number }): Decimal => {
@@ -42,7 +47,7 @@ export const getResetBalancesUpdate = ({
 			newEntities[entityId].balance = entityResetBalance;
 			newEntities[entityId].adjustment = 0;
 		}
-		return { entities: newEntities };
+		return { entities: newEntities, usage_attribution: {} };
 	}
 
 	let resetBalance = newBalance;
@@ -57,5 +62,6 @@ export const getResetBalancesUpdate = ({
 		balance: resetBalance,
 		additional_balance: 0,
 		adjustment: 0,
+		usage_attribution: {},
 	};
 };

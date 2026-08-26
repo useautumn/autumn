@@ -2,15 +2,19 @@ import {
 	apiBalanceToAllowed,
 	CheckResponseV3Schema,
 	FeatureType,
+	orgToInStatuses,
 } from "@autumn/shared";
-import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getCreditRateRequiredBalance } from "@/internal/features/creditSystemUtils.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 
 export const getCheckResponseV2 = async ({
+	ctx,
 	checkData,
 	requiredBalance,
 	properties,
 }: {
+	ctx: AutumnContext;
 	checkData: CheckDataV2;
 	requiredBalance: number;
 	properties?: Record<string, unknown> | null;
@@ -31,10 +35,13 @@ export const getCheckResponseV2 = async ({
 		featureToUse.type === FeatureType.CreditSystem &&
 		featureToUse.id !== originalFeature.id
 	) {
-		requiredBalance = featureToCreditSystem({
-			featureId: originalFeature.id,
+		requiredBalance = getCreditRateRequiredBalance({
+			fullSubject: checkData.fullSubject,
+			sourceFeature: originalFeature,
 			creditSystem: featureToUse,
 			amount: requiredBalance,
+			reverseOrder: ctx.org.config?.reverse_deduction_order,
+			inStatuses: orgToInStatuses({ org: ctx.org }),
 		});
 	}
 

@@ -17,12 +17,27 @@ export const toApiFeature = ({ feature }: { feature: Feature }) => {
 		featureType = feature.config.usage_type;
 	}
 
-	let creditSchema: CreditSchemaItem[] | undefined;
+	let creditSchema:
+		| Array<{ metered_feature_id: string; credit_cost: number }>
+		| undefined;
 	if (feature.type === FeatureType.CreditSystem && feature.config?.schema) {
-		creditSchema = feature.config.schema.map((s: CreditSchemaItem) => ({
-			metered_feature_id: s.metered_feature_id,
-			credit_cost: s.credit_amount,
-		}));
+		const canRepresentSchema = feature.config.schema.every(
+			(item: CreditSchemaItem) =>
+				item.tier_behavior !== "graduated" &&
+				(item.feature_amount === undefined || item.feature_amount === 1),
+		);
+		if (canRepresentSchema) {
+			creditSchema = feature.config.schema.flatMap((item: CreditSchemaItem) =>
+				item.tier_behavior === "graduated"
+					? []
+					: [
+							{
+								metered_feature_id: item.metered_feature_id,
+								credit_cost: item.credit_amount,
+							},
+						],
+			);
+		}
 	}
 
 	return ApiFeatureV0Schema.parse({
@@ -33,7 +48,7 @@ export const toApiFeature = ({ feature }: { feature: Feature }) => {
 			singular: feature.display?.singular || feature.name,
 			plural: feature.display?.plural || feature.name,
 		},
-		credit_schema: creditSchema,
+		...(creditSchema === undefined ? {} : { credit_schema: creditSchema }),
 	});
 };
 

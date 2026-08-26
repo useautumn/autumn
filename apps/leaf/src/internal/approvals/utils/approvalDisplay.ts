@@ -4,7 +4,10 @@ import {
 	parsePreviewPayload,
 } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
+import { errorMessage } from "../../../lib/errorMessage.js";
+import { logger } from "../../../lib/logger.js";
 import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
+import { autumnMcpErrorText } from "../../autumnMcp/errorResult.js";
 
 const text = (value: unknown) =>
 	typeof value === "string" && value.trim() ? value.trim() : null;
@@ -122,11 +125,28 @@ export const resolveApprovalDisplay = async ({
 		customerId || planIds.length || needsFeatures ? getToken() : null;
 	const fetchRecord = (toolName: string, request: Record<string, unknown>) =>
 		token
-			?.then((value) =>
-				executeTool({ env, token: value, toolName, args: { request } }),
-			)
-			.then(parsePreviewPayload)
-			.catch(() => null);
+			?.then(async (value) => {
+				const result = await executeTool({
+					env,
+					token: value,
+					toolName,
+					args: { request },
+				});
+				const errorText = autumnMcpErrorText(result);
+				if (errorText) throw new Error(errorText);
+				return parsePreviewPayload(result);
+			})
+			.catch((error) => {
+				logger.warn("Approval display lookup failed", {
+					event: "leaf.approval_display_fetch_failed",
+					data: {
+						error: errorMessage(error).slice(0, 300),
+						request,
+						tool: toolName,
+					},
+				});
+				return null;
+			});
 	const [customer, features, plans] = await Promise.all([
 		customerId
 			? fetchRecord("getCustomer", {

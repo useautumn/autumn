@@ -1,3 +1,9 @@
+import {
+	ApiCreditSchemaItemSchema,
+	CreateFeatureV0ParamsSchema,
+	ModelMarkupsSchema,
+	ProviderMarkupsSchema,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 
 // ============ VALIDATION HELPERS ============
@@ -44,6 +50,25 @@ const ApiFeatureType = z.enum([
 	"credit_system",
 ]);
 
+const AgentFeatureType = z.enum([
+	"static",
+	"boolean",
+	"single_use",
+	"continuous_use",
+	"credit_system",
+	"ai_credit_system",
+]);
+
+export const PricingAgentFeatureInputSchema =
+	CreateFeatureV0ParamsSchema.extend({
+		type: AgentFeatureType,
+		credit_schema: z.array(ApiCreditSchemaItemSchema).nullish(),
+		invoice_credit: z.boolean().optional(),
+		model_markups: ModelMarkupsSchema.optional(),
+		default_markup: z.number().min(-100).optional(),
+		provider_markups: ProviderMarkupsSchema.optional(),
+	});
+
 const ProductItemInterval = z.enum([
 	"minute",
 	"hour",
@@ -58,55 +83,43 @@ const ProductItemInterval = z.enum([
 const UsageModel = z.enum(["prepaid", "pay_per_use"]);
 const FreeTrialDuration = z.enum(["day", "month", "year"]);
 
-const FeatureSchema = z
-	.object({
-		id: z
-			.string()
-			.describe(
-				"Unique ID for the feature (lowercase, underscores, no spaces)",
-			),
-		name: z.string().describe("Display name for the feature"),
-		type: ApiFeatureType.describe(
-			"Type: single_use for consumables, continuous_use for allocated resources, boolean for on/off",
+const FeatureSchema = PricingAgentFeatureInputSchema.extend({
+	id: z
+		.string()
+		.describe("Unique ID for the feature (lowercase, underscores, no spaces)"),
+	name: z.string().describe("Display name for the feature"),
+	type: ApiFeatureType.describe(
+		"Type: single_use for consumables, continuous_use for allocated resources, boolean for on/off",
+	),
+	display: z
+		.object({
+			singular: z
+				.string()
+				.describe(
+					"Singular form of the unit (e.g., 'message', 'credit', 'seat', 'API call')",
+				),
+			plural: z
+				.string()
+				.describe(
+					"Plural form of the unit (e.g., 'messages', 'credits', 'seats', 'API calls')",
+				),
+		})
+		.describe(
+			"REQUIRED for metered features (single_use, continuous_use, credit_system). Used for display like '100 messages' or '1 seat'.",
 		),
-		display: z
-			.object({
-				singular: z
-					.string()
-					.describe(
-						"Singular form of the unit (e.g., 'message', 'credit', 'seat', 'API call')",
-					),
-				plural: z
-					.string()
-					.describe(
-						"Plural form of the unit (e.g., 'messages', 'credits', 'seats', 'API calls')",
-					),
-			})
-			.describe(
-				"REQUIRED for metered features (single_use, continuous_use, credit_system). Used for display like '100 messages' or '1 seat'.",
-			),
-		credit_schema: z
-			.array(
-				z.object({
-					metered_feature_id: z.string(),
-					credit_cost: z.number(),
-				}),
-			)
-			.nullish(),
-	})
-	.refine(
-		(data) => {
-			if (data.type === "credit_system") {
-				return data.credit_schema && data.credit_schema.length > 0;
-			}
-			return true;
-		},
-		{
-			message:
-				"Credit system features require at least one metered feature in credit_schema.",
-			path: ["credit_schema"],
-		},
-	);
+}).refine(
+	(data) => {
+		if (data.type === "credit_system") {
+			return data.credit_schema && data.credit_schema.length > 0;
+		}
+		return true;
+	},
+	{
+		message:
+			"Credit system features require at least one metered feature in credit_schema.",
+		path: ["credit_schema"],
+	},
+);
 
 const PriceTierSchema = z.object({
 	to: z

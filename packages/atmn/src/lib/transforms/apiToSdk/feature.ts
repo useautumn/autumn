@@ -1,16 +1,38 @@
-import type { Feature, ModelMarkupEntry } from "../../../compose/models/featureModels.js";
+import type {
+	CreditSchemaItem,
+	Feature,
+	ModelMarkupEntry,
+} from "../../../compose/models/featureModels.js";
 import type { ApiFeature } from "../../api/types/feature.js";
 import { createTransformer } from "./Transformer.js";
 
 type RawApiFeature = Omit<ApiFeature, "type"> & { type: string };
 
-function mapCreditSchema(
-	api: RawApiFeature,
-): Array<{ meteredFeatureId: string; creditCost: number }> {
-	return (api.credit_schema ?? []).map((cs) => ({
-		meteredFeatureId: cs.metered_feature_id,
-		creditCost: cs.credit_cost,
-	}));
+function mapCreditSchema(api: RawApiFeature): CreditSchemaItem[] {
+	return (api.credit_schema ?? []).map((creditSchemaItem) => {
+		const base = {
+			meteredFeatureId: creditSchemaItem.metered_feature_id,
+			...(creditSchemaItem.billing_units !== undefined && {
+				billingUnits: creditSchemaItem.billing_units,
+			}),
+		};
+
+		if (creditSchemaItem.tier_behavior === "graduated") {
+			return {
+				...base,
+				tierBehavior: "graduated",
+				tiers: creditSchemaItem.tiers.map((tier) => ({
+					to: tier.to,
+					creditCost: tier.credit_cost,
+				})),
+			};
+		}
+
+		return {
+			...base,
+			creditCost: creditSchemaItem.credit_cost,
+		};
+	});
 }
 
 function mapModelMarkups(api: RawApiFeature): Record<string, ModelMarkupEntry> | undefined {

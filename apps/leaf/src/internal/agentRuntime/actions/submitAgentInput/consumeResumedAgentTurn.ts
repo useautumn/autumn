@@ -142,6 +142,7 @@ export const consumeResumedAgentTurn = async ({
 	const expectedWrites = (expectedToolNames ?? []).map((toolName) => ({
 		normalized: normalizeToolName(toolName),
 		reserved: false,
+		result: undefined as unknown,
 		status: "pending" as "applied" | "failed" | "pending",
 		toolName,
 	}));
@@ -187,6 +188,8 @@ export const consumeResumedAgentTurn = async ({
 		const step = index >= 0 ? expectedWrites[index] : undefined;
 		if (step) {
 			step.status = isFailedActionResult(event) ? "failed" : "applied";
+			const output = event.result?.output;
+			step.result = parsedResultText(output) ?? output;
 		}
 	};
 	try {
@@ -326,7 +329,8 @@ export const consumeResumedAgentTurn = async ({
 			});
 		}
 	}
-	const writes = expectedWrites.map(({ status, toolName }) => ({
+	const writes = expectedWrites.map(({ result, status, toolName }) => ({
+		result,
 		status,
 		toolName,
 	}));

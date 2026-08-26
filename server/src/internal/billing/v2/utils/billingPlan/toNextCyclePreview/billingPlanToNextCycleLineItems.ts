@@ -2,12 +2,14 @@ import {
 	type AutumnBillingPlan,
 	type BillingContext,
 	type FullCusProduct,
+	isCustomerEntitlementDueAtInvoice,
 	type LineItem,
 	ms,
 	sumValues,
 	timestampsMatch,
 } from "@autumn/shared";
 import { partitionSkippedOverageLineItems } from "@/external/stripe/webhookHandlers/common/filterSkippedOverageLineItems";
+import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { filterStripeDiscountsForNextCycle } from "@/internal/billing/v2/providers/stripe/utils/discounts/filterStripeDiscountsForNextCycle";
@@ -107,17 +109,37 @@ export const billingPlanToNextCycleLineItems = ({
 	nextCycleStart: number;
 	options?: NextCycleLineItemOptions;
 }) => {
-	const arrearLineItems = productsForUsageLineItems.flatMap(
-		(customerProduct) =>
-			customerProductToArrearLineItems({
-				ctx,
-				customerProduct,
-				billingContext: {
-					...billingContext,
-					currentEpochMs: nextCycleStart - ms.minutes(30),
-				},
-				options: { includeZeroAmounts: true },
-			}).lineItems,
+	const disableOverageBilling = shouldDisableOverageBilling({
+		org: ctx.org,
+		customerId: billingContext.fullCustomer.id,
+		customerConfig: billingContext.fullCustomer.config,
+	});
+	const arrearResults = productsForUsageLineItems.map((customerProduct) =>
+		customerProductToArrearLineItems({
+			ctx,
+			customerProduct,
+			billingContext: {
+				...billingContext,
+				currentEpochMs: nextCycleStart - ms.minutes(30),
+			},
+			filters: {
+				invoiceCreditCusEntFilter: (customerEntitlement) =>
+					isCustomerEntitlementDueAtInvoice({
+						customerEntitlement,
+						invoicePeriodEndMs: nextCycleStart,
+					}),
+			},
+			options: {
+				includeZeroAmounts: true,
+				invoiceCredits: options.chargeUsageLineItems
+					? { fullyOffsetOverage: disableOverageBilling }
+					: undefined,
+			},
+		}),
+	);
+	const arrearLineItems = arrearResults.flatMap((result) => result.lineItems);
+	const invoiceCreditLineItems = arrearResults.flatMap(
+		(result) => result.invoiceCreditLineItems,
 	);
 
 	const previewUsageLineItems = arrearLineItems.map(
@@ -146,6 +168,7 @@ export const billingPlanToNextCycleLineItems = ({
 		nextCycleAutumnLineItems = [
 			...nextCycleAutumnLineItems,
 			...billableLineItems,
+			...invoiceCreditLineItems,
 		];
 	}
 

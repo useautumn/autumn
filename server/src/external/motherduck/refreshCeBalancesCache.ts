@@ -40,16 +40,18 @@ export const getCurrentLakeMetadataLocation = async ({
 
 let inFlight: Promise<void> | null = null;
 
+/** Never throws (a failed tick must not crash the cron); returns whether the
+ * refresh actually completed so one-shot callers can fail loudly. */
 export const refreshCeBalancesCache = async ({
 	logger,
 }: {
 	logger: Logger;
-}): Promise<void> => {
+}): Promise<{ ok: boolean }> => {
 	if (inFlight) {
 		logger.info(
 			"[refreshCeBalancesCache] previous refresh still running — skipping tick",
 		);
-		return;
+		return { ok: true };
 	}
 
 	inFlight = (async () => {
@@ -148,17 +150,19 @@ export const refreshCeBalancesCache = async ({
 				metadataLocation: ceMetadataLocation,
 				durationMs: Math.round(performance.now() - startedAt),
 			},
-			"[refreshCeBalancesCache] rebuilt lake_cache.main.ce_balances",
+			"[refreshCeBalancesCache] rebuilt balance cache tables",
 		);
 	})();
 
 	try {
 		await inFlight;
+		return { ok: true };
 	} catch (error) {
 		logger.error(
 			{ type: "md_cache_refresh_failed", error: String(error) },
 			"[refreshCeBalancesCache] refresh failed",
 		);
+		return { ok: false };
 	} finally {
 		inFlight = null;
 	}

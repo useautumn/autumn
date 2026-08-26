@@ -1,6 +1,7 @@
 import {
 	addCusProductToCusEnt,
 	cusEntsToUsage,
+	ErrCode,
 	type ExistingUsages,
 	type FullCusProduct,
 	featureUtils,
@@ -8,6 +9,7 @@ import {
 	isEntityScopedCusEnt,
 	isOneOffPrepaidConsumableCustomerEntitlement,
 	isUnlimitedCusEnt,
+	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
@@ -28,13 +30,7 @@ export const cusProductToExistingUsages = ({
 
 	const cusEnts = cusProduct.customer_entitlements;
 
-	const existingUsages: Record<
-		string,
-		{
-			usage: number;
-			entityUsages: Record<string, number>;
-		}
-	> = {};
+	const existingUsages: ExistingUsages = {};
 
 	for (const cusEnt of cusEnts) {
 		if (isBooleanCusEnt({ cusEnt })) continue;
@@ -70,6 +66,36 @@ export const cusProductToExistingUsages = ({
 		}
 
 		const currentExistingUsage = existingUsages[internalFeatureId];
+
+		if (
+			carryConsumableFeature &&
+			Object.keys(cusEnt.usage_attribution ?? {}).length > 0
+		) {
+			const mergedUsageAttribution =
+				currentExistingUsage.usageAttribution ?? {};
+			for (const [sourceInternalFeatureId, attribution] of Object.entries(
+				cusEnt.usage_attribution ?? {},
+			)) {
+				const currentAttribution =
+					mergedUsageAttribution[sourceInternalFeatureId];
+				if (currentAttribution) {
+					throw new RecaseError({
+						message: `carry_over_usages cannot merge multiple attribution positions for credit feature '${cusEnt.entitlement.feature.id}'.`,
+						code: ErrCode.InvalidRequest,
+						statusCode: 400,
+						data: {
+							featureId: cusEnt.entitlement.feature.id,
+							sourceInternalFeatureId,
+						},
+					});
+				}
+				mergedUsageAttribution[sourceInternalFeatureId] = {
+					units: attribution.units,
+					credits: attribution.credits,
+				};
+			}
+			currentExistingUsage.usageAttribution = mergedUsageAttribution;
+		}
 
 		// 1. If it's entity scoped
 		if (isEntityScopedCusEnt(cusEnt)) {

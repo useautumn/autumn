@@ -24,6 +24,11 @@ import {
 import { createFeaturesFromItems } from "@server/internal/products/product-items/createFeaturesFromItems";
 import { StatusCodes } from "http-status-codes";
 import {
+	validateInvoiceCreditPooling,
+	validateInvoiceCreditPrice,
+	validateInvoiceCreditUsageBasedPricing,
+} from "@/internal/features/validateInvoiceCreditPooling.js";
+import {
 	isBooleanFeatureItem,
 	isFeatureItem,
 	isFeaturePriceItem,
@@ -67,6 +72,14 @@ const validateProductItem = ({
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
+
+	validateInvoiceCreditPooling({ feature, pooled: item.pooled });
+	validateInvoiceCreditUsageBasedPricing({
+		feature,
+		usageBased:
+			isFeaturePriceItem(item) && item.usage_model === UsageModel.PayPerUse,
+	});
+	validateInvoiceCreditPrice({ feature, item });
 
 	if (
 		item.pooled &&

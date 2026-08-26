@@ -348,6 +348,7 @@ const buildCustomerEntitlement = ({
 	internal_feature_id: entitlement.internal_feature_id,
 	unlimited: false,
 	balance,
+	usage_attribution: {},
 	created_at: now,
 	next_reset_at: now + 30 * 24 * 60 * 60 * 1000,
 	usage_allowed: false,

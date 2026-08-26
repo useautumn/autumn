@@ -1,6 +1,5 @@
 import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
-import { env } from "../../../lib/env.js";
 import { logger } from "../../../lib/logger.js";
 import { APPROVAL_SESSION_GONE_MESSAGE } from "../../../ui/messages.js";
 import { EveSessionGoneError } from "../../agentRuntime/eve/client.js";
@@ -13,6 +12,7 @@ import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import type { ApprovalRunResult, SubmittedApprovalResult } from "../types.js";
 import { approvalErrorResult } from "../utils/approvalErrors.js";
 import { executeApprovalWrites } from "./executeApprovalWrites.js";
+import { guardApprovalDrift } from "./guardApprovalDrift.js";
 import { resumeApproval } from "./resumeApproval.js";
 
 const dropEveSession = async ({ approval }: { approval: ChatApproval }) => {
@@ -54,22 +54,33 @@ const releaseClaim = async ({
 	}
 };
 
-/** Slack-surface-only: the dashboard shows a group's primary write alone, so
- * it must never execute the whole group. */
-const approvalExecutorEnabled = ({ provider }: { provider: string }) => {
-	const flag =
-		env.LEAF_APPROVAL_EXECUTOR ??
-		(process.env.NODE_ENV === "production" ? "0" : "1");
-	return flag === "1" && surfaceRendersGroup(provider);
+/** Dead-session fallback, reached only after guardApprovalDrift passed in this
+ * same resolve — Slack-only, since only a surface that rendered the group may
+ * execute it. */
+const executeWithoutSession = async ({
+	approval,
+	providerUserId,
+}: {
+	approval: ChatApproval;
+	providerUserId: string;
+}): Promise<ApprovalRunResult | undefined> => {
+	if (!surfaceRendersGroup(approval.provider ?? "")) return undefined;
+	try {
+		return await executeApprovalWrites({ approval, providerUserId });
+	} catch (error) {
+		logger.error("[chat] Dead-session write execution failed", error, {
+			event: "leaf.approval_executor_failed",
+			approval_id: approval.id,
+		});
+		return undefined;
+	}
 };
 
 export const resolveApproval = async ({
 	approval,
-	onResumed,
 	providerUserId,
 }: {
 	approval: ChatApproval;
-	onResumed?: (result: ApprovalRunResult) => Promise<void> | void;
 	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
 }): Promise<ApprovalRunResult> => {
@@ -84,19 +95,15 @@ export const resolveApproval = async ({
 		);
 	}
 
-	if (approvalExecutorEnabled({ provider: approval.provider ?? "" })) {
+	if (surfaceRendersGroup(approval.provider ?? "")) {
 		try {
-			const executed = await executeApprovalWrites({
-				approval,
-				onResumed,
-				providerUserId,
-			});
-			if (executed) return executed;
+			const drifted = await guardApprovalDrift({ approval, providerUserId });
+			if (drifted) return drifted;
 		} catch (error) {
-			// Nothing has executed when this throws (token mint / step listing),
-			// so releasing the claim is safe.
-			logger.error("[chat] Approval executor failed before executing", error, {
-				event: "leaf.approval_executor_failed",
+			// Nothing has executed when the guard throws (token mint / preview
+			// fetch), so releasing the claim is safe.
+			logger.error("[chat] Approval drift guard failed", error, {
+				event: "leaf.approval_drift_guard_failed",
 				approval_id: approval.id,
 			});
 			await releaseClaim({ approval, providerUserId });
@@ -112,19 +119,24 @@ export const resolveApproval = async ({
 		});
 	} catch (error) {
 		if (error instanceof EveSessionGoneError) {
-			// Eve lost the session this card belongs to; no retry can run it, and
-			// leaving it pending would block the thread behind a dead card.
+			// Eve lost the session this card belongs to; the deterministic
+			// executor still honors the approval from the stored writes.
 			logger.error("[chat] Approval session is gone", error, {
 				event: "leaf.approval_session_gone",
 				approval_id: approval.id,
 			});
+			await dropEveSession({ approval });
+			const executed = await executeWithoutSession({
+				approval,
+				providerUserId,
+			});
+			if (executed) return executed;
 			await chatApprovalRepo.finalize({
 				approvalId: approval.id,
 				db,
 				providerUserId,
 				status: "failed",
 			});
-			await dropEveSession({ approval });
 			return {
 				error: true,
 				message: APPROVAL_SESSION_GONE_MESSAGE,

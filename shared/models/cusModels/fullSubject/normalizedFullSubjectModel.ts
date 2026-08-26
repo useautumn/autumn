@@ -6,6 +6,7 @@ import {
 import {
 	type EntityBalance,
 	FullCustomerEntitlementSchema,
+	type UsageAttribution,
 } from "../../cusProductModels/cusEntModels/cusEntModels.js";
 import type { Replaceable } from "../../cusProductModels/cusEntModels/replaceableTable.js";
 import type { DbRollover } from "../../cusProductModels/cusEntModels/rolloverModels/rolloverTable.js";
@@ -76,6 +77,7 @@ export type SubjectBalance = {
 	feature_id: string;
 	unlimited: boolean | null;
 	balance: number;
+	usage_attribution?: UsageAttribution;
 	adjustment: number | null;
 	additional_balance: number;
 	usage_allowed: boolean | null;

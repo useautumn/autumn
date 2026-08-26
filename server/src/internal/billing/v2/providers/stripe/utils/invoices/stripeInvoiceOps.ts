@@ -151,19 +151,23 @@ export const finalizeStripeInvoice = async ({
 type CreateStripeInvoiceItemsParams = {
 	ctx: AutumnContext;
 	invoiceItems: Stripe.InvoiceItemCreateParams[];
+	idempotencyKeys?: string[];
 };
 
 export const createStripeInvoiceItems = async ({
 	ctx,
 	invoiceItems,
+	idempotencyKeys,
 }: CreateStripeInvoiceItemsParams): Promise<Stripe.InvoiceItem[]> => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
 	return Promise.all(
-		invoiceItems.map((item) =>
+		invoiceItems.map((item, index) =>
 			stripeCli.invoiceItems.create(
 				item,
-				autumnStripeRequestOptions({ source: "invoiceItems.create" }),
+				idempotencyKeys?.[index]
+					? { idempotencyKey: idempotencyKeys[index] }
+					: autumnStripeRequestOptions({ source: "invoiceItems.create" }),
 			),
 		),
 	);

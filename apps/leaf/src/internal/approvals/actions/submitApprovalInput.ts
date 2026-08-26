@@ -1,4 +1,4 @@
-import type { ChatApproval } from "@autumn/shared";
+import type { ChatApproval, ChatApprovalWrite } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
 import {
@@ -6,9 +6,9 @@ import {
 	APPROVAL_NOT_EXECUTED_MESSAGE,
 } from "../../../ui/messages.js";
 import { submitAgentInput } from "../../agentRuntime/actions/submitAgentInput/submitAgentInput.js";
-import { postEveInputResponse } from "../../agentRuntime/eve/client.js";
-import { approvalOptionIds } from "../../agentRuntime/eve/events.js";
+import type { ResumedAgentTurn } from "../../agentRuntime/actions/submitAgentInput/types.js";
 import { getEveSessionBySessionId } from "../../agentRuntime/eve/repo.js";
+import { rawErrorShapeText } from "../../autumnMcp/errorResult.js";
 import {
 	approvalAuthContext,
 	childSessionIdsOf,
@@ -21,27 +21,43 @@ import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 import type { SubmittedApprovalResult } from "../types.js";
 import { createChainedApproval } from "./createChainedApproval.js";
 
-/** Answers the park in eve and consumes the resumed turn; re-issued duplicates
- * of already-applied writes can be absorbed instead of carded again. */
+/** Write rows and resume outcomes share execution order — position 0 is the
+ * primary, then the withheld siblings. Steps without evidence stay pending. */
+const persistWriteOutcomes = async ({
+	writeRows,
+	writes,
+}: {
+	writeRows: ReadonlyArray<ChatApprovalWrite>;
+	writes: ResumedAgentTurn["writes"];
+}) => {
+	await Promise.all(
+		writeRows.map((row, index) => {
+			const outcome = writes[index];
+			if (!outcome || outcome.status === "pending") return undefined;
+			return chatApprovalWritesRepo.setStatus({
+				db,
+				result: outcome.result,
+				status: outcome.status,
+				writeId: row.id,
+			});
+		}),
+	);
+};
+
+/** Answers the park in eve and consumes the resumed turn; the write outcomes
+ * eve streams back are persisted onto the approval's write rows. */
 export const submitApprovalInput = async ({
 	approval,
 	expectExecution,
 	note,
 	optionId,
 	providerUserId,
-	shouldAbsorbChained,
-	suppressSiblingWithheldNote,
 }: {
 	approval: ChatApproval;
 	expectExecution?: boolean;
 	note?: string;
 	optionId: string;
 	providerUserId: string;
-	shouldAbsorbChained?: (chained: {
-		input?: Record<string, unknown>;
-		toolName: string;
-	}) => string | undefined;
-	suppressSiblingWithheldNote?: boolean;
 }): Promise<SubmittedApprovalResult> => {
 	if (!(approval.run_id && approval.tool_call_id)) {
 		logger.warn("Approval is missing Eve session state", {
@@ -97,7 +113,6 @@ export const submitApprovalInput = async ({
 		approvedWriteFailed,
 		approvedWriteUnverified,
 		chained,
-		chainedSiblingRequestIds,
 		chainedWithheld,
 		deferredEmptyTurn,
 		writes,
@@ -119,53 +134,47 @@ export const submitApprovalInput = async ({
 		session,
 		siblingOptionIdFor: siblingDenyOptionFor(writeRows),
 		siblingRequestIds,
-		suppressSiblingWithheldNote,
 	});
-	const absorbNote =
-		chained && !chainedWithheld?.length
-			? shouldAbsorbChained?.({
-					input: chained.input,
-					toolName: chained.toolName,
-				})
-			: undefined;
-	if (chained && absorbNote) {
-		// A re-issued duplicate of a write the system just applied — deny it in
-		// eve with the reason instead of asking the user again.
-		await postEveInputResponse({
-			auth,
-			note: absorbNote,
-			optionId: approvalOptionIds({ options: chained.options }).deny,
-			requestId: chained.requestId,
-			session,
-			siblingRequestIds: chainedSiblingRequestIds,
-		});
-		logger.info("Absorbed duplicate re-issued write", {
-			event: "leaf.approval_duplicate_absorbed",
-			approval_id: approval.id,
-			data: { tool: chained.toolName },
-		});
+	if (expectExecution && writeRows.length) {
+		try {
+			await persistWriteOutcomes({ writeRows, writes });
+		} catch (error) {
+			logger.warn("Could not persist approval write outcomes", {
+				event: "leaf.approval_write_outcomes_persist_failed",
+				approval_id: approval.id,
+				error,
+			});
+		}
 	}
-	const chainedApprovalId =
-		chained && !absorbNote
-			? await createChainedApproval({
-					auth,
-					chained,
-					providerUserId,
-					sessionId: session.sessionId,
-					withheld: chainedWithheld,
-				})
-			: undefined;
+	const chainedApprovalId = chained
+		? await createChainedApproval({
+				auth,
+				chained,
+				providerUserId,
+				sessionId: session.sessionId,
+				withheld: chainedWithheld,
+			})
+		: undefined;
 	// Eve may execute the approved call before the resumed stream opens, so a
 	// turn that did real work without echoing the result still counts as run.
-	const settled = !((chained && !absorbNote) || question);
+	const settled = !(chained || question);
 	const notExecuted =
 		expectExecution &&
 		(deferredEmptyTurn || (settled && approvedWriteUnverified && !text));
 	if (expectExecution && approvedWriteFailed) {
+		const failedWrite = writes.find((write) => write.status === "failed");
 		logger.error("Approved Eve action failed", undefined, {
 			event: "leaf.eve_approval_failed",
 			approval_id: approval.id,
-			data: approvalLogData,
+			data: {
+				...approvalLogData,
+				failed_tool: failedWrite?.toolName,
+				failure: rawErrorShapeText(failedWrite?.result),
+				writes: writes.map((write) => ({
+					status: write.status,
+					tool: write.toolName,
+				})),
+			},
 		});
 		return {
 			chainedApprovalId,

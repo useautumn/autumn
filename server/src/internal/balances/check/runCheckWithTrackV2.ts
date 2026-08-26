@@ -7,6 +7,7 @@ import {
 	featureUtils,
 	InsufficientBalanceError,
 	InternalError,
+	orgToInStatuses,
 	type ParsedCheckParams,
 	RecaseError,
 	type TrackParams,
@@ -16,7 +17,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackFeatureDeductions } from "@/internal/balances/track/utils/getFeatureDeductions.js";
 import { runTrackV3 } from "@/internal/balances/track/v3/runTrackV3.js";
 import { buildLockScheduleName } from "@/internal/balances/utils/lock/buildLockScheduleName.js";
-import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
+import { getCreditRateRequiredBalance } from "@/internal/features/creditSystemUtils.js";
 import { workflows } from "@/queue/workflows.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 
@@ -24,9 +25,7 @@ import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
  * Checks if the customer has any entitlement for the requested feature.
  * Returns false when apiBalance is undefined, indicating no customer_entitlement exists.
  */
-const customerHasEntitlementForFeature = (
-	checkData: CheckDataV2,
-): boolean => {
+const customerHasEntitlementForFeature = (checkData: CheckDataV2): boolean => {
 	return checkData.apiBalance !== undefined;
 };
 
@@ -99,6 +98,20 @@ export const runCheckWithTrackV2 = async ({
 		return buildNoEntitlementResponse({ checkData, requiredBalance });
 	}
 
+	const { featureToUse, originalFeature } = checkData;
+	const responseRequiredBalance =
+		featureToUse.type === FeatureType.CreditSystem &&
+		featureToUse.id !== originalFeature.id
+			? getCreditRateRequiredBalance({
+					fullSubject: checkData.fullSubject,
+					sourceFeature: originalFeature,
+					creditSystem: featureToUse,
+					amount: requiredBalance,
+					reverseOrder: ctx.org.config?.reverse_deduction_order,
+					inStatuses: orgToInStatuses({ org: ctx.org }),
+				})
+			: requiredBalance;
+
 	const featureDeductions = getTrackFeatureDeductions({
 		ctx,
 		featureId: body.feature_id,
@@ -144,18 +157,6 @@ export const runCheckWithTrackV2 = async ({
 		}
 	}
 
-	const { featureToUse, originalFeature } = checkData;
-	if (
-		featureToUse.type === FeatureType.CreditSystem &&
-		featureToUse.id !== originalFeature.id
-	) {
-		requiredBalance = featureToCreditSystem({
-			featureId: originalFeature.id,
-			creditSystem: featureToUse,
-			amount: requiredBalance,
-		});
-	}
-
 	if (body.lock?.expires_at && allowed) {
 		try {
 			const scheduleName = buildLockScheduleName({
@@ -186,7 +187,7 @@ export const runCheckWithTrackV2 = async ({
 		allowed,
 		customer_id: checkData.customerId || "",
 		entity_id: checkData.entityId,
-		required_balance: requiredBalance,
+		required_balance: responseRequiredBalance,
 		balance: checkData.apiBalance ?? null,
 		balances: trackBalances,
 		flag: checkData.apiFlag ?? null,

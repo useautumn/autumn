@@ -1,5 +1,9 @@
 import { expect } from "bun:test";
-import type { FeatureType, FeatureUsageType } from "@autumn/shared";
+import type {
+	CreditSchemaItem,
+	FeatureType,
+	FeatureUsageType,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
@@ -8,7 +12,8 @@ type ExpectedDbFeature = {
 	id: string;
 	type: FeatureType;
 	usageType?: FeatureUsageType;
-	creditSchema?: { metered_feature_id: string; credit_amount: number }[];
+	creditSchema?: CreditSchemaItem[];
+	invoiceCredit?: boolean;
 	defaultMarkup?: number;
 };
 
@@ -36,6 +41,11 @@ export const expectDbFeaturesCorrect = async ({
 		}
 		if (expectedFeature.creditSchema !== undefined) {
 			expect(feature?.config?.schema).toEqual(expectedFeature.creditSchema);
+		}
+		if (expectedFeature.invoiceCredit !== undefined) {
+			expect(feature?.config?.invoice_credit).toBe(
+				expectedFeature.invoiceCredit,
+			);
 		}
 		if (expectedFeature.defaultMarkup !== undefined) {
 			expect(feature?.config?.default_markup).toBe(

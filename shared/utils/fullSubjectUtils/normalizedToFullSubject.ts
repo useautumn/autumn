@@ -62,6 +62,7 @@ const subjectBalanceToFullCustomerEntitlement = ({
 		created_at: subjectBalance.created_at,
 		unlimited: subjectBalance.unlimited,
 		balance: subjectBalance.balance,
+		usage_attribution: subjectBalance.usage_attribution,
 		additional_balance: subjectBalance.additional_balance,
 		usage_allowed: subjectBalance.usage_allowed,
 		separate_interval: subjectBalance.separate_interval,

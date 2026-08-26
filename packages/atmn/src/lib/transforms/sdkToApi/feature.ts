@@ -1,4 +1,5 @@
 import type { Feature } from "../../../compose/models/index.js";
+import type { ApiFeature } from "../../api/types/feature.js";
 
 export interface ApiFeatureParams {
 	id: string;
@@ -7,10 +8,7 @@ export interface ApiFeatureParams {
 	consumable?: boolean;
 	archived?: boolean;
 	event_names?: string[];
-	credit_schema?: Array<{
-		metered_feature_id: string;
-		credit_cost: number;
-	}>;
+	credit_schema?: ApiFeature["credit_schema"];
 	model_markups?: Record<string, {
 		markup?: number;
 		input_cost?: number;
@@ -40,10 +38,30 @@ export function transformFeatureToApi(feature: Feature): ApiFeatureParams {
 	}
 
 	if (feature.type === "credit_system" && feature.creditSchema) {
-		base.credit_schema = feature.creditSchema.map((entry) => ({
-			metered_feature_id: entry.meteredFeatureId,
-			credit_cost: entry.creditCost,
-		}));
+		base.credit_schema = feature.creditSchema.map((creditSchemaItem) => {
+			const baseItem = {
+				metered_feature_id: creditSchemaItem.meteredFeatureId,
+				...(creditSchemaItem.billingUnits !== undefined && {
+					billing_units: creditSchemaItem.billingUnits,
+				}),
+			};
+
+			if (creditSchemaItem.tierBehavior === "graduated") {
+				return {
+					...baseItem,
+					tier_behavior: "graduated" as const,
+					tiers: creditSchemaItem.tiers.map((tier) => ({
+						to: tier.to,
+						credit_cost: tier.creditCost,
+					})),
+				};
+			}
+
+			return {
+				...baseItem,
+				credit_cost: creditSchemaItem.creditCost,
+			};
+		});
 	}
 
 	if (feature.type === "ai_credit_system") {
