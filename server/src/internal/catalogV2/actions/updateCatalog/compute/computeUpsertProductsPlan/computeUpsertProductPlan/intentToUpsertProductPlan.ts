@@ -21,6 +21,7 @@ import { findFullProductByInternalId } from "@/internal/catalogV2/actions/update
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 import { resolveAliasReplacement } from "@/internal/catalogV2/productAliases/resolveAliasReplacement";
+import { shouldProtectReferencedCatalogRows } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
 
 const planHasVersionableCustomers = ({
 	planId,
@@ -129,7 +130,9 @@ export const intentToUpsertProductPlan = ({
 		baseFullProduct,
 		planParams,
 		versioning,
-		protectReferencedRows: customerUsage.hasVersionableRowRefs,
+		protectReferencedRows: shouldProtectReferencedCatalogRows({
+			usage: customerUsage,
+		}),
 		...(variantBaseFullProduct
 			? {
 					stripeCandidates: {

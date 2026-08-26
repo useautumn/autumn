@@ -1,5 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { retireOrDeleteRows } from "@/internal/product/actions/inPlaceUpdateUtils.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 
@@ -54,16 +55,13 @@ export const applyEntitlementPricesPlan = async ({
 		});
 	}
 
-	if (plan.prices.deleted.length > 0) {
-		await PriceService.deleteInIds({
+	if (plan.prices.deleted.length > 0 || plan.entitlements.deleted.length > 0) {
+		await retireOrDeleteRows({
 			db: ctx.db,
-			ids: plan.prices.deleted.map((price) => price.id),
-		});
-	}
-	if (plan.entitlements.deleted.length > 0) {
-		await EntitlementService.deleteInIds({
-			db: ctx.db,
-			ids: plan.entitlements.deleted.map((entitlement) => entitlement.id),
+			entitlementIds: plan.entitlements.deleted.map(
+				(entitlement) => entitlement.id,
+			),
+			priceIds: plan.prices.deleted.map((price) => price.id),
 		});
 	}
 };
