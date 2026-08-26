@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 
 const ApiCreditSchemaItemBaseSchema = z.object({
-	metered_feature_id: z.string().nonempty().meta({
+	metered_feature_id: z.string().meta({
 		description:
 			"ID of the metered feature that draws from this credit system.",
 	}),
