@@ -3,6 +3,7 @@ import {
 	billingControlsFromColumns,
 	type Product,
 	productDetailFieldIsSame,
+	productToPlanProcessors,
 	type UpdateCatalogPlanParams,
 } from "@autumn/shared";
 
@@ -14,6 +15,7 @@ type VariantSettingsPlanParams = Pick<
 	| "config"
 	| "metadata"
 	| "billing_controls"
+	| "processors"
 >;
 
 const settingsChanged = ({
@@ -59,6 +61,17 @@ export const variantSettingsPlanParams = ({
 		)
 	) {
 		patch.billing_controls = billingControlsFromColumns(next);
+	}
+
+	const currentProcessors = productToPlanProcessors({ product: current });
+	const nextProcessors = productToPlanProcessors({ product: next });
+	if (
+		(currentProcessors?.stripe?.product_id ?? null) !==
+			(nextProcessors?.stripe?.product_id ?? null) ||
+		JSON.stringify(currentProcessors?.stripe?.additional_product_ids ?? []) !==
+			JSON.stringify(nextProcessors?.stripe?.additional_product_ids ?? [])
+	) {
+		if (nextProcessors) patch.processors = nextProcessors;
 	}
 
 	return patch;

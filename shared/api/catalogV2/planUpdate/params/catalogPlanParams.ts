@@ -1,5 +1,6 @@
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1.js";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
+import { ApiPlanProcessorsSchema } from "@api/products/components/processors.js";
 import { PlanLicenseParamsSchema } from "@api/products/crud/licenses/planLicenseParams.js";
 import { MigrationParamsSchema } from "@api/products/crud/migrationParams.js";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1.js";
@@ -49,6 +50,10 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 	active: z.boolean().optional().meta({
 		description:
 			"Take the active pointer. On `new_version`, omit to mint a draft; `true` promotes the minted row immediately.",
+	}),
+	processors: ApiPlanProcessorsSchema.optional().meta({
+		description:
+			"Payment processors this plan is connected to. Omit to keep.",
 	}),
 	price: BasePriceParamsSchema.nullable().optional().meta({
 		description:

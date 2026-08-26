@@ -58,7 +58,8 @@ const buildVariantEditIntent = ({
 		!editDiff &&
 		!hasSettings &&
 		!pointerChanged &&
-		target.archived === undefined
+		target.archived === undefined &&
+		target.processors === undefined
 	) {
 		return undefined;
 	}
@@ -68,7 +69,8 @@ const buildVariantEditIntent = ({
 		!editDiff &&
 		!hasSettings &&
 		pointerChanged &&
-		target.archived === undefined;
+		target.archived === undefined &&
+		target.processors === undefined;
 
 	return {
 		productKey: productToProductKey({ product: target.row }),
@@ -77,6 +79,9 @@ const buildVariantEditIntent = ({
 			version: target.row.version,
 			...settingsPatch,
 			...(target.archived !== undefined ? { archived: target.archived } : {}),
+			...(target.processors !== undefined
+				? { processors: target.processors }
+				: {}),
 			...(target.unlink ? { base_variant_id: null } : {}),
 		},
 		source: pointerIsOnlyChange
