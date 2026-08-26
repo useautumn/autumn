@@ -12,6 +12,7 @@ export type VariantEditTarget = {
 	follow: boolean;
 	customize?: CatalogVariantParams["customize"];
 	archived?: boolean;
+	processors?: CatalogVariantParams["processors"];
 };
 
 type TargetSourceArgs = {
@@ -69,7 +70,12 @@ const targetsFromDeclaredCustomize = ({
 	productStatesContext,
 }: TargetSourceArgs): VariantEditTarget[] =>
 	(upsert.declaredVariants ?? []).flatMap((variant) => {
-		if (!variant.customize && variant.archived === undefined) return [];
+		if (
+			!variant.customize &&
+			variant.archived === undefined &&
+			variant.processors === undefined
+		)
+			return [];
 		return targetVersionsFor({
 			planId: variant.variant_plan_id,
 			version: variant.version,
@@ -82,6 +88,9 @@ const targetsFromDeclaredCustomize = ({
 			...(variant.customize ? { customize: variant.customize } : {}),
 			...(variant.archived !== undefined
 				? { archived: variant.archived }
+				: {}),
+			...(variant.processors !== undefined
+				? { processors: variant.processors }
 				: {}),
 		}));
 	});
@@ -127,6 +136,7 @@ const mergeTargets = ({
 		current.follow ||= target.follow;
 		if (target.customize !== undefined) current.customize = target.customize;
 		if (target.archived !== undefined) current.archived = target.archived;
+		if (target.processors !== undefined) current.processors = target.processors;
 	}
 	return [...byKey.values()];
 };

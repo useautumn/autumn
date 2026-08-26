@@ -63,7 +63,8 @@ const buildVariantEditIntent = ({
 		!editDiff &&
 		!hasSettings &&
 		newBasePointer === undefined &&
-		target.archived === undefined
+		target.archived === undefined &&
+		target.processors === undefined
 	) {
 		return undefined;
 	}
@@ -74,7 +75,11 @@ const buildVariantEditIntent = ({
 		target.version ===
 			activeVersionForPlan({ planId: target.planId, productStatesContext });
 	const pointerIsOnlyChange =
-		!target.follow && !editDiff && !hasSettings && repointToNewBase;
+		!target.follow &&
+		!editDiff &&
+		!hasSettings &&
+		target.processors === undefined &&
+		repointToNewBase;
 
 	return {
 		productKey: { planId: target.planId, version: target.version },
@@ -83,6 +88,9 @@ const buildVariantEditIntent = ({
 			version: target.version,
 			...settingsPatch,
 			...(target.archived !== undefined ? { archived: target.archived } : {}),
+			...(target.processors !== undefined
+				? { processors: target.processors }
+				: {}),
 		},
 		source: pointerIsOnlyChange ? "repoint" : "variant_propagation",
 		...(editDiff ? { editDiff } : {}),

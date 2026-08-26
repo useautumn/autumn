@@ -126,6 +126,12 @@ export const deriveVariantMints = ({
 		const newVersionSlug =
 			declaredVariant?.new_version_slug ?? propagateTarget?.new_version_slug;
 		mintedPlanIds.add(planId);
+		const declaredProcessors = (upsert.declaredVariants ?? []).find(
+			(variant) =>
+				variant.variant_plan_id === planId &&
+				(variant.version === undefined || variant.version === active.version) &&
+				variant.processors !== undefined,
+		)?.processors;
 		intents.push({
 			productKey: { planId, version },
 			planParams: {
@@ -135,6 +141,9 @@ export const deriveVariantMints = ({
 				...(intent.planParams.active === true ? { active: true } : {}),
 				...(newVersionSlug ? { new_version_slug: newVersionSlug } : {}),
 				...settingsPatch,
+				...(declaredProcessors !== undefined
+					? { processors: declaredProcessors }
+					: {}),
 			},
 			source: "variant_propagation",
 			...(editDiff ? { editDiff } : {}),
