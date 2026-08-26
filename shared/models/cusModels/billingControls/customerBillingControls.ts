@@ -238,16 +238,24 @@ export const billingControlsFromColumns = (
 export const normalizeBillingControlsForCompare = (
 	billingControls: CustomerBillingControls | null | undefined,
 ): CustomerBillingControls | undefined => {
-	if (!billingControls?.spend_limits) return billingControls ?? undefined;
+	if (!billingControls) return undefined;
 
-	return {
-		...billingControls,
-		spend_limits: billingControls.spend_limits.map((spendLimit) => {
-			if (spendLimit.skip_overage_billing === true) return spendLimit;
-			const { skip_overage_billing: _dropped, ...rest } = spendLimit;
-			return rest;
+	const spendLimits = billingControls.spend_limits?.map((spendLimit) => {
+		if (spendLimit.skip_overage_billing === true) return spendLimit;
+		const { skip_overage_billing: _dropped, ...rest } = spendLimit;
+		return rest;
+	});
+
+	const normalized = Object.fromEntries(
+		BILLING_CONTROL_KEYS.flatMap((key) => {
+			const value =
+				key === "spend_limits" ? spendLimits : billingControls[key];
+			if (value == null || value.length === 0) return [];
+			return [[key, value]];
 		}),
-	};
+	) as CustomerBillingControls;
+
+	return Object.keys(normalized).length > 0 ? normalized : undefined;
 };
 
 export const mergeBillingControls = (

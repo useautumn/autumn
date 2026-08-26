@@ -24,6 +24,17 @@ export const executeRemovePlans = async ({
 				continue;
 			}
 
+			if (row.willTombstone) {
+				await ProductService.tombstoneByInternalId({
+					db: tx,
+					internalId: row.current.internal_id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+					previousVersionSlug: row.current.version_slug,
+				});
+				continue;
+			}
+
 			await deleteProductRowAndHandoffActive({
 				db: tx,
 				internalId: row.current.internal_id,

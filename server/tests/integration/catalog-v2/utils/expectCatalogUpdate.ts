@@ -92,6 +92,7 @@ export const expectFeatureUsageCorrect = ({
 type ExpectedPlanPreview = {
 	planId: string;
 	action: CatalogAction;
+	version?: number;
 	hasCustomers?: boolean;
 	willArchive?: boolean;
 	/** Exact ordered list of state.reasons[].message (`[]` asserts no reasons). */
@@ -162,6 +163,9 @@ export const expectCatalogPreviewCorrect = ({
 			);
 			expect(entry, `missing preview entry for ${expected.planId}`).toBeDefined();
 			expect(entry?.action).toBe(expected.action);
+			if (expected.version !== undefined) {
+				expect(entry?.version).toBe(expected.version);
+			}
 			if (expected.hasCustomers !== undefined) {
 				expect(entry?.state.has_customers).toBe(expected.hasCustomers);
 			}

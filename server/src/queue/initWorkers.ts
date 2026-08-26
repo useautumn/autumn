@@ -1,7 +1,8 @@
 import "../sentry.js";
 
-import { ms, withTimeout } from "@autumn/shared";
+import { ms, seconds, withTimeout } from "@autumn/shared";
 import {
+	ChangeMessageVisibilityCommand,
 	DeleteMessageBatchCommand,
 	DeleteMessageCommand,
 	type Message,
@@ -61,11 +62,13 @@ const QUEUE_CAPACITY_RETRY_MS = 1_000;
 const DELETE_RETRY_DELAYS_MS = [100, 250, 500] as const;
 
 type JobOverride = {
-	ack: "upfront" | "always-after-processing";
-	dispatch: "inline" | "background";
+	ack?: "upfront" | "always-after-processing";
+	dispatch?: "inline" | "background";
 	/** Per-message bound. Omit for MESSAGE_TIMEOUT_MS; `null` runs unbounded,
 	 * which is only safe when the message is ACKed upfront. */
 	timeoutMs?: number | null;
+	/** Extend this message's SQS visibility after receive. Queue default is 30s. */
+	visibilityTimeoutSeconds?: number;
 };
 
 // Jobs with nonstandard acknowledgement or dispatch behavior. Inline dispatch
@@ -93,6 +96,11 @@ const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
 		ack: "always-after-processing",
 		dispatch: "inline",
 		timeoutMs: BATCH_RESET_MESSAGE_TIMEOUT_MS,
+	},
+	// Longer than a typical billing call, short enough that lock-miss retries
+	// redeliver in minutes (not hours) so oldest-message age stays bounded.
+	[JobName.AutoTopUp]: {
+		visibilityTimeoutSeconds: seconds.minutes(2),
 	},
 };
 
@@ -323,6 +331,16 @@ export const startPollingLoop = async ({
 
 		const job: SqsJob = JSON.parse(message.Body);
 		const override = getJobOverride(job.name);
+
+		if (override?.visibilityTimeoutSeconds != null && message.ReceiptHandle) {
+			await sqs.send(
+				new ChangeMessageVisibilityCommand({
+					QueueUrl: queueUrl,
+					ReceiptHandle: message.ReceiptHandle,
+					VisibilityTimeout: override.visibilityTimeoutSeconds,
+				}),
+			);
+		}
 
 		if (override?.ack === "upfront") {
 			await ackMessageUpfront({ sqs, message, job });

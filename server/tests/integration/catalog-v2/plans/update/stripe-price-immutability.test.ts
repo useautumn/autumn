@@ -144,7 +144,7 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Team V2",
-						versioning: "new_version" as const,
+						versioning: "new_version", active: true as const,
 					},
 				],
 			});

@@ -1,12 +1,12 @@
 /**
  * catalogV2.update / preview_update — remove_plans verdicts.
  *
- * Unreferenced plans hard-delete. Customers (expired included), reward
- * programs, or a surviving license parent archive instead. Unpinned entries
- * share one verdict across every version.
+ * Unreferenced plans hard-delete. Expired-only customers tombstone.
+ * Versionable customers, reward programs, or a surviving license parent
+ * archive instead. Unpinned entries share one verdict across every version.
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import {
 	CouponDurationType,
 	CusProductStatus,
@@ -19,6 +19,7 @@ import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import {
@@ -33,6 +34,7 @@ import {
 	expectDbPlansCorrect,
 	expectPlanVersionsCorrect,
 } from "../utils/expectCatalogPlans.js";
+import { expectTombstoneCorrect } from "../utils/expectTombstoneCorrect.js";
 import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
 import {
 	messagesItem,
@@ -161,11 +163,18 @@ test.concurrent(
 					],
 				});
 				await seedVersionableCustomer({ ctx, planId: withCustomerId });
-				await seedVersionableCustomer({
+				const expired = await seedVersionableCustomer({
 					ctx,
 					planId: expiredId,
 					status: CusProductStatus.Expired,
 				});
+				const expiredProduct = await ProductService.get({
+					db: ctx.db,
+					id: expiredId,
+					orgId: ctx.org.id,
+					env: ctx.env,
+				});
+				expect(expiredProduct).toBeDefined();
 
 				expectCatalogPreviewCorrect({
 					preview: await autumnV2_3.catalogV2.previewUpdate({
@@ -185,7 +194,7 @@ test.concurrent(
 						{
 							planId: expiredId,
 							action: "delete",
-							willArchive: true,
+							willArchive: false,
 							hasCustomers: true,
 						},
 						{
@@ -208,9 +217,16 @@ test.concurrent(
 					ctx,
 					expected: [
 						{ id: withCustomerId, archived: true },
-						{ id: expiredId, archived: true },
 						{ id: childId, archived: true },
 					],
+				});
+				await expectTombstoneCorrect({
+					ctx,
+					planId: expiredId,
+					version: expiredProduct!.version,
+					previousVersionSlug: expiredProduct!.version_slug ?? "v1",
+					internalId: expiredProduct!.internal_id,
+					customerProductId: expired.cusProductId,
 				});
 			},
 		});

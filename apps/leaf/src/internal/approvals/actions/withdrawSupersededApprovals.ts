@@ -2,98 +2,55 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { APPROVAL_STILL_OPEN_MESSAGE } from "../../../ui/messages.js";
-import { drainParkedAgentTurn } from "../../agentRuntime/actions/submitAgentInput/drainParkedAgentTurn.js";
 import type { AgentThreadRef } from "../../agentRuntime/domain/agentTurnContext.js";
-import { adoptPostedEveSession } from "../../agentRuntime/eve/adoptPostedSession.js";
-import {
-	EveSessionGoneError,
-	postEveInputResponse,
-} from "../../agentRuntime/eve/client.js";
-import { siblingRequestIdsFromToolArgs } from "../../agentRuntime/eve/parkedInput.js";
-import { saveEveSessionState } from "../../agentRuntime/eve/sessionState.js";
-import type {
-	EveAuthContext,
-	EveSessionRef,
-} from "../../agentRuntime/eve/types.js";
+import type { EveSessionRef } from "../../agentRuntime/eve/types.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
+import { approvalDenyPlan } from "../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
-import { denyOptionFromApproval } from "./approvalOptions.js";
+import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 
 const withdrawnNote = (toolName: string) =>
-	`(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild or ask anything — reply with nothing; their new message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one.${
+	`(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild, retry, or ask anything about the withdrawn change — the user's message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one. If it is a QUESTION, just answer it — do NOT re-issue the write or show a card; say the change is still pending and wait for them to confirm it.${
 		normalizeToolName(toolName) === "attach"
 			? " Keep an attach refinement customer-specific; use catalog tools only if they explicitly ask to change the shared plan."
 			: ""
 	})`;
 
-type WithdrawOutcome = "withdrawn" | "undecided" | "session_gone";
+const MANY_WITHDRAWN_NOTE =
+	"(The user replied with a new message instead of deciding on the pending requests, so they were all withdrawn. Do not rebuild, retry, or ask anything about the withdrawn changes — the user's message follows immediately and you should act on that.)";
 
-const withdrewInEve = async ({
-	approval,
-	auth,
-	logger,
-	orgId,
-	session,
-}: {
-	approval: ChatApproval;
-	auth: EveAuthContext;
-	logger: AutumnLogger;
-	orgId: string;
-	session: EveSessionRef;
-}): Promise<WithdrawOutcome> => {
-	if (!approval.tool_call_id) return "withdrawn";
-	try {
-		const posted = await postEveInputResponse({
-			auth,
-			note: withdrawnNote(approval.tool_name),
-			optionId: denyOptionFromApproval(approval),
-			requestId: approval.tool_call_id,
-			session,
-			siblingRequestIds: siblingRequestIdsFromToolArgs(approval.tool_args),
-		});
-		adoptPostedEveSession({ posted, session, status: "running" });
-		await drainParkedAgentTurn({ auth, orgId, session });
-		return "withdrawn";
-	} catch (error) {
-		// A session eve has lost can never decide this card; the card is dead
-		// with it, and the thread must not stay blocked on it.
-		if (error instanceof EveSessionGoneError) {
-			logger.warn("Eve session is gone; cancelling its pending approval", {
-				event: "leaf.eve_superseded_approval_session_gone",
-				approval_id: approval.id,
-				data: { error: error.message, session_id: session.sessionId },
-			});
-			return "session_gone";
-		}
-		logger.warn("Could not deny superseded Eve approval", {
-			event: "leaf.eve_superseded_approval_deny_failed",
-			approval_id: approval.id,
-			data: { error: error instanceof Error ? error.message : String(error) },
-		});
-		return "undecided";
-	}
+export type ApprovalWithdrawal = {
+	inputResponses: Array<{ optionId: string; requestId: string }>;
+	note: string;
 };
 
-const rehomeUndecidedApprovals = async ({
-	approvals,
-	sessionId,
-}: {
-	approvals: ChatApproval[];
-	sessionId: string;
-}) => {
-	for (const approval of approvals) {
-		if (!approval.run_id || approval.run_id === sessionId) continue;
-		await chatApprovalRepo.moveToRun({
-			approvalId: approval.id,
-			db,
-			fromRunId: approval.run_id,
-			toRunId: sessionId,
-		});
-	}
+const denyResponsesFor = async (
+	approval: ChatApproval,
+): Promise<ApprovalWithdrawal["inputResponses"]> => {
+	const toolCallId = approval.tool_call_id;
+	if (!toolCallId) return [];
+	const writes = await chatApprovalWritesRepo.list({
+		approvalId: approval.id,
+		db,
+	});
+	const plan = approvalDenyPlan({
+		approval: { ...approval, tool_call_id: toolCallId },
+		writes,
+	});
+	return [
+		{ optionId: plan.optionId, requestId: plan.requestId },
+		...plan.siblingRequestIds
+			.filter((siblingRequestId) => siblingRequestId !== plan.requestId)
+			.map((siblingRequestId) => ({
+				optionId: plan.siblingOptionIdFor(siblingRequestId) ?? "deny",
+				requestId: siblingRequestId,
+			})),
+	];
 };
 
+/** Cancels the pending cards and returns their deny responses to ride the
+ * SAME eve post as the user's new message — no wind-down turn of its own. */
 export const withdrawSupersededApprovals = async ({
-	auth,
 	logger,
 	onApprovalsSuperseded,
 	orgId,
@@ -101,14 +58,13 @@ export const withdrawSupersededApprovals = async ({
 	session,
 	thread,
 }: {
-	auth: EveAuthContext;
 	logger: AutumnLogger;
 	onApprovalsSuperseded?: (approvals: ChatApproval[]) => Promise<void> | void;
 	orgId: string;
 	providerUserId: string;
 	session: EveSessionRef;
 	thread: AgentThreadRef;
-}): Promise<{ sessionGone: boolean }> => {
+}): Promise<{ withdrawal?: ApprovalWithdrawal }> => {
 	const pendingApprovals = await chatApprovalRepo.listPendingForRun({
 		db,
 		channelId: thread.channelId,
@@ -118,24 +74,19 @@ export const withdrawSupersededApprovals = async ({
 		runId: session.sessionId,
 		workspaceId: thread.workspaceId,
 	});
-	if (pendingApprovals.length === 0) return { sessionGone: false };
+	if (pendingApprovals.length === 0) return {};
 
+	const foreignApprovals = pendingApprovals.filter(
+		(approval) => approval.run_id && approval.run_id !== session.sessionId,
+	);
+	const ownApprovals = pendingApprovals.filter(
+		(approval) => !foreignApprovals.includes(approval),
+	);
+
+	const inputResponses: ApprovalWithdrawal["inputResponses"] = [];
 	const cancelledApprovals: ChatApproval[] = [];
-	const undecidedApprovals: ChatApproval[] = [];
-	let sessionGone = false;
-	for (const approval of pendingApprovals) {
-		const outcome = await withdrewInEve({
-			approval,
-			auth,
-			logger,
-			orgId,
-			session,
-		});
-		if (outcome === "undecided") {
-			undecidedApprovals.push(approval);
-			continue;
-		}
-		if (outcome === "session_gone") sessionGone = true;
+	for (const approval of ownApprovals) {
+		inputResponses.push(...(await denyResponsesFor(approval)));
 		const cancelled = await chatApprovalRepo.cancel({
 			approvalId: approval.id,
 			db,
@@ -147,12 +98,38 @@ export const withdrawSupersededApprovals = async ({
 	if (cancelledApprovals.length > 0) {
 		await onApprovalsSuperseded?.(cancelledApprovals);
 	}
-	if (undecidedApprovals.length === 0) return { sessionGone };
 
-	await rehomeUndecidedApprovals({
-		approvals: undecidedApprovals,
-		sessionId: session.sessionId,
+	if (foreignApprovals.length > 0) {
+		logger.warn("Pending approvals live in another run; rehoming them", {
+			event: "leaf.eve_superseded_approvals_rehomed",
+			data: {
+				approval_ids: foreignApprovals.map((approval) => approval.id),
+				session_id: session.sessionId,
+			},
+		});
+		for (const approval of foreignApprovals) {
+			await chatApprovalRepo.moveToRun({
+				approvalId: approval.id,
+				db,
+				fromRunId: approval.run_id as string,
+				toRunId: session.sessionId,
+			});
+		}
+		throw new Error(APPROVAL_STILL_OPEN_MESSAGE);
+	}
+
+	if (inputResponses.length === 0) return {};
+	logger.info("Withdrew pending approvals for the user's new message", {
+		event: "leaf.eve_approvals_superseded",
+		data: {
+			approval_ids: cancelledApprovals.map((approval) => approval.id),
+			request_ids: inputResponses.map((response) => response.requestId),
+			session_id: session.sessionId,
+		},
 	});
-	await saveEveSessionState({ orgId, session });
-	throw new Error(APPROVAL_STILL_OPEN_MESSAGE);
+	const note =
+		cancelledApprovals.length === 1 && cancelledApprovals[0]
+			? withdrawnNote(cancelledApprovals[0].tool_name)
+			: MANY_WITHDRAWN_NOTE;
+	return { withdrawal: { inputResponses, note } };
 };

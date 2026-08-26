@@ -16,10 +16,26 @@ die() { echo "[capy-init] ERROR: $*" >&2; exit 1; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+COMPOSE_FILE="$REPO_ROOT/scripts/setup/dw.compose.yml"
+TRIGGER_COMPOSE_FILE="$REPO_ROOT/scripts/setup/trigger.compose.yml"
+. "$SCRIPT_DIR/capy-trigger-image.sh"
+. "$SCRIPT_DIR/install-stripe-cli.sh"
 
 command -v bun >/dev/null 2>&1 || die "bun is required"
 docker info >/dev/null 2>&1 || die "Docker Engine is required (use a Capy v2 VM)"
 docker compose version >/dev/null 2>&1 || die "Docker Compose is required"
+
+if [ "$(sysctl -n fs.inotify.max_user_watches)" -lt 524288 ]; then
+  log "raising inotify watcher limit for the Trigger.dev source worker"
+  if [ "$EUID" -eq 0 ]; then
+    SUDO=()
+  else
+    command -v sudo >/dev/null 2>&1 || die "sudo is required to configure inotify"
+    SUDO=(sudo)
+  fi
+  echo fs.inotify.max_user_watches=524288 | "${SUDO[@]}" tee /etc/sysctl.d/99-autumn-capy.conf >/dev/null
+  "${SUDO[@]}" sysctl --system >/dev/null
+fi
 
 if ! command -v psql >/dev/null 2>&1; then
   log "installing PostgreSQL client"
@@ -52,13 +68,32 @@ command -v neonctl >/dev/null 2>&1 || command -v neon >/dev/null 2>&1 || \
 log "neonctl ready"
 log "psql ready"
 
+# Sync the repo-pinned AI submodule, install its deps, and refresh repo skills.
+log "initializing ai submodule"
+git -C "$REPO_ROOT" submodule update --init --recursive
+if [ -f "$REPO_ROOT/ai/package.json" ]; then
+  log "installing ai deps"
+  ( cd "$REPO_ROOT/ai" && bun install --frozen-lockfile )
+  log "syncing repo skills from ai"
+  ( cd "$REPO_ROOT/ai" && bun sync )
+  if [ ! -f "$REPO_ROOT/.agents/skills/tdd/SKILL.md" ]; then
+    die "bun sync did not write .agents/skills/tdd/SKILL.md"
+  fi
+  log "repo skills ready at .agents/skills"
+fi
+
+log "installing Stripe CLI (stripe listen → localhost webhooks)"
+install_stripe_cli "[capy-init]"
+command -v stripe >/dev/null 2>&1 || die "stripe installation did not put a binary on PATH"
+stripe version >/dev/null
+
 # Bun workspace deps. Frozen-lockfile so a stale node_modules from a
 # Capy snapshot is repaired without churn.
 log "bun install --frozen-lockfile (workspace deps)"
 ( cd "$REPO_ROOT" && bun install --frozen-lockfile )
 
-# Pull only local infrastructure services. The ngrok profile is intentionally
-# excluded; Capy v2 discovers listening services without a tunnel container.
+# Pull local infrastructure into the snapshot. The ngrok profile is
+# intentionally excluded; Capy v2 discovers listening services directly.
 log "pulling local service images"
 (
   cd "$REPO_ROOT"
@@ -66,8 +101,12 @@ log "pulling local service images"
   DRAGONFLY_PORT=6379 \
   ELASTICMQ_PORT=9324 \
   DYNAMODB_PORT=8000 \
-    docker compose -f scripts/setup/dw.compose.yml pull \
+    docker compose -f "$COMPOSE_FILE" pull \
       dragonfly elasticmq dynamodb
 )
+
+docker compose -f "$TRIGGER_COMPOSE_FILE" config --images \
+  | sort -u \
+  | xargs -n1 docker pull
 
 log "init complete"

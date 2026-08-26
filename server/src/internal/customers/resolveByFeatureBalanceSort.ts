@@ -18,6 +18,7 @@ import {
 } from "@/external/motherduck/initMotherDuck.js";
 import { getMiscRedis } from "@/external/redis/initRedis.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
+import { withActiveSpan } from "@/utils/otel/withActiveSpan.js";
 import { buildSearchPredicates } from "./CusSearchService.js";
 import { looseEntitlementIsLiveSql } from "./looseEntitlementSql.js";
 
@@ -29,14 +30,47 @@ export type FeatureBalanceSortRow = {
 	total: number;
 };
 
-/** Lake column/expression for each basis. Mirrors PG: remaining=SUM(balance),
- * granted≈SUM(allowance+adjustment), usage=granted−remaining (prepaid quantity
- * and legacy entity multipliers are PG-verify refinements, not lake ones). */
+/** Lake column/expression for each basis. Mirrors PG: remaining=SUM(balance)
+ * finite-only, granted≈SUM(allowance+adjustment) finite-only, usage=all-rows
+ * consumption incl. unlimited deductions (prepaid quantity and legacy entity
+ * multipliers are PG-verify refinements, not lake ones). */
 export const basisExprSql = (basis: FeatureBalanceSortBasis): SQL => {
 	if (basis === "granted") return sql.raw("granted_total");
-	if (basis === "usage") return sql.raw("(granted_total - total)");
+	if (basis === "usage") return sql.raw("usage_total");
 	return sql.raw("total");
 };
+
+/** ∞ > x is true, 5 < ∞ is false: `>` on remaining/granted ADMITS every
+ * unlimited holder (exports must include them); `<` excludes pure-unlimited.
+ * Usage is real on every row, so neither rule applies there. */
+export const unlimitedPassesThreshold = ({
+	basis,
+	op,
+}: {
+	basis: FeatureBalanceSortBasis;
+	op: BalanceFilterOp;
+}): boolean => basis !== "usage" && op === ">";
+
+export const thresholdRequiresFiniteRows = ({
+	basis,
+	op,
+}: {
+	basis: FeatureBalanceSortBasis;
+	op: BalanceFilterOp;
+}): boolean => basis !== "usage" && op === "<";
+
+/** The unlimited stripe orders remaining/granted sorts (no number to rank
+ * unlimited customers by); usage ranks everyone by their real number, and a
+ * `<` filter passes rows on finite merit so the stripe stands down there too. */
+export const stripeSuppressed = ({
+	basis,
+	remainingFilter,
+}: {
+	basis: FeatureBalanceSortBasis;
+	remainingFilter?: BalanceThresholdFilter;
+}): boolean =>
+	basis === "usage" ||
+	(remainingFilter !== undefined && !unlimitedPassesThreshold(remainingFilter));
 
 /** Lake nominations per top-up iteration; sized so one batch usually fills a
  * 250 page even after expired-row inflation (~12% table-wide) and filters. */
@@ -72,26 +106,27 @@ export type BalanceThresholdFilter = {
 	basis: FeatureBalanceSortBasis;
 };
 
-/** The scalar a threshold compares in the chosen basis. */
+/** The scalar a threshold compares in the chosen basis. Usage spans ALL rows:
+ * finite consumption plus unlimited-row deductions. */
 export const basisValueOf = ({
 	basis,
 	remaining,
 	granted,
+	unlimitedUsage,
 }: {
 	basis: FeatureBalanceSortBasis;
 	remaining: number;
 	granted: number;
+	unlimitedUsage: number;
 }): number =>
 	basis === "granted"
 		? granted
 		: basis === "usage"
-			? granted - remaining
+			? granted - remaining + unlimitedUsage
 			: remaining;
 
-/** Thresholds compare the FINITE value only (sums exclude unlimited rows):
- * mixed unlimited+finite customers are judged on their finite side, and
- * pure-unlimited customers (finite 0) fail both directions — a threshold is a
- * statement about numbers, and unlimited is not a number. */
+/** Remaining/granted thresholds compare finite sums (see
+ * `thresholdRequiresFiniteRows`); usage thresholds compare all-rows usage. */
 export const passesBalanceFilter = ({
 	total,
 	op,
@@ -114,6 +149,18 @@ export const balanceThresholdSql = ({
 	value: number;
 }): SQL =>
 	op === ">" ? sql`${totalExpr} > ${value}` : sql`${totalExpr} < ${value}`;
+
+/** Entity-scoped unlimited deductions land in entities[*].balance while the
+ * top-level balance stays 0 — count both (mirrors cusEntsToUnlimitedUsage). */
+export const unlimitedUsedSumSql = (): SQL => sql`SUM(
+	-(COALESCE(ce.balance, 0) + CASE
+		WHEN jsonb_typeof(ce.entities) = 'object' THEN COALESCE((
+			SELECT SUM((ent.value->>'balance')::numeric)
+			FROM jsonb_each(ce.entities) AS ent
+		), 0)
+		ELSE 0
+	END)
+) FILTER (WHERE ce.unlimited IS TRUE)`;
 
 /** "Live" must match what the Usage column sums (cusEnts of ACTIVE_STATUSES
  * products + non-drained loose rows) — NOT `ce.expired`, whose NULL→true
@@ -166,12 +213,16 @@ const verifyExactBalances = async ({
 		is_unlimited: boolean;
 		remaining: string | number;
 		granted: string | number;
+		unlimited_used: string | number;
+		finite_rows: string | number;
 	}>(sql`
 		SELECT
 			${customers.internal_id} AS internal_customer_id,
 			COALESCE(b.is_unlimited, false) AS is_unlimited,
 			COALESCE(b.remaining, 0) AS remaining,
-			COALESCE(b.granted, 0) AS granted
+			COALESCE(b.granted, 0) AS granted,
+			COALESCE(b.unlimited_used, 0) AS unlimited_used,
+			COALESCE(b.finite_rows, 0) AS finite_rows
 		FROM customers
 		LEFT JOIN (
 			SELECT
@@ -181,7 +232,9 @@ const verifyExactBalances = async ({
 				SUM(
 					COALESCE(e.allowance, 0) * COALESCE(cp.quantity, 1)
 					+ COALESCE(ce.adjustment, 0)
-				) FILTER (WHERE ce.unlimited IS NOT TRUE) AS granted
+				) FILTER (WHERE ce.unlimited IS NOT TRUE) AS granted,
+				${unlimitedUsedSumSql()} AS unlimited_used,
+				COUNT(*) FILTER (WHERE ce.unlimited IS NOT TRUE) AS finite_rows
 			FROM customer_entitlements ce
 			LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
 			LEFT JOIN entitlements e ON e.id = ce.entitlement_id
@@ -199,35 +252,50 @@ const verifyExactBalances = async ({
 	for (const row of rows) {
 		const remaining = Number(row.remaining);
 		const granted = Number(row.granted);
-		if (
-			remainingFilter &&
-			!passesBalanceFilter({
-				total: basisValueOf({
-					basis: remainingFilter.basis,
-					remaining,
-					granted,
-				}),
-				op: remainingFilter.op,
-				value: remainingFilter.value,
-			})
-		) {
-			continue;
+		const unlimitedUsage = Number(row.unlimited_used);
+		const finiteRows = Number(row.finite_rows);
+		if (remainingFilter) {
+			const admittedAsUnlimited =
+				Boolean(row.is_unlimited) && unlimitedPassesThreshold(remainingFilter);
+			if (!admittedAsUnlimited) {
+				if (thresholdRequiresFiniteRows(remainingFilter) && finiteRows === 0) {
+					continue;
+				}
+				if (
+					!passesBalanceFilter({
+						total: basisValueOf({
+							basis: remainingFilter.basis,
+							remaining,
+							granted,
+							unlimitedUsage,
+						}),
+						op: remainingFilter.op,
+						value: remainingFilter.value,
+					})
+				) {
+					continue;
+				}
+			}
 		}
 		mapped.push({
 			internalId: row.internal_customer_id,
-			// Under a threshold filter, rows pass on finite merit — suppress the
-			// unlimited stripe so the page orders by the filtered values.
-			isUnlimited: remainingFilter ? false : Boolean(row.is_unlimited),
-			total: basisValueOf({ basis, remaining, granted }),
+			isUnlimited: stripeSuppressed({ basis, remainingFilter })
+				? false
+				: Boolean(row.is_unlimited),
+			total: basisValueOf({ basis, remaining, granted, unlimitedUsage }),
 		});
 	}
 	return mapped;
 };
 
+/** Search/full_customers/count fire together, so a cold cache otherwise runs
+ * N copies of the multi-second scan — concurrent callers share one compute. */
+const deflationInFlight = new Map<string, Promise<FeatureBalanceSortRow[]>>();
+
 /** Cached exact rows for the deflation-exception customers. Values are up to
  * TTL stale, but they only steer RANKING — displayed numbers come from
  * hydration. Recompute is a feature-index scan (~seconds on whale features). */
-export const getDeflationExceptionRows = async ({
+export const getDeflationExceptionRows = ({
 	db,
 	orgId,
 	env,
@@ -240,29 +308,82 @@ export const getDeflationExceptionRows = async ({
 	internalFeatureId: string;
 	basis: FeatureBalanceSortBasis;
 }): Promise<FeatureBalanceSortRow[]> => {
-	const miscRedis = getMiscRedis();
-	const cacheKey = deflationSetCacheKey({ internalFeatureId, basis });
+	const key = deflationSetCacheKey({ internalFeatureId, basis });
+	const inFlight = deflationInFlight.get(key);
+	if (inFlight) return inFlight;
 
-	const cached = await tryRedisOp({
-		operation: () => miscRedis.get(cacheKey),
-		source: "balance-sort:deflation-set:get",
-		redisInstance: miscRedis,
+	const compute = computeDeflationExceptionRows({
+		db,
+		orgId,
+		env,
+		internalFeatureId,
+		basis,
+	}).finally(() => {
+		deflationInFlight.delete(key);
 	});
-	if (cached) {
-		return (JSON.parse(cached) as [string, boolean, number][]).map(
-			([internalId, isUnlimited, total]) => ({
-				internalId,
-				isUnlimited,
-				total,
-			}),
-		);
-	}
+	deflationInFlight.set(key, compute);
+	return compute;
+};
 
-	// Deflation sources = negative rows the lake counts but the live definition
-	// excludes: pooled contributions, and rows bound to non-active products
-	// (status-based — the lazily-backfilled `expired` flag misses churned rows).
-	const tStart = performance.now();
-	const idRows = await db.execute<{ internal_customer_id: string }>(sql`
+const computeDeflationExceptionRows = async ({
+	db,
+	orgId,
+	env,
+	internalFeatureId,
+	basis,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	internalFeatureId: string;
+	basis: FeatureBalanceSortBasis;
+}): Promise<FeatureBalanceSortRow[]> =>
+	withActiveSpan({
+		name: "customer.balance_sort.deflation",
+		attributes: {
+			"customer.balance_sort.feature_internal_id": internalFeatureId,
+			"customer.balance_sort.basis": basis,
+		},
+		fn: async (span) => {
+			const miscRedis = getMiscRedis();
+			const cacheKey = deflationSetCacheKey({ internalFeatureId, basis });
+
+			const cached = await withActiveSpan({
+				name: "customer.balance_sort.deflation.cache_lookup",
+				fn: async (cacheSpan) => {
+					const result = await tryRedisOp({
+						operation: () => miscRedis.get(cacheKey),
+						source: "balance-sort:deflation-set:get",
+						redisInstance: miscRedis,
+					});
+					cacheSpan.setAttribute("cache.hit", Boolean(result));
+					return result;
+				},
+			});
+			if (cached) {
+				const rows = (JSON.parse(cached) as [string, boolean, number][]).map(
+					([internalId, isUnlimited, total]) => ({
+						internalId,
+						isUnlimited,
+						total,
+					}),
+				);
+				span.setAttributes({
+					"customer.balance_sort.cache_hit": true,
+					"customer.balance_sort.deflation_rows": rows.length,
+				});
+				return rows;
+			}
+			span.setAttribute("customer.balance_sort.cache_hit", false);
+
+			// Deflation sources = negative rows the lake counts but the live definition
+			// excludes: pooled contributions, and rows bound to non-active products
+			// (status-based — the lazily-backfilled `expired` flag misses churned rows).
+			const tStart = performance.now();
+			const idRows = await withActiveSpan({
+				name: "customer.balance_sort.deflation.scan",
+				fn: async (scanSpan) => {
+					const result = await db.execute<{ internal_customer_id: string }>(sql`
 		SELECT DISTINCT ce.internal_customer_id
 		FROM customer_entitlements ce
 		LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
@@ -278,45 +399,83 @@ export const getDeflationExceptionRows = async ({
 		LIMIT ${DEFLATION_SET_CAP}
 		${planetScaleTag({ query: "balanceSortDeflationSet" })}
 	`);
-	if (idRows.length >= DEFLATION_SET_CAP) {
-		logger.warn(
-			`[balanceSort] deflation set hit cap (${DEFLATION_SET_CAP}) for feature ${internalFeatureId} — under-ranked customers beyond the cap can be missed`,
-		);
-	}
+					scanSpan.setAttribute(
+						"customer.balance_sort.candidate_rows",
+						result.length,
+					);
+					return result;
+				},
+			});
+			span.setAttribute(
+				"customer.balance_sort.deflation_candidate_rows",
+				idRows.length,
+			);
+			if (idRows.length >= DEFLATION_SET_CAP) {
+				logger.warn(
+					`[balanceSort] deflation set hit cap (${DEFLATION_SET_CAP}) for feature ${internalFeatureId} — under-ranked customers beyond the cap can be missed`,
+				);
+			}
 
-	// Exact values computed without search/filters: the set is feature-scoped
-	// and reused across requests; per-request predicates apply at merge time.
-	const rows =
-		idRows.length === 0
-			? []
-			: await verifyExactBalances({
-					db,
-					orgId,
-					env,
-					search: "",
-					filters: undefined,
-					internalFeatureId,
-					internalCustomerIds: idRows.map((row) => row.internal_customer_id),
-					basis,
-				});
+			// Exact values computed without search/filters: the set is feature-scoped
+			// and reused across requests; per-request predicates apply at merge time.
+			const rows = await withActiveSpan({
+				name: "customer.balance_sort.deflation.verify",
+				attributes: {
+					"customer.balance_sort.candidate_rows": idRows.length,
+				},
+				fn: async (verifySpan) => {
+					const result =
+						idRows.length === 0
+							? []
+							: await verifyExactBalances({
+									db,
+									orgId,
+									env,
+									search: "",
+									filters: undefined,
+									internalFeatureId,
+									internalCustomerIds: idRows.map(
+										(row) => row.internal_customer_id,
+									),
+									basis,
+								});
+					verifySpan.setAttribute(
+						"customer.balance_sort.verified_rows",
+						result.length,
+					);
+					return result;
+				},
+			});
 
-	logger.info(
-		`[balanceSort] deflation set for ${internalFeatureId}: ${rows.length} customers in ${(performance.now() - tStart).toFixed(0)}ms`,
-	);
+			logger.info(
+				`[balanceSort] deflation set for ${internalFeatureId}: ${rows.length} customers in ${(performance.now() - tStart).toFixed(0)}ms`,
+			);
 
-	await tryRedisOp({
-		operation: () =>
-			miscRedis.set(
-				cacheKey,
-				JSON.stringify(rows.map((r) => [r.internalId, r.isUnlimited, r.total])),
-				"EX",
-				DEFLATION_SET_TTL_SECONDS,
-			),
-		source: "balance-sort:deflation-set:set",
-		redisInstance: miscRedis,
+			await withActiveSpan({
+				name: "customer.balance_sort.deflation.cache_write",
+				attributes: {
+					"customer.balance_sort.deflation_rows": rows.length,
+					"cache.ttl_seconds": DEFLATION_SET_TTL_SECONDS,
+				},
+				fn: async () =>
+					await tryRedisOp({
+						operation: () =>
+							miscRedis.set(
+								cacheKey,
+								JSON.stringify(
+									rows.map((r) => [r.internalId, r.isUnlimited, r.total]),
+								),
+								"EX",
+								DEFLATION_SET_TTL_SECONDS,
+							),
+						source: "balance-sort:deflation-set:set",
+						redisInstance: miscRedis,
+					}),
+			});
+			span.setAttribute("customer.balance_sort.deflation_rows", rows.length);
+			return rows;
+		},
 	});
-	return rows;
-};
 
 /** Desc ranks unlimited first then largest totals; asc is the exact mirror. */
 const compareRows = (
@@ -384,11 +543,12 @@ export const nominationQuery = ({
 				}
 		`
 		: sql``;
-	// Under a threshold filter the stripe is suppressed (verify emits u=false),
-	// so the cursor/order tuple must drop is_unlimited — a (false, ...) tuple
-	// would otherwise exclude every mixed customer from later batches.
+	// When the stripe is suppressed (verify emits u=false), the cursor/order
+	// tuple must drop is_unlimited — a (false, ...) tuple would otherwise
+	// exclude every mixed customer from later batches.
+	const suppressStripe = stripeSuppressed({ basis, remainingFilter });
 	const cursorPredicate = after
-		? remainingFilter
+		? suppressStripe
 			? sortOrder === "asc"
 				? sql`AND (${basisExpr}, internal_customer_id) > (${after.b}, ${after.id})`
 				: sql`AND (${basisExpr}, internal_customer_id) < (${after.b}, ${after.id})`
@@ -400,13 +560,23 @@ export const nominationQuery = ({
 	// threshold against a desc sort otherwise burns every batch on giants that
 	// all fail verify — 0-row pages after the full top-up budget.
 	const thresholdPredicate = remainingFilter
-		? sql`AND ${balanceThresholdSql({
-				totalExpr: basisExprSql(remainingFilter.basis),
-				op: remainingFilter.op,
-				value: remainingFilter.value,
-			})}`
+		? unlimitedPassesThreshold(remainingFilter)
+			? sql`AND (${balanceThresholdSql({
+					totalExpr: basisExprSql(remainingFilter.basis),
+					op: remainingFilter.op,
+					value: remainingFilter.value,
+				})} OR is_unlimited)`
+			: sql`AND ${balanceThresholdSql({
+					totalExpr: basisExprSql(remainingFilter.basis),
+					op: remainingFilter.op,
+					value: remainingFilter.value,
+				})}${
+					thresholdRequiresFiniteRows(remainingFilter)
+						? sql` AND finite_rows > 0`
+						: sql``
+				}`
 		: sql``;
-	const orderBy = remainingFilter
+	const orderBy = suppressStripe
 		? sql`${basisExpr} ${direction}, internal_customer_id ${direction}`
 		: sql`is_unlimited ${direction}, ${basisExpr} ${direction}, internal_customer_id ${direction}`;
 
@@ -452,120 +622,211 @@ export const resolveInternalIdsByFeatureBalanceSort = async ({
 	sortOrder?: SortOrder;
 	basis?: FeatureBalanceSortBasis;
 	remainingFilter?: BalanceThresholdFilter;
-}): Promise<{ rows: FeatureBalanceSortRow[]; hasMore: boolean }> => {
-	const md = await getMotherDuckResolverDb();
+}): Promise<{ rows: FeatureBalanceSortRow[]; hasMore: boolean }> =>
+	withActiveSpan({
+		name: "customer.balance_sort.resolve",
+		attributes: {
+			"customer.balance_sort.feature_internal_id": internalFeatureId,
+			"customer.balance_sort.basis": basis,
+			"customer.balance_sort.order": sortOrder,
+			"customer.balance_sort.limit": limit,
+			"customer.balance_sort.has_cursor": Boolean(cursor),
+			"customer.balance_sort.has_search": Boolean(search.trim()),
+			"customer.balance_sort.has_filters": Boolean(filters),
+			"customer.balance_sort.has_threshold": Boolean(remainingFilter),
+		},
+		fn: async (span) => {
+			const md = await getMotherDuckResolverDb();
 
-	const verifiedById = new Map<string, FeatureBalanceSortRow>();
+			const verifiedById = new Map<string, FeatureBalanceSortRow>();
+			let iterationCount = 0;
+			let nominationCount = 0;
+			let verifiedCount = 0;
 
-	// Deflation exceptions ride along from page one: their lake rank is wrong
-	// by construction, so only their (cached-exact) values can place them.
-	const exceptionRows = await getDeflationExceptionRows({
-		db,
-		orgId,
-		env,
-		internalFeatureId,
-		basis,
-	});
-	const exceptionIds = new Set(exceptionRows.map((row) => row.internalId));
+			// Deflation exceptions ride along from page one: their lake rank is wrong
+			// by construction, so only their (cached-exact) values can place them.
+			const exceptionRows = await getDeflationExceptionRows({
+				db,
+				orgId,
+				env,
+				internalFeatureId,
+				basis,
+			});
+			const exceptionIds = new Set(exceptionRows.map((row) => row.internalId));
 
-	let nominationAfter: NominationCursor | null = cursor
-		? { u: cursor.u, b: cursor.b, id: cursor.id }
-		: null;
-	let nominationsExhausted = false;
+			let nominationAfter: NominationCursor | null = cursor
+				? { u: cursor.u, b: cursor.b, id: cursor.id }
+				: null;
+			let nominationsExhausted = false;
 
-	for (let iteration = 0; iteration < MAX_TOPUP_ITERATIONS; iteration++) {
-		const nominationRows = (await runMdWithTimeout({
-			label: "balance-sort nomination",
-			run: () =>
-				md.execute(
-					nominationQuery({
-						orgId,
-						env,
-						createdAtRange: filters?.created_at_range,
-						internalFeatureId,
-						after: nominationAfter,
-						sortOrder,
-						basis,
-						remainingFilter,
-					}),
-				),
-		})) as unknown as {
-			internal_customer_id: string;
-			is_unlimited: boolean;
-			total: number | string;
-		}[];
+			for (let iteration = 0; iteration < MAX_TOPUP_ITERATIONS; iteration++) {
+				iterationCount = iteration + 1;
+				const nominationRows = await withActiveSpan({
+					name: "customer.balance_sort.nominate",
+					attributes: {
+						"customer.balance_sort.iteration": iteration,
+						"customer.balance_sort.has_nomination_cursor":
+							Boolean(nominationAfter),
+					},
+					fn: async (nominationSpan) => {
+						const result = (await runMdWithTimeout({
+							label: "balance-sort nomination",
+							run: () =>
+								md.execute(
+									nominationQuery({
+										orgId,
+										env,
+										createdAtRange: filters?.created_at_range,
+										internalFeatureId,
+										after: nominationAfter,
+										sortOrder,
+										basis,
+										remainingFilter,
+									}),
+								),
+						})) as unknown as {
+							internal_customer_id: string;
+							is_unlimited: boolean;
+							total: number | string;
+						}[];
+						nominationSpan.setAttribute(
+							"customer.balance_sort.nomination_rows",
+							result.length,
+						);
+						return result;
+					},
+				});
+				nominationCount += nominationRows.length;
 
-		if (nominationRows.length < NOMINATION_BATCH_SIZE) {
-			nominationsExhausted = true;
-		}
+				if (nominationRows.length < NOMINATION_BATCH_SIZE) {
+					nominationsExhausted = true;
+				}
 
-		const freshIds = nominationRows
-			.map((row) => row.internal_customer_id)
-			.filter((id) => !verifiedById.has(id) && !exceptionIds.has(id));
+				const freshIds = nominationRows
+					.map((row) => row.internal_customer_id)
+					.filter((id) => !verifiedById.has(id) && !exceptionIds.has(id));
 
-		const verified = await verifyExactBalances({
-			db,
-			orgId,
-			env,
-			search,
-			filters,
-			internalFeatureId,
-			internalCustomerIds: freshIds,
-			basis,
-			remainingFilter,
-		});
-		for (const row of verified) verifiedById.set(row.internalId, row);
+				const verified = await withActiveSpan({
+					name: "customer.balance_sort.verify",
+					attributes: {
+						"customer.balance_sort.iteration": iteration,
+						"customer.balance_sort.verify_source": "nomination",
+						"customer.balance_sort.candidate_rows": freshIds.length,
+					},
+					fn: async (verifySpan) => {
+						const result = await verifyExactBalances({
+							db,
+							orgId,
+							env,
+							search,
+							filters,
+							internalFeatureId,
+							internalCustomerIds: freshIds,
+							basis,
+							remainingFilter,
+						});
+						verifySpan.setAttribute(
+							"customer.balance_sort.verified_rows",
+							result.length,
+						);
+						return result;
+					},
+				});
+				verifiedCount += verified.length;
+				for (const row of verified) verifiedById.set(row.internalId, row);
 
-		if (iteration === 0) {
-			// Exceptions get per-request predicates applied via a verify pass too;
-			// cached values only pre-place them when no search/filters narrow the set.
-			const hasRequestPredicates = Boolean(
-				search.trim() ||
-					(filters && Object.values(filters).some((v) => v !== undefined)) ||
-					remainingFilter,
+				if (iteration === 0) {
+					// Exceptions get per-request predicates applied via a verify pass too;
+					// cached values only pre-place them when no search/filters narrow the set.
+					const hasRequestPredicates = Boolean(
+						search.trim() ||
+							(filters &&
+								Object.values(filters).some((v) => v !== undefined)) ||
+							remainingFilter,
+					);
+					const placedExceptions = hasRequestPredicates
+						? await withActiveSpan({
+								name: "customer.balance_sort.verify",
+								attributes: {
+									"customer.balance_sort.iteration": iteration,
+									"customer.balance_sort.verify_source": "deflation",
+									"customer.balance_sort.candidate_rows": exceptionRows.length,
+								},
+								fn: async (verifySpan) => {
+									const result = await verifyExactBalances({
+										db,
+										orgId,
+										env,
+										search,
+										filters,
+										internalFeatureId,
+										internalCustomerIds: exceptionRows.map(
+											(row) => row.internalId,
+										),
+										basis,
+										remainingFilter,
+									});
+									verifySpan.setAttribute(
+										"customer.balance_sort.verified_rows",
+										result.length,
+									);
+									return result;
+								},
+							})
+						: exceptionRows;
+					verifiedCount += placedExceptions.length;
+					for (const row of placedExceptions)
+						verifiedById.set(row.internalId, row);
+				}
+
+				const pageCandidates = [...verifiedById.values()]
+					.filter((row) => !cursor || isAfterCursor(row, cursor, sortOrder))
+					.sort((a, b) => compareRows(a, b, sortOrder));
+
+				if (pageCandidates.length > limit || nominationsExhausted) {
+					span.setAttributes({
+						"customer.balance_sort.iterations": iterationCount,
+						"customer.balance_sort.nomination_rows": nominationCount,
+						"customer.balance_sort.verified_rows": verifiedCount,
+						"customer.balance_sort.result_rows": Math.min(
+							pageCandidates.length,
+							limit,
+						),
+						"customer.balance_sort.nominations_exhausted": nominationsExhausted,
+					});
+					return {
+						rows: pageCandidates.slice(0, limit),
+						hasMore: pageCandidates.length > limit || !nominationsExhausted,
+					};
+				}
+
+				const lastNomination = nominationRows[nominationRows.length - 1];
+				nominationAfter = {
+					u: Boolean(lastNomination.is_unlimited),
+					b: Number(lastNomination.total),
+					id: lastNomination.internal_customer_id,
+				};
+			}
+
+			// Top-up budget exhausted with a page unfilled: heavy filter attrition.
+			// Return what verified; more may exist past the nomination horizon.
+			const pageCandidates = [...verifiedById.values()]
+				.filter((row) => !cursor || isAfterCursor(row, cursor, sortOrder))
+				.sort((a, b) => compareRows(a, b, sortOrder));
+			logger.warn(
+				`[balanceSort] top-up budget exhausted for feature ${internalFeatureId}: ${pageCandidates.length}/${limit} rows after ${MAX_TOPUP_ITERATIONS} batches`,
 			);
-			const placedExceptions = hasRequestPredicates
-				? await verifyExactBalances({
-						db,
-						orgId,
-						env,
-						search,
-						filters,
-						internalFeatureId,
-						internalCustomerIds: exceptionRows.map((r) => r.internalId),
-						basis,
-						remainingFilter,
-					})
-				: exceptionRows;
-			for (const row of placedExceptions) verifiedById.set(row.internalId, row);
-		}
-
-		const pageCandidates = [...verifiedById.values()]
-			.filter((row) => !cursor || isAfterCursor(row, cursor, sortOrder))
-			.sort((a, b) => compareRows(a, b, sortOrder));
-
-		if (pageCandidates.length > limit || nominationsExhausted) {
-			return {
-				rows: pageCandidates.slice(0, limit),
-				hasMore: pageCandidates.length > limit || !nominationsExhausted,
-			};
-		}
-
-		const lastNomination = nominationRows[nominationRows.length - 1];
-		nominationAfter = {
-			u: Boolean(lastNomination.is_unlimited),
-			b: Number(lastNomination.total),
-			id: lastNomination.internal_customer_id,
-		};
-	}
-
-	// Top-up budget exhausted with a page unfilled: heavy filter attrition.
-	// Return what verified; more may exist past the nomination horizon.
-	const pageCandidates = [...verifiedById.values()]
-		.filter((row) => !cursor || isAfterCursor(row, cursor, sortOrder))
-		.sort((a, b) => compareRows(a, b, sortOrder));
-	logger.warn(
-		`[balanceSort] top-up budget exhausted for feature ${internalFeatureId}: ${pageCandidates.length}/${limit} rows after ${MAX_TOPUP_ITERATIONS} batches`,
-	);
-	return { rows: pageCandidates.slice(0, limit), hasMore: true };
-};
+			span.setAttributes({
+				"customer.balance_sort.iterations": iterationCount,
+				"customer.balance_sort.nomination_rows": nominationCount,
+				"customer.balance_sort.verified_rows": verifiedCount,
+				"customer.balance_sort.result_rows": Math.min(
+					pageCandidates.length,
+					limit,
+				),
+				"customer.balance_sort.nominations_exhausted": nominationsExhausted,
+				"customer.balance_sort.topup_budget_exhausted": true,
+			});
+			return { rows: pageCandidates.slice(0, limit), hasMore: true };
+		},
+	});

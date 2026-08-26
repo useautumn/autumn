@@ -21,6 +21,7 @@ import {
 	useMemo,
 	useState,
 } from "react";
+import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -35,6 +36,7 @@ import {
 	type UseCreateScheduleForm,
 	useCreateScheduleForm,
 } from "../hooks/useCreateScheduleForm";
+import { useCreateScheduleGeneration } from "../hooks/useCreateScheduleGeneration";
 import { useCreateScheduleMutation } from "../hooks/useCreateScheduleMutation";
 import { useCreateSchedulePreview } from "../hooks/useCreateSchedulePreview";
 import {
@@ -48,6 +50,7 @@ export type EditingPlan =
 	| { location: "unscheduled"; planIndex: number };
 
 interface CreateScheduleFormContextValue {
+	generation: BillingGenerationState;
 	form: UseCreateScheduleForm;
 	formValues: CreateScheduleForm;
 	customerId: string | undefined;
@@ -113,6 +116,7 @@ interface CreateScheduleFormProviderProps {
 	nowMs?: number;
 	initialValues?: CreateScheduleForm;
 	existingPlans?: SchedulePlan[];
+	onApplied?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 	children: ReactNode;
@@ -125,6 +129,7 @@ export function CreateScheduleFormProvider({
 	nowMs: nowMsProp,
 	initialValues,
 	existingPlans = NO_EXISTING_PLANS,
+	onApplied,
 	onCheckoutRedirect,
 	onSuccess,
 	children,
@@ -314,10 +319,17 @@ export function CreateScheduleFormProvider({
 		}
 	}, [preview?.redirect_to_checkout, form]);
 
+	const generation = useCreateScheduleGeneration({
+		currentRequest: previewRequestBody as Record<string, unknown> | null,
+		customerId,
+		form,
+	});
+
 	const { handleSubmit, handleInvoiceSubmit, handleCheckoutSubmit, isPending } =
 		useCreateScheduleMutation({
 			customerId,
 			buildRequestBody,
+			onApplied,
 			onCheckoutRedirect,
 			onSuccess,
 		});
@@ -326,6 +338,7 @@ export function CreateScheduleFormProvider({
 
 	const value = useMemo<CreateScheduleFormContextValue>(
 		() => ({
+			generation,
 			form,
 			formValues,
 			customerId,
@@ -360,6 +373,7 @@ export function CreateScheduleFormProvider({
 			error: phaseTimingError ? new Error(phaseTimingError) : previewError,
 		}),
 		[
+			generation,
 			form,
 			formValues,
 			customerId,

@@ -1,11 +1,14 @@
-import type {
-	CatalogPropagateTargetParams,
-	FullPlanLicense,
-	LicenseCustomize,
+import {
+	type CatalogPropagateTargetParams,
+	type FullPlanLicense,
+	type LicenseCustomize,
+	productKeyToString,
+	productToProductKey,
 } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { activeVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeVersionForPlan";
+import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 
 /** Current plan_license links on this row. Minted versions fall back to the clone source. */
 export const upsertProductPlanToLicenses = ({
@@ -17,14 +20,52 @@ export const upsertProductPlanToLicenses = ({
 	upsert.row.baseFullProduct?.licenses ??
 	[];
 
-/** The child row this link currently points at — base on a version mint. */
-const childSourceInternalId = ({
+/** Child rows this parent may still be linked to — current, mint source, or demoted. */
+const childSourceInternalIds = ({
 	child,
 }: {
 	child: UpsertProductPlan;
-}): string | undefined =>
-	child.row.currentFullProduct?.internal_id ??
-	child.row.baseFullProduct?.internal_id;
+}): string[] => [
+	...new Set(
+		[
+			child.row.currentFullProduct?.internal_id,
+			child.row.baseFullProduct?.internal_id,
+			child.previousActiveInternalId,
+		].filter((internalId): internalId is string => internalId !== undefined),
+	),
+];
+
+/** Incoming links on the upserted child plus the demoted pointer (promote). */
+export const reverseLinksForChild = ({
+	upsert,
+	productStatesContext,
+}: {
+	upsert: UpsertProductPlan;
+	productStatesContext: ProductStatesContext;
+}) => {
+	const previousActive = upsert.previousActiveInternalId
+		? findFullProductByInternalId({
+				internalId: upsert.previousActiveInternalId,
+				productStatesContext,
+			})
+		: null;
+	const seen = new Set<string>();
+	return [
+		upsert.row.currentFullProduct,
+		upsert.row.baseFullProduct,
+		previousActive,
+	].flatMap((product) => {
+		if (!product) return [];
+		return (product.parent_plan_licenses ?? []).filter((link) => {
+			const key = productKeyToString({
+				productKey: productToProductKey({ product: link.product }),
+			});
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+	});
+};
 
 export const parentLicenseLinkForChild = ({
 	parent,
@@ -33,12 +74,12 @@ export const parentLicenseLinkForChild = ({
 	parent: UpsertProductPlan;
 	child: UpsertProductPlan;
 }): FullPlanLicense | undefined => {
-	const sourceInternalId = childSourceInternalId({ child });
+	const sourceInternalIds = childSourceInternalIds({ child });
 	return upsertProductPlanToLicenses({ upsert: parent }).find(
 		(link) =>
 			link.product.id === child.row.planId &&
-			(sourceInternalId === undefined ||
-				link.license_internal_product_id === sourceInternalId),
+			(sourceInternalIds.length === 0 ||
+				sourceInternalIds.includes(link.license_internal_product_id)),
 	);
 };
 
@@ -100,6 +141,30 @@ export const childPropagatesToParent = ({
 	);
 };
 
+/** True when this row takes the unique active pointer (mint+active or existing promote). */
+export const movesActivePointer = ({
+	upsert,
+}: {
+	upsert: UpsertProductPlan;
+}): boolean => {
+	const nextIsActive = upsert.row.nextFullProduct.active;
+	const mintedNewRow = upsert.row.versioning === "new_version";
+	const promotedExisting = upsert.previousActiveInternalId != null;
+	return nextIsActive && (mintedNewRow || promotedExisting);
+};
+
+/** In-place item writes, or the child taking the pointer. Draft-mint clones do not. */
+export const childTriggersLicenseRewrite = ({
+	child,
+}: {
+	child: UpsertProductPlan;
+}): boolean => {
+	const mintedNewRow = child.row.versioning === "new_version";
+	const childHasItemWrites = child.entitlementPricesPlan != null;
+	const inPlaceItemWrites = childHasItemWrites && !mintedNewRow;
+	return inPlaceItemWrites || movesActivePointer({ upsert: child });
+};
+
 export const shouldPropagate = ({
 	parent,
 	child,
@@ -109,10 +174,17 @@ export const shouldPropagate = ({
 	child: UpsertProductPlan;
 	productStatesContext: ProductStatesContext;
 }): boolean => {
-	if (parent.declaredLicenses !== undefined) return false;
-	if (!child.entitlementPricesPlan) return false;
-	if (!childPropagatesToParent({ child, parent, productStatesContext }))
-		return false;
+	const hasDeclaredLicenses = parent.declaredLicenses !== undefined;
+	const rewritesLicenses = childTriggersLicenseRewrite({ child });
+	const listedForPropagate = childPropagatesToParent({
+		child,
+		parent,
+		productStatesContext,
+	});
+
+	if (hasDeclaredLicenses) return false;
+	if (!rewritesLicenses) return false;
+	if (!listedForPropagate) return false;
 	return true;
 };
 

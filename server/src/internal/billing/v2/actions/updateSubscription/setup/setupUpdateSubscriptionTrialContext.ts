@@ -1,10 +1,13 @@
 import type {
-	CustomizePlanV1,
+	FreeTrialParamsSource,
 	FullCusProduct,
 	FullProduct,
 	TrialContext,
 } from "@autumn/shared";
-import { isProductPaidAndRecurring } from "@autumn/shared";
+import {
+	isProductPaidAndRecurring,
+	resolveFreeTrialParam,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import {
@@ -17,7 +20,7 @@ import {
  * Sets up trial context for update subscription operations.
  *
  * Logic:
- * 1. If customize.free_trial param passed → Use it (null removes trial, value sets fresh trial)
+ * 1. If a free_trial param passed (customize.free_trial or the shorthand) → Use it (null removes trial, value sets fresh trial)
  * 2. If paid product with trialing subscription → Inherit from subscription
  * 3. If customer product is trialing (free product case) → Inherit from customer product
  * 4. Otherwise → No trial context
@@ -33,12 +36,13 @@ export const setupUpdateSubscriptionTrialContext = ({
 	customerProduct?: FullCusProduct;
 	currentEpochMs: number;
 	fullProduct: FullProduct;
-	params: { customize?: CustomizePlanV1 };
+	params: FreeTrialParamsSource;
 }): TrialContext | undefined => {
-	// Handle explicit free_trial param (null or value)
-	if (params.customize?.free_trial !== undefined) {
+	// Handle explicit free_trial param (null or value), in either shape
+	const freeTrialParam = resolveFreeTrialParam(params);
+	if (freeTrialParam !== undefined) {
 		return handleFreeTrialParam({
-			freeTrialParams: params.customize.free_trial,
+			freeTrialParams: freeTrialParam,
 			stripeSubscription,
 			customerProduct,
 			fullProduct,

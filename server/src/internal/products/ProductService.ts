@@ -40,6 +40,7 @@ import {
 	deleteProductRowAndHandoffActive,
 	type ProductWriteDb,
 } from "./repos/activateHighestRemainingProduct";
+import { liveProductWhere } from "./repos/liveProductWhere";
 import {
 	composeFullProductQuery,
 	normalizeFullProductLicenses,
@@ -368,6 +369,7 @@ export class ProductService {
 				eq(products.id, id),
 				eq(products.org_id, orgId),
 				eq(products.env, env),
+				liveProductWhere,
 				version ? eq(products.version, version) : eq(products.active, true),
 			),
 			orderBy: [desc(products.version)],
@@ -426,6 +428,7 @@ export class ProductService {
 		version,
 		archived,
 		skipCache = false,
+		includeDeleted = false,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
@@ -436,9 +439,12 @@ export class ProductService {
 		archived?: boolean;
 		/** Read straight from the DB — for writes deciding off the result. */
 		skipCache?: boolean;
+		/** Occupancy / mint max — include tombstoned rows. */
+		includeDeleted?: boolean;
 	}): Promise<FullProduct[]> {
 		// Use caching for simple queries (no inIds, returnAll, or version)
-		const canCache = !inIds && !returnAll && !version && !skipCache;
+		const canCache =
+			!inIds && !returnAll && !version && !skipCache && !includeDeleted;
 
 		if (canCache) {
 			const cacheKey = buildProductsCacheKey({
@@ -468,6 +474,7 @@ export class ProductService {
 			returnAll,
 			version,
 			archived,
+			includeDeleted,
 		});
 	}
 
@@ -479,6 +486,7 @@ export class ProductService {
 		returnAll = false,
 		version,
 		archived,
+		includeDeleted = false,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
@@ -487,6 +495,7 @@ export class ProductService {
 		returnAll?: boolean;
 		version?: number;
 		archived?: boolean;
+		includeDeleted?: boolean;
 	}): Promise<FullProduct[]> {
 		const rows = (await db.query.products.findMany({
 			where: and(
@@ -495,6 +504,7 @@ export class ProductService {
 				inIds ? inArray(products.id, inIds) : undefined,
 				version ? eq(products.version, version) : undefined,
 				!returnAll && !version ? eq(products.active, true) : undefined,
+				includeDeleted ? undefined : liveProductWhere,
 			),
 			with: composeFullProductQuery(),
 		})) as ProductWithLicenseRelations[];
@@ -597,6 +607,7 @@ export class ProductService {
 				),
 				eq(products.org_id, orgId),
 				eq(products.env, env),
+				liveProductWhere,
 				version ? eq(products.version, version) : undefined,
 				!version
 					? or(
@@ -683,6 +694,36 @@ export class ProductService {
 		await db
 			.update(products)
 			.set({ archived: true })
+			.where(
+				and(
+					eq(products.internal_id, internalId),
+					eq(products.org_id, orgId),
+					eq(products.env, env),
+				),
+			);
+	}
+
+	static async tombstoneByInternalId({
+		db,
+		internalId,
+		orgId,
+		env,
+		previousVersionSlug,
+	}: {
+		db: ProductWriteDb;
+		internalId: string;
+		orgId: string;
+		env: AppEnv;
+		previousVersionSlug: string | null;
+	}) {
+		await db
+			.update(products)
+			.set({
+				deleted_at: Date.now(),
+				previous_version_slug: previousVersionSlug,
+				version_slug: null,
+				active: false,
+			})
 			.where(
 				and(
 					eq(products.internal_id, internalId),

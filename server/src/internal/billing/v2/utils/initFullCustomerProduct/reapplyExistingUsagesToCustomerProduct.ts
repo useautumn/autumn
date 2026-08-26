@@ -22,7 +22,6 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 	fromCustomerProduct?: FullCusProduct;
 	customerProduct: FullCusProduct;
 }) => {
-	const { db } = ctx;
 	const { valid } = cp(customerProduct).main().recurring();
 	if (!valid) return;
 
@@ -62,6 +61,7 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 
 		cusEnt.balance = balance;
 		cusEnt.entities = entities;
+		cusEnt.usage_attribution = {};
 	}
 
 	applyExistingUsages({
@@ -78,6 +78,7 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 			updates: {
 				balance: cusEnt.balance ?? 0,
 				entities: cusEnt.entities,
+				usage_attribution: cusEnt.usage_attribution ?? {},
 			},
 		});
 	}

@@ -9,12 +9,20 @@ const proxyChatRequest =
 		const headers = new Headers(c.req.raw.headers);
 		headers.delete("host");
 
-		return fetch(`${chatServerUrl}${url.pathname}${url.search}`, {
-			body: bodylessMethods.has(c.req.raw.method) ? undefined : c.req.raw.body,
-			headers,
-			method: c.req.raw.method,
-			redirect: "manual",
-		} as RequestInit & { duplex: "half" });
+		try {
+			return await fetch(`${chatServerUrl}${url.pathname}${url.search}`, {
+				body: bodylessMethods.has(c.req.raw.method)
+					? undefined
+					: c.req.raw.body,
+				headers,
+				method: c.req.raw.method,
+				redirect: "manual",
+			} as RequestInit & { duplex: "half" });
+		} catch {
+			// Leaf is optional locally; an uncaught ConnectionRefused here runs
+			// before ctx exists and looks like the API process died.
+			return c.json({ error: "chat_server_unavailable" }, 502);
+		}
 	};
 
 export const createChatProxyRouter = (
@@ -40,6 +48,8 @@ export const createChatProxyRouter = (
 	// Plan-preview / approval interactions for the dashboard chat (state-backed,
 	// fetched + resolved beside the text-only stream).
 	router.get("/agent/interactions", proxy);
+	router.get("/agent/approvals/:approvalId", proxy);
+	router.post("/agent/approvals/:approvalId/supersede", proxy);
 	router.post("/agent/approve", proxy);
 	router.post("/agent/reject", proxy);
 

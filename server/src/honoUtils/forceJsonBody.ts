@@ -22,3 +22,10 @@ export const forceJsonBodyField = async (
 		text: Promise.resolve(forced),
 	};
 };
+
+export const replaceJsonBody = async (c: Context, body: unknown) => {
+	const forced = JSON.stringify(body);
+	(c.req as { bodyCache: Record<string, unknown> }).bodyCache = {
+		text: Promise.resolve(forced),
+	};
+};

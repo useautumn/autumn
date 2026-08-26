@@ -9,6 +9,7 @@ import { InfoIcon, PlusIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { DisabledTooltipButton } from "@/components/forms/shared";
 import { BillingFooter } from "@/components/forms/shared/BillingFooter";
+import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
 import { getInvoiceButtonState } from "@/components/forms/shared/utils/invoiceButtonState";
 import {
 	SheetFooter,
@@ -19,6 +20,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { useHasSchedule } from "../hooks/useHasSchedule";
 import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
+import { CreateScheduleGenerationBar } from "./CreateScheduleGenerationBar";
 import { SchedulePhaseCard } from "./SchedulePhaseCard";
 import { SchedulePreview } from "./SchedulePreview";
 import { UnscheduledPlanRow } from "./UnscheduledPlanRow";
@@ -40,9 +42,13 @@ export function CreateScheduleSheetContent() {
 			<SheetHeader
 				title={hasSchedule ? "Update Schedule" : "Create Schedule"}
 				description="Set up billing phases that activate at specific times"
+				action={<BillingPromptToggle />}
 			/>
 
 			<div className="flex-1 overflow-y-auto">
+				<SheetSection withSeparator={false} className="pb-0">
+					<CreateScheduleGenerationBar />
+				</SheetSection>
 				<SheetSection title="Phases" withSeparator>
 					<div className="space-y-4">
 						{formValues.phases.map((_phase, phaseIndex) => (

@@ -11,6 +11,7 @@ import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSqsClient } from "@/queue/initSqs.js";
+import { pinTrackProducerQueueToFifo } from "./trackAsyncQueueTestEnv.js";
 
 const mockState = {
 	queueCommands: [] as Record<string, unknown>[],
@@ -89,7 +90,7 @@ const body = {
 };
 
 describe("track queue fallback", () => {
-	const originalAsyncQueueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+	let restoreQueueEnv: (() => void) | undefined;
 
 	beforeEach(() => {
 		mockState.queueCommands = [];
@@ -99,7 +100,9 @@ describe("track queue fallback", () => {
 		mockState.releaseCalls = [];
 		mockState.v3Error = null;
 		// queueTrack resolves the shared track queue from the async URL first.
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackQueueUrl;
+		restoreQueueEnv = pinTrackProducerQueueToFifo({
+			fifoQueueUrl: trackQueueUrl,
+		}).restore;
 
 		const sqsClient = getSqsClient({ queueUrl: trackQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
@@ -197,7 +200,8 @@ describe("track queue fallback", () => {
 		if (mockState.originalSend) {
 			sqsClient.send = mockState.originalSend;
 		}
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalAsyncQueueUrl;
+		restoreQueueEnv?.();
+		restoreQueueEnv = undefined;
 	});
 });
 

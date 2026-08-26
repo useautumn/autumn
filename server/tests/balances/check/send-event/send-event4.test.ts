@@ -69,7 +69,7 @@ describe(`${chalk.yellowBright("send-event4: Testing check with track, unlimited
 		expect(checkRes.balance).toMatchObject({
 			feature_id: TestFeature.Messages,
 			current_balance: 0,
-			usage: 0,
+			usage: 1000,
 			granted_balance: 0,
 		});
 	});
@@ -97,7 +97,7 @@ describe(`${chalk.yellowBright("send-event4: Testing check with track, unlimited
 		expect(checkRes.balance).toMatchObject({
 			feature_id: TestFeature.Credits,
 			current_balance: 0,
-			usage: 0,
+			usage: requiredBalance,
 			granted_balance: 0,
 		});
 	});

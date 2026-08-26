@@ -10,6 +10,7 @@ export const initialEveSessionState = (
 	streamIndex: 0,
 	status: "running",
 	lastEventAt: Date.now(),
+	pendingRequests: [],
 });
 
 /** Merges a patch into the live session ref, then persists the whole row. */
@@ -32,3 +33,13 @@ export const saveEveSessionState = async ({
 		threadKey: session.threadKey,
 	});
 };
+
+export const advanceStreamCursor = (session: EveSessionRef) => {
+	session.state.streamIndex += 1;
+	session.state.lastEventAt = Date.now();
+};
+
+export const statusAfterTerminalEvent = (
+	eventType: string,
+): EveSessionState["status"] =>
+	eventType === "session.completed" ? "completed" : "waiting";

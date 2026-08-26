@@ -1,5 +1,6 @@
 import { ms } from "@autumn/shared";
 import { differenceInMilliseconds } from "date-fns";
+import { logger } from "../lib/logger.js";
 import { formatTypingStatus } from "./progress.js";
 
 const THINKING_VERBS = [
@@ -37,6 +38,19 @@ export const createStatusTicker = (target: TypingTarget): StatusTicker => {
 	let lastRendered = "";
 	let lastVerbAt = 0;
 	let verbIndex = 0;
+	// Serialized so the stop() clear can never be overtaken by an in-flight update.
+	let sendChain: Promise<void> = Promise.resolve();
+
+	const enqueue = (text: string) => {
+		sendChain = sendChain
+			.then(() => target.startTyping(text))
+			.catch((error) => {
+				logger.warn("Could not update typing status", {
+					data: { error },
+					event: "leaf.status_update_failed",
+				});
+			});
+	};
 
 	const send = (text: string) => {
 		if (stopped || text === lastRendered) return;
@@ -44,9 +58,7 @@ export const createStatusTicker = (target: TypingTarget): StatusTicker => {
 		lastRenderAt = Date.now();
 		// formatTypingStatus enforces Slack's length cap; the empty-string clear
 		// in stop() stays raw because the formatter swaps "" for a default label.
-		target.startTyping(formatTypingStatus(text)).catch((error) => {
-			console.warn("[chat] Could not update status", error);
-		});
+		enqueue(formatTypingStatus(text));
 	};
 
 	const tick = () => {
@@ -112,9 +124,7 @@ export const createStatusTicker = (target: TypingTarget): StatusTicker => {
 			}
 			// Explicitly clear the status: without this, a snippet rendered just
 			// before stop() outlives the run as a stuck "thinking" line.
-			if (lastRendered) {
-				target.startTyping("").catch(() => {});
-			}
+			if (lastRendered) enqueue("");
 		},
 	};
 };

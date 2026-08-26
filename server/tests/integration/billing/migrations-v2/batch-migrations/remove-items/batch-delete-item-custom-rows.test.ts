@@ -1,125 +1,129 @@
 /**
- * A delete must reach customers whose row points at a custom definition of
- * the same item, and must spare one whose custom definition means something
- * different.
+ * Filter-mode delete matches live messages/mo rows by feature+interval, so a
+ * free custom 500/mo is removed along with the catalog 100/mo copy.
  *
- * customer_entitlements can point at a custom or older-version entitlement
- * that composeFullProductQuery filters out, so resolving by catalog id alone
- * leaves those customers holding the item. Discovery is by feature and
- * `entsAreSame` decides what counts as the same item.
- *
- * Red (catalog-id only): the same-meaning custom row survives the delete.
- * Green: it is removed, and the different-allowance one is not.
+ * Paid different-allowance rows stay in batch-delete-item-paid-rows.test.ts.
  */
-import { expect, test } from "bun:test";
-import { customerEntitlements } from "@autumn/shared";
+import { test } from "bun:test";
+import { ResetInterval } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { TestFeature } from "@tests/setup/v2Features";
-import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
+import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { and, eq } from "drizzle-orm";
-import { repointToCustomEntitlement } from "../paidRowTestUtils";
+import { expectCustomerEntitlementRowCount } from "../batchTestUtils";
+import {
+	repointToCustomEntitlement,
+	setScopedFeatureBalance,
+} from "../paidRowTestUtils";
+import { expectBatchLane } from "../version-repoint/utils/versionRepointTestUtils";
 
-const MESSAGES_INCLUDED = 100;
-const DIFFERENT_ALLOWANCE = 500;
-const PLAN_PREFIX = "batch-delete-custom";
+const CATALOG_ALLOWANCE = 100;
+const CUSTOM_ALLOWANCE = 500;
 
-test(`${chalk.yellowBright("batch migration: a delete reaches same-meaning custom rows and spares different ones")}`, async () => {
-	const catalogCustomerId = "batch-delete-custom-catalog";
-	const sameMeaningCustomerId = "batch-delete-custom-same";
-	const differentCustomerId = "batch-delete-custom-different";
-	const plan = products.base({
-		id: "batch-delete-custom-plan",
-		items: [
-			itemsV2.dashboard(),
-			itemsV2.monthlyMessages({ included: MESSAGES_INCLUDED }),
-		],
-	});
-
-	const { ctx, autumnV2_2 } = await initScenario({
-		customerId: catalogCustomerId,
-		setup: [
-			s.customer({ testClock: false }),
-			s.otherCustomers([
-				{ id: sameMeaningCustomerId },
-				{ id: differentCustomerId },
-			]),
-			s.products({ list: [plan], prefix: PLAN_PREFIX }),
-		],
-		actions: [
-			s.parallel(
-				s.attach({ productId: plan.id }),
-				s.attach({
-					customerId: sameMeaningCustomerId,
-					productId: plan.id,
-				}),
-				s.attach({
-					customerId: differentCustomerId,
-					productId: plan.id,
-				}),
-			),
-		],
-	});
-	// s.products mutates plan.id with the prefix during setup.
-	const planId = plan.id;
-
-	// An exact copy: the same item under a custom id.
-	await repointToCustomEntitlement({
-		ctx,
-		customerId: sameMeaningCustomerId,
-		featureId: TestFeature.Messages,
-	});
-	// A different allowance makes it a distinct item that survives.
-	await repointToCustomEntitlement({
-		ctx,
-		customerId: differentCustomerId,
-		featureId: TestFeature.Messages,
-		overrides: { allowance: DIFFERENT_ALLOWANCE },
-	});
-
-	const { result } = await runChunkedMigration({
-		ctx,
-		migrationClient: autumnV2_2,
-		migrationId: "batch-delete-custom-migration",
-		filter: { customer: { plan: { plan_id: planId, custom: false } } },
-		operations: {
-			customer: [
-				{
-					type: "update_plan",
-					plan_filter: { plan_id: planId, custom: false },
-					customize: {
-						remove_items: [{ feature_id: TestFeature.Messages }],
-					},
-				},
+test.concurrent(
+	`${chalk.yellowBright("batch migration: a delete removes free custom rows of every live allowance")}`,
+	async () => {
+		const catalogCustomerId = "batch-del-filter-catalog";
+		const sameMeaningCustomerId = "batch-del-filter-same";
+		const custom500CustomerId = "batch-del-filter-500";
+		const plan = products.base({
+			id: "batch-del-filter-plan",
+			items: [
+				items.dashboard(),
+				items.monthlyMessages({ includedUsage: CATALOG_ALLOWANCE }),
 			],
-		},
-		noBillingChanges: true,
-	});
+		});
 
-	expect({
-		lane: result?.lane,
-		rejections: (result?.rejections ?? []).map(
-			(r) => `${r.code}: ${r.message}`,
-		),
-	}).toEqual({ lane: "batch", rejections: [] });
-
-	const messageRowsFor = async (customerId: string) =>
-		ctx.db
-			.select({ id: customerEntitlements.id })
-			.from(customerEntitlements)
-			.where(
-				and(
-					eq(customerEntitlements.customer_id, customerId),
-					eq(customerEntitlements.feature_id, TestFeature.Messages),
+		const { ctx, autumnV2_3 } = await initScenario({
+			customerId: catalogCustomerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.otherCustomers([
+					{ id: sameMeaningCustomerId },
+					{ id: custom500CustomerId },
+				]),
+				s.products({ list: [plan] }),
+			],
+			actions: [
+				s.parallel(
+					s.billing.attach({ productId: plan.id }),
+					s.billing.attach({
+						customerId: sameMeaningCustomerId,
+						productId: plan.id,
+					}),
+					s.billing.attach({
+						customerId: custom500CustomerId,
+						productId: plan.id,
+					}),
 				),
-			);
+			],
+		});
+		const planId = plan.id;
 
-	// ── The catalog row and the same-meaning custom row both go ────────
-	expect(await messageRowsFor(catalogCustomerId)).toHaveLength(0);
-	expect(await messageRowsFor(sameMeaningCustomerId)).toHaveLength(0);
+		await repointToCustomEntitlement({
+			ctx,
+			customerId: sameMeaningCustomerId,
+			featureId: TestFeature.Messages,
+		});
+		await repointToCustomEntitlement({
+			ctx,
+			customerId: custom500CustomerId,
+			featureId: TestFeature.Messages,
+			overrides: { allowance: CUSTOM_ALLOWANCE },
+		});
+		await setScopedFeatureBalance({
+			ctx,
+			customerId: custom500CustomerId,
+			featureId: TestFeature.Messages,
+			balance: CUSTOM_ALLOWANCE,
+		});
 
-	// ── A custom row meaning something else survives ───────────────────
-	expect(await messageRowsFor(differentCustomerId)).toHaveLength(1);
-});
+		const { result } = await runChunkedMigration({
+			ctx,
+			migrationClient: autumnV2_3,
+			migrationId: "batch-delete-custom-migration",
+			filter: { customer: { plan: { plan_id: planId, custom: false } } },
+			operations: {
+				customer: [
+					{
+						type: "update_plan",
+						plan_filter: { plan_id: planId, custom: false },
+						customize: {
+							remove_items: [
+								{
+									feature_id: TestFeature.Messages,
+									interval: ResetInterval.Month,
+								},
+							],
+						},
+					},
+				],
+			},
+			noBillingChanges: true,
+		});
+		expectBatchLane({ result });
+
+		for (const customerId of [
+			catalogCustomerId,
+			sameMeaningCustomerId,
+			custom500CustomerId,
+		]) {
+			await expectCustomerEntitlementRowCount({
+				ctx,
+				customerId,
+				planId,
+				featureId: TestFeature.Messages,
+				count: 0,
+			});
+			await expectCustomerEntitlementRowCount({
+				ctx,
+				customerId,
+				planId,
+				featureId: TestFeature.Dashboard,
+				count: 1,
+			});
+		}
+	},
+);

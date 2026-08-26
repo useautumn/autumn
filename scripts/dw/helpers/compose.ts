@@ -39,9 +39,8 @@ function composeEnv(worktreeNum: number): Record<string, string> {
 
 export function ensureComposeStack(
 	worktreeNum: number,
-	branchName: string | undefined,
+	_branchName: string | undefined,
 ): void {
-	if (worktreeNum === 1 && !branchName) return;
 	if (!dockerComposeAvailable()) {
 		log("docker compose not available; skipping infra stack");
 		return;
@@ -81,9 +80,8 @@ function composeDown(project: string, extra: string[] = []): number {
 
 export function removeComposeStack(
 	worktreeNum: number,
-	branchName: string | undefined,
+	_branchName: string | undefined,
 ): void {
-	if (worktreeNum === 1 && !branchName) return;
 	const project = composeProjectName(worktreeNum);
 	if (composeDown(project, ["-v"]) === 0) {
 		log(`removed compose stack ${project}`);

@@ -27,6 +27,7 @@ import updateEntityDataV2Script from "./fullSubject/updateEntityDataV2.lua";
 // ============================================================================
 
 import CONTEXT_UTILS_V2 from "./fullSubjectDeduction/contextUtilsV2.lua";
+import CREDIT_RATE_UTILS from "./fullSubjectDeduction/creditRateUtils.lua";
 import DEDUCT_FROM_MAIN_BALANCE_V2 from "./fullSubjectDeduction/deductFromMainBalanceV2.lua";
 import DEDUCT_FROM_ROLLOVERS_V2 from "./fullSubjectDeduction/deductFromRolloversV2.lua";
 import DEDUCT_FROM_SUBJECT_BALANCES_MAIN from "./fullSubjectDeduction/deductFromSubjectBalances.lua";
@@ -78,6 +79,7 @@ ${updateCustomerProductV2MainScript}`;
  * Composed from shared helper modules + V2-specific storage adapters.
  */
 export const DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT = `${LUA_UTILS}
+${CREDIT_RATE_UTILS}
 ${READ_SUBJECT_BALANCES}
 ${READ_USAGE_WINDOWS}
 ${CONTEXT_UTILS_V2}

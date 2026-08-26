@@ -37,6 +37,10 @@ const trackAsyncQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
 
 import { runBatchTrack } from "@/internal/balances/track/runBatchTrack.js";
+import {
+	clearTrackProducerQueueUrls,
+	pinTrackProducerQueueToFifo,
+} from "./trackAsyncQueueTestEnv.js";
 
 const buildCtx = () =>
 	({
@@ -82,12 +86,14 @@ const body = [
 ];
 
 describe("runBatchTrack", () => {
-	const originalEnv = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+	let restoreQueueEnv: (() => void) | undefined;
 
 	beforeEach(() => {
 		mockState.queueCommands = [];
 		mockState.queueFailure = null;
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
+		restoreQueueEnv = pinTrackProducerQueueToFifo({
+			fifoQueueUrl: trackAsyncQueueUrl,
+		}).restore;
 
 		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
@@ -124,7 +130,8 @@ describe("runBatchTrack", () => {
 			const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
 		}
-		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalEnv;
+		restoreQueueEnv?.();
+		restoreQueueEnv = undefined;
 	});
 
 	test("validates all items before enqueueing one batch with per-item deduplication", async () => {
@@ -206,24 +213,20 @@ describe("runBatchTrack", () => {
 	});
 
 	test("throws 503 RecaseError when no track queue URL is set", async () => {
-		const originalTrackUrl = process.env.TRACK_SQS_QUEUE_URL;
-		delete process.env.TRACK_ASYNC_SQS_QUEUE_URL;
-		delete process.env.TRACK_SQS_QUEUE_URL;
+		const { restore } = clearTrackProducerQueueUrls();
 		const ctx = buildCtx();
 
-		await expect(runBatchTrack({ ctx, body })).rejects.toMatchObject({
-			code: ErrCode.InternalError,
-			statusCode: 503,
-			message: "Async track is not available right now",
-		});
+		try {
+			await expect(runBatchTrack({ ctx, body })).rejects.toMatchObject({
+				code: ErrCode.InternalError,
+				statusCode: 503,
+				message: "Async track is not available right now",
+			});
 
-		expect(mockState.queueCommands).toHaveLength(0);
-		expect(ctx.logger.error).toHaveBeenCalled();
-
-		if (originalTrackUrl === undefined) {
-			delete process.env.TRACK_SQS_QUEUE_URL;
-		} else {
-			process.env.TRACK_SQS_QUEUE_URL = originalTrackUrl;
+			expect(mockState.queueCommands).toHaveLength(0);
+			expect(ctx.logger.error).toHaveBeenCalled();
+		} finally {
+			restore();
 		}
 	});
 

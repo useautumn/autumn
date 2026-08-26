@@ -4,6 +4,7 @@ import { useStore } from "@tanstack/react-form";
 import { useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { createSchemaItem } from "../utils/creditSchemaUtils";
 import type { CreditSystemFormInstance } from "./useCreditSystemForm";
 
 export function useCreditSchema(form: CreditSystemFormInstance) {
@@ -24,25 +25,20 @@ export function useCreditSchema(form: CreditSystemFormInstance) {
 		(f: Feature) => f.type === FeatureType.Metered || isAiCreditSystem(f.type),
 	);
 
-	const handleSchemaChange = (
-		index: number,
-		key: keyof CreditSchemaItem,
-		value: string | number,
-	) => {
-		const newSchema = [...schema];
-		newSchema[index] = { ...newSchema[index], [key]: value };
+	const setSchema = (newSchema: CreditSchemaItem[]) =>
 		form.setFieldValue("config", { ...config, schema: newSchema });
-	};
+
+	const setSchemaItem = ({
+		index,
+		item,
+	}: {
+		index: number;
+		item: CreditSchemaItem;
+	}) => setSchema(schema.map((existing, i) => (i === index ? item : existing)));
 
 	const addSchemaItem = () => {
 		schemaKeysRef.current = [...schemaKeysRef.current, crypto.randomUUID()];
-		form.setFieldValue("config", {
-			...config,
-			schema: [
-				...schema,
-				{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
-			],
-		});
+		setSchema([...schema, createSchemaItem()]);
 	};
 
 	const removeSchemaItem = (index: number) => {
@@ -50,19 +46,21 @@ export function useCreditSchema(form: CreditSystemFormInstance) {
 			toast.error("There must be at least one item in the credit system");
 			return;
 		}
-		const nextKeys = [...schemaKeysRef.current];
-		nextKeys.splice(index, 1);
-		schemaKeysRef.current = nextKeys;
-		const newSchema = [...schema];
-		newSchema.splice(index, 1);
-		form.setFieldValue("config", { ...config, schema: newSchema });
+		schemaKeysRef.current = schemaKeysRef.current.filter((_, i) => i !== index);
+		setSchema(schema.filter((_, i) => i !== index));
 	};
 
 	return {
 		schema,
 		schemaKeys,
 		allSchemaCandidateFeatures,
-		handleSchemaChange,
+		invoiceCredit: Boolean(config?.invoice_credit),
+		setInvoiceCredit: (invoiceCredit: boolean) =>
+			form.setFieldValue("config", {
+				...config,
+				invoice_credit: invoiceCredit,
+			}),
+		setSchemaItem,
 		addSchemaItem,
 		removeSchemaItem,
 	};

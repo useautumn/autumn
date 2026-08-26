@@ -148,7 +148,7 @@ export function CustomerListTable({
 				sort: createdAtSort && !createdAtSort.desc ? "asc" : "desc",
 				sortBy: "created_at",
 				sortFeature: "",
-				sortBasis: "remaining",
+				sortBasis: "usage",
 			});
 		},
 		[sorting, setFilters],

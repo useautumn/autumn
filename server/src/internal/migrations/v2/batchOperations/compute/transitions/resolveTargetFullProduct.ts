@@ -1,11 +1,11 @@
 import type {
 	Entitlement,
+	EntitlementWithFeature,
 	Feature,
 	FullProduct,
 	PlanItemFilter,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
-import { entsAreSame } from "@autumn/shared/utils/productUtils/entUtils/index.js";
 import { entIntvToResetIntv } from "@autumn/shared/utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals.js";
 import { isFixedPrice } from "@shared/utils/productUtils/priceUtils/classifyPriceUtils";
 import type { MigrationRuntime } from "@/internal/migrations/v2/types/migrationDefinition.js";
@@ -35,14 +35,17 @@ const matchesRemoveFilter = ({
 	) {
 		return false;
 	}
+	if (
+		filter.included !== undefined &&
+		entitlement.allowance !== filter.included
+	) {
+		return false;
+	}
 	return true;
 };
 
-/** Resolves the product the customer ends up on. Version alone is a full
- * transition to the target's definitions; with item customize the version is
- * a pure repoint and items evolve from the customer's current (from)
- * definitions — mirroring the per-customer patch path (setupPatchContext).
- * Identity, base price, and free trial always follow the target. */
+/** Version alone is a full transition to the target; with item customize,
+ * items and base-price semantics evolve from fromProduct (version is a repoint). */
 export const resolveTargetFullProduct = ({
 	migration,
 	op,
@@ -59,6 +62,7 @@ export const resolveTargetFullProduct = ({
 	features: Feature[];
 }): {
 	toProduct?: FullProduct;
+	addEntitlements: EntitlementWithFeature[];
 	hasItemChanges: boolean;
 	rejections: BatchMigrationRejection[];
 } => {
@@ -72,7 +76,8 @@ export const resolveTargetFullProduct = ({
 			fromProduct: targetProduct,
 			features,
 		});
-	if (rejections.length > 0) return { hasItemChanges: false, rejections };
+	if (rejections.length > 0)
+		return { addEntitlements: [], hasItemChanges: false, rejections };
 
 	const removeFilters = op.customize?.remove_items ?? [];
 	const hasItemCustomize =
@@ -94,22 +99,20 @@ export const resolveTargetFullProduct = ({
 	const retainedEntitlements = itemBase.entitlements.filter(
 		(entitlement) => !isRemoved(entitlement.id),
 	);
-	const newEntitlements = addEntitlements.filter(
-		(addition) =>
-			!retainedEntitlements.some((existing) => entsAreSame(existing, addition)),
-	);
 
 	return {
 		toProduct: {
 			...targetProduct,
-			entitlements: [...retainedEntitlements, ...newEntitlements],
+			// Written add_items stay on toProduct even when catalog already has the same shape; execution dedupes.
+			entitlements: [...retainedEntitlements, ...addEntitlements],
 			prices: [
-				...targetProduct.prices.filter(isFixedPrice),
+				...itemBase.prices.filter(isFixedPrice),
 				...itemBase.prices.filter(
 					(price) => !isFixedPrice(price) && !isRemoved(price.entitlement_id),
 				),
 			],
 		},
+		addEntitlements,
 		hasItemChanges:
 			addEntitlements.length > 0 || removedEntitlementIds.size > 0,
 		rejections: [],

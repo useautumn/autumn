@@ -1,5 +1,5 @@
 import type { AppEnv } from "@autumn/shared";
-import { autumnMcpHeaders } from "./client.js";
+import { autumnMcpHeaders } from "./headers.js";
 
 export type JsonValue =
 	| string
@@ -66,6 +66,95 @@ const openMcpRpcSession = async ({
 	return { close, sendRpc };
 };
 
+type PooledRpcSession = {
+	close: () => Promise<void>;
+	sendRpc: (
+		method: string,
+		params: Record<string, unknown>,
+	) => Promise<Record<string, unknown> & { error?: unknown; result?: unknown }>;
+	inFlight: number;
+	lastUsedAt: number;
+};
+
+/** Session churn was 3 HTTP round trips per tool call (initialize, call,
+ * DELETE) on the agent's hot path — keep sessions alive with a sliding TTL. */
+const RPC_SESSION_TTL_MS = 60_000;
+
+const rpcSessionPool = new Map<string, PooledRpcSession>();
+
+const evictStaleRpcSessions = () => {
+	const now = Date.now();
+	for (const [key, pooled] of rpcSessionPool) {
+		if (pooled.inFlight === 0 && now - pooled.lastUsedAt > RPC_SESSION_TTL_MS) {
+			rpcSessionPool.delete(key);
+			void pooled.close();
+		}
+	}
+};
+
+const dropRpcSession = (key: string) => {
+	const pooled = rpcSessionPool.get(key);
+	if (!pooled) return;
+	rpcSessionPool.delete(key);
+	void pooled.close();
+};
+
+/** Runs `send` on a pooled session; a transport failure evicts the session and
+ * retries once on a fresh one. JSON-RPC app errors are not retried. */
+const withPooledRpcSession = async <T>(
+	{
+		appEnv,
+		baseUrl,
+		token,
+	}: { appEnv: AppEnv; baseUrl: string; token: string },
+	send: (sendRpc: PooledRpcSession["sendRpc"]) => Promise<T>,
+): Promise<T> => {
+	const key = `${baseUrl}:${token}:${appEnv}`;
+	evictStaleRpcSessions();
+
+	const attempt = async (): Promise<T> => {
+		let pooled = rpcSessionPool.get(key);
+		if (!pooled) {
+			const session = await openMcpRpcSession({ appEnv, baseUrl, token });
+			pooled = { ...session, inFlight: 0, lastUsedAt: Date.now() };
+			rpcSessionPool.set(key, pooled);
+		}
+		pooled.inFlight += 1;
+		try {
+			return await send(pooled.sendRpc);
+		} finally {
+			pooled.inFlight -= 1;
+			pooled.lastUsedAt = Date.now();
+		}
+	};
+
+	try {
+		return await attempt();
+	} catch (error) {
+		if (error instanceof McpRpcToolError) throw error;
+		dropRpcSession(key);
+		return attempt();
+	}
+};
+
+class McpRpcToolError extends Error {}
+
+/** The server no longer knows the pooled session (restart or expiry); the
+ * pool must open a fresh one rather than surface this as a tool failure. */
+class McpRpcSessionStaleError extends Error {}
+
+const STALE_SESSION_CODE = -32000;
+
+const isStaleSessionError = (error: unknown) => {
+	const { code, message } = (error ?? {}) as {
+		code?: number;
+		message?: string;
+	};
+	return (
+		code === STALE_SESSION_CODE || /session not found/i.test(message ?? "")
+	);
+};
+
 export const callAutumnMcpTool = async ({
 	args,
 	baseUrl,
@@ -79,25 +168,21 @@ export const callAutumnMcpTool = async ({
 	token: string;
 	toolName: string;
 }) => {
-	const { close, sendRpc } = await openMcpRpcSession({
-		appEnv,
-		baseUrl,
-		token,
-	});
-	try {
+	return withPooledRpcSession({ appEnv, baseUrl, token }, async (sendRpc) => {
 		const response = await sendRpc("tools/call", {
 			arguments: args,
 			name: toolName,
 		});
+		if (isStaleSessionError(response.error)) {
+			throw new McpRpcSessionStaleError("Autumn MCP session is stale");
+		}
 		if (response.error) {
-			throw new Error(
+			throw new McpRpcToolError(
 				`Autumn MCP tools/call failed: ${JSON.stringify(response.error).slice(0, 400)}`,
 			);
 		}
 		return response.result;
-	} finally {
-		await close();
-	}
+	});
 };
 
 export const listAutumnMcpTools = async ({
@@ -109,14 +194,10 @@ export const listAutumnMcpTools = async ({
 	env: AppEnv;
 	token: string;
 }): Promise<AutumnMcpToolMetadata[]> => {
-	const { close, sendRpc } = await openMcpRpcSession({
-		appEnv,
-		baseUrl,
-		token,
-	});
-	try {
+	return withPooledRpcSession({ appEnv, baseUrl, token }, async (sendRpc) => {
 		const listed = await sendRpc("tools/list", {});
-		const tools = (listed.result?.tools ?? []) as Array<{
+		const tools = ((listed.result as { tools?: unknown[] } | undefined)
+			?.tools ?? []) as Array<{
 			description?: string;
 			inputSchema?: JsonSchemaObject;
 			name: string;
@@ -126,7 +207,5 @@ export const listAutumnMcpTools = async ({
 			inputSchema: tool.inputSchema ?? { type: "object" },
 			name: tool.name,
 		}));
-	} finally {
-		await close();
-	}
+	});
 };

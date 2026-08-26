@@ -11,10 +11,10 @@
  * Green: the row survives and the customer falls out of the batch's changes.
  */
 import { expect, test } from "bun:test";
-import { customerEntitlements, rollovers } from "@autumn/shared";
+import { customerEntitlements, ResetInterval, rollovers } from "@autumn/shared";
 import { runChunkedMigration } from "@tests/integration/billing/migrations-v2/utils/runChunkedMigration";
 import { TestFeature } from "@tests/setup/v2Features";
-import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
+import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -24,20 +24,20 @@ import { generateId } from "@/utils/genUtils.js";
 const MESSAGES_INCLUDED = 100;
 const ROLLOVER_BALANCE = 25;
 
-test(`${chalk.yellowBright("batch migration: a delete spares rows carrying accrued rollover")}`, async () => {
-	const customerId = "batch-delete-rollover-rows";
+test(`${chalk.yellowBright("batch plan-item delete: a delete spares rows carrying accrued rollover")}`, async () => {
+	const customerId = "bpid-delete-rollover-rows";
 	const plan = products.base({
-		id: "batch-delete-rollover-plan",
+		id: "bpid-delete-rollover-plan",
 		items: [
-			itemsV2.dashboard(),
-			itemsV2.monthlyMessages({ included: MESSAGES_INCLUDED }),
+			items.dashboard(),
+			items.monthlyMessages({ includedUsage: MESSAGES_INCLUDED }),
 		],
 	});
 
-	const { ctx, autumnV2_2 } = await initScenario({
+	const { ctx, autumnV2_3 } = await initScenario({
 		customerId,
 		setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
-		actions: [s.attach({ productId: plan.id })],
+		actions: [s.billing.attach({ productId: plan.id })],
 	});
 
 	const messageRows = await ctx.db
@@ -65,8 +65,8 @@ test(`${chalk.yellowBright("batch migration: a delete spares rows carrying accru
 
 	await runChunkedMigration({
 		ctx,
-		migrationClient: autumnV2_2,
-		migrationId: "batch-delete-rollover-migration",
+		migrationClient: autumnV2_3,
+		migrationId: "bpid-delete-rollover-migration",
 		filter: { customer: { plan: { plan_id: plan.id, custom: false } } },
 		operations: {
 			customer: [
@@ -74,7 +74,12 @@ test(`${chalk.yellowBright("batch migration: a delete spares rows carrying accru
 					type: "update_plan",
 					plan_filter: { plan_id: plan.id, custom: false },
 					customize: {
-						remove_items: [{ feature_id: TestFeature.Messages }],
+						remove_items: [
+							{
+								feature_id: TestFeature.Messages,
+								interval: ResetInterval.Month,
+							},
+						],
 					},
 				},
 			],

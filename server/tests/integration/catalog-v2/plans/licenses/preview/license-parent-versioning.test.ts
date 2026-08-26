@@ -3,7 +3,7 @@
  * that actually resolves for that parent plan.
  *
  * Contract:
- *   - new_version + customers → mint v3, resolved new_version, v1/v2 unchanged
+ *   - new_version + customers → preview tops active v2, minted v3 sibling, resolved new_version
  *   - new_version + no customers → latest v2 follows, resolved existing
  *   - all_versions / pinned version → resolved strategy and per-version actions agree
  *
@@ -53,9 +53,11 @@ test.concurrent(
 							{
 								plan_id: childId,
 								items: [messagesItem(200)],
+								versioning: "new_version",
+								active: true,
 								propagate: {
 									license_parents: [
-										{ plan_id: parentId, versioning: "new_version" },
+										{ plan_id: parentId, versioning: "new_version", active: true },
 									],
 								},
 							},
@@ -70,7 +72,7 @@ test.concurrent(
 						licenseParents: [
 							{
 								planId: parentId,
-								version: 3,
+								version: 2,
 								hasCustomers: true,
 								hasPlanChange: true,
 								licenseAction: "propagated",
@@ -83,11 +85,7 @@ test.concurrent(
 								},
 								siblingVersions: [
 									{ version: 1, licenseAction: "unchanged" },
-									{
-										version: 2,
-										hasCustomers: true,
-										licenseAction: "unchanged",
-									},
+									{ version: 3, licenseAction: "unchanged" },
 								],
 							},
 						],
@@ -122,7 +120,7 @@ test.concurrent(
 								items: [messagesItem(200)],
 								propagate: {
 									license_parents: [
-										{ plan_id: parentId, versioning: "new_version" },
+										{ plan_id: parentId, versioning: "new_version", active: true },
 									],
 								},
 							},

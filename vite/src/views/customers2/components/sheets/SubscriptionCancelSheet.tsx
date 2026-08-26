@@ -23,6 +23,8 @@ import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
+import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
@@ -84,7 +86,10 @@ function SheetContent() {
 
 export function SubscriptionCancelSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
+	const sheetData = useSheetStore((s) => s.data);
 	const { closeSheet } = useSheetStore();
+	const approvalSeed = approvalSeedFromSheetData(sheetData);
+	const onApplied = useSettleApprovalOnApply();
 	const { customer } = useCusQuery();
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
@@ -142,7 +147,13 @@ export function SubscriptionCancelSheet() {
 		<UpdateSubscriptionFormProvider
 			formContext={formContext}
 			originalItems={undefined}
-			defaultOverrides={{ cancelAction: defaultCancelAction }}
+			defaultOverrides={{
+				cancelAction: defaultCancelAction,
+				...(approvalSeed?.defaultOverrides as
+					| Partial<UpdateSubscriptionForm>
+					| undefined),
+			}}
+			onApplied={onApplied}
 			onSuccess={closeSheet}
 		>
 			<SheetContent />

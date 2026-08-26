@@ -2,14 +2,56 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval, ChatInstallation } from "@autumn/shared";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
-import { approvalCard } from "../../../../ui/blocks.js";
+import { approvalCard, approvalSheetUrl } from "../../../../ui/blocks.js";
 import type { ReplyTarget } from "../../../../ui/progress.js";
 import type { AgentApprovalTurn } from "../../../agentRuntime/domain/agentTurn.js";
+import type { WithheldWrite } from "../../../agentRuntime/eve/parkedInput.js";
 import { toolLabel } from "../../../agentRuntime/tools/toolPolicy.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { createApproval } from "../../actions/createApproval.js";
+import {
+	dashboardLinkableApproval,
+	withheldWritesOf,
+} from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
-import { publicToolArgs } from "../../utils/toolRequest.js";
+import { chatApprovalWritesRepo } from "../../repos/chatApprovalWritesRepo.js";
+import { publicToolArgs, requestStringField } from "../../utils/toolRequest.js";
+
+/** URL only for cards the dashboard sheet can actually open. */
+export const dashboardUrlFor = ({
+	approvalId,
+	env,
+	groupedStepCount,
+	orgId,
+	provider,
+	toolArgs,
+	toolName,
+}: {
+	approvalId: string;
+	env: ChatApproval["env"];
+	groupedStepCount: number;
+	orgId: string;
+	provider: string;
+	toolArgs?: Record<string, unknown>;
+	toolName: string;
+}) =>
+	dashboardLinkableApproval({
+		approval: {
+			provider,
+			tool_args: toolArgs ?? {},
+			tool_name: toolName,
+		},
+		groupedStepCount,
+	})
+		? approvalSheetUrl({
+				approvalId,
+				customerId: requestStringField(toolArgs, "customer_id"),
+				env,
+				orgId,
+				planId: requestStringField(toolArgs, "plan_id"),
+				toolName,
+			})
+		: undefined;
 
 export const postApprovalCardForRow = async ({
 	approval,
@@ -18,18 +60,32 @@ export const postApprovalCardForRow = async ({
 }: {
 	approval: ChatApproval;
 	logger?: AutumnLogger;
-	/** Structural post-only view so ActionEvent threads (unknown state generic) fit. */
 	target: { post: (message: unknown) => Promise<{ id: string }> };
 }) => {
 	const toolArgs =
 		approval.tool_args && typeof approval.tool_args === "object"
 			? (approval.tool_args as Record<string, unknown>)
 			: {};
+	const writes = await chatApprovalWritesRepo.list({
+		approvalId: approval.id,
+		db,
+	});
+	const grouped = withheldWritesOf({ approval, writes });
 	const sent = await target.post(
 		approvalCard({
+			dashboardUrl: dashboardUrlFor({
+				approvalId: approval.id,
+				env: approval.env,
+				groupedStepCount: grouped.length,
+				orgId: approval.org_id,
+				provider: approval.provider,
+				toolArgs,
+				toolName: approval.tool_name,
+			}),
 			id: approval.id,
 			env: approval.env,
 			preview: approval.preview ?? undefined,
+			writes: grouped,
 			toolArgs: publicToolArgs(toolArgs),
 			toolName: approval.tool_name,
 		}),
@@ -49,9 +105,8 @@ export const postApprovalCardForRow = async ({
 	}
 };
 
-/** Grouped step previews land after the card is already visible; once they
- * persist, the card re-renders — unless the approval resolved meanwhile, whose
- * card must not be overwritten. */
+/** Re-renders the card once backfilled previews persist — unless the approval
+ * resolved meanwhile, whose card must not be overwritten. */
 const renderBackfilledGroupCard = async ({
 	backfill,
 	channelId,
@@ -61,17 +116,23 @@ const renderBackfilledGroupCard = async ({
 	messageId,
 	target,
 }: {
-	backfill: () => Promise<Record<string, unknown> | undefined>;
+	backfill: () => Promise<ReadonlyArray<WithheldWrite> | undefined>;
 	channelId: string;
-	created: { approvalId: string; preview: unknown; toolName: string };
+	created: {
+		approvalId: string;
+		dashboardUrl?: string | null;
+		preview: unknown;
+		toolArgs: Record<string, unknown>;
+		toolName: string;
+	};
 	env: ChatApproval["env"];
 	logger: AutumnLogger;
 	messageId: string;
 	target: ReplyTarget;
 }) => {
 	try {
-		const enrichedToolArgs = await backfill();
-		if (!enrichedToolArgs) return;
+		const previewedSteps = await backfill();
+		if (!previewedSteps) return;
 		if (!target.adapter?.editMessage) {
 			logger.warn("No adapter to re-render the backfilled card", {
 				event: "leaf.approval_group_preview_render_skipped",
@@ -88,10 +149,12 @@ const renderBackfilledGroupCard = async ({
 			channelId,
 			messageId,
 			approvalCard({
+				dashboardUrl: created.dashboardUrl,
 				id: created.approvalId,
 				env,
 				preview: created.preview,
-				toolArgs: enrichedToolArgs,
+				writes: previewedSteps,
+				toolArgs: created.toolArgs,
 				toolName: created.toolName,
 			}),
 		);
@@ -140,11 +203,22 @@ export const presentApproval = async ({
 	if (!created) return false;
 
 	await logAction(`Waiting for approval: ${toolLabel(created.toolName)}`);
+	const dashboardUrl = dashboardUrlFor({
+		approvalId: created.approvalId,
+		env,
+		groupedStepCount: created.withheld.length,
+		orgId,
+		provider: installation.provider,
+		toolArgs: created.toolArgs,
+		toolName: created.toolName,
+	});
 	const sent = await target.post(
 		approvalCard({
+			dashboardUrl,
 			id: created.approvalId,
 			env,
 			preview: created.preview,
+			writes: created.withheld,
 			toolArgs: created.toolArgs,
 			toolName: created.toolName,
 		}),
@@ -167,7 +241,7 @@ export const presentApproval = async ({
 		void renderBackfilledGroupCard({
 			backfill: created.backfillGroupedPreviews,
 			channelId,
-			created,
+			created: { ...created, dashboardUrl },
 			env,
 			logger,
 			messageId: sent.id,

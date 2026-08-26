@@ -164,7 +164,7 @@ export const getApiBalance = ({
 
 	if (unlimited) {
 		return {
-			data: getUnlimitedApiBalance({ apiFeature, cusEnts }),
+			data: getUnlimitedApiBalance({ apiFeature, cusEnts, entityId }),
 		};
 	}
 

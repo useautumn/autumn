@@ -19,18 +19,20 @@ export const batchMigrationPlanToExecutionPlan = ({
 				entitlement: operation.entitlementPrice.entitlement,
 				initialState: operation.initialState,
 			})),
-			removeEntitlementOps: patch.operations.removeEntitlements.map(
-				(operation) => ({
-					entitlement: operation.entitlementPrice.entitlement,
-				}),
-			),
-			replaceEntitlementOps: patch.operations.replaceEntitlements.map(
-				(operation) => ({
-					fromEntitlement: operation.fromEntitlementPrice.entitlement,
+			removeEntitlementOps: patch.operations.removeEntitlements
+				.filter((operation) => operation.by === "filter")
+				.map((operation) => ({
+					by: "filter" as const,
+					from: operation.from,
+				})),
+			replaceEntitlementOps: patch.operations.replaceEntitlements
+				.filter((operation) => operation.by === "filter")
+				.map((operation) => ({
+					by: "filter" as const,
+					from: operation.from,
 					entitlement: operation.entitlementPrice.entitlement,
 					initialState: operation.initialState,
-				}),
-			),
+				})),
 			licenseEntitlementOps: patch.operations.licenseEntitlements,
 			repointCustomerProduct: patch.operations.repointCustomerProduct,
 		};

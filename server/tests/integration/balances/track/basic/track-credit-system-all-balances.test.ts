@@ -8,12 +8,12 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
 // ═══════════════════════════════════════════════════════════════════
-// Scenario A: track feature_id linked to 2 credit systems
-// Action1 → Credits (entitled) + Credits3 (not entitled → null entry).
+// Scenario A: track feature_id linked to 3 credit systems
+// Action1 → Credits (entitled) + InvoiceCredits and Credits3 (not entitled).
 // ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("track-all-balances-A: track feature_id linked to credit system returns both balances")}`,
+	`${chalk.yellowBright("track-all-balances-A: track feature_id returns every linked credit-system balance")}`,
 	async () => {
 		const action1Item = items.free({
 			featureId: TestFeature.Action1,
@@ -49,17 +49,23 @@ test.concurrent(
 		// `balances` exposes the feature plus every linked credit system
 		expect(trackRes.balances).toBeDefined();
 		expect(Object.keys(trackRes.balances ?? {}).sort()).toEqual(
-			[TestFeature.Action1, TestFeature.Credits, TestFeature.Credits3].sort(),
+			[
+				TestFeature.Action1,
+				TestFeature.Credits,
+				TestFeature.InvoiceCredits,
+				TestFeature.Credits3,
+			].sort(),
 		);
 		expect(trackRes.balances?.[TestFeature.Action1]).not.toBeNull();
 		expect(trackRes.balances?.[TestFeature.Credits]).not.toBeNull();
+		expect(trackRes.balances?.[TestFeature.InvoiceCredits]).toBeNull();
 		expect(trackRes.balances?.[TestFeature.Credits3]).toBeNull();
 	},
 );
 
 // ═══════════════════════════════════════════════════════════════════
 // Scenario B: event_name → 2 features with their credit systems
-// "action-event" matches Action1 (→ Credits, Credits3) and Action3
+// "action-event" matches Action1 (→ Credits, InvoiceCredits, Credits3) and Action3
 // (→ Credits2). Credits3 is unentitled → null entry.
 // ═══════════════════════════════════════════════════════════════════
 
@@ -110,6 +116,7 @@ test.concurrent(
 				TestFeature.Action3,
 				TestFeature.Credits,
 				TestFeature.Credits2,
+				TestFeature.InvoiceCredits,
 				TestFeature.Credits3,
 			].sort(),
 		);
@@ -122,6 +129,7 @@ test.concurrent(
 			expect(trackRes.balances?.[fid]).not.toBeNull();
 		}
 		expect(trackRes.balances?.[TestFeature.Credits3]).toBeNull();
+		expect(trackRes.balances?.[TestFeature.InvoiceCredits]).toBeNull();
 	},
 );
 
@@ -244,10 +252,16 @@ test.concurrent(
 		// `balances` includes null entries for the missing entitlements
 		expect(trackRes.balances).toBeDefined();
 		expect(Object.keys(trackRes.balances ?? {}).sort()).toEqual(
-			[TestFeature.Action1, TestFeature.Credits, TestFeature.Credits3].sort(),
+			[
+				TestFeature.Action1,
+				TestFeature.Credits,
+				TestFeature.InvoiceCredits,
+				TestFeature.Credits3,
+			].sort(),
 		);
 		expect(trackRes.balances?.[TestFeature.Action1]).not.toBeNull();
 		expect(trackRes.balances?.[TestFeature.Credits]).toBeNull();
+		expect(trackRes.balances?.[TestFeature.InvoiceCredits]).toBeNull();
 		expect(trackRes.balances?.[TestFeature.Credits3]).toBeNull();
 	},
 );

@@ -25,16 +25,19 @@ const bumpWithWords = ({
 	autumn,
 	childId,
 	propagate,
+	versioning,
 }: {
 	autumn: Parameters<typeof bumpChild>[0]["autumn"];
 	childId: string;
 	propagate: Parameters<typeof bumpChild>[0]["propagate"];
+	versioning?: Parameters<typeof bumpChild>[0]["versioning"];
 }) =>
 	bumpChild({
 		autumn,
 		childId,
 		items: [messagesItem(200), wordsItem(50)],
 		propagate,
+		versioning,
 	});
 
 test.concurrent(
@@ -124,6 +127,7 @@ test.concurrent(
 				await bumpWithWords({
 					autumn: autumnV2_3,
 					childId,
+					versioning: "new_version",
 					propagate: {
 						license_parents: [
 							{ plan_id: parentId, versioning: "new_version" },

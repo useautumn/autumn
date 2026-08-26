@@ -12,17 +12,14 @@ export const FreeTrialParamsV1Schema = z
 			.meta({
 				description: "Unit of time for the trial ('day', 'month', 'year').",
 			}),
-		card_required: z.boolean().default(true).meta({
+		card_required: z.boolean().default(false).meta({
 			description:
-				"If true, payment method required to start trial. Customer is charged after trial ends.",
+				"If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.",
 		}),
-		on_end: z
-			.enum(["bill", "revert"])
-			.optional()
-			.meta({
-				description:
-					"Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.",
-			}),
+		on_end: z.enum(["bill", "revert"]).optional().meta({
+			description:
+				"Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.",
+		}),
 	})
 	.meta({
 		title: "FreeTrialParams",

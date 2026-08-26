@@ -23,6 +23,7 @@ export function FeatureUsageCell({
 		shouldShowOutOfBalance,
 		shouldShowUsed,
 		isUnlimited,
+		unlimitedUsage,
 		usageType,
 		quantity,
 		cusEntsCount,
@@ -47,7 +48,11 @@ export function FeatureUsageCell({
 
 	if (isUnlimited) {
 		return (
-			<span className="text-tertiary-foreground text-tiny px-1">Unlimited</span>
+			<span className="text-tertiary-foreground text-tiny px-1">
+				Unlimited
+				{unlimitedUsage > 0 &&
+					` · ${new Intl.NumberFormat().format(unlimitedUsage)} used`}
+			</span>
 		);
 	}
 

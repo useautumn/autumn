@@ -9,18 +9,7 @@ import {
 	oauthRefreshTokenRepo,
 } from "@/internal/auth/repos/index.js";
 
-/**
- * Revoke an OAuth consent and delete all linked resources:
- * - API keys (with meta.oauth_consent_id matching)
- * - Access tokens (matching clientId + referenceId)
- * - Refresh tokens (matching clientId + referenceId)
- * - The consent itself
- *
- * DELETE /consents/:consent_id
- * Auth: Session (from internalRouter middleware)
- *
- * Returns: { deleted_api_keys: ["am_sk_test_...", ...] }
- */
+/** Only the consent owner may revoke it and its linked credentials. */
 export const handleRevokeConsent = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	params: z.object({
@@ -77,12 +66,13 @@ export const handleRevokeConsent = createRoute({
 			}
 		}
 
-		// 4. Delete access tokens for this client + org
+		// Delete legacy main-org tokens and sandbox-bound consent tokens.
 		await oauthAccessTokenRepo.deleteByClientAndReference({
 			db,
 			clientId,
 			referenceId,
 		});
+		await oauthAccessTokenRepo.deleteByConsentId({ db, consentId: consent_id });
 
 		// 5. Delete refresh tokens for this client + org
 		await oauthRefreshTokenRepo.deleteByClientAndReference({

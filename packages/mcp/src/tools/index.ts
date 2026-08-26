@@ -1,26 +1,18 @@
-import { createTool } from "@mastra/core/tools";
-import * as z from "zod/v4";
-import { claimLatestPendingAction } from "../agent/pending-actions.js";
+import type { createTool } from "@mastra/core/tools";
+import type * as z from "zod/v4";
 import { instrumentToolsWithAnalytics } from "../analytics/index.js";
-import { type AutumnMcpAuth, getAutumnAuth } from "../server/auth/auth.js";
 import { domainModules, toolDomains } from "./domains.js";
 import { createOrgTools } from "./org.js";
-import { callAutumn } from "./utils/client.js";
 import {
 	dateToEpochMillisecondsTool,
 	epochMillisecondsToDateTool,
 } from "./utils/dates.js";
-import { logTool } from "./utils/debug.js";
 import {
-	agentBillingPreviewTool,
-	agentLocalPreviewTool,
-	agentPendingWriteTool,
 	operationTool,
 	rawLocalPreviewTool,
 	toTools,
 } from "./utils/factories.js";
 import { attachIntentToTools } from "./utils/intent.js";
-import type { ConfirmedWriteToolName } from "./utils/types.js";
 
 const {
 	agent,
@@ -123,66 +115,4 @@ export const createRawAutumnOperationTools = ({
 	instrumentToolsWithAnalytics({
 		tools: createRawAutumnOperationToolset({ requireIntent }),
 		surface: "mcp",
-	});
-
-/** Applies a previously-staged billing write after the user confirms it. */
-export const executeConfirmedBillingAction = ({
-	auth,
-	toolName,
-	request,
-}: {
-	auth: AutumnMcpAuth;
-	toolName: ConfirmedWriteToolName;
-	request: unknown;
-}) =>
-	callAutumn({
-		auth,
-		endpoint: endpointByTool[toolName],
-		request: schemaByTool[toolName].parse(request),
-	});
-
-/**
- * Agent toolset: destructive operations and billing writes are staged as pending
- * actions (preview-first), then applied via `confirmBillingAction` once approved.
- */
-const createAgentAutumnOperationToolset = (): ToolRecord => ({
-	...toTools(
-		operations.filter(({ destructive }) => !destructive),
-		operationTool,
-	),
-	...toTools(
-		operations.filter(({ destructive }) => destructive),
-		agentPendingWriteTool,
-	),
-	...toTools(billingPreviews, agentBillingPreviewTool),
-	...toTools(localPreviews, agentLocalPreviewTool),
-	dateToEpochMilliseconds: dateToEpochMillisecondsTool,
-	epochMillisecondsToDate: epochMillisecondsToDateTool,
-	confirmBillingAction: createTool({
-		id: "confirmBillingAction",
-		description:
-			"Apply the latest pending billing action after the user semantically confirms the preview.",
-		inputSchema: z.object({}).strict(),
-		execute: async (_input, context) => {
-			const auth = getAutumnAuth(context);
-			logTool("confirm-start", { env: auth.env });
-			const action = await claimLatestPendingAction(auth);
-			logTool("confirm-claimed", { toolName: action.toolName });
-			const result = await executeConfirmedBillingAction({
-				auth,
-				toolName: action.toolName,
-				request: action.request,
-			});
-			return {
-				message: `Confirmed and applied ${action.toolName}.`,
-				result,
-			};
-		},
-	}),
-});
-
-export const createAgentAutumnOperationTools = () =>
-	instrumentToolsWithAnalytics({
-		tools: createAgentAutumnOperationToolset(),
-		surface: "agent",
 	});

@@ -296,13 +296,15 @@ const main = async (): Promise<void> => {
 	const repoRoot = process.cwd();
 	const serverPort = resolveServerPort();
 
-	const { TEST_ORG_CONFIG } = await import(
-		"../../setupTestUtils/createTestOrg.js"
-	);
-	const orgId =
-		process.env.ORG_ID && process.env.ORG_ID.length > 0
-			? process.env.ORG_ID
-			: TEST_ORG_CONFIG.id;
+	// ORG_ID is always injected at fork. Do not import createTestOrg here —
+	// that pulls initLogger → @autumn/logging before a stale-warm bun install
+	// can link newly added workspace packages.
+	const orgId = process.env.ORG_ID;
+	if (!orgId) {
+		throw new Error(
+			"[tw-boot] ORG_ID is required — the orchestrator must inject the test org id",
+		);
+	}
 
 	const stripeAccountId = process.env.STRIPE_ACCOUNT_ID;
 	if (!stripeAccountId) {
@@ -331,13 +333,24 @@ const main = async (): Promise<void> => {
 	//     fast-forwarded lockfile (missing newly-added packages). Frozen
 	//     install is a no-op in seconds when node_modules is current.
 	log("reconciling node_modules (bun install --frozen-lockfile)");
-	const installProc = spawn(["bun", "install", "--frozen-lockfile"], {
+	const installEnv = process.env as Record<string, string>;
+	let installExit = await spawn(["bun", "install", "--frozen-lockfile"], {
 		cwd: repoRoot,
 		stdout: "inherit",
 		stderr: "inherit",
-		env: process.env as Record<string, string>,
-	});
-	const installExit = await installProc.exited;
+		env: installEnv,
+	}).exited;
+	if (installExit !== 0) {
+		// Stale warm + fast-forward can land on a lockfile that drifted from the
+		// baked node_modules — regenerate in-sandbox instead of failing the fan-out.
+		log("frozen install failed — regenerating lockfile (bun install)");
+		installExit = await spawn(["bun", "install"], {
+			cwd: repoRoot,
+			stdout: "inherit",
+			stderr: "inherit",
+			env: installEnv,
+		}).exited;
+	}
 	if (installExit !== 0) {
 		throw new Error(
 			`[tw-boot] bun install exited with code ${installExit} — dependency self-heal failed`,

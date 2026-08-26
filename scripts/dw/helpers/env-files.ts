@@ -97,6 +97,7 @@ export function provisionedInfraEnv(
 		REDIS_URL: redisUrl,
 		MISC_CACHE_DRAGONFLY_PUBLIC_URL: redisUrl,
 		CACHE_V2_DRAGONFLY_URL: redisUrl,
+		CACHE_V2_DRAGONFLY_PUBLIC_URL: redisUrl,
 		DYNAMODB_ENDPOINT: `http://localhost:${dynamoDbPortFor(worktreeNum)}`,
 		SQS_QUEUE_URL: queueUrl("autumn.fifo"),
 		SQS_QUEUE_URL_V2: queueUrl("autumn.fifo"),

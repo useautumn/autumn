@@ -6,15 +6,11 @@ import type {
 	LogArgs,
 } from "../types.js";
 import { createLogger } from "./createLogger.js";
-
-const rewriteAppPath = (value: string): string =>
-	value.replace("file:///app/", "./").replace(/\/app\//g, "./");
-
-const errorToObject = (error: Error) => ({
-	name: error.name,
-	message: error.message,
-	stack: error.stack ? rewriteAppPath(error.stack) : undefined,
-});
+import {
+	errorToObject,
+	normalizeErrorValues,
+	rewriteAppPath,
+} from "./normalizeErrors.js";
 
 const normalizeLogArgs = ({ args }: { args: LogArgs }) => {
 	const strings = args
@@ -24,10 +20,14 @@ const normalizeLogArgs = ({ args }: { args: LogArgs }) => {
 		.filter(
 			(arg) => typeof arg !== "string" && arg !== null && arg !== undefined,
 		)
-		.map((arg) => (arg instanceof Error ? { error: errorToObject(arg) } : arg));
+		.map((arg) =>
+			arg instanceof Error
+				? { error: errorToObject(arg) }
+				: normalizeErrorValues(arg),
+		);
 	const error = args.find((arg): arg is Error => arg instanceof Error);
 	const message =
-		strings.at(-1) ??
+		strings[strings.length - 1] ??
 		(error
 			? rewriteAppPath(error.stack || error.message || "Error occurred")
 			: "");
@@ -39,31 +39,39 @@ const normalizeLogArgs = ({ args }: { args: LogArgs }) => {
 };
 
 const createLogMethod =
-	({ method }: { method: pino.LogFn }) =>
+	({ level, logger }: { level: pino.Level; logger: pino.Logger }) =>
 	(...args: LogArgs) => {
+		if (!logger.isLevelEnabled(level)) return;
 		const { message, merged } = normalizeLogArgs({ args });
-		if (Object.keys(merged).length > 0) method(merged, message);
-		else method(message);
+		if (Object.keys(merged).length > 0) logger[level](merged, message);
+		else logger[level](message);
 	};
 
+const noopFlush = async () => {};
+
 export const createAutumnLogger = ({
+	flush = noopFlush,
 	logger,
 }: {
+	flush?: () => Promise<void>;
 	logger: pino.Logger;
 }): AutumnLogger => ({
 	level: logger.level as ConsoleLoggerLevel,
-	debug: createLogMethod({ method: logger.debug.bind(logger) }),
-	info: createLogMethod({ method: logger.info.bind(logger) }),
-	warn: createLogMethod({ method: logger.warn.bind(logger) }),
-	warning: createLogMethod({ method: logger.warn.bind(logger) }),
-	error: createLogMethod({ method: logger.error.bind(logger) }),
+	debug: createLogMethod({ level: "debug", logger }),
+	info: createLogMethod({ level: "info", logger }),
+	warn: createLogMethod({ level: "warn", logger }),
+	warning: createLogMethod({ level: "warn", logger }),
+	error: createLogMethod({ level: "error", logger }),
+	flush,
 	child: ({ context, onlyProd = false }) => {
 		if (onlyProd && process.env.NODE_ENV !== "production") {
-			return createAutumnLogger({ logger });
+			return createAutumnLogger({ flush, logger });
 		}
-		return createAutumnLogger({ logger: logger.child(context) });
+		return createAutumnLogger({ flush, logger: logger.child(context) });
 	},
 });
 
-export const createAppLogger = (params: CreateLoggerParams): AutumnLogger =>
-	createAutumnLogger({ logger: createLogger(params) });
+export const createAppLogger = (params: CreateLoggerParams): AutumnLogger => {
+	const { flushTransports, logger } = createLogger(params);
+	return createAutumnLogger({ flush: flushTransports, logger });
+};

@@ -16,11 +16,13 @@ import {
 import { useState } from "react";
 import { useParams } from "react-router";
 import { hasBillingControls } from "@/components/billing-controls/BillingControlsDisplay";
+import { EMPTY_BILLING_CONTROLS } from "@/components/billing-controls/clearedBillingControls";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useVariantLinkVisibility } from "../../hooks/useVariantLinkVisibility";
 import { MetadataEditor } from "./MetadataEditor";
 import { PlanBillingControlsSection } from "./PlanBillingControlsSection";
+import { VersionSlugField } from "./VersionSlugField";
 
 const NO_BASE_PLAN = "__none__";
 
@@ -37,6 +39,8 @@ export const MoreSettingsSection = () => {
 	} = useVariantLinkVisibility(product);
 
 	const hasGroup = notNullish(product.group);
+	// A version row only exists once the plan is saved; creating one always mints v1.
+	const isExistingVersion = !isCustomPlan && Boolean(product.internal_id);
 	// The linked base can be archived or a variant, so it stays selectable.
 	const visibleBasePlanOptions =
 		basePlan && !basePlanOptions.some((p) => p.id === basePlan.id)
@@ -72,6 +76,8 @@ export const MoreSettingsSection = () => {
 				titleClassName="text-tertiary-foreground"
 			>
 				<div className="space-y-5">
+					{isExistingVersion && <VersionSlugField />}
+
 					<ConfigRow
 						title="Group"
 						description="Assign the plan to a subscription tier group."
@@ -196,7 +202,10 @@ export const MoreSettingsSection = () => {
 											setBillingControlsOpened(true);
 										} else {
 											setBillingControlsOpened(false);
-											setProduct({ ...product, billing_controls: {} });
+											setProduct({
+												...product,
+												billing_controls: { ...EMPTY_BILLING_CONTROLS },
+											});
 										}
 									}}
 								/>

@@ -6,6 +6,10 @@ const SESSION_RESOLVE_TIMEOUT_MS = ms.seconds(15);
 export type RunStopReason = "timeout" | "user";
 
 export type ActiveRun = {
+	/** Aborts the locally-consumed turn stream so a stop lands immediately. */
+	abortTurnStream?: () => void;
+	/** Silences run progress (ticker/typing) the moment a stop is requested. */
+	onStop?: () => void;
 	/** Set by the pump once it stops consuming turns — no more injections. */
 	closed?: boolean;
 	/** Interrupts the current turn and delivers the text as the next turn. */
@@ -111,6 +115,8 @@ export const registerRun = ({
 		requestStop: async ({ byUserId, reason }) => {
 			if (run.stop) return;
 			run.stop = { byUserId, reason };
+			run.onStop?.();
+			run.abortTurnStream?.();
 			if (interruptSent) return;
 			interruptSent = true;
 			// The session id may never resolve if the run failed during setup.

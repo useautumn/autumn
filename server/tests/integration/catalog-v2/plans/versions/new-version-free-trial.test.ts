@@ -1,5 +1,5 @@
 /**
- * catalogV2.update — free_trial on versioning: "new_version" mint.
+ * catalogV2.update — free_trial on versioning: "new_version", active: true mint.
  *
  * Omitted trial is copied onto v2 with a new free_trials row id; null removes
  * it from v2 only; a changed shape lands on v2. v1's trial row is never touched.
@@ -111,7 +111,7 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Trial V2",
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});
@@ -173,7 +173,7 @@ test.concurrent(
 						plan_id: planId,
 						name: "Trial V2",
 						free_trial: null,
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});
@@ -234,7 +234,7 @@ test.concurrent(
 					{
 						plan_id: planId,
 						free_trial: trial14d,
-						versioning: "new_version",
+						versioning: "new_version", active: true,
 					},
 				],
 			});

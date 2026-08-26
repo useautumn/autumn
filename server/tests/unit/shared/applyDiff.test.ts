@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
-	AppEnv,
 	type ApiPlanLicenseV1,
 	type ApiPlanV1,
+	AppEnv,
 	BillingInterval,
 	BillingMethod,
 	type DiffedCustomizePlanV1,
@@ -162,4 +162,85 @@ test("applyCustomizeToPlan drops licenses listed in remove_licenses", () => {
 	});
 
 	expect(applied.licenses).toEqual([]);
+});
+
+describe("removeItems filter parity with the engine", () => {
+	const emailsPricedPlan = () =>
+		makePlan({
+			items: [
+				{
+					feature_id: "emails",
+					included: 0,
+					unlimited: false,
+					reset: null,
+					price: {
+						amount: 0.9,
+						billing_units: 1000,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.UsageBased,
+						max_purchase: null,
+					},
+				},
+			],
+		});
+
+	// Incident repro (resend, 24 Aug): the Slack card removed the plan's priced
+	// emails item by feature_id and added a custom one. The engine matched and
+	// attached fine; this translator kept both items, so the dashboard preview
+	// failed with "same feature, same reset interval".
+	test("a feature_id-only filter removes a priced item, like the engine", () => {
+		const diff = {
+			remove_items: [{ feature_id: "emails" }],
+			add_items: [
+				{
+					feature_id: "emails",
+					included: 5_000_000,
+					price: {
+						amount: 0.35,
+						billing_units: 1000,
+						interval: BillingInterval.Month,
+						billing_method: BillingMethod.UsageBased,
+					},
+				},
+			],
+		} as DiffedCustomizePlanV1;
+
+		const items = applyDiff({ base: emailsPricedPlan(), diff }).items;
+
+		expect(items).toHaveLength(1);
+		expect(items[0].included).toBe(5_000_000);
+		expect(items[0].price?.amount).toBe(0.35);
+	});
+
+	test("a billing_method filter still only matches that method", () => {
+		const diff = {
+			remove_items: [
+				{ feature_id: "emails", billing_method: BillingMethod.Prepaid },
+			],
+		} as DiffedCustomizePlanV1;
+
+		const items = applyDiff({ base: emailsPricedPlan(), diff }).items;
+
+		expect(items).toHaveLength(1);
+		expect(items[0].price?.amount).toBe(0.9);
+	});
+
+	test("a feature_id-only filter still removes an unpriced item", () => {
+		const base = makePlan({
+			items: [
+				{
+					feature_id: "emails",
+					included: 1000,
+					unlimited: false,
+					reset: null,
+					price: null,
+				},
+			],
+		});
+		const diff = {
+			remove_items: [{ feature_id: "emails" }],
+		} as DiffedCustomizePlanV1;
+
+		expect(applyDiff({ base, diff }).items).toHaveLength(0);
+	});
 });

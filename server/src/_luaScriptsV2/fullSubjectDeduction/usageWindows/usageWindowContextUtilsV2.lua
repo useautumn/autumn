@@ -42,6 +42,7 @@ local function get_available_from_usage_windows(params)
   local context = params.context
   local ent_feature_id = params.ent_feature_id
   local credit_cost = params.credit_cost or 1
+  local rate_card = params.rate_card
   local allowed = nil
 
   for feature_id, feature_windows in pairs(context.usage_windows or {}) do
@@ -55,7 +56,16 @@ local function get_available_from_usage_windows(params)
       if entry.dimension_type ~= 'balance' then
         units = headroom
       elseif not is_nil(ent_feature_id) and feature_id == ent_feature_id then
-        units = headroom / credit_cost
+        if not is_nil(rate_card) then
+          units = credit_rate_units_for_credit_change({
+            rate_card = rate_card,
+            current_units = params.current_units,
+            requested_units = params.requested_units,
+            allowed_credit_change = headroom,
+          })
+        else
+          units = headroom / credit_cost
+        end
       end
 
       if units ~= nil and (allowed == nil or units < allowed) then
@@ -76,6 +86,7 @@ local function consume_usage_window_headroom(params)
   local ent_feature_id = params.ent_feature_id
   local credit_cost = params.credit_cost or 1
   local units = params.units or 0
+  local credits = params.credits
 
   if units <= 0 then
     return
@@ -87,7 +98,7 @@ local function consume_usage_window_headroom(params)
       if entry.dimension_type ~= 'balance' then
         consumed = units
       elseif not is_nil(ent_feature_id) and feature_id == ent_feature_id then
-        consumed = units * credit_cost
+        consumed = is_nil(credits) and units * credit_cost or credits
       end
 
       if consumed ~= nil and consumed > 0 then

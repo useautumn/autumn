@@ -1,5 +1,8 @@
 import { Hono } from "hono";
+import { createRouterRateLimiter } from "@/honoMiddlewares/routerRateLimiter/index.js";
+import { handleGenerateBillingRequest } from "@/internal/billing/v2/handlers/handleGenerateBillingRequest.js";
 import { handlePreviewAttach } from "@/internal/billing/v2/handlers/handlePreviewAttach.js";
+import { handleResolveBillingRequest } from "@/internal/billing/v2/handlers/handleResolveBillingRequest.js";
 import { handleAttachPreview } from "@/internal/customers/attach/handleAttachPreview/handleAttachPreview.js";
 import { handleCancelV2 } from "@/internal/customers/cancel/handleCancelV2.js";
 import { handleOpenCustomerPortalV2 } from "@/internal/customers/handlers/handleBillingPortal/handleOpenCustomerPortalV2.js";
@@ -57,6 +60,21 @@ billingRpcRouter.post(
 	...handlePreviewMultiUpdate,
 );
 billingRpcRouter.post("/billing.preview_attach", ...handlePreviewAttach);
+billingRpcRouter.post(
+	"/billing.resolve_request",
+	...handleResolveBillingRequest,
+);
+
+const generateBillingRequestLimiter = createRouterRateLimiter({
+	keyPrefix: "billing_generate_request",
+	limit: 10,
+	windowMs: 10_000,
+});
+billingRpcRouter.post(
+	"/agent.generate_billing_request",
+	generateBillingRequestLimiter,
+	...handleGenerateBillingRequest,
+);
 billingRpcRouter.post("/billing.setup_payment", ...handleSetupPaymentV2);
 billingRpcRouter.post(
 	"/billing.open_customer_portal",

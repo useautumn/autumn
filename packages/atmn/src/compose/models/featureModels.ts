@@ -4,6 +4,36 @@
 
 import { z } from "zod/v4";
 
+export const CreditTierSchema = z.object({
+	to: z.union([z.number(), z.literal("inf")]),
+	creditCost: z.number(),
+});
+
+const CreditSchemaItemBaseSchema = z.object({
+	meteredFeatureId: z.string(),
+	billingUnits: z.number().optional(),
+});
+
+export const FlatCreditSchemaItemSchema = CreditSchemaItemBaseSchema.extend({
+	creditCost: z.number(),
+	tierBehavior: z.never().optional(),
+	tiers: z.never().optional(),
+});
+
+export const GraduatedCreditSchemaItemSchema =
+	CreditSchemaItemBaseSchema.extend({
+		creditCost: z.never().optional(),
+		tierBehavior: z.literal("graduated"),
+		tiers: z.array(CreditTierSchema),
+	});
+
+export const CreditSchemaItemSchema = z.union([
+	FlatCreditSchemaItemSchema,
+	GraduatedCreditSchemaItemSchema,
+]);
+
+export type CreditSchemaItem = z.infer<typeof CreditSchemaItemSchema>;
+
 export const FeatureSchema = z.object({
 	id: z.string().meta({
 		description:
@@ -17,23 +47,10 @@ export const FeatureSchema = z.object({
 		description:
 			"Event names that trigger this feature's balance. Allows multiple features to respond to a single event.",
 	}),
-	creditSchema: z
-		.array(
-			z.object({
-				metered_feature_id: z.string().meta({
-					description:
-						"ID of the metered feature that draws from this credit system.",
-				}),
-				credit_cost: z.number().meta({
-					description: "Credits consumed per unit of the metered feature.",
-				}),
-			}),
-		)
-		.optional()
-		.meta({
-			description:
-				"For credit_system features: maps metered features to their credit costs.",
-		}),
+	creditSchema: z.array(CreditSchemaItemSchema).optional().meta({
+		description:
+			"For credit_system features: maps metered features to flat or graduated credit costs.",
+	}),
 	archived: z.boolean().meta({
 		description:
 			"Whether the feature is archived and hidden from the dashboard.",
@@ -51,10 +68,7 @@ type FeatureBase = {
 	/** Event names that trigger this feature */
 	eventNames?: string[];
 	/** Credit schema for credit_system features */
-	creditSchema?: Array<{
-		meteredFeatureId: string;
-		creditCost: number;
-	}>;
+	creditSchema?: CreditSchemaItem[];
 };
 
 /** Boolean feature - no consumable field allowed */
@@ -76,10 +90,7 @@ export type CreditSystemFeature = FeatureBase & {
 	/** Credit systems are always consumable */
 	consumable?: true;
 	/** Required: defines how credits map to metered features */
-	creditSchema: Array<{
-		meteredFeatureId: string;
-		creditCost: number;
-	}>;
+	creditSchema: CreditSchemaItem[];
 };
 
 export type ModelMarkupEntry = {

@@ -1,4 +1,5 @@
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
+import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../../common/customerData";
 import { EntityDataSchema } from "../../../common/entityData";
@@ -26,6 +27,10 @@ export const BillingParamsBaseV1Schema = z.object({
 
 	version: z.number().optional().meta({
 		description: "The version of the plan to attach.",
+	}),
+	free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
+		description:
+			"Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.",
 	}),
 	customize: CustomizePlanV1Schema.optional().meta({
 		description:

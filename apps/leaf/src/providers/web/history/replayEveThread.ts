@@ -2,13 +2,13 @@ import { parsePreviewPayload } from "@autumn/render";
 import type { CatalogPlanPreview } from "@autumn/shared";
 import { getTime, isValid, parseISO } from "date-fns";
 import { catalogPlanNeedingDecision } from "../../../internal/agentRuntime/actions/resolveCatalogDecision/catalogDecisionPolicy.js";
-import { streamEveEvents } from "../../../internal/agentRuntime/eve/client.js";
 import {
 	displayEveToolLabel,
 	isPreviewToolName,
 	labelForResult,
 	textForInputRequests,
 } from "../../../internal/agentRuntime/eve/events.js";
+import { streamEveEventsWithReconnect } from "../../../internal/agentRuntime/eve/streamWithReconnect.js";
 import type {
 	EveAuthContext,
 	EveSessionRef,
@@ -39,7 +39,7 @@ const collectEveEvents = async ({
 	const abortController = new AbortController();
 	const events = [];
 	try {
-		for await (const event of streamEveEvents({
+		for await (const event of streamEveEventsWithReconnect({
 			auth,
 			session: replaySession,
 			signal: abortController.signal,

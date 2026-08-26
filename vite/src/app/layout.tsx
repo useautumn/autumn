@@ -3,7 +3,7 @@ import { IconButton, SandboxBanner } from "@autumn/ui";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Outlet } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { SandboxFavicon } from "@/components/general/SandboxFavicon";
@@ -114,13 +114,14 @@ const MainContent = ({
 	const env = useEnv();
 	const { org, isLoading: orgLoading } = useOrg();
 	const [showDeployDialog, setShowDeployDialog] = useState(false);
+	const isCapyDev = import.meta.env.VITE_CAPY_DEV === "1";
 
 	useDevQuery();
 	useAutumnFlags();
 	useFeatureFlags();
 	useFeaturesQuery();
 	useRewardsQuery();
-	useEventNames();
+	useEventNames({ enabled: !isCapyDev });
 
 	const showLoading = orgLoading || !org;
 
@@ -165,7 +166,13 @@ const MainContent = ({
 						)}
 					>
 						<div className="w-full h-full justify-center">
-							{showLoading ? <LoadingScreen /> : <Outlet />}
+							{showLoading ? (
+								<LoadingScreen />
+							) : (
+								<Suspense fallback={<LoadingScreen />}>
+									<Outlet />
+								</Suspense>
+							)}
 						</div>
 					</div>
 				</div>

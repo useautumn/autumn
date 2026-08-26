@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
+
+process.env.AUTUMN_DASHBOARD_URL = "https://app.useautumn.com";
+
 import { cardToBlockKit } from "@chat-adapter/slack";
 import {
 	approvalCard,
@@ -163,11 +166,11 @@ describe("approval card", () => {
 
 		const json = JSON.stringify(card);
 		expect(json).toContain("Update **charlie**'s subscription to **pro**?");
-		expect(json).toContain('"caption":"Plan changes"');
+		expect(json).toContain('"caption":"pro customizations"');
 		// No current plan in the preview, so setting a price is an add.
 		expect(json).toContain('["🟢 Add","Base price","$200.00 per month"]');
 		expect(json).not.toContain('Update","Base price');
-		expect(json).not.toContain("custom");
+		expect(json).not.toContain("Custom plan");
 		expect(json).not.toContain('"customize"');
 	});
 
@@ -288,7 +291,9 @@ describe("approval card", () => {
 		expect(json).toContain('["now","Pro"]');
 		expect(json).toContain('["after 2 years","Enterprise"]');
 		expect(json).toContain('["🟢 Add","Pro · 100 messages","—"]');
-		expect(json).toContain('["🔴 Remove","Enterprise · 12 workflows","—"]');
+		expect(json).toContain(
+			'["🔴 Remove","Enterprise (after 2 years) · 12 workflows","—"]',
+		);
 		expect(json).not.toContain("[object Object]");
 	});
 
@@ -319,7 +324,7 @@ describe("approval card", () => {
 		const json = JSON.stringify(card);
 		expect(json).toContain("Finalized invoice");
 		expect(json).toContain("Provision after payment");
-		expect(json).toContain("Reset usage");
+		expect(json).toContain("Usage will reset");
 		expect(json).toContain("Customer completes payment in checkout");
 		expect(json).not.toContain("Draft invoice");
 	});
@@ -434,9 +439,9 @@ describe("approval card", () => {
 
 		const json = JSON.stringify(card);
 		const slackJson = JSON.stringify(cardToBlockKit(card));
-		expect(json).toContain('"caption":"Plan changes"');
+		expect(json).toContain('"caption":"enterprise customizations"');
 		expect(slackJson).toContain('"type":"data_table"');
-		expect(slackJson).toContain('"caption":"Plan changes"');
+		expect(slackJson).toContain('"caption":"enterprise customizations"');
 		expect(json).toContain('"headers":["Change","Details","Pricing"]');
 		expect(json).toContain('["🟢 Add","Dashboard","—"]');
 		expect(json).toContain('["🟢 Add","Unlimited seats","—"]');
@@ -1109,7 +1114,9 @@ describe("approval status card", () => {
 		);
 		expect(supersededJson).toContain("Due now");
 		expect(supersededJson).toContain("$400.00");
-		expect(supersededJson).toContain("🔄 Updated");
+		expect(supersededJson).toContain(
+			"🔄 Withdrawn — superseded by a newer request in this thread",
+		);
 		// Settled state is a non-interactive status line, not a (fake) button row.
 		expect(superseded.children.at(-1)?.type).toBe("text");
 		expect(supersededJson).not.toContain('"type":"actions"');
@@ -1180,7 +1187,7 @@ describe("grouped step outcomes", () => {
 		const card = approvalStatusCard({
 			env: AppEnv.Sandbox,
 			status: "failed",
-			steps: [
+			outcomes: [
 				{ status: "applied", toolName: "updateCustomer" },
 				{ status: "failed", toolName: "attach" },
 			],
@@ -1198,7 +1205,7 @@ describe("grouped step outcomes", () => {
 		const card = approvalStatusCard({
 			env: AppEnv.Sandbox,
 			status: "failed",
-			steps: [{ status: "failed", toolName: "attach" }],
+			outcomes: [{ status: "failed", toolName: "attach" }],
 			toolArgs: { request: { customer_id: "cus_1" } },
 			toolName: "attach",
 		});
@@ -1208,7 +1215,7 @@ describe("grouped step outcomes", () => {
 });
 
 // On a grouped card the primary write may be the one with no preview, so the
-// money facts must still reach the user via the included steps.
+// money facts must still reach the user via the included writes.
 describe("grouped card with a preview-less primary write", () => {
 	test("still names the attach that carries the billing impact", () => {
 		const card = approvalCard({
@@ -1436,7 +1443,7 @@ describe("update-subscription card avoids restating itself", () => {
 
 	test("drops the generic intent label when a changes table renders", () => {
 		const rendered = JSON.stringify(cardToBlockKit(updateWithChanges()));
-		expect(rendered).toContain("Plan changes");
+		expect(rendered).toContain("customizations");
 		expect(rendered).not.toContain('"Update plan"');
 	});
 
@@ -1541,7 +1548,7 @@ describe("resolved fan-out card keeps the whole group", () => {
 
 // A grouped step must speak in the card's tense: "Attached" once resolved, not
 // a permanent "Attaching" that reads as still pending.
-describe("grouped steps follow the card state", () => {
+describe("grouped writes follow the card state", () => {
 	const mixedGroup = {
 		env: AppEnv.Sandbox,
 		toolArgs: {

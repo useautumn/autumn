@@ -6,6 +6,7 @@
  * run.sh drops trailing args, so invoke bun directly to pass flags:
  *
  *   infisical run --env=dev --recursive -- bun <path> --customers 400000 --pages all
+ *   infisical run --env=dev --recursive -- bun <path> --customers 50000 --groups 10
  *   infisical run --env=dev --recursive -- bun <path> --cleanup
  *
  * Isolated from seedBatchBench: a replace rewrites entitlement_id + balance
@@ -47,12 +48,15 @@ const parseArgs = () => {
 	return {
 		customers: Number(get("--customers") ?? "400000"),
 		pages: pagesArg === "all" ? Number.POSITIVE_INFINITY : Number(pagesArg),
+		groups: Number(get("--groups") ?? "1"),
 		cleanup: args.includes("--cleanup"),
 	};
 };
 
+const GROUP_ENTITLEMENT_PREFIX = "ent_bench_planrep_g_";
+
 const main = async () => {
-	const { customers, pages, cleanup } = parseArgs();
+	const { customers, pages, groups, cleanup } = parseArgs();
 	const { ctx, org, benchProducts } = await getBenchContext();
 	const { db } = ctx;
 	const prefixes = BENCH_PLANREP_PREFIXES;
@@ -69,6 +73,10 @@ const main = async () => {
 	await db.execute(sql`
 		DELETE FROM migration_item_runs
 		WHERE item_id LIKE ${`${prefixes.internalCustomer}%`}
+	`);
+	await db.execute(sql`
+		DELETE FROM entitlements
+		WHERE id LIKE ${`${GROUP_ENTITLEMENT_PREFIX}%`}
 	`);
 	console.log(`bench: cleanup done in ${Date.now() - cleanupStarted}ms`);
 	if (cleanup) {
@@ -110,6 +118,40 @@ const main = async () => {
 	console.log(
 		`bench: seeded ${customers.toLocaleString()} customers holding ${TestFeature.Messages} @ ${STARTING_BALANCE} in ${Date.now() - seedStarted}ms`,
 	);
+
+	if (groups > 1) {
+		const groupStarted = Date.now();
+		await db.execute(sql`
+			INSERT INTO entitlements (
+				id, created_at, org_id, internal_product_id, internal_feature_id,
+				feature_id, allowance_type, allowance, interval, interval_count, is_custom
+			)
+			SELECT
+				${GROUP_ENTITLEMENT_PREFIX} || i,
+				${Date.now()},
+				${org.id},
+				${internalProductId},
+				${benchProducts.messagesInternalFeatureId},
+				${TestFeature.Messages},
+				'fixed',
+				10 + i,
+				'month',
+				1,
+				true
+			FROM GENERATE_SERIES(1, ${groups}) AS i
+			ON CONFLICT (id) DO NOTHING
+		`);
+		await db.execute(sql`
+			UPDATE customer_entitlements AS live
+			SET entitlement_id = ${GROUP_ENTITLEMENT_PREFIX} || (
+				((SPLIT_PART(live.customer_id, '-', 4))::int - 1) % ${groups} + 1
+			)
+			WHERE live.id LIKE ${`${prefixes.entitlement}%`}
+		`);
+		console.log(
+			`bench: split into ${groups} live defs (allowance 11..${10 + groups}) in ${Date.now() - groupStarted}ms`,
+		);
+	}
 
 	const vacuumStarted = Date.now();
 	await db.execute(sql`VACUUM (ANALYZE) customer_entitlements`);
@@ -200,7 +242,7 @@ const main = async () => {
 	}
 	console.log(`bench: prepare ${prepareMs}ms, lane decision ${laneMs}ms`);
 	console.log(
-		`bench: replace ops ${replaceOps.length} (${FROM_ALLOWANCE} → ${TO_ALLOWANCE})`,
+		`bench: replace ops ${replaceOps.length} (${groups > 1 ? `${groups} live defs → ${TO_ALLOWANCE}` : `${FROM_ALLOWANCE} → ${TO_ALLOWANCE}`})`,
 	);
 
 	let cursor: string | undefined;
@@ -240,6 +282,12 @@ const main = async () => {
 
 	const totalMs = Date.now() - runStarted;
 
+	const toEntitlementId = replaceOps[0]?.entitlement.id;
+	if (!toEntitlementId) {
+		console.error("bench: replace op missing minted entitlement");
+		process.exit(1);
+	}
+
 	const [counts]: Array<{
 		holders: string;
 		rows: string;
@@ -255,13 +303,18 @@ const main = async () => {
 			 WHERE id LIKE ${`${prefixes.entitlement}%`}) AS rows,
 			(SELECT count(*) FROM customer_entitlements
 			 WHERE id LIKE ${`${prefixes.entitlement}%`}
-			   AND entitlement_id <> ${entitlementId}) AS repointed,
+			   AND entitlement_id = ${toEntitlementId}) AS repointed,
 			(SELECT count(*) FROM customer_entitlements
 			 WHERE id LIKE ${`${prefixes.entitlement}%`}
-			   AND entitlement_id = ${entitlementId}) AS stale,
-			(SELECT count(*) FROM customer_entitlements
-			 WHERE id LIKE ${`${prefixes.entitlement}%`}
-			   AND balance IS DISTINCT FROM ${EXPECTED_BALANCE}) AS wrong_balance,
+			   AND entitlement_id <> ${toEntitlementId}) AS stale,
+			(SELECT count(*) FROM customer_entitlements AS live
+			 WHERE live.id LIKE ${`${prefixes.entitlement}%`}
+			   AND live.balance IS DISTINCT FROM (
+					(${STARTING_BALANCE})::numeric + (${TO_ALLOWANCE})::numeric - CASE
+						WHEN ${groups} <= 1 THEN (${FROM_ALLOWANCE})::numeric
+						ELSE 10::numeric + (((SPLIT_PART(live.customer_id, '-', 4))::int - 1) % ${groups} + 1)
+					END
+			   )) AS wrong_balance,
 			(SELECT count(*) FROM customer_entitlements
 			 WHERE id LIKE ${`${BENCH_CUSTOMER_ENTITLEMENT_PREFIX}%`}
 			   AND id NOT LIKE ${`${prefixes.entitlement}%`}) AS shared
@@ -289,7 +342,9 @@ const main = async () => {
 	const ranToCompletion = pages === Number.POSITIVE_INFINITY;
 	console.log("");
 	console.log(
-		`bench: allowance ${FROM_ALLOWANCE} → ${TO_ALLOWANCE}, start balance ${STARTING_BALANCE} → ${EXPECTED_BALANCE}`,
+		groups > 1
+			? `bench: ${groups} live defs (allowance 11..${10 + groups}) → ${TO_ALLOWANCE}, start balance ${STARTING_BALANCE}`
+			: `bench: allowance ${FROM_ALLOWANCE} → ${TO_ALLOWANCE}, start balance ${STARTING_BALANCE} → ${EXPECTED_BALANCE}`,
 	);
 	console.log(`bench: holders ${counts.holders} (expected ${customers})`);
 	console.log(`bench: rows ${counts.rows} (expected ${customers})`);
@@ -297,7 +352,7 @@ const main = async () => {
 		`bench: repointed ${counts.repointed}, stale ${counts.stale}${ranToCompletion ? " (expected 0 stale)" : ""}`,
 	);
 	console.log(
-		`bench: wrong balance ${counts.wrong_balance} (expected ${EXPECTED_BALANCE})`,
+		`bench: wrong balance ${counts.wrong_balance} (expected 0)`,
 	);
 	console.log(
 		`bench: shared dataset rows ${counts.shared} (expected ${sharedBefore}, untouched)`,

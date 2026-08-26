@@ -7,6 +7,7 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const mockState = {
 	getByAccountId: undefined as (() => Promise<unknown>) | undefined,
+	getWebhookSecretCalls: 0,
 };
 
 await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
@@ -19,8 +20,15 @@ await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 }));
 
 await mockModuleWithRestore("@/external/connect/initStripeCli.js", () => ({
-	initMasterStripe: () => ({}),
-	getStripeWebhookSecret: async () => "whsec_test",
+	initMasterStripe: () => ({
+		webhooks: {
+			constructEventAsync: async (body: string) => JSON.parse(body),
+		},
+	}),
+	getStripeWebhookSecret: async () => {
+		mockState.getWebhookSecretCalls++;
+		return "whsec_test";
+	},
 }));
 
 await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
@@ -32,6 +40,7 @@ const { stripeConnectSeederMiddleware } = await import(
 );
 
 const originalSkipVerify = process.env.STRIPE_WEBHOOK_SKIP_VERIFY;
+const originalNodeEnv = process.env.NODE_ENV;
 
 type TestEnv = { Variables: { ctx: unknown } };
 
@@ -73,11 +82,14 @@ const postEvent = (app: Hono<TestEnv>) =>
 describe("stripeConnectSeederMiddleware org resolution", () => {
 	beforeEach(() => {
 		process.env.STRIPE_WEBHOOK_SKIP_VERIFY = "true";
+		process.env.NODE_ENV = "test";
 		mockState.getByAccountId = undefined;
+		mockState.getWebhookSecretCalls = 0;
 	});
 
 	afterAll(() => {
 		process.env.STRIPE_WEBHOOK_SKIP_VERIFY = originalSkipVerify;
+		process.env.NODE_ENV = originalNodeEnv;
 	});
 
 	test("returns 200 and skips processing when the account is genuinely unlinked", async () => {
@@ -119,5 +131,21 @@ describe("stripeConnectSeederMiddleware org resolution", () => {
 
 		expect(response.status).toBe(200);
 		expect(didHandlerRun()).toBe(true);
+		expect(mockState.getWebhookSecretCalls).toBe(0);
+	});
+
+	test("still verifies signatures in production when skip verify is set", async () => {
+		process.env.NODE_ENV = "production";
+		mockState.getByAccountId = async () => ({
+			org: { id: "org_test", slug: "test-org", config: {} },
+			features: [],
+		});
+
+		const { app, didHandlerRun } = createApp();
+		const response = await postEvent(app);
+
+		expect(response.status).toBe(200);
+		expect(didHandlerRun()).toBe(true);
+		expect(mockState.getWebhookSecretCalls).toBe(1);
 	});
 });

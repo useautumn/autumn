@@ -1,3 +1,4 @@
+import { billingActionBadges, customizeWithFreeTrial } from "@autumn/render";
 import {
 	type ApiPlanV1,
 	AppEnv,
@@ -18,7 +19,6 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useEnv } from "@/utils/envUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { BillingCustomizeDiff } from "./BillingCustomizeDiff";
-import { billingActionBadges } from "./billingParams";
 import { PlanPreviewCard, PlansBackdrop } from "./PlanPreviewCard";
 
 const asString = (value: unknown): string | undefined =>
@@ -145,9 +145,10 @@ export function BillingPreviewCard({
 	const incomingPlans = incoming.filter(hasPlan);
 	const badges = billingActionBadges(params);
 
+	const folded = customizeWithFreeTrial(params);
 	const customize =
-		params?.customize && typeof params.customize === "object"
-			? (params.customize as Record<string, unknown>)
+		folded && typeof folded === "object"
+			? (folded as Record<string, unknown>)
 			: undefined;
 	const phases = Array.isArray(params?.phases)
 		? (params.phases as SchedulePhase[])

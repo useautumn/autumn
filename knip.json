@@ -31,6 +31,7 @@
 		"server": {
 			"entry": [
 				"src/workers.ts",
+				"src/ducklake.ts",
 				"src/internal/customers/cusUtils/createNewCustomer.ts",
 				"src/utils/importUtils/addProductFromSubs.ts",
 				"src/utils/scriptUtils/readOnlyStripe.ts",
@@ -132,11 +133,23 @@
 		},
 		"apps/leaf": {
 			"entry": [
-				"tests/**/*.ts"
+				"tests/**/*.ts",
+				"agent/**/*.ts"
 			],
 			"project": [
 				"src/**/*.ts",
-				"tests/**/*.ts"
+				"tests/**/*.ts",
+				"agent/**/*.ts"
+			]
+		},
+		"packages/agent-docs": {
+			"entry": [
+				"**/*.test.ts",
+				"scripts/**/*.ts"
+			],
+			"project": [
+				"src/**/*.ts",
+				"scripts/**/*.ts"
 			]
 		},
 		"packages/gateway": {
@@ -165,9 +178,6 @@
 		"packages/render": {
 			"project": [
 				"src/**/*.ts"
-			],
-			"ignore": [
-				"src/billing/planDisplay.ts"
 			]
 		},
 		"packages/env": {

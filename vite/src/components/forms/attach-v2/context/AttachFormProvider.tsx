@@ -23,12 +23,14 @@ import { useStore } from "@tanstack/react-form";
 import {
 	createContext,
 	type ReactNode,
+	useCallback,
 	useContext,
 	useEffect,
 	useMemo,
 	useRef,
 	useState,
 } from "react";
+import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
 import { getProductWithSupportedPlanFormValues } from "@/components/forms/shared/utils/planCustomizationUtils";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -49,6 +51,7 @@ import {
 	useAttachCurrency,
 } from "../hooks/useAttachCurrency";
 import { type UseAttachForm, useAttachForm } from "../hooks/useAttachForm";
+import { useAttachGeneration } from "../hooks/useAttachGeneration";
 import { useAttachMultiRequestBody } from "../hooks/useAttachMultiRequestBody";
 import { useAttachMutation } from "../hooks/useAttachMutation";
 import { useAttachPlanEditor } from "../hooks/useAttachPlanEditor";
@@ -92,6 +95,8 @@ interface AttachFormContextValue {
 	previewQuery: UseAttachPreviewReturn;
 	previewDiff: UsePreviewDiffReturn;
 
+	generation: BillingGenerationState;
+
 	planEditorProduct: FrontendProduct | undefined;
 	showPlanEditor: boolean;
 	handleEditPlan: (params?: { additionalPlanId?: string }) => void;
@@ -125,9 +130,11 @@ interface AttachFormProviderProps {
 	customerId: string | undefined;
 	entityId: string | undefined;
 	initialProductId?: string;
+	defaultOverrides?: Partial<AttachForm>;
 	onPlanEditorOpen?: () => void;
 	onPlanEditorClose?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
+	onApplied?: () => void;
 	onSuccess?: () => void;
 	onScopeChange?: (entityId: string | undefined) => void;
 	allowMultiplePlans?: boolean;
@@ -138,9 +145,11 @@ export function AttachFormProvider({
 	customerId,
 	entityId,
 	initialProductId,
+	defaultOverrides,
 	onPlanEditorOpen,
 	onPlanEditorClose,
 	onCheckoutRedirect,
+	onApplied,
 	onSuccess,
 	onScopeChange,
 	allowMultiplePlans = false,
@@ -150,7 +159,10 @@ export function AttachFormProvider({
 		Record<string, number>
 	>({});
 
-	const form = useAttachForm({ initialProductId });
+	const form = useAttachForm({
+		defaultOverrides,
+		initialProductId: defaultOverrides?.productId ?? initialProductId,
+	});
 
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();
@@ -324,6 +336,21 @@ export function AttachFormProvider({
 
 	// Track product changes and initialize prepaid options
 	const previousProductIdRef = useRef<string | undefined>(undefined);
+	// Seeded defaults must survive this effect's first pass — the plan's own trial/prepaid init would stomp them.
+	const seededRef = useRef(Boolean(defaultOverrides));
+	// AI generation applies whole configs, including productId — the reset/init pass below would stomp them.
+	const programmaticProductChangeRef = useRef(false);
+	const markProgrammaticProductChange = useCallback(
+		(nextProductId: string | undefined) => {
+			if (
+				nextProductId !== undefined &&
+				nextProductId !== form.store.state.values.productId
+			) {
+				programmaticProductChangeRef.current = true;
+			}
+		},
+		[form],
+	);
 	useEffect(() => {
 		if (!product) return;
 		// Only trigger when productId actually changes (not on initial mount with same value)
@@ -336,6 +363,13 @@ export function AttachFormProvider({
 			previousProductIdRef.current !== productId;
 
 		previousProductIdRef.current = productId;
+
+		if (programmaticProductChangeRef.current) {
+			programmaticProductChangeRef.current = false;
+			return;
+		}
+		const seededFirstRun = seededRef.current && !isProductChange;
+		seededRef.current = false;
 
 		if (isProductChange) {
 			form.setFieldValue("items", null);
@@ -363,7 +397,7 @@ export function AttachFormProvider({
 		form.setFieldValue("prepaidOptions", resolvedPrepaidOptions);
 		setInitialPrepaidOptions(resolvedPrepaidOptions as Record<string, number>);
 
-		if (product.free_trial) {
+		if (product.free_trial && !seededFirstRun) {
 			form.setFieldValue("trialEnabled", true);
 			form.setFieldValue("trialLength", Number(product.free_trial.length));
 			form.setFieldValue(
@@ -486,6 +520,7 @@ export function AttachFormProvider({
 		discounts,
 		currency: attachCurrency.requestCurrency,
 		startDate,
+		resetBillingCycle,
 		hasInvalidPlanScopes: additionalPlans.hasInvalidPlanScopes,
 	});
 	const billingOperation = isMultiPlan
@@ -495,6 +530,14 @@ export function AttachFormProvider({
 	const buildOperationRequestBody = isMultiPlan
 		? buildMultiRequestBody
 		: buildRequestBody;
+
+	const generation = useAttachGeneration({
+		form,
+		customerId,
+		currentRequest: requestBody as Record<string, unknown> | null,
+		markProgrammaticProductChange,
+		onScopeChange,
+	});
 
 	const previewQuery = useAttachPreview({
 		path: billingOperation.previewPath,
@@ -554,6 +597,7 @@ export function AttachFormProvider({
 		customerId,
 		buildRequestBody: buildOperationRequestBody,
 		path: billingOperation.path,
+		onApplied,
 		onCheckoutRedirect,
 		onSuccess,
 	});
@@ -582,6 +626,7 @@ export function AttachFormProvider({
 			attachCurrency,
 			previewQuery,
 			previewDiff,
+			generation,
 			planEditorProduct,
 			showPlanEditor,
 			handleEditPlan,
@@ -615,6 +660,7 @@ export function AttachFormProvider({
 			attachCurrency,
 			previewQuery,
 			previewDiff,
+			generation,
 			planEditorProduct,
 			showPlanEditor,
 			handleEditPlan,

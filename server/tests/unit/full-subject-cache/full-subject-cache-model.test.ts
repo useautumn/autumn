@@ -362,4 +362,23 @@ describe("fullSubject cache model", () => {
 		).toEqual(["price_fixed", "price_usage"]);
 		expect(isCustomerProductOneOff(customerProduct)).toBe(false);
 	});
+
+	// Red: FullSubject hydration dropped usage attribution from normalized balances.
+	// Green: attribution survives the normalized-to-full conversion unchanged.
+	test("preserves usage attribution when hydrating a normalized subject", () => {
+		const normalized = buildMixedIntervalNormalized();
+		const [customerEntitlement] = normalized.customer_entitlements;
+		if (!customerEntitlement) throw new Error("expected test entitlement");
+		customerEntitlement.usage_attribution = {
+			internal_feature_a: { units: 30_000, credits: 260 },
+			internal_feature_b: { units: 5_000, credits: 500 },
+		};
+
+		const fullSubject = normalizedToFullSubject({ normalized });
+
+		expect(
+			fullSubject.customer_products[0]?.customer_entitlements[0]
+				?.usage_attribution,
+		).toEqual(customerEntitlement.usage_attribution);
+	});
 });

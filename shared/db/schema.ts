@@ -4,6 +4,7 @@
 import { actions } from "../models/analyticsModels/actionTable.js";
 import {
 	chatApprovals,
+	chatApprovalWrites,
 	chatInstallations,
 	chatOAuthCredentials,
 } from "../models/chatModels/chatTable.js";
@@ -94,6 +95,8 @@ import { freeTrialRelations } from "../models/productModels/freeTrialModels/free
 import { freeTrials } from "../models/productModels/freeTrialModels/freeTrialTable.js";
 import { priceRelations } from "../models/productModels/priceModels/priceRelations.js";
 import { prices } from "../models/productModels/priceModels/priceTable.js";
+import { productAliasRelations } from "../models/productModels/productAliasRelations.js";
+import { productAliases } from "../models/productModels/productAliasTable.js";
 import { productRelations } from "../models/productModels/productRelations.js";
 // Product Tables
 import { products } from "../models/productModels/productTable.js";
@@ -142,6 +145,7 @@ export {
 	customerJwtFamilies,
 	autoTopupLimitStates as autoTopupLimits,
 	chatApprovals,
+	chatApprovalWrites,
 	chatInstallations,
 	chatOAuthCredentials,
 	chatResults,
@@ -215,6 +219,8 @@ export {
 	organizationsRelations,
 	priceRelations,
 	prices,
+	productAliasRelations,
+	productAliases,
 	productRelations,
 	products,
 	rewardRelations,

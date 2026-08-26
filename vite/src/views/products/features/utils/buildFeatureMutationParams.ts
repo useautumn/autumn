@@ -1,4 +1,5 @@
 import {
+	type ApiCreditSchemaItem,
 	type CreditSchemaItem,
 	type Feature,
 	type FeatureType,
@@ -8,6 +9,7 @@ import {
 	type ProviderMarkups,
 	type UpdateCatalogFeatureParams,
 } from "@autumn/shared";
+import { creditSchemaToApi } from "../credit-systems/utils/creditSchemaUtils";
 
 interface BuildFeatureMarkupParamsArgs {
 	type: FeatureType;
@@ -15,19 +17,21 @@ interface BuildFeatureMarkupParamsArgs {
 	defaultMarkup?: number | null;
 	providerMarkups?: ProviderMarkups;
 	schema?: CreditSchemaItem[];
+	invoiceCredit?: boolean;
 }
 
 interface FeatureMarkupParams {
 	model_markups?: ModelMarkups;
 	default_markup?: number | null;
 	provider_markups?: ProviderMarkups;
-	credit_schema?: { metered_feature_id: string; credit_cost: number }[];
+	credit_schema?: ApiCreditSchemaItem[];
+	invoice_credit?: boolean;
 }
 
 /**
  * Centralizes the AI-vs-classic credit system field selection shared by the
  * feature mutation sheets. AI credit systems carry markup fields and omit the
- * credit schema; classic credit systems do the inverse.
+ * rate card; classic credit systems do the inverse.
  */
 export const buildFeatureMarkupParams = ({
 	type,
@@ -35,19 +39,15 @@ export const buildFeatureMarkupParams = ({
 	defaultMarkup,
 	providerMarkups,
 	schema,
+	invoiceCredit,
 }: BuildFeatureMarkupParamsArgs): FeatureMarkupParams => {
 	const ai = isAiCreditSystem(type);
 	return {
 		model_markups: ai ? modelMarkups : undefined,
 		default_markup: ai ? defaultMarkup : undefined,
 		provider_markups: ai ? providerMarkups : undefined,
-		credit_schema: ai
-			? undefined
-			: schema?.map((item) => ({
-					metered_feature_id: item.metered_feature_id,
-					credit_cost:
-						item.credit_amount != null ? Number(item.credit_amount) : 0,
-				})),
+		credit_schema: ai || !schema ? undefined : creditSchemaToApi(schema),
+		invoice_credit: ai ? undefined : invoiceCredit,
 	};
 };
 
@@ -83,6 +83,7 @@ export const featureToCatalogFeatureParams = ({
 			defaultMarkup: feature.config?.default_markup,
 			providerMarkups: feature.config?.provider_markups,
 			schema: feature.config?.schema,
+			invoiceCredit: feature.config?.invoice_credit,
 		}),
 		...(archived !== undefined ? { archived } : {}),
 	};

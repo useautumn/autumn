@@ -9,6 +9,7 @@ import {
 import { sqlNow } from "../../db/utils.js";
 import type { AppEnv } from "../genModels/genEnums.js";
 import { organizations } from "../orgModels/orgTable.js";
+import type { ChatApprovalStatus } from "./chatApprovalApi.js";
 import type { ChatAuthMode } from "./chatEnums.js";
 
 export type ChatProvider =
@@ -75,7 +76,10 @@ export const chatApprovals = pgTable(
 		tool_name: text("tool_name").notNull(),
 		tool_args: jsonb("tool_args").$type<Record<string, unknown>>().notNull(),
 		preview: jsonb().$type<unknown>(),
-		status: text("status").notNull(),
+		status: text("status").$type<ChatApprovalStatus>().notNull(),
+		child_session_ids: text("child_session_ids").array(),
+		approve_option_id: text("approve_option_id"),
+		deny_option_id: text("deny_option_id"),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 		expires_at: numeric("expires_at", { mode: "number" }).notNull(),
 		decided_at: numeric("decided_at", { mode: "number" }),
@@ -87,6 +91,45 @@ export const chatApprovals = pgTable(
 			foreignColumns: [organizations.id],
 			name: "chat_approvals_org_id_fkey",
 		}).onDelete("cascade"),
+	],
+);
+
+export type ChatApprovalWriteStatus =
+	| "pending"
+	| "running"
+	| "applied"
+	| "failed"
+	| "skipped"
+	| "unknown";
+
+/** One gated write within an approval; position 0 is the primary write the
+ * parent row mirrors, later positions are the grouped siblings. */
+export const chatApprovalWrites = pgTable(
+	"chat_approval_writes",
+	{
+		id: text().primaryKey().notNull(),
+		approval_id: text("approval_id").notNull(),
+		position: numeric({ mode: "number" }).notNull(),
+		request_id: text("request_id"),
+		deny_option_id: text("deny_option_id"),
+		tool_name: text("tool_name").notNull(),
+		tool_args: jsonb("tool_args").$type<Record<string, unknown>>().notNull(),
+		preview: jsonb().$type<unknown>(),
+		status: text("status").$type<ChatApprovalWriteStatus>().notNull(),
+		result: jsonb().$type<unknown>(),
+		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
+		updated_at: numeric({ mode: "number" }).notNull().default(sqlNow),
+	},
+	(table) => [
+		foreignKey({
+			columns: [table.approval_id],
+			foreignColumns: [chatApprovals.id],
+			name: "chat_approval_writes_approval_id_fkey",
+		}).onDelete("cascade"),
+		unique("chat_approval_writes_approval_position_key").on(
+			table.approval_id,
+			table.position,
+		),
 	],
 );
 
@@ -138,4 +181,5 @@ export const chatOAuthCredentials = pgTable(
 
 export type ChatInstallation = typeof chatInstallations.$inferSelect;
 export type ChatApproval = typeof chatApprovals.$inferSelect;
+export type ChatApprovalWrite = typeof chatApprovalWrites.$inferSelect;
 export type ChatOAuthCredential = typeof chatOAuthCredentials.$inferSelect;

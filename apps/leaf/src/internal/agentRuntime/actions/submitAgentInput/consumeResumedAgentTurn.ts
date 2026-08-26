@@ -1,18 +1,23 @@
 import { ms } from "@autumn/shared";
-import { db } from "../../../../lib/db.js";
 import { logger } from "../../../../lib/logger.js";
 import { isErrorResult } from "../../../approvals/utils/approvalErrors.js";
 import {
 	EveStreamIdleTimeoutError,
-	streamEveEvents,
+	isEveTransportLost,
 } from "../../eve/client.js";
 import type { EveEvent } from "../../eve/eveEventSchemas.js";
 import { labelForAction, labelForResult } from "../../eve/events.js";
 import {
 	classifyParkedEveInput,
+	pendingGatedRequests,
 	type WithheldWrite,
 } from "../../eve/parkedInput.js";
-import { upsertEveSession } from "../../eve/repo.js";
+import {
+	advanceStreamCursor,
+	saveEveSessionState,
+	statusAfterTerminalEvent,
+} from "../../eve/sessionState.js";
+import { streamEveEventsWithReconnect } from "../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { normalizeToolName } from "../../tools/toolPolicy.js";
 import type { ResumedAgentTurn } from "./types.js";
@@ -28,6 +33,10 @@ const parsedResultText = (output: unknown): unknown => {
 	try {
 		return JSON.parse(text);
 	} catch {
+		logger.warn("Autumn MCP result text was not JSON", {
+			event: "leaf.autumn_mcp_result_parse_failed",
+			data: { text: text.slice(0, 300) },
+		});
 		return undefined;
 	}
 };
@@ -61,9 +70,8 @@ const CHILD_REPLAY_IDLE_TIMEOUT_MS = ms.seconds(15);
  * can be quiet for minutes before the next park or result arrives. */
 const RESUME_IDLE_TIMEOUT_MS = ms.minutes(5);
 
-/** Replays a completed child session's stream from the start, feeding its
- * action events to the caller. Task-mode children end with session.completed,
- * so the replay is finite; a live child ends at the idle timeout instead. */
+/** Replays a child session's stream from the start — finite for task-mode
+ * children (session.completed); a live child ends at the idle timeout. */
 const applyChildStreamResults = async ({
 	auth,
 	childSessionId,
@@ -87,11 +95,12 @@ const applyChildStreamResults = async ({
 		threadKey: session.threadKey,
 	};
 	try {
-		for await (const event of streamEveEvents({
+		for await (const event of streamEveEventsWithReconnect({
 			auth,
 			idleTimeoutMs: CHILD_REPLAY_IDLE_TIMEOUT_MS,
 			session: childSession,
 		})) {
+			childSession.state.streamIndex += 1;
 			if (event.type === "actions.requested") onRequested(event);
 			if (event.type === "action.result") onResult(event);
 			if (
@@ -115,11 +124,7 @@ export const consumeResumedAgentTurn = async ({
 	skipRequestId,
 }: {
 	auth: EveAuthContext;
-	/** The writes the user approved, in apply order; their results are the only
-	 * proof each one ran. */
 	expectedToolNames?: ReadonlyArray<string>;
-	/** Child sessions the turn delegated to before parking. A proxied write
-	 * executes there, so its proof lives on the child stream. */
 	childSessionIds?: ReadonlyArray<string>;
 	orgId: string;
 	session: EveSessionRef;
@@ -134,22 +139,23 @@ export const consumeResumedAgentTurn = async ({
 	let sawEvent = false;
 	let sawTurnActivity = false;
 	let turnStarted = false;
-	const expectedSteps = (expectedToolNames ?? []).map((toolName) => ({
+	const expectedWrites = (expectedToolNames ?? []).map((toolName) => ({
 		normalized: normalizeToolName(toolName),
 		reserved: false,
+		result: undefined as unknown,
 		status: "pending" as "applied" | "failed" | "pending",
 		toolName,
 	}));
 	const approvedCallIds = new Map<string, number>();
 	// Each requested call reserves the next free step of its tool, so N calls
-	// of one tool map to N distinct steps rather than all onto the first.
+	// of one tool map to N distinct writes rather than all onto the first.
 	const reserveStepFor = (name?: string) => {
 		if (!name) return -1;
 		const normalized = normalizeToolName(name);
-		const index = expectedSteps.findIndex(
+		const index = expectedWrites.findIndex(
 			(step) => !step.reserved && step.normalized === normalized,
 		);
-		if (index >= 0) expectedSteps[index].reserved = true;
+		if (index >= 0) expectedWrites[index].reserved = true;
 		return index;
 	};
 	// A result with an unknown callId (Eve executed before the stream opened,
@@ -157,7 +163,7 @@ export const consumeResumedAgentTurn = async ({
 	const unresolvedStepFor = (name?: string) => {
 		if (!name) return -1;
 		const normalized = normalizeToolName(name);
-		return expectedSteps.findIndex(
+		return expectedWrites.findIndex(
 			(step) => step.status !== "applied" && step.normalized === normalized,
 		);
 	};
@@ -179,127 +185,132 @@ export const consumeResumedAgentTurn = async ({
 			? (approvedCallIds.get(callId) ??
 				unresolvedStepFor(labelForResult(event.result)))
 			: unresolvedStepFor(labelForResult(event.result));
-		const step = index >= 0 ? expectedSteps[index] : undefined;
+		const step = index >= 0 ? expectedWrites[index] : undefined;
 		if (step) {
 			step.status = isFailedActionResult(event) ? "failed" : "applied";
+			const output = event.result?.output;
+			step.result = parsedResultText(output) ?? output;
 		}
 	};
-	for await (const event of streamEveEvents({
-		auth,
-		idleTimeoutMs: RESUME_IDLE_TIMEOUT_MS,
-		session,
-	})) {
-		sawEvent = true;
-		session.state.streamIndex += 1;
-		session.state.lastEventAt = Date.now();
-		if (
-			event.type === "step.started" ||
-			event.type === "actions.requested" ||
-			event.type === "action.result" ||
-			event.type === "input.requested" ||
-			event.type === "subagent.completed"
-		) {
-			sawTurnActivity = true;
-		}
-		if (event.type === "actions.requested") {
-			recordRequestedActions(event);
-		}
-		if (event.type === "action.result") {
-			logger.info("Resumed tool completed", {
-				event: "leaf.eve_resumed_tool_completed",
-				data: {
-					call_id: event.result?.callId,
-					failed: isFailedActionResult(event),
-					rejection: rejectionDetail(event.result?.output),
-					status: event.status,
-					tool: event.result?.toolName,
-				},
-			});
-		}
-		if (event.type === "action.result") {
-			recordActionResult(event);
-		}
-		if (event.type === "turn.started") {
-			turnStarted = true;
-		} else if (event.type === "input.requested") {
-			const parkedInput = classifyParkedEveInput({
-				requests: event.requests,
-				skipRequestId,
-			});
-			logger.info("Resumed turn parked input", {
-				event: "leaf.eve_resumed_park",
-				data: {
-					kind: parkedInput?.kind,
-					request_count: event.requests.length,
-					tools: event.requests.map((request) => request.action?.toolName),
-					withheld:
-						parkedInput?.kind === "gated" ? parkedInput.withheld.length : 0,
-				},
-			});
-			if (parkedInput?.kind === "gated") {
-				chained = parkedInput.chained;
-				chainedSiblingRequestIds = parkedInput.siblingRequestIds;
-				chainedWithheld = parkedInput.withheld;
+	try {
+		for await (const event of streamEveEventsWithReconnect({
+			auth,
+			idleTimeoutMs: RESUME_IDLE_TIMEOUT_MS,
+			session,
+		})) {
+			sawEvent = true;
+			advanceStreamCursor(session);
+			if (
+				event.type === "step.started" ||
+				event.type === "actions.requested" ||
+				event.type === "action.result" ||
+				event.type === "input.requested" ||
+				event.type === "subagent.completed"
+			) {
+				sawTurnActivity = true;
+			}
+			if (event.type === "actions.requested") {
+				recordRequestedActions(event);
+			}
+			if (event.type === "action.result") {
+				logger.info("Resumed tool completed", {
+					event: "leaf.eve_resumed_tool_completed",
+					data: {
+						call_id: event.result?.callId,
+						failed: isFailedActionResult(event),
+						rejection: rejectionDetail(event.result?.output),
+						status: event.status,
+						tool: event.result?.toolName,
+					},
+				});
+			}
+			if (event.type === "action.result") {
+				recordActionResult(event);
+			}
+			if (event.type === "turn.started") {
+				turnStarted = true;
+			} else if (event.type === "input.requested") {
+				const parkedInput = classifyParkedEveInput({
+					requests: event.requests,
+					skipRequestId,
+				});
+				logger.info("Resumed turn parked input", {
+					event: "leaf.eve_resumed_park",
+					data: {
+						kind: parkedInput?.kind,
+						request_count: event.requests.length,
+						tools: event.requests.map((request) => request.action?.toolName),
+						withheld:
+							parkedInput?.kind === "gated" ? parkedInput.withheld.length : 0,
+					},
+				});
+				if (parkedInput?.kind === "gated") {
+					chained = parkedInput.chained;
+					chainedSiblingRequestIds = parkedInput.siblingRequestIds;
+					chainedWithheld = parkedInput.withheld;
+					session.state.pendingRequests = pendingGatedRequests(parkedInput);
+					session.state.status = "waiting";
+					break;
+				}
+				if (parkedInput?.kind === "question") {
+					question = parkedInput.question;
+					session.state.status = "waiting";
+					break;
+				}
+				if (parkedInput) {
+					if (!(text || pendingText)) text = parkedInput.text;
+					session.state.status = "waiting";
+					break;
+				}
+			} else if (
+				event.type === "message.appended" &&
+				(turnStarted || sawTurnActivity)
+			) {
+				sawTurnActivity = true;
+				const messageSoFar = event.messageSoFar;
+				pendingText =
+					typeof messageSoFar === "string"
+						? messageSoFar
+						: `${pendingText}${event.messageDelta}`;
+			} else if (
+				event.type === "message.completed" &&
+				(turnStarted || sawTurnActivity)
+			) {
+				sawTurnActivity = true;
+				if (event.finishReason !== "tool-calls") {
+					text = event.message || pendingText;
+				}
+				pendingText = "";
+			} else if (
+				(turnStarted || sawTurnActivity) &&
+				(event.type === "session.waiting" || event.type === "session.completed")
+			) {
+				session.state.status = statusAfterTerminalEvent(event.type);
 				break;
+			} else if (
+				(turnStarted || sawTurnActivity) &&
+				(event.type === "turn.failed" || event.type === "session.failed")
+			) {
+				session.state.status = "failed";
+				throw new Error(event.message);
 			}
-			if (parkedInput?.kind === "question") {
-				question = parkedInput.question;
-				session.state.status = "waiting";
-				break;
-			}
-			if (parkedInput) {
-				if (!(text || pendingText)) text = parkedInput.text;
-				session.state.status = "waiting";
-				break;
-			}
-		} else if (
-			event.type === "message.appended" &&
-			(turnStarted || sawTurnActivity)
-		) {
-			sawTurnActivity = true;
-			const messageSoFar = event.messageSoFar;
-			pendingText =
-				typeof messageSoFar === "string"
-					? messageSoFar
-					: `${pendingText}${event.messageDelta}`;
-		} else if (
-			event.type === "message.completed" &&
-			(turnStarted || sawTurnActivity)
-		) {
-			sawTurnActivity = true;
-			if (event.finishReason !== "tool-calls") {
-				text = event.message || pendingText;
-			}
-			pendingText = "";
-		} else if (
-			(turnStarted || sawTurnActivity) &&
-			(event.type === "session.waiting" || event.type === "session.completed")
-		) {
-			session.state.status =
-				event.type === "session.completed" ? "completed" : "waiting";
-			break;
-		} else if (
-			(turnStarted || sawTurnActivity) &&
-			(event.type === "turn.failed" || event.type === "session.failed")
-		) {
-			session.state.status = "failed";
-			throw new Error(event.message);
 		}
-	}
-	if (sawEvent) {
-		await upsertEveSession({
-			db,
-			env: session.env,
-			orgId,
-			sessionId: session.sessionId,
-			state: session.state,
-			threadKey: session.threadKey,
+	} catch (error) {
+		if (!isEveTransportLost(error)) throw error;
+		logger.warn("Resumed stream lost; settling from write evidence", {
+			event: "leaf.eve_resumed_stream_lost",
+			data: {
+				session_id: session.sessionId,
+				stream_index: session.state.streamIndex,
+			},
+			error,
 		});
 	}
+	if (sawEvent) await saveEveSessionState({ orgId, session });
 	// Writes delegated to a subagent report their results on the child's
-	// stream only; replay each child to prove the approved steps ran there.
+	// stream only; replay each child to prove the approved writes ran there.
 	for (const childSessionId of childSessionIds) {
-		if (expectedSteps.every((step) => step.status === "applied")) break;
+		if (expectedWrites.every((step) => step.status === "applied")) break;
 		try {
 			await applyChildStreamResults({
 				auth,
@@ -309,32 +320,33 @@ export const consumeResumedAgentTurn = async ({
 				session,
 			});
 		} catch (error) {
-			logger.warn("Could not verify steps from the child session", {
+			logger.warn("Could not verify writes from the child session", {
 				event: "leaf.eve_child_verification_failed",
 				data: {
 					child_session_id: childSessionId,
-					error: error instanceof Error ? error.message : String(error),
+					error,
 				},
 			});
 		}
 	}
-	const steps = expectedSteps.map(({ status, toolName }) => ({
+	const writes = expectedWrites.map(({ result, status, toolName }) => ({
+		result,
 		status,
 		toolName,
 	}));
 	return {
-		approvedWriteFailed: steps.some((step) => step.status === "failed"),
+		approvedWriteFailed: writes.some((step) => step.status === "failed"),
 		// Without a result for the approved tool there is no proof it ran, so an
 		// unrelated tool or a bare reply must not read as success.
 		approvedWriteUnverified:
-			expectedSteps.length > 0 &&
-			!expectedSteps.some((step) => step.status === "applied"),
+			expectedWrites.length > 0 &&
+			!expectedWrites.some((step) => step.status === "applied"),
 		chained,
 		chainedSiblingRequestIds,
 		chainedWithheld,
 		deferredEmptyTurn: turnStarted && !(sawTurnActivity || text || pendingText),
 		question,
-		steps,
+		writes,
 		text: text || pendingText,
 	};
 };

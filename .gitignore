@@ -24,6 +24,7 @@ tests/
 !packages/mcp/tests
 !packages/gateway/tests
 !apps/leaf/tests
+!packages/render/tests
 !vite/tests
 .secrets
 

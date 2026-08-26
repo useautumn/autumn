@@ -29,6 +29,7 @@ export type BuildAttachMultiRequestBodyParams = Pick<
 	| "discounts"
 	| "currency"
 	| "startDate"
+	| "resetBillingCycle"
 > & {
 	products: ProductV2[];
 	features: Feature[];
@@ -96,6 +97,7 @@ export function buildAttachMultiRequestBody({
 	discounts,
 	currency,
 	startDate,
+	resetBillingCycle,
 	hasInvalidPlanScopes = false,
 }: BuildAttachMultiRequestBodyParams): MultiAttachParamsV0 | null {
 	if (hasInvalidPlanScopes || !customerId || !product) return null;
@@ -159,6 +161,7 @@ export function buildAttachMultiRequestBody({
 		...(currency ? { currency: currency.toLowerCase() } : {}),
 		...(validDiscounts.length > 0 ? { discounts: validDiscounts } : {}),
 		...(startDate ? { starts_at: startDate } : {}),
+		...(resetBillingCycle ? { billing_cycle_anchor: "now" as const } : {}),
 	};
 }
 
@@ -186,6 +189,7 @@ export function useAttachMultiRequestBody(
 		discounts,
 		currency,
 		startDate,
+		resetBillingCycle,
 		hasInvalidPlanScopes,
 	} = params;
 	const requestBody = useMemo(
@@ -211,6 +215,7 @@ export function useAttachMultiRequestBody(
 				discounts,
 				currency,
 				startDate,
+				resetBillingCycle,
 				hasInvalidPlanScopes,
 			}),
 		[
@@ -234,6 +239,7 @@ export function useAttachMultiRequestBody(
 			discounts,
 			currency,
 			startDate,
+			resetBillingCycle,
 			hasInvalidPlanScopes,
 		],
 	);

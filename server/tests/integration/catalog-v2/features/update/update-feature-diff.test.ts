@@ -125,21 +125,33 @@ test.concurrent(
 			type: FeatureType.Metered,
 			consumable: true,
 		});
-		const creditSchema = [
-			{ metered_feature_id: meteredAId, credit_cost: 2 },
-			{ metered_feature_id: meteredBId, credit_cost: 1 },
-		];
+		const flatCreditRate = {
+			metered_feature_id: meteredAId,
+			billing_units: 100,
+			credit_cost: 2,
+		};
+		const graduatedCreditRate = {
+			metered_feature_id: meteredBId,
+			billing_units: 1_000,
+			tier_behavior: "graduated" as const,
+			tiers: [
+				{ to: 10_000, credit_cost: 1 },
+				{ to: "inf" as const, credit_cost: 0.5 },
+			],
+		};
+		const creditSchema = [flatCreditRate, graduatedCreditRate];
 		const creditSystem = {
 			feature_id: creditSystemId,
 			name: "CV2 Diff Credits",
 			type: FeatureType.CreditSystem,
+			invoice_credit: true,
 			credit_schema: creditSchema,
 		};
 		await deleteDbFeatures({ ctx, featureIds });
 
-		const previewSchema = async (schema: typeof creditSchema) =>
+		const previewCreditSystem = async (patch: Partial<typeof creditSystem>) =>
 			autumnV2_3.catalogV2.previewUpdate({
-				features: [{ ...creditSystem, credit_schema: schema }],
+				features: [{ ...creditSystem, ...patch }],
 			});
 
 		try {
@@ -153,7 +165,9 @@ test.concurrent(
 
 			// Same schema, reversed order → nothing changed
 			expectCatalogPreviewCorrect({
-				preview: await previewSchema([...creditSchema].reverse()),
+				preview: await previewCreditSystem({
+					credit_schema: [...creditSchema].reverse(),
+				}),
 				features: [
 					{
 						featureId: creditSystemId,
@@ -163,12 +177,14 @@ test.concurrent(
 				],
 			});
 
-			// Cost change → previous schema captured whole
+			// Billing-unit change → previous schema captured whole
 			expectCatalogPreviewCorrect({
-				preview: await previewSchema([
-					{ metered_feature_id: meteredAId, credit_cost: 3 },
-					{ metered_feature_id: meteredBId, credit_cost: 1 },
-				]),
+				preview: await previewCreditSystem({
+					credit_schema: [
+						{ ...flatCreditRate, billing_units: 200 },
+						graduatedCreditRate,
+					],
+				}),
 				features: [
 					{
 						featureId: creditSystemId,
@@ -178,16 +194,37 @@ test.concurrent(
 				],
 			});
 
-			// Dropped entry → previous schema captured whole
+			// Tier change → previous schema captured whole
 			expectCatalogPreviewCorrect({
-				preview: await previewSchema([
-					{ metered_feature_id: meteredAId, credit_cost: 2 },
-				]),
+				preview: await previewCreditSystem({
+					credit_schema: [
+						flatCreditRate,
+						{
+							...graduatedCreditRate,
+							tiers: [
+								{ to: 20_000, credit_cost: 1 },
+								{ to: "inf", credit_cost: 0.4 },
+							],
+						},
+					],
+				}),
 				features: [
 					{
 						featureId: creditSystemId,
 						action: "update",
 						previousAttributes: { credit_schema: creditSchema },
+					},
+				],
+			});
+
+			// Invoice itemization change → previous value captured exactly
+			expectCatalogPreviewCorrect({
+				preview: await previewCreditSystem({ invoice_credit: false }),
+				features: [
+					{
+						featureId: creditSystemId,
+						action: "update",
+						previousAttributes: { invoice_credit: true },
 					},
 				],
 			});

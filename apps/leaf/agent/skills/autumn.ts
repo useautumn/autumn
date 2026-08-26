@@ -1,5 +1,5 @@
-import { subagentSkills } from "../lib/subagentSkills.js";
+import { namedSkills } from "../lib/subagentSkills.js";
 
-// Catalog work stays rooted until the catalog specialist is wired, so the
-// orchestrator keeps only the catalog skill and its prerequisites.
-export default subagentSkills({ agent: "catalog" });
+// The orchestrator routes and answers from preloaded context; it keeps only
+// the shared concepts skill for conceptual pricing-model questions.
+export default namedSkills({ names: ["autumn-concepts"] });

@@ -1,23 +1,31 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { MAX_WORKTREE } from "../constants.ts";
 import type { WorktreeAliases } from "../types.ts";
 import { log, sh } from "./shell.ts";
 
 const PORTLESS_PROXY_PORT_FILE = join(homedir(), ".portless", "proxy.port");
 
+/** bun d owns 6379/6380/8000. wt-1 compose sits past slot 50. */
+const worktree1ComposeSlot = MAX_WORKTREE + 1;
+
+function composeSlot(worktreeNum: number): number {
+	return worktreeNum === 1 ? worktree1ComposeSlot : worktreeNum;
+}
+
 export function dragonflyPortFor(worktreeNum: number): number {
-	return 6379 + (worktreeNum - 1) * 100;
+	return 6379 + (composeSlot(worktreeNum) - 1) * 100;
 }
 
 export function elasticMqPortFor(worktreeNum: number): number {
-	return 9324 + (worktreeNum - 1) * 100;
+	return 9324 + (composeSlot(worktreeNum) - 1) * 100;
 }
 
 // DynamoDB Local's default port. Base 8000 never collides with the server's
 // 8080 base: 8000 + k*100 and 8080 + k*100 stay 80 apart for every worktree.
 export function dynamoDbPortFor(worktreeNum: number): number {
-	return 8000 + (worktreeNum - 1) * 100;
+	return 8000 + (composeSlot(worktreeNum) - 1) * 100;
 }
 
 export function serverPortFor(worktreeNum: number): number {
@@ -88,20 +96,59 @@ export function appPortsFor(worktreeNum: number): number[] {
 	];
 }
 
+function parentPidOf(pid: number): number | undefined {
+	const ppid = Number(sh("ps", ["-o", "ppid=", "-p", String(pid)]).stdout);
+	if (!Number.isInteger(ppid) || ppid <= 1) return undefined;
+	return ppid;
+}
+
+function isNodemonPid(pid: number): boolean {
+	return sh("ps", ["-o", "args=", "-p", String(pid)]).stdout.includes(
+		"nodemon",
+	);
+}
+
+/**
+ * Local `bun dw run` only. Killing the port holder without nodemon just
+ * makes nodemon respawn another server — that is how leftover trees pile up.
+ */
 export function killOwnPorts(worktreeNum: number): void {
+	if (process.env.NODE_ENV === "production") return;
 	const ports = appPortsFor(worktreeNum);
 	if (process.platform === "win32") return;
 	const lsof = sh(
 		"lsof",
 		ports.flatMap((p) => ["-ti", `:${p}`]),
 	);
-	const pids = lsof.stdout.split("\n").filter(Boolean);
-	for (const pid of pids) {
+	const listeners = [
+		...new Set(
+			lsof.stdout
+				.split("\n")
+				.map((pid) => Number(pid))
+				.filter((pid) => Number.isInteger(pid) && pid > 1),
+		),
+	];
+	const supervisors = [
+		...new Set(
+			listeners.flatMap((pid) => {
+				const ppid = parentPidOf(pid);
+				if (
+					ppid === undefined ||
+					ppid === process.pid ||
+					!isNodemonPid(ppid)
+				) {
+					return [];
+				}
+				return [ppid];
+			}),
+		),
+	];
+	for (const pid of [...supervisors, ...listeners]) {
 		try {
-			process.kill(Number(pid), "SIGKILL");
+			process.kill(pid, "SIGKILL");
 		} catch {}
 	}
-	if (pids.length > 0) {
-		log(`killed ${pids.length} process(es) on ports ${ports.join(", ")}`);
+	if (listeners.length > 0) {
+		log(`killed ${listeners.length} process(es) on ports ${ports.join(", ")}`);
 	}
 }

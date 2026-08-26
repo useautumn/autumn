@@ -63,7 +63,7 @@ export function CustomerListFilterButton({
 			balanceFeature: "",
 			balanceOp: ">",
 			balanceValue: "",
-			balanceBasis: "remaining",
+			balanceBasis: "usage",
 			joinedFrom: null,
 			joinedTo: null,
 		});

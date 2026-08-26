@@ -15,6 +15,7 @@ import { deductFromCusEntsTypescript } from "@/internal/balances/track/deductUti
 import { CusService } from "@/internal/customers/CusService";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
 import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters";
+import { validateInvoiceCreditBalanceMutation } from "../utils/validateInvoiceCreditBalanceMutation.js";
 
 const resetCusEntInPlace = ({
 	cusEnt,
@@ -88,6 +89,11 @@ export const computeRecalculateBalance = async ({
 		throw new RecaseError({
 			message: `Balance not found for feature ${feature_id} and customer ${customer_id}`,
 			statusCode: 404,
+		});
+	}
+	for (const customerEntitlement of before) {
+		validateInvoiceCreditBalanceMutation({
+			feature: customerEntitlement.entitlement.feature,
 		});
 	}
 	const entityId = fullCustomer.entity?.id ?? undefined;

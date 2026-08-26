@@ -219,7 +219,10 @@ test.concurrent(
 								parentLicenseOp({
 									planFilter,
 									childId,
-									customize: messagesItemDelta({ included: 1000 }),
+									customize: messagesItemDelta({
+										included: 1000,
+										fromIncluded: 500,
+									}),
 								}),
 							],
 						},

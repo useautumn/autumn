@@ -41,6 +41,7 @@ describe("classifySubscribedMessage", () => {
 	test.each([
 		"autumn stop replying",
 		"<@U123> don't reply anymore",
+		"@U0B66PD6MKQ stop replying now",
 		"please leave this thread",
 		"unsubscribe from this thread",
 	])("unsubscribes for explicit opt-out: %s", async (text) => {

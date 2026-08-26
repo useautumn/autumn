@@ -1,3 +1,13 @@
+/** One `/query/events` row: a `period` plus the numeric series columns. */
+export type EventRow = Record<string, string | number>;
+
+/** The `/query/events` payload shape every stage of the chart pipeline reads and returns. */
+export interface EventsData {
+	meta: Array<{ name: string }>;
+	rows: number;
+	data: EventRow[];
+}
+
 export type Row =
 	| {
 			interval_start: string;

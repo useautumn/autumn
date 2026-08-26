@@ -17,16 +17,21 @@ if (process.env.TRIGGER_SERVER_SECRET_KEY) {
 	const previewBranch = process.env.TRIGGER_DEV_BRANCH?.trim();
 	configure({
 		secretKey: process.env.TRIGGER_SERVER_SECRET_KEY,
+		baseURL: process.env.TRIGGER_API_URL,
 		// Must match `bunx trigger.dev dev --branch` from scripts/dev.ts —
 		// otherwise local triggers land on `default` while the worker listens
 		// on the isolated branch and never receives them.
-		...(previewBranch && previewBranch !== "default"
-			? { previewBranch }
-			: {}),
+		...(previewBranch && previewBranch !== "default" ? { previewBranch } : {}),
 	});
 }
 
-/** Whether autumn's trigger.dev key is configured — check THIS, never
- * `TRIGGER_SECRET_KEY` (that name belongs to autumn-cloud). */
-export const isTriggerConfigured = (): boolean =>
-	Boolean(process.env.TRIGGER_SERVER_SECRET_KEY);
+/** True when we can enqueue onto autumn's Trigger project.
+ * Workers inject `TRIGGER_SECRET_KEY`; local/non-prod also needs `TRIGGER_DEV_BRANCH`. */
+export const isTriggerConfigured = (): boolean => {
+	const hasAutumnKey = Boolean(process.env.TRIGGER_SERVER_SECRET_KEY);
+	const hasInjectedKey = Boolean(process.env.TRIGGER_SECRET_KEY);
+	if (!hasAutumnKey && !hasInjectedKey) return false;
+
+	if (process.env.NODE_ENV === "production") return true;
+	return Boolean(process.env.TRIGGER_DEV_BRANCH?.trim());
+};

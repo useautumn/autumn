@@ -17,6 +17,7 @@ import {
 	childSessionIdsToolArgs,
 	classifyParkedEveInput,
 	type PendingQuestion,
+	pendingGatedRequests,
 	siblingRequestIdsToolArgs,
 	type WithheldWrite,
 	withheldWritesToolArgs,
@@ -25,6 +26,7 @@ import {
 	type CapturedPreview,
 	previewForParkedWrite,
 } from "../../../eve/parkedWritePreview.js";
+import type { EvePendingRequest } from "../../../eve/types.js";
 import { isSilentTool, toolGerund } from "../../../tools/toolPolicy.js";
 import { catalogPlanNeedingDecision } from "../../resolveCatalogDecision/catalogDecisionPolicy.js";
 
@@ -41,9 +43,8 @@ export type EveTurnProgress = Readonly<{
 	lastPreview?: CapturedPreview;
 	pendingText: string;
 	reasoningStreamId?: string;
-	/** Child sessions spawned by delegated subagents — the pointer for
-	 * attributing proxied approvals and following child streams. */
 	subagentChildSessionIds: ReadonlySet<string>;
+	subagentStartedAtByCallId: ReadonlyMap<string, number>;
 	toolInputs: ReadonlyMap<string, Record<string, unknown>>;
 	toolLabels: ReadonlyMap<string, string>;
 	turnStarted: boolean;
@@ -55,6 +56,7 @@ export type EveTurnEffect =
 	| Readonly<{ id: string; kind: "reasoning"; text: string }>
 	| Readonly<{
 			kind: "save_session";
+			pendingRequests?: ReadonlyArray<EvePendingRequest>;
 			status: "completed" | "failed" | "waiting";
 	  }>
 	| Readonly<{ kind: "thinking" }>
@@ -70,6 +72,7 @@ export const createEveTurnProgress = (): EveTurnProgress => ({
 	finalText: "",
 	pendingText: "",
 	subagentChildSessionIds: new Set(),
+	subagentStartedAtByCallId: new Map(),
 	toolInputs: new Map(),
 	toolLabels: new Map(),
 	turnStarted: false,
@@ -267,7 +270,13 @@ const reduceInputRequest = ({
 	});
 	if (parked?.kind === "gated") {
 		return {
-			effects: [{ kind: "save_session", status: "waiting" }],
+			effects: [
+				{
+					kind: "save_session",
+					pendingRequests: pendingGatedRequests(parked),
+					status: "waiting",
+				},
+			],
 			outcome: {
 				approval: approvalForGatedWrite({
 					chained: parked.chained,
@@ -286,7 +295,17 @@ const reduceInputRequest = ({
 		? accumulatedText
 		: textForInputRequests(event.requests) || WAITING_FOR_INPUT_MESSAGE;
 	return {
-		effects: [{ kind: "save_session", status: "waiting" }],
+		effects: [
+			{
+				kind: "save_session",
+				pendingRequests: event.requests.flatMap((request) =>
+					request.requestId
+						? [{ kind: "question" as const, requestId: request.requestId }]
+						: [],
+				),
+				status: "waiting",
+			},
+		],
 		outcome: {
 			kind: "parked",
 			question: parked?.kind === "question" ? parked.question : undefined,
@@ -356,6 +375,10 @@ export const reduceEveTurnEvent = ({
 			const subagentChildSessionIds = event.childSessionId
 				? new Set([...progress.subagentChildSessionIds, event.childSessionId])
 				: progress.subagentChildSessionIds;
+			logger.info("Eve subagent called", {
+				event: "leaf.eve_subagent_called",
+				data: { child_session_id: event.childSessionId, subagent: name },
+			});
 			return {
 				effects: [
 					{
@@ -367,8 +390,31 @@ export const reduceEveTurnEvent = ({
 						},
 					},
 				],
-				progress: { ...progress, subagentChildSessionIds },
+				progress: {
+					...progress,
+					subagentChildSessionIds,
+					subagentStartedAtByCallId: event.callId
+						? new Map([
+								...progress.subagentStartedAtByCallId,
+								[event.callId, Date.now()],
+							])
+						: progress.subagentStartedAtByCallId,
+				},
 			};
+		}
+		case "subagent.completed": {
+			const startedAt = event.callId
+				? progress.subagentStartedAtByCallId.get(event.callId)
+				: undefined;
+			logger.info("Eve subagent completed", {
+				event: "leaf.eve_subagent_completed",
+				data: {
+					duration_ms:
+						startedAt === undefined ? undefined : Date.now() - startedAt,
+					subagent: event.subagentName ?? "subagent",
+				},
+			});
+			return { effects: [], progress };
 		}
 		case "step.started":
 			return { effects: [{ kind: "thinking" }], progress };

@@ -1,5 +1,8 @@
 import { prefixOAuthToken } from "@autumn/auth";
-import { returnsOAuthAccessTokenForClientId } from "@autumn/auth/oauth";
+import {
+	getOAuthConsentOrgId,
+	returnsOAuthAccessTokenForClientId,
+} from "@autumn/auth/oauth";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { asNonEmptyString } from "@autumn/shared/utils/auth/oauthRequestBody";
 import type { Context } from "hono";
@@ -10,6 +13,7 @@ import {
 	storeOAuthRefreshReplay,
 } from "@/external/redis/actions/oauthRefreshReplay/oauthRefreshReplay.js";
 import { auth } from "@/utils/auth.js";
+import { oauthConsentRepo } from "../repos/index.js";
 import { isMcpOAuthClient } from "./mcpOAuthScopes.js";
 import {
 	getExternalOAuthApiKeyForToken,
@@ -88,6 +92,16 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			tokenRecord,
 		});
 		const consentedTokenRecord = { ...tokenRecord, oauthConsentId };
+		const consentMetadata = oauthConsentId
+			? await oauthConsentRepo.getMetadataById({
+					db,
+					consentId: oauthConsentId,
+				})
+			: null;
+		const grantReferenceId = getOAuthConsentOrgId({
+			metadata: consentMetadata,
+			referenceId: tokenRecord.referenceId,
+		});
 
 		// The minted token names the authoritative client: a confidential client
 		// authenticates over the header, so setup saw no client_id to classify.
@@ -113,6 +127,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			accessTokenId: tokenRecord.id,
 			db,
 			oauthConsentId,
+			referenceId: grantReferenceId,
 			refreshTokenId: tokenRecord.refreshId,
 			resource: tokenRequest.resource,
 			scopes: issuedScopes,
@@ -146,7 +161,11 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		// 7. Everyone else exchanges the token for a scoped api key
 		const apiKeyResult = await getExternalOAuthApiKeyForToken({
 			db,
-			tokenRecord: { ...consentedTokenRecord, scopes: issuedScopes },
+			tokenRecord: {
+				...consentedTokenRecord,
+				referenceId: grantReferenceId,
+				scopes: issuedScopes,
+			},
 			requestedScopes: requestedResourceScopes,
 		});
 		if (!apiKeyResult) return response;

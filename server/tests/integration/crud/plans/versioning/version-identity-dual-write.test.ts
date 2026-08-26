@@ -2,10 +2,10 @@
  * Version identity dual-write (plan-version-identity unit 1).
  *
  * Contract under test:
- *   New columns on products (not yet exposed in API responses):
+ *   New columns on products (also exposed on GET product/plan responses):
  *     - version_slug: string — user-facing version identity, defaults to `v{n}`
  *     - active: boolean — at most one active version per plan (DB-enforced)
- *   New behaviors (write paths only; nothing reads these yet):
+ *   New behaviors (write paths; GET coverage lives in version-identity-fetch):
  *     - plan create → v1 row carries version_slug "v1", active true
  *     - legacy version mint (plans.update force_version) → new row gets a
  *       FRESH slug "v{n}" (not the cloned source slug) and becomes active;
@@ -137,7 +137,7 @@ test.concurrent(
 				{
 					plan_id: planId,
 					items: [monthlyMessagesItem(700)],
-					versioning: "new_version",
+					versioning: "new_version", active: true,
 				},
 			],
 		});

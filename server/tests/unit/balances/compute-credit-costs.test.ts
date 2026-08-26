@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	type CreditSchemaItem,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
@@ -11,7 +12,7 @@ import type { FeatureDeduction } from "@/internal/balances/utils/types/featureDe
 const makeFeature = (
 	id: string,
 	type: FeatureType,
-	schema: { metered_feature_id: string; credit_amount: number }[] = [],
+	schema: CreditSchemaItem[] = [],
 ): Feature => ({
 	internal_id: `fe_${id}`,
 	org_id: "org_test",
@@ -37,6 +38,17 @@ const credits = makeFeature("credits", FeatureType.CreditSystem, [
 const staleCredits = makeFeature("credits", FeatureType.CreditSystem, [
 	{ metered_feature_id: "other_feature", credit_amount: 5 },
 ]);
+const currentInvoiceCredits = {
+	...credits,
+	config: { ...credits.config, invoice_credit: true },
+} as Feature;
+const graduatedCredits = makeFeature("credits", FeatureType.CreditSystem, [
+	{
+		metered_feature_id: "messages",
+		tier_behavior: "graduated",
+		tiers: [{ to: "inf", credit_amount: 0.5 }],
+	},
+]);
 
 describe("computeCreditCosts", () => {
 	test("applies schema ratios for parent credit systems", () => {
@@ -46,8 +58,8 @@ describe("computeCreditCosts", () => {
 			deduction,
 		});
 
-		expect(lookup("ce_msg")).toBe(1);
-		expect(lookup("ce_cred")).toBe(0.2);
+		expect(lookup("ce_msg")).toEqual({ creditCost: 1 });
+		expect(lookup("ce_cred")).toEqual({ creditCost: 0.2 });
 	});
 
 	test("token deductions use their USD cost 1:1 and ratio-map to parents", () => {
@@ -68,8 +80,8 @@ describe("computeCreditCosts", () => {
 			deduction,
 		});
 
-		expect(lookup("ce_ai")).toBe(0.125);
-		expect(lookup("ce_orbs")).toBe(125);
+		expect(lookup("ce_ai")).toEqual({ creditCost: 0.125 });
+		expect(lookup("ce_orbs")).toEqual({ creditCost: 125 });
 	});
 
 	test("stale schema snapshot falls back to 1 instead of failing the track", () => {
@@ -79,6 +91,106 @@ describe("computeCreditCosts", () => {
 			deduction,
 		});
 
-		expect(lookup("ce_stale")).toBe(1);
+		expect(lookup("ce_stale")).toEqual({ creditCost: 1 });
 	});
+
+	test("rejects a stale cached schema for an invoice credit rate card", () => {
+		const deduction: FeatureDeduction = { feature: messages, deduction: 10 };
+
+		expect(() =>
+			computeCreditCosts({
+				cusEnts: [makeCusEnt("ce_stale", staleCredits)],
+				deduction,
+				catalogFeatures: [messages, currentInvoiceCredits],
+			}),
+		).toThrow(/stale credit rate card/i);
+	});
+
+	test("passes graduated cards to the atomic deduction engine", () => {
+		const deduction: FeatureDeduction = { feature: messages, deduction: 10 };
+		const lookup = computeCreditCosts({
+			cusEnts: [makeCusEnt("ce_graduated", graduatedCredits)],
+			deduction,
+		});
+
+		expect(lookup("ce_graduated")).toEqual({
+			creditCost: 0.5,
+			rateCard: {
+				source_internal_feature_id: messages.internal_id,
+				feature_amount: 1,
+				tier_behavior: "graduated",
+				tiers: [{ to: "inf", credit_amount: 0.5 }],
+			},
+		});
+	});
+
+	test.concurrent(
+		"rejects rate cards backed by an unlimited credit entitlement",
+		() => {
+			const deduction: FeatureDeduction = { feature: messages, deduction: 10 };
+			const unlimitedEntitlement = {
+				...makeCusEnt("ce_graduated", graduatedCredits),
+				unlimited: true,
+			} as FullCusEntWithFullCusProduct;
+
+			expect(() =>
+				computeCreditCosts({
+					cusEnts: [unlimitedEntitlement],
+					deduction,
+				}),
+			).toThrow(/credit rate cards.*unlimited/i);
+		},
+	);
+
+	test.concurrent("rejects rate cards backed by additional balances", () => {
+		const deduction: FeatureDeduction = { feature: messages, deduction: 10 };
+		const customerAdditionalBalance = {
+			...makeCusEnt("ce_customer_additional", graduatedCredits),
+			additional_balance: 1,
+		} as FullCusEntWithFullCusProduct;
+		const entityAdditionalBalance = {
+			...makeCusEnt("ce_entity_additional", graduatedCredits),
+			entities: {
+				entity_1: {
+					id: "entity_1",
+					balance: 100,
+					adjustment: 0,
+					additional_balance: 1,
+				},
+			},
+		} as FullCusEntWithFullCusProduct;
+
+		for (const customerEntitlement of [
+			customerAdditionalBalance,
+			entityAdditionalBalance,
+		]) {
+			expect(() =>
+				computeCreditCosts({
+					cusEnts: [customerEntitlement],
+					deduction,
+				}),
+			).toThrow(/credit rate cards.*additional balances/i);
+		}
+	});
+
+	test.concurrent(
+		"rejects direct invoice-credit tracks backed by additional balance",
+		() => {
+			const deduction: FeatureDeduction = {
+				feature: currentInvoiceCredits,
+				deduction: 10,
+			};
+			const customerEntitlement = {
+				...makeCusEnt("ce_invoice_credits", currentInvoiceCredits),
+				additional_balance: 1,
+			} as FullCusEntWithFullCusProduct;
+
+			expect(() =>
+				computeCreditCosts({
+					cusEnts: [customerEntitlement],
+					deduction,
+				}),
+			).toThrow(/credit rate cards.*additional balances/i);
+		},
+	);
 });

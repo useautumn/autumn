@@ -1,4 +1,8 @@
-import type { EntityRolloverBalance, FullSubject } from "@autumn/shared";
+import type {
+	EntityRolloverBalance,
+	FullSubject,
+	UsageAttribution,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
@@ -19,6 +23,7 @@ interface SubjectBalanceUpdate {
 	additional_balance: number | null;
 	adjustment: number | null;
 	entities: Record<string, unknown> | null;
+	usage_attribution: UsageAttribution | null;
 	next_reset_at: number | null;
 	expected_next_reset_at: number | null;
 	rollover_insert: unknown | null;
@@ -94,6 +99,7 @@ export const syncDeductionUpdatesToFullSubjectCache = async ({
 					additional_balance: update.additional_balance ?? null,
 					adjustment: update.adjustment ?? null,
 					entities: update.entities ?? null,
+					usage_attribution: update.usage_attribution ?? null,
 					next_reset_at: null,
 					expected_next_reset_at: cusEntNextResetAts[cusEntId] ?? null,
 					rollover_insert: null,

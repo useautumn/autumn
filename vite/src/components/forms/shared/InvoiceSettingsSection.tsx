@@ -17,17 +17,19 @@ const NO_TEMPLATE_VALUE = "none";
 
 export interface InvoiceSettings {
 	templateId: string | null;
-	netTermsDays: number;
+	netTermsDays: number | null;
 }
 
 export function InvoiceSettingsSection({
 	value,
 	onChange,
 	disabled,
+	defaultNetTermsDays,
 }: {
 	value: InvoiceSettings;
 	onChange: (value: InvoiceSettings) => void;
 	disabled?: boolean;
+	defaultNetTermsDays?: number;
 }) {
 	const { templates } = useInvoiceTemplatesQuery();
 	const hasTemplates = templates.length > 0;
@@ -80,7 +82,11 @@ export function InvoiceSettingsSection({
 						<Input
 							type="number"
 							min={1}
-							value={String(value.netTermsDays)}
+							value={String(
+								value.netTermsDays ??
+									defaultNetTermsDays ??
+									DEFAULT_NET_TERMS_DAYS,
+							)}
 							onChange={(e) => {
 								const parsed = Number.parseInt(e.target.value, 10);
 								onChange({

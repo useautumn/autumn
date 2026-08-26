@@ -27,6 +27,7 @@ export const latestVariantsOfBase = ({
 			upsert.row.currentFullProduct?.internal_id,
 			upsert.row.baseFullProduct?.internal_id,
 			upsert.row.nextFullProduct.internal_id,
+			upsert.previousActiveInternalId,
 		].filter((internalId): internalId is string => internalId !== undefined),
 	);
 

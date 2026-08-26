@@ -117,7 +117,26 @@ export interface ItemFilter {
 	feature_id?: string;
 	interval?: string;
 	billing_method?: string;
+	included?: number;
 }
+
+export const includedFilterInputValue = (
+	included: number | undefined,
+): string => (included === undefined ? "" : String(included));
+
+export const setItemFilterIncluded = ({
+	filter,
+	included,
+}: {
+	filter: ItemFilter;
+	included: number | undefined;
+}): ItemFilter => {
+	if (included === undefined) {
+		const { included: _included, ...rest } = filter;
+		return rest;
+	}
+	return { ...filter, included };
+};
 
 export function filterToProductItem(filter: ItemFilter): ProductItem {
 	return {
@@ -144,5 +163,6 @@ export function getFilterSummary(
 	const name = feature?.name || filter.feature_id || "Unconfigured";
 	const parts: string[] = [name];
 	if (filter.interval) parts.push(filter.interval);
+	if (filter.included !== undefined) parts.push(`${filter.included} included`);
 	return parts.join(" · ");
 }

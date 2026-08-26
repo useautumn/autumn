@@ -31,6 +31,10 @@ export const planParamsToProductRowPatch = ({
 		patch.is_default = planParams.auto_enable;
 	}
 	if (planParams.archived !== undefined) patch.archived = planParams.archived;
+	if (planParams.active !== undefined) patch.active = planParams.active;
+	if (planParams.new_version_slug !== undefined) {
+		patch.version_slug = planParams.new_version_slug;
+	}
 	if (planParams.config !== undefined) {
 		patch.config = {
 			ignore_past_due:

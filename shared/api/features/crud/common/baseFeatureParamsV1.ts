@@ -5,6 +5,7 @@ import {
 } from "../../../../models/featureModels/featureConfig/creditConfig";
 import { FeatureType } from "../../../../models/featureModels/featureEnums";
 import { idRegex } from "../../../../utils/utils";
+import { ApiCreditSchemaItemSchema } from "../../creditRateCard.js";
 
 export const BaseFeatureV1ParamsSchema = z.object({
 	id: z.string().nonempty().regex(idRegex).meta({
@@ -37,18 +38,15 @@ export const BaseFeatureV1ParamsSchema = z.object({
 				"Singular and plural display names for the feature in your user interface.",
 		}),
 
-	credit_schema: z
-		.array(
-			z.object({
-				metered_feature_id: z.string(),
-				credit_cost: z.number(),
-			}),
-		)
-		.optional()
-		.meta({
-			description:
-				"A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.",
-		}),
+	credit_schema: z.array(ApiCreditSchemaItemSchema).optional().meta({
+		description:
+			"A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.",
+	}),
+
+	invoice_credit: z.boolean().optional().meta({
+		description:
+			"Whether usage of this classic credit system should be itemized as invoice credits.",
+	}),
 
 	model_markups: ModelMarkupsSchema.optional().meta({
 		description:

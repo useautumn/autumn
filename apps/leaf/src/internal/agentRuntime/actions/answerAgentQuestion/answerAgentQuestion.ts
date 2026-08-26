@@ -42,7 +42,6 @@ export const answerAgentQuestion = async ({
 				chained,
 				providerUserId: auth.providerUserId,
 				sessionId: session.sessionId,
-				siblingRequestIds: chainedSiblingRequestIds,
 				withheld: chainedWithheld,
 			})
 		: undefined;

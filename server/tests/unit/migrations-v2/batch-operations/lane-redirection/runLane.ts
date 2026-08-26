@@ -168,8 +168,11 @@ export const runLane = ({
 			codes: result.rejections.map((rejection) => rejection.code),
 			addIds: [] as string[],
 			removeIds: [] as string[],
+			removeBy: [] as Array<"definition" | "filter">,
+			removeFrom: [] as unknown[],
 			replaceFromIds: [] as string[],
 			replaceToIds: [] as string[],
+			replaceBy: [] as Array<"definition" | "filter">,
 		};
 	}
 
@@ -182,16 +185,28 @@ export const runLane = ({
 				(operation) => operation.entitlementPrice.entitlement.id,
 			) ?? [],
 		removeIds:
-			operations?.removeEntitlements.map(
-				(operation) => operation.entitlementPrice.entitlement.id,
+			operations?.removeEntitlements.flatMap((operation) =>
+				operation.by === "definition"
+					? [operation.entitlementPrice.entitlement.id]
+					: [],
+			) ?? [],
+		removeBy:
+			operations?.removeEntitlements.map((operation) => operation.by) ?? [],
+		removeFrom:
+			operations?.removeEntitlements.flatMap((operation) =>
+				operation.by === "filter" ? [operation.from] : [],
 			) ?? [],
 		replaceFromIds:
-			operations?.replaceEntitlements.map(
-				(operation) => operation.fromEntitlementPrice.entitlement.id,
+			operations?.replaceEntitlements.flatMap((operation) =>
+				operation.by === "definition"
+					? [operation.fromEntitlementPrice.entitlement.id]
+					: [],
 			) ?? [],
 		replaceToIds:
 			operations?.replaceEntitlements.map(
 				(operation) => operation.entitlementPrice.entitlement.id,
 			) ?? [],
+		replaceBy:
+			operations?.replaceEntitlements.map((operation) => operation.by) ?? [],
 	};
 };

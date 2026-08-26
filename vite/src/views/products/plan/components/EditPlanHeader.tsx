@@ -8,16 +8,11 @@ import {
 	SelectSeparator,
 	SelectTrigger,
 	SelectValue,
-	SmallSpinner,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
-import {
-	ArrowsClockwiseIcon,
-	TriangleIcon,
-	UserIcon,
-} from "@phosphor-icons/react";
+import { TriangleIcon, UserIcon } from "@phosphor-icons/react";
 import { PlusIcon } from "lucide-react";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
@@ -39,10 +34,7 @@ import { pushPage } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery.tsx";
 import { useCusProductQuery } from "@/views/customers/customer/product/hooks/useCusProductQuery.tsx";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
-import {
-	useProductQuery,
-	useProductQueryState,
-} from "../../product/hooks/useProductQuery";
+import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useCreateVariant } from "../hooks/useCreateVariant";
 import {
 	MigrateCustomersDialog,
@@ -51,17 +43,18 @@ import {
 import { CreateVariantButton } from "./CreateVariantButton";
 import { CreateVariantDialog } from "./CreateVariantDialog";
 import { PlanToolbar } from "./PlanToolbar.tsx";
+import { PlanVersionSelect } from "./PlanVersionSelect";
+import { PromoteToActiveButton } from "./PromoteToActiveButton";
 import { BackToPlanButton } from "./plan-licenses/BackToPlanButton";
-
-const MIGRATE_CUSTOMERS = "__migrate_customers__";
+import { VersionSlugBadge } from "./VersionSlugBadge";
+import { versionLabel } from "./versionLabel";
 
 export const EditPlanHeader = () => {
-	const { numVersions, versionCounts, isLoading } = useProductQuery();
+	const { numVersions, versionCounts } = useProductQuery();
 	const product = useProductStore((s) => s.product);
 	const { counts } = useProductCountsQuery(
 		product.version ? { version: product.version } : {},
 	);
-	const { queryStates, setQueryStates } = useProductQueryState();
 	const navigate = useNavigate();
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const flags = useAutumnFlags();
@@ -70,7 +63,6 @@ export const EditPlanHeader = () => {
 	const env = useEnv();
 	const currency = org?.default_currency ?? "USD";
 	const [migrateDialogOpen, setMigrateDialogOpen] = useState(false);
-	const showAllVariants = useVariantViewStore((s) => s.showAllVariants);
 
 	const pastVersionsWithCustomers = useMemo(() => {
 		if (!numVersions || numVersions <= 1) return [];
@@ -107,27 +99,7 @@ export const EditPlanHeader = () => {
 		!!vercelAllowedIds?.length &&
 		vercelAllowedIds.includes(product.id);
 
-	const versionOptions = Array.from(
-		{ length: numVersions },
-		(_, i) => numVersions - i,
-	);
-	const currentVersion = queryStates.version || product.version;
-
 	const canMigrate = pastVersionsWithCustomers.length > 0 && !isCusPlanEditor;
-
-	const handleVersionChange = (version: string) => {
-		if (version === MIGRATE_CUSTOMERS) {
-			setMigrateDialogOpen(true);
-			return;
-		}
-		const versionNumber = parseInt(version, 10);
-		if (versionNumber === numVersions && !isCusPlanEditor) {
-			// Remove version param for latest version
-			setQueryStates({ version: null });
-		} else {
-			setQueryStates({ version: versionNumber });
-		}
-	};
 
 	const getProductAdminHover = () => {
 		return [
@@ -196,9 +168,6 @@ export const EditPlanHeader = () => {
 								{product.name}
 							</span>
 						</AdminHover>
-						<span className="text-sm text-tertiary-foreground">
-							v{product.version}
-						</span>
 					</div>
 				</div>
 				<div className="flex flex-row justify-between items-center">
@@ -212,6 +181,12 @@ export const EditPlanHeader = () => {
 								innerClassName="max-w-30 text-tiny-id truncate"
 							/>
 						)}
+						<VersionSlugBadge
+							slug={versionLabel({
+								versionSlug: product.version_slug,
+								version: product.version,
+							})}
+						/>
 						<AdminHover
 							texts={[
 								{ key: "active", value: counts?.active?.toString() || "0" },
@@ -260,75 +235,14 @@ export const EditPlanHeader = () => {
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
+						{/* Left of the selectors so showing it never shifts them. */}
+						<PromoteToActiveButton />
 						<VariantSelect />
-						{numVersions && numVersions > 1 && (
-							<Select
-								value={currentVersion.toString()}
-								onValueChange={handleVersionChange}
-								disabled={showAllVariants}
-								items={{
-									...Object.fromEntries(
-										versionOptions.map((version) => [
-											version.toString(),
-											`Version ${version}`,
-										]),
-									),
-									...(canMigrate
-										? { [MIGRATE_CUSTOMERS]: "Migrate customers" }
-										: {}),
-								}}
-							>
-								{showAllVariants ? (
-									<Tooltip>
-										<TooltipTrigger render={<span />}>
-											<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
-												<SelectValue placeholder="Version" />
-											</SelectTrigger>
-										</TooltipTrigger>
-										<TooltipContent>
-											Latest versions of all plans are shown
-										</TooltipContent>
-									</Tooltip>
-								) : (
-									<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
-										<SelectValue placeholder="Version" />
-									</SelectTrigger>
-								)}
-								<SelectContent>
-									{versionOptions.map((version) => {
-										const count = versionCounts[version]?.active || 0;
-										const hasLoaded = Object.keys(versionCounts).length > 0;
-										return (
-											<SelectItem key={version} value={version.toString()}>
-												<div className="flex items-center justify-between w-full gap-3">
-													<span>Version {version}</span>
-													{hasLoaded ? (
-														<IconBadge variant="muted" icon={<UserIcon />}>
-															{count}
-														</IconBadge>
-													) : (
-														<SmallSpinner
-															size={10}
-															className="text-tertiary-foreground"
-														/>
-													)}
-												</div>
-											</SelectItem>
-										);
-									})}
-									{canMigrate && (
-										<>
-											<SelectSeparator />
-											<SelectItem value={MIGRATE_CUSTOMERS}>
-												<div className="flex items-center gap-2">
-													<ArrowsClockwiseIcon />
-													<span>Migrate customers</span>
-												</div>
-											</SelectItem>
-										</>
-									)}
-								</SelectContent>
-							</Select>
+						{product.id && (
+							<PlanVersionSelect
+								canMigrate={canMigrate}
+								onMigrateCustomers={() => setMigrateDialogOpen(true)}
+							/>
 						)}
 						{!isCusPlanEditor && (
 							<>

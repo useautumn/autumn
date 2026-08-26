@@ -44,6 +44,10 @@ export const products = pgTable(
 		// The version that represents the plan (default resolution target).
 		// At most one per (org_id, id, env) — enforced by unique_active_product.
 		active: boolean("active").notNull().default(false),
+		// Set on tombstone. Catalog reads filter `deleted_at IS NULL`.
+		deleted_at: numeric({ mode: "number" }),
+		// Slug before tombstone vacated `version_slug` (null frees the unique).
+		previous_version_slug: text("previous_version_slug"),
 		processor: jsonb().$type<ProductProcessor>().default(sql`null`),
 		base_variant_id: text("base_variant_id"),
 		base_internal_product_id: text("base_internal_product_id"),

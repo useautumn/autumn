@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { partitionSkippedOverageLineItems } from "@/external/stripe/webhookHandlers/common/filterSkippedOverageLineItems.js";
+import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems.js";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems.js";
@@ -48,29 +49,41 @@ export const getFinalUsageInvoicePreview = ({
 		currentEpochMs: periodEndMs - ms.minutes(30),
 	};
 
-	const arrearLineItems = customerProducts.flatMap(
-		(customerProduct) =>
-			customerProductToArrearLineItems({
-				ctx,
-				customerProduct,
-				billingContext: arrearBillingContext,
-				options: { updateNextResetAt: false },
-			}).lineItems,
+	const disableOverageBilling = shouldDisableOverageBilling({
+		org: ctx.org,
+		customerId: fullCustomer.id,
+		customerConfig: fullCustomer.config,
+	});
+	const arrearResults = customerProducts.map((customerProduct) =>
+		customerProductToArrearLineItems({
+			ctx,
+			customerProduct,
+			billingContext: arrearBillingContext,
+			options: {
+				updateNextResetAt: false,
+				invoiceCredits: { fullyOffsetOverage: disableOverageBilling },
+			},
+		}),
+	);
+	const arrearLineItems = arrearResults.flatMap((result) => result.lineItems);
+	const invoiceCreditLineItems = arrearResults.flatMap(
+		(result) => result.invoiceCreditLineItems,
 	);
 
 	const { billableLineItems } = partitionSkippedOverageLineItems({
 		fullCustomer,
 		lineItems: arrearLineItems,
 	});
+	const finalLineItems = [...billableLineItems, ...invoiceCreditLineItems];
 
-	if (billableLineItems.length === 0) return null;
+	if (finalLineItems.length === 0) return null;
 
 	const discountedLineItems = stripeDiscounts?.length
 		? applyStripeDiscountsToLineItems({
-				lineItems: billableLineItems,
+				lineItems: finalLineItems,
 				discounts: stripeDiscounts,
 			})
-		: billableLineItems;
+		: finalLineItems;
 
 	const lineItems = discountedLineItems.map(lineItemToPreviewLineItem);
 

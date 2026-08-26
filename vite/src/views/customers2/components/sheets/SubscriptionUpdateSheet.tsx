@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 
 import { useMemo } from "react";
+import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import {
 	EditPlanSection,
@@ -14,6 +15,7 @@ import {
 	type UpdateSubscriptionForm,
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
+	UpdateSubscriptionGenerationBar,
 	UpdateSubscriptionPlanOptions,
 	UpdateSubscriptionPreviewSection,
 	useUpdateSubscriptionFormContext,
@@ -31,6 +33,8 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
+import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
+import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
@@ -87,7 +91,12 @@ function EditContent() {
 						},
 					]}
 					itemId={customerProduct.id}
+					action={<BillingPromptToggle />}
 				/>
+
+				<div className="px-4 pt-4">
+					<UpdateSubscriptionGenerationBar />
+				</div>
 
 				<div
 					className={cn(
@@ -163,14 +172,26 @@ export function SubscriptionUpdateSheet() {
 		| FrontendProduct
 		| undefined;
 
+	const approvalSeed = approvalSeedFromSheetData(sheetData ?? null);
+	const onApplied = useSettleApprovalOnApply();
 	const defaultOverrides = useMemo((): Partial<UpdateSubscriptionForm> => {
 		if (!productV2) return {};
-		return getSupportedFormOverridesFromProductCustomization({
-			customizedProduct,
-			baseProduct: productV2 as FrontendProduct,
-			currentVersion,
-		});
-	}, [customizedProduct, productV2, currentVersion]);
+		return {
+			...getSupportedFormOverridesFromProductCustomization({
+				customizedProduct,
+				baseProduct: productV2 as FrontendProduct,
+				currentVersion,
+			}),
+			...(approvalSeed?.defaultOverrides as
+				| Partial<UpdateSubscriptionForm>
+				| undefined),
+		};
+	}, [
+		approvalSeed?.defaultOverrides,
+		customizedProduct,
+		productV2,
+		currentVersion,
+	]);
 
 	const formContext = useMemo(
 		(): UpdateSubscriptionFormContext | null =>
@@ -240,6 +261,7 @@ export function SubscriptionUpdateSheet() {
 			onCheckoutRedirect={(checkoutUrl) => {
 				window.location.href = checkoutUrl;
 			}}
+			onApplied={onApplied}
 			onSuccess={closeSheet}
 		>
 			<SheetContent />

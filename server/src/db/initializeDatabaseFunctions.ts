@@ -21,8 +21,9 @@ export const initializeDatabaseFunctions = async () => {
 		// 2. Main functions (depend on helpers)
 		const sqlFiles = [
 			// Helper functions
-			"deductFromRollovers.sql",
 			"deductFromMainBalance.sql",
+			"creditRateUtils.sql",
+			"deductFromRollovers.sql",
 			"unwindFromLockReceipt.sql",
 			"getTotalBalance.sql",
 			"deductFromAdditionalBalance.sql",

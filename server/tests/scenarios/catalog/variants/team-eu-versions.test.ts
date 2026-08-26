@@ -26,7 +26,7 @@ test(`${chalk.yellowBright("catalog-qa: Team v2 + EU pointing at v2")}`, async (
 		],
 	});
 	await autumnV2_3.catalogV2.update({
-		plans: [{ plan_id: teamId, versioning: "new_version" }],
+		plans: [{ plan_id: teamId, versioning: "new_version", active: true }],
 	});
 	await seedNamedCustomer({
 		ctx,

@@ -290,4 +290,35 @@ describe("diffPlanV1 — popfly start vs start_annual", () => {
 			expect.arrayContaining(to.items),
 		);
 	});
+
+	test("default 100→200 remove filter does not stamp included", () => {
+		const from = makePlan({
+			items: [
+				{
+					feature_id: "messages",
+					included: 100,
+					unlimited: false,
+					reset: { interval: ResetInterval.Month },
+					price: null,
+				},
+			],
+		});
+		const to = makePlan({
+			items: [{ ...from.items[0]!, included: 200 }],
+		});
+
+		const diff = diffPlanV1({ from, to });
+		expect(diff.remove_items).toEqual([
+			{
+				feature_id: "messages",
+				interval: ResetInterval.Month,
+				interval_count: 1,
+			},
+		]);
+		expect(diff.remove_items?.[0]).not.toHaveProperty("included");
+		expect(diff.add_items?.[0]).toMatchObject({
+			feature_id: "messages",
+			included: 200,
+		});
+	});
 });

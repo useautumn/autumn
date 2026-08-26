@@ -757,7 +757,7 @@ test.concurrent(
 	},
 );
 
-// Item FX amount change diffs; currency add/remove no item diff
+// Item FX amount change diffs; currency add/remove remints price rows without plan diff
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 changes-items: item currency amount change vs add/remove")}`,
 	async () => {
@@ -840,7 +840,7 @@ test.concurrent(
 			);
 			expectPlanPreviewRowCorrect({
 				preview: currencyRemoved,
-				expected: { planId, action: "none", planChange: null },
+				expected: { planId, action: "update", planChange: null },
 			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });

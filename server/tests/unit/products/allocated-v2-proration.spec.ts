@@ -422,6 +422,8 @@ const newProduct: Product = {
 	version: 2,
 	version_slug: "v2",
 	active: true,
+deleted_at: null,
+previous_version_slug: null,
 	group: "",
 	env: AppEnv.Sandbox,
 	internal_id: "prod_internal_v2",

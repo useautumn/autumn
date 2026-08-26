@@ -175,6 +175,8 @@ describe("plain plan item replace lowering", () => {
 		expect(rejections).toHaveLength(0);
 		expect(operations.replaceEntitlements).toHaveLength(1);
 		const replace = operations.replaceEntitlements[0]!;
+		expect(replace.by).toBe("definition");
+		if (replace.by !== "definition") return;
 		expect(replace.fromEntitlementPrice.entitlement.id).toBe("ent_messages");
 		expect(replace.entitlementPrice.entitlement.id).toBe("ent_messages_new");
 		expect(replace.initialState.granted).toBe(200);
@@ -235,7 +237,9 @@ describe("plain plan item replace lowering", () => {
 		expect(rejections).toHaveLength(0);
 		expect(operations.replaceEntitlements).toHaveLength(1);
 		expect(
-			operations.replaceEntitlements[0]?.fromEntitlementPrice.entitlement.id,
+			operations.replaceEntitlements[0]?.by === "definition"
+				? operations.replaceEntitlements[0].fromEntitlementPrice.entitlement.id
+				: undefined,
 		).toBe("ent_monthly");
 		expect(operations.removeEntitlements).toHaveLength(0);
 		expect(operations.addEntitlements).toHaveLength(0);
@@ -266,8 +270,10 @@ describe("plain plan item replace lowering", () => {
 		expect(rejections).toHaveLength(0);
 		expect(operations.replaceEntitlements).toHaveLength(0);
 		expect(
-			operations.removeEntitlements.map(
-				(operation) => operation.entitlementPrice.entitlement.id,
+			operations.removeEntitlements.flatMap((operation) =>
+				operation.by === "definition"
+					? [operation.entitlementPrice.entitlement.id]
+					: [],
 			),
 		).toEqual(["ent_monthly"]);
 	});

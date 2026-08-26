@@ -17,6 +17,7 @@ export * from "./featureQuantity/featureQuantityParamsV0";
 export * from "./featureQuantity/mappers/featureQuantityParamsToCusProductOptions";
 export * from "./invoiceModeParams";
 export * from "./licenseQuantityParams";
+export * from "./mappers/billingParamsV1ToV0";
 export * from "./multi/index";
 export * from "./redirectMode";
 export * from "./refundLastPayment";

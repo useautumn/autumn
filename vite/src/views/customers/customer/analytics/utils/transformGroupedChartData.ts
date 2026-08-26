@@ -1,20 +1,7 @@
 import type { Feature } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
+import type { EventRow, EventsData } from "../components/analytics-types";
 import { CUSTOMER_BALANCE_SUFFIX } from "./deductionsToEventsData";
-
-/**
- * Row data from the events API
- */
-type EventRow = Record<string, string | number>;
-
-/**
- * Events data structure from the API
- */
-interface EventsData {
-	meta: Array<{ name: string }>;
-	rows: number;
-	data: EventRow[];
-}
 
 /**
  * Chart series configuration

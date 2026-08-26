@@ -59,7 +59,7 @@ const updateUpsert = ({
 		baseFullProduct: null,
 		nextFullProduct: next,
 	},
-	state: { hasCustomers: false },
+	state: { hasCustomers: false, planHadLiveVersions: true },
 });
 
 const createUpsert = ({ next }: { next: FullProduct }): UpsertProductPlan => ({
@@ -73,7 +73,7 @@ const createUpsert = ({ next }: { next: FullProduct }): UpsertProductPlan => ({
 		baseFullProduct: null,
 		nextFullProduct: next,
 	},
-	state: { hasCustomers: false },
+	state: { hasCustomers: false, planHadLiveVersions: false },
 });
 
 describe("projectProductStatesContext", () => {

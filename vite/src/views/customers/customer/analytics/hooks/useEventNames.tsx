@@ -12,17 +12,20 @@ export const useEventNames = ({
 	interval,
 	start,
 	end,
+	enabled = true,
 }: {
 	limit?: number;
 	interval?: string;
 	start?: number | null;
 	end?: number | null;
+	enabled?: boolean;
 } = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
 	const { data, isLoading, error } = useQuery({
 		queryKey: buildKey(["query-event-names-list", limit, interval, start, end]),
+		enabled,
 		queryFn: async () => {
 			const { data } = await axiosInstance.get("/query/event_names/list", {
 				params: {

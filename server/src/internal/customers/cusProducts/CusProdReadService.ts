@@ -12,25 +12,16 @@ export class CusProdReadService {
 	static async existsForProduct({
 		db,
 		internalProductId,
-		productId,
 	}: {
 		db: DrizzleCli;
-		internalProductId?: string;
-		productId?: string;
+		internalProductId: string;
 	}) {
 		const result = await db
 			.select({
 				id: customerProducts.id,
 			})
 			.from(customerProducts)
-			.where(
-				and(
-					productId ? eq(customerProducts.product_id, productId) : undefined,
-					internalProductId
-						? eq(customerProducts.internal_product_id, internalProductId)
-						: undefined,
-				),
-			)
+			.where(eq(customerProducts.internal_product_id, internalProductId))
 			.limit(1);
 
 		return result.length > 0;

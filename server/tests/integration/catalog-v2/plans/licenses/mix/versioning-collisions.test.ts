@@ -202,7 +202,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: child + parent new_version is one mint that follows")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: child + parent new_version renames active in place without customers")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_vnvd_p");
@@ -233,16 +233,15 @@ test.concurrent(
 					],
 				});
 
-				const minted = await expectLatestPlanVersion({
+				await expectLatestPlanVersion({
 					ctx,
 					planId: parentId,
-					version: 3,
+					version: 2,
 				});
-				expect(minted.name).toBe("Renamed");
 				await expectLicenseLinkCorrect({
 					ctx,
 					parentPlanId: parentId,
-					parentVersion: 3,
+					parentVersion: 2,
 					licensePlanId: childId,
 					customized: false,
 					messagesAllowance: 200,
@@ -250,7 +249,7 @@ test.concurrent(
 				await expectLicenseLinkCorrect({
 					ctx,
 					parentPlanId: parentId,
-					parentVersion: 2,
+					parentVersion: 1,
 					licensePlanId: childId,
 					customized: true,
 					messagesAllowance: 10,
@@ -427,7 +426,7 @@ test.concurrent(
 				await expectLatestPlanVersion({
 					ctx,
 					planId: parentId,
-					version: 2,
+					version: 1,
 				});
 				await expectLicenseLinkCorrect({
 					ctx,

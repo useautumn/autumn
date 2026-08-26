@@ -3,10 +3,12 @@ import {
 	type CustomerPlanChange,
 	cusProductToProduct,
 	customerProductToApiSubscriptionStatus,
+	type Entity,
 	type FullCusProduct,
 } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
 import { buildLifecyclePreviousAttributes } from "./buildLifecyclePreviousAttributes";
+import { customerProductToEntityId } from "./customerProductToEntityId";
 import { toCustomerPlanSnapshot } from "./toCustomerPlanSnapshot";
 
 export type CustomerProductTransition = {
@@ -45,14 +47,22 @@ export const deriveCustomerPlanChangeAction = ({
 export const buildCustomerPlanChange = ({
 	before,
 	after,
-}: CustomerProductTransition): CustomerPlanChange | undefined => {
+	entities,
+}: CustomerProductTransition & {
+	entities?: Entity[];
+}): CustomerPlanChange | undefined => {
 	if (after === null) return undefined;
 
 	const action = deriveCustomerPlanChangeAction({ before, after });
 	const snapshot = toCustomerPlanSnapshot({ cusProduct: after });
+	const entityId = customerProductToEntityId({
+		customerProduct: after,
+		entities,
+	});
 
 	if (before === null) {
 		return {
+			entity_id: entityId,
 			action,
 			...snapshot,
 			previous_attributes: null,
@@ -61,6 +71,7 @@ export const buildCustomerPlanChange = ({
 	}
 
 	return {
+		entity_id: entityId,
 		action,
 		...snapshot,
 		previous_attributes: buildLifecyclePreviousAttributes({ before, after }),

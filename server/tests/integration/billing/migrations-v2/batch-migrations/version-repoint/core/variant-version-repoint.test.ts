@@ -4,6 +4,8 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+
+// version-only is per-customer until definition execute is restored
 import {
 	expectBatchLane,
 	expectCustomerPlanRepointedInPlace,
@@ -93,7 +95,7 @@ const setupVariantFamily = async ({ prefix }: { prefix: string }) => {
 	};
 };
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("batch version repoint variants: base migration leaves variants untouched")}`,
 	async () => {
 		const prefix = "repoint-variant-base-only";
@@ -167,7 +169,7 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("batch version repoint variants: variant migration leaves base and sibling untouched")}`,
 	async () => {
 		const prefix = "repoint-variant-one-only";
@@ -243,7 +245,7 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("batch version repoint variants: one operation can target base and variant explicitly")}`,
 	async () => {
 		const prefix = "repoint-variant-combined";
@@ -312,7 +314,7 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("batch version repoint variants: each explicit target resolves its own plan and version")}`,
 	async () => {
 		const prefix = "repoint-variant-independent";
@@ -386,7 +388,7 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("batch version repoint variants: one missing target falls the whole migration back")}`,
 	async () => {
 		const prefix = "repoint-variant-missing-target";

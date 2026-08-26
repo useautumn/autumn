@@ -22,6 +22,16 @@ export const EntityBalanceSchema = z.object({
 	additional_balance: z.number().optional(),
 });
 
+export const UsageAttributionItemSchema = z.object({
+	units: z.number(),
+	credits: z.number(),
+});
+
+export const UsageAttributionSchema = z.record(
+	z.string(),
+	UsageAttributionItemSchema,
+);
+
 export const CustomerEntitlementSchema = z.object({
 	// Foreign keys
 	id: z.string(),
@@ -40,6 +50,9 @@ export const CustomerEntitlementSchema = z.object({
 	balance: z.number().nullish().default(0),
 
 	additional_balance: z.number().default(0),
+	// Optional at the model boundary for legacy cached/in-memory objects. The
+	// database column is non-null and defaults to an empty object.
+	usage_attribution: UsageAttributionSchema.optional(),
 
 	usage_allowed: z.boolean().nullable(),
 	separate_interval: z.boolean().default(false),
@@ -77,6 +90,7 @@ export type CustomerEntitlementFilters = z.infer<
 	typeof CustomerEntitlementFiltersSchema
 >;
 export type EntityBalance = z.infer<typeof EntityBalanceSchema>;
+export type UsageAttribution = z.infer<typeof UsageAttributionSchema>;
 export type CustomerEntitlement = z.infer<typeof CustomerEntitlementSchema>;
 export type FullCustomerEntitlement = z.infer<
 	typeof FullCustomerEntitlementSchema

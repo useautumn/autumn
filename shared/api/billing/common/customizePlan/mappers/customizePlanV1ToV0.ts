@@ -1,10 +1,45 @@
 import { basePriceToProductItem } from "@api/products/components/basePrice/basePriceToProductItem";
 import { planV1ToProductItems } from "@api/products/mappers/planV1ToProductItems";
 import type { FullProduct } from "@models/productModels/productModels";
-import { isPriceItem, mapToProductItems } from "@utils/index";
+import {
+	isPriceItem,
+	mapToProductItems,
+	mapToProductV2,
+	productV2ToApiPlanV1,
+} from "@utils/index";
+import { applyCustomizeToPlan } from "@utils/planV1Utils/diff/applyDiff";
 import type { SharedContext } from "../../../../../types/sharedContext";
 import type { CustomizePlanV0 } from "../customizePlanV0";
 import type { CustomizePlanV1 } from "../customizePlanV1";
+
+const patchStyleCustomizeToItems = ({
+	ctx,
+	customizePlanV1,
+	fullProduct,
+}: {
+	ctx: SharedContext;
+	customizePlanV1: CustomizePlanV1;
+	fullProduct: FullProduct;
+}): CustomizePlanV0 => {
+	const basePlan = productV2ToApiPlanV1({
+		features: ctx.features,
+		includeProration: true,
+		product: mapToProductV2({ features: ctx.features, product: fullProduct }),
+	});
+	const applied = applyCustomizeToPlan({
+		customize: {
+			add_items: customizePlanV1.add_items,
+			items: customizePlanV1.items,
+			price: customizePlanV1.price,
+			remove_items: customizePlanV1.remove_items,
+		},
+		plan: basePlan,
+	});
+	return planV1ToProductItems({
+		ctx,
+		plan: { items: applied.items, price: applied.price },
+	});
+};
 
 export const customizePlanV1ToV0 = ({
 	ctx,
@@ -15,6 +50,13 @@ export const customizePlanV1ToV0 = ({
 	customizePlanV1: CustomizePlanV1;
 	fullProduct: FullProduct;
 }): CustomizePlanV0 => {
+	if (
+		customizePlanV1.add_items !== undefined ||
+		customizePlanV1.remove_items !== undefined
+	) {
+		return patchStyleCustomizeToItems({ ctx, customizePlanV1, fullProduct });
+	}
+
 	const currentProductItems = mapToProductItems({
 		prices: fullProduct.prices,
 		entitlements: fullProduct.entitlements,

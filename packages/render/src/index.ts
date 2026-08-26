@@ -2,6 +2,8 @@ export { type BillingBadge, billingActionBadges } from "./billing/badges.js";
 export {
 	buildCustomizeChanges,
 	type CustomizeChange,
+	customizeNeedsCurrentPlan,
+	customizeWithFreeTrial,
 	customPriceText,
 	freeTrialText,
 } from "./billing/customizeChanges.js";
@@ -12,6 +14,7 @@ export {
 	buildPlanItemChangeDisplay,
 	type LineItemDisplay,
 	type MoneyDisplay,
+	phaseTimingText,
 	removedPlanChanges,
 	type SchedulePhaseDisplay,
 } from "./billing/previewDisplay.js";
