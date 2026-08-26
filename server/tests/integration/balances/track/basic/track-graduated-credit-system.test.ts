@@ -88,7 +88,7 @@ test.concurrent(
 		const addOnProduct = makeCreditProduct({
 			id: "graduated-credit-multiple-addon",
 			isAddOn: true,
-			creditAllowance: 0.9,
+			creditAllowance: 0,
 		});
 		const { autumnV2_3 } = await initScenario({
 			customerId,

@@ -374,7 +374,6 @@ test.concurrent(
 								included: 100,
 								pooled: true,
 								reset: { interval: ResetInterval.Month },
-								price: usagePrice,
 							},
 						],
 					},

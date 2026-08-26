@@ -98,11 +98,6 @@ test.concurrent(
 			feature_id: TestFeature.InvoiceCredits,
 			next_reset_at: nextResetAt,
 		});
-		await autumnV2.balances.update({
-			customer_id: customerId,
-			feature_id: TestFeature.InvoiceCredits,
-			expires_at: nextResetAt + 24 * 60 * 60 * 1000,
-		});
 
 		const customer = await autumnV2.customers.get<ApiCustomer>(customerId);
 		expect(customer.balances[TestFeature.InvoiceCredits]).toMatchObject({
