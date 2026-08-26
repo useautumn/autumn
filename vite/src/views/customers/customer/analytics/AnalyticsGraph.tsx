@@ -13,7 +13,7 @@ import {
 import { createPortal } from "react-dom";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
-import { getEnvFromPath, getRedirectUrl } from "@/utils/genUtils";
+import { pushPage } from "@/utils/genUtils";
 import type { Row } from "./components/analytics-types";
 import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
 import {
@@ -24,13 +24,13 @@ import {
 import { formatCompactNumber, formatPeriodLabel } from "./utils/parseTimestamp";
 import type { ChartSeriesConfig } from "./utils/transformGroupedChartData";
 
-type TooltipEntry = {
+type TooltipEntry = Pick<
+	ChartSeriesConfig,
+	"customerId" | "entityId" | "entityCustomerId"
+> & {
 	dataKey: string;
 	value: number;
 	color: string;
-	customerId?: string;
-	entityId?: string;
-	entityCustomerId?: string;
 };
 
 const MAX_TOOLTIP_ITEMS = 5;
@@ -45,20 +45,21 @@ const Y_TICK = {
 	dy: -3,
 } as const;
 
-const dashboardHref = ({ path }: { path: string }): string =>
-	getRedirectUrl(path, getEnvFromPath(window.location.pathname));
-
 const tooltipItemHref = ({
 	item,
 }: {
 	item: TooltipEntry;
 }): string | undefined => {
 	if (item.customerId) {
-		return dashboardHref({ path: `/customers/${item.customerId}` });
+		return pushPage({
+			path: `/customers/${item.customerId}`,
+			preserveParams: false,
+		});
 	}
 	if (item.entityId && item.entityCustomerId) {
-		return dashboardHref({
-			path: `/customers/${item.entityCustomerId}?entity_id=${item.entityId}`,
+		return pushPage({
+			path: `/customers/${item.entityCustomerId}`,
+			queryParams: { entity_id: item.entityId },
 		});
 	}
 	return undefined;
@@ -288,9 +289,8 @@ export const EventsBarChart = memo(function EventsBarChart({
 		liveHoveredKeyRef.current = null;
 	}, [pinned]);
 
-	// The tooltip is fixed in viewport coords; scrolling moves the chart out
-	// from under it. Dismiss rather than track — the pointer is no longer over
-	// the same data point anyway. A pinned card is deliberate, so it stays.
+	// The tooltip is fixed in viewport coords, so scrolling moves the chart out
+	// from under it: dismiss rather than track. A pin is deliberate, so it stays.
 	useLayoutEffect(() => {
 		const dismiss = () => handleChartMouseLeave();
 		window.addEventListener("scroll", dismiss, true);

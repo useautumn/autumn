@@ -17,12 +17,17 @@ const eventsFor = (columns: string[]): EventsData => ({
 const customerNames = {
 	cus_named: { name: "Acme Inc", email: "ops@acme.com" },
 	cus_email: { name: null, email: "solo@acme.com" },
+	cus_blank: { name: "", email: "blank@acme.com" },
+	cus_bare: { name: null, email: null },
 };
 
 const entityNames = {
 	ent_named: { name: "Seat 1", internal_customer_id: "int_cus_1" },
 	ent_unnamed: { name: null, internal_customer_id: "int_cus_2" },
+	ent_blank: { name: "", internal_customer_id: "int_cus_3" },
 };
+
+const planNames = { plan_pro: "Pro" };
 
 const configFor = ({
 	columns,
@@ -38,6 +43,7 @@ const configFor = ({
 		originalColors: [],
 		customerNames,
 		entityNames,
+		planNames,
 	});
 
 test("labels customer series by name, then email, then id", () => {
@@ -45,6 +51,8 @@ test("labels customer series by name, then email, then id", () => {
 		columns: [
 			"messages_count__cus_named",
 			"messages_count__cus_email",
+			"messages_count__cus_blank",
+			"messages_count__cus_bare",
 			"messages_count__cus_unknown",
 		],
 		groupBy: "customer_id",
@@ -53,6 +61,8 @@ test("labels customer series by name, then email, then id", () => {
 	expect(config.map((series) => series.yName)).toEqual([
 		"messages (Acme Inc)",
 		"messages (solo@acme.com)",
+		"messages (blank@acme.com)",
+		"messages (cus_bare)",
 		"messages (cus_unknown)",
 	]);
 });
@@ -89,6 +99,7 @@ test("labels entity series by name, then id", () => {
 		columns: [
 			"messages_count__ent_named",
 			"messages_count__ent_unnamed",
+			"messages_count__ent_blank",
 			"messages_count__ent_unknown",
 		],
 		groupBy: "entity_id",
@@ -97,8 +108,40 @@ test("labels entity series by name, then id", () => {
 	expect(config.map((series) => series.yName)).toEqual([
 		"messages (Seat 1)",
 		"messages (ent_unnamed)",
+		"messages (ent_blank)",
 		"messages (ent_unknown)",
 	]);
+});
+
+test("labels plan series by name, empty plan and the reserved bucket", () => {
+	const config = configFor({
+		columns: [
+			"messages_count__plan_pro",
+			"messages_count__plan_unknown",
+			"messages_count__",
+			"messages_count__AUTUMN_RESERVED",
+		],
+		groupBy: "plan_id",
+	});
+
+	expect(config.map((series) => series.yName)).toEqual([
+		"messages (Pro)",
+		"messages (plan_unknown)",
+		"messages (No plan)",
+		"messages (Other values)",
+	]);
+});
+
+test("falls back to raw ids when no name maps are loaded", () => {
+	const config = generateChartConfig({
+		events: eventsFor(["messages_count__cus_named"]),
+		features: [],
+		groupBy: "customer_id",
+		originalColors: [],
+	});
+
+	expect(config[0].yName).toBe("messages (cus_named)");
+	expect(config[0].customerId).toBe("cus_named");
 });
 
 test("carries entity ids only for known entities", () => {

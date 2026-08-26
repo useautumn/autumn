@@ -5,8 +5,10 @@ import { useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import type { CustomerDisplayInfo } from "../utils/customerDisplayLabel";
-import type { EntityDisplayInfo } from "../utils/entityDisplayLabel";
+import type {
+	CustomerDisplayInfo,
+	EntityDisplayInfo,
+} from "../utils/displayLabels";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { useSelectedEventNames } from "./useSelectedEventNames";
 

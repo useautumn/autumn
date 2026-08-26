@@ -29,8 +29,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
-import { customerDisplayLabel } from "../utils/customerDisplayLabel";
-import { entityDisplayLabel } from "../utils/entityDisplayLabel";
+import { groupValueLabel } from "../utils/displayLabels";
 
 export const SelectGroupByDropdown = ({
 	propertyKeys,
@@ -452,20 +451,12 @@ export const SelectGroupByDropdown = ({
 										)}
 									</DropdownMenuItem>
 									{availableGroupValues.map((value: string) => {
-										const displayValue =
-											value === "AUTUMN_RESERVED"
-												? "Other values"
-												: currentGroupBy === "entity_id"
-													? entityDisplayLabel({
-															entityId: value,
-															entityNames,
-														})
-													: currentGroupBy === "customer_id"
-														? customerDisplayLabel({
-																customerId: value,
-																customerNames,
-															})
-														: value;
+										const displayValue = groupValueLabel({
+											groupValue: value,
+											groupBy: currentGroupBy,
+											entityNames,
+											customerNames,
+										});
 										return (
 											<DropdownMenuItem
 												key={value}

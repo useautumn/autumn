@@ -1,6 +1,8 @@
 import { getClickhouseClient } from "@/external/tinybird/initClickhouse.js";
 import { escapeChString } from "../clickhouseUtils.js";
 
+// Mirrors the ClickHouse `entities` columns: `id` is the entity's own public
+// id, `internal_customer_id` is the customer that owns it.
 type EntityNameRow = {
 	id: string;
 	name: string | null;
@@ -12,7 +14,7 @@ export type EntityDisplayInfo = {
 	internal_customer_id: string;
 };
 
-/** Looks up entity display fields from the entities datasource by their IDs. Returns a map of id -> { name, internal_customer_id }; ids with no row are omitted. */
+/** Looks up entity display fields from the entities datasource. Returns a map of entity id -> { name, internal_customer_id }; entity ids with no row are omitted. */
 export const getEntityNames = async ({
 	entityIds,
 	orgId,

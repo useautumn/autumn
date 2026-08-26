@@ -1,6 +1,8 @@
 import { getClickhouseClient } from "@/external/tinybird/initClickhouse.js";
 import { escapeChString } from "../clickhouseUtils.js";
 
+// Mirrors the ClickHouse `customers` columns: `id` is the customer's own
+// public id.
 type CustomerNameRow = {
 	id: string;
 	name: string | null;
@@ -12,7 +14,7 @@ export type CustomerDisplayInfo = {
 	email: string | null;
 };
 
-/** Looks up customer display fields from the customers datasource by their IDs. Returns a map of id -> { name, email }; ids with no row are omitted. */
+/** Looks up customer display fields from the customers datasource. Returns a map of customer id -> { name, email }; customer ids with no row are omitted. */
 export const getCustomerNames = async ({
 	customerIds,
 	orgId,
