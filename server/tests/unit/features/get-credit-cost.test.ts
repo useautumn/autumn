@@ -195,86 +195,115 @@ describe("getCreditRateRequiredBalance — flat rate cards", () => {
 				creditSystem: flatCreditFeature,
 				amount: 167.33,
 			}),
-		).toBe(
-			getCreditCost({
+		).toEqual({
+			requiredBalance: getCreditCost({
 				featureId: sourceFeature.id,
 				creditSystem: flatCreditFeature,
 				amount: 167.33,
 			}),
-		);
+			fundable: true,
+		});
 	});
 });
 
+const makeGraduatedCustomerEntitlement = ({
+	id,
+	balance,
+	currentUsage,
+}: {
+	id: string;
+	balance: number;
+	currentUsage: number;
+}) => ({
+	id,
+	balance,
+	additional_balance: 0,
+	rollovers: [],
+	usage_attribution: {
+		[sourceFeature.internal_id]: {
+			units: currentUsage,
+			credits: getCreditCost({
+				featureId: sourceFeature.id,
+				creditSystem: graduatedCreditFeature,
+				amount: currentUsage,
+			}),
+		},
+	},
+	entitlement: {
+		feature: graduatedCreditFeature,
+		allowance_type: AllowanceType.Fixed,
+		entity_feature_id: null,
+		interval: null,
+		interval_count: 1,
+	},
+});
+
+const makeGraduatedFullSubject = ({
+	entitlements,
+}: {
+	entitlements: Array<{ id: string; balance: number; currentUsage: number }>;
+}) =>
+	({
+		subjectType: "customer",
+		entity: null,
+		customer_products: entitlements.map((entitlement) => ({
+			status: "active",
+			customer_entitlements: [makeGraduatedCustomerEntitlement(entitlement)],
+		})),
+		extra_customer_entitlements: [],
+		pooled_customer_entitlements: [],
+	}) as unknown as FullSubject;
+
 describe("getCreditCost — graduated rate cards", () => {
 	test("rates a check across each entitlement's independent tier position", () => {
-		const makeCustomerEntitlement = ({
-			id,
-			balance,
-			currentUsage,
-		}: {
-			id: string;
-			balance: number;
-			currentUsage: number;
-		}) => ({
-			id,
-			balance,
-			additional_balance: 0,
-			rollovers: [],
-			usage_attribution: {
-				[sourceFeature.internal_id]: {
-					units: currentUsage,
-					credits: getCreditCost({
-						featureId: sourceFeature.id,
-						creditSystem: graduatedCreditFeature,
-						amount: currentUsage,
-					}),
-				},
-			},
-			entitlement: {
-				feature: graduatedCreditFeature,
-				allowance_type: AllowanceType.Fixed,
-				entity_feature_id: null,
-				interval: null,
-				interval_count: 1,
-			},
-		});
-		const fullSubject = {
-			subjectType: "customer",
-			entity: null,
-			customer_products: [
-				{
-					status: "active",
-					customer_entitlements: [
-						makeCustomerEntitlement({
-							id: "base_credits",
-							balance: 0.5,
-							currentUsage: 9_950,
-						}),
-					],
-				},
-				{
-					status: "active",
-					customer_entitlements: [
-						makeCustomerEntitlement({
-							id: "addon_credits",
-							balance: 0.9,
-							currentUsage: 0,
-						}),
-					],
-				},
+		const fullSubject = makeGraduatedFullSubject({
+			entitlements: [
+				{ id: "base_credits", balance: 0.5, currentUsage: 9_950 },
+				{ id: "addon_credits", balance: 0.9, currentUsage: 0 },
 			],
-			extra_customer_entitlements: [],
-			pooled_customer_entitlements: [],
-		} as unknown as FullSubject;
+		});
 
-		expect(
-			getCreditRateRequiredBalance({
-				fullSubject,
-				sourceFeature,
-				creditSystem: graduatedCreditFeature,
-				amount: 100,
-			}),
-		).toBeCloseTo(1, 10);
+		const requiredBalance = getCreditRateRequiredBalance({
+			fullSubject,
+			sourceFeature,
+			creditSystem: graduatedCreditFeature,
+			amount: 100,
+		});
+		expect(requiredBalance.requiredBalance).toBeCloseTo(1, 10);
+		expect(requiredBalance.fundable).toBe(true);
+	});
+
+	test("flags exhausted graduated entitlements as unfundable", () => {
+		const fullSubject = makeGraduatedFullSubject({
+			entitlements: [
+				{ id: "base_credits", balance: 0, currentUsage: 10_000 },
+				{ id: "addon_credits", balance: 0, currentUsage: 0 },
+			],
+		});
+
+		const requiredBalance = getCreditRateRequiredBalance({
+			fullSubject,
+			sourceFeature,
+			creditSystem: graduatedCreditFeature,
+			amount: 100,
+		});
+		expect(requiredBalance.requiredBalance).toBeCloseTo(1, 10);
+		expect(requiredBalance.fundable).toBe(false);
+	});
+
+	test("flags a partially fundable graduated check as unfundable", () => {
+		const fullSubject = makeGraduatedFullSubject({
+			entitlements: [{ id: "base_credits", balance: 0.5, currentUsage: 9_950 }],
+		});
+
+		const requiredBalance = getCreditRateRequiredBalance({
+			fullSubject,
+			sourceFeature,
+			creditSystem: graduatedCreditFeature,
+			amount: 100,
+		});
+		expect(requiredBalance.requiredBalance).toBeCloseTo(0.9, 10);
+		expect(requiredBalance.fundable).toBe(false);
 	});
 
 	test("charges the marginal cost when usage crosses one tier", () => {

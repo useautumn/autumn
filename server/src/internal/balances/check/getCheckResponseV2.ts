@@ -31,11 +31,12 @@ export const getCheckResponseV2 = async ({
 		evaluationApiSubject,
 	} = checkData;
 
+	let creditRateFundable = true;
 	if (
 		featureToUse.type === FeatureType.CreditSystem &&
 		featureToUse.id !== originalFeature.id
 	) {
-		requiredBalance = getCreditRateRequiredBalance({
+		const creditRateRequiredBalance = getCreditRateRequiredBalance({
 			fullSubject: checkData.fullSubject,
 			sourceFeature: originalFeature,
 			creditSystem: featureToUse,
@@ -43,6 +44,8 @@ export const getCheckResponseV2 = async ({
 			reverseOrder: ctx.org.config?.reverse_deduction_order,
 			inStatuses: orgToInStatuses({ org: ctx.org }),
 		});
+		requiredBalance = creditRateRequiredBalance.requiredBalance;
+		creditRateFundable = creditRateRequiredBalance.fundable;
 	}
 
 	if (!evaluationApiBalance && !evaluationApiFlag) {
@@ -59,7 +62,8 @@ export const getCheckResponseV2 = async ({
 	const allowed = evaluationApiFlag
 		? true
 		: evaluationApiBalance
-			? apiBalanceToAllowed({
+			? creditRateFundable &&
+				apiBalanceToAllowed({
 					apiBalance: evaluationApiBalance,
 					apiSubject: evaluationApiSubject,
 					feature: featureToUse,

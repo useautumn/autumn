@@ -356,6 +356,12 @@ const getCreditRateFundedUnits = ({
 	return lowerBound;
 };
 
+export type CreditRateRequiredBalance = {
+	requiredBalance: number;
+	/** False when the active graduated credit entitlements cannot fund every requested unit. */
+	fundable: boolean;
+};
+
 export const getCreditRateRequiredBalance = ({
 	fullSubject,
 	sourceFeature,
@@ -370,17 +376,20 @@ export const getCreditRateRequiredBalance = ({
 	amount: number;
 	reverseOrder?: boolean;
 	inStatuses?: CusProductStatus[];
-}): number => {
+}): CreditRateRequiredBalance => {
 	const schemaItem = getCreditSchemaItem({
 		featureId: sourceFeature.id,
 		creditSystem,
 	});
 	if (schemaItem?.tier_behavior !== "graduated") {
-		return featureToCreditSystem({
-			featureId: sourceFeature.id,
-			creditSystem,
-			amount,
-		});
+		return {
+			requiredBalance: featureToCreditSystem({
+				featureId: sourceFeature.id,
+				creditSystem,
+				amount,
+			}),
+			fundable: true,
+		};
 	}
 
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
@@ -390,11 +399,14 @@ export const getCreditRateRequiredBalance = ({
 		inStatuses,
 	});
 	if (customerEntitlements.length === 0) {
-		return featureToCreditSystem({
-			featureId: sourceFeature.id,
-			creditSystem,
-			amount,
-		});
+		return {
+			requiredBalance: featureToCreditSystem({
+				featureId: sourceFeature.id,
+				creditSystem,
+				amount,
+			}),
+			fundable: true,
+		};
 	}
 
 	let remainingUnits = new Decimal(amount);
@@ -431,19 +443,24 @@ export const getCreditRateRequiredBalance = ({
 		finalUsage = currentUsage + fundedUnits;
 		finalCreditSystem = entitlementCreditSystem;
 
-		if (remainingUnits.lte(1e-10)) return requiredCredits.toNumber();
+		if (remainingUnits.lte(1e-10)) {
+			return { requiredBalance: requiredCredits.toNumber(), fundable: true };
+		}
 	}
 
-	return requiredCredits
-		.add(
-			featureToCreditSystem({
-				featureId: sourceFeature.id,
-				creditSystem: finalCreditSystem,
-				amount: remainingUnits.toNumber(),
-				currentUsage: finalUsage,
-			}),
-		)
-		.toNumber();
+	return {
+		requiredBalance: requiredCredits
+			.add(
+				featureToCreditSystem({
+					featureId: sourceFeature.id,
+					creditSystem: finalCreditSystem,
+					amount: remainingUnits.toNumber(),
+					currentUsage: finalUsage,
+				}),
+			)
+			.toNumber(),
+		fundable: remainingUnits.lte(1e-10),
+	};
 };
 
 export const featureToCreditSystem = ({

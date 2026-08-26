@@ -109,7 +109,7 @@ export const runCheckWithTrackV2 = async ({
 					amount: requiredBalance,
 					reverseOrder: ctx.org.config?.reverse_deduction_order,
 					inStatuses: orgToInStatuses({ org: ctx.org }),
-				})
+				}).requiredBalance
 			: requiredBalance;
 
 	const featureDeductions = getTrackFeatureDeductions({
