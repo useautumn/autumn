@@ -1,3 +1,4 @@
+import "scraps-ui/scraps.css";
 import "@autumn/ui/styles.css";
 import * as Sentry from "@sentry/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
