@@ -761,8 +761,9 @@ describe("approval card", () => {
 
 		const json = JSON.stringify(card);
 		expect(json).toContain("Update **Acme**?");
-		expect(json).toContain('"label":"Name","value":"Acme"');
-		expect(json).toContain('"label":"Email","value":"billing@example.com"');
+		expect(json).toContain('"headers":["Field","Change"]');
+		expect(json).toContain('["Name","Acme"]');
+		expect(json).toContain('["Email","billing@example.com"]');
 		expect(json).not.toContain('"customer_id"');
 	});
 

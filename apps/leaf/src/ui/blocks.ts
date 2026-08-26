@@ -657,41 +657,44 @@ const compactValue = (value: unknown): string | null => {
 		: json;
 };
 
-// Bare CRUD writes (update customer, create entity…) have no billing preview —
-// show what's being written as label/value fields so the card is never empty.
-const requestSummaryFields = (
+const requestFieldEntries = (
 	toolArgs?: Record<string, unknown>,
-): FieldElement[] => {
+): { label: string; value: string }[] => {
 	const request = toolRequestFromArgs(toolArgs) ?? {};
-	const fields: FieldElement[] = [];
+	const entries: { label: string; value: string }[] = [];
 	for (const [key, value] of Object.entries(request)) {
 		if (HIDDEN_REQUEST_KEYS.has(key) || key.startsWith("_")) continue;
 		const rendered = compactValue(value);
 		if (rendered === null) continue;
-		fields.push(Field({ label: humanizeKey(key), value: rendered }));
-		if (fields.length >= MAX_REQUEST_FIELDS) break;
+		entries.push({ label: humanizeKey(key), value: rendered });
 	}
-	return fields;
+	return entries;
+};
+
+// Bare CRUD writes (update customer, create entity…) have no billing preview —
+// the fields being written render as the change table so the card is never empty.
+const requestChangesTable = (
+	toolArgs?: Record<string, unknown>,
+): CardChild | null => {
+	const entries = requestFieldEntries(toolArgs);
+	if (entries.length === 0) return null;
+	return Table({
+		align: ["left", "left"],
+		caption: "Changes",
+		headers: ["Field", "Change"],
+		rows: entries.map((entry) => [entry.label, entry.value]),
+	});
 };
 
 /** One-line summary of a bare write's fields, for fan-out rows where the
- * per-card field list has no room. */
+ * per-card table has no room. */
 const requestChangesText = (
 	toolArgs?: Record<string, unknown>,
 ): string | null => {
-	const request = toolRequestFromArgs(toolArgs) ?? {};
-	const parts: string[] = [];
-	let overflow = 0;
-	for (const [key, value] of Object.entries(request)) {
-		if (HIDDEN_REQUEST_KEYS.has(key) || key.startsWith("_")) continue;
-		const rendered = compactValue(value);
-		if (rendered === null) continue;
-		if (parts.length >= MAX_REQUEST_FIELDS) {
-			overflow += 1;
-			continue;
-		}
-		parts.push(`${humanizeKey(key)}: ${rendered}`);
-	}
+	const entries = requestFieldEntries(toolArgs);
+	const shown = entries.slice(0, MAX_REQUEST_FIELDS);
+	const overflow = entries.length - shown.length;
+	const parts = shown.map((entry) => `${entry.label}: ${entry.value}`);
 	if (overflow > 0) parts.push(`+${overflow} more`);
 	return parts.length ? parts.join(" · ") : null;
 };
@@ -1061,10 +1064,9 @@ const approvalPreviewBlocks = ({
 	const blocks: CardChild[] = [];
 	const normalizedToolName = normalizeToolName(toolName);
 	if (isFailedApprovalPreview(preview)) {
-		blocks.push(
-			CardText(PREVIEW_UNAVAILABLE_MESSAGE, { style: "muted" }),
-			Fields(requestSummaryFields(toolArgs)),
-		);
+		blocks.push(CardText(PREVIEW_UNAVAILABLE_MESSAGE, { style: "muted" }));
+		const changes = requestChangesTable(toolArgs);
+		if (changes) blocks.push(changes);
 		return blocks;
 	}
 	const structured = previewElements(preview);
@@ -1089,8 +1091,8 @@ const approvalPreviewBlocks = ({
 		pushMoney();
 		// Nothing structured to show — fall back to the write's own fields.
 		if (blocks.length === 0) {
-			const fields = requestSummaryFields(toolArgs);
-			if (fields.length) blocks.push(Fields(fields));
+			const changes = requestChangesTable(toolArgs);
+			if (changes) blocks.push(changes);
 		}
 		const mutedLine = contextLine([
 			structured ? null : nextCycleNote(preview),
