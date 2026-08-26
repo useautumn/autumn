@@ -29,6 +29,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
+import { customerDisplayLabel } from "../utils/customerDisplayLabel";
 
 export const SelectGroupByDropdown = ({
 	propertyKeys,
@@ -456,7 +457,10 @@ export const SelectGroupByDropdown = ({
 												: currentGroupBy === "entity_id"
 													? (entityNames?.[value] ?? value)
 													: currentGroupBy === "customer_id"
-														? (customerNames?.[value] ?? value)
+														? customerDisplayLabel({
+																customerId: value,
+																customerNames,
+															})
 														: value;
 										return (
 											<DropdownMenuItem

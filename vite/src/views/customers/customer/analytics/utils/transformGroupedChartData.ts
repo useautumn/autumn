@@ -1,18 +1,24 @@
 import type { Feature } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
 import type { EventRow, EventsData } from "../components/analytics-types";
+import {
+	type CustomerDisplayInfo,
+	customerDisplayLabel,
+} from "./customerDisplayLabel";
 import { CUSTOMER_BALANCE_SUFFIX } from "./deductionsToEventsData";
 
 /**
  * Chart series configuration
  */
-interface ChartSeriesConfig {
+export interface ChartSeriesConfig {
 	xKey: string;
 	yKey: string;
 	type: "bar";
 	stacked: boolean;
 	yName: string;
 	fill: string;
+	/** Only set when grouping by customer, for a real customer id. */
+	customerId?: string;
 }
 
 /**
@@ -244,7 +250,7 @@ export function generateChartConfig({
 	groupBy: string | null;
 	originalColors: string[];
 	entityNames?: Record<string, string>;
-	customerNames?: Record<string, string>;
+	customerNames?: Record<string, CustomerDisplayInfo>;
 	planNames?: Record<string, string>;
 }): ChartSeriesConfig[] {
 	const colorsToUse = groupBy ? CHART_COLORS : originalColors;
@@ -290,13 +296,21 @@ export function generateChartConfig({
 			displayGroupValue = `${entityNames?.[base] ?? base}${CUSTOMER_BALANCE_SUFFIX}`;
 		} else if (groupBy === "entity_id" && entityNames?.[groupValue]) {
 			displayGroupValue = entityNames[groupValue];
-		} else if (groupBy === "customer_id" && customerNames?.[groupValue]) {
-			displayGroupValue = customerNames[groupValue];
+		} else if (groupBy === "customer_id") {
+			displayGroupValue = customerDisplayLabel({
+				customerId: groupValue,
+				customerNames,
+			});
 		} else if (groupBy === "plan_id" && planNames?.[groupValue]) {
 			displayGroupValue = planNames[groupValue];
 		} else {
 			displayGroupValue = groupValue;
 		}
+
+		const isRealCustomerGroup =
+			groupBy === "customer_id" &&
+			groupValue !== "" &&
+			groupValue !== "AUTUMN_RESERVED";
 
 		config.push({
 			xKey: "period",
@@ -305,6 +319,7 @@ export function generateChartConfig({
 			stacked: true,
 			yName: `${featureName} (${displayGroupValue})`,
 			fill: colorsToUse[colorIndex % colorsToUse.length],
+			...(isRealCustomerGroup ? { customerId: groupValue } : {}),
 		});
 
 		colorIndex++;

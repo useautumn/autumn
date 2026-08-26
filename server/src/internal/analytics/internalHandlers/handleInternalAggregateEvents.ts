@@ -13,7 +13,10 @@ import { z } from "zod/v4";
 import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { aggregateDeductions } from "@/internal/analytics/actions/aggregateDeductions.js";
-import { getCustomerNames } from "@/internal/analytics/actions/getCustomerNames.js";
+import {
+	type CustomerDisplayInfo,
+	getCustomerNames,
+} from "@/internal/analytics/actions/getCustomerNames.js";
 import { getEntityNames } from "@/internal/analytics/actions/getEntityNames.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -245,7 +248,7 @@ export const handleInternalAggregateEvents = createRoute({
 			}
 		}
 
-		let customerNames: Record<string, string> | undefined;
+		let customerNames: Record<string, CustomerDisplayInfo> | undefined;
 		if (resolvedGroupBy === "customer_id" && events?.data) {
 			const customerIds = [
 				...new Set(
