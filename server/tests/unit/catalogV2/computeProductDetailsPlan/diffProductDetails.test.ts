@@ -85,4 +85,14 @@ describe("productDetailsAreSame / diffProductDetails", () => {
 			true,
 		);
 	});
+
+	test("processor is not a product-detail key", () => {
+		const current = row({ processor: { type: "stripe", id: "prod_old" } });
+		const next = row({ processor: { type: "stripe", id: "prod_new" } });
+		expect(productDetailsAreSame({ product1: current, product2: next })).toBe(
+			true,
+		);
+		expect(diffProductDetails({ current, next })).toEqual({});
+	});
 });
+
