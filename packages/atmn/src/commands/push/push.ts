@@ -429,10 +429,23 @@ function normalizeFeatureForCompare(f: Feature): Record<string, unknown> {
 	if (f.creditSchema && f.creditSchema.length > 0) {
 		result.creditSchema = [...f.creditSchema]
 			.sort((a, b) => a.meteredFeatureId.localeCompare(b.meteredFeatureId))
-			.map((cs) => ({
-				meteredFeatureId: cs.meteredFeatureId,
-				creditCost: cs.creditCost,
-			}));
+			.map((creditSchemaItem) => {
+				const base = {
+					meteredFeatureId: creditSchemaItem.meteredFeatureId,
+					...(creditSchemaItem.billingUnits !== undefined &&
+						creditSchemaItem.billingUnits !== 1 && {
+							billingUnits: creditSchemaItem.billingUnits,
+						}),
+				};
+
+				return creditSchemaItem.tierBehavior === "graduated"
+					? {
+							...base,
+							tierBehavior: creditSchemaItem.tierBehavior,
+							tiers: creditSchemaItem.tiers,
+						}
+					: { ...base, creditCost: creditSchemaItem.creditCost };
+			});
 	}
 
 	if (f.type === "ai_credit_system") {
