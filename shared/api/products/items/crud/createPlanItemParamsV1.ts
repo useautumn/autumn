@@ -4,6 +4,7 @@ import {
 	additionalCurrencyPlanItemIssues,
 } from "@api/products/components/additionalCurrencies";
 import { BillingMethod } from "@api/products/components/billingMethod";
+import { ApiPriceProcessorsSchema } from "@api/products/components/processors";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
@@ -65,6 +66,10 @@ export const CreatePlanItemParamsV1Schema = z
 							"Stripe price id this feature price is billed under. Set by sync flows to preserve an existing Stripe price.",
 						internal: true,
 					}),
+				processors: ApiPriceProcessorsSchema.optional().meta({
+					description:
+						"Adopt an existing Stripe price instead of creating one. The id must already exist in Stripe.",
+				}),
 				amount: z.number().optional().meta({
 					description:
 						"Price per billing_units after included usage. Either 'amount' or 'tiers' is required.",

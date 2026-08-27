@@ -206,6 +206,10 @@ export const ProductItemSchema = z.object({
 	stripe_price_id: z.string().nullish().meta({
 		internal: true,
 	}),
+	/** Caller-adopted Stripe price. Validated to exist before it is honoured. */
+	stripe_prepaid_price_v2_id: z.string().nullish().meta({
+		internal: true,
+	}),
 	price_interval: z.enum(ProductItemInterval).nullish().meta({
 		internal: true,
 	}),
