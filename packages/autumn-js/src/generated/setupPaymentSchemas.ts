@@ -102,10 +102,19 @@ export const setupPaymentUpsertLicenseTierSchema = z.object({
 	additionalCurrencies: z.union([z.array(z.any()), z.undefined()]).optional(),
 });
 
+export const setupPaymentRemoveLicenseSchema = z.object({
+	licensePlanId: z.string(),
+});
+
 export const setupPaymentAttachDiscountSchema = z.object({
 	rewardId: z.union([z.string(), z.undefined()]).optional(),
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
 });
+
+export const setupPaymentBillingCycleAnchorSchema = z.union([
+	z.string(),
+	z.number(),
+]);
 
 export const setupPaymentCustomLineItemSchema = z.object({
 	amount: z.number(),
@@ -137,6 +146,13 @@ export const setupPaymentFeatureQuantityOutboundSchema = z.object({
 	feature_id: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const setupPaymentFreeTrialParamsOutboundSchema = z.object({
+	duration_length: z.number(),
+	duration_type: z.string(),
+	card_required: z.boolean(),
+	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const setupPaymentAdditionalCurrencyOutboundSchema = z.object({
@@ -334,9 +350,10 @@ export const setupPaymentPlanItemFilterOutboundSchema = z.object({
 	billing_method: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.union([z.string(), z.string(), z.undefined()]).optional(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentFreeTrialParamsOutboundSchema = z.object({
+export const setupPaymentCustomizeFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
@@ -521,6 +538,7 @@ export const setupPaymentUpsertLicensePlanItemFilterOutboundSchema = z.object({
 	billing_method: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.union([z.string(), z.string(), z.undefined()]).optional(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentUpsertLicenseCustomizeOutboundSchema = z.object({
@@ -553,6 +571,10 @@ export const setupPaymentUpsertLicenseOutboundSchema = z.object({
 	metadata: z.union([z.record(z.string(), z.any()), z.undefined()]).optional(),
 });
 
+export const setupPaymentRemoveLicenseOutboundSchema = z.object({
+	license_plan_id: z.string(),
+});
+
 export const setupPaymentCustomizeOutboundSchema = z.object({
 	price: z
 		.union([setupPaymentBasePriceOutboundSchema, z.undefined()])
@@ -568,7 +590,7 @@ export const setupPaymentCustomizeOutboundSchema = z.object({
 		.union([z.array(setupPaymentPlanItemFilterOutboundSchema), z.undefined()])
 		.optional(),
 	free_trial: z
-		.union([setupPaymentFreeTrialParamsOutboundSchema, z.undefined()])
+		.union([setupPaymentCustomizeFreeTrialParamsOutboundSchema, z.undefined()])
 		.optional()
 		.nullable(),
 	billing_controls: z
@@ -577,12 +599,20 @@ export const setupPaymentCustomizeOutboundSchema = z.object({
 	upsert_licenses: z
 		.union([z.array(setupPaymentUpsertLicenseOutboundSchema), z.undefined()])
 		.optional(),
+	remove_licenses: z
+		.union([z.array(setupPaymentRemoveLicenseOutboundSchema), z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentAttachDiscountOutboundSchema = z.object({
 	reward_id: z.union([z.string(), z.undefined()]).optional(),
 	promotion_code: z.union([z.string(), z.undefined()]).optional(),
 });
+
+export const setupPaymentBillingCycleAnchorOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+]);
 
 export const setupPaymentCustomLineItemOutboundSchema = z.object({
 	amount: z.number(),
@@ -612,6 +642,10 @@ export const setupPaymentParamsOutboundSchema = z.object({
 		.union([z.array(setupPaymentFeatureQuantityOutboundSchema), z.undefined()])
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
+	free_trial: z
+		.union([setupPaymentFreeTrialParamsOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	customize: z
 		.union([setupPaymentCustomizeOutboundSchema, z.undefined()])
 		.optional(),
@@ -621,7 +655,9 @@ export const setupPaymentParamsOutboundSchema = z.object({
 		.union([z.array(setupPaymentAttachDiscountOutboundSchema), z.undefined()])
 		.optional(),
 	success_url: z.union([z.string(), z.undefined()]).optional(),
-	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
+	billing_cycle_anchor: z
+		.union([z.string(), z.number(), z.undefined()])
+		.optional(),
 	starts_at: z.union([z.number(), z.undefined()]).optional(),
 	ends_at: z.union([z.number(), z.undefined()]).optional(),
 	checkout_session_params: z
@@ -651,6 +687,19 @@ export const setupPaymentParamsOutboundSchema = z.object({
 });
 
 const closedEnumSchema = z.any();
+
+export const setupPaymentDurationTypeSchema = closedEnumSchema;
+
+export const setupPaymentOnEndSchema = closedEnumSchema;
+
+export const setupPaymentFreeTrialParamsSchema = z.object({
+	durationLength: z.number(),
+	durationType: z
+		.union([setupPaymentDurationTypeSchema, z.undefined()])
+		.optional(),
+	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
+	onEnd: z.union([setupPaymentOnEndSchema, z.undefined()]).optional(),
+});
 
 export const setupPaymentPriceIntervalSchema = closedEnumSchema;
 
@@ -816,19 +865,20 @@ export const setupPaymentPlanItemFilterSchema = z.object({
 		])
 		.optional(),
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentDurationTypeSchema = closedEnumSchema;
+export const setupPaymentCustomizeDurationTypeSchema = closedEnumSchema;
 
-export const setupPaymentOnEndSchema = closedEnumSchema;
+export const setupPaymentCustomizeOnEndSchema = closedEnumSchema;
 
-export const setupPaymentFreeTrialParamsSchema = z.object({
+export const setupPaymentCustomizeFreeTrialParamsSchema = z.object({
 	durationLength: z.number(),
 	durationType: z
-		.union([setupPaymentDurationTypeSchema, z.undefined()])
+		.union([setupPaymentCustomizeDurationTypeSchema, z.undefined()])
 		.optional(),
 	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
-	onEnd: z.union([setupPaymentOnEndSchema, z.undefined()]).optional(),
+	onEnd: z.union([setupPaymentCustomizeOnEndSchema, z.undefined()]).optional(),
 });
 
 export const setupPaymentPurchaseLimitIntervalSchema = closedEnumSchema;
@@ -1020,6 +1070,7 @@ export const setupPaymentUpsertLicensePlanItemFilterSchema = z.object({
 		])
 		.optional(),
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentUpsertLicenseCustomizeSchema = z.object({
@@ -1064,7 +1115,7 @@ export const setupPaymentCustomizeSchema = z.object({
 		.union([z.array(setupPaymentPlanItemFilterSchema), z.undefined()])
 		.optional(),
 	freeTrial: z
-		.union([setupPaymentFreeTrialParamsSchema, z.undefined()])
+		.union([setupPaymentCustomizeFreeTrialParamsSchema, z.undefined()])
 		.optional()
 		.nullable(),
 	billingControls: z
@@ -1072,6 +1123,9 @@ export const setupPaymentCustomizeSchema = z.object({
 		.optional(),
 	upsertLicenses: z
 		.union([z.array(setupPaymentUpsertLicenseSchema), z.undefined()])
+		.optional(),
+	removeLicenses: z
+		.union([z.array(setupPaymentRemoveLicenseSchema), z.undefined()])
 		.optional(),
 });
 
@@ -1085,6 +1139,10 @@ export const setupPaymentParamsSchema = z.object({
 		.union([z.array(setupPaymentFeatureQuantitySchema), z.undefined()])
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
+	freeTrial: z
+		.union([setupPaymentFreeTrialParamsSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	customize: z.union([setupPaymentCustomizeSchema, z.undefined()]).optional(),
 	prorationBehavior: z
 		.union([setupPaymentProrationBehaviorSchema, z.undefined()])
@@ -1094,7 +1152,9 @@ export const setupPaymentParamsSchema = z.object({
 		.union([z.array(setupPaymentAttachDiscountSchema), z.undefined()])
 		.optional(),
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
-	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
+	billingCycleAnchor: z
+		.union([z.string(), z.number(), z.undefined()])
+		.optional(),
 	startsAt: z.union([z.number(), z.undefined()]).optional(),
 	endsAt: z.union([z.number(), z.undefined()]).optional(),
 	checkoutSessionParams: z

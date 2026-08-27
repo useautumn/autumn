@@ -22,6 +22,9 @@ class Billing(BaseSDK):
             ]
         ] = None,
         version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[models.AttachFreeTrialParams, models.AttachFreeTrialParamsTypedDict]
+        ] = UNSET,
         customize: Optional[
             Union[models.AttachCustomize, models.AttachCustomizeTypedDict]
         ] = None,
@@ -39,6 +42,12 @@ class Billing(BaseSDK):
         ] = None,
         success_url: Optional[str] = None,
         new_billing_subscription: Optional[bool] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.AttachBillingCycleAnchor,
+                models.AttachBillingCycleAnchorTypedDict,
+            ]
+        ] = None,
         plan_schedule: Optional[models.AttachPlanSchedule] = None,
         starts_at: Optional[int] = None,
         ends_at: Optional[int] = None,
@@ -85,6 +94,7 @@ class Billing(BaseSDK):
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
+        :param free_trial: Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.
         :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
@@ -93,6 +103,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+        :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
         :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
@@ -105,7 +116,7 @@ class Billing(BaseSDK):
         :param license_quantities: Seat quantities for the plan's licenses, keyed by license plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
-        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
@@ -132,6 +143,9 @@ class Billing(BaseSDK):
                 feature_quantities, Optional[List[models.AttachFeatureQuantity]]
             ),
             version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.AttachFreeTrialParams]
+            ),
             customize=utils.get_pydantic_model(
                 customize, Optional[models.AttachCustomize]
             ),
@@ -146,6 +160,7 @@ class Billing(BaseSDK):
             ),
             success_url=success_url,
             new_billing_subscription=new_billing_subscription,
+            billing_cycle_anchor=billing_cycle_anchor,
             plan_schedule=plan_schedule,
             starts_at=starts_at,
             ends_at=ends_at,
@@ -244,6 +259,9 @@ class Billing(BaseSDK):
             ]
         ] = None,
         version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[models.AttachFreeTrialParams, models.AttachFreeTrialParamsTypedDict]
+        ] = UNSET,
         customize: Optional[
             Union[models.AttachCustomize, models.AttachCustomizeTypedDict]
         ] = None,
@@ -261,6 +279,12 @@ class Billing(BaseSDK):
         ] = None,
         success_url: Optional[str] = None,
         new_billing_subscription: Optional[bool] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.AttachBillingCycleAnchor,
+                models.AttachBillingCycleAnchorTypedDict,
+            ]
+        ] = None,
         plan_schedule: Optional[models.AttachPlanSchedule] = None,
         starts_at: Optional[int] = None,
         ends_at: Optional[int] = None,
@@ -307,6 +331,7 @@ class Billing(BaseSDK):
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
+        :param free_trial: Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.
         :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
@@ -315,6 +340,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+        :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
         :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
@@ -327,7 +353,7 @@ class Billing(BaseSDK):
         :param license_quantities: Seat quantities for the plan's licenses, keyed by license plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
-        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
@@ -354,6 +380,9 @@ class Billing(BaseSDK):
                 feature_quantities, Optional[List[models.AttachFeatureQuantity]]
             ),
             version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.AttachFreeTrialParams]
+            ),
             customize=utils.get_pydantic_model(
                 customize, Optional[models.AttachCustomize]
             ),
@@ -368,6 +397,7 @@ class Billing(BaseSDK):
             ),
             success_url=success_url,
             new_billing_subscription=new_billing_subscription,
+            billing_cycle_anchor=billing_cycle_anchor,
             plan_schedule=plan_schedule,
             starts_at=starts_at,
             ends_at=ends_at,
@@ -1118,6 +1148,12 @@ class Billing(BaseSDK):
             ]
         ] = None,
         version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.PreviewAttachFreeTrialParams,
+                models.PreviewAttachFreeTrialParamsTypedDict,
+            ]
+        ] = UNSET,
         customize: Optional[
             Union[models.PreviewAttachCustomize, models.PreviewAttachCustomizeTypedDict]
         ] = None,
@@ -1138,6 +1174,12 @@ class Billing(BaseSDK):
         ] = None,
         success_url: Optional[str] = None,
         new_billing_subscription: Optional[bool] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.PreviewAttachBillingCycleAnchor,
+                models.PreviewAttachBillingCycleAnchorTypedDict,
+            ]
+        ] = None,
         plan_schedule: Optional[models.PreviewAttachPlanSchedule] = None,
         starts_at: Optional[int] = None,
         ends_at: Optional[int] = None,
@@ -1188,6 +1230,7 @@ class Billing(BaseSDK):
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
+        :param free_trial: Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.
         :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
@@ -1196,6 +1239,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+        :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
         :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
@@ -1208,7 +1252,7 @@ class Billing(BaseSDK):
         :param license_quantities: Seat quantities for the plan's licenses, keyed by license plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
-        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
@@ -1236,6 +1280,9 @@ class Billing(BaseSDK):
                 Optional[List[models.PreviewAttachFeatureQuantityRequest]],
             ),
             version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.PreviewAttachFreeTrialParams]
+            ),
             customize=utils.get_pydantic_model(
                 customize, Optional[models.PreviewAttachCustomize]
             ),
@@ -1250,6 +1297,7 @@ class Billing(BaseSDK):
             ),
             success_url=success_url,
             new_billing_subscription=new_billing_subscription,
+            billing_cycle_anchor=billing_cycle_anchor,
             plan_schedule=plan_schedule,
             starts_at=starts_at,
             ends_at=ends_at,
@@ -1348,6 +1396,12 @@ class Billing(BaseSDK):
             ]
         ] = None,
         version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.PreviewAttachFreeTrialParams,
+                models.PreviewAttachFreeTrialParamsTypedDict,
+            ]
+        ] = UNSET,
         customize: Optional[
             Union[models.PreviewAttachCustomize, models.PreviewAttachCustomizeTypedDict]
         ] = None,
@@ -1368,6 +1422,12 @@ class Billing(BaseSDK):
         ] = None,
         success_url: Optional[str] = None,
         new_billing_subscription: Optional[bool] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.PreviewAttachBillingCycleAnchor,
+                models.PreviewAttachBillingCycleAnchorTypedDict,
+            ]
+        ] = None,
         plan_schedule: Optional[models.PreviewAttachPlanSchedule] = None,
         starts_at: Optional[int] = None,
         ends_at: Optional[int] = None,
@@ -1418,6 +1478,7 @@ class Billing(BaseSDK):
         :param entity_id: The ID of the entity to attach the plan to.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
+        :param free_trial: Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.
         :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
@@ -1426,6 +1487,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+        :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
         :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
@@ -1438,7 +1500,7 @@ class Billing(BaseSDK):
         :param license_quantities: Seat quantities for the plan's licenses, keyed by license plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
-        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
@@ -1466,6 +1528,9 @@ class Billing(BaseSDK):
                 Optional[List[models.PreviewAttachFeatureQuantityRequest]],
             ),
             version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.PreviewAttachFreeTrialParams]
+            ),
             customize=utils.get_pydantic_model(
                 customize, Optional[models.PreviewAttachCustomize]
             ),
@@ -1480,6 +1545,7 @@ class Billing(BaseSDK):
             ),
             success_url=success_url,
             new_billing_subscription=new_billing_subscription,
+            billing_cycle_anchor=billing_cycle_anchor,
             plan_schedule=plan_schedule,
             starts_at=starts_at,
             ends_at=ends_at,
@@ -1922,6 +1988,12 @@ class Billing(BaseSDK):
             ]
         ] = None,
         version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.BillingUpdateFreeTrialParams,
+                models.BillingUpdateFreeTrialParamsTypedDict,
+            ]
+        ] = UNSET,
         customize: Optional[
             Union[models.BillingUpdateCustomize, models.BillingUpdateCustomizeTypedDict]
         ] = None,
@@ -1941,8 +2013,15 @@ class Billing(BaseSDK):
             ]
         ] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.BillingUpdateBillingCycleAnchor,
+                models.BillingUpdateBillingCycleAnchorTypedDict,
+            ]
+        ] = None,
         no_billing_changes: Optional[bool] = None,
         refund_last_payment: Optional[models.BillingUpdateRefundLastPayment] = None,
+        subscription_params: Optional[Dict[str, Any]] = None,
         recalculate_balances: Optional[
             Union[
                 models.BillingUpdateRecalculateBalances,
@@ -1975,6 +2054,7 @@ class Billing(BaseSDK):
         :param plan_id: The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
+        :param free_trial: Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.
         :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
@@ -1982,8 +2062,10 @@ class Billing(BaseSDK):
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+        :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+        :param subscription_params: Additional parameters to pass into the Stripe subscription update or cancel call.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param license_quantities: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
@@ -2010,6 +2092,9 @@ class Billing(BaseSDK):
                 feature_quantities, Optional[List[models.BillingUpdateFeatureQuantity]]
             ),
             version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.BillingUpdateFreeTrialParams]
+            ),
             customize=utils.get_pydantic_model(
                 customize, Optional[models.BillingUpdateCustomize]
             ),
@@ -2023,8 +2108,10 @@ class Billing(BaseSDK):
                 discounts, Optional[List[models.BillingUpdateAttachDiscount]]
             ),
             cancel_action=cancel_action,
+            billing_cycle_anchor=billing_cycle_anchor,
             no_billing_changes=no_billing_changes,
             refund_last_payment=refund_last_payment,
+            subscription_params=subscription_params,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.BillingUpdateRecalculateBalances]
             ),
@@ -2108,6 +2195,12 @@ class Billing(BaseSDK):
             ]
         ] = None,
         version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.BillingUpdateFreeTrialParams,
+                models.BillingUpdateFreeTrialParamsTypedDict,
+            ]
+        ] = UNSET,
         customize: Optional[
             Union[models.BillingUpdateCustomize, models.BillingUpdateCustomizeTypedDict]
         ] = None,
@@ -2127,8 +2220,15 @@ class Billing(BaseSDK):
             ]
         ] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.BillingUpdateBillingCycleAnchor,
+                models.BillingUpdateBillingCycleAnchorTypedDict,
+            ]
+        ] = None,
         no_billing_changes: Optional[bool] = None,
         refund_last_payment: Optional[models.BillingUpdateRefundLastPayment] = None,
+        subscription_params: Optional[Dict[str, Any]] = None,
         recalculate_balances: Optional[
             Union[
                 models.BillingUpdateRecalculateBalances,
@@ -2161,6 +2261,7 @@ class Billing(BaseSDK):
         :param plan_id: The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
+        :param free_trial: Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.
         :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
@@ -2168,8 +2269,10 @@ class Billing(BaseSDK):
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+        :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+        :param subscription_params: Additional parameters to pass into the Stripe subscription update or cancel call.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param license_quantities: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
@@ -2196,6 +2299,9 @@ class Billing(BaseSDK):
                 feature_quantities, Optional[List[models.BillingUpdateFeatureQuantity]]
             ),
             version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.BillingUpdateFreeTrialParams]
+            ),
             customize=utils.get_pydantic_model(
                 customize, Optional[models.BillingUpdateCustomize]
             ),
@@ -2209,8 +2315,10 @@ class Billing(BaseSDK):
                 discounts, Optional[List[models.BillingUpdateAttachDiscount]]
             ),
             cancel_action=cancel_action,
+            billing_cycle_anchor=billing_cycle_anchor,
             no_billing_changes=no_billing_changes,
             refund_last_payment=refund_last_payment,
+            subscription_params=subscription_params,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.BillingUpdateRecalculateBalances]
             ),
@@ -2294,6 +2402,12 @@ class Billing(BaseSDK):
             ]
         ] = None,
         version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.PreviewUpdateFreeTrialParams,
+                models.PreviewUpdateFreeTrialParamsTypedDict,
+            ]
+        ] = UNSET,
         customize: Optional[
             Union[models.PreviewUpdateCustomize, models.PreviewUpdateCustomizeTypedDict]
         ] = None,
@@ -2313,8 +2427,15 @@ class Billing(BaseSDK):
             ]
         ] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.PreviewUpdateBillingCycleAnchor,
+                models.PreviewUpdateBillingCycleAnchorTypedDict,
+            ]
+        ] = None,
         no_billing_changes: Optional[bool] = None,
         refund_last_payment: Optional[models.PreviewUpdateRefundLastPayment] = None,
+        subscription_params: Optional[Dict[str, Any]] = None,
         recalculate_balances: Optional[
             Union[
                 models.PreviewUpdateRecalculateBalances,
@@ -2347,6 +2468,7 @@ class Billing(BaseSDK):
         :param plan_id: The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
+        :param free_trial: Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.
         :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
@@ -2354,8 +2476,10 @@ class Billing(BaseSDK):
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+        :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+        :param subscription_params: Additional parameters to pass into the Stripe subscription update or cancel call.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param license_quantities: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
@@ -2383,6 +2507,9 @@ class Billing(BaseSDK):
                 Optional[List[models.PreviewUpdateFeatureQuantityRequest]],
             ),
             version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.PreviewUpdateFreeTrialParams]
+            ),
             customize=utils.get_pydantic_model(
                 customize, Optional[models.PreviewUpdateCustomize]
             ),
@@ -2396,8 +2523,10 @@ class Billing(BaseSDK):
                 discounts, Optional[List[models.PreviewUpdateAttachDiscount]]
             ),
             cancel_action=cancel_action,
+            billing_cycle_anchor=billing_cycle_anchor,
             no_billing_changes=no_billing_changes,
             refund_last_payment=refund_last_payment,
+            subscription_params=subscription_params,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.PreviewUpdateRecalculateBalances]
             ),
@@ -2481,6 +2610,12 @@ class Billing(BaseSDK):
             ]
         ] = None,
         version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.PreviewUpdateFreeTrialParams,
+                models.PreviewUpdateFreeTrialParamsTypedDict,
+            ]
+        ] = UNSET,
         customize: Optional[
             Union[models.PreviewUpdateCustomize, models.PreviewUpdateCustomizeTypedDict]
         ] = None,
@@ -2500,8 +2635,15 @@ class Billing(BaseSDK):
             ]
         ] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.PreviewUpdateBillingCycleAnchor,
+                models.PreviewUpdateBillingCycleAnchorTypedDict,
+            ]
+        ] = None,
         no_billing_changes: Optional[bool] = None,
         refund_last_payment: Optional[models.PreviewUpdateRefundLastPayment] = None,
+        subscription_params: Optional[Dict[str, Any]] = None,
         recalculate_balances: Optional[
             Union[
                 models.PreviewUpdateRecalculateBalances,
@@ -2534,6 +2676,7 @@ class Billing(BaseSDK):
         :param plan_id: The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
+        :param free_trial: Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.
         :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
@@ -2541,8 +2684,10 @@ class Billing(BaseSDK):
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
+        :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+        :param subscription_params: Additional parameters to pass into the Stripe subscription update or cancel call.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param license_quantities: Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity.
@@ -2570,6 +2715,9 @@ class Billing(BaseSDK):
                 Optional[List[models.PreviewUpdateFeatureQuantityRequest]],
             ),
             version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.PreviewUpdateFreeTrialParams]
+            ),
             customize=utils.get_pydantic_model(
                 customize, Optional[models.PreviewUpdateCustomize]
             ),
@@ -2583,8 +2731,10 @@ class Billing(BaseSDK):
                 discounts, Optional[List[models.PreviewUpdateAttachDiscount]]
             ),
             cancel_action=cancel_action,
+            billing_cycle_anchor=billing_cycle_anchor,
             no_billing_changes=no_billing_changes,
             refund_last_payment=refund_last_payment,
+            subscription_params=subscription_params,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.PreviewUpdateRecalculateBalances]
             ),
@@ -3266,6 +3416,12 @@ class Billing(BaseSDK):
             ]
         ] = None,
         version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.SetupPaymentFreeTrialParams,
+                models.SetupPaymentFreeTrialParamsTypedDict,
+            ]
+        ] = UNSET,
         customize: Optional[
             Union[models.SetupPaymentCustomize, models.SetupPaymentCustomizeTypedDict]
         ] = None,
@@ -3278,6 +3434,12 @@ class Billing(BaseSDK):
             ]
         ] = None,
         success_url: Optional[str] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.SetupPaymentBillingCycleAnchor,
+                models.SetupPaymentBillingCycleAnchorTypedDict,
+            ]
+        ] = None,
         starts_at: Optional[int] = None,
         ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
@@ -3324,11 +3486,13 @@ class Billing(BaseSDK):
         :param plan_id: If specified, the plan will be attached to the customer after setup.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
+        :param free_trial: Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.
         :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
+        :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
         :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
@@ -3339,7 +3503,7 @@ class Billing(BaseSDK):
         :param license_quantities: Seat quantities for the plan's licenses, keyed by license plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
-        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
@@ -3366,6 +3530,9 @@ class Billing(BaseSDK):
                 feature_quantities, Optional[List[models.SetupPaymentFeatureQuantity]]
             ),
             version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.SetupPaymentFreeTrialParams]
+            ),
             customize=utils.get_pydantic_model(
                 customize, Optional[models.SetupPaymentCustomize]
             ),
@@ -3375,6 +3542,7 @@ class Billing(BaseSDK):
                 discounts, Optional[List[models.SetupPaymentAttachDiscount]]
             ),
             success_url=success_url,
+            billing_cycle_anchor=billing_cycle_anchor,
             starts_at=starts_at,
             ends_at=ends_at,
             checkout_session_params=checkout_session_params,
@@ -3471,6 +3639,12 @@ class Billing(BaseSDK):
             ]
         ] = None,
         version: Optional[float] = None,
+        free_trial: OptionalNullable[
+            Union[
+                models.SetupPaymentFreeTrialParams,
+                models.SetupPaymentFreeTrialParamsTypedDict,
+            ]
+        ] = UNSET,
         customize: Optional[
             Union[models.SetupPaymentCustomize, models.SetupPaymentCustomizeTypedDict]
         ] = None,
@@ -3483,6 +3657,12 @@ class Billing(BaseSDK):
             ]
         ] = None,
         success_url: Optional[str] = None,
+        billing_cycle_anchor: Optional[
+            Union[
+                models.SetupPaymentBillingCycleAnchor,
+                models.SetupPaymentBillingCycleAnchorTypedDict,
+            ]
+        ] = None,
         starts_at: Optional[int] = None,
         ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
@@ -3529,11 +3709,13 @@ class Billing(BaseSDK):
         :param plan_id: If specified, the plan will be attached to the customer after setup.
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
+        :param free_trial: Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.
         :param customize: Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
+        :param billing_cycle_anchor: Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
         :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
@@ -3544,7 +3726,7 @@ class Billing(BaseSDK):
         :param license_quantities: Seat quantities for the plan's licenses, keyed by license plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
-        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param remove_plan_ids: Plan IDs to expire on the customer as part of this attach. Each must be an active plan billed on the same subscription as the attach (or a free plan); plans on a separate subscription are rejected.
@@ -3571,6 +3753,9 @@ class Billing(BaseSDK):
                 feature_quantities, Optional[List[models.SetupPaymentFeatureQuantity]]
             ),
             version=version,
+            free_trial=utils.get_pydantic_model(
+                free_trial, OptionalNullable[models.SetupPaymentFreeTrialParams]
+            ),
             customize=utils.get_pydantic_model(
                 customize, Optional[models.SetupPaymentCustomize]
             ),
@@ -3580,6 +3765,7 @@ class Billing(BaseSDK):
                 discounts, Optional[List[models.SetupPaymentAttachDiscount]]
             ),
             success_url=success_url,
+            billing_cycle_anchor=billing_cycle_anchor,
             starts_at=starts_at,
             ends_at=ends_at,
             checkout_session_params=checkout_session_params,

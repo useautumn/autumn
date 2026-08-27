@@ -56,7 +56,7 @@ export type PreviewMultiAttachAdditionalCurrency = {
  */
 export type PreviewMultiAttachBasePrice = {
   /**
-   * Base price amount for the plan.
+   * Base price amount for the plan, in major currency units (e.g. dollars).
    */
   amount: number;
   /**
@@ -444,7 +444,7 @@ export type PreviewMultiAttachFreeTrialParams = {
    */
   durationType?: PreviewMultiAttachDurationType | undefined;
   /**
-   * If true, payment method required to start trial. Customer is charged after trial ends.
+   * If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
    */
   cardRequired?: boolean | undefined;
   /**
@@ -749,6 +749,10 @@ export type PreviewMultiAttachParams = {
    * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
    */
   billingBehavior?: PreviewMultiAttachBillingBehavior | undefined;
+  /**
+   * Pass 'now' to reset the billing cycle of every plan on the subscription to the time of this request.
+   */
+  billingCycleAnchor?: "now" | undefined;
   /**
    * URL to redirect to after successful checkout.
    */
@@ -1108,6 +1112,10 @@ export type PreviewMultiAttachResponse = {
    * The three-letter ISO currency code. All amounts are in the currency's major unit (e.g., dollars for USD).
    */
   currency: string;
+  /**
+   * True when this change clears the customer's usage balances, so the approver can see usage will reset.
+   */
+  resetsUsage?: boolean | undefined;
   /**
    * Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles.
    */
@@ -1711,7 +1719,7 @@ export const PreviewMultiAttachFreeTrialParams$outboundSchema: z.ZodMiniType<
       PreviewMultiAttachDurationType$outboundSchema,
       "month",
     ),
-    cardRequired: z._default(z.boolean(), true),
+    cardRequired: z._default(z.boolean(), false),
     onEnd: z.optional(PreviewMultiAttachOnEnd$outboundSchema),
   }),
   z.transform((v) => {
@@ -2129,6 +2137,7 @@ export type PreviewMultiAttachParams$Outbound = {
   invoice_mode?: PreviewMultiAttachInvoiceMode$Outbound | undefined;
   discounts?: Array<PreviewMultiAttachAttachDiscount$Outbound> | undefined;
   billing_behavior?: string | undefined;
+  billing_cycle_anchor?: "now" | undefined;
   success_url?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   redirect_mode: string;
@@ -2163,6 +2172,7 @@ export const PreviewMultiAttachParams$outboundSchema: z.ZodMiniType<
     billingBehavior: z.optional(
       PreviewMultiAttachBillingBehavior$outboundSchema,
     ),
+    billingCycleAnchor: z.optional(z.literal("now")),
     successUrl: z.optional(z.string()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     redirectMode: z._default(
@@ -2184,6 +2194,7 @@ export const PreviewMultiAttachParams$outboundSchema: z.ZodMiniType<
       startsAt: "starts_at",
       invoiceMode: "invoice_mode",
       billingBehavior: "billing_behavior",
+      billingCycleAnchor: "billing_cycle_anchor",
       successUrl: "success_url",
       checkoutSessionParams: "checkout_session_params",
       redirectMode: "redirect_mode",
@@ -2678,6 +2689,7 @@ export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
     subtotal: types.number(),
     total: types.number(),
     currency: types.string(),
+    resets_usage: types.optional(types.boolean()),
     next_cycle: types.optional(
       z.lazy(() => PreviewMultiAttachNextCycle$inboundSchema),
     ),
@@ -2695,6 +2707,7 @@ export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
     return remap$(v, {
       "customer_id": "customerId",
       "line_items": "lineItems",
+      "resets_usage": "resetsUsage",
       "next_cycle": "nextCycle",
       "redirect_to_checkout": "redirectToCheckout",
       "checkout_type": "checkoutType",

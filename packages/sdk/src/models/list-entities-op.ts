@@ -9,6 +9,7 @@ import * as openEnums from "../types/enums.js";
 import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
+import { smartUnion } from "../types/smart-union.js";
 import { Balance, Balance$inboundSchema } from "./balance.js";
 import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
@@ -224,16 +225,55 @@ export const ListEntitiesType = {
  */
 export type ListEntitiesType = OpenEnum<typeof ListEntitiesType>;
 
-export type ListEntitiesCreditSchema = {
+export type ListEntitiesCreditSchema3 = {
+  meteredFeatureId: "";
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type ListEntitiesCreditSchema2 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
   meteredFeatureId: string;
   /**
-   * Credits consumed per unit of the metered feature.
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
+
+export type ListEntitiesTier = {
+  to?: any | undefined;
+  creditCost?: any | undefined;
+};
+
+export type ListEntitiesCreditSchema1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<ListEntitiesTier>;
+};
+
+export type ListEntitiesCreditSchemaUnion =
+  | ListEntitiesCreditSchema1
+  | ListEntitiesCreditSchema2
+  | ListEntitiesCreditSchema3;
 
 export type ListEntitiesModelMarkups = {
   markup?: number | undefined;
@@ -257,6 +297,24 @@ export type ListEntitiesDisplay = {
    * Plural form for UI display (e.g., 'API calls', 'seats').
    */
   plural?: string | null | undefined;
+};
+
+export type ListEntitiesStripe = {
+  /**
+   * Stripe product ID this feature's usage prices bill under.
+   */
+  productId?: string | undefined;
+  /**
+   * Stripe meter ID used to create this feature's metered price.
+   */
+  meterId?: string | undefined;
+};
+
+/**
+ * Processor mappings for this feature. Present when a Stripe product or meter is set.
+ */
+export type ListEntitiesProcessors = {
+  stripe?: ListEntitiesStripe | undefined;
 };
 
 /**
@@ -284,9 +342,19 @@ export type ListEntitiesFeature = {
    */
   eventNames?: Array<string> | undefined;
   /**
-   * For credit_system features: maps metered features to their credit costs.
+   * For classic credit systems: maps metered features to flat or graduated credit costs.
    */
-  creditSchema?: Array<ListEntitiesCreditSchema> | undefined;
+  creditSchema?:
+    | Array<
+      | ListEntitiesCreditSchema1
+      | ListEntitiesCreditSchema2
+      | ListEntitiesCreditSchema3
+    >
+    | undefined;
+  /**
+   * Whether usage of this classic credit system should be itemized as invoice credits.
+   */
+  invoiceCredit?: boolean | undefined;
   /**
    * Per-model markup overrides for AI credit systems.
    */
@@ -310,6 +378,10 @@ export type ListEntitiesFeature = {
    * Whether the feature is archived and hidden from the dashboard.
    */
   archived: boolean;
+  /**
+   * Processor mappings for this feature. Present when a Stripe product or meter is set.
+   */
+  processors?: ListEntitiesProcessors | undefined;
 };
 
 export type ListEntitiesFlags = {
@@ -868,29 +940,136 @@ export const ListEntitiesType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListEntitiesType);
 
 /** @internal */
-export const ListEntitiesCreditSchema$inboundSchema: z.ZodMiniType<
-  ListEntitiesCreditSchema,
+export const ListEntitiesCreditSchema3$inboundSchema: z.ZodMiniType<
+  ListEntitiesCreditSchema3,
   unknown
 > = z.pipe(
   z.object({
-    metered_feature_id: types.string(),
+    metered_feature_id: types.literal(""),
+    billing_units: types.optional(types.number()),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
       "credit_cost": "creditCost",
     });
   }),
 );
 
-export function listEntitiesCreditSchemaFromJSON(
+export function listEntitiesCreditSchema3FromJSON(
   jsonString: string,
-): SafeParseResult<ListEntitiesCreditSchema, SDKValidationError> {
+): SafeParseResult<ListEntitiesCreditSchema3, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListEntitiesCreditSchema$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListEntitiesCreditSchema' from JSON`,
+    (x) => ListEntitiesCreditSchema3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEntitiesCreditSchema3' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListEntitiesCreditSchema2$inboundSchema: z.ZodMiniType<
+  ListEntitiesCreditSchema2,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function listEntitiesCreditSchema2FromJSON(
+  jsonString: string,
+): SafeParseResult<ListEntitiesCreditSchema2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEntitiesCreditSchema2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEntitiesCreditSchema2' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListEntitiesTier$inboundSchema: z.ZodMiniType<
+  ListEntitiesTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: types.optional(z.any()),
+    credit_cost: types.optional(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function listEntitiesTierFromJSON(
+  jsonString: string,
+): SafeParseResult<ListEntitiesTier, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEntitiesTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEntitiesTier' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListEntitiesCreditSchema1$inboundSchema: z.ZodMiniType<
+  ListEntitiesCreditSchema1,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => ListEntitiesTier$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function listEntitiesCreditSchema1FromJSON(
+  jsonString: string,
+): SafeParseResult<ListEntitiesCreditSchema1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEntitiesCreditSchema1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEntitiesCreditSchema1' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListEntitiesCreditSchemaUnion$inboundSchema: z.ZodMiniType<
+  ListEntitiesCreditSchemaUnion,
+  unknown
+> = smartUnion([
+  z.lazy(() => ListEntitiesCreditSchema1$inboundSchema),
+  z.lazy(() => ListEntitiesCreditSchema2$inboundSchema),
+  z.lazy(() => ListEntitiesCreditSchema3$inboundSchema),
+]);
+
+export function listEntitiesCreditSchemaUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<ListEntitiesCreditSchemaUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEntitiesCreditSchemaUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEntitiesCreditSchemaUnion' from JSON`,
   );
 }
 
@@ -960,6 +1139,51 @@ export function listEntitiesDisplayFromJSON(
 }
 
 /** @internal */
+export const ListEntitiesStripe$inboundSchema: z.ZodMiniType<
+  ListEntitiesStripe,
+  unknown
+> = z.pipe(
+  z.object({
+    product_id: types.optional(types.string()),
+    meter_id: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "product_id": "productId",
+      "meter_id": "meterId",
+    });
+  }),
+);
+
+export function listEntitiesStripeFromJSON(
+  jsonString: string,
+): SafeParseResult<ListEntitiesStripe, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEntitiesStripe$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEntitiesStripe' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListEntitiesProcessors$inboundSchema: z.ZodMiniType<
+  ListEntitiesProcessors,
+  unknown
+> = z.object({
+  stripe: types.optional(z.lazy(() => ListEntitiesStripe$inboundSchema)),
+});
+
+export function listEntitiesProcessorsFromJSON(
+  jsonString: string,
+): SafeParseResult<ListEntitiesProcessors, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEntitiesProcessors$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEntitiesProcessors' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListEntitiesFeature$inboundSchema: z.ZodMiniType<
   ListEntitiesFeature,
   unknown
@@ -970,9 +1194,14 @@ export const ListEntitiesFeature$inboundSchema: z.ZodMiniType<
     type: ListEntitiesType$inboundSchema,
     consumable: types.boolean(),
     event_names: types.optional(z.array(types.string())),
-    credit_schema: types.optional(
-      z.array(z.lazy(() => ListEntitiesCreditSchema$inboundSchema)),
-    ),
+    credit_schema: types.optional(z.array(smartUnion([
+      z.lazy(() => ListEntitiesCreditSchema1$inboundSchema),
+      z.lazy(() =>
+        ListEntitiesCreditSchema2$inboundSchema
+      ),
+      z.lazy(() => ListEntitiesCreditSchema3$inboundSchema),
+    ]))),
+    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => ListEntitiesModelMarkups$inboundSchema),
@@ -986,11 +1215,15 @@ export const ListEntitiesFeature$inboundSchema: z.ZodMiniType<
       ListEntitiesDisplay$inboundSchema
     )),
     archived: types.boolean(),
+    processors: types.optional(z.lazy(() =>
+      ListEntitiesProcessors$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",

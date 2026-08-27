@@ -13,7 +13,10 @@ import { AppEnv } from "@models/genModels/genEnums.js";
 import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 import type { ApiFeatureProcessors } from "../../api/features/components/processors.js";
 import type { ApiFeatureV1 } from "../../api/features/apiFeatureV1.js";
-import type { ApiCreditSchemaItem } from "../../api/features/creditRateCard.js";
+import {
+	type ApiCreditSchemaItem,
+	isGraduatedCreditSchemaItem,
+} from "../../api/features/creditRateCard.js";
 import type {
 	CreateFeatureV1Params,
 	UpdateFeatureV1Params,
@@ -84,7 +87,7 @@ export const apiCreditSchemaItemToDb = (
 			: { feature_amount: credit.billing_units }),
 	};
 
-	if (credit.tier_behavior === "graduated") {
+	if (isGraduatedCreditSchemaItem(credit)) {
 		return {
 			...base,
 			tier_behavior: "graduated",

@@ -1,4 +1,5 @@
 import type { ApiFeatureV1 } from "@api/features/apiFeatureV1.js";
+import { isGraduatedCreditSchemaItem } from "@api/features/creditRateCard.js";
 
 type FeatureDisplay = ApiFeatureV1["display"];
 type CreditSchema = ApiFeatureV1["credit_schema"];
@@ -35,23 +36,29 @@ const creditSchemaItemsEqual = ({
 	right: NonNullable<CreditSchema>[number];
 }) => {
 	if ((left.billing_units ?? 1) !== (right.billing_units ?? 1)) return false;
-	if (left.tier_behavior !== right.tier_behavior) return false;
 
 	if (
-		left.tier_behavior !== "graduated" ||
-		right.tier_behavior !== "graduated"
+		isGraduatedCreditSchemaItem(left) &&
+		isGraduatedCreditSchemaItem(right)
 	) {
-		return left.credit_cost === right.credit_cost;
+		return (
+			left.tiers.length === right.tiers.length &&
+			left.tiers.every(
+				(tier, index) =>
+					tier.to === right.tiers[index]?.to &&
+					tier.credit_cost === right.tiers[index]?.credit_cost,
+			)
+		);
 	}
 
-	return (
-		left.tiers.length === right.tiers.length &&
-		left.tiers.every(
-			(tier, index) =>
-				tier.to === right.tiers[index]?.to &&
-				tier.credit_cost === right.tiers[index]?.credit_cost,
-		)
-	);
+	if (
+		isGraduatedCreditSchemaItem(left) ||
+		isGraduatedCreditSchemaItem(right)
+	) {
+		return false;
+	}
+
+	return left.credit_cost === right.credit_cost;
 };
 
 const creditSchemasEqual = (left: CreditSchema, right: CreditSchema) => {

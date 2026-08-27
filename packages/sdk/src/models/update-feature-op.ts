@@ -9,6 +9,7 @@ import * as openEnums from "../types/enums.js";
 import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
+import { smartUnion } from "../types/smart-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type UpdateFeatureGlobals = {
@@ -39,10 +40,62 @@ export type UpdateFeatureDisplayRequestBody = {
   plural: string;
 };
 
-export type UpdateFeatureCreditSchemaRequestBody = {
+export type UpdateFeatureCreditSchemaRequestBody2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
   meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
   creditCost: number;
 };
+
+export const UpdateFeatureToRequestBodyEnum = {
+  Inf: "inf",
+} as const;
+export type UpdateFeatureToRequestBodyEnum = ClosedEnum<
+  typeof UpdateFeatureToRequestBodyEnum
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type UpdateFeatureToRequestBodyUnion =
+  | number
+  | UpdateFeatureToRequestBodyEnum;
+
+export type UpdateFeatureTierRequestBody = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | UpdateFeatureToRequestBodyEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type UpdateFeatureCreditSchemaRequestBody1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<UpdateFeatureTierRequestBody>;
+};
+
+export type UpdateFeatureCreditSchemaRequestBodyUnion =
+  | UpdateFeatureCreditSchemaRequestBody1
+  | UpdateFeatureCreditSchemaRequestBody2;
 
 export type UpdateFeatureModelMarkupsRequest = {
   markup?: number | undefined;
@@ -72,9 +125,18 @@ export type UpdateFeatureParams = {
    */
   display?: UpdateFeatureDisplayRequestBody | undefined;
   /**
-   * A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+   * A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.
    */
-  creditSchema?: Array<UpdateFeatureCreditSchemaRequestBody> | undefined;
+  creditSchema?:
+    | Array<
+      | UpdateFeatureCreditSchemaRequestBody1
+      | UpdateFeatureCreditSchemaRequestBody2
+    >
+    | undefined;
+  /**
+   * Whether usage of this classic credit system should be itemized as invoice credits.
+   */
+  invoiceCredit?: boolean | undefined;
   /**
    * Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
    */
@@ -124,16 +186,73 @@ export type UpdateFeatureTypeResponse = OpenEnum<
   typeof UpdateFeatureTypeResponse
 >;
 
-export type UpdateFeatureCreditSchemaResponse = {
+export type UpdateFeatureCreditSchemaResponse3 = {
+  meteredFeatureId: "";
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type UpdateFeatureCreditSchemaResponse2 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
   meteredFeatureId: string;
   /**
-   * Credits consumed per unit of the metered feature.
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
+
+export const UpdateFeatureToResponseEnum = {
+  Inf: "inf",
+} as const;
+export type UpdateFeatureToResponseEnum = ClosedEnum<
+  typeof UpdateFeatureToResponseEnum
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type UpdateFeatureToResponseUnion = number | UpdateFeatureToResponseEnum;
+
+export type UpdateFeatureTierResponse = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | UpdateFeatureToResponseEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type UpdateFeatureCreditSchemaResponse1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<UpdateFeatureTierResponse>;
+};
+
+export type UpdateFeatureCreditSchemaResponseUnion =
+  | UpdateFeatureCreditSchemaResponse1
+  | UpdateFeatureCreditSchemaResponse2
+  | UpdateFeatureCreditSchemaResponse3;
 
 export type UpdateFeatureModelMarkupsResponse = {
   markup?: number | undefined;
@@ -157,6 +276,24 @@ export type UpdateFeatureDisplayResponse = {
    * Plural form for UI display (e.g., 'API calls', 'seats').
    */
   plural?: string | null | undefined;
+};
+
+export type UpdateFeatureStripe = {
+  /**
+   * Stripe product ID this feature's usage prices bill under.
+   */
+  productId?: string | undefined;
+  /**
+   * Stripe meter ID used to create this feature's metered price.
+   */
+  meterId?: string | undefined;
+};
+
+/**
+ * Processor mappings for this feature. Present when a Stripe product or meter is set.
+ */
+export type UpdateFeatureProcessors = {
+  stripe?: UpdateFeatureStripe | undefined;
 };
 
 /**
@@ -184,9 +321,19 @@ export type UpdateFeatureResponse = {
    */
   eventNames?: Array<string> | undefined;
   /**
-   * For credit_system features: maps metered features to their credit costs.
+   * For classic credit systems: maps metered features to flat or graduated credit costs.
    */
-  creditSchema?: Array<UpdateFeatureCreditSchemaResponse> | undefined;
+  creditSchema?:
+    | Array<
+      | UpdateFeatureCreditSchemaResponse1
+      | UpdateFeatureCreditSchemaResponse2
+      | UpdateFeatureCreditSchemaResponse3
+    >
+    | undefined;
+  /**
+   * Whether usage of this classic credit system should be itemized as invoice credits.
+   */
+  invoiceCredit?: boolean | undefined;
   /**
    * Per-model markup overrides for AI credit systems.
    */
@@ -213,6 +360,10 @@ export type UpdateFeatureResponse = {
    * Whether the feature is archived and hidden from the dashboard.
    */
   archived: boolean;
+  /**
+   * Processor mappings for this feature. Present when a Stripe product or meter is set.
+   */
+  processors?: UpdateFeatureProcessors | undefined;
 };
 
 /** @internal */
@@ -246,34 +397,159 @@ export function updateFeatureDisplayRequestBodyToJSON(
 }
 
 /** @internal */
-export type UpdateFeatureCreditSchemaRequestBody$Outbound = {
+export type UpdateFeatureCreditSchemaRequestBody2$Outbound = {
   metered_feature_id: string;
+  billing_units?: number | undefined;
   credit_cost: number;
 };
 
 /** @internal */
-export const UpdateFeatureCreditSchemaRequestBody$outboundSchema: z.ZodMiniType<
-  UpdateFeatureCreditSchemaRequestBody$Outbound,
-  UpdateFeatureCreditSchemaRequestBody
+export const UpdateFeatureCreditSchemaRequestBody2$outboundSchema:
+  z.ZodMiniType<
+    UpdateFeatureCreditSchemaRequestBody2$Outbound,
+    UpdateFeatureCreditSchemaRequestBody2
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.string(),
+      billingUnits: z.optional(z.number()),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+        billingUnits: "billing_units",
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function updateFeatureCreditSchemaRequestBody2ToJSON(
+  updateFeatureCreditSchemaRequestBody2: UpdateFeatureCreditSchemaRequestBody2,
+): string {
+  return JSON.stringify(
+    UpdateFeatureCreditSchemaRequestBody2$outboundSchema.parse(
+      updateFeatureCreditSchemaRequestBody2,
+    ),
+  );
+}
+
+/** @internal */
+export const UpdateFeatureToRequestBodyEnum$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateFeatureToRequestBodyEnum
+> = z.enum(UpdateFeatureToRequestBodyEnum);
+
+/** @internal */
+export type UpdateFeatureToRequestBodyUnion$Outbound = number | string;
+
+/** @internal */
+export const UpdateFeatureToRequestBodyUnion$outboundSchema: z.ZodMiniType<
+  UpdateFeatureToRequestBodyUnion$Outbound,
+  UpdateFeatureToRequestBodyUnion
+> = smartUnion([z.number(), UpdateFeatureToRequestBodyEnum$outboundSchema]);
+
+export function updateFeatureToRequestBodyUnionToJSON(
+  updateFeatureToRequestBodyUnion: UpdateFeatureToRequestBodyUnion,
+): string {
+  return JSON.stringify(
+    UpdateFeatureToRequestBodyUnion$outboundSchema.parse(
+      updateFeatureToRequestBodyUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateFeatureTierRequestBody$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const UpdateFeatureTierRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateFeatureTierRequestBody$Outbound,
+  UpdateFeatureTierRequestBody
 > = z.pipe(
   z.object({
-    meteredFeatureId: z.string(),
+    to: smartUnion([z.number(), UpdateFeatureToRequestBodyEnum$outboundSchema]),
     creditCost: z.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
-      meteredFeatureId: "metered_feature_id",
       creditCost: "credit_cost",
     });
   }),
 );
 
-export function updateFeatureCreditSchemaRequestBodyToJSON(
-  updateFeatureCreditSchemaRequestBody: UpdateFeatureCreditSchemaRequestBody,
+export function updateFeatureTierRequestBodyToJSON(
+  updateFeatureTierRequestBody: UpdateFeatureTierRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateFeatureCreditSchemaRequestBody$outboundSchema.parse(
-      updateFeatureCreditSchemaRequestBody,
+    UpdateFeatureTierRequestBody$outboundSchema.parse(
+      updateFeatureTierRequestBody,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateFeatureCreditSchemaRequestBody1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<UpdateFeatureTierRequestBody$Outbound>;
+};
+
+/** @internal */
+export const UpdateFeatureCreditSchemaRequestBody1$outboundSchema:
+  z.ZodMiniType<
+    UpdateFeatureCreditSchemaRequestBody1$Outbound,
+    UpdateFeatureCreditSchemaRequestBody1
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.string(),
+      billingUnits: z.optional(z.number()),
+      tierBehavior: z.literal("graduated"),
+      tiers: z.array(z.lazy(() => UpdateFeatureTierRequestBody$outboundSchema)),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+        billingUnits: "billing_units",
+        tierBehavior: "tier_behavior",
+      });
+    }),
+  );
+
+export function updateFeatureCreditSchemaRequestBody1ToJSON(
+  updateFeatureCreditSchemaRequestBody1: UpdateFeatureCreditSchemaRequestBody1,
+): string {
+  return JSON.stringify(
+    UpdateFeatureCreditSchemaRequestBody1$outboundSchema.parse(
+      updateFeatureCreditSchemaRequestBody1,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateFeatureCreditSchemaRequestBodyUnion$Outbound =
+  | UpdateFeatureCreditSchemaRequestBody1$Outbound
+  | UpdateFeatureCreditSchemaRequestBody2$Outbound;
+
+/** @internal */
+export const UpdateFeatureCreditSchemaRequestBodyUnion$outboundSchema:
+  z.ZodMiniType<
+    UpdateFeatureCreditSchemaRequestBodyUnion$Outbound,
+    UpdateFeatureCreditSchemaRequestBodyUnion
+  > = smartUnion([
+    z.lazy(() => UpdateFeatureCreditSchemaRequestBody1$outboundSchema),
+    z.lazy(() => UpdateFeatureCreditSchemaRequestBody2$outboundSchema),
+  ]);
+
+export function updateFeatureCreditSchemaRequestBodyUnionToJSON(
+  updateFeatureCreditSchemaRequestBodyUnion:
+    UpdateFeatureCreditSchemaRequestBodyUnion,
+): string {
+  return JSON.stringify(
+    UpdateFeatureCreditSchemaRequestBodyUnion$outboundSchema.parse(
+      updateFeatureCreditSchemaRequestBodyUnion,
     ),
   );
 }
@@ -343,8 +619,12 @@ export type UpdateFeatureParams$Outbound = {
   consumable?: boolean | undefined;
   display?: UpdateFeatureDisplayRequestBody$Outbound | undefined;
   credit_schema?:
-    | Array<UpdateFeatureCreditSchemaRequestBody$Outbound>
+    | Array<
+      | UpdateFeatureCreditSchemaRequestBody1$Outbound
+      | UpdateFeatureCreditSchemaRequestBody2$Outbound
+    >
     | undefined;
+  invoice_credit?: boolean | undefined;
   model_markups?:
     | { [k: string]: UpdateFeatureModelMarkupsRequest$Outbound }
     | null
@@ -372,24 +652,22 @@ export const UpdateFeatureParams$outboundSchema: z.ZodMiniType<
     display: z.optional(
       z.lazy(() => UpdateFeatureDisplayRequestBody$outboundSchema),
     ),
-    creditSchema: z.optional(
-      z.array(
-        z.lazy(() => UpdateFeatureCreditSchemaRequestBody$outboundSchema),
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => UpdateFeatureCreditSchemaRequestBody1$outboundSchema),
+      z.lazy(() =>
+        UpdateFeatureCreditSchemaRequestBody2$outboundSchema
       ),
-    ),
-    modelMarkups: z.optional(
-      z.nullable(z.record(
-        z.string(),
-        z.lazy(() => UpdateFeatureModelMarkupsRequest$outboundSchema),
-      )),
-    ),
+    ]))),
+    invoiceCredit: z.optional(z.boolean()),
+    modelMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => UpdateFeatureModelMarkupsRequest$outboundSchema),
+    ))),
     defaultMarkup: z.optional(z.number()),
-    providerMarkups: z.optional(
-      z.nullable(z.record(
-        z.string(),
-        z.lazy(() => UpdateFeatureProviderMarkupsRequest$outboundSchema),
-      )),
-    ),
+    providerMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => UpdateFeatureProviderMarkupsRequest$outboundSchema),
+    ))),
     eventNames: z.optional(z.array(z.string())),
     archived: z.optional(z.boolean()),
     featureId: z.string(),
@@ -398,6 +676,7 @@ export const UpdateFeatureParams$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       creditSchema: "credit_schema",
+      invoiceCredit: "invoice_credit",
       modelMarkups: "model_markups",
       defaultMarkup: "default_markup",
       providerMarkups: "provider_markups",
@@ -423,29 +702,159 @@ export const UpdateFeatureTypeResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateFeatureTypeResponse);
 
 /** @internal */
-export const UpdateFeatureCreditSchemaResponse$inboundSchema: z.ZodMiniType<
-  UpdateFeatureCreditSchemaResponse,
+export const UpdateFeatureCreditSchemaResponse3$inboundSchema: z.ZodMiniType<
+  UpdateFeatureCreditSchemaResponse3,
   unknown
 > = z.pipe(
   z.object({
-    metered_feature_id: types.string(),
+    metered_feature_id: types.literal(""),
+    billing_units: types.optional(types.number()),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
       "credit_cost": "creditCost",
     });
   }),
 );
 
-export function updateFeatureCreditSchemaResponseFromJSON(
+export function updateFeatureCreditSchemaResponse3FromJSON(
   jsonString: string,
-): SafeParseResult<UpdateFeatureCreditSchemaResponse, SDKValidationError> {
+): SafeParseResult<UpdateFeatureCreditSchemaResponse3, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => UpdateFeatureCreditSchemaResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureCreditSchemaResponse' from JSON`,
+    (x) =>
+      UpdateFeatureCreditSchemaResponse3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateFeatureCreditSchemaResponse3' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateFeatureCreditSchemaResponse2$inboundSchema: z.ZodMiniType<
+  UpdateFeatureCreditSchemaResponse2,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateFeatureCreditSchemaResponse2FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateFeatureCreditSchemaResponse2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdateFeatureCreditSchemaResponse2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateFeatureCreditSchemaResponse2' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateFeatureToResponseEnum$inboundSchema: z.ZodMiniEnum<
+  typeof UpdateFeatureToResponseEnum
+> = z.enum(UpdateFeatureToResponseEnum);
+
+/** @internal */
+export const UpdateFeatureToResponseUnion$inboundSchema: z.ZodMiniType<
+  UpdateFeatureToResponseUnion,
+  unknown
+> = smartUnion([types.number(), UpdateFeatureToResponseEnum$inboundSchema]);
+
+export function updateFeatureToResponseUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateFeatureToResponseUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateFeatureToResponseUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateFeatureToResponseUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateFeatureTierResponse$inboundSchema: z.ZodMiniType<
+  UpdateFeatureTierResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), UpdateFeatureToResponseEnum$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function updateFeatureTierResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateFeatureTierResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateFeatureTierResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateFeatureTierResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateFeatureCreditSchemaResponse1$inboundSchema: z.ZodMiniType<
+  UpdateFeatureCreditSchemaResponse1,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => UpdateFeatureTierResponse$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function updateFeatureCreditSchemaResponse1FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateFeatureCreditSchemaResponse1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdateFeatureCreditSchemaResponse1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateFeatureCreditSchemaResponse1' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateFeatureCreditSchemaResponseUnion$inboundSchema:
+  z.ZodMiniType<UpdateFeatureCreditSchemaResponseUnion, unknown> = smartUnion([
+    z.lazy(() => UpdateFeatureCreditSchemaResponse1$inboundSchema),
+    z.lazy(() => UpdateFeatureCreditSchemaResponse2$inboundSchema),
+    z.lazy(() => UpdateFeatureCreditSchemaResponse3$inboundSchema),
+  ]);
+
+export function updateFeatureCreditSchemaResponseUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateFeatureCreditSchemaResponseUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdateFeatureCreditSchemaResponseUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateFeatureCreditSchemaResponseUnion' from JSON`,
   );
 }
 
@@ -516,6 +925,51 @@ export function updateFeatureDisplayResponseFromJSON(
 }
 
 /** @internal */
+export const UpdateFeatureStripe$inboundSchema: z.ZodMiniType<
+  UpdateFeatureStripe,
+  unknown
+> = z.pipe(
+  z.object({
+    product_id: types.optional(types.string()),
+    meter_id: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "product_id": "productId",
+      "meter_id": "meterId",
+    });
+  }),
+);
+
+export function updateFeatureStripeFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateFeatureStripe, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateFeatureStripe$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateFeatureStripe' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateFeatureProcessors$inboundSchema: z.ZodMiniType<
+  UpdateFeatureProcessors,
+  unknown
+> = z.object({
+  stripe: types.optional(z.lazy(() => UpdateFeatureStripe$inboundSchema)),
+});
+
+export function updateFeatureProcessorsFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateFeatureProcessors, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateFeatureProcessors$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateFeatureProcessors' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateFeatureResponse$inboundSchema: z.ZodMiniType<
   UpdateFeatureResponse,
   unknown
@@ -526,9 +980,14 @@ export const UpdateFeatureResponse$inboundSchema: z.ZodMiniType<
     type: UpdateFeatureTypeResponse$inboundSchema,
     consumable: types.boolean(),
     event_names: types.optional(z.array(types.string())),
-    credit_schema: types.optional(
-      z.array(z.lazy(() => UpdateFeatureCreditSchemaResponse$inboundSchema)),
-    ),
+    credit_schema: types.optional(z.array(smartUnion([
+      z.lazy(() => UpdateFeatureCreditSchemaResponse1$inboundSchema),
+      z.lazy(() =>
+        UpdateFeatureCreditSchemaResponse2$inboundSchema
+      ),
+      z.lazy(() => UpdateFeatureCreditSchemaResponse3$inboundSchema),
+    ]))),
+    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => UpdateFeatureModelMarkupsResponse$inboundSchema),
@@ -542,11 +1001,15 @@ export const UpdateFeatureResponse$inboundSchema: z.ZodMiniType<
       UpdateFeatureDisplayResponse$inboundSchema
     )),
     archived: types.boolean(),
+    processors: types.optional(z.lazy(() =>
+      UpdateFeatureProcessors$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",

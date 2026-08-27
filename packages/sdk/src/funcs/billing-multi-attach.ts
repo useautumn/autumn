@@ -58,6 +58,7 @@ import { Result } from "../types/fp.js";
  * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. (optional)
  * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
  * @param billingBehavior - How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything. (optional)
+ * @param billingCycleAnchor - Pass 'now' to reset the billing cycle of every plan on the subscription to the time of this request. (optional)
  * @param successUrl - URL to redirect to after successful checkout. (optional)
  * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
  * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)

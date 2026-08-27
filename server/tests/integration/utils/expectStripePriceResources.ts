@@ -14,6 +14,7 @@ import {
 	type FullProduct,
 	findPriceByFeatureId,
 	isFixedPrice,
+	isPrepaidPrice,
 	type Price,
 	type PriceStripeReuseLevel,
 } from "@autumn/shared";
@@ -117,9 +118,12 @@ export const expectPriceStripeResourcesPresent = ({
 	expect(price, `${prefix}price row missing`).toBeDefined();
 	if (!price) return;
 
+	const priceSlot = isPrepaidPrice(price)
+		? "stripe_prepaid_price_v2_id"
+		: "stripe_price_id";
 	expect(
-		stripeConfigValue({ price, field: "stripe_price_id" }),
-		`${prefix}stripe_price_id present`,
+		stripeConfigValue({ price, field: priceSlot }),
+		`${prefix}${priceSlot} present`,
 	).toBeTruthy();
 
 	// Fixed base prices often only have stripe_price_id (no per-feature product).
@@ -190,9 +194,12 @@ export const expectPriceStripeReuseCorrect = ({
 		price: before,
 		field: "stripe_product_id",
 	});
+	const priceSlot = isPrepaidPrice(before)
+		? "stripe_prepaid_price_v2_id"
+		: "stripe_price_id";
 	const beforePrice = stripeConfigValue({
 		price: before,
-		field: "stripe_price_id",
+		field: priceSlot,
 	});
 	const beforeMeter = stripeConfigValue({
 		price: before,
@@ -205,7 +212,7 @@ export const expectPriceStripeReuseCorrect = ({
 	});
 	const afterPrice = stripeConfigValue({
 		price: after,
-		field: "stripe_price_id",
+		field: priceSlot,
 	});
 	const afterMeter = stripeConfigValue({
 		price: after,
@@ -218,7 +225,7 @@ export const expectPriceStripeReuseCorrect = ({
 				beforeProduct,
 			);
 		}
-		expect(afterPrice, `${prefix}full: stripe_price_id`).toBe(beforePrice);
+		expect(afterPrice, `${prefix}full: ${priceSlot}`).toBe(beforePrice);
 		if (beforeMeter) {
 			expect(afterMeter, `${prefix}full: stripe_meter_id`).toBe(beforeMeter);
 		}
@@ -239,7 +246,7 @@ export const expectPriceStripeReuseCorrect = ({
 		if (beforePrice) {
 			expect(
 				afterPrice,
-				`${prefix}product-only: stripe_price_id must not reuse`,
+				`${prefix}product-only: ${priceSlot} must not reuse`,
 			).not.toBe(beforePrice);
 		}
 		return;
@@ -252,7 +259,7 @@ export const expectPriceStripeReuseCorrect = ({
 		);
 	}
 	if (beforePrice) {
-		expect(afterPrice, `${prefix}none: stripe_price_id`).not.toBe(beforePrice);
+		expect(afterPrice, `${prefix}none: ${priceSlot}`).not.toBe(beforePrice);
 	}
 	if (beforeMeter) {
 		expect(afterMeter, `${prefix}none: stripe_meter_id`).not.toBe(beforeMeter);

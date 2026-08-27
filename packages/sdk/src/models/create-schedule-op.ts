@@ -56,7 +56,7 @@ export type CreateScheduleFreeTrialParams = {
    */
   durationType?: CreateScheduleFreeTrialDurationType | undefined;
   /**
-   * If true, payment method required to start trial. Customer is charged after trial ends.
+   * If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
    */
   cardRequired?: boolean | undefined;
   /**
@@ -186,7 +186,7 @@ export type UnscheduledPlanAdditionalCurrency = {
  */
 export type UnscheduledPlanBasePrice = {
   /**
-   * Base price amount for the plan.
+   * Base price amount for the plan, in major currency units (e.g. dollars).
    */
   amount: number;
   /**
@@ -810,6 +810,10 @@ export type UnscheduledPlanPlanItemFilter = {
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
    */
   intervalCount?: number | undefined;
+  /**
+   * Match items whose grant equals this included usage. Omitted is a wildcard.
+   */
+  included?: number | undefined;
 };
 
 /**
@@ -1086,7 +1090,7 @@ export type UnscheduledPlan = {
    */
   planId: string;
   /**
-   * The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID.
+   * The plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID. On phases after the first, the entity must already be scoped by the first phase — a schedule cannot change scope mid-flight.
    */
   entityId?: string | null | undefined;
   /**
@@ -1190,7 +1194,7 @@ export type PhaseStartAdditionalCurrency = {
  */
 export type PhaseStartBasePrice = {
   /**
-   * Base price amount for the plan.
+   * Base price amount for the plan, in major currency units (e.g. dollars).
    */
   amount: number;
   /**
@@ -1772,6 +1776,10 @@ export type PhaseStartPlanItemFilter = {
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
    */
   intervalCount?: number | undefined;
+  /**
+   * Match items whose grant equals this included usage. Omitted is a wildcard.
+   */
+  included?: number | undefined;
 };
 
 /**
@@ -2044,7 +2052,7 @@ export type CreateSchedulePlan2 = {
    */
   planId: string;
   /**
-   * The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID.
+   * The plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID. On phases after the first, the entity must already be scoped by the first phase — a schedule cannot change scope mid-flight.
    */
   entityId?: string | null | undefined;
   /**
@@ -2068,13 +2076,15 @@ export type CreateSchedulePlan2 = {
 /**
  * Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
  */
-export const BillingCycleAnchor2 = {
+export const CreateScheduleBillingCycleAnchor2 = {
   PhaseStart: "phase_start",
 } as const;
 /**
  * Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
  */
-export type BillingCycleAnchor2 = ClosedEnum<typeof BillingCycleAnchor2>;
+export type CreateScheduleBillingCycleAnchor2 = ClosedEnum<
+  typeof CreateScheduleBillingCycleAnchor2
+>;
 
 export type PhaseStart = {
   /**
@@ -2092,7 +2102,7 @@ export type PhaseStart = {
   /**
    * Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
    */
-  billingCycleAnchor?: BillingCycleAnchor2 | undefined;
+  billingCycleAnchor?: CreateScheduleBillingCycleAnchor2 | undefined;
 };
 
 export type PhaseStartUnion = PhaseStart;
@@ -2306,7 +2316,7 @@ export const CreateScheduleFreeTrialParams$outboundSchema: z.ZodMiniType<
       CreateScheduleFreeTrialDurationType$outboundSchema,
       "month",
     ),
-    cardRequired: z._default(z.boolean(), true),
+    cardRequired: z._default(z.boolean(), false),
     onEnd: z.optional(CreateScheduleOnEnd$outboundSchema),
   }),
   z.transform((v) => {
@@ -3282,6 +3292,7 @@ export type UnscheduledPlanPlanItemFilter$Outbound = {
   billing_method?: string | undefined;
   interval?: string | string | undefined;
   interval_count?: number | undefined;
+  included?: number | undefined;
 };
 
 /** @internal */
@@ -3301,6 +3312,7 @@ export const UnscheduledPlanPlanItemFilter$outboundSchema: z.ZodMiniType<
       ]),
     ),
     intervalCount: z.optional(z.int()),
+    included: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4523,6 +4535,7 @@ export type PhaseStartPlanItemFilter$Outbound = {
   billing_method?: string | undefined;
   interval?: string | string | undefined;
   interval_count?: number | undefined;
+  included?: number | undefined;
 };
 
 /** @internal */
@@ -4540,6 +4553,7 @@ export const PhaseStartPlanItemFilter$outboundSchema: z.ZodMiniType<
       ]),
     ),
     intervalCount: z.optional(z.int()),
+    included: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4966,9 +4980,9 @@ export function createSchedulePlan2ToJSON(
 }
 
 /** @internal */
-export const BillingCycleAnchor2$outboundSchema: z.ZodMiniEnum<
-  typeof BillingCycleAnchor2
-> = z.enum(BillingCycleAnchor2);
+export const CreateScheduleBillingCycleAnchor2$outboundSchema: z.ZodMiniEnum<
+  typeof CreateScheduleBillingCycleAnchor2
+> = z.enum(CreateScheduleBillingCycleAnchor2);
 
 /** @internal */
 export type PhaseStart$Outbound = {
@@ -4987,7 +5001,9 @@ export const PhaseStart$outboundSchema: z.ZodMiniType<
     startsAt: z.optional(smartUnion([z.number(), z.string()])),
     startingAfter: z.optional(z.lazy(() => StartingAfter2$outboundSchema)),
     plans: z.array(z.lazy(() => CreateSchedulePlan2$outboundSchema)),
-    billingCycleAnchor: z.optional(BillingCycleAnchor2$outboundSchema),
+    billingCycleAnchor: z.optional(
+      CreateScheduleBillingCycleAnchor2$outboundSchema,
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {

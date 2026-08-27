@@ -15,7 +15,7 @@
  *     - filter precision: same feature_id, different reset.interval
  *     - base versions on rollover change with customer (both base and variant version)
  *     - preview_update returns 0 writes when nothing changes
- *     - stripe_prepaid_price_v2_id carried forward on versioning
+ *     - stripe_price_id carried forward on versioning (V1 attach stamps)
  *     - create_variant rejects archived base (cannot_fork_archived_base)
  *     - base+variant both have customers → both version, variant pins to new base
  *   Error codes:
@@ -222,7 +222,20 @@ test.concurrent(
 		const variantId = `${baseId}_variant`;
 		await cleanup(baseId, variantId);
 
-		const base = await createBase(baseId, rolloverBaseItemsPriced(200));
+		await createBase(baseId, rolloverBaseItemsPriced(200));
+		const stampCustomerId = `cus_${rid}_v1_stamp`;
+		await cleanupCustomers(stampCustomerId);
+		const { autumnV1 } = await initScenario({
+			customerId: stampCustomerId,
+			setup: [s.customer({ testClock: false, paymentMethod: "success" })],
+			actions: [],
+		});
+		await autumnV1.attach({
+			customer_id: stampCustomerId,
+			product_id: baseId,
+			options: [{ feature_id: TestFeature.Credits, quantity: 1 }],
+		});
+		const base = await ProductService.getFull({ db, idOrInternalId: baseId, orgId: org.id, env });
 		await createVariant(baseId, variantId);
 		const variantFull = await ProductService.getFull({ db, idOrInternalId: variantId, orgId: org.id, env });
 
@@ -548,10 +561,10 @@ test.concurrent(
 );
 
 // ═══════════════════════════════════════════════════════════════════
-// 9. stripe_prepaid_price_v2_id carried forward on versioning
+// 9. stripe_price_id carried forward on versioning (V1 attach stamps)
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("rollover versioning: stripe_prepaid_price_v2_id carried forward to variant v2")}`,
+	`${chalk.yellowBright("rollover versioning: stripe_price_id carried forward to variant v2")}`,
 	async () => {
 			const rid = readableVariantTestId("rv_prepaid_carry");
 			const baseId = `base_${rid}`;
@@ -563,14 +576,6 @@ test.concurrent(
 		await createBase(baseId, rolloverPrepaidItems(200));
 		await createVariant(baseId, variantId);
 
-		const variantV1 = await ProductService.getFull({ db, idOrInternalId: variantId, orgId: org.id, env });
-		const v1PrepaidPrice = variantV1.prices.find(
-			(p: any) => p.config?.feature_id === TestFeature.Credits && p.config?.stripe_prepaid_price_v2_id,
-		);
-		expect(v1PrepaidPrice).toBeDefined();
-		expect((v1PrepaidPrice!.config as any)?.stripe_price_id).toBeTruthy();
-		expect((v1PrepaidPrice!.config as any)?.stripe_prepaid_price_v2_id).toBeTruthy();
-
 		const { autumnV1 } = await initScenario({
 			customerId,
 			setup: [s.customer({ testClock: false, paymentMethod: "success" })],
@@ -578,6 +583,13 @@ test.concurrent(
 		});
 		await autumnV1.attach({ customer_id: customerId, product_id: variantId, options: [{ feature_id: TestFeature.Credits, quantity: 500 }] });
 		await wait(4000);
+
+		const variantV1 = await ProductService.getFull({ db, idOrInternalId: variantId, orgId: org.id, env });
+		const v1PrepaidPrice = variantV1.prices.find(
+			(p: any) => p.config?.feature_id === TestFeature.Credits && p.config?.stripe_price_id,
+		);
+		expect(v1PrepaidPrice).toBeDefined();
+		expect((v1PrepaidPrice!.config as any)?.stripe_price_id).toBeTruthy();
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 			items: rolloverPrepaidItems(500),
@@ -589,11 +601,10 @@ test.concurrent(
 
 		const v2 = variantVersions.find((v: any) => v.version === 2)!;
 		const v2PrepaidPrice = v2.prices.find(
-			(p: any) => p.config?.feature_id === TestFeature.Credits && p.config?.stripe_prepaid_price_v2_id,
+			(p: any) => p.config?.feature_id === TestFeature.Credits && p.config?.stripe_price_id,
 		);
 		expect(v2PrepaidPrice).toBeDefined();
 		expect((v2PrepaidPrice!.config as any)?.stripe_price_id).toBeTruthy();
-		expect((v2PrepaidPrice!.config as any)?.stripe_prepaid_price_v2_id).toBeTruthy();
 
 		await cleanup(baseId, variantId);
 	},

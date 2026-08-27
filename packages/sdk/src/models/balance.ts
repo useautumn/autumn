@@ -6,7 +6,7 @@ import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import * as openEnums from "../types/enums.js";
-import { OpenEnum } from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -26,16 +26,71 @@ export const BalanceType = {
  */
 export type BalanceType = OpenEnum<typeof BalanceType>;
 
-export type BalanceCreditSchema = {
+export type BalanceCreditSchema3 = {
+  meteredFeatureId: "";
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type BalanceCreditSchema2 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
   meteredFeatureId: string;
   /**
-   * Credits consumed per unit of the metered feature.
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
+
+export const BalanceToEnum = {
+  Inf: "inf",
+} as const;
+export type BalanceToEnum = ClosedEnum<typeof BalanceToEnum>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type BalanceFeatureToUnion = number | BalanceToEnum;
+
+export type BalanceFeatureTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | BalanceToEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type BalanceCreditSchema1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<BalanceFeatureTier>;
+};
+
+export type BalanceCreditSchemaUnion =
+  | BalanceCreditSchema1
+  | BalanceCreditSchema2
+  | BalanceCreditSchema3;
 
 export type BalanceModelMarkups = {
   markup?: number | undefined;
@@ -59,6 +114,24 @@ export type BalanceDisplay = {
    * Plural form for UI display (e.g., 'API calls', 'seats').
    */
   plural?: string | null | undefined;
+};
+
+export type BalanceStripe = {
+  /**
+   * Stripe product ID this feature's usage prices bill under.
+   */
+  productId?: string | undefined;
+  /**
+   * Stripe meter ID used to create this feature's metered price.
+   */
+  meterId?: string | undefined;
+};
+
+/**
+ * Processor mappings for this feature. Present when a Stripe product or meter is set.
+ */
+export type BalanceProcessors = {
+  stripe?: BalanceStripe | undefined;
 };
 
 /**
@@ -86,9 +159,15 @@ export type BalanceFeature = {
    */
   eventNames?: Array<string> | undefined;
   /**
-   * For credit_system features: maps metered features to their credit costs.
+   * For classic credit systems: maps metered features to flat or graduated credit costs.
    */
-  creditSchema?: Array<BalanceCreditSchema> | undefined;
+  creditSchema?:
+    | Array<BalanceCreditSchema1 | BalanceCreditSchema2 | BalanceCreditSchema3>
+    | undefined;
+  /**
+   * Whether usage of this classic credit system should be itemized as invoice credits.
+   */
+  invoiceCredit?: boolean | undefined;
   /**
    * Per-model markup overrides for AI credit systems.
    */
@@ -109,6 +188,10 @@ export type BalanceFeature = {
    * Whether the feature is archived and hidden from the dashboard.
    */
   archived: boolean;
+  /**
+   * Processor mappings for this feature. Present when a Stripe product or meter is set.
+   */
+  processors?: BalanceProcessors | undefined;
 };
 
 export const BalanceIntervalEnum = {
@@ -144,9 +227,9 @@ export type BalanceReset = {
   resetsAt: number | null;
 };
 
-export type BalanceTo = number | string;
+export type BreakdownTo = number | string;
 
-export type BalanceTier = {
+export type BreakdownTier = {
   to: number | string;
   amount: number;
   flatAmount?: number | undefined;
@@ -184,7 +267,7 @@ export type BalancePrice = {
   /**
    * Tiered pricing configuration if applicable.
    */
-  tiers?: Array<BalanceTier> | undefined;
+  tiers?: Array<BreakdownTier> | undefined;
   /**
    * How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier).
    */
@@ -313,29 +396,156 @@ export const BalanceType$inboundSchema: z.ZodMiniType<BalanceType, unknown> =
   openEnums.inboundSchema(BalanceType);
 
 /** @internal */
-export const BalanceCreditSchema$inboundSchema: z.ZodMiniType<
-  BalanceCreditSchema,
+export const BalanceCreditSchema3$inboundSchema: z.ZodMiniType<
+  BalanceCreditSchema3,
   unknown
 > = z.pipe(
   z.object({
-    metered_feature_id: types.string(),
+    metered_feature_id: types.literal(""),
+    billing_units: types.optional(types.number()),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
       "credit_cost": "creditCost",
     });
   }),
 );
 
-export function balanceCreditSchemaFromJSON(
+export function balanceCreditSchema3FromJSON(
   jsonString: string,
-): SafeParseResult<BalanceCreditSchema, SDKValidationError> {
+): SafeParseResult<BalanceCreditSchema3, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => BalanceCreditSchema$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'BalanceCreditSchema' from JSON`,
+    (x) => BalanceCreditSchema3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceCreditSchema3' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceCreditSchema2$inboundSchema: z.ZodMiniType<
+  BalanceCreditSchema2,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function balanceCreditSchema2FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceCreditSchema2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceCreditSchema2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceCreditSchema2' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceToEnum$inboundSchema: z.ZodMiniEnum<typeof BalanceToEnum> =
+  z.enum(BalanceToEnum);
+
+/** @internal */
+export const BalanceFeatureToUnion$inboundSchema: z.ZodMiniType<
+  BalanceFeatureToUnion,
+  unknown
+> = smartUnion([types.number(), BalanceToEnum$inboundSchema]);
+
+export function balanceFeatureToUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceFeatureToUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceFeatureToUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceFeatureToUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceFeatureTier$inboundSchema: z.ZodMiniType<
+  BalanceFeatureTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), BalanceToEnum$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function balanceFeatureTierFromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceFeatureTier, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceFeatureTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceFeatureTier' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceCreditSchema1$inboundSchema: z.ZodMiniType<
+  BalanceCreditSchema1,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => BalanceFeatureTier$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function balanceCreditSchema1FromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceCreditSchema1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceCreditSchema1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceCreditSchema1' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceCreditSchemaUnion$inboundSchema: z.ZodMiniType<
+  BalanceCreditSchemaUnion,
+  unknown
+> = smartUnion([
+  z.lazy(() => BalanceCreditSchema1$inboundSchema),
+  z.lazy(() => BalanceCreditSchema2$inboundSchema),
+  z.lazy(() => BalanceCreditSchema3$inboundSchema),
+]);
+
+export function balanceCreditSchemaUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceCreditSchemaUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceCreditSchemaUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceCreditSchemaUnion' from JSON`,
   );
 }
 
@@ -405,6 +615,51 @@ export function balanceDisplayFromJSON(
 }
 
 /** @internal */
+export const BalanceStripe$inboundSchema: z.ZodMiniType<
+  BalanceStripe,
+  unknown
+> = z.pipe(
+  z.object({
+    product_id: types.optional(types.string()),
+    meter_id: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "product_id": "productId",
+      "meter_id": "meterId",
+    });
+  }),
+);
+
+export function balanceStripeFromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceStripe, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceStripe$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceStripe' from JSON`,
+  );
+}
+
+/** @internal */
+export const BalanceProcessors$inboundSchema: z.ZodMiniType<
+  BalanceProcessors,
+  unknown
+> = z.object({
+  stripe: types.optional(z.lazy(() => BalanceStripe$inboundSchema)),
+});
+
+export function balanceProcessorsFromJSON(
+  jsonString: string,
+): SafeParseResult<BalanceProcessors, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => BalanceProcessors$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceProcessors' from JSON`,
+  );
+}
+
+/** @internal */
 export const BalanceFeature$inboundSchema: z.ZodMiniType<
   BalanceFeature,
   unknown
@@ -415,9 +670,14 @@ export const BalanceFeature$inboundSchema: z.ZodMiniType<
     type: BalanceType$inboundSchema,
     consumable: types.boolean(),
     event_names: types.optional(z.array(types.string())),
-    credit_schema: types.optional(
-      z.array(z.lazy(() => BalanceCreditSchema$inboundSchema)),
-    ),
+    credit_schema: types.optional(z.array(smartUnion([
+      z.lazy(() => BalanceCreditSchema1$inboundSchema),
+      z.lazy(() =>
+        BalanceCreditSchema2$inboundSchema
+      ),
+      z.lazy(() => BalanceCreditSchema3$inboundSchema),
+    ]))),
+    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => BalanceModelMarkups$inboundSchema),
@@ -431,11 +691,15 @@ export const BalanceFeature$inboundSchema: z.ZodMiniType<
       BalanceDisplay$inboundSchema
     )),
     archived: types.boolean(),
+    processors: types.optional(z.lazy(() =>
+      BalanceProcessors$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",
@@ -502,41 +766,43 @@ export function balanceResetFromJSON(
 }
 
 /** @internal */
-export const BalanceTo$inboundSchema: z.ZodMiniType<BalanceTo, unknown> =
+export const BreakdownTo$inboundSchema: z.ZodMiniType<BreakdownTo, unknown> =
   smartUnion([types.number(), types.string()]);
 
-export function balanceToFromJSON(
+export function breakdownToFromJSON(
   jsonString: string,
-): SafeParseResult<BalanceTo, SDKValidationError> {
+): SafeParseResult<BreakdownTo, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => BalanceTo$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'BalanceTo' from JSON`,
+    (x) => BreakdownTo$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BreakdownTo' from JSON`,
   );
 }
 
 /** @internal */
-export const BalanceTier$inboundSchema: z.ZodMiniType<BalanceTier, unknown> = z
-  .pipe(
-    z.object({
-      to: smartUnion([types.number(), types.string()]),
-      amount: types.number(),
-      flat_amount: types.optional(types.number()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "flat_amount": "flatAmount",
-      });
-    }),
-  );
+export const BreakdownTier$inboundSchema: z.ZodMiniType<
+  BreakdownTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), types.string()]),
+    amount: types.number(),
+    flat_amount: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "flat_amount": "flatAmount",
+    });
+  }),
+);
 
-export function balanceTierFromJSON(
+export function breakdownTierFromJSON(
   jsonString: string,
-): SafeParseResult<BalanceTier, SDKValidationError> {
+): SafeParseResult<BreakdownTier, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => BalanceTier$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'BalanceTier' from JSON`,
+    (x) => BreakdownTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BreakdownTier' from JSON`,
   );
 }
 
@@ -557,7 +823,7 @@ export const BalancePrice$inboundSchema: z.ZodMiniType<BalancePrice, unknown> =
   z.pipe(
     z.object({
       amount: types.optional(types.number()),
-      tiers: types.optional(z.array(z.lazy(() => BalanceTier$inboundSchema))),
+      tiers: types.optional(z.array(z.lazy(() => BreakdownTier$inboundSchema))),
       tier_behavior: types.optional(BalanceTierBehavior$inboundSchema),
       billing_units: types.number(),
       billing_method: BalanceBillingMethod$inboundSchema,

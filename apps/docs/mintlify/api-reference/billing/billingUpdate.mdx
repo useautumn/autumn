@@ -77,6 +77,28 @@ const response = await autumn.billing.update({
   The version of the plan to attach.
 </DynamicParamField>
 
+<DynamicParamField body="free_trial" type="object | null">
+  Free trial configuration for a plan.
+  <Expandable title="properties">
+    <DynamicParamField body="duration_length" type="number" required>
+      Number of duration_type periods the trial lasts.
+    </DynamicParamField>
+
+    <DynamicParamField body="duration_type" type="'day' | 'month' | 'year'">
+      Unit of time for the trial ('day', 'month', 'year').
+    </DynamicParamField>
+
+    <DynamicParamField body="card_required" type="boolean">
+      If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
+    </DynamicParamField>
+
+    <DynamicParamField body="on_end" type="'bill' | 'revert'">
+      Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="customize" type="object">
   Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
   <Expandable title="properties">
@@ -84,7 +106,7 @@ const response = await autumn.billing.update({
       Base price configuration for a plan.
       <Expandable title="properties">
         <DynamicParamField body="amount" type="number" required>
-          Base price amount for the plan.
+          Base price amount for the plan, in major currency units (e.g. dollars).
         </DynamicParamField>
 
         <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
@@ -427,6 +449,10 @@ const response = await autumn.billing.update({
           Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
         </DynamicParamField>
 
+        <DynamicParamField body="included" type="number">
+          Match items whose grant equals this included usage. Omitted is a wildcard.
+        </DynamicParamField>
+
       </Expandable>
     </DynamicParamField>
 
@@ -442,7 +468,7 @@ const response = await autumn.billing.update({
         </DynamicParamField>
 
         <DynamicParamField body="card_required" type="boolean">
-          If true, payment method required to start trial. Customer is charged after trial ends.
+          If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
         </DynamicParamField>
 
         <DynamicParamField body="on_end" type="'bill' | 'revert'">
@@ -621,7 +647,7 @@ const response = await autumn.billing.update({
               Base price configuration for a plan.
               <Expandable title="properties">
                 <DynamicParamField body="amount" type="number" required>
-                  Base price amount for the plan.
+                  Base price amount for the plan, in major currency units (e.g. dollars).
                 </DynamicParamField>
 
                 <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
@@ -800,6 +826,10 @@ const response = await autumn.billing.update({
                   Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
                 </DynamicParamField>
 
+                <DynamicParamField body="included" type="number">
+                  Match items whose grant equals this included usage. Omitted is a wildcard.
+                </DynamicParamField>
+
               </Expandable>
             </DynamicParamField>
 
@@ -807,6 +837,14 @@ const response = await autumn.billing.update({
         </DynamicParamField>
 
         <DynamicParamField body="metadata" type="object" />
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="remove_licenses" type="object[]">
+      License links to drop, keyed by license_plan_id. Parallel to remove_items.
+      <Expandable title="properties">
+        <DynamicParamField body="license_plan_id" type="string" required />
 
       </Expandable>
     </DynamicParamField>
@@ -871,7 +909,7 @@ const response = await autumn.billing.update({
 </DynamicParamField>
 
 <DynamicParamField body="billing_cycle_anchor" type="any">
-  Reset the billing cycle anchor immediately with 'now'
+  Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
 </DynamicParamField>
 
 <DynamicParamField body="no_billing_changes" type="boolean">
@@ -880,6 +918,10 @@ const response = await autumn.billing.update({
 
 <DynamicParamField body="refund_last_payment" type="'prorated' | 'full'">
   Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+</DynamicParamField>
+
+<DynamicParamField body="subscription_params" type="object">
+  Additional parameters to pass into the Stripe subscription update or cancel call.
 </DynamicParamField>
 
 <DynamicParamField body="recalculate_balances" type="object">

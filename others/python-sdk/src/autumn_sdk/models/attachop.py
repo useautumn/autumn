@@ -9,10 +9,9 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -85,6 +84,66 @@ class AttachFeatureQuantity(BaseModel):
         return m
 
 
+AttachDurationType = Literal[
+    "day",
+    "month",
+    "year",
+]
+r"""Unit of time for the trial ('day', 'month', 'year')."""
+
+
+AttachOnEnd = Literal[
+    "bill",
+    "revert",
+]
+r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
+class AttachFreeTrialParamsTypedDict(TypedDict):
+    r"""Free trial configuration for a plan."""
+
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
+    duration_type: NotRequired[AttachDurationType]
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+    card_required: NotRequired[bool]
+    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
+    on_end: NotRequired[AttachOnEnd]
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
+class AttachFreeTrialParams(BaseModel):
+    r"""Free trial configuration for a plan."""
+
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
+
+    duration_type: Optional[AttachDurationType] = "month"
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+
+    card_required: Optional[bool] = False
+    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
+
+    on_end: Optional[AttachOnEnd] = None
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["duration_type", "card_required", "on_end"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 AttachPriceInterval = Literal[
     "one_off",
     "week",
@@ -115,7 +174,7 @@ class AttachBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
     interval: AttachPriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
@@ -128,7 +187,7 @@ class AttachBasePrice(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
     interval: AttachPriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
@@ -1047,6 +1106,8 @@ class AttachPlanItemFilterTypedDict(TypedDict):
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+    included: NotRequired[float]
+    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
 
 
 class AttachPlanItemFilter(BaseModel):
@@ -1064,10 +1125,13 @@ class AttachPlanItemFilter(BaseModel):
     interval_count: Optional[int] = None
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
 
+    included: Optional[float] = None
+    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["feature_id", "billing_method", "interval", "interval_count"]
+            ["feature_id", "billing_method", "interval", "interval_count", "included"]
         )
         serialized = handler(self)
         m = {}
@@ -1083,7 +1147,7 @@ class AttachPlanItemFilter(BaseModel):
         return m
 
 
-AttachDurationType = Literal[
+AttachCustomizeDurationType = Literal[
     "day",
     "month",
     "year",
@@ -1091,39 +1155,39 @@ AttachDurationType = Literal[
 r"""Unit of time for the trial ('day', 'month', 'year')."""
 
 
-AttachOnEnd = Literal[
+AttachCustomizeOnEnd = Literal[
     "bill",
     "revert",
 ]
 r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
-class AttachFreeTrialParamsTypedDict(TypedDict):
+class AttachCustomizeFreeTrialParamsTypedDict(TypedDict):
     r"""Free trial configuration for a plan."""
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
-    duration_type: NotRequired[AttachDurationType]
+    duration_type: NotRequired[AttachCustomizeDurationType]
     r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
-    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
-    on_end: NotRequired[AttachOnEnd]
+    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
+    on_end: NotRequired[AttachCustomizeOnEnd]
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
-class AttachFreeTrialParams(BaseModel):
+class AttachCustomizeFreeTrialParams(BaseModel):
     r"""Free trial configuration for a plan."""
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
 
-    duration_type: Optional[AttachDurationType] = "month"
+    duration_type: Optional[AttachCustomizeDurationType] = "month"
     r"""Unit of time for the trial ('day', 'month', 'year')."""
 
-    card_required: Optional[bool] = True
-    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+    card_required: Optional[bool] = False
+    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
 
-    on_end: Optional[AttachOnEnd] = None
+    on_end: Optional[AttachCustomizeOnEnd] = None
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
     @model_serializer(mode="wrap")
@@ -1570,7 +1634,7 @@ class AttachUpsertLicenseBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
     interval: AttachPriceUpsertLicenseInterval
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
@@ -1585,7 +1649,7 @@ class AttachUpsertLicenseBasePrice(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
     interval: AttachPriceUpsertLicenseInterval
     r"""Billing interval (e.g. 'month', 'year')."""
@@ -2053,6 +2117,8 @@ class AttachUpsertLicensePlanItemFilterTypedDict(TypedDict):
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+    included: NotRequired[float]
+    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
 
 
 class AttachUpsertLicensePlanItemFilter(BaseModel):
@@ -2070,10 +2136,13 @@ class AttachUpsertLicensePlanItemFilter(BaseModel):
     interval_count: Optional[int] = None
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
 
+    included: Optional[float] = None
+    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["feature_id", "billing_method", "interval", "interval_count"]
+            ["feature_id", "billing_method", "interval", "interval_count", "included"]
         )
         serialized = handler(self)
         m = {}
@@ -2173,6 +2242,14 @@ class AttachUpsertLicense(BaseModel):
         return m
 
 
+class AttachRemoveLicenseTypedDict(TypedDict):
+    license_plan_id: str
+
+
+class AttachRemoveLicense(BaseModel):
+    license_plan_id: str
+
+
 class AttachCustomizeTypedDict(TypedDict):
     r"""Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination."""
 
@@ -2184,12 +2261,14 @@ class AttachCustomizeTypedDict(TypedDict):
     r"""Items to add to the plan."""
     remove_items: NotRequired[List[AttachPlanItemFilterTypedDict]]
     r"""Filters selecting items to remove from the plan."""
-    free_trial: NotRequired[Nullable[AttachFreeTrialParamsTypedDict]]
+    free_trial: NotRequired[Nullable[AttachCustomizeFreeTrialParamsTypedDict]]
     r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
     billing_controls: NotRequired[AttachBillingControlsTypedDict]
     r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
     upsert_licenses: NotRequired[List[AttachUpsertLicenseTypedDict]]
     r"""License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance."""
+    remove_licenses: NotRequired[List[AttachRemoveLicenseTypedDict]]
+    r"""License links to drop, keyed by license_plan_id. Parallel to remove_items."""
 
 
 class AttachCustomize(BaseModel):
@@ -2207,7 +2286,7 @@ class AttachCustomize(BaseModel):
     remove_items: Optional[List[AttachPlanItemFilter]] = None
     r"""Filters selecting items to remove from the plan."""
 
-    free_trial: OptionalNullable[AttachFreeTrialParams] = UNSET
+    free_trial: OptionalNullable[AttachCustomizeFreeTrialParams] = UNSET
     r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
 
     billing_controls: Optional[AttachBillingControls] = None
@@ -2215,6 +2294,9 @@ class AttachCustomize(BaseModel):
 
     upsert_licenses: Optional[List[AttachUpsertLicense]] = None
     r"""License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance."""
+
+    remove_licenses: Optional[List[AttachRemoveLicense]] = None
+    r"""License links to drop, keyed by license_plan_id. Parallel to remove_items."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -2227,6 +2309,7 @@ class AttachCustomize(BaseModel):
                 "free_trial",
                 "billing_controls",
                 "upsert_licenses",
+                "remove_licenses",
             ]
         )
         nullable_fields = set(["price", "free_trial"])
@@ -2359,6 +2442,16 @@ class AttachAttachDiscount(BaseModel):
         return m
 
 
+AttachBillingCycleAnchorTypedDict = TypeAliasType(
+    "AttachBillingCycleAnchorTypedDict", Union[str, int]
+)
+r"""Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds."""
+
+
+AttachBillingCycleAnchor = TypeAliasType("AttachBillingCycleAnchor", Union[str, int])
+r"""Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds."""
+
+
 AttachPlanSchedule = Literal[
     "immediate",
     "end_of_cycle",
@@ -2477,6 +2570,8 @@ class AttachParamsTypedDict(TypedDict):
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
     version: NotRequired[float]
     r"""The version of the plan to attach."""
+    free_trial: NotRequired[Nullable[AttachFreeTrialParamsTypedDict]]
+    r"""Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given."""
     customize: NotRequired[AttachCustomizeTypedDict]
     r"""Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination."""
     invoice_mode: NotRequired[AttachInvoiceModeTypedDict]
@@ -2493,8 +2588,8 @@ class AttachParamsTypedDict(TypedDict):
     r"""URL to redirect to after successful checkout."""
     new_billing_subscription: NotRequired[bool]
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
-    billing_cycle_anchor: Literal["now"]
-    r"""Reset the billing cycle anchor immediately with 'now'."""
+    billing_cycle_anchor: NotRequired[AttachBillingCycleAnchorTypedDict]
+    r"""Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds."""
     plan_schedule: NotRequired[AttachPlanSchedule]
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
     starts_at: NotRequired[int]
@@ -2520,7 +2615,7 @@ class AttachParamsTypedDict(TypedDict):
     no_billing_changes: NotRequired[bool]
     r"""If true, skips any billing changes for the attach operation."""
     enable_plan_immediately: NotRequired[bool]
-    r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form."""
+    r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case."""
     tax_rate_id: NotRequired[str]
     r"""Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items."""
     currency: NotRequired[str]
@@ -2544,6 +2639,9 @@ class AttachParams(BaseModel):
 
     version: Optional[float] = None
     r"""The version of the plan to attach."""
+
+    free_trial: OptionalNullable[AttachFreeTrialParams] = UNSET
+    r"""Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given."""
 
     customize: Optional[AttachCustomize] = None
     r"""Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination."""
@@ -2569,11 +2667,8 @@ class AttachParams(BaseModel):
     new_billing_subscription: Optional[bool] = None
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
 
-    billing_cycle_anchor: Annotated[
-        Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
-        pydantic.Field(alias="billing_cycle_anchor"),
-    ] = "now"
-    r"""Reset the billing cycle anchor immediately with 'now'."""
+    billing_cycle_anchor: Optional[AttachBillingCycleAnchor] = None
+    r"""Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds."""
 
     plan_schedule: Optional[AttachPlanSchedule] = None
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
@@ -2612,7 +2707,7 @@ class AttachParams(BaseModel):
     r"""If true, skips any billing changes for the attach operation."""
 
     enable_plan_immediately: Optional[bool] = None
-    r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form."""
+    r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case."""
 
     tax_rate_id: Optional[str] = None
     r"""Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items."""
@@ -2630,6 +2725,7 @@ class AttachParams(BaseModel):
                 "entity_id",
                 "feature_quantities",
                 "version",
+                "free_trial",
                 "customize",
                 "invoice_mode",
                 "proration_behavior",
@@ -2657,15 +2753,24 @@ class AttachParams(BaseModel):
                 "remove_plan_ids",
             ]
         )
+        nullable_fields = set(["free_trial"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -2811,9 +2916,5 @@ class AttachResponse(BaseModel):
 
 try:
     AttachUsageLimit.model_rebuild()
-except NameError:
-    pass
-try:
-    AttachParams.model_rebuild()
 except NameError:
     pass

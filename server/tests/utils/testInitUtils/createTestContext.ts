@@ -16,6 +16,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { ensureV2Features } from "@tests/utils/setup/setupOrg.js";
 import {
 	type Logger,
 	logger,
@@ -85,6 +86,10 @@ export const createTestContext = async () => {
 
 	const env = DEFAULT_ENV;
 	const stripeCli = createStripeCli({ org, env });
+	await withRetry(
+		() => ensureV2Features({ db, orgId: org.id, env }),
+		{ label: "ensureV2Features" },
+	);
 	const features = await withRetry(
 		() => FeatureService.list({ db, orgId: org.id, env }),
 		{ label: "FeatureService.list" },

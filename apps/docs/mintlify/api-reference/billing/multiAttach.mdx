@@ -31,7 +31,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           Base price configuration for a plan.
           <Expandable title="properties">
             <DynamicParamField body="amount" type="number" required>
-              Base price amount for the plan.
+              Base price amount for the plan, in major currency units (e.g. dollars).
             </DynamicParamField>
 
             <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
@@ -249,7 +249,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicParamField>
 
     <DynamicParamField body="card_required" type="boolean">
-      If true, payment method required to start trial. Customer is charged after trial ends.
+      If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
     </DynamicParamField>
 
     <DynamicParamField body="on_end" type="'bill' | 'revert'">
@@ -309,6 +309,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
 <DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'none'">
   How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
+</DynamicParamField>
+
+<DynamicParamField body="billing_cycle_anchor" type="any">
+  Pass 'now' to reset the billing cycle of every plan on the subscription to the time of this request.
 </DynamicParamField>
 
 <DynamicParamField body="success_url" type="string">

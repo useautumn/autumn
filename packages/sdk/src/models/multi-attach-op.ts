@@ -55,7 +55,7 @@ export type MultiAttachAdditionalCurrency = {
  */
 export type MultiAttachBasePrice = {
   /**
-   * Base price amount for the plan.
+   * Base price amount for the plan, in major currency units (e.g. dollars).
    */
   amount: number;
   /**
@@ -431,7 +431,7 @@ export type MultiAttachFreeTrialParams = {
    */
   durationType?: MultiAttachDurationType | undefined;
   /**
-   * If true, payment method required to start trial. Customer is charged after trial ends.
+   * If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
    */
   cardRequired?: boolean | undefined;
   /**
@@ -732,6 +732,10 @@ export type MultiAttachParams = {
    * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything.
    */
   billingBehavior?: MultiAttachBillingBehavior | undefined;
+  /**
+   * Pass 'now' to reset the billing cycle of every plan on the subscription to the time of this request.
+   */
+  billingCycleAnchor?: "now" | undefined;
   /**
    * URL to redirect to after successful checkout.
    */
@@ -1368,7 +1372,7 @@ export const MultiAttachFreeTrialParams$outboundSchema: z.ZodMiniType<
   z.object({
     durationLength: z.number(),
     durationType: z._default(MultiAttachDurationType$outboundSchema, "month"),
-    cardRequired: z._default(z.boolean(), true),
+    cardRequired: z._default(z.boolean(), false),
     onEnd: z.optional(MultiAttachOnEnd$outboundSchema),
   }),
   z.transform((v) => {
@@ -1764,6 +1768,7 @@ export type MultiAttachParams$Outbound = {
   invoice_mode?: MultiAttachInvoiceMode$Outbound | undefined;
   discounts?: Array<MultiAttachAttachDiscount$Outbound> | undefined;
   billing_behavior?: string | undefined;
+  billing_cycle_anchor?: "now" | undefined;
   success_url?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   redirect_mode: string;
@@ -1794,6 +1799,7 @@ export const MultiAttachParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => MultiAttachAttachDiscount$outboundSchema)),
     ),
     billingBehavior: z.optional(MultiAttachBillingBehavior$outboundSchema),
+    billingCycleAnchor: z.optional(z.literal("now")),
     successUrl: z.optional(z.string()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     redirectMode: z._default(
@@ -1813,6 +1819,7 @@ export const MultiAttachParams$outboundSchema: z.ZodMiniType<
       startsAt: "starts_at",
       invoiceMode: "invoice_mode",
       billingBehavior: "billing_behavior",
+      billingCycleAnchor: "billing_cycle_anchor",
       successUrl: "success_url",
       checkoutSessionParams: "checkout_session_params",
       redirectMode: "redirect_mode",

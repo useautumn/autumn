@@ -102,6 +102,10 @@ export const billingUpdateUpsertLicenseTierSchema = z.object({
 	additionalCurrencies: z.union([z.array(z.any()), z.undefined()]).optional(),
 });
 
+export const billingUpdateRemoveLicenseSchema = z.object({
+	licensePlanId: z.string(),
+});
+
 export const billingUpdateInvoiceModeSchema = z.object({
 	enabled: z.boolean(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
@@ -114,6 +118,11 @@ export const billingUpdateAttachDiscountSchema = z.object({
 	rewardId: z.union([z.string(), z.undefined()]).optional(),
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
 });
+
+export const billingUpdateBillingCycleAnchorSchema = z.union([
+	z.string(),
+	z.number(),
+]);
 
 export const billingUpdateRecalculateBalancesSchema = z.object({
 	enabled: z.boolean(),
@@ -141,6 +150,13 @@ export const billingUpdateFeatureQuantityOutboundSchema = z.object({
 	feature_id: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const billingUpdateFreeTrialParamsOutboundSchema = z.object({
+	duration_length: z.number(),
+	duration_type: z.string(),
+	card_required: z.boolean(),
+	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const billingUpdateAdditionalCurrencyOutboundSchema = z.object({
@@ -337,9 +353,10 @@ export const billingUpdatePlanItemFilterOutboundSchema = z.object({
 	billing_method: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.union([z.string(), z.string(), z.undefined()]).optional(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const billingUpdateFreeTrialParamsOutboundSchema = z.object({
+export const billingUpdateCustomizeFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
@@ -528,6 +545,7 @@ export const billingUpdateUpsertLicensePlanItemFilterOutboundSchema = z.object({
 	billing_method: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.union([z.string(), z.string(), z.undefined()]).optional(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const billingUpdateUpsertLicenseCustomizeOutboundSchema = z.object({
@@ -560,6 +578,10 @@ export const billingUpdateUpsertLicenseOutboundSchema = z.object({
 	metadata: z.union([z.record(z.string(), z.any()), z.undefined()]).optional(),
 });
 
+export const billingUpdateRemoveLicenseOutboundSchema = z.object({
+	license_plan_id: z.string(),
+});
+
 export const billingUpdateCustomizeOutboundSchema = z.object({
 	price: z
 		.union([billingUpdateBasePriceOutboundSchema, z.undefined()])
@@ -575,7 +597,7 @@ export const billingUpdateCustomizeOutboundSchema = z.object({
 		.union([z.array(billingUpdatePlanItemFilterOutboundSchema), z.undefined()])
 		.optional(),
 	free_trial: z
-		.union([billingUpdateFreeTrialParamsOutboundSchema, z.undefined()])
+		.union([billingUpdateCustomizeFreeTrialParamsOutboundSchema, z.undefined()])
 		.optional()
 		.nullable(),
 	billing_controls: z
@@ -583,6 +605,9 @@ export const billingUpdateCustomizeOutboundSchema = z.object({
 		.optional(),
 	upsert_licenses: z
 		.union([z.array(billingUpdateUpsertLicenseOutboundSchema), z.undefined()])
+		.optional(),
+	remove_licenses: z
+		.union([z.array(billingUpdateRemoveLicenseOutboundSchema), z.undefined()])
 		.optional(),
 });
 
@@ -598,6 +623,11 @@ export const billingUpdateAttachDiscountOutboundSchema = z.object({
 	reward_id: z.union([z.string(), z.undefined()]).optional(),
 	promotion_code: z.union([z.string(), z.undefined()]).optional(),
 });
+
+export const billingUpdateBillingCycleAnchorOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+]);
 
 export const billingUpdateRecalculateBalancesOutboundSchema = z.object({
 	enabled: z.boolean(),
@@ -621,6 +651,10 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 		.union([z.array(billingUpdateFeatureQuantityOutboundSchema), z.undefined()])
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
+	free_trial: z
+		.union([billingUpdateFreeTrialParamsOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	customize: z
 		.union([billingUpdateCustomizeOutboundSchema, z.undefined()])
 		.optional(),
@@ -634,9 +668,14 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 		.union([z.array(billingUpdateAttachDiscountOutboundSchema), z.undefined()])
 		.optional(),
 	cancel_action: z.union([z.string(), z.undefined()]).optional(),
-	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
+	billing_cycle_anchor: z
+		.union([z.string(), z.number(), z.undefined()])
+		.optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 	refund_last_payment: z.union([z.string(), z.undefined()]).optional(),
+	subscription_params: z
+		.union([z.record(z.string(), z.any()), z.undefined()])
+		.optional(),
 	recalculate_balances: z
 		.union([billingUpdateRecalculateBalancesOutboundSchema, z.undefined()])
 		.optional(),
@@ -651,6 +690,19 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 const closedEnumSchema = z.any();
 
 const openEnumSchema = z.any();
+
+export const billingUpdateDurationTypeSchema = closedEnumSchema;
+
+export const billingUpdateOnEndSchema = closedEnumSchema;
+
+export const billingUpdateFreeTrialParamsSchema = z.object({
+	durationLength: z.number(),
+	durationType: z
+		.union([billingUpdateDurationTypeSchema, z.undefined()])
+		.optional(),
+	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
+	onEnd: z.union([billingUpdateOnEndSchema, z.undefined()]).optional(),
+});
 
 export const billingUpdatePriceIntervalSchema = closedEnumSchema;
 
@@ -818,19 +870,20 @@ export const billingUpdatePlanItemFilterSchema = z.object({
 		])
 		.optional(),
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const billingUpdateDurationTypeSchema = closedEnumSchema;
+export const billingUpdateCustomizeDurationTypeSchema = closedEnumSchema;
 
-export const billingUpdateOnEndSchema = closedEnumSchema;
+export const billingUpdateCustomizeOnEndSchema = closedEnumSchema;
 
-export const billingUpdateFreeTrialParamsSchema = z.object({
+export const billingUpdateCustomizeFreeTrialParamsSchema = z.object({
 	durationLength: z.number(),
 	durationType: z
-		.union([billingUpdateDurationTypeSchema, z.undefined()])
+		.union([billingUpdateCustomizeDurationTypeSchema, z.undefined()])
 		.optional(),
 	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
-	onEnd: z.union([billingUpdateOnEndSchema, z.undefined()]).optional(),
+	onEnd: z.union([billingUpdateCustomizeOnEndSchema, z.undefined()]).optional(),
 });
 
 export const billingUpdatePurchaseLimitIntervalSchema = closedEnumSchema;
@@ -1022,6 +1075,7 @@ export const billingUpdateUpsertLicensePlanItemFilterSchema = z.object({
 		])
 		.optional(),
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const billingUpdateUpsertLicenseCustomizeSchema = z.object({
@@ -1066,7 +1120,7 @@ export const billingUpdateCustomizeSchema = z.object({
 		.union([z.array(billingUpdatePlanItemFilterSchema), z.undefined()])
 		.optional(),
 	freeTrial: z
-		.union([billingUpdateFreeTrialParamsSchema, z.undefined()])
+		.union([billingUpdateCustomizeFreeTrialParamsSchema, z.undefined()])
 		.optional()
 		.nullable(),
 	billingControls: z
@@ -1074,6 +1128,9 @@ export const billingUpdateCustomizeSchema = z.object({
 		.optional(),
 	upsertLicenses: z
 		.union([z.array(billingUpdateUpsertLicenseSchema), z.undefined()])
+		.optional(),
+	removeLicenses: z
+		.union([z.array(billingUpdateRemoveLicenseSchema), z.undefined()])
 		.optional(),
 });
 
@@ -1093,6 +1150,10 @@ export const updateSubscriptionParamsSchema = z.object({
 		.union([z.array(billingUpdateFeatureQuantitySchema), z.undefined()])
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
+	freeTrial: z
+		.union([billingUpdateFreeTrialParamsSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	customize: z.union([billingUpdateCustomizeSchema, z.undefined()]).optional(),
 	invoiceMode: z
 		.union([billingUpdateInvoiceModeSchema, z.undefined()])
@@ -1110,10 +1171,15 @@ export const updateSubscriptionParamsSchema = z.object({
 	cancelAction: z
 		.union([billingUpdateCancelActionSchema, z.undefined()])
 		.optional(),
-	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
+	billingCycleAnchor: z
+		.union([z.string(), z.number(), z.undefined()])
+		.optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 	refundLastPayment: z
 		.union([billingUpdateRefundLastPaymentSchema, z.undefined()])
+		.optional(),
+	subscriptionParams: z
+		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
 	recalculateBalances: z
 		.union([billingUpdateRecalculateBalancesSchema, z.undefined()])
