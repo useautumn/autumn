@@ -91,6 +91,7 @@ export const runAgentTurn = async ({
 		run?.resolveSessionId(session.sessionId);
 		return consumeAgentTurn({
 			auth,
+			deadlineAt: ctx.deadlineAt,
 			env,
 			logger,
 			onAction,
