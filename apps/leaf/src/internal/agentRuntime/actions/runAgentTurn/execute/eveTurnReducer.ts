@@ -33,6 +33,7 @@ import { catalogPlanNeedingDecision } from "../../resolveCatalogDecision/catalog
 export type EveTurnOutcome =
 	| { kind: "answered"; catalogDecision?: CatalogPlanPreview; text: string }
 	| { kind: "parked"; question?: PendingQuestion; text: string }
+	| { kind: "deferred" }
 	| { kind: "silent" }
 	| { kind: "stopped"; stopReason: RunStopReason; text: string }
 	| { approval: AgentApprovalRequest; kind: "suspended"; text: string }
@@ -315,6 +316,14 @@ const reduceInputRequest = ({
 	};
 };
 
+/** Eve parks holding the message when a delivery answers a subagent's park:
+ * the responses route to the child and the message lands on a parent with no
+ * pending batch, so the turn starts, receives and completes without working. */
+const turnDeferredItsInput = (progress: EveTurnProgress) =>
+	progress.turnStarted &&
+	progress.toolLabels.size === 0 &&
+	progress.subagentChildSessionIds.size === 0;
+
 const reduceTerminalEvent = ({
 	event,
 	progress,
@@ -335,7 +344,7 @@ const reduceTerminalEvent = ({
 		],
 		outcome: eveTurnProducedOutput({ catalogDecision, text })
 			? { catalogDecision, kind: "answered", text }
-			: { kind: "silent" },
+			: { kind: turnDeferredItsInput(progress) ? "deferred" : "silent" },
 		progress,
 	};
 };
