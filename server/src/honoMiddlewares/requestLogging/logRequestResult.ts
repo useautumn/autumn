@@ -47,6 +47,19 @@ const COMPACT_BALANCE_FIELDS = new Set([
 	"overage_allowed",
 	"next_reset_at",
 ]);
+const COMPACT_DEDUCTION_FIELDS = new Set([
+	"balance_id",
+	"feature_id",
+	"plan_id",
+	"reset",
+	"value",
+]);
+const COMPACT_FLAG_FIELDS = new Set([
+	"id",
+	"feature_id",
+	"plan_id",
+	"expires_at",
+]);
 
 const compactFields = ({
 	value,
@@ -74,6 +87,37 @@ const compactHighVolumeResponseBody = (
 		compactResponseBody.balance = compactFields({
 			value: responseBody.balance,
 			fields: COMPACT_BALANCE_FIELDS,
+		});
+	}
+	if (isRecord(responseBody.balances)) {
+		const balances: Record<string, Record<string, unknown> | null> = {};
+		for (const [featureId, balance] of Object.entries(responseBody.balances)) {
+			if (balance === null) {
+				balances[featureId] = null;
+			} else if (isRecord(balance)) {
+				balances[featureId] = compactFields({
+					value: balance,
+					fields: COMPACT_BALANCE_FIELDS,
+				});
+			}
+		}
+		compactResponseBody.balances = balances;
+	}
+	if (Array.isArray(responseBody.deductions)) {
+		compactResponseBody.deductions = responseBody.deductions
+			.filter(isRecord)
+			.map((deduction) =>
+				compactFields({
+					value: deduction,
+					fields: COMPACT_DEDUCTION_FIELDS,
+				}),
+			);
+	}
+	if (responseBody.flag === null) compactResponseBody.flag = null;
+	if (isRecord(responseBody.flag)) {
+		compactResponseBody.flag = compactFields({
+			value: responseBody.flag,
+			fields: COMPACT_FLAG_FIELDS,
 		});
 	}
 	return compactResponseBody;

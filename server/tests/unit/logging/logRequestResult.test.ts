@@ -248,6 +248,86 @@ describe("logRequestResult", () => {
 		});
 	});
 
+	test("keeps compact multi-feature track diagnostics", async () => {
+		spyOn(Math, "random").mockReturnValue(0.5);
+		const responseBody = {
+			value: 45.67,
+			balance: null,
+			balances: {
+				action1: {
+					feature_id: "action1",
+					current_balance: 154.33,
+					usage: 45.67,
+					breakdown: [{ id: "cus_ent_action1" }],
+				},
+				action3: {
+					feature_id: "action3",
+					current_balance: 104.33,
+					usage: 45.67,
+					breakdown: [{ id: "cus_ent_action3" }],
+				},
+			},
+			deductions: [
+				{
+					balance_id: "cus_ent_action1",
+					feature_id: "action1",
+					plan_id: "free",
+					reset: null,
+					value: 45.67,
+					unexpected: "drop-me",
+				},
+			],
+			flag: {
+				id: "cus_ent_flag",
+				feature_id: "premium",
+				plan_id: "free",
+				expires_at: null,
+				unexpected: "drop-me",
+			},
+		};
+		const { captured } = await captureJsonResponse({
+			path: "/v1/track",
+			durationMs: 10,
+			responseBody,
+		});
+
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: {
+				value: 45.67,
+				balance: null,
+				balances: {
+					action1: {
+						feature_id: "action1",
+						current_balance: 154.33,
+						usage: 45.67,
+					},
+					action3: {
+						feature_id: "action3",
+						current_balance: 104.33,
+						usage: 45.67,
+					},
+				},
+				deductions: [
+					{
+						balance_id: "cus_ent_action1",
+						feature_id: "action1",
+						plan_id: "free",
+						reset: null,
+						value: 45.67,
+					},
+				],
+				flag: {
+					id: "cus_ent_flag",
+					feature_id: "premium",
+					plan_id: "free",
+					expires_at: null,
+				},
+			},
+		});
+	});
+
 	test("keeps a sampled fast high-volume response in full", async () => {
 		spyOn(Math, "random").mockReturnValue(0);
 		const responseBody = { allowed: true, balance: { remaining: 90 } };
