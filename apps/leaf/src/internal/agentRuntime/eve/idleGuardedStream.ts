@@ -29,6 +29,9 @@ export async function* idleGuardedStream<Item>({
 			idleTimer = armIdleTimer();
 			yield item;
 		}
+		// eve's client reads its own abort as a clean disconnect and returns, so
+		// a silent stream ends the loop rather than throwing.
+		if (timedOut) throw onIdleTimeout();
 	} catch (error) {
 		if (timedOut) throw onIdleTimeout();
 		throw error;

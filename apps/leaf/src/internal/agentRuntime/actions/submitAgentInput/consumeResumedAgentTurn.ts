@@ -1,9 +1,9 @@
-import { ms } from "@autumn/shared";
 import { logger } from "../../../../lib/logger.js";
 import { isErrorResult } from "../../../approvals/utils/approvalErrors.js";
 import {
 	EveStreamIdleTimeoutError,
 	isEveTransportLost,
+	streamEveEvents,
 } from "../../eve/client.js";
 import type { EveEvent } from "../../eve/eveEventSchemas.js";
 import { labelForAction, labelForResult } from "../../eve/events.js";
@@ -15,11 +15,13 @@ import {
 import {
 	advanceStreamCursor,
 	saveEveSessionState,
-	statusAfterTerminalEvent,
 } from "../../eve/sessionState.js";
-import { streamEveEventsWithReconnect } from "../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { normalizeToolName } from "../../tools/toolPolicy.js";
+import {
+	CHILD_REPLAY_IDLE_TIMEOUT_MS,
+	RESUME_IDLE_TIMEOUT_MS,
+} from "../../turnBudget.js";
 import type { ResumedAgentTurn } from "./types.js";
 
 const FAILED_ACTION_STATUSES = new Set(["error", "failed", "rejected"]);
@@ -65,11 +67,6 @@ const isFailedActionResult = (event: {
 	return isErrorResult(output) || isErrorResult(parsedResultText(output));
 };
 
-const CHILD_REPLAY_IDLE_TIMEOUT_MS = ms.seconds(15);
-/** Delegated children work in silence on the parent stream, so a resumed turn
- * can be quiet for minutes before the next park or result arrives. */
-const RESUME_IDLE_TIMEOUT_MS = ms.minutes(5);
-
 /** Replays a child session's stream from the start — finite for task-mode
  * children (session.completed); a live child ends at the idle timeout. */
 const applyChildStreamResults = async ({
@@ -95,7 +92,7 @@ const applyChildStreamResults = async ({
 		threadKey: session.threadKey,
 	};
 	try {
-		for await (const event of streamEveEventsWithReconnect({
+		for await (const event of streamEveEvents({
 			auth,
 			idleTimeoutMs: CHILD_REPLAY_IDLE_TIMEOUT_MS,
 			session: childSession,
@@ -193,7 +190,7 @@ export const consumeResumedAgentTurn = async ({
 		}
 	};
 	try {
-		for await (const event of streamEveEventsWithReconnect({
+		for await (const event of streamEveEvents({
 			auth,
 			idleTimeoutMs: RESUME_IDLE_TIMEOUT_MS,
 			session,
@@ -249,17 +246,14 @@ export const consumeResumedAgentTurn = async ({
 					chainedSiblingRequestIds = parkedInput.siblingRequestIds;
 					chainedWithheld = parkedInput.withheld;
 					session.state.pendingRequests = pendingGatedRequests(parkedInput);
-					session.state.status = "waiting";
 					break;
 				}
 				if (parkedInput?.kind === "question") {
 					question = parkedInput.question;
-					session.state.status = "waiting";
 					break;
 				}
 				if (parkedInput) {
 					if (!(text || pendingText)) text = parkedInput.text;
-					session.state.status = "waiting";
 					break;
 				}
 			} else if (
@@ -285,13 +279,11 @@ export const consumeResumedAgentTurn = async ({
 				(turnStarted || sawTurnActivity) &&
 				(event.type === "session.waiting" || event.type === "session.completed")
 			) {
-				session.state.status = statusAfterTerminalEvent(event.type);
 				break;
 			} else if (
 				(turnStarted || sawTurnActivity) &&
 				(event.type === "turn.failed" || event.type === "session.failed")
 			) {
-				session.state.status = "failed";
 				throw new Error(event.message);
 			}
 		}

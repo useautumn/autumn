@@ -1,16 +1,12 @@
 /**
- * TDD test: a single eve stream disconnect during an approval resume (or a
- * queued-turn drain) must never surface as a failure — the consumer reconnects
- * at its cursor, and exhausted retries fall back to write evidence.
+ * A single eve stream disconnect during an approval resume (or a queued-turn
+ * drain) must never surface as a failure. Reconnection lives inside eve's
+ * ClientSession.stream(), so streamEveEvents is mocked the way eve behaves:
+ * transparent reconnects at the cursor, raising EveStreamDisconnectedError only
+ * once the SDK has given up.
  *
- * Red-failure mode (current behavior):
- *  - consumeResumedAgentTurn / drainParkedAgentTurn iterate streamEveEvents
- *    bare, so the first EveStreamDisconnectedError (or a resume idle timeout)
- *    throws out and the approval is finalized "failed" even though the
- *    approved write succeeded.
- *
- * Green-success criteria (after fix):
- *  - Both consumers reconnect at session.state.streamIndex and finish the turn.
+ * The contract under test:
+ *  - A disconnect eve recovers from is invisible to both consumers.
  *  - Exhausted reconnects and idle timeouts return the write-evidence result
  *    (applied / failed / unverified) instead of throwing.
  */
@@ -52,7 +48,7 @@ type StreamPass = {
 
 let streamPasses: StreamPass[] = [];
 const streamCalls: number[] = [];
-const resyncedSessionIds: string[] = [];
+const streamPassesConsumed: number[] = [];
 
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/client.js",
@@ -66,42 +62,38 @@ await mockLeafModule({
 			continuationToken: "token_2",
 			sessionId: "eve_session_1",
 		}),
-		resyncEveStreamIndex: async ({
-			session: resyncSession,
-		}: {
-			session: EveSessionRef;
-		}) => {
-			resyncedSessionIds.push(resyncSession.sessionId);
-		},
 		streamEveEvents: async function* ({
 			session: streamSession,
 		}: {
 			session: EveSessionRef;
 		}) {
-			const callIndex = streamCalls.length;
 			streamCalls.push(streamSession.state.streamIndex);
-			const pass =
-				streamPasses[Math.min(callIndex, streamPasses.length - 1)] ??
-				({ events: [] } as StreamPass);
-			for (const event of pass.events) yield event;
-			if (pass.thenThrow === "disconnect") {
-				throw new MockEveStreamDisconnectedError(
-					"The socket connection was closed unexpectedly",
-				);
-			}
-			if (pass.thenThrow === "idle") {
-				throw new MockEveStreamIdleTimeoutError("Eve stream idle timeout");
+			for (let index = 0; index < streamPasses.length; index += 1) {
+				const pass = streamPasses[index];
+				streamPassesConsumed.push(index);
+				for (const event of pass.events) yield event;
+				if (pass.thenThrow === "idle") {
+					throw new MockEveStreamIdleTimeoutError("Eve stream idle timeout");
+				}
+				if (
+					pass.thenThrow === "disconnect" &&
+					index === streamPasses.length - 1
+				) {
+					throw new MockEveStreamDisconnectedError(
+						"The socket connection was closed unexpectedly",
+					);
+				}
 			}
 		},
 	}),
 });
 
-const upsertedStates: string[] = [];
+const upsertedStreamIndexes: number[] = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
 	factory: () => ({
 		upsertEveSession: async ({ state }: { state: EveSessionRef["state"] }) => {
-			upsertedStates.push(state.status ?? "unknown");
+			upsertedStreamIndexes.push(state.streamIndex);
 		},
 	}),
 });
@@ -134,11 +126,8 @@ const makeSession = (): EveSessionRef => ({
 	newSession: false,
 	sessionId: "eve_session_1",
 	state: {
-		version: 1,
 		continuationToken: "token_1",
 		streamIndex: 0,
-		status: "waiting",
-		lastEventAt: 0,
 		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",
@@ -168,8 +157,8 @@ describe("consumeResumedAgentTurn stream resilience", () => {
 	beforeEach(() => {
 		streamPasses = [];
 		streamCalls.length = 0;
-		resyncedSessionIds.length = 0;
-		upsertedStates.length = 0;
+		streamPassesConsumed.length = 0;
+		upsertedStreamIndexes.length = 0;
 		loggedWarns.length = 0;
 	});
 
@@ -191,7 +180,8 @@ describe("consumeResumedAgentTurn stream resilience", () => {
 			session: makeSession(),
 		});
 
-		expect(streamCalls).toEqual([0, 3]);
+		expect(streamCalls).toEqual([0]);
+		expect(streamPassesConsumed).toEqual([0, 1]);
 		expect(result.approvedWriteFailed).toBe(false);
 		expect(result.approvedWriteUnverified).toBe(false);
 		expect(result.writes).toEqual([
@@ -227,7 +217,8 @@ describe("consumeResumedAgentTurn stream resilience", () => {
 			session: makeSession(),
 		});
 
-		expect(streamCalls.length).toBe(8);
+		expect(streamCalls).toEqual([0]);
+		expect(streamPassesConsumed).toHaveLength(8);
 		expect(result.approvedWriteFailed).toBe(false);
 		expect(result.text).toBe("Attached the plan.");
 	});
@@ -274,8 +265,8 @@ describe("drainParkedAgentTurn stream resilience", () => {
 	beforeEach(() => {
 		streamPasses = [];
 		streamCalls.length = 0;
-		resyncedSessionIds.length = 0;
-		upsertedStates.length = 0;
+		streamPassesConsumed.length = 0;
+		upsertedStreamIndexes.length = 0;
 		loggedWarns.length = 0;
 	});
 
@@ -291,19 +282,20 @@ describe("drainParkedAgentTurn stream resilience", () => {
 		const session = makeSession();
 		await drainParkedAgentTurn({ auth, orgId: "org_1", session });
 
-		expect(streamCalls).toEqual([0, 1]);
-		expect(session.state.status).toBe("completed");
-		expect(upsertedStates).toEqual(["completed"]);
+		expect(streamCalls).toEqual([0]);
+		expect(streamPassesConsumed).toEqual([0, 1]);
+		expect(session.state.streamIndex).toBe(2);
+		expect(upsertedStreamIndexes).toEqual([2]);
 	});
 
-	test("exhausted reconnects settle the session as waiting instead of throwing", async () => {
+	test("exhausted reconnects settle the session instead of throwing", async () => {
 		streamPasses = [{ events: [], thenThrow: "disconnect" }];
 
 		const session = makeSession();
 		await drainParkedAgentTurn({ auth, orgId: "org_1", session });
 
-		expect(session.state.status).toBe("waiting");
-		expect(upsertedStates).toEqual(["waiting"]);
+		expect(session.state.streamIndex).toBe(0);
+		expect(upsertedStreamIndexes).toEqual([0]);
 	});
 });
 
@@ -311,18 +303,26 @@ describe("drainParkedAgentTurn re-park cap", () => {
 	beforeEach(() => {
 		streamPasses = [];
 		streamCalls.length = 0;
-		upsertedStates.length = 0;
+		streamPassesConsumed.length = 0;
+		upsertedStreamIndexes.length = 0;
 	});
 
 	test("a child that re-parks after every deny is reported stuck, never left parked", async () => {
 		const gatedPark = {
 			requests: [
 				{
-					action: { input: {}, toolName: "autumn__attach" },
+					action: {
+						callId: "tc_1",
+						input: {},
+						kind: "tool-call",
+						toolName: "autumn__attach",
+					},
+					display: "confirmation",
 					options: [
-						{ id: "approve", label: "Approve" },
-						{ id: "deny", label: "Deny" },
+						{ id: "approve", label: "Yes" },
+						{ id: "deny", label: "No" },
 					],
+					prompt: "Approve tool call: autumn__attach",
 					requestId: "tc_1",
 				},
 			],

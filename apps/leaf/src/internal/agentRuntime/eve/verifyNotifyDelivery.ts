@@ -1,6 +1,6 @@
 import { ms } from "@autumn/shared";
 import postgres from "postgres";
-import { logger } from "../../../../lib/logger.js";
+import { logger } from "../../../lib/logger.js";
 
 const NOTIFY_TIMEOUT_MS = ms.seconds(3);
 

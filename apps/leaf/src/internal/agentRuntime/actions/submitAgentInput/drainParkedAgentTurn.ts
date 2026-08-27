@@ -1,8 +1,7 @@
-import { ms } from "@autumn/shared";
 import { logger } from "../../../../lib/logger.js";
 import { answerEveInput } from "../../eve/answerEveInput.js";
-import { isEveTransportLost, resyncEveStreamIndex } from "../../eve/client.js";
-import { approvalOptionIds, isTerminalEveEventType } from "../../eve/events.js";
+import { isEveTransportLost, streamEveEvents } from "../../eve/client.js";
+import { DENY_OPTION_ID, isTerminalEveEventType } from "../../eve/events.js";
 import {
 	classifyParkedEveInput,
 	type ParkedEveInput,
@@ -11,14 +10,12 @@ import {
 import {
 	advanceStreamCursor,
 	saveEveSessionState,
-	statusAfterTerminalEvent,
 } from "../../eve/sessionState.js";
-import { streamEveEventsWithReconnect } from "../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
+import { DRAIN_IDLE_TIMEOUT_MS } from "../../turnBudget.js";
 import { QUEUED_TURN_WITHDRAWAL_NOTE } from "./agentInputNotes.js";
 
 const MAX_DRAIN_DENIES = 3;
-const DRAIN_IDLE_TIMEOUT_MS = ms.minutes(1);
 
 type GatedPark = Extract<ParkedEveInput, { kind: "gated" }>;
 
@@ -37,7 +34,7 @@ const denyGatedPark = async ({
 	await answerEveInput({
 		auth,
 		note: QUEUED_TURN_WITHDRAWAL_NOTE,
-		optionId: approvalOptionIds({ options: parked.chained.options }).deny,
+		optionId: DENY_OPTION_ID,
 		requestId: parked.chained.requestId,
 		session,
 		siblingOptionIdFor: (siblingRequestId) =>
@@ -57,7 +54,7 @@ const drainPass = async ({
 	session: EveSessionRef;
 }): Promise<{ parkedAgain: boolean; stuck: boolean }> => {
 	let turnStarted = false;
-	for await (const event of streamEveEventsWithReconnect({
+	for await (const event of streamEveEvents({
 		auth,
 		idleTimeoutMs: DRAIN_IDLE_TIMEOUT_MS,
 		session,
@@ -96,11 +93,9 @@ const drainPass = async ({
 					},
 				});
 			}
-			session.state.status = "waiting";
 			return { parkedAgain: false, stuck };
 		}
 		if (turnStarted && isTerminalEveEventType(event.type)) {
-			session.state.status = statusAfterTerminalEvent(event.type);
 			return { parkedAgain: false, stuck: false };
 		}
 	}
@@ -125,7 +120,7 @@ export const drainParkedAgentTurn = async ({
 			if (parkedAgain) denies += 1;
 		} catch (error) {
 			if (!isEveTransportLost(error)) throw error;
-			logger.warn("Drain stream lost; resyncing the cursor", {
+			logger.warn("Drain stream lost; settling at the cursor", {
 				event: "leaf.eve_drain_stream_lost",
 				data: {
 					session_id: session.sessionId,
@@ -133,8 +128,6 @@ export const drainParkedAgentTurn = async ({
 				},
 				error,
 			});
-			await resyncEveStreamIndex({ auth, session });
-			session.state.status = "waiting";
 			parkedAgain = false;
 		}
 	}

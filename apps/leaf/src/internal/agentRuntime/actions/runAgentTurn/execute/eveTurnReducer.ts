@@ -59,7 +59,6 @@ export type EveTurnEffect =
 	| Readonly<{
 			kind: "save_session";
 			pendingRequests?: ReadonlyArray<EvePendingRequest>;
-			status: "completed" | "failed" | "waiting";
 	  }>
 	| Readonly<{ kind: "thinking" }>
 	| Readonly<{ kind: "throw"; message: string }>;
@@ -106,7 +105,7 @@ const approvalForGatedWrite = ({
 	siblingRequestIds: ReadonlyArray<string>;
 	withheld: ReadonlyArray<WithheldWrite>;
 }): AgentApprovalRequest => {
-	const options = approvalOptionIds({ options: chained.options });
+	const options = approvalOptionIds();
 	return {
 		toolCallId: chained.requestId,
 		toolName: chained.toolName,
@@ -291,7 +290,6 @@ const reduceInputRequest = ({
 				{
 					kind: "save_session",
 					pendingRequests: pendingGatedRequests(parked),
-					status: "waiting",
 				},
 			],
 			outcome: {
@@ -320,7 +318,6 @@ const reduceInputRequest = ({
 						? [{ kind: "question" as const, requestId: request.requestId }]
 						: [],
 				),
-				status: "waiting",
 			},
 		],
 		outcome: {
@@ -341,10 +338,8 @@ const turnDeferredItsInput = (progress: EveTurnProgress) =>
 	progress.subagentChildSessionIds.size === 0;
 
 const reduceTerminalEvent = ({
-	event,
 	progress,
 }: {
-	event: Extract<EveEvent, { type: "session.completed" | "session.waiting" }>;
 	progress: EveTurnProgress;
 }): EveTurnTransition => {
 	const text = progress.pendingText || progress.finalText;
@@ -352,12 +347,7 @@ const reduceTerminalEvent = ({
 		progress.lastPreview?.preview,
 	);
 	return {
-		effects: [
-			{
-				kind: "save_session",
-				status: event.type === "session.completed" ? "completed" : "waiting",
-			},
-		],
+		effects: [{ kind: "save_session" }],
 		outcome: eveTurnProducedOutput({ catalogDecision, text })
 			? { catalogDecision, kind: "answered", text }
 			: { kind: turnDeferredItsInput(progress) ? "deferred" : "silent" },
@@ -454,7 +444,7 @@ export const reduceEveTurnEvent = ({
 		case "session.failed":
 			return {
 				effects: [
-					{ kind: "save_session", status: "failed" },
+					{ kind: "save_session" },
 					{ kind: "delete_session" },
 					{ kind: "throw", message: event.message },
 				],
@@ -463,14 +453,14 @@ export const reduceEveTurnEvent = ({
 		case "turn.failed":
 			return {
 				effects: [
-					{ kind: "save_session", status: "failed" },
+					{ kind: "save_session" },
 					{ kind: "throw", message: event.message },
 				],
 				progress,
 			};
 		case "session.waiting":
 		case "session.completed":
-			return reduceTerminalEvent({ event, progress });
+			return reduceTerminalEvent({ progress });
 		default:
 			return { effects: [], progress };
 	}

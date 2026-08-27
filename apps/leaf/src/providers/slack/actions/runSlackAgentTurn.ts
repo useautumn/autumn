@@ -1,13 +1,11 @@
-import { ms, withTimeout } from "@autumn/shared";
+import { withTimeout } from "@autumn/shared";
 import { runAgentTurn } from "../../../internal/agentRuntime/actions/runAgentTurn/runAgentTurn.js";
-import { MESSAGE_TIMEOUT_MS } from "../../../lib/chatAgentConfig.js";
+import { TURN_BACKSTOP_MS } from "../../../internal/agentRuntime/turnBudget.js";
 import type {
 	SlackAgentTurnParams,
 	SlackAgentTurnResult,
 } from "../domain/slackAgentTurn.js";
 import { setupSlackAgentTurn } from "../setup/setupSlackAgentTurn.js";
-
-const TIMEOUT_BACKSTOP_GRACE_MS = ms.seconds(20);
 
 const executeSlackAgentTurn = async (
 	params: SlackAgentTurnParams,
@@ -37,5 +35,5 @@ export const runSlackAgentTurn = (
 	withTimeout({
 		fn: () => executeSlackAgentTurn(params),
 		timeoutMessage: "Chat agent timed out",
-		timeoutMs: MESSAGE_TIMEOUT_MS + TIMEOUT_BACKSTOP_GRACE_MS,
+		timeoutMs: TURN_BACKSTOP_MS,
 	});

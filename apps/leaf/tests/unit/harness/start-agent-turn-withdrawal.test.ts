@@ -24,17 +24,9 @@ const postedMessages: Array<{
 	inputResponses?: Array<{ optionId: string; requestId: string }>;
 	message?: unknown;
 }> = [];
-const fastForwardedSessionIds: string[] = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
-		fastForwardEveStreamIndex: async ({
-			session,
-		}: {
-			session: EveSessionRef;
-		}) => {
-			fastForwardedSessionIds.push(session.sessionId);
-		},
 		postEveMessage: async (input: {
 			inputResponses?: Array<{ optionId: string; requestId: string }>;
 			message?: unknown;
@@ -52,11 +44,8 @@ await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/sessionState.js",
 	factory: () => ({
 		initialEveSessionState: (continuationToken: string) => ({
-			version: 1,
 			continuationToken,
 			streamIndex: 0,
-			status: "running",
-			lastEventAt: 0,
 			pendingRequests: [],
 		}),
 		saveEveSessionState: async () => undefined,
@@ -85,11 +74,8 @@ const makeSession = (): EveSessionRef => ({
 	newSession: false,
 	sessionId: "eve_session_1",
 	state: {
-		version: 1,
 		continuationToken: "token_1",
 		streamIndex: 7,
-		status: "waiting",
-		lastEventAt: 0,
 		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",
@@ -98,7 +84,6 @@ const makeSession = (): EveSessionRef => ({
 describe("startAgentTurn withdrawal bundling", () => {
 	beforeEach(() => {
 		postedMessages.length = 0;
-		fastForwardedSessionIds.length = 0;
 	});
 
 	test("denies ride the same post as the new message, note prefixed", async () => {
@@ -127,7 +112,7 @@ describe("startAgentTurn withdrawal bundling", () => {
 		expect(String(posted.message)).toContain("actually make it 2k credits");
 	});
 
-	test("a plain follow-up still fast-forwards and sends only the message", async () => {
+	test("a plain follow-up sends only the message", async () => {
 		await startAgentTurn({
 			auth,
 			env: AppEnv.Sandbox,
@@ -138,7 +123,6 @@ describe("startAgentTurn withdrawal bundling", () => {
 			thread,
 		});
 
-		expect(fastForwardedSessionIds).toEqual(["eve_session_1"]);
 		expect(postedMessages[0]).toEqual({
 			inputResponses: undefined,
 			message: "hello",

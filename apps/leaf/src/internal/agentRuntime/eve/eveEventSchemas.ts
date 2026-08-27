@@ -1,3 +1,4 @@
+import { type InputRequest, inputRequestSchema } from "eve/client";
 import { z } from "zod";
 
 const eveActionSchema = z.object({
@@ -19,27 +20,14 @@ const eveActionResultSchema = z.object({
 	toolName: z.string().optional(),
 });
 
-const eveInputRequestSchema = z.object({
-	action: z
-		.object({
-			callId: z.string().optional(),
-			input: z.record(z.string(), z.unknown()).optional(),
-			kind: z.string().optional(),
-			toolName: z.string().optional(),
-		})
-		.optional(),
-	display: z.string().optional(),
-	options: z
-		.array(
-			z.object({
-				id: z.string().optional(),
-				label: z.string().optional(),
-			}),
-		)
-		.optional(),
-	prompt: z.string().optional(),
-	requestId: z.string().optional(),
-});
+/** eve ships its schema on zod v4, which cannot nest inside leaf's zod v3
+ * objects, so the contract is enforced by delegating to eve's own parse. A
+ * request eve shapes unexpectedly is dropped rather than failing the turn. */
+const parseInputRequests = (value: unknown): InputRequest[] =>
+	(Array.isArray(value) ? value : []).flatMap((request) => {
+		const parsed = inputRequestSchema.safeParse(request);
+		return parsed.success ? [parsed.data as InputRequest] : [];
+	});
 
 const eveEventEnvelopeSchema = z.object({
 	data: z.unknown().optional(),
@@ -59,7 +47,7 @@ const actionResultSchema = turnDataSchema.extend({
 	status: z.string().optional(),
 });
 const inputRequestedSchema = turnDataSchema.extend({
-	requests: z.array(eveInputRequestSchema).default([]),
+	requests: z.unknown().transform(parseInputRequests),
 });
 const reasoningCompletedSchema = turnDataSchema.extend({
 	reasoning: z.string().default(""),
@@ -93,7 +81,7 @@ const emptyEventSchema = z.object({});
 
 export type EveAction = z.infer<typeof eveActionSchema>;
 export type EveActionResult = z.infer<typeof eveActionResultSchema>;
-export type EveInputRequest = z.infer<typeof eveInputRequestSchema>;
+export type EveInputRequest = InputRequest;
 
 const eveEventSchema = eveEventEnvelopeSchema.transform((envelope) => {
 	const data = envelope.data ?? {};

@@ -1,19 +1,25 @@
 import type { AutumnLogger } from "@autumn/logging";
-import { type AppEnv, ms } from "@autumn/shared";
+import type { AppEnv } from "@autumn/shared";
 import { AGENT_UNREACHABLE_MESSAGE } from "../../../../../ui/messages.js";
 import type { ActiveRun } from "../../../../runs/runRegistry.js";
 import {
 	EveSessionDeadError,
 	EveStreamDisconnectedError,
 	EveStreamIdleTimeoutError,
-	resyncEveStreamIndex,
+	streamEveEvents,
 } from "../../../eve/client.js";
 import {
 	advanceStreamCursor,
 	saveEveSessionState,
 } from "../../../eve/sessionState.js";
-import { streamEveEventsWithReconnect } from "../../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
+import {
+	MAX_IDLE_RESYNCS,
+	MAX_IDLE_RETRIES,
+	MAX_QUIET_MS,
+	MAX_TURN_DURATION_MS,
+	STREAM_RETRY_DELAY_MS,
+} from "../../../turnBudget.js";
 import { applyEveEvent, type EveEventContext } from "./applyEveEvent.js";
 import {
 	createEveTurnProgress,
@@ -24,18 +30,6 @@ import {
 import { createTurnActivity, type TurnActivity } from "./turnActivity.js";
 import { watchSubagentProgress } from "./watchSubagentProgress.js";
 
-// Eve can close empty while asynchronously resuming a turn.
-const MAX_IDLE_RETRIES = 20;
-/** Each idle window is 2 minutes, so this bounds a quiet turn at ~6 minutes
- * before leaf answers with whatever it has. */
-const MAX_IDLE_RESYNCS = 3;
-/** Settle before the caller's own wall-clock backstop, so a turn eve never
- * resumes is answered by leaf rather than killed mid-recovery. */
-const MAX_QUIET_MS = ms.minutes(2.5);
-/** The ceiling on a single turn however busy it looks: a stream that dribbles
- * one event per idle window would otherwise reset the resync budget forever. */
-const MAX_TURN_DURATION_MS = ms.minutes(15);
-const STREAM_RETRY_DELAY_MS = ms.seconds(0.5);
 const PERSIST_CURSOR_EVERY_EVENTS = 10;
 
 type EveTurnContext = Omit<EveEventContext, "event"> & { auth: EveAuthContext };
@@ -82,7 +76,7 @@ const streamPassEvents = async ({
 	let progress = turn.progress;
 	let sawEvent = false;
 	try {
-		for await (const event of streamEveEventsWithReconnect({
+		for await (const event of streamEveEvents({
 			auth,
 			session,
 			signal,
@@ -103,6 +97,9 @@ const streamPassEvents = async ({
 			const result = await applyEveEvent({ ...turn, event, progress });
 			progress = result.progress;
 			if (result.outcome) {
+				// The next post resumes from here, so a cursor left behind by the
+				// checkpoint interval would replay this turn as the next one's reply.
+				await saveEveSessionState({ orgId, session });
 				return { outcome: result.outcome, progress, sawEvent };
 			}
 
@@ -131,9 +128,9 @@ const streamPassEvents = async ({
 };
 
 /** An idle window is a gap, not an ending: eve holds the turn durably and
- * resumes on its own, so leaf resyncs and reopens at the cursor. Only an
- * exhausted budget settles the turn from whatever text arrived. */
-const resyncAfterIdleStream = async ({
+ * resumes on its own, so leaf reopens at the cursor. Only an exhausted budget
+ * settles the turn from whatever text arrived. */
+const persistCursorAfterIdleStream = async ({
 	attempt,
 	logger,
 	turn,
@@ -142,8 +139,8 @@ const resyncAfterIdleStream = async ({
 	logger: AutumnLogger;
 	turn: EveTurnContext;
 }) => {
-	const { auth, orgId, session } = turn;
-	logger.warn("Eve stream went idle; resyncing cursor", {
+	const { orgId, session } = turn;
+	logger.warn("Eve stream went idle; reopening at the cursor", {
 		event: "leaf.eve_stream_idle_timeout",
 		data: {
 			attempt,
@@ -151,8 +148,7 @@ const resyncAfterIdleStream = async ({
 			stream_index: session.state.streamIndex,
 		},
 	});
-	await resyncEveStreamIndex({ auth, session });
-	await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
+	await saveEveSessionState({ orgId, session });
 };
 
 const settleExhaustedTurn = ({
@@ -181,25 +177,6 @@ const settleExhaustedTurn = ({
 	return { kind: "answered", text: partialText };
 };
 
-const healSilentCursor = async ({
-	logger,
-	turn,
-}: {
-	logger: AutumnLogger;
-	turn: EveTurnContext;
-}) => {
-	const { auth, orgId, session } = turn;
-	logger.warn("Eve stream produced nothing; resyncing cursor", {
-		event: "leaf.eve_stream_silent_resync",
-		data: {
-			session_id: session.sessionId,
-			stream_index: session.state.streamIndex,
-		},
-	});
-	await resyncEveStreamIndex({ auth, session });
-	await saveEveSessionState({ orgId, session });
-};
-
 const outcomeForExhaustedRetries = async ({
 	streamedAnyEvent,
 	turn,
@@ -213,7 +190,7 @@ const outcomeForExhaustedRetries = async ({
 		return streamedAnyEvent ? { kind: "silent" } : { kind: "unreachable" };
 	}
 	closeReasoningOutput({ onReasoning, progress });
-	await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
+	await saveEveSessionState({ orgId, session });
 	return { kind: "answered", text: finalText };
 };
 
@@ -265,7 +242,7 @@ export const consumeAgentTurn = async ({
 		stop: NonNullable<ActiveRun["stop"]>;
 	}): Promise<EveTurnOutcome> => {
 		abortController.abort();
-		await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
+		await saveEveSessionState({ orgId, session });
 		return {
 			kind: "stopped",
 			stopReason: stop.reason,
@@ -274,7 +251,6 @@ export const consumeAgentTurn = async ({
 	};
 
 	let streamedAnyEvent = false;
-	let healedSilentCursor = false;
 	let idleRetries = 0;
 	const activity = createTurnActivity();
 
@@ -334,7 +310,11 @@ export const consumeAgentTurn = async ({
 				if (idleRetries >= MAX_IDLE_RESYNCS) {
 					return settleExhaustedTurn({ activity, logger, turn });
 				}
-				await resyncAfterIdleStream({ attempt: idleRetries, logger, turn });
+				await persistCursorAfterIdleStream({
+					attempt: idleRetries,
+					logger,
+					turn,
+				});
 				continue;
 			}
 			if (
@@ -355,15 +335,6 @@ export const consumeAgentTurn = async ({
 			if (pass.error !== undefined) throw pass.error;
 
 			idleRetries = pass.sawEvent ? 0 : idleRetries + 1;
-			const silentlyExhausted =
-				idleRetries >= MAX_IDLE_RETRIES &&
-				!(streamedAnyEvent || healedSilentCursor);
-			if (silentlyExhausted) {
-				healedSilentCursor = true;
-				await healSilentCursor({ logger, turn });
-				idleRetries = 0;
-				continue;
-			}
 			await new Promise((resolve) =>
 				setTimeout(resolve, STREAM_RETRY_DELAY_MS),
 			);

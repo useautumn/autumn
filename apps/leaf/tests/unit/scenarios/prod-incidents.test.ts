@@ -151,8 +151,6 @@ await mockLeafModule({
 		EveSessionGoneError: MockEveSessionGoneError,
 		EveStreamDisconnectedError: MockEveStreamDisconnectedError,
 		EveStreamIdleTimeoutError: MockEveStreamIdleTimeoutError,
-		fastForwardEveStreamIndex: async () => undefined,
-		resyncEveStreamIndex: async () => undefined,
 		postEveMessage: async ({
 			inputResponses,
 			message,
@@ -205,30 +203,6 @@ await mockLeafModule({
 			}
 		},
 	}),
-});
-
-let tokenAlive: boolean | undefined;
-const cancelledRuns: string[] = [];
-await mockLeafModule({
-	specifier: "../../../src/internal/agentRuntime/eve/world/sessionRun.js",
-	factory: () => ({
-		cancelSessionRun: async (sessionId: string) => {
-			cancelledRuns.push(sessionId);
-			return true;
-		},
-		isContinuationTokenAlive: async () => tokenAlive,
-	}),
-});
-await mockLeafModule({
-	specifier: "../../../src/internal/agentRuntime/eve/world/workflowWorld.js",
-	factory: () => ({
-		hasWorkflowWorld: () => false,
-		workflowWorldHoldingRun: async () => undefined,
-	}),
-});
-await mockLeafModule({
-	specifier: "../../../src/internal/agentRuntime/eve/world/sessionStream.js",
-	factory: () => ({ sessionEventCount: async () => undefined }),
 });
 
 let storedSession: EveSessionRef | undefined;
@@ -342,11 +316,8 @@ const parkCard = ({ requestId }: { requestId: string }) => {
 		newSession: false,
 		sessionId: fake.id,
 		state: {
-			version: 1,
 			continuationToken: fake.token,
 			streamIndex: 2,
-			status: "waiting",
-			lastEventAt: 0,
 			pendingRequests: [{ denyOptionId: "deny", kind: "gated", requestId }],
 		},
 		threadKey: "sandbox:slack:T1:C1:thread_1",
@@ -370,12 +341,10 @@ describe("production incident replications", () => {
 		nextSession = 0;
 		rebuildsAfterDeny = 0;
 		posts.length = 0;
-		cancelledRuns.length = 0;
 		deletedSessions.length = 0;
 		cancelledApprovals.length = 0;
 		storedSession = undefined;
 		pendingApprovals = [];
-		tokenAlive = undefined;
 	});
 
 	test("Ayush 20:30 — a question over a pending card, child rebuilds after the deny", async () => {
@@ -428,11 +397,11 @@ describe("production incident replications", () => {
 		pendingApprovals = [];
 		if (storedSession) storedSession.state.pendingRequests = [];
 		deadTokens.add(fake.token);
-		tokenAlive = false;
 
 		const result = await send("hello again");
 
-		expect(deletedSessions).toContain(fake.id);
+		// The upsert keys on the thread, so re-homing rewrites session_id in
+		// place; the row does not need deleting first.
 		expect(storedSession?.sessionId).not.toBe(fake.id);
 		expect(result.kind).toBe("reply");
 	});
@@ -447,7 +416,6 @@ describe("production incident replications", () => {
 
 		expect(fake.deferredMessages).toBe(1);
 		expect(deletedSessions).toContain(fake.id);
-		expect(cancelledRuns).toContain(fake.id);
 		expect(result.kind).toBe("reply");
 	}, 20_000);
 });

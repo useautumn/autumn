@@ -111,12 +111,9 @@ const applyEveEffect = async ({
 			await saveEveSessionState({
 				orgId,
 				session,
-				state: {
-					status: effect.status,
-					...(effect.pendingRequests
-						? { pendingRequests: [...effect.pendingRequests] }
-						: {}),
-				},
+				state: effect.pendingRequests
+					? { pendingRequests: [...effect.pendingRequests] }
+					: undefined,
 			});
 			return;
 		case "throw":
