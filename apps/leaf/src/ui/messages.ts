@@ -40,6 +40,13 @@ export const QUESTION_ANSWER_FAILED_MESSAGE =
 export const questionAnswerFailedWithDetail = (detail: string) =>
 	`I couldn't record that answer (${detail}). Reply in the thread instead.`;
 
+export const stalledToolNudge = (tools: readonly string[]) =>
+	`(Your last turn requested ${tools.join(", ")} but ${
+		tools.length === 1 ? "it" : "they"
+	} never ran and no result is coming. Do not call ${
+		tools.length === 1 ? "it" : "them"
+	} again — every tool you need is already registered and callable by name. Continue the user's request with the tools you have.)`;
+
 // Run lifecycle
 
 export const RUN_TIMED_OUT_MESSAGE =
