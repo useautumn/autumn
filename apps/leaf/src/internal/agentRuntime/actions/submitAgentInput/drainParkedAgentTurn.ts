@@ -1,6 +1,10 @@
 import { logger } from "../../../../lib/logger.js";
 import { answerEveInput } from "../../eve/answerEveInput.js";
-import { isEveTransportLost, resyncEveStreamIndex } from "../../eve/client.js";
+import {
+	isEveTransportLost,
+	resyncEveStreamIndex,
+	streamEveEvents,
+} from "../../eve/client.js";
 import { approvalOptionIds, isTerminalEveEventType } from "../../eve/events.js";
 import {
 	classifyParkedEveInput,
@@ -12,7 +16,6 @@ import {
 	saveEveSessionState,
 	statusAfterTerminalEvent,
 } from "../../eve/sessionState.js";
-import { streamEveEventsWithReconnect } from "../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { DRAIN_IDLE_TIMEOUT_MS } from "../../turnBudget.js";
 import { QUEUED_TURN_WITHDRAWAL_NOTE } from "./agentInputNotes.js";
@@ -56,7 +59,7 @@ const drainPass = async ({
 	session: EveSessionRef;
 }): Promise<{ parkedAgain: boolean; stuck: boolean }> => {
 	let turnStarted = false;
-	for await (const event of streamEveEventsWithReconnect({
+	for await (const event of streamEveEvents({
 		auth,
 		idleTimeoutMs: DRAIN_IDLE_TIMEOUT_MS,
 		session,

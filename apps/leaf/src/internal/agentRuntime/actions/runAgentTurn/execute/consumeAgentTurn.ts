@@ -7,12 +7,12 @@ import {
 	EveStreamDisconnectedError,
 	EveStreamIdleTimeoutError,
 	resyncEveStreamIndex,
+	streamEveEvents,
 } from "../../../eve/client.js";
 import {
 	advanceStreamCursor,
 	saveEveSessionState,
 } from "../../../eve/sessionState.js";
-import { streamEveEventsWithReconnect } from "../../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 import {
 	MAX_IDLE_RESYNCS,
@@ -77,7 +77,7 @@ const streamPassEvents = async ({
 	let progress = turn.progress;
 	let sawEvent = false;
 	try {
-		for await (const event of streamEveEventsWithReconnect({
+		for await (const event of streamEveEvents({
 			auth,
 			session,
 			signal,

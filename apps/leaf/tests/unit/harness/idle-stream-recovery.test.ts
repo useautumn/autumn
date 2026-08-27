@@ -74,6 +74,9 @@ await mockLeafModule({
 				// A real child relay ENDS when its own idle window expires; only a
 				// child still streaming holds the parent open.
 				if (childKeepsStreaming) await new Promise(() => undefined);
+				// An idle window costs real time, so a dying child still vouches
+				// for the parent across a pass rather than expiring in one tick.
+				await new Promise((resolve) => setTimeout(resolve, 1));
 				throw new MockEveStreamIdleTimeoutError("child idle");
 			}
 			const pass = streamPasses[

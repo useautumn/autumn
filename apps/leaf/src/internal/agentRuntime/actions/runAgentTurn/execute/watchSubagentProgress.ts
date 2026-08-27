@@ -1,11 +1,13 @@
 import { logger } from "../../../../../lib/logger.js";
-import { EveStreamIdleTimeoutError } from "../../../eve/client.js";
+import {
+	EveStreamIdleTimeoutError,
+	streamEveEvents,
+} from "../../../eve/client.js";
 import {
 	displayEveToolLabel,
 	isTerminalEveEventType,
 	labelForAction,
 } from "../../../eve/events.js";
-import { streamEveEventsWithReconnect } from "../../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 import { isSilentTool } from "../../../tools/toolPolicy.js";
 import {
@@ -49,7 +51,7 @@ export const watchSubagentProgress = ({
 	let childEndReason: string | undefined;
 
 	const relayPass = async () => {
-		for await (const event of streamEveEventsWithReconnect({
+		for await (const event of streamEveEvents({
 			auth,
 			idleTimeoutMs: CHILD_RELAY_IDLE_TIMEOUT_MS,
 			session: childSession,

@@ -3,6 +3,7 @@ import { isErrorResult } from "../../../approvals/utils/approvalErrors.js";
 import {
 	EveStreamIdleTimeoutError,
 	isEveTransportLost,
+	streamEveEvents,
 } from "../../eve/client.js";
 import type { EveEvent } from "../../eve/eveEventSchemas.js";
 import { labelForAction, labelForResult } from "../../eve/events.js";
@@ -16,7 +17,6 @@ import {
 	saveEveSessionState,
 	statusAfterTerminalEvent,
 } from "../../eve/sessionState.js";
-import { streamEveEventsWithReconnect } from "../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { normalizeToolName } from "../../tools/toolPolicy.js";
 import {
@@ -93,7 +93,7 @@ const applyChildStreamResults = async ({
 		threadKey: session.threadKey,
 	};
 	try {
-		for await (const event of streamEveEventsWithReconnect({
+		for await (const event of streamEveEvents({
 			auth,
 			idleTimeoutMs: CHILD_REPLAY_IDLE_TIMEOUT_MS,
 			session: childSession,
@@ -191,7 +191,7 @@ export const consumeResumedAgentTurn = async ({
 		}
 	};
 	try {
-		for await (const event of streamEveEventsWithReconnect({
+		for await (const event of streamEveEvents({
 			auth,
 			idleTimeoutMs: RESUME_IDLE_TIMEOUT_MS,
 			session,

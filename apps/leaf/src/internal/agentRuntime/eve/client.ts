@@ -300,6 +300,17 @@ export async function* streamEveEvents({
 		});
 	} catch (error) {
 		if (isRetryableEveStreamError(error)) {
+			logger.warn(
+				"Eve stream disconnected after the SDK exhausted reconnects",
+				{
+					event: "leaf.eve_stream_disconnected",
+					data: {
+						session_id: session.sessionId,
+						stream_index: session.state.streamIndex,
+					},
+					error,
+				},
+			);
 			throw new EveStreamDisconnectedError(error);
 		}
 		throw error;
