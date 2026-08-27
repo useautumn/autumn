@@ -71,7 +71,6 @@ export const initProductsV0 = async ({
 		orgId: ctx.org.id,
 		env: ctx.env,
 		inIds: products.map((product) => product.id),
-		returnAll: true,
 	});
 
 	await materializeProductsInStripe({ ctx, products: fullProducts });
