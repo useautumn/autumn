@@ -539,6 +539,8 @@ const response = await client.billing.multiUpdate({ customerId: "cus_123", updat
 
 @param customerId - The ID of the customer to update plans for.
 @param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+@param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
+@param subscriptionParams - Additional parameters to pass into the Stripe subscription update or cancel call. (optional)
 @param updates - The list of plan updates to apply to the customer.
 
 @returns A billing response with the resulting invoice summary (one credit invoice per affected subscription for immediate cancels).
@@ -554,6 +556,8 @@ const response = await client.billing.previewMultiUpdate({ customerId: "cus_123"
 
 @param customerId - The ID of the customer to update plans for.
 @param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+@param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
+@param subscriptionParams - Additional parameters to pass into the Stripe subscription update or cancel call. (optional)
 @param updates - The list of plan updates to apply to the customer.
 
 @returns A preview with the combined total plus one entry per subscription, each with its own line items, totals, and next-cycle preview.
@@ -1025,6 +1029,8 @@ const response = await client.billing.multiUpdate({ customerId: "cus_123", updat
 
 @param customerId - The ID of the customer to update plans for.
 @param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+@param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
+@param subscriptionParams - Additional parameters to pass into the Stripe subscription update or cancel call. (optional)
 @param updates - The list of plan updates to apply to the customer.
 
 @returns A billing response with the resulting invoice summary (one credit invoice per affected subscription for immediate cancels).
@@ -1111,6 +1117,8 @@ const response = await client.billing.previewMultiUpdate({ customerId: "cus_123"
 
 @param customerId - The ID of the customer to update plans for.
 @param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+@param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
+@param subscriptionParams - Additional parameters to pass into the Stripe subscription update or cancel call. (optional)
 @param updates - The list of plan updates to apply to the customer.
 
 @returns A preview with the combined total plus one entry per subscription, each with its own line items, totals, and next-cycle preview.

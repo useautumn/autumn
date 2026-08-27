@@ -1,8 +1,14 @@
 import { priceConfigForCurrency } from "@models/productModels/priceModels/priceConfig/priceCurrencyView";
 import { PriceType } from "@models/productModels/priceModels/priceEnums";
 import type { Price } from "@models/productModels/priceModels/priceModels";
-import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
-import { usageTiersToComparisonShape } from "./pricesAreSame.js";
+import {
+	TierBehavior,
+	type UsagePriceConfig,
+} from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import {
+	normalizedAllocatedBillingBehavior,
+	usageTiersToComparisonShape,
+} from "./pricesAreSame.js";
 
 /**
  * Stripe mint identity for one attach currency. Same normalizations as
@@ -23,11 +29,11 @@ export const priceToStripePriceIdempotencyShape = ({
 		currency: ccy,
 		orgDefault: orgDefault.toLowerCase(),
 	});
-	const usage = price.config.type === PriceType.Usage;
-	const billingUnits =
-		usage && "billing_units" in price.config
-			? (price.config.billing_units ?? 1)
+	const usageConfig =
+		price.config.type === PriceType.Usage
+			? (price.config as UsagePriceConfig)
 			: null;
+	const billingUnits = usageConfig ? (usageConfig.billing_units ?? 1) : null;
 
 	return {
 		amount: amount ?? null,
@@ -35,8 +41,13 @@ export const priceToStripePriceIdempotencyShape = ({
 		interval: price.config.interval ?? null,
 		interval_count: price.config.interval_count ?? 1,
 		billing_units: billingUnits,
-		tier_behavior: usage
+		tier_behavior: usageConfig
 			? (price.tier_behavior ?? TierBehavior.Graduated)
+			: null,
+		bill_when: usageConfig?.bill_when ?? null,
+		should_prorate: usageConfig ? (usageConfig.should_prorate ?? false) : null,
+		allocated_billing_behavior: usageConfig
+			? normalizedAllocatedBillingBehavior(usageConfig)
 			: null,
 	};
 };

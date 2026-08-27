@@ -29,7 +29,9 @@ import {
 	BillingInterval,
 	BillingMethod,
 	type CreatePlanParamsV2Input,
+	findPriceByFeatureId,
 	type PlanUpdatePreview,
+	type Price,
 	ResetInterval,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
@@ -40,6 +42,7 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+import { stripeConfigValue } from "@tests/integration/utils/expectStripePriceResources.js";
 import {
 	expectStripeResourcesCarriedToVariant,
 	expectVariantProductCorrect,
@@ -584,12 +587,17 @@ test.concurrent(
 		await autumnV1.attach({ customer_id: customerId, product_id: variantId, options: [{ feature_id: TestFeature.Credits, quantity: 500 }] });
 		await wait(4000);
 
+		const prepaidStripeId = (price: Price | undefined) =>
+			stripeConfigValue({ price, field: "stripe_prepaid_price_v2_id" }) ??
+			stripeConfigValue({ price, field: "stripe_price_id" });
+
 		const variantV1 = await ProductService.getFull({ db, idOrInternalId: variantId, orgId: org.id, env });
-		const v1PrepaidPrice = variantV1.prices.find(
-			(p: any) => p.config?.feature_id === TestFeature.Credits && p.config?.stripe_price_id,
-		);
+		const v1PrepaidPrice = findPriceByFeatureId({
+			prices: variantV1.prices,
+			featureId: TestFeature.Credits,
+		});
 		expect(v1PrepaidPrice).toBeDefined();
-		expect((v1PrepaidPrice!.config as any)?.stripe_price_id).toBeTruthy();
+		expect(prepaidStripeId(v1PrepaidPrice)).toBeTruthy();
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 			items: rolloverPrepaidItems(500),
@@ -599,12 +607,13 @@ test.concurrent(
 		const variantVersions = await getAllVersions(variantId);
 		expect(variantVersions.length).toBe(2);
 
-		const v2 = variantVersions.find((v: any) => v.version === 2)!;
-		const v2PrepaidPrice = v2.prices.find(
-			(p: any) => p.config?.feature_id === TestFeature.Credits && p.config?.stripe_price_id,
-		);
+		const v2 = variantVersions.find((v: { version: number }) => v.version === 2)!;
+		const v2PrepaidPrice = findPriceByFeatureId({
+			prices: v2.prices,
+			featureId: TestFeature.Credits,
+		});
 		expect(v2PrepaidPrice).toBeDefined();
-		expect((v2PrepaidPrice!.config as any)?.stripe_price_id).toBeTruthy();
+		expect(prepaidStripeId(v2PrepaidPrice)).toBeTruthy();
 
 		await cleanup(baseId, variantId);
 	},

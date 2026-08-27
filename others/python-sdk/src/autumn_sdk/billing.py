@@ -2813,6 +2813,8 @@ class Billing(BaseSDK):
             List[models.MultiUpdateUpdate], List[models.MultiUpdateUpdateTypedDict]
         ],
         entity_id: Optional[str] = None,
+        refund_last_payment: Optional[models.MultiUpdateRefundLastPayment] = None,
+        subscription_params: Optional[Dict[str, Any]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2825,6 +2827,8 @@ class Billing(BaseSDK):
         :param customer_id: The ID of the customer to update plans for.
         :param updates: The list of plan updates to apply to the customer.
         :param entity_id: The ID of the entity to update plans for. Individual updates can override this with their own entity_id.
+        :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+        :param subscription_params: Additional parameters to pass into the Stripe subscription update or cancel call.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2843,6 +2847,8 @@ class Billing(BaseSDK):
         request = models.MultiUpdateParams(
             customer_id=customer_id,
             entity_id=entity_id,
+            refund_last_payment=refund_last_payment,
+            subscription_params=subscription_params,
             updates=utils.get_pydantic_model(updates, List[models.MultiUpdateUpdate]),
         )
 
@@ -2913,6 +2919,8 @@ class Billing(BaseSDK):
             List[models.MultiUpdateUpdate], List[models.MultiUpdateUpdateTypedDict]
         ],
         entity_id: Optional[str] = None,
+        refund_last_payment: Optional[models.MultiUpdateRefundLastPayment] = None,
+        subscription_params: Optional[Dict[str, Any]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2925,6 +2933,8 @@ class Billing(BaseSDK):
         :param customer_id: The ID of the customer to update plans for.
         :param updates: The list of plan updates to apply to the customer.
         :param entity_id: The ID of the entity to update plans for. Individual updates can override this with their own entity_id.
+        :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+        :param subscription_params: Additional parameters to pass into the Stripe subscription update or cancel call.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2943,6 +2953,8 @@ class Billing(BaseSDK):
         request = models.MultiUpdateParams(
             customer_id=customer_id,
             entity_id=entity_id,
+            refund_last_payment=refund_last_payment,
+            subscription_params=subscription_params,
             updates=utils.get_pydantic_model(updates, List[models.MultiUpdateUpdate]),
         )
 
@@ -3014,6 +3026,10 @@ class Billing(BaseSDK):
             List[models.PreviewMultiUpdateUpdateTypedDict],
         ],
         entity_id: Optional[str] = None,
+        refund_last_payment: Optional[
+            models.PreviewMultiUpdateRefundLastPayment
+        ] = None,
+        subscription_params: Optional[Dict[str, Any]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -3026,6 +3042,8 @@ class Billing(BaseSDK):
         :param customer_id: The ID of the customer to update plans for.
         :param updates: The list of plan updates to apply to the customer.
         :param entity_id: The ID of the entity to update plans for. Individual updates can override this with their own entity_id.
+        :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+        :param subscription_params: Additional parameters to pass into the Stripe subscription update or cancel call.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -3044,6 +3062,8 @@ class Billing(BaseSDK):
         request = models.PreviewMultiUpdateParams(
             customer_id=customer_id,
             entity_id=entity_id,
+            refund_last_payment=refund_last_payment,
+            subscription_params=subscription_params,
             updates=utils.get_pydantic_model(
                 updates, List[models.PreviewMultiUpdateUpdate]
             ),
@@ -3117,6 +3137,10 @@ class Billing(BaseSDK):
             List[models.PreviewMultiUpdateUpdateTypedDict],
         ],
         entity_id: Optional[str] = None,
+        refund_last_payment: Optional[
+            models.PreviewMultiUpdateRefundLastPayment
+        ] = None,
+        subscription_params: Optional[Dict[str, Any]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -3129,6 +3153,8 @@ class Billing(BaseSDK):
         :param customer_id: The ID of the customer to update plans for.
         :param updates: The list of plan updates to apply to the customer.
         :param entity_id: The ID of the entity to update plans for. Individual updates can override this with their own entity_id.
+        :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+        :param subscription_params: Additional parameters to pass into the Stripe subscription update or cancel call.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -3147,6 +3173,8 @@ class Billing(BaseSDK):
         request = models.PreviewMultiUpdateParams(
             customer_id=customer_id,
             entity_id=entity_id,
+            refund_last_payment=refund_last_payment,
+            subscription_params=subscription_params,
             updates=utils.get_pydantic_model(
                 updates, List[models.PreviewMultiUpdateUpdate]
             ),
