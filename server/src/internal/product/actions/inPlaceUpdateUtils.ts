@@ -150,7 +150,7 @@ const backfillExistingItemIds = ({
  * reference it keep their definition. Referenced rows flip to is_custom:true
  * (hidden from the catalog, FK still valid); unreferenced rows are deleted.
  */
-export const retireOrDeleteRows = async ({
+const retireOrDeleteRows = async ({
 	db,
 	entitlementIds,
 	priceIds,

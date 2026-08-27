@@ -35,13 +35,6 @@ export const emptyVersioningUsage = (): CustomerProductVersioningUsage => ({
 	versionableCustomerCount: 0,
 });
 
-/** Catalog in-place writes must not DELETE ents/prices that any CP still FKs. */
-export const shouldProtectReferencedCatalogRows = ({
-	usage,
-}: {
-	usage: CustomerProductVersioningFlags;
-}): boolean => usage.hasVersionableRowRefs || usage.hasAnyCustomerProducts;
-
 const emptyUsage = emptyVersioningUsage;
 
 const sqlIn = ({ values }: { values: string[] }) =>
