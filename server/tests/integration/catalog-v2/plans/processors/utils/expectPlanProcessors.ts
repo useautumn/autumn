@@ -1,5 +1,35 @@
 import { expect } from "bun:test";
 import type { ApiPlanV1 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+
+/** DB-side stripe product id on one plan version. `null` asserts unset. */
+export const expectVersionProcessorCorrect = async ({
+	ctx,
+	planId,
+	version,
+	productId,
+}: {
+	ctx: AutumnContext;
+	planId: string;
+	version: number;
+	productId: string | null;
+}) => {
+	const product = await ProductService.get({
+		db: ctx.db,
+		id: planId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		version,
+	});
+	expect(product, `missing ${planId} v${version}`).toBeDefined();
+	const label = `${planId} v${version} processor id`;
+	if (productId === null) {
+		expect(product?.processor?.id ?? null, label).toBeNull();
+		return;
+	}
+	expect(product?.processor?.id, label).toBe(productId);
+};
 
 /**
  * API-side processors asserts via catalogV2.get.
@@ -27,10 +57,9 @@ export const expectApiPlanProcessorsCorrect = ({
 	if (basePriceId === null) {
 		expect(plan.price?.processors, "base processors omitted").toBeUndefined();
 	} else if (basePriceId !== undefined) {
-		expect(
-			plan.price?.processors?.stripe?.price_id,
-			"base price_id",
-		).toBe(basePriceId);
+		expect(plan.price?.processors?.stripe?.price_id, "base price_id").toBe(
+			basePriceId,
+		);
 	}
 
 	if (items === undefined) return;
