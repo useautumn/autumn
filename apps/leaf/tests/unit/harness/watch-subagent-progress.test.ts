@@ -84,11 +84,8 @@ const session: EveSessionRef = {
 	newSession: false,
 	sessionId: "parent_session",
 	state: {
-		version: 1,
 		continuationToken: "token_1",
 		streamIndex: 9,
-		status: "waiting",
-		lastEventAt: 0,
 		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",

@@ -1,7 +1,7 @@
 import { $ } from "bun";
 import { logger } from "../../../lib/logger.js";
 import { setEmbeddedEveStatus } from "./embeddedStatus.js";
-import { verifyNotifyDelivery } from "./world/verifyNotifyDelivery.js";
+import { verifyNotifyDelivery } from "./verifyNotifyDelivery.js";
 
 const EVE_PORT = process.env.EVE_PORT ?? "3999";
 const CHAT_PORT = process.env.CHAT_PORT ?? process.env.PORT ?? "3099";

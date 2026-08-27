@@ -49,7 +49,6 @@ type StreamPass = {
 let streamPasses: StreamPass[] = [];
 const streamCalls: number[] = [];
 const streamPassesConsumed: number[] = [];
-const resyncedSessionIds: string[] = [];
 
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/client.js",
@@ -63,13 +62,6 @@ await mockLeafModule({
 			continuationToken: "token_2",
 			sessionId: "eve_session_1",
 		}),
-		resyncEveStreamIndex: async ({
-			session: resyncSession,
-		}: {
-			session: EveSessionRef;
-		}) => {
-			resyncedSessionIds.push(resyncSession.sessionId);
-		},
 		streamEveEvents: async function* ({
 			session: streamSession,
 		}: {
@@ -96,12 +88,12 @@ await mockLeafModule({
 	}),
 });
 
-const upsertedStates: string[] = [];
+const upsertedStreamIndexes: number[] = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
 	factory: () => ({
 		upsertEveSession: async ({ state }: { state: EveSessionRef["state"] }) => {
-			upsertedStates.push(state.status ?? "unknown");
+			upsertedStreamIndexes.push(state.streamIndex);
 		},
 	}),
 });
@@ -134,11 +126,8 @@ const makeSession = (): EveSessionRef => ({
 	newSession: false,
 	sessionId: "eve_session_1",
 	state: {
-		version: 1,
 		continuationToken: "token_1",
 		streamIndex: 0,
-		status: "waiting",
-		lastEventAt: 0,
 		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",
@@ -169,8 +158,7 @@ describe("consumeResumedAgentTurn stream resilience", () => {
 		streamPasses = [];
 		streamCalls.length = 0;
 		streamPassesConsumed.length = 0;
-		resyncedSessionIds.length = 0;
-		upsertedStates.length = 0;
+		upsertedStreamIndexes.length = 0;
 		loggedWarns.length = 0;
 	});
 
@@ -278,8 +266,7 @@ describe("drainParkedAgentTurn stream resilience", () => {
 		streamPasses = [];
 		streamCalls.length = 0;
 		streamPassesConsumed.length = 0;
-		resyncedSessionIds.length = 0;
-		upsertedStates.length = 0;
+		upsertedStreamIndexes.length = 0;
 		loggedWarns.length = 0;
 	});
 
@@ -297,18 +284,18 @@ describe("drainParkedAgentTurn stream resilience", () => {
 
 		expect(streamCalls).toEqual([0]);
 		expect(streamPassesConsumed).toEqual([0, 1]);
-		expect(session.state.status).toBe("completed");
-		expect(upsertedStates).toEqual(["completed"]);
+		expect(session.state.streamIndex).toBe(2);
+		expect(upsertedStreamIndexes).toEqual([2]);
 	});
 
-	test("exhausted reconnects settle the session as waiting instead of throwing", async () => {
+	test("exhausted reconnects settle the session instead of throwing", async () => {
 		streamPasses = [{ events: [], thenThrow: "disconnect" }];
 
 		const session = makeSession();
 		await drainParkedAgentTurn({ auth, orgId: "org_1", session });
 
-		expect(session.state.status).toBe("waiting");
-		expect(upsertedStates).toEqual(["waiting"]);
+		expect(session.state.streamIndex).toBe(0);
+		expect(upsertedStreamIndexes).toEqual([0]);
 	});
 });
 
@@ -317,18 +304,25 @@ describe("drainParkedAgentTurn re-park cap", () => {
 		streamPasses = [];
 		streamCalls.length = 0;
 		streamPassesConsumed.length = 0;
-		upsertedStates.length = 0;
+		upsertedStreamIndexes.length = 0;
 	});
 
 	test("a child that re-parks after every deny is reported stuck, never left parked", async () => {
 		const gatedPark = {
 			requests: [
 				{
-					action: { input: {}, toolName: "autumn__attach" },
+					action: {
+						callId: "tc_1",
+						input: {},
+						kind: "tool-call",
+						toolName: "autumn__attach",
+					},
+					display: "confirmation",
 					options: [
-						{ id: "approve", label: "Approve" },
-						{ id: "deny", label: "Deny" },
+						{ id: "approve", label: "Yes" },
+						{ id: "deny", label: "No" },
 					],
+					prompt: "Approve tool call: autumn__attach",
 					requestId: "tc_1",
 				},
 			],

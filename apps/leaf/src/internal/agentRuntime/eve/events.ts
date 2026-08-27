@@ -40,26 +40,13 @@ export const displayEveToolLabel = (actionOrLabel: EveAction | string) => {
 export const isPreviewToolName = (toolName: string) =>
 	/^preview/i.test(normalizeToolName(toolName));
 
-export const approvalOptionIds = (request: {
-	options?: ReadonlyArray<Readonly<{ id?: string; label?: string }>>;
-}) => {
-	const options = request.options ?? [];
-	const optionText = (option: { id?: string; label?: string }) =>
-		`${option.id ?? ""} ${option.label ?? ""}`.toLowerCase();
-	const byPattern = (pattern: RegExp) =>
-		options.find((option) => pattern.test(optionText(option)))?.id;
-	// Never invent an id absent from the request — eve rejects unknown option
-	// ids, so fall back to a real option before the bare literal.
-	const approve =
-		byPattern(/\b(approve|apply|confirm|allow|yes)\b/) ??
-		options[0]?.id ??
-		"approve";
-	const deny =
-		byPattern(/\b(deny|reject|discard|cancel|no)\b/) ??
-		options.at(-1)?.id ??
-		"deny";
-	return { approve, deny };
-};
+export const APPROVE_OPTION_ID = "approve";
+export const DENY_OPTION_ID = "deny";
+
+export const approvalOptionIds = () => ({
+	approve: APPROVE_OPTION_ID,
+	deny: DENY_OPTION_ID,
+});
 
 export const textForInputRequests = (
 	requests: ReadonlyArray<EveInputRequest>,

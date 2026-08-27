@@ -15,7 +15,6 @@ import {
 import {
 	advanceStreamCursor,
 	saveEveSessionState,
-	statusAfterTerminalEvent,
 } from "../../eve/sessionState.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { normalizeToolName } from "../../tools/toolPolicy.js";
@@ -247,17 +246,14 @@ export const consumeResumedAgentTurn = async ({
 					chainedSiblingRequestIds = parkedInput.siblingRequestIds;
 					chainedWithheld = parkedInput.withheld;
 					session.state.pendingRequests = pendingGatedRequests(parkedInput);
-					session.state.status = "waiting";
 					break;
 				}
 				if (parkedInput?.kind === "question") {
 					question = parkedInput.question;
-					session.state.status = "waiting";
 					break;
 				}
 				if (parkedInput) {
 					if (!(text || pendingText)) text = parkedInput.text;
-					session.state.status = "waiting";
 					break;
 				}
 			} else if (
@@ -283,13 +279,11 @@ export const consumeResumedAgentTurn = async ({
 				(turnStarted || sawTurnActivity) &&
 				(event.type === "session.waiting" || event.type === "session.completed")
 			) {
-				session.state.status = statusAfterTerminalEvent(event.type);
 				break;
 			} else if (
 				(turnStarted || sawTurnActivity) &&
 				(event.type === "turn.failed" || event.type === "session.failed")
 			) {
-				session.state.status = "failed";
 				throw new Error(event.message);
 			}
 		}

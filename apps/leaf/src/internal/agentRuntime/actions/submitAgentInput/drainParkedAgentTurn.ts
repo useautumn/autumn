@@ -1,11 +1,7 @@
 import { logger } from "../../../../lib/logger.js";
 import { answerEveInput } from "../../eve/answerEveInput.js";
-import {
-	isEveTransportLost,
-	resyncEveStreamIndex,
-	streamEveEvents,
-} from "../../eve/client.js";
-import { approvalOptionIds, isTerminalEveEventType } from "../../eve/events.js";
+import { isEveTransportLost, streamEveEvents } from "../../eve/client.js";
+import { DENY_OPTION_ID, isTerminalEveEventType } from "../../eve/events.js";
 import {
 	classifyParkedEveInput,
 	type ParkedEveInput,
@@ -14,7 +10,6 @@ import {
 import {
 	advanceStreamCursor,
 	saveEveSessionState,
-	statusAfterTerminalEvent,
 } from "../../eve/sessionState.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { DRAIN_IDLE_TIMEOUT_MS } from "../../turnBudget.js";
@@ -39,7 +34,7 @@ const denyGatedPark = async ({
 	await answerEveInput({
 		auth,
 		note: QUEUED_TURN_WITHDRAWAL_NOTE,
-		optionId: approvalOptionIds({ options: parked.chained.options }).deny,
+		optionId: DENY_OPTION_ID,
 		requestId: parked.chained.requestId,
 		session,
 		siblingOptionIdFor: (siblingRequestId) =>
@@ -98,11 +93,9 @@ const drainPass = async ({
 					},
 				});
 			}
-			session.state.status = "waiting";
 			return { parkedAgain: false, stuck };
 		}
 		if (turnStarted && isTerminalEveEventType(event.type)) {
-			session.state.status = statusAfterTerminalEvent(event.type);
 			return { parkedAgain: false, stuck: false };
 		}
 	}
@@ -127,7 +120,7 @@ export const drainParkedAgentTurn = async ({
 			if (parkedAgain) denies += 1;
 		} catch (error) {
 			if (!isEveTransportLost(error)) throw error;
-			logger.warn("Drain stream lost; resyncing the cursor", {
+			logger.warn("Drain stream lost; settling at the cursor", {
 				event: "leaf.eve_drain_stream_lost",
 				data: {
 					session_id: session.sessionId,
@@ -135,8 +128,6 @@ export const drainParkedAgentTurn = async ({
 				},
 				error,
 			});
-			await resyncEveStreamIndex({ auth, session });
-			session.state.status = "waiting";
 			parkedAgain = false;
 		}
 	}

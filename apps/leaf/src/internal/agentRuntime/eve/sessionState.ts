@@ -5,11 +5,8 @@ import type { EveSessionRef, EveSessionState } from "./types.js";
 export const initialEveSessionState = (
 	continuationToken: string,
 ): EveSessionState => ({
-	version: 1,
 	continuationToken,
 	streamIndex: 0,
-	status: "running",
-	lastEventAt: Date.now(),
 	pendingRequests: [],
 });
 
@@ -23,7 +20,7 @@ export const saveEveSessionState = async ({
 	session: EveSessionRef;
 	state?: Partial<EveSessionState>;
 }) => {
-	session.state = { ...session.state, ...state, lastEventAt: Date.now() };
+	session.state = { ...session.state, ...state };
 	await upsertEveSession({
 		db,
 		env: session.env,
@@ -36,10 +33,4 @@ export const saveEveSessionState = async ({
 
 export const advanceStreamCursor = (session: EveSessionRef) => {
 	session.state.streamIndex += 1;
-	session.state.lastEventAt = Date.now();
 };
-
-export const statusAfterTerminalEvent = (
-	eventType: string,
-): EveSessionState["status"] =>
-	eventType === "session.completed" ? "completed" : "waiting";
