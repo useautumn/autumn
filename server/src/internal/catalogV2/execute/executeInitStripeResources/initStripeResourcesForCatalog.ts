@@ -1,14 +1,15 @@
 import { hasMissingStripeResourcesForProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
-import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
 import { hydratePlanLicenseProcessor } from "./hydratePlanLicenseProcessor";
 import {
 	catalogProductsByInternalId,
 	stripeCandidatesFromCatalog,
 } from "./stripeCandidatesFromCatalog";
+import { validateAdoptedStripePrices } from "./validateAdoptedStripePrices";
 
 const touchesStripeResources = ({ upsert }: { upsert: UpsertProductPlan }) =>
 	upsert.row.op !== "none" || upsert.planLicenses !== undefined;
@@ -47,6 +48,10 @@ export const initStripeResourcesForCatalog = async ({
 		.sort(
 			(a, b) => stripeInitRank({ upsert: a }) - stripeInitRank({ upsert: b }),
 		);
+
+	// Ahead of the completeness skip and the Live guard below, so a stated id
+	// is checked in every environment even when nothing needs creating.
+	await validateAdoptedStripePrices({ ctx, upsertProducts: targets });
 
 	for (const upsert of targets) {
 		const product = upsert.row.nextFullProduct;
