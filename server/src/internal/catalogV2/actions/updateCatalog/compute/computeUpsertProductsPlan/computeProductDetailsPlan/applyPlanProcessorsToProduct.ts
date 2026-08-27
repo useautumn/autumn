@@ -1,15 +1,8 @@
-import type { ApiPlanProcessors, Product } from "@autumn/shared";
-
-const processorsEqual = ({
-	left,
-	right,
-}: {
-	left: Product["processor"];
-	right: Product["processor"];
-}): boolean =>
-	(left?.id ?? null) === (right?.id ?? null) &&
-	JSON.stringify(left?.additional_ids ?? []) ===
-		JSON.stringify(right?.additional_ids ?? []);
+import {
+	type ApiPlanProcessors,
+	type Product,
+	productProcessorsAreSame,
+} from "@autumn/shared";
 
 /** Stamp `plan.processors.stripe` onto `product.processor`. Omit keeps. */
 export const applyPlanProcessorsToProduct = ({
@@ -35,7 +28,7 @@ export const applyPlanProcessorsToProduct = ({
 	};
 	return {
 		product: next,
-		changed: !processorsEqual({
+		changed: !productProcessorsAreSame({
 			left: product.processor,
 			right: next.processor,
 		}),

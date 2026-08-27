@@ -3,6 +3,7 @@ import {
 	billingControlsFromColumns,
 	type Product,
 	productDetailFieldIsSame,
+	productProcessorsAreSame,
 	productToPlanProcessors,
 	type UpdateCatalogPlanParams,
 } from "@autumn/shared";
@@ -26,7 +27,8 @@ const settingsChanged = ({
 	key: "description" | "group" | "is_add_on" | "config" | "metadata";
 	current: Product;
 	next: Product;
-}): boolean => !productDetailFieldIsSame({ key, product1: current, product2: next });
+}): boolean =>
+	!productDetailFieldIsSame({ key, product1: current, product2: next });
 
 /** Base current→next settings. Name / default / archive never copy. */
 export const variantSettingsPlanParams = ({
@@ -63,14 +65,13 @@ export const variantSettingsPlanParams = ({
 		patch.billing_controls = billingControlsFromColumns(next);
 	}
 
-	const currentProcessors = productToPlanProcessors({ product: current });
-	const nextProcessors = productToPlanProcessors({ product: next });
 	if (
-		(currentProcessors?.stripe?.product_id ?? null) !==
-			(nextProcessors?.stripe?.product_id ?? null) ||
-		JSON.stringify(currentProcessors?.stripe?.additional_product_ids ?? []) !==
-			JSON.stringify(nextProcessors?.stripe?.additional_product_ids ?? [])
+		!productProcessorsAreSame({
+			left: current.processor,
+			right: next.processor,
+		})
 	) {
+		const nextProcessors = productToPlanProcessors({ product: next });
 		if (nextProcessors) patch.processors = nextProcessors;
 	}
 
