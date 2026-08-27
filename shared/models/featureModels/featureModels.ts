@@ -30,6 +30,7 @@ export const FeatureSchema = z.object({
 	event_names: z.array(z.string()).default([]),
 	model_markups: ModelMarkupsSchema.nullish(),
 	stripe_meter: FeatureStripeMeterSchema.nullish(),
+	stripe_product_id: z.string().nullish(),
 });
 
 export const CreateFeatureSchema = FeatureSchema.pick({
@@ -40,6 +41,8 @@ export const CreateFeatureSchema = FeatureSchema.pick({
 	display: true,
 	event_names: true,
 	model_markups: true,
+	stripe_meter: true,
+	stripe_product_id: true,
 });
 
 export const MinFeatureSchema = z.object({

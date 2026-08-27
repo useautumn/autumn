@@ -25,7 +25,7 @@ export const createStripePrepaidPriceV2 = async ({
 	ctx: AutumnContext;
 	price: Price;
 	product: FullProduct;
-	currentStripeProduct?: Stripe.Product;
+	currentStripeProduct?: { id: string };
 	currency?: string;
 }) => {
 	const { org, db, env } = ctx;
@@ -79,11 +79,20 @@ export const createStripePrepaidPriceV2 = async ({
 		});
 	}
 
+	const stripeProductId =
+		currentStripeProduct?.id ?? config.stripe_product_id ?? undefined;
+	if (!stripeProductId) {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message: `createStripePrepaidPriceV2: missing Stripe product for price ${price.id}`,
+		});
+	}
+
 	const stripeCreatePriceParams = priceUtils.convert.toStripeCreatePriceParams({
 		price,
 		product,
 		org,
-		currentStripeProduct,
+		stripeProductId,
 		currency,
 	});
 
@@ -104,6 +113,7 @@ export const createStripePrepaidPriceV2 = async ({
 		slot: "stripe_prepaid_price_v2_id",
 		id: stripePrice.id,
 	});
+	config.stripe_product_id = stripePrice.product as string;
 	price.config = config;
 
 	await PriceService.update({

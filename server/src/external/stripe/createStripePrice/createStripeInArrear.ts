@@ -234,7 +234,7 @@ export const createStripeInArrearPrice = async ({
 	entitlements: EntitlementWithFeature[];
 	logger: any;
 	curStripePrice?: Stripe.Price | null;
-	curStripeProduct?: Stripe.Product | null;
+	curStripeProduct?: { id: string } | null;
 	internalEntityId?: string;
 	useCheckout?: boolean;
 	currency?: string;
@@ -323,18 +323,13 @@ export const createStripeInArrearPrice = async ({
 		};
 	}
 
-	let productData = {};
 	const stripeProductId = curStripeProduct?.id || config.stripe_product_id;
-	if (stripeProductId) {
-		productData = {
-			product: stripeProductId,
-		};
-	} else {
-		productData = {
-			product_data: {
-				name: `${product.name} - ${feature.name}`,
-			},
-		};
+	if (!stripeProductId) {
+		throw new RecaseError({
+			message: `createStripeInArrearPrice: missing Stripe product for feature ${feature.id}`,
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
 	}
 
 	const recurringData = billingIntervalToStripe({
@@ -344,7 +339,7 @@ export const createStripeInArrearPrice = async ({
 
 	const stripePrice = await stripeCli.prices.create(
 		{
-			...productData,
+			product: stripeProductId,
 			...priceAmountData,
 			currency,
 			recurring: recurringData?.interval

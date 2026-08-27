@@ -2,12 +2,14 @@ import {
 	BillingInterval,
 	BillingType,
 	type EntitlementWithFeature,
+	ErrCode,
 	type Organization,
 	type Price,
 	type Product,
 	setPriceCurrencyStripeId,
 	TierInfinite,
 	type UsagePriceConfig,
+	RecaseError,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { PriceService } from "@server/internal/products/prices/PriceService";
@@ -88,21 +90,15 @@ export const createStripeMeteredPrice = async ({
 		};
 	}
 
-	let productData = {};
-	if (config.stripe_product_id) {
-		productData = {
-			product: config.stripe_product_id,
-		};
-	} else {
-		productData = {
-			product_data: {
-				name: `${product.name} - ${feature!.name}`,
-			},
-		};
+	if (!config.stripe_product_id) {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message: `createStripeMeteredPrice: missing Stripe product for feature ${feature!.id}`,
+		});
 	}
 
 	const stripePrice = await stripeCli.prices.create({
-		...productData,
+		product: config.stripe_product_id,
 		...priceAmountData,
 		currency,
 		nickname: `Autumn Price (${feature!.name}) [Placeholder]`,
@@ -171,7 +167,7 @@ export const createStripeArrearProrated = async ({
 	product: Product;
 	org: Organization;
 	entitlements: EntitlementWithFeature[];
-	curStripeProd: Stripe.Product | null;
+	curStripeProd: { id: string } | null;
 	stripeCli: Stripe;
 	currency?: string;
 	mintPlaceholder?: boolean;
@@ -194,18 +190,13 @@ export const createStripeArrearProrated = async ({
 		orgDefault
 	).toLowerCase();
 
-	// 1. Product name
-	const productName = `${product.name} - ${
-		config.billing_units === 1 ? "" : `${config.billing_units} `
-	}${relatedEnt.feature.name}`;
-
-	const productData = curStripeProd
-		? { product: curStripeProd.id }
-		: {
-				product_data: {
-					name: productName,
-				},
-			};
+	const stripeProductId = curStripeProd?.id ?? config.stripe_product_id;
+	if (!stripeProductId) {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message: `createStripeArrearProrated: missing Stripe product for feature ${relatedEnt.feature.id}`,
+		});
+	}
 
 	// let tiers = arrearProratedToStripeTiers(price, relatedEnt);
 	const tiers = priceToInArrearTiers({
@@ -230,7 +221,7 @@ export const createStripeArrearProrated = async ({
 
 	const stripePrice = await stripeCli.prices.create(
 		{
-			...productData,
+			product: stripeProductId,
 			currency,
 			...priceAmountData,
 			recurring: {

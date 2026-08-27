@@ -6,33 +6,22 @@ import type {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { PriceService } from "@server/internal/products/prices/PriceService";
-import { getPriceEntitlement } from "@server/internal/products/prices/priceUtils";
 import type Stripe from "stripe";
 
 export const createStripeOneOffTieredProduct = async ({
 	db,
-	stripeCli,
 	price,
-	entitlements,
-	product,
+	stripeProductId,
 }: {
 	db: DrizzleCli;
 	stripeCli: Stripe;
 	price: Price;
 	entitlements: EntitlementWithFeature[];
 	product: Product;
+	stripeProductId: string;
 }) => {
 	const config = price.config as UsagePriceConfig;
-	const relatedEnt = getPriceEntitlement(price, entitlements);
-	const productName = `${product.name} - ${
-		config.billing_units === 1 ? "" : `${config.billing_units} `
-	}${relatedEnt.feature.name}`;
-
-	const stripeProduct = await stripeCli.products.create({
-		name: productName,
-	});
-
-	config.stripe_product_id = stripeProduct.id;
+	config.stripe_product_id = stripeProductId;
 
 	await PriceService.update({
 		db,

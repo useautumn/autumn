@@ -16,6 +16,12 @@ export const buildStripeProductIdempotencyKey = ({
 	productInternalId: string;
 }) => `${AUTUMN_STRIPE_IDEMPOTENCY_PREFIX}product:${productInternalId}`;
 
+export const buildStripeFeatureProductIdempotencyKey = ({
+	featureInternalId,
+}: {
+	featureInternalId: string;
+}) => `${AUTUMN_STRIPE_IDEMPOTENCY_PREFIX}product:feature:${featureInternalId}`;
+
 export const buildStripeMeterIdempotencyKey = ({
 	priceId,
 }: {

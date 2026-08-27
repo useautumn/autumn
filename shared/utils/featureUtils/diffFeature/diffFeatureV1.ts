@@ -160,6 +160,14 @@ const fieldComparisons: FieldComparison[] = [
 		isSame: (from, to) =>
 			providerMarkupsEqual(from.provider_markups, to.provider_markups),
 	},
+	{
+		key: "processors",
+		isSame: (from, to) =>
+			(from.processors?.stripe?.product_id ?? null) ===
+				(to.processors?.stripe?.product_id ?? null) &&
+			(from.processors?.stripe?.meter_id ?? null) ===
+				(to.processors?.stripe?.meter_id ?? null),
+	},
 ];
 
 export const diffFeatureV1 = ({
