@@ -14,7 +14,7 @@
 	],
 	"scripts": {
 		"ts": "tsgo --noEmit --skipLibCheck",
-		"build": "rm -rf dist && tsup && tsc -p tsconfig.standalone.json && node scripts/dedupe-dts.mjs",
+		"build": "rm -rf dist && tsup && tsc -p tsconfig.standalone.json && node scripts/link-sdk-types.mjs",
 		"prepublishOnly": "bun run build"
 	},
 	"exports": {
