@@ -187,10 +187,20 @@ pass "environment.json has no snapshot; install bootstraps bun + packages"
 bun "$CLOUD" --root "$tmp/repo" --home "$tmp/home" persist-env
 grep -q 'export CLOUD_AGENT=1' "$tmp/home/.autumn-agent/env.sh" || fail "env.sh missing CLOUD_AGENT"
 grep -q 'autumn-infisical-token' "$tmp/home/.autumn-agent/env.sh" || fail "env.sh must read token from cache"
+grep -q 'autumn-stripe-sandbox-secret-key' "$tmp/home/.autumn-agent/env.sh" \
+	|| fail "env.sh must read STRIPE_SANDBOX_SECRET_KEY from cache"
 if grep -q 'INFISICAL_TOKEN=secret' "$tmp/home/.autumn-agent/env.sh"; then
 	fail "env.sh must not embed the Infisical token"
 fi
+if grep -qE 'sk_test_|STRIPE_SANDBOX_SECRET_KEY=sk_' "$tmp/home/.autumn-agent/env.sh"; then
+	fail "env.sh must not embed the Stripe sandbox key"
+fi
 grep -Fq ". ${tmp}/home/.autumn-agent/env.sh" "$tmp/home/.bashrc" || fail "bashrc must source env.sh"
+mkdir -p "$tmp/home/.cache"
+printf 'sk_test_cursor_cloud_dummy' > "$tmp/home/.cache/autumn-stripe-sandbox-secret-key"
+sourced="$(HOME="$tmp/home" bash -c '. "$HOME/.autumn-agent/env.sh"; printf %s "$STRIPE_SANDBOX_SECRET_KEY"')"
+[[ "$sourced" == "sk_test_cursor_cloud_dummy" ]] \
+	|| fail "env.sh must export STRIPE_SANDBOX_SECRET_KEY from the cache file"
 pass "persist-env writes env.sh and bashrc"
 
 sync_line="$(rg -n 'ai/src/cli.ts sync --copy' "$ROOT/scripts/setup/cursor-cloud/install.sh" | head -1 | cut -d: -f1)"
@@ -227,6 +237,9 @@ grep -q 'autoEnsureLocalTestOrg' "$ROOT/scripts/dw/commands/start.ts" \
 grep -q 'pull_infisical STRIPE_SANDBOX_SECRET_KEY' \
 	"$ROOT/scripts/setup/cursor-cloud/start.sh" \
 	|| fail "start.sh must pull STRIPE_SANDBOX_SECRET_KEY before dw start"
+grep -q 'autumn-stripe-sandbox-secret-key' \
+	"$ROOT/scripts/setup/cursor-cloud/start.sh" \
+	|| fail "start.sh must cache STRIPE_SANDBOX_SECRET_KEY for later shells"
 grep -q 'STRIPE_SANDBOX_SECRET_KEY unset' \
 	"$ROOT/scripts/dw/helpers/setup.ts" \
 	|| fail "Cloud seed must refuse to run without STRIPE_SANDBOX_SECRET_KEY"

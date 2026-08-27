@@ -41,6 +41,10 @@ pull_infisical() {
 pull_infisical EXECUTOR_API_KEY
 pull_infisical STRIPE_SANDBOX_SECRET_KEY
 if [ -n "${STRIPE_SANDBOX_SECRET_KEY:-}" ]; then
+	umask 077
+	mkdir -p "${HOME}/.cache"
+	printf '%s' "$STRIPE_SANDBOX_SECRET_KEY" > "${HOME}/.cache/autumn-stripe-sandbox-secret-key"
+	chmod 600 "${HOME}/.cache/autumn-stripe-sandbox-secret-key"
 	echo "[cursor-cloud-start] STRIPE_SANDBOX_SECRET_KEY ready"
 else
 	echo "[cursor-cloud-start] STRIPE_SANDBOX_SECRET_KEY unset — unit-test-org seed will fail" >&2
