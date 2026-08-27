@@ -1,4 +1,4 @@
-import type { FullCusProduct, ProductV2 } from "@autumn/shared";
+import type { CancelAction, FullCusProduct, ProductV2 } from "@autumn/shared";
 import { useMemo } from "react";
 import { CancelAdvancedSection } from "@/components/forms/cancel-subscription/components/CancelAdvancedSection";
 import { CancelPreviewSection } from "@/components/forms/cancel-subscription/components/CancelPreviewSection";
@@ -67,8 +67,12 @@ function SheetContent() {
 
 export function SubscriptionUncancelSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
+	const sheetData = useSheetStore((s) => s.data);
 	const { closeSheet } = useSheetStore();
 	const { customer } = useCusQuery();
+
+	const initialCancelAction: CancelAction =
+		(sheetData?.cancelAction as CancelAction | undefined) ?? "uncancel";
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const { prepaidItems } = usePrepaidItems({ product: productV2 });
@@ -116,7 +120,12 @@ export function SubscriptionUncancelSheet() {
 		<UpdateSubscriptionFormProvider
 			formContext={formContext}
 			originalItems={undefined}
-			defaultOverrides={{ cancelAction: "uncancel" }}
+			defaultOverrides={{
+				cancelAction: initialCancelAction,
+				...(initialCancelAction === "cancel_immediately" && {
+					billingBehavior: "prorate_immediately",
+				}),
+			}}
 			onSuccess={closeSheet}
 		>
 			<SheetContent />
