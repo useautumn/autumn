@@ -5,6 +5,7 @@
   FullSubject payload stored as a plain Redis string.
 
   KEYS[1] = full subject key
+  KEYS[2] = runtime subject hash key
 
   ARGV[1] = JSON params:
     {
@@ -21,6 +22,7 @@
 ]]
 
 local subject_key = KEYS[1]
+local runtime_subject_key = KEYS[2]
 local request_params = cjson.decode(ARGV[1])
 local cache_ttl = tonumber(ARGV[2])
 
@@ -89,6 +91,7 @@ customer_products[target_index] = target_customer_product
 cached_subject.customer_products = customer_products
 
 redis.call("SET", subject_key, cjson.encode(cached_subject), "EX", cache_ttl)
+redis.call("UNLINK", runtime_subject_key)
 
 return cjson.encode({
   success = true,

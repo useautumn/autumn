@@ -1,19 +1,24 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { AppEnv, normalizedToFullSubject } from "@autumn/shared";
+import { describe, expect, test } from "bun:test";
+import {
+	AppEnv,
+	fullSubjectToCustomerEntitlements,
+	normalizedToFullSubject,
+} from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { getOrInitFullSubjectViewEpoch } from "@/internal/customers/cache/fullSubject/actions/invalidate/getOrInitFullSubjectViewEpoch.js";
 import type { CachedFullSubject } from "@/internal/customers/cache/fullSubject/fullSubjectCacheModel.js";
-import { sanitizeCachedFullSubject } from "@/internal/customers/cache/fullSubject/sanitize/sanitizeCachedFullSubject.js";
 import {
 	buildFullSubjectKey,
 	buildFullSubjectViewEpochKey,
+	buildRuntimeSubjectKey,
 	buildSharedFullSubjectBalanceKey,
 	getCachedFullSubject,
 	getCachedPartialFullSubject,
 	invalidateCachedFullSubject,
 	setCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
+import { sanitizeCachedFullSubject } from "@/internal/customers/cache/fullSubject/sanitize/sanitizeCachedFullSubject.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { fullSubjectToComparableSubject } from "../full-subject/utils/buildComparableFullSubject.js";
 import {
@@ -39,6 +44,12 @@ const cleanupKeys = async ({
 	const subjectRaw = (await ctx.redisV2.get(subjectKey)) as string | null;
 	const keys = [
 		subjectKey,
+		buildRuntimeSubjectKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+			entityId,
+		}),
 		buildFullSubjectViewEpochKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -62,8 +73,6 @@ const cleanupKeys = async ({
 
 	await ctx.redisV2.del(...keys);
 };
-
-afterEach(async () => {});
 
 const getCurrentViewEpoch = async ({ customerId }: { customerId: string }) =>
 	getOrInitFullSubjectViewEpoch({
@@ -142,6 +151,85 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 				);
 
 				await cleanupKeys({ customerId: scenario.ids.customerId });
+			},
+		});
+	});
+
+	test("runtime partial reads observe live balances", async () => {
+		const scenario = buildCustomerMeteredScenario({
+			ctx,
+			name: "fullsubject-cache-runtime-partial-read",
+		});
+
+		await withInsertedScenario({
+			ctx,
+			scenario,
+			run: async ({ scenario }) => {
+				const customerId = scenario.ids.customerId;
+				const { normalized } = (await getFullSubjectNormalized({
+					ctx,
+					customerId,
+				}))!;
+				await setCachedFullSubject({
+					ctx,
+					normalized,
+					fetchedSubjectViewEpoch: await getCurrentViewEpoch({ customerId }),
+				});
+				const subjectKey = buildFullSubjectKey({
+					orgId: ctx.org.id,
+					env: ctx.env,
+					customerId,
+				});
+				const cachedSubject = JSON.parse(
+					(await ctx.redisV2.get(subjectKey)) as string,
+				) as CachedFullSubject;
+				const featureId = cachedSubject.meteredFeatures[0]!;
+				const customerEntitlementId =
+					cachedSubject.customerEntitlementIdsByFeatureId[featureId]![0]!;
+				const balanceKey = buildSharedFullSubjectBalanceKey({
+					orgId: ctx.org.id,
+					env: ctx.env,
+					customerId,
+					featureId,
+				});
+				const firstPartial = await getCachedPartialFullSubject({
+					ctx,
+					customerId,
+					featureIds: [featureId],
+					source: "integration-test-hot-partial",
+				});
+				firstPartial.fullSubject!.customer.name = "request-local-mutation";
+				const updatedBalance = JSON.parse(
+					(await ctx.redisV2.hget(balanceKey, customerEntitlementId)) as string,
+				) as { balance: number };
+				updatedBalance.balance -= 5;
+				await ctx.redisV2.hset(
+					balanceKey,
+					customerEntitlementId,
+					JSON.stringify(updatedBalance),
+				);
+
+				ctx.extraLogs.partialSubjectRuntimeHit = false;
+				const partial = await getCachedPartialFullSubject({
+					ctx,
+					customerId,
+					featureIds: [featureId],
+					source: "integration-test-hot-partial",
+				});
+				const partialBalance = fullSubjectToCustomerEntitlements({
+					fullSubject: partial.fullSubject!,
+				}).find(
+					(customerEntitlement) =>
+						customerEntitlement.id === customerEntitlementId,
+				)?.balance;
+
+				expect(ctx.extraLogs.partialSubjectRuntimeHit).toBe(true);
+				expect(partialBalance).toBe(updatedBalance.balance);
+				expect(partial.fullSubject?.customer.name).not.toBe(
+					"request-local-mutation",
+				);
+
+				await cleanupKeys({ customerId });
 			},
 		});
 	});
@@ -348,13 +436,14 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					entityId,
 					source: "integration-test",
 				});
-				const { fullSubject: partialCached } = await getCachedPartialFullSubject({
-					ctx,
-					customerId: scenario.ids.customerId,
-					entityId,
-					featureIds: ["messages", "users"],
-					source: "integration-test",
-				});
+				const { fullSubject: partialCached } =
+					await getCachedPartialFullSubject({
+						ctx,
+						customerId: scenario.ids.customerId,
+						entityId,
+						featureIds: ["messages", "users"],
+						source: "integration-test",
+					});
 
 				expect(cached).toBeUndefined();
 				expect(partialCached).toBeUndefined();

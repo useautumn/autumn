@@ -15,6 +15,12 @@ declare module "ioredis" {
 			numKeys: number,
 			...args: string[]
 		): Promise<"OK" | "CACHE_EXISTS" | "STALE_WRITE">;
+		setRuntimeSubjectIfCurrent(
+			subjectKey: string,
+			epochKey: string,
+			runtimeSubjectKey: string,
+			...args: string[]
+		): Promise<"OK" | "CACHE_MISSING" | "STALE_WRITE">;
 		publishCachedFullSubject(
 			numKeys: number,
 			...args: string[]
@@ -25,12 +31,14 @@ declare module "ioredis" {
 		): Promise<string>;
 		updateFullSubjectCustomerDataV2(
 			subjectKey: string,
+			runtimeSubjectKey: string,
 			updatesJson: string,
 			cacheTtlSeconds: string,
 			nowMs: string,
 		): Promise<string>;
 		updateFullSubjectEntityDataV2(
 			subjectKey: string,
+			runtimeSubjectKey: string,
 			updatesJson: string,
 			cacheTtlSeconds: string,
 			nowMs: string,
@@ -41,6 +49,7 @@ declare module "ioredis" {
 		): Promise<string>;
 		updateFullSubjectCustomerProductV2(
 			subjectKey: string,
+			runtimeSubjectKey: string,
 			paramsJson: string,
 			cacheTtlSeconds: string,
 			nowMs: string,

@@ -5,6 +5,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { markCustomerUpdatedAt } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
+import { buildRuntimeSubjectKey } from "../../builders/buildRuntimeSubjectKey.js";
 import { FULL_SUBJECT_EPOCH_TTL_SECONDS } from "../../config/fullSubjectCacheConfig.js";
 import { invalidateSharedBalanceFields } from "./invalidateSharedBalanceFields.js";
 
@@ -45,6 +46,14 @@ const invalidateCachedFullSubjectOnRedis = async ({
 	const entitySubjectKey = entityId
 		? buildFullSubjectKey({ orgId: org.id, env, customerId, entityId })
 		: undefined;
+	const customerRuntimeSubjectKey = buildRuntimeSubjectKey({
+		orgId: org.id,
+		env,
+		customerId,
+	});
+	const entityRuntimeSubjectKey = entityId
+		? buildRuntimeSubjectKey({ orgId: org.id, env, customerId, entityId })
+		: undefined;
 
 	const epochKey = buildFullSubjectViewEpochKey({
 		orgId: org.id,
@@ -52,8 +61,12 @@ const invalidateCachedFullSubjectOnRedis = async ({
 		customerId,
 	});
 
-	const pipeline = redisV2.pipeline().unlink(customerSubjectKey);
-	if (entitySubjectKey) pipeline.unlink(entitySubjectKey);
+	const pipeline = redisV2
+		.pipeline()
+		.unlink(customerSubjectKey, customerRuntimeSubjectKey);
+	if (entitySubjectKey && entityRuntimeSubjectKey) {
+		pipeline.unlink(entitySubjectKey, entityRuntimeSubjectKey);
+	}
 	pipeline.incr(epochKey).expire(epochKey, FULL_SUBJECT_EPOCH_TTL_SECONDS);
 
 	const subjectLabel = entityId ? `${customerId}:${entityId}` : customerId;

@@ -3,7 +3,7 @@ import type {
 	SubjectBalance,
 	UsageWindow,
 } from "@autumn/shared";
-import type { Redis } from "ioredis";
+import type { ChainableCommander, Redis } from "ioredis";
 import { throwOnPipelineConnectionError } from "@/external/redis/utils/pipelineErrors.js";
 import { REDIS_OP_TIMEOUT_MS } from "@/external/redis/utils/redisOpTimeouts.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
@@ -50,6 +50,164 @@ export type FeatureBalanceOutcome =
 export type FeatureBalancesBatchOutcome =
 	| { kind: "ok"; value: FeatureBalanceResult[] }
 	| { kind: "missing"; reason: string };
+
+export type FeatureBalancesBatchRead = {
+	featureIds: string[];
+	customerEntitlementIdsByFeatureId: Record<string, string[]>;
+	includeAggregated: boolean;
+	usageWindowFeatureIds?: Set<string>;
+};
+
+export const appendCachedFeatureBalanceReads = ({
+	pipeline,
+	orgId,
+	env,
+	customerId,
+	read,
+}: {
+	pipeline: ChainableCommander;
+	orgId: string;
+	env: string;
+	customerId: string;
+	read: FeatureBalancesBatchRead;
+}): void => {
+	for (const featureId of read.featureIds) {
+		const customerEntitlementIds =
+			read.customerEntitlementIdsByFeatureId[featureId] ?? [];
+		const fields = [...customerEntitlementIds];
+		if (read.includeAggregated) fields.push(AGGREGATED_BALANCE_FIELD);
+		if (read.usageWindowFeatureIds?.has(featureId)) {
+			fields.push(USAGE_WINDOWS_FIELD);
+		}
+		pipeline.hmget(
+			buildSharedFullSubjectBalanceKey({
+				orgId,
+				env,
+				customerId,
+				featureId,
+			}),
+			...fields,
+		);
+	}
+};
+
+export const parseCachedFeatureBalanceReads = ({
+	results,
+	read,
+}: {
+	results: unknown[] | null | undefined;
+	read: FeatureBalancesBatchRead;
+}): FeatureBalancesBatchOutcome => {
+	if (!results) return { kind: "missing", reason: "batch_pipeline_null" };
+
+	const featureBalances: FeatureBalanceResult[] = [];
+
+	for (let i = 0; i < read.featureIds.length; i++) {
+		const featureId = read.featureIds[i];
+		const customerEntitlementIds =
+			read.customerEntitlementIdsByFeatureId[featureId] ?? [];
+		const result = results[i] as [Error | null, unknown] | undefined;
+		if (result?.[0]) throw result[0];
+		const allValues = result?.[1] as (string | null)[] | null | undefined;
+		if (!allValues) {
+			return {
+				kind: "missing",
+				reason: `batch_hash_missing:${featureId}`,
+			};
+		}
+
+		let aggregated: AggregatedFeatureBalance | undefined;
+		let usageWindows: UsageWindow[] | undefined;
+
+		if (read.usageWindowFeatureIds?.has(featureId)) {
+			usageWindows = parseUsageWindowsField(allValues.pop() ?? null);
+		}
+
+		if (read.includeAggregated) {
+			const aggregatedJson = allValues.pop() ?? null;
+			if (aggregatedJson) {
+				try {
+					const parsed = JSON.parse(aggregatedJson) as AggregatedFeatureBalance;
+					aggregated = sanitizeCachedAggregatedFeatureBalance({
+						aggregated: parsed,
+					});
+				} catch {
+					// Malformed aggregation falls back to the subject snapshot.
+				}
+			}
+		}
+
+		if (allValues.length !== customerEntitlementIds.length) {
+			return {
+				kind: "missing",
+				reason: `batch_length_mismatch:${featureId}:got=${allValues.length}:expected=${customerEntitlementIds.length}`,
+			};
+		}
+
+		const balances: SubjectBalance[] = [];
+		for (let j = 0; j < allValues.length; j++) {
+			const entryJson = allValues[j];
+			if (!entryJson) {
+				return {
+					kind: "missing",
+					reason: `batch_field_null:${featureId}:${customerEntitlementIds[j]}`,
+				};
+			}
+			try {
+				const parsedBalance = JSON.parse(entryJson) as SubjectBalance;
+				balances.push(
+					roundSubjectBalance({
+						subjectBalance: sanitizeCachedSubjectBalance({
+							subjectBalance: parsedBalance,
+						}),
+					}),
+				);
+			} catch {
+				return {
+					kind: "missing",
+					reason: `batch_parse_failed:${featureId}:${customerEntitlementIds[j]}`,
+				};
+			}
+		}
+
+		featureBalances.push({
+			featureId,
+			balances,
+			aggregated,
+			usageWindows,
+		});
+	}
+
+	return { kind: "ok", value: featureBalances };
+};
+
+export const parseCachedFeatureBalanceHashReads = ({
+	results,
+	read,
+}: {
+	results: unknown[] | null | undefined;
+	read: FeatureBalancesBatchRead;
+}): FeatureBalancesBatchOutcome => {
+	if (!results) return { kind: "missing", reason: "hash_pipeline_null" };
+
+	const orderedResults = read.featureIds.map((featureId, index) => {
+		const result = results[index] as [Error | null, unknown] | undefined;
+		if (result?.[0]) return result;
+		const fields = (result?.[1] ?? {}) as Record<string, string>;
+		const values: Array<string | null> = (
+			read.customerEntitlementIdsByFeatureId[featureId] ?? []
+		).map((customerEntitlementId) => fields[customerEntitlementId] ?? null);
+		if (read.includeAggregated) {
+			values.push(fields[AGGREGATED_BALANCE_FIELD] ?? null);
+		}
+		if (read.usageWindowFeatureIds?.has(featureId)) {
+			values.push(fields[USAGE_WINDOWS_FIELD] ?? null);
+		}
+		return [null, values];
+	});
+
+	return parseCachedFeatureBalanceReads({ results: orderedResults, read });
+};
 
 const readFeatureBalancesFromMaster = async ({
 	redis,
@@ -164,27 +322,22 @@ export const getCachedFeatureBalancesBatch = async ({
 	if (featureIds.length === 0) return { kind: "ok", value: [] };
 
 	const { org, env, redisV2 } = ctx;
+	const read: FeatureBalancesBatchRead = {
+		featureIds,
+		customerEntitlementIdsByFeatureId,
+		includeAggregated,
+		usageWindowFeatureIds,
+	};
 	const results = await runRedisOp({
 		operation: (redis) => {
 			const pipeline = redis.pipeline();
-			for (const featureId of featureIds) {
-				const customerEntitlementIds =
-					customerEntitlementIdsByFeatureId[featureId] ?? [];
-				const fields = [...customerEntitlementIds];
-				if (includeAggregated) fields.push(AGGREGATED_BALANCE_FIELD);
-				if (usageWindowFeatureIds?.has(featureId)) {
-					fields.push(USAGE_WINDOWS_FIELD);
-				}
-				pipeline.hmget(
-					buildSharedFullSubjectBalanceKey({
-						orgId: org.id,
-						env,
-						customerId,
-						featureId,
-					}),
-					...fields,
-				);
-			}
+			appendCachedFeatureBalanceReads({
+				pipeline,
+				orgId: org.id,
+				env,
+				customerId,
+				read,
+			});
 			return pipeline.exec().then(throwOnPipelineConnectionError);
 		},
 		source: "getCachedFeatureBalancesBatch",
@@ -194,82 +347,5 @@ export const getCachedFeatureBalancesBatch = async ({
 		timeoutMs: REDIS_OP_TIMEOUT_MS.featureBalancesBatch,
 	});
 
-	if (!results) return { kind: "missing", reason: "batch_pipeline_null" };
-
-	const featureBalances: FeatureBalanceResult[] = [];
-
-	for (let i = 0; i < featureIds.length; i++) {
-		const customerEntitlementIds =
-			customerEntitlementIdsByFeatureId[featureIds[i]] ?? [];
-		const allValues = results[i]?.[1] as (string | null)[] | null;
-		if (!allValues)
-			return {
-				kind: "missing",
-				reason: `batch_hash_missing:${featureIds[i]}`,
-			};
-
-		let aggregated: AggregatedFeatureBalance | undefined;
-		let usageWindows: UsageWindow[] | undefined;
-
-		// Pop reserved fields in reverse push order: [_aggregated?, _usage_windows?].
-		if (usageWindowFeatureIds?.has(featureIds[i])) {
-			usageWindows = parseUsageWindowsField(allValues.pop() ?? null);
-		}
-
-		if (includeAggregated) {
-			const aggregatedJson = allValues.pop() ?? null;
-			if (aggregatedJson) {
-				try {
-					const parsed = JSON.parse(aggregatedJson) as AggregatedFeatureBalance;
-					aggregated = sanitizeCachedAggregatedFeatureBalance({
-						aggregated: parsed,
-					});
-				} catch {
-					// Malformed _aggregated is non-fatal; fall back to subject string value
-				}
-			}
-		}
-
-		const ceValues = allValues;
-
-		if (ceValues.length !== customerEntitlementIds.length)
-			return {
-				kind: "missing",
-				reason: `batch_length_mismatch:${featureIds[i]}:got=${ceValues.length}:expected=${customerEntitlementIds.length}`,
-			};
-
-		const balances: SubjectBalance[] = [];
-		for (let j = 0; j < ceValues.length; j++) {
-			const entryJson = ceValues[j];
-			if (!entryJson)
-				return {
-					kind: "missing",
-					reason: `batch_field_null:${featureIds[i]}:${customerEntitlementIds[j]}`,
-				};
-			try {
-				const parsedBalance = JSON.parse(entryJson) as SubjectBalance;
-				balances.push(
-					roundSubjectBalance({
-						subjectBalance: sanitizeCachedSubjectBalance({
-							subjectBalance: parsedBalance,
-						}),
-					}),
-				);
-			} catch {
-				return {
-					kind: "missing",
-					reason: `batch_parse_failed:${featureIds[i]}:${customerEntitlementIds[j]}`,
-				};
-			}
-		}
-
-		featureBalances.push({
-			featureId: featureIds[i],
-			balances,
-			aggregated,
-			usageWindows,
-		});
-	}
-
-	return { kind: "ok", value: featureBalances };
+	return parseCachedFeatureBalanceReads({ results, read });
 };

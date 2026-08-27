@@ -1,3 +1,4 @@
+import type { HttpBindings } from "@hono/node-server";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
@@ -70,6 +71,35 @@ export const parseCustomerIdFromBody = async (
 	return undefined;
 };
 
+const waitForNextEventLoopTurn = () =>
+	new Promise<void>((resolve) => setImmediate(resolve));
+
+const waitForResponseCompletion = ({
+	c,
+}: {
+	c: Context<HonoEnv>;
+}): Promise<void> => {
+	const outgoing = (c.env as Partial<HttpBindings> | undefined)?.outgoing;
+	if (!outgoing) {
+		return waitForNextEventLoopTurn();
+	}
+
+	if (outgoing.writableFinished || outgoing.destroyed) {
+		return waitForNextEventLoopTurn();
+	}
+
+	return new Promise((resolve) => {
+		const complete = () => {
+			outgoing.off("finish", complete);
+			outgoing.off("close", complete);
+			setImmediate(resolve);
+		};
+
+		outgoing.once("finish", complete);
+		outgoing.once("close", complete);
+	});
+};
+
 /**
  * Analytics middleware for Hono
  * Enriches logger context and logs responses
@@ -114,9 +144,18 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	const finalCtx = c.get("ctx");
 	const durationMs = Date.now() - finalCtx.timestamp;
+	const responseCompleted = waitForResponseCompletion({ c });
 
 	Promise.resolve()
-		.then(() => logRequestResult({ ctx: finalCtx, c, skipUrls, durationMs }))
+		.then(() =>
+			logRequestResult({
+				ctx: finalCtx,
+				c,
+				skipUrls,
+				durationMs,
+				responseCompleted,
+			}),
+		)
 		.catch((error) => {
 			console.error("Failed to log response to logtail");
 			console.error(error);

@@ -5,14 +5,17 @@
 
   KEYS[1] = subjectKey (existence check + subject view write)
   KEYS[2] = epochKey (staleness check)
-  KEYS[3..N] = balance hash keys (one per metered feature)
+  KEYS[3] = runtime subject hash key
+  KEYS[4..N] = balance hash keys (one per metered feature)
 
   ARGV[1] = expected epoch value
   ARGV[2] = TTL seconds (applies to subject key and all balance keys)
   ARGV[3] = epoch TTL seconds (applied to epoch key)
   ARGV[4] = subject view JSON string
-  ARGV[5] = number of balance keys (N - 2)
-  ARGV[6..M] = for each balance key: field_count, then field_count pairs of (field_name, field_value_json)
+  ARGV[5] = runtime field count
+  ARGV[6..R] = runtime field pairs
+  ARGV[R+1] = number of balance keys (N - 3)
+  ARGV[R+2..M] = balance field counts and pairs
 
   Returns:
     "OK" = all keys written
@@ -22,11 +25,12 @@
 
 local subject_key = KEYS[1]
 local epoch_key = KEYS[2]
+local runtime_subject_key = KEYS[3]
 local expected_epoch = ARGV[1]
 local ttl = tonumber(ARGV[2])
 local epoch_ttl = tonumber(ARGV[3])
 local subject_view_json = ARGV[4]
-local num_balance_keys = tonumber(ARGV[5])
+local runtime_field_count = tonumber(ARGV[5])
 
 if redis.call('EXISTS', subject_key) == 1 then
   return 'CACHE_EXISTS'
@@ -39,8 +43,22 @@ end
 
 local argv_index = 6
 
+redis.call('UNLINK', runtime_subject_key)
+
+for i = 1, runtime_field_count do
+  local field_name = ARGV[argv_index]
+  local field_value = ARGV[argv_index + 1]
+  redis.call('HSET', runtime_subject_key, field_name, field_value)
+  argv_index = argv_index + 2
+end
+
+redis.call('EXPIRE', runtime_subject_key, ttl)
+
+local num_balance_keys = tonumber(ARGV[argv_index])
+argv_index = argv_index + 1
+
 for i = 1, num_balance_keys do
-  local balance_key = KEYS[2 + i]
+  local balance_key = KEYS[3 + i]
   local field_count = tonumber(ARGV[argv_index])
   argv_index = argv_index + 1
 

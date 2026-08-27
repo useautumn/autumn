@@ -41,6 +41,7 @@ import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.j
 import { prepareDeductionOptionsV2 } from "./prepareDeductionOptionsV2.js";
 import { prepareFeatureDeductionV2 } from "./prepareFeatureDeductionV2.js";
 import { rollbackDeductionV2 } from "./rollbackDeductionV2.js";
+import { snapshotFullSubjectBalanceState } from "./snapshotFullSubjectBalanceState.js";
 
 export const executeRedisDeductionV2 = async ({
 	ctx,
@@ -74,7 +75,7 @@ export const executeRedisDeductionV2 = async ({
 	mutationLogCustomerEntitlements: FullCusEntWithFullCusProduct[];
 }> => {
 	const { org, env } = ctx;
-	const oldFullSubject = structuredClone(fullSubject);
+	const oldFullSubject = snapshotFullSubjectBalanceState({ fullSubject });
 	let currentSegmentOldFullSubject = oldFullSubject;
 	let currentExpectedSubjectViewEpoch = expectedSubjectViewEpoch;
 	let refreshedSubjectView = false;
@@ -263,7 +264,9 @@ export const executeRedisDeductionV2 = async ({
 				!refreshedSubjectView
 			) {
 				fullSubject = await refreshFullSubject();
-				currentSegmentOldFullSubject = structuredClone(fullSubject);
+				currentSegmentOldFullSubject = snapshotFullSubjectBalanceState({
+					fullSubject,
+				});
 				currentExpectedSubjectViewEpoch = fullSubject.subjectViewEpoch;
 				options = prepareDeductionOptionsV2({
 					ctx,

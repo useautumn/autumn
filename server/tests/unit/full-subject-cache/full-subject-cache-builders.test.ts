@@ -3,6 +3,7 @@ import {
 	buildFullSubjectBalanceKey,
 	buildFullSubjectKey,
 	buildFullSubjectViewEpochKey,
+	buildRuntimeSubjectKey,
 	buildSharedFullSubjectBalanceKey,
 } from "@/internal/customers/cache/fullSubject/index.js";
 
@@ -15,6 +16,14 @@ describe("fullSubject cache key builders", () => {
 				customerId: "cus",
 			}),
 		).toBe("{cus}:org:test:full_subject");
+
+		expect(
+			buildRuntimeSubjectKey({
+				orgId: "org",
+				env: "test",
+				customerId: "cus",
+			}),
+		).toBe("{cus}:org:test:runtime_subject");
 
 		expect(
 			buildFullSubjectBalanceKey({
@@ -52,6 +61,15 @@ describe("fullSubject cache key builders", () => {
 				entityId: "ent",
 			}),
 		).toBe("{cus}:org:test:entity:ent:full_subject");
+
+		expect(
+			buildRuntimeSubjectKey({
+				orgId: "org",
+				env: "test",
+				customerId: "cus",
+				entityId: "ent",
+			}),
+		).toBe("{cus}:org:test:entity:ent:runtime_subject");
 
 		expect(
 			buildFullSubjectBalanceKey({

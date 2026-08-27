@@ -12,6 +12,7 @@ import {
 	PUBLISH_CACHED_FULL_SUBJECT_SCRIPT,
 	ROLL_USAGE_WINDOWS_SCRIPT,
 	SET_CACHED_FULL_SUBJECT_SCRIPT,
+	SET_RUNTIME_SUBJECT_IF_CURRENT_SCRIPT,
 	UPDATE_CACHED_INVOICE_V2_SCRIPT,
 	UPDATE_CUSTOMER_DATA_V2_SCRIPT,
 	UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT,
@@ -77,17 +78,22 @@ export const registerRedisCommands = ({
 		lua: SET_CACHED_FULL_SUBJECT_SCRIPT,
 	});
 
+	redisInstance.defineCommand("setRuntimeSubjectIfCurrent", {
+		numberOfKeys: 3,
+		lua: SET_RUNTIME_SUBJECT_IF_CURRENT_SCRIPT,
+	});
+
 	redisInstance.defineCommand("publishCachedFullSubject", {
 		lua: PUBLISH_CACHED_FULL_SUBJECT_SCRIPT,
 	});
 
 	redisInstance.defineCommand("updateFullSubjectCustomerDataV2", {
-		numberOfKeys: 1,
+		numberOfKeys: 2,
 		lua: UPDATE_CUSTOMER_DATA_V2_SCRIPT,
 	});
 
 	redisInstance.defineCommand("updateFullSubjectEntityDataV2", {
-		numberOfKeys: 1,
+		numberOfKeys: 2,
 		lua: UPDATE_ENTITY_DATA_V2_SCRIPT,
 	});
 
@@ -96,7 +102,7 @@ export const registerRedisCommands = ({
 	});
 
 	redisInstance.defineCommand("updateFullSubjectCustomerProductV2", {
-		numberOfKeys: 1,
+		numberOfKeys: 2,
 		lua: UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT,
 	});
 
