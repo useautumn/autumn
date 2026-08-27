@@ -89,6 +89,12 @@ export const eveTurnProducedOutput = ({
 	text?: string;
 }) => Boolean(text?.trim() || catalogDecision);
 
+const isTurnActivityEvent = (event: EveEvent) =>
+	event.type === "step.started" ||
+	event.type === "input.requested" ||
+	event.type === "subagent.called" ||
+	event.type === "subagent.completed";
+
 const approvalForGatedWrite = ({
 	chained,
 	progress,
@@ -386,7 +392,9 @@ export const reduceEveTurnEvent = ({
 	if (event.type === "action.result") {
 		return reduceActionResult({ capturedPreview, event, progress });
 	}
-	if (!progress.turnStarted) return { effects: [], progress };
+	if (!(progress.turnStarted || isTurnActivityEvent(event))) {
+		return { effects: [], progress };
+	}
 
 	switch (event.type) {
 		case "subagent.called": {
