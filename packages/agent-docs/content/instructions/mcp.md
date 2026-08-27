@@ -3,3 +3,5 @@
 <part file="references/personality.md" />
 
 <part file="references/autumn-rules.md" />
+
+<part file="references/skill-routing.md" />
