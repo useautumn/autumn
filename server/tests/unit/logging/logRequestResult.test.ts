@@ -419,13 +419,12 @@ describe("logRequestResult", () => {
 	});
 
 	test("summarizes any response body larger than the logging cap", async () => {
-		spyOn(Math, "random").mockReturnValue(0);
 		const responseBody = {
 			id: "cus_123",
 			payload: "x".repeat(32 * 1024),
 		};
 		const { captured } = await captureJsonResponse({
-			path: "/v1/balances.check",
+			path: "/v1/customers.list",
 			durationMs: 10,
 			responseBody,
 		});
@@ -438,6 +437,25 @@ describe("logRequestResult", () => {
 				original_bytes: Buffer.byteLength(JSON.stringify(responseBody)),
 				top_level_keys: ["id", "payload"],
 			},
+		});
+	});
+
+	test("keeps the one-percent sampled response in full above the logging cap", async () => {
+		spyOn(Math, "random").mockReturnValue(0);
+		const responseBody = {
+			allowed: true,
+			payload: "x".repeat(32 * 1024),
+		};
+		const { captured } = await captureJsonResponse({
+			path: "/v1/balances.check",
+			durationMs: 10,
+			responseBody,
+		});
+
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: responseBody,
 		});
 	});
 

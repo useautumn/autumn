@@ -122,10 +122,12 @@ export const logRequestResult = async ({
 
 		const excludeResponseBody =
 			isSuccess && RESPONSE_BODY_EXCLUDED_ROUTES.has(c.req.path);
+		const isFastHighVolumeSuccess =
+			isHighVolumeSuccess && durationMs < SLOW_REQUEST_BODY_THRESHOLD_MS;
+		const keepFullSampledResponseBody =
+			isFastHighVolumeSuccess && shouldSampleSuccessResponseBody();
 		const compactResponseBody =
-			isHighVolumeSuccess &&
-			durationMs < SLOW_REQUEST_BODY_THRESHOLD_MS &&
-			!shouldSampleSuccessResponseBody();
+			isFastHighVolumeSuccess && !keepFullSampledResponseBody;
 
 		let originalResponseBodyBytes: number | undefined;
 		let responseBodyWasCompacted = false;
@@ -162,7 +164,10 @@ export const logRequestResult = async ({
 					originalResponseBodyBytes > MAX_LOGGED_RESPONSE_BODY_BYTES)
 					? Buffer.byteLength(JSON.stringify(finalResponseBody))
 					: originalResponseBodyBytes;
-			if (loggedResponseBodyBytes > MAX_LOGGED_RESPONSE_BODY_BYTES) {
+			if (
+				!keepFullSampledResponseBody &&
+				loggedResponseBodyBytes > MAX_LOGGED_RESPONSE_BODY_BYTES
+			) {
 				finalResponseBody = {
 					truncated: true,
 					original_bytes: originalResponseBodyBytes ?? loggedResponseBodyBytes,
