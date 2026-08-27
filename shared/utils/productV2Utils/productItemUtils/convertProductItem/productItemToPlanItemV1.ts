@@ -1,4 +1,5 @@
 import { PlanExpand } from "@api/products/components/planExpand.js";
+import { priceConfigToPriceProcessors } from "@utils/productUtils/priceUtils/convertPrice/priceConfigToPriceProcessors.js";
 import {
 	type ApiPlanItemV1,
 	ApiPlanItemV1Schema,
@@ -106,6 +107,10 @@ const itemToPlanFeaturePrice = ({
 		});
 	}
 
+	const processors = priceConfigToPriceProcessors({
+		config: item.price_config,
+	});
+
 	return {
 		amount: price ?? undefined,
 		additional_currencies: additionalCurrencies,
@@ -121,6 +126,7 @@ const itemToPlanFeaturePrice = ({
 		billing_units: item.billing_units ?? 1,
 		billing_method: billingMethod,
 		max_purchase: maxPurchase,
+		...(processors ? { processors } : {}),
 	};
 };
 

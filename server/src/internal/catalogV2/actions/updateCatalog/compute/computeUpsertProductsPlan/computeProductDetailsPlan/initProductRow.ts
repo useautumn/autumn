@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils.js";
+import { applyPlanProcessorsToProduct } from "./applyPlanProcessorsToProduct";
 import { planParamsToProductRowPatch } from "./planParamsToProductRowPatch";
 
 /**
@@ -35,7 +36,7 @@ export const initProductRow = ({
 			current: base,
 		});
 		const willBeActive = planParams.active === true;
-		return {
+		const cloned = {
 			...base,
 			...patch,
 			version,
@@ -52,11 +53,15 @@ export const initProductRow = ({
 			base_internal_product_id:
 				baseInternalProductId ?? base.base_internal_product_id ?? null,
 		};
+		return applyPlanProcessorsToProduct({
+			product: cloned,
+			processors: planParams.processors,
+		}).product;
 	}
 
 	const patch = planParamsToProductRowPatch({ planParams, current: null });
 
-	return {
+	const created = {
 		id: planParams.plan_id,
 		name: patch.name ?? planParams.plan_id,
 		description: patch.description ?? null,
@@ -89,4 +94,8 @@ export const initProductRow = ({
 		usage_alerts: patch.usage_alerts ?? null,
 		overage_allowed: patch.overage_allowed ?? null,
 	};
+	return applyPlanProcessorsToProduct({
+		product: created,
+		processors: planParams.processors,
+	}).product;
 };

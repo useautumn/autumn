@@ -49,6 +49,7 @@ export const applyProductDetailsUpdate = async ({
 			usage_alerts: product.usage_alerts,
 			overage_allowed: product.overage_allowed,
 			base_internal_product_id: product.base_internal_product_id,
+			processor: product.processor,
 		},
 	});
 

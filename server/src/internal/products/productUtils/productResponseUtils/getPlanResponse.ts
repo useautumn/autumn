@@ -12,7 +12,9 @@ import {
 	getProductItemDisplay,
 	itemToBillingInterval,
 	itemToBillingIntervalCount,
+	priceConfigToPriceProcessors,
 	productItemsToPlanItemsV1,
+	productToPlanProcessors,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
 	sortProductItems,
@@ -109,6 +111,9 @@ export async function getPlanResponse({
 
 	// 4. Extract base price using existing helper
 	const basePriceItem = productV2ToBasePrice({ product: productV2 as any });
+	const basePriceProcessors = priceConfigToPriceProcessors({
+		config: basePriceItem?.price_config,
+	});
 	const basePrice: ApiPlanV1["price"] | null = basePriceItem
 		? {
 				amount: basePriceItem.price,
@@ -126,6 +131,7 @@ export async function getPlanResponse({
 					features,
 					currency,
 				}),
+				...(basePriceProcessors ? { processors: basePriceProcessors } : {}),
 			}
 		: null;
 
@@ -174,6 +180,9 @@ export async function getPlanResponse({
 		: undefined;
 
 	// 9. Build Plan response
+	const planProcessors = productToPlanProcessors({
+		product,
+	});
 	const plan = {
 		id: product.id,
 		name: product.name || "",
@@ -200,6 +209,7 @@ export async function getPlanResponse({
 		metadata: product.metadata ?? {},
 
 		customer_eligibility: customerEligibility,
+		...(planProcessors ? { processors: planProcessors } : {}),
 	} satisfies ApiPlanV1;
 
 	// 10. Graph edges: up-link to the base plan, down-links to variants.

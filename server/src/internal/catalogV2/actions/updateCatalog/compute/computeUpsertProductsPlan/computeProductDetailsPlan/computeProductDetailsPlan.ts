@@ -8,6 +8,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { ProductDetailsPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { isExistingRowPromote } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/isExistingRowPromote";
+import { applyPlanProcessorsToProduct } from "./applyPlanProcessorsToProduct";
 import { diffProductDetails } from "./diffProductDetails";
 import { initProductRow } from "./initProductRow";
 import { planParamsToProductRowPatch } from "./planParamsToProductRowPatch";
@@ -75,7 +76,7 @@ export const computeProductDetailsPlan = ({
 	) {
 		patch.is_default = true;
 	}
-	const next: Product = {
+	const patched: Product = {
 		...currentFullProduct,
 		...patch,
 		...(baseInternalProductId !== undefined
@@ -85,13 +86,22 @@ export const computeProductDetailsPlan = ({
 				}
 			: {}),
 	};
+	const { product: next, changed: processorChanged } =
+		applyPlanProcessorsToProduct({
+			product: patched,
+			processors: planParams.processors,
+		});
 	const previousAttributes = diffProductDetails({
 		current: currentFullProduct,
 		next,
 	});
-	if (isEmptyObject(previousAttributes)) {
+	if (isEmptyObject(previousAttributes) && !processorChanged) {
 		return { changed: false, product: currentFullProduct };
 	}
 
-	return { changed: true, product: next, previousAttributes };
+	return {
+		changed: true,
+		product: next,
+		...(isEmptyObject(previousAttributes) ? {} : { previousAttributes }),
+	};
 };

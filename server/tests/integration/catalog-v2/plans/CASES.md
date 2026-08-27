@@ -43,6 +43,9 @@ plans/
     update-plan-free-trial.test.ts
     stripe-reuse.test.ts
     stripe-reuse-mint.test.ts
+  processors/
+    get-echo.test.ts
+    utils/expectPlanProcessors.ts
   versions/
     plan-versions.test.ts
     new-version-mint.test.ts
@@ -1372,3 +1375,35 @@ overrides the target per variant; unnamed targets fall back to `v{n}`.
 | variant target following in place → existing row's slug untouched | `versions/version-identity-propagate-slug.test.ts` |
 | target slug another version of that target holds → `DuplicateVersionSlug` | `versions/version-identity-propagate-slug.test.ts` |
 | `license_parents[].new_version_slug` with `new_version` → names the parent's minted row | `versions/version-identity-propagate-slug.test.ts` |
+
+## 27. Processors GET echo — `processors/`
+
+`catalogV2.get` maps existing Stripe ids onto `processors.stripe`. Price
+processors expose `price_id` only — Stripe product is inferred from the
+price. Currency echo waits for price stamp.
+
+| Case | Status |
+|---|---|
+| Paid + Stripe init → GET plan `product_id` / price `price_id` match DB | ✓ `processors/get-echo.test.ts` |
+| Free plan omits `processors` | ✓ `processors/get-echo.test.ts` |
+| `create_in_stripe: false` omits `processors` | ✓ `processors/get-echo.test.ts` |
+| Mapper: V2 prepaid id wins over V1; omit when unset | ✓ unit `catalogV2/processors-echo.test.ts` |
+
+## 28. Plan processor stamp + variant fan-out
+
+`plans[].processors.stripe` stamps `product.processor`. Omit keeps. Not a
+product-detail key — processor-only updates still persist. Base stamp fans
+out to latest variants (same path as description/group). `variants[].processors`
+or a direct `plans[]` entry for the variant overrides the base.
+
+Price processors, Stripe retrieve, and init-skip are later.
+
+| Case | Status |
+|---|---|
+| Stamp `product_id` onto the plan row | ✓ unit `computeProductDetailsPlan/applyPlanProcessorsToProduct.test.ts` |
+| Omit / same id is a no-op | ✓ unit `computeProductDetailsPlan/applyPlanProcessorsToProduct.test.ts` |
+| Processor is not a `PRODUCT_DETAIL_KEYS` field | ✓ unit `computeProductDetailsPlan/diffProductDetails.test.ts` |
+| Base processor change fans out to latest variant | ✓ unit `variants/derive-variant-intents.test.ts` |
+| `variants[].processors` overrides the base | ✓ unit `variants/derive-variant-intents.test.ts` |
+| Variant create copies `variants[].processors` | ✓ unit `variants/derive-variant-intents.test.ts` |
+| Direct variant `plans[]` entry overrides (first claim wins) | existing `claimNewIntents` — no extra path |
