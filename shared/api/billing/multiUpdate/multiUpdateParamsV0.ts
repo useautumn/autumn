@@ -1,15 +1,15 @@
 import { z } from "zod/v4";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { CancelActionSchema } from "../common/cancelAction";
-import { CancellationDetailsSchema } from "../common/cancellationDetails";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
+import { SubscriptionParamsSchema } from "../common/subscriptionParams";
 
 const applyMultiUpdateItemRefinements = <
 	Schema extends z.ZodType<{
 		cancel_action: z.infer<typeof CancelActionSchema>;
 		proration_behavior?: z.infer<typeof BillingBehaviorSchema>;
 		refund_last_payment?: z.infer<typeof RefundLastPaymentSchema>;
-		cancellation_details?: z.infer<typeof CancellationDetailsSchema>;
+		subscription_params?: z.infer<typeof SubscriptionParamsSchema>;
 	}>,
 >(
 	schema: Schema,
@@ -28,14 +28,6 @@ const applyMultiUpdateItemRefinements = <
 			{
 				message:
 					"refund_last_payment requires cancel_action to be 'cancel_immediately'.",
-			},
-		)
-		.refine(
-			(data) =>
-				!(data.cancellation_details && data.cancel_action === "uncancel"),
-			{
-				message:
-					"cancellation_details cannot be passed when cancel_action is 'uncancel'.",
 			},
 		);
 
@@ -62,10 +54,7 @@ const extMultiUpdateItemShape = z.object({
 			"How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",
 	}),
 	refund_last_payment: RefundLastPaymentSchema.optional(),
-	cancellation_details: CancellationDetailsSchema.optional().meta({
-		description:
-			"Reason and details forwarded to Stripe as cancellation_details when this update cancels the Stripe subscription.",
-	}),
+	subscription_params: SubscriptionParamsSchema.optional(),
 });
 
 export const ExtMultiUpdateItemV0Schema = applyMultiUpdateItemRefinements(

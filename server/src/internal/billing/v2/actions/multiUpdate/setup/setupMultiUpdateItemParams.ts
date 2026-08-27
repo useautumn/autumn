@@ -22,7 +22,7 @@ export const multiUpdateItemToParams = ({
 	cancel_action: item.cancel_action,
 	proration_behavior: item.proration_behavior,
 	refund_last_payment: item.refund_last_payment,
-	cancellation_details: item.cancellation_details,
+	subscription_params: item.subscription_params,
 });
 
 export const narrowFullCustomerToEntity = ({

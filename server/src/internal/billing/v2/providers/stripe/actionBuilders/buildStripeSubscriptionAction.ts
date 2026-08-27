@@ -13,7 +13,6 @@ import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2
 import type Stripe from "stripe";
 import { billingPlanToOneOffStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/billingPlanToOneOffStripeItemSpecs";
 import { buildFreeRecurringPlaceholderItem } from "../utils/subscriptionSchedules/buildStripePhasesUpdate";
-import { convertCancellationDetailsToStripe } from "../utils/subscriptions/convertCancellationDetailsToStripe";
 
 const subscriptionStartsInFuture = ({
 	billingContext,
@@ -124,15 +123,9 @@ export const buildStripeSubscriptionAction = ({
 	}
 
 	if (deletesAllSubscriptionItems) {
-		const cancellationDetails = convertCancellationDetailsToStripe({
-			cancellationDetails: billingContext.cancellationDetails,
-		});
 		return {
 			type: "cancel" as const,
 			stripeSubscriptionId: stripeSubscription.id,
-			...(cancellationDetails && {
-				params: { cancellation_details: cancellationDetails },
-			}),
 		};
 	}
 

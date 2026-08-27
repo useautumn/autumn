@@ -36,9 +36,11 @@ const response = await autumn.billing.multiUpdate({
             planId: "pro_plan",
             cancelAction: "cancel_immediately",
             refundLastPayment: "full",
-            cancellationDetails: {
-                reason: "too_expensive",
-                details: "Switching to a competitor",
+            subscriptionParams: {
+                cancellation_details: {
+                    feedback: "too_expensive",
+                    comment: "Switching to a competitor",
+                },
             },
         },
     ],
