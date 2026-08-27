@@ -6,7 +6,12 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { BillingInterval, type Price, PriceType } from "@autumn/shared";
+import {
+	BillingInterval,
+	BillWhen,
+	type Price,
+	PriceType,
+} from "@autumn/shared";
 import { buildStripePriceIdempotencyKey } from "@/external/stripe/prices/utils/buildIdempotencyKey.js";
 
 const fixed = ({ amount }: { amount: number }): Price => ({
@@ -43,5 +48,31 @@ describe("buildStripePriceIdempotencyKey", () => {
 		expect(key({ price: ten })).toBe(key({ price: tenAgain }));
 		expect(key({ price: ten })).not.toBe(key({ price: twenty }));
 		expect(key({ price: ten })).toMatch(/^autumn:price:pr_abc:stripe_price_id:usd:[a-f0-9]{16}$/);
+	});
+
+	test("same id + amount, prorated → arrear, gets a new key", () => {
+		const usage = ({ shouldProrate }: { shouldProrate: boolean }): Price => ({
+			id: "pr_abc",
+			org_id: "org_1",
+			created_at: 1,
+			internal_product_id: "ip_pro",
+			is_custom: false,
+			proration_config: null,
+			config: {
+				type: PriceType.Usage,
+				bill_when: BillWhen.EndOfPeriod,
+				should_prorate: shouldProrate,
+				interval: BillingInterval.Month,
+				interval_count: 1,
+				billing_units: 1,
+				usage_tiers: [{ to: "inf", amount: 1 }],
+				feature_id: "messages",
+				internal_feature_id: "feat_1",
+			},
+		});
+
+		expect(key({ price: usage({ shouldProrate: true }) })).not.toBe(
+			key({ price: usage({ shouldProrate: false }) }),
+		);
 	});
 });

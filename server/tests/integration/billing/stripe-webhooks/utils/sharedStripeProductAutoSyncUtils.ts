@@ -91,8 +91,13 @@ export const requireUsagePrice = ({ fullProduct }: { fullProduct: FullProduct })
 };
 
 export const stripePriceIdForPrice = ({ price }: { price: Price }) => {
+	const config = price.config;
 	const stripePriceId =
-		price.config.stripe_price_id ?? price.config.stripe_empty_price_id;
+		config.stripe_price_id ??
+		("stripe_prepaid_price_v2_id" in config
+			? config.stripe_prepaid_price_v2_id
+			: undefined) ??
+		config.stripe_empty_price_id;
 	if (!stripePriceId) throw new Error(`Price ${price.id} has no Stripe price`);
 	return stripePriceId;
 };

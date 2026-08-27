@@ -14,7 +14,6 @@ const activeTempPaths: string[] = [
 	"integration/billing/update-subscription/free-trial/update-quantity-with-trial.test.ts",
 	"integration/catalog-v2/plans/update/stripe-price-immutability.test.ts",
 	"integration/catalog-v2/plans/update/update-plan-free-trial.test.ts",
-	"integration/crud/plans/update/update-plan-allocated-v1-compat.test.ts",
 	"integration/crud/plans/variants/rollover-disambiguation.test.ts",
 ];
 

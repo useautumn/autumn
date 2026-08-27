@@ -10,6 +10,7 @@ import {
 import {
 	createExternalStripeSubscription,
 	stampStripeSlotsViaV1Attach,
+	stripePriceIdForPrice,
 } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
 import { createStripeFixedPriceUnderProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import {
@@ -87,10 +88,11 @@ const expectCustomizedPriceUnderLicenseProduct = async ({
 	expect(customized.planLicense.customized).toBe(true);
 	expect(price?.is_custom).toBe(true);
 	expect(price?.config.stripe_product_id).toBe(licenseStripeProductId);
-	expect(price?.config.stripe_price_id).toBeDefined();
+	if (!price) throw new Error(`License ${licensePlanId} has no base price`);
+	const stampedStripePriceId = stripePriceIdForPrice({ price });
 
 	const stripePrice = await ctx.stripeCli.prices.retrieve(
-		price!.config.stripe_price_id!,
+		stampedStripePriceId,
 	);
 	expect(stripeProductId({ price: stripePrice })).toBe(licenseStripeProductId);
 

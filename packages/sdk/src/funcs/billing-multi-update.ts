@@ -45,6 +45,8 @@ import { Result } from "../types/fp.js";
  *
  * @param customerId - The ID of the customer to update plans for.
  * @param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+ * @param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
+ * @param subscriptionParams - Additional parameters to pass into the Stripe subscription update or cancel call. (optional)
  * @param updates - The list of plan updates to apply to the customer.
  *
  * @returns A billing response with the resulting invoice summary (one credit invoice per affected subscription for immediate cancels).
