@@ -49,7 +49,6 @@ import {
 	expectStripePriceIdNotReused,
 	loadCustomerAndCatalogPrices,
 } from "@tests/integration/billing/misc/utils/findCatalogAndCustomPrices";
-import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
@@ -73,12 +72,10 @@ test.concurrent(`${chalk.yellowBright("custom plan: add boolean entitlement → 
 		customerId,
 		setup: [
 			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
+			s.products({ list: [proPlan], createInStripe: true }),
 		],
 		actions: [],
 	});
-
-	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -125,12 +122,10 @@ test.concurrent(`${chalk.yellowBright("custom plan: paid feature shapes unchange
 		customerId,
 		setup: [
 			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
+			s.products({ list: [proPlan], createInStripe: true }),
 		],
 		actions: [],
 	});
-
-	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -174,12 +169,10 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid → consumable on sa
 		customerId,
 		setup: [
 			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
+			s.products({ list: [proPlan], createInStripe: true }),
 		],
 		actions: [],
 	});
-
-	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -222,12 +215,10 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid amount change → st
 		customerId,
 		setup: [
 			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
+			s.products({ list: [proPlan], createInStripe: true }),
 		],
 		actions: [],
 	});
-
-	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -265,12 +256,10 @@ test.concurrent(`${chalk.yellowBright("custom plan: tier amount change → strip
 		customerId,
 		setup: [
 			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
+			s.products({ list: [proPlan], createInStripe: true }),
 		],
 		actions: [],
 	});
-
-	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -315,12 +304,10 @@ test.concurrent(`${chalk.yellowBright("custom plan: graduated → volume tier_be
 		customerId,
 		setup: [
 			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
+			s.products({ list: [proPlan], createInStripe: true }),
 		],
 		actions: [],
 	});
-
-	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -373,12 +360,10 @@ test.concurrent(`${chalk.yellowBright("custom plan: add flat_amount to tier → 
 		customerId,
 		setup: [
 			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
+			s.products({ list: [proPlan], createInStripe: true }),
 		],
 		actions: [],
 	});
-
-	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -433,12 +418,10 @@ test.concurrent(`${chalk.yellowBright("custom plan: prorated allocated → arrea
 		customerId,
 		setup: [
 			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
+			s.products({ list: [proPlan], createInStripe: true }),
 		],
 		actions: [],
 	});
-
-	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -476,12 +459,10 @@ test.concurrent(`${chalk.yellowBright("custom plan: change prepaid billing_units
 		customerId,
 		setup: [
 			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
+			s.products({ list: [proPlan], createInStripe: true }),
 		],
 		actions: [],
 	});
-
-	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -532,12 +513,10 @@ test.concurrent(`${chalk.yellowBright("custom plan: change rollover config → b
 		customerId,
 		setup: [
 			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
+			s.products({ list: [proPlan], createInStripe: true }),
 		],
 		actions: [],
 	});
-
-	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,
@@ -588,12 +567,10 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid + consumable pair on
 		customerId,
 		setup: [
 			s.customer({ testClock: false, paymentMethod: "success" }),
-			s.products({ list: [proPlan] }),
+			s.products({ list: [proPlan], createInStripe: true }),
 		],
 		actions: [],
 	});
-
-	await materializePlanInStripe({ ctx, planId: proPlan.id });
 
 	const params: AttachParamsV1Input = {
 		customer_id: customerId,

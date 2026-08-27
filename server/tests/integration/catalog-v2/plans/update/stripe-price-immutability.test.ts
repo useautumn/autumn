@@ -81,10 +81,11 @@ test.concurrent(
 						plan_id: planId,
 						name: "Team",
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 					},
 				],
 			});
-			const before = await materializePlanInStripe({ ctx, planId });
+			const before = await getFull({ ctx, planId });
 			const beforePrice = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -138,10 +139,10 @@ test.concurrent(
 						plan_id: planId,
 						name: "Team V1",
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 					},
 				],
 			});
-			await materializePlanInStripe({ ctx, planId });
 			// v2 carries v1's stripe ids in full — the shared-id danger case.
 			await autumnV2_3.catalogV2.update({
 				plans: [

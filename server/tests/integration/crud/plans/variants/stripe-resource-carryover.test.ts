@@ -6,7 +6,6 @@ import {
 	ProductItemFeatureType,
 	ProductItemInterval,
 } from "@autumn/shared";
-import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -118,7 +117,7 @@ test.concurrent(
 
 		const { ctx } = await initScenario({
 			customerId: cid,
-			setup: [s.customer(), s.products({ list: [base] })],
+			setup: [s.customer(), s.products({ list: [base], createInStripe: true })],
 			actions: [],
 		});
 
@@ -128,7 +127,6 @@ test.concurrent(
 		});
 		const variantId = `stripe_var_${cid}`;
 
-		await materializePlanInStripe({ ctx, planId: base.id });
 		await createVariantPlan({
 			rpc,
 			basePlanId: base.id,
@@ -175,7 +173,7 @@ test.concurrent(
 
 		const { ctx } = await initScenario({
 			customerId: cid,
-			setup: [s.customer(), s.products({ list: [base] })],
+			setup: [s.customer(), s.products({ list: [base], createInStripe: true })],
 			actions: [],
 		});
 
@@ -186,7 +184,6 @@ test.concurrent(
 		const variantId = `stripe_var_${cid}`;
 		const updatedName = "Stripe Root Product Updated";
 
-		await materializePlanInStripe({ ctx, planId: base.id });
 		await createVariantPlan({
 			rpc,
 			basePlanId: base.id,

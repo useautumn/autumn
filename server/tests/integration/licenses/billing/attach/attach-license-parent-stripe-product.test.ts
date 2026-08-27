@@ -305,13 +305,15 @@ test.concurrent(
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success", testClock: false }),
-				s.products({ list: [parent, teamSeat] }),
+				s.products({ list: [parent, teamSeat], createInStripe: true }),
 			],
 			actions: [],
 		});
-		const childBefore = await materializePlanInStripe({
-			ctx: scenario.ctx,
-			planId: teamSeat.id,
+		const childBefore = await ProductService.getFull({
+			db: scenario.ctx.db,
+			idOrInternalId: teamSeat.id,
+			orgId: scenario.ctx.org.id,
+			env: scenario.ctx.env,
 		});
 		await scenario.autumnV2_2.post("/plans.update", {
 			plan_id: parent.id,

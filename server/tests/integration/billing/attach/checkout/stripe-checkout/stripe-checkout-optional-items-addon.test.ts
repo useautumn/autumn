@@ -30,7 +30,6 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, AttachParamsV1Input } from "@autumn/shared";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
@@ -38,6 +37,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { ProductService } from "@/internal/products/ProductService";
 
 test.concurrent(
 	`${chalk.yellowBright("checkout optional_items: purchased add-on is provisioned")}`,
@@ -61,16 +61,18 @@ test.concurrent(
 			setup: [
 				s.deleteCustomer({ customerId }), // clean slate across TDD re-runs
 				s.customer({ testClock: true }), // No payment method -> Stripe checkout
-				s.products({ list: [pro, unfairAdvantage] }),
+				// Checkout passes the add-on's catalog Stripe price as an
+				// `optional_items` entry, so that price must exist before attach.
+				s.products({ list: [pro, unfairAdvantage], createInStripe: true }),
 			],
 			actions: [],
 		});
 
-		// Checkout passes the add-on's catalog Stripe price as an `optional_items`
-		// entry, so that price must exist before attach — nothing else mints it.
-		const fullAddOn = await materializePlanInStripe({
-			ctx,
-			planId: unfairAdvantage.id,
+		const fullAddOn = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: unfairAdvantage.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
 		});
 		const addOnStripePriceId = fullAddOn?.prices[0]?.config?.stripe_price_id as
 			| string

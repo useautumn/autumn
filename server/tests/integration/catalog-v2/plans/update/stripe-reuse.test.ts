@@ -1,7 +1,7 @@
 /**
  * catalogV2.update — Stripe id carry-forward on entitlement/price rows.
  *
- * Seeds real Stripe resources via `materializePlanInStripe`, then updates via
+ * Seeds real Stripe resources via `create_in_stripe`, then updates via
  * catalogV2 and asserts reuse levels with shared expect helpers.
  *
  * Full carry (stripe_price_id + stripe_product_id + meter) when price AND
@@ -79,11 +79,12 @@ test.concurrent(
 							prepaidMessagesItem({ amount: 10 }),
 							{ feature_id: TestFeature.Dashboard },
 						],
+						create_in_stripe: true,
 					},
 				],
 			});
 
-			const before = await materializePlanInStripe({ ctx, planId });
+			const before = await getFull({ ctx, planId });
 			const paidBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -134,11 +135,12 @@ test.concurrent(
 						name: "Stripe Details",
 						price: { amount: 20, interval: BillingInterval.Month },
 						items: [prepaidMessagesItem({ amount: 5 })],
+						create_in_stripe: true,
 					},
 				],
 			});
 
-			const before = await materializePlanInStripe({ ctx, planId });
+			const before = await getFull({ ctx, planId });
 			const paidBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -196,11 +198,12 @@ test.concurrent(
 								},
 							},
 						],
+						create_in_stripe: true,
 					},
 				],
 			});
 
-			const before = await materializePlanInStripe({ ctx, planId });
+			const before = await getFull({ ctx, planId });
 			const paidBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -256,11 +259,12 @@ test.concurrent(
 						plan_id: planId,
 						name: "Stripe Prepaid",
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 					},
 				],
 			});
 
-			const before = await materializePlanInStripe({ ctx, planId });
+			const before = await getFull({ ctx, planId });
 			const paidBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -318,11 +322,12 @@ test.concurrent(
 								},
 							},
 						],
+						create_in_stripe: true,
 					},
 				],
 			});
 
-			const before = await materializePlanInStripe({ ctx, planId });
+			const before = await getFull({ ctx, planId });
 			const paidBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -384,11 +389,12 @@ test.concurrent(
 						name: "Stripe Base",
 						price: { amount: 20, interval: BillingInterval.Month },
 						items: [{ feature_id: TestFeature.Dashboard }],
+						create_in_stripe: true,
 					},
 				],
 			});
 
-			const before = await materializePlanInStripe({ ctx, planId });
+			const before = await getFull({ ctx, planId });
 			const baseBefore = findBasePrice({ product: before })!;
 
 			await autumnV2_3.catalogV2.update({
@@ -476,10 +482,11 @@ test.concurrent(
 						plan_id: planId,
 						name: "Stripe Mint",
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 					},
 				],
 			});
-			const before = await materializePlanInStripe({ ctx, planId });
+			const before = await getFull({ ctx, planId });
 			const priceBefore = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,

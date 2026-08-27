@@ -122,10 +122,11 @@ test.concurrent(
 						plan_id: baseId,
 						name: "Team",
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 					},
 				],
 			});
-			const base = await materializePlanInStripe({ ctx, planId: baseId });
+			const base = await getFull({ ctx, planId: baseId });
 
 			await autumnV2_3.catalogV2.update({
 				plans: [
@@ -215,6 +216,7 @@ test.concurrent(
 						plan_id: baseId,
 						name: "Team",
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 						variants: [
 							{
 								variant_plan_id: variantId,
@@ -227,8 +229,7 @@ test.concurrent(
 					},
 				],
 			});
-			await materializePlanInStripe({ ctx, planId: baseId });
-			const before = await materializePlanInStripe({ ctx, planId: variantId });
+			const before = await getFull({ ctx, planId: variantId });
 			const beforePrice = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -280,6 +281,7 @@ test.concurrent(
 						plan_id: baseId,
 						name: "Team",
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 						variants: [
 							{
 								variant_plan_id: variantId,
@@ -292,8 +294,7 @@ test.concurrent(
 					},
 				],
 			});
-			await materializePlanInStripe({ ctx, planId: baseId });
-			const before = await materializePlanInStripe({ ctx, planId: variantId });
+			const before = await getFull({ ctx, planId: variantId });
 			const beforePrice = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -358,10 +359,11 @@ test.concurrent(
 						plan_id: baseId,
 						name: "Team",
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 					},
 				],
 			});
-			const base = await materializePlanInStripe({ ctx, planId: baseId });
+			const base = await getFull({ ctx, planId: baseId });
 
 			await autumnV2_3.catalogV2.update({
 				plans: [
