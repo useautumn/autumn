@@ -224,6 +224,16 @@ if grep -q 'bun", \["install"\]' "$ROOT/scripts/dw/commands/start.ts"; then
 fi
 grep -q 'autoEnsureLocalTestOrg' "$ROOT/scripts/dw/commands/start.ts" \
 	|| fail "dw start must seed unit-test-org on Cloud agents"
+grep -q 'writeEnvLocalFiles' "$ROOT/scripts/dw/commands/start.ts" \
+	|| fail "dw start must pin local DATABASE_URL in server/.env.local"
+grep -q 'writeEnvLocalFiles' "$ROOT/scripts/dw/helpers/start.ts" \
+	|| fail "cloud dw run must pin local DATABASE_URL in server/.env.local"
+if grep -q 'if (existsSync(join(dir, "package.json"))) return dir' \
+	"$ROOT/server/src/utils/envUtils.ts"; then
+	fail "loadLocalEnv must not treat monorepo-root package.json as the env dir"
+fi
+grep -q 'resolveEnvDir' "$ROOT/server/src/utils/envUtils.ts" \
+	|| fail "loadLocalEnv must resolve the directory that contains ENV_FILE"
 grep -q 'unit-test-org' "$ROOT/scripts/setup/cursor-cloud/cursorCloud.ts" \
 	|| fail "Cloud AGENTS.md section must mention unit-test-org seed"
 grep -q 'setup-test.ts", "--ensure"' "$ROOT/scripts/dw/helpers/setup.ts" \
