@@ -2,6 +2,8 @@
 
 <part file="references/autumn-rules.md" />
 
+<part file="references/skill-routing.md" />
+
 <part file="references/leaf-rules.md" />
 
 Surface — Autumn dashboard:
