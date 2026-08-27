@@ -3,6 +3,7 @@ import {
 	type FullProduct,
 	getPriceCurrencyStripeId,
 	type Price,
+	type StripePriceNicknameSource,
 	priceToEnt,
 	priceUtils,
 	RecaseError,
@@ -12,6 +13,7 @@ import {
 import { PriceService } from "@server/internal/products/prices/PriceService";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { buildStripePriceIdempotencyKey } from "@/external/stripe/prices/utils/buildIdempotencyKey";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 export const createStripePrepaidPriceV2 = async ({
@@ -20,12 +22,14 @@ export const createStripePrepaidPriceV2 = async ({
 	product,
 	currentStripeProduct,
 	currency: targetCurrency,
+	source = "catalog",
 }: {
 	ctx: AutumnContext;
 	price: Price;
 	product: FullProduct;
-	currentStripeProduct?: Stripe.Product;
+	currentStripeProduct?: { id: string };
 	currency?: string;
+	source?: StripePriceNicknameSource;
 }) => {
 	const { org, db, env } = ctx;
 
@@ -42,19 +46,19 @@ export const createStripePrepaidPriceV2 = async ({
 		entitlements: product.entitlements,
 	});
 
-	// No allowance → V2 price is identical to V1. Reuse the same Stripe price.
-	if (!entitlement?.allowance) {
+	const existingV1PriceId = getPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_price_id",
+	});
+	if (!entitlement?.allowance && existingV1PriceId) {
 		setPriceCurrencyStripeId({
 			config,
 			currency,
 			orgDefault,
 			slot: "stripe_prepaid_price_v2_id",
-			id: getPriceCurrencyStripeId({
-				config,
-				currency,
-				orgDefault,
-				slot: "stripe_price_id",
-			}),
+			id: existingV1PriceId,
 		});
 		price.config = config;
 
@@ -67,7 +71,10 @@ export const createStripePrepaidPriceV2 = async ({
 		return;
 	}
 
-	if (entitlement.allowance % (price.config.billing_units ?? 1) !== 0) {
+	if (
+		entitlement?.allowance &&
+		entitlement.allowance % (price.config.billing_units ?? 1) !== 0
+	) {
 		throw new RecaseError({
 			code: ErrCode.InvalidRequest,
 			message:
@@ -75,17 +82,34 @@ export const createStripePrepaidPriceV2 = async ({
 		});
 	}
 
+	const stripeProductId =
+		currentStripeProduct?.id ?? config.stripe_product_id ?? undefined;
+	if (!stripeProductId) {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message: `createStripePrepaidPriceV2: missing Stripe product for price ${price.id}`,
+		});
+	}
+
 	const stripeCreatePriceParams = priceUtils.convert.toStripeCreatePriceParams({
 		price,
 		product,
 		org,
-		currentStripeProduct,
+		stripeProductId,
 		currency,
+		source,
 	});
 
 	const stripeCli = createStripeCli({ org, env });
 
-	const stripePrice = await stripeCli.prices.create(stripeCreatePriceParams);
+	const stripePrice = await stripeCli.prices.create(stripeCreatePriceParams, {
+		idempotencyKey: buildStripePriceIdempotencyKey({
+			price,
+			slot: "stripe_prepaid_price_v2_id",
+			currency,
+			orgDefault,
+		}),
+	});
 
 	setPriceCurrencyStripeId({
 		config,
@@ -94,6 +118,7 @@ export const createStripePrepaidPriceV2 = async ({
 		slot: "stripe_prepaid_price_v2_id",
 		id: stripePrice.id,
 	});
+	config.stripe_product_id = stripePrice.product as string;
 	price.config = config;
 
 	await PriceService.update({

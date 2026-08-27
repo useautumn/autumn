@@ -4,6 +4,7 @@ import {
 	featureV1ToDbFeature,
 } from "@autumn/shared";
 import type { AxiosError } from "axios";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
 	useProduct,
@@ -17,8 +18,10 @@ import { getBackendErr } from "@/utils/genUtils";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { validateCreditSystem } from "@/views/products/features/credit-systems/utils/validateCreditSystem";
 import { featureToCatalogFeatureParams } from "@/views/products/features/utils/buildFeatureMutationParams";
+import { featureStripeProductChanged } from "@/views/products/features/utils/featureStripeProductChanged";
 import { useSaveRestoreFeature } from "../../hooks/useSaveRestoreFeature";
 import { getDefaultItem } from "../../utils/getDefaultItem";
+import { FeatureStripeProductConfirmDialog } from "./FeatureStripeProductConfirmDialog";
 import { NewFeatureAdvanced } from "./NewFeatureAdvanced";
 import { NewFeatureBehaviour } from "./NewFeatureBehaviour";
 import { NewFeatureDetails } from "./NewFeatureDetails";
@@ -33,28 +36,11 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const { product, setProduct } = useProduct();
 	const { setSheet } = useSheet();
 	const { mutateAsync: updateCatalog, isPending } = useUpdateCatalogMutation();
+	const [confirmOpen, setConfirmOpen] = useState(false);
 
 	const isDirty = !!feature.name || !!feature.id || feature.type !== null;
 
-	const handleCreateFeature = async () => {
-		if (feature.type === FeatureType.CreditSystem) {
-			const validationError = validateCreditSystem(feature);
-			if (validationError) {
-				toast.error(validationError);
-				return;
-			}
-		}
-
-		const result = CreateFeatureSchema.safeParse(feature);
-		if (result.error) {
-			toast.error("Invalid feature", {
-				description: result.error.issues
-					.map((issue) => issue.message)
-					.join(".\n"),
-			});
-			return;
-		}
-
+	const persistFeature = async () => {
 		try {
 			const response = await updateCatalog({
 				features: [featureToCatalogFeatureParams({ feature })],
@@ -77,6 +63,7 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 			const itemIndex = newItems.length - 1;
 			const itemId = getItemId({ item: newItem, itemIndex });
 
+			setConfirmOpen(false);
 			setTimeout(() => {
 				setSheet({ type: "edit-feature", itemId });
 			}, 0);
@@ -85,6 +72,38 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 				getBackendErr(error as AxiosError, "Failed to create feature"),
 			);
 		}
+	};
+
+	const handleCreateFeature = async () => {
+		if (feature.type === FeatureType.CreditSystem) {
+			const validationError = validateCreditSystem(feature);
+			if (validationError) {
+				toast.error(validationError);
+				return;
+			}
+		}
+
+		const result = CreateFeatureSchema.safeParse(feature);
+		if (result.error) {
+			toast.error("Invalid feature", {
+				description: result.error.issues
+					.map((issue) => issue.message)
+					.join(".\n"),
+			});
+			return;
+		}
+
+		if (
+			featureStripeProductChanged({
+				from: null,
+				to: feature.stripe_product_id,
+			})
+		) {
+			setConfirmOpen(true);
+			return;
+		}
+
+		await persistFeature();
 	};
 
 	const handleClose = () => {
@@ -122,6 +141,14 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 				confirmLabel="Create"
 				closeLabel="Cancel"
 				isLoading={isPending}
+			/>
+
+			<FeatureStripeProductConfirmDialog
+				confirmLabel="Create"
+				isSaving={isPending}
+				onConfirm={() => void persistFeature()}
+				onOpenChange={setConfirmOpen}
+				open={confirmOpen}
 			/>
 		</div>
 	);

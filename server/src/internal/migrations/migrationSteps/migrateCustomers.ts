@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import {
+	BillingVersion,
 	type Customer,
 	type FullProduct,
 	type MigrationJob,
@@ -46,6 +47,7 @@ export const migrateCustomers = async ({
 				price,
 				entitlements: toProduct.entitlements,
 				product: toProduct,
+				billingVersion: BillingVersion.V1,
 			}),
 		);
 	}

@@ -44,6 +44,7 @@ export const features = pgTable(
 		event_names: text("event_names").array().default([]),
 		model_markups: jsonb().$type<ModelMarkups>().default(sql`null`),
 		stripe_meter: jsonb().$type<FeatureStripeMeter>().default(sql`null`),
+		stripe_product_id: text("stripe_product_id"),
 	},
 	(table) => [
 		foreignKey({

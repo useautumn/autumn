@@ -45,6 +45,7 @@ export * from "./errors/classes/featureErrClasses.js";
 export * from "./errors/codes/featureErrCodes.js";
 // Features
 export * from "./features/apiFeatureV1.js";
+export * from "./features/components/processors.js";
 export * from "./features/creditRateCard.js";
 export * from "./features/previewUpdateFeature/previewUpdateFeatureResponse.js";
 export * from "./features/prevVersions/apiFeatureV0.js";
@@ -119,6 +120,7 @@ export * from "./events/list/eventsListResponse.js";
 export * from "./events/list/eventsListResponseV2_3.js";
 // Features
 export * from "./features/apiFeatureV1.js";
+export * from "./features/components/processors.js";
 export * from "./features/creditRateCard.js";
 export * from "./features/crud/index.js";
 export * from "./features/prevVersions/apiFeatureV0.js";
