@@ -513,9 +513,16 @@ test.concurrent(
 	},
 );
 
-// Expired-only customers are not versionable — hard-delete, don't retire.
+/**
+ * Expired-only CPs are not versionable (`has_customers` stays false, no
+ * migrate draft) but their cus_ents still FK catalog rows. Prod FK is
+ * RESTRICT — in-place rematch must retire, not DELETE.
+ *
+ * Red (current):  old ent is hard-deleted (local CASCADE) / FK 500 (prod)
+ * Green (after):  old ent retired is_custom; cus_ent survives
+ */
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 rows: expired-only customers → rows deleted (not retired)")}`,
+	`${chalk.yellowBright("catalogV2 rows: expired-only customers → rematch retires old ent")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_row_exp");
@@ -560,7 +567,8 @@ test.concurrent(
 				before,
 				expected: {
 					mintedEnts: [{ featureId: TestFeature.Messages, allowance: 200 }],
-					deletedEnts: [oldEnt.id],
+					retiredEnts: [oldEnt.id],
+					survivingCusEnts: [oldEnt.id],
 				},
 			});
 		} finally {

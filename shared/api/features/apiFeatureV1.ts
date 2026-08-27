@@ -4,7 +4,7 @@ import {
 	ProviderMarkupsSchema,
 } from "../../models/featureModels/featureConfig/creditConfig";
 import { FeatureType } from "../../models/featureModels/featureEnums";
-import { ApiCreditSchemaItemSchema } from "./creditRateCard.js";
+import { ApiCreditSchemaResponseItemSchema } from "./creditRateCard.js";
 
 export const ApiFeatureV1Schema = z.object({
 	id: z.string().meta({
@@ -29,7 +29,7 @@ export const ApiFeatureV1Schema = z.object({
 		description:
 			"Event names that trigger this feature's balance. Allows multiple features to respond to a single event.",
 	}),
-	credit_schema: z.array(ApiCreditSchemaItemSchema).optional().meta({
+	credit_schema: z.array(ApiCreditSchemaResponseItemSchema).optional().meta({
 		description:
 			"For classic credit systems: maps metered features to flat or graduated credit costs.",
 	}),
