@@ -76,3 +76,10 @@ export const textForInputRequests = (
 		})
 		.filter(Boolean)
 		.join("\n\n");
+
+/** Eve ended the turn — `session.waiting` is a park, the rest are endings. */
+export const isTerminalEveEventType = (eventType: string) =>
+	eventType === "session.waiting" ||
+	eventType === "session.completed" ||
+	eventType === "turn.failed" ||
+	eventType === "session.failed";

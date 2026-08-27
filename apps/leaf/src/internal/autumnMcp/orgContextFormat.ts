@@ -30,12 +30,24 @@ const compactPrice = (price: unknown) => {
 	return `${record.amount}/${record.interval ?? "one_off"}`;
 };
 
+const compactInterval = (value: unknown) => {
+	const record = asRecord(value) ?? {};
+	if (!record.interval) return undefined;
+	const count =
+		typeof record.interval_count === "number" && record.interval_count > 1
+			? `x${record.interval_count}`
+			: "";
+	return `${record.interval}${count}`;
+};
+
 const compactItem = (item: unknown) => {
 	const record = asRecord(item) ?? {};
 	const featureId = record.feature_id ?? record.id;
 	if (typeof featureId !== "string") return undefined;
 	const parts = [featureId];
-	if (record.included !== undefined && record.included !== null) {
+	if (record.unlimited === true) {
+		parts.push("unlimited");
+	} else if (record.included !== undefined && record.included !== null) {
 		parts.push(`included=${record.included}`);
 	}
 	const price = asRecord(record.price) ?? {};
@@ -47,6 +59,13 @@ const compactItem = (item: unknown) => {
 				: "";
 		parts.push(`price=${price.amount}${units}`);
 	}
+	if (Array.isArray(price.tiers) && price.tiers.length) {
+		parts.push(`tiers=${price.tiers.length}`);
+	}
+	// remove_items filters on the price interval, falling back to the reset one.
+	const interval = compactInterval(price) ?? compactInterval(record.reset);
+	if (interval) parts.push(interval);
+	if (record.rollover) parts.push("rollover");
 	return parts.join(" ");
 };
 
