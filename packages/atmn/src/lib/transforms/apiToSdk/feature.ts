@@ -1,3 +1,4 @@
+import { isGraduatedCreditSchemaItem } from "@autumn/shared";
 import type {
 	CreditSchemaItem,
 	Feature,
@@ -17,7 +18,7 @@ function mapCreditSchema(api: RawApiFeature): CreditSchemaItem[] {
 			}),
 		};
 
-		if (creditSchemaItem.tier_behavior === "graduated") {
+		if (isGraduatedCreditSchemaItem(creditSchemaItem)) {
 			return {
 				...base,
 				tierBehavior: "graduated",

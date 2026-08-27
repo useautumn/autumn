@@ -3,6 +3,7 @@
  * Provides structured output (text/json/csv) for AI/programmatic interaction.
  */
 
+import { isGraduatedCreditSchemaItem } from "@autumn/shared";
 import { AppEnv } from "../../lib/env/detect.js";
 import { getKey } from "../../lib/env/keys.js";
 import { fetchFeatures } from "../../lib/api/endpoints/features.js";
@@ -259,7 +260,10 @@ function outputSingleFeature(
 		console.log("");
 		console.log(`Credit Schema (${feature.credit_schema.length}):`);
 		for (const credit of feature.credit_schema) {
-			console.log(`  - ${credit.metered_feature_id}: ${credit.credit_cost} credits`);
+			const cost = isGraduatedCreditSchemaItem(credit)
+				? `${credit.tiers.length} graduated tiers`
+				: `${credit.credit_cost} credits`;
+			console.log(`  - ${credit.metered_feature_id}: ${cost}`);
 		}
 	}
 }
