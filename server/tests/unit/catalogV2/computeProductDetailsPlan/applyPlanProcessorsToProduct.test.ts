@@ -21,9 +21,10 @@ describe("applyPlanProcessorsToProduct", () => {
 			product,
 			changed: false,
 		});
-		expect(
-			applyPlanProcessorsToProduct({ product, processors: {} }),
-		).toEqual({ product, changed: false });
+		expect(applyPlanProcessorsToProduct({ product, processors: {} })).toEqual({
+			product,
+			changed: false,
+		});
 	});
 
 	test("stripe object stamps id and additional ids", () => {
@@ -43,6 +44,48 @@ describe("applyPlanProcessorsToProduct", () => {
 			id: "prod_abc",
 			additional_ids: ["prod_alias"],
 		});
+	});
+
+	test("reordered additional ids are not a change", () => {
+		const product = row({
+			processor: {
+				type: "stripe",
+				id: "prod_abc",
+				additional_ids: ["prod_alias_a", "prod_alias_b"],
+			},
+		});
+		expect(
+			applyPlanProcessorsToProduct({
+				product,
+				processors: {
+					stripe: {
+						product_id: "prod_abc",
+						additional_product_ids: ["prod_alias_b", "prod_alias_a"],
+					},
+				},
+			}).changed,
+		).toBe(false);
+	});
+
+	test("a different additional id set is a change", () => {
+		const product = row({
+			processor: {
+				type: "stripe",
+				id: "prod_abc",
+				additional_ids: ["prod_alias_a"],
+			},
+		});
+		expect(
+			applyPlanProcessorsToProduct({
+				product,
+				processors: {
+					stripe: {
+						product_id: "prod_abc",
+						additional_product_ids: ["prod_alias_b"],
+					},
+				},
+			}).changed,
+		).toBe(true);
 	});
 
 	test("same id is not a change", () => {
