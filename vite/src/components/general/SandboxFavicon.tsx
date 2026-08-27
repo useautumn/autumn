@@ -12,15 +12,11 @@ const sandboxFaviconHref = (color: string) =>
 		`<svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg"><rect width="28" height="28" rx="6" fill="${sandboxColorValue(color)}"/><path d="${AUTUMN_MARK}" fill="black"/></svg>`,
 	)}`;
 
-declare const __APP_ENV__: string;
-
 export const SandboxFavicon = () => {
 	const env = useEnv();
 	const activeSandbox = useActiveSandbox();
 	const color =
-		env === AppEnv.Sandbox && __APP_ENV__ !== "dev"
-			? (activeSandbox?.color ?? "blue")
-			: undefined;
+		env === AppEnv.Sandbox ? (activeSandbox?.color ?? "blue") : undefined;
 
 	useEffect(() => {
 		if (!color) return;
