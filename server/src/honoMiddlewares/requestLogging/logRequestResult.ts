@@ -19,6 +19,8 @@ const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
 const SLOW_REQUEST_BODY_THRESHOLD_MS = 500;
 const SUCCESS_RESPONSE_BODY_SAMPLE_RATE = 0.01;
 const MAX_LOGGED_RESPONSE_BODY_BYTES = 32 * 1024;
+const MAX_LOGGED_RESPONSE_BODY_KEYS = 50;
+const MAX_LOGGED_RESPONSE_BODY_KEY_LENGTH = 128;
 
 const LIST_RESPONSE_ROUTES = new Set<string>([
 	"/v1/events.aggregate",
@@ -148,6 +150,9 @@ export const logRequestResult = async ({
 				}
 			}
 		}
+		const originalTopLevelKeys = isRecord(finalResponseBody)
+			? Object.keys(finalResponseBody)
+			: undefined;
 
 		if (compactResponseBody && isRecord(finalResponseBody)) {
 			finalResponseBody = compactHighVolumeResponseBody({
@@ -157,7 +162,7 @@ export const logRequestResult = async ({
 			responseBodyWasCompacted = true;
 		}
 
-		if (isRecord(finalResponseBody)) {
+		if (finalResponseBody !== null && finalResponseBody !== undefined) {
 			const loggedResponseBodyBytes =
 				originalResponseBodyBytes === undefined ||
 				(responseBodyWasCompacted &&
@@ -168,11 +173,29 @@ export const logRequestResult = async ({
 				!keepFullSampledResponseBody &&
 				loggedResponseBodyBytes > MAX_LOGGED_RESPONSE_BODY_BYTES
 			) {
-				finalResponseBody = {
+				const truncatedResponseBody = {
 					truncated: true,
 					original_bytes: originalResponseBodyBytes ?? loggedResponseBodyBytes,
-					top_level_keys: Object.keys(finalResponseBody),
+					...(originalTopLevelKeys
+						? {
+								top_level_keys: originalTopLevelKeys
+									.slice(0, MAX_LOGGED_RESPONSE_BODY_KEYS)
+									.map((key) =>
+										key.slice(0, MAX_LOGGED_RESPONSE_BODY_KEY_LENGTH),
+									),
+								top_level_key_count: originalTopLevelKeys.length,
+							}
+						: {}),
 				};
+				finalResponseBody =
+					Buffer.byteLength(JSON.stringify(truncatedResponseBody)) <=
+					MAX_LOGGED_RESPONSE_BODY_BYTES
+						? truncatedResponseBody
+						: {
+								truncated: true,
+								original_bytes:
+									originalResponseBodyBytes ?? loggedResponseBodyBytes,
+							};
 			}
 		}
 

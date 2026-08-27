@@ -54,7 +54,7 @@ const captureJsonResponse = async ({
 }: {
 	path: string;
 	durationMs: number;
-	responseBody: Record<string, unknown>;
+	responseBody: unknown;
 }) => {
 	const captured: CapturedLog[] = [];
 	let cloneCount = 0;
@@ -418,7 +418,7 @@ describe("logRequestResult", () => {
 		});
 	});
 
-	test("summarizes any response body larger than the logging cap", async () => {
+	test("summarizes an object response larger than the logging cap", async () => {
 		const responseBody = {
 			id: "cus_123",
 			payload: "x".repeat(32 * 1024),
@@ -436,6 +436,79 @@ describe("logRequestResult", () => {
 				truncated: true,
 				original_bytes: Buffer.byteLength(JSON.stringify(responseBody)),
 				top_level_keys: ["id", "payload"],
+				top_level_key_count: 2,
+			},
+		});
+	});
+
+	test("summarizes a top-level array larger than the logging cap", async () => {
+		const responseBody = [{ payload: "x".repeat(32 * 1024) }];
+		const { captured } = await captureJsonResponse({
+			path: "/v1/customers.list",
+			durationMs: 10,
+			responseBody,
+		});
+
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: {
+				truncated: true,
+				original_bytes: Buffer.byteLength(JSON.stringify(responseBody)),
+			},
+		});
+	});
+
+	test("bounds oversized response key diagnostics", async () => {
+		const responseBody = Object.fromEntries(
+			Array.from({ length: 100 }, (_, index) => [
+				`key_${index}_${"x".repeat(160)}`,
+				"value".repeat(100),
+			]),
+		);
+		const { captured } = await captureJsonResponse({
+			path: "/v1/customers.list",
+			durationMs: 10,
+			responseBody,
+		});
+		const loggedResponse = captured[0]?.args[1] as {
+			res: {
+				top_level_keys: string[];
+				top_level_key_count: number;
+			};
+		};
+
+		expect(loggedResponse.res.top_level_keys).toHaveLength(50);
+		expect(loggedResponse.res.top_level_key_count).toBe(100);
+		expect(
+			loggedResponse.res.top_level_keys.every((key) => key.length <= 128),
+		).toBe(true);
+		expect(
+			Buffer.byteLength(JSON.stringify(loggedResponse.res)),
+		).toBeLessThanOrEqual(32 * 1024);
+	});
+
+	test("reports original keys when a compacted response still exceeds the cap", async () => {
+		spyOn(Math, "random").mockReturnValue(0.5);
+		const responseBody = {
+			id: "cus_123",
+			subscriptions: [{ id: "sub_123" }],
+			payload: "x".repeat(32 * 1024),
+		};
+		const { captured } = await captureJsonResponse({
+			path: "/v1/customers.get",
+			durationMs: 10,
+			responseBody,
+		});
+
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: {
+				truncated: true,
+				original_bytes: Buffer.byteLength(JSON.stringify(responseBody)),
+				top_level_keys: ["id", "subscriptions", "payload"],
+				top_level_key_count: 3,
 			},
 		});
 	});
