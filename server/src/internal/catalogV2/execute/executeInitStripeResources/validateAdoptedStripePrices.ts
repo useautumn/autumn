@@ -75,7 +75,7 @@ export const validateAdoptedStripePrices = async ({
 		if (!exists) {
 			throw new RecaseError({
 				code: ErrCode.InvalidRequest,
-				message: `Stripe price ${entry.stripePriceId} (plan ${entry.planId}) does not exist. Autumn will not create a replacement — check the id or omit it.`,
+				message: `Stripe price ${entry.stripePriceId} not found (plan ${entry.planId})`,
 				statusCode: 400,
 			});
 		}
