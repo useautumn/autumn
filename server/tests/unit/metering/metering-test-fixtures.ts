@@ -1,5 +1,6 @@
 import {
 	type MeteringEvent,
+	type MeteringEventType,
 	parseMeteringEvent,
 } from "@/internal/metering/events/meteringEventSchema.js";
 
@@ -17,7 +18,7 @@ export const makeEvent = ({
 	eventTs = BASE_EVENT_TS,
 }: {
 	id: string;
-	type: "deduct" | "grant" | "reset";
+	type: MeteringEventType;
 	value?: number;
 	customerId?: string;
 	featureId?: string;
@@ -54,6 +55,15 @@ const createSeededRandom = ({ seed }: { seed: number }) => {
 	};
 };
 
+const rollEventType = ({ roll }: { roll: number }): MeteringEventType => {
+	if (roll < 0.15) return "grant";
+	if (roll < 0.2) return "reset";
+	// Rare on purpose: a set overwrites the meter wholesale, so a heavy mix
+	// would keep flattening the balances the deduct path is meant to exercise.
+	if (roll < 0.21) return "set";
+	return "deduct";
+};
+
 export const generateEvents = ({
 	count,
 	seed,
@@ -69,14 +79,13 @@ export const generateEvents = ({
 	const events: MeteringEvent[] = [];
 
 	for (let index = 0; index < count; index++) {
-		const roll = random();
-		const type = roll < 0.15 ? "grant" : roll < 0.2 ? "reset" : "deduct";
+		const type = rollEventType({ roll: random() });
 		const customerId = `cus_${Math.floor(random() * customerCount)}`;
 		const featureId = `feature_${Math.floor(random() * featureCount)}`;
-		const value =
-			type === "grant"
-				? 100 + Math.floor(random() * 400)
-				: 1 + Math.floor(random() * 60);
+		const installsBalance = type === "grant" || type === "set";
+		const value = installsBalance
+			? 100 + Math.floor(random() * 400)
+			: 1 + Math.floor(random() * 60);
 
 		// Replay a recent id occasionally so the dedupe window is exercised.
 		const replayIndex = Math.floor(random() * 40) + 1;

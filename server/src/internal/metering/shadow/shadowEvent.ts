@@ -12,6 +12,7 @@ const EVENT_ID_HASH_LENGTH = 32;
 const EVENT_ID_PREFIX: Record<MeteringEventType, string> = {
 	deduct: "shd",
 	grant: "shg",
+	set: "shs",
 	reset: "shr",
 };
 
@@ -55,6 +56,9 @@ export const buildShadowEventId = ({
  * it (a reset restores the meter's granted total), but the v1 schema still
  * demands a positive value, so a reset back to zero cannot be represented and
  * is dropped here.
+ *
+ * A "set" is the exception: its value is the post-state balance an absolute
+ * write installed, so zero passes through rather than being dropped.
  */
 export const buildShadowEvent = ({
 	type,
@@ -72,7 +76,8 @@ export const buildShadowEvent = ({
 	if (!orgId || !env || !customerId || !featureId || !idempotencyKey) {
 		return null;
 	}
-	if (!Number.isFinite(value) || value <= 0) return null;
+	if (!Number.isFinite(value) || value < 0) return null;
+	if (value === 0 && type !== "set") return null;
 
 	return {
 		v: 1,

@@ -379,6 +379,12 @@ export const shadowTapDeduct = (params: ShadowTapParams): void =>
 export const shadowTapGrant = (params: ShadowTapParams): void =>
 	recordShadowMutation({ type: "grant", params });
 
+/** Mirrors one committed absolute balance write, where the source installed a
+ *  post-state rather than a delta. `value` is that post-state, and the fold
+ *  overwrites both the granted total and the balance with it. Zero is legal. */
+export const shadowTapSet = (params: ShadowTapParams): void =>
+	recordShadowMutation({ type: "set", params });
+
 /** Mirrors one committed cycle/manual reset. `value` is the amount the balance
  *  resets to; the fold restores the meter's granted total and ignores it. */
 export const shadowTapReset = (params: ShadowTapParams): void =>

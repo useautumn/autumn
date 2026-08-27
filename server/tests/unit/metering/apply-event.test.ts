@@ -109,6 +109,103 @@ describe("applyEvent fold", () => {
 		expect(meterOf({ state })).toEqual({ granted: 100, balance: 100 });
 	});
 
+	test("set creates the meter when nothing has been granted yet", () => {
+		const { state, result } = applyEvent({
+			state: createMeterState(),
+			event: makeEvent({ id: "evt_1", type: "set", value: 1000 }),
+		});
+
+		expect(result).toBe("applied");
+		expect(meterOf({ state })).toEqual({ granted: 1000, balance: 1000 });
+	});
+
+	test("set overwrites whatever the meter held", () => {
+		let state = createMeterState();
+		for (const event of [
+			makeEvent({ id: "evt_1", type: "grant", value: 100 }),
+			makeEvent({ id: "evt_2", type: "deduct", value: 40 }),
+			makeEvent({ id: "evt_3", type: "set", value: 7 }),
+		]) {
+			state = applyEvent({ state, event }).state;
+		}
+
+		expect(meterOf({ state })).toEqual({ granted: 7, balance: 7 });
+	});
+
+	test("set to zero is representable and leaves nothing to spend", () => {
+		let state = createMeterState();
+		for (const event of [
+			makeEvent({ id: "evt_1", type: "grant", value: 100 }),
+			makeEvent({ id: "evt_2", type: "set", value: 0 }),
+		]) {
+			state = applyEvent({ state, event }).state;
+		}
+
+		expect(meterOf({ state })).toEqual({ granted: 0, balance: 0 });
+
+		const spend = applyEvent({
+			state,
+			event: makeEvent({ id: "evt_3", type: "deduct", value: 1 }),
+		});
+		expect(spend.result).toBe("rejected_insufficient");
+	});
+
+	test("a deduct after a set spends against the set balance", () => {
+		let state = createMeterState();
+		for (const event of [
+			makeEvent({ id: "evt_1", type: "set", value: 1000 }),
+			makeEvent({ id: "evt_2", type: "deduct", value: 13 }),
+		]) {
+			state = applyEvent({ state, event }).state;
+		}
+
+		expect(meterOf({ state })).toEqual({ granted: 1000, balance: 987 });
+	});
+
+	test("a set after a deduct discards the prior usage", () => {
+		let state = createMeterState();
+		for (const event of [
+			makeEvent({ id: "evt_1", type: "grant", value: 1000 }),
+			makeEvent({ id: "evt_2", type: "deduct", value: 13 }),
+			makeEvent({ id: "evt_3", type: "set", value: 500 }),
+		]) {
+			state = applyEvent({ state, event }).state;
+		}
+
+		expect(meterOf({ state })).toEqual({ granted: 500, balance: 500 });
+	});
+
+	test("a reset after a set restores the set value", () => {
+		// A set rewrites granted as well as balance, so the meter a later reset
+		// restores to is the set post-state, not the pre-set allowance.
+		let state = createMeterState();
+		for (const event of [
+			makeEvent({ id: "evt_1", type: "grant", value: 1000 }),
+			makeEvent({ id: "evt_2", type: "set", value: 500 }),
+			makeEvent({ id: "evt_3", type: "deduct", value: 200 }),
+			makeEvent({ id: "evt_4", type: "reset", value: 1 }),
+		]) {
+			state = applyEvent({ state, event }).state;
+		}
+
+		expect(meterOf({ state })).toEqual({ granted: 500, balance: 500 });
+	});
+
+	test("a repeated set id is a duplicate and does not re-install the balance", () => {
+		const set = makeEvent({ id: "evt_1", type: "set", value: 1000 });
+		const installed = applyEvent({ state: createMeterState(), event: set });
+		const spent = applyEvent({
+			state: installed.state,
+			event: makeEvent({ id: "evt_2", type: "deduct", value: 13 }),
+		});
+		const replay = applyEvent({ state: spent.state, event: set });
+
+		expect(replay.result).toBe("duplicate");
+		expect(canonicalSerialize({ state: replay.state })).toBe(
+			canonicalSerialize({ state: spent.state }),
+		);
+	});
+
 	test("state is keyed per customer and per feature", () => {
 		let state = createMeterState();
 		for (const event of [

@@ -40,6 +40,17 @@ const foldMeter = ({
 		};
 	}
 
+	// An absolute write, not a delta: the source installed a balance the mirror
+	// cannot express as an increment, so the meter takes it wholesale. Granted
+	// moves with it because the fold has no other record of the allowance behind
+	// an absolute write, and a later reset has to restore to the set value.
+	if (event.type === "set") {
+		return {
+			meter: { granted: event.value, balance: event.value },
+			result: "applied",
+		};
+	}
+
 	if (event.type === "reset") {
 		return {
 			meter: { granted: meter.granted, balance: meter.granted },

@@ -20,6 +20,7 @@ import {
 	shadowTapDeduct,
 	shadowTapGrant,
 	shadowTapReset,
+	shadowTapSet,
 } from "@/internal/metering/shadow/shadowTap.js";
 import {
 	isOrgTapped,
@@ -206,18 +207,53 @@ describe("shadow tap event mapping", () => {
 		});
 	});
 
+	test("maps an absolute set onto its own event type", () => {
+		const set = buildShadowEvent({
+			...BASE_PARAMS,
+			type: "set",
+			value: 1000,
+			idempotencyKey: "cus_ent:ce_1:set:1000",
+			eventTs: 1234,
+		});
+
+		expect(parseMeteringEvent({ input: set })).toMatchObject({
+			type: "set",
+			value: 1000,
+			customer_id: "cus_1",
+			feature_id: "messages",
+		});
+	});
+
+	test("a set to zero is a real post-state and survives the mapping", () => {
+		// Unlike a reset, a set carries the balance the write installed, so zero
+		// has to be representable or an emptied meter would never mirror.
+		const set = buildShadowEvent({
+			...BASE_PARAMS,
+			type: "set",
+			value: 0,
+			idempotencyKey: "cus_ent:ce_1:set:0",
+		});
+
+		expect(parseMeteringEvent({ input: set })).toMatchObject({
+			type: "set",
+			value: 0,
+		});
+	});
+
 	test("the type is part of the id, so a shared key never collides", () => {
-		const ids = (["deduct", "grant", "reset"] as const).map((type) =>
+		const ids = (["deduct", "grant", "set", "reset"] as const).map((type) =>
 			buildShadowEventId({ ...BASE_PARAMS, type }),
 		);
 
-		expect(new Set(ids).size).toBe(3);
-		// The deduct id is unchanged by grants and resets existing: it is still
-		// the digest under the original prefix.
+		expect(new Set(ids).size).toBe(4);
+		// The deduct id is unchanged by grants, sets and resets existing: it is
+		// still the digest under the original prefix.
 		expect(ids[0].startsWith("shd_")).toBeTrue();
 		expect(ids[1].startsWith("shg_")).toBeTrue();
-		expect(ids[2].startsWith("shr_")).toBeTrue();
+		expect(ids[2].startsWith("shs_")).toBeTrue();
+		expect(ids[3].startsWith("shr_")).toBeTrue();
 		expect(ids[1].slice(4)).toBe(ids[0].slice(4));
+		expect(ids[2].slice(4)).toBe(ids[0].slice(4));
 	});
 
 	test("a reset back to zero cannot be represented and is dropped", () => {
@@ -229,6 +265,9 @@ describe("shadow tap event mapping", () => {
 	});
 
 	test("refunds and empty identifiers never become events", () => {
+		expect(
+			buildShadowEvent({ ...BASE_PARAMS, type: "set", value: -5 }),
+		).toBeNull();
 		expect(buildShadowEvent({ ...BASE_PARAMS, value: 0 })).toBeNull();
 		expect(buildShadowEvent({ ...BASE_PARAMS, value: -5 })).toBeNull();
 		expect(buildShadowEvent({ ...BASE_PARAMS, value: Number.NaN })).toBeNull();
@@ -296,7 +335,12 @@ describe("shadow tap configuration", () => {
 	test("every tap helper is a no-op when the tap is disabled", async () => {
 		await resetShadowTapForTests();
 
-		for (const tap of [shadowTapDeduct, shadowTapGrant, shadowTapReset]) {
+		for (const tap of [
+			shadowTapDeduct,
+			shadowTapGrant,
+			shadowTapSet,
+			shadowTapReset,
+		]) {
 			expect(() => tap(BASE_MUTATION)).not.toThrow();
 			expect(tap(BASE_MUTATION)).toBeUndefined();
 		}

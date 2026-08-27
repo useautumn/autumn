@@ -35,7 +35,7 @@ describe("metering event schema v1", () => {
 	});
 
 	test("accepts every event type and an optional entity_id", () => {
-		for (const type of ["deduct", "grant", "reset"] as const) {
+		for (const type of ["deduct", "grant", "set", "reset"] as const) {
 			const event = parseMeteringEvent({
 				input: { ...validInput, type, entity_id: "ent_1" },
 			});
@@ -53,10 +53,32 @@ describe("metering event schema v1", () => {
 		).toBe(false);
 	});
 
-	test("rejects a non-positive value", () => {
-		for (const value of [0, -1, -0.5]) {
+	test("rejects a non-positive value for the types that move a meter", () => {
+		for (const type of ["deduct", "grant", "reset"] as const) {
+			for (const value of [0, -1, -0.5]) {
+				expect(
+					meteringEventSchema.safeParse({ ...validInput, type, value }).success,
+				).toBe(false);
+			}
+		}
+	});
+
+	test("a set may install a zero balance", () => {
+		// A set carries a post-state, not an amount, and zero is a real balance
+		// a fresh grant-then-full-spend leaves behind.
+		const event = parseMeteringEvent({
+			input: { ...validInput, type: "set", value: 0 },
+		});
+
+		expect(event.type).toBe("set");
+		expect(event.value).toBe(0);
+	});
+
+	test("a set still rejects a negative balance", () => {
+		for (const value of [-1, -0.5]) {
 			expect(
-				meteringEventSchema.safeParse({ ...validInput, value }).success,
+				meteringEventSchema.safeParse({ ...validInput, type: "set", value })
+					.success,
 			).toBe(false);
 		}
 	});
