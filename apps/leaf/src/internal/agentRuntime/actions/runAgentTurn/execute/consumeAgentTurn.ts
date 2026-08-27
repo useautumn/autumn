@@ -291,15 +291,16 @@ export const consumeAgentTurn = async ({
 				});
 			}
 
-			const quietTooLong =
-				activity.activeChildren() === 0 &&
-				activity.msSinceActivity() >= MAX_QUIET_MS;
+			// A child streams on its own session, so a quiet parent is not
+			// evidence the turn is done — children have completed well after the
+			// deadline. MAX_TURN_DURATION_MS still bounds a runaway turn.
+			const childIsWorking = activity.activeChildren() > 0;
+			const quietTooLong = activity.msSinceActivity() >= MAX_QUIET_MS;
 			const deadlineReached =
 				deadlineAt !== undefined && Date.now() >= deadlineAt;
 			if (
 				activity.msSinceStart() >= MAX_TURN_DURATION_MS ||
-				quietTooLong ||
-				deadlineReached
+				(!childIsWorking && (quietTooLong || deadlineReached))
 			) {
 				return settleExhaustedTurn({ activity, logger, turn });
 			}

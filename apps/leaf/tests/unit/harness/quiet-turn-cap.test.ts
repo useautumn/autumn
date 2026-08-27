@@ -223,9 +223,10 @@ describe("a parent quiet past the cap settles on the clock", () => {
 		expect(log.quiet_ms).toBeLessThan(QUIET_CAP_MS + PASS_ADVANCE_MS);
 	});
 
-	test("a caller deadline settles the turn before its own backstop", async () => {
-		// A live child suppresses the quiet cap, so without a deadline the turn
-		// runs to the 15 min ceiling -- long past the caller's 3m20s wall.
+	test("a caller deadline does not settle a turn whose child is working", async () => {
+		// Prod 2026-08-27 17:30:40 wrun_01M1247EP8R8ZBDA5QXXFSZQPG: the deadline
+		// fired with quiet_ms 299 while the investigator had 46 events in flight.
+		// The child completed 2m44s later, into a turn already reported failed.
 		childKeepsStreaming = true;
 		childEvents = Array.from({ length: 3 }, () =>
 			event({
@@ -233,15 +234,29 @@ describe("a parent quiet past the cap settles on the clock", () => {
 				type: "actions.requested",
 			}),
 		);
-		streamPasses = nineQuietPasses([
-			event({ type: "turn.started" }),
-			event({ childSessionId: "wrun_child_1", type: "subagent.called" }),
-			event({
-				finishReason: "stop",
-				message: "Partial answer so far.",
-				type: "message.completed",
-			}),
-		]);
+		// Quiet passes carry the turn past the deadline, then eve resumes and
+		// finishes -- exactly what prod's child did 2m44s after being cut off.
+		streamPasses = [
+			{
+				events: [
+					event({ type: "turn.started" }),
+					event({ childSessionId: "wrun_child_1", type: "subagent.called" }),
+				],
+				thenThrow: "idle",
+			},
+			{ events: [], thenThrow: "idle" },
+			{ events: [], thenThrow: "idle" },
+			{
+				events: [
+					event({
+						finishReason: "stop",
+						message: "The delegated answer.",
+						type: "message.completed",
+					}),
+					event({ type: "session.waiting" }),
+				],
+			},
+		];
 
 		const abandoned: AbandonedLog[] = [];
 		const logger = {
@@ -268,9 +283,11 @@ describe("a parent quiet past the cap settles on the clock", () => {
 			token: "t",
 		} as never);
 
-		expect(outcome).toMatchObject({ kind: "answered" });
-		expect(abandoned).toHaveLength(1);
-		expect(parentStreamCalls).toBeLessThan(5);
+		expect(abandoned).toHaveLength(0);
+		expect(outcome).toMatchObject({
+			kind: "answered",
+			text: "The delegated answer.",
+		});
 	});
 
 	test("a live child suppresses the quiet cap even when the parent is silent", async () => {
