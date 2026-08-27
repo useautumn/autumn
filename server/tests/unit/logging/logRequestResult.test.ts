@@ -251,19 +251,27 @@ describe("logRequestResult", () => {
 	test("keeps compact multi-feature track diagnostics", async () => {
 		spyOn(Math, "random").mockReturnValue(0.5);
 		const responseBody = {
+			customer_id: "cus_123",
+			event_name: "api_call",
 			value: 45.67,
 			balance: null,
 			balances: {
 				action1: {
+					object: "balance",
 					feature_id: "action1",
 					current_balance: 154.33,
 					usage: 45.67,
+					max_purchase: null,
+					feature: { id: "action1", name: "Action 1" },
 					breakdown: [{ id: "cus_ent_action1" }],
+					rollovers: [{ id: "rollover_action1" }],
 				},
 				action3: {
+					object: "balance",
 					feature_id: "action3",
 					current_balance: 104.33,
 					usage: 45.67,
+					max_purchase: null,
 					breakdown: [{ id: "cus_ent_action3" }],
 				},
 			},
@@ -274,15 +282,15 @@ describe("logRequestResult", () => {
 					plan_id: "free",
 					reset: null,
 					value: 45.67,
-					unexpected: "drop-me",
 				},
 			],
 			flag: {
+				object: "flag",
 				id: "cus_ent_flag",
 				feature_id: "premium",
 				plan_id: "free",
 				expires_at: null,
-				unexpected: "drop-me",
+				feature: { id: "premium", name: "Premium" },
 			},
 		};
 		const { captured } = await captureJsonResponse({
@@ -295,18 +303,24 @@ describe("logRequestResult", () => {
 			statusCode: 200,
 			durationMs: 10,
 			res: {
+				customer_id: "cus_123",
+				event_name: "api_call",
 				value: 45.67,
 				balance: null,
 				balances: {
 					action1: {
+						object: "balance",
 						feature_id: "action1",
 						current_balance: 154.33,
 						usage: 45.67,
+						max_purchase: null,
 					},
 					action3: {
+						object: "balance",
 						feature_id: "action3",
 						current_balance: 104.33,
 						usage: 45.67,
+						max_purchase: null,
 					},
 				},
 				deductions: [
@@ -319,6 +333,7 @@ describe("logRequestResult", () => {
 					},
 				],
 				flag: {
+					object: "flag",
 					id: "cus_ent_flag",
 					feature_id: "premium",
 					plan_id: "free",

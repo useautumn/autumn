@@ -29,96 +29,36 @@ const shouldSampleSuccessResponseBody = () =>
 	SUCCESS_RESPONSE_BODY_SAMPLE_RATE > 0 &&
 	Math.random() < Math.min(SUCCESS_RESPONSE_BODY_SAMPLE_RATE, 1);
 
-const COMPACT_RESPONSE_FIELDS = new Set([
-	"allowed",
-	"code",
-	"feature_id",
-	"required_balance",
-	"value",
-]);
-const COMPACT_BALANCE_FIELDS = new Set([
-	"feature_id",
-	"plan_id",
-	"usage",
-	"granted",
-	"remaining",
-	"current_balance",
-	"unlimited",
-	"overage_allowed",
-	"next_reset_at",
-]);
-const COMPACT_DEDUCTION_FIELDS = new Set([
-	"balance_id",
-	"feature_id",
-	"plan_id",
-	"reset",
-	"value",
-]);
-const COMPACT_FLAG_FIELDS = new Set([
-	"id",
-	"feature_id",
-	"plan_id",
-	"expires_at",
-]);
-
-const compactFields = ({
-	value,
-	fields,
-}: {
-	value: Record<string, unknown>;
-	fields: Set<string>;
-}) =>
-	Object.fromEntries(
-		Object.entries(value).filter(([field]) => fields.has(field)),
-	);
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
+
+const stripLargeFields = (value: unknown) => {
+	if (!isRecord(value)) return value;
+	const compactValue = { ...value };
+	delete compactValue.breakdown;
+	delete compactValue.feature;
+	delete compactValue.rollovers;
+	return compactValue;
+};
 
 const compactHighVolumeResponseBody = (
 	responseBody: Record<string, unknown>,
 ) => {
-	const compactResponseBody = compactFields({
-		value: responseBody,
-		fields: COMPACT_RESPONSE_FIELDS,
-	});
-	if (responseBody.balance === null) compactResponseBody.balance = null;
-	if (isRecord(responseBody.balance)) {
-		compactResponseBody.balance = compactFields({
-			value: responseBody.balance,
-			fields: COMPACT_BALANCE_FIELDS,
-		});
+	const compactResponseBody = { ...responseBody };
+	delete compactResponseBody.preview;
+	if ("balance" in compactResponseBody) {
+		compactResponseBody.balance = stripLargeFields(responseBody.balance);
 	}
 	if (isRecord(responseBody.balances)) {
-		const balances: Record<string, Record<string, unknown> | null> = {};
-		for (const [featureId, balance] of Object.entries(responseBody.balances)) {
-			if (balance === null) {
-				balances[featureId] = null;
-			} else if (isRecord(balance)) {
-				balances[featureId] = compactFields({
-					value: balance,
-					fields: COMPACT_BALANCE_FIELDS,
-				});
-			}
-		}
-		compactResponseBody.balances = balances;
+		compactResponseBody.balances = Object.fromEntries(
+			Object.entries(responseBody.balances).map(([featureId, balance]) => [
+				featureId,
+				stripLargeFields(balance),
+			]),
+		);
 	}
-	if (Array.isArray(responseBody.deductions)) {
-		compactResponseBody.deductions = responseBody.deductions
-			.filter(isRecord)
-			.map((deduction) =>
-				compactFields({
-					value: deduction,
-					fields: COMPACT_DEDUCTION_FIELDS,
-				}),
-			);
-	}
-	if (responseBody.flag === null) compactResponseBody.flag = null;
-	if (isRecord(responseBody.flag)) {
-		compactResponseBody.flag = compactFields({
-			value: responseBody.flag,
-			fields: COMPACT_FLAG_FIELDS,
-		});
+	if ("flag" in compactResponseBody) {
+		compactResponseBody.flag = stripLargeFields(responseBody.flag);
 	}
 	return compactResponseBody;
 };
