@@ -131,6 +131,7 @@ export const executeStripeSubscriptionOperation = async ({
 			return await stripeClient.subscriptions.cancel(
 				subscriptionAction.stripeSubscriptionId,
 				{
+					...subscriptionAction.params,
 					expand: ["latest_invoice"],
 				},
 				autumnStripeRequestOptions({ source: idempotencySource }),

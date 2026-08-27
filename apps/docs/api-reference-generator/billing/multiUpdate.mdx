@@ -28,4 +28,21 @@ const response = await autumn.billing.multiUpdate({
 });
 ```
 
+```typescript Cancel immediately with a refund and Stripe reason
+const response = await autumn.billing.multiUpdate({
+    customerId: "cus_123",
+    updates: [
+        {
+            planId: "pro_plan",
+            cancelAction: "cancel_immediately",
+            refundLastPayment: "full",
+            cancellationDetails: {
+                reason: "too_expensive",
+                details: "Switching to a competitor",
+            },
+        },
+    ],
+});
+```
+
 </CodeGroup>

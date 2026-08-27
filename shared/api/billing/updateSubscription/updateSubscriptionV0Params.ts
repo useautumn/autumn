@@ -6,6 +6,7 @@ import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
 import { CancelActionSchema } from "../common/cancelAction";
+import { CancellationDetailsSchema } from "../common/cancellationDetails";
 import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { RedirectModeSchema } from "../common/redirectMode";
@@ -32,6 +33,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		// - 'next_cycle_only': Do NOT create any charges due to the update
 		billing_behavior: BillingBehaviorSchema.optional(),
 		refund_last_payment: RefundLastPaymentSchema.optional(),
+		cancellation_details: CancellationDetailsSchema.optional(),
 		billing_cycle_anchor: BillingCycleAnchorSchema.optional(),
 
 		processor_subscription_id: z.string().nullable().optional(),
@@ -116,6 +118,18 @@ export const UpdateSubscriptionV0ParamsSchema =
 			{
 				message:
 					"refund_last_payment requires cancel_action to be 'cancel_immediately'.",
+			},
+		)
+		.refine(
+			(data) =>
+				!(
+					data.cancellation_details &&
+					data.cancel_action !== "cancel_immediately" &&
+					data.cancel_action !== "cancel_end_of_cycle"
+				),
+			{
+				message:
+					"cancellation_details requires cancel_action to be 'cancel_immediately' or 'cancel_end_of_cycle'.",
 			},
 		);
 

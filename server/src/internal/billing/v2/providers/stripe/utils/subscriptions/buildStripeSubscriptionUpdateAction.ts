@@ -9,6 +9,7 @@ import { notNullish } from "@shared/utils/utils";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
+import { convertCancellationDetailsToStripe } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/convertCancellationDetailsToStripe";
 import { shouldEnableStripeAutomaticTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
 
 export const buildStripeSubscriptionUpdateAction = ({
@@ -69,6 +70,12 @@ export const buildStripeSubscriptionUpdateAction = ({
 		stripeSubscription.trial_settings?.end_behavior.missing_payment_method !==
 			"create_invoice";
 
+	const cancellationDetails = shouldSetCancelAt
+		? convertCancellationDetailsToStripe({
+				cancellationDetails: billingContext.cancellationDetails,
+			})
+		: undefined;
+
 	const params: Stripe.SubscriptionUpdateParams = {
 		items: subItemsUpdate.length > 0 ? subItemsUpdate : undefined,
 		trial_end: shouldSetTrialEnd
@@ -81,6 +88,9 @@ export const buildStripeSubscriptionUpdateAction = ({
 			: shouldSetCancelAt
 				? subscriptionCancelAt
 				: undefined,
+		...(cancellationDetails && {
+			cancellation_details: cancellationDetails,
+		}),
 		proration_behavior: "none",
 		payment_behavior: "error_if_incomplete",
 

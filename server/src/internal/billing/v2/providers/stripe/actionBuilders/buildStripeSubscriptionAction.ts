@@ -7,12 +7,13 @@ import type {
 } from "@autumn/shared";
 import { stripePhaseStartsInFuture } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import type Stripe from "stripe";
 import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
 import { buildStripeSubscriptionCreateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction";
 import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction";
+import type Stripe from "stripe";
 import { billingPlanToOneOffStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/billingPlanToOneOffStripeItemSpecs";
 import { buildFreeRecurringPlaceholderItem } from "../utils/subscriptionSchedules/buildStripePhasesUpdate";
+import { convertCancellationDetailsToStripe } from "../utils/subscriptions/convertCancellationDetailsToStripe";
 
 const subscriptionStartsInFuture = ({
 	billingContext,
@@ -123,9 +124,15 @@ export const buildStripeSubscriptionAction = ({
 	}
 
 	if (deletesAllSubscriptionItems) {
+		const cancellationDetails = convertCancellationDetailsToStripe({
+			cancellationDetails: billingContext.cancellationDetails,
+		});
 		return {
 			type: "cancel" as const,
 			stripeSubscriptionId: stripeSubscription.id,
+			...(cancellationDetails && {
+				params: { cancellation_details: cancellationDetails },
+			}),
 		};
 	}
 

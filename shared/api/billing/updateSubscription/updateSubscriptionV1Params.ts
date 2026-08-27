@@ -4,6 +4,7 @@ import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingParamsBaseV1";
 import { CancelActionSchema } from "../common/cancelAction";
+import { CancellationDetailsSchema } from "../common/cancellationDetails";
 import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { RedirectModeSchema } from "../common/redirectMode";
@@ -39,6 +40,10 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 		}),
 
 		refund_last_payment: RefundLastPaymentSchema.optional(),
+		cancellation_details: CancellationDetailsSchema.optional().meta({
+			description:
+				"Reason and details forwarded to Stripe as cancellation_details when this update cancels the Stripe subscription.",
+		}),
 
 		recalculate_balances: z
 			.object({
@@ -114,6 +119,18 @@ export const UpdateSubscriptionV1ParamsSchema =
 			{
 				message:
 					"refund_last_payment requires cancel_action to be 'cancel_immediately'.",
+			},
+		)
+		.refine(
+			(data) =>
+				!(
+					data.cancellation_details &&
+					data.cancel_action !== "cancel_immediately" &&
+					data.cancel_action !== "cancel_end_of_cycle"
+				),
+			{
+				message:
+					"cancellation_details requires cancel_action to be 'cancel_immediately' or 'cancel_end_of_cycle'.",
 			},
 		);
 

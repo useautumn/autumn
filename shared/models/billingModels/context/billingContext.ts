@@ -135,6 +135,10 @@ export interface BillingContext {
 	storedRefundLineItems?: DbInvoiceLineItem[];
 
 	refundLastPayment?: "prorated" | "full";
+	cancellationDetails?: {
+		reason?: string;
+		details?: string;
+	};
 
 	paymentBehaviorIntent?: PaymentBehaviorIntent;
 	shouldFinalizeFirstInvoice?: boolean;
