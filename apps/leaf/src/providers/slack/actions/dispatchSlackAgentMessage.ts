@@ -19,11 +19,7 @@ import {
 	createLeafSessionContext,
 	logger as rootLogger,
 } from "../../../lib/logger.js";
-import {
-	errorNotice,
-	RUN_STOPPED_FOR_TIME_MESSAGE,
-	runStoppedByUserNotice,
-} from "../../../ui/messages.js";
+import { errorNotice, runStoppedByUserNotice } from "../../../ui/messages.js";
 import type { ReplyTarget } from "../../../ui/progress.js";
 import { createRunProgress } from "../../../ui/runProgress.js";
 import { getSlackWorkspaceId } from "../context.js";
@@ -184,13 +180,8 @@ const runAndReply = async ({
 		});
 
 		if (output.kind === "stopped") {
-			await progress.fail(
-				output.reason === "timeout" ? "Timed out" : "Stopped by user",
-			);
-			const notice =
-				output.reason === "timeout"
-					? RUN_STOPPED_FOR_TIME_MESSAGE
-					: runStoppedByUserNotice(run.stop?.byUserId);
+			await progress.fail("Stopped by user");
+			const notice = runStoppedByUserNotice(run.stop?.byUserId);
 			await target.post({
 				markdown: [output.text, notice]
 					.filter((part): part is string => Boolean(part?.trim()))

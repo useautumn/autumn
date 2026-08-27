@@ -45,9 +45,6 @@ export const questionAnswerFailedWithDetail = (detail: string) =>
 export const RUN_TIMED_OUT_MESSAGE =
 	"That run took too long and was stopped. Send your message again to continue.";
 
-export const RUN_STOPPED_FOR_TIME_MESSAGE =
-	"_I stopped because the run was taking too long. Send a new message to continue._";
-
 export const runStoppedByUserNotice = (stoppedBy?: string) =>
 	`_Stopped${stoppedBy ? ` by <@${stoppedBy}>` : ""}. Nothing further was run._`;
 

@@ -106,16 +106,12 @@ const postedSessionFrom = ({
 	return { continuationToken, sessionId: response.sessionId };
 };
 
-export type EveFilePart = {
-	data: string;
-	filename?: string;
-	mediaType: string;
-	type: "file";
-};
-
 export type EveMessageContent =
 	| string
-	| Array<{ text: string; type: "text" } | EveFilePart>;
+	| Array<
+			| { text: string; type: "text" }
+			| { data: string; filename?: string; mediaType: string; type: "file" }
+	  >;
 
 /** Leaf's context bags are plain JSON-serializable records; the SDK's stricter
  * JsonObject cannot be proven structurally from `unknown` values. */

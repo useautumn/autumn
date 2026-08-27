@@ -64,9 +64,13 @@ export const textForInputRequests = (
 		.filter(Boolean)
 		.join("\n\n");
 
-/** Eve ended the turn — `session.waiting` is a park, the rest are endings. */
+/** Nothing more is coming on this stream: eve's own session boundaries, plus
+ * the step and turn failures that poison the turn without closing the session.
+ * Mirrors isCurrentTurnBoundaryEvent | isTurnFailureEvent from eve/client,
+ * which take a whole event where leaf only carries the type. */
 export const isTerminalEveEventType = (eventType: string) =>
 	eventType === "session.waiting" ||
 	eventType === "session.completed" ||
+	eventType === "session.failed" ||
 	eventType === "turn.failed" ||
-	eventType === "session.failed";
+	eventType === "step.failed";

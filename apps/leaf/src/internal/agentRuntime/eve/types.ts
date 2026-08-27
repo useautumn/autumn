@@ -42,7 +42,3 @@ export type EveAuthContext = {
 	threadId: string;
 	workspaceId: string;
 };
-
-export type EveRuntimeSession = EveSessionRef & {
-	auth: EveAuthContext;
-};
