@@ -29,13 +29,11 @@ const TEST_ORG_CONFIG = {
 export const TEST_ORG_PUBLISHABLE_KEY =
 	"am_pk_test_3DoBu1cmlgxWqEXYiKaBKOPHqsu";
 
-// `bun tw` warm-up forks one shared org into N isolated workers, each minting
-// its OWN Stripe sub-account at boot (see attachSandboxStripeAccount). So the
-// warm-parent seed must NOT create a sub-account. `bun t` / `bun dw` keep the
-// shared account, so the flag defaults to off (unset env => unchanged behavior).
-const skipStripeAccountForWorkerMode = ["1", "true", "yes"].includes(
-	(process.env.TW_SKIP_STRIPE_ACCOUNT ?? "").trim().toLowerCase(),
-);
+function skipsStripeAccountForWorkerMode(): boolean {
+	return ["1", "true", "yes"].includes(
+		(process.env.TW_SKIP_STRIPE_ACCOUNT ?? "").trim().toLowerCase(),
+	);
+}
 
 // Synthetic inviter pinned to the test org; satisfies invitation.inviter_id
 // NOT-NULL FK without needing a real human user in a fresh worktree branch.
@@ -44,6 +42,37 @@ const TEST_INVITER_USER = {
 	name: "Setup Test Inviter",
 	email: "setup-test-inviter@autumn.test",
 };
+
+export function testOrgNeedsStripeAccount({
+	org,
+}: {
+	org: {
+		test_stripe_connect?: { default_account_id?: string | null } | null;
+	};
+}): boolean {
+	if (skipsStripeAccountForWorkerMode()) return false;
+	return !org.test_stripe_connect?.default_account_id;
+}
+
+export async function ensureTestOrgStripeAccount({
+	org,
+}: {
+	org: {
+		id: string;
+		slug: string;
+		name: string;
+		createdAt: Date;
+		test_stripe_connect?: { default_account_id?: string | null } | null;
+	};
+}): Promise<void> {
+	if (!testOrgNeedsStripeAccount({ org })) return;
+	await afterOrgCreated({
+		org: { ...org, slug: TEST_ORG_CONFIG.slug } as never,
+		user: TEST_INVITER_USER as never,
+		createStripeAccount: true,
+		pkey: TEST_ORG_PUBLISHABLE_KEY,
+	});
+}
 
 const TEAM_INVITE_EMAILS = [
 	"ayush@useautumn.com",
@@ -81,14 +110,7 @@ export async function createTestOrg({
 			),
 		);
 
-		await afterOrgCreated({
-			org: { ...existingOrg, slug: TEST_ORG_CONFIG.slug } as any,
-			user: TEST_INVITER_USER as any,
-			createStripeAccount:
-				!skipStripeAccountForWorkerMode &&
-				!existingOrg.test_stripe_connect?.default_account_id,
-			pkey: TEST_ORG_PUBLISHABLE_KEY,
-		});
+		await ensureTestOrgStripeAccount({ org: existingOrg });
 
 		await seedTeamInvites({ db });
 		await clearOrgDbOnly({
@@ -171,7 +193,7 @@ export async function createTestOrg({
 	await afterOrgCreated({
 		org: insertedOrg as any,
 		user: TEST_INVITER_USER as any,
-		createStripeAccount: !skipStripeAccountForWorkerMode,
+		createStripeAccount: !skipsStripeAccountForWorkerMode(),
 		pkey: TEST_ORG_PUBLISHABLE_KEY,
 	});
 

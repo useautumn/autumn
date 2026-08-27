@@ -39,6 +39,12 @@ pull_infisical() {
 }
 
 pull_infisical EXECUTOR_API_KEY
+pull_infisical STRIPE_SANDBOX_SECRET_KEY
+if [ -n "${STRIPE_SANDBOX_SECRET_KEY:-}" ]; then
+	echo "[cursor-cloud-start] STRIPE_SANDBOX_SECRET_KEY ready"
+else
+	echo "[cursor-cloud-start] STRIPE_SANDBOX_SECRET_KEY unset — unit-test-org seed will fail" >&2
+fi
 pull_infisical CLOUDFLARE_TUNNEL_API_TOKEN
 pull_infisical CLOUDFLARE_TUNNEL_ACCOUNT_ID
 if [ -z "${CLOUDFLARE_TUNNEL_API_TOKEN:-}" ]; then

@@ -224,6 +224,14 @@ if grep -q 'bun", \["install"\]' "$ROOT/scripts/dw/commands/start.ts"; then
 fi
 grep -q 'autoEnsureLocalTestOrg' "$ROOT/scripts/dw/commands/start.ts" \
 	|| fail "dw start must seed unit-test-org on Cloud agents"
+grep -q 'pull_infisical STRIPE_SANDBOX_SECRET_KEY' \
+	"$ROOT/scripts/setup/cursor-cloud/start.sh" \
+	|| fail "start.sh must pull STRIPE_SANDBOX_SECRET_KEY before dw start"
+grep -q 'STRIPE_SANDBOX_SECRET_KEY unset' \
+	"$ROOT/scripts/dw/helpers/setup.ts" \
+	|| fail "Cloud seed must refuse to run without STRIPE_SANDBOX_SECRET_KEY"
+grep -q 'ensureTestOrgStripeAccount' "$ROOT/scripts/setup/setup-test.ts" \
+	|| fail "setup-test --ensure must attach Stripe if the org already exists"
 grep -q 'writeEnvLocalFiles' "$ROOT/scripts/dw/commands/start.ts" \
 	|| fail "dw start must pin local DATABASE_URL in server/.env.local"
 grep -q 'writeEnvLocalFiles' "$ROOT/scripts/dw/helpers/start.ts" \
