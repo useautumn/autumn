@@ -9,6 +9,7 @@ import { stripePhaseStartsInFuture } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
 import { buildStripeSubscriptionCreateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction";
+import { buildStripeSubscriptionCancelParams } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionParams";
 import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction";
 import type Stripe from "stripe";
 import { billingPlanToOneOffStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/billingPlanToOneOffStripeItemSpecs";
@@ -126,6 +127,10 @@ export const buildStripeSubscriptionAction = ({
 		return {
 			type: "cancel" as const,
 			stripeSubscriptionId: stripeSubscription.id,
+			params: buildStripeSubscriptionCancelParams({
+				params: {},
+				subscriptionParams: billingContext.subscriptionParams,
+			}),
 		};
 	}
 
