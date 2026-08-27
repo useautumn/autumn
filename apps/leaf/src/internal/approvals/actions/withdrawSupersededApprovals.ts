@@ -9,15 +9,15 @@ import { approvalDenyPlan } from "../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 
-const withdrawnNote = (toolName: string) =>
-	`(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild, retry, or ask anything about the withdrawn change — the user's message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one. If it is a QUESTION, just answer it — do NOT re-issue the write or show a card; say the change is still pending and wait for them to confirm it.${
+export const withdrawnNoteFor = (toolName: string) =>
+	`(The user replied with a new message instead of deciding on this pending request, so it was withdrawn and nothing is pending any more. Act on the user's message, treating it as a refinement of the withdrawn change where it reads like one. If it is a QUESTION about the withdrawn change, answer it and then re-issue that same write unchanged so the card is back for them to confirm — never describe a withdrawn change as awaiting their confirmation when no card is open.${
 		normalizeToolName(toolName) === "attach"
 			? " Keep an attach refinement customer-specific; use catalog tools only if they explicitly ask to change the shared plan."
 			: ""
 	})`;
 
 const MANY_WITHDRAWN_NOTE =
-	"(The user replied with a new message instead of deciding on the pending requests, so they were all withdrawn. Do not rebuild, retry, or ask anything about the withdrawn changes — the user's message follows immediately and you should act on that.)";
+	"(The user replied with a new message instead of deciding on the pending requests, so they were all withdrawn and nothing is pending any more. Act on the user's message. If it is a QUESTION about the withdrawn changes, answer it and then re-issue those same writes unchanged so the cards are back for them to confirm.)";
 
 export type ApprovalWithdrawal = {
 	inputResponses: Array<{ optionId: string; requestId: string }>;
@@ -129,7 +129,7 @@ export const withdrawSupersededApprovals = async ({
 	});
 	const note =
 		cancelledApprovals.length === 1 && cancelledApprovals[0]
-			? withdrawnNote(cancelledApprovals[0].tool_name)
+			? withdrawnNoteFor(cancelledApprovals[0].tool_name)
 			: MANY_WITHDRAWN_NOTE;
 	return { withdrawal: { inputResponses, note } };
 };
