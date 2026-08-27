@@ -121,6 +121,31 @@ describe("a withdrawal that eve defers is redelivered", () => {
 		repostedMessages = [];
 	});
 
+	test("a parked turn that ran tools is not mistaken for a deferral", async () => {
+		// toolLabels is cleared as each result lands, so a completed tool call
+		// used to leave the map empty and read as a deferred message.
+		parentPasses = [
+			[
+				event({ type: "turn.started" }),
+				event({
+					actions: [{ callId: "c1", toolName: "autumn__getCustomer" }],
+					type: "actions.requested",
+				}),
+				event({
+					result: { callId: "c1", toolName: "autumn__getCustomer" },
+					status: "ok",
+					type: "action.result",
+				}),
+				event({ type: "session.waiting" }),
+			],
+		];
+
+		const outcome = await consume();
+
+		expect(outcome).toMatchObject({ kind: "silent" });
+		expect(repostedMessages).toHaveLength(0);
+	});
+
 	test("the parked no-op turn does not silently swallow the message", async () => {
 		// Exactly what eve emits for a deferred message: a turn that starts,
 		// receives, completes and parks without ever doing any work.
