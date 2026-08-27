@@ -10,6 +10,7 @@ export * from "./api/billing/common/billingPreviewResponse";
 export * from "./api/billing/common/billingResponse";
 export * from "./api/billing/common/cancelAction";
 export * from "./api/billing/common/customizePlan/customizePlanV1";
+export * from "./api/billing/common/subscriptionParams";
 export * from "./api/billing/common/customLineItem";
 export * from "./api/billing/common/mappers/resolveFreeTrialParam";
 export * from "./api/billing/createSchedule/createScheduleParamsV0";

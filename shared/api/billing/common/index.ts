@@ -21,4 +21,5 @@ export * from "./mappers/billingParamsV1ToV0";
 export * from "./multi/index";
 export * from "./redirectMode";
 export * from "./refundLastPayment";
+export * from "./subscriptionParams";
 export * from "./transitionRules";

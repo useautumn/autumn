@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { urlsForEntry } from "./env-files.ts";
+import { LOCAL_DATABASE_URL } from "../constants.ts";
+import { databaseUrlForEnvLocal, urlsForEntry } from "./env-files.ts";
 import { aliasesFor } from "./ports.ts";
 
 const cloudEntry = {
@@ -32,6 +33,15 @@ describe("urlsForEntry", () => {
 			"https://autumn-wt45-aa11bb-api.autumnworktree.com",
 		);
 		expect(urls.viteUrl).toBe(aliases.viteUrl);
+	});
+
+	test("local Postgres keeps sslmode unset; Neon URLs get verify-full", () => {
+		expect(databaseUrlForEnvLocal(LOCAL_DATABASE_URL)).toBe(LOCAL_DATABASE_URL);
+		expect(
+			databaseUrlForEnvLocal(
+				"postgresql://user:pass@ep-foo.us-east-2.aws.neon.tech/autumn",
+			),
+		).toContain("sslmode=verify-full");
 	});
 
 	test("Cloud agent browsers use public hosts; API stays loopback", () => {

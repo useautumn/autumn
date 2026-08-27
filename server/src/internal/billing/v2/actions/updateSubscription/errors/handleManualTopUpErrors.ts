@@ -17,6 +17,7 @@ const FORBIDDEN_FIELDS: readonly (keyof UpdateSubscriptionV1Params)[] = [
 	"cancel_action",
 	"billing_cycle_anchor",
 	"refund_last_payment",
+	"subscription_params",
 	"recalculate_balances",
 	"status",
 	"processor_subscription_id",

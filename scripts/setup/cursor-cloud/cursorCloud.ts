@@ -34,6 +34,11 @@ Boot starts local infra (Postgres/Redis/ClickHouse/ElasticMQ), seeds
 \`unit-test-org\`, and the Cloudflare public URL via
 \`bun scripts/dw/index.ts start\`. It does **not** start the app.
 Run \`bun dw\` when the task needs Vite/API.
+\`start\` pulls \`STRIPE_SANDBOX_SECRET_KEY\` before seeding so the org
+gets a Stripe Connect account, then caches it for later shells (not
+\`server/.env\`). \`bun t\` must use local Postgres via \`server/.env\` /
+\`.env.local\`. Infisical's PlanetScale \`DATABASE_URL\` against the local
+API causes Stripe \`No such customer\`.
 The in-IDE Browser tab stays blank (Cursor bug, any URL) — open the
 public \`autumn-wt1-<hash>.autumnworktree.com\` URL from \`bun dw identify\`,
 or \`http://localhost:3000\` from Ports.
@@ -156,6 +161,10 @@ export PATH="${root}/node_modules/.bin:/usr/local/bin:$HOME/.bun/bin:$PATH"
 if [ -z "\${INFISICAL_TOKEN:-}" ] && [ -s "$HOME/.cache/autumn-infisical-token" ]; then
   INFISICAL_TOKEN="$(cat "$HOME/.cache/autumn-infisical-token")"
   export INFISICAL_TOKEN
+fi
+if [ -z "\${STRIPE_SANDBOX_SECRET_KEY:-}" ] && [ -s "$HOME/.cache/autumn-stripe-sandbox-secret-key" ]; then
+  STRIPE_SANDBOX_SECRET_KEY="$(cat "$HOME/.cache/autumn-stripe-sandbox-secret-key")"
+  export STRIPE_SANDBOX_SECRET_KEY
 fi
 if [ -z "\${INFISICAL_PROJECT_ID:-}" ] && [ -f "${root}/.infisical.json" ]; then
   INFISICAL_PROJECT_ID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("workspaceId") or "")' "${root}/.infisical.json" 2>/dev/null || true)"

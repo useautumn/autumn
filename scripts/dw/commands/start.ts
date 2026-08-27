@@ -1,5 +1,7 @@
 import { isCloudAgent } from "@autumn/env";
+import { LOCAL_DATABASE_URL } from "../constants.ts";
 import { ensurePublicAccess } from "../helpers/cloudflare.ts";
+import { writeEnvLocalFiles } from "../helpers/env-files.ts";
 import { ensureLocalInfra } from "../helpers/localInfra.ts";
 import {
 	loadRegistry,
@@ -24,6 +26,10 @@ export async function cmdStart(): Promise<RegistryEntry> {
 	ensureLocalInfra();
 	if (isCloudAgent()) {
 		await autoEnsureLocalTestOrg();
+		writeEnvLocalFiles({
+			...entry0,
+			databaseUrl: LOCAL_DATABASE_URL,
+		});
 	}
 	const entry = await ensurePublicAccess(entry0);
 	const registry = loadRegistry();
