@@ -2,7 +2,7 @@ import { ms } from "@autumn/shared";
 import { logger } from "../../../../lib/logger.js";
 import { answerEveInput } from "../../eve/answerEveInput.js";
 import { isEveTransportLost, resyncEveStreamIndex } from "../../eve/client.js";
-import { approvalOptionIds } from "../../eve/events.js";
+import { approvalOptionIds, isTerminalEveEventType } from "../../eve/events.js";
 import {
 	classifyParkedEveInput,
 	type ParkedEveInput,
@@ -45,12 +45,6 @@ const denyGatedPark = async ({
 		siblingRequestIds: parked.siblingRequestIds,
 	});
 };
-
-const isTerminalEvent = (eventType: string) =>
-	eventType === "session.waiting" ||
-	eventType === "session.completed" ||
-	eventType === "turn.failed" ||
-	eventType === "session.failed";
 
 /** One pass over the stream; `parkedAgain` asks for another after a deny. */
 const drainPass = async ({
@@ -105,7 +99,7 @@ const drainPass = async ({
 			session.state.status = "waiting";
 			return { parkedAgain: false, stuck };
 		}
-		if (turnStarted && isTerminalEvent(event.type)) {
+		if (turnStarted && isTerminalEveEventType(event.type)) {
 			session.state.status = statusAfterTerminalEvent(event.type);
 			return { parkedAgain: false, stuck: false };
 		}
