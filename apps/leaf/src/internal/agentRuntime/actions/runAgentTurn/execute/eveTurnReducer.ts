@@ -35,6 +35,7 @@ export type EveTurnOutcome =
 	| { kind: "parked"; question?: PendingQuestion; text: string }
 	| { kind: "deferred" }
 	| { kind: "silent" }
+	| { kind: "stalled"; tools: readonly string[] }
 	| { kind: "stopped"; stopReason: RunStopReason; text: string }
 	| { approval: AgentApprovalRequest; kind: "suspended"; text: string }
 	| { kind: "unreachable" };
@@ -340,6 +341,12 @@ const turnDeferredItsInput = (progress: EveTurnProgress) =>
 	!progress.sawToolActivity &&
 	progress.subagentChildSessionIds.size === 0;
 
+/** A requested call clears from toolLabels when its result lands, so anything
+ * still there at a park was never dispatched and no result is coming. */
+const undispatchedToolNames = (progress: EveTurnProgress) => [
+	...new Set(progress.toolLabels.values()),
+];
+
 const reduceTerminalEvent = ({
 	event,
 	progress,
@@ -351,6 +358,21 @@ const reduceTerminalEvent = ({
 	const catalogDecision = catalogPlanNeedingDecision(
 		progress.lastPreview?.preview,
 	);
+	const stalledTools = undispatchedToolNames(progress);
+	const outcome: EveTurnOutcome = eveTurnProducedOutput({
+		catalogDecision,
+		text,
+	})
+		? { catalogDecision, kind: "answered", text }
+		: stalledTools.length > 0
+			? { kind: "stalled", tools: stalledTools }
+			: { kind: turnDeferredItsInput(progress) ? "deferred" : "silent" };
+	if (outcome.kind === "stalled") {
+		logger.warn("Eve parked with tool calls that never ran", {
+			event: "leaf.eve_turn_stalled",
+			data: { tools: stalledTools },
+		});
+	}
 	return {
 		effects: [
 			{
@@ -358,9 +380,7 @@ const reduceTerminalEvent = ({
 				status: event.type === "session.completed" ? "completed" : "waiting",
 			},
 		],
-		outcome: eveTurnProducedOutput({ catalogDecision, text })
-			? { catalogDecision, kind: "answered", text }
-			: { kind: turnDeferredItsInput(progress) ? "deferred" : "silent" },
+		outcome,
 		progress,
 	};
 };

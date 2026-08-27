@@ -1,4 +1,5 @@
 import { db } from "../../../../lib/db.js";
+import { stalledToolNudge } from "../../../../ui/messages.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import type {
 	AgentTurnContext,
@@ -152,6 +153,23 @@ export const runAgentTurn = async ({
 			// its own deferred input, and must not read as a fresh deferral.
 			outcome =
 				redelivered.kind === "deferred" ? { kind: "silent" } : redelivered;
+		}
+		if (outcome.kind === "stalled") {
+			logger.warn("Eve parked on undispatched tool calls; nudging the turn", {
+				event: "leaf.eve_stalled_turn_nudged",
+				data: {
+					session_id: session.sessionId,
+					stream_index: session.state.streamIndex,
+					tools: outcome.tools,
+				},
+			});
+			await postEveMessage({
+				auth: { ...auth, orgInstructions: prepared.orgContext?.instructions },
+				message: stalledToolNudge(outcome.tools),
+				session,
+			});
+			const resumed = await consume(session);
+			outcome = resumed.kind === "stalled" ? { kind: "silent" } : resumed;
 		}
 		const result = await resolveAgentTurnOutcome({
 			env,
