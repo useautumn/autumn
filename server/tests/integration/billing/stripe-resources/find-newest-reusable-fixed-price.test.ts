@@ -6,6 +6,7 @@
  *   catalog $20 / interval mismatch / preview / self / other product.id → no
  *   USD attach uses base amount + stripe_price_id
  *   EUR attach uses currencies.eur amount + slot; USD-only → no
+ *   catalog cannot reuse custom; custom can reuse catalog
  */
 
 import { expect, test } from "bun:test";
@@ -87,6 +88,7 @@ test.concurrent(
 			interval = BillingInterval.Month,
 			stripePriceId,
 			currencies,
+			isCustom = true,
 		}: {
 			id: string;
 			internalProductId: string;
@@ -98,6 +100,7 @@ test.concurrent(
 				string,
 				{ amount: number; stripe_price_id?: string }
 			>;
+			isCustom?: boolean;
 		}) => {
 			await PriceService.insert({
 				db: ctx.db,
@@ -106,7 +109,7 @@ test.concurrent(
 					org_id: ctx.org.id,
 					internal_product_id: internalProductId,
 					created_at: createdAt,
-					is_custom: true,
+					is_custom: isCustom,
 					config: {
 						type: PriceType.Fixed,
 						amount,
@@ -130,6 +133,7 @@ test.concurrent(
 		const usdOnly = generateId("pr");
 		const usdEur = generateId("pr");
 		const otherPlan = generateId("pr");
+		const catalog = generateId("pr");
 		const now = Date.now();
 
 		await insertFixed({
@@ -182,6 +186,14 @@ test.concurrent(
 			createdAt: now + 40,
 			amount: 25,
 			stripePriceId: "price_prem_25",
+		});
+		await insertFixed({
+			id: catalog,
+			internalProductId: fullPro.internal_id,
+			createdAt: now - 200,
+			amount: 25,
+			stripePriceId: "price_catalog_25",
+			isCustom: false,
 		});
 
 		const find = ({
@@ -241,5 +253,16 @@ test.concurrent(
 		expect(
 			(await find({ target: target25, productId: premium.id }))?.id,
 		).toBe(otherPlan);
+
+		expect(
+			(await find({ target: { ...target25, is_custom: false } }))?.id,
+		).toBe(catalog);
+		expect(
+			(
+				await find({
+					target: { ...target25, is_custom: true, id: catalog },
+				})
+			)?.id,
+		).toBe(usdEur);
 	},
 );

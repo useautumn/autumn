@@ -59,6 +59,9 @@ export const findReusableStripeResources = ({
 	const matches = candidates.filter((candidate) => {
 		if (candidate.price.id === targetPrice.id) return false;
 		if (!isFixedPrice(candidate.price)) return false;
+		if (targetPrice.is_custom !== true && candidate.price.is_custom === true) {
+			return false;
+		}
 		if (
 			!isSameProductScope({
 				targetProduct,

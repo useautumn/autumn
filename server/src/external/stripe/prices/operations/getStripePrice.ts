@@ -5,16 +5,21 @@ export async function getStripePrice({
 	stripeClient,
 	stripePriceId,
 	errorOnNotFound = false,
+	expand,
 }: {
 	stripeClient: Stripe;
 	stripePriceId?: string;
 	errorOnNotFound?: boolean;
+	expand?: string[];
 }): Promise<Stripe.Price | undefined> {
 	const getStripePriceOptional = async () => {
 		if (!stripePriceId) return undefined;
 
 		const { data: stripePrice, error } = await tryCatch(
-			stripeClient.prices.retrieve(stripePriceId),
+			stripeClient.prices.retrieve(
+				stripePriceId,
+				expand?.length ? { expand } : undefined,
+			),
 		);
 
 		if (error) {

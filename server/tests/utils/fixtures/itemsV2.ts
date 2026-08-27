@@ -239,7 +239,11 @@ const volumePrepaidMessages = ({
 }: {
 	included?: number;
 	billingUnits?: number;
-	tiers?: { to: number | typeof TierInfinite; amount: number }[];
+	tiers?: {
+		to: number | typeof TierInfinite;
+		amount: number;
+		flat_amount?: number;
+	}[];
 } = {}) => ({
 	feature_id: TestFeature.Messages,
 	included,

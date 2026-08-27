@@ -13,6 +13,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { liveProductWhere } from "@/internal/products/repos/liveProductWhere.js";
 import { composeAttachCurrencyFixedMatch } from "./utils/composeAttachCurrencyFixedMatch.js";
+import { composeReusableCustomScope } from "./utils/composeReusableCustomScope.js";
 
 export const composeNewestReusableFixedPriceQuery = ({
 	db,
@@ -20,6 +21,7 @@ export const composeNewestReusableFixedPriceQuery = ({
 	env,
 	productId,
 	excludePriceId,
+	targetIsCustom,
 	targetCurrency,
 	orgDefaultCurrency,
 	amount,
@@ -31,6 +33,7 @@ export const composeNewestReusableFixedPriceQuery = ({
 	env: AppEnv;
 	productId: string;
 	excludePriceId: string;
+	targetIsCustom: boolean;
 	targetCurrency: string;
 	orgDefaultCurrency: string;
 	amount: number;
@@ -48,6 +51,7 @@ export const composeNewestReusableFixedPriceQuery = ({
 				eq(products.id, productId),
 				liveProductWhere,
 				ne(prices.id, excludePriceId),
+				composeReusableCustomScope({ targetIsCustom }),
 				sql`${prices.config} ->> 'type' = ${PriceType.Fixed}`,
 				sql`${prices.config} ->> 'interval' = ${interval}`,
 				sql`COALESCE((${prices.config} ->> 'interval_count')::int, 1) = ${intervalCount}`,
@@ -88,6 +92,7 @@ export const findNewestReusableFixedPrice = async ({
 		env: ctx.env,
 		productId,
 		excludePriceId: targetPrice.id,
+		targetIsCustom: targetPrice.is_custom === true,
 		targetCurrency,
 		orgDefaultCurrency,
 		amount,

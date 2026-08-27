@@ -11,19 +11,26 @@ import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	AppEnv,
 	BillingInterval,
+	BillWhen,
 	type FullProduct,
 	getPriceCurrencyStripeId,
 	type Price,
 	PriceType,
+	TierInfinite,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const mockState = {
 	queryCalls: 0,
+	usageQueryCalls: 0,
+	prepaidQueryCalls: 0,
 	retrieveCalls: [] as string[],
 	persistCalls: 0,
 	candidate: null as Price | null,
+	usageCandidate: null as Price | null,
+	prepaidCandidate: null as Price | null,
 	stripePrice: null as { id: string; active: boolean } | null,
 };
 
@@ -34,6 +41,14 @@ await mockModuleWithRestore(
 			findNewestReusableFixedPrice: async () => {
 				mockState.queryCalls += 1;
 				return mockState.candidate;
+			},
+			findNewestReusablePrepaidPrice: async () => {
+				mockState.prepaidQueryCalls += 1;
+				return mockState.prepaidCandidate;
+			},
+			findNewestReusableUsagePrice: async () => {
+				mockState.usageQueryCalls += 1;
+				return mockState.usageCandidate;
 			},
 		},
 	}),
@@ -131,9 +146,13 @@ const product = ({ price }: { price: Price }): FullProduct =>
 describe("findReusableStripePrice", () => {
 	beforeEach(() => {
 		mockState.queryCalls = 0;
+		mockState.usageQueryCalls = 0;
+		mockState.prepaidQueryCalls = 0;
 		mockState.retrieveCalls = [];
 		mockState.persistCalls = 0;
 		mockState.candidate = null;
+		mockState.usageCandidate = null;
+		mockState.prepaidCandidate = null;
 		mockState.stripePrice = null;
 	});
 
@@ -210,6 +229,74 @@ describe("findReusableStripePrice", () => {
 		expect(mockState.retrieveCalls).toEqual(["price_dead"]);
 		expect(dead.config.stripe_price_id).toBeNull();
 		expect(mockState.persistCalls).toBe(0);
+	});
+
+	test("usage empty slot queries the usage finder, not the fixed finder", async () => {
+		const target: Price = {
+			id: "pr_usage_b",
+			org_id: "org_1",
+			created_at: 1,
+			internal_product_id: "ip_pro",
+			is_custom: true,
+			config: {
+				type: PriceType.Usage,
+				bill_when: BillWhen.EndOfPeriod,
+				billing_units: 1,
+				internal_feature_id: "ifeat_messages",
+				feature_id: "messages",
+				usage_tiers: [{ amount: 2, to: TierInfinite }],
+				interval: BillingInterval.Month,
+				interval_count: 1,
+				should_prorate: false,
+			} satisfies UsagePriceConfig,
+			proration_config: null,
+		};
+
+		await findReusableStripePrice({
+			ctx,
+			products: [product({ price: target })],
+			currency: "usd",
+		});
+
+		expect(mockState.usageQueryCalls).toBe(1);
+		expect(mockState.prepaidQueryCalls).toBe(0);
+		expect(mockState.queryCalls).toBe(0);
+		expect(target.config.stripe_price_id).toBeUndefined();
+	});
+
+	test("prepaid empty V2 slot queries the prepaid finder, not usage", async () => {
+		const target: Price = {
+			id: "pr_prepaid_b",
+			org_id: "org_1",
+			created_at: 1,
+			internal_product_id: "ip_pro",
+			is_custom: true,
+			config: {
+				type: PriceType.Usage,
+				bill_when: BillWhen.InAdvance,
+				billing_units: 100,
+				internal_feature_id: "ifeat_messages",
+				feature_id: "messages",
+				usage_tiers: [{ amount: 10, to: TierInfinite }],
+				interval: BillingInterval.Month,
+				interval_count: 1,
+				should_prorate: false,
+			} satisfies UsagePriceConfig,
+			proration_config: null,
+		};
+
+		await findReusableStripePrice({
+			ctx,
+			products: [product({ price: target })],
+			currency: "usd",
+		});
+
+		expect(mockState.prepaidQueryCalls).toBe(1);
+		expect(mockState.usageQueryCalls).toBe(0);
+		expect(mockState.queryCalls).toBe(0);
+		expect(
+			(target.config as UsagePriceConfig).stripe_prepaid_price_v2_id,
+		).toBeUndefined();
 	});
 });
 

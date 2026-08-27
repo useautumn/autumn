@@ -1,5 +1,6 @@
 import {
 	type CurrencyAwarePriceConfig,
+	type CurrencyStripeIdSlot,
 	getPriceCurrencyStripeId,
 	type Price,
 	setPriceCurrencyStripeId,
@@ -10,13 +11,14 @@ export const copyAttachCurrencyStripeSlot = ({
 	sourcePrice,
 	currency,
 	orgDefaultCurrency,
+	slot = "stripe_price_id",
 }: {
 	targetPrice: Price;
 	sourcePrice: Price;
 	currency: string;
 	orgDefaultCurrency: string;
+	slot?: CurrencyStripeIdSlot;
 }): boolean => {
-	const slot = "stripe_price_id" as const;
 	const sourceId = getPriceCurrencyStripeId({
 		config: sourcePrice.config as CurrencyAwarePriceConfig,
 		currency,

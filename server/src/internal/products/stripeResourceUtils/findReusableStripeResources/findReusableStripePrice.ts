@@ -1,13 +1,56 @@
 import {
 	type FullProduct,
 	getPriceStripeReuseLevel,
+	isFixedPrice,
 	type Price,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { priceRepo } from "@/internal/products/prices/repos/priceRepo.js";
-import { hasEmptyStripeResource } from "./hasEmptyStripeResource.js";
+import {
+	hasEmptyStripeResource,
+	isReusablePrepaidPrice,
+	isReusableUsagePrice,
+} from "./hasEmptyStripeResource.js";
 import { isUsableStripePrice } from "./isUsableStripePrice.js";
 import { stampAttachCurrencyStripeSlot } from "./stampAttachCurrencyStripeSlot.js";
+
+const findNewestReusableCandidate = ({
+	ctx,
+	targetPrice,
+	productId,
+	targetCurrency,
+}: {
+	ctx: AutumnContext;
+	targetPrice: Price;
+	productId: string;
+	targetCurrency: string;
+}) => {
+	if (isFixedPrice(targetPrice)) {
+		return priceRepo.findNewestReusableFixedPrice({
+			ctx,
+			targetPrice,
+			productId,
+			targetCurrency,
+		});
+	}
+	if (isReusablePrepaidPrice(targetPrice)) {
+		return priceRepo.findNewestReusablePrepaidPrice({
+			ctx,
+			targetPrice,
+			productId,
+			targetCurrency,
+		});
+	}
+	if (isReusableUsagePrice(targetPrice)) {
+		return priceRepo.findNewestReusableUsagePrice({
+			ctx,
+			targetPrice,
+			productId,
+			targetCurrency,
+		});
+	}
+	return null;
+};
 
 const findReusableStripePriceForTarget = async ({
 	ctx,
@@ -22,7 +65,7 @@ const findReusableStripePriceForTarget = async ({
 }) => {
 	if (!hasEmptyStripeResource({ ctx, targetPrice, currency })) return;
 
-	const candidate = await priceRepo.findNewestReusableFixedPrice({
+	const candidate = await findNewestReusableCandidate({
 		ctx,
 		targetPrice,
 		productId: product.id,
@@ -55,6 +98,9 @@ const findReusableStripePriceForTarget = async ({
 		targetPrice,
 		sourcePrice: candidate,
 		currency,
+		slot: isReusablePrepaidPrice(targetPrice)
+			? "stripe_prepaid_price_v2_id"
+			: "stripe_price_id",
 	});
 };
 

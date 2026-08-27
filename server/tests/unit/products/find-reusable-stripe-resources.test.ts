@@ -8,7 +8,7 @@
  *   EUR attach, USD slot only → null
  *   other product.id / org / env → null
  *   same product.id across versions → match
- *   catalog beats custom; newest custom wins
+ *   catalog cannot reuse custom; custom can reuse catalog
  *   usage candidate → null
  */
 
@@ -121,7 +121,7 @@ const usagePrice = (): Price => ({
 
 describe("findReusableStripeResources — fixed", () => {
 	test("same $25 monthly on Pro stamps the donor stripe_price_id", () => {
-		const target = fixedPrice({ id: "pr_b" });
+		const target = fixedPrice({ id: "pr_b", isCustom: true });
 		const donor = fixedPrice({
 			id: "pr_a",
 			isCustom: true,
@@ -161,12 +161,14 @@ describe("findReusableStripeResources — fixed", () => {
 	test("USD attach on USD+EUR copies the USD slot only", () => {
 		const target = fixedPrice({
 			id: "pr_b",
+			isCustom: true,
 			config: {
 				currencies: { eur: { amount: 25 } },
 			},
 		});
 		const eurTarget = fixedPrice({
 			id: "pr_b_eur",
+			isCustom: true,
 			config: {
 				currencies: { eur: { amount: 25 } },
 			},
@@ -228,6 +230,7 @@ describe("findReusableStripeResources — fixed", () => {
 	test("EUR attach with only a USD slot does not match", () => {
 		const target = fixedPrice({
 			id: "pr_b",
+			isCustom: true,
 			config: { currencies: { eur: { amount: 25 } } },
 		});
 		const usdOnly = fixedPrice({
@@ -295,7 +298,7 @@ describe("findReusableStripeResources — fixed", () => {
 		).toBeNull();
 	});
 
-	test("catalog beats custom; newest custom wins among customs", () => {
+	test("catalog cannot reuse custom; custom can reuse catalog", () => {
 		const olderCustom = fixedPrice({
 			id: "pr_old",
 			isCustom: true,
@@ -316,22 +319,40 @@ describe("findReusableStripeResources — fixed", () => {
 
 		expect(
 			find({
-				target: fixedPrice({ id: "pr_b1" }),
+				target: fixedPrice({ id: "pr_catalog" }),
 				candidates: [
 					candidate({ price: olderCustom }),
 					candidate({ price: newerCustom }),
 				],
-			})?.id,
-		).toBe("pr_new");
+			}),
+		).toBeNull();
 		expect(
 			find({
-				target: fixedPrice({ id: "pr_b2" }),
+				target: fixedPrice({ id: "pr_catalog_mix" }),
 				candidates: [
 					candidate({ price: newerCustom }),
 					candidate({ price: catalog }),
 				],
 			})?.id,
 		).toBe("pr_cat");
+		expect(
+			find({
+				target: fixedPrice({ id: "pr_custom_mix", isCustom: true }),
+				candidates: [
+					candidate({ price: newerCustom }),
+					candidate({ price: catalog }),
+				],
+			})?.id,
+		).toBe("pr_cat");
+		expect(
+			find({
+				target: fixedPrice({ id: "pr_custom_only", isCustom: true }),
+				candidates: [
+					candidate({ price: olderCustom }),
+					candidate({ price: newerCustom }),
+				],
+			})?.id,
+		).toBe("pr_new");
 	});
 
 	test("usage target or candidate is ignored", () => {
