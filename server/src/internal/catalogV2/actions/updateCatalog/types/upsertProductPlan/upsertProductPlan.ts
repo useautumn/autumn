@@ -23,6 +23,8 @@ export type UpsertProductSource =
 	| "license_pin"
 	| "license_adopt"
 	| "repoint"
+	/** Sibling version taking the plan's Stripe mapping — every version shares it. */
+	| "processor_sync"
 	| "demoted_product";
 
 /** Which product row this plan writes, and its before/after FullProduct. */

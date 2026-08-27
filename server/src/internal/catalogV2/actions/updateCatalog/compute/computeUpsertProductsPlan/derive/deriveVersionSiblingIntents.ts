@@ -120,7 +120,12 @@ export const deriveVersionSiblingIntents = ({
 	upsert: UpsertProductPlan;
 	projectedProductStatesContext: ProductStatesContext;
 }): ProductUpsertIntent[] => {
-	if (intent.source !== "direct") return [];
+	// A sync already carries the mapping to one row; re-deriving would loop.
+	if (intent.source === "processor_sync") return [];
+	// Mapping fan-out rides any lane: a variant reached by propagation still
+	// owes the id to its own versions. Every other edge stays direct-only.
+	const declaredProcessors = intent.planParams.processors;
+	if (intent.source !== "direct" && declaredProcessors === undefined) return [];
 	const inheritAllVersions = intent.planParams.versioning === "all_versions";
 	const explicitUnlink = intent.planParams.base_variant_id === null;
 	const versions =
@@ -139,7 +144,17 @@ export const deriveVersionSiblingIntents = ({
 				product.version === intent.productKey.version ||
 				product.base_internal_product_id == null,
 		);
-	if (!inheritAllVersions && !upsert.unlink && !firstLink) return [];
+	// Every version of a plan bills under one Stripe product, so a stated mapping
+	// replaces whatever each sibling held — declared, not diffed, since siblings
+	// can lag the addressed row.
+	if (
+		!inheritAllVersions &&
+		!upsert.unlink &&
+		!firstLink &&
+		declaredProcessors === undefined
+	) {
+		return [];
+	}
 
 	const contentEdit = inheritAllVersions
 		? contentEditFromLatest({ upsert })
@@ -149,6 +164,7 @@ export const deriveVersionSiblingIntents = ({
 		.filter((product) => {
 			if (product.version === intent.productKey.version) return false;
 			if (inheritAllVersions || explicitUnlink || firstLink) return true;
+			if (declaredProcessors !== undefined) return true;
 			return product.base_internal_product_id === currentPointer;
 		})
 		.map((product) => {
@@ -165,8 +181,18 @@ export const deriveVersionSiblingIntents = ({
 							planParams: intent.planParams,
 							version: product.version,
 						})
-					: { plan_id: product.id, version: product.version },
-				source: inheritAllVersions ? ("all_versions" as const) : "repoint",
+					: {
+							plan_id: product.id,
+							version: product.version,
+							...(declaredProcessors !== undefined
+								? { processors: declaredProcessors }
+								: {}),
+						},
+				source: inheritAllVersions
+					? ("all_versions" as const)
+					: upsert.unlink || firstLink
+						? ("repoint" as const)
+						: ("processor_sync" as const),
 				...(editDiff ? { editDiff } : {}),
 				...(upsert.unlink ? { unlink: true } : {}),
 				...(firstLink ? { baseInternalProductId: nextPointer } : {}),
