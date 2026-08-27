@@ -7,6 +7,10 @@ import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
 import { shouldEnableStripeAutomaticTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
 import { buildInvoiceModeSubscriptionParams } from "./buildInvoiceModeSubscriptionParams";
+import {
+	buildStripeSubscriptionCancelParams,
+	buildStripeSubscriptionUpdateParams,
+} from "./buildStripeSubscriptionParams";
 import { willStripeSubscriptionUpdateCreateInvoice } from "./willStripeSubscriptionUpdateCreateInvoice";
 
 export const executeStripeSubscriptionOperation = async ({
@@ -99,15 +103,18 @@ export const executeStripeSubscriptionOperation = async ({
 
 			return await stripeClient.subscriptions.update(
 				subscriptionAction.stripeSubscriptionId,
-				{
-					...paramsWithoutAutoTax,
-					...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
-					...(updateWillCreateInvoice ? invoiceModeParams : {}),
-					...(autumnMeta && { metadata: autumnMeta }),
-					...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
-					...taxRateParams,
-					expand: ["latest_invoice"],
-				},
+				buildStripeSubscriptionUpdateParams({
+					params: {
+						...paramsWithoutAutoTax,
+						...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
+						...(updateWillCreateInvoice ? invoiceModeParams : {}),
+						...(autumnMeta && { metadata: autumnMeta }),
+						...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
+						...taxRateParams,
+						expand: ["latest_invoice"],
+					},
+					subscriptionParams: billingContext.subscriptionParams,
+				}),
 				autumnStripeRequestOptions({ source: idempotencySource }),
 			);
 		}
@@ -130,10 +137,13 @@ export const executeStripeSubscriptionOperation = async ({
 		case "cancel":
 			return await stripeClient.subscriptions.cancel(
 				subscriptionAction.stripeSubscriptionId,
-				{
-					...subscriptionAction.params,
-					expand: ["latest_invoice"],
-				},
+				buildStripeSubscriptionCancelParams({
+					params: {
+						...subscriptionAction.params,
+						expand: ["latest_invoice"],
+					},
+					subscriptionParams: billingContext.subscriptionParams,
+				}),
 				autumnStripeRequestOptions({ source: idempotencySource }),
 			);
 
