@@ -60,7 +60,11 @@ export const runAgentTurn = async ({
 
 	const startTurn = (prepared: Partial<PreparedAgentTurn>) =>
 		startAgentTurn({
-			auth: { ...auth, orgInstructions: prepared.orgContext?.instructions },
+			auth: {
+				...auth,
+				orgCatalog: prepared.orgContext?.text,
+				orgInstructions: prepared.orgContext?.instructions,
+			},
 			env,
 			message: buildAgentTurnMessage({
 				env,

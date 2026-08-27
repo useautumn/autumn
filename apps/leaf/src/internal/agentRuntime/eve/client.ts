@@ -16,7 +16,12 @@ import { workflowWorldHoldingRun } from "./world/workflowWorld.js";
 
 const eveUrl = (path: string) => new URL(path, env.EVE_SERVER_URL).href;
 
-const eveHeaders = (auth: EveAuthContext, init?: HeadersInit) => {
+// Eve keeps the attribute for the session's life, so only creation sends it.
+const eveHeaders = (
+	auth: EveAuthContext,
+	init?: HeadersInit,
+	{ withOrgCatalog = false }: { withOrgCatalog?: boolean } = {},
+) => {
 	const headers = new Headers(init);
 	headers.set("authorization", `Bearer ${env.EVE_INTERNAL_AUTH_TOKEN}`);
 	headers.set("x-leaf-app-env", String(auth.appEnv));
@@ -37,6 +42,12 @@ const eveHeaders = (auth: EveAuthContext, init?: HeadersInit) => {
 		headers.set(
 			"x-leaf-org-instructions",
 			Buffer.from(auth.orgInstructions).toString("base64url"),
+		);
+	}
+	if (withOrgCatalog && auth.orgCatalog) {
+		headers.set(
+			"x-leaf-org-catalog",
+			Buffer.from(auth.orgCatalog).toString("base64url"),
 		);
 	}
 	return headers;
@@ -120,7 +131,11 @@ export const postEveMessage = async ({
 				: eveUrl("/eve/v1/session"),
 			{
 				method: "POST",
-				headers: eveHeaders(auth, { "content-type": "application/json" }),
+				headers: eveHeaders(
+					auth,
+					{ "content-type": "application/json" },
+					{ withOrgCatalog: !session },
+				),
 				body: JSON.stringify(
 					session
 						? {
@@ -364,7 +379,8 @@ async function* streamEveEventsOverHttp({
 	}
 }
 
-const REPLAY_QUIET_GAP_MS = ms.seconds(2);
+// Spots the end of a buffered replay; every resumed turn pays it up front.
+const REPLAY_QUIET_GAP_MS = ms.seconds(0.25);
 
 const countEveReplayableEvents = async ({
 	auth,

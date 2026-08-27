@@ -1,36 +1,24 @@
 import { type ChartConfig, ChartContainer } from "@autumn/ui";
-import {
-	memo,
-	startTransition,
-	useCallback,
-	useLayoutEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
+import { X } from "lucide-react";
+import { memo, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
 import type { Row } from "./components/analytics-types";
+import { TooltipItem, tooltipItemHref } from "./components/TooltipItem";
 import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
+import { usePinnedChartTooltip } from "./hooks/usePinnedChartTooltip";
 import {
 	CHART_MARGIN,
 	type PlotInsets,
 	Y_AXIS_WIDTH,
 } from "./utils/chartGeometry";
 import { formatCompactNumber, formatPeriodLabel } from "./utils/parseTimestamp";
-
-interface ChartSeriesConfig {
-	xKey: string;
-	yKey: string;
-	type: "bar";
-	stacked: boolean;
-	yName: string;
-	fill: string;
-}
+import type { ChartSeriesConfig } from "./utils/transformGroupedChartData";
 
 const MAX_TOOLTIP_ITEMS = 5;
 const CHART_STYLE = { cursor: "default" } as const;
+const BAR_STYLE = { cursor: "pointer" } as const;
 const X_TICK = { fontSize: 11, fill: "#666" } as const;
 const Y_TICK = {
 	fontSize: 11,
@@ -39,21 +27,6 @@ const Y_TICK = {
 	dx: -15,
 	dy: -3,
 } as const;
-
-function TooltipItem({ item, label }: { item: any; label: string }) {
-	return (
-		<div className="flex items-center gap-2">
-			<span
-				className="h-2.5 w-2.5 shrink-0 rounded-sm"
-				style={{ background: item.color }}
-			/>
-			<span className="flex-1 truncate text-tertiary-foreground">{label}</span>
-			<span className="tabular-nums text-muted-foreground">
-				{Number(item.value).toLocaleString()}
-			</span>
-		</div>
-	);
-}
 
 export const EventsBarChart = memo(function EventsBarChart({
 	data,
@@ -72,124 +45,20 @@ export const EventsBarChart = memo(function EventsBarChart({
 }) {
 	const { queryStates } = useAnalyticsQueryState();
 	const selectedInterval = queryStates.interval;
-	const [hoveredKey, setHoveredKey] = useState<string | null>(null);
-	const [activeRow, setActiveRow] = useState<Row | null>(null);
-	const containerRef = useRef<HTMLDivElement>(null);
 
-	// Cursor tracking is imperative: a per-pixel setState here re-renders the
-	// whole recharts tree per mousemove, which is what made the tooltip choppy.
-	const tooltipRef = useRef<HTMLDivElement>(null);
-	const lastMousePos = useRef<{ x: number; y: number } | null>(null);
-
-	// Fixed positioning in viewport coords: the animated card wrapper creates a
-	// stacking context, so an absolute tooltip gets clipped at the card edge.
-	const positionTooltip = useCallback(() => {
-		const tooltip = tooltipRef.current;
-		const pos = lastMousePos.current;
-		const rect = containerRef.current?.getBoundingClientRect();
-		if (!tooltip || !pos || !rect) return;
-		const clientX = rect.left + pos.x;
-		const clientY = rect.top + pos.y;
-		tooltip.style.top = `${clientY - 12}px`;
-		if (window.innerWidth - clientX < 200) {
-			tooltip.style.left = "auto";
-			tooltip.style.right = `${window.innerWidth - clientX + 12}px`;
-		} else {
-			tooltip.style.right = "auto";
-			tooltip.style.left = `${clientX + 12}px`;
-		}
-	}, []);
-
-	// Plot-area x-range, used to resolve which column the cursor is over.
-	const plotXRef = useRef<{ left: number; width: number } | null>(null);
-	// Lets mousemove retry when the first measure ran before recharts drew the
-	// grid — the ResizeObserver never refires if the container size is stable.
-	const measureRef = useRef<(() => void) | null>(null);
-
-	useLayoutEffect(() => {
-		const container = containerRef.current;
-		if (!container) {
-			return;
-		}
-		const measure = () => {
-			const grid = container.querySelector(".recharts-cartesian-grid");
-			if (!grid) {
-				return;
-			}
-			const c = container.getBoundingClientRect();
-			const g = grid.getBoundingClientRect();
-			if (g.width === 0 || g.height === 0) {
-				return;
-			}
-			plotXRef.current = { left: g.left - c.left, width: g.width };
-			onGeometry?.({
-				left: Math.round(g.left - c.left),
-				right: Math.round(c.right - g.right),
-				top: Math.round(g.top - c.top),
-				bottom: Math.round(c.bottom - g.bottom),
-			});
-		};
-		measureRef.current = measure;
-		measure();
-		const observer = new ResizeObserver(measure);
-		observer.observe(container);
-		return () => {
-			observer.disconnect();
-			measureRef.current = null;
-		};
-	}, [onGeometry, data]);
-
-	// Segment hover narrows the tooltip to that series; the active COLUMN is
-	// resolved from the cursor's x against the measured plot area, so hovering
-	// empty space above a bar still shows that column's full stack. Deliberately
-	// not recharts' activeTooltipIndex — it does not reach chart-level handlers
-	// in this setup, which is exactly the bug this replaces.
-	const handleBarMouseEnter = useCallback(
-		(dataKey: string) => () => startTransition(() => setHoveredKey(dataKey)),
-		[],
-	);
-	const handleBarMouseLeave = useCallback(
-		() => startTransition(() => setHoveredKey(null)),
-		[],
-	);
-	const handleMouseMove = useCallback(
-		(e: React.MouseEvent) => {
-			const rect = containerRef.current?.getBoundingClientRect();
-			if (!rect) return;
-			const x = e.clientX - rect.left;
-			lastMousePos.current = { x, y: e.clientY - rect.top };
-			positionTooltip();
-
-			if (!plotXRef.current) measureRef.current?.();
-			const plot = plotXRef.current;
-			const count = data.data.length;
-			if (!plot || count === 0 || plot.width <= 0) return;
-			const index = Math.floor(((x - plot.left) / plot.width) * count);
-			const row = index >= 0 && index < count ? data.data[index] : null;
-			startTransition(() =>
-				setActiveRow((prev) => (prev === row ? prev : row)),
-			);
-		},
-		[data, positionTooltip],
-	);
-	const handleChartMouseLeave = useCallback(() => {
-		setHoveredKey(null);
-		setActiveRow(null);
-		lastMousePos.current = null;
-	}, []);
-
-	// The tooltip is fixed in viewport coords; scrolling moves the chart out
-	// from under it. Dismiss rather than track — the pointer is no longer over
-	// the same data point anyway.
-	useLayoutEffect(() => {
-		const dismiss = () => handleChartMouseLeave();
-		window.addEventListener("scroll", dismiss, true);
-		window.addEventListener("resize", dismiss);
-		return () => {
-			window.removeEventListener("scroll", dismiss, true);
-			window.removeEventListener("resize", dismiss);
-		};
-	}, [handleChartMouseLeave]);
+	const {
+		containerRef,
+		tooltipRef,
+		pinned,
+		tooltipData,
+		hasTooltipAnchor,
+		barHandlers,
+		handleBarMouseLeave,
+		handleMouseMove,
+		handleChartMouseLeave,
+		handleChartClick,
+		unpin,
+	} = usePinnedChartTooltip({ data, chartConfig, onGeometry });
 
 	const formatXAxis = useCallback(
 		(value: string): string => {
@@ -206,40 +75,10 @@ export const EventsBarChart = memo(function EventsBarChart({
 		return config;
 	}, [chartConfig]);
 
-	const tooltipData = useMemo(() => {
-		if (!activeRow) return null;
-		const allItems = chartConfig
-			.map((s) => ({
-				dataKey: s.yKey,
-				value: Number(activeRow[s.yKey] ?? 0),
-				color: s.fill,
-			}))
-			.filter((i) => i.value !== 0);
-		// A stale or zero-valued hoveredKey must not blank the tooltip while the
-		// CSS hover state is still lit — fall back to the full stack instead.
-		const hoveredItems = hoveredKey
-			? allItems.filter((i) => i.dataKey === hoveredKey)
-			: [];
-		const items = hoveredItems.length
-			? hoveredItems
-			: allItems.sort((a, b) => b.value - a.value);
-		if (!items.length) return null;
-		return { period: String(activeRow.period), items };
-	}, [activeRow, hoveredKey, chartConfig]);
-
-	const barHandlers = useMemo(
-		() => chartConfig.map((series) => handleBarMouseEnter(series.yKey)),
-		[chartConfig, handleBarMouseEnter],
-	);
-
-	const visible = tooltipData?.items.slice(0, MAX_TOOLTIP_ITEMS) ?? [];
-	const overflow = (tooltipData?.items.length ?? 0) - visible.length;
-	const overflowSum =
-		overflow > 0
-			? tooltipData!.items
-					.slice(MAX_TOOLTIP_ITEMS)
-					.reduce((s, i) => s + i.value, 0)
-			: 0;
+	const items = tooltipData?.items ?? [];
+	const visible = items.slice(0, MAX_TOOLTIP_ITEMS);
+	const overflowItems = items.slice(MAX_TOOLTIP_ITEMS);
+	const overflowSum = overflowItems.reduce((sum, item) => sum + item.value, 0);
 
 	// Memoized so tooltip-driven re-renders never touch the recharts tree.
 	const chart = useMemo(
@@ -293,7 +132,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 							stackId="a"
 							fill={series.fill}
 							activeBar={false}
-							style={CHART_STYLE}
+							style={BAR_STYLE}
 							onMouseEnter={barHandlers[si]}
 							onMouseLeave={handleBarMouseLeave}
 							isAnimationActive={false}
@@ -313,29 +152,42 @@ export const EventsBarChart = memo(function EventsBarChart({
 		],
 	);
 
-	// Position before paint so the tooltip never flashes at a stale corner.
-	useLayoutEffect(() => {
-		if (tooltipData) positionTooltip();
-	}, [tooltipData, positionTooltip]);
-
 	return (
 		<div
 			ref={containerRef}
 			className="h-full w-full relative"
 			onMouseMove={handleMouseMove}
 			onMouseLeave={handleChartMouseLeave}
+			onClick={handleChartClick}
 		>
 			{chart}
 			{/* Portaled: sticky table headers and animated card wrappers otherwise
 			    win the stacking-context fight regardless of z-index. */}
 			{tooltipData &&
-				lastMousePos.current &&
+				hasTooltipAnchor &&
 				createPortal(
 					<div
 						ref={tooltipRef}
-						className="pointer-events-none fixed z-[100] bg-popover text-popover-foreground grid min-w-[8rem] items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs shadow-md ring-1 ring-foreground/10"
+						className={cn(
+							"fixed z-[100] bg-popover text-popover-foreground grid min-w-[8rem] items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs shadow-md ring-1 ring-foreground/10",
+							!pinned && "pointer-events-none",
+						)}
 					>
-						<div className="font-medium">{formatXAxis(tooltipData.period)}</div>
+						<div className="flex items-center gap-2">
+							<span className="flex-1 font-medium">
+								{formatXAxis(tooltipData.period)}
+							</span>
+							{pinned && (
+								<button
+									type="button"
+									aria-label="Unpin tooltip"
+									onClick={unpin}
+									className="-mr-1 shrink-0 rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
+								>
+									<X className="h-3 w-3" />
+								</button>
+							)}
+						</div>
 						<div className="grid gap-1">
 							{visible.map((item) => (
 								<TooltipItem
@@ -345,12 +197,13 @@ export const EventsBarChart = memo(function EventsBarChart({
 										(rechartsConfig[item.dataKey]?.label as string) ??
 										item.dataKey
 									}
+									href={pinned ? tooltipItemHref({ item }) : undefined}
 								/>
 							))}
-							{overflow > 0 && (
+							{overflowItems.length > 0 && (
 								<div className="flex items-center gap-2 text-muted-foreground">
 									<span className="h-2.5 w-2.5 shrink-0" />
-									<span className="flex-1">+{overflow} more</span>
+									<span className="flex-1">+{overflowItems.length} more</span>
 									<span className="tabular-nums">
 										{overflowSum.toLocaleString()}
 									</span>
