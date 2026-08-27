@@ -31,6 +31,7 @@ export type AgentActionProgress = Readonly<{
 }>;
 
 export type AgentTurnContext = Readonly<{
+	deadlineAt?: number;
 	eveSession?: EveSessionRef;
 	env: AppEnv;
 	id: string;

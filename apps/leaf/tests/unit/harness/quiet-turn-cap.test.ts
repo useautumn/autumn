@@ -223,6 +223,56 @@ describe("a parent quiet past the cap settles on the clock", () => {
 		expect(log.quiet_ms).toBeLessThan(QUIET_CAP_MS + PASS_ADVANCE_MS);
 	});
 
+	test("a caller deadline settles the turn before its own backstop", async () => {
+		// A live child suppresses the quiet cap, so without a deadline the turn
+		// runs to the 15 min ceiling -- long past the caller's 3m20s wall.
+		childKeepsStreaming = true;
+		childEvents = Array.from({ length: 3 }, () =>
+			event({
+				actions: [{ toolName: "autumn__previewAttach" }],
+				type: "actions.requested",
+			}),
+		);
+		streamPasses = nineQuietPasses([
+			event({ type: "turn.started" }),
+			event({ childSessionId: "wrun_child_1", type: "subagent.called" }),
+			event({
+				finishReason: "stop",
+				message: "Partial answer so far.",
+				type: "message.completed",
+			}),
+		]);
+
+		const abandoned: AbandonedLog[] = [];
+		const logger = {
+			error: (
+				_message: string,
+				meta?: { event?: string; data?: AbandonedLog },
+			) => {
+				if (meta?.event === "leaf.eve_turn_abandoned" && meta.data) {
+					abandoned.push(meta.data);
+				}
+			},
+			info: () => {},
+			warn: () => {},
+		};
+		const outcome = await consumeAgentTurn({
+			auth: {} as never,
+			// Two passes of virtual clock, so the third crosses it.
+			deadlineAt: TURN_START.getTime() + 2 * PASS_ADVANCE_MS,
+			env: AppEnv.Sandbox,
+			logger: logger as never,
+			onAction: async () => undefined,
+			orgId: "org_1",
+			session: session(),
+			token: "t",
+		} as never);
+
+		expect(outcome).toMatchObject({ kind: "answered" });
+		expect(abandoned).toHaveLength(1);
+		expect(parentStreamCalls).toBeLessThan(5);
+	});
+
 	test("a live child suppresses the quiet cap even when the parent is silent", async () => {
 		// Same silent parent, but a child relay is still streaming: the turn is
 		// working, so neither the quiet cap nor the resync budget may settle it.
