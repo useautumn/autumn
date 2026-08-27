@@ -29,6 +29,9 @@ const MAX_IDLE_RETRIES = 20;
 /** Each idle window is 2 minutes, so this bounds a quiet turn at ~6 minutes
  * before leaf answers with whatever it has. */
 const MAX_IDLE_RESYNCS = 3;
+/** Settle before the caller's own wall-clock backstop, so a turn eve never
+ * resumes is answered by leaf rather than killed mid-recovery. */
+const MAX_QUIET_MS = ms.minutes(2.5);
 /** The ceiling on a single turn however busy it looks: a stream that dribbles
  * one event per idle window would otherwise reset the resync budget forever. */
 const MAX_TURN_DURATION_MS = ms.minutes(15);
@@ -167,6 +170,7 @@ const settleExhaustedTurn = ({
 		event: "leaf.eve_turn_abandoned",
 		data: {
 			has_partial_text: Boolean(partialText),
+			quiet_ms: activity.msSinceActivity(),
 			session_id: session.sessionId,
 			stream_index: session.state.streamIndex,
 			turn_ms: activity.msSinceStart(),
@@ -285,7 +289,10 @@ export const consumeAgentTurn = async ({
 				});
 			}
 
-			if (activity.msSinceStart() >= MAX_TURN_DURATION_MS) {
+			const quietTooLong =
+				activity.activeChildren() === 0 &&
+				activity.msSinceActivity() >= MAX_QUIET_MS;
+			if (activity.msSinceStart() >= MAX_TURN_DURATION_MS || quietTooLong) {
 				return settleExhaustedTurn({ activity, logger, turn });
 			}
 

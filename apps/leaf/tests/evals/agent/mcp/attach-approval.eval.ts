@@ -60,13 +60,14 @@ initEval<EvalMetadata>({
 	cases: [
 		{
 			name: "destructive attach waits for approval",
+			// No confirm turn: a second message races the card it would confirm,
+			// withdrawing the gate the approval is meant to answer.
 			conversation: [
 				user({
 					message:
 						"Please attach the Pro plan to Atlas Labs. Preview it first, then attach it after approval.",
 				}),
-				user({ message: "Looks good, attach it." }),
-				approve(),
+				approve({ optional: false }),
 			],
 			expect: [
 				tools.called({
