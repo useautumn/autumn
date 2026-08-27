@@ -71,7 +71,7 @@ const captureJsonResponse = async ({
 			headers: new Headers({ "content-type": "application/json" }),
 			clone: () => {
 				cloneCount++;
-				return { json: async () => responseBody };
+				return { text: async () => JSON.stringify(responseBody) };
 			},
 		},
 	} as unknown as Context<HonoEnv>;
@@ -343,6 +343,104 @@ describe("logRequestResult", () => {
 		});
 	});
 
+	test("compacts additional high-volume response shapes", async () => {
+		spyOn(Math, "random").mockReturnValue(0.5);
+		const subjectResponseBody = {
+			id: "cus_123",
+			name: "Acme",
+			balances: {
+				messages: {
+					remaining: 90,
+					breakdown: [
+						{
+							id: "cus_ent_123",
+							remaining: 90,
+							metadata: "x".repeat(32 * 1024),
+						},
+					],
+					feature: { id: "messages", name: "Messages" },
+				},
+			},
+			subscriptions: [{ id: "sub_123", plan_id: "pro" }],
+			purchases: [{ id: "purchase_123", plan_id: "credits" }],
+		};
+
+		for (const path of [
+			"/v1/entities.get",
+			"/v1/customers.get",
+			"/v1/customers.get_or_create",
+		]) {
+			const { captured } = await captureJsonResponse({
+				path,
+				durationMs: 10,
+				responseBody: subjectResponseBody,
+			});
+
+			expect(captured[0]?.args[1]).toEqual({
+				statusCode: 200,
+				durationMs: 10,
+				res: {
+					id: "cus_123",
+					name: "Acme",
+					balances: { messages: { remaining: 90 } },
+					subscriptions_count: 1,
+					purchases_count: 1,
+				},
+			});
+		}
+
+		const { captured: aggregateCaptured } = await captureJsonResponse({
+			path: "/v1/events.aggregate",
+			durationMs: 10,
+			responseBody: {
+				list: [{ period: 1, values: { messages: 10 } }],
+				total: 10,
+				deductions: [{ period: 1, values: { messages: 4 } }],
+			},
+		});
+		expect(aggregateCaptured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: { total: 10, list_count: 1, deductions_count: 1 },
+		});
+
+		const { captured: plansCaptured } = await captureJsonResponse({
+			path: "/v1/plans.list",
+			durationMs: 10,
+			responseBody: {
+				list: [{ id: "pro", items: [{ feature_id: "messages" }] }],
+			},
+		});
+		expect(plansCaptured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: { list_count: 1 },
+		});
+	});
+
+	test("summarizes any response body larger than the logging cap", async () => {
+		spyOn(Math, "random").mockReturnValue(0);
+		const responseBody = {
+			id: "cus_123",
+			payload: "x".repeat(32 * 1024),
+		};
+		const { captured } = await captureJsonResponse({
+			path: "/v1/balances.check",
+			durationMs: 10,
+			responseBody,
+		});
+
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: {
+				truncated: true,
+				original_bytes: Buffer.byteLength(JSON.stringify(responseBody)),
+				top_level_keys: ["id", "payload"],
+			},
+		});
+	});
+
 	test("keeps a sampled fast high-volume response in full", async () => {
 		spyOn(Math, "random").mockReturnValue(0);
 		const responseBody = { allowed: true, balance: { remaining: 90 } };
@@ -393,7 +491,7 @@ describe("logRequestResult", () => {
 				clone: () => {
 					cloneCount++;
 					return {
-						json: async () => responseBody,
+						text: async () => JSON.stringify(responseBody),
 					};
 				},
 			},
@@ -427,7 +525,9 @@ describe("logRequestResult", () => {
 				headers: new Headers({ "content-type": "application/json" }),
 				clone: () => {
 					cloneCount++;
-					return { json: async () => ({ events: [{ id: "evt_1" }] }) };
+					return {
+						text: async () => JSON.stringify({ events: [{ id: "evt_1" }] }),
+					};
 				},
 			},
 		} as unknown as Context<HonoEnv>;

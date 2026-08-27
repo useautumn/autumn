@@ -9,10 +9,21 @@ const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
 	"/v1/balances.check",
 	"/v1/check",
 	"/v1/track",
+	"/v1/entities.get",
+	"/v1/customers.get",
+	"/v1/customers.get_or_create",
+	"/v1/events.aggregate",
+	"/v1/plans.list",
 ]);
 
 const SLOW_REQUEST_BODY_THRESHOLD_MS = 500;
 const SUCCESS_RESPONSE_BODY_SAMPLE_RATE = 0.01;
+const MAX_LOGGED_RESPONSE_BODY_BYTES = 32 * 1024;
+
+const LIST_RESPONSE_ROUTES = new Set<string>([
+	"/v1/events.aggregate",
+	"/v1/plans.list",
+]);
 
 // Event pages run to megabytes each, dwarfing every other route's ingest.
 const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
@@ -35,9 +46,13 @@ const stripLargeFields = (value: unknown) => {
 	return compactValue;
 };
 
-const compactHighVolumeResponseBody = (
-	responseBody: Record<string, unknown>,
-) => {
+const compactHighVolumeResponseBody = ({
+	path,
+	responseBody,
+}: {
+	path: string;
+	responseBody: Record<string, unknown>;
+}) => {
 	const compactResponseBody = { ...responseBody };
 	delete compactResponseBody.preview;
 	if ("balance" in compactResponseBody) {
@@ -53,6 +68,25 @@ const compactHighVolumeResponseBody = (
 	}
 	if ("flag" in compactResponseBody) {
 		compactResponseBody.flag = stripLargeFields(responseBody.flag);
+	}
+	if (Array.isArray(responseBody.subscriptions)) {
+		compactResponseBody.subscriptions_count = responseBody.subscriptions.length;
+		delete compactResponseBody.subscriptions;
+	}
+	if (Array.isArray(responseBody.purchases)) {
+		compactResponseBody.purchases_count = responseBody.purchases.length;
+		delete compactResponseBody.purchases;
+	}
+	if (LIST_RESPONSE_ROUTES.has(path) && Array.isArray(responseBody.list)) {
+		compactResponseBody.list_count = responseBody.list.length;
+		delete compactResponseBody.list;
+	}
+	if (
+		path === "/v1/events.aggregate" &&
+		Array.isArray(responseBody.deductions)
+	) {
+		compactResponseBody.deductions_count = responseBody.deductions.length;
+		delete compactResponseBody.deductions;
 	}
 	return compactResponseBody;
 };
@@ -93,6 +127,8 @@ export const logRequestResult = async ({
 			durationMs < SLOW_REQUEST_BODY_THRESHOLD_MS &&
 			!shouldSampleSuccessResponseBody();
 
+		let originalResponseBodyBytes: number | undefined;
+		let responseBodyWasCompacted = false;
 		let finalResponseBody = excludeResponseBody ? null : responseBody;
 		if (
 			!excludeResponseBody &&
@@ -102,7 +138,9 @@ export const logRequestResult = async ({
 			const contentType = c.res.headers.get("content-type");
 			if (contentType?.includes("application/json")) {
 				try {
-					finalResponseBody = await c.res.clone().json();
+					const responseText = await c.res.clone().text();
+					originalResponseBodyBytes = Buffer.byteLength(responseText);
+					finalResponseBody = JSON.parse(responseText);
 				} catch (_error) {
 					finalResponseBody = null;
 				}
@@ -110,7 +148,27 @@ export const logRequestResult = async ({
 		}
 
 		if (compactResponseBody && isRecord(finalResponseBody)) {
-			finalResponseBody = compactHighVolumeResponseBody(finalResponseBody);
+			finalResponseBody = compactHighVolumeResponseBody({
+				path: c.req.path,
+				responseBody: finalResponseBody,
+			});
+			responseBodyWasCompacted = true;
+		}
+
+		if (isRecord(finalResponseBody)) {
+			const loggedResponseBodyBytes =
+				originalResponseBodyBytes === undefined ||
+				(responseBodyWasCompacted &&
+					originalResponseBodyBytes > MAX_LOGGED_RESPONSE_BODY_BYTES)
+					? Buffer.byteLength(JSON.stringify(finalResponseBody))
+					: originalResponseBodyBytes;
+			if (loggedResponseBodyBytes > MAX_LOGGED_RESPONSE_BODY_BYTES) {
+				finalResponseBody = {
+					truncated: true,
+					original_bytes: originalResponseBodyBytes ?? loggedResponseBodyBytes,
+					top_level_keys: Object.keys(finalResponseBody),
+				};
+			}
 		}
 
 		const log = isSuccess ? ctx.logger.info : ctx.logger.warn;
