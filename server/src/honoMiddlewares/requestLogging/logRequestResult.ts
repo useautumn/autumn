@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import type { Context } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { isAxiomResponseBodyReductionEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { addExtrasToLogs } from "@/utils/logging/addContextToLogs.js";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
@@ -114,8 +115,11 @@ export const logRequestResult = async ({
 		}
 
 		const isSuccess = statusCode >= 200 && statusCode < 300;
+		const reduceResponseBodyIngest = isAxiomResponseBodyReductionEnabled();
 		const isHighVolumeSuccess =
-			isSuccess && HIGH_VOLUME_SUCCESS_ROUTES.has(c.req.path);
+			reduceResponseBodyIngest &&
+			isSuccess &&
+			HIGH_VOLUME_SUCCESS_ROUTES.has(c.req.path);
 
 		ctx.logger = addExtrasToLogs({
 			logger: ctx.logger,
@@ -170,6 +174,7 @@ export const logRequestResult = async ({
 					? Buffer.byteLength(JSON.stringify(finalResponseBody))
 					: originalResponseBodyBytes;
 			if (
+				reduceResponseBodyIngest &&
 				!keepFullSampledResponseBody &&
 				loggedResponseBodyBytes > MAX_LOGGED_RESPONSE_BODY_BYTES
 			) {

@@ -37,6 +37,7 @@ export function MiscellaneousEdgeConfigDialog({
 				syncCoalesce: data.syncCoalesce ?? false,
 				subjectLookupDbOnly: data.subjectLookupDbOnly ?? false,
 				idempotencyDynamoRead: data.idempotencyDynamoRead ?? false,
+				axiomResponseBodyReduction: data.axiomResponseBodyReduction ?? true,
 			};
 		},
 		enabled: open,

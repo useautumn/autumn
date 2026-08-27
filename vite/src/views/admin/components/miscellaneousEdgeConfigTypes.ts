@@ -4,6 +4,7 @@ export type MiscellaneousEdgeConfig = {
 	subjectLookupDbOnly: boolean;
 	idempotencyDynamoRead: boolean;
 	redisFallbackToDb: boolean;
+	axiomResponseBodyReduction: boolean;
 	configHealthy: boolean;
 	configConfigured: boolean;
 	lastSuccessAt: string | null;
@@ -16,6 +17,7 @@ export const MISCELLANEOUS_DEFAULT_CONFIG: MiscellaneousEdgeConfig = {
 	subjectLookupDbOnly: false,
 	idempotencyDynamoRead: false,
 	redisFallbackToDb: false,
+	axiomResponseBodyReduction: true,
 	configHealthy: false,
 	configConfigured: false,
 	lastSuccessAt: null,
@@ -48,7 +50,7 @@ export const getStatusMessage = ({
 	config: MiscellaneousEdgeConfig;
 }) => {
 	if (config.configConfigured === false) {
-		return "Miscellaneous config is missing in S3, so every switch below stays off.";
+		return "Miscellaneous config is missing in S3, so the defaults shown below apply.";
 	}
 
 	return config.error ?? "Saved changes reach all servers within 10 seconds.";

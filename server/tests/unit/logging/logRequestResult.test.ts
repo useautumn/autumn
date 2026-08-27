@@ -3,6 +3,8 @@ import type { Context } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { logRequestResult } from "@/honoMiddlewares/requestLogging/logRequestResult.js";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { MiscellaneousEdgeConfigSchema } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigSchemas.js";
+import { _setMiscellaneousEdgeConfigForTesting } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { addRequestToLogs } from "@/utils/logging/addContextToLogs.js";
 import type { LogRequestContext } from "@/utils/logging/loggerTypes.js";
 
@@ -82,6 +84,9 @@ const captureJsonResponse = async ({
 
 afterEach(() => {
 	mock.restore();
+	_setMiscellaneousEdgeConfigForTesting({
+		config: MiscellaneousEdgeConfigSchema.parse({}),
+	});
 });
 
 describe("logRequestResult", () => {
@@ -532,6 +537,34 @@ describe("logRequestResult", () => {
 		});
 	});
 
+	test("keeps full response bodies when Axiom reduction is disabled", async () => {
+		_setMiscellaneousEdgeConfigForTesting({
+			config: MiscellaneousEdgeConfigSchema.parse({
+				axiomResponseBodyReduction: false,
+			}),
+		});
+		spyOn(Math, "random").mockReturnValue(0.5);
+		const responseBody = {
+			allowed: true,
+			balance: {
+				remaining: 90,
+				breakdown: [{ id: "cus_ent_123" }],
+			},
+			payload: "x".repeat(32 * 1024),
+		};
+		const { captured } = await captureJsonResponse({
+			path: "/v1/balances.check",
+			durationMs: 10,
+			responseBody,
+		});
+
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: responseBody,
+		});
+	});
+
 	test("keeps a sampled fast high-volume response in full", async () => {
 		spyOn(Math, "random").mockReturnValue(0);
 		const responseBody = { allowed: true, balance: { remaining: 90 } };
@@ -600,7 +633,12 @@ describe("logRequestResult", () => {
 		});
 	});
 
-	test("drops the response body on the legacy events list route", async () => {
+	test("keeps the legacy events list exclusion when reduction is disabled", async () => {
+		_setMiscellaneousEdgeConfigForTesting({
+			config: MiscellaneousEdgeConfigSchema.parse({
+				axiomResponseBodyReduction: false,
+			}),
+		});
 		const captured: CapturedLog[] = [];
 		let cloneCount = 0;
 		const ctx = {
