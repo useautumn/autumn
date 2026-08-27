@@ -66,7 +66,7 @@ export const formatAutumnOrgContext = ({
 		sections.push(
 			toJsonBlock({
 				label: "listPlans",
-				note: "compact index — call getPlan/listPlans for full details",
+				note: "every plan and item, enough to build a customize — call getPlan only for tier amounts or trial terms",
 				pretty: false,
 				value: compactPlans(plans),
 			}),

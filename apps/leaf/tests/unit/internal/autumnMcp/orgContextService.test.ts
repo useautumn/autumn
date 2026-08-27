@@ -11,6 +11,9 @@ process.env.SLACK_SIGNING_SECRET ??= "test";
 const { formatAutumnOrgContext, loadAutumnOrgContext } = await import(
 	"../../../../src/internal/autumnMcp/orgContextService.js"
 );
+const { compactPlans } = await import(
+	"../../../../src/internal/autumnMcp/orgContextFormat.js"
+);
 
 const createLogger = () => {
 	const warnings: unknown[] = [];
@@ -54,12 +57,12 @@ describe("Autumn org context service", () => {
 		});
 
 		expect(text).toContain("getAgentRules:");
-		expect(text).toContain("listPlans (compact index");
+		expect(text).toContain("listPlans (every plan and item");
 		expect(text).toContain("listFeatures (compact index)");
 		expect(text).toContain("```json");
 		expect(text).toContain("workspace scoped");
 		expect(text).not.toContain("Always use invoice mode.");
-		expect(text).toContain('"items":["credits"]');
+		expect(text).toContain('"items":["credits rollover"]');
 		expect(text).toContain('"id":"enterprise"');
 		expect(text).toContain('"type":"boolean"');
 	});
@@ -126,7 +129,7 @@ describe("Autumn org context service", () => {
 		});
 
 		expect(context?.text).toContain("getAgentRules:");
-		expect(context?.text).toContain("listPlans (compact index");
+		expect(context?.text).toContain("listPlans (every plan and item");
 		expect(context?.text).not.toContain("listFeatures:");
 		expect(warnings).toHaveLength(1);
 	});
@@ -209,5 +212,46 @@ describe("org context stale-while-revalidate cache", () => {
 		} finally {
 			setSystemTime();
 		}
+	});
+});
+
+describe("compact plan items carry what a customize needs", () => {
+	const itemsOf = (items: unknown[]) =>
+		(compactPlans([{ id: "p", items, name: "P" }])[0] as { items: string[] })
+			.items;
+
+	test("a boolean reads as unlimited, never as an allowance of 1", () => {
+		expect(
+			itemsOf([{ feature_id: "sso", included: 1, unlimited: true }]),
+		).toEqual(["sso unlimited"]);
+	});
+
+	test("same feature on two intervals stays distinguishable", () => {
+		expect(
+			itemsOf([
+				{
+					feature_id: "credits",
+					price: { billing_method: "prepaid", interval: "month" },
+				},
+				{
+					feature_id: "credits",
+					price: { billing_method: "prepaid", interval: "one_off" },
+				},
+			]),
+		).toEqual(["credits prepaid month", "credits prepaid one_off"]);
+	});
+
+	test("a price ladder is marked rather than dropped", () => {
+		expect(
+			itemsOf([{ feature_id: "credits", price: { tiers: [1, 2, 3] } }]),
+		).toEqual(["credits tiers=3"]);
+	});
+
+	test("a price-less item falls back to its reset interval", () => {
+		expect(
+			itemsOf([
+				{ feature_id: "credits", included: 100, reset: { interval: "month" } },
+			]),
+		).toEqual(["credits included=100 month"]);
 	});
 });
