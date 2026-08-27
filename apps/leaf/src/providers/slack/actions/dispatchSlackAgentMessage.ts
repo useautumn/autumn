@@ -76,8 +76,12 @@ const runAndReply = async ({
 	const evePresenter = createEveSlackPresenter({ setStatus: progress.status });
 	const reactSafely = (input: { action: "add" | "remove"; emoji: string }) =>
 		react?.(input).catch(() => undefined);
+	// Invisible to Braintrust and to the turn's own prepare_ms.
+	const ingressStartedAt = Date.now();
+	let historyMs = 0;
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
+		const historyStartedAt = Date.now();
 		const [installation, recentMessages] = await Promise.all([
 			findSlackInstallationForWorkspace({ workspaceId }),
 			Promise.resolve(
@@ -86,6 +90,7 @@ const runAndReply = async ({
 					: recentMessagesInput,
 			),
 		]);
+		historyMs = Date.now() - historyStartedAt;
 		if (!installation) {
 			logger.warn("Slack installation not found", {
 				event: "leaf.slack_installation_missing",
@@ -140,7 +145,17 @@ const runAndReply = async ({
 			kind: "message",
 			ownerProviderUserId: providerUserId,
 		});
+		const startPostStartedAt = Date.now();
 		await progress.start();
+		const startPostMs = Date.now() - startPostStartedAt;
+		logger.info("Slack ingress complete", {
+			event: "leaf.slack_ingress_completed",
+			data: {
+				history_ms: historyMs,
+				ingress_ms: Date.now() - ingressStartedAt,
+				start_post_ms: startPostMs,
+			},
+		});
 		const logAction = progress.activity;
 		run.logAction = logAction;
 		run.onStop = progress.stop;

@@ -24,9 +24,18 @@ const skillBundle = (bundle: Skill[]) =>
 	});
 
 /** The subagent's skill bundle: its own domain skill plus every transitive
- * prerequisite (concepts), resolved from agent-docs. */
-export const subagentSkills = ({ agent }: { agent: LeafAgentId }) =>
-	skillBundle(leafSkillsFor(agent));
+ * prerequisite (concepts), resolved from agent-docs. A skill named in
+ * `inlined` is already in the prompt, so it is not offered as loadable. */
+export const subagentSkills = ({
+	agent,
+	inlined = [],
+}: {
+	agent: LeafAgentId;
+	inlined?: readonly string[];
+}) =>
+	skillBundle(
+		leafSkillsFor(agent).filter((skill) => !inlined.includes(skill.name)),
+	);
 
 export const namedSkills = ({ names }: { names: readonly string[] }) =>
 	skillBundle(leafSkills.filter((skill) => names.includes(skill.name)));

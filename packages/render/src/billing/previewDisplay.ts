@@ -239,7 +239,7 @@ export const buildPlanItemChangeDisplay = ({
 		includedText:
 			item.unlimited === true
 				? "Unlimited"
-				: included === null || (included === 0 && price !== null)
+				: included === null || included === 0
 					? null
 					: formatCount(included),
 		pricingText: itemPricingText(price),

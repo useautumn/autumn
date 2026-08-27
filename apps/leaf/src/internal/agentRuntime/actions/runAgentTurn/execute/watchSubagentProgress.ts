@@ -1,7 +1,11 @@
 import { ms } from "@autumn/shared";
 import { logger } from "../../../../../lib/logger.js";
 import { EveStreamIdleTimeoutError } from "../../../eve/client.js";
-import { displayEveToolLabel, labelForAction } from "../../../eve/events.js";
+import {
+	displayEveToolLabel,
+	isTerminalEveEventType,
+	labelForAction,
+} from "../../../eve/events.js";
 import { streamEveEventsWithReconnect } from "../../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 import { isSilentTool } from "../../../tools/toolPolicy.js";
@@ -44,6 +48,9 @@ export const watchSubagentProgress = ({
 		threadKey: session.threadKey,
 	};
 
+	const startedAt = Date.now();
+	let childEndReason: string | undefined;
+
 	const relayPass = async () => {
 		for await (const event of streamEveEventsWithReconnect({
 			auth,
@@ -75,9 +82,9 @@ export const watchSubagentProgress = ({
 			}
 			if (
 				event.type === "input.requested" ||
-				event.type === "session.completed" ||
-				event.type === "session.failed"
+				isTerminalEveEventType(event.type)
 			) {
+				childEndReason = event.type;
 				return true;
 			}
 		}
@@ -92,12 +99,29 @@ export const watchSubagentProgress = ({
 			} catch (error) {
 				if (!(error instanceof EveStreamIdleTimeoutError)) throw error;
 			}
-			if (signal.aborted) return;
+			if (signal.aborted) {
+				childEndReason = "aborted";
+				return;
+			}
 		}
+		childEndReason = "reconnects_exhausted";
 	};
 
 	void relay()
-		.finally(() => onChildEnded?.())
+		.finally(() => {
+			const exhausted = childEndReason === "reconnects_exhausted";
+			logger[exhausted ? "error" : "info"]("Eve subagent relay ended", {
+				event: "leaf.eve_child_relay_ended",
+				data: {
+					child_session_id: childSessionId,
+					events_seen: childSession.state.streamIndex,
+					reason: childEndReason ?? "stream_closed",
+					relay_ms: Date.now() - startedAt,
+					session_id: session.sessionId,
+				},
+			});
+			onChildEnded?.();
+		})
 		.catch((error) => {
 			if (error instanceof EveStreamIdleTimeoutError) return;
 			if (error instanceof Error && error.name === "AbortError") return;

@@ -98,20 +98,8 @@ jobs:
             --data-binary @"$RUNNER_TEMP/shipped-summary-payload.json" \
             "$DEPLOY_URL/api/shipped/summary"
 
-  wait-for-summary:
-    name: Wait for a PR summary
-    if: >-
-      github.event.action == 'opened' &&
-      github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Wait for a PR summary
-        run: sleep 300
-
   notify-without-summary:
-    name: Notify without summary
-    needs: wait-for-summary
+    name: Post PR to shipped
     if: >-
       github.event.action == 'opened' &&
       github.event.pull_request.head.repo.full_name == github.repository
