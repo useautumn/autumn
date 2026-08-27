@@ -14,7 +14,7 @@ type EvalMetadata = {
 	flow: "multiWrite";
 };
 
-const experimentName = "billing-multi-write-chained-approvals";
+const experimentName = "billing-multi-write-chained-approvals-bench";
 
 // Two customers already on Launch so a plan change is an update, and two more
 // with no plan so an attach is the only sensible write. Customer-level billing:
