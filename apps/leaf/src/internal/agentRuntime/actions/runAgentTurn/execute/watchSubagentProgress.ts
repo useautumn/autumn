@@ -1,4 +1,3 @@
-import { ms } from "@autumn/shared";
 import { logger } from "../../../../../lib/logger.js";
 import { EveStreamIdleTimeoutError } from "../../../eve/client.js";
 import {
@@ -9,13 +8,11 @@ import {
 import { streamEveEventsWithReconnect } from "../../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 import { isSilentTool } from "../../../tools/toolPolicy.js";
+import {
+	CHILD_RELAY_IDLE_TIMEOUT_MS,
+	MAX_CHILD_IDLE_RECONNECTS,
+} from "../../../turnBudget.js";
 import type { EveEventContext } from "./applyEveEvent.js";
-
-/** A delegated child can think for minutes between events, so the relay
- * reconnects through quiet windows and ends only when the child session
- * terminates — while it lives, it vouches for the parent turn. */
-const CHILD_WATCH_IDLE_TIMEOUT_MS = ms.minutes(2);
-const MAX_CHILD_IDLE_RECONNECTS = 10;
 
 /** Relays a delegated child session's live progress — tool starts and partial
  * text — onto the parent turn's status channel, which otherwise freezes on
@@ -54,7 +51,7 @@ export const watchSubagentProgress = ({
 	const relayPass = async () => {
 		for await (const event of streamEveEventsWithReconnect({
 			auth,
-			idleTimeoutMs: CHILD_WATCH_IDLE_TIMEOUT_MS,
+			idleTimeoutMs: CHILD_RELAY_IDLE_TIMEOUT_MS,
 			session: childSession,
 			signal,
 		})) {

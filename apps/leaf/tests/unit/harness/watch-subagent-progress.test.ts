@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import type { EveEvent } from "../../../src/internal/agentRuntime/eve/eveEventSchemas.js";
 import type { EveSessionRef } from "../../../src/internal/agentRuntime/eve/types.js";
+import { MAX_CHILD_IDLE_RECONNECTS } from "../../../src/internal/agentRuntime/turnBudget.js";
 import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 mock.module("../../../src/lib/env.js", () => ({ env: {} }));
@@ -170,7 +171,9 @@ describe("watchSubagentProgress", () => {
 		});
 		await flush();
 		expect(ended).toBe(true);
-		expect(streamedSessionIds.length).toBeLessThanOrEqual(11);
+		expect(streamedSessionIds.length).toBeLessThanOrEqual(
+			MAX_CHILD_IDLE_RECONNECTS + 1,
+		);
 	});
 
 	test("watches the child even with no status channel, to vouch for the turn", async () => {

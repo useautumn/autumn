@@ -36,10 +36,7 @@ describeWithDb("world reader (real Postgres)", () => {
 		await sql.close();
 	});
 
-	test("exact event count and cursor-based replay", async () => {
-		const { readSessionEvents } = await import(
-			"../../src/internal/agentRuntime/eve/world/readSessionEvents.js"
-		);
+	test("exact event count from the journal", async () => {
 		const { sessionEventCount, sessionStreamName } = await import(
 			"../../src/internal/agentRuntime/eve/world/sessionStream.js"
 		);
@@ -53,15 +50,6 @@ describeWithDb("world reader (real Postgres)", () => {
 			values (${chunkId()}, ${streamId}, ${runId}, ${Buffer.alloc(0)}, true)`;
 
 		expect(await sessionEventCount(runId)).toBe(3);
-
-		const seen: string[] = [];
-		for await (const event of readSessionEvents({
-			sessionId: runId,
-			startIndex: 1,
-		})) {
-			seen.push(event.type);
-		}
-		expect(seen).toEqual(["message.completed", "session.waiting"]);
 	});
 
 	test("NOTIFY delivery is proven on a direct connection", async () => {

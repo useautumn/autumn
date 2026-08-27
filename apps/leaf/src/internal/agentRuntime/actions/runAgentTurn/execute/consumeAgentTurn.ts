@@ -1,5 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
-import { type AppEnv, ms } from "@autumn/shared";
+import type { AppEnv } from "@autumn/shared";
 import { AGENT_UNREACHABLE_MESSAGE } from "../../../../../ui/messages.js";
 import type { ActiveRun } from "../../../../runs/runRegistry.js";
 import {
@@ -14,6 +14,13 @@ import {
 } from "../../../eve/sessionState.js";
 import { streamEveEventsWithReconnect } from "../../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
+import {
+	MAX_IDLE_RESYNCS,
+	MAX_IDLE_RETRIES,
+	MAX_QUIET_MS,
+	MAX_TURN_DURATION_MS,
+	STREAM_RETRY_DELAY_MS,
+} from "../../../turnBudget.js";
 import { applyEveEvent, type EveEventContext } from "./applyEveEvent.js";
 import {
 	createEveTurnProgress,
@@ -24,18 +31,6 @@ import {
 import { createTurnActivity, type TurnActivity } from "./turnActivity.js";
 import { watchSubagentProgress } from "./watchSubagentProgress.js";
 
-// Eve can close empty while asynchronously resuming a turn.
-const MAX_IDLE_RETRIES = 20;
-/** Each idle window is 2 minutes, so this bounds a quiet turn at ~6 minutes
- * before leaf answers with whatever it has. */
-const MAX_IDLE_RESYNCS = 3;
-/** Settle before the caller's own wall-clock backstop, so a turn eve never
- * resumes is answered by leaf rather than killed mid-recovery. */
-const MAX_QUIET_MS = ms.minutes(2.5);
-/** The ceiling on a single turn however busy it looks: a stream that dribbles
- * one event per idle window would otherwise reset the resync budget forever. */
-const MAX_TURN_DURATION_MS = ms.minutes(15);
-const STREAM_RETRY_DELAY_MS = ms.seconds(0.5);
 const PERSIST_CURSOR_EVERY_EVENTS = 10;
 
 type EveTurnContext = Omit<EveEventContext, "event"> & { auth: EveAuthContext };

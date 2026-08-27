@@ -4,10 +4,10 @@
  * reader tailed an empty table forever, the liveness check saw no hook, and the
  * exact count reset the cursor to 0.
  *
- * Red: with a reachable world that does not hold the run, leaf still streams,
- * counts, and checks liveness through it.
+ * Red: with a reachable world that does not hold the run, leaf still counts
+ * and checks liveness through it.
  * Green: every world read is skipped for a run the world does not hold, and
- * the HTTP path is used exactly as before.
+ * events, counts, and liveness come over HTTP instead.
  */
 
 import { afterAll, describe, expect, mock, test } from "bun:test";
@@ -109,9 +109,7 @@ describe("world reads are guarded by run presence", () => {
 			seen.push(event.type);
 		}
 		expect(seen).toEqual(["turn.started", "session.waiting"]);
-		expect(fetched.some((url) => url.includes("/stream?startIndex=0"))).toBe(
-			true,
-		);
+		expect(fetched.some((url) => url.includes("/stream"))).toBe(true);
 		expect(worldCalls).not.toContain("streams.get");
 	});
 

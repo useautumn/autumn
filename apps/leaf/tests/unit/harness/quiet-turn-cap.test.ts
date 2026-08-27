@@ -1,7 +1,7 @@
 /**
  * The parent-quiet cap in consumeAgentTurn: a turn with NO live child that has
- * been silent past MAX_QUIET_MS (2.5 min) settles on the clock, not after the
- * MAX_IDLE_RESYNCS (3) budget is spent.
+ * been silent past MAX_QUIET_MS settles on the clock, not after the
+ * MAX_IDLE_RESYNCS budget is spent.
  *
  * The existing idle-stream-recovery suite cannot see this: its mock stream
  * never advances any clock, so msSinceActivity() is always ~0 and the resync

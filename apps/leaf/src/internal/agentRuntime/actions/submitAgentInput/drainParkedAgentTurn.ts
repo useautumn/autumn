@@ -1,4 +1,3 @@
-import { ms } from "@autumn/shared";
 import { logger } from "../../../../lib/logger.js";
 import { answerEveInput } from "../../eve/answerEveInput.js";
 import { isEveTransportLost, resyncEveStreamIndex } from "../../eve/client.js";
@@ -15,10 +14,10 @@ import {
 } from "../../eve/sessionState.js";
 import { streamEveEventsWithReconnect } from "../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
+import { DRAIN_IDLE_TIMEOUT_MS } from "../../turnBudget.js";
 import { QUEUED_TURN_WITHDRAWAL_NOTE } from "./agentInputNotes.js";
 
 const MAX_DRAIN_DENIES = 3;
-const DRAIN_IDLE_TIMEOUT_MS = ms.minutes(1);
 
 type GatedPark = Extract<ParkedEveInput, { kind: "gated" }>;
 

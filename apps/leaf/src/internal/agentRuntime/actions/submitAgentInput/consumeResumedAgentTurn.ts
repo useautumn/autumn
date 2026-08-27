@@ -1,4 +1,3 @@
-import { ms } from "@autumn/shared";
 import { logger } from "../../../../lib/logger.js";
 import { isErrorResult } from "../../../approvals/utils/approvalErrors.js";
 import {
@@ -20,6 +19,10 @@ import {
 import { streamEveEventsWithReconnect } from "../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import { normalizeToolName } from "../../tools/toolPolicy.js";
+import {
+	CHILD_REPLAY_IDLE_TIMEOUT_MS,
+	RESUME_IDLE_TIMEOUT_MS,
+} from "../../turnBudget.js";
 import type { ResumedAgentTurn } from "./types.js";
 
 const FAILED_ACTION_STATUSES = new Set(["error", "failed", "rejected"]);
@@ -64,11 +67,6 @@ const isFailedActionResult = (event: {
 	const output = event.result?.output;
 	return isErrorResult(output) || isErrorResult(parsedResultText(output));
 };
-
-const CHILD_REPLAY_IDLE_TIMEOUT_MS = ms.seconds(15);
-/** Delegated children work in silence on the parent stream, so a resumed turn
- * can be quiet for minutes before the next park or result arrives. */
-const RESUME_IDLE_TIMEOUT_MS = ms.minutes(5);
 
 /** Replays a child session's stream from the start — finite for task-mode
  * children (session.completed); a live child ends at the idle timeout. */
