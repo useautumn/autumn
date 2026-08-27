@@ -44,6 +44,7 @@ export type EveTurnProgress = Readonly<{
 	lastPreview?: CapturedPreview;
 	pendingText: string;
 	reasoningStreamId?: string;
+	sawToolActivity: boolean;
 	subagentChildSessionIds: ReadonlySet<string>;
 	subagentStartedAtByCallId: ReadonlyMap<string, number>;
 	toolInputs: ReadonlyMap<string, Record<string, unknown>>;
@@ -72,6 +73,7 @@ export type EveTurnTransition = Readonly<{
 export const createEveTurnProgress = (): EveTurnProgress => ({
 	finalText: "",
 	pendingText: "",
+	sawToolActivity: false,
 	subagentChildSessionIds: new Set(),
 	subagentStartedAtByCallId: new Map(),
 	toolInputs: new Map(),
@@ -149,7 +151,15 @@ const reduceRequestedActions = ({
 		toolLabels.set(action.callId, label);
 		if (action.input) toolInputs.set(action.callId, action.input);
 	}
-	return { effects, progress: { ...progress, toolInputs, toolLabels } };
+	return {
+		effects,
+		progress: {
+			...progress,
+			sawToolActivity: progress.sawToolActivity || event.actions.length > 0,
+			toolInputs,
+			toolLabels,
+		},
+	};
 };
 
 const reduceActionResult = ({
@@ -321,7 +331,7 @@ const reduceInputRequest = ({
  * pending batch, so the turn starts, receives and completes without working. */
 const turnDeferredItsInput = (progress: EveTurnProgress) =>
 	progress.turnStarted &&
-	progress.toolLabels.size === 0 &&
+	!progress.sawToolActivity &&
 	progress.subagentChildSessionIds.size === 0;
 
 const reduceTerminalEvent = ({

@@ -129,6 +129,8 @@ const eveEventSchema = eveEventEnvelopeSchema.transform((envelope) => {
 			return event({ schema: messageAppendedSchema, type: envelope.type });
 		case "message.completed":
 			return event({ schema: messageCompletedSchema, type: envelope.type });
+		case "step.failed":
+			return event({ schema: failureSchema, type: envelope.type });
 		case "turn.failed":
 			return event({ schema: failureSchema, type: envelope.type });
 		case "session.failed":

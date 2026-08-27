@@ -219,6 +219,7 @@ const outcomeForExhaustedRetries = async ({
 
 export const consumeAgentTurn = async ({
 	auth,
+	deadlineAt,
 	env,
 	logger,
 	onAction,
@@ -231,6 +232,7 @@ export const consumeAgentTurn = async ({
 	token,
 }: {
 	auth: EveAuthContext;
+	deadlineAt?: number;
 	env: AppEnv;
 	logger: AutumnLogger;
 	onAction?: EveEventContext["onAction"];
@@ -292,7 +294,13 @@ export const consumeAgentTurn = async ({
 			const quietTooLong =
 				activity.activeChildren() === 0 &&
 				activity.msSinceActivity() >= MAX_QUIET_MS;
-			if (activity.msSinceStart() >= MAX_TURN_DURATION_MS || quietTooLong) {
+			const deadlineReached =
+				deadlineAt !== undefined && Date.now() >= deadlineAt;
+			if (
+				activity.msSinceStart() >= MAX_TURN_DURATION_MS ||
+				quietTooLong ||
+				deadlineReached
+			) {
 				return settleExhaustedTurn({ activity, logger, turn });
 			}
 

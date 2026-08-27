@@ -42,7 +42,7 @@
 		"chat": "^4.31.0",
 		"date-fns": "^4.1.0",
 		"drizzle-orm": "catalog:",
-		"eve": "^0.16.2",
+		"eve": "0.16.2",
 		"hono": "4.12.27",
 		"lru-cache": "^11.2.7",
 		"postgres": "catalog:",
