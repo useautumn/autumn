@@ -169,7 +169,7 @@ export const CustomerProductsColumns = [
 										meta.onUncancelClick?.(row.original);
 									}}
 								>
-									<RotateCcw size={16} /> Uncancel
+									<RotateCcw size={16} /> Manage Cancellation
 								</DropdownMenuItem>
 								<DropdownMenuItem
 									className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
