@@ -38,15 +38,22 @@ export function BillingUnits() {
 		capitalize: false,
 	});
 
+	const hasMultipleTiers = (item.tiers?.length ?? 0) > 1;
+
 	return (
-		<div className="flex min-w-0 overflow-hidden">
+		<div
+			className={cn(
+				"flex min-w-0 overflow-hidden",
+				hasMultipleTiers && "shrink-0",
+			)}
+		>
 			<Popover open={open} onOpenChange={setOpen}>
 				<PopoverTrigger asChild>
 					<Button
 						variant="muted"
 						className={cn(
 							"min-w-0 max-w-full justify-start overflow-hidden text-tertiary-foreground",
-							item.tiers?.length && item.tiers.length > 1 && "max-w-20",
+							hasMultipleTiers && "max-w-20",
 						)}
 					>
 						<span className="min-w-0 truncate text-xs">
