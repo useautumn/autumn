@@ -30,7 +30,6 @@ const silentTools = new Set([
 	"read",
 	"read_file",
 	"todo",
-	"connection_search",
 ]);
 
 export const isSilentTool = (toolName: string) =>
