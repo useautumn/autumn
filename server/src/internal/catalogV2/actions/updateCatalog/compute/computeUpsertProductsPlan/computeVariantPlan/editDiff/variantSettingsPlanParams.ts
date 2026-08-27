@@ -72,7 +72,8 @@ export const variantSettingsPlanParams = ({
 		})
 	) {
 		const nextProcessors = productToPlanProcessors({ product: next });
-		if (nextProcessors) patch.processors = nextProcessors;
+		// A cleared mapping has no next value — send the explicit unlink instead.
+		patch.processors = nextProcessors ?? { stripe: null };
 	}
 
 	return patch;
