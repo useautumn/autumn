@@ -17,33 +17,6 @@ import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 import { buildAgentThreadKey } from "../../../sessions/agentThreadKey.js";
 import { buildEveInputResponses } from "./buildEveInputResponses.js";
 
-/** Eve answers a dead delivery hook by silently starting a new run rather than
- * failing, so the row keyed to the old id has to go with it. */
-const dropRehomedSessionRow = async ({
-	env,
-	orgId,
-	session,
-	staleSessionId,
-}: {
-	env: AppEnv;
-	orgId: string;
-	session: EveSessionRef;
-	staleSessionId: string;
-}) => {
-	logger.warn("Eve re-homed the session onto a new run", {
-		event: "leaf.eve_session_rehomed",
-		data: { session_id: session.sessionId, stale_session_id: staleSessionId },
-	});
-	await deleteEveSession({
-		db,
-		env,
-		orgId,
-		reason: "session_gone",
-		sessionId: staleSessionId,
-		threadKey: session.threadKey,
-	});
-};
-
 export const startAgentTurn = async ({
 	auth,
 	env,
@@ -115,7 +88,13 @@ export const startAgentTurn = async ({
 		const { rehomed } = adoptPostedEveSession({ posted, session });
 		if (outbound.inputResponses) session.state.pendingRequests = [];
 		if (rehomed) {
-			await dropRehomedSessionRow({ env, orgId, session, staleSessionId });
+			logger.warn("Eve re-homed the session onto a new run", {
+				event: "leaf.eve_session_rehomed",
+				data: {
+					session_id: session.sessionId,
+					stale_session_id: staleSessionId,
+				},
+			});
 		}
 	}
 	const started: EveSessionRef = session ?? {

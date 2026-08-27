@@ -400,7 +400,8 @@ describe("production incident replications", () => {
 
 		const result = await send("hello again");
 
-		expect(deletedSessions).toContain(fake.id);
+		// The upsert keys on the thread, so re-homing rewrites session_id in
+		// place; the row does not need deleting first.
 		expect(storedSession?.sessionId).not.toBe(fake.id);
 		expect(result.kind).toBe("reply");
 	});
