@@ -1,9 +1,38 @@
 import { z } from "zod/v4";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { CancelActionSchema } from "../common/cancelAction";
+import { RefundLastPaymentSchema } from "../common/refundLastPayment";
+import { SubscriptionParamsSchema } from "../common/subscriptionParams";
+
+const applyMultiUpdateItemRefinements = <
+	Schema extends z.ZodType<{
+		cancel_action: z.infer<typeof CancelActionSchema>;
+		proration_behavior?: z.infer<typeof BillingBehaviorSchema>;
+		refund_last_payment?: z.infer<typeof RefundLastPaymentSchema>;
+		subscription_params?: z.infer<typeof SubscriptionParamsSchema>;
+	}>,
+>(
+	schema: Schema,
+) =>
+	schema
+		.refine((data) => !(data.refund_last_payment && data.proration_behavior), {
+			message:
+				"Cannot pass both proration_behavior and refund_last_payment. Use proration_behavior for invoice credits/proration, or refund_last_payment for direct refunds.",
+		})
+		.refine(
+			(data) =>
+				!(
+					data.refund_last_payment &&
+					data.cancel_action !== "cancel_immediately"
+				),
+			{
+				message:
+					"refund_last_payment requires cancel_action to be 'cancel_immediately'.",
+			},
+		);
 
 /** Per-update entry in the multi-update request (external fields only) */
-export const ExtMultiUpdateItemV0Schema = z.object({
+const extMultiUpdateItemShape = z.object({
 	plan_id: z.string().optional().meta({
 		description:
 			"The ID of the plan to update. Optional if subscription_id is provided.",
@@ -24,13 +53,21 @@ export const ExtMultiUpdateItemV0Schema = z.object({
 		description:
 			"How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",
 	}),
+	refund_last_payment: RefundLastPaymentSchema.optional(),
+	subscription_params: SubscriptionParamsSchema.optional(),
 });
 
-export const MultiUpdateItemV0Schema = ExtMultiUpdateItemV0Schema.extend({
-	customer_product_id: z.string().optional().meta({
-		internal: true,
+export const ExtMultiUpdateItemV0Schema = applyMultiUpdateItemRefinements(
+	extMultiUpdateItemShape,
+);
+
+export const MultiUpdateItemV0Schema = applyMultiUpdateItemRefinements(
+	extMultiUpdateItemShape.extend({
+		customer_product_id: z.string().optional().meta({
+			internal: true,
+		}),
 	}),
-});
+);
 
 const multiUpdateParamsBase = {
 	customer_id: z.string().meta({

@@ -149,6 +149,11 @@ export function urlsForEntry(entry: RegistryEntry): {
 	};
 }
 
+export function databaseUrlForEnvLocal(databaseUrl: string): string {
+	const isLocalPostgres = /@localhost(?::\d+)?\//.test(databaseUrl);
+	return isLocalPostgres ? databaseUrl : forceSslVerifyFull(databaseUrl);
+}
+
 export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	const { worktreeNum, databaseUrl } = entry;
 	if (!databaseUrl) {
@@ -161,7 +166,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	const serverPort = serverPortFor(worktreeNum);
 	const portlessCa = join(homedir(), ".portless", "ca.pem");
 
-	const dbUrl = forceSslVerifyFull(databaseUrl);
+	const dbUrl = databaseUrlForEnvLocal(databaseUrl);
 	const serverEnv: Record<string, string> = {
 		DATABASE_URL: dbUrl,
 		DATABASE_CRITICAL_URL: dbUrl,

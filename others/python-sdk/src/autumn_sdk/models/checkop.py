@@ -171,19 +171,161 @@ FlagType2 = Union[
 r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
-class CheckCreditSchema2TypedDict(TypedDict):
+class CheckCreditSchema6TypedDict(TypedDict):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    metered_feature_id: Literal[""]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class CheckCreditSchema6(BaseModel):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    metered_feature_id: Annotated[
+        Annotated[Literal[""], AfterValidator(validate_const(""))],
+        pydantic.Field(alias="metered_feature_id"),
+    ] = ""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CheckCreditSchema5TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
     credit_cost: float
-    r"""Credits consumed per unit of the metered feature."""
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
 
-class CheckCreditSchema2(BaseModel):
+class CheckCreditSchema5(BaseModel):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
 
     credit_cost: float
-    r"""Credits consumed per unit of the metered feature."""
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CheckToEnum2 = Literal["inf",]
+
+
+CheckToUnion2TypedDict = TypeAliasType(
+    "CheckToUnion2TypedDict", Union[float, CheckToEnum2]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+CheckToUnion2 = TypeAliasType("CheckToUnion2", Union[float, CheckToEnum2])
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class CheckTier2TypedDict(TypedDict):
+    to: CheckToUnion2TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CheckTier2(BaseModel):
+    to: CheckToUnion2
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CheckCreditSchema4TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[CheckTier2TypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    tier_behavior: Literal["graduated"]
+
+
+class CheckCreditSchema4(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[CheckTier2]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CheckCreditSchemaUnion2TypedDict = TypeAliasType(
+    "CheckCreditSchemaUnion2TypedDict",
+    Union[
+        CheckCreditSchema5TypedDict,
+        CheckCreditSchema6TypedDict,
+        CheckCreditSchema4TypedDict,
+    ],
+)
+
+
+CheckCreditSchemaUnion2 = TypeAliasType(
+    "CheckCreditSchemaUnion2",
+    Union[CheckCreditSchema5, CheckCreditSchema6, CheckCreditSchema4],
+)
 
 
 class CheckModelMarkups2TypedDict(TypedDict):
@@ -268,6 +410,65 @@ class FlagDisplay2(BaseModel):
         return m
 
 
+class CheckStripe2TypedDict(TypedDict):
+    product_id: NotRequired[str]
+    r"""Stripe product ID this feature's usage prices bill under."""
+    meter_id: NotRequired[str]
+    r"""Stripe meter ID used to create this feature's metered price."""
+
+
+class CheckStripe2(BaseModel):
+    product_id: Optional[str] = None
+    r"""Stripe product ID this feature's usage prices bill under."""
+
+    meter_id: Optional[str] = None
+    r"""Stripe meter ID used to create this feature's metered price."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["product_id", "meter_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CheckProcessors2TypedDict(TypedDict):
+    r"""Processor mappings for this feature. Present when a Stripe product or meter is set."""
+
+    stripe: NotRequired[CheckStripe2TypedDict]
+
+
+class CheckProcessors2(BaseModel):
+    r"""Processor mappings for this feature. Present when a Stripe product or meter is set."""
+
+    stripe: Optional[CheckStripe2] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CheckFeature2TypedDict(TypedDict):
     r"""The full feature object if expanded."""
 
@@ -283,8 +484,10 @@ class CheckFeature2TypedDict(TypedDict):
     r"""Whether the feature is archived and hidden from the dashboard."""
     event_names: NotRequired[List[str]]
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
-    credit_schema: NotRequired[List[CheckCreditSchema2TypedDict]]
-    r"""For credit_system features: maps metered features to their credit costs."""
+    credit_schema: NotRequired[List[CheckCreditSchemaUnion2TypedDict]]
+    r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
+    invoice_credit: NotRequired[bool]
+    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
     model_markups: NotRequired[Nullable[Dict[str, CheckModelMarkups2TypedDict]]]
     r"""Per-model markup overrides for AI credit systems."""
     default_markup: NotRequired[float]
@@ -293,6 +496,8 @@ class CheckFeature2TypedDict(TypedDict):
     r"""Per-provider default markup percentages for AI credit systems."""
     display: NotRequired[FlagDisplay2TypedDict]
     r"""Display names for the feature in billing UI and customer-facing components."""
+    processors: NotRequired[CheckProcessors2TypedDict]
+    r"""Processor mappings for this feature. Present when a Stripe product or meter is set."""
 
 
 class CheckFeature2(BaseModel):
@@ -316,8 +521,11 @@ class CheckFeature2(BaseModel):
     event_names: Optional[List[str]] = None
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
 
-    credit_schema: Optional[List[CheckCreditSchema2]] = None
-    r"""For credit_system features: maps metered features to their credit costs."""
+    credit_schema: Optional[List[CheckCreditSchemaUnion2]] = None
+    r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
+
+    invoice_credit: Optional[bool] = None
+    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
 
     model_markups: OptionalNullable[Dict[str, CheckModelMarkups2]] = UNSET
     r"""Per-model markup overrides for AI credit systems."""
@@ -331,16 +539,21 @@ class CheckFeature2(BaseModel):
     display: Optional[FlagDisplay2] = None
     r"""Display names for the feature in billing UI and customer-facing components."""
 
+    processors: Optional[CheckProcessors2] = None
+    r"""Processor mappings for this feature. Present when a Stripe product or meter is set."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
             [
                 "event_names",
                 "credit_schema",
+                "invoice_credit",
                 "model_markups",
                 "default_markup",
                 "provider_markups",
                 "display",
+                "processors",
             ]
         )
         nullable_fields = set(["model_markups", "provider_markups"])
@@ -1589,19 +1802,161 @@ FlagType1 = Union[
 r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
-class CheckCreditSchema1TypedDict(TypedDict):
+class CheckCreditSchema3TypedDict(TypedDict):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    metered_feature_id: Literal[""]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class CheckCreditSchema3(BaseModel):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    metered_feature_id: Annotated[
+        Annotated[Literal[""], AfterValidator(validate_const(""))],
+        pydantic.Field(alias="metered_feature_id"),
+    ] = ""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CheckCreditSchema2TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
     credit_cost: float
-    r"""Credits consumed per unit of the metered feature."""
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class CheckCreditSchema2(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CheckToEnum1 = Literal["inf",]
+
+
+CheckToUnion1TypedDict = TypeAliasType(
+    "CheckToUnion1TypedDict", Union[float, CheckToEnum1]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+CheckToUnion1 = TypeAliasType("CheckToUnion1", Union[float, CheckToEnum1])
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class CheckTier1TypedDict(TypedDict):
+    to: CheckToUnion1TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CheckTier1(BaseModel):
+    to: CheckToUnion1
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CheckCreditSchema1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[CheckTier1TypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    tier_behavior: Literal["graduated"]
 
 
 class CheckCreditSchema1(BaseModel):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
 
-    credit_cost: float
-    r"""Credits consumed per unit of the metered feature."""
+    tiers: List[CheckTier1]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CheckCreditSchemaUnion1TypedDict = TypeAliasType(
+    "CheckCreditSchemaUnion1TypedDict",
+    Union[
+        CheckCreditSchema2TypedDict,
+        CheckCreditSchema3TypedDict,
+        CheckCreditSchema1TypedDict,
+    ],
+)
+
+
+CheckCreditSchemaUnion1 = TypeAliasType(
+    "CheckCreditSchemaUnion1",
+    Union[CheckCreditSchema2, CheckCreditSchema3, CheckCreditSchema1],
+)
 
 
 class CheckModelMarkups1TypedDict(TypedDict):
@@ -1686,6 +2041,65 @@ class FlagDisplay1(BaseModel):
         return m
 
 
+class CheckStripe1TypedDict(TypedDict):
+    product_id: NotRequired[str]
+    r"""Stripe product ID this feature's usage prices bill under."""
+    meter_id: NotRequired[str]
+    r"""Stripe meter ID used to create this feature's metered price."""
+
+
+class CheckStripe1(BaseModel):
+    product_id: Optional[str] = None
+    r"""Stripe product ID this feature's usage prices bill under."""
+
+    meter_id: Optional[str] = None
+    r"""Stripe meter ID used to create this feature's metered price."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["product_id", "meter_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CheckProcessors1TypedDict(TypedDict):
+    r"""Processor mappings for this feature. Present when a Stripe product or meter is set."""
+
+    stripe: NotRequired[CheckStripe1TypedDict]
+
+
+class CheckProcessors1(BaseModel):
+    r"""Processor mappings for this feature. Present when a Stripe product or meter is set."""
+
+    stripe: Optional[CheckStripe1] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CheckFeature1TypedDict(TypedDict):
     r"""The full feature object if expanded."""
 
@@ -1701,8 +2115,10 @@ class CheckFeature1TypedDict(TypedDict):
     r"""Whether the feature is archived and hidden from the dashboard."""
     event_names: NotRequired[List[str]]
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
-    credit_schema: NotRequired[List[CheckCreditSchema1TypedDict]]
-    r"""For credit_system features: maps metered features to their credit costs."""
+    credit_schema: NotRequired[List[CheckCreditSchemaUnion1TypedDict]]
+    r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
+    invoice_credit: NotRequired[bool]
+    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
     model_markups: NotRequired[Nullable[Dict[str, CheckModelMarkups1TypedDict]]]
     r"""Per-model markup overrides for AI credit systems."""
     default_markup: NotRequired[float]
@@ -1711,6 +2127,8 @@ class CheckFeature1TypedDict(TypedDict):
     r"""Per-provider default markup percentages for AI credit systems."""
     display: NotRequired[FlagDisplay1TypedDict]
     r"""Display names for the feature in billing UI and customer-facing components."""
+    processors: NotRequired[CheckProcessors1TypedDict]
+    r"""Processor mappings for this feature. Present when a Stripe product or meter is set."""
 
 
 class CheckFeature1(BaseModel):
@@ -1734,8 +2152,11 @@ class CheckFeature1(BaseModel):
     event_names: Optional[List[str]] = None
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
 
-    credit_schema: Optional[List[CheckCreditSchema1]] = None
-    r"""For credit_system features: maps metered features to their credit costs."""
+    credit_schema: Optional[List[CheckCreditSchemaUnion1]] = None
+    r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
+
+    invoice_credit: Optional[bool] = None
+    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
 
     model_markups: OptionalNullable[Dict[str, CheckModelMarkups1]] = UNSET
     r"""Per-model markup overrides for AI credit systems."""
@@ -1749,16 +2170,21 @@ class CheckFeature1(BaseModel):
     display: Optional[FlagDisplay1] = None
     r"""Display names for the feature in billing UI and customer-facing components."""
 
+    processors: Optional[CheckProcessors1] = None
+    r"""Processor mappings for this feature. Present when a Stripe product or meter is set."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
             [
                 "event_names",
                 "credit_schema",
+                "invoice_credit",
                 "model_markups",
                 "default_markup",
                 "provider_markups",
                 "display",
+                "processors",
             ]
         )
         nullable_fields = set(["model_markups", "provider_markups"])
@@ -3011,7 +3437,23 @@ try:
 except NameError:
     pass
 try:
+    CheckCreditSchema6.model_rebuild()
+except NameError:
+    pass
+try:
+    CheckCreditSchema4.model_rebuild()
+except NameError:
+    pass
+try:
     CheckUsageLimit2.model_rebuild()
+except NameError:
+    pass
+try:
+    CheckCreditSchema3.model_rebuild()
+except NameError:
+    pass
+try:
+    CheckCreditSchema1.model_rebuild()
 except NameError:
     pass
 try:

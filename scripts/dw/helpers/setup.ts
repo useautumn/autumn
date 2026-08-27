@@ -79,11 +79,25 @@ export function localTestOrgEnv(): Record<string, string> {
 	};
 }
 
+export function cloudSeedMissingStripeKey({
+	stripeSandboxSecretKey = process.env.STRIPE_SANDBOX_SECRET_KEY,
+}: {
+	stripeSandboxSecretKey?: string;
+} = {}): boolean {
+	return !stripeSandboxSecretKey?.trim();
+}
+
 /**
  * Idempotent Cloud seed: create unit-test-org if missing, otherwise only
- * ensure the Infisical API key hash. Does not clear an existing org.
+ * ensure the Infisical API key hash and Stripe Connect account.
+ * Does not clear an existing org.
  */
 export async function autoEnsureLocalTestOrg(): Promise<void> {
+	if (cloudSeedMissingStripeKey()) {
+		fatal(
+			"STRIPE_SANDBOX_SECRET_KEY unset — Cloud start must pull it from Infisical before seeding unit-test-org",
+		);
+	}
 	log("ensuring unit-test-org in local postgres");
 	const code = shInherit(
 		"bun",

@@ -4,6 +4,7 @@ import {
 	ProviderMarkupsSchema,
 } from "../../models/featureModels/featureConfig/creditConfig";
 import { FeatureType } from "../../models/featureModels/featureEnums";
+import { ApiFeatureProcessorsSchema } from "./components/processors.js";
 import { ApiCreditSchemaResponseItemSchema } from "./creditRateCard.js";
 
 export const ApiFeatureV1Schema = z.object({
@@ -71,6 +72,11 @@ export const ApiFeatureV1Schema = z.object({
 	archived: z.boolean().meta({
 		description:
 			"Whether the feature is archived and hidden from the dashboard.",
+	}),
+
+	processors: ApiFeatureProcessorsSchema.optional().meta({
+		description:
+			"Processor mappings for this feature. Present when a Stripe product or meter is set.",
 	}),
 });
 

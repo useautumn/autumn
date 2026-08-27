@@ -74,3 +74,7 @@ export const isSubjectReadSingleflightEnabled = (): boolean =>
 /** Kill switch for the MotherDuck balance-cache refresh cron. */
 export const isMotherduckCacheRefreshDisabled = (): boolean =>
 	store.get().disableMotherduckCacheRefresh;
+
+/** Global gate for Axiom response-body compaction and size caps. */
+export const isAxiomResponseBodyReductionEnabled = (): boolean =>
+	store.get().axiomResponseBodyReduction;

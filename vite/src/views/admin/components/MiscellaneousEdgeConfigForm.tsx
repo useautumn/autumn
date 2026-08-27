@@ -70,6 +70,8 @@ export const MiscellaneousEdgeConfigForm = ({
 				idempotencyDynamoRead:
 					parsed.idempotencyDynamoRead ?? prev.idempotencyDynamoRead,
 				redisFallbackToDb: parsed.redisFallbackToDb ?? prev.redisFallbackToDb,
+				axiomResponseBodyReduction:
+					parsed.axiomResponseBodyReduction ?? prev.axiomResponseBodyReduction,
 			}));
 			setJsonError(null);
 		} catch {
@@ -187,6 +189,20 @@ export const MiscellaneousEdgeConfigForm = ({
 						</div>
 					</div>
 					<div className="rounded-lg border border-border divide-y divide-border">
+						<MiscellaneousEdgeConfigSwitch
+							title="Axiom response-body reduction"
+							hint="Compacts 99% of selected fast-success bodies and caps other non-sampled JSON bodies at 32 KB. Request metadata is unaffected; disable to restore full bodies."
+							ariaLabel="Enable Axiom response-body reduction"
+							checked={config.axiomResponseBodyReduction}
+							onCheckedChange={(axiomResponseBodyReduction) => {
+								setSyncSource("form");
+								setConfig((prev) => ({
+									...prev,
+									axiomResponseBodyReduction,
+								}));
+							}}
+						/>
+
 						<MiscellaneousEdgeConfigSwitch
 							title="Sync coalescing"
 							ariaLabel="Enable sync coalescing"

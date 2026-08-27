@@ -59,6 +59,19 @@ export const listPlansItemDisplaySchema = z.object({
 	secondaryText: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const listPlansConfigSchema = z.object({
+	ignorePastDue: z.boolean(),
+});
+
+export const listPlansFilterSchema = z.object({
+	properties: z.record(z.string(), z.string()),
+});
+
+export const listPlansOverageAllowedSchema = z.object({
+	featureId: z.string(),
+	enabled: z.boolean(),
+});
+
 export const listPlansVariantDetailsAdditionalCurrencySchema = z.object({
 	currency: z.string(),
 	amount: z.number(),
@@ -87,17 +100,58 @@ export const listPlansVariantDetailsOverageAllowedSchema = z.object({
 	enabled: z.boolean(),
 });
 
-export const listPlansConfigSchema = z.object({
-	ignorePastDue: z.boolean(),
+export const listPlansUpsertLicenseAdditionalCurrencySchema = z.object({
+	currency: z.union([z.any(), z.undefined()]).optional(),
+	amount: z.union([z.any(), z.undefined()]).optional(),
 });
 
-export const listPlansFilterSchema = z.object({
-	properties: z.record(z.string(), z.string()),
+export const listPlansUpsertLicenseResetSchema = z.object({
+	interval: z.union([z.any(), z.undefined()]).optional(),
+	intervalCount: z.union([z.any(), z.undefined()]).optional(),
 });
 
-export const listPlansOverageAllowedSchema = z.object({
+export const listPlansUpsertLicensePriceSchema = z.object({
+	stripePriceId: z.union([z.any(), z.undefined()]).optional(),
+	amount: z.union([z.any(), z.undefined()]).optional(),
+	additionalCurrencies: z.union([z.any(), z.undefined()]).optional(),
+	tiers: z.union([z.any(), z.undefined()]).optional(),
+	tierBehavior: z.union([z.any(), z.undefined()]).optional(),
+	interval: z.union([z.any(), z.undefined()]).optional(),
+	intervalCount: z.union([z.any(), z.undefined()]).optional(),
+	billingUnits: z.union([z.any(), z.undefined()]).optional(),
+	billingMethod: z.union([z.any(), z.undefined()]).optional(),
+	maxPurchase: z.union([z.any(), z.undefined()]).optional(),
+});
+
+export const listPlansUpsertLicenseProrationSchema = z.object({
+	onIncrease: z.union([z.any(), z.undefined()]).optional(),
+	onDecrease: z.union([z.any(), z.undefined()]).optional(),
+});
+
+export const listPlansUpsertLicenseRolloverSchema = z.object({
+	max: z.union([z.any(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.any(), z.undefined()]).optional(),
+	expiryDurationType: z.union([z.any(), z.undefined()]).optional(),
+	expiryDurationLength: z.union([z.any(), z.undefined()]).optional(),
+});
+
+export const listPlansUpsertLicensePlanItemSchema = z.object({
 	featureId: z.string(),
-	enabled: z.boolean(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	pooled: z.boolean(),
+	reset: z.union([listPlansUpsertLicenseResetSchema, z.undefined()]).optional(),
+	price: z.union([listPlansUpsertLicensePriceSchema, z.undefined()]).optional(),
+	proration: z
+		.union([listPlansUpsertLicenseProrationSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([listPlansUpsertLicenseRolloverSchema, z.undefined()])
+		.optional(),
+});
+
+export const listPlansRemoveLicenseSchema = z.object({
+	licensePlanId: z.string(),
 });
 
 export const listPlansParamsOutboundSchema = z.object({
@@ -200,6 +254,88 @@ export const listPlansFreeTrialSchema = z.object({
 });
 
 export const listPlansEnvSchema = openEnumSchema;
+
+export const listPlansPurchaseLimitIntervalSchema = openEnumSchema;
+
+export const listPlansPurchaseLimitSchema = z.object({
+	interval: listPlansPurchaseLimitIntervalSchema,
+	intervalCount: z.number(),
+	limit: z.number(),
+});
+
+export const listPlansAutoTopupSchema = z.object({
+	featureId: z.string(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	quantity: z.number(),
+	purchaseLimit: z
+		.union([listPlansPurchaseLimitSchema, z.undefined()])
+		.optional(),
+	invoiceMode: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const listPlansLimitTypeSchema = openEnumSchema;
+
+export const listPlansSpendLimitSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	limitType: z.union([listPlansLimitTypeSchema, z.undefined()]).optional(),
+	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+	skipOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const listPlansUsageLimitIntervalSchema = openEnumSchema;
+
+export const listPlansAnchorSchema = openEnumSchema;
+
+export const listPlansUsageLimitSchema = z.object({
+	featureId: z.string(),
+	enabled: z.boolean(),
+	limit: z.number(),
+	interval: listPlansUsageLimitIntervalSchema,
+	anchor: z.union([listPlansAnchorSchema, z.undefined()]).optional(),
+	filter: z.union([listPlansFilterSchema, z.undefined()]).optional(),
+});
+
+export const listPlansThresholdTypeSchema = openEnumSchema;
+
+export const listPlansUsageAlertSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	thresholdType: listPlansThresholdTypeSchema,
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const listPlansBillingControlsSchema = z.object({
+	autoTopups: z
+		.union([z.array(listPlansAutoTopupSchema), z.undefined()])
+		.optional(),
+	spendLimits: z
+		.union([z.array(listPlansSpendLimitSchema), z.undefined()])
+		.optional(),
+	usageLimits: z
+		.union([z.array(listPlansUsageLimitSchema), z.undefined()])
+		.optional(),
+	usageAlerts: z
+		.union([z.array(listPlansUsageAlertSchema), z.undefined()])
+		.optional(),
+	overageAllowed: z
+		.union([z.array(listPlansOverageAllowedSchema), z.undefined()])
+		.optional(),
+});
+
+export const listPlansStatusSchema = openEnumSchema;
+
+export const listPlansAttachActionSchema = openEnumSchema;
+
+export const listPlansCustomerEligibilitySchema = z.object({
+	trialAvailable: z.union([z.boolean(), z.undefined()]).optional(),
+	status: z.union([listPlansStatusSchema, z.undefined()]).optional(),
+	canceling: z.union([z.boolean(), z.undefined()]).optional(),
+	trialing: z.union([z.boolean(), z.undefined()]).optional(),
+	attachAction: listPlansAttachActionSchema,
+});
 
 export const listPlansPriceVariantDetailsIntervalSchema = openEnumSchema;
 
@@ -305,6 +441,7 @@ export const listPlansPlanItemFilterSchema = z.object({
 		])
 		.optional(),
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const listPlansVariantDetailsDurationTypeSchema = openEnumSchema;
@@ -401,6 +538,56 @@ export const listPlansVariantDetailsBillingControlsSchema = z.object({
 		.optional(),
 });
 
+export const listPlansUpsertLicenseIntervalSchema = openEnumSchema;
+
+export const listPlansUpsertLicenseBasePriceSchema = z.object({
+	amount: z.number(),
+	interval: listPlansUpsertLicenseIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(listPlansUpsertLicenseAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const listPlansUpsertLicenseBillingMethodSchema = openEnumSchema;
+
+export const listPlansUpsertLicensePlanItemFilterSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	billingMethod: z
+		.union([listPlansUpsertLicenseBillingMethodSchema, z.undefined()])
+		.optional(),
+	interval: z.union([z.any(), z.undefined()]).optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const listPlansUpsertLicenseCustomizeSchema = z.object({
+	price: z
+		.union([listPlansUpsertLicenseBasePriceSchema, z.undefined()])
+		.optional()
+		.nullable(),
+	addItems: z
+		.union([z.array(listPlansUpsertLicensePlanItemSchema), z.undefined()])
+		.optional(),
+	removeItems: z
+		.union([z.array(listPlansUpsertLicensePlanItemFilterSchema), z.undefined()])
+		.optional(),
+});
+
+export const listPlansUpsertLicenseSchema = z.object({
+	licensePlanId: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	prepaidOnly: z.union([z.boolean(), z.undefined()]).optional(),
+	customize: z
+		.union([listPlansUpsertLicenseCustomizeSchema, z.undefined()])
+		.optional()
+		.nullable(),
+	metadata: z.union([z.record(z.string(), z.any()), z.undefined()]).optional(),
+});
+
 export const listPlansCustomizeSchema = z.object({
 	price: z
 		.union([listPlansBasePriceSchema, z.undefined()])
@@ -419,93 +606,17 @@ export const listPlansCustomizeSchema = z.object({
 	billingControls: z
 		.union([listPlansVariantDetailsBillingControlsSchema, z.undefined()])
 		.optional(),
+	upsertLicenses: z
+		.union([z.array(listPlansUpsertLicenseSchema), z.undefined()])
+		.optional(),
+	removeLicenses: z
+		.union([z.array(listPlansRemoveLicenseSchema), z.undefined()])
+		.optional(),
 });
 
 export const listPlansVariantDetailsSchema = z.object({
 	basePlanId: z.string(),
 	customize: z.union([listPlansCustomizeSchema, z.undefined()]).optional(),
-});
-
-export const listPlansPurchaseLimitIntervalSchema = openEnumSchema;
-
-export const listPlansPurchaseLimitSchema = z.object({
-	interval: listPlansPurchaseLimitIntervalSchema,
-	intervalCount: z.number(),
-	limit: z.number(),
-});
-
-export const listPlansAutoTopupSchema = z.object({
-	featureId: z.string(),
-	enabled: z.boolean(),
-	threshold: z.number(),
-	quantity: z.number(),
-	purchaseLimit: z
-		.union([listPlansPurchaseLimitSchema, z.undefined()])
-		.optional(),
-	invoiceMode: z.union([z.boolean(), z.undefined()]).optional(),
-});
-
-export const listPlansLimitTypeSchema = openEnumSchema;
-
-export const listPlansSpendLimitSchema = z.object({
-	featureId: z.union([z.string(), z.undefined()]).optional(),
-	enabled: z.boolean(),
-	limitType: z.union([listPlansLimitTypeSchema, z.undefined()]).optional(),
-	overageLimit: z.union([z.number(), z.undefined()]).optional(),
-	skipOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
-});
-
-export const listPlansUsageLimitIntervalSchema = openEnumSchema;
-
-export const listPlansAnchorSchema = openEnumSchema;
-
-export const listPlansUsageLimitSchema = z.object({
-	featureId: z.string(),
-	enabled: z.boolean(),
-	limit: z.number(),
-	interval: listPlansUsageLimitIntervalSchema,
-	anchor: z.union([listPlansAnchorSchema, z.undefined()]).optional(),
-	filter: z.union([listPlansFilterSchema, z.undefined()]).optional(),
-});
-
-export const listPlansThresholdTypeSchema = openEnumSchema;
-
-export const listPlansUsageAlertSchema = z.object({
-	featureId: z.union([z.string(), z.undefined()]).optional(),
-	enabled: z.boolean(),
-	threshold: z.number(),
-	thresholdType: listPlansThresholdTypeSchema,
-	name: z.union([z.string(), z.undefined()]).optional(),
-});
-
-export const listPlansBillingControlsSchema = z.object({
-	autoTopups: z
-		.union([z.array(listPlansAutoTopupSchema), z.undefined()])
-		.optional(),
-	spendLimits: z
-		.union([z.array(listPlansSpendLimitSchema), z.undefined()])
-		.optional(),
-	usageLimits: z
-		.union([z.array(listPlansUsageLimitSchema), z.undefined()])
-		.optional(),
-	usageAlerts: z
-		.union([z.array(listPlansUsageAlertSchema), z.undefined()])
-		.optional(),
-	overageAllowed: z
-		.union([z.array(listPlansOverageAllowedSchema), z.undefined()])
-		.optional(),
-});
-
-export const listPlansStatusSchema = openEnumSchema;
-
-export const listPlansAttachActionSchema = openEnumSchema;
-
-export const listPlansCustomerEligibilitySchema = z.object({
-	trialAvailable: z.union([z.boolean(), z.undefined()]).optional(),
-	status: z.union([listPlansStatusSchema, z.undefined()]).optional(),
-	canceling: z.union([z.boolean(), z.undefined()]).optional(),
-	trialing: z.union([z.boolean(), z.undefined()]).optional(),
-	attachAction: listPlansAttachActionSchema,
 });
 
 export const listPlansListSchema = z.object({
@@ -514,6 +625,8 @@ export const listPlansListSchema = z.object({
 	description: z.string().nullable(),
 	group: z.string().nullable(),
 	version: z.number(),
+	versionSlug: z.union([z.string(), z.undefined()]).optional().nullable(),
+	active: z.union([z.boolean(), z.undefined()]).optional(),
 	addOn: z.boolean(),
 	autoEnable: z.boolean(),
 	price: listPlansPriceSchema.nullable(),
@@ -522,10 +635,6 @@ export const listPlansListSchema = z.object({
 	createdAt: z.number(),
 	env: listPlansEnvSchema,
 	archived: z.boolean(),
-	baseVariantId: z.string().nullable(),
-	variantDetails: z
-		.union([listPlansVariantDetailsSchema, z.undefined()])
-		.optional(),
 	config: listPlansConfigSchema,
 	billingControls: z
 		.union([listPlansBillingControlsSchema, z.undefined()])
@@ -533,6 +642,10 @@ export const listPlansListSchema = z.object({
 	metadata: z.record(z.string(), z.any()),
 	customerEligibility: z
 		.union([listPlansCustomerEligibilitySchema, z.undefined()])
+		.optional(),
+	baseVariantId: z.string().nullable(),
+	variantDetails: z
+		.union([listPlansVariantDetailsSchema, z.undefined()])
 		.optional(),
 });
 

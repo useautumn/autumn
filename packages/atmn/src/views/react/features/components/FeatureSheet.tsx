@@ -1,3 +1,4 @@
+import { isGraduatedCreditSchemaItem } from "@autumn/shared";
 import { Box, Text } from "ink";
 import type { ApiFeature } from "../../../../lib/api/types/index.js";
 import { SheetSection } from "../../primitives/index.js";
@@ -112,12 +113,12 @@ export function FeatureSheet({
 								<Box paddingLeft={2}>
 									<Text>
 										<Text color="gray">
-											{item.tier_behavior === "graduated"
+											{isGraduatedCreditSchemaItem(item)
 												? "Pricing: "
 												: "Credit Cost: "}
 										</Text>
 										<Text color="cyan">
-											{item.tier_behavior === "graduated"
+											{isGraduatedCreditSchemaItem(item)
 												? `${item.tiers.length} graduated tiers`
 												: item.credit_cost}
 										</Text>

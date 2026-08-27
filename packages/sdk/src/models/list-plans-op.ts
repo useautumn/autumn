@@ -78,7 +78,7 @@ export type ListPlansPriceDisplay = {
 
 export type ListPlansPrice = {
   /**
-   * Base price amount for the plan.
+   * Base price amount for the plan, in major currency units (e.g. dollars).
    */
   amount: number;
   /**
@@ -453,6 +453,298 @@ export const ListPlansEnv = {
 export type ListPlansEnv = OpenEnum<typeof ListPlansEnv>;
 
 /**
+ * Miscellaneous plan-level configuration flags.
+ */
+export type ListPlansConfig = {
+  /**
+   * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+   */
+  ignorePastDue: boolean;
+};
+
+/**
+ * The time interval for the purchase limit window.
+ */
+export const ListPlansPurchaseLimitInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type ListPlansPurchaseLimitInterval = OpenEnum<
+  typeof ListPlansPurchaseLimitInterval
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type ListPlansPurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: ListPlansPurchaseLimitInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount: number;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type ListPlansAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled: boolean;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: ListPlansPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const ListPlansLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type ListPlansLimitType = OpenEnum<typeof ListPlansLimitType>;
+
+export type ListPlansSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: ListPlansLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const ListPlansUsageLimitInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type ListPlansUsageLimitInterval = OpenEnum<
+  typeof ListPlansUsageLimitInterval
+>;
+
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export const ListPlansAnchor = {
+  BillingCycle: "billing_cycle",
+  Utc: "utc",
+} as const;
+/**
+ * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+ */
+export type ListPlansAnchor = OpenEnum<typeof ListPlansAnchor>;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type ListPlansFilter = {
+  properties: { [k: string]: string };
+};
+
+export type ListPlansUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: ListPlansUsageLimitInterval;
+  /**
+   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+   */
+  anchor?: ListPlansAnchor | undefined;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: ListPlansFilter | undefined;
+};
+
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const ListPlansThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type ListPlansThresholdType = OpenEnum<typeof ListPlansThresholdType>;
+
+export type ListPlansUsageAlert = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled: boolean;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: ListPlansThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type ListPlansOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
+/**
+ * Plan-level billing controls used as customer defaults.
+ */
+export type ListPlansBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<ListPlansAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<ListPlansSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<ListPlansUsageLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<ListPlansUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<ListPlansOverageAllowed> | undefined;
+};
+
+/**
+ * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
+ */
+export const ListPlansStatus = {
+  Active: "active",
+  Scheduled: "scheduled",
+} as const;
+/**
+ * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
+ */
+export type ListPlansStatus = OpenEnum<typeof ListPlansStatus>;
+
+/**
+ * The action that would occur if this plan were attached to the customer.
+ */
+export const ListPlansAttachAction = {
+  Activate: "activate",
+  Upgrade: "upgrade",
+  Downgrade: "downgrade",
+  None: "none",
+  Purchase: "purchase",
+} as const;
+/**
+ * The action that would occur if this plan were attached to the customer.
+ */
+export type ListPlansAttachAction = OpenEnum<typeof ListPlansAttachAction>;
+
+export type ListPlansCustomerEligibility = {
+  /**
+   * Whether the trial on this plan is available to this customer. For example, if the customer used the trial in the past, this will be false.
+   */
+  trialAvailable?: boolean | undefined;
+  /**
+   * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
+   */
+  status?: ListPlansStatus | undefined;
+  /**
+   * Whether the customer's active instance of this plan is set to cancel.
+   */
+  canceling?: boolean | undefined;
+  /**
+   * Whether the customer is currently on a free trial of this plan.
+   */
+  trialing?: boolean | undefined;
+  /**
+   * The action that would occur if this plan were attached to the customer.
+   */
+  attachAction: ListPlansAttachAction;
+};
+
+/**
  * Billing interval (e.g. 'month', 'year').
  */
 export const ListPlansPriceVariantDetailsInterval = {
@@ -486,7 +778,7 @@ export type ListPlansVariantDetailsAdditionalCurrency = {
  */
 export type ListPlansBasePrice = {
   /**
-   * Base price amount for the plan.
+   * Base price amount for the plan, in major currency units (e.g. dollars).
    */
   amount: number;
   /**
@@ -825,6 +1117,10 @@ export type ListPlansPlanItemFilter = {
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
    */
   intervalCount?: number | undefined;
+  /**
+   * Match items whose grant equals this included usage. Omitted is a wildcard.
+   */
+  included?: number | undefined;
 };
 
 /**
@@ -869,7 +1165,7 @@ export type ListPlansFreeTrialParams = {
    */
   durationType: ListPlansVariantDetailsDurationType;
   /**
-   * If true, payment method required to start trial. Customer is charged after trial ends.
+   * If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
    */
   cardRequired: boolean;
   /**
@@ -1121,6 +1417,191 @@ export type ListPlansVariantDetailsBillingControls = {
 };
 
 /**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export const ListPlansUpsertLicenseInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export type ListPlansUpsertLicenseInterval = OpenEnum<
+  typeof ListPlansUpsertLicenseInterval
+>;
+
+export type ListPlansUpsertLicenseAdditionalCurrency = {
+  currency?: any | undefined;
+  amount?: any | undefined;
+};
+
+/**
+ * Base price configuration for a plan.
+ */
+export type ListPlansUpsertLicenseBasePrice = {
+  /**
+   * Base price amount for the plan, in major currency units (e.g. dollars).
+   */
+  amount: number;
+  /**
+   * Billing interval (e.g. 'month', 'year').
+   */
+  interval: ListPlansUpsertLicenseInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?:
+    | Array<ListPlansUpsertLicenseAdditionalCurrency>
+    | undefined;
+};
+
+/**
+ * Reset configuration for consumable features. Omit for non-consumable features like seats.
+ */
+export type ListPlansUpsertLicenseReset = {
+  interval?: any | undefined;
+  intervalCount?: any | undefined;
+};
+
+/**
+ * Pricing for usage beyond included units. Omit for free features.
+ */
+export type ListPlansUpsertLicensePrice = {
+  stripePriceId?: any | undefined;
+  amount?: any | undefined;
+  additionalCurrencies?: any | undefined;
+  tiers?: any | undefined;
+  tierBehavior?: any | undefined;
+  interval?: any | undefined;
+  intervalCount?: any | undefined;
+  billingUnits?: any | undefined;
+  billingMethod?: any | undefined;
+  maxPurchase?: any | undefined;
+};
+
+/**
+ * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+ */
+export type ListPlansUpsertLicenseProration = {
+  onIncrease?: any | undefined;
+  onDecrease?: any | undefined;
+};
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type ListPlansUpsertLicenseRollover = {
+  max?: any | undefined;
+  maxPercentage?: any | undefined;
+  expiryDurationType?: any | undefined;
+  expiryDurationLength?: any | undefined;
+};
+
+/**
+ * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
+ */
+export type ListPlansUpsertLicensePlanItem = {
+  /**
+   * The ID of the feature to configure.
+   */
+  featureId: string;
+  /**
+   * Number of free units included. Balance resets to this each interval for consumable features.
+   */
+  included?: number | undefined;
+  /**
+   * If true, customer has unlimited access to this feature.
+   */
+  unlimited?: boolean | undefined;
+  /**
+   * Whether entity-level grants contribute to a shared customer balance.
+   */
+  pooled: boolean;
+  /**
+   * Reset configuration for consumable features. Omit for non-consumable features like seats.
+   */
+  reset?: ListPlansUpsertLicenseReset | undefined;
+  /**
+   * Pricing for usage beyond included units. Omit for free features.
+   */
+  price?: ListPlansUpsertLicensePrice | undefined;
+  /**
+   * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+   */
+  proration?: ListPlansUpsertLicenseProration | undefined;
+  /**
+   * Rollover config for unused units. If set, unused included units carry over.
+   */
+  rollover?: ListPlansUpsertLicenseRollover | undefined;
+};
+
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export const ListPlansUpsertLicenseBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export type ListPlansUpsertLicenseBillingMethod = OpenEnum<
+  typeof ListPlansUpsertLicenseBillingMethod
+>;
+
+/**
+ * Filter for matching plan items. All provided fields must match (AND).
+ */
+export type ListPlansUpsertLicensePlanItemFilter = {
+  /**
+   * Match items linked to this feature.
+   */
+  featureId?: string | undefined;
+  /**
+   * Match items with this billing method (prepaid or usage_based).
+   */
+  billingMethod?: ListPlansUpsertLicenseBillingMethod | undefined;
+  /**
+   * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+   */
+  interval?: any | undefined;
+  /**
+   * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Match items whose grant equals this included usage. Omitted is a wildcard.
+   */
+  included?: number | undefined;
+};
+
+export type ListPlansUpsertLicenseCustomize = {
+  price?: ListPlansUpsertLicenseBasePrice | null | undefined;
+  addItems?: Array<ListPlansUpsertLicensePlanItem> | undefined;
+  removeItems?: Array<ListPlansUpsertLicensePlanItemFilter> | undefined;
+};
+
+export type ListPlansUpsertLicense = {
+  licensePlanId: string;
+  included?: number | undefined;
+  prepaidOnly?: boolean | undefined;
+  customize?: ListPlansUpsertLicenseCustomize | null | undefined;
+  metadata?: { [k: string]: any } | undefined;
+};
+
+export type ListPlansRemoveLicense = {
+  licensePlanId: string;
+};
+
+/**
  * The customization that transforms the base plan into this variant.
  */
 export type ListPlansCustomize = {
@@ -1144,6 +1625,14 @@ export type ListPlansCustomize = {
    * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
    */
   billingControls?: ListPlansVariantDetailsBillingControls | undefined;
+  /**
+   * License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
+   */
+  upsertLicenses?: Array<ListPlansUpsertLicense> | undefined;
+  /**
+   * License links to drop, keyed by license_plan_id. Parallel to remove_items.
+   */
+  removeLicenses?: Array<ListPlansRemoveLicense> | undefined;
 };
 
 /**
@@ -1158,298 +1647,6 @@ export type ListPlansVariantDetails = {
    * The customization that transforms the base plan into this variant.
    */
   customize?: ListPlansCustomize | undefined;
-};
-
-/**
- * Miscellaneous plan-level configuration flags.
- */
-export type ListPlansConfig = {
-  /**
-   * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
-   */
-  ignorePastDue: boolean;
-};
-
-/**
- * The time interval for the purchase limit window.
- */
-export const ListPlansPurchaseLimitInterval = {
-  Hour: "hour",
-  Day: "day",
-  Week: "week",
-  Month: "month",
-} as const;
-/**
- * The time interval for the purchase limit window.
- */
-export type ListPlansPurchaseLimitInterval = OpenEnum<
-  typeof ListPlansPurchaseLimitInterval
->;
-
-/**
- * Optional rate limit to cap how often auto top-ups occur.
- */
-export type ListPlansPurchaseLimit = {
-  /**
-   * The time interval for the purchase limit window.
-   */
-  interval: ListPlansPurchaseLimitInterval;
-  /**
-   * Number of intervals in the purchase limit window.
-   */
-  intervalCount: number;
-  /**
-   * Maximum number of auto top-ups allowed within the interval.
-   */
-  limit: number;
-};
-
-export type ListPlansAutoTopup = {
-  /**
-   * The ID of the feature (credit balance) to auto top-up.
-   */
-  featureId: string;
-  /**
-   * Whether auto top-up is enabled.
-   */
-  enabled: boolean;
-  /**
-   * When the balance drops below this threshold, an auto top-up will be purchased.
-   */
-  threshold: number;
-  /**
-   * Amount of credits to add per auto top-up.
-   */
-  quantity: number;
-  /**
-   * Optional rate limit to cap how often auto top-ups occur.
-   */
-  purchaseLimit?: ListPlansPurchaseLimit | undefined;
-  /**
-   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
-   */
-  invoiceMode?: boolean | undefined;
-};
-
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export const ListPlansLimitType = {
-  Absolute: "absolute",
-  UsagePercentage: "usage_percentage",
-} as const;
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export type ListPlansLimitType = OpenEnum<typeof ListPlansLimitType>;
-
-export type ListPlansSpendLimit = {
-  /**
-   * Optional feature ID this spend limit applies to.
-   */
-  featureId?: string | undefined;
-  /**
-   * Whether the overage spend limit is enabled.
-   */
-  enabled: boolean;
-  /**
-   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
-   */
-  limitType?: ListPlansLimitType | undefined;
-  /**
-   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
-   */
-  overageLimit?: number | undefined;
-  /**
-   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
-   */
-  skipOverageBilling?: boolean | undefined;
-};
-
-/**
- * Interval for the cap, aligned to the customer's billing cycle.
- */
-export const ListPlansUsageLimitInterval = {
-  Day: "day",
-  Week: "week",
-  Month: "month",
-  Year: "year",
-} as const;
-/**
- * Interval for the cap, aligned to the customer's billing cycle.
- */
-export type ListPlansUsageLimitInterval = OpenEnum<
-  typeof ListPlansUsageLimitInterval
->;
-
-/**
- * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
- */
-export const ListPlansAnchor = {
-  BillingCycle: "billing_cycle",
-  Utc: "utc",
-} as const;
-/**
- * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
- */
-export type ListPlansAnchor = OpenEnum<typeof ListPlansAnchor>;
-
-/**
- * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
- */
-export type ListPlansFilter = {
-  properties: { [k: string]: string };
-};
-
-export type ListPlansUsageLimit = {
-  /**
-   * The feature this usage limit applies to.
-   */
-  featureId: string;
-  /**
-   * Whether this usage limit is enabled.
-   */
-  enabled: boolean;
-  /**
-   * Maximum units allowed per interval.
-   */
-  limit: number;
-  /**
-   * Interval for the cap, aligned to the customer's billing cycle.
-   */
-  interval: ListPlansUsageLimitInterval;
-  /**
-   * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
-   */
-  anchor?: ListPlansAnchor | undefined;
-  /**
-   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
-   */
-  filter?: ListPlansFilter | undefined;
-};
-
-/**
- * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
- */
-export const ListPlansThresholdType = {
-  Usage: "usage",
-  UsagePercentage: "usage_percentage",
-  Remaining: "remaining",
-  RemainingPercentage: "remaining_percentage",
-} as const;
-/**
- * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
- */
-export type ListPlansThresholdType = OpenEnum<typeof ListPlansThresholdType>;
-
-export type ListPlansUsageAlert = {
-  /**
-   * The feature ID this alert applies to.
-   */
-  featureId?: string | undefined;
-  /**
-   * Whether this usage alert is enabled.
-   */
-  enabled: boolean;
-  /**
-   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
-   */
-  threshold: number;
-  /**
-   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
-   */
-  thresholdType: ListPlansThresholdType;
-  /**
-   * Optional user-defined label to distinguish multiple alerts on the same feature.
-   */
-  name?: string | undefined;
-};
-
-export type ListPlansOverageAllowed = {
-  /**
-   * The feature ID this overage allowed control applies to.
-   */
-  featureId: string;
-  /**
-   * Whether overage is allowed for this feature.
-   */
-  enabled: boolean;
-};
-
-/**
- * Plan-level billing controls used as customer defaults.
- */
-export type ListPlansBillingControls = {
-  /**
-   * List of auto top-up configurations per feature.
-   */
-  autoTopups?: Array<ListPlansAutoTopup> | undefined;
-  /**
-   * List of overage spend limits per feature (caps overage spend).
-   */
-  spendLimits?: Array<ListPlansSpendLimit> | undefined;
-  /**
-   * List of hard usage caps per feature (max units per interval).
-   */
-  usageLimits?: Array<ListPlansUsageLimit> | undefined;
-  /**
-   * List of usage alert configurations per feature.
-   */
-  usageAlerts?: Array<ListPlansUsageAlert> | undefined;
-  /**
-   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
-   */
-  overageAllowed?: Array<ListPlansOverageAllowed> | undefined;
-};
-
-/**
- * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
- */
-export const ListPlansStatus = {
-  Active: "active",
-  Scheduled: "scheduled",
-} as const;
-/**
- * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
- */
-export type ListPlansStatus = OpenEnum<typeof ListPlansStatus>;
-
-/**
- * The action that would occur if this plan were attached to the customer.
- */
-export const ListPlansAttachAction = {
-  Activate: "activate",
-  Upgrade: "upgrade",
-  Downgrade: "downgrade",
-  None: "none",
-  Purchase: "purchase",
-} as const;
-/**
- * The action that would occur if this plan were attached to the customer.
- */
-export type ListPlansAttachAction = OpenEnum<typeof ListPlansAttachAction>;
-
-export type ListPlansCustomerEligibility = {
-  /**
-   * Whether the trial on this plan is available to this customer. For example, if the customer used the trial in the past, this will be false.
-   */
-  trialAvailable?: boolean | undefined;
-  /**
-   * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
-   */
-  status?: ListPlansStatus | undefined;
-  /**
-   * Whether the customer's active instance of this plan is set to cancel.
-   */
-  canceling?: boolean | undefined;
-  /**
-   * Whether the customer is currently on a free trial of this plan.
-   */
-  trialing?: boolean | undefined;
-  /**
-   * The action that would occur if this plan were attached to the customer.
-   */
-  attachAction: ListPlansAttachAction;
 };
 
 /**
@@ -1476,6 +1673,14 @@ export type ListPlansList = {
    * Version number of the plan. Incremented when plan configuration changes.
    */
   version: number;
+  /**
+   * User-facing version identity. Defaults to v{n} when the version is minted.
+   */
+  versionSlug?: string | null | undefined;
+  /**
+   * Whether this is the active version of the plan. At most one version is active.
+   */
+  active?: boolean | undefined;
   /**
    * Whether this is an add-on plan that can be attached alongside a main plan.
    */
@@ -1509,14 +1714,6 @@ export type ListPlansList = {
    */
   archived: boolean;
   /**
-   * Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from.
-   */
-  baseVariantId: string | null;
-  /**
-   * Details about how this variant relates to its latest base plan.
-   */
-  variantDetails?: ListPlansVariantDetails | undefined;
-  /**
    * Miscellaneous plan-level configuration flags.
    */
   config: ListPlansConfig;
@@ -1529,6 +1726,14 @@ export type ListPlansList = {
    */
   metadata: { [k: string]: any };
   customerEligibility?: ListPlansCustomerEligibility | undefined;
+  /**
+   * Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from.
+   */
+  baseVariantId: string | null;
+  /**
+   * Details about how this variant relates to its latest base plan.
+   */
+  variantDetails?: ListPlansVariantDetails | undefined;
 };
 
 /**
@@ -2070,6 +2275,343 @@ export const ListPlansEnv$inboundSchema: z.ZodMiniType<ListPlansEnv, unknown> =
   openEnums.inboundSchema(ListPlansEnv);
 
 /** @internal */
+export const ListPlansConfig$inboundSchema: z.ZodMiniType<
+  ListPlansConfig,
+  unknown
+> = z.pipe(
+  z.object({
+    ignore_past_due: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "ignore_past_due": "ignorePastDue",
+    });
+  }),
+);
+
+export function listPlansConfigFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansConfig, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansConfig$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansConfig' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansPurchaseLimitInterval$inboundSchema: z.ZodMiniType<
+  ListPlansPurchaseLimitInterval,
+  unknown
+> = openEnums.inboundSchema(ListPlansPurchaseLimitInterval);
+
+/** @internal */
+export const ListPlansPurchaseLimit$inboundSchema: z.ZodMiniType<
+  ListPlansPurchaseLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: ListPlansPurchaseLimitInterval$inboundSchema,
+    interval_count: z._default(types.number(), 1),
+    limit: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+    });
+  }),
+);
+
+export function listPlansPurchaseLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansPurchaseLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansPurchaseLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansPurchaseLimit' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansAutoTopup$inboundSchema: z.ZodMiniType<
+  ListPlansAutoTopup,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+    threshold: types.number(),
+    quantity: types.number(),
+    purchase_limit: types.optional(
+      z.lazy(() => ListPlansPurchaseLimit$inboundSchema),
+    ),
+    invoice_mode: types.optional(types.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "purchase_limit": "purchaseLimit",
+      "invoice_mode": "invoiceMode",
+    });
+  }),
+);
+
+export function listPlansAutoTopupFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansAutoTopup, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansAutoTopup$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansAutoTopup' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansLimitType$inboundSchema: z.ZodMiniType<
+  ListPlansLimitType,
+  unknown
+> = openEnums.inboundSchema(ListPlansLimitType);
+
+/** @internal */
+export const ListPlansSpendLimit$inboundSchema: z.ZodMiniType<
+  ListPlansSpendLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), false),
+    limit_type: types.optional(ListPlansLimitType$inboundSchema),
+    overage_limit: types.optional(types.number()),
+    skip_overage_billing: types.optional(types.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "limit_type": "limitType",
+      "overage_limit": "overageLimit",
+      "skip_overage_billing": "skipOverageBilling",
+    });
+  }),
+);
+
+export function listPlansSpendLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansSpendLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansSpendLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansSpendLimit' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansUsageLimitInterval$inboundSchema: z.ZodMiniType<
+  ListPlansUsageLimitInterval,
+  unknown
+> = openEnums.inboundSchema(ListPlansUsageLimitInterval);
+
+/** @internal */
+export const ListPlansAnchor$inboundSchema: z.ZodMiniType<
+  ListPlansAnchor,
+  unknown
+> = openEnums.inboundSchema(ListPlansAnchor);
+
+/** @internal */
+export const ListPlansFilter$inboundSchema: z.ZodMiniType<
+  ListPlansFilter,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), types.string()),
+});
+
+export function listPlansFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansFilter, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansFilter' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansUsageLimit$inboundSchema: z.ZodMiniType<
+  ListPlansUsageLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), true),
+    limit: types.number(),
+    interval: ListPlansUsageLimitInterval$inboundSchema,
+    anchor: types.optional(ListPlansAnchor$inboundSchema),
+    filter: types.optional(z.lazy(() => ListPlansFilter$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function listPlansUsageLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUsageLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansUsageLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUsageLimit' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansThresholdType$inboundSchema: z.ZodMiniType<
+  ListPlansThresholdType,
+  unknown
+> = openEnums.inboundSchema(ListPlansThresholdType);
+
+/** @internal */
+export const ListPlansUsageAlert$inboundSchema: z.ZodMiniType<
+  ListPlansUsageAlert,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), true),
+    threshold: types.number(),
+    threshold_type: ListPlansThresholdType$inboundSchema,
+    name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "threshold_type": "thresholdType",
+    });
+  }),
+);
+
+export function listPlansUsageAlertFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUsageAlert, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansUsageAlert$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUsageAlert' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansOverageAllowed$inboundSchema: z.ZodMiniType<
+  ListPlansOverageAllowed,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function listPlansOverageAllowedFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansOverageAllowed, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansOverageAllowed$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansOverageAllowed' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansBillingControls$inboundSchema: z.ZodMiniType<
+  ListPlansBillingControls,
+  unknown
+> = z.pipe(
+  z.object({
+    auto_topups: types.optional(
+      z.array(z.lazy(() => ListPlansAutoTopup$inboundSchema)),
+    ),
+    spend_limits: types.optional(
+      z.array(z.lazy(() => ListPlansSpendLimit$inboundSchema)),
+    ),
+    usage_limits: types.optional(
+      z.array(z.lazy(() => ListPlansUsageLimit$inboundSchema)),
+    ),
+    usage_alerts: types.optional(
+      z.array(z.lazy(() => ListPlansUsageAlert$inboundSchema)),
+    ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => ListPlansOverageAllowed$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "auto_topups": "autoTopups",
+      "spend_limits": "spendLimits",
+      "usage_limits": "usageLimits",
+      "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
+    });
+  }),
+);
+
+export function listPlansBillingControlsFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansBillingControls, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansBillingControls$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansBillingControls' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansStatus$inboundSchema: z.ZodMiniType<
+  ListPlansStatus,
+  unknown
+> = openEnums.inboundSchema(ListPlansStatus);
+
+/** @internal */
+export const ListPlansAttachAction$inboundSchema: z.ZodMiniType<
+  ListPlansAttachAction,
+  unknown
+> = openEnums.inboundSchema(ListPlansAttachAction);
+
+/** @internal */
+export const ListPlansCustomerEligibility$inboundSchema: z.ZodMiniType<
+  ListPlansCustomerEligibility,
+  unknown
+> = z.pipe(
+  z.object({
+    trial_available: types.optional(types.boolean()),
+    status: types.optional(ListPlansStatus$inboundSchema),
+    canceling: types.optional(types.boolean()),
+    trialing: types.optional(types.boolean()),
+    attach_action: ListPlansAttachAction$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "trial_available": "trialAvailable",
+      "attach_action": "attachAction",
+    });
+  }),
+);
+
+export function listPlansCustomerEligibilityFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansCustomerEligibility, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansCustomerEligibility$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansCustomerEligibility' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansPriceVariantDetailsInterval$inboundSchema: z.ZodMiniType<
   ListPlansPriceVariantDetailsInterval,
   unknown
@@ -2439,6 +2981,7 @@ export const ListPlansPlanItemFilter$inboundSchema: z.ZodMiniType<
       ]),
     ),
     interval_count: types.optional(types.number()),
+    included: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2482,7 +3025,7 @@ export const ListPlansFreeTrialParams$inboundSchema: z.ZodMiniType<
       ListPlansVariantDetailsDurationType$inboundSchema,
       "month",
     ),
-    card_required: z._default(types.boolean(), true),
+    card_required: z._default(types.boolean(), false),
     on_end: types.optional(ListPlansVariantDetailsOnEnd$inboundSchema),
   }),
   z.transform((v) => {
@@ -2778,6 +3321,360 @@ export function listPlansVariantDetailsBillingControlsFromJSON(
 }
 
 /** @internal */
+export const ListPlansUpsertLicenseInterval$inboundSchema: z.ZodMiniType<
+  ListPlansUpsertLicenseInterval,
+  unknown
+> = openEnums.inboundSchema(ListPlansUpsertLicenseInterval);
+
+/** @internal */
+export const ListPlansUpsertLicenseAdditionalCurrency$inboundSchema:
+  z.ZodMiniType<ListPlansUpsertLicenseAdditionalCurrency, unknown> = z.object({
+    currency: types.optional(z.any()),
+    amount: types.optional(z.any()),
+  });
+
+export function listPlansUpsertLicenseAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  ListPlansUpsertLicenseAdditionalCurrency,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansUpsertLicenseAdditionalCurrency$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'ListPlansUpsertLicenseAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansUpsertLicenseBasePrice$inboundSchema: z.ZodMiniType<
+  ListPlansUpsertLicenseBasePrice,
+  unknown
+> = z.pipe(
+  z.object({
+    amount: types.number(),
+    interval: ListPlansUpsertLicenseInterval$inboundSchema,
+    interval_count: types.optional(types.number()),
+    additional_currencies: types.optional(z.array(z.lazy(() =>
+      ListPlansUpsertLicenseAdditionalCurrency$inboundSchema
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+      "additional_currencies": "additionalCurrencies",
+    });
+  }),
+);
+
+export function listPlansUpsertLicenseBasePriceFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUpsertLicenseBasePrice, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansUpsertLicenseBasePrice$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUpsertLicenseBasePrice' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansUpsertLicenseReset$inboundSchema: z.ZodMiniType<
+  ListPlansUpsertLicenseReset,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: types.optional(z.any()),
+    interval_count: types.optional(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+    });
+  }),
+);
+
+export function listPlansUpsertLicenseResetFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUpsertLicenseReset, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansUpsertLicenseReset$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUpsertLicenseReset' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansUpsertLicensePrice$inboundSchema: z.ZodMiniType<
+  ListPlansUpsertLicensePrice,
+  unknown
+> = z.pipe(
+  z.object({
+    stripe_price_id: types.optional(z.any()),
+    amount: types.optional(z.any()),
+    additional_currencies: types.optional(z.any()),
+    tiers: types.optional(z.any()),
+    tier_behavior: types.optional(z.any()),
+    interval: types.optional(z.any()),
+    interval_count: types.optional(z.any()),
+    billing_units: types.optional(z.any()),
+    billing_method: types.optional(z.any()),
+    max_purchase: types.optional(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "stripe_price_id": "stripePriceId",
+      "additional_currencies": "additionalCurrencies",
+      "tier_behavior": "tierBehavior",
+      "interval_count": "intervalCount",
+      "billing_units": "billingUnits",
+      "billing_method": "billingMethod",
+      "max_purchase": "maxPurchase",
+    });
+  }),
+);
+
+export function listPlansUpsertLicensePriceFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUpsertLicensePrice, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansUpsertLicensePrice$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUpsertLicensePrice' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansUpsertLicenseProration$inboundSchema: z.ZodMiniType<
+  ListPlansUpsertLicenseProration,
+  unknown
+> = z.pipe(
+  z.object({
+    on_increase: types.optional(z.any()),
+    on_decrease: types.optional(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "on_increase": "onIncrease",
+      "on_decrease": "onDecrease",
+    });
+  }),
+);
+
+export function listPlansUpsertLicenseProrationFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUpsertLicenseProration, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansUpsertLicenseProration$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUpsertLicenseProration' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansUpsertLicenseRollover$inboundSchema: z.ZodMiniType<
+  ListPlansUpsertLicenseRollover,
+  unknown
+> = z.pipe(
+  z.object({
+    max: types.optional(z.any()),
+    max_percentage: types.optional(z.any()),
+    expiry_duration_type: types.optional(z.any()),
+    expiry_duration_length: types.optional(z.any()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "max_percentage": "maxPercentage",
+      "expiry_duration_type": "expiryDurationType",
+      "expiry_duration_length": "expiryDurationLength",
+    });
+  }),
+);
+
+export function listPlansUpsertLicenseRolloverFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUpsertLicenseRollover, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansUpsertLicenseRollover$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUpsertLicenseRollover' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansUpsertLicensePlanItem$inboundSchema: z.ZodMiniType<
+  ListPlansUpsertLicensePlanItem,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    included: types.optional(types.number()),
+    unlimited: types.optional(types.boolean()),
+    pooled: z._default(types.boolean(), false),
+    reset: types.optional(
+      z.lazy(() => ListPlansUpsertLicenseReset$inboundSchema),
+    ),
+    price: types.optional(
+      z.lazy(() => ListPlansUpsertLicensePrice$inboundSchema),
+    ),
+    proration: types.optional(
+      z.lazy(() => ListPlansUpsertLicenseProration$inboundSchema),
+    ),
+    rollover: types.optional(
+      z.lazy(() => ListPlansUpsertLicenseRollover$inboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function listPlansUpsertLicensePlanItemFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUpsertLicensePlanItem, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansUpsertLicensePlanItem$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUpsertLicensePlanItem' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansUpsertLicenseBillingMethod$inboundSchema: z.ZodMiniType<
+  ListPlansUpsertLicenseBillingMethod,
+  unknown
+> = openEnums.inboundSchema(ListPlansUpsertLicenseBillingMethod);
+
+/** @internal */
+export const ListPlansUpsertLicensePlanItemFilter$inboundSchema: z.ZodMiniType<
+  ListPlansUpsertLicensePlanItemFilter,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    billing_method: types.optional(
+      ListPlansUpsertLicenseBillingMethod$inboundSchema,
+    ),
+    interval: types.optional(z.any()),
+    interval_count: types.optional(types.number()),
+    included: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "billing_method": "billingMethod",
+      "interval_count": "intervalCount",
+    });
+  }),
+);
+
+export function listPlansUpsertLicensePlanItemFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUpsertLicensePlanItemFilter, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      ListPlansUpsertLicensePlanItemFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUpsertLicensePlanItemFilter' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansUpsertLicenseCustomize$inboundSchema: z.ZodMiniType<
+  ListPlansUpsertLicenseCustomize,
+  unknown
+> = z.pipe(
+  z.object({
+    price: z.optional(
+      z.nullable(z.lazy(() => ListPlansUpsertLicenseBasePrice$inboundSchema)),
+    ),
+    add_items: types.optional(
+      z.array(z.lazy(() => ListPlansUpsertLicensePlanItem$inboundSchema)),
+    ),
+    remove_items: types.optional(
+      z.array(z.lazy(() => ListPlansUpsertLicensePlanItemFilter$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "add_items": "addItems",
+      "remove_items": "removeItems",
+    });
+  }),
+);
+
+export function listPlansUpsertLicenseCustomizeFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUpsertLicenseCustomize, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansUpsertLicenseCustomize$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUpsertLicenseCustomize' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansUpsertLicense$inboundSchema: z.ZodMiniType<
+  ListPlansUpsertLicense,
+  unknown
+> = z.pipe(
+  z.object({
+    license_plan_id: types.string(),
+    included: types.optional(types.number()),
+    prepaid_only: types.optional(types.boolean()),
+    customize: z.optional(
+      z.nullable(z.lazy(() => ListPlansUpsertLicenseCustomize$inboundSchema)),
+    ),
+    metadata: types.optional(z.record(z.string(), z.any())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "license_plan_id": "licensePlanId",
+      "prepaid_only": "prepaidOnly",
+    });
+  }),
+);
+
+export function listPlansUpsertLicenseFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansUpsertLicense, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansUpsertLicense$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansUpsertLicense' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListPlansRemoveLicense$inboundSchema: z.ZodMiniType<
+  ListPlansRemoveLicense,
+  unknown
+> = z.pipe(
+  z.object({
+    license_plan_id: types.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "license_plan_id": "licensePlanId",
+    });
+  }),
+);
+
+export function listPlansRemoveLicenseFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansRemoveLicense, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansRemoveLicense$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansRemoveLicense' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansCustomize$inboundSchema: z.ZodMiniType<
   ListPlansCustomize,
   unknown
@@ -2798,6 +3695,12 @@ export const ListPlansCustomize$inboundSchema: z.ZodMiniType<
     billing_controls: types.optional(
       z.lazy(() => ListPlansVariantDetailsBillingControls$inboundSchema),
     ),
+    upsert_licenses: types.optional(
+      z.array(z.lazy(() => ListPlansUpsertLicense$inboundSchema)),
+    ),
+    remove_licenses: types.optional(
+      z.array(z.lazy(() => ListPlansRemoveLicense$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2805,6 +3708,8 @@ export const ListPlansCustomize$inboundSchema: z.ZodMiniType<
       "remove_items": "removeItems",
       "free_trial": "freeTrial",
       "billing_controls": "billingControls",
+      "upsert_licenses": "upsertLicenses",
+      "remove_licenses": "removeLicenses",
     });
   }),
 );
@@ -2846,343 +3751,6 @@ export function listPlansVariantDetailsFromJSON(
 }
 
 /** @internal */
-export const ListPlansConfig$inboundSchema: z.ZodMiniType<
-  ListPlansConfig,
-  unknown
-> = z.pipe(
-  z.object({
-    ignore_past_due: z._default(types.boolean(), false),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "ignore_past_due": "ignorePastDue",
-    });
-  }),
-);
-
-export function listPlansConfigFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansConfig, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansConfig$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansConfig' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansPurchaseLimitInterval$inboundSchema: z.ZodMiniType<
-  ListPlansPurchaseLimitInterval,
-  unknown
-> = openEnums.inboundSchema(ListPlansPurchaseLimitInterval);
-
-/** @internal */
-export const ListPlansPurchaseLimit$inboundSchema: z.ZodMiniType<
-  ListPlansPurchaseLimit,
-  unknown
-> = z.pipe(
-  z.object({
-    interval: ListPlansPurchaseLimitInterval$inboundSchema,
-    interval_count: z._default(types.number(), 1),
-    limit: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "interval_count": "intervalCount",
-    });
-  }),
-);
-
-export function listPlansPurchaseLimitFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansPurchaseLimit, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansPurchaseLimit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansPurchaseLimit' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansAutoTopup$inboundSchema: z.ZodMiniType<
-  ListPlansAutoTopup,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    enabled: z._default(types.boolean(), false),
-    threshold: types.number(),
-    quantity: types.number(),
-    purchase_limit: types.optional(
-      z.lazy(() => ListPlansPurchaseLimit$inboundSchema),
-    ),
-    invoice_mode: types.optional(types.boolean()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "purchase_limit": "purchaseLimit",
-      "invoice_mode": "invoiceMode",
-    });
-  }),
-);
-
-export function listPlansAutoTopupFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansAutoTopup, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansAutoTopup$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansAutoTopup' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansLimitType$inboundSchema: z.ZodMiniType<
-  ListPlansLimitType,
-  unknown
-> = openEnums.inboundSchema(ListPlansLimitType);
-
-/** @internal */
-export const ListPlansSpendLimit$inboundSchema: z.ZodMiniType<
-  ListPlansSpendLimit,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.optional(types.string()),
-    enabled: z._default(types.boolean(), false),
-    limit_type: types.optional(ListPlansLimitType$inboundSchema),
-    overage_limit: types.optional(types.number()),
-    skip_overage_billing: types.optional(types.boolean()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "limit_type": "limitType",
-      "overage_limit": "overageLimit",
-      "skip_overage_billing": "skipOverageBilling",
-    });
-  }),
-);
-
-export function listPlansSpendLimitFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansSpendLimit, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansSpendLimit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansSpendLimit' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansUsageLimitInterval$inboundSchema: z.ZodMiniType<
-  ListPlansUsageLimitInterval,
-  unknown
-> = openEnums.inboundSchema(ListPlansUsageLimitInterval);
-
-/** @internal */
-export const ListPlansAnchor$inboundSchema: z.ZodMiniType<
-  ListPlansAnchor,
-  unknown
-> = openEnums.inboundSchema(ListPlansAnchor);
-
-/** @internal */
-export const ListPlansFilter$inboundSchema: z.ZodMiniType<
-  ListPlansFilter,
-  unknown
-> = z.object({
-  properties: z.record(z.string(), types.string()),
-});
-
-export function listPlansFilterFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansFilter, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansFilter$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansFilter' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansUsageLimit$inboundSchema: z.ZodMiniType<
-  ListPlansUsageLimit,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    enabled: z._default(types.boolean(), true),
-    limit: types.number(),
-    interval: ListPlansUsageLimitInterval$inboundSchema,
-    anchor: types.optional(ListPlansAnchor$inboundSchema),
-    filter: types.optional(z.lazy(() => ListPlansFilter$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-    });
-  }),
-);
-
-export function listPlansUsageLimitFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansUsageLimit, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansUsageLimit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansUsageLimit' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansThresholdType$inboundSchema: z.ZodMiniType<
-  ListPlansThresholdType,
-  unknown
-> = openEnums.inboundSchema(ListPlansThresholdType);
-
-/** @internal */
-export const ListPlansUsageAlert$inboundSchema: z.ZodMiniType<
-  ListPlansUsageAlert,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.optional(types.string()),
-    enabled: z._default(types.boolean(), true),
-    threshold: types.number(),
-    threshold_type: ListPlansThresholdType$inboundSchema,
-    name: types.optional(types.string()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "threshold_type": "thresholdType",
-    });
-  }),
-);
-
-export function listPlansUsageAlertFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansUsageAlert, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansUsageAlert$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansUsageAlert' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansOverageAllowed$inboundSchema: z.ZodMiniType<
-  ListPlansOverageAllowed,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    enabled: z._default(types.boolean(), false),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-    });
-  }),
-);
-
-export function listPlansOverageAllowedFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansOverageAllowed, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansOverageAllowed$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansOverageAllowed' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansBillingControls$inboundSchema: z.ZodMiniType<
-  ListPlansBillingControls,
-  unknown
-> = z.pipe(
-  z.object({
-    auto_topups: types.optional(
-      z.array(z.lazy(() => ListPlansAutoTopup$inboundSchema)),
-    ),
-    spend_limits: types.optional(
-      z.array(z.lazy(() => ListPlansSpendLimit$inboundSchema)),
-    ),
-    usage_limits: types.optional(
-      z.array(z.lazy(() => ListPlansUsageLimit$inboundSchema)),
-    ),
-    usage_alerts: types.optional(
-      z.array(z.lazy(() => ListPlansUsageAlert$inboundSchema)),
-    ),
-    overage_allowed: types.optional(
-      z.array(z.lazy(() => ListPlansOverageAllowed$inboundSchema)),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "auto_topups": "autoTopups",
-      "spend_limits": "spendLimits",
-      "usage_limits": "usageLimits",
-      "usage_alerts": "usageAlerts",
-      "overage_allowed": "overageAllowed",
-    });
-  }),
-);
-
-export function listPlansBillingControlsFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansBillingControls, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansBillingControls$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansBillingControls' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListPlansStatus$inboundSchema: z.ZodMiniType<
-  ListPlansStatus,
-  unknown
-> = openEnums.inboundSchema(ListPlansStatus);
-
-/** @internal */
-export const ListPlansAttachAction$inboundSchema: z.ZodMiniType<
-  ListPlansAttachAction,
-  unknown
-> = openEnums.inboundSchema(ListPlansAttachAction);
-
-/** @internal */
-export const ListPlansCustomerEligibility$inboundSchema: z.ZodMiniType<
-  ListPlansCustomerEligibility,
-  unknown
-> = z.pipe(
-  z.object({
-    trial_available: types.optional(types.boolean()),
-    status: types.optional(ListPlansStatus$inboundSchema),
-    canceling: types.optional(types.boolean()),
-    trialing: types.optional(types.boolean()),
-    attach_action: ListPlansAttachAction$inboundSchema,
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "trial_available": "trialAvailable",
-      "attach_action": "attachAction",
-    });
-  }),
-);
-
-export function listPlansCustomerEligibilityFromJSON(
-  jsonString: string,
-): SafeParseResult<ListPlansCustomerEligibility, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListPlansCustomerEligibility$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListPlansCustomerEligibility' from JSON`,
-  );
-}
-
-/** @internal */
 export const ListPlansList$inboundSchema: z.ZodMiniType<
   ListPlansList,
   unknown
@@ -3193,6 +3761,8 @@ export const ListPlansList$inboundSchema: z.ZodMiniType<
     description: types.nullable(types.string()),
     group: types.nullable(types.string()),
     version: types.number(),
+    version_slug: z.optional(z.nullable(types.string())),
+    active: types.optional(types.boolean()),
     add_on: types.boolean(),
     auto_enable: types.boolean(),
     price: types.nullable(z.lazy(() => ListPlansPrice$inboundSchema)),
@@ -3201,10 +3771,6 @@ export const ListPlansList$inboundSchema: z.ZodMiniType<
     created_at: types.number(),
     env: ListPlansEnv$inboundSchema,
     archived: types.boolean(),
-    base_variant_id: types.nullable(types.string()),
-    variant_details: types.optional(
-      z.lazy(() => ListPlansVariantDetails$inboundSchema),
-    ),
     config: z.lazy(() => ListPlansConfig$inboundSchema),
     billing_controls: types.optional(
       z.lazy(() => ListPlansBillingControls$inboundSchema),
@@ -3213,17 +3779,22 @@ export const ListPlansList$inboundSchema: z.ZodMiniType<
     customer_eligibility: types.optional(
       z.lazy(() => ListPlansCustomerEligibility$inboundSchema),
     ),
+    base_variant_id: types.nullable(types.string()),
+    variant_details: types.optional(
+      z.lazy(() => ListPlansVariantDetails$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
+      "version_slug": "versionSlug",
       "add_on": "addOn",
       "auto_enable": "autoEnable",
       "free_trial": "freeTrial",
       "created_at": "createdAt",
-      "base_variant_id": "baseVariantId",
-      "variant_details": "variantDetails",
       "billing_controls": "billingControls",
       "customer_eligibility": "customerEligibility",
+      "base_variant_id": "baseVariantId",
+      "variant_details": "variantDetails",
     });
   }),
 );

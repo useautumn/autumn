@@ -2,12 +2,16 @@ import {
 	BillingInterval,
 	BillingType,
 	type EntitlementWithFeature,
+	ErrCode,
 	type Organization,
 	type Price,
 	type Product,
 	setPriceCurrencyStripeId,
 	TierInfinite,
 	type UsagePriceConfig,
+	RecaseError,
+	priceToStripeNickname,
+	type StripePriceNicknameSource,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { PriceService } from "@server/internal/products/prices/PriceService";
@@ -17,6 +21,7 @@ import {
 } from "@server/internal/products/prices/priceUtils";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
+import { buildStripePriceIdempotencyKey } from "../prices/utils/buildIdempotencyKey";
 import { billingIntervalToStripe } from "../stripePriceUtils";
 import { priceToInArrearTiers } from "./createStripeInArrear";
 
@@ -27,6 +32,7 @@ interface StripeMeteredPriceParams {
 	product: Product;
 	org: Organization;
 	currency?: string;
+	source?: StripePriceNicknameSource;
 }
 
 export const createStripeMeteredPrice = async ({
@@ -36,6 +42,7 @@ export const createStripeMeteredPrice = async ({
 	product,
 	org,
 	currency: targetCurrency,
+	source = "catalog",
 }: StripeMeteredPriceParams) => {
 	const config = price.config as UsagePriceConfig;
 	const orgDefault = (org.default_currency || "usd").toLowerCase();
@@ -87,24 +94,23 @@ export const createStripeMeteredPrice = async ({
 		};
 	}
 
-	let productData = {};
-	if (config.stripe_product_id) {
-		productData = {
-			product: config.stripe_product_id,
-		};
-	} else {
-		productData = {
-			product_data: {
-				name: `${product.name} - ${feature!.name}`,
-			},
-		};
+	if (!config.stripe_product_id) {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message: `createStripeMeteredPrice: missing Stripe product for feature ${feature!.id}`,
+		});
 	}
 
 	const stripePrice = await stripeCli.prices.create({
-		...productData,
+		product: config.stripe_product_id,
 		...priceAmountData,
 		currency,
-		nickname: `Autumn Price (${feature!.name}) [Placeholder]`,
+		nickname: priceToStripeNickname({
+			price,
+			featureName: feature!.name,
+			source,
+			isPlaceholder: true,
+		}),
 		recurring: {
 			...(billingIntervalToStripe({
 				interval: price.config!.interval,
@@ -163,15 +169,19 @@ export const createStripeArrearProrated = async ({
 	curStripeProd,
 	stripeCli,
 	currency: targetCurrency,
+	mintPlaceholder = true,
+	source = "catalog",
 }: {
 	db: DrizzleCli;
 	price: Price;
 	product: Product;
 	org: Organization;
 	entitlements: EntitlementWithFeature[];
-	curStripeProd: Stripe.Product | null;
+	curStripeProd: { id: string } | null;
 	stripeCli: Stripe;
 	currency?: string;
+	mintPlaceholder?: boolean;
+	source?: StripePriceNicknameSource;
 }) => {
 	const relatedEnt = getPriceEntitlement(price, entitlements);
 
@@ -191,18 +201,13 @@ export const createStripeArrearProrated = async ({
 		orgDefault
 	).toLowerCase();
 
-	// 1. Product name
-	const productName = `${product.name} - ${
-		config.billing_units === 1 ? "" : `${config.billing_units} `
-	}${relatedEnt.feature.name}`;
-
-	const productData = curStripeProd
-		? { product: curStripeProd.id }
-		: {
-				product_data: {
-					name: productName,
-				},
-			};
+	const stripeProductId = curStripeProd?.id ?? config.stripe_product_id;
+	if (!stripeProductId) {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message: `createStripeArrearProrated: missing Stripe product for feature ${relatedEnt.feature.id}`,
+		});
+	}
 
 	// let tiers = arrearProratedToStripeTiers(price, relatedEnt);
 	const tiers = priceToInArrearTiers({
@@ -225,15 +230,29 @@ export const createStripeArrearProrated = async ({
 		};
 	}
 
-	const stripePrice = await stripeCli.prices.create({
-		...productData,
-		currency,
-		...priceAmountData,
-		recurring: {
-			...(recurringData as any),
+	const stripePrice = await stripeCli.prices.create(
+		{
+			product: stripeProductId,
+			currency,
+			...priceAmountData,
+			recurring: {
+				...(recurringData as any),
+			},
+			nickname: priceToStripeNickname({
+				price,
+				featureName: relatedEnt.feature.name,
+				source,
+			}),
 		},
-		nickname: `Autumn Price (${relatedEnt.feature.name})`,
-	});
+		{
+			idempotencyKey: buildStripePriceIdempotencyKey({
+				price,
+				slot: "stripe_price_id",
+				currency,
+				orgDefault,
+			}),
+		},
+	);
 
 	setPriceCurrencyStripeId({
 		config,
@@ -245,8 +264,7 @@ export const createStripeArrearProrated = async ({
 	config.stripe_product_id = stripePrice.product as string;
 	const billingType = getBillingType(price.config);
 
-	// CREATE PLACEHOLDER PRICE FOR INARREAR PRORATED PRICING
-	if (billingType === BillingType.InArrearProrated) {
+	if (mintPlaceholder && billingType === BillingType.InArrearProrated) {
 		const placeholderPrice = await createStripeMeteredPrice({
 			stripeCli,
 			price,
@@ -254,6 +272,7 @@ export const createStripeArrearProrated = async ({
 			product,
 			org,
 			currency,
+			source,
 		});
 		setPriceCurrencyStripeId({
 			config,

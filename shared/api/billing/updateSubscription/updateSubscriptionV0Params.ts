@@ -10,6 +10,7 @@ import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
+import { SubscriptionParamsSchema } from "../common/subscriptionParams";
 
 export const ExtUpdateSubscriptionV0ParamsSchema =
 	BillingParamsBaseV0Schema.extend({
@@ -32,6 +33,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		// - 'next_cycle_only': Do NOT create any charges due to the update
 		billing_behavior: BillingBehaviorSchema.optional(),
 		refund_last_payment: RefundLastPaymentSchema.optional(),
+		subscription_params: SubscriptionParamsSchema.optional(),
 		billing_cycle_anchor: BillingCycleAnchorSchema.optional(),
 
 		processor_subscription_id: z.string().nullable().optional(),

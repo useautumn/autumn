@@ -11,9 +11,10 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -76,7 +77,7 @@ class PreviewMultiAttachBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
     interval: PreviewMultiAttachPriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
@@ -91,7 +92,7 @@ class PreviewMultiAttachBasePrice(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
     interval: PreviewMultiAttachPriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
@@ -717,7 +718,7 @@ class PreviewMultiAttachFreeTrialParamsTypedDict(TypedDict):
     duration_type: NotRequired[PreviewMultiAttachDurationType]
     r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
-    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
     on_end: NotRequired[PreviewMultiAttachOnEnd]
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
@@ -731,8 +732,8 @@ class PreviewMultiAttachFreeTrialParams(BaseModel):
     duration_type: Optional[PreviewMultiAttachDurationType] = "month"
     r"""Unit of time for the trial ('day', 'month', 'year')."""
 
-    card_required: Optional[bool] = True
-    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+    card_required: Optional[bool] = False
+    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
 
     on_end: Optional[PreviewMultiAttachOnEnd] = None
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
@@ -1201,6 +1202,8 @@ class PreviewMultiAttachParamsTypedDict(TypedDict):
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
     billing_behavior: NotRequired[PreviewMultiAttachBillingBehavior]
     r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
+    billing_cycle_anchor: Literal["now"]
+    r"""Pass 'now' to reset the billing cycle of every plan on the subscription to the time of this request."""
     success_url: NotRequired[str]
     r"""URL to redirect to after successful checkout."""
     checkout_session_params: NotRequired[Dict[str, Any]]
@@ -1244,6 +1247,12 @@ class PreviewMultiAttachParams(BaseModel):
     billing_behavior: Optional[PreviewMultiAttachBillingBehavior] = None
     r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything."""
 
+    billing_cycle_anchor: Annotated[
+        Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
+        pydantic.Field(alias="billing_cycle_anchor"),
+    ] = "now"
+    r"""Pass 'now' to reset the billing cycle of every plan on the subscription to the time of this request."""
+
     success_url: Optional[str] = None
     r"""URL to redirect to after successful checkout."""
 
@@ -1275,6 +1284,7 @@ class PreviewMultiAttachParams(BaseModel):
                 "invoice_mode",
                 "discounts",
                 "billing_behavior",
+                "billing_cycle_anchor",
                 "success_url",
                 "checkout_session_params",
                 "redirect_mode",
@@ -1902,6 +1912,8 @@ class PreviewMultiAttachResponseTypedDict(TypedDict):
     r"""Whether the customer will be redirected to a checkout page if attach is called."""
     checkout_type: Nullable[PreviewMultiAttachCheckoutType]
     r"""The type of checkout that will be used if the customer is redirected to a checkout page."""
+    resets_usage: NotRequired[bool]
+    r"""True when this change clears the customer's usage balances, so the approver can see usage will reset."""
     next_cycle: NotRequired[PreviewMultiAttachNextCycleTypedDict]
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
     expand: NotRequired[List[str]]
@@ -1941,6 +1953,9 @@ class PreviewMultiAttachResponse(BaseModel):
     checkout_type: Nullable[PreviewMultiAttachCheckoutType]
     r"""The type of checkout that will be used if the customer is redirected to a checkout page."""
 
+    resets_usage: Optional[bool] = None
+    r"""True when this change clears the customer's usage balances, so the approver can see usage will reset."""
+
     next_cycle: Optional[PreviewMultiAttachNextCycle] = None
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
 
@@ -1955,7 +1970,9 @@ class PreviewMultiAttachResponse(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["next_cycle", "expand", "tax", "invoice_credits"])
+        optional_fields = set(
+            ["resets_usage", "next_cycle", "expand", "tax", "invoice_credits"]
+        )
         nullable_fields = set(["checkout_type"])
         serialized = handler(self)
         m = {}
@@ -1981,5 +1998,9 @@ class PreviewMultiAttachResponse(BaseModel):
 
 try:
     PreviewMultiAttachUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    PreviewMultiAttachParams.model_rebuild()
 except NameError:
     pass

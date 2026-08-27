@@ -102,6 +102,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Version number of the plan. Incremented when plan configuration changes.
             </DynamicResponseField>
 
+            <DynamicResponseField name="version_slug" type="string | null">
+              User-facing version identity. Defaults to v\{n\} when the version is minted.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="active" type="boolean">
+              Whether this is the active version of the plan. At most one version is active.
+            </DynamicResponseField>
+
             <DynamicResponseField name="add_on" type="boolean">
               Whether this is an add-on plan that can be attached alongside a main plan.
             </DynamicResponseField>
@@ -114,7 +122,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Base recurring price for the plan. Null for free plans or usage-only plans.
               <Expandable title="properties">
                 <DynamicResponseField name="amount" type="number">
-                  Base price amount for the plan.
+                  Base price amount for the plan, in major currency units (e.g. dollars).
                 </DynamicResponseField>
 
                 <DynamicResponseField name="additional_currencies" type="object[]">
@@ -387,6 +395,195 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Whether the plan is archived. Archived plans cannot be attached to new customers.
             </DynamicResponseField>
 
+            <DynamicResponseField name="config" type="object">
+              Miscellaneous plan-level configuration flags.
+              <Expandable title="properties">
+                <DynamicResponseField name="ignore_past_due" type="boolean">
+                  If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="billing_controls" type="object">
+              Plan-level billing controls used as customer defaults.
+              <Expandable title="properties">
+                <DynamicResponseField name="auto_topups" type="object[]">
+                  List of auto top-up configurations per feature.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="feature_id" type="string">
+                      The ID of the feature (credit balance) to auto top-up.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="enabled" type="boolean">
+                      Whether auto top-up is enabled.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="threshold" type="number">
+                      When the balance drops below this threshold, an auto top-up will be purchased.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="quantity" type="number">
+                      Amount of credits to add per auto top-up.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="purchase_limit" type="object">
+                      Optional rate limit to cap how often auto top-ups occur.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
+                          The time interval for the purchase limit window.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="interval_count" type="number">
+                          Number of intervals in the purchase limit window.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="limit" type="number">
+                          Maximum number of auto top-ups allowed within the interval.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="invoice_mode" type="boolean">
+                      When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="spend_limits" type="object[]">
+                  List of overage spend limits per feature (caps overage spend).
+                  <Expandable title="properties">
+                    <DynamicResponseField name="feature_id" type="string">
+                      Optional feature ID this spend limit applies to.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="enabled" type="boolean">
+                      Whether the overage spend limit is enabled.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="limit_type" type="'absolute' | 'usage_percentage'">
+                      How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="overage_limit" type="number">
+                      Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="skip_overage_billing" type="boolean">
+                      When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="usage_limits" type="object[]">
+                  List of hard usage caps per feature (max units per interval).
+                  <Expandable title="properties">
+                    <DynamicResponseField name="feature_id" type="string">
+                      The feature this usage limit applies to.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="enabled" type="boolean">
+                      Whether this usage limit is enabled.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="limit" type="number">
+                      Maximum units allowed per interval.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
+                      Interval for the cap, aligned to the customer's billing cycle.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                      Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="filter" type="object">
+                      When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="properties.{key}" type="string" />
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="usage_alerts" type="object[]">
+                  List of usage alert configurations per feature.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="feature_id" type="string">
+                      The feature ID this alert applies to.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="enabled" type="boolean">
+                      Whether this usage alert is enabled.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="threshold" type="number">
+                      The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'">
+                      Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="name" type="string">
+                      Optional user-defined label to distinguish multiple alerts on the same feature.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="overage_allowed" type="object[]">
+                  List of overage allowed controls per feature. When enabled, usage can exceed balance.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="feature_id" type="string">
+                      The feature ID this overage allowed control applies to.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="enabled" type="boolean">
+                      Whether overage is allowed for this feature.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="metadata" type="object">
+              Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="customer_eligibility" type="object">
+              <Expandable title="properties">
+                <DynamicResponseField name="trial_available" type="boolean">
+                  Whether the trial on this plan is available to this customer. For example, if the customer used the trial in the past, this will be false.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="status" type="'active' | 'scheduled'">
+                  The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="canceling" type="boolean">
+                  Whether the customer's active instance of this plan is set to cancel.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="trialing" type="boolean">
+                  Whether the customer is currently on a free trial of this plan.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="attach_action" type="'activate' | 'upgrade' | 'downgrade' | 'none' | 'purchase'">
+                  The action that would occur if this plan were attached to the customer.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
             <DynamicResponseField name="base_variant_id" type="string | null">
               Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from.
             </DynamicResponseField>
@@ -405,7 +602,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Base price configuration for a plan.
                       <Expandable title="properties">
                         <DynamicResponseField name="amount" type="number">
-                          Base price amount for the plan.
+                          Base price amount for the plan, in major currency units (e.g. dollars).
                         </DynamicResponseField>
 
                         <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
@@ -599,6 +796,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="included" type="number">
+                          Match items whose grant equals this included usage. Omitted is a wildcard.
+                        </DynamicResponseField>
+
                       </Expandable>
                     </DynamicResponseField>
 
@@ -614,7 +815,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                         </DynamicResponseField>
 
                         <DynamicResponseField name="card_required" type="boolean">
-                          If true, payment method required to start trial. Customer is charged after trial ends.
+                          If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
                         </DynamicResponseField>
 
                         <DynamicResponseField name="on_end" type="'bill' | 'revert'">
@@ -778,196 +979,218 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       </Expandable>
                     </DynamicResponseField>
 
-                  </Expandable>
-                </DynamicResponseField>
-
-              </Expandable>
-            </DynamicResponseField>
-
-            <DynamicResponseField name="config" type="object">
-              Miscellaneous plan-level configuration flags.
-              <Expandable title="properties">
-                <DynamicResponseField name="ignore_past_due" type="boolean">
-                  If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
-                </DynamicResponseField>
-
-              </Expandable>
-            </DynamicResponseField>
-
-            <DynamicResponseField name="billing_controls" type="object">
-              Plan-level billing controls used as customer defaults.
-              <Expandable title="properties">
-                <DynamicResponseField name="auto_topups" type="object[]">
-                  List of auto top-up configurations per feature.
-                  <Expandable title="properties">
-                    <DynamicResponseField name="feature_id" type="string">
-                      The ID of the feature (credit balance) to auto top-up.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="enabled" type="boolean">
-                      Whether auto top-up is enabled.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="threshold" type="number">
-                      When the balance drops below this threshold, an auto top-up will be purchased.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="quantity" type="number">
-                      Amount of credits to add per auto top-up.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="purchase_limit" type="object">
-                      Optional rate limit to cap how often auto top-ups occur.
+                    <DynamicResponseField name="upsert_licenses" type="object[]">
+                      License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
                       <Expandable title="properties">
-                        <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
-                          The time interval for the purchase limit window.
+                        <DynamicResponseField name="license_plan_id" type="string" />
+
+                        <DynamicResponseField name="included" type="integer" />
+
+                        <DynamicResponseField name="prepaid_only" type="boolean" />
+
+                        <DynamicResponseField name="customize" type="object | null">
+                          <Expandable title="properties">
+                            <DynamicResponseField name="price" type="object | null">
+                              Base price configuration for a plan.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="amount" type="number">
+                                  Base price amount for the plan, in major currency units (e.g. dollars).
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+                                  Billing interval (e.g. 'month', 'year').
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="interval_count" type="number">
+                                  Number of intervals per billing cycle. Defaults to 1.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="additional_currencies" type="object[]">
+                                  Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="currency" type="string">
+                                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="amount" type="number">
+                                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="add_items" type="object[]">
+                              <Expandable title="properties">
+                                <DynamicResponseField name="feature_id" type="string">
+                                  The ID of the feature to configure.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="included" type="number">
+                                  Number of free units included. Balance resets to this each interval for consumable features.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="unlimited" type="boolean">
+                                  If true, customer has unlimited access to this feature.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="pooled" type="boolean">
+                                  Whether entity-level grants contribute to a shared customer balance.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="reset" type="object">
+                                  Reset configuration for consumable features. Omit for non-consumable features like seats.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+                                      Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="interval_count" type="number">
+                                      Number of intervals between resets. Defaults to 1.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="price" type="object">
+                                  Pricing for usage beyond included units. Omit for free features.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="amount" type="number">
+                                      Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="additional_currencies" type="object[]">
+                                      Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="currency" type="any" />
+
+                                        <DynamicResponseField name="amount" type="any" />
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="tiers" type="object[]">
+                                      Tiered pricing. Either 'amount' or 'tiers' is required.
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="to" type="any" />
+
+                                        <DynamicResponseField name="amount" type="any" />
+
+                                        <DynamicResponseField name="flat_amount" type="any" />
+
+                                        <DynamicResponseField name="additional_currencies" type="any" />
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
+
+                                    <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+                                      Billing interval. For consumable features, should match reset.interval.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="interval_count" type="number">
+                                      Number of intervals per billing cycle. Defaults to 1.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="billing_units" type="number">
+                                      Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="billing_method" type="'prepaid' | 'usage_based'">
+                                      'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="max_purchase" type="number | null">
+                                      Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="proration" type="object">
+                                  Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'">
+                                      Billing behavior when quantity increases mid-cycle.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'">
+                                      Credit behavior when quantity decreases mid-cycle.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="rollover" type="object">
+                                  Rollover config for unused units. If set, unused included units carry over.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="max" type="number">
+                                      Max rollover units. Omit for unlimited rollover.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="max_percentage" type="number">
+                                      Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'">
+                                      When rolled over units expire.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="expiry_duration_length" type="number">
+                                      Number of periods before expiry.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="remove_items" type="object[]">
+                              <Expandable title="properties">
+                                <DynamicResponseField name="feature_id" type="string">
+                                  Match items linked to this feature.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="billing_method" type="'prepaid' | 'usage_based'">
+                                  Match items with this billing method (prepaid or usage_based).
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+                                  Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="interval_count" type="integer">
+                                  Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="included" type="number">
+                                  Match items whose grant equals this included usage. Omitted is a wildcard.
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                          </Expandable>
                         </DynamicResponseField>
 
-                        <DynamicResponseField name="interval_count" type="number">
-                          Number of intervals in the purchase limit window.
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="limit" type="number">
-                          Maximum number of auto top-ups allowed within the interval.
-                        </DynamicResponseField>
+                        <DynamicResponseField name="metadata" type="object" />
 
                       </Expandable>
                     </DynamicResponseField>
 
-                    <DynamicResponseField name="invoice_mode" type="boolean">
-                      When true, auto top-up creates a send_invoice invoice instead of auto-charging.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
-                <DynamicResponseField name="spend_limits" type="object[]">
-                  List of overage spend limits per feature (caps overage spend).
-                  <Expandable title="properties">
-                    <DynamicResponseField name="feature_id" type="string">
-                      Optional feature ID this spend limit applies to.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="enabled" type="boolean">
-                      Whether the overage spend limit is enabled.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="limit_type" type="'absolute' | 'usage_percentage'">
-                      How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="overage_limit" type="number">
-                      Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="skip_overage_billing" type="boolean">
-                      When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
-                <DynamicResponseField name="usage_limits" type="object[]">
-                  List of hard usage caps per feature (max units per interval).
-                  <Expandable title="properties">
-                    <DynamicResponseField name="feature_id" type="string">
-                      The feature this usage limit applies to.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="enabled" type="boolean">
-                      Whether this usage limit is enabled.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="limit" type="number">
-                      Maximum units allowed per interval.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
-                      Interval for the cap, aligned to the customer's billing cycle.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
-                      Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="filter" type="object">
-                      When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+                    <DynamicResponseField name="remove_licenses" type="object[]">
+                      License links to drop, keyed by license_plan_id. Parallel to remove_items.
                       <Expandable title="properties">
-                        <DynamicResponseField name="properties.{key}" type="string" />
+                        <DynamicResponseField name="license_plan_id" type="string" />
 
                       </Expandable>
                     </DynamicResponseField>
 
                   </Expandable>
-                </DynamicResponseField>
-
-                <DynamicResponseField name="usage_alerts" type="object[]">
-                  List of usage alert configurations per feature.
-                  <Expandable title="properties">
-                    <DynamicResponseField name="feature_id" type="string">
-                      The feature ID this alert applies to.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="enabled" type="boolean">
-                      Whether this usage alert is enabled.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="threshold" type="number">
-                      The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'">
-                      Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="name" type="string">
-                      Optional user-defined label to distinguish multiple alerts on the same feature.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
-                <DynamicResponseField name="overage_allowed" type="object[]">
-                  List of overage allowed controls per feature. When enabled, usage can exceed balance.
-                  <Expandable title="properties">
-                    <DynamicResponseField name="feature_id" type="string">
-                      The feature ID this overage allowed control applies to.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="enabled" type="boolean">
-                      Whether overage is allowed for this feature.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
-              </Expandable>
-            </DynamicResponseField>
-
-            <DynamicResponseField name="metadata" type="object">
-              Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.
-            </DynamicResponseField>
-
-            <DynamicResponseField name="customer_eligibility" type="object">
-              <Expandable title="properties">
-                <DynamicResponseField name="trial_available" type="boolean">
-                  Whether the trial on this plan is available to this customer. For example, if the customer used the trial in the past, this will be false.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="status" type="'active' | 'scheduled'">
-                  The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="canceling" type="boolean">
-                  Whether the customer's active instance of this plan is set to cancel.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="trialing" type="boolean">
-                  Whether the customer is currently on a free trial of this plan.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="attach_action" type="'activate' | 'upgrade' | 'downgrade' | 'none' | 'purchase'">
-                  The action that would occur if this plan were attached to the customer.
                 </DynamicResponseField>
 
               </Expandable>
@@ -1056,6 +1279,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Version number of the plan. Incremented when plan configuration changes.
             </DynamicResponseField>
 
+            <DynamicResponseField name="version_slug" type="string | null">
+              User-facing version identity. Defaults to v\{n\} when the version is minted.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="active" type="boolean">
+              Whether this is the active version of the plan. At most one version is active.
+            </DynamicResponseField>
+
             <DynamicResponseField name="add_on" type="boolean">
               Whether this is an add-on plan that can be attached alongside a main plan.
             </DynamicResponseField>
@@ -1068,7 +1299,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Base recurring price for the plan. Null for free plans or usage-only plans.
               <Expandable title="properties">
                 <DynamicResponseField name="amount" type="number">
-                  Base price amount for the plan.
+                  Base price amount for the plan, in major currency units (e.g. dollars).
                 </DynamicResponseField>
 
                 <DynamicResponseField name="additional_currencies" type="object[]">
@@ -1341,6 +1572,195 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Whether the plan is archived. Archived plans cannot be attached to new customers.
             </DynamicResponseField>
 
+            <DynamicResponseField name="config" type="object">
+              Miscellaneous plan-level configuration flags.
+              <Expandable title="properties">
+                <DynamicResponseField name="ignore_past_due" type="boolean">
+                  If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="billing_controls" type="object">
+              Plan-level billing controls used as customer defaults.
+              <Expandable title="properties">
+                <DynamicResponseField name="auto_topups" type="object[]">
+                  List of auto top-up configurations per feature.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="feature_id" type="string">
+                      The ID of the feature (credit balance) to auto top-up.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="enabled" type="boolean">
+                      Whether auto top-up is enabled.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="threshold" type="number">
+                      When the balance drops below this threshold, an auto top-up will be purchased.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="quantity" type="number">
+                      Amount of credits to add per auto top-up.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="purchase_limit" type="object">
+                      Optional rate limit to cap how often auto top-ups occur.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
+                          The time interval for the purchase limit window.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="interval_count" type="number">
+                          Number of intervals in the purchase limit window.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="limit" type="number">
+                          Maximum number of auto top-ups allowed within the interval.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="invoice_mode" type="boolean">
+                      When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="spend_limits" type="object[]">
+                  List of overage spend limits per feature (caps overage spend).
+                  <Expandable title="properties">
+                    <DynamicResponseField name="feature_id" type="string">
+                      Optional feature ID this spend limit applies to.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="enabled" type="boolean">
+                      Whether the overage spend limit is enabled.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="limit_type" type="'absolute' | 'usage_percentage'">
+                      How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="overage_limit" type="number">
+                      Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="skip_overage_billing" type="boolean">
+                      When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="usage_limits" type="object[]">
+                  List of hard usage caps per feature (max units per interval).
+                  <Expandable title="properties">
+                    <DynamicResponseField name="feature_id" type="string">
+                      The feature this usage limit applies to.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="enabled" type="boolean">
+                      Whether this usage limit is enabled.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="limit" type="number">
+                      Maximum units allowed per interval.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
+                      Interval for the cap, aligned to the customer's billing cycle.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
+                      Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="filter" type="object">
+                      When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+                      <Expandable title="properties">
+                        <DynamicResponseField name="properties.{key}" type="string" />
+
+                      </Expandable>
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="usage_alerts" type="object[]">
+                  List of usage alert configurations per feature.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="feature_id" type="string">
+                      The feature ID this alert applies to.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="enabled" type="boolean">
+                      Whether this usage alert is enabled.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="threshold" type="number">
+                      The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'">
+                      Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="name" type="string">
+                      Optional user-defined label to distinguish multiple alerts on the same feature.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="overage_allowed" type="object[]">
+                  List of overage allowed controls per feature. When enabled, usage can exceed balance.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="feature_id" type="string">
+                      The feature ID this overage allowed control applies to.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="enabled" type="boolean">
+                      Whether overage is allowed for this feature.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="metadata" type="object">
+              Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="customer_eligibility" type="object">
+              <Expandable title="properties">
+                <DynamicResponseField name="trial_available" type="boolean">
+                  Whether the trial on this plan is available to this customer. For example, if the customer used the trial in the past, this will be false.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="status" type="'active' | 'scheduled'">
+                  The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="canceling" type="boolean">
+                  Whether the customer's active instance of this plan is set to cancel.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="trialing" type="boolean">
+                  Whether the customer is currently on a free trial of this plan.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="attach_action" type="'activate' | 'upgrade' | 'downgrade' | 'none' | 'purchase'">
+                  The action that would occur if this plan were attached to the customer.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
             <DynamicResponseField name="base_variant_id" type="string | null">
               Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from.
             </DynamicResponseField>
@@ -1359,7 +1779,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Base price configuration for a plan.
                       <Expandable title="properties">
                         <DynamicResponseField name="amount" type="number">
-                          Base price amount for the plan.
+                          Base price amount for the plan, in major currency units (e.g. dollars).
                         </DynamicResponseField>
 
                         <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
@@ -1553,6 +1973,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="included" type="number">
+                          Match items whose grant equals this included usage. Omitted is a wildcard.
+                        </DynamicResponseField>
+
                       </Expandable>
                     </DynamicResponseField>
 
@@ -1568,7 +1992,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                         </DynamicResponseField>
 
                         <DynamicResponseField name="card_required" type="boolean">
-                          If true, payment method required to start trial. Customer is charged after trial ends.
+                          If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
                         </DynamicResponseField>
 
                         <DynamicResponseField name="on_end" type="'bill' | 'revert'">
@@ -1732,196 +2156,218 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       </Expandable>
                     </DynamicResponseField>
 
-                  </Expandable>
-                </DynamicResponseField>
-
-              </Expandable>
-            </DynamicResponseField>
-
-            <DynamicResponseField name="config" type="object">
-              Miscellaneous plan-level configuration flags.
-              <Expandable title="properties">
-                <DynamicResponseField name="ignore_past_due" type="boolean">
-                  If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
-                </DynamicResponseField>
-
-              </Expandable>
-            </DynamicResponseField>
-
-            <DynamicResponseField name="billing_controls" type="object">
-              Plan-level billing controls used as customer defaults.
-              <Expandable title="properties">
-                <DynamicResponseField name="auto_topups" type="object[]">
-                  List of auto top-up configurations per feature.
-                  <Expandable title="properties">
-                    <DynamicResponseField name="feature_id" type="string">
-                      The ID of the feature (credit balance) to auto top-up.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="enabled" type="boolean">
-                      Whether auto top-up is enabled.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="threshold" type="number">
-                      When the balance drops below this threshold, an auto top-up will be purchased.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="quantity" type="number">
-                      Amount of credits to add per auto top-up.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="purchase_limit" type="object">
-                      Optional rate limit to cap how often auto top-ups occur.
+                    <DynamicResponseField name="upsert_licenses" type="object[]">
+                      License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
                       <Expandable title="properties">
-                        <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
-                          The time interval for the purchase limit window.
+                        <DynamicResponseField name="license_plan_id" type="string" />
+
+                        <DynamicResponseField name="included" type="integer" />
+
+                        <DynamicResponseField name="prepaid_only" type="boolean" />
+
+                        <DynamicResponseField name="customize" type="object | null">
+                          <Expandable title="properties">
+                            <DynamicResponseField name="price" type="object | null">
+                              Base price configuration for a plan.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="amount" type="number">
+                                  Base price amount for the plan, in major currency units (e.g. dollars).
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+                                  Billing interval (e.g. 'month', 'year').
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="interval_count" type="number">
+                                  Number of intervals per billing cycle. Defaults to 1.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="additional_currencies" type="object[]">
+                                  Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="currency" type="string">
+                                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="amount" type="number">
+                                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="add_items" type="object[]">
+                              <Expandable title="properties">
+                                <DynamicResponseField name="feature_id" type="string">
+                                  The ID of the feature to configure.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="included" type="number">
+                                  Number of free units included. Balance resets to this each interval for consumable features.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="unlimited" type="boolean">
+                                  If true, customer has unlimited access to this feature.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="pooled" type="boolean">
+                                  Whether entity-level grants contribute to a shared customer balance.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="reset" type="object">
+                                  Reset configuration for consumable features. Omit for non-consumable features like seats.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+                                      Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="interval_count" type="number">
+                                      Number of intervals between resets. Defaults to 1.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="price" type="object">
+                                  Pricing for usage beyond included units. Omit for free features.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="amount" type="number">
+                                      Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="additional_currencies" type="object[]">
+                                      Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="currency" type="any" />
+
+                                        <DynamicResponseField name="amount" type="any" />
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="tiers" type="object[]">
+                                      Tiered pricing. Either 'amount' or 'tiers' is required.
+                                      <Expandable title="properties">
+                                        <DynamicResponseField name="to" type="any" />
+
+                                        <DynamicResponseField name="amount" type="any" />
+
+                                        <DynamicResponseField name="flat_amount" type="any" />
+
+                                        <DynamicResponseField name="additional_currencies" type="any" />
+
+                                      </Expandable>
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
+
+                                    <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+                                      Billing interval. For consumable features, should match reset.interval.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="interval_count" type="number">
+                                      Number of intervals per billing cycle. Defaults to 1.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="billing_units" type="number">
+                                      Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="billing_method" type="'prepaid' | 'usage_based'">
+                                      'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="max_purchase" type="number | null">
+                                      Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="proration" type="object">
+                                  Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'">
+                                      Billing behavior when quantity increases mid-cycle.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'">
+                                      Credit behavior when quantity decreases mid-cycle.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="rollover" type="object">
+                                  Rollover config for unused units. If set, unused included units carry over.
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="max" type="number">
+                                      Max rollover units. Omit for unlimited rollover.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="max_percentage" type="number">
+                                      Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'">
+                                      When rolled over units expire.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="expiry_duration_length" type="number">
+                                      Number of periods before expiry.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="remove_items" type="object[]">
+                              <Expandable title="properties">
+                                <DynamicResponseField name="feature_id" type="string">
+                                  Match items linked to this feature.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="billing_method" type="'prepaid' | 'usage_based'">
+                                  Match items with this billing method (prepaid or usage_based).
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+                                  Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="interval_count" type="integer">
+                                  Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="included" type="number">
+                                  Match items whose grant equals this included usage. Omitted is a wildcard.
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
+                          </Expandable>
                         </DynamicResponseField>
 
-                        <DynamicResponseField name="interval_count" type="number">
-                          Number of intervals in the purchase limit window.
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="limit" type="number">
-                          Maximum number of auto top-ups allowed within the interval.
-                        </DynamicResponseField>
+                        <DynamicResponseField name="metadata" type="object" />
 
                       </Expandable>
                     </DynamicResponseField>
 
-                    <DynamicResponseField name="invoice_mode" type="boolean">
-                      When true, auto top-up creates a send_invoice invoice instead of auto-charging.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
-                <DynamicResponseField name="spend_limits" type="object[]">
-                  List of overage spend limits per feature (caps overage spend).
-                  <Expandable title="properties">
-                    <DynamicResponseField name="feature_id" type="string">
-                      Optional feature ID this spend limit applies to.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="enabled" type="boolean">
-                      Whether the overage spend limit is enabled.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="limit_type" type="'absolute' | 'usage_percentage'">
-                      How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="overage_limit" type="number">
-                      Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="skip_overage_billing" type="boolean">
-                      When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
-                <DynamicResponseField name="usage_limits" type="object[]">
-                  List of hard usage caps per feature (max units per interval).
-                  <Expandable title="properties">
-                    <DynamicResponseField name="feature_id" type="string">
-                      The feature this usage limit applies to.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="enabled" type="boolean">
-                      Whether this usage limit is enabled.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="limit" type="number">
-                      Maximum units allowed per interval.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
-                      Interval for the cap, aligned to the customer's billing cycle.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="anchor" type="'billing_cycle' | 'utc'">
-                      Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="filter" type="object">
-                      When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+                    <DynamicResponseField name="remove_licenses" type="object[]">
+                      License links to drop, keyed by license_plan_id. Parallel to remove_items.
                       <Expandable title="properties">
-                        <DynamicResponseField name="properties.{key}" type="string" />
+                        <DynamicResponseField name="license_plan_id" type="string" />
 
                       </Expandable>
                     </DynamicResponseField>
 
                   </Expandable>
-                </DynamicResponseField>
-
-                <DynamicResponseField name="usage_alerts" type="object[]">
-                  List of usage alert configurations per feature.
-                  <Expandable title="properties">
-                    <DynamicResponseField name="feature_id" type="string">
-                      The feature ID this alert applies to.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="enabled" type="boolean">
-                      Whether this usage alert is enabled.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="threshold" type="number">
-                      The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'">
-                      Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="name" type="string">
-                      Optional user-defined label to distinguish multiple alerts on the same feature.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
-                <DynamicResponseField name="overage_allowed" type="object[]">
-                  List of overage allowed controls per feature. When enabled, usage can exceed balance.
-                  <Expandable title="properties">
-                    <DynamicResponseField name="feature_id" type="string">
-                      The feature ID this overage allowed control applies to.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="enabled" type="boolean">
-                      Whether overage is allowed for this feature.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
-              </Expandable>
-            </DynamicResponseField>
-
-            <DynamicResponseField name="metadata" type="object">
-              Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.
-            </DynamicResponseField>
-
-            <DynamicResponseField name="customer_eligibility" type="object">
-              <Expandable title="properties">
-                <DynamicResponseField name="trial_available" type="boolean">
-                  Whether the trial on this plan is available to this customer. For example, if the customer used the trial in the past, this will be false.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="status" type="'active' | 'scheduled'">
-                  The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="canceling" type="boolean">
-                  Whether the customer's active instance of this plan is set to cancel.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="trialing" type="boolean">
-                  Whether the customer is currently on a free trial of this plan.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="attach_action" type="'activate' | 'upgrade' | 'downgrade' | 'none' | 'purchase'">
-                  The action that would occur if this plan were attached to the customer.
                 </DynamicResponseField>
 
               </Expandable>
@@ -1982,18 +2428,41 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
             </DynamicResponseField>
 
-            <DynamicResponseField name="credit_schema" type="object[]">
-              For credit_system features: maps metered features to their credit costs.
+            <DynamicResponseField name="credit_schema" type="object | object | object[]">
+              For classic credit systems: maps metered features to flat or graduated credit costs.
               <Expandable title="properties">
-                <DynamicResponseField name="metered_feature_id" type="string">
+                <DynamicResponseField name="metered_feature_id" type="string | any">
                   ID of the metered feature that draws from this credit system.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="billing_units" type="number">
+                  Number of metered-feature units priced together. Defaults to one when omitted.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="tier_behavior" type="any" />
+
+                <DynamicResponseField name="tiers" type="object[]">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="to" type="number">
+                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="credit_cost" type="number">
+                      Credits consumed per billing-unit group within this tier.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
                 <DynamicResponseField name="credit_cost" type="number">
-                  Credits consumed per unit of the metered feature.
+                  Credits consumed per billing-unit group.
                 </DynamicResponseField>
 
               </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="invoice_credit" type="boolean">
+              Whether usage of this classic credit system should be itemized as invoice credits.
             </DynamicResponseField>
 
             <DynamicResponseField name="model_markups.{key}" type="object | null">
@@ -2036,6 +2505,25 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
             <DynamicResponseField name="archived" type="boolean">
               Whether the feature is archived and hidden from the dashboard.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="processors" type="object">
+              Processor mappings for this feature. Present when a Stripe product or meter is set.
+              <Expandable title="properties">
+                <DynamicResponseField name="stripe" type="object">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="product_id" type="string">
+                      Stripe product ID this feature's usage prices bill under.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="meter_id" type="string">
+                      Stripe meter ID used to create this feature's metered price.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
             </DynamicResponseField>
 
           </Expandable>
@@ -2225,18 +2713,37 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
             </DynamicResponseField>
 
-            <DynamicResponseField name="credit_schema" type="object[]">
-              For credit_system features: maps metered features to their credit costs.
+            <DynamicResponseField name="credit_schema" type="object | object | object[]">
+              For classic credit systems: maps metered features to flat or graduated credit costs.
               <Expandable title="properties">
-                <DynamicResponseField name="metered_feature_id" type="string">
+                <DynamicResponseField name="metered_feature_id" type="string | any">
                   ID of the metered feature that draws from this credit system.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="billing_units" type="number">
+                  Number of metered-feature units priced together. Defaults to one when omitted.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="tier_behavior" type="any" />
+
+                <DynamicResponseField name="tiers" type="object[]">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="to" type="any" />
+
+                    <DynamicResponseField name="credit_cost" type="any" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
                 <DynamicResponseField name="credit_cost" type="number">
-                  Credits consumed per unit of the metered feature.
+                  Credits consumed per billing-unit group.
                 </DynamicResponseField>
 
               </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="invoice_credit" type="boolean">
+              Whether usage of this classic credit system should be itemized as invoice credits.
             </DynamicResponseField>
 
             <DynamicResponseField name="model_markups.{key}" type="object | null">
@@ -2279,6 +2786,25 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
             <DynamicResponseField name="archived" type="boolean">
               Whether the feature is archived and hidden from the dashboard.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="processors" type="object">
+              Processor mappings for this feature. Present when a Stripe product or meter is set.
+              <Expandable title="properties">
+                <DynamicResponseField name="stripe" type="object">
+                  <Expandable title="properties">
+                    <DynamicResponseField name="product_id" type="string">
+                      Stripe product ID this feature's usage prices bill under.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="meter_id" type="string">
+                      Stripe meter ID used to create this feature's metered price.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
             </DynamicResponseField>
 
           </Expandable>

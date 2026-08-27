@@ -59,29 +59,22 @@ export async function generateSdksInParallel({
 	speakeasySdkDir: string;
 	pythonSdkDir: string;
 }): Promise<void> {
-	console.log("Generating TypeScript and Python SDKs in parallel...");
+	// Both `speakeasy run`s use packages/sdk/.speakeasy; parallel clobbers models.
+	console.log("Generating TypeScript and Python SDKs...");
 
-	const results = await Promise.allSettled([
-		generateTypeScriptSdkQuiet({ speakeasySdkDir }),
-		generatePythonSdkQuiet({ speakeasySdkDir, pythonSdkDir }),
-	]);
-
-	const [tsResult, pyResult] = results;
-
-	if (tsResult.status === "fulfilled") {
+	try {
+		await generateTypeScriptSdkQuiet({ speakeasySdkDir });
 		console.log("✓ TypeScript SDK generated and built successfully");
-	} else {
-		console.error("✗ TypeScript SDK generation failed:", tsResult.reason);
+	} catch (reason) {
+		console.error("✗ TypeScript SDK generation failed:", reason);
+		throw new Error("SDK generation failed");
 	}
 
-	if (pyResult.status === "fulfilled") {
+	try {
+		await generatePythonSdkQuiet({ speakeasySdkDir, pythonSdkDir });
 		console.log("✓ Python SDK generated and patched successfully");
-	} else {
-		console.error("✗ Python SDK generation failed:", pyResult.reason);
-	}
-
-	// Throw if either failed
-	if (tsResult.status === "rejected" || pyResult.status === "rejected") {
+	} catch (reason) {
+		console.error("✗ Python SDK generation failed:", reason);
 		throw new Error("SDK generation failed");
 	}
 }

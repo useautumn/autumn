@@ -95,6 +95,10 @@ export const attachUpsertLicenseTierSchema = z.object({
 	additionalCurrencies: z.union([z.array(z.any()), z.undefined()]).optional(),
 });
 
+export const attachRemoveLicenseSchema = z.object({
+	licensePlanId: z.string(),
+});
+
 export const attachInvoiceModeSchema = z.object({
 	enabled: z.boolean(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
@@ -107,6 +111,8 @@ export const attachAttachDiscountSchema = z.object({
 	rewardId: z.union([z.string(), z.undefined()]).optional(),
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
 });
+
+export const attachBillingCycleAnchorSchema = z.union([z.string(), z.number()]);
 
 export const attachCustomLineItemSchema = z.object({
 	amount: z.number(),
@@ -140,6 +146,13 @@ export const attachFeatureQuantityOutboundSchema = z.object({
 	feature_id: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const attachFreeTrialParamsOutboundSchema = z.object({
+	duration_length: z.number(),
+	duration_type: z.string(),
+	card_required: z.boolean(),
+	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const attachAdditionalCurrencyOutboundSchema = z.object({
@@ -315,9 +328,10 @@ export const attachPlanItemFilterOutboundSchema = z.object({
 	billing_method: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.union([z.string(), z.string(), z.undefined()]).optional(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachFreeTrialParamsOutboundSchema = z.object({
+export const attachCustomizeFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
@@ -498,6 +512,7 @@ export const attachUpsertLicensePlanItemFilterOutboundSchema = z.object({
 	billing_method: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.union([z.string(), z.string(), z.undefined()]).optional(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const attachUpsertLicenseCustomizeOutboundSchema = z.object({
@@ -527,6 +542,10 @@ export const attachUpsertLicenseOutboundSchema = z.object({
 	metadata: z.union([z.record(z.string(), z.any()), z.undefined()]).optional(),
 });
 
+export const attachRemoveLicenseOutboundSchema = z.object({
+	license_plan_id: z.string(),
+});
+
 export const attachCustomizeOutboundSchema = z.object({
 	price: z
 		.union([attachBasePriceOutboundSchema, z.undefined()])
@@ -542,7 +561,7 @@ export const attachCustomizeOutboundSchema = z.object({
 		.union([z.array(attachPlanItemFilterOutboundSchema), z.undefined()])
 		.optional(),
 	free_trial: z
-		.union([attachFreeTrialParamsOutboundSchema, z.undefined()])
+		.union([attachCustomizeFreeTrialParamsOutboundSchema, z.undefined()])
 		.optional()
 		.nullable(),
 	billing_controls: z
@@ -550,6 +569,9 @@ export const attachCustomizeOutboundSchema = z.object({
 		.optional(),
 	upsert_licenses: z
 		.union([z.array(attachUpsertLicenseOutboundSchema), z.undefined()])
+		.optional(),
+	remove_licenses: z
+		.union([z.array(attachRemoveLicenseOutboundSchema), z.undefined()])
 		.optional(),
 });
 
@@ -565,6 +587,11 @@ export const attachAttachDiscountOutboundSchema = z.object({
 	reward_id: z.union([z.string(), z.undefined()]).optional(),
 	promotion_code: z.union([z.string(), z.undefined()]).optional(),
 });
+
+export const attachBillingCycleAnchorOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+]);
 
 export const attachCustomLineItemOutboundSchema = z.object({
 	amount: z.number(),
@@ -594,6 +621,10 @@ export const attachParamsOutboundSchema = z.object({
 		.union([z.array(attachFeatureQuantityOutboundSchema), z.undefined()])
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
+	free_trial: z
+		.union([attachFreeTrialParamsOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	customize: z.union([attachCustomizeOutboundSchema, z.undefined()]).optional(),
 	invoice_mode: z
 		.union([attachInvoiceModeOutboundSchema, z.undefined()])
@@ -606,7 +637,9 @@ export const attachParamsOutboundSchema = z.object({
 		.optional(),
 	success_url: z.union([z.string(), z.undefined()]).optional(),
 	new_billing_subscription: z.union([z.boolean(), z.undefined()]).optional(),
-	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
+	billing_cycle_anchor: z
+		.union([z.string(), z.number(), z.undefined()])
+		.optional(),
 	plan_schedule: z.union([z.string(), z.undefined()]).optional(),
 	starts_at: z.union([z.number(), z.undefined()]).optional(),
 	ends_at: z.union([z.number(), z.undefined()]).optional(),
@@ -640,6 +673,17 @@ export const attachParamsOutboundSchema = z.object({
 const closedEnumSchema = z.any();
 
 const openEnumSchema = z.any();
+
+export const attachDurationTypeSchema = closedEnumSchema;
+
+export const attachOnEndSchema = closedEnumSchema;
+
+export const attachFreeTrialParamsSchema = z.object({
+	durationLength: z.number(),
+	durationType: z.union([attachDurationTypeSchema, z.undefined()]).optional(),
+	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
+	onEnd: z.union([attachOnEndSchema, z.undefined()]).optional(),
+});
 
 export const attachPriceIntervalSchema = closedEnumSchema;
 
@@ -792,17 +836,20 @@ export const attachPlanItemFilterSchema = z.object({
 		])
 		.optional(),
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachDurationTypeSchema = closedEnumSchema;
+export const attachCustomizeDurationTypeSchema = closedEnumSchema;
 
-export const attachOnEndSchema = closedEnumSchema;
+export const attachCustomizeOnEndSchema = closedEnumSchema;
 
-export const attachFreeTrialParamsSchema = z.object({
+export const attachCustomizeFreeTrialParamsSchema = z.object({
 	durationLength: z.number(),
-	durationType: z.union([attachDurationTypeSchema, z.undefined()]).optional(),
+	durationType: z
+		.union([attachCustomizeDurationTypeSchema, z.undefined()])
+		.optional(),
 	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
-	onEnd: z.union([attachOnEndSchema, z.undefined()]).optional(),
+	onEnd: z.union([attachCustomizeOnEndSchema, z.undefined()]).optional(),
 });
 
 export const attachPurchaseLimitIntervalSchema = closedEnumSchema;
@@ -982,6 +1029,7 @@ export const attachUpsertLicensePlanItemFilterSchema = z.object({
 		])
 		.optional(),
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const attachUpsertLicenseCustomizeSchema = z.object({
@@ -1018,7 +1066,7 @@ export const attachCustomizeSchema = z.object({
 		.union([z.array(attachPlanItemFilterSchema), z.undefined()])
 		.optional(),
 	freeTrial: z
-		.union([attachFreeTrialParamsSchema, z.undefined()])
+		.union([attachCustomizeFreeTrialParamsSchema, z.undefined()])
 		.optional()
 		.nullable(),
 	billingControls: z
@@ -1026,6 +1074,9 @@ export const attachCustomizeSchema = z.object({
 		.optional(),
 	upsertLicenses: z
 		.union([z.array(attachUpsertLicenseSchema), z.undefined()])
+		.optional(),
+	removeLicenses: z
+		.union([z.array(attachRemoveLicenseSchema), z.undefined()])
 		.optional(),
 });
 
@@ -1043,6 +1094,10 @@ export const attachParamsSchema = z.object({
 		.union([z.array(attachFeatureQuantitySchema), z.undefined()])
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
+	freeTrial: z
+		.union([attachFreeTrialParamsSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	customize: z.union([attachCustomizeSchema, z.undefined()]).optional(),
 	invoiceMode: z.union([attachInvoiceModeSchema, z.undefined()]).optional(),
 	prorationBehavior: z
@@ -1055,7 +1110,9 @@ export const attachParamsSchema = z.object({
 		.optional(),
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
 	newBillingSubscription: z.union([z.boolean(), z.undefined()]).optional(),
-	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
+	billingCycleAnchor: z
+		.union([z.string(), z.number(), z.undefined()])
+		.optional(),
 	planSchedule: z.union([attachPlanScheduleSchema, z.undefined()]).optional(),
 	startsAt: z.union([z.number(), z.undefined()]).optional(),
 	endsAt: z.union([z.number(), z.undefined()]).optional(),

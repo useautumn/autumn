@@ -7,6 +7,7 @@ import { FeatureType } from "@models/featureModels/featureEnums.js";
 import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 import type { z } from "zod/v4";
 import { ApiFeatureV1Schema } from "../apiFeatureV1.js";
+import { isGraduatedCreditSchemaItem } from "../creditRateCard.js";
 import {
 	ApiFeatureType,
 	ApiFeatureV0Schema,
@@ -23,7 +24,10 @@ export const apiCreditSchemaToV0 = ({
 		z.infer<typeof ApiFeatureV0Schema>["credit_schema"]
 	> = [];
 	for (const item of creditSchema) {
-		if (item.tier_behavior === "graduated" || (item.billing_units ?? 1) !== 1) {
+		if (
+			isGraduatedCreditSchemaItem(item) ||
+			(item.billing_units ?? 1) !== 1
+		) {
 			return null;
 		}
 		legacyCreditSchema.push({

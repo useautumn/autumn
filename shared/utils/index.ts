@@ -65,8 +65,9 @@ export * from "./productUtils/freeTrialUtils";
 export * from "./productUtils/index";
 export * from "./productUtils/isProductUpgrade";
 export * from "./productUtils/priceUtils";
-export * from "./productUtils/priceUtils/index";
 // Price match utils
+export * from "./productUtils/priceUtils/convertPrice/priceToRequiredStripeSlots";
+export * from "./productUtils/priceUtils/index";
 export * from "./productUtils/priceUtils/match/copyStripeResourcesToMatchingPrice";
 export * from "./productUtils/priceUtils/match/getPriceStripeReuseLevel";
 export * from "./productUtils/priceUtils/match/priceStripeObjectsMatch";

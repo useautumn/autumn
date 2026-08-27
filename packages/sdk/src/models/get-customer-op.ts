@@ -6,7 +6,7 @@ import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import * as openEnums from "../types/enums.js";
-import { OpenEnum } from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -582,16 +582,71 @@ export const GetCustomerFlagsType = {
  */
 export type GetCustomerFlagsType = OpenEnum<typeof GetCustomerFlagsType>;
 
-export type GetCustomerCreditSchema = {
+export type GetCustomerCreditSchema3 = {
+  meteredFeatureId: "";
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type GetCustomerCreditSchema2 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
   meteredFeatureId: string;
   /**
-   * Credits consumed per unit of the metered feature.
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
+
+export const GetCustomerToEnum = {
+  Inf: "inf",
+} as const;
+export type GetCustomerToEnum = ClosedEnum<typeof GetCustomerToEnum>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type GetCustomerToUnion = number | GetCustomerToEnum;
+
+export type GetCustomerTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | GetCustomerToEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type GetCustomerCreditSchema1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<GetCustomerTier>;
+};
+
+export type GetCustomerCreditSchemaUnion =
+  | GetCustomerCreditSchema1
+  | GetCustomerCreditSchema2
+  | GetCustomerCreditSchema3;
 
 export type GetCustomerModelMarkups = {
   markup?: number | undefined;
@@ -615,6 +670,24 @@ export type GetCustomerDisplay = {
    * Plural form for UI display (e.g., 'API calls', 'seats').
    */
   plural?: string | null | undefined;
+};
+
+export type GetCustomerFlagsStripe = {
+  /**
+   * Stripe product ID this feature's usage prices bill under.
+   */
+  productId?: string | undefined;
+  /**
+   * Stripe meter ID used to create this feature's metered price.
+   */
+  meterId?: string | undefined;
+};
+
+/**
+ * Processor mappings for this feature. Present when a Stripe product or meter is set.
+ */
+export type GetCustomerFlagsProcessors = {
+  stripe?: GetCustomerFlagsStripe | undefined;
 };
 
 /**
@@ -642,9 +715,19 @@ export type GetCustomerFeature = {
    */
   eventNames?: Array<string> | undefined;
   /**
-   * For credit_system features: maps metered features to their credit costs.
+   * For classic credit systems: maps metered features to flat or graduated credit costs.
    */
-  creditSchema?: Array<GetCustomerCreditSchema> | undefined;
+  creditSchema?:
+    | Array<
+      | GetCustomerCreditSchema1
+      | GetCustomerCreditSchema2
+      | GetCustomerCreditSchema3
+    >
+    | undefined;
+  /**
+   * Whether usage of this classic credit system should be itemized as invoice credits.
+   */
+  invoiceCredit?: boolean | undefined;
   /**
    * Per-model markup overrides for AI credit systems.
    */
@@ -668,6 +751,10 @@ export type GetCustomerFeature = {
    * Whether the feature is archived and hidden from the dashboard.
    */
   archived: boolean;
+  /**
+   * Processor mappings for this feature. Present when a Stripe product or meter is set.
+   */
+  processors?: GetCustomerFlagsProcessors | undefined;
 };
 
 export type GetCustomerFlags = {
@@ -1674,29 +1761,157 @@ export const GetCustomerFlagsType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(GetCustomerFlagsType);
 
 /** @internal */
-export const GetCustomerCreditSchema$inboundSchema: z.ZodMiniType<
-  GetCustomerCreditSchema,
+export const GetCustomerCreditSchema3$inboundSchema: z.ZodMiniType<
+  GetCustomerCreditSchema3,
   unknown
 > = z.pipe(
   z.object({
-    metered_feature_id: types.string(),
+    metered_feature_id: types.literal(""),
+    billing_units: types.optional(types.number()),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
       "credit_cost": "creditCost",
     });
   }),
 );
 
-export function getCustomerCreditSchemaFromJSON(
+export function getCustomerCreditSchema3FromJSON(
   jsonString: string,
-): SafeParseResult<GetCustomerCreditSchema, SDKValidationError> {
+): SafeParseResult<GetCustomerCreditSchema3, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetCustomerCreditSchema$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerCreditSchema' from JSON`,
+    (x) => GetCustomerCreditSchema3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerCreditSchema3' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerCreditSchema2$inboundSchema: z.ZodMiniType<
+  GetCustomerCreditSchema2,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function getCustomerCreditSchema2FromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerCreditSchema2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerCreditSchema2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerCreditSchema2' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerToEnum$inboundSchema: z.ZodMiniEnum<
+  typeof GetCustomerToEnum
+> = z.enum(GetCustomerToEnum);
+
+/** @internal */
+export const GetCustomerToUnion$inboundSchema: z.ZodMiniType<
+  GetCustomerToUnion,
+  unknown
+> = smartUnion([types.number(), GetCustomerToEnum$inboundSchema]);
+
+export function getCustomerToUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerToUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerToUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerToUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerTier$inboundSchema: z.ZodMiniType<
+  GetCustomerTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), GetCustomerToEnum$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function getCustomerTierFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerTier, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerTier' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerCreditSchema1$inboundSchema: z.ZodMiniType<
+  GetCustomerCreditSchema1,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => GetCustomerTier$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function getCustomerCreditSchema1FromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerCreditSchema1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerCreditSchema1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerCreditSchema1' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerCreditSchemaUnion$inboundSchema: z.ZodMiniType<
+  GetCustomerCreditSchemaUnion,
+  unknown
+> = smartUnion([
+  z.lazy(() => GetCustomerCreditSchema1$inboundSchema),
+  z.lazy(() => GetCustomerCreditSchema2$inboundSchema),
+  z.lazy(() => GetCustomerCreditSchema3$inboundSchema),
+]);
+
+export function getCustomerCreditSchemaUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerCreditSchemaUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerCreditSchemaUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerCreditSchemaUnion' from JSON`,
   );
 }
 
@@ -1766,6 +1981,51 @@ export function getCustomerDisplayFromJSON(
 }
 
 /** @internal */
+export const GetCustomerFlagsStripe$inboundSchema: z.ZodMiniType<
+  GetCustomerFlagsStripe,
+  unknown
+> = z.pipe(
+  z.object({
+    product_id: types.optional(types.string()),
+    meter_id: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "product_id": "productId",
+      "meter_id": "meterId",
+    });
+  }),
+);
+
+export function getCustomerFlagsStripeFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerFlagsStripe, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerFlagsStripe$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerFlagsStripe' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerFlagsProcessors$inboundSchema: z.ZodMiniType<
+  GetCustomerFlagsProcessors,
+  unknown
+> = z.object({
+  stripe: types.optional(z.lazy(() => GetCustomerFlagsStripe$inboundSchema)),
+});
+
+export function getCustomerFlagsProcessorsFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerFlagsProcessors, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerFlagsProcessors$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerFlagsProcessors' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetCustomerFeature$inboundSchema: z.ZodMiniType<
   GetCustomerFeature,
   unknown
@@ -1776,9 +2036,14 @@ export const GetCustomerFeature$inboundSchema: z.ZodMiniType<
     type: GetCustomerFlagsType$inboundSchema,
     consumable: types.boolean(),
     event_names: types.optional(z.array(types.string())),
-    credit_schema: types.optional(
-      z.array(z.lazy(() => GetCustomerCreditSchema$inboundSchema)),
-    ),
+    credit_schema: types.optional(z.array(smartUnion([
+      z.lazy(() => GetCustomerCreditSchema1$inboundSchema),
+      z.lazy(() =>
+        GetCustomerCreditSchema2$inboundSchema
+      ),
+      z.lazy(() => GetCustomerCreditSchema3$inboundSchema),
+    ]))),
+    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => GetCustomerModelMarkups$inboundSchema),
@@ -1792,11 +2057,15 @@ export const GetCustomerFeature$inboundSchema: z.ZodMiniType<
       GetCustomerDisplay$inboundSchema
     )),
     archived: types.boolean(),
+    processors: types.optional(z.lazy(() =>
+      GetCustomerFlagsProcessors$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",

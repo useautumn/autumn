@@ -258,6 +258,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		cancelAction,
 		recalculateBalances: params.recalculate_balances?.enabled === true,
 		refundLastPayment: params.refund_last_payment,
+		subscriptionParams: params.subscription_params,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		stripeDiscounts,

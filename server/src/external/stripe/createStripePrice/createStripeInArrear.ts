@@ -9,6 +9,8 @@ import {
 	type Product,
 	priceConfigForCurrency,
 	priceToEnt,
+	priceToStripeNickname,
+	type StripePriceNicknameSource,
 	setPriceCurrencyStripeId,
 	TierInfinite,
 	type UsagePriceConfig,
@@ -19,6 +21,10 @@ import RecaseError from "@server/utils/errorUtils";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
+import {
+	buildStripeMeterIdempotencyKey,
+	buildStripePriceIdempotencyKey,
+} from "../prices/utils/buildIdempotencyKey";
 import { billingIntervalToStripe } from "../stripePriceUtils";
 
 const searchStripeMeter = async ({
@@ -127,13 +133,18 @@ const getStripeMeter = async ({
 		}
 	} catch (_error) {}
 
-	const meter = await stripeCli.billing.meters.create({
-		display_name: `${product.name} - ${feature!.name}`,
-		event_name: price.id!,
-		default_aggregation: {
-			formula: "sum",
+	const meter = await stripeCli.billing.meters.create(
+		{
+			display_name: `${product.name} - ${feature!.name}`,
+			event_name: price.id!,
+			default_aggregation: {
+				formula: "sum",
+			},
 		},
-	});
+		{
+			idempotencyKey: buildStripeMeterIdempotencyKey({ priceId: price.id! }),
+		},
+	);
 	return meter;
 };
 
@@ -216,6 +227,7 @@ export const createStripeInArrearPrice = async ({
 	internalEntityId,
 	useCheckout = false,
 	currency: targetCurrency,
+	source = "catalog",
 }: {
 	db: DrizzleCli;
 	stripeCli: Stripe;
@@ -225,10 +237,11 @@ export const createStripeInArrearPrice = async ({
 	entitlements: EntitlementWithFeature[];
 	logger: any;
 	curStripePrice?: Stripe.Price | null;
-	curStripeProduct?: Stripe.Product | null;
+	curStripeProduct?: { id: string } | null;
 	internalEntityId?: string;
 	useCheckout?: boolean;
 	currency?: string;
+	source?: StripePriceNicknameSource;
 }) => {
 	const config = price.config as UsagePriceConfig;
 	const orgDefault = (org.default_currency || "usd").toLowerCase();
@@ -314,18 +327,13 @@ export const createStripeInArrearPrice = async ({
 		};
 	}
 
-	let productData = {};
 	const stripeProductId = curStripeProduct?.id || config.stripe_product_id;
-	if (stripeProductId) {
-		productData = {
-			product: stripeProductId,
-		};
-	} else {
-		productData = {
-			product_data: {
-				name: `${product.name} - ${feature.name}`,
-			},
-		};
+	if (!stripeProductId) {
+		throw new RecaseError({
+			message: `createStripeInArrearPrice: missing Stripe product for feature ${feature.id}`,
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
 	}
 
 	const recurringData = billingIntervalToStripe({
@@ -333,20 +341,34 @@ export const createStripeInArrearPrice = async ({
 		intervalCount: price.config.interval_count,
 	});
 
-	const stripePrice = await stripeCli.prices.create({
-		...productData,
-		...priceAmountData,
-		currency,
-		recurring: recurringData?.interval
-			? {
-					interval: recurringData.interval,
-					interval_count: recurringData.interval_count,
-					meter: meter.id,
-					usage_type: "metered",
-				}
-			: undefined,
-		nickname: `Autumn Price (${relatedEnt.feature.name})`,
-	});
+	const stripePrice = await stripeCli.prices.create(
+		{
+			product: stripeProductId,
+			...priceAmountData,
+			currency,
+			recurring: recurringData?.interval
+				? {
+						interval: recurringData.interval,
+						interval_count: recurringData.interval_count,
+						meter: meter.id,
+						usage_type: "metered",
+					}
+				: undefined,
+			nickname: priceToStripeNickname({
+				price,
+				featureName: relatedEnt.feature.name,
+				source,
+			}),
+		},
+		{
+			idempotencyKey: buildStripePriceIdempotencyKey({
+				price,
+				slot: "stripe_price_id",
+				currency,
+				orgDefault,
+			}),
+		},
+	);
 
 	setPriceCurrencyStripeId({
 		config,

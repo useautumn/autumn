@@ -2,6 +2,7 @@ import {
 	atmnToStripeAmountDecimal,
 	type Entitlement,
 	type FixedPriceConfig,
+	isAllocatedPrice,
 	isConsumablePrice,
 	isPrepaidPrice,
 	type Organization,
@@ -123,6 +124,56 @@ export const autumnConsumablePriceToStripePriceShape = ({
 			currency,
 			billing_scheme: "tiered",
 			recurring: recurringMetered,
+			tiers_mode: "graduated",
+			tiers: autumnTiersToShape({ tiers }),
+		},
+	});
+};
+
+/** Allocated v2 main price is licensed/tiered, not metered. */
+export const autumnAllocatedPriceToStripePriceShape = ({
+	price,
+	entitlement,
+	stripeProductId,
+	currency,
+	org,
+}: {
+	price: Price;
+	entitlement: Entitlement;
+	stripeProductId: string;
+	currency: string;
+	org: Organization;
+}): StripePriceShape | null => {
+	if (!isAllocatedPrice(price)) return null;
+	if (price.tier_behavior === TierBehavior.VolumeBased) return null;
+
+	const recurring = priceToStripeRecurringParams({ price });
+	if (!recurring) return null;
+
+	const tiers = priceToInArrearTiers({ price, entitlement, org, currency });
+	if (tiers.length === 1) {
+		const tier = tiers[0]!;
+		return inlinePriceToShape({
+			price: {
+				product: stripeProductId,
+				currency,
+				billing_scheme: "per_unit",
+				recurring,
+				unit_amount_decimal: (tier.unit_amount_decimal ?? tier.unit_amount) as
+					| string
+					| number
+					| null
+					| undefined,
+			},
+		});
+	}
+
+	return inlinePriceToShape({
+		price: {
+			product: stripeProductId,
+			currency,
+			billing_scheme: "tiered",
+			recurring,
 			tiers_mode: "graduated",
 			tiers: autumnTiersToShape({ tiers }),
 		},

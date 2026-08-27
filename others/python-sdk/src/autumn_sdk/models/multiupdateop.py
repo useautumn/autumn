@@ -5,7 +5,7 @@ from autumn_sdk.types import BaseModel, Nullable, UNSET_SENTINEL, UnrecognizedSt
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -52,6 +52,13 @@ MultiUpdateProrationBehavior = Literal[
 r"""How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
 
+MultiUpdateRefundLastPayment = Literal[
+    "prorated",
+    "full",
+]
+r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+
+
 class MultiUpdateUpdateTypedDict(TypedDict):
     cancel_action: MultiUpdateCancelAction
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
@@ -63,6 +70,10 @@ class MultiUpdateUpdateTypedDict(TypedDict):
     r"""The ID of the entity this update targets. Overrides the top-level entity_id for this update."""
     proration_behavior: NotRequired[MultiUpdateProrationBehavior]
     r"""How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
+    refund_last_payment: NotRequired[MultiUpdateRefundLastPayment]
+    r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+    subscription_params: NotRequired[Dict[str, Any]]
+    r"""Additional parameters to pass into the Stripe subscription update or cancel call."""
 
 
 class MultiUpdateUpdate(BaseModel):
@@ -81,10 +92,23 @@ class MultiUpdateUpdate(BaseModel):
     proration_behavior: Optional[MultiUpdateProrationBehavior] = None
     r"""How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
+    refund_last_payment: Optional[MultiUpdateRefundLastPayment] = None
+    r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+
+    subscription_params: Optional[Dict[str, Any]] = None
+    r"""Additional parameters to pass into the Stripe subscription update or cancel call."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["plan_id", "subscription_id", "entity_id", "proration_behavior"]
+            [
+                "plan_id",
+                "subscription_id",
+                "entity_id",
+                "proration_behavior",
+                "refund_last_payment",
+                "subscription_params",
+            ]
         )
         serialized = handler(self)
         m = {}

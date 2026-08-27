@@ -9,6 +9,7 @@ import { notNullish } from "@shared/utils/utils";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
+import { buildStripeSubscriptionUpdateParams } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionParams";
 import { shouldEnableStripeAutomaticTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
 
 export const buildStripeSubscriptionUpdateAction = ({
@@ -121,6 +122,9 @@ export const buildStripeSubscriptionUpdateAction = ({
 	return {
 		type: "update" as const,
 		stripeSubscriptionId: stripeSubscription.id,
-		params,
+		params: buildStripeSubscriptionUpdateParams({
+			params,
+			subscriptionParams: billingContext.subscriptionParams,
+		}),
 	};
 };

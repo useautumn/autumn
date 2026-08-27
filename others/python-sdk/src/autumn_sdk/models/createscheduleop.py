@@ -68,7 +68,7 @@ class CreateScheduleFreeTrialParamsTypedDict(TypedDict):
     duration_type: NotRequired[CreateScheduleFreeTrialDurationType]
     r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
-    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
     on_end: NotRequired[CreateScheduleOnEnd]
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
@@ -82,8 +82,8 @@ class CreateScheduleFreeTrialParams(BaseModel):
     duration_type: Optional[CreateScheduleFreeTrialDurationType] = "month"
     r"""Unit of time for the trial ('day', 'month', 'year')."""
 
-    card_required: Optional[bool] = True
-    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+    card_required: Optional[bool] = False
+    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
 
     on_end: Optional[CreateScheduleOnEnd] = None
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
@@ -282,7 +282,7 @@ class UnscheduledPlanBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
     interval: PriceUnscheduledPlanInterval
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
@@ -295,7 +295,7 @@ class UnscheduledPlanBasePrice(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
     interval: PriceUnscheduledPlanInterval
     r"""Billing interval (e.g. 'month', 'year')."""
@@ -1222,6 +1222,8 @@ class UnscheduledPlanPlanItemFilterTypedDict(TypedDict):
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+    included: NotRequired[float]
+    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
 
 
 class UnscheduledPlanPlanItemFilter(BaseModel):
@@ -1239,10 +1241,13 @@ class UnscheduledPlanPlanItemFilter(BaseModel):
     interval_count: Optional[int] = None
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
 
+    included: Optional[float] = None
+    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["feature_id", "billing_method", "interval", "interval_count"]
+            ["feature_id", "billing_method", "interval", "interval_count", "included"]
         )
         serialized = handler(self)
         m = {}
@@ -1724,7 +1729,7 @@ class UnscheduledPlanTypedDict(TypedDict):
     plan_id: str
     r"""The ID of the plan to schedule in this phase."""
     entity_id: NotRequired[Nullable[str]]
-    r"""The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID."""
+    r"""The plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID. On phases after the first, the entity must already be scoped by the first phase — a schedule cannot change scope mid-flight."""
     feature_quantities: NotRequired[List[UnscheduledPlanFeatureQuantityTypedDict]]
     r"""Optional prepaid feature quantities for this phase's plan."""
     version: NotRequired[float]
@@ -1740,7 +1745,7 @@ class UnscheduledPlan(BaseModel):
     r"""The ID of the plan to schedule in this phase."""
 
     entity_id: OptionalNullable[str] = UNSET
-    r"""The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID."""
+    r"""The plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID. On phases after the first, the entity must already be scoped by the first phase — a schedule cannot change scope mid-flight."""
 
     feature_quantities: Optional[List[UnscheduledPlanFeatureQuantity]] = None
     r"""Optional prepaid feature quantities for this phase's plan."""
@@ -1892,7 +1897,7 @@ class PhaseStartBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
     interval: PhaseStartPriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
@@ -1905,7 +1910,7 @@ class PhaseStartBasePrice(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
     interval: PhaseStartPriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
@@ -2760,6 +2765,8 @@ class PhaseStartPlanItemFilterTypedDict(TypedDict):
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+    included: NotRequired[float]
+    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
 
 
 class PhaseStartPlanItemFilter(BaseModel):
@@ -2777,10 +2784,13 @@ class PhaseStartPlanItemFilter(BaseModel):
     interval_count: Optional[int] = None
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
 
+    included: Optional[float] = None
+    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["feature_id", "billing_method", "interval", "interval_count"]
+            ["feature_id", "billing_method", "interval", "interval_count", "included"]
         )
         serialized = handler(self)
         m = {}
@@ -3252,7 +3262,7 @@ class CreateSchedulePlan2TypedDict(TypedDict):
     plan_id: str
     r"""The ID of the plan to schedule in this phase."""
     entity_id: NotRequired[Nullable[str]]
-    r"""The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID."""
+    r"""The plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID. On phases after the first, the entity must already be scoped by the first phase — a schedule cannot change scope mid-flight."""
     feature_quantities: NotRequired[List[PhaseStartFeatureQuantityTypedDict]]
     r"""Optional prepaid feature quantities for this phase's plan."""
     version: NotRequired[float]
@@ -3268,7 +3278,7 @@ class CreateSchedulePlan2(BaseModel):
     r"""The ID of the plan to schedule in this phase."""
 
     entity_id: OptionalNullable[str] = UNSET
-    r"""The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID."""
+    r"""The plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID. On phases after the first, the entity must already be scoped by the first phase — a schedule cannot change scope mid-flight."""
 
     feature_quantities: Optional[List[PhaseStartFeatureQuantity]] = None
     r"""Optional prepaid feature quantities for this phase's plan."""
@@ -3316,7 +3326,7 @@ class CreateSchedulePlan2(BaseModel):
         return m
 
 
-BillingCycleAnchor2 = Literal["phase_start",]
+CreateScheduleBillingCycleAnchor2 = Literal["phase_start",]
 r"""Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts."""
 
 
@@ -3327,7 +3337,7 @@ class PhaseStartTypedDict(TypedDict):
     r"""When this phase should start, in epoch milliseconds, or 'now' for the immediate phase."""
     starting_after: NotRequired[StartingAfter2TypedDict]
     r"""Relative start offset from the previous resolved schedule phase."""
-    billing_cycle_anchor: NotRequired[BillingCycleAnchor2]
+    billing_cycle_anchor: NotRequired[CreateScheduleBillingCycleAnchor2]
     r"""Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts."""
 
 
@@ -3341,7 +3351,7 @@ class PhaseStart(BaseModel):
     starting_after: Optional[StartingAfter2] = None
     r"""Relative start offset from the previous resolved schedule phase."""
 
-    billing_cycle_anchor: Optional[BillingCycleAnchor2] = None
+    billing_cycle_anchor: Optional[CreateScheduleBillingCycleAnchor2] = None
     r"""Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts."""
 
     @model_serializer(mode="wrap")

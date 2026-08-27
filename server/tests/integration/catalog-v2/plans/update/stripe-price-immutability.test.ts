@@ -61,8 +61,13 @@ const prepaidMessagesItem = ({
 	},
 });
 
-const stripePriceIdOf = (price: { config: unknown }): string =>
-	(price.config as { stripe_price_id?: string | null }).stripe_price_id!;
+const stripePriceIdOf = (price: { config: unknown }): string => {
+	const config = price.config as {
+		stripe_prepaid_price_v2_id?: string | null;
+		stripe_price_id?: string | null;
+	};
+	return (config.stripe_prepaid_price_v2_id || config.stripe_price_id)!;
+};
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 stripe immutability: base plan round-tripped stale stripe_price_id is not reused")}`,

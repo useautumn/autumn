@@ -10,12 +10,14 @@ import {
 import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { getBackendErr } from "@/utils/genUtils";
+import { FeatureStripeProductConfirmDialog } from "../../plan/components/new-feature/FeatureStripeProductConfirmDialog";
 import { NewFeatureAdvanced } from "../../plan/components/new-feature/NewFeatureAdvanced";
 import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatureBehaviour";
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../plan/components/new-feature/NewFeatureType";
 import { validateCreditSystem } from "../credit-systems/utils/validateCreditSystem";
 import { featureToCatalogFeatureParams } from "../utils/buildFeatureMutationParams";
+import { featureStripeProductChanged } from "../utils/featureStripeProductChanged";
 import { getDefaultFeature } from "../utils/defaultFeature";
 
 function CreateFeatureSheet({
@@ -30,6 +32,7 @@ function CreateFeatureSheet({
 	isControlled?: boolean;
 } = {}) {
 	const [internalOpen, setInternalOpen] = useState(false);
+	const [confirmOpen, setConfirmOpen] = useState(false);
 
 	const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
 	const setOpen = controlledOnOpenChange || setInternalOpen;
@@ -39,6 +42,27 @@ function CreateFeatureSheet({
 	const reset = useFeatureStore((s) => s.reset);
 
 	const { mutateAsync: updateCatalog, isPending } = useUpdateCatalogMutation();
+
+	const persistFeature = async () => {
+		try {
+			await updateCatalog({
+				features: [featureToCatalogFeatureParams({ feature })],
+			});
+
+			toast.success("Feature created successfully");
+			setConfirmOpen(false);
+			setOpen(false);
+
+			if (onSuccess && feature.id) {
+				onSuccess(feature.id);
+			}
+		} catch (error: unknown) {
+			console.error("Error creating feature", error);
+			toast.error(
+				getBackendErr(error as AxiosError, "Failed to create feature"),
+			);
+		}
+	};
 
 	const handleCreateFeature = async () => {
 		// Validate credit system specific fields first
@@ -59,23 +83,17 @@ function CreateFeatureSheet({
 			return;
 		}
 
-		try {
-			await updateCatalog({
-				features: [featureToCatalogFeatureParams({ feature })],
-			});
-
-			toast.success("Feature created successfully");
-			setOpen(false);
-
-			if (onSuccess && feature.id) {
-				onSuccess(feature.id);
-			}
-		} catch (error: unknown) {
-			console.error("Error creating feature", error);
-			toast.error(
-				getBackendErr(error as AxiosError, "Failed to create feature"),
-			);
+		if (
+			featureStripeProductChanged({
+				from: null,
+				to: feature.stripe_product_id,
+			})
+		) {
+			setConfirmOpen(true);
+			return;
 		}
+
+		await persistFeature();
 	};
 
 	const handleCancel = () => {
@@ -123,6 +141,13 @@ function CreateFeatureSheet({
 						Create feature
 					</ShortcutButton>
 				</SheetFooter>
+				<FeatureStripeProductConfirmDialog
+					confirmLabel="Create feature"
+					isSaving={isPending}
+					onConfirm={() => void persistFeature()}
+					onOpenChange={setConfirmOpen}
+					open={confirmOpen}
+				/>
 			</SheetContent>
 		</Sheet>
 	);

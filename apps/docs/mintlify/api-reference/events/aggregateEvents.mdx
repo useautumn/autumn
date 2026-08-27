@@ -261,7 +261,7 @@ The seat-owned balances appear in `grouped_values` too, but for them the owner a
 </DynamicParamField>
 
 <DynamicParamField body="group_by" type="string">
-  Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" / "$plan_id" to group by those columns
+  Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" / "$plan_id" to group by those columns. When aggregate_on is "deducted", "$feature_id" groups deductions by the tracked feature that consumed each balance.
 </DynamicParamField>
 
 <DynamicParamField body="range" type="'24h' | '7d' | '30d' | '90d' | 'last_cycle' | '1bc' | '3bc'">

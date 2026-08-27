@@ -91,6 +91,12 @@ export const evaluateMultiUpdateStripe = async ({
 			fullProducts: Array.from(fullProductById.values()),
 			storedChargeLineItems,
 			storedRefundLineItems,
+			refundLastPayment: groupContexts.find(
+				(context) => context.refundLastPayment !== undefined,
+			)?.refundLastPayment,
+			subscriptionParams: groupContexts.find(
+				(context) => context.subscriptionParams !== undefined,
+			)?.subscriptionParams,
 		};
 
 		const stripeBillingPlan = await evaluateStripeBillingPlan({
