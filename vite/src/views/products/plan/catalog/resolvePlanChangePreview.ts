@@ -31,11 +31,15 @@ export const resolveEffectiveVersionChoice = ({
 	choice,
 	showNewOption,
 	showAllOption,
+	isMetadataOnly = false,
 }: {
 	choice: CatalogVersionChoice;
 	showNewOption: boolean;
 	showAllOption: boolean;
+	/** No content to version, so the save edits the row it targets. */
+	isMetadataOnly?: boolean;
 }): CatalogVersionChoice => {
+	if (isMetadataOnly) return "update";
 	if (choice === "new" && !showNewOption) return "update";
 	if (choice === "all" && !showAllOption) return "update";
 	return choice;
@@ -113,6 +117,7 @@ export const resolvePlanChangePreview = ({
 		choice: versionChoice,
 		showNewOption,
 		showAllOption,
+		isMetadataOnly,
 	});
 
 	const strategy = strategyForCatalogPreview({
