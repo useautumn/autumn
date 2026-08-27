@@ -6,6 +6,10 @@ import { priceToEnt } from "@utils/productUtils/convertProductUtils";
 import { priceToStripePrepaidV2Tiers } from "@utils/productUtils/priceUtils/convertPrice/priceToStripePrepaidV2Tiers";
 import { priceToStripeRecurringParams } from "@utils/productUtils/priceUtils/convertPrice/priceToStripeRecurringParams";
 import type Stripe from "stripe";
+import {
+	type StripePriceNicknameSource,
+	priceToStripeNickname,
+} from "./priceToStripeNickname";
 import { priceToStripeTiersMode } from "./priceToStripeTiersMode";
 
 export const priceToStripeCreatePriceParams = ({
@@ -14,12 +18,14 @@ export const priceToStripeCreatePriceParams = ({
 	org,
 	stripeProductId,
 	currency: targetCurrency,
+	source = "catalog",
 }: {
 	price: Price;
 	product: FullProduct;
 	org: Organization;
 	stripeProductId: string;
 	currency?: string;
+	source?: StripePriceNicknameSource;
 }): Stripe.PriceCreateParams => {
 	const currency = (
 		targetCurrency ??
@@ -60,6 +66,10 @@ export const priceToStripeCreatePriceParams = ({
 		...priceAmountData,
 		recurring: recurringData,
 		currency,
-		nickname: `Autumn Price (${entitlement.feature.name})`,
+		nickname: priceToStripeNickname({
+			price,
+			featureName: entitlement.feature.name,
+			source,
+		}),
 	};
 };

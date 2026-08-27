@@ -7,7 +7,9 @@ import type {
 import {
 	atmnToStripeAmount,
 	priceConfigForCurrency,
+	priceToStripeNickname,
 	setPriceCurrencyStripeId,
+	type StripePriceNicknameSource,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { PriceService } from "@server/internal/products/prices/PriceService";
@@ -22,6 +24,7 @@ export const createStripeFixedPrice = async ({
 	product,
 	org,
 	currency: targetCurrency,
+	source = "catalog",
 }: {
 	db: DrizzleCli;
 	stripeCli: Stripe;
@@ -29,6 +32,7 @@ export const createStripeFixedPrice = async ({
 	product: Product;
 	org: Organization;
 	currency?: string;
+	source?: StripePriceNicknameSource;
 }) => {
 	const config = price.config as FixedPriceConfig;
 	const orgDefault = (org.default_currency || "usd").toLowerCase();
@@ -61,7 +65,7 @@ export const createStripeFixedPrice = async ({
 				}) as any),
 			},
 
-			nickname: `Autumn Price (Fixed)`,
+			nickname: priceToStripeNickname({ price, source }),
 		},
 		{
 			idempotencyKey: buildStripePriceIdempotencyKey({

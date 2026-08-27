@@ -9,6 +9,8 @@ import {
 	type Product,
 	priceConfigForCurrency,
 	priceToEnt,
+	priceToStripeNickname,
+	type StripePriceNicknameSource,
 	setPriceCurrencyStripeId,
 	TierInfinite,
 	type UsagePriceConfig,
@@ -225,6 +227,7 @@ export const createStripeInArrearPrice = async ({
 	internalEntityId,
 	useCheckout = false,
 	currency: targetCurrency,
+	source = "catalog",
 }: {
 	db: DrizzleCli;
 	stripeCli: Stripe;
@@ -238,6 +241,7 @@ export const createStripeInArrearPrice = async ({
 	internalEntityId?: string;
 	useCheckout?: boolean;
 	currency?: string;
+	source?: StripePriceNicknameSource;
 }) => {
 	const config = price.config as UsagePriceConfig;
 	const orgDefault = (org.default_currency || "usd").toLowerCase();
@@ -350,7 +354,11 @@ export const createStripeInArrearPrice = async ({
 						usage_type: "metered",
 					}
 				: undefined,
-			nickname: `Autumn Price (${relatedEnt.feature.name})`,
+			nickname: priceToStripeNickname({
+				price,
+				featureName: relatedEnt.feature.name,
+				source,
+			}),
 		},
 		{
 			idempotencyKey: buildStripePriceIdempotencyKey({

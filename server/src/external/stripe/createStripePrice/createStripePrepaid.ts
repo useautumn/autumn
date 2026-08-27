@@ -7,8 +7,10 @@ import {
 	type Price,
 	type Product,
 	priceConfigForCurrency,
+	priceToStripeNickname,
 	priceToStripeTiersMode,
 	setPriceCurrencyStripeId,
+	type StripePriceNicknameSource,
 	TierInfinite,
 	type UsagePriceConfig,
 	type UsageTier,
@@ -68,6 +70,7 @@ export const createStripePrepaid = async ({
 	curStripeProd,
 	stripeCli,
 	currency: targetCurrency,
+	source = "catalog",
 }: {
 	db: DrizzleCli;
 	price: Price;
@@ -77,6 +80,7 @@ export const createStripePrepaid = async ({
 	curStripeProd: { id: string } | null;
 	stripeCli: Stripe;
 	currency?: string;
+	source?: StripePriceNicknameSource;
 }) => {
 	const relatedEnt = getPriceEntitlement(price, entitlements);
 
@@ -123,6 +127,11 @@ export const createStripePrepaid = async ({
 			product: stripeProductId,
 			unit_amount_decimal: unitAmountDecimalStr,
 			currency,
+			nickname: priceToStripeNickname({
+				price,
+				featureName: relatedEnt.feature.name,
+				source,
+			}),
 		});
 
 		config.stripe_product_id = stripePrice.product as string;
@@ -154,7 +163,11 @@ export const createStripePrepaid = async ({
 			recurring: {
 				...(recurringData as any),
 			},
-			nickname: `Autumn Price (${relatedEnt.feature.name})`,
+			nickname: priceToStripeNickname({
+				price,
+				featureName: relatedEnt.feature.name,
+				source,
+			}),
 		});
 
 		config.stripe_product_id = stripePrice.product as string;

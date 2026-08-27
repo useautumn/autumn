@@ -283,6 +283,7 @@ export const initStripeResourcesForBillingPlan = async ({
 					useCheckout: false,
 					currency,
 					billingVersion: billingContext.billingVersion,
+					source: price.is_custom ? "customize" : "catalog",
 				}),
 			);
 		}

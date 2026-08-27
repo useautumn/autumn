@@ -10,6 +10,8 @@ import {
 	TierInfinite,
 	type UsagePriceConfig,
 	RecaseError,
+	priceToStripeNickname,
+	type StripePriceNicknameSource,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { PriceService } from "@server/internal/products/prices/PriceService";
@@ -30,6 +32,7 @@ interface StripeMeteredPriceParams {
 	product: Product;
 	org: Organization;
 	currency?: string;
+	source?: StripePriceNicknameSource;
 }
 
 export const createStripeMeteredPrice = async ({
@@ -39,6 +42,7 @@ export const createStripeMeteredPrice = async ({
 	product,
 	org,
 	currency: targetCurrency,
+	source = "catalog",
 }: StripeMeteredPriceParams) => {
 	const config = price.config as UsagePriceConfig;
 	const orgDefault = (org.default_currency || "usd").toLowerCase();
@@ -101,7 +105,12 @@ export const createStripeMeteredPrice = async ({
 		product: config.stripe_product_id,
 		...priceAmountData,
 		currency,
-		nickname: `Autumn Price (${feature!.name}) [Placeholder]`,
+		nickname: priceToStripeNickname({
+			price,
+			featureName: feature!.name,
+			source,
+			isPlaceholder: true,
+		}),
 		recurring: {
 			...(billingIntervalToStripe({
 				interval: price.config!.interval,
@@ -161,6 +170,7 @@ export const createStripeArrearProrated = async ({
 	stripeCli,
 	currency: targetCurrency,
 	mintPlaceholder = true,
+	source = "catalog",
 }: {
 	db: DrizzleCli;
 	price: Price;
@@ -171,6 +181,7 @@ export const createStripeArrearProrated = async ({
 	stripeCli: Stripe;
 	currency?: string;
 	mintPlaceholder?: boolean;
+	source?: StripePriceNicknameSource;
 }) => {
 	const relatedEnt = getPriceEntitlement(price, entitlements);
 
@@ -227,7 +238,11 @@ export const createStripeArrearProrated = async ({
 			recurring: {
 				...(recurringData as any),
 			},
-			nickname: `Autumn Price (${relatedEnt.feature.name})`,
+			nickname: priceToStripeNickname({
+				price,
+				featureName: relatedEnt.feature.name,
+				source,
+			}),
 		},
 		{
 			idempotencyKey: buildStripePriceIdempotencyKey({
@@ -256,6 +271,7 @@ export const createStripeArrearProrated = async ({
 			product,
 			org,
 			currency,
+			source,
 		});
 		setPriceCurrencyStripeId({
 			config,

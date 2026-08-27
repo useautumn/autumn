@@ -3,6 +3,7 @@ import {
 	type FullProduct,
 	getPriceCurrencyStripeId,
 	type Price,
+	type StripePriceNicknameSource,
 	priceToEnt,
 	priceUtils,
 	RecaseError,
@@ -21,12 +22,14 @@ export const createStripePrepaidPriceV2 = async ({
 	product,
 	currentStripeProduct,
 	currency: targetCurrency,
+	source = "catalog",
 }: {
 	ctx: AutumnContext;
 	price: Price;
 	product: FullProduct;
 	currentStripeProduct?: { id: string };
 	currency?: string;
+	source?: StripePriceNicknameSource;
 }) => {
 	const { org, db, env } = ctx;
 
@@ -94,6 +97,7 @@ export const createStripePrepaidPriceV2 = async ({
 		org,
 		stripeProductId,
 		currency,
+		source,
 	});
 
 	const stripeCli = createStripeCli({ org, env });

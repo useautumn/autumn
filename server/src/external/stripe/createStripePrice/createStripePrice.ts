@@ -11,6 +11,7 @@ import {
 	priceToEnt,
 	priceToRequiredStripeSlots,
 	priceUtils,
+	type StripePriceNicknameSource,
 	RecaseError,
 	type RequiredStripeResourceSlot,
 	setPriceCurrencyStripeId,
@@ -165,6 +166,7 @@ export const createStripePriceIFNotExist = async ({
 	useCheckout = false,
 	currency: targetCurrency,
 	billingVersion = LATEST_BILLING_VERSION,
+	source = "catalog",
 }: {
 	ctx: AutumnContext;
 	price: Price;
@@ -174,6 +176,7 @@ export const createStripePriceIFNotExist = async ({
 	useCheckout?: boolean;
 	currency?: string;
 	billingVersion?: BillingVersion;
+	source?: StripePriceNicknameSource;
 }) => {
 	// Fetch latest price data...
 
@@ -260,6 +263,7 @@ export const createStripePriceIFNotExist = async ({
 				product,
 				org,
 				currency,
+				source,
 			});
 		}
 	}
@@ -293,6 +297,7 @@ export const createStripePriceIFNotExist = async ({
 				org,
 				curStripeProd: resolvedStripeProduct,
 				currency,
+				source,
 			});
 		}
 
@@ -308,6 +313,7 @@ export const createStripePriceIFNotExist = async ({
 				product,
 				currentStripeProduct: resolvedStripeProduct ?? undefined,
 				currency,
+				source,
 			});
 		}
 	}
@@ -331,6 +337,7 @@ export const createStripePriceIFNotExist = async ({
 				curStripeProd: resolvedStripeProduct,
 				currency,
 				mintPlaceholder: requiresSlot("stripe_placeholder_price_id"),
+				source,
 			});
 		} else if (
 			requiresSlot("stripe_placeholder_price_id") &&
@@ -344,6 +351,7 @@ export const createStripePriceIFNotExist = async ({
 				product,
 				org,
 				currency,
+				source,
 			});
 			setPriceCurrencyStripeId({
 				config,
@@ -374,6 +382,7 @@ export const createStripePriceIFNotExist = async ({
 			internalEntityId,
 			useCheckout,
 			currency,
+			source,
 		});
 
 		if (CREATE_STRIPE_EMPTY_PRICES && !stripeEmptyPrice) {

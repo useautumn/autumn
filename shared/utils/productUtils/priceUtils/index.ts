@@ -8,6 +8,7 @@ export * from "./classifyPriceUtils.js";
 export * from "./comparePrice/pricesAreSame.js";
 export * from "./convertAmountUtils.js";
 export * from "./convertPrice/priceToRequiredStripeSlots.js";
+export * from "./convertPrice/priceToStripeNickname.js";
 export * from "./convertPrice/priceToStripeTiersMode.js";
 export * from "./convertPriceUtils.js";
 export * from "./findPrice/findPriceByFeatureId.js";
