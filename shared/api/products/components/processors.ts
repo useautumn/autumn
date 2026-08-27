@@ -19,7 +19,8 @@ export const ApiStripePriceProcessorSchema = z.object({
 });
 
 export const ApiPlanProcessorsSchema = z.object({
-	stripe: ApiStripePlanProcessorSchema.optional(),
+	/** Omit to keep the current mapping; null unlinks it. */
+	stripe: ApiStripePlanProcessorSchema.nullish(),
 });
 
 export const ApiPriceProcessorsSchema = z.object({
