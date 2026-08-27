@@ -12,6 +12,7 @@ const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
 ]);
 
 const SLOW_REQUEST_BODY_THRESHOLD_MS = 500;
+const SUCCESS_RESPONSE_BODY_SAMPLE_RATE = 0.01;
 
 // Event pages run to megabytes each, dwarfing every other route's ingest.
 const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
@@ -19,15 +20,8 @@ const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
 	"/v1/events.list",
 ]);
 
-const SUCCESS_RESPONSE_BODY_SAMPLE_RATE = Number.parseFloat(
-	process.env.AXIOM_SUCCESS_RESPONSE_BODY_SAMPLE_RATE ??
-		process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE ??
-		"0.01",
-);
-
 const shouldSampleSuccessResponseBody = () =>
-	SUCCESS_RESPONSE_BODY_SAMPLE_RATE > 0 &&
-	Math.random() < Math.min(SUCCESS_RESPONSE_BODY_SAMPLE_RATE, 1);
+	Math.random() < SUCCESS_RESPONSE_BODY_SAMPLE_RATE;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
