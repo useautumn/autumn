@@ -1,11 +1,11 @@
 /**
  * findNewestReusablePrepaidPrice
  *
- * SQL is a coarse filter. The winner is the newest row that pricesAreSame
- * accepts. Slot is stripe_prepaid_price_v2_id only.
+ * SQL is a coarse filter. The winner is the catalog-first, then newest
+ * row that pricesAreSame accepts. Slot is stripe_prepaid_price_v2_id only.
  *
  * Contract:
- *   newest matching prepaid with a usable V2 slot wins
+ *   catalog beats a newer custom; among customs, newest matching V2 slot wins
  *   volume vs graduated → no
  *   flat_amount 50 vs unset/0 → no
  *   consumable, one-off, V1-only, preview, other product.id → no
@@ -261,9 +261,9 @@ test.concurrent(
 
 		const target10 = targetPrepaid({});
 
-		expect((await find({ target: target10 }))?.id).toBe(newer);
+		expect((await find({ target: target10 }))?.id).toBe(catalog);
 		expect((await find({ target: { ...target10, id: newer } }))?.id).toBe(
-			older,
+			catalog,
 		);
 
 		expect(
@@ -284,7 +284,7 @@ test.concurrent(
 					usageTiers: [{ amount: 10, to: TierInfinite, flat_amount: 0 }],
 				}),
 			}),
-		).toMatchObject({ id: newer });
+		).toMatchObject({ id: catalog });
 
 		expect(
 			await find({

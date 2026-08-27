@@ -362,9 +362,10 @@ export const createStripeInArrearPrice = async ({
 		},
 		{
 			idempotencyKey: buildStripePriceIdempotencyKey({
-				priceId: price.id!,
+				price,
 				slot: "stripe_price_id",
 				currency,
+				orgDefault,
 			}),
 		},
 	);

@@ -104,9 +104,10 @@ export const createStripePrepaidPriceV2 = async ({
 
 	const stripePrice = await stripeCli.prices.create(stripeCreatePriceParams, {
 		idempotencyKey: buildStripePriceIdempotencyKey({
-			priceId: price.id!,
+			price,
 			slot: "stripe_prepaid_price_v2_id",
 			currency,
+			orgDefault,
 		}),
 	});
 

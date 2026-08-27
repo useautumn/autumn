@@ -246,9 +246,10 @@ export const createStripeArrearProrated = async ({
 		},
 		{
 			idempotencyKey: buildStripePriceIdempotencyKey({
-				priceId: price.id!,
+				price,
 				slot: "stripe_price_id",
 				currency,
+				orgDefault,
 			}),
 		},
 	);

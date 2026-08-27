@@ -5,9 +5,9 @@
  * slot is still empty (catalog $1/msg → customize $2/msg).
  *
  * Contract:
- *   A $2 then B $2 consumable → same stripe_price_id, not catalog
+ *   A $2 then B $2 consumable → same stripe_price_id + product + meter, not catalog
  *   A $2 then B $3 → different stripe_price_ids
- *   A allocated-v2 $20 then B $20 → same stripe_price_id, not catalog
+ *   A allocated-v2 $20 then B $20 → same stripe_price_id + product, not catalog
  */
 
 import { expect, test } from "bun:test";
@@ -20,7 +20,9 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import {
 	customerUsageStripePriceId,
+	expectSharedUsageStripeMeter,
 	expectSharedUsageStripePrice,
+	expectSharedUsageStripeProduct,
 } from "./utils/customerUsageStripePriceId";
 
 test.concurrent(
@@ -55,6 +57,18 @@ test.concurrent(
 		});
 
 		await expectSharedUsageStripePrice({
+			ctx,
+			customerIds: [customerId, customerBId],
+			catalogProductId: pro.id,
+			featureId: TestFeature.Messages,
+		});
+		await expectSharedUsageStripeMeter({
+			ctx,
+			customerIds: [customerId, customerBId],
+			catalogProductId: pro.id,
+			featureId: TestFeature.Messages,
+		});
+		await expectSharedUsageStripeProduct({
 			ctx,
 			customerIds: [customerId, customerBId],
 			catalogProductId: pro.id,
@@ -145,6 +159,12 @@ test.concurrent(
 		});
 
 		await expectSharedUsageStripePrice({
+			ctx,
+			customerIds: [customerId, customerBId],
+			catalogProductId: pro.id,
+			featureId: TestFeature.Users,
+		});
+		await expectSharedUsageStripeProduct({
 			ctx,
 			customerIds: [customerId, customerBId],
 			catalogProductId: pro.id,

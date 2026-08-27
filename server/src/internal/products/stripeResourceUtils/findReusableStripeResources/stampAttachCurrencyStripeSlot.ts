@@ -6,6 +6,8 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { copyAttachCurrencyStripeSlot } from "./copyAttachCurrencyStripeSlot.js";
+import { copyReusableStripeProductId } from "./copyReusableStripeProductId.js";
+import { copyReusableUsageMeter } from "./copyReusableUsageMeter.js";
 
 export const stampAttachCurrencyStripeSlot = async ({
 	ctx,
@@ -28,6 +30,9 @@ export const stampAttachCurrencyStripeSlot = async ({
 		slot,
 	});
 	if (!copied) return;
+
+	copyReusableStripeProductId({ targetPrice, sourcePrice });
+	copyReusableUsageMeter({ targetPrice, sourcePrice });
 
 	await PriceService.update({
 		db: ctx.db,

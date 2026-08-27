@@ -1,11 +1,11 @@
 /**
  * findNewestReusableUsagePrice
  *
- * SQL is a coarse filter. The winner is the newest row that pricesAreSame
- * accepts — including 0 / null / undefined / inf vs -1 tier aliases.
+ * SQL is a coarse filter. The winner is the catalog-first, then newest
+ * row that pricesAreSame accepts — including 0 / null / undefined / inf vs -1.
  *
  * Contract:
- *   newest matching consumable with a usable stripe slot wins
+ *   catalog beats a newer custom; among customs, newest matching wins
  *   amount 0 is a real tier; flat_amount unset equals 0
  *   last-tier `to` inf aliases -1; mid-tier `to` is compared
  *   billing_units null / undefined / 1 are equivalent
@@ -300,9 +300,9 @@ test.concurrent(
 
 		const target2 = targetUsage({ amount: 2 });
 
-		expect((await find({ target: target2 }))?.id).toBe(usdEur);
+		expect((await find({ target: target2 }))?.id).toBe(catalog);
 		expect((await find({ target: { ...target2, id: usdEur } }))?.id).toBe(
-			unitsNull,
+			catalog,
 		);
 
 		expect(await find({ target: targetUsage({ amount: 0 }) })).toMatchObject({
@@ -314,21 +314,21 @@ test.concurrent(
 					usageTiers: [{ amount: 2, to: TierInfinite, flat_amount: 0 }],
 				}),
 			}),
-		).toMatchObject({ id: usdEur });
+		).toMatchObject({ id: catalog });
 		expect(
 			await find({
 				target: targetUsage({ usageTiers: [{ amount: 2, to: -1 }] }),
 			}),
-		).toMatchObject({ id: usdEur });
+		).toMatchObject({ id: catalog });
 
 		expect(
 			await find({ target: targetUsage({ amount: 2, billingUnits: null }) }),
-		).toMatchObject({ id: usdEur });
+		).toMatchObject({ id: catalog });
 		expect(
 			await find({
 				target: targetUsage({ amount: 2, billingUnits: undefined }),
 			}),
-		).toMatchObject({ id: usdEur });
+		).toMatchObject({ id: catalog });
 		expect(
 			await find({ target: targetUsage({ amount: 2, billingUnits: 100 }) }),
 		).toMatchObject({ id: unitsHundred });

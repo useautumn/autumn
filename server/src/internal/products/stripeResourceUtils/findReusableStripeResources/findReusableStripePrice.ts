@@ -1,18 +1,31 @@
 import {
+	type CurrencyAwarePriceConfig,
 	type FullProduct,
+	getPriceCurrencyStripeId,
 	getPriceStripeReuseLevel,
 	isFixedPrice,
+	orgToCurrency,
 	type Price,
+	priceConfigForCurrency,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	logStripePriceReuse,
+	type StripePriceReuseEntry,
+} from "@/internal/billing/v2/providers/stripe/logs/logStripePriceReuse.js";
 import { priceRepo } from "@/internal/products/prices/repos/priceRepo.js";
 import {
 	hasEmptyStripeResource,
 	isReusablePrepaidPrice,
 	isReusableUsagePrice,
 } from "./hasEmptyStripeResource.js";
-import { isUsableStripePrice } from "./isUsableStripePrice.js";
+import { evaluateUsableStripePrice } from "./isUsableStripePrice.js";
 import { stampAttachCurrencyStripeSlot } from "./stampAttachCurrencyStripeSlot.js";
+
+const reuseSlot = ({ targetPrice }: { targetPrice: Price }) =>
+	isReusablePrepaidPrice(targetPrice)
+		? "stripe_prepaid_price_v2_id"
+		: "stripe_price_id";
 
 const findNewestReusableCandidate = ({
 	ctx,
@@ -62,8 +75,40 @@ const findReusableStripePriceForTarget = async ({
 	targetPrice: Price;
 	product: FullProduct;
 	currency: string;
-}) => {
-	if (!hasEmptyStripeResource({ ctx, targetPrice, currency })) return;
+}): Promise<StripePriceReuseEntry | null> => {
+	const reusable =
+		isFixedPrice(targetPrice) ||
+		isReusablePrepaidPrice(targetPrice) ||
+		isReusableUsagePrice(targetPrice);
+	if (!reusable) return null;
+
+	const orgDefaultCurrency = orgToCurrency({ org: ctx.org }).toLowerCase();
+	const { amount } = priceConfigForCurrency({
+		config: targetPrice.config,
+		currency,
+		orgDefault: orgDefaultCurrency,
+	});
+	const base = {
+		currency,
+		product,
+		targetPrice,
+		targetAmount: amount,
+		targetInterval: targetPrice.config.interval,
+	} satisfies Partial<StripePriceReuseEntry>;
+
+	if (!hasEmptyStripeResource({ ctx, targetPrice, currency })) {
+		return {
+			...base,
+			result: "skipped",
+			reason: "slot-set",
+			stripePriceId: getPriceCurrencyStripeId({
+				config: targetPrice.config as CurrencyAwarePriceConfig,
+				currency,
+				orgDefault: orgDefaultCurrency,
+				slot: reuseSlot({ targetPrice }),
+			}),
+		};
+	}
 
 	const candidate = await findNewestReusableCandidate({
 		ctx,
@@ -71,37 +116,72 @@ const findReusableStripePriceForTarget = async ({
 		productId: product.id,
 		targetCurrency: currency,
 	});
-	if (!candidate) return;
-
-	if (
-		getPriceStripeReuseLevel({
-			newPrice: targetPrice,
-			candidatePrice: candidate,
-			newEntitlements: [],
-			candidateEntitlements: [],
-		}) !== "full"
-	) {
-		return;
+	if (!candidate) {
+		return { ...base, result: "no-candidate" };
 	}
 
-	const usable = await isUsableStripePrice({
+	const candidateStripePriceId = getPriceCurrencyStripeId({
+		config: candidate.config as CurrencyAwarePriceConfig,
+		currency,
+		orgDefault: orgDefaultCurrency,
+		slot: reuseSlot({ targetPrice }),
+	});
+	const withCandidate = {
+		...base,
+		candidatePrice: candidate,
+		candidateStripePriceId,
+	};
+
+	const reuseLevel = getPriceStripeReuseLevel({
+		newPrice: targetPrice,
+		candidatePrice: candidate,
+		newEntitlements: [],
+		candidateEntitlements: [],
+	});
+	if (reuseLevel !== "full") {
+		return {
+			...withCandidate,
+			result: "reuse-level",
+			reason: reuseLevel,
+			reuseLevel,
+		};
+	}
+
+	const usable = await evaluateUsableStripePrice({
 		ctx,
 		targetPrice,
 		candidate,
 		product,
 		currency,
 	});
-	if (!usable) return;
+	if (!usable.usable) {
+		return {
+			...withCandidate,
+			result: "unusable",
+			reason: usable.reason,
+			reuseLevel,
+			expectedStripeProductId: usable.expectedStripeProductId,
+			retrievedStripeProductId: usable.retrievedStripeProductId,
+			stripePriceId: usable.stripePriceId,
+		};
+	}
 
 	await stampAttachCurrencyStripeSlot({
 		ctx,
 		targetPrice,
 		sourcePrice: candidate,
 		currency,
-		slot: isReusablePrepaidPrice(targetPrice)
-			? "stripe_prepaid_price_v2_id"
-			: "stripe_price_id",
+		slot: reuseSlot({ targetPrice }),
 	});
+
+	return {
+		...withCandidate,
+		result: "stamped",
+		reuseLevel,
+		expectedStripeProductId: usable.expectedStripeProductId,
+		retrievedStripeProductId: usable.retrievedStripeProductId,
+		stripePriceId: usable.stripePriceId,
+	};
 };
 
 export const findReusableStripePrice = async ({
@@ -113,7 +193,7 @@ export const findReusableStripePrice = async ({
 	products: FullProduct[];
 	currency: string;
 }) => {
-	await Promise.all(
+	const entries = await Promise.all(
 		products.flatMap((product) =>
 			product.prices.map((price) =>
 				findReusableStripePriceForTarget({
@@ -125,4 +205,8 @@ export const findReusableStripePrice = async ({
 			),
 		),
 	);
+
+	for (const entry of entries) {
+		if (entry) logStripePriceReuse({ ctx, entry });
+	}
 };

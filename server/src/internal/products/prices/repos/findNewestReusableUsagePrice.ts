@@ -11,13 +11,14 @@ import {
 	products,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { liveProductWhere } from "@/internal/products/repos/liveProductWhere.js";
 import { composeAttachCurrencyUsageStripeSlot } from "./utils/composeAttachCurrencyUsageStripeSlot.js";
 import { composeConfigTextEquals } from "./utils/composeConfigTextEquals.js";
 import { composeReusableCustomScope } from "./utils/composeReusableCustomScope.js";
+import { composeReusablePriceRankOrder } from "./utils/composeReusablePriceRankOrder.js";
 
 const USAGE_REUSE_CANDIDATE_LIMIT = 1000;
 
@@ -84,7 +85,7 @@ export const composeNewestReusableUsagePriceQuery = ({
 				}),
 			),
 		)
-		.orderBy(desc(prices.created_at))
+		.orderBy(...composeReusablePriceRankOrder())
 		.limit(USAGE_REUSE_CANDIDATE_LIMIT);
 
 export const findNewestReusableUsagePrice = async ({

@@ -180,22 +180,22 @@ export const expectSingleStripePriceInitialized = async ({
 		`${prefix}: one stripe price id (autumn=${autumnId}, subs=${subscriptionPriceIds.join(",")})`,
 	).toBe(1);
 
-	const stripeProductId = stripeConfigValue({
-		price,
-		field: "stripe_product_id",
-	});
-	if (!stripeProductId) return;
-
-	const listed = await stripeCli.prices.list({
-		product: stripeProductId,
-		active: true,
-		limit: 100,
-	});
-	const autumnPrices = listed.data.filter((stripePrice) =>
-		(stripePrice.nickname ?? "").startsWith("Autumn Price"),
-	);
+	// Feature Stripe Products accumulate prices across the shared test org.
+	// Assert this slot's Price, not that it is the only Autumn-nicknamed one.
+	const stripePrice = await stripeCli.prices.retrieve(autumnId!);
 	expect(
-		autumnPrices.length,
-		`${prefix}: one Autumn Price on stripe product ${stripeProductId}`,
-	).toBe(1);
+		hasAutumnPriceNickname(stripePrice.nickname),
+		`${prefix}: ${autumnId} nickname is Autumn-minted (got ${stripePrice.nickname})`,
+	).toBe(true);
 };
+
+const autumnPriceNicknamePrefixes = [
+	"Base price",
+	"Usage-based price",
+	"Prepaid price",
+] as const;
+
+const hasAutumnPriceNickname = (nickname: string | null) =>
+	autumnPriceNicknamePrefixes.some((prefix) =>
+		(nickname ?? "").startsWith(prefix),
+	);

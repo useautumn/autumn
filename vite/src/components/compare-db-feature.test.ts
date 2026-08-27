@@ -112,3 +112,25 @@ test("rate-card comparison detects graduated tiers and invoice-credit changes", 
 		}),
 	).toBe(false);
 });
+
+test("detects stripe product changes and treats empty as unset", () => {
+	expect(
+		compareDbFeature({
+			curFeature: { ...creditSystem({ schema: [] }), stripe_product_id: null },
+			newFeature: { ...creditSystem({ schema: [] }), stripe_product_id: "" },
+		}),
+	).toBe(true);
+
+	expect(
+		compareDbFeature({
+			curFeature: {
+				...creditSystem({ schema: [] }),
+				stripe_product_id: "prod_123",
+			},
+			newFeature: {
+				...creditSystem({ schema: [] }),
+				stripe_product_id: "prod_456",
+			},
+		}),
+	).toBe(false);
+});

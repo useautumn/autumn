@@ -8,12 +8,13 @@ import {
 	PriceType,
 	products,
 } from "@autumn/shared";
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { liveProductWhere } from "@/internal/products/repos/liveProductWhere.js";
 import { composeAttachCurrencyFixedMatch } from "./utils/composeAttachCurrencyFixedMatch.js";
 import { composeReusableCustomScope } from "./utils/composeReusableCustomScope.js";
+import { composeReusablePriceRankOrder } from "./utils/composeReusablePriceRankOrder.js";
 
 export const composeNewestReusableFixedPriceQuery = ({
 	db,
@@ -62,7 +63,7 @@ export const composeNewestReusableFixedPriceQuery = ({
 				}),
 			),
 		)
-		.orderBy(desc(prices.created_at))
+		.orderBy(...composeReusablePriceRankOrder())
 		.limit(1);
 
 export const findNewestReusableFixedPrice = async ({

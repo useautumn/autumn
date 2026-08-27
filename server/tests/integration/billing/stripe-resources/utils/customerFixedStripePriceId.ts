@@ -2,6 +2,7 @@ import { expect } from "bun:test";
 import { type FixedPriceConfig, isFixedPrice, type Price } from "@autumn/shared";
 import { loadCustomerAndCatalogPrices } from "@tests/integration/billing/misc/utils/findCatalogAndCustomPrices";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { ProductService } from "@/internal/products/ProductService";
 
 export const fixedStripePriceId = ({ prices }: { prices: Price[] }) => {
 	const fixed = prices.find((price) => isFixedPrice(price));
@@ -28,6 +29,25 @@ export const customerFixedStripePriceId = async ({
 		customerStripePriceId: fixedStripePriceId({ prices: customerPrices }),
 		catalogStripePriceId: fixedStripePriceId({ prices: catalogPrices }),
 	};
+};
+
+export const catalogVersionFixedStripePriceId = async ({
+	ctx,
+	catalogProductId,
+	version,
+}: {
+	ctx: AutumnContext;
+	catalogProductId: string;
+	version: number;
+}) => {
+	const product = await ProductService.getFull({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		idOrInternalId: catalogProductId,
+		version,
+	});
+	return fixedStripePriceId({ prices: product.prices });
 };
 
 export const expectSharedFixedStripePrice = async ({

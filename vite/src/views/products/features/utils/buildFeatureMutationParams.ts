@@ -10,6 +10,10 @@ import {
 	type UpdateCatalogFeatureParams,
 } from "@autumn/shared";
 import { creditSchemaToApi } from "../credit-systems/utils/creditSchemaUtils";
+import {
+	featureStripeProductChanged,
+	normalizeFeatureStripeProductId,
+} from "./featureStripeProductChanged";
 
 interface BuildFeatureMarkupParamsArgs {
 	type: FeatureType;
@@ -57,18 +61,30 @@ export const featureToCatalogFeatureParams = ({
 	featureId = feature.id,
 	newFeatureId,
 	archived,
+	originalStripeProductId,
 }: {
 	feature: Pick<Feature, "id" | "name" | "type" | "config" | "event_names"> & {
 		model_markups?: Feature["model_markups"];
+		stripe_product_id?: string | null;
 	};
 	featureId?: string;
 	newFeatureId?: string;
 	archived?: boolean;
+	originalStripeProductId?: string | null;
 }): UpdateCatalogFeatureParams => {
 	const renamed =
 		newFeatureId !== undefined && newFeatureId !== featureId
 			? newFeatureId
 			: undefined;
+	const nextProductId = normalizeFeatureStripeProductId(
+		feature.stripe_product_id,
+	);
+	const processors = featureStripeProductChanged({
+		from: originalStripeProductId,
+		to: nextProductId,
+	})
+		? { stripe: { product_id: nextProductId ?? "" } }
+		: undefined;
 
 	return {
 		feature_id: featureId,
@@ -86,5 +102,6 @@ export const featureToCatalogFeatureParams = ({
 			invoiceCredit: feature.config?.invoice_credit,
 		}),
 		...(archived !== undefined ? { archived } : {}),
+		...(processors ? { processors } : {}),
 	};
 };

@@ -2,7 +2,7 @@
  * findNewestReusableFixedPrice
  *
  * Contract:
- *   newest created_at $25 with a usable stripe slot wins
+ *   catalog $25 beats a newer custom $25; among customs, newest wins
  *   catalog $20 / interval mismatch / preview / self / other product.id → no
  *   USD attach uses base amount + stripe_price_id
  *   EUR attach uses currencies.eur amount + slot; USD-only → no
@@ -214,10 +214,10 @@ test.concurrent(
 
 		const target25 = targetFixed({ amount: 25 });
 
-		expect((await find({ target: target25 }))?.id).toBe(usdEur);
+		expect((await find({ target: target25 }))?.id).toBe(catalog);
 		expect(
 			(await find({ target: { ...target25, id: usdEur } }))?.id,
-		).toBe(usdOnly);
+		).toBe(catalog);
 
 		expect(
 			await find({
