@@ -23,6 +23,8 @@ export const MiscellaneousEdgeConfigSchema = z.object({
 	/** Kill switch for the MotherDuck balance-cache refresh cron. Refresh runs
 	 *  by default wherever the RW token exists; flip this to stop it. */
 	disableMotherduckCacheRefresh: z.boolean().default(false),
+	/** Global switch for Axiom response-body compaction and size caps. */
+	axiomResponseBodyReduction: z.boolean().default(true),
 });
 
 export type MiscellaneousEdgeConfig = z.infer<

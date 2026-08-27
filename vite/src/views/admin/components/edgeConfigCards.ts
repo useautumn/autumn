@@ -364,9 +364,14 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 					const allowlistCount = Array.isArray(allowlist)
 						? allowlist.length
 						: 0;
+					const axiomResponseBodyReductionDisabled =
+						config.axiomResponseBodyReduction === false;
 					const parts: string[] = [];
 
 					if (config.syncCoalesce === true) parts.push("Sync coalesce on");
+					if (axiomResponseBodyReductionDisabled) {
+						parts.push("Axiom response reduction off");
+					}
 					if (allowlistCount > 0) {
 						parts.push(
 							`${pluralize({ count: allowlistCount, noun: "flat-model customer" })}`,
@@ -375,7 +380,10 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 
 					return parts.length === 0
 						? { label: "Defaults", tone: "neutral" }
-						: { label: parts.join(" | "), tone: "active" };
+						: {
+								label: parts.join(" | "),
+								tone: axiomResponseBodyReductionDisabled ? "warning" : "active",
+							};
 				},
 			},
 		],

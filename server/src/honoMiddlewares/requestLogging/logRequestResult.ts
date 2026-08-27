@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import type { Context } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { isAxiomResponseBodyReductionEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { addExtrasToLogs } from "@/utils/logging/addContextToLogs.js";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
@@ -9,10 +10,23 @@ const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
 	"/v1/balances.check",
 	"/v1/check",
 	"/v1/track",
+	"/v1/entities.get",
+	"/v1/customers.get",
+	"/v1/customers.get_or_create",
+	"/v1/events.aggregate",
+	"/v1/plans.list",
 ]);
 
 const SLOW_REQUEST_BODY_THRESHOLD_MS = 500;
 const SUCCESS_RESPONSE_BODY_SAMPLE_RATE = 0.01;
+const MAX_LOGGED_RESPONSE_BODY_BYTES = 32 * 1024;
+const MAX_LOGGED_RESPONSE_BODY_KEYS = 50;
+const MAX_LOGGED_RESPONSE_BODY_KEY_LENGTH = 128;
+
+const LIST_RESPONSE_ROUTES = new Set<string>([
+	"/v1/events.aggregate",
+	"/v1/plans.list",
+]);
 
 // Event pages run to megabytes each, dwarfing every other route's ingest.
 const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
@@ -35,9 +49,13 @@ const stripLargeFields = (value: unknown) => {
 	return compactValue;
 };
 
-const compactHighVolumeResponseBody = (
-	responseBody: Record<string, unknown>,
-) => {
+const compactHighVolumeResponseBody = ({
+	path,
+	responseBody,
+}: {
+	path: string;
+	responseBody: Record<string, unknown>;
+}) => {
 	const compactResponseBody = { ...responseBody };
 	delete compactResponseBody.preview;
 	if ("balance" in compactResponseBody) {
@@ -53,6 +71,25 @@ const compactHighVolumeResponseBody = (
 	}
 	if ("flag" in compactResponseBody) {
 		compactResponseBody.flag = stripLargeFields(responseBody.flag);
+	}
+	if (Array.isArray(responseBody.subscriptions)) {
+		compactResponseBody.subscriptions_count = responseBody.subscriptions.length;
+		delete compactResponseBody.subscriptions;
+	}
+	if (Array.isArray(responseBody.purchases)) {
+		compactResponseBody.purchases_count = responseBody.purchases.length;
+		delete compactResponseBody.purchases;
+	}
+	if (LIST_RESPONSE_ROUTES.has(path) && Array.isArray(responseBody.list)) {
+		compactResponseBody.list_count = responseBody.list.length;
+		delete compactResponseBody.list;
+	}
+	if (
+		path === "/v1/events.aggregate" &&
+		Array.isArray(responseBody.deductions)
+	) {
+		compactResponseBody.deductions_count = responseBody.deductions.length;
+		delete compactResponseBody.deductions;
 	}
 	return compactResponseBody;
 };
@@ -78,8 +115,11 @@ export const logRequestResult = async ({
 		}
 
 		const isSuccess = statusCode >= 200 && statusCode < 300;
+		const reduceResponseBodyIngest = isAxiomResponseBodyReductionEnabled();
 		const isHighVolumeSuccess =
-			isSuccess && HIGH_VOLUME_SUCCESS_ROUTES.has(c.req.path);
+			reduceResponseBodyIngest &&
+			isSuccess &&
+			HIGH_VOLUME_SUCCESS_ROUTES.has(c.req.path);
 
 		ctx.logger = addExtrasToLogs({
 			logger: ctx.logger,
@@ -88,11 +128,15 @@ export const logRequestResult = async ({
 
 		const excludeResponseBody =
 			isSuccess && RESPONSE_BODY_EXCLUDED_ROUTES.has(c.req.path);
+		const isFastHighVolumeSuccess =
+			isHighVolumeSuccess && durationMs < SLOW_REQUEST_BODY_THRESHOLD_MS;
+		const keepFullSampledResponseBody =
+			isFastHighVolumeSuccess && shouldSampleSuccessResponseBody();
 		const compactResponseBody =
-			isHighVolumeSuccess &&
-			durationMs < SLOW_REQUEST_BODY_THRESHOLD_MS &&
-			!shouldSampleSuccessResponseBody();
+			isFastHighVolumeSuccess && !keepFullSampledResponseBody;
 
+		let originalResponseBodyBytes: number | undefined;
+		let responseBodyWasCompacted = false;
 		let finalResponseBody = excludeResponseBody ? null : responseBody;
 		if (
 			!excludeResponseBody &&
@@ -102,15 +146,62 @@ export const logRequestResult = async ({
 			const contentType = c.res.headers.get("content-type");
 			if (contentType?.includes("application/json")) {
 				try {
-					finalResponseBody = await c.res.clone().json();
+					const responseText = await c.res.clone().text();
+					originalResponseBodyBytes = Buffer.byteLength(responseText);
+					finalResponseBody = JSON.parse(responseText);
 				} catch (_error) {
 					finalResponseBody = null;
 				}
 			}
 		}
+		const originalTopLevelKeys = isRecord(finalResponseBody)
+			? Object.keys(finalResponseBody)
+			: undefined;
 
 		if (compactResponseBody && isRecord(finalResponseBody)) {
-			finalResponseBody = compactHighVolumeResponseBody(finalResponseBody);
+			finalResponseBody = compactHighVolumeResponseBody({
+				path: c.req.path,
+				responseBody: finalResponseBody,
+			});
+			responseBodyWasCompacted = true;
+		}
+
+		if (finalResponseBody !== null && finalResponseBody !== undefined) {
+			const loggedResponseBodyBytes =
+				originalResponseBodyBytes === undefined ||
+				(responseBodyWasCompacted &&
+					originalResponseBodyBytes > MAX_LOGGED_RESPONSE_BODY_BYTES)
+					? Buffer.byteLength(JSON.stringify(finalResponseBody))
+					: originalResponseBodyBytes;
+			if (
+				reduceResponseBodyIngest &&
+				!keepFullSampledResponseBody &&
+				loggedResponseBodyBytes > MAX_LOGGED_RESPONSE_BODY_BYTES
+			) {
+				const truncatedResponseBody = {
+					truncated: true,
+					original_bytes: originalResponseBodyBytes ?? loggedResponseBodyBytes,
+					...(originalTopLevelKeys
+						? {
+								top_level_keys: originalTopLevelKeys
+									.slice(0, MAX_LOGGED_RESPONSE_BODY_KEYS)
+									.map((key) =>
+										key.slice(0, MAX_LOGGED_RESPONSE_BODY_KEY_LENGTH),
+									),
+								top_level_key_count: originalTopLevelKeys.length,
+							}
+						: {}),
+				};
+				finalResponseBody =
+					Buffer.byteLength(JSON.stringify(truncatedResponseBody)) <=
+					MAX_LOGGED_RESPONSE_BODY_BYTES
+						? truncatedResponseBody
+						: {
+								truncated: true,
+								original_bytes:
+									originalResponseBodyBytes ?? loggedResponseBodyBytes,
+							};
+			}
 		}
 
 		const log = isSuccess ? ctx.logger.info : ctx.logger.warn;
