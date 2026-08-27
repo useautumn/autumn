@@ -91,9 +91,9 @@ export default defineConfig([
 			"@useautumn/sdk",
 		],
 		noExternal,
-		// sdk/index declarations are hand-shimmed onto the tsc-emitted
-		// dist/sdk-types tree by scripts/dedupe-dts.mjs — a rollup here would
-		// re-inline the full 2 MB SDK type surface.
+		// sdk/index is omitted: package.json points the root export straight at
+		// the tsc-emitted dist/sdk-types tree, and a rollup here would re-inline
+		// the full 2 MB SDK type surface.
 		dts: {
 			entry: {
 				"backend/index": "src/backend/index.ts",

@@ -3,29 +3,37 @@ import * as path from "node:path";
 
 // tsup emits every type declaration twice (.d.ts for require, .d.mts for
 // import). This keeps one real copy; a "pointer" is a one-line re-export of it.
-const distDir = path.resolve(import.meta.dirname, "../dist");
-const sdkTypesEntry = path.join(distDir, "sdk-types", "index.js");
+const packageDir = path.resolve(import.meta.dirname, "..");
+const distDir = path.join(packageDir, "dist");
 
-// sdk-types is the canonical type tree, standalone is runtime-only, and sdk's
-// declarations are replaced whole — none of them need per-file processing.
-const untouchedTopLevelDirs = new Set(["sdk-types", "standalone", "sdk"]);
+const readJson = (file) => JSON.parse(fs.readFileSync(file, "utf8"));
+
+// Derived from the tsconfig that produces the type tree, so renaming the output
+// dir or the workspace package can't strand this script on a stale path.
+const standaloneCompilerOptions = readJson(
+	path.join(packageDir, "tsconfig.standalone.json"),
+).compilerOptions;
+const sdkTypesDir = path.resolve(packageDir, standaloneCompilerOptions.outDir);
+const sdkTypesEntry = path.join(sdkTypesDir, "index.js");
+const workspaceSdkName = readJson(
+	path.resolve(
+		packageDir,
+		standaloneCompilerOptions.rootDir,
+		"../package.json",
+	),
+).name;
+
+// tsc emits the type tree with relative imports and no .d.mts twins, so every
+// pass below would no-op across its ~200 files.
+const sdkTypesTopLevelDir = path.relative(distDir, sdkTypesDir);
 
 const listDeclarationFiles = () =>
 	fs
 		.readdirSync(distDir, { recursive: true })
 		.map((entry) => entry.toString())
-		.filter((entry) => !untouchedTopLevelDirs.has(entry.split(/[\\/]/)[0]))
+		.filter((entry) => entry.split(/[\\/]/)[0] !== sdkTypesTopLevelDir)
 		.filter((entry) => /\.d\.(ts|mts)$/.test(entry))
 		.map((entry) => path.join(distDir, entry));
-
-// The root export is a pure `export * from "@useautumn/sdk"`, so its
-// declarations can point at the tsc-emitted tree instead of a 2 MB rollup.
-const pointRootDeclarationsAtSdkTypesTree = () => {
-	const pointer = 'export * from "../sdk-types/index.js";\n';
-	fs.mkdirSync(path.join(distDir, "sdk"), { recursive: true });
-	fs.writeFileSync(path.join(distDir, "sdk", "index.d.ts"), pointer);
-	fs.writeFileSync(path.join(distDir, "sdk", "index.d.mts"), pointer);
-};
 
 const toRelativeImportSpecifier = ({ fromFile, toFile }) => {
 	const relative = path
@@ -34,13 +42,13 @@ const toRelativeImportSpecifier = ({ fromFile, toFile }) => {
 	return relative.startsWith(".") ? relative : `./${relative}`;
 };
 
-// The dts rollup keeps "@useautumn/sdk" imports external (see tsup.config.ts);
-// consumers can't resolve that workspace name, so point them at dist/sdk-types.
+// The dts rollup keeps the workspace SDK imports external (see tsup.config.ts);
+// consumers can't resolve that workspace name, so point them at the type tree.
 const rewriteWorkspaceSdkImports = (declarationFiles) => {
 	let rewrittenCount = 0;
 	for (const file of declarationFiles) {
 		const content = fs.readFileSync(file, "utf8");
-		if (!content.includes("@useautumn/sdk")) continue;
+		if (!content.includes(workspaceSdkName)) continue;
 		const specifier = toRelativeImportSpecifier({
 			fromFile: file,
 			toFile: sdkTypesEntry,
@@ -48,8 +56,8 @@ const rewriteWorkspaceSdkImports = (declarationFiles) => {
 		fs.writeFileSync(
 			file,
 			content
-				.replaceAll('"@useautumn/sdk"', `"${specifier}"`)
-				.replaceAll("'@useautumn/sdk'", `'${specifier}'`),
+				.replaceAll(`"${workspaceSdkName}"`, `"${specifier}"`)
+				.replaceAll(`'${workspaceSdkName}'`, `'${specifier}'`),
 		);
 		rewrittenCount++;
 	}
@@ -100,11 +108,10 @@ const deleteUnreferencedEsmDeclarationChunks = (declarationFiles) => {
 };
 
 const declarationFiles = listDeclarationFiles();
-pointRootDeclarationsAtSdkTypesTree();
 const rewrittenCount = rewriteWorkspaceSdkImports(declarationFiles);
 const pointerCount =
 	replaceDuplicateEsmDeclarationsWithPointers(declarationFiles);
 const deletedCount = deleteUnreferencedEsmDeclarationChunks(declarationFiles);
 console.log(
-	`dedupe-dts: pointed root declarations at sdk-types, rewrote ${rewrittenCount} SDK imports, replaced ${pointerCount} duplicate .d.mts files with pointers, deleted ${deletedCount} unreferenced declaration chunks`,
+	`dedupe-dts: rewrote ${rewrittenCount} ${workspaceSdkName} imports, replaced ${pointerCount} duplicate .d.mts files with pointers, deleted ${deletedCount} unreferenced declaration chunks`,
 );

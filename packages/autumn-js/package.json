@@ -6,7 +6,7 @@
 	"homepage": "https://docs.useautumn.com",
 	"main": "./dist/sdk/index.js",
 	"module": "./dist/sdk/index.mjs",
-	"types": "./dist/sdk/index.d.ts",
+	"types": "./dist/sdk-types/index.d.ts",
 	"files": [
 		"dist",
 		"README.md",
@@ -19,7 +19,7 @@
 	},
 	"exports": {
 		".": {
-			"types": "./dist/sdk/index.d.ts",
+			"types": "./dist/sdk-types/index.d.ts",
 			"require": "./dist/sdk/index.js",
 			"import": "./dist/sdk/index.mjs"
 		},
