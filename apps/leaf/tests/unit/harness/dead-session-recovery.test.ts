@@ -55,7 +55,6 @@ await mockLeafModule({
 		EveSessionGoneError: MockEveSessionGoneError,
 		EveStreamDisconnectedError: MockEveStreamDisconnectedError,
 		EveStreamIdleTimeoutError: MockEveStreamIdleTimeoutError,
-		resyncEveStreamIndex: async () => undefined,
 		streamEveEvents: async function* () {
 			if (streamBehaviour === "silent-disconnects") {
 				throw new MockEveStreamDisconnectedError("socket closed");
@@ -70,11 +69,8 @@ await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/sessionState.js",
 	factory: () => ({
 		initialEveSessionState: (continuationToken: string) => ({
-			version: 1,
 			continuationToken,
 			streamIndex: 0,
-			status: "running",
-			lastEventAt: 0,
 			pendingRequests: [],
 		}),
 		saveEveSessionState: async () => undefined,
@@ -117,11 +113,8 @@ const makeSession = (): EveSessionRef => ({
 	newSession: false,
 	sessionId: "eve_session_dead",
 	state: {
-		version: 1,
 		continuationToken: "token_1",
 		streamIndex: 57,
-		status: "waiting",
-		lastEventAt: 0,
 		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",

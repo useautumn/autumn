@@ -5,10 +5,9 @@ import { chatApprovalRepo } from "../../approvals/repos/chatApprovalRepo.js";
 import type { AgentThreadRef } from "../domain/agentTurnContext.js";
 import { deleteEveSession, type EveSessionDeleteReason } from "./repo.js";
 import type { EveSessionRef } from "./types.js";
-import { cancelSessionRun } from "./world/sessionRun.js";
 
-/** Drops the row, cancels the eve run behind it so its hooks and parks
- * release, and cancels every card that could only be decided through it. */
+/** Drops the row and cancels every card that could only be decided through
+ * the session behind it. */
 export const abandonEveSession = async ({
 	env,
 	orgId,
@@ -32,7 +31,6 @@ export const abandonEveSession = async ({
 		sessionId: session.sessionId,
 		threadKey: session.threadKey,
 	});
-	const cancelledRun = await cancelSessionRun(session.sessionId);
 	const orphaned = await chatApprovalRepo.listPendingForRun({
 		db,
 		channelId: thread.channelId,
@@ -52,7 +50,6 @@ export const abandonEveSession = async ({
 	logger.warn("Abandoned eve session", {
 		event: "leaf.eve_session_abandoned",
 		data: {
-			cancelled_run: cancelledRun,
 			orphaned_approval_ids: orphaned.map((approval) => approval.id),
 			reason,
 			session_id: session.sessionId,

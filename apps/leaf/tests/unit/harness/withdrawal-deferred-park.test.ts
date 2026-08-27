@@ -47,14 +47,12 @@ await mockLeafModule({
 		EveSessionDeadError: class extends Error {},
 		EveStreamDisconnectedError: class extends Error {},
 		EveStreamIdleTimeoutError: MockEveStreamIdleTimeoutError,
-		fastForwardEveStreamIndex: async () => undefined,
 		isEveTransportLost: (error: unknown) =>
 			error instanceof MockEveStreamIdleTimeoutError,
 		postEveMessage: async ({ message }: { message?: unknown }) => {
 			repostedMessages.push(message);
 			return { continuationToken: "token_2", sessionId: "eve_session_1" };
 		},
-		resyncEveStreamIndex: async () => undefined,
 		streamEveEvents: async function* () {
 			const events = parentPasses[parentStreamCalls] ?? [];
 			parentStreamCalls += 1;
@@ -72,8 +70,6 @@ await mockLeafModule({
 			session.state.streamIndex += 1;
 		},
 		saveEveSessionState: async () => undefined,
-		statusAfterTerminalEvent: (eventType: string) =>
-			eventType === "session.completed" ? "completed" : "waiting",
 	}),
 });
 
@@ -94,11 +90,8 @@ const session = (): EveSessionRef => ({
 	newSession: false,
 	sessionId: "eve_session_1",
 	state: {
-		version: 1,
 		continuationToken: "token_1",
 		streamIndex: 32,
-		status: "running",
-		lastEventAt: 0,
 		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",

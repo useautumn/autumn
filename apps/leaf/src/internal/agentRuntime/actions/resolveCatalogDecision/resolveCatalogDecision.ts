@@ -102,7 +102,7 @@ export const resolveCatalogDecision = async ({
 			session,
 			siblingRequestIds: siblingRequestIdsFromToolArgs(suspension.toolArgs),
 		});
-		adoptPostedEveSession({ posted, session, status: "waiting" });
+		adoptPostedEveSession({ posted, session });
 		await upsertEveSession({
 			db,
 			env: session.env,

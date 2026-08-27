@@ -172,11 +172,8 @@ describe("withdrawSupersededApprovals", () => {
 			newSession: false,
 			sessionId: "eve_session_1",
 			state: {
-				version: 1,
 				continuationToken: "token_1",
 				streamIndex: 7,
-				status: "waiting",
-				lastEventAt: 0,
 				pendingRequests: [],
 			},
 			threadKey: "sandbox:slack:T1:C1:thread_1",

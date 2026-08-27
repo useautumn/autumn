@@ -1,8 +1,50 @@
 import { describe, expect, test } from "bun:test";
+import type { EveInputRequest } from "../../../src/internal/agentRuntime/eve/eveEventSchemas.js";
 import {
 	classifyParkedEveInput,
 	siblingRequestIdsFromToolArgs,
 } from "../../../src/internal/agentRuntime/eve/parkedInput.js";
+
+const approvalRequest = ({
+	input = {},
+	requestId,
+	toolName,
+}: {
+	input?: EveInputRequest["action"]["input"];
+	requestId: string;
+	toolName: string;
+}): EveInputRequest => ({
+	action: { callId: requestId, input, kind: "tool-call", toolName },
+	allowFreeform: false,
+	display: "confirmation",
+	options: [
+		{ id: "approve", label: "Yes" },
+		{ id: "deny", label: "No" },
+	],
+	prompt: `Approve tool call: ${toolName}`,
+	requestId,
+});
+
+const questionRequest = ({
+	options,
+	prompt,
+	requestId,
+}: {
+	options?: ReadonlyArray<{ id: string; label: string }>;
+	prompt: string;
+	requestId: string;
+}): EveInputRequest => ({
+	action: {
+		callId: requestId,
+		input: { prompt },
+		kind: "tool-call",
+		toolName: "ask_question",
+	},
+	display: options ? "select" : "text",
+	prompt,
+	requestId,
+	...(options ? { options: [...options] } : {}),
+});
 
 // Every park blocks the run until it is answered, so the only wrong answer is
 // `undefined` — each case pins one park shape to the surface that can answer it.
@@ -10,11 +52,10 @@ describe("classifyParkedEveInput", () => {
 	test("an option-less ask_question is text, not a gated write", () => {
 		const parked = classifyParkedEveInput({
 			requests: [
-				{
-					action: { toolName: "ask_question" },
+				questionRequest({
 					prompt: "Which plan should I migrate them onto?",
 					requestId: "req_2",
-				},
+				}),
 			],
 			skipRequestId: "req_1",
 		});
@@ -25,46 +66,14 @@ describe("classifyParkedEveInput", () => {
 		});
 	});
 
-	test("falls back to a generic line when the park carries no prompt", () => {
-		const parked = classifyParkedEveInput({
-			requests: [{ requestId: "req_2" }],
-		});
-
-		expect(parked).toEqual({
-			kind: "waiting",
-			text: "Eve is waiting for input.",
-		});
-	});
-
-	// The skip filter compares ids; an id-less park must survive it rather than
-	// be swept out with the answered one.
-	test("a park with no request id survives the skip filter", () => {
-		expect(
-			classifyParkedEveInput({
-				requests: [{ prompt: "Which plan?" }],
-				skipRequestId: "req_1",
-			}),
-		).toEqual({ kind: "waiting", text: "Which plan?" });
-	});
-
-	test("an unanswerable gated write is surfaced as text, not a card", () => {
-		expect(
-			classifyParkedEveInput({
-				// No requestId, so the resume path has nothing to answer eve with.
-				requests: [
-					{ action: { toolName: "autumn__attach" }, prompt: "Approve?" },
-				],
-			}),
-		).toEqual({ kind: "waiting", text: "Approve?" });
-	});
-
 	test("captures a chained gated write", () => {
 		const parked = classifyParkedEveInput({
 			requests: [
-				{
-					action: { input: { plan_id: "pro" }, toolName: "autumn__attach" },
+				approvalRequest({
+					input: { plan_id: "pro" },
 					requestId: "req_2",
-				},
+					toolName: "autumn__attach",
+				}),
 			],
 			skipRequestId: "req_1",
 		});
@@ -72,7 +81,10 @@ describe("classifyParkedEveInput", () => {
 		expect(parked).toEqual({
 			chained: {
 				input: { plan_id: "pro" },
-				options: undefined,
+				options: [
+					{ id: "approve", label: "Yes" },
+					{ id: "deny", label: "No" },
+				],
 				requestId: "req_2",
 				toolName: "autumn__attach",
 			},
@@ -85,12 +97,11 @@ describe("classifyParkedEveInput", () => {
 	test("captures an optioned question", () => {
 		const parked = classifyParkedEveInput({
 			requests: [
-				{
-					action: { toolName: "ask_question" },
+				questionRequest({
 					options: [{ id: "yes", label: "Yes" }],
 					prompt: "Apply now?",
 					requestId: "req_2",
-				},
+				}),
 			],
 		});
 
@@ -108,11 +119,7 @@ describe("classifyParkedEveInput", () => {
 		expect(
 			classifyParkedEveInput({
 				requests: [
-					{
-						action: { toolName: "autumn__attach" },
-						prompt: "Approve?",
-						requestId: "req_1",
-					},
+					approvalRequest({ requestId: "req_1", toolName: "autumn__attach" }),
 				],
 				skipRequestId: "req_1",
 			}),
@@ -124,12 +131,15 @@ describe("classifyParkedEveInput", () => {
 	test("carries the rest of the batch as siblings of the picked write", () => {
 		const parked = classifyParkedEveInput({
 			requests: [
-				{ action: { toolName: "autumn__attach" }, requestId: "req_1" },
-				{
-					action: { toolName: "autumn__updateSubscription" },
+				approvalRequest({ requestId: "req_1", toolName: "autumn__attach" }),
+				approvalRequest({
 					requestId: "req_2",
-				},
-				{ action: { toolName: "autumn__updateCatalog" }, requestId: "req_3" },
+					toolName: "autumn__updateSubscription",
+				}),
+				approvalRequest({
+					requestId: "req_3",
+					toolName: "autumn__updateCatalog",
+				}),
 			],
 		});
 
@@ -142,18 +152,15 @@ describe("classifyParkedEveInput", () => {
 
 	// An approve/deny option id sent to an ask_question corrupts its answer, and
 	// an unanswered question never blocks the batch anyway.
-	test("leaves questions and id-less requests out of the siblings", () => {
+	test("leaves questions out of the siblings", () => {
 		const parked = classifyParkedEveInput({
 			requests: [
-				{ action: { toolName: "autumn__attach" }, requestId: "req_1" },
-				{
-					action: { toolName: "ask_question" },
-					prompt: "Which plan?",
-					requestId: "req_2",
-				},
-				{ action: { toolName: "autumn__updateSubscription" } },
-				{ prompt: "Anything else?", requestId: "req_4" },
-				{ action: { toolName: "autumn__updateCatalog" }, requestId: "req_5" },
+				approvalRequest({ requestId: "req_1", toolName: "autumn__attach" }),
+				questionRequest({ prompt: "Which plan?", requestId: "req_2" }),
+				approvalRequest({
+					requestId: "req_5",
+					toolName: "autumn__updateCatalog",
+				}),
 			],
 		});
 
@@ -163,11 +170,11 @@ describe("classifyParkedEveInput", () => {
 	test("excludes the answered request from the siblings", () => {
 		const parked = classifyParkedEveInput({
 			requests: [
-				{ action: { toolName: "autumn__attach" }, requestId: "req_1" },
-				{
-					action: { toolName: "autumn__updateSubscription" },
+				approvalRequest({ requestId: "req_1", toolName: "autumn__attach" }),
+				approvalRequest({
 					requestId: "req_2",
-				},
+					toolName: "autumn__updateSubscription",
+				}),
 			],
 			skipRequestId: "req_1",
 		});
@@ -214,20 +221,16 @@ describe("withheld sibling writes stay recoverable", () => {
 	test("keeps the tool name and input of every withheld write", () => {
 		const parked = classifyParkedEveInput({
 			requests: [
-				{
-					action: {
-						input: { request: { customer_id: "cus_1", plan_id: "pro" } },
-						toolName: "autumn__attach",
-					},
+				approvalRequest({
+					input: { request: { customer_id: "cus_1", plan_id: "pro" } },
 					requestId: "req_1",
-				},
-				{
-					action: {
-						input: { request: { customer_id: "cus_1", email: "new@x.com" } },
-						toolName: "autumn__updateCustomer",
-					},
+					toolName: "autumn__attach",
+				}),
+				approvalRequest({
+					input: { request: { customer_id: "cus_1", email: "new@x.com" } },
 					requestId: "req_2",
-				},
+					toolName: "autumn__updateCustomer",
+				}),
 			],
 		});
 

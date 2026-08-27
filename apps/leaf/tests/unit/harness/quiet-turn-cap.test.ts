@@ -1,7 +1,7 @@
 /**
  * The parent-quiet cap in consumeAgentTurn: a turn with NO live child that has
- * been silent past MAX_QUIET_MS (2.5 min) settles on the clock, not after the
- * MAX_IDLE_RESYNCS (3) budget is spent.
+ * been silent past MAX_QUIET_MS settles on the clock, not after the
+ * MAX_IDLE_RESYNCS budget is spent.
  *
  * The existing idle-stream-recovery suite cannot see this: its mock stream
  * never advances any clock, so msSinceActivity() is always ~0 and the resync
@@ -75,11 +75,9 @@ await mockLeafModule({
 		EveSessionDeadError: class extends Error {},
 		EveStreamDisconnectedError: MockEveStreamDisconnectedError,
 		EveStreamIdleTimeoutError: MockEveStreamIdleTimeoutError,
-		fastForwardEveStreamIndex: async () => undefined,
 		isEveTransportLost: (error: unknown) =>
 			error instanceof MockEveStreamDisconnectedError ||
 			error instanceof MockEveStreamIdleTimeoutError,
-		resyncEveStreamIndex: async () => undefined,
 		streamEveEvents: async function* ({ session }: { session: EveSessionRef }) {
 			if (session.sessionId.startsWith("wrun_child")) {
 				for (const event of childEvents) {
@@ -113,8 +111,6 @@ await mockLeafModule({
 			session.state.streamIndex += 1;
 		},
 		saveEveSessionState: async () => undefined,
-		statusAfterTerminalEvent: (eventType: string) =>
-			eventType === "session.completed" ? "completed" : "waiting",
 	}),
 });
 
@@ -135,11 +131,8 @@ const session = (): EveSessionRef => ({
 	newSession: false,
 	sessionId: "eve_session_1",
 	state: {
-		version: 1,
 		continuationToken: "token_1",
 		streamIndex: 33,
-		status: "running",
-		lastEventAt: 0,
 		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",
