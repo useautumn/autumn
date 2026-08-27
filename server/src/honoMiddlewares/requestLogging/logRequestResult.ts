@@ -5,13 +5,13 @@ import { addExtrasToLogs } from "@/utils/logging/addContextToLogs.js";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
 const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
-	// "/v1/balances.track",
-	// "/v1/balances.check",
-	// "/v1/check",
-	// "/v1/track",
-	// "/v1/customers.get_or_create",
-	// "/v1/entities.get",
+	"/v1/balances.track",
+	"/v1/balances.check",
+	"/v1/check",
+	"/v1/track",
 ]);
+
+const SLOW_REQUEST_BODY_THRESHOLD_MS = 500;
 
 // Event pages run to megabytes each, dwarfing every other route's ingest.
 const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
@@ -19,13 +19,65 @@ const RESPONSE_BODY_EXCLUDED_ROUTES = new Set<string>([
 	"/v1/events.list",
 ]);
 
-const SUCCESS_REQUEST_LOG_SAMPLE_RATE = Number.parseFloat(
-	process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE ?? "0",
+const SUCCESS_RESPONSE_BODY_SAMPLE_RATE = Number.parseFloat(
+	process.env.AXIOM_SUCCESS_RESPONSE_BODY_SAMPLE_RATE ??
+		process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE ??
+		"0.01",
 );
 
-const shouldSampleSuccessLog = () =>
-	SUCCESS_REQUEST_LOG_SAMPLE_RATE > 0 &&
-	Math.random() < Math.min(SUCCESS_REQUEST_LOG_SAMPLE_RATE, 1);
+const shouldSampleSuccessResponseBody = () =>
+	SUCCESS_RESPONSE_BODY_SAMPLE_RATE > 0 &&
+	Math.random() < Math.min(SUCCESS_RESPONSE_BODY_SAMPLE_RATE, 1);
+
+const COMPACT_RESPONSE_FIELDS = new Set([
+	"allowed",
+	"code",
+	"feature_id",
+	"required_balance",
+	"value",
+]);
+const COMPACT_BALANCE_FIELDS = new Set([
+	"feature_id",
+	"plan_id",
+	"usage",
+	"granted",
+	"remaining",
+	"current_balance",
+	"unlimited",
+	"overage_allowed",
+	"next_reset_at",
+]);
+
+const compactFields = ({
+	value,
+	fields,
+}: {
+	value: Record<string, unknown>;
+	fields: Set<string>;
+}) =>
+	Object.fromEntries(
+		Object.entries(value).filter(([field]) => fields.has(field)),
+	);
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+const compactHighVolumeResponseBody = (
+	responseBody: Record<string, unknown>,
+) => {
+	const compactResponseBody = compactFields({
+		value: responseBody,
+		fields: COMPACT_RESPONSE_FIELDS,
+	});
+	if (responseBody.balance === null) compactResponseBody.balance = null;
+	if (isRecord(responseBody.balance)) {
+		compactResponseBody.balance = compactFields({
+			value: responseBody.balance,
+			fields: COMPACT_BALANCE_FIELDS,
+		});
+	}
+	return compactResponseBody;
+};
 
 export const logRequestResult = async ({
 	ctx,
@@ -51,20 +103,24 @@ export const logRequestResult = async ({
 		const isHighVolumeSuccess =
 			isSuccess && HIGH_VOLUME_SUCCESS_ROUTES.has(c.req.path);
 
-		if (isHighVolumeSuccess && !shouldSampleSuccessLog()) {
-			return;
-		}
-
 		ctx.logger = addExtrasToLogs({
 			logger: ctx.logger,
 			extras: ctx.extraLogs,
 		});
 
-		const skipResponseBody =
+		const excludeResponseBody =
 			isSuccess && RESPONSE_BODY_EXCLUDED_ROUTES.has(c.req.path);
+		const compactResponseBody =
+			isHighVolumeSuccess &&
+			durationMs < SLOW_REQUEST_BODY_THRESHOLD_MS &&
+			!shouldSampleSuccessResponseBody();
 
-		let finalResponseBody = skipResponseBody ? null : responseBody;
-		if (finalResponseBody === undefined && c.req.path.includes("/v1")) {
+		let finalResponseBody = excludeResponseBody ? null : responseBody;
+		if (
+			!excludeResponseBody &&
+			finalResponseBody === undefined &&
+			c.req.path.includes("/v1")
+		) {
 			const contentType = c.res.headers.get("content-type");
 			if (contentType?.includes("application/json")) {
 				try {
@@ -73,6 +129,10 @@ export const logRequestResult = async ({
 					finalResponseBody = null;
 				}
 			}
+		}
+
+		if (compactResponseBody && isRecord(finalResponseBody)) {
+			finalResponseBody = compactHighVolumeResponseBody(finalResponseBody);
 		}
 
 		const log = isSuccess ? ctx.logger.info : ctx.logger.warn;

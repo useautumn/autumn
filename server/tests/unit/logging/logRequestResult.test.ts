@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import type { Context } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { logRequestResult } from "@/honoMiddlewares/requestLogging/logRequestResult.js";
@@ -47,18 +47,55 @@ const mergeLoggedObjects = (args: unknown[]) =>
 		),
 	);
 
+const captureJsonResponse = async ({
+	path,
+	durationMs,
+	responseBody,
+}: {
+	path: string;
+	durationMs: number;
+	responseBody: Record<string, unknown>;
+}) => {
+	const captured: CapturedLog[] = [];
+	let cloneCount = 0;
+	const ctx = {
+		timestamp: 123,
+		logger: createCapturingLogger({ captured }),
+		extraLogs: {},
+		org: { slug: "test-org" },
+	} as unknown as AutumnContext;
+	const c = {
+		req: { path },
+		res: {
+			status: 200,
+			headers: new Headers({ "content-type": "application/json" }),
+			clone: () => {
+				cloneCount++;
+				return { json: async () => responseBody };
+			},
+		},
+	} as unknown as Context<HonoEnv>;
+
+	await logRequestResult({ ctx, c, durationMs });
+	return { captured, cloneCount };
+};
+
+afterEach(() => {
+	mock.restore();
+});
+
 describe("logRequestResult", () => {
 	test("logs the request body without rebinding request metadata", async () => {
 		const captured: CapturedLog[] = [];
 		const requestLogContext: LogRequestContext = {
 			id: "req_123",
 			method: "POST",
-			url: "https://api.useautumn.com/v1/check",
+			url: "https://api.useautumn.com/v1/customers.get",
 			timestamp: 123,
 			customer_id: "cus_123",
 			query: {},
 			body: { feature_id: "messages" },
-			name: "POST /v1/check",
+			name: "POST /v1/customers.get",
 		};
 		const internalRequestContext = {
 			id: requestLogContext.id,
@@ -80,7 +117,7 @@ describe("logRequestResult", () => {
 			org: { slug: "test-org" },
 		} as unknown as AutumnContext;
 		const c = {
-			req: { path: "/v1/check" },
+			req: { path: "/v1/customers.get" },
 			res: {
 				status: 200,
 				headers: new Headers({ "content-type": "application/json" }),
@@ -172,7 +209,78 @@ describe("logRequestResult", () => {
 		});
 	});
 
-	test("still reads and logs successful JSON response bodies when not supplied", async () => {
+	test("compacts an unsampled fast high-volume response", async () => {
+		spyOn(Math, "random").mockReturnValue(0.5);
+		const responseBody = {
+			allowed: true,
+			required_balance: 1,
+			preview: { scenario: "upgrade" },
+			balance: {
+				feature_id: "messages",
+				remaining: 90,
+				usage: 10,
+				granted: 100,
+				overage_allowed: false,
+				breakdown: [{ id: "cus_ent_123", remaining: 90 }],
+			},
+		};
+		const { captured, cloneCount } = await captureJsonResponse({
+			path: "/v1/balances.check",
+			durationMs: 10,
+			responseBody,
+		});
+
+		expect(cloneCount).toBe(1);
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: {
+				allowed: true,
+				required_balance: 1,
+				balance: {
+					feature_id: "messages",
+					remaining: 90,
+					usage: 10,
+					granted: 100,
+					overage_allowed: false,
+				},
+			},
+		});
+	});
+
+	test("keeps a sampled fast high-volume response in full", async () => {
+		spyOn(Math, "random").mockReturnValue(0);
+		const responseBody = { allowed: true, balance: { remaining: 90 } };
+		const { captured } = await captureJsonResponse({
+			path: "/v1/balances.check",
+			durationMs: 10,
+			responseBody,
+		});
+
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 10,
+			res: responseBody,
+		});
+	});
+
+	test("keeps a slow high-volume response in full", async () => {
+		spyOn(Math, "random").mockReturnValue(0.5);
+		const responseBody = { allowed: true, balance: { remaining: 90 } };
+		const { captured } = await captureJsonResponse({
+			path: "/v1/balances.check",
+			durationMs: 500,
+			responseBody,
+		});
+
+		expect(captured[0]?.args[1]).toEqual({
+			statusCode: 200,
+			durationMs: 500,
+			res: responseBody,
+		});
+	});
+
+	test("still reads and logs successful JSON response bodies for other routes", async () => {
 		const captured: CapturedLog[] = [];
 		const responseBody = { allowed: true, balance: 90 };
 		let cloneCount = 0;
@@ -183,7 +291,7 @@ describe("logRequestResult", () => {
 			org: { slug: "test-org" },
 		} as unknown as AutumnContext;
 		const c = {
-			req: { path: "/v1/check" },
+			req: { path: "/v1/customers.get" },
 			res: {
 				status: 200,
 				headers: new Headers({ "content-type": "application/json" }),
