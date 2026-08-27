@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	customerProducts,
+	REFERENCED_ROW_CUSTOMER_STATUSES,
 	VERSIONABLE_CUSTOMER_STATUSES,
 } from "@autumn/shared";
 import { and, countDistinct, inArray, isNull, sql } from "drizzle-orm";
@@ -15,7 +16,7 @@ export type CustomerProductVersioningFlags = {
 	hasVersionableCustomerProducts: boolean;
 	/** Versionable CPs that are not seat assignments (`customer_license_link_id` null). */
 	hasVersionableDirectCustomerProducts: boolean;
-	/** This version's ent/price ids are referenced by a versionable cus_ent/cus_price. */
+	/** This version's ent/price ids are referenced by a cus_ent/cus_price, including expired. */
 	hasVersionableRowRefs: boolean;
 };
 
@@ -72,7 +73,7 @@ export const buildVersionableEntitlementRefsQuery = ({
 	env: AppEnv;
 }) => {
 	const productIds = sqlIn({ values: internalProductIds });
-	const statuses = sqlIn({ values: [...VERSIONABLE_CUSTOMER_STATUSES] });
+	const statuses = sqlIn({ values: [...REFERENCED_ROW_CUSTOMER_STATUSES] });
 
 	return sql`
 		SELECT DISTINCT t.internal_product_id
@@ -100,7 +101,7 @@ export const buildVersionablePriceRefsQuery = ({
 	env: AppEnv;
 }) => {
 	const productIds = sqlIn({ values: internalProductIds });
-	const statuses = sqlIn({ values: [...VERSIONABLE_CUSTOMER_STATUSES] });
+	const statuses = sqlIn({ values: [...REFERENCED_ROW_CUSTOMER_STATUSES] });
 
 	return sql`
 		SELECT DISTINCT t.internal_product_id
