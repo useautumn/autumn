@@ -53,6 +53,7 @@ function printPortlessUrl(): Plugin {
 export default defineConfig({
 	define: {
 		__APP_ENV__: JSON.stringify(process.env.VITE_APP_ENV || ""),
+		__WORKTREE_NUM__: JSON.stringify(process.env.VITE_WORKTREE_NUM || "1"),
 	},
 	esbuild: {
 		pure: ["console.log"],

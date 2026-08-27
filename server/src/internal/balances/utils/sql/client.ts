@@ -1,4 +1,4 @@
-import type { EntityBalance, Rollover } from "@autumn/shared";
+import type { EntityBalance, Rollover, UsageAttribution } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -9,6 +9,7 @@ export type ResetCusEntParam = {
 	additional_balance: number | null;
 	adjustment: number;
 	entities: Record<string, EntityBalance> | null;
+	usage_attribution: UsageAttribution;
 	next_reset_at: number;
 	rollover_insert: Pick<
 		Rollover,
@@ -21,6 +22,7 @@ export type AppliedCusEntReset = {
 	additional_balance: number;
 	adjustment: number;
 	entities: Record<string, EntityBalance> | null;
+	usage_attribution: UsageAttribution;
 	next_reset_at: number;
 	cache_version: number;
 	rollover: Pick<

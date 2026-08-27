@@ -1,4 +1,6 @@
 import {
+	type CustomerDisplayInfo,
+	type EntityDisplayInfo,
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
@@ -224,7 +226,7 @@ export const handleInternalAggregateEvents = createRoute({
 		}
 
 		// When grouping by entity_id, resolve entity names from ClickHouse
-		let entityNames: Record<string, string> | undefined;
+		let entityNames: Record<string, EntityDisplayInfo> | undefined;
 		if (resolvedGroupBy === "entity_id" && events?.data) {
 			const entityIds = [
 				...new Set(
@@ -245,7 +247,7 @@ export const handleInternalAggregateEvents = createRoute({
 			}
 		}
 
-		let customerNames: Record<string, string> | undefined;
+		let customerNames: Record<string, CustomerDisplayInfo> | undefined;
 		if (resolvedGroupBy === "customer_id" && events?.data) {
 			const customerIds = [
 				...new Set(

@@ -44,6 +44,20 @@ export type PreviewMultiUpdateProrationBehavior = ClosedEnum<
   typeof PreviewMultiUpdateProrationBehavior
 >;
 
+/**
+ * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+ */
+export const PreviewMultiUpdateRefundLastPayment = {
+  Prorated: "prorated",
+  Full: "full",
+} as const;
+/**
+ * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+ */
+export type PreviewMultiUpdateRefundLastPayment = ClosedEnum<
+  typeof PreviewMultiUpdateRefundLastPayment
+>;
+
 export type PreviewMultiUpdateUpdate = {
   /**
    * The ID of the plan to update. Optional if subscription_id is provided.
@@ -65,6 +79,14 @@ export type PreviewMultiUpdateUpdate = {
    * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
   prorationBehavior?: PreviewMultiUpdateProrationBehavior | undefined;
+  /**
+   * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+   */
+  refundLastPayment?: PreviewMultiUpdateRefundLastPayment | undefined;
+  /**
+   * Additional parameters to pass into the Stripe subscription update or cancel call.
+   */
+  subscriptionParams?: { [k: string]: any } | undefined;
 };
 
 export type PreviewMultiUpdateParams = {
@@ -353,6 +375,10 @@ export type PreviewMultiUpdateSubscription = {
    */
   currency: string;
   /**
+   * True when this change clears the customer's usage balances, so the approver can see usage will reset.
+   */
+  resetsUsage?: boolean | undefined;
+  /**
    * Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles.
    */
   nextCycle?: PreviewMultiUpdateNextCycle | undefined;
@@ -407,12 +433,19 @@ export const PreviewMultiUpdateProrationBehavior$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewMultiUpdateProrationBehavior);
 
 /** @internal */
+export const PreviewMultiUpdateRefundLastPayment$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiUpdateRefundLastPayment
+> = z.enum(PreviewMultiUpdateRefundLastPayment);
+
+/** @internal */
 export type PreviewMultiUpdateUpdate$Outbound = {
   plan_id?: string | undefined;
   subscription_id?: string | undefined;
   entity_id?: string | undefined;
   cancel_action: string;
   proration_behavior?: string | undefined;
+  refund_last_payment?: string | undefined;
+  subscription_params?: { [k: string]: any } | undefined;
 };
 
 /** @internal */
@@ -428,6 +461,10 @@ export const PreviewMultiUpdateUpdate$outboundSchema: z.ZodMiniType<
     prorationBehavior: z.optional(
       PreviewMultiUpdateProrationBehavior$outboundSchema,
     ),
+    refundLastPayment: z.optional(
+      PreviewMultiUpdateRefundLastPayment$outboundSchema,
+    ),
+    subscriptionParams: z.optional(z.record(z.string(), z.any())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -436,6 +473,8 @@ export const PreviewMultiUpdateUpdate$outboundSchema: z.ZodMiniType<
       entityId: "entity_id",
       cancelAction: "cancel_action",
       prorationBehavior: "proration_behavior",
+      refundLastPayment: "refund_last_payment",
+      subscriptionParams: "subscription_params",
     });
   }),
 );
@@ -895,6 +934,7 @@ export const PreviewMultiUpdateSubscription$inboundSchema: z.ZodMiniType<
     subtotal: types.number(),
     total: types.number(),
     currency: types.string(),
+    resets_usage: types.optional(types.boolean()),
     next_cycle: types.optional(
       z.lazy(() => PreviewMultiUpdateNextCycle$inboundSchema),
     ),
@@ -907,6 +947,7 @@ export const PreviewMultiUpdateSubscription$inboundSchema: z.ZodMiniType<
     return remap$(v, {
       "customer_id": "customerId",
       "line_items": "lineItems",
+      "resets_usage": "resetsUsage",
       "next_cycle": "nextCycle",
       "plan_ids": "planIds",
     });

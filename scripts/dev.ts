@@ -423,6 +423,7 @@ async function startDev() {
 			SLACK_REDIRECT_URI,
 			DISCORD_BOT_URL: process.env.DISCORD_BOT_URL ?? LOCAL_CHAT_URL,
 			VITE_APP_ENV: viteAppEnv,
+			VITE_WORKTREE_NUM: String(worktreeNum),
 			...(useLocalAuthUrls && {
 				CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
 				VITE_BACKEND_URL: localUrl(
@@ -441,6 +442,9 @@ async function startDev() {
 				REDIS_URL: LOCAL_MISC_CACHE_URL,
 			}),
 			...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
+			WORKFLOW_QUEUE_NAMESPACE:
+				process.env.WORKFLOW_QUEUE_NAMESPACE ??
+				`local_${process.env.USER ?? "dev"}`,
 			...(worktreeNum > 1 && {
 				CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
 				VITE_BACKEND_URL: localUrl(

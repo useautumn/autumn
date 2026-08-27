@@ -511,10 +511,10 @@ test.concurrent(
 		const v1Price = v1.prices.find(
 			(p: any) =>
 				p.config?.feature_id === TestFeature.Credits &&
-				p.config?.stripe_price_id,
+				p.config?.stripe_prepaid_price_v2_id,
 		);
 		expect(v1Price).toBeDefined();
-		const v1StripeId = (v1Price as any)?.config?.stripe_price_id;
+		const v1StripeId = (v1Price as any)?.config?.stripe_prepaid_price_v2_id;
 		expect(v1StripeId).toBeTruthy();
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
@@ -534,10 +534,12 @@ test.concurrent(
 		const v2Price = v2.prices.find(
 			(p: any) =>
 				p.config?.feature_id === TestFeature.Credits &&
-				p.config?.stripe_price_id,
+				p.config?.stripe_prepaid_price_v2_id,
 		);
 		expect(v2Price).toBeDefined();
-		expect((v2Price as any)?.config?.stripe_price_id).toBe(v1StripeId);
+		expect((v2Price as any)?.config?.stripe_prepaid_price_v2_id).toBe(
+			v1StripeId,
+		);
 
 		await cleanup(baseId, variantId);
 	},

@@ -53,6 +53,8 @@ class ImportCustomerDataTypedDict(TypedDict):
     r"""Email address for the customer."""
     fingerprint: NotRequired[str]
     r"""Anti-fraud fingerprint for the customer."""
+    created_at: NotRequired[int]
+    r"""Unix ms timestamp the customer signed up, so a migrated customer keeps its original signup date. Defaults to the import time for a customer Autumn creates here."""
 
 
 class ImportCustomerData(BaseModel):
@@ -67,9 +69,12 @@ class ImportCustomerData(BaseModel):
     fingerprint: Optional[str] = None
     r"""Anti-fraud fingerprint for the customer."""
 
+    created_at: Optional[int] = None
+    r"""Unix ms timestamp the customer signed up, so a migrated customer keeps its original signup date. Defaults to the import time for a customer Autumn creates here."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["name", "email", "fingerprint"])
+        optional_fields = set(["name", "email", "fingerprint", "created_at"])
         serialized = handler(self)
         m = {}
 

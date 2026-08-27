@@ -45,6 +45,35 @@ describe("resolvePlanChangePreview", () => {
 		).toBe("update");
 	});
 
+	test("a metadata-only save edits its row instead of minting a version", () => {
+		expect(
+			resolveEffectiveVersionChoice({
+				choice: "new",
+				showNewOption: true,
+				showAllOption: true,
+				isMetadataOnly: true,
+			}),
+		).toBe("update");
+
+		const model = resolvePlanChangePreview({
+			preview: planPreview({
+				state: { has_customers: true, will_archive: false },
+				plan_change: { item_changes: [] },
+				version_slug: "v1",
+				new_version_slug: "launch",
+			} as Partial<CatalogPlanUpdatePreview>),
+			versionChoice: "new",
+			variantSelection: null,
+			licenseParentSelection: null,
+			isLatest: true,
+			namesByPlanId: {},
+		});
+
+		expect(model.isMetadataOnly).toBe(true);
+		expect(model.effectiveVersionChoice).toBe("update");
+		expect(model.strategy).toBeUndefined();
+	});
+
 	test("shows child all_versions when the child has siblings and license parents", () => {
 		expect(
 			resolveVersioningOptionVisibility({

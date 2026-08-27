@@ -15,7 +15,7 @@
  *     - filter precision: same feature_id, different reset.interval
  *     - base versions on rollover change with customer (both base and variant version)
  *     - preview_update returns 0 writes when nothing changes
- *     - stripe_prepaid_price_v2_id carried forward on versioning
+ *     - stripe_price_id carried forward on versioning (V1 attach stamps)
  *     - create_variant rejects archived base (cannot_fork_archived_base)
  *     - base+variant both have customers → both version, variant pins to new base
  *   Error codes:
@@ -629,10 +629,10 @@ test.concurrent(
 );
 
 // ═══════════════════════════════════════════════════════════════════
-// 9. stripe_prepaid_price_v2_id carried forward on versioning
+// 9. stripe_price_id carried forward on versioning (V1 attach stamps)
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("rollover versioning: stripe_prepaid_price_v2_id carried forward to variant v2")}`,
+	`${chalk.yellowBright("rollover versioning: stripe_price_id carried forward to variant v2")}`,
 	async () => {
 		const rid = readableVariantTestId("rv_prepaid_carry");
 		const baseId = `base_${rid}`;
@@ -645,21 +645,20 @@ test.concurrent(
 		await materializePlanInStripe({ ctx, planId: baseId });
 		await createVariant(baseId, variantId);
 
-		const variantV1 = await ProductService.getFull({
+		const variantBeforeAttach = await ProductService.getFull({
 			db,
 			idOrInternalId: variantId,
 			orgId: org.id,
 			env,
 		});
-		const v1PrepaidPrice = variantV1.prices.find(
+		const prepaidPriceBeforeAttach = variantBeforeAttach.prices.find(
 			(p: any) =>
 				p.config?.feature_id === TestFeature.Credits &&
 				p.config?.stripe_prepaid_price_v2_id,
 		);
-		expect(v1PrepaidPrice).toBeDefined();
-		expect((v1PrepaidPrice!.config as any)?.stripe_price_id).toBeTruthy();
+		expect(prepaidPriceBeforeAttach).toBeDefined();
 		expect(
-			(v1PrepaidPrice!.config as any)?.stripe_prepaid_price_v2_id,
+			(prepaidPriceBeforeAttach!.config as any)?.stripe_prepaid_price_v2_id,
 		).toBeTruthy();
 
 		const { autumnV1 } = await initScenario({
@@ -673,6 +672,21 @@ test.concurrent(
 			options: [{ feature_id: TestFeature.Credits, quantity: 500 }],
 		});
 		await wait(4000);
+
+		// Only a V1 attach mints the v1-shaped prepaid price id.
+		const variantV1 = await ProductService.getFull({
+			db,
+			idOrInternalId: variantId,
+			orgId: org.id,
+			env,
+		});
+		const v1PrepaidPrice = variantV1.prices.find(
+			(p: any) =>
+				p.config?.feature_id === TestFeature.Credits &&
+				p.config?.stripe_price_id,
+		);
+		expect(v1PrepaidPrice).toBeDefined();
+		expect((v1PrepaidPrice!.config as any)?.stripe_price_id).toBeTruthy();
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 			items: rolloverPrepaidItems(500),

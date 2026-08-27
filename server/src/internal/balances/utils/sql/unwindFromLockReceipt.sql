@@ -26,6 +26,10 @@ DECLARE
   rollover_id text;
   entity_id text;
   credit_cost numeric;
+  usage_attribution_delta jsonb;
+  current_usage_attribution jsonb;
+  rate_card_unwind_change jsonb;
+  unwind_credit_cost numeric;
 
   item_value_delta numeric;
   item_value_magnitude numeric;
@@ -41,6 +45,7 @@ DECLARE
   updated_additional_balance numeric;
   updated_adjustment numeric;
   updated_entities jsonb;
+  updated_usage_attribution jsonb;
 
   rows_affected integer;
 
@@ -81,6 +86,7 @@ BEGIN
     rollover_id := NULLIF(item->>'rollover_id', '');
     entity_id := NULLIF(item->>'entity_id', '');
     credit_cost := COALESCE((item->>'credit_cost')::numeric, 1);
+    usage_attribution_delta := item->'usage_attribution_delta';
 
     item_value_delta := COALESCE((item->>'value_delta')::numeric, 0);
     item_value_magnitude := ABS(item_value_delta);
@@ -113,6 +119,38 @@ BEGIN
       ELSE 0
     END;
 
+    current_usage_attribution := NULL;
+    IF usage_attribution_delta IS NOT NULL
+      AND jsonb_typeof(usage_attribution_delta) = 'object'
+      AND customer_entitlement_id IS NOT NULL
+    THEN
+      SELECT COALESCE(ce.usage_attribution, '{}'::jsonb)
+      INTO current_usage_attribution
+      FROM customer_entitlements ce
+      WHERE ce.id = customer_entitlement_id;
+    END IF;
+
+    rate_card_unwind_change := credit_rate_unwind_attribution_delta(
+      usage_attribution_delta,
+      current_usage_attribution,
+      unwind_iteration_value
+    );
+    unwind_credit_cost := credit_cost;
+    IF rate_card_unwind_change IS NOT NULL THEN
+      inverse_balance_delta := -(rate_card_unwind_change->>'credits')::numeric;
+      inverse_usage_delta := CASE
+        WHEN COALESCE((item->>'usage_delta')::numeric, 0) != 0
+          THEN (rate_card_unwind_change->>'credits')::numeric
+        ELSE 0
+      END;
+      inverse_value_delta := (rate_card_unwind_change->>'units')::numeric;
+      unwind_credit_cost := CASE
+        WHEN ABS(inverse_value_delta) <= 0.0000000001 THEN 0
+        ELSE (rate_card_unwind_change->>'credits')::numeric
+          / inverse_value_delta
+      END;
+    END IF;
+
     IF item_target_type = 'customer_entitlement' THEN
       IF customer_entitlement_id IS NULL THEN
         RAISE EXCEPTION 'LOCK_CUSTOMER_ENTITLEMENT_ID_MISSING';
@@ -134,17 +172,29 @@ BEGIN
         UPDATE customer_entitlements ce
         SET
           balance = ce.balance + inverse_balance_delta,
-          adjustment = COALESCE(ce.adjustment, 0) + inverse_adjustment_delta
+          adjustment = COALESCE(ce.adjustment, 0) + inverse_adjustment_delta,
+          usage_attribution = CASE
+            WHEN rate_card_unwind_change IS NULL THEN ce.usage_attribution
+            ELSE apply_credit_rate_attribution(
+              COALESCE(ce.usage_attribution, '{}'::jsonb),
+              rate_card_unwind_change->'rate_card',
+              (rate_card_unwind_change->>'units')::numeric,
+              (rate_card_unwind_change->>'credits')::numeric
+            )
+          END
         WHERE ce.id = customer_entitlement_id
         RETURNING
           ce.balance,
           COALESCE(ce.additional_balance, 0),
           COALESCE(ce.adjustment, 0),
-          COALESCE(ce.entities, '{}'::jsonb)
-        INTO updated_balance, updated_additional_balance, updated_adjustment, updated_entities;
+          COALESCE(ce.entities, '{}'::jsonb),
+          COALESCE(ce.usage_attribution, '{}'::jsonb)
+        INTO updated_balance, updated_additional_balance, updated_adjustment,
+          updated_entities, updated_usage_attribution;
       ELSE
         UPDATE customer_entitlements ce
-        SET entities = jsonb_set(
+        SET
+          entities = jsonb_set(
           jsonb_set(
             COALESCE(ce.entities, '{}'::jsonb),
             ARRAY[entity_id, 'balance'],
@@ -154,14 +204,25 @@ BEGIN
           ARRAY[entity_id, 'adjustment'],
           to_jsonb(COALESCE((COALESCE(ce.entities, '{}'::jsonb)->entity_id->>'adjustment')::numeric, 0) + inverse_adjustment_delta),
           true
-        )
+          ),
+          usage_attribution = CASE
+            WHEN rate_card_unwind_change IS NULL THEN ce.usage_attribution
+            ELSE apply_credit_rate_attribution(
+              COALESCE(ce.usage_attribution, '{}'::jsonb),
+              rate_card_unwind_change->'rate_card',
+              (rate_card_unwind_change->>'units')::numeric,
+              (rate_card_unwind_change->>'credits')::numeric
+            )
+          END
         WHERE ce.id = customer_entitlement_id
         RETURNING
           ce.balance,
           COALESCE(ce.additional_balance, 0),
           COALESCE(ce.adjustment, 0),
-          COALESCE(ce.entities, '{}'::jsonb)
-        INTO updated_balance, updated_additional_balance, updated_adjustment, updated_entities;
+          COALESCE(ce.entities, '{}'::jsonb),
+          COALESCE(ce.usage_attribution, '{}'::jsonb)
+        INTO updated_balance, updated_additional_balance, updated_adjustment,
+          updated_entities, updated_usage_attribution;
       END IF;
 
       -- Entitlement no longer exists (e.g. product upgraded mid-flight).
@@ -181,6 +242,7 @@ BEGIN
           'additional_balance', updated_additional_balance,
           'adjustment', updated_adjustment,
           'entities', updated_entities,
+          'usage_attribution', updated_usage_attribution,
           'deducted', COALESCE((updates_json->customer_entitlement_id->>'deducted')::numeric, 0) + inverse_value_delta,
           'additional_deducted', COALESCE((updates_json->customer_entitlement_id->>'additional_deducted')::numeric, 0)
         ),
@@ -222,6 +284,51 @@ BEGIN
         CONTINUE;
       END IF;
 
+      IF rate_card_unwind_change IS NOT NULL THEN
+        updated_balance := NULL;
+        UPDATE customer_entitlements ce
+        SET usage_attribution = apply_credit_rate_attribution(
+          COALESCE(ce.usage_attribution, '{}'::jsonb),
+          rate_card_unwind_change->'rate_card',
+          (rate_card_unwind_change->>'units')::numeric,
+          (rate_card_unwind_change->>'credits')::numeric
+        )
+        WHERE ce.id = customer_entitlement_id
+        RETURNING
+          ce.balance,
+          COALESCE(ce.additional_balance, 0),
+          COALESCE(ce.adjustment, 0),
+          COALESCE(ce.entities, '{}'::jsonb),
+          COALESCE(ce.usage_attribution, '{}'::jsonb)
+        INTO updated_balance, updated_additional_balance, updated_adjustment,
+          updated_entities, updated_usage_attribution;
+
+        IF updated_balance IS NULL THEN
+          RAISE EXCEPTION 'LOCK_ATTRIBUTION_OWNER_MISSING';
+        END IF;
+
+        updates_json := jsonb_set(
+          updates_json,
+          ARRAY[customer_entitlement_id],
+          jsonb_build_object(
+            'balance', updated_balance,
+            'additional_balance', updated_additional_balance,
+            'adjustment', updated_adjustment,
+            'entities', updated_entities,
+            'usage_attribution', updated_usage_attribution,
+            'deducted', COALESCE(
+              (updates_json->customer_entitlement_id->>'deducted')::numeric,
+              0
+            ) + inverse_value_delta,
+            'additional_deducted', COALESCE(
+              (updates_json->customer_entitlement_id->>'additional_deducted')::numeric,
+              0
+            )
+          ),
+          true
+        );
+      END IF;
+
       modified_rollover_ids_array := array_append(modified_rollover_ids_array, rollover_id);
     ELSE
       RAISE EXCEPTION 'INVALID_LOCK_ITEM_TARGET_TYPE|targetType:%', item_target_type;
@@ -233,12 +340,17 @@ BEGIN
         'customer_entitlement_id', customer_entitlement_id,
         'rollover_id', rollover_id,
         'entity_id', entity_id,
-        'credit_cost', credit_cost,
+        'credit_cost', unwind_credit_cost,
         'balance_delta', inverse_balance_delta,
         'adjustment_delta', inverse_adjustment_delta,
         'usage_delta', inverse_usage_delta,
         'value_delta', inverse_value_delta
-      )
+      ) || CASE
+        WHEN rate_card_unwind_change IS NULL THEN '{}'::jsonb
+        ELSE jsonb_build_object(
+          'usage_attribution_delta', rate_card_unwind_change
+        )
+      END
     );
 
     remaining_value := remaining_value - unwind_iteration_value;

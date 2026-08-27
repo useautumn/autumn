@@ -491,6 +491,20 @@
       "when": 1787568392799,
       "tag": "0069_panoramic_romulus",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1787584362654,
+      "tag": "0070_sharp_warpath",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1787771170135,
+      "tag": "0071_calm_may_parker",
+      "breakpoints": true
     }
   ]
 }

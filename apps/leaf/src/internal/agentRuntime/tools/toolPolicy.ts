@@ -18,10 +18,18 @@ const labels: Record<string, string> = {
 	updateSubscription: "Update subscription",
 };
 
-// Pure utility tools the agent calls constantly — not worth a progress line.
+// Plumbing the user should never see: date maths, file rummaging, and the
+// agent's own bookkeeping. A status line is for what is being done to their
+// billing, not how the agent gets there.
 const silentTools = new Set([
 	"dateToEpochMilliseconds",
 	"epochMillisecondsToDate",
+	"bash",
+	"glob",
+	"grep",
+	"read",
+	"read_file",
+	"todo",
 ]);
 
 export const isSilentTool = (toolName: string) =>
@@ -41,7 +49,7 @@ export const toolLabel = (toolName: string) => {
 // Present-progressive phrasing for live status lines ("Looking up the
 // customer…"). Falls back to the noun label for anything unmapped.
 const gerunds: Record<string, string> = {
-	billing: "Preparing a billing action",
+	billing: "Preparing the change",
 	catalog: "Working on the pricing catalog",
 	getAgentRules: "Reading your billing setup",
 	investigator: "Investigating",
@@ -73,7 +81,8 @@ const gerunds: Record<string, string> = {
 	updateAgentRules: "Updating your agent rules",
 	updatePlan: "Updating the plan",
 	listBalances: "Checking balances",
-	connection_search: "Finding the right tool",
+	listRewards: "Looking through your rewards",
+	load_skill: "Reading a playbook",
 };
 
 export const toolGerund = (toolName: string) =>

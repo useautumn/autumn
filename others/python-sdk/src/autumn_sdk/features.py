@@ -24,10 +24,11 @@ class Features(BaseSDK):
         ] = None,
         credit_schema: Optional[
             Union[
-                List[models.CreateFeatureCreditSchemaRequestBody],
-                List[models.CreateFeatureCreditSchemaRequestBodyTypedDict],
+                List[models.CreateFeatureCreditSchemaRequestBodyUnion],
+                List[models.CreateFeatureCreditSchemaRequestBodyUnionTypedDict],
             ]
         ] = None,
+        invoice_credit: Optional[bool] = None,
         model_markups: OptionalNullable[
             Union[
                 Dict[str, models.CreateFeatureModelMarkupsRequest],
@@ -56,7 +57,8 @@ class Features(BaseSDK):
         :param feature_id: The ID of the feature to create.
         :param consumable: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
         :param display: Singular and plural display names for the feature in your user interface.
-        :param credit_schema: A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+        :param credit_schema: A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+        :param invoice_credit: Whether usage of this classic credit system should be itemized as invoice credits.
         :param model_markups: Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
         :param default_markup: Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free.
         :param provider_markups: Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id.
@@ -85,8 +87,9 @@ class Features(BaseSDK):
             ),
             credit_schema=utils.get_pydantic_model(
                 credit_schema,
-                Optional[List[models.CreateFeatureCreditSchemaRequestBody]],
+                Optional[List[models.CreateFeatureCreditSchemaRequestBodyUnion]],
             ),
+            invoice_credit=invoice_credit,
             model_markups=utils.get_pydantic_model(
                 model_markups,
                 OptionalNullable[Dict[str, models.CreateFeatureModelMarkupsRequest]],
@@ -174,10 +177,11 @@ class Features(BaseSDK):
         ] = None,
         credit_schema: Optional[
             Union[
-                List[models.CreateFeatureCreditSchemaRequestBody],
-                List[models.CreateFeatureCreditSchemaRequestBodyTypedDict],
+                List[models.CreateFeatureCreditSchemaRequestBodyUnion],
+                List[models.CreateFeatureCreditSchemaRequestBodyUnionTypedDict],
             ]
         ] = None,
+        invoice_credit: Optional[bool] = None,
         model_markups: OptionalNullable[
             Union[
                 Dict[str, models.CreateFeatureModelMarkupsRequest],
@@ -206,7 +210,8 @@ class Features(BaseSDK):
         :param feature_id: The ID of the feature to create.
         :param consumable: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
         :param display: Singular and plural display names for the feature in your user interface.
-        :param credit_schema: A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+        :param credit_schema: A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+        :param invoice_credit: Whether usage of this classic credit system should be itemized as invoice credits.
         :param model_markups: Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
         :param default_markup: Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free.
         :param provider_markups: Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id.
@@ -235,8 +240,9 @@ class Features(BaseSDK):
             ),
             credit_schema=utils.get_pydantic_model(
                 credit_schema,
-                Optional[List[models.CreateFeatureCreditSchemaRequestBody]],
+                Optional[List[models.CreateFeatureCreditSchemaRequestBodyUnion]],
             ),
+            invoice_credit=invoice_credit,
             model_markups=utils.get_pydantic_model(
                 model_markups,
                 OptionalNullable[Dict[str, models.CreateFeatureModelMarkupsRequest]],
@@ -690,10 +696,11 @@ class Features(BaseSDK):
         ] = None,
         credit_schema: Optional[
             Union[
-                List[models.UpdateFeatureCreditSchemaRequestBody],
-                List[models.UpdateFeatureCreditSchemaRequestBodyTypedDict],
+                List[models.UpdateFeatureCreditSchemaRequestBodyUnion],
+                List[models.UpdateFeatureCreditSchemaRequestBodyUnionTypedDict],
             ]
         ] = None,
+        invoice_credit: Optional[bool] = None,
         model_markups: OptionalNullable[
             Union[
                 Dict[str, models.UpdateFeatureModelMarkupsRequest],
@@ -724,7 +731,8 @@ class Features(BaseSDK):
         :param type: The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
         :param consumable: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
         :param display: Singular and plural display names for the feature in your user interface.
-        :param credit_schema: A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+        :param credit_schema: A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+        :param invoice_credit: Whether usage of this classic credit system should be itemized as invoice credits.
         :param model_markups: Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
         :param default_markup: Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free.
         :param provider_markups: Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id.
@@ -755,8 +763,9 @@ class Features(BaseSDK):
             ),
             credit_schema=utils.get_pydantic_model(
                 credit_schema,
-                Optional[List[models.UpdateFeatureCreditSchemaRequestBody]],
+                Optional[List[models.UpdateFeatureCreditSchemaRequestBodyUnion]],
             ),
+            invoice_credit=invoice_credit,
             model_markups=utils.get_pydantic_model(
                 model_markups,
                 OptionalNullable[Dict[str, models.UpdateFeatureModelMarkupsRequest]],
@@ -846,10 +855,11 @@ class Features(BaseSDK):
         ] = None,
         credit_schema: Optional[
             Union[
-                List[models.UpdateFeatureCreditSchemaRequestBody],
-                List[models.UpdateFeatureCreditSchemaRequestBodyTypedDict],
+                List[models.UpdateFeatureCreditSchemaRequestBodyUnion],
+                List[models.UpdateFeatureCreditSchemaRequestBodyUnionTypedDict],
             ]
         ] = None,
+        invoice_credit: Optional[bool] = None,
         model_markups: OptionalNullable[
             Union[
                 Dict[str, models.UpdateFeatureModelMarkupsRequest],
@@ -880,7 +890,8 @@ class Features(BaseSDK):
         :param type: The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
         :param consumable: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
         :param display: Singular and plural display names for the feature in your user interface.
-        :param credit_schema: A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+        :param credit_schema: A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+        :param invoice_credit: Whether usage of this classic credit system should be itemized as invoice credits.
         :param model_markups: Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
         :param default_markup: Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free.
         :param provider_markups: Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id.
@@ -911,8 +922,9 @@ class Features(BaseSDK):
             ),
             credit_schema=utils.get_pydantic_model(
                 credit_schema,
-                Optional[List[models.UpdateFeatureCreditSchemaRequestBody]],
+                Optional[List[models.UpdateFeatureCreditSchemaRequestBodyUnion]],
             ),
+            invoice_credit=invoice_credit,
             model_markups=utils.get_pydantic_model(
                 model_markups,
                 OptionalNullable[Dict[str, models.UpdateFeatureModelMarkupsRequest]],

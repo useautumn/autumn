@@ -3,6 +3,7 @@ import {
 	buildBillingPreviewDisplay,
 	buildCustomizeChanges,
 	buildPlanItemChangeDisplay,
+	customizeWithFreeTrial,
 	customPriceText,
 	formatCount,
 	formatMoney,
@@ -1194,14 +1195,14 @@ const approvalPreviewBlocks = ({
 	const changeRows = [
 		...customizeRows({
 			currentPlan: primaryCurrentPlan,
-			customize: request?.customize,
+			customize: customizeWithFreeTrial(request),
 		}),
 		...schedulePlans.flatMap(({ plan, timing }) => {
 			const planId = getString(plan.plan_id) ?? "Plan";
 			const planLabel = planNames.get(planId) ?? planId;
 			return customizeRows({
 				currentPlan: currentPlanFor(planId),
-				customize: plan.customize,
+				customize: customizeWithFreeTrial(plan),
 				plan: timing ? `${planLabel} (${timing})` : planLabel,
 			});
 		}),
@@ -1231,7 +1232,23 @@ const approvalPreviewBlocks = ({
 		);
 	}
 	if (changeRows.length) {
-		blocks.push(changeTable({ caption: "Plan changes", rows: changeRows }));
+		// Name the plan being customized: "Plan changes" reads as a catalog edit.
+		// Prefer the display name; the id is only a fallback when none resolved.
+		const customizedPlanId =
+			getString(request?.plan_id) ??
+			display.changes.incoming[0]?.planId ??
+			undefined;
+		const customizedPlanName = customizedPlanId
+			? (planNames.get(customizedPlanId) ?? customizedPlanId)
+			: undefined;
+		blocks.push(
+			changeTable({
+				caption: customizedPlanName
+					? `${customizedPlanName} customizations`
+					: "Customizations",
+				rows: changeRows,
+			}),
+		);
 	}
 	// Prepaid quantities are silent money decisions — an omitted quantity
 	// defaults to 0 server-side, so the approver must see it either way.
@@ -1299,6 +1316,11 @@ const approvalPreviewBlocks = ({
 		!display.badges.some(({ label }) => label === "Checkout link")
 			? [{ active: true, label: "Checkout link" }]
 			: []),
+		// The preview knows whether balances clear; the request params do not.
+		...(display.resetsUsage &&
+		!display.badges.some(({ label }) => label === "Reset usage")
+			? [{ active: true, label: "Reset usage" }]
+			: []),
 	];
 	const badgeLine = badges
 		.map(({ active, label }) => {
@@ -1308,6 +1330,8 @@ const approvalPreviewBlocks = ({
 			if (label === "Enable immediately")
 				return active ? "Provision immediately" : "Provision after payment";
 			if (label === "Prorations") return active ? label : "No prorations";
+			if (label === "Reset usage") return "Usage will reset";
+			if (label === "Card required") return active ? label : "No card required";
 			if (label === "Checkout link")
 				return "Customer completes payment in checkout";
 			return label;
@@ -1451,6 +1475,7 @@ export const approvalCard = ({
 				Button({
 					id: "cancel_billing_action",
 					label: "Dismiss",
+					style: "danger",
 					value: id,
 				}),
 				...(editable

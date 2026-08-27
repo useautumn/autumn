@@ -105,6 +105,10 @@ function applyCloudAgentDevEnv(
 	next.DATABASE_URL = LOCAL_DATABASE_URL;
 	next.DATABASE_CRITICAL_URL = LOCAL_DATABASE_URL;
 	next.STRIPE_WEBHOOK_SKIP_VERIFY = "true";
+	writeEnvLocalFiles({
+		...entry,
+		databaseUrl: LOCAL_DATABASE_URL,
+	});
 	return next;
 }
 

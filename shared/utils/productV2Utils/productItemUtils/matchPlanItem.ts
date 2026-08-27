@@ -1,6 +1,6 @@
 import { BillingMethod } from "../../../api/products/components/billingMethod.js";
 import type { PlanItemFilter } from "../../../api/products/items/filter/planItemFilter.js";
-import { ResetInterval } from "../../../models/productModels/intervals/resetInterval.js";
+import type { ResetInterval } from "../../../models/productModels/intervals/resetInterval.js";
 import {
 	type ProductItem,
 	UsageModel,
@@ -52,6 +52,16 @@ export const matchesPlanItemFilter = ({
 		// itemToEntIntervalCount({ item }) !== filter.interval_count
 	)
 		return false;
+
+	if (filter.included !== undefined) {
+		const grant =
+			typeof item.included_usage === "number"
+				? item.included_usage
+				: item.included_usage == null
+					? 0
+					: null;
+		if (grant !== filter.included) return false;
+	}
 
 	return true;
 };

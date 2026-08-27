@@ -1,6 +1,7 @@
 import { parsePreviewPayload } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
 import { db } from "../../../../../lib/db.js";
+import { logger } from "../../../../../lib/logger.js";
 import { toolRequestFromArgs } from "../../../../approvals/utils/toolRequest.js";
 import { executeAutumnMcpTool } from "../../../../autumnMcp/client.js";
 import type { AgentActionProgress } from "../../../domain/agentTurnContext.js";
@@ -96,10 +97,26 @@ const applyEveEffect = async ({
 			onThinking?.();
 			return;
 		case "save_session":
+			if (effect.pendingRequests?.length) {
+				logger.info("Recorded eve parks the session is waiting on", {
+					event: "leaf.eve_pending_requests_recorded",
+					data: {
+						request_ids: effect.pendingRequests.map(
+							(request) => request.requestId,
+						),
+						session_id: session.sessionId,
+					},
+				});
+			}
 			await saveEveSessionState({
 				orgId,
 				session,
-				state: { status: effect.status },
+				state: {
+					status: effect.status,
+					...(effect.pendingRequests
+						? { pendingRequests: [...effect.pendingRequests] }
+						: {}),
+				},
 			});
 			return;
 		case "throw":

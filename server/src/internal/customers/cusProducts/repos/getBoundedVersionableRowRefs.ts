@@ -1,4 +1,4 @@
-import { VERSIONABLE_CUSTOMER_STATUSES } from "@autumn/shared";
+import { REFERENCED_ROW_CUSTOMER_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
@@ -48,7 +48,7 @@ export const buildBoundedVersionableRowRefsQuery = ({
 		return sql`SELECT NULL::text AS internal_product_id WHERE false`;
 	}
 
-	const statuses = sqlIn({ values: [...VERSIONABLE_CUSTOMER_STATUSES] });
+	const statuses = sqlIn({ values: [...REFERENCED_ROW_CUSTOMER_STATUSES] });
 	const targetsByProduct = new Map<string, VersioningRowRefTarget[]>();
 	for (const target of targets) {
 		const productTargets =

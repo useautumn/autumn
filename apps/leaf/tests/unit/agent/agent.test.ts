@@ -57,7 +57,7 @@ describe("chat environment selection", () => {
 			"One fact answers in one short sentence",
 		);
 		expect(autumnChatInstructions).toContain("goes in bullets");
-		expect(autumnChatInstructions).toContain("Ask one direct question");
+		expect(autumnChatInstructions).toContain("ask one direct question");
 		expect(autumnChatInstructions).toContain(
 			"do not expose internal modelling",
 		);

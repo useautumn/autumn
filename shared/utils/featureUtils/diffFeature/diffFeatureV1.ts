@@ -1,4 +1,5 @@
 import type { ApiFeatureV1 } from "@api/features/apiFeatureV1.js";
+import { isGraduatedCreditSchemaItem } from "@api/features/creditRateCard.js";
 
 type FeatureDisplay = ApiFeatureV1["display"];
 type CreditSchema = ApiFeatureV1["credit_schema"];
@@ -27,18 +28,54 @@ const displaysEqual = (left: FeatureDisplay, right: FeatureDisplay) =>
 	(left?.singular ?? null) === (right?.singular ?? null) &&
 	(left?.plural ?? null) === (right?.plural ?? null);
 
+const creditSchemaItemsEqual = ({
+	left,
+	right,
+}: {
+	left: NonNullable<CreditSchema>[number];
+	right: NonNullable<CreditSchema>[number];
+}) => {
+	if ((left.billing_units ?? 1) !== (right.billing_units ?? 1)) return false;
+
+	if (
+		isGraduatedCreditSchemaItem(left) &&
+		isGraduatedCreditSchemaItem(right)
+	) {
+		return (
+			left.tiers.length === right.tiers.length &&
+			left.tiers.every(
+				(tier, index) =>
+					tier.to === right.tiers[index]?.to &&
+					tier.credit_cost === right.tiers[index]?.credit_cost,
+			)
+		);
+	}
+
+	if (
+		isGraduatedCreditSchemaItem(left) ||
+		isGraduatedCreditSchemaItem(right)
+	) {
+		return false;
+	}
+
+	return left.credit_cost === right.credit_cost;
+};
+
 const creditSchemasEqual = (left: CreditSchema, right: CreditSchema) => {
 	const leftEntries = left ?? [];
 	const rightEntries = right ?? [];
-	const costByFeatureId = new Map(
-		leftEntries.map((entry) => [entry.metered_feature_id, entry.credit_cost]),
+	const leftByFeatureId = new Map(
+		leftEntries.map((entry) => [entry.metered_feature_id, entry]),
 	);
 	return (
 		leftEntries.length === rightEntries.length &&
-		rightEntries.every(
-			(entry) =>
-				costByFeatureId.get(entry.metered_feature_id) === entry.credit_cost,
-		)
+		rightEntries.every((rightEntry) => {
+			const leftEntry = leftByFeatureId.get(rightEntry.metered_feature_id);
+			return (
+				leftEntry !== undefined &&
+				creditSchemaItemsEqual({ left: leftEntry, right: rightEntry })
+			);
+		})
 	);
 };
 
@@ -111,6 +148,11 @@ const fieldComparisons: FieldComparison[] = [
 			creditSchemasEqual(from.credit_schema, to.credit_schema),
 	},
 	{
+		key: "invoice_credit",
+		isSame: (from, to) =>
+			(from.invoice_credit ?? false) === (to.invoice_credit ?? false),
+	},
+	{
 		key: "default_markup",
 		isSame: (from, to) =>
 			nullableNumbersEqual(from.default_markup, to.default_markup),
@@ -124,6 +166,14 @@ const fieldComparisons: FieldComparison[] = [
 		key: "provider_markups",
 		isSame: (from, to) =>
 			providerMarkupsEqual(from.provider_markups, to.provider_markups),
+	},
+	{
+		key: "processors",
+		isSame: (from, to) =>
+			(from.processors?.stripe?.product_id ?? null) ===
+				(to.processors?.stripe?.product_id ?? null) &&
+			(from.processors?.stripe?.meter_id ?? null) ===
+				(to.processors?.stripe?.meter_id ?? null),
 	},
 ];
 

@@ -123,7 +123,7 @@ if (process.env.UNIT_TESTS) await seedMockedModulesForUnitLane();
 // must succeed — a swallowed init failure here resurfaces as the opaque
 // "Default TestContext is not initialized" Proxy error from every test
 // scheduled on this worker.
-if (process.env.TESTS_ORG) {
+if (process.env.TESTS_ORG && !process.env.UNIT_TESTS) {
 	// Dynamic import: createTestContext drags in the server init graph (db,
 	// redis, stripe), which unit-only lanes must never load or connect to.
 	const { createTestContext } = await import(

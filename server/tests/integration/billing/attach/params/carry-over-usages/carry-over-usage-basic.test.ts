@@ -10,8 +10,9 @@
  *   on a plan transition (no clamping to zero)
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
+import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -77,6 +78,68 @@ test.concurrent(
 			usage: 40,
 		});
 	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("carry-over-usage invoice credit: tier position follows the carried balance usage")}`,
+	async () => {
+		const oldCredits = items.consumable({
+			featureId: TestFeature.InvoiceCredits,
+			includedUsage: 1_000,
+			price: 1,
+			billingUnits: 1,
+		});
+		const newCredits = items.consumable({
+			featureId: TestFeature.InvoiceCredits,
+			includedUsage: 2_000,
+			price: 1,
+			billingUnits: 1,
+		});
+		const oldPlan = products.pro({
+			id: "invoice-credit-carry-old",
+			items: [oldCredits],
+		});
+		const newPlan = products.premium({
+			id: "invoice-credit-carry-new",
+			items: [newCredits],
+		});
+
+		const { customerId, autumnV2_3, ctx } = await initScenario({
+			customerId: "carry-over-usage-invoice-credit",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [oldPlan, newPlan] }),
+			],
+			actions: [s.attach({ productId: oldPlan.id, timeout: 4_000 })],
+		});
+
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Action1,
+			value: 100,
+		});
+		await new Promise((resolve) => setTimeout(resolve, 2_000));
+		await autumnV2_3.billing.attach({
+			customer_id: customerId,
+			plan_id: newPlan.id,
+			carry_over_usages: { enabled: true },
+		});
+
+		const customerEntitlement = await findCustomerEntitlement({
+			ctx,
+			customerId,
+			featureId: TestFeature.InvoiceCredits,
+		});
+		const sourceInternalFeatureId = ctx.features.find(
+			(feature) => feature.id === TestFeature.Action1,
+		)?.internal_id;
+		expect(sourceInternalFeatureId).toBeDefined();
+		expect(customerEntitlement?.balance).toBeCloseTo(1_980, 10);
+		expect(
+			customerEntitlement?.usage_attribution?.[sourceInternalFeatureId!],
+		).toEqual({ units: 100, credits: 20 });
+	},
+	{ timeout: 120_000 },
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════

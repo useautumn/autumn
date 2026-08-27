@@ -3,12 +3,16 @@ import { type AppEnv, ms } from "@autumn/shared";
 import { AGENT_UNREACHABLE_MESSAGE } from "../../../../../ui/messages.js";
 import type { ActiveRun } from "../../../../runs/runRegistry.js";
 import {
+	EveSessionDeadError,
 	EveStreamDisconnectedError,
 	EveStreamIdleTimeoutError,
 	resyncEveStreamIndex,
-	streamEveEvents,
 } from "../../../eve/client.js";
-import { saveEveSessionState } from "../../../eve/sessionState.js";
+import {
+	advanceStreamCursor,
+	saveEveSessionState,
+} from "../../../eve/sessionState.js";
+import { streamEveEventsWithReconnect } from "../../../eve/streamWithReconnect.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 import { applyEveEvent, type EveEventContext } from "./applyEveEvent.js";
 import {
@@ -17,11 +21,21 @@ import {
 	type EveTurnProgress,
 	eveTurnProducedOutput,
 } from "./eveTurnReducer.js";
+import { createTurnActivity, type TurnActivity } from "./turnActivity.js";
+import { watchSubagentProgress } from "./watchSubagentProgress.js";
 
 // Eve can close empty while asynchronously resuming a turn.
 const MAX_IDLE_RETRIES = 20;
+/** Each idle window is 2 minutes, so this bounds a quiet turn at ~6 minutes
+ * before leaf answers with whatever it has. */
+const MAX_IDLE_RESYNCS = 3;
+/** Settle before the caller's own wall-clock backstop, so a turn eve never
+ * resumes is answered by leaf rather than killed mid-recovery. */
+const MAX_QUIET_MS = ms.minutes(2.5);
+/** The ceiling on a single turn however busy it looks: a stream that dribbles
+ * one event per idle window would otherwise reset the resync budget forever. */
+const MAX_TURN_DURATION_MS = ms.minutes(15);
 const STREAM_RETRY_DELAY_MS = ms.seconds(0.5);
-const MAX_STREAM_DISCONNECT_RETRIES = 5;
 const PERSIST_CURSOR_EVERY_EVENTS = 10;
 
 type EveTurnContext = Omit<EveEventContext, "event"> & { auth: EveAuthContext };
@@ -48,11 +62,13 @@ const closeReasoningOutput = ({
 
 const streamPassEvents = async ({
 	abandonForStop,
+	activity,
 	onFirstStreamEvent,
 	run,
 	signal,
 	turn,
 }: {
+	activity: TurnActivity;
 	abandonForStop: (input: {
 		progress: EveTurnProgress;
 		stop: NonNullable<ActiveRun["stop"]>;
@@ -66,11 +82,15 @@ const streamPassEvents = async ({
 	let progress = turn.progress;
 	let sawEvent = false;
 	try {
-		for await (const event of streamEveEvents({ auth, session, signal })) {
+		for await (const event of streamEveEventsWithReconnect({
+			auth,
+			session,
+			signal,
+		})) {
 			if (!sawEvent) onFirstStreamEvent?.();
 			sawEvent = true;
-			session.state.streamIndex += 1;
-			session.state.lastEventAt = Date.now();
+			activity.touch();
+			advanceStreamCursor(session);
 
 			if (run?.stop) {
 				return {
@@ -86,6 +106,20 @@ const streamPassEvents = async ({
 				return { outcome: result.outcome, progress, sawEvent };
 			}
 
+			if (event.type === "subagent.called" && event.childSessionId) {
+				activity.childStarted();
+				watchSubagentProgress({
+					auth,
+					childSessionId: event.childSessionId,
+					onAction: turn.onAction,
+					onChildActivity: activity.touch,
+					onChildEnded: activity.childFinished,
+					onReasoning: turn.onReasoning,
+					session,
+					signal,
+				});
+			}
+
 			if (session.state.streamIndex % PERSIST_CURSOR_EVERY_EVENTS === 0) {
 				await saveEveSessionState({ orgId, session });
 			}
@@ -96,24 +130,52 @@ const streamPassEvents = async ({
 	return { progress, sawEvent };
 };
 
-const recoverFromIdleStream = async ({
+/** An idle window is a gap, not an ending: eve holds the turn durably and
+ * resumes on its own, so leaf resyncs and reopens at the cursor. Only an
+ * exhausted budget settles the turn from whatever text arrived. */
+const resyncAfterIdleStream = async ({
+	attempt,
 	logger,
 	turn,
 }: {
+	attempt: number;
 	logger: AutumnLogger;
 	turn: EveTurnContext;
-}): Promise<EveTurnOutcome> => {
-	const { auth, onReasoning, orgId, progress, session } = turn;
+}) => {
+	const { auth, orgId, session } = turn;
 	logger.warn("Eve stream went idle; resyncing cursor", {
 		event: "leaf.eve_stream_idle_timeout",
 		data: {
+			attempt,
 			session_id: session.sessionId,
 			stream_index: session.state.streamIndex,
 		},
 	});
 	await resyncEveStreamIndex({ auth, session });
 	await saveEveSessionState({ orgId, session, state: { status: "waiting" } });
+};
+
+const settleExhaustedTurn = ({
+	activity,
+	logger,
+	turn,
+}: {
+	activity: TurnActivity;
+	logger: AutumnLogger;
+	turn: EveTurnContext;
+}): EveTurnOutcome => {
+	const { onReasoning, progress, session } = turn;
 	const partialText = progress.finalText || progress.pendingText;
+	logger.error("Eve never resumed the turn", {
+		event: "leaf.eve_turn_abandoned",
+		data: {
+			has_partial_text: Boolean(partialText),
+			quiet_ms: activity.msSinceActivity(),
+			session_id: session.sessionId,
+			stream_index: session.state.streamIndex,
+			turn_ms: activity.msSinceStart(),
+		},
+	});
 	if (!partialText) throw new Error(AGENT_UNREACHABLE_MESSAGE);
 	closeReasoningOutput({ onReasoning, progress });
 	return { kind: "answered", text: partialText };
@@ -157,6 +219,7 @@ const outcomeForExhaustedRetries = async ({
 
 export const consumeAgentTurn = async ({
 	auth,
+	deadlineAt,
 	env,
 	logger,
 	onAction,
@@ -169,6 +232,7 @@ export const consumeAgentTurn = async ({
 	token,
 }: {
 	auth: EveAuthContext;
+	deadlineAt?: number;
 	env: AppEnv;
 	logger: AutumnLogger;
 	onAction?: EveEventContext["onAction"];
@@ -212,7 +276,7 @@ export const consumeAgentTurn = async ({
 	let streamedAnyEvent = false;
 	let healedSilentCursor = false;
 	let idleRetries = 0;
-	let disconnectRetries = 0;
+	const activity = createTurnActivity();
 
 	const abortForRunStop = () => abortController.abort();
 	if (run) run.abortTurnStream = abortForRunStop;
@@ -227,8 +291,22 @@ export const consumeAgentTurn = async ({
 				});
 			}
 
+			const quietTooLong =
+				activity.activeChildren() === 0 &&
+				activity.msSinceActivity() >= MAX_QUIET_MS;
+			const deadlineReached =
+				deadlineAt !== undefined && Date.now() >= deadlineAt;
+			if (
+				activity.msSinceStart() >= MAX_TURN_DURATION_MS ||
+				quietTooLong ||
+				deadlineReached
+			) {
+				return settleExhaustedTurn({ activity, logger, turn });
+			}
+
 			const pass = await streamPassEvents({
 				abandonForStop,
+				activity,
 				onFirstStreamEvent: streamedAnyEvent ? undefined : onFirstStreamEvent,
 				run,
 				signal: abortController.signal,
@@ -245,23 +323,33 @@ export const consumeAgentTurn = async ({
 				});
 			}
 
-			if (pass.error instanceof EveStreamDisconnectedError) {
-				disconnectRetries += 1;
-				logger.warn("Eve stream disconnected; reconnecting", {
-					event: "leaf.eve_stream_disconnected",
+			if (pass.error instanceof EveStreamIdleTimeoutError) {
+				// Work delegated to a subagent runs on the child's stream, so the
+				// parent is not evidence of a dead turn while a child is live.
+				// The child relay owns when a child stops counting: it reconnects
+				// through quiet windows and ends when the session terminates.
+				const turnIsWorking = activity.activeChildren() > 0;
+				idleRetries = pass.sawEvent || turnIsWorking ? 0 : idleRetries + 1;
+				if (idleRetries >= MAX_IDLE_RESYNCS) {
+					return settleExhaustedTurn({ activity, logger, turn });
+				}
+				await resyncAfterIdleStream({ attempt: idleRetries, logger, turn });
+				continue;
+			}
+			if (
+				pass.error instanceof EveStreamDisconnectedError &&
+				!streamedAnyEvent
+			) {
+				logger.error("Eve session produced no events across every reconnect", {
+					event: "leaf.eve_session_dead",
 					data: {
-						attempt: disconnectRetries,
-						error: pass.error.message,
+						new_session: session.newSession,
 						session_id: session.sessionId,
 						stream_index: session.state.streamIndex,
 					},
+					error: pass.error,
 				});
-				if (disconnectRetries >= MAX_STREAM_DISCONNECT_RETRIES)
-					throw pass.error;
-				continue;
-			}
-			if (pass.error instanceof EveStreamIdleTimeoutError) {
-				return await recoverFromIdleStream({ logger, turn });
+				throw new EveSessionDeadError(session.sessionId);
 			}
 			if (pass.error !== undefined) throw pass.error;
 

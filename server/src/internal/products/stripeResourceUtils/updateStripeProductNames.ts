@@ -6,11 +6,11 @@ import type {
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
-import { usagePriceToProductName } from "../prices/priceUtils/usagePriceUtils/convertUsagePrice.js";
 
 /**
- * Sync a plan rename onto its owned Stripe Products (main + per-feature).
+ * Sync a plan rename onto its owned Stripe Product.
  * Callers guard variant rows — a variant shares its base's Stripe Product.
+ * Per-feature Stripe Products are renamed from the feature, not the plan.
  */
 export const updateStripeProductNames = async ({
 	org,
@@ -48,29 +48,5 @@ export const updateStripeProductNames = async ({
 				newName,
 			},
 		);
-	}
-
-	for (const price of curProduct.prices) {
-		const priceStripeProdId = price.config?.stripe_product_id;
-
-		if (priceStripeProdId) {
-			const name = usagePriceToProductName({
-				price,
-				fullProduct: {
-					...curProduct,
-					name: newName,
-				},
-			});
-
-			try {
-				await stripeCli.products.update(priceStripeProdId, {
-					name,
-				});
-			} catch (error: any) {
-				logger.error(
-					`Error updating price ${price.id} name in Stripe: ${error.message}`,
-				);
-			}
-		}
 	}
 };

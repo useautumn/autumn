@@ -8,7 +8,9 @@ import type {
 import {
 	anchorOverridesFrom,
 	type FieldReaders,
+	freeTrialFromRequest,
 	overridesFromRequest,
+	quantityRecordFrom,
 	readArray,
 	readBoolean,
 	readEnum,
@@ -20,7 +22,11 @@ import {
 	requestRecord,
 	trialOverridesFrom,
 } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
-import type { AttachForm, FormCustomLineItem } from "../attachFormSchema";
+import type {
+	AttachAdditionalPlan,
+	AttachForm,
+	FormCustomLineItem,
+} from "../attachFormSchema";
 
 const ATTACH_FIELD_READERS: FieldReaders<AttachForm> = {
 	addLicenses: readArray<CustomizePlanLicense>("upsert_licenses"),
@@ -74,10 +80,87 @@ const carryOverFrom = (
 	};
 };
 
-/** Inverse of buildAttachRequestBody. Stage-scoped keys (invoice*, redirect,
- * checkout params) are intentionally skipped — the review stage re-collects
- * them; billing_controls has no form control and gates linkability instead. */
+const requestPlanFields = (plan: Record<string, unknown>) => {
+	const items = Array.isArray(plan.items)
+		? (plan.items as ProductItem[])
+		: null;
+	const prepaidOptions = quantityRecordFrom(
+		plan.feature_quantities,
+		"feature_id",
+	);
+	return {
+		isCustom: items !== null,
+		items,
+		prepaidOptions,
+		productId: typeof plan.plan_id === "string" ? plan.plan_id : "",
+		version: typeof plan.version === "number" ? plan.version : undefined,
+	};
+};
+
+/** Inverse of buildAttachMultiRequestBody: plans[0] seeds the primary plan
+ * fields, the rest become additionalPlans rows. */
+const multiAttachOverridesFromRequestBody = (
+	request: Record<string, unknown>,
+): Partial<AttachForm> => {
+	const plans = request.plans as Record<string, unknown>[];
+	const [primaryPlan, ...additionalRequestPlans] = plans;
+	const primary = requestPlanFields(primaryPlan ?? {});
+
+	const additionalPlans: AttachAdditionalPlan[] = additionalRequestPlans.map(
+		(plan, index) => ({
+			_id: `seeded-plan-${index}`,
+			entityId: typeof plan.entity_id === "string" ? plan.entity_id : null,
+			...requestPlanFields(plan),
+		}),
+	);
+
+	return {
+		additionalPlans,
+		productId: primary.productId,
+		prepaidOptions: primary.prepaidOptions,
+		...(primary.items ? { isCustom: true, items: primary.items } : {}),
+		...(primary.version !== undefined ? { version: primary.version } : {}),
+		...(typeof request.currency === "string"
+			? { currency: request.currency }
+			: {}),
+		...(typeof request.starts_at === "number"
+			? { startDate: request.starts_at }
+			: {}),
+		...(typeof request.billing_behavior === "string"
+			? { prorationBehavior: request.billing_behavior as BillingBehavior }
+			: {}),
+		...(typeof request.new_billing_subscription === "boolean"
+			? { newBillingSubscription: request.new_billing_subscription }
+			: {}),
+		...(typeof request.enable_plan_immediately === "boolean"
+			? { enablePlanImmediately: request.enable_plan_immediately }
+			: {}),
+		...(Array.isArray(request.discounts)
+			? {
+					discounts: (request.discounts as AttachDiscount[]).map(
+						(discount, index) => ({
+							...discount,
+							_id: `seeded-discount-${index}`,
+						}),
+					),
+				}
+			: {}),
+		...trialOverridesFrom(freeTrialFromRequest(request)),
+	};
+};
+
+/** Inverse of buildAttachRequestBody (or buildAttachMultiRequestBody when the
+ * request carries `plans`). Stage-scoped keys (invoice*, redirect, checkout
+ * params) are intentionally skipped — the review stage re-collects them;
+ * billing_controls has no form control and gates linkability instead. */
 export const attachFormOverridesFromRequestBody = (
+	request: Record<string, unknown>,
+): Partial<AttachForm> =>
+	Array.isArray(request.plans) && request.plans.length > 0
+		? multiAttachOverridesFromRequestBody(request)
+		: singleAttachOverridesFromRequestBody(request);
+
+const singleAttachOverridesFromRequestBody = (
 	request: Record<string, unknown>,
 ): Partial<AttachForm> => ({
 	...overridesFromRequest(request, ATTACH_FIELD_READERS),
@@ -91,5 +174,5 @@ export const attachFormOverridesFromRequestBody = (
 		enabled: "carryOverUsages",
 		featureIds: "carryOverUsageFeatureIds",
 	}),
-	...trialOverridesFrom(request.free_trial),
+	...trialOverridesFrom(freeTrialFromRequest(request)),
 });

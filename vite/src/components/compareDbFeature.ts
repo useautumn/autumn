@@ -4,7 +4,13 @@ import {
 	type Feature,
 	FeatureType,
 } from "@autumn/shared";
+import { creditSchemaToApi } from "@/views/products/features/credit-systems/utils/creditSchemaUtils";
 
+const byMeteredFeatureId = (a: CreditSchemaItem, b: CreditSchemaItem) =>
+	a.metered_feature_id.localeCompare(b.metered_feature_id);
+
+/** Compares the serialized rate card so billing units, rate type, and tiers all
+ * count as changes. */
 const creditSchemasSame = ({
 	schema1,
 	schema2,
@@ -12,17 +18,11 @@ const creditSchemasSame = ({
 	schema1: CreditSchemaItem[];
 	schema2: CreditSchemaItem[];
 }) => {
-	schema1.sort((a, b) =>
-		a.metered_feature_id.localeCompare(b.metered_feature_id),
-	);
-	schema2.sort((a, b) =>
-		a.metered_feature_id.localeCompare(b.metered_feature_id),
-	);
+	if (schema1.length !== schema2.length) return false;
 
-	return schema1.every(
-		(schema, index) =>
-			schema.metered_feature_id === schema2[index].metered_feature_id &&
-			schema.credit_amount === schema2[index].credit_amount,
+	return (
+		JSON.stringify(creditSchemaToApi([...schema1].sort(byMeteredFeatureId))) ===
+		JSON.stringify(creditSchemaToApi([...schema2].sort(byMeteredFeatureId)))
 	);
 };
 
@@ -89,6 +89,15 @@ export const compareDbFeature = ({
 			message: `Credit schema different: ${curFeature.config?.schema} !== ${newFeature.config?.schema}`,
 		},
 
+		invoice_credit: {
+			condition:
+				curFeature.type === FeatureType.CreditSystem &&
+				newFeature.type === FeatureType.CreditSystem &&
+				Boolean(curFeature.config?.invoice_credit) !==
+					Boolean(newFeature.config?.invoice_credit),
+			message: `Invoice credit different: ${curFeature.config?.invoice_credit} !== ${newFeature.config?.invoice_credit}`,
+		},
+
 		event_names: {
 			condition:
 				curFeature.type === FeatureType.Metered &&
@@ -98,6 +107,13 @@ export const compareDbFeature = ({
 					eventNames2: newFeature.event_names || [],
 				}),
 			message: `Event names different: ${curFeature.event_names} !== ${newFeature.event_names}`,
+		},
+
+		stripe_product_id: {
+			condition:
+				(curFeature.stripe_product_id || null) !==
+				(newFeature.stripe_product_id || null),
+			message: `Stripe product different: ${curFeature.stripe_product_id} !== ${newFeature.stripe_product_id}`,
 		},
 	};
 

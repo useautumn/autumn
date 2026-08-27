@@ -22,6 +22,7 @@ export const StripeSubscriptionActionSchema = z.discriminatedUnion("type", [
 	z.object({
 		type: z.literal("cancel"),
 		stripeSubscriptionId: z.string(),
+		params: z.custom<Stripe.SubscriptionCancelParams>().optional(),
 	}),
 	z.object({
 		type: z.literal("none"),

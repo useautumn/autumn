@@ -142,7 +142,9 @@ export const upsertEveSession = async ({
  * pointer to it, so keeping it replays the same dead resume on every message. */
 export type EveSessionDeleteReason =
 	| "approval_session_gone"
+	| "drain_stuck"
 	| "post_failed"
+	| "session_dead"
 	| "session_failed"
 	| "session_gone"
 	| "turn_unusable";

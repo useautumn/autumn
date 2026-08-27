@@ -103,7 +103,7 @@ export function FeatureSheet({
 				feature.credit_schema &&
 				feature.credit_schema.length > 0 && (
 					<SheetSection title="Credit Schema">
-						{feature.credit_schema.map((item: { metered_feature_id: string; credit_cost: number }, index: number) => (
+						{feature.credit_schema.map((item, index) => (
 							<Box key={item.metered_feature_id} flexDirection="column">
 								<Text>
 									<Text color="gray">{index + 1}. </Text>
@@ -111,8 +111,16 @@ export function FeatureSheet({
 								</Text>
 								<Box paddingLeft={2}>
 									<Text>
-										<Text color="gray">Credit Cost: </Text>
-										<Text color="cyan">{item.credit_cost}</Text>
+										<Text color="gray">
+											{item.tier_behavior === "graduated"
+												? "Pricing: "
+												: "Credit Cost: "}
+										</Text>
+										<Text color="cyan">
+											{item.tier_behavior === "graduated"
+												? `${item.tiers.length} graduated tiers`
+												: item.credit_cost}
+										</Text>
 									</Text>
 								</Box>
 							</Box>

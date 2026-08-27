@@ -1,11 +1,13 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
+	AppEnv,
 	type AutumnBillingPlan,
 	type BillingContext,
 	BillingInterval,
 	BillWhen,
 	type FullCusProduct,
 	type FullCustomerPrice,
+	type FullProduct,
 	type Price,
 	PriceType,
 	type UsagePriceConfig,
@@ -16,6 +18,7 @@ const mockState = {
 	priceIds: [] as string[],
 	currencies: [] as (string | undefined)[],
 	productCalls: 0,
+	finderCalls: 0,
 };
 
 await mockModuleWithRestore(
@@ -39,6 +42,15 @@ await mockModuleWithRestore("@/internal/products/productUtils", () => ({
 		mockState.productCalls++;
 	},
 }));
+
+await mockModuleWithRestore(
+	"@/internal/products/stripeResourceUtils/findReusableStripeResources/findReusableStripePrice",
+	() => ({
+		findReusableStripePrice: async () => {
+			mockState.finderCalls++;
+		},
+	}),
+);
 
 import {
 	initStripeResourcesForBillingPlan,
@@ -169,6 +181,7 @@ describe("initStripeResourcesForBillingPlan", () => {
 		mockState.priceIds = [];
 		mockState.currencies = [];
 		mockState.productCalls = 0;
+		mockState.finderCalls = 0;
 	});
 
 	test("uses preview Stripe IDs without initializing Stripe resources during dry run", async () => {
@@ -417,39 +430,56 @@ describe("initStripeResourcesForBillingPlan", () => {
 	});
 });
 
+const unInitedProduct = ({ env }: { env: AppEnv }): FullProduct =>
+	({
+		id: "pro",
+		name: "Pro",
+		internal_id: "prod_internal",
+		org_id: "org_1",
+		env,
+		version: 1,
+		created_at: 1,
+		processor: null,
+		base_internal_product_id: null,
+		base_variant_id: null,
+		is_add_on: false,
+		is_default: false,
+		archived: false,
+		group: "",
+		description: null,
+		config: {},
+		metadata: {},
+		prices: [fixedPrice({ id: "price_1" })],
+		entitlements: [],
+		free_trial: null,
+		licenses: [],
+	}) as unknown as FullProduct;
+
+const connectedCtx = ({ env }: { env: AppEnv }): AutumnContext =>
+	({
+		db: {},
+		env,
+		org: {
+			id: "org_1",
+			default_currency: "usd",
+			config: { disable_stripe_writes: false },
+			stripe_config: { test_api_key: "sk_test_x", live_api_key: "sk_live_x" },
+		},
+		logger: { debug: () => undefined, info: () => undefined },
+	}) as unknown as AutumnContext;
+
 describe("initStripeResourcesForProducts allowCreate seam", () => {
 	beforeEach(() => {
 		mockState.priceIds = [];
 		mockState.currencies = [];
 		mockState.productCalls = 0;
+		mockState.finderCalls = 0;
 	});
-
-	const buildFullProduct = () =>
-		({
-			...customerProduct({ customerPrices: [] }).product,
-			prices: [fixedPrice({ id: "price_seam" })],
-			entitlements: [],
-			free_trial: null,
-		}) as unknown as Parameters<
-			typeof initStripeResourcesForProducts
-		>[0]["products"][number];
-
-	const buildCtx = () =>
-		({
-			db: {},
-			env: "sandbox",
-			org: {
-				id: "org_1",
-				config: { disable_stripe_writes: false },
-				stripe_config: { test_api_key: "sk_test_x" },
-			},
-			logger: { debug: () => undefined, info: () => undefined },
-		}) as unknown as AutumnContext;
 
 	test("without allowCreate stops after the reuse phase", async () => {
 		await initStripeResourcesForProducts({
-			ctx: buildCtx(),
-			products: [buildFullProduct()],
+			ctx: connectedCtx({ env: AppEnv.Sandbox }),
+			products: [unInitedProduct({ env: AppEnv.Sandbox })],
 			lookupVariantFamilies: false,
 		});
 
@@ -459,14 +489,45 @@ describe("initStripeResourcesForProducts allowCreate seam", () => {
 
 	test("allowCreate: true creates the product and its prices", async () => {
 		await initStripeResourcesForProducts({
-			ctx: buildCtx(),
-			products: [buildFullProduct()],
+			ctx: connectedCtx({ env: AppEnv.Sandbox }),
+			products: [unInitedProduct({ env: AppEnv.Sandbox })],
 			allowCreate: true,
 			lookupVariantFamilies: false,
 		});
 
 		expect(mockState.productCalls).toBe(1);
-		expect(mockState.priceIds).toEqual(["price_seam"]);
+		expect(mockState.priceIds).toEqual(["price_1"]);
+	});
+});
+
+describe("initStripeResourcesForProducts Live finder gate", () => {
+	beforeEach(() => {
+		mockState.priceIds = [];
+		mockState.currencies = [];
+		mockState.productCalls = 0;
+		mockState.finderCalls = 0;
+	});
+
+	test("Live without allowCreate skips findReusableStripePrice", async () => {
+		await initStripeResourcesForProducts({
+			ctx: connectedCtx({ env: AppEnv.Live }),
+			products: [unInitedProduct({ env: AppEnv.Live })],
+			lookupVariantFamilies: false,
+		});
+
+		expect(mockState.finderCalls).toBe(0);
+		expect(mockState.priceIds).toEqual([]);
+	});
+
+	test("Live + allowCreate calls findReusableStripePrice", async () => {
+		await initStripeResourcesForProducts({
+			ctx: connectedCtx({ env: AppEnv.Live }),
+			products: [unInitedProduct({ env: AppEnv.Live })],
+			allowCreate: true,
+			lookupVariantFamilies: false,
+		});
+
+		expect(mockState.finderCalls).toBe(1);
 	});
 });
 

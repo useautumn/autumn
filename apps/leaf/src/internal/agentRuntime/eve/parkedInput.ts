@@ -2,6 +2,7 @@ import { WAITING_FOR_INPUT_MESSAGE } from "../../../ui/messages.js";
 import { normalizeToolName } from "../tools/toolPolicy.js";
 import type { EveInputRequest } from "./eveEventSchemas.js";
 import { approvalOptionIds, textForInputRequests } from "./events.js";
+import type { EvePendingRequest, EveSessionRef } from "./types.js";
 
 export type ChainedPendingRequest = Readonly<{
 	input?: Record<string, unknown>;
@@ -166,4 +167,49 @@ export const classifyParkedEveInput = ({
 		kind: "waiting",
 		text: textForInputRequests(pending) || WAITING_FOR_INPUT_MESSAGE,
 	};
+};
+
+type GatedParkShape = {
+	chained: {
+		options?: ReadonlyArray<{ id?: string; label?: string }>;
+		requestId: string;
+	};
+	withheld: ReadonlyArray<{ denyOptionId?: string; requestId: string }>;
+};
+
+/** Every request in a gated batch with the option that releases it. */
+export const pendingGatedRequests = (
+	parked: GatedParkShape,
+): EvePendingRequest[] => [
+	{
+		denyOptionId: approvalOptionIds({ options: parked.chained.options }).deny,
+		kind: "gated",
+		requestId: parked.chained.requestId,
+	},
+	...parked.withheld.map((write) => ({
+		denyOptionId: write.denyOptionId ?? "deny",
+		kind: "gated" as const,
+		requestId: write.requestId,
+	})),
+];
+
+/** Gated parks nothing in this post answers. eve silently defers a message
+ * posted over one, so each must be denied in the same post. */
+export const outstandingGatedDenies = ({
+	answered,
+	session,
+}: {
+	answered: ReadonlyArray<{ requestId: string }>;
+	session: EveSessionRef;
+}) => {
+	const answeredIds = new Set(answered.map((response) => response.requestId));
+	return session.state.pendingRequests
+		.filter(
+			(request) =>
+				request.kind === "gated" && !answeredIds.has(request.requestId),
+		)
+		.map((request) => ({
+			optionId: request.denyOptionId ?? "deny",
+			requestId: request.requestId,
+		}));
 };

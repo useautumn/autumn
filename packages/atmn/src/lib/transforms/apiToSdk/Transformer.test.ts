@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { transformFeatureToApi } from "../sdkToApi/feature.js";
 import { transformApiFeature } from "./feature.js";
 import { transformApiPlan } from "./plan.js";
 import { createTransformer } from "./Transformer.js";
@@ -68,6 +69,45 @@ describe("Transformer", () => {
 				expect(result.consumable).toBe(true);
 				expect(result.creditSchema).toHaveLength(1);
 			}
+		});
+
+		test("graduated credit system round trip", () => {
+			const apiFeature = {
+				id: "credits",
+				name: "Credits",
+				type: "credit_system",
+				consumable: true,
+				archived: false,
+				credit_schema: [
+					{
+						metered_feature_id: "api_calls",
+						billing_units: 100,
+						tier_behavior: "graduated" as const,
+						tiers: [
+							{ to: 10_000, credit_cost: 1 },
+							{ to: "inf" as const, credit_cost: 0.5 },
+						],
+					},
+				],
+			};
+
+			const feature = transformApiFeature(apiFeature);
+
+			expect(feature.type).toBe("credit_system");
+			if (feature.type === "credit_system") {
+				expect(feature.creditSchema[0]).toEqual({
+					meteredFeatureId: "api_calls",
+					billingUnits: 100,
+					tierBehavior: "graduated",
+					tiers: [
+						{ to: 10_000, creditCost: 1 },
+						{ to: "inf", creditCost: 0.5 },
+					],
+				});
+			}
+			expect(transformFeatureToApi(feature).credit_schema).toEqual(
+				apiFeature.credit_schema,
+			);
 		});
 
 		test("ai_credit_system", () => {

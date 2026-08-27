@@ -9,6 +9,7 @@ import {
 import { runDeductionPass } from "@/internal/balances/track/deductUtils/deductFromCusEntsTypescript.js";
 import type { DeductionUpdates } from "@/internal/balances/utils/types/deductionUpdate.js";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
+import { validateInvoiceCreditBalanceMutation } from "@/internal/balances/utils/validateInvoiceCreditBalanceMutation.js";
 
 export type AutoTopupRebalanceDelta = {
 	cusEntId: string;
@@ -79,6 +80,10 @@ export const computeRebalancedAutoTopUp = ({
 	);
 
 	if (!prepaidCusEnt) return { deltas: [] };
+
+	validateInvoiceCreditBalanceMutation({
+		feature: prepaidCusEnt.entitlement.feature,
+	});
 
 	const candidates = cusEntsForFeature.filter(
 		(cusEnt) =>

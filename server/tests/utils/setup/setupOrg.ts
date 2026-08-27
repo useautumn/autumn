@@ -2,9 +2,37 @@ import type { AppEnv } from "@autumn/shared";
 import { getFeatures } from "@tests/setup/v2Features.js";
 import { ensureOrgSvixApps } from "@tests/utils/setup/ensureOrgSvixApps.js";
 import axios from "axios";
-import { initDrizzle } from "@/db/initDrizzle";
+import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+
+/** Insert only features the org is missing so new TestFeature entries land. */
+export const ensureV2Features = async ({
+	db,
+	orgId,
+	env,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+}) => {
+	const wanted = Object.values(getFeatures({ orgId }));
+	const existing = await FeatureService.list({ db, orgId, env });
+	const existingIds = new Set(existing.map((feature) => feature.id));
+	const missing = wanted.filter((feature) => !existingIds.has(feature.id));
+	if (missing.length === 0) return;
+
+	const inserted = await FeatureService.insert({
+		db,
+		data: missing,
+		logger: console,
+	});
+	if (!inserted) {
+		throw new Error(
+			`ensureV2Features: insert failed for ${missing.map((feature) => feature.id).join(",")}`,
+		);
+	}
+};
 
 export const getAxiosInstance = (apiKey?: string) => {
 	// Priority: 1. Passed apiKey, 2. Org secret key from context, 3. TEST_ORG_SECRET_KEY fallback
@@ -38,12 +66,7 @@ export const setupOrg = async ({
 }) => {
 	const { db } = initDrizzle();
 	if (seedFeatures) {
-		const v2Features = getFeatures({ orgId });
-		await FeatureService.insert({
-			db,
-			data: Object.values(v2Features),
-			logger: console,
-		});
+		await ensureV2Features({ db, orgId, env });
 		console.log("✅ Inserted v2 features");
 	} else {
 		console.log("↷ Skipped v2 feature seed");

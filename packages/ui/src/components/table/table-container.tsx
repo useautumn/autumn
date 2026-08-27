@@ -7,5 +7,9 @@ export function TableContainer({
 	className?: string;
 	children: React.ReactNode;
 }) {
-	return <div className={cn("flex flex-col", className)}>{children}</div>;
+	return (
+		<div data-slot="table-container" className={cn("flex flex-col", className)}>
+			{children}
+		</div>
+	);
 }

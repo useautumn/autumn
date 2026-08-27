@@ -102,6 +102,10 @@ export const previewAttachUpsertLicenseTierSchema = z.object({
 	additionalCurrencies: z.union([z.array(z.any()), z.undefined()]).optional(),
 });
 
+export const previewAttachRemoveLicenseSchema = z.object({
+	licensePlanId: z.string(),
+});
+
 export const previewAttachInvoiceModeSchema = z.object({
 	enabled: z.boolean(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
@@ -114,6 +118,11 @@ export const previewAttachAttachDiscountSchema = z.object({
 	rewardId: z.union([z.string(), z.undefined()]).optional(),
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
 });
+
+export const previewAttachBillingCycleAnchorSchema = z.union([
+	z.string(),
+	z.number(),
+]);
 
 export const previewAttachCustomLineItemSchema = z.object({
 	amount: z.number(),
@@ -232,6 +241,13 @@ export const previewAttachFeatureQuantityRequestOutboundSchema = z.object({
 	feature_id: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const previewAttachFreeTrialParamsOutboundSchema = z.object({
+	duration_length: z.number(),
+	duration_type: z.string(),
+	card_required: z.boolean(),
+	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const previewAttachAdditionalCurrencyOutboundSchema = z.object({
@@ -428,9 +444,10 @@ export const previewAttachPlanItemFilterOutboundSchema = z.object({
 	billing_method: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.union([z.string(), z.string(), z.undefined()]).optional(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewAttachFreeTrialParamsOutboundSchema = z.object({
+export const previewAttachCustomizeFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
@@ -619,6 +636,7 @@ export const previewAttachUpsertLicensePlanItemFilterOutboundSchema = z.object({
 	billing_method: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.union([z.string(), z.string(), z.undefined()]).optional(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const previewAttachUpsertLicenseCustomizeOutboundSchema = z.object({
@@ -651,6 +669,10 @@ export const previewAttachUpsertLicenseOutboundSchema = z.object({
 	metadata: z.union([z.record(z.string(), z.any()), z.undefined()]).optional(),
 });
 
+export const previewAttachRemoveLicenseOutboundSchema = z.object({
+	license_plan_id: z.string(),
+});
+
 export const previewAttachCustomizeOutboundSchema = z.object({
 	price: z
 		.union([previewAttachBasePriceOutboundSchema, z.undefined()])
@@ -666,7 +688,7 @@ export const previewAttachCustomizeOutboundSchema = z.object({
 		.union([z.array(previewAttachPlanItemFilterOutboundSchema), z.undefined()])
 		.optional(),
 	free_trial: z
-		.union([previewAttachFreeTrialParamsOutboundSchema, z.undefined()])
+		.union([previewAttachCustomizeFreeTrialParamsOutboundSchema, z.undefined()])
 		.optional()
 		.nullable(),
 	billing_controls: z
@@ -674,6 +696,9 @@ export const previewAttachCustomizeOutboundSchema = z.object({
 		.optional(),
 	upsert_licenses: z
 		.union([z.array(previewAttachUpsertLicenseOutboundSchema), z.undefined()])
+		.optional(),
+	remove_licenses: z
+		.union([z.array(previewAttachRemoveLicenseOutboundSchema), z.undefined()])
 		.optional(),
 });
 
@@ -689,6 +714,11 @@ export const previewAttachAttachDiscountOutboundSchema = z.object({
 	reward_id: z.union([z.string(), z.undefined()]).optional(),
 	promotion_code: z.union([z.string(), z.undefined()]).optional(),
 });
+
+export const previewAttachBillingCycleAnchorOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+]);
 
 export const previewAttachCustomLineItemOutboundSchema = z.object({
 	amount: z.number(),
@@ -721,6 +751,10 @@ export const previewAttachParamsOutboundSchema = z.object({
 		])
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
+	free_trial: z
+		.union([previewAttachFreeTrialParamsOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	customize: z
 		.union([previewAttachCustomizeOutboundSchema, z.undefined()])
 		.optional(),
@@ -735,7 +769,9 @@ export const previewAttachParamsOutboundSchema = z.object({
 		.optional(),
 	success_url: z.union([z.string(), z.undefined()]).optional(),
 	new_billing_subscription: z.union([z.boolean(), z.undefined()]).optional(),
-	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
+	billing_cycle_anchor: z
+		.union([z.string(), z.number(), z.undefined()])
+		.optional(),
 	plan_schedule: z.union([z.string(), z.undefined()]).optional(),
 	starts_at: z.union([z.number(), z.undefined()]).optional(),
 	ends_at: z.union([z.number(), z.undefined()]).optional(),
@@ -771,6 +807,19 @@ const closedEnumSchema = z.any();
 const planSchema = z.any();
 
 const openEnumSchema = z.any();
+
+export const previewAttachDurationTypeSchema = closedEnumSchema;
+
+export const previewAttachOnEndSchema = closedEnumSchema;
+
+export const previewAttachFreeTrialParamsSchema = z.object({
+	durationLength: z.number(),
+	durationType: z
+		.union([previewAttachDurationTypeSchema, z.undefined()])
+		.optional(),
+	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
+	onEnd: z.union([previewAttachOnEndSchema, z.undefined()]).optional(),
+});
 
 export const previewAttachPriceIntervalSchema = closedEnumSchema;
 
@@ -938,19 +987,20 @@ export const previewAttachPlanItemFilterSchema = z.object({
 		])
 		.optional(),
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewAttachDurationTypeSchema = closedEnumSchema;
+export const previewAttachCustomizeDurationTypeSchema = closedEnumSchema;
 
-export const previewAttachOnEndSchema = closedEnumSchema;
+export const previewAttachCustomizeOnEndSchema = closedEnumSchema;
 
-export const previewAttachFreeTrialParamsSchema = z.object({
+export const previewAttachCustomizeFreeTrialParamsSchema = z.object({
 	durationLength: z.number(),
 	durationType: z
-		.union([previewAttachDurationTypeSchema, z.undefined()])
+		.union([previewAttachCustomizeDurationTypeSchema, z.undefined()])
 		.optional(),
 	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
-	onEnd: z.union([previewAttachOnEndSchema, z.undefined()]).optional(),
+	onEnd: z.union([previewAttachCustomizeOnEndSchema, z.undefined()]).optional(),
 });
 
 export const previewAttachPurchaseLimitIntervalSchema = closedEnumSchema;
@@ -1142,6 +1192,7 @@ export const previewAttachUpsertLicensePlanItemFilterSchema = z.object({
 		])
 		.optional(),
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	included: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const previewAttachUpsertLicenseCustomizeSchema = z.object({
@@ -1186,7 +1237,7 @@ export const previewAttachCustomizeSchema = z.object({
 		.union([z.array(previewAttachPlanItemFilterSchema), z.undefined()])
 		.optional(),
 	freeTrial: z
-		.union([previewAttachFreeTrialParamsSchema, z.undefined()])
+		.union([previewAttachCustomizeFreeTrialParamsSchema, z.undefined()])
 		.optional()
 		.nullable(),
 	billingControls: z
@@ -1194,6 +1245,9 @@ export const previewAttachCustomizeSchema = z.object({
 		.optional(),
 	upsertLicenses: z
 		.union([z.array(previewAttachUpsertLicenseSchema), z.undefined()])
+		.optional(),
+	removeLicenses: z
+		.union([z.array(previewAttachRemoveLicenseSchema), z.undefined()])
 		.optional(),
 });
 
@@ -1211,6 +1265,10 @@ export const previewAttachParamsSchema = z.object({
 		.union([z.array(previewAttachFeatureQuantityRequestSchema), z.undefined()])
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
+	freeTrial: z
+		.union([previewAttachFreeTrialParamsSchema, z.undefined()])
+		.optional()
+		.nullable(),
 	customize: z.union([previewAttachCustomizeSchema, z.undefined()]).optional(),
 	invoiceMode: z
 		.union([previewAttachInvoiceModeSchema, z.undefined()])
@@ -1227,7 +1285,9 @@ export const previewAttachParamsSchema = z.object({
 		.optional(),
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
 	newBillingSubscription: z.union([z.boolean(), z.undefined()]).optional(),
-	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
+	billingCycleAnchor: z
+		.union([z.string(), z.number(), z.undefined()])
+		.optional(),
 	planSchedule: z
 		.union([previewAttachPlanScheduleSchema, z.undefined()])
 		.optional(),
@@ -1296,6 +1356,7 @@ export const previewAttachResponseSchema = z.object({
 	subtotal: z.number(),
 	total: z.number(),
 	currency: z.string(),
+	resetsUsage: z.union([z.boolean(), z.undefined()]).optional(),
 	nextCycle: z.union([previewAttachNextCycleSchema, z.undefined()]).optional(),
 	expand: z.union([z.array(z.string()), z.undefined()]).optional(),
 	incoming: z.array(previewAttachIncomingSchema),

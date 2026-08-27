@@ -104,7 +104,7 @@ class EventsAggregateParamsTypedDict(TypedDict):
     entity_id: NotRequired[str]
     r"""Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)"""
     group_by: NotRequired[str]
-    r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" / \"$plan_id\" to group by those columns"""
+    r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" / \"$plan_id\" to group by those columns. When aggregate_on is \"deducted\", \"$feature_id\" groups deductions by the tracked feature that consumed each balance."""
     range: NotRequired[Range]
     r"""Time range to aggregate events for. Either range or custom_range must be provided"""
     bin_size: NotRequired[BinSize]
@@ -130,7 +130,7 @@ class EventsAggregateParams(BaseModel):
     r"""Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)"""
 
     group_by: Optional[str] = None
-    r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" / \"$plan_id\" to group by those columns"""
+    r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" / \"$plan_id\" to group by those columns. When aggregate_on is \"deducted\", \"$feature_id\" groups deductions by the tracked feature that consumed each balance."""
 
     range: Optional[Range] = None
     r"""Time range to aggregate events for. Either range or custom_range must be provided"""

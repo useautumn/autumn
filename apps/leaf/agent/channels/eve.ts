@@ -32,12 +32,14 @@ const leafInternalAuth = (): AuthFn<Request> => async (request) => {
 	if (chatInstallationId) attributes.chatInstallationId = chatInstallationId;
 	const autumnUserId = request.headers.get("x-leaf-autumn-user-id");
 	if (autumnUserId) attributes.autumnUserId = autumnUserId;
-	const encodedInstructions = request.headers.get("x-leaf-org-instructions");
-	if (encodedInstructions) {
-		attributes.orgInstructions = Buffer.from(
-			encodedInstructions,
-			"base64url",
-		).toString("utf8");
+	for (const [key, header] of [
+		["orgCatalog", "x-leaf-org-catalog"],
+		["orgInstructions", "x-leaf-org-instructions"],
+	] as const) {
+		const encoded = request.headers.get(header);
+		if (encoded) {
+			attributes[key] = Buffer.from(encoded, "base64url").toString("utf8");
+		}
 	}
 
 	return {
@@ -48,6 +50,29 @@ const leafInternalAuth = (): AuthFn<Request> => async (request) => {
 	};
 };
 
+/** Evals and local tooling reach eve without leaf's headers; outside
+ * production an env-configured org/user stands in so connections authorize. */
+const localEvalAuth = (): AuthFn<Request> => async () => {
+	if (process.env.NODE_ENV === "production") return null;
+	const orgId = process.env.LEAF_EVAL_ORG_ID;
+	const providerUserId = process.env.LEAF_EVAL_USER_ID;
+	if (!(orgId && providerUserId)) return null;
+	return {
+		attributes: {
+			appEnv: process.env.LEAF_EVAL_APP_ENV ?? "sandbox",
+			channelId: "eval",
+			orgId,
+			provider: "web",
+			providerUserId,
+			threadId: "eval",
+			workspaceId: orgId,
+		},
+		authenticator: "leaf-eval",
+		principalId: providerUserId,
+		principalType: "user",
+	};
+};
+
 export default eveChannel({
-	auth: [leafInternalAuth(), vercelOidc(), localDev()],
+	auth: [leafInternalAuth(), vercelOidc(), localEvalAuth(), localDev()],
 });

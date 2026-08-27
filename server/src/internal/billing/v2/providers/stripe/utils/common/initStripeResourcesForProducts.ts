@@ -24,6 +24,7 @@ import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
 import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies";
+import { findReusableStripePrice } from "@/internal/products/stripeResourceUtils/findReusableStripeResources/findReusableStripePrice";
 import {
 	planLicenseToCustomStripeInitProduct,
 	planLicenseToStripeInitProduct,
@@ -70,9 +71,15 @@ export const initStripeResourcesForProducts = async ({
 			)
 			.filter((licenseProduct) => licenseProduct !== null),
 	);
+	const initProducts = [...products, ...customLicenseProducts];
+	await findReusableStripePrice({
+		ctx,
+		products: initProducts,
+		currency: orgToCurrency({ org }).toLowerCase(),
+	});
 
 	const batchProductUpdates = [];
-	for (const product of [...products, ...customLicenseProducts]) {
+	for (const product of initProducts) {
 		if (product.processor?.id != null) continue;
 
 		batchProductUpdates.push(
@@ -89,7 +96,7 @@ export const initStripeResourcesForProducts = async ({
 
 	const batchPriceUpdates = [];
 
-	for (const product of [...products, ...customLicenseProducts]) {
+	for (const product of initProducts) {
 		for (const price of product.prices) {
 			batchPriceUpdates.push(
 				createStripePriceIFNotExist({
@@ -236,6 +243,12 @@ export const initStripeResourcesForBillingPlan = async ({
 
 	if (orgDisableStripeWrites({ ctx })) return;
 
+	await findReusableStripePrice({
+		ctx,
+		products: targetProducts,
+		currency,
+	});
+
 	const batchProductUpdates = [];
 	for (const product of targetProducts) {
 		if (product.processor?.id != null) continue;
@@ -268,6 +281,8 @@ export const initStripeResourcesForBillingPlan = async ({
 					internalEntityId,
 					useCheckout: false,
 					currency,
+					billingVersion: billingContext.billingVersion,
+					source: price.is_custom ? "customize" : "catalog",
 				}),
 			);
 		}

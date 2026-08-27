@@ -75,6 +75,7 @@ export * from "./update-balance-op.js";
 export * from "./update-customer-op.js";
 export * from "./update-entity-op.js";
 export * from "./update-feature-op.js";
-export * from "./update-plan-op.js";
+export * from "./update-plan-billing-controls-response.js";
+export * from "./update-plan-response.js";
 export * from "./update-referral-program-op.js";
 export * from "./update-reward-op.js";

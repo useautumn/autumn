@@ -8,6 +8,7 @@ import type {
 import {
 	anchorOverridesFrom,
 	type FieldReaders,
+	freeTrialFromRequest,
 	overridesFromRequest,
 	readArray,
 	readBoolean,
@@ -46,5 +47,5 @@ export const updateSubscriptionFormOverridesFromRequestBody = (
 ): Partial<UpdateSubscriptionForm> => ({
 	...overridesFromRequest(request, UPDATE_FIELD_READERS),
 	...anchorOverridesFrom(request.billing_cycle_anchor),
-	...trialOverridesFrom(request.free_trial, { removable: true }),
+	...trialOverridesFrom(freeTrialFromRequest(request), { removable: true }),
 });

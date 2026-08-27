@@ -1,6 +1,13 @@
-import { parsePreviewPayload } from "@autumn/render";
+import {
+	customizeNeedsCurrentPlan,
+	customizeWithFreeTrial,
+	parsePreviewPayload,
+} from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
+import { errorMessage } from "../../../lib/errorMessage.js";
+import { logger } from "../../../lib/logger.js";
 import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
+import { autumnMcpErrorText } from "../../autumnMcp/errorResult.js";
 
 const text = (value: unknown) =>
 	typeof value === "string" && value.trim() ? value.trim() : null;
@@ -51,7 +58,7 @@ export const resolveApprovalDisplay = async ({
 }) => {
 	const customerId = text(request?.customer_id);
 	const planId = text(request?.plan_id);
-	const customize = record(request?.customize);
+	const customize = record(customizeWithFreeTrial(request));
 	const catalogPlans = Array.isArray(request?.plans)
 		? request.plans.map(record)
 		: [];
@@ -71,8 +78,6 @@ export const resolveApprovalDisplay = async ({
 		...catalogPlans,
 		...schedulePlans.map((plan) => record(plan.customize)),
 	];
-	const needsBasePlan = (value: Record<string, unknown>) =>
-		Array.isArray(value.items) || Array.isArray(value.remove_items);
 	const needsFeatures =
 		Boolean(text(request?.feature_id)) ||
 		customizations.some((value) =>
@@ -105,10 +110,12 @@ export const resolveApprovalDisplay = async ({
 	);
 	const knownPlanNames = { ...requestPlanNames, ...previewPlanNames };
 	const basePlanIds = new Set([
-		...(planId && needsBasePlan(customize) ? [planId] : []),
+		...(planId && customizeNeedsCurrentPlan(customize) ? [planId] : []),
 		...schedulePlans.flatMap((plan) => {
 			const id = text(plan.plan_id);
-			return id && needsBasePlan(record(plan.customize)) ? [id] : [];
+			return id && customizeNeedsCurrentPlan(customizeWithFreeTrial(plan))
+				? [id]
+				: [];
 		}),
 	]);
 	const planIds = referencedPlanIds.filter(
@@ -118,11 +125,28 @@ export const resolveApprovalDisplay = async ({
 		customerId || planIds.length || needsFeatures ? getToken() : null;
 	const fetchRecord = (toolName: string, request: Record<string, unknown>) =>
 		token
-			?.then((value) =>
-				executeTool({ env, token: value, toolName, args: { request } }),
-			)
-			.then(parsePreviewPayload)
-			.catch(() => null);
+			?.then(async (value) => {
+				const result = await executeTool({
+					env,
+					token: value,
+					toolName,
+					args: { request },
+				});
+				const errorText = autumnMcpErrorText(result);
+				if (errorText) throw new Error(errorText);
+				return parsePreviewPayload(result);
+			})
+			.catch((error) => {
+				logger.warn("Approval display lookup failed", {
+					event: "leaf.approval_display_fetch_failed",
+					data: {
+						error: errorMessage(error).slice(0, 300),
+						request,
+						tool: toolName,
+					},
+				});
+				return null;
+			});
 	const [customer, features, plans] = await Promise.all([
 		customerId
 			? fetchRecord("getCustomer", {
@@ -154,12 +178,10 @@ export const resolveApprovalDisplay = async ({
 			return planId && Object.keys(plan).length ? [[planId, plan]] : [];
 		}),
 	);
-	const currentPlanByPlan = Object.fromEntries(
-		Object.entries(planRecords).map(([id, value]) => [
-			id,
-			subscriptionPlanByPlan[id] ?? value,
-		]),
-	);
+	const currentPlanByPlan = {
+		...planRecords,
+		...subscriptionPlanByPlan,
+	};
 	const basePlanItemsByPlan = Object.fromEntries(
 		Object.entries(currentPlanByPlan).flatMap(([id, value]) =>
 			Array.isArray(value.items) ? [[id, value.items]] : [],

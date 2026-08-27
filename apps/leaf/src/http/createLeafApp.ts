@@ -1,5 +1,6 @@
 import type { HttpBindings } from "@hono/node-server";
 import { Hono } from "hono";
+import { embeddedEveStatus } from "../internal/agentRuntime/eve/embeddedStatus.js";
 import { db } from "../lib/db.js";
 import { env } from "../lib/env.js";
 import { logger } from "../lib/logger.js";
@@ -28,7 +29,9 @@ export const createLeafApp = () => {
 		return c.req.method === "OPTIONS" ? c.body(null, 204) : next();
 	});
 
-	app.get("/health", (c) => c.json({ ok: true }));
+	// Stays 200 during eve's boot: the ALB has no grace period and would kill
+	// the task. The eve field is for deploy verification and alerting.
+	app.get("/health", (c) => c.json({ eve: embeddedEveStatus(), ok: true }));
 	app.route(
 		"",
 		createMcpRouter({

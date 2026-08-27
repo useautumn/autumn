@@ -1,4 +1,4 @@
-import { billingActionBadges } from "@autumn/render";
+import { billingActionBadges, customizeWithFreeTrial } from "@autumn/render";
 import {
 	type ApiPlanV1,
 	AppEnv,
@@ -145,9 +145,10 @@ export function BillingPreviewCard({
 	const incomingPlans = incoming.filter(hasPlan);
 	const badges = billingActionBadges(params);
 
+	const folded = customizeWithFreeTrial(params);
 	const customize =
-		params?.customize && typeof params.customize === "object"
-			? (params.customize as Record<string, unknown>)
+		folded && typeof folded === "object"
+			? (folded as Record<string, unknown>)
 			: undefined;
 	const phases = Array.isArray(params?.phases)
 		? (params.phases as SchedulePhase[])

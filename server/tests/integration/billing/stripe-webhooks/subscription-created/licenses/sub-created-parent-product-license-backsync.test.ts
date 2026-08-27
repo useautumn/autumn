@@ -7,7 +7,10 @@ import {
 	BillingInterval,
 	productToBasePrice,
 } from "@autumn/shared";
-import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
+import {
+	createExternalStripeSubscription,
+	stampStripeSlotsViaV1Attach,
+} from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
 import { createStripeFixedPriceUnderProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import {
 	expectProductActive,
@@ -36,8 +39,25 @@ const UPDATED_PAID_SEATS = 4;
 
 type Scenario = {
 	ctx: TestContext;
+	autumnV1: AutumnInt;
 	autumnV2_2: AutumnInt;
 	autumnV2_3: AutumnInt;
+};
+
+const stampLicenseStripeViaV1Attach = async ({
+	scenario,
+	stampCustomerId,
+	productIds,
+}: {
+	scenario: Scenario;
+	stampCustomerId: string;
+	productIds: string[];
+}) => {
+	await stampStripeSlotsViaV1Attach({
+		autumnV1: scenario.autumnV1,
+		customerId: stampCustomerId,
+		attaches: productIds.map((productId) => ({ productId })),
+	});
 };
 
 const stripeProductId = ({ price }: { price: Stripe.Price }) =>
@@ -168,6 +188,7 @@ const createLicenseSubscription = async ({
 
 test(`${chalk.yellowBright("license back-sync: equal shapes under one license product select by exact price")}`, async () => {
 	const customerId = "sub-license-parent-product-distinct";
+	const stampCustomerId = `${customerId}-v1-stamp`;
 	const parentA = products.base({
 		id: `${customerId}-a`,
 		items: [items.dashboard()],
@@ -186,6 +207,7 @@ test(`${chalk.yellowBright("license back-sync: equal shapes under one license pr
 		ctx: testCtx,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
+			s.otherCustomers([{ id: stampCustomerId, paymentMethod: "success" }]),
 			s.products({ list: [parentA, parentB, teamSeat] }),
 		],
 		actions: [],
@@ -204,6 +226,11 @@ test(`${chalk.yellowBright("license back-sync: equal shapes under one license pr
 		licensePlanId: teamSeat.id,
 		amount: 12,
 		interval: BillingInterval.Month,
+	});
+	await stampLicenseStripeViaV1Attach({
+		scenario,
+		stampCustomerId,
+		productIds: [teamSeat.id],
 	});
 
 	// Sequential: concurrent materialization of the shared seat could double-create.
@@ -256,6 +283,7 @@ test(`${chalk.yellowBright("license back-sync: equal shapes under one license pr
 
 test(`${chalk.yellowBright("license back-sync: shared license product selects by customized base shape")}`, async () => {
 	const customerId = "sub-license-parent-product-shared";
+	const stampCustomerId = `${customerId}-v1-stamp`;
 	const pro = products.base({
 		id: `${customerId}-pro`,
 		items: [items.dashboard()],
@@ -271,6 +299,7 @@ test(`${chalk.yellowBright("license back-sync: shared license product selects by
 		ctx: testCtx,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
+			s.otherCustomers([{ id: stampCustomerId, paymentMethod: "success" }]),
 			s.products({ list: [pro, teamSeat] }),
 		],
 		actions: [],
@@ -284,6 +313,11 @@ test(`${chalk.yellowBright("license back-sync: shared license product selects by
 		basePlanId: pro.id,
 		variantPlanId: annualId,
 		name: "Pro Annual",
+	});
+	await stampLicenseStripeViaV1Attach({
+		scenario,
+		stampCustomerId,
+		productIds: [pro.id],
 	});
 	const [proFull, annualFull] = await Promise.all([
 		ProductService.getFull({
@@ -318,6 +352,11 @@ test(`${chalk.yellowBright("license back-sync: shared license product selects by
 		licensePlanId: teamSeat.id,
 		amount: 200,
 		interval: BillingInterval.Year,
+	});
+	await stampLicenseStripeViaV1Attach({
+		scenario,
+		stampCustomerId,
+		productIds: [teamSeat.id],
 	});
 
 	const [monthly, annual] = await Promise.all([
@@ -359,6 +398,7 @@ test(`${chalk.yellowBright("license back-sync: shared license product selects by
 
 test(`${chalk.yellowBright("license back-sync: parent and child sharing a product still select the parent")}`, async () => {
 	const customerId = "sub-license-parent-product-child-shared";
+	const stampCustomerId = `${customerId}-v1-stamp`;
 	const parent = products.base({
 		id: `${customerId}-parent`,
 		items: [items.dashboard()],
@@ -373,6 +413,7 @@ test(`${chalk.yellowBright("license back-sync: parent and child sharing a produc
 		ctx: testCtx,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
+			s.otherCustomers([{ id: stampCustomerId, paymentMethod: "success" }]),
 			s.products({ list: [parent, teamSeat] }),
 		],
 		actions: [],
@@ -399,6 +440,11 @@ test(`${chalk.yellowBright("license back-sync: parent and child sharing a produc
 		licensePlanId: teamSeat.id,
 		amount: 15,
 		interval: BillingInterval.Month,
+	});
+	await stampLicenseStripeViaV1Attach({
+		scenario,
+		stampCustomerId,
+		productIds: [teamSeat.id],
 	});
 	const customized = await expectCustomizedPriceUnderLicenseProduct({
 		ctx: scenario.ctx,

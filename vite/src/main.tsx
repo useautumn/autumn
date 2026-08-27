@@ -1,3 +1,4 @@
+import "scraps-ui/scraps.css";
 import "@autumn/ui/styles.css";
 import * as Sentry from "@sentry/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -13,12 +14,13 @@ Sentry.init({
 });
 
 declare const __APP_ENV__: string;
+declare const __WORKTREE_NUM__: string;
 if (__APP_ENV__ === "prod") {
 	document.title = "Autumn (P)";
 } else if (__APP_ENV__ === "staging") {
 	document.title = "Autumn (S)";
 } else if (__APP_ENV__ === "dev") {
-	document.title = "Autumn (Dev)";
+	document.title = `Autumn (wt${__WORKTREE_NUM__})`;
 }
 
 const queryClient = new QueryClient({

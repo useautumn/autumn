@@ -116,6 +116,13 @@ await mockModuleWithRestore(
 	}),
 );
 
+await mockModuleWithRestore(
+	"@/internal/products/stripeResourceUtils/findReusableStripeResources/findReusableStripePrice",
+	() => ({
+		findReusableStripePrice: async () => {},
+	}),
+);
+
 await mockModuleWithRestore("@/internal/products/productUtils", () => ({
 	checkStripeProductExists: async () => {
 		mockState.productCreateCalls++;

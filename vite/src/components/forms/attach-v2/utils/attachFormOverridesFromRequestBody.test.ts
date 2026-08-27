@@ -61,4 +61,59 @@ describe("attachFormOverridesFromRequestBody", () => {
 			resetBillingCycle: true,
 		});
 	});
+
+	test("maps a resolved multi-attach request into primary + additional plans", () => {
+		const overrides = attachFormOverridesFromRequestBody({
+			billing_behavior: "none",
+			customer_id: "cus_1",
+			currency: "usd",
+			enable_plan_immediately: true,
+			free_trial: { card_required: true, duration: "day", length: 14 },
+			plans: [
+				{
+					feature_quantities: [{ feature_id: "seats", quantity: 5 }],
+					items: [{ feature_id: null, interval: "month", price: 500 }],
+					plan_id: "scale",
+					version: 2,
+				},
+				{
+					entity_id: "ent_1",
+					plan_id: "enterprise",
+				},
+			],
+		});
+		expect(overrides).toMatchObject({
+			additionalPlans: [
+				{
+					_id: "seeded-plan-0",
+					entityId: "ent_1",
+					isCustom: false,
+					items: null,
+					productId: "enterprise",
+				},
+			],
+			currency: "usd",
+			enablePlanImmediately: true,
+			isCustom: true,
+			items: [{ feature_id: null, interval: "month", price: 500 }],
+			prepaidOptions: { seats: 5 },
+			productId: "scale",
+			prorationBehavior: "none",
+			trialDuration: "day",
+			trialEnabled: true,
+			trialLength: 14,
+			version: 2,
+		});
+	});
+
+	test("single-plan plans array still seeds primary only", () => {
+		const overrides = attachFormOverridesFromRequestBody({
+			customer_id: "cus_1",
+			plans: [{ plan_id: "scale" }],
+		});
+		expect(overrides).toMatchObject({
+			additionalPlans: [],
+			productId: "scale",
+		});
+	});
 });

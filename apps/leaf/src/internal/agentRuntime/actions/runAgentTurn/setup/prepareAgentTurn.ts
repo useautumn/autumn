@@ -2,65 +2,41 @@ import { db } from "../../../../../lib/db.js";
 import { withdrawSupersededApprovals } from "../../../../approvals/actions/withdrawSupersededApprovals.js";
 import { autumnOrgContextService } from "../../../../autumnMcp/orgContextService.js";
 import type { AgentTurnContext } from "../../../domain/agentTurnContext.js";
-import { deleteEveSession, getEveSession } from "../../../eve/repo.js";
-import type { EveAuthContext } from "../../../eve/types.js";
+import { getEveSession } from "../../../eve/repo.js";
 
-export const prepareAgentTurn = async ({
-	auth,
-	context,
-}: {
-	auth: EveAuthContext;
-	context: AgentTurnContext;
-}) => {
-	const {
-		env,
-		logger,
-		onAction,
-		onApprovalsSuperseded,
-		org,
-		providerUserId,
-		thread,
-		token,
-	} = context;
-	const loadOrgContext = () =>
-		autumnOrgContextService.load({ env, logger, orgId: org.id, token });
+export const loadAgentOrgContext = ({
+	env,
+	logger,
+	org,
+	token,
+}: AgentTurnContext) =>
+	autumnOrgContextService.load({ env, logger, orgId: org.id, token });
+
+export type PreparedAgentTurn = Awaited<ReturnType<typeof prepareAgentTurn>>;
+
+export const prepareAgentTurn = async (context: AgentTurnContext) => {
+	const { env, logger, onAction, onApprovalsSuperseded, org, providerUserId } =
+		context;
 	const existingSession =
 		context.eveSession ??
-		(await getEveSession({ db, env, orgId: org.id, thread }));
+		(await getEveSession({ db, env, orgId: org.id, thread: context.thread }));
 
 	if (!existingSession) {
 		await onAction?.("Loading context");
 		return {
 			existingSession: undefined,
-			orgContext: await loadOrgContext(),
+			orgContext: await loadAgentOrgContext(context),
+			withdrawal: undefined,
 		} as const;
 	}
 
-	const { sessionGone } = await withdrawSupersededApprovals({
-		auth,
+	const { withdrawal } = await withdrawSupersededApprovals({
 		logger,
 		onApprovalsSuperseded,
 		orgId: org.id,
 		providerUserId,
 		session: existingSession,
-		thread,
+		thread: context.thread,
 	});
-	if (sessionGone) {
-		// Eve lost the session; keeping its row would replay the same dead
-		// resume on every message, so this turn starts a fresh conversation.
-		await deleteEveSession({
-			db,
-			env,
-			orgId: org.id,
-			reason: "session_gone",
-			sessionId: existingSession.sessionId,
-			threadKey: existingSession.threadKey,
-		});
-		await onAction?.("Loading context");
-		return {
-			existingSession: undefined,
-			orgContext: await loadOrgContext(),
-		} as const;
-	}
-	return { existingSession, orgContext: undefined } as const;
+	return { existingSession, orgContext: undefined, withdrawal } as const;
 };

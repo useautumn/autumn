@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import {
 	AttachAdvancedSection,
 	AttachFormProvider,
+	AttachGenerationBar,
 	AttachLicenseLossWarning,
 	AttachMultiPlanSection,
 	AttachPlanOptions,
@@ -27,6 +28,7 @@ import {
 	GenerateCheckoutStageWithPreview,
 	SchedulePlanStageWithPreview,
 } from "@/components/forms/shared/GenerateCheckoutStage";
+import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
 import {
 	PREVIEW_REVEAL_TRANSITION,
 	PreviewLoadingSection,
@@ -213,10 +215,12 @@ function SelectContent() {
 			<SheetHeader
 				title="Attach Product"
 				description="Select and configure a product to attach to this customer"
+				action={<BillingPromptToggle />}
 			/>
 
 			<SheetSection withSeparator={false} className="pb-0">
-				<div className="space-y-2">
+				<div className="space-y-3">
+					<AttachGenerationBar />
 					<AttachProductSelection
 						scope={
 							additionalPlans.isMultiPlan && rowScopePicker

@@ -15,6 +15,7 @@ import {
 
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { updateFeature } from "@/internal/features/featureActions/updateFeature";
+import { validateInvoiceCreditFeatureType } from "../../featureUtils.js";
 
 export const handleUpdateFeatureV1 = createRoute({
 	scopes: [Scopes.Features.Write],
@@ -32,6 +33,10 @@ export const handleUpdateFeatureV1 = createRoute({
 		if (!originalFeature) {
 			throw new FeatureNotFoundError({ featureId: feature_id });
 		}
+		validateInvoiceCreditFeatureType({
+			invoiceCredit: body.invoice_credit,
+			featureType: body.type ?? originalFeature.type,
+		});
 
 		// If changing type and consumable not provided, throw error
 		if (body.type === FeatureType.Metered && nullish(body.consumable)) {

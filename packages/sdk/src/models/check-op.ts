@@ -6,7 +6,7 @@ import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import * as openEnums from "../types/enums.js";
-import { OpenEnum } from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -84,16 +84,71 @@ export const FlagType2 = {
  */
 export type FlagType2 = OpenEnum<typeof FlagType2>;
 
-export type CheckCreditSchema2 = {
+export type CheckCreditSchema6 = {
+  meteredFeatureId: "";
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type CheckCreditSchema5 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
   meteredFeatureId: string;
   /**
-   * Credits consumed per unit of the metered feature.
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
+
+export const CheckToEnum2 = {
+  Inf: "inf",
+} as const;
+export type CheckToEnum2 = ClosedEnum<typeof CheckToEnum2>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CheckToUnion2 = number | CheckToEnum2;
+
+export type CheckTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CheckToEnum2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CheckCreditSchema4 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CheckTier2>;
+};
+
+export type CheckCreditSchemaUnion2 =
+  | CheckCreditSchema4
+  | CheckCreditSchema5
+  | CheckCreditSchema6;
 
 export type CheckModelMarkups2 = {
   markup?: number | undefined;
@@ -117,6 +172,24 @@ export type FlagDisplay2 = {
    * Plural form for UI display (e.g., 'API calls', 'seats').
    */
   plural?: string | null | undefined;
+};
+
+export type CheckStripe2 = {
+  /**
+   * Stripe product ID this feature's usage prices bill under.
+   */
+  productId?: string | undefined;
+  /**
+   * Stripe meter ID used to create this feature's metered price.
+   */
+  meterId?: string | undefined;
+};
+
+/**
+ * Processor mappings for this feature. Present when a Stripe product or meter is set.
+ */
+export type CheckProcessors2 = {
+  stripe?: CheckStripe2 | undefined;
 };
 
 /**
@@ -144,9 +217,15 @@ export type CheckFeature2 = {
    */
   eventNames?: Array<string> | undefined;
   /**
-   * For credit_system features: maps metered features to their credit costs.
+   * For classic credit systems: maps metered features to flat or graduated credit costs.
    */
-  creditSchema?: Array<CheckCreditSchema2> | undefined;
+  creditSchema?:
+    | Array<CheckCreditSchema4 | CheckCreditSchema5 | CheckCreditSchema6>
+    | undefined;
+  /**
+   * Whether usage of this classic credit system should be itemized as invoice credits.
+   */
+  invoiceCredit?: boolean | undefined;
   /**
    * Per-model markup overrides for AI credit systems.
    */
@@ -167,6 +246,10 @@ export type CheckFeature2 = {
    * Whether the feature is archived and hidden from the dashboard.
    */
   archived: boolean;
+  /**
+   * Processor mappings for this feature. Present when a Stripe product or meter is set.
+   */
+  processors?: CheckProcessors2 | undefined;
 };
 
 export type Flag2 = {
@@ -835,16 +918,71 @@ export const FlagType1 = {
  */
 export type FlagType1 = OpenEnum<typeof FlagType1>;
 
+export type CheckCreditSchema3 = {
+  meteredFeatureId: "";
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type CheckCreditSchema2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export const CheckToEnum1 = {
+  Inf: "inf",
+} as const;
+export type CheckToEnum1 = ClosedEnum<typeof CheckToEnum1>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CheckToUnion1 = number | CheckToEnum1;
+
+export type CheckTier1 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CheckToEnum1;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
 export type CheckCreditSchema1 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
   meteredFeatureId: string;
   /**
-   * Credits consumed per unit of the metered feature.
+   * Number of metered-feature units priced together. Defaults to one when omitted.
    */
-  creditCost: number;
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CheckTier1>;
 };
+
+export type CheckCreditSchemaUnion1 =
+  | CheckCreditSchema1
+  | CheckCreditSchema2
+  | CheckCreditSchema3;
 
 export type CheckModelMarkups1 = {
   markup?: number | undefined;
@@ -868,6 +1006,24 @@ export type FlagDisplay1 = {
    * Plural form for UI display (e.g., 'API calls', 'seats').
    */
   plural?: string | null | undefined;
+};
+
+export type CheckStripe1 = {
+  /**
+   * Stripe product ID this feature's usage prices bill under.
+   */
+  productId?: string | undefined;
+  /**
+   * Stripe meter ID used to create this feature's metered price.
+   */
+  meterId?: string | undefined;
+};
+
+/**
+ * Processor mappings for this feature. Present when a Stripe product or meter is set.
+ */
+export type CheckProcessors1 = {
+  stripe?: CheckStripe1 | undefined;
 };
 
 /**
@@ -895,9 +1051,15 @@ export type CheckFeature1 = {
    */
   eventNames?: Array<string> | undefined;
   /**
-   * For credit_system features: maps metered features to their credit costs.
+   * For classic credit systems: maps metered features to flat or graduated credit costs.
    */
-  creditSchema?: Array<CheckCreditSchema1> | undefined;
+  creditSchema?:
+    | Array<CheckCreditSchema1 | CheckCreditSchema2 | CheckCreditSchema3>
+    | undefined;
+  /**
+   * Whether usage of this classic credit system should be itemized as invoice credits.
+   */
+  invoiceCredit?: boolean | undefined;
   /**
    * Per-model markup overrides for AI credit systems.
    */
@@ -918,6 +1080,10 @@ export type CheckFeature1 = {
    * Whether the feature is archived and hidden from the dashboard.
    */
   archived: boolean;
+  /**
+   * Processor mappings for this feature. Present when a Stripe product or meter is set.
+   */
+  processors?: CheckProcessors1 | undefined;
 };
 
 export type Flag1 = {
@@ -1651,29 +1817,154 @@ export const FlagType2$inboundSchema: z.ZodMiniType<FlagType2, unknown> =
   openEnums.inboundSchema(FlagType2);
 
 /** @internal */
-export const CheckCreditSchema2$inboundSchema: z.ZodMiniType<
-  CheckCreditSchema2,
+export const CheckCreditSchema6$inboundSchema: z.ZodMiniType<
+  CheckCreditSchema6,
   unknown
 > = z.pipe(
   z.object({
-    metered_feature_id: types.string(),
+    metered_feature_id: types.literal(""),
+    billing_units: types.optional(types.number()),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
       "credit_cost": "creditCost",
     });
   }),
 );
 
-export function checkCreditSchema2FromJSON(
+export function checkCreditSchema6FromJSON(
   jsonString: string,
-): SafeParseResult<CheckCreditSchema2, SDKValidationError> {
+): SafeParseResult<CheckCreditSchema6, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CheckCreditSchema2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckCreditSchema2' from JSON`,
+    (x) => CheckCreditSchema6$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckCreditSchema6' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckCreditSchema5$inboundSchema: z.ZodMiniType<
+  CheckCreditSchema5,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkCreditSchema5FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckCreditSchema5, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckCreditSchema5$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckCreditSchema5' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckToEnum2$inboundSchema: z.ZodMiniEnum<typeof CheckToEnum2> = z
+  .enum(CheckToEnum2);
+
+/** @internal */
+export const CheckToUnion2$inboundSchema: z.ZodMiniType<
+  CheckToUnion2,
+  unknown
+> = smartUnion([types.number(), CheckToEnum2$inboundSchema]);
+
+export function checkToUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckToUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckToUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckToUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckTier2$inboundSchema: z.ZodMiniType<CheckTier2, unknown> = z
+  .pipe(
+    z.object({
+      to: smartUnion([types.number(), CheckToEnum2$inboundSchema]),
+      credit_cost: types.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "credit_cost": "creditCost",
+      });
+    }),
+  );
+
+export function checkTier2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckTier2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckTier2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckTier2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckCreditSchema4$inboundSchema: z.ZodMiniType<
+  CheckCreditSchema4,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => CheckTier2$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function checkCreditSchema4FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckCreditSchema4, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckCreditSchema4$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckCreditSchema4' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckCreditSchemaUnion2$inboundSchema: z.ZodMiniType<
+  CheckCreditSchemaUnion2,
+  unknown
+> = smartUnion([
+  z.lazy(() => CheckCreditSchema4$inboundSchema),
+  z.lazy(() => CheckCreditSchema5$inboundSchema),
+  z.lazy(() => CheckCreditSchema6$inboundSchema),
+]);
+
+export function checkCreditSchemaUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckCreditSchemaUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckCreditSchemaUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckCreditSchemaUnion2' from JSON`,
   );
 }
 
@@ -1741,6 +2032,49 @@ export function flagDisplay2FromJSON(
 }
 
 /** @internal */
+export const CheckStripe2$inboundSchema: z.ZodMiniType<CheckStripe2, unknown> =
+  z.pipe(
+    z.object({
+      product_id: types.optional(types.string()),
+      meter_id: types.optional(types.string()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "product_id": "productId",
+        "meter_id": "meterId",
+      });
+    }),
+  );
+
+export function checkStripe2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckStripe2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckStripe2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckStripe2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckProcessors2$inboundSchema: z.ZodMiniType<
+  CheckProcessors2,
+  unknown
+> = z.object({
+  stripe: types.optional(z.lazy(() => CheckStripe2$inboundSchema)),
+});
+
+export function checkProcessors2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckProcessors2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckProcessors2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckProcessors2' from JSON`,
+  );
+}
+
+/** @internal */
 export const CheckFeature2$inboundSchema: z.ZodMiniType<
   CheckFeature2,
   unknown
@@ -1751,9 +2085,14 @@ export const CheckFeature2$inboundSchema: z.ZodMiniType<
     type: FlagType2$inboundSchema,
     consumable: types.boolean(),
     event_names: types.optional(z.array(types.string())),
-    credit_schema: types.optional(
-      z.array(z.lazy(() => CheckCreditSchema2$inboundSchema)),
-    ),
+    credit_schema: types.optional(z.array(smartUnion([
+      z.lazy(() => CheckCreditSchema4$inboundSchema),
+      z.lazy(() =>
+        CheckCreditSchema5$inboundSchema
+      ),
+      z.lazy(() => CheckCreditSchema6$inboundSchema),
+    ]))),
+    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => CheckModelMarkups2$inboundSchema),
@@ -1767,11 +2106,15 @@ export const CheckFeature2$inboundSchema: z.ZodMiniType<
       FlagDisplay2$inboundSchema
     )),
     archived: types.boolean(),
+    processors: types.optional(z.lazy(() =>
+      CheckProcessors2$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",
@@ -2484,18 +2827,123 @@ export const FlagType1$inboundSchema: z.ZodMiniType<FlagType1, unknown> =
   openEnums.inboundSchema(FlagType1);
 
 /** @internal */
+export const CheckCreditSchema3$inboundSchema: z.ZodMiniType<
+  CheckCreditSchema3,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.literal(""),
+    billing_units: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkCreditSchema3FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckCreditSchema3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckCreditSchema3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckCreditSchema3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckCreditSchema2$inboundSchema: z.ZodMiniType<
+  CheckCreditSchema2,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkCreditSchema2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckCreditSchema2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckCreditSchema2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckCreditSchema2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckToEnum1$inboundSchema: z.ZodMiniEnum<typeof CheckToEnum1> = z
+  .enum(CheckToEnum1);
+
+/** @internal */
+export const CheckToUnion1$inboundSchema: z.ZodMiniType<
+  CheckToUnion1,
+  unknown
+> = smartUnion([types.number(), CheckToEnum1$inboundSchema]);
+
+export function checkToUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckToUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckToUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckToUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckTier1$inboundSchema: z.ZodMiniType<CheckTier1, unknown> = z
+  .pipe(
+    z.object({
+      to: smartUnion([types.number(), CheckToEnum1$inboundSchema]),
+      credit_cost: types.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "credit_cost": "creditCost",
+      });
+    }),
+  );
+
+export function checkTier1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckTier1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckTier1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckTier1' from JSON`,
+  );
+}
+
+/** @internal */
 export const CheckCreditSchema1$inboundSchema: z.ZodMiniType<
   CheckCreditSchema1,
   unknown
 > = z.pipe(
   z.object({
     metered_feature_id: types.string(),
-    credit_cost: types.number(),
+    billing_units: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => CheckTier1$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
       "metered_feature_id": "meteredFeatureId",
-      "credit_cost": "creditCost",
+      "billing_units": "billingUnits",
+      "tier_behavior": "tierBehavior",
     });
   }),
 );
@@ -2507,6 +2955,26 @@ export function checkCreditSchema1FromJSON(
     jsonString,
     (x) => CheckCreditSchema1$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'CheckCreditSchema1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckCreditSchemaUnion1$inboundSchema: z.ZodMiniType<
+  CheckCreditSchemaUnion1,
+  unknown
+> = smartUnion([
+  z.lazy(() => CheckCreditSchema1$inboundSchema),
+  z.lazy(() => CheckCreditSchema2$inboundSchema),
+  z.lazy(() => CheckCreditSchema3$inboundSchema),
+]);
+
+export function checkCreditSchemaUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckCreditSchemaUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckCreditSchemaUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckCreditSchemaUnion1' from JSON`,
   );
 }
 
@@ -2574,6 +3042,49 @@ export function flagDisplay1FromJSON(
 }
 
 /** @internal */
+export const CheckStripe1$inboundSchema: z.ZodMiniType<CheckStripe1, unknown> =
+  z.pipe(
+    z.object({
+      product_id: types.optional(types.string()),
+      meter_id: types.optional(types.string()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "product_id": "productId",
+        "meter_id": "meterId",
+      });
+    }),
+  );
+
+export function checkStripe1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckStripe1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckStripe1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckStripe1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckProcessors1$inboundSchema: z.ZodMiniType<
+  CheckProcessors1,
+  unknown
+> = z.object({
+  stripe: types.optional(z.lazy(() => CheckStripe1$inboundSchema)),
+});
+
+export function checkProcessors1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckProcessors1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckProcessors1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckProcessors1' from JSON`,
+  );
+}
+
+/** @internal */
 export const CheckFeature1$inboundSchema: z.ZodMiniType<
   CheckFeature1,
   unknown
@@ -2584,9 +3095,14 @@ export const CheckFeature1$inboundSchema: z.ZodMiniType<
     type: FlagType1$inboundSchema,
     consumable: types.boolean(),
     event_names: types.optional(z.array(types.string())),
-    credit_schema: types.optional(
-      z.array(z.lazy(() => CheckCreditSchema1$inboundSchema)),
-    ),
+    credit_schema: types.optional(z.array(smartUnion([
+      z.lazy(() => CheckCreditSchema1$inboundSchema),
+      z.lazy(() =>
+        CheckCreditSchema2$inboundSchema
+      ),
+      z.lazy(() => CheckCreditSchema3$inboundSchema),
+    ]))),
+    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => CheckModelMarkups1$inboundSchema),
@@ -2600,11 +3116,15 @@ export const CheckFeature1$inboundSchema: z.ZodMiniType<
       FlagDisplay1$inboundSchema
     )),
     archived: types.boolean(),
+    processors: types.optional(z.lazy(() =>
+      CheckProcessors1$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",

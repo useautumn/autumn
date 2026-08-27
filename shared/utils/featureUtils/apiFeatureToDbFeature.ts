@@ -8,9 +8,15 @@ import {
 	FeatureUsageType,
 } from "@models/featureModels/featureEnums.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
+import type { FeatureStripeMeter } from "@models/featureModels/featureTable.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
+import type { ApiFeatureProcessors } from "../../api/features/components/processors.js";
 import type { ApiFeatureV1 } from "../../api/features/apiFeatureV1.js";
+import {
+	type ApiCreditSchemaItem,
+	isGraduatedCreditSchemaItem,
+} from "../../api/features/creditRateCard.js";
 import type {
 	CreateFeatureV1Params,
 	UpdateFeatureV1Params,
@@ -26,6 +32,98 @@ import type { SharedContext } from "../../types/sharedContext.js";
 import { notNullish, nullish } from "../utils.js";
 import { buildAiCreditSystemConfig } from "./buildAiCreditSystemConfig.js";
 import { isAnyCreditSystem } from "./classifyFeature/isAnyCreditSystem.js";
+
+export const featureProcessorsToDbFields = ({
+	processors,
+	originalFeature,
+}: {
+	processors?: ApiFeatureProcessors | null;
+	originalFeature?: Feature;
+}): {
+	stripe_product_id: string | null | undefined;
+	stripe_meter: FeatureStripeMeter | null | undefined;
+} => {
+	const stripe = processors?.stripe;
+	const stripe_product_id =
+		stripe?.product_id !== undefined
+			? stripe.product_id
+			: originalFeature?.stripe_product_id;
+	const stripe_meter =
+		stripe?.meter_id !== undefined
+			? {
+					id: stripe.meter_id,
+					event_name:
+						originalFeature?.stripe_meter?.id === stripe.meter_id
+							? (originalFeature.stripe_meter?.event_name ?? "")
+							: "",
+				}
+			: originalFeature?.stripe_meter;
+
+	return { stripe_product_id, stripe_meter };
+};
+
+export const featureToApiProcessors = (
+	feature: Feature,
+): ApiFeatureProcessors | undefined => {
+	const product_id = feature.stripe_product_id ?? undefined;
+	const meter_id = feature.stripe_meter?.id ?? undefined;
+	if (!product_id && !meter_id) return undefined;
+
+	return {
+		stripe: {
+			...(product_id ? { product_id } : {}),
+			...(meter_id ? { meter_id } : {}),
+		},
+	};
+};
+
+export const apiCreditSchemaItemToDb = (
+	credit: ApiCreditSchemaItem,
+): CreditSchemaItem => {
+	const base = {
+		metered_feature_id: credit.metered_feature_id,
+		...(credit.billing_units === undefined
+			? {}
+			: { feature_amount: credit.billing_units }),
+	};
+
+	if (isGraduatedCreditSchemaItem(credit)) {
+		return {
+			...base,
+			tier_behavior: "graduated",
+			tiers: credit.tiers.map((tier) => ({
+				to: tier.to,
+				credit_amount: tier.credit_cost,
+			})),
+		};
+	}
+
+	return { ...base, credit_amount: credit.credit_cost };
+};
+
+export const dbCreditSchemaItemToApi = (
+	credit: CreditSchemaItem,
+): ApiCreditSchemaItem => {
+	const base = {
+		metered_feature_id: credit.metered_feature_id,
+		...(credit.feature_amount === undefined
+			? {}
+			: { billing_units: credit.feature_amount }),
+	};
+
+	if (credit.tier_behavior === "graduated") {
+		return {
+			...base,
+			tier_behavior: "graduated",
+			tiers: credit.tiers.map((tier) => ({
+				to: tier.to,
+				credit_cost: tier.credit_amount,
+			})),
+		};
+	}
+
+	return { ...base, credit_cost: credit.credit_amount };
+};
 
 export const apiFeatureToDbFeature = ({
 	apiFeature,
@@ -91,14 +189,16 @@ export const featureV1ToDbFeatureConfig = ({
 	const type = apiFeature.type || originalFeature.type;
 	const hasProviderMarkups = "provider_markups" in apiFeature;
 	const hasDefaultMarkup = "default_markup" in apiFeature;
+	const hasInvoiceCredit = apiFeature.invoice_credit !== undefined;
 
 	if (
 		isAiCreditSystem(type) &&
 		(isAiCreditSystem(apiFeature.type) ||
 			hasDefaultMarkup ||
-			hasProviderMarkups)
+			hasProviderMarkups ||
+			hasInvoiceCredit)
 	) {
-		return buildAiCreditSystemConfig({
+		const config = buildAiCreditSystemConfig({
 			defaultMarkup: hasDefaultMarkup
 				? apiFeature.default_markup
 				: originalFeature.config?.default_markup,
@@ -106,9 +206,16 @@ export const featureV1ToDbFeatureConfig = ({
 				? apiFeature.provider_markups
 				: originalFeature.config?.provider_markups,
 		});
+		return hasInvoiceCredit
+			? { ...config, invoice_credit: apiFeature.invoice_credit }
+			: config;
 	}
 
-	if (nullish(apiFeature.consumable) && nullish(apiFeature.credit_schema))
+	if (
+		nullish(apiFeature.consumable) &&
+		nullish(apiFeature.credit_schema) &&
+		!hasInvoiceCredit
+	)
 		return;
 
 	if (type === FeatureType.Boolean) return;
@@ -126,15 +233,14 @@ export const featureV1ToDbFeatureConfig = ({
 
 	if (type === FeatureType.CreditSystem) {
 		const newSchema = notNullish(apiFeature.credit_schema)
-			? apiFeature.credit_schema.map(
-					(credit: { metered_feature_id: string; credit_cost: number }) => ({
-						metered_feature_id: credit.metered_feature_id,
-						credit_amount: credit.credit_cost,
-					}),
-				)
+			? apiFeature.credit_schema.map(apiCreditSchemaItemToDb)
 			: originalFeature.config?.schema;
 		return {
+			...originalFeature.config,
 			schema: newSchema,
+			invoice_credit: hasInvoiceCredit
+				? apiFeature.invoice_credit
+				: originalFeature.config?.invoice_credit,
 			usage_type: FeatureUsageType.Single,
 		};
 	}
@@ -146,7 +252,9 @@ export const featureV1ToDbFeature = ({
 	apiFeature,
 	originalFeature,
 }: {
-	apiFeature: ApiFeatureV1 | CreateFeatureV1Params;
+	apiFeature: (ApiFeatureV1 | CreateFeatureV1Params) & {
+		processors?: ApiFeatureProcessors;
+	};
 	originalFeature?: Feature;
 }) => {
 	// Replace body...
@@ -176,18 +284,24 @@ export const featureV1ToDbFeature = ({
 		);
 	}
 
+	if (
+		isAnyCreditSystem(apiFeature.type) &&
+		apiFeature.invoice_credit !== undefined
+	) {
+		newConfig.invoice_credit = apiFeature.invoice_credit;
+	}
+
 	if (apiFeature.credit_schema) {
 		newConfig.usage_type = FeatureUsageType.Single;
-		newConfig.schema = apiFeature.credit_schema.map(
-			(credit: { metered_feature_id: string; credit_cost: number }) => ({
-				metered_feature_id: credit.metered_feature_id,
-				credit_amount: credit.credit_cost,
-			}),
-		);
+		newConfig.schema = apiFeature.credit_schema.map(apiCreditSchemaItemToDb);
 	}
 
 	const modelMarkups =
 		apiFeature.model_markups ?? originalFeature?.model_markups ?? null;
+	const processorFields = featureProcessorsToDbFields({
+		processors: apiFeature.processors,
+		originalFeature,
+	});
 
 	return {
 		internal_id: originalFeature?.internal_id ?? "",
@@ -213,6 +327,8 @@ export const featureV1ToDbFeature = ({
 						plural: apiFeature.display.plural,
 					}
 				: (originalFeature?.display ?? null),
+		stripe_product_id: processorFields.stripe_product_id,
+		stripe_meter: processorFields.stripe_meter,
 	} satisfies Feature;
 };
 
@@ -243,11 +359,12 @@ export const dbToApiFeatureV1 = ({
 			dbFeature.config?.usage_type === FeatureUsageType.Single,
 
 		credit_schema: Array.isArray(dbFeature.config?.schema)
-			? dbFeature.config.schema.map((schema: CreditSchemaItem) => ({
-					metered_feature_id: schema.metered_feature_id,
-					credit_cost: schema.credit_amount,
-				}))
+			? dbFeature.config.schema.map(dbCreditSchemaItemToApi)
 			: undefined,
+		invoice_credit:
+			dbFeature.type === FeatureType.CreditSystem
+				? (dbFeature.config?.invoice_credit ?? undefined)
+				: undefined,
 		model_markups: dbFeature.model_markups ?? undefined,
 		default_markup: dbFeature.config?.default_markup ?? undefined,
 		provider_markups: dbFeature.config?.provider_markups ?? undefined,
@@ -262,6 +379,7 @@ export const dbToApiFeatureV1 = ({
 					plural: dbFeature.display.plural,
 				}
 			: undefined,
+		processors: featureToApiProcessors(dbFeature),
 	} satisfies ApiFeatureV1;
 
 	return applyResponseVersionChanges({

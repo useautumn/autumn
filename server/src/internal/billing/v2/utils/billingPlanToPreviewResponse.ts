@@ -5,6 +5,7 @@ import type {
 } from "@autumn/shared";
 import {
 	type BillingPreviewResponse,
+	billingContextResetsUsage,
 	billingContextToCurrency,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -149,6 +150,7 @@ export const billingPlanToPreviewResponse = async ({
 		subtotal,
 		total,
 		currency,
+		resets_usage: billingContextResetsUsage(billingContext),
 		next_cycle: nextCycle,
 		incoming,
 		outgoing,

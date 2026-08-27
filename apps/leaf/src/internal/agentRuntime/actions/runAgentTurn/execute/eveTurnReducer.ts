@@ -17,6 +17,7 @@ import {
 	childSessionIdsToolArgs,
 	classifyParkedEveInput,
 	type PendingQuestion,
+	pendingGatedRequests,
 	siblingRequestIdsToolArgs,
 	type WithheldWrite,
 	withheldWritesToolArgs,
@@ -25,12 +26,14 @@ import {
 	type CapturedPreview,
 	previewForParkedWrite,
 } from "../../../eve/parkedWritePreview.js";
+import type { EvePendingRequest } from "../../../eve/types.js";
 import { isSilentTool, toolGerund } from "../../../tools/toolPolicy.js";
 import { catalogPlanNeedingDecision } from "../../resolveCatalogDecision/catalogDecisionPolicy.js";
 
 export type EveTurnOutcome =
 	| { kind: "answered"; catalogDecision?: CatalogPlanPreview; text: string }
 	| { kind: "parked"; question?: PendingQuestion; text: string }
+	| { kind: "deferred" }
 	| { kind: "silent" }
 	| { kind: "stopped"; stopReason: RunStopReason; text: string }
 	| { approval: AgentApprovalRequest; kind: "suspended"; text: string }
@@ -41,6 +44,7 @@ export type EveTurnProgress = Readonly<{
 	lastPreview?: CapturedPreview;
 	pendingText: string;
 	reasoningStreamId?: string;
+	sawToolActivity: boolean;
 	subagentChildSessionIds: ReadonlySet<string>;
 	subagentStartedAtByCallId: ReadonlyMap<string, number>;
 	toolInputs: ReadonlyMap<string, Record<string, unknown>>;
@@ -54,6 +58,7 @@ export type EveTurnEffect =
 	| Readonly<{ id: string; kind: "reasoning"; text: string }>
 	| Readonly<{
 			kind: "save_session";
+			pendingRequests?: ReadonlyArray<EvePendingRequest>;
 			status: "completed" | "failed" | "waiting";
 	  }>
 	| Readonly<{ kind: "thinking" }>
@@ -68,6 +73,7 @@ export type EveTurnTransition = Readonly<{
 export const createEveTurnProgress = (): EveTurnProgress => ({
 	finalText: "",
 	pendingText: "",
+	sawToolActivity: false,
 	subagentChildSessionIds: new Set(),
 	subagentStartedAtByCallId: new Map(),
 	toolInputs: new Map(),
@@ -82,6 +88,12 @@ export const eveTurnProducedOutput = ({
 	catalogDecision?: unknown;
 	text?: string;
 }) => Boolean(text?.trim() || catalogDecision);
+
+const isTurnActivityEvent = (event: EveEvent) =>
+	event.type === "step.started" ||
+	event.type === "input.requested" ||
+	event.type === "subagent.called" ||
+	event.type === "subagent.completed";
 
 const approvalForGatedWrite = ({
 	chained,
@@ -145,7 +157,15 @@ const reduceRequestedActions = ({
 		toolLabels.set(action.callId, label);
 		if (action.input) toolInputs.set(action.callId, action.input);
 	}
-	return { effects, progress: { ...progress, toolInputs, toolLabels } };
+	return {
+		effects,
+		progress: {
+			...progress,
+			sawToolActivity: progress.sawToolActivity || event.actions.length > 0,
+			toolInputs,
+			toolLabels,
+		},
+	};
 };
 
 const reduceActionResult = ({
@@ -267,7 +287,13 @@ const reduceInputRequest = ({
 	});
 	if (parked?.kind === "gated") {
 		return {
-			effects: [{ kind: "save_session", status: "waiting" }],
+			effects: [
+				{
+					kind: "save_session",
+					pendingRequests: pendingGatedRequests(parked),
+					status: "waiting",
+				},
+			],
 			outcome: {
 				approval: approvalForGatedWrite({
 					chained: parked.chained,
@@ -286,7 +312,17 @@ const reduceInputRequest = ({
 		? accumulatedText
 		: textForInputRequests(event.requests) || WAITING_FOR_INPUT_MESSAGE;
 	return {
-		effects: [{ kind: "save_session", status: "waiting" }],
+		effects: [
+			{
+				kind: "save_session",
+				pendingRequests: event.requests.flatMap((request) =>
+					request.requestId
+						? [{ kind: "question" as const, requestId: request.requestId }]
+						: [],
+				),
+				status: "waiting",
+			},
+		],
 		outcome: {
 			kind: "parked",
 			question: parked?.kind === "question" ? parked.question : undefined,
@@ -295,6 +331,14 @@ const reduceInputRequest = ({
 		progress,
 	};
 };
+
+/** Eve parks holding the message when a delivery answers a subagent's park:
+ * the responses route to the child and the message lands on a parent with no
+ * pending batch, so the turn starts, receives and completes without working. */
+const turnDeferredItsInput = (progress: EveTurnProgress) =>
+	progress.turnStarted &&
+	!progress.sawToolActivity &&
+	progress.subagentChildSessionIds.size === 0;
 
 const reduceTerminalEvent = ({
 	event,
@@ -316,7 +360,7 @@ const reduceTerminalEvent = ({
 		],
 		outcome: eveTurnProducedOutput({ catalogDecision, text })
 			? { catalogDecision, kind: "answered", text }
-			: { kind: "silent" },
+			: { kind: turnDeferredItsInput(progress) ? "deferred" : "silent" },
 		progress,
 	};
 };
@@ -348,7 +392,9 @@ export const reduceEveTurnEvent = ({
 	if (event.type === "action.result") {
 		return reduceActionResult({ capturedPreview, event, progress });
 	}
-	if (!progress.turnStarted) return { effects: [], progress };
+	if (!(progress.turnStarted || isTurnActivityEvent(event))) {
+		return { effects: [], progress };
+	}
 
 	switch (event.type) {
 		case "subagent.called": {

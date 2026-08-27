@@ -1,12 +1,16 @@
+import type { CustomerDisplayInfo } from "@autumn/shared";
 import { getClickhouseClient } from "@/external/tinybird/initClickhouse.js";
 import { escapeChString } from "../clickhouseUtils.js";
 
+// Mirrors the ClickHouse `customers` columns: `id` is the customer's own
+// public id.
 type CustomerNameRow = {
 	id: string;
 	name: string | null;
+	email: string | null;
 };
 
-/** Looks up customer names from the customers datasource by their IDs. Returns a map of id -> name (or id if name is null/empty). */
+/** Looks up customer display fields from the customers datasource. Returns a map of customer id -> { name, email }; customer ids with no row are omitted. */
 export const getCustomerNames = async ({
 	customerIds,
 	orgId,
@@ -15,7 +19,7 @@ export const getCustomerNames = async ({
 	customerIds: string[];
 	orgId: string;
 	env: string;
-}): Promise<Record<string, string>> => {
+}): Promise<Record<string, CustomerDisplayInfo>> => {
 	if (customerIds.length === 0) return {};
 
 	const ch = getClickhouseClient();
@@ -25,7 +29,7 @@ export const getCustomerNames = async ({
 		.join(",");
 
 	const query = `
-		SELECT id, name
+		SELECT id, name, email
 		FROM customers FINAL
 		WHERE org_id = {org_id:String}
 			AND env = {env:String}
@@ -43,17 +47,11 @@ export const getCustomerNames = async ({
 
 	const resultJson = (await result.json()) as { data: CustomerNameRow[] };
 
-	const nameMap: Record<string, string> = {};
+	const displayMap: Record<string, CustomerDisplayInfo> = {};
 	for (const row of resultJson.data) {
 		if (!row.id) continue;
-		nameMap[row.id] = row.name || row.id;
+		displayMap[row.id] = { name: row.name || null, email: row.email || null };
 	}
 
-	for (const id of customerIds) {
-		if (!nameMap[id]) {
-			nameMap[id] = id;
-		}
-	}
-
-	return nameMap;
+	return displayMap;
 };

@@ -136,3 +136,32 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	"pooled item validation: rejects invoice-credit features",
+	async () => {
+		await expectPooledItemRejected({
+			planId: `pooled-invoice-credit-${crypto.randomUUID()}`,
+			item: {
+				feature_id: TestFeature.InvoiceCredits,
+				included: 100,
+				pooled: true,
+			},
+			errMessage: "Invoice-credit features cannot use pooled plan items",
+		});
+	},
+);
+
+test.concurrent(
+	"invoice-credit item validation: rejects included-only plan items",
+	async () => {
+		await expectPooledItemRejected({
+			planId: `included-only-invoice-credit-${crypto.randomUUID()}`,
+			item: {
+				feature_id: TestFeature.InvoiceCredits,
+				included: 100,
+			},
+			errMessage: "Invoice-credit features require usage-based pricing",
+		});
+	},
+);

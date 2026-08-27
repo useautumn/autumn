@@ -1,4 +1,8 @@
-import type { DeductionPeriod } from "@autumn/shared";
+import type {
+	CustomerDisplayInfo,
+	DeductionPeriod,
+	EntityDisplayInfo,
+} from "@autumn/shared";
 import { ErrCode } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -120,8 +124,10 @@ export const useAnalyticsData = ({
 		bcExclusionFlag: data?.bcExclusionFlag ?? false,
 		groupBy,
 		truncated: data?.truncated ?? false,
-		entityNames: (data?.entityNames as Record<string, string>) ?? undefined,
-		customerNames: (data?.customerNames as Record<string, string>) ?? undefined,
+		entityNames:
+			(data?.entityNames as Record<string, EntityDisplayInfo>) ?? undefined,
+		customerNames:
+			(data?.customerNames as Record<string, CustomerDisplayInfo>) ?? undefined,
 		planNames: (data?.planNames as Record<string, string>) ?? undefined,
 		totals:
 			(data?.totals as

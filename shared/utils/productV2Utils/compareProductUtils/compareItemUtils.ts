@@ -6,7 +6,11 @@ import type { UsageTier } from "../../../models/productModels/priceModels/priceC
 import type { FeatureItem } from "../../../models/productV2Models/productItemModels/featureItem.js";
 import type { FeaturePriceItem } from "../../../models/productV2Models/productItemModels/featurePriceItem.js";
 import type { PriceItem } from "../../../models/productV2Models/productItemModels/priceItem.js";
-import { AllocatedBillingBehavior } from "../../../models/productV2Models/productItemModels/productItemEnums.js";
+import {
+	AllocatedBillingBehavior,
+	OnDecrease,
+	OnIncrease,
+} from "../../../models/productV2Models/productItemModels/productItemEnums.js";
 import type {
 	ProductItem,
 	ProductItemConfig,
@@ -143,12 +147,20 @@ const tiersAreSame = (tiers1: TierLike[] | null, tiers2: TierLike[] | null) => {
 		(tier, index) =>
 			tier.amount === tiers2[index].amount &&
 			tier.to === tiers2[index].to &&
-			tier.flat_amount === tiers2[index].flat_amount &&
+			(tier.flat_amount ?? null) === (tiers2[index].flat_amount ?? null) &&
 			additionalCurrenciesAreSame(
 				tier.additional_currencies,
 				tiers2[index].additional_currencies,
 			),
 	);
+};
+
+/** A flat per-unit price and a single infinite tier describe the same
+ * pricing — canonicalize to tiers so the two shapes compare equal. */
+const itemPricingTiers = (item: FeaturePriceItem): TierLike[] | null => {
+	if (item.tiers?.length) return item.tiers as TierLike[];
+	if (item.price != null) return [{ amount: item.price, to: "inf" }];
+	return null;
 };
 
 // Helper to normalize included_usage for comparison (null and 0 are equivalent)
@@ -196,7 +208,8 @@ export const featureItemsAreSame = ({
 		},
 		reset_usage_when_enabled: {
 			condition:
-				item1.reset_usage_when_enabled == item2.reset_usage_when_enabled,
+				(item1.reset_usage_when_enabled ?? false) ===
+				(item2.reset_usage_when_enabled ?? false),
 			message: `Reset usage when enabled different: ${item1.reset_usage_when_enabled} !== ${item2.reset_usage_when_enabled}`,
 		},
 		rollover_config: {
@@ -261,8 +274,10 @@ const prorationConfigsAreSame = ({
 	config2?: ProductItemConfig;
 }) => {
 	return (
-		config1?.on_increase === config2?.on_increase &&
-		config1?.on_decrease === config2?.on_decrease
+		(config1?.on_increase ?? OnIncrease.ProrateImmediately) ===
+			(config2?.on_increase ?? OnIncrease.ProrateImmediately) &&
+		(config1?.on_decrease ?? OnDecrease.Prorate) ===
+			(config2?.on_decrease ?? OnDecrease.Prorate)
 	);
 };
 
@@ -305,8 +320,9 @@ const rolloversAreSame = ({
 		return false;
 	}
 	return (
-		rollover1?.max === rollover2?.max &&
-		rollover1?.max_percentage === rollover2?.max_percentage &&
+		(rollover1?.max ?? null) === (rollover2?.max ?? null) &&
+		(rollover1?.max_percentage ?? null) ===
+			(rollover2?.max_percentage ?? null) &&
 		rollover1?.duration === rollover2?.duration &&
 		rollover1?.length === rollover2?.length
 	);
@@ -337,7 +353,8 @@ export const featurePriceItemsAreSame = ({
 		},
 		reset_usage_when_enabled: {
 			condition:
-				item1.reset_usage_when_enabled == item2.reset_usage_when_enabled,
+				(item1.reset_usage_when_enabled ?? false) ===
+				(item2.reset_usage_when_enabled ?? false),
 			message: `Reset usage when enabled different: ${item1.reset_usage_when_enabled} !== ${item2.reset_usage_when_enabled}`,
 		},
 		proration_config: {
@@ -394,9 +411,9 @@ export const featurePriceItemsAreSame = ({
 			condition: item1.usage_model === item2.usage_model,
 			message: `Usage model different: ${item1.usage_model} != ${item2.usage_model}`,
 		},
-		price: {
-			condition: item1.price == item2.price,
-			message: `Price different: ${item1.price} != ${item2.price}`,
+		pricing: {
+			condition: tiersAreSame(itemPricingTiers(item1), itemPricingTiers(item2)),
+			message: `Pricing different: ${JSON.stringify(itemPricingTiers(item1))} != ${JSON.stringify(itemPricingTiers(item2))}`,
 		},
 		additional_currencies: {
 			condition: additionalCurrenciesAreSame(
@@ -405,12 +422,12 @@ export const featurePriceItemsAreSame = ({
 			),
 			message: `Additional currencies different`,
 		},
-		tiers: {
-			condition: tiersAreSame(item1.tiers || null, item2.tiers || null),
-			message: `Tiers different`,
-		},
 		tier_behavior: {
-			condition: item1.tier_behavior == item2.tier_behavior,
+			condition:
+				(itemPricingTiers(item1)?.length ?? 0) <= 1 &&
+				(itemPricingTiers(item2)?.length ?? 0) <= 1
+					? true
+					: item1.tier_behavior == item2.tier_behavior,
 			message: `Tiers type different: ${item1.tier_behavior} != ${item2.tier_behavior}`,
 		},
 		billing_units: {
@@ -419,7 +436,8 @@ export const featurePriceItemsAreSame = ({
 		},
 		reset_usage_when_enabled: {
 			condition:
-				item1.reset_usage_when_enabled == item2.reset_usage_when_enabled,
+				(item1.reset_usage_when_enabled ?? false) ===
+				(item2.reset_usage_when_enabled ?? false),
 			message: `Reset usage when enabled different: ${item1.reset_usage_when_enabled} !== ${item2.reset_usage_when_enabled}`,
 		},
 	};

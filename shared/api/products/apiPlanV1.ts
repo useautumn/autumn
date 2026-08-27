@@ -109,7 +109,8 @@ export const ApiPlanV1Schema = z.object({
 	price: z
 		.object({
 			amount: z.number().meta({
-				description: "Base price amount for the plan.",
+				description:
+					"Base price amount for the plan, in major currency units (e.g. dollars).",
 			}),
 			additional_currencies: AdditionalCurrencyPriceArraySchema.optional().meta(
 				{

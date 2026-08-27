@@ -9,6 +9,7 @@ import {
 	type DiffablePlanV1,
 	type DiffedCustomizePlanV1,
 } from "./diffPlanV1.js";
+import { planItemMatchesFilter } from "./planItemMatchesFilter.js";
 
 export type ApplyDiffOutput = {
 	price: ApiPlanV1["price"];
@@ -30,34 +31,13 @@ const applyPrice = (
 	return { ...diff };
 };
 
-const itemMatchesFilter = (
-	item: ApiPlanItem | CreatePlanItemParamsV1,
-	filter: PlanItemFilter,
-): boolean => {
-	if (filter.feature_id !== undefined && item.feature_id !== filter.feature_id)
-		return false;
-	if (filter.billing_method !== undefined) {
-		if (item.price?.billing_method !== filter.billing_method) return false;
-	} else if (item.price?.billing_method !== undefined) {
-		return false;
-	}
-	if (filter.interval !== undefined) {
-		const itemInterval = item.price?.interval ?? item.reset?.interval;
-		if (String(itemInterval) !== String(filter.interval)) return false;
-	}
-	if (filter.interval_count !== undefined) {
-		const itemCount = item.price?.interval_count ?? item.reset?.interval_count;
-		if ((itemCount ?? 1) !== filter.interval_count) return false;
-	}
-	return true;
-};
-
 const removeItems = (
 	items: ApiPlanV1["items"],
 	removeFilters: PlanItemFilter[],
 ): ApiPlanV1["items"] => {
 	return items.filter(
-		(item) => !removeFilters.some((filter) => itemMatchesFilter(item, filter)),
+		(item) =>
+			!removeFilters.some((filter) => planItemMatchesFilter({ item, filter })),
 	);
 };
 
@@ -144,7 +124,8 @@ export const applyPlanItemParamsDiff = ({
 	let next = [...items];
 	if (remove_items) {
 		next = next.filter(
-			(item) => !remove_items.some((filter) => itemMatchesFilter(item, filter)),
+			(item) =>
+				!remove_items.some((filter) => planItemMatchesFilter({ item, filter })),
 		);
 	}
 	if (add_items) {
@@ -228,10 +209,7 @@ const applyLicenses = ({
 		(diff.remove_licenses ?? []).map((entry) => entry.license_plan_id),
 	);
 	const pending = new Map(
-		(diff.upsert_licenses ?? []).map((entry) => [
-			entry.license_plan_id,
-			entry,
-		]),
+		(diff.upsert_licenses ?? []).map((entry) => [entry.license_plan_id, entry]),
 	);
 
 	const next: ApiPlanLicenseV1[] = [];

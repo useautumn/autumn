@@ -34,6 +34,55 @@ export type SetupPaymentFeatureQuantity = {
 };
 
 /**
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
+export const SetupPaymentDurationType = {
+  Day: "day",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
+export type SetupPaymentDurationType = ClosedEnum<
+  typeof SetupPaymentDurationType
+>;
+
+/**
+ * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+ */
+export const SetupPaymentOnEnd = {
+  Bill: "bill",
+  Revert: "revert",
+} as const;
+/**
+ * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+ */
+export type SetupPaymentOnEnd = ClosedEnum<typeof SetupPaymentOnEnd>;
+
+/**
+ * Free trial configuration for a plan.
+ */
+export type SetupPaymentFreeTrialParams = {
+  /**
+   * Number of duration_type periods the trial lasts.
+   */
+  durationLength: number;
+  /**
+   * Unit of time for the trial ('day', 'month', 'year').
+   */
+  durationType?: SetupPaymentDurationType | undefined;
+  /**
+   * If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
+   */
+  cardRequired?: boolean | undefined;
+  /**
+   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+   */
+  onEnd?: SetupPaymentOnEnd | undefined;
+};
+
+/**
  * Billing interval (e.g. 'month', 'year').
  */
 export const SetupPaymentPriceInterval = {
@@ -67,7 +116,7 @@ export type SetupPaymentAdditionalCurrency = {
  */
 export type SetupPaymentBasePrice = {
   /**
-   * Base price amount for the plan.
+   * Base price amount for the plan, in major currency units (e.g. dollars).
    */
   amount: number;
   /**
@@ -707,12 +756,16 @@ export type SetupPaymentPlanItemFilter = {
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
    */
   intervalCount?: number | undefined;
+  /**
+   * Match items whose grant equals this included usage. Omitted is a wildcard.
+   */
+  included?: number | undefined;
 };
 
 /**
  * Unit of time for the trial ('day', 'month', 'year').
  */
-export const SetupPaymentDurationType = {
+export const SetupPaymentCustomizeDurationType = {
   Day: "day",
   Month: "month",
   Year: "year",
@@ -720,26 +773,28 @@ export const SetupPaymentDurationType = {
 /**
  * Unit of time for the trial ('day', 'month', 'year').
  */
-export type SetupPaymentDurationType = ClosedEnum<
-  typeof SetupPaymentDurationType
+export type SetupPaymentCustomizeDurationType = ClosedEnum<
+  typeof SetupPaymentCustomizeDurationType
 >;
 
 /**
  * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
  */
-export const SetupPaymentOnEnd = {
+export const SetupPaymentCustomizeOnEnd = {
   Bill: "bill",
   Revert: "revert",
 } as const;
 /**
  * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
  */
-export type SetupPaymentOnEnd = ClosedEnum<typeof SetupPaymentOnEnd>;
+export type SetupPaymentCustomizeOnEnd = ClosedEnum<
+  typeof SetupPaymentCustomizeOnEnd
+>;
 
 /**
  * Free trial configuration for a plan.
  */
-export type SetupPaymentFreeTrialParams = {
+export type SetupPaymentCustomizeFreeTrialParams = {
   /**
    * Number of duration_type periods the trial lasts.
    */
@@ -747,15 +802,15 @@ export type SetupPaymentFreeTrialParams = {
   /**
    * Unit of time for the trial ('day', 'month', 'year').
    */
-  durationType?: SetupPaymentDurationType | undefined;
+  durationType?: SetupPaymentCustomizeDurationType | undefined;
   /**
-   * If true, payment method required to start trial. Customer is charged after trial ends.
+   * If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
    */
   cardRequired?: boolean | undefined;
   /**
    * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
    */
-  onEnd?: SetupPaymentOnEnd | undefined;
+  onEnd?: SetupPaymentCustomizeOnEnd | undefined;
 };
 
 /**
@@ -1032,7 +1087,7 @@ export type SetupPaymentUpsertLicenseAdditionalCurrency = {
  */
 export type SetupPaymentUpsertLicenseBasePrice = {
   /**
-   * Base price amount for the plan.
+   * Base price amount for the plan, in major currency units (e.g. dollars).
    */
   amount: number;
   /**
@@ -1380,6 +1435,10 @@ export type SetupPaymentUpsertLicensePlanItemFilter = {
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
    */
   intervalCount?: number | undefined;
+  /**
+   * Match items whose grant equals this included usage. Omitted is a wildcard.
+   */
+  included?: number | undefined;
 };
 
 export type SetupPaymentUpsertLicenseCustomize = {
@@ -1394,6 +1453,10 @@ export type SetupPaymentUpsertLicense = {
   prepaidOnly?: boolean | undefined;
   customize?: SetupPaymentUpsertLicenseCustomize | null | undefined;
   metadata?: { [k: string]: any } | undefined;
+};
+
+export type SetupPaymentRemoveLicense = {
+  licensePlanId: string;
 };
 
 /**
@@ -1419,7 +1482,7 @@ export type SetupPaymentCustomize = {
   /**
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
-  freeTrial?: SetupPaymentFreeTrialParams | null | undefined;
+  freeTrial?: SetupPaymentCustomizeFreeTrialParams | null | undefined;
   /**
    * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
    */
@@ -1428,6 +1491,10 @@ export type SetupPaymentCustomize = {
    * License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
    */
   upsertLicenses?: Array<SetupPaymentUpsertLicense> | undefined;
+  /**
+   * License links to drop, keyed by license_plan_id. Parallel to remove_items.
+   */
+  removeLicenses?: Array<SetupPaymentRemoveLicense> | undefined;
 };
 
 /**
@@ -1457,6 +1524,11 @@ export type SetupPaymentAttachDiscount = {
    */
   promotionCode?: string | undefined;
 };
+
+/**
+ * Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
+ */
+export type SetupPaymentBillingCycleAnchor = string | number;
 
 export type SetupPaymentCustomLineItem = {
   /**
@@ -1530,6 +1602,10 @@ export type SetupPaymentParams = {
    */
   version?: number | undefined;
   /**
+   * Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.
+   */
+  freeTrial?: SetupPaymentFreeTrialParams | null | undefined;
+  /**
    * Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
    */
   customize?: SetupPaymentCustomize | undefined;
@@ -1550,9 +1626,9 @@ export type SetupPaymentParams = {
    */
   successUrl?: string | undefined;
   /**
-   * Reset the billing cycle anchor immediately with 'now'.
+   * Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
    */
-  billingCycleAnchor?: "now" | undefined;
+  billingCycleAnchor?: string | number | undefined;
   /**
    * Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
    */
@@ -1594,7 +1670,7 @@ export type SetupPaymentParams = {
    */
   noBillingChanges?: boolean | undefined;
   /**
-   * If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+   * If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
    */
   enablePlanImmediately?: boolean | undefined;
   /**
@@ -1659,6 +1735,55 @@ export function setupPaymentFeatureQuantityToJSON(
   return JSON.stringify(
     SetupPaymentFeatureQuantity$outboundSchema.parse(
       setupPaymentFeatureQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentDurationType
+> = z.enum(SetupPaymentDurationType);
+
+/** @internal */
+export const SetupPaymentOnEnd$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentOnEnd
+> = z.enum(SetupPaymentOnEnd);
+
+/** @internal */
+export type SetupPaymentFreeTrialParams$Outbound = {
+  duration_length: number;
+  duration_type: string;
+  card_required: boolean;
+  on_end?: string | undefined;
+};
+
+/** @internal */
+export const SetupPaymentFreeTrialParams$outboundSchema: z.ZodMiniType<
+  SetupPaymentFreeTrialParams$Outbound,
+  SetupPaymentFreeTrialParams
+> = z.pipe(
+  z.object({
+    durationLength: z.number(),
+    durationType: z._default(SetupPaymentDurationType$outboundSchema, "month"),
+    cardRequired: z._default(z.boolean(), false),
+    onEnd: z.optional(SetupPaymentOnEnd$outboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      durationLength: "duration_length",
+      durationType: "duration_type",
+      cardRequired: "card_required",
+      onEnd: "on_end",
+    });
+  }),
+);
+
+export function setupPaymentFreeTrialParamsToJSON(
+  setupPaymentFreeTrialParams: SetupPaymentFreeTrialParams,
+): string {
+  return JSON.stringify(
+    SetupPaymentFreeTrialParams$outboundSchema.parse(
+      setupPaymentFreeTrialParams,
     ),
   );
 }
@@ -2481,6 +2606,7 @@ export type SetupPaymentPlanItemFilter$Outbound = {
   billing_method?: string | undefined;
   interval?: string | string | undefined;
   interval_count?: number | undefined;
+  included?: number | undefined;
 };
 
 /** @internal */
@@ -2500,6 +2626,7 @@ export const SetupPaymentPlanItemFilter$outboundSchema: z.ZodMiniType<
       ]),
     ),
     intervalCount: z.optional(z.int()),
+    included: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2519,17 +2646,17 @@ export function setupPaymentPlanItemFilterToJSON(
 }
 
 /** @internal */
-export const SetupPaymentDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof SetupPaymentDurationType
-> = z.enum(SetupPaymentDurationType);
+export const SetupPaymentCustomizeDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentCustomizeDurationType
+> = z.enum(SetupPaymentCustomizeDurationType);
 
 /** @internal */
-export const SetupPaymentOnEnd$outboundSchema: z.ZodMiniEnum<
-  typeof SetupPaymentOnEnd
-> = z.enum(SetupPaymentOnEnd);
+export const SetupPaymentCustomizeOnEnd$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentCustomizeOnEnd
+> = z.enum(SetupPaymentCustomizeOnEnd);
 
 /** @internal */
-export type SetupPaymentFreeTrialParams$Outbound = {
+export type SetupPaymentCustomizeFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
@@ -2537,15 +2664,18 @@ export type SetupPaymentFreeTrialParams$Outbound = {
 };
 
 /** @internal */
-export const SetupPaymentFreeTrialParams$outboundSchema: z.ZodMiniType<
-  SetupPaymentFreeTrialParams$Outbound,
-  SetupPaymentFreeTrialParams
+export const SetupPaymentCustomizeFreeTrialParams$outboundSchema: z.ZodMiniType<
+  SetupPaymentCustomizeFreeTrialParams$Outbound,
+  SetupPaymentCustomizeFreeTrialParams
 > = z.pipe(
   z.object({
     durationLength: z.number(),
-    durationType: z._default(SetupPaymentDurationType$outboundSchema, "month"),
-    cardRequired: z._default(z.boolean(), true),
-    onEnd: z.optional(SetupPaymentOnEnd$outboundSchema),
+    durationType: z._default(
+      SetupPaymentCustomizeDurationType$outboundSchema,
+      "month",
+    ),
+    cardRequired: z._default(z.boolean(), false),
+    onEnd: z.optional(SetupPaymentCustomizeOnEnd$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2557,12 +2687,12 @@ export const SetupPaymentFreeTrialParams$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function setupPaymentFreeTrialParamsToJSON(
-  setupPaymentFreeTrialParams: SetupPaymentFreeTrialParams,
+export function setupPaymentCustomizeFreeTrialParamsToJSON(
+  setupPaymentCustomizeFreeTrialParams: SetupPaymentCustomizeFreeTrialParams,
 ): string {
   return JSON.stringify(
-    SetupPaymentFreeTrialParams$outboundSchema.parse(
-      setupPaymentFreeTrialParams,
+    SetupPaymentCustomizeFreeTrialParams$outboundSchema.parse(
+      setupPaymentCustomizeFreeTrialParams,
     ),
   );
 }
@@ -3343,6 +3473,7 @@ export type SetupPaymentUpsertLicensePlanItemFilter$Outbound = {
   billing_method?: string | undefined;
   interval?: string | string | undefined;
   interval_count?: number | undefined;
+  included?: number | undefined;
 };
 
 /** @internal */
@@ -3363,6 +3494,7 @@ export const SetupPaymentUpsertLicensePlanItemFilter$outboundSchema:
         ]),
       ),
       intervalCount: z.optional(z.int()),
+      included: z.optional(z.number()),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -3473,14 +3605,43 @@ export function setupPaymentUpsertLicenseToJSON(
 }
 
 /** @internal */
+export type SetupPaymentRemoveLicense$Outbound = {
+  license_plan_id: string;
+};
+
+/** @internal */
+export const SetupPaymentRemoveLicense$outboundSchema: z.ZodMiniType<
+  SetupPaymentRemoveLicense$Outbound,
+  SetupPaymentRemoveLicense
+> = z.pipe(
+  z.object({
+    licensePlanId: z.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      licensePlanId: "license_plan_id",
+    });
+  }),
+);
+
+export function setupPaymentRemoveLicenseToJSON(
+  setupPaymentRemoveLicense: SetupPaymentRemoveLicense,
+): string {
+  return JSON.stringify(
+    SetupPaymentRemoveLicense$outboundSchema.parse(setupPaymentRemoveLicense),
+  );
+}
+
+/** @internal */
 export type SetupPaymentCustomize$Outbound = {
   price?: SetupPaymentBasePrice$Outbound | null | undefined;
   items?: Array<SetupPaymentItemPlanItem$Outbound> | undefined;
   add_items?: Array<SetupPaymentAddItemPlanItem$Outbound> | undefined;
   remove_items?: Array<SetupPaymentPlanItemFilter$Outbound> | undefined;
-  free_trial?: SetupPaymentFreeTrialParams$Outbound | null | undefined;
+  free_trial?: SetupPaymentCustomizeFreeTrialParams$Outbound | null | undefined;
   billing_controls?: SetupPaymentBillingControls$Outbound | undefined;
   upsert_licenses?: Array<SetupPaymentUpsertLicense$Outbound> | undefined;
+  remove_licenses?: Array<SetupPaymentRemoveLicense$Outbound> | undefined;
 };
 
 /** @internal */
@@ -3501,15 +3662,18 @@ export const SetupPaymentCustomize$outboundSchema: z.ZodMiniType<
     removeItems: z.optional(
       z.array(z.lazy(() => SetupPaymentPlanItemFilter$outboundSchema)),
     ),
-    freeTrial: z.optional(
-      z.nullable(z.lazy(() => SetupPaymentFreeTrialParams$outboundSchema)),
-    ),
-    billingControls: z.optional(
-      z.lazy(() => SetupPaymentBillingControls$outboundSchema),
-    ),
-    upsertLicenses: z.optional(
-      z.array(z.lazy(() => SetupPaymentUpsertLicense$outboundSchema)),
-    ),
+    freeTrial: z.optional(z.nullable(z.lazy(() =>
+      SetupPaymentCustomizeFreeTrialParams$outboundSchema
+    ))),
+    billingControls: z.optional(z.lazy(() =>
+      SetupPaymentBillingControls$outboundSchema
+    )),
+    upsertLicenses: z.optional(z.array(z.lazy(() =>
+      SetupPaymentUpsertLicense$outboundSchema
+    ))),
+    removeLicenses: z.optional(z.array(z.lazy(() =>
+      SetupPaymentRemoveLicense$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3518,6 +3682,7 @@ export const SetupPaymentCustomize$outboundSchema: z.ZodMiniType<
       freeTrial: "free_trial",
       billingControls: "billing_controls",
       upsertLicenses: "upsert_licenses",
+      removeLicenses: "remove_licenses",
     });
   }),
 );
@@ -3563,6 +3728,25 @@ export function setupPaymentAttachDiscountToJSON(
 ): string {
   return JSON.stringify(
     SetupPaymentAttachDiscount$outboundSchema.parse(setupPaymentAttachDiscount),
+  );
+}
+
+/** @internal */
+export type SetupPaymentBillingCycleAnchor$Outbound = string | number;
+
+/** @internal */
+export const SetupPaymentBillingCycleAnchor$outboundSchema: z.ZodMiniType<
+  SetupPaymentBillingCycleAnchor$Outbound,
+  SetupPaymentBillingCycleAnchor
+> = smartUnion([z.string(), z.int()]);
+
+export function setupPaymentBillingCycleAnchorToJSON(
+  setupPaymentBillingCycleAnchor: SetupPaymentBillingCycleAnchor,
+): string {
+  return JSON.stringify(
+    SetupPaymentBillingCycleAnchor$outboundSchema.parse(
+      setupPaymentBillingCycleAnchor,
+    ),
   );
 }
 
@@ -3692,12 +3876,13 @@ export type SetupPaymentParams$Outbound = {
   plan_id?: string | undefined;
   feature_quantities?: Array<SetupPaymentFeatureQuantity$Outbound> | undefined;
   version?: number | undefined;
+  free_trial?: SetupPaymentFreeTrialParams$Outbound | null | undefined;
   customize?: SetupPaymentCustomize$Outbound | undefined;
   proration_behavior?: string | undefined;
   subscription_id?: string | undefined;
   discounts?: Array<SetupPaymentAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
-  billing_cycle_anchor?: "now" | undefined;
+  billing_cycle_anchor?: string | number | undefined;
   starts_at?: number | undefined;
   ends_at?: number | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
@@ -3727,6 +3912,9 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => SetupPaymentFeatureQuantity$outboundSchema)),
     ),
     version: z.optional(z.number()),
+    freeTrial: z.optional(
+      z.nullable(z.lazy(() => SetupPaymentFreeTrialParams$outboundSchema)),
+    ),
     customize: z.optional(z.lazy(() => SetupPaymentCustomize$outboundSchema)),
     prorationBehavior: z.optional(SetupPaymentProrationBehavior$outboundSchema),
     subscriptionId: z.optional(z.string()),
@@ -3734,7 +3922,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => SetupPaymentAttachDiscount$outboundSchema)),
     ),
     successUrl: z.optional(z.string()),
-    billingCycleAnchor: z.optional(z.literal("now")),
+    billingCycleAnchor: z.optional(smartUnion([z.string(), z.int()])),
     startsAt: z.optional(z.int()),
     endsAt: z.optional(z.int()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
@@ -3764,6 +3952,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       entityId: "entity_id",
       planId: "plan_id",
       featureQuantities: "feature_quantities",
+      freeTrial: "free_trial",
       prorationBehavior: "proration_behavior",
       subscriptionId: "subscription_id",
       successUrl: "success_url",

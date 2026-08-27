@@ -100,7 +100,7 @@ describe("priceToStripeCreatePriceParams per-currency", () => {
 			}),
 			product: fullProduct,
 			org,
-			currentStripeProduct: { id: "prod_shared" } as never,
+			stripeProductId: "prod_shared",
 			currency: "eur",
 		});
 
@@ -113,7 +113,7 @@ describe("priceToStripeCreatePriceParams per-currency", () => {
 			price: prepaidPrice({}),
 			product: fullProduct,
 			org,
-			currentStripeProduct: { id: "prod_shared" } as never,
+			stripeProductId: "prod_shared",
 		});
 
 		expect(params.currency).toBe("usd");

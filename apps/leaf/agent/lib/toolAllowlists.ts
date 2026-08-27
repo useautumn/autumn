@@ -58,21 +58,11 @@ export const toolAllowlists = {
 		"queryRequestLogs",
 		"searchRequestLogs",
 	],
-	/** Routing plus org context, and for now the catalog tools, which stay
-	 * here until the catalog specialist is wired (see agent/subagents/README.md). */
-	orchestrator: [
-		...ORG_CONTEXT_READS,
-		...DATE_UTILS,
-		"createPlan",
-		"createReward",
-		"getCurrentOrganization",
-		"getPlan",
-		"listRewards",
-		"previewUpdateCatalog",
-		"updateAgentRules",
-		"updateCatalog",
-		"updatePlan",
-	],
+	/** Routing plus org context and catalog reads; catalog writes live only in
+	 * the (unwired) catalog specialist (see agent/subagents/README.md). */
+	// A pure router: delegation plus the one gated admin write. Org context is
+	// preloaded server-side; every other read lives on a specialist.
+	orchestrator: ["updateAgentRules"],
 } as const satisfies Record<string, readonly string[] | undefined>;
 
 export type LeafAgentConnection = keyof typeof toolAllowlists;

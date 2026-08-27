@@ -80,7 +80,8 @@ export const updateStripeSub2 = async ({
 		add_invoice_items: itemSet.invoiceItems,
 		...(invoiceOnly && {
 			collection_method: "send_invoice",
-			days_until_due: 30,
+			days_until_due:
+				attachParams.org.config.default_invoice_net_terms_days ?? 30,
 		}),
 		payment_behavior: "error_if_incomplete",
 

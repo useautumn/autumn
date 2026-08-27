@@ -11,6 +11,9 @@ process.env.SLACK_SIGNING_SECRET ??= "test";
 const { formatAutumnOrgContext, loadAutumnOrgContext } = await import(
 	"../../../../src/internal/autumnMcp/orgContextService.js"
 );
+const { compactPlans } = await import(
+	"../../../../src/internal/autumnMcp/orgContextFormat.js"
+);
 
 const createLogger = () => {
 	const warnings: unknown[] = [];
@@ -54,12 +57,12 @@ describe("Autumn org context service", () => {
 		});
 
 		expect(text).toContain("getAgentRules:");
-		expect(text).toContain("listPlans (compact index");
+		expect(text).toContain("listPlans (every plan and item");
 		expect(text).toContain("listFeatures (compact index)");
 		expect(text).toContain("```json");
 		expect(text).toContain("workspace scoped");
 		expect(text).not.toContain("Always use invoice mode.");
-		expect(text).toContain('"items":["credits"]');
+		expect(text).toContain('"items":["credits rollover"]');
 		expect(text).toContain('"id":"enterprise"');
 		expect(text).toContain('"type":"boolean"');
 	});
@@ -126,8 +129,129 @@ describe("Autumn org context service", () => {
 		});
 
 		expect(context?.text).toContain("getAgentRules:");
-		expect(context?.text).toContain("listPlans (compact index");
+		expect(context?.text).toContain("listPlans (every plan and item");
 		expect(context?.text).not.toContain("listFeatures:");
 		expect(warnings).toHaveLength(1);
+	});
+});
+
+describe("org context stale-while-revalidate cache", () => {
+	const { setSystemTime } = require("bun:test") as {
+		setSystemTime: (time?: Date) => void;
+	};
+
+	const makeExecuteTool = () => {
+		let rounds = 0;
+		const executeTool = async ({ toolName }: { toolName: string }) => {
+			if (toolName === "getCurrentOrganization") rounds += 1;
+			return { round: rounds, tool: toolName };
+		};
+		return { executeTool, rounds: () => rounds };
+	};
+
+	const loadFor = (orgId: string, executeTool: unknown) => {
+		const { logger } = createLogger();
+		const {
+			autumnOrgContextService,
+		} = require("../../../../src/internal/autumnMcp/orgContextService.js");
+		return autumnOrgContextService.load({
+			env: AppEnv.Sandbox,
+			executeTool,
+			logger,
+			orgId,
+			token: "tok",
+		}) as Promise<{ text: string } | undefined>;
+	};
+
+	const flushBackground = () =>
+		new Promise((resolve) => setTimeout(resolve, 5));
+
+	test("fresh window shares one load across threads", async () => {
+		setSystemTime(new Date("2026-08-24T10:00:00Z"));
+		try {
+			const { executeTool, rounds } = makeExecuteTool();
+			const first = await loadFor("org_swr_fresh", executeTool);
+			const second = await loadFor("org_swr_fresh", executeTool);
+			expect(rounds()).toBe(1);
+			expect(second?.text).toBe(first?.text ?? "");
+		} finally {
+			setSystemTime();
+		}
+	});
+
+	test("stale window serves the old snapshot and refreshes in background", async () => {
+		try {
+			setSystemTime(new Date("2026-08-24T11:00:00Z"));
+			const { executeTool, rounds } = makeExecuteTool();
+			const first = await loadFor("org_swr_stale", executeTool);
+
+			setSystemTime(new Date("2026-08-24T11:02:00Z"));
+			const stale = await loadFor("org_swr_stale", executeTool);
+			expect(stale?.text).toBe(first?.text ?? "");
+
+			await flushBackground();
+			expect(rounds()).toBe(2);
+
+			const refreshed = await loadFor("org_swr_stale", executeTool);
+			expect(refreshed?.text).toContain('"round": 2');
+		} finally {
+			setSystemTime();
+		}
+	});
+
+	test("past the stale window the load blocks on a fresh fetch", async () => {
+		try {
+			setSystemTime(new Date("2026-08-24T12:00:00Z"));
+			const { executeTool, rounds } = makeExecuteTool();
+			await loadFor("org_swr_expired", executeTool);
+
+			setSystemTime(new Date("2026-08-24T12:20:00Z"));
+			const reloaded = await loadFor("org_swr_expired", executeTool);
+			expect(rounds()).toBe(2);
+			expect(reloaded?.text).toContain('"round": 2');
+		} finally {
+			setSystemTime();
+		}
+	});
+});
+
+describe("compact plan items carry what a customize needs", () => {
+	const itemsOf = (items: unknown[]) =>
+		(compactPlans([{ id: "p", items, name: "P" }])[0] as { items: string[] })
+			.items;
+
+	test("a boolean reads as unlimited, never as an allowance of 1", () => {
+		expect(
+			itemsOf([{ feature_id: "sso", included: 1, unlimited: true }]),
+		).toEqual(["sso unlimited"]);
+	});
+
+	test("same feature on two intervals stays distinguishable", () => {
+		expect(
+			itemsOf([
+				{
+					feature_id: "credits",
+					price: { billing_method: "prepaid", interval: "month" },
+				},
+				{
+					feature_id: "credits",
+					price: { billing_method: "prepaid", interval: "one_off" },
+				},
+			]),
+		).toEqual(["credits prepaid month", "credits prepaid one_off"]);
+	});
+
+	test("a price ladder is marked rather than dropped", () => {
+		expect(
+			itemsOf([{ feature_id: "credits", price: { tiers: [1, 2, 3] } }]),
+		).toEqual(["credits tiers=3"]);
+	});
+
+	test("a price-less item falls back to its reset interval", () => {
+		expect(
+			itemsOf([
+				{ feature_id: "credits", included: 100, reset: { interval: "month" } },
+			]),
+		).toEqual(["credits included=100 month"]);
 	});
 });

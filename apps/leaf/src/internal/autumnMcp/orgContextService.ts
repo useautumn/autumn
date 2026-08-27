@@ -1,7 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { parsePreviewPayload } from "@autumn/render";
 import { type AppEnv, ms } from "@autumn/shared";
-import { createTtlCache } from "../../lib/ttlCache.js";
 import { executeAutumnMcpTool } from "./client.js";
 import { autumnMcpErrorText } from "./errorResult.js";
 import {
@@ -67,7 +66,7 @@ export const formatAutumnOrgContext = ({
 		sections.push(
 			toJsonBlock({
 				label: "listPlans",
-				note: "compact index — call getPlan/listPlans for full details",
+				note: "every plan and item, enough to build a customize — call getPlan only for tier amounts or trial terms",
 				pretty: false,
 				value: compactPlans(plans),
 			}),
@@ -183,28 +182,102 @@ export const loadAutumnOrgContext = async ({
 	return text || instructions ? { instructions, text } : undefined;
 };
 
-/** The block is org-level and changes rarely, but was refetched — four MCP
- * round trips — on every new thread. A short TTL keeps new threads instant
- * while catalog edits still surface within a minute. */
-const orgContextCache = createTtlCache<AutumnOrgContext | undefined>({
-	ttlMs: ms.minutes(1),
-});
+const ORG_CONTEXT_FRESH_MS = ms.minutes(1);
+const ORG_CONTEXT_STALE_MS = ms.minutes(15);
+
+type OrgContextCacheEntry = {
+	fetchedAt: number;
+	refreshing: boolean;
+	value: Promise<AutumnOrgContext | undefined>;
+};
+
+type OrgContextLoad = () => Promise<AutumnOrgContext | undefined>;
+
+/** Serve-stale-while-revalidate: a new thread never blocks on the four MCP
+ * round trips while any snapshot under 15 min old exists; edits land on the
+ * next thread after the background refresh (at most a minute behind). */
+const orgContextCache = new Map<string, OrgContextCacheEntry>();
+
+const evictExpiredOrgContext = (now: number) => {
+	for (const [key, entry] of orgContextCache) {
+		if (now - entry.fetchedAt > ORG_CONTEXT_STALE_MS) {
+			orgContextCache.delete(key);
+		}
+	}
+};
+
+const startOrgContextLoad = ({
+	key,
+	load,
+}: {
+	key: string;
+	load: OrgContextLoad;
+}): Promise<AutumnOrgContext | undefined> => {
+	const created: OrgContextCacheEntry = {
+		fetchedAt: Date.now(),
+		refreshing: false,
+		value: load(),
+	};
+	orgContextCache.set(key, created);
+	created.value.catch(() => {
+		if (orgContextCache.get(key) === created) orgContextCache.delete(key);
+	});
+	return created.value;
+};
+
+const refreshOrgContextInBackground = ({
+	entry,
+	key,
+	load,
+}: {
+	entry: OrgContextCacheEntry;
+	key: string;
+	load: OrgContextLoad;
+}) => {
+	entry.refreshing = true;
+	const fresh = load();
+	fresh
+		.then(() => {
+			orgContextCache.set(key, {
+				fetchedAt: Date.now(),
+				refreshing: false,
+				value: fresh,
+			});
+		})
+		.catch(() => {
+			entry.refreshing = false;
+		});
+};
 
 const loadAutumnOrgContextCached = ({
 	env,
+	executeTool,
 	logger,
 	orgId,
 	token,
 }: {
 	env: AppEnv;
+	executeTool?: ExecuteAutumnTool;
 	logger: AutumnLogger;
 	orgId?: string;
 	token: string;
 }): Promise<AutumnOrgContext | undefined> => {
-	if (!orgId) return loadAutumnOrgContext({ env, logger, token });
-	return orgContextCache.getOrCreate(`${orgId}:${env}`, () =>
-		loadAutumnOrgContext({ env, logger, token }),
-	);
+	const load: OrgContextLoad = () =>
+		loadAutumnOrgContext({ env, executeTool, logger, token });
+	if (!orgId) return load();
+
+	const key = `${orgId}:${env}`;
+	const now = Date.now();
+	evictExpiredOrgContext(now);
+
+	const entry = orgContextCache.get(key);
+	if (!entry) return startOrgContextLoad({ key, load });
+
+	const isStale = now - entry.fetchedAt > ORG_CONTEXT_FRESH_MS;
+	if (isStale && !entry.refreshing) {
+		refreshOrgContextInBackground({ entry, key, load });
+	}
+	return entry.value;
 };
 
 export const autumnOrgContextService = {

@@ -29,7 +29,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicParamField>
 
     <DynamicParamField body="card_required" type="boolean">
-      If true, payment method required to start trial. Customer is charged after trial ends.
+      If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
     </DynamicParamField>
 
     <DynamicParamField body="on_end" type="'bill' | 'revert'">
@@ -123,7 +123,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicParamField>
 
     <DynamicParamField body="entity_id" type="string | null">
-      The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID.
+      The plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID. On phases after the first, the entity must already be scoped by the first phase — a schedule cannot change scope mid-flight.
     </DynamicParamField>
 
     <DynamicParamField body="feature_quantities" type="object[]">
@@ -155,7 +155,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           Base price configuration for a plan.
           <Expandable title="properties">
             <DynamicParamField body="amount" type="number" required>
-              Base price amount for the plan.
+              Base price amount for the plan, in major currency units (e.g. dollars).
             </DynamicParamField>
 
             <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
@@ -486,6 +486,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
             </DynamicParamField>
 
+            <DynamicParamField body="included" type="number">
+              Match items whose grant equals this included usage. Omitted is a wildcard.
+            </DynamicParamField>
+
           </Expandable>
         </DynamicParamField>
 
@@ -682,7 +686,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         </DynamicParamField>
 
         <DynamicParamField body="entity_id" type="string | null">
-          The immediate plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID.
+          The plan scope. Omit to inherit the request entity, pass null for customer-level, or pass an entity ID. On phases after the first, the entity must already be scoped by the first phase — a schedule cannot change scope mid-flight.
         </DynamicParamField>
 
         <DynamicParamField body="feature_quantities" type="object[]">
@@ -714,7 +718,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Base price configuration for a plan.
               <Expandable title="properties">
                 <DynamicParamField body="amount" type="number" required>
-                  Base price amount for the plan.
+                  Base price amount for the plan, in major currency units (e.g. dollars).
                 </DynamicParamField>
 
                 <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
@@ -1015,6 +1019,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                 <DynamicParamField body="interval_count" type="integer">
                   Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+                </DynamicParamField>
+
+                <DynamicParamField body="included" type="number">
+                  Match items whose grant equals this included usage. Omitted is a wildcard.
                 </DynamicParamField>
 
               </Expandable>

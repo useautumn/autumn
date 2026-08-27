@@ -11,6 +11,7 @@ import {
 	isPrepaidPrice,
 	productsAreSame,
 	RecaseError,
+	resolveFreeTrialParam,
 	roundUsageToNearestBillingUnit,
 	UpdateSubscriptionIntent,
 	type UpdateSubscriptionV1Params,
@@ -110,7 +111,7 @@ export const handleOneOffErrors = ({
 	if (!isCustomerProductOneOff(customerProduct)) return;
 
 	// 1. Check that free trial param isn't passed in
-	const freeTrial = params.customize?.free_trial;
+	const freeTrial = resolveFreeTrialParam(params);
 
 	if (freeTrial) {
 		throw new RecaseError({

@@ -9,14 +9,30 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 // stubbing them is what makes every module below importable, hence restorable.
 mock.module("../../../src/lib/env.js", () => ({ env: {} }));
 mock.module("../../../src/lib/db.js", () => ({ db: {} }));
+let writeRows: unknown[] = [];
+const writeStatusUpdates: Array<{
+	result?: unknown;
+	status: string;
+	writeId: string;
+}> = [];
 mock.module(
 	"../../../src/internal/approvals/repos/chatApprovalWritesRepo.js",
 	() => ({
 		chatApprovalWritesRepo: {
 			insert: async () => undefined,
-			list: async () => [],
+			list: async () => writeRows,
 			setPreview: async () => true,
-			setStatus: async () => undefined,
+			setStatus: async (input: {
+				result?: unknown;
+				status: string;
+				writeId: string;
+			}) => {
+				writeStatusUpdates.push({
+					result: input.result,
+					status: input.status,
+					writeId: input.writeId,
+				});
+			},
 		},
 	}),
 );
@@ -216,6 +232,7 @@ describe("resumeApproval", () => {
 				streamIndex: 4,
 				status: "waiting",
 				lastEventAt: 0,
+				pendingRequests: [],
 			},
 			threadKey: "sandbox:slack:T1:C1:thread_1",
 		};
@@ -887,6 +904,7 @@ describe("delegated writes are verified on the child stream", () => {
 				streamIndex: 4,
 				status: "waiting",
 				lastEventAt: 0,
+				pendingRequests: [],
 			},
 			threadKey: "sandbox:slack:T1:C1:thread_1",
 		};
@@ -956,5 +974,118 @@ describe("delegated writes are verified on the child stream", () => {
 
 		expect(result).toMatchObject({ error: true, retryable: true });
 		expect(loggedEvents).toEqual(["leaf.eve_approval_not_executed"]);
+	});
+});
+
+describe("approved write outcomes persist onto the write rows", () => {
+	beforeEach(() => {
+		streamedEvents = EMPTY_TURN;
+		streamedEventsBySession = {};
+		idleTimeoutSessionIds = [];
+		postedResponses.length = 0;
+		loggedEvents.length = 0;
+		writeStatusUpdates.length = 0;
+		writeRows = [
+			{
+				deny_option_id: "deny",
+				id: "w_1",
+				position: 0,
+				request_id: "req_1",
+				tool_args: {},
+				tool_name: "autumn__updateCustomer",
+			},
+			{
+				deny_option_id: "deny",
+				id: "w_2",
+				position: 1,
+				request_id: "req_2",
+				tool_args: {},
+				tool_name: "autumn__attach",
+			},
+		];
+		session = {
+			env: AppEnv.Sandbox,
+			newSession: false,
+			sessionId: "eve_session_1",
+			state: {
+				version: 1,
+				continuationToken: "token_1",
+				streamIndex: 4,
+				status: "waiting",
+				lastEventAt: 0,
+				pendingRequests: [],
+			},
+			threadKey: "sandbox:slack:T1:C1:thread_1",
+		};
+	});
+
+	test("streamed results land on their rows in execution order", async () => {
+		streamedEvents = [
+			{ type: "turn.started" },
+			{
+				result: {
+					callId: "c1",
+					output: { ok: true },
+					toolName: "autumn__updateCustomer",
+				},
+				status: "completed",
+				type: "action.result",
+			},
+			{
+				result: {
+					callId: "c2",
+					output: { error: "Plan not found" },
+					toolName: "autumn__attach",
+				},
+				status: "error",
+				type: "action.result",
+			},
+			{ type: "session.waiting" },
+		];
+
+		await resumeApproval({
+			approval: groupedApproval(),
+			providerUserId: "U1",
+		});
+
+		expect(writeStatusUpdates).toEqual([
+			{ result: { ok: true }, status: "applied", writeId: "w_1" },
+			{ result: { error: "Plan not found" }, status: "failed", writeId: "w_2" },
+		]);
+	});
+
+	test("a write without stream evidence stays pending", async () => {
+		streamedEvents = [
+			{ type: "turn.started" },
+			{
+				result: {
+					callId: "c1",
+					output: { ok: true },
+					toolName: "autumn__updateCustomer",
+				},
+				status: "completed",
+				type: "action.result",
+			},
+			{ type: "session.waiting" },
+		];
+
+		await resumeApproval({
+			approval: groupedApproval(),
+			providerUserId: "U1",
+		});
+
+		expect(writeStatusUpdates).toEqual([
+			{ result: { ok: true }, status: "applied", writeId: "w_1" },
+		]);
+	});
+
+	test("a deny persists nothing", async () => {
+		writeRows = [writeRows[0] as never];
+		await discardApproval({
+			approval: approval(),
+			providerUserId: "U1",
+		});
+
+		expect(writeStatusUpdates).toEqual([]);
 	});
 });

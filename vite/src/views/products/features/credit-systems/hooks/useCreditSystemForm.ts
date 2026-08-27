@@ -3,6 +3,7 @@ import { FeatureType } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { useEffect, useRef } from "react";
 import { useAppForm } from "@/hooks/form/form";
+import { createSchemaItem } from "../utils/creditSchemaUtils";
 
 export interface CreditSystemFormValues {
 	name: string;
@@ -15,6 +16,7 @@ export interface CreditSystemFormValues {
 	defaultMarkup: number;
 	/** Per-provider default markups (persisted to config.provider_markups). */
 	provider_markups: Record<string, { markup: number }>;
+	stripe_product_id: string | null;
 }
 
 export function useCreditSystemForm({
@@ -31,11 +33,7 @@ export function useCreditSystemForm({
 			name: feature?.name ?? "",
 			id: feature?.id ?? "",
 			type: feature?.type ?? FeatureType.CreditSystem,
-			config: feature?.config ?? {
-				schema: [
-					{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
-				],
-			},
+			config: feature?.config ?? { schema: [createSchemaItem()] },
 			event_names: feature?.event_names ?? [],
 			model_markups:
 				(feature?.model_markups as CreditSystemFormValues["model_markups"]) ??
@@ -46,6 +44,7 @@ export function useCreditSystemForm({
 				(feature?.config
 					?.provider_markups as CreditSystemFormValues["provider_markups"]) ??
 				{},
+			stripe_product_id: feature?.stripe_product_id ?? null,
 		} satisfies CreditSystemFormValues,
 		onSubmit: onSubmit ? ({ value }) => onSubmit(value) : undefined,
 	});

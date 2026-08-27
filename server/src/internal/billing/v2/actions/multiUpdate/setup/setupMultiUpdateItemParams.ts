@@ -21,6 +21,8 @@ export const multiUpdateItemToParams = ({
 	customer_product_id: item.customer_product_id,
 	cancel_action: item.cancel_action,
 	proration_behavior: item.proration_behavior,
+	refund_last_payment: item.refund_last_payment,
+	subscription_params: item.subscription_params,
 });
 
 export const narrowFullCustomerToEntity = ({

@@ -9,15 +9,16 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeUpdateFeatureRewrites } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpdateFeaturesPlan/computeUpdateFeatureRewrites";
-import { resolveFeatureUpdateEntry } from "@/internal/catalogV2/actions/updateCatalog/utils/featureUpdateUtils/resolveFeatureUpdateEntry";
 import type { CatalogComputeStep } from "@/internal/catalogV2/actions/updateCatalog/types/catalogComputeState";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateFeaturePlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateFeaturePlan";
+import { resolveFeatureUpdateEntry } from "@/internal/catalogV2/actions/updateCatalog/utils/featureUpdateUtils/resolveFeatureUpdateEntry";
 
 const FEATURE_DIFF_VERSION = new ApiVersionClass(ApiVersion.V2_1);
 
 const CREDIT_CONFIG_KEYS = [
 	"credit_schema",
+	"invoice_credit",
 	"model_markups",
 	"default_markup",
 	"provider_markups",
