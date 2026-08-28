@@ -5,7 +5,7 @@ import {
 	chatApprovals,
 	chatApprovalWrites,
 } from "@autumn/shared";
-import { and, asc, eq, exists } from "drizzle-orm";
+import { and, asc, eq, exists, gt, inArray, or, sql } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 
@@ -114,9 +114,44 @@ const setStepStatus = async ({
 		.where(eq(chatApprovalWrites.id, writeId));
 };
 
+/** Settled writes parked by the given eve session (root or child), newest first. */
+const listSettledForSession = async ({
+	db,
+	sessionId,
+	since,
+	toolName,
+}: {
+	db: ChatDb;
+	sessionId: string;
+	since: number;
+	toolName: string;
+}): Promise<ChatApprovalWrite[]> => {
+	const rows = await db
+		.select({ write: chatApprovalWrites })
+		.from(chatApprovalWrites)
+		.innerJoin(
+			chatApprovals,
+			eq(chatApprovalWrites.approval_id, chatApprovals.id),
+		)
+		.where(
+			and(
+				eq(chatApprovalWrites.tool_name, normalizeToolName(toolName)),
+				inArray(chatApprovalWrites.status, ["applied", "failed", "skipped"]),
+				gt(chatApprovalWrites.updated_at, since),
+				or(
+					eq(chatApprovals.run_id, sessionId),
+					sql`${sessionId} = ANY(${chatApprovals.child_session_ids})`,
+				),
+			),
+		)
+		.orderBy(asc(chatApprovalWrites.updated_at));
+	return rows.map((row) => row.write).reverse();
+};
+
 export const chatApprovalWritesRepo = {
 	insert: insertSteps,
 	list: listSteps,
+	listSettledForSession,
 	setPreview: setStepPreview,
 	setStatus: setStepStatus,
 } as const;

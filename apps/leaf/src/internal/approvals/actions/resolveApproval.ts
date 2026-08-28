@@ -54,10 +54,27 @@ const releaseClaim = async ({
 	}
 };
 
-/** Dead-session fallback, reached only after guardApprovalDrift passed in this
- * same resolve — Slack-only, since only a surface that rendered the group may
- * execute it. */
-const executeWithoutSession = async ({
+/** Post-execution narration resume; never throws — the card already carries
+ * the truth. */
+const narrateInBackground = ({
+	approval,
+	providerUserId,
+}: {
+	approval: ChatApproval;
+	providerUserId: string;
+}): Promise<SubmittedApprovalResult | undefined> =>
+	resumeApproval({ approval, providerUserId }).catch((error: unknown) => {
+		logger.warn("[chat] Post-execution narration failed", {
+			event: "leaf.approval_narration_failed",
+			approval_id: approval.id,
+			error,
+		});
+		return undefined;
+	});
+
+/** Deterministic executor for a surface that rendered the whole group;
+ * returns undefined when the approval has no stored writes to run. */
+const executeStoredWrites = async ({
 	approval,
 	providerUserId,
 }: {
@@ -110,12 +127,16 @@ export const resolveApproval = async ({
 			return approvalErrorResult(error, { retryable: true });
 		}
 	}
-	if (!approval.tool_call_id) {
-		const executed = await executeWithoutSession({
-			approval,
-			providerUserId,
-		});
-		if (executed) return executed;
+
+	// Writes run directly; the resumed session only narrates.
+	const executed = await executeStoredWrites({ approval, providerUserId });
+	if (executed) {
+		return approval.tool_call_id
+			? {
+					...executed,
+					narration: narrateInBackground({ approval, providerUserId }),
+				}
+			: executed;
 	}
 
 	let result: SubmittedApprovalResult;
@@ -126,18 +147,11 @@ export const resolveApproval = async ({
 		});
 	} catch (error) {
 		if (error instanceof EveSessionGoneError) {
-			// Eve lost the session this card belongs to; the deterministic
-			// executor still honors the approval from the stored writes.
 			logger.error("[chat] Approval session is gone", error, {
 				event: "leaf.approval_session_gone",
 				approval_id: approval.id,
 			});
 			await dropEveSession({ approval });
-			const executed = await executeWithoutSession({
-				approval,
-				providerUserId,
-			});
-			if (executed) return executed;
 			await chatApprovalRepo.finalize({
 				approvalId: approval.id,
 				db,

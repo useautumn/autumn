@@ -28,6 +28,7 @@ export type ApprovalRunResult =
 			chainedApprovalId?: string;
 			error: true;
 			message: string;
+			narration?: Promise<SubmittedApprovalResult | undefined>;
 			retryable?: boolean;
 			writes?: ReadonlyArray<ApprovalWriteOutcome>;
 	  }
@@ -35,6 +36,7 @@ export type ApprovalRunResult =
 	// and needs its own card, or the session waits in silence.
 	| {
 			chainedApprovalId?: string;
+			narration?: Promise<SubmittedApprovalResult | undefined>;
 			question?: {
 				options: ReadonlyArray<Readonly<{ id?: string; label?: string }>>;
 				prompt: string;

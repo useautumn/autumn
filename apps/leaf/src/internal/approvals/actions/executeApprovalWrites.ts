@@ -93,8 +93,8 @@ const stepOutcomes = (
 		toolName: write.tool_name,
 	}));
 
-/** Dead-session fallback: the eve session that parked these writes is gone,
- * so the stored writes run directly — the card is the only outcome surface. */
+/** Runs the approval's stored writes in order and finalizes the row — the
+ * card carries the outcome; any session resume is narration only. */
 export const executeApprovalWrites = async ({
 	approval,
 	providerUserId,
@@ -133,7 +133,7 @@ export const executeApprovalWrites = async ({
 		providerUserId,
 		status: allApplied ? "approved" : "failed",
 	});
-	logger.info("Executed approved writes without an eve session", {
+	logger.info("Executed approved writes", {
 		event: "leaf.approval_writes_executed",
 		approval_id: approval.id,
 		data: {
