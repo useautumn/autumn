@@ -13,13 +13,16 @@ const attachCards = (events: ReadonlyArray<{ type: string }>) =>
 
 export default defineEval({
 	description:
-		"A question asked while a write is pending is answered in text — the withdrawn card is not rebuilt in place of the answer (prod thread C0BCAQQK0KS, 2026-08-25).",
+		"An objection asking for an explanation while a write is pending gets text — no billing re-delegation or rebuilt card (prod thread C0BCAQQK0KS).",
 	async test(t) {
 		await t.send(
 			"put customer gen-attach-multi on pro_gen-attach-multi, 1035 per month",
 		);
-		const question = await t.send("how many emails will they have after?");
+		const question = await t.send(
+			"STOP previewing attach. tell me why you did that",
+		);
 
+		question.notEvent("subagent.called", { data: { name: "billing" } });
 		question.eventsSatisfy(
 			"the question is answered, not re-carded",
 			(events) => attachCards(events) === 0,

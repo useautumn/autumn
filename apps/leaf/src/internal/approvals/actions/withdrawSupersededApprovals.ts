@@ -10,14 +10,14 @@ import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 
 const withdrawnNote = (toolName: string) =>
-	`(The user replied with a new message instead of deciding on this pending request, so it was withdrawn. Do not rebuild, retry, or ask anything about the withdrawn change — the user's message follows immediately and you should act on that, treating it as a refinement of the withdrawn change where it reads like one. If it is a QUESTION, just answer it — do NOT re-issue the write or show a card; say the change is still pending and wait for them to confirm it.${
+	`(The user replied with a new message instead of deciding on this pending request, so it was withdrawn and not applied. Classify the new message on its own. Rebuild only for an explicit confirmation or an actionable refinement with a concrete replacement. For a question, objection, or stop/explain request, reply in text and do not delegate, re-issue the write, or show a card.${
 		normalizeToolName(toolName) === "attach"
 			? " Keep an attach refinement customer-specific; use catalog tools only if they explicitly ask to change the shared plan."
 			: ""
 	})`;
 
 const MANY_WITHDRAWN_NOTE =
-	"(The user replied with a new message instead of deciding on the pending requests, so they were all withdrawn. Do not rebuild, retry, or ask anything about the withdrawn changes — the user's message follows immediately and you should act on that.)";
+	"(The user replied with a new message instead of deciding on the pending requests, so they were withdrawn and not applied. Classify the new message on its own. Rebuild only for explicit confirmation or an actionable refinement with concrete replacements; questions, objections, and stop/explain requests get text with no delegation or card.)";
 
 export type ApprovalWithdrawal = {
 	inputResponses: Array<{ optionId: string; requestId: string }>;
