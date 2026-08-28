@@ -123,10 +123,10 @@ export function BalanceEditSheet() {
 								<QuestionIcon className="size-3.5 cursor-help text-tertiary-foreground inline align-text-bottom" />
 							</TooltipTrigger>
 							<TooltipContent className="max-w-72">
-								For a change that lasts, update the customer's plan — that
-								changes what they get each cycle. For a separate grant that
-								isn't tied to their plan, like promotional credit, create a new
-								balance.
+								Balance updates are meant for manual corrections. To change what
+								a customer gets on an ongoing basis, update their plan instead.
+								To grant a separate balance that isn't tied to their plan, like
+								a promotional credit, create a new balance.
 							</TooltipContent>
 						</Tooltip>
 					</p>
