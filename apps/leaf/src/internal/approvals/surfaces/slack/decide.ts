@@ -511,30 +511,32 @@ export const handleApprovalActionWithDeps = async ({
 			tool: details.toolName,
 		});
 
-		// The agent's continuation is conversation — it belongs in the thread,
-		// while the card stays a compact record of what ran.
-		if (!failed && "text" in result && result.text.trim()) {
-			try {
-				await deps.postThreadReply({ event, markdown: result.text });
-			} catch (error) {
-				deps.logger.warn("Could not post approval outcome reply", {
-					event: "leaf.approval_reply_failed",
-					approval_id: approvalId,
-					error,
-				});
+		// Conversation belongs in the thread; the card stays a compact record.
+		const postConversation = async (resumed: ApprovalRunResult) => {
+			if (!isErrorResult(resumed) && "text" in resumed && resumed.text.trim()) {
+				try {
+					await deps.postThreadReply({ event, markdown: resumed.text });
+				} catch (error) {
+					deps.logger.warn("Could not post approval outcome reply", {
+						event: "leaf.approval_reply_failed",
+						approval_id: approvalId,
+						error,
+					});
+				}
 			}
-		}
-		if (event.thread) {
-			try {
-				await surfaceResumedOutcome({ resumed: result });
-			} catch (error) {
-				deps.logger.warn("Could not surface chained interaction", {
-					event: "leaf.approval_chained_surface_failed",
-					approval_id: approvalId,
-					error,
-				});
+			if (event.thread) {
+				try {
+					await surfaceResumedOutcome({ resumed });
+				} catch (error) {
+					deps.logger.warn("Could not surface chained interaction", {
+						event: "leaf.approval_chained_surface_failed",
+						approval_id: approvalId,
+						error,
+					});
+				}
 			}
-		}
+		};
+		await postConversation(result);
 
 		await deps.editActionMessage({
 			content: approvalStatusCard({
@@ -559,6 +561,11 @@ export const handleApprovalActionWithDeps = async ({
 			}),
 			event,
 		});
+
+		if ("narration" in result && result.narration) {
+			const narrated = await result.narration;
+			if (narrated) await postConversation(narrated);
+		}
 	} catch (error) {
 		deps.logger.error("[chat] Approval action failed", error, {
 			event: "leaf.approval_failed",

@@ -118,16 +118,19 @@ const balancePreviewElements = (payload: LooseRecord): CardChild[] | null => {
 		],
 	].flatMap(([label, value]) =>
 		typeof value === "string" || typeof value === "number"
-			? [`**${label}**  ${value}`]
+			? [[String(label), String(value)]]
 			: [],
 	);
 
-	return [
-		...(fields.length ? [CardText(fields.join("\n"))] : []),
-		...(typeof payload.impact === "string"
-			? [CardText(payload.impact, { style: "muted" })]
-			: []),
-	];
+	return fields.length
+		? [
+				Table({
+					align: ["left", "right"],
+					headers: ["Item", "Value"],
+					rows: fields,
+				}),
+			]
+		: null;
 };
 
 /** Structured card body for a preview payload, or null to fall back to text. */
