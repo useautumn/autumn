@@ -21,6 +21,7 @@ const workflowWorld =
 	(chatDatabaseUrl ? "@workflow/world-postgres" : undefined);
 
 export default defineAgent({
+	build: { externalDependencies: ["@vercel/otel"] },
 	model: leafModel("orchestrator"),
 	modelContextWindowTokens: leafModelContextWindowTokens("orchestrator"),
 	reasoning: leafReasoning("orchestrator"),

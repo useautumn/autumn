@@ -21,9 +21,11 @@
  */
 
 import { test } from "bun:test";
+import { ApiVersion } from "@autumn/shared";
 import {
 	createCustomBasePriceForProduct,
 	createExternalStripeSubscription,
+	ensureDistinctStripeProcessor,
 	expectStripeSubscriptionCreated,
 	getFullProduct,
 	getFullProductFromMap,
@@ -39,7 +41,17 @@ import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { deleteVariantTestPlans } from "@tests/integration/crud/plans/variants/utils/variantTestPlanUtils";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
+
+const deleteLeftoverCarryPlans = async (planIds: string[]) => {
+	const rpc = new AutumnRpcCli({
+		secretKey: ctx.orgSecretKey,
+		version: ApiVersion.V2_1,
+	});
+	await deleteVariantTestPlans({ rpc, planIds });
+};
 
 /** Base(consumable messages) + one variant, external sub on the base. */
 const setupConsumableFamilyOnBase = async ({
@@ -345,19 +357,34 @@ test(`${chalk.yellowBright("sub.updated auto-sync carry 5: allocated usage never
 		],
 	});
 
+	await deleteLeftoverCarryPlans(["sync-carry-mkt-25k", "sync-carry-mkt-5k"]);
+
+	const v1CustomerA = `${customerId}-v1-a`;
+	const v1CustomerB = `${customerId}-v1-b`;
 	const { autumnV1 } = await initScenario({
 		customerId,
 		ctx,
 		setup: [
 			s.deleteCustomer({ customerId }),
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [planA, planB], prefix: "" }),
+			s.otherCustomers([
+				{ id: v1CustomerA, paymentMethod: "success" },
+				{ id: v1CustomerB, paymentMethod: "success" },
+			]),
+			s.products({ list: [planA, planB] }),
 		],
-		actions: [],
+		actions: [
+			s.attach({ productId: planA.id, customerId: v1CustomerA }),
+			s.attach({ productId: planB.id, customerId: v1CustomerB }),
+		],
 	});
 
 	const planAFull = await getFullProduct({ ctx, productId: planA.id });
-	const planBFull = await getFullProduct({ ctx, productId: planB.id });
+	const planBFull = await ensureDistinctStripeProcessor({
+		ctx,
+		fullProduct: await getFullProduct({ ctx, productId: planB.id }),
+		otherProcessorId: planAFull.processor?.id,
+	});
 
 	const planAPrice = await createCustomBasePriceForProduct({
 		ctx,
@@ -496,19 +523,23 @@ test(`${chalk.yellowBright("sub.created auto-sync carry 7: default free usage ca
 		],
 	});
 
+	await deleteLeftoverCarryPlans(["sync-carry-free", "sync-carry-paid"]);
+
+	const v1CustomerId = `${customerId}-v1`;
 	const { autumnV1 } = await initScenario({
 		customerId,
 		ctx,
 		setup: [
 			s.deleteCustomer({ customerId }),
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [free, paid], prefix: "" }),
+			s.otherCustomers([{ id: v1CustomerId, paymentMethod: "success" }]),
+			s.products({ list: [free, paid] }),
 		],
-		actions: [],
+		actions: [
+			s.attach({ productId: free.id }),
+			s.attach({ productId: paid.id, customerId: v1CustomerId }),
+		],
 	});
-
-	// s.attach would re-prefix the raw (prefix: "") product id, so attach directly.
-	await autumnV1.attach({ customer_id: customerId, product_id: free.id });
 
 	await trackCustomerUsage({
 		autumnV1,
@@ -517,7 +548,12 @@ test(`${chalk.yellowBright("sub.created auto-sync carry 7: default free usage ca
 		value: 2_000,
 	});
 
-	const paidFull = await getFullProduct({ ctx, productId: paid.id });
+	const freeFull = await getFullProduct({ ctx, productId: free.id });
+	const paidFull = await ensureDistinctStripeProcessor({
+		ctx,
+		fullProduct: await getFullProduct({ ctx, productId: paid.id }),
+		otherProcessorId: freeFull.processor?.id,
+	});
 	const paidPrice = await createCustomBasePriceForProduct({
 		ctx,
 		fullProduct: paidFull,

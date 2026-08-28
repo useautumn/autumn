@@ -34,8 +34,39 @@ import {
 	stripePriceIdForPrice,
 	waitForCustomerProducts,
 } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
+import { WEBHOOK_TEST_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import chalk from "chalk";
+import type { AutumnInt } from "@/external/autumn/autumnCli";
 import { CusService } from "@/internal/customers/CusService";
+
+const waitProducts = ({
+	autumnV1,
+	ctx,
+	customerId,
+	subscriptionId,
+	eventTypes,
+	active,
+	notPresent,
+}: {
+	autumnV1: AutumnInt;
+	ctx: TestContext;
+	customerId: string;
+	subscriptionId: string;
+	eventTypes: string[];
+	active: string[];
+	notPresent?: string[];
+}) =>
+	waitForCustomerProducts({
+		autumnV1,
+		customerId,
+		active,
+		notPresent,
+		stripeCli: ctx.stripeCli,
+		env: ctx.env,
+		subscriptionId,
+		eventTypes,
+	});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CASE 1: item added to an existing base-plan-only subscription
@@ -66,9 +97,12 @@ test(
 			customerId,
 			items: [{ price: stripePriceIdForPrice({ price: variantBasePrice }) }],
 		});
-		await waitForCustomerProducts({
+		await waitProducts({
 			autumnV1,
+			ctx,
 			customerId,
+			subscriptionId: subscription.id,
+			eventTypes: ["customer.subscription.created"],
 			active: [variantId],
 			notPresent: [automationsId],
 		});
@@ -87,9 +121,12 @@ test(
 		});
 
 		// ── Contract: add-on auto-syncs active, base plan untouched ──
-		await waitForCustomerProducts({
+		await waitProducts({
 			autumnV1,
+			ctx,
 			customerId,
+			subscriptionId: subscription.id,
+			eventTypes: ["customer.subscription.updated"],
 			active: [variantId, automationsId],
 		});
 		await expectActiveLinkedCustomerProducts({
@@ -98,6 +135,7 @@ test(
 			productIds: [variantId, automationsId],
 		});
 	},
+	{ timeout: WEBHOOK_TEST_TIMEOUT_MS },
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -141,9 +179,12 @@ test(
 				{ price: nativeAutomationsPrice.id },
 			],
 		});
-		await waitForCustomerProducts({
+		await waitProducts({
 			autumnV1,
+			ctx,
 			customerId,
+			subscriptionId: subscription.id,
+			eventTypes: ["customer.subscription.created"],
 			active: [variantId, automationsId],
 		});
 
@@ -158,9 +199,12 @@ test(
 		});
 
 		// ── Contract: add-on expires, base plan untouched ──
-		await waitForCustomerProducts({
+		await waitProducts({
 			autumnV1,
+			ctx,
 			customerId,
+			subscriptionId: subscription.id,
+			eventTypes: ["customer.subscription.updated"],
 			active: [variantId],
 			notPresent: [automationsId],
 		});
@@ -170,6 +214,7 @@ test(
 			productIds: [variantId],
 		});
 	},
+	{ timeout: WEBHOOK_TEST_TIMEOUT_MS },
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -213,9 +258,20 @@ test(
 			customerId,
 			items: [{ price: stripePriceIdForPrice({ price: secondBasePrice }) }],
 		});
-		await waitForCustomerProducts({
+		await waitProducts({
 			autumnV1,
+			ctx,
 			customerId,
+			subscriptionId: subscriptionA.id,
+			eventTypes: ["customer.subscription.created"],
+			active: [variantId],
+		});
+		await waitProducts({
+			autumnV1,
+			ctx,
+			customerId,
+			subscriptionId: subscriptionB.id,
+			eventTypes: ["customer.subscription.created"],
 			active: [variantId, secondGroupBaseId],
 			notPresent: [automationsId],
 		});
@@ -234,9 +290,12 @@ test(
 		});
 
 		// ── Contract: add-on links to subscription A only ──
-		await waitForCustomerProducts({
+		await waitProducts({
 			autumnV1,
+			ctx,
 			customerId,
+			subscriptionId: subscriptionA.id,
+			eventTypes: ["customer.subscription.updated"],
 			active: [variantId, secondGroupBaseId, automationsId],
 		});
 		await expectActiveLinkedCustomerProducts({
@@ -259,6 +318,7 @@ test(
 			).length,
 		).toBe(1);
 	},
+	{ timeout: WEBHOOK_TEST_TIMEOUT_MS },
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -304,9 +364,12 @@ test(
 				{ price: nativeDedicatedIpPrice.id, quantity: 2 },
 			],
 		});
-		await waitForCustomerProducts({
+		await waitProducts({
 			autumnV1,
+			ctx,
 			customerId,
+			subscriptionId: subscription.id,
+			eventTypes: ["customer.subscription.created"],
 			active: [variantId, dedicatedIpsId],
 			notPresent: [automationsId],
 		});
@@ -333,9 +396,12 @@ test(
 		});
 
 		// ── Contract: both add-ons independently active, no cross-contamination ──
-		await waitForCustomerProducts({
+		await waitProducts({
 			autumnV1,
+			ctx,
 			customerId,
+			subscriptionId: subscription.id,
+			eventTypes: ["customer.subscription.updated"],
 			active: [variantId, dedicatedIpsId, automationsId],
 		});
 		const linkedAfter = await expectActiveLinkedCustomerProducts({
@@ -348,4 +414,5 @@ test(
 			?.options?.find((option) => option.feature_id != null)?.quantity;
 		expect(dedicatedIpsOptionsAfter).toBe(dedicatedIpsOptionsBefore);
 	},
+	{ timeout: WEBHOOK_TEST_TIMEOUT_MS },
 );

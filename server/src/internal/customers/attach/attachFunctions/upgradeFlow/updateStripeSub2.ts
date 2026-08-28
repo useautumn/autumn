@@ -5,6 +5,7 @@ import {
 	ProrationBehavior,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency.js";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -66,7 +67,9 @@ export const updateStripeSub2 = async ({
 				: undefined;
 
 	// 1. Update subscription
-	const updatedSub = await stripeCli.subscriptions.update(curSub.id, {
+	const updatedSub = await stripeCli.subscriptions.update(
+		curSub.id,
+		{
 		items: sanitizeSubItems(itemSet.subItems),
 		proration_behavior:
 			proration === ProrationBehavior.None
@@ -97,7 +100,9 @@ export const updateStripeSub2 = async ({
 			)
 				? false
 				: undefined,
-	});
+		},
+		autumnStripeRequestOptions({ source: "attach.upgrade_sub_update" }),
+	);
 
 	let latestInvoice = updatedSub.latest_invoice as Stripe.Invoice | null;
 

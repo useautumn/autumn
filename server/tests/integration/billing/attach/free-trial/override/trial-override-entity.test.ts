@@ -90,7 +90,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 1: entity attach wi
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(14),
-		total: 20, // Pro ($20) for entity 2 after trial
+		total: 40, // Entity-1 pro ($20) + entity-2 pro ($20) after trial
 	});
 
 	// 2. Attach with free_trial override
@@ -328,7 +328,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-entity 3: entity upgrade w
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(14),
-		total: 50, // Premium ($50) after trial
+		total: 70, // Premium ($50) + entity-2 pro ($20) after trial
 	});
 
 	// 2. Upgrade with free_trial override

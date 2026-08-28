@@ -10,9 +10,17 @@ const mockLeafModule = ({
 }) => mockModuleWithRestore({ baseUrl: import.meta.url, factory, specifier });
 
 mock.module("../../../src/lib/db.js", () => ({ db: {} }));
-mock.module("../../../src/lib/logger.js", () => ({
-	logger: { warn: () => undefined },
-}));
+await mockLeafModule({
+	specifier: "../../../src/lib/logger.js",
+	factory: () => ({
+		logger: {
+			debug: () => undefined,
+			error: () => undefined,
+			info: () => undefined,
+			warn: () => undefined,
+		},
+	}),
+});
 
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/repo.js",

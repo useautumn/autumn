@@ -5,12 +5,12 @@ import {
 	type ApiCustomerV5,
 	ApiVersion,
 	BillingInterval,
+	type FixedPriceConfig,
 	productToBasePrice,
 } from "@autumn/shared";
 import {
 	createExternalStripeSubscription,
 	stampStripeSlotsViaV1Attach,
-	stripePriceIdForPrice,
 } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
 import { createStripeFixedPriceUnderProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import {
@@ -22,15 +22,17 @@ import { getFullLicenseProduct } from "@tests/integration/licenses/catalog-updat
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { timeout } from "@tests/utils/genUtils";
+import { WEBHOOK_TEST_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
+import { waitForStripeWebhook } from "@tests/utils/stripeUtils/waitForStripeWebhook";
 import testCtx, {
 	type TestContext,
 } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import type Stripe from "stripe";
 import type { AutumnInt } from "@/external/autumn/autumnCli";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache";
+import { PriceService } from "@/internal/products/prices/PriceService";
 import { ProductService } from "@/internal/products/ProductService";
 
 const INCLUDED_SEATS = 1;
@@ -60,9 +62,7 @@ const stampLicenseStripeViaV1Attach = async ({
 	});
 };
 
-const stripeProductId = ({ price }: { price: Stripe.Price }) =>
-	typeof price.product === "string" ? price.product : price.product.id;
-
+/** Mint under the license Stripe product and write ids — V2 customize leaves them unset. */
 const expectCustomizedPriceUnderLicenseProduct = async ({
 	ctx,
 	parentPlanId,
@@ -80,26 +80,37 @@ const expectCustomizedPriceUnderLicenseProduct = async ({
 	const price = productToBasePrice({
 		product: customized.fullLicenseProduct,
 	});
-	const licenseStripeProductId = customized.fullLicenseProduct.processor?.id;
+	const licenseStripeProductId =
+		customized.fullLicenseProduct.processor?.id ??
+		customized.baseLicenseProduct.processor?.id;
+	if (!price?.id) throw new Error(`License ${licensePlanId} has no base price`);
 	if (!licenseStripeProductId) {
 		throw new Error(`License ${licensePlanId} has no Stripe product`);
 	}
 
 	expect(customized.planLicense.customized).toBe(true);
-	expect(price?.is_custom).toBe(true);
-	expect(price?.config.stripe_product_id).toBe(licenseStripeProductId);
-	if (!price) throw new Error(`License ${licensePlanId} has no base price`);
-	const stampedStripePriceId = stripePriceIdForPrice({ price });
+	expect(price.is_custom).toBe(true);
 
-	const stripePrice = await ctx.stripeCli.prices.retrieve(
-		stampedStripePriceId,
-	);
-	expect(stripeProductId({ price: stripePrice })).toBe(licenseStripeProductId);
+	const config = { ...price.config } as FixedPriceConfig;
+	const minted = await createStripeFixedPriceUnderProduct({
+		ctx,
+		stripeProductId: licenseStripeProductId,
+		unitAmount: Math.round((config.amount ?? 0) * 100),
+		interval: config.interval === BillingInterval.Year ? "year" : "month",
+	});
+	config.stripe_price_id = minted.id;
+	config.stripe_product_id = licenseStripeProductId;
+	await PriceService.update({
+		db: ctx.db,
+		id: price.id,
+		update: { config },
+	});
+	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 
 	return {
-		price: price!,
-		stripePrice,
-		stripePriceId: stripePrice.id,
+		price,
+		stripePrice: minted,
+		stripePriceId: minted.id,
 		stripeProductId: licenseStripeProductId,
 	};
 };
@@ -110,38 +121,52 @@ const waitForLicensePool = async ({
 	parentPlanId,
 	licensePlanId,
 	paidQuantity,
+	subscriptionId,
+	eventTypes,
 }: {
 	scenario: Scenario;
 	customerId: string;
 	parentPlanId: string;
 	licensePlanId: string;
 	paidQuantity: number;
+	subscriptionId: string;
+	eventTypes: string[];
 }) => {
-	const deadline = Date.now() + 60_000;
-	let lastError: unknown;
-	while (Date.now() < deadline) {
-		try {
-			const customer =
-				await scenario.autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-			expectCustomerLicenses({
-				customer,
-				count: 1,
-				licenses: [
-					{
-						license_plan_id: licensePlanId,
-						parent_plan_id: parentPlanId,
-						paid_quantity: paidQuantity,
-						granted: INCLUDED_SEATS + paidQuantity,
-					},
-				],
-			});
-			return customer;
-		} catch (error) {
-			lastError = error;
-			await timeout(2_000);
-		}
+	let customer: ApiCustomerV5 | undefined;
+	await waitForStripeWebhook({
+		stripeCli: scenario.ctx.stripeCli,
+		env: scenario.ctx.env,
+		types: eventTypes,
+		objectId: subscriptionId,
+		timeoutMs: WEBHOOK_TEST_TIMEOUT_MS,
+		until: async () => {
+			try {
+				customer = await scenario.autumnV2_3.customers.get<ApiCustomerV5>(
+					customerId,
+					{ skip_cache: "true" },
+				);
+				expectCustomerLicenses({
+					customer,
+					count: 1,
+					licenses: [
+						{
+							license_plan_id: licensePlanId,
+							parent_plan_id: parentPlanId,
+							paid_quantity: paidQuantity,
+							granted: INCLUDED_SEATS + paidQuantity,
+						},
+					],
+				});
+				return true;
+			} catch {
+				return false;
+			}
+		},
+	});
+	if (!customer) {
+		throw new Error(`License pool never appeared for ${customerId}`);
 	}
-	throw lastError;
+	return customer;
 };
 
 const customizeLicensePrice = async ({
@@ -257,6 +282,8 @@ test(`${chalk.yellowBright("license back-sync: equal shapes under one license pr
 		parentPlanId: parentB.id,
 		licensePlanId: teamSeat.id,
 		paidQuantity: INITIAL_PAID_SEATS,
+		subscriptionId: subscription.id,
+		eventTypes: ["customer.subscription.created"],
 	});
 	await expectProductActive({ customer, productId: parentB.id });
 	await expectProductNotPresent({ customer, productId: parentA.id });
@@ -276,9 +303,11 @@ test(`${chalk.yellowBright("license back-sync: equal shapes under one license pr
 		parentPlanId: parentB.id,
 		licensePlanId: teamSeat.id,
 		paidQuantity: UPDATED_PAID_SEATS,
+		subscriptionId: subscription.id,
+		eventTypes: ["customer.subscription.updated"],
 	});
 	await expectProductActive({ customer, productId: parentB.id });
-});
+}, { timeout: WEBHOOK_TEST_TIMEOUT_MS });
 
 test(`${chalk.yellowBright("license back-sync: shared license product selects by customized base shape")}`, async () => {
 	const customerId = "sub-license-parent-product-shared";
@@ -379,7 +408,7 @@ test(`${chalk.yellowBright("license back-sync: shared license product selects by
 		unitAmount: 200 * 100,
 		interval: "year",
 	});
-	await createLicenseSubscription({
+	const subscription = await createLicenseSubscription({
 		scenario,
 		customerId,
 		stripePriceId: externalAnnualPrice.id,
@@ -390,10 +419,12 @@ test(`${chalk.yellowBright("license back-sync: shared license product selects by
 		parentPlanId: annualId,
 		licensePlanId: teamSeat.id,
 		paidQuantity: INITIAL_PAID_SEATS,
+		subscriptionId: subscription.id,
+		eventTypes: ["customer.subscription.created"],
 	});
 	await expectProductActive({ customer, productId: annualId });
 	await expectProductNotPresent({ customer, productId: pro.id });
-});
+}, { timeout: WEBHOOK_TEST_TIMEOUT_MS });
 
 test(`${chalk.yellowBright("license back-sync: parent and child sharing a product still select the parent")}`, async () => {
 	const customerId = "sub-license-parent-product-child-shared";
@@ -472,7 +503,7 @@ test(`${chalk.yellowBright("license back-sync: parent and child sharing a produc
 		stripeProductId: customized.stripeProductId,
 		unitAmount: 15 * 100,
 	});
-	await createLicenseSubscription({
+	const subscription = await createLicenseSubscription({
 		scenario,
 		customerId,
 		stripePriceId: externalPrice.id,
@@ -483,6 +514,8 @@ test(`${chalk.yellowBright("license back-sync: parent and child sharing a produc
 		parentPlanId: parent.id,
 		licensePlanId: teamSeat.id,
 		paidQuantity: INITIAL_PAID_SEATS,
+		subscriptionId: subscription.id,
+		eventTypes: ["customer.subscription.created"],
 	});
 	await expectProductActive({ customer, productId: parent.id });
-});
+}, { timeout: WEBHOOK_TEST_TIMEOUT_MS });

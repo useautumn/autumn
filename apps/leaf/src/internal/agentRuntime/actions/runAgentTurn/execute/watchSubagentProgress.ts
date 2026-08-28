@@ -43,7 +43,7 @@ export const watchSubagentProgress = ({
 		env: session.env,
 		newSession: false,
 		sessionId: childSessionId,
-		state: { ...session.state, continuationToken: "", streamIndex: 0 },
+		state: { ...session.state, streamIndex: 0 },
 		threadKey: session.threadKey,
 	};
 

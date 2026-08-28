@@ -1,5 +1,5 @@
 import { formatMs, notNullish } from "@autumn/shared";
-import { getStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
+import { isAutumnOriginatedStripeEvent } from "@/external/stripe/common/autumnStripeIdempotency.js";
 import { stripeSubscriptionScheduleToPhaseIndex } from "@/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
@@ -27,13 +27,10 @@ export const handleSchedulePhaseChanges = async ({
 	const { stripeSubscription, previousAttributes, nowMs } = eventContext;
 	const { logger } = ctx;
 
-	// Check if subscription is locked (being modified by another process)
-	const lock = await getStripeSubscriptionLock({
-		ctx,
-		stripeSubscriptionId: stripeSubscription.id,
-	});
-	if (lock) {
-		logger.info(`[handleSchedulePhaseChanges] SKIP: subscription is locked`);
+	if (isAutumnOriginatedStripeEvent({ event: ctx.stripeEvent })) {
+		logger.info(
+			`[handleSchedulePhaseChanges] SKIP: autumn-originated subscription update`,
+		);
 		return;
 	}
 

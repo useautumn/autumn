@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 
@@ -19,14 +20,22 @@ export const updateCurSchedule = async ({
 	const { stripeCli } = attachParams;
 
 	if (sub.cancel_at) {
-		await stripeCli.subscriptions.update(sub.id, {
-			cancel_at: null,
-		});
+		await stripeCli.subscriptions.update(
+			sub.id,
+			{
+				cancel_at: null,
+			},
+			autumnStripeRequestOptions({ source: "attach.schedule_uncancel" }),
+		);
 	}
 
-	await stripeCli.subscriptionSchedules.update(schedule.id, {
-		phases: newPhases,
-	});
+	await stripeCli.subscriptionSchedules.update(
+		schedule.id,
+		{
+			phases: newPhases,
+		},
+		autumnStripeRequestOptions({ source: "attach.schedule_update" }),
+	);
 
 	return schedule;
 };

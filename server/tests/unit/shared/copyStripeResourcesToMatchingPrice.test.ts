@@ -204,6 +204,40 @@ describe("copyStripeResourcesToMatchingPrice", () => {
 		expect(config.stripe_product_id).toBe("prod_ai_credits");
 	});
 
+	test("does not copy a consumable candidate's stripe_meter_id onto a prepaid target", () => {
+		const consumableCandidate = candidate({
+			id: "pr_consumable",
+			config: {
+				...baseConfig,
+				bill_when: BillWhen.EndOfPeriod,
+				stripe_product_id: "prod_ai_credits",
+				stripe_meter_id: "meter_ai_credits",
+			},
+		});
+		const newPrice = target({
+			config: {
+				...baseConfig,
+				bill_when: BillWhen.StartOfPeriod,
+				stripe_product_id: undefined,
+				stripe_price_id: undefined,
+				stripe_meter_id: undefined,
+				stripe_event_name: undefined,
+			} as UsagePriceConfig,
+		});
+
+		const result = copyStripeResourcesToMatchingPrice({
+			targetPrice: newPrice,
+			candidatePrices: [consumableCandidate],
+			targetEntitlements: [entitlement({ id: "ent_new" })],
+			candidateEntitlements: [entitlement()],
+		});
+
+		const config = newPrice.config as UsagePriceConfig;
+		expect(result.copiedFields).toEqual(["stripe_product_id"]);
+		expect(config.stripe_product_id).toBe("prod_ai_credits");
+		expect(config.stripe_meter_id).toBeUndefined();
+	});
+
 	test("returns no copied fields when nothing matches", () => {
 		const unrelatedCandidate = candidate({
 			id: "pr_unrelated",

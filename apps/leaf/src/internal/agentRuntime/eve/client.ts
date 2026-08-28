@@ -1,11 +1,12 @@
 import { ms } from "@autumn/shared";
-import type { SendTurnPayload } from "eve/client";
-import { Client, ClientError } from "eve/client";
+import type { SendTurnOptions } from "eve/client";
+import { Client, ClientError, parseInputResponses } from "eve/client";
 import { env } from "../../../lib/env.js";
 import { logger } from "../../../lib/logger.js";
 import { withRetry } from "../../../lib/withRetry.js";
 import { STREAM_IDLE_TIMEOUT_MS } from "../turnBudget.js";
 import { type EveEvent, parseEveEvent } from "./eveEventSchemas.js";
+import { CANCEL_OPTION_ID } from "./events.js";
 import { idleGuardedStream } from "./idleGuardedStream.js";
 import {
 	isConnectionRefusedError,
@@ -58,11 +59,9 @@ const eveClient = ({
 	new Client({
 		headers: () => eveHeaders(auth, { withOrgCatalog }),
 		host: env.EVE_SERVER_URL,
-		preserveCompletedSessions: true,
 	});
 
-/** Eve lost the session behind our continuation token — every further post
- * fails identically, so drop the session rather than retry. */
+/** Eve no longer has this fixed session, so every later operation fails. */
 export class EveSessionGoneError extends Error {
 	constructor(message: string) {
 		super(message);
@@ -73,12 +72,15 @@ export class EveSessionGoneError extends Error {
 const POST_RETRY_ATTEMPTS = 2;
 const POST_RETRY_BASE_DELAY_MS = ms.seconds(0.5);
 
-const SESSION_GONE_PATTERN =
-	/not found via continuation token|session (was )?not found/i;
+const SESSION_GONE_PATTERN = /session (was )?not found|session_not_active/i;
 
 const rethrowAsSessionGone = (error: unknown): never => {
 	if (error instanceof ClientError) {
-		if (error.status === 404 || SESSION_GONE_PATTERN.test(error.body)) {
+		if (
+			error.status === 404 ||
+			error.code === "session_not_active" ||
+			SESSION_GONE_PATTERN.test(error.body)
+		) {
 			throw new EveSessionGoneError(
 				`Eve session is gone (${error.status}): ${error.body.slice(0, 200)}`,
 			);
@@ -88,22 +90,6 @@ const rethrowAsSessionGone = (error: unknown): never => {
 		);
 	}
 	throw error;
-};
-
-const postedSessionFrom = ({
-	existing,
-	response,
-}: {
-	existing?: EveSessionRef;
-	response: { continuationToken?: string; sessionId: string };
-}) => {
-	if (!response.sessionId) throw new Error("Eve did not return a session id");
-	const continuationToken =
-		response.continuationToken ?? existing?.state.continuationToken;
-	if (!continuationToken) {
-		throw new Error("Eve did not return a continuation token");
-	}
-	return { continuationToken, sessionId: response.sessionId };
 };
 
 export type EveMessageContent =
@@ -116,38 +102,36 @@ export type EveMessageContent =
 /** Leaf's context bags are plain JSON-serializable records; the SDK's stricter
  * JsonObject cannot be proven structurally from `unknown` values. */
 const asJsonObject = (value: Record<string, unknown>) =>
-	value as unknown as NonNullable<SendTurnPayload["clientContext"]>;
+	value as unknown as NonNullable<SendTurnOptions["clientContext"]>;
 
 export const postEveMessage = async ({
 	auth,
 	clientContext,
-	inputResponses,
 	message,
 	session,
 }: {
 	auth: EveAuthContext;
 	clientContext?: Record<string, unknown>;
-	inputResponses?: { optionId: string; requestId: string }[];
-	message?: EveMessageContent;
+	message: EveMessageContent;
 	session?: EveSessionRef;
 }) => {
 	const client = eveClient({ auth, withOrgCatalog: !session });
-	const post = () =>
-		client
-			.session(
-				session
-					? {
-							continuationToken: session.state.continuationToken,
-							sessionId: session.sessionId,
-							streamIndex: session.state.streamIndex,
-						}
-					: undefined,
-			)
-			.send({
-				clientContext: clientContext && asJsonObject(clientContext),
-				inputResponses,
+	const options = {
+		clientContext: clientContext && asJsonObject(clientContext),
+	};
+	const post = async () => {
+		if (!session) {
+			const { response } = await client.sessions.create({
 				message,
+				...options,
 			});
+			return response;
+		}
+		const attached = client.sessions.attach(session.sessionId, {
+			streamIndex: session.state.streamIndex,
+		});
+		return attached.send(message, { ...options, turnPolicy: "steer" });
+	};
 	const response = await withRetry({
 		attempts: POST_RETRY_ATTEMPTS,
 		baseDelayMs: POST_RETRY_BASE_DELAY_MS,
@@ -169,7 +153,7 @@ export const postEveMessage = async ({
 			isConnectionRefusedError(error) ||
 			(!session && isRetryableEveStreamError(error)),
 	}).catch(rethrowAsSessionGone);
-	return postedSessionFrom({ existing: session, response });
+	return { sessionId: response.sessionId };
 };
 
 /** Written to the model, not the user: the siblings are denied for a procedural
@@ -201,29 +185,28 @@ export const postEveInputResponse = async ({
 	const siblings = [...new Set(siblingRequestIds ?? [])].filter(
 		(siblingRequestId) => siblingRequestId && siblingRequestId !== requestId,
 	);
-	const client = eveClient({ auth });
 	const post = () =>
-		client
-			.session({
-				continuationToken: session.state.continuationToken,
-				sessionId: session.sessionId,
+		eveClient({ auth })
+			.sessions.attach(session.sessionId, {
 				streamIndex: session.state.streamIndex,
 			})
-			.send({
-				inputResponses: [
+			.respond(
+				parseInputResponses([
 					{ optionId, requestId },
 					...siblings.map((siblingRequestId) => ({
 						optionId: approveSiblings
 							? optionId
-							: (siblingOptionIdFor?.(siblingRequestId) ?? "deny"),
+							: (siblingOptionIdFor?.(siblingRequestId) ?? CANCEL_OPTION_ID),
 						requestId: siblingRequestId,
 					})),
-				],
-				message:
-					siblings.length && !approveSiblings
-						? [note, SIBLING_WITHHELD_NOTE].filter(Boolean).join("\n\n")
-						: note,
-			});
+				]),
+				{
+					clientContext:
+						siblings.length && !approveSiblings
+							? [note, SIBLING_WITHHELD_NOTE].filter(Boolean).join("\n\n")
+							: note,
+				},
+			);
 	const response = await withRetry({
 		attempts: POST_RETRY_ATTEMPTS,
 		baseDelayMs: POST_RETRY_BASE_DELAY_MS,
@@ -237,7 +220,7 @@ export const postEveInputResponse = async ({
 		operation: post,
 		shouldRetry: isConnectionRefusedError,
 	}).catch(rethrowAsSessionGone);
-	return postedSessionFrom({ existing: session, response });
+	return { sessionId: response.sessionId };
 };
 
 export class EveStreamIdleTimeoutError extends Error {
@@ -324,9 +307,7 @@ async function* openEveStream({
 	signal: AbortSignal;
 }): AsyncGenerator<EveEvent> {
 	const stream = eveClient({ auth })
-		.session({
-			continuationToken: session.state.continuationToken,
-			sessionId: session.sessionId,
+		.sessions.attach(session.sessionId, {
 			streamIndex: session.state.streamIndex,
 		})
 		.stream({ signal, startIndex: session.state.streamIndex });

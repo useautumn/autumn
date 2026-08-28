@@ -37,7 +37,10 @@ const setupPortalPlanSync = async ({
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, ultra] }),
 		],
-		actions: [s.billing.attach({ productId: ultra.id })],
+		actions: [
+			s.attach({ productId: pro.id }),
+			s.billing.attach({ productId: ultra.id }),
+		],
 	});
 
 	const subscriptionId = await getSubscriptionId({

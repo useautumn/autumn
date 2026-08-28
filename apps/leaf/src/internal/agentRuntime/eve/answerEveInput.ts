@@ -1,5 +1,5 @@
-import { adoptPostedEveSession } from "./adoptPostedSession.js";
 import { postEveInputResponse } from "./client.js";
+import { removePendingRequests } from "./sessionState.js";
 
 type PostEveInputResponseInput = Parameters<typeof postEveInputResponse>[0];
 
@@ -7,7 +7,9 @@ type PostEveInputResponseInput = Parameters<typeof postEveInputResponse>[0];
  * row stays with the caller, which knows when the turn has settled. */
 export const answerEveInput = async (input: PostEveInputResponseInput) => {
 	const posted = await postEveInputResponse(input);
-	adoptPostedEveSession({ posted, session: input.session });
-	input.session.state.pendingRequests = [];
+	removePendingRequests({
+		requestIds: new Set([input.requestId, ...(input.siblingRequestIds ?? [])]),
+		session: input.session,
+	});
 	return posted;
 };

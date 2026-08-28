@@ -8,6 +8,7 @@ export const misc: TestGroup = {
 	paths: [
 		"integration/cron",
 		"integration/external-psps",
+		"integration/misc",
 		"scenarios",
 		"archives",
 		"integration/others/rate-limits",

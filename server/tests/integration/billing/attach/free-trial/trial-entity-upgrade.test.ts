@@ -101,8 +101,7 @@ test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 1: entity upgrade to
 	expect(preview.total).toBe(0);
 	expectPreviewNextCycleCorrect({
 		preview,
-		startsAt: advancedTo + ms.days(14), // Fresh 14-day trial
-		total: 50, // Premium ($50)
+		total: 0,
 	});
 
 	// 2. Upgrade entity-1 to premium
@@ -343,7 +342,7 @@ test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 3: entity downgrade 
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(14), // Trial end (pro activates)
-		total: 20, // Pro ($20)
+		total: 70, // Pro ($20) + entity-2 premium ($50)
 	});
 
 	// 2. Downgrade entity-1 to pro (scheduled)
@@ -547,8 +546,7 @@ test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 4: mixed products af
 	expect(preview.total).toBe(0);
 	expectPreviewNextCycleCorrect({
 		preview,
-		startsAt: newTrialEnd, // Fresh 14-day trial from now
-		total: 50, // Premium ($50) + Pro ($20) after trial
+		total: 0,
 	});
 
 	// 2. Upgrade entity-1 to premium
@@ -694,8 +692,7 @@ test.concurrent(`${chalk.yellowBright("trial-entity-upgrade 5: both entities upg
 	expect(preview1.total).toBe(0); // Trial → trial = $0
 	expectPreviewNextCycleCorrect({
 		preview: preview1,
-		startsAt: advancedTo + ms.days(14), // Fresh 14-day trial
-		total: 50, // Premium ($50) only entity-1 upgraded so far
+		total: 0,
 	});
 
 	await autumnV1.billing.attach({

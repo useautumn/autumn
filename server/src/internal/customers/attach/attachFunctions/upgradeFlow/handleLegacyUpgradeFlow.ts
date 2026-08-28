@@ -11,6 +11,7 @@ import {
 	ProrationBehavior,
 	SuccessCode,
 } from "@autumn/shared";
+import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency.js";
 import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { isStripeSubscriptionCanceling } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils.js";
@@ -125,13 +126,17 @@ export const handleLegacyUpgradeFlow = async ({
 		// 	lockedAtMs: Date.now(),
 		// });
 
-		await stripeCli.subscriptions.cancel(curSub.id, {
-			prorate: config.proration === ProrationBehavior.Immediately,
-			invoice_now: config.proration === ProrationBehavior.Immediately,
-			cancellation_details: {
-				comment: "autumn_cancel",
+		await stripeCli.subscriptions.cancel(
+			curSub.id,
+			{
+				prorate: config.proration === ProrationBehavior.Immediately,
+				invoice_now: config.proration === ProrationBehavior.Immediately,
+				cancellation_details: {
+					comment: "autumn_cancel",
+				},
 			},
-		});
+			autumnStripeRequestOptions({ source: "attach.upgrade_cancel" }),
+		);
 	} else if (subItems.length > 0) {
 		logger.info(`UPGRADE FLOW, updating sub ${curSub.id}`);
 		itemSet.subItems = subItems;
