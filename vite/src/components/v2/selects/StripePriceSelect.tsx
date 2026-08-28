@@ -28,8 +28,15 @@ const priceHeadline = ({ price }: { price: CatalogStripePrice }) => {
 	return `${amount} every ${every}`;
 };
 
-const priceSubtext = ({ price }: { price: CatalogStripePrice }) =>
-	[price.id, price.product_name].filter(Boolean).join(" · ");
+/** Null while a price is unresolved — the headline is already its id. */
+const priceSubtext = ({
+	price,
+}: {
+	price: CatalogStripePrice;
+}): string | null =>
+	price.unit_amount === null && !price.product_name
+		? null
+		: [price.id, price.product_name].filter(Boolean).join(" · ");
 
 const unresolvedPrice = ({ id }: { id: string }): CatalogStripePrice => ({
 	id,
@@ -62,10 +69,19 @@ export const StripePriceSelect = ({
 	const { stripePrices, isFetching } = useStripePricesSearchQuery({
 		search: debouncedSearch,
 	});
+	// The mapped id is resolved up front so it reads like any searched result
+	// rather than a bare id. Same query key as searching it, so it is a cache hit.
+	const { stripePrices: mappedPrices, isFetching: isResolvingMapped } =
+		useStripePricesSearchQuery({ search: value ?? "" });
 
-	const isResolved = stripePrices.some((price) => price.id === value);
+	const selected =
+		stripePrices.find((price) => price.id === value) ??
+		mappedPrices.find((price) => price.id === value) ??
+		(value ? unresolvedPrice({ id: value }) : undefined);
 	const options = [
-		...(value && !isResolved ? [unresolvedPrice({ id: value })] : []),
+		...(selected && !stripePrices.some((price) => price.id === value)
+			? [selected]
+			: []),
 		...stripePrices,
 	];
 
@@ -75,16 +91,16 @@ export const StripePriceSelect = ({
 			// Nothing to show until the id is one Stripe can actually resolve.
 			emptyText={isStripeLookup(search.trim()) ? "No Stripe price found" : null}
 			footer={
-				isFetching ? (
+				isFetching || isResolvingMapped ? (
 					<div className="flex items-center justify-center gap-2 border-border/60 border-t px-3 py-2 text-tertiary-foreground text-xs">
 						<SmallSpinner size={12} />
 						Looking up Stripe
 					</div>
 				) : undefined
 			}
-			getOptionLabel={(price) => priceSubtext({ price })}
+			getOptionLabel={(price) => priceSubtext({ price }) ?? price.id}
 			getOptionValue={(price) => price.id}
-			isLoading={isFetching}
+			isLoading={isFetching || isResolvingMapped}
 			onSearchChange={setSearch}
 			onValueChange={onChange}
 			options={options}
@@ -100,9 +116,11 @@ export const StripePriceSelect = ({
 								</span>
 							)}
 						</span>
-						<span className="truncate font-mono text-tertiary-foreground text-xs">
-							{priceSubtext({ price })}
-						</span>
+						{priceSubtext({ price }) && (
+							<span className="truncate font-mono text-tertiary-foreground text-xs">
+								{priceSubtext({ price })}
+							</span>
+						)}
 					</div>
 					<CheckIcon
 						className={cn(
@@ -114,7 +132,14 @@ export const StripePriceSelect = ({
 			)}
 			renderValue={(price) =>
 				price ? (
-					<span className="truncate font-mono text-xs">{price.id}</span>
+					<span className="flex min-w-0 items-center gap-2">
+						<span className="truncate">{priceHeadline({ price })}</span>
+						{priceSubtext({ price }) && (
+							<span className="shrink-0 font-mono text-tertiary-foreground text-xs">
+								{price.id}
+							</span>
+						)}
+					</span>
 				) : (
 					<span className="text-tertiary-foreground">Not mapped</span>
 				)
