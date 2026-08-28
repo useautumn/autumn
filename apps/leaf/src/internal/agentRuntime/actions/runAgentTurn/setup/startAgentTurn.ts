@@ -1,7 +1,7 @@
 import type { AppEnv } from "@autumn/shared";
 import { db } from "../../../../../lib/db.js";
 import { logger } from "../../../../../lib/logger.js";
-import type { ApprovalWithdrawal } from "../../../../approvals/actions/withdrawSupersededApprovals.js";
+import { chatApprovalRepo } from "../../../../approvals/repos/chatApprovalRepo.js";
 import type {
 	AgentThreadRef,
 	AgentTurnParams,
@@ -25,7 +25,6 @@ export const startAgentTurn = async ({
 	params,
 	session,
 	thread,
-	withdrawal,
 }: {
 	auth: EveAuthContext;
 	env: AppEnv;
@@ -34,13 +33,11 @@ export const startAgentTurn = async ({
 	params: AgentTurnParams;
 	session?: EveSessionRef;
 	thread: AgentThreadRef;
-	withdrawal?: ApprovalWithdrawal;
 }): Promise<EveSessionRef> => {
 	const outbound = buildEveInputResponses({
 		message,
 		params,
 		session,
-		withdrawal,
 	});
 	if (session && outbound.inputResponses) {
 		logger.info("Answering open eve parks alongside the message", {
@@ -51,9 +48,6 @@ export const startAgentTurn = async ({
 					(response) => response.requestId,
 				),
 				session_id: session.sessionId,
-				withdrawn_request_ids: (withdrawal?.inputResponses ?? []).map(
-					(response) => response.requestId,
-				),
 			},
 		});
 	}
@@ -88,6 +82,11 @@ export const startAgentTurn = async ({
 		const { rehomed } = adoptPostedEveSession({ posted, session });
 		if (outbound.inputResponses) session.state.pendingRequests = [];
 		if (rehomed) {
+			await chatApprovalRepo.moveToRun({
+				db,
+				fromRunId: staleSessionId,
+				toRunId: session.sessionId,
+			});
 			logger.warn("Eve re-homed the session onto a new run", {
 				event: "leaf.eve_session_rehomed",
 				data: {

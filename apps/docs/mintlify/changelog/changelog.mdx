@@ -4,6 +4,60 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="August 28th 2026">
+  ## Plan versions in the dashboard
+
+  The plan page now lets you work with [versions](/documentation/customers/versioning) directly. A version selector lists every version with its slug and marks the active one, **Promote to active** moves the pointer to an older version without editing content, and version slugs are editable under **More settings**. When a plan change mints a new version, the dialog asks for the new version's slug up front and surfaces slug collisions in the preview instead of failing on save.
+
+  ## Rename plan IDs without breaking API calls
+
+  Renaming a plan's ID (e.g. `pro` → `pro-new`) now keeps the old ID as an alias, so existing API calls, request bodies, and Stripe checkout metadata that reference the old ID keep resolving. Responses always return the live ID. Renaming again replaces the previous alias, and the dashboard's plan change dialog explains which alias will stop working before you confirm.
+
+  ## Stripe pass-through params on subscription updates
+
+  [`billing.update`](/api-reference/billing/billingUpdate) and [`billing.multi_update`](/api-reference/billing/multiUpdate) accept a new `subscription_params` object that is forwarded onto the underlying Stripe `subscriptions.update` or `subscriptions.cancel` call, with Autumn-owned keys winning any collisions. Multi-update also accepts `refund_last_payment` at the request root for cancel-immediately updates, applying the refund across every update in the call.
+
+  ## Stripe Prices are reused across customers
+
+  When two customers on the same plan end up with identical pricing — including matching custom fixed, usage-based, and prepaid prices — Autumn now reuses the existing Stripe Price instead of minting a duplicate, keeping your Stripe catalog clean. Minted Stripe Prices are also named by kind (Base, Prepaid, Usage-based), and only genuine attach-time customizations get a `(custom)` suffix.
+
+  ## Trials no longer require a card by default
+
+  New [free trials](/documentation/modelling-pricing/trials) default to `card_required: false`, and the card requirement is now visible where the trial is configured. A top-level `free_trial` on [`billing.attach`](/api-reference/billing/attach) is honoured instead of being silently dropped, and free plans no longer report `card_required: true` when signup never asks for a card.
+
+  ## Default net terms for invoice-mode billing
+
+  Organizations billing via `send_invoice` can set a `default_net_terms_days` org setting that fills in `days_until_due` on generated invoices when neither the request nor the invoice template specifies net terms. Precedence is request `net_terms_days` → invoice template → org default → the unchanged 30-day fallback, and it applies across attach, multi-attach, updates, schedules, and plan migrations.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Analytics usage charts now support pinned tooltips: click a bar to pin it, and when grouped by customer or entity, tooltip rows link straight to the customer or entity page — [#3083](https://github.com/useautumn/autumn/pull/3083)
+      - [`billing.multi_attach`](/api-reference/billing/multiAttach) supports `billing_cycle_anchor: "now"` to reset the billing cycle, with a matching toggle under More Options in the dashboard attach sheet — [#2986](https://github.com/useautumn/autumn/pull/2986), [#2987](https://github.com/useautumn/autumn/pull/2987)
+      - Unlimited usage is now surfaced in API responses instead of being hidden behind a null balance — [#2970](https://github.com/useautumn/autumn/pull/2970)
+      - The customer list's Balance filter and Features sort now default to the `usage` basis, and unlimited balances get consistent semantics per basis: usage counts real consumption on unlimited rows, while remaining/granted comparisons handle unlimited holders explicitly — [#3065](https://github.com/useautumn/autumn/pull/3065), [#3026](https://github.com/useautumn/autumn/pull/3026)
+      - The customer products Status filter is now a multi-select with a combined active + expired view — [#2957](https://github.com/useautumn/autumn/pull/2957)
+      - A product scheduled to cancel now offers **Cancel Immediately** and **Manage Cancellation** in its row actions, so you no longer have to uncancel first and cancel again — [#3134](https://github.com/useautumn/autumn/pull/3134), [#3135](https://github.com/useautumn/autumn/pull/3135)
+      - MCP OAuth now supports named sandboxes: the consent screen's environment picker lists them, and issued credentials stay bound to the selected sandbox across refreshes — [#3025](https://github.com/useautumn/autumn/pull/3025)
+      - The Verify Stripe sheet's shared-customer warning now links each colliding Autumn customer by name instead of listing plain IDs — [#2953](https://github.com/useautumn/autumn/pull/2953)
+      - `atmn push` now forwards `archived: true` from `autumn.config.ts`, so `atmn pull` → `atmn push` round-trips archived plans correctly — [#3009](https://github.com/useautumn/autumn/pull/3009)
+    </Accordion>
+    <Accordion title="Fixes">
+      - Renaming a plan's version slug in the dashboard no longer silently mints a new version; metadata-only saves now edit the existing version — [#3110](https://github.com/useautumn/autumn/pull/3110)
+      - [`billing.updated`](/api-reference/webhooks/billingUpdated) webhooks now carry `entity_id` when a scheduled downgrade on an entity-scoped plan takes effect, not just on the original cancel call — [#3062](https://github.com/useautumn/autumn/pull/3062)
+      - The analytics usage chart keeps idle periods on the x-axis, so a 30-day range with usage in only 5 days renders all 30 buckets — [#3032](https://github.com/useautumn/autumn/pull/3032)
+      - Cancelling at end of cycle with a scheduled downgrade now correctly attaches the free default plan — [#3027](https://github.com/useautumn/autumn/pull/3027)
+      - `proration_behavior: "none"` is treated as a no-op on new subscriptions instead of returning a 400 — [#2980](https://github.com/useautumn/autumn/pull/2980)
+      - Billing controls now persist when cleared from Plan Settings, and creating a control no longer fails when a lane was previously unset — [#3004](https://github.com/useautumn/autumn/pull/3004), [#3005](https://github.com/useautumn/autumn/pull/3005)
+      - Catalog updates no longer fail with a foreign-key error when expired customers still reference a plan's items — [#3095](https://github.com/useautumn/autumn/pull/3095)
+      - Plan grant changes during migrations only rewrite balances that match the original allowance, so customized grants are preserved instead of duplicated — [#2965](https://github.com/useautumn/autumn/pull/2965)
+      - Auto top-ups hold their billing lock for the full charge and extend queue visibility, closing a race that could double-charge on message redelivery — [#2962](https://github.com/useautumn/autumn/pull/2962)
+      - Legacy rollover caps of `max: 0` are treated as uncapped when saving a plan instead of failing validation — [#2955](https://github.com/useautumn/autumn/pull/2955)
+      - The per-unit selector in graduated pricing tier rows no longer collapses to an unreadable sliver — [#3099](https://github.com/useautumn/autumn/pull/3099)
+      - The Export customers sheet shows the correct customer count again — [#2967](https://github.com/useautumn/autumn/pull/2967)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="August 14th 2026">
   ## Deduction aggregations on events.aggregate
 
