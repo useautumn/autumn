@@ -14,6 +14,7 @@ import { createMskOauthBearerProvider } from "./mskOauthBearer.js";
 
 const FNV_OFFSET_BASIS = 2_166_136_261;
 const FNV_PRIME = 16_777_619;
+export const KAFKA_METERING_BUFFER_CAPACITY = 1_000;
 
 const partitionKeyOf = ({ event }: { event: MeteringEvent }): string =>
 	`${event.org_id}:${event.customer_id}`;
@@ -42,6 +43,12 @@ export class KafkaMeteringLog implements MeteringLog {
 	private readonly consumer: Consumer;
 	private readonly admin: Admin;
 	private buffered: MeteringLogRecord[] = [];
+	private bufferGeneration = 0;
+	private bufferCapacityWaiter: {
+		resolve: () => void;
+		resume: () => void;
+	} | null = null;
+	private isDisconnecting = false;
 
 	constructor({
 		brokers,
@@ -81,6 +88,7 @@ export class KafkaMeteringLog implements MeteringLog {
 	}
 
 	async connect({ fromOffset }: { fromOffset: number }): Promise<void> {
+		this.isDisconnecting = false;
 		await Promise.all([
 			this.producer.connect(),
 			this.consumer.connect(),
@@ -88,8 +96,18 @@ export class KafkaMeteringLog implements MeteringLog {
 		]);
 		await this.consumer.subscribe({ topic: this.topic, fromBeginning: true });
 		await this.consumer.run({
-			eachMessage: async ({ partition, message }) => {
+			eachMessage: async ({ partition, message, pause }) => {
 				if (partition !== this.partition || !message.value) return;
+				if (this.buffered.length >= KAFKA_METERING_BUFFER_CAPACITY) {
+					const generation = this.bufferGeneration;
+					const resume = pause();
+					await new Promise<void>((resolve) => {
+						this.bufferCapacityWaiter = { resolve, resume };
+					});
+					if (this.isDisconnecting || generation !== this.bufferGeneration) {
+						return;
+					}
+				}
 				this.buffered.push({
 					offset: Number(message.offset),
 					event: parseMeteringEvent({
@@ -102,6 +120,8 @@ export class KafkaMeteringLog implements MeteringLog {
 	}
 
 	async disconnect(): Promise<void> {
+		this.isDisconnecting = true;
+		this.resetBuffer();
 		await Promise.all([
 			this.producer.disconnect(),
 			this.consumer.disconnect(),
@@ -156,7 +176,7 @@ export class KafkaMeteringLog implements MeteringLog {
 	}): Promise<MeteringLogRecord[]> {
 		const head = this.buffered[0];
 		if (head && head.offset > fromOffset) {
-			this.buffered = [];
+			this.resetBuffer();
 			this.seek({ offset: fromOffset });
 			return [];
 		}
@@ -165,7 +185,32 @@ export class KafkaMeteringLog implements MeteringLog {
 			this.buffered.shift();
 		}
 
-		return this.buffered.splice(0, Math.max(0, limit));
+		const records = this.buffered.splice(0, Math.max(0, limit));
+		this.releaseBufferCapacity();
+		return records;
+	}
+
+	private resetBuffer(): void {
+		this.bufferGeneration++;
+		this.buffered = [];
+		this.releaseBufferCapacity();
+	}
+
+	private releaseBufferCapacity(): void {
+		if (
+			this.buffered.length >= KAFKA_METERING_BUFFER_CAPACITY ||
+			!this.bufferCapacityWaiter
+		) {
+			return;
+		}
+
+		const waiter = this.bufferCapacityWaiter;
+		this.bufferCapacityWaiter = null;
+		try {
+			waiter.resume();
+		} finally {
+			waiter.resolve();
+		}
 	}
 
 	private seek({ offset }: { offset: number }): void {
