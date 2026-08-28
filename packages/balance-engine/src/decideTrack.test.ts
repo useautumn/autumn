@@ -26,7 +26,7 @@ const createState = ({ balance = 10 }: { balance?: number } = {}) =>
 		identity,
 		features: {
 			messages: {
-				kind: "metered",
+				kind: "direct_metered_v1",
 				buckets: [{ id: "messages_monthly", balance, usage: 0 }],
 			},
 		},
@@ -113,7 +113,7 @@ describe("track decisions", () => {
 			balance: 5,
 			usage: 5,
 		});
-		expect(applied.state.receipts.cmd_1).toEqual(outcome);
+		expect(applied.receipt).toEqual(outcome);
 	});
 
 	test.concurrent(
@@ -121,6 +121,7 @@ describe("track decisions", () => {
 		() => {
 			let state = createState();
 			const statuses: string[] = [];
+			const receipts = [];
 
 			for (const [index, commandId] of ["cmd_1", "cmd_2", "cmd_3"].entries()) {
 				const outcome = requireNewOutcome(
@@ -133,7 +134,9 @@ describe("track decisions", () => {
 					}),
 				);
 				statuses.push(outcome.status);
-				state = applyTrackOutcome({ state, outcome }).state;
+				const applied = applyTrackOutcome({ state, outcome });
+				state = applied.state;
+				receipts.push(applied.receipt);
 			}
 
 			expect(statuses).toEqual(["applied", "applied", "rejected"]);
@@ -142,7 +145,7 @@ describe("track decisions", () => {
 				usage: 10,
 			});
 			expect(state.revision).toBe(3);
-			expect(Object.keys(state.receipts)).toHaveLength(3);
+			expect(receipts).toHaveLength(3);
 		},
 	);
 
@@ -181,7 +184,7 @@ describe("track decisions", () => {
 
 			const applied = applyTrackOutcome({ state, outcome });
 			expect(applied.state.features).toEqual(state.features);
-			expect(applied.state.receipts.cmd_1).toEqual(outcome);
+			expect(applied.receipt).toEqual(outcome);
 		},
 	);
 
@@ -210,12 +213,19 @@ describe("track decisions", () => {
 		);
 		const state = applyTrackOutcome({ state: initialState, outcome }).state;
 
-		const duplicate = decideTrack({ state, command });
+		const duplicate = decideTrack({
+			state,
+			command,
+			existingReceipt: outcome,
+		});
 
 		expect(duplicate).toEqual({ kind: "duplicate", outcome });
-		expect(applyTrackOutcome({ state, outcome })).toEqual({
+		expect(
+			applyTrackOutcome({ state, outcome, existingReceipt: outcome }),
+		).toEqual({
 			kind: "duplicate",
 			state,
+			receipt: outcome,
 		});
 	});
 
@@ -227,7 +237,11 @@ describe("track decisions", () => {
 		const state = applyTrackOutcome({ state: initialState, outcome }).state;
 
 		expect(
-			decideTrack({ state, command: createCommand({ value: 4 }) }),
+			decideTrack({
+				state,
+				command: createCommand({ value: 4 }),
+				existingReceipt: outcome,
+			}),
 		).toEqual({
 			kind: "unsupported",
 			reason: "command_conflict",
@@ -254,7 +268,7 @@ describe("track decisions", () => {
 					identity,
 					features: {
 						messages: {
-							kind: "metered",
+							kind: "direct_metered_v1",
 							buckets: [
 								{ id: "messages_monthly", balance: 5, usage: 0 },
 								{ id: "messages_rollover", balance: 5, usage: 0 },

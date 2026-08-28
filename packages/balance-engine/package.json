@@ -12,7 +12,8 @@
 		}
 	},
 	"scripts": {
-		"test": "bun --config ./bunfig.toml test src",
+		"test": "bun test --config ./bunfig.toml src",
+		"test:unit": "bun test --config ./bunfig.toml src",
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
