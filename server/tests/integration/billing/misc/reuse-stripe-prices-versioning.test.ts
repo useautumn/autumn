@@ -31,6 +31,11 @@ import {
 	priceStripeObjectsMatch,
 	TierInfinite,
 } from "@autumn/shared";
+import {
+	type StripeResourceField,
+	stripeConfigValue,
+	stripePriceIdentityValue,
+} from "@tests/integration/utils/expectStripePriceResources";
 import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -40,26 +45,22 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService";
 
-const collectStripeIdsByFeatureKey = (
-	prices: Price[],
-): Map<string, Record<string, string | null>> => {
-	const map = new Map<string, Record<string, string | null>>();
+const CARRIED_STRIPE_FIELDS = [
+	"stripe_product_id",
+	"stripe_price_id",
+	"stripe_empty_price_id",
+	"stripe_meter_id",
+	"stripe_prepaid_price_v2_id",
+	"stripe_placeholder_price_id",
+] as const satisfies readonly StripeResourceField[];
+
+const collectPricesByFeatureKey = (prices: Price[]): Map<string, Price> => {
+	const map = new Map<string, Price>();
 	for (const price of prices) {
 		const config = price.config as Record<string, unknown>;
 		const featureId = (config.feature_id as string | undefined) ?? "__fixed__";
 		const billWhen = (config.bill_when as string | undefined) ?? "__none__";
-		const key = `${featureId}|${billWhen}`;
-		map.set(key, {
-			stripe_product_id: (config.stripe_product_id as string | null) ?? null,
-			stripe_price_id: (config.stripe_price_id as string | null) ?? null,
-			stripe_empty_price_id:
-				(config.stripe_empty_price_id as string | null) ?? null,
-			stripe_meter_id: (config.stripe_meter_id as string | null) ?? null,
-			stripe_prepaid_price_v2_id:
-				(config.stripe_prepaid_price_v2_id as string | null) ?? null,
-			stripe_placeholder_price_id:
-				(config.stripe_placeholder_price_id as string | null) ?? null,
-		});
+		map.set(`${featureId}|${billWhen}`, price);
 	}
 	return map;
 };
@@ -105,7 +106,7 @@ test.concurrent(`${chalk.yellowBright("versioning: add boolean entitlement → a
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
-	const beforeIds = collectStripeIdsByFeatureKey(beforeProduct.prices);
+	const beforePrices = collectPricesByFeatureKey(beforeProduct.prices);
 
 	const updatedItems = [
 		items.monthlyPrice({ price: 20 }),
@@ -125,23 +126,21 @@ test.concurrent(`${chalk.yellowBright("versioning: add boolean entitlement → a
 
 	expect(afterProduct.version).toBe(beforeProduct.version + 1);
 
-	const afterIds = collectStripeIdsByFeatureKey(afterProduct.prices);
+	const afterPrices = collectPricesByFeatureKey(afterProduct.prices);
 
-	for (const [key, before] of beforeIds.entries()) {
-		const after = afterIds.get(key);
-		expect(after).toBeDefined();
+	for (const [key, before] of beforePrices.entries()) {
+		const after = afterPrices.get(key);
+		expect(after, `${key}: missing on new version`).toBeDefined();
 		if (!after) continue;
-		expect(before.stripe_price_id).not.toBeNull();
-		expect(after.stripe_product_id).toBe(before.stripe_product_id);
-		expect(after.stripe_price_id).toBe(before.stripe_price_id);
-		expect(after.stripe_empty_price_id).toBe(before.stripe_empty_price_id);
-		expect(after.stripe_meter_id).toBe(before.stripe_meter_id);
-		expect(after.stripe_prepaid_price_v2_id).toBe(
-			before.stripe_prepaid_price_v2_id,
-		);
-		expect(after.stripe_placeholder_price_id).toBe(
-			before.stripe_placeholder_price_id,
-		);
+		expect(
+			stripePriceIdentityValue({ price: before }),
+			`${key}: previous version has no Stripe price id`,
+		).not.toBeNull();
+		for (const field of CARRIED_STRIPE_FIELDS) {
+			const beforeValue = stripeConfigValue({ price: before, field });
+			const afterValue = stripeConfigValue({ price: after, field });
+			expect(afterValue, `${key}: ${field}`).toBe(beforeValue);
+		}
 	}
 });
 
@@ -198,11 +197,11 @@ test.concurrent(`${chalk.yellowBright("versioning: prepaid amount change → str
 	expect(afterMessages).toBeDefined();
 	if (!afterMessages || !beforeMessages) return;
 
-	const beforeConfig = beforeMessages.config as Record<string, unknown>;
-	const afterConfig = afterMessages.config as Record<string, unknown>;
-	expect(beforeConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(afterConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(afterConfig.stripe_price_id).not.toBe(beforeConfig.stripe_price_id);
+	const beforeId = stripePriceIdentityValue({ price: beforeMessages });
+	const afterId = stripePriceIdentityValue({ price: afterMessages });
+	expect(beforeId).not.toBeNull();
+	expect(afterId).not.toBeNull();
+	expect(afterId).not.toBe(beforeId);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -257,9 +256,9 @@ test.concurrent(`${chalk.yellowBright("versioning: graduated → volume tier_beh
 	expect(afterMessages).toBeDefined();
 	if (!afterMessages || !beforeMessages) return;
 
-	const beforeConfig = beforeMessages.config as Record<string, unknown>;
-	const afterConfig = afterMessages.config as Record<string, unknown>;
-	expect(beforeConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(afterConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(afterConfig.stripe_price_id).not.toBe(beforeConfig.stripe_price_id);
+	const beforeId = stripePriceIdentityValue({ price: beforeMessages });
+	const afterId = stripePriceIdentityValue({ price: afterMessages });
+	expect(beforeId).not.toBeNull();
+	expect(afterId).not.toBeNull();
+	expect(afterId).not.toBe(beforeId);
 });
