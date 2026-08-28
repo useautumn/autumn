@@ -13,6 +13,8 @@ export const DEFAULT_OAUTH_RESOURCE_SCOPES = [
 	Scopes.Features.Write,
 	Scopes.Plans.Read,
 	Scopes.Plans.Write,
+	Scopes.Rewards.Read,
+	Scopes.Rewards.Write,
 	Scopes.Balances.Read,
 	Scopes.Balances.Write,
 	Scopes.Billing.Read,
@@ -23,7 +25,5 @@ export const DEFAULT_OAUTH_RESOURCE_SCOPES = [
 export const OAUTH_PROTOCOL_SCOPES = OPENID_SCOPES;
 
 export const DEFAULT_OAUTH_RESOURCES = [
-	...new Set(
-		DEFAULT_OAUTH_RESOURCE_SCOPES.map((scope) => scope.split(":")[0]),
-	),
+	...new Set(DEFAULT_OAUTH_RESOURCE_SCOPES.map((scope) => scope.split(":")[0])),
 ] as ResourceType[];
