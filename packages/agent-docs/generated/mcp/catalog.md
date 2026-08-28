@@ -4,7 +4,8 @@ First read the `autumn-concepts` knowledge — it defines Autumn's data model �
 
 ## Approach
 
-- Modeling is iterative: translate the user's intended pricing into Autumn's model (features + plans + plan items). Ask clarifying questions and never assume behavior — confirm, for example, whether a paid item is usage-based or prepaid, and at what interval a metered allowance resets.
+- Modeling is iterative: translate the user's intended pricing into Autumn's model (features + plans + plan items). Ask only when different readings really change the model — for example, is a paid item billed on usage or paid upfront, and when does an allowance reset. Otherwise take the obvious reading and say what you assumed.
+- Never invent a price, limit, or plan name — a missing number is always a question.
 - If one ambiguity changes which other questions apply, resolve it first before asking those.
 - For a new codebase-managed catalog, ask whether the user wants to use `atmn` to create, pull, preview, and push their catalog. Recommend `atmn` unless they explicitly want dashboard/API-first changes.
 - For an existing project, check whether `autumn.config.ts` exists. If it does, treat it as the local catalog source and prefer `atmn`; otherwise use MCP/API tools directly or ask whether to initialize/pull config first.
@@ -150,7 +151,7 @@ Use `atmn` when a project has or should have an `autumn.config.ts` source of tru
 
 ## Config shapes
 
-`autumn.config.ts` uses the atmn package types, not raw API JSON. Field names are camelCase: `featureId`, `billingMethod`, `billingUnits`, `freeTrial`, `addItems`, `removeItems`, `intervalCount`. Follow the exported types from the package when editing config.
+`autumn.config.ts` uses the atmn package types, not raw API JSON. Field names are camelCase: `featureId`, `billingMethod`, `billingUnits`, `freeTrial`, `addItems`, `removeItems`, `intervalCount`. Follow the exported types from the package when editing config. Amounts are plain dollars: $20 is `20`, never `2000`.
 
 Core builders:
 

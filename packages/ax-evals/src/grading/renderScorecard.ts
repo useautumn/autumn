@@ -1,0 +1,51 @@
+import chalk from "chalk";
+import type { Arm } from "../types/arm.ts";
+import type { AxScore } from "./types/axScore.ts";
+
+const mark = (score: number | null) =>
+	score === null
+		? chalk.dim("·")
+		: score >= 1
+			? chalk.green("✓")
+			: chalk.red("✗");
+
+/**
+ * Collects scores as Braintrust computes them and prints one scorecard line
+ * per arm when it completes, plus a delta footer when every arm is in.
+ */
+export const renderScorecard = ({
+	arms,
+	expectationCount,
+}: {
+	arms: Arm[];
+	expectationCount: number;
+}) => {
+	const byArm = new Map<Arm, AxScore[]>();
+	let armsPrinted = 0;
+
+	const record = (arm: Arm, score: AxScore) => {
+		const scores = byArm.get(arm) ?? [];
+		scores.push(score);
+		byArm.set(arm, scores);
+		if (scores.length !== expectationCount) return;
+
+		const summary = scores
+			.map((entry) => `${mark(entry.score)} ${chalk.dim(entry.name)}`)
+			.join("   ");
+		process.stderr.write(`\n${chalk.bold(`scores · ${arm}`)}\n  ${summary}\n`);
+
+		armsPrinted += 1;
+		if (armsPrinted === arms.length && arms.length > 1) {
+			const passed = (name: Arm) =>
+				(byArm.get(name) ?? []).filter((entry) => entry.score === 1).length;
+			const graded = (name: Arm) =>
+				(byArm.get(name) ?? []).filter((entry) => entry.score !== null).length;
+			const summaryLine = arms
+				.map((name) => `${name} ${passed(name)}/${graded(name)}`)
+				.join(" · ");
+			process.stderr.write(`\n${chalk.bold.cyan(`Δ  ${summaryLine}`)}\n\n`);
+		}
+	};
+
+	return { record };
+};

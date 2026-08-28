@@ -1,0 +1,22 @@
+{
+	"name": "@autumn/ax-evals",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"evals": "braintrust eval cases --external-packages @anthropic-ai/claude-agent-sdk",
+		"test": "bun test tests",
+		"ts": "bunx tsgo --noEmit"
+	},
+	"dependencies": {
+		"@anthropic-ai/claude-agent-sdk": "0.3.241",
+		"@autumn/agent-docs": "workspace:*",
+		"atmn": "workspace:*",
+		"braintrust": "^3.14.0",
+		"chalk": "^5.3.0"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.2.23",
+		"@typescript/native-preview": "7.0.0-dev.20260511.1"
+	}
+}

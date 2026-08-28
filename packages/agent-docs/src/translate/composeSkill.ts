@@ -1,5 +1,6 @@
 import type { SkillFile } from "./formats/types.js";
 import { parseFrontmatter } from "./ingest/frontmatter.js";
+import { publishedSkillName } from "./publishedSkillName.js";
 
 // Inline a docs page into the SKILL.md body.
 const DOCS_TAG = /<docs\s+([^>]*?)\/>/g;
@@ -64,22 +65,29 @@ export const composeSkill = ({
 	const references: SkillFile[] = [];
 	const requires: string[] = [];
 
-	const withSkillRefs = body.replace(SKILL_TAG, (_match, raw: string) => {
-		const { name, reason, text } = parseAttrs(raw);
-		if (!name) {
-			throw new Error(`<skill> in ${path} is missing a name`);
-		}
-		if (!requires.includes(name)) {
-			requires.push(name);
-		}
-		// `text` renders verbatim, for prose that already names the prerequisite.
-		if (text) {
-			return text;
-		}
-		return reason
-			? `Before using this skill, first load the \`${name}\` skill — ${reason}.`
-			: `Before using this skill, first load the \`${name}\` skill.`;
-	});
+	// MDX comments are authoring-only; strip first so commented-out tags never execute.
+	const withoutComments = body.replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+
+	const withSkillRefs = withoutComments.replace(
+		SKILL_TAG,
+		(_match, raw: string) => {
+			const { name, reason, text } = parseAttrs(raw);
+			if (!name) {
+				throw new Error(`<skill> in ${path} is missing a name`);
+			}
+			const published = publishedSkillName({ name });
+			if (!requires.includes(published)) {
+				requires.push(published);
+			}
+			// `text` renders verbatim, for prose that already names the prerequisite.
+			if (text) {
+				return text;
+			}
+			return reason
+				? `Before using this skill, first load the \`${published}\` skill — ${reason}.`
+				: `Before using this skill, first load the \`${published}\` skill.`;
+		},
+	);
 
 	const withReferences = withSkillRefs.replace(
 		REFERENCE_TAG,
@@ -139,7 +147,7 @@ export const composeSkill = ({
 		.trim();
 
 	return {
-		name: data.name,
+		name: publishedSkillName({ name: data.name }),
 		description: data.description,
 		body: resolved,
 		references,

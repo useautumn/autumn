@@ -19,6 +19,7 @@
 			"packages/atmn",
 			"packages/atmn-nightly",
 			"packages/atmn-generator",
+			"packages/ax-evals",
 			"packages/atmn-tests",
 			"packages/auth",
 			"packages/env",

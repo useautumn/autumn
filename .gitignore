@@ -21,6 +21,7 @@ supabase.sh
 **/.env*
 tests/
 !server/tests
+!packages/ax-evals/tests
 !packages/mcp/tests
 !packages/gateway/tests
 !apps/leaf/tests
@@ -117,6 +118,7 @@ server/chrome
 
 
 server/autumn.config.ts
+/autumn.config.ts
 
 
 .tinyb

@@ -1,0 +1,130 @@
+---
+name: setup
+description: First-time Autumn setup — install the atmn CLI, sign in, turn the user's pricing into autumn.config.ts, and push it to a sandbox org. Use when the user is new to Autumn, pastes an Autumn setup prompt, or asks to set up Autumn, add billing, monetization, subscriptions, usage-based billing, pricing, or plans. If Autumn is already set up, use autumn-catalog instead.
+---
+
+# Setup
+
+Take the user from "I want billing" to their pricing pushed and live in a sandbox org, written in `autumn.config.ts`. That's the whole job. Hooking Autumn into their app (SDK, customers, check/track) comes later — offer it at the end, never start it.
+
+## Ground rules
+
+These apply the whole time, not just in one phase.
+
+- CLI-first: everything happens in `autumn.config.ts` and `atmn`. The one browser moment is `atmn login`. Never send the user to the dashboard to do the work.
+{/* - Never invent a price, limit, or plan name. A missing number is a question, never a guess. Don't scaffold from `atmn init` templates — template pricing is invented pricing. */}
+- Push only after the user approves the pricing table (Phase 5), or when they already told you to go ahead without a review.
+- Sandbox by default: `AUTUMN_SECRET_KEY` is the sandbox key. Don't touch production during setup.
+- Keys: check that a key exists by its name only. Never read, print, or ask the user to paste a key into the chat.
+- Two tries max to fix any failing command, then stop and show the error.
+- Never run `atmn nuke`, and never remove existing plans unless the user clearly asked.
+- If a step is already done, say so in one line ("Already signed in — skipping login") and move on.
+
+## How to talk
+
+You are a competent engineer pairing with the user, not an installer wizard and not a marketer.
+
+- Simple, everyday words: "plans", "what's included", "extra usage". No jargon in chat — schema words like `consumable`, `prepaid`, `usage_based` stay in the config. If a simpler word says the same thing, use it.
+- 1–3 sentences per message. The pricing table is the only large thing you send.
+- One message, one purpose: a status, a question, or the table.
+- Don't ask permission for harmless work — reading the repo, drafting the config, building the table. Ask only for decisions and approvals.
+- Say what's about to happen before it does: one line before the browser opens, one before the push.
+- When you need input, ask at most three short numbered questions — the ones that unblock you, nothing more. If your platform has a built-in way to ask questions with options, use it. Never re-ask something they answered.
+- Always end a message with something: the question, what you're doing next, or that you're done.
+- Don't paste the config or command output into chat; name the file and summarize. Errors are the exception — quote those exactly.
+- If you're stuck, send three lines: what failed, the exact error, what you need to continue.
+- No emoji, no hype, no "Great question". Plain and concrete: "Connected to Acme (sandbox)."
+
+## Progress
+
+Copy this checklist into your first message and keep it up to date. If you skip an item, say why in one line.
+
+- [ ] 1 Skills installed; checked for an existing config, key, and pricing
+- [ ] 2 Connected to Autumn — `atmn` installed and signed in
+- [ ] 3 Got the user's pricing — rough plans and prices to build from
+- [ ] 4 Pricing written to `autumn.config.ts` and valid
+- [ ] 5 Pricing table shown; user approved it
+- [ ] 6 Pushed to Autumn and verified
+- [ ] 7 Done — suggested integration next, didn't start it
+
+## Phase 1 — Check the project (silent)
+
+Don't message the user yet — just find out where things stand.
+
+Three skills share this job. If any of them is missing, install them all with one command from the project root:
+
+```bash
+npx skills add useautumn/skills --skill autumn-setup --skill autumn-catalog --skill autumn-concepts -y
+```
+
+`autumn-setup` (this file) is the flow. `autumn-catalog` is how to build the pricing, plus the exact `atmn` commands — load it in Phase 4. `autumn-concepts` explains Autumn's objects — catalog loads it itself.
+
+Then check three things:
+
+{/* Subject to change once the new atmn ships. */}
+- `autumn.config.ts` exists → Autumn is already set up here. Say so, treat the file as the truth, and use `autumn-catalog` for the changes; come back at Phase 5 when there's something to push.
+- An `AUTUMN_SECRET_KEY` exists (shell env, `.env`, `.env.local`) → already signed in; skip login in Phase 2.
+- They already told you the pricing (their message, a pricing page, the README) → Phase 3 is a quick confirm, not a list of questions.
+
+## Phase 2 — Introduce and connect
+
+Start with two or three sentences: what's going to happen (connect this project to an Autumn org → write the pricing into `autumn.config.ts` → approve a table → push), and — if they need to sign in — that a browser window is coming. Something like this, in your own words:
+
+> Setting up Autumn. I'll connect this project to an Autumn org (quick browser sign-in), write your pricing into `autumn.config.ts`, and show you a table to approve before anything is pushed. Opening the sign-in now.
+
+Then:
+
+1. Add `atmn` as a dev dependency — the config file imports from it. Use whatever package manager the user already uses; read it off the lockfile (or the `packageManager` field in package.json):
+
+   | Lockfile | Install atmn | Run atmn |
+   |---|---|---|
+   | `bun.lock` / `bun.lockb` | `bun add -d atmn` | `bunx atmn` |
+   | `pnpm-lock.yaml` | `pnpm add -D atmn` | `pnpm exec atmn` |
+   | `yarn.lock` | `yarn add -D atmn` | `yarn atmn` |
+   | `package-lock.json` or none | `npm i -D atmn` | `npx atmn` |
+
+   Every `atmn …` command below means that run command.
+2. No key → run `atmn login`. It opens the user's browser to sign in and create or pick an org, prints the sign-in URL, and waits — that's normal, it's not stuck. If the browser doesn't open, send the user the printed URL as-is. Keys get saved to `.env`. Key already there → don't run login (it stops to ask about re-signing in, and you can't answer that prompt).
+3. Login fails or there's no browser (SSH, sandbox) → retry once, then ask the user to copy their sandbox secret key from the Autumn dashboard (app.useautumn.com) into `.env` as `AUTUMN_SECRET_KEY` themselves, and continue.
+4. If the key was already there before this session, the org might already have plans: run `atmn pull`. If plans show up, say so and go through them with the user before changing anything. A brand-new org is empty — skip pull and let Phase 4 create the config.
+
+Done when there's a key and you know whether the org already has plans. Say so in one line.
+
+## Phase 3 — Get a starting point
+
+You need the pricing in the user's own words — not the details, just what to build.
+
+- They already told you (their message, a pricing page, the README) → repeat it back in one or two sentences and move on. If they gave you everything, ask nothing.
+- They haven't → ask what they're building and what they want to charge. A pricing page, or a competitor's page they like, is a full answer too.
+
+Don't dig into details here — what to ask, what to assume, and how to handle unclear pricing is `autumn-catalog`'s job, next phase.
+
+Done when you have rough plans and prices to build from.
+
+## Phase 4 — Write the config
+
+<skill name="catalog" text="Load `autumn-catalog` now — from here it drives the pricing conversation: what to ask, what to assume, how to build the pricing (features, plans, items), and the exact `atmn` commands." />
+
+Follow it to turn the starting point into `autumn.config.ts` and check the config is valid with its preview loop. Your speaking rules above still apply to catalog's questions. Only move on when the config passes; don't push yet.
+
+## Phase 5 — Show the table
+
+Show the pricing as exactly this table — same columns every time, one row per plan; annual versions and add-ons get their own rows:
+
+| Plan | Price | Included | Extra usage |
+|---|---|---|---|
+| Free | $0 | 50 AI messages / month | — |
+| Pro | $20 / month · 14-day trial | 1,000 AI messages / month | $0.01 / message |
+| Credit pack (add-on) | $10 one-off | 500 credits | — |
+
+Price includes how often it's charged and any trial; Included lists what they get; `—` where a column doesn't apply; every number exactly as the user gave it. Under the table, list the assumptions you made ("Assumed: messages reset monthly"), then ask whether this is what they want to charge.
+
+Approval means a clear yes — or they earlier told you to go ahead without a review, in which case show the table and keep going. Silence or a half-answer is not a yes. If they change something → back to Phase 4, fix it, show the table again. If they want to stop, stop: say what exists and that nothing was pushed.
+
+## Phase 6 — Push
+
+Only after the yes. Push with `atmn` using `autumn-catalog`'s atmn reference — it has the exact commands, flags, and versioning choices. If the push asks for decisions (new version of a live plan, deleting things), bring them to the user; never decide alone. Check the push output shows every plan and feature made it — a push that errored is not done, and after two failed fixes you stop and show the error.
+
+## Phase 7 — Done
+
+Wrap up with: what's now live (plans and features, which org, sandbox), where the config file is, that they can see their plans at app.useautumn.com, and that the next step — whenever they're ready — is hooking Autumn into their app (SDK, customers, `check`/`track`). Then stop. Don't install the SDK, create customers, build checkout, or walk them through the dashboard.
