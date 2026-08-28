@@ -127,7 +127,7 @@ export function SearchableSelect<T>({
 						aria-haspopup="listbox"
 						disabled={disabled}
 						className={cn(
-							"flex items-center justify-between gap-2 w-full min-w-0 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 rounded-lg",
+							"flex items-center justify-between gap-2 w-full min-w-0 cursor-pointer text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 rounded-lg",
 							"input-base input-shadow-default input-state-open transition-all duration-150",
 							triggerClassName,
 						)}
@@ -214,7 +214,7 @@ export function SearchableSelect<T>({
 													onSelect={() => handleSelect(option)}
 													disabled={isDisabled}
 													className={cn(
-														"min-w-0",
+														"min-w-0 cursor-pointer",
 														isDisabled &&
 															"text-subtle pointer-events-none opacity-50",
 													)}
