@@ -24,7 +24,7 @@ const createState = () =>
 		identity,
 		features: {
 			messages: {
-				kind: "metered",
+				kind: "direct_metered_v1",
 				buckets: [{ id: "messages_monthly", balance: 10, usage: 0 }],
 			},
 		},
@@ -126,7 +126,7 @@ describe("checks", () => {
 			identity,
 			features: {
 				messages: {
-					kind: "metered",
+					kind: "direct_metered_v1",
 					buckets: [
 						{ id: "messages_monthly", balance: 5, usage: 0 },
 						{ id: "messages_rollover", balance: 5, usage: 0 },
