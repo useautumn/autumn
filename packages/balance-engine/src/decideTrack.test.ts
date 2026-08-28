@@ -7,7 +7,7 @@ import {
 	OutOfOrderTrackOutcomeError,
 	parseTrackCommand,
 	shadowComparisonKeyOf,
-} from "./meteringEngine.js";
+} from "./balanceEngine.js";
 
 /**
  * Contract: versioned commands produce deterministic outcomes; only durable
