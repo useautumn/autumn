@@ -12,9 +12,11 @@ import {
 const usage = ({
 	amount,
 	stripePriceId,
+	prepaidV2StripePriceId,
 }: {
 	amount: number;
 	stripePriceId?: string;
+	prepaidV2StripePriceId?: string;
 }): Price => ({
 	id: "pr_messages",
 	org_id: "org_1",
@@ -32,6 +34,9 @@ const usage = ({
 		interval: BillingInterval.Month,
 		interval_count: 1,
 		...(stripePriceId !== undefined ? { stripe_price_id: stripePriceId } : {}),
+		...(prepaidV2StripePriceId !== undefined
+			? { stripe_prepaid_price_v2_id: prepaidV2StripePriceId }
+			: {}),
 	} as UsagePriceConfig,
 	entitlement_id: "ent_messages",
 	proration_config: null,
@@ -73,6 +78,45 @@ describe("stripePriceIdForInitializedPrice", () => {
 			stripePriceIdForInitializedPrice({
 				requestedStripePriceId: "price_imported",
 				currentPrice: usage({ amount: 10, stripePriceId: "price_old" }),
+				newPrice: usage({ amount: 500 }),
+			}),
+		).toBe("price_imported");
+	});
+
+	test("drops a round-tripped prepaid v2 id when the definition drifted", () => {
+		expect(
+			stripePriceIdForInitializedPrice({
+				requestedStripePriceId: "price_old",
+				currentPrice: usage({
+					amount: 10,
+					prepaidV2StripePriceId: "price_old",
+				}),
+				newPrice: usage({ amount: 500 }),
+			}),
+		).toBeUndefined();
+	});
+
+	test("keeps a round-tripped prepaid v2 id when the definition still matches", () => {
+		expect(
+			stripePriceIdForInitializedPrice({
+				requestedStripePriceId: "price_old",
+				currentPrice: usage({
+					amount: 10,
+					prepaidV2StripePriceId: "price_old",
+				}),
+				newPrice: usage({ amount: 10 }),
+			}),
+		).toBe("price_old");
+	});
+
+	test("keeps an unowned id when the current price only fills the v2 slot", () => {
+		expect(
+			stripePriceIdForInitializedPrice({
+				requestedStripePriceId: "price_imported",
+				currentPrice: usage({
+					amount: 10,
+					prepaidV2StripePriceId: "price_old",
+				}),
 				newPrice: usage({ amount: 500 }),
 			}),
 		).toBe("price_imported");
