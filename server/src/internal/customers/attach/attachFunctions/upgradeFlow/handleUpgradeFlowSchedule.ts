@@ -1,5 +1,6 @@
 import type { AttachConfig, FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
+import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
 	ACTIVE_STATUSES,
@@ -80,7 +81,11 @@ export const handleUpgradeFlowSchedule = async ({
 		logger.info(
 			`UPGRADE FLOW: no subsequent phases, releasing schedule ${schedule?.id}`,
 		);
-		await stripeCli.subscriptionSchedules.release(schedule!.id);
+		await stripeCli.subscriptionSchedules.release(
+			schedule!.id,
+			{},
+			autumnStripeRequestOptions({ source: "attach.upgrade_schedule_release" }),
+		);
 		await CusProductService.updateByStripeScheduledId({
 			db: ctx.db,
 			stripeScheduledId: schedule!.id,
@@ -101,9 +106,15 @@ export const handleUpgradeFlowSchedule = async ({
 
 		if (shouldCancelSub) {
 			logger.info(`UPGRADE FLOW: canceling sub ${curSub?.id}`);
-			await stripeCli.subscriptions.update(curSub.id, {
-				cancel_at_period_end: true,
-			});
+			await stripeCli.subscriptions.update(
+				curSub.id,
+				{
+					cancel_at_period_end: true,
+				},
+				autumnStripeRequestOptions({
+					source: "attach.upgrade_schedule_cancel",
+				}),
+			);
 		}
 
 		return;
