@@ -16,6 +16,7 @@ import {
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../../repos/chatApprovalWritesRepo.js";
 import { publicToolArgs, requestStringField } from "../../utils/toolRequest.js";
+import { editSupersededApprovalCards } from "./superseded.js";
 
 /** URL only for cards the dashboard sheet can actually open. */
 export const dashboardUrlFor = ({
@@ -223,6 +224,22 @@ export const presentApproval = async ({
 			toolName: created.toolName,
 		}),
 	);
+	const supersededApprovals = await chatApprovalRepo.cancelPendingForRun({
+		db,
+		exceptApprovalId: created.approvalId,
+		providerUserId,
+		runId: turn.sessionId,
+	});
+	if (supersededApprovals.length) {
+		logger.info("Superseded pending approvals with a replacement", {
+			event: "leaf.eve_approvals_superseded",
+			data: {
+				approval_count: supersededApprovals.length,
+				replacement_approval_id: created.approvalId,
+				session_id: turn.sessionId,
+			},
+		});
+	}
 
 	try {
 		await chatApprovalRepo.setMessageTs({
@@ -248,5 +265,10 @@ export const presentApproval = async ({
 			target,
 		});
 	}
+	await editSupersededApprovalCards({
+		approvals: supersededApprovals,
+		logger,
+		target,
+	});
 	return true;
 };

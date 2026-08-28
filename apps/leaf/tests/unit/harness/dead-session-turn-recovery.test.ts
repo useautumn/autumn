@@ -54,7 +54,6 @@ await mockLeafModule({
 		prepareAgentTurn: async () => ({
 			existingSession,
 			orgContext: undefined,
-			withdrawal: undefined,
 		}),
 	}),
 });
@@ -120,6 +119,24 @@ await mockLeafModule({
 	}),
 });
 
+const movedApprovals: Array<{ fromRunId: string; toRunId: string }> = [];
+await mockLeafModule({
+	specifier: "../../../src/internal/approvals/repos/chatApprovalRepo.js",
+	factory: () => ({
+		chatApprovalRepo: {
+			moveToRun: async ({
+				fromRunId,
+				toRunId,
+			}: {
+				fromRunId: string;
+				toRunId: string;
+			}) => {
+				movedApprovals.push({ fromRunId, toRunId });
+			},
+		},
+	}),
+});
+
 await mockLeafModule({
 	specifier: "../../../src/internal/autumnMcp/orgContextService.js",
 	factory: () => ({
@@ -157,6 +174,7 @@ describe("runAgentTurn dead-session recovery", () => {
 	beforeEach(() => {
 		startedSessions.length = 0;
 		deletedSessions.length = 0;
+		movedApprovals.length = 0;
 		consumeCalls = 0;
 	});
 
@@ -170,6 +188,9 @@ describe("runAgentTurn dead-session recovery", () => {
 			{ reason: "session_dead", sessionId: "eve_session_dead" },
 		]);
 		expect(startedSessions).toEqual(["eve_session_dead", undefined]);
+		expect(movedApprovals).toEqual([
+			{ fromRunId: "eve_session_dead", toRunId: "eve_session_fresh" },
+		]);
 		expect(consumeCalls).toBe(2);
 		expect((result as { kind: string }).kind).toBe("reply");
 	});

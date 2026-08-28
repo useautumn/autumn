@@ -9,7 +9,7 @@ type AgentModel = {
 
 const AGENTS: Record<LeafAgentConnection, AgentModel> = {
 	billing: {
-		model: "openrouter/google/gemini-3-flash-preview",
+		model: "openrouter/google/gemini-3.7-flash",
 		reasoning: "low",
 	},
 	catalog: { reasoning: "low" },

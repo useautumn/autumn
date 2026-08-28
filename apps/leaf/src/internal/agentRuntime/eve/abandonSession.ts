@@ -40,17 +40,20 @@ export const abandonEveSession = async ({
 		runId: session.sessionId,
 		workspaceId: thread.workspaceId,
 	});
+	const orphanedApprovalIds: string[] = [];
 	for (const approval of orphaned) {
+		if (!approval.tool_call_id) continue;
 		await chatApprovalRepo.cancel({
 			approvalId: approval.id,
 			db,
 			providerUserId,
 		});
+		orphanedApprovalIds.push(approval.id);
 	}
 	logger.warn("Abandoned eve session", {
 		event: "leaf.eve_session_abandoned",
 		data: {
-			orphaned_approval_ids: orphaned.map((approval) => approval.id),
+			orphaned_approval_ids: orphanedApprovalIds,
 			reason,
 			session_id: session.sessionId,
 		},
