@@ -1,6 +1,8 @@
 import { defineDynamic, defineTool } from "eve/tools";
+import { withoutApprovalSummary } from "../../src/internal/approvals/utils/approvalSummary.js";
 import { callAutumnMcpTool } from "../../src/internal/autumnMcp/rpcClient.js";
 import { approvalSets } from "./approvalSets.js";
+import { withApprovalSummarySchema } from "./approvalSummarySchema.js";
 import {
 	type LeafPrincipalAttributes,
 	mintCachedAutumnToken,
@@ -36,6 +38,9 @@ export const autumnDirectTools = ({
 					if (!allowlist.has(tool.name)) continue;
 					const qualified = `autumn__${tool.name}`;
 					const toolName = tool.name;
+					const gatedBillingWrite =
+						agent === "billing" && approvalToolNames.has(toolName);
+					const inputSchema = slimToolSchema(tool.inputSchema);
 					entries[qualified] = defineTool({
 						approval: () =>
 							approvalToolNames.has(toolName)
@@ -47,14 +52,18 @@ export const autumnDirectTools = ({
 								toolCtx.session.auth.current?.attributes,
 							);
 							return callAutumnMcpTool({
-								args: input as Record<string, unknown>,
+								args: gatedBillingWrite
+									? withoutApprovalSummary(input as Record<string, unknown>)
+									: (input as Record<string, unknown>),
 								baseUrl: leafMcpBaseUrl(),
 								env: minted.appEnv,
 								token: minted.accessToken,
 								toolName,
 							});
 						},
-						inputSchema: slimToolSchema(tool.inputSchema),
+						inputSchema: gatedBillingWrite
+							? withApprovalSummarySchema(inputSchema)
+							: inputSchema,
 					});
 				}
 				return entries;
