@@ -60,7 +60,7 @@ import chalk from "chalk";
 // TEST 1: custom plan adds a boolean entitlement, base price reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: add boolean entitlement → base price Stripe IDs reused")}`, async () => {
+test(`${chalk.yellowBright("custom plan: add boolean entitlement → base price Stripe IDs reused")}`, async () => {
 	const customerId = "reuse-custom-boolean";
 
 	const proPlan = products.pro({
@@ -82,10 +82,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: add boolean entitlement → 
 		plan_id: proPlan.id,
 		customize: {
 			price: itemsV2.monthlyPrice({ amount: 20 }),
-			items: [
-				itemsV2.monthlyMessages({ included: 100 }),
-				itemsV2.dashboard(),
-			],
+			items: [itemsV2.monthlyMessages({ included: 100 }), itemsV2.dashboard()],
 		},
 	};
 
@@ -104,7 +101,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: add boolean entitlement → 
 // TEST 2: custom plan keeps prepaid/consumable/allocated items → all reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: paid feature shapes unchanged → all Stripe IDs reused")}`, async () => {
+test(`${chalk.yellowBright("custom plan: paid feature shapes unchanged → all Stripe IDs reused")}`, async () => {
 	const customerId = "reuse-custom-paid";
 
 	const proPlan = products.pro({
@@ -157,7 +154,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: paid feature shapes unchange
 // TEST 3 (negative): swap prepaid → consumable on same feature → no reuse
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: prepaid → consumable on same feature → stripe_price_id NOT reused")}`, async () => {
+test(`${chalk.yellowBright("custom plan: prepaid → consumable on same feature → stripe_price_id NOT reused")}`, async () => {
 	const customerId = "reuse-custom-prepaid-to-consumable";
 
 	const proPlan = products.pro({
@@ -185,11 +182,12 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid → consumable on sa
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
-	const { pairs, catalogPrices, customerPrices } = await loadCustomerAndCatalogPrices({
-		ctx,
-		customerId,
-		catalogProductId: proPlan.id,
-	});
+	const { pairs, catalogPrices, customerPrices } =
+		await loadCustomerAndCatalogPrices({
+			ctx,
+			customerId,
+			catalogProductId: proPlan.id,
+		});
 
 	expectStripePriceIdNotReused({
 		pairs,
@@ -203,7 +201,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid → consumable on sa
 // TEST 4 (negative): change prepaid price amount → stripe_price_id not reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: prepaid amount change → stripe_price_id NOT reused")}`, async () => {
+test(`${chalk.yellowBright("custom plan: prepaid amount change → stripe_price_id NOT reused")}`, async () => {
 	const customerId = "reuse-custom-prepaid-amount";
 
 	const proPlan = products.pro({
@@ -244,7 +242,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: prepaid amount change → st
 // TEST 5 (negative): change tier amounts on tiered prepaid → not reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: tier amount change → stripe_price_id NOT reused")}`, async () => {
+test(`${chalk.yellowBright("custom plan: tier amount change → stripe_price_id NOT reused")}`, async () => {
 	const customerId = "reuse-custom-tier";
 
 	const proPlan = products.pro({
@@ -292,7 +290,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: tier amount change → strip
 // TEST 6 (negative): graduated → volume tier_behavior → stripe_price_id not reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: graduated → volume tier_behavior → stripe_price_id NOT reused")}`, async () => {
+test(`${chalk.yellowBright("custom plan: graduated → volume tier_behavior → stripe_price_id NOT reused")}`, async () => {
 	const customerId = "reuse-custom-tier-behavior";
 
 	const proPlan = products.pro({
@@ -348,7 +346,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: graduated → volume tier_be
 // TEST 7 (negative): add flat_amount to a tier → stripe_price_id not reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: add flat_amount to tier → stripe_price_id NOT reused")}`, async () => {
+test(`${chalk.yellowBright("custom plan: add flat_amount to tier → stripe_price_id NOT reused")}`, async () => {
 	const customerId = "reuse-custom-flat-amount";
 
 	const proPlan = products.pro({
@@ -406,7 +404,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: add flat_amount to tier → 
 // catalog → V2 UsageBased without proration (arrear).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: prorated allocated → arrear customize → stripe_price_id NOT reused")}`, async () => {
+test(`${chalk.yellowBright("custom plan: prorated allocated → arrear customize → stripe_price_id NOT reused")}`, async () => {
 	const customerId = "reuse-custom-proration";
 
 	const proPlan = products.pro({
@@ -447,7 +445,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: prorated allocated → arrea
 // TEST 9 (negative): change billing_units → stripe_price_id not reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: change prepaid billing_units → stripe_price_id NOT reused")}`, async () => {
+test(`${chalk.yellowBright("custom plan: change prepaid billing_units → stripe_price_id NOT reused")}`, async () => {
 	const customerId = "reuse-custom-billing-units";
 
 	const proPlan = products.pro({
@@ -492,7 +490,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: change prepaid billing_units
 // reuses all Stripe IDs across the customize.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: change rollover config → base price Stripe IDs still reused")}`, async () => {
+test(`${chalk.yellowBright("custom plan: change rollover config → base price Stripe IDs still reused")}`, async () => {
 	const customerId = "reuse-custom-rollover";
 
 	const proPlan = products.pro({
@@ -552,7 +550,7 @@ test.concurrent(`${chalk.yellowBright("custom plan: change rollover config → b
 // TEST 11 (positive): prepaid + consumable pair on same feature → both reused
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("custom plan: prepaid + consumable pair on same feature → both Stripe IDs reused")}`, async () => {
+test(`${chalk.yellowBright("custom plan: prepaid + consumable pair on same feature → both Stripe IDs reused")}`, async () => {
 	const customerId = "reuse-custom-pair";
 
 	const proPlan = products.pro({
