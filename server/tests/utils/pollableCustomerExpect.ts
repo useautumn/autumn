@@ -40,6 +40,9 @@ export const DEFAULT_SETTLE_TIMEOUT_MS =
 export const WEBHOOK_SETTLE_TIMEOUT_MS =
 	Number(process.env.TEST_FILE_CONCURRENCY || "0") > 1 ? 150_000 : 30_000;
 
+/** Hard cap for webhook integration tests — bunfig `timeout = 0` will otherwise hang forever. */
+export const WEBHOOK_TEST_TIMEOUT_MS = 5 * 60_000;
+
 /**
  * THE one place polling lives.
  *

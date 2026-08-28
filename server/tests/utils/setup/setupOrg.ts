@@ -3,10 +3,14 @@ import { getFeatures } from "@tests/setup/v2Features.js";
 import { ensureOrgSvixApps } from "@tests/utils/setup/ensureOrgSvixApps.js";
 import axios from "axios";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 
-/** Insert only features the org is missing so new TestFeature entries land. */
+const featureConfigKey = (config: unknown) => JSON.stringify(config ?? null);
+
+/** Insert missing TestFeatures and refresh stale credit-system configs. */
 export const ensureV2Features = async ({
 	db,
 	orgId,
@@ -18,20 +22,39 @@ export const ensureV2Features = async ({
 }) => {
 	const wanted = Object.values(getFeatures({ orgId }));
 	const existing = await FeatureService.list({ db, orgId, env });
-	const existingIds = new Set(existing.map((feature) => feature.id));
-	const missing = wanted.filter((feature) => !existingIds.has(feature.id));
-	if (missing.length === 0) return;
-
-	const inserted = await FeatureService.insert({
-		db,
-		data: missing,
-		logger: console,
-	});
-	if (!inserted) {
-		throw new Error(
-			`ensureV2Features: insert failed for ${missing.map((feature) => feature.id).join(",")}`,
-		);
+	const existingById = new Map(existing.map((feature) => [feature.id, feature]));
+	const missing = wanted.filter((feature) => !existingById.has(feature.id));
+	if (missing.length > 0) {
+		const inserted = await FeatureService.insert({
+			db,
+			data: missing,
+			logger: console,
+		});
+		if (!inserted) {
+			throw new Error(
+				`ensureV2Features: insert failed for ${missing.map((feature) => feature.id).join(",")}`,
+			);
+		}
 	}
+
+	for (const feature of wanted) {
+		const current = existingById.get(feature.id);
+		if (!current) continue;
+		if (featureConfigKey(current.config) === featureConfigKey(feature.config)) {
+			continue;
+		}
+		await FeatureService.update({
+			db,
+			id: feature.id,
+			orgId,
+			env,
+			updates: { config: feature.config, type: feature.type },
+		});
+	}
+
+	// Config no-ops still leave org/product caches holding the previous join.
+	await clearOrgCache({ db, orgId, env, logger: console });
+	await invalidateProductsCache({ orgId, env });
 };
 
 export const getAxiosInstance = (apiKey?: string) => {
@@ -81,6 +104,7 @@ export const setupOrg = async ({
 			config: {
 				...org.config,
 				bill_upgrade_immediately: true,
+				disable_stripe_writes: false,
 			},
 		},
 	});

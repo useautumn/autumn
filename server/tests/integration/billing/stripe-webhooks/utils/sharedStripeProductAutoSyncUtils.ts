@@ -28,6 +28,7 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
+import { waitForStripeWebhook } from "@tests/utils/stripeUtils/waitForStripeWebhook";
 import testCtx, {
 	type TestContext,
 } from "@tests/utils/testInitUtils/createTestContext";
@@ -142,22 +143,55 @@ export const waitForCustomerProducts = async ({
 	active,
 	notPresent = [],
 	label,
+	stripeCli,
+	env,
+	subscriptionId,
+	eventTypes,
 }: {
 	autumnV1: Awaited<ReturnType<typeof initScenario>>["autumnV1"];
 	customerId: string;
 	active: string[];
 	notPresent?: string[];
 	label?: string;
+	stripeCli?: TestContext["stripeCli"];
+	env?: TestContext["env"];
+	subscriptionId?: string;
+	eventTypes?: string[];
 }) => {
+	const productsMatch = async () => {
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({ customer, active, notPresent });
+		return customer;
+	};
+
+	if (stripeCli && env && subscriptionId && eventTypes) {
+		let customer: ApiCustomerV3 | undefined;
+		await waitForStripeWebhook({
+			stripeCli,
+			env,
+			types: eventTypes,
+			objectId: subscriptionId,
+			until: async () => {
+				try {
+					customer = await productsMatch();
+					return true;
+				} catch {
+					return false;
+				}
+			},
+		});
+		if (!customer) throw new Error(`Products never settled for ${customerId}`);
+		return customer;
+	}
+
 	const deadline = Date.now() + 60_000;
 	let lastError: unknown;
 	let lastCustomer: ApiCustomerV3 | undefined;
 
 	while (Date.now() < deadline) {
 		try {
-			const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+			const customer = await productsMatch();
 			lastCustomer = customer;
-			await expectCustomerProducts({ customer, active, notPresent });
 			return customer;
 		} catch (error) {
 			lastError = error;

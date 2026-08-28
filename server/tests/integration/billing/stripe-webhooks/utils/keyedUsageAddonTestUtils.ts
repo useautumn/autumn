@@ -1,9 +1,11 @@
-import type { ProductV2 } from "@autumn/shared";
+import type { ProductV2, UsagePriceConfig } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import type Stripe from "stripe";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache";
+import { PriceService } from "@/internal/products/prices/PriceService";
 import {
 	createStripeMeteredPriceUnderProduct,
 	type FamilySpec,
@@ -69,12 +71,30 @@ export const createNativeDedicatedIpPrice = async ({
 		recurring: { interval: "month" },
 	});
 
-/**
- * The Automations add-on's usage price is metered, and Autumn creates a
- * dedicated Stripe product (+ meter) for a metered price rather than reusing
- * the product-level processor.id — findKeyedPrice matches on THIS id, not
- * fullProduct.processor.id.
- */
+/** Price-level stripe_product_id override so findKeyedPrice uniquely claims the add-on. */
+const stampDedicatedAutomationsStripeProduct = async ({
+	ctx,
+	automationsId,
+}: {
+	ctx: TestContext;
+	automationsId: string;
+}) => {
+	const dedicated = await ctx.stripeCli.products.create({
+		name: `Automations keyed ${automationsId}`,
+	});
+	const fullProduct = await getFullProduct({ ctx, productId: automationsId });
+	const price = requireUsagePrice({ fullProduct });
+	const config = { ...price.config } as UsagePriceConfig;
+	config.stripe_product_id = dedicated.id;
+	await PriceService.update({
+		db: ctx.db,
+		id: price.id!,
+		update: { config },
+	});
+	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
+};
+
+/** findKeyedPrice matches on the usage price's stripe_product_id, not processor.id. */
 export const automationsStripeProductId = async ({
 	ctx,
 	productId,
@@ -186,6 +206,10 @@ export const setupKeyedUsageAddonScenario = async ({
 				: []),
 		],
 	});
+
+	if (automationsId) {
+		await stampDedicatedAutomationsStripeProduct({ ctx, automationsId });
+	}
 
 	for (const productId of fullProducts.keys()) {
 		fullProducts.set(productId, await getFullProduct({ ctx, productId }));

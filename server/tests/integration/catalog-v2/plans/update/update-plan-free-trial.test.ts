@@ -205,7 +205,7 @@ test.concurrent(
 						freeTrial: {
 							duration_length: 14,
 							duration_type: FreeTrialDuration.Month,
-							card_required: true,
+							card_required: false,
 							on_end: null,
 						},
 					},
@@ -492,7 +492,7 @@ test.concurrent(
 		const trial = {
 			duration_length: 7,
 			duration_type: FreeTrialDuration.Day,
-			card_required: true,
+			card_required: false,
 			on_end: null,
 		};
 		try {
@@ -599,7 +599,7 @@ test.concurrent(
 						freeTrial: {
 							duration_length: 14,
 							duration_type: FreeTrialDuration.Month,
-							card_required: true,
+							card_required: false,
 							on_end: null,
 						},
 					},
@@ -614,7 +614,7 @@ test.concurrent(
 						free_trial: {
 							duration_length: 14,
 							duration_type: FreeTrialDuration.Month,
-							card_required: true,
+							card_required: false,
 							on_end: "bill",
 						},
 					},

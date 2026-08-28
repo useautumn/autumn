@@ -12,9 +12,11 @@ import {
 const usage = ({
 	amount,
 	stripePriceId,
+	stripePrepaidPriceV2Id,
 }: {
 	amount: number;
 	stripePriceId?: string;
+	stripePrepaidPriceV2Id?: string;
 }): Price => ({
 	id: "pr_messages",
 	org_id: "org_1",
@@ -32,6 +34,9 @@ const usage = ({
 		interval: BillingInterval.Month,
 		interval_count: 1,
 		...(stripePriceId !== undefined ? { stripe_price_id: stripePriceId } : {}),
+		...(stripePrepaidPriceV2Id !== undefined
+			? { stripe_prepaid_price_v2_id: stripePrepaidPriceV2Id }
+			: {}),
 	} as UsagePriceConfig,
 	entitlement_id: "ent_messages",
 	proration_config: null,
@@ -76,5 +81,18 @@ describe("stripePriceIdForInitializedPrice", () => {
 				newPrice: usage({ amount: 500 }),
 			}),
 		).toBe("price_imported");
+	});
+
+	test("drops a round-tripped prepaid v2 id when the definition drifted", () => {
+		expect(
+			stripePriceIdForInitializedPrice({
+				requestedStripePriceId: "price_old_v2",
+				currentPrice: usage({
+					amount: 10,
+					stripePrepaidPriceV2Id: "price_old_v2",
+				}),
+				newPrice: usage({ amount: 500 }),
+			}),
+		).toBeUndefined();
 	});
 });

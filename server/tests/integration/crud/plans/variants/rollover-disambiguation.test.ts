@@ -43,6 +43,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import { stripeConfigValue } from "@tests/integration/utils/expectStripePriceResources.js";
+import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
 import {
 	expectStripeResourcesCarriedToVariant,
 	expectVariantProductCorrect,
@@ -220,7 +221,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover create_variant: preserves duplicate feature_id items + Stripe reuse")}`,
 	async () => {
-		const rid = readableVariantTestId("rv_dups_stripe");
+		const rid = `${readableVariantTestId("rv_dups_stripe")}_${Date.now().toString(36)}`;
 		const baseId = `base_${rid}`;
 		const variantId = `${baseId}_variant`;
 		await cleanup(baseId, variantId);
@@ -569,7 +570,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover versioning: stripe_price_id carried forward to variant v2")}`,
 	async () => {
-			const rid = readableVariantTestId("rv_prepaid_carry");
+			const rid = `${readableVariantTestId("rv_prepaid_carry")}_${Date.now().toString(36)}`;
 			const baseId = `base_${rid}`;
 			const variantId = `${baseId}_variant`;
 			const customerId = `cus_${rid}`;
@@ -603,6 +604,7 @@ test.concurrent(
 			items: rolloverPrepaidItems(500),
 			update_variant_ids: [variantId],
 		});
+		await initPlanStripeResources({ ctx, planId: variantId });
 
 		const variantVersions = await getAllVersions(variantId);
 		expect(variantVersions.length).toBe(2);

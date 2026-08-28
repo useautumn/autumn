@@ -107,6 +107,7 @@ test.concurrent(
 				],
 			});
 
+			await initPlanStripeResources({ ctx, planId });
 			const after = await getFull({ ctx, planId });
 			const afterPrice = findFeaturePrice({
 				product: after,
