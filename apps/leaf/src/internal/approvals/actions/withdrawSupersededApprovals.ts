@@ -9,7 +9,7 @@ import { approvalDenyPlan } from "../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 
-const withdrawnNote = (toolName: string) =>
+export const withdrawnNoteFor = (toolName: string) =>
 	`(The user replied with a new message instead of deciding on this pending request, so it was withdrawn and not applied. Classify the new message on its own. Rebuild only for an explicit confirmation or an actionable refinement with a concrete replacement. For a question, objection, or stop/explain request, reply in text and do not delegate, re-issue the write, or show a card.${
 		normalizeToolName(toolName) === "attach"
 			? " Keep an attach refinement customer-specific; use catalog tools only if they explicitly ask to change the shared plan."
@@ -129,7 +129,7 @@ export const withdrawSupersededApprovals = async ({
 	});
 	const note =
 		cancelledApprovals.length === 1 && cancelledApprovals[0]
-			? withdrawnNote(cancelledApprovals[0].tool_name)
+			? withdrawnNoteFor(cancelledApprovals[0].tool_name)
 			: MANY_WITHDRAWN_NOTE;
 	return { withdrawal: { inputResponses, note } };
 };
