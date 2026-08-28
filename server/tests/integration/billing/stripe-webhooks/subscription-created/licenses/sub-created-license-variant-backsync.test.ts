@@ -102,6 +102,11 @@ const setupVariantLicenseFamily = async ({
 		],
 	});
 
+	// Parent license plans hold the customized price rows the tests read, so
+	// materialize them too — not just the seat plans.
+	await fetchFullProduct({ ctx, productId: annualProId });
+	await fetchFullProduct({ ctx, productId: pro.id });
+
 	const quarterlySeatFull = await fetchFullProduct({
 		ctx,
 		productId: quarterlySeat.id,
@@ -205,9 +210,7 @@ test(`${chalk.yellowBright("sub.created license variant back-sync: annual seat q
 	const stripeSubscription = await createExternalStripeSubscription({
 		ctx,
 		customerId,
-		items: [
-			{ price: family.annualLicenseStripePriceId, quantity: PAID_SEATS },
-		],
+		items: [{ price: family.annualLicenseStripePriceId, quantity: PAID_SEATS }],
 	});
 	expect(stripeSubscription.status).toBe("active");
 	await timeout(12_000);

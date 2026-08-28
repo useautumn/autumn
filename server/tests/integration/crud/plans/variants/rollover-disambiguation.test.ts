@@ -714,9 +714,12 @@ test.concurrent(
 			featureId: TestFeature.Credits,
 		});
 		expect(v2PrepaidPrice).toBeDefined();
-		expect((v2PrepaidPrice!.config as any)?.stripe_price_id).toBeTruthy();
+		expect(prepaidStripeId(v2PrepaidPrice)).toBeTruthy();
 		expect(
-			(v2PrepaidPrice!.config as any)?.stripe_prepaid_price_v2_id,
+			stripeConfigValue({
+				price: v2PrepaidPrice,
+				field: "stripe_prepaid_price_v2_id",
+			}),
 		).toBeTruthy();
 
 		await cleanup(baseId, variantId);

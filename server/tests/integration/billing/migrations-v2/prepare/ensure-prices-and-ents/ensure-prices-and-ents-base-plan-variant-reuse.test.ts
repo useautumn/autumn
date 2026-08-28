@@ -28,7 +28,8 @@
  */
 
 import { expect, test } from "bun:test";
-import { products as productsTable } from "@autumn/shared";
+import { type Price, products as productsTable } from "@autumn/shared";
+import { stripePriceIdentityValue } from "@tests/integration/utils/expectStripePriceResources.js";
 import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
@@ -36,7 +37,10 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
-import { buildUpdatePlanOperations, createMigration } from "../../utils/migrationTestUtils.js";
+import {
+	buildUpdatePlanOperations,
+	createMigration,
+} from "../../utils/migrationTestUtils.js";
 import {
 	expectPreparedArtifact,
 	expectPreparedArtifactRowIds,
@@ -49,128 +53,141 @@ type PriceStripeConfig = {
 	stripe_prepaid_price_v2_id?: string | null;
 };
 
-test.concurrent(`${chalk.yellowBright("migrations prepare runtime: variant plan reuses its BASE plan's Stripe resources")}`, async () => {
-	const baseCustomerId = "prep-base-variant-reuse-base";
-	const variantCustomerId = "prep-base-variant-reuse-variant";
+test.concurrent(
+	`${chalk.yellowBright("migrations prepare runtime: variant plan reuses its BASE plan's Stripe resources")}`,
+	async () => {
+		const baseCustomerId = "prep-base-variant-reuse-base";
+		const variantCustomerId = "prep-base-variant-reuse-variant";
 
-	const pro = products.pro({ id: "pro", items: [] });
-	const proYearly = products.pro({ id: "pro_yearly", items: [] });
+		const pro = products.pro({ id: "pro", items: [] });
+		const proYearly = products.pro({ id: "pro_yearly", items: [] });
 
-	const { autumnV1, autumnV2_2, ctx } = await initScenario({
-		customerId: baseCustomerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.otherCustomers([{ id: variantCustomerId, paymentMethod: "success" }]),
-			s.products({ list: [pro, proYearly] }),
-		],
-		actions: [
-			s.billing.attach({ productId: pro.id }),
-			s.billing.attach({ productId: proYearly.id, customerId: variantCustomerId }),
-		],
-	});
+		const { autumnV1, autumnV2_2, ctx } = await initScenario({
+			customerId: baseCustomerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.otherCustomers([{ id: variantCustomerId, paymentMethod: "success" }]),
+				s.products({ list: [pro, proYearly] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.billing.attach({
+					productId: proYearly.id,
+					customerId: variantCustomerId,
+				}),
+			],
+		});
 
-	// Simulate `pro_yearly` being a variant of `pro` (same as Mintlify's real
-	// catalog, where growth_yearly/pro_yearly point back at growth/pro).
-	await ctx.db
-		.update(productsTable)
-		.set({ base_variant_id: pro.id })
-		.where(
-			and(
-				eq(productsTable.id, proYearly.id),
-				eq(productsTable.org_id, ctx.org.id),
-				eq(productsTable.env, ctx.env),
-			),
-		);
+		// Simulate `pro_yearly` being a variant of `pro` (same as Mintlify's real
+		// catalog, where growth_yearly/pro_yearly point back at growth/pro).
+		await ctx.db
+			.update(productsTable)
+			.set({ base_variant_id: pro.id })
+			.where(
+				and(
+					eq(productsTable.id, proYearly.id),
+					eq(productsTable.org_id, ctx.org.id),
+					eq(productsTable.env, ctx.env),
+				),
+			);
 
-	// Pre-seed: add the new tier ladder to `pro`'s CURRENT version via ordinary
-	// (non-custom) catalog editing — exactly what Mintlify will do before
-	// running the real migration.
-	await autumnV1.products.update(pro.id, {
-		items: [
-			items.volumePrepaidMessages({
-				includedUsage: 0,
-				tiers: [
-					{ to: 2000, amount: 30 },
-					{ to: "inf", amount: 12 },
-				],
-			}),
-		],
-	});
-
-	// `products.update` is reuse-only, and the new tier ladder has no reuse
-	// candidate — the pre-seeded price only gets real Stripe ids at billing time.
-	await materializePlanInStripe({ ctx, planId: pro.id });
-
-	const latestProVersion = await ctx.db.query.products.findFirst({
-		where: (p, { eq: eqOp, and: andOp }) =>
-			andOp(eqOp(p.id, pro.id), eqOp(p.org_id, ctx.org.id), eqOp(p.env, ctx.env)),
-		orderBy: (p, { desc }) => desc(p.version),
-	});
-	if (!latestProVersion) {
-		throw new Error("Expected pro's latest version to exist");
-	}
-	const proNonCustomPrices = await ctx.db.query.prices.findMany({
-		where: (p, { eq: eqOp, and: andOp }) =>
-			andOp(
-				eqOp(p.internal_product_id, latestProVersion.internal_id),
-				eqOp(p.is_custom, false),
-			),
-	});
-	const preSeededPro = proNonCustomPrices.find(
-		(p) => (p.config as { type?: string }).type === "usage",
-	);
-	if (!preSeededPro?.config) {
-		throw new Error("Expected pre-seeded pro price to exist");
-	}
-	const preSeededConfig = preSeededPro.config as PriceStripeConfig;
-	if (
-		!preSeededConfig.stripe_price_id ||
-		!preSeededConfig.stripe_product_id ||
-		!preSeededConfig.stripe_prepaid_price_v2_id
-	) {
-		throw new Error("Expected pre-seeded pro price to have real Stripe ids");
-	}
-
-	// Migration targets `pro_yearly` ONLY — its op's own `matchedProducts` never
-	// includes `pro` at all, so any reuse must come from resolving the base
-	// plan explicitly, not from whatever this op happened to match.
-	const operations = buildUpdatePlanOperations({
-		planId: proYearly.id,
-		customize: {
-			add_items: [
-				itemsV2.volumePrepaidMessages({
-					included: 0,
+		// Pre-seed: add the new tier ladder to `pro`'s CURRENT version via ordinary
+		// (non-custom) catalog editing — exactly what Mintlify will do before
+		// running the real migration.
+		await autumnV1.products.update(pro.id, {
+			items: [
+				items.volumePrepaidMessages({
+					includedUsage: 0,
 					tiers: [
 						{ to: 2000, amount: 30 },
 						{ to: "inf", amount: 12 },
 					],
 				}),
 			],
-		},
-	});
-	const migration = await createMigration({
-		migrationClient: autumnV2_2,
-		id: `${variantCustomerId}-mig`,
-		filter: { customer: { plan: { plan_id: proYearly.id } } },
-		operations,
-	});
+		});
 
-	const run = await prepareMigration({ ctx, migration, dryRun: false });
-	const artifact = expectPreparedArtifact({
-		result: run,
-		opIndex: 0,
-		kind: "add_item",
-		itemIndex: 0,
-	});
-	const { priceId } = expectPreparedArtifactRowIds({ artifact });
+		// `products.update` is reuse-only, and the new tier ladder has no reuse
+		// candidate — the pre-seeded price only gets real Stripe ids at billing time.
+		await materializePlanInStripe({ ctx, planId: pro.id });
 
-	const variantConfig = run.result.prices.find((p) => p.id === priceId)
-		?.config as PriceStripeConfig | undefined;
+		const latestProVersion = await ctx.db.query.products.findFirst({
+			where: (p, { eq: eqOp, and: andOp }) =>
+				andOp(
+					eqOp(p.id, pro.id),
+					eqOp(p.org_id, ctx.org.id),
+					eqOp(p.env, ctx.env),
+				),
+			orderBy: (p, { desc }) => desc(p.version),
+		});
+		if (!latestProVersion) {
+			throw new Error("Expected pro's latest version to exist");
+		}
+		const proNonCustomPrices = await ctx.db.query.prices.findMany({
+			where: (p, { eq: eqOp, and: andOp }) =>
+				andOp(
+					eqOp(p.internal_product_id, latestProVersion.internal_id),
+					eqOp(p.is_custom, false),
+				),
+		});
+		const preSeededPro = proNonCustomPrices.find(
+			(p) => (p.config as { type?: string }).type === "usage",
+		);
+		if (!preSeededPro?.config) {
+			throw new Error("Expected pre-seeded pro price to exist");
+		}
+		const preSeededConfig = preSeededPro.config as PriceStripeConfig;
+		const preSeededStripePriceId = stripePriceIdentityValue({
+			price: preSeededPro as Price,
+		});
+		if (!preSeededStripePriceId || !preSeededConfig.stripe_product_id) {
+			throw new Error("Expected pre-seeded pro price to have real Stripe ids");
+		}
 
-	// ── The actual fix: pro_yearly's new price reuses pro's real Stripe ids ──
-	expect(variantConfig?.stripe_price_id).toBe(preSeededConfig.stripe_price_id);
-	expect(variantConfig?.stripe_product_id).toBe(preSeededConfig.stripe_product_id);
-	expect(variantConfig?.stripe_prepaid_price_v2_id).toBe(
-		preSeededConfig.stripe_prepaid_price_v2_id,
-	);
-});
+		// Migration targets `pro_yearly` ONLY — its op's own `matchedProducts` never
+		// includes `pro` at all, so any reuse must come from resolving the base
+		// plan explicitly, not from whatever this op happened to match.
+		const operations = buildUpdatePlanOperations({
+			planId: proYearly.id,
+			customize: {
+				add_items: [
+					itemsV2.volumePrepaidMessages({
+						included: 0,
+						tiers: [
+							{ to: 2000, amount: 30 },
+							{ to: "inf", amount: 12 },
+						],
+					}),
+				],
+			},
+		});
+		const migration = await createMigration({
+			migrationClient: autumnV2_2,
+			id: `${variantCustomerId}-mig`,
+			filter: { customer: { plan: { plan_id: proYearly.id } } },
+			operations,
+		});
+
+		const run = await prepareMigration({ ctx, migration, dryRun: false });
+		const artifact = expectPreparedArtifact({
+			result: run,
+			opIndex: 0,
+			kind: "add_item",
+			itemIndex: 0,
+		});
+		const { priceId } = expectPreparedArtifactRowIds({ artifact });
+
+		const variantPrice = run.result.prices.find((p) => p.id === priceId);
+		const variantConfig = variantPrice?.config as PriceStripeConfig | undefined;
+
+		// ── The actual fix: pro_yearly's new price reuses pro's real Stripe ids ──
+		expect(
+			stripePriceIdentityValue({ price: variantPrice as Price | undefined }),
+		).toBe(preSeededStripePriceId);
+		expect(variantConfig?.stripe_product_id).toBe(
+			preSeededConfig.stripe_product_id,
+		);
+		expect(variantConfig?.stripe_prepaid_price_v2_id).toBe(
+			preSeededConfig.stripe_prepaid_price_v2_id,
+		);
+	},
+);

@@ -1,12 +1,12 @@
 import { expect } from "bun:test";
 import {
 	type AppEnv,
+	diffPriceStripeObjects,
 	type FullCusProduct,
+	isFixedPrice,
+	isPrepaidPrice,
 	type Price,
 	type UsagePriceConfig,
-	diffPriceStripeObjects,
-	isFixedPrice,
-	priceStripeObjectsMatch,
 } from "@autumn/shared";
 import { stripePriceIdentityValue } from "@tests/integration/utils/expectStripePriceResources";
 import type { DrizzleCli } from "@/db/initDrizzle";
@@ -86,15 +86,33 @@ export const loadCustomerAndCatalogPrices = async ({
 	};
 };
 
-const formatDiff = (catalog: Price, customer: Price): string => {
-	const diffs = diffPriceStripeObjects({
-		priceA: catalog,
-		priceB: customer,
-	});
-	return diffs
-		.map((diff) => `${diff.field}: catalog=${diff.a ?? "null"}, customer=${diff.b ?? "null"}`)
-		.join("\n  ");
+/**
+ * Prepaid prices hold their Stripe Price in the v2 slot, leaving
+ * stripe_price_id null — it carries no reuse signal for them.
+ */
+const reusableStripeObjectDiffs = ({
+	catalog,
+	customer,
+}: {
+	catalog: Price;
+	customer: Price;
+}) => {
+	const diffs = diffPriceStripeObjects({ priceA: catalog, priceB: customer });
+	if (!isPrepaidPrice(catalog)) return diffs;
+	return diffs.filter((diff) => diff.field !== "stripe_price_id");
 };
+
+const formatDiffs = ({
+	diffs,
+}: {
+	diffs: { field: string; a: string | null; b: string | null }[];
+}): string =>
+	diffs
+		.map(
+			(diff) =>
+				`${diff.field}: catalog=${diff.a ?? "null"}, customer=${diff.b ?? "null"}`,
+		)
+		.join("\n  ");
 
 /**
  * Assert every (catalog, customer) price pair shares all Stripe-object IDs.
@@ -112,13 +130,10 @@ export const expectAllStripeIdsReused = ({
 			stripePriceIdentityValue({ price: catalog }),
 			`catalog ${priceMatchKey(catalog)} has no Stripe price id — materialize the plan first`,
 		).not.toBeNull();
-		const matches = priceStripeObjectsMatch({
-			priceA: catalog,
-			priceB: customer,
-		});
-		if (!matches) {
+		const diffs = reusableStripeObjectDiffs({ catalog, customer });
+		if (diffs.length > 0) {
 			throw new Error(
-				`Expected stripe-object reuse for ${priceMatchKey(catalog)} but got diffs:\n  ${formatDiff(catalog, customer)}`,
+				`Expected stripe-object reuse for ${priceMatchKey(catalog)} but got diffs:\n  ${formatDiffs({ diffs })}`,
 			);
 		}
 	}

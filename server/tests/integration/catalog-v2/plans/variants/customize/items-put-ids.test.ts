@@ -21,6 +21,7 @@ import {
 	expectPriceStripeResourcesPresent,
 	expectPriceStripeReuseCorrect,
 	findFeaturePrice,
+	stripePriceIdentityValue,
 } from "@tests/integration/utils/expectStripePriceResources.js";
 import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -299,9 +300,9 @@ test.concurrent(
 				product: before,
 				featureId: TestFeature.Messages,
 			})!;
-			const staleStripePriceId = (
-				beforePrice.config as { stripe_price_id?: string | null }
-			).stripe_price_id!;
+			const staleStripePriceId = stripePriceIdentityValue({
+				price: beforePrice,
+			})!;
 
 			await autumnV2_3.catalogV2.update({
 				plans: [
