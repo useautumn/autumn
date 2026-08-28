@@ -7,7 +7,7 @@ import {
 } from "@autumn/ui";
 import { FlaskIcon, PencilIcon } from "@phosphor-icons/react";
 import type { Row, Table } from "@tanstack/react-table";
-import { ArrowRightLeft, Delete, RotateCcw } from "lucide-react";
+import { ArrowRightLeft, Delete, RotateCcw, Zap } from "lucide-react";
 import {
 	hiddenSkeleton,
 	nameWithIconSkeleton,
@@ -114,6 +114,7 @@ export const CustomerProductsColumns = [
 				onCancelClick?: (product: FullCusProduct) => void;
 				onUpdateClick?: (product: FullCusProduct) => void;
 				onUncancelClick?: (product: FullCusProduct) => void;
+				onCancelImmediatelyClick?: (product: FullCusProduct) => void;
 				onTransferClick?: (product: FullCusProduct) => void;
 				onTestSheetClick?: (product: FullCusProduct) => void;
 				hasEntities?: boolean;
@@ -160,15 +161,26 @@ export const CustomerProductsColumns = [
 							</DropdownMenuItem>
 						)}
 						{isCanceling ? (
-							<DropdownMenuItem
-								className="flex items-center gap-2 text-xs"
-								onClick={(e) => {
-									e.stopPropagation();
-									meta.onUncancelClick?.(row.original);
-								}}
-							>
-								<RotateCcw size={16} /> Uncancel
-							</DropdownMenuItem>
+							<>
+								<DropdownMenuItem
+									className="flex items-center gap-2 text-xs"
+									onClick={(e) => {
+										e.stopPropagation();
+										meta.onUncancelClick?.(row.original);
+									}}
+								>
+									<RotateCcw size={16} /> Manage Cancellation
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
+									onClick={(e) => {
+										e.stopPropagation();
+										meta.onCancelImmediatelyClick?.(row.original);
+									}}
+								>
+									<Zap size={16} /> Cancel Immediately
+								</DropdownMenuItem>
+							</>
 						) : (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"

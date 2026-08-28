@@ -136,6 +136,14 @@ export function CustomerProductsTable() {
 		setSheet({ type: "subscription-uncancel", itemId: product.id });
 	};
 
+	const handleCancelImmediatelyClick = (product: FullCusProduct) => {
+		setSheet({
+			type: "subscription-uncancel",
+			itemId: product.id,
+			data: { cancelAction: "cancel_immediately" },
+		});
+	};
+
 	const handleUpdateClick = (product: FullCusProduct) => {
 		setSheet({ type: "subscription-update", itemId: product.id });
 	};
@@ -151,6 +159,7 @@ export function CustomerProductsTable() {
 			meta: {
 				onCancelClick: handleCancelClick,
 				onUncancelClick: handleUncancelClick,
+				onCancelImmediatelyClick: handleCancelImmediatelyClick,
 				onTransferClick: handleTransferClick,
 				onUpdateClick: handleUpdateClick,
 				hasEntities,
