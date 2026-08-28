@@ -1,19 +1,9 @@
 import { type ChatApprovalWrite, ms } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
+import { isSameToolRequest } from "./toolRequest.js";
 
 const SETTLED_WINDOW_MS = ms.minutes(15);
-
-const canonical = (value: unknown): string =>
-	JSON.stringify(value, (_key, node) =>
-		node && typeof node === "object" && !Array.isArray(node)
-			? Object.fromEntries(
-					Object.entries(node as Record<string, unknown>).sort(([a], [b]) =>
-						a.localeCompare(b),
-					),
-				)
-			: node,
-	);
 
 const toToolResult = ({ result, status }: ChatApprovalWrite): unknown => {
 	if (status === "applied") return result ?? {};
@@ -46,7 +36,8 @@ export const settledWriteResult = async ({
 		since: Date.now() - SETTLED_WINDOW_MS,
 		toolName,
 	});
-	const wanted = canonical(input);
-	const match = settled.find((write) => canonical(write.tool_args) === wanted);
+	const match = settled.find((write) =>
+		isSameToolRequest(write.tool_args, input),
+	);
 	return match && toToolResult(match);
 };
