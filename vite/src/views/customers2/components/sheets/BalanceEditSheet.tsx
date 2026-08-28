@@ -124,9 +124,7 @@ export function BalanceEditSheet() {
 							</TooltipTrigger>
 							<TooltipContent className="max-w-64">
 								Balance updates are meant for manual corrections. To change what
-								a customer gets on an ongoing basis, update their plan instead —
-								plan changes persist across resets and emit a billing.updated
-								webhook.
+								a customer gets on an ongoing basis, update their plan instead.
 							</TooltipContent>
 						</Tooltip>
 					</p>
