@@ -31,16 +31,14 @@ export function BasePriceAdvancedSettings() {
 			<SheetAccordionItem title="Advanced" value="advanced">
 				<div className="flex flex-col gap-2 pt-2 pb-10">
 					<FormLabel>Stripe price</FormLabel>
-					<div className="w-xs max-w-full">
-						<StripePriceSelect
-							onChange={(stripePriceId) =>
-								setBasePriceItem(
-									withItemStripePriceId({ item: basePriceItem, stripePriceId }),
-								)
-							}
-							value={itemStripePriceId({ item: basePriceItem })}
-						/>
-					</div>
+					<StripePriceSelect
+						onChange={(stripePriceId) =>
+							setBasePriceItem(
+								withItemStripePriceId({ item: basePriceItem, stripePriceId }),
+							)
+						}
+						value={itemStripePriceId({ item: basePriceItem })}
+					/>
 					<p className="text-tertiary-foreground text-xs">
 						Bill this version under a Stripe price you already have.
 					</p>

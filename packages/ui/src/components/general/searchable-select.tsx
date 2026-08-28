@@ -34,7 +34,8 @@ export type SearchableSelectProps<T> = {
 	placeholder?: string;
 	searchable?: boolean;
 	searchPlaceholder?: string;
-	emptyText?: string;
+	/** `null` renders no empty state at all — the search input stands alone. */
+	emptyText?: ReactNode | null;
 	disabled?: boolean;
 	triggerClassName?: string;
 	contentClassName?: string;
@@ -189,15 +190,17 @@ export function SearchableSelect<T>({
 								)}
 								{header}
 								<CommandList>
-									<CommandEmpty className="text-tertiary-foreground">
-										{isLoading ? (
-											<div className="flex justify-center items-center py-2">
-												<SmallSpinner size={14} />
-											</div>
-										) : (
-											emptyText
-										)}
-									</CommandEmpty>
+									{(emptyText !== null || isLoading) && (
+										<CommandEmpty className="text-tertiary-foreground">
+											{isLoading ? (
+												<div className="flex justify-center items-center py-2">
+													<SmallSpinner size={14} />
+												</div>
+											) : (
+												emptyText
+											)}
+										</CommandEmpty>
+									)}
 									<CommandGroup>
 										{options.map((option) => {
 											const optionValue = getOptionValue(option);

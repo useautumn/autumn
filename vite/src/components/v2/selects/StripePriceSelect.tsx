@@ -72,11 +72,8 @@ export const StripePriceSelect = ({
 	return (
 		<SearchableSelect<CatalogStripePrice>
 			disabled={disabled}
-			emptyText={
-				isStripeLookup(search.trim())
-					? "No Stripe price found"
-					: "Paste a price ID, or a product ID to list its prices"
-			}
+			// Nothing to show until the id is one Stripe can actually resolve.
+			emptyText={isStripeLookup(search.trim()) ? "No Stripe price found" : null}
 			footer={
 				isFetching ? (
 					<div className="flex items-center justify-center gap-2 border-border/60 border-t px-3 py-2 text-tertiary-foreground text-xs">
@@ -122,7 +119,7 @@ export const StripePriceSelect = ({
 					<span className="text-tertiary-foreground">Not mapped</span>
 				)
 			}
-			searchPlaceholder="price_... or prod_..."
+			searchPlaceholder="Enter a price_ or prod_ ID"
 			searchable
 			triggerClassName="h-input"
 			value={value}
