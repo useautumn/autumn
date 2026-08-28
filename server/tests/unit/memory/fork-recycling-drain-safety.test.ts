@@ -24,7 +24,7 @@ afterAll(() => {
 
 type Outcome = { ok: boolean; pid?: string; reason?: string };
 
-const call = async (url: string): Promise<Outcome> => {
+const callOnce = async (url: string): Promise<Outcome> => {
 	try {
 		const response = await fetch(url);
 		const body = await response.text();
@@ -37,6 +37,20 @@ const call = async (url: string): Promise<Outcome> => {
 	} catch (error) {
 		return { ok: false, reason: (error as Error).message };
 	}
+};
+
+// A keep-alive socket can be idle-swept in the same instant fetch reuses it.
+// Mid-response cuts still fail immediately (truncated body / HTTP status).
+const call = async (url: string): Promise<Outcome> => {
+	const first = await callOnce(url);
+	if (
+		first.ok ||
+		first.reason?.startsWith("truncated") ||
+		first.reason?.startsWith("status")
+	) {
+		return first;
+	}
+	return callOnce(url);
 };
 
 describe("drain safety under concurrent load", () => {
