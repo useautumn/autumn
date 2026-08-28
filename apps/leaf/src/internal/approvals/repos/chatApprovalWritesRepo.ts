@@ -5,7 +5,7 @@ import {
 	chatApprovals,
 	chatApprovalWrites,
 } from "@autumn/shared";
-import { and, asc, eq, exists, gt, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, exists, gt, inArray, or, sql } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
 import { normalizeToolName } from "../../agentRuntime/tools/toolPolicy.js";
 
@@ -144,8 +144,8 @@ const listSettledForSession = async ({
 				),
 			),
 		)
-		.orderBy(asc(chatApprovalWrites.updated_at));
-	return rows.map((row) => row.write).reverse();
+		.orderBy(desc(chatApprovalWrites.updated_at));
+	return rows.map((row) => row.write);
 };
 
 export const chatApprovalWritesRepo = {
