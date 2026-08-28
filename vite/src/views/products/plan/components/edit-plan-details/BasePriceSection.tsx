@@ -23,6 +23,7 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { stampBaseCurrency } from "../../utils/currencyUtils";
 import { AdditionalCurrenciesEditor } from "../shared/AdditionalCurrenciesEditor";
 import { CurrencyAmountInput } from "../shared/CurrencyAmountInput";
+import { BasePriceStripeMapping } from "./BasePriceStripeMapping";
 import { FreeTrialOption } from "./FreeTrialOption";
 import { SelectBillingCycle } from "./SelectBillingCycle";
 
@@ -240,6 +241,13 @@ export const BasePriceSection = ({
 									currencies={basePriceItem?.additional_currencies}
 									onChange={handleCurrenciesChange}
 									baseCurrency={defaultCurrency}
+								/>
+							)}
+
+							{basePriceItem && (
+								<BasePriceStripeMapping
+									item={basePriceItem}
+									setItem={setItem}
 								/>
 							)}
 						</div>
