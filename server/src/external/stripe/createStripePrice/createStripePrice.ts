@@ -11,9 +11,9 @@ import {
 	priceToEnt,
 	priceToRequiredStripeSlots,
 	priceUtils,
-	type StripePriceNicknameSource,
 	RecaseError,
 	type RequiredStripeResourceSlot,
+	type StripePriceNicknameSource,
 	setPriceCurrencyStripeId,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -37,6 +37,18 @@ import { createStripeOneOffTieredProduct } from "./createStripeOneOffTiered";
 import { createStripePrepaid } from "./createStripePrepaid";
 
 const CREATE_STRIPE_EMPTY_PRICES = false;
+
+/** Expanded prices carry the product object; unexpanded ones carry its id. */
+const stripeProductOfPrice = ({
+	stripePrice,
+}: {
+	stripePrice?: Stripe.Price;
+}): Stripe.Product | null => {
+	const product = stripePrice?.product;
+	if (!product || typeof product === "string") return null;
+	if ("deleted" in product && product.deleted) return null;
+	return product as Stripe.Product;
+};
 
 const checkCurStripePrice = async ({
 	price,
@@ -125,6 +137,7 @@ const checkCurStripePrice = async ({
 			stripePrepaidPriceV2 = await getStripePrice({
 				stripeClient: stripeCli,
 				stripePriceId: prepaidV2Id,
+				expand: ["product"],
 			});
 		}
 
@@ -148,6 +161,12 @@ const checkCurStripePrice = async ({
 		CREATE_STRIPE_EMPTY_PRICES ? getStripeEmptyPrice() : undefined,
 		getStripePrepaidPriceV2(),
 	]);
+
+	// Every creator records the product of the price it made; an adopted price
+	// deserves the same, or we would stamp a product it does not belong to.
+	if (!stripeProd) {
+		stripeProd = stripeProductOfPrice({ stripePrice: stripePrepaidPriceV2 });
+	}
 
 	return {
 		stripePrice,
@@ -210,6 +229,8 @@ export const createStripePriceIFNotExist = async ({
 		});
 	}
 
+	// Derived-from-the-adopted-price products have no creator to persist them.
+	const hadStripeProductId = Boolean(config.stripe_product_id);
 	const { stripePrice, stripeEmptyPrice, stripePrepaidPriceV2, stripeProd } =
 		await checkCurStripePrice({
 			price,
@@ -242,6 +263,12 @@ export const createStripePriceIFNotExist = async ({
 				update: { config },
 			});
 		}
+	} else if (!hadStripeProductId && config.stripe_product_id) {
+		await PriceService.update({
+			db,
+			id: price.id!,
+			update: { config },
+		});
 	}
 
 	const resolvedStripeProduct = config.stripe_product_id
