@@ -1,8 +1,4 @@
-/**
- * Superseding a pending approval must not cost a separate eve turn: the deny
- * responses ride the SAME postEveMessage call as the user's new message, with
- * the withdrawal note prefixed, so the model pivots in one turn.
- */
+/** A new message releases Eve's gate in the same post while the durable card stays pending. */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
@@ -24,17 +20,9 @@ const postedMessages: Array<{
 	inputResponses?: Array<{ optionId: string; requestId: string }>;
 	message?: unknown;
 }> = [];
-const fastForwardedSessionIds: string[] = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
-		fastForwardEveStreamIndex: async ({
-			session,
-		}: {
-			session: EveSessionRef;
-		}) => {
-			fastForwardedSessionIds.push(session.sessionId);
-		},
 		postEveMessage: async (input: {
 			inputResponses?: Array<{ optionId: string; requestId: string }>;
 			message?: unknown;
@@ -47,25 +35,24 @@ await mockLeafModule({
 		},
 	}),
 });
-
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/sessionState.js",
 	factory: () => ({
 		initialEveSessionState: (continuationToken: string) => ({
-			version: 1,
 			continuationToken,
 			streamIndex: 0,
-			status: "running",
-			lastEventAt: 0,
 			pendingRequests: [],
 		}),
 		saveEveSessionState: async () => undefined,
 	}),
 });
-
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
 	factory: () => ({ deleteEveSession: async () => undefined }),
+});
+await mockLeafModule({
+	specifier: "../../../src/internal/approvals/repos/chatApprovalRepo.js",
+	factory: () => ({ chatApprovalRepo: { moveToRun: async () => undefined } }),
 });
 
 const { startAgentTurn } = await import(
@@ -79,55 +66,48 @@ const thread = {
 	threadId: "thread_1",
 	workspaceId: "T1",
 } as never;
-
-const makeSession = (): EveSessionRef => ({
+const makeSession = (pending = false): EveSessionRef => ({
 	env: AppEnv.Sandbox,
 	newSession: false,
 	sessionId: "eve_session_1",
 	state: {
-		version: 1,
 		continuationToken: "token_1",
 		streamIndex: 7,
-		status: "waiting",
-		lastEventAt: 0,
-		pendingRequests: [],
+		pendingRequests: pending
+			? [{ denyOptionId: "deny", kind: "gated", requestId: "tc_1" }]
+			: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",
 });
 
-describe("startAgentTurn withdrawal bundling", () => {
+describe("startAgentTurn with a pending approval", () => {
 	beforeEach(() => {
 		postedMessages.length = 0;
-		fastForwardedSessionIds.length = 0;
 	});
 
-	test("denies ride the same post as the new message, note prefixed", async () => {
+	test("releases the gate alongside the new message without calling it withdrawn", async () => {
 		await startAgentTurn({
 			auth,
 			env: AppEnv.Sandbox,
 			message: "actually make it 2k credits",
 			orgId: "org_1",
 			params: {} as never,
-			session: makeSession(),
+			session: makeSession(true),
 			thread,
-			withdrawal: {
-				inputResponses: [{ optionId: "deny", requestId: "tc_1" }],
-				note: "(withdrawn — act on the new message)",
-			},
 		});
 
 		expect(postedMessages).toHaveLength(1);
-		const posted = postedMessages[0];
-		expect(posted.inputResponses).toEqual([
+		expect(postedMessages[0]?.inputResponses).toEqual([
 			{ optionId: "deny", requestId: "tc_1" },
 		]);
-		expect(String(posted.message)).toContain(
-			"(withdrawn — act on the new message)",
+		expect(String(postedMessages[0]?.message)).toContain("remains available");
+		expect(String(postedMessages[0]?.message)).not.toContain("withdrawn");
+		expect(String(postedMessages[0]?.message)).toContain(
+			"actually make it 2k credits",
 		);
-		expect(String(posted.message)).toContain("actually make it 2k credits");
 	});
 
-	test("a plain follow-up still fast-forwards and sends only the message", async () => {
+	test("a plain follow-up sends only the message", async () => {
 		await startAgentTurn({
 			auth,
 			env: AppEnv.Sandbox,
@@ -138,7 +118,6 @@ describe("startAgentTurn withdrawal bundling", () => {
 			thread,
 		});
 
-		expect(fastForwardedSessionIds).toEqual(["eve_session_1"]);
 		expect(postedMessages[0]).toEqual({
 			inputResponses: undefined,
 			message: "hello",

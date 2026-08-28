@@ -6,6 +6,7 @@
  * the backend returns all features in a single call.
  */
 
+import { isGraduatedCreditSchemaItem } from "@autumn/shared";
 import type { ApiFeature } from "../api/types/index.js";
 import { fetchFeatures } from "../api/endpoints/features.js";
 import type {
@@ -330,9 +331,10 @@ export class FeaturesController
 			if (selected.credit_schema && selected.credit_schema.length > 0) {
 				lines.push(`  Credit Schema:`);
 				for (const credit of selected.credit_schema) {
-					lines.push(
-						`    - ${credit.metered_feature_id}: ${credit.credit_cost} credits`,
-					);
+					const cost = isGraduatedCreditSchemaItem(credit)
+						? `${credit.tiers.length} graduated tiers`
+						: `${credit.credit_cost} credits`;
+					lines.push(`    - ${credit.metered_feature_id}: ${cost}`);
 				}
 			}
 		}

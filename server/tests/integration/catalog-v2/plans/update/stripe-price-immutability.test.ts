@@ -65,12 +65,12 @@ const prepaidMessagesItem = ({
 	},
 });
 
-const stripePriceIdOf = (price: { config: unknown }): string => {
+const stripePriceIdOf = (price: { config: unknown }): string | undefined => {
 	const config = price.config as {
 		stripe_prepaid_price_v2_id?: string | null;
 		stripe_price_id?: string | null;
 	};
-	return (config.stripe_prepaid_price_v2_id || config.stripe_price_id)!;
+	return config.stripe_prepaid_price_v2_id || config.stripe_price_id || undefined;
 };
 
 test.concurrent(
@@ -103,7 +103,9 @@ test.concurrent(
 						items: [
 							prepaidMessagesItem({
 								amount: 500,
-								stripePriceId: stripePriceIdOf(beforePrice),
+								...(stripePriceIdOf(beforePrice)
+									? { stripePriceId: stripePriceIdOf(beforePrice) }
+									: {}),
 							}),
 						],
 					},

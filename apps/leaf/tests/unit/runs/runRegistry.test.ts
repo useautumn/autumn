@@ -77,7 +77,7 @@ describe("runRegistry", () => {
 		const stopPromise = run.requestStop({ byUserId: "U1", reason: "user" });
 		expect(run.stop).toEqual({ byUserId: "U1", reason: "user" });
 
-		await run.requestStop({ byUserId: "U2", reason: "timeout" });
+		await run.requestStop({ byUserId: "U2", reason: "user" });
 		await stopPromise;
 		expect(run.stop).toEqual({ byUserId: "U1", reason: "user" });
 		expect(interrupted).toEqual(["sesn_1"]);

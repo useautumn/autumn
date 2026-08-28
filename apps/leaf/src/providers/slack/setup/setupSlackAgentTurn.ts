@@ -1,11 +1,10 @@
-import { ms } from "@autumn/shared";
 import type {
 	AgentTurnContext,
 	AgentTurnParams,
 } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { findEveSessionForThread } from "../../../internal/agentRuntime/eve/repo.js";
+import { turnDeadlineFrom } from "../../../internal/agentRuntime/turnBudget.js";
 import { getInstallationOAuthAccessToken } from "../../../internal/installations/actions/getInstallationOAuthAccessToken.js";
-import { MESSAGE_TIMEOUT_MS } from "../../../lib/chatAgentConfig.js";
 import { db } from "../../../lib/db.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
 import type { SlackAgentTurnParams } from "../domain/slackAgentTurn.js";
@@ -13,8 +12,6 @@ import { prepareAttachmentMessage } from "./prepareAttachments.js";
 import { resolveSlackAdminOrgContext } from "./resolveSlackAdminOrg.js";
 import { resolveSlackCallerAuth } from "./resolveSlackCallerAuth.js";
 import { getDefaultChatEnv, selectChatEnv } from "./selectChatEnv.js";
-
-const SETTLE_BEFORE_BACKSTOP_MS = ms.seconds(30);
 
 export const setupSlackAgentTurn = async ({
 	agentRunId,
@@ -136,7 +133,7 @@ export const setupSlackAgentTurn = async ({
 	});
 	const context: AgentTurnContext = {
 		autumnUserId,
-		deadlineAt: Date.now() + MESSAGE_TIMEOUT_MS - SETTLE_BEFORE_BACKSTOP_MS,
+		deadlineAt: turnDeadlineFrom({ startedAt: Date.now() }),
 		env,
 		eveSession: existingSession,
 		id: agentRunId ?? crypto.randomUUID(),

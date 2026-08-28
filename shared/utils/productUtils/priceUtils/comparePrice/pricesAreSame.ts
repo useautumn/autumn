@@ -13,7 +13,9 @@ import {
 } from "@autumn/shared";
 
 /** Unset behavior follows the allocated v1 shape: derived from should_prorate. */
-const normalizedAllocatedBillingBehavior = (usageConfig: UsagePriceConfig) =>
+export const normalizedAllocatedBillingBehavior = (
+	usageConfig: UsagePriceConfig,
+) =>
 	usageConfig.allocated_billing_behavior ??
 	(usageConfig.should_prorate
 		? AllocatedBillingBehavior.Prorated

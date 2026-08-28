@@ -19,5 +19,8 @@ export const getCreditCost = ({
 		(schema) => schema.meteredFeatureId === featureId,
 	);
 
-	return amount * (schemaItem?.creditCost ?? 1);
+	const creditCost =
+		schemaItem && "creditCost" in schemaItem ? schemaItem.creditCost : 1;
+
+	return amount * (creditCost ?? 1);
 };

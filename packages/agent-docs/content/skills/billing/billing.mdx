@@ -28,7 +28,7 @@ Use this resource for billing actions: attaching plans, updating subscriptions, 
 - If one ambiguity changes which of the other questions apply, resolve it first on its own before gathering the rest.
 - Gather all remaining missing questions from the checklist and ask them together.
 - If there are no missing questions, call the preview tool for every action the request needs — in one batch when there is more than one.
-- Surface the preview's immediate billing impact in one line, then immediately call the write tool — the write tool call itself IS the approval mechanism (it triggers your client's approval prompt/card before executing). Never ask for confirmation with a question tool or in prose.
+- After the preview returns, immediately call the write tool with the same params and emit no prose first — the write call itself shows the approval card.
 - When the request names more than one change, call EVERY write in that same batch — including preview-free ones like `updateCustomer`. The checklist runs once over the whole request, not once per change: never walk it again for the second change after the first write is approved.
 - If params change, update them and repeat from the relevant checklist step.
 - Once approved, apply the exact previewed billing action.
@@ -46,7 +46,7 @@ Use this resource for billing actions: attaching plans, updating subscriptions, 
 - If using `invoice_mode` and the customer has no email, ask for the email — an address you must have before the preview is meaningful is one of the few things worth asking for.
 - Ask independent missing questions together in one concise message, using one bullet point per question.
 - While gathering params, ask only for values needed to build the billing request; do not explain plan internals unless the user asks.
-- If a customization is inferred, surface it for confirmation before previewing or writing. If its intent is ambiguous, ask before building — don't resolve it silently. When surfacing a customization, describe it as a patch (what was added/removed/changed vs the catalog plan), not a full restatement of every feature.
+- If a customization is inferred, state its most literal reading in the preview line and build it — the preview is its confirmation. If the user disputes it, do not carry it into another preview unless they explicitly restate it.
 - A follow-up that refines an attach customization remains customer-specific; use catalog tools only when the user explicitly asks to change the shared plan.
 - If the plan prices a feature as prepaid, a bare amount for that feature ("put them on 4.5k credits") means `feature_quantities` — NOT an item customization. Never remove or replace a prepaid item to set how many units a customer gets; customize the item only when the user explicitly changes its pricing or included allowance.
 - The word "included" means free allowance, not a purchase: "N included credits" sets `included: N` on the item via `customize` (carrying the rest of the item over unchanged) and does NOT add `feature_quantities`. Only combine both when the user asks for extra prepaid units on top of the new allowance.
@@ -179,12 +179,8 @@ Carry the whole ladder over; don't replace it with just the custom tier or a fla
 - Preview only after action, target IDs, quantities, customization, timing, and billing behavior are known or intentionally defaulted.
 - If missing information could change immediate charges, access timing, or scheduled state, ask before previewing.
 - The main purpose of preview is to determine immediate billing impact: `total`, `currency`, and `line_items`.
-- Summarize the preview's impact before the write.
-- Lead with immediate impact: amount due now, no immediate charge, or credit.
-- Include only preview facts that affect approval; avoid repeating context the user already resolved.
-- If `next_cycle` exists, explain the next event: date, amount, and likely reason such as renewal, trial end, cancellation, downgrade, phase change, or nearest multi-interval event.
-- Mention material state changes from `incoming` and `outgoing`, but treat them as supporting context if they look stale or incomplete.
-- Convert preview timestamps before presenting dates.
+- Do not summarize the preview in prose before the write; the approval card presents its billing impact and state changes.
+- A preview without its matching pending write is incomplete. Never claim a card exists unless the write tool was called.
 - Apply only the exact previewed request. If params change, preview again.
 
 ## Completion response

@@ -29,10 +29,13 @@ import {
 	BillingInterval,
 	BillingMethod,
 	type CreatePlanParamsV2Input,
+	findPriceByFeatureId,
 	type PlanUpdatePreview,
+	type Price,
 	ResetInterval,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
+import { stripeConfigValue } from "@tests/integration/utils/expectStripePriceResources.js";
 import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -241,7 +244,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover create_variant: preserves duplicate feature_id items + Stripe reuse")}`,
 	async () => {
-		const rid = readableVariantTestId("rv_dups_stripe");
+		const rid = `${readableVariantTestId("rv_dups_stripe")}_${Date.now().toString(36)}`;
 		const baseId = `base_${rid}`;
 		const variantId = `${baseId}_variant`;
 		await cleanup(baseId, variantId);
@@ -634,7 +637,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover versioning: stripe_price_id carried forward to variant v2")}`,
 	async () => {
-		const rid = readableVariantTestId("rv_prepaid_carry");
+		const rid = `${readableVariantTestId("rv_prepaid_carry")}_${Date.now().toString(36)}`;
 		const baseId = `base_${rid}`;
 		const variantId = `${baseId}_variant`;
 		const customerId = `cus_${rid}`;
@@ -673,20 +676,23 @@ test.concurrent(
 		});
 		await wait(4000);
 
-		// Only a V1 attach mints the v1-shaped prepaid price id.
+		// A V1 attach may stamp either prepaid slot, so accept whichever holds it.
+		const prepaidStripeId = (price: Price | undefined) =>
+			stripeConfigValue({ price, field: "stripe_prepaid_price_v2_id" }) ??
+			stripeConfigValue({ price, field: "stripe_price_id" });
+
 		const variantV1 = await ProductService.getFull({
 			db,
 			idOrInternalId: variantId,
 			orgId: org.id,
 			env,
 		});
-		const v1PrepaidPrice = variantV1.prices.find(
-			(p: any) =>
-				p.config?.feature_id === TestFeature.Credits &&
-				p.config?.stripe_price_id,
-		);
+		const v1PrepaidPrice = findPriceByFeatureId({
+			prices: variantV1.prices,
+			featureId: TestFeature.Credits,
+		});
 		expect(v1PrepaidPrice).toBeDefined();
-		expect((v1PrepaidPrice!.config as any)?.stripe_price_id).toBeTruthy();
+		expect(prepaidStripeId(v1PrepaidPrice)).toBeTruthy();
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 			items: rolloverPrepaidItems(500),
@@ -703,11 +709,10 @@ test.concurrent(
 			planId: variantId,
 			version: 2,
 		});
-		const v2PrepaidPrice = v2.prices.find(
-			(p: any) =>
-				p.config?.feature_id === TestFeature.Credits &&
-				p.config?.stripe_prepaid_price_v2_id,
-		);
+		const v2PrepaidPrice = findPriceByFeatureId({
+			prices: v2.prices,
+			featureId: TestFeature.Credits,
+		});
 		expect(v2PrepaidPrice).toBeDefined();
 		expect((v2PrepaidPrice!.config as any)?.stripe_price_id).toBeTruthy();
 		expect(

@@ -151,8 +151,6 @@ await mockLeafModule({
 		EveSessionGoneError: MockEveSessionGoneError,
 		EveStreamDisconnectedError: MockEveStreamDisconnectedError,
 		EveStreamIdleTimeoutError: MockEveStreamIdleTimeoutError,
-		fastForwardEveStreamIndex: async () => undefined,
-		resyncEveStreamIndex: async () => undefined,
 		postEveMessage: async ({
 			inputResponses,
 			message,
@@ -207,30 +205,6 @@ await mockLeafModule({
 	}),
 });
 
-let tokenAlive: boolean | undefined;
-const cancelledRuns: string[] = [];
-await mockLeafModule({
-	specifier: "../../../src/internal/agentRuntime/eve/world/sessionRun.js",
-	factory: () => ({
-		cancelSessionRun: async (sessionId: string) => {
-			cancelledRuns.push(sessionId);
-			return true;
-		},
-		isContinuationTokenAlive: async () => tokenAlive,
-	}),
-});
-await mockLeafModule({
-	specifier: "../../../src/internal/agentRuntime/eve/world/workflowWorld.js",
-	factory: () => ({
-		hasWorkflowWorld: () => false,
-		workflowWorldHoldingRun: async () => undefined,
-	}),
-});
-await mockLeafModule({
-	specifier: "../../../src/internal/agentRuntime/eve/world/sessionStream.js",
-	factory: () => ({ sessionEventCount: async () => undefined }),
-});
-
 let storedSession: EveSessionRef | undefined;
 const deletedSessions: string[] = [];
 await mockLeafModule({
@@ -267,6 +241,7 @@ await mockLeafModule({
 
 let pendingApprovals: ChatApproval[] = [];
 const cancelledApprovals: string[] = [];
+const detachedRuns: string[] = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/approvals/repos/chatApprovalRepo.js",
 	factory: () => ({
@@ -276,6 +251,9 @@ await mockLeafModule({
 				const row = pendingApprovals.find((a) => a.id === approvalId);
 				pendingApprovals = pendingApprovals.filter((a) => a.id !== approvalId);
 				return row;
+			},
+			detachPendingForRun: async ({ runId }: { runId: string }) => {
+				detachedRuns.push(runId);
 			},
 			listPendingForRun: async () => pendingApprovals,
 			moveToRun: async () => undefined,
@@ -342,11 +320,8 @@ const parkCard = ({ requestId }: { requestId: string }) => {
 		newSession: false,
 		sessionId: fake.id,
 		state: {
-			version: 1,
 			continuationToken: fake.token,
 			streamIndex: 2,
-			status: "waiting",
-			lastEventAt: 0,
 			pendingRequests: [{ denyOptionId: "deny", kind: "gated", requestId }],
 		},
 		threadKey: "sandbox:slack:T1:C1:thread_1",
@@ -370,15 +345,14 @@ describe("production incident replications", () => {
 		nextSession = 0;
 		rebuildsAfterDeny = 0;
 		posts.length = 0;
-		cancelledRuns.length = 0;
 		deletedSessions.length = 0;
 		cancelledApprovals.length = 0;
+		detachedRuns.length = 0;
 		storedSession = undefined;
 		pendingApprovals = [];
-		tokenAlive = undefined;
 	});
 
-	test("Ayush 20:30 — a question over a pending card, child rebuilds after the deny", async () => {
+	test("a question releases the park without cancelling the pending card", async () => {
 		rebuildsAfterDeny = 3;
 		const fake = parkCard({ requestId: "tc_attach" });
 
@@ -392,10 +366,12 @@ describe("production incident replications", () => {
 		]);
 		expect(fake.deferredMessages).toBe(0);
 		expect(deletedSessions).toHaveLength(0);
+		expect(cancelledApprovals).toEqual([]);
+		expect(detachedRuns).toEqual([fake.id]);
 		expect(["approval", "reply", "parked"]).toContain(result.kind);
 	});
 
-	test("exec 19:50 — superseding a card is one post, never a drain", async () => {
+	test("a replacement request releases the old park without cancelling early", async () => {
 		parkCard({ requestId: "tc_sched" });
 
 		await send(
@@ -404,7 +380,7 @@ describe("production incident replications", () => {
 
 		expect(posts.filter((post) => post.kind === "input")).toHaveLength(0);
 		expect(posts.filter((post) => post.kind === "message")).toHaveLength(1);
-		expect(cancelledApprovals).toEqual(["approval_tc_sched"]);
+		expect(cancelledApprovals).toEqual([]);
 	});
 
 	test("orphaned park — approval row gone but eve still parked (the dead-session trap)", async () => {
@@ -428,11 +404,11 @@ describe("production incident replications", () => {
 		pendingApprovals = [];
 		if (storedSession) storedSession.state.pendingRequests = [];
 		deadTokens.add(fake.token);
-		tokenAlive = false;
 
 		const result = await send("hello again");
 
-		expect(deletedSessions).toContain(fake.id);
+		// The upsert keys on the thread, so re-homing rewrites session_id in
+		// place; the row does not need deleting first.
 		expect(storedSession?.sessionId).not.toBe(fake.id);
 		expect(result.kind).toBe("reply");
 	});
@@ -447,7 +423,6 @@ describe("production incident replications", () => {
 
 		expect(fake.deferredMessages).toBe(1);
 		expect(deletedSessions).toContain(fake.id);
-		expect(cancelledRuns).toContain(fake.id);
 		expect(result.kind).toBe("reply");
 	}, 20_000);
 });

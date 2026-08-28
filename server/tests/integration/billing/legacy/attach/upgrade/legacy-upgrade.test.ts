@@ -13,7 +13,11 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, ProductItemInterval } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	isFixedPrice,
+	ProductItemInterval,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -21,15 +25,63 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import ctx from "@tests/utils/testInitUtils/createTestContext";
+import ctx, {
+	type TestContext,
+} from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addYears } from "date-fns";
+import { createStripeFixedPrice } from "@/external/stripe/createStripePrice/createStripeFixedPrice";
 import { attachPmToCus } from "@/external/stripe/stripeCusUtils";
+import { ProductService } from "@/internal/products/ProductService";
+import { checkStripeProductExists } from "@/internal/products/productUtils";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
 import { getCusSub } from "@/utils/scriptUtils/testUtils/cusTestUtils";
 import { toMilliseconds } from "@/utils/timeUtils";
+
+/** V2 catalog skips stripe_price_id on $0 fixed prices; V1 attach still sends them. */
+const stampZeroFixedStripePrices = async ({
+	ctx,
+	productId,
+}: {
+	ctx: TestContext;
+	productId: string;
+}) => {
+	let fullProduct = await ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: productId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+	if (!fullProduct.processor?.id) {
+		await checkStripeProductExists({
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
+			product: fullProduct,
+			logger: ctx.logger,
+		});
+		fullProduct = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: productId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+	}
+	for (const price of fullProduct.prices) {
+		if (!isFixedPrice(price)) continue;
+		if ((price.config.amount ?? 0) > 0) continue;
+		if (price.config.stripe_price_id) continue;
+		await createStripeFixedPrice({
+			db: ctx.db,
+			stripeCli: ctx.stripeCli,
+			price,
+			product: fullProduct,
+			org: ctx.org,
+		});
+	}
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Upgrade with payment method validation
@@ -343,13 +395,23 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 4: free (no prices) to $0/
 		],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx: scenarioCtx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [free, usagePlan] }),
 		],
-		actions: [s.attach({ productId: free.id })],
+		actions: [],
+	});
+
+	await stampZeroFixedStripePrices({ ctx: scenarioCtx, productId: free.id });
+	await stampZeroFixedStripePrices({
+		ctx: scenarioCtx,
+		productId: usagePlan.id,
+	});
+	await autumnV1.attach({
+		customer_id: customerId,
+		product_id: free.id,
 	});
 
 	// Verify on free plan

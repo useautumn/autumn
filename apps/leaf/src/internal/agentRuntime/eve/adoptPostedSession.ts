@@ -1,4 +1,4 @@
-import type { EveSessionRef, EveSessionState } from "./types.js";
+import type { EveSessionRef } from "./types.js";
 
 export type PostedEveSession = {
 	continuationToken: string;
@@ -13,19 +13,15 @@ export type PostedEveSession = {
 export const adoptPostedEveSession = ({
 	posted,
 	session,
-	status,
 }: {
 	posted: PostedEveSession;
 	session: EveSessionRef;
-	status?: EveSessionState["status"];
 }) => {
 	const rehomed = posted.sessionId !== session.sessionId;
 	session.sessionId = posted.sessionId;
 	session.state = {
 		...session.state,
 		continuationToken: posted.continuationToken,
-		lastEventAt: Date.now(),
-		...(status ? { status } : {}),
 		...(rehomed ? { streamIndex: 0 } : {}),
 	};
 	return { rehomed };

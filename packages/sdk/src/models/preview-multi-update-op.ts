@@ -16,6 +16,20 @@ export type PreviewMultiUpdateGlobals = {
 };
 
 /**
+ * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+ */
+export const PreviewMultiUpdateRefundLastPayment = {
+  Prorated: "prorated",
+  Full: "full",
+} as const;
+/**
+ * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+ */
+export type PreviewMultiUpdateRefundLastPayment = ClosedEnum<
+  typeof PreviewMultiUpdateRefundLastPayment
+>;
+
+/**
  * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
  */
 export const PreviewMultiUpdateCancelAction = {
@@ -44,20 +58,6 @@ export type PreviewMultiUpdateProrationBehavior = ClosedEnum<
   typeof PreviewMultiUpdateProrationBehavior
 >;
 
-/**
- * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
- */
-export const PreviewMultiUpdateRefundLastPayment = {
-  Prorated: "prorated",
-  Full: "full",
-} as const;
-/**
- * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
- */
-export type PreviewMultiUpdateRefundLastPayment = ClosedEnum<
-  typeof PreviewMultiUpdateRefundLastPayment
->;
-
 export type PreviewMultiUpdateUpdate = {
   /**
    * The ID of the plan to update. Optional if subscription_id is provided.
@@ -79,14 +79,6 @@ export type PreviewMultiUpdateUpdate = {
    * How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
   prorationBehavior?: PreviewMultiUpdateProrationBehavior | undefined;
-  /**
-   * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
-   */
-  refundLastPayment?: PreviewMultiUpdateRefundLastPayment | undefined;
-  /**
-   * Additional parameters to pass into the Stripe subscription update or cancel call.
-   */
-  subscriptionParams?: { [k: string]: any } | undefined;
 };
 
 export type PreviewMultiUpdateParams = {
@@ -98,6 +90,14 @@ export type PreviewMultiUpdateParams = {
    * The ID of the entity to update plans for. Individual updates can override this with their own entity_id.
    */
   entityId?: string | undefined;
+  /**
+   * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+   */
+  refundLastPayment?: PreviewMultiUpdateRefundLastPayment | undefined;
+  /**
+   * Additional parameters to pass into the Stripe subscription update or cancel call.
+   */
+  subscriptionParams?: { [k: string]: any } | undefined;
   /**
    * The list of plan updates to apply to the customer.
    */
@@ -423,6 +423,11 @@ export type MultiUpdatePreviewResponse = {
 };
 
 /** @internal */
+export const PreviewMultiUpdateRefundLastPayment$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiUpdateRefundLastPayment
+> = z.enum(PreviewMultiUpdateRefundLastPayment);
+
+/** @internal */
 export const PreviewMultiUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
   typeof PreviewMultiUpdateCancelAction
 > = z.enum(PreviewMultiUpdateCancelAction);
@@ -433,19 +438,12 @@ export const PreviewMultiUpdateProrationBehavior$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewMultiUpdateProrationBehavior);
 
 /** @internal */
-export const PreviewMultiUpdateRefundLastPayment$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewMultiUpdateRefundLastPayment
-> = z.enum(PreviewMultiUpdateRefundLastPayment);
-
-/** @internal */
 export type PreviewMultiUpdateUpdate$Outbound = {
   plan_id?: string | undefined;
   subscription_id?: string | undefined;
   entity_id?: string | undefined;
   cancel_action: string;
   proration_behavior?: string | undefined;
-  refund_last_payment?: string | undefined;
-  subscription_params?: { [k: string]: any } | undefined;
 };
 
 /** @internal */
@@ -461,10 +459,6 @@ export const PreviewMultiUpdateUpdate$outboundSchema: z.ZodMiniType<
     prorationBehavior: z.optional(
       PreviewMultiUpdateProrationBehavior$outboundSchema,
     ),
-    refundLastPayment: z.optional(
-      PreviewMultiUpdateRefundLastPayment$outboundSchema,
-    ),
-    subscriptionParams: z.optional(z.record(z.string(), z.any())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -473,8 +467,6 @@ export const PreviewMultiUpdateUpdate$outboundSchema: z.ZodMiniType<
       entityId: "entity_id",
       cancelAction: "cancel_action",
       prorationBehavior: "proration_behavior",
-      refundLastPayment: "refund_last_payment",
-      subscriptionParams: "subscription_params",
     });
   }),
 );
@@ -491,6 +483,8 @@ export function previewMultiUpdateUpdateToJSON(
 export type PreviewMultiUpdateParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
+  refund_last_payment?: string | undefined;
+  subscription_params?: { [k: string]: any } | undefined;
   updates: Array<PreviewMultiUpdateUpdate$Outbound>;
 };
 
@@ -502,12 +496,18 @@ export const PreviewMultiUpdateParams$outboundSchema: z.ZodMiniType<
   z.object({
     customerId: z.string(),
     entityId: z.optional(z.string()),
+    refundLastPayment: z.optional(
+      PreviewMultiUpdateRefundLastPayment$outboundSchema,
+    ),
+    subscriptionParams: z.optional(z.record(z.string(), z.any())),
     updates: z.array(z.lazy(() => PreviewMultiUpdateUpdate$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
       customerId: "customer_id",
       entityId: "entity_id",
+      refundLastPayment: "refund_last_payment",
+      subscriptionParams: "subscription_params",
     });
   }),
 );

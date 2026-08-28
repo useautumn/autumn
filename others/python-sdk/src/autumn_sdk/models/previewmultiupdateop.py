@@ -38,6 +38,13 @@ class PreviewMultiUpdateGlobals(BaseModel):
         return m
 
 
+PreviewMultiUpdateRefundLastPayment = Literal[
+    "prorated",
+    "full",
+]
+r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+
+
 PreviewMultiUpdateCancelAction = Literal[
     "cancel_immediately",
     "cancel_end_of_cycle",
@@ -53,13 +60,6 @@ PreviewMultiUpdateProrationBehavior = Literal[
 r"""How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
 
-PreviewMultiUpdateRefundLastPayment = Literal[
-    "prorated",
-    "full",
-]
-r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
-
-
 class PreviewMultiUpdateUpdateTypedDict(TypedDict):
     cancel_action: PreviewMultiUpdateCancelAction
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
@@ -71,10 +71,6 @@ class PreviewMultiUpdateUpdateTypedDict(TypedDict):
     r"""The ID of the entity this update targets. Overrides the top-level entity_id for this update."""
     proration_behavior: NotRequired[PreviewMultiUpdateProrationBehavior]
     r"""How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
-    refund_last_payment: NotRequired[PreviewMultiUpdateRefundLastPayment]
-    r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
-    subscription_params: NotRequired[Dict[str, Any]]
-    r"""Additional parameters to pass into the Stripe subscription update or cancel call."""
 
 
 class PreviewMultiUpdateUpdate(BaseModel):
@@ -93,23 +89,10 @@ class PreviewMultiUpdateUpdate(BaseModel):
     proration_behavior: Optional[PreviewMultiUpdateProrationBehavior] = None
     r"""How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
 
-    refund_last_payment: Optional[PreviewMultiUpdateRefundLastPayment] = None
-    r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
-
-    subscription_params: Optional[Dict[str, Any]] = None
-    r"""Additional parameters to pass into the Stripe subscription update or cancel call."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            [
-                "plan_id",
-                "subscription_id",
-                "entity_id",
-                "proration_behavior",
-                "refund_last_payment",
-                "subscription_params",
-            ]
+            ["plan_id", "subscription_id", "entity_id", "proration_behavior"]
         )
         serialized = handler(self)
         m = {}
@@ -132,6 +115,10 @@ class PreviewMultiUpdateParamsTypedDict(TypedDict):
     r"""The list of plan updates to apply to the customer."""
     entity_id: NotRequired[str]
     r"""The ID of the entity to update plans for. Individual updates can override this with their own entity_id."""
+    refund_last_payment: NotRequired[PreviewMultiUpdateRefundLastPayment]
+    r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+    subscription_params: NotRequired[Dict[str, Any]]
+    r"""Additional parameters to pass into the Stripe subscription update or cancel call."""
 
 
 class PreviewMultiUpdateParams(BaseModel):
@@ -144,9 +131,17 @@ class PreviewMultiUpdateParams(BaseModel):
     entity_id: Optional[str] = None
     r"""The ID of the entity to update plans for. Individual updates can override this with their own entity_id."""
 
+    refund_last_payment: Optional[PreviewMultiUpdateRefundLastPayment] = None
+    r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+
+    subscription_params: Optional[Dict[str, Any]] = None
+    r"""Additional parameters to pass into the Stripe subscription update or cancel call."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["entity_id"])
+        optional_fields = set(
+            ["entity_id", "refund_last_payment", "subscription_params"]
+        )
         serialized = handler(self)
         m = {}
 

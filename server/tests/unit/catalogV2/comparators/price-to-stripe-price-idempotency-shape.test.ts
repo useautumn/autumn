@@ -1,15 +1,21 @@
 /**
- * Stripe Price idempotency shape — only fields that land on prices.create
+ * Stripe Price idempotency shape — fields that change prices.create
  * for THIS currency. Same normalizations as pricesAreSame for those fields.
  *
  * In:  amount (this currency), usage_tiers (this currency), interval,
- *      interval_count, billing_units (usage), tier_behavior (usage)
+ *      interval_count, billing_units (usage), tier_behavior (usage),
+ *      bill_when, should_prorate, allocated_billing_behavior
  * Out: entitlement, feature ids, proration, other-currency overlays,
- *      stripe ids, should_prorate, bill_when
+ *      stripe ids
+ *
+ * Red (current):  bill_when / should_prorate collide so allocated→arrear remint
+ *                 reuses autumn:price:{id}:stripe_price_id:{ccy}:{hash}
+ * Green (after):  those config fields change the hash
  */
 
 import { describe, expect, test } from "bun:test";
 import {
+	AllocatedBillingBehavior,
 	BillingInterval,
 	BillWhen,
 	type FixedPriceConfig,
@@ -279,8 +285,34 @@ describe("priceToStripePriceIdempotencyShape", () => {
 		});
 	});
 
+	describe("usage — billing path (in-place config update remints the same slot)", () => {
+		test("bill_when", () => {
+			expectShapeSame(
+				usage({ bill_when: BillWhen.EndOfPeriod }),
+				usage({ bill_when: BillWhen.InAdvance }),
+				false,
+			);
+		});
+
+		test("should_prorate", () => {
+			expectShapeSame(
+				usage({ should_prorate: false }),
+				usage({ should_prorate: true }),
+				false,
+			);
+		});
+
+		test("allocated_billing_behavior", () => {
+			expectShapeSame(
+				usage({ allocated_billing_behavior: AllocatedBillingBehavior.Prorated }),
+				usage({ allocated_billing_behavior: AllocatedBillingBehavior.Arrear }),
+				false,
+			);
+		});
+	});
+
 	describe("ignored (differ but still same shape)", () => {
-		test("stripe ids, feature ids, bill_when, should_prorate, entitlement", () => {
+		test("stripe ids, feature ids, entitlement", () => {
 			expectShapeSame(
 				usage({
 					stripe_price_id: "a",
@@ -288,8 +320,6 @@ describe("priceToStripePriceIdempotencyShape", () => {
 					stripe_meter_id: "a",
 					feature_id: "messages",
 					internal_feature_id: "ifeat_1",
-					bill_when: BillWhen.EndOfPeriod,
-					should_prorate: false,
 				}),
 				usage({
 					stripe_price_id: "b",
@@ -297,8 +327,6 @@ describe("priceToStripePriceIdempotencyShape", () => {
 					stripe_meter_id: "b",
 					feature_id: "seats",
 					internal_feature_id: "ifeat_2",
-					bill_when: BillWhen.InAdvance,
-					should_prorate: true,
 				}),
 				true,
 			);

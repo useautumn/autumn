@@ -29,6 +29,7 @@ import {
 	stripePriceIdForPrice,
 	waitForCustomerProducts,
 } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
+import { WEBHOOK_TEST_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import chalk from "chalk";
 
 test(
@@ -76,6 +77,10 @@ test(
 			autumnV1,
 			customerId,
 			active: [variantId, automationsId],
+			stripeCli: ctx.stripeCli,
+			env: ctx.env,
+			subscriptionId: subscription.id,
+			eventTypes: ["customer.subscription.created"],
 		});
 
 		// ── Contract: both are linked to this subscription ──
@@ -86,4 +91,5 @@ test(
 		});
 		expect(linked).toHaveLength(2);
 	},
+	{ timeout: WEBHOOK_TEST_TIMEOUT_MS },
 );

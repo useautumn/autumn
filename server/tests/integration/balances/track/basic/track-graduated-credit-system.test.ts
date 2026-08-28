@@ -114,7 +114,8 @@ test.concurrent(
 			required_balance: 100,
 		});
 
-		expect(check.allowed).toBe(false);
+		// Paid 0-grant addon is usage-allowed; required_balance is its first-tier rate.
+		expect(check.allowed).toBe(true);
 		expect(check.required_balance).toBeCloseTo(1, 10);
 	},
 	{ timeout: 120_000 },
