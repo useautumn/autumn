@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "./autumnOAuthScopes";
 import { Scopes } from "../scopeDefinitions";
+import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "./autumnOAuthScopes";
 
 describe("DEFAULT_OAUTH_RESOURCE_SCOPES", () => {
 	test("contains the exact Autumn OAuth resource allowlist", () => {
@@ -12,6 +12,8 @@ describe("DEFAULT_OAUTH_RESOURCE_SCOPES", () => {
 			Scopes.Features.Write,
 			Scopes.Plans.Read,
 			Scopes.Plans.Write,
+			Scopes.Rewards.Read,
+			Scopes.Rewards.Write,
 			Scopes.Balances.Read,
 			Scopes.Balances.Write,
 			Scopes.Billing.Read,
@@ -30,8 +32,6 @@ describe("DEFAULT_OAUTH_RESOURCE_SCOPES", () => {
 				Scopes.Migrations.Write,
 				Scopes.Platform.Read,
 				Scopes.Platform.Write,
-				Scopes.Rewards.Read,
-				Scopes.Rewards.Write,
 				Scopes.Admin,
 				Scopes.Owner,
 				Scopes.Superuser,
