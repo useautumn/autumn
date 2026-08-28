@@ -89,6 +89,7 @@ describe("fetchApprovalPreview", () => {
 		[
 			"createPlan",
 			{ name: "Growth", plan_id: "growth" },
+			"previewUpdateCatalog",
 			{
 				expand: ["plan"],
 				features: [],
@@ -101,18 +102,12 @@ describe("fetchApprovalPreview", () => {
 		[
 			"createReward",
 			{ coupon: { id: "launch" } },
-			{
-				features: [],
-				plans: [],
-				rewards: [{ coupon: { id: "launch" } }],
-				skip_deletions: true,
-				skip_feature_ids: [],
-				skip_plan_ids: [],
-			},
+			"previewCreateReward",
+			{ coupon: { id: "launch" } },
 		],
 	] as const)(
-		"previews %s through the catalog endpoint",
-		async (toolName, request, expected) => {
+		"previews %s through its preview endpoint",
+		async (toolName, request, previewTool, expected) => {
 			const calls: Array<{ args: unknown; toolName: string }> = [];
 			await fetchApprovalPreview({
 				env: AppEnv.Sandbox,
@@ -132,7 +127,7 @@ describe("fetchApprovalPreview", () => {
 			});
 
 			expect(calls).toEqual([
-				{ args: { request: expected }, toolName: "previewUpdateCatalog" },
+				{ args: { request: expected }, toolName: previewTool },
 			]);
 		},
 	);

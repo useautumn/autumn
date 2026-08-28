@@ -9,6 +9,8 @@ export default defineEval({
 		);
 		t.event("subagent.called", { data: { name: "billing" } });
 		t.notEvent("subagent.called", { data: { name: "investigator" } });
+		// Non-gated subagent tool calls (previewCreateReward) never surface in
+		// eval events — the gated write below is the observable end of the flow.
 		turn.calledTool("autumn__createReward", { status: "pending" });
 	},
 });
