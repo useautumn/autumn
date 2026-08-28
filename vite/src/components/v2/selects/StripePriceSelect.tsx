@@ -25,7 +25,7 @@ const priceHeadline = ({ price }: { price: CatalogStripePrice }) => {
 		price.interval_count && price.interval_count > 1
 			? `${price.interval_count} ${price.interval}s`
 			: price.interval;
-	return `${amount} every ${every}`;
+	return `${amount} / ${every}`;
 };
 
 /** Null while a price is unresolved — the headline is already its id. */
