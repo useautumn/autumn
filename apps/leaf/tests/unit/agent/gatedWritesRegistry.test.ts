@@ -12,6 +12,7 @@ describe("gated-write registry derivations", () => {
 			"attach",
 			"createBalance",
 			"createEntity",
+			"createReward",
 			"createSchedule",
 			"updateCustomer",
 			"updateSubscription",
