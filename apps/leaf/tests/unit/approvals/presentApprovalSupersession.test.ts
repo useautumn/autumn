@@ -15,6 +15,7 @@ const mockLeafModule = ({
 const events: string[] = [];
 const superseded = [{ id: "old" } as ChatApproval];
 let cancelParams: Record<string, unknown> | undefined;
+let released: ChatApproval[] = [];
 const warnings: string[] = [];
 
 await mockLeafModule({
@@ -35,6 +36,16 @@ await mockLeafModule({
 			toolName: "autumn__attach",
 			withheld: [],
 		}),
+	}),
+});
+
+await mockLeafModule({
+	specifier: "../../../src/internal/approvals/actions/releaseSupersededPark.js",
+	factory: () => ({
+		releaseSupersededPark: async ({ approval }: { approval: ChatApproval }) => {
+			released.push(approval);
+			events.push("release-old");
+		},
 	}),
 });
 
@@ -106,6 +117,7 @@ const params = {
 beforeEach(() => {
 	events.length = 0;
 	edited = [];
+	released = [];
 	cancelParams = undefined;
 	warnings.length = 0;
 });
@@ -127,6 +139,7 @@ test("supersedes the old approval only after posting its replacement", async () 
 		"store-message",
 		"edit-old",
 		"post-summary",
+		"release-old",
 	]);
 	expect(cancelParams).toMatchObject({
 		exceptApprovalId: "replacement",
@@ -134,6 +147,7 @@ test("supersedes the old approval only after posting its replacement", async () 
 		runId: "run_1",
 	});
 	expect(edited).toEqual(superseded);
+	expect(released).toEqual(superseded);
 });
 
 test("keeps the old approval pending when posting fails", async () => {

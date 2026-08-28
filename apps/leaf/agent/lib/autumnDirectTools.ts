@@ -38,14 +38,12 @@ export const autumnDirectTools = ({
 					if (!allowlist.has(tool.name)) continue;
 					const qualified = `autumn__${tool.name}`;
 					const toolName = tool.name;
-					const gatedBillingWrite =
-						agent === "billing" && approvalToolNames.has(toolName);
+					const requiresApproval = approvalToolNames.has(toolName);
+					const gatedBillingWrite = agent === "billing" && requiresApproval;
 					const inputSchema = slimToolSchema(tool.inputSchema);
 					entries[qualified] = defineTool({
 						approval: () =>
-							approvalToolNames.has(toolName)
-								? "user-approval"
-								: "not-applicable",
+							requiresApproval ? "user-approval" : "not-applicable",
 						description: tool.description,
 						execute: async (input, toolCtx) => {
 							const minted = await mintCachedAutumnToken(

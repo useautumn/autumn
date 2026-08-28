@@ -9,6 +9,7 @@ import type { WithheldWrite } from "../../../agentRuntime/eve/parkedInput.js";
 import { toolLabel } from "../../../agentRuntime/tools/toolPolicy.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { createApproval } from "../../actions/createApproval.js";
+import { releaseSupersededPark } from "../../actions/releaseSupersededPark.js";
 import {
 	allWritesOf,
 	dashboardLinkableApproval,
@@ -19,6 +20,9 @@ import { chatApprovalWritesRepo } from "../../repos/chatApprovalWritesRepo.js";
 import { approvalSummaryFromWrites } from "../../utils/approvalSummary.js";
 import { publicToolArgs, requestStringField } from "../../utils/toolRequest.js";
 import { editSupersededApprovalCards } from "./superseded.js";
+
+const SUPERSEDED_EVE_NOTE =
+	"A newer approval now represents the user's request. Do not re-issue or explain this superseded write.";
 
 /** URL only for cards the dashboard sheet can actually open. */
 export const dashboardUrlFor = ({
@@ -311,5 +315,12 @@ export const presentApproval = async ({
 			...created.withheld,
 		],
 	});
+	for (const approval of supersededApprovals) {
+		await releaseSupersededPark({
+			approval,
+			note: SUPERSEDED_EVE_NOTE,
+			providerUserId,
+		});
+	}
 	return true;
 };

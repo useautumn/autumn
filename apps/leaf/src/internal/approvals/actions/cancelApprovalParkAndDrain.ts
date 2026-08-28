@@ -9,9 +9,8 @@ import type {
 import { approvalDenyPlan } from "../domain/approvalRecord.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 
-/** Denies the whole parked batch, then drains the resumed turn — an undrained
- * ack would replay as the reply to the user's next message. */
-export const denyApprovalParkAndDrain = async ({
+/** Cancels the whole parked batch, then consumes its resumed continuation. */
+export const cancelApprovalParkAndDrain = async ({
 	approval,
 	auth,
 	note,
@@ -37,5 +36,5 @@ export const denyApprovalParkAndDrain = async ({
 			writes,
 		}),
 	});
-	return drainParkedAgentTurn({ auth, orgId: approval.org_id, session });
+	await drainParkedAgentTurn({ auth, orgId: approval.org_id, session });
 };

@@ -6,6 +6,7 @@ import { getOrgInstallationToken } from "../../installations/actions/getOrgInsta
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 import type { ApprovalRunResult, ApprovalWriteOutcome } from "../types.js";
+import { withoutApprovalSummary } from "../utils/approvalSummary.js";
 import {
 	classifyWriteExecution,
 	type WriteExecutionOutcome,
@@ -24,7 +25,7 @@ const runWrite = async ({
 }): Promise<WriteExecutionOutcome> => {
 	try {
 		const result = await executeAutumnMcpTool({
-			args: write.tool_args,
+			args: withoutApprovalSummary(write.tool_args),
 			env,
 			token,
 			toolName: write.tool_name,

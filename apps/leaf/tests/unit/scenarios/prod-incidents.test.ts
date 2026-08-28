@@ -1,11 +1,6 @@
 /**
- * Replications of the 24 Aug production incidents, driven through leaf's real
- * prepare → withdraw → start → consume code against a fake eve that encodes
- * eve's confirmed contract:
- *  - a message posted over an unanswered gated park is silently DEFERRED — the
- *    run emits nothing, the stream only ever disconnects (the 12s reaper);
- *  - a message posted on a dead delivery hook silently re-homes to a new run;
- *  - a denied child rebuilds and re-parks.
+ * Replications of the 24 Aug production incidents against Eve's fixed-session
+ * contract: follow-ups run while approvals remain pending.
  * Each scenario asserts the outcome the user should have seen.
  */
 
@@ -55,17 +50,13 @@ class MockEveSessionDeadError extends Error {
 
 type Park = { kind: "gated"; requestId: string };
 type FakeSession = {
-	deferredMessages: number;
 	events: EveEvent[];
 	id: string;
 	parks: Park[];
-	rebuildsLeft: number;
-	token: string;
 };
 const fakeSessions = new Map<string, FakeSession>();
-const deadTokens = new Set<string>();
+const deadSessions = new Set<string>();
 let nextSession = 0;
-let rebuildsAfterDeny = 0;
 
 const gatedPark = (requestId: string): EveEvent =>
 	({
@@ -92,12 +83,9 @@ const replyEvents = (text: string): EveEvent[] =>
 const createFakeSession = () => {
 	nextSession += 1;
 	const session: FakeSession = {
-		deferredMessages: 0,
 		events: [],
 		id: `wrun_fake_${nextSession}`,
 		parks: [],
-		rebuildsLeft: rebuildsAfterDeny,
-		token: `token_${nextSession}`,
 	};
 	fakeSessions.set(session.id, session);
 	return session;
@@ -121,20 +109,7 @@ const deliver = ({
 	session: FakeSession;
 }) => {
 	const answered = new Set((inputResponses ?? []).map((r) => r.requestId));
-	const unanswered = session.parks.filter(
-		(park) => !answered.has(park.requestId),
-	);
-	if (unanswered.length > 0) {
-		// eve: deferred step input, zero events.
-		session.deferredMessages += 1;
-		return;
-	}
-	session.parks = [];
-	if (session.rebuildsLeft > 0 && (inputResponses?.length ?? 0) > 0) {
-		session.rebuildsLeft -= 1;
-		parkOn(session, `tc_rebuilt_${session.rebuildsLeft}`);
-		return;
-	}
+	session.parks = session.parks.filter((park) => !answered.has(park.requestId));
 	session.events.push(...replyEvents(`answered: ${String(message ?? "")}`));
 };
 
@@ -164,18 +139,15 @@ await mockLeafModule({
 			if (!session) {
 				const created = createFakeSession();
 				created.events.push(...replyEvents("hello"));
-				return { continuationToken: created.token, sessionId: created.id };
+				return { sessionId: created.id };
 			}
-			if (deadTokens.has(session.state.continuationToken)) {
-				// eve: falls back to a brand-new run, no error.
-				const rehomed = createFakeSession();
-				rehomed.events.push(...replyEvents("rehomed"));
-				return { continuationToken: rehomed.token, sessionId: rehomed.id };
+			if (deadSessions.has(session.sessionId)) {
+				throw new MockEveSessionGoneError("session_not_active");
 			}
 			const fake = fakeSessions.get(session.sessionId);
 			if (!fake) throw new MockEveSessionGoneError("session was not found");
 			deliver({ inputResponses, message, session: fake });
-			return { continuationToken: fake.token, sessionId: fake.id };
+			return { sessionId: fake.id };
 		},
 		postEveInputResponse: async ({
 			optionId,
@@ -190,7 +162,7 @@ await mockLeafModule({
 			const fake = fakeSessions.get(session.sessionId);
 			if (!fake) throw new MockEveSessionGoneError("session was not found");
 			deliver({ inputResponses: [{ optionId, requestId }], session: fake });
-			return { continuationToken: fake.token, sessionId: fake.id };
+			return { sessionId: fake.id };
 		},
 		streamEveEvents: async function* ({ session }: { session: EveSessionRef }) {
 			const fake = fakeSessions.get(session.sessionId);
@@ -320,7 +292,6 @@ const parkCard = ({ requestId }: { requestId: string }) => {
 		newSession: false,
 		sessionId: fake.id,
 		state: {
-			continuationToken: fake.token,
 			streamIndex: 2,
 			pendingRequests: [{ denyOptionId: "deny", kind: "gated", requestId }],
 		},
@@ -341,9 +312,8 @@ const parkCard = ({ requestId }: { requestId: string }) => {
 describe("production incident replications", () => {
 	beforeEach(() => {
 		fakeSessions.clear();
-		deadTokens.clear();
+		deadSessions.clear();
 		nextSession = 0;
-		rebuildsAfterDeny = 0;
 		posts.length = 0;
 		deletedSessions.length = 0;
 		cancelledApprovals.length = 0;
@@ -352,35 +322,35 @@ describe("production incident replications", () => {
 		pendingApprovals = [];
 	});
 
-	test("a question releases the park without cancelling the pending card", async () => {
-		rebuildsAfterDeny = 3;
+	test("a question leaves the approval pending and reaches the root once", async () => {
 		const fake = parkCard({ requestId: "tc_attach" });
 
 		const result = await send("is there a trial?");
 
-		// One post carrying the deny AND the message; no separate drain turn.
 		const messagePosts = posts.filter((post) => post.kind === "message");
 		expect(messagePosts).toHaveLength(1);
-		expect(messagePosts[0].inputResponses).toEqual([
-			{ optionId: "deny", requestId: "tc_attach" },
-		]);
-		expect(fake.deferredMessages).toBe(0);
+		expect(messagePosts[0]?.inputResponses).toBeUndefined();
+		expect(String(messagePosts[0]?.message)).toContain("is there a trial?");
+		expect(fake.parks).toEqual([{ kind: "gated", requestId: "tc_attach" }]);
 		expect(deletedSessions).toHaveLength(0);
 		expect(cancelledApprovals).toEqual([]);
 		expect(detachedRuns).toEqual([fake.id]);
-		expect(["approval", "reply", "parked"]).toContain(result.kind);
+		expect(result.kind).toBe("reply");
 	});
 
 	test("a replacement request releases the old park without cancelling early", async () => {
-		parkCard({ requestId: "tc_sched" });
+		const fake = parkCard({ requestId: "tc_sched" });
 
-		await send(
-			"for him start a schedule on scale and 3x the price every year for 4 years",
-		);
+		const message = "actually scrap that -- do 100 now and then 1200 next year";
+		await send(message);
 
 		expect(posts.filter((post) => post.kind === "input")).toHaveLength(0);
-		expect(posts.filter((post) => post.kind === "message")).toHaveLength(1);
+		const messagePosts = posts.filter((post) => post.kind === "message");
+		expect(messagePosts).toHaveLength(1);
+		expect(messagePosts[0]?.inputResponses).toBeUndefined();
+		expect(String(messagePosts[0]?.message)).toContain(message);
 		expect(cancelledApprovals).toEqual([]);
+		expect(detachedRuns).toEqual([fake.id]);
 	});
 
 	test("orphaned park — approval row gone but eve still parked (the dead-session trap)", async () => {
@@ -390,11 +360,8 @@ describe("production incident replications", () => {
 
 		const result = await send("what does pro cost?");
 
-		// The persisted pending set still answers the park in the same post.
-		expect(fake.deferredMessages).toBe(0);
-		expect(posts[0]?.inputResponses).toEqual([
-			{ optionId: "deny", requestId: "tc_orphan" },
-		]);
+		expect(posts[0]?.inputResponses).toBeUndefined();
+		expect(fake.parks).toEqual([{ kind: "gated", requestId: "tc_orphan" }]);
 		expect(storedSession?.sessionId).toBe(fake.id);
 		expect(result.kind).toBe("reply");
 	});
@@ -403,7 +370,7 @@ describe("production incident replications", () => {
 		const fake = parkCard({ requestId: "tc_hook" });
 		pendingApprovals = [];
 		if (storedSession) storedSession.state.pendingRequests = [];
-		deadTokens.add(fake.token);
+		deadSessions.add(fake.id);
 
 		const result = await send("hello again");
 
@@ -413,16 +380,15 @@ describe("production incident replications", () => {
 		expect(result.kind).toBe("reply");
 	});
 
-	test("silent session — recovered on a fresh run, cards and run released", async () => {
+	test("an untracked Eve approval does not swallow the next message", async () => {
 		const fake = parkCard({ requestId: "tc_silent" });
 		pendingApprovals = [];
-		// Leaf lost track of the park entirely (pre-fix state) — eve defers.
 		if (storedSession) storedSession.state.pendingRequests = [];
 
 		const result = await send("is there a trial?");
 
-		expect(fake.deferredMessages).toBe(1);
-		expect(deletedSessions).toContain(fake.id);
+		expect(fake.parks).toEqual([{ kind: "gated", requestId: "tc_silent" }]);
+		expect(deletedSessions).not.toContain(fake.id);
 		expect(result.kind).toBe("reply");
-	}, 20_000);
+	});
 });

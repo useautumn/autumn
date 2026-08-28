@@ -36,9 +36,9 @@ const familyOf = (model: string): ModelFamily | undefined =>
 	FAMILIES[model.replace(/^openrouter\//, "").split("/")[0] ?? ""];
 
 const modelFor = (agent: LeafAgentConnection) =>
+	AGENTS[agent].model ??
 	process.env[`EVE_MODEL_${agent.toUpperCase()}`] ??
-	process.env.EVE_MODEL ??
-	AGENTS[agent].model;
+	process.env.EVE_MODEL;
 
 type ChatBody = {
 	messages?: Array<{ content?: unknown; role?: string }>;
