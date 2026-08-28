@@ -10,13 +10,17 @@ import { makeEvent } from "./metering-test-fixtures.js";
 
 const meterOf = ({
 	state,
+	orgId = "org_1",
+	env = "sandbox",
 	customerId = "cus_1",
 	featureId = "messages",
 }: {
 	state: ReturnType<typeof createMeterState>;
+	orgId?: string;
+	env?: string;
 	customerId?: string;
 	featureId?: string;
-}) => readFeatureMeter({ state, customerId, featureId });
+}) => readFeatureMeter({ state, orgId, env, customerId, featureId });
 
 describe("applyEvent fold", () => {
 	test("grant adds to granted and balance", () => {
@@ -232,6 +236,37 @@ describe("applyEvent fold", () => {
 			balance: 20,
 		});
 		expect(meterOf({ state, customerId: "cus_2" })).toEqual({
+			granted: 30,
+			balance: 30,
+		});
+	});
+
+	test("the same customer and feature ids stay isolated by org and env", () => {
+		let state = createMeterState();
+		for (const event of [
+			makeEvent({ id: "evt_1", type: "grant", value: 10 }),
+			makeEvent({
+				id: "evt_2",
+				type: "grant",
+				value: 20,
+				orgId: "org_2",
+			}),
+			makeEvent({
+				id: "evt_3",
+				type: "grant",
+				value: 30,
+				env: "live",
+			}),
+		]) {
+			state = applyEvent({ state, event }).state;
+		}
+
+		expect(meterOf({ state })).toEqual({ granted: 10, balance: 10 });
+		expect(meterOf({ state, orgId: "org_2" })).toEqual({
+			granted: 20,
+			balance: 20,
+		});
+		expect(meterOf({ state, env: "live" })).toEqual({
 			granted: 30,
 			balance: 30,
 		});

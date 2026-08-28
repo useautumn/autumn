@@ -1,4 +1,10 @@
-import { type Consumer, Kafka, logLevel, type Producer } from "kafkajs";
+import {
+	type Admin,
+	type Consumer,
+	Kafka,
+	logLevel,
+	type Producer,
+} from "kafkajs";
 import {
 	type MeteringEvent,
 	parseMeteringEvent,
@@ -34,6 +40,7 @@ export class KafkaMeteringLog implements MeteringLog {
 	private readonly partitionCount: number;
 	private readonly producer: Producer;
 	private readonly consumer: Consumer;
+	private readonly admin: Admin;
 	private buffered: MeteringLogRecord[] = [];
 
 	constructor({
@@ -70,11 +77,15 @@ export class KafkaMeteringLog implements MeteringLog {
 
 		this.producer = kafka.producer();
 		this.consumer = kafka.consumer({ groupId: consumerGroup });
+		this.admin = kafka.admin();
 	}
 
 	async connect({ fromOffset }: { fromOffset: number }): Promise<void> {
-		await this.producer.connect();
-		await this.consumer.connect();
+		await Promise.all([
+			this.producer.connect(),
+			this.consumer.connect(),
+			this.admin.connect(),
+		]);
 		await this.consumer.subscribe({ topic: this.topic, fromBeginning: true });
 		await this.consumer.run({
 			eachMessage: async ({ partition, message }) => {
@@ -91,7 +102,11 @@ export class KafkaMeteringLog implements MeteringLog {
 	}
 
 	async disconnect(): Promise<void> {
-		await Promise.all([this.producer.disconnect(), this.consumer.disconnect()]);
+		await Promise.all([
+			this.producer.disconnect(),
+			this.consumer.disconnect(),
+			this.admin.disconnect(),
+		]);
 	}
 
 	async append({ event }: { event: MeteringEvent }): Promise<{
@@ -111,6 +126,23 @@ export class KafkaMeteringLog implements MeteringLog {
 			],
 		});
 		return { offset: Number(metadata?.baseOffset ?? metadata?.offset ?? -1) };
+	}
+
+	async getHighWatermark(): Promise<number> {
+		const offsets = await this.admin.fetchTopicOffsets(this.topic);
+		const owned = offsets.find(({ partition }) => partition === this.partition);
+		if (!owned) {
+			throw new Error(
+				`No high watermark for ${this.topic} partition ${this.partition}`,
+			);
+		}
+		const highWatermark = Number(owned.high);
+		if (!Number.isSafeInteger(highWatermark) || highWatermark < 0) {
+			throw new Error(
+				`Invalid high watermark for ${this.topic} partition ${this.partition}: ${owned.high}`,
+			);
+		}
+		return highWatermark;
 	}
 
 	// Records arrive on the consumer's own schedule, so a read that asks for an

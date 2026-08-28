@@ -55,8 +55,12 @@ describe("crash / restore equivalence", () => {
 			1,
 		);
 		expect(
-			uninterrupted.check({ customerId: "cus_0", featureId: "feature_0" })
-				.balance,
+			uninterrupted.check({
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: "cus_0",
+				featureId: "feature_0",
+			}).balance,
 		).toBeGreaterThan(0);
 
 		for (const killOffset of KILL_OFFSETS) {

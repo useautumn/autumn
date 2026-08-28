@@ -36,6 +36,51 @@ describe("PartitionWorker", () => {
 		expect(worker.partition).toBe(0);
 	});
 
+	test("captures the startup high watermark and becomes ready only after consuming it", async () => {
+		const worker = new PartitionWorker({
+			partition: 0,
+			log: await seedLog({ events: grantThenDeducts }),
+			snapshotStore: new InMemorySnapshotStore(),
+		});
+		await worker.takeOwnership();
+
+		expect(worker.isReady).toBeFalse();
+		expect(await worker.captureHighWatermark()).toBe(5);
+		expect(worker.isReady).toBeFalse();
+
+		await worker.consume({ upTo: 1 });
+		expect(worker.isReady).toBeFalse();
+
+		await worker.consume();
+		expect(worker.isReady).toBeTrue();
+	});
+
+	test("ignores a legacy unscoped snapshot and replays from offset zero", async () => {
+		const snapshotStore = new InMemorySnapshotStore();
+		await snapshotStore.put({
+			partition: 0,
+			epoch: 1,
+			offset: 50,
+			data: JSON.stringify({
+				customers: {
+					cus_1: { messages: { granted: 100, balance: 90 } },
+				},
+				dedupe: { capacity: 10_000, ids: ["legacy_event"] },
+			}),
+		});
+		const worker = new PartitionWorker({
+			partition: 0,
+			log: await seedLog({ events: [] }),
+			snapshotStore,
+		});
+
+		await worker.takeOwnership();
+
+		expect(worker.offset).toBe(0);
+		expect(worker.state.customers).toEqual({});
+		expect(worker.state.dedupe.ids).toEqual([]);
+	});
+
 	test("consume applies events in order and advances the offset", async () => {
 		const worker = new PartitionWorker({
 			partition: 0,
@@ -49,7 +94,12 @@ describe("PartitionWorker", () => {
 		expect(applied).toBe(5);
 		expect(offset).toBe(5);
 		expect(
-			worker.check({ customerId: "cus_1", featureId: "messages" }),
+			worker.check({
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: "cus_1",
+				featureId: "messages",
+			}),
 		).toEqual({ balance: 20, allowed: true });
 	});
 
@@ -64,7 +114,12 @@ describe("PartitionWorker", () => {
 		await worker.consume({ upTo: 1 });
 		expect(worker.offset).toBe(2);
 		expect(
-			worker.check({ customerId: "cus_1", featureId: "messages" }),
+			worker.check({
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: "cus_1",
+				featureId: "messages",
+			}),
 		).toEqual({ balance: 60, allowed: true });
 
 		expect((await worker.consume()).applied).toBe(3);
@@ -81,16 +136,25 @@ describe("PartitionWorker", () => {
 		await worker.takeOwnership();
 		await worker.consume();
 
-		expect(worker.check({ customerId: "nope", featureId: "messages" })).toEqual(
-			{
-				balance: 0,
-				allowed: false,
-			},
-		);
-		expect(worker.check({ customerId: "cus_1", featureId: "nope" })).toEqual({
+		expect(
+			worker.check({
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: "nope",
+				featureId: "messages",
+			}),
+		).toEqual({
 			balance: 0,
 			allowed: false,
 		});
+		expect(
+			worker.check({
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: "cus_1",
+				featureId: "nope",
+			}),
+		).toEqual({ balance: 0, allowed: false });
 	});
 
 	test("a drained balance is reported as not allowed", async () => {
@@ -108,7 +172,12 @@ describe("PartitionWorker", () => {
 		await worker.consume();
 
 		expect(
-			worker.check({ customerId: "cus_1", featureId: "messages" }),
+			worker.check({
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: "cus_1",
+				featureId: "messages",
+			}),
 		).toEqual({ balance: 0, allowed: false });
 	});
 

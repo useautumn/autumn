@@ -21,6 +21,10 @@ export class InMemoryMeteringLog implements MeteringLog {
 		return { offset };
 	}
 
+	async getHighWatermark(): Promise<number> {
+		return this.records.length;
+	}
+
 	async read({
 		fromOffset,
 		limit,

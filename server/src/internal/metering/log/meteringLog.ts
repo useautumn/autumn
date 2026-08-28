@@ -7,6 +7,7 @@ export type MeteringLogRecord = {
 
 export interface MeteringLog {
 	append(params: { event: MeteringEvent }): Promise<{ offset: number }>;
+	getHighWatermark(): Promise<number>;
 	read(params: {
 		fromOffset: number;
 		limit: number;

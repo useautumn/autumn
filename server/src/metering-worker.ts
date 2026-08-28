@@ -44,6 +44,7 @@ const worker = new PartitionWorker({
 
 await worker.takeOwnership();
 await log.connect({ fromOffset: worker.offset });
+const startupHighWatermark = await worker.captureHighWatermark();
 
 const server = Bun.serve({
 	port,
@@ -51,7 +52,7 @@ const server = Bun.serve({
 });
 
 logger.info(
-	`[metering-worker] partition ${OWNED_PARTITION} owned at epoch ${worker.epoch}, offset ${worker.offset}, serving on ${port}`,
+	`[metering-worker] partition ${OWNED_PARTITION} owned at epoch ${worker.epoch}, offset ${worker.offset}, startup target ${startupHighWatermark}, serving on ${port}`,
 );
 
 let isShuttingDown = false;

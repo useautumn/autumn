@@ -22,22 +22,72 @@ export const createMeteringHttpApp = ({
 }): Hono => {
 	const app = new Hono();
 
-	app.get("/healthz", (c) =>
-		c.json({ status: "ok", offset: worker.offset, epoch: worker.epoch }),
-	);
+	const catchingUpBody = () => ({
+		error: "worker_catching_up",
+		offset: worker.offset,
+		target_offset: worker.targetOffset,
+		epoch: worker.epoch,
+	});
+
+	app.get("/healthz", (c) => {
+		if (!worker.isReady) {
+			return c.json(
+				{ ...catchingUpBody(), status: "catching_up" as const },
+				503,
+			);
+		}
+		return c.json({ status: "ok", offset: worker.offset, epoch: worker.epoch });
+	});
+
+	app.post("/catch-up", async (c) => {
+		try {
+			await worker.captureHighWatermark();
+			if (worker.isReady) {
+				return c.json({
+					status: "ok" as const,
+					offset: worker.offset,
+					target_offset: worker.targetOffset,
+					epoch: worker.epoch,
+				});
+			}
+			return c.json(
+				{ ...catchingUpBody(), status: "catching_up" as const },
+				202,
+			);
+		} catch (error) {
+			return c.json(
+				{
+					error:
+						error instanceof Error
+							? error.message
+							: "high watermark unavailable",
+				},
+				502,
+			);
+		}
+	});
 
 	app.get("/check", (c) => {
+		if (!worker.isReady) return c.json(catchingUpBody(), 503);
+
+		const orgId = c.req.query("org_id");
+		const env = c.req.query("env");
 		const customerId = c.req.query("customer_id");
 		const featureId = c.req.query("feature_id");
 
-		if (!customerId || !featureId) {
-			return c.json({ error: "customer_id and feature_id are required" }, 400);
+		if (!orgId || !env || !customerId || !featureId) {
+			return c.json(
+				{ error: "org_id, env, customer_id and feature_id are required" },
+				400,
+			);
 		}
 
-		return c.json(worker.check({ customerId, featureId }));
+		return c.json(worker.check({ orgId, env, customerId, featureId }));
 	});
 
 	app.post("/track", async (c) => {
+		if (!worker.isReady) return c.json(catchingUpBody(), 503);
+
 		const raw = await c.req.json().catch(() => null);
 		const parsed = workerTrackRequestSchema.safeParse(raw);
 

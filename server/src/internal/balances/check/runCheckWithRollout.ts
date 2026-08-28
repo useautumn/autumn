@@ -58,6 +58,8 @@ const runWorkerCheck = async ({
 
 	const worker = await fetchMeteringWorkerCheck({
 		workerUrl: routing.workerUrl,
+		orgId: ctx.org.id,
+		env: ctx.env,
 		customerId: body.customer_id ?? "",
 		featureId: body.feature_id,
 	});

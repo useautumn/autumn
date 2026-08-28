@@ -167,13 +167,15 @@ describe("metering worker check client", () => {
 		expect(
 			await fetchMeteringWorkerCheck({
 				workerUrl: WORKER_URL,
+				orgId: "org 1",
+				env: "sandbox",
 				customerId: "cus 1",
 				featureId: "messages",
 				fetchImpl,
 			}),
 		).toEqual({ balance: 42, allowed: true });
 		expect(calls[0]).toBe(
-			`${WORKER_URL}/check?customer_id=cus%201&feature_id=messages`,
+			`${WORKER_URL}/check?org_id=org%201&env=sandbox&customer_id=cus%201&feature_id=messages`,
 		);
 	});
 
@@ -190,6 +192,8 @@ describe("metering worker check client", () => {
 			expect(
 				await fetchMeteringWorkerCheck({
 					workerUrl: WORKER_URL,
+					orgId: "org_1",
+					env: "sandbox",
 					customerId: "cus_1",
 					featureId: "messages",
 					fetchImpl,
@@ -209,6 +213,8 @@ describe("metering worker check client", () => {
 		expect(
 			await fetchMeteringWorkerCheck({
 				workerUrl: WORKER_URL,
+				orgId: "org_1",
+				env: "sandbox",
 				customerId: "cus_1",
 				featureId: "messages",
 				timeoutMs: 5,

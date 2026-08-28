@@ -34,18 +34,22 @@ const asNumber = (value: unknown): number | null =>
 
 export const fetchMeteringWorkerCheck = async ({
 	workerUrl,
+	orgId,
+	env,
 	customerId,
 	featureId,
 	timeoutMs = METERING_WORKER_CHECK_TIMEOUT_MS,
 	fetchImpl = fetch,
 }: {
 	workerUrl: string;
+	orgId: string;
+	env: string;
 	customerId: string;
 	featureId: string;
 	timeoutMs?: number;
 	fetchImpl?: MeteringWorkerFetch;
 }): Promise<MeteringWorkerCheckResult | null> => {
-	const url = `${workerUrl}/check?customer_id=${encodeURIComponent(
+	const url = `${workerUrl}/check?org_id=${encodeURIComponent(orgId)}&env=${encodeURIComponent(env)}&customer_id=${encodeURIComponent(
 		customerId,
 	)}&feature_id=${encodeURIComponent(featureId)}`;
 

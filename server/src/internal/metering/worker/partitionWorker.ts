@@ -7,6 +7,7 @@ import {
 	deserializeMeterState,
 	type MeterState,
 	readFeatureMeter,
+	UnsupportedMeterStateVersionError,
 } from "../fold/meterState.js";
 import type { MeteringLog } from "../log/meteringLog.js";
 import type { SnapshotStore } from "../snapshot/snapshotStore.js";
@@ -35,6 +36,7 @@ export class PartitionWorker {
 	private nextOffset = 0;
 	private currentEpoch = 0;
 	private eventsSinceSnapshot = 0;
+	private requiredHighWatermark: number | null = null;
 
 	constructor({
 		partition,
@@ -78,6 +80,17 @@ export class PartitionWorker {
 		return this.meterState;
 	}
 
+	get targetOffset(): number | null {
+		return this.requiredHighWatermark;
+	}
+
+	get isReady(): boolean {
+		return (
+			this.requiredHighWatermark !== null &&
+			this.nextOffset >= this.requiredHighWatermark
+		);
+	}
+
 	async takeOwnership(): Promise<void> {
 		const latest = await this.snapshotStore.getLatest({
 			partition: this.partition,
@@ -86,11 +99,28 @@ export class PartitionWorker {
 		this.currentEpoch = await this.snapshotStore.claimEpoch({
 			partition: this.partition,
 		});
-		this.meterState = latest
-			? deserializeMeterState({ serialized: latest.data })
-			: createMeterState({ dedupeCapacity: this.dedupeCapacity });
-		this.nextOffset = latest?.offset ?? 0;
+		this.requiredHighWatermark = null;
+		try {
+			this.meterState = latest
+				? deserializeMeterState({ serialized: latest.data })
+				: createMeterState({ dedupeCapacity: this.dedupeCapacity });
+			this.nextOffset = latest?.offset ?? 0;
+		} catch (error) {
+			if (!(error instanceof UnsupportedMeterStateVersionError)) throw error;
+
+			// An unversioned snapshot used customer_id alone as its key. Replaying the
+			// durable log is the only safe way to rebuild org/env-scoped balances.
+			this.meterState = createMeterState({
+				dedupeCapacity: this.dedupeCapacity,
+			});
+			this.nextOffset = 0;
+		}
 		this.eventsSinceSnapshot = 0;
+	}
+
+	async captureHighWatermark(): Promise<number> {
+		this.requiredHighWatermark = await this.log.getHighWatermark();
+		return this.requiredHighWatermark;
 	}
 
 	async consume({ upTo }: { upTo?: number } = {}): Promise<{
@@ -169,6 +199,8 @@ export class PartitionWorker {
 			balance:
 				readFeatureMeter({
 					state: this.meterState,
+					orgId: event.org_id,
+					env: event.env,
 					customerId: event.customer_id,
 					featureId: event.feature_id,
 				})?.balance ?? 0,
@@ -176,12 +208,24 @@ export class PartitionWorker {
 		};
 	}
 
-	check({ customerId, featureId }: { customerId: string; featureId: string }): {
+	check({
+		orgId,
+		env,
+		customerId,
+		featureId,
+	}: {
+		orgId: string;
+		env: string;
+		customerId: string;
+		featureId: string;
+	}): {
 		balance: number;
 		allowed: boolean;
 	} {
 		const meter = readFeatureMeter({
 			state: this.meterState,
+			orgId,
+			env,
 			customerId,
 			featureId,
 		});

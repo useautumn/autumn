@@ -1,5 +1,10 @@
 import type { MeteringEvent } from "../events/meteringEventSchema.js";
-import type { DedupeWindow, FeatureMeter, MeterState } from "./meterState.js";
+import {
+	type DedupeWindow,
+	type FeatureMeter,
+	type MeterState,
+	meterSubjectKeyOf,
+} from "./meterState.js";
 
 export type ApplyEventResult =
 	| "applied"
@@ -79,23 +84,32 @@ export const applyEvent = ({
 		return { state, result: "duplicate" };
 	}
 
+	const subjectKey = meterSubjectKeyOf({
+		orgId: event.org_id,
+		env: event.env,
+		customerId: event.customer_id,
+	});
 	const current =
-		state.customers[event.customer_id]?.[event.feature_id] ?? EMPTY_METER;
+		state.customers[subjectKey]?.[event.feature_id] ?? EMPTY_METER;
 	const { meter, result } = foldMeter({ meter: current, event });
 	const dedupe = recordEventId({ dedupe: state.dedupe, id: event.id });
 
 	// A rejected deduct still consumes its idempotency key, so a retry of the
 	// same event id answers "duplicate" instead of being re-evaluated later.
 	if (result === "rejected_insufficient") {
-		return { state: { customers: state.customers, dedupe }, result };
+		return {
+			state: { version: state.version, customers: state.customers, dedupe },
+			result,
+		};
 	}
 
 	return {
 		state: {
+			version: state.version,
 			customers: {
 				...state.customers,
-				[event.customer_id]: {
-					...state.customers[event.customer_id],
+				[subjectKey]: {
+					...state.customers[subjectKey],
 					[event.feature_id]: meter,
 				},
 			},

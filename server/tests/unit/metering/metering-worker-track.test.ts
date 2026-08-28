@@ -45,13 +45,19 @@ const createWorkerApp = async ({
 		snapshotStore: new InMemorySnapshotStore(),
 	});
 	await worker.takeOwnership();
+	await worker.captureHighWatermark();
 	await worker.consume();
 
 	return { app: createMeteringHttpApp({ worker }), worker, log };
 };
 
 const balanceOf = ({ worker }: { worker: PartitionWorker }): number =>
-	worker.check({ customerId: "cus_1", featureId: "messages" }).balance;
+	worker.check({
+		orgId: "org_1",
+		env: "sandbox",
+		customerId: "cus_1",
+		featureId: "messages",
+	}).balance;
 
 describe("worker POST /track", () => {
 	test("deducts against the fold and answers with the new balance", async () => {
@@ -177,6 +183,7 @@ describe("worker POST /track", () => {
 			append: async () => {
 				throw new Error("broker down");
 			},
+			getHighWatermark: async () => 0,
 			read: async () => [],
 		};
 		const { app, worker } = await createWorkerApp({
