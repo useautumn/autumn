@@ -4,6 +4,7 @@ import {
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { PlanSheetFooterContainer } from "@/components/v2/sheets/PlanSheetFooterContainer";
+import { BasePriceAdvancedSettings } from "./edit-plan-details/BasePriceAdvancedSettings";
 import { BasePriceSection } from "./edit-plan-details/BasePriceSection";
 import { PlanTypeSection } from "./edit-plan-details/PlanTypeSection";
 import { IncludedQuantitySection } from "./plan-licenses/IncludedQuantitySection";
@@ -32,6 +33,7 @@ export function EditPlanPriceSheet({
 				<IncludedQuantitySection />
 				<PlanTypeSection />
 				<BasePriceSection withSeparator={false} />
+				<BasePriceAdvancedSettings />
 			</div>
 
 			{!hideFooter && <PlanSheetFooterContainer sheetType={sheetType} />}
