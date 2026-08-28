@@ -11,15 +11,34 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { PriceService } from "@/internal/products/prices/PriceService";
 
-type PriceConfigIds = {
-	stripe_prepaid_price_v2_id?: string | null;
-	stripe_product_id?: string | null;
-};
+/** Fixed prices bill from the v1 slot, prepaid from the v2 slot. */
+const PRICE_MAPPING_SLOTS = [
+	"stripe_price_id",
+	"stripe_prepaid_price_v2_id",
+] as const;
+
+type PriceConfigIds = Partial<
+	Record<(typeof PRICE_MAPPING_SLOTS)[number] | "stripe_product_id", string | null>
+>;
 
 type AdoptedPrice = { planId: string; price: Price; stripePriceId: string };
 
 const configIds = ({ price }: { price: Price }): PriceConfigIds =>
 	(price.config ?? {}) as PriceConfigIds;
+
+/** Every Stripe price the plan already holds — carried-forward ids included. */
+const knownStripePriceIds = ({
+	product,
+}: {
+	product?: FullProduct | null;
+}): Set<string> =>
+	new Set(
+		(product?.prices ?? []).flatMap((price) =>
+			PRICE_MAPPING_SLOTS.map((slot) => configIds({ price })[slot]).filter(
+				(id): id is string => Boolean(id),
+			),
+		),
+	);
 
 /** Stated ids only — an id Autumn minted earlier was real when it was written. */
 const newlyAdoptedPrices = ({
@@ -28,22 +47,14 @@ const newlyAdoptedPrices = ({
 	upsert: UpsertProductPlan;
 }): AdoptedPrice[] => {
 	const next: FullProduct = upsert.row.nextFullProduct;
-	const current = upsert.row.currentFullProduct;
+	const known = knownStripePriceIds({ product: upsert.row.currentFullProduct });
 
 	return next.prices.flatMap((price) => {
-		const stripePriceId = configIds({ price }).stripe_prepaid_price_v2_id;
+		const ids = configIds({ price });
+		const stripePriceId = PRICE_MAPPING_SLOTS.map((slot) => ids[slot])
+			.filter((id): id is string => Boolean(id))
+			.find((id) => !known.has(id));
 		if (!stripePriceId) return [];
-
-		const currentPrice = current?.prices.find(
-			(candidate) => candidate.id === price.id,
-		);
-		if (
-			currentPrice &&
-			configIds({ price: currentPrice }).stripe_prepaid_price_v2_id ===
-				stripePriceId
-		) {
-			return [];
-		}
 		return [{ planId: next.id, price, stripePriceId }];
 	});
 };

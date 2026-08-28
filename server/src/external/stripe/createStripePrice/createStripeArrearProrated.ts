@@ -250,6 +250,7 @@ export const createStripeArrearProrated = async ({
 				slot: "stripe_price_id",
 				currency,
 				orgDefault,
+				stripeProductId,
 			}),
 		},
 	);
