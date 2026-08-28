@@ -14,6 +14,9 @@
  *   B9  a zero-included prepaid item keeps the supplied id. Autumn aliases the
  *       V2 slot to the V1 price on that branch, but a filled slot means the
  *       mint never runs and the alias is never reached — this pins that.
+ *   B10 the adopted price's own Stripe product is recorded on its config —
+ *       every price creator already derives the product from the price it
+ *       made, so the adopt path must do the same instead of minting one.
  *
  * Red (current): `price.processors` is stripped from write params (zod drops
  *   unknown keys), so the id never reaches the slot and Autumn mints its own.
@@ -74,6 +77,16 @@ const v2PriceIdOf = ({ product }: { product: FullProduct }): string | null =>
 	stripeConfigValue({
 		price: findFeaturePrice({ product, featureId: TestFeature.Messages }),
 		field: "stripe_prepaid_price_v2_id",
+	});
+
+const priceProductIdOf = ({
+	product,
+}: {
+	product: FullProduct;
+}): string | null =>
+	stripeConfigValue({
+		price: findFeaturePrice({ product, featureId: TestFeature.Messages }),
+		field: "stripe_product_id",
 	});
 
 test.concurrent(
@@ -201,6 +214,53 @@ test.concurrent(
 					v2PriceIdOf({ product: adopter }),
 					"supplied id survives the zero-included alias",
 				).toBe(donorPriceId);
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 processors price: an adopted price records its own stripe product")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_price_prod");
+		// A price Autumn did not make, under a product it would never resolve to —
+		// the shape a real import starts from.
+		const externalProduct = await ctx.stripeCli.products.create({
+			name: `External Product ${planId}`,
+		});
+		const externalPrice = await ctx.stripeCli.prices.create({
+			product: externalProduct.id,
+			currency: "usd",
+			unit_amount: 1000,
+			recurring: { interval: "month" },
+		});
+
+		await withCatalogPlans({
+			ctx,
+			planIds: [planId],
+			run: async () => {
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: planId,
+							name: "Price Product Target",
+							items: [
+								prepaidItem({ included: 100, priceId: externalPrice.id }),
+							],
+						},
+					],
+				});
+
+				// B10: the product comes from the adopted price, not a fresh mint.
+				const adopter = await getFull({ ctx, planId });
+				expect(v2PriceIdOf({ product: adopter }), "adopted price id").toBe(
+					externalPrice.id,
+				);
+				expect(
+					priceProductIdOf({ product: adopter }),
+					"adopted price's own product is recorded",
+				).toBe(externalProduct.id);
 			},
 		});
 	},
