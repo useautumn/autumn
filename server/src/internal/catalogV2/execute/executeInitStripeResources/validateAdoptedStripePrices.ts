@@ -103,11 +103,13 @@ export const validateAdoptedStripePrices = async ({
 			});
 		}
 
-		const config = configIds({ price: entry.price });
-		if (config.stripe_product_id) continue;
-
+		// The stated price owns its product: a changed price re-points it,
+		// rather than leaving the row on the product it used to belong to.
 		const stripeProductId = productIdOf({ stripePrice });
 		if (!stripeProductId) continue;
+
+		const config = configIds({ price: entry.price });
+		if (config.stripe_product_id === stripeProductId) continue;
 
 		config.stripe_product_id = stripeProductId;
 		await PriceService.update({

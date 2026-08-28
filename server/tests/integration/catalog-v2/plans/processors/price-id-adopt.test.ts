@@ -14,6 +14,8 @@
  *   B9  a zero-included prepaid item keeps the supplied id. Autumn aliases the
  *       V2 slot to the V1 price on that branch, but a filled slot means the
  *       mint never runs and the alias is never reached — this pins that.
+ *   B11 re-mapping to a price under a different product re-points the
+ *       product too — the stated price owns it, it is not gap-fill
  *   B10 the adopted price's own Stripe product is recorded on its config —
  *       every price creator already derives the product from the price it
  *       made, so the adopt path must do the same instead of minting one.
@@ -261,6 +263,66 @@ test.concurrent(
 					priceProductIdOf({ product: adopter }),
 					"adopted price's own product is recorded",
 				).toBe(externalProduct.id);
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 processors price: changing the price re-points its product")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_price_repoint");
+		const makeExternal = async (label: string) => {
+			const product = await ctx.stripeCli.products.create({
+				name: `External ${label} ${planId}`,
+			});
+			const price = await ctx.stripeCli.prices.create({
+				product: product.id,
+				currency: "usd",
+				unit_amount: 1000,
+				recurring: { interval: "month" },
+			});
+			return { productId: product.id, priceId: price.id };
+		};
+		const first = await makeExternal("A");
+		const second = await makeExternal("B");
+
+		await withCatalogPlans({
+			ctx,
+			planIds: [planId],
+			run: async () => {
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: planId,
+							name: "Price Repoint",
+							items: [prepaidItem({ included: 100, priceId: first.priceId })],
+						},
+					],
+				});
+				const before = await getFull({ ctx, planId });
+				expect(priceProductIdOf({ product: before }), "first product").toBe(
+					first.productId,
+				);
+
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: planId,
+							items: [prepaidItem({ included: 100, priceId: second.priceId })],
+						},
+					],
+				});
+
+				// B11: the product follows the price, it does not stay on the old one.
+				const after = await getFull({ ctx, planId });
+				expect(v2PriceIdOf({ product: after }), "second price").toBe(
+					second.priceId,
+				);
+				expect(priceProductIdOf({ product: after }), "product re-pointed").toBe(
+					second.productId,
+				);
 			},
 		});
 	},

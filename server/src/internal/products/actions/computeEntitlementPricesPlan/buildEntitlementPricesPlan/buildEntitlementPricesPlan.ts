@@ -1,8 +1,8 @@
 import type { ClaimResult } from "../types/claimResult";
 import type { EntitlementPricesPlanMode } from "../types/computeEntitlementPricesPlanParams";
 import {
-	emptyEntitlementPricesPlan,
 	type EntitlementPricesPlan,
+	emptyEntitlementPricesPlan,
 } from "../types/entitlementPricesPlan";
 import {
 	leaveBucketForMode,
@@ -10,6 +10,20 @@ import {
 	withFreshIds,
 	withFreshPriceId,
 } from "./buildEntitlementPricesPlanUtils";
+
+/**
+ * A claim matches on price definition, which deliberately ignores Stripe ids —
+ * billing depends on that. So a re-stated mapping arrives as a claimed pair and
+ * would be dropped; carry it onto the row we keep instead.
+ */
+const adoptedPriceIdOf = (
+	entitlementPrice: ClaimResult["entitlementPriceClaims"][number]["current"],
+): string | undefined =>
+	(
+		entitlementPrice.price?.config as
+			| { stripe_prepaid_price_v2_id?: string }
+			| undefined
+	)?.stripe_prepaid_price_v2_id;
 
 /**
  * Claims → same; unclaimed desired → new; unclaimed current → leave bucket by mode.
@@ -27,11 +41,32 @@ export const buildEntitlementPricesPlan = ({
 	const isCustom = mode.type === "custom";
 	const leaveBucket = leaveBucketForMode({ mode });
 
-	for (const { current } of claims.entitlementPriceClaims) {
+	for (const { desired, current } of claims.entitlementPriceClaims) {
+		const statedPriceId = adoptedPriceIdOf(desired);
+		const mappingChanged =
+			statedPriceId !== undefined &&
+			statedPriceId !== adoptedPriceIdOf(current) &&
+			current.price !== undefined;
+
+		if (!mappingChanged) {
+			pushEntitlementPrice({ plan, bucket: "same", entitlementPrice: current });
+			continue;
+		}
+
+		const keptPrice = current.price!;
 		pushEntitlementPrice({
 			plan,
-			bucket: "same",
-			entitlementPrice: current,
+			bucket: "updated",
+			entitlementPrice: {
+				...current,
+				price: {
+					...keptPrice,
+					config: {
+						...keptPrice.config,
+						stripe_prepaid_price_v2_id: statedPriceId,
+					} as typeof keptPrice.config,
+				},
+			},
 		});
 	}
 
