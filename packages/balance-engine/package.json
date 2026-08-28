@@ -1,14 +1,14 @@
 {
-	"name": "@autumn/metering-engine",
+	"name": "@autumn/balance-engine",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
 	"sideEffects": false,
 	"exports": {
 		".": {
-			"types": "./src/meteringEngine.ts",
-			"import": "./src/meteringEngine.ts",
-			"default": "./src/meteringEngine.ts"
+			"types": "./src/balanceEngine.ts",
+			"import": "./src/balanceEngine.ts",
+			"default": "./src/balanceEngine.ts"
 		}
 	},
 	"scripts": {
@@ -17,7 +17,7 @@
 	},
 	"dependencies": {
 		"decimal.js": "^10.5.0",
-		"zod": "^4.0.0"
+		"zod": "^3.25.23"
 	},
 	"devDependencies": {
 		"@types/bun": "1.3.14",
