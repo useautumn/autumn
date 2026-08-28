@@ -1,10 +1,11 @@
 import type {
 	CatalogGetMappingsResponse,
-	CatalogUpdateMappingsParams,
+	UpdateCatalogParamsInput,
 } from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -34,21 +35,21 @@ export const useCatalogMappings = ({
 		},
 	});
 
+	// Writes go through catalogV2 so the server fans the product out to every
+	// version and variant, and moves the base prices that were left behind.
 	const updateMappings = useMutation({
-		mutationFn: async (params: CatalogUpdateMappingsParams) => {
-			const { data } = await axiosInstance.post<CatalogGetMappingsResponse>(
-				"/v1/catalog.update_mappings",
-				params,
-			);
-			return data;
-		},
-		onSuccess: (data) => {
-			queryClient.setQueryData(queryKey, data);
-			queryClient.invalidateQueries({ queryKey: ["products"] });
-			toast.success("Stripe product mappings saved");
+		mutationFn: (params: UpdateCatalogParamsInput) =>
+			CatalogV2Service.update(axiosInstance, params),
+		onSuccess: async () => {
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey }),
+				queryClient.invalidateQueries({ queryKey: ["products"] }),
+				queryClient.invalidateQueries({ queryKey: ["product"] }),
+			]);
+			toast.success("Stripe product mapping saved");
 		},
 		onError: (error) => {
-			toast.error(getBackendErr(error, "Failed to save mappings"));
+			toast.error(getBackendErr(error, "Failed to save mapping"));
 		},
 	});
 
