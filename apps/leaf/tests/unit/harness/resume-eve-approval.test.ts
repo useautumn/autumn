@@ -45,13 +45,6 @@ const mockLeafModule = ({
 	specifier: string;
 }) => mockModuleWithRestore({ baseUrl: import.meta.url, factory, specifier });
 
-class MockEveSessionGoneError extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = "EveSessionGoneError";
-	}
-}
-let sessionGone = false;
 let streamedEvents: EveEvent[] = [];
 let streamedEventsBySession: Record<string, EveEvent[]> = {};
 let idleTimeoutSessionIds: string[] = [];
@@ -62,6 +55,7 @@ class MockEveStreamIdleTimeoutError extends Error {
 		this.name = "EveStreamIdleTimeoutError";
 	}
 }
+class MockEveSessionGoneError extends Error {}
 const postedResponses: {
 	approveSiblings?: boolean;
 	optionId: string;
@@ -80,18 +74,13 @@ await mockLeafModule({
 			requestId: string;
 			siblingRequestIds?: string[];
 		}) => {
-			if (sessionGone) {
-				throw new MockEveSessionGoneError(
-					"Eve session is gone (500): target session was not found via continuation token.",
-				);
-			}
 			postedResponses.push({
 				approveSiblings: input.approveSiblings,
 				optionId: input.optionId,
 				requestId: input.requestId,
 				siblingRequestIds: input.siblingRequestIds,
 			});
-			return { continuationToken: "token_2", sessionId: "eve_session_1" };
+			return { sessionId: "eve_session_1" };
 		},
 		streamEveEvents: async function* ({
 			session: streamSession,
@@ -109,36 +98,21 @@ await mockLeafModule({
 	}),
 });
 
-const deletedSessionIds: string[] = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
 	factory: () => ({
-		deleteEveSession: async ({ sessionId }: { sessionId: string }) => {
-			deletedSessionIds.push(sessionId);
-		},
+		deleteEveSession: async () => undefined,
 		getEveSessionBySessionId: async () => session,
 		upsertEveSession: async () => undefined,
 	}),
 });
 
-const finalized: Array<{ approvalId: string; status: string }> = [];
-const released: string[] = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/approvals/repos/chatApprovalRepo.js",
 	factory: () => ({
 		chatApprovalRepo: {
-			finalize: async ({
-				approvalId,
-				status,
-			}: {
-				approvalId: string;
-				status: string;
-			}) => {
-				finalized.push({ approvalId, status });
-			},
-			release: async ({ approvalId }: { approvalId: string }) => {
-				released.push(approvalId);
-			},
+			finalize: async () => undefined,
+			release: async () => undefined,
 		},
 	}),
 });
@@ -168,9 +142,6 @@ await mockLeafModule({
 	}),
 });
 
-const { resolveApproval } = await import(
-	"../../../src/internal/approvals/actions/resolveApproval.js"
-);
 const { discardApproval } = await import(
 	"../../../src/internal/approvals/actions/discardApproval.js"
 );
@@ -215,6 +186,16 @@ const EMPTY_TURN: EveEvent[] = [
 	{ type: "session.waiting" },
 ];
 
+beforeEach(() => {
+	session = {
+		env: AppEnv.Sandbox,
+		newSession: false,
+		sessionId: "eve_session_1",
+		state: { streamIndex: 4, pendingRequests: [] },
+		threadKey: "sandbox:slack:T1:C1:thread_1",
+	};
+});
+
 describe("resumeApproval", () => {
 	beforeEach(() => {
 		streamedEvents = EMPTY_TURN;
@@ -222,17 +203,6 @@ describe("resumeApproval", () => {
 		idleTimeoutSessionIds = [];
 		postedResponses.length = 0;
 		loggedEvents.length = 0;
-		session = {
-			env: AppEnv.Sandbox,
-			newSession: false,
-			sessionId: "eve_session_1",
-			state: {
-				continuationToken: "token_1",
-				streamIndex: 4,
-				pendingRequests: [],
-			},
-			threadKey: "sandbox:slack:T1:C1:thread_1",
-		};
 	});
 
 	test("answers the whole batch the card was parked with", async () => {
@@ -324,6 +294,25 @@ describe("resumeApproval", () => {
 
 		expect(result).toMatchObject({ text: "" });
 		expect(loggedEvents).toEqual([]);
+	});
+
+	test("falls back when the approval's Eve session is gone", async () => {
+		session = undefined as never;
+
+		await expect(
+			resumeApproval({ approval: approval(), providerUserId: "U1" }),
+		).rejects.toBeInstanceOf(MockEveSessionGoneError);
+	});
+
+	test("settles a discard whose Eve session is gone", async () => {
+		session = undefined as never;
+
+		const result = await discardApproval({
+			approval: approval(),
+			providerUserId: "U1",
+		});
+
+		expect(result).toMatchObject({ result: {}, text: "", writes: [] });
 	});
 });
 
@@ -806,30 +795,6 @@ describe("grouped approvals that fail a write and park again", () => {
 	});
 });
 
-// Eve has lost the session (its transcript broke terminally). Returning the card
-// to pending would block the thread behind a card nothing can ever run.
-describe("resolveApproval when eve has lost the session", () => {
-	beforeEach(() => {
-		sessionGone = true;
-		finalized.length = 0;
-		released.length = 0;
-		deletedSessionIds.length = 0;
-	});
-
-	test("finalizes the card as failed, drops the session, and does not retry", async () => {
-		const result = await resolveApproval({
-			approval: approval(),
-			providerUserId: "U1",
-		});
-
-		expect(result).toMatchObject({ error: true, retryable: false });
-		expect(finalized).toEqual([{ approvalId: "a_1", status: "failed" }]);
-		expect(released).toEqual([]);
-		expect(deletedSessionIds).toEqual(["eve_session_1"]);
-		sessionGone = false;
-	});
-});
-
 // A write delegated to a subagent executes on the child session, so the
 // parent's resumed stream never carries its result — proof must come from
 // replaying the child stream named on the card.
@@ -899,7 +864,6 @@ describe("delegated writes are verified on the child stream", () => {
 			newSession: false,
 			sessionId: "eve_session_1",
 			state: {
-				continuationToken: "token_1",
 				streamIndex: 4,
 				pendingRequests: [],
 			},
@@ -1005,7 +969,6 @@ describe("approved write outcomes persist onto the write rows", () => {
 			newSession: false,
 			sessionId: "eve_session_1",
 			state: {
-				continuationToken: "token_1",
 				streamIndex: 4,
 				pendingRequests: [],
 			},

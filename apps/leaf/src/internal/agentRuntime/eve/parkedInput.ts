@@ -1,7 +1,7 @@
 import { WAITING_FOR_INPUT_MESSAGE } from "../../../ui/messages.js";
 import type { EveInputRequest } from "./eveEventSchemas.js";
-import { DENY_OPTION_ID, textForInputRequests } from "./events.js";
-import type { EvePendingRequest, EveSessionRef } from "./types.js";
+import { approvalOptionIds, textForInputRequests } from "./events.js";
+import type { EvePendingRequest } from "./types.js";
 
 export type ChainedPendingRequest = Readonly<{
 	input?: Record<string, unknown>;
@@ -35,7 +35,7 @@ export type ParkedEveInput =
 	| Readonly<{ kind: "waiting"; text: string }>;
 
 const isApprovalRequest = (request: EveInputRequest) =>
-	request.display === "confirmation";
+	request.kind === "tool-approval" || request.display === "confirmation";
 
 const CHILD_SESSION_IDS_KEY = "_eveChildSessionIds";
 const SIBLING_REQUEST_IDS_KEY = "_eveSiblingRequestIds";
@@ -131,7 +131,7 @@ export const classifyParkedEveInput = ({
 			kind: "gated",
 			siblingRequestIds: siblings.map((request) => request.requestId),
 			withheld: siblings.map((request) => ({
-				denyOptionId: DENY_OPTION_ID,
+				denyOptionId: approvalOptionIds(request.options).deny,
 				input: request.action.input,
 				requestId: request.requestId,
 				toolName: request.action.toolName,
@@ -139,7 +139,9 @@ export const classifyParkedEveInput = ({
 		};
 	}
 
-	const optioned = pending.find((request) => request.display === "select");
+	const optioned = pending.find(
+		(request) => request.kind === "question" || request.display === "select",
+	);
 	if (optioned) {
 		return {
 			kind: "question",
@@ -158,37 +160,22 @@ export const classifyParkedEveInput = ({
 };
 
 type GatedParkShape = {
-	chained: { requestId: string };
-	withheld: ReadonlyArray<{ requestId: string }>;
+	chained: {
+		options?: ReadonlyArray<Readonly<{ id?: string }>>;
+		requestId: string;
+	};
+	withheld: ReadonlyArray<{ denyOptionId?: string; requestId: string }>;
 };
 
 /** Every request in a gated batch with the option that releases it. */
 export const pendingGatedRequests = (
 	parked: GatedParkShape,
 ): EvePendingRequest[] =>
-	[parked.chained, ...parked.withheld].map((request) => ({
-		denyOptionId: DENY_OPTION_ID,
+	[parked.chained, ...parked.withheld].map((request, index) => ({
+		denyOptionId:
+			index === 0
+				? approvalOptionIds(parked.chained.options).deny
+				: parked.withheld[index - 1]?.denyOptionId,
 		kind: "gated" as const,
 		requestId: request.requestId,
 	}));
-
-/** Gated parks nothing in this post answers. eve silently defers a message
- * posted over one, so each must be denied in the same post. */
-export const outstandingGatedDenies = ({
-	answered,
-	session,
-}: {
-	answered: ReadonlyArray<{ requestId: string }>;
-	session: EveSessionRef;
-}) => {
-	const answeredIds = new Set(answered.map((response) => response.requestId));
-	return session.state.pendingRequests
-		.filter(
-			(request) =>
-				request.kind === "gated" && !answeredIds.has(request.requestId),
-		)
-		.map((request) => ({
-			optionId: request.denyOptionId ?? DENY_OPTION_ID,
-			requestId: request.requestId,
-		}));
-};

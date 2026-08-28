@@ -17,6 +17,7 @@ minimumReleaseAge = 259200 # seconds
 # Newly released dependencies we intentionally pin; exempt from the age gate.
 minimumReleaseAgeExcludes = [
 	"ai",
+	"eve",
 	"@ai-sdk/harness",
 	"@ai-sdk/harness-claude-code",
 	"@ai-sdk/sandbox-vercel",

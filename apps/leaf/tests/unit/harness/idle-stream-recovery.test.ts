@@ -93,18 +93,11 @@ await mockLeafModule({
 });
 
 await mockLeafModule({
-	specifier: "../../../src/internal/agentRuntime/eve/sessionState.js",
-	factory: () => ({
-		advanceStreamCursor: (session: EveSessionRef) => {
-			session.state.streamIndex += 1;
-		},
-		saveEveSessionState: async () => undefined,
-	}),
-});
-
-await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
-	factory: () => ({ deleteEveSession: async () => undefined }),
+	factory: () => ({
+		deleteEveSession: async () => undefined,
+		upsertEveSession: async () => undefined,
+	}),
 });
 
 const { consumeAgentTurn } = await import(
@@ -119,7 +112,6 @@ const session = (): EveSessionRef => ({
 	newSession: false,
 	sessionId: "eve_session_1",
 	state: {
-		continuationToken: "token_1",
 		streamIndex: 33,
 		pendingRequests: [],
 	},

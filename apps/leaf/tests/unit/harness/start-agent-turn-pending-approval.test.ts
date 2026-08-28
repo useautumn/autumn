@@ -1,4 +1,4 @@
-/** A new message releases Eve's gate in the same post while the durable card stays pending. */
+/** A new message detaches the card before steering Eve into a normal turn. */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
@@ -20,39 +20,43 @@ const postedMessages: Array<{
 	inputResponses?: Array<{ optionId: string; requestId: string }>;
 	message?: unknown;
 }> = [];
+const detachedRuns: string[] = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
-		postEveMessage: async (input: {
-			inputResponses?: Array<{ optionId: string; requestId: string }>;
-			message?: unknown;
+		postEveInputResponse: async (input: {
+			optionId: string;
+			requestId: string;
 		}) => {
 			postedMessages.push({
-				inputResponses: input.inputResponses,
-				message: input.message,
+				inputResponses: [
+					{ optionId: input.optionId, requestId: input.requestId },
+				],
 			});
-			return { continuationToken: "token_2", sessionId: "eve_session_1" };
+			return { sessionId: "eve_session_1" };
+		},
+		postEveMessage: async (input: { message?: unknown }) => {
+			postedMessages.push({ message: input.message });
+			return { sessionId: "eve_session_1" };
 		},
 	}),
 });
 await mockLeafModule({
-	specifier: "../../../src/internal/agentRuntime/eve/sessionState.js",
+	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
 	factory: () => ({
-		initialEveSessionState: (continuationToken: string) => ({
-			continuationToken,
-			streamIndex: 0,
-			pendingRequests: [],
-		}),
-		saveEveSessionState: async () => undefined,
+		deleteEveSession: async () => undefined,
+		upsertEveSession: async () => undefined,
 	}),
 });
 await mockLeafModule({
-	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
-	factory: () => ({ deleteEveSession: async () => undefined }),
-});
-await mockLeafModule({
 	specifier: "../../../src/internal/approvals/repos/chatApprovalRepo.js",
-	factory: () => ({ chatApprovalRepo: { moveToRun: async () => undefined } }),
+	factory: () => ({
+		chatApprovalRepo: {
+			detachPendingForRun: async ({ runId }: { runId: string }) => {
+				detachedRuns.push(runId);
+			},
+		},
+	}),
 });
 
 const { startAgentTurn } = await import(
@@ -71,7 +75,6 @@ const makeSession = (pending = false): EveSessionRef => ({
 	newSession: false,
 	sessionId: "eve_session_1",
 	state: {
-		continuationToken: "token_1",
 		streamIndex: 7,
 		pendingRequests: pending
 			? [{ denyOptionId: "deny", kind: "gated", requestId: "tc_1" }]
@@ -82,10 +85,11 @@ const makeSession = (pending = false): EveSessionRef => ({
 
 describe("startAgentTurn with a pending approval", () => {
 	beforeEach(() => {
+		detachedRuns.length = 0;
 		postedMessages.length = 0;
 	});
 
-	test("releases the gate alongside the new message without calling it withdrawn", async () => {
+	test("leaves a gated approval pending while sending the new message", async () => {
 		await startAgentTurn({
 			auth,
 			env: AppEnv.Sandbox,
@@ -97,14 +101,10 @@ describe("startAgentTurn with a pending approval", () => {
 		});
 
 		expect(postedMessages).toHaveLength(1);
-		expect(postedMessages[0]?.inputResponses).toEqual([
-			{ optionId: "deny", requestId: "tc_1" },
-		]);
-		expect(String(postedMessages[0]?.message)).toContain("remains available");
-		expect(String(postedMessages[0]?.message)).not.toContain("withdrawn");
-		expect(String(postedMessages[0]?.message)).toContain(
-			"actually make it 2k credits",
-		);
+		expect(postedMessages[0]).toEqual({
+			message: "actually make it 2k credits",
+		});
+		expect(detachedRuns).toEqual(["eve_session_1"]);
 	});
 
 	test("a plain follow-up sends only the message", async () => {
@@ -119,9 +119,9 @@ describe("startAgentTurn with a pending approval", () => {
 		});
 
 		expect(postedMessages[0]).toEqual({
-			inputResponses: undefined,
 			message: "hello",
 		});
+		expect(detachedRuns).toEqual(["eve_session_1"]);
 	});
 
 	test("question-chip answers still send responses without a message", async () => {
@@ -139,7 +139,7 @@ describe("startAgentTurn with a pending approval", () => {
 
 		expect(postedMessages[0]).toEqual({
 			inputResponses: [{ optionId: "opt_a", requestId: "q_1" }],
-			message: undefined,
 		});
+		expect(detachedRuns).toEqual([]);
 	});
 });

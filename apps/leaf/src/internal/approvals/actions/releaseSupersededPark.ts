@@ -1,16 +1,11 @@
 import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
-import { abandonEveSession } from "../../agentRuntime/eve/abandonSession.js";
 import { getEveSessionBySessionId } from "../../agentRuntime/eve/repo.js";
-import {
-	approvalAuthContext,
-	approvalThreadRef,
-} from "../domain/approvalRecord.js";
-import { denyApprovalParkAndDrain } from "./denyApprovalParkAndDrain.js";
+import { approvalAuthContext } from "../domain/approvalRecord.js";
+import { cancelApprovalParkAndDrain } from "./cancelApprovalParkAndDrain.js";
 
-/** Best effort: denies and drains the eve park behind a cancelled card so the
- * session stops waiting on it; a session that keeps re-parking is abandoned. */
+/** Best effort: cancels the Eve request behind a superseded card. */
 export const releaseSupersededPark = async ({
 	approval,
 	note,
@@ -29,20 +24,11 @@ export const releaseSupersededPark = async ({
 				})
 			: undefined;
 		if (!session) return;
-		const { stuck } = await denyApprovalParkAndDrain({
+		await cancelApprovalParkAndDrain({
 			approval,
 			auth: approvalAuthContext({ approval, providerUserId }),
 			note,
 			session,
-		});
-		if (!stuck) return;
-		await abandonEveSession({
-			env: approval.env,
-			orgId: approval.org_id,
-			providerUserId,
-			reason: "drain_stuck",
-			session,
-			thread: approvalThreadRef(approval),
 		});
 	} catch (error) {
 		logger.warn("Could not release the eve park behind a superseded approval", {

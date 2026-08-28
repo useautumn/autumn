@@ -33,7 +33,6 @@ import { catalogPlanNeedingDecision } from "../../resolveCatalogDecision/catalog
 export type EveTurnOutcome =
 	| { kind: "answered"; catalogDecision?: CatalogPlanPreview; text: string }
 	| { kind: "parked"; question?: PendingQuestion; text: string }
-	| { kind: "deferred" }
 	| { kind: "silent" }
 	| { kind: "stopped"; stopReason: RunStopReason; text: string }
 	| { approval: AgentApprovalRequest; kind: "suspended"; text: string }
@@ -44,7 +43,6 @@ export type EveTurnProgress = Readonly<{
 	lastPreview?: CapturedPreview;
 	pendingText: string;
 	reasoningStreamId?: string;
-	sawToolActivity: boolean;
 	subagentChildSessionIds: ReadonlySet<string>;
 	subagentStartedAtByCallId: ReadonlyMap<string, number>;
 	toolInputs: ReadonlyMap<string, Record<string, unknown>>;
@@ -72,7 +70,6 @@ export type EveTurnTransition = Readonly<{
 export const createEveTurnProgress = (): EveTurnProgress => ({
 	finalText: "",
 	pendingText: "",
-	sawToolActivity: false,
 	subagentChildSessionIds: new Set(),
 	subagentStartedAtByCallId: new Map(),
 	toolInputs: new Map(),
@@ -105,7 +102,7 @@ const approvalForGatedWrite = ({
 	siblingRequestIds: ReadonlyArray<string>;
 	withheld: ReadonlyArray<WithheldWrite>;
 }): AgentApprovalRequest => {
-	const options = approvalOptionIds();
+	const options = approvalOptionIds(chained.options);
 	return {
 		toolCallId: chained.requestId,
 		toolName: chained.toolName,
@@ -160,7 +157,6 @@ const reduceRequestedActions = ({
 		effects,
 		progress: {
 			...progress,
-			sawToolActivity: progress.sawToolActivity || event.actions.length > 0,
 			toolInputs,
 			toolLabels,
 		},
@@ -329,14 +325,6 @@ const reduceInputRequest = ({
 	};
 };
 
-/** Eve parks holding the message when a delivery answers a subagent's park:
- * the responses route to the child and the message lands on a parent with no
- * pending batch, so the turn starts, receives and completes without working. */
-const turnDeferredItsInput = (progress: EveTurnProgress) =>
-	progress.turnStarted &&
-	!progress.sawToolActivity &&
-	progress.subagentChildSessionIds.size === 0;
-
 const reduceTerminalEvent = ({
 	progress,
 }: {
@@ -350,7 +338,7 @@ const reduceTerminalEvent = ({
 		effects: [{ kind: "save_session" }],
 		outcome: eveTurnProducedOutput({ catalogDecision, text })
 			? { catalogDecision, kind: "answered", text }
-			: { kind: turnDeferredItsInput(progress) ? "deferred" : "silent" },
+			: { kind: "silent" },
 		progress,
 	};
 };

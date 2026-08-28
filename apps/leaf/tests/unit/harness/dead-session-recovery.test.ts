@@ -113,7 +113,6 @@ const makeSession = (): EveSessionRef => ({
 	newSession: false,
 	sessionId: "eve_session_dead",
 	state: {
-		continuationToken: "token_1",
 		streamIndex: 57,
 		pendingRequests: [],
 	},

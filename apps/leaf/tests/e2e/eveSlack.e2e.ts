@@ -195,7 +195,7 @@ const main = async () => {
 		unknown
 	>[];
 	const customersPayload = await mcpJson({
-		args: { request: { limit: 5, start_cursor: "" } },
+		args: { request: { limit: 100, start_cursor: "" } },
 		toolName: "listCustomers",
 		token,
 	});
@@ -318,27 +318,143 @@ const main = async () => {
 				turn: turn.output,
 			});
 			check("S2 approval card posted", posted === true);
-			const cardJson = JSON.stringify(target.posted.at(-1)?.content ?? {});
+			const cardJson = JSON.stringify(target.posted[0]?.content ?? {});
 			check(
 				"S2 card has receipt/money facts",
 				/Due (now|today)|No charge now/.test(cardJson),
 				cardJson.slice(0, 300),
 			);
-			const approval = await pendingApprovalForRun({
+			const original = await pendingApprovalForRun({
 				channelId: s2ThreadId,
 				installation,
 				runId: turn.output.sessionId,
 			});
-			check("S2 approval row exists", Boolean(approval));
-			if (approval) {
+			check("S2 approval row exists", Boolean(original));
+			if (original) {
+				const question = await runTurn({
+					installation,
+					text: "Before I approve it, explain what the customer would pay. Do not change the proposal.",
+					threadId: s2ThreadId,
+				});
+				check(
+					"S2 question answered without a new card",
+					question.output.kind === "reply",
+					question.output.kind === "reply"
+						? question.output.text.slice(0, 120)
+						: `kind=${question.output.kind}`,
+				);
+				const stillPending = await chatApprovalRepo.get({
+					approvalId: original.id,
+					db,
+				});
+				check(
+					"S2 question leaves the original card actionable",
+					stillPending?.status === "pending" &&
+						stillPending.tool_call_id === null,
+					`status=${stillPending?.status}, detached=${stillPending?.tool_call_id === null}`,
+				);
+
+				const refinement = await runTurn({
+					installation,
+					text: "Actually add a 14-day free trial to that proposal and keep everything else unchanged.",
+					threadId: s2ThreadId,
+				});
+				check(
+					"S2 refinement produces a replacement card",
+					refinement.output.kind === "approval",
+					`kind=${refinement.output.kind}`,
+				);
+				if (refinement.output.kind !== "approval") {
+					throw new Error("S2 refinement did not produce an approval");
+				}
+				const replacementTarget = makeTarget();
+				await presentApproval({
+					channelId: s2ThreadId,
+					env: refinement.output.env,
+					installation,
+					logAction: () => undefined,
+					logger,
+					orgId: installation.org_id,
+					providerUserId: USER_A,
+					target: replacementTarget as never,
+					turn: refinement.output,
+				});
+				const replacement = await pendingApprovalForRun({
+					channelId: s2ThreadId,
+					installation,
+					runId: refinement.output.sessionId,
+				});
+				const superseded = await chatApprovalRepo.get({
+					approvalId: original.id,
+					db,
+				});
+				check(
+					"S2 old card becomes stale only after replacement posts",
+					superseded?.status === "cancelled" && Boolean(replacement),
+					`old=${superseded?.status}, replacement=${replacement?.status}`,
+				);
+				const summary = replacementTarget.posted
+					.map(
+						({ content }) => (content as { markdown?: string })?.markdown ?? "",
+					)
+					.find(Boolean);
+				check(
+					"S2 replacement summary explains the update",
+					Boolean(
+						summary &&
+							/updated|added/i.test(summary) &&
+							/14.day/i.test(summary),
+					),
+					summary,
+				);
+				if (!replacement) throw new Error("S2 replacement row missing");
+				const replacementRequest = (
+					replacement.tool_args as {
+						request?: {
+							customer_id?: string;
+							customize?: { price?: unknown };
+							free_trial?: {
+								duration_length?: number;
+								duration_type?: string;
+							};
+							plan_id?: string;
+						};
+					}
+				).request;
+				check(
+					"S2 replacement preserves the plan and adds exactly 14 days",
+					replacementRequest?.customer_id === customerId &&
+						replacementRequest.plan_id === planId &&
+						replacementRequest.free_trial?.duration_length === 14 &&
+						replacementRequest.free_trial.duration_type === "day" &&
+						!replacementRequest.customize?.price,
+					JSON.stringify(replacementRequest),
+				);
+				const beforeApproval = await mcpJson({
+					args: {
+						request: { customer_id: customerId, with_autumn_id: false },
+					},
+					toolName: "getCustomer",
+					token,
+				});
+				check(
+					"S2 neither proposal executes before approval",
+					!JSON.stringify(beforeApproval ?? {}).includes(planId),
+				);
+				const staleClaim = await chatApprovalRepo.claim({
+					approvalId: original.id,
+					db,
+					providerUserId: USER_B,
+				});
+				check("S2 superseded card cannot be claimed", !staleClaim);
 				const claimed = await chatApprovalRepo.claim({
-					approvalId: approval.id,
+					approvalId: replacement.id,
 					db,
 					providerUserId: USER_B,
 				});
 				check("S2 another user can claim/approve", Boolean(claimed));
 				const result = await resolveApproval({
-					approval: claimed ?? approval,
+					approval: claimed ?? replacement,
 					providerUserId: USER_B,
 				});
 				const failed = "error" in result && result.error === true;

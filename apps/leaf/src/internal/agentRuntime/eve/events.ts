@@ -41,11 +41,18 @@ export const isPreviewToolName = (toolName: string) =>
 	/^preview/i.test(normalizeToolName(toolName));
 
 export const APPROVE_OPTION_ID = "approve";
-export const DENY_OPTION_ID = "deny";
+export const CANCEL_OPTION_ID = "cancel";
 
-export const approvalOptionIds = () => ({
-	approve: APPROVE_OPTION_ID,
-	deny: DENY_OPTION_ID,
+export const approvalOptionIds = (
+	options?: ReadonlyArray<Readonly<{ id?: string }>>,
+) => ({
+	approve:
+		options?.find((option) => option.id === APPROVE_OPTION_ID)?.id ??
+		APPROVE_OPTION_ID,
+	deny:
+		options?.find(
+			(option) => option.id === CANCEL_OPTION_ID || option.id === "deny",
+		)?.id ?? CANCEL_OPTION_ID,
 });
 
 export const textForInputRequests = (

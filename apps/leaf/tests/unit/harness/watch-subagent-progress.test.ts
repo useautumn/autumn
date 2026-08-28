@@ -84,7 +84,6 @@ const session: EveSessionRef = {
 	newSession: false,
 	sessionId: "parent_session",
 	state: {
-		continuationToken: "token_1",
 		streamIndex: 9,
 		pendingRequests: [],
 	},

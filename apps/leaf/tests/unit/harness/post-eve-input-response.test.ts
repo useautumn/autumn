@@ -19,9 +19,8 @@ const { postEveInputResponse, SIBLING_WITHHELD_NOTE } = await import(
 );
 
 type PostedBody = {
-	continuationToken: string;
+	clientContext?: string;
 	inputResponses: { optionId: string; requestId: string }[];
-	message?: string;
 };
 
 let postedBodies: PostedBody[] = [];
@@ -42,7 +41,6 @@ const session: EveSessionRef = {
 	newSession: false,
 	sessionId: "eve_session_1",
 	state: {
-		continuationToken: "token_1",
 		streamIndex: 3,
 		pendingRequests: [],
 	},
@@ -60,7 +58,6 @@ describe("postEveInputResponse", () => {
 			postedBodies.push(JSON.parse(String(init.body)) as PostedBody);
 			return new Response(
 				JSON.stringify({
-					continuationToken: "token_2",
 					sessionId: "eve_session_1",
 				}),
 				{ headers: { "content-type": "application/json" } },
@@ -95,16 +92,15 @@ describe("postEveInputResponse", () => {
 		await post({ note: "(a note)" });
 
 		expect(postedBodies[0]).toEqual({
-			continuationToken: "token_1",
+			clientContext: "(a note)",
 			inputResponses: [{ optionId: "approve", requestId: "req_1" }],
-			message: "(a note)",
 		});
 	});
 
 	test("leaves the note alone when siblings are an empty list", async () => {
 		await post({ note: "(a note)", siblingRequestIds: [] });
 
-		expect(postedBodies[0]?.message).toBe("(a note)");
+		expect(postedBodies[0]?.clientContext).toBe("(a note)");
 		expect(postedBodies[0]?.inputResponses).toHaveLength(1);
 	});
 
@@ -116,8 +112,8 @@ describe("postEveInputResponse", () => {
 
 		expect(postedBodies[0]?.inputResponses).toEqual([
 			{ optionId: "approve", requestId: "req_1" },
-			{ optionId: "deny", requestId: "req_2" },
-			{ optionId: "deny", requestId: "req_3" },
+			{ optionId: "cancel", requestId: "req_2" },
+			{ optionId: "cancel", requestId: "req_3" },
 		]);
 	});
 
@@ -128,14 +124,14 @@ describe("postEveInputResponse", () => {
 
 		expect(postedBodies[0]?.inputResponses).toEqual([
 			{ optionId: "approve", requestId: "req_1" },
-			{ optionId: "deny", requestId: "req_2" },
+			{ optionId: "cancel", requestId: "req_2" },
 		]);
 	});
 
 	test("tells the model the siblings were withheld, not rejected", async () => {
 		await post({ note: "(a note)", siblingRequestIds: ["req_2"] });
 
-		expect(postedBodies[0]?.message).toBe(
+		expect(postedBodies[0]?.clientContext).toBe(
 			`(a note)\n\n${SIBLING_WITHHELD_NOTE}`,
 		);
 	});
@@ -143,7 +139,7 @@ describe("postEveInputResponse", () => {
 	test("sends the sibling note alone when the caller had none", async () => {
 		await post({ siblingRequestIds: ["req_2"] });
 
-		expect(postedBodies[0]?.message).toBe(SIBLING_WITHHELD_NOTE);
+		expect(postedBodies[0]?.clientContext).toBe(SIBLING_WITHHELD_NOTE);
 	});
 
 	// The batch answer carries the caller's own option, so approving a grouped card
@@ -170,7 +166,7 @@ describe("postEveInputResponse", () => {
 				siblingRequestIds: ["req_2"],
 			});
 
-			expect(postedBodies[0]?.message).toBeUndefined();
+			expect(postedBodies[0]?.clientContext).toBeUndefined();
 		});
 
 		// Dependent writes share a card, so the order the model issued them in is
@@ -187,13 +183,13 @@ describe("postEveInputResponse", () => {
 			).toEqual(["req_1", "req_2", "req_3", "req_4"]);
 		});
 
-		test("still denies every sibling on a withdraw", async () => {
-			await post({ optionId: "deny", siblingRequestIds: ["req_2", "req_3"] });
+		test("still cancels every sibling on a withdraw", async () => {
+			await post({ optionId: "cancel", siblingRequestIds: ["req_2", "req_3"] });
 
 			expect(postedBodies[0]?.inputResponses).toEqual([
-				{ optionId: "deny", requestId: "req_1" },
-				{ optionId: "deny", requestId: "req_2" },
-				{ optionId: "deny", requestId: "req_3" },
+				{ optionId: "cancel", requestId: "req_1" },
+				{ optionId: "cancel", requestId: "req_2" },
+				{ optionId: "cancel", requestId: "req_3" },
 			]);
 		});
 	});
