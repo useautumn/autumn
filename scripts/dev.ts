@@ -2,6 +2,7 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isCloudAgent } from "@autumn/env";
+import { parseEnvFile } from "./dw/helpers/env-files.ts";
 import { resolveTriggerDevBranch } from "./triggerDevBranch.ts";
 
 function spawnTriggerDevBranchReaper({
@@ -72,6 +73,29 @@ const AUTUMN_PUBLIC_API_URL =
 const publicApiUrl = AUTUMN_PUBLIC_API_URL.replace(/\/$/, "");
 const CHAT_URL = process.env.CHAT_URL ?? publicApiUrl;
 const SLACK_BOT_URL = process.env.SLACK_BOT_URL ?? publicApiUrl;
+
+/** Slack only delivers events for the LOCAL dev app to a laptop (via the
+ * chat tunnel), so non-dev runs must verify with the local app's credentials
+ * from server/.env — the injected prod/staging ones belong to the deployed
+ * bot. */
+const localSlackAppEnv = (): Record<string, string> => {
+	if (viteAppEnv === "dev") return {};
+	const envPath = join(
+		dirname(fileURLToPath(import.meta.url)),
+		"../server/.env",
+	);
+	if (!existsSync(envPath)) return {};
+	const { values } = parseEnvFile(readFileSync(envPath, "utf8"));
+	const overrides = Object.fromEntries(
+		["SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET", "SLACK_SIGNING_SECRET"].flatMap(
+			(key) => (values[key] ? [[key, values[key]]] : []),
+		),
+	);
+	if (Object.keys(overrides).length) {
+		console.log("[dev] using local Slack app credentials from server/.env");
+	}
+	return overrides;
+};
 const TRIGGER_API_URL =
 	(process.env.TRIGGER_API_URL ?? "https://api.trigger.dev")
 		.trim()
@@ -394,6 +418,7 @@ async function startDev() {
 
 		const spawnEnv: Record<string, string> = {
 			...process.env,
+			...localSlackAppEnv(),
 			TRIGGER_DEV_BRANCH: triggerDevBranch,
 			TRIGGER_API_URL,
 			// Sandbox key only. `stripe listen` reads STRIPE_API_KEY, so no
