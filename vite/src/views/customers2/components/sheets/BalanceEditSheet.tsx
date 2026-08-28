@@ -110,7 +110,15 @@ export function BalanceEditSheet() {
 					</CopyButton>
 				}
 				breadcrumbs={undefined}
-			/>
+			>
+				{!isUnlimited && (
+					<p className="text-tertiary-foreground text-xs mt-2">
+						Balance changes here are temporary manual corrections — they'll
+						reset to the plan's defaults on the next billing cycle. For
+						persistent changes, update the customer's plan instead.
+					</p>
+				)}
+			</SheetHeader>
 
 			{isUnlimited ? (
 				<UnlimitedBalanceInfo
