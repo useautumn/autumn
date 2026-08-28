@@ -23,6 +23,9 @@ export const leafAgentSkillNames: Record<"orchestrator" | "investigator" | "bill
 
 export const leafSkillRequires: Record<string, string[]> = {
   "autumn-concepts": [],
+  "autumn-setup": [
+    "autumn-catalog"
+  ],
   "autumn-catalog": [
     "autumn-concepts"
   ],

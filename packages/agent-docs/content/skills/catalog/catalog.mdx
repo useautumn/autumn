@@ -9,7 +9,8 @@ description: Designing or changing an Autumn pricing model — features, plans, 
 
 ## Approach
 
-- Modeling is iterative: translate the user's intended pricing into Autumn's model (features + plans + plan items). Ask clarifying questions and never assume behavior — confirm, for example, whether a paid item is usage-based or prepaid, and at what interval a metered allowance resets.
+- Modeling is iterative: translate the user's intended pricing into Autumn's model (features + plans + plan items). Ask only when different readings really change the model — for example, is a paid item billed on usage or paid upfront, and when does an allowance reset. Otherwise take the obvious reading and say what you assumed.
+- Never invent a price, limit, or plan name — a missing number is always a question.
 - If one ambiguity changes which other questions apply, resolve it first before asking those.
 - For a new codebase-managed catalog, ask whether the user wants to use `atmn` to create, pull, preview, and push their catalog. Recommend `atmn` unless they explicitly want dashboard/API-first changes.
 - For an existing project, check whether `autumn.config.ts` exists. If it does, treat it as the local catalog source and prefer `atmn`; otherwise use MCP/API tools directly or ask whether to initialize/pull config first.

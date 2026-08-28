@@ -42,6 +42,14 @@ export default defineConfig({
 			skill: { file: "skills/concepts/concepts.mdx" },
 		},
 	},
+	setup: {
+		title: "Setup",
+		description:
+			"First-run Autumn setup — install the skill pack, then model pricing.",
+		formats: {
+			skill: { file: "skills/setup/setup.mdx" },
+		},
+	},
 	catalog: {
 		title: "Catalog",
 		description:
