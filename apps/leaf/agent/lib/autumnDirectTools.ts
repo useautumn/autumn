@@ -1,5 +1,6 @@
 import { defineDynamic, defineTool } from "eve/tools";
 import { withoutApprovalSummary } from "../../src/internal/approvals/utils/approvalSummary.js";
+import { settledWriteResult } from "../../src/internal/approvals/utils/settledWriteResult.js";
 import { callAutumnMcpTool } from "../../src/internal/autumnMcp/rpcClient.js";
 import { approvalSets } from "./approvalSets.js";
 import { withApprovalSummarySchema } from "./approvalSummarySchema.js";
@@ -46,6 +47,14 @@ export const autumnDirectTools = ({
 							requiresApproval ? "user-approval" : "not-applicable",
 						description: tool.description,
 						execute: async (input, toolCtx) => {
+							if (requiresApproval) {
+								const settled = await settledWriteResult({
+									input: input as Record<string, unknown>,
+									sessionId: toolCtx.session.id,
+									toolName,
+								});
+								if (settled !== undefined) return settled;
+							}
 							const minted = await mintCachedAutumnToken(
 								toolCtx.session.auth.current?.attributes,
 							);

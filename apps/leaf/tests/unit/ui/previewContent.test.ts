@@ -76,7 +76,7 @@ describe("previewElements", () => {
 		expect(json).toContain("Cancel at end of cycle");
 	});
 
-	test("renders createBalance local previews as fields", () => {
+	test("renders createBalance local previews as a table", () => {
 		const json = JSON.stringify(
 			previewElements({
 				action: "createBalance",
@@ -89,10 +89,11 @@ describe("previewElements", () => {
 				impact: "Creates a standalone balance grant.",
 			}),
 		);
+		expect(json).toContain("table");
 		expect(json).toContain("credits");
 		expect(json).toContain("500");
 		expect(json).toContain("Expires");
-		expect(json).toContain("standalone balance grant");
+		expect(json).not.toContain("standalone balance grant");
 	});
 });
 

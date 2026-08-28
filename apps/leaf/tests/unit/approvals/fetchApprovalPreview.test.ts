@@ -98,18 +98,6 @@ describe("fetchApprovalPreview", () => {
 				skip_plan_ids: [],
 			},
 		],
-		[
-			"createReward",
-			{ coupon: { id: "launch" } },
-			{
-				features: [],
-				plans: [],
-				rewards: [{ coupon: { id: "launch" } }],
-				skip_deletions: true,
-				skip_feature_ids: [],
-				skip_plan_ids: [],
-			},
-		],
 	] as const)(
 		"previews %s through the catalog endpoint",
 		async (toolName, request, expected) => {
