@@ -37,4 +37,19 @@ describe("leafAgentPrompt", () => {
 			expect(prompt).toContain(phrase);
 		});
 	}
+
+	test("routes billing objections separately from causal investigation", () => {
+		const prompt = leafAgentPrompt("orchestrator");
+		expect(prompt).toContain(
+			"ASKING or OBJECTING about current or proposed customer billing",
+		);
+		expect(prompt).toContain("how or why a customer reached its current state");
+		expect(prompt).toContain(
+			"A causal, historical, or log question → `investigator`",
+		);
+		expect(prompt).toContain("billing for a text-only answer");
+		expect(prompt).not.toContain(
+			"Questions, objections, and stop/explain requests never re-delegate billing",
+		);
+	});
 });
