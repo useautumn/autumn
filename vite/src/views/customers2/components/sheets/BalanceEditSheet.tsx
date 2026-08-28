@@ -20,8 +20,11 @@ import {
 	InfoRow,
 	LabelInput,
 	Switch,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
 } from "@autumn/ui";
-import { ClockCountdownIcon } from "@phosphor-icons/react";
+import { ClockCountdownIcon, QuestionIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -113,9 +116,19 @@ export function BalanceEditSheet() {
 			>
 				{!isUnlimited && (
 					<p className="text-tertiary-foreground text-xs mt-2">
-						Balance changes here are temporary manual corrections — they'll
-						reset to the plan's defaults on the next billing cycle. For
-						persistent changes, update the customer's plan instead.
+						Make a one-off adjustment to a balance. After the next reset, the
+						balance will return to the plan's defaults.{" "}
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<QuestionIcon className="size-3.5 cursor-help text-tertiary-foreground inline align-text-bottom" />
+							</TooltipTrigger>
+							<TooltipContent className="max-w-64">
+								Balance updates are meant for manual corrections. To change what
+								a customer gets on an ongoing basis, update their plan instead —
+								plan changes persist across resets and emit a billing.updated
+								webhook.
+							</TooltipContent>
+						</Tooltip>
 					</p>
 				)}
 			</SheetHeader>
