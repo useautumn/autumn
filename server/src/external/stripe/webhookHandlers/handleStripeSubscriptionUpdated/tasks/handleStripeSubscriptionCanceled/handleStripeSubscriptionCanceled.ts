@@ -5,7 +5,7 @@ import {
 	notNullish,
 } from "@autumn/shared";
 import { msToSeconds } from "@shared/utils/common/unixUtils";
-import { getStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
+import { isAutumnOriginatedStripeEvent } from "@/external/stripe/common/autumnStripeIdempotency.js";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -19,7 +19,7 @@ import { scheduleDefaultProducts } from "./scheduleDefaultProducts";
  *
  * This task:
  * 1. Detects if subscription was just canceled
- * 2. Skips if Autumn initiated the cancellation (via lock)
+ * 2. Skips if Autumn initiated the cancellation
  * 3. Marks active customer products as canceled
  * 4. Schedules default products for non-add-on groups
  * 5. Sends cancel webhooks (after defaults are scheduled)
@@ -48,17 +48,14 @@ export const handleStripeSubscriptionCanceled = async ({
 
 	if (!canceled) return;
 
-	// 2. Check lock - if Autumn initiated this cancellation, skip
-	const lock = await getStripeSubscriptionLock({
-		ctx,
-		stripeSubscriptionId: stripeSubscription.id,
+	const autumnOriginated = isAutumnOriginatedStripeEvent({
+		event: ctx.stripeEvent,
 	});
-
 	const hasSchedule = Boolean(stripeSubscription.schedule);
 
-	if (lock || hasSchedule) {
+	if (autumnOriginated || hasSchedule) {
 		logger.info(
-			`[handleStripeSubscriptionCanceled] Skipping - lock on stripe subscription found`,
+			`[handleStripeSubscriptionCanceled] Skipping - ${autumnOriginated ? "autumn-originated" : "has schedule"}`,
 		);
 		return;
 	}
