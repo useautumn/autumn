@@ -1,4 +1,5 @@
 import { db } from "../../../../lib/db.js";
+import { chatApprovalRepo } from "../../../approvals/repos/chatApprovalRepo.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import type {
 	AgentTurnContext,
@@ -81,11 +82,18 @@ export const runAgentTurn = async ({
 			params,
 			session: prepared.existingSession,
 			thread,
-			withdrawal: prepared.withdrawal,
 		});
-	const startFresh = async () => {
+	const startFresh = async (staleSessionId: string) => {
 		restarted = true;
-		return startTurn({ orgContext: await loadAgentOrgContext(ctx) });
+		const session = await startTurn({
+			orgContext: await loadAgentOrgContext(ctx),
+		});
+		await chatApprovalRepo.moveToRun({
+			db,
+			fromRunId: staleSessionId,
+			toRunId: session.sessionId,
+		});
+		return session;
 	};
 	const consume = (session: EveSessionRef) => {
 		run?.resolveSessionId(session.sessionId);
@@ -119,11 +127,11 @@ export const runAgentTurn = async ({
 				existingSession,
 				session: existingSession,
 			});
-			return startFresh();
+			return startFresh(existingSession.sessionId);
 		});
 		let outcome = await consume(session).catch(async (error) => {
 			await recoverLostSession({ ctx, error, existingSession, session });
-			session = await startFresh();
+			session = await startFresh(session.sessionId);
 			return consume(session);
 		});
 		if (outcome.kind === "deferred") {

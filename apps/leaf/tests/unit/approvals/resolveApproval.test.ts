@@ -56,11 +56,16 @@ await mockLeafModule({
 	}),
 });
 
+let pendingRequestIds = ["tc_1"];
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/repo.js",
 	factory: () => ({
 		deleteEveSession: async () => {},
-		getEveSessionBySessionId: async () => undefined,
+		getEveSessionBySessionId: async () => ({
+			state: {
+				pendingRequests: pendingRequestIds.map((requestId) => ({ requestId })),
+			},
+		}),
 	}),
 });
 
@@ -86,6 +91,7 @@ const approval = (overrides: Partial<ChatApproval> = {}) =>
 		org_id: "org_1",
 		provider: "slack",
 		run_id: "eve_session_1",
+		tool_call_id: "tc_1",
 		tool_name: "autumn__attach",
 		...overrides,
 	}) as unknown as ChatApproval;
@@ -93,6 +99,7 @@ const approval = (overrides: Partial<ChatApproval> = {}) =>
 beforeEach(() => {
 	repoCalls.length = 0;
 	executorCalls.length = 0;
+	pendingRequestIds = ["tc_1"];
 	resumeBehavior = async () => ({ result: {}, text: "", writes: [] });
 	driftBehavior = async () => undefined;
 	executorBehavior = async () => undefined;
@@ -168,6 +175,25 @@ describe("resolveApproval drift guard", () => {
 });
 
 describe("resolveApproval dead-session fallback", () => {
+	test("a released park executes the still-pending stored writes", async () => {
+		executorBehavior = async () => ({
+			result: {},
+			text: "",
+			toolName: "autumn__attach",
+			writes: [{ status: "applied", toolName: "autumn__attach" }],
+		});
+
+		const result = await resolveApproval({
+			approval: approval({ tool_call_id: null }),
+			providerUserId: "U1",
+		});
+
+		expect(executorCalls).toEqual(["a_1"]);
+		expect(result).toMatchObject({
+			writes: [{ status: "applied", toolName: "autumn__attach" }],
+		});
+	});
+
 	test("a gone session executes the stored writes deterministically", async () => {
 		resumeBehavior = async () => {
 			throw new EveSessionGoneError("session gone");
