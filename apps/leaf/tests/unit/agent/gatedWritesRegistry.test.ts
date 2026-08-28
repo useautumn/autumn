@@ -53,7 +53,7 @@ describe("gated-write registry derivations", () => {
 			createBalance: "previewCreateBalance",
 			createEntity: undefined,
 			createPlan: "previewUpdateCatalog",
-			createReward: "previewCreateReward",
+			createReward: "previewUpdateCatalog",
 			createSchedule: "previewCreateSchedule",
 			updateAgentRules: undefined,
 			updateCatalog: "previewUpdateCatalog",

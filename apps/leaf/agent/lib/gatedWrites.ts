@@ -38,7 +38,7 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 	},
 	{
 		agents: ["billing", "catalog"],
-		previewTool: "previewCreateReward",
+		previewTool: "previewUpdateCatalog",
 		scopes: ["rewards:write"],
 		toolName: "createReward",
 	},

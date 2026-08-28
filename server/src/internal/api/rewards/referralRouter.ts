@@ -19,7 +19,6 @@ import {
 import {
 	handleCreateReward,
 	handleListRewards,
-	handlePreviewCreateReward,
 } from "./handlers/rewards/index.js";
 
 export const redemptionRouter = new Hono<HonoEnv>();
@@ -53,7 +52,6 @@ referralRpcRouter.post(
 referralRpcRouter.post("/rewards.redeem", ...handleRedeemReward);
 referralRpcRouter.post("/rewards.list", ...handleListRewards);
 referralRpcRouter.post("/rewards.create", ...handleCreateReward);
-referralRpcRouter.post("/rewards.preview_create", ...handlePreviewCreateReward);
 referralRpcRouter.post("/rewards.get", ...handleGetReward);
 referralRpcRouter.post("/rewards.update", ...handleUpdateReward);
 referralRpcRouter.post("/rewards.delete", ...handleDeleteReward);

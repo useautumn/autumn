@@ -62,6 +62,12 @@ const previewRequestForWrite = ({
 			skip_deletions: true,
 		});
 	}
+	if (name === "createReward") {
+		return withCatalogDefaults({
+			rewards: [request],
+			skip_deletions: true,
+		});
+	}
 	if (name === "updatePlan") {
 		return withCatalogDefaults({
 			expand: ["plan"],
