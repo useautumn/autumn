@@ -19,7 +19,10 @@ const PRICE_MAPPING_SLOTS = [
 
 type PriceConfigIds = Partial<
 	Record<
-		(typeof PRICE_MAPPING_SLOTS)[number] | "stripe_product_id",
+		| (typeof PRICE_MAPPING_SLOTS)[number]
+		| "stripe_product_id"
+		| "stripe_meter_id"
+		| "stripe_event_name",
 		string | null
 	>
 >;
@@ -67,6 +70,29 @@ const newlyAdoptedPrices = ({
 		if (!stripePriceId) return [];
 		return [{ planId: next.id, price, stripePriceId }];
 	});
+};
+
+/**
+ * A metered price is bound to a Stripe meter, and usage is reported against
+ * that meter's event name — so adopting the price has to adopt both, or usage
+ * has nowhere to go. Derived from the price, never stated.
+ */
+const adoptedMeter = async ({
+	stripeCli,
+	stripePrice,
+	config,
+}: {
+	stripeCli: Stripe;
+	stripePrice: Stripe.Price;
+	config: PriceConfigIds;
+}): Promise<boolean> => {
+	const meterId = stripePrice.recurring?.meter;
+	if (!meterId || config.stripe_meter_id === meterId) return false;
+
+	const meter = await stripeCli.billing.meters.retrieve(meterId);
+	config.stripe_meter_id = meterId;
+	config.stripe_event_name = meter.event_name;
+	return true;
 };
 
 /** Expanded prices carry the product object; unexpanded ones carry its id. */
@@ -126,15 +152,17 @@ export const validateAdoptedStripePrices = async ({
 			});
 		}
 
-		// The stated price owns its product: a changed price re-points it,
-		// rather than leaving the row on the product it used to belong to.
-		const stripeProductId = productIdOf({ stripePrice });
-		if (!stripeProductId) continue;
-
+		// The stated price owns its product and meter: a changed price re-points
+		// them, rather than leaving the row on the ones it used to belong to.
 		const config = configIds({ price: entry.price });
-		if (config.stripe_product_id === stripeProductId) continue;
+		const stripeProductId = productIdOf({ stripePrice });
+		const productChanged =
+			Boolean(stripeProductId) && config.stripe_product_id !== stripeProductId;
+		if (productChanged) config.stripe_product_id = stripeProductId;
 
-		config.stripe_product_id = stripeProductId;
+		const meterChanged = await adoptedMeter({ stripeCli, stripePrice, config });
+		if (!productChanged && !meterChanged) continue;
+
 		await PriceService.update({
 			db: ctx.db,
 			id: entry.price.id!,

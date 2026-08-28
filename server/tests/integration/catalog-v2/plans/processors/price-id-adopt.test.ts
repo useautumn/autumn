@@ -327,3 +327,74 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 processors price: a usage-based price maps into the v1 slot with its meter")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_price_usage");
+		// A metered price Autumn did not make — its meter is what usage reports to.
+		const meter = await ctx.stripeCli.billing.meters.create({
+			display_name: `External Meter ${planId}`,
+			event_name: `external_events_${planId}`,
+			default_aggregation: { formula: "sum" },
+		});
+		const product = await ctx.stripeCli.products.create({
+			name: `External Usage ${planId}`,
+		});
+		const meteredPrice = await ctx.stripeCli.prices.create({
+			product: product.id,
+			currency: "usd",
+			unit_amount: 5,
+			recurring: { interval: "month", meter: meter.id, usage_type: "metered" },
+		});
+
+		await withCatalogPlans({
+			ctx,
+			planIds: [planId],
+			run: async () => {
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: planId,
+							name: "Usage Price Adopt",
+							items: [
+								{
+									feature_id: TestFeature.Messages,
+									included: 0,
+									price: {
+										amount: 0.05,
+										interval: BillingInterval.Month,
+										billing_method: BillingMethod.UsageBased,
+										billing_units: 1,
+										processors: { stripe: { price_id: meteredPrice.id } },
+									},
+								},
+							],
+						},
+					],
+				});
+
+				const price = findFeaturePrice({
+					product: await getFull({ ctx, planId }),
+					featureId: TestFeature.Messages,
+				});
+				// B12: usage-based bills from the v1 slot, not the prepaid one.
+				expect(
+					stripeConfigValue({ price, field: "stripe_price_id" }),
+					"adopted usage price id",
+				).toBe(meteredPrice.id);
+				// B13: the meter and its event name come from the adopted price —
+				// otherwise usage would have nowhere to report.
+				expect(
+					stripeConfigValue({ price, field: "stripe_meter_id" }),
+					"meter derived from the price",
+				).toBe(meter.id);
+				expect(
+					stripeConfigValue({ price, field: "stripe_event_name" }),
+					"event name derived from the meter",
+				).toBe(meter.event_name);
+			},
+		});
+	},
+);
