@@ -110,6 +110,13 @@ export const resolveApproval = async ({
 			return approvalErrorResult(error, { retryable: true });
 		}
 	}
+	if (!approval.tool_call_id) {
+		const executed = await executeWithoutSession({
+			approval,
+			providerUserId,
+		});
+		if (executed) return executed;
+	}
 
 	let result: SubmittedApprovalResult;
 	try {

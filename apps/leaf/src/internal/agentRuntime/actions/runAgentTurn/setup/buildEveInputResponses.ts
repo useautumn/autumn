@@ -1,11 +1,10 @@
-import type { ApprovalWithdrawal } from "../../../../approvals/actions/withdrawSupersededApprovals.js";
 import type { AgentTurnParams } from "../../../domain/agentTurnContext.js";
 import type { EveMessageContent } from "../../../eve/client.js";
 import { outstandingGatedDenies } from "../../../eve/parkedInput.js";
 import type { EveSessionRef } from "../../../eve/types.js";
 
 const OUTSTANDING_PARK_NOTE =
-	"(Pending write approvals in this thread were withdrawn because the user moved on with a new message. Do not rebuild, retry, or ask about them — act on the user's message.)";
+	"(The pending approval remains available in the thread. Its agent park was released only so you can act on the user's new message. Do not treat that release as rejection or rebuild the approval unless this message requests a replacement.)";
 
 export type EveInputResponse = { optionId: string; requestId: string };
 
@@ -20,19 +19,17 @@ const withNotePrefix = ({
 		? `${note}\n\n${message}`
 		: [{ text: note, type: "text" as const }, ...message];
 
-/** Everything a continuation post answers: chip answers, withdrawal denies and
- * a deny for every park still open that nothing else covers. Chip answers
+/** Everything a continuation post answers: chip answers and a deny for every
+ * park still open that nothing else covers. Chip answers
  * are never re-sent as a message, which would replay as a second user turn. */
 export const buildEveInputResponses = ({
 	message,
 	params,
 	session,
-	withdrawal,
 }: {
 	message: EveMessageContent;
 	params: AgentTurnParams;
 	session?: EveSessionRef;
-	withdrawal?: ApprovalWithdrawal;
 }): {
 	inputResponses?: EveInputResponse[];
 	message?: EveMessageContent;
@@ -42,10 +39,7 @@ export const buildEveInputResponses = ({
 	const chipResponses = params.questionResponse
 		? [params.questionResponse]
 		: [];
-	const explicitResponses = [
-		...(withdrawal?.inputResponses ?? []),
-		...chipResponses,
-	];
+	const explicitResponses = [...chipResponses];
 	const outstandingDenies = outstandingGatedDenies({
 		answered: explicitResponses,
 		session,
@@ -53,9 +47,7 @@ export const buildEveInputResponses = ({
 	const inputResponses = [...explicitResponses, ...outstandingDenies];
 	if (inputResponses.length === 0) return { message, outstandingDenies };
 	if (chipResponses.length > 0) return { inputResponses, outstandingDenies };
-	const note =
-		withdrawal?.note ??
-		(outstandingDenies.length > 0 ? OUTSTANDING_PARK_NOTE : undefined);
+	const note = outstandingDenies.length > 0 ? OUTSTANDING_PARK_NOTE : undefined;
 	return {
 		inputResponses,
 		message: note ? withNotePrefix({ message, note }) : message,
