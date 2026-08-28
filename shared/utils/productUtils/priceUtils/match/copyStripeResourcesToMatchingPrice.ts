@@ -1,4 +1,9 @@
-import { type Entitlement, nullish, type Price } from "@autumn/shared";
+import {
+	type Entitlement,
+	isConsumablePrice,
+	nullish,
+	type Price,
+} from "@autumn/shared";
 import { getPriceStripeReuseLevel } from "./getPriceStripeReuseLevel.js";
 
 const stripeResourceFields = [
@@ -83,6 +88,13 @@ export const copyStripeResourcesToMatchingPrice = ({
 	if (productSource) {
 		const fromConfig = productSource.config as StripeResourceConfig;
 		for (const field of stripeProductOnlyFields) {
+			if (
+				field === "stripe_meter_id" &&
+				(!isConsumablePrice(targetPrice) || !isConsumablePrice(productSource))
+			) {
+				continue;
+			}
+
 			if (
 				copyField({
 					fromConfig,
