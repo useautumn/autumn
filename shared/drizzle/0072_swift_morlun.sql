@@ -1,0 +1,1 @@
+ALTER TABLE "pooled_balances" DROP CONSTRAINT "pooled_balances_lifecycle_ids_valid";

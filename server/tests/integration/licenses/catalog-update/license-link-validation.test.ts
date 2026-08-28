@@ -1,5 +1,5 @@
-// Contract: license links reject pooled entitlements from base or customized license items.
-// The pooled catalog plan remains valid, and rejection persists no parent-to-license link.
+// Contract: license links accept pooled entitlements on the child and in
+// customize add_items. Self-link and archived-license still reject.
 
 import { expect, test } from "bun:test";
 import { type ApiPlanExpandedV1, ErrCode } from "@autumn/shared";
@@ -119,7 +119,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses catalog: pooled catalog items cannot be linked as a license")}`,
+	`${chalk.yellowBright("licenses catalog: pooled catalog items can be linked as a license")}`,
 	async () => {
 		const parent = products.base({
 			id: "pooled-license-link-parent",
@@ -135,7 +135,7 @@ test.concurrent(
 			],
 		});
 		const { autumnV2_2 } = await initScenario({
-			customerId: "license-link-rejects-pooled-catalog-item",
+			customerId: "license-link-accepts-pooled-catalog-item",
 			setup: [
 				s.customer({ testClock: false }),
 				s.products({ list: [parent, pooledLicense] }),
@@ -143,25 +143,24 @@ test.concurrent(
 			actions: [],
 		});
 
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			errMessage: "Pooled items are not supported for plan licenses",
-			func: () =>
-				autumnV2_2.post("/plans.update", {
-					plan_id: parent.id,
-					licenses: [{ license_plan_id: pooledLicense.id, included: 1 }],
-				}),
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [{ license_plan_id: pooledLicense.id, included: 1 }],
 		});
 
 		const persistedParent = (await autumnV2_2.post("/plans.get", {
 			plan_id: parent.id,
 		})) as ApiPlanExpandedV1;
-		expect(persistedParent.licenses ?? []).toHaveLength(0);
+		expect(persistedParent.licenses ?? []).toHaveLength(1);
+		expect(persistedParent.licenses?.[0]).toMatchObject({
+			license_plan_id: pooledLicense.id,
+			included: 1,
+		});
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses catalog: pooled customized items cannot be added to a license")}`,
+	`${chalk.yellowBright("licenses catalog: pooled customized items can be added to a license")}`,
 	async () => {
 		const parent = products.base({
 			id: "pooled-license-custom-parent",
@@ -172,7 +171,7 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 25 })],
 		});
 		const { autumnV2_2 } = await initScenario({
-			customerId: "license-link-rejects-pooled-custom-item",
+			customerId: "license-link-accepts-pooled-custom-item",
 			setup: [
 				s.customer({ testClock: false }),
 				s.products({ list: [parent, license] }),
@@ -180,32 +179,31 @@ test.concurrent(
 			actions: [],
 		});
 
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			errMessage: "Pooled items are not supported for plan licenses",
-			func: () =>
-				autumnV2_2.post("/plans.update", {
-					plan_id: parent.id,
-					licenses: [
-						{
-							license_plan_id: license.id,
-							included: 1,
-							customize: {
-								add_items: [
-									{
-										...itemsV2.monthlyCredits({ included: 100 }),
-										pooled: true,
-									},
-								],
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 1,
+					customize: {
+						add_items: [
+							{
+								...itemsV2.monthlyCredits({ included: 100 }),
+								pooled: true,
 							},
-						},
-					],
-				}),
+						],
+					},
+				},
+			],
 		});
 
 		const persistedParent = (await autumnV2_2.post("/plans.get", {
 			plan_id: parent.id,
 		})) as ApiPlanExpandedV1;
-		expect(persistedParent.licenses ?? []).toHaveLength(0);
+		expect(persistedParent.licenses ?? []).toHaveLength(1);
+		expect(persistedParent.licenses?.[0]).toMatchObject({
+			license_plan_id: license.id,
+			included: 1,
+		});
 	},
 );
