@@ -108,6 +108,7 @@ export const createStripePrepaidPriceV2 = async ({
 			slot: "stripe_prepaid_price_v2_id",
 			currency,
 			orgDefault,
+			stripeProductId,
 		}),
 	});
 

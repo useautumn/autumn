@@ -67,6 +67,7 @@ export * from "./referrals/createReferralCodeParams.js";
 export * from "./referrals/redeemReferralCodeParams.js";
 export * from "./referrals/referralOpModels.js";
 export * from "./rewards/index.js";
+export * from "./stripe/stripePriceModels.js";
 export * from "./stripe/stripeProductModels.js";
 // Helpers
 export * from "./utils/openApiHelpers.js";
