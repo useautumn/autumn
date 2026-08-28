@@ -10,11 +10,13 @@ import { toolLabel } from "../../../agentRuntime/tools/toolPolicy.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { createApproval } from "../../actions/createApproval.js";
 import {
+	allWritesOf,
 	dashboardLinkableApproval,
 	withheldWritesOf,
 } from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../../repos/chatApprovalWritesRepo.js";
+import { approvalSummaryFromWrites } from "../../utils/approvalSummary.js";
 import { publicToolArgs, requestStringField } from "../../utils/toolRequest.js";
 import { editSupersededApprovalCards } from "./superseded.js";
 
@@ -53,6 +55,27 @@ export const dashboardUrlFor = ({
 				toolName,
 			})
 		: undefined;
+
+const postApprovalCompanion = async ({
+	logger,
+	target,
+	writes,
+}: {
+	logger: AutumnLogger;
+	target: { post: (message: unknown) => Promise<unknown> };
+	writes: ReadonlyArray<WithheldWrite>;
+}) => {
+	const summary = approvalSummaryFromWrites({ writes });
+	if (!summary) return;
+	try {
+		await target.post({ markdown: summary });
+	} catch (error) {
+		logger.warn("Could not post approval companion", {
+			error,
+			event: "leaf.approval_companion_failed",
+		});
+	}
+};
 
 export const postApprovalCardForRow = async ({
 	approval,
@@ -104,6 +127,11 @@ export const postApprovalCardForRow = async ({
 			error,
 		});
 	}
+	await postApprovalCompanion({
+		logger,
+		target,
+		writes: allWritesOf({ approval, writes }),
+	});
 };
 
 /** Re-renders the card once backfilled previews persist — unless the approval
@@ -269,6 +297,19 @@ export const presentApproval = async ({
 		approvals: supersededApprovals,
 		logger,
 		target,
+	});
+	await postApprovalCompanion({
+		logger,
+		target,
+		writes: [
+			{
+				input: created.toolArgs,
+				preview: created.preview,
+				requestId: "",
+				toolName: created.toolName,
+			},
+			...created.withheld,
+		],
 	});
 	return true;
 };

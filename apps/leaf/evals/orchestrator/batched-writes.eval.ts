@@ -35,5 +35,35 @@ export default defineEval({
 			(events) =>
 				events.filter((event) => event.type === "input.requested").length === 1,
 		);
+
+		turn.eventsSatisfy(
+			"every write carries the same complete summary",
+			(events) => {
+				const requested = events.find(
+					(event) => event.type === "input.requested",
+				) as
+					| {
+							data: {
+								requests?: Array<{
+									action?: { input?: Record<string, unknown> };
+								}>;
+							};
+					  }
+					| undefined;
+				const summaries = (requested?.data.requests ?? []).map(
+					(request) => request.action?.input?.approval_summary,
+				);
+				return (
+					summaries.length === 2 &&
+					summaries.every(
+						(summary) =>
+							typeof summary === "string" &&
+							summary === summaries[0] &&
+							/email/i.test(summary) &&
+							/1035|1,035/.test(summary),
+					)
+				);
+			},
+		);
 	},
 });

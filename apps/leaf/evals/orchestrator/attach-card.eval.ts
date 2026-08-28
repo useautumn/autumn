@@ -10,6 +10,29 @@ export default defineEval({
 
 		turn.calledTool("autumn__attach", { status: "pending" });
 		turn.eventsSatisfy(
+			"the write carries a grounded post-card summary",
+			(events) =>
+				events.some((event) => {
+					if (event.type !== "input.requested") return false;
+					const requests = (
+						event as unknown as {
+							data: {
+								requests?: Array<{
+									action?: { input?: Record<string, unknown> };
+								}>;
+							};
+						}
+					).data.requests;
+					const summary = requests?.[0]?.action?.input?.approval_summary;
+					return (
+						typeof summary === "string" &&
+						/1035|1,035/.test(summary) &&
+						/custom|base price|override/i.test(summary) &&
+						!/confirm|approve|looks good|shall I/i.test(summary)
+					);
+				}),
+		);
+		turn.eventsSatisfy(
 			"the action turn emits no confirmation prose",
 			(events) =>
 				events.every(
