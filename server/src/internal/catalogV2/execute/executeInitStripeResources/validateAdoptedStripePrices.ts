@@ -18,7 +18,10 @@ const PRICE_MAPPING_SLOTS = [
 ] as const;
 
 type PriceConfigIds = Partial<
-	Record<(typeof PRICE_MAPPING_SLOTS)[number] | "stripe_product_id", string | null>
+	Record<
+		(typeof PRICE_MAPPING_SLOTS)[number] | "stripe_product_id",
+		string | null
+	>
 >;
 
 type AdoptedPrice = { planId: string; price: Price; stripePriceId: string };
@@ -26,16 +29,21 @@ type AdoptedPrice = { planId: string; price: Price; stripePriceId: string };
 const configIds = ({ price }: { price: Price }): PriceConfigIds =>
 	(price.config ?? {}) as PriceConfigIds;
 
-/** Every Stripe price the plan already holds — carried-forward ids included. */
+/**
+ * Every Stripe price this row already had, plus the row it was cloned from —
+ * an id carried forward by a mint was real when Autumn wrote it.
+ */
 const knownStripePriceIds = ({
-	product,
+	products,
 }: {
-	product?: FullProduct | null;
+	products: Array<FullProduct | null | undefined>;
 }): Set<string> =>
 	new Set(
-		(product?.prices ?? []).flatMap((price) =>
-			PRICE_MAPPING_SLOTS.map((slot) => configIds({ price })[slot]).filter(
-				(id): id is string => Boolean(id),
+		products.flatMap((product) =>
+			(product?.prices ?? []).flatMap((price) =>
+				PRICE_MAPPING_SLOTS.map((slot) => configIds({ price })[slot]).filter(
+					(id): id is string => Boolean(id),
+				),
 			),
 		),
 	);
@@ -47,7 +55,9 @@ const newlyAdoptedPrices = ({
 	upsert: UpsertProductPlan;
 }): AdoptedPrice[] => {
 	const next: FullProduct = upsert.row.nextFullProduct;
-	const known = knownStripePriceIds({ product: upsert.row.currentFullProduct });
+	const known = knownStripePriceIds({
+		products: [upsert.row.currentFullProduct, upsert.row.baseFullProduct],
+	});
 
 	return next.prices.flatMap((price) => {
 		const ids = configIds({ price });
@@ -88,9 +98,11 @@ export const validateAdoptedStripePrices = async ({
 	ctx: AutumnContext;
 	upsertProducts: UpsertProductPlan[];
 }) => {
-	const adopted = upsertProducts.flatMap((upsert) =>
-		newlyAdoptedPrices({ upsert }),
-	);
+	// `create_in_stripe: false` means this plan does not talk to Stripe at all,
+	// so its ids are threaded through rather than resolved.
+	const adopted = upsertProducts
+		.filter((upsert) => upsert.createInStripe !== false)
+		.flatMap((upsert) => newlyAdoptedPrices({ upsert }));
 	if (adopted.length === 0) return;
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
