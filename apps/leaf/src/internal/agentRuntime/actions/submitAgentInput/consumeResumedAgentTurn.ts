@@ -13,6 +13,7 @@ import {
 	type WithheldWrite,
 } from "../../eve/parkedInput.js";
 import {
+	addPendingRequests,
 	advanceStreamCursor,
 	saveEveSessionState,
 } from "../../eve/sessionState.js";
@@ -88,7 +89,7 @@ const applyChildStreamResults = async ({
 		env: session.env,
 		newSession: false,
 		sessionId: childSessionId,
-		state: { ...session.state, continuationToken: "", streamIndex: 0 },
+		state: { ...session.state, streamIndex: 0 },
 		threadKey: session.threadKey,
 	};
 	try {
@@ -245,7 +246,10 @@ export const consumeResumedAgentTurn = async ({
 					chained = parkedInput.chained;
 					chainedSiblingRequestIds = parkedInput.siblingRequestIds;
 					chainedWithheld = parkedInput.withheld;
-					session.state.pendingRequests = pendingGatedRequests(parkedInput);
+					addPendingRequests({
+						requests: pendingGatedRequests(parkedInput),
+						session,
+					});
 					break;
 				}
 				if (parkedInput?.kind === "question") {

@@ -9,7 +9,10 @@ import type { EveEvent } from "../../../eve/eveEventSchemas.js";
 import { isPreviewToolName } from "../../../eve/events.js";
 import type { CapturedPreview } from "../../../eve/parkedWritePreview.js";
 import { deleteEveSession } from "../../../eve/repo.js";
-import { saveEveSessionState } from "../../../eve/sessionState.js";
+import {
+	addPendingRequests,
+	saveEveSessionState,
+} from "../../../eve/sessionState.js";
 import type { EveSessionRef } from "../../../eve/types.js";
 import { normalizeToolName } from "../../../tools/toolPolicy.js";
 import { enrichCatalogPreview } from "../../resolveCatalogDecision/catalogDecisionPolicy.js";
@@ -108,13 +111,10 @@ const applyEveEffect = async ({
 					},
 				});
 			}
-			await saveEveSessionState({
-				orgId,
-				session,
-				state: effect.pendingRequests
-					? { pendingRequests: [...effect.pendingRequests] }
-					: undefined,
-			});
+			if (effect.pendingRequests) {
+				addPendingRequests({ requests: effect.pendingRequests, session });
+			}
+			await saveEveSessionState({ orgId, session });
 			return;
 		case "throw":
 			throw new Error(effect.message);

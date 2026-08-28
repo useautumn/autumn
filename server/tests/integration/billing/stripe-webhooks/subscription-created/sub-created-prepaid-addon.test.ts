@@ -109,13 +109,22 @@ test(`${chalk.yellowBright("sub.created prepaid add-on: main plan + $30 prepaid 
 		items: [items.prepaidMessages({ billingUnits: 1, price: 30 })],
 	});
 
+	const v1CustomerId = `${customerId}-v1`;
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
+			s.otherCustomers([{ id: v1CustomerId, paymentMethod: "success" }]),
 			s.products({ list: [pro, addon] }),
 		],
-		actions: [],
+		actions: [
+			s.attach({ productId: pro.id, customerId: v1CustomerId }),
+			s.attach({
+				productId: addon.id,
+				customerId: v1CustomerId,
+				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+			}),
+		],
 	});
 
 	const proFull = await getFullProduct({ ctx, productId: pro.id });
@@ -183,13 +192,22 @@ test.skip(`${chalk.yellowBright("sub.created prepaid add-on: two-tier (1 free, $
 		],
 	});
 
+	const v1CustomerId = `${customerId}-v1`;
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
+			s.otherCustomers([{ id: v1CustomerId, paymentMethod: "success" }]),
 			s.products({ list: [pro, addon] }),
 		],
-		actions: [],
+		actions: [
+			s.attach({ productId: pro.id, customerId: v1CustomerId }),
+			s.attach({
+				productId: addon.id,
+				customerId: v1CustomerId,
+				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+			}),
+		],
 	});
 
 	const proFull = await getFullProduct({ ctx, productId: pro.id });
@@ -249,13 +267,21 @@ test(`${chalk.yellowBright("sub.created prepaid add-on: add-on-only subscription
 		items: [items.prepaidMessages({ billingUnits: 1, price: 30 })],
 	});
 
+	const v1CustomerId = `${customerId}-v1`;
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
+			s.otherCustomers([{ id: v1CustomerId, paymentMethod: "success" }]),
 			s.products({ list: [addon] }),
 		],
-		actions: [],
+		actions: [
+			s.attach({
+				productId: addon.id,
+				customerId: v1CustomerId,
+				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+			}),
+		],
 	});
 
 	const nativePrice = await createNativePerUnitPrice({

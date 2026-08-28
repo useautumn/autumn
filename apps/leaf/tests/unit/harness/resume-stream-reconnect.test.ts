@@ -126,7 +126,6 @@ const makeSession = (): EveSessionRef => ({
 	newSession: false,
 	sessionId: "eve_session_1",
 	state: {
-		continuationToken: "token_1",
 		streamIndex: 0,
 		pendingRequests: [],
 	},
@@ -299,7 +298,7 @@ describe("drainParkedAgentTurn stream resilience", () => {
 	});
 });
 
-describe("drainParkedAgentTurn re-park cap", () => {
+describe("drainParkedAgentTurn", () => {
 	beforeEach(() => {
 		streamPasses = [];
 		streamCalls.length = 0;
@@ -307,7 +306,7 @@ describe("drainParkedAgentTurn re-park cap", () => {
 		upsertedStreamIndexes.length = 0;
 	});
 
-	test("a child that re-parks after every deny is reported stuck, never left parked", async () => {
+	test("records a later park without deciding it", async () => {
 		const gatedPark = {
 			requests: [
 				{
@@ -329,19 +328,25 @@ describe("drainParkedAgentTurn re-park cap", () => {
 			type: "input.requested",
 		} as unknown as EveEvent;
 		streamPasses = [
-			{ events: [{ type: "turn.started" }, gatedPark] as EveEvent[] },
-			{ events: [gatedPark] },
-			{ events: [gatedPark] },
-			{ events: [gatedPark] },
+			{
+				events: [
+					{ type: "turn.started" },
+					gatedPark,
+					{ type: "session.waiting" },
+				] as EveEvent[],
+			},
 		];
 
-		const result = await drainParkedAgentTurn({
+		const session = makeSession();
+		await drainParkedAgentTurn({
 			auth,
 			orgId: "org_1",
-			session: makeSession(),
+			session,
 		});
 
-		expect(streamCalls).toHaveLength(4);
-		expect(result?.stuck).toBe(true);
+		expect(streamCalls).toHaveLength(1);
+		expect(session.state.pendingRequests).toEqual([
+			{ denyOptionId: "deny", kind: "gated", requestId: "tc_1" },
+		]);
 	});
 });

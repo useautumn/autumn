@@ -1486,7 +1486,9 @@ export async function initScenario({
 					"Cannot attach product: customerId is required when using s.attach()",
 				);
 			}
-			const prefixedProductId = `${action.productId}_${productPrefix}`;
+			const prefixedProductId = productPrefix
+				? `${action.productId}_${productPrefix}`
+				: action.productId;
 
 			let entityId: string | undefined;
 			if (action.entityIndex !== undefined) {

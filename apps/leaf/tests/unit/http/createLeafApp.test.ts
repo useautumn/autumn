@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { Hono } from "hono";
 
 mock.module("../../../src/lib/env.js", () => ({
 	env: {
@@ -8,6 +9,14 @@ mock.module("../../../src/lib/env.js", () => ({
 		MCP_SERVER_URL: "http://leaf.test",
 	},
 }));
+
+mock.module("../../../src/providers/slack/routes.js", () => ({
+	slackRoutes: new Hono(),
+}));
+const webRoutes = new Hono().post("/chat", (c) =>
+	c.json({ error: "Not authenticated" }, 401),
+);
+mock.module("../../../src/providers/web/routes.js", () => ({ webRoutes }));
 
 const { createLeafApp } = await import("../../../src/http/createLeafApp.js");
 

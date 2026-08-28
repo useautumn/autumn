@@ -7,7 +7,7 @@ import {
 
 export default defineAgent({
 	description:
-		"Read-only Autumn investigator. Delegate questions about a customer's current state (plans, entities, balances, trials, past-due subscriptions) and what-happened questions answered from request logs. Never use it as a prep step for a billing action — the billing subagent reads any customer state it needs itself.",
+		"Read-only Autumn investigator for how or why a customer reached its current state, request-log history, and anomaly diagnosis. Never use it for questions or objections about current or proposed billing, or as preparation for a billing action — the billing specialist owns those.",
 	model: leafModel("investigator"),
 	modelContextWindowTokens: leafModelContextWindowTokens("investigator"),
 	reasoning: leafReasoning("investigator"),

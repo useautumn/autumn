@@ -9,8 +9,8 @@ import {
 } from "../../../approvals/utils/toolRequest.js";
 import type { AgentApprovalRequest } from "../../domain/agentTurn.js";
 import type { AgentThreadRef } from "../../domain/agentTurnContext.js";
-import { adoptPostedEveSession } from "../../eve/adoptPostedSession.js";
-import { postEveInputResponse } from "../../eve/client.js";
+import { answerEveInput } from "../../eve/answerEveInput.js";
+import { CANCEL_OPTION_ID } from "../../eve/events.js";
 import { siblingRequestIdsFromToolArgs } from "../../eve/parkedInput.js";
 import { getEveSessionBySessionId, upsertEveSession } from "../../eve/repo.js";
 import type { EveAuthContext } from "../../eve/types.js";
@@ -85,8 +85,8 @@ export const resolveCatalogDecision = async ({
 		const denyOptionId =
 			typeof suspension.toolArgs._eveDenyOptionId === "string"
 				? suspension.toolArgs._eveDenyOptionId
-				: "deny";
-		const posted = await postEveInputResponse({
+				: CANCEL_OPTION_ID;
+		await answerEveInput({
 			note: "(Dashboard: this change needs versioning/variant/migration choices — a decision card is already shown to the user with explanatory text. Do NOT reply; end your turn silently and wait for their selection.)",
 			auth: {
 				appEnv: env,
@@ -102,7 +102,6 @@ export const resolveCatalogDecision = async ({
 			session,
 			siblingRequestIds: siblingRequestIdsFromToolArgs(suspension.toolArgs),
 		});
-		adoptPostedEveSession({ posted, session });
 		await upsertEveSession({
 			db,
 			env: session.env,

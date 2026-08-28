@@ -125,11 +125,13 @@ const setupLicenseSubscription = async ({
 		group: `${idPrefix}-licenses`,
 	});
 
+	const v1CustomerId = `${customerId}-v1`;
 	const { autumnV2_3 } = await initScenario({
 		customerId,
 		ctx,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
+			s.otherCustomers([{ id: v1CustomerId, paymentMethod: "success" }]),
 			s.products({ list: [parent, devSeat] }),
 		],
 		actions: [
@@ -138,6 +140,7 @@ const setupLicenseSubscription = async ({
 				licenseProductId: devSeat.id,
 				included: INCLUDED_SEATS,
 			}),
+			s.attach({ productId: devSeat.id, customerId: v1CustomerId }),
 		],
 	});
 

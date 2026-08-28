@@ -13,10 +13,12 @@ import {
 	hasMissingStripeResourcesForProduct,
 	isFixedPrice,
 	type Price,
+	ProcessorType,
 	ProductItemFeatureType,
 	type ProductV2,
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
+	UsageModel,
 } from "@autumn/shared";
 import { createStripeFixedPriceUnderProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
@@ -24,7 +26,10 @@ import {
 	expectCustomerProducts,
 	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { createVariantPlan } from "@tests/integration/crud/plans/variants/utils/variantTestPlanUtils";
+import {
+	createVariantPlan,
+	deleteVariantTestPlans,
+} from "@tests/integration/crud/plans/variants/utils/variantTestPlanUtils";
 import { materializeProductsInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -37,6 +42,7 @@ import testCtx, {
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import type Stripe from "stripe";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { ProductService } from "@/internal/products/ProductService";
@@ -315,6 +321,37 @@ export const createCustomBasePriceForProduct = async ({
 		unitAmount: amount * 100,
 	});
 
+/** Same-group V1 attach can reuse one Stripe product; sync then treats both plans as ambiguous. */
+export const ensureDistinctStripeProcessor = async ({
+	ctx,
+	fullProduct,
+	otherProcessorId,
+}: {
+	ctx: TestContext;
+	fullProduct: FullProduct;
+	otherProcessorId?: string;
+}) => {
+	if (
+		fullProduct.processor?.id &&
+		fullProduct.processor.id !== otherProcessorId
+	) {
+		return fullProduct;
+	}
+
+	const stripeProduct = await ctx.stripeCli.products.create({
+		name: `distinct ${fullProduct.id}`,
+	});
+	await ProductService.updateByInternalId({
+		db: ctx.db,
+		internalId: fullProduct.internal_id,
+		update: {
+			processor: { type: ProcessorType.Stripe, id: stripeProduct.id },
+		},
+	});
+	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
+	return getFullProduct({ ctx, productId: fullProduct.id });
+};
+
 export const findSubscriptionItemByStripeProductId = ({
 	subscription,
 	stripeProductId,
@@ -569,17 +606,28 @@ export const stampStripeSlotsViaV1Attach = async ({
 	}
 };
 
+const prepaidAttachOptions = (product: ProductV2) => {
+	const options = product.items
+		.filter(
+			(item) => item.usage_model === UsageModel.Prepaid && item.feature_id,
+		)
+		.map((item) => ({
+			feature_id: item.feature_id as string,
+			quantity: 1,
+		}));
+	return options.length > 0 ? options : undefined;
+};
+
 export const setupSharedStripeFamilies = async ({
 	customerId,
 	families,
 	additionalProducts = [],
-	stampCustomerId,
 }: {
 	customerId: string;
 	families: FamilySpec[];
 	additionalProducts?: ProductV2[];
-	stampCustomerId?: string;
 }) => {
+	const v1CustomerId = `${customerId}-v1`;
 	const bases = families.map((family) =>
 		products.base({
 			id: family.baseId,
@@ -600,18 +648,36 @@ export const setupSharedStripeFamilies = async ({
 		ctx: testCtx,
 		setup: [
 			s.deleteCustomer({ customerId }),
+			s.deleteCustomer({ customerId: v1CustomerId }),
+			s.deleteCustomer({ customerId: `${customerId}-v1-stamp` }),
 			s.customer({ paymentMethod: "success" }),
-			...(stampCustomerId
-				? [s.otherCustomers([{ id: stampCustomerId, paymentMethod: "success" }])]
-				: []),
+			s.otherCustomers([{ id: v1CustomerId, paymentMethod: "success" }]),
 			s.products({ list: [...bases, ...additionalProducts], prefix: "" }),
 		],
-		actions: [],
+		actions: [
+			...families.map((family) =>
+				s.attach({ productId: family.baseId, customerId: v1CustomerId }),
+			),
+			...additionalProducts.map((product) =>
+				s.attach({
+					productId: product.id,
+					customerId: v1CustomerId,
+					options: prepaidAttachOptions(product),
+				}),
+			),
+		],
 	});
 
 	const rpc = new AutumnRpcCli({
 		secretKey: ctx.orgSecretKey,
 		version: ApiVersion.V2_1,
+	});
+
+	await deleteVariantTestPlans({
+		rpc,
+		planIds: families.flatMap((family) =>
+			family.variants.map((variant) => variant.id),
+		),
 	});
 
 	for (const family of families) {
