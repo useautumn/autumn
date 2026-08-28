@@ -18,14 +18,12 @@ export function StripePriceConfig() {
 	return (
 		<div className="flex flex-col gap-2">
 			<FormLabel>Stripe price</FormLabel>
-			<div className="advanced-input-width">
-				<StripePriceSelect
-					onChange={(stripePriceId) =>
-						setItem(withItemStripePriceId({ item, stripePriceId }))
-					}
-					value={itemStripePriceId({ item })}
-				/>
-			</div>
+			<StripePriceSelect
+				onChange={(stripePriceId) =>
+					setItem(withItemStripePriceId({ item, stripePriceId }))
+				}
+				value={itemStripePriceId({ item })}
+			/>
 			<p className="text-tertiary-foreground text-xs">
 				Bill this item under a Stripe price you already have. Applies to this
 				version only.
