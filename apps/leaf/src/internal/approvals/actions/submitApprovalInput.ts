@@ -7,6 +7,7 @@ import {
 } from "../../../ui/messages.js";
 import { submitAgentInput } from "../../agentRuntime/actions/submitAgentInput/submitAgentInput.js";
 import type { ResumedAgentTurn } from "../../agentRuntime/actions/submitAgentInput/types.js";
+import { EveSessionGoneError } from "../../agentRuntime/eve/client.js";
 import { getEveSessionBySessionId } from "../../agentRuntime/eve/repo.js";
 import { rawErrorShapeText } from "../../autumnMcp/errorResult.js";
 import {
@@ -77,8 +78,6 @@ export const submitApprovalInput = async ({
 		sessionId: approval.run_id,
 	});
 	if (!session) {
-		// Retryable, so the row returns to pending — the "button does nothing"
-		// symptom starts here.
 		logger.warn("Eve session not found for approval", {
 			event: "leaf.approval_eve_session_not_found",
 			approval_id: approval.id,
@@ -88,11 +87,10 @@ export const submitApprovalInput = async ({
 				tool: approval.tool_name,
 			},
 		});
-		return {
-			error: true,
-			message: "Eve session not found.",
-			retryable: true,
-		};
+		if (expectExecution) {
+			throw new EveSessionGoneError(`Eve session ${approval.run_id} not found`);
+		}
+		return { result: {}, text: "", writes: [] };
 	}
 	const startedAt = Date.now();
 	const auth = approvalAuthContext({ approval, providerUserId });

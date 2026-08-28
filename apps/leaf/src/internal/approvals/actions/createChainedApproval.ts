@@ -37,7 +37,7 @@ export const createChainedApproval = async ({
 }) => {
 	const env = auth.appEnv as ChatApproval["env"];
 	const provider = auth.provider as ChatApproval["provider"];
-	const options = approvalOptionIds();
+	const options = approvalOptionIds(chained.options);
 	let preview: unknown;
 	let previewedWithheld = withheld;
 	try {

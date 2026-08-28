@@ -1,11 +1,12 @@
 import { db } from "../../../lib/db.js";
 import { upsertEveSession } from "./repo.js";
-import type { EveSessionRef, EveSessionState } from "./types.js";
+import type {
+	EvePendingRequest,
+	EveSessionRef,
+	EveSessionState,
+} from "./types.js";
 
-export const initialEveSessionState = (
-	continuationToken: string,
-): EveSessionState => ({
-	continuationToken,
+export const initialEveSessionState = (): EveSessionState => ({
 	streamIndex: 0,
 	pendingRequests: [],
 });
@@ -33,4 +34,33 @@ export const saveEveSessionState = async ({
 
 export const advanceStreamCursor = (session: EveSessionRef) => {
 	session.state.streamIndex += 1;
+};
+
+export const addPendingRequests = ({
+	requests,
+	session,
+}: {
+	requests: ReadonlyArray<EvePendingRequest>;
+	session: EveSessionRef;
+}) => {
+	const pending = new Map(
+		session.state.pendingRequests.map((request) => [
+			request.requestId,
+			request,
+		]),
+	);
+	for (const request of requests) pending.set(request.requestId, request);
+	session.state.pendingRequests = [...pending.values()];
+};
+
+export const removePendingRequests = ({
+	requestIds,
+	session,
+}: {
+	requestIds: ReadonlySet<string>;
+	session: EveSessionRef;
+}) => {
+	session.state.pendingRequests = session.state.pendingRequests.filter(
+		(request) => !requestIds.has(request.requestId),
+	);
 };

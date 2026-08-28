@@ -36,7 +36,7 @@ export const denyOptionOf = (approval: ChatApproval): string =>
 		approval.tool_args as Record<string, unknown>,
 		"_eveDenyOptionId",
 	) ??
-	"deny";
+	"cancel";
 
 /** Sibling park ids are the grouped writes' request ids — derived, not stored
  * twice. Legacy rows fall back to the marker. */

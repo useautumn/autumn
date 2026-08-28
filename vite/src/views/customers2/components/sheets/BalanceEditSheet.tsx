@@ -20,8 +20,11 @@ import {
 	InfoRow,
 	LabelInput,
 	Switch,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
 } from "@autumn/ui";
-import { ClockCountdownIcon } from "@phosphor-icons/react";
+import { ClockCountdownIcon, QuestionIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -110,7 +113,25 @@ export function BalanceEditSheet() {
 					</CopyButton>
 				}
 				breadcrumbs={undefined}
-			/>
+			>
+				{!isUnlimited && (
+					<p className="text-tertiary-foreground text-xs mt-2">
+						Make a one-off adjustment to a balance. After the next reset, the
+						balance will return to the plan's defaults.{" "}
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<QuestionIcon className="size-3.5 cursor-help text-tertiary-foreground inline align-text-bottom" />
+							</TooltipTrigger>
+							<TooltipContent className="max-w-72">
+								Balance updates are meant for manual corrections. To change what
+								a customer gets on an ongoing basis, update their plan instead.
+								To grant a separate balance that isn't tied to their plan, like
+								a promotional credit, create a new balance.
+							</TooltipContent>
+						</Tooltip>
+					</p>
+				)}
+			</SheetHeader>
 
 			{isUnlimited ? (
 				<UnlimitedBalanceInfo

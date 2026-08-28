@@ -34,15 +34,20 @@ test(`${chalk.yellowBright("customer.subscription.updated auto-sync: ungrouped b
 		items: [items.monthlyPrice({ price: 19 })],
 	});
 
+	const v1CustomerId = `${customerId}-v1`;
 	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		ctx: testCtx,
 		setup: [
 			s.deleteCustomer({ customerId }),
 			s.customer({ paymentMethod: "success" }),
+			s.otherCustomers([{ id: v1CustomerId, paymentMethod: "success" }]),
 			s.products({ list: [ultra, pro], prefix: "" }),
 		],
-		actions: [],
+		actions: [
+			s.attach({ productId: ultraId, customerId: v1CustomerId }),
+			s.attach({ productId: proId, customerId: v1CustomerId }),
+		],
 	});
 
 	const ultraFull = await getFullProduct({ ctx, productId: ultraId });

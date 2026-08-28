@@ -5,7 +5,7 @@ import {
 	isCustomerProductOnStripeSubscription,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { getStripeSubscriptionLock } from "@/external/redis/actions/stripeSubscriptionLock/stripeSubscriptionLock.js";
+import { isAutumnOriginatedStripeEvent } from "@/external/stripe/common/autumnStripeIdempotency.js";
 import {
 	type ExpandedStripeCustomer,
 	getExpandedStripeCustomer,
@@ -54,7 +54,7 @@ export interface StripeSubscriptionDeletedContext {
  * Returns null if:
  * - No fullCustomer in context
  * - No customer products found for this subscription
- * - Lock exists on the subscription (Autumn initiated the deletion)
+ * - The deletion event was originated by Autumn
  */
 export const setupStripeSubscriptionDeletedContext = async ({
 	ctx,
@@ -87,15 +87,10 @@ export const setupStripeSubscriptionDeletedContext = async ({
 		return null;
 	}
 
-	// 2. Check lock - if Autumn initiated this deletion, skip
-	const lock = await getStripeSubscriptionLock({
-		ctx,
-		stripeSubscriptionId,
-	});
-
-	if (lock) {
+	// 2. Skip Autumn's own deletion echo
+	if (isAutumnOriginatedStripeEvent({ event })) {
 		logger.info(
-			`[sub.deleted] Skipping - lock found on subscription ${stripeSubscriptionId}`,
+			`[sub.deleted] Skipping - autumn-originated deletion ${stripeSubscriptionId}`,
 		);
 		return null;
 	}

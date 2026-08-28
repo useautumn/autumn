@@ -100,13 +100,22 @@ const setupProWithPrepaidAddon = async ({
 		items: [items.prepaidMessages({ billingUnits: 1, price: 30 })],
 	});
 
+	const v1CustomerId = `${customerId}-v1`;
 	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
+			s.otherCustomers([{ id: v1CustomerId, paymentMethod: "success" }]),
 			s.products({ list: [pro, addon] }),
 		],
-		actions: [],
+		actions: [
+			s.attach({ productId: pro.id, customerId: v1CustomerId }),
+			s.attach({
+				productId: addon.id,
+				customerId: v1CustomerId,
+				options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+			}),
+		],
 	});
 
 	const proFull = await getFullProduct({ ctx, productId: pro.id });

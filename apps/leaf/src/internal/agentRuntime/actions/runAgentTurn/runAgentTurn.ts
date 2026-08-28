@@ -1,11 +1,9 @@
 import { db } from "../../../../lib/db.js";
-import { chatApprovalRepo } from "../../../approvals/repos/chatApprovalRepo.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import type {
 	AgentTurnContext,
 	AgentTurnParams,
 } from "../../domain/agentTurnContext.js";
-import { postEveMessage } from "../../eve/client.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import {
 	generateThreadTitle,
@@ -83,17 +81,11 @@ export const runAgentTurn = async ({
 			session: prepared.existingSession,
 			thread,
 		});
-	const startFresh = async (staleSessionId: string) => {
+	const startFresh = async () => {
 		restarted = true;
-		const session = await startTurn({
+		return startTurn({
 			orgContext: await loadAgentOrgContext(ctx),
 		});
-		await chatApprovalRepo.moveToRun({
-			db,
-			fromRunId: staleSessionId,
-			toRunId: session.sessionId,
-		});
-		return session;
 	};
 	const consume = (session: EveSessionRef) => {
 		run?.resolveSessionId(session.sessionId);
@@ -127,40 +119,13 @@ export const runAgentTurn = async ({
 				existingSession,
 				session: existingSession,
 			});
-			return startFresh(existingSession.sessionId);
+			return startFresh();
 		});
-		let outcome = await consume(session).catch(async (error) => {
+		const outcome = await consume(session).catch(async (error) => {
 			await recoverLostSession({ ctx, error, existingSession, session });
-			session = await startFresh(session.sessionId);
+			session = await startFresh();
 			return consume(session);
 		});
-		if (outcome.kind === "deferred") {
-			logger.warn("Eve parked holding the message; redelivering", {
-				event: "leaf.eve_deferred_input_redelivered",
-				data: {
-					session_id: session.sessionId,
-					stream_index: session.state.streamIndex,
-				},
-			});
-			await postEveMessage({
-				auth: { ...auth, orgInstructions: prepared.orgContext?.instructions },
-				message: buildAgentTurnMessage({
-					env,
-					isAdminInstall: isInternalAutumnSlackProvider({
-						provider: thread.provider,
-					}),
-					newSession: false,
-					orgSlug: org.slug,
-					params,
-				}),
-				session,
-			});
-			const redelivered = await consume(session);
-			// One redelivery is the fix; a second park is eve failing to consume
-			// its own deferred input, and must not read as a fresh deferral.
-			outcome =
-				redelivered.kind === "deferred" ? { kind: "silent" } : redelivered;
-		}
 		const result = await resolveAgentTurnOutcome({
 			env,
 			logger,

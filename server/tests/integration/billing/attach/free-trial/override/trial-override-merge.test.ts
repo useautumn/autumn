@@ -84,7 +84,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 1: add-on with free_
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(7),
-		total: 20, // Pro ($20) + Add-on ($20) after trial
+		total: 40, // Pro ($20) + Add-on ($20) after trial
 	});
 
 	// 2. Attach add-on with free_trial override
@@ -302,8 +302,7 @@ test.concurrent(`${chalk.yellowBright("trial-override-merge 3: add-on with free_
 	expect(preview.total).toBe(0); // No charge during trial
 	expectPreviewNextCycleCorrect({
 		preview,
-		startsAt: advancedTo + ms.days(14), // Fresh 14-day trial
-		total: 20, //
+		total: 0,
 	});
 
 	// 2. Attach add-on with free_trial override

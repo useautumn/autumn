@@ -34,9 +34,18 @@ if (cluster.isPrimary) {
 } else {
 	const drainState = { draining: false };
 	let inFlight = 0;
+	const openSockets = new Set<import("node:net").Socket>();
 
 	const server = http.createServer((req, res) => {
 		inFlight++;
+		let released = false;
+		const release = () => {
+			if (released) return;
+			released = true;
+			inFlight--;
+		};
+		res.on("finish", release);
+		res.on("close", release);
 		const url = new URL(req.url ?? "/", "http://127.0.0.1");
 		const delayMs = Number(url.searchParams.get("ms") ?? 20);
 		setTimeout(() => {
@@ -44,14 +53,20 @@ if (cluster.isPrimary) {
 			// Body is length-checked by the test, so a mid-response kill shows up
 			// as a truncated read rather than a silent pass.
 			res.end(`ok:${process.pid}:${"x".repeat(512)}`);
-			inFlight--;
 		}, delayMs);
+	});
+
+	// Same signal as init.ts: streamed/unflushed responses outlive the handler,
+	// so drain must wait on sockets or process.exit cuts the last byte.
+	server.on("connection", (socket) => {
+		openSockets.add(socket);
+		socket.on("close", () => openSockets.delete(socket));
 	});
 
 	server.listen(PORT, "127.0.0.1", () => {
 		startWorkerForkRecycling({
 			server,
-			getActiveRequestCount: () => inFlight,
+			getActiveRequestCount: () => Math.max(inFlight, openSockets.size),
 			onDrainStart: () => {
 				drainState.draining = true;
 			},
