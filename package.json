@@ -17,6 +17,7 @@
 			"apps/testbench",
 			"packages/agent-docs",
 			"packages/atmn",
+			"packages/ax-evals",
 			"packages/atmn-tests",
 			"packages/auth",
 			"packages/env",

@@ -10,7 +10,7 @@ Use `atmn` when a project has or should have an `autumn.config.ts` source of tru
 
 ## Config shapes
 
-`autumn.config.ts` uses the atmn package types, not raw API JSON. Field names are camelCase: `featureId`, `billingMethod`, `billingUnits`, `freeTrial`, `addItems`, `removeItems`, `intervalCount`. Follow the exported types from the package when editing config.
+`autumn.config.ts` uses the atmn package types, not raw API JSON. Field names are camelCase: `featureId`, `billingMethod`, `billingUnits`, `freeTrial`, `addItems`, `removeItems`, `intervalCount`. Follow the exported types from the package when editing config. Amounts are plain dollars: $20 is `20`, never `2000`.
 
 Core builders:
 
