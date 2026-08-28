@@ -57,9 +57,9 @@ export function AdvancedSettings() {
 		usageType === FeatureUsageType.Single &&
 		itemToBillingInterval({ item }) !== BillingInterval.OneOff;
 
-	// Only prepaid prices have a mappable Stripe slot today; metered prices are
-	// still minted with their meter.
-	const showStripePrice = isPriced && item.usage_model === UsageModel.Prepaid;
+	// Prepaid maps into the v2 slot, usage-based into v1; the meter comes from
+	// the adopted price rather than being mapped.
+	const showStripePrice = isPriced;
 
 	return (
 		<SheetAccordion type="single" withSeparator={false} collapsible={true}>

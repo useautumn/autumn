@@ -1,11 +1,19 @@
-import type { ProductItem } from "@autumn/shared";
+import {
+	BillingMethod,
+	isFeaturePriceItem,
+	itemToBillingMethod,
+	type ProductItem,
+} from "@autumn/shared";
 
 /**
- * A base price is fixed and bills from the v1 slot; a prepaid feature price
- * bills from v2. The server picks the same slot from the stated `processors`.
+ * One stated id, two slots: prepaid bills from v2, everything else — base
+ * prices and usage-based items — from v1. The server routes it the same way.
  */
 const mappingSlot = ({ item }: { item: ProductItem }) =>
-	item.feature_id ? "stripe_prepaid_price_v2_id" : "stripe_price_id";
+	isFeaturePriceItem(item) &&
+	itemToBillingMethod({ item }) === BillingMethod.Prepaid
+		? "stripe_prepaid_price_v2_id"
+		: "stripe_price_id";
 
 export const itemStripePriceId = ({
 	item,
