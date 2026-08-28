@@ -17,7 +17,10 @@ import { DEFAULT_SLACK_BOT_SCOPES } from "@autumn/shared/utils/auth/slackScopes"
 import { eq } from "drizzle-orm";
 import { db } from "../src/lib/db.js";
 import { env } from "../src/lib/env.js";
-import { replaceInstallation } from "../src/providers/slack/installations.js";
+import {
+	findInstallation,
+	replaceInstallation,
+} from "../src/providers/slack/installations.js";
 
 const ADMIN_ORG_SLUG = process.env.SEED_ADMIN_ORG_SLUG ?? "autumn";
 
@@ -29,11 +32,24 @@ const required = (key: string) => {
 	return value;
 };
 
+/** With --if-missing: exit 0 when the row exists, 42 when a token is needed. */
 const main = async () => {
-	const botToken = required("SLACK_BOT_TOKEN");
 	const clientId = required("SLACK_CLIENT_ID");
 	const adminWorkspaceId = env.SLACK_ADMIN_WORKSPACE_ID;
 	if (!adminWorkspaceId) throw new Error("SLACK_ADMIN_WORKSPACE_ID is not set");
+
+	if (process.argv.includes("--if-missing")) {
+		const existing = await findInstallation(
+			`slack_admin:${clientId}`,
+			adminWorkspaceId,
+		);
+		if (existing) {
+			log(`slack_admin:${clientId} already installed`);
+			process.exit(0);
+		}
+		if (!process.env.SLACK_BOT_TOKEN) process.exit(42);
+	}
+	const botToken = required("SLACK_BOT_TOKEN");
 
 	const response = await fetch("https://slack.com/api/auth.test", {
 		headers: { Authorization: `Bearer ${botToken}` },

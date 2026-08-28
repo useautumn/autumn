@@ -96,6 +96,63 @@ const localSlackAppEnv = (): Record<string, string> => {
 	}
 	return overrides;
 };
+
+/** Ensures the local app's slack_admin installation exists in the target DB
+ * so a non-dev run gets the admin org+env flow. The bot token lives encrypted
+ * in the dev DB, so a missing row is seeded via a dev-env token fetch.
+ * Best-effort: failures log a hint and never block startup. */
+const ensureLocalSlackAdminInstall = ({
+	spawnEnv,
+}: {
+	spawnEnv: Record<string, string>;
+}) => {
+	const seed = (extraEnv: Record<string, string>) =>
+		Bun.spawnSync(
+			["bun", "apps/leaf/scripts/seedSlackAdminInstall.ts", "--if-missing"],
+			{ env: { ...spawnEnv, ...extraEnv }, stderr: "pipe", stdout: "pipe" },
+		);
+	const probe = seed({});
+	if (probe.exitCode === 0) return;
+	if (probe.exitCode !== 42) {
+		console.log(
+			`[dev] slack_admin seed probe failed: ${probe.stderr.toString().trim().slice(0, 200)}`,
+		);
+		return;
+	}
+	const tokenProc = Bun.spawnSync(
+		[
+			"infisical",
+			"run",
+			"--env=dev",
+			"--recursive",
+			"--",
+			"bun",
+			"apps/leaf/scripts/printLocalSlackBotToken.ts",
+		],
+		{
+			env: {
+				HOME: process.env.HOME ?? "",
+				PATH: process.env.PATH ?? "",
+				SLACK_ADMIN_WORKSPACE_ID: spawnEnv.SLACK_ADMIN_WORKSPACE_ID ?? "",
+			},
+			stderr: "pipe",
+			stdout: "pipe",
+		},
+	);
+	const token = tokenProc.stdout.toString().trim().split("\n").at(-1) ?? "";
+	if (!token.startsWith("xoxb")) {
+		console.log(
+			"[dev] could not fetch the local Slack bot token from the dev DB — run apps/leaf/scripts/seedSlackAdminInstall.ts manually with SLACK_BOT_TOKEN set",
+		);
+		return;
+	}
+	const seeded = seed({ SLACK_BOT_TOKEN: token });
+	console.log(
+		seeded.exitCode === 0
+			? "[dev] seeded the local slack_admin installation"
+			: `[dev] slack_admin seed failed: ${seeded.stderr.toString().trim().slice(0, 200)}`,
+	);
+};
 const TRIGGER_API_URL =
 	(process.env.TRIGGER_API_URL ?? "https://api.trigger.dev")
 		.trim()
@@ -487,6 +544,9 @@ async function startDev() {
 		};
 		if (useLocalMiscCache) {
 			delete spawnEnv.MISC_CACHE_DRAGONFLY_PRIVATE_URL;
+		}
+		if (viteAppEnv !== "dev" && spawnEnv.SLACK_SIGNING_SECRET) {
+			ensureLocalSlackAdminInstall({ spawnEnv });
 		}
 
 		const concurrentlyProc = Bun.spawn(shellArgs, {
