@@ -5,7 +5,7 @@ from autumn_sdk.types import BaseModel, Nullable, UNSET_SENTINEL, UnrecognizedSt
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -35,6 +35,13 @@ class MultiUpdateGlobals(BaseModel):
                     m[k] = val
 
         return m
+
+
+MultiUpdateRefundLastPayment = Literal[
+    "prorated",
+    "full",
+]
+r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
 
 
 MultiUpdateCancelAction = Literal[
@@ -107,6 +114,10 @@ class MultiUpdateParamsTypedDict(TypedDict):
     r"""The list of plan updates to apply to the customer."""
     entity_id: NotRequired[str]
     r"""The ID of the entity to update plans for. Individual updates can override this with their own entity_id."""
+    refund_last_payment: NotRequired[MultiUpdateRefundLastPayment]
+    r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+    subscription_params: NotRequired[Dict[str, Any]]
+    r"""Additional parameters to pass into the Stripe subscription update or cancel call."""
 
 
 class MultiUpdateParams(BaseModel):
@@ -119,9 +130,17 @@ class MultiUpdateParams(BaseModel):
     entity_id: Optional[str] = None
     r"""The ID of the entity to update plans for. Individual updates can override this with their own entity_id."""
 
+    refund_last_payment: Optional[MultiUpdateRefundLastPayment] = None
+    r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+
+    subscription_params: Optional[Dict[str, Any]] = None
+    r"""Additional parameters to pass into the Stripe subscription update or cancel call."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["entity_id"])
+        optional_fields = set(
+            ["entity_id", "refund_last_payment", "subscription_params"]
+        )
         serialized = handler(self)
         m = {}
 

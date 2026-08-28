@@ -4,13 +4,15 @@
  *
  * Contract:
  *   New types/fields:
- *     updates[].subscription_params?: Record<string, unknown>
+ *     multiUpdate.subscription_params?: Record<string, unknown>
+ *     multiUpdate.refund_last_payment?: "prorated" | "full"
  *     update.subscription_params?: Record<string, unknown>
  *   Kept:
- *     refund_last_payment cannot pair with proration_behavior
- *     refund_last_payment requires cancel_immediately
+ *     refund_last_payment cannot pair with any update's proration_behavior
+ *     refund_last_payment requires every update to be cancel_immediately
  *   Removed:
  *     cancellation_details / Autumn reason+details rename
+ *     per-update subscription_params / refund_last_payment
  */
 
 import { describe, expect, test } from "bun:test";
@@ -24,9 +26,19 @@ import {
 import { multiUpdateItemToParams } from "@/internal/billing/v2/actions/multiUpdate/setup/setupMultiUpdateItemParams";
 import chalk from "chalk";
 
-const parseMultiUpdate = (updates: Array<Record<string, unknown>>) =>
+const parseMultiUpdate = ({
+	updates,
+	refundLastPayment,
+	subscriptionParams,
+}: {
+	updates: Array<Record<string, unknown>>;
+	refundLastPayment?: "prorated" | "full";
+	subscriptionParams?: Record<string, unknown>;
+}) =>
 	ExtMultiUpdateParamsV0Schema.safeParse({
 		customer_id: "cus_123",
+		refund_last_payment: refundLastPayment,
+		subscription_params: subscriptionParams,
 		updates,
 	});
 
@@ -39,14 +51,16 @@ const stripeSubscriptionParams = {
 
 describe(chalk.yellowBright("multiUpdate cancel param schema"), () => {
 	test("rejects refund_last_payment with proration_behavior", () => {
-		const result = parseMultiUpdate([
-			{
-				plan_id: "pro",
-				cancel_action: "cancel_immediately",
-				refund_last_payment: "full",
-				proration_behavior: "prorate_immediately",
-			},
-		]);
+		const result = parseMultiUpdate({
+			refundLastPayment: "full",
+			updates: [
+				{
+					plan_id: "pro",
+					cancel_action: "cancel_immediately",
+					proration_behavior: "prorate_immediately",
+				},
+			],
+		});
 
 		expect(result.success).toBe(false);
 		if (result.success) return;
@@ -56,13 +70,15 @@ describe(chalk.yellowBright("multiUpdate cancel param schema"), () => {
 	});
 
 	test("rejects refund_last_payment unless cancel_immediately", () => {
-		const result = parseMultiUpdate([
-			{
-				plan_id: "pro",
-				cancel_action: "cancel_end_of_cycle",
-				refund_last_payment: "full",
-			},
-		]);
+		const result = parseMultiUpdate({
+			refundLastPayment: "full",
+			updates: [
+				{
+					plan_id: "pro",
+					cancel_action: "cancel_end_of_cycle",
+				},
+			],
+		});
 
 		expect(result.success).toBe(false);
 		if (result.success) return;
@@ -72,48 +88,52 @@ describe(chalk.yellowBright("multiUpdate cancel param schema"), () => {
 	});
 
 	test("accepts refund_last_payment on immediate cancel", () => {
-		const result = parseMultiUpdate([
-			{
-				plan_id: "pro",
-				cancel_action: "cancel_immediately",
-				refund_last_payment: "full",
-			},
-		]);
+		const result = parseMultiUpdate({
+			refundLastPayment: "full",
+			updates: [
+				{
+					plan_id: "pro",
+					cancel_action: "cancel_immediately",
+				},
+			],
+		});
 
 		expect(result.success).toBe(true);
+		if (!result.success) return;
+		expect(result.data.refund_last_payment).toBe("full");
 	});
 
 	test("accepts subscription_params on end-of-cycle cancel", () => {
-		const result = parseMultiUpdate([
-			{
-				plan_id: "pro",
-				cancel_action: "cancel_end_of_cycle",
-				subscription_params: stripeSubscriptionParams,
-			},
-		]);
+		const result = parseMultiUpdate({
+			subscriptionParams: stripeSubscriptionParams,
+			updates: [
+				{
+					plan_id: "pro",
+					cancel_action: "cancel_end_of_cycle",
+				},
+			],
+		});
 
 		expect(result.success).toBe(true);
 		if (!result.success) return;
-		expect(result.data.updates[0]?.subscription_params).toEqual(
-			stripeSubscriptionParams,
-		);
+		expect(result.data.subscription_params).toEqual(stripeSubscriptionParams);
 	});
 
 	test("accepts subscription_params on immediate cancel", () => {
-		const result = parseMultiUpdate([
-			{
-				plan_id: "pro",
-				cancel_action: "cancel_immediately",
-				refund_last_payment: "prorated",
-				subscription_params: stripeSubscriptionParams,
-			},
-		]);
+		const result = parseMultiUpdate({
+			refundLastPayment: "prorated",
+			subscriptionParams: stripeSubscriptionParams,
+			updates: [
+				{
+					plan_id: "pro",
+					cancel_action: "cancel_immediately",
+				},
+			],
+		});
 
 		expect(result.success).toBe(true);
 		if (!result.success) return;
-		expect(result.data.updates[0]?.subscription_params).toEqual(
-			stripeSubscriptionParams,
-		);
+		expect(result.data.subscription_params).toEqual(stripeSubscriptionParams);
 	});
 });
 
@@ -146,18 +166,21 @@ describe(chalk.yellowBright("update subscription param schema"), () => {
 });
 
 describe(chalk.yellowBright("multiUpdateItemToParams"), () => {
-	test("copies subscription_params onto update params", () => {
-		const params = {
-			customer_id: "cus_123",
-		} as MultiUpdateParamsV0;
+	test("copies top-level subscription_params and refund_last_payment onto update params", () => {
 		const item = {
 			plan_id: "pro",
 			cancel_action: "cancel_end_of_cycle",
-			subscription_params: stripeSubscriptionParams,
 		} as MultiUpdateItemV0;
+		const params = {
+			customer_id: "cus_123",
+			refund_last_payment: "full" as const,
+			subscription_params: stripeSubscriptionParams,
+			updates: [item],
+		} satisfies MultiUpdateParamsV0;
 
-		expect(
-			multiUpdateItemToParams({ params, item }).subscription_params,
-		).toEqual(stripeSubscriptionParams);
+		expect(multiUpdateItemToParams({ params, item })).toMatchObject({
+			refund_last_payment: "full",
+			subscription_params: stripeSubscriptionParams,
+		});
 	});
 });

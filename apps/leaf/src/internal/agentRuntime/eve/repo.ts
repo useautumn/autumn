@@ -258,28 +258,3 @@ export const setHarnessSessionTitleIfEmpty = async ({
 			),
 		);
 };
-
-export const updateEveSessionState = async ({
-	db,
-	env,
-	orgId,
-	state,
-	threadKey,
-}: {
-	db: ChatDb;
-	env: AppEnv;
-	orgId: string;
-	state: EveSessionState;
-	threadKey: string;
-}) => {
-	await db
-		.update(harnessSessions)
-		.set({ resume_state: state, updated_at: Date.now() })
-		.where(
-			and(
-				eq(harnessSessions.org_id, orgId),
-				eq(harnessSessions.env, env),
-				eq(harnessSessions.thread_key, threadKey),
-			),
-		);
-};

@@ -31,14 +31,41 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="credit_schema" type="object[]">
-  A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+<DynamicParamField body="credit_schema" type="object | object[]">
+  A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.
   <Expandable title="properties">
-    <DynamicParamField body="metered_feature_id" type="string" required />
+    <DynamicParamField body="metered_feature_id" type="string">
+      ID of the metered feature that draws from this credit system.
+    </DynamicParamField>
 
-    <DynamicParamField body="credit_cost" type="number" required />
+    <DynamicParamField body="billing_units" type="number">
+      Number of metered-feature units priced together. Defaults to one when omitted.
+    </DynamicParamField>
+
+    <DynamicParamField body="tier_behavior" type="any" />
+
+    <DynamicParamField body="tiers" type="object[]">
+      <Expandable title="properties">
+        <DynamicParamField body="to" type="number" required>
+          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+        </DynamicParamField>
+
+        <DynamicParamField body="credit_cost" type="number" required>
+          Credits consumed per billing-unit group within this tier.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="credit_cost" type="number">
+      Credits consumed per billing-unit group.
+    </DynamicParamField>
 
   </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="invoice_credit" type="boolean">
+  Whether usage of this classic credit system should be itemized as invoice credits.
 </DynamicParamField>
 
 <DynamicParamField body="model_markups.{key}" type="object | null">
@@ -102,18 +129,41 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
 </DynamicResponseField>
 
-<DynamicResponseField name="credit_schema" type="object[]">
-  For credit_system features: maps metered features to their credit costs.
+<DynamicResponseField name="credit_schema" type="object | object | object[]">
+  For classic credit systems: maps metered features to flat or graduated credit costs.
   <Expandable title="properties">
-    <DynamicResponseField name="metered_feature_id" type="string">
+    <DynamicResponseField name="metered_feature_id" type="string | any">
       ID of the metered feature that draws from this credit system.
     </DynamicResponseField>
 
+    <DynamicResponseField name="billing_units" type="number">
+      Number of metered-feature units priced together. Defaults to one when omitted.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="tier_behavior" type="any" />
+
+    <DynamicResponseField name="tiers" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="to" type="number">
+          Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="credit_cost" type="number">
+          Credits consumed per billing-unit group within this tier.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
     <DynamicResponseField name="credit_cost" type="number">
-      Credits consumed per unit of the metered feature.
+      Credits consumed per billing-unit group.
     </DynamicResponseField>
 
   </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="invoice_credit" type="boolean">
+  Whether usage of this classic credit system should be itemized as invoice credits.
 </DynamicResponseField>
 
 <DynamicResponseField name="model_markups.{key}" type="object | null">
@@ -156,6 +206,25 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
 <DynamicResponseField name="archived" type="boolean">
   Whether the feature is archived and hidden from the dashboard.
+</DynamicResponseField>
+
+<DynamicResponseField name="processors" type="object">
+  Processor mappings for this feature. Present when a Stripe product or meter is set.
+  <Expandable title="properties">
+    <DynamicResponseField name="stripe" type="object">
+      <Expandable title="properties">
+        <DynamicResponseField name="product_id" type="string">
+          Stripe product ID this feature's usage prices bill under.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="meter_id" type="string">
+          Stripe meter ID used to create this feature's metered price.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
 </DynamicResponseField>
 
 

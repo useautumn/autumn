@@ -3,8 +3,8 @@
  *
  * Contract:
  *   New types/fields:
- *     updates[].refund_last_payment: "prorated" | "full"
- *     updates[].subscription_params.cancellation_details.{feedback,comment}
+ *     refund_last_payment: "prorated" | "full"
+ *     subscription_params.cancellation_details.{feedback,comment}
  *   New behaviors:
  *     refund_last_payment on cancel_immediately refunds the last Stripe payment
  *     cancellation_details reach Stripe on cancel_immediately (subscriptions.cancel)
@@ -65,11 +65,11 @@ test.concurrent(
 
 		await autumnV2_3.billing.multiUpdate<MultiUpdateParamsV0Input>({
 			customer_id: customerId,
+			refund_last_payment: "full",
 			updates: [
 				{
 					plan_id: pro.id,
 					cancel_action: "cancel_immediately",
-					refund_last_payment: "full",
 				},
 			],
 		});
@@ -119,13 +119,13 @@ test.concurrent(
 
 		await autumnV2_3.billing.multiUpdate<MultiUpdateParamsV0Input>({
 			customer_id: customerId,
+			subscription_params: {
+				cancellation_details: stripeCancellationDetails,
+			},
 			updates: [
 				{
 					plan_id: pro.id,
 					cancel_action: "cancel_immediately",
-					subscription_params: {
-						cancellation_details: stripeCancellationDetails,
-					},
 				},
 			],
 		});
@@ -157,13 +157,13 @@ test.concurrent(
 
 		await autumnV2_3.billing.multiUpdate<MultiUpdateParamsV0Input>({
 			customer_id: customerId,
+			subscription_params: {
+				cancellation_details: stripeCancellationDetails,
+			},
 			updates: [
 				{
 					plan_id: pro.id,
 					cancel_action: "cancel_end_of_cycle",
-					subscription_params: {
-						cancellation_details: stripeCancellationDetails,
-					},
 				},
 			],
 		});

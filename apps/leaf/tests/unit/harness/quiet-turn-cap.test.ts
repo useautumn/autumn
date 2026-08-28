@@ -1,7 +1,7 @@
 /**
  * The parent-quiet cap in consumeAgentTurn: a turn with NO live child that has
- * been silent past MAX_QUIET_MS (2.5 min) settles on the clock, not after the
- * MAX_IDLE_RESYNCS (3) budget is spent.
+ * been silent past MAX_QUIET_MS settles on the clock, not after the
+ * MAX_IDLE_RESYNCS budget is spent.
  *
  * The existing idle-stream-recovery suite cannot see this: its mock stream
  * never advances any clock, so msSinceActivity() is always ~0 and the resync
@@ -75,11 +75,9 @@ await mockLeafModule({
 		EveSessionDeadError: class extends Error {},
 		EveStreamDisconnectedError: MockEveStreamDisconnectedError,
 		EveStreamIdleTimeoutError: MockEveStreamIdleTimeoutError,
-		fastForwardEveStreamIndex: async () => undefined,
 		isEveTransportLost: (error: unknown) =>
 			error instanceof MockEveStreamDisconnectedError ||
 			error instanceof MockEveStreamIdleTimeoutError,
-		resyncEveStreamIndex: async () => undefined,
 		streamEveEvents: async function* ({ session }: { session: EveSessionRef }) {
 			if (session.sessionId.startsWith("wrun_child")) {
 				for (const event of childEvents) {
@@ -113,8 +111,6 @@ await mockLeafModule({
 			session.state.streamIndex += 1;
 		},
 		saveEveSessionState: async () => undefined,
-		statusAfterTerminalEvent: (eventType: string) =>
-			eventType === "session.completed" ? "completed" : "waiting",
 	}),
 });
 
@@ -135,11 +131,8 @@ const session = (): EveSessionRef => ({
 	newSession: false,
 	sessionId: "eve_session_1",
 	state: {
-		version: 1,
 		continuationToken: "token_1",
 		streamIndex: 33,
-		status: "running",
-		lastEventAt: 0,
 		pendingRequests: [],
 	},
 	threadKey: "sandbox:slack:T1:C1:thread_1",
@@ -223,9 +216,10 @@ describe("a parent quiet past the cap settles on the clock", () => {
 		expect(log.quiet_ms).toBeLessThan(QUIET_CAP_MS + PASS_ADVANCE_MS);
 	});
 
-	test("a caller deadline settles the turn before its own backstop", async () => {
-		// A live child suppresses the quiet cap, so without a deadline the turn
-		// runs to the 15 min ceiling -- long past the caller's 3m20s wall.
+	test("a caller deadline does not settle a turn whose child is working", async () => {
+		// Prod 2026-08-27 17:30:40 wrun_01M1247EP8R8ZBDA5QXXFSZQPG: the deadline
+		// fired with quiet_ms 299 while the investigator had 46 events in flight.
+		// The child completed 2m44s later, into a turn already reported failed.
 		childKeepsStreaming = true;
 		childEvents = Array.from({ length: 3 }, () =>
 			event({
@@ -233,15 +227,29 @@ describe("a parent quiet past the cap settles on the clock", () => {
 				type: "actions.requested",
 			}),
 		);
-		streamPasses = nineQuietPasses([
-			event({ type: "turn.started" }),
-			event({ childSessionId: "wrun_child_1", type: "subagent.called" }),
-			event({
-				finishReason: "stop",
-				message: "Partial answer so far.",
-				type: "message.completed",
-			}),
-		]);
+		// Quiet passes carry the turn past the deadline, then eve resumes and
+		// finishes -- exactly what prod's child did 2m44s after being cut off.
+		streamPasses = [
+			{
+				events: [
+					event({ type: "turn.started" }),
+					event({ childSessionId: "wrun_child_1", type: "subagent.called" }),
+				],
+				thenThrow: "idle",
+			},
+			{ events: [], thenThrow: "idle" },
+			{ events: [], thenThrow: "idle" },
+			{
+				events: [
+					event({
+						finishReason: "stop",
+						message: "The delegated answer.",
+						type: "message.completed",
+					}),
+					event({ type: "session.waiting" }),
+				],
+			},
+		];
 
 		const abandoned: AbandonedLog[] = [];
 		const logger = {
@@ -268,9 +276,11 @@ describe("a parent quiet past the cap settles on the clock", () => {
 			token: "t",
 		} as never);
 
-		expect(outcome).toMatchObject({ kind: "answered" });
-		expect(abandoned).toHaveLength(1);
-		expect(parentStreamCalls).toBeLessThan(5);
+		expect(abandoned).toHaveLength(0);
+		expect(outcome).toMatchObject({
+			kind: "answered",
+			text: "The delegated answer.",
+		});
 	});
 
 	test("a live child suppresses the quiet cap even when the parent is silent", async () => {

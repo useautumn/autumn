@@ -6,7 +6,7 @@ from autumn_sdk.types import BaseModel, Nullable, UNSET_SENTINEL
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -36,6 +36,13 @@ class PreviewMultiUpdateGlobals(BaseModel):
                     m[k] = val
 
         return m
+
+
+PreviewMultiUpdateRefundLastPayment = Literal[
+    "prorated",
+    "full",
+]
+r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
 
 
 PreviewMultiUpdateCancelAction = Literal[
@@ -108,6 +115,10 @@ class PreviewMultiUpdateParamsTypedDict(TypedDict):
     r"""The list of plan updates to apply to the customer."""
     entity_id: NotRequired[str]
     r"""The ID of the entity to update plans for. Individual updates can override this with their own entity_id."""
+    refund_last_payment: NotRequired[PreviewMultiUpdateRefundLastPayment]
+    r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+    subscription_params: NotRequired[Dict[str, Any]]
+    r"""Additional parameters to pass into the Stripe subscription update or cancel call."""
 
 
 class PreviewMultiUpdateParams(BaseModel):
@@ -120,9 +131,17 @@ class PreviewMultiUpdateParams(BaseModel):
     entity_id: Optional[str] = None
     r"""The ID of the entity to update plans for. Individual updates can override this with their own entity_id."""
 
+    refund_last_payment: Optional[PreviewMultiUpdateRefundLastPayment] = None
+    r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+
+    subscription_params: Optional[Dict[str, Any]] = None
+    r"""Additional parameters to pass into the Stripe subscription update or cancel call."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["entity_id"])
+        optional_fields = set(
+            ["entity_id", "refund_last_payment", "subscription_params"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -657,6 +676,8 @@ class PreviewMultiUpdateSubscriptionTypedDict(TypedDict):
     r"""Products or subscription changes being removed or ended."""
     plan_ids: List[str]
     r"""The IDs of the plans updated on this subscription."""
+    resets_usage: NotRequired[bool]
+    r"""True when this change clears the customer's usage balances, so the approver can see usage will reset."""
     next_cycle: NotRequired[PreviewMultiUpdateNextCycleTypedDict]
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
     expand: NotRequired[List[str]]
@@ -688,6 +709,9 @@ class PreviewMultiUpdateSubscription(BaseModel):
     plan_ids: List[str]
     r"""The IDs of the plans updated on this subscription."""
 
+    resets_usage: Optional[bool] = None
+    r"""True when this change clears the customer's usage balances, so the approver can see usage will reset."""
+
     next_cycle: Optional[PreviewMultiUpdateNextCycle] = None
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
 
@@ -696,7 +720,7 @@ class PreviewMultiUpdateSubscription(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["next_cycle", "expand"])
+        optional_fields = set(["resets_usage", "next_cycle", "expand"])
         serialized = handler(self)
         m = {}
 

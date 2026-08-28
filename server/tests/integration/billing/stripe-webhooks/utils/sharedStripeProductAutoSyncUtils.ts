@@ -91,8 +91,13 @@ export const requireUsagePrice = ({ fullProduct }: { fullProduct: FullProduct })
 };
 
 export const stripePriceIdForPrice = ({ price }: { price: Price }) => {
+	const config = price.config;
 	const stripePriceId =
-		price.config.stripe_price_id ?? price.config.stripe_empty_price_id;
+		config.stripe_price_id ??
+		("stripe_prepaid_price_v2_id" in config
+			? config.stripe_prepaid_price_v2_id
+			: undefined) ??
+		config.stripe_empty_price_id;
 	if (!stripePriceId) throw new Error(`Price ${price.id} has no Stripe price`);
 	return stripePriceId;
 };
@@ -483,14 +488,37 @@ export const usageItemForFeature = ({
 	};
 };
 
+export const stampStripeSlotsViaV1Attach = async ({
+	autumnV1,
+	customerId,
+	attaches,
+}: {
+	autumnV1: Awaited<ReturnType<typeof initScenario>>["autumnV1"];
+	customerId: string;
+	attaches: Array<{
+		productId: string;
+		options?: { feature_id: string; quantity: number }[];
+	}>;
+}) => {
+	for (const attach of attaches) {
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: attach.productId,
+			options: attach.options,
+		});
+	}
+};
+
 export const setupSharedStripeFamilies = async ({
 	customerId,
 	families,
 	additionalProducts = [],
+	stampCustomerId,
 }: {
 	customerId: string;
 	families: FamilySpec[];
 	additionalProducts?: ProductV2[];
+	stampCustomerId?: string;
 }) => {
 	const bases = families.map((family) =>
 		products.base({
@@ -513,6 +541,9 @@ export const setupSharedStripeFamilies = async ({
 		setup: [
 			s.deleteCustomer({ customerId }),
 			s.customer({ paymentMethod: "success" }),
+			...(stampCustomerId
+				? [s.otherCustomers([{ id: stampCustomerId, paymentMethod: "success" }])]
+				: []),
 			s.products({ list: [...bases, ...additionalProducts], prefix: "" }),
 		],
 		actions: [],

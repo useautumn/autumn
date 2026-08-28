@@ -106,6 +106,24 @@ describe("createStripePrepaidPriceV2 per-currency", () => {
 		expect(config.stripe_prepaid_price_v2_id).toBeUndefined();
 	});
 
+	test("no allowance and no v1 id: mints a Stripe price into the v2 slot", async () => {
+		stripeCreates.length = 0;
+		const price = makePrice({ stripePriceId: null });
+
+		await createStripePrepaidPriceV2({
+			ctx,
+			price,
+			product: makeProduct({ allowance: 0 }),
+			currentStripeProduct: { id: "prod_shared" } as never,
+		});
+
+		expect(stripeCreates).toHaveLength(1);
+		// biome-ignore lint/suspicious/noExplicitAny: test config narrowing
+		expect((price.config as any).stripe_prepaid_price_v2_id).toBe(
+			"price_v2_eur",
+		);
+	});
+
 	test("no allowance default: copies top-level price id into top-level v2 slot", async () => {
 		stripeCreates.length = 0;
 		const price = makePrice({ stripePriceId: "price_usd" });

@@ -31,6 +31,10 @@ export type ImportCustomerData = {
    * Anti-fraud fingerprint for the customer.
    */
   fingerprint?: string | undefined;
+  /**
+   * Unix ms timestamp the customer signed up, so a migrated customer keeps its original signup date. Defaults to the import time for a customer Autumn creates here.
+   */
+  createdAt?: number | undefined;
 };
 
 /**
@@ -305,17 +309,26 @@ export type ImportCustomerData$Outbound = {
   name?: string | undefined;
   email?: string | undefined;
   fingerprint?: string | undefined;
+  created_at?: number | undefined;
 };
 
 /** @internal */
 export const ImportCustomerData$outboundSchema: z.ZodMiniType<
   ImportCustomerData$Outbound,
   ImportCustomerData
-> = z.object({
-  name: z.optional(z.string()),
-  email: z.optional(z.string()),
-  fingerprint: z.optional(z.string()),
-});
+> = z.pipe(
+  z.object({
+    name: z.optional(z.string()),
+    email: z.optional(z.string()),
+    fingerprint: z.optional(z.string()),
+    createdAt: z.optional(z.int()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      createdAt: "created_at",
+    });
+  }),
+);
 
 export function importCustomerDataToJSON(
   importCustomerData: ImportCustomerData,

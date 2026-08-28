@@ -1,6 +1,7 @@
 import {
 	type AttachConfig,
 	BillingType,
+	BillingVersion,
 	ErrCode,
 	type FullCusProduct,
 } from "@autumn/shared";
@@ -205,6 +206,7 @@ const createStripePrices = async ({
 				product: product!,
 				internalEntityId: attachParams.internalEntityId,
 				useCheckout,
+				billingVersion: BillingVersion.V1,
 			}),
 		);
 	}

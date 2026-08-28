@@ -108,6 +108,13 @@ export const compareDbFeature = ({
 				}),
 			message: `Event names different: ${curFeature.event_names} !== ${newFeature.event_names}`,
 		},
+
+		stripe_product_id: {
+			condition:
+				(curFeature.stripe_product_id || null) !==
+				(newFeature.stripe_product_id || null),
+			message: `Stripe product different: ${curFeature.stripe_product_id} !== ${newFeature.stripe_product_id}`,
+		},
 	};
 
 	const same = Object.values(diffs).every((d) => !d.condition);

@@ -2,15 +2,19 @@ import {
 	atmnToStripeAmountDecimal,
 	BillingInterval,
 	type EntitlementWithFeature,
+	ErrCode,
 	type Organization,
 	type Price,
 	type Product,
 	priceConfigForCurrency,
+	priceToStripeNickname,
 	priceToStripeTiersMode,
 	setPriceCurrencyStripeId,
+	type StripePriceNicknameSource,
 	TierInfinite,
 	type UsagePriceConfig,
 	type UsageTier,
+	RecaseError,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { PriceService } from "@server/internal/products/prices/PriceService";
@@ -66,15 +70,17 @@ export const createStripePrepaid = async ({
 	curStripeProd,
 	stripeCli,
 	currency: targetCurrency,
+	source = "catalog",
 }: {
 	db: DrizzleCli;
 	price: Price;
 	product: Product;
 	org: Organization;
 	entitlements: EntitlementWithFeature[];
-	curStripeProd: Stripe.Product | null;
+	curStripeProd: { id: string } | null;
 	stripeCli: Stripe;
 	currency?: string;
+	source?: StripePriceNicknameSource;
 }) => {
 	const relatedEnt = getPriceEntitlement(price, entitlements);
 
@@ -99,15 +105,13 @@ export const createStripePrepaid = async ({
 		priceConfigForCurrency({ config, currency, orgDefault }).usage_tiers ??
 		config.usage_tiers;
 
-	const productName = `${product.name} - ${relatedEnt.feature.name}`;
-
-	const productData = curStripeProd
-		? { product: curStripeProd.id }
-		: {
-				product_data: {
-					name: productName,
-				},
-			};
+	const stripeProductId = curStripeProd?.id ?? config.stripe_product_id;
+	if (!stripeProductId) {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message: `createStripePrepaid: missing Stripe product for feature ${relatedEnt.feature.id}`,
+		});
+	}
 
 	// 2. If billing interval is one off
 	let stripePrice = null;
@@ -120,9 +124,14 @@ export const createStripePrepaid = async ({
 		});
 
 		stripePrice = await stripeCli.prices.create({
-			...productData,
+			product: stripeProductId,
 			unit_amount_decimal: unitAmountDecimalStr,
 			currency,
+			nickname: priceToStripeNickname({
+				price,
+				featureName: relatedEnt.feature.name,
+				source,
+			}),
 		});
 
 		config.stripe_product_id = stripePrice.product as string;
@@ -148,13 +157,17 @@ export const createStripePrepaid = async ({
 		}
 
 		stripePrice = await stripeCli.prices.create({
-			...productData,
+			product: stripeProductId,
 			currency,
 			...priceAmountData,
 			recurring: {
 				...(recurringData as any),
 			},
-			nickname: `Autumn Price (${relatedEnt.feature.name})`,
+			nickname: priceToStripeNickname({
+				price,
+				featureName: relatedEnt.feature.name,
+				source,
+			}),
 		});
 
 		config.stripe_product_id = stripePrice.product as string;

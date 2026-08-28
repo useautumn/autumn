@@ -10,6 +10,7 @@ import {
 	getFullProduct,
 	requireUsagePrice,
 	setupSharedStripeFamilies,
+	stampStripeSlotsViaV1Attach,
 } from "./sharedStripeProductAutoSyncUtils";
 
 /**
@@ -157,11 +158,38 @@ export const setupKeyedUsageAddonScenario = async ({
 		...(dedicatedIpsId ? [dedicatedIpsAddon({ id: dedicatedIpsId })] : []),
 	];
 
+	const stampCustomerId = `${customerId}-v1-stamp`;
 	const { autumnV1, ctx, fullProducts } = await setupSharedStripeFamilies({
 		customerId,
 		families,
 		additionalProducts,
+		stampCustomerId,
 	});
+
+	await stampStripeSlotsViaV1Attach({
+		autumnV1,
+		customerId: stampCustomerId,
+		attaches: [
+			...families.flatMap((family) =>
+				family.variants.length > 0
+					? family.variants.map((variant) => ({ productId: variant.id }))
+					: [{ productId: family.baseId }],
+			),
+			...(automationsId ? [{ productId: automationsId }] : []),
+			...(dedicatedIpsId
+				? [
+						{
+							productId: dedicatedIpsId,
+							options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
+						},
+					]
+				: []),
+		],
+	});
+
+	for (const productId of fullProducts.keys()) {
+		fullProducts.set(productId, await getFullProduct({ ctx, productId }));
+	}
 
 	return { autumnV1, ctx, fullProducts };
 };

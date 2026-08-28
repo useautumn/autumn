@@ -475,6 +475,7 @@ export const multiAttachParamsSchema = z.object({
 	billingBehavior: z
 		.union([multiAttachBillingBehaviorSchema, z.undefined()])
 		.optional(),
+	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
 	checkoutSessionParams: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
@@ -522,6 +523,7 @@ export const multiAttachParamsOutboundSchema = z.object({
 		.union([z.array(multiAttachAttachDiscountOutboundSchema), z.undefined()])
 		.optional(),
 	billing_behavior: z.union([z.string(), z.undefined()]).optional(),
+	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	success_url: z.union([z.string(), z.undefined()]).optional(),
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])

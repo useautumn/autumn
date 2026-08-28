@@ -16,6 +16,20 @@ export type MultiUpdateGlobals = {
 };
 
 /**
+ * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+ */
+export const MultiUpdateRefundLastPayment = {
+  Prorated: "prorated",
+  Full: "full",
+} as const;
+/**
+ * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+ */
+export type MultiUpdateRefundLastPayment = ClosedEnum<
+  typeof MultiUpdateRefundLastPayment
+>;
+
+/**
  * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
  */
 export const MultiUpdateCancelAction = {
@@ -76,6 +90,14 @@ export type MultiUpdateParams = {
    * The ID of the entity to update plans for. Individual updates can override this with their own entity_id.
    */
   entityId?: string | undefined;
+  /**
+   * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+   */
+  refundLastPayment?: MultiUpdateRefundLastPayment | undefined;
+  /**
+   * Additional parameters to pass into the Stripe subscription update or cancel call.
+   */
+  subscriptionParams?: { [k: string]: any } | undefined;
   /**
    * The list of plan updates to apply to the customer.
    */
@@ -163,6 +185,11 @@ export type MultiUpdateResponse = {
 };
 
 /** @internal */
+export const MultiUpdateRefundLastPayment$outboundSchema: z.ZodMiniEnum<
+  typeof MultiUpdateRefundLastPayment
+> = z.enum(MultiUpdateRefundLastPayment);
+
+/** @internal */
 export const MultiUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
   typeof MultiUpdateCancelAction
 > = z.enum(MultiUpdateCancelAction);
@@ -216,6 +243,8 @@ export function multiUpdateUpdateToJSON(
 export type MultiUpdateParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
+  refund_last_payment?: string | undefined;
+  subscription_params?: { [k: string]: any } | undefined;
   updates: Array<MultiUpdateUpdate$Outbound>;
 };
 
@@ -227,12 +256,16 @@ export const MultiUpdateParams$outboundSchema: z.ZodMiniType<
   z.object({
     customerId: z.string(),
     entityId: z.optional(z.string()),
+    refundLastPayment: z.optional(MultiUpdateRefundLastPayment$outboundSchema),
+    subscriptionParams: z.optional(z.record(z.string(), z.any())),
     updates: z.array(z.lazy(() => MultiUpdateUpdate$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
       customerId: "customer_id",
       entityId: "entity_id",
+      refundLastPayment: "refund_last_payment",
+      subscriptionParams: "subscription_params",
     });
   }),
 );

@@ -596,6 +596,7 @@ export const previewMultiAttachParamsSchema = z.object({
 	billingBehavior: z
 		.union([previewMultiAttachBillingBehaviorSchema, z.undefined()])
 		.optional(),
+	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
 	checkoutSessionParams: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
@@ -647,6 +648,7 @@ export const previewMultiAttachResponseSchema = z.object({
 	subtotal: z.number(),
 	total: z.number(),
 	currency: z.string(),
+	resetsUsage: z.union([z.boolean(), z.undefined()]).optional(),
 	nextCycle: z
 		.union([previewMultiAttachNextCycleSchema, z.undefined()])
 		.optional(),
@@ -681,6 +683,7 @@ export const previewMultiAttachParamsOutboundSchema = z.object({
 		])
 		.optional(),
 	billing_behavior: z.union([z.string(), z.undefined()]).optional(),
+	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	success_url: z.union([z.string(), z.undefined()]).optional(),
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])

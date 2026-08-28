@@ -9,6 +9,7 @@ import * as openEnums from "../types/enums.js";
 import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
+import { smartUnion } from "../types/smart-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type CreateFeatureGlobals = {
@@ -39,10 +40,62 @@ export type CreateFeatureDisplayRequestBody = {
   plural: string;
 };
 
-export type CreateFeatureCreditSchemaRequestBody = {
+export type CreateFeatureCreditSchemaRequestBody2 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
   meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
   creditCost: number;
 };
+
+export const CreateFeatureToRequestBodyEnum = {
+  Inf: "inf",
+} as const;
+export type CreateFeatureToRequestBodyEnum = ClosedEnum<
+  typeof CreateFeatureToRequestBodyEnum
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CreateFeatureToRequestBodyUnion =
+  | number
+  | CreateFeatureToRequestBodyEnum;
+
+export type CreateFeatureTierRequestBody = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CreateFeatureToRequestBodyEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreateFeatureCreditSchemaRequestBody1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CreateFeatureTierRequestBody>;
+};
+
+export type CreateFeatureCreditSchemaRequestBodyUnion =
+  | CreateFeatureCreditSchemaRequestBody1
+  | CreateFeatureCreditSchemaRequestBody2;
 
 export type CreateFeatureModelMarkupsRequest = {
   markup?: number | undefined;
@@ -72,9 +125,18 @@ export type CreateFeatureParams = {
    */
   display?: CreateFeatureDisplayRequestBody | undefined;
   /**
-   * A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+   * A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.
    */
-  creditSchema?: Array<CreateFeatureCreditSchemaRequestBody> | undefined;
+  creditSchema?:
+    | Array<
+      | CreateFeatureCreditSchemaRequestBody1
+      | CreateFeatureCreditSchemaRequestBody2
+    >
+    | undefined;
+  /**
+   * Whether usage of this classic credit system should be itemized as invoice credits.
+   */
+  invoiceCredit?: boolean | undefined;
   /**
    * Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
    */
@@ -116,16 +178,73 @@ export type CreateFeatureTypeResponse = OpenEnum<
   typeof CreateFeatureTypeResponse
 >;
 
-export type CreateFeatureCreditSchemaResponse = {
+export type CreateFeatureCreditSchemaResponse3 = {
+  meteredFeatureId: "";
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type CreateFeatureCreditSchemaResponse2 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
   meteredFeatureId: string;
   /**
-   * Credits consumed per unit of the metered feature.
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
+
+export const CreateFeatureToResponseEnum = {
+  Inf: "inf",
+} as const;
+export type CreateFeatureToResponseEnum = ClosedEnum<
+  typeof CreateFeatureToResponseEnum
+>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type CreateFeatureToResponseUnion = number | CreateFeatureToResponseEnum;
+
+export type CreateFeatureTierResponse = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | CreateFeatureToResponseEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type CreateFeatureCreditSchemaResponse1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<CreateFeatureTierResponse>;
+};
+
+export type CreateFeatureCreditSchemaResponseUnion =
+  | CreateFeatureCreditSchemaResponse1
+  | CreateFeatureCreditSchemaResponse2
+  | CreateFeatureCreditSchemaResponse3;
 
 export type CreateFeatureModelMarkupsResponse = {
   markup?: number | undefined;
@@ -149,6 +268,24 @@ export type CreateFeatureDisplayResponse = {
    * Plural form for UI display (e.g., 'API calls', 'seats').
    */
   plural?: string | null | undefined;
+};
+
+export type CreateFeatureStripe = {
+  /**
+   * Stripe product ID this feature's usage prices bill under.
+   */
+  productId?: string | undefined;
+  /**
+   * Stripe meter ID used to create this feature's metered price.
+   */
+  meterId?: string | undefined;
+};
+
+/**
+ * Processor mappings for this feature. Present when a Stripe product or meter is set.
+ */
+export type CreateFeatureProcessors = {
+  stripe?: CreateFeatureStripe | undefined;
 };
 
 /**
@@ -176,9 +313,19 @@ export type CreateFeatureResponse = {
    */
   eventNames?: Array<string> | undefined;
   /**
-   * For credit_system features: maps metered features to their credit costs.
+   * For classic credit systems: maps metered features to flat or graduated credit costs.
    */
-  creditSchema?: Array<CreateFeatureCreditSchemaResponse> | undefined;
+  creditSchema?:
+    | Array<
+      | CreateFeatureCreditSchemaResponse1
+      | CreateFeatureCreditSchemaResponse2
+      | CreateFeatureCreditSchemaResponse3
+    >
+    | undefined;
+  /**
+   * Whether usage of this classic credit system should be itemized as invoice credits.
+   */
+  invoiceCredit?: boolean | undefined;
   /**
    * Per-model markup overrides for AI credit systems.
    */
@@ -205,6 +352,10 @@ export type CreateFeatureResponse = {
    * Whether the feature is archived and hidden from the dashboard.
    */
   archived: boolean;
+  /**
+   * Processor mappings for this feature. Present when a Stripe product or meter is set.
+   */
+  processors?: CreateFeatureProcessors | undefined;
 };
 
 /** @internal */
@@ -238,34 +389,159 @@ export function createFeatureDisplayRequestBodyToJSON(
 }
 
 /** @internal */
-export type CreateFeatureCreditSchemaRequestBody$Outbound = {
+export type CreateFeatureCreditSchemaRequestBody2$Outbound = {
   metered_feature_id: string;
+  billing_units?: number | undefined;
   credit_cost: number;
 };
 
 /** @internal */
-export const CreateFeatureCreditSchemaRequestBody$outboundSchema: z.ZodMiniType<
-  CreateFeatureCreditSchemaRequestBody$Outbound,
-  CreateFeatureCreditSchemaRequestBody
+export const CreateFeatureCreditSchemaRequestBody2$outboundSchema:
+  z.ZodMiniType<
+    CreateFeatureCreditSchemaRequestBody2$Outbound,
+    CreateFeatureCreditSchemaRequestBody2
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.string(),
+      billingUnits: z.optional(z.number()),
+      creditCost: z.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+        billingUnits: "billing_units",
+        creditCost: "credit_cost",
+      });
+    }),
+  );
+
+export function createFeatureCreditSchemaRequestBody2ToJSON(
+  createFeatureCreditSchemaRequestBody2: CreateFeatureCreditSchemaRequestBody2,
+): string {
+  return JSON.stringify(
+    CreateFeatureCreditSchemaRequestBody2$outboundSchema.parse(
+      createFeatureCreditSchemaRequestBody2,
+    ),
+  );
+}
+
+/** @internal */
+export const CreateFeatureToRequestBodyEnum$outboundSchema: z.ZodMiniEnum<
+  typeof CreateFeatureToRequestBodyEnum
+> = z.enum(CreateFeatureToRequestBodyEnum);
+
+/** @internal */
+export type CreateFeatureToRequestBodyUnion$Outbound = number | string;
+
+/** @internal */
+export const CreateFeatureToRequestBodyUnion$outboundSchema: z.ZodMiniType<
+  CreateFeatureToRequestBodyUnion$Outbound,
+  CreateFeatureToRequestBodyUnion
+> = smartUnion([z.number(), CreateFeatureToRequestBodyEnum$outboundSchema]);
+
+export function createFeatureToRequestBodyUnionToJSON(
+  createFeatureToRequestBodyUnion: CreateFeatureToRequestBodyUnion,
+): string {
+  return JSON.stringify(
+    CreateFeatureToRequestBodyUnion$outboundSchema.parse(
+      createFeatureToRequestBodyUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureTierRequestBody$Outbound = {
+  to: number | string;
+  credit_cost: number;
+};
+
+/** @internal */
+export const CreateFeatureTierRequestBody$outboundSchema: z.ZodMiniType<
+  CreateFeatureTierRequestBody$Outbound,
+  CreateFeatureTierRequestBody
 > = z.pipe(
   z.object({
-    meteredFeatureId: z.string(),
+    to: smartUnion([z.number(), CreateFeatureToRequestBodyEnum$outboundSchema]),
     creditCost: z.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
-      meteredFeatureId: "metered_feature_id",
       creditCost: "credit_cost",
     });
   }),
 );
 
-export function createFeatureCreditSchemaRequestBodyToJSON(
-  createFeatureCreditSchemaRequestBody: CreateFeatureCreditSchemaRequestBody,
+export function createFeatureTierRequestBodyToJSON(
+  createFeatureTierRequestBody: CreateFeatureTierRequestBody,
 ): string {
   return JSON.stringify(
-    CreateFeatureCreditSchemaRequestBody$outboundSchema.parse(
-      createFeatureCreditSchemaRequestBody,
+    CreateFeatureTierRequestBody$outboundSchema.parse(
+      createFeatureTierRequestBody,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureCreditSchemaRequestBody1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<CreateFeatureTierRequestBody$Outbound>;
+};
+
+/** @internal */
+export const CreateFeatureCreditSchemaRequestBody1$outboundSchema:
+  z.ZodMiniType<
+    CreateFeatureCreditSchemaRequestBody1$Outbound,
+    CreateFeatureCreditSchemaRequestBody1
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.string(),
+      billingUnits: z.optional(z.number()),
+      tierBehavior: z.literal("graduated"),
+      tiers: z.array(z.lazy(() => CreateFeatureTierRequestBody$outboundSchema)),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+        billingUnits: "billing_units",
+        tierBehavior: "tier_behavior",
+      });
+    }),
+  );
+
+export function createFeatureCreditSchemaRequestBody1ToJSON(
+  createFeatureCreditSchemaRequestBody1: CreateFeatureCreditSchemaRequestBody1,
+): string {
+  return JSON.stringify(
+    CreateFeatureCreditSchemaRequestBody1$outboundSchema.parse(
+      createFeatureCreditSchemaRequestBody1,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateFeatureCreditSchemaRequestBodyUnion$Outbound =
+  | CreateFeatureCreditSchemaRequestBody1$Outbound
+  | CreateFeatureCreditSchemaRequestBody2$Outbound;
+
+/** @internal */
+export const CreateFeatureCreditSchemaRequestBodyUnion$outboundSchema:
+  z.ZodMiniType<
+    CreateFeatureCreditSchemaRequestBodyUnion$Outbound,
+    CreateFeatureCreditSchemaRequestBodyUnion
+  > = smartUnion([
+    z.lazy(() => CreateFeatureCreditSchemaRequestBody1$outboundSchema),
+    z.lazy(() => CreateFeatureCreditSchemaRequestBody2$outboundSchema),
+  ]);
+
+export function createFeatureCreditSchemaRequestBodyUnionToJSON(
+  createFeatureCreditSchemaRequestBodyUnion:
+    CreateFeatureCreditSchemaRequestBodyUnion,
+): string {
+  return JSON.stringify(
+    CreateFeatureCreditSchemaRequestBodyUnion$outboundSchema.parse(
+      createFeatureCreditSchemaRequestBodyUnion,
     ),
   );
 }
@@ -335,8 +611,12 @@ export type CreateFeatureParams$Outbound = {
   consumable?: boolean | undefined;
   display?: CreateFeatureDisplayRequestBody$Outbound | undefined;
   credit_schema?:
-    | Array<CreateFeatureCreditSchemaRequestBody$Outbound>
+    | Array<
+      | CreateFeatureCreditSchemaRequestBody1$Outbound
+      | CreateFeatureCreditSchemaRequestBody2$Outbound
+    >
     | undefined;
+  invoice_credit?: boolean | undefined;
   model_markups?:
     | { [k: string]: CreateFeatureModelMarkupsRequest$Outbound }
     | null
@@ -362,30 +642,29 @@ export const CreateFeatureParams$outboundSchema: z.ZodMiniType<
     display: z.optional(
       z.lazy(() => CreateFeatureDisplayRequestBody$outboundSchema),
     ),
-    creditSchema: z.optional(
-      z.array(
-        z.lazy(() => CreateFeatureCreditSchemaRequestBody$outboundSchema),
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => CreateFeatureCreditSchemaRequestBody1$outboundSchema),
+      z.lazy(() =>
+        CreateFeatureCreditSchemaRequestBody2$outboundSchema
       ),
-    ),
-    modelMarkups: z.optional(
-      z.nullable(z.record(
-        z.string(),
-        z.lazy(() => CreateFeatureModelMarkupsRequest$outboundSchema),
-      )),
-    ),
+    ]))),
+    invoiceCredit: z.optional(z.boolean()),
+    modelMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => CreateFeatureModelMarkupsRequest$outboundSchema),
+    ))),
     defaultMarkup: z.optional(z.number()),
-    providerMarkups: z.optional(
-      z.nullable(z.record(
-        z.string(),
-        z.lazy(() => CreateFeatureProviderMarkupsRequest$outboundSchema),
-      )),
-    ),
+    providerMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => CreateFeatureProviderMarkupsRequest$outboundSchema),
+    ))),
     eventNames: z.optional(z.array(z.string())),
     featureId: z.string(),
   }),
   z.transform((v) => {
     return remap$(v, {
       creditSchema: "credit_schema",
+      invoiceCredit: "invoice_credit",
       modelMarkups: "model_markups",
       defaultMarkup: "default_markup",
       providerMarkups: "provider_markups",
@@ -410,29 +689,159 @@ export const CreateFeatureTypeResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CreateFeatureTypeResponse);
 
 /** @internal */
-export const CreateFeatureCreditSchemaResponse$inboundSchema: z.ZodMiniType<
-  CreateFeatureCreditSchemaResponse,
+export const CreateFeatureCreditSchemaResponse3$inboundSchema: z.ZodMiniType<
+  CreateFeatureCreditSchemaResponse3,
   unknown
 > = z.pipe(
   z.object({
-    metered_feature_id: types.string(),
+    metered_feature_id: types.literal(""),
+    billing_units: types.optional(types.number()),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
       "credit_cost": "creditCost",
     });
   }),
 );
 
-export function createFeatureCreditSchemaResponseFromJSON(
+export function createFeatureCreditSchemaResponse3FromJSON(
   jsonString: string,
-): SafeParseResult<CreateFeatureCreditSchemaResponse, SDKValidationError> {
+): SafeParseResult<CreateFeatureCreditSchemaResponse3, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CreateFeatureCreditSchemaResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CreateFeatureCreditSchemaResponse' from JSON`,
+    (x) =>
+      CreateFeatureCreditSchemaResponse3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureCreditSchemaResponse3' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureCreditSchemaResponse2$inboundSchema: z.ZodMiniType<
+  CreateFeatureCreditSchemaResponse2,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createFeatureCreditSchemaResponse2FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureCreditSchemaResponse2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateFeatureCreditSchemaResponse2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureCreditSchemaResponse2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureToResponseEnum$inboundSchema: z.ZodMiniEnum<
+  typeof CreateFeatureToResponseEnum
+> = z.enum(CreateFeatureToResponseEnum);
+
+/** @internal */
+export const CreateFeatureToResponseUnion$inboundSchema: z.ZodMiniType<
+  CreateFeatureToResponseUnion,
+  unknown
+> = smartUnion([types.number(), CreateFeatureToResponseEnum$inboundSchema]);
+
+export function createFeatureToResponseUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureToResponseUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureToResponseUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureToResponseUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureTierResponse$inboundSchema: z.ZodMiniType<
+  CreateFeatureTierResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), CreateFeatureToResponseEnum$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function createFeatureTierResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureTierResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureTierResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureTierResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureCreditSchemaResponse1$inboundSchema: z.ZodMiniType<
+  CreateFeatureCreditSchemaResponse1,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => CreateFeatureTierResponse$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function createFeatureCreditSchemaResponse1FromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureCreditSchemaResponse1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateFeatureCreditSchemaResponse1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureCreditSchemaResponse1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureCreditSchemaResponseUnion$inboundSchema:
+  z.ZodMiniType<CreateFeatureCreditSchemaResponseUnion, unknown> = smartUnion([
+    z.lazy(() => CreateFeatureCreditSchemaResponse1$inboundSchema),
+    z.lazy(() => CreateFeatureCreditSchemaResponse2$inboundSchema),
+    z.lazy(() => CreateFeatureCreditSchemaResponse3$inboundSchema),
+  ]);
+
+export function createFeatureCreditSchemaResponseUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureCreditSchemaResponseUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateFeatureCreditSchemaResponseUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureCreditSchemaResponseUnion' from JSON`,
   );
 }
 
@@ -503,6 +912,51 @@ export function createFeatureDisplayResponseFromJSON(
 }
 
 /** @internal */
+export const CreateFeatureStripe$inboundSchema: z.ZodMiniType<
+  CreateFeatureStripe,
+  unknown
+> = z.pipe(
+  z.object({
+    product_id: types.optional(types.string()),
+    meter_id: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "product_id": "productId",
+      "meter_id": "meterId",
+    });
+  }),
+);
+
+export function createFeatureStripeFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureStripe, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureStripe$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureStripe' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateFeatureProcessors$inboundSchema: z.ZodMiniType<
+  CreateFeatureProcessors,
+  unknown
+> = z.object({
+  stripe: types.optional(z.lazy(() => CreateFeatureStripe$inboundSchema)),
+});
+
+export function createFeatureProcessorsFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateFeatureProcessors, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateFeatureProcessors$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateFeatureProcessors' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreateFeatureResponse$inboundSchema: z.ZodMiniType<
   CreateFeatureResponse,
   unknown
@@ -513,9 +967,14 @@ export const CreateFeatureResponse$inboundSchema: z.ZodMiniType<
     type: CreateFeatureTypeResponse$inboundSchema,
     consumable: types.boolean(),
     event_names: types.optional(z.array(types.string())),
-    credit_schema: types.optional(
-      z.array(z.lazy(() => CreateFeatureCreditSchemaResponse$inboundSchema)),
-    ),
+    credit_schema: types.optional(z.array(smartUnion([
+      z.lazy(() => CreateFeatureCreditSchemaResponse1$inboundSchema),
+      z.lazy(() =>
+        CreateFeatureCreditSchemaResponse2$inboundSchema
+      ),
+      z.lazy(() => CreateFeatureCreditSchemaResponse3$inboundSchema),
+    ]))),
+    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => CreateFeatureModelMarkupsResponse$inboundSchema),
@@ -529,11 +988,15 @@ export const CreateFeatureResponse$inboundSchema: z.ZodMiniType<
       CreateFeatureDisplayResponse$inboundSchema
     )),
     archived: types.boolean(),
+    processors: types.optional(z.lazy(() =>
+      CreateFeatureProcessors$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",

@@ -5,6 +5,7 @@ import {
 	SheetAccordionItem,
 	TagInput,
 } from "@autumn/ui";
+import { FeatureStripeProductField } from "./FeatureStripeProductField";
 
 export function NewFeatureAdvanced({
 	feature,
@@ -13,19 +14,18 @@ export function NewFeatureAdvanced({
 	feature: CreateFeature;
 	setFeature: (feature: CreateFeature) => void;
 }) {
-	const showAdvanced =
-		feature.type &&
-		feature.config?.usage_type &&
-		feature.type !== FeatureType.Boolean &&
-		feature.type !== FeatureType.CreditSystem;
+	const showEventNames =
+		feature.type === FeatureType.Metered && Boolean(feature.config?.usage_type);
+	const showStripeProduct =
+		Boolean(feature.type) && feature.type !== FeatureType.Boolean;
 
-	if (!showAdvanced) return null;
+	if (!showEventNames && !showStripeProduct) return null;
 
 	return (
 		<SheetAccordion type="single" withSeparator={false} collapsible={true}>
 			<SheetAccordionItem value="advanced" title="Advanced">
 				<div className="space-y-4">
-					<div className="space-y-4">
+					{showEventNames && (
 						<div className="flex flex-col w-full gap-1">
 							<FormLabel>Event Names (optional)</FormLabel>
 							<TagInput
@@ -51,7 +51,18 @@ export function NewFeatureAdvanced({
 								</a>
 							</span>
 						</div>
-					</div>
+					)}
+					{showStripeProduct && (
+						<FeatureStripeProductField
+							onChange={(stripeProductId) =>
+								setFeature({
+									...feature,
+									stripe_product_id: stripeProductId,
+								})
+							}
+							stripeProductId={feature.stripe_product_id ?? null}
+						/>
+					)}
 				</div>
 			</SheetAccordionItem>
 		</SheetAccordion>

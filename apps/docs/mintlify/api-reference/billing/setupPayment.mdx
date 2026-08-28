@@ -43,6 +43,28 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   The version of the plan to attach.
 </DynamicParamField>
 
+<DynamicParamField body="free_trial" type="object | null">
+  Free trial configuration for a plan.
+  <Expandable title="properties">
+    <DynamicParamField body="duration_length" type="number" required>
+      Number of duration_type periods the trial lasts.
+    </DynamicParamField>
+
+    <DynamicParamField body="duration_type" type="'day' | 'month' | 'year'">
+      Unit of time for the trial ('day', 'month', 'year').
+    </DynamicParamField>
+
+    <DynamicParamField body="card_required" type="boolean">
+      If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
+    </DynamicParamField>
+
+    <DynamicParamField body="on_end" type="'bill' | 'revert'">
+      Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="customize" type="object">
   Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
   <Expandable title="properties">
@@ -50,7 +72,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       Base price configuration for a plan.
       <Expandable title="properties">
         <DynamicParamField body="amount" type="number" required>
-          Base price amount for the plan.
+          Base price amount for the plan, in major currency units (e.g. dollars).
         </DynamicParamField>
 
         <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
@@ -393,6 +415,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
         </DynamicParamField>
 
+        <DynamicParamField body="included" type="number">
+          Match items whose grant equals this included usage. Omitted is a wildcard.
+        </DynamicParamField>
+
       </Expandable>
     </DynamicParamField>
 
@@ -408,7 +434,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         </DynamicParamField>
 
         <DynamicParamField body="card_required" type="boolean">
-          If true, payment method required to start trial. Customer is charged after trial ends.
+          If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
         </DynamicParamField>
 
         <DynamicParamField body="on_end" type="'bill' | 'revert'">
@@ -587,7 +613,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Base price configuration for a plan.
               <Expandable title="properties">
                 <DynamicParamField body="amount" type="number" required>
-                  Base price amount for the plan.
+                  Base price amount for the plan, in major currency units (e.g. dollars).
                 </DynamicParamField>
 
                 <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
@@ -766,6 +792,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
                 </DynamicParamField>
 
+                <DynamicParamField body="included" type="number">
+                  Match items whose grant equals this included usage. Omitted is a wildcard.
+                </DynamicParamField>
+
               </Expandable>
             </DynamicParamField>
 
@@ -773,6 +803,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         </DynamicParamField>
 
         <DynamicParamField body="metadata" type="object" />
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="remove_licenses" type="object[]">
+      License links to drop, keyed by license_plan_id. Parallel to remove_items.
+      <Expandable title="properties">
+        <DynamicParamField body="license_plan_id" type="string" required />
 
       </Expandable>
     </DynamicParamField>
@@ -807,7 +845,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 </DynamicParamField>
 
 <DynamicParamField body="billing_cycle_anchor" type="any">
-  Reset the billing cycle anchor immediately with 'now'.
+  Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
 </DynamicParamField>
 
 <DynamicParamField body="starts_at" type="integer">
@@ -891,7 +929,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 </DynamicParamField>
 
 <DynamicParamField body="enable_plan_immediately" type="boolean">
-  If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+  If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. Set it here rather than on `invoice_mode`, which only covers the invoice-unpaid case.
 </DynamicParamField>
 
 <DynamicParamField body="tax_rate_id" type="string">

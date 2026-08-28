@@ -1,15 +1,19 @@
 import {
 	type FullProduct,
+	isAllocatedPrice,
 	isConsumablePrice,
 	isFixedPrice,
+	isPrepaidPrice,
 	type Organization,
 	type Price,
 	priceToEnt,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import {
+	autumnAllocatedPriceToStripePriceShape,
 	autumnBasePriceToStripePriceShape,
 	autumnConsumablePriceToStripePriceShape,
+	autumnPrepaidPriceToStripePriceShape,
 } from "../../matchUtils/autumnPriceShape";
 import {
 	stripePriceShapesEqual,
@@ -149,4 +153,82 @@ export const findMatchingStripePriceForConsumablePrice = ({
 				}),
 			}
 		: null;
+};
+
+export const stripePriceMatchesAllocatedPrice = ({
+	stripePrice,
+	price,
+	product,
+	stripeProductId: expectedStripeProductId,
+	currency,
+	org,
+}: {
+	stripePrice: Stripe.Price;
+	price: Price;
+	product: FullProduct;
+	stripeProductId: string;
+	currency: string;
+	org: Organization;
+}) => {
+	if (!stripePrice.active) return false;
+	if (!isAllocatedPrice(price)) return false;
+
+	const entitlement = priceToEnt({
+		price,
+		entitlements: product.entitlements,
+	});
+	if (!entitlement) return false;
+
+	const autumnShape = autumnAllocatedPriceToStripePriceShape({
+		price,
+		entitlement,
+		stripeProductId: expectedStripeProductId,
+		currency,
+		org,
+	});
+	if (!autumnShape) return false;
+
+	return stripePriceShapesEqual(
+		stripePriceToShape({ price: stripePrice }),
+		autumnShape,
+	);
+};
+
+export const stripePriceMatchesPrepaidPrice = ({
+	stripePrice,
+	price,
+	product,
+	stripeProductId: expectedStripeProductId,
+	currency,
+	org,
+}: {
+	stripePrice: Stripe.Price;
+	price: Price;
+	product: FullProduct;
+	stripeProductId: string;
+	currency: string;
+	org: Organization;
+}) => {
+	if (!stripePrice.active) return false;
+	if (!isPrepaidPrice(price)) return false;
+
+	const entitlement = priceToEnt({
+		price,
+		entitlements: product.entitlements,
+	});
+	if (!entitlement) return false;
+
+	const autumnShape = autumnPrepaidPriceToStripePriceShape({
+		price,
+		entitlement,
+		stripeProductId: expectedStripeProductId,
+		currency,
+		org,
+	});
+	if (!autumnShape) return false;
+
+	return stripePriceShapesEqual(
+		stripePriceToShape({ price: stripePrice }),
+		autumnShape,
+	);
 };

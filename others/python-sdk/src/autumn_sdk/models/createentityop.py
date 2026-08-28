@@ -12,9 +12,10 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -613,19 +614,165 @@ CreateEntityType = Union[
 r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
-class CreateEntityCreditSchemaTypedDict(TypedDict):
+class CreateEntityCreditSchema3TypedDict(TypedDict):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+    metered_feature_id: Literal[""]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+
+class CreateEntityCreditSchema3(BaseModel):
+    credit_cost: float
+    r"""Credits consumed per billing-unit group."""
+
+    metered_feature_id: Annotated[
+        Annotated[Literal[""], AfterValidator(validate_const(""))],
+        pydantic.Field(alias="metered_feature_id"),
+    ] = ""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateEntityCreditSchema2TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
     credit_cost: float
-    r"""Credits consumed per unit of the metered feature."""
+    r"""Credits consumed per billing-unit group."""
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
 
 
-class CreateEntityCreditSchema(BaseModel):
+class CreateEntityCreditSchema2(BaseModel):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
 
     credit_cost: float
-    r"""Credits consumed per unit of the metered feature."""
+    r"""Credits consumed per billing-unit group."""
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateEntityToEnum = Literal["inf",]
+
+
+CreateEntityToUnionTypedDict = TypeAliasType(
+    "CreateEntityToUnionTypedDict", Union[float, CreateEntityToEnum]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+CreateEntityToUnion = TypeAliasType(
+    "CreateEntityToUnion", Union[float, CreateEntityToEnum]
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class CreateEntityTierTypedDict(TypedDict):
+    to: CreateEntityToUnionTypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateEntityTier(BaseModel):
+    to: CreateEntityToUnion
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class CreateEntityCreditSchema1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    tiers: List[CreateEntityTierTypedDict]
+    billing_units: NotRequired[float]
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+    tier_behavior: Literal["graduated"]
+
+
+class CreateEntityCreditSchema1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    tiers: List[CreateEntityTier]
+
+    billing_units: Optional[float] = None
+    r"""Number of metered-feature units priced together. Defaults to one when omitted."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["billing_units"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateEntityCreditSchemaUnionTypedDict = TypeAliasType(
+    "CreateEntityCreditSchemaUnionTypedDict",
+    Union[
+        CreateEntityCreditSchema2TypedDict,
+        CreateEntityCreditSchema3TypedDict,
+        CreateEntityCreditSchema1TypedDict,
+    ],
+)
+
+
+CreateEntityCreditSchemaUnion = TypeAliasType(
+    "CreateEntityCreditSchemaUnion",
+    Union[
+        CreateEntityCreditSchema2, CreateEntityCreditSchema3, CreateEntityCreditSchema1
+    ],
+)
 
 
 class CreateEntityModelMarkupsTypedDict(TypedDict):
@@ -710,6 +857,65 @@ class CreateEntityDisplay(BaseModel):
         return m
 
 
+class CreateEntityStripeTypedDict(TypedDict):
+    product_id: NotRequired[str]
+    r"""Stripe product ID this feature's usage prices bill under."""
+    meter_id: NotRequired[str]
+    r"""Stripe meter ID used to create this feature's metered price."""
+
+
+class CreateEntityStripe(BaseModel):
+    product_id: Optional[str] = None
+    r"""Stripe product ID this feature's usage prices bill under."""
+
+    meter_id: Optional[str] = None
+    r"""Stripe meter ID used to create this feature's metered price."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["product_id", "meter_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateEntityProcessorsTypedDict(TypedDict):
+    r"""Processor mappings for this feature. Present when a Stripe product or meter is set."""
+
+    stripe: NotRequired[CreateEntityStripeTypedDict]
+
+
+class CreateEntityProcessors(BaseModel):
+    r"""Processor mappings for this feature. Present when a Stripe product or meter is set."""
+
+    stripe: Optional[CreateEntityStripe] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CreateEntityFeatureTypedDict(TypedDict):
     r"""The full feature object if expanded."""
 
@@ -725,8 +931,10 @@ class CreateEntityFeatureTypedDict(TypedDict):
     r"""Whether the feature is archived and hidden from the dashboard."""
     event_names: NotRequired[List[str]]
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
-    credit_schema: NotRequired[List[CreateEntityCreditSchemaTypedDict]]
-    r"""For credit_system features: maps metered features to their credit costs."""
+    credit_schema: NotRequired[List[CreateEntityCreditSchemaUnionTypedDict]]
+    r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
+    invoice_credit: NotRequired[bool]
+    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
     model_markups: NotRequired[Nullable[Dict[str, CreateEntityModelMarkupsTypedDict]]]
     r"""Per-model markup overrides for AI credit systems."""
     default_markup: NotRequired[float]
@@ -737,6 +945,8 @@ class CreateEntityFeatureTypedDict(TypedDict):
     r"""Per-provider default markup percentages for AI credit systems."""
     display: NotRequired[CreateEntityDisplayTypedDict]
     r"""Display names for the feature in billing UI and customer-facing components."""
+    processors: NotRequired[CreateEntityProcessorsTypedDict]
+    r"""Processor mappings for this feature. Present when a Stripe product or meter is set."""
 
 
 class CreateEntityFeature(BaseModel):
@@ -760,8 +970,11 @@ class CreateEntityFeature(BaseModel):
     event_names: Optional[List[str]] = None
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
 
-    credit_schema: Optional[List[CreateEntityCreditSchema]] = None
-    r"""For credit_system features: maps metered features to their credit costs."""
+    credit_schema: Optional[List[CreateEntityCreditSchemaUnion]] = None
+    r"""For classic credit systems: maps metered features to flat or graduated credit costs."""
+
+    invoice_credit: Optional[bool] = None
+    r"""Whether usage of this classic credit system should be itemized as invoice credits."""
 
     model_markups: OptionalNullable[Dict[str, CreateEntityModelMarkups]] = UNSET
     r"""Per-model markup overrides for AI credit systems."""
@@ -775,16 +988,21 @@ class CreateEntityFeature(BaseModel):
     display: Optional[CreateEntityDisplay] = None
     r"""Display names for the feature in billing UI and customer-facing components."""
 
+    processors: Optional[CreateEntityProcessors] = None
+    r"""Processor mappings for this feature. Present when a Stripe product or meter is set."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
             [
                 "event_names",
                 "credit_schema",
+                "invoice_credit",
                 "model_markups",
                 "default_markup",
                 "provider_markups",
                 "display",
+                "processors",
             ]
         )
         nullable_fields = set(["model_markups", "provider_markups"])
@@ -1388,6 +1606,14 @@ class CreateEntityResponse(BaseModel):
 
 try:
     CreateEntityUsageLimitRequestBody.model_rebuild()
+except NameError:
+    pass
+try:
+    CreateEntityCreditSchema3.model_rebuild()
+except NameError:
+    pass
+try:
+    CreateEntityCreditSchema1.model_rebuild()
 except NameError:
     pass
 try:

@@ -1,7 +1,6 @@
 import { WAITING_FOR_INPUT_MESSAGE } from "../../../ui/messages.js";
-import { normalizeToolName } from "../tools/toolPolicy.js";
 import type { EveInputRequest } from "./eveEventSchemas.js";
-import { approvalOptionIds, textForInputRequests } from "./events.js";
+import { DENY_OPTION_ID, textForInputRequests } from "./events.js";
 import type { EvePendingRequest, EveSessionRef } from "./types.js";
 
 export type ChainedPendingRequest = Readonly<{
@@ -35,17 +34,8 @@ export type ParkedEveInput =
 	| Readonly<{ kind: "question"; question: PendingQuestion }>
 	| Readonly<{ kind: "waiting"; text: string }>;
 
-type ApprovalShapedRequest = EveInputRequest & {
-	action: { toolName: string };
-	requestId: string;
-};
-
-const isApprovalShaped = (
-	request: EveInputRequest,
-): request is ApprovalShapedRequest =>
-	Boolean(request.requestId) &&
-	Boolean(request.action?.toolName) &&
-	normalizeToolName(request.action?.toolName ?? "") !== "ask_question";
+const isApprovalRequest = (request: EveInputRequest) =>
+	request.display === "confirmation";
 
 const CHILD_SESSION_IDS_KEY = "_eveChildSessionIds";
 const SIBLING_REQUEST_IDS_KEY = "_eveSiblingRequestIds";
@@ -129,7 +119,7 @@ export const classifyParkedEveInput = ({
 		: requests;
 	if (pending.length === 0) return undefined;
 
-	const [gated, ...siblings] = pending.filter(isApprovalShaped);
+	const [gated, ...siblings] = pending.filter(isApprovalRequest);
 	if (gated) {
 		return {
 			chained: {
@@ -141,7 +131,7 @@ export const classifyParkedEveInput = ({
 			kind: "gated",
 			siblingRequestIds: siblings.map((request) => request.requestId),
 			withheld: siblings.map((request) => ({
-				denyOptionId: approvalOptionIds(request).deny,
+				denyOptionId: DENY_OPTION_ID,
 				input: request.action.input,
 				requestId: request.requestId,
 				toolName: request.action.toolName,
@@ -149,10 +139,8 @@ export const classifyParkedEveInput = ({
 		};
 	}
 
-	const optioned = pending.find(
-		(request) => request.prompt && (request.options?.length ?? 0) > 0,
-	);
-	if (optioned?.requestId && optioned.prompt) {
+	const optioned = pending.find((request) => request.display === "select");
+	if (optioned) {
 		return {
 			kind: "question",
 			question: {
@@ -170,28 +158,19 @@ export const classifyParkedEveInput = ({
 };
 
 type GatedParkShape = {
-	chained: {
-		options?: ReadonlyArray<{ id?: string; label?: string }>;
-		requestId: string;
-	};
-	withheld: ReadonlyArray<{ denyOptionId?: string; requestId: string }>;
+	chained: { requestId: string };
+	withheld: ReadonlyArray<{ requestId: string }>;
 };
 
 /** Every request in a gated batch with the option that releases it. */
 export const pendingGatedRequests = (
 	parked: GatedParkShape,
-): EvePendingRequest[] => [
-	{
-		denyOptionId: approvalOptionIds({ options: parked.chained.options }).deny,
-		kind: "gated",
-		requestId: parked.chained.requestId,
-	},
-	...parked.withheld.map((write) => ({
-		denyOptionId: write.denyOptionId ?? "deny",
+): EvePendingRequest[] =>
+	[parked.chained, ...parked.withheld].map((request) => ({
+		denyOptionId: DENY_OPTION_ID,
 		kind: "gated" as const,
-		requestId: write.requestId,
-	})),
-];
+		requestId: request.requestId,
+	}));
 
 /** Gated parks nothing in this post answers. eve silently defers a message
  * posted over one, so each must be denied in the same post. */
@@ -209,7 +188,7 @@ export const outstandingGatedDenies = ({
 				request.kind === "gated" && !answeredIds.has(request.requestId),
 		)
 		.map((request) => ({
-			optionId: request.denyOptionId ?? "deny",
+			optionId: request.denyOptionId ?? DENY_OPTION_ID,
 			requestId: request.requestId,
 		}));
 };

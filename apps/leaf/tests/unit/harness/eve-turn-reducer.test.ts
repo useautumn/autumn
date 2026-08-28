@@ -3,6 +3,27 @@ import {
 	createEveTurnProgress,
 	reduceEveTurnEvent,
 } from "../../../src/internal/agentRuntime/actions/runAgentTurn/execute/eveTurnReducer.js";
+import type { EveInputRequest } from "../../../src/internal/agentRuntime/eve/eveEventSchemas.js";
+
+const approvalRequest = ({
+	input = {},
+	requestId,
+	toolName,
+}: {
+	input?: EveInputRequest["action"]["input"];
+	requestId: string;
+	toolName: string;
+}): EveInputRequest => ({
+	action: { callId: requestId, input, kind: "tool-call", toolName },
+	allowFreeform: false,
+	display: "confirmation",
+	options: [
+		{ id: "approve", label: "Yes" },
+		{ id: "deny", label: "No" },
+	],
+	prompt: `Approve tool call: ${toolName}`,
+	requestId,
+});
 
 describe("Eve turn reducer", () => {
 	test("reduces a streamed reply after the current turn starts", () => {
@@ -58,9 +79,7 @@ describe("Eve turn reducer", () => {
 			event: { type: "session.completed" },
 			progress: completed.progress,
 		});
-		expect(terminal.effects).toEqual([
-			{ kind: "save_session", status: "completed" },
-		]);
+		expect(terminal.effects).toEqual([{ kind: "save_session" }]);
 		expect(terminal.outcome).toMatchObject({ kind: "answered", text: "Hello" });
 	});
 
@@ -130,18 +149,15 @@ describe("Eve turn reducer", () => {
 		const suspended = reduceEveTurnEvent({
 			event: {
 				requests: [
-					{
-						action: { input: { request }, toolName: "autumn__attach" },
-						options: [
-							{ id: "confirm", label: "Approve" },
-							{ id: "cancel", label: "Deny" },
-						],
+					approvalRequest({
+						input: { request },
 						requestId: "req_1",
-					},
-					{
-						action: { toolName: "autumn__updateSubscription" },
+						toolName: "autumn__attach",
+					}),
+					approvalRequest({
 						requestId: "req_2",
-					},
+						toolName: "autumn__updateSubscription",
+					}),
 				],
 				type: "input.requested",
 			},
@@ -150,27 +166,24 @@ describe("Eve turn reducer", () => {
 		// The park is persisted with the option that releases each request, so a
 		// later message can never be posted over it unanswered.
 		expect(suspended.effects).toHaveLength(1);
-		expect(suspended.effects[0]).toMatchObject({
-			kind: "save_session",
-			status: "waiting",
-		});
+		expect(suspended.effects[0]).toMatchObject({ kind: "save_session" });
 		expect(
 			(suspended.effects[0] as { pendingRequests?: unknown[] }).pendingRequests,
 		).toEqual([
-			{ denyOptionId: "cancel", kind: "gated", requestId: "req_1" },
+			{ denyOptionId: "deny", kind: "gated", requestId: "req_1" },
 			{ denyOptionId: "deny", kind: "gated", requestId: "req_2" },
 		]);
 		expect(suspended.outcome).toEqual({
 			approval: {
 				preview: { currency: "usd", line_items: [], total: 20 },
 				toolArgs: {
-					_eveApproveOptionId: "confirm",
-					_eveDenyOptionId: "cancel",
+					_eveApproveOptionId: "approve",
+					_eveDenyOptionId: "deny",
 					_eveSiblingRequestIds: ["req_2"],
 					_eveWithheldWrites: [
 						{
 							denyOptionId: "deny",
-							input: undefined,
+							input: {},
 							requestId: "req_2",
 							toolName: "autumn__updateSubscription",
 						},
@@ -192,7 +205,7 @@ describe("Eve turn reducer", () => {
 		});
 
 		expect(transition.effects).toEqual([
-			{ kind: "save_session", status: "failed" },
+			{ kind: "save_session" },
 			{ kind: "delete_session" },
 			{ kind: "throw", message: "Eve failed" },
 		]);
@@ -230,24 +243,16 @@ describe("a batch parked after a preview turn", () => {
 		const suspended = reduceEveTurnEvent({
 			event: {
 				requests: [
-					{
-						action: {
-							input: { request: { customer_id: "cus_1", email: "n@x.com" } },
-							toolName: "autumn__updateCustomer",
-						},
-						options: [
-							{ id: "confirm", label: "Approve" },
-							{ id: "cancel", label: "Deny" },
-						],
+					approvalRequest({
+						input: { request: { customer_id: "cus_1", email: "n@x.com" } },
 						requestId: "req_1",
-					},
-					{
-						action: {
-							input: { request: { customer_id: "cus_1", plan_id: "pro" } },
-							toolName: "autumn__attach",
-						},
+						toolName: "autumn__updateCustomer",
+					}),
+					approvalRequest({
+						input: { request: { customer_id: "cus_1", plan_id: "pro" } },
 						requestId: "req_2",
-					},
+						toolName: "autumn__attach",
+					}),
 				],
 				type: "input.requested",
 			},

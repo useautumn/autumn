@@ -66,7 +66,6 @@ const expectStripeResourceCoverage = ({ product }: { product: FullProduct }) => 
 	expect(itemPrices.length).toBeGreaterThan(0);
 	for (const itemPrice of itemPrices) {
 		expect(stripeConfigValue(itemPrice, "stripe_product_id")).toBeTruthy();
-		expect(stripeConfigValue(itemPrice, "stripe_price_id")).toBeTruthy();
 		expect(
 			stripeConfigValue(itemPrice, "stripe_prepaid_price_v2_id"),
 		).toBeTruthy();

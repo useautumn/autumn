@@ -8,10 +8,15 @@ import {
 	FeatureUsageType,
 } from "@models/featureModels/featureEnums.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
+import type { FeatureStripeMeter } from "@models/featureModels/featureTable.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
+import type { ApiFeatureProcessors } from "../../api/features/components/processors.js";
 import type { ApiFeatureV1 } from "../../api/features/apiFeatureV1.js";
-import type { ApiCreditSchemaItem } from "../../api/features/creditRateCard.js";
+import {
+	type ApiCreditSchemaItem,
+	isGraduatedCreditSchemaItem,
+} from "../../api/features/creditRateCard.js";
 import type {
 	CreateFeatureV1Params,
 	UpdateFeatureV1Params,
@@ -28,6 +33,50 @@ import { notNullish, nullish } from "../utils.js";
 import { buildAiCreditSystemConfig } from "./buildAiCreditSystemConfig.js";
 import { isAnyCreditSystem } from "./classifyFeature/isAnyCreditSystem.js";
 
+export const featureProcessorsToDbFields = ({
+	processors,
+	originalFeature,
+}: {
+	processors?: ApiFeatureProcessors | null;
+	originalFeature?: Feature;
+}): {
+	stripe_product_id: string | null | undefined;
+	stripe_meter: FeatureStripeMeter | null | undefined;
+} => {
+	const stripe = processors?.stripe;
+	const stripe_product_id =
+		stripe?.product_id !== undefined
+			? stripe.product_id
+			: originalFeature?.stripe_product_id;
+	const stripe_meter =
+		stripe?.meter_id !== undefined
+			? {
+					id: stripe.meter_id,
+					event_name:
+						originalFeature?.stripe_meter?.id === stripe.meter_id
+							? (originalFeature.stripe_meter?.event_name ?? "")
+							: "",
+				}
+			: originalFeature?.stripe_meter;
+
+	return { stripe_product_id, stripe_meter };
+};
+
+export const featureToApiProcessors = (
+	feature: Feature,
+): ApiFeatureProcessors | undefined => {
+	const product_id = feature.stripe_product_id ?? undefined;
+	const meter_id = feature.stripe_meter?.id ?? undefined;
+	if (!product_id && !meter_id) return undefined;
+
+	return {
+		stripe: {
+			...(product_id ? { product_id } : {}),
+			...(meter_id ? { meter_id } : {}),
+		},
+	};
+};
+
 export const apiCreditSchemaItemToDb = (
 	credit: ApiCreditSchemaItem,
 ): CreditSchemaItem => {
@@ -38,7 +87,7 @@ export const apiCreditSchemaItemToDb = (
 			: { feature_amount: credit.billing_units }),
 	};
 
-	if (credit.tier_behavior === "graduated") {
+	if (isGraduatedCreditSchemaItem(credit)) {
 		return {
 			...base,
 			tier_behavior: "graduated",
@@ -203,7 +252,9 @@ export const featureV1ToDbFeature = ({
 	apiFeature,
 	originalFeature,
 }: {
-	apiFeature: ApiFeatureV1 | CreateFeatureV1Params;
+	apiFeature: (ApiFeatureV1 | CreateFeatureV1Params) & {
+		processors?: ApiFeatureProcessors;
+	};
 	originalFeature?: Feature;
 }) => {
 	// Replace body...
@@ -247,6 +298,10 @@ export const featureV1ToDbFeature = ({
 
 	const modelMarkups =
 		apiFeature.model_markups ?? originalFeature?.model_markups ?? null;
+	const processorFields = featureProcessorsToDbFields({
+		processors: apiFeature.processors,
+		originalFeature,
+	});
 
 	return {
 		internal_id: originalFeature?.internal_id ?? "",
@@ -272,6 +327,8 @@ export const featureV1ToDbFeature = ({
 						plural: apiFeature.display.plural,
 					}
 				: (originalFeature?.display ?? null),
+		stripe_product_id: processorFields.stripe_product_id,
+		stripe_meter: processorFields.stripe_meter,
 	} satisfies Feature;
 };
 
@@ -322,6 +379,7 @@ export const dbToApiFeatureV1 = ({
 					plural: dbFeature.display.plural,
 				}
 			: undefined,
+		processors: featureToApiProcessors(dbFeature),
 	} satisfies ApiFeatureV1;
 
 	return applyResponseVersionChanges({

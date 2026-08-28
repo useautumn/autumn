@@ -35,6 +35,55 @@ export type BillingUpdateFeatureQuantity = {
 };
 
 /**
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
+export const BillingUpdateDurationType = {
+  Day: "day",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Unit of time for the trial ('day', 'month', 'year').
+ */
+export type BillingUpdateDurationType = ClosedEnum<
+  typeof BillingUpdateDurationType
+>;
+
+/**
+ * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+ */
+export const BillingUpdateOnEnd = {
+  Bill: "bill",
+  Revert: "revert",
+} as const;
+/**
+ * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+ */
+export type BillingUpdateOnEnd = ClosedEnum<typeof BillingUpdateOnEnd>;
+
+/**
+ * Free trial configuration for a plan.
+ */
+export type BillingUpdateFreeTrialParams = {
+  /**
+   * Number of duration_type periods the trial lasts.
+   */
+  durationLength: number;
+  /**
+   * Unit of time for the trial ('day', 'month', 'year').
+   */
+  durationType?: BillingUpdateDurationType | undefined;
+  /**
+   * If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
+   */
+  cardRequired?: boolean | undefined;
+  /**
+   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+   */
+  onEnd?: BillingUpdateOnEnd | undefined;
+};
+
+/**
  * Billing interval (e.g. 'month', 'year').
  */
 export const BillingUpdatePriceInterval = {
@@ -68,7 +117,7 @@ export type BillingUpdateAdditionalCurrency = {
  */
 export type BillingUpdateBasePrice = {
   /**
-   * Base price amount for the plan.
+   * Base price amount for the plan, in major currency units (e.g. dollars).
    */
   amount: number;
   /**
@@ -708,12 +757,16 @@ export type BillingUpdatePlanItemFilter = {
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
    */
   intervalCount?: number | undefined;
+  /**
+   * Match items whose grant equals this included usage. Omitted is a wildcard.
+   */
+  included?: number | undefined;
 };
 
 /**
  * Unit of time for the trial ('day', 'month', 'year').
  */
-export const BillingUpdateDurationType = {
+export const BillingUpdateCustomizeDurationType = {
   Day: "day",
   Month: "month",
   Year: "year",
@@ -721,26 +774,28 @@ export const BillingUpdateDurationType = {
 /**
  * Unit of time for the trial ('day', 'month', 'year').
  */
-export type BillingUpdateDurationType = ClosedEnum<
-  typeof BillingUpdateDurationType
+export type BillingUpdateCustomizeDurationType = ClosedEnum<
+  typeof BillingUpdateCustomizeDurationType
 >;
 
 /**
  * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
  */
-export const BillingUpdateOnEnd = {
+export const BillingUpdateCustomizeOnEnd = {
   Bill: "bill",
   Revert: "revert",
 } as const;
 /**
  * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
  */
-export type BillingUpdateOnEnd = ClosedEnum<typeof BillingUpdateOnEnd>;
+export type BillingUpdateCustomizeOnEnd = ClosedEnum<
+  typeof BillingUpdateCustomizeOnEnd
+>;
 
 /**
  * Free trial configuration for a plan.
  */
-export type BillingUpdateFreeTrialParams = {
+export type BillingUpdateCustomizeFreeTrialParams = {
   /**
    * Number of duration_type periods the trial lasts.
    */
@@ -748,15 +803,15 @@ export type BillingUpdateFreeTrialParams = {
   /**
    * Unit of time for the trial ('day', 'month', 'year').
    */
-  durationType?: BillingUpdateDurationType | undefined;
+  durationType?: BillingUpdateCustomizeDurationType | undefined;
   /**
-   * If true, payment method required to start trial. Customer is charged after trial ends.
+   * If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false.
    */
   cardRequired?: boolean | undefined;
   /**
    * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
    */
-  onEnd?: BillingUpdateOnEnd | undefined;
+  onEnd?: BillingUpdateCustomizeOnEnd | undefined;
 };
 
 /**
@@ -1033,7 +1088,7 @@ export type BillingUpdateUpsertLicenseAdditionalCurrency = {
  */
 export type BillingUpdateUpsertLicenseBasePrice = {
   /**
-   * Base price amount for the plan.
+   * Base price amount for the plan, in major currency units (e.g. dollars).
    */
   amount: number;
   /**
@@ -1381,6 +1436,10 @@ export type BillingUpdateUpsertLicensePlanItemFilter = {
    * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
    */
   intervalCount?: number | undefined;
+  /**
+   * Match items whose grant equals this included usage. Omitted is a wildcard.
+   */
+  included?: number | undefined;
 };
 
 export type BillingUpdateUpsertLicenseCustomize = {
@@ -1395,6 +1454,10 @@ export type BillingUpdateUpsertLicense = {
   prepaidOnly?: boolean | undefined;
   customize?: BillingUpdateUpsertLicenseCustomize | null | undefined;
   metadata?: { [k: string]: any } | undefined;
+};
+
+export type BillingUpdateRemoveLicense = {
+  licensePlanId: string;
 };
 
 /**
@@ -1420,7 +1483,7 @@ export type BillingUpdateCustomize = {
   /**
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
-  freeTrial?: BillingUpdateFreeTrialParams | null | undefined;
+  freeTrial?: BillingUpdateCustomizeFreeTrialParams | null | undefined;
   /**
    * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
    */
@@ -1429,6 +1492,10 @@ export type BillingUpdateCustomize = {
    * License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.
    */
   upsertLicenses?: Array<BillingUpdateUpsertLicense> | undefined;
+  /**
+   * License links to drop, keyed by license_plan_id. Parallel to remove_items.
+   */
+  removeLicenses?: Array<BillingUpdateRemoveLicense> | undefined;
 };
 
 /**
@@ -1516,6 +1583,11 @@ export type BillingUpdateCancelAction = ClosedEnum<
 >;
 
 /**
+ * Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
+ */
+export type BillingUpdateBillingCycleAnchor = string | number;
+
+/**
  * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
  */
 export const BillingUpdateRefundLastPayment = {
@@ -1586,6 +1658,10 @@ export type UpdateSubscriptionParams = {
    */
   version?: number | undefined;
   /**
+   * Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given.
+   */
+  freeTrial?: BillingUpdateFreeTrialParams | null | undefined;
+  /**
    * Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.
    */
   customize?: BillingUpdateCustomize | undefined;
@@ -1614,9 +1690,9 @@ export type UpdateSubscriptionParams = {
    */
   cancelAction?: BillingUpdateCancelAction | undefined;
   /**
-   * Reset the billing cycle anchor immediately with 'now'
+   * Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.
    */
-  billingCycleAnchor?: "now" | undefined;
+  billingCycleAnchor?: string | number | undefined;
   /**
    * If true, the subscription is updated internally without applying billing changes in Stripe.
    */
@@ -1625,6 +1701,10 @@ export type UpdateSubscriptionParams = {
    * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
    */
   refundLastPayment?: BillingUpdateRefundLastPayment | undefined;
+  /**
+   * Additional parameters to pass into the Stripe subscription update or cancel call.
+   */
+  subscriptionParams?: { [k: string]: any } | undefined;
   /**
    * Controls whether balances should be recalculated during the subscription update.
    */
@@ -1749,6 +1829,55 @@ export function billingUpdateFeatureQuantityToJSON(
   return JSON.stringify(
     BillingUpdateFeatureQuantity$outboundSchema.parse(
       billingUpdateFeatureQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export const BillingUpdateDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateDurationType
+> = z.enum(BillingUpdateDurationType);
+
+/** @internal */
+export const BillingUpdateOnEnd$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateOnEnd
+> = z.enum(BillingUpdateOnEnd);
+
+/** @internal */
+export type BillingUpdateFreeTrialParams$Outbound = {
+  duration_length: number;
+  duration_type: string;
+  card_required: boolean;
+  on_end?: string | undefined;
+};
+
+/** @internal */
+export const BillingUpdateFreeTrialParams$outboundSchema: z.ZodMiniType<
+  BillingUpdateFreeTrialParams$Outbound,
+  BillingUpdateFreeTrialParams
+> = z.pipe(
+  z.object({
+    durationLength: z.number(),
+    durationType: z._default(BillingUpdateDurationType$outboundSchema, "month"),
+    cardRequired: z._default(z.boolean(), false),
+    onEnd: z.optional(BillingUpdateOnEnd$outboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      durationLength: "duration_length",
+      durationType: "duration_type",
+      cardRequired: "card_required",
+      onEnd: "on_end",
+    });
+  }),
+);
+
+export function billingUpdateFreeTrialParamsToJSON(
+  billingUpdateFreeTrialParams: BillingUpdateFreeTrialParams,
+): string {
+  return JSON.stringify(
+    BillingUpdateFreeTrialParams$outboundSchema.parse(
+      billingUpdateFreeTrialParams,
     ),
   );
 }
@@ -2572,6 +2701,7 @@ export type BillingUpdatePlanItemFilter$Outbound = {
   billing_method?: string | undefined;
   interval?: string | string | undefined;
   interval_count?: number | undefined;
+  included?: number | undefined;
 };
 
 /** @internal */
@@ -2591,6 +2721,7 @@ export const BillingUpdatePlanItemFilter$outboundSchema: z.ZodMiniType<
       ]),
     ),
     intervalCount: z.optional(z.int()),
+    included: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2612,17 +2743,17 @@ export function billingUpdatePlanItemFilterToJSON(
 }
 
 /** @internal */
-export const BillingUpdateDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof BillingUpdateDurationType
-> = z.enum(BillingUpdateDurationType);
+export const BillingUpdateCustomizeDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateCustomizeDurationType
+> = z.enum(BillingUpdateCustomizeDurationType);
 
 /** @internal */
-export const BillingUpdateOnEnd$outboundSchema: z.ZodMiniEnum<
-  typeof BillingUpdateOnEnd
-> = z.enum(BillingUpdateOnEnd);
+export const BillingUpdateCustomizeOnEnd$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateCustomizeOnEnd
+> = z.enum(BillingUpdateCustomizeOnEnd);
 
 /** @internal */
-export type BillingUpdateFreeTrialParams$Outbound = {
+export type BillingUpdateCustomizeFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
@@ -2630,32 +2761,36 @@ export type BillingUpdateFreeTrialParams$Outbound = {
 };
 
 /** @internal */
-export const BillingUpdateFreeTrialParams$outboundSchema: z.ZodMiniType<
-  BillingUpdateFreeTrialParams$Outbound,
-  BillingUpdateFreeTrialParams
-> = z.pipe(
-  z.object({
-    durationLength: z.number(),
-    durationType: z._default(BillingUpdateDurationType$outboundSchema, "month"),
-    cardRequired: z._default(z.boolean(), true),
-    onEnd: z.optional(BillingUpdateOnEnd$outboundSchema),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      durationLength: "duration_length",
-      durationType: "duration_type",
-      cardRequired: "card_required",
-      onEnd: "on_end",
-    });
-  }),
-);
+export const BillingUpdateCustomizeFreeTrialParams$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateCustomizeFreeTrialParams$Outbound,
+    BillingUpdateCustomizeFreeTrialParams
+  > = z.pipe(
+    z.object({
+      durationLength: z.number(),
+      durationType: z._default(
+        BillingUpdateCustomizeDurationType$outboundSchema,
+        "month",
+      ),
+      cardRequired: z._default(z.boolean(), false),
+      onEnd: z.optional(BillingUpdateCustomizeOnEnd$outboundSchema),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        durationLength: "duration_length",
+        durationType: "duration_type",
+        cardRequired: "card_required",
+        onEnd: "on_end",
+      });
+    }),
+  );
 
-export function billingUpdateFreeTrialParamsToJSON(
-  billingUpdateFreeTrialParams: BillingUpdateFreeTrialParams,
+export function billingUpdateCustomizeFreeTrialParamsToJSON(
+  billingUpdateCustomizeFreeTrialParams: BillingUpdateCustomizeFreeTrialParams,
 ): string {
   return JSON.stringify(
-    BillingUpdateFreeTrialParams$outboundSchema.parse(
-      billingUpdateFreeTrialParams,
+    BillingUpdateCustomizeFreeTrialParams$outboundSchema.parse(
+      billingUpdateCustomizeFreeTrialParams,
     ),
   );
 }
@@ -3439,6 +3574,7 @@ export type BillingUpdateUpsertLicensePlanItemFilter$Outbound = {
   billing_method?: string | undefined;
   interval?: string | string | undefined;
   interval_count?: number | undefined;
+  included?: number | undefined;
 };
 
 /** @internal */
@@ -3459,6 +3595,7 @@ export const BillingUpdateUpsertLicensePlanItemFilter$outboundSchema:
         ]),
       ),
       intervalCount: z.optional(z.int()),
+      included: z.optional(z.number()),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -3563,14 +3700,46 @@ export function billingUpdateUpsertLicenseToJSON(
 }
 
 /** @internal */
+export type BillingUpdateRemoveLicense$Outbound = {
+  license_plan_id: string;
+};
+
+/** @internal */
+export const BillingUpdateRemoveLicense$outboundSchema: z.ZodMiniType<
+  BillingUpdateRemoveLicense$Outbound,
+  BillingUpdateRemoveLicense
+> = z.pipe(
+  z.object({
+    licensePlanId: z.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      licensePlanId: "license_plan_id",
+    });
+  }),
+);
+
+export function billingUpdateRemoveLicenseToJSON(
+  billingUpdateRemoveLicense: BillingUpdateRemoveLicense,
+): string {
+  return JSON.stringify(
+    BillingUpdateRemoveLicense$outboundSchema.parse(billingUpdateRemoveLicense),
+  );
+}
+
+/** @internal */
 export type BillingUpdateCustomize$Outbound = {
   price?: BillingUpdateBasePrice$Outbound | null | undefined;
   items?: Array<BillingUpdateItemPlanItem$Outbound> | undefined;
   add_items?: Array<BillingUpdateAddItemPlanItem$Outbound> | undefined;
   remove_items?: Array<BillingUpdatePlanItemFilter$Outbound> | undefined;
-  free_trial?: BillingUpdateFreeTrialParams$Outbound | null | undefined;
+  free_trial?:
+    | BillingUpdateCustomizeFreeTrialParams$Outbound
+    | null
+    | undefined;
   billing_controls?: BillingUpdateBillingControls$Outbound | undefined;
   upsert_licenses?: Array<BillingUpdateUpsertLicense$Outbound> | undefined;
+  remove_licenses?: Array<BillingUpdateRemoveLicense$Outbound> | undefined;
 };
 
 /** @internal */
@@ -3591,15 +3760,18 @@ export const BillingUpdateCustomize$outboundSchema: z.ZodMiniType<
     removeItems: z.optional(
       z.array(z.lazy(() => BillingUpdatePlanItemFilter$outboundSchema)),
     ),
-    freeTrial: z.optional(
-      z.nullable(z.lazy(() => BillingUpdateFreeTrialParams$outboundSchema)),
-    ),
-    billingControls: z.optional(
-      z.lazy(() => BillingUpdateBillingControls$outboundSchema),
-    ),
-    upsertLicenses: z.optional(
-      z.array(z.lazy(() => BillingUpdateUpsertLicense$outboundSchema)),
-    ),
+    freeTrial: z.optional(z.nullable(z.lazy(() =>
+      BillingUpdateCustomizeFreeTrialParams$outboundSchema
+    ))),
+    billingControls: z.optional(z.lazy(() =>
+      BillingUpdateBillingControls$outboundSchema
+    )),
+    upsertLicenses: z.optional(z.array(z.lazy(() =>
+      BillingUpdateUpsertLicense$outboundSchema
+    ))),
+    removeLicenses: z.optional(z.array(z.lazy(() =>
+      BillingUpdateRemoveLicense$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3608,6 +3780,7 @@ export const BillingUpdateCustomize$outboundSchema: z.ZodMiniType<
       freeTrial: "free_trial",
       billingControls: "billing_controls",
       upsertLicenses: "upsert_licenses",
+      removeLicenses: "remove_licenses",
     });
   }),
 );
@@ -3705,6 +3878,25 @@ export function billingUpdateAttachDiscountToJSON(
 export const BillingUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
   typeof BillingUpdateCancelAction
 > = z.enum(BillingUpdateCancelAction);
+
+/** @internal */
+export type BillingUpdateBillingCycleAnchor$Outbound = string | number;
+
+/** @internal */
+export const BillingUpdateBillingCycleAnchor$outboundSchema: z.ZodMiniType<
+  BillingUpdateBillingCycleAnchor$Outbound,
+  BillingUpdateBillingCycleAnchor
+> = smartUnion([z.string(), z.int()]);
+
+export function billingUpdateBillingCycleAnchorToJSON(
+  billingUpdateBillingCycleAnchor: BillingUpdateBillingCycleAnchor,
+): string {
+  return JSON.stringify(
+    BillingUpdateBillingCycleAnchor$outboundSchema.parse(
+      billingUpdateBillingCycleAnchor,
+    ),
+  );
+}
 
 /** @internal */
 export const BillingUpdateRefundLastPayment$outboundSchema: z.ZodMiniEnum<
@@ -3805,6 +3997,7 @@ export type UpdateSubscriptionParams$Outbound = {
   plan_id?: string | undefined;
   feature_quantities?: Array<BillingUpdateFeatureQuantity$Outbound> | undefined;
   version?: number | undefined;
+  free_trial?: BillingUpdateFreeTrialParams$Outbound | null | undefined;
   customize?: BillingUpdateCustomize$Outbound | undefined;
   invoice_mode?: BillingUpdateInvoiceMode$Outbound | undefined;
   proration_behavior?: string | undefined;
@@ -3812,9 +4005,10 @@ export type UpdateSubscriptionParams$Outbound = {
   subscription_id?: string | undefined;
   discounts?: Array<BillingUpdateAttachDiscount$Outbound> | undefined;
   cancel_action?: string | undefined;
-  billing_cycle_anchor?: "now" | undefined;
+  billing_cycle_anchor?: string | number | undefined;
   no_billing_changes?: boolean | undefined;
   refund_last_payment?: string | undefined;
+  subscription_params?: { [k: string]: any } | undefined;
   recalculate_balances?: BillingUpdateRecalculateBalances$Outbound | undefined;
   carry_over_usages?: BillingUpdateCarryOverUsages$Outbound | undefined;
   license_quantities?: Array<BillingUpdateLicenseQuantity$Outbound> | undefined;
@@ -3833,6 +4027,9 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => BillingUpdateFeatureQuantity$outboundSchema)),
     ),
     version: z.optional(z.number()),
+    freeTrial: z.optional(
+      z.nullable(z.lazy(() => BillingUpdateFreeTrialParams$outboundSchema)),
+    ),
     customize: z.optional(z.lazy(() => BillingUpdateCustomize$outboundSchema)),
     invoiceMode: z.optional(
       z.lazy(() => BillingUpdateInvoiceMode$outboundSchema),
@@ -3849,11 +4046,12 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => BillingUpdateAttachDiscount$outboundSchema)),
     ),
     cancelAction: z.optional(BillingUpdateCancelAction$outboundSchema),
-    billingCycleAnchor: z.optional(z.literal("now")),
+    billingCycleAnchor: z.optional(smartUnion([z.string(), z.int()])),
     noBillingChanges: z.optional(z.boolean()),
     refundLastPayment: z.optional(
       BillingUpdateRefundLastPayment$outboundSchema,
     ),
+    subscriptionParams: z.optional(z.record(z.string(), z.any())),
     recalculateBalances: z.optional(
       z.lazy(() => BillingUpdateRecalculateBalances$outboundSchema),
     ),
@@ -3870,6 +4068,7 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       entityId: "entity_id",
       planId: "plan_id",
       featureQuantities: "feature_quantities",
+      freeTrial: "free_trial",
       invoiceMode: "invoice_mode",
       prorationBehavior: "proration_behavior",
       redirectMode: "redirect_mode",
@@ -3878,6 +4077,7 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       billingCycleAnchor: "billing_cycle_anchor",
       noBillingChanges: "no_billing_changes",
       refundLastPayment: "refund_last_payment",
+      subscriptionParams: "subscription_params",
       recalculateBalances: "recalculate_balances",
       carryOverUsages: "carry_over_usages",
       licenseQuantities: "license_quantities",

@@ -6,9 +6,10 @@ import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import * as openEnums from "../types/enums.js";
-import { OpenEnum } from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
+import { smartUnion } from "../types/smart-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type ListFeaturesGlobals = {
@@ -31,16 +32,71 @@ export const ListFeaturesType = {
  */
 export type ListFeaturesType = OpenEnum<typeof ListFeaturesType>;
 
-export type ListFeaturesCreditSchema = {
+export type ListFeaturesCreditSchema3 = {
+  meteredFeatureId: "";
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
+   */
+  creditCost: number;
+};
+
+export type ListFeaturesCreditSchema2 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
   meteredFeatureId: string;
   /**
-   * Credits consumed per unit of the metered feature.
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group.
    */
   creditCost: number;
 };
+
+export const ListFeaturesToEnum = {
+  Inf: "inf",
+} as const;
+export type ListFeaturesToEnum = ClosedEnum<typeof ListFeaturesToEnum>;
+
+/**
+ * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+ */
+export type ListFeaturesToUnion = number | ListFeaturesToEnum;
+
+export type ListFeaturesTier = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: number | ListFeaturesToEnum;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type ListFeaturesCreditSchema1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<ListFeaturesTier>;
+};
+
+export type ListFeaturesCreditSchemaUnion =
+  | ListFeaturesCreditSchema1
+  | ListFeaturesCreditSchema2
+  | ListFeaturesCreditSchema3;
 
 export type ListFeaturesModelMarkups = {
   markup?: number | undefined;
@@ -66,6 +122,24 @@ export type ListFeaturesDisplay = {
   plural?: string | null | undefined;
 };
 
+export type ListFeaturesStripe = {
+  /**
+   * Stripe product ID this feature's usage prices bill under.
+   */
+  productId?: string | undefined;
+  /**
+   * Stripe meter ID used to create this feature's metered price.
+   */
+  meterId?: string | undefined;
+};
+
+/**
+ * Processor mappings for this feature. Present when a Stripe product or meter is set.
+ */
+export type ListFeaturesProcessors = {
+  stripe?: ListFeaturesStripe | undefined;
+};
+
 export type ListFeaturesList = {
   /**
    * The unique identifier for this feature, used in /check and /track calls.
@@ -88,9 +162,19 @@ export type ListFeaturesList = {
    */
   eventNames?: Array<string> | undefined;
   /**
-   * For credit_system features: maps metered features to their credit costs.
+   * For classic credit systems: maps metered features to flat or graduated credit costs.
    */
-  creditSchema?: Array<ListFeaturesCreditSchema> | undefined;
+  creditSchema?:
+    | Array<
+      | ListFeaturesCreditSchema1
+      | ListFeaturesCreditSchema2
+      | ListFeaturesCreditSchema3
+    >
+    | undefined;
+  /**
+   * Whether usage of this classic credit system should be itemized as invoice credits.
+   */
+  invoiceCredit?: boolean | undefined;
   /**
    * Per-model markup overrides for AI credit systems.
    */
@@ -114,6 +198,10 @@ export type ListFeaturesList = {
    * Whether the feature is archived and hidden from the dashboard.
    */
   archived: boolean;
+  /**
+   * Processor mappings for this feature. Present when a Stripe product or meter is set.
+   */
+  processors?: ListFeaturesProcessors | undefined;
 };
 
 /**
@@ -147,29 +235,157 @@ export const ListFeaturesType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListFeaturesType);
 
 /** @internal */
-export const ListFeaturesCreditSchema$inboundSchema: z.ZodMiniType<
-  ListFeaturesCreditSchema,
+export const ListFeaturesCreditSchema3$inboundSchema: z.ZodMiniType<
+  ListFeaturesCreditSchema3,
   unknown
 > = z.pipe(
   z.object({
-    metered_feature_id: types.string(),
+    metered_feature_id: types.literal(""),
+    billing_units: types.optional(types.number()),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
       "credit_cost": "creditCost",
     });
   }),
 );
 
-export function listFeaturesCreditSchemaFromJSON(
+export function listFeaturesCreditSchema3FromJSON(
   jsonString: string,
-): SafeParseResult<ListFeaturesCreditSchema, SDKValidationError> {
+): SafeParseResult<ListFeaturesCreditSchema3, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ListFeaturesCreditSchema$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesCreditSchema' from JSON`,
+    (x) => ListFeaturesCreditSchema3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListFeaturesCreditSchema3' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListFeaturesCreditSchema2$inboundSchema: z.ZodMiniType<
+  ListFeaturesCreditSchema2,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function listFeaturesCreditSchema2FromJSON(
+  jsonString: string,
+): SafeParseResult<ListFeaturesCreditSchema2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListFeaturesCreditSchema2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListFeaturesCreditSchema2' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListFeaturesToEnum$inboundSchema: z.ZodMiniEnum<
+  typeof ListFeaturesToEnum
+> = z.enum(ListFeaturesToEnum);
+
+/** @internal */
+export const ListFeaturesToUnion$inboundSchema: z.ZodMiniType<
+  ListFeaturesToUnion,
+  unknown
+> = smartUnion([types.number(), ListFeaturesToEnum$inboundSchema]);
+
+export function listFeaturesToUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<ListFeaturesToUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListFeaturesToUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListFeaturesToUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListFeaturesTier$inboundSchema: z.ZodMiniType<
+  ListFeaturesTier,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), ListFeaturesToEnum$inboundSchema]),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function listFeaturesTierFromJSON(
+  jsonString: string,
+): SafeParseResult<ListFeaturesTier, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListFeaturesTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListFeaturesTier' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListFeaturesCreditSchema1$inboundSchema: z.ZodMiniType<
+  ListFeaturesCreditSchema1,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    billing_units: types.optional(types.number()),
+    tier_behavior: types.literal("graduated"),
+    tiers: z.array(z.lazy(() => ListFeaturesTier$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "billing_units": "billingUnits",
+      "tier_behavior": "tierBehavior",
+    });
+  }),
+);
+
+export function listFeaturesCreditSchema1FromJSON(
+  jsonString: string,
+): SafeParseResult<ListFeaturesCreditSchema1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListFeaturesCreditSchema1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListFeaturesCreditSchema1' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListFeaturesCreditSchemaUnion$inboundSchema: z.ZodMiniType<
+  ListFeaturesCreditSchemaUnion,
+  unknown
+> = smartUnion([
+  z.lazy(() => ListFeaturesCreditSchema1$inboundSchema),
+  z.lazy(() => ListFeaturesCreditSchema2$inboundSchema),
+  z.lazy(() => ListFeaturesCreditSchema3$inboundSchema),
+]);
+
+export function listFeaturesCreditSchemaUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<ListFeaturesCreditSchemaUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListFeaturesCreditSchemaUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListFeaturesCreditSchemaUnion' from JSON`,
   );
 }
 
@@ -239,6 +455,51 @@ export function listFeaturesDisplayFromJSON(
 }
 
 /** @internal */
+export const ListFeaturesStripe$inboundSchema: z.ZodMiniType<
+  ListFeaturesStripe,
+  unknown
+> = z.pipe(
+  z.object({
+    product_id: types.optional(types.string()),
+    meter_id: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "product_id": "productId",
+      "meter_id": "meterId",
+    });
+  }),
+);
+
+export function listFeaturesStripeFromJSON(
+  jsonString: string,
+): SafeParseResult<ListFeaturesStripe, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListFeaturesStripe$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListFeaturesStripe' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListFeaturesProcessors$inboundSchema: z.ZodMiniType<
+  ListFeaturesProcessors,
+  unknown
+> = z.object({
+  stripe: types.optional(z.lazy(() => ListFeaturesStripe$inboundSchema)),
+});
+
+export function listFeaturesProcessorsFromJSON(
+  jsonString: string,
+): SafeParseResult<ListFeaturesProcessors, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListFeaturesProcessors$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListFeaturesProcessors' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListFeaturesList$inboundSchema: z.ZodMiniType<
   ListFeaturesList,
   unknown
@@ -249,9 +510,14 @@ export const ListFeaturesList$inboundSchema: z.ZodMiniType<
     type: ListFeaturesType$inboundSchema,
     consumable: types.boolean(),
     event_names: types.optional(z.array(types.string())),
-    credit_schema: types.optional(
-      z.array(z.lazy(() => ListFeaturesCreditSchema$inboundSchema)),
-    ),
+    credit_schema: types.optional(z.array(smartUnion([
+      z.lazy(() => ListFeaturesCreditSchema1$inboundSchema),
+      z.lazy(() =>
+        ListFeaturesCreditSchema2$inboundSchema
+      ),
+      z.lazy(() => ListFeaturesCreditSchema3$inboundSchema),
+    ]))),
+    invoice_credit: types.optional(types.boolean()),
     model_markups: z.optional(z.nullable(z.record(
       z.string(),
       z.lazy(() => ListFeaturesModelMarkups$inboundSchema),
@@ -265,11 +531,15 @@ export const ListFeaturesList$inboundSchema: z.ZodMiniType<
       ListFeaturesDisplay$inboundSchema
     )),
     archived: types.boolean(),
+    processors: types.optional(z.lazy(() =>
+      ListFeaturesProcessors$inboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "invoice_credit": "invoiceCredit",
       "model_markups": "modelMarkups",
       "default_markup": "defaultMarkup",
       "provider_markups": "providerMarkups",

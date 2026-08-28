@@ -18,6 +18,8 @@ import { executeUpsertProducts } from "@/internal/catalogV2/execute/executeUpser
 import { queueRewardMigrations } from "@/internal/catalogV2/execute/queueRewardMigrations";
 import { rewritePublicPlanIdsAfterRename } from "@/internal/catalogV2/execute/rewritePublicPlanIdsAfterRename";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { fillFeatureStripeMeterEventName } from "@/internal/features/utils/fillFeatureStripeMeterEventName.js";
+import { updateFeatureStripeProductName } from "@/internal/features/utils/updateFeatureStripeProductName.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache";
 import { JobName } from "@/queue/JobName.js";
@@ -40,12 +42,17 @@ const executeInsertFeatures = async ({
 	updateCatalogPlan: UpdateCatalogPlan;
 }) => {
 	if (updateCatalogPlan.insertFeatures.length === 0) return;
+	const insertFeatures = await Promise.all(
+		updateCatalogPlan.insertFeatures.map((feature) =>
+			fillFeatureStripeMeterEventName({ ctx, feature }),
+		),
+	);
 	await FeatureService.insert({
 		db: ctx.db,
-		data: updateCatalogPlan.insertFeatures,
+		data: insertFeatures,
 		logger: ctx.logger,
 	});
-	for (const feature of updateCatalogPlan.insertFeatures) {
+	for (const feature of insertFeatures) {
 		await workflows.triggerGenerateFeatureDisplay({
 			featureId: feature.id,
 			orgId: ctx.org.id,
@@ -79,24 +86,30 @@ const executeUpdateFeatures = async ({
 	});
 
 	await Promise.all(
-		ops.map((op) =>
-			FeatureService.update({
+		ops.map(async (op) => {
+			const next = await fillFeatureStripeMeterEventName({
+				ctx,
+				feature: op.next,
+			});
+			return FeatureService.update({
 				db: ctx.db,
 				id: op.current.id,
 				orgId: ctx.org.id,
 				env: ctx.env,
 				updates: {
-					id: op.next.id,
-					name: op.next.name,
-					type: op.next.type,
-					archived: op.next.archived,
-					event_names: op.next.event_names,
-					config: op.next.config,
-					model_markups: op.next.model_markups,
-					display: op.next.display,
+					id: next.id,
+					name: next.name,
+					type: next.type,
+					archived: next.archived,
+					event_names: next.event_names,
+					config: next.config,
+					model_markups: next.model_markups,
+					display: next.display,
+					stripe_product_id: next.stripe_product_id,
+					stripe_meter: next.stripe_meter,
 				},
-			}),
-		),
+			});
+		}),
 	);
 
 	for (const op of ops) {
@@ -106,6 +119,7 @@ const executeUpdateFeatures = async ({
 				orgId: ctx.org.id,
 				env: ctx.env,
 			});
+			await updateFeatureStripeProductName({ ctx, feature: op.next });
 		}
 		if (op.clearCreditSystemCache) {
 			await addTaskToQueue({

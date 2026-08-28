@@ -28,6 +28,25 @@ const response = await autumn.billing.multiUpdate({
 });
 ```
 
+```typescript Cancel immediately with a refund and Stripe reason
+const response = await autumn.billing.multiUpdate({
+    customerId: "cus_123",
+    updates: [
+        {
+            planId: "pro_plan",
+            cancelAction: "cancel_immediately",
+            refundLastPayment: "full",
+            subscriptionParams: {
+                cancellation_details: {
+                    feedback: "too_expensive",
+                    comment: "Switching to a competitor",
+                },
+            },
+        },
+    ],
+});
+```
+
 </CodeGroup>
 
 ### Body Parameters
@@ -38,6 +57,14 @@ const response = await autumn.billing.multiUpdate({
 
 <DynamicParamField body="entity_id" type="string">
   The ID of the entity to update plans for. Individual updates can override this with their own entity_id.
+</DynamicParamField>
+
+<DynamicParamField body="refund_last_payment" type="'prorated' | 'full'">
+  Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+</DynamicParamField>
+
+<DynamicParamField body="subscription_params" type="object">
+  Additional parameters to pass into the Stripe subscription update or cancel call.
 </DynamicParamField>
 
 <DynamicParamField body="updates" type="object[]" required>

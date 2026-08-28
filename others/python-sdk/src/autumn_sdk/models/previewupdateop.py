@@ -10,10 +10,9 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -86,6 +85,66 @@ class PreviewUpdateFeatureQuantityRequest(BaseModel):
         return m
 
 
+PreviewUpdateDurationType = Literal[
+    "day",
+    "month",
+    "year",
+]
+r"""Unit of time for the trial ('day', 'month', 'year')."""
+
+
+PreviewUpdateOnEnd = Literal[
+    "bill",
+    "revert",
+]
+r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
+class PreviewUpdateFreeTrialParamsTypedDict(TypedDict):
+    r"""Free trial configuration for a plan."""
+
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
+    duration_type: NotRequired[PreviewUpdateDurationType]
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+    card_required: NotRequired[bool]
+    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
+    on_end: NotRequired[PreviewUpdateOnEnd]
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
+class PreviewUpdateFreeTrialParams(BaseModel):
+    r"""Free trial configuration for a plan."""
+
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
+
+    duration_type: Optional[PreviewUpdateDurationType] = "month"
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+
+    card_required: Optional[bool] = False
+    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
+
+    on_end: Optional[PreviewUpdateOnEnd] = None
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["duration_type", "card_required", "on_end"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 PreviewUpdatePriceInterval = Literal[
     "one_off",
     "week",
@@ -116,7 +175,7 @@ class PreviewUpdateBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
     interval: PreviewUpdatePriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
@@ -129,7 +188,7 @@ class PreviewUpdateBasePrice(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
     interval: PreviewUpdatePriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
@@ -1062,6 +1121,8 @@ class PreviewUpdatePlanItemFilterTypedDict(TypedDict):
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+    included: NotRequired[float]
+    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
 
 
 class PreviewUpdatePlanItemFilter(BaseModel):
@@ -1079,10 +1140,13 @@ class PreviewUpdatePlanItemFilter(BaseModel):
     interval_count: Optional[int] = None
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
 
+    included: Optional[float] = None
+    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["feature_id", "billing_method", "interval", "interval_count"]
+            ["feature_id", "billing_method", "interval", "interval_count", "included"]
         )
         serialized = handler(self)
         m = {}
@@ -1098,7 +1162,7 @@ class PreviewUpdatePlanItemFilter(BaseModel):
         return m
 
 
-PreviewUpdateDurationType = Literal[
+PreviewUpdateCustomizeDurationType = Literal[
     "day",
     "month",
     "year",
@@ -1106,39 +1170,39 @@ PreviewUpdateDurationType = Literal[
 r"""Unit of time for the trial ('day', 'month', 'year')."""
 
 
-PreviewUpdateOnEnd = Literal[
+PreviewUpdateCustomizeOnEnd = Literal[
     "bill",
     "revert",
 ]
 r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
-class PreviewUpdateFreeTrialParamsTypedDict(TypedDict):
+class PreviewUpdateCustomizeFreeTrialParamsTypedDict(TypedDict):
     r"""Free trial configuration for a plan."""
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
-    duration_type: NotRequired[PreviewUpdateDurationType]
+    duration_type: NotRequired[PreviewUpdateCustomizeDurationType]
     r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
-    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
-    on_end: NotRequired[PreviewUpdateOnEnd]
+    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
+    on_end: NotRequired[PreviewUpdateCustomizeOnEnd]
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
-class PreviewUpdateFreeTrialParams(BaseModel):
+class PreviewUpdateCustomizeFreeTrialParams(BaseModel):
     r"""Free trial configuration for a plan."""
 
     duration_length: float
     r"""Number of duration_type periods the trial lasts."""
 
-    duration_type: Optional[PreviewUpdateDurationType] = "month"
+    duration_type: Optional[PreviewUpdateCustomizeDurationType] = "month"
     r"""Unit of time for the trial ('day', 'month', 'year')."""
 
-    card_required: Optional[bool] = True
-    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+    card_required: Optional[bool] = False
+    r"""If true, a payment method is required to start the trial and the customer is charged when it ends. Defaults to false."""
 
-    on_end: Optional[PreviewUpdateOnEnd] = None
+    on_end: Optional[PreviewUpdateCustomizeOnEnd] = None
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
     @model_serializer(mode="wrap")
@@ -1589,7 +1653,7 @@ class PreviewUpdateUpsertLicenseBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
     interval: PreviewUpdatePriceUpsertLicenseInterval
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
@@ -1604,7 +1668,7 @@ class PreviewUpdateUpsertLicenseBasePrice(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
-    r"""Base price amount for the plan."""
+    r"""Base price amount for the plan, in major currency units (e.g. dollars)."""
 
     interval: PreviewUpdatePriceUpsertLicenseInterval
     r"""Billing interval (e.g. 'month', 'year')."""
@@ -2074,6 +2138,8 @@ class PreviewUpdateUpsertLicensePlanItemFilterTypedDict(TypedDict):
     r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
     interval_count: NotRequired[int]
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+    included: NotRequired[float]
+    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
 
 
 class PreviewUpdateUpsertLicensePlanItemFilter(BaseModel):
@@ -2091,10 +2157,13 @@ class PreviewUpdateUpsertLicensePlanItemFilter(BaseModel):
     interval_count: Optional[int] = None
     r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
 
+    included: Optional[float] = None
+    r"""Match items whose grant equals this included usage. Omitted is a wildcard."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["feature_id", "billing_method", "interval", "interval_count"]
+            ["feature_id", "billing_method", "interval", "interval_count", "included"]
         )
         serialized = handler(self)
         m = {}
@@ -2194,6 +2263,14 @@ class PreviewUpdateUpsertLicense(BaseModel):
         return m
 
 
+class PreviewUpdateRemoveLicenseTypedDict(TypedDict):
+    license_plan_id: str
+
+
+class PreviewUpdateRemoveLicense(BaseModel):
+    license_plan_id: str
+
+
 class PreviewUpdateCustomizeTypedDict(TypedDict):
     r"""Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination."""
 
@@ -2205,12 +2282,14 @@ class PreviewUpdateCustomizeTypedDict(TypedDict):
     r"""Items to add to the plan."""
     remove_items: NotRequired[List[PreviewUpdatePlanItemFilterTypedDict]]
     r"""Filters selecting items to remove from the plan."""
-    free_trial: NotRequired[Nullable[PreviewUpdateFreeTrialParamsTypedDict]]
+    free_trial: NotRequired[Nullable[PreviewUpdateCustomizeFreeTrialParamsTypedDict]]
     r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
     billing_controls: NotRequired[PreviewUpdateBillingControlsTypedDict]
     r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
     upsert_licenses: NotRequired[List[PreviewUpdateUpsertLicenseTypedDict]]
     r"""License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance."""
+    remove_licenses: NotRequired[List[PreviewUpdateRemoveLicenseTypedDict]]
+    r"""License links to drop, keyed by license_plan_id. Parallel to remove_items."""
 
 
 class PreviewUpdateCustomize(BaseModel):
@@ -2228,7 +2307,7 @@ class PreviewUpdateCustomize(BaseModel):
     remove_items: Optional[List[PreviewUpdatePlanItemFilter]] = None
     r"""Filters selecting items to remove from the plan."""
 
-    free_trial: OptionalNullable[PreviewUpdateFreeTrialParams] = UNSET
+    free_trial: OptionalNullable[PreviewUpdateCustomizeFreeTrialParams] = UNSET
     r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
 
     billing_controls: Optional[PreviewUpdateBillingControls] = None
@@ -2236,6 +2315,9 @@ class PreviewUpdateCustomize(BaseModel):
 
     upsert_licenses: Optional[List[PreviewUpdateUpsertLicense]] = None
     r"""License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance."""
+
+    remove_licenses: Optional[List[PreviewUpdateRemoveLicense]] = None
+    r"""License links to drop, keyed by license_plan_id. Parallel to remove_items."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -2248,6 +2330,7 @@ class PreviewUpdateCustomize(BaseModel):
                 "free_trial",
                 "billing_controls",
                 "upsert_licenses",
+                "remove_licenses",
             ]
         )
         nullable_fields = set(["price", "free_trial"])
@@ -2388,6 +2471,18 @@ PreviewUpdateCancelAction = Literal[
 r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
 
+PreviewUpdateBillingCycleAnchorTypedDict = TypeAliasType(
+    "PreviewUpdateBillingCycleAnchorTypedDict", Union[str, int]
+)
+r"""Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds."""
+
+
+PreviewUpdateBillingCycleAnchor = TypeAliasType(
+    "PreviewUpdateBillingCycleAnchor", Union[str, int]
+)
+r"""Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds."""
+
+
 PreviewUpdateRefundLastPayment = Literal[
     "prorated",
     "full",
@@ -2470,6 +2565,8 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan."""
     version: NotRequired[float]
     r"""The version of the plan to attach."""
+    free_trial: NotRequired[Nullable[PreviewUpdateFreeTrialParamsTypedDict]]
+    r"""Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given."""
     customize: NotRequired[PreviewUpdateCustomizeTypedDict]
     r"""Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination."""
     invoice_mode: NotRequired[PreviewUpdateInvoiceModeTypedDict]
@@ -2484,12 +2581,14 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
     cancel_action: NotRequired[PreviewUpdateCancelAction]
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
-    billing_cycle_anchor: Literal["now"]
-    r"""Reset the billing cycle anchor immediately with 'now'"""
+    billing_cycle_anchor: NotRequired[PreviewUpdateBillingCycleAnchorTypedDict]
+    r"""Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds."""
     no_billing_changes: NotRequired[bool]
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
     refund_last_payment: NotRequired[PreviewUpdateRefundLastPayment]
     r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+    subscription_params: NotRequired[Dict[str, Any]]
+    r"""Additional parameters to pass into the Stripe subscription update or cancel call."""
     recalculate_balances: NotRequired[PreviewUpdateRecalculateBalancesTypedDict]
     r"""Controls whether balances should be recalculated during the subscription update."""
     carry_over_usages: NotRequired[PreviewUpdateCarryOverUsagesTypedDict]
@@ -2514,6 +2613,9 @@ class PreviewUpdateParams(BaseModel):
     version: Optional[float] = None
     r"""The version of the plan to attach."""
 
+    free_trial: OptionalNullable[PreviewUpdateFreeTrialParams] = UNSET
+    r"""Free trial for this plan. A shorthand for customize.free_trial, which takes precedence when both are given."""
+
     customize: Optional[PreviewUpdateCustomize] = None
     r"""Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination."""
 
@@ -2535,17 +2637,17 @@ class PreviewUpdateParams(BaseModel):
     cancel_action: Optional[PreviewUpdateCancelAction] = None
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
-    billing_cycle_anchor: Annotated[
-        Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
-        pydantic.Field(alias="billing_cycle_anchor"),
-    ] = "now"
-    r"""Reset the billing cycle anchor immediately with 'now'"""
+    billing_cycle_anchor: Optional[PreviewUpdateBillingCycleAnchor] = None
+    r"""Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds."""
 
     no_billing_changes: Optional[bool] = None
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
 
     refund_last_payment: Optional[PreviewUpdateRefundLastPayment] = None
     r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+
+    subscription_params: Optional[Dict[str, Any]] = None
+    r"""Additional parameters to pass into the Stripe subscription update or cancel call."""
 
     recalculate_balances: Optional[PreviewUpdateRecalculateBalances] = None
     r"""Controls whether balances should be recalculated during the subscription update."""
@@ -2564,6 +2666,7 @@ class PreviewUpdateParams(BaseModel):
                 "plan_id",
                 "feature_quantities",
                 "version",
+                "free_trial",
                 "customize",
                 "invoice_mode",
                 "proration_behavior",
@@ -2574,20 +2677,30 @@ class PreviewUpdateParams(BaseModel):
                 "billing_cycle_anchor",
                 "no_billing_changes",
                 "refund_last_payment",
+                "subscription_params",
                 "recalculate_balances",
                 "carry_over_usages",
                 "license_quantities",
             ]
         )
+        nullable_fields = set(["free_trial"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -3190,6 +3303,8 @@ class PreviewUpdateResponseTypedDict(TypedDict):
     outgoing: List[PreviewUpdateOutgoingTypedDict]
     r"""Products or subscription changes being removed or ended."""
     intent: Intent
+    resets_usage: NotRequired[bool]
+    r"""True when this change clears the customer's usage balances, so the approver can see usage will reset."""
     next_cycle: NotRequired[PreviewUpdateNextCycleTypedDict]
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
     expand: NotRequired[List[str]]
@@ -3226,6 +3341,9 @@ class PreviewUpdateResponse(BaseModel):
 
     intent: Intent
 
+    resets_usage: Optional[bool] = None
+    r"""True when this change clears the customer's usage balances, so the approver can see usage will reset."""
+
     next_cycle: Optional[PreviewUpdateNextCycle] = None
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
 
@@ -3240,7 +3358,9 @@ class PreviewUpdateResponse(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["next_cycle", "expand", "tax", "invoice_credits"])
+        optional_fields = set(
+            ["resets_usage", "next_cycle", "expand", "tax", "invoice_credits"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -3257,9 +3377,5 @@ class PreviewUpdateResponse(BaseModel):
 
 try:
     PreviewUpdateUsageLimit.model_rebuild()
-except NameError:
-    pass
-try:
-    PreviewUpdateParams.model_rebuild()
 except NameError:
     pass

@@ -90,4 +90,37 @@ test("catalog feature params include invoice-credit configuration", () => {
 			credit_cost: 1,
 		},
 	]);
+	expect(result.processors).toBeUndefined();
+});
+
+const creditFeature = {
+	id: "credits",
+	name: "Credits",
+	type: FeatureType.CreditSystem,
+	config: { usage_type: FeatureUsageType.Single, schema: [] },
+	event_names: [],
+};
+
+test("omits processors when the stripe product is unchanged", () => {
+	const result = featureToCatalogFeatureParams({
+		feature: { ...creditFeature, stripe_product_id: "prod_1" },
+		originalStripeProductId: "prod_1",
+	});
+
+	expect(result.processors).toBeUndefined();
+});
+
+test("sends processors when a stripe product is set or cleared", () => {
+	expect(
+		featureToCatalogFeatureParams({
+			feature: { ...creditFeature, stripe_product_id: "prod_1" },
+		}).processors,
+	).toEqual({ stripe: { product_id: "prod_1" } });
+
+	expect(
+		featureToCatalogFeatureParams({
+			feature: { ...creditFeature, stripe_product_id: null },
+			originalStripeProductId: "prod_1",
+		}).processors,
+	).toEqual({ stripe: { product_id: "" } });
 });

@@ -7,11 +7,7 @@ import type {
 	AgentTurnParams,
 } from "../../../domain/agentTurnContext.js";
 import { adoptPostedEveSession } from "../../../eve/adoptPostedSession.js";
-import {
-	type EveMessageContent,
-	fastForwardEveStreamIndex,
-	postEveMessage,
-} from "../../../eve/client.js";
+import { type EveMessageContent, postEveMessage } from "../../../eve/client.js";
 import { deleteEveSession } from "../../../eve/repo.js";
 import {
 	initialEveSessionState,
@@ -19,7 +15,6 @@ import {
 } from "../../../eve/sessionState.js";
 import type { EveAuthContext, EveSessionRef } from "../../../eve/types.js";
 import { buildAgentThreadKey } from "../../../sessions/agentThreadKey.js";
-import { assertEveSessionAlive } from "./assertEveSessionAlive.js";
 import { buildEveInputResponses } from "./buildEveInputResponses.js";
 
 export const startAgentTurn = async ({
@@ -47,25 +42,20 @@ export const startAgentTurn = async ({
 		session,
 		withdrawal,
 	});
-	if (session) {
-		await assertEveSessionAlive({ env, orgId, session });
-		if (outbound.inputResponses) {
-			logger.info("Answering open eve parks alongside the message", {
-				event: "leaf.eve_parks_answered_with_message",
-				data: {
-					chip_answered: Boolean(params.questionResponse),
-					outstanding_request_ids: outbound.outstandingDenies.map(
-						(response) => response.requestId,
-					),
-					session_id: session.sessionId,
-					withdrawn_request_ids: (withdrawal?.inputResponses ?? []).map(
-						(response) => response.requestId,
-					),
-				},
-			});
-		} else {
-			await fastForwardEveStreamIndex({ auth, session });
-		}
+	if (session && outbound.inputResponses) {
+		logger.info("Answering open eve parks alongside the message", {
+			event: "leaf.eve_parks_answered_with_message",
+			data: {
+				chip_answered: Boolean(params.questionResponse),
+				outstanding_request_ids: outbound.outstandingDenies.map(
+					(response) => response.requestId,
+				),
+				session_id: session.sessionId,
+				withdrawn_request_ids: (withdrawal?.inputResponses ?? []).map(
+					(response) => response.requestId,
+				),
+			},
+		});
 	}
 	const posted = await postEveMessage({
 		auth,
@@ -94,8 +84,18 @@ export const startAgentTurn = async ({
 		throw error;
 	});
 	if (session) {
-		adoptPostedEveSession({ posted, session, status: "running" });
+		const staleSessionId = session.sessionId;
+		const { rehomed } = adoptPostedEveSession({ posted, session });
 		if (outbound.inputResponses) session.state.pendingRequests = [];
+		if (rehomed) {
+			logger.warn("Eve re-homed the session onto a new run", {
+				event: "leaf.eve_session_rehomed",
+				data: {
+					session_id: session.sessionId,
+					stale_session_id: staleSessionId,
+				},
+			});
+		}
 	}
 	const started: EveSessionRef = session ?? {
 		env,

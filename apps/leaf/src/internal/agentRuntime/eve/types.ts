@@ -9,14 +9,11 @@ export const evePendingRequestSchema = z.strictObject({
 
 export type EvePendingRequest = z.infer<typeof evePendingRequestSchema>;
 
-export const eveSessionStateSchema = z.strictObject({
-	version: z.literal(1),
+// Non-strict so rows written before a field was retired still parse; a strict
+// object would fail them all and silently restart every live thread.
+export const eveSessionStateSchema = z.object({
 	continuationToken: z.string().min(1),
 	streamIndex: z.number().int().nonnegative(),
-	status: z
-		.enum(["running", "waiting", "completed", "failed"])
-		.default("running"),
-	lastEventAt: z.number().int().nonnegative(),
 	// Parks eve is waiting on. A message posted while any gated park is open is
 	// silently deferred by eve, so these must be answered before every post.
 	pendingRequests: z.array(evePendingRequestSchema).default([]),
@@ -44,8 +41,4 @@ export type EveAuthContext = {
 	providerUserId: string;
 	threadId: string;
 	workspaceId: string;
-};
-
-export type EveRuntimeSession = EveSessionRef & {
-	auth: EveAuthContext;
 };

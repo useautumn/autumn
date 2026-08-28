@@ -4,26 +4,36 @@ import { CancelActionSchema } from "../common/cancelAction";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 import { SubscriptionParamsSchema } from "../common/subscriptionParams";
 
-const applyMultiUpdateItemRefinements = <
+const applyMultiUpdateParamsRefinements = <
 	Schema extends z.ZodType<{
-		cancel_action: z.infer<typeof CancelActionSchema>;
-		proration_behavior?: z.infer<typeof BillingBehaviorSchema>;
 		refund_last_payment?: z.infer<typeof RefundLastPaymentSchema>;
-		subscription_params?: z.infer<typeof SubscriptionParamsSchema>;
+		updates: Array<{
+			cancel_action: z.infer<typeof CancelActionSchema>;
+			proration_behavior?: z.infer<typeof BillingBehaviorSchema>;
+		}>;
 	}>,
 >(
 	schema: Schema,
 ) =>
 	schema
-		.refine((data) => !(data.refund_last_payment && data.proration_behavior), {
-			message:
-				"Cannot pass both proration_behavior and refund_last_payment. Use proration_behavior for invoice credits/proration, or refund_last_payment for direct refunds.",
-		})
 		.refine(
 			(data) =>
 				!(
 					data.refund_last_payment &&
-					data.cancel_action !== "cancel_immediately"
+					data.updates.some((update) => update.proration_behavior)
+				),
+			{
+				message:
+					"Cannot pass both proration_behavior and refund_last_payment. Use proration_behavior for invoice credits/proration, or refund_last_payment for direct refunds.",
+			},
+		)
+		.refine(
+			(data) =>
+				!(
+					data.refund_last_payment &&
+					data.updates.some(
+						(update) => update.cancel_action !== "cancel_immediately",
+					)
 				),
 			{
 				message:
@@ -53,21 +63,15 @@ const extMultiUpdateItemShape = z.object({
 		description:
 			"How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",
 	}),
-	refund_last_payment: RefundLastPaymentSchema.optional(),
-	subscription_params: SubscriptionParamsSchema.optional(),
 });
 
-export const ExtMultiUpdateItemV0Schema = applyMultiUpdateItemRefinements(
-	extMultiUpdateItemShape,
-);
+export const ExtMultiUpdateItemV0Schema = extMultiUpdateItemShape;
 
-export const MultiUpdateItemV0Schema = applyMultiUpdateItemRefinements(
-	extMultiUpdateItemShape.extend({
-		customer_product_id: z.string().optional().meta({
-			internal: true,
-		}),
+export const MultiUpdateItemV0Schema = extMultiUpdateItemShape.extend({
+	customer_product_id: z.string().optional().meta({
+		internal: true,
 	}),
-);
+});
 
 const multiUpdateParamsBase = {
 	customer_id: z.string().meta({
@@ -77,27 +81,33 @@ const multiUpdateParamsBase = {
 		description:
 			"The ID of the entity to update plans for. Individual updates can override this with their own entity_id.",
 	}),
+	refund_last_payment: RefundLastPaymentSchema.optional(),
+	subscription_params: SubscriptionParamsSchema.optional(),
 };
 
 const updatesMeta = {
 	description: "The list of plan updates to apply to the customer.",
 };
 
-export const ExtMultiUpdateParamsV0Schema = z.object({
-	...multiUpdateParamsBase,
-	updates: z
-		.array(ExtMultiUpdateItemV0Schema)
-		.min(1, "At least one update must be provided")
-		.meta(updatesMeta),
-});
+export const ExtMultiUpdateParamsV0Schema = applyMultiUpdateParamsRefinements(
+	z.object({
+		...multiUpdateParamsBase,
+		updates: z
+			.array(ExtMultiUpdateItemV0Schema)
+			.min(1, "At least one update must be provided")
+			.meta(updatesMeta),
+	}),
+);
 
-export const MultiUpdateParamsV0Schema = z.object({
-	...multiUpdateParamsBase,
-	updates: z
-		.array(MultiUpdateItemV0Schema)
-		.min(1, "At least one update must be provided")
-		.meta(updatesMeta),
-});
+export const MultiUpdateParamsV0Schema = applyMultiUpdateParamsRefinements(
+	z.object({
+		...multiUpdateParamsBase,
+		updates: z
+			.array(MultiUpdateItemV0Schema)
+			.min(1, "At least one update must be provided")
+			.meta(updatesMeta),
+	}),
+);
 
 export type MultiUpdateItemV0 = z.infer<typeof MultiUpdateItemV0Schema>;
 export type MultiUpdateParamsV0 = z.infer<typeof MultiUpdateParamsV0Schema>;

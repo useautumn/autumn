@@ -1,3 +1,1 @@
-import { disabledFrameworkTool } from "../../../lib/disabledTools.js";
-
-export default disabledFrameworkTool;
+export { disabledFrameworkTool as default } from "../../../lib/disabledTools.js";

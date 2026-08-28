@@ -13,23 +13,34 @@ import {
 } from "@autumn/shared";
 
 /** Unset behavior follows the allocated v1 shape: derived from should_prorate. */
-const normalizedAllocatedBillingBehavior = (usageConfig: UsagePriceConfig) =>
+export const normalizedAllocatedBillingBehavior = (
+	usageConfig: UsagePriceConfig,
+) =>
 	usageConfig.allocated_billing_behavior ??
 	(usageConfig.should_prorate
 		? AllocatedBillingBehavior.Prorated
 		: AllocatedBillingBehavior.Arrear);
 
+/** Last `to` is ignored; unset `flat_amount` is 0. */
+export const usageTiersToComparisonShape = (tiers: UsageTier[]) =>
+	tiers.map((tier, index) => ({
+		amount: tier.amount,
+		flat_amount: tier.flat_amount ?? 0,
+		to: index === tiers.length - 1 ? null : tier.to,
+	}));
+
 export const tiersAreSame = (tiers1: UsageTier[], tiers2: UsageTier[]) => {
 	if (tiers1.length !== tiers2.length) return false;
-	for (let i = 0; i < tiers1.length; i++) {
-		const tier1 = tiers1[i];
-		const tier2 = tiers2[i];
-
-		if (i !== tiers1.length - 1 && tier1.to !== tier2.to) return false;
-		if (tier1.amount !== tier2.amount) return false;
-		if ((tier1.flat_amount ?? 0) !== (tier2.flat_amount ?? 0)) return false;
-	}
-	return true;
+	const shape1 = usageTiersToComparisonShape(tiers1);
+	const shape2 = usageTiersToComparisonShape(tiers2);
+	return shape1.every((tier, index) => {
+		const other = shape2[index];
+		return (
+			tier.amount === other?.amount &&
+			tier.flat_amount === other.flat_amount &&
+			tier.to === other.to
+		);
+	});
 };
 
 const hasCatalogCurrencies = (
