@@ -4,16 +4,22 @@ import {
 	type Price,
 	RecaseError,
 } from "@autumn/shared";
+import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getStripePrice } from "@/external/stripe/prices/operations/getStripePrice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { PriceService } from "@/internal/products/prices/PriceService";
 
-type AdoptedPrice = { planId: string; priceId: string; stripePriceId: string };
+type PriceConfigIds = {
+	stripe_prepaid_price_v2_id?: string | null;
+	stripe_product_id?: string | null;
+};
 
-const adoptedStripePriceId = ({ price }: { price: Price }): string | null =>
-	(price.config as { stripe_prepaid_price_v2_id?: string | null })
-		?.stripe_prepaid_price_v2_id ?? null;
+type AdoptedPrice = { planId: string; price: Price; stripePriceId: string };
+
+const configIds = ({ price }: { price: Price }): PriceConfigIds =>
+	(price.config ?? {}) as PriceConfigIds;
 
 /** Stated ids only — an id Autumn minted earlier was real when it was written. */
 const newlyAdoptedPrices = ({
@@ -25,7 +31,7 @@ const newlyAdoptedPrices = ({
 	const current = upsert.row.currentFullProduct;
 
 	return next.prices.flatMap((price) => {
-		const stripePriceId = adoptedStripePriceId({ price });
+		const stripePriceId = configIds({ price }).stripe_prepaid_price_v2_id;
 		if (!stripePriceId) return [];
 
 		const currentPrice = current?.prices.find(
@@ -33,17 +39,36 @@ const newlyAdoptedPrices = ({
 		);
 		if (
 			currentPrice &&
-			adoptedStripePriceId({ price: currentPrice }) === stripePriceId
+			configIds({ price: currentPrice }).stripe_prepaid_price_v2_id ===
+				stripePriceId
 		) {
 			return [];
 		}
-		return [{ planId: next.id, priceId: price.id, stripePriceId }];
+		return [{ planId: next.id, price, stripePriceId }];
 	});
 };
 
+/** Expanded prices carry the product object; unexpanded ones carry its id. */
+const productIdOf = ({
+	stripePrice,
+}: {
+	stripePrice: Stripe.Price;
+}): string | null => {
+	const product = stripePrice.product;
+	if (!product) return null;
+	if (typeof product === "string") return product;
+	if ("deleted" in product && product.deleted) return null;
+	return product.id;
+};
+
 /**
- * A stated Stripe price must already exist. Autumn never mints a replacement
- * for one — that would hand back an id the caller never asked for.
+ * A stated Stripe price must already exist — Autumn never mints a replacement,
+ * which would hand back an id the caller never asked for. The same lookup
+ * records the price's own Stripe product, so adoption never leaves a price
+ * pointing at a product it does not belong to.
+ *
+ * Scoped to prices this request stated: shared init paths (attach, sync,
+ * migrations) are untouched.
  */
 export const validateAdoptedStripePrices = async ({
 	ctx,
@@ -58,26 +83,37 @@ export const validateAdoptedStripePrices = async ({
 	if (adopted.length === 0) return;
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	const seen = new Map<string, boolean>();
+	const seen = new Map<string, Stripe.Price | undefined>();
 
 	for (const entry of adopted) {
-		const cached = seen.get(entry.stripePriceId);
-		const exists =
-			cached ??
-			Boolean(
-				await getStripePrice({
+		const stripePrice = seen.has(entry.stripePriceId)
+			? seen.get(entry.stripePriceId)
+			: await getStripePrice({
 					stripeClient: stripeCli,
 					stripePriceId: entry.stripePriceId,
-				}),
-			);
-		seen.set(entry.stripePriceId, exists);
+					expand: ["product"],
+				});
+		seen.set(entry.stripePriceId, stripePrice);
 
-		if (!exists) {
+		if (!stripePrice) {
 			throw new RecaseError({
 				code: ErrCode.InvalidRequest,
 				message: `Stripe price ${entry.stripePriceId} not found (plan ${entry.planId})`,
 				statusCode: 400,
 			});
 		}
+
+		const config = configIds({ price: entry.price });
+		if (config.stripe_product_id) continue;
+
+		const stripeProductId = productIdOf({ stripePrice });
+		if (!stripeProductId) continue;
+
+		config.stripe_product_id = stripeProductId;
+		await PriceService.update({
+			db: ctx.db,
+			id: entry.price.id!,
+			update: { config: entry.price.config },
+		});
 	}
 };

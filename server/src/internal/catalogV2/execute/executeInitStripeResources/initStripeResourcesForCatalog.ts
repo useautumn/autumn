@@ -1,15 +1,15 @@
 import { hasMissingStripeResourcesForProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
 import { hydratePlanLicenseProcessor } from "./hydratePlanLicenseProcessor";
+import { validateAdoptedStripePrices } from "./validateAdoptedStripePrices";
 import {
 	catalogProductsByInternalId,
 	stripeCandidatesFromCatalog,
 } from "./stripeCandidatesFromCatalog";
-import { validateAdoptedStripePrices } from "./validateAdoptedStripePrices";
 
 const touchesStripeResources = ({ upsert }: { upsert: UpsertProductPlan }) =>
 	upsert.row.op !== "none" || upsert.planLicenses !== undefined;

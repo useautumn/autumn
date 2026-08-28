@@ -1,6 +1,6 @@
+import type { CreatePlanItemParamsV1 } from "@api/models";
 import { RecaseError } from "@api/errors/base/RecaseError";
 import { ProductErrorCode } from "@api/errors/codes/productErrCodes";
-import type { CreatePlanItemParamsV1 } from "@api/models";
 import { BillingMethod } from "@api/products/components/billingMethod";
 import { billingMethodToUsageModel } from "@api/products/components/mappers/billingMethodTousageModel";
 import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0";
@@ -61,7 +61,9 @@ export function planItemV1ToV0({
 		price: price
 			? {
 					stripe_price_id:
-						"stripe_price_id" in price ? price.stripe_price_id : undefined,
+						"stripe_price_id" in price
+							? price.stripe_price_id
+							: undefined,
 					processors: "processors" in price ? price.processors : undefined,
 					amount: price.amount,
 					tiers: internalTiers,
