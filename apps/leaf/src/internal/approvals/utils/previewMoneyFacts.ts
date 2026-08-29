@@ -25,7 +25,7 @@ const asRecord = (value: unknown): Record<string, unknown> | undefined =>
 		? (value as Record<string, unknown>)
 		: undefined;
 
-const asAmount = (value: unknown): number | undefined =>
+const asNumber = (value: unknown): number | undefined =>
 	typeof value === "number" ? value : undefined;
 
 const planIds = (value: unknown): string[] =>
@@ -48,8 +48,8 @@ const samePlanIds = ({
 
 const linePeriodOf = (value: unknown): LinePeriod | undefined => {
 	const period = asRecord(value);
-	const start = asAmount(period?.start);
-	const end = asAmount(period?.end);
+	const start = asNumber(period?.start);
+	const end = asNumber(period?.end);
 	return start !== undefined && end !== undefined && end > start
 		? { end, start }
 		: undefined;
@@ -58,7 +58,7 @@ const linePeriodOf = (value: unknown): LinePeriod | undefined => {
 const lineFactsOf = (item: unknown): LineFacts => {
 	const record = asRecord(item) ?? {};
 	return {
-		amount: asAmount(record.total) ?? asAmount(record.amount),
+		amount: asNumber(record.total) ?? asNumber(record.amount),
 		key: `${record.plan_id ?? ""}|${record.feature_id ?? ""}`,
 		period: linePeriodOf(record.period),
 	};
@@ -83,7 +83,7 @@ const moneyFactsOf = (preview: unknown): MoneyFacts | undefined => {
 		lineFacts: lineItems.map(lineFactsOf).sort(byLineIdentity),
 		outgoingPlans: planIds(record.outgoing_plans ?? record.outgoing),
 		total:
-			asAmount(record.total) ?? asAmount(asRecord(record.due_today)?.total),
+			asNumber(record.total) ?? asNumber(asRecord(record.due_today)?.total),
 	};
 };
 

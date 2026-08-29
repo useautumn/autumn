@@ -9,7 +9,6 @@ type EvalMetadata = {
 };
 
 const experimentName = "rsd-marketing-upgrade-wrong-plan";
-const requestedPrice = 1900;
 
 // Replays a live incident: "upgrade their marketing product to 700K contacts
 // for $1900/mo" for a customer on custom Enterprise + transactional. The
@@ -45,7 +44,7 @@ initEval<EvalMetadata>({
 					body: {
 						customer_id: customer.id,
 						customize: {
-							price: { amount: requestedPrice, interval: "month" },
+							price: { amount: 1900, interval: "month" },
 						},
 					},
 					write: "attach",

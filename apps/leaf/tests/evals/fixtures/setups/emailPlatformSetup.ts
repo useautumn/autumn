@@ -24,15 +24,6 @@ const planIds = {
 
 const MARKETING_GROUP = "Marketing";
 
-const marketingSizes = [
-	{ amount: 40, contacts: 5_000, key: "marketingStarter" },
-	{ amount: 80, contacts: 10_000, key: "marketingStarter10k" },
-	{ amount: 180, contacts: 25_000, key: "marketingStarter25k" },
-	{ amount: 250, contacts: 50_000, key: "marketingStarter50k" },
-	{ amount: 450, contacts: 100_000, key: "marketingStarter100k" },
-	{ amount: 650, contacts: 150_000, key: "marketingStarter150k" },
-] as const;
-
 /** Anonymized email-platform org: a Marketing plan ladder with sized contact
  * variants (no 700K size exists), a custom-priced Enterprise with zero
  * contacts, and a separate transactional plan — the shape behind the
@@ -74,8 +65,12 @@ export const emailPlatformSetup = () =>
 			const marketingPlan = ({
 				amount,
 				contacts,
-				key,
-			}: (typeof marketingSizes)[number]) => ({
+				planId,
+			}: {
+				amount: number;
+				contacts: number;
+				planId: string;
+			}) => ({
 				...plan.monthly({
 					basePrice: basePrice.monthly({ amount }),
 					items: [
@@ -83,7 +78,7 @@ export const emailPlatformSetup = () =>
 						items.included({ feature: features.ai_credits, included: 100 }),
 					],
 					name: `Marketing Starter ${contacts / 1_000}K`,
-					planId: planIds[key],
+					planId,
 				}),
 				group: MARKETING_GROUP,
 			});
@@ -103,12 +98,36 @@ export const emailPlatformSetup = () =>
 					name: "Enterprise",
 					planId: planIds.enterprise,
 				}),
-				marketingStarter: marketingPlan(marketingSizes[0]),
-				marketingStarter10k: marketingPlan(marketingSizes[1]),
-				marketingStarter25k: marketingPlan(marketingSizes[2]),
-				marketingStarter50k: marketingPlan(marketingSizes[3]),
-				marketingStarter100k: marketingPlan(marketingSizes[4]),
-				marketingStarter150k: marketingPlan(marketingSizes[5]),
+				marketingStarter: marketingPlan({
+					amount: 40,
+					contacts: 5_000,
+					planId: planIds.marketingStarter,
+				}),
+				marketingStarter10k: marketingPlan({
+					amount: 80,
+					contacts: 10_000,
+					planId: planIds.marketingStarter10k,
+				}),
+				marketingStarter25k: marketingPlan({
+					amount: 180,
+					contacts: 25_000,
+					planId: planIds.marketingStarter25k,
+				}),
+				marketingStarter50k: marketingPlan({
+					amount: 250,
+					contacts: 50_000,
+					planId: planIds.marketingStarter50k,
+				}),
+				marketingStarter100k: marketingPlan({
+					amount: 450,
+					contacts: 100_000,
+					planId: planIds.marketingStarter100k,
+				}),
+				marketingStarter150k: marketingPlan({
+					amount: 650,
+					contacts: 150_000,
+					planId: planIds.marketingStarter150k,
+				}),
 				sendhubPro: {
 					...plan.monthly({
 						basePrice: basePrice.monthly({ amount: 20 }),
