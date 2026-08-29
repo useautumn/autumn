@@ -57,6 +57,7 @@ const previewComputedAt = (nowMs: number) => {
 };
 
 const CARD_SHOWN_AT = CYCLE_START + 9 * 24 * 60 * 60 * 1000;
+const RETRY_CADENCE_SECONDS = [120, 30, 30];
 
 describe("proration time-decay is not drift", () => {
 	test("the same write re-previewed later does not drift", () => {
@@ -71,7 +72,7 @@ describe("proration time-decay is not drift", () => {
 	test("the drift-refresh loop converges: a refreshed card is approvable", () => {
 		let stored = previewComputedAt(CARD_SHOWN_AT);
 		let clickedAt = CARD_SHOWN_AT;
-		for (const secondsLater of [120, 30, 30]) {
+		for (const secondsLater of RETRY_CADENCE_SECONDS) {
 			clickedAt += secondsLater * 1000;
 			const current = previewComputedAt(clickedAt);
 			const verdict = previewMoneyFactsDrifted({ current, stored });
@@ -180,7 +181,7 @@ describe("guardApprovalDrift under proration time-decay", () => {
 
 	test("retrying after a drift refresh eventually executes", async () => {
 		parkCard();
-		for (const secondsLater of [120, 30, 30]) {
+		for (const secondsLater of RETRY_CADENCE_SECONDS) {
 			serverNow += secondsLater * 1000;
 			const result = await guardApprovalDrift({
 				approval,
