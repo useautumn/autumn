@@ -67,6 +67,7 @@ const domain = {
 			id: "previewAttach",
 			description: `
 - Preview attaching a plan before attach.
+- Use when the request is about a plan or product line the customer is not on — pick a plan from that group, customized if no listed variant matches, even if the customer has other subscriptions.
 - Follow the Billing resource.
 `.trim(),
 		}),
@@ -74,6 +75,7 @@ const domain = {
 			id: "previewUpdateSubscription",
 			description: `
 - Preview updating a subscription before updateSubscription.
+- Only for changing terms of the plan the request is about; a request naming a different plan or product line is an attach, never an update to another subscription.
 - Follow the Billing resource.
 `.trim(),
 		}),
@@ -90,6 +92,7 @@ const domain = {
 			id: "attach",
 			description: `
 - Attach a plan to a customer.
+- Use when the request is about a plan or product line the customer is not on — pick a plan from that group, customized if no listed variant matches, even if the customer has other subscriptions.
 - Follow the Billing resource.
 `.trim(),
 		}),
@@ -97,6 +100,7 @@ const domain = {
 			id: "updateSubscription",
 			description: `
 - Update a subscription.
+- Only for changing terms of the plan the request is about; a request naming a different plan or product line is an attach, never an update to another subscription.
 - Follow the Billing resource.
 `.trim(),
 		}),

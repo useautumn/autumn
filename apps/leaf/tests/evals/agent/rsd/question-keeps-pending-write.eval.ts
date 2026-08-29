@@ -3,7 +3,7 @@ import { withCustomers } from "../../fixtures/createSetup.js";
 import { api, tools } from "../../fixtures/expectations/index.js";
 import { orgSetups } from "../../fixtures/orgSetups.js";
 import { plan } from "../../fixtures/plans/index.js";
-import { initEval, user } from "../../harness/index.js";
+import { approve, initEval, user } from "../../harness/index.js";
 import { billingAttachScores } from "../../utils/scorers.js";
 
 type EvalMetadata = {
@@ -54,9 +54,6 @@ initEval<EvalMetadata>({
 	cases: [
 		{
 			name: "a pricing question is answered in text without replacing the write",
-			// The harness cannot resume a park across an intermediate turn, so
-			// execution is not gated here; the incident's churn — a fresh write
-			// built per reply — is what these counts catch.
 			conversation: [
 				user({
 					message: `Attach ${marketing.id} customized to $1900/month with 700K contacts for customer ${customer.id}, prorated with a finalized invoice.`,
@@ -64,11 +61,16 @@ initEval<EvalMetadata>({
 				user({
 					message: "can you confirm the total number of contacts and pricing",
 				}),
+				approve(),
 			],
 			expect: [
-				tools.called({ toolNames: ["previewAttach"] }),
+				tools.called({ toolNames: ["previewAttach", "attach"] }),
 				api.calledTimes({
 					call: { toolName: "previewAttach" },
+					count: 1,
+				}),
+				api.calledTimes({
+					call: { toolName: "attach" },
 					count: 1,
 				}),
 				api.calledTimes({

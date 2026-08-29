@@ -54,10 +54,10 @@ initEval<EvalMetadata>({
 	cases: [
 		{
 			name: "a typed approve executes the previewed write, not a rebuilt one",
-			// The harness cannot resume a park across an intermediate turn, so
-			// execution is not gated here; the incident's rebuild — a typed
-			// approve re-modelled onto the enterprise subscription with
-			// prorations dropped — is what these gates catch.
+			// A typed "please approve" is a text turn, not a card click, so
+			// execution is not gated; the incident's rebuild — re-modelled onto
+			// the enterprise subscription with prorations dropped — is what
+			// these counts catch.
 			conversation: [
 				user({
 					message: `Attach ${marketing.id} customized to $1900/month with 700K contacts for customer ${customer.id}, prorated with a finalized invoice.`,
