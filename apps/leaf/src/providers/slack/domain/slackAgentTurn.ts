@@ -35,6 +35,13 @@ export type SlackAgentTurnParams = Readonly<{
 
 export type SlackAgentTurnResult =
 	| Readonly<{ env: AppEnv; kind: "blocked"; text: string }>
+	| Readonly<{
+			approval: ChatApproval;
+			decision: "approve" | "cancel";
+			env: AppEnv;
+			kind: "approval_reply";
+	  }>
+	| Readonly<{ env: AppEnv; kind: "approval_guidance"; text: string }>
 	| (AgentTurnResult &
 			Readonly<{
 				env: AppEnv;

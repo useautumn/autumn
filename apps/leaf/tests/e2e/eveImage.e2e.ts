@@ -181,7 +181,7 @@ const main = async () => {
 	if (process.env.E2E_ONLY !== "web") {
 		console.log("--- slack surface");
 		const slack = await runSlackImageTurn({ installation });
-		const slackText = slack.output.kind === "empty" ? "" : slack.output.text;
+		const slackText = "text" in slack.output ? slack.output.text : "";
 		check(
 			"slack: model saw the image",
 			/red/i.test(slackText),

@@ -1,6 +1,7 @@
 import { withTimeout } from "@autumn/shared";
 import { runAgentTurn } from "../../../internal/agentRuntime/actions/runAgentTurn/runAgentTurn.js";
 import { TURN_BACKSTOP_MS } from "../../../internal/agentRuntime/turnBudget.js";
+import { matchPendingApprovalReply } from "../../../internal/approvals/actions/matchPendingApprovalReply.js";
 import type {
 	SlackAgentTurnParams,
 	SlackAgentTurnResult,
@@ -12,6 +13,28 @@ const executeSlackAgentTurn = async (
 ): Promise<SlackAgentTurnResult> => {
 	const setup = await setupSlackAgentTurn(params);
 	if (setup.kind === "blocked") return setup;
+	const session = setup.context.eveSession;
+	if (session) {
+		const matched = await matchPendingApprovalReply({
+			channelId: params.channelId,
+			env: setup.context.env,
+			orgId: setup.org.id,
+			provider: setup.installation.provider,
+			runId: session.sessionId,
+			text: params.text,
+			workspaceId: setup.installation.workspace_id,
+		});
+		if (matched && "guidance" in matched) {
+			return {
+				env: setup.context.env,
+				kind: "approval_guidance",
+				text: matched.guidance,
+			};
+		}
+		if (matched) {
+			return { ...matched, env: setup.context.env, kind: "approval_reply" };
+		}
+	}
 	const isFollowUp =
 		params.recentMessages?.some((message) => message.isBot) ?? false;
 

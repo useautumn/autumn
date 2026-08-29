@@ -273,7 +273,7 @@ const main = async () => {
 			text: "In sandbox: how many plans do we have? Answer in one sentence.",
 			threadId,
 		});
-		const text = turn.output.kind === "empty" ? "" : turn.output.text;
+		const text = "text" in turn.output ? turn.output.text : "";
 		check("S1 run produced text", Boolean(text.trim()), text.slice(0, 120));
 		// Tool activity lives in the assistant status line, never posted cards.
 		check(
@@ -550,7 +550,9 @@ const main = async () => {
 					? second.output.question.prompt.slice(0, 120)
 					: second.output.kind === "empty"
 						? undefined
-						: second.output.text.slice(0, 120),
+						: "text" in second.output
+							? second.output.text.slice(0, 120)
+							: undefined,
 		);
 	}
 
@@ -614,7 +616,7 @@ const main = async () => {
 				text: "No changes then. In one sentence: which plan is that customer currently on?",
 				threadId,
 			});
-			const text = followUp.output.kind === "empty" ? "" : followUp.output.text;
+			const text = "text" in followUp.output ? followUp.output.text : "";
 			check(
 				"S4 session not wedged after dismiss",
 				Boolean(text.trim()),
@@ -680,7 +682,7 @@ const main = async () => {
 		});
 		// File ingestion is flag-gated off (upstream eve queue bug corrupts
 		// bytes) — the graceful path acknowledges the file instead of failing.
-		const text = turn.output.kind === "empty" ? "" : turn.output.text;
+		const text = "text" in turn.output ? turn.output.text : "";
 		check(
 			"S6 attachment acknowledged gracefully (or seen, if flag on)",
 			/red/i.test(text) || /pixel\.png|image|file/i.test(text),
@@ -699,7 +701,7 @@ const main = async () => {
 			text: "Different person here — in one sentence, which plan does that customer have now?",
 			threadId: s2ThreadId,
 		});
-		const text = followUp.output.kind === "empty" ? "" : followUp.output.text;
+		const text = "text" in followUp.output ? followUp.output.text : "";
 		// A no-tool turn may never open a stream; the bot then posts the text as
 		// a plain message — that's the correct fallback, not a failure.
 		check(
@@ -837,7 +839,7 @@ const main = async () => {
 			text: "Leave the price as is — do not apply anything. Just say 'ok'.",
 			threadId,
 		});
-		const text = followUp.output.kind === "empty" ? "" : followUp.output.text;
+		const text = "text" in followUp.output ? followUp.output.text : "";
 		check(
 			"S8 session healthy after decision routing",
 			Boolean(text.trim()),
@@ -907,7 +909,9 @@ const main = async () => {
 						? turn.output.question.prompt.slice(0, 120)
 						: turn.output.kind === "empty"
 							? undefined
-							: turn.output.text.slice(0, 120),
+							: "text" in turn.output
+								? turn.output.text.slice(0, 120)
+								: undefined,
 			);
 			if (turn.output.kind === "approval") {
 				// Card safety net: the quantity (or its absence) must be visible.

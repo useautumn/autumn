@@ -13,7 +13,7 @@ import { catalogDecisionCard, questionCard } from "./interactionCards.js";
 
 type PresentableSlackAgentTurn = Exclude<
 	SlackAgentTurnResult,
-	{ kind: "blocked" | "stopped" }
+	{ kind: "approval_guidance" | "approval_reply" | "blocked" | "stopped" }
 >;
 
 export const presentSlackAgentTurn = async ({

@@ -1,6 +1,7 @@
 import type { Attachment } from "chat";
 import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { isTransientNetworkError } from "../../../internal/agentRuntime/eve/streamErrors.js";
+import { decideApprovalFromReply } from "../../../internal/approvals/surfaces/slack/decideFromReply.js";
 import { editSupersededApprovalCards } from "../../../internal/approvals/surfaces/slack/superseded.js";
 import {
 	dispatchThreadMessage,
@@ -178,6 +179,27 @@ const runAndReply = async ({
 			text,
 			threadId,
 		});
+
+		if (output.kind === "approval_guidance") {
+			await progress.complete();
+			await target.post({ markdown: output.text });
+			return "close";
+		}
+		if (output.kind === "approval_reply") {
+			await progress.complete();
+			await decideApprovalFromReply({
+				approval: output.approval,
+				decision: output.decision,
+				providerUserId,
+				target,
+			});
+			logger.info("Decided pending approval from a thread reply", {
+				event: "leaf.approval_reply_decided",
+				approval_id: output.approval.id,
+				data: { decision: output.decision },
+			});
+			return "close";
+		}
 
 		const stoppedBy = () => run?.stop;
 		if (output.kind === "stopped" || stoppedBy()) {
