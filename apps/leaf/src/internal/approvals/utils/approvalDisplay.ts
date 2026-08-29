@@ -227,13 +227,24 @@ export const resolveApprovalDisplay = async ({
 	};
 };
 
+const isFailedPreview = (preview: unknown) =>
+	Boolean(
+		preview &&
+			typeof preview === "object" &&
+			(preview as { failed?: unknown }).failed === true,
+	);
+
 export const withApprovalDisplay = ({
 	display,
 	preview,
 }: {
 	display: Awaited<ReturnType<typeof resolveApprovalDisplay>>;
 	preview: unknown;
-}) =>
-	Object.values(display).some(Boolean)
-		? { _display: display, preview }
-		: preview;
+}) => {
+	if (preview == null || isFailedPreview(preview)) return preview;
+	return {
+		_captured_at: Date.now(),
+		...(Object.values(display).some(Boolean) ? { _display: display } : {}),
+		preview,
+	};
+};
