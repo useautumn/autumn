@@ -16,8 +16,8 @@ type MoneyFacts = {
 	total?: number;
 };
 
-// Each preview rounds its amounts to cents independently, so two honest
-// computes of the same write can differ by a cent per side.
+// Each compute rounds to cents independently, so a decay-adjusted stored
+// amount can miss the freshly rounded one by up to a cent per line.
 const CENT_TOLERANCE = 0.011;
 
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
@@ -35,6 +35,16 @@ const planIds = (value: unknown): string[] =>
 				.filter((id): id is string => typeof id === "string")
 				.sort()
 		: [];
+
+const samePlanIds = ({
+	current,
+	stored,
+}: {
+	current: ReadonlyArray<string>;
+	stored: ReadonlyArray<string>;
+}): boolean =>
+	stored.length === current.length &&
+	stored.every((id, index) => id === current[index]);
 
 const linePeriodOf = (value: unknown): LinePeriod | undefined => {
 	const period = asRecord(value);
@@ -66,14 +76,14 @@ const moneyFactsOf = (preview: unknown): MoneyFacts | undefined => {
 		: preview;
 	const record = asRecord(parsePreviewPayload(unwrapped) ?? unwrapped);
 	if (!record) return undefined;
-	const dueToday = asRecord(record.due_today);
 	const lineItems = Array.isArray(record.line_items) ? record.line_items : [];
 	return {
 		currency: typeof record.currency === "string" ? record.currency : undefined,
 		incomingPlans: planIds(record.incoming_plans ?? record.incoming),
 		lineFacts: lineItems.map(lineFactsOf).sort(byLineIdentity),
 		outgoingPlans: planIds(record.outgoing_plans ?? record.outgoing),
-		total: asAmount(record.total) ?? asAmount(dueToday?.total),
+		total:
+			asAmount(record.total) ?? asAmount(asRecord(record.due_today)?.total),
 	};
 };
 
@@ -94,33 +104,50 @@ const decayAdjustedAmount = ({
 			(stored.period.end - stored.period.start)
 		: undefined;
 
-const compareLineFacts = ({
+/** Total proration decay across matched lines, or undefined when the lines
+ * differ in identity or beyond decay — i.e. a real change. */
+const lineDecayDelta = ({
 	current,
 	stored,
 }: {
 	current: ReadonlyArray<LineFacts>;
 	stored: ReadonlyArray<LineFacts>;
-}): { decayDelta: number } | { drifted: true } => {
-	if (stored.length !== current.length) return { drifted: true };
+}): number | undefined => {
+	if (stored.length !== current.length) return undefined;
 	let decayDelta = 0;
 	for (const [index, storedLine] of stored.entries()) {
 		const currentLine = current[index];
-		if (!currentLine || storedLine.key !== currentLine.key) {
-			return { drifted: true };
-		}
+		if (!currentLine || storedLine.key !== currentLine.key) return undefined;
 		if (storedLine.amount === undefined || currentLine.amount === undefined) {
-			if (storedLine.amount !== currentLine.amount) return { drifted: true };
+			if (storedLine.amount !== currentLine.amount) return undefined;
 			continue;
 		}
 		const expected =
 			decayAdjustedAmount({ current: currentLine, stored: storedLine }) ??
 			storedLine.amount;
 		if (Math.abs(currentLine.amount - expected) > CENT_TOLERANCE) {
-			return { drifted: true };
+			return undefined;
 		}
 		decayDelta += expected - storedLine.amount;
 	}
-	return { decayDelta };
+	return decayDelta;
+};
+
+const totalWithinDecay = ({
+	currentFacts,
+	decayDelta,
+	storedFacts,
+}: {
+	currentFacts: MoneyFacts;
+	decayDelta: number;
+	storedFacts: MoneyFacts;
+}): boolean => {
+	if (storedFacts.total === undefined || currentFacts.total === undefined) {
+		return storedFacts.total === currentFacts.total;
+	}
+	const tolerance = CENT_TOLERANCE * (storedFacts.lineFacts.length + 1);
+	const expected = storedFacts.total + decayDelta;
+	return Math.abs(currentFacts.total - expected) <= tolerance;
 };
 
 /** Whether the approved money facts still match what would execute — derived
@@ -144,32 +171,25 @@ export const previewMoneyFactsDrifted = ({
 		return { drifted: true, reason: "currency changed" };
 	}
 	if (
-		JSON.stringify(storedFacts.incomingPlans) !==
-			JSON.stringify(currentFacts.incomingPlans) ||
-		JSON.stringify(storedFacts.outgoingPlans) !==
-			JSON.stringify(currentFacts.outgoingPlans)
+		!samePlanIds({
+			current: currentFacts.incomingPlans,
+			stored: storedFacts.incomingPlans,
+		}) ||
+		!samePlanIds({
+			current: currentFacts.outgoingPlans,
+			stored: storedFacts.outgoingPlans,
+		})
 	) {
 		return { drifted: true, reason: "plan set changed" };
 	}
-	const lineVerdict = compareLineFacts({
+	const decayDelta = lineDecayDelta({
 		current: currentFacts.lineFacts,
 		stored: storedFacts.lineFacts,
 	});
-	if ("drifted" in lineVerdict) {
+	if (decayDelta === undefined) {
 		return { drifted: true, reason: "line items changed" };
 	}
-	if (storedFacts.total === undefined || currentFacts.total === undefined) {
-		if (storedFacts.total !== currentFacts.total) {
-			return {
-				drifted: true,
-				reason: `total ${storedFacts.total} → ${currentFacts.total}`,
-			};
-		}
-		return { drifted: false };
-	}
-	const expectedTotal = storedFacts.total + lineVerdict.decayDelta;
-	const totalTolerance = CENT_TOLERANCE * (storedFacts.lineFacts.length + 1);
-	if (Math.abs(currentFacts.total - expectedTotal) > totalTolerance) {
+	if (!totalWithinDecay({ currentFacts, decayDelta, storedFacts })) {
 		return {
 			drifted: true,
 			reason: `total ${storedFacts.total} → ${currentFacts.total}`,

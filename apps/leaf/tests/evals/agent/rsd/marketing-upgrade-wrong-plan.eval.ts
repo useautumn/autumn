@@ -1,10 +1,7 @@
-import { BillingInterval } from "@autumn/shared";
-import { withCustomers } from "../../fixtures/createSetup.js";
 import { api, billing, tools } from "../../fixtures/expectations/index.js";
-import { orgSetups } from "../../fixtures/orgSetups.js";
-import { plan } from "../../fixtures/plans/index.js";
 import { approve, initEval, user } from "../../harness/index.js";
 import { billingAttachScores } from "../../utils/scorers.js";
+import { incidentSetup } from "./incidentSetup.js";
 
 type EvalMetadata = {
 	domain: "rsd";
@@ -18,29 +15,7 @@ const requestedPrice = 1900;
 // for $1900/mo" for a customer on custom Enterprise + transactional. The
 // failure was an updateSubscription on Enterprise (wrong product, prorations
 // dropped) instead of a customized Marketing attach.
-const setup = withCustomers({
-	setup: orgSetups.emailPlatform(),
-	customers: ({ customers, plans, subscriptions }) => ({
-		sender: {
-			...customers.base({
-				email: "billing@corvid-interactive.example",
-				id: "rsd-customer-0001",
-				name: "Corvid Interactive",
-			}),
-			subscriptions: [
-				subscriptions.active({
-					plan: plan.customized({
-						customize: {
-							price: { amount: 720, interval: BillingInterval.Month },
-						},
-						plan: plans.enterprise,
-					}),
-				}),
-				subscriptions.active({ plan: plans.sendhubPro }),
-			],
-		},
-	}),
-});
+const setup = incidentSetup();
 
 const customer = setup.refs.customers.sender;
 
