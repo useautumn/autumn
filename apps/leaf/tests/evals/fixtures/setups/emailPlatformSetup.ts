@@ -103,9 +103,12 @@ export const emailPlatformSetup = () =>
 					name: "Enterprise",
 					planId: planIds.enterprise,
 				}),
-				...Object.fromEntries(
-					marketingSizes.map((size) => [size.key, marketingPlan(size)]),
-				),
+				marketingStarter: marketingPlan(marketingSizes[0]),
+				marketingStarter10k: marketingPlan(marketingSizes[1]),
+				marketingStarter25k: marketingPlan(marketingSizes[2]),
+				marketingStarter50k: marketingPlan(marketingSizes[3]),
+				marketingStarter100k: marketingPlan(marketingSizes[4]),
+				marketingStarter150k: marketingPlan(marketingSizes[5]),
 				sendhubPro: {
 					...plan.monthly({
 						basePrice: basePrice.monthly({ amount: 20 }),
