@@ -62,7 +62,7 @@ const { billingPreview, confirmedWrite } = createDomainTools({
 });
 
 const attachTargeting =
-	"- Use when the request is about a plan or product line the customer is not on — pick a plan from that group, customized if no listed variant matches, even if the customer has other subscriptions.";
+	"- Use when the request is about a plan or product line the customer is not on — attach from that group, customizing the closest plan when none matches the requested terms, even if the customer has other subscriptions.";
 const updateSubscriptionTargeting =
 	"- Only for changing terms of the plan the request is about; a request naming a different plan or product line is an attach, never an update to another subscription.";
 
