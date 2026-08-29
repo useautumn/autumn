@@ -21,6 +21,7 @@ const customer = setup.refs.customers.sender;
 initEval<EvalMetadata>({
 	experimentName,
 	setup,
+	timeout: 120_000,
 	metadata: {
 		domain: "rsd",
 		flow: "attach",
@@ -51,6 +52,51 @@ initEval<EvalMetadata>({
 				}),
 				api.calledTimes({
 					call: { toolName: "updateSubscription" },
+					count: 0,
+				}),
+				api.calledTimes({
+					call: { body: { plan_id: "enterprise" }, toolName: "attach" },
+					count: 0,
+				}),
+				api.calledTimes({
+					call: { body: { plan_id: "enterprise_custom" }, toolName: "attach" },
+					count: 0,
+				}),
+			],
+		},
+		{
+			name: "a marketing upgrade after a plan listing still attaches, never rebuilds enterprise",
+			conversation: [
+				user({
+					message: `What is the current plan for customer ID: ${customer.id}`,
+				}),
+				user({
+					message:
+						"can you please upgrade their marketing plan to: $1250/month for 400K contacts",
+				}),
+				approve(),
+			],
+			expect: [
+				tools.called({ toolNames: ["previewAttach", "attach"] }),
+				...billing.previewThenWrite({
+					body: {
+						customer_id: customer.id,
+						customize: {
+							price: { amount: 1250, interval: "month" },
+						},
+					},
+					write: "attach",
+				}),
+				api.calledTimes({
+					call: { toolName: "updateSubscription" },
+					count: 0,
+				}),
+				api.calledTimes({
+					call: { body: { plan_id: "enterprise" }, toolName: "attach" },
+					count: 0,
+				}),
+				api.calledTimes({
+					call: { body: { plan_id: "enterprise_custom" }, toolName: "attach" },
 					count: 0,
 				}),
 			],
