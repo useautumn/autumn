@@ -4,6 +4,7 @@ import type {
 	AgentTurnContext,
 	AgentTurnParams,
 } from "../../domain/agentTurnContext.js";
+import { cancelEveTurn } from "../../eve/client.js";
 import type { EveAuthContext, EveSessionRef } from "../../eve/types.js";
 import {
 	generateThreadTitle,
@@ -51,6 +52,11 @@ export const runAgentTurn = async ({
 		threadId: thread.threadId,
 		workspaceId: thread.workspaceId,
 	};
+	if (run) {
+		run.sendInterrupt = async (sessionId) => {
+			await cancelEveTurn({ auth, sessionId });
+		};
+	}
 	const titlePromise = titleSourceText?.trim()
 		? generateThreadTitle({ logger, text: titleSourceText })
 		: undefined;

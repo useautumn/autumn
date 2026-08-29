@@ -158,6 +158,22 @@ export const postEveMessage = async ({
 
 /** Written to the model, not the user: the siblings are denied for a procedural
  * reason, and without saying so the model reads six denials as six rejections. */
+/** Cooperative server-side cancel; "accepted" and "no_active_turn" both succeed. */
+export const cancelEveTurn = async ({
+	auth,
+	sessionId,
+}: {
+	auth: EveAuthContext;
+	sessionId: string;
+}) => {
+	const result = await eveClient({ auth }).sessions.attach(sessionId).cancel();
+	logger.info("Requested eve turn cancellation", {
+		event: "leaf.eve_turn_cancel_requested",
+		data: { session_id: sessionId, status: result.status },
+	});
+	return result;
+};
+
 export const SIBLING_WITHHELD_NOTE =
 	"(The other pending write approvals in this batch were withheld, not rejected on their merits — approvals are shown to the user one at a time. Re-issue each withheld write as its own separate step so the user can approve it individually.)";
 

@@ -178,7 +178,7 @@ test("keeps the card successful when its companion fails", async () => {
 		} as never,
 	} as never);
 
-	expect(result).toBe(true);
+	expect(result).toBe("posted");
 	expect(warnings).toContain("Could not post approval companion");
 });
 

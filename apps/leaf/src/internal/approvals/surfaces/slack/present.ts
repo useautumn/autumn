@@ -203,6 +203,7 @@ const renderBackfilledGroupCard = async ({
 export const presentApproval = async ({
 	channelId,
 	installation,
+	isStopped,
 	logAction,
 	logger = rootLogger,
 	orgId,
@@ -214,13 +215,15 @@ export const presentApproval = async ({
 	channelId: string;
 	env: ChatApproval["env"];
 	installation: ChatInstallation;
+	isStopped?: () => boolean;
 	logAction: (message: string) => Promise<void> | void;
 	logger?: AutumnLogger;
 	orgId: string;
 	providerUserId: string;
 	target: ReplyTarget;
 	turn: AgentApprovalTurn;
-}) => {
+}): Promise<"posted" | "not_created" | "stopped"> => {
+	if (isStopped?.()) return "stopped";
 	const created = await createApproval({
 		channelId,
 		env,
@@ -233,7 +236,15 @@ export const presentApproval = async ({
 		turn,
 		workspaceId: installation.workspace_id,
 	});
-	if (!created) return false;
+	if (!created) return "not_created";
+	if (isStopped?.()) {
+		await chatApprovalRepo.cancel({
+			approvalId: created.approvalId,
+			db,
+			providerUserId,
+		});
+		return "stopped";
+	}
 
 	await logAction(`Waiting for approval: ${toolLabel(created.toolName)}`);
 	const dashboardUrl = dashboardUrlFor({
@@ -322,5 +333,5 @@ export const presentApproval = async ({
 			providerUserId,
 		});
 	}
-	return true;
+	return "posted";
 };

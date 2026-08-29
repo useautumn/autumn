@@ -317,7 +317,7 @@ const main = async () => {
 				target: target as never,
 				turn: turn.output,
 			});
-			check("S2 approval card posted", posted === true);
+			check("S2 approval card posted", posted === "posted");
 			const cardJson = JSON.stringify(target.posted[0]?.content ?? {});
 			check(
 				"S2 card has receipt/money facts",

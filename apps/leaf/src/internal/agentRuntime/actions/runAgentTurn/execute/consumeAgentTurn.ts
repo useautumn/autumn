@@ -259,7 +259,7 @@ export const consumeAgentTurn = async ({
 
 	try {
 		while (idleRetries < MAX_IDLE_RETRIES) {
-			// Eve cannot be interrupted server-side.
+			// Local fast-path; requestStop cancels the turn server-side separately.
 			if (run?.stop) {
 				return await abandonForStop({
 					progress: turn.progress,

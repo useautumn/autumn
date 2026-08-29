@@ -21,6 +21,7 @@ export const presentSlackAgentTurn = async ({
 	clientContext,
 	logAction,
 	logger,
+	isStopped,
 	providerUserId,
 	stopStatus,
 	target,
@@ -32,11 +33,12 @@ export const presentSlackAgentTurn = async ({
 	logAction: (message: string) => Promise<void> | void;
 	logger: AutumnLogger;
 	providerUserId: string;
+	isStopped?: () => boolean;
 	stopStatus: () => void;
 	target: ReplyTarget;
 	threadId: string;
 	turn: PresentableSlackAgentTurn;
-}) => {
+}): Promise<"posted" | "stopped"> => {
 	const outputText = turn.kind === "empty" ? "" : turn.text;
 	const { installation, org } = turn;
 	let catalogDecision: ResolvedAgentCatalogDecision | undefined;
@@ -72,6 +74,7 @@ export const presentSlackAgentTurn = async ({
 	}
 
 	stopStatus();
+	if (isStopped?.()) return "stopped";
 
 	if (catalogDecision) {
 		if (outputText.trim()) {
@@ -85,7 +88,7 @@ export const presentSlackAgentTurn = async ({
 				plan: catalogDecision.plan,
 			}),
 		);
-		return;
+		return "posted";
 	}
 
 	if (turn.kind === "question") {
@@ -99,14 +102,15 @@ export const presentSlackAgentTurn = async ({
 				sessionId: turn.sessionId,
 			}),
 		);
-		return;
+		return "posted";
 	}
 
 	if (turn.kind === "approval") {
-		const postedApproval = await presentApproval({
+		const presented = await presentApproval({
 			channelId,
 			env: turn.env,
 			installation,
+			isStopped,
 			logAction,
 			logger,
 			orgId: org.id,
@@ -114,7 +118,8 @@ export const presentSlackAgentTurn = async ({
 			target,
 			turn,
 		});
-		if (postedApproval) return;
+		if (presented === "stopped") return "stopped";
+		if (presented === "posted") return "posted";
 	}
 
 	if (!outputText.trim()) {
@@ -126,7 +131,7 @@ export const presentSlackAgentTurn = async ({
 				run_id: turn.sessionId,
 			},
 		});
-		return;
+		return "posted";
 	}
 
 	await target.post({ markdown: outputText });
@@ -136,4 +141,5 @@ export const presentSlackAgentTurn = async ({
 			has_text: true,
 		},
 	});
+	return "posted";
 };

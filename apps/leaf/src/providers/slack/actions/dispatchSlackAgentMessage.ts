@@ -179,17 +179,22 @@ const runAndReply = async ({
 			threadId,
 		});
 
-		if (output.kind === "stopped") {
+		const stoppedBy = () => run?.stop;
+		if (output.kind === "stopped" || stoppedBy()) {
 			await progress.fail("Stopped by user");
-			const notice = runStoppedByUserNotice(run.stop?.byUserId);
+			const notice = runStoppedByUserNotice(stoppedBy()?.byUserId);
+			const partial = output.kind === "empty" ? undefined : output.text;
 			await target.post({
-				markdown: [output.text, notice]
+				markdown: [partial, notice]
 					.filter((part): part is string => Boolean(part?.trim()))
 					.join("\n\n"),
 			});
 			logger.info("Posted stopped run notice", {
 				event: "leaf.slack_run_stopped",
-				data: { stop_reason: output.reason },
+				data: {
+					stop_reason:
+						output.kind === "stopped" ? output.reason : stoppedBy()?.reason,
+				},
 			});
 			return "close";
 		}
@@ -211,9 +216,10 @@ const runAndReply = async ({
 			return "keep";
 		}
 
-		await presentSlackAgentTurn({
+		const presented = await presentSlackAgentTurn({
 			channelId,
 			clientContext,
+			isStopped: () => Boolean(stoppedBy()),
 			logAction,
 			logger,
 			providerUserId,
@@ -222,6 +228,13 @@ const runAndReply = async ({
 			threadId,
 			turn: output,
 		});
+		if (presented === "stopped") {
+			await progress.fail("Stopped by user");
+			await target.post({
+				markdown: runStoppedByUserNotice(stoppedBy()?.byUserId),
+			});
+			return "close";
+		}
 		await progress.complete();
 		return "keep";
 	} catch (error) {

@@ -9,15 +9,12 @@ import {
 } from "../../../src/internal/runs/runRegistry.js";
 
 describe("dispatchThreadMessage", () => {
-	test("injects follow-ups into the active run with an interrupt first", async () => {
+	test("injects follow-ups into the active run as a steer message", async () => {
 		const sent: string[] = [];
 		const run = registerRun({
 			key: "co2",
 			kind: "message",
 			ownerProviderUserId: "U1",
-			sendInterrupt: async () => {
-				sent.push("interrupt");
-			},
 			sendUserMessage: async ({ text }) => {
 				sent.push(`message:${text}`);
 			},
@@ -39,7 +36,7 @@ describe("dispatchThreadMessage", () => {
 			text: "also, what's the MRR?",
 		});
 
-		expect(sent).toEqual(["interrupt", "message:also, what's the MRR?"]);
+		expect(sent).toEqual(["message:also, what's the MRR?"]);
 		expect(run.pendingTurns).toBe(1);
 		expect(acked).toBe(1);
 		expect(newRuns).toBe(0);
@@ -90,9 +87,6 @@ describe("dispatchThreadMessage", () => {
 			key: "co4",
 			kind: "message",
 			ownerProviderUserId: "U1",
-			sendInterrupt: async () => {
-				throw new Error("session busy");
-			},
 		});
 		run.resolveSessionId("sesn_1");
 		let newRuns = 0;
@@ -141,9 +135,6 @@ describe("dispatchThreadMessage", () => {
 			key: "co6",
 			kind: "message",
 			ownerProviderUserId: "U1",
-			sendInterrupt: async () => {
-				sent.push("interrupt");
-			},
 			sendUserMessage: async ({ text }) => {
 				sent.push(`message:${text}`);
 			},
@@ -177,10 +168,10 @@ describe("stopActiveThreadRun", () => {
 			key: "co-opt-out",
 			kind: "message",
 			ownerProviderUserId: "U1",
-			sendInterrupt: async (sessionId) => {
-				interrupts.push(sessionId);
-			},
 		});
+		run.sendInterrupt = async (sessionId) => {
+			interrupts.push(sessionId);
+		};
 		run.resolveSessionId("sesn_opt_out");
 
 		const stopped = await stopActiveThreadRun({

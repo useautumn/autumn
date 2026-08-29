@@ -68,10 +68,10 @@ describe("runRegistry", () => {
 			key: "k3",
 			kind: "message",
 			ownerProviderUserId: "U1",
-			sendInterrupt: async (sessionId) => {
-				interrupted.push(sessionId);
-			},
 		});
+		run.sendInterrupt = async (sessionId) => {
+			interrupted.push(sessionId);
+		};
 		run.resolveSessionId("sesn_1");
 
 		const stopPromise = run.requestStop({ byUserId: "U1", reason: "user" });
@@ -82,5 +82,21 @@ describe("runRegistry", () => {
 		expect(run.stop).toEqual({ byUserId: "U1", reason: "user" });
 		expect(interrupted).toEqual(["sesn_1"]);
 		closeRun({ key: "k3", run });
+	});
+
+	test("requestStop swallows interrupt failures", async () => {
+		const run = registerRun({
+			key: "k4",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
+		run.sendInterrupt = async () => {
+			throw new Error("cancel failed");
+		};
+		run.resolveSessionId("sesn_4");
+
+		await run.requestStop({ byUserId: "U1", reason: "user" });
+		expect(run.stop).toEqual({ byUserId: "U1", reason: "user" });
+		closeRun({ key: "k4", run });
 	});
 });

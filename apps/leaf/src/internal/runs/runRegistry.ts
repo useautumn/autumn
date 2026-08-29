@@ -24,6 +24,8 @@ export type ActiveRun = {
 		reason: RunStopReason;
 	}) => Promise<void>;
 	resolveSessionId: (sessionId: string) => void;
+	/** Late-bound by runAgentTurn once auth exists; cancels the turn server-side. */
+	sendInterrupt?: (sessionId: string) => Promise<void>;
 	sessionId: Promise<string>;
 	startedAt: number;
 	stop?: { byUserId: string; reason: RunStopReason };
@@ -45,7 +47,6 @@ export const runKeyForThread = ({
 	workspaceId: string;
 }) => [provider, workspaceId, channelId, threadId].join(":");
 
-const defaultSendInterrupt = async () => {};
 const defaultSendUserMessage = async () => {
 	throw new Error("Eve follow-up injection is queued after the active run");
 };
@@ -54,13 +55,11 @@ export const registerRun = ({
 	key,
 	kind,
 	ownerProviderUserId,
-	sendInterrupt = defaultSendInterrupt,
 	sendUserMessage = defaultSendUserMessage,
 }: {
 	key: string;
 	kind: ActiveRun["kind"];
 	ownerProviderUserId: string;
-	sendInterrupt?: (sessionId: string) => Promise<void>;
 	sendUserMessage?: (input: {
 		sessionId: string;
 		text: string;
@@ -103,9 +102,6 @@ export const registerRun = ({
 			if (run.closed || run.stop) throw new Error("Run is closing");
 			run.pendingTurns += 1;
 			try {
-				// Interrupt first so the message becomes the very next turn —
-				// the user chose immediate pivot over queue-behind-the-turn.
-				if (run.kind === "message") await sendInterrupt(resolved);
 				await sendUserMessage({ sessionId: resolved, text });
 			} catch (error) {
 				run.pendingTurns -= 1;
@@ -123,7 +119,7 @@ export const registerRun = ({
 			const resolved = await resolveSessionIdOrNull();
 			if (!resolved) return;
 			try {
-				await sendInterrupt(resolved);
+				await run.sendInterrupt?.(resolved);
 			} catch (error) {
 				logger.warn("Could not interrupt session for stop request", {
 					event: "leaf.run_stop_interrupt_failed",
