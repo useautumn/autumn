@@ -150,14 +150,12 @@ export const createGenericMcpAgentDriver = ({
 			runId?: string;
 			suspension?: { toolCallId?: string };
 		}) => {
-			pendingApproval =
-				output.finishReason === "suspended" && output.runId
-					? {
-							runId: output.runId,
-							toolCallId: output.suspension?.toolCallId,
-						}
-					: null;
-			if (pendingApproval) trace.event({ type: "approval_pending" });
+			if (output.finishReason !== "suspended" || !output.runId) return;
+			pendingApproval = {
+				runId: output.runId,
+				toolCallId: output.suspension?.toolCallId,
+			};
+			trace.event({ type: "approval_pending" });
 		};
 
 		return {
@@ -172,6 +170,7 @@ export const createGenericMcpAgentDriver = ({
 					toolCallId: pendingApproval.toolCallId,
 				});
 				messages = output.messages;
+				pendingApproval = null;
 				rememberApproval(output);
 				trace.event({ text: output.text ?? "", type: "agent_text" });
 				return { text: output.text };
