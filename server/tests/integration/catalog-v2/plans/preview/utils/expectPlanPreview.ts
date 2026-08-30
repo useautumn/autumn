@@ -397,15 +397,28 @@ export const findPlanPreviewRow = ({
 	planId: string;
 	currentVersion?: number;
 }): PlanPreviewRow => {
-	const row = preview.plans.find(
-		(candidate) =>
-			candidate.plan_id === planId &&
-			(currentVersion === undefined ||
-				candidate.versioning?.current_version === currentVersion),
-	);
+	const row = preview.plans.find((candidate) => {
+		if (candidate.plan_id !== planId) return false;
+		if (currentVersion === undefined) return true;
+		return (
+			candidate.version === currentVersion ||
+			candidate.versioning?.current_version === currentVersion
+		);
+	});
 	const label =
 		currentVersion === undefined ? planId : `${planId} v${currentVersion}`;
-	expect(row, `missing preview row for plan ${label}`).toBeDefined();
+	expect(
+		row,
+		`missing preview row for plan ${label} (have ${JSON.stringify(
+			preview.plans
+				.filter((candidate) => candidate.plan_id === planId)
+				.map((candidate) => ({
+					version: candidate.version,
+					current: candidate.versioning?.current_version,
+					action: candidate.action,
+				})),
+		)})`,
+	).toBeDefined();
 	if (!row) throw new Error(`missing preview row for plan ${label}`);
 	return row;
 };

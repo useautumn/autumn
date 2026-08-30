@@ -979,6 +979,28 @@ follow each parent version from the child sibling it actually points at.
 | Parent `all_versions` follows every linked version from its anchored child sibling; anchors stay put | ✓ |
 | Diverged child items: v1 is 100 Messages, v2 is 50 + Words; add Dashboard on v2 `all_versions` → parent v1 is 100 + Dashboard (no Words), parent v2 is 50 + Words + Dashboard | ✓ |
 
+#### Atmn PUT — four pinned directs — `mix/atmn-put-direct-versions.test.ts`
+
+Same diverged fixture. Each version is a direct `{ version_slug }` row;
+parents restate `licenses[]` (optional child `version_slug`). No
+`all_versions` / `propagate`.
+
+| Case | Status |
+|---|---|
+| Preview of child v1+v2 + parent v1+v2 → each row omits `sibling_versions` | ✓ |
+| PUT add Dashboard on both children, restate parent licenses → all four get Dashboard; Words stay v2-only; anchors stay | ✓ |
+| Restate `licenses[]` without `version_slug` → stay on the current child row | ✓ |
+| Identical re-PUT → preview `none`; `plan_license` row ids unchanged | ✓ |
+| Customers on all four + `draft: true` → one draft, collapsed `{ plan_id }` filters, child add Dashboard + parent `upsert_licenses` add Dashboard | ✓ |
+
+#### Atmn PUT lanes — `mix/atmn-put-direct-version-lanes.test.ts`
+
+| Case | Status |
+|---|---|
+| Dashboard only on child v2 → parent v1 unchanged; parent v2 gets it | ✓ |
+| Preview: both parents `license_action: explicit`; `license_changes` add Dashboard; no unlink | ✓ |
+| Restated overlays (v1=80, v2=40) stay; Dashboard still flows | ✓ |
+
 ### lifecycle/ — archive or remove an anchored child version — `lifecycle/anchored-version-remove.test.ts`
 
 Remove/archive of a child version is blocked while any catalog link still
