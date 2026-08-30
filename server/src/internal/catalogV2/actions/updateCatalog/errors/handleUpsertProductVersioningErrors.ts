@@ -128,7 +128,22 @@ export const handleUpsertProductVersioningErrors = ({
 				planId: target.plan_id,
 				versioning: target.versioning,
 				version: target.version,
+				versionSlug: target.version_slug,
 			});
+			if (target.version_slug !== undefined && target.version === undefined) {
+				const version = versionForSlug({
+					planId: target.plan_id,
+					versionSlug: target.version_slug,
+					productStatesContext,
+				});
+				if (version === undefined) {
+					throw new RecaseError({
+						message: `Unknown version_slug "${target.version_slug}" for plan_id=${target.plan_id}`,
+						code: ErrCode.InvalidRequest,
+						statusCode: 400,
+					});
+				}
+			}
 			rejectNewVersionOnMissingPlan({
 				planId: target.plan_id,
 				versioning: target.versioning,

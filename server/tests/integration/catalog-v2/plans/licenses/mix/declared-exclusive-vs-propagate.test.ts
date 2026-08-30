@@ -203,7 +203,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: declared customize on child new_version links latest")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: declared customize on child new_version stays on current")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_mdm_p");
@@ -217,6 +217,7 @@ test.concurrent(
 					parentId,
 					childId,
 				});
+				const childV1 = await getFullPlan({ ctx, planId: childId });
 				await autumnV2_3.catalogV2.update({
 					plans: [
 						{
@@ -231,14 +232,14 @@ test.concurrent(
 					],
 				});
 
-				const childV2 = await getFullPlan({ ctx, planId: childId });
 				await expectLicenseLinkCorrect({
 					ctx,
 					parentPlanId: parentId,
 					licensePlanId: childId,
+					licenseVersion: 1,
 					customized: true,
 					messagesAllowance: 300,
-					licenseInternalProductId: childV2.internal_id,
+					licenseInternalProductId: childV1.internal_id,
 				});
 			},
 		});

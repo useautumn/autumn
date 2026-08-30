@@ -32,5 +32,6 @@ export const assembleNextFullProduct = ({
 		entitlements,
 		free_trial: freeTrial,
 		licenses: currentFullProduct?.licenses,
+		parent_plan_licenses: currentFullProduct?.parent_plan_licenses,
 	} as FullProduct;
 };

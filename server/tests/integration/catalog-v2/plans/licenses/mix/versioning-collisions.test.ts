@@ -446,3 +446,74 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 plan-licenses: parent existing edit + child v2 propagate new_version — mint and rename both land")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const parentId = uniqueTestId("cv2_lic_vclaim_p");
+		const childId = uniqueTestId("cv2_lic_vclaim_c");
+		await withCatalogPlans({
+			ctx,
+			planIds: [parentId, childId],
+			run: async () => {
+				await seedLinkedChildParent({ autumn: autumnV2_3, parentId, childId });
+				const childV1 = await getFullPlan({ ctx, planId: childId });
+				await bumpChild({
+					autumn: autumnV2_3,
+					childId,
+					items: [messagesItem(50)],
+					versioning: "new_version",
+				});
+				await seedVersionableCustomer({ ctx, planId: parentId });
+				const childV2 = await getFullPlan({ ctx, planId: childId });
+
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{ plan_id: parentId, name: "Renamed", versioning: "existing" },
+						{
+							plan_id: childId,
+							version: 2,
+							items: [messagesItem(200)],
+							propagate: {
+								license_parents: [
+									{ plan_id: parentId, versioning: "new_version" },
+								],
+							},
+						},
+					],
+				});
+
+				const parentV1 = await getFullPlan({
+					ctx,
+					planId: parentId,
+					version: 1,
+				});
+				expect(parentV1.name).toBe("Renamed");
+				await expectLicenseLinkCorrect({
+					ctx,
+					parentPlanId: parentId,
+					parentVersion: 1,
+					licensePlanId: childId,
+					licenseInternalProductId: childV1.internal_id,
+					messagesAllowance: 10,
+				});
+				const minted = await expectLatestPlanVersion({
+					ctx,
+					planId: parentId,
+					version: 2,
+				});
+				expect(minted.internal_id).not.toBe(parentV1.internal_id);
+				await expectLicenseLinkCorrect({
+					ctx,
+					parentPlanId: parentId,
+					parentVersion: 2,
+					licensePlanId: childId,
+					licenseInternalProductId: childV2.internal_id,
+					customized: false,
+					messagesAllowance: 200,
+				});
+			},
+		});
+	},
+);

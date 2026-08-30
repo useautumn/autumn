@@ -18,5 +18,8 @@ export const buildPlanLicensePreviousAttributes = ({
 	if (from.product.version !== to.product.version) {
 		previous.version = from.product.version;
 	}
+	if (from.product.version_slug !== to.product.version_slug) {
+		previous.version_slug = from.product.version_slug ?? undefined;
+	}
 	return Object.keys(previous).length > 0 ? previous : null;
 };

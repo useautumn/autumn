@@ -55,6 +55,8 @@ export type PlanLicensePlan = {
 	metadata?: Record<string, unknown>;
 	/** Declared customize: object = replace, null = clear, undefined = preserve. */
 	customize?: LicenseCustomize | null;
+	/** Declared anchor slug, kept for guard messages. */
+	declaredVersionSlug?: string;
 	/** Overlay vs the child's rows: `same` keeps stock ids, `new` is the is_custom inserts. */
 	entitlementPricesPlan?: EntitlementPricesPlan;
 	/** Absent = nothing to persist for this link. */

@@ -8,6 +8,7 @@ import {
 	buildCatalogMigrateTargets,
 	buildCatalogPropagate,
 	buildSelectedLicenseParentPropagate,
+	catalogPlanLicenseParents,
 	catalogPreviewAliasReplacements,
 	catalogPreviewHasPlanIdChange,
 	catalogPreviewHasPromotion,
@@ -246,6 +247,132 @@ describe("catalog plan preview helpers", () => {
 				}),
 			}),
 		).toBe(true);
+	});
+
+	test("flattens sibling_versions.license_parents for the dialog list", () => {
+		const preview = planPreview({
+			plan_id: "seat",
+			version: 2,
+			sibling_versions: [
+				{
+					plan_id: "seat",
+					version: 1,
+					state: { has_customers: false, will_archive: false },
+					license_parents: [
+						{
+							plan_id: "team",
+							name: "Team",
+							version: 1,
+							license_action: "unchanged",
+							state: { has_customers: true, will_archive: false },
+						},
+					],
+				},
+			],
+		});
+		expect(catalogPlanLicenseParents({ preview }).map((p) => p.plan_id)).toEqual(
+			["team"],
+		);
+	});
+
+	test("merges sibling-linked parent versions into the same parent plan", () => {
+		const preview = planPreview({
+			plan_id: "seat",
+			version: 2,
+			license_parents: [
+				{
+					plan_id: "team",
+					name: "QA Anchor Team",
+					version: 2,
+					version_slug: "v2",
+					license_action: "propagated",
+					state: { has_customers: true, will_archive: false },
+				},
+				{
+					plan_id: "eu",
+					name: "QA Anchor EU",
+					version: 2,
+					version_slug: "v2",
+					license_action: "propagated",
+					state: { has_customers: false, will_archive: false },
+				},
+			],
+			sibling_versions: [
+				{
+					plan_id: "seat",
+					version: 1,
+					state: { has_customers: false, will_archive: false },
+					license_parents: [
+						{
+							plan_id: "team",
+							name: "QA Anchor Team",
+							version: 1,
+							version_slug: "v1",
+							license_action: "propagated",
+							state: { has_customers: true, will_archive: false },
+						},
+						{
+							plan_id: "eu",
+							name: "QA Anchor EU",
+							version: 1,
+							version_slug: "v1",
+							license_action: "propagated",
+							state: { has_customers: false, will_archive: false },
+						},
+					],
+				},
+			],
+		});
+
+		const parents = catalogPlanLicenseParents({ preview });
+		expect(toLicenseParentTargets({ parents })).toEqual([
+			{
+				planId: "eu",
+				name: "QA Anchor EU",
+				versions: [
+					{
+						version: 2,
+						versionSlug: "v2",
+						key: "eu:2",
+						conflicts: [],
+						...emptyCatalogPlanChangeDiff(),
+					},
+					{
+						version: 1,
+						versionSlug: "v1",
+						key: "eu:1",
+						conflicts: [],
+						...emptyCatalogPlanChangeDiff(),
+					},
+				],
+			},
+			{
+				planId: "team",
+				name: "QA Anchor Team",
+				versions: [
+					{
+						version: 2,
+						versionSlug: "v2",
+						key: "team:2",
+						conflicts: [],
+						...emptyCatalogPlanChangeDiff(),
+					},
+					{
+						version: 1,
+						versionSlug: "v1",
+						key: "team:1",
+						conflicts: [],
+						...emptyCatalogPlanChangeDiff(),
+					},
+				],
+			},
+		]);
+		expect(
+			buildSelectedLicenseParentPropagate({
+				selectedKeys: ["team:1"],
+				targets: toLicenseParentTargets({ parents }),
+			}),
+		).toEqual([{ plan_id: "team", version: 1, version_slug: "v1" }]);
 	});
 
 	test("a version slug rename opens a confirm-only Review on its own", () => {

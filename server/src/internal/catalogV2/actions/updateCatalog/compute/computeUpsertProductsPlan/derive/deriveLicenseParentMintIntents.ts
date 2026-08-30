@@ -4,6 +4,7 @@ import type {
 	ProductUpsertIntent,
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { movesActivePointer } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
@@ -55,6 +56,9 @@ export const deriveLicenseParentMintIntents = ({
 }): ProductUpsertIntent[] => {
 	const mintedPlanIds = new Set<string>();
 	const intents: ProductUpsertIntent[] = [];
+	const childTakesActive =
+		upsert.row.nextFullProduct.active || movesActivePointer({ upsert });
+	if (!childTakesActive) return [];
 
 	for (const target of upsert.propagate?.license_parents ?? []) {
 		if (target.versioning !== "new_version") continue;

@@ -191,6 +191,116 @@ describe("resolvePlanChangePreview", () => {
 		});
 	});
 
+	test("all_versions makes sibling-linked parent versions independently selectable", () => {
+		const preview = planPreview({
+			plan_id: "seat",
+			version: 2,
+			versioning: {
+				current_version: 2,
+				new_version: null,
+				resolved: "all_versions",
+				options: ["existing", "all_versions"],
+			},
+			license_parents: [
+				{
+					plan_id: "team",
+					name: "Team",
+					version: 2,
+					version_slug: "v2",
+					license_action: "propagated",
+					state: { has_customers: true, will_archive: false },
+					conflicts: [],
+				},
+			],
+			sibling_versions: [
+				{
+					plan_id: "seat",
+					version: 1,
+					state: { has_customers: false, will_archive: false },
+					license_parents: [
+						{
+							plan_id: "team",
+							name: "Team",
+							version: 1,
+							version_slug: "v1",
+							license_action: "propagated",
+							state: { has_customers: true, will_archive: false },
+							conflicts: [],
+						},
+					],
+				},
+			],
+		});
+
+		const model = resolvePlanChangePreview({
+			preview,
+			versionChoice: "all",
+			variantSelection: null,
+			licenseParentSelection: null,
+			isLatest: true,
+			namesByPlanId: {},
+		});
+
+		expect(model.licenseParentTargets[0]?.versions.map((v) => v.version)).toEqual(
+			[2, 1],
+		);
+		expect(model.defaultLicenseParentKeys).toEqual(["team"]);
+		expect(model.propagate).toEqual({
+			license_parents: [{ plan_id: "team", versioning: "all_versions" }],
+		});
+
+		const pinnedV1 = resolvePlanChangePreview({
+			preview,
+			versionChoice: "all",
+			variantSelection: null,
+			licenseParentSelection: ["team:1"],
+			isLatest: true,
+			namesByPlanId: {},
+		});
+		expect(pinnedV1.propagate).toEqual({
+			license_parents: [{ plan_id: "team", version: 1, version_slug: "v1" }],
+		});
+	});
+
+	test("discovers parents nested on sibling_versions of the edited child", () => {
+		const preview = planPreview({
+			plan_id: "seat",
+			version: 2,
+			license_parents: undefined,
+			sibling_versions: [
+				{
+					plan_id: "seat",
+					version: 1,
+					state: { has_customers: false, will_archive: false },
+					license_parents: [
+						{
+							plan_id: "team",
+							name: "Team",
+							version: 1,
+							license_action: "unchanged",
+							state: { has_customers: true, will_archive: false },
+							conflicts: [],
+						},
+					],
+				},
+			],
+		});
+
+		const model = resolvePlanChangePreview({
+			preview,
+			versionChoice: "update",
+			variantSelection: null,
+			licenseParentSelection: ["team:1"],
+			isLatest: true,
+			namesByPlanId: {},
+		});
+
+		expect(model.showLicenseParentScope).toBe(true);
+		expect(model.propagate).toEqual({
+			license_parents: [{ plan_id: "team", version: 1 }],
+		});
+	});
+
 	test("all_versions includes historical variant conflicts in default selection", () => {
 		const preview = planPreview({
 			versioning: {

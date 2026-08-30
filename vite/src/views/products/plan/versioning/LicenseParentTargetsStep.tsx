@@ -111,9 +111,10 @@ function LicenseParentScopeControl({
 	onChange: (next: string[]) => void;
 }) {
 	if (versions.length <= 1) {
+		const only = versions[0];
 		return (
 			<span className="shrink-0 font-mono text-tertiary-foreground text-xs">
-				v{versions[0]?.version ?? 1}
+				{only?.versionSlug ?? `v${only?.version ?? 1}`}
 			</span>
 		);
 	}
@@ -144,6 +145,10 @@ function LicenseParentScopeControl({
 						) : null
 					}
 					selectedKeys={selectedKeys}
+					versionLabel={(version) =>
+						versions.find((entry) => entry.version === version)?.versionSlug ??
+						`v${version}`
+					}
 					versions={versions.map((entry) => entry.version)}
 				/>
 			</DropdownMenuContent>

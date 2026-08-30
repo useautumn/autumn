@@ -26,6 +26,8 @@ export const PlanLicenseSchema = z.object({
 
 export const CustomizePlanLicenseSchema = z.object({
 	license_plan_id: z.string(),
+	/** Child version to anchor to. Stated = that slug's row; omitted keeps the existing link (new links use the child's active row). */
+	version_slug: z.string().optional(),
 	included: z.number().int().min(0).optional(),
 	prepaid_only: z.boolean().optional(),
 	customize: LicenseCustomizeSchema.nullish(),

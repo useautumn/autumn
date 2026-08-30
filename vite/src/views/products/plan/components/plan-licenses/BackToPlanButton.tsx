@@ -1,9 +1,10 @@
 import { IconButton } from "@autumn/ui";
 import { ArrowLeftIcon } from "@phosphor-icons/react";
-import { parseAsString, useQueryStates } from "nuqs";
+import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useNavigate } from "react-router";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { pushPage } from "@/utils/genUtils";
+import { parentPlanEditorQueryParams } from "./planLicenseNavigation";
 
 /**
  * Shown on a license's editor page only when arrived from a plan (the `fromPlan`
@@ -11,7 +12,10 @@ import { pushPage } from "@/utils/genUtils";
  */
 export const BackToPlanButton = () => {
 	const navigate = useNavigate();
-	const [{ fromPlan }] = useQueryStates({ fromPlan: parseAsString });
+	const [{ fromPlan, fromPlanVersion }] = useQueryStates({
+		fromPlan: parseAsString,
+		fromPlanVersion: parseAsInteger,
+	});
 	const { products } = useProductsQuery();
 
 	if (!fromPlan) return null;
@@ -29,6 +33,9 @@ export const BackToPlanButton = () => {
 				pushPage({
 					navigate,
 					path: `/products/${fromPlan}`,
+					queryParams: parentPlanEditorQueryParams({
+						parentVersion: fromPlanVersion,
+					}),
 					preserveParams: false,
 				})
 			}
