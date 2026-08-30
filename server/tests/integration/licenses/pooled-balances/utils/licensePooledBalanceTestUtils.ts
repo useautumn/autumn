@@ -282,6 +282,33 @@ export const expectLicensePooledGrant = async ({
 	});
 };
 
+export const expectLicensePooledCheck = async ({
+	autumn,
+	customerId,
+	entityId,
+	featureId = TestFeature.Messages,
+	allowed,
+	remaining,
+}: {
+	autumn: AutumnInt;
+	customerId: string;
+	entityId?: string;
+	featureId?: string;
+	allowed: boolean;
+	remaining?: number;
+}) => {
+	const check = await autumn.check<CheckResponseV3>({
+		customer_id: customerId,
+		entity_id: entityId,
+		feature_id: featureId,
+		skip_cache: true,
+	});
+	expect(check.allowed).toBe(allowed);
+	if (remaining !== undefined) {
+		expect(check.balance?.remaining).toBe(remaining);
+	}
+};
+
 export const expectLicensePrivateSeatGrant = async ({
 	autumn,
 	customerId,

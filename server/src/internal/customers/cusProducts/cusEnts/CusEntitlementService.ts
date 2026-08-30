@@ -42,6 +42,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { markCustomersUpdatedAtByInternalIds } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
+import { licensePooledBalanceIsLiveSql } from "@/internal/customers/licensePooledBalanceIsLiveSql.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
@@ -427,6 +428,9 @@ export class CusEntService {
 					isNull(customerEntitlements.customer_product_id),
 					isCronResettableLooseCustomerEntitlement(),
 					commonResetPredicates(),
+					licensePooledBalanceIsLiveSql({
+						pooledBalanceAlias: "pooled_balances",
+					}),
 					afterCursor(),
 				),
 			);
