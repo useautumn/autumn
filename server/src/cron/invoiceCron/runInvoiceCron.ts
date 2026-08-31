@@ -71,17 +71,22 @@ export const handleVoidInvoiceCron = async ({
 
 	const subId = stripeInvoiceToStripeSubscriptionId(invoice);
 	const voidSub = metadata.type === MetadataType.InvoiceCheckout;
-	const expirePendingRows = () =>
-		expirePendingCustomerProducts({
-			ctx: {
-				db,
-				logger,
-				org: { id: org.id },
-				env: customer.env,
-				redisV2: resolveRedisV2(),
-			},
-			metadataId: metadata.id,
-		});
+	const expirePendingRows = async () => {
+		try {
+			await expirePendingCustomerProducts({
+				ctx: {
+					db,
+					logger,
+					org: { id: org.id },
+					env: customer.env,
+					redisV2: resolveRedisV2(),
+				},
+				metadataId: metadata.id,
+			});
+		} catch (error) {
+			logger.error(`Error expiring pending customer products: ${error}`);
+		}
+	};
 
 	console.log(
 		`Invoice: ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug}) - status: ${invoice.status}`,
@@ -90,7 +95,6 @@ export const handleVoidInvoiceCron = async ({
 	if (invoice.status === "open") {
 		try {
 			await stripeCli.invoices.voidInvoice(metadata.stripe_invoice_id);
-			await expirePendingRows();
 			logger.info(
 				`voided invoice ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug})`,
 			);
@@ -104,6 +108,7 @@ export const handleVoidInvoiceCron = async ({
 				}
 			}
 
+			await expirePendingRows();
 			await MetadataService.delete({
 				db,
 				id: metadata.id,
