@@ -69,13 +69,18 @@ export const handleRenewal = async ({
 		return { success: true };
 	}
 
-	// Past-due → active recovery.
+	// Past-due → active recovery. A product cancelled before it went past due
+	// needs uncancel, since markActive leaves the cancellation fields set.
 	if (curSameProduct && curSameProduct.status === CusProductStatus.PastDue) {
 		logger.info(
 			`Renewal for existing past due product ${product.id}, marking as active`,
 		);
 
-		await customerProductActions.markActive({
+		const recoverPastDueProduct = curSameProduct.canceled
+			? customerProductActions.uncancel
+			: customerProductActions.markActive;
+
+		await recoverPastDueProduct({
 			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
