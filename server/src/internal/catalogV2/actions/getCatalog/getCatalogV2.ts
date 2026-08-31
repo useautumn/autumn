@@ -6,6 +6,7 @@ import {
 	type GetCatalogResponse,
 	LATEST_VERSION,
 } from "@autumn/shared";
+import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
@@ -40,11 +41,23 @@ export const getCatalogV2 = async ({
 		),
 	});
 
+	// One read for the whole catalog: RC mappings live in their own table, keyed
+	// by plan id with no version dimension.
+	const revenuecatMappings = await RCMappingService.getAll({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+	const revenuecatByPlanId = new Map(
+		revenuecatMappings.map((mapping) => [mapping.autumn_product_id, mapping]),
+	);
+
 	const plans = await Promise.all(
 		baseProducts.map((product) =>
 			getPlanResponse({
 				ctx,
 				product: pruneArchivedVariants(product),
+				revenuecatMapping: revenuecatByPlanId.get(product.id),
 				features: ctx.features,
 				currency: ctx.org.default_currency || undefined,
 				expandLicensePlans: true,
