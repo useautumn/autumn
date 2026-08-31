@@ -1,0 +1,49 @@
+name: Balance Worker Unit Tests
+
+on:
+  pull_request:
+    paths:
+      - "apps/balance-worker/**"
+      - "packages/balance-engine/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/balance-worker-unit-tests.yml"
+  push:
+    branches: [dev]
+    paths:
+      - "apps/balance-worker/**"
+      - "packages/balance-engine/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/balance-worker-unit-tests.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: balance-worker-unit-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run unit tests
+        run: bun -F @autumn/balance-worker test:unit
+
+      - name: Run TypeScript type check
+        run: bun -F @autumn/balance-worker ts
