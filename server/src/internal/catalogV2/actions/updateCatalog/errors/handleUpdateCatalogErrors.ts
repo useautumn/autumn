@@ -6,6 +6,8 @@ import {
 	type UpdateCatalogParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { handleDeclaredVariantAnchorErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleDeclaredVariantAnchorErrors";
+import { handleLicenseAnchorLifecycleErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleLicenseAnchorLifecycleErrors";
 import { handleRemoveFeatureErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRemoveFeatureErrors/handleRemoveFeatureErrors";
 import { handleRemovePlanErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRemovePlanErrors/handleRemovePlanErrors";
 import { handleUpdateFeatureErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpdateFeatureErrors/handleUpdateFeatureErrors";
@@ -157,6 +159,10 @@ export const handleUpdateCatalogErrors = async ({
 		params,
 		productStatesContext: catalogContext.productStatesContext,
 	});
+	handleDeclaredVariantAnchorErrors({
+		params,
+		productStatesContext: catalogContext.productStatesContext,
+	});
 	await handleUpsertProductRenameErrors({
 		ctx,
 		params,
@@ -169,4 +175,5 @@ export const handleUpdateCatalogErrors = async ({
 		updateCatalogPlan,
 		productStatesContext: catalogContext.productStatesContext,
 	});
+	handleLicenseAnchorLifecycleErrors({ updateCatalogPlan });
 };

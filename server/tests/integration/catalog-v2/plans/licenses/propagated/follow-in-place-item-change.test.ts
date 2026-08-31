@@ -34,7 +34,7 @@ test.concurrent(
 				await bumpChild({
 					autumn: autumnV2_3,
 					childId,
-					propagate: { license_parents: [{ plan_id: parentId }] },
+					propagate: { license_parents: [{ plan_id: parentId, version: 1 }] },
 					parentPlans: [{ plan_id: parentId, name: "Parent" }],
 				});
 

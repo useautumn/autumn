@@ -116,8 +116,7 @@ test.concurrent(
 							{
 								planId: euId,
 								version: 2,
-								variantAction: "propagated",
-								hasPlanChange: true,
+								variantAction: "unchanged",
 							},
 							{
 								planId: ukId,

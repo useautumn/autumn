@@ -96,7 +96,8 @@ test.concurrent(
 								items: [messagesItem(200)],
 								propagate: {
 									license_parents: [
-										{ plan_id: parentId, versioning: "all_versions" },
+										{ plan_id: parentId, version: 1 },
+										{ plan_id: parentId, version: 2 },
 									],
 								},
 							},

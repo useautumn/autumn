@@ -58,7 +58,7 @@ test.concurrent(
 						{
 							plan_id: childId,
 							items: [messagesItem(NEW_ALLOWANCE)],
-							propagate: { license_parents: [{ plan_id: parentId }] },
+							propagate: { license_parents: [{ plan_id: parentId, version: 1 }] },
 							migration: { draft: true },
 						},
 					],
@@ -146,8 +146,8 @@ test.concurrent(
 							items: [messagesItem(NEW_ALLOWANCE)],
 							propagate: {
 								license_parents: [
-									{ plan_id: teamId },
-									{ plan_id: scaleId },
+									{ plan_id: teamId, version: 1 },
+									{ plan_id: scaleId, version: 1 },
 								],
 							},
 							migration: { draft: true },

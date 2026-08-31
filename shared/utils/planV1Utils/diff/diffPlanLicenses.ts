@@ -16,6 +16,9 @@ const toUpsertLicense = ({
 	clearCustomize?: boolean;
 }): CustomizePlanLicense => ({
 	license_plan_id: license.license_plan_id,
+	...(license.version_slug !== undefined
+		? { version_slug: license.version_slug }
+		: {}),
 	included: license.included,
 	prepaid_only: license.prepaid_only,
 	...(clearCustomize
@@ -30,7 +33,8 @@ const byLicensePlanId = <T extends { license_plan_id: string }>(
 	right: T,
 ): number => left.license_plan_id.localeCompare(right.license_plan_id);
 
-/** Link-field patch. `version` / expanded `plan` are display — ignored.
+/** Link-field patch. Numeric `version` / expanded `plan` are display — ignored;
+ * `version_slug` (the version anchor) is a term.
  * New links are skipped unless `includeAdds` — those are lifecycle, not terms. */
 export const diffPlanLicenses = ({
 	from,

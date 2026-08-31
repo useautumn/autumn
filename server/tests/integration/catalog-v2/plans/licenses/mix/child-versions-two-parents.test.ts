@@ -1,17 +1,17 @@
 /**
  * catalogV2 — a child that has minted its own version, offered by two parents
- * that each have v1 + v2. The child mint freezes every parent row at its old
- * value, so a later propagate can only add; it must never silently un-freeze a
- * diverged slot.
+ * that each have v1 + v2. Links are version-anchored: the child mint touches
+ * no parent row, and a later in-place edit of the new child row reaches only
+ * links pointing at THAT row — a link on another child version never follows.
  *
  * Contract:
- *   - child `new_version` → all four parent rows re-point to the new child row
- *     and pin their old allowance
- *   - later child edit (messages 200 + Words) with A `all_versions`, B omitted
- *     → A inherits Words on both versions but keeps its pinned 10;
- *       B inherits nothing
- *   - preview of that edit → value_divergence on all four rows, but
- *     license_action splits propagated (A) vs unchanged (B)
+ *   - child `new_version` → all four parent rows untouched: still anchored to
+ *     child v1, uncustomized, stock 10
+ *   - later in-place edit of child v2 (messages 200 + Words) with A
+ *     `all_versions`, B omitted → no link is anchored to v2, so nothing is
+ *     reached; all four rows stay anchored to v1 at 10 with no Words
+ *   - preview of that edit → child v2 has no license_parents; both parents
+ *     sit on sibling_versions[v1].license_parents as unchanged
  */
 
 import { test } from "bun:test";
@@ -34,12 +34,6 @@ import {
 	wordsItem,
 } from "../utils/seedLicensePlans.js";
 
-const messagesValueDivergence = {
-	reason: "value_divergence" as const,
-	feature_name: "Messages",
-	item_filter: { feature_id: TestFeature.Messages },
-};
-
 /** Two parents at v1+v2 offering the child, then the child mints its own v2. */
 const seedChildVersionOverTwoParents = async ({
 	autumn,
@@ -59,19 +53,16 @@ const seedChildVersionOverTwoParents = async ({
 	});
 };
 
-const expectEveryParentRow = async ({
+const expectEveryParentRowAnchoredToV1 = async ({
 	ctx,
 	parentIds,
 	childId,
-	expected,
+	childV1InternalId,
 }: {
 	ctx: Parameters<typeof expectLicenseLinkCorrect>[0]["ctx"];
 	parentIds: string[];
 	childId: string;
-	expected: Omit<
-		Parameters<typeof expectLicenseLinkCorrect>[0],
-		"ctx" | "parentPlanId" | "licensePlanId" | "parentVersion"
-	>;
+	childV1InternalId: string;
 }) => {
 	for (const parentPlanId of parentIds) {
 		for (const parentVersion of [1, 2]) {
@@ -80,14 +71,18 @@ const expectEveryParentRow = async ({
 				parentPlanId,
 				parentVersion,
 				licensePlanId: childId,
-				...expected,
+				licenseVersion: 1,
+				customized: false,
+				messagesAllowance: 10,
+				omitFeatureIds: [TestFeature.Words],
+				licenseInternalProductId: childV1InternalId,
 			});
 		}
 	}
 };
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: child new_version freezes every version of every parent")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: child new_version leaves every parent row anchored to v1")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const childId = uniqueTestId("cv2_lic_cv2p_c");
@@ -97,23 +92,24 @@ test.concurrent(
 			ctx,
 			planIds: [childId, teamId, orgId],
 			run: async () => {
-				await seedChildVersionOverTwoParents({
+				await seedTwoParentsWithTwoVersions({
 					autumn: autumnV2_3,
 					childId,
 					parentIds: [teamId, orgId],
 				});
+				const childV1 = await getFullPlan({ ctx, planId: childId });
+				await bumpChild({
+					autumn: autumnV2_3,
+					childId,
+					items: [messagesItem(50)],
+					versioning: "new_version",
+				});
 
-				const childV2 = await getFullPlan({ ctx, planId: childId });
-				// Every link re-points at the new child row but keeps the old allowance.
-				await expectEveryParentRow({
+				await expectEveryParentRowAnchoredToV1({
 					ctx,
 					parentIds: [teamId, orgId],
 					childId,
-					expected: {
-						customized: true,
-						messagesAllowance: 10,
-						licenseInternalProductId: childV2.internal_id,
-					},
+					childV1InternalId: childV1.internal_id,
 				});
 			},
 		});
@@ -121,7 +117,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: all_versions adds a new item to a frozen parent without un-freezing it")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: in-place edit of child v2 never reaches links anchored to v1")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const childId = uniqueTestId("cv2_lic_cv2f_c");
@@ -131,45 +127,30 @@ test.concurrent(
 			ctx,
 			planIds: [childId, followId, pinId],
 			run: async () => {
-				await seedChildVersionOverTwoParents({
+				await seedTwoParentsWithTwoVersions({
 					autumn: autumnV2_3,
 					childId,
 					parentIds: [followId, pinId],
+				});
+				const childV1 = await getFullPlan({ ctx, planId: childId });
+				await bumpChild({
+					autumn: autumnV2_3,
+					childId,
+					items: [messagesItem(50)],
+					versioning: "new_version",
 				});
 				await bumpChild({
 					autumn: autumnV2_3,
 					childId,
 					items: [messagesItem(200), wordsItem(50)],
-					propagate: {
-						license_parents: [
-							{ plan_id: followId, versioning: "all_versions" },
-						],
-					},
 				});
 
-				// Followed parent: Words flows in, the diverged messages slot holds.
-				for (const parentVersion of [1, 2]) {
-					await expectLicenseLinkCorrect({
-						ctx,
-						parentPlanId: followId,
-						parentVersion,
-						licensePlanId: childId,
-						customized: true,
-						entitlements: [
-							{ feature_id: TestFeature.Messages, allowance: 10 },
-							{ feature_id: TestFeature.Words, allowance: 50 },
-						],
-					});
-				}
-				await expectEveryParentRow({
+				// Off-anchor pins would 400; omit propagate — no link points at v2.
+				await expectEveryParentRowAnchoredToV1({
 					ctx,
-					parentIds: [pinId],
+					parentIds: [followId, pinId],
 					childId,
-					expected: {
-						customized: true,
-						messagesAllowance: 10,
-						omitFeatureIds: [TestFeature.Words],
-					},
+					childV1InternalId: childV1.internal_id,
 				});
 			},
 		});
@@ -177,7 +158,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: preview splits license_action across parents while every row diverges")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: preview puts v1-anchored parents on sibling_versions")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const childId = uniqueTestId("cv2_lic_cv2p_pc");
@@ -199,11 +180,6 @@ test.concurrent(
 							{
 								plan_id: childId,
 								items: [messagesItem(200), wordsItem(50)],
-								propagate: {
-									license_parents: [
-										{ plan_id: followId, versioning: "all_versions" },
-									],
-								},
 							},
 						],
 					}),
@@ -213,30 +189,18 @@ test.concurrent(
 					preview,
 					expected: {
 						planId: childId,
-						licenseParents: [
+						licenseParents: null,
+						siblingVersions: [
 							{
-								planId: followId,
-								version: 2,
-								licenseAction: "propagated",
-								conflicts: [messagesValueDivergence],
-								siblingVersions: [
+								version: 1,
+								licenseParents: [
 									{
-										version: 1,
-										licenseAction: "propagated",
-										conflicts: [messagesValueDivergence],
-									},
-								],
-							},
-							{
-								planId: pinId,
-								version: 2,
-								licenseAction: "unchanged",
-								conflicts: [messagesValueDivergence],
-								siblingVersions: [
-									{
-										version: 1,
+										planId: followId,
 										licenseAction: "unchanged",
-										conflicts: [messagesValueDivergence],
+									},
+									{
+										planId: pinId,
+										licenseAction: "unchanged",
 									},
 								],
 							},

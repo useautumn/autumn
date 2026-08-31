@@ -1,9 +1,9 @@
 /**
- * catalogV2.update — base new_version re-points latest variants.
+ * catalogV2.update — base new_version does not auto-repoint variants.
  *
  * Contract:
- *   pin → pointer moves, items frozen
- *   propagate.variants → pointer + item DIFF
+ *   no propagate → pointer stays on the mint source; items frozen
+ *   propagate + no customers → pointer moves + item DIFF
  *   historical variant version stays on the old base row
  */
 
@@ -11,7 +11,6 @@ import { test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { expectCatalogResultsCorrect } from "../../../utils/expectCatalogUpdate.js";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
 import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
 import { dashboardItem, messagesItem } from "../../licenses/utils/seedLicensePlans.js";
@@ -25,7 +24,7 @@ import {
 } from "../utils/seedVariantPlans.js";
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 variants: base new_version pin re-points latest, items stay 200")}`,
+	`${chalk.yellowBright("catalogV2 variants: base new_version without propagate leaves pointer on v1")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const baseId = uniqueTestId("cv2_var_ptr_pin");
@@ -37,26 +36,21 @@ test.concurrent(
 				baseId,
 				variantId,
 			});
-			const response = await autumnV2_3.catalogV2.update({
+			await autumnV2_3.catalogV2.update({
 				plans: [
 					{
 						plan_id: baseId,
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 						items: [messagesItem(100), dashboardItem()],
 					},
-				],
-			});
-			expectCatalogResultsCorrect({
-				response,
-				plans: [
-					{ id: baseId, action: "update" },
-					{ id: variantId, action: "update" },
 				],
 			});
 			await expectVariantPointerCorrect({
 				ctx,
 				variantPlanId: variantId,
 				basePlanId: baseId,
+				baseVersion: 1,
 			});
 			await expectVariantPlanCorrect({
 				ctx,
@@ -71,7 +65,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 variants: base new_version + propagated items re-points and adds Dashboard")}`,
+	`${chalk.yellowBright("catalogV2 variants: base new_version + propagate re-points empty-customer latest")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const baseId = uniqueTestId("cv2_var_ptr_prop");
@@ -87,9 +81,10 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: baseId,
-						versioning: "new_version", active: true,
-						items: [messagesItem(100), dashboardItem()],
-						propagate: { variants: [{ plan_id: variantId }] },
+					versioning: "new_version",
+					active: true,
+					items: [messagesItem(100), dashboardItem()],
+					propagate: { variants: [{ plan_id: variantId }] },
 					},
 				],
 			});
@@ -97,6 +92,7 @@ test.concurrent(
 				ctx,
 				variantPlanId: variantId,
 				basePlanId: baseId,
+				baseVersion: 2,
 			});
 			await expectVariantPlanCorrect({
 				ctx,
@@ -128,7 +124,8 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: baseId,
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 						items: [messagesItem(100), dashboardItem()],
 					},
 				],
@@ -145,6 +142,7 @@ test.concurrent(
 				variantPlanId: variantId,
 				variantVersion: 2,
 				basePlanId: baseId,
+				baseVersion: 1,
 			});
 			await expectVariantPlanCorrect({
 				ctx,

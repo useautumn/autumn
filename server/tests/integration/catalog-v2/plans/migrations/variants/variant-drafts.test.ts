@@ -70,7 +70,7 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 							migration: { draft: true },
 						},
 					],
@@ -248,7 +248,7 @@ test.concurrent(
 									},
 								},
 							],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 							migration: { draft: true },
 						},
 					],
@@ -311,6 +311,10 @@ test.concurrent(
 								},
 							],
 						},
+					],
+				});
+				await autumnV2_3.catalogV2.update({
+					plans: [
 						{
 							plan_id: variantId,
 							licenses: [
@@ -347,7 +351,7 @@ test.concurrent(
 									},
 								},
 							],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 							migration: { draft: true },
 						},
 					],
@@ -403,7 +407,7 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
-							propagate: { variants: [{ plan_id: euId }] },
+							propagate: { variants: [{ plan_id: euId, version: 1 }] },
 							migration: { draft: true },
 						},
 					],
@@ -458,7 +462,7 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 							migration: { draft: true },
 						},
 					],

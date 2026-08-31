@@ -1,13 +1,10 @@
 /**
- * catalogV2.update — base promote re-points follow variants in place.
+ * catalogV2.update — base promote does not auto-repoint variants.
  *
  * Contract:
- *   variant whose pointer == previous active base → base_internal_product_id
- *   moves to the newly promoted base. No variant version is minted.
+ *   promote without propagate → pointer stays on the previous active row
  *   Historical variant versions stay on their existing base row.
- *   Active variant pinned to a non-active historical base (not the old
- *   pointer) is left. Draft mint without active must not repoint
- *   (already covered in follower-mint-active).
+ *   Active variant pinned to a non-active historical base is left.
  */
 
 import { test } from "bun:test";
@@ -28,7 +25,7 @@ import {
 } from "../utils/seedVariantPlans.js";
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 variants: base promote re-points the follow variant, no mint")}`,
+	`${chalk.yellowBright("catalogV2 variants: base promote without propagate leaves pointer on v1")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const baseId = uniqueTestId("cv2_var_pr_fol");
@@ -69,7 +66,7 @@ test.concurrent(
 				ctx,
 				variantPlanId: variantId,
 				basePlanId: baseId,
-				baseVersion: 2,
+				baseVersion: 1,
 			});
 			await expectVariantPlanCorrect({
 				ctx,
@@ -117,7 +114,7 @@ test.concurrent(
 				variantPlanId: variantId,
 				variantVersion: 2,
 				basePlanId: baseId,
-				baseVersion: 2,
+				baseVersion: 1,
 			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });

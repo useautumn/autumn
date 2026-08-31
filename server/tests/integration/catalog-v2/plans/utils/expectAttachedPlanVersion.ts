@@ -46,15 +46,21 @@ export const expectAttachedPlanVersionCorrect = async ({
 		internalCustomerId,
 		planId,
 	});
+	const scoped =
+		entityId === undefined
+			? rows
+			: rows.filter((row) =>
+					entityId === true ? Boolean(row.entity_id) : row.entity_id === entityId,
+				);
 
 	if (count !== undefined) {
 		expect(
-			rows,
+			scoped,
 			"exactly one version of the default plan may attach",
 		).toHaveLength(count);
 	} else if (version !== undefined) {
 		expect(
-			rows,
+			scoped,
 			"exactly one version of the default plan may attach",
 		).toHaveLength(1);
 	}
@@ -69,12 +75,12 @@ export const expectAttachedPlanVersionCorrect = async ({
 		});
 		expect(product, `missing ${planId} v${version}`).toBeDefined();
 		if (!product) return;
-		expect(rows[0]?.internal_product_id).toBe(product.internal_id);
+		expect(scoped[0]?.internal_product_id).toBe(product.internal_id);
 	}
 
 	if (entityId === true) {
-		expect(rows[0]?.entity_id).toBeTruthy();
+		expect(scoped[0]?.entity_id).toBeTruthy();
 	} else if (entityId !== undefined) {
-		expect(rows[0]?.entity_id).toBe(entityId);
+		expect(scoped[0]?.entity_id).toBe(entityId);
 	}
 };

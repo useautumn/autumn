@@ -53,7 +53,7 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(150)],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 						},
 					],
 				};
@@ -119,7 +119,7 @@ test.concurrent(
 									customize: messagesOverride(150),
 								},
 							],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 						},
 					],
 				};
@@ -196,7 +196,7 @@ test.concurrent(
 									customize: messagesOverride(150),
 								},
 							],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 						},
 					],
 				};

@@ -38,6 +38,7 @@ import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
+import { getCustomerBalancePlanName } from "../table/customer-balance/customerBalanceUtils";
 import { BalanceEditPreviews } from "./BalanceEditPreviews";
 import { GrantedBalancePopover } from "./GrantedBalancePopover";
 import { PooledBalanceContributions } from "./PooledBalanceContributions";
@@ -328,6 +329,16 @@ function EntitlementInfoRows({
 	unlimitedUsage?: number;
 	billingCycleEnd: number | null;
 }) {
+	const { customer } = useCusQuery();
+	const planName =
+		getCustomerBalancePlanName({
+			balance: {
+				...selectedCusEnt,
+				customer_product: cusProduct ?? null,
+			},
+			fullCustomer: customer,
+		}) ?? "N/A";
+
 	return (
 		<div className="flex flex-col gap-2 rounded-lg">
 			{selectedCusEnt.external_id && (
@@ -344,7 +355,7 @@ function EntitlementInfoRows({
 				/>
 			)}
 			{entity && <InfoRow label="Entity" value={entity.name || entity.id} />}
-			<InfoRow label="Plan" value={cusProduct?.product.name || "N/A"} />
+			<InfoRow label="Plan" value={planName} />
 			<InfoRow
 				label="Interval"
 				value={

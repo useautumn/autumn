@@ -85,7 +85,7 @@ test.concurrent(
 								customize: messagesCustomize(300),
 							},
 						],
-						propagate: { variants: [{ plan_id: variantId }] },
+						propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 					},
 				],
 			});
@@ -127,7 +127,7 @@ test.concurrent(
 								},
 							},
 						],
-						propagate: { variants: [{ plan_id: variantId }] },
+						propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 					},
 				],
 			});

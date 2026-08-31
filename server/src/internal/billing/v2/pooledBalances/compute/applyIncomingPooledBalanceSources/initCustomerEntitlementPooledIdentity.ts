@@ -1,10 +1,7 @@
 import {
-	EntInterval,
+	entToPooledBalanceIdentity,
 	type FullCustomerEntitlement,
-	isBooleanEntitlement,
-	isUnlimitedEntitlement,
 	type PooledBalanceIdentity,
-	rolloverConfigToSignature,
 } from "@autumn/shared";
 import type { PooledBalanceLifecycle } from "../types/pooledBalanceComputeTypes";
 
@@ -22,28 +19,12 @@ export const initCustomerEntitlementPooledIdentity = ({
 }: {
 	customerEntitlement: FullCustomerEntitlement;
 	lifecycle: PooledBalanceIdentityLifecycle;
-}): PooledBalanceIdentity => {
-	const unlimited = isUnlimitedEntitlement({
+}): PooledBalanceIdentity => ({
+	...entToPooledBalanceIdentity({
 		entitlement: customerEntitlement.entitlement,
-	});
-	const tracksBalance =
-		!unlimited &&
-		!isBooleanEntitlement({
-			entitlement: customerEntitlement.entitlement,
-		});
-	const rollover = tracksBalance
-		? customerEntitlement.entitlement.rollover
-		: null;
-
-	return {
-		internalFeatureId: customerEntitlement.internal_feature_id,
-		unlimited,
-		interval: customerEntitlement.entitlement.interval ?? EntInterval.Lifetime,
-		intervalCount: customerEntitlement.entitlement.interval_count ?? 1,
-		resetCycleAnchor: lifecycle.resetCycleAnchor,
-		resetMode: lifecycle.resetMode,
-		stripeSubscriptionId: lifecycle.stripeSubscriptionId,
-		customerLicenseLinkId: lifecycle.customerLicenseLinkId,
-		rolloverSignature: rolloverConfigToSignature({ rollover }),
-	};
-};
+	}),
+	resetCycleAnchor: lifecycle.resetCycleAnchor,
+	resetMode: lifecycle.resetMode,
+	stripeSubscriptionId: lifecycle.stripeSubscriptionId,
+	customerLicenseLinkId: lifecycle.customerLicenseLinkId,
+});

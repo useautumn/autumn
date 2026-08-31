@@ -4,7 +4,7 @@
  * Contract:
  *   `propagate.variants[].new_version_slug` names that variant's minted row
  *   a base slug never reaches a target — an unnamed target falls back to `v{n}`
- *   `variants[].new_version_slug` overrides the propagate target's slug
+ *   a target's `new_version_slug` wins over `variants[].new_version_slug`
  *   a target that follows in place → its slug is untouched
  *   variant content drift survives propagation (editDiff, not absolute content)
  *   a target slug another version of that target holds → DuplicateVersionSlug
@@ -169,7 +169,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("version identity propagate-slug: variants[] slug overrides the target slug")}`,
+	`${chalk.yellowBright("version identity propagate-slug: target slug wins over variants[] slug")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const baseId = uniqueTestId("cv2_vid_pvo");
@@ -193,7 +193,7 @@ test.concurrent(
 					ctx,
 					planId: variantId,
 					version: 2,
-					versionSlug: "from_declared",
+					versionSlug: "from_target",
 				});
 			},
 		});
@@ -302,7 +302,7 @@ test.concurrent(
 						license_parents: [
 							{
 								plan_id: parentId,
-								versioning: "new_version",
+								version: 2,
 								new_version_slug: "summer_parent",
 							},
 						],

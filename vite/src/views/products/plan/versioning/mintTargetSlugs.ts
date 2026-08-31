@@ -1,5 +1,8 @@
 import type { CatalogPropagateParams } from "@autumn/shared";
-import type { PropagationTarget } from "../catalog/catalogPlanPreview";
+import {
+	type VariantTarget,
+	variantTargetMintsInSelection,
+} from "../catalog/catalogPlanPreview";
 import { mintVersionSlugError } from "../utils/versionSlug";
 
 /**
@@ -63,19 +66,18 @@ export const mintTargetSlugError = ({
  */
 export const mintTargetSlugConflicts = ({
 	targets,
-	selectedIds,
+	selectedKeys,
 	selection,
 }: {
-	targets: PropagationTarget[];
-	selectedIds: string[];
+	targets: VariantTarget[];
+	selectedKeys: string[];
 	selection: MintSlugSelection;
-}): PropagationTarget[] =>
+}): VariantTarget[] =>
 	targets.filter(
 		(target) =>
-			selectedIds.includes(target.id) &&
-			target.mintsNewVersion &&
+			variantTargetMintsInSelection({ target, selectedKeys }) &&
 			mintTargetSlugError({
-				slug: effectiveMintSlug({ selection, planId: target.id }),
+				slug: effectiveMintSlug({ selection, planId: target.planId }),
 				takenSlugs: target.takenSlugs,
 			}) !== null,
 	);

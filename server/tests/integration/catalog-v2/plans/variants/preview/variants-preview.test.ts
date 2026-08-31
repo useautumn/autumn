@@ -36,6 +36,7 @@ import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
 import { expectVariantPlanCorrect } from "../utils/expectVariantPointer.js";
 import {
 	seedBaseWithVariant,
+	seedDivergedVariantBase,
 	seedVariantNewVersion,
 } from "../utils/seedVariantPlans.js";
 
@@ -72,7 +73,7 @@ test.concurrent(
 					{
 						plan_id: baseId,
 						items: [messagesItem(100), dashboardItem()],
-						propagate: { variants: [{ plan_id: listedId }] },
+						propagate: { variants: [{ plan_id: listedId, version: 1 }] },
 					},
 				],
 			};
@@ -133,7 +134,7 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(150)],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 						},
 					],
 				}),
@@ -185,7 +186,7 @@ test.concurrent(
 									},
 								},
 							],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 						},
 					],
 				}),
@@ -228,7 +229,7 @@ test.concurrent(
 					{
 						plan_id: baseId,
 						items: [messagesItem(100), dashboardItem()],
-						propagate: { variants: [{ plan_id: variantId }] },
+						propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 					},
 				],
 			});
@@ -270,7 +271,7 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 2 }] },
 						},
 					],
 				}),
@@ -309,7 +310,7 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(150)],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 2 }] },
 						},
 					],
 				}),
@@ -343,7 +344,12 @@ test.concurrent(
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
 							versioning: "all_versions",
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: {
+								variants: [
+									{ plan_id: variantId, version: 1 },
+									{ plan_id: variantId, version: 2 },
+								],
+							},
 						},
 					],
 				}),
@@ -403,7 +409,7 @@ test.concurrent(
 							versioning: {
 								current_version: 2,
 								new_version: null,
-								resolved: "existing",
+								resolved: "all_versions",
 								options: ["existing", "all_versions"],
 							},
 							siblingVersions: [
@@ -476,8 +482,6 @@ test.concurrent(
 						{
 							planId: variantId,
 							version: 3,
-							variantAction: "propagated",
-							hasPlanChange: true,
 							versioning: {
 								current_version: 2,
 								new_version: 3,
@@ -492,8 +496,7 @@ test.concurrent(
 								},
 								{
 									version: 2,
-									variantAction: "unchanged",
-									hasPlanChange: false,
+									variantAction: "propagated",
 								},
 							],
 						},
@@ -503,6 +506,214 @@ test.concurrent(
 		} finally {
 			await cleanupPlanCustomerRefs({ ctx, planIds: [baseId, variantId] });
 			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants preview: variants[] only lists rows anchored to the edited base")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_prv_anc");
+		const euAId = uniqueTestId("cv2_var_prv_anc_a");
+		const euBId = uniqueTestId("cv2_var_prv_anc_b");
+		await deleteDbPlans({ ctx, planIds: [baseId, euAId, euBId] });
+		try {
+			await seedBaseWithVariant({
+				autumn: autumnV2_3,
+				baseId,
+				variantId: euAId,
+			});
+			await seedDivergedVariantBase({ autumn: autumnV2_3, baseId });
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: baseId,
+						variants: [{ variant_plan_id: euBId, name: "Team B" }],
+					},
+				],
+			});
+
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [
+						{
+							plan_id: baseId,
+							items: [messagesItem(50), dashboardItem()],
+							propagate: { variants: [{ plan_id: euBId, version: 1 }] },
+						},
+					],
+				}),
+			);
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId: baseId,
+					variants: [
+						{
+							planId: euBId,
+							variantAction: "propagated",
+							hasPlanChange: true,
+						},
+					],
+					siblingVersions: [
+						{
+							version: 1,
+							variants: [
+								{
+									planId: euAId,
+									version: 1,
+									variantAction: "unchanged",
+								},
+							],
+						},
+					],
+				},
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, euAId, euBId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants preview: discover lists every other-anchor version on sibling_versions")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_prv_disc");
+		const variantId = uniqueTestId("cv2_var_prv_disc_eu");
+		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		try {
+			await seedBaseWithVariant({
+				autumn: autumnV2_3,
+				baseId,
+				variantId,
+			});
+			await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
+			await seedDivergedVariantBase({ autumn: autumnV2_3, baseId });
+			await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: baseId,
+						version: 2,
+						variants: [{ variant_plan_id: variantId, version: 3 }],
+					},
+				],
+			});
+
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [
+						{
+							plan_id: baseId,
+							items: [messagesItem(50), dashboardItem()],
+						},
+					],
+				}),
+			);
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId: baseId,
+					variants: [
+						{
+							planId: variantId,
+							version: 3,
+							variantAction: "unchanged",
+						},
+					],
+					siblingVersions: [
+						{
+							version: 1,
+							variants: [
+								{
+									planId: variantId,
+									version: 2,
+									variantAction: "unchanged",
+									siblingVersions: [
+										{ version: 1, variantAction: "unchanged" },
+									],
+								},
+							],
+						},
+					],
+				},
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants preview: all_versions nests other-anchor variants on sibling_versions")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_prv_sib");
+		const euAId = uniqueTestId("cv2_var_prv_sib_a");
+		const euBId = uniqueTestId("cv2_var_prv_sib_b");
+		await deleteDbPlans({ ctx, planIds: [baseId, euAId, euBId] });
+		try {
+			await seedBaseWithVariant({
+				autumn: autumnV2_3,
+				baseId,
+				variantId: euAId,
+			});
+			await seedDivergedVariantBase({ autumn: autumnV2_3, baseId });
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: baseId,
+						variants: [{ variant_plan_id: euBId, name: "Team B" }],
+					},
+				],
+			});
+
+			const preview = parsePlanPreview(
+				await autumnV2_3.catalogV2.previewUpdate({
+					plans: [
+						{
+							plan_id: baseId,
+							items: [messagesItem(50), dashboardItem()],
+							versioning: "all_versions",
+							propagate: {
+								variants: [
+									{ plan_id: euAId, version: 1 },
+									{ plan_id: euBId, version: 1 },
+								],
+							},
+						},
+					],
+				}),
+			);
+			expectPlanPreviewRowCorrect({
+				preview,
+				expected: {
+					planId: baseId,
+					variants: [
+						{
+							planId: euBId,
+							variantAction: "propagated",
+							hasPlanChange: true,
+						},
+					],
+					siblingVersions: [
+						{
+							version: 1,
+							variants: [
+								{
+									planId: euAId,
+									version: 1,
+									variantAction: "propagated",
+								},
+							],
+						},
+					],
+				},
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, euAId, euBId] });
 		}
 	},
 );

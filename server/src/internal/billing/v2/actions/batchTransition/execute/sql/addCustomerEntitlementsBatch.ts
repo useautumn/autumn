@@ -1,8 +1,84 @@
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AddEntitlementPriceOperation } from "../../types/entitlementPriceOperationTypes";
 import type { BatchMutationResult } from "../../types/types";
 import { activeStatusesSql, sqlList } from "./batchTransitionSqlUtils";
+
+const generatedContributionIdsCte = ({
+	contributionIds,
+}: {
+	contributionIds: string[];
+}): SQL => sql`,
+		generated_contribution_ids AS MATERIALIZED (
+			SELECT generated.id, generated.ordinality
+			FROM JSONB_ARRAY_ELEMENTS_TEXT(${JSON.stringify(contributionIds)}::jsonb)
+				WITH ORDINALITY AS generated(id, ordinality)
+		)`;
+
+// Same-statement UPDATE cannot see rows from `inserted` (CTE snapshot).
+// Write pooled_contribution_id on INSERT; never gate the granted bump on that UPDATE.
+const addPooledContributionsCtes = ({
+	pooledBalanceId,
+	contributionAmount,
+	now,
+}: {
+	pooledBalanceId: string;
+	contributionAmount: number;
+	now: number;
+}): SQL => sql`,
+		inserted_contributions AS (
+			INSERT INTO pooled_balance_contributions (
+				id,
+				pooled_balance_id,
+				source_customer_product_id,
+				source_customer_entitlement_id,
+				current_contribution,
+				next_cycle_contribution,
+				effective_at,
+				created_at,
+				updated_at
+			)
+			SELECT
+				contribution_id.id,
+				${pooledBalanceId},
+				inserted.customer_product_id,
+				inserted.id,
+				${contributionAmount},
+				${contributionAmount},
+				NULL,
+				${now},
+				${now}
+			FROM inserted
+			INNER JOIN generated_ids
+				ON generated_ids.id = inserted.id
+			INNER JOIN generated_contribution_ids AS contribution_id
+				ON contribution_id.ordinality = generated_ids.ordinality
+			ON CONFLICT (source_customer_entitlement_id) DO NOTHING
+			RETURNING id, source_customer_entitlement_id
+		),
+		pool_deltas AS (
+			SELECT COUNT(*)::int AS contribution_count
+			FROM inserted_contributions
+		),
+		updated_pools AS (
+			UPDATE pooled_balances AS pool
+			SET
+				granted = pool.granted + (${contributionAmount} * pool_deltas.contribution_count),
+				updated_at = ${now}
+			FROM pool_deltas
+			WHERE pool.id = ${pooledBalanceId}
+			RETURNING 1
+		),
+		updated_synthetic AS (
+			UPDATE customer_entitlements AS synthetic
+			SET
+				balance = COALESCE(synthetic.balance, 0) + (${contributionAmount} * pool_deltas.contribution_count),
+				cache_version = COALESCE(synthetic.cache_version, 0) + 1
+			FROM pool_deltas, updated_pools
+			WHERE synthetic.pooled_balance_id = ${pooledBalanceId}
+				AND synthetic.customer_product_id IS NULL
+			RETURNING 1
+		)`;
 
 export const addCustomerEntitlementsBatch = async ({
 	db,
@@ -11,6 +87,8 @@ export const addCustomerEntitlementsBatch = async ({
 	customerEntitlementIds,
 	operation,
 	batchSize,
+	pooledBalanceId,
+	contributionIds,
 }: {
 	db: DrizzleCli;
 	customerLicenseLinkId: string;
@@ -18,6 +96,8 @@ export const addCustomerEntitlementsBatch = async ({
 	customerEntitlementIds: string[];
 	operation: AddEntitlementPriceOperation;
 	batchSize: number;
+	pooledBalanceId?: string;
+	contributionIds?: string[];
 }): Promise<BatchMutationResult> => {
 	if (operation.existingEntitlementIds.length === 0) {
 		throw new Error("Customer entitlement addition requires candidate IDs");
@@ -25,8 +105,24 @@ export const addCustomerEntitlementsBatch = async ({
 	if (customerEntitlementIds.length !== batchSize) {
 		throw new Error("Customer entitlement addition requires one ID per row");
 	}
+	if (
+		pooledBalanceId &&
+		(!contributionIds || contributionIds.length !== batchSize)
+	) {
+		throw new Error(
+			"Pooled entitlement addition requires one contribution ID per row",
+		);
+	}
 
 	const customerEntitlement = operation.customerEntitlement;
+	const pooledAdd =
+		pooledBalanceId && contributionIds && operation.pooledAdd
+			? {
+					pooledBalanceId,
+					contributionIds,
+					contributionAmount: operation.pooledAdd.contributionAmount,
+				}
+			: undefined;
 	const [result] = await db.execute<BatchMutationResult>(sql`
 		WITH candidate_rows AS MATERIALIZED (
 			SELECT seat.id, seat.created_at
@@ -55,7 +151,8 @@ export const addCustomerEntitlementsBatch = async ({
 			SELECT generated.id, generated.ordinality
 			FROM JSONB_ARRAY_ELEMENTS_TEXT(${JSON.stringify(customerEntitlementIds)}::jsonb)
 				WITH ORDINALITY AS generated(id, ordinality)
-		),
+		)
+		${pooledAdd ? generatedContributionIdsCte({ contributionIds: pooledAdd.contributionIds }) : sql``},
 		inserted AS (
 			INSERT INTO customer_entitlements (
 				id,
@@ -79,6 +176,7 @@ export const addCustomerEntitlementsBatch = async ({
 				customer_id,
 				feature_id,
 				external_id
+				${pooledAdd ? sql`, pooled_contribution_id` : sql``}
 			)
 			SELECT
 				generated.id,
@@ -102,12 +200,28 @@ export const addCustomerEntitlementsBatch = async ({
 				${customerEntitlement.customer_id},
 				${customerEntitlement.feature_id},
 				${customerEntitlement.external_id}
+				${pooledAdd ? sql`, contribution_id.id` : sql``}
 			FROM target_rows AS target
 			INNER JOIN generated_ids AS generated
 				ON generated.ordinality = target.ordinal
+			${
+				pooledAdd
+					? sql`INNER JOIN generated_contribution_ids AS contribution_id
+				ON contribution_id.ordinality = generated.ordinality`
+					: sql``
+			}
 			ON CONFLICT (id) DO NOTHING
-			RETURNING 1
+			RETURNING id, customer_product_id
 		)
+		${
+			pooledAdd
+				? addPooledContributionsCtes({
+						pooledBalanceId: pooledAdd.pooledBalanceId,
+						contributionAmount: pooledAdd.contributionAmount,
+						now: Date.now(),
+					})
+				: sql``
+		}
 		SELECT
 			(SELECT COUNT(*)::int FROM inserted) AS affected,
 			(

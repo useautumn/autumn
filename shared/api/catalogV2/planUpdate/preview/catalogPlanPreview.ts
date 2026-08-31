@@ -8,7 +8,7 @@ import {
 	CatalogPlanUsageSchema,
 	emptyCatalogPlanUsage,
 } from "./catalogPlanUsage.js";
-import { CatalogSiblingVersionPreviewSchema } from "./catalogSiblingVersionPreview.js";
+import { CatalogPlanSiblingVersionPreviewSchema } from "./catalogPlanSiblingVersionPreview.js";
 import { CatalogVariantPreviewSchema } from "./catalogVariantPreview.js";
 import { CatalogPlanVersioningSchema } from "./catalogVersioningPreview.js";
 import { PlanAliasReplacementSchema } from "./planAliasReplacement.js";
@@ -35,16 +35,16 @@ export const CatalogPlanUpdatePreviewSchema = CatalogCorePreviewSchema.extend({
 	}),
 	versioning: CatalogPlanVersioningSchema.nullable(),
 	sibling_versions: z
-		.array(CatalogSiblingVersionPreviewSchema)
+		.array(CatalogPlanSiblingVersionPreviewSchema)
 		.optional()
 		.meta({
 			description:
-				"Other existing versions of this plan. Omitted when there are none, or when more than one entry in this update targets the same plan (`all_versions` is unavailable then).",
+				"Other existing versions of this plan. Each may carry `license_parents` for links that still point at that version. Omitted when there are none, or when more than one entry in this update targets the same plan (`all_versions` is unavailable then).",
 		}),
 	license_parents: z.array(CatalogLicenseParentPreviewSchema).optional().meta({
 		internal: true,
 		description:
-			"Parents offering this plan as a license and how each one's planLicense resolves against this entry's change. Omitted when the plan is not a license.",
+			"Parents whose planLicense currently points at this version row, and how each resolves against this entry's change. Omitted when none do.",
 	}),
 	variants: z.array(CatalogVariantPreviewSchema).optional().meta({
 		internal: true,

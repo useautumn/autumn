@@ -1,6 +1,10 @@
 /**
- * catalogV2.update — child versioning:new_version re-points the catalog
- * license at the minted child row. Overlay freeze is still the pin planner.
+ * catalogV2.update — child versioning:new_version leaves a non-propagated
+ * parent's license link untouched: still anchored to child v1, no manufactured
+ * freeze overlay, same plan_license row.
+ *
+ * Red (current):  the mint re-points the link to v2 and clones a frozen overlay
+ * Green (after):  the link is version-anchored — no repoint, no overlay
  */
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -15,11 +19,11 @@ import {
 } from "../utils/seedLicensePlans.js";
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: child new_version re-points absent parent to v2")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: child new_version leaves absent parent anchored to v1")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
-		const parentId = uniqueTestId("cv2_lic_repoint_p");
-		const childId = uniqueTestId("cv2_lic_repoint_c");
+		const parentId = uniqueTestId("cv2_lic_anchor_p");
+		const childId = uniqueTestId("cv2_lic_anchor_c");
 		await withCatalogPlans({
 			ctx,
 			planIds: [parentId, childId],
@@ -30,6 +34,12 @@ test.concurrent(
 					childId,
 				});
 				const childV1 = await getFullPlan({ ctx, planId: childId });
+				const before = await expectLicenseLinkCorrect({
+					ctx,
+					parentPlanId: parentId,
+					licensePlanId: childId,
+					licenseInternalProductId: childV1.internal_id,
+				});
 
 				await bumpChild({
 					autumn: autumnV2_3,
@@ -44,10 +54,12 @@ test.concurrent(
 					ctx,
 					parentPlanId: parentId,
 					licensePlanId: childId,
+					licenseVersion: 1,
 					included: 2,
-					customized: true,
+					customized: false,
 					messagesAllowance: 10,
-					licenseInternalProductId: childV2.internal_id,
+					licenseInternalProductId: childV1.internal_id,
+					planLicenseId: before.planLicense.id,
 				});
 			},
 		});

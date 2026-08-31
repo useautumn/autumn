@@ -15,13 +15,15 @@ import {
 } from "./buildUpdateCatalogPlanParams";
 import {
 	applyLicenseParentScopedDiffs,
-	applyPropagationTargetDiffs,
 	buildCatalogMigrateTargets,
+	catalogPlanLicenseParents,
+	catalogPlanVariantLanes,
 	type CatalogVersionChoice,
 	getLicenseParentVersionKey,
 	hasCatalogMigrationTargets,
 	licenseParentVersions,
 	planChangeToTargetDiff,
+	variantVersions,
 } from "./catalogPlanPreview";
 import { resolvePlanChangePreview } from "./resolvePlanChangePreview";
 
@@ -96,21 +98,29 @@ export const usePlanChangeCatalogPreview = ({
 	const fallbackDiff = planChangeToTargetDiff({
 		planChange: discoverPreview?.plan_change,
 	});
-	const variantTargets = applyPropagationTargetDiffs({
+	const variantTargets = applyLicenseParentScopedDiffs({
 		targets: model.variantTargets,
 		fallbackDiff,
-		scopedById: new Map(
-			(scopedPreview?.variants ?? []).map((variant) => [
-				variant.plan_id,
-				variant.plan_change ?? null,
-			]),
+		scopedByKey: new Map(
+			catalogPlanVariantLanes({ preview: scopedPreview }).flatMap((variant) =>
+				variantVersions({ variant }).map(
+					(entry) =>
+						[
+							getLicenseParentVersionKey({
+								plan_id: variant.plan_id,
+								version: entry.version,
+							}),
+							entry.plan_change ?? null,
+						] as [string, PlanChangeV0 | null],
+				),
+			),
 		),
 	});
 	const licenseParentTargets = applyLicenseParentScopedDiffs({
 		targets: model.licenseParentTargets,
 		fallbackDiff,
 		scopedByKey: new Map(
-			(scopedPreview?.license_parents ?? []).flatMap((parent) =>
+			catalogPlanLicenseParents({ preview: scopedPreview }).flatMap((parent) =>
 				licenseParentVersions({ parent }).map(
 					(entry) =>
 						[getLicenseParentVersionKey(entry), entry.plan_change ?? null] as [
@@ -128,7 +138,7 @@ export const usePlanChangeCatalogPreview = ({
 	const migrateTargets = migratePlanPreview
 		? buildCatalogMigrateTargets({
 				preview: migratePlanPreview,
-				selectedVariantIds: model.effectiveVariantIds,
+				selectedVariantKeys: model.effectiveVariantKeys,
 				selectedLicenseParentKeys: model.effectiveLicenseParentKeys,
 				versionChoice: model.effectiveVersionChoice,
 				currentVersion: product.version,

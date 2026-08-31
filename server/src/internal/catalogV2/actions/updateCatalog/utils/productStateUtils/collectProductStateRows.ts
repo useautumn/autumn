@@ -1,6 +1,7 @@
 import type { FullProduct } from "@autumn/shared";
 
-/** Flatten listFull rows plus nested license parents and payload-base variants. */
+/** Flatten listFull rows plus nested license parents and payload-base variants.
+ * Prefer a row that already carries reverse `parent_plan_licenses`. */
 export const collectProductStateRows = ({
 	products,
 	payloadPlanIds,
@@ -12,8 +13,17 @@ export const collectProductStateRows = ({
 	const payloadIds = payloadPlanIds ? new Set(payloadPlanIds) : null;
 
 	const add = (product: FullProduct | null | undefined) => {
-		if (!product || byInternalId.has(product.internal_id)) return;
-		byInternalId.set(product.internal_id, product);
+		if (!product) return;
+		const existing = byInternalId.get(product.internal_id);
+		if (!existing) {
+			byInternalId.set(product.internal_id, product);
+			return;
+		}
+		const existingHasReverse = (existing.parent_plan_licenses ?? []).length > 0;
+		const incomingHasReverse = (product.parent_plan_licenses ?? []).length > 0;
+		if (!existingHasReverse && incomingHasReverse) {
+			byInternalId.set(product.internal_id, product);
+		}
 	};
 
 	for (const product of products) {

@@ -13,7 +13,6 @@ import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableC
 import {
 	expectLatestPlanVersion,
 	expectLicenseLinkCorrect,
-	expectLicenseLinkMissing,
 } from "../utils/expectLicenseLinkCorrect.js";
 import {
 	bumpChild,
@@ -162,7 +161,8 @@ test.concurrent(
 							items: [messagesItem(200)],
 							propagate: {
 								license_parents: [
-									{ plan_id: parentId, versioning: "all_versions" },
+									{ plan_id: parentId, version: 1 },
+									{ plan_id: parentId, version: 2 },
 								],
 							},
 						},
@@ -220,9 +220,7 @@ test.concurrent(
 					autumn: autumnV2_3,
 					childId,
 					propagate: {
-						license_parents: [
-							{ plan_id: parentId, versioning: "new_version" },
-						],
+						license_parents: [{ plan_id: parentId, version: 2 }],
 					},
 					parentPlans: [
 						{
@@ -283,9 +281,7 @@ test.concurrent(
 					autumn: autumnV2_3,
 					childId,
 					propagate: {
-						license_parents: [
-							{ plan_id: parentId, versioning: "new_version" },
-						],
+						license_parents: [{ plan_id: parentId, version: 2 }],
 					},
 					parentPlans: [{ plan_id: parentId, name: "Renamed" }],
 				});
@@ -344,15 +340,13 @@ test.concurrent(
 
 				await expectAutumnError({
 					errCode: ErrCode.InvalidPropagationTarget,
-					errMessage: `Invalid propagation target: ${otherId}`,
+					errMessage: "is not linked to an edited row",
 					func: () =>
 						bumpChild({
 							autumn: autumnV2_3,
 							childId,
 							propagate: {
-								license_parents: [
-									{ plan_id: otherId, versioning: "new_version" },
-								],
+								license_parents: [{ plan_id: otherId, version: 1 }],
 							},
 						}),
 				});
@@ -405,7 +399,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: parent new_version without licenses[] does not copy links")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: parent new_version without licenses[] clones links onto the mint")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_vmc_p");
@@ -419,15 +413,11 @@ test.concurrent(
 					parentId,
 					childId,
 				});
+				await seedVersionableCustomer({ ctx, planId: parentId });
 				await autumnV2_3.catalogV2.update({
 					plans: [{ plan_id: parentId, versioning: "new_version" }],
 				});
 
-				await expectLatestPlanVersion({
-					ctx,
-					planId: parentId,
-					version: 1,
-				});
 				await expectLicenseLinkCorrect({
 					ctx,
 					parentPlanId: parentId,
@@ -436,11 +426,54 @@ test.concurrent(
 					customized: false,
 					messagesAllowance: 10,
 				});
-				await expectLicenseLinkMissing({
+				await expectLicenseLinkCorrect({
 					ctx,
 					parentPlanId: parentId,
 					parentVersion: 2,
 					licensePlanId: childId,
+					customized: false,
+					messagesAllowance: 10,
+				});
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 plan-licenses: child v2 pin of a parent still linked to v1 → 400")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const parentId = uniqueTestId("cv2_lic_vclaim_p");
+		const childId = uniqueTestId("cv2_lic_vclaim_c");
+		await withCatalogPlans({
+			ctx,
+			planIds: [parentId, childId],
+			run: async () => {
+				await seedLinkedChildParent({ autumn: autumnV2_3, parentId, childId });
+				await bumpChild({
+					autumn: autumnV2_3,
+					childId,
+					items: [messagesItem(50)],
+					versioning: "new_version",
+				});
+				await seedVersionableCustomer({ ctx, planId: parentId });
+
+				await expectAutumnError({
+					errCode: ErrCode.InvalidPropagationTarget,
+					errMessage: "is not linked to an edited row",
+					func: () =>
+						autumnV2_3.catalogV2.update({
+							plans: [
+								{
+									plan_id: childId,
+									version: 2,
+									items: [messagesItem(200)],
+									propagate: {
+										license_parents: [{ plan_id: parentId, version: 1 }],
+									},
+								},
+							],
+						}),
 				});
 			},
 		});

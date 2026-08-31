@@ -74,14 +74,9 @@ export const computeUpdateCatalogPlan = ({
 
 	compute.advance({
 		step: computeRemoveProductsPlan({
-			ctx: enrichCtxWithFeatures({
-				ctx,
-				features: compute.projected.features,
-			}),
 			catalogContext,
 			params,
 			projected: compute.projected,
-			existingUpserts: compute.plan.upsertProducts,
 		}),
 	});
 

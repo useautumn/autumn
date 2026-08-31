@@ -9,6 +9,7 @@ import {
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import { resolvedProductIdsSql } from "@/internal/invoices/repos/utils/resolvedProductIdsSql.js";
+import { licensePooledBalanceIsLiveSql } from "./licensePooledBalanceIsLiveSql.js";
 import { looseEntitlementIsLiveSql } from "./looseEntitlementSql.js";
 
 const RECURRING_BILLING_INTERVALS = [
@@ -435,8 +436,10 @@ const buildPooledCustomerEntitlementsCTE = () => sql`
 			'[]'::json
 		) AS pooled_customer_entitlements
 		FROM (
-			SELECT *
+			SELECT ce.*
 			FROM customer_entitlements ce
+			JOIN pooled_balances live_pb ON live_pb.id = ce.pooled_balance_id
+				AND ${licensePooledBalanceIsLiveSql({ pooledBalanceAlias: "live_pb" })}
 			WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
 				AND ce.customer_product_id IS NULL
 				AND ce.pooled_balance_id IS NOT NULL
@@ -795,8 +798,10 @@ export const getPaginatedFullCusQuery = ({
 			) AS pooled_customer_entitlements
 		FROM customer_records cr
 		LEFT JOIN LATERAL (
-			SELECT *
+			SELECT ce.*
 			FROM customer_entitlements ce
+			JOIN pooled_balances live_pb ON live_pb.id = ce.pooled_balance_id
+				AND ${licensePooledBalanceIsLiveSql({ pooledBalanceAlias: "live_pb" })}
 			WHERE ce.internal_customer_id = cr.internal_id
 				AND ce.customer_product_id IS NULL
 				AND ce.pooled_balance_id IS NOT NULL

@@ -105,7 +105,8 @@ test.concurrent(
 						autumn: autumnV2_3,
 						childId,
 						licenseParents: [
-							{ plan_id: followId, versioning: "all_versions" },
+							{ plan_id: followId, version: 1 },
+							{ plan_id: followId, version: 2 },
 						],
 					}),
 				);
@@ -171,7 +172,8 @@ test.concurrent(
 						autumn: autumnV2_3,
 						childId,
 						licenseParents: [
-							{ plan_id: followId, versioning: "all_versions" },
+							{ plan_id: followId, version: 1 },
+							{ plan_id: followId, version: 2 },
 						],
 					}),
 				);

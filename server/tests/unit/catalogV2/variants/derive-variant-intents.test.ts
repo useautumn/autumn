@@ -291,7 +291,7 @@ describe("deriveVariantIntents", () => {
 		expect(intents[0]?.editDiff).toBeUndefined();
 	});
 
-	test("base mint pin emits repoint with the new internal_id", () => {
+	test("base mint without propagate does not silently repoint variants", () => {
 		const oldBase = { ...baseProduct, internal_id: "internal_team_v1" };
 		const newBase = {
 			...baseProduct,
@@ -311,7 +311,8 @@ describe("deriveVariantIntents", () => {
 				planParams: {
 					plan_id: "team",
 					version: 2,
-					versioning: "new_version", active: true,
+					versioning: "new_version",
+					active: true,
 				},
 				source: "direct",
 			},
@@ -321,7 +322,7 @@ describe("deriveVariantIntents", () => {
 					version: 2,
 					op: "create",
 					source: "direct",
-					versioning: "new_version", active: true,
+					versioning: "new_version",
 					currentFullProduct: null,
 					baseFullProduct: oldBase,
 					nextFullProduct: newBase,
@@ -337,10 +338,7 @@ describe("deriveVariantIntents", () => {
 			},
 		});
 
-		expect(intents).toHaveLength(1);
-		expect(intents[0]?.source).toBe("repoint");
-		expect(intents[0]?.baseInternalProductId).toBe(newBase.internal_id);
-		expect(intents[0]?.editDiff).toBeUndefined();
+		expect(intents).toEqual([]);
 	});
 
 	test("base new_version without active mints variant as a draft", () => {

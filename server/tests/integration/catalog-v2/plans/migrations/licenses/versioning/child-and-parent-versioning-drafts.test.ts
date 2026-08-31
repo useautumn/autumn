@@ -6,7 +6,7 @@
  *   G2 child all_versions + Team all_versions: child v1, parent v2
  *   G3 Team all_versions rename + propagate all_versions → license-only parent op
  *   G4 child new_version + Team all_versions, no draft → no draft
- *   G5 Team new_version in plans[] + propagate latest → no parent op
+ *   G5 Team new_version in plans[] + pin latest: child existing still drafts the pin
  *   G6 preview of G1 equals the update draft minus id; preview persists nothing
  */
 
@@ -102,7 +102,9 @@ test.concurrent(
 							plan_id: childId,
 							versioning: "all_versions",
 							items: [messagesItem(200)],
-							propagate: { license_parents: [{ plan_id: teamId }] },
+							propagate: {
+								license_parents: [{ plan_id: teamId, version: 2 }],
+							},
 							migration: { draft: true },
 						},
 					],
@@ -160,7 +162,8 @@ test.concurrent(
 							items: [messagesItem(200)],
 							propagate: {
 								license_parents: [
-									{ plan_id: teamId, versioning: "all_versions" },
+									{ plan_id: teamId, version: 1 },
+									{ plan_id: teamId, version: 2 },
 								],
 							},
 							migration: { draft: true },
@@ -233,7 +236,8 @@ test.concurrent(
 							items: [messagesItem(200)],
 							propagate: {
 								license_parents: [
-									{ plan_id: teamId, versioning: "all_versions" },
+									{ plan_id: teamId, version: 1 },
+									{ plan_id: teamId, version: 2 },
 								],
 							},
 							migration: { draft: true },
@@ -293,9 +297,7 @@ test.concurrent(
 							items: [messagesItem(200)],
 							versioning: "new_version", active: true,
 							propagate: {
-								license_parents: [
-									{ plan_id: teamId, versioning: "all_versions" },
-								],
+								license_parents: [{ plan_id: teamId, version: 2 }],
 							},
 						},
 					],
@@ -312,7 +314,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 license-drafts: parent new_version in plans[] + propagate latest → child op only")}`,
+	`${chalk.yellowBright("catalogV2 license-drafts: parent new_version in plans[] + pin latest still drafts the pin")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const childId = uniqueTestId("cv2_ml_g5_c");
@@ -330,6 +332,7 @@ test.concurrent(
 				await seedVersionableCustomer({ ctx, planId: teamId, version: 1 });
 
 				const childFilter = versionPinnedFilter({ planId: childId });
+				const teamFilter = versionPinnedFilter({ planId: teamId });
 				await expectLicenseDraftCase({
 					autumn: autumnV2_3,
 					ctx,
@@ -337,7 +340,9 @@ test.concurrent(
 						{
 							plan_id: childId,
 							items: [messagesItem(200)],
-							propagate: { license_parents: [{ plan_id: teamId }] },
+							propagate: {
+								license_parents: [{ plan_id: teamId, version: 1 }],
+							},
 							migration: { draft: true },
 						},
 						{
@@ -346,16 +351,34 @@ test.concurrent(
 							name: "Team v2",
 						},
 					],
-					responsePlans: [[{ plan_id: childId, versions: [1] }]],
+					responsePlans: [
+						[
+							{ plan_id: childId, versions: [1] },
+							{ plan_id: teamId, versions: [1] },
+						],
+					],
 					expected: [
 						{
-							planIds: [childId],
-							omitPlanIds: [teamId],
+							planIds: [childId, teamId],
 							noBillingChanges: true,
-							filter: { customer: { plan: childFilter } },
+							filter: {
+								customer: {
+									plan: orPlanFilter({
+										branches: [
+											{ plan_id: childId, version: 1 },
+											{ plan_id: teamId, version: 1 },
+										],
+									}),
+								},
+							},
 							operations: [
 								childItemOp({
 									planFilter: childFilter,
+									customize: messagesItemDelta({ included: 200 }),
+								}),
+								parentLicenseOp({
+									planFilter: teamFilter,
+									childId,
 									customize: messagesItemDelta({ included: 200 }),
 								}),
 							],
@@ -399,7 +422,9 @@ test.concurrent(
 							plan_id: childId,
 							versioning: "all_versions",
 							items: [messagesItem(200)],
-							propagate: { license_parents: [{ plan_id: teamId }] },
+							propagate: {
+								license_parents: [{ plan_id: teamId, version: 2 }],
+							},
 							migration: { draft: true },
 						},
 					],

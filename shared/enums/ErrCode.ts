@@ -204,6 +204,8 @@ export const ErrCode = {
 	DuplicateVersionSlug: "duplicate_version_slug",
 	CannotPreviewOnVariant: "cannot_preview_on_variant",
 	InvalidPropagationTarget: "invalid_propagation_target",
+	ConflictingVariantAnchor: "conflicting_variant_anchor",
+	VariantCrossPlanAnchor: "variant_cross_plan_anchor",
 	TooManyVariants: "too_many_variants",
 	ConflictingVersionFlags: "conflicting_version_flags",
 	VariantCannotBeDefault: "variant_cannot_be_default",

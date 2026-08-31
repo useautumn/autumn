@@ -143,7 +143,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: customized pin + child new_version re-points, keeps overlay")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: customized link + child new_version stays anchored to v1")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_pcm_p");
@@ -158,6 +158,13 @@ test.concurrent(
 					childId,
 					customize: messagesOverride(500),
 				});
+				const childV1 = await getFullPlan({ ctx, planId: childId });
+				const before = await expectLicenseLinkCorrect({
+					ctx,
+					parentPlanId: parentId,
+					licensePlanId: childId,
+					licenseInternalProductId: childV1.internal_id,
+				});
 				await bumpWithWords({
 					autumn: autumnV2_3,
 					childId,
@@ -170,10 +177,12 @@ test.concurrent(
 					ctx,
 					parentPlanId: parentId,
 					licensePlanId: childId,
+					licenseVersion: 1,
 					customized: true,
 					messagesAllowance: 500,
 					omitFeatureIds: [TestFeature.Words],
-					licenseInternalProductId: childV2.internal_id,
+					licenseInternalProductId: childV1.internal_id,
+					planLicenseId: before.planLicense.id,
 				});
 			},
 		});

@@ -20,7 +20,9 @@ import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { timeout } from "@/utils/genUtils.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { cleanupPlanCustomerRefs } from "../utils/cleanupPlanCustomerRefs.js";
 import { expectAttachedPlanVersionCorrect } from "../utils/expectAttachedPlanVersion.js";
@@ -129,6 +131,11 @@ const setDefaultAppliesToEntities = async ({
 			config: { ...org.config, default_applies_to_entities: enabled },
 		},
 	});
+	await clearOrgCache({ db: ctx.db, orgId: ctx.org.id, env: ctx.env });
+	if (enabled) {
+		// Server L1 org cache is 5s and only the request process can drop it.
+		await timeout(5500);
+	}
 };
 
 test.concurrent(

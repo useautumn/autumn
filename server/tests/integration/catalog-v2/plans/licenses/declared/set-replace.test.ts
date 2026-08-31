@@ -4,7 +4,7 @@
  * Contract:
  *   replace child A with child B in one declared set
  *   two licenses; drop one, keep the other
- *   child already has v2; licenses:[child] links latest
+ *   child already has v2; new licenses:[child] create-defaults to active
  */
 
 import { test } from "bun:test";
@@ -124,7 +124,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: licenses:[child] links the latest child version")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: new licenses:[child] create-defaults to the latest child version")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_lat_p");

@@ -1,25 +1,22 @@
 /**
- * catalogV2.update — child promote freezes uncustomized license definitions.
+ * catalogV2.update — child promote leaves non-propagated links untouched.
  *
  * Contract:
- *   Uncustomized parent NOT in propagate → mint/pin a planLicense to child
- *   v1 (customize overlay). Do not retarget to the newly active child.
+ *   Parent NOT in propagate → link stays version-anchored to child v1:
+ *   no repoint, no manufactured overlay, same plan_license row.
  *   Parent IN propagate → follow the newly active child (new reference).
  *   Already-customized parent → leave (same row, same overlay, no retarget).
  *   Parent promote (licenses omitted) → child identity unchanged;
- *   v2 stays empty, v1 keeps the existing links.
- *   Declared licenses[] on child promote is exclusive — re-link to the
- *   newly active child, not an implicit freeze on the demoted row.
+ *   new_version clones outgoing links onto v2; v1 keeps the existing links.
+ *   Declared licenses[] on child promote is exclusive — omit version_slug
+ *   keeps the existing v1 anchor; customize still applies on that row.
  */
 
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import {
-	expectLicenseLinkCorrect,
-	expectLicenseLinkMissing,
-} from "../utils/expectLicenseLinkCorrect.js";
+import { expectLicenseLinkCorrect } from "../utils/expectLicenseLinkCorrect.js";
 import {
 	getFullPlan,
 	messagesItem,
@@ -43,7 +40,7 @@ const mintChildDraftV2 = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: child promote freezes uncustomized; propagate follows v2")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: child promote leaves non-propagated link anchored; propagate follows v2")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const frozenId = uniqueTestId("cv2_lic_pr_frz_p");
@@ -59,6 +56,12 @@ test.concurrent(
 					parentIds: [frozenId, followId],
 				});
 				const childV1 = await getFullPlan({ ctx, planId: childId });
+				const anchoredBefore = await expectLicenseLinkCorrect({
+					ctx,
+					parentPlanId: frozenId,
+					licensePlanId: childId,
+					licenseInternalProductId: childV1.internal_id,
+				});
 				await mintChildDraftV2({ autumn: autumnV2_3, childId });
 				const childV2 = await getFullPlan({
 					ctx,
@@ -75,7 +78,7 @@ test.concurrent(
 							items: [messagesItem(200)],
 							propagate: {
 								license_parents: [
-									{ plan_id: followId, versioning: "existing" },
+									{ plan_id: followId, version: 1 },
 								],
 							},
 						},
@@ -88,9 +91,10 @@ test.concurrent(
 					licensePlanId: childId,
 					licenseVersion: 1,
 					included: 2,
-					customized: true,
+					customized: false,
 					messagesAllowance: 10,
 					licenseInternalProductId: childV1.internal_id,
+					planLicenseId: anchoredBefore.planLicense.id,
 				});
 				await expectLicenseLinkCorrect({
 					ctx,
@@ -153,7 +157,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: parent promote leaves child identity; omits licenses so v2 stays empty")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: parent promote leaves child identity; new_version clones licenses onto v2")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_pr_par_p");
@@ -200,11 +204,13 @@ test.concurrent(
 					included: 2,
 					licenseInternalProductId: childV1.internal_id,
 				});
-				await expectLicenseLinkMissing({
+				await expectLicenseLinkCorrect({
 					ctx,
 					parentPlanId: parentId,
 					parentVersion: 2,
 					licensePlanId: childId,
+					included: 2,
+					licenseInternalProductId: childV1.internal_id,
 				});
 			},
 		});
@@ -212,7 +218,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: declared licenses[] on child promote re-links to v2")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: declared licenses[] on child promote omit keeps the v1 anchor")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_pr_dec_p");
@@ -227,12 +233,8 @@ test.concurrent(
 					childId,
 					customize: messagesOverride(500),
 				});
+				const childV1 = await getFullPlan({ ctx, planId: childId });
 				await mintChildDraftV2({ autumn: autumnV2_3, childId });
-				const childV2 = await getFullPlan({
-					ctx,
-					planId: childId,
-					version: 2,
-				});
 
 				await autumnV2_3.catalogV2.update({
 					plans: [
@@ -259,9 +261,10 @@ test.concurrent(
 					ctx,
 					parentPlanId: parentId,
 					licensePlanId: childId,
+					licenseVersion: 1,
 					customized: true,
 					messagesAllowance: 300,
-					licenseInternalProductId: childV2.internal_id,
+					licenseInternalProductId: childV1.internal_id,
 				});
 			},
 		});

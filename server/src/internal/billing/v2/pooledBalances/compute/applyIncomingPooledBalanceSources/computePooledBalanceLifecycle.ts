@@ -89,17 +89,17 @@ const getPooledBalanceLifecycleIds = ({
 	PooledBalanceLifecycle,
 	"stripeSubscriptionId" | "customerLicenseLinkId"
 > => {
-	if (resetMode === PooledBalanceResetMode.Lifetime) {
-		return {
-			stripeSubscriptionId: null,
-			customerLicenseLinkId: null,
-		};
-	}
-
 	if (customerProduct.customer_license_link_id) {
 		return {
 			stripeSubscriptionId: null,
 			customerLicenseLinkId: customerProduct.customer_license_link_id,
+		};
+	}
+
+	if (resetMode === PooledBalanceResetMode.Lifetime) {
+		return {
+			stripeSubscriptionId: null,
+			customerLicenseLinkId: null,
 		};
 	}
 

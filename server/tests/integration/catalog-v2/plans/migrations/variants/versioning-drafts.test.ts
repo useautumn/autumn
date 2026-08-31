@@ -37,14 +37,21 @@ const followDashboard = ({
 	baseId,
 	variantId,
 	versioning,
+	versions = [1],
 }: {
 	baseId: string;
 	variantId: string;
 	versioning?: "all_versions" | "new_version";
+	versions?: number[];
 }) => ({
 	plan_id: baseId,
 	items: [messagesItem(100), dashboardItem()],
-	propagate: { variants: [{ plan_id: variantId }] },
+	propagate: {
+		variants:
+			versioning === "new_version"
+				? [{ plan_id: variantId }]
+				: versions.map((version) => ({ plan_id: variantId, version })),
+	},
 	migration: { draft: true as const },
 	...(versioning ? { versioning } : {}),
 	...(versioning === "new_version" ? { active: true } : {}),
@@ -73,7 +80,7 @@ test.concurrent(
 				await expectLicenseDraftCase({
 					autumn: autumnV2_3,
 					ctx,
-					plans: [followDashboard({ baseId, variantId })],
+					plans: [followDashboard({ baseId, variantId, versions: [2] })],
 					responsePlans: [[{ plan_id: baseId, versions: [1] }]],
 					expected: [
 						{
@@ -186,6 +193,7 @@ test.concurrent(
 							baseId,
 							variantId,
 							versioning: "all_versions",
+							versions: [1, 2],
 						}),
 					],
 					responsePlans: [

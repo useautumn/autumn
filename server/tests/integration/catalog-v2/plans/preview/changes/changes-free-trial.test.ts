@@ -1,8 +1,8 @@
 /**
  * catalogV2.preview_update — customize.free_trial lane.
  *
- * Spec asserts freeTrialsEqual normalization (card_required true / on_end
- * "bill" / duration_type month ≡ omitted).
+ * Spec asserts freeTrialsEqual normalization (card_required false / on_end
+ * "bill" / duration_type month ≡ omitted). V1 defaults card_required to false.
  */
 
 import { test } from "bun:test";
@@ -109,9 +109,9 @@ test.concurrent(
 	},
 );
 
-// card_required flip diffs; explicit true ≡ omitted → no trial diff
+// card_required flip diffs; V1 omit defaults false → explicit false ≡ no trial diff
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 changes-free-trial: card_required flip vs explicit true ≡ omit")}`,
+	`${chalk.yellowBright("catalogV2 changes-free-trial: card_required flip vs explicit false ≡ omit")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_cft_card");
@@ -137,18 +137,16 @@ test.concurrent(
 							free_trial: {
 								duration_length: 14,
 								duration_type: FreeTrialDuration.Day,
-								card_required: true,
+								card_required: false,
 							},
 						},
 					],
 				}),
 			);
-			// Once trial persists + changes wired: action none / no free_trial lane.
-			// Today trial doesn't persist so this may look like an add — still RED.
 			const row = findPlanPreviewRow({ preview: noDiff, planId });
 			if (row.plan_change?.customize?.free_trial !== undefined) {
 				throw new Error(
-					"explicit card_required:true must not produce free_trial diff",
+					"explicit card_required:false must not produce free_trial diff",
 				);
 			}
 
@@ -160,7 +158,7 @@ test.concurrent(
 							free_trial: {
 								duration_length: 14,
 								duration_type: FreeTrialDuration.Day,
-								card_required: false,
+								card_required: true,
 							},
 						},
 					],
@@ -174,7 +172,7 @@ test.concurrent(
 						free_trial: {
 							duration_length: 14,
 							duration_type: FreeTrialDuration.Day,
-							card_required: false,
+							card_required: true,
 						},
 					},
 				},

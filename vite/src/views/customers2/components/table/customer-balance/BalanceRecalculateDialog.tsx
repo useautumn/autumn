@@ -92,7 +92,11 @@ export function BalanceRecalculateDialog({
 						{changedRows.map((row) => {
 							const ent = entById.get(row.customer_entitlement_id);
 							const parts = ent
-								? getCustomerBalanceSourceParts({ balance: ent, entities })
+								? getCustomerBalanceSourceParts({
+										balance: ent,
+										entities,
+										fullCustomer: customer,
+									})
 								: null;
 							const label = parts
 								? [parts.productName, parts.intervalLabel]

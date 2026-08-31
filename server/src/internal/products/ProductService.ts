@@ -43,6 +43,7 @@ import {
 import { liveProductWhere } from "./repos/liveProductWhere";
 import {
 	composeFullProductQuery,
+	composeProductWithLicensesQuery,
 	normalizeFullProductLicenses,
 	type ProductWithLicenseRelations,
 } from "./repos/utils/composeFullProductQuery";
@@ -567,21 +568,16 @@ export class ProductService {
 				inArray(products.base_internal_product_id, baseInternalProductIds),
 				returnAll ? undefined : eq(products.active, true),
 			),
-			with: {
-				entitlements: {
-					with: {
-						feature: true,
-					},
-					where: eq(entitlements.is_custom, false),
-				},
-				prices: { where: eq(prices.is_custom, false) },
-				free_trials: { where: eq(freeTrials.is_custom, false) },
-			},
-		})) as FullProduct[];
+			with: composeProductWithLicensesQuery(),
+		})) as ProductWithLicenseRelations[];
 
-		parseFreeTrials({ products: data });
+		const variants = data.map((product) => {
+			const normalized = normalizeFullProductLicenses({ product });
+			parseFreeTrials({ product: normalized });
+			return normalized;
+		});
 
-		return returnAll ? data : getActiveProducts(data);
+		return returnAll ? variants : getActiveProducts(variants);
 	}
 
 	static async getFull({

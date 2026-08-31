@@ -57,7 +57,7 @@ test.concurrent(
 								active: true,
 								propagate: {
 									license_parents: [
-										{ plan_id: parentId, versioning: "new_version", active: true },
+										{ plan_id: parentId, version: 2 },
 									],
 								},
 							},
@@ -85,7 +85,7 @@ test.concurrent(
 								},
 								siblingVersions: [
 									{ version: 1, licenseAction: "unchanged" },
-									{ version: 3, licenseAction: "unchanged" },
+									{ version: 3, licenseAction: "propagated" },
 								],
 							},
 						],
@@ -120,7 +120,7 @@ test.concurrent(
 								items: [messagesItem(200)],
 								propagate: {
 									license_parents: [
-										{ plan_id: parentId, versioning: "new_version", active: true },
+										{ plan_id: parentId, version: 2 },
 									],
 								},
 							},
@@ -169,9 +169,18 @@ test.concurrent(
 					childId,
 				});
 
-				for (const target of [
-					{ plan_id: parentId, versioning: "all_versions" as const },
-					{ plan_id: parentId, version: 1 },
+				for (const { licenseParents, bothPropagated } of [
+					{
+						licenseParents: [
+							{ plan_id: parentId, version: 1 },
+							{ plan_id: parentId, version: 2 },
+						],
+						bothPropagated: true,
+					},
+					{
+						licenseParents: [{ plan_id: parentId, version: 1 }],
+						bothPropagated: false,
+					},
 				]) {
 					const preview = parsePlanPreview(
 						await autumnV2_3.catalogV2.previewUpdate({
@@ -179,13 +188,11 @@ test.concurrent(
 								{
 									plan_id: childId,
 									items: [messagesItem(200)],
-									propagate: { license_parents: [target] },
+									propagate: { license_parents: licenseParents },
 								},
 							],
 						}),
 					);
-					const allVersions = target.versioning === "all_versions";
-
 					expectPlanPreviewRowCorrect({
 						preview,
 						expected: {
@@ -194,11 +201,11 @@ test.concurrent(
 								{
 									planId: parentId,
 									version: 2,
-									licenseAction: allVersions ? "propagated" : "unchanged",
+									licenseAction: bothPropagated ? "propagated" : "unchanged",
 									versioning: {
 										current_version: 2,
 										new_version: null,
-										resolved: allVersions ? "all_versions" : "existing",
+										resolved: "existing",
 										options: ["existing", "all_versions"],
 									},
 									siblingVersions: [

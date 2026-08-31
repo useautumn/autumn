@@ -170,7 +170,7 @@ test.concurrent(
 								customize: { items: [messagesItem(300)] },
 							},
 						],
-						propagate: { variants: [{ plan_id: dropVariantId }] },
+						propagate: { variants: [{ plan_id: dropVariantId, version: 1 }] },
 					},
 				],
 			});
@@ -199,7 +199,7 @@ test.concurrent(
 								},
 							},
 						],
-						propagate: { variants: [{ plan_id: keepVariantId }] },
+						propagate: { variants: [{ plan_id: keepVariantId, version: 1 }] },
 					},
 				],
 			});

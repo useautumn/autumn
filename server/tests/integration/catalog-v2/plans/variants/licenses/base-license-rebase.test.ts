@@ -58,7 +58,7 @@ test.concurrent(
 									},
 								},
 							],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 						},
 					],
 				});
@@ -114,6 +114,10 @@ test.concurrent(
 								},
 							],
 						},
+					],
+				});
+				await autumnV2_3.catalogV2.update({
+					plans: [
 						{
 							plan_id: variantId,
 							licenses: [
@@ -143,7 +147,7 @@ test.concurrent(
 									},
 								},
 							],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 						},
 					],
 				});
@@ -181,7 +185,7 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							licenses: [],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 						},
 					],
 				});

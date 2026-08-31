@@ -5,7 +5,12 @@ import {
 	type Entity,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
+	type FullCustomerEntitlement,
+	filterCustomerEntitlementsByPooledBalanceSource,
+	findCustomerLicenseByLinkId,
+	findCustomerProductById,
 	fullCustomerToCustomerEntitlements,
+	fullCustomerToCustomerLicenses,
 	hasRecalculableScope,
 	isPaidCustomerEntitlement,
 	isPooledBalanceSourceCustomerEntitlement,
@@ -33,14 +38,102 @@ export const canDeleteCustomerBalance = ({
 		isPooledBalanceSourceCustomerEntitlement({ customerEntitlement: balance })
 	);
 
+type BalanceWithOptionalProduct = FullCustomerEntitlement & {
+	customer_product?: { product: { name: string } } | null;
+};
+
+const getLicensePooledBalancePlanName = ({
+	balance,
+	fullCustomer,
+}: {
+	balance: BalanceWithOptionalProduct;
+	fullCustomer: FullCustomer;
+}) => {
+	const customerLicense = findCustomerLicenseByLinkId({
+		customerLicenses: fullCustomerToCustomerLicenses({ fullCustomer }),
+		customerLicenseLinkId: balance.pooled_balance?.customer_license_link_id,
+	});
+	if (!customerLicense) return undefined;
+
+	return (
+		findCustomerProductById({
+			fullCustomer,
+			customerProductId: customerLicense.parent_customer_product_id,
+		})?.product.name ?? customerLicense.planLicense?.product.name
+	);
+};
+
+const getRegularPooledBalancePlanName = ({
+	balance,
+	fullCustomer,
+}: {
+	balance: BalanceWithOptionalProduct;
+	fullCustomer: FullCustomer;
+}) => {
+	const pooledBalanceId =
+		balance.pooled_balance_id ?? balance.pooled_balance?.id;
+	if (!pooledBalanceId) return undefined;
+
+	const planNames = new Set<string>();
+	for (const customerProduct of fullCustomer.customer_products) {
+		const contributes = filterCustomerEntitlementsByPooledBalanceSource({
+			customerEntitlements: customerProduct.customer_entitlements,
+		}).some(
+			(customerEntitlement) =>
+				customerEntitlement.pooled_balance_id === pooledBalanceId,
+		);
+		if (contributes && customerProduct.product.name) {
+			planNames.add(customerProduct.product.name);
+		}
+	}
+
+	if (planNames.size !== 1) return undefined;
+	return [...planNames][0];
+};
+
+/** Plan that granted this balance. Pooled ents have no customer_product. */
+export const getCustomerBalancePlanName = ({
+	balance,
+	fullCustomer,
+}: {
+	balance: BalanceWithOptionalProduct;
+	fullCustomer?: FullCustomer | null;
+}): string | undefined => {
+	if (balance.customer_product?.product.name) {
+		return balance.customer_product.product.name;
+	}
+
+	if (
+		!fullCustomer ||
+		!isSyntheticPooledBalanceCustomerEntitlement({
+			customerEntitlement: balance,
+		})
+	) {
+		return undefined;
+	}
+
+	if (balance.pooled_balance?.customer_license_link_id) {
+		return getLicensePooledBalancePlanName({ balance, fullCustomer });
+	}
+
+	return getRegularPooledBalancePlanName({ balance, fullCustomer });
+};
+
 export function getCustomerBalanceSourceParts({
 	balance,
 	entities,
+	fullCustomer,
 }: {
 	balance: FullCusEntWithFullCusProduct;
 	entities: Entity[];
+	fullCustomer?: FullCustomer | null;
 }) {
-	const productName = balance.customer_product?.product.name || "No plan";
+	const isPooledBalance = isSyntheticPooledBalanceCustomerEntitlement({
+		customerEntitlement: balance,
+	});
+	const productName =
+		getCustomerBalancePlanName({ balance, fullCustomer }) ??
+		(isPooledBalance ? "Pooled" : "No plan");
 
 	const { interval, interval_count } = balance.entitlement;
 	let intervalLabel: string;
@@ -70,12 +163,14 @@ export function getCustomerBalanceSourceParts({
 export function getCustomerBalanceSourceLabel({
 	balance,
 	entities,
+	fullCustomer,
 }: {
 	balance: FullCusEntWithFullCusProduct;
 	entities: Entity[];
+	fullCustomer?: FullCustomer | null;
 }) {
 	const { productName, intervalLabel, entityName } =
-		getCustomerBalanceSourceParts({ balance, entities });
+		getCustomerBalanceSourceParts({ balance, entities, fullCustomer });
 	const parts = [productName, intervalLabel];
 	if (entityName) parts.push(entityName);
 	return parts.join(" · ");
