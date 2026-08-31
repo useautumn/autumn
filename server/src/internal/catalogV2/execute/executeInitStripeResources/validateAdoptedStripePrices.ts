@@ -72,24 +72,72 @@ const newlyAdoptedPrices = ({
 	});
 };
 
+const retrieveStripePrices = async ({
+	stripeCli,
+	stripePriceIds,
+}: {
+	stripeCli: Stripe;
+	stripePriceIds: string[];
+}): Promise<Map<string, Stripe.Price | undefined>> => {
+	const entries = await Promise.all(
+		[...new Set(stripePriceIds)].map(async (stripePriceId) => {
+			const stripePrice = await getStripePrice({
+				stripeClient: stripeCli,
+				stripePriceId,
+				expand: ["product"],
+			});
+			return [stripePriceId, stripePrice] as const;
+		}),
+	);
+	return new Map(entries);
+};
+
+const meterIdOf = ({
+	stripePrice,
+}: {
+	stripePrice: Stripe.Price;
+}): string | undefined => {
+	const meter = stripePrice.recurring?.meter;
+	if (!meter) return undefined;
+	return typeof meter === "string" ? meter : meter.id;
+};
+
+const retrieveMeters = async ({
+	stripeCli,
+	meterIds,
+}: {
+	stripeCli: Stripe;
+	meterIds: string[];
+}): Promise<Map<string, Stripe.Billing.Meter>> => {
+	const entries = await Promise.all(
+		[...new Set(meterIds)].map(async (meterId) => {
+			const meter = await stripeCli.billing.meters.retrieve(meterId);
+			return [meterId, meter] as const;
+		}),
+	);
+	return new Map(entries);
+};
+
 /**
  * A metered price is bound to a Stripe meter, and usage is reported against
  * that meter's event name — so adopting the price has to adopt both, or usage
  * has nowhere to go. Derived from the price, never stated.
  */
-const adoptedMeter = async ({
-	stripeCli,
+const adoptedMeter = ({
 	stripePrice,
 	config,
+	meters,
 }: {
-	stripeCli: Stripe;
 	stripePrice: Stripe.Price;
 	config: PriceConfigIds;
-}): Promise<boolean> => {
-	const meterId = stripePrice.recurring?.meter;
+	meters: Map<string, Stripe.Billing.Meter>;
+}): boolean => {
+	const meterId = meterIdOf({ stripePrice });
 	if (!meterId || config.stripe_meter_id === meterId) return false;
 
-	const meter = await stripeCli.billing.meters.retrieve(meterId);
+	const meter = meters.get(meterId);
+	if (!meter) return false;
+
 	config.stripe_meter_id = meterId;
 	config.stripe_event_name = meter.event_name;
 	return true;
@@ -132,18 +180,14 @@ export const validateAdoptedStripePrices = async ({
 	if (adopted.length === 0) return;
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	const seen = new Map<string, Stripe.Price | undefined>();
+	const stripePrices = await retrieveStripePrices({
+		stripeCli,
+		stripePriceIds: adopted.map((entry) => entry.stripePriceId),
+	});
 
+	const meterIds: string[] = [];
 	for (const entry of adopted) {
-		const stripePrice = seen.has(entry.stripePriceId)
-			? seen.get(entry.stripePriceId)
-			: await getStripePrice({
-					stripeClient: stripeCli,
-					stripePriceId: entry.stripePriceId,
-					expand: ["product"],
-				});
-		seen.set(entry.stripePriceId, stripePrice);
-
+		const stripePrice = stripePrices.get(entry.stripePriceId);
 		if (!stripePrice) {
 			throw new RecaseError({
 				code: ErrCode.InvalidRequest,
@@ -151,6 +195,19 @@ export const validateAdoptedStripePrices = async ({
 				statusCode: 400,
 			});
 		}
+
+		const meterId = meterIdOf({ stripePrice });
+		if (meterId && configIds({ price: entry.price }).stripe_meter_id !== meterId) {
+			meterIds.push(meterId);
+		}
+	}
+
+	const meters = await retrieveMeters({ stripeCli, meterIds });
+	const updates: Price[] = [];
+
+	for (const entry of adopted) {
+		const stripePrice = stripePrices.get(entry.stripePriceId);
+		if (!stripePrice) continue;
 
 		// The stated price owns its product and meter: a changed price re-points
 		// them, rather than leaving the row on the ones it used to belong to.
@@ -160,13 +217,11 @@ export const validateAdoptedStripePrices = async ({
 			Boolean(stripeProductId) && config.stripe_product_id !== stripeProductId;
 		if (productChanged) config.stripe_product_id = stripeProductId;
 
-		const meterChanged = await adoptedMeter({ stripeCli, stripePrice, config });
+		const meterChanged = adoptedMeter({ stripePrice, config, meters });
 		if (!productChanged && !meterChanged) continue;
 
-		await PriceService.update({
-			db: ctx.db,
-			id: entry.price.id!,
-			update: { config: entry.price.config },
-		});
+		updates.push(entry.price);
 	}
+
+	await PriceService.upsert({ db: ctx.db, data: updates });
 };
