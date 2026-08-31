@@ -11,8 +11,9 @@ If you've ever dealt with a memory leak, you probably know that the easiest thin
 
 I wanted to share how we ended up eliminating these leaks because most of our findings turned out to be non-unique to our codebase and therefore could happen to anyone. Before we dive into it though, I'd like to mention a couple things:
 
-1. Most of the leaks we found turned out to be Bun related. Our app runs on Bun v1.3.14, and these fixes were done before [v1.4](https://bun.com/blog/bun-v1.4) came out. We haven't migrated yet, but a huge part of Bun v1.4 is eliminating memory leaks, so that is probably a good first step if you find yourself encountering some of the leaks we're about to discuss
-2. Our app is a Hono server running on Bun, deployed on AWS ECS. To give you a baseline, the following graph shows our memory growth before any work was done:
+1. Huge props to [Owen](https://x.com/ogme01) (our founding eng) who basically handled this entire piece of work!
+2. Most of the leaks we found turned out to be Bun related. Our app runs on Bun v1.3.14, and these fixes were done before [v1.4](https://bun.com/blog/bun-v1.4) came out. We haven't migrated yet, but a huge part of Bun v1.4 is eliminating memory leaks, so that is probably a good first step if you find yourself encountering some of the leaks we're about to discuss
+3. Our app is a Hono server running on Bun, deployed on AWS ECS. To give you a baseline, the following graph shows our memory growth before any work was done:
 
 ![Memory growth before any leak work](/images/blog/eliminating-memory-leaks-before.png)
 
