@@ -67,7 +67,7 @@ export const repointBasePricesToPlanProcessor = async ({
 		stripeProductIds: stranded.map((entry) => entry.stripeProductId),
 	});
 
-	for (const { price, stripeProductId } of stranded) {
+	const updates = stranded.map(({ price, stripeProductId }) => {
 		const matched = findMatchingStripePriceForFixedPrice({
 			price,
 			stripeProductId,
@@ -81,10 +81,8 @@ export const repointBasePricesToPlanProcessor = async ({
 			stripePriceId: matched?.id ?? null,
 		});
 
-		await PriceService.update({
-			db: ctx.db,
-			id: price.id!,
-			update: { config: price.config },
-		});
-	}
+		return price;
+	});
+
+	await PriceService.upsert({ db: ctx.db, data: updates });
 };
