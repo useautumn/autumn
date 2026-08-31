@@ -16,7 +16,13 @@ type PoolExpectation = {
 	resetCycleAnchor: "present" | null;
 	resetMode: PooledBalanceResetMode;
 	stripeSubscriptionId: "stripe_subscription" | null;
+	customerLicenseLinkId?: string | null;
 	rollovers?: Array<{ balance: number; usage?: number }>;
+};
+
+type PoolFilter = {
+	customerLicenseLinkId?: string | null;
+	internalFeatureId?: string;
 };
 
 type ContributionExpectation = {
@@ -38,12 +44,14 @@ export const expectPooledBalanceCorrect = async ({
 	pool,
 	contributions,
 	sources,
+	filter,
 }: {
 	db: DrizzleCli;
 	customerId: string;
 	pool: PoolExpectation;
 	contributions: ContributionExpectation;
 	sources: SourceExpectation;
+	filter?: PoolFilter;
 }) => {
 	const fullState = await getPooledBalanceDbState({ db, customerId });
 	const poolCount = pool.count ?? 1;
@@ -53,8 +61,23 @@ export const expectPooledBalanceCorrect = async ({
 	// always means the live one — use getPooledBalanceDbState for the history.
 	const isLive = (expiresAt: number | null) =>
 		expiresAt === null || expiresAt > Date.now();
-	const pools = fullState.pools.filter((candidate) =>
-		isLive(candidate.expires_at),
+	const matchesFilter = (candidate: (typeof fullState.pools)[number]) => {
+		if (
+			filter?.customerLicenseLinkId !== undefined &&
+			candidate.customer_license_link_id !== filter.customerLicenseLinkId
+		) {
+			return false;
+		}
+		if (
+			filter?.internalFeatureId !== undefined &&
+			candidate.internal_feature_id !== filter.internalFeatureId
+		) {
+			return false;
+		}
+		return true;
+	};
+	const pools = fullState.pools.filter(
+		(candidate) => isLive(candidate.expires_at) && matchesFilter(candidate),
 	);
 	const livePoolIds = new Set(pools.map((candidate) => candidate.id));
 	const poolCustomerEntitlements = fullState.poolCustomerEntitlements.filter(
@@ -62,7 +85,20 @@ export const expectPooledBalanceCorrect = async ({
 			candidate.pooled_balance_id !== null &&
 			livePoolIds.has(candidate.pooled_balance_id),
 	);
-	const state = { ...fullState, pools, poolCustomerEntitlements };
+	const filteredContributions = fullState.contributions.filter((contribution) =>
+		livePoolIds.has(contribution.pooled_balance_id),
+	);
+	const filteredSourceCustomerEntitlementIds = new Set(
+		filteredContributions.map(
+			(contribution) => contribution.source_customer_entitlement_id,
+		),
+	);
+	const state = {
+		...fullState,
+		pools,
+		poolCustomerEntitlements,
+		contributions: filteredContributions,
+	};
 
 	expect(state.pools).toHaveLength(poolCount);
 	expect(state.poolCustomerEntitlements).toHaveLength(poolCount);
@@ -107,7 +143,10 @@ export const expectPooledBalanceCorrect = async ({
 			unlimited: pool.unlimited ?? false,
 			interval: pool.interval,
 			reset_mode: pool.resetMode,
-			customer_license_link_id: null,
+			customer_license_link_id:
+				pool.customerLicenseLinkId === undefined
+					? (filter?.customerLicenseLinkId ?? null)
+					: pool.customerLicenseLinkId,
 		});
 		if (pool.resetCycleAnchor === "present") {
 			expect(pooledBalance.reset_cycle_anchor).not.toBeNull();
@@ -170,9 +209,13 @@ export const expectPooledBalanceCorrect = async ({
 
 	const pooledSourceCustomerEntitlements = state.sourceCustomerProducts.flatMap(
 		(customerProduct) =>
-			customerProduct.customer_entitlements.filter(
-				(customerEntitlement) => customerEntitlement.entitlement.pooled,
-			),
+			customerProduct.customer_entitlements.filter((customerEntitlement) => {
+				if (!customerEntitlement.entitlement.pooled) return false;
+				if (!filter) return true;
+				return filteredSourceCustomerEntitlementIds.has(
+					customerEntitlement.id,
+				);
+			}),
 	);
 	expect(pooledSourceCustomerEntitlements).toHaveLength(sources.count);
 	for (const sourceCustomerEntitlement of pooledSourceCustomerEntitlements) {

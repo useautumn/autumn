@@ -7,6 +7,7 @@ import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import { resolvedProductIdsSql } from "@/internal/invoices/repos/utils/resolvedProductIdsSql.js";
 import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
+import { licensePooledBalanceIsLiveSql } from "../../licensePooledBalanceIsLiveSql.js";
 import { looseEntitlementIsLiveSql } from "../../looseEntitlementSql.js";
 import { composeCustomerLicensesCtes } from "./composeCustomerLicensesCtes.js";
 import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
@@ -324,6 +325,7 @@ export const getFullSubjectRowsQuery = ({
 				FROM customer_entitlements ce
 				JOIN pooled_balances pb
 					ON pb.id = ce.pooled_balance_id
+					AND ${licensePooledBalanceIsLiveSql()}
 				WHERE ce.internal_customer_id = sr.internal_customer_id
 					AND ce.customer_product_id IS NULL
 					AND ce.pooled_balance_id IS NOT NULL

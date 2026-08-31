@@ -3,6 +3,7 @@ import { RELEVANT_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { resetCronQueryTag } from "@/internal/balances/batchReset/resetCronQueryTag.js";
+import { licensePooledBalanceIsLiveSql } from "@/internal/customers/licensePooledBalanceIsLiveSql.js";
 
 /**
  * A customer entitlement hydrated with everything batch reset needs:
@@ -91,6 +92,7 @@ export const buildResetContextByIdsQuery = ({
 		WHERE e.rollover IS NOT NULL AND r.cus_ent_id = ce.id
 	) rollovers_agg ON true
 	WHERE ce.id = ANY(${sql.param(customerEntitlementIds)}::text[])
+		AND ${licensePooledBalanceIsLiveSql()}
 	${resetCronQueryTag("hydrateContext")}
 `;
 

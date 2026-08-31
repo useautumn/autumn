@@ -26,6 +26,7 @@ import {
 	getCustomerListFilterSql,
 	POOLED_CUSTOMER_ENTITLEMENT_LIMIT,
 } from "./getFullCusQuery.js";
+import { licensePooledBalanceIsLiveSql } from "./licensePooledBalanceIsLiveSql.js";
 import { looseEntitlementIsLiveSql } from "./looseEntitlementSql.js";
 
 export type CursorPaginatedFullCusQueryArgs = {
@@ -338,6 +339,8 @@ export const getCursorPaginatedFullCusQuery = ({
 			JOIN LATERAL (
 				SELECT ce.*
 				FROM customer_entitlements ce
+				JOIN pooled_balances live_pb ON live_pb.id = ce.pooled_balance_id
+					AND ${licensePooledBalanceIsLiveSql({ pooledBalanceAlias: "live_pb" })}
 				WHERE ce.internal_customer_id = cr.internal_id
 					AND ce.customer_product_id IS NULL
 					AND ce.pooled_balance_id IS NOT NULL

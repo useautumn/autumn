@@ -1,18 +1,18 @@
 /**
- * catalogV2.update — declared licenses[] reject pooled items.
+ * catalogV2.update — declared licenses[] accept pooled items.
  *
  * Contract:
- *   pooled item on the child → 400
- *   pooled item in customize add_items → 400
+ *   pooled item on the child → link persists
+ *   pooled item in customize add_items → customized link persists
  */
 
 import { test } from "bun:test";
-import { ErrCode, ResetInterval } from "@autumn/shared";
+import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
+import { expectLicenseLinkCorrect } from "../utils/expectLicenseLinkCorrect.js";
 import { messagesItem, withCatalogPlans } from "../utils/seedLicensePlans.js";
 
 const pooledMessages = {
@@ -30,7 +30,7 @@ const pooledWords = {
 };
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: pooled item on child → 400")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: pooled item on child links")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_pool_p");
@@ -50,18 +50,22 @@ test.concurrent(
 					],
 				});
 
-				await expectAutumnError({
-					errCode: ErrCode.InvalidRequest,
-					errMessage: "Pooled items are not supported",
-					func: () =>
-						autumnV2_3.catalogV2.update({
-							plans: [
-								{
-									plan_id: parentId,
-									licenses: [{ license_plan_id: childId, included: 1 }],
-								},
-							],
-						}),
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: parentId,
+							licenses: [{ license_plan_id: childId, included: 1 }],
+						},
+					],
+				});
+
+				await expectLicenseLinkCorrect({
+					ctx,
+					parentPlanId: parentId,
+					licensePlanId: childId,
+					included: 1,
+					customized: false,
+					messagesAllowance: 10,
 				});
 			},
 		});
@@ -69,7 +73,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: pooled item in customize add_items → 400")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: pooled item in customize add_items links")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_poolc_p");
@@ -89,24 +93,29 @@ test.concurrent(
 					],
 				});
 
-				await expectAutumnError({
-					errCode: ErrCode.InvalidRequest,
-					errMessage: "Pooled items are not supported",
-					func: () =>
-						autumnV2_3.catalogV2.update({
-							plans: [
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: parentId,
+							licenses: [
 								{
-									plan_id: parentId,
-									licenses: [
-										{
-											license_plan_id: childId,
-											included: 1,
-											customize: { add_items: [pooledWords] },
-										},
-									],
+									license_plan_id: childId,
+									included: 1,
+									customize: { add_items: [pooledWords] },
 								},
 							],
-						}),
+						},
+					],
+				});
+
+				await expectLicenseLinkCorrect({
+					ctx,
+					parentPlanId: parentId,
+					licensePlanId: childId,
+					included: 1,
+					customized: true,
+					messagesAllowance: 10,
+					entitlements: [{ feature_id: TestFeature.Words, allowance: 10 }],
 				});
 			},
 		});

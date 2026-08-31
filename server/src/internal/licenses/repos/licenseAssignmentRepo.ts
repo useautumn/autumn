@@ -217,8 +217,8 @@ const expireUnusedAssignmentsByLinkIds = async ({
 	customerLicenseLinkIds: string[];
 	endedAt: number;
 }) => {
-	if (customerLicenseLinkIds.length === 0) return;
-	await db
+	if (customerLicenseLinkIds.length === 0) return [];
+	return db
 		.update(customerProducts)
 		.set({ status: CusProductStatus.Expired, ended_at: endedAt })
 		.where(
@@ -230,7 +230,8 @@ const expireUnusedAssignmentsByLinkIds = async ({
 				isNull(customerProducts.internal_entity_id),
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 			),
-		);
+		)
+		.returning();
 };
 
 /** Seats are grouped through their customer license — the seat's own parent

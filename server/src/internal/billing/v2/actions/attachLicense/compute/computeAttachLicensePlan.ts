@@ -5,6 +5,7 @@ import {
 	findFeatureById,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan.js";
 import { initFullCustomerProductFromCustomerLicense } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromCustomerLicense.js";
 import { constructEntity } from "@/internal/entities/entityUtils/entityUtils.js";
 import type { AttachLicenseContext, AttachLicensePlan } from "../types.js";
@@ -86,12 +87,20 @@ export const computeAttachLicensePlan = ({
 			}),
 		}));
 
+	const incomingCustomerProducts = insertedAssignments.map(
+		(assignment) => assignment.customerProduct,
+	);
+	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
+		ctx,
+		fullCustomer,
+		incomingCustomerProducts,
+		now: context.currentEpochMs,
+	});
+
 	const billingPlan: AutumnBillingPlan = {
 		customerId: fullCustomer.id ?? fullCustomer.internal_id,
 		insertEntities: newEntities,
-		insertCustomerProducts: insertedAssignments.map(
-			(assignment) => assignment.customerProduct,
-		),
+		insertCustomerProducts: incomingCustomerProducts,
 		updateCustomerProducts: computeReusedCustomerProductUpdates({
 			reusedAssignments,
 		}),
@@ -101,6 +110,7 @@ export const computeAttachLicensePlan = ({
 				remainingChange: -assignmentEntities.length,
 			},
 		],
+		pooledBalancePlan,
 	};
 
 	return {

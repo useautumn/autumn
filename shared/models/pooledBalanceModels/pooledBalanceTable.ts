@@ -93,21 +93,6 @@ export const pooledBalances = pgTable(
 			"pooled_balances_reset_mode_valid",
 			sql`${table.reset_mode} IN ('lazy', 'subscription', 'lifetime')`,
 		),
-		check(
-			"pooled_balances_lifecycle_ids_valid",
-			sql`(
-				${table.reset_mode} = 'subscription'
-				AND ${table.stripe_subscription_id} IS NOT NULL
-				AND ${table.customer_license_link_id} IS NULL
-			) OR (
-				${table.reset_mode} = 'lazy'
-				AND ${table.stripe_subscription_id} IS NULL
-			) OR (
-				${table.reset_mode} = 'lifetime'
-				AND ${table.stripe_subscription_id} IS NULL
-				AND ${table.customer_license_link_id} IS NULL
-			)`,
-		),
 		unique("unique_pooled_balance_customer_entitlement").on(
 			table.customer_entitlement_id,
 		),

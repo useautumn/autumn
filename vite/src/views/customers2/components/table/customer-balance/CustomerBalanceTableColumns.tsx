@@ -9,9 +9,6 @@ import {
 	cusEntsToPrepaidQuantity,
 	cusEntsToUnlimitedUsage,
 	getRolloverFields,
-	isFreeCustomerEntitlement,
-	isPrepaidCustomerEntitlement,
-	isSyntheticPooledBalanceCustomerEntitlement,
 	nullish,
 } from "@autumn/shared";
 import {
@@ -26,76 +23,24 @@ import {
 } from "@autumn/ui";
 import {
 	ArrowsClockwiseIcon,
-	BoxArrowDownIcon,
 	BracketsSquareIcon,
-	CaretRightIcon,
 	ClockCountdownIcon,
-	MoneyWavyIcon,
 	PulseIcon,
-	WalletIcon,
 } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
 import { Trash } from "lucide-react";
-import { AdminHover } from "@/components/general/AdminHover";
 import { cn } from "@/lib/utils";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
 import { useFeatureUsageBalance } from "@/views/customers2/hooks/useFeatureUsageBalance";
 import { CustomerFeatureUsageBar } from "../customer-feature-usage/CustomerFeatureUsageBar";
 import { FeatureBalanceDisplay } from "../customer-feature-usage/FeatureBalanceDisplay";
 import { AdminSyncAnchorMenuItem } from "./AdminSyncAnchorMenuItem";
+import { CustomerBalanceFeatureCell } from "./CustomerBalanceFeatureCell";
 import type { CustomerBalanceRowData } from "./CustomerBalanceTable";
 import {
 	canDeleteCustomerBalance,
 	canRecalculateCustomerBalances,
-	getCustomerBalanceSourceParts,
 } from "./customerBalanceUtils";
-
-function getBalanceBillingIcon({
-	balance,
-}: {
-	balance: FullCusEntWithFullCusProduct;
-}) {
-	const size = 14;
-	const weight = "duotone" as const;
-
-	if (isFreeCustomerEntitlement(balance))
-		return {
-			icon: <BoxArrowDownIcon size={size} weight={weight} />,
-			color: "text-green-500",
-			label: "Included",
-		};
-
-	if (isPrepaidCustomerEntitlement(balance))
-		return {
-			icon: <WalletIcon size={size} weight={weight} />,
-			color: "text-orange-500",
-			label: "Prepaid price",
-		};
-
-	return {
-		icon: <MoneyWavyIcon size={size} weight={weight} />,
-		color: "text-yellow-500",
-		label: "Usage-based price",
-	};
-}
-
-function BalanceBillingIcon({
-	balance,
-}: {
-	balance: FullCusEntWithFullCusProduct;
-}) {
-	const { icon, color, label } = getBalanceBillingIcon({ balance });
-
-	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<div className={cn("shrink-0", color)}>{icon}</div>
-			</TooltipTrigger>
-			<TooltipContent>{label}</TooltipContent>
-		</Tooltip>
-	);
-}
 
 /** Computes balance values from a single entitlement (for sub-rows) */
 function getIndividualEntValues({
@@ -606,90 +551,13 @@ export const CustomerBalanceTableColumns = ({
 		accessorKey: "feature",
 		enableResizing: true,
 		minSize: 100,
-		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => {
-			const ent = row.original;
-			const isSubRow = row.depth > 0;
-
-			if (isSubRow) {
-				const isPooledBalance = isSyntheticPooledBalanceCustomerEntitlement({
-					customerEntitlement: ent,
-				});
-				const { productName, intervalLabel, entityName } =
-					getCustomerBalanceSourceParts({ balance: ent, entities });
-				const sourceName = isPooledBalance ? "Pooled" : productName;
-				const hasPlan = !!ent.customer_product;
-				const metaParts = [intervalLabel, entityName]
-					.filter(Boolean)
-					.join(" · ");
-
-				if (!hasPlan && !isPooledBalance) {
-					return (
-						<div className="flex items-center gap-2 min-w-0">
-							<BalanceBillingIcon balance={ent} />
-							<AdminHover
-								texts={getCusEntHoverTexts({
-									cusEnt: ent,
-									entities,
-								})}
-							>
-								<span className="text-tertiary-foreground truncate text-xs">
-									{metaParts}
-								</span>
-							</AdminHover>
-						</div>
-					);
-				}
-
-				return (
-					<div className="flex flex-col gap-0.5 min-w-0">
-						<div className="flex items-center gap-2">
-							<BalanceBillingIcon balance={ent} />
-							<AdminHover
-								texts={getCusEntHoverTexts({
-									cusEnt: ent,
-									entities,
-								})}
-							>
-								<span className="text-foreground text-xs font-medium truncate">
-									{sourceName}
-								</span>
-							</AdminHover>
-						</div>
-						<span className="text-tertiary-foreground text-xs truncate pl-5.5">
-							{metaParts}
-						</span>
-					</div>
-				);
-			}
-
-			const canExpand = row.getCanExpand();
-			const isExpanded = row.getIsExpanded();
-
-			return (
-				<div className="flex items-center gap-2">
-					{canExpand && (
-						<span
-							className={cn(
-								"inline-flex text-tertiary-foreground transition-transform duration-200",
-								isExpanded && "rotate-90",
-							)}
-						>
-							<CaretRightIcon size={14} weight="bold" />
-						</span>
-					)}
-					<AdminHover
-						texts={getCusEntHoverTexts({
-							cusEnt: ent,
-							entities,
-						})}
-					>
-						<span className="font-medium text-foreground truncate">
-							{ent.entitlement.feature.name}
-						</span>
-					</AdminHover>
-				</div>
-			);
-		},
+		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => (
+			<CustomerBalanceFeatureCell
+				row={row}
+				entities={entities}
+				fullCustomer={fullCustomer}
+			/>
+		),
 	},
 	{
 		header: "Usage",
