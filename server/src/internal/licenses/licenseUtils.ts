@@ -13,6 +13,9 @@ export const toApiPlanLicenses = (
 	licenses.map((license) => ({
 		license_plan_id: license.product.id,
 		version: license.product.version,
+		...(license.product.version_slug
+			? { version_slug: license.product.version_slug }
+			: {}),
 		included: license.included,
 		prepaid_only: license.prepaid_only,
 	}));

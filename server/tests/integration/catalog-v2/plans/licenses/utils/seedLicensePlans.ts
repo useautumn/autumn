@@ -212,6 +212,45 @@ export const seedTwoParentsWithTwoVersions = async ({
 	}
 };
 
+/** Each parent v1 stays on child v1; each parent v2 is minted onto child v2. */
+export const seedDistributedParentVersionAnchors = async ({
+	autumn,
+	childId,
+	parentIds,
+	included = 2,
+}: {
+	autumn: CatalogV2Client;
+	childId: string;
+	parentIds: [string, string];
+	included?: number;
+}) => {
+	await seedTwoParents({ autumn, childId, parentIds, included });
+	await bumpChild({
+		autumn,
+		childId,
+		items: [messagesItem(50)],
+		versioning: "new_version",
+	});
+	for (const parentId of parentIds) {
+		await autumn.catalogV2.update({
+			plans: [
+				{
+					plan_id: parentId,
+					versioning: "new_version",
+					active: true,
+					licenses: [
+						{
+							license_plan_id: childId,
+							included,
+							version_slug: "v2",
+						},
+					],
+				},
+			],
+		});
+	}
+};
+
 export const bumpChild = async ({
 	autumn,
 	childId,

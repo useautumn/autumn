@@ -65,7 +65,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: child new_version pin retires assigned seat")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: child new_version leaves assigned seat and catalog link untouched")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_cmint_p");
@@ -79,6 +79,7 @@ test.concurrent(
 					parentId,
 					childId,
 				});
+				const childV1 = await getFullPlan({ ctx, planId: childId });
 				const assigned = await seedAssignedLicenseCustomer({
 					ctx,
 					parentId,
@@ -91,16 +92,18 @@ test.concurrent(
 					versioning: "new_version",
 				});
 
-				const childV2 = await getFullPlan({ ctx, planId: childId });
+				// No write: catalog and customer share the same live row, still on v1.
 				const catalog = await expectLicenseLinkCorrect({
 					ctx,
 					parentPlanId: parentId,
 					licensePlanId: childId,
-					customized: true,
+					licenseVersion: 1,
+					customized: false,
 					messagesAllowance: 10,
-					licenseInternalProductId: childV2.internal_id,
+					licenseInternalProductId: childV1.internal_id,
+					planLicenseId: assigned.planLicenseId,
 				});
-				expect(catalog.planLicense.id).not.toBe(assigned.planLicenseId);
+				expect(catalog.planLicense.is_custom).toBe(false);
 				await expectCustomerLicensePinnedTo({
 					ctx,
 					customerLicenseId: assigned.customerLicenseId,

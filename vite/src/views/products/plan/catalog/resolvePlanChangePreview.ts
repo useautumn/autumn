@@ -14,6 +14,7 @@ import {
 import {
 	buildCatalogPropagate,
 	buildSelectedLicenseParentPropagate,
+	catalogPlanLicenseParents,
 	type CatalogVersionChoice,
 	isCatalogMetadataOnly,
 	type LicenseParentTarget,
@@ -145,7 +146,7 @@ export const resolvePlanChangePreview = ({
 		: EMPTY_SELECTION;
 
 	const licenseParentTargets = toLicenseParentTargets({
-		parents: preview?.license_parents,
+		parents: catalogPlanLicenseParents({ preview }),
 	});
 	const defaultLicenseParentKeys = getDefaultLicenseParentKeys({
 		targets: licenseParentTargets,
@@ -178,7 +179,7 @@ export const resolvePlanChangePreview = ({
 		showLicenseParentScope,
 		versionChoiceOnlyAffectsParents:
 			!preview?.state.has_customers &&
-			(preview?.license_parents ?? []).some((parent) =>
+			catalogPlanLicenseParents({ preview }).some((parent) =>
 				licenseParentVersions({ parent }).some(
 					(entry) => entry.state.has_customers,
 				),
@@ -188,6 +189,7 @@ export const resolvePlanChangePreview = ({
 			variantIds: effectiveVariantIds,
 			licenseParents: buildSelectedLicenseParentPropagate({
 				selectedKeys: effectiveLicenseParentKeys,
+				targets: licenseParentTargets,
 			}),
 		}),
 		settingsChanges: previousAttributesToSettingChanges(

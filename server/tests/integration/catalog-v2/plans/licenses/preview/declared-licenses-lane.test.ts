@@ -66,6 +66,7 @@ test.concurrent(
 							{
 								license_plan_id: childA,
 								version: 1,
+								version_slug: "v1",
 								included: 1,
 								prepaid_only: true,
 							},
@@ -92,6 +93,7 @@ test.concurrent(
 							{
 								license_plan_id: childB,
 								version: 1,
+								version_slug: "v1",
 								included: 3,
 								prepaid_only: true,
 							},
@@ -163,6 +165,7 @@ test.concurrent(
 							{
 								license_plan_id: childId,
 								version: 1,
+								version_slug: "v1",
 								included: 2,
 								prepaid_only: true,
 							},

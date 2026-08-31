@@ -17,6 +17,7 @@ import {
 	applyLicenseParentScopedDiffs,
 	applyPropagationTargetDiffs,
 	buildCatalogMigrateTargets,
+	catalogPlanLicenseParents,
 	type CatalogVersionChoice,
 	getLicenseParentVersionKey,
 	hasCatalogMigrationTargets,
@@ -110,7 +111,7 @@ export const usePlanChangeCatalogPreview = ({
 		targets: model.licenseParentTargets,
 		fallbackDiff,
 		scopedByKey: new Map(
-			(scopedPreview?.license_parents ?? []).flatMap((parent) =>
+			catalogPlanLicenseParents({ preview: scopedPreview }).flatMap((parent) =>
 				licenseParentVersions({ parent }).map(
 					(entry) =>
 						[getLicenseParentVersionKey(entry), entry.plan_change ?? null] as [

@@ -114,6 +114,59 @@ export const catalogPreviewHasVersionSlugChange = ({
 	preview: CatalogPlanUpdatePreview | undefined;
 }): boolean => catalogPreviewVersionSlugChange({ preview }) !== undefined;
 
+const parentVersionsOf = ({
+	parent,
+}: {
+	parent: CatalogLicenseParentPreview;
+}): CatalogLicenseParentVersionPreview[] => {
+	const { sibling_versions: _siblings, ...row } = parent;
+	return [row, ...(parent.sibling_versions ?? [])];
+};
+
+/** Fold every parent version (direct row + sibling-linked) into one lane per plan. */
+export const catalogPlanLicenseParents = ({
+	preview,
+}: {
+	preview: CatalogPlanUpdatePreview | undefined;
+}): CatalogLicenseParentPreview[] => {
+	if (!preview) return [];
+	const byPlanId = new Map<
+		string,
+		{ name: string; versions: Map<number, CatalogLicenseParentVersionPreview> }
+	>();
+
+	const ingest = (parent: CatalogLicenseParentPreview) => {
+		const existing = byPlanId.get(parent.plan_id) ?? {
+			name: parent.name,
+			versions: new Map(),
+		};
+		existing.name = parent.name;
+		for (const version of parentVersionsOf({ parent })) {
+			existing.versions.set(version.version, version);
+		}
+		byPlanId.set(parent.plan_id, existing);
+	};
+
+	for (const sibling of preview.sibling_versions ?? []) {
+		for (const parent of sibling.license_parents ?? []) ingest(parent);
+	}
+	for (const parent of preview.license_parents ?? []) ingest(parent);
+
+	return [...byPlanId.entries()]
+		.sort(([left], [right]) => left.localeCompare(right))
+		.map(([, { name, versions }]) => {
+			const newestFirst = [...versions.values()].sort(
+				(left, right) => right.version - left.version,
+			);
+			const [top, ...siblings] = newestFirst;
+			return {
+				...top,
+				name,
+				...(siblings.length > 0 ? { sibling_versions: siblings } : {}),
+			};
+		});
+};
+
 export const catalogPreviewOpensDialog = ({
 	preview,
 }: {
@@ -130,7 +183,7 @@ export const catalogPreviewOpensDialog = ({
 	return (
 		previewOpensStrategyStep({ preview }) ||
 		(preview?.variants?.length ?? 0) > 0 ||
-		(preview?.license_parents?.length ?? 0) > 0
+		catalogPlanLicenseParents({ preview }).length > 0
 	);
 };
 
@@ -449,6 +502,7 @@ export type LicenseParentTarget = {
 
 export type LicenseParentVersion = {
 	version: number;
+	versionSlug?: string;
 	key: string;
 	conflicts: CatalogConflictPreview[];
 } & CatalogPlanChangeDiff;
@@ -463,6 +517,7 @@ export const toLicenseParentTargets = ({
 		name: parent.name,
 		versions: licenseParentVersions({ parent }).map((entry) => ({
 			version: entry.version,
+			...(entry.version_slug ? { versionSlug: entry.version_slug } : {}),
 			key: getLicenseParentVersionKey(entry),
 			conflicts: entry.conflicts ?? [],
 			...planChangeToTargetDiff({ planChange: entry.plan_change }),
@@ -492,16 +547,24 @@ export const licenseParentVersionsInScope = ({
 /** Plan-selection keys → propagate targets. Whole plan means `all_versions`. */
 export const buildSelectedLicenseParentPropagate = ({
 	selectedKeys,
+	targets = [],
 }: {
 	selectedKeys: string[];
+	targets?: LicenseParentTarget[];
 }): NonNullable<CatalogPropagateParams["license_parents"]> =>
-	selectedKeys
-		.map(parsePlanKey)
-		.map(({ planId, version }) =>
-			version === undefined
-				? { plan_id: planId, versioning: "all_versions" as const }
-				: { plan_id: planId, version },
-		);
+	selectedKeys.map(parsePlanKey).map(({ planId, version }) => {
+		if (version === undefined) {
+			return { plan_id: planId, versioning: "all_versions" as const };
+		}
+		const versionSlug = targets
+			.find((target) => target.planId === planId)
+			?.versions.find((entry) => entry.version === version)?.versionSlug;
+		return {
+			plan_id: planId,
+			version,
+			...(versionSlug ? { version_slug: versionSlug } : {}),
+		};
+	});
 
 export type CatalogMigrateTargetRole = "base" | "variant" | "license_parent";
 
@@ -575,7 +638,7 @@ const buildLicenseParentMigrateTargets = ({
 	isNewVersion: boolean;
 }): CatalogMigrateTarget[] => {
 	const targets: CatalogMigrateTarget[] = [];
-	for (const parent of preview.license_parents ?? []) {
+	for (const parent of catalogPlanLicenseParents({ preview })) {
 		const selectedByScope = licenseParentVersions({ parent }).filter((entry) =>
 			licenseParentVersionIsSelected({
 				planId: parent.plan_id,

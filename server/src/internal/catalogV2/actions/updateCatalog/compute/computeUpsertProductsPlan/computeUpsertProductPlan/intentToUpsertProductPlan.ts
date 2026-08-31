@@ -1,13 +1,12 @@
-import {
-	productToProductKey,
-} from "@autumn/shared";
+import { productToProductKey } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { assembleNextFullProduct } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/assembleNextFullProduct";
-import { declaredVariantsForSource } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/declaredVariantsForSource";
 import { computeCatalogEntitlementPricesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeCatalogEntitlementPricesPlan/computeCatalogEntitlementPricesPlan";
 import { computeFreeTrialPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeFreeTrialPlan/computeFreeTrialPlan";
 import { computeProductDetailsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeProductDetailsPlan/computeProductDetailsPlan";
+import { declaredVariantsForSource } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/declaredVariantsForSource";
 import { resolveUpsertVariantPointer } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/resolveUpsertVariantPointer";
+import { planParamsFromEditDiff } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/planParamsFromEditDiff";
 import { resolveUpsertOp } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/resolveUpsertOp";
 import { resolveUpsertVersioning } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/resolveUpsertVersioning";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
@@ -15,7 +14,6 @@ import type {
 	ProductUpsertIntent,
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
-import { planParamsFromEditDiff } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/planParamsFromEditDiff";
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
@@ -172,8 +170,7 @@ export const intentToUpsertProductPlan = ({
 			versioning,
 			currentFullProduct,
 			// Mint-only clone source for preview; null on in-place writes.
-			baseFullProduct:
-				versioning === "new_version" ? baseFullProduct : null,
+			baseFullProduct: versioning === "new_version" ? baseFullProduct : null,
 			nextFullProduct,
 		},
 		...(details.changed ? { details } : {}),
@@ -194,7 +191,8 @@ export const intentToUpsertProductPlan = ({
 			: {}),
 		...(declaredVariants !== undefined ? { declaredVariants } : {}),
 		...(unlink ? { unlink: true } : {}),
-		...(source === "direct" && planParams.propagate !== undefined
+		...((source === "direct" || source === "all_versions") &&
+		planParams.propagate !== undefined
 			? { propagate: planParams.propagate }
 			: {}),
 		...(planParams.create_in_stripe !== undefined
@@ -215,8 +213,8 @@ export const intentToUpsertProductPlan = ({
 						})
 					: customerUsage.hasVersionableCustomerProducts,
 			planHadLiveVersions:
-				(productStatesContext.versionsByPlanId[productKey.planId] ?? []).length >
-				0,
+				(productStatesContext.versionsByPlanId[productKey.planId] ?? [])
+					.length > 0,
 		},
 	};
 };

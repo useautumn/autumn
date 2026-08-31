@@ -1,4 +1,5 @@
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { fullProductForSlug } from "./fullProductForSlug";
 
 /** Version number for this plan_id + version_slug, or undefined if no row owns it. */
 export const versionForSlug = ({
@@ -10,6 +11,4 @@ export const versionForSlug = ({
 	versionSlug: string;
 	productStatesContext: ProductStatesContext;
 }): number | undefined =>
-	(productStatesContext.versionsByPlanId[planId] ?? []).find(
-		(product) => product.version_slug === versionSlug,
-	)?.version;
+	fullProductForSlug({ planId, versionSlug, productStatesContext })?.version;

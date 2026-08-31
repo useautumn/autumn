@@ -6,6 +6,7 @@ import { PlanChangeCoreV0Schema } from "./planChangeCoreV0.js";
 export const PlanLicensePreviousAttributesV0Schema = ApiPlanLicenseV1Schema.pick(
 	{
 		version: true,
+		version_slug: true,
 		included: true,
 		prepaid_only: true,
 	},
