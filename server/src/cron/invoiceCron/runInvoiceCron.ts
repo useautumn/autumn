@@ -4,6 +4,7 @@ import { addDays } from "date-fns";
 import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import type { Stripe } from "stripe";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
+import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import { expirePendingCustomerProducts } from "@/internal/billing/v2/execute/expirePendingCustomerProducts";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { createStripeCli } from "../../external/connect/createStripeCli";
@@ -72,10 +73,13 @@ export const handleVoidInvoiceCron = async ({
 	const voidSub = metadata.type === MetadataType.InvoiceCheckout;
 	const expirePendingRows = () =>
 		expirePendingCustomerProducts({
-			db,
-			logger,
-			orgId: org.id,
-			env: customer.env,
+			ctx: {
+				db,
+				logger,
+				org: { id: org.id },
+				env: customer.env,
+				redisV2: resolveRedisV2(),
+			},
 			metadataId: metadata.id,
 		});
 

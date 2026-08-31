@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
 	type ApiCustomerV5,
+	type AttachParamsV1Input,
 	CusProductStatus,
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
@@ -122,5 +123,47 @@ test.concurrent(
 			remaining: 100,
 			usage: 0,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("stripe-checkout pending: deferred checkout inserts a pending plan that grants nothing")}`,
+	async () => {
+		const customerId = "stripe-checkout-pending-inserted";
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, autumnV2_2, customer } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [],
+		});
+
+		const result = await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+		});
+
+		expect(result.payment_url).toBeDefined();
+
+		const customerProducts = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const pendingCustomerProduct = customerProducts.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(pendingCustomerProduct?.status).toBe(CusProductStatus.Pending);
+		expect(pendingCustomerProduct?.metadata_id).toBeTruthy();
+
+		const check = await autumnV2_2.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		});
+
+		expect(check.allowed).toBe(false);
 	},
 );

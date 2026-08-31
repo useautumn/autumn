@@ -21,6 +21,8 @@ export const promotePendingCustomerProducts = async ({
 
 	if (!pendingCustomerProducts.length) return;
 
+	const promotedIds = new Set<string>();
+
 	for (const customerProduct of pendingCustomerProducts) {
 		const plannedCustomerProduct =
 			autumnBillingPlan.insertCustomerProducts?.find(
@@ -37,7 +39,12 @@ export const promotePendingCustomerProducts = async ({
 				scheduled_ids: plannedCustomerProduct?.scheduled_ids ?? undefined,
 			},
 		});
+
+		promotedIds.add(customerProduct.id);
 	}
 
-	autumnBillingPlan.insertCustomerProducts = [];
+	autumnBillingPlan.insertCustomerProducts =
+		autumnBillingPlan.insertCustomerProducts?.filter(
+			(planned) => !promotedIds.has(planned.id),
+		) ?? [];
 };

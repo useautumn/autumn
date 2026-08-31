@@ -1,6 +1,10 @@
 import { CusProductStatus } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import {
+	expireCustomerProducts,
+	expirePendingCustomerProducts,
+} from "@/internal/billing/v2/execute/expirePendingCustomerProducts";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
@@ -32,6 +36,10 @@ export const handleStripeCheckoutSessionExpired = async ({
 		// Try to clean up the metadata row even if no cusProduct ever got created
 		// (e.g. a deferred-flow checkout that expired).
 		if (session.metadata?.autumn_metadata_id) {
+			await expirePendingCustomerProducts({
+				ctx,
+				metadataId: session.metadata.autumn_metadata_id,
+			});
 			await MetadataService.delete({
 				db: ctx.db,
 				id: session.metadata.autumn_metadata_id,
@@ -40,21 +48,7 @@ export const handleStripeCheckoutSessionExpired = async ({
 		return;
 	}
 
-	const now = Date.now();
-
-	for (const cusProduct of cusProducts) {
-		// If the success-path webhook already linked a subscription, leave it.
-		if ((cusProduct.subscription_ids ?? []).length > 0) continue;
-
-		await CusProductService.update({
-			ctx,
-			cusProductId: cusProduct.id,
-			updates: {
-				status: CusProductStatus.Expired,
-				ended_at: now,
-			},
-		});
-	}
+	await expireCustomerProducts({ ctx, customerProducts: cusProducts });
 
 	if (session.metadata?.autumn_metadata_id) {
 		await MetadataService.delete({
