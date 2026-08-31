@@ -13,6 +13,7 @@ export const cusProductToPlanStatus = ({
 		case CusProductStatus.Expired:
 			return "expired";
 		case CusProductStatus.Scheduled:
+		case CusProductStatus.Pending:
 			return "scheduled";
 		default:
 			return "active";

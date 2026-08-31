@@ -13,6 +13,7 @@ import {
 	CalendarIcon,
 	CheckIcon,
 	ClockIcon,
+	HourglassIcon,
 	PauseIcon,
 	XIcon,
 } from "lucide-react";
@@ -60,6 +61,11 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
 		label: "Scheduled",
 		iconClassName: "bg-purple-500 dark:bg-purple-600",
 	},
+	pending: {
+		icon: HourglassIcon,
+		label: "Pending",
+		iconClassName: "bg-zinc-400 dark:bg-zinc-500",
+	},
 };
 
 function resolveStatus({
@@ -74,6 +80,7 @@ function resolveStatus({
 	if (status === CusProductStatus.Paused) return "paused";
 	if (status === CusProductStatus.Expired) return "expired";
 	if (status === CusProductStatus.Scheduled) return "scheduled";
+	if (status === CusProductStatus.Pending) return "pending";
 	if (canceled) return "canceling";
 	if (trialing || status === CusProductStatus.Trialing) return "trialing";
 	if (status === CusProductStatus.PastDue) return "past_due";

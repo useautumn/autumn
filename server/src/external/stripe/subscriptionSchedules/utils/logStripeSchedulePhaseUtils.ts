@@ -111,6 +111,7 @@ const formatCustomerProductStatus = (
 	const statusLabels: Record<CusProductStatus, string> = {
 		[CusProductStatus.Active]: "✓ active",
 		[CusProductStatus.Scheduled]: "⏳ scheduled",
+		[CusProductStatus.Pending]: "⧖ pending",
 		[CusProductStatus.Expired]: "✗ expired",
 		[CusProductStatus.PastDue]: "⚠ past_due",
 		[CusProductStatus.Trialing]: "🔄 trialing",

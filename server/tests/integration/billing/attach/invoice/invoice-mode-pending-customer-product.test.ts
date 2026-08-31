@@ -1,0 +1,126 @@
+import { expect, test } from "bun:test";
+import {
+	ALL_STATUSES,
+	type ApiCustomerV5,
+	CusProductStatus,
+} from "@autumn/shared";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+import chalk from "chalk";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+
+const listCustomerProducts = async ({
+	ctx,
+	internalCustomerId,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	internalCustomerId: string;
+}) =>
+	await CusProductService.list({
+		db: ctx.db,
+		internalCustomerId,
+		inStatuses: ALL_STATUSES,
+	});
+
+test.concurrent(
+	`${chalk.yellowBright("invoice-mode pending: deferred attach inserts a pending plan that grants nothing")}`,
+	async () => {
+		const customerId = "invoice-mode-pending-inserted";
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, autumnV2_2, customer } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [
+				s.billing.attach({
+					productId: pro.id,
+					invoice: true,
+					enableProductImmediately: false,
+					finalizeInvoice: true,
+				}),
+			],
+		});
+
+		const customerProducts = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const pendingCustomerProduct = customerProducts.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(pendingCustomerProduct).toBeDefined();
+		expect(pendingCustomerProduct?.status).toBe(CusProductStatus.Pending);
+		expect(pendingCustomerProduct?.metadata_id).toBeTruthy();
+
+		const check = await autumnV2_2.check({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		});
+
+		expect(check.allowed).toBe(false);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoice-mode pending: paying the invoice promotes the pending plan to active")}`,
+	async () => {
+		const customerId = "invoice-mode-pending-promoted";
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, autumnV2_1, customer } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.billing.attach({
+					productId: pro.id,
+					invoice: true,
+					enableProductImmediately: false,
+					finalizeInvoice: true,
+				}),
+			],
+		});
+
+		const stripeInvoices = await ctx.stripeCli.invoices.list({
+			customer: customer?.processor?.id ?? "",
+			limit: 1,
+		});
+
+		await ctx.stripeCli.invoices.pay(stripeInvoices.data[0].id);
+		await new Promise((resolve) => setTimeout(resolve, 12_000));
+
+		const customerProducts = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const promotedCustomerProducts = customerProducts.filter(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(promotedCustomerProducts).toHaveLength(1);
+		expect(promotedCustomerProducts[0].status).toBe(CusProductStatus.Active);
+		expect(promotedCustomerProducts[0].metadata_id).toBeNull();
+
+		const apiCustomer =
+			await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+
+		await expectBalanceCorrect({
+			customer: apiCustomer,
+			featureId: TestFeature.Messages,
+			remaining: 100,
+			usage: 0,
+		});
+	},
+);

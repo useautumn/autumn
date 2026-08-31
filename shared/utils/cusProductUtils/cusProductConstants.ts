@@ -9,6 +9,7 @@ export const RELEVANT_STATUSES = [
 	CusProductStatus.Active,
 	CusProductStatus.PastDue,
 	CusProductStatus.Scheduled,
+	CusProductStatus.Pending,
 ];
 
 export const VERSIONABLE_CUSTOMER_STATUSES = [
@@ -34,6 +35,7 @@ export const MIGRATABLE_STATUSES = [
 
 export const ALL_STATUSES = [
 	CusProductStatus.Scheduled,
+	CusProductStatus.Pending,
 	CusProductStatus.Active,
 	CusProductStatus.PastDue,
 	CusProductStatus.Paused,

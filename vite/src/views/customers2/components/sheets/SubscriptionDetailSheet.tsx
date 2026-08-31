@@ -95,12 +95,13 @@ export function SubscriptionDetailSheet() {
 	);
 
 	const isScheduled = cusProduct.status === CusProductStatus.Scheduled;
+	const isPending = cusProduct.status === CusProductStatus.Pending;
 	const subscriptionDiscounts = getDiscountsForSubscription({
 		subscriptionIds: cusProduct.subscription_ids ?? [],
 	});
 
-	const canCancel = !isExpired;
-	const canUpdate = !isExpired && !isScheduled;
+	const canCancel = !isExpired && !isPending;
+	const canUpdate = !isExpired && !isScheduled && !isPending;
 	const hasPlanItems = (displayItems?.length ?? 0) > 0;
 	const licenseRows = cusProductLicenses(cusProduct);
 	const prepaidDisplayQuantities = backendToDisplayQuantity({

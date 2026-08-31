@@ -1,0 +1,2 @@
+ALTER TABLE "customer_products" ADD COLUMN "metadata_id" text;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_customer_products_metadata_id" ON "customer_products" USING btree ("metadata_id") WHERE "customer_products"."metadata_id" IS NOT NULL;
