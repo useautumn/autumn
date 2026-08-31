@@ -43,7 +43,19 @@ const upsertMatchesDraftEntry = ({
 	if (planParams.version !== undefined) {
 		return upsertProductPlan.row.version === planParams.version;
 	}
-	return upsertProductPlan.row.source === "direct";
+	if (planParams.version_slug !== undefined) {
+		return (
+			upsertProductPlan.row.nextFullProduct.version_slug ===
+			planParams.version_slug
+		);
+	}
+	// One request can carry many direct rows of a plan, so "any direct row" would
+	// let one entry's draft claim its siblings. An unpinned entry named the
+	// active row, and only that row.
+	return (
+		upsertProductPlan.row.source === "direct" &&
+		upsertProductPlan.row.nextFullProduct.active === true
+	);
 };
 
 /** The params entry whose `migration.draft` claims this upsert row. */

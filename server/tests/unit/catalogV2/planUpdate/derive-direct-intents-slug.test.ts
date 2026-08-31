@@ -39,19 +39,42 @@ describe("deriveDirectIntents version_slug targeting", () => {
 		expect(intent?.productKey).toEqual({ planId: "pro", version: 1 });
 	});
 
-	test("unknown version_slug is not fall-through-to-active", () => {
-		expect(
-			deriveDirectIntents({
-				params: {
-					plans: [{ plan_id: "pro", version_slug: "missing", name: "Ghost" }],
-					features: [],
-					remove_features: [],
-					remove_plans: [],
-				},
-				productStatesContext,
-				internalIdRefs: new Map(),
-			}),
-		).toEqual([]);
+	test("unknown version_slug mints under that name, never the active row", () => {
+		const [intent] = deriveDirectIntents({
+			params: {
+				plans: [{ plan_id: "pro", version_slug: "missing", name: "Ghost" }],
+				features: [],
+				remove_features: [],
+				remove_plans: [],
+			},
+			productStatesContext,
+			internalIdRefs: new Map(),
+		});
+
+		// A config states the history it wants, so a slug naming no row creates
+		// one. The original guarantee still holds: it must never land on the
+		// active row (v2 here), which would silently rewrite live pricing.
+		expect(intent?.productKey).toEqual({ planId: "pro", version: 3 });
+		expect(intent?.planParams.new_version_slug).toBe("missing");
+		expect(intent?.planParams.version_slug).toBeUndefined();
+	});
+
+	test("two entries minting distinct slugs get distinct versions", () => {
+		const intents = deriveDirectIntents({
+			params: {
+				plans: [
+					{ plan_id: "pro", version_slug: "autumn", name: "A" },
+					{ plan_id: "pro", version_slug: "winter", name: "B" },
+				],
+				features: [],
+				remove_features: [],
+				remove_plans: [],
+			},
+			productStatesContext,
+			internalIdRefs: new Map(),
+		});
+
+		expect(intents.map((intent) => intent.productKey.version)).toEqual([3, 4]);
 	});
 
 	test("omit both targets the active row", () => {

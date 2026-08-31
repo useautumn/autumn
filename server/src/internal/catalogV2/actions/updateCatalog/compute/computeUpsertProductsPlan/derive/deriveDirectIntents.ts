@@ -95,9 +95,37 @@ const resolveVersionsForPlan = ({
 	const maxVersion = maxVersionForPlan({ planId, productStatesContext });
 	const hasLiveVersions =
 		(productStatesContext.versionsByPlanId[planId] ?? []).length > 0;
-	const nextFreeVersion = maxVersion + 1;
 	const activeOrV1 =
 		activeVersionForPlan({ planId, productStatesContext }) ?? (maxVersion || 1);
+
+	// Versions this request has spoken for, so rows minted here never land on
+	// each other or on a row the payload pinned.
+	const claimedVersions = new Set(
+		withExplicitVersion.map((planParams) => planParams.version),
+	);
+	let nextFreeVersion = maxVersion + 1;
+	const takeFreeVersion = (): number => {
+		while (claimedVersions.has(nextFreeVersion)) nextFreeVersion++;
+		claimedVersions.add(nextFreeVersion);
+		return nextFreeVersion;
+	};
+
+	/**
+	 * A slug naming no existing row is history the catalog does not have yet.
+	 * The config is the desired state, so the row is minted under that name.
+	 */
+	const mintedFromSlug = resolved
+		.filter(
+			(planParams) =>
+				!hasExplicitVersion(planParams) &&
+				planParams.version_slug !== undefined,
+		)
+		.map((planParams) => ({
+			...planParams,
+			version: takeFreeVersion(),
+			new_version_slug: planParams.new_version_slug ?? planParams.version_slug,
+			version_slug: undefined,
+		}));
 
 	const targetingLatest = resolved
 		.filter(
@@ -109,11 +137,11 @@ const resolveVersionsForPlan = ({
 			...planParams,
 			version:
 				planParams.versioning === "new_version" || !hasLiveVersions
-					? nextFreeVersion
+					? takeFreeVersion()
 					: activeOrV1,
 		}));
 
-	return [...withExplicitVersion, ...targetingLatest];
+	return [...withExplicitVersion, ...mintedFromSlug, ...targetingLatest];
 };
 
 /**
