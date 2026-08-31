@@ -1,7 +1,10 @@
 import { productKeyToString, productToProductKey } from "@autumn/shared";
 import {
+	childEditsItemsInPlace,
 	childTriggersLicenseRewrite,
+	movesActivePointer,
 	reverseLinksForChild,
+	reverseLinksOnChildPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
 import { deriveLicenseParentMintIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveLicenseParentMintIntents";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
@@ -10,7 +13,12 @@ import type {
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
-/** Links-only pin for parent versions not already in the batch. Skip all_versions plans — siblings cover them. */
+/**
+ * Pull absent parent versions into the batch. In-place edits pull every
+ * reverse-linked parent (pin candidates); mints/promotes pull only parents
+ * listed in propagate — anchored links stay untouched. Skip all_versions
+ * plans — siblings cover them.
+ */
 export const deriveLicenseParentIntents = ({
 	intent,
 	upsert,
@@ -25,10 +33,19 @@ export const deriveLicenseParentIntents = ({
 	const rewritesLicenses = childTriggersLicenseRewrite({ child: upsert });
 	if (!rewritesLicenses) return [];
 
-	const reverseLinks = reverseLinksForChild({
-		upsert,
-		productStatesContext: projectedProductStatesContext,
-	});
+	const editsInPlace = childEditsItemsInPlace({ child: upsert });
+	const propagatePlanIds = new Set(
+		(upsert.propagate?.license_parents ?? []).map((target) => target.plan_id),
+	);
+	const reverseLinks = movesActivePointer({ upsert })
+		? reverseLinksOnChildPlan({
+				planId: upsert.row.planId,
+				productStatesContext: projectedProductStatesContext,
+			})
+		: reverseLinksForChild({
+				upsert,
+				productStatesContext: projectedProductStatesContext,
+			});
 
 	return [
 		...deriveLicenseParentMintIntents({
@@ -39,6 +56,8 @@ export const deriveLicenseParentIntents = ({
 		...reverseLinks.flatMap((link) => {
 			const productKey = productToProductKey({ product: link.product });
 			if (allVersionsPlanIds.has(productKey.planId)) return [];
+			if (!editsInPlace && !propagatePlanIds.has(productKey.planId))
+				return [];
 			const parentIsLoaded =
 				projectedProductStatesContext.statesByPlanVersion[
 					productKeyToString({ productKey })

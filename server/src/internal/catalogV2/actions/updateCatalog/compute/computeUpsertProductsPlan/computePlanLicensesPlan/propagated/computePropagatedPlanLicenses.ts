@@ -10,6 +10,7 @@ import {
 	needsNewParentLink,
 	needsRepoint,
 	parentLicenseLinkForChild,
+	propagateReachesLink,
 	shouldPropagate,
 	upsertProductPlansToChildPlans,
 } from "../licensePlanUtils";
@@ -94,8 +95,8 @@ const propagatedPlanLicense = ({
 		: propagatedStockPlanLicense({ currentPlanLicense, child, parent });
 
 /**
- * Child-driven adopt: parents listed in propagate.license_parents follow the
- * child's new items. In-place uncustomized share stock (`op: "none"`) for preview.
+ * Child-driven adopt: listed parents follow this child's next items.
+ * In-place uncustomized share stock; mint/promote may re-point.
  */
 export const computePropagatedPlanLicenses = ({
 	ctx,
@@ -113,7 +114,14 @@ export const computePropagatedPlanLicenses = ({
 	for (const child of upsertProductPlansToChildPlans({ upsertProducts })) {
 		const currentPlanLicense = parentLicenseLinkForChild({ parent, child });
 		if (!currentPlanLicense) continue;
+		if (
+			parent.row.source === "license_adopt" &&
+			!child.row.nextFullProduct.active
+		) {
+			continue;
+		}
 		if (!shouldPropagate({ parent, child, productStatesContext })) continue;
+		if (!propagateReachesLink({ currentPlanLicense, child })) continue;
 
 		const planLicense = propagatedPlanLicense({
 			ctx,

@@ -9,6 +9,10 @@ export const ApiPlanLicenseV1Schema = z.object({
 	version: z.number().int().min(1).meta({
 		description: "The exact license-plan version pinned by this link.",
 	}),
+	version_slug: z.string().optional().meta({
+		description:
+			"Version slug of the license-plan row this link points at.",
+	}),
 	included: z.number().meta({
 		description:
 			"Number of license assignments included with this plan for free.",

@@ -62,6 +62,24 @@ export const handlePlanLicenseErrors = ({
 	}
 
 	for (const planLicense of declared) {
+		// Declared anchor must resolve to a live row; drafts are allowed.
+		if (planLicense.declaredVersionSlug !== undefined) {
+			if (!planLicense.licenseProduct) {
+				throw new RecaseError({
+					message: `License ${planLicense.licensePlanId} has no version with slug ${planLicense.declaredVersionSlug}`,
+					code: ErrCode.InvalidRequest,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+			if (planLicense.licenseProduct.archived) {
+				throw new RecaseError({
+					message: `Cannot anchor license ${planLicense.licensePlanId} to archived version ${planLicense.declaredVersionSlug}`,
+					code: ErrCode.InvalidRequest,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+		}
+
 		if (!planLicense.effectiveLicenseProduct) {
 			throw new ProductNotFoundError({
 				productId: planLicense.licensePlanId,

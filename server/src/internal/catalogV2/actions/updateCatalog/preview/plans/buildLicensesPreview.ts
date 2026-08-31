@@ -18,6 +18,9 @@ const plannedLicensesPreview = ({
 			{
 				license_plan_id: planLicense.licensePlanId,
 				version: planLicense.licenseProduct.version,
+				...(planLicense.licenseProduct.version_slug
+					? { version_slug: planLicense.licenseProduct.version_slug }
+					: {}),
 				included: planLicense.included,
 				prepaid_only: planLicense.prepaidOnly,
 			},

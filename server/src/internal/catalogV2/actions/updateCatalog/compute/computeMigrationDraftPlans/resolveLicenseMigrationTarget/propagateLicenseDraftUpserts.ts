@@ -9,7 +9,11 @@ import {
 	licenseUpsertFromPlanLicense,
 	sortLicenseDraftUpserts,
 } from "@/internal/catalogV2/actions/updateCatalog/compute/computeMigrationDraftPlans/resolveLicenseMigrationTarget/licenseUpsertFromPlanLicense";
-import { shouldPropagate } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
+import {
+	parentLicenseLinkForChild,
+	propagateReachesLink,
+	shouldPropagate,
+} from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 
@@ -44,6 +48,10 @@ export const propagateLicenseDraftUpserts = ({
 		) {
 			continue;
 		}
+
+		const currentPlanLicense = parentLicenseLinkForChild({ parent, child });
+		if (!currentPlanLicense) continue;
+		if (!propagateReachesLink({ currentPlanLicense, child })) continue;
 
 		const planLicense = parent.planLicenses?.find(
 			(link) => link.licensePlanId === child.row.planId,

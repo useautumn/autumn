@@ -10,8 +10,11 @@ import { productToProductKey } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
 import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 import {
+	childEditsItemsInPlace,
 	childPropagatesToParent,
-	reverseLinksForChild,
+	movesActivePointer,
+	reverseLinksOnChildPlan,
+	reverseLinksOnChildProduct,
 } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/licensePlanUtils";
 import { withCatalogConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withCatalogConflicts";
 import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
@@ -38,6 +41,11 @@ const byVersionAscending = (
 
 /** A parent version plus the plan name, which only the top-level entry keeps. */
 type NamedParentVersion = CatalogLicenseParentVersionPreview & { name: string };
+
+type ReverseChildLink = {
+	license_internal_product_id: string;
+	product: FullProduct;
+};
 
 const parentVersioningOptions = ({
 	planId,
@@ -172,11 +180,26 @@ const parentPlanChange = ({
 			})
 		: undefined;
 
+/** This child edit will rewrite the catalog link (in-place on this row, or mint/promote). */
+const childEditRewritesLink = ({
+	link,
+	child,
+}: {
+	link: ReverseChildLink | undefined;
+	child: UpsertProductPlan;
+}): boolean => {
+	if (movesActivePointer({ upsert: child })) return true;
+	if (!childEditsItemsInPlace({ child })) return false;
+	if (!link) return false;
+	return link.license_internal_product_id === child.row.nextFullProduct.internal_id;
+};
+
 const buildParentVersionPreview = ({
 	parentUpsert,
 	stateProduct,
 	previewVersion,
 	child,
+	link,
 	upsertProducts,
 	productStatesContext,
 	previewContext,
@@ -185,6 +208,7 @@ const buildParentVersionPreview = ({
 	stateProduct: FullProduct;
 	previewVersion: number;
 	child: UpsertProductPlan;
+	link?: ReverseChildLink;
 	upsertProducts: UpsertProductPlan[];
 	productStatesContext: ProductStatesContext;
 	previewContext: PreviewCatalogContext | undefined;
@@ -199,11 +223,13 @@ const buildParentVersionPreview = ({
 		parentUpsert?.row.baseFullProduct ??
 		parentState.currentFullProduct ??
 		stateProduct;
-	const licenseAction = resolveLicenseAction({
-		parent: parentUpsert,
-		child,
-		productStatesContext,
-	});
+	const licenseAction = childEditRewritesLink({ link, child })
+		? resolveLicenseAction({
+				parent: parentUpsert,
+				child,
+				productStatesContext,
+			})
+		: ("unchanged" as const);
 	const planChange = parentPlanChange({ parentUpsert });
 	const preview = {
 		...catalogRowIdentity({
@@ -228,7 +254,12 @@ const buildParentVersionPreview = ({
 		license_action: licenseAction,
 		...(planChange ? { plan_change: planChange } : {}),
 	};
-	if (licenseAction === "explicit") return preview;
+	if (
+		licenseAction === "explicit" ||
+		!childEditRewritesLink({ link, child })
+	) {
+		return preview;
+	}
 	return withCatalogConflicts({
 		preview,
 		current: child.row.currentFullProduct,
@@ -274,9 +305,15 @@ const foldParentVersions = ({
 			.filter((version) => version.version !== active.version)
 			.map(({ name: _name, ...sibling }) => sibling)
 			.sort(byVersionAscending);
+		const minted = planVersions.find(
+			(version) => version.version > (activeVersion ?? active.version),
+		);
 
 		return {
 			...active,
+			...(minted?.plan_change && !active.plan_change
+				? { plan_change: minted.plan_change }
+				: {}),
 			versioning: parentVersioning({
 				planId: active.plan_id,
 				linkedVersions: planVersions,
@@ -289,23 +326,29 @@ const foldParentVersions = ({
 	});
 };
 
-/** Parents currently offering this child. Empty → omit the lane. */
+/** Parents whose planLicense points at this child version row. Empty → omit. */
 export const buildLicenseParentsPreview = ({
 	directUpsert,
+	childInternalId,
+	includeMintedParents = true,
 	upsertProducts,
 	productStatesContext,
 	previewContext,
 }: {
 	directUpsert: UpsertProductPlan;
+	childInternalId?: string;
+	includeMintedParents?: boolean;
 	upsertProducts: UpsertProductPlan[];
 	productStatesContext: ProductStatesContext;
 	previewContext: PreviewCatalogContext | undefined;
 }): CatalogLicenseParentPreview[] => {
-	const reverseLinks = reverseLinksForChild({
-		upsert: directUpsert,
+	const scopedInternalId =
+		childInternalId ?? directUpsert.row.nextFullProduct.internal_id;
+	const reverseLinks = reverseLinksOnChildProduct({
+		planId: directUpsert.row.planId,
+		childInternalId: scopedInternalId,
 		productStatesContext,
 	});
-	if (reverseLinks.length === 0) return [];
 
 	const existingVersions = reverseLinks
 		.filter((link) => !link.product.archived)
@@ -321,16 +364,78 @@ export const buildLicenseParentsPreview = ({
 				stateProduct: link.product,
 				previewVersion: parentKey.version,
 				child: directUpsert,
+				link,
 				upsertProducts,
 				productStatesContext,
 				previewContext,
 			});
 		});
+	if (!includeMintedParents) {
+		return foldParentVersions({
+			versions: existingVersions,
+			directUpsert,
+			upsertProducts,
+			productStatesContext,
+		}).sort(byPlanId);
+	}
+
+	const sourceInternalId =
+		directUpsert.row.currentFullProduct?.internal_id ??
+		directUpsert.row.baseFullProduct?.internal_id;
+	const followingFromSource =
+		sourceInternalId &&
+		sourceInternalId !== scopedInternalId &&
+		movesActivePointer({ upsert: directUpsert })
+			? reverseLinksOnChildProduct({
+					planId: directUpsert.row.planId,
+					childInternalId: sourceInternalId,
+					productStatesContext,
+				})
+					.filter((link) => !link.product.archived)
+					.flatMap((link): NamedParentVersion[] => {
+						const parentKey = productToProductKey({ product: link.product });
+						const parentUpsert = findParentUpsert({
+							upsertProducts,
+							planId: parentKey.planId,
+							version: parentKey.version,
+						});
+						const listedForPropagate = (
+							directUpsert.propagate?.license_parents ?? []
+						).some((target) => target.plan_id === parentKey.planId);
+						if (
+							!listedForPropagate &&
+							resolveLicenseAction({
+								parent: parentUpsert,
+								child: directUpsert,
+								productStatesContext,
+							}) === "unchanged"
+						) {
+							return [];
+						}
+						return [
+							buildParentVersionPreview({
+								parentUpsert,
+								stateProduct: link.product,
+								previewVersion: parentKey.version,
+								child: directUpsert,
+								link,
+								upsertProducts,
+								productStatesContext,
+								previewContext,
+							}),
+						];
+					})
+			: [];
+
 	const linkedParentPlanIds = new Set(
-		existingVersions.map((version) => version.plan_id),
+		reverseLinksOnChildPlan({
+			planId: directUpsert.row.planId,
+			productStatesContext,
+		}).map((link) => productToProductKey({ product: link.product }).planId),
 	);
 	const mintedVersions = upsertProducts.flatMap((parentUpsert) => {
 		if (!linkedParentPlanIds.has(parentUpsert.row.planId)) return [];
+		if (parentUpsert.row.source !== "license_adopt") return [];
 		const maxVersion = maxVersionForPlan({
 			planId: parentUpsert.row.planId,
 			productStatesContext,
@@ -361,7 +466,7 @@ export const buildLicenseParentsPreview = ({
 	});
 
 	return foldParentVersions({
-		versions: [...existingVersions, ...mintedVersions],
+		versions: [...existingVersions, ...followingFromSource, ...mintedVersions],
 		directUpsert,
 		upsertProducts,
 		productStatesContext,
