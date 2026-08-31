@@ -1,11 +1,11 @@
 import type { TestGroup } from "./types";
 
-/** Local-confirmed leftovers from tw mtbqh66d-qn7c1r (2026-08-27) — cleared. */
+/** Scratch group for tw leftovers. Keep empty on trunk. */
 const activeTempPaths: string[] = [];
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "tw failures 2026-08-27 — product bugs only",
+	description: "local tw triage — keep empty on trunk",
 	tier: "domain",
 	paths: activeTempPaths,
 	maxConcurrency: 4,

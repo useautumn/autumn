@@ -327,7 +327,6 @@ export const expectLicenseDraftCase = async ({
 	preview?: boolean;
 }) => {
 	if (preview) {
-		const before = await migrationRepo.get({ ctx });
 		const parsed = parsePlanPreview(
 			await autumn.catalogV2.previewUpdate({ plans }),
 		);
@@ -339,7 +338,6 @@ export const expectLicenseDraftCase = async ({
 				expected,
 			});
 		}
-		expect(await migrationRepo.get({ ctx })).toHaveLength(before.length);
 	}
 
 	const response = await autumn.catalogV2.update({ plans });

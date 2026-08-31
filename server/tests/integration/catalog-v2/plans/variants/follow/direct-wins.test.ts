@@ -31,12 +31,16 @@ test.concurrent(
 						plan_id: baseId,
 						items: [messagesItem(100), dashboardItem()],
 						propagate: { variants: [{ plan_id: variantId, version: 1 }] },
-					},
-					{
-						plan_id: variantId,
-						items: [
-							messagesItem(200),
-							{ feature_id: TestFeature.AdminRights },
+						variants: [
+							{
+								variant_plan_id: variantId,
+								customize: {
+									items: [
+										messagesItem(200),
+										{ feature_id: TestFeature.AdminRights },
+									],
+								},
+							},
 						],
 					},
 				],

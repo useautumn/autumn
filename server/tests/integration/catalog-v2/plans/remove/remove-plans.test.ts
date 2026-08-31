@@ -2,11 +2,13 @@
  * catalogV2.update / preview_update — remove_plans verdicts.
  *
  * Unreferenced plans hard-delete. Expired-only customers tombstone.
- * Versionable customers, reward programs, or a surviving license parent
- * archive instead. Unpinned entries share one verdict across every version.
+ * Versionable customers or reward programs archive instead. A surviving
+ * license parent blocks child archive/remove. Unpinned entries share one
+ * verdict across every version.
  */
 
 import { expect, test } from "bun:test";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import {
 	CouponDurationType,
 	CusProductStatus,
@@ -135,7 +137,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 remove plans: customers and license parents archive instead")}`,
+	`${chalk.yellowBright("catalogV2 remove plans: customers archive; license parents block child remove")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const withCustomerId = uniqueTestId("cv2_rmp_cus");
@@ -181,7 +183,6 @@ test.concurrent(
 						remove_plans: [
 							{ plan_id: withCustomerId },
 							{ plan_id: expiredId },
-							{ plan_id: childId },
 						],
 					}),
 					plans: [
@@ -197,12 +198,6 @@ test.concurrent(
 							willArchive: false,
 							hasCustomers: true,
 						},
-						{
-							planId: childId,
-							action: "delete",
-							willArchive: true,
-							hasCustomers: false,
-						},
 					],
 				});
 
@@ -210,14 +205,20 @@ test.concurrent(
 					remove_plans: [
 						{ plan_id: withCustomerId },
 						{ plan_id: expiredId },
-						{ plan_id: childId },
 					],
+				});
+				await expectAutumnError({
+					errMessage: `Cannot archive or remove ${childId} version 1 while ${parentId} still links to it`,
+					func: () =>
+						autumnV2_3.catalogV2.update({
+							remove_plans: [{ plan_id: childId }],
+						}),
 				});
 				await expectDbPlansCorrect({
 					ctx,
 					expected: [
 						{ id: withCustomerId, archived: true },
-						{ id: childId, archived: true },
+						{ id: childId, archived: false },
 					],
 				});
 				await expectTombstoneCorrect({

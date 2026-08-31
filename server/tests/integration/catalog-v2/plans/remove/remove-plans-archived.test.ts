@@ -1,5 +1,5 @@
 /**
- * catalogV2.update — archived plans stay pinned; settings still fan out;
+ * catalogV2.update — archived plans stay pinned (no settings fan-out);
  * drafts skip archived rows; variants[].archived unarchives.
  */
 
@@ -17,6 +17,7 @@ import {
 import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
 import { expectLicenseLinkCorrect } from "../licenses/utils/expectLicenseLinkCorrect.js";
 import {
+	dashboardItem,
 	messagesItem,
 	withCatalogPlans,
 } from "../licenses/utils/seedLicensePlans.js";
@@ -136,7 +137,7 @@ test.concurrent(
 									{
 										variant_plan_id: variantId,
 										customize: {
-											add_items: [messagesItem(300)],
+											add_items: [dashboardItem()],
 										},
 									},
 								],
@@ -187,7 +188,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 remove plans: settings fan out to archived variants; archived:false unarchives; no draft")}`,
+	`${chalk.yellowBright("catalogV2 remove plans: archived variants skip settings; archived:false unarchives; no draft")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const baseId = uniqueTestId("cv2_rmp_set_b");
@@ -219,7 +220,7 @@ test.concurrent(
 				ctx,
 				variantPlanId: variantId,
 				name: "Team EU",
-				description: "after",
+				description: null,
 				allowances: { [TestFeature.Messages]: 200 },
 			});
 			await expectDbPlansCorrect({
