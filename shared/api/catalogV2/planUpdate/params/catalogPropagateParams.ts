@@ -10,6 +10,10 @@ export const CatalogPropagateTargetParamsSchema = z.object({
 	version: z.number().int().min(1).optional().meta({
 		description: "Which version of the target follows. Omit to target latest.",
 	}),
+	version_slug: z.string().nonempty().regex(idRegex).optional().meta({
+		description:
+			"Which version of the target follows, by slug. Same pin as `version`; omit both to target latest.",
+	}),
 	versioning: CatalogPlanVersioningStrategySchema.optional().meta({
 		description:
 			"How this follow applies across the target's versions. Omit or `existing` = the resolved row only; `all_versions` = every other existing version of the target; `new_version` = mint max+1 on the target.",

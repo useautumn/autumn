@@ -7,6 +7,8 @@ import type {
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { PlanLicensePlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
+import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
+import { fullProductForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForSlug";
 
 const declaredLinkChanged = ({
 	currentPlanLicense,
@@ -38,6 +40,39 @@ const declaredLinkChanged = ({
 	return false;
 };
 
+/** Stated slug = that row. Omitted keeps the existing child id; new links use active. */
+const anchorFullProductForDeclared = ({
+	params,
+	currentPlanLicense,
+	productStatesContext,
+}: {
+	params: PlanLicenseParams;
+	currentPlanLicense: FullPlanLicense | null;
+	productStatesContext: ProductStatesContext;
+}): FullProduct | null => {
+	if (params.version_slug !== undefined) {
+		return fullProductForSlug({
+			planId: params.license_plan_id,
+			versionSlug: params.version_slug,
+			productStatesContext,
+		});
+	}
+
+	if (currentPlanLicense) {
+		return (
+			findFullProductByInternalId({
+				internalId: currentPlanLicense.license_internal_product_id,
+				productStatesContext,
+			}) ?? currentPlanLicense.product
+		);
+	}
+
+	return activeFullProductForPlan({
+		planId: params.license_plan_id,
+		productStatesContext,
+	});
+};
+
 /** Declared licenses[] vs current links → per-link write ops. */
 export const resolveDeclaredPlanLicenses = ({
 	declared,
@@ -58,12 +93,13 @@ export const resolveDeclaredPlanLicenses = ({
 	const declaredIds = new Set(declared.map((entry) => entry.license_plan_id));
 
 	const planned: PlanLicensePlan[] = declared.map((params) => {
-		const licenseProduct = activeFullProductForPlan({
-			planId: params.license_plan_id,
-			productStatesContext,
-		});
 		const currentPlanLicense =
 			currentPlanLicenseByPlanId.get(params.license_plan_id) ?? null;
+		const licenseProduct = anchorFullProductForDeclared({
+			params,
+			currentPlanLicense,
+			productStatesContext,
+		});
 
 		const op = !currentPlanLicense
 			? "create"
@@ -87,6 +123,7 @@ export const resolveDeclaredPlanLicenses = ({
 			prepaidOnly: params.prepaid_only ?? true,
 			metadata: params.metadata,
 			customize: params.customize,
+			declaredVersionSlug: params.version_slug,
 		};
 	});
 

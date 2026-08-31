@@ -76,7 +76,8 @@ const metadatasAreSame = (
 	return true;
 };
 
-/** Link snapshot (`ApiPlanLicenseV1`). `version` and expanded `plan` are display. */
+/** Link snapshot (`ApiPlanLicenseV1`). Numeric `version` and expanded `plan` are
+ * display; `version_slug` is the version anchor and is a compared term. */
 export const planLicensesAreSame = ({
 	left,
 	right,
@@ -86,6 +87,7 @@ export const planLicensesAreSame = ({
 }): boolean => {
 	const diffs = {
 		licensePlanId: left.license_plan_id !== right.license_plan_id,
+		versionSlug: left.version_slug !== right.version_slug,
 		included: left.included !== right.included,
 		prepaidOnly: left.prepaid_only !== right.prepaid_only,
 		customize: !licenseCustomizesAreSame({
@@ -107,6 +109,7 @@ export const customizePlanLicensesAreSame = ({
 }): boolean => {
 	const diffs = {
 		licensePlanId: left.license_plan_id !== right.license_plan_id,
+		versionSlug: left.version_slug !== right.version_slug,
 		included: left.included !== right.included,
 		prepaidOnly: left.prepaid_only !== right.prepaid_only,
 		customize: !licenseCustomizePatchesAreSame({

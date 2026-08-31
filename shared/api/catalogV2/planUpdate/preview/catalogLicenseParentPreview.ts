@@ -28,10 +28,9 @@ export const CatalogLicenseParentVersionPreviewSchema =
 	});
 
 /**
- * One license parent plan a child-plan edit fans out to, nested under the
- * child's direct preview row. Reports the latest linked version, with any
- * older linked versions under `sibling_versions`. License ops live on
- * plan_change (upsert_licenses / remove_licenses).
+ * One license parent plan whose planLicense points at this child version
+ * row. Older linked versions of the same parent nest under
+ * `sibling_versions`. License ops live on plan_change.
  */
 export const CatalogLicenseParentPreviewSchema =
 	CatalogCorePreviewSchema.extend({
