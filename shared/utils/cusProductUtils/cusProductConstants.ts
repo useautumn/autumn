@@ -9,6 +9,11 @@ export const RELEVANT_STATUSES = [
 	CusProductStatus.Active,
 	CusProductStatus.PastDue,
 	CusProductStatus.Scheduled,
+];
+
+/** Adds plans awaiting payment — attach conflict checks must see them. */
+export const ATTACH_CONFLICT_STATUSES = [
+	...RELEVANT_STATUSES,
 	CusProductStatus.Pending,
 ];
 

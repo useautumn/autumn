@@ -1,8 +1,8 @@
 import {
+	ATTACH_CONFLICT_STATUSES,
 	CusProductStatus,
 	type FullCusProduct,
 	type Product,
-	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import { isOneOff } from "@server/internal/products/productUtils";
 import { nullish } from "@server/utils/genUtils";
@@ -51,7 +51,7 @@ export const getExistingCusProducts = ({
 			? cp.internal_entity_id === internalEntityId
 			: nullish(cp.internal_entity_id);
 
-		const isRelevant = RELEVANT_STATUSES.includes(cp.status);
+		const isRelevant = ATTACH_CONFLICT_STATUSES.includes(cp.status);
 
 		return idMatch && entityMatch && isRelevant;
 	});
