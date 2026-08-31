@@ -127,9 +127,19 @@ const buildPropagationEdit = ({
 	};
 };
 
+const hasContentCustomize = (
+	customize: NonNullable<CatalogVariantParams["customize"]>,
+): boolean =>
+	customize.price !== undefined ||
+	customize.items !== undefined ||
+	customize.add_items !== undefined ||
+	customize.remove_items !== undefined ||
+	customize.free_trial !== undefined;
+
 /**
- * Propagation edit first; variants[n].customize second so it wins an
- * overlapping slot. One diff at the end is the variant's editDiff.
+ * Follow applies the base current→next diff onto the variant; customize then
+ * patches on top. Declared customize alone recomposes over the declaring
+ * base row's pre-edit content.
  */
 export const buildVariantEditDiff = ({
 	variantProduct,
@@ -162,17 +172,24 @@ export const buildVariantEditDiff = ({
 	}
 	if (customize) {
 		const { upsert_licenses, ...contentCustomize } = customize;
-		if (
-			contentCustomize.price !== undefined ||
-			contentCustomize.items !== undefined ||
-			contentCustomize.add_items !== undefined ||
-			contentCustomize.remove_items !== undefined ||
-			contentCustomize.free_trial !== undefined
-		) {
-			nextPlan = applyCustomizeToPlan({
-				plan: nextPlan,
-				customize: contentCustomize,
+		if (!follow) {
+			const basePlan = fullProductToApiPlanV1Sync({
+				product: baseCurrent ?? baseNext,
 			});
+			nextPlan = hasContentCustomize(customize)
+				? {
+						...applyCustomizeToPlan({
+							plan: basePlan,
+							customize: contentCustomize,
+						}),
+						licenses: currentPlan.licenses,
+					}
+				: { ...basePlan, licenses: currentPlan.licenses };
+		} else if (hasContentCustomize(customize)) {
+			nextPlan = {
+				...applyCustomizeToPlan({ plan: nextPlan, customize: contentCustomize }),
+				licenses: nextPlan.licenses,
+			};
 		}
 		if (upsert_licenses !== undefined) {
 			nextPlan = mergeUpsertLicensesOntoPlan({

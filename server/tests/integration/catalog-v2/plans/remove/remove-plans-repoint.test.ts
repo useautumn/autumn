@@ -1,11 +1,14 @@
 /**
- * catalogV2.update — pin-deleting a base version repoints surviving
- * variants at the remaining live version, or 400s if none remains.
+ * catalogV2.update — pin-deleting a base version is blocked when any
+ * variant still points at that row. Unused sibling versions can go.
  *
  * Contract:
- *   Pin-delete Team v2 while v1 lives → EU points at v1
+ *   Pin-delete Team v2 while EU points at v2 → 400 (no silent repoint)
  *   Pin-delete Team v1 while EU points at v2 → v1 gone, pointer stays on v2
  *   Pin-delete last remaining Team version while EU survives → 400
+ *
+ * Red (current): pin-delete of a referenced version repoints the variant.
+ * Green (after): that delete is 400; the pointer is unchanged.
  */
 
 import { test } from "bun:test";
@@ -27,7 +30,7 @@ import {
 const cannotRemoveWithVariants = ({ planId }: { planId: string }) =>
 	`Cannot delete or archive plan ${planId} while it still has variants`;
 
-const seedBaseV2WithVariant = async ({
+const seedBaseV2WithVariantOnV2 = async ({
 	autumn,
 	baseId,
 	variantId,
@@ -40,17 +43,26 @@ const seedBaseV2WithVariant = async ({
 	await autumn.catalogV2.update({
 		plans: [{ plan_id: baseId, versioning: "new_version", active: true }],
 	});
+	await autumn.catalogV2.update({
+		plans: [
+			{
+				plan_id: baseId,
+				version: 2,
+				variants: [{ variant_plan_id: variantId, version: 1 }],
+			},
+		],
+	});
 };
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 remove plans: pin-delete latest base version repoints the variant")}`,
+	`${chalk.yellowBright("catalogV2 remove plans: pin-delete of a referenced base version is 400")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const baseId = uniqueTestId("cv2_rmp_rp_v2");
 		const variantId = uniqueTestId("cv2_rmp_rp_v2_eu");
 		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
 		try {
-			await seedBaseV2WithVariant({
+			await seedBaseV2WithVariantOnV2({
 				autumn: autumnV2_3,
 				baseId,
 				variantId,
@@ -62,20 +74,25 @@ test.concurrent(
 				baseVersion: 2,
 			});
 
-			await autumnV2_3.catalogV2.update({
-				remove_plans: [{ plan_id: baseId, version: 2 }],
+			await expectAutumnError({
+				errCode: ErrCode.InvalidRequest,
+				errMessage: cannotRemoveWithVariants({ planId: baseId }),
+				func: () =>
+					autumnV2_3.catalogV2.update({
+						remove_plans: [{ plan_id: baseId, version: 2 }],
+					}),
 			});
 
 			await expectPlanVersionsCorrect({
 				ctx,
 				planId: baseId,
-				versions: [1],
+				versions: [1, 2],
 			});
 			await expectVariantPointerCorrect({
 				ctx,
 				variantPlanId: variantId,
 				basePlanId: baseId,
-				baseVersion: 1,
+				baseVersion: 2,
 			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
@@ -91,7 +108,7 @@ test.concurrent(
 		const variantId = uniqueTestId("cv2_rmp_rp_old_eu");
 		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
 		try {
-			await seedBaseV2WithVariant({
+			await seedBaseV2WithVariantOnV2({
 				autumn: autumnV2_3,
 				baseId,
 				variantId,

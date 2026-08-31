@@ -73,7 +73,7 @@ const draftChildAddsDashboard = ({
 }) => ({
 	plan_id: childId,
 	items: [messagesItem(10), dashboardItem()],
-	propagate: { license_parents: [{ plan_id: parentId }] },
+	propagate: { license_parents: [{ plan_id: parentId, version: 1 }] },
 	migration: { draft: true },
 });
 

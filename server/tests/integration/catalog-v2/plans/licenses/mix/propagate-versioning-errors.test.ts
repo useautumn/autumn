@@ -1,7 +1,7 @@
 /**
- * catalogV2.update — propagate.license_parents versioning guards.
- * Same combinations as plan-entry versioning: strategy + explicit version, and
- * new_version on a missing plan.
+ * catalogV2.update — propagate.license_parents pin guards.
+ * Missing pin is a schema 400. Off-anchor / missing plan → InvalidPropagationTarget.
+ * Source new_version + historical parent with customers → 400.
  */
 import { test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
@@ -9,19 +9,22 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
+import { seedDivergedChildAnchors } from "../utils/atmnPutDirectVersions.js";
+import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import {
 	bumpChild,
 	messagesItem,
 	seedLinkedChildParent,
+	seedTwoParentVersions,
 	withCatalogPlans,
 } from "../utils/seedLicensePlans.js";
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: propagate new_version + explicit version → 400")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: propagate target missing pin → 400")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
-		const parentId = uniqueTestId("cv2_lic_err_nv_p");
-		const childId = uniqueTestId("cv2_lic_err_nv_c");
+		const parentId = uniqueTestId("cv2_lic_err_pin_p");
+		const childId = uniqueTestId("cv2_lic_err_pin_c");
 		await withCatalogPlans({
 			ctx,
 			planIds: [parentId, childId],
@@ -32,21 +35,13 @@ test.concurrent(
 					childId,
 				});
 				await expectAutumnError({
-					errCode: ErrCode.InvalidRequest,
-					errMessage:
-						'versioning "new_version" cannot be combined with an explicit version',
+					errMessage: "Propagate targets must pin a row",
 					func: () =>
 						bumpChild({
 							autumn: autumnV2_3,
 							childId,
 							propagate: {
-								license_parents: [
-									{
-										plan_id: parentId,
-										version: 1,
-										versioning: "new_version",
-									},
-								],
+								license_parents: [{ plan_id: parentId }],
 							},
 						}),
 				});
@@ -56,37 +51,35 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: propagate all_versions + explicit version → 400")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: off-anchor parent pin → 400")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
-		const parentId = uniqueTestId("cv2_lic_err_av_p");
-		const childId = uniqueTestId("cv2_lic_err_av_c");
+		const parentId = uniqueTestId("cv2_lic_err_offv_p");
+		const childId = uniqueTestId("cv2_lic_err_offv_c");
 		await withCatalogPlans({
 			ctx,
 			planIds: [parentId, childId],
 			run: async () => {
-				await seedLinkedChildParent({
+				await seedDivergedChildAnchors({
 					autumn: autumnV2_3,
-					parentId,
 					childId,
+					parentId,
 				});
 				await expectAutumnError({
-					errCode: ErrCode.InvalidRequest,
-					errMessage:
-						'versioning "all_versions" cannot be combined with an explicit version',
+					errCode: ErrCode.InvalidPropagationTarget,
+					errMessage: "is not linked to an edited row",
 					func: () =>
-						bumpChild({
-							autumn: autumnV2_3,
-							childId,
-							propagate: {
-								license_parents: [
-									{
-										plan_id: parentId,
-										version: 1,
-										versioning: "all_versions",
+						autumnV2_3.catalogV2.update({
+							plans: [
+								{
+									plan_id: childId,
+									version: 2,
+									items: [messagesItem(200)],
+									propagate: {
+										license_parents: [{ plan_id: parentId, version: 1 }],
 									},
-								],
-							},
+								},
+							],
 						}),
 				});
 			},
@@ -95,7 +88,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: propagate new_version on missing parent → 400")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: pin a missing parent → 400")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const childId = uniqueTestId("cv2_lic_err_miss_c");
@@ -114,16 +107,52 @@ test.concurrent(
 					],
 				});
 				await expectAutumnError({
-					errCode: ErrCode.InvalidRequest,
-					errMessage: 'versioning "new_version" requires an existing plan',
+					errCode: ErrCode.InvalidPropagationTarget,
+					errMessage: `Invalid propagation target: ${missingId}`,
 					func: () =>
 						bumpChild({
 							autumn: autumnV2_3,
 							childId,
 							propagate: {
-								license_parents: [
-									{ plan_id: missingId, versioning: "new_version" },
-								],
+								license_parents: [{ plan_id: missingId, version: 1 }],
+							},
+						}),
+				});
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 plan-licenses: new_version + historical parent with customers → 400")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const parentId = uniqueTestId("cv2_lic_err_hist_p");
+		const childId = uniqueTestId("cv2_lic_err_hist_c");
+		await withCatalogPlans({
+			ctx,
+			planIds: [parentId, childId],
+			run: async () => {
+				await seedTwoParentVersions({
+					autumn: autumnV2_3,
+					parentId,
+					childId,
+				});
+				await seedVersionableCustomer({
+					ctx,
+					planId: parentId,
+					version: 1,
+				});
+				await expectAutumnError({
+					errCode: ErrCode.InvalidRequest,
+					errMessage: "historical version has customers",
+					func: () =>
+						bumpChild({
+							autumn: autumnV2_3,
+							childId,
+							versioning: "new_version",
+							propagate: {
+								license_parents: [{ plan_id: parentId, version: 1 }],
 							},
 						}),
 				});

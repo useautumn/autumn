@@ -1,7 +1,6 @@
 import type { FullProduct } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
-import { activeFullProductForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeFullProductForPlan";
 
 /** True when this upsert minted a new version row (clone source is baseFullProduct). */
 export const baseRowMinted = ({
@@ -12,40 +11,60 @@ export const baseRowMinted = ({
 	upsert.row.versioning === "new_version" &&
 	upsert.row.baseFullProduct != null;
 
-/** Active variant of this base (the representing row per child plan id). */
-export const latestVariantsOfBase = ({
-	upsert,
+/** Variant product rows whose pointer is one of these base internal ids. */
+export const variantRowsAnchoredTo = ({
+	baseInternalIds,
 	productStatesContext,
 	includeArchived = false,
 }: {
-	upsert: UpsertProductPlan;
+	baseInternalIds: Iterable<string>;
 	productStatesContext: ProductStatesContext;
 	includeArchived?: boolean;
 }): FullProduct[] => {
-	const baseInternalIds = new Set(
-		[
-			upsert.row.currentFullProduct?.internal_id,
-			upsert.row.baseFullProduct?.internal_id,
-			upsert.row.nextFullProduct.internal_id,
-			upsert.previousActiveInternalId,
-		].filter((internalId): internalId is string => internalId !== undefined),
+	const ids = new Set(
+		[...baseInternalIds].filter((internalId) => internalId.length > 0),
 	);
+	if (ids.size === 0) return [];
 
-	const latest: FullProduct[] = [];
-	for (const planId of Object.keys(productStatesContext.versionsByPlanId)) {
-		const product = activeFullProductForPlan({
-			planId,
-			productStatesContext,
-		});
-		if (!product || (!includeArchived && product.archived)) continue;
-		if (product.id === upsert.row.planId) continue;
-		if (
-			!product.base_internal_product_id ||
-			!baseInternalIds.has(product.base_internal_product_id)
-		) {
-			continue;
+	const rows: FullProduct[] = [];
+	for (const versions of Object.values(productStatesContext.versionsByPlanId)) {
+		for (const product of versions) {
+			if (!product.base_internal_product_id) continue;
+			if (!ids.has(product.base_internal_product_id)) continue;
+			if (!includeArchived && product.archived) continue;
+			rows.push(product);
 		}
-		latest.push(product);
 	}
-	return latest;
+	return rows;
+};
+
+/**
+ * Which base row(s) a variant must already point at to receive this upsert.
+ * Mint: the clone source. Promote + propagate: the demoted row too.
+ */
+export const reachInternalIdsForBaseUpsert = ({
+	upsert,
+}: {
+	upsert: UpsertProductPlan;
+}): string[] => {
+	if (baseRowMinted({ upsert }) && upsert.row.baseFullProduct) {
+		return [upsert.row.baseFullProduct.internal_id];
+	}
+
+	const ids = [
+		upsert.row.currentFullProduct?.internal_id,
+		upsert.row.nextFullProduct.internal_id,
+	];
+	if (
+		upsert.previousActiveInternalId &&
+		(upsert.propagate?.variants?.length ?? 0) > 0
+	) {
+		ids.push(upsert.previousActiveInternalId);
+	}
+
+	return [
+		...new Set(
+			ids.filter((internalId): internalId is string => internalId != null),
+		),
+	];
 };

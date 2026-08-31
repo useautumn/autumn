@@ -435,6 +435,7 @@ Preview `options` include `new_version` when the latest version has customers
 | `versioning: "new_version"` + explicit `version` → 400 | ✓ |
 | `versioning: "new_version"` + `migration.draft` → 400 | ✓ |
 | `versioning: "new_version"` on missing plan → 400 | ✓ |
+| `versioning: "new_version"` on a non-active row (direct or declared) → 400 — only the plan's ACTIVE row can mint | ✓ `validation/plan-errors.test.ts` |
 | `versioning: "all_versions"` + explicit `version` → 400 | ✓ |
 | Duplicate `(plan_id, version)` entries → error | ✓ |
 | Two unpinned entries for same plan_id → error | ✓ |
@@ -717,7 +718,7 @@ Mint clones the latest version (`id` stable, `version = max+1`, new
 rows, then applies param changes. Omitted facets are carried. Known gaps not
 covered here: `initStripeResourcesForProducts` is not wired after execute
 (carry only works from pre-seeded ids), reward migration is not queued,
-license links are not copied.
+license links clone onto the minted row.
 
 ### A1 — mint mechanics — `versions/new-version-mint.test.ts`
 
@@ -834,7 +835,7 @@ Direct parent `licenses[]` only. Omit = leave links unchanged; present = full-se
 | Two licenses; drop one, keep the other | ✓ `set-replace.test.ts` |
 | `customize: null` clears overlay | ✓ `set-fields.test.ts` |
 | included / prepaid_only / metadata-only (no customize) | ✓ `set-fields.test.ts` |
-| Child already has v2; `licenses:[child]` links latest | ✓ `set-replace.test.ts` |
+| Child already has v2; new `licenses:[child]` create-defaults to the ACTIVE row | ✓ `set-replace.test.ts` |
 | Duplicate `license_plan_id` in `licenses[]` → 400 | ✓ `declared-license-errors.test.ts` |
 | Self-link → 400 | ✓ `declared-license-guards.test.ts` |
 | Archived child → 400 | ✓ `declared-license-guards.test.ts` |
@@ -844,23 +845,46 @@ Direct parent `licenses[]` only. Omit = leave links unchanged; present = full-se
 | Customize changing a child's prepaid amount → 400 | ✓ `declared-license-paid-feature.test.ts` |
 | Create feature + parent customize `add_items` that feature | ✓ `set-fields.test.ts` |
 
+### Version anchor (`version_slug` on `licenses[]`) — `declared-version-anchor.test.ts`
+
+Stated slug = that child row. Omitted on an **existing** link = keep the current
+child product id (no move). Omitted on a **new** link = child's active row
+(create-default). Repoint only via an explicit slug or `propagate.license_parents`.
+
+| Case | Status |
+|---|---|
+| New link, `version_slug: v1` while child active is v2 → link on v1 | ✓ `declared-version-anchor.test.ts` |
+| New link, omitted slug, child already v2 → create-default to active v2 | ✓ `declared-version-anchor.test.ts` |
+| Existing link on v1, child minted v2, omitted slug → stay on v1 | ✓ `declared-version-anchor.test.ts` |
+| Existing link on v1, `version_slug: v2` → move to v2; later omit stays on v2 | ✓ `declared-version-anchor.test.ts` |
+| Unknown slug → 400 | ✓ `declared-version-anchor.test.ts` |
+| Anchoring to an archived child version → 400 | ✓ `declared-version-anchor.test.ts` |
+
 ## 18. Plan licenses — pin / follow / compose — `licenses/`
 
-Follow is `child.propagate.license_parents[].versioning` (`existing` | `new_version` |
-`all_versions`). Team in `plans[]` is declared content, not follow. Omit from
-propagate = pin (freeze).
+Follow targets are pure pins: `{ plan_id, version | version_slug (one required),
+new_version_slug? }` — no `versioning` field on propagate targets. A pinned parent
+row must hold a link anchored to the edited child row (off-anchor pin → 400);
+write semantics come from the CHILD's `versioning`. Team in `plans[]` is declared
+content, not follow. Absent from propagate = pin (freeze). Strategy-based rows
+below predate pin-only targets — read their `existing`/`all_versions`/pinned-version
+phrasing as the old addressing; behavior asserts still apply per pinned row.
 
 ### pinned/ — parent not listed in child's propagate
+
+Pin (freeze overlay) fires ONLY on in-place child edits. Child `new_version` /
+promote leaves non-propagated links untouched — no repoint, no manufactured
+overlay; the link stays version-anchored to the row it points at.
 
 | Case | Status |
 |---|---|
 | In-batch parent without propagate freezes uncustomized child item change | ✓ `pin-in-place-item-change.test.ts` |
 | Absent parent (not in `plans[]`) is derived and pinned | ✓ `pin-in-place-item-change.test.ts` |
-| Child `new_version` re-points absent parent to v2 (pin freeze) | ✓ `pin-on-child-new-version.test.ts` |
+| Child `new_version` leaves absent parent anchored to v1 — no repoint, no overlay, same row id | ✓ `pin-on-child-new-version.test.ts` |
 | Child 10→200 **and** add Words; parent not in propagate → overlay msgs=10, **no Words** | ✓ `pin-freeze-items.test.ts` |
 | Pin leak: overlay messages ent id ≠ child's stock e1 | ✓ `pin-freeze-items.test.ts` |
 | Overlay already 500; child 10→200 + Words; no propagate → skip; still 500; no Words | ✓ `pin-freeze-items.test.ts` |
-| Overlay 500; child `new_version` 200+Words; no propagate → re-point to v2, keep 500, no Words | ✓ `pin-freeze-items.test.ts` |
+| Overlay 500; child `new_version` 200+Words; no propagate → link untouched on v1, keep 500, no Words, same row id | ✓ `pin-freeze-items.test.ts` |
 | After a pin, child 200→10 → stay `customized:true` (no collapse) | ✓ `pin-freeze-items.test.ts` |
 | Child name-only → no pin; link stays uncustomized sharing stock | ✓ `pin-freeze-items.test.ts` |
 | Parent v1+v2, child bump, **no** propagate → **both** versions pin | ✓ `pin-freeze-items.test.ts` |
@@ -874,8 +898,9 @@ propagate = pin (freeze).
 | Omit / `existing` → latest follows, historical frozen | ✓ `follow-latest-or-explicit-version.test.ts` |
 | `{ version: 1 }` → that version follows, latest frozen | ✓ `follow-latest-or-explicit-version.test.ts` |
 | `all_versions` → every existing parent version follows | ✓ `follow-all-parent-versions.test.ts` |
-| `new_version` + customers on latest → mint, follow mint, freeze old | ✓ `follow-new-parent-version.test.ts` |
-| `new_version` + no customers → fall back to existing (no mint) | ✓ `follow-new-parent-version.test.ts` |
+| Child `new_version` + pinned active parent w/ customers → parent mints; older parent versions untouched | ✓ `follow-new-parent-version.test.ts` |
+| Child `new_version` + pinned active parent w/o customers → no mint; link MOVES in place to child v2; older versions stay v1 uncustomized | ✓ `follow-new-parent-version.test.ts` |
+| Off-anchor parent pin (link anchored to a different child row) → 400 | ✓ `follow-new-parent-version.test.ts` |
 | v1 customized 500, v2 stock; child propagate `all_versions` + Words → v1 rebase 500+Words; v2 stock 200+Words | ✓ `follow-version-overlays.test.ts` |
 | Latest customized 500; propagate `new_version` + customers → mint follows rebased 500+Words; old latest pins (500, no Words) | ✓ `follow-version-overlays.test.ts` |
 | Customers on parent **v1** only; latest empty; propagate `new_version` → no mint; latest follows in place; v1 pins | ✓ `follow-version-overlays.test.ts` |
@@ -891,7 +916,7 @@ Seed via DB `customer_licenses.plan_license_id`. `seedVersionableCustomer` is th
 | Same customer; child propagate → no plan_license write; customer **sees 200** (shares stock) | ✓ `assigned-seat-follow.test.ts` |
 | Same customer; parent `licenses[]` customize 300 → retire+mint successor at 300; customer stays on retired row | ✓ `assigned-seat-declared.test.ts` |
 | Same customer; `licenses: []` → retire, **not** hard-delete | ✓ `assigned-seat-declared.test.ts` |
-| Customer on plan_license; child `new_version` + pin → catalog link on a new plan_license; customer remains on retired v1-era row | ✓ `assigned-seat-pin.test.ts` |
+| Customer on plan_license; child `new_version` + pin → NO write: catalog + customer share the same live row, still anchored to v1 | ✓ `assigned-seat-pin.test.ts` |
 
 ### mix/ — declared × follow, guards
 
@@ -905,11 +930,14 @@ Seed via DB `customer_licenses.plan_license_id`. `seedVersionableCustomer` is th
 | Child and parent both change messages → declared customize wins; child keeps its own | ✓ `declared-customize-and-child-items.test.ts` |
 | `new_version` / `all_versions` + explicit `version` → 400 | ✓ `propagate-versioning-errors.test.ts` |
 | `new_version` on missing parent → 400 | ✓ `propagate-versioning-errors.test.ts` |
+| Child `existing` v2 + propagate Team v1 (linked to child v1) → 400, need `all_versions` | ✓ `propagate-versioning-errors.test.ts` |
 | Seed overlay 500; child 10→200 + **propagate** + parent `licenses[]` customize 300 → 300; pin/propagate do not run | ✓ `declared-exclusive-vs-propagate.test.ts` |
 | Child 10→200 + propagate + parent `licenses: []` → link gone; propagate does **not** resurrect | ✓ `declared-exclusive-vs-propagate.test.ts` |
 | Parent offers Seat+Pack; declare only Seat; Pack child in propagate → Pack **removed**, not followed | ✓ `declared-exclusive-vs-propagate.test.ts` |
 | Parent `licenses:[child]` no customize; child 10→200 + propagate → uncustomized 200 via declared re-link | ✓ `declared-exclusive-vs-propagate.test.ts` |
-| Child `new_version` + parent `licenses[]` customize 300 → declared links **latest** (v2) at 300 | ✓ `declared-exclusive-vs-propagate.test.ts` |
+| Child `new_version` + parent `licenses[]` customize 300 (no slug) → declared stays on current (v1) at 300 | unrun `declared-exclusive-vs-propagate.test.ts` |
+| Same-batch omit slug + child `new_version` + propagate → stay on child v1 | ✓ `mix/declared-slug-vs-propagate.test.ts` |
+| Same-batch `version_slug: v1` + child `new_version` + propagate → stay on child v1 | ✓ `mix/declared-slug-vs-propagate.test.ts` |
 | M-excl / pin+Words, parent-then-child vs child-then-parent → identical | ✓ `declared-exclusive-vs-propagate.test.ts` |
 | Team offers Seat+Pack; Seat not in propagate, Pack is; both 10→200 → Seat overlay 10; Pack stock 200 | ✓ `concat-pin-and-follow.test.ts` |
 | One Seat; Team not in propagate, Org is → Team 10; Org 200 | ✓ `concat-pin-and-follow.test.ts` |
@@ -921,7 +949,7 @@ Seed via DB `customer_licenses.plan_license_id`. `seedVersionableCustomer` is th
 | Child propagate `new_version`; parent `plans[]` name-only (`existing`) → at most one mint; name lands on the intended row; other versions pin | ✓ `versioning-collisions.test.ts` |
 | `propagate.license_parents` `new_version` on a plan with customers but **no link** → must **not** mint (400 or no-op) | ✓ `versioning-collisions.test.ts` |
 | Child `all_versions` while offered as a license → 400, or pin/follow per child version the link actually points at | ✓ `versioning-collisions.test.ts` |
-| Parent `new_version`, omit `licenses` → lock whether v2 copies links (§15 currently says not copied) | ✓ `versioning-collisions.test.ts` |
+| Parent `new_version`, omit `licenses` → minted row clones outgoing links | ✓ `versioning-collisions.test.ts` |
 
 #### Two parents × two versions each — split strategy
 
@@ -930,8 +958,66 @@ Seed via DB `customer_licenses.plan_license_id`. `seedVersionableCustomer` is th
 | A(v1,v2) `all_versions`, B(v1,v2) omitted → both A follow 200; **both** B freeze at 10 | ✓ `two-parents-versions-split.test.ts` |
 | Same + A v1 customized 500, child adds Words → A v1 rebases 500+Words, A v2 200+Words; both B stay 10 with **no** Words | ✓ `two-parents-versions-split.test.ts` |
 | A `{ version: 1 }`, B omitted → A v1 follows; A **v2** freezes; both B freeze | ✓ `two-parents-versions-split.test.ts` |
-| Child `new_version` over two parents at v1+v2 → all four rows re-point to the new child row and pin 10 | ✓ `child-versions-two-parents.test.ts` |
-| Then child 200+Words, A `all_versions`, B omitted → A inherits Words on both versions but holds its pinned 10; B inherits nothing | ✓ `child-versions-two-parents.test.ts` |
+| Child `new_version` over two parents at v1+v2 → all four rows untouched: anchored to child v1, uncustomized, stock 10 | ✓ `child-versions-two-parents.test.ts` |
+| Then child edits active v2 in place (200+Words), A `all_versions`, B omitted → NO row reached: an in-place edit only reaches links pointing at the edited row | ✓ `child-versions-two-parents.test.ts` |
+
+#### Distributed anchors under child `all_versions` — `mix/all-versions-distributed-anchors.test.ts`
+
+Child `versioning: all_versions` edits every child row in place; each sibling's
+edit reaches exactly the links anchored to THAT row, pin/follow decided per
+(sibling row × parent link) pair.
+
+| Case | Status |
+|---|---|
+| A anchored child v1, B anchored child v2; child `all_versions` edit, both in propagate → A shares v1's edited stock, B shares v2's; anchors unchanged | ✓ |
+| Same anchors, no propagate → A pins v1's pre-edit content (10), B pins v2's (50) — per-row frozen values | ✓ |
+
+#### Same parent, versions split across child siblings — `mix/all-versions-parent-version-anchors.test.ts`
+
+Team/EU v1 → child v1, Team/EU v2 → child v2. Child `all_versions` can
+follow each parent version from the child sibling it actually points at.
+`propagate.license_parents[].version_slug` pins that parent row.
+
+| Case | Status |
+|---|---|
+| Preview: v2 parents on `license_parents`, v1 parents on `sibling_versions[v1].license_parents`, both `propagated` when parent `all_versions` | ✓ |
+| `{ version_slug: "v1" }` follows only that parent row; the parent's v2 and the other parent pin | ✓ |
+| Parent `all_versions` follows every linked version from its anchored child sibling; anchors stay put | ✓ |
+| Diverged child items: v1 is 100 Messages, v2 is 50 + Words; add Dashboard on v2 `all_versions` → parent v1 is 100 + Dashboard (no Words), parent v2 is 50 + Words + Dashboard | ✓ |
+
+#### Atmn PUT — four pinned directs — `mix/atmn-put-direct-versions.test.ts`
+
+Same diverged fixture. Each version is a direct `{ version_slug }` row;
+parents restate `licenses[]` (optional child `version_slug`). No
+`all_versions` / `propagate`.
+
+| Case | Status |
+|---|---|
+| Preview of child v1+v2 + parent v1+v2 → each row omits `sibling_versions` | ✓ |
+| PUT add Dashboard on both children, restate parent licenses → all four get Dashboard; Words stay v2-only; anchors stay | ✓ |
+| Restate `licenses[]` without `version_slug` → stay on the current child row | ✓ |
+| Identical re-PUT → preview `none`; `plan_license` row ids unchanged | ✓ |
+| Customers on all four + `draft: true` → one draft, collapsed `{ plan_id }` filters, child add Dashboard + parent `upsert_licenses` add Dashboard | ✓ |
+
+#### Atmn PUT lanes — `mix/atmn-put-direct-version-lanes.test.ts`
+
+| Case | Status |
+|---|---|
+| Dashboard only on child v2 → parent v1 unchanged; parent v2 gets it | ✓ |
+| Preview: both parents `license_action: explicit`; `license_changes` add Dashboard; no unlink | ✓ |
+| Restated overlays (v1=80, v2=40) stay; Dashboard still flows | ✓ |
+
+### lifecycle/ — archive or remove an anchored child version — `lifecycle/anchored-version-remove.test.ts`
+
+Remove/archive of a child version is blocked while any catalog link still
+points at that row. Same-call unlink (`licenses: []`) then remove is allowed
+because the projection no longer has the link.
+
+| Case | Status |
+|---|---|
+| Remove child v1 while a parent still links to it → 400 naming the parent | ✓ |
+| Archive child v1 while a parent still links to it → 400 naming the parent | ✓ |
+| Same-call `licenses: []` then remove v1 → allowed | ✓ |
 
 ## 19. Plan licenses preview — `licenses/preview/`
 
@@ -952,7 +1038,7 @@ Seed via DB `customer_licenses.plan_license_id`. `seedVersionableCustomer` is th
 | After `new_version` + license customize add Dashboard, later `preview_update` parses and echoes the overlay | ✓ `license-changes-customize.test.ts` |
 | In-batch pin → updated freeze, no nested `plan_change` | ✓ `license-changes-follow.test.ts` |
 | In-batch propagate → updated + nested item `plan_change` | ✓ `license-changes-follow.test.ts` |
-| Child `new_version` + pin → `previous_attributes.version` | ✓ `license-changes-follow.test.ts` |
+| Child `new_version` + pin → link untouched, NO `license_changes` row on the parent | ✓ `license-changes-follow.test.ts` |
 | Child `versioning.options` unions reverse-link parents (no propagate yet) | ✓ `child-versioning-options-union.test.ts` |
 | Same options when propagate is later filled (must not shrink) | ✓ `child-versioning-options-union.test.ts` |
 | Child `license_parents`: declared item override → `explicit` + final customize (declared wins; child-only items still flow) | ✓ `license-parents-lane.test.ts` |
@@ -975,7 +1061,7 @@ under `sibling_versions` with their own `license_action` and `conflicts`:
 | A `all_versions`, B omitted → A latest+sibling `propagated`; B latest+sibling `unchanged`; no conflicts | ✓ `conflicts/two-parents-versions-split.test.ts` |
 | A v1 and B v1 each customized 500 → `value_divergence` on **both** siblings, on neither latest | ✓ `conflicts/two-parents-versions-split.test.ts` |
 | A `{ version: 1 }` → A latest `unchanged` while its sibling v1 is the `propagated` one | ✓ `conflicts/two-parents-versions-split.test.ts` |
-| Child minted a version, then 200+Words: every row diverges but `license_action` still splits A `propagated` / B `unchanged` | ✓ `mix/child-versions-two-parents.test.ts` |
+| Child minted a version, then 200+Words: v2 `license_parents` omitted; both parents sit on `sibling_versions[v1].license_parents` as `unchanged` | ✓ `mix/child-versions-two-parents.test.ts` |
 
 Deferred (need absent-parent fan-out or are invalid):
 
@@ -1120,12 +1206,12 @@ Independent of `propagate.variants`. Latest version only. Name never copies.
 | base rename only → variant name unchanged, no variant write | ✓ `settings/details.test.ts` |
 | follow items + billing_controls in one call | ✓ `settings/details.test.ts` |
 
-### pointer/ — base mint re-points latest (Unit 4)
+### pointer/ — version-anchored (no auto-repoint)
 
 | Case | Status |
 |---|---|
-| Base `new_version`, variant pinned → latest pointer moves; items stay 200 | ✓ `pointer/pointer-on-base-mint.test.ts` |
-| Base `new_version` + propagate → pointer + Dashboard | ✓ `pointer/pointer-on-base-mint.test.ts` |
+| Base `new_version` without propagate → pointer stays on v1; items stay 200 | ✓ `pointer/pointer-on-base-mint.test.ts` |
+| Base `new_version` + propagate, no customers → pointer + Dashboard | ✓ `pointer/pointer-on-base-mint.test.ts` |
 | Historical variant v1 stays on the old base row | ✓ `pointer/pointer-on-base-mint.test.ts` |
 | Nest existing standalone in `variants[]` → pointer set, items kept | `pointer/link-existing.test.ts` |
 | Nest existing standalone with sibling versions → pointer on every version | `pointer/link-existing.test.ts` |
@@ -1136,20 +1222,29 @@ Independent of `propagate.variants`. Latest version only. Name never copies.
 | `{ plan_id, base_variant_id: null }` → unlink every version | `pointer/unlink.test.ts` |
 | Nest `{ variant_plan_id, base_variant_id: null }` → unlink every version | `pointer/unlink.test.ts` |
 
-### versioning/ — variants inherit parent `plans[]` versioning (Unit 5)
+### versioning/ — pin-only propagate; write semantics from the source plan (Unit 5)
 
-No `variants[].versioning`. Width follows the parent row. `propagate.variants[].versioning` is ignored.
+No `variants[].versioning`. Propagate targets are pure pins —
+`{ plan_id, version | version_slug (one required), new_version_slug? }`; the
+`versioning` field no longer exists on propagate targets. A pinned row must be
+anchored to an edited base row; each eligible pin receives the diff of ITS OWN
+anchor. Write semantics come only from the SOURCE plan's `versioning` (mirrors
+the dashboard flow: the user explicitly picks which versions follow — no
+strategy inheritance, no omit heuristics).
 
 | Case | Status |
 |---|---|
-| Parent `existing` (default), customers on v1 → latest only | ✓ `versioning/propagate-versioning.test.ts` |
-| Parent `all_versions` → v1 + latest get the DIFF | ✓ `versioning/propagate-versioning.test.ts` |
-| Parent `new_version` + customers on latest → mint max+1 | ✓ `versioning/propagate-versioning.test.ts` |
-| Parent `new_version` + no customers → edit latest in place | ✓ `versioning/propagate-versioning.test.ts` |
-| Parent `existing` ignores `propagate.variants[].versioning` | ✓ `versioning/propagate-versioning.test.ts` |
-| strategy + explicit version / missing plan / draft+new_version → 400 | ✓ `versioning/propagate-versioning-errors.test.ts` |
-| Base `new_version`: customered EU mints, UK in-place | `versioning/mixed-customers.test.ts` |
-| Preview nest after mint is variant version 2 | `versioning/mixed-customers.test.ts` |
+| Source `existing` + pinned variant row → in-place edit, anchor unchanged | ✓ `versioning/propagate-versioning.test.ts` |
+| Source `new_version` + plan-level, resolved row w/ customers → mint max+1 onto the new base row | ✓ `versioning/propagate-versioning.test.ts` |
+| Source `new_version` + plan-level, resolved latest inactive w/ customers → mint max+1 | ✓ `versioning/propagate-versioning.test.ts` |
+| Source `new_version` + plan-level, resolved row w/o customers → in-place edit + repoint | ✓ `versioning/propagate-versioning.test.ts` |
+| Source `existing` + pin historical only → that row follows; latest frozen | ✓ `versioning/propagate-versioning.test.ts` |
+| Source `new_version` + resolved row older than plan latest w/ customers → 400 | ✓ `versioning/propagate-versioning-errors.test.ts` |
+| Propagate target missing both `version` and `version_slug` → 400 | ✓ `versioning/propagate-versioning-errors.test.ts` |
+| Off-anchor pin (row anchored to a different base row) → 400 | ✓ `versioning/propagate-versioning-errors.test.ts` |
+| Pinned target on a missing plan → 400 | ✓ `versioning/propagate-versioning-errors.test.ts` |
+| Base `new_version`: pinned customered EU mints, pinned UK in-place | ✓ `versioning/mixed-customers.test.ts` |
+| Preview nest after mint is variant version 2 | ✓ `versioning/mixed-customers.test.ts` |
 
 ### preview/ — `variants[]` nest (Unit 6)
 
@@ -1167,6 +1262,10 @@ No `variants[].versioning`. Width follows the parent row. `propagate.variants[].
 | Explicit variant target version → only that sibling is `propagated`, even when the base uses `all_versions` | ✓ `preview/variants-preview.test.ts` |
 | Variant lane `versioning` reports inherited `existing` / `all_versions` / `new_version`, fallback, options, and pinned override | ✓ `preview/variants-preview.test.ts` |
 | An `unchanged` sibling still reports conflicts so callers can assess widening scope | ✓ `preview/variants-preview.test.ts` |
+| Base row's `variants[]` contains ONLY variant rows anchored to THAT row (`base_internal_product_id` = the row's `internal_id`), incl. non-active anchored rows | ✓ `preview/variants-preview.test.ts` |
+| Variant rows anchored to OTHER base versions appear under the base's `sibling_versions[n].variants`, not top-level (mirrors per-version `license_parents`) | ✓ `preview/variants-preview.test.ts` |
+| Discover / `existing` also populate `sibling_versions[].variants` (unchanged) so the dashboard can pin any row after choosing `all_versions` | ✓ `preview/variants-preview.test.ts` |
+| Base `all_versions` edit → top-level `variants[]` + every `sibling_versions[].variants[]` populated, so the full pinnable set is enumerable (dashboard pin choices) | ✓ `preview/variants-preview.test.ts` |
 | Pinned base v1 + customered variant → no `new_version` | `preview/parent-versioning-options-pinned.test.ts` |
 | Base `has_customers` stays false when only the variant has customers | `preview/parent-versioning-options-pinned.test.ts` |
 | Follow add Dashboard nests created Dashboard, not messages | `preview/license-changes.test.ts` |
@@ -1213,7 +1312,6 @@ applied customize. Same customize `$or`s; different customize stays split.
 | Parent `all_versions`: customers on v1 only → pin; v1+v2 → collapse | ✓ `migrations/variants/versioning-drafts.test.ts` |
 | Parent `new_version` + draft → 400 | ✓ `migrations/variants/versioning-drafts.test.ts` |
 | Parent `new_version` without draft → no draft | ✓ `migrations/variants/versioning-drafts.test.ts` |
-| `propagate.variants[].versioning: new_version` + draft → 400 | ✓ `versioning/propagate-versioning-errors.test.ts` |
 | Follow 100→150 vs 200 lists `value_divergence`; draft is 150 | ✓ `migrations/variants/conflict-drafts.test.ts` |
 | Follow + declare 300 → two ops (150 vs 300) | ✓ `migrations/variants/conflict-drafts.test.ts` |
 | License follow 100→150 vs 200 stamps `license_plan_id`; two ops at 150 | ✓ `migrations/variants/conflict-drafts.test.ts` |
@@ -1253,7 +1351,7 @@ license parents that still exist after the batch. Same-call upsert+remove is
 | Unpinned archive of a base that still has variants → 400 | ✓ `remove/remove-plans-variants.test.ts` |
 | Preview of unpinned delete with variants → 400, not detach warning | ✓ `remove/remove-plans-preview.test.ts` |
 | Same-call remove base + variant (no customers) → both hard delete | ✓ `remove/remove-plans-variants.test.ts` |
-| Pin-delete latest base version; variant repoints at surviving v1 | ✓ `remove/remove-plans-repoint.test.ts` |
+| Pin-delete a referenced base version → 400 (no silent repoint) | ✓ `remove/remove-plans-repoint.test.ts` |
 | Pin-delete an old base version the variant does not point at → v1 gone, pointer stays | ✓ `remove/remove-plans-repoint.test.ts` |
 | Pin-delete last remaining base version while a variant survives → 400 | ✓ `remove/remove-plans-repoint.test.ts` |
 | Remove parent + child (no customers) → both hard delete | ✓ `remove/remove-plans-same-call.test.ts` |
@@ -1327,13 +1425,25 @@ Draft mint (`new_version` without `active`) does not take the pointer.
 | Paid draft promote: pointer moves, default stays on free v1 | ✓ `versions/default-follows-active.test.ts` |
 | Cardless-trial paid draft: default follows (`isEligibleDefaultProduct`) | ✓ `versions/default-follows-active.test.ts` |
 | Explicit `auto_enable: true` on historical promote → `HistoricalPlanVersionCannotBeDefault` | ✓ `versions/default-follows-active.test.ts` |
-| Base promote re-points follow variant; no variant mint | ✓ `variants/pointer/pointer-on-base-promote.test.ts` |
-| Base promote leaves historical variant v1 on the old row | ✓ `variants/pointer/pointer-on-base-promote.test.ts` |
+| Base promote without propagate leaves pointer on v1 | ✓ `variants/pointer/pointer-on-base-promote.test.ts` |
+| Base promote leaves historical variant versions on the old row | ✓ `variants/pointer/pointer-on-base-promote.test.ts` |
 | Promote leaves a pin at a historical non-active base | ✓ `variants/pointer/pointer-on-base-promote.test.ts` |
-| Child promote freezes uncustomized parent; propagate follows v2 | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
+| Pinned variant row anchored to the edited base row receives that anchor's diff (pins are the only propagate addressing) | ✓ `variants/anchors/propagate-reach.test.ts` |
+| Base `all_versions` edits proV1+proV2; pins on proEuV1 (→proV1) and proEuV2 (→proV2) each receive their OWN anchor's diff; NO relinking | ✓ `variants/anchors/propagate-reach.test.ts` |
+| Same variant across anchors (EU v1+v2 on Team v1, EU v3 on Team v2): discover lists all three; `all_versions` can pin any one (v2 only here) | ✓ `variants/anchors/propagate-reach.test.ts` |
+| Declared under pinned v2 repoints and recomposes customize | ✓ `variants/anchors/declared-repoint.test.ts` |
+| Same variant declared under two base rows → 400 | ✓ `variants/anchors/declared-repoint.test.ts` |
+| Pin + omit of the same variant row under two bases → 400 | ✓ `variants/anchors/declared-repoint.test.ts` |
+| `version_slug` pins which variant row each base declares | ✓ `variants/anchors/declared-repoint.test.ts` |
+| Omit + customize on a base mint edits only the active variant row; historical anchors stay | ✓ `variants/anchors/declared-repoint.test.ts` |
+| Base mint + pinned active variant w/ customers → mint onto the new base row (clone, licenses copied); w/o customers → in-place edit + repoint | ✓ `variants/anchors/propagate-mint.test.ts` |
+| Pro v1 ← EU v2 (empty); Pro `new_version` + plan-level propagate → EU stays v2, pointer moves to Pro v2 (no EU v3) | ✓ `variants/anchors/propagate-mint.test.ts` |
+| Propagate mint copies license links onto the new variant version | ✓ `variants/anchors/propagate-mint.test.ts` |
+| Direct variant `new_version` mint inherits the source row's anchor; a base and its variant as sibling top-level `plans[]` entries → 400 (edit via `base.variants[]`) | ✓ `variants/anchors/direct-mint-anchor.test.ts` |
+| Child promote leaves uncustomized parent anchored to v1 (no repoint, no overlay); propagate follows v2 | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
 | Customized parent is left on child promote | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
 | Parent promote (licenses omitted): child identity unchanged; v2 stays empty | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
-| Declared `licenses[]` on child promote re-links to newly active child | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
+| Declared `licenses[]` on child promote omit keeps the existing v1 anchor; customize still applies | ✓ `licenses/pinned/uncustomized-freeze-on-child-promote.test.ts` |
 | Preview `promotion_details` present when a row takes the pointer | ✓ `versions/promote-preview.test.ts` + `promote-preview-details.test.ts` |
 | Preview `promotion_details` omitted on no-op / draft mint / first create | ✓ `versions/promote-preview-details.test.ts` |
 | Preview rename + promote returns both rename fields and `promotion_details` | ✓ `versions/promote-preview-details.test.ts` |

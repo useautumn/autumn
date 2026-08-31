@@ -49,7 +49,7 @@ test.concurrent(
 								{
 									plan_id: baseId,
 									items: [messagesItem(100), dashboardItem()],
-									propagate: { variants: [{ plan_id: missingId }] },
+									propagate: { variants: [{ plan_id: missingId, version: 1 }] },
 								},
 							],
 						}),
@@ -82,7 +82,7 @@ test.concurrent(
 								{
 									plan_id: baseId,
 									items: [messagesItem(100), dashboardItem()],
-									propagate: { variants: [{ plan_id: baseId }] },
+									propagate: { variants: [{ plan_id: baseId, version: 1 }] },
 								},
 							],
 						}),
@@ -118,7 +118,7 @@ test.concurrent(
 								{
 									plan_id: childId,
 									items: [messagesItem(200)],
-									propagate: { variants: [{ plan_id: variantId }] },
+									propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 								},
 							],
 						}),

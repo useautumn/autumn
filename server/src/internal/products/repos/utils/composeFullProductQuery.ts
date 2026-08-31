@@ -40,9 +40,9 @@ const composeLicenseSide = () => ({
 	},
 });
 
-/** Nested base/variants: items + license plans. Skip parent_plan_licenses —
- * nesting that relation under base/variants hits a Postgres LATERAL alias bug. */
-const composeNestedVariantProduct = () => ({
+/** Items + outgoing license links. Used for list-variants and nested
+ * base/variants (skip parent_plan_licenses there — LATERAL alias bug). */
+export const composeProductWithLicensesQuery = () => ({
 	...composeProductItems(),
 	...composeLicenseSide(),
 });
@@ -67,10 +67,10 @@ export const composeFullProductQuery = () => ({
 		},
 	},
 	base_product: {
-		with: composeNestedVariantProduct(),
+		with: composeProductWithLicensesQuery(),
 	},
 	variants: {
-		with: composeNestedVariantProduct(),
+		with: composeProductWithLicensesQuery(),
 	},
 });
 

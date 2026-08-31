@@ -1,14 +1,15 @@
 /**
- * catalogV2.update — variants inherit the parent plans[] versioning strategy.
+ * catalogV2.update — propagate.variants write semantics from the source.
+ * existing/all_versions targets pin rows; new_version targets are plan-level
+ * ({ plan_id } only) and the server resolves active-else-latest anchored row.
  *
  * Contract:
- *   existing (default) → latest only
- *   all_versions → every existing variant version gets the DIFF
- *   new_version + customers on latest → mint max+1
- *   new_version + no customers → edit latest in place
- *   propagate.variants[].versioning is ignored
- *   all_versions add of a continuous-use feature the variant v1 already has
- *     → skip v1 (no second item, no overwrite); latest still receives the add
+ *   existing + pin latest → latest only
+ *   pin every version → each pinned row gets ITS OWN anchor's diff
+ *   new_version + plan-level target, resolved row w/ customers → mint max+1 (named by new_version_slug)
+ *   new_version + latest-but-inactive resolved row w/ customers → mint (not 400)
+ *   new_version + plan-level target, resolved row w/o customers → edit in place + repoint
+ *   pin historical only → that row follows; latest frozen
  */
 
 import { expect, test } from "bun:test";
@@ -27,12 +28,15 @@ import {
 	expectPlanPreviewRowCorrect,
 	parsePlanPreview,
 } from "../../preview/utils/expectPlanPreview.js";
+import { expectVersionIdentityCorrect } from "../../utils/expectVersionIdentity.js";
 import {
 	expectVariantPlanCorrect,
+	expectVariantPointerCorrect,
 	getFullPlan,
 } from "../utils/expectVariantPointer.js";
 import {
 	seedBaseWithVariant,
+	seedDivergedVariantBase,
 	seedVariantNewVersion,
 } from "../utils/seedVariantPlans.js";
 
@@ -64,7 +68,9 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: {
+								variants: [{ plan_id: variantId, version: 2 }],
+							},
 						},
 					],
 				});
@@ -110,7 +116,12 @@ test.concurrent(
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
 							versioning: "all_versions",
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: {
+								variants: [
+									{ plan_id: variantId, version: 1 },
+									{ plan_id: variantId, version: 2 },
+								],
+							},
 						},
 					],
 				});
@@ -155,7 +166,11 @@ test.concurrent(
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
 							versioning: "new_version", active: true,
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: {
+								variants: [
+									{ plan_id: variantId, new_version_slug: "eu-mint" },
+								],
+							},
 						},
 					],
 				});
@@ -172,6 +187,85 @@ test.concurrent(
 					version: 2,
 					allowances: { [TestFeature.Messages]: 200 },
 					featureIds: [TestFeature.Messages, TestFeature.Dashboard],
+				});
+				await expectVersionIdentityCorrect({
+					ctx,
+					planId: variantId,
+					version: 2,
+					versionSlug: "eu-mint",
+				});
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 variants: new_version mints from latest even when that row is inactive")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_var_ver_inact");
+		const variantId = uniqueTestId("cv2_var_ver_inact_eu");
+		await withCatalogPlans({
+			ctx,
+			planIds: [baseId, variantId],
+			run: async () => {
+				await seedBaseWithVariant({
+					autumn: autumnV2_3,
+					baseId,
+					variantId,
+				});
+				await seedVariantNewVersion({ autumn: autumnV2_3, variantId });
+				await seedDivergedVariantBase({ autumn: autumnV2_3, baseId });
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: baseId,
+							version: 2,
+							variants: [{ variant_plan_id: variantId, version: 2 }],
+						},
+					],
+				});
+				await autumnV2_3.catalogV2.update({
+					plans: [{ plan_id: variantId, version: 1, active: true }],
+				});
+				await seedVersionableCustomer({
+					ctx,
+					planId: variantId,
+					version: 2,
+				});
+				await autumnV2_3.catalogV2.update({
+					plans: [
+						{
+							plan_id: baseId,
+							items: [messagesItem(100), dashboardItem()],
+							versioning: "new_version",
+							active: true,
+							propagate: { variants: [{ plan_id: variantId }] },
+						},
+					],
+				});
+				const frozen = await getFullPlan({
+					ctx,
+					planId: variantId,
+					version: 2,
+				});
+				const minted = await getFullPlan({
+					ctx,
+					planId: variantId,
+					version: 3,
+				});
+				expect(
+					frozen.entitlements.map((row) => row.feature_id),
+				).not.toContain(TestFeature.Dashboard);
+				expect(minted.entitlements.map((row) => row.feature_id)).toContain(
+					TestFeature.Dashboard,
+				);
+				await expectVariantPointerCorrect({
+					ctx,
+					variantPlanId: variantId,
+					variantVersion: 3,
+					basePlanId: baseId,
+					baseVersion: 3,
 				});
 			},
 		});
@@ -199,7 +293,9 @@ test.concurrent(
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
 							versioning: "new_version", active: true,
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: {
+								variants: [{ plan_id: variantId }],
+							},
 						},
 					],
 				});
@@ -216,7 +312,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 variants: parent existing ignores propagate.variants versioning")}`,
+	`${chalk.yellowBright("catalogV2 variants: pin historical v1 follows; latest stays frozen")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const baseId = uniqueTestId("cv2_var_ver_ign");
@@ -238,9 +334,7 @@ test.concurrent(
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
 							propagate: {
-								variants: [
-									{ plan_id: variantId, versioning: "all_versions" },
-								],
+								variants: [{ plan_id: variantId, version: 1 }],
 							},
 						},
 					],
@@ -250,14 +344,14 @@ test.concurrent(
 					variantPlanId: variantId,
 					version: 1,
 					allowances: { [TestFeature.Messages]: 200 },
-					featureIds: [TestFeature.Messages],
+					featureIds: [TestFeature.Messages, TestFeature.Dashboard],
 				});
 				await expectVariantPlanCorrect({
 					ctx,
 					variantPlanId: variantId,
 					version: 2,
 					allowances: { [TestFeature.Messages]: 200 },
-					featureIds: [TestFeature.Messages, TestFeature.Dashboard],
+					featureIds: [TestFeature.Messages],
 				});
 			},
 		});
@@ -300,7 +394,12 @@ test.concurrent(
 								plan_id: baseId,
 								items: [messagesItem(100), workflowsItem(200)],
 								versioning: "all_versions",
-								propagate: { variants: [{ plan_id: variantId }] },
+								propagate: {
+									variants: [
+										{ plan_id: variantId, version: 1 },
+										{ plan_id: variantId, version: 2 },
+									],
+								},
 							},
 						],
 					}),
@@ -309,18 +408,15 @@ test.concurrent(
 					preview: workflowsOnly,
 					expected: {
 						planId: baseId,
-						variants: [
+						variants: null,
+						siblingVersions: [
 							{
-								planId: variantId,
-								version: 2,
-								variantAction: "propagated",
-								hasPlanChange: true,
-								siblingVersions: [
+								version: 1,
+								variants: [
 									{
-										version: 1,
+										planId: variantId,
+										version: 2,
 										variantAction: "propagated",
-										hasPlanChange: false,
-										conflicts: null,
 									},
 								],
 							},
@@ -338,7 +434,12 @@ test.concurrent(
 								dashboardItem(),
 							],
 							versioning: "all_versions",
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: {
+								variants: [
+									{ plan_id: variantId, version: 1 },
+									{ plan_id: variantId, version: 2 },
+								],
+							},
 						},
 					],
 				});

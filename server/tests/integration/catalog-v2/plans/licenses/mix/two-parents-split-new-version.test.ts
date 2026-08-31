@@ -45,8 +45,8 @@ test.concurrent(
 					versioning: "new_version",
 					propagate: {
 						license_parents: [
-							{ plan_id: withCustomersId, versioning: "new_version" },
-							{ plan_id: noCustomersId, versioning: "new_version" },
+							{ plan_id: withCustomersId, version: 1 },
+							{ plan_id: noCustomersId, version: 1 },
 						],
 					},
 				});
@@ -69,8 +69,8 @@ test.concurrent(
 					parentPlanId: withCustomersId,
 					parentVersion: 1,
 					licensePlanId: childId,
-					customized: true,
-					messagesAllowance: 10,
+					customized: false,
+					messagesAllowance: 200,
 				});
 
 				await expectLatestPlanVersion({

@@ -8,9 +8,8 @@ import {
 } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
-import { activeVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeVersionForPlan";
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
-import { versionForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/versionForSlug";
+import { fullProductForPlanParams } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForPlanParams";
 
 /** Current plan_license links on this row. Minted versions fall back to the clone source. */
 export const upsertProductPlanToLicenses = ({
@@ -159,30 +158,29 @@ export const needsNewParentLink = ({
 	currentPlanLicense.parent_internal_product_id !==
 	parent.row.nextFullProduct.internal_id;
 
-/** Omit / `existing` = the active pointer. `all_versions` is only the child's propagate target. */
+/** Pin-only: the target names exactly this parent row. Adopt mints match their clone source. */
 const propagateTargetMatchesParent = ({
 	target,
 	parent,
-	activeVersion,
 	productStatesContext,
 }: {
 	target: CatalogPropagateTargetParams;
 	parent: UpsertProductPlan;
-	activeVersion: number | undefined;
 	productStatesContext: ProductStatesContext;
 }): boolean => {
 	if (target.plan_id !== parent.row.planId) return false;
-	if (target.version !== undefined) return target.version === parent.row.version;
-	if (target.version_slug !== undefined) {
-		const version = versionForSlug({
-			planId: target.plan_id,
-			versionSlug: target.version_slug,
-			productStatesContext,
-		});
-		return version !== undefined && version === parent.row.version;
+	if (target.version === undefined && target.version_slug === undefined) {
+		return false;
 	}
-	if (target.versioning === "all_versions") return true;
-	return activeVersion !== undefined && parent.row.version === activeVersion;
+	const pinnedRow = fullProductForPlanParams({
+		planParams: target,
+		productStatesContext,
+	});
+	const parentVersion =
+		parent.row.source === "license_adopt"
+			? parent.row.baseFullProduct?.version
+			: parent.row.version;
+	return pinnedRow?.version === parentVersion;
 };
 
 export const childPropagatesToParent = ({
@@ -193,20 +191,14 @@ export const childPropagatesToParent = ({
 	child: UpsertProductPlan;
 	parent: UpsertProductPlan;
 	productStatesContext: ProductStatesContext;
-}): boolean => {
-	const activeVersion = activeVersionForPlan({
-		planId: parent.row.planId,
-		productStatesContext,
-	});
-	return (child.propagate?.license_parents ?? []).some((target) =>
+}): boolean =>
+	(child.propagate?.license_parents ?? []).some((target) =>
 		propagateTargetMatchesParent({
 			target,
 			parent,
-			activeVersion,
 			productStatesContext,
 		}),
 	);
-};
 
 /** True when this row takes the unique active pointer (mint+active or existing promote). */
 export const movesActivePointer = ({

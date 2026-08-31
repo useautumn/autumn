@@ -10,6 +10,7 @@ import type {
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { computeDeclaredPlanLicenses } from "./declared/computeDeclaredPlanLicenses";
 import { computeFinalDeclaredLicenses } from "./declared/computeFinalDeclaredLicenses";
+import { cloneOutgoingLicensesOnMint } from "./mint/cloneOutgoingLicensesOnMint";
 import { computePinnedPlanLicenses } from "./pinned/computePinnedPlanLicenses";
 import { planLicensesPlanToFullPlanLicenses } from "./planLicensesPlanToFullPlanLicenses";
 import { computePropagatedPlanLicenses } from "./propagated/computePropagatedPlanLicenses";
@@ -62,7 +63,8 @@ const withPlanLicenseRowPlans = ({
 
 /**
  * planLicenses for every plan in the batch. Runs after all plan content is
- * folded. Declared licenses[] is exclusive; otherwise pin and adopt concat.
+ * folded. Declared licenses[] is exclusive; otherwise pin + adopt, then a
+ * new_version row clones leftover outgoing links from its source.
  */
 export const computePlanLicensesPlan = ({
 	ctx,
@@ -105,7 +107,16 @@ export const computePlanLicensesPlan = ({
 			upsertProducts,
 			productStatesContext,
 		});
-		const planLicenses = [...pinned, ...propagated];
+		const planned = [...pinned, ...propagated];
+		const planLicenses = [
+			...planned,
+			...cloneOutgoingLicensesOnMint({
+				ctx,
+				upsert,
+				alreadyPlanned: planned,
+				productStatesContext,
+			}),
+		];
 		if (planLicenses.length === 0) return upsert;
 
 		return withPlanLicenseRowPlans({

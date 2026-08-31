@@ -118,6 +118,91 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("catalogV2 plan-errors: new_version on a non-active row → 400")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_err_nv_hist");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, name: "Base" }],
+			});
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "Next",
+						versioning: "new_version",
+						active: true,
+					},
+				],
+			});
+			await expectAutumnError({
+				errCode: ErrCode.InvalidRequest,
+				errMessage: 'versioning "new_version" can only target the active row',
+				func: () =>
+					autumnV2_3.catalogV2.update({
+						plans: [
+							{
+								plan_id: planId,
+								version: 1,
+								name: "From V1",
+								versioning: "new_version",
+								active: true,
+							},
+						],
+					}),
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 plan-errors: new_version on a non-active declared variant → 400")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const baseId = uniqueTestId("cv2_err_nv_dec");
+		const variantId = uniqueTestId("cv2_err_nv_dec_eu");
+		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: baseId,
+						name: "Team",
+						variants: [{ variant_plan_id: variantId, name: "Team EU" }],
+					},
+				],
+			});
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{ plan_id: variantId, versioning: "new_version", active: true },
+				],
+			});
+			await expectAutumnError({
+				errCode: ErrCode.InvalidRequest,
+				errMessage: 'versioning "new_version" can only target the active row',
+				func: () =>
+					autumnV2_3.catalogV2.update({
+						plans: [
+							{
+								plan_id: baseId,
+								versioning: "new_version",
+								active: true,
+								variants: [{ variant_plan_id: variantId, version: 1 }],
+							},
+						],
+					}),
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
+		}
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("catalogV2 plan-errors: all_versions + explicit version → 400")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });

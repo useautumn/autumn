@@ -1,4 +1,5 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { DeclaredVariantsMap } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/shouldUnlinkDirectVariant";
 import { computeDemotedProductPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductPlan/computeDemotedProductPlan";
 import { intentToUpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductPlan/intentToUpsertProductPlan";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
@@ -13,13 +14,13 @@ export const computeUpsertProductPlan = ({
 	intent,
 	productStatesContext,
 	claimedProductKeys,
-	declaredVariantPlanIdsByBasePlanId,
+	declaredVariants,
 }: {
 	ctx: AutumnContext;
 	intent: ProductUpsertIntent;
 	productStatesContext: ProductStatesContext;
 	claimedProductKeys: Set<string>;
-	declaredVariantPlanIdsByBasePlanId?: Map<string, Set<string>>;
+	declaredVariants?: DeclaredVariantsMap;
 }): {
 	targetProductPlan: UpsertProductPlan;
 	upsertProductPlans: UpsertProductPlan[];
@@ -28,7 +29,7 @@ export const computeUpsertProductPlan = ({
 		ctx,
 		intent,
 		productStatesContext,
-		declaredVariantPlanIdsByBasePlanId,
+		declaredVariants,
 	});
 	const demotedProductPlan = computeDemotedProductPlan({
 		ctx,

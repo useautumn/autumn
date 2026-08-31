@@ -12,11 +12,12 @@ import type {
 	ProductUpsertIntent,
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
+import { fullProductForPlanParams } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForPlanParams";
 
 /**
  * Pull absent parent versions into the batch. In-place edits pull every
- * reverse-linked parent (pin candidates); mints/promotes pull only parents
- * listed in propagate — anchored links stay untouched. Skip all_versions
+ * reverse-linked parent (pin candidates); mints/promotes pull only rows
+ * pinned in propagate — anchored links stay untouched. Skip all_versions
  * plans — siblings cover them.
  */
 export const deriveLicenseParentIntents = ({
@@ -34,8 +35,14 @@ export const deriveLicenseParentIntents = ({
 	if (!rewritesLicenses) return [];
 
 	const editsInPlace = childEditsItemsInPlace({ child: upsert });
-	const propagatePlanIds = new Set(
-		(upsert.propagate?.license_parents ?? []).map((target) => target.plan_id),
+	const pinnedParentInternalIds = new Set(
+		(upsert.propagate?.license_parents ?? []).flatMap((target) => {
+			const pinnedRow = fullProductForPlanParams({
+				planParams: target,
+				productStatesContext: projectedProductStatesContext,
+			});
+			return pinnedRow ? [pinnedRow.internal_id] : [];
+		}),
 	);
 	const reverseLinks = movesActivePointer({ upsert })
 		? reverseLinksOnChildPlan({
@@ -56,7 +63,10 @@ export const deriveLicenseParentIntents = ({
 		...reverseLinks.flatMap((link) => {
 			const productKey = productToProductKey({ product: link.product });
 			if (allVersionsPlanIds.has(productKey.planId)) return [];
-			if (!editsInPlace && !propagatePlanIds.has(productKey.planId))
+			if (
+				!editsInPlace &&
+				!pinnedParentInternalIds.has(link.parent_internal_product_id)
+			)
 				return [];
 			const parentIsLoaded =
 				projectedProductStatesContext.statesByPlanVersion[

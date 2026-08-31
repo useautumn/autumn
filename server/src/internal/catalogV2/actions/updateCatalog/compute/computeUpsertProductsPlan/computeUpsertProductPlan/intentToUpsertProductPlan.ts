@@ -6,6 +6,7 @@ import { computeFreeTrialPlan } from "@/internal/catalogV2/actions/updateCatalog
 import { computeProductDetailsPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeProductDetailsPlan/computeProductDetailsPlan";
 import { declaredVariantsForSource } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/declaredVariantsForSource";
 import { resolveUpsertVariantPointer } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/resolveUpsertVariantPointer";
+import type { DeclaredVariantsMap } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/shouldUnlinkDirectVariant";
 import { planParamsFromEditDiff } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/planParamsFromEditDiff";
 import { resolveUpsertOp } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/resolveUpsertOp";
 import { resolveUpsertVersioning } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/resolveUpsertVersioning";
@@ -40,12 +41,12 @@ export const intentToUpsertProductPlan = ({
 	ctx,
 	intent,
 	productStatesContext,
-	declaredVariantPlanIdsByBasePlanId,
+	declaredVariants,
 }: {
 	ctx: AutumnContext;
 	intent: ProductUpsertIntent;
 	productStatesContext: ProductStatesContext;
-	declaredVariantPlanIdsByBasePlanId?: Map<string, Set<string>>;
+	declaredVariants?: DeclaredVariantsMap;
 }): UpsertProductPlan => {
 	const { productKey, source, baseInternalProductId } = intent;
 	const { currentFullProduct, customerUsage } = productKeyToState({
@@ -62,7 +63,7 @@ export const intentToUpsertProductPlan = ({
 		planId: productKey.planId,
 		currentFullProduct,
 		productStatesContext,
-		declaredVariantPlanIdsByBasePlanId,
+		declaredVariants,
 	});
 	const unlink = pointer === null;
 
@@ -156,7 +157,7 @@ export const intentToUpsertProductPlan = ({
 		entitlementPricesPlan,
 		freeTrialChanged: freeTrialPlan.changed,
 	});
-	const declaredVariants = declaredVariantsForSource({
+	const sourceDeclaredVariants = declaredVariantsForSource({
 		source,
 		variants: planParams.variants,
 	});
@@ -179,7 +180,8 @@ export const intentToUpsertProductPlan = ({
 		// Direct / variant_link send licenses[]. Siblings rebase via editDiff.
 		...((source === "direct" ||
 			source === "all_versions" ||
-			source === "variant_link") &&
+			source === "variant_link" ||
+			source === "variant_propagation") &&
 		planParams.licenses !== undefined
 			? { declaredLicenses: planParams.licenses }
 			: {}),
@@ -189,7 +191,9 @@ export const intentToUpsertProductPlan = ({
 		...(intent.editDiff?.remove_licenses !== undefined
 			? { removeLicenses: intent.editDiff.remove_licenses }
 			: {}),
-		...(declaredVariants !== undefined ? { declaredVariants } : {}),
+		...(sourceDeclaredVariants !== undefined
+			? { declaredVariants: sourceDeclaredVariants }
+			: {}),
 		...(unlink ? { unlink: true } : {}),
 		...((source === "direct" || source === "all_versions") &&
 		planParams.propagate !== undefined

@@ -1,10 +1,12 @@
 import {
 	type CatalogPlanVersioningStrategy,
 	ErrCode,
+	type FullProduct,
 	RecaseError,
 	type UpdateCatalogParams,
 } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import { fullProductForPlanParams } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/fullProductForPlanParams";
 import { maxVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/maxVersionForPlan";
 import { versionForSlug } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/versionForSlug";
 
@@ -51,6 +53,21 @@ const claimPinnedVersion = ({
 	seenPinned.add(pinKey);
 };
 
+const rejectNewVersionOnNonActiveRow = ({
+	planId,
+	row,
+}: {
+	planId: string;
+	row: FullProduct | null;
+}): void => {
+	if (!row || row.active) return;
+	throw new RecaseError({
+		message: `versioning "new_version" can only target the active row (plan_id=${planId})`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
+};
+
 const rejectNewVersionOnMissingPlan = ({
 	planId,
 	versioning,
@@ -82,6 +99,40 @@ export const handleUpsertProductVersioningErrors = ({
 	const creatingPlanIds = new Set<string>();
 
 	for (const planParams of params.plans) {
+		if (planParams.versioning === "new_version") {
+			if (
+				planParams.version !== undefined ||
+				planParams.version_slug !== undefined
+			) {
+				rejectNewVersionOnNonActiveRow({
+					planId: planParams.plan_id,
+					row: fullProductForPlanParams({
+						planParams,
+						productStatesContext,
+					}),
+				});
+			}
+			for (const variant of planParams.variants ?? []) {
+				if (
+					variant.version === undefined &&
+					variant.version_slug === undefined
+				) {
+					continue;
+				}
+				rejectNewVersionOnNonActiveRow({
+					planId: variant.variant_plan_id,
+					row: fullProductForPlanParams({
+						planParams: {
+							plan_id: variant.variant_plan_id,
+							version: variant.version,
+							version_slug: variant.version_slug,
+						},
+						productStatesContext,
+					}),
+				});
+			}
+		}
+
 		rejectStrategyPlusExplicitVersion({
 			planId: planParams.plan_id,
 			versioning: planParams.versioning,
@@ -124,12 +175,6 @@ export const handleUpsertProductVersioningErrors = ({
 			...(planParams.propagate?.license_parents ?? []),
 			...(planParams.propagate?.variants ?? []),
 		]) {
-			rejectStrategyPlusExplicitVersion({
-				planId: target.plan_id,
-				versioning: target.versioning,
-				version: target.version,
-				versionSlug: target.version_slug,
-			});
 			if (target.version_slug !== undefined && target.version === undefined) {
 				const version = versionForSlug({
 					planId: target.plan_id,
@@ -143,24 +188,6 @@ export const handleUpsertProductVersioningErrors = ({
 						statusCode: 400,
 					});
 				}
-			}
-			rejectNewVersionOnMissingPlan({
-				planId: target.plan_id,
-				versioning: target.versioning,
-				existingVersionCount: (
-					productStatesContext.versionsByPlanId[target.plan_id] ?? []
-				).length,
-			});
-		}
-
-		if (planParams.migration?.draft) {
-			for (const target of planParams.propagate?.variants ?? []) {
-				if (target.versioning !== "new_version") continue;
-				throw new RecaseError({
-					message: `versioning "new_version" cannot be combined with migration.draft (plan_id=${target.plan_id})`,
-					code: ErrCode.InvalidRequest,
-					statusCode: 400,
-				});
 			}
 		}
 

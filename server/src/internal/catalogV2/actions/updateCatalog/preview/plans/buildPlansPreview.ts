@@ -46,6 +46,7 @@ export const buildPlansPreview = ({
 			upsertProducts,
 			productStatesContext,
 			previewContext: catalogContext.previewContext,
+			renamePlans: updateCatalogPlan.renamePlans,
 		});
 		const licenseParents = buildLicenseParentsPreview({
 			directUpsert: upsert,

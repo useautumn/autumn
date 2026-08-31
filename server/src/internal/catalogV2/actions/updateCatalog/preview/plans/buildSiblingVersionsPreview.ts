@@ -4,6 +4,7 @@ import type {
 } from "@autumn/shared";
 import { productToProductKey } from "@autumn/shared";
 import { buildLicenseParentsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildLicenseParentsPreview";
+import { buildVariantsPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/buildVariantsPreview";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
 import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
 import { withCatalogConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withCatalogConflicts";
@@ -12,6 +13,7 @@ import type {
 	PreviewCatalogContext,
 	ProductStatesContext,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import type { RenameProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/renameProductPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { productKeyToState } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/productKeyToState";
 
@@ -145,17 +147,74 @@ const withSiblingLicenseParents = ({
 	};
 };
 
+/** No-op upsert so variant preview can resolve anchors on an unselected row. */
+const existingRowUpsert = ({
+	product,
+	productStatesContext,
+}: {
+	product: FullProduct;
+	productStatesContext: ProductStatesContext;
+}): UpsertProductPlan => ({
+	row: {
+		planId: product.id,
+		version: product.version,
+		op: "none",
+		source: "direct",
+		versioning: "existing",
+		currentFullProduct: product,
+		baseFullProduct: null,
+		nextFullProduct: product,
+	},
+	state: {
+		hasCustomers: productKeyToState({
+			productKey: productToProductKey({ product }),
+			productStatesContext,
+		}).customerUsage.hasVersionableCustomerProducts,
+		planHadLiveVersions: true,
+	},
+});
+
+const withSiblingVariants = ({
+	sibling,
+	baseUpsert,
+	upsertProducts,
+	productStatesContext,
+	previewContext,
+	renamePlans,
+}: {
+	sibling: CatalogPlanSiblingVersionPreview;
+	baseUpsert: UpsertProductPlan;
+	upsertProducts: UpsertProductPlan[];
+	productStatesContext: ProductStatesContext;
+	previewContext: PreviewCatalogContext | undefined;
+	renamePlans: RenameProductPlan[];
+}): CatalogPlanSiblingVersionPreview => {
+	const variants = buildVariantsPreview({
+		directUpsert: baseUpsert,
+		upsertProducts,
+		productStatesContext,
+		previewContext,
+		renamePlans,
+	});
+	return {
+		...sibling,
+		...(variants.length > 0 ? { variants } : {}),
+	};
+};
+
 /** Other existing versions of this direct entry's plan. Empty → omit the lane. */
 export const buildSiblingVersionsPreview = ({
 	directUpsert,
 	upsertProducts,
 	productStatesContext,
 	previewContext,
+	renamePlans,
 }: {
 	directUpsert: UpsertProductPlan;
 	upsertProducts: UpsertProductPlan[];
 	productStatesContext: ProductStatesContext;
 	previewContext: PreviewCatalogContext | undefined;
+	renamePlans: RenameProductPlan[];
 }): CatalogPlanSiblingVersionPreview[] => {
 	const { planId, versioning, version } = directUpsert.row;
 	const hasExactlyOneDirectEntry =
@@ -183,19 +242,38 @@ export const buildSiblingVersionsPreview = ({
 			previewContext,
 		});
 
+	const attachVariants = ({
+		siblingPreview,
+		baseUpsert,
+	}: {
+		siblingPreview: CatalogPlanSiblingVersionPreview;
+		baseUpsert: UpsertProductPlan;
+	}) =>
+		withSiblingVariants({
+			sibling: siblingPreview,
+			baseUpsert,
+			upsertProducts,
+			productStatesContext,
+			previewContext,
+			renamePlans,
+		});
+
 	if (versioning === "all_versions") {
 		return upsertProducts
 			.filter((upsert) => isAllVersionsSiblingForPlan({ upsert, planId }))
 			.map((sibling) =>
-				attachParents({
-					sibling: selectedSiblingFromUpsert({
-						sibling,
-						editedCurrent,
-						editedNext,
-						previewContext,
+				attachVariants({
+					siblingPreview: attachParents({
+						sibling: selectedSiblingFromUpsert({
+							sibling,
+							editedCurrent,
+							editedNext,
+							previewContext,
+						}),
+						childInternalId: sibling.row.nextFullProduct.internal_id,
+						childUpsert: sibling,
 					}),
-					childInternalId: sibling.row.nextFullProduct.internal_id,
-					childUpsert: sibling,
+					baseUpsert: sibling,
 				}),
 			)
 			.sort(byVersionAscending);
@@ -223,12 +301,16 @@ export const buildSiblingVersionsPreview = ({
 						editedNext,
 						previewContext,
 					});
-			return attachParents({
-				sibling: preview,
-				childInternalId: sibling
-					? sibling.row.nextFullProduct.internal_id
-					: product.internal_id,
-				childUpsert: sibling ?? directUpsert,
+			return attachVariants({
+				siblingPreview: attachParents({
+					sibling: preview,
+					childInternalId: sibling
+						? sibling.row.nextFullProduct.internal_id
+						: product.internal_id,
+					childUpsert: sibling ?? directUpsert,
+				}),
+				baseUpsert:
+					sibling ?? existingRowUpsert({ product, productStatesContext }),
 			});
 		})
 		.sort(byVersionAscending);

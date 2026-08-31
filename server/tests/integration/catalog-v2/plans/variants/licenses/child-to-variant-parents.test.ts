@@ -40,8 +40,8 @@ test.concurrent(
 							items: [messagesItem(200)],
 							propagate: {
 								license_parents: [
-									{ plan_id: baseId },
-									{ plan_id: variantId },
+									{ plan_id: baseId, version: 1 },
+									{ plan_id: variantId, version: 1 },
 								],
 							},
 						},
@@ -90,7 +90,7 @@ test.concurrent(
 							plan_id: childId,
 							items: [messagesItem(200)],
 							propagate: {
-								license_parents: [{ plan_id: variantId }],
+								license_parents: [{ plan_id: variantId, version: 1 }],
 							},
 						},
 					],

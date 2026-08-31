@@ -122,22 +122,35 @@ export const deriveVersionSiblingIntents = ({
 }): ProductUpsertIntent[] => {
 	if (intent.source !== "direct") return [];
 	const inheritAllVersions = intent.planParams.versioning === "all_versions";
-	const nextPointer = upsert.row.nextFullProduct.base_internal_product_id;
-	const previousPointer =
+	const explicitUnlink = intent.planParams.base_variant_id === null;
+	const versions =
+		projectedProductStatesContext.versionsByPlanId[intent.planParams.plan_id] ??
+		[];
+	const currentPointer =
 		upsert.row.currentFullProduct?.base_internal_product_id;
-	const pointerChanged =
-		nextPointer != null && nextPointer !== previousPointer;
-	if (!inheritAllVersions && !upsert.unlink && !pointerChanged) return [];
+	const nextPointer = upsert.row.nextFullProduct.base_internal_product_id;
+
+	// First link of a standalone plan claims every version (mirror of unlink).
+	const firstLink =
+		nextPointer != null &&
+		currentPointer == null &&
+		versions.every(
+			(product) =>
+				product.version === intent.productKey.version ||
+				product.base_internal_product_id == null,
+		);
+	if (!inheritAllVersions && !upsert.unlink && !firstLink) return [];
 
 	const contentEdit = inheritAllVersions
 		? contentEditFromLatest({ upsert })
 		: undefined;
-	const versions =
-		projectedProductStatesContext.versionsByPlanId[intent.planParams.plan_id] ??
-		[];
 
 	return versions
-		.filter((product) => product.version !== intent.productKey.version)
+		.filter((product) => {
+			if (product.version === intent.productKey.version) return false;
+			if (inheritAllVersions || explicitUnlink || firstLink) return true;
+			return product.base_internal_product_id === currentPointer;
+		})
 		.map((product) => {
 			const editDiff = inheritAllVersions
 				? mergeEdits({
@@ -155,11 +168,8 @@ export const deriveVersionSiblingIntents = ({
 					: { plan_id: product.id, version: product.version },
 				source: inheritAllVersions ? ("all_versions" as const) : "repoint",
 				...(editDiff ? { editDiff } : {}),
-				...(upsert.unlink
-					? { unlink: true }
-					: pointerChanged
-						? { baseInternalProductId: nextPointer }
-						: {}),
+				...(upsert.unlink ? { unlink: true } : {}),
+				...(firstLink ? { baseInternalProductId: nextPointer } : {}),
 			};
 		});
 };

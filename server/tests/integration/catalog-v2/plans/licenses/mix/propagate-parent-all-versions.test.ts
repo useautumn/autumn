@@ -1,7 +1,5 @@
 /**
- * catalogV2.update — propagate.license_parents[].versioning across parent
- * versions. Omitting it targets latest; `all_versions` fans out to every
- * parent version that offers the child.
+ * catalogV2.update — pin every parent version vs pin latest only.
  */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -35,7 +33,8 @@ test.concurrent(
 					included: 200,
 					propagate: {
 						license_parents: [
-							{ plan_id: parentId, versioning: "all_versions" },
+							{ plan_id: parentId, version: 1 },
+							{ plan_id: parentId, version: 2 },
 						],
 					},
 				});
@@ -74,7 +73,9 @@ test.concurrent(
 					autumn: autumnV2_3,
 					childId,
 					included: 200,
-					propagate: { license_parents: [{ plan_id: parentId }] },
+					propagate: {
+						license_parents: [{ plan_id: parentId, version: 2 }],
+					},
 				});
 
 				await expectLicenseLinkCorrect({
