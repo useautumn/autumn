@@ -29,7 +29,7 @@ Our app uses the pino library for logging and Axiom is where we store our logs. 
 
 <AxiomLogLeakAnimation />
 
-To solve this, we started writing logs to stdout instead (a one-line change to the Pino transport). We then used a FireLens sidecar (FluentBit) in the same ECS task which reads stdout and sends the logs to axiom. Since the HTTP request to Axiom is no longer in the main Bun process, that leak path is now gone. Here is our memory chart after we made these changes.
+To solve this, we started writing logs to stdout instead (a one-line change to the Pino transport). We then used a FireLens sidecar (FluentBit) in the same ECS task which reads stdout and sends the logs to axiom. Since the HTTP request to Axiom is no longer in the main Bun process, that leak path is now gone.
 
 **Same leak, now in the OTel exporter**
 
