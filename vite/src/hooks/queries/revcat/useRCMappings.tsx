@@ -1,7 +1,10 @@
+import type { UpdateCatalogParamsInput } from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
 
 export type RCFeatureQuantity = { feature_id: string; quantity?: number };
 export type RCFeatureQuantities = Record<string, RCFeatureQuantity[]>;
@@ -35,20 +38,39 @@ export const useRCMappings = () => {
 		},
 	});
 
+	// Writes go through catalogV2 so the catalog is the single writer and an RC
+	// id already claimed by another plan is rejected rather than silently shared.
+	const toCatalogParams = (
+		mappingsToSave: SaveMappingInput[],
+	): UpdateCatalogParamsInput => ({
+		plans: mappingsToSave.map((mapping) => ({
+			plan_id: mapping.autumn_product_id,
+			processors: {
+				revenuecat: {
+					products: mapping.revenuecat_product_ids.map((productId) => {
+						const quantities = mapping.feature_quantities?.[productId];
+						return {
+							product_id: productId,
+							...(quantities?.length ? { feature_quantities: quantities } : {}),
+						};
+					}),
+				},
+			},
+		})),
+	});
+
 	const saveMutation = useMutation({
-		mutationFn: async (mappingsToSave: SaveMappingInput[]) => {
-			const { data } = await axiosInstance.post<{ mappings: RCMapping[] }>(
-				"/v1/organization/revenuecat/mappings",
-				{ mappings: mappingsToSave },
-			);
-			return data.mappings;
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["revenuecat-mappings"] });
+		mutationFn: (mappingsToSave: SaveMappingInput[]) =>
+			CatalogV2Service.update(axiosInstance, toCatalogParams(mappingsToSave)),
+		onSuccess: async () => {
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: ["revenuecat-mappings"] }),
+				queryClient.invalidateQueries({ queryKey: ["products"] }),
+			]);
 			toast.success("Mappings saved successfully");
 		},
-		onError: () => {
-			toast.error("Failed to save mappings");
+		onError: (error) => {
+			toast.error(getBackendErr(error, "Failed to save mappings"));
 		},
 	});
 

@@ -12,6 +12,7 @@ import {
 } from "@/internal/catalogV2/execute/executeFeatureReferenceRewrites";
 import { initStripeResourcesForCatalog } from "@/internal/catalogV2/execute/executeInitStripeResources/initStripeResourcesForCatalog";
 import { executeMigrationDrafts } from "@/internal/catalogV2/execute/executeMigrationDrafts";
+import { executeRevenueCatMappings } from "./executeRevenueCatMappings";
 import { executeRemovePlans } from "@/internal/catalogV2/execute/executeRemovePlans";
 import { executeRenamePlans } from "@/internal/catalogV2/execute/executeRenamePlans";
 import { executeUpsertProducts } from "@/internal/catalogV2/execute/executeUpsertProducts/executeUpsertProducts";
@@ -212,6 +213,12 @@ export const executeUpdateCatalogPlan = async ({
 		phases,
 		phase: "execute.remove_plans",
 		run: () => executeRemovePlans({ ctx, updateCatalogPlan }),
+	});
+	await timeCatalogPhase({
+		ctx,
+		phases,
+		phase: "execute.revenuecat_mappings",
+		run: () => executeRevenueCatMappings({ ctx, updateCatalogPlan }),
 	});
 	await timeCatalogPhase({
 		ctx,

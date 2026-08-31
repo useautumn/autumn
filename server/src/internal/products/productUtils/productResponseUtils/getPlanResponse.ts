@@ -15,6 +15,7 @@ import {
 	priceConfigToPriceProcessors,
 	productItemsToPlanItemsV1,
 	productToPlanProcessors,
+	type RevenueCatPlanMapping,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
 	sortProductItems,
@@ -56,6 +57,8 @@ type GetPlanResponseArgs = {
 	basePlan?: ApiPlanV1;
 	baseFullProduct?: FullProduct;
 	resolveBaseFullProduct?: boolean;
+	/** RevenueCat mappings live in their own table, so the row is read in. */
+	revenuecatMapping?: RevenueCatPlanMapping | null;
 };
 
 type PlanExpansions = {
@@ -91,6 +94,7 @@ export async function getPlanResponse({
 	basePlan,
 	baseFullProduct,
 	resolveBaseFullProduct = true,
+	revenuecatMapping,
 	expandLicensePlans = false,
 	expandVariants = false,
 }: GetPlanResponseArgs & PlanExpansions): Promise<
@@ -182,6 +186,7 @@ export async function getPlanResponse({
 	// 9. Build Plan response
 	const planProcessors = productToPlanProcessors({
 		product,
+		revenuecatMapping,
 	});
 	const plan = {
 		id: product.id,
