@@ -7,11 +7,12 @@ import { AreaRadioGroupItem, Button, RadioGroup, Switch } from "@autumn/ui";
 import { useMemo, useState } from "react";
 import { PlanDiffBody } from "@/components/v2/PlanDiffBody";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { makePlanKey, parsePlanKey } from "@/lib/planSelectionKeys";
 import {
 	emptyCatalogPlanChangeDiff,
-	type PropagationTarget,
+	type VariantTarget,
 } from "@/views/products/plan/catalog/catalogPlanPreview";
-import { getDefaultPropagationTargetIds } from "@/views/products/plan/versioning/getDefaultPropagationTargetIds";
+import { getDefaultLicenseParentKeys } from "@/views/products/plan/versioning/getDefaultPropagationTargetIds";
 import { VariantTargetsStep } from "@/views/products/plan/versioning/VariantTargetsStep";
 import type { LeafCatalogDecision } from "../chatTypes";
 
@@ -55,24 +56,35 @@ export function CatalogDecisionCard({
 	const variants = plan.variants ?? [];
 	const showVariants = !metadataOnly && variants.length > 0;
 
-	const variantTargets = useMemo<PropagationTarget[]>(
+	const variantTargets = useMemo<VariantTarget[]>(
 		() =>
-			variants.map((variant: PlanUpdatePreviewVariant) => ({
-				id: variant.plan_id,
-				name: variant.name,
-				detail: variant.plan_id,
-				conflicts: variant.conflicts ?? [],
-				...emptyCatalogPlanChangeDiff(),
-				itemChanges: variant.item_changes ?? [],
-			})),
+			variants.map((variant: PlanUpdatePreviewVariant) => {
+				const version = variant.version ?? 1;
+				return {
+					planId: variant.plan_id,
+					name: variant.name,
+					versions: [
+						{
+							version,
+							key: makePlanKey({ planId: variant.plan_id, version }),
+							conflicts: variant.conflicts ?? [],
+							...emptyCatalogPlanChangeDiff(),
+							itemChanges: variant.item_changes ?? [],
+						},
+					],
+					mintsNewVersion: false,
+					mintVersion: version + 1,
+					takenSlugs: [],
+				};
+			}),
 		[variants],
 	);
 
 	const [versioning, setVersioning] = useState<
 		LeafCatalogDecision["versioning"]
 	>(metadataOnly ? "update_all_versions" : "create_version");
-	const [selectedVariantIds, setSelectedVariantIds] = useState<string[]>(() =>
-		getDefaultPropagationTargetIds({ targets: variantTargets }),
+	const [selectedVariantKeys, setSelectedVariantKeys] = useState<string[]>(
+		() => getDefaultLicenseParentKeys({ targets: variantTargets }),
 	);
 	const [migrationDraft, setMigrationDraft] = useState(false);
 
@@ -85,7 +97,13 @@ export function CatalogDecisionCard({
 		onSubmit({
 			migrationDraft: migrateAvailable && migrationDraft,
 			planId: plan.plan_id,
-			propagateVariantIds: showVariants ? selectedVariantIds : [],
+			propagateVariantIds: showVariants
+				? [
+						...new Set(
+							selectedVariantKeys.map((key) => parsePlanKey(key).planId),
+						),
+					]
+				: [],
 			versioning,
 		});
 	};
@@ -121,7 +139,7 @@ export function CatalogDecisionCard({
 						/>
 						{showAllVersionsOption && (
 							<AreaRadioGroupItem
-								description="Applies this change to every version of this plan and its variants."
+								description="Applies this change to every version of this plan. Next you pick which variant versions follow."
 								label="Update all versions"
 								value="update_all_versions"
 							/>
@@ -136,14 +154,8 @@ export function CatalogDecisionCard({
 						Variants
 					</span>
 					<VariantTargetsStep
-						onToggle={(id) =>
-							setSelectedVariantIds((prev) =>
-								prev.includes(id)
-									? prev.filter((variantId) => variantId !== id)
-									: [...prev, id],
-							)
-						}
-						selectedIds={selectedVariantIds}
+						onChange={setSelectedVariantKeys}
+						selectedKeys={selectedVariantKeys}
 						targets={variantTargets}
 					/>
 				</div>

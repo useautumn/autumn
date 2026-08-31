@@ -311,6 +311,10 @@ test.concurrent(
 								},
 							],
 						},
+					],
+				});
+				await autumnV2_3.catalogV2.update({
+					plans: [
 						{
 							plan_id: variantId,
 							licenses: [

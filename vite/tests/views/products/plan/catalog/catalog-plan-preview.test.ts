@@ -4,10 +4,11 @@ import type {
 	PreviewUpdateCatalogResponse,
 } from "@autumn/shared";
 import {
-	applyPropagationTargetDiffs,
+	applyLicenseParentScopedDiffs,
 	buildCatalogMigrateTargets,
 	buildCatalogPropagate,
 	buildSelectedLicenseParentPropagate,
+	catalogPlanLicenseParents,
 	catalogPreviewAliasReplacements,
 	catalogPreviewHasPlanIdChange,
 	catalogPreviewHasPromotion,
@@ -248,6 +249,132 @@ describe("catalog plan preview helpers", () => {
 		).toBe(true);
 	});
 
+	test("flattens sibling_versions.license_parents for the dialog list", () => {
+		const preview = planPreview({
+			plan_id: "seat",
+			version: 2,
+			sibling_versions: [
+				{
+					plan_id: "seat",
+					version: 1,
+					state: { has_customers: false, will_archive: false },
+					license_parents: [
+						{
+							plan_id: "team",
+							name: "Team",
+							version: 1,
+							license_action: "unchanged",
+							state: { has_customers: true, will_archive: false },
+						},
+					],
+				},
+			],
+		});
+		expect(catalogPlanLicenseParents({ preview }).map((p) => p.plan_id)).toEqual(
+			["team"],
+		);
+	});
+
+	test("merges sibling-linked parent versions into the same parent plan", () => {
+		const preview = planPreview({
+			plan_id: "seat",
+			version: 2,
+			license_parents: [
+				{
+					plan_id: "team",
+					name: "QA Anchor Team",
+					version: 2,
+					version_slug: "v2",
+					license_action: "propagated",
+					state: { has_customers: true, will_archive: false },
+				},
+				{
+					plan_id: "eu",
+					name: "QA Anchor EU",
+					version: 2,
+					version_slug: "v2",
+					license_action: "propagated",
+					state: { has_customers: false, will_archive: false },
+				},
+			],
+			sibling_versions: [
+				{
+					plan_id: "seat",
+					version: 1,
+					state: { has_customers: false, will_archive: false },
+					license_parents: [
+						{
+							plan_id: "team",
+							name: "QA Anchor Team",
+							version: 1,
+							version_slug: "v1",
+							license_action: "propagated",
+							state: { has_customers: true, will_archive: false },
+						},
+						{
+							plan_id: "eu",
+							name: "QA Anchor EU",
+							version: 1,
+							version_slug: "v1",
+							license_action: "propagated",
+							state: { has_customers: false, will_archive: false },
+						},
+					],
+				},
+			],
+		});
+
+		const parents = catalogPlanLicenseParents({ preview });
+		expect(toLicenseParentTargets({ parents })).toEqual([
+			{
+				planId: "eu",
+				name: "QA Anchor EU",
+				versions: [
+					{
+						version: 2,
+						versionSlug: "v2",
+						key: "eu:2",
+						conflicts: [],
+						...emptyCatalogPlanChangeDiff(),
+					},
+					{
+						version: 1,
+						versionSlug: "v1",
+						key: "eu:1",
+						conflicts: [],
+						...emptyCatalogPlanChangeDiff(),
+					},
+				],
+			},
+			{
+				planId: "team",
+				name: "QA Anchor Team",
+				versions: [
+					{
+						version: 2,
+						versionSlug: "v2",
+						key: "team:2",
+						conflicts: [],
+						...emptyCatalogPlanChangeDiff(),
+					},
+					{
+						version: 1,
+						versionSlug: "v1",
+						key: "team:1",
+						conflicts: [],
+						...emptyCatalogPlanChangeDiff(),
+					},
+				],
+			},
+		]);
+		expect(
+			buildSelectedLicenseParentPropagate({
+				selectedKeys: ["team:1"],
+				targets: toLicenseParentTargets({ parents }),
+			}),
+		).toEqual([{ plan_id: "team", version: 1 }]);
+	});
+
 	test("a version slug rename opens a confirm-only Review on its own", () => {
 		const renamed = planPreview({
 			version_slug: "v1",
@@ -409,6 +536,9 @@ describe("catalog plan preview helpers", () => {
 		expect(withCustomers.mintsNewVersion).toBe(true);
 		expect(withCustomers.mintVersion).toBe(3);
 		expect(withCustomers.takenSlugs).toEqual(["add-dashboard", "v1"]);
+		expect(withCustomers.versions.map((entry) => entry.version)).toEqual([
+			2, 1,
+		]);
 		// No customers means the base edit lands in place, so there is nothing to name.
 		expect(withoutCustomers.mintsNewVersion).toBe(false);
 	});
@@ -430,14 +560,20 @@ describe("catalog plan preview helpers", () => {
 			}),
 		).toEqual([
 			{
-				id: "pro_eu",
+				planId: "pro_eu",
 				name: "Pro EU",
-				detail: "pro_eu",
-				conflicts: [],
+				versions: [
+					{
+						version: 1,
+						versionSlug: "v1",
+						key: "pro_eu:1",
+						conflicts: [],
+						...emptyCatalogPlanChangeDiff(),
+					},
+				],
 				mintsNewVersion: false,
 				mintVersion: 2,
 				takenSlugs: ["v1"],
-				...emptyCatalogPlanChangeDiff(),
 			},
 		]);
 		expect(
@@ -464,8 +600,7 @@ describe("catalog plan preview helpers", () => {
 					},
 				],
 				namesByPlanId: { pro_eu: "Pro EU" },
-				includeHistoricalVersions: true,
-			})[0].conflicts,
+			})[0].versions.flatMap((entry) => entry.conflicts),
 		).toEqual([
 			{
 				reason: "value_divergence",
@@ -521,20 +656,27 @@ describe("catalog plan preview helpers", () => {
 			{ plan_id: "team", version: 1 },
 			{ plan_id: "team", version: 2 },
 		]);
+		// A whole-plan key expands into one pin per linked version.
 		expect(
-			buildSelectedLicenseParentPropagate({ selectedKeys: ["team"] }),
-		).toEqual([{ plan_id: "team", versioning: "all_versions" }]);
+			buildSelectedLicenseParentPropagate({
+				selectedKeys: ["team"],
+				targets: toLicenseParentTargets({ parents }),
+			}),
+		).toEqual([
+			{ plan_id: "team", version: 2 },
+			{ plan_id: "team", version: 1 },
+		]);
 		expect(
 			buildCatalogPropagate({
-				variantIds: ["pro_eu"],
+				variants: [{ plan_id: "pro_eu", version: 1 }],
 				licenseParents: [{ plan_id: "team", version: 2 }],
 			}),
 		).toEqual({
-			variants: [{ plan_id: "pro_eu" }],
+			variants: [{ plan_id: "pro_eu", version: 1 }],
 			license_parents: [{ plan_id: "team", version: 2 }],
 		});
 		expect(
-			buildCatalogPropagate({ variantIds: [], licenseParents: [] }),
+			buildCatalogPropagate({ variants: [], licenseParents: [] }),
 		).toBeUndefined();
 	});
 
@@ -563,9 +705,9 @@ describe("catalog plan preview helpers", () => {
 			],
 			namesByPlanId: { "qa-eus-eu": "QA Compose EU" },
 		});
-		expect(variantTarget.itemChanges).toEqual([]);
-		expect(variantTarget.licenseChanges).toHaveLength(1);
-		expect(variantTarget.licenseChanges[0]?.license_plan_id).toBe(
+		expect(variantTarget.versions[0].itemChanges).toEqual([]);
+		expect(variantTarget.versions[0].licenseChanges).toHaveLength(1);
+		expect(variantTarget.versions[0].licenseChanges[0]?.license_plan_id).toBe(
 			"qa-eus-seat",
 		);
 
@@ -606,7 +748,7 @@ describe("catalog plan preview helpers", () => {
 					},
 				],
 			}),
-			selectedVariantIds: ["qa-eus-eu"],
+			selectedVariantKeys: ["qa-eus-eu"],
 			selectedLicenseParentKeys: ["team:2"],
 			versionChoice: "update",
 			currentVersion: 1,
@@ -659,19 +801,23 @@ describe("catalog plan preview helpers", () => {
 			},
 		});
 
-		const [fromFallback] = applyPropagationTargetDiffs({
+		const [fromFallback] = applyLicenseParentScopedDiffs({
 			targets: [emptyTarget],
 			fallbackDiff,
 		});
-		expect(fromFallback.conflicts[0]?.license_plan_id).toBe("qa-eus-seat");
-		expect(fromFallback.licenseChanges[0]?.license_plan_id).toBe("qa-eus-seat");
+		expect(fromFallback.versions[0].conflicts[0]?.license_plan_id).toBe(
+			"qa-eus-seat",
+		);
+		expect(fromFallback.versions[0].licenseChanges[0]?.license_plan_id).toBe(
+			"qa-eus-seat",
+		);
 
-		const [fromScoped] = applyPropagationTargetDiffs({
+		const [fromScoped] = applyLicenseParentScopedDiffs({
 			targets: [emptyTarget],
 			fallbackDiff,
-			scopedById: new Map([
+			scopedByKey: new Map([
 				[
-					"qa-eus-eu",
+					"qa-eus-eu:1",
 					{
 						item_changes: [],
 						license_changes: [
@@ -688,9 +834,9 @@ describe("catalog plan preview helpers", () => {
 				],
 			]),
 		});
-		expect(fromScoped.licenseChanges[0]?.plan_change?.item_changes).toEqual([
-			{ feature_id: "messages", action: "updated" },
-		]);
+		expect(
+			fromScoped.versions[0].licenseChanges[0]?.plan_change?.item_changes,
+		).toEqual([{ feature_id: "messages", action: "updated" }]);
 	});
 
 	test("review lists only variant versions whose preview action changes them", () => {
@@ -728,7 +874,7 @@ describe("catalog plan preview helpers", () => {
 					},
 				],
 			}),
-			selectedVariantIds: ["qa-euv-eu"],
+			selectedVariantKeys: ["qa-euv-eu"],
 			selectedLicenseParentKeys: [],
 			versionChoice: "all",
 			currentVersion: 2,
@@ -738,7 +884,9 @@ describe("catalog plan preview helpers", () => {
 		expect(variant.rows.map((row) => row.version)).toEqual([2, 1]);
 	});
 
-	test("review uses a variant's resolved versioning instead of the base choice", () => {
+	test("review shows the minted row for a customered variant under a base mint", () => {
+		// Discover lanes read resolved "existing" even when the save will mint,
+		// so review derives the mint from the base choice + customers.
 		const [variant] = buildCatalogMigrateTargets({
 			preview: planPreview({
 				plan_id: "team",
@@ -759,7 +907,43 @@ describe("catalog plan preview helpers", () => {
 					},
 				],
 			}),
-			selectedVariantIds: ["team-eu"],
+			selectedVariantKeys: ["team-eu"],
+			selectedLicenseParentKeys: [],
+			versionChoice: "new",
+			currentVersion: 2,
+			baseName: "Team",
+		}).filter((target) => target.role === "variant");
+
+		expect(variant.rows).toHaveLength(1);
+		expect(variant.rows[0]).toMatchObject({
+			version: 3,
+			isCurrent: false,
+			isNew: true,
+		});
+	});
+
+	test("review keeps the current row for an empty variant under a base mint", () => {
+		const [variant] = buildCatalogMigrateTargets({
+			preview: planPreview({
+				plan_id: "team",
+				version: 2,
+				state: { has_customers: true, will_archive: false },
+				variants: [
+					{
+						plan_id: "team-eu",
+						version: 2,
+						state: { has_customers: false, will_archive: false },
+						variant_action: "propagated",
+						versioning: {
+							current_version: 2,
+							new_version: null,
+							resolved: "existing",
+							options: ["existing", "all_versions"],
+						},
+					},
+				],
+			}),
+			selectedVariantKeys: ["team-eu"],
 			selectedLicenseParentKeys: [],
 			versionChoice: "new",
 			currentVersion: 2,
@@ -808,7 +992,7 @@ describe("catalog plan preview helpers", () => {
 		}) =>
 			buildCatalogMigrateTargets({
 				preview,
-				selectedVariantIds: [],
+				selectedVariantKeys: [],
 				selectedLicenseParentKeys,
 				versionChoice,
 				currentVersion: 1,
@@ -868,7 +1052,7 @@ describe("catalog plan preview helpers", () => {
 					},
 				],
 			}),
-			selectedVariantIds: [],
+			selectedVariantKeys: [],
 			selectedLicenseParentKeys: ["team"],
 			versionChoice: "new",
 			currentVersion: 1,
@@ -909,7 +1093,7 @@ describe("catalog plan preview helpers", () => {
 					},
 				],
 			}),
-			selectedVariantIds: [],
+			selectedVariantKeys: [],
 			selectedLicenseParentKeys: ["team"],
 			versionChoice: "new",
 			currentVersion: 1,

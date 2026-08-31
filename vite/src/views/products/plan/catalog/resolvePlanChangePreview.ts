@@ -3,10 +3,7 @@ import type {
 	CatalogPlanVersioningStrategy,
 	CatalogPropagateParams,
 } from "@autumn/shared";
-import {
-	getDefaultLicenseParentKeys,
-	getDefaultPropagationTargetIds,
-} from "../versioning/getDefaultPropagationTargetIds";
+import { getDefaultLicenseParentKeys } from "../versioning/getDefaultPropagationTargetIds";
 import {
 	previousAttributesToSettingChanges,
 	type SettingChange,
@@ -14,15 +11,18 @@ import {
 import {
 	buildCatalogPropagate,
 	buildSelectedLicenseParentPropagate,
+	buildSelectedVariantPropagate,
+	catalogPlanLicenseParents,
+	catalogPlanVariantLanes,
 	type CatalogVersionChoice,
 	isCatalogMetadataOnly,
 	type LicenseParentTarget,
 	licenseParentVersions,
-	type PropagationTarget,
 	previewOpensStrategyStep,
 	strategyForCatalogPreview,
 	toLicenseParentTargets,
 	toVariantPropagationTargets,
+	type VariantTarget,
 } from "./catalogPlanPreview";
 
 const EMPTY_SELECTION: string[] = [];
@@ -73,12 +73,12 @@ export type PlanChangePreviewModel = {
 	showUpdateOption: boolean;
 	effectiveVersionChoice: CatalogVersionChoice;
 	strategy: CatalogPlanVersioningStrategy | undefined;
-	variantTargets: PropagationTarget[];
-	defaultVariantIds: string[];
-	selectedVariantIds: string[];
+	variantTargets: VariantTarget[];
+	defaultVariantKeys: string[];
+	selectedVariantKeys: string[];
 	showVersionStrategy: boolean;
 	showVariantScope: boolean;
-	effectiveVariantIds: string[];
+	effectiveVariantKeys: string[];
 	licenseParentTargets: LicenseParentTarget[];
 	defaultLicenseParentKeys: string[];
 	selectedLicenseParentKeys: string[];
@@ -126,32 +126,49 @@ export const resolvePlanChangePreview = ({
 		isLatest,
 	});
 
+	const variantLanes = catalogPlanVariantLanes({
+		preview,
+		includeSiblingRows: effectiveVersionChoice === "all",
+	});
 	const variantTargets = toVariantPropagationTargets({
-		variants: preview?.variants,
+		variants: variantLanes,
 		namesByPlanId,
-		includeHistoricalVersions: effectiveVersionChoice === "all",
 		baseMintsNewVersion: strategy === "new_version",
 	});
-	const defaultVariantIds = getDefaultPropagationTargetIds({
+	const defaultVariantKeys = getDefaultLicenseParentKeys({
 		targets: variantTargets,
 	});
-	const selectedVariantIds = variantSelection ?? defaultVariantIds;
-	const showVariantScope =
-		!!preview?.plan_change?.customize &&
-		variantTargets.length > 0 &&
-		(isLatest || effectiveVersionChoice === "all");
-	const effectiveVariantIds = showVariantScope
-		? selectedVariantIds
+	const availableVariantKeys = new Set(
+		variantTargets.flatMap((target) => [
+			target.planId,
+			...target.versions.map((entry) => entry.key),
+		]),
+	);
+	const selectedVariantKeys = (variantSelection ?? defaultVariantKeys).filter(
+		(key) => availableVariantKeys.has(key),
+	);
+	// License-only edits propagate too, so any content change opens the step.
+	const showVariantScope = !isMetadataOnly && variantTargets.length > 0;
+	const effectiveVariantKeys = showVariantScope
+		? selectedVariantKeys
 		: EMPTY_SELECTION;
 
+	const includeSiblingLinked = effectiveVersionChoice !== "update";
 	const licenseParentTargets = toLicenseParentTargets({
-		parents: preview?.license_parents,
+		parents: catalogPlanLicenseParents({ preview, includeSiblingLinked }),
 	});
 	const defaultLicenseParentKeys = getDefaultLicenseParentKeys({
 		targets: licenseParentTargets,
 	});
-	const selectedLicenseParentKeys =
-		licenseParentSelection ?? defaultLicenseParentKeys;
+	const availableLicenseParentKeys = new Set(
+		licenseParentTargets.flatMap((target) => [
+			target.planId,
+			...target.versions.map((entry) => entry.key),
+		]),
+	);
+	const selectedLicenseParentKeys = (
+		licenseParentSelection ?? defaultLicenseParentKeys
+	).filter((key) => availableLicenseParentKeys.has(key));
 	const showLicenseParentScope = licenseParentTargets.length > 0;
 	const effectiveLicenseParentKeys = showLicenseParentScope
 		? selectedLicenseParentKeys
@@ -166,28 +183,34 @@ export const resolvePlanChangePreview = ({
 		effectiveVersionChoice,
 		strategy,
 		variantTargets,
-		defaultVariantIds,
-		selectedVariantIds,
+		defaultVariantKeys,
+		selectedVariantKeys,
 		showVersionStrategy:
 			!isMetadataOnly && previewOpensStrategyStep({ preview }),
 		showVariantScope,
-		effectiveVariantIds,
+		effectiveVariantKeys,
 		licenseParentTargets,
 		defaultLicenseParentKeys,
 		selectedLicenseParentKeys,
 		showLicenseParentScope,
 		versionChoiceOnlyAffectsParents:
 			!preview?.state.has_customers &&
-			(preview?.license_parents ?? []).some((parent) =>
-				licenseParentVersions({ parent }).some(
-					(entry) => entry.state.has_customers,
-				),
+			catalogPlanLicenseParents({ preview, includeSiblingLinked }).some(
+				(parent) =>
+					licenseParentVersions({ parent }).some(
+						(entry) => entry.state.has_customers,
+					),
 			),
 		effectiveLicenseParentKeys,
 		propagate: buildCatalogPropagate({
-			variantIds: effectiveVariantIds,
+			variants: buildSelectedVariantPropagate({
+				selectedKeys: effectiveVariantKeys,
+				targets: variantTargets,
+				baseMintsNewVersion: strategy === "new_version",
+			}),
 			licenseParents: buildSelectedLicenseParentPropagate({
 				selectedKeys: effectiveLicenseParentKeys,
+				targets: licenseParentTargets,
 			}),
 		}),
 		settingsChanges: previousAttributesToSettingChanges(

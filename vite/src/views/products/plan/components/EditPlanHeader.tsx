@@ -28,13 +28,17 @@ import {
 	useIsCusPlanEditor,
 	useProductStore,
 } from "@/hooks/stores/useProductStore.ts";
-import { useVariantViewStore } from "@/hooks/stores/useVariantViewStore.ts";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery.tsx";
 import { useCusProductQuery } from "@/views/customers/customer/product/hooks/useCusProductQuery.tsx";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
-import { useProductQuery } from "../../product/hooks/useProductQuery";
+import {
+	ALL_VARIANTS_VIEW,
+	useAllVariantsView,
+	useProductQuery,
+	useProductQueryState,
+} from "../../product/hooks/useProductQuery";
 import { useCreateVariant } from "../hooks/useCreateVariant";
 import {
 	MigrateCustomersDialog,
@@ -51,6 +55,7 @@ import { versionLabel } from "./versionLabel";
 
 export const EditPlanHeader = () => {
 	const { numVersions, versionCounts } = useProductQuery();
+	const { queryStates } = useProductQueryState();
 	const product = useProductStore((s) => s.product);
 	const { counts } = useProductCountsQuery(
 		product.version ? { version: product.version } : {},
@@ -155,7 +160,9 @@ export const EditPlanHeader = () => {
 							},
 							{
 								name: `${product.name}`,
-								href: `/products/${product.id}`,
+								href: queryStates.view
+									? `/products/${product.id}?view=${queryStates.view}`
+									: `/products/${product.id}`,
 							},
 						]}
 					/>
@@ -265,8 +272,8 @@ const VariantSelect = () => {
 	const product = useProductStore((s) => s.product);
 	const { products } = useProductsQuery();
 	const navigate = useNavigate();
-	const showAllVariants = useVariantViewStore((s) => s.showAllVariants);
-	const setShowAllVariants = useVariantViewStore((s) => s.setShowAllVariants);
+	const { setQueryStates } = useProductQueryState();
+	const showAllVariants = useAllVariantsView();
 
 	// base_id is only populated on products-list entries, not the store product,
 	// so resolve it from the list. A base plan is its own base.
@@ -295,19 +302,22 @@ const VariantSelect = () => {
 			return;
 		}
 		if (id === SHOW_ALL_VARIANTS) {
-			setShowAllVariants(true);
-			// Variant cards only exist on the base, so focus it.
 			if (product.id !== baseId) {
 				pushPage({
 					navigate,
 					path: `/products/${baseId}`,
+					queryParams: { view: ALL_VARIANTS_VIEW },
 					preserveParams: false,
 				});
+				return;
 			}
+			setQueryStates({ view: ALL_VARIANTS_VIEW });
 			return;
 		}
-		setShowAllVariants(false);
-		if (id === product.id) return;
+		if (id === product.id) {
+			setQueryStates({ view: null });
+			return;
+		}
 		pushPage({ navigate, path: `/products/${id}`, preserveParams: false });
 	};
 

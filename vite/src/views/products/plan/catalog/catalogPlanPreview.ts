@@ -114,6 +114,114 @@ export const catalogPreviewHasVersionSlugChange = ({
 	preview: CatalogPlanUpdatePreview | undefined;
 }): boolean => catalogPreviewVersionSlugChange({ preview }) !== undefined;
 
+const parentVersionsOf = ({
+	parent,
+}: {
+	parent: CatalogLicenseParentPreview;
+}): CatalogLicenseParentVersionPreview[] => {
+	const { sibling_versions: _siblings, ...row } = parent;
+	return [row, ...(parent.sibling_versions ?? [])];
+};
+
+/** Fold parent versions into one lane per plan. Sibling-linked rows are
+ * parents anchored to another child version — omit them on `existing`. */
+export const catalogPlanLicenseParents = ({
+	preview,
+	includeSiblingLinked = true,
+}: {
+	preview: CatalogPlanUpdatePreview | undefined;
+	includeSiblingLinked?: boolean;
+}): CatalogLicenseParentPreview[] => {
+	if (!preview) return [];
+	const byPlanId = new Map<
+		string,
+		{ name: string; versions: Map<number, CatalogLicenseParentVersionPreview> }
+	>();
+
+	const ingest = (parent: CatalogLicenseParentPreview) => {
+		const existing = byPlanId.get(parent.plan_id) ?? {
+			name: parent.name,
+			versions: new Map(),
+		};
+		existing.name = parent.name;
+		for (const version of parentVersionsOf({ parent })) {
+			existing.versions.set(version.version, version);
+		}
+		byPlanId.set(parent.plan_id, existing);
+	};
+
+	if (includeSiblingLinked) {
+		for (const sibling of preview.sibling_versions ?? []) {
+			for (const parent of sibling.license_parents ?? []) ingest(parent);
+		}
+	}
+	for (const parent of preview.license_parents ?? []) ingest(parent);
+
+	return [...byPlanId.entries()]
+		.sort(([left], [right]) => left.localeCompare(right))
+		.map(([, { name, versions }]) => {
+			const newestFirst = [...versions.values()].sort(
+				(left, right) => right.version - left.version,
+			);
+			const [top, ...siblings] = newestFirst;
+			return {
+				...top,
+				name,
+				...(siblings.length > 0 ? { sibling_versions: siblings } : {}),
+			};
+		});
+};
+
+const variantVersionsOf = ({
+	variant,
+}: {
+	variant: CatalogVariantPreview;
+}): CatalogVariantVersionPreview[] => {
+	const { sibling_versions: _siblings, ...row } = variant;
+	return [row, ...(variant.sibling_versions ?? [])];
+};
+
+/** Variant lanes offered for an edit: the edited row's own, plus each
+ * sibling base row's when the edit spans all versions. One lane per plan. */
+export const catalogPlanVariantLanes = ({
+	preview,
+	includeSiblingRows = true,
+}: {
+	preview: CatalogPlanUpdatePreview | undefined;
+	includeSiblingRows?: boolean;
+}): CatalogVariantPreview[] => {
+	if (!preview) return [];
+	const byPlanId = new Map<string, Map<number, CatalogVariantVersionPreview>>();
+
+	const ingest = (variant: CatalogVariantPreview) => {
+		const versions = byPlanId.get(variant.plan_id) ?? new Map();
+		for (const row of variantVersionsOf({ variant })) {
+			versions.set(row.version, row);
+		}
+		byPlanId.set(variant.plan_id, versions);
+	};
+
+	if (includeSiblingRows) {
+		for (const sibling of preview.sibling_versions ?? []) {
+			for (const variant of sibling.variants ?? []) ingest(variant);
+		}
+	}
+	for (const variant of preview.variants ?? []) ingest(variant);
+
+	return [...byPlanId.entries()]
+		.sort(([left], [right]) => left.localeCompare(right))
+		.map(([, versions]) => {
+			const newestFirst = [...versions.values()].sort(
+				(left, right) => right.version - left.version,
+			);
+			const [top, ...siblings] = newestFirst;
+			return {
+				...top,
+				...(siblings.length > 0 ? { sibling_versions: siblings } : {}),
+			};
+		});
+};
+
 export const catalogPreviewOpensDialog = ({
 	preview,
 }: {
@@ -130,7 +238,7 @@ export const catalogPreviewOpensDialog = ({
 	return (
 		previewOpensStrategyStep({ preview }) ||
 		(preview?.variants?.length ?? 0) > 0 ||
-		(preview?.license_parents?.length ?? 0) > 0
+		catalogPlanLicenseParents({ preview }).length > 0
 	);
 };
 
@@ -197,19 +305,17 @@ export const hasCatalogMigrationTargets = ({
 }): boolean => (preview?.migrations?.length ?? 0) > 0;
 
 export const buildCatalogPropagate = ({
-	variantIds,
+	variants,
 	licenseParents,
 }: {
-	variantIds: string[];
+	variants: NonNullable<CatalogPropagateParams["variants"]>;
 	licenseParents: NonNullable<CatalogPropagateParams["license_parents"]>;
 }): CatalogPropagateParams | undefined => {
-	if (variantIds.length === 0 && licenseParents.length === 0) {
+	if (variants.length === 0 && licenseParents.length === 0) {
 		return undefined;
 	}
 	return {
-		...(variantIds.length > 0
-			? { variants: variantIds.map((plan_id) => ({ plan_id })) }
-			: {}),
+		...(variants.length > 0 ? { variants } : {}),
 		...(licenseParents.length > 0 ? { license_parents: licenseParents } : {}),
 	};
 };
@@ -286,19 +392,6 @@ export type CatalogPlanChangeDiff = {
 	licenseChanges: PlanLicenseChangeV0[];
 };
 
-export type PropagationTarget = {
-	id: string;
-	name: string;
-	detail: string;
-	conflicts: CatalogConflictPreview[];
-	/** This target gets its own new row, so the save can name it. */
-	mintsNewVersion: boolean;
-	/** The version that row lands at — max+1, not active+1. */
-	mintVersion: number;
-	/** Display slugs this plan's versions already hold. */
-	takenSlugs: string[];
-} & CatalogPlanChangeDiff;
-
 export const emptyCatalogPlanChangeDiff = (): CatalogPlanChangeDiff => ({
 	itemChanges: [],
 	hasPriceChange: false,
@@ -329,30 +422,6 @@ export const catalogTargetDiffHasChanges = ({
 	hasPriceChange ||
 	licenseChanges.length > 0 ||
 	settingChanges.length > 0;
-
-/** Discover variants have conflicts but no plan_change until propagate.
- * Prefer the scoped row when present; otherwise show the current plan's diff. */
-export const applyPropagationTargetDiffs = ({
-	targets,
-	fallbackDiff,
-	scopedById,
-}: {
-	targets: PropagationTarget[];
-	fallbackDiff: CatalogPlanChangeDiff;
-	scopedById?: Map<string, PlanChangeV0 | null | undefined>;
-}): PropagationTarget[] =>
-	targets.map((target) => {
-		if (scopedById?.has(target.id)) {
-			const scopedDiff = planChangeToTargetDiff({
-				planChange: scopedById.get(target.id),
-			});
-			if (catalogTargetDiffHasChanges(scopedDiff)) {
-				return { ...target, ...scopedDiff };
-			}
-		}
-		if (catalogTargetDiffHasChanges(target)) return target;
-		return { ...target, ...fallbackDiff };
-	});
 
 const dedupeBy = <T>(entries: T[], keyOf: (entry: T) => string): T[] => {
 	const seen = new Map<string, T>();
@@ -408,26 +477,27 @@ export const applyLicenseParentScopedDiffs = ({
 export const toVariantPropagationTargets = ({
 	variants,
 	namesByPlanId,
-	includeHistoricalVersions = false,
 	baseMintsNewVersion = false,
 }: {
 	variants: CatalogVariantPreview[] | undefined;
 	namesByPlanId: Record<string, string>;
-	includeHistoricalVersions?: boolean;
 	baseMintsNewVersion?: boolean;
-}): PropagationTarget[] =>
+}): VariantTarget[] =>
 	(variants ?? []).map((variant) => {
 		const versions = variantVersions({ variant });
 		return {
-			id: variant.plan_id,
+			planId: variant.plan_id,
 			name: namesByPlanId[variant.plan_id] ?? variant.plan_id,
-			detail: variant.plan_id,
-			conflicts: dedupeBy(
-				(includeHistoricalVersions ? versions : [variant]).flatMap(
-					(entry) => entry.conflicts ?? [],
-				),
-				(conflict) => JSON.stringify(conflict),
-			),
+			versions: versions.map((entry) => ({
+				version: entry.version,
+				...(entry.version_slug ? { versionSlug: entry.version_slug } : {}),
+				key: makePlanKey({
+					planId: variant.plan_id,
+					version: entry.version,
+				}),
+				conflicts: entry.conflicts ?? [],
+				...planChangeToTargetDiff({ planChange: entry.plan_change }),
+			})),
 			mintsNewVersion: variantFollowMintsNewVersion({
 				variant,
 				baseMintsNewVersion,
@@ -436,7 +506,6 @@ export const toVariantPropagationTargets = ({
 				Math.max(...versions.map((entry) => entry.version), variant.version) +
 				1,
 			takenSlugs: versions.map((entry) => entry.version_slug).filter(Boolean),
-			...planChangeToTargetDiff({ planChange: variant.plan_change }),
 		};
 	});
 
@@ -447,8 +516,37 @@ export type LicenseParentTarget = {
 	versions: LicenseParentVersion[];
 };
 
+/** One variant plan and the versions of it this base edit can pin. */
+export type VariantTarget = LicenseParentTarget & {
+	mintsNewVersion: boolean;
+	mintVersion: number;
+	takenSlugs: string[];
+};
+
+/** Newest row in the lane is the one a base mint would clone. */
+export const variantTargetMintsInSelection = ({
+	target,
+	selectedKeys,
+}: {
+	target: VariantTarget;
+	selectedKeys: string[];
+}): boolean => {
+	if (!target.mintsNewVersion) return false;
+	const newest = target.versions[0];
+	if (!newest) return false;
+	return (
+		planScopeIsWholePlan({ selectedKeys, planId: target.planId }) ||
+		planScopeIncludesVersion({
+			selectedKeys,
+			planId: target.planId,
+			version: newest.version,
+		})
+	);
+};
+
 export type LicenseParentVersion = {
 	version: number;
+	versionSlug?: string;
 	key: string;
 	conflicts: CatalogConflictPreview[];
 } & CatalogPlanChangeDiff;
@@ -463,6 +561,7 @@ export const toLicenseParentTargets = ({
 		name: parent.name,
 		versions: licenseParentVersions({ parent }).map((entry) => ({
 			version: entry.version,
+			...(entry.version_slug ? { versionSlug: entry.version_slug } : {}),
 			key: getLicenseParentVersionKey(entry),
 			conflicts: entry.conflicts ?? [],
 			...planChangeToTargetDiff({ planChange: entry.plan_change }),
@@ -489,19 +588,43 @@ export const licenseParentVersionsInScope = ({
 	);
 };
 
-/** Plan-selection keys → propagate targets. Whole plan means `all_versions`. */
+/** Plan-selection keys → pinned targets. A whole-plan key expands client-side
+ * into one pinned target per linked version — the API only accepts pins. */
 export const buildSelectedLicenseParentPropagate = ({
 	selectedKeys,
+	targets = [],
 }: {
 	selectedKeys: string[];
+	targets?: LicenseParentTarget[];
 }): NonNullable<CatalogPropagateParams["license_parents"]> =>
-	selectedKeys
-		.map(parsePlanKey)
-		.map(({ planId, version }) =>
-			version === undefined
-				? { plan_id: planId, versioning: "all_versions" as const }
-				: { plan_id: planId, version },
-		);
+	selectedKeys.map(parsePlanKey).flatMap(({ planId, version }) => {
+		if (version !== undefined) return [{ plan_id: planId, version }];
+		const target = targets.find((entry) => entry.planId === planId);
+		return (target?.versions ?? []).map((entry) => ({
+			plan_id: planId,
+			version: entry.version,
+		}));
+	});
+
+/** Selected variant keys → targets. Pins per version, except under a base
+ * mint, where targets are plan-level and the server resolves the row. */
+export const buildSelectedVariantPropagate = ({
+	selectedKeys,
+	targets = [],
+	baseMintsNewVersion = false,
+}: {
+	selectedKeys: string[];
+	targets?: VariantTarget[];
+	baseMintsNewVersion?: boolean;
+}): NonNullable<CatalogPropagateParams["variants"]> => {
+	if (baseMintsNewVersion) {
+		const planIds = [
+			...new Set(selectedKeys.map((key) => parsePlanKey(key).planId)),
+		];
+		return planIds.map((planId) => ({ plan_id: planId }));
+	}
+	return buildSelectedLicenseParentPropagate({ selectedKeys, targets });
+};
 
 export type CatalogMigrateTargetRole = "base" | "variant" | "license_parent";
 
@@ -569,13 +692,18 @@ const buildLicenseParentMigrateTargets = ({
 	preview,
 	selectedLicenseParentKeys,
 	isNewVersion,
+	includeSiblingLinked,
 }: {
 	preview: CatalogPlanUpdatePreview;
 	selectedLicenseParentKeys: string[];
 	isNewVersion: boolean;
+	includeSiblingLinked: boolean;
 }): CatalogMigrateTarget[] => {
 	const targets: CatalogMigrateTarget[] = [];
-	for (const parent of preview.license_parents ?? []) {
+	for (const parent of catalogPlanLicenseParents({
+		preview,
+		includeSiblingLinked,
+	})) {
 		const selectedByScope = licenseParentVersions({ parent }).filter((entry) =>
 			licenseParentVersionIsSelected({
 				planId: parent.plan_id,
@@ -631,14 +759,14 @@ const buildLicenseParentMigrateTargets = ({
 
 export const buildCatalogMigrateTargets = ({
 	preview,
-	selectedVariantIds,
+	selectedVariantKeys,
 	selectedLicenseParentKeys,
 	versionChoice,
 	currentVersion,
 	baseName,
 }: {
 	preview: CatalogPlanUpdatePreview;
-	selectedVariantIds: string[];
+	selectedVariantKeys: string[];
 	selectedLicenseParentKeys: string[];
 	versionChoice: CatalogVersionChoice;
 	currentVersion: number;
@@ -681,35 +809,59 @@ export const buildCatalogMigrateTargets = ({
 		},
 	];
 
-	for (const variantId of selectedVariantIds) {
-		const variant = (preview.variants ?? []).find(
-			(entry) => entry.plan_id === variantId,
+	const variantLanes = catalogPlanVariantLanes({
+		preview,
+		includeSiblingRows: includeHistorical,
+	});
+	for (const variant of variantLanes) {
+		const selectedByScope = variantVersions({ variant }).filter((entry) =>
+			licenseParentVersionIsSelected({
+				planId: variant.plan_id,
+				version: entry.version,
+				selectedKeys: selectedVariantKeys,
+			}),
 		);
-		if (!variant) continue;
-		const createsNewVersion = followerMintsNewVersion({
-			follower: variant,
+		if (selectedByScope.length === 0) continue;
+		const createsNewVersion = variantFollowMintsNewVersion({
+			variant,
 			baseMintsNewVersion: isNewVersion,
 		});
-		const affectedVersions = variantVersions({ variant }).filter(
+		const affectedVersions = selectedByScope.filter(
 			(entry) => entry.variant_action !== "unchanged",
 		);
 		const rowsToShow =
-			affectedVersions.length > 0 ? affectedVersions : [variant];
+			affectedVersions.length > 0 ? affectedVersions : selectedByScope;
+		// A mint happens once for the plan — collapse the card to the new row.
+		const rows = createsNewVersion
+			? [
+					migrateRowFromPlanChange({
+						version:
+							variant.versioning?.new_version ??
+							Math.max(
+								...variantVersions({ variant }).map((entry) => entry.version),
+							) + 1,
+						isCurrent: false,
+						isNew: true,
+						planChange: variant.plan_change,
+						customerCount: customerCountOf({ usage: variant.state.usage }),
+						conflicts: variant.conflicts,
+					}),
+				]
+			: rowsToShow.map((entry) =>
+					migrateRowFromPlanChange({
+						version: entry.version,
+						isCurrent: entry.version === variant.version,
+						isNew: false,
+						planChange: entry.plan_change,
+						customerCount: customerCountOf({ usage: entry.state.usage }),
+						conflicts: entry.conflicts,
+					}),
+				);
 		targets.push({
-			id: variantId,
-			name: variantId,
+			id: variant.plan_id,
+			name: variant.plan_id,
 			role: "variant",
-			rows: rowsToShow.map((entry) => {
-				const isTopLevel = entry.version === variant.version;
-				return migrateRowFromPlanChange({
-					version: entry.version,
-					isCurrent: isTopLevel && !createsNewVersion,
-					isNew: isTopLevel && createsNewVersion,
-					planChange: entry.plan_change,
-					customerCount: customerCountOf({ usage: entry.state.usage }),
-					conflicts: entry.conflicts,
-				});
-			}),
+			rows,
 		});
 	}
 
@@ -718,6 +870,7 @@ export const buildCatalogMigrateTargets = ({
 			preview,
 			selectedLicenseParentKeys,
 			isNewVersion,
+			includeSiblingLinked: versionChoice !== "update",
 		}),
 	);
 

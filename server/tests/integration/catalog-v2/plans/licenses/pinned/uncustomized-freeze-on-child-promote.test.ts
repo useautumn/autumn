@@ -7,7 +7,7 @@
  *   Parent IN propagate → follow the newly active child (new reference).
  *   Already-customized parent → leave (same row, same overlay, no retarget).
  *   Parent promote (licenses omitted) → child identity unchanged;
- *   v2 stays empty, v1 keeps the existing links.
+ *   new_version clones outgoing links onto v2; v1 keeps the existing links.
  *   Declared licenses[] on child promote is exclusive — omit version_slug
  *   keeps the existing v1 anchor; customize still applies on that row.
  */
@@ -16,10 +16,7 @@ import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import {
-	expectLicenseLinkCorrect,
-	expectLicenseLinkMissing,
-} from "../utils/expectLicenseLinkCorrect.js";
+import { expectLicenseLinkCorrect } from "../utils/expectLicenseLinkCorrect.js";
 import {
 	getFullPlan,
 	messagesItem,
@@ -160,7 +157,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: parent promote leaves child identity; omits licenses so v2 stays empty")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: parent promote leaves child identity; new_version clones licenses onto v2")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_pr_par_p");
@@ -207,11 +204,13 @@ test.concurrent(
 					included: 2,
 					licenseInternalProductId: childV1.internal_id,
 				});
-				await expectLicenseLinkMissing({
+				await expectLicenseLinkCorrect({
 					ctx,
 					parentPlanId: parentId,
 					parentVersion: 2,
 					licensePlanId: childId,
+					included: 2,
+					licenseInternalProductId: childV1.internal_id,
 				});
 			},
 		});

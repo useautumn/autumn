@@ -16,9 +16,9 @@ import {
 	useIsCusPlanEditor,
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
-import { useVariantViewStore } from "@/hooks/stores/useVariantViewStore";
 import { cn } from "@/lib/utils";
 import {
+	useAllVariantsView,
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
@@ -38,7 +38,7 @@ export const PlanVersionSelect = ({
 	const { versionCounts } = useProductQuery();
 	const { queryStates, setQueryStates } = useProductQueryState();
 	const isCusPlanEditor = useIsCusPlanEditor();
-	const showAllVariants = useVariantViewStore((s) => s.showAllVariants);
+	const showAllVariants = useAllVariantsView();
 	const [open, setOpen] = useState(false);
 	const { versions, isLoading } = useProductVersionsQuery({
 		productId: product.id,

@@ -1,53 +1,60 @@
-import { Card, CardContent, CopyButton, IconButton } from "@autumn/ui";
-import { ArrowRightIcon } from "@phosphor-icons/react";
-import { useNavigate } from "react-router";
+import { Card, CardContent, CopyButton } from "@autumn/ui";
+import { useState } from "react";
 import { ItemChangeList } from "@/components/v2/ItemChangeList";
-import { useVariantViewStore } from "@/hooks/stores/useVariantViewStore";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { PlanVariant } from "@/services/products/ProductService";
-import { pushPage } from "@/utils/genUtils";
+import { LicenseChangeList } from "../../versioning/LicenseChangeList";
+import { VariantPlanLink } from "./VariantPlanLink";
 import { VariantPrice } from "./VariantPrice";
+import { VariantVersionSelect } from "./VariantVersionSelect";
+import { variantRowVersion } from "./variantRowVersion";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 
-export function VariantPlanCard({ variant }: { variant: PlanVariant }) {
-	const navigate = useNavigate();
-	const setShowAllVariants = useVariantViewStore((s) => s.setShowAllVariants);
+export function VariantPlanCard({ rows }: { rows: PlanVariant[] }) {
+	const newest = rows[0];
+	const [pickedVersion, setPickedVersion] = useState(variantRowVersion(newest));
+	const selected =
+		rows.find((row) => variantRowVersion(row) === pickedVersion) ?? newest;
+	const selectedVersion = variantRowVersion(selected);
+	const { features } = useFeaturesQuery();
 
 	return (
 		<Card className="min-w-sm max-w-xl mx-4 w-full !rounded-2xl bg-background">
-			<CardContent className="space-y-4 px-5">
+			<CardContent className="flex flex-col gap-4 px-5">
 				<div className="flex items-center justify-between gap-2">
-					<div className="truncate text-base font-medium text-foreground">
-						{variant.name}
+					<div className="flex min-w-0 items-center gap-2">
+						<div className="truncate text-base font-medium text-foreground">
+							{selected.name}
+						</div>
+						<VariantVersionSelect
+							onVersionChange={setPickedVersion}
+							rows={rows}
+							selectedVersion={selectedVersion}
+						/>
 					</div>
 					<div className="flex shrink-0 items-center gap-1">
 						<CopyButton
 							className="text-tertiary-foreground"
 							innerClassName={ID_CHIP_INNER_CLASS}
 							size="mini"
-							text={variant.id}
+							text={selected.id}
 						/>
-						<IconButton
-							aria-label={`Go to ${variant.name}`}
-							icon={<ArrowRightIcon size={14} />}
-							iconOrientation="center"
-							onClick={() => {
-								setShowAllVariants(false);
-								pushPage({
-									navigate,
-									path: `/products/${variant.id}`,
-									preserveParams: false,
-								});
-							}}
-							size="mini"
-							variant="secondary"
+						<VariantPlanLink
+							name={selected.name}
+							planId={selected.id}
+							version={selectedVersion}
 						/>
 					</div>
 				</div>
 
-				<VariantPrice variant={variant} />
+				<VariantPrice variant={selected} />
 
-				<ItemChangeList itemChanges={variant.item_changes ?? []} />
+				<ItemChangeList itemChanges={selected.item_changes ?? []} />
+				<LicenseChangeList
+					changes={selected.license_changes ?? []}
+					features={features}
+				/>
 			</CardContent>
 		</Card>
 	);

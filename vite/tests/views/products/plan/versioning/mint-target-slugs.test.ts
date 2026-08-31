@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { PropagationTarget } from "@/views/products/plan/catalog/catalogPlanPreview";
+import type { VariantTarget } from "@/views/products/plan/catalog/catalogPlanPreview";
 import { emptyCatalogPlanChangeDiff } from "@/views/products/plan/catalog/catalogPlanPreview";
 import {
 	effectiveMintSlug,
@@ -10,15 +10,20 @@ import {
 } from "@/views/products/plan/versioning/mintTargetSlugs";
 
 const target = (
-	overrides: Partial<PropagationTarget> & { id: string },
-): PropagationTarget => ({
-	name: overrides.id,
-	detail: overrides.id,
-	conflicts: [],
+	overrides: Partial<VariantTarget> & { planId: string },
+): VariantTarget => ({
+	name: overrides.planId,
+	versions: [
+		{
+			version: 2,
+			key: `${overrides.planId}:2`,
+			conflicts: [],
+			...emptyCatalogPlanChangeDiff(),
+		},
+	],
 	mintsNewVersion: true,
 	mintVersion: 3,
 	takenSlugs: [],
-	...emptyCatalogPlanChangeDiff(),
 	...overrides,
 });
 
@@ -69,28 +74,27 @@ describe("mint target slugs", () => {
 
 	test("only selected minting targets can conflict", () => {
 		const targets = [
-			target({ id: "pro_eu", takenSlugs: ["v1", "add-dashboard"] }),
-			target({ id: "pro_uk", takenSlugs: ["v1"] }),
+			target({ planId: "pro_eu", takenSlugs: ["v1", "add-dashboard"] }),
+			target({ planId: "pro_uk", takenSlugs: ["v1"] }),
 			target({
-				id: "legacy",
+				planId: "legacy",
 				mintsNewVersion: false,
 				takenSlugs: ["add-dashboard"],
 			}),
 		];
-		const selectedIds = ["pro_eu", "pro_uk", "legacy"];
+		const selectedKeys = ["pro_eu", "pro_uk", "legacy"];
 		const selection = { base: "add-dashboard", overrides: {} };
 
 		expect(
-			mintTargetSlugConflicts({ targets, selectedIds, selection }).map(
-				(entry) => entry.id,
+			mintTargetSlugConflicts({ targets, selectedKeys, selection }).map(
+				(entry) => entry.planId,
 			),
 		).toEqual(["pro_eu"]);
 
-		// Unselected targets are never propagated to, so they cannot block the save.
 		expect(
 			mintTargetSlugConflicts({
 				targets,
-				selectedIds: ["pro_uk"],
+				selectedKeys: ["pro_uk"],
 				selection,
 			}),
 		).toEqual([]);
@@ -98,7 +102,7 @@ describe("mint target slugs", () => {
 		expect(
 			mintTargetSlugConflicts({
 				targets,
-				selectedIds,
+				selectedKeys,
 				selection: {
 					base: "add-dashboard",
 					overrides: { pro_eu: "add-dashboard-eu" },

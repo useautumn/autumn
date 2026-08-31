@@ -1,6 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
+import {
+	parseAsInteger,
+	parseAsString,
+	parseAsStringLiteral,
+	useQueryStates,
+} from "nuqs";
 import { useMemo } from "react";
 import { useParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
@@ -23,11 +28,14 @@ type ProductQueryResponse = ProductDataResponse & {
 };
 
 // Product query state...
+export const ALL_VARIANTS_VIEW = "all-variants" as const;
+
 export const useProductQueryState = () => {
 	const [queryStates, setQueryStates] = useQueryStates(
 		{
 			version: parseAsInteger,
 			productId: parseAsString,
+			view: parseAsStringLiteral([ALL_VARIANTS_VIEW]),
 		},
 		{
 			history: "push",
@@ -35,6 +43,11 @@ export const useProductQueryState = () => {
 	);
 
 	return { queryStates, setQueryStates };
+};
+
+export const useAllVariantsView = () => {
+	const { queryStates } = useProductQueryState();
+	return queryStates.view === ALL_VARIANTS_VIEW;
 };
 
 export const useProductQuery = () => {
