@@ -119,6 +119,35 @@ function Table({
 	);
 }
 
+async function coverImageResponse(imagePath: string) {
+	const abs = path.join(process.cwd(), "public", imagePath.replace(/^\//, ""));
+	const file = await readFile(abs);
+	const ext = path.extname(abs).slice(1).toLowerCase();
+	const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : `image/${ext}`;
+	const src = `data:${mime};base64,${file.toString("base64")}`;
+
+	return new ImageResponse(
+		<div
+			style={{
+				width: "100%",
+				height: "100%",
+				display: "flex",
+				background: BG,
+			}}
+		>
+			{/** biome-ignore lint/performance/noImgElement: satori only supports <img> */}
+			<img
+				alt=""
+				height={630}
+				src={src}
+				style={{ width: "100%", height: "100%", objectFit: "cover" }}
+				width={1200}
+			/>
+		</div>,
+		size,
+	);
+}
+
 export default async function OgImage({
 	params,
 }: {
@@ -127,6 +156,10 @@ export default async function OgImage({
 	const { slug } = await params;
 	const post = getPostBySlug({ slug });
 	const title = post?.title ?? "Autumn";
+
+	if (slug === "eliminating-memory-leaks") {
+		return coverImageResponse("/images/blog/eliminating-memory-leaks-og.jpg");
+	}
 
 	const [logo, bg, fonts] = await Promise.all([
 		logoDataUri(),

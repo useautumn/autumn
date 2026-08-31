@@ -5,6 +5,7 @@ import { CreditsTable } from "./blogComponents/ai-billing-infrastructure/Credits
 import { LockAndReleaseDiagram } from "./blogComponents/ai-billing-infrastructure/LockAndReleaseDiagram";
 import { HierarchyDiagram } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/HierarchyDiagram";
 import { PlanRecordDiagram } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/PlanRecordDiagram";
+import { AxiomLogLeakAnimation } from "./blogComponents/eliminating-memory-leaks/AxiomLogLeakAnimation";
 import { TestimonialQuote } from "./blogComponents/how-mintlify-is-scaling-sales-led-gtm/TestimonialQuote";
 import { ConfigAsCodeSimulator } from "./blogComponents/stop-rebuilding-your-billing-system/ConfigAsCodeSimulator";
 import {
@@ -96,7 +97,7 @@ export const mdxComponents = {
 		...props
 	}: ComponentPropsWithoutRef<"blockquote">) => (
 		<blockquote
-			className="border-l-2 border-[#9564ff] bg-[#9564ff0d] py-4 pl-4 pr-4 not-italic font-normal text-[#FFFFFF99] [&>p]:my-0 [&>p]:text-[#FFFFFF99] [&>p+p]:mt-3"
+			className="border-l-2 border-[#9564ff] bg-[#9564ff0d] py-4 pl-4 pr-4 not-italic font-normal text-[#FFFFFF99] [&>p]:my-0 [&>p]:text-[#FFFFFF99] [&>p+p]:mt-3 [&>p]:before:content-none [&>p]:after:content-none"
 			{...props}
 		>
 			{children}
@@ -125,6 +126,7 @@ export const mdxComponents = {
 			{children}
 		</td>
 	),
+	AxiomLogLeakAnimation,
 	Expand,
 	CreditsTable,
 	CreditBucketsTable,
