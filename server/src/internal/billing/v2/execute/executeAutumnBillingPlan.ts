@@ -10,6 +10,7 @@ import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/exe
 import { executeInsertPlanLicenses } from "@/internal/billing/v2/execute/executeAutumnActions/executeInsertPlanLicenses";
 import { executeOneOffPurchaseRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeOneOffPurchaseRebalance";
 import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
+import { insertCustomCatalogRows } from "@/internal/billing/v2/execute/executeAutumnActions/insertCustomCatalogRows";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
 import { executePooledBalancePlan } from "@/internal/billing/v2/pooledBalances/execute/executePooledBalancePlan";
@@ -22,9 +23,6 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { replaceScheduledPhaseCustomerProductIds } from "@/internal/customers/schedules/repos/replaceScheduledPhaseCustomerProductIds";
 import { invoiceActions } from "@/internal/invoices/actions";
-import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
-import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
-import { PriceService } from "@/internal/products/prices/PriceService";
 import { SubService } from "@/internal/subscriptions/SubService";
 import { workflows } from "@/queue/workflows";
 
@@ -48,13 +46,8 @@ export const executeAutumnBillingPlan = async ({
 	// an update entry to persist it.
 	await applyDerivedCustomerProductIsCustom({ ctx, autumnBillingPlan });
 
-	const {
-		insertCustomerProducts,
-		customPrices,
-		customEntitlements,
-		customFreeTrial,
-		insertCustomerEntitlements,
-	} = autumnBillingPlan;
+	const { insertCustomerProducts, insertCustomerEntitlements } =
+		autumnBillingPlan;
 	const updateCustomerProducts = getUpdateCustomerProducts({
 		autumnBillingPlan,
 	});
@@ -62,26 +55,7 @@ export const executeAutumnBillingPlan = async ({
 		autumnBillingPlan,
 	});
 
-	if (customEntitlements) {
-		await EntitlementService.insert({
-			db,
-			data: customEntitlements,
-		});
-	}
-
-	if (customPrices) {
-		await PriceService.insert({
-			db,
-			data: customPrices,
-		});
-	}
-
-	if (customFreeTrial) {
-		await FreeTrialService.insert({
-			db,
-			data: customFreeTrial,
-		});
-	}
+	await insertCustomCatalogRows({ ctx, autumnBillingPlan });
 
 	await executeInsertPlanLicenses({
 		ctx,

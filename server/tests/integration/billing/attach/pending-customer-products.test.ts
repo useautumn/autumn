@@ -9,6 +9,7 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items.js";
+import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -131,24 +132,24 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("stripe-checkout pending: deferred checkout inserts a pending plan that grants nothing")}`,
 	async () => {
-		const customerId = "stripe-checkout-pending-inserted";
+		const customerId = `stripe-checkout-pending-inserted-${Date.now()}`;
 		const pro = products.pro({
 			id: "pro-checkout-pending",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 
-		const { ctx, autumnV2_2, customer } = await initScenario({
+		const { ctx, autumnV1, autumnV2_2, customer } = await initScenario({
 			customerId,
-			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			setup: [s.customer({ testClock: true }), s.products({ list: [pro] })],
 			actions: [],
 		});
 
-		const result = await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		const result = await autumnV1.billing.attach({
 			customer_id: customerId,
-			plan_id: pro.id,
+			product_id: pro.id,
 		});
 
-		expect(result.payment_url).toBeDefined();
+		expect(result.payment_url).toContain("checkout.stripe.com");
 
 		const customerProducts = await listCustomerProducts({
 			ctx,
@@ -173,7 +174,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("stripe-checkout pending: completing checkout promotes the pending plan to active")}`,
 	async () => {
-		const customerId = "stripe-checkout-pending-promoted";
+		const customerId = `stripe-checkout-pending-promoted-${Date.now()}`;
 		const pro = products.pro({
 			id: "pro-checkout-promoted",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -211,5 +212,44 @@ test.concurrent(
 		});
 
 		expect(check.allowed).toBe(true);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("pending custom plan: deferred attach with custom prices inserts a pending plan")}`,
+	async () => {
+		const customerId = "pending-custom-plan-prices";
+		const pro = products.pro({
+			id: "pro-pending-custom",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, autumnV2_2, customer } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [],
+		});
+
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			customize: { price: itemsV2.monthlyPrice({ amount: 42 }) },
+			invoice_mode: {
+				enabled: true,
+				enable_plan_immediately: false,
+				finalize: true,
+			},
+		});
+
+		const customerProducts = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const pendingCustomerProduct = customerProducts.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(pendingCustomerProduct?.status).toBe(CusProductStatus.Pending);
+		expect(pendingCustomerProduct?.customer_prices.length).toBeGreaterThan(0);
 	},
 );
