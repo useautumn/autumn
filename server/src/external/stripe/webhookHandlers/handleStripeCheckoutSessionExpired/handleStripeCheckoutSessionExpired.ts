@@ -48,7 +48,11 @@ export const handleStripeCheckoutSessionExpired = async ({
 		return;
 	}
 
-	await expireCustomerProducts({ ctx, customerProducts: cusProducts });
+	await expireCustomerProducts({
+		ctx,
+		customerProducts: cusProducts,
+		skipSubscriptionLinked: true,
+	});
 
 	if (session.metadata?.autumn_metadata_id) {
 		await MetadataService.delete({

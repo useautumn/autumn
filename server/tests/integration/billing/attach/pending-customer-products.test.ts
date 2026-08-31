@@ -14,7 +14,9 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { handleVoidInvoiceCron } from "@/cron/invoiceCron/runInvoiceCron";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { MetadataService } from "@/internal/metadata/MetadataService";
 
 const listCustomerProducts = async ({
 	ctx,
@@ -251,5 +253,58 @@ test.concurrent(
 
 		expect(pendingCustomerProduct?.status).toBe(CusProductStatus.Pending);
 		expect(pendingCustomerProduct?.customer_prices.length).toBeGreaterThan(0);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoice-mode pending: voiding the invoice expires the pending plan")}`,
+	async () => {
+		const customerId = `invoice-mode-pending-expired-${Date.now()}`;
+		const pro = products.pro({
+			id: "pro-invoice-expired",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, customer } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [
+				s.billing.attach({
+					productId: pro.id,
+					invoice: true,
+					enableProductImmediately: false,
+					finalizeInvoice: true,
+				}),
+			],
+		});
+
+		const pendingCustomerProducts = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const pendingCustomerProduct = pendingCustomerProducts.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(pendingCustomerProduct?.status).toBe(CusProductStatus.Pending);
+
+		const deferredMetadata = await MetadataService.get({
+			db: ctx.db,
+			id: pendingCustomerProduct?.metadata_id ?? "",
+		});
+
+		await handleVoidInvoiceCron({ ctx, metadata: deferredMetadata! });
+
+		const expiredCustomerProducts = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const expiredCustomerProduct = expiredCustomerProducts.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(expiredCustomerProduct?.status).toBe(CusProductStatus.Expired);
+		expect(expiredCustomerProduct?.metadata_id).toBeNull();
+		expect(expiredCustomerProduct?.ended_at).toBeGreaterThan(0);
 	},
 );
