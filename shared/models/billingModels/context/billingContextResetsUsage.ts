@@ -10,11 +10,12 @@ export const billingContextResetsUsage = (billingContext: unknown): boolean => {
 		intent?: unknown;
 		requestedBillingCycleAnchor?: number | "now";
 	} | null;
-	if (!context || context.carryOverUsages?.enabled === true) return false;
+	const carriesUsagesOver = context?.carryOverUsages?.enabled === true;
+	if (carriesUsagesOver) return false;
 
-	const restartsBillingCycle = context.requestedBillingCycleAnchor === "now";
+	const restartsBillingCycle = context?.requestedBillingCycleAnchor === "now";
 	const replacesPlan =
-		context.intent === UpdateSubscriptionIntent.UpdatePlan &&
+		context?.intent === UpdateSubscriptionIntent.UpdatePlan &&
 		context.carryOverUsages?.enabled === false;
 
 	return restartsBillingCycle || replacesPlan;
