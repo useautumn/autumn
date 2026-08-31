@@ -4,7 +4,7 @@
  * Contract:
  *   base promote lists the follow variant at its current version (no mint)
  *   historical variant v1 stays in sibling_versions; latest follow is listed
- *   child promote: uncustomized parent unchanged (freeze); propagate follows
+ *   child promote: parents stay on v1 (sibling_versions); pin follows, omit freezes
  */
 
 import { test } from "bun:test";
@@ -139,7 +139,7 @@ test.concurrent(
 								items: [messagesItem(200)],
 								propagate: {
 									license_parents: [
-										{ plan_id: followId, versioning: "existing" },
+										{ plan_id: followId, version: 1 },
 									],
 								},
 							},
@@ -153,9 +153,23 @@ test.concurrent(
 						planId: childId,
 						active: true,
 						promotionDetails: { previous_active_version_slug: "v1" },
-						licenseParents: [
-							{ planId: frozenId, licenseAction: "unchanged" },
-							{ planId: followId, licenseAction: "propagated" },
+						licenseParents: null,
+						siblingVersions: [
+							{
+								version: 1,
+								licenseParents: [
+									{
+										planId: frozenId,
+										licenseAction: "unchanged",
+										hasPlanChange: false,
+									},
+									{
+										planId: followId,
+										licenseAction: "unchanged",
+										hasPlanChange: true,
+									},
+								],
+							},
 						],
 					},
 				});

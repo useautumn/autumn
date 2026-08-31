@@ -1,9 +1,9 @@
 /**
- * catalogV2.update — propagate.license_parents omit / existing / explicit version.
+ * catalogV2.update — propagate.license_parents pins a specific parent row.
  * Parent absent from plans[]. Parent has v1+v2, both linked.
  *
- * omit/existing → active pointer follows, other versions frozen
- * version: 1 → v1 follows, latest frozen
+ * pin v2 → latest follows, v1 frozen
+ * pin v1 → v1 follows, latest frozen
  */
 import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -56,7 +56,7 @@ const forceActiveVersion = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: omit versioning follows latest; v1 stays frozen")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: pin v2 follows latest; v1 stays frozen")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_pex_p");
@@ -73,7 +73,9 @@ test.concurrent(
 				await bumpChild({
 					autumn: autumnV2_3,
 					childId,
-					propagate: { license_parents: [{ plan_id: parentId }] },
+					propagate: {
+						license_parents: [{ plan_id: parentId, version: 2 }],
+					},
 				});
 
 				await expectLicenseLinkCorrect({
@@ -100,7 +102,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: existing follows latest; v1 stays frozen")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: pin latest follows latest; v1 stays frozen")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_pex2_p");
@@ -118,9 +120,7 @@ test.concurrent(
 					autumn: autumnV2_3,
 					childId,
 					propagate: {
-						license_parents: [
-							{ plan_id: parentId, versioning: "existing" },
-						],
+						license_parents: [{ plan_id: parentId, version: 2 }],
 					},
 				});
 
@@ -190,7 +190,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: omit versioning follows active v1; v2 stays frozen")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: pin active v1 follows v1; v2 stays frozen")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_pact_p");
@@ -208,7 +208,9 @@ test.concurrent(
 				await bumpChild({
 					autumn: autumnV2_3,
 					childId,
-					propagate: { license_parents: [{ plan_id: parentId }] },
+					propagate: {
+						license_parents: [{ plan_id: parentId, version: 1 }],
+					},
 				});
 
 				await expectLicenseLinkCorrect({

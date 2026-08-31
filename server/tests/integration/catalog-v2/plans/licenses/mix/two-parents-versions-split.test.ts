@@ -75,7 +75,8 @@ test.concurrent(
 					included: 200,
 					propagate: {
 						license_parents: [
-							{ plan_id: followId, versioning: "all_versions" },
+							{ plan_id: followId, version: 1 },
+							{ plan_id: followId, version: 2 },
 						],
 					},
 				});
@@ -134,7 +135,8 @@ test.concurrent(
 					items: [messagesItem(200), wordsItem(50)],
 					propagate: {
 						license_parents: [
-							{ plan_id: followId, versioning: "all_versions" },
+							{ plan_id: followId, version: 1 },
+							{ plan_id: followId, version: 2 },
 						],
 					},
 				});

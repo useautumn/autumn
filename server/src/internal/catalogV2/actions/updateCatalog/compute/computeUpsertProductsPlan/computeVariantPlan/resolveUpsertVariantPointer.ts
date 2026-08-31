@@ -6,6 +6,7 @@ import type {
 import type { FullProduct } from "@autumn/shared";
 import { resolveBaseVariantIdPointer } from "./resolveBaseVariantIdPointer";
 import {
+	type DeclaredVariantsMap,
 	declaredParentInternalIdForPlan,
 	shouldUnlinkDirectVariant,
 } from "./shouldUnlinkDirectVariant";
@@ -17,14 +18,14 @@ export const resolveUpsertVariantPointer = ({
 	planId,
 	currentFullProduct,
 	productStatesContext,
-	declaredVariantPlanIdsByBasePlanId,
+	declaredVariants,
 }: {
 	intent: ProductUpsertIntent;
 	source: UpsertProductSource;
 	planId: string;
 	currentFullProduct: FullProduct | null;
 	productStatesContext: ProductStatesContext;
-	declaredVariantPlanIdsByBasePlanId?: Map<string, Set<string>>;
+	declaredVariants?: DeclaredVariantsMap;
 }): string | null | undefined => {
 	const fromField = resolveBaseVariantIdPointer({
 		baseVariantId: intent.planParams.base_variant_id,
@@ -39,7 +40,7 @@ export const resolveUpsertVariantPointer = ({
 			planId,
 			currentFullProduct,
 			productStatesContext,
-			declaredVariantPlanIdsByBasePlanId,
+			declaredVariants,
 		});
 	if (unlink) return null;
 
@@ -47,8 +48,7 @@ export const resolveUpsertVariantPointer = ({
 		intent.baseInternalProductId ??
 		declaredParentInternalIdForPlan({
 			planId,
-			declaredVariantPlanIdsByBasePlanId,
-			productStatesContext,
+			declaredVariants,
 		})
 	);
 };

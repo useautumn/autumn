@@ -8,6 +8,7 @@ import {
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
+import { buildPlanLicenseChanges } from "@/internal/catalogV2/actions/buildPlanChange/buildPlanLicenseChanges/buildPlanLicenseChanges.js";
 import { buildCorePlanUpdatePreview } from "@/internal/product/actions/previewUpdatePlan/buildCorePlanUpdatePreview.js";
 import { ProductService } from "../ProductService.js";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse.js";
@@ -52,11 +53,13 @@ export const handleGetProductInternal = createRoute({
 			features: features,
 		});
 
+		// Every row anchored to this version, including historical — the editor picks among them.
 		const variantProducts = await ProductService.listVariantsByParent({
 			db,
 			baseInternalProductIds: [product.internal_id],
 			orgId: org.id,
 			env,
+			returnAll: true,
 		});
 
 		const basePlan: ApiPlanExpandedV1 = await getPlanResponse({
@@ -83,6 +86,11 @@ export const handleGetProductInternal = createRoute({
 					customerCount: 0,
 					versionable: false,
 				});
+				const { licenseChanges } = buildPlanLicenseChanges({
+					fromLicenses: product.licenses,
+					toLicenses: variant.licenses,
+					features,
+				});
 
 				return {
 					id: variant.id,
@@ -93,6 +101,7 @@ export const handleGetProductInternal = createRoute({
 					customize: preview.customize,
 					price_change: preview.price_change,
 					item_changes: preview.item_changes,
+					license_changes: licenseChanges,
 				};
 			}),
 		);

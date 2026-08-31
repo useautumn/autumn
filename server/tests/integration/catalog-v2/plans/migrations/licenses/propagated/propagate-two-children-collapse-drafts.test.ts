@@ -80,7 +80,7 @@ test.concurrent(
 					plan_id: planId,
 					items: [messagesItem(10), dashboardItem()],
 					propagate: {
-						license_parents: [{ plan_id: teamId }, { plan_id: scaleId }],
+						license_parents: [{ plan_id: teamId, version: 1 }, { plan_id: scaleId, version: 1 }],
 					},
 					migration: { draft: true },
 				}));
@@ -156,7 +156,7 @@ test.concurrent(
 						plan_id: planId,
 						items: [wordsItem(100)],
 						propagate: {
-							license_parents: [{ plan_id: teamId }, { plan_id: scaleId }],
+							license_parents: [{ plan_id: teamId, version: 1 }, { plan_id: scaleId, version: 1 }],
 						},
 						migration: { draft: true },
 					})),
@@ -242,13 +242,13 @@ test.concurrent(
 						{
 							plan_id: seatId,
 							items: [messagesItem(10), dashboardItem()],
-							propagate: { license_parents: [{ plan_id: teamId }] },
+							propagate: { license_parents: [{ plan_id: teamId, version: 1 }] },
 							migration: { draft: true },
 						},
 						{
 							plan_id: packId,
 							items: [messagesItem(10), dashboardItem()],
-							propagate: { license_parents: [{ plan_id: scaleId }] },
+							propagate: { license_parents: [{ plan_id: scaleId, version: 1 }] },
 							migration: { draft: true },
 						},
 					],

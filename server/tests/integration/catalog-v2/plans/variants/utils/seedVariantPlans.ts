@@ -2,6 +2,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import {
 	messagesItem,
 	messagesOverride,
+	wordsItem,
 } from "../../licenses/utils/seedLicensePlans.js";
 
 export type CatalogV2Client = {
@@ -73,6 +74,26 @@ export const seedBaseWithTwoVariants = async ({
 						add_items: [messagesItem(variantMessages)],
 					},
 				})),
+			},
+		],
+	});
+};
+
+/** Mint base v2 (50 Messages + Words). Variants stay on v1 unless propagate. */
+export const seedDivergedVariantBase = async ({
+	autumn,
+	baseId,
+}: {
+	autumn: CatalogV2Client;
+	baseId: string;
+}) => {
+	await autumn.catalogV2.update({
+		plans: [
+			{
+				plan_id: baseId,
+				versioning: "new_version",
+				active: true,
+				items: [messagesItem(50), wordsItem(10)],
 			},
 		],
 	});

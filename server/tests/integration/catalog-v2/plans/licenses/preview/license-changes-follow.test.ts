@@ -7,7 +7,7 @@
  * Contract:
  *   - pin (no propagate) → updated freeze, no nested plan_change
  *   - propagate → updated + nested item plan_change
- *   - child new_version + pin → previous_attributes.version
+ *   - child new_version + pin → no license_changes (link stays on v1)
  */
 
 import { test } from "bun:test";
@@ -92,9 +92,9 @@ test.concurrent(
 							{
 								plan_id: childId,
 								items: [messagesItem(200)],
-								propagate: { license_parents: [{ plan_id: parentId }] },
+								propagate: { license_parents: [{ plan_id: parentId, version: 1 }] },
 							},
-							{ plan_id: parentId },
+							{ plan_id: parentId, version: 1 },
 						],
 					}),
 				);
@@ -121,7 +121,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 license_changes: child new_version + pin reports previous version")}`,
+	`${chalk.yellowBright("catalogV2 license_changes: child new_version + pin leaves the parent link untouched")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lc_ver_p");
@@ -152,13 +152,7 @@ test.concurrent(
 					preview,
 					expected: {
 						planId: parentId,
-						licenseChanges: [
-							{
-								action: "updated",
-								license_plan_id: childId,
-								previous_attributes: { version: 1 },
-							},
-						],
+						licenseChanges: null,
 					},
 				});
 			},

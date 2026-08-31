@@ -38,7 +38,7 @@ test.concurrent(
 						{
 							plan_id: packId,
 							items: [messagesItem(200)],
-							propagate: { license_parents: [{ plan_id: parentId }] },
+							propagate: { license_parents: [{ plan_id: parentId, version: 1 }] },
 						},
 					],
 				});
@@ -83,7 +83,7 @@ test.concurrent(
 						{
 							plan_id: childId,
 							items: [messagesItem(200)],
-							propagate: { license_parents: [{ plan_id: orgId }] },
+							propagate: { license_parents: [{ plan_id: orgId, version: 1 }] },
 						},
 					],
 				});
@@ -144,7 +144,7 @@ test.concurrent(
 						{
 							plan_id: packId,
 							items: [messagesItem(200)],
-							propagate: { license_parents: [{ plan_id: parentId }] },
+							propagate: { license_parents: [{ plan_id: parentId, version: 1 }] },
 						},
 					],
 				});

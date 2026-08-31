@@ -1,6 +1,6 @@
 /**
- * catalogV2.update — propagate.license_parents versioning:all_versions.
- * Parent absent from plans[]. Every existing parent version follows.
+ * catalogV2.update — pin every parent version to follow.
+ * Parent absent from plans[]. Each pinned row follows.
  */
 import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
@@ -14,7 +14,7 @@ import {
 } from "../utils/seedLicensePlans.js";
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 plan-licenses: all_versions follows every parent version")}`,
+	`${chalk.yellowBright("catalogV2 plan-licenses: pinning every parent version follows each row")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const parentId = uniqueTestId("cv2_lic_pav_p");
@@ -33,7 +33,8 @@ test.concurrent(
 					childId,
 					propagate: {
 						license_parents: [
-							{ plan_id: parentId, versioning: "all_versions" },
+							{ plan_id: parentId, version: 1 },
+							{ plan_id: parentId, version: 2 },
 						],
 					},
 				});

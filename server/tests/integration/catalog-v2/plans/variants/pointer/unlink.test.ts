@@ -9,7 +9,7 @@
  * Contract:
  *   omit from variants[] + top-level entry → every version row unlinked
  *   omit from variants[] alone → stays linked (no accidental unlink)
- *   top-level edit alone (base absent) → stays linked (current behavior)
+ *   top-level edit alone (base absent) → stays linked
  *   after unlink, base edits no longer propagate to the ex-variant
  *   `{ plan_id, base_variant_id: null }` → every version row unlinked
  *   nest `{ variant_plan_id, base_variant_id: null }` → every version row unlinked
@@ -55,7 +55,6 @@ test.concurrent(
 				variantPlanId: variantId,
 				versions: [1, 2],
 			});
-			// Content untouched by the unlink itself.
 			await expectVariantPlanCorrect({
 				ctx,
 				variantPlanId: variantId,

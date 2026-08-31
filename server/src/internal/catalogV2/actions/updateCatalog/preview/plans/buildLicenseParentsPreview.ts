@@ -78,13 +78,11 @@ const parentVersioningOptions = ({
 const parentVersioning = ({
 	planId,
 	linkedVersions,
-	directUpsert,
 	upsertProducts,
 	productStatesContext,
 }: {
 	planId: string;
 	linkedVersions: NamedParentVersion[];
-	directUpsert: UpsertProductPlan;
 	upsertProducts: UpsertProductPlan[];
 	productStatesContext: ProductStatesContext;
 }): CatalogPlanVersioning => {
@@ -94,9 +92,6 @@ const parentVersioning = ({
 	const minted = linkedVersions.find(
 		(version) => version.version > currentVersion,
 	);
-	const target = directUpsert.propagate?.license_parents?.find(
-		(candidate) => candidate.plan_id === planId,
-	);
 	const parentUsesAllVersions = upsertProducts.some(
 		(upsert) =>
 			upsert.row.planId === planId &&
@@ -105,7 +100,7 @@ const parentVersioning = ({
 	);
 	const resolved = minted
 		? ("new_version" as const)
-		: target?.versioning === "all_versions" || parentUsesAllVersions
+		: parentUsesAllVersions
 			? ("all_versions" as const)
 			: ("existing" as const);
 
@@ -274,12 +269,10 @@ const buildParentVersionPreview = ({
 /** Collapse the per-version rows of one parent plan into a single lane entry. */
 const foldParentVersions = ({
 	versions,
-	directUpsert,
 	upsertProducts,
 	productStatesContext,
 }: {
 	versions: NamedParentVersion[];
-	directUpsert: UpsertProductPlan;
 	upsertProducts: UpsertProductPlan[];
 	productStatesContext: ProductStatesContext;
 }): CatalogLicenseParentPreview[] => {
@@ -317,7 +310,6 @@ const foldParentVersions = ({
 			versioning: parentVersioning({
 				planId: active.plan_id,
 				linkedVersions: planVersions,
-				directUpsert,
 				upsertProducts,
 				productStatesContext,
 			}),
@@ -373,7 +365,6 @@ export const buildLicenseParentsPreview = ({
 	if (!includeMintedParents) {
 		return foldParentVersions({
 			versions: existingVersions,
-			directUpsert,
 			upsertProducts,
 			productStatesContext,
 		}).sort(byPlanId);
@@ -467,7 +458,6 @@ export const buildLicenseParentsPreview = ({
 
 	return foldParentVersions({
 		versions: [...existingVersions, ...followingFromSource, ...mintedVersions],
-		directUpsert,
 		upsertProducts,
 		productStatesContext,
 	}).sort(byPlanId);

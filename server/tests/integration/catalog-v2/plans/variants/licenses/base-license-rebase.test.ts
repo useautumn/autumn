@@ -58,7 +58,7 @@ test.concurrent(
 									},
 								},
 							],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 						},
 					],
 				});
@@ -143,7 +143,7 @@ test.concurrent(
 									},
 								},
 							],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 						},
 					],
 				});
@@ -181,7 +181,7 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							licenses: [],
-							propagate: { variants: [{ plan_id: variantId }] },
+							propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 						},
 					],
 				});

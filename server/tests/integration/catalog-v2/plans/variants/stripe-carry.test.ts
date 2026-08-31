@@ -367,7 +367,7 @@ test.concurrent(
 					{
 						plan_id: baseId,
 						items: [{ ...prepaidMessagesItem({ amount: 10 }), included: 200 }],
-						propagate: { variants: [{ plan_id: variantId }] },
+						propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 					},
 				],
 			});

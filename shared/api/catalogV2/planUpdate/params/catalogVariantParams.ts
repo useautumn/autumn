@@ -17,7 +17,11 @@ export const CatalogVariantParamsSchema = z.object({
 	}),
 	version: z.number().int().min(1).optional().meta({
 		description:
-			"Which version of the variant this overlay targets. Omit to target latest.",
+			"Which version of the variant this overlay targets. At most one of `version` / `version_slug`; omit both to target latest.",
+	}),
+	version_slug: z.string().nonempty().regex(idRegex).optional().meta({
+		description:
+			"Which version of the variant this overlay targets, by slug. Same pin as `version`; omit both to target latest.",
 	}),
 	name: z.string().nonempty().optional().meta({
 		description: "Display name when creating the variant if it does not exist.",
@@ -42,6 +46,13 @@ export const CatalogVariantParamsSchema = z.object({
 		description:
 			"Declared overlay on this variant. `items` is PUT (replaces the list); `add_items` / `remove_items` are PATCH. Independent of `propagate`. Blocked on an archived variant unless `archived` is false in the same entry.",
 	}),
-});
+}).refine(
+	(data) => data.version === undefined || data.version_slug === undefined,
+	{
+		message:
+			"Cannot specify both version and version_slug. Use one, or omit both to target the active row.",
+		path: ["version_slug"],
+	},
+);
 
 export type CatalogVariantParams = z.infer<typeof CatalogVariantParamsSchema>;

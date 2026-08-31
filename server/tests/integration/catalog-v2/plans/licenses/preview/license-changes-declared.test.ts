@@ -154,6 +154,7 @@ test.concurrent(
 							{
 								license_plan_id: childId,
 								version: 1,
+								version_slug: "v1",
 								included: 2,
 								prepaid_only: true,
 							},

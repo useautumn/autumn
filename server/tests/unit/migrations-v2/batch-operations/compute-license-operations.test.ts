@@ -344,7 +344,7 @@ describe("version link diff", () => {
 		expect(repoints[0]?.planLicenseId).toBe("plan_lic_custom");
 	});
 
-	test("a changed child product rejects the link transition", () => {
+	test("a parent version bump that crosses child versions rejects to per-customer", () => {
 		const { links, rejections } = diff({
 			fromLink: licenseLink({
 				id: "plan_lic_v1",
@@ -357,8 +357,12 @@ describe("version link diff", () => {
 		});
 
 		expect(links).toHaveLength(0);
-		expect(rejections.map(({ code }) => code)).toEqual([
-			"license_link_transition",
+		expect(rejections.map(({ code, message }) => ({ code, message }))).toEqual([
+			{
+				code: "license_link_transition",
+				message:
+					"The target version links a different license product version; runs per-customer.",
+			},
 		]);
 	});
 

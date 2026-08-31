@@ -128,7 +128,7 @@ test.concurrent(
 						plan_id: baseId,
 						items: [messagesItem(100), dashboardItem()],
 						billing_controls: billingControls,
-						propagate: { variants: [{ plan_id: variantId }] },
+						propagate: { variants: [{ plan_id: variantId, version: 1 }] },
 					},
 				],
 			});

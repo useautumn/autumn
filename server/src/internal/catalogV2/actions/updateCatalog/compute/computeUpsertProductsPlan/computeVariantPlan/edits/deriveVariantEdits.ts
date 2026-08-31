@@ -1,140 +1,120 @@
-import type { FullProduct, UpdateCatalogPlanParams } from "@autumn/shared";
-import { isEmptyObject } from "@autumn/shared";
-import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import type { UpdateCatalogPlanParams } from "@autumn/shared";
+import { isEmptyObject, productToProductKey } from "@autumn/shared";
 import type {
 	ProductUpsertIntent,
 	UpsertProductPlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { buildVariantEditDiff } from "../editDiff/buildVariantEditDiff";
-import { variantSettingsPlanParams } from "../editDiff/variantSettingsPlanParams";
+import type { VariantEditTarget } from "../targets/variantEditTarget";
 import { baseRowMinted } from "../variantPlanUtils";
-import {
-	resolveVariantEditTargets,
-	type VariantEditTarget,
-} from "./resolveVariantEditTargets";
-import { activeVersionForPlan } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/activeVersionForPlan";
 
-const variantProductAt = ({
-	planId,
-	version,
-	productStatesContext,
+/** Where this target's pointer moves. `undefined` leaves it untouched. */
+const resolveTargetPointer = ({
+	target,
+	upsert,
+	newBasePointer,
 }: {
-	planId: string;
-	version: number;
-	productStatesContext: ProductStatesContext;
-}): FullProduct | undefined =>
-	(productStatesContext.versionsByPlanId[planId] ?? []).find(
-		(product) => product.version === version,
-	);
+	target: VariantEditTarget;
+	upsert: UpsertProductPlan;
+	newBasePointer: string | undefined;
+}): string | null | undefined => {
+	if (target.unlink) return null;
+	if (target.declared) return upsert.row.nextFullProduct.internal_id;
+	// existing/all_versions: pinned historical rows keep their anchor.
+	// new_version: the one resolved row always re-anchors.
+	if (target.follow) {
+		if (upsert.row.versioning === "new_version") return newBasePointer;
+		return target.row.active ? newBasePointer : undefined;
+	}
+	return undefined;
+};
 
 /** One target row → one intent, or undefined when nothing would change. */
 const buildVariantEditIntent = ({
 	target,
 	upsert,
-	baseCurrent,
 	settingsPatch,
 	newBasePointer,
-	productStatesContext,
 }: {
 	target: VariantEditTarget;
 	upsert: UpsertProductPlan;
-	baseCurrent: FullProduct | null;
 	settingsPatch: Partial<UpdateCatalogPlanParams>;
 	newBasePointer: string | undefined;
-	productStatesContext: ProductStatesContext;
 }): ProductUpsertIntent | undefined => {
-	const variantProduct = variantProductAt({
-		planId: target.planId,
-		version: target.version,
-		productStatesContext,
-	});
-	if (!variantProduct) return undefined;
-
 	const editDiff = buildVariantEditDiff({
-		variantProduct,
-		baseCurrent,
+		variantProduct: target.row,
+		baseCurrent: upsert.row.currentFullProduct ?? upsert.row.baseFullProduct,
 		baseNext: upsert.row.nextFullProduct,
-		follow: target.follow,
+		follow: target.follow === true,
 		customize: target.customize,
 		declaredLicenses: upsert.declaredLicenses,
 	});
 	const hasSettings = !isEmptyObject(settingsPatch);
+	const pointer = resolveTargetPointer({ target, upsert, newBasePointer });
+	const pointerChanged =
+		pointer !== undefined && pointer !== target.row.base_internal_product_id;
+
 	if (
 		!editDiff &&
 		!hasSettings &&
-		newBasePointer === undefined &&
+		!pointerChanged &&
 		target.archived === undefined
 	) {
 		return undefined;
 	}
 
-	// The base pointer only moves on the variant's latest version.
-	const repointToNewBase =
-		newBasePointer !== undefined &&
-		target.version ===
-			activeVersionForPlan({ planId: target.planId, productStatesContext });
 	const pointerIsOnlyChange =
-		!target.follow && !editDiff && !hasSettings && repointToNewBase;
+		!target.follow &&
+		!editDiff &&
+		!hasSettings &&
+		pointerChanged &&
+		target.archived === undefined;
 
 	return {
-		productKey: { planId: target.planId, version: target.version },
+		productKey: productToProductKey({ product: target.row }),
 		planParams: {
-			plan_id: target.planId,
-			version: target.version,
+			plan_id: target.row.id,
+			version: target.row.version,
 			...settingsPatch,
 			...(target.archived !== undefined ? { archived: target.archived } : {}),
+			...(target.unlink ? { base_variant_id: null } : {}),
 		},
-		source: pointerIsOnlyChange ? "repoint" : "variant_propagation",
+		source: pointerIsOnlyChange
+			? ("repoint" as const)
+			: ("variant_propagation" as const),
 		...(editDiff ? { editDiff } : {}),
-		...(repointToNewBase ? { baseInternalProductId: newBasePointer } : {}),
+		...(pointerChanged && pointer !== null
+			? { baseInternalProductId: pointer }
+			: {}),
+		...(target.unlink ? { unlink: true } : {}),
 	};
 };
 
-/**
- * Existing ids: merge propagate, declare customize, settings, and pointer.
- * Width follows the folded base (`all_versions`); settings stay latest-only.
- */
+/** In-place writes on targeted variant rows: content, settings, pointer, archive. */
 export const deriveVariantEdits = ({
 	upsert,
-	projectedProductStatesContext,
-	mintedPlanIds = new Set(),
+	targets,
+	settingsPatch,
 }: {
 	upsert: UpsertProductPlan;
-	projectedProductStatesContext: ProductStatesContext;
-	mintedPlanIds?: Set<string>;
+	targets: VariantEditTarget[];
+	settingsPatch: Partial<UpdateCatalogPlanParams>;
 }): ProductUpsertIntent[] => {
-	const baseCurrent =
-		upsert.row.currentFullProduct ?? upsert.row.baseFullProduct;
-	const settingsPatch = variantSettingsPlanParams({
-		current: baseCurrent,
-		next: upsert.row.nextFullProduct,
-	});
 	const nextIsActive = upsert.row.nextFullProduct.active;
-	const mintedNewBase = baseRowMinted({ upsert });
-	const promotedExisting = upsert.previousActiveInternalId != null;
-	const movesActiveBasePointer =
-		nextIsActive && (mintedNewBase || promotedExisting);
-	const newBasePointer = movesActiveBasePointer
+	const movesActivePointer =
+		nextIsActive &&
+		(baseRowMinted({ upsert }) || upsert.previousActiveInternalId != null);
+	const newBasePointer = movesActivePointer
 		? upsert.row.nextFullProduct.internal_id
 		: undefined;
-
-	const targets = resolveVariantEditTargets({
-		upsert,
-		productStatesContext: projectedProductStatesContext,
-		sweepLatestVariants:
-			!isEmptyObject(settingsPatch) || newBasePointer !== undefined,
-		mintedPlanIds,
-	});
 
 	return targets.flatMap(
 		(target) =>
 			buildVariantEditIntent({
 				target,
 				upsert,
-				baseCurrent,
 				settingsPatch,
 				newBasePointer,
-				productStatesContext: projectedProductStatesContext,
 			}) ?? [],
 	);
 };

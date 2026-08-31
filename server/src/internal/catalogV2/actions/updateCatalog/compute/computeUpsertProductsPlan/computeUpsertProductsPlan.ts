@@ -2,7 +2,7 @@ import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computePlanLicensesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/computePlanLicensesPlan";
 import { computeUpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductPlan/computeUpsertProductPlan";
-import { indexDeclaredVariantPlanIds } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/shouldUnlinkDirectVariant";
+import { indexDeclaredVariants } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/shouldUnlinkDirectVariant";
 import { deriveDirectIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveDirectIntents";
 import { deriveIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveIntents";
 import type { CatalogComputeStep } from "@/internal/catalogV2/actions/updateCatalog/types/catalogComputeState";
@@ -32,8 +32,9 @@ export const computeUpsertProductsPlan = ({
 		params,
 		productStatesContext,
 	});
-	const declaredVariantPlanIdsByBasePlanId = indexDeclaredVariantPlanIds({
+	const declaredVariants = indexDeclaredVariants({
 		plans: params.plans,
+		productStatesContext,
 	});
 	const claimedProductKeys = claimProductKeys({ intents: pendingIntents });
 	const allVersionsPlanIds = new Set(
@@ -52,7 +53,7 @@ export const computeUpsertProductsPlan = ({
 			intent,
 			productStatesContext: fold.projected,
 			claimedProductKeys,
-			declaredVariantPlanIdsByBasePlanId,
+			declaredVariants,
 		});
 
 		for (const upsert of upsertProductPlans) {

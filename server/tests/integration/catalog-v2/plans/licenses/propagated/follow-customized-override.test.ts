@@ -55,7 +55,7 @@ const adoptChild = ({
 		childId,
 		items,
 		versioning,
-		propagate: { license_parents: [{ plan_id: parentId }] },
+		propagate: { license_parents: [{ plan_id: parentId, version: 1 }] },
 		parentPlans: [{ plan_id: parentId, name: "Parent" }],
 	});
 

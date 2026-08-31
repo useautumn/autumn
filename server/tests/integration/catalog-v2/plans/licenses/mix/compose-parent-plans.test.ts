@@ -40,7 +40,8 @@ test.concurrent(
 					childId,
 					propagate: {
 						license_parents: [
-							{ plan_id: parentId, versioning: "all_versions" },
+							{ plan_id: parentId, version: 1 },
+							{ plan_id: parentId, version: 2 },
 						],
 					},
 					parentPlans: [{ plan_id: parentId, name: "Renamed" }],
@@ -95,7 +96,8 @@ test.concurrent(
 					childId,
 					propagate: {
 						license_parents: [
-							{ plan_id: parentId, versioning: "all_versions" },
+							{ plan_id: parentId, version: 1 },
+							{ plan_id: parentId, version: 2 },
 						],
 					},
 					parentPlans: [
@@ -150,7 +152,9 @@ test.concurrent(
 				await bumpChild({
 					autumn: autumnV2_3,
 					childId,
-					propagate: { license_parents: [{ plan_id: parentId }] },
+					propagate: {
+						license_parents: [{ plan_id: parentId, version: 2 }],
+					},
 					parentPlans: [
 						{
 							plan_id: parentId,
@@ -171,16 +175,16 @@ test.concurrent(
 					parentPlanId: parentId,
 					parentVersion: 3,
 					licensePlanId: childId,
-					customized: false,
-					messagesAllowance: 200,
+					customized: true,
+					messagesAllowance: 10,
 				});
 				await expectLicenseLinkCorrect({
 					ctx,
 					parentPlanId: parentId,
 					parentVersion: 2,
 					licensePlanId: childId,
-					customized: true,
-					messagesAllowance: 10,
+					customized: false,
+					messagesAllowance: 200,
 				});
 				await expectLicenseLinkCorrect({
 					ctx,

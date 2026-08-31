@@ -75,7 +75,8 @@ test.concurrent(
 					childId,
 					propagate: {
 						license_parents: [
-							{ plan_id: parentId, versioning: "all_versions" },
+							{ plan_id: parentId, version: 1 },
+							{ plan_id: parentId, version: 2 },
 						],
 					},
 				});
@@ -129,9 +130,7 @@ test.concurrent(
 					childId,
 					versioning: "new_version",
 					propagate: {
-						license_parents: [
-							{ plan_id: parentId, versioning: "new_version" },
-						],
+						license_parents: [{ plan_id: parentId, version: 1 }],
 					},
 				});
 
@@ -157,8 +156,10 @@ test.concurrent(
 					parentVersion: 1,
 					licensePlanId: childId,
 					customized: true,
-					messagesAllowance: 500,
-					omitFeatureIds: [TestFeature.Words],
+					entitlements: [
+						{ feature_id: TestFeature.Messages, allowance: 500 },
+						{ feature_id: TestFeature.Words, allowance: 50 },
+					],
 				});
 			},
 		});
@@ -190,7 +191,7 @@ test.concurrent(
 					childId,
 					propagate: {
 						license_parents: [
-							{ plan_id: parentId, versioning: "new_version" },
+							{ plan_id: parentId, version: 2 },
 						],
 					},
 				});
@@ -246,7 +247,8 @@ test.concurrent(
 					childId,
 					propagate: {
 						license_parents: [
-							{ plan_id: parentId, versioning: "all_versions" },
+							{ plan_id: parentId, version: 1 },
+							{ plan_id: parentId, version: 2 },
 						],
 					},
 				});

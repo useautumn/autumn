@@ -7,8 +7,9 @@ import type {
 	FullProduct,
 } from "@autumn/shared";
 import { buildPlanChangeFromFullProducts } from "@/internal/catalogV2/actions/buildPlanChange";
+import { variantRowsAnchoredTo } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/variantPlanUtils";
+import { variantRowForPropagateTarget } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/variantRowForPropagateTarget";
 import { catalogRowIdentity } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/catalogRowIdentity";
-import { latestVariantsOfBase } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/variantPlanUtils";
 import { withVariantConflicts } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/conflicts/withVariantConflicts";
 import { customerUsageForPreview } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/planUsage/buildPlanUsage";
 import { computeVersioningOptionsForPlan } from "@/internal/catalogV2/actions/updateCatalog/preview/plans/versioningOptions/computeVersioningOptionsForPlan";
@@ -64,11 +65,13 @@ const resolveVariantAction = ({
 	version,
 	previewVersion,
 	base,
+	productStatesContext,
 }: {
 	variantPlanId: string;
 	version: number;
 	previewVersion: number;
 	base: UpsertProductPlan;
+	productStatesContext: ProductStatesContext;
 }): CatalogVariantAction => {
 	const versionIsTargeted = ({
 		targetVersion,
@@ -90,11 +93,16 @@ const resolveVariantAction = ({
 		return "explicit";
 	}
 	if (
-		base.propagate?.variants?.some(
-			(target) =>
-				target.plan_id === variantPlanId &&
-				versionIsTargeted({ targetVersion: target.version }),
-		)
+		base.propagate?.variants?.some((target) => {
+			if (target.plan_id !== variantPlanId) return false;
+			const targetRow = variantRowForPropagateTarget({
+				target,
+				anchorInternalIds: editedBaseInternalIds({ upsert: base }),
+				productStatesContext,
+			});
+			if (!targetRow) return false;
+			return versionIsTargeted({ targetVersion: targetRow.version });
+		})
 	) {
 		return "propagated";
 	}
@@ -172,16 +180,11 @@ const variantVersioning = ({
 	base: UpsertProductPlan;
 	productStatesContext: ProductStatesContext;
 }): CatalogPlanVersioning => {
-	const target = base.propagate?.variants?.find(
-		(candidate) => candidate.plan_id === variant.id,
-	);
 	const resolved = mintUpsert
 		? ("new_version" as const)
-		: target?.version !== undefined
-			? ("existing" as const)
-			: base.row.versioning === "all_versions"
-				? ("all_versions" as const)
-				: ("existing" as const);
+		: base.row.versioning === "all_versions"
+			? ("all_versions" as const)
+			: ("existing" as const);
 
 	return {
 		current_version: variant.version,
@@ -191,9 +194,10 @@ const variantVersioning = ({
 	};
 };
 
-/** Every other existing version that could receive this base edit. */
+/** Other rows of this variant plan anchored to the same base row. */
 const siblingVersionsForVariant = ({
 	variant,
+	anchoredRows,
 	upsertProducts,
 	productStatesContext,
 	previewContext,
@@ -203,6 +207,7 @@ const siblingVersionsForVariant = ({
 	base,
 }: {
 	variant: FullProduct;
+	anchoredRows: FullProduct[];
 	upsertProducts: UpsertProductPlan[];
 	productStatesContext: ProductStatesContext;
 	previewContext: PreviewCatalogContext | undefined;
@@ -211,7 +216,7 @@ const siblingVersionsForVariant = ({
 	previewVersion: number;
 	base: UpsertProductPlan;
 }): CatalogVariantVersionPreview[] =>
-	(productStatesContext.versionsByPlanId[variant.id] ?? [])
+	anchoredRows
 		.filter((product) => product.version !== previewVersion)
 		.map((product) => {
 			const siblingUpsert = findVariantUpsert({
@@ -224,6 +229,7 @@ const siblingVersionsForVariant = ({
 				version: product.version,
 				previewVersion,
 				base,
+				productStatesContext,
 			});
 			const planChange = variantPlanChange({ variantUpsert: siblingUpsert });
 			const preview: CatalogVariantVersionPreview = {
@@ -252,7 +258,51 @@ const siblingVersionsForVariant = ({
 		})
 		.sort(byVersionAscending);
 
-/** Latest variants of this base. Empty → omit the lane. */
+/** Base rows this upsert edits — what anchored variant rows must point at. */
+const editedBaseInternalIds = ({
+	upsert,
+}: {
+	upsert: UpsertProductPlan;
+}): Set<string> =>
+	new Set(
+		[
+			upsert.row.currentFullProduct?.internal_id,
+			upsert.row.baseFullProduct?.internal_id,
+			upsert.row.nextFullProduct.internal_id,
+			upsert.previousActiveInternalId,
+		].filter((internalId): internalId is string => internalId !== undefined),
+	);
+
+/** Anchored rows per variant plan: [representative, ...other anchored rows]. */
+const anchoredRowsByVariantPlan = ({
+	upsert,
+	productStatesContext,
+}: {
+	upsert: UpsertProductPlan;
+	productStatesContext: ProductStatesContext;
+}): Map<string, FullProduct[]> => {
+	const anchored = variantRowsAnchoredTo({
+		baseInternalIds: editedBaseInternalIds({ upsert }),
+		productStatesContext,
+	});
+	const byPlan = new Map<string, FullProduct[]>();
+	for (const row of anchored) {
+		if (row.id === upsert.row.planId) continue;
+		byPlan.set(row.id, [...(byPlan.get(row.id) ?? []), row]);
+	}
+	for (const [planId, rows] of byPlan) {
+		const representative =
+			rows.find((row) => row.active) ??
+			rows.slice().sort((left, right) => right.version - left.version)[0];
+		byPlan.set(planId, [
+			representative,
+			...rows.filter((row) => row !== representative),
+		]);
+	}
+	return byPlan;
+};
+
+/** Variant rows anchored to THIS base row. Empty → omit the lane. */
 export const buildVariantsPreview = ({
 	directUpsert,
 	upsertProducts,
@@ -266,17 +316,17 @@ export const buildVariantsPreview = ({
 	previewContext: PreviewCatalogContext | undefined;
 	renamePlans: RenameProductPlan[];
 }): CatalogVariantPreview[] => {
-	const variants = latestVariantsOfBase({
+	const anchoredByPlan = anchoredRowsByVariantPlan({
 		upsert: directUpsert,
 		productStatesContext,
 	});
-	if (variants.length === 0) return [];
+	if (anchoredByPlan.size === 0) return [];
 
 	const editedCurrent = directUpsert.row.currentFullProduct;
 	const editedNext = directUpsert.row.nextFullProduct;
 
-	return variants
-		.map((variant) => {
+	return [...anchoredByPlan.values()]
+		.map(([variant, ...anchoredSiblings]) => {
 			const mintUpsert = findVariantMintUpsert({
 				upsertProducts,
 				planId: variant.id,
@@ -294,6 +344,7 @@ export const buildVariantsPreview = ({
 				version: previewVersion,
 				previewVersion,
 				base: directUpsert,
+				productStatesContext,
 			});
 			const planChange = variantPlanChange({ variantUpsert });
 			const aliasReplacement = aliasReplacementForPlan({
@@ -303,6 +354,7 @@ export const buildVariantsPreview = ({
 			});
 			const siblingVersions = siblingVersionsForVariant({
 				variant,
+				anchoredRows: [variant, ...anchoredSiblings],
 				upsertProducts,
 				productStatesContext,
 				previewContext,
