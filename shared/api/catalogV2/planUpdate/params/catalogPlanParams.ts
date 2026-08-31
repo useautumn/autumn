@@ -26,6 +26,11 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 		description:
 			"Rename the plan to this id. Blocked when any customer or reward program references it.",
 	}),
+	internal_id: z.string().nonempty().optional().meta({
+		description:
+			"Address an existing row by its stable id. Omit when creating — the server generates one. A differing plan_id alongside it is a rename.",
+		internal: true,
+	}),
 	name: z.string().nonempty().optional().meta({
 		description: "Display name of the plan. Required when creating.",
 	}),

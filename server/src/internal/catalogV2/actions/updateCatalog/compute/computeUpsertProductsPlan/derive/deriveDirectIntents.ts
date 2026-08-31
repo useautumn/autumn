@@ -2,6 +2,7 @@ import type {
 	UpdateCatalogParams,
 	UpdateCatalogPlanParams,
 } from "@autumn/shared";
+import type { InternalIdRefs } from "@/internal/catalogV2/actions/updateCatalog/setup/resolveInternalIdRefs";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type {
 	ProductUpsertIntent,
@@ -17,28 +18,44 @@ const hasExplicitVersion = (
 
 const groupPlanParamsByPlanId = ({
 	planParamsList,
+	internalIdRefs,
 }: {
 	planParamsList: UpdateCatalogParams["plans"];
+	internalIdRefs: InternalIdRefs;
 }): Map<string, UpdateCatalogPlanParams[]> => {
 	const byPlanId = new Map<string, UpdateCatalogPlanParams[]>();
 	for (const planParams of planParamsList) {
-		const forPlan = byPlanId.get(planParams.plan_id) ?? [];
+		// Group under the row's CURRENT id: a rename states the new one.
+		const currentPlanId =
+			(planParams.internal_id
+				? internalIdRefs.get(planParams.internal_id)?.planId
+				: undefined) ?? planParams.plan_id;
+		const forPlan = byPlanId.get(currentPlanId) ?? [];
 		forPlan.push(planParams);
-		byPlanId.set(planParams.plan_id, forPlan);
+		byPlanId.set(currentPlanId, forPlan);
 	}
 	return byPlanId;
 };
 
-/** Numeric pin, or the version that owns `version_slug`. Unknown slugs stay unresolved. */
+/**
+ * The stable id wins: it is the only handle a rename cannot invalidate. A slug
+ * or numeric pin naming a different row alongside it is rejected in errors, so
+ * by here they either agree or the request never arrives.
+ */
 const resolvePinnedVersion = ({
 	planParams,
 	planId,
 	productStatesContext,
+	internalIdRefs,
 }: {
 	planParams: UpdateCatalogPlanParams;
 	planId: string;
 	productStatesContext: ProductStatesContext;
+	internalIdRefs: InternalIdRefs;
 }): number | undefined => {
+	if (planParams.internal_id !== undefined) {
+		return internalIdRefs.get(planParams.internal_id)?.version;
+	}
 	if (planParams.version !== undefined) return planParams.version;
 	if (planParams.version_slug === undefined) return undefined;
 	return versionForSlug({
@@ -54,16 +71,19 @@ const resolveVersionsForPlan = ({
 	planId,
 	planParamsList,
 	productStatesContext,
+	internalIdRefs,
 }: {
 	planId: string;
 	planParamsList: UpdateCatalogPlanParams[];
 	productStatesContext: ProductStatesContext;
+	internalIdRefs: InternalIdRefs;
 }): ResolvedPlanParams[] => {
 	const resolved = planParamsList.map((planParams) => {
 		const version = resolvePinnedVersion({
 			planParams,
 			planId,
 			productStatesContext,
+			internalIdRefs,
 		});
 		return version !== undefined ? { ...planParams, version } : planParams;
 	});
@@ -77,8 +97,7 @@ const resolveVersionsForPlan = ({
 		(productStatesContext.versionsByPlanId[planId] ?? []).length > 0;
 	const nextFreeVersion = maxVersion + 1;
 	const activeOrV1 =
-		activeVersionForPlan({ planId, productStatesContext }) ??
-		(maxVersion || 1);
+		activeVersionForPlan({ planId, productStatesContext }) ?? (maxVersion || 1);
 
 	const targetingLatest = resolved
 		.filter(
@@ -104,23 +123,29 @@ const resolveVersionsForPlan = ({
 export const deriveDirectIntents = ({
 	params,
 	productStatesContext,
+	internalIdRefs,
 }: {
 	params: UpdateCatalogParams;
 	productStatesContext: ProductStatesContext;
+	internalIdRefs: InternalIdRefs;
 }): ProductUpsertIntent[] =>
-	[...groupPlanParamsByPlanId({ planParamsList: params.plans }).entries()]
+	[
+		...groupPlanParamsByPlanId({
+			planParamsList: params.plans,
+			internalIdRefs,
+		}).entries(),
+	]
 		.flatMap(([planId, planParamsList]) =>
 			resolveVersionsForPlan({
 				planId,
 				planParamsList,
 				productStatesContext,
-			}),
+				internalIdRefs,
+			}).map((planParams) => ({ planId, planParams })),
 		)
-		.map((planParams) => ({
-			productKey: {
-				planId: planParams.plan_id,
-				version: planParams.version,
-			},
+		.map(({ planId, planParams }) => ({
+			// Key on the row's current id; `plan_id` may be the rename target.
+			productKey: { planId, version: planParams.version },
 			planParams,
 			source: "direct" as const,
 			...(planParams.base_variant_id === null ? { unlink: true } : {}),

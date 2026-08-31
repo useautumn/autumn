@@ -19,6 +19,15 @@ export const planParamsToProductRowPatch = ({
 	const patch: Partial<Product> = {};
 
 	if (planParams.new_plan_id !== undefined) patch.id = planParams.new_plan_id;
+	// Addressed by internal_id under a different plan_id: the row moves there.
+	// Without this the upsert writes the old id back over the rename.
+	if (
+		planParams.internal_id !== undefined &&
+		current !== null &&
+		planParams.plan_id !== current.id
+	) {
+		patch.id = planParams.plan_id;
+	}
 	if (planParams.name !== undefined) patch.name = planParams.name;
 	if (planParams.description !== undefined) {
 		patch.description = planParams.description;

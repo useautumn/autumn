@@ -6,6 +6,7 @@ import {
 	type UpdateCatalogParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { assertInternalIdAgrees } from "@/internal/catalogV2/actions/updateCatalog/errors/assertInternalIdAgrees";
 import { handleDeclaredVariantAnchorErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleDeclaredVariantAnchorErrors";
 import { handleLicenseAnchorLifecycleErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleLicenseAnchorLifecycleErrors";
 import { handleRemoveFeatureErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleRemoveFeatureErrors/handleRemoveFeatureErrors";
@@ -154,6 +155,11 @@ export const handleUpdateCatalogErrors = async ({
 	handleRemovePlanErrors({
 		updateCatalogPlan,
 		productStatesContext: catalogContext.productStatesContext,
+	});
+	assertInternalIdAgrees({
+		params,
+		productStatesContext: catalogContext.productStatesContext,
+		internalIdRefs: catalogContext.internalIdRefs,
 	});
 	handleUpsertProductVersioningErrors({
 		params,

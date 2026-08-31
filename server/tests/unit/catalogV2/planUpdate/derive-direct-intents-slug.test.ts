@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { products } from "@tests/utils/fixtures/db/products";
 import { deriveDirectIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveDirectIntents";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
-import { products } from "@tests/utils/fixtures/db/products";
 
 const v1 = {
 	...products.createFull({ id: "pro" }),
@@ -34,6 +34,7 @@ describe("deriveDirectIntents version_slug targeting", () => {
 				remove_plans: [],
 			},
 			productStatesContext,
+			internalIdRefs: new Map(),
 		});
 		expect(intent?.productKey).toEqual({ planId: "pro", version: 1 });
 	});
@@ -48,6 +49,7 @@ describe("deriveDirectIntents version_slug targeting", () => {
 					remove_plans: [],
 				},
 				productStatesContext,
+				internalIdRefs: new Map(),
 			}),
 		).toEqual([]);
 	});
@@ -61,6 +63,7 @@ describe("deriveDirectIntents version_slug targeting", () => {
 				remove_plans: [],
 			},
 			productStatesContext,
+			internalIdRefs: new Map(),
 		});
 		expect(intent?.productKey).toEqual({ planId: "pro", version: 2 });
 	});
@@ -79,6 +82,7 @@ describe("deriveDirectIntents version_slug targeting", () => {
 				maxVersionByPlanId: { pro: 2 },
 				rewardProgramsByPlanId: {},
 			},
+			internalIdRefs: new Map(),
 		});
 		expect(intent?.productKey).toEqual({ planId: "pro", version: 3 });
 	});

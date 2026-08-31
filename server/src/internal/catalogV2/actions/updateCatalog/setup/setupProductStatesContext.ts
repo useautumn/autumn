@@ -1,5 +1,6 @@
 import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { InternalIdRefs } from "@/internal/catalogV2/actions/updateCatalog/setup/resolveInternalIdRefs";
 import {
 	type CatalogPhases,
 	timeCatalogPhase,
@@ -19,10 +20,14 @@ import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 
 const payloadPlanIds = ({
 	params,
+	internalIdRefs,
 }: {
 	params: UpdateCatalogParams;
+	internalIdRefs: InternalIdRefs;
 }): string[] => [
 	...new Set([
+		// A renamed row's current id is only known through its internal_id.
+		...[...internalIdRefs.values()].map((ref) => ref.planId),
 		...params.plans.flatMap((entry) => [
 			entry.plan_id,
 			...(entry.new_plan_id ? [entry.new_plan_id] : []),
@@ -51,13 +56,15 @@ export const setupProductStatesContext = async ({
 	ctx,
 	params,
 	phases,
+	internalIdRefs,
 }: {
 	ctx: AutumnContext;
 	params: UpdateCatalogParams;
 	phases: CatalogPhases;
+	internalIdRefs: InternalIdRefs;
 }): Promise<ProductStatesContext> => {
 	const { db, org, env } = ctx;
-	const loadedPlanIds = payloadPlanIds({ params });
+	const loadedPlanIds = payloadPlanIds({ params, internalIdRefs });
 	if (loadedPlanIds.length === 0) return emptyProductStatesContext();
 
 	const payloadVersions = await timeCatalogPhase({
