@@ -17,12 +17,14 @@ export function PlanVersionScopeItems({
 	selectedKeys,
 	onChange,
 	renderVersionSuffix,
+	versionLabel,
 }: {
 	planId: string;
 	versions: number[];
 	selectedKeys: string[];
 	onChange: (next: string[]) => void;
 	renderVersionSuffix?: (version: number) => ReactNode;
+	versionLabel?: (version: number) => string;
 }) {
 	const isWholePlan = planScopeIsWholePlan({ selectedKeys, planId });
 
@@ -59,7 +61,9 @@ export function PlanVersionScopeItems({
 						className="border-border"
 						indeterminate={isWholePlan}
 					/>
-					<span className="flex-1">v{version}</span>
+					<span className="flex-1">
+						{versionLabel?.(version) ?? `v${version}`}
+					</span>
 					{renderVersionSuffix?.(version)}
 				</DropdownMenuItem>
 			))}

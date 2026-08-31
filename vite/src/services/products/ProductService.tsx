@@ -1,6 +1,7 @@
 import type {
 	CreateVariantParamsV2Input,
 	DiffedCustomizePlanV1,
+	PlanLicenseChangeV0,
 	PlanUpdatePreview,
 	PlanUpdatePreviewItemChange,
 	PlanUpdatePreviewPriceChange,
@@ -109,4 +110,5 @@ export interface PlanVariant {
 	customize?: DiffedCustomizePlanV1 | null;
 	price_change?: PlanUpdatePreviewPriceChange;
 	item_changes?: PlanUpdatePreviewItemChange[];
+	license_changes?: PlanLicenseChangeV0[];
 }

@@ -343,11 +343,10 @@ export default function PlanChangeDialog({
 		effectiveVersionChoice,
 		strategy,
 		variantTargets,
-		defaultVariantIds,
-		selectedVariantIds,
+		selectedVariantKeys,
 		showVersionStrategy,
 		showVariantScope,
-		effectiveVariantIds,
+		effectiveVariantKeys,
 		licenseParentTargets,
 		selectedLicenseParentKeys,
 		showLicenseParentScope,
@@ -400,7 +399,7 @@ export default function PlanChangeDialog({
 	const slugConflicts = mintsNewVersion
 		? mintTargetSlugConflicts({
 				targets: variantTargets,
-				selectedIds: effectiveVariantIds,
+				selectedKeys: effectiveVariantKeys,
 				selection: slugSelection,
 			})
 		: [];
@@ -675,8 +674,8 @@ export default function PlanChangeDialog({
 												Apply to variants
 											</PlanChangeFieldLabel>
 											<span className="text-tertiary-foreground text-xs">
-												Select which variants receive this change. Unselected
-												variants stay as they are.
+												Pick which variants receive this update, and which
+												versions. Unselected versions stay as they are.
 											</span>
 											{slugConflicts.length > 0 && (
 												<span className="text-amber-600 text-xs dark:text-amber-500">
@@ -685,18 +684,9 @@ export default function PlanChangeDialog({
 											)}
 										</div>
 										<VariantTargetsStep
+											baseMintsNewVersion={mintsNewVersion}
 											features={features}
-											targets={variantTargets}
-											selectedIds={selectedVariantIds}
-											slugSelection={slugSelection}
-											onToggle={(id) =>
-												setVariantSelection((current) => {
-													const selected = current ?? defaultVariantIds;
-													return selected.includes(id)
-														? selected.filter((value) => value !== id)
-														: [...selected, id];
-												})
-											}
+											onChange={(next) => setVariantSelection(next)}
 											onSlugChange={({ planId, slug }) =>
 												setSlugSelection((current) =>
 													withMintSlugOverride({
@@ -706,6 +696,9 @@ export default function PlanChangeDialog({
 													}),
 												)
 											}
+											selectedKeys={selectedVariantKeys}
+											slugSelection={slugSelection}
+											targets={variantTargets}
 										/>
 									</div>
 								)}
@@ -772,9 +765,11 @@ export default function PlanChangeDialog({
 															? "Updates selected parents in place while current customers retain their license definitions."
 															: isLatest
 																? variantTargets.length > 0
-																	? "Updates the latest version of this plan and the variants you select next. You can migrate current customers after."
+																	? "Updates this version. Next you pick which linked variant versions follow. You can migrate current customers after."
 																	: "Updates the latest version of this plan. You can migrate current customers after."
-																: `Updates only v${product.version}. Other versions and variants stay as they are.`
+																: variantTargets.length > 0
+																	? `Updates only v${product.version}. Next you pick which variant versions linked to it follow.`
+																	: `Updates only v${product.version}. Other versions stay as they are.`
 													}
 												/>
 											)}
@@ -782,7 +777,7 @@ export default function PlanChangeDialog({
 												<AreaRadioGroupItem
 													value="all"
 													label="Update all versions"
-													description="Applies this change to every version of this plan and its variants."
+													description="Applies this change to every version of this plan. Next you pick which variant versions follow — each gets the diff of the version it is linked to."
 												/>
 											)}
 										</RadioGroup>

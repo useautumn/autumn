@@ -25,6 +25,10 @@ import {
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
+import { useProductQuery } from "@/views/products/product/hooks/useProductQuery";
+import { VersionSlugBadge } from "../VersionSlugBadge";
+import { versionLabel } from "../versionLabel";
+import { licenseEditorQueryParams } from "./planLicenseNavigation";
 import { usePendingLicenseLinks } from "./PendingLicenseLinksContext";
 import { useLicenseDraft, useLicenseDraftStore } from "./useLicenseDraftStore";
 
@@ -40,6 +44,7 @@ export function LicensePlanCardHeader({
 }) {
 	const navigate = useNavigate();
 	const { product } = useProduct();
+	const { product: parentPlan } = useProductQuery();
 	const { setSheet } = useSheet();
 	const item = useCurrentItem();
 	const patchDraft = useLicenseDraftStore((s) => s.patch);
@@ -79,6 +84,18 @@ export function LicensePlanCardHeader({
 		setSheet({ type: "edit-plan", itemId: product.id });
 	};
 
+	const openLicense = () => {
+		pushPage({
+			navigate,
+			path: `/products/${license.id}`,
+			queryParams: licenseEditorQueryParams({
+				parentPlanId: planLicense.parent_plan_id,
+				parentVersion: parentPlan?.version,
+				licenseVersion: license.version,
+			}),
+		});
+	};
+
 	const removeCard = () => {
 		// A staged (unsaved) link has nothing to soft-delete — drop it outright.
 		if (isPendingLink) {
@@ -88,16 +105,24 @@ export function LicensePlanCardHeader({
 		patchDraft(license.id, { removed: true });
 	};
 
-	if (removed) {
-		return (
-			<CardHeader className="px-3">
-				<div className="flex items-center justify-between w-full gap-2 min-w-0">
-					<div className="flex items-center gap-2 text-xs min-w-0">
-						{licenseName}
+	return (
+		<CardHeader className="px-3">
+			<div className="flex items-center justify-between w-full gap-2 min-w-0">
+				<div className="flex items-center gap-2 text-xs min-w-0">
+					{licenseName}
+					<VersionSlugBadge
+						slug={versionLabel({
+							versionSlug: license.version_slug,
+							version: license.version,
+						})}
+					/>
+					{removed && (
 						<span className="shrink-0 text-tertiary-foreground">
 							Removed on save
 						</span>
-					</div>
+					)}
+				</div>
+				{removed ? (
 					<Button
 						variant="secondary"
 						size="sm"
@@ -106,72 +131,57 @@ export function LicensePlanCardHeader({
 					>
 						Undo
 					</Button>
-				</div>
-			</CardHeader>
-		);
-	}
-
-	return (
-		<CardHeader className="px-3">
-			<div className="flex items-center justify-between w-full gap-2 min-w-0">
-				<div className="flex items-center gap-2 text-xs min-w-0">
-					{licenseName}
-				</div>
-				<div className="flex items-center gap-1 shrink-0">
-					<DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-						<DropdownMenuTrigger asChild>
-							<IconButton
-								aria-label={`${license.name ?? license.id} actions`}
-								icon={<EllipsisVerticalIcon />}
-								iconOrientation="center"
-								size="mini"
-								variant="secondary"
-								className={cn(menuOpen && "btn-secondary-active")}
-							/>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DropdownMenuItem
-								className="flex items-center text-xs"
-								onClick={() => openSettings()}
-							>
-								<div className="flex items-center gap-2">
-									<PencilSimpleIcon
-										size={12}
-										className="text-tertiary-foreground"
-									/>
-									License Settings
-								</div>
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								className="flex items-center text-xs"
-								onClick={() =>
-									pushPage({
-										navigate,
-										path: `/products/${license.id}`,
-										queryParams: { fromPlan: planLicense.parent_plan_id },
-									})
-								}
-							>
-								<div className="flex items-center gap-2">
-									<ArrowRightIcon
-										size={12}
-										className="text-tertiary-foreground"
-									/>
-									Go to License
-								</div>
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								className="flex items-center text-xs"
-								onClick={() => removeCard()}
-							>
-								<div className="flex items-center gap-2">
-									<TrashIcon size={12} className="text-tertiary-foreground" />
-									Remove
-								</div>
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
+				) : (
+					<div className="flex items-center gap-1 shrink-0">
+						<DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+							<DropdownMenuTrigger asChild>
+								<IconButton
+									aria-label={`${license.name ?? license.id} actions`}
+									icon={<EllipsisVerticalIcon />}
+									iconOrientation="center"
+									size="mini"
+									variant="secondary"
+									className={cn(menuOpen && "btn-secondary-active")}
+								/>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuItem
+									className="flex items-center text-xs"
+									onClick={() => openSettings()}
+								>
+									<div className="flex items-center gap-2">
+										<PencilSimpleIcon
+											size={12}
+											className="text-tertiary-foreground"
+										/>
+										License Settings
+									</div>
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									className="flex items-center text-xs"
+									onClick={openLicense}
+								>
+									<div className="flex items-center gap-2">
+										<ArrowRightIcon
+											size={12}
+											className="text-tertiary-foreground"
+										/>
+										Go to License
+									</div>
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									className="flex items-center text-xs"
+									onClick={() => removeCard()}
+								>
+									<div className="flex items-center gap-2">
+										<TrashIcon size={12} className="text-tertiary-foreground" />
+										Remove
+									</div>
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
+				)}
 			</div>
 		</CardHeader>
 	);

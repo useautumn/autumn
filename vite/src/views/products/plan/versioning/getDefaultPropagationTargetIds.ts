@@ -1,19 +1,4 @@
-import type {
-	LicenseParentTarget,
-	PropagationTarget,
-} from "../catalog/catalogPlanPreview";
-
-export const getDefaultPropagationTargetIds = ({
-	targets,
-}: {
-	targets: PropagationTarget[];
-}): string[] => {
-	const ids: string[] = [];
-	for (const target of targets) {
-		if (target.conflicts.length === 0) ids.push(target.id);
-	}
-	return ids;
-};
+import type { LicenseParentTarget } from "../catalog/catalogPlanPreview";
 
 /**
  * Pin every conflict-free parent version, collapsing to the whole-plan key when
