@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { type ApiCustomerV5, ApiVersion } from "@autumn/shared";
+import {
+	type ApiCustomerV5,
+	ApiVersion,
+	type CheckResponseV3,
+} from "@autumn/shared";
 import { expectUsageLimitCorrect } from "@tests/integration/utils/expectUsageLimitCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -10,6 +14,8 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { sql } from "drizzle-orm";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { createHonoApp } from "@/initHono.js";
+import { CHECK_DB_HYDRATION_BUDGET_MS } from "@/internal/balances/check/getCheckDataV2.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { setCustomerUsageLimit } from "../utils/usage-limit-utils/customerUsageLimitUtils.js";
 import { expireUsageWindowForReset } from "../utils/usage-limit-utils/expireUsageWindowForReset.js";
@@ -30,6 +36,86 @@ const queryRows = (result: unknown): any[] =>
 	Array.isArray(result) ? result : ((result as { rows?: any[] })?.rows ?? []);
 
 const HOUR_MS = 60 * 60 * 1000;
+
+const createDeferred = () => {
+	let resolve!: () => void;
+	let reject!: (reason?: unknown) => void;
+	const promise = new Promise<void>((resolvePromise, rejectPromise) => {
+		resolve = resolvePromise;
+		reject = rejectPromise;
+	});
+	return { promise, reject, resolve };
+};
+
+const holdUsageWindowRowLock = ({
+	ctx,
+	customerId,
+	featureId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	featureId: string;
+}) => {
+	const acquired = createDeferred();
+	const release = createDeferred();
+	const settled = ctx.db.transaction(async (tx) => {
+		const rows = queryRows(
+			await tx.execute(sql`
+				SELECT uw.id
+				FROM usage_windows uw
+				JOIN customers c ON c.internal_id = uw.internal_customer_id
+				WHERE c.id = ${customerId}
+					AND c.org_id = ${ctx.org.id}
+					AND c.env = ${ctx.env}
+					AND uw.feature_id = ${featureId}
+				FOR UPDATE OF uw
+			`),
+		);
+		if (rows.length !== 1) {
+			throw new Error(`Expected one usage window, found ${rows.length}`);
+		}
+		acquired.resolve();
+		await release.promise;
+	});
+	void settled.catch(acquired.reject);
+
+	return { acquired: acquired.promise, release: release.resolve, settled };
+};
+
+const waitForBlockedUsageWindowUpdate = async ({
+	ctx,
+}: {
+	ctx: TestContext;
+}) => {
+	for (let attempt = 0; attempt < 100; attempt++) {
+		const [result] = await ctx.db.execute<{ blocked: boolean }>(sql`
+			SELECT EXISTS (
+				SELECT 1
+				FROM pg_stat_activity
+				WHERE wait_event_type = 'Lock'
+					AND query ILIKE '%usage_windows%'
+			) AS blocked
+		`);
+		if (result?.blocked) return;
+		await timeout(10);
+	}
+
+	throw new Error("Timed out waiting for the first usage-window update");
+};
+
+const expectCheckAvoidedHydrationTimeout = async ({
+	response,
+	elapsedMs,
+}: {
+	response: Response;
+	elapsedMs: number;
+}) => {
+	const body = (await response.json()) as CheckResponseV3;
+	expect(response.status).toBe(200);
+	expect(body.allowed).toBe(true);
+	expect(body.balance).not.toBeNull();
+	expect(elapsedMs).toBeLessThan(CHECK_DB_HYDRATION_BUDGET_MS);
+};
 
 const fetchWindowRows = async ({
 	ctx,
@@ -381,3 +467,80 @@ test.concurrent(
 		expect(allRows).toHaveLength(2);
 	},
 );
+
+// Red: competing checks queue on one expired-window UPDATE until the 2s fail-open.
+// Green: one check rolls while advisory-lock losers skip persistence and continue.
+test(`${chalk.yellowBright("usage-window-reset4 (contention): competing checks do not queue behind the lazy roll")}`, async () => {
+	const freePlan = products.base({
+		id: "uw-reset-contention",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const customerId = "uw-reset-contention-1";
+	const { ctx } = await initScenario({
+		customerId,
+		setup: [s.customer({ testClock: false }), s.products({ list: [freePlan] })],
+		actions: [s.billing.attach({ productId: freePlan.id })],
+	});
+
+	await setCustomerUsageLimit({
+		autumn: autumnV2_3,
+		customerId,
+		featureId: TestFeature.Messages,
+		limit: 5,
+	});
+	await autumnV2_3.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 3,
+	});
+	await timeout(4000);
+	await expireUsageWindowForReset({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+
+	const rowLock = holdUsageWindowRowLock({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+	let firstCheck: Promise<Response> | undefined;
+
+	try {
+		await rowLock.acquired;
+		const app = createHonoApp();
+		const check = () =>
+			app.fetch(
+				new Request("http://localhost/v1/balances.check", {
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${process.env.UNIT_TEST_AUTUMN_SECRET_KEY || ""}`,
+						"Content-Type": "application/json",
+						"x-api-version": ApiVersion.V2_3.toString(),
+					},
+					body: JSON.stringify({
+						customer_id: customerId,
+						feature_id: TestFeature.Messages,
+					}),
+				}),
+			);
+
+		const pendingFirstCheck = Promise.resolve(check());
+		firstCheck = pendingFirstCheck;
+		void pendingFirstCheck.catch(() => undefined);
+		await waitForBlockedUsageWindowUpdate({ ctx });
+
+		const startedAt = performance.now();
+		const response = await check();
+		await expectCheckAvoidedHydrationTimeout({
+			response,
+			elapsedMs: performance.now() - startedAt,
+		});
+	} finally {
+		rowLock.release();
+		await rowLock.settled;
+		if (firstCheck) await firstCheck;
+	}
+});
