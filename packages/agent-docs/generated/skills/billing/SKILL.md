@@ -58,29 +58,20 @@ Then decide how it is paid. Follow the user's instructions or the org rules. If 
 
 ## 2. Build the request body
 
-- Any customer-specific pricing goes in `customize` — a patch over the catalog plan, not a replacement. Use `add_items` and `remove_items`. Do not replace the whole `items` array.
-```json
-{ "customize": {
-    "remove_items": [{ "feature_id": "credits" }],
-    "add_items": [{ "feature_id": "credits", "included": 5000 }] } }
-```
-- `add_items` is a full item definition, so read that item's fields (`pooled`, `reset`, `rollover`, …) off the plan first and restate every one unless specified explicitly.
-- Base price changes go in `customize.price`.
-- Each remove entry is a filter. When `feature_id` alone could match more than one item, add `billing_method`, `interval`, or `interval_count` to pin the right one.
+- Any customer-specific pricing goes in `customize` — a patch over the catalog plan, not a replacement. Before writing one, follow the `customize` reference (autumn-concepts) for the patch rules; in particular, an `add_items` entry is a full item definition, so restate every field off the plan's item unless you are explicitly changing it.
 
 ## 3. Preview, then write
 
 - Call the matching preview: `previewAttach`, `previewCreateSchedule`, or `previewUpdateSubscription`.
-- If it comes back clean, call the write in the same turn. Emit no prose in between — the write call is what shows the approval card.
-- If the preview fails, state the blocking reason once and stop.
-- When a request needs more than one write — change the email then attach, create a reward then attach — issue them together in a single batch so the user approves once.
-- Run every preview you need first, then send all the writes together.
+
+- Preview before every write. The write call itself is the approval gate — it renders the approval card, so never ask for approval in prose and never narrate between a clean preview and its write: call both in the same turn.
+- With enough info, in ONE turn: (1) call the preview tool, then (2) immediately call the matching write with the previewed args. Emit no prose between them.
+- If a preview fails, state the blocking reason once and stop; do not call or suggest the write tool.
+- One request asking for several writes ("change their email and put them on Pro", "attach Pro to these four customers", "update X and then attach Y"): run every preview you need first, then issue ALL the writes together in ONE tool batch — including preview-free ones like `updateCustomer`. Writes apply in the order called, so a later write already sees an earlier one's effect; wording like "and then" describes that apply order, never a reason to split turns. Gated writes are shown together on one approval card, so the user approves the whole request once — never issue one gated write and leave the rest for after it is approved.
 
 ## 4. Write the approval description
 
-- Bullet what is happening, one line per step, in the order the steps apply.
-- Say what changes for the customer, what they pay, and when it takes effect.
-- For a batched request, repeat the same complete description on every write.
+- The `approval_description` field's schema carries the full rules. Order the bullets in the order the steps apply, covering what changes for the customer, what they pay, and when it takes effect.
 
 ## 5. Report the result once it is approved
 
