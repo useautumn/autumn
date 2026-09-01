@@ -76,4 +76,4 @@ For reasoning about free trials and when billing begins, read `references/trials
 
 For distinguishing a customer from an entity (seats, sub-accounts) and their runtime billing state, read `references/customer-entity.md`.
 
-For reasoning about balances, caps, overage, or billing controls — runtime caps, alerts, and top-ups, read `references/balances.md`.
+For reasoning about billing controls — runtime caps, alerts, overage, and top-ups, read `references/billing-controls.md`.
