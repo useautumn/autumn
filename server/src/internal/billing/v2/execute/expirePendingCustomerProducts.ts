@@ -5,23 +5,13 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 export const expireCustomerProducts = async ({
 	ctx,
 	customerProducts,
-	skipSubscriptionLinked = false,
 }: {
 	ctx: RepoContext;
 	customerProducts: FullCusProduct[];
-	/** Rows the success path may have already claimed by linking a subscription. */
-	skipSubscriptionLinked?: boolean;
 }) => {
 	const now = Date.now();
 
 	for (const customerProduct of customerProducts) {
-		if (
-			skipSubscriptionLinked &&
-			(customerProduct.subscription_ids ?? []).length > 0
-		) {
-			continue;
-		}
-
 		await CusProductService.update({
 			ctx,
 			cusProductId: customerProduct.id,

@@ -48,10 +48,13 @@ export const handleStripeCheckoutSessionExpired = async ({
 		return;
 	}
 
+	const abandonedCusProducts = cusProducts.filter(
+		(cusProduct) => (cusProduct.subscription_ids ?? []).length === 0,
+	);
+
 	await expireCustomerProducts({
 		ctx,
-		customerProducts: cusProducts,
-		skipSubscriptionLinked: true,
+		customerProducts: abandonedCusProducts,
 	});
 
 	if (session.metadata?.autumn_metadata_id) {
