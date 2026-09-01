@@ -7,7 +7,6 @@ import type {
 	ProductV2,
 } from "@autumn/shared";
 import {
-	CusProductStatus,
 	ProductItemFeatureType,
 	productV2ToFrontendProduct,
 } from "@autumn/shared";
@@ -348,11 +347,7 @@ export function UpdateSubscriptionFormProvider({
 
 	const previewQuery = useUpdateSubscriptionPreview({
 		requestBody: previewBody,
-		enabled: !!(
-			formContext.customerId &&
-			formContext.product &&
-			formContext.customerProduct?.status !== CusProductStatus.Pending
-		),
+		enabled: !!(formContext.customerId && formContext.product),
 	});
 
 	const generation = useUpdateSubscriptionGeneration({

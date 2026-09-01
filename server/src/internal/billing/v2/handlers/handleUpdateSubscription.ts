@@ -7,8 +7,8 @@ import {
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/discardPendingCustomerProduct";
 import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/findPendingCustomerProduct";
+import { updatePendingCustomerProduct } from "@/internal/billing/v2/execute/updatePendingCustomerProduct";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
@@ -41,24 +41,23 @@ export const handleUpdateSubscription = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		// A plan awaiting payment has no subscription to update against, so a
-		// cancel discards it rather than pricing a change against one.
-		if (body.cancel_action) {
-			const pendingCustomerProduct = await findPendingCustomerProduct({
+		const pendingCustomerProduct = await findPendingCustomerProduct({
+			ctx,
+			customerId: body.customer_id,
+			productId: body.plan_id,
+			entityId: body.entity_id,
+		});
+
+		if (pendingCustomerProduct) {
+			const pendingUpdate = await updatePendingCustomerProduct({
 				ctx,
-				customerId: body.customer_id,
-				productId: body.plan_id,
-				entityId: body.entity_id,
+				params: body,
+				customerProduct: pendingCustomerProduct,
 			});
 
-			if (pendingCustomerProduct) {
-				await discardPendingCustomerProduct({
-					ctx,
-					customerProduct: pendingCustomerProduct,
-				});
+			if (!pendingUpdate) return c.json({ success: true }, 200);
 
-				return c.json({ success: true }, 200);
-			}
+			return c.json(billingResultToResponse(pendingUpdate), 200);
 		}
 
 		const { billingContext, billingResult } =

@@ -526,3 +526,108 @@ test.concurrent(
 		expect(cancelled?.metadata_id).toBeNull();
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("pending update: editing quantities re-attaches and replaces the invoice")}`,
+	async () => {
+		const customerId = `pending-update-quantity-${Date.now()}`;
+		const pro = products.pro({
+			id: "pro-pending-update-qty",
+			items: [items.prepaidMessages({ billingUnits: 1, price: 0.34 })],
+		});
+
+		const { ctx, autumnV2_2, customer } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [
+				s.billing.attach({
+					productId: pro.id,
+					options: [{ feature_id: TestFeature.Messages, quantity: 1000 }],
+					invoice: true,
+					enableProductImmediately: false,
+					finalizeInvoice: true,
+				}),
+			],
+		});
+
+		const beforeUpdate = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const originalPending = beforeUpdate.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+		const originalMetadataId = originalPending?.metadata_id ?? "";
+
+		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			feature_quantities: [
+				{ feature_id: TestFeature.Messages, quantity: 2000 },
+			],
+		});
+
+		const afterUpdate = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const pendingRows = afterUpdate.filter(
+			(customerProduct) =>
+				customerProduct.product.id === pro.id &&
+				customerProduct.status === CusProductStatus.Pending,
+		);
+
+		expect(pendingRows).toHaveLength(1);
+		expect(pendingRows[0].metadata_id).not.toBe(originalMetadataId);
+		expect(pendingRows[0].created_at).toBe(originalPending?.created_at ?? 0);
+
+		const originalMetadata = await MetadataService.get({
+			db: ctx.db,
+			id: originalMetadataId,
+		});
+		expect(originalMetadata).toBeNull();
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("pending update: an active plan still takes the normal update path")}`,
+	async () => {
+		const customerId = `pending-update-active-guard-${Date.now()}`;
+		const pro = products.pro({
+			id: "pro-pending-update-guard",
+			items: [items.prepaidMessages({ billingUnits: 1, price: 0.1 })],
+		});
+
+		const { ctx, autumnV2_2, customer } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.billing.attach({
+					productId: pro.id,
+					options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+				}),
+			],
+		});
+
+		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+		});
+
+		const customerProducts = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const rows = customerProducts.filter(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(rows).toHaveLength(1);
+		expect(rows[0].status).toBe(CusProductStatus.Active);
+		expect(rows[0].metadata_id).toBeNull();
+	},
+);

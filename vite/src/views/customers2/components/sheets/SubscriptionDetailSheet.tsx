@@ -107,7 +107,7 @@ export function SubscriptionDetailSheet() {
 	});
 
 	const canCancel = !isExpired;
-	const canUpdate = !isExpired && !isScheduled && !isPending;
+	const canUpdate = !isExpired && !isScheduled;
 	const hasPlanItems = (displayItems?.length ?? 0) > 0;
 	const licenseRows = cusProductLicenses(cusProduct);
 	const prepaidDisplayQuantities = backendToDisplayQuantity({

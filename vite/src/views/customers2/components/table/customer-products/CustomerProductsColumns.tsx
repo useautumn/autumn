@@ -154,7 +154,7 @@ export const CustomerProductsColumns = [
 								<ArrowRightLeft size={16} /> Transfer
 							</DropdownMenuItem>
 						)}
-						{meta.onUpdateClick && !isPending && (
+						{meta.onUpdateClick && (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
 								onClick={(e) => {
