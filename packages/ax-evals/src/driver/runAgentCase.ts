@@ -71,6 +71,11 @@ export const runAgentCase = async ({
 		PATH: `${join(cwd, "node_modules/.bin")}:${process.env.PATH ?? ""}`,
 	};
 	if (process.env.AX_EVALS_USE_API_KEY !== "1") delete env.ANTHROPIC_API_KEY;
+	// Infisical injects a host AUTUMN_SECRET_KEY that is not in this
+	// worktree's DB. atmn prefers process.env over the workspace .env, so
+	// drop it — the per-run key in cwd/.env is the one that authenticates.
+	delete env.AUTUMN_SECRET_KEY;
+	delete env.AUTUMN_PROD_SECRET_KEY;
 
 	const result: AgentRunResult = {
 		toolUses: [],

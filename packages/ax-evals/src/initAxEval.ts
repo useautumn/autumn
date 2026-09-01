@@ -21,7 +21,6 @@ import { bareKit, defaultKit, kitUnderTest } from "./kit/kits.ts";
 import type { AgentKit } from "./kit/types/agentKit.ts";
 import { llmUser } from "./simulator/llmUser.ts";
 import { scriptedTurns } from "./simulator/scriptedTurns.ts";
-import { simulatedUser } from "./simulator/simulatedUser.ts";
 import type { Arm } from "./types/arm.ts";
 import type { AxRunOutput } from "./types/axRunOutput.ts";
 import {
@@ -36,8 +35,6 @@ import { sweepStaleWorkspaces } from "./workspace/sweepStaleWorkspaces.ts";
 const turnSourceFor = (axCase: AxCase) => {
 	if (axCase.simulatedUser)
 		return llmUser({ prompt: axCase.prompt, ...axCase.simulatedUser });
-	if (axCase.answers)
-		return simulatedUser({ prompt: axCase.prompt, answers: axCase.answers });
 	return scriptedTurns([axCase.prompt, ...(axCase.followUpMessages ?? [])]);
 };
 
@@ -128,6 +125,7 @@ export const initAxEval = ({
 		const org = await createEvalOrg({ runId: orgRunId });
 		const workspace = await createCaseWorkspace(`${axCase.name}-${arm}`, {
 			secretKey: org.secretKey,
+			backendUrl,
 		});
 		try {
 			// A real post-init project has an autumn.config.ts with the import
@@ -138,7 +136,10 @@ export const initAxEval = ({
 			) {
 				await writeFile(
 					join(workspace.dir, "autumn.config.ts"),
-					'import { feature, plan, item } from "atmn";\n\n// Define your features and plans, then run `atmn push`.\n',
+					`import { feature, plan, item } from "atmn";
+
+// Define your features and plans, then run \`atmn --headless push\`.
+`,
 				);
 			}
 			// node:fs, not Bun.write — this code runs under the braintrust CLI (node)
@@ -187,7 +188,6 @@ export const initAxEval = ({
 				kitSkillIds: equipment.skillIds,
 				config,
 				configAfterTurn,
-				askedAbout: turnSource.askedTopics?.() ?? [],
 				...run,
 			};
 		} finally {

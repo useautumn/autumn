@@ -1,6 +1,5 @@
 import type { ToolUse } from "../driver/types/toolUse.ts";
 import type { InspectedConfig } from "../grading/types/inspectedConfig.ts";
-import type { AskedTopic } from "../simulator/types/userAnswers.ts";
 import type { Arm } from "./arm.ts";
 
 /**
@@ -16,8 +15,6 @@ export type AxRunOutput = {
 	config: InspectedConfig;
 	/** the config as it looked after each user message, in order (for afterTurn) */
 	configAfterTurn: InspectedConfig[];
-	/** which topics the agent's questions hit, in order (for flow grading) */
-	askedAbout: AskedTopic[];
 	toolUses: ToolUse[];
 	loadedSkills: string[];
 	finalText: string;
