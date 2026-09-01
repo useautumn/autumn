@@ -63,6 +63,10 @@ export const schemaByTool = {
 	z.ZodType
 >;
 
+/** A preview's changed plans carry the terms a customize is diffed against, so
+ * every surface can render the diff from the preview alone. */
+const BILLING_PREVIEW_EXPAND = ["incoming.plan", "outgoing.plan"];
+
 const operations = toolDomains.flatMap((domain) => domain.operations ?? []);
 const billingPreviews = toolDomains.flatMap(
 	(domain) => domain.billingPreviews ?? [],
@@ -88,7 +92,11 @@ const createRawAutumnOperationToolset = ({
 	const operationTools: ToolRecord = {
 		...toTools(operations, operationTool),
 		...toTools(billingPreviews, (config) =>
-			operationTool({ ...config, endpoint: config.previewEndpoint }),
+			operationTool({
+				...config,
+				endpoint: config.previewEndpoint,
+				expand: BILLING_PREVIEW_EXPAND,
+			}),
 		),
 		...toTools(localPreviews, rawLocalPreviewTool),
 		...toTools(confirmedWrites, operationTool),

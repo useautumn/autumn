@@ -11,6 +11,7 @@ import { setupDefaultProductContext } from "@/internal/billing/v2/actions/update
 import { setupUpdateLicenseQuantities } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateLicenseQuantities";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
 import { handleEntityLicenseAssignmentErrors } from "@/internal/billing/v2/common/errors/handleEntityLicenseAssignmentErrors";
+import { handleInvoiceModeEmailErrors } from "@/internal/billing/v2/common/errors/handleInvoiceModeEmailErrors";
 import { fetchStripeTaxRateForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeTaxRateForBilling";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
@@ -197,6 +198,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	});
 
 	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
+	handleInvoiceModeEmailErrors({ invoiceMode, fullCustomer, stripeCustomer });
 	const isCustom =
 		contextOverride.forceIsCustom !== undefined
 			? contextOverride.forceIsCustom

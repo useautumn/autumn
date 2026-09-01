@@ -99,6 +99,19 @@ export const removedPlanChanges = ({
 	return outgoing.filter((change) => !incomingIds.has(change.planId));
 };
 
+/** A plan on both sides is an in-place update, not an attach — only plans the
+ * customer does not already hold count. */
+export const addedPlanChanges = ({
+	incoming,
+	outgoing,
+}: {
+	incoming: BillingChangeDisplay[];
+	outgoing: BillingChangeDisplay[];
+}): BillingChangeDisplay[] => {
+	const outgoingIds = new Set(outgoing.map((change) => change.planId));
+	return incoming.filter((change) => !outgoingIds.has(change.planId));
+};
+
 const changeSummaryText = ({
 	incoming,
 	outgoing,
@@ -106,8 +119,7 @@ const changeSummaryText = ({
 	incoming: BillingChangeDisplay[];
 	outgoing: BillingChangeDisplay[];
 }): string | null => {
-	const outgoingIds = new Set(outgoing.map((change) => change.planId));
-	const added = incoming.filter((change) => !outgoingIds.has(change.planId));
+	const added = addedPlanChanges({ incoming, outgoing });
 	const removed = removedPlanChanges({ incoming, outgoing });
 	const names = (changes: BillingChangeDisplay[]) =>
 		changes.map((change) => change.name).join(", ");

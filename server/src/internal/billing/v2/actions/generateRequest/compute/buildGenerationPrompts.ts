@@ -1,12 +1,12 @@
-import { leafSkillsFor, skillToText } from "@autumn/agent-docs/agent";
+import { leafSkillBundle, skillToText } from "@autumn/agent-docs/agent";
 import {
 	type GenerateBillingTool,
 	generationRegistry,
 } from "../generationSchemas";
 
-/** The billing subagent's full skill bundle (billing + concepts, with
- * references inlined) — the same single source Leaf runs on. */
-const SHARED_PARAM_DOCS = leafSkillsFor("billing")
+/** The billing skill bundle (billing + concepts, with references inlined) —
+ * the same single source Leaf runs on. */
+const SHARED_PARAM_DOCS = leafSkillBundle(["billing"])
 	.map(skillToText)
 	.join("\n\n");
 
