@@ -73,6 +73,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - Use `createSchedule` for multiple phases or when the request needs explicit control over future billing state.
 - Use `attach` for a single plan attach even when it has `starts_at` or `ends_at`.
 - Check the customer's existing subscriptions before choosing the action.
+- When the request names a product line or plan group ("their marketing product"), the target is a plan from that group in the catalog — customize the closest one when none matches the requested terms. A subscription from another group is never the target, even when it carries the same feature.
 
 ### attach
 
