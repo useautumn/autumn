@@ -58,12 +58,18 @@ export const executeMultiSubscriptionBillingPlan = async ({
 		stripeResults.push(result);
 	}
 
-	const deferredResult = stripeResults.find((result) => result.deferred);
-	if (deferredResult?.deferredMetadataId) {
+	// Only a wholly deferred request can be held as pending: a partially
+	// deferred one has live subscriptions whose products must be inserted now.
+	const deferredMetadataId =
+		stripeResults.length > 0 && stripeResults.every((result) => result.deferred)
+			? stripeResults[0].deferredMetadataId
+			: undefined;
+
+	if (deferredMetadataId) {
 		await insertPendingCustomerProducts({
 			ctx,
 			autumnBillingPlan,
-			metadataId: deferredResult.deferredMetadataId,
+			metadataId: deferredMetadataId,
 		});
 		return stripeResults;
 	}

@@ -51,12 +51,16 @@ export const promotePendingCustomerProducts = async ({
 		});
 
 		// Rollovers are held back while a plan is pending, the same way they are
-		// for a scheduled plan, so carry them over as it goes live.
-		await reapplyExistingRolloversToCustomerProduct({
-			ctx,
-			fullCustomer,
-			customerProduct: plannedCustomerProduct,
-		});
+		// for a scheduled plan, so carry them over as it goes live. The persisted
+		// row is the one with no rollovers yet — reapplying to the planned row
+		// would insert a second copy of the ones it still holds in memory.
+		if (plannedCustomerProduct.status === CusProductStatus.Active) {
+			await reapplyExistingRolloversToCustomerProduct({
+				ctx,
+				fullCustomer,
+				customerProduct,
+			});
+		}
 
 		promotedIds.add(customerProduct.id);
 	}
