@@ -7,6 +7,10 @@ import { describeToolUse } from "./driver/describeToolUse.ts";
 import { type CompletedTurn, runAgentCase } from "./driver/runAgentCase.ts";
 import { inspectWorkspaceConfig } from "./grading/inspectConfig.ts";
 import { renderScorecard } from "./grading/renderScorecard.ts";
+import {
+	captureConfigText,
+	inspectConfigSnapshots,
+} from "./grading/turnSnapshots.ts";
 import type { AxScore } from "./grading/types/axScore.ts";
 import { equipAgent } from "./kit/equipAgent.ts";
 import { bareKit, defaultKit, kitUnderTest } from "./kit/kits.ts";
@@ -95,15 +99,24 @@ export const initAxEval = ({
 				workspaceDir: workspace.dir,
 				kit: armKit,
 			});
+			const configTextAfterTurn: (string | null)[] = [];
+			const turnSource = turnSourceFor(axCase);
 			const run = await runAgentCase({
 				label: `${axCase.name}/${arm}`,
 				cwd: workspace.dir,
-				turnSource: turnSourceFor(axCase),
+				turnSource,
 				skillPluginDir: equipment.pluginDir,
 				skillIds: equipment.skillIds,
 				maxTurns,
 				timeoutMs,
-				onTurn: logTurnToBraintrust,
+				onTurn: (turn) => {
+					configTextAfterTurn.push(captureConfigText(workspace.dir));
+					logTurnToBraintrust(turn);
+				},
+			});
+			const configAfterTurn = await inspectConfigSnapshots({
+				workspaceDir: workspace.dir,
+				configTexts: configTextAfterTurn,
 			});
 			const config = await inspectWorkspaceConfig(workspace.dir);
 			return {
@@ -111,6 +124,8 @@ export const initAxEval = ({
 				skillId: equipment.underTestSkillId,
 				kitSkillIds: equipment.skillIds,
 				config,
+				configAfterTurn,
+				askedAbout: turnSource.askedTopics?.() ?? [],
 				...run,
 			};
 		} finally {

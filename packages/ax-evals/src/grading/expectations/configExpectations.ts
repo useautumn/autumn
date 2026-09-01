@@ -12,44 +12,86 @@ const planMatches = (spec: PlanSpec, plan: ApiPlanParams): boolean => {
 export const config = {
 	/** autumn.config.ts exists, parses, and passes atmn validation */
 	valid: (): Expectation => ({
-		name: "config valid",
+		name: "config parses and passes validation",
 		kind: "config",
-		score: (output) => ({
-			name: "config valid",
-			score:
-				output.config.configFound &&
-				!output.config.parseError &&
-				!output.config.validationErrors
-					? 1
-					: 0,
-			metadata: {
-				parseError: output.config.parseError,
-				validationErrors: output.config.validationErrors,
-			},
-		}),
+		score: (output) => {
+			const { configFound, parseError, validationErrors } = output.config;
+			const why = !configFound
+				? "no autumn.config.ts was written"
+				: parseError
+					? `config does not parse: ${parseError.slice(0, 80)}`
+					: validationErrors
+						? `atmn validation failed: ${validationErrors[0]}`
+						: undefined;
+			return {
+				name: "config parses and passes validation",
+				score: why ? 0 : 1,
+				metadata: { why, parseError, validationErrors },
+			};
+		},
 	}),
 
 	/** some plan in the config structurally matches the spec */
 	plan: (label: string, spec: PlanSpec): Expectation => ({
-		name: `plan: ${label}`,
+		name: `has plan: ${label}`,
 		kind: "config",
-		score: (output) => ({
-			name: `plan: ${label}`,
-			score: output.config.plans.some((plan) => planMatches(spec, plan))
-				? 1
-				: 0,
-			metadata: { spec, plans: output.config.plans },
-		}),
+		score: (output) => {
+			const matched = output.config.plans.some((plan) =>
+				planMatches(spec, plan),
+			);
+			const why = matched
+				? undefined
+				: output.config.plans.length === 0
+					? "the config has no plans"
+					: `none of the ${output.config.plans.length} plans match the expected shape`;
+			return {
+				name: `has plan: ${label}`,
+				score: matched ? 1 : 0,
+				metadata: { why, spec, plans: output.config.plans },
+			};
+		},
+	}),
+
+	/** a boolean feature exists and some plan grants it (id-agnostic) */
+	booleanFeatureOnPlan: (): Expectation => ({
+		name: "a plan grants a boolean (on/off) feature",
+		kind: "config",
+		score: (output) => {
+			const booleanFeatureIds = output.config.features
+				.filter((feature) => feature.type === "boolean")
+				.map((feature) => feature.id);
+			const granted = output.config.plans.some((plan) =>
+				(plan.items ?? []).some((item) =>
+					booleanFeatureIds.includes(String(item.feature_id ?? "")),
+				),
+			);
+			const why = granted
+				? undefined
+				: booleanFeatureIds.length === 0
+					? "no boolean feature was modeled"
+					: "a boolean feature exists but no plan grants it";
+			return {
+				name: "a plan grants a boolean (on/off) feature",
+				score: granted ? 1 : 0,
+				metadata: { why, booleanFeatureIds },
+			};
+		},
 	}),
 
 	/** exactly n plans were modeled */
 	planCount: (count: number): Expectation => ({
-		name: "plan count",
+		name: `modeled exactly ${count} plans`,
 		kind: "config",
-		score: (output) => ({
-			name: "plan count",
-			score: output.config.plans.length === count ? 1 : 0,
-			metadata: { expected: count, actual: output.config.plans.length },
-		}),
+		score: (output) => {
+			const actual = output.config.plans.length;
+			return {
+				name: `modeled exactly ${count} plans`,
+				score: actual === count ? 1 : 0,
+				metadata:
+					actual === count
+						? { expected: count, actual }
+						: { why: `expected ${count} plans, found ${actual}`, actual },
+			};
+		},
 	}),
 };

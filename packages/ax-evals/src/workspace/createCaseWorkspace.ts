@@ -17,10 +17,22 @@ export const createCaseWorkspace = async (
 	const dir = join(WORKSPACE_ROOT, `${label}-${runId}`);
 	await mkdir(join(dir, "node_modules"), { recursive: true });
 	await symlink(ATMN_DIR, join(dir, "node_modules/atmn"));
+	// atmn declared as a dependency and a secret key in .env, so agents see an
+	// already-installed, already-authenticated project; install/login behavior
+	// is exercised by dedicated setup-flow cases instead.
 	await writeFile(
 		join(dir, "package.json"),
-		JSON.stringify({ name: "ax-eval-workspace", type: "module" }, null, "\t"),
+		JSON.stringify(
+			{
+				name: "ax-eval-workspace",
+				type: "module",
+				dependencies: { atmn: "*" },
+			},
+			null,
+			"\t",
+		),
 	);
+	await writeFile(join(dir, ".env"), "AUTUMN_SECRET_KEY=am_sk_test_ax_evals\n");
 
 	const cleanup = async () => {
 		if (process.env.AX_EVALS_KEEP === "1") {

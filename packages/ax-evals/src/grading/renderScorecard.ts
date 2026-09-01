@@ -10,8 +10,8 @@ const mark = (score: number | null) =>
 			: chalk.red("✗");
 
 /**
- * Collects scores as Braintrust computes them and prints one scorecard line
- * per arm when it completes, plus a delta footer when every arm is in.
+ * Collects scores as Braintrust computes them and prints one scorecard per
+ * arm when it completes, plus a delta footer when every arm is in.
  */
 export const renderScorecard = ({
 	arms,
@@ -29,10 +29,23 @@ export const renderScorecard = ({
 		byArm.set(arm, scores);
 		if (scores.length !== expectationCount) return;
 
-		const summary = scores
-			.map((entry) => `${mark(entry.score)} ${chalk.dim(entry.name)}`)
-			.join("   ");
-		process.stderr.write(`\n${chalk.bold(`scores · ${arm}`)}\n  ${summary}\n`);
+		// One expectation per line: failures in red so they pop, passes dimmed.
+		const passedCount = scores.filter((entry) => entry.score === 1).length;
+		const gradedCount = scores.filter((entry) => entry.score !== null).length;
+		const lines = scores
+			.map((entry) => {
+				const name =
+					entry.score === 0 ? chalk.red(entry.name) : chalk.dim(entry.name);
+				const why =
+					entry.score === 0 && typeof entry.metadata?.why === "string"
+						? chalk.dim(` — ${entry.metadata.why}`)
+						: "";
+				return `  ${mark(entry.score)} ${name}${why}`;
+			})
+			.join("\n");
+		process.stderr.write(
+			`\n${chalk.bold(`scores · ${arm}`)} ${chalk.dim(`${passedCount}/${gradedCount}`)}\n${lines}\n`,
+		);
 
 		armsPrinted += 1;
 		if (armsPrinted === arms.length && arms.length > 1) {

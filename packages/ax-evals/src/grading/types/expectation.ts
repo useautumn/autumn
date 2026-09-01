@@ -7,7 +7,8 @@ import type { AxScore } from "./axScore.ts";
  */
 export type Expectation = {
 	name: string;
-	/** config = graded from the produced config; conduct = graded from behavior */
-	kind: "config" | "conduct";
+	/** config = graded from the produced config; conduct = graded from behavior;
+	 * flow = graded from the simulator's interview trace */
+	kind: "config" | "conduct" | "flow";
 	score: (output: AxRunOutput) => AxScore;
 };

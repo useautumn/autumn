@@ -21,13 +21,16 @@ const inspect = async (workspaceDir: string): Promise<InspectedConfig> => {
 				? undefined
 				: formatValidationErrors(validation.errors).split("\n"),
 			plans: config.plans.map((plan) => transformPlanToApi(plan)),
-			featureIds: config.features.map((feature) => feature.id),
+			features: config.features.map((feature) => ({
+				id: feature.id,
+				type: feature.type,
+			})),
 		};
 	} catch (error) {
 		return {
 			configFound: true,
 			plans: [],
-			featureIds: [],
+			features: [],
 			parseError: error instanceof Error ? error.message : String(error),
 		};
 	}

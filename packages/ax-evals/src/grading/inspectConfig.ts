@@ -23,7 +23,7 @@ export const inspectWorkspaceConfig = async (
 	const empty: InspectedConfig = {
 		configFound: false,
 		plans: [],
-		featureIds: [],
+		features: [],
 	};
 	if (!existsSync(join(workspaceDir, "autumn.config.ts"))) return empty;
 
