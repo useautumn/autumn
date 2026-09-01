@@ -3,6 +3,7 @@ import {
 	type Entity,
 	type ExistingUsages,
 	type FullCusProduct,
+	isUnlimitedCusEnt,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deductFromCusEntsTypescript } from "@/internal/balances/track/deductUtils/deductFromCusEntsTypescript";
@@ -78,26 +79,32 @@ export const applyExistingUsages = ({
 				)?.id ?? cusEnts[0]?.id)
 			: undefined;
 
-		// 1. Deduct entity usages
-		for (const [entityId, entityUsage] of Object.entries(
-			existingUsage.entityUsages,
-		)) {
+		// An unlimited grant has no allowance to exceed, so carried usage has
+		// nothing to bill against and would only land on a priced sibling.
+		const absorbedByUnlimitedGrant = cusEnts.some(isUnlimitedCusEnt);
+
+		if (!absorbedByUnlimitedGrant) {
+			// 1. Deduct entity usages
+			for (const [entityId, entityUsage] of Object.entries(
+				existingUsage.entityUsages,
+			)) {
+				deductFromCusEntsTypescript({
+					cusEnts,
+					amountToDeduct: entityUsage,
+					targetEntityId: entityId,
+					// Carried usage is never floored: prior usage above the new
+					// allowance lands as a negative balance, not a silent reset.
+					allowOverage: true,
+				});
+			}
+
+			// 2. Deduct top level usages
 			deductFromCusEntsTypescript({
 				cusEnts,
-				amountToDeduct: entityUsage,
-				targetEntityId: entityId,
-				// Carried usage is never floored: prior usage above the new
-				// allowance lands as a negative balance, not a silent reset.
+				amountToDeduct: existingUsage.usage,
 				allowOverage: true,
 			});
 		}
-
-		// 2. Deduct top level usages
-		deductFromCusEntsTypescript({
-			cusEnts,
-			amountToDeduct: existingUsage.usage,
-			allowOverage: true,
-		});
 
 		for (const newCusEnt of cusEnts) {
 			const original = customerProduct.customer_entitlements.find(
