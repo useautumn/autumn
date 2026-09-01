@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
-	applyTrackOutcome,
-	createMeteringState,
-	decideTrack,
-	evaluateCheck,
-	meteringStateSchema,
-	parseCheckCommand,
-	parseTrackCommand,
-	parseTrackOutcome,
+	computeCheck,
+	computeTrack,
+	createCustomerMeteringState,
+	customerMeteringStateSchema,
+	executeTrack,
+	checkCommandSchema,
+	trackCommandSchema,
+	trackOutcomeSchema,
 } from "../../src/balanceEngine.js";
 
 const identity = {
@@ -17,13 +17,12 @@ const identity = {
 } as const;
 
 const createState = ({ balance = 10 }: { balance?: number } = {}) =>
-	createMeteringState({
+	createCustomerMeteringState({
 		identity,
-		features: {
-			messages: {
-				kind: "direct_metered_v1",
-				buckets: [{ id: "messages_monthly", balance, usage: 0 }],
-			},
+		customerEntitlementsByFeatureId: {
+			messages: [
+					{ id: "messages_monthly", balance, usage: 0 },
+				],
 		},
 	});
 
@@ -36,20 +35,18 @@ const createTrackCommand = ({
 	properties?: Record<string, unknown> | null;
 	occurredAt?: number;
 } = {}) =>
-	parseTrackCommand({
-		input: {
-			schemaVersion: 1,
-			type: "track",
-			commandId: "cmd_1",
-			requestId,
-			identity,
-			entityId: null,
-			featureId: "messages",
-			value: 5,
-			overageBehavior: "reject",
-			properties,
-			occurredAt,
-		},
+	trackCommandSchema.parse({
+		schemaVersion: 1,
+		type: "track",
+		commandId: "cmd_1",
+		requestId,
+		identity,
+		entityId: null,
+		featureId: "messages",
+		value: 5,
+		overageBehavior: "reject",
+		properties,
+		occurredAt,
 	});
 
 const createCheckCommand = ({
@@ -57,21 +54,19 @@ const createCheckCommand = ({
 }: {
 	properties?: Record<string, unknown> | null;
 } = {}) =>
-	parseCheckCommand({
-		input: {
-			schemaVersion: 1,
-			type: "check",
-			requestId: "req_check_1",
-			identity,
-			entityId: null,
-			featureId: "messages",
-			requiredBalance: 1,
-			properties,
-			occurredAt: 1_700_000_000_000,
-		},
+	checkCommandSchema.parse({
+		schemaVersion: 1,
+		type: "check",
+		requestId: "req_check_1",
+		identity,
+		entityId: null,
+		featureId: "messages",
+		requiredBalance: 1,
+		properties,
+		occurredAt: 1_700_000_000_000,
 	});
 
-const requireNewOutcome = (decision: ReturnType<typeof decideTrack>) => {
+const requireNewOutcome = (decision: ReturnType<typeof computeTrack>) => {
 	if (decision.kind !== "new") {
 		throw new Error(`Expected a new outcome, received ${decision.kind}`);
 	}
@@ -81,13 +76,13 @@ const requireNewOutcome = (decision: ReturnType<typeof decideTrack>) => {
 describe("balance engine contract boundaries", () => {
 	test("names property-sensitive commands as unsupported", () => {
 		expect(
-			decideTrack({
+			computeTrack({
 				state: createState(),
 				command: createTrackCommand({ properties: { region: "eu" } }),
 			}),
 		).toEqual({ kind: "unsupported", reason: "properties_not_supported" });
 		expect(
-			evaluateCheck({
+			computeCheck({
 				state: createState(),
 				command: createCheckCommand({ properties: { region: "eu" } }),
 			}),
@@ -104,12 +99,12 @@ describe("balance engine contract boundaries", () => {
 	test("treats attempt metadata changes as the same logical command", () => {
 		const state = createState();
 		const outcome = requireNewOutcome(
-			decideTrack({ state, command: createTrackCommand() }),
+			computeTrack({ state, command: createTrackCommand() }),
 		);
-		const appliedState = applyTrackOutcome({ state, outcome }).state;
+		const appliedState = executeTrack({ state, outcome }).state;
 
 		expect(
-			decideTrack({
+			computeTrack({
 				state: appliedState,
 				existingReceipt: outcome,
 				command: createTrackCommand({
@@ -122,7 +117,7 @@ describe("balance engine contract boundaries", () => {
 
 	test("rejects outcomes whose metadata contradicts their mutations", () => {
 		const outcome = requireNewOutcome(
-			decideTrack({ state: createState(), command: createTrackCommand() }),
+			computeTrack({ state: createState(), command: createTrackCommand() }),
 		);
 
 		for (const input of [
@@ -134,12 +129,12 @@ describe("balance engine contract boundaries", () => {
 			},
 			{ ...outcome, commandFingerprint: "incorrect" },
 		]) {
-			expect(() => parseTrackOutcome({ input })).toThrow();
+			expect(() => trackOutcomeSchema.parse(input)).toThrow();
 		}
 	});
 
 	test("returns API-compatible remaining balance after overflow", () => {
-		const result = evaluateCheck({
+		const result = computeCheck({
 			state: createState({ balance: -2 }),
 			command: createCheckCommand(),
 		});
@@ -153,15 +148,14 @@ describe("balance engine contract boundaries", () => {
 
 	test("uses an explicitly versioned direct-metered state shape", () => {
 		expect(
-			meteringStateSchema.safeParse({
+			customerMeteringStateSchema.safeParse({
 				schemaVersion: 1,
 				identity,
 				revision: 0,
-				features: {
-					messages: {
-						kind: "direct_metered_v1",
-						buckets: [{ id: "messages_monthly", balance: 10, usage: 0 }],
-					},
+				customerEntitlementsByFeatureId: {
+					messages: [
+							{ id: "messages_monthly", balance: 10, usage: 0 },
+						],
 				},
 			}).success,
 		).toBe(true);
