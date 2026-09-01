@@ -10,5 +10,6 @@ export type Expectation = {
 	/** config = graded from the produced config; conduct = graded from behavior;
 	 * flow = graded from the simulator's interview trace */
 	kind: "config" | "conduct" | "flow";
-	score: (output: AxRunOutput) => AxScore;
+	/** async when the scorer calls out (e.g. an LLM judge) */
+	score: (output: AxRunOutput) => AxScore | Promise<AxScore>;
 };

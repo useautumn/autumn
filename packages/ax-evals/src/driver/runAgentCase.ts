@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { query, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import {
 	AGENT_ALLOWED_TOOLS,
@@ -7,6 +8,7 @@ import {
 } from "../axConstants.ts";
 import type { TurnSource } from "../simulator/types/turnSource.ts";
 import { collectAgentEvent } from "./collectAgentEvent.ts";
+import { createLiveChat, type LiveChat } from "./renderLiveChat.ts";
 import { renderRunFooter, renderTurnBlock } from "./renderTurnBlock.ts";
 import { shortText, trace } from "./trace.ts";
 import type { AgentRunResult } from "./types/agentRunResult.ts";
@@ -28,8 +30,10 @@ export type CompletedTurn = {
  * arrives — never on timers. Subscription login is used: the inherited
  * ANTHROPIC_API_KEY is dropped unless AX_EVALS_USE_API_KEY=1.
  *
- * Progress rendering: one atomic block per completed turn (never interleaves
- * across arms). AX_EVALS_TRACE=live streams raw events instead; =0 silences.
+ * Progress rendering: `chat` (default for a single arm) streams each user
+ * turn, tool call, and agent reply the moment it happens; `blocks` (default
+ * for concurrent arms) writes one atomic block per completed turn so arms
+ * never interleave. AX_EVALS_TRACE=live streams raw events; =0 silences.
  */
 export const runAgentCase = async ({
 	label,
@@ -39,6 +43,8 @@ export const runAgentCase = async ({
 	skillIds,
 	maxTurns = DEFAULT_MAX_TURNS,
 	timeoutMs = DEFAULT_TIMEOUT_MS,
+	renderMode = "blocks",
+	systemPromptAppend,
 	onTurn,
 }: {
 	label: string;
@@ -48,11 +54,17 @@ export const runAgentCase = async ({
 	skillIds?: string[];
 	maxTurns?: number;
 	timeoutMs?: number;
+	renderMode?: "chat" | "blocks";
+	/** extra system-prompt context, e.g. a scenario primer */
+	systemPromptAppend?: string;
 	onTurn?: (turn: CompletedTurn) => void;
 }): Promise<AgentRunResult> => {
 	const env: Record<string, string | undefined> = {
 		...process.env,
 		CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
+		// Bare `atmn` resolves like it would after npm install: through the
+		// workspace's own .bin (where step-tier stubs also live).
+		PATH: `${join(cwd, "node_modules/.bin")}:${process.env.PATH ?? ""}`,
 	};
 	if (process.env.AX_EVALS_USE_API_KEY !== "1") delete env.ANTHROPIC_API_KEY;
 
@@ -61,11 +73,21 @@ export const runAgentCase = async ({
 		loadedSkills: [],
 		finalText: "",
 		turnTexts: [],
+		userTexts: [],
 		turns: 0,
 		costUsd: 0,
 		wallMs: 0,
 		timedOut: false,
 	};
+
+	const traceEnv = process.env.AX_EVALS_TRACE;
+	const rendering =
+		traceEnv === "live" || traceEnv === "0" ? "none" : renderMode;
+	const chat: LiveChat | undefined =
+		rendering === "chat"
+			? createLiveChat({ arm: label, workspaceDir: cwd })
+			: undefined;
+	const renderBlocks = rendering === "blocks";
 
 	// The generator drains this queue; the message loop decides when to
 	// enqueue the next turn (on each result) and breaks when the source is dry.
@@ -74,6 +96,7 @@ export const runAgentCase = async ({
 	let notifyQueued: (() => void) | undefined;
 	const enqueueTurn = (text: string) => {
 		trace(label, `user: ${shortText(text)}`);
+		chat?.user(text);
 		queuedTurns.push(text);
 		sentTexts.push(text);
 		notifyQueued?.();
@@ -98,7 +121,7 @@ export const runAgentCase = async ({
 	const started = Date.now();
 	const deadline = started + timeoutMs;
 
-	const openingTurn = turnSource.next("");
+	const openingTurn = await turnSource.next("");
 	if (openingTurn === null)
 		throw new Error("TurnSource produced no opening turn");
 	enqueueTurn(openingTurn);
@@ -113,6 +136,13 @@ export const runAgentCase = async ({
 				plugins: [{ type: "local" as const, path: skillPluginDir }],
 			}),
 			...(skillIds && { skills: skillIds }),
+			...(systemPromptAppend && {
+				systemPrompt: {
+					type: "preset" as const,
+					preset: "claude_code" as const,
+					append: systemPromptAppend,
+				},
+			}),
 			model: AGENT_MODEL,
 			allowedTools: AGENT_ALLOWED_TOOLS,
 			permissionMode: "acceptEdits",
@@ -121,11 +151,10 @@ export const runAgentCase = async ({
 		},
 	});
 
-	const renderBlocks =
-		process.env.AX_EVALS_TRACE !== "live" && process.env.AX_EVALS_TRACE !== "0";
 	let turnStartedAt = started;
 	let turnStartCostUsd = 0;
 	let turnStartToolIndex = 0;
+	const renderedResults = new WeakSet<ToolUse>();
 
 	const finishTurn = (subtype: string) => {
 		const turnIndex = result.turns - 1;
@@ -169,12 +198,41 @@ export const runAgentCase = async ({
 			process.stderr.write(`│ ✗ TIMEOUT after ${timeoutMs}ms [${label}]\n`);
 			break;
 		}
+		const toolCountBefore = result.toolUses.length;
 		collectAgentEvent({ message, result, label });
+		if (chat) {
+			if (message.type === "system" && message.subtype === "init") {
+				chat.header({
+					skillLoaded: skillIds
+						? skillIds.every((id) => result.loadedSkills.includes(id))
+						: undefined,
+					authSource: result.apiKeySource,
+					model: result.model,
+				});
+			}
+			for (const tool of result.toolUses.slice(toolCountBefore))
+				chat.tool(tool);
+			if (message.type === "user") {
+				for (const tool of result.toolUses) {
+					if (tool.result && !renderedResults.has(tool)) {
+						renderedResults.add(tool);
+						chat.toolResult(tool);
+					}
+				}
+			}
+		}
 		if (message.type === "result") {
+			chat?.agentText(result.finalText);
+			chat?.turnDone({
+				turnIndex: result.turns - 1,
+				subtype: message.subtype,
+				turnMs: Date.now() - turnStartedAt,
+				turnCostUsd: result.costUsd - turnStartCostUsd,
+			});
 			finishTurn(message.subtype);
 			const nextText =
 				sentTexts.length < turnSource.maxUserTurns
-					? turnSource.next(result.finalText)
+					? await turnSource.next(result.finalText)
 					: null;
 			if (nextText === null) break;
 			enqueueTurn(nextText);
@@ -182,7 +240,14 @@ export const runAgentCase = async ({
 	}
 
 	result.wallMs = Date.now() - started;
-	if (renderBlocks) {
+	result.userTexts = sentTexts;
+	if (chat) {
+		chat.footer({
+			turns: result.turns,
+			wallMs: result.wallMs,
+			costUsd: result.costUsd,
+		});
+	} else if (renderBlocks) {
 		process.stderr.write(
 			renderRunFooter({
 				arm: label,

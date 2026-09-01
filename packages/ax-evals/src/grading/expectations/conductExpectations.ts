@@ -89,6 +89,36 @@ export const conduct = {
 		},
 	}),
 
+	/** no tool result hit harness misconfiguration (approval walls, missing
+	 * binaries) — benign probe failures like reading a missing file are fine.
+	 * A 0 here means fix the eval setup before trusting other scores. */
+	noHarnessFriction: (): Expectation => ({
+		name: "no harness friction",
+		kind: "conduct",
+		score: (output) => {
+			const friction = output.toolUses.filter(
+				(tool) =>
+					tool.result?.isError &&
+					/requires approval|command not found|permission denied/i.test(
+						tool.result.text,
+					),
+			);
+			return {
+				name: "no harness friction",
+				score: friction.length === 0 ? 1 : 0,
+				metadata:
+					friction.length === 0
+						? undefined
+						: {
+								why: "the environment blocked the agent — eval setup problem, not agent behavior",
+								blocked: friction.map(
+									(tool) => `${tool.name}: ${tool.result?.text.slice(0, 100)}`,
+								),
+							},
+			};
+		},
+	}),
+
 	/** the config was written at some point (any turn) */
 	wroteConfig: (): Expectation => ({
 		name: "wrote autumn.config.ts",

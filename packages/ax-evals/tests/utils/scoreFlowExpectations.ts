@@ -6,13 +6,13 @@ import type { AxRunOutput } from "../../src/types/axRunOutput.ts";
  * Runs a case's flow expectations against a synthetic interview trace — no
  * agent involved. Returns { expectationName: score }.
  */
-export const scoreFlowExpectations = ({
+export const scoreFlowExpectations = async ({
 	axCase,
 	askedAbout,
 }: {
 	axCase: AxCase;
 	askedAbout: AskedTopic[];
-}): Record<string, number | null> => {
+}): Promise<Record<string, number | null>> => {
 	const output: AxRunOutput = {
 		arm: "with",
 		config: { configFound: false, plans: [], features: [] },
@@ -22,6 +22,7 @@ export const scoreFlowExpectations = ({
 		loadedSkills: [],
 		finalText: "",
 		turnTexts: [],
+		userTexts: [],
 		turns: askedAbout.length + 1,
 		costUsd: 0,
 		wallMs: 0,
@@ -31,9 +32,11 @@ export const scoreFlowExpectations = ({
 		(expectation) => expectation.kind === "flow",
 	);
 	return Object.fromEntries(
-		flowExpectations.map((expectation) => {
-			const { name, score } = expectation.score(output);
-			return [name, score];
-		}),
+		await Promise.all(
+			flowExpectations.map(async (expectation) => {
+				const { name, score } = await expectation.score(output);
+				return [name, score] as const;
+			}),
+		),
 	);
 };

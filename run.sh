@@ -86,7 +86,7 @@ if [[ "$resolved" == "$repo_root/packages/ax-evals/"* && "$resolved" == *".eval.
 	if [[ ${#passthrough_args[@]} -gt 0 && "${passthrough_args[0]}" =~ ^[0-9]+$ ]]; then
 		passthrough_args=("${passthrough_args[@]:1}")
 	fi
-	exec env infisical run --env=dev --recursive -- "$repo_root/packages/ax-evals/node_modules/.bin/braintrust" eval "$rel" --external-packages @anthropic-ai/claude-agent-sdk ${passthrough_args[@]+"${passthrough_args[@]}"}
+	exec env AX_EVALS_ARM=with infisical run --env=dev --recursive -- "$repo_root/packages/ax-evals/node_modules/.bin/braintrust" eval "$rel" --external-packages @anthropic-ai/claude-agent-sdk ${passthrough_args[@]+"${passthrough_args[@]}"}
 fi
 
 if [[ "$resolved" == "$repo_root/packages/ax-evals/"* && "$resolved" == *".test.ts" ]]; then

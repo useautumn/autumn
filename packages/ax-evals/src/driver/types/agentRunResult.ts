@@ -10,6 +10,8 @@ export type AgentRunResult = {
 	finalText: string;
 	/** the agent's closing text of each user turn, in order */
 	turnTexts: string[];
+	/** every user message sent, in order (for transcript judging) */
+	userTexts: string[];
 	turns: number;
 	costUsd: number;
 	wallMs: number;
