@@ -500,7 +500,7 @@ If the customer the customer is NOT on a paid plan (free plan or no plan at all)
 The customer already has an active (Stripe) subscription — common in sales-led trials.
 
 - On end: revert (default to this): attach the new plan with `on_end: "revert"` . This grants the plan in Autumn without touching the Stripe subscription; at trial end Autumn moves the customer back to their original plan, preserving the existing billing cycle.
-- On end: bill -- attaching a plan with a trial (or updating the subscription to add one) resets the Stripe billing anchor/cycle. This can be undesired so warn the user if they request this.
+- On end: bill -- attaching a plan with a trial (or updating the subscription to add one) resets the Stripe billing anchor/cycle. This can be undesired: warn the user, offer `on_end: "revert"` instead, and let them choose.
 - Card required param is ignored if there is already an active sub.
 
 Updating or ending a trial
