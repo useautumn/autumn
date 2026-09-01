@@ -2,8 +2,8 @@ import type { RouteScopeRequirement } from "@autumn/shared";
 import type { LeafAgentConnection } from "./toolAllowlists.js";
 
 type GatedWrite = {
-	/** Subagents whose toolset exposes (and gates) this write. */
-	agents: readonly Exclude<LeafAgentConnection, "investigator">[];
+	/** Agents whose toolset exposes (and gates) this write. */
+	agents: readonly LeafAgentConnection[];
 	/** Preview twin used to backfill the approval card; absent = no preview. */
 	previewTool?: string;
 	/** Per-user scopes required to approve; absent = fails closed at decide. */
@@ -11,23 +11,24 @@ type GatedWrite = {
 	toolName: string;
 };
 
-/** The one authoritative table of approval-gated writes — approval sets,
- * scope requirements, and write→preview mapping all derive from here. */
+/** The one authoritative table of approval-gated writes — approval sets, scope
+ * requirements, and write→preview mapping all derive from here. Every gated
+ * write also carries an agent-authored description; see approvalDescriptionSchema. */
 export const GATED_WRITES: readonly GatedWrite[] = [
 	{
-		agents: ["billing"],
+		agents: ["leaf"],
 		previewTool: "previewAttach",
 		scopes: ["billing:write"],
 		toolName: "attach",
 	},
 	{
-		agents: ["billing"],
+		agents: ["leaf"],
 		previewTool: "previewCreateBalance",
 		scopes: ["balances:write"],
 		toolName: "createBalance",
 	},
 	{
-		agents: ["billing"],
+		agents: ["leaf"],
 		toolName: "createEntity",
 	},
 	{
@@ -37,18 +38,18 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		toolName: "createPlan",
 	},
 	{
-		agents: ["billing", "catalog"],
+		agents: ["catalog", "leaf"],
 		scopes: ["rewards:write"],
 		toolName: "createReward",
 	},
 	{
-		agents: ["billing"],
+		agents: ["leaf"],
 		previewTool: "previewCreateSchedule",
 		scopes: ["billing:write"],
 		toolName: "createSchedule",
 	},
 	{
-		agents: ["orchestrator"],
+		agents: ["leaf"],
 		toolName: "updateAgentRules",
 	},
 	{
@@ -58,7 +59,7 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		toolName: "updateCatalog",
 	},
 	{
-		agents: ["billing"],
+		agents: ["leaf"],
 		scopes: ["customers:write"],
 		toolName: "updateCustomer",
 	},
@@ -69,7 +70,7 @@ export const GATED_WRITES: readonly GatedWrite[] = [
 		toolName: "updatePlan",
 	},
 	{
-		agents: ["billing"],
+		agents: ["leaf"],
 		previewTool: "previewUpdateSubscription",
 		scopes: ["billing:write"],
 		toolName: "updateSubscription",

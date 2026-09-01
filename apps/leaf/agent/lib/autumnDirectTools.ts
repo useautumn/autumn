@@ -1,9 +1,7 @@
 import { defineDynamic, defineTool } from "eve/tools";
-import { withoutApprovalSummary } from "../../src/internal/approvals/utils/approvalSummary.js";
-import { settledWriteResult } from "../../src/internal/approvals/utils/settledWriteResult.js";
 import { callAutumnMcpTool } from "../../src/internal/autumnMcp/rpcClient.js";
+import { withApprovalDescriptionSchema } from "./approvalDescriptionSchema.js";
 import { approvalSets } from "./approvalSets.js";
-import { withApprovalSummarySchema } from "./approvalSummarySchema.js";
 import {
 	type LeafPrincipalAttributes,
 	mintCachedAutumnToken,
@@ -11,6 +9,29 @@ import {
 import { leafMcpBaseUrl, serverToolMetadata } from "./autumnToolMetadata.js";
 import { type LeafAgentConnection, toolAllowlists } from "./toolAllowlists.js";
 import { slimToolSchema } from "./toolSchemaSlim.js";
+
+/** Deciding how to bill needs the customer's payment method (card on file or
+ * not) and their plans, so they are asked for rather than costing a second
+ * read. The tool's input is `{ request }` and validates strict, so this has to
+ * go inside `request` — a sibling key is rejected outright. */
+const DEFAULT_CUSTOMER_EXPAND = ["payment_method", "subscriptions.plan"];
+
+export const withCustomerExpand = (input: Record<string, unknown>) => {
+	const request = input.request;
+	if (!request || typeof request !== "object" || Array.isArray(request)) {
+		return input;
+	}
+	const fields = request as Record<string, unknown>;
+	if (fields.expand !== undefined) return input;
+	return { ...input, request: { ...fields, expand: DEFAULT_CUSTOMER_EXPAND } };
+};
+
+/** What a gated write returns to the model. The card is the user's decision
+ * point, so the turn ends here rather than waiting on it. */
+const RECORDED_FOR_APPROVAL =
+	"Recorded for approval. The user sees an approval card with the exact " +
+	"change and applies it from there. Do not call this write again, and do " +
+	"not tell the user it has been applied.";
 
 /** Pre-registers the agent's allowlisted Autumn tools on every step with the
  * exact server schemas, so no discovery round trip is needed. */
@@ -40,36 +61,30 @@ export const autumnDirectTools = ({
 					const qualified = `autumn__${tool.name}`;
 					const toolName = tool.name;
 					const requiresApproval = approvalToolNames.has(toolName);
-					const gatedBillingWrite = agent === "billing" && requiresApproval;
 					const inputSchema = slimToolSchema(tool.inputSchema);
 					entries[qualified] = defineTool({
-						approval: () =>
-							requiresApproval ? "user-approval" : "not-applicable",
+						// Nothing suspends the turn: a gated write is recorded here and
+						// applied by leaf when the user approves the card. Parking left
+						// the session unable to raise a second card in the same thread.
+						approval: () => "not-applicable",
 						description: tool.description,
 						execute: async (input, toolCtx) => {
-							if (requiresApproval) {
-								const settled = await settledWriteResult({
-									input: input as Record<string, unknown>,
-									sessionId: toolCtx.session.id,
-									toolName,
-								});
-								if (settled !== undefined) return settled;
-							}
+							if (requiresApproval) return RECORDED_FOR_APPROVAL;
 							const minted = await mintCachedAutumnToken(
 								toolCtx.session.auth.current?.attributes,
 							);
+							const args = input as Record<string, unknown>;
 							return callAutumnMcpTool({
-								args: gatedBillingWrite
-									? withoutApprovalSummary(input as Record<string, unknown>)
-									: (input as Record<string, unknown>),
+								args:
+									toolName === "getCustomer" ? withCustomerExpand(args) : args,
 								baseUrl: leafMcpBaseUrl(),
 								env: minted.appEnv,
 								token: minted.accessToken,
 								toolName,
 							});
 						},
-						inputSchema: gatedBillingWrite
-							? withApprovalSummarySchema(inputSchema)
+						inputSchema: requiresApproval
+							? withApprovalDescriptionSchema(inputSchema)
 							: inputSchema,
 					});
 				}

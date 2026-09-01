@@ -23,7 +23,7 @@ export default defineEval({
 							};
 						}
 					).data.requests;
-					const summary = requests?.[0]?.action?.input?.approval_summary;
+					const summary = requests?.[0]?.action?.input?.approval_description;
 					return (
 						typeof summary === "string" &&
 						/1035|1,035/.test(summary) &&

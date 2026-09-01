@@ -51,7 +51,7 @@ export default defineEval({
 					  }
 					| undefined;
 				const summaries = (requested?.data.requests ?? []).map(
-					(request) => request.action?.input?.approval_summary,
+					(request) => request.action?.input?.approval_description,
 				);
 				return (
 					summaries.length === 2 &&

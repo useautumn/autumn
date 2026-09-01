@@ -1,5 +1,6 @@
-/** Which Autumn MCP tools each agent may discover. The split is the point of
- * the subagent architecture: a small surface per specialist. */
+/** Which Autumn MCP tools each agent may discover. `leaf` is the single live
+ * agent; `catalog` is prepared but wired to no agent, so catalog writes reach
+ * nobody — see agent-docs.config.ts. */
 
 const ORG_CONTEXT_READS = [
 	"getAgentRules",
@@ -20,25 +21,6 @@ const CUSTOMER_READS = [
 ] as const;
 
 export const toolAllowlists = {
-	billing: [
-		...ORG_CONTEXT_READS,
-		...DATE_UTILS,
-		...CUSTOMER_READS,
-		"attach",
-		"createBalance",
-		"createEntity",
-		"createReward",
-		"createSchedule",
-		"getOrCreateCustomer",
-		"getPlan",
-		"listRewards",
-		"previewAttach",
-		"previewCreateBalance",
-		"previewCreateSchedule",
-		"previewUpdateSubscription",
-		"updateCustomer",
-		"updateSubscription",
-	],
 	catalog: [
 		...ORG_CONTEXT_READS,
 		...DATE_UTILS,
@@ -50,21 +32,29 @@ export const toolAllowlists = {
 		"updateCatalog",
 		"updatePlan",
 	],
-	investigator: [
+	leaf: [
 		...ORG_CONTEXT_READS,
 		...DATE_UTILS,
 		...CUSTOMER_READS,
+		"attach",
+		"createBalance",
+		"createEntity",
+		"createReward",
+		"createSchedule",
 		"getCurrentOrganization",
+		"getOrCreateCustomer",
 		"getPlan",
 		"listRewards",
+		"previewAttach",
+		"previewCreateBalance",
+		"previewCreateSchedule",
+		"previewUpdateSubscription",
 		"queryRequestLogs",
 		"searchRequestLogs",
+		"updateAgentRules",
+		"updateCustomer",
+		"updateSubscription",
 	],
-	/** Routing plus org context and catalog reads; catalog writes live only in
-	 * the (unwired) catalog specialist (see agent/subagents/README.md). */
-	// A pure router: delegation plus the one gated admin write. Org context is
-	// preloaded server-side; every other read lives on a specialist.
-	orchestrator: ["updateAgentRules"],
 } as const satisfies Record<string, readonly string[] | undefined>;
 
 export type LeafAgentConnection = keyof typeof toolAllowlists;

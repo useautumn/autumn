@@ -13,9 +13,8 @@ const customerLookups = (events: ReadonlyArray<{ type: string }>) =>
 
 export default defineEval({
 	description:
-		"A trial attach for a customer named earlier in the thread goes straight to billing — no investigator hop and no paging through the customer list to re-find them.",
+		"A trial attach for a customer named earlier in the thread reuses that id — no paging through the customer list to re-find them.",
 	async test(t) {
-		// Turn 1 is a question, so an investigator hop here is correct.
 		await t.send(
 			"i'm looking at customer gen-attach-trial, can you tell me what plan they're on?",
 		);
@@ -23,10 +22,9 @@ export default defineEval({
 			"can u attach scale with a 2 week free trial to this customer",
 		);
 
-		// Turn 2 names a billing action: it must route straight to billing and
-		// carry the customer the thread already identified, with no re-lookup.
-		attach.event("subagent.called", { data: { name: "billing" } });
-		attach.notEvent("subagent.called", { data: { name: "investigator" } });
+		// Turn 2 names a billing action against the customer the thread already
+		// identified, so it must reuse that id rather than re-find them.
+		attach.calledTool("autumn__attach", { status: "pending" });
 		attach.eventsSatisfy(
 			"the customer is never re-found by listing customers",
 			(events) => customerLookups(events).length === 0,

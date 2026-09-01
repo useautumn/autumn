@@ -13,13 +13,12 @@ const attachCards = (events: ReadonlyArray<{ type: string }>) =>
 
 export default defineEval({
 	description:
-		"An objection asking for an explanation about proposed billing delegates to billing for text without producing a card (prod thread C0BCAQQK0KS).",
+		"An objection asking for an explanation about proposed billing is answered in text without producing a card (prod thread C0BCAQQK0KS).",
 	async test(t) {
 		const question = await t.send(
 			"The proposed attach for gen-attach-multi on pro_gen-attach-multi at 1035 per month looks wrong. Explain why it uses 1035 without changing anything.",
 		);
 
-		question.event("subagent.called", { data: { name: "billing" } });
 		question.eventsSatisfy(
 			"the question is answered, not re-carded",
 			(events) => attachCards(events) === 0,

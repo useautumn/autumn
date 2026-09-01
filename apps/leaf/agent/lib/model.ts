@@ -8,13 +8,13 @@ type AgentModel = {
 };
 
 const AGENTS: Record<LeafAgentConnection, AgentModel> = {
-	billing: {
-		model: "openrouter/google/gemini-3.7-flash",
+	catalog: { reasoning: "low" },
+	// Routed through OpenRouter, not the direct Anthropic provider: turns on the
+	// direct path stalled silently after tool results.
+	leaf: {
+		model: "openrouter/anthropic/claude-sonnet-5",
 		reasoning: "low",
 	},
-	catalog: { reasoning: "low" },
-	investigator: { reasoning: "low" },
-	orchestrator: { model: "openrouter/x-ai/grok-4.20", reasoning: "none" },
 };
 
 type ModelFamily = {

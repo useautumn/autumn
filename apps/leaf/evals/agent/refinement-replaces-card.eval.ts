@@ -13,7 +13,6 @@ export default defineEval({
 			"Before I approve it, explain what the customer would pay. Do not change the proposal.",
 			{ turnPolicy: "steer" },
 		);
-		question.event("subagent.called", { data: { name: "billing" } });
 		question.notCalledTool("autumn__attach");
 		question.event("message.completed");
 
@@ -23,25 +22,6 @@ export default defineEval({
 		);
 
 		replacement.calledTool("autumn__attach", { status: "pending" });
-		replacement.eventsSatisfy(
-			"the delegation identifies the replacement and its delta",
-			(events) =>
-				events.some((event) => {
-					if (event.type !== "actions.requested") return false;
-					const actions = (
-						event as unknown as {
-							data?: { actions?: Array<{ input?: { message?: string } }> };
-						}
-					).data?.actions;
-					return (actions ?? []).some(({ input }) => {
-						const message = input?.message ?? "";
-						return (
-							/replacement of pending proposal/i.test(message) &&
-							/changed:[^\n]*14[^\n]*trial/i.test(message)
-						);
-					});
-				}),
-		);
 		replacement.eventsSatisfy(
 			"the replacement carries the trial and summarizes its payment outcome",
 			(events) =>
@@ -62,7 +42,7 @@ export default defineEval({
 								free_trial?: { duration_length?: number };
 						  }
 						| undefined;
-					const summary = input?.approval_summary;
+					const summary = input?.approval_description;
 					return (
 						request?.customize?.price?.amount === 1035 &&
 						request.free_trial?.duration_length === 14 &&
