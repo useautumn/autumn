@@ -8,7 +8,7 @@ import {
 	parseCheckCommand,
 	parseTrackCommand,
 	parseTrackOutcome,
-} from "./balanceEngine.js";
+} from "../../src/balanceEngine.js";
 
 const identity = {
 	orgId: "org_1",

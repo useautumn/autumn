@@ -6,7 +6,7 @@ import {
 	evaluateCheck,
 	parseCheckCommand,
 	parseTrackCommand,
-} from "./balanceEngine.js";
+} from "../../src/balanceEngine.js";
 
 /**
  * Contract: checks read the latest applied customer state without mutation and
