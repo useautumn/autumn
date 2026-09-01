@@ -29,6 +29,7 @@ export function CopyTextButton({
 
 	return (
 		<Button
+			title={text}
 			variant={variant as ButtonProps["variant"]}
 			size="icon"
 			className={cn(
