@@ -1,9 +1,9 @@
 // One-off manual refresh of the TRANSIENT lake_cache_v2 balance tables.
-// Must run from the branch/commit where DEFAULT_DATABASE = "lake_cache_v2"
-// (feat/lake-cache-v2-transient or later) — the deployed cron keeps writing
-// v1 until that code ships, so this seeds v2 ahead of the reader flip.
 // Requires MOTHERDUCK_RW_TOKEN and AWS creds with glue:GetTable.
 //   infisical run --env=prod --recursive -- bun run server/experiments/refreshV2CacheOnce.ts
+//
+// --shadow writes ce_balance_totals__shadow instead of the live table, so a
+// query change can be diffed against production before it ships.
 import type { Logger } from "../src/external/logtail/logtailUtils";
 import { refreshCeBalancesCache } from "../src/external/motherduck/refreshCeBalancesCache";
 
@@ -17,9 +17,18 @@ const consoleLogger = {
 	trace: (...args: unknown[]) => console.log("[trace]", ...args),
 } as unknown as Logger;
 
-console.log("Refreshing lake_cache_v2 balance tables...");
+const totalsTable = process.argv.includes("--shadow")
+	? "ce_balance_totals__shadow"
+	: undefined;
+
+console.log(
+	`Refreshing lake_cache_v2 balance tables (totals -> ${totalsTable ?? "ce_balance_totals"})...`,
+);
 const startedAt = performance.now();
-const { ok } = await refreshCeBalancesCache({ logger: consoleLogger });
+const { ok } = await refreshCeBalancesCache({
+	logger: consoleLogger,
+	totalsTable,
+});
 if (!ok) {
 	console.error("Refresh FAILED — v2 is not seeded; do not merge/deploy.");
 	process.exit(1);
