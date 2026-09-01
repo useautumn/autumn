@@ -36,10 +36,13 @@ afterEach(() => {
 describe("chat environment selection", () => {
 	test("exposes the leaf knowledge skills", () => {
 		expect(leafSkills.map((skill) => skill.name).sort()).toEqual([
-			"autumn-billing",
 			"autumn-catalog",
 			"autumn-concepts",
 			"autumn-investigate",
+			"balances",
+			"billing",
+			"schedules",
+			"trials",
 		]);
 	});
 
@@ -52,14 +55,14 @@ describe("chat environment selection", () => {
 		);
 	});
 
-	test("uses bullets for multiple required items", () => {
+	test("keeps the reply style rules", () => {
+		expect(autumnChatInstructions).toContain("fewest words, no fluff");
 		expect(autumnChatInstructions).toContain(
-			"One fact answers in one short sentence",
+			"No greetings, preamble, headers, recaps",
 		);
-		expect(autumnChatInstructions).toContain("goes in bullets");
-		expect(autumnChatInstructions).toContain("ask one direct question");
+		expect(autumnChatInstructions).toContain("Don't pre-announce steps");
 		expect(autumnChatInstructions).toContain(
-			"do not expose internal modelling",
+			"Avoid Autumn-specific terminology",
 		);
 	});
 

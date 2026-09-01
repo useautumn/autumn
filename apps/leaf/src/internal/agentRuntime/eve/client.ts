@@ -15,10 +15,7 @@ import {
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
 // Eve keeps the attribute for the session's life, so only creation sends it.
-const eveHeaders = (
-	auth: EveAuthContext,
-	{ withOrgCatalog = false }: { withOrgCatalog?: boolean } = {},
-): Record<string, string> => {
+const eveHeaders = (auth: EveAuthContext): Record<string, string> => {
 	const headers: Record<string, string> = {
 		authorization: `Bearer ${env.EVE_INTERNAL_AUTH_TOKEN}`,
 		"x-leaf-app-env": String(auth.appEnv),
@@ -41,23 +38,12 @@ const eveHeaders = (
 			auth.orgInstructions,
 		).toString("base64url");
 	}
-	if (withOrgCatalog && auth.orgCatalog) {
-		headers["x-leaf-org-catalog"] = Buffer.from(auth.orgCatalog).toString(
-			"base64url",
-		);
-	}
 	return headers;
 };
 
-const eveClient = ({
-	auth,
-	withOrgCatalog = false,
-}: {
-	auth: EveAuthContext;
-	withOrgCatalog?: boolean;
-}) =>
+const eveClient = ({ auth }: { auth: EveAuthContext }) =>
 	new Client({
-		headers: () => eveHeaders(auth, { withOrgCatalog }),
+		headers: () => eveHeaders(auth),
 		host: env.EVE_SERVER_URL,
 	});
 
@@ -115,7 +101,7 @@ export const postEveMessage = async ({
 	message: EveMessageContent;
 	session?: EveSessionRef;
 }) => {
-	const client = eveClient({ auth, withOrgCatalog: !session });
+	const client = eveClient({ auth });
 	const options = {
 		clientContext: clientContext && asJsonObject(clientContext),
 	};

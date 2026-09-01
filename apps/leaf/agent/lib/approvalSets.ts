@@ -9,10 +9,8 @@ const setForAgent = (agent: LeafAgentConnection): ReadonlySet<string> =>
 	);
 
 export const approvalSets: Record<LeafAgentConnection, ReadonlySet<string>> = {
-	billing: setForAgent("billing"),
 	catalog: setForAgent("catalog"),
-	investigator: setForAgent("investigator"),
-	orchestrator: setForAgent("orchestrator"),
+	leaf: setForAgent("leaf"),
 };
 
 for (const write of GATED_WRITES) {

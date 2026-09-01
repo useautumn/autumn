@@ -25,36 +25,17 @@ export type ApprovalRunResult =
 	// `retryable` means the write never ran to completion (a session crash /
 	// interruption), so the approval stays pending and the user can re-apply.
 	| {
-			chainedApprovalId?: string;
 			error: true;
 			message: string;
-			narration?: Promise<SubmittedApprovalResult | undefined>;
 			retryable?: boolean;
 			writes?: ReadonlyArray<ApprovalWriteOutcome>;
 	  }
-	// The resumed turn parked again — a chained gated write or a question —
-	// and needs its own card, or the session waits in silence.
 	| {
-			chainedApprovalId?: string;
-			narration?: Promise<SubmittedApprovalResult | undefined>;
-			question?: {
-				options: ReadonlyArray<Readonly<{ id?: string; label?: string }>>;
-				prompt: string;
-				requestId: string;
-				sessionId: string;
-			};
 			result: unknown;
 			writes?: ReadonlyArray<ApprovalWriteOutcome>;
 			text: string;
 			toolName?: string;
 	  };
-
-/** A resume outcome — every ApprovalRunResult except drift, which only the
- * pre-execution guard can produce. */
-export type SubmittedApprovalResult = Exclude<
-	ApprovalRunResult,
-	{ drifted: true }
->;
 
 export type ApprovalAuthorization =
 	| { allowed: true }
@@ -63,7 +44,6 @@ export type ApprovalAuthorization =
 export type ApprovalActionDeps = {
 	resolveApproval: (input: {
 		approval: ChatApproval;
-		onProgress?: (statusLine: string) => void;
 		providerUserId: string;
 	}) => Promise<ApprovalRunResult>;
 	cancelApproval: (input: {
@@ -74,10 +54,6 @@ export type ApprovalActionDeps = {
 		approvalId: string;
 		providerUserId: string;
 	}) => Promise<ChatApproval | undefined>;
-	discardApproval?: (input: {
-		approval: ChatApproval;
-		providerUserId: string;
-	}) => Promise<ApprovalRunResult>;
 	releaseApproval?: (input: {
 		approvalId: string;
 		providerUserId: string;

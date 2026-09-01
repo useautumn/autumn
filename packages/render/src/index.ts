@@ -2,12 +2,14 @@ export { type BillingBadge, billingActionBadges } from "./billing/badges.js";
 export {
 	buildCustomizeChanges,
 	type CustomizeChange,
+	currentPlanFromPreview,
 	customizeNeedsCurrentPlan,
 	customizeWithFreeTrial,
 	customPriceText,
 	freeTrialText,
 } from "./billing/customizeChanges.js";
 export {
+	addedPlanChanges,
 	type BillingChangeDisplay,
 	type BillingPreviewDisplay,
 	buildBillingPreviewDisplay,

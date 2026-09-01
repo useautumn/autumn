@@ -2,18 +2,21 @@ import { defineConfig } from "./src/config/define.js";
 import type { AgentDefinition } from "./src/config/types.js";
 
 /**
- * The Eve orchestrator + subagents: each gets a composed prompt from its
- * instructions mdx, and a skill bundle resolved from the entry keys below.
+ * The Eve agents: each gets a composed prompt from its instructions mdx, and a
+ * skill bundle resolved from the entry keys below. `leaf` is the only live one;
+ * `catalog` is prepared but wired to no agent (see apps/leaf/agent/lib).
  */
 export const agents = {
-	orchestrator: { instructions: "instructions/orchestrator.md", skills: [] },
-	investigator: {
-		instructions: "instructions/subagents/investigator.md",
-		skills: ["investigate"],
-	},
-	billing: {
-		instructions: "instructions/subagents/billing.md",
-		skills: ["billing"],
+	leaf: {
+		instructions: "instructions/leaf.md",
+		skills: [
+			"billingSteps",
+			"investigate",
+			"concepts",
+			"trials",
+			"schedules",
+			"balances",
+		],
 	},
 	catalog: {
 		instructions: "instructions/subagents/catalog.md",
@@ -64,7 +67,38 @@ export default defineConfig({
 				priority: 0.94,
 				document: "skills/billing/billing.mdx",
 			},
-			skill: { file: "skills/billing/billing.mdx" },
+		},
+	},
+	billingSteps: {
+		title: "Billing steps",
+		description:
+			"The step-by-step flow for updating a customer's billing state.",
+		formats: {
+			skill: { file: "skills/billing-steps/billing-steps.mdx" },
+		},
+	},
+	trials: {
+		title: "Trials",
+		description:
+			"Free trials: duration, card requirements, and end-of-trial behavior.",
+		formats: {
+			skill: { file: "skills/trials/trials.mdx" },
+		},
+	},
+	schedules: {
+		title: "Schedules",
+		description:
+			"Multi-phase schedules: phase timing, plan scoping, and immediate-phase params.",
+		formats: {
+			skill: { file: "skills/schedules/schedules.mdx" },
+		},
+	},
+	balances: {
+		title: "Balances",
+		description:
+			"How balances behave at zero: caps, overage permission, and billing controls.",
+		formats: {
+			skill: { file: "skills/balances/balances.mdx" },
 		},
 	},
 	investigate: {

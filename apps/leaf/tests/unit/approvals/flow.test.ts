@@ -410,7 +410,7 @@ describe("dismissing an approval", () => {
 	// A double-click (or a retried Slack interaction) lands the second click
 	// while the first is still denying in Eve. Only the first may discard and
 	// reply; the second must find the row already decided and do nothing.
-	test("a second dismiss click discards and replies only once", async () => {
+	test("a second dismiss click cancels only once", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
 			"../../../src/internal/approvals/surfaces/slack/decide.js"
@@ -432,34 +432,24 @@ describe("dismissing an approval", () => {
 			value: "approval_1",
 		} as unknown as ActionEvent;
 		let cancelWins = 1;
-		const discards: string[] = [];
-		const replies: string[] = [];
+		let cancellations = 0;
+		const cardEdits: string[] = [];
 		const deps = {
 			resolveApproval: async () => {
 				throw new Error("should not run");
 			},
-			cancelApproval: async () =>
-				cancelWins-- > 0
-					? ({ ...approval, status: "cancelled" } as ChatApproval)
-					: undefined,
-			claimApproval: async () => undefined,
-			discardApproval: async ({
-				approval: discarded,
-			}: {
-				approval: ChatApproval;
-			}) => {
-				discards.push(discarded.id);
-				return {
-					result: {},
-					text: "Discarded. What would you like different?",
-				};
+			cancelApproval: async () => {
+				if (cancelWins-- <= 0) return undefined;
+				cancellations += 1;
+				return { ...approval, status: "cancelled" } as ChatApproval;
 			},
-			editActionMessage: async () => {},
+			claimApproval: async () => undefined,
+			editActionMessage: async () => {
+				cardEdits.push("edit");
+			},
 			getApproval: async () => approval,
 			logger: { error: () => {}, info: () => {}, warn: () => {} },
-			postThreadReply: async ({ markdown }: { markdown: string }) => {
-				replies.push(markdown);
-			},
+			postThreadReply: async () => {},
 		};
 
 		await Promise.all([
@@ -467,7 +457,7 @@ describe("dismissing an approval", () => {
 			handleApprovalActionWithDeps({ deps, event }),
 		]);
 
-		expect(discards).toEqual(["approval_1"]);
-		expect(replies).toHaveLength(1);
+		expect(cancellations).toBe(1);
+		expect(cardEdits.length).toBeGreaterThanOrEqual(2);
 	});
 });

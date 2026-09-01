@@ -7,11 +7,10 @@
  *   bun tests/e2e/eveSlack.e2e.ts
  */
 import { buildCatalogDecisionModel, parsePreviewPayload } from "@autumn/render";
-import { AppEnv, type ChatApproval, chatApprovals } from "@autumn/shared";
+import { AppEnv, chatApprovals } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { answerAgentQuestion } from "../../src/internal/agentRuntime/actions/answerAgentQuestion/answerAgentQuestion.js";
 import { resolveCatalogDecision } from "../../src/internal/agentRuntime/actions/resolveCatalogDecision/resolveCatalogDecision.js";
-import { discardApproval } from "../../src/internal/approvals/actions/discardApproval.js";
 import { resolveApproval } from "../../src/internal/approvals/actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../src/internal/approvals/repos/chatApprovalRepo.js";
 import { presentApproval } from "../../src/internal/approvals/surfaces/slack/present.js";
@@ -98,7 +97,6 @@ const runTurn = async ({
 	const target = makeTarget();
 	const ticker = createStatusTicker(target as never);
 	const presenter = createEveSlackPresenter({ setStatus: ticker.activity });
-	const superseded: ChatApproval[] = [];
 	const output = await runSlackAgentTurn({
 		attachments: attachments?.map((attachment) => ({
 			data: attachment.data,
@@ -112,9 +110,6 @@ const runTurn = async ({
 		installation,
 		logger,
 		onAction: (message) => presenter.onAction(message),
-		onApprovalsSuperseded: (approvals) => {
-			superseded.push(...approvals);
-		},
 		onReasoning: presenter.onReasoning,
 		onThinking: ticker.thinking,
 		providerUserId,
@@ -123,7 +118,7 @@ const runTurn = async ({
 		threadId,
 	});
 	ticker.stop();
-	return { output, superseded, target };
+	return { output, target };
 };
 
 const mcpJson = async ({
@@ -531,11 +526,6 @@ const main = async () => {
 			text: "Actually hold off on that — don't change anything yet. Just confirm you've cancelled it.",
 			threadId,
 		});
-		check(
-			"S3 pending approval was superseded",
-			second.superseded.length > 0,
-			`superseded=${second.superseded.length}`,
-		);
 		// Valid outcomes: a reply, a question, or a rebuilt gated write (the
 		// supersede note tells the model to rebuild with the adjustment) — each
 		// renders on Slack (text, chips, or a fresh approval card).
@@ -594,15 +584,6 @@ const main = async () => {
 				: undefined;
 		check("S4 approval row exists", Boolean(approval));
 		if (approval) {
-			const denied = await discardApproval({
-				approval,
-				providerUserId: USER_A,
-			});
-			check(
-				"S4 deny succeeded",
-				!("error" in denied && denied.error),
-				"text" in denied ? denied.text?.slice(0, 120) : undefined,
-			);
 			await chatApprovalRepo.cancel({
 				approvalId: approval.id,
 				db,
@@ -822,7 +803,6 @@ const main = async () => {
 				runId: turn.output.sessionId,
 			});
 			if (approval) {
-				await discardApproval({ approval, providerUserId: USER_A });
 				await chatApprovalRepo.cancel({
 					approvalId: approval.id,
 					db,
@@ -936,7 +916,6 @@ const main = async () => {
 					runId: turn.output.sessionId,
 				});
 				if (approval) {
-					await discardApproval({ approval, providerUserId: USER_A });
 					await chatApprovalRepo.cancel({
 						approvalId: approval.id,
 						db,

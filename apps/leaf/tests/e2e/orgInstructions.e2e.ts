@@ -76,7 +76,6 @@ try {
 		installation,
 		logger,
 		onAction: (message) => presenter.onAction(message),
-		onApprovalsSuperseded: () => {},
 		onReasoning: presenter.onReasoning,
 		onThinking: ticker.thinking,
 		providerUserId,

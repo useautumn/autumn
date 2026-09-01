@@ -62,7 +62,6 @@ export const runAgentTurn = async ({
 		startAgentTurn({
 			auth: {
 				...auth,
-				orgCatalog: prepared.orgContext?.text,
 				orgInstructions: prepared.orgContext?.instructions,
 			},
 			env,

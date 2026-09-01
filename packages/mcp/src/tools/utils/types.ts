@@ -6,6 +6,8 @@ export type OperationToolConfig = {
 	description: string;
 	schema: z.ZodType;
 	endpoint: string;
+	/** Expansion the endpoint always needs, merged in after the request parses. */
+	expand?: string[];
 	destructive?: boolean;
 	idempotent?: boolean;
 };

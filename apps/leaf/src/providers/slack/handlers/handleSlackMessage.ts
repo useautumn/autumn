@@ -1,10 +1,6 @@
 import type { Message, Thread } from "chat";
-import { stopActiveThreadRun } from "../../../internal/runs/runCoordinator.js";
-import { runKeyForThread } from "../../../internal/runs/runRegistry.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
 import { dispatchSlackAgentMessage } from "../actions/dispatchSlackAgentMessage.js";
-import { getSlackWorkspaceId } from "../context.js";
-import { classifySubscribedMessage } from "../routing/classifySubscribedMessage.js";
 import { getRecentMessages } from "../threadContext.js";
 
 const logUnsubscribeFailure = (error: unknown) => {
@@ -28,7 +24,6 @@ const unsubscribe = (thread: Thread) =>
 	thread.unsubscribe().catch(logUnsubscribeFailure);
 
 type HandlerDependencies = Readonly<{
-	classify: typeof classifySubscribedMessage;
 	dispatch: typeof dispatchSlackAgentMessage;
 	getRecentMessages: typeof getRecentMessages;
 }>;
@@ -72,7 +67,6 @@ const dispatchMessage = async ({
 };
 
 export const createSlackMessageHandlers = ({
-	classify = classifySubscribedMessage,
 	dispatch = dispatchSlackAgentMessage,
 	getRecentMessages: getMessages = getRecentMessages,
 }: Partial<HandlerDependencies> = {}) => {
@@ -98,35 +92,17 @@ export const createSlackMessageHandlers = ({
 		});
 	};
 
+	// Every reply in a subscribed thread is answered; "stop" and "stop replying"
+	// are the only way out, handled as control commands inside dispatch.
 	const handleSubscribedSlackMessage = async (
 		thread: Thread,
 		message: Message,
 	) => {
 		if (shouldSkipMessage(message)) return;
-		const recentMessages = await getMessages(thread, message);
-		const disposition = await classify({
-			isMention: message.isMention === true,
-			recentMessages,
-			text: message.text,
-		});
-		if (disposition === "ignore") return;
-		if (disposition === "unsubscribe") {
-			// Unsubscribing alone leaves an in-flight run streaming replies.
-			await stopActiveThreadRun({
-				byUserId: message.author.userId,
-				runKey: runKeyForThread({
-					channelId: thread.channelId,
-					provider: "slack",
-					threadId: thread.id,
-					workspaceId: getSlackWorkspaceId(message.raw),
-				}),
-			});
-			return unsubscribe(thread);
-		}
 		await dispatchMessage({
 			dispatch,
 			message,
-			recentMessages,
+			recentMessages: () => getMessages(thread, message),
 			showRunPlan: false,
 			thread,
 		});
