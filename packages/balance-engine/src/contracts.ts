@@ -60,7 +60,7 @@ const canonicalizeJsonValue = (value: JsonValue): JsonValue => {
 
 	return Object.fromEntries(
 		Object.entries(value)
-			.sort(([left], [right]) => left.localeCompare(right))
+			.sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
 			.map(([key, entry]) => [key, canonicalizeJsonValue(entry)]),
 	);
 };
@@ -101,7 +101,7 @@ export type CheckCommand = z.infer<typeof checkCommandSchema>;
 
 const balanceMutationSchema = z
 	.object({
-		bucketId: nonEmptyStringSchema,
+		customerEntitlementId: nonEmptyStringSchema,
 		balanceBefore: z.number().finite(),
 		balanceAfter: z.number().finite(),
 		usageBefore: z.number().finite().nonnegative(),
@@ -167,18 +167,18 @@ export const trackOutcomeSchema = z
 			});
 		}
 
-		const mutationBucketIds = new Set<string>();
+		const mutationCustomerEntitlementIds = new Set<string>();
 		let mutationBalanceDelta = new Decimal(0);
 		let mutationUsageDelta = new Decimal(0);
 		for (const [index, mutation] of outcome.mutations.entries()) {
-			if (mutationBucketIds.has(mutation.bucketId)) {
+			if (mutationCustomerEntitlementIds.has(mutation.customerEntitlementId)) {
 				context.addIssue({
 					code: "custom",
-					message: `Duplicate mutation bucket id: ${mutation.bucketId}`,
-					path: ["mutations", index, "bucketId"],
+					message: `Duplicate mutation customer entitlement id: ${mutation.customerEntitlementId}`,
+					path: ["mutations", index, "customerEntitlementId"],
 				});
 			}
-			mutationBucketIds.add(mutation.bucketId);
+			mutationCustomerEntitlementIds.add(mutation.customerEntitlementId);
 
 			const balanceDelta = new Decimal(mutation.balanceBefore).minus(
 				mutation.balanceAfter,
@@ -234,6 +234,16 @@ export const trackOutcomeSchema = z
 				path: ["appliedValue"],
 			});
 		}
+		if (
+			outcome.overageBehavior === "cap" &&
+			appliedValue.gt(Decimal.max(outcome.balanceBefore, 0))
+		) {
+			context.addIssue({
+				code: "custom",
+				message: "Capped outcomes cannot exceed available balance",
+				path: ["appliedValue"],
+			});
+		}
 
 		if (outcome.status === "rejected") {
 			if (
@@ -272,7 +282,7 @@ export const trackOutcomeSchema = z
 
 export type TrackOutcome = z.infer<typeof trackOutcomeSchema>;
 
-const balanceBucketSchema = z
+const leanCustomerEntitlementSchema = z
 	.object({
 		id: nonEmptyStringSchema,
 		balance: z.number().finite(),
@@ -280,25 +290,27 @@ const balanceBucketSchema = z
 	})
 	.strict();
 
-export type BalanceBucket = z.infer<typeof balanceBucketSchema>;
+export type LeanCustomerEntitlement = z.infer<
+	typeof leanCustomerEntitlementSchema
+>;
 
 export const directMeteredV1FeatureStateSchema = z
 	.object({
 		kind: z.literal("direct_metered_v1"),
-		buckets: z.array(balanceBucketSchema).min(1),
+		customerEntitlements: z.array(leanCustomerEntitlementSchema).min(1),
 	})
 	.strict()
-	.superRefine(({ buckets }, context) => {
-		const bucketIds = new Set<string>();
-		for (const [index, bucket] of buckets.entries()) {
-			if (bucketIds.has(bucket.id)) {
+	.superRefine(({ customerEntitlements }, context) => {
+		const customerEntitlementIds = new Set<string>();
+		for (const [index, customerEntitlement] of customerEntitlements.entries()) {
+			if (customerEntitlementIds.has(customerEntitlement.id)) {
 				context.addIssue({
 					code: "custom",
-					message: `Duplicate bucket id: ${bucket.id}`,
-					path: ["buckets", index, "id"],
+					message: `Duplicate customer entitlement id: ${customerEntitlement.id}`,
+					path: ["customerEntitlements", index, "id"],
 				});
 			}
-			bucketIds.add(bucket.id);
+			customerEntitlementIds.add(customerEntitlement.id);
 		}
 	});
 
@@ -306,22 +318,25 @@ export type DirectMeteredV1FeatureState = z.infer<
 	typeof directMeteredV1FeatureStateSchema
 >;
 
-export const meteringStateSchema = z
+export const customerMeteringStateSchema = z
 	.object({
 		schemaVersion: z.literal(1),
 		identity: meteringIdentitySchema,
 		revision: z.number().int().nonnegative(),
-		features: z.record(nonEmptyStringSchema, directMeteredV1FeatureStateSchema),
+		featureStatesById: z.record(
+			nonEmptyStringSchema,
+			directMeteredV1FeatureStateSchema,
+		),
 	})
 	.strict();
 
-export type MeteringState = z.infer<typeof meteringStateSchema>;
+export type CustomerMeteringState = z.infer<typeof customerMeteringStateSchema>;
 
 export type UnsupportedDecisionReason =
 	| "command_conflict"
 	| "entity_not_supported"
 	| "feature_not_found"
-	| "multiple_buckets_not_supported"
+	| "multiple_customer_entitlements_not_supported"
 	| "properties_not_supported"
 	| "refund_not_supported"
 	| "subject_mismatch";
@@ -345,7 +360,7 @@ export type CheckDecision =
 			reason:
 				| "entity_not_supported"
 				| "feature_not_found"
-				| "multiple_buckets_not_supported"
+				| "multiple_customer_entitlements_not_supported"
 				| "properties_not_supported"
 				| "subject_mismatch";
 	  };

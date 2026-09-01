@@ -1,15 +1,15 @@
+import { availableBalanceOf, identitiesMatch } from "../../common/state.js";
 import type {
 	CheckCommand,
 	CheckDecision,
-	MeteringState,
-} from "./contracts.js";
-import { availableBalanceOf, identitiesMatch } from "./state.js";
+	CustomerMeteringState,
+} from "../../contracts.js";
 
-export const evaluateCheck = ({
+export const computeCheck = ({
 	state,
 	command,
 }: {
-	state: MeteringState;
+	state: CustomerMeteringState;
 	command: CheckCommand;
 }): CheckDecision => {
 	if (!identitiesMatch({ left: state.identity, right: command.identity })) {
@@ -22,15 +22,20 @@ export const evaluateCheck = ({
 		return { kind: "unsupported", reason: "properties_not_supported" };
 	}
 
-	const feature = state.features[command.featureId];
-	if (!feature) {
+	const featureState = Object.hasOwn(state.featureStatesById, command.featureId)
+		? state.featureStatesById[command.featureId]
+		: undefined;
+	if (!featureState) {
 		return { kind: "unsupported", reason: "feature_not_found" };
 	}
-	if (feature.buckets.length !== 1) {
-		return { kind: "unsupported", reason: "multiple_buckets_not_supported" };
+	if (featureState.customerEntitlements.length !== 1) {
+		return {
+			kind: "unsupported",
+			reason: "multiple_customer_entitlements_not_supported",
+		};
 	}
 
-	const balance = availableBalanceOf({ feature });
+	const balance = availableBalanceOf({ featureState });
 	const allowed =
 		command.requiredBalance <= 0 || balance.gte(command.requiredBalance);
 

@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import * as balanceEngine from "../../src/balanceEngine.js";
 import {
-	applyTrackOutcome,
-	createMeteringState,
-	decideTrack,
-	evaluateCheck,
-	meteringStateSchema,
+	computeCheck,
+	computeTrack,
+	createCustomerMeteringState,
+	executeTrack,
 	parseCheckCommand,
+	parseCustomerMeteringState,
 	parseTrackCommand,
 	parseTrackOutcome,
 } from "../../src/balanceEngine.js";
@@ -17,12 +18,12 @@ const identity = {
 } as const;
 
 const createState = ({ balance = 10 }: { balance?: number } = {}) =>
-	createMeteringState({
+	createCustomerMeteringState({
 		identity,
-		features: {
+		featureStatesById: {
 			messages: {
 				kind: "direct_metered_v1",
-				buckets: [{ id: "messages_monthly", balance, usage: 0 }],
+				customerEntitlements: [{ id: "messages_monthly", balance, usage: 0 }],
 			},
 		},
 	});
@@ -31,10 +32,12 @@ const createTrackCommand = ({
 	requestId = "req_1",
 	properties = null,
 	occurredAt = 1_700_000_000_000,
+	overageBehavior = "reject",
 }: {
 	requestId?: string;
 	properties?: Record<string, unknown> | null;
 	occurredAt?: number;
+	overageBehavior?: "cap" | "reject" | "overflow";
 } = {}) =>
 	parseTrackCommand({
 		input: {
@@ -46,7 +49,7 @@ const createTrackCommand = ({
 			entityId: null,
 			featureId: "messages",
 			value: 5,
-			overageBehavior: "reject",
+			overageBehavior,
 			properties,
 			occurredAt,
 		},
@@ -71,7 +74,7 @@ const createCheckCommand = ({
 		},
 	});
 
-const requireNewOutcome = (decision: ReturnType<typeof decideTrack>) => {
+const requireNewOutcome = (decision: ReturnType<typeof computeTrack>) => {
 	if (decision.kind !== "new") {
 		throw new Error(`Expected a new outcome, received ${decision.kind}`);
 	}
@@ -81,13 +84,13 @@ const requireNewOutcome = (decision: ReturnType<typeof decideTrack>) => {
 describe("balance engine contract boundaries", () => {
 	test("names property-sensitive commands as unsupported", () => {
 		expect(
-			decideTrack({
+			computeTrack({
 				state: createState(),
 				command: createTrackCommand({ properties: { region: "eu" } }),
 			}),
 		).toEqual({ kind: "unsupported", reason: "properties_not_supported" });
 		expect(
-			evaluateCheck({
+			computeCheck({
 				state: createState(),
 				command: createCheckCommand({ properties: { region: "eu" } }),
 			}),
@@ -104,12 +107,12 @@ describe("balance engine contract boundaries", () => {
 	test("treats attempt metadata changes as the same logical command", () => {
 		const state = createState();
 		const outcome = requireNewOutcome(
-			decideTrack({ state, command: createTrackCommand() }),
+			computeTrack({ state, command: createTrackCommand() }),
 		);
-		const appliedState = applyTrackOutcome({ state, outcome }).state;
+		const appliedState = executeTrack({ state, outcome }).state;
 
 		expect(
-			decideTrack({
+			computeTrack({
 				state: appliedState,
 				existingReceipt: outcome,
 				command: createTrackCommand({
@@ -122,7 +125,7 @@ describe("balance engine contract boundaries", () => {
 
 	test("rejects outcomes whose metadata contradicts their mutations", () => {
 		const outcome = requireNewOutcome(
-			decideTrack({ state: createState(), command: createTrackCommand() }),
+			computeTrack({ state: createState(), command: createTrackCommand() }),
 		);
 
 		for (const input of [
@@ -138,8 +141,34 @@ describe("balance engine contract boundaries", () => {
 		}
 	});
 
+	test("rejects capped outcomes that exceed available balance", () => {
+		const outcome = requireNewOutcome(
+			computeTrack({
+				state: createState({ balance: 3 }),
+				command: createTrackCommand({ overageBehavior: "cap" }),
+			}),
+		);
+
+		expect(() =>
+			parseTrackOutcome({
+				input: {
+					...outcome,
+					appliedValue: 4,
+					balanceAfter: -1,
+					mutations: [
+						{
+							...outcome.mutations[0],
+							balanceAfter: -1,
+							usageAfter: 4,
+						},
+					],
+				},
+			}),
+		).toThrow();
+	});
+
 	test("returns API-compatible remaining balance after overflow", () => {
-		const result = evaluateCheck({
+		const result = computeCheck({
 			state: createState({ balance: -2 }),
 			command: createCheckCommand(),
 		});
@@ -152,19 +181,45 @@ describe("balance engine contract boundaries", () => {
 	});
 
 	test("uses an explicitly versioned direct-metered state shape", () => {
-		expect(
-			meteringStateSchema.safeParse({
-				schemaVersion: 1,
-				identity,
-				revision: 0,
-				features: {
-					messages: {
-						kind: "direct_metered_v1",
-						buckets: [{ id: "messages_monthly", balance: 10, usage: 0 }],
+		expect(() =>
+			parseCustomerMeteringState({
+				input: {
+					schemaVersion: 1,
+					identity,
+					revision: 0,
+					featureStatesById: {
+						messages: {
+							kind: "direct_metered_v1",
+							customerEntitlements: [
+								{ id: "messages_monthly", balance: 10, usage: 0 },
+							],
+						},
 					},
 				},
-			}).success,
-		).toBe(true);
+			}),
+		).not.toThrow();
+		expect(() =>
+			parseCustomerMeteringState({
+				input: {
+					...createState(),
+					featureStatesById: {
+						messages: {
+							customerEntitlements: [
+								{ id: "messages_monthly", balance: 10, usage: 0 },
+							],
+						},
+					},
+				},
+			}),
+		).toThrow();
+	});
+
+	test("keeps validation libraries behind parser functions", () => {
+		expect(
+			Object.keys(balanceEngine).filter((exportName) =>
+				exportName.endsWith("Schema"),
+			),
+		).toEqual([]);
 	});
 
 	test("keeps receipts outside the bounded customer balance state", () => {
