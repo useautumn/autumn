@@ -4,6 +4,7 @@ import {
 	type ApiCustomerV5,
 	type AttachParamsV1Input,
 	CusProductStatus,
+	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -482,5 +483,46 @@ test.concurrent(
 		);
 
 		expect(promoted?.status).toBe(CusProductStatus.Active);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("pending cancel: billing.update cancel_action discards a pending plan")}`,
+	async () => {
+		const customerId = `pending-cancel-update-${Date.now()}`;
+		const pro = products.pro({
+			id: "pro-pending-cancel-update",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, autumnV2_2, customer } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [
+				s.billing.attach({
+					productId: pro.id,
+					invoice: true,
+					enableProductImmediately: false,
+					finalizeInvoice: true,
+				}),
+			],
+		});
+
+		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			cancel_action: "cancel_immediately",
+		});
+
+		const customerProducts = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const cancelled = customerProducts.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(cancelled?.status).toBe(CusProductStatus.Expired);
+		expect(cancelled?.metadata_id).toBeNull();
 	},
 );
