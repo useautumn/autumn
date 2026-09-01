@@ -26,7 +26,15 @@ Then decide how it is paid. Follow the user's instructions or the org rules. If 
 
 ## 2. Build the request body
 
-- Any customer-specific pricing goes in `customize` — a patch over the catalog plan, not a replacement. Before writing one, follow the `customize` reference (autumn-concepts) for the patch rules; in particular, an `add_items` entry is a full item definition, so restate every field off the plan's item unless you are explicitly changing it.
+- Any customer-specific pricing goes in `customize` — a patch over the catalog plan, not a replacement. Use `add_items` and `remove_items`. Do not replace the whole `items` array.
+```json
+{ "customize": {
+    "remove_items": [{ "feature_id": "credits" }],
+    "add_items": [{ "feature_id": "credits", "included": 5000 }] } }
+```
+- `add_items` is a full item definition, so read that item's fields (`pooled`, `reset`, `rollover`, …) off the plan first and restate every one unless specified explicitly.
+- Base price changes go in `customize.price`.
+- Each remove entry is a filter. When `feature_id` alone could match more than one item, add `billing_method`, `interval`, or `interval_count` to pin the right one.
 
 ## 3. Preview, then write
 
@@ -36,7 +44,9 @@ Then decide how it is paid. Follow the user's instructions or the org rules. If 
 
 ## 4. Write the approval description
 
-- The `approval_description` field's schema carries the full rules. Order the bullets in the order the steps apply, covering what changes for the customer, what they pay, and when it takes effect.
+- Bullet what is happening, one line per step, in the order the steps apply.
+- Say what changes for the customer, what they pay, and when it takes effect.
+- For a batched request, repeat the same complete description on every write.
 
 ## 5. Report the result once it is approved
 

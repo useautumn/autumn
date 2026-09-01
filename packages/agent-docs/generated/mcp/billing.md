@@ -45,7 +45,8 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - A follow-up that refines an attach customization remains customer-specific; use catalog tools only when the user explicitly asks to change the shared plan.
 - If the plan prices a feature as prepaid, a bare amount for that feature ("put them on 4.5k credits") means `feature_quantities` — NOT an item customization. Never remove or replace a prepaid item to set how many units a customer gets; customize the item only when the user explicitly changes its pricing or included allowance.
 - The word "included" means free allowance, not a purchase: "N included credits" sets `included: N` on the item via `customize` (carrying the rest of the item over unchanged) and does NOT add `feature_quantities`. Only combine both when the user asks for extra prepaid units on top of the new allowance.
-- Before any trial action, re-read the Trials section in `autumn://docs/concepts` — including its warning about trialing a customer who already pays.
+- Before any trial action, re-read the Trials section in `autumn://docs/concepts`.
+- Adding a trial for a customer who already has a paid subscription resets the Stripe billing cycle; warn the user and offer the `on_end: "revert"` flow, then let them choose.
 
 ## Target resolution
 
