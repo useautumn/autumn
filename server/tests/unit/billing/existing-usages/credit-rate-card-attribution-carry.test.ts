@@ -70,6 +70,7 @@ describe("credit-rate usage attribution carry-over", () => {
 
 		expect(existingUsages[CREDIT_INTERNAL_FEATURE_ID]).toEqual({
 			usage: 760,
+			accruedOverage: 0,
 			entityUsages: {},
 			usageAttribution,
 		});
@@ -89,6 +90,7 @@ describe("credit-rate usage attribution carry-over", () => {
 
 			expect(existingUsages[CREDIT_INTERNAL_FEATURE_ID]).toEqual({
 				usage: 760,
+				accruedOverage: 0,
 				entityUsages: {},
 				usageAttribution,
 			});
@@ -114,6 +116,7 @@ describe("credit-rate usage attribution carry-over", () => {
 
 			expect(existingUsages[CREDIT_INTERNAL_FEATURE_ID]).toEqual({
 				usage: 760,
+				accruedOverage: 0,
 				entityUsages: {},
 				usageAttribution,
 			});
@@ -174,6 +177,7 @@ describe("credit-rate usage attribution carry-over", () => {
 
 			expect(existingUsages[CREDIT_INTERNAL_FEATURE_ID]).toEqual({
 				usage: 0,
+				accruedOverage: 0,
 				entityUsages: {},
 				usageAttribution: {
 					[SOURCE_A_INTERNAL_ID]: { units: 5_000, credits: 50 },
