@@ -14,16 +14,15 @@ This covers the majority of cases. Load skills upfront when needed:
 
 ## 1. Read the customer's current state
 
-- Call `getCustomer`, `listEntities`, and `verify` in ONE batch — never one after another.
-- `verify` diffs what Autumn expects against live Stripe. If it returns mismatches, flag them to the user.
+- Call `getCustomer` and `listEntities` in ONE batch — never one after another.
 - Then decide which operation the request needs based on the current state and the target plan ID:
   - Is the target plan ID already active on that customer or entity? → updateSubscription
-  - Moving the customer onto a different plan ID? → `attach` or `multiAttach`
+  - Moving the customer onto a different plan ID? → `attach` (one write per plan, all in one batch)
   - Moving them onto a plan(s) in several phases (ramps, staged pricing) → `createSchedule`
 
-Then decide how it is paid. Follow the user's instructions or the org rules. If neither says, first check if there is a payment method (from the `getCustomer` call).
+Then decide how it is paid. Follow the user's instructions or the org rules. If neither says:
 
-If payment method exists, just attach directly to charge it. If there is none, use invoice mode, finalized, with the plan enabled immediately.
+<part file="../billing/references/billing-behavior.md" inline="true" />
 
 ## 2. Build the request body
 

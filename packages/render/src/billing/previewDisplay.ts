@@ -86,31 +86,52 @@ const changeDisplay = ({
 	};
 };
 
-/** A plan on both sides is an in-place update, not a removal — only plans
- * that truly leave the customer count. */
+const displayChanges = (values: readonly unknown[]): BillingChangeDisplay[] =>
+	values.flatMap(
+		(value) => changeDisplay({ planNames: new Map(), value }) ?? [],
+	);
+
+const rawOrDisplay = (
+	values: readonly unknown[] | BillingChangeDisplay[],
+): BillingChangeDisplay[] =>
+	values.every(
+		(value) =>
+			typeof (value as BillingChangeDisplay)?.planId === "string" &&
+			typeof (value as BillingChangeDisplay)?.name === "string",
+	)
+		? (values as BillingChangeDisplay[])
+		: displayChanges(values);
+
+/** A plan on both sides is an in-place update — only plans present in `of`
+ * and absent from `notIn` count. Accepts raw API changes or display objects. */
+const planChangesOnlyIn = ({
+	of,
+	notIn,
+}: {
+	of: readonly unknown[] | BillingChangeDisplay[];
+	notIn: readonly unknown[] | BillingChangeDisplay[];
+}): BillingChangeDisplay[] => {
+	const excluded = new Set(rawOrDisplay(notIn).map((change) => change.planId));
+	return rawOrDisplay(of).filter((change) => !excluded.has(change.planId));
+};
+
 export const removedPlanChanges = ({
 	incoming,
 	outgoing,
 }: {
-	incoming: BillingChangeDisplay[];
-	outgoing: BillingChangeDisplay[];
-}): BillingChangeDisplay[] => {
-	const incomingIds = new Set(incoming.map((change) => change.planId));
-	return outgoing.filter((change) => !incomingIds.has(change.planId));
-};
+	incoming: readonly unknown[] | BillingChangeDisplay[];
+	outgoing: readonly unknown[] | BillingChangeDisplay[];
+}): BillingChangeDisplay[] =>
+	planChangesOnlyIn({ of: outgoing, notIn: incoming });
 
-/** A plan on both sides is an in-place update, not an attach — only plans the
- * customer does not already hold count. */
 export const addedPlanChanges = ({
 	incoming,
 	outgoing,
 }: {
-	incoming: BillingChangeDisplay[];
-	outgoing: BillingChangeDisplay[];
-}): BillingChangeDisplay[] => {
-	const outgoingIds = new Set(outgoing.map((change) => change.planId));
-	return incoming.filter((change) => !outgoingIds.has(change.planId));
-};
+	incoming: readonly unknown[] | BillingChangeDisplay[];
+	outgoing: readonly unknown[] | BillingChangeDisplay[];
+}): BillingChangeDisplay[] =>
+	planChangesOnlyIn({ of: incoming, notIn: outgoing });
 
 const changeSummaryText = ({
 	incoming,

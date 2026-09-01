@@ -182,7 +182,12 @@ export const setupUpdatePlanProductContext = async ({
 		params.no_billing_changes === true ||
 		operationBillingContext.stripeSubscription === undefined;
 
-	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
+	const invoiceMode = await setupInvoiceModeContext({
+		ctx,
+		fullCustomer: productFullCustomer,
+		params,
+		stripeCustomer: operationBillingContext.stripeCustomer,
+	});
 	const billingContext: UpdateSubscriptionBillingContext = {
 		intent: UpdateSubscriptionIntent.UpdatePlan,
 		fullCustomer: productFullCustomer,

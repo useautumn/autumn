@@ -14,16 +14,47 @@ This covers the majority of cases. Load skills upfront when needed:
 
 ## 1. Read the customer's current state
 
-- Call `getCustomer`, `listEntities`, and `verify` in ONE batch — never one after another.
-- `verify` diffs what Autumn expects against live Stripe. If it returns mismatches, flag them to the user.
+- Call `getCustomer` and `listEntities` in ONE batch — never one after another.
 - Then decide which operation the request needs based on the current state and the target plan ID:
   - Is the target plan ID already active on that customer or entity? → updateSubscription
-  - Moving the customer onto a different plan ID? → `attach` or `multiAttach`
+  - Moving the customer onto a different plan ID? → `attach` (one write per plan, all in one batch)
   - Moving them onto a plan(s) in several phases (ramps, staged pricing) → `createSchedule`
 
-Then decide how it is paid. Follow the user's instructions or the org rules. If neither says, first check if there is a payment method (from the `getCustomer` call).
+Then decide how it is paid. Follow the user's instructions or the org rules. If neither says:
 
-If payment method exists, just attach directly to charge it. If there is none, use invoice mode, finalized, with the plan enabled immediately.
+## Billing behavior
+
+### Invoice default
+
+- Default operator-led billing actions to invoice mode: `invoice_mode.enabled: true` and `invoice_mode.finalize: false`, and grant access now (see Enable plan immediately for which field).
+- Use invoice mode even when the immediate charge is $0, unless the user asks for checkout, self-serve, or direct charging.
+- This grants access now while creating a draft Stripe invoice that the operator can review, edit, and send.
+- Use explicit net terms from the user or contract in `invoice_mode.net_terms_days`; otherwise do not ask just to set net terms.
+- If the customer has no email, ask for it and update the customer before previewing invoice or checkout flows.
+
+### Enable plan immediately
+
+- Top-level `enable_plan_immediately` grants access now whenever payment is deferred or pending (invoice unpaid, checkout incomplete, or future `starts_at`) — a superset of `invoice_mode.enable_plan_immediately`, which only covers the invoice-unpaid case.
+- For `createSchedule` and `attach`, set top-level `enable_plan_immediately: true` instead of `invoice_mode.enable_plan_immediately`.
+- `updateSubscription` has no top-level field; keep using `invoice_mode.enable_plan_immediately` there.
+
+### Checkout flow
+
+- Use checkout only when the user wants a payment link or checkout session to send to the customer.
+- For checkout, omit `invoice_mode`, set `redirect_mode: "always"`, and set `enable_plan_immediately: true`.
+- If the user might be asking for checkout but did not say so clearly, clarify before previewing.
+
+### Direct charge flow
+
+- If the user wants self-serve-style billing or immediate card charging, clarify before omitting `invoice_mode`.
+- Without `invoice_mode`, eligible plan changes may charge the customer immediately.
+
+### Proration
+
+- Default proration to `none` so the preview starts with no immediate prorated charge or credit.
+- If the customer has no existing subscriptions, do not pass `proration_behavior: "none"`; new subscriptions do not allow it.
+- Use the endpoint's field name: `proration_behavior` for attach/updateSubscription, `billing_behavior` for createSchedule.
+- Use `prorate_immediately` only when the user asks for prorations, immediate true-up, or immediate credits/charges.
 
 ## 2. Build the request body
 

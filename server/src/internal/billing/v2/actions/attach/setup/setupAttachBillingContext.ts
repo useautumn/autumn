@@ -17,7 +17,6 @@ import {
 	resolveCustomerCurrency,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { handleInvoiceModeEmailErrors } from "@/internal/billing/v2/common/errors/handleInvoiceModeEmailErrors";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
@@ -184,8 +183,12 @@ export const setupAttachBillingContext = async ({
 		customerProduct: currentCustomerProduct,
 	});
 
-	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
-	handleInvoiceModeEmailErrors({ invoiceMode, fullCustomer, stripeCustomer });
+	const invoiceMode = await setupInvoiceModeContext({
+		ctx,
+		fullCustomer,
+		params,
+		stripeCustomer,
+	});
 	const paymentBehaviorIntent = setupPaymentBehaviorIntent({
 		contextOverride,
 		paymentMethod,

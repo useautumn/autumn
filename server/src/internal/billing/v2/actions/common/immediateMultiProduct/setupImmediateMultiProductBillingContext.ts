@@ -23,7 +23,6 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
-import { handleInvoiceModeEmailErrors } from "@/internal/billing/v2/common/errors/handleInvoiceModeEmailErrors";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
@@ -294,8 +293,12 @@ export const setupImmediateMultiProductBillingContext = async ({
 			!preview && params.no_billing_changes !== true,
 	});
 
-	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
-	handleInvoiceModeEmailErrors({ invoiceMode, fullCustomer, stripeCustomer });
+	const invoiceMode = await setupInvoiceModeContext({
+		ctx,
+		fullCustomer,
+		params,
+		stripeCustomer,
+	});
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 	const trialContext = await setupImmediateMultiProductTrialContext({
 		ctx,

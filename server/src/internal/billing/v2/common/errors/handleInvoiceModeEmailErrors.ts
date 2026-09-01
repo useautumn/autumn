@@ -1,25 +1,16 @@
-import {
-	ErrCode,
-	type FullCustomer,
-	type InvoiceMode,
-	RecaseError,
-} from "@autumn/shared";
+import { ErrCode, type FullCustomer, RecaseError } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
 
 /** Invoice mode delivers the invoice by email, so Stripe rejects finalization
  * when neither Autumn nor Stripe holds an email for the customer. */
 export const handleInvoiceModeEmailErrors = ({
-	invoiceMode,
 	fullCustomer,
 	stripeCustomer,
 }: {
-	invoiceMode?: InvoiceMode;
 	fullCustomer: FullCustomer;
 	stripeCustomer?: Stripe.Customer;
 }) => {
-	if (!invoiceMode) return;
-
 	const hasEmail = Boolean(
 		fullCustomer.email?.trim() || stripeCustomer?.email?.trim(),
 	);

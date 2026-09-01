@@ -78,6 +78,7 @@ describe("setupInvoiceModeContext payment method types", () => {
 	test("falls back to the org config list", async () => {
 		const invoiceMode = await setupInvoiceModeContext({
 			ctx: makeCtx({ allowedPaymentMethods: ["card", "us_bank_account"] }),
+			fullCustomer: { email: "billing@x.dev" } as never,
 			params: makeParams({}),
 		});
 
@@ -90,6 +91,7 @@ describe("setupInvoiceModeContext payment method types", () => {
 	test("stays undefined when nothing is configured", async () => {
 		const invoiceMode = await setupInvoiceModeContext({
 			ctx: makeCtx({ allowedPaymentMethods: null }),
+			fullCustomer: { email: "billing@x.dev" } as never,
 			params: makeParams({}),
 		});
 
@@ -99,6 +101,7 @@ describe("setupInvoiceModeContext payment method types", () => {
 	test("returns no invoice mode when invoice mode is off", async () => {
 		const invoiceMode = await setupInvoiceModeContext({
 			ctx: makeCtx({ allowedPaymentMethods: ["card"] }),
+			fullCustomer: { email: "billing@x.dev" } as never,
 			params: makeParams({ enabled: false }),
 		});
 
@@ -110,6 +113,7 @@ describe("setupInvoiceModeContext net terms", () => {
 	test("falls back to the org default when request and template are silent", async () => {
 		const invoiceMode = await setupInvoiceModeContext({
 			ctx: makeCtx({ defaultNetTermsDays: 45 }),
+			fullCustomer: { email: "billing@x.dev" } as never,
 			params: makeParams({}),
 		});
 
@@ -119,6 +123,7 @@ describe("setupInvoiceModeContext net terms", () => {
 	test("request net terms beat the org default", async () => {
 		const invoiceMode = await setupInvoiceModeContext({
 			ctx: makeCtx({ defaultNetTermsDays: 45 }),
+			fullCustomer: { email: "billing@x.dev" } as never,
 			params: makeParams({ netTermsDays: 7 }),
 		});
 
@@ -131,6 +136,7 @@ describe("setupInvoiceModeContext net terms", () => {
 				defaultNetTermsDays: 45,
 				template: { net_terms_days: 14 },
 			}),
+			fullCustomer: { email: "billing@x.dev" } as never,
 			params: makeParams({ invoiceTemplateId: TEMPLATE_ID }),
 		});
 
@@ -143,6 +149,7 @@ describe("setupInvoiceModeContext net terms", () => {
 				defaultNetTermsDays: 45,
 				template: { net_terms_days: null },
 			}),
+			fullCustomer: { email: "billing@x.dev" } as never,
 			params: makeParams({ invoiceTemplateId: TEMPLATE_ID }),
 		});
 
@@ -152,6 +159,7 @@ describe("setupInvoiceModeContext net terms", () => {
 	test("stays undefined when no org default is configured", async () => {
 		const invoiceMode = await setupInvoiceModeContext({
 			ctx: makeCtx({ defaultNetTermsDays: null }),
+			fullCustomer: { email: "billing@x.dev" } as never,
 			params: makeParams({}),
 		});
 
