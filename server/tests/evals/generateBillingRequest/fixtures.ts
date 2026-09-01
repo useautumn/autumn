@@ -58,6 +58,48 @@ export const saasContext = ({
 		],
 	}) as unknown as GenerationContext;
 
+export const versionedPlanContext = (): GenerationContext =>
+	({
+		customer: {
+			id: "cus_versioned",
+			current_plans: [
+				{
+					customer_product_id: "cp_versioned",
+					effective_plan: {
+						id: "generation",
+						items: [
+							{
+								feature_id: "messages",
+								included: 200,
+								reset: { interval: "month" },
+							},
+						],
+						name: "Generation Version Plan",
+						price: { amount: 20, interval: "month" },
+						version: 2,
+					},
+					plan_id: "generation",
+					status: "active",
+				},
+			],
+		},
+		features: [{ id: "messages", name: "Messages", type: "single_use" }],
+		now,
+		plans: [10, 20, 30].map((amount, index) => ({
+			id: "generation",
+			items: [
+				{
+					feature_id: "messages",
+					included: (index + 1) * 100,
+					reset: { interval: "month" },
+				},
+			],
+			name: "Generation Version Plan",
+			price: { amount, interval: "month" },
+			version: index + 1,
+		})),
+	}) as unknown as GenerationContext;
+
 /** Enterprise org with a volume-tiered prepaid credits ladder — the shape that
  * stresses same-shape customize patches. */
 export const creditLadderContext = (): GenerationContext =>

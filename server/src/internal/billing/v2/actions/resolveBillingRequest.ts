@@ -123,9 +123,15 @@ export const resolveBillingRequest = async ({
 			fullCustomer,
 			params: params.request,
 		});
-		fullProduct = cusProductToProduct({
-			cusProduct: targetCustomerProduct,
-		});
+		fullProduct = params.request.version
+			? await ProductService.getFull({
+					db: ctx.db,
+					env: ctx.env,
+					idOrInternalId: targetCustomerProduct.product.id,
+					orgId: ctx.org.id,
+					version: params.request.version,
+				})
+			: cusProductToProduct({ cusProduct: targetCustomerProduct });
 	}
 
 	const { request, unrepresentable } = billingParamsV1ToV0({

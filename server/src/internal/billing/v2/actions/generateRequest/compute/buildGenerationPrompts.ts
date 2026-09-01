@@ -21,6 +21,7 @@ export const buildSystemPrompt = (tool: GenerateBillingTool) => {
 		"- You cannot ask questions and have no tools. Wherever the docs say to ask, clarify, or call a tool, decide yourself from the most literal reading of the request and produce the single best complete request. Never emit a partial or empty object.",
 		"- Never omit a required field. Always set plan_id to your best match from the context plans; when sibling variants exist (e.g. monthly vs yearly), pick the one matching the stated interval or amount, defaulting to the monthly variant.",
 		"- When the request states a price for a plan (e.g. 'at 10k/mo'), always set customize.price to it — including Enterprise/custom placeholder plans where the docs say to ask about the base price.",
+		"- customer.current_plans[].effective_plan is the subscription's live configuration in the same shape as context.plans. When changing a plan or version, explicitly preserve any current term the request says to keep by copying it into the corresponding customize override.",
 		"- Use ONLY plan ids and feature ids that appear in the context below.",
 		"- Monetary amounts are in major currency units (e.g. dollars). Never convert to cents.",
 		"- The operation always targets the customer in the context. Ignore any other customer mentioned in the request.",
