@@ -403,7 +403,6 @@ Metered volume variant:
 
 - Base price changes go in `customize.price`.
 - Plan item changes are PATCH-style: use `add_items` and `remove_items` in API params.
-- An `add_items` entry is a full item definition, not a patch: read the item's fields (`pooled`, `reset`, `rollover`, …) off the plan first and restate every one you are not explicitly changing.
 - Avoid full `items` replacement unless the API or config workflow specifically requires it.
 - Each remove entry is a filter. Include `billing_method`, `interval`, or `interval_count` when `feature_id` alone could match multiple items.
 - Taking a feature away is always `remove_items`, never an `add_items` entry with `included: 0` — that grants the feature with a zero allowance instead of withholding it, and a boolean feature has no allowance to set. "no approval chains", "without SSO", "0 seats" on a boolean all mean remove.
@@ -500,7 +499,7 @@ If the customer the customer is NOT on a paid plan (free plan or no plan at all)
 The customer already has an active (Stripe) subscription — common in sales-led trials.
 
 - On end: revert (default to this): attach the new plan with `on_end: "revert"` . This grants the plan in Autumn without touching the Stripe subscription; at trial end Autumn moves the customer back to their original plan, preserving the existing billing cycle.
-- On end: bill -- attaching a plan with a trial (or updating the subscription to add one) resets the Stripe billing anchor/cycle. This can be undesired: warn the user, offer `on_end: "revert"` instead, and let them choose.
+- On end: bill -- attaching a plan with a trial (or updating the subscription to add one) resets the Stripe billing anchor/cycle. This can be undesired so warn the user if they request this.
 - Card required param is ignored if there is already an active sub.
 
 Updating or ending a trial

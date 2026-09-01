@@ -14,15 +14,16 @@ This covers the majority of cases. Load skills upfront when needed:
 
 ## 1. Read the customer's current state
 
-- Call `getCustomer` and `listEntities` in ONE batch — never one after another.
+- Call `getCustomer`, `listEntities`, and `verify` in ONE batch — never one after another.
+- `verify` diffs what Autumn expects against live Stripe. If it returns mismatches, flag them to the user.
 - Then decide which operation the request needs based on the current state and the target plan ID:
   - Is the target plan ID already active on that customer or entity? → updateSubscription
-  - Moving the customer onto a different plan ID? → `attach` (one write per plan, all in one batch)
+  - Moving the customer onto a different plan ID? → `attach` or `multiAttach`
   - Moving them onto a plan(s) in several phases (ramps, staged pricing) → `createSchedule`
 
-Then decide how it is paid. Follow the user's instructions or the org rules. If neither says:
+Then decide how it is paid. Follow the user's instructions or the org rules. If neither says, first check if there is a payment method (from the `getCustomer` call).
 
-<part file="../billing/references/billing-behavior.md" inline="true" />
+If payment method exists, just attach directly to charge it. If there is none, use invoice mode, finalized, with the plan enabled immediately.
 
 ## 2. Build the request body
 
@@ -39,8 +40,10 @@ Then decide how it is paid. Follow the user's instructions or the org rules. If 
 ## 3. Preview, then write
 
 - Call the matching preview: `previewAttach`, `previewCreateSchedule`, or `previewUpdateSubscription`.
-
-<part file="../../instructions/references/preview-then-write.md" inline="true" />
+- If it comes back clean, call the write in the same turn. Emit no prose in between — the write call is what shows the approval card.
+- If the preview fails, state the blocking reason once and stop.
+- When a request needs more than one write — change the email then attach, create a reward then attach — issue them together in a single batch so the user approves once.
+- Run every preview you need first, then send all the writes together.
 
 ## 4. Write the approval description
 

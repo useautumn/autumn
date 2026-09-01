@@ -14,16 +14,16 @@ description: How a balance behaves at zero — what makes an included allowance 
 - If neither is set, `included` IS the cap: usage stops at 0 and `check` returns `allowed: false`. Nothing extra is needed to enforce it.
 - So never add a `spend_limit` to "cap" a feature that has no overage price and no `overage_allowed` — it is already capped, and the limit does nothing.
 
+### Billing controls
+
+- Only `overage_allowed` changes whether usage may pass 0. The rest just bound usage that is already permitted.
+- `usage_limits`: a separate gate on TOTAL usage per time window, counted independently of the balance. This one bites whether or not overage exists, and can sit below the included amount.
+
 ### Tracking past zero
 
 - On `track`, `overage_behavior` decides what happens to a deduction that does not fit.
 - `cap` (default): deducts only what fits and stops at 0.
 - `overflow`: deducts the whole value and lets the balance go negative. `usage_limits` do not clamp it; `spend_limits` still apply.
-
-### How controls interact with balances
-
-- Only `overage_allowed` changes whether usage may pass 0. The rest just bound usage that is already permitted — with no overage, a `spend_limit` has nothing to bound and does nothing.
-- `usage_limits` are counted independently of the balance: they bite whether or not overage exists, and can sit below the included amount.
 
 ### Billing Controls
 
