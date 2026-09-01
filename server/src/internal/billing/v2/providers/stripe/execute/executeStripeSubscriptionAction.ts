@@ -155,7 +155,7 @@ export const executeStripeSubscriptionAction = async ({
 			billingContext,
 		});
 
-		await insertMetadataFromBillingPlan({
+		const deferredMetadata = await insertMetadataFromBillingPlan({
 			ctx,
 			billingPlan,
 			billingContext: deferredBillingContext,
@@ -171,6 +171,7 @@ export const executeStripeSubscriptionAction = async ({
 			stripeInvoice: latestStripeInvoice,
 			stripeSubscription,
 			deferred: true,
+			deferredMetadataId: deferredMetadata.id,
 			requiredAction,
 			autumnInvoice,
 		};

@@ -2,12 +2,13 @@ import {
 	AffectedResource,
 	ApiVersion,
 	InternalError,
+	Scopes,
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
-	Scopes,
 } from "@autumn/shared";
-import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { updatePendingPlanIfAny } from "@/internal/billing/v2/execute/updatePendingPlanIfAny";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
 
@@ -39,6 +40,20 @@ export const handleUpdateSubscription = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
+		const pendingUpdate = await updatePendingPlanIfAny({ ctx, params: body });
+
+		if (pendingUpdate) {
+			const { billingContext, billingResult } = pendingUpdate;
+			if (!billingContext || !billingResult) {
+				return c.json({ success: true }, 200);
+			}
+
+			return c.json(
+				billingResultToResponse({ billingContext, billingResult }),
+				200,
+			);
+		}
+
 		const { billingContext, billingResult } =
 			await billingActions.updateSubscription({
 				ctx,
@@ -52,7 +67,6 @@ export const handleUpdateSubscription = createRoute({
 			});
 		}
 
-		// 7. Format response
 		const response = billingResultToResponse({
 			billingContext,
 			billingResult,

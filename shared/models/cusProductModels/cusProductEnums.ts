@@ -5,6 +5,7 @@ export enum CollectionMethod {
 
 export enum CusProductStatus {
 	Scheduled = "scheduled",
+	Pending = "pending",
 	Active = "active",
 	PastDue = "past_due",
 	Expired = "expired",

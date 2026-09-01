@@ -46,6 +46,7 @@ import {
 } from "./SubscriptionDetailLicenses";
 import { SubscriptionLicenseRow } from "./SubscriptionLicenseRow";
 import { formatDiscountLabel } from "./subscriptionDetailUtils";
+import { usePendingPaymentLink } from "./usePendingPaymentLink";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 
@@ -76,6 +77,11 @@ export function SubscriptionDetailSheet() {
 		() => productV2?.items && itemsForDisplay(productV2.items),
 		[productV2?.items, itemsForDisplay],
 	);
+	const { data: pendingPaymentUrl } = usePendingPaymentLink({
+		customerId: customer?.id ?? customer?.internal_id,
+		customerProductId: cusProduct?.id,
+		enabled: cusProduct?.status === CusProductStatus.Pending,
+	});
 
 	if (!cusProduct) {
 		return (
@@ -95,6 +101,7 @@ export function SubscriptionDetailSheet() {
 	);
 
 	const isScheduled = cusProduct.status === CusProductStatus.Scheduled;
+	const isPending = cusProduct.status === CusProductStatus.Pending;
 	const subscriptionDiscounts = getDiscountsForSubscription({
 		subscriptionIds: cusProduct.subscription_ids ?? [],
 	});
@@ -294,6 +301,23 @@ export function SubscriptionDetailSheet() {
 							/>
 						}
 					/>
+
+					{isPending && pendingPaymentUrl && (
+						<InfoRow
+							icon={<CreditCardIcon size={16} />}
+							label="Payment"
+							value={
+								<a
+									href={pendingPaymentUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-sm underline underline-offset-2"
+								>
+									Open payment link
+								</a>
+							}
+						/>
+					)}
 
 					{subscriptionDiscounts.map((discount: ApiDiscount) => (
 						<InfoRow

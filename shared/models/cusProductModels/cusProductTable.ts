@@ -78,6 +78,10 @@ export const customerProducts = pgTable(
 		// so the webhook can patch in subscription_ids on completion (or expire on abandonment).
 		stripe_checkout_session_id: text("stripe_checkout_session_id"),
 
+		// Links a pending row to the deferred billing plan that will promote it
+		// on payment, or expire it when the invoice is voided.
+		metadata_id: text("metadata_id"),
+
 		previous_customer_product_id: text("previous_customer_product_id"),
 		on_trial_end: text("on_trial_end"),
 	},
@@ -143,6 +147,10 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_stripe_checkout_session_id").on(
 			table.stripe_checkout_session_id,
 		),
+		index("idx_customer_products_metadata_id")
+			.on(table.metadata_id)
+			.where(sql`${table.metadata_id} IS NOT NULL`)
+			.concurrently(),
 		index("idx_customer_products_customer_license")
 			.on(table.customer_license_link_id)
 			.where(sql`${table.customer_license_link_id} IS NOT NULL`)

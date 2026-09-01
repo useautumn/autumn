@@ -102,6 +102,7 @@ export const executeStripeCheckoutSessionAction = async ({
 	// 6. Default: defer Autumn billing plan execution to the webhook handler.
 	return {
 		deferred: true,
+		deferredMetadataId: metadata.id,
 		stripeCheckoutSession,
 	};
 };

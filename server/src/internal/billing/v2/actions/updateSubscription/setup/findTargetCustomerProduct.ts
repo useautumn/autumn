@@ -1,4 +1,5 @@
 import {
+	ATTACH_CONFLICT_STATUSES,
 	cusProductToPrices,
 	ErrCode,
 	type FullCusProduct,
@@ -12,7 +13,6 @@ import {
 	isCustomerProductPaidRecurring,
 	isCustomerProductRecurring,
 	isPrepaidPrice,
-	RELEVANT_STATUSES,
 	RecaseError,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -145,7 +145,7 @@ export const findTargetCustomerProduct = async ({
 
 	const candidates = fullCustomerToPlanProducts({ fullCustomer }).filter(
 		(cp) => {
-			if (!RELEVANT_STATUSES.includes(cp.status)) return false;
+			if (!ATTACH_CONFLICT_STATUSES.includes(cp.status)) return false;
 			return isCusProductOnEntity({ cusProduct: cp, internalEntityId });
 		},
 	);
@@ -160,7 +160,7 @@ export const findTargetCustomerProduct = async ({
 		const fallback = await CusProductService.getFull({
 			db: ctx.db,
 			id: params.customer_product_id,
-			inStatuses: RELEVANT_STATUSES,
+			inStatuses: ATTACH_CONFLICT_STATUSES,
 		});
 		const belongsToCustomer =
 			fallback?.internal_customer_id === fullCustomer.internal_id;
