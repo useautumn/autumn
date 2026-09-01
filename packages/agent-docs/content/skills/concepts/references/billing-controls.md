@@ -8,13 +8,14 @@
 
 <control-types>
 
-- `overage_allowed`: whether usage can continue after granted balance is exhausted.
+- `overage_allowed`: whether usage can continue after granted balance is exhausted. Track calls can also declare per-call behavior: `cap` (stop at the balance) or `overflow` (allow and bill the excess).
 - `spend_limits`: cap overage in feature units, not dollars.
-- `usage_limits`: hard usage caps over a time window.
+- `usage_limits`: hard usage caps over a time window; can filter on event properties.
   - Useful when a plan grants multiple balances, e.g. 5/day and 5/month, but the customer also needs a separate 100/month cap.
   - Useful for credit systems when credits are shared, but one mapped action needs its own cap, e.g. 10 `action_1` calls/day.
+  - Also the right tool for a per-entity cap on a pooled (shared) balance.
 - `usage_alerts`: notify when usage crosses a threshold; alerts do not block usage.
-- `auto_topups`: automatically buy prepaid quantity when balance drops below a threshold.
+- `auto_topups`: automatically buy prepaid quantity when balance drops below a threshold. Has a purchase limit per window; repeated card failures suspend it; failures emit a `billing.auto_topup_failed` webhook. Plans can ship default billing controls that customers inherit.
 
 </control-types>
 

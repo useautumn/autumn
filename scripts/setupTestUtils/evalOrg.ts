@@ -131,7 +131,11 @@ const main = async () => {
 	await assertDevDatabase();
 	const { db, client } = (
 		await import("@server/db/initDrizzle.js")
-	).initDrizzle();
+	).initDrizzle({
+		// Pin to the URL we were given after preload — don't let
+		// initDrizzle's dotenv.config() swap in a different DATABASE_URL.
+		databaseUrl: process.env.DATABASE_URL,
+	});
 	try {
 		if (command === "create" && runId) {
 			const result = await createEvalOrg({ db, runId });
