@@ -1,5 +1,5 @@
 import { Tracker } from "@bydefault/vercel";
-import { after, NextResponse, type NextRequest } from "next/server";
+import { after, type NextRequest, NextResponse } from "next/server";
 import { negotiate } from "@/lib/contentNegotiation";
 import { markdownTargetFor } from "@/lib/markdownRoutes";
 
@@ -7,6 +7,16 @@ import { markdownTargetFor } from "@/lib/markdownRoutes";
 // proxy is a no-op instead of throwing at module load.
 const token = process.env.BYDEFAULT_TOKEN;
 const tracker = token ? new Tracker({ token, exclude: ["/api"] }) : null;
+const NOT_FOUND_MARKDOWN = `# Page not found
+
+The requested page does not exist or has moved.
+
+- [Home](https://useautumn.com/)
+- [Developer resources](https://useautumn.com/developers)
+- [Sitemap](https://useautumn.com/sitemap.xml)
+- [llms.txt](https://useautumn.com/llms.txt)
+- [Documentation](https://docs.useautumn.com/welcome)
+`;
 
 function track(request: NextRequest) {
 	if (tracker) {
@@ -20,7 +30,21 @@ async function negotiateMarkdown(
 	request: NextRequest,
 ): Promise<NextResponse | null> {
 	const markdownTarget = markdownTargetFor(request.nextUrl.pathname);
-	if (!markdownTarget) return null;
+	if (!markdownTarget) {
+		if (
+			request.nextUrl.pathname !== "/docs" &&
+			negotiate(request.headers.get("accept")) === "markdown"
+		) {
+			return new NextResponse(NOT_FOUND_MARKDOWN, {
+				status: 404,
+				headers: {
+					"Content-Type": "text/markdown; charset=utf-8",
+					Vary: "Accept",
+				},
+			});
+		}
+		return null;
+	}
 
 	const decision = negotiate(request.headers.get("accept"));
 
@@ -89,6 +113,10 @@ export const config = {
 		// AI/agent text routes are dotted paths excluded above; track them explicitly.
 		{ source: "/llms.txt" },
 		{ source: "/llms-full.txt" },
+		{ source: "/pricing.md" },
+		{ source: "/about.md" },
+		{ source: "/contact.md" },
+		{ source: "/developers.md" },
 		{ source: "/alog.md" },
 		{ source: "/alog/:path*.md" },
 		{ source: "/blog.md" },

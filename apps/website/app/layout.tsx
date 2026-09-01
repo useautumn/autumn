@@ -21,7 +21,7 @@ const url = "https://useautumn.com";
 
 export const metadata: Metadata = {
 	title: {
-		default: "Billing Infrastructure for AI Startups | Autumn",
+		default: "Autumn Billing Infrastructure for AI Startups | useautumn.com",
 		template: "%s | Autumn",
 	},
 	description:
@@ -97,6 +97,8 @@ export default function RootLayout({ children }: LayoutProps) {
 			)}
 		>
 			<head>
+				<link rel="alternate" type="text/markdown" href="/home.md" />
+				<link rel="service-desc" type="application/yaml" href="/openapi.yml" />
 				<Reb2b />
 			</head>
 			<body className="min-h-full max-w-full overflow-x-clip overscroll-x-none flex flex-col">

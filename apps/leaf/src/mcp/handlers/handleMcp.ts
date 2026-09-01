@@ -1,12 +1,22 @@
 import { randomUUID } from "node:crypto";
 import type { createAutumnOperationsMCPServer } from "@autumn/mcp";
 import { RESPONSE_ALREADY_SENT } from "@hono/node-server/utils/response";
+import { isPublicMcpDiscoveryRequest } from "../auth/isPublicMcpDiscoveryRequest.js";
 import { OAuthHttpError } from "../auth/protectedResourceMetadata.js";
 import { buildAuthForRequest } from "../auth/resolveRequestAuth.js";
 import type { LeafMcpContext, McpRouteOptions } from "../types.js";
 
 type McpServer = ReturnType<typeof createAutumnOperationsMCPServer>;
 type McpAuth = Awaited<ReturnType<typeof buildAuthForRequest>>;
+
+const publicDiscoveryAuth = (options: McpRouteOptions): McpAuth => ({
+	apiKey: "public-discovery",
+	env: options["oauth-environment"],
+	principalId: "public:mcp-discovery",
+	resource: options.resourceUrl,
+	scopes: [],
+	serverURL: options["server-url"],
+});
 
 const setIncomingAuth = ({ c, auth }: { c: LeafMcpContext; auth: McpAuth }) => {
 	(c.env.incoming as typeof c.env.incoming & { auth?: McpAuth }).auth = auth;
@@ -41,13 +51,15 @@ export const createHandleMcp =
 	async (c: LeafMcpContext) => {
 		let auth: McpAuth;
 		try {
-			auth = await buildAuthForRequest({
-				headers: c.req.raw.headers,
-				db: options.db,
-				flags: options,
-				logger: options.logger,
-				resourceUrl: options.resourceUrl,
-			});
+			auth = (await isPublicMcpDiscoveryRequest(c.req.raw))
+				? publicDiscoveryAuth(options)
+				: await buildAuthForRequest({
+						headers: c.req.raw.headers,
+						db: options.db,
+						flags: options,
+						logger: options.logger,
+						resourceUrl: options.resourceUrl,
+					});
 		} catch (error) {
 			if (error instanceof OAuthHttpError) {
 				return oauthErrorResponse(c, error);
