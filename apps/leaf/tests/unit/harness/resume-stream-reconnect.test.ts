@@ -1,15 +1,5 @@
-/**
- * A single eve stream disconnect during an approval resume (or a queued-turn
- * drain) must never surface as a failure. Reconnection lives inside eve's
- * ClientSession.stream(), so streamEveEvents is mocked the way eve behaves:
- * transparent reconnects at the cursor, raising EveStreamDisconnectedError only
- * once the SDK has given up.
- *
- * The contract under test:
- *  - A disconnect eve recovers from is invisible to both consumers.
- *  - Exhausted reconnects and idle timeouts return the write-evidence result
- *    (applied / failed / unverified) instead of throwing.
- */
+/** A recoverable eve stream disconnect is invisible; exhausted reconnects and
+ * idle timeouts return write-evidence results instead of throwing. */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";

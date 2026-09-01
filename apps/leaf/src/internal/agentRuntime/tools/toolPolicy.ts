@@ -18,9 +18,7 @@ const labels: Record<string, string> = {
 	updateSubscription: "Update subscription",
 };
 
-// Plumbing the user should never see: date maths, file rummaging, and the
-// agent's own bookkeeping. A status line is for what is being done to their
-// billing, not how the agent gets there.
+// Plumbing the user should never see in a status line.
 const silentTools = new Set([
 	"dateToEpochMilliseconds",
 	"epochMillisecondsToDate",

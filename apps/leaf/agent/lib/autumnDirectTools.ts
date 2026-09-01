@@ -10,10 +10,8 @@ import { leafMcpBaseUrl, serverToolMetadata } from "./autumnToolMetadata.js";
 import { type LeafAgentConnection, toolAllowlists } from "./toolAllowlists.js";
 import { slimToolSchema } from "./toolSchemaSlim.js";
 
-/** Deciding how to bill needs the customer's payment method (card on file or
- * not) and their plans, so they are asked for rather than costing a second
- * read. The tool's input is `{ request }` and validates strict, so this has to
- * go inside `request` — a sibling key is rejected outright. */
+// Billing decisions need payment method + plans up front; strict validation
+// means the expand must live inside `request`, not beside it.
 const DEFAULT_CUSTOMER_EXPAND = ["payment_method", "subscriptions.plan"];
 
 export const withCustomerExpand = (input: Record<string, unknown>) => {
@@ -63,9 +61,7 @@ export const autumnDirectTools = ({
 					const requiresApproval = approvalToolNames.has(toolName);
 					const inputSchema = slimToolSchema(tool.inputSchema);
 					entries[qualified] = defineTool({
-						// Nothing suspends the turn: a gated write is recorded here and
-						// applied by leaf when the user approves the card. Parking left
-						// the session unable to raise a second card in the same thread.
+						// Gated writes record and end the turn; leaf applies on approval.
 						approval: () => "not-applicable",
 						description: tool.description,
 						execute: async (input, toolCtx) => {

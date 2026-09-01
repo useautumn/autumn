@@ -1,10 +1,6 @@
-/**
- * Root-fix validation: after an approved id rename, a follow-up write in the
- * SAME thread must target the NEW id — the transcript now records the rename
- * as a real tool result instead of a procedural deny + SYSTEM NOTE.
- *
- *   bun tests/e2e/staleIdRename.e2e.ts
- */
+/** After an approved id rename, a follow-up write in the SAME thread targets
+ * the NEW id.
+ *   bun tests/e2e/staleIdRename.e2e.ts */
 import { AppEnv } from "@autumn/shared";
 import { createApproval } from "../../src/internal/approvals/actions/createApproval.js";
 import { resolveApproval } from "../../src/internal/approvals/actions/resolveApproval.js";

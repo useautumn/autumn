@@ -1,6 +1,4 @@
-/** Which Autumn MCP tools each agent may discover. `leaf` is the single live
- * agent; `catalog` is prepared but wired to no agent, so catalog writes reach
- * nobody — see agent-docs.config.ts. */
+/** Which Autumn MCP tools each agent may discover. */
 
 const ORG_CONTEXT_READS = [
 	"getAgentRules",

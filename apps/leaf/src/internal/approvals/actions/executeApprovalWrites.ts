@@ -155,8 +155,7 @@ export const executeApprovalWrites = async ({
 			writes: stepOutcomes(executed),
 		};
 	}
-	// The primary write's response carries the money facts the thread links to —
-	// checkout url, invoice, customer. Dropping it left the outcome empty.
+	// The primary write's response carries the money facts the thread links to.
 	const primaryOutcome = executed[0]?.outcome;
 	return {
 		result:

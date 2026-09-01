@@ -51,8 +51,8 @@ export type RecordedWrite = Readonly<{
 
 export type EveTurnProgress = Readonly<{
 	finalText: string;
-	/** Gated writes the model called this turn; nothing parks, so the approval
-	 * is assembled from these when the turn ends. */
+	/** Gated writes the model called this turn; the approval is assembled from
+	 * these when the turn ends. */
 	recordedWrites: ReadonlyArray<RecordedWrite>;
 	lastPreview?: CapturedPreview;
 	pendingText: string;

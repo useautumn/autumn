@@ -20,9 +20,8 @@ const eveActionResultSchema = z.object({
 	toolName: z.string().optional(),
 });
 
-/** eve ships its schema on zod v4, which cannot nest inside leaf's zod v3
- * objects, so the contract is enforced by delegating to eve's own parse. A
- * request eve shapes unexpectedly is dropped rather than failing the turn. */
+/** eve's zod v4 schemas cannot nest in leaf's v3 objects, so eve's own parse
+ * enforces the contract; an unexpected shape drops rather than failing the turn. */
 const parseInputRequests = (value: unknown): InputRequest[] =>
 	(Array.isArray(value) ? value : []).flatMap((request) => {
 		const parsed = inputRequestSchema.safeParse(request);

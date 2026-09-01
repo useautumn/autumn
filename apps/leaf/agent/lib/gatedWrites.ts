@@ -2,18 +2,14 @@ import type { RouteScopeRequirement } from "@autumn/shared";
 import type { LeafAgentConnection } from "./toolAllowlists.js";
 
 type GatedWrite = {
-	/** Agents whose toolset exposes (and gates) this write. */
 	agents: readonly LeafAgentConnection[];
-	/** Preview twin used to backfill the approval card; absent = no preview. */
 	previewTool?: string;
-	/** Per-user scopes required to approve; absent = fails closed at decide. */
 	scopes?: RouteScopeRequirement;
 	toolName: string;
 };
 
-/** The one authoritative table of approval-gated writes — approval sets, scope
- * requirements, and write→preview mapping all derive from here. Every gated
- * write also carries an agent-authored description; see approvalDescriptionSchema. */
+/** The authoritative gated-write table: approval sets, scope requirements
+ * (absent = fails closed), and write→preview mapping all derive from here. */
 export const GATED_WRITES: readonly GatedWrite[] = [
 	{
 		agents: ["leaf"],

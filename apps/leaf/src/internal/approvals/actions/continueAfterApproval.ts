@@ -18,8 +18,8 @@ const appliedNotice = (result: unknown) =>
 		"</approval_applied>",
 	].join("\n");
 
-/** Approval used to resume a parked turn; nothing parks now, so a follow-up
- * turn is what confirms the change and finishes a multi-step request. */
+/** A fresh turn confirms the applied change and finishes any remaining steps
+ * of a multi-step request. */
 export const continueAfterApproval = async ({
 	approval,
 	providerUserId,

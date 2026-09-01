@@ -1,10 +1,6 @@
-/**
- * The approve flow: approve resumes eve, which executes the parked writes
- * itself; outcomes stream back onto the write rows. Drift is guarded
- * pre-resume — a drifted card refreshes instead of executing.
- *
- *   bun tests/e2e/approveFlow.e2e.ts
- */
+/** Approve executes the stored writes deterministically; outcomes land on the
+ * write rows, and a drifted card refreshes instead of executing.
+ *   bun tests/e2e/approveFlow.e2e.ts */
 import { AppEnv, chatApprovals, chatApprovalWrites } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { createApproval } from "../../src/internal/approvals/actions/createApproval.js";

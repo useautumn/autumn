@@ -6,9 +6,8 @@ import {
 } from "@autumn/agent-docs/agent";
 import { defineDynamic, defineSkill } from "eve/skills";
 
-/** The agent's loadable skill bundle: its own domain skills plus every
- * transitive prerequisite (concepts), resolved from agent-docs. A skill named
- * in `inlined` is already in the prompt, so it is not offered as loadable. */
+/** Loadable skill bundle from agent-docs; a skill named in `inlined` is
+ * already in the prompt, so it is not offered as loadable. */
 export const agentSkills = ({
 	agent,
 	inlined = [],
