@@ -357,14 +357,17 @@ export const handleApprovalActionWithDeps = async ({
 			return;
 		}
 		const details = await cardDetailsForApproval({ approval: claimed });
-		await deps.editActionMessage({
-			content: approvalStatusCard({
-				status: "running",
-				...details,
-				actorId: providerUserId,
-			}),
-			event,
-		});
+		// Best effort: a failed card render must never block the execution.
+		await deps
+			.editActionMessage({
+				content: approvalStatusCard({
+					status: "running",
+					...details,
+					actorId: providerUserId,
+				}),
+				event,
+			})
+			.catch(() => {});
 		const result = await deps.resolveApproval({
 			approval: claimed,
 			providerUserId,
