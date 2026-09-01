@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleGetCustomer } from "@/internal/customers/internalHandlers/handleGetCustomer.js";
+import { handleGetPendingPaymentLink } from "@/internal/customers/internalHandlers/handleGetPendingPaymentLink.js";
 import { handleClearCustomerCache } from "./handlers/handleClearCustomerCache.js";
 import { handleListCustomerProducts } from "./handlers/handleListCustomerProducts.js";
 import { handleCountCustomers } from "./internalHandlers/handleCountCustomers.js";
@@ -29,6 +30,10 @@ internalCusRouter.post(
 	...handleDownloadCustomerExport,
 );
 internalCusRouter.get("/:customer_id/products", ...handleListCustomerProducts);
+internalCusRouter.get(
+	"/:customer_id/products/:customer_product_id/payment_link",
+	...handleGetPendingPaymentLink,
+);
 internalCusRouter.get("/:customer_id", ...handleGetCustomer);
 internalCusRouter.get(
 	"/:customer_id/product/:product_id",
