@@ -14,6 +14,7 @@
  *   C4  archived plans are not re-proposed — they are already off the surface
  *   C5  zero stated plans against a non-empty catalog is refused, not a wipe
  *   C6  the default is unchanged: omitting skip_deletions touches nothing
+ *   C7  restating an archived plan revives it — presence is the signal
  *
  * Red (current): setup is payload-scoped, so absentees are uncomputable and
  *   every assertion below either no-ops or cannot see the plan.
@@ -168,6 +169,47 @@ test.concurrent(
 					await planExists({ ctx, planId: untouchedId }),
 					"unmentioned plan survives a patch",
 				).toBe(true);
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 full-state: restating an archived plan brings it back")}`,
+	async () => {
+		// Full state speaks for the entire org catalog, so it needs an org of its
+		// own — in a shared one it would remove every concurrent test's plans.
+		const { autumnV2_3, ctx } = await initScenario({
+			setup: [s.platform.create({})],
+			actions: [],
+		});
+		const planId = uniqueTestId("cv2_fs_revive");
+
+		await withCatalogPlans({
+			ctx,
+			planIds: [planId],
+			run: async () => {
+				await autumnV2_3.catalogV2.update({
+					plans: [{ plan_id: planId, name: "Retired", items: [] }],
+				});
+				await autumnV2_3.catalogV2.update({
+					plans: [{ plan_id: planId, archived: true }],
+				});
+				expect(
+					await planExists({ ctx, planId }),
+					"archived before the revive",
+				).toBe(false);
+
+				// C7: archived rows never live in a config, so stating one again is
+				// the whole signal. No `archived: false` — presence is the ask.
+				await autumnV2_3.catalogV2.update({
+					skip_deletions: false,
+					plans: [{ plan_id: planId, name: "Back", items: [] }],
+				});
+
+				expect(await planExists({ ctx, planId }), "revived by presence").toBe(
+					true,
+				);
 			},
 		});
 	},
