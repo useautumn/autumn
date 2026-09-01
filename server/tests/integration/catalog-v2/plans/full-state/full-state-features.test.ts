@@ -54,7 +54,11 @@ test.concurrent(
 	async () => {
 		// Full state speaks for the whole org, so it needs an org of its own.
 		const { autumnV2_3, ctx } = await initScenario({
-			setup: [s.platform.create({})],
+			setup: [
+				s.platform.create({
+					userEmail: `${uniqueTestId("fs")}@autumn.test`,
+				}),
+			],
 			actions: [],
 		});
 		const keptId = uniqueTestId("fs_feat_kept");
@@ -96,7 +100,11 @@ test.concurrent(
 	`${chalk.yellowBright("catalogV2 full-state features: dropping a feature a plan still uses is an error")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({
-			setup: [s.platform.create({})],
+			setup: [
+				s.platform.create({
+					userEmail: `${uniqueTestId("fs")}@autumn.test`,
+				}),
+			],
 			actions: [],
 		});
 		const featureId = uniqueTestId("fs_feat_used");
@@ -140,7 +148,11 @@ test.concurrent(
 	`${chalk.yellowBright("catalogV2 full-state features: a patch never removes a feature")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({
-			setup: [s.platform.create({})],
+			setup: [
+				s.platform.create({
+					userEmail: `${uniqueTestId("fs")}@autumn.test`,
+				}),
+			],
 			actions: [],
 		});
 		const statedId = uniqueTestId("fs_feat_stated");

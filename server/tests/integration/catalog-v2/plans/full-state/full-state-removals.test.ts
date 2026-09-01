@@ -52,7 +52,11 @@ test.concurrent(
 		// Full state speaks for the entire org catalog, so it needs an org of its
 		// own — in a shared one it would remove every concurrent test's plans.
 		const { autumnV2_3, ctx } = await initScenario({
-			setup: [s.platform.create({})],
+			setup: [
+				s.platform.create({
+					userEmail: `${uniqueTestId("fs")}@autumn.test`,
+				}),
+			],
 			actions: [],
 		});
 		const keptId = uniqueTestId("cv2_fs_kept");
@@ -102,7 +106,11 @@ test.concurrent(
 		// Full state speaks for the entire org catalog, so it needs an org of its
 		// own — in a shared one it would remove every concurrent test's plans.
 		const { autumnV2_3, ctx } = await initScenario({
-			setup: [s.platform.create({})],
+			setup: [
+				s.platform.create({
+					userEmail: `${uniqueTestId("fs")}@autumn.test`,
+				}),
+			],
 			actions: [],
 		});
 		const planId = uniqueTestId("cv2_fs_wipe");
@@ -138,7 +146,11 @@ test.concurrent(
 		// Full state speaks for the entire org catalog, so it needs an org of its
 		// own — in a shared one it would remove every concurrent test's plans.
 		const { autumnV2_3, ctx } = await initScenario({
-			setup: [s.platform.create({})],
+			setup: [
+				s.platform.create({
+					userEmail: `${uniqueTestId("fs")}@autumn.test`,
+				}),
+			],
 			actions: [],
 		});
 		const statedId = uniqueTestId("cv2_fs_stated");
@@ -180,7 +192,11 @@ test.concurrent(
 		// Full state speaks for the entire org catalog, so it needs an org of its
 		// own — in a shared one it would remove every concurrent test's plans.
 		const { autumnV2_3, ctx } = await initScenario({
-			setup: [s.platform.create({})],
+			setup: [
+				s.platform.create({
+					userEmail: `${uniqueTestId("fs")}@autumn.test`,
+				}),
+			],
 			actions: [],
 		});
 		const planId = uniqueTestId("cv2_fs_revive");
