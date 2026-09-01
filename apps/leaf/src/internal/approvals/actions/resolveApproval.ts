@@ -54,7 +54,6 @@ export const resolveApproval = async ({
 	providerUserId,
 }: {
 	approval: ChatApproval;
-	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
 }): Promise<ApprovalRunResult> => {
 	if (approval.harness && approval.harness !== "eve") {

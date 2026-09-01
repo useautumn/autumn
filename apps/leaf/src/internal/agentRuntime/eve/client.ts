@@ -142,41 +142,6 @@ export const postEveMessage = async ({
 	return { sessionId: response.sessionId };
 };
 
-/** Ends a turn parked on pending input so the next user message gets a turn of
- * its own. Eve buffers message deliveries behind pending input and only picks
- * up input answers, so without this a follow-up sits unanswered until the user
- * approves or dismisses. Best effort: a failed cancel is no worse than not
- * trying, and the turn is abandoned either way. */
-export const cancelEveTurn = async ({
-	auth,
-	session,
-}: {
-	auth: EveAuthContext;
-	session: EveSessionRef;
-}) => {
-	try {
-		const result = await eveClient({ auth })
-			.sessions.attach(session.sessionId)
-			.cancel();
-		// Correlate with any later stall on this session: "accepted" means a live
-		// turn was killed, "no_active_turn" means the park had already settled.
-		logger.info("Cancelled a parked Eve turn", {
-			event: "leaf.eve_turn_cancelled",
-			data: {
-				pending_request_count: session.state.pendingRequests.length,
-				session_id: session.sessionId,
-				status: result.status,
-			},
-		});
-	} catch (error) {
-		logger.warn("Could not cancel a parked Eve turn", {
-			event: "leaf.eve_turn_cancel_failed",
-			data: { session_id: session.sessionId },
-			error,
-		});
-	}
-};
-
 /** Written to the model, not the user: the siblings are denied for a procedural
  * reason, and without saying so the model reads six denials as six rejections. */
 export const SIBLING_WITHHELD_NOTE =

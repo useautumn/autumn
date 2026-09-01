@@ -3,23 +3,18 @@ import {
 	type ChatApprovalWrite,
 	chatInstallations,
 	checkScopes,
-	ms,
 } from "@autumn/shared";
 import type { ActionEvent } from "chat";
-import { differenceInMilliseconds } from "date-fns";
 import { and, eq } from "drizzle-orm";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
-import { questionCard } from "../../../../providers/slack/presenters/interactionCards.js";
 import { resolveSlackCallerAuth } from "../../../../providers/slack/setup/resolveSlackCallerAuth.js";
 import { approvalCard, approvalStatusCard } from "../../../../ui/blocks.js";
 import type { ReplyTarget } from "../../../../ui/progress.js";
-import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
 import type { WithheldWrite } from "../../../agentRuntime/eve/parkedInput.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import { continueAfterApproval } from "../../actions/continueAfterApproval.js";
-import { discardApproval } from "../../actions/discardApproval.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
 import { withheldWritesOf } from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
@@ -34,12 +29,10 @@ import {
 	approvalErrorResult,
 	isErrorResult,
 } from "../../utils/approvalErrors.js";
-import { formatElapsed } from "../../utils/approvalProgress.js";
 import { requiredScopesForApproval } from "../../utils/approvalScopeRequirements.js";
 import { publicToolArgs } from "../../utils/toolRequest.js";
-import { dashboardUrlFor, postApprovalCardForRow } from "./present.js";
+import { dashboardUrlFor } from "./present.js";
 
-const APPROVAL_PROGRESS_DELAY_MS = ms.seconds(10);
 
 /** Grouped writes for card bodies and scope checks; step-listing failures
  * degrade to the legacy marker fallback rather than blocking the click. */
@@ -300,30 +293,6 @@ export const handleApprovalActionWithDeps = async ({
 				await editToCurrentStatus();
 				return;
 			}
-			// Deny in the session too, or eve keeps waiting and the discarded write
-			// can still run later.
-			if (cancelled.harness === "eve") {
-				const discard = deps.discardApproval ?? discardApproval;
-				// The row is already cancelled, so a deny eve drops would leave its
-				// turn parked behind a card nobody can click — one retry is cheap.
-				let denied = await discard({ approval: cancelled, providerUserId });
-				if ("error" in denied && denied.error) {
-					denied = await discard({ approval: cancelled, providerUserId });
-				}
-				if ("error" in denied && denied.error) {
-					deps.logger.warn("Could not deny Eve approval on dismiss", {
-						event: "leaf.eve_dismiss_deny_failed",
-						approval_id: approvalId,
-						data: { message: denied.message },
-					});
-				} else if ("text" in denied && denied.text.trim()) {
-					try {
-						await deps.postThreadReply({ event, markdown: denied.text });
-					} catch {
-						// The acknowledgement reply is cosmetic.
-					}
-				}
-			}
 			await deps.editActionMessage({
 				content: approvalStatusCard({
 					status: "cancelled",
@@ -387,78 +356,19 @@ export const handleApprovalActionWithDeps = async ({
 			});
 			return;
 		}
-		// A resumed turn can park again where nothing streams — surface chained
-		// writes and questions as fresh cards or they stay invisible.
-		const surfaceResumedOutcome = async ({
-			resumed,
-		}: {
-			resumed: ApprovalRunResult;
-		}) => {
-			if (!event.thread) return;
-			if ("chainedApprovalId" in resumed && resumed.chainedApprovalId) {
-				const chained = await deps.getApproval({
-					approvalId: resumed.chainedApprovalId,
-				});
-				if (chained) {
-					await postApprovalCardForRow({
-						approval: chained,
-						logger: rootLogger,
-						target: event.thread,
-					});
-				}
-			}
-			if ("question" in resumed && resumed.question) {
-				await event.thread.post(
-					questionCard({
-						env: claimed.env,
-						options: resumed.question.options,
-						orgId: claimed.org_id,
-						prompt: resumed.question.prompt,
-						requestId: resumed.question.requestId,
-						sessionId: resumed.question.sessionId,
-					}),
-				);
-			}
-		};
 		const details = await cardDetailsForApproval({ approval: claimed });
-		const startedAt = Date.now();
-		let statusText: string | undefined;
-		const renderRunningCard = () =>
-			approvalStatusCard({
+		await deps.editActionMessage({
+			content: approvalStatusCard({
 				status: "running",
 				...details,
 				actorId: providerUserId,
-				statusLine: statusText
-					? differenceInMilliseconds(Date.now(), startedAt) >=
-						APPROVAL_PROGRESS_DELAY_MS
-						? `${statusText} · ${formatElapsed(startedAt)}`
-						: statusText
-					: undefined,
-			});
-		const editor = createThrottledCardEditor({
-			edit: () =>
-				deps.editActionMessage({ content: renderRunningCard(), event }),
+			}),
+			event,
 		});
-		editor.requestEdit();
-
-		const heartbeat = setInterval(
-			() => editor.requestEdit(),
-			APPROVAL_PROGRESS_DELAY_MS,
-		);
-		let result: Awaited<ReturnType<ApprovalActionDeps["resolveApproval"]>>;
-		try {
-			result = await deps.resolveApproval({
-				approval: claimed,
-				onProgress: (line) => {
-					statusText = line;
-					editor.requestEdit();
-				},
-				providerUserId,
-			});
-		} finally {
-			clearInterval(heartbeat);
-			await editor.finalize();
-		}
+		const result = await deps.resolveApproval({
+			approval: claimed,
+			providerUserId,
+		});
 		if ("drifted" in result) {
 			// Nothing executed; the row is back in pending with fresh previews —
 			// re-render the PENDING card and tell the thread why.
@@ -521,17 +431,6 @@ export const handleApprovalActionWithDeps = async ({
 				} catch (error) {
 					deps.logger.warn("Could not post approval outcome reply", {
 						event: "leaf.approval_reply_failed",
-						approval_id: approvalId,
-						error,
-					});
-				}
-			}
-			if (event.thread) {
-				try {
-					await surfaceResumedOutcome({ resumed });
-				} catch (error) {
-					deps.logger.warn("Could not surface chained interaction", {
-						event: "leaf.approval_chained_surface_failed",
 						approval_id: approvalId,
 						error,
 					});

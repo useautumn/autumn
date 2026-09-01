@@ -1,5 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { AppEnv, ChatApproval, ChatProvider } from "@autumn/shared";
+import type { AppEnv, ChatProvider } from "@autumn/shared";
 import type { ActiveRun } from "../../runs/runRegistry.js";
 import type { EveSessionRef } from "../eve/types.js";
 
@@ -37,7 +37,6 @@ export type AgentTurnContext = Readonly<{
 	id: string;
 	logger: AutumnLogger;
 	onAction?: (progress: AgentActionProgress | string) => Promise<void> | void;
-	onApprovalsSuperseded?: (approvals: ChatApproval[]) => Promise<void> | void;
 	onThinking?: () => void;
 	onReasoning?: (input: { id: string; text: string }) => void;
 	org: { id: string; slug?: string };

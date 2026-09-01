@@ -1,7 +1,6 @@
 import type { Attachment } from "chat";
 import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { isTransientNetworkError } from "../../../internal/agentRuntime/eve/streamErrors.js";
-import { editSupersededApprovalCards } from "../../../internal/approvals/surfaces/slack/superseded.js";
 import {
 	dispatchThreadMessage,
 	stopActiveThreadRun,
@@ -167,8 +166,6 @@ const runAndReply = async ({
 			installation,
 			logger,
 			onAction: logAction,
-			onApprovalsSuperseded: (approvals) =>
-				editSupersededApprovalCards({ approvals, logger, target }),
 			onReasoning: evePresenter.onReasoning,
 			onThinking: progress.thinking,
 			providerUserId,

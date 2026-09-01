@@ -56,7 +56,6 @@ const runTurn = (text: string) =>
 		installation,
 		logger,
 		onAction: () => {},
-		onApprovalsSuperseded: () => {},
 		onReasoning: () => {},
 		onThinking: () => {},
 		providerUserId,
