@@ -9,14 +9,20 @@ export function CancelFooter() {
 	const { customerProduct } = formContext;
 
 	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
+	const awaitingPayment = customerProduct.status === CusProductStatus.Pending;
 	const isDefault = customerProduct.product?.is_default ?? false;
 	const { valid: isFreeOrOneOff } = cp(customerProduct).free().or.oneOff();
 	const isFreeDefault = isDefault && isFreeOrOneOff;
 
-	const isReady = !previewQuery.isLoading && !previewQuery.error;
+	// A pending plan has no subscription to preview against — it is discarded,
+	// not billed, so there is nothing to wait for.
+	const isReady =
+		awaitingPayment || (!previewQuery.isLoading && !previewQuery.error);
 
 	let buttonLabel = "Cancel Subscription";
-	if (isScheduled) {
+	if (awaitingPayment) {
+		buttonLabel = "Discard Pending Plan";
+	} else if (isScheduled) {
 		buttonLabel = "Cancel Scheduled Plan";
 	} else if (isFreeDefault) {
 		buttonLabel = "Cancel Default Plan";

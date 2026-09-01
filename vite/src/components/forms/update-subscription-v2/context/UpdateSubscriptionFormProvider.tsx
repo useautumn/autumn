@@ -7,6 +7,7 @@ import type {
 	ProductV2,
 } from "@autumn/shared";
 import {
+	CusProductStatus,
 	ProductItemFeatureType,
 	productV2ToFrontendProduct,
 } from "@autumn/shared";
@@ -345,9 +346,14 @@ export function UpdateSubscriptionFormProvider({
 		[buildRequestBody, formValues],
 	);
 
+	// A pending plan has no subscription to price a change against.
 	const previewQuery = useUpdateSubscriptionPreview({
 		requestBody: previewBody,
-		enabled: !!(formContext.customerId && formContext.product),
+		enabled: !!(
+			formContext.customerId &&
+			formContext.product &&
+			formContext.customerProduct?.status !== CusProductStatus.Pending
+		),
 	});
 
 	const generation = useUpdateSubscriptionGeneration({
