@@ -1,18 +1,17 @@
-import { type BillingPlan, CusProductStatus } from "@autumn/shared";
+import { type AutumnBillingPlan, CusProductStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { insertCustomCatalogRows } from "@/internal/billing/v2/execute/executeAutumnActions/insertCustomCatalogRows";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 
 export const insertPendingCustomerProducts = async ({
 	ctx,
-	billingPlan,
+	autumnBillingPlan,
 	metadataId,
 }: {
 	ctx: AutumnContext;
-	billingPlan: BillingPlan;
+	autumnBillingPlan: AutumnBillingPlan;
 	metadataId: string;
 }) => {
-	const autumnBillingPlan = billingPlan.autumn;
 	const { insertCustomerProducts } = autumnBillingPlan;
 
 	if (!insertCustomerProducts?.length) return;

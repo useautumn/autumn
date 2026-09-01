@@ -7,6 +7,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { insertPendingCustomerProducts } from "@/internal/billing/v2/execute/insertPendingCustomerProducts";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
@@ -55,6 +56,16 @@ export const executeMultiSubscriptionBillingPlan = async ({
 		});
 		onStripeResult?.(result);
 		stripeResults.push(result);
+	}
+
+	const deferredResult = stripeResults.find((result) => result.deferred);
+	if (deferredResult?.deferredMetadataId) {
+		await insertPendingCustomerProducts({
+			ctx,
+			autumnBillingPlan,
+			metadataId: deferredResult.deferredMetadataId,
+		});
+		return stripeResults;
 	}
 
 	const primaryStripeResult = stripeResults[0];

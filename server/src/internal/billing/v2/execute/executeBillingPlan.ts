@@ -51,7 +51,7 @@ export const executeBillingPlan = async ({
 		if (stripeBillingResult.deferredMetadataId) {
 			await insertPendingCustomerProducts({
 				ctx,
-				billingPlan,
+				autumnBillingPlan: billingPlan.autumn,
 				metadataId: stripeBillingResult.deferredMetadataId,
 			});
 		}

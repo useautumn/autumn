@@ -28,15 +28,18 @@ export const promotePendingCustomerProducts = async ({
 			autumnBillingPlan.insertCustomerProducts?.find(
 				(planned) => planned.id === customerProduct.id,
 			);
+		if (!plannedCustomerProduct) continue;
 
 		await CusProductService.update({
 			ctx,
 			cusProductId: customerProduct.id,
 			updates: {
-				status: CusProductStatus.Active,
+				// The plan already decided each row's status — a future schedule
+				// phase stays Scheduled rather than going live on payment.
+				status: plannedCustomerProduct.status,
 				metadata_id: null,
-				subscription_ids: plannedCustomerProduct?.subscription_ids ?? undefined,
-				scheduled_ids: plannedCustomerProduct?.scheduled_ids ?? undefined,
+				subscription_ids: plannedCustomerProduct.subscription_ids ?? undefined,
+				scheduled_ids: plannedCustomerProduct.scheduled_ids ?? undefined,
 			},
 		});
 
