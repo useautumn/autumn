@@ -502,8 +502,6 @@ export class CusProductService {
 
 	// Deliberately no freshness mark: the Stripe webhook refresh-cache middleware
 	// invalidation chokepoint already stamps every customer this touches.
-	/** Expires a row only while it is still pending, so a concurrent promotion
-	 * on payment is never overwritten. */
 	static async expireIfPending({
 		ctx,
 		cusProductId,

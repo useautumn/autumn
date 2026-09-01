@@ -14,8 +14,6 @@ export function CancelFooter() {
 	const { valid: isFreeOrOneOff } = cp(customerProduct).free().or.oneOff();
 	const isFreeDefault = isDefault && isFreeOrOneOff;
 
-	// A pending plan has no subscription to preview against — it is discarded,
-	// not billed, so there is nothing to wait for.
 	const isReady =
 		awaitingPayment || (!previewQuery.isLoading && !previewQuery.error);
 

@@ -41,8 +41,7 @@ export const promotePendingCustomerProducts = async ({
 			ctx,
 			cusProductId: customerProduct.id,
 			updates: {
-				// The plan already decided each row's status — a future schedule
-				// phase stays Scheduled rather than going live on payment.
+				// A future schedule phase stays Scheduled rather than going live.
 				status: plannedCustomerProduct.status,
 				metadata_id: null,
 				subscription_ids: plannedCustomerProduct.subscription_ids ?? undefined,
@@ -50,10 +49,8 @@ export const promotePendingCustomerProducts = async ({
 			},
 		});
 
-		// Rollovers are held back while a plan is pending, the same way they are
-		// for a scheduled plan, so carry them over as it goes live. The persisted
-		// row is the one with no rollovers yet — reapplying to the planned row
-		// would insert a second copy of the ones it still holds in memory.
+		// The persisted row has no rollovers yet; the planned one still holds
+		// them in memory and would insert a second copy.
 		if (plannedCustomerProduct.status === CusProductStatus.Active) {
 			await reapplyExistingRolloversToCustomerProduct({
 				ctx,

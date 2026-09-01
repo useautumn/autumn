@@ -36,8 +36,6 @@ const voidStripeInvoice = async ({
 	await stripeCli.invoices.voidInvoice(stripeInvoiceId);
 };
 
-/** Drops a plan awaiting payment, closing whatever the deferred plan left open
- * so the customer can no longer pay for it. */
 export const discardPendingCustomerProduct = async ({
 	ctx,
 	customerProduct,

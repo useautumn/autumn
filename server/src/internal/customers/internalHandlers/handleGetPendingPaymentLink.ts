@@ -4,18 +4,14 @@ import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { CusService } from "../CusService";
 
-/**
- * GET /customers/:customer_id/products/:customer_product_id/payment_link
- * The URL a pending plan is waiting on, resolved from Stripe so it reflects
- * the session or invoice as it stands now.
- */
+/** Resolved from Stripe on read so the link reflects the session or invoice
+ * as it stands now. */
 export const handleGetPendingPaymentLink = createRoute({
 	scopes: [Scopes.Customers.Read],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { customer_id, customer_product_id } = c.req.param();
 
-		// Resolve through the customer so the row is scoped to this org and env.
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customer_id,

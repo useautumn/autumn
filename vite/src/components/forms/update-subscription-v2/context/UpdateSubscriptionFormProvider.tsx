@@ -346,7 +346,6 @@ export function UpdateSubscriptionFormProvider({
 		[buildRequestBody, formValues],
 	);
 
-	// A pending plan has no subscription to price a change against.
 	const previewQuery = useUpdateSubscriptionPreview({
 		requestBody: previewBody,
 		enabled: !!(

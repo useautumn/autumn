@@ -24,8 +24,6 @@ export const expireCustomerProducts = async ({
 	}
 };
 
-/** Expires only rows still awaiting payment, so a promotion that lands first
- * is never overwritten. */
 export const expirePendingCustomerProducts = async ({
 	ctx,
 	metadataId,
