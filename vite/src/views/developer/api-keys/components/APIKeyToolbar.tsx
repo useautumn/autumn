@@ -1,13 +1,13 @@
-import type { ApiKey } from "@autumn/shared";
-import { ToolbarButton } from "@autumn/ui";
-import { Delete } from "lucide-react";
-import { useState } from "react";
+import type { ApiKeyListItem } from "@autumn/shared";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	ToolbarButton,
 } from "@autumn/ui";
+import { Delete } from "lucide-react";
+import { useState } from "react";
 import { DeleteApiKeyDialog } from "./DeleteApiKeyDialog";
 
 const APIKeyToolbarItems = ({
@@ -16,23 +16,21 @@ const APIKeyToolbarItems = ({
 	setDeleteOpen: (open: boolean) => void;
 }) => {
 	return (
-		<>
-			<DropdownMenuItem
-				className="flex items-center"
-				onClick={() => {
-					setDeleteOpen(true);
-				}}
-			>
-				<div className="flex items-center justify-between w-full gap-2">
-					Delete
-					<Delete size={12} />
-				</div>
-			</DropdownMenuItem>
-		</>
+		<DropdownMenuItem
+			className="flex items-center"
+			onClick={() => {
+				setDeleteOpen(true);
+			}}
+		>
+			<div className="flex items-center justify-between w-full gap-2">
+				Delete
+				<Delete size={12} />
+			</div>
+		</DropdownMenuItem>
 	);
 };
 
-export const APIKeyToolbar = ({ apiKey }: { apiKey: ApiKey }) => {
+export const APIKeyToolbar = ({ apiKey }: { apiKey: ApiKeyListItem }) => {
 	const [deleteOpen, setDeleteOpen] = useState(false);
 
 	return (
