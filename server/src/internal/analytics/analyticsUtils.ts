@@ -4,7 +4,6 @@ import {
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
-	type FullCustomerEntitlement,
 	type FullProduct,
 	RecaseError,
 	type Subscription,
@@ -310,6 +309,14 @@ function calculateBillingCycleResult(
 	const gap = currentEndDate.getTime() - currentStartDate.getTime();
 	const gapDays = Math.floor(gap / (1000 * 60 * 60 * 24));
 
+	if (intervalType === "1bc") {
+		return {
+			startDate: startDates[0],
+			endDate: endDates[0],
+			gap: gapDays,
+		};
+	}
+
 	if (intervalType === "last_cycle") {
 		const earliestCreation = createdDates.reduce((earliest, current) => {
 			const currentDate = new Date(current);
@@ -339,7 +346,7 @@ function calculateBillingCycleResult(
 		};
 	}
 
-	const gapMultiplier = intervalType === "1bc" ? 1 : 3;
+	const gapMultiplier = 3;
 	const now = new Date();
 
 	// For analytics, we look BACKWARD from today for N billing cycles
