@@ -631,3 +631,52 @@ test.concurrent(
 		expect(rows[0].metadata_id).toBeNull();
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("pending update: a non-billing edit keeps the original payment")}`,
+	async () => {
+		const customerId = `pending-update-no-billing-${Date.now()}`;
+		const pro = products.pro({
+			id: "pro-pending-no-billing",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, autumnV2_2, customer } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [
+				s.billing.attach({
+					productId: pro.id,
+					invoice: true,
+					enableProductImmediately: false,
+					finalizeInvoice: true,
+				}),
+			],
+		});
+
+		const before = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const originalPending = before.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			no_billing_changes: true,
+		});
+
+		const after = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const stillPending = after.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(stillPending?.status).toBe(CusProductStatus.Pending);
+		expect(stillPending?.metadata_id).toBe(originalPending?.metadata_id);
+	},
+);

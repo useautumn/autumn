@@ -122,15 +122,16 @@ function EditContent() {
 					</div>
 				</div>
 
-				{customerProduct.status === CusProductStatus.Pending && (
-					<div className="px-4 pt-4">
-						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-							This plan is waiting on payment. Saving replaces it, so the
-							payment link already sent to the customer will stop working and a
-							new one is issued.
-						</InfoBox>
-					</div>
-				)}
+				{customerProduct.status === CusProductStatus.Pending &&
+					!hasNoBillingChanges && (
+						<div className="px-4 pt-4">
+							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+								This plan is waiting on payment. Saving replaces it, so the
+								payment link already sent to the customer will stop working and
+								a new one is issued.
+							</InfoBox>
+						</div>
+					)}
 
 				<EditPlanSection />
 				<UpdateSubscriptionPlanOptions />

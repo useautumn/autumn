@@ -7,6 +7,7 @@ import {
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { FIELDS_WITH_BILLING_CHANGES } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
 import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/findPendingCustomerProduct";
 import { updatePendingCustomerProduct } from "@/internal/billing/v2/execute/updatePendingCustomerProduct";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
@@ -48,7 +49,13 @@ export const handleUpdateSubscription = createRoute({
 			entityId: body.entity_id,
 		});
 
-		if (pendingCustomerProduct) {
+		// Only a change to what is billed needs a new invoice; anything else runs
+		// as a normal update and leaves the customer's payment link alone.
+		const rebillsPendingPlan =
+			body.no_billing_changes !== true &&
+			FIELDS_WITH_BILLING_CHANGES.some((field) => body[field] !== undefined);
+
+		if (pendingCustomerProduct && rebillsPendingPlan) {
 			const pendingUpdate = await updatePendingCustomerProduct({
 				ctx,
 				params: body,
