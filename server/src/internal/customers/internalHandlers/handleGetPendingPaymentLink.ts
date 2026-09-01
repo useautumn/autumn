@@ -2,7 +2,7 @@ import { CusProductStatus, Scopes } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { MetadataService } from "@/internal/metadata/MetadataService";
-import { CusProductService } from "../cusProducts/CusProductService";
+import { CusService } from "../CusService";
 
 /**
  * GET /customers/:customer_id/products/:customer_product_id/payment_link
@@ -13,13 +13,19 @@ export const handleGetPendingPaymentLink = createRoute({
 	scopes: [Scopes.Customers.Read],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { customer_product_id } = c.req.param();
+		const { customer_id, customer_product_id } = c.req.param();
 
-		const customerProduct = await CusProductService.getFull({
-			db: ctx.db,
-			id: customer_product_id,
+		// Resolve through the customer so the row is scoped to this org and env.
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customer_id,
 			inStatuses: [CusProductStatus.Pending],
+			withEntities: false,
 		});
+
+		const customerProduct = fullCustomer.customer_products.find(
+			(candidate) => candidate.id === customer_product_id,
+		);
 
 		if (!customerProduct?.metadata_id) return c.json({ url: null });
 
