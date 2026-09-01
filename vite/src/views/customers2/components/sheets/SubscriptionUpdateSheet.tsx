@@ -96,7 +96,7 @@ function EditContent() {
 					action={<BillingPromptToggle />}
 				/>
 
-				<div className="px-4 pt-4">
+				<div className="has-[form]:px-4 has-[form]:pt-4">
 					<UpdateSubscriptionGenerationBar />
 				</div>
 
