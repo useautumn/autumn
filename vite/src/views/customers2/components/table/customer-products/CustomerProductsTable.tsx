@@ -216,7 +216,7 @@ export function CustomerProductsTable() {
 					flexibleTableColumns: true,
 					mobileCards: true,
 					selectedItemId,
-					virtualization: { containerHeight: "428px", skeletonRowCount: 3 },
+					virtualization: { skeletonRowCount: 3 },
 				}}
 			>
 				<Table.Container>
