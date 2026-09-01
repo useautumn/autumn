@@ -7,7 +7,7 @@ import {
 	OutOfOrderTrackOutcomeError,
 	parseTrackCommand,
 	shadowComparisonKeyOf,
-} from "./balanceEngine.js";
+} from "../../src/balanceEngine.js";
 
 /**
  * Contract: versioned commands produce deterministic outcomes; only durable
