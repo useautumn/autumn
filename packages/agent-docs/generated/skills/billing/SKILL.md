@@ -1,0 +1,62 @@
+---
+name: billing
+description: Steps for updating a customer's billing state — attaching a plan, updating a subscription, or scheduling a change. Use whenever the user asks to change what a customer is billed for.
+---
+
+# Billing
+
+Follow these steps carefully for every request that updates a customer's billing state.
+
+This covers the majority of cases. Load skills upfront when needed:
+- Load the `trials` skill first if the request involves a trial, or the customer is already trialing.
+- Load the `schedules` skill first if the request moves the customer between plans over time, or the customer already has a schedule.
+- Load the `balances` skill first if the request mentions a cap, limit, overage, or credit allowance, or the customer already has billing controls set.
+
+## 1. Read the customer's current state
+
+- Call `getCustomer`, `listEntities`, and `verify` in ONE batch — never one after another.
+- `verify` diffs what Autumn expects against live Stripe. If it returns mismatches, flag them to the user.
+- Then decide which operation the request needs based on the current state and the target plan ID:
+  - Is the target plan ID already active on that customer or entity? → updateSubscription
+  - Moving the customer onto a different plan ID? → `attach` or `multiAttach`
+  - Moving them onto a plan(s) in several phases (ramps, staged pricing) → `createSchedule`
+
+Then decide how it is paid. Follow the user's instructions or the org rules. If neither says, first check if there is a payment method (from the `getCustomer` call).
+
+If payment method exists, just attach directly to charge it. If there is none, use invoice mode, finalized, with the plan enabled immediately.
+
+## 2. Build the request body
+
+- Any customer-specific pricing goes in `customize` — a patch over the catalog plan, not a replacement. Use `add_items` and `remove_items`. Do not replace the whole `items` array.
+```json
+{ "customize": {
+    "remove_items": [{ "feature_id": "credits" }],
+    "add_items": [{ "feature_id": "credits", "included": 5000 }] } }
+```
+- `add_items` is a full item definition, so read that item's fields (`pooled`, `reset`, `rollover`, …) off the plan first and restate every one unless specified explicitly.
+- Base price changes go in `customize.price`.
+- Each remove entry is a filter. When `feature_id` alone could match more than one item, add `billing_method`, `interval`, or `interval_count` to pin the right one.
+
+## 3. Preview, then write
+
+- Call the matching preview: `previewAttach`, `previewCreateSchedule`, or `previewUpdateSubscription`.
+- If it comes back clean, call the write in the same turn. Emit no prose in between — the write call is what shows the approval card.
+- If the preview fails, state the blocking reason once and stop.
+- When a request needs more than one write — change the email then attach, create a reward then attach — issue them together in a single batch so the user approves once.
+- Run every preview you need first, then send all the writes together.
+
+## 4. Write the approval description
+
+- Bullet what is happening, one line per step, in the order the steps apply.
+- Say what changes for the customer, what they pay, and when it takes effect.
+- For a batched request, repeat the same complete description on every write.
+
+## 5. Report the result once it is approved
+
+The write runs outside your turn. You are handed its result in an `<approval_applied>` block.
+
+- Say it applied, then list the links as markdown bullets. Every link is a hyperlink with a short label — `[View invoice](url)`, `[Stripe customer](url)` — never a bare url pasted into the text.
+- if `invoice.status` is `draft` → say it must be finalized there before the customer is charged.
+- If it failed, say so and quote the error. No links for a change that did not apply.
+- If the customer made a mistake and asks for something that needs to be undone, direct them to the dashboard.
+- Then continue to carry out any remaining steps the user requested if not done already.

@@ -1,3 +1,10 @@
+---
+name: trials
+description: Setting up or reasoning about a free trial — how long it runs, whether a card is required, what happens when it ends, and how trialing a customer who already pays differs from trialing a new one. Load when the request mentions a trial, or the customer is already on one.
+---
+
+# Trials
+
 ### Trials
 
 - A trial gives a customer temporary, free access to a plan. It can be passed in during the billing call, or it can come with the plan configuration itself (which can be overriden).
@@ -15,10 +22,6 @@ The customer already has an active (Stripe) subscription — common in sales-led
 - On end: bill -- attaching a plan with a trial (or updating the subscription to add one) resets the Stripe billing anchor/cycle. This can be undesired so warn the user if they request this.
 - Card required param is ignored if there is already an active sub.
 
-
 Updating or ending a trial
 - Call update_subscription on the trialing plan with a new `free_trial`. The duration is counted from now, not from the original start. A 14-day extension on day 10 of a 14-day trial gives 14 more days, not 4.
 - Pass `free_trial: null` to end the trial immediately instead.
-
-
-
