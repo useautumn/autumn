@@ -46,33 +46,42 @@ const resolveContainerCredentials =
 			? `http://169.254.170.2${relativeUri}`
 			: (fullUri as string);
 		const tokenFile = process.env.AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE;
-		const authToken =
-			process.env.AWS_CONTAINER_AUTHORIZATION_TOKEN ??
-			(tokenFile ? (await Bun.file(tokenFile).text()).trim() : undefined);
-		// A stalled metadata endpoint must not hang boot: polling start is awaited.
-		const response = await fetch(url, {
-			signal: AbortSignal.timeout(5_000),
-			...(authToken ? { headers: { Authorization: authToken } } : {}),
-		});
-		if (!response.ok) {
-			throw new Error(
-				`Container credentials endpoint returned ${response.status}`,
-			);
+		try {
+			const authToken =
+				process.env.AWS_CONTAINER_AUTHORIZATION_TOKEN ??
+				(tokenFile ? (await Bun.file(tokenFile).text()).trim() : undefined);
+			// A stalled metadata endpoint must not hang boot: polling start is awaited.
+			const response = await fetch(url, {
+				signal: AbortSignal.timeout(5_000),
+				...(authToken ? { headers: { Authorization: authToken } } : {}),
+			});
+			if (!response.ok) {
+				throw new Error(
+					`Container credentials endpoint returned ${response.status}`,
+				);
+			}
+			const raw = (await response.json()) as {
+				AccessKeyId: string;
+				SecretAccessKey: string;
+				Token: string;
+				Expiration: string;
+			};
+			containerCredentials = {
+				accessKeyId: raw.AccessKeyId,
+				secretAccessKey: raw.SecretAccessKey,
+				sessionToken: raw.Token,
+				expiresAt: Date.parse(raw.Expiration),
+			};
+			bunClientCache.clear();
+			return containerCredentials;
+		} catch (error) {
+			// A metadata blip inside the refresh margin must not wipe live config:
+			// reuse cached credentials while they remain genuinely valid.
+			const stillValid =
+				containerCredentials && Date.now() < containerCredentials.expiresAt;
+			if (stillValid) return containerCredentials;
+			throw error;
 		}
-		const raw = (await response.json()) as {
-			AccessKeyId: string;
-			SecretAccessKey: string;
-			Token: string;
-			Expiration: string;
-		};
-		containerCredentials = {
-			accessKeyId: raw.AccessKeyId,
-			secretAccessKey: raw.SecretAccessKey,
-			sessionToken: raw.Token,
-			expiresAt: Date.parse(raw.Expiration),
-		};
-		bunClientCache.clear();
-		return containerCredentials;
 	};
 
 const getBunClient = async ({
