@@ -17,7 +17,7 @@ import {
 	ConflictingPartitionInitializationError,
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
-} from "./sqliteBalanceStateStore.js";
+} from "../../../src/state/sqliteBalanceStateStore.js";
 
 const identity = {
 	orgId: "org_1",

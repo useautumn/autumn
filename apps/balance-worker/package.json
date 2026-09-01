@@ -4,8 +4,8 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"test": "bun test --config ./bunfig.toml src",
-		"test:unit": "bun test --config ./bunfig.toml src",
+		"test": "bun test --config ./bunfig.toml tests/unit",
+		"test:unit": "bun test --config ./bunfig.toml tests/unit",
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
