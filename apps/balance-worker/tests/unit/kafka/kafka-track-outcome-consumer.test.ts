@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
 	createKafkaTrackOutcomeConsumer,
+	type KafkaPartitionOffsetsPort,
 	type KafkaTrackOutcomeConsumerPort,
 	type KafkaTrackOutcomeConsumerRunConfig,
+	StateBehindKafkaLogStartError,
 } from "../../../src/kafka/kafkaTrackOutcomeConsumer.js";
 import { serializeKafkaTrackOutcomeRecord } from "../../../src/kafka/trackOutcomeRecord.js";
 import {
@@ -23,6 +25,7 @@ type Commit = {
 
 type FakeKafkaConsumer = KafkaTrackOutcomeConsumerPort & {
 	commits: Commit[][];
+	emitGroupJoin: () => void;
 	lifecycle: string[];
 	runConfig: KafkaTrackOutcomeConsumerRunConfig | null;
 	seeks: Commit[];
@@ -34,6 +37,23 @@ type FakeKafkaConsumer = KafkaTrackOutcomeConsumerPort & {
 	failNextCommit: (error: Error) => void;
 };
 
+const createFakeKafkaPartitionOffsets = ({
+	low = "0",
+	high = "10000",
+}: {
+	low?: string;
+	high?: string;
+} = {}): KafkaPartitionOffsetsPort => ({
+	fetchTopicOffsets: async () => [
+		{
+			partition,
+			offset: high,
+			low,
+			high,
+		},
+	],
+});
+
 const createFakeKafkaConsumer = ({
 	onCommit,
 }: {
@@ -41,6 +61,7 @@ const createFakeKafkaConsumer = ({
 } = {}): FakeKafkaConsumer => {
 	let eachMessage: KafkaTrackOutcomeConsumerRunConfig["eachMessage"] | null =
 		null;
+	let groupJoinListener: (() => void) | null = null;
 	let nextCommitError: Error | null = null;
 	const commits: Commit[][] = [];
 	const seeks: Commit[] = [];
@@ -51,6 +72,15 @@ const createFakeKafkaConsumer = ({
 		seeks,
 		lifecycle,
 		runConfig: null,
+		events: {
+			GROUP_JOIN: "consumer.group_join",
+		} as KafkaTrackOutcomeConsumerPort["events"],
+		on: ((eventName: string, listener: () => void) => {
+			if (eventName === "consumer.group_join") groupJoinListener = listener;
+			return () => {
+				if (groupJoinListener === listener) groupJoinListener = null;
+			};
+		}) as KafkaTrackOutcomeConsumerPort["on"],
 		connect: async () => {
 			lifecycle.push("connect");
 		},
@@ -106,6 +136,9 @@ const createFakeKafkaConsumer = ({
 		failNextCommit: (error) => {
 			nextCommitError = error;
 		},
+		emitGroupJoin: () => {
+			groupJoinListener?.();
+		},
 	};
 };
 
@@ -126,6 +159,7 @@ describe("Kafka track outcome consumer", () => {
 			});
 			const consumer = createKafkaTrackOutcomeConsumer({
 				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
 				partitionsConsumedConcurrently: 2,
@@ -165,6 +199,7 @@ describe("Kafka track outcome consumer", () => {
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaTrackOutcomeConsumer({
 				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
 			});
@@ -200,6 +235,7 @@ describe("Kafka track outcome consumer", () => {
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaTrackOutcomeConsumer({
 				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
 			});
@@ -220,6 +256,86 @@ describe("Kafka track outcome consumer", () => {
 				[{ topic, partition, offset: "4" }],
 			]);
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(4n);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("refuses to fold when SQLite progress is behind the Kafka log start", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const initialState = createState();
+			fixture.store.initializeState({ state: initialState });
+			fixture.store.applyDurableTrackOutcome({
+				position: { topic, partition, offset: 0n },
+				outcome: createOutcome({ state: initialState }),
+			});
+			const restoredState = fixture.store.readState({ identity });
+			if (!restoredState) throw new Error("Expected restored state");
+			const serialized = serializeKafkaTrackOutcomeRecord({
+				outcome: createOutcome({
+					state: restoredState,
+					commandId: "cmd_2",
+					requestId: "req_2",
+				}),
+			});
+			const consumerPort = createFakeKafkaConsumer();
+			const consumer = createKafkaTrackOutcomeConsumer({
+				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets({
+					low: "5000",
+					high: "5001",
+				}),
+				topic,
+				stateStore: fixture.store,
+			});
+
+			await consumer.start();
+			await expect(
+				consumerPort.deliver({ offset: "5000", ...serialized }),
+			).rejects.toBeInstanceOf(StateBehindKafkaLogStartError);
+
+			expect(consumerPort.commits).toEqual([]);
+			expect(consumerPort.seeks).toEqual([]);
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
+			expect(fixture.store.readState({ identity })?.revision).toBe(1);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("retries reconciliation when its offset commit fails", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const state = createState();
+			fixture.store.initializeState({ state });
+			const serialized = serializeKafkaTrackOutcomeRecord({
+				outcome: createOutcome({ state }),
+			});
+			const consumerPort = createFakeKafkaConsumer();
+			const consumer = createKafkaTrackOutcomeConsumer({
+				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+			});
+			await consumer.start();
+
+			consumerPort.failNextCommit(new Error("reconciliation commit failed"));
+			await expect(
+				consumerPort.deliver({ offset: "3", ...serialized }),
+			).rejects.toThrow("reconciliation commit failed");
+			expect(consumerPort.commits).toEqual([]);
+			expect(consumerPort.seeks).toEqual([]);
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
+
+			await consumerPort.deliver({ offset: "3", ...serialized });
+
+			expect(consumerPort.commits).toEqual([
+				[{ topic, partition, offset: "0" }],
+			]);
+			expect(consumerPort.seeks).toEqual([{ topic, partition, offset: "0" }]);
+			expect(fixture.store.readState({ identity })?.revision).toBe(0);
 		} finally {
 			closeStoreFixture(fixture);
 		}
@@ -246,6 +362,7 @@ describe("Kafka track outcome consumer", () => {
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaTrackOutcomeConsumer({
 				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
 			});
@@ -270,6 +387,47 @@ describe("Kafka track outcome consumer", () => {
 		}
 	});
 
+	test("reconciles a partition again after joining a new group generation", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const initialState = createState();
+			fixture.store.initializeState({ state: initialState });
+			const firstSerialized = serializeKafkaTrackOutcomeRecord({
+				outcome: createOutcome({ state: initialState }),
+			});
+			const consumerPort = createFakeKafkaConsumer();
+			const consumer = createKafkaTrackOutcomeConsumer({
+				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+			});
+			await consumer.start();
+			await consumerPort.deliver({ offset: "0", ...firstSerialized });
+
+			const restoredState = fixture.store.readState({ identity });
+			if (!restoredState) throw new Error("Expected restored state");
+			const secondSerialized = serializeKafkaTrackOutcomeRecord({
+				outcome: createOutcome({
+					state: restoredState,
+					commandId: "cmd_2",
+					requestId: "req_2",
+				}),
+			});
+			consumerPort.emitGroupJoin();
+			await consumerPort.deliver({ offset: "3", ...secondSerialized });
+
+			expect(consumerPort.commits.at(-1)).toEqual([
+				{ topic, partition, offset: "1" },
+			]);
+			expect(consumerPort.seeks).toEqual([{ topic, partition, offset: "1" }]);
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
+			expect(fixture.store.readState({ identity })?.revision).toBe(1);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test("does not commit or advance a malformed record", async () => {
 		const fixture = createStoreFixture();
 		try {
@@ -278,6 +436,7 @@ describe("Kafka track outcome consumer", () => {
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaTrackOutcomeConsumer({
 				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
 			});
@@ -305,6 +464,7 @@ describe("Kafka track outcome consumer", () => {
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaTrackOutcomeConsumer({
 				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
 				topic,
 				stateStore: fixture.store,
 			});

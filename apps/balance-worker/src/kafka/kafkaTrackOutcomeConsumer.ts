@@ -1,4 +1,9 @@
-import type { Consumer, ConsumerRunConfig, EachMessageHandler } from "kafkajs";
+import type {
+	Admin,
+	Consumer,
+	ConsumerRunConfig,
+	EachMessageHandler,
+} from "kafkajs";
 import type { SqliteBalanceStateStore } from "../state/sqliteBalanceStateStore.js";
 import {
 	parseKafkaRecordOffset,
@@ -14,7 +19,11 @@ export type KafkaTrackOutcomeConsumerPort = Pick<
 	| "seek"
 	| "stop"
 	| "disconnect"
+	| "events"
+	| "on"
 >;
+
+export type KafkaPartitionOffsetsPort = Pick<Admin, "fetchTopicOffsets">;
 
 export type KafkaTrackOutcomeConsumerRunConfig = ConsumerRunConfig & {
 	autoCommit: false;
@@ -22,13 +31,46 @@ export type KafkaTrackOutcomeConsumerRunConfig = ConsumerRunConfig & {
 	eachMessage: EachMessageHandler;
 };
 
+export class KafkaPartitionOffsetsNotFoundError extends Error {
+	constructor({ topic, partition }: { topic: string; partition: number }) {
+		super(`Kafka partition offsets not found for ${topic}[${partition}]`);
+		this.name = "KafkaPartitionOffsetsNotFoundError";
+	}
+}
+
+export class StateBehindKafkaLogStartError extends Error {
+	readonly storedNextOffset: bigint;
+	readonly logStartOffset: bigint;
+
+	constructor({
+		topic,
+		partition,
+		storedNextOffset,
+		logStartOffset,
+	}: {
+		topic: string;
+		partition: number;
+		storedNextOffset: bigint;
+		logStartOffset: bigint;
+	}) {
+		super(
+			`Stored state for ${topic}[${partition}] expects offset ${storedNextOffset}, but the Kafka log starts at ${logStartOffset}`,
+		);
+		this.name = "StateBehindKafkaLogStartError";
+		this.storedNextOffset = storedNextOffset;
+		this.logStartOffset = logStartOffset;
+	}
+}
+
 export const createKafkaTrackOutcomeConsumer = ({
 	consumer,
+	partitionOffsets,
 	topic,
 	stateStore,
 	partitionsConsumedConcurrently = 1,
 }: {
 	consumer: KafkaTrackOutcomeConsumerPort;
+	partitionOffsets: KafkaPartitionOffsetsPort;
 	topic: string;
 	stateStore: SqliteBalanceStateStore;
 	partitionsConsumedConcurrently?: number;
@@ -48,7 +90,40 @@ export const createKafkaTrackOutcomeConsumer = ({
 
 	let isStarted = false;
 	let isStopped = false;
+	let removeGroupJoinListener: (() => void) | null = null;
 	const initializedPartitions = new Set<string>();
+
+	const assertStoredOffsetIsRetained = async ({
+		recordTopic,
+		partition,
+		storedNextOffset,
+	}: {
+		recordTopic: string;
+		partition: number;
+		storedNextOffset: bigint;
+	}): Promise<void> => {
+		const topicOffsets = await partitionOffsets.fetchTopicOffsets(recordTopic);
+		const currentPartitionOffsets = topicOffsets.find(
+			(offsets) => offsets.partition === partition,
+		);
+		if (!currentPartitionOffsets) {
+			throw new KafkaPartitionOffsetsNotFoundError({
+				topic: recordTopic,
+				partition,
+			});
+		}
+		const logStartOffset = parseKafkaRecordOffset({
+			offset: currentPartitionOffsets.low,
+		});
+		if (storedNextOffset < logStartOffset) {
+			throw new StateBehindKafkaLogStartError({
+				topic: recordTopic,
+				partition,
+				storedNextOffset,
+				logStartOffset,
+			});
+		}
+	};
 
 	const commitOffset = async ({
 		recordTopic,
@@ -77,6 +152,13 @@ export const createKafkaTrackOutcomeConsumer = ({
 				partition,
 			});
 			if (storedNextOffset !== null && recordOffset !== storedNextOffset) {
+				if (recordOffset > storedNextOffset) {
+					await assertStoredOffsetIsRetained({
+						recordTopic,
+						partition,
+						storedNextOffset,
+					});
+				}
 				await commitOffset({
 					recordTopic,
 					partition,
@@ -120,6 +202,9 @@ export const createKafkaTrackOutcomeConsumer = ({
 			throw new Error("Kafka track outcome consumer already stopped");
 
 		await consumer.connect();
+		removeGroupJoinListener = consumer.on(consumer.events.GROUP_JOIN, () => {
+			initializedPartitions.clear();
+		});
 		try {
 			await consumer.subscribe({ topics: [topic], fromBeginning: true });
 			const runConfig: KafkaTrackOutcomeConsumerRunConfig = {
@@ -131,6 +216,8 @@ export const createKafkaTrackOutcomeConsumer = ({
 			isStarted = true;
 		} catch (error) {
 			await consumer.disconnect().catch(() => undefined);
+			removeGroupJoinListener();
+			removeGroupJoinListener = null;
 			throw error;
 		}
 	};
@@ -141,7 +228,12 @@ export const createKafkaTrackOutcomeConsumer = ({
 		try {
 			await consumer.stop();
 		} finally {
-			await consumer.disconnect();
+			try {
+				await consumer.disconnect();
+			} finally {
+				removeGroupJoinListener?.();
+				removeGroupJoinListener = null;
+			}
 		}
 	};
 
