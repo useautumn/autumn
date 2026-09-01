@@ -157,6 +157,22 @@ between prepaid-pricing and per-seat pages). Requires server-preview grading (A2
 Existing config → edit-not-nuke; push-only-after-approval; approval-gated flows;
 multi-turn interviews with the simulator; production-mined regression cases.
 
+### B8. Real-customer suites (`cases/suites/<persona>/`) — STARTED
+Anonymized real pricing, one persona folder per customer archetype; behavior
+classes (ambiguity/traps/conduct) stay where they are. First suite:
+**knowledgePlatform** (docs platform: monthly+annual plan pairs, monthly credits
+on annual plans, per-deployment entity attachment, prepaid credit packages →
+volume tiers + usage overage). Built: multi-step drip-feed case with `afterTurn`
+checkpoints (plans msg → credits msg), its one-shot twin (delta = cost of
+iterative delivery), focused add-on-onto-existing-config case. Multi-step
+grading follows research.md §6: final state gates, checkpoints localize,
+regressions read off checkpoint-vs-final deltas. Deferred from this suite:
+pooled balances (not config-expressible until atmn v3), "and so on" tier-ladder
+ambiguity variant (ask-vs-infer), ask-flow multi-step (needs a turn source
+mixing scripted milestones with an answers card), entity-hierarchy conduct
+(catalog skill doesn't teach plan-attachment hierarchy yet — becomes urgent with
+licenses).
+
 ## Found while researching — fold into the atmn rework (real bugs, pre-eval)
 
 1. **Proration enums**: atmn's `onIncrease`/`onDecrease` values have ZERO overlap

@@ -10,5 +10,5 @@ export type InspectedConfig = {
 	parseError?: string;
 	validationErrors?: string[];
 	plans: ApiPlanParams[];
-	featureIds: string[];
+	features: { id: string; type: string }[];
 };

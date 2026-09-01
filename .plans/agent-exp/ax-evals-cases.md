@@ -89,5 +89,81 @@ One NEG per rule family; grade avoided / recovered / stuck:
 - b7-static-fixtures · CONDUCT · large catalog brief → no .map()/spread-generated fixtures (v3 lint)
 - b7-vague-stop · CONDUCT · one-line brief "set up billing" → asks discovery questions, writes nothing
 
-Counts: B1 10 · B2 15 · B3 9 · B4 12 · B5 8 · B6 ~19 · B7 6 ≈ **79 cases**.
+## Basics — template-derived (ACTIVE PLAN, Aug 28 2026)
+
+Source: the 5 pricing-chat template prompts (vite/src/views/onboarding4/
+pricingTemplateConfigs.ts). Each template exercises a distinct knob set, so
+covering all 5 covers the basic config surface structurally:
+
+| knob                          | cursor | railway | linear | t3 | openai |
+|-------------------------------|:------:|:-------:|:------:|:--:|:------:|
+| flat monthly price ladder     |   x    |    x    |        | x  |        |
+| free/default plan             |   x    |    x    |   x    | x  |   x    |
+| metered allowance + reset     |   x    |    x    |        | x  |        |
+| unlimited feature             |   x    |         |   x    |    |        |
+| credit system (schema)        |        |    x    |        |    |   x    |
+| one-time grant (no reset)     |        |    x    |        |    |   x    |
+| usage overage after included  |        |    x    |        |    |        |
+| per-seat pricing              |        |         |   x    |    |        |
+| static (non-consumable) limit |        |         |   x    |    |        |
+| two separate meters           |   x    |         |        | x  |        |
+| prepaid one-off add-on        |        |         |        | x  |   x    |
+| fractional billing_units      |        |         |        |    |   x    |
+
+Watch-outs: linear per-seat = per-user price, NOT licenses (not expressible til
+v3); "3x Pro" relative phrasing (cursor) and per-1K-token credit costs (openai)
+are the trap bits.
+
+Each template gets up to 3 paths (waves, build in order — stop when deltas dry up):
+1. **clear one-shot** — all facts given, wrote-immediately + config gate (wave 1, 5 cases)
+2. **vague interview** — ONE bit stripped per template, rotating so different
+   edges get exercised without combinatorial explosion: price (cursor), credit
+   costs (railway), seat price (linear), add-on shape (t3), billing units
+   (openai). must-ask + config gate (wave 2, 5 cases)
+3. **extend** — seed golden minus one plan/add-on, ask to add it. no-nuke +
+   config gate (wave 3, 5 cases)
+
+Per research.md §8: waves 2–3 are a lookup table, not a build plan — build a
+row when a live transcript demands it. Stopping rule (all three): ~20
+consecutive transcripts show nothing uncovered, delta plateaus across two skill
+iterations, every remaining assertion fails in at least one arm.
+
+Edge discipline per case: the template's trap bit is always asserted in the
+plan specs (e.g. one-time grant = no reset interval; per-seat = per-user price
+shape); transcripts read after every live run; new edges come from production
+mining, not invention.
+
+Structure: one folder per setup (cases/basics/<setup>/) holding a shared
+setup file (golden + plan specs + fact answers) with each vague variant as a
+file inside. Built: basics/proGrowth/ (clear, missing-price, missing-features),
+flow/pro-and-growth-discovery (interview sentinel on the same setup),
+knowledgePlatform suite (first persona suite).
+
+## Flow — discovery interviews (vague opener → structured build-out)
+
+Grades the interview itself via the simulator's topic trace (askedAbout):
+coverage gates, order tracked, final config is still the gate.
+
+- flow-pro-and-growth-discovery · FLOW · "we have a pro and growth plan" → asks prices, then metered features, lands the config the answers describe — BUILT
+- flow-volunteered-info · FLOW · user's price answer also volunteers the metered feature → agent must not re-ask
+- flow-whatever-you-think · FLOW · answers defer ("up to you") → agent picks sane defaults and says so
+- flow-revised-answer · FLOW · user changes the pro price mid-interview → final config carries the revision (supersede)
+
+Note (Aug 28 2026): the scaffold-era exemplar families (core/, ambiguity/,
+traps/, conduct/) were deleted to keep the suite lean — their patterns live on
+in this backlog and get rebuilt one at a time as real cases.
+
+## B8 — real-customer suites (anonymized personas)
+
+### knowledgePlatform (docs platform; built Aug 28 2026)
+- kp-plans-then-credits · MULTI-STEP · plans spurt then credits spurt; afterTurn checkpoints + final gate — BUILT
+- kp-whole-pricing-one-shot · TWIN · identical content, one message; delta = cost of iterative delivery — BUILT
+- kp-credits-add-on-tiers · CLEAR · seeded base plans + add prepaid packages → volume tiers + overage — BUILT
+- kp-tier-ladder-and-so-on · VAGUE · "1k for $100, 2k for $200 and so on" → must ask how far the ladder goes
+- kp-ask-flow-multi-step · MULTI-STEP · plans spurt WITHOUT prices → agent must ask, answers respond, then credits spurt
+- kp-pooled-credits · GATED(atmn v3) · credits pooled across deployments
+- kp-entity-hierarchy · CONDUCT · "plans attach per deployment" → agent explains attachment is an attach-time concern, doesn't invent config
+
+
+Counts: B1 10 · B2 15 · B3 9 · B4 12 · B5 8 · B6 ~19 · B7 6 · B8 7 ≈ **86 cases**.
 First tranche to implement after Phase 0: all of B1 + B2 (25 cases, one PR per family).

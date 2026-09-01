@@ -37,9 +37,13 @@ export const scoreConfigExpectations = async ({
 };
 
 // No skillId: config-kind expectations never read it; only conduct ones do.
+// Every checkpoint sees the same config, so afterTurn expectations are provable
+// with a single golden (subset matching makes the full golden pass early turns).
 const agentlessOutput = (config: AxRunOutput["config"]): AxRunOutput => ({
 	arm: "with",
 	config,
+	configAfterTurn: [config, config, config, config],
+	askedAbout: [],
 	toolUses: [],
 	loadedSkills: [],
 	finalText: "",

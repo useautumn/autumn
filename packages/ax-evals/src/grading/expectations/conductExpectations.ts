@@ -8,69 +8,100 @@ const isConfigWrite = (tool: ToolUse) =>
 export const conduct = {
 	/** the skill under test actually fired (null when the arm had none installed) */
 	skillFired: (): Expectation => ({
-		name: "skill fired",
+		name: "used a skill from the kit",
 		kind: "conduct",
 		score: (output) => {
 			const kitSkillIds = output.kitSkillIds ?? [];
-			if (kitSkillIds.length === 0) return { name: "skill fired", score: null };
+			if (kitSkillIds.length === 0)
+				return { name: "used a skill from the kit", score: null };
 			const fired = output.toolUses.some(
 				(tool) =>
 					tool.name === "Skill" &&
 					kitSkillIds.includes(String(tool.input.skill ?? "")),
 			);
-			return { name: "skill fired", score: fired ? 1 : 0 };
+			return {
+				name: "used a skill from the kit",
+				score: fired ? 1 : 0,
+				metadata: fired
+					? undefined
+					: { why: "the kit's skills were installed but never invoked" },
+			};
 		},
 	}),
 
 	/** the run completed without hitting the timeout */
 	completed: (): Expectation => ({
-		name: "completed",
+		name: "finished without timing out",
 		kind: "conduct",
 		score: (output) => ({
-			name: "completed",
+			name: "finished without timing out",
 			score: output.timedOut ? 0 : 1,
-			metadata: { wallMs: output.wallMs, turns: output.turns },
+			metadata: {
+				why: output.timedOut ? "the run hit its time limit" : undefined,
+				wallMs: output.wallMs,
+				turns: output.turns,
+			},
 		}),
 	}),
 
 	/** vague prompt: asked a question AND did not write the config in turn 0 */
 	mustAskFirst: (): Expectation => ({
-		name: "asked before writing",
+		name: "asked a question before writing the config",
 		kind: "conduct",
 		score: (output) => {
 			const askedInOpening = (output.turnTexts[0] ?? "").includes("?");
 			const wroteInOpening = output.toolUses.some(
 				(tool) => tool.turn === 0 && isConfigWrite(tool),
 			);
+			const why =
+				!askedInOpening && wroteInOpening
+					? "wrote the config immediately without asking anything"
+					: askedInOpening && wroteInOpening
+						? "asked, but had already written the config in the same turn"
+						: askedInOpening
+							? undefined
+							: "never asked a question";
 			return {
-				name: "asked before writing",
+				name: "asked a question before writing the config",
 				score: askedInOpening && !wroteInOpening ? 1 : 0,
-				metadata: { askedInOpening, wroteInOpening },
+				metadata: { why, askedInOpening, wroteInOpening },
 			};
 		},
 	}),
 
 	/** clear prompt (twin): wrote the config in the opening turn, no stalling */
 	mustWriteImmediately: (): Expectation => ({
-		name: "wrote without stalling",
+		name: "wrote the config in the first turn, without asking",
 		kind: "conduct",
-		score: (output) => ({
-			name: "wrote without stalling",
-			score: output.toolUses.some(
+		score: (output) => {
+			const wrote = output.toolUses.some(
 				(tool) => tool.turn === 0 && isConfigWrite(tool),
-			)
-				? 1
-				: 0,
-		}),
+			);
+			return {
+				name: "wrote the config in the first turn, without asking",
+				score: wrote ? 1 : 0,
+				metadata: wrote
+					? undefined
+					: {
+							why: "the first turn ended with no Write/Edit of autumn.config.ts",
+						},
+			};
+		},
 	}),
 
 	/** the config was written at some point (any turn) */
 	wroteConfig: (): Expectation => ({
-		name: "wrote config",
+		name: "wrote autumn.config.ts",
 		kind: "conduct",
-		score: (output) => ({
-			name: "wrote config",
-			score: output.toolUses.some(isConfigWrite) ? 1 : 0,
-		}),
+		score: (output) => {
+			const wrote = output.toolUses.some(isConfigWrite);
+			return {
+				name: "wrote autumn.config.ts",
+				score: wrote ? 1 : 0,
+				metadata: wrote
+					? undefined
+					: { why: "no Write/Edit of autumn.config.ts in any turn" },
+			};
+		},
 	}),
 };
