@@ -42,6 +42,7 @@ import {
 	findBranchByName,
 	waitForNeonBranchOperations,
 } from "../dw/helpers/neon.ts";
+import { sh } from "../dw/helpers/shell.ts";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -645,6 +646,18 @@ function ensureNeonBranch(
 	};
 }
 
+// The template branch carries a better-auth `jwks` row encrypted with the
+// machine secret of whoever last booted against it — undecryptable here.
+function clearInheritedJwks(directUrl: string): void {
+	const res = sh("psql", [directUrl, "-v", "ON_ERROR_STOP=1"], {
+		stdin: `DELETE FROM jwks;\n`,
+	});
+	if (res.code !== 0) {
+		fatal(`clearing inherited jwks rows failed:\n${res.stderr}`);
+	}
+	log("cleared inherited jwks rows (better-auth re-mints on first boot)");
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -675,6 +688,7 @@ async function main(): Promise<void> {
 	const directUrl = connectionString(nextState.branchName, { pooled: false });
 	applyCommittedMigrations(nextState.branchName, directUrl);
 	loadDbFunctions(nextState.branchName, directUrl);
+	if (created) clearInheritedJwks(directUrl);
 
 	// Per-machine secrets — mint on first run, then persist. Server can't
 	// boot without BETTER_AUTH_SECRET / ENCRYPTION_IV / ENCRYPTION_PASSWORD.
