@@ -7,6 +7,7 @@ import type {
 	FullCustomer,
 	ProductItem,
 	ProductV2,
+	TrialOnEnd,
 } from "@autumn/shared";
 import {
 	ACTIVE_STATUSES,
@@ -85,6 +86,7 @@ interface AttachFormContextValue {
 	previewPrepaidOptions: Record<string, number>;
 
 	hasActiveSubscription: boolean;
+	supportsTrialRevert: boolean;
 	isAutoSelectingImmediateSchedule: boolean;
 	billingOptions: UseAttachBillingOptionsStateReturn;
 
@@ -303,6 +305,13 @@ export function AttachFormProvider({
 	});
 	const { isMultiPlan } = additionalPlans;
 
+	// Reverting needs an existing subscription to fall back to, and multi-plan
+	// attaches don't support it — everywhere else the trial must bill on end.
+	const supportsTrialRevert = hasActiveSubscription && !isMultiPlan;
+	const effectiveTrialOnEnd: TrialOnEnd = supportsTrialRevert
+		? trialOnEnd
+		: "bill";
+
 	// The currency must be offered by every plan being attached, so feed the
 	// hook all selected plans' items — it intersects across charging items.
 	const currencyItems = useMemo(() => {
@@ -380,7 +389,7 @@ export function AttachFormProvider({
 			form.setFieldValue("trialLength", null);
 			form.setFieldValue("trialDuration", FreeTrialDuration.Day);
 			form.setFieldValue("trialCardRequired", true);
-			form.setFieldValue("trialOnEnd", "bill");
+			form.setFieldValue("trialOnEnd", "revert");
 			form.setFieldValue("grantFree", false);
 			form.setFieldValue("currency", null);
 		}
@@ -408,7 +417,7 @@ export function AttachFormProvider({
 				"trialCardRequired",
 				Boolean(product.free_trial.card_required),
 			);
-			form.setFieldValue("trialOnEnd", product.free_trial.on_end ?? "bill");
+			form.setFieldValue("trialOnEnd", product.free_trial.on_end ?? "revert");
 		}
 	}, [productId, product, form]);
 
@@ -474,7 +483,7 @@ export function AttachFormProvider({
 		trialDuration,
 		trialEnabled,
 		trialCardRequired,
-		trialOnEnd,
+		trialOnEnd: effectiveTrialOnEnd,
 		planSchedule,
 		startDate,
 		endDate,
@@ -514,7 +523,7 @@ export function AttachFormProvider({
 		trialDuration,
 		trialEnabled,
 		trialCardRequired,
-		trialOnEnd,
+		trialOnEnd: effectiveTrialOnEnd,
 		prorationBehavior,
 		redirectMode,
 		discounts,
@@ -620,6 +629,7 @@ export function AttachFormProvider({
 			initialPrepaidOptions,
 			previewPrepaidOptions,
 			hasActiveSubscription,
+			supportsTrialRevert,
 			isAutoSelectingImmediateSchedule,
 			billingOptions,
 			additionalPlans,
@@ -654,6 +664,7 @@ export function AttachFormProvider({
 			initialPrepaidOptions,
 			previewPrepaidOptions,
 			hasActiveSubscription,
+			supportsTrialRevert,
 			isAutoSelectingImmediateSchedule,
 			billingOptions,
 			additionalPlans,

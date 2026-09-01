@@ -63,14 +63,8 @@ function OutgoingPlans({
 }
 
 export function AttachUpdatesSection() {
-	const {
-		previewQuery,
-		formValues,
-		product,
-		products,
-		hasActiveSubscription,
-		additionalPlans,
-	} = useAttachFormContext();
+	const { previewQuery, formValues, product, products, supportsTrialRevert } =
+		useAttachFormContext();
 
 	const hasProductSelected = !!formValues.productId;
 	const { data: previewData, isPending } = previewQuery;
@@ -85,10 +79,7 @@ export function AttachUpdatesSection() {
 	if (isPending) return <AttachUpdatesSkeleton />;
 	if (!product) return null;
 
-	const isPausing =
-		!additionalPlans.isMultiPlan &&
-		formValues.trialOnEnd === "revert" &&
-		hasActiveSubscription;
+	const isPausing = supportsTrialRevert && formValues.trialOnEnd === "revert";
 
 	return (
 		<SheetSection withSeparator={false} className="pb-0">
