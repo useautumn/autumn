@@ -128,9 +128,8 @@ function EditContent() {
 					!hasNoBillingChanges && (
 						<div className="px-4 pt-4">
 							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-								This plan is waiting on payment. Saving replaces it, so the
-								payment link already sent to the customer will stop working and
-								a new one is issued.
+								Updating creates a new payment link. The existing one will stop
+								working.
 							</InfoBox>
 						</div>
 					)}
