@@ -1,4 +1,8 @@
-import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type FullCusProduct,
+	isCustomerProductTrialing,
+} from "@autumn/shared";
 import {
 	DropdownMenuItem,
 	Tooltip,
@@ -123,6 +127,9 @@ export const CustomerProductsColumns = [
 			if (!meta?.onCancelClick) return null;
 
 			const isCanceling = row.original.canceled;
+			// A pending plan is a frozen billing plan replayed on payment, so
+			// there is nothing to edit or cancel until it is paid or expires.
+			const isPending = row.original.status === CusProductStatus.Pending;
 
 			return (
 				<div className="flex justify-end">
@@ -138,7 +145,7 @@ export const CustomerProductsColumns = [
 								<FlaskIcon size={16} /> Test Sheet
 							</DropdownMenuItem>
 						)}
-						{meta.hasEntities && meta.onTransferClick && (
+						{meta.hasEntities && meta.onTransferClick && !isPending && (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
 								onClick={(e) => {
@@ -149,7 +156,7 @@ export const CustomerProductsColumns = [
 								<ArrowRightLeft size={16} /> Transfer
 							</DropdownMenuItem>
 						)}
-						{meta.onUpdateClick && (
+						{meta.onUpdateClick && !isPending && (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
 								onClick={(e) => {
@@ -160,7 +167,7 @@ export const CustomerProductsColumns = [
 								<PencilIcon size={16} /> Update
 							</DropdownMenuItem>
 						)}
-						{isCanceling ? (
+						{isCanceling && !isPending ? (
 							<>
 								<DropdownMenuItem
 									className="flex items-center gap-2 text-xs"
@@ -182,15 +189,17 @@ export const CustomerProductsColumns = [
 								</DropdownMenuItem>
 							</>
 						) : (
-							<DropdownMenuItem
-								className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
-								onClick={(e) => {
-									e.stopPropagation();
-									meta.onCancelClick?.(row.original);
-								}}
-							>
-								<Delete size={16} /> Cancel
-							</DropdownMenuItem>
+							!isPending && (
+								<DropdownMenuItem
+									className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
+									onClick={(e) => {
+										e.stopPropagation();
+										meta.onCancelClick?.(row.original);
+									}}
+								>
+									<Delete size={16} /> Cancel
+								</DropdownMenuItem>
+							)
 						)}
 					</TableDropdownMenuCell>
 				</div>
