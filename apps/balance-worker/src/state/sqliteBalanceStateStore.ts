@@ -1,11 +1,11 @@
 import type { Database } from "bun:sqlite";
 import { isDeepStrictEqual } from "node:util";
 import {
-	applyTrackOutcome as applyEngineTrackOutcome,
+	executeTrack as executeEngineTrack,
 	type MeteringIdentity,
-	type MeteringState,
+	type CustomerMeteringState,
 	meteringPartitionKeyOf,
-	meteringStateSchema,
+	customerMeteringStateSchema,
 	type TrackOutcome,
 	trackOutcomeSchema,
 } from "@autumn/balance-engine";
@@ -44,7 +44,7 @@ export type KafkaRecordPosition = {
 export type DurableTrackOutcomeApplyResult =
 	| {
 			kind: "applied" | "duplicate";
-			state: MeteringState;
+			state: CustomerMeteringState;
 			receipt: TrackOutcome;
 			nextOffset: bigint;
 	  }
@@ -112,9 +112,9 @@ export class SqliteBalanceStateStore {
 			.immediate();
 	}
 
-	initializeState({ state }: { state: MeteringState }): void {
-		const parsedState = meteringStateSchema.parse(state);
-		const persistedState = meteringStateSchema.parse(
+	initializeState({ state }: { state: CustomerMeteringState }): void {
+		const parsedState = customerMeteringStateSchema.parse(state);
+		const persistedState = customerMeteringStateSchema.parse(
 			JSON.parse(JSON.stringify(parsedState)),
 		);
 		const partitionKey = meteringPartitionKeyOf({
@@ -147,7 +147,7 @@ export class SqliteBalanceStateStore {
 		identity,
 	}: {
 		identity: MeteringIdentity;
-	}): MeteringState | null {
+	}): CustomerMeteringState | null {
 		return readState({ database: this.database, identity });
 	}
 
@@ -216,7 +216,7 @@ export class SqliteBalanceStateStore {
 					identity: parsedOutcome.identity,
 					commandId: parsedOutcome.commandId,
 				});
-				const applied = applyEngineTrackOutcome({
+				const applied = executeEngineTrack({
 					state,
 					outcome: parsedOutcome,
 					existingReceipt,

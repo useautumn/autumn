@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
-	applyTrackOutcome,
-	createMeteringState,
-	decideTrack,
+	computeTrack,
+	createCustomerMeteringState,
+	executeTrack,
 	meteringPartitionKeyOf,
 	OutOfOrderTrackOutcomeError,
-	parseTrackCommand,
 	shadowComparisonKeyOf,
-} from "../../src/balanceEngine.js";
+	trackCommandSchema,
+} from "../../../../src/balanceEngine.js";
 
 /**
  * Contract: versioned commands produce deterministic outcomes; only durable
@@ -22,13 +22,12 @@ const identity = {
 } as const;
 
 const createState = ({ balance = 10 }: { balance?: number } = {}) =>
-	createMeteringState({
+	createCustomerMeteringState({
 		identity,
-		features: {
-			messages: {
-				kind: "direct_metered_v1",
-				buckets: [{ id: "messages_monthly", balance, usage: 0 }],
-			},
+		customerEntitlementsByFeatureId: {
+			messages: [
+					{ id: "messages_monthly", balance, usage: 0 },
+				],
 		},
 	});
 
@@ -45,23 +44,21 @@ const createCommand = ({
 	overageBehavior?: "cap" | "reject" | "overflow";
 	entityId?: string | null;
 } = {}) =>
-	parseTrackCommand({
-		input: {
-			schemaVersion: 1,
-			type: "track",
-			commandId,
-			requestId,
-			identity,
-			entityId,
-			featureId: "messages",
-			value,
-			overageBehavior,
-			properties: null,
-			occurredAt: 1_700_000_000_000,
-		},
+	trackCommandSchema.parse({
+		schemaVersion: 1,
+		type: "track",
+		commandId,
+		requestId,
+		identity,
+		entityId,
+		featureId: "messages",
+		value,
+		overageBehavior,
+		properties: null,
+		occurredAt: 1_700_000_000_000,
 	});
 
-const requireNewOutcome = (decision: ReturnType<typeof decideTrack>) => {
+const requireNewOutcome = (decision: ReturnType<typeof computeTrack>) => {
 	if (decision.kind !== "new") {
 		throw new Error(`Expected a new outcome, received ${decision.kind}`);
 	}
@@ -83,10 +80,10 @@ describe("track decisions", () => {
 		},
 	);
 
-	test.concurrent("decides once, then applies the durable outcome", () => {
+	test.concurrent("computes once, then executes the durable outcome", () => {
 		const state = createState();
 		const outcome = requireNewOutcome(
-			decideTrack({ state, command: createCommand() }),
+			computeTrack({ state, command: createCommand() }),
 		);
 
 		expect(outcome).toMatchObject({
@@ -99,16 +96,16 @@ describe("track decisions", () => {
 			revisionBefore: 0,
 			revisionAfter: 1,
 		});
-		expect(state.features.messages.buckets[0]).toEqual({
+		expect(state.customerEntitlementsByFeatureId.messages[0]).toEqual({
 			id: "messages_monthly",
 			balance: 10,
 			usage: 0,
 		});
 
-		const applied = applyTrackOutcome({ state, outcome });
+		const applied = executeTrack({ state, outcome });
 
 		expect(applied.kind).toBe("applied");
-		expect(applied.state.features.messages.buckets[0]).toEqual({
+		expect(applied.state.customerEntitlementsByFeatureId.messages[0]).toEqual({
 			id: "messages_monthly",
 			balance: 5,
 			usage: 5,
@@ -125,7 +122,7 @@ describe("track decisions", () => {
 
 			for (const [index, commandId] of ["cmd_1", "cmd_2", "cmd_3"].entries()) {
 				const outcome = requireNewOutcome(
-					decideTrack({
+					computeTrack({
 						state,
 						command: createCommand({
 							commandId,
@@ -134,13 +131,13 @@ describe("track decisions", () => {
 					}),
 				);
 				statuses.push(outcome.status);
-				const applied = applyTrackOutcome({ state, outcome });
+				const applied = executeTrack({ state, outcome });
 				state = applied.state;
 				receipts.push(applied.receipt);
 			}
 
 			expect(statuses).toEqual(["applied", "applied", "rejected"]);
-			expect(state.features.messages.buckets[0]).toMatchObject({
+			expect(state.customerEntitlementsByFeatureId.messages[0]).toMatchObject({
 				balance: 0,
 				usage: 10,
 			});
@@ -151,7 +148,7 @@ describe("track decisions", () => {
 
 	test.concurrent("caps at the available balance", () => {
 		const outcome = requireNewOutcome(
-			decideTrack({
+			computeTrack({
 				state: createState({ balance: 3 }),
 				command: createCommand({ value: 5, overageBehavior: "cap" }),
 			}),
@@ -170,7 +167,7 @@ describe("track decisions", () => {
 		() => {
 			const state = createState({ balance: 3 });
 			const outcome = requireNewOutcome(
-				decideTrack({ state, command: createCommand({ value: 5 }) }),
+				computeTrack({ state, command: createCommand({ value: 5 }) }),
 			);
 
 			expect(outcome).toMatchObject({
@@ -182,8 +179,8 @@ describe("track decisions", () => {
 				mutations: [],
 			});
 
-			const applied = applyTrackOutcome({ state, outcome });
-			expect(applied.state.features).toEqual(state.features);
+			const applied = executeTrack({ state, outcome });
+			expect(applied.state.customerEntitlementsByFeatureId).toEqual(state.customerEntitlementsByFeatureId);
 			expect(applied.receipt).toEqual(outcome);
 		},
 	);
@@ -191,15 +188,15 @@ describe("track decisions", () => {
 	test.concurrent("overflow applies the full value", () => {
 		const state = createState({ balance: 3 });
 		const outcome = requireNewOutcome(
-			decideTrack({
+			computeTrack({
 				state,
 				command: createCommand({ value: 5, overageBehavior: "overflow" }),
 			}),
 		);
-		const applied = applyTrackOutcome({ state, outcome });
+		const applied = executeTrack({ state, outcome });
 
 		expect(outcome.appliedValue).toBe(5);
-		expect(applied.state.features.messages.buckets[0]).toMatchObject({
+		expect(applied.state.customerEntitlementsByFeatureId.messages[0]).toMatchObject({
 			balance: -2,
 			usage: 5,
 		});
@@ -209,11 +206,11 @@ describe("track decisions", () => {
 		const command = createCommand();
 		const initialState = createState();
 		const outcome = requireNewOutcome(
-			decideTrack({ state: initialState, command }),
+			computeTrack({ state: initialState, command }),
 		);
-		const state = applyTrackOutcome({ state: initialState, outcome }).state;
+		const state = executeTrack({ state: initialState, outcome }).state;
 
-		const duplicate = decideTrack({
+		const duplicate = computeTrack({
 			state,
 			command,
 			existingReceipt: outcome,
@@ -221,7 +218,7 @@ describe("track decisions", () => {
 
 		expect(duplicate).toEqual({ kind: "duplicate", outcome });
 		expect(
-			applyTrackOutcome({ state, outcome, existingReceipt: outcome }),
+			executeTrack({ state, outcome, existingReceipt: outcome }),
 		).toEqual({
 			kind: "duplicate",
 			state,
@@ -232,12 +229,12 @@ describe("track decisions", () => {
 	test.concurrent("rejects a reused command id with different input", () => {
 		const initialState = createState();
 		const outcome = requireNewOutcome(
-			decideTrack({ state: initialState, command: createCommand() }),
+			computeTrack({ state: initialState, command: createCommand() }),
 		);
-		const state = applyTrackOutcome({ state: initialState, outcome }).state;
+		const state = executeTrack({ state: initialState, outcome }).state;
 
 		expect(
-			decideTrack({
+			computeTrack({
 				state,
 				command: createCommand({ value: 4 }),
 				existingReceipt: outcome,
@@ -251,29 +248,26 @@ describe("track decisions", () => {
 	test.concurrent(
 		"names inputs that are outside the first supported path",
 		() => {
-			const entityDecision = decideTrack({
+			const entityDecision = computeTrack({
 				state: createState(),
 				command: createCommand({ entityId: "entity_1" }),
 			});
-			const refundDecision = decideTrack({
+			const refundDecision = computeTrack({
 				state: createState(),
 				command: createCommand({ value: -1 }),
 			});
-			const missingFeatureDecision = decideTrack({
-				state: createMeteringState({ identity, features: {} }),
+			const missingFeatureDecision = computeTrack({
+				state: createCustomerMeteringState({ identity, customerEntitlementsByFeatureId: {} }),
 				command: createCommand(),
 			});
-			const multipleBucketDecision = decideTrack({
-				state: createMeteringState({
+			const multipleCustomerEntitlementDecision = computeTrack({
+				state: createCustomerMeteringState({
 					identity,
-					features: {
-						messages: {
-							kind: "direct_metered_v1",
-							buckets: [
+					customerEntitlementsByFeatureId: {
+						messages: [
 								{ id: "messages_monthly", balance: 5, usage: 0 },
 								{ id: "messages_rollover", balance: 5, usage: 0 },
 							],
-						},
 					},
 				}),
 				command: createCommand(),
@@ -291,55 +285,53 @@ describe("track decisions", () => {
 				kind: "unsupported",
 				reason: "feature_not_found",
 			});
-			expect(multipleBucketDecision).toEqual({
+			expect(multipleCustomerEntitlementDecision).toEqual({
 				kind: "unsupported",
-				reason: "multiple_buckets_not_supported",
+				reason: "multiple_customer_entitlements_not_supported",
 			});
 		},
 	);
 
 	test.concurrent(
-		"rejects an outcome decided against an older revision",
+		"rejects an outcome computed against an older revision",
 		() => {
 			const state = createState();
 			const firstOutcome = requireNewOutcome(
-				decideTrack({ state, command: createCommand() }),
+				computeTrack({ state, command: createCommand() }),
 			);
 			const secondOutcome = requireNewOutcome(
-				decideTrack({
+				computeTrack({
 					state,
 					command: createCommand({ commandId: "cmd_2", requestId: "req_2" }),
 				}),
 			);
-			const advancedState = applyTrackOutcome({
+			const advancedState = executeTrack({
 				state,
 				outcome: firstOutcome,
 			}).state;
 
 			expect(() =>
-				applyTrackOutcome({ state: advancedState, outcome: secondOutcome }),
+				executeTrack({ state: advancedState, outcome: secondOutcome }),
 			).toThrow(OutOfOrderTrackOutcomeError);
 		},
 	);
 
 	test.concurrent("rejects an outcome whose expected balance is stale", () => {
 		const outcome = requireNewOutcome(
-			decideTrack({ state: createState(), command: createCommand() }),
+			computeTrack({ state: createState(), command: createCommand() }),
 		);
 
 		expect(() =>
-			applyTrackOutcome({ state: createState({ balance: 9 }), outcome }),
-		).toThrow("Outcome does not match current bucket messages");
+			executeTrack({ state: createState({ balance: 9 }), outcome }),
+		).toThrow("Outcome does not match current state for messages");
 	});
 
 	test.concurrent("validates the versioned command envelope", () => {
 		expect(() =>
-			parseTrackCommand({
-				input: { ...createCommand(), schemaVersion: 2 },
-			}),
+			trackCommandSchema.parse({ ...createCommand(), schemaVersion: 2 }),
 		).toThrow();
 		expect(() =>
-			parseTrackCommand({ input: { ...createCommand(), value: 0 } }),
+			trackCommandSchema.parse({ ...createCommand(), value: 0 }),
 		).toThrow();
 	});
 });
