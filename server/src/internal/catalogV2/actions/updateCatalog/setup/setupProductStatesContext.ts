@@ -93,6 +93,10 @@ export const setupProductStatesContext = async ({
 			? [...new Set(payloadVersions.map((product) => product.id))]
 			: loadedPlanIds,
 	});
+	// Full state can legitimately load an org with no plans at all, and the
+	// versioning probes reject empty id lists rather than returning nothing.
+	if (allVersions.length === 0) return emptyProductStatesContext();
+
 	const allPlanIds = [
 		...new Set([...loadedPlanIds, ...allVersions.map((product) => product.id)]),
 	];

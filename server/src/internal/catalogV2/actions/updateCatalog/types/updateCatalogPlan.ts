@@ -10,6 +10,8 @@ export type RemoveFeaturePlan = {
 	current: Feature | null;
 	/** Archive instead of hard delete — some reference survives the batch. */
 	willArchive: boolean;
+	/** Absent from a full-state config rather than named in remove_features. */
+	byOmission?: boolean;
 	hasCustomerEntitlements: boolean;
 };
 
