@@ -1,5 +1,6 @@
 import { ApiFeatureProcessorsSchema } from "@api/features/components/processors.js";
 import { CreateFeatureV2ParamsSchema } from "@api/features/crud/createFeatureParams.js";
+import { MigrationParamsSchema } from "@api/products/crud/migrationParams.js";
 import { z } from "zod/v4";
 import { UpdateCatalogPlanParamsSchema } from "./planUpdate/params/catalogPlanParams.js";
 
@@ -82,9 +83,10 @@ export const UpdateCatalogParamsSchema = z.object({
 		description: "Features to leave untouched under skip_deletions:false.",
 	}),
 
-	// migration: MigrationParamsSchema.optional().meta({
-	// 	description: "Catalog-wide migration default, overridable per plan.",
-	// }),
+	migration: MigrationParamsSchema.optional().meta({
+		description:
+			"Catalog-wide migration default, overridable per plan. draft: true asks the server to draft a migration for every row an edit leaves customers behind on.",
+	}),
 	// expand: z.array(CatalogExpandSchema).optional(),
 });
 

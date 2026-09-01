@@ -72,13 +72,20 @@ export const matchingDraftPlanParams = ({
 			upsertMatchesDraftEntry({ upsertProductPlan, planParams }),
 	);
 
+/**
+ * A request-level draft claims every row, leaving `rowCanReceiveMigrationDraft`
+ * and the diff to decide which actually get one — a caller pushing a whole
+ * catalog cannot know which plans hold customers.
+ */
 export const upsertClaimsMigrationDraft = ({
 	upsertProductPlan,
 	params,
 }: {
 	upsertProductPlan: UpsertProductPlan;
 	params: UpdateCatalogParams;
-}): boolean => matchingDraftPlanParams({ upsertProductPlan, params }) != null;
+}): boolean =>
+	params.migration?.draft === true ||
+	matchingDraftPlanParams({ upsertProductPlan, params }) != null;
 
 export const includeCustomForMigrationDraft = ({
 	upsertProductPlan,
@@ -88,4 +95,4 @@ export const includeCustomForMigrationDraft = ({
 	params: UpdateCatalogParams;
 }): boolean =>
 	matchingDraftPlanParams({ upsertProductPlan, params })?.migration
-		?.include_custom === true;
+		?.include_custom === true || params.migration?.include_custom === true;
