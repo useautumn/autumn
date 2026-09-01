@@ -12,6 +12,10 @@ const run = promisify(execFile);
  * because the braintrust CLI executes this bundle under node, not bun.
  */
 export const ensureAtmnBuilt = async (): Promise<void> => {
-	if (existsSync(join(ATMN_DIR, "dist/compose/index.js"))) return;
+	// Both the config entrypoint and the CLI bundle the workspace symlinks to.
+	const built = ["dist/compose/index.js", "dist/cli.js"].every((file) =>
+		existsSync(join(ATMN_DIR, file)),
+	);
+	if (built) return;
 	await run("bun", ["run", "build"], { cwd: ATMN_DIR });
 };

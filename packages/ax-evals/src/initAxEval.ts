@@ -24,8 +24,12 @@ import { scriptedTurns } from "./simulator/scriptedTurns.ts";
 import { simulatedUser } from "./simulator/simulatedUser.ts";
 import type { Arm } from "./types/arm.ts";
 import type { AxRunOutput } from "./types/axRunOutput.ts";
+import {
+	assertBackendReachable,
+	evalBackendUrl,
+} from "./workspace/backendUrl.ts";
 import { createCaseWorkspace } from "./workspace/createCaseWorkspace.ts";
-import { installAtmnStub } from "./workspace/installAtmnStub.ts";
+import { createEvalOrg, deleteEvalOrg } from "./workspace/evalOrg.ts";
 import { saveRunArtifact } from "./workspace/saveRunArtifact.ts";
 import { sweepStaleWorkspaces } from "./workspace/sweepStaleWorkspaces.ts";
 
@@ -111,12 +115,32 @@ export const initAxEval = ({
 			? ("chat" as const)
 			: ("blocks" as const);
 
+	const backendUrl = evalBackendUrl();
+
 	const runArm = async (arm: Arm): Promise<AxRunOutput> => {
 		const armKit = selectedArms[arm];
 		if (!armKit) throw new Error(`Unknown arm "${arm}"`);
+		await assertBackendReachable(backendUrl);
 		await sweepStaleWorkspaces();
-		const workspace = await createCaseWorkspace(`${axCase.name}-${arm}`);
+		// A real throwaway org per arm: pushes land somewhere disposable and
+		// concurrent arms never share state.
+		const orgRunId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+		const org = await createEvalOrg({ runId: orgRunId });
+		const workspace = await createCaseWorkspace(`${axCase.name}-${arm}`, {
+			secretKey: org.secretKey,
+		});
 		try {
+			// A real post-init project has an autumn.config.ts with the import
+			// line already there; seeding it kills invented-import failures.
+			if (
+				axCase.scenario?.seedConfig !== false &&
+				!axCase.existingFiles?.["autumn.config.ts"]
+			) {
+				await writeFile(
+					join(workspace.dir, "autumn.config.ts"),
+					'import { feature, plan, item } from "atmn";\n\n// Define your features and plans, then run `atmn push`.\n',
+				);
+			}
 			// node:fs, not Bun.write — this code runs under the braintrust CLI (node)
 			for (const [path, content] of Object.entries(
 				axCase.existingFiles ?? {},
@@ -127,8 +151,6 @@ export const initAxEval = ({
 				workspaceDir: workspace.dir,
 				kit: armKit,
 			});
-			if (axCase.scenario?.stubAtmn)
-				await installAtmnStub({ workspaceDir: workspace.dir });
 			const configTextAfterTurn: (string | null)[] = [];
 			const turnSource = turnSourceFor(axCase);
 			const run = await runAgentCase({
@@ -141,6 +163,7 @@ export const initAxEval = ({
 				timeoutMs,
 				renderMode,
 				systemPromptAppend: axCase.scenario?.primer,
+				extraEnv: { ATMN_BACKEND_URL: backendUrl },
 				onTurn: (turn) => {
 					configTextAfterTurn.push(captureConfigText(workspace.dir));
 					logTurnToBraintrust(turn);
@@ -169,6 +192,11 @@ export const initAxEval = ({
 			};
 		} finally {
 			await workspace.cleanup();
+			await deleteEvalOrg({ runId: orgRunId }).catch((error) => {
+				process.stderr.write(
+					`[ax-evals] failed to delete eval org ${orgRunId}: ${error}\n`,
+				);
+			});
 		}
 	};
 

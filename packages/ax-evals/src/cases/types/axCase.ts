@@ -2,14 +2,14 @@ import type { Expectation } from "../../grading/types/expectation.ts";
 import type { UserAnswers } from "../../simulator/types/userAnswers.ts";
 
 /** The starting world of a step-tier case: state the environment instead of
- * making the agent rediscover (and pay for) it every run. */
+ * making the agent rediscover (and pay for) it every run. atmn itself is
+ * always real — push/pull hit the run's own throwaway org on the dev server. */
 export type Scenario = {
 	/** appended to the agent's system prompt, e.g. "atmn is installed, the key
 	 * is in .env, the org is empty — your job is modeling the config" */
 	primer?: string;
-	/** replace atmn's network commands (pull/push/login) with instant
-	 * deterministic local replies; preview and the rest stay real */
-	stubAtmn?: boolean;
+	/** skip seeding the starter autumn.config.ts (for from-nothing cases) */
+	seedConfig?: false;
 };
 
 /** A tau-style LLM-simulated user: goal + private facts brief. */
