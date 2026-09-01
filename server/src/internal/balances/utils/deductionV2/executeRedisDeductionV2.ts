@@ -12,6 +12,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import {
 	getRedisTrackFeatureIdempotencyKey,
+	getRedisTrackReplayStateKey,
 	TRACK_V3_IDEMPOTENCY_TTL_MS,
 } from "@/internal/balances/idempotency/trackQueueIdempotency.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
@@ -19,7 +20,7 @@ import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoi
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
-import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
+import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
@@ -41,6 +42,16 @@ import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.j
 import { prepareDeductionOptionsV2 } from "./prepareDeductionOptionsV2.js";
 import { prepareFeatureDeductionV2 } from "./prepareFeatureDeductionV2.js";
 import { rollbackDeductionV2 } from "./rollbackDeductionV2.js";
+
+type RedisDeductionReplayState = {
+	updates: Record<string, DeductionUpdate>;
+	rolloverUpdates: Record<string, RolloverUpdate>;
+	mutationLogs: MutationLogItem[];
+	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
+	usageWindowUpdates: Record<string, UsageWindowUpdate>;
+	usageWindowMutations: UsageWindowMutation[];
+	mutationLogCustomerEntitlements: FullCusEntWithFullCusProduct[];
+};
 
 export const executeRedisDeductionV2 = async ({
 	ctx,
@@ -123,6 +134,10 @@ export const executeRedisDeductionV2 = async ({
 		customerId,
 		entityId: fullSubject.entityId,
 	});
+	const targetRedis = redisInstance ?? ctx.redisV2;
+	const replayStateRedisKey = idempotencyKey
+		? getRedisTrackReplayStateKey({ ctx, customerId }).redisKey
+		: null;
 
 	// One timestamp for the whole operation: the resolver keys windows from it
 	// and Lua receives the same value, so they never disagree on the window.
@@ -134,6 +149,36 @@ export const executeRedisDeductionV2 = async ({
 			(customerEntitlement) => [customerEntitlement.id, customerEntitlement],
 		),
 	);
+	let replayStateLoaded = false;
+	const restoreReplayState = async (): Promise<void> => {
+		if (!replayStateRedisKey || replayStateLoaded) return;
+		replayStateLoaded = true;
+		const serializedReplayState = await tryRedisRead(
+			() => targetRedis.get(replayStateRedisKey),
+			targetRedis,
+		);
+		if (serializedReplayState) {
+			const replayState = JSON.parse(
+				serializedReplayState,
+			) as RedisDeductionReplayState;
+			allUpdates = replayState.updates;
+			allRolloverUpdates = replayState.rolloverUpdates;
+			allMutationLogs = replayState.mutationLogs;
+			allUsageWindowMutations = replayState.usageWindowMutations;
+			Object.assign(
+				allModifiedCusEntIdsByFeatureId,
+				replayState.modifiedCusEntIdsByFeatureId,
+			);
+			Object.assign(allUsageWindowUpdates, replayState.usageWindowUpdates);
+			for (const customerEntitlement of replayState.mutationLogCustomerEntitlements) {
+				mutationLogCustomerEntitlementById.set(
+					customerEntitlement.id,
+					customerEntitlement,
+				);
+			}
+			refreshedSubjectView = true;
+		}
+	};
 
 	for (
 		let deductionIndex = 0;
@@ -229,8 +274,6 @@ export const executeRedisDeductionV2 = async ({
 			debug: process.env.NODE_ENV !== "production",
 		};
 
-		const targetRedis = redisInstance ?? ctx.redisV2;
-
 		const result = await tryRedisWrite(
 			() =>
 				targetRedis.deductFromSubjectBalances(
@@ -289,11 +332,42 @@ export const executeRedisDeductionV2 = async ({
 			if (
 				resultJson.error === RedisDeductionErrorCode.DuplicateIdempotencyKey
 			) {
+				await restoreReplayState();
 				duplicateFeatureIds.push(deduction.feature.id);
 				ctx.logger.info(
 					`[executeRedisDeductionV2] Skipping already-applied feature ${deduction.feature.id} (duplicate idempotency key)`,
 				);
 				continue;
+			}
+
+			if (
+				resultJson.error === RedisDeductionErrorCode.SubjectViewChanged &&
+				replayStateRedisKey &&
+				(allMutationLogs.length > 0 ||
+					Object.keys(allModifiedCusEntIdsByFeatureId).length > 0 ||
+					Object.keys(allUsageWindowUpdates).length > 0)
+			) {
+				const replayState: RedisDeductionReplayState = {
+					updates: allUpdates,
+					rolloverUpdates: allRolloverUpdates,
+					mutationLogs: allMutationLogs,
+					modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
+					usageWindowUpdates: allUsageWindowUpdates,
+					usageWindowMutations: allUsageWindowMutations,
+					mutationLogCustomerEntitlements: [
+						...mutationLogCustomerEntitlementById.values(),
+					],
+				};
+				await tryRedisWrite(
+					() =>
+						targetRedis.set(
+							replayStateRedisKey,
+							JSON.stringify(replayState),
+							"PX",
+							TRACK_V3_IDEMPOTENCY_TTL_MS,
+						),
+					targetRedis,
+				);
 			}
 
 			throw new RedisDeductionError({

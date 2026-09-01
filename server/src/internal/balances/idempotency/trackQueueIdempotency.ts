@@ -29,3 +29,21 @@ export const getRedisTrackFeatureIdempotencyKey = ({
 		redisKey: `{${customerId}}:${ctx.org.id}:${ctx.env}:idempotency:${hashedKey}`,
 	};
 };
+
+/** Carries partial multi-feature deduction results across an SQS redelivery so
+ *  completed features can still be mirrored to Postgres and included in the event. */
+export const getRedisTrackReplayStateKey = ({
+	ctx,
+	customerId,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+}) => {
+	const hashedKey = hashIdempotencyKey(
+		`${getTrackQueueIdempotencyKey({ ctx })}:replay-state`,
+	);
+	return {
+		hashedKey,
+		redisKey: `{${customerId}}:${ctx.org.id}:${ctx.env}:idempotency:${hashedKey}`,
+	};
+};
