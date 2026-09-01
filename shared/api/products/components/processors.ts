@@ -54,7 +54,8 @@ export const ApiPlanProcessorsSchema = z.object({
 });
 
 export const ApiPriceProcessorsSchema = z.object({
-	stripe: ApiStripePriceProcessorSchema.optional(),
+	/** Omit to keep the current mapping; null unlinks it. */
+	stripe: ApiStripePriceProcessorSchema.nullish(),
 });
 
 export type ApiStripePlanProcessor = z.infer<

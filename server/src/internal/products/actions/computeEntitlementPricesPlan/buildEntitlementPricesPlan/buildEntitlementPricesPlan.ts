@@ -1,4 +1,9 @@
-import type { Price } from "@autumn/shared";
+import {
+	type Price,
+	STRIPE_PRICE_MAPPING_SLOTS,
+	type StripePriceMappingSlot,
+} from "@autumn/shared";
+import type { StripeMappingUnlinks } from "../helpers/stripeMappingUnlinks";
 import type { ClaimResult } from "../types/claimResult";
 import type { EntitlementPricesPlanMode } from "../types/computeEntitlementPricesPlanParams";
 import {
@@ -12,15 +17,7 @@ import {
 	withFreshPriceId,
 } from "./buildEntitlementPricesPlanUtils";
 
-/** Fixed prices bill from the v1 slot, prepaid from the v2 slot. */
-const PRICE_MAPPING_SLOTS = [
-	"stripe_price_id",
-	"stripe_prepaid_price_v2_id",
-] as const;
-
-type PriceMapping = Partial<
-	Record<(typeof PRICE_MAPPING_SLOTS)[number], string | null>
->;
+type PriceMapping = Partial<Record<StripePriceMappingSlot, string | null>>;
 
 const mappingOf = ({ price }: { price?: Price }): PriceMapping =>
 	(price?.config ?? {}) as PriceMapping;
@@ -30,24 +27,41 @@ const mappingOf = ({ price }: { price?: Price }): PriceMapping =>
  * billing depends on that. So a re-stated mapping arrives as a claimed pair and
  * would be dropped; carry it onto the row we keep instead. Desired only carries
  * a slot the request stated, so a plain edit produces nothing here.
+ *
+ * A stated `null` is an unlink rather than a restate, and it cannot be read off
+ * the desired row — an untouched slot is nullish there too — so it arrives as
+ * `unlinkedSlots`. Only a slot that currently holds an id is worth writing.
  */
 const restatedMapping = ({
 	desired,
 	current,
+	unlinkedSlots,
 }: {
 	desired?: Price;
 	current?: Price;
+	unlinkedSlots?: StripePriceMappingSlot[];
 }): PriceMapping | undefined => {
 	if (!current) return undefined;
 
 	const desiredMapping = mappingOf({ price: desired });
 	const currentMapping = mappingOf({ price: current });
-	const restated = PRICE_MAPPING_SLOTS.filter(
-		(slot) => desiredMapping[slot] && desiredMapping[slot] !== currentMapping[slot],
+	const isUnlinked = ({ slot }: { slot: StripePriceMappingSlot }) =>
+		unlinkedSlots?.includes(slot) ?? false;
+
+	const restated = STRIPE_PRICE_MAPPING_SLOTS.filter((slot) =>
+		isUnlinked({ slot })
+			? Boolean(currentMapping[slot])
+			: Boolean(desiredMapping[slot]) &&
+				desiredMapping[slot] !== currentMapping[slot],
 	);
 	if (restated.length === 0) return undefined;
 
-	return Object.fromEntries(restated.map((slot) => [slot, desiredMapping[slot]]));
+	return Object.fromEntries(
+		restated.map((slot) => [
+			slot,
+			isUnlinked({ slot }) ? null : desiredMapping[slot],
+		]),
+	);
 };
 
 const withMapping = ({
@@ -68,9 +82,12 @@ const withMapping = ({
 export const buildEntitlementPricesPlan = ({
 	mode,
 	claims,
+	unlinks,
 }: {
 	mode: EntitlementPricesPlanMode;
 	claims: ClaimResult;
+	/** Stripe mapping slots the request stated as `null`, by current price id. */
+	unlinks?: StripeMappingUnlinks;
 }): EntitlementPricesPlan => {
 	const plan = emptyEntitlementPricesPlan();
 
@@ -81,6 +98,7 @@ export const buildEntitlementPricesPlan = ({
 		const mapping = restatedMapping({
 			desired: desired.price,
 			current: current.price,
+			unlinkedSlots: current.price && unlinks?.get(current.price.id),
 		});
 
 		if (!mapping || !current.price) {
@@ -118,8 +136,13 @@ export const buildEntitlementPricesPlan = ({
 
 	if (claims.basePriceClaim) {
 		const { desired, current } = claims.basePriceClaim;
-		const mapping = restatedMapping({ desired, current });
-		if (mapping) plan.prices.updated.push(withMapping({ price: current, mapping }));
+		const mapping = restatedMapping({
+			desired,
+			current,
+			unlinkedSlots: unlinks?.get(current.id),
+		});
+		if (mapping)
+			plan.prices.updated.push(withMapping({ price: current, mapping }));
 		else plan.prices.same.push(current);
 	}
 

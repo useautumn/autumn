@@ -1,9 +1,9 @@
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1.js";
-import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
+import { CatalogBasePriceParamsSchema } from "./catalogBasePriceParams.js";
 import { ApiPlanProcessorsSchema } from "@api/products/components/processors.js";
 import { PlanLicenseParamsSchema } from "@api/products/crud/licenses/planLicenseParams.js";
 import { MigrationParamsSchema } from "@api/products/crud/migrationParams.js";
-import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1.js";
+import { CatalogPlanItemParamsV1Schema } from "./catalogPlanItemParams.js";
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
@@ -55,11 +55,11 @@ export const UpdateCatalogPlanParamsSchema = z.object({
 		description:
 			"Payment processors this plan is connected to. Omit to keep.",
 	}),
-	price: BasePriceParamsSchema.nullable().optional().meta({
+	price: CatalogBasePriceParamsSchema.nullable().optional().meta({
 		description:
 			"Base recurring price. Omit to leave unchanged; null removes it.",
 	}),
-	items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
+	items: z.array(CatalogPlanItemParamsV1Schema).optional().meta({
 		description: "Feature configurations for this plan.",
 	}),
 	free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
