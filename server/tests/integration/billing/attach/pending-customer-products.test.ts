@@ -678,6 +678,7 @@ test.concurrent(
 
 		expect(stillPending?.status).toBe(CusProductStatus.Pending);
 		expect(stillPending?.metadata_id).toBe(originalPending?.metadata_id);
+		expect(stillPending?.created_at).toBe(originalPending?.created_at ?? 0);
 	},
 );
 

@@ -11,12 +11,13 @@ import { buildPendingReattachParams } from "@/internal/billing/v2/execute/buildP
 import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/discardPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/getDeferredBillingPlanData";
 import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingPlanRebills";
+import { relinkPendingPayment } from "@/internal/billing/v2/execute/relinkPendingPayment";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 type PendingUpdateResult = {
 	billingContext?: UpdateSubscriptionBillingContext;
 	billingResult?: BillingResult;
-} | null;
+};
 
 /** A plan awaiting payment was never billed, so an edit re-runs the attach that
  * created it and a cancel simply drops it. Either way the original payment is
@@ -61,7 +62,23 @@ export const updatePendingCustomerProduct = async ({
 		replacementQuantities: preview.billingContext?.featureQuantities ?? [],
 	});
 
-	if (!rebills) return null;
+	// The invoice still stands, so the edit runs as an ordinary update and the
+	// row it produces keeps pointing at the payment it is waiting on.
+	if (!rebills) {
+		const updated = await billingActions.updateSubscription({
+			ctx,
+			params,
+			preview: false,
+		});
+
+		await relinkPendingPayment({
+			ctx,
+			customerProduct,
+			metadataId: customerProduct.metadata_id,
+		});
+
+		return updated as PendingUpdateResult;
+	}
 
 	await discardPendingCustomerProduct({ ctx, customerProduct });
 
