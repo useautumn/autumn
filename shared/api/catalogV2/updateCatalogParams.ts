@@ -1,5 +1,5 @@
-import { CreateFeatureV2ParamsSchema } from "@api/features/crud/createFeatureParams.js";
 import { ApiFeatureProcessorsSchema } from "@api/features/components/processors.js";
+import { CreateFeatureV2ParamsSchema } from "@api/features/crud/createFeatureParams.js";
 import { z } from "zod/v4";
 import { UpdateCatalogPlanParamsSchema } from "./planUpdate/params/catalogPlanParams.js";
 
@@ -56,10 +56,7 @@ export const UpdateCatalogParamsSchema = z.object({
 		.optional()
 		.default([]),
 	plans: z.array(UpdateCatalogPlanParamsSchema).optional().default([]),
-	remove_plans: z
-		.array(RemoveCatalogPlanParamsSchema)
-		.optional()
-		.default([]),
+	remove_plans: z.array(RemoveCatalogPlanParamsSchema).optional().default([]),
 
 	// rewards: z.array(CreateRewardParamsSchema).optional().meta({
 	// 	description:
@@ -73,15 +70,17 @@ export const UpdateCatalogParamsSchema = z.object({
 	// 			"Desired referral programs. Same omit-vs-empty semantics as rewards.",
 	// 	}),
 
-	// skip_deletions: z.boolean().optional().default(true).meta({
-	// 	description:
-	// 		"When false, plans and features missing from this payload are archived or deleted.",
-	// }),
-	// skip_plan_ids: z.array(z.string()).optional().default([]).meta({
-	// 	description:
-	// 		"Plans to leave untouched, matched against plan_id and new_plan_id.",
-	// }),
-	// skip_feature_ids: z.array(z.string()).optional().default([]),
+	skip_deletions: z.boolean().optional().default(true).meta({
+		description:
+			"When false the payload is the complete desired catalog: plans missing from it are removed. Defaults true, which leaves anything unmentioned alone.",
+	}),
+	skip_plan_ids: z.array(z.string()).optional().default([]).meta({
+		description:
+			"Plans to leave untouched under skip_deletions:false, matched against plan_id and new_plan_id.",
+	}),
+	skip_feature_ids: z.array(z.string()).optional().default([]).meta({
+		description: "Features to leave untouched under skip_deletions:false.",
+	}),
 
 	// migration: MigrationParamsSchema.optional().meta({
 	// 	description: "Catalog-wide migration default, overridable per plan.",

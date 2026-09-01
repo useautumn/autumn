@@ -64,8 +64,13 @@ export const setupProductStatesContext = async ({
 	internalIdRefs: InternalIdRefs;
 }): Promise<ProductStatesContext> => {
 	const { db, org, env } = ctx;
+	// Full state means the payload is the whole desired catalog, so the server
+	// has to see everything to know what is missing from it.
+	const fullState = params.skip_deletions === false;
 	const loadedPlanIds = payloadPlanIds({ params, internalIdRefs });
-	if (loadedPlanIds.length === 0) return emptyProductStatesContext();
+	if (!fullState && loadedPlanIds.length === 0) {
+		return emptyProductStatesContext();
+	}
 
 	const payloadVersions = await timeCatalogPhase({
 		ctx,
@@ -76,7 +81,7 @@ export const setupProductStatesContext = async ({
 				db,
 				orgId: org.id,
 				env,
-				inIds: loadedPlanIds,
+				...(fullState ? {} : { inIds: loadedPlanIds }),
 				returnAll: true,
 				includeDeleted: true,
 				skipCache: true,
@@ -84,7 +89,9 @@ export const setupProductStatesContext = async ({
 	});
 	const allVersions = collectProductStateRows({
 		products: payloadVersions,
-		payloadPlanIds: loadedPlanIds,
+		payloadPlanIds: fullState
+			? [...new Set(payloadVersions.map((product) => product.id))]
+			: loadedPlanIds,
 	});
 	const allPlanIds = [
 		...new Set([...loadedPlanIds, ...allVersions.map((product) => product.id)]),
