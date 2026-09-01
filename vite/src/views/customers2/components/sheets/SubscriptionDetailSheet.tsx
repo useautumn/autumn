@@ -100,7 +100,7 @@ export function SubscriptionDetailSheet() {
 		subscriptionIds: cusProduct.subscription_ids ?? [],
 	});
 
-	const canCancel = !isExpired && !isPending;
+	const canCancel = !isExpired;
 	const canUpdate = !isExpired && !isScheduled && !isPending;
 	const hasPlanItems = (displayItems?.length ?? 0) > 0;
 	const licenseRows = cusProductLicenses(cusProduct);

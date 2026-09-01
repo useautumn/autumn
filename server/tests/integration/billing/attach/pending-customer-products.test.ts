@@ -308,3 +308,70 @@ test.concurrent(
 		expect(expiredCustomerProduct?.ended_at).toBeGreaterThan(0);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("pending cancel: cancelling a pending plan discards it and voids the invoice")}`,
+	async () => {
+		const customerId = `pending-cancel-discards-${Date.now()}`;
+		const pro = products.pro({
+			id: "pro-pending-cancel",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, autumnV1, customer } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [
+				s.billing.attach({
+					productId: pro.id,
+					invoice: true,
+					enableProductImmediately: false,
+					finalizeInvoice: true,
+				}),
+			],
+		});
+
+		const pendingCustomerProducts = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const pendingCustomerProduct = pendingCustomerProducts.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(pendingCustomerProduct?.status).toBe(CusProductStatus.Pending);
+
+		const metadataId = pendingCustomerProduct?.metadata_id ?? "";
+		const deferredMetadata = await MetadataService.get({
+			db: ctx.db,
+			id: metadataId,
+		});
+		const stripeInvoiceId = deferredMetadata?.stripe_invoice_id ?? "";
+
+		await autumnV1.cancel({
+			customer_id: customerId,
+			product_id: pro.id,
+		});
+
+		const cancelledCustomerProducts = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const cancelledCustomerProduct = cancelledCustomerProducts.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(cancelledCustomerProduct?.status).toBe(CusProductStatus.Expired);
+		expect(cancelledCustomerProduct?.metadata_id).toBeNull();
+
+		const stripeInvoice =
+			await ctx.stripeCli.invoices.retrieve(stripeInvoiceId);
+		expect(stripeInvoice.status).toBe("void");
+
+		const remainingMetadata = await MetadataService.get({
+			db: ctx.db,
+			id: metadataId,
+		});
+		expect(remainingMetadata).toBeNull();
+	},
+);

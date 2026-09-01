@@ -128,7 +128,8 @@ export const CustomerProductsColumns = [
 
 			const isCanceling = row.original.canceled;
 			// A pending plan is a frozen billing plan replayed on payment, so
-			// there is nothing to edit or cancel until it is paid or expires.
+			// there is nothing to edit or transfer until it is paid. Cancelling
+			// discards it and closes the payment it is waiting on.
 			const isPending = row.original.status === CusProductStatus.Pending;
 
 			return (
@@ -167,7 +168,7 @@ export const CustomerProductsColumns = [
 								<PencilIcon size={16} /> Update
 							</DropdownMenuItem>
 						)}
-						{isCanceling && !isPending ? (
+						{isCanceling ? (
 							<>
 								<DropdownMenuItem
 									className="flex items-center gap-2 text-xs"
@@ -189,17 +190,15 @@ export const CustomerProductsColumns = [
 								</DropdownMenuItem>
 							</>
 						) : (
-							!isPending && (
-								<DropdownMenuItem
-									className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
-									onClick={(e) => {
-										e.stopPropagation();
-										meta.onCancelClick?.(row.original);
-									}}
-								>
-									<Delete size={16} /> Cancel
-								</DropdownMenuItem>
-							)
+							<DropdownMenuItem
+								className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
+								onClick={(e) => {
+									e.stopPropagation();
+									meta.onCancelClick?.(row.original);
+								}}
+							>
+								<Delete size={16} /> Cancel
+							</DropdownMenuItem>
 						)}
 					</TableDropdownMenuCell>
 				</div>

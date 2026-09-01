@@ -5,7 +5,9 @@ import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/upd
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionErrors";
 import { logUpdateSubscriptionContext } from "@/internal/billing/v2/actions/updateSubscription/logs/logUpdateSubscriptionContext";
 import { setupUpdateSubscriptionBillingContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
+import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/discardPendingCustomerProduct";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
+import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/findPendingCustomerProduct";
 import { voidInvoicesOnImmediateCancel } from "@/internal/billing/v2/execute/voidInvoicesOnImmediateCancel";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
@@ -57,6 +59,21 @@ export const handleCancelV2 = createRoute({
 		ctx.logger.info(
 			`=============== RUNNING CANCEL FOR ${customer_id} ===============`,
 		);
+
+		const pendingCustomerProduct = await findPendingCustomerProduct({
+			ctx,
+			customerId: customer_id,
+			productId: product_id,
+			entityId: entity_id,
+		});
+
+		if (pendingCustomerProduct) {
+			await discardPendingCustomerProduct({
+				ctx,
+				customerProduct: pendingCustomerProduct,
+			});
+			return c.json({ success: true });
+		}
 
 		const billingContext = await setupUpdateSubscriptionBillingContext({
 			ctx,
