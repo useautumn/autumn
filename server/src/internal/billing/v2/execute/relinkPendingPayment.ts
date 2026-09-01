@@ -3,8 +3,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-/** An ordinary update replaces the row without knowing it was awaiting payment,
- * so point the replacement back at the metadata holding that payment. */
 export const relinkPendingPayment = async ({
 	ctx,
 	customerProduct,

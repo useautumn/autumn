@@ -41,7 +41,6 @@ export const promotePendingCustomerProducts = async ({
 			ctx,
 			cusProductId: customerProduct.id,
 			updates: {
-				// A future schedule phase stays Scheduled rather than going live.
 				status: plannedCustomerProduct.status,
 				metadata_id: null,
 				subscription_ids: plannedCustomerProduct.subscription_ids ?? undefined,
@@ -49,8 +48,6 @@ export const promotePendingCustomerProducts = async ({
 			},
 		});
 
-		// The persisted row has no rollovers yet; the planned one still holds
-		// them in memory and would insert a second copy.
 		if (plannedCustomerProduct.status === CusProductStatus.Active) {
 			await reapplyExistingRolloversToCustomerProduct({
 				ctx,

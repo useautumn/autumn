@@ -40,8 +40,6 @@ export const handleUpdateSubscription = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		// A plan awaiting payment is replaced rather than repriced, but only when
-		// the edit bills differently — see updatePendingCustomerProduct.
 		const pendingUpdate = await updatePendingPlanIfAny({ ctx, params: body });
 
 		if (pendingUpdate) {
@@ -69,7 +67,6 @@ export const handleUpdateSubscription = createRoute({
 			});
 		}
 
-		// 7. Format response
 		const response = billingResultToResponse({
 			billingContext,
 			billingResult,

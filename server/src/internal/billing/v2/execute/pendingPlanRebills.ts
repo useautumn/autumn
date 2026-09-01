@@ -21,9 +21,6 @@ const quantitiesChanged = ({
 				?.quantity !== option.quantity,
 	);
 
-/** Whether the replacement bills differently from the plan the customer was
- * already invoiced for. An entitlement-only edit — a free feature added or
- * removed — leaves the invoice correct, so it is kept. */
 export const pendingPlanRebills = ({
 	ctx,
 	customerProduct,

@@ -59,7 +59,6 @@ export const handleCancelV2 = createRoute({
 			`=============== RUNNING CANCEL FOR ${customer_id} ===============`,
 		);
 
-		// A plan awaiting payment was never billed, so cancelling drops it.
 		const discarded = await discardPendingPlanIfAny({
 			ctx,
 			customerId: customer_id,

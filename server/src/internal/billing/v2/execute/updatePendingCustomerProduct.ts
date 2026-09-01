@@ -4,24 +4,20 @@ import type {
 	UpdateSubscriptionBillingContext,
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
-import { CusProductStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { buildPendingReattachParams } from "@/internal/billing/v2/execute/buildPendingReattachParams";
 import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/discardPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/getDeferredBillingPlanData";
+import { inheritPendingCreatedAt } from "@/internal/billing/v2/execute/inheritPendingCreatedAt";
 import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingPlanRebills";
 import { relinkPendingPayment } from "@/internal/billing/v2/execute/relinkPendingPayment";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-type PendingUpdateResult = {
+export type PendingUpdateResult = {
 	billingContext?: UpdateSubscriptionBillingContext;
 	billingResult?: BillingResult;
 };
 
-/** A plan awaiting payment was never billed, so an edit re-runs the attach that
- * created it and a cancel simply drops it. Either way the original payment is
- * closed first, so the customer cannot pay for a plan that no longer exists. */
 export const updatePendingCustomerProduct = async ({
 	ctx,
 	params,
@@ -47,9 +43,7 @@ export const updatePendingCustomerProduct = async ({
 		customerProduct,
 	});
 
-	// Build the replacement first: if it only changes entitlements, the invoice
-	// the customer already has still describes what they owe, so it stands.
-	const preview = await billingActions.attach({
+	const replacementPreview = await billingActions.attach({
 		ctx,
 		params: reattachParams,
 		preview: true,
@@ -58,12 +52,11 @@ export const updatePendingCustomerProduct = async ({
 	const rebills = pendingPlanRebills({
 		ctx,
 		customerProduct,
-		replacementProduct: preview.billingContext?.fullProducts?.[0],
-		replacementQuantities: preview.billingContext?.featureQuantities ?? [],
+		replacementProduct: replacementPreview.billingContext?.fullProducts?.[0],
+		replacementQuantities:
+			replacementPreview.billingContext?.featureQuantities ?? [],
 	});
 
-	// The invoice still stands, so the edit runs as an ordinary update and the
-	// row it produces keeps pointing at the payment it is waiting on.
 	if (!rebills) {
 		const updated = await billingActions.updateSubscription({
 			ctx,
@@ -89,23 +82,11 @@ export const updatePendingCustomerProduct = async ({
 
 	if (!billingResult) return {};
 
-	// The replacement stands in for the original, so it keeps the date the
-	// customer was first invoiced rather than the date of this edit.
-	const replacement = await CusProductService.getByMetadataId({
-		db: ctx.db,
-		metadataId: billingResult.stripe.deferredMetadataId ?? "",
-		orgId: ctx.org.id,
-		env: ctx.env,
-		inStatuses: [CusProductStatus.Pending],
+	await inheritPendingCreatedAt({
+		ctx,
+		metadataId: billingResult.stripe.deferredMetadataId,
+		createdAt: customerProduct.created_at,
 	});
-
-	for (const row of replacement) {
-		await CusProductService.update({
-			ctx,
-			cusProductId: row.id,
-			updates: { created_at: customerProduct.created_at },
-		});
-	}
 
 	return {
 		billingContext:

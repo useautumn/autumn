@@ -6,8 +6,6 @@ import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { CusService } from "../CusService";
 
-/** Resolved from Stripe on read so the link reflects the session or invoice
- * as it stands now. */
 export const handleGetPendingPaymentLink = createRoute({
 	scopes: [Scopes.Customers.Read],
 	handler: async (c) => {

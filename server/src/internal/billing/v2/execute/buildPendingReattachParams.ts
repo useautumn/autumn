@@ -5,9 +5,6 @@ import type {
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 
-/** Rebuilds the attach that produced a pending plan, with the update's changes
- * applied over it. The deferred metadata keeps the resolved context rather than
- * the original request, so the payment settings are read back off it. */
 export const buildPendingReattachParams = ({
 	params,
 	billingContext,
