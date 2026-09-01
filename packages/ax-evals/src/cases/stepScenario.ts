@@ -12,7 +12,6 @@ import type { Scenario } from "./types/axCase.ts";
  * gets its own dedicated cases without this scenario.
  */
 export const stepScenario = (): Scenario => ({
-	stubAtmn: true,
 	primer: [
 		"Project state (already verified, do not re-check): atmn is installed in",
 		"node_modules, a valid AUTUMN_SECRET_KEY is in .env, and the Autumn org",

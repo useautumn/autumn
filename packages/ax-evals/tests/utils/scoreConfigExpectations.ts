@@ -17,7 +17,9 @@ export const scoreConfigExpectations = async ({
 	axCase: AxCase;
 	configFile?: string;
 }): Promise<Record<string, number | null>> => {
-	const workspace = await createCaseWorkspace(`proof-${axCase.name}`);
+	const workspace = await createCaseWorkspace(`proof-${axCase.name}`, {
+		secretKey: "am_sk_test_grader_proof",
+	});
 	try {
 		if (configFile)
 			await writeFile(join(workspace.dir, "autumn.config.ts"), configFile);

@@ -45,6 +45,7 @@ export const runAgentCase = async ({
 	timeoutMs = DEFAULT_TIMEOUT_MS,
 	renderMode = "blocks",
 	systemPromptAppend,
+	extraEnv,
 	onTurn,
 }: {
 	label: string;
@@ -57,13 +58,16 @@ export const runAgentCase = async ({
 	renderMode?: "chat" | "blocks";
 	/** extra system-prompt context, e.g. a scenario primer */
 	systemPromptAppend?: string;
+	/** run-scoped env for the agent, e.g. ATMN_BACKEND_URL */
+	extraEnv?: Record<string, string>;
 	onTurn?: (turn: CompletedTurn) => void;
 }): Promise<AgentRunResult> => {
 	const env: Record<string, string | undefined> = {
 		...process.env,
+		...extraEnv,
 		CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
 		// Bare `atmn` resolves like it would after npm install: through the
-		// workspace's own .bin (where step-tier stubs also live).
+		// workspace's own .bin, exactly as after a real npm install.
 		PATH: `${join(cwd, "node_modules/.bin")}:${process.env.PATH ?? ""}`,
 	};
 	if (process.env.AX_EVALS_USE_API_KEY !== "1") delete env.ANTHROPIC_API_KEY;

@@ -11,12 +11,19 @@ import { ATMN_DIR, WORKSPACE_ROOT } from "./workspacePaths.ts";
  */
 export const createCaseWorkspace = async (
 	label: string,
+	{ secretKey }: { secretKey: string },
 ): Promise<CaseWorkspace> => {
 	await ensureAtmnBuilt();
 	const runId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 	const dir = join(WORKSPACE_ROOT, `${label}-${runId}`);
-	await mkdir(join(dir, "node_modules"), { recursive: true });
+	await mkdir(join(dir, "node_modules/.bin"), { recursive: true });
 	await symlink(ATMN_DIR, join(dir, "node_modules/atmn"));
+	// The .bin shim npm would have installed — `atmn` and `npx atmn` both
+	// resolve through it.
+	await symlink(
+		join(ATMN_DIR, "dist/cli.js"),
+		join(dir, "node_modules/.bin/atmn"),
+	);
 	// atmn declared as a dependency and a secret key in .env, so agents see an
 	// already-installed, already-authenticated project; install/login behavior
 	// is exercised by dedicated setup-flow cases instead.
@@ -32,7 +39,7 @@ export const createCaseWorkspace = async (
 			"\t",
 		),
 	);
-	await writeFile(join(dir, ".env"), "AUTUMN_SECRET_KEY=am_sk_test_ax_evals\n");
+	await writeFile(join(dir, ".env"), `AUTUMN_SECRET_KEY=${secretKey}\n`);
 
 	const cleanup = async () => {
 		if (process.env.AX_EVALS_KEEP === "1") {
