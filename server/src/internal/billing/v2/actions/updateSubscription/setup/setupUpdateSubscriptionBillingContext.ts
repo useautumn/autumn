@@ -32,7 +32,7 @@ import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutM
 import { setupUpdateSubscriptionIntent } from "./setupUpdateSubscriptionIntent";
 import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTrialContext";
 
-export const FIELDS_WITH_BILLING_CHANGES = [
+const FIELDS_WITH_BILLING_CHANGES = [
 	"feature_quantities",
 	"license_quantities",
 	"version",

@@ -7,7 +7,6 @@ import {
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { FIELDS_WITH_BILLING_CHANGES } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
 import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/findPendingCustomerProduct";
 import { updatePendingCustomerProduct } from "@/internal/billing/v2/execute/updatePendingCustomerProduct";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
@@ -49,22 +48,27 @@ export const handleUpdateSubscription = createRoute({
 			entityId: body.entity_id,
 		});
 
-		// Only a change to what is billed needs a new invoice; anything else runs
-		// as a normal update and leaves the customer's payment link alone.
-		const rebillsPendingPlan =
-			body.no_billing_changes !== true &&
-			FIELDS_WITH_BILLING_CHANGES.some((field) => body[field] !== undefined);
+		// A plan awaiting payment is replaced rather than repriced, but only when
+		// the edit actually bills differently — otherwise it updates normally and
+		// the customer's payment link survives.
+		const pendingUpdate = pendingCustomerProduct
+			? await updatePendingCustomerProduct({
+					ctx,
+					params: body,
+					customerProduct: pendingCustomerProduct,
+				})
+			: undefined;
 
-		if (pendingCustomerProduct && rebillsPendingPlan) {
-			const pendingUpdate = await updatePendingCustomerProduct({
-				ctx,
-				params: body,
-				customerProduct: pendingCustomerProduct,
-			});
+		if (pendingUpdate) {
+			const { billingContext, billingResult } = pendingUpdate;
+			if (!billingContext || !billingResult) {
+				return c.json({ success: true }, 200);
+			}
 
-			if (!pendingUpdate) return c.json({ success: true }, 200);
-
-			return c.json(billingResultToResponse(pendingUpdate), 200);
+			return c.json(
+				billingResultToResponse({ billingContext, billingResult }),
+				200,
+			);
 		}
 
 		const { billingContext, billingResult } =
