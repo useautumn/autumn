@@ -7,13 +7,47 @@ import {
 	type DbInvoiceLineItem,
 	type FullCusProduct,
 	type FullProductWithoutLicenses,
+	fixedPriceToDescription,
 	type InvoiceLineItemDiscount,
+	isFixedPrice,
 	type LineItem,
 	type LineItemContext,
 	LineItemSchema,
 	type Price,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+
+/**
+ * A stored charge row may carry Stripe's own wording, which renders a flat fee as
+ * its subscription quantity and the product's `unit_label` ("1 emails × Plan").
+ * Fixed prices are re-rendered in Autumn's format; usage prices keep the stored
+ * text, which carries tier detail Autumn's description would drop.
+ */
+const refundLineDescription = ({
+	chargeRow,
+	price,
+	product,
+	context,
+	preferStoredText,
+}: {
+	chargeRow: DbInvoiceLineItem;
+	price: Price;
+	product: { name: string };
+	context: LineItemContext;
+	/** License credits keep stored wording so the assigned quantity stays visible. */
+	preferStoredText: boolean;
+}): string => {
+	if (!preferStoredText && isFixedPrice(price)) {
+		return fixedPriceToDescription({
+			price,
+			currency: context.currency,
+			context,
+		});
+	}
+
+	if (chargeRow.description) return `Unused ${chargeRow.description}`;
+	return `Unused ${product.name}`;
+};
 
 export const chargeRowToRefundLineItem = ({
 	chargeRow,
@@ -93,9 +127,13 @@ export const chargeRowToRefundLineItem = ({
 		customerEntitlement: matchingCusEnt,
 	};
 
-	const description = chargeRow.description
-		? `Unused ${chargeRow.description}`
-		: `Unused ${product.name}`;
+	const description = refundLineDescription({
+		chargeRow,
+		price,
+		product,
+		context,
+		preferStoredText: contextOverride !== undefined,
+	});
 
 	const lineItemData = {
 		id: generateKsuid({ prefix: "invoice_li_" }),
