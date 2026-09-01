@@ -61,6 +61,7 @@ export const executeDeferredBillingPlan = async ({
 	await promotePendingCustomerProducts({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
+		fullCustomer: billingContext.fullCustomer,
 		metadataId: metadata.id,
 	});
 

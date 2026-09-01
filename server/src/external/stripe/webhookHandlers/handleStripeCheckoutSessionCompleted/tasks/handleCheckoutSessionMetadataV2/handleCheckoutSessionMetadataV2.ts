@@ -169,6 +169,7 @@ const executeCheckoutSessionMetadataV2 = async ({
 	await promotePendingCustomerProducts({
 		ctx,
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
+		fullCustomer: updatedDeferredData.billingContext.fullCustomer,
 		metadataId: metadata.id,
 	});
 
