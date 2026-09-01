@@ -69,6 +69,7 @@ function SendInvoiceContent() {
 function EditContent() {
 	const {
 		formContext,
+		hasChanges,
 		hasNoBillingChanges,
 		showPlanEditor,
 		productWithFormItems,
@@ -123,6 +124,7 @@ function EditContent() {
 				</div>
 
 				{customerProduct.status === CusProductStatus.Pending &&
+					hasChanges &&
 					!hasNoBillingChanges && (
 						<div className="px-4 pt-4">
 							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
