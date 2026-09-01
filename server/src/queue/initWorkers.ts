@@ -223,10 +223,6 @@ export const startPollingLoop = async ({
 			queueUrl,
 			consecutiveIntervals: minutes,
 		});
-		Sentry.captureMessage(
-			`SQS Worker ${process.pid} (${queueUrl}): No messages processed for ${minutes} minutes`,
-			"warning",
-		);
 	};
 
 	const recycleWorkerIfNeeded = () => {
