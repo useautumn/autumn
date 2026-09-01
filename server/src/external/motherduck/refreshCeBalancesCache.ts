@@ -38,14 +38,63 @@ export const getCurrentLakeMetadataLocation = async ({
 	return location;
 };
 
+// Aggregate once here (~1s/feature at query time otherwise); expiry
+// is baked at refresh, which the 5-min staleness window already covers.
+// granted ≈ allowance + adjustment (quantity lives only in PG).
+// remaining/granted sums cover FINITE rows only; usage covers ALL rows
+// (unlimited rows track real deductions, so −balance = their usage).
+// The ORDER BY clusters row groups so per-feature top-N prunes.
+/** Reads the lake in one pass: the `ce_balances` intermediate this replaced was
+ * 114M rows rewritten per run for a table nothing else ever queried. */
+export const ceBalanceTotalsSql = ({
+	ceMetadataLocation,
+	totalsTable = "ce_balance_totals",
+}: {
+	ceMetadataLocation: string;
+	totalsTable?: string;
+}): string => `
+	CREATE OR REPLACE TABLE main.${totalsTable} AS
+	WITH b AS (
+		SELECT ${CE_BALANCES_CACHE_PROJECTION}
+		FROM iceberg_scan('${ceMetadataLocation}')
+	)
+	SELECT
+		b.internal_customer_id,
+		b.internal_feature_id,
+		COALESCE(BOOL_OR(b.unlimited), false) AS is_unlimited,
+		COALESCE(SUM(b.balance) FILTER (WHERE b.unlimited IS NOT TRUE), 0) AS total,
+		COALESCE(SUM(COALESCE(a.allowance, 0) + COALESCE(b.adjustment, 0))
+			FILTER (WHERE b.unlimited IS NOT TRUE), 0) AS granted_total,
+		COALESCE(SUM(CASE
+			WHEN b.unlimited IS TRUE THEN -(COALESCE(b.balance, 0) + COALESCE(b.entities_balance, 0))
+			ELSE COALESCE(a.allowance, 0) + COALESCE(b.adjustment, 0) - COALESCE(b.balance, 0)
+		END), 0) AS usage_total,
+		COUNT(*) FILTER (WHERE b.unlimited IS NOT TRUE) AS finite_rows
+	FROM b
+	LEFT JOIN main.ent_allowances a ON a.id = b.entitlement_id
+	WHERE (b.expires_at IS NULL OR b.expires_at > epoch_ms(now()))
+		AND (
+			(
+				b.customer_product_id IS NULL
+				AND (${LIVE_LOOSE_BALANCE_CACHE_PREDICATE})
+			)
+			OR b.customer_product_id IN (SELECT id FROM main.cp_active)
+		)
+	GROUP BY 1, 2
+	ORDER BY b.internal_feature_id, is_unlimited DESC, total DESC
+`;
+
 let inFlight: Promise<void> | null = null;
 
 /** Never throws (a failed tick must not crash the cron); returns whether the
  * refresh actually completed so one-shot callers can fail loudly. */
 export const refreshCeBalancesCache = async ({
 	logger,
+	totalsTable,
 }: {
 	logger: Logger;
+	/** Shadow target for verifying a query change against the live table. */
+	totalsTable?: string;
 }): Promise<{ ok: boolean }> => {
 	if (inFlight) {
 		logger.info(
@@ -72,13 +121,6 @@ export const refreshCeBalancesCache = async ({
 			run: async (db) => {
 				await db.execute(
 					sql.raw(`
-						CREATE OR REPLACE TABLE main.ce_balances AS
-						SELECT ${CE_BALANCES_CACHE_PROJECTION}
-						FROM iceberg_scan('${ceMetadataLocation}')
-					`),
-				);
-				await db.execute(
-					sql.raw(`
 						CREATE OR REPLACE TABLE main.ent_allowances AS
 						SELECT e.id, e.allowance, f.type AS feature_type
 						FROM iceberg_scan('${entMetadataLocation}') e
@@ -96,43 +138,13 @@ export const refreshCeBalancesCache = async ({
 						WHERE status IN ('active', 'past_due')
 					`),
 				);
-				// Aggregate once here (~1s/feature at query time otherwise); expiry
-				// is baked at refresh, which the 5-min staleness window already covers.
-				// granted ≈ allowance + adjustment (quantity lives only in PG).
-				// remaining/granted sums cover FINITE rows only; usage covers ALL rows
-				// (unlimited rows track real deductions, so −balance = their usage).
-				// The ORDER BY clusters row groups so per-feature top-N prunes.
 				await db.execute(
-					sql.raw(`
-						CREATE OR REPLACE TABLE main.ce_balance_totals AS
-						SELECT
-							b.internal_customer_id,
-							b.internal_feature_id,
-							COALESCE(BOOL_OR(b.unlimited), false) AS is_unlimited,
-							COALESCE(SUM(b.balance) FILTER (WHERE b.unlimited IS NOT TRUE), 0) AS total,
-							COALESCE(SUM(COALESCE(a.allowance, 0) + COALESCE(b.adjustment, 0))
-								FILTER (WHERE b.unlimited IS NOT TRUE), 0) AS granted_total,
-							COALESCE(SUM(CASE
-								WHEN b.unlimited IS TRUE THEN -(COALESCE(b.balance, 0) + COALESCE(b.entities_balance, 0))
-								ELSE COALESCE(a.allowance, 0) + COALESCE(b.adjustment, 0) - COALESCE(b.balance, 0)
-							END), 0) AS usage_total,
-							COUNT(*) FILTER (WHERE b.unlimited IS NOT TRUE) AS finite_rows
-						FROM main.ce_balances b
-						LEFT JOIN main.ent_allowances a ON a.id = b.entitlement_id
-						WHERE (b.expires_at IS NULL OR b.expires_at > epoch_ms(now()))
-							AND (
-								(
-									b.customer_product_id IS NULL
-									AND (${LIVE_LOOSE_BALANCE_CACHE_PREDICATE})
-								)
-								OR b.customer_product_id IN (SELECT id FROM main.cp_active)
-							)
-						GROUP BY 1, 2
-						ORDER BY b.internal_feature_id, is_unlimited DESC, total DESC
-					`),
+					sql.raw(ceBalanceTotalsSql({ ceMetadataLocation, totalsTable })),
 				);
 				const countResult = (await db.execute(
-					sql`SELECT COUNT(*) AS n FROM main.ce_balances`,
+					sql.raw(
+						`SELECT COUNT(*) AS n FROM main.${totalsTable ?? "ce_balance_totals"}`,
+					),
 				)) as unknown as
 					| { n: number | string }[]
 					| { rows: { n: number | string }[] };
@@ -150,7 +162,7 @@ export const refreshCeBalancesCache = async ({
 				metadataLocation: ceMetadataLocation,
 				durationMs: Math.round(performance.now() - startedAt),
 			},
-			"[refreshCeBalancesCache] rebuilt balance cache tables",
+			"[refreshCeBalancesCache] rebuilt balance cache tables (rowCount = totals rows)",
 		);
 	})();
 
