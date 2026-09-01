@@ -5,11 +5,14 @@ const shorten = (text: string, max: number) => {
 	return flat.length > max ? `${flat.slice(0, max)}…` : flat;
 };
 
-const fileName = (path: unknown, workspaceDir: string) =>
-	String(path ?? "")
+const fileName = (path: unknown, workspaceDir: string) => {
+	const stripped = String(path ?? "")
 		.replace(`/private${workspaceDir}`, "")
 		.replace(workspaceDir, "")
 		.replace(/^\//, "");
+	// Reading the workspace root itself strips to "" — name it honestly.
+	return stripped || "./ (workspace root)";
+};
 
 const firstCommand = (command: unknown) => {
 	const [head] = String(command ?? "").split(/&&|\|\|/, 1);

@@ -23,11 +23,43 @@ export const collectAgentEvent = ({
 		return;
 	}
 
+	if (message.type === "user") {
+		const content = message.message.content;
+		if (!Array.isArray(content)) return;
+		for (const block of content) {
+			if (!isRecord(block) || block.type !== "tool_result") continue;
+			const tool = result.toolUses.find(
+				(candidate) => candidate.id === block.tool_use_id,
+			);
+			if (!tool) continue;
+			const text =
+				typeof block.content === "string"
+					? block.content
+					: Array.isArray(block.content)
+						? block.content
+								.map((part) =>
+									isRecord(part) && typeof part.text === "string"
+										? part.text
+										: "",
+								)
+								.join(" ")
+						: "";
+			tool.result = { text, isError: block.is_error === true };
+			trace(label, `tool result (${tool.name}): ${shortText(text)}`);
+		}
+		return;
+	}
+
 	if (message.type === "assistant") {
 		for (const block of message.message.content) {
 			if (block.type === "tool_use") {
 				const input = isRecord(block.input) ? block.input : {};
-				result.toolUses.push({ name: block.name, input, turn: result.turns });
+				result.toolUses.push({
+					name: block.name,
+					input,
+					turn: result.turns,
+					id: block.id,
+				});
 				const detail =
 					block.name === "Skill"
 						? String(input.skill ?? "")

@@ -26,10 +26,12 @@ export const scoreConfigExpectations = async ({
 			(expectation) => expectation.kind === "config",
 		);
 		return Object.fromEntries(
-			configExpectations.map((expectation) => {
-				const { name, score } = expectation.score(output);
-				return [name, score];
-			}),
+			await Promise.all(
+				configExpectations.map(async (expectation) => {
+					const { name, score } = await expectation.score(output);
+					return [name, score] as const;
+				}),
+			),
 		);
 	} finally {
 		await workspace.cleanup();
@@ -48,6 +50,7 @@ const agentlessOutput = (config: AxRunOutput["config"]): AxRunOutput => ({
 	loadedSkills: [],
 	finalText: "",
 	turnTexts: [],
+	userTexts: [],
 	turns: 1,
 	costUsd: 0,
 	wallMs: 0,

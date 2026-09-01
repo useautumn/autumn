@@ -9,6 +9,31 @@ const mark = (score: number | null) =>
 			? chalk.green("✓")
 			: chalk.red("✗");
 
+const flat = (value: unknown) =>
+	String(value ?? "")
+		.replaceAll("\n", " ⏎ ")
+		.slice(0, 300);
+
+/** Failure metadata worth reading in the terminal (full copy is in
+ * Braintrust): validation errors and the closest-plan field diff. */
+const failureDetail = (entry: AxScore): string => {
+	if (entry.score !== 0 || !entry.metadata) return "";
+	const lines: string[] = [];
+	const { validationErrors, closestPlan, fields } = entry.metadata as {
+		validationErrors?: string[];
+		closestPlan?: string;
+		fields?: Record<string, string>;
+	};
+	for (const error of validationErrors ?? [])
+		lines.push(`      ${flat(error)}`);
+	if (fields) {
+		lines.push(`      closest plan: ${String(closestPlan)}`);
+		for (const [field, verdict] of Object.entries(fields))
+			lines.push(`      ${field}: ${flat(verdict)}`);
+	}
+	return lines.length > 0 ? chalk.dim(`\n${lines.join("\n")}`) : "";
+};
+
 /**
  * Collects scores as Braintrust computes them and prints one scorecard per
  * arm when it completes, plus a delta footer when every arm is in.
@@ -40,7 +65,7 @@ export const renderScorecard = ({
 					entry.score === 0 && typeof entry.metadata?.why === "string"
 						? chalk.dim(` — ${entry.metadata.why}`)
 						: "";
-				return `  ${mark(entry.score)} ${name}${why}`;
+				return `  ${mark(entry.score)} ${name}${why}${failureDetail(entry)}`;
 			})
 			.join("\n");
 		process.stderr.write(
