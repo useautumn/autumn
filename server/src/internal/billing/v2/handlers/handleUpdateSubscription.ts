@@ -7,8 +7,7 @@ import {
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/findPendingCustomerProduct";
-import { updatePendingCustomerProduct } from "@/internal/billing/v2/execute/updatePendingCustomerProduct";
+import { updatePendingPlanIfAny } from "@/internal/billing/v2/execute/updatePendingPlanIfAny";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
@@ -41,23 +40,9 @@ export const handleUpdateSubscription = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		const pendingCustomerProduct = await findPendingCustomerProduct({
-			ctx,
-			customerId: body.customer_id,
-			productId: body.plan_id,
-			entityId: body.entity_id,
-		});
-
 		// A plan awaiting payment is replaced rather than repriced, but only when
-		// the edit actually bills differently — otherwise it updates normally and
-		// the customer's payment link survives.
-		const pendingUpdate = pendingCustomerProduct
-			? await updatePendingCustomerProduct({
-					ctx,
-					params: body,
-					customerProduct: pendingCustomerProduct,
-				})
-			: undefined;
+		// the edit bills differently — see updatePendingCustomerProduct.
+		const pendingUpdate = await updatePendingPlanIfAny({ ctx, params: body });
 
 		if (pendingUpdate) {
 			const { billingContext, billingResult } = pendingUpdate;
