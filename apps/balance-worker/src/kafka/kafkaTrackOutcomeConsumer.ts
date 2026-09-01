@@ -2,7 +2,7 @@ import type {
 	Admin,
 	Consumer,
 	ConsumerRunConfig,
-	EachMessageHandler,
+	EachBatchHandler,
 } from "kafkajs";
 import type { SqliteBalanceStateStore } from "../state/sqliteBalanceStateStore.js";
 import {
@@ -27,8 +27,9 @@ export type KafkaPartitionOffsetsPort = Pick<Admin, "fetchTopicOffsets">;
 
 export type KafkaTrackOutcomeConsumerRunConfig = ConsumerRunConfig & {
 	autoCommit: false;
+	eachBatchAutoResolve: false;
 	partitionsConsumedConcurrently: number;
-	eachMessage: EachMessageHandler;
+	eachBatch: EachBatchHandler;
 };
 
 export class KafkaPartitionOffsetsNotFoundError extends Error {
@@ -39,6 +40,7 @@ export class KafkaPartitionOffsetsNotFoundError extends Error {
 }
 
 export class StateBehindKafkaLogStartError extends Error {
+	readonly retriable = false;
 	readonly storedNextOffset: bigint;
 	readonly logStartOffset: bigint;
 
@@ -139,14 +141,24 @@ export const createKafkaTrackOutcomeConsumer = ({
 		]);
 	};
 
-	const eachMessage: EachMessageHandler = async ({
-		topic: recordTopic,
-		partition,
-		message,
+	const eachBatch: EachBatchHandler = async ({
+		batch,
+		resolveOffset,
+		heartbeat,
+		commitOffsetsIfNecessary,
+		uncommittedOffsets,
+		isRunning,
+		isStale,
 	}) => {
+		const { topic: recordTopic, partition, messages } = batch;
+		const firstMessage = messages[0];
+		if (!firstMessage) return;
+
 		const partitionKey = JSON.stringify([recordTopic, partition]);
 		if (!initializedPartitions.has(partitionKey)) {
-			const recordOffset = parseKafkaRecordOffset({ offset: message.offset });
+			const recordOffset = parseKafkaRecordOffset({
+				offset: firstMessage.offset,
+			});
 			const storedNextOffset = stateStore.readNextOffset({
 				topic: recordTopic,
 				partition,
@@ -174,25 +186,59 @@ export const createKafkaTrackOutcomeConsumer = ({
 			}
 		}
 
-		const result = processTrackOutcomeRecord({
-			topic: recordTopic,
-			partition,
-			message,
-			stateStore,
-		});
-		await commitOffset({
-			recordTopic,
-			partition,
-			nextOffset: result.nextOffset,
-		});
-		initializedPartitions.add(partitionKey);
-		if (result.kind === "position_already_applied") {
-			consumer.seek({
+		for (const message of messages) {
+			if (!isRunning() || isStale()) return;
+
+			const recordOffset = parseKafkaRecordOffset({ offset: message.offset });
+			const result = processTrackOutcomeRecord({
 				topic: recordTopic,
 				partition,
-				offset: result.nextOffset.toString(),
+				message,
+				stateStore,
+			});
+			if (
+				result.kind === "position_already_applied" &&
+				result.nextOffset > recordOffset + 1n
+			) {
+				await commitOffset({
+					recordTopic,
+					partition,
+					nextOffset: result.nextOffset,
+				});
+				consumer.seek({
+					topic: recordTopic,
+					partition,
+					offset: result.nextOffset.toString(),
+				});
+				initializedPartitions.add(partitionKey);
+				return;
+			}
+
+			resolveOffset(message.offset);
+			await heartbeat();
+		}
+
+		const currentTopicOffsets = uncommittedOffsets().topics.find(
+			(offsets) => offsets.topic === recordTopic,
+		);
+		const currentPartitionOffset = currentTopicOffsets?.partitions.find(
+			(offsets) => offsets.partition === partition,
+		);
+		if (!currentPartitionOffset) {
+			throw new KafkaPartitionOffsetsNotFoundError({
+				topic: recordTopic,
+				partition,
 			});
 		}
+		await commitOffsetsIfNecessary({
+			topics: [
+				{
+					topic: recordTopic,
+					partitions: [currentPartitionOffset],
+				},
+			],
+		});
+		initializedPartitions.add(partitionKey);
 	};
 
 	const start = async (): Promise<void> => {
@@ -209,8 +255,9 @@ export const createKafkaTrackOutcomeConsumer = ({
 			await consumer.subscribe({ topics: [topic], fromBeginning: true });
 			const runConfig: KafkaTrackOutcomeConsumerRunConfig = {
 				autoCommit: false,
+				eachBatchAutoResolve: false,
 				partitionsConsumedConcurrently,
-				eachMessage,
+				eachBatch,
 			};
 			await consumer.run(runConfig);
 			isStarted = true;
