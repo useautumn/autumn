@@ -1,5 +1,6 @@
 /** An idle parent stream reconnects at its cursor, and a turn with a live
- * child session is never abandoned — only quiet across ALL sessions fails. */
+ * child session is never abandoned — only quiet across ALL sessions fails.
+ * Prod incident 2026-08-25 (Slack thread C0BCAQQK0KS, 10:30Z/10:48Z). */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
