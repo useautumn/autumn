@@ -1,5 +1,4 @@
 import type { Expectation } from "../../grading/types/expectation.ts";
-import type { UserAnswers } from "../../simulator/types/userAnswers.ts";
 
 /** The starting world of a step-tier case: state the environment instead of
  * making the agent rediscover (and pay for) it every run. atmn itself is
@@ -30,9 +29,7 @@ export type AxCase = {
 	prompt: string;
 	/** extra user messages sent in order after the prompt */
 	followUpMessages?: string[];
-	/** what the user knows, by topic — answers agent questions that mention it */
-	answers?: UserAnswers;
-	/** when set, an LLM plays the user from this brief (overrides answers) */
+	/** when set, an LLM plays the user from this brief */
 	simulatedUser?: SimulatedUserBrief;
 	/** starting world for step-tier cases (primer + stubbed atmn) */
 	scenario?: Scenario;

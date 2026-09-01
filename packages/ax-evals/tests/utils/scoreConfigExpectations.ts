@@ -19,6 +19,7 @@ export const scoreConfigExpectations = async ({
 }): Promise<Record<string, number | null>> => {
 	const workspace = await createCaseWorkspace(`proof-${axCase.name}`, {
 		secretKey: "am_sk_test_grader_proof",
+		backendUrl: "http://localhost:8080",
 	});
 	try {
 		if (configFile)
@@ -47,7 +48,6 @@ const agentlessOutput = (config: AxRunOutput["config"]): AxRunOutput => ({
 	arm: "with",
 	config,
 	configAfterTurn: [config, config, config, config],
-	askedAbout: [],
 	toolUses: [],
 	loadedSkills: [],
 	finalText: "",
