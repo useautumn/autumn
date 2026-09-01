@@ -1,4 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import { executeTrack } from "@autumn/balance-engine";
+import type {
+	Batch,
+	EachBatchHandler,
+	EachMessageHandler,
+	KafkaMessage,
+	OffsetsByTopicPartition,
+} from "kafkajs";
 import {
 	createKafkaTrackOutcomeConsumer,
 	type KafkaPartitionOffsetsPort,
@@ -29,6 +37,13 @@ type FakeKafkaConsumer = KafkaTrackOutcomeConsumerPort & {
 	lifecycle: string[];
 	runConfig: KafkaTrackOutcomeConsumerRunConfig | null;
 	seeks: Commit[];
+	deliverBatch: (params: {
+		records: Array<{
+			offset: string;
+			key: Buffer | null;
+			value: Buffer | null;
+		}>;
+	}) => Promise<void>;
 	deliver: (params: {
 		offset: string;
 		key: Buffer | null;
@@ -59,13 +74,39 @@ const createFakeKafkaConsumer = ({
 }: {
 	onCommit?: () => void;
 } = {}): FakeKafkaConsumer => {
-	let eachMessage: KafkaTrackOutcomeConsumerRunConfig["eachMessage"] | null =
-		null;
+	let eachBatch: EachBatchHandler | null = null;
+	let eachMessage: EachMessageHandler | null = null;
 	let groupJoinListener: (() => void) | null = null;
 	let nextCommitError: Error | null = null;
 	const commits: Commit[][] = [];
 	const seeks: Commit[] = [];
 	const lifecycle: string[] = [];
+	const commitOffsets = async (offsets: Commit[]): Promise<void> => {
+		lifecycle.push("commit");
+		onCommit?.();
+		if (nextCommitError) {
+			const error = nextCommitError;
+			nextCommitError = null;
+			throw error;
+		}
+		commits.push(offsets);
+	};
+	const toKafkaMessage = ({
+		offset,
+		key,
+		value,
+	}: {
+		offset: string;
+		key: Buffer | null;
+		value: Buffer | null;
+	}): KafkaMessage => ({
+		offset,
+		key,
+		value,
+		timestamp: "0",
+		attributes: 0,
+		headers: {},
+	});
 
 	return {
 		commits,
@@ -89,23 +130,15 @@ const createFakeKafkaConsumer = ({
 		},
 		run: async function (config) {
 			lifecycle.push("run");
-			if (!config?.eachMessage) {
-				throw new Error("Expected an eachMessage consumer configuration");
+			if (!config?.eachBatch && !config?.eachMessage) {
+				throw new Error("Expected a Kafka record handler");
 			}
 			const runConfig = config as KafkaTrackOutcomeConsumerRunConfig;
 			this.runConfig = runConfig;
-			eachMessage = runConfig.eachMessage;
+			eachBatch = config.eachBatch ?? null;
+			eachMessage = config.eachMessage ?? null;
 		},
-		commitOffsets: async (offsets) => {
-			lifecycle.push("commit");
-			onCommit?.();
-			if (nextCommitError) {
-				const error = nextCommitError;
-				nextCommitError = null;
-				throw error;
-			}
-			commits.push(offsets);
-		},
+		commitOffsets,
 		seek: (position) => {
 			lifecycle.push("seek");
 			seeks.push(position);
@@ -116,22 +149,77 @@ const createFakeKafkaConsumer = ({
 		disconnect: async () => {
 			lifecycle.push("disconnect");
 		},
-		deliver: async ({ offset, key, value }) => {
+		deliverBatch: async ({ records }) => {
+			if (eachBatch) {
+				let lastResolvedOffset: string | null = null;
+				const messages = records.map(toKafkaMessage);
+				const uncommittedOffsets = (): OffsetsByTopicPartition =>
+					lastResolvedOffset === null
+						? { topics: [] }
+						: {
+								topics: [
+									{
+										topic,
+										partitions: [
+											{
+												partition,
+												offset: (BigInt(lastResolvedOffset) + 1n).toString(),
+											},
+										],
+									},
+								],
+							};
+				const batch: Batch = {
+					topic,
+					partition,
+					highWatermark: "10000",
+					messages,
+					isEmpty: () => messages.length === 0,
+					firstOffset: () => messages[0]?.offset ?? null,
+					lastOffset: () => messages.at(-1)?.offset ?? "0",
+					offsetLag: () => "0",
+					offsetLagLow: () => "0",
+				};
+				await eachBatch({
+					batch,
+					resolveOffset: (offset) => {
+						lastResolvedOffset = offset;
+					},
+					heartbeat: async () => undefined,
+					pause: () => () => undefined,
+					commitOffsetsIfNecessary: async (offsets) => {
+						const offsetsToCommit = offsets ?? uncommittedOffsets();
+						await commitOffsets(
+							offsetsToCommit.topics.flatMap(
+								({ topic: commitTopic, partitions }) =>
+									partitions.map(({ partition: commitPartition, offset }) => ({
+										topic: commitTopic,
+										partition: commitPartition,
+										offset,
+									})),
+							),
+						);
+					},
+					uncommittedOffsets,
+					isRunning: () => true,
+					isStale: () => false,
+				});
+				return;
+			}
+
 			if (!eachMessage) throw new Error("Consumer has not started");
-			await eachMessage({
-				topic,
-				partition,
-				message: {
-					offset,
-					key,
-					value,
-					timestamp: "0",
-					attributes: 0,
-					headers: {},
-				},
-				heartbeat: async () => undefined,
-				pause: () => () => undefined,
-			});
+			for (const record of records) {
+				await eachMessage({
+					topic,
+					partition,
+					message: toKafkaMessage(record),
+					heartbeat: async () => undefined,
+					pause: () => () => undefined,
+				});
+			}
+		},
+		deliver: async function ({ offset, key, value }) {
+			await this.deliverBatch({ records: [{ offset, key, value }] });
 		},
 		failNextCommit: (error) => {
 			nextCommitError = error;
@@ -188,14 +276,96 @@ describe("Kafka track outcome consumer", () => {
 		}
 	});
 
+	test("commits once after folding every record in a fetched batch", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const initialState = createState();
+			fixture.store.initializeState({ state: initialState });
+			const firstOutcome = createOutcome({ state: initialState });
+			const firstExecution = executeTrack({
+				state: initialState,
+				outcome: firstOutcome,
+				existingReceipt: null,
+			});
+			if (firstExecution.kind !== "applied") {
+				throw new Error("Expected first outcome to apply");
+			}
+			const secondOutcome = createOutcome({
+				state: firstExecution.state,
+				commandId: "cmd_2",
+				requestId: "req_2",
+			});
+			const consumerPort = createFakeKafkaConsumer();
+			const consumer = createKafkaTrackOutcomeConsumer({
+				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+			});
+
+			await consumer.start();
+			await consumerPort.deliverBatch({
+				records: [
+					{
+						offset: "0",
+						...serializeKafkaTrackOutcomeRecord({ outcome: firstOutcome }),
+					},
+					{
+						offset: "1",
+						...serializeKafkaTrackOutcomeRecord({ outcome: secondOutcome }),
+					},
+				],
+			});
+
+			expect(consumerPort.runConfig).toMatchObject({
+				autoCommit: false,
+				eachBatchAutoResolve: false,
+			});
+			expect(consumerPort.commits).toEqual([
+				[{ topic, partition, offset: "2" }],
+			]);
+			expect(fixture.store.readState({ identity })).toMatchObject({
+				revision: 2,
+				featureStatesById: {
+					messages: {
+						customerEntitlements: [{ balance: 0, usage: 10 }],
+					},
+				},
+			});
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test("repairs a lagging group offset after a commit failure", async () => {
 		const fixture = createStoreFixture();
 		try {
-			const state = createState();
-			fixture.store.initializeState({ state });
-			const serialized = serializeKafkaTrackOutcomeRecord({
-				outcome: createOutcome({ state }),
+			const initialState = createState();
+			fixture.store.initializeState({ state: initialState });
+			const firstOutcome = createOutcome({ state: initialState });
+			const firstExecution = executeTrack({
+				state: initialState,
+				outcome: firstOutcome,
+				existingReceipt: null,
 			});
+			if (firstExecution.kind !== "applied") {
+				throw new Error("Expected first outcome to apply");
+			}
+			const secondOutcome = createOutcome({
+				state: firstExecution.state,
+				commandId: "cmd_2",
+				requestId: "req_2",
+			});
+			const records = [
+				{
+					offset: "0",
+					...serializeKafkaTrackOutcomeRecord({ outcome: firstOutcome }),
+				},
+				{
+					offset: "1",
+					...serializeKafkaTrackOutcomeRecord({ outcome: secondOutcome }),
+				},
+			];
 			const consumerPort = createFakeKafkaConsumer();
 			const consumer = createKafkaTrackOutcomeConsumer({
 				consumer: consumerPort,
@@ -206,19 +376,64 @@ describe("Kafka track outcome consumer", () => {
 			await consumer.start();
 
 			consumerPort.failNextCommit(new Error("rebalance during commit"));
-			await expect(
-				consumerPort.deliver({ offset: "0", ...serialized }),
-			).rejects.toThrow("rebalance during commit");
-			expect(fixture.store.readState({ identity })?.revision).toBe(1);
-			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
+			await expect(consumerPort.deliverBatch({ records })).rejects.toThrow(
+				"rebalance during commit",
+			);
+			expect(fixture.store.readState({ identity })?.revision).toBe(2);
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
 
-			await consumerPort.deliver({ offset: "0", ...serialized });
+			await consumerPort.deliverBatch({ records });
 
 			expect(consumerPort.commits).toEqual([
-				[{ topic, partition, offset: "1" }],
+				[{ topic, partition, offset: "2" }],
 			]);
-			expect(consumerPort.seeks).toEqual([{ topic, partition, offset: "1" }]);
-			expect(fixture.store.readState({ identity })?.revision).toBe(1);
+			expect(consumerPort.seeks).toEqual([{ topic, partition, offset: "2" }]);
+			expect(fixture.store.readState({ identity })?.revision).toBe(2);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("does not seek when the writer already applied exactly this record", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const initialState = createState();
+			fixture.store.initializeState({ state: initialState });
+			const firstOutcome = createOutcome({ state: initialState });
+			const consumerPort = createFakeKafkaConsumer();
+			const consumer = createKafkaTrackOutcomeConsumer({
+				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+			});
+			await consumer.start();
+			await consumerPort.deliver({
+				offset: "0",
+				...serializeKafkaTrackOutcomeRecord({ outcome: firstOutcome }),
+			});
+
+			const currentState = fixture.store.readState({ identity });
+			if (!currentState) throw new Error("Expected current state");
+			const secondOutcome = createOutcome({
+				state: currentState,
+				commandId: "cmd_2",
+				requestId: "req_2",
+			});
+			fixture.store.applyDurableTrackOutcome({
+				position: { topic, partition, offset: 1n },
+				outcome: secondOutcome,
+			});
+
+			await consumerPort.deliver({
+				offset: "1",
+				...serializeKafkaTrackOutcomeRecord({ outcome: secondOutcome }),
+			});
+
+			expect(consumerPort.seeks).toEqual([]);
+			expect(consumerPort.commits.at(-1)).toEqual([
+				{ topic, partition, offset: "2" },
+			]);
 		} finally {
 			closeStoreFixture(fixture);
 		}
@@ -291,9 +506,11 @@ describe("Kafka track outcome consumer", () => {
 			});
 
 			await consumer.start();
-			await expect(
-				consumerPort.deliver({ offset: "5000", ...serialized }),
-			).rejects.toBeInstanceOf(StateBehindKafkaLogStartError);
+			const delivery = consumerPort.deliver({ offset: "5000", ...serialized });
+			await expect(delivery).rejects.toBeInstanceOf(
+				StateBehindKafkaLogStartError,
+			);
+			await expect(delivery).rejects.toMatchObject({ retriable: false });
 
 			expect(consumerPort.commits).toEqual([]);
 			expect(consumerPort.seeks).toEqual([]);
@@ -448,11 +665,81 @@ describe("Kafka track outcome consumer", () => {
 					key: Buffer.from("invalid", "utf8"),
 					value: Buffer.from("not-json", "utf8"),
 				}),
-			).rejects.toThrow();
+			).rejects.toMatchObject({
+				name: "KafkaPartitionInvariantError",
+				retriable: false,
+			});
 
 			expect(consumerPort.commits).toEqual([]);
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
 			expect(fixture.store.readState({ identity })?.revision).toBe(0);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("marks an invalid record offset as non-retryable", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const state = createState();
+			fixture.store.initializeState({ state });
+			const serialized = serializeKafkaTrackOutcomeRecord({
+				outcome: createOutcome({ state }),
+			});
+			const consumerPort = createFakeKafkaConsumer();
+			const consumer = createKafkaTrackOutcomeConsumer({
+				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+			});
+
+			await consumer.start();
+			await expect(
+				consumerPort.deliver({ offset: "-1", ...serialized }),
+			).rejects.toMatchObject({ retriable: false });
+			expect(consumerPort.commits).toEqual([]);
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("marks an out-of-order outcome as a non-retryable invariant failure", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const initialState = createState();
+			fixture.store.initializeState({ state: initialState });
+			const firstOutcome = createOutcome({ state: initialState });
+			fixture.store.applyDurableTrackOutcome({
+				position: { topic, partition, offset: 0n },
+				outcome: firstOutcome,
+			});
+			const staleOutcome = createOutcome({
+				state: initialState,
+				commandId: "cmd_2",
+				requestId: "req_2",
+			});
+			const consumerPort = createFakeKafkaConsumer();
+			const consumer = createKafkaTrackOutcomeConsumer({
+				consumer: consumerPort,
+				partitionOffsets: createFakeKafkaPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+			});
+
+			await consumer.start();
+			await expect(
+				consumerPort.deliver({
+					offset: "1",
+					...serializeKafkaTrackOutcomeRecord({ outcome: staleOutcome }),
+				}),
+			).rejects.toMatchObject({
+				name: "KafkaPartitionInvariantError",
+				retriable: false,
+			});
+			expect(consumerPort.commits).toEqual([]);
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
 		} finally {
 			closeStoreFixture(fixture);
 		}
