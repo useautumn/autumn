@@ -1,18 +1,10 @@
 import type { ChatApproval } from "@autumn/shared";
-import { denyOptionOf } from "../domain/approvalRecord.js";
 import type { ApprovalRunResult } from "../types.js";
-import { submitApprovalInput } from "./submitApprovalInput.js";
 
-export const discardApproval = async ({
-	approval,
-	providerUserId,
-}: {
+/** Nothing parks, so the caller cancelling the row IS the discard: the stored
+ * writes simply never run. The agent's turn ended when the card was posted, so
+ * there is no session to deny and nothing for it to say. */
+export const discardApproval = async (_input: {
 	approval: ChatApproval;
 	providerUserId: string;
-}): Promise<ApprovalRunResult> =>
-	submitApprovalInput({
-		approval,
-		note: "(Dashboard: the user clicked Discard on this change. Acknowledge briefly and ask what they'd like different — they are NOT waiting on any further approval.)",
-		optionId: denyOptionOf(approval),
-		providerUserId,
-	});
+}): Promise<ApprovalRunResult> => ({ result: undefined, text: "" });

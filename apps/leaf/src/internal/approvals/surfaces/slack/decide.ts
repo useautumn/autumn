@@ -13,10 +13,12 @@ import { logger as rootLogger } from "../../../../lib/logger.js";
 import { questionCard } from "../../../../providers/slack/presenters/interactionCards.js";
 import { resolveSlackCallerAuth } from "../../../../providers/slack/setup/resolveSlackCallerAuth.js";
 import { approvalCard, approvalStatusCard } from "../../../../ui/blocks.js";
+import type { ReplyTarget } from "../../../../ui/progress.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
 import type { WithheldWrite } from "../../../agentRuntime/eve/parkedInput.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
+import { continueAfterApproval } from "../../actions/continueAfterApproval.js";
 import { discardApproval } from "../../actions/discardApproval.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
 import { withheldWritesOf } from "../../domain/approvalRecord.js";
@@ -562,9 +564,16 @@ export const handleApprovalActionWithDeps = async ({
 			event,
 		});
 
-		if ("narration" in result && result.narration) {
-			const narrated = await result.narration;
-			if (narrated) await postConversation(narrated);
+		if (event.thread) {
+			await continueAfterApproval({
+				approval: claimed,
+				providerUserId,
+				result: "result" in result ? result.result : undefined,
+				// The action event's thread is generically typed; the reply surface
+				// is the same object the message path posts through.
+				target: event.thread as ReplyTarget,
+				threadId: event.threadId,
+			});
 		}
 	} catch (error) {
 		deps.logger.error("[chat] Approval action failed", error, {

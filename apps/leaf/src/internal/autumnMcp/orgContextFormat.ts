@@ -70,8 +70,8 @@ const compactItem = (item: unknown) => {
 };
 
 /** The 30KB pretty-printed listPlans/listFeatures dump is ~89% whitespace and
- * display noise; the orchestrator only routes and answers trivial questions
- * from this compact index — anything beyond it is delegated, never fetched. */
+ * display noise; the agent answers trivial catalog questions from this compact
+ * index and calls getPlan only for detail beyond it. */
 export const compactPlans = (plans: unknown) =>
 	listOf(plans).map((plan) => ({
 		...(plan.add_on === true ? { add_on: true } : {}),

@@ -62,7 +62,8 @@ export const catalogItemActionToChange = (value: unknown) =>
 export const changeTableRow = ({
 	change,
 	details,
-	pricing = "—",
+	// A row with no price is granted by the plan, not missing information.
+	pricing = "Included",
 }: {
 	change: Change;
 	details: string;
@@ -89,7 +90,7 @@ export const planItemChangeTableRow = ({
 		details:
 			details ??
 			(change.includedText ? `${change.includedText} ${feature}` : feature),
-		pricing: change.pricingText ?? "—",
+		pricing: change.pricingText ?? undefined,
 	});
 };
 

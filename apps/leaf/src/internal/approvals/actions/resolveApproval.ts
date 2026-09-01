@@ -1,37 +1,12 @@
 import type { ChatApproval } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
-import { APPROVAL_SESSION_GONE_MESSAGE } from "../../../ui/messages.js";
-import { EveSessionGoneError } from "../../agentRuntime/eve/client.js";
-import {
-	deleteEveSession,
-	getEveSessionBySessionId,
-} from "../../agentRuntime/eve/repo.js";
 import { surfaceRendersGroup } from "../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
-import type { ApprovalRunResult, SubmittedApprovalResult } from "../types.js";
+import type { ApprovalRunResult } from "../types.js";
 import { approvalErrorResult } from "../utils/approvalErrors.js";
 import { executeApprovalWrites } from "./executeApprovalWrites.js";
 import { guardApprovalDrift } from "./guardApprovalDrift.js";
-import { resumeApproval } from "./resumeApproval.js";
-
-const dropEveSession = async ({ approval }: { approval: ChatApproval }) => {
-	if (!approval.run_id) return;
-	const session = await getEveSessionBySessionId({
-		db,
-		orgId: approval.org_id,
-		sessionId: approval.run_id,
-	});
-	if (!session) return;
-	await deleteEveSession({
-		db,
-		env: session.env,
-		orgId: approval.org_id,
-		reason: "approval_session_gone",
-		sessionId: session.sessionId,
-		threadKey: session.threadKey,
-	});
-};
 
 const releaseClaim = async ({
 	approval,
@@ -54,26 +29,8 @@ const releaseClaim = async ({
 	}
 };
 
-/** Post-execution narration resume; never throws — the card already carries
- * the truth. */
-const narrateInBackground = ({
-	approval,
-	providerUserId,
-}: {
-	approval: ChatApproval;
-	providerUserId: string;
-}): Promise<SubmittedApprovalResult | undefined> =>
-	resumeApproval({ approval, providerUserId }).catch((error: unknown) => {
-		logger.warn("[chat] Post-execution narration failed", {
-			event: "leaf.approval_narration_failed",
-			approval_id: approval.id,
-			error,
-		});
-		return undefined;
-	});
-
-/** Deterministic executor for a surface that rendered the whole group;
- * returns undefined when the approval has no stored writes to run. */
+/** Deterministic executor: the card's stored writes are the whole truth, and
+ * the agent is never consulted again. */
 const executeStoredWrites = async ({
 	approval,
 	providerUserId,
@@ -81,7 +38,6 @@ const executeStoredWrites = async ({
 	approval: ChatApproval;
 	providerUserId: string;
 }): Promise<ApprovalRunResult | undefined> => {
-	if (!surfaceRendersGroup(approval.provider ?? "")) return undefined;
 	try {
 		return await executeApprovalWrites({ approval, providerUserId });
 	} catch (error) {
@@ -128,62 +84,13 @@ export const resolveApproval = async ({
 		}
 	}
 
-	// Writes run directly; the resumed session only narrates.
 	const executed = await executeStoredWrites({ approval, providerUserId });
-	if (executed) {
-		return approval.tool_call_id
-			? {
-					...executed,
-					narration: narrateInBackground({ approval, providerUserId }),
-				}
-			: executed;
-	}
+	if (executed) return executed;
 
-	let result: SubmittedApprovalResult;
-	try {
-		result = await resumeApproval({
-			approval,
-			providerUserId,
-		});
-	} catch (error) {
-		if (error instanceof EveSessionGoneError) {
-			logger.error("[chat] Approval session is gone", error, {
-				event: "leaf.approval_session_gone",
-				approval_id: approval.id,
-			});
-			await dropEveSession({ approval });
-			await chatApprovalRepo.finalize({
-				approvalId: approval.id,
-				db,
-				providerUserId,
-				status: "failed",
-			});
-			return {
-				error: true,
-				message: APPROVAL_SESSION_GONE_MESSAGE,
-				retryable: false,
-			};
-		}
-		// A thrown resumer error means the write never ran — release the claim so
-		// the row returns to pending and the card stays clickable.
-		logger.error("[chat] Approval run failed", error, {
-			event: "leaf.approval_run_failed",
-			approval_id: approval.id,
-		});
-		await releaseClaim({ approval, providerUserId });
-		return approvalErrorResult(error, { retryable: true });
-	}
-
-	// Retryable errors return the row to pending; everything else is finalized.
-	if ("error" in result && result.retryable) {
-		await releaseClaim({ approval, providerUserId });
-	} else {
-		await chatApprovalRepo.finalize({
-			approvalId: approval.id,
-			db,
-			providerUserId,
-			status: "error" in result ? "failed" : "approved",
-		});
-	}
-	return result;
+	// The executor only returns undefined when it threw, and nothing ran — the
+	// claim goes back so the card stays clickable.
+	await releaseClaim({ approval, providerUserId });
+	return approvalErrorResult(new Error("Approval writes did not run"), {
+		retryable: true,
+	});
 };

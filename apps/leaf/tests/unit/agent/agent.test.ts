@@ -36,10 +36,12 @@ afterEach(() => {
 describe("chat environment selection", () => {
 	test("exposes the leaf knowledge skills", () => {
 		expect(leafSkills.map((skill) => skill.name).sort()).toEqual([
-			"autumn-billing",
 			"autumn-catalog",
 			"autumn-concepts",
 			"autumn-investigate",
+			"billing",
+			"schedules",
+			"trials",
 		]);
 	});
 
