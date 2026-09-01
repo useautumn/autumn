@@ -3,23 +3,10 @@ import {
 	type FeatureOptions,
 	type FullCusProduct,
 	type FullProduct,
+	featureOptionsAreSame,
 	productsAreSame,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-
-const quantitiesChanged = ({
-	current,
-	replacement,
-}: {
-	current: FeatureOptions[];
-	replacement: FeatureOptions[];
-}) =>
-	current.length !== replacement.length ||
-	current.some(
-		(option) =>
-			replacement.find((next) => next.feature_id === option.feature_id)
-				?.quantity !== option.quantity,
-	);
 
 export const pendingPlanRebills = ({
 	ctx,
@@ -40,12 +27,10 @@ export const pendingPlanRebills = ({
 		features: ctx.features,
 	});
 
-	return (
-		!onlyEntsChanged ||
-		!freeTrialsSame ||
-		quantitiesChanged({
-			current: customerProduct.options ?? [],
-			replacement: replacementQuantities,
-		})
-	);
+	const quantitiesSame = featureOptionsAreSame({
+		curFeatureOptions: customerProduct.options ?? [],
+		newFeatureOptions: replacementQuantities,
+	});
+
+	return !onlyEntsChanged || !freeTrialsSame || !quantitiesSame;
 };
