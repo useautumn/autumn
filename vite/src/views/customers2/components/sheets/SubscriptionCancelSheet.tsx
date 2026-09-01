@@ -35,6 +35,7 @@ function SheetContent() {
 	const product = customerProduct.product;
 	const isDefault = product?.is_default ?? false;
 	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
+	const isPending = customerProduct.status === CusProductStatus.Pending;
 	const { valid: isFreeOrOneOff } = cp(customerProduct).free().or.oneOff();
 	const isFreeDefault = isDefault && isFreeOrOneOff;
 
@@ -55,6 +56,15 @@ function SheetContent() {
 					itemId={customerProduct.id}
 				/>
 
+				{isPending && (
+					<div className="px-4 pt-4">
+						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+							This plan is waiting on payment. Cancelling will void the payment
+							and remove the plan.
+						</InfoBox>
+					</div>
+				)}
+
 				{isScheduled && (
 					<div className="px-4 pt-4">
 						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
@@ -74,10 +84,14 @@ function SheetContent() {
 					</div>
 				)}
 
-				<CancelModeSection />
-				<RefundBehaviorSection />
-				<CancelAdvancedSection />
-				<CancelPreviewSection />
+				{!isPending && (
+					<>
+						<CancelModeSection />
+						<RefundBehaviorSection />
+						<CancelAdvancedSection />
+						<CancelPreviewSection />
+					</>
+				)}
 				<CancelFooter />
 			</div>
 		</LayoutGroup>

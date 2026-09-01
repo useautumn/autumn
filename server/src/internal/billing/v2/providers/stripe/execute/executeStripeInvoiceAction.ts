@@ -55,7 +55,7 @@ export const executeStripeInvoiceAction = async ({
 	if (deferBillingPlan) {
 		logger.debug(`Deferring billing plan`);
 
-		await insertMetadataFromBillingPlan({
+		const deferredMetadata = await insertMetadataFromBillingPlan({
 			ctx,
 			billingPlan,
 			billingContext,
@@ -83,6 +83,7 @@ export const executeStripeInvoiceAction = async ({
 		return {
 			stripeInvoice: invoice,
 			deferred: true,
+			deferredMetadataId: deferredMetadata.id,
 			requiredAction,
 			autumnInvoice,
 		};

@@ -52,11 +52,19 @@ export const lazyResetSubjectUsageWindows = async ({
 		const rolls = computeUsageWindowRolls({ usageWindows, limits, now });
 		if (rolls.length === 0) return false;
 
+		const didRoll = await usageWindowRepo.rollWindows({
+			db: ctx.db,
+			rolls,
+			now,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId: fullSubject.customerId,
+		});
+		if (!didRoll) return false;
+
 		ctx.logger.info(
 			`[lazyResetSubjectUsageWindows] customer: ${fullSubject.customerId}, rolling: ${rolls.length}`,
 		);
-
-		await usageWindowRepo.rollWindows({ db: ctx.db, rolls, now });
 		await rollUsageWindowsCache({
 			ctx,
 			customerId: fullSubject.customerId,

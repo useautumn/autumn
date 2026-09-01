@@ -1,4 +1,8 @@
-import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type FullCusProduct,
+	isCustomerProductTrialing,
+} from "@autumn/shared";
 import {
 	DropdownMenuItem,
 	Tooltip,
@@ -123,6 +127,7 @@ export const CustomerProductsColumns = [
 			if (!meta?.onCancelClick) return null;
 
 			const isCanceling = row.original.canceled;
+			const isPending = row.original.status === CusProductStatus.Pending;
 
 			return (
 				<div className="flex justify-end">
@@ -138,7 +143,7 @@ export const CustomerProductsColumns = [
 								<FlaskIcon size={16} /> Test Sheet
 							</DropdownMenuItem>
 						)}
-						{meta.hasEntities && meta.onTransferClick && (
+						{meta.hasEntities && meta.onTransferClick && !isPending && (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
 								onClick={(e) => {

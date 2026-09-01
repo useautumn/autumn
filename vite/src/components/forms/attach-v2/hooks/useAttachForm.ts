@@ -33,7 +33,7 @@ export function useAttachForm({
 			trialDuration: FreeTrialDuration.Day,
 			trialEnabled: false,
 			trialCardRequired: true,
-			trialOnEnd: "bill",
+			trialOnEnd: "revert",
 			planSchedule: null,
 			startDate: null,
 			endDate: null,

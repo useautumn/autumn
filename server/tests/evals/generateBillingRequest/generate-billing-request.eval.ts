@@ -28,6 +28,7 @@ import {
 	tieredScaleBaseItems,
 	tieredScaleContext,
 	variantLadderContext,
+	versionedPlanContext,
 } from "./fixtures";
 
 type EvalInput = {
@@ -404,6 +405,37 @@ const cases: EvalCase[] = [
 		},
 		expected: {
 			feature_quantities: [{ feature_id: "messages", quantity: 1000 }],
+		},
+	},
+	{
+		name: "update: change version while preserving current price",
+		input: {
+			context: versionedPlanContext(),
+			currentRequest: {
+				customer_product_id: "cp_versioned",
+				product_id: "generation",
+			},
+			prompt: "update to v3 but keep the price the same",
+			tool: "update_subscription",
+		},
+		expected: {
+			customize: { price: { amount: 20, interval: "month" } },
+			version: 3,
+		},
+	},
+	{
+		name: "update: change version while preserving a current entitlement",
+		input: {
+			context: versionedPlanContext(),
+			prompt: "update to v3 but keep the current Messages allowance",
+			tool: "update_subscription",
+		},
+		expected: {
+			customize: {
+				add_items: [{ feature_id: "messages", included: 200 }],
+				remove_items: [{ feature_id: "messages" }],
+			},
+			version: 3,
 		},
 	},
 	{

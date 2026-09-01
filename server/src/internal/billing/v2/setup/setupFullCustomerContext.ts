@@ -1,13 +1,13 @@
 import {
+	ATTACH_CONFLICT_STATUSES,
 	CusProductStatus,
 	EntityNotFoundError,
-	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 
 const BILLING_CONTEXT_STATUSES = [
-	...RELEVANT_STATUSES,
+	...ATTACH_CONFLICT_STATUSES,
 	CusProductStatus.Paused,
 ];
 

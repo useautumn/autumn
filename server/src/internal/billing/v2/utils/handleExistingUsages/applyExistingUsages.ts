@@ -3,7 +3,9 @@ import {
 	type Entity,
 	type ExistingUsages,
 	type FullCusProduct,
+	isUnlimitedCusEnt,
 } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deductFromCusEntsTypescript } from "@/internal/balances/track/deductUtils/deductFromCusEntsTypescript";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
@@ -28,6 +30,7 @@ const logExistingUsages = ({
 				featureId: ctx.features.find((f) => f.internal_id === internalFeatureId)
 					?.id,
 				usage: existingUsage.usage,
+				accruedOverage: existingUsage.accruedOverage,
 				entityUsages: entityUsages.length > 0 ? entityUsages : undefined,
 			};
 		},
@@ -78,12 +81,27 @@ export const applyExistingUsages = ({
 				)?.id ?? cusEnts[0]?.id)
 			: undefined;
 
+		// An unlimited grant absorbs the usage its allowance covers, so carried
+		// usage must not reach a priced sibling and become billable overage.
+		const unlimitedCusEnts = cusEnts.filter(isUnlimitedCusEnt);
+		const hasUnlimitedGrant = unlimitedCusEnts.length > 0;
+		const carryTargets = hasUnlimitedGrant ? unlimitedCusEnts : cusEnts;
+
+		// Overage already exceeded its allowance on the source, so it was owed
+		// before this transition and survives it even when the grant grows.
+		const accruedOverage = hasUnlimitedGrant
+			? (existingUsage.accruedOverage ?? 0)
+			: 0;
+		const absorbedUsage = new Decimal(existingUsage.usage)
+			.sub(accruedOverage)
+			.toNumber();
+
 		// 1. Deduct entity usages
 		for (const [entityId, entityUsage] of Object.entries(
 			existingUsage.entityUsages,
 		)) {
 			deductFromCusEntsTypescript({
-				cusEnts,
+				cusEnts: carryTargets,
 				amountToDeduct: entityUsage,
 				targetEntityId: entityId,
 				// Carried usage is never floored: prior usage above the new
@@ -94,10 +112,19 @@ export const applyExistingUsages = ({
 
 		// 2. Deduct top level usages
 		deductFromCusEntsTypescript({
-			cusEnts,
-			amountToDeduct: existingUsage.usage,
+			cusEnts: carryTargets,
+			amountToDeduct: absorbedUsage,
 			allowOverage: true,
 		});
+
+		// 3. Re-apply overage the source had already accrued to the priced rows
+		if (accruedOverage > 0) {
+			deductFromCusEntsTypescript({
+				cusEnts: cusEnts.filter((cusEnt) => !isUnlimitedCusEnt(cusEnt)),
+				amountToDeduct: accruedOverage,
+				allowOverage: true,
+			});
+		}
 
 		for (const newCusEnt of cusEnts) {
 			const original = customerProduct.customer_entitlements.find(

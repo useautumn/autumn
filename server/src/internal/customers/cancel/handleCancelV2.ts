@@ -5,6 +5,7 @@ import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/upd
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionErrors";
 import { logUpdateSubscriptionContext } from "@/internal/billing/v2/actions/updateSubscription/logs/logUpdateSubscriptionContext";
 import { setupUpdateSubscriptionBillingContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
+import { discardPendingPlanIfAny } from "@/internal/billing/v2/execute/discardPendingPlanIfAny";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { voidInvoicesOnImmediateCancel } from "@/internal/billing/v2/execute/voidInvoicesOnImmediateCancel";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
@@ -57,6 +58,15 @@ export const handleCancelV2 = createRoute({
 		ctx.logger.info(
 			`=============== RUNNING CANCEL FOR ${customer_id} ===============`,
 		);
+
+		const discarded = await discardPendingPlanIfAny({
+			ctx,
+			customerId: customer_id,
+			productId: product_id,
+			entityId: entity_id,
+		});
+
+		if (discarded) return c.json({ success: true });
 
 		const billingContext = await setupUpdateSubscriptionBillingContext({
 			ctx,

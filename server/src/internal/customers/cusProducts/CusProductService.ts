@@ -337,6 +337,41 @@ export class CusProductService {
 		});
 	}
 
+	static async getByMetadataId({
+		db,
+		metadataId,
+		orgId,
+		env,
+		inStatuses,
+	}: {
+		db: DrizzleCli;
+		metadataId: string;
+		orgId: string;
+		env: AppEnv;
+		inStatuses?: string[];
+	}) {
+		const data = await db.query.customerProducts.findMany({
+			where: (_table, { and, eq: dEq, inArray }) =>
+				and(
+					dEq(customerProducts.metadata_id, metadataId),
+					inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,
+				),
+			with: {
+				product: true,
+				customer: true,
+				...getFullCusProdRelations(),
+			},
+		});
+
+		const cusProducts = data as FullCusProduct[];
+
+		return filterByOrgAndEnv({
+			cusProducts,
+			orgId,
+			env,
+		});
+	}
+
 	static async getByStripeScheduledId({
 		db,
 		stripeScheduledId,
@@ -467,6 +502,40 @@ export class CusProductService {
 
 	// Deliberately no freshness mark: the Stripe webhook refresh-cache middleware
 	// invalidation chokepoint already stamps every customer this touches.
+	static async expireIfPending({
+		ctx,
+		cusProductId,
+	}: {
+		ctx: RepoContext;
+		cusProductId: string;
+	}) {
+		const { db } = ctx;
+		const results = await db
+			.update(customerProducts)
+			.set({
+				status: CusProductStatus.Expired,
+				ended_at: Date.now(),
+				metadata_id: null,
+				updated_at: Date.now(),
+			})
+			.where(
+				and(
+					eq(customerProducts.id, cusProductId),
+					eq(customerProducts.status, CusProductStatus.Pending),
+				),
+			)
+			.returning({
+				internal_customer_id: customerProducts.internal_customer_id,
+			});
+
+		await markCustomersUpdatedAtByInternalIds({
+			db,
+			internalCustomerIds: results.map((row) => row.internal_customer_id),
+		});
+
+		return results.length > 0;
+	}
+
 	static async updateByStripeSubId({
 		db,
 		stripeSubId,

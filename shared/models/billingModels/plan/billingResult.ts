@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 
 export interface StripeBillingPlanResult {
 	deferred?: boolean;
+	deferredMetadataId?: string;
 	stripeInvoice?: Stripe.Invoice;
 	stripeSubscription?: Stripe.Subscription;
 	stripeCheckoutSession?:
