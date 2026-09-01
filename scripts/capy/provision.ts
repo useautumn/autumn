@@ -688,11 +688,15 @@ async function main(): Promise<void> {
 	const directUrl = connectionString(nextState.branchName, { pooled: false });
 	applyCommittedMigrations(nextState.branchName, directUrl);
 	loadDbFunctions(nextState.branchName, directUrl);
-	if (created) clearInheritedJwks(directUrl);
 
 	// Per-machine secrets — mint on first run, then persist. Server can't
 	// boot without BETTER_AUTH_SECRET / ENCRYPTION_IV / ENCRYPTION_PASSWORD.
+	const secretsMinted = !priorState?.secrets;
 	nextState.secrets = ensureSecrets(priorState);
+
+	// A fresh branch inherits the template's jwks row; a re-minted secret
+	// (lost state file) orphans an adopted branch's row the same way.
+	if (created || secretsMinted) clearInheritedJwks(directUrl);
 
 	saveState(nextState);
 	if (!nextState.databaseUrl) fatal("provisioning produced no databaseUrl");
