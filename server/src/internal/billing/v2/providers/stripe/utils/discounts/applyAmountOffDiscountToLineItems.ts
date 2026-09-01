@@ -10,7 +10,7 @@ import { addDiscountTagToDescription } from "./addDiscountTagToDescription";
 import { discountAppliesToLineItem } from "./discountAppliesToLineItem";
 import { getBackdatedDiscountCycleCount } from "./getBackdatedDiscountCycleCount";
 
-const allocateAmountOffDiscounts = ({
+export const allocateAmountOffDiscounts = ({
 	lineItems,
 	amountOffMinorUnits,
 	currency,
@@ -44,9 +44,9 @@ const allocateAmountOffDiscounts = ({
 		return diff === 0 ? a.index - b.index : diff;
 	});
 
-	for (const { index } of byRemainder) {
+	for (const allocation of byRemainder) {
 		if (remaining <= 0) break;
-		allocations[index].minorUnits += 1;
+		allocation.minorUnits += 1;
 		remaining -= 1;
 	}
 
