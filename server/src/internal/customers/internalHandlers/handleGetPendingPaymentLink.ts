@@ -1,5 +1,7 @@
 import { CusProductStatus, Scopes } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { getStripeCheckoutSession } from "@/external/stripe/checkoutSessions/operations/getStripeCheckoutSession";
+import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { CusService } from "../CusService";
@@ -32,20 +34,22 @@ export const handleGetPendingPaymentLink = createRoute({
 
 		if (!metadata) return c.json({ url: null });
 
-		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-
 		if (metadata.stripe_checkout_session_id) {
-			const session = await stripeCli.checkout.sessions.retrieve(
-				metadata.stripe_checkout_session_id,
-			);
+			const session = await getStripeCheckoutSession({
+				ctx,
+				checkoutSessionId: metadata.stripe_checkout_session_id,
+				expand: [],
+			});
 
 			return c.json({ url: session.status === "open" ? session.url : null });
 		}
 
 		if (metadata.stripe_invoice_id) {
-			const invoice = await stripeCli.invoices.retrieve(
-				metadata.stripe_invoice_id,
-			);
+			const invoice = await getStripeInvoice({
+				stripeClient: createStripeCli({ org: ctx.org, env: ctx.env }),
+				invoiceId: metadata.stripe_invoice_id,
+				expand: [],
+			});
 
 			return c.json({
 				url: invoice.status === "open" ? invoice.hosted_invoice_url : null,
