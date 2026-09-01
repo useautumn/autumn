@@ -2,6 +2,7 @@
 
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
+import { billingOperations } from "../models/billingOperationModels/billingOperationTable.js";
 import {
 	chatApprovals,
 	chatApprovalWrites,
@@ -142,6 +143,7 @@ export {
 	actions,
 	apiKeyRelations,
 	apiKeys,
+	billingOperations,
 	customerJwtFamilies,
 	autoTopupLimitStates as autoTopupLimits,
 	chatApprovals,
