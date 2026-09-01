@@ -36,7 +36,7 @@ const listCustomerProducts = async ({
 test.concurrent(
 	`${chalk.yellowBright("invoice-mode pending: deferred attach inserts a pending plan that grants nothing")}`,
 	async () => {
-		const customerId = "invoice-mode-pending-inserted";
+		const customerId = `invoice-mode-pending-inserted-${Date.now()}`;
 		const pro = products.pro({
 			id: "pro-invoice-pending",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -79,7 +79,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("invoice-mode pending: paying the invoice promotes the pending plan to active")}`,
 	async () => {
-		const customerId = "invoice-mode-pending-promoted";
+		const customerId = `invoice-mode-pending-promoted-${Date.now()}`;
 		const pro = products.pro({
 			id: "pro-invoice-promoted",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -222,7 +222,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("pending custom plan: deferred attach with custom prices inserts a pending plan")}`,
 	async () => {
-		const customerId = "pending-custom-plan-prices";
+		const customerId = `pending-custom-plan-prices-${Date.now()}`;
 		const pro = products.pro({
 			id: "pro-pending-custom",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -678,5 +678,64 @@ test.concurrent(
 
 		expect(stillPending?.status).toBe(CusProductStatus.Pending);
 		expect(stillPending?.metadata_id).toBe(originalPending?.metadata_id);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("pending update: a billing edit leaves exactly one pending plan")}`,
+	async () => {
+		const customerId = `pending-update-survives-${Date.now()}`;
+		const pro = products.pro({
+			id: "pro-pending-survives",
+			items: [items.prepaidMessages({ billingUnits: 1, price: 0.2 })],
+		});
+
+		// A default plan is what makes the gap dangerous: while the original is
+		// discarded the customer has no plan, and the default machinery reacts.
+		const { ctx, autumnV2_2, customer } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, withDefault: true }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.billing.attach({
+					productId: pro.id,
+					options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+					invoice: true,
+					enableProductImmediately: false,
+					finalizeInvoice: true,
+				}),
+			],
+		});
+
+		const before = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const original = before.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			customize: { price: itemsV2.monthlyPrice({ amount: 35 }) },
+		});
+
+		await timeout(6000);
+
+		const after = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const pendingRows = after.filter(
+			(customerProduct) =>
+				customerProduct.product.id === pro.id &&
+				customerProduct.status === CusProductStatus.Pending,
+		);
+
+		expect(pendingRows).toHaveLength(1);
+		expect(pendingRows[0].created_at).toBe(original?.created_at ?? 0);
 	},
 );
