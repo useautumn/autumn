@@ -1,6 +1,7 @@
 import {
 	addCusProductToCusEnt,
 	cusEntsToUsage,
+	cusEntToBalance,
 	ErrCode,
 	type ExistingUsages,
 	type FullCusProduct,
@@ -61,6 +62,7 @@ export const cusProductToExistingUsages = ({
 		if (!existingUsages[internalFeatureId]) {
 			existingUsages[internalFeatureId] = {
 				usage: 0,
+				accruedOverage: 0,
 				entityUsages: {},
 			};
 		}
@@ -122,6 +124,21 @@ export const cusProductToExistingUsages = ({
 		)
 			.add(usage)
 			.toNumber();
+
+		// A negative balance is usage that already exceeded its allowance, so it
+		// was billable before this transition regardless of what replaces it.
+		const rowBalance = cusEntToBalance({
+			cusEnt: cusEntWithCusProduct,
+			entityId,
+		});
+
+		if (rowBalance < 0) {
+			currentExistingUsage.accruedOverage = new Decimal(
+				currentExistingUsage.accruedOverage ?? 0,
+			)
+				.sub(rowBalance)
+				.toNumber();
+		}
 	}
 
 	return existingUsages;
