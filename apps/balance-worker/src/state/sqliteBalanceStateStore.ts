@@ -114,17 +114,20 @@ export class SqliteBalanceStateStore {
 
 	initializeState({ state }: { state: MeteringState }): void {
 		const parsedState = meteringStateSchema.parse(state);
+		const persistedState = meteringStateSchema.parse(
+			JSON.parse(JSON.stringify(parsedState)),
+		);
 		const partitionKey = meteringPartitionKeyOf({
-			identity: parsedState.identity,
+			identity: persistedState.identity,
 		});
 
 		this.database
 			.transaction(() => {
 				const existingState = readState({
 					database: this.database,
-					identity: parsedState.identity,
+					identity: persistedState.identity,
 				});
-				if (isDeepStrictEqual(existingState, parsedState)) return;
+				if (isDeepStrictEqual(existingState, persistedState)) return;
 				if (existingState !== null) {
 					throw new ConflictingMeteringStateInitializationError({
 						partitionKey,
@@ -134,7 +137,7 @@ export class SqliteBalanceStateStore {
 				insertState({
 					database: this.database,
 					partitionKey,
-					state: parsedState,
+					state: persistedState,
 				});
 			})
 			.immediate();
@@ -199,15 +202,6 @@ export class SqliteBalanceStateStore {
 						nextOffset: expectedOffset,
 					} as const;
 				}
-				if (position.offset > expectedOffset) {
-					throw new UnexpectedKafkaOffsetError({
-						topic: position.topic,
-						partition: position.partition,
-						expectedOffset,
-						receivedOffset: position.offset,
-					});
-				}
-
 				const partitionKey = meteringPartitionKeyOf({
 					identity: parsedOutcome.identity,
 				});

@@ -3,8 +3,10 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+	ConflictingTrackReceiptError,
 	createMeteringState,
 	decideTrack,
+	type MeteringIdentity,
 	type MeteringState,
 	OutOfOrderTrackOutcomeError,
 	parseTrackCommand,
@@ -15,7 +17,6 @@ import {
 	ConflictingPartitionInitializationError,
 	openSqliteBalanceStateStore,
 	type SqliteBalanceStateStore,
-	UnexpectedKafkaOffsetError,
 } from "./sqliteBalanceStateStore.js";
 
 const identity = {
@@ -27,9 +28,15 @@ const identity = {
 const topic = "metering-events-v1";
 const partition = 0;
 
-const createState = ({ balance = 10 }: { balance?: number } = {}) =>
+const createState = ({
+	balance = 10,
+	meteringIdentity = identity,
+}: {
+	balance?: number;
+	meteringIdentity?: MeteringIdentity;
+} = {}) =>
 	createMeteringState({
-		identity,
+		identity: meteringIdentity,
 		features: {
 			messages: {
 				kind: "direct_metered_v1",
@@ -55,7 +62,7 @@ const createOutcome = ({
 				type: "track",
 				commandId,
 				requestId,
-				identity,
+				identity: state.identity,
 				entityId: null,
 				featureId: "messages",
 				value: 5,
@@ -220,28 +227,121 @@ describe("SQLite balance state store", () => {
 		}
 	});
 
+	test.concurrent("accepts gaps between delivered Kafka offsets", () => {
+		const fixture = createStoreFixture();
+		try {
+			const state = createState();
+			fixture.store.initializeState({ state });
+			const firstOutcome = createOutcome({ state });
+			fixture.store.applyDurableTrackOutcome({
+				position: { topic, partition, offset: 0n },
+				outcome: firstOutcome,
+			});
+			const advancedState = fixture.store.readState({ identity });
+			if (!advancedState) throw new Error("Expected persisted metering state");
+			const secondOutcome = createOutcome({
+				state: advancedState,
+				commandId: "cmd_2",
+				requestId: "req_2",
+			});
+
+			const result = fixture.store.applyDurableTrackOutcome({
+				position: { topic, partition, offset: 3n },
+				outcome: secondOutcome,
+			});
+
+			expect(result).toMatchObject({ kind: "applied", nextOffset: 4n });
+			expect(fixture.store.readState({ identity })).toMatchObject({
+				revision: 2,
+				features: {
+					messages: {
+						buckets: [{ balance: 0, usage: 10 }],
+					},
+				},
+			});
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(4n);
+			expect(
+				fixture.store.applyDurableTrackOutcome({
+					position: { topic, partition, offset: 1n },
+					outcome: firstOutcome,
+				}),
+			).toEqual({ kind: "position_already_applied", nextOffset: 4n });
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test.concurrent(
-		"rejects a skipped Kafka offset without changing state",
+		"rolls back progress for a conflicting duplicate outcome",
 		() => {
 			const fixture = createStoreFixture();
 			try {
 				const state = createState();
 				fixture.store.initializeState({ state });
 				const outcome = createOutcome({ state });
+				fixture.store.applyDurableTrackOutcome({
+					position: { topic, partition, offset: 0n },
+					outcome,
+				});
 
 				expect(() =>
 					fixture.store.applyDurableTrackOutcome({
 						position: { topic, partition, offset: 1n },
-						outcome,
+						outcome: { ...outcome, requestId: "req_conflict" },
 					}),
-				).toThrow(UnexpectedKafkaOffsetError);
-				expect(fixture.store.readState({ identity })).toEqual(state);
-				expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
+				).toThrow(ConflictingTrackReceiptError);
+				expect(fixture.store.readState({ identity })).toMatchObject({
+					revision: 1,
+					features: {
+						messages: {
+							buckets: [{ balance: 5, usage: 5 }],
+						},
+					},
+				});
+				expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
 			} finally {
 				closeStoreFixture(fixture);
 			}
 		},
 	);
+
+	test.concurrent("folds multiple customers in one partition", () => {
+		const fixture = createStoreFixture();
+		try {
+			const secondIdentity = { ...identity, customerId: "cus_2" };
+			const firstState = createState();
+			const secondState = createState({ meteringIdentity: secondIdentity });
+			fixture.store.initializeState({ state: firstState });
+			fixture.store.initializeState({ state: secondState });
+
+			fixture.store.applyDurableTrackOutcome({
+				position: { topic, partition, offset: 0n },
+				outcome: createOutcome({ state: firstState }),
+			});
+			fixture.store.applyDurableTrackOutcome({
+				position: { topic, partition, offset: 1n },
+				outcome: createOutcome({
+					state: secondState,
+					commandId: "cmd_2",
+					requestId: "req_2",
+				}),
+			});
+
+			expect(fixture.store.readState({ identity })).toMatchObject({
+				revision: 1,
+				features: { messages: { buckets: [{ balance: 5, usage: 5 }] } },
+			});
+			expect(
+				fixture.store.readState({ identity: secondIdentity }),
+			).toMatchObject({
+				revision: 1,
+				features: { messages: { buckets: [{ balance: 5, usage: 5 }] } },
+			});
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
 
 	test.concurrent(
 		"allows exact initialization retries without replacing persisted data",
@@ -265,6 +365,24 @@ describe("SQLite balance state store", () => {
 				).toThrow(ConflictingMeteringStateInitializationError);
 				expect(fixture.store.readState({ identity })).toEqual(state);
 				expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
+			} finally {
+				closeStoreFixture(fixture);
+			}
+		},
+	);
+
+	test.concurrent(
+		"normalizes negative zero across initialization retries",
+		() => {
+			const fixture = createStoreFixture();
+			try {
+				const state = createState({ balance: -0 });
+				fixture.store.initializeState({ state });
+				fixture.store.initializeState({ state });
+
+				expect(fixture.store.readState({ identity })).toMatchObject({
+					features: { messages: { buckets: [{ balance: 0 }] } },
+				});
 			} finally {
 				closeStoreFixture(fixture);
 			}
