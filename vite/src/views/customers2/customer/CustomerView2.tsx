@@ -88,7 +88,9 @@ export default function CustomerView2() {
 	}
 
 	const isRevenueCatCustomer = customer.customer_products.some(
-		(cp) => cp.processor?.type === ProcessorType.RevenueCat,
+		(cp) =>
+			cp.status !== CusProductStatus.Expired &&
+			cp.processor?.type === ProcessorType.RevenueCat,
 	);
 
 	return (
