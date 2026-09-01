@@ -15,6 +15,7 @@ import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { handleVoidInvoiceCron } from "@/cron/invoiceCron/runInvoiceCron";
+import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/discardPendingCustomerProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
@@ -373,5 +374,113 @@ test.concurrent(
 			id: metadataId,
 		});
 		expect(remainingMetadata).toBeNull();
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("pending custom plan: paying a deferred custom plan promotes it to active")}`,
+	async () => {
+		const customerId = `pending-custom-promote-${Date.now()}`;
+		const pro = products.pro({
+			id: "pro-pending-custom-promote",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, autumnV2_2, customer } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			customize: { price: itemsV2.monthlyPrice({ amount: 42 }) },
+			invoice_mode: {
+				enabled: true,
+				enable_plan_immediately: false,
+				finalize: true,
+			},
+		});
+
+		const stripeInvoices = await ctx.stripeCli.invoices.list({
+			customer: customer?.processor?.id ?? "",
+			limit: 1,
+		});
+
+		await ctx.stripeCli.invoices.pay(stripeInvoices.data[0].id);
+		await timeout(12000);
+
+		const customerProducts = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const promoted = customerProducts.filter(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(promoted).toHaveLength(1);
+		expect(promoted[0].status).toBe(CusProductStatus.Active);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("pending expiry: a promoted plan is never expired by a late discard")}`,
+	async () => {
+		const customerId = `pending-expiry-guard-${Date.now()}`;
+		const pro = products.pro({
+			id: "pro-pending-expiry-guard",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, customer } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [
+				s.billing.attach({
+					productId: pro.id,
+					invoice: true,
+					enableProductImmediately: false,
+					finalizeInvoice: true,
+				}),
+			],
+		});
+
+		const pending = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const pendingCustomerProduct = pending.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		const stripeInvoices = await ctx.stripeCli.invoices.list({
+			customer: customer?.processor?.id ?? "",
+			limit: 1,
+		});
+		await ctx.stripeCli.invoices.pay(stripeInvoices.data[0].id);
+		await timeout(12000);
+
+		// The row is Active now; a discard racing in afterwards must not undo it.
+		await discardPendingCustomerProduct({
+			ctx,
+			customerProduct: pendingCustomerProduct!,
+		});
+
+		const afterDiscard = await listCustomerProducts({
+			ctx,
+			internalCustomerId: customer?.internal_id ?? "",
+		});
+		const promoted = afterDiscard.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		);
+
+		expect(promoted?.status).toBe(CusProductStatus.Active);
 	},
 );

@@ -1,7 +1,7 @@
 import type { FullCusProduct } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { expireCustomerProducts } from "@/internal/billing/v2/execute/expirePendingCustomerProducts";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
 const expireStripeCheckoutSession = async ({
@@ -12,14 +12,13 @@ const expireStripeCheckoutSession = async ({
 	stripeCheckoutSessionId: string;
 }) => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const session = await stripeCli.checkout.sessions.retrieve(
+		stripeCheckoutSessionId,
+	);
 
-	try {
-		await stripeCli.checkout.sessions.expire(stripeCheckoutSessionId);
-	} catch (error) {
-		ctx.logger.warn(
-			`Failed to expire checkout session ${stripeCheckoutSessionId}: ${error}`,
-		);
-	}
+	if (session.status !== "open") return;
+
+	await stripeCli.checkout.sessions.expire(stripeCheckoutSessionId);
 };
 
 const voidStripeInvoice = async ({
@@ -30,14 +29,11 @@ const voidStripeInvoice = async ({
 	stripeInvoiceId: string;
 }) => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const stripeInvoice = await stripeCli.invoices.retrieve(stripeInvoiceId);
 
-	try {
-		const stripeInvoice = await stripeCli.invoices.retrieve(stripeInvoiceId);
-		if (stripeInvoice.status !== "open") return;
-		await stripeCli.invoices.voidInvoice(stripeInvoiceId);
-	} catch (error) {
-		ctx.logger.warn(`Failed to void invoice ${stripeInvoiceId}: ${error}`);
-	}
+	if (stripeInvoice.status !== "open") return;
+
+	await stripeCli.invoices.voidInvoice(stripeInvoiceId);
 };
 
 /** Drops a plan awaiting payment, closing whatever the deferred plan left open
@@ -71,5 +67,8 @@ export const discardPendingCustomerProduct = async ({
 		await MetadataService.delete({ db: ctx.db, id: metadataId });
 	}
 
-	await expireCustomerProducts({ ctx, customerProducts: [customerProduct] });
+	await CusProductService.expireIfPending({
+		ctx,
+		cusProductId: customerProduct.id,
+	});
 };

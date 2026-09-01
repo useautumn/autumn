@@ -21,7 +21,13 @@ export const findPendingCustomerProduct = async ({
 		entityId,
 	});
 
-	return fullCustomer.customer_products.find(
-		(customerProduct) => !productId || customerProduct.product.id === productId,
-	);
+	return fullCustomer.customer_products.find((customerProduct) => {
+		const productMatches =
+			!productId || customerProduct.product.id === productId;
+		const entityMatches = entityId
+			? customerProduct.entity_id === entityId
+			: !customerProduct.internal_entity_id;
+
+		return productMatches && entityMatches;
+	});
 };

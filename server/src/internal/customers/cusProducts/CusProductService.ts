@@ -502,6 +502,42 @@ export class CusProductService {
 
 	// Deliberately no freshness mark: the Stripe webhook refresh-cache middleware
 	// invalidation chokepoint already stamps every customer this touches.
+	/** Expires a row only while it is still pending, so a concurrent promotion
+	 * on payment is never overwritten. */
+	static async expireIfPending({
+		ctx,
+		cusProductId,
+	}: {
+		ctx: RepoContext;
+		cusProductId: string;
+	}) {
+		const { db } = ctx;
+		const results = await db
+			.update(customerProducts)
+			.set({
+				status: CusProductStatus.Expired,
+				ended_at: Date.now(),
+				metadata_id: null,
+				updated_at: Date.now(),
+			})
+			.where(
+				and(
+					eq(customerProducts.id, cusProductId),
+					eq(customerProducts.status, CusProductStatus.Pending),
+				),
+			)
+			.returning({
+				internal_customer_id: customerProducts.internal_customer_id,
+			});
+
+		await markCustomersUpdatedAtByInternalIds({
+			db,
+			internalCustomerIds: results.map((row) => row.internal_customer_id),
+		});
+
+		return results.length > 0;
+	}
+
 	static async updateByStripeSubId({
 		db,
 		stripeSubId,

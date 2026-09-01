@@ -24,6 +24,8 @@ export const expireCustomerProducts = async ({
 	}
 };
 
+/** Expires only rows still awaiting payment, so a promotion that lands first
+ * is never overwritten. */
 export const expirePendingCustomerProducts = async ({
 	ctx,
 	metadataId,
@@ -39,8 +41,10 @@ export const expirePendingCustomerProducts = async ({
 		inStatuses: [CusProductStatus.Pending],
 	});
 
-	await expireCustomerProducts({
-		ctx,
-		customerProducts: pendingCustomerProducts,
-	});
+	for (const customerProduct of pendingCustomerProducts) {
+		await CusProductService.expireIfPending({
+			ctx,
+			cusProductId: customerProduct.id,
+		});
+	}
 };
