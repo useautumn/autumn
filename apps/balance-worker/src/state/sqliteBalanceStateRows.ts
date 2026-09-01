@@ -1,11 +1,11 @@
 import type { Database } from "bun:sqlite";
 import {
+	type CustomerMeteringState,
 	type MeteringIdentity,
-	type MeteringState,
 	meteringPartitionKeyOf,
-	meteringStateSchema,
+	parseCustomerMeteringState,
+	parseTrackOutcome,
 	type TrackOutcome,
-	trackOutcomeSchema,
 } from "@autumn/balance-engine";
 import { CorruptBalanceStateError } from "./sqliteBalanceStateErrors.js";
 
@@ -28,7 +28,7 @@ export const readState = ({
 }: {
 	database: Database;
 	identity: MeteringIdentity;
-}): MeteringState | null => {
+}): CustomerMeteringState | null => {
 	const partitionKey = meteringPartitionKeyOf({ identity });
 	const row = database
 		.query<StateRow, { partitionKey: string }>(`
@@ -39,7 +39,9 @@ export const readState = ({
 		.get({ partitionKey });
 	if (!row) return null;
 
-	const state = meteringStateSchema.parse(JSON.parse(row.stateJson));
+	const state = parseCustomerMeteringState({
+		input: JSON.parse(row.stateJson),
+	});
 	if (
 		BigInt(state.revision) !== row.revision ||
 		meteringPartitionKeyOf({ identity: state.identity }) !== partitionKey
@@ -68,7 +70,7 @@ export const readTrackReceipt = ({
 		.get({ partitionKey, commandId });
 	if (!row) return null;
 
-	const outcome = trackOutcomeSchema.parse(JSON.parse(row.outcomeJson));
+	const outcome = parseTrackOutcome({ input: JSON.parse(row.outcomeJson) });
 	if (
 		outcome.commandId !== commandId ||
 		meteringPartitionKeyOf({ identity: outcome.identity }) !== partitionKey
@@ -123,7 +125,7 @@ export const insertState = ({
 }: {
 	database: Database;
 	partitionKey: string;
-	state: MeteringState;
+	state: CustomerMeteringState;
 }) => {
 	database
 		.query<
@@ -149,7 +151,7 @@ export const updateState = ({
 	database: Database;
 	partitionKey: string;
 	revisionBefore: number;
-	state: MeteringState;
+	state: CustomerMeteringState;
 }) =>
 	database
 		.query<

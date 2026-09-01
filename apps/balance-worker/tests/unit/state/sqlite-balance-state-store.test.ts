@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	ConflictingTrackReceiptError,
-	createMeteringState,
-	decideTrack,
+	type CustomerMeteringState,
+	computeTrack,
+	createCustomerMeteringState,
 	type MeteringIdentity,
-	type MeteringState,
 	OutOfOrderTrackOutcomeError,
 	parseTrackCommand,
 	type TrackOutcome,
@@ -35,12 +35,12 @@ const createState = ({
 	balance?: number;
 	meteringIdentity?: MeteringIdentity;
 } = {}) =>
-	createMeteringState({
+	createCustomerMeteringState({
 		identity: meteringIdentity,
-		features: {
+		featureStatesById: {
 			messages: {
 				kind: "direct_metered_v1",
-				buckets: [{ id: "messages_monthly", balance, usage: 0 }],
+				customerEntitlements: [{ id: "messages_monthly", balance, usage: 0 }],
 			},
 		},
 	});
@@ -50,11 +50,11 @@ const createOutcome = ({
 	commandId = "cmd_1",
 	requestId = "req_1",
 }: {
-	state: MeteringState;
+	state: CustomerMeteringState;
 	commandId?: string;
 	requestId?: string;
 }): TrackOutcome => {
-	const decision = decideTrack({
+	const decision = computeTrack({
 		state,
 		command: parseTrackCommand({
 			input: {
@@ -125,9 +125,9 @@ describe("SQLite balance state store", () => {
 			expect(result).toMatchObject({ kind: "applied", nextOffset: 1n });
 			expect(fixture.store.readState({ identity })).toMatchObject({
 				revision: 1,
-				features: {
+				featureStatesById: {
 					messages: {
-						buckets: [{ balance: 5, usage: 5 }],
+						customerEntitlements: [{ balance: 5, usage: 5 }],
 					},
 				},
 			});
@@ -164,9 +164,9 @@ describe("SQLite balance state store", () => {
 				expect(duplicate).toMatchObject({ kind: "duplicate", nextOffset: 2n });
 				expect(fixture.store.readState({ identity })).toMatchObject({
 					revision: 1,
-					features: {
+					featureStatesById: {
 						messages: {
-							buckets: [{ balance: 5, usage: 5 }],
+							customerEntitlements: [{ balance: 5, usage: 5 }],
 						},
 					},
 				});
@@ -209,9 +209,9 @@ describe("SQLite balance state store", () => {
 			).toThrow(OutOfOrderTrackOutcomeError);
 			expect(fixture.store.readState({ identity })).toMatchObject({
 				revision: 1,
-				features: {
+				featureStatesById: {
 					messages: {
-						buckets: [{ balance: 5, usage: 5 }],
+						customerEntitlements: [{ balance: 5, usage: 5 }],
 					},
 				},
 			});
@@ -253,9 +253,9 @@ describe("SQLite balance state store", () => {
 			expect(result).toMatchObject({ kind: "applied", nextOffset: 4n });
 			expect(fixture.store.readState({ identity })).toMatchObject({
 				revision: 2,
-				features: {
+				featureStatesById: {
 					messages: {
-						buckets: [{ balance: 0, usage: 10 }],
+						customerEntitlements: [{ balance: 0, usage: 10 }],
 					},
 				},
 			});
@@ -292,9 +292,9 @@ describe("SQLite balance state store", () => {
 				).toThrow(ConflictingTrackReceiptError);
 				expect(fixture.store.readState({ identity })).toMatchObject({
 					revision: 1,
-					features: {
+					featureStatesById: {
 						messages: {
-							buckets: [{ balance: 5, usage: 5 }],
+							customerEntitlements: [{ balance: 5, usage: 5 }],
 						},
 					},
 				});
@@ -329,13 +329,17 @@ describe("SQLite balance state store", () => {
 
 			expect(fixture.store.readState({ identity })).toMatchObject({
 				revision: 1,
-				features: { messages: { buckets: [{ balance: 5, usage: 5 }] } },
+				featureStatesById: {
+					messages: { customerEntitlements: [{ balance: 5, usage: 5 }] },
+				},
 			});
 			expect(
 				fixture.store.readState({ identity: secondIdentity }),
 			).toMatchObject({
 				revision: 1,
-				features: { messages: { buckets: [{ balance: 5, usage: 5 }] } },
+				featureStatesById: {
+					messages: { customerEntitlements: [{ balance: 5, usage: 5 }] },
+				},
 			});
 			expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
 		} finally {
@@ -381,7 +385,9 @@ describe("SQLite balance state store", () => {
 				fixture.store.initializeState({ state });
 
 				expect(fixture.store.readState({ identity })).toMatchObject({
-					features: { messages: { buckets: [{ balance: 0 }] } },
+					featureStatesById: {
+						messages: { customerEntitlements: [{ balance: 0 }] },
+					},
 				});
 			} finally {
 				closeStoreFixture(fixture);
@@ -410,9 +416,9 @@ describe("SQLite balance state store", () => {
 
 				expect(reopenedStore.readState({ identity })).toMatchObject({
 					revision: 1,
-					features: {
+					featureStatesById: {
 						messages: {
-							buckets: [{ balance: 5, usage: 5 }],
+							customerEntitlements: [{ balance: 5, usage: 5 }],
 						},
 					},
 				});

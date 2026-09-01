@@ -1,13 +1,13 @@
 import type { Database } from "bun:sqlite";
 import { isDeepStrictEqual } from "node:util";
 import {
-	applyTrackOutcome as applyEngineTrackOutcome,
+	type CustomerMeteringState,
+	executeTrack as executeEngineTrack,
 	type MeteringIdentity,
-	type MeteringState,
 	meteringPartitionKeyOf,
-	meteringStateSchema,
+	parseCustomerMeteringState,
+	parseTrackOutcome,
 	type TrackOutcome,
-	trackOutcomeSchema,
 } from "@autumn/balance-engine";
 import {
 	ConflictingMeteringStateInitializationError,
@@ -44,7 +44,7 @@ export type KafkaRecordPosition = {
 export type DurableTrackOutcomeApplyResult =
 	| {
 			kind: "applied" | "duplicate";
-			state: MeteringState;
+			state: CustomerMeteringState;
 			receipt: TrackOutcome;
 			nextOffset: bigint;
 	  }
@@ -112,11 +112,11 @@ export class SqliteBalanceStateStore {
 			.immediate();
 	}
 
-	initializeState({ state }: { state: MeteringState }): void {
-		const parsedState = meteringStateSchema.parse(state);
-		const persistedState = meteringStateSchema.parse(
-			JSON.parse(JSON.stringify(parsedState)),
-		);
+	initializeState({ state }: { state: CustomerMeteringState }): void {
+		const parsedState = parseCustomerMeteringState({ input: state });
+		const persistedState = parseCustomerMeteringState({
+			input: JSON.parse(JSON.stringify(parsedState)),
+		});
 		const partitionKey = meteringPartitionKeyOf({
 			identity: persistedState.identity,
 		});
@@ -147,7 +147,7 @@ export class SqliteBalanceStateStore {
 		identity,
 	}: {
 		identity: MeteringIdentity;
-	}): MeteringState | null {
+	}): CustomerMeteringState | null {
 		return readState({ database: this.database, identity });
 	}
 
@@ -181,7 +181,7 @@ export class SqliteBalanceStateStore {
 		assertTopic({ topic: position.topic });
 		assertPartition({ partition: position.partition });
 		assertOffset({ offset: position.offset });
-		const parsedOutcome = trackOutcomeSchema.parse(outcome);
+		const parsedOutcome = parseTrackOutcome({ input: outcome });
 
 		return this.database
 			.transaction(() => {
@@ -216,19 +216,19 @@ export class SqliteBalanceStateStore {
 					identity: parsedOutcome.identity,
 					commandId: parsedOutcome.commandId,
 				});
-				const applied = applyEngineTrackOutcome({
+				const executed = executeEngineTrack({
 					state,
 					outcome: parsedOutcome,
 					existingReceipt,
 				});
 				const nextOffset = position.offset + 1n;
 
-				if (applied.kind === "applied") {
+				if (executed.kind === "applied") {
 					const stateUpdate = updateState({
 						database: this.database,
 						partitionKey,
 						revisionBefore: parsedOutcome.revisionBefore,
-						state: applied.state,
+						state: executed.state,
 					});
 					if (stateUpdate.changes !== 1) {
 						throw new CorruptBalanceStateError({ partitionKey });
@@ -238,7 +238,7 @@ export class SqliteBalanceStateStore {
 						database: this.database,
 						partitionKey,
 						position,
-						receipt: applied.receipt,
+						receipt: executed.receipt,
 					});
 				}
 
@@ -259,9 +259,9 @@ export class SqliteBalanceStateStore {
 				}
 
 				return {
-					kind: applied.kind,
-					state: applied.state,
-					receipt: applied.receipt,
+					kind: executed.kind,
+					state: executed.state,
+					receipt: executed.receipt,
 					nextOffset,
 				} as const;
 			})
