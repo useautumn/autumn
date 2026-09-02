@@ -73,6 +73,32 @@ export function CreditRateCardRow({
 			),
 		);
 
+	if (!selectedFeature) {
+		return (
+			<div className="flex items-center gap-2">
+				<div className="min-w-0 flex-1">
+					<FeatureSelectDropdown
+						value={item.metered_feature_id}
+						onValueChange={(metered_feature_id) =>
+							onChange({ ...item, metered_feature_id })
+						}
+						availableFeatures={availableFeatures}
+						allFeatures={allFeatures}
+					/>
+				</div>
+				<IconButton
+					aria-label="Remove rate card item"
+					type="button"
+					variant="skeleton"
+					iconOrientation="center"
+					className="shrink-0 text-tertiary-foreground hover:text-red-500"
+					icon={<TrashIcon size={12} />}
+					onClick={onRemove}
+				/>
+			</div>
+		);
+	}
+
 	return (
 		<div
 			className={cn(
@@ -87,20 +113,14 @@ export function CreditRateCardRow({
 					onClick={onToggle}
 					className="flex h-full min-w-0 flex-1 cursor-pointer select-none items-center gap-2 rounded-lg px-2 text-left"
 				>
-					{selectedFeature ? (
-						<>
-							<span className="shrink-0">
-								{getFeatureIcon({ feature: selectedFeature })}
-							</span>
-							<span className="truncate text-sm">{selectedFeature.name}</span>
-							{!isExpanded && (
-								<span className="ml-auto min-w-0 truncate text-tertiary-foreground text-xs">
-									{creditRateSummary({ item, unitName, isAiChild })}
-								</span>
-							)}
-						</>
-					) : (
-						<span className="text-subtle text-sm">Select feature</span>
+					<span className="shrink-0">
+						{getFeatureIcon({ feature: selectedFeature })}
+					</span>
+					<span className="truncate text-sm">{selectedFeature.name}</span>
+					{!isExpanded && (
+						<span className="ml-auto min-w-0 truncate text-tertiary-foreground text-xs">
+							{creditRateSummary({ item, unitName, isAiChild })}
+						</span>
 					)}
 				</button>
 				<IconButton
@@ -120,17 +140,6 @@ export function CreditRateCardRow({
 
 			{isExpanded && (
 				<div className="flex flex-col gap-2 p-2 pt-0">
-					{!selectedFeature && (
-						<FeatureSelectDropdown
-							value={item.metered_feature_id}
-							onValueChange={(metered_feature_id) =>
-								onChange({ ...item, metered_feature_id })
-							}
-							availableFeatures={availableFeatures}
-							allFeatures={allFeatures}
-						/>
-					)}
-
 					{isMultiTier && showRateCardControls ? (
 						<>
 							<CreditTierRows item={item} onChange={onChange} />
