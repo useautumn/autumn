@@ -1,6 +1,6 @@
 import type { FrontendProduct } from "@autumn/shared";
 import { PackageIcon } from "@phosphor-icons/react";
-import type { ValuePickerOption } from "./ValuePicker";
+import type { ValuePickerOption } from "@/components/v2/rule-builder/ValuePicker";
 
 export function buildPlanSuggestions(
 	products: FrontendProduct[],

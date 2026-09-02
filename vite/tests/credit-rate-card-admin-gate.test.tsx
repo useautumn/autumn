@@ -92,7 +92,7 @@ test("collapsed rows summarize the rate without exposing controls", () => {
 	expect(html).not.toContain('aria-label="Credit cost"');
 });
 
-test("the dimensions section shows fields as pills and a cell per field on each rate", () => {
+test("the dimensions section shows fields as chips and a rate table with a column per field", () => {
 	const html = renderToStaticMarkup(
 		<CreditDimensionsSection
 			schema={[
@@ -113,12 +113,11 @@ test("the dimensions section shows fields as pills and a cell per field on each 
 		/>,
 	);
 
-	expect(html).toContain('aria-label="Dimension fields"');
 	expect(html).toContain(">size<");
 	expect(html).toContain(">region<");
 	expect(html).toContain('aria-label="size_large region"');
 	expect(html).toContain('aria-label="size_large_region_eu credit cost"');
-	expect(html).toContain("anything else");
-	expect(html).toContain(">Add rate<");
+	expect(html).toContain(">Credits<");
+	expect(html).toContain("New rate");
 	expect(html).not.toContain(">Feature A<");
 });

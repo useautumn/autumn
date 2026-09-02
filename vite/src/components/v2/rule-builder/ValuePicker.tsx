@@ -9,7 +9,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@autumn/ui";
-import { CheckIcon, XIcon } from "@phosphor-icons/react";
+import { CheckIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,9 @@ export function ValuePicker({
 	selectedValues,
 	onToggle,
 	onRemove,
+	onAdd,
 	placeholder = "Select...",
+	searchPlaceholder = "Search...",
 	className: triggerClassName,
 	defaultOpen = false,
 }: {
@@ -36,13 +38,29 @@ export function ValuePicker({
 	selectedValues: string[];
 	onToggle: (value: string) => void;
 	onRemove: (value: string) => void;
+	/** Lets the search text be added as a new value when it matches no suggestion. */
+	onAdd?: (value: string) => void;
 	placeholder?: string;
+	searchPlaceholder?: string;
 	className?: string;
 	defaultOpen?: boolean;
 }) {
 	const [open, setOpen] = useState(defaultOpen);
+	const [search, setSearch] = useState("");
 
 	const getOption = (val: string) => suggestions.find((s) => s.value === val);
+
+	const newValue = search.trim();
+	const canAddNewValue =
+		onAdd !== undefined &&
+		newValue.length > 0 &&
+		!suggestions.some((s) => s.value === newValue) &&
+		!selectedValues.includes(newValue);
+
+	const addNewValue = () => {
+		onAdd?.(newValue);
+		setSearch("");
+	};
 
 	return (
 		<div className={cn("min-w-0", triggerClassName)}>
@@ -99,12 +117,27 @@ export function ValuePicker({
 					}}
 				>
 					<Command className="bg-interactive-secondary">
-						<CommandInput placeholder="Search..." className="text-sm" />
+						<CommandInput
+							value={search}
+							onValueChange={setSearch}
+							placeholder={searchPlaceholder}
+							className="text-sm"
+						/>
 						<CommandList>
 							<CommandEmpty className="text-tertiary-foreground text-sm p-2">
 								No results
 							</CommandEmpty>
 							<CommandGroup>
+								{canAddNewValue && (
+									<CommandItem
+										value={`add:${newValue}`}
+										onSelect={addNewValue}
+										className="text-sm"
+									>
+										<PlusIcon size={14} className="shrink-0" />
+										<span className="flex-1 truncate">Add “{newValue}”</span>
+									</CommandItem>
+								)}
 								{suggestions.map((suggestion) => {
 									const isSelected = selectedValues.includes(suggestion.value);
 									const keywords = [suggestion.label];

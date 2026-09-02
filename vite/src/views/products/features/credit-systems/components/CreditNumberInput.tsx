@@ -1,4 +1,5 @@
 import { Input } from "@autumn/ui";
+import type { ComponentProps } from "react";
 import { useState } from "react";
 
 interface CreditNumberInputProps {
@@ -7,6 +8,7 @@ interface CreditNumberInputProps {
 	placeholder?: string;
 	className?: string;
 	disabled?: boolean;
+	variant?: ComponentProps<typeof Input>["variant"];
 	ariaLabel: string;
 }
 
@@ -18,6 +20,7 @@ export function CreditNumberInput({
 	placeholder,
 	className,
 	disabled,
+	variant,
 	ariaLabel,
 }: CreditNumberInputProps) {
 	const [draft, setDraft] = useState<string | null>(null);
@@ -28,6 +31,7 @@ export function CreditNumberInput({
 			type="text"
 			inputMode="decimal"
 			lang="en"
+			variant={variant}
 			className={className}
 			disabled={disabled}
 			placeholder={placeholder}
