@@ -41,6 +41,57 @@ const hasUnsupportedUsagePrice = (product: ProductV2): boolean =>
 			isFeaturePriceItem(item) && item.usage_model !== UsageModel.Prepaid,
 	) ?? false;
 
+export type ListedRevenueCatProduct = {
+	product: ProductV2;
+	unsupported: boolean;
+};
+
+/**
+ * The unsupported filter governs CREATING mappings, not rendering them: a plan
+ * that became unsupported while still owning RevenueCat ids stays listed so
+ * those ids can be released. With no row, the catalog's one-plan-per-id rule
+ * would leave them claimed by an invisible plan forever.
+ */
+export const listRevenueCatProducts = ({
+	products,
+	existingMappings,
+}: {
+	products: ProductV2[];
+	existingMappings: {
+		autumn_product_id: string;
+		revenuecat_product_ids: string[];
+	}[];
+}): ListedRevenueCatProduct[] =>
+	products
+		.map((product) => ({
+			product,
+			unsupported: hasUnsupportedUsagePrice(product),
+		}))
+		.filter(
+			({ product, unsupported }) =>
+				!unsupported ||
+				(existingMappings.find((m) => m.autumn_product_id === product.id)
+					?.revenuecat_product_ids.length ?? 0) > 0,
+		);
+
+const UNSUPPORTED_NOTE =
+	"This plan bills usage at runtime, which RevenueCat purchases can't collect. Release the products below to map them to another plan.";
+
+// An unsupported plan keeps its row so its ids can be released, but nothing may
+// be added to it — the catalog rejects an id claimed by two plans, so a hidden
+// claim is otherwise unbreakable without editing the plan itself.
+const UnsupportedMappingNotice = () => (
+	<div className="text-tertiary-foreground text-xs py-1">
+		{UNSUPPORTED_NOTE}
+	</div>
+);
+
+const UnsupportedBadge = () => (
+	<span className="text-tiny text-amber-600 dark:text-amber-500 bg-muted px-1.5 py-0.5 rounded-md">
+		unsupported
+	</span>
+);
+
 interface PrepaidFeature {
 	featureId: string;
 	billingUnits: number;
@@ -54,6 +105,8 @@ interface ProductMapping {
 	autumnProductName: string;
 	revenueCatProductIds: string[];
 	featurePacks: FeaturePacks;
+	/** Listed read-only: it may only release the ids it already owns. */
+	unsupported: boolean;
 }
 
 interface RevenueCatMappingSheetProps {
@@ -165,6 +218,7 @@ const MappingRow = memo(function MappingRow({
 				<span className="text-tiny-id text-tertiary-foreground bg-muted px-1.5 py-0.5 rounded-md">
 					{mapping.autumnProductId}
 				</span>
+				{mapping.unsupported && <UnsupportedBadge />}
 			</div>
 
 			{/* Display selected products as tags */}
@@ -195,11 +249,15 @@ const MappingRow = memo(function MappingRow({
 				</div>
 			)}
 
-			<AddRcProductSelect
-				availableProducts={availableProducts}
-				hasNoRcProducts={rcProducts.length === 0}
-				onAdd={(value) => onAddProduct(mapping.autumnProductId, value)}
-			/>
+			{mapping.unsupported ? (
+				<UnsupportedMappingNotice />
+			) : (
+				<AddRcProductSelect
+					availableProducts={availableProducts}
+					hasNoRcProducts={rcProducts.length === 0}
+					onAdd={(value) => onAddProduct(mapping.autumnProductId, value)}
+				/>
+			)}
 		</div>
 	);
 });
@@ -251,6 +309,7 @@ const PrepaidMappingRow = memo(function PrepaidMappingRow({
 				<span className="text-tiny text-tertiary-foreground bg-muted px-1.5 py-0.5 rounded-md">
 					prepaid
 				</span>
+				{mapping.unsupported && <UnsupportedBadge />}
 			</div>
 
 			<div className="text-tertiary-foreground text-xs">
@@ -299,6 +358,7 @@ const PrepaidMappingRow = memo(function PrepaidMappingRow({
 												type="number"
 												min={0}
 												lang="en"
+												disabled={mapping.unsupported}
 												value={packs ?? ""}
 												placeholder="0"
 												onChange={(e) =>
@@ -332,11 +392,15 @@ const PrepaidMappingRow = memo(function PrepaidMappingRow({
 				</div>
 			)}
 
-			<AddRcProductSelect
-				availableProducts={availableProducts}
-				hasNoRcProducts={rcProducts.length === 0}
-				onAdd={(value) => onAddProduct(mapping.autumnProductId, value)}
-			/>
+			{mapping.unsupported ? (
+				<UnsupportedMappingNotice />
+			) : (
+				<AddRcProductSelect
+					availableProducts={availableProducts}
+					hasNoRcProducts={rcProducts.length === 0}
+					onAdd={(value) => onAddProduct(mapping.autumnProductId, value)}
+				/>
+			)}
 		</div>
 	);
 });
@@ -348,8 +412,15 @@ export function RevenueCatMappingSheet({
 	const { products: allProducts } = useProductsQuery();
 	const { products: rcProducts } = useRCProducts();
 
+	const {
+		mappings: existingMappings,
+		saveMappings,
+		isSaving,
+		isLoading: isLoadingMappings,
+	} = useRCMappings();
+
 	// Latest version of each product (stable identity for effects).
-	const products = useMemo(() => {
+	const latestProducts = useMemo(() => {
 		const productMap = new Map<string, ProductV2>();
 		for (const product of allProducts) {
 			const existing = productMap.get(product.id);
@@ -357,16 +428,24 @@ export function RevenueCatMappingSheet({
 				productMap.set(product.id, product);
 			}
 		}
-		return Array.from(productMap.values()).filter(
-			(product) => !hasUnsupportedUsagePrice(product),
-		);
+		return Array.from(productMap.values());
 	}, [allProducts]);
 
+	const listedProducts = useMemo(
+		() =>
+			listRevenueCatProducts({
+				products: latestProducts,
+				existingMappings,
+			}),
+		[latestProducts, existingMappings],
+	);
+
 	// productId -> prepaid features (featureId + billing units). Presence here
-	// switches the row to the per-SKU packs table.
+	// switches the row to the per-SKU packs table. Unsupported plans are included
+	// so their stored packs round-trip instead of being dropped on save.
 	const prepaidInfoByProduct = useMemo(() => {
 		const map = new Map<string, PrepaidFeature[]>();
-		for (const product of products) {
+		for (const { product } of listedProducts) {
 			const prepaidItems = getPrepaidItems(product);
 			if (prepaidItems.length === 0) continue;
 			map.set(
@@ -380,13 +459,8 @@ export function RevenueCatMappingSheet({
 			);
 		}
 		return map;
-	}, [products]);
+	}, [listedProducts]);
 
-	const {
-		mappings: existingMappings,
-		saveMappings,
-		isSaving,
-	} = useRCMappings();
 	const [mappings, setMappings] = useState<ProductMapping[]>([]);
 	const initializedRef = useRef(false);
 
@@ -397,11 +471,18 @@ export function RevenueCatMappingSheet({
 			return;
 		}
 
-		if (initializedRef.current || !products || products.length === 0) {
+		// Existing mappings decide which unsupported plans stay listed, and every
+		// listed plan is restated on save — snapshotting before they load would
+		// both hide those rows and read as clearing every mapping.
+		if (
+			initializedRef.current ||
+			isLoadingMappings ||
+			listedProducts.length === 0
+		) {
 			return;
 		}
 
-		const initialMappings = products.map((product) => {
+		const initialMappings = listedProducts.map(({ product, unsupported }) => {
 			const existingMapping = existingMappings.find(
 				(m) => m.autumn_product_id === product.id,
 			);
@@ -431,18 +512,26 @@ export function RevenueCatMappingSheet({
 				autumnProductName: product.name,
 				revenueCatProductIds: existingMapping?.revenuecat_product_ids || [],
 				featurePacks,
+				unsupported,
 			};
 		});
 
 		setMappings(initialMappings);
 		initializedRef.current = true;
-	}, [open, products, existingMappings, prepaidInfoByProduct]);
+	}, [
+		open,
+		listedProducts,
+		existingMappings,
+		prepaidInfoByProduct,
+		isLoadingMappings,
+	]);
 
 	const handleAddProduct = useCallback(
 		(autumnProductId: string, revenueCatProductId: string) => {
 			setMappings((prev) =>
 				prev.map((mapping) =>
-					mapping.autumnProductId === autumnProductId
+					// Unsupported rows can only release ids, never take new ones.
+					mapping.autumnProductId === autumnProductId && !mapping.unsupported
 						? {
 								...mapping,
 								revenueCatProductIds: [

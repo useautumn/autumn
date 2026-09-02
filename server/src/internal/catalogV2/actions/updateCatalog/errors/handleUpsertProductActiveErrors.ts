@@ -8,7 +8,7 @@ export const handleUpsertProductActiveErrors = ({
 }): void => {
 	const planIdsTakingPointer = new Set<string>();
 
-	for (const planParams of params.plans) {
+	for (const planParams of params.plans ?? []) {
 		const allVersionsActive =
 			planParams.versioning === "all_versions" && planParams.active === true;
 		if (allVersionsActive) {
@@ -31,7 +31,7 @@ export const handleUpsertProductActiveErrors = ({
 		planIdsTakingPointer.add(planParams.plan_id);
 	}
 
-	for (const planParams of params.plans) {
+	for (const planParams of params.plans ?? []) {
 		if (planParams.active !== false) continue;
 		if (planIdsTakingPointer.has(planParams.plan_id)) continue;
 

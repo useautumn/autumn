@@ -49,7 +49,7 @@ export const setupFeatureStatesContext = async ({
 	});
 
 	const entryByFeatureId = new Map(
-		params.features.map((entry) => [entry.feature_id, entry]),
+		(params.features ?? []).map((entry) => [entry.feature_id, entry]),
 	);
 
 	const stateRows = await listFeatureStates({

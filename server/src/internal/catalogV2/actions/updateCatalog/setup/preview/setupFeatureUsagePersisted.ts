@@ -82,7 +82,7 @@ export const setupFeatureUsagePersisted = async ({
 		};
 	}
 
-	for (const entry of params.features) {
+	for (const entry of params.features ?? []) {
 		if (!summaries[entry.feature_id]) {
 			summaries[entry.feature_id] = emptyPersistedFeatureUsage();
 		}

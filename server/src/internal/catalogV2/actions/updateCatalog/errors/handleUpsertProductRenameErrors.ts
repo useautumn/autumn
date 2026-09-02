@@ -1,8 +1,4 @@
-import {
-	ErrCode,
-	RecaseError,
-	type UpdateCatalogParams,
-} from "@autumn/shared";
+import { ErrCode, RecaseError, type UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
@@ -18,7 +14,7 @@ const renameTargetsFromParams = ({
 }: {
 	params: UpdateCatalogParams;
 }): RenameTarget[] =>
-	params.plans.flatMap((planParams) => [
+	(params.plans ?? []).flatMap((planParams) => [
 		...(planParams.new_plan_id && planParams.new_plan_id !== planParams.plan_id
 			? [{ fromId: planParams.plan_id, toId: planParams.new_plan_id }]
 			: []),
@@ -60,7 +56,7 @@ const takenPlanIdsForRename = ({
 	const persistedProducts = Object.values(
 		productStatesContext.versionsByPlanId,
 	).flat();
-	const siblingPlanIds = params.plans.flatMap((entry) => [
+	const siblingPlanIds = (params.plans ?? []).flatMap((entry) => [
 		...(entry.plan_id === fromId ? [] : [entry.plan_id]),
 		...(entry.variants ?? [])
 			.map((variant) => variant.variant_plan_id)

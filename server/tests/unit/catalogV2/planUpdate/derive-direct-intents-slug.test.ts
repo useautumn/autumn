@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { products } from "@tests/utils/fixtures/db/products";
 import { deriveDirectIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveDirectIntents";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
-import { products } from "@tests/utils/fixtures/db/products";
 
 const v1 = {
 	...products.createFull({ id: "pro" }),
@@ -32,24 +32,58 @@ describe("deriveDirectIntents version_slug targeting", () => {
 				features: [],
 				remove_features: [],
 				remove_plans: [],
+				skip_deletions: true,
+				skip_plan_ids: [],
+				skip_feature_ids: [],
 			},
 			productStatesContext,
+			internalIdRefs: new Map(),
 		});
 		expect(intent?.productKey).toEqual({ planId: "pro", version: 1 });
 	});
 
-	test("unknown version_slug is not fall-through-to-active", () => {
-		expect(
-			deriveDirectIntents({
-				params: {
-					plans: [{ plan_id: "pro", version_slug: "missing", name: "Ghost" }],
-					features: [],
-					remove_features: [],
-					remove_plans: [],
-				},
-				productStatesContext,
-			}),
-		).toEqual([]);
+	test("unknown version_slug mints under that name, never the active row", () => {
+		const [intent] = deriveDirectIntents({
+			params: {
+				plans: [{ plan_id: "pro", version_slug: "missing", name: "Ghost" }],
+				features: [],
+				remove_features: [],
+				remove_plans: [],
+				skip_deletions: true,
+				skip_plan_ids: [],
+				skip_feature_ids: [],
+			},
+			productStatesContext,
+			internalIdRefs: new Map(),
+		});
+
+		// A config states the history it wants, so a slug naming no row creates
+		// one. The original guarantee still holds: it must never land on the
+		// active row (v2 here), which would silently rewrite live pricing.
+		expect(intent?.productKey).toEqual({ planId: "pro", version: 3 });
+		expect(intent?.planParams.new_version_slug).toBe("missing");
+		expect(intent?.planParams.version_slug).toBeUndefined();
+	});
+
+	test("two entries minting distinct slugs get distinct versions", () => {
+		const intents = deriveDirectIntents({
+			params: {
+				plans: [
+					{ plan_id: "pro", version_slug: "autumn", name: "A" },
+					{ plan_id: "pro", version_slug: "winter", name: "B" },
+				],
+				features: [],
+				remove_features: [],
+				remove_plans: [],
+				skip_deletions: true,
+				skip_plan_ids: [],
+				skip_feature_ids: [],
+			},
+			productStatesContext,
+			internalIdRefs: new Map(),
+		});
+
+		expect(intents.map((intent) => intent.productKey.version)).toEqual([3, 4]);
 	});
 
 	test("omit both targets the active row", () => {
@@ -59,8 +93,12 @@ describe("deriveDirectIntents version_slug targeting", () => {
 				features: [],
 				remove_features: [],
 				remove_plans: [],
+				skip_deletions: true,
+				skip_plan_ids: [],
+				skip_feature_ids: [],
 			},
 			productStatesContext,
+			internalIdRefs: new Map(),
 		});
 		expect(intent?.productKey).toEqual({ planId: "pro", version: 2 });
 	});
@@ -72,6 +110,9 @@ describe("deriveDirectIntents version_slug targeting", () => {
 				features: [],
 				remove_features: [],
 				remove_plans: [],
+				skip_deletions: true,
+				skip_plan_ids: [],
+				skip_feature_ids: [],
 			},
 			productStatesContext: {
 				statesByPlanVersion: {},
@@ -79,6 +120,7 @@ describe("deriveDirectIntents version_slug targeting", () => {
 				maxVersionByPlanId: { pro: 2 },
 				rewardProgramsByPlanId: {},
 			},
+			internalIdRefs: new Map(),
 		});
 		expect(intent?.productKey).toEqual({ planId: "pro", version: 3 });
 	});

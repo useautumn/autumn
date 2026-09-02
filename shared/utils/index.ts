@@ -74,6 +74,7 @@ export * from "./productUtils/priceUtils/match/copyStripeResourcesToMatchingPric
 export * from "./productUtils/priceUtils/match/getPriceStripeReuseLevel";
 export * from "./productUtils/priceUtils/match/priceStripeObjectsMatch";
 export * from "./productUtils/priceUtils/match/stripePriceIdForInitializedPrice";
+export * from "./productUtils/priceUtils/match/stripePriceMappingSlots";
 export * from "./productV2Utils/mapToProductV2";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils";
 export * from "./productV2Utils/productItemUtils/getItemType";

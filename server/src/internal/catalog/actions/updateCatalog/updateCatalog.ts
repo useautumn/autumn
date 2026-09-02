@@ -83,7 +83,7 @@ const upsertFeatures = async ({
 	let changed = false;
 	const skipFeatureIds = new Set(params.skip_feature_ids);
 
-	for (const feature of params.features) {
+	for (const feature of params.features ?? []) {
 		if (skipFeatureIds.has(feature.feature_id)) continue;
 
 		const existing = await FeatureService.get({
@@ -132,7 +132,7 @@ const upsertPlans = async ({
 }) => {
 	const { db, org, env } = ctx;
 	const skipPlanIds = new Set(params.skip_plan_ids);
-	const activePlans = params.plans.filter(
+	const activePlans = (params.plans ?? []).filter(
 		(plan) =>
 			!skipPlanIds.has(plan.plan_id) &&
 			(!plan.new_plan_id || !skipPlanIds.has(plan.new_plan_id)),
@@ -458,7 +458,7 @@ const resolveCatalogUpdateResponse = async ({
 }) => {
 	const { db, org, env } = ctx;
 	const resolvedPlans = await Promise.all(
-		params.plans.map(async (planParams) => {
+		(params.plans ?? []).map(async (planParams) => {
 			const product = await ProductService.getFull({
 				db,
 				idOrInternalId: planParams.new_plan_id ?? planParams.plan_id,
@@ -473,7 +473,7 @@ const resolveCatalogUpdateResponse = async ({
 	);
 
 	const resolvedFeatures = await Promise.all(
-		params.features.map(async (feature) => {
+		(params.features ?? []).map(async (feature) => {
 			const dbFeature = await FeatureService.get({
 				db,
 				orgId: org.id,
@@ -539,7 +539,7 @@ export const updateCatalog = async ({
 		? []
 		: deriveReplacePlanRemovals({
 				products: productsBeforeUpdate,
-				plans: params.plans,
+				plans: params.plans ?? [],
 			}).filter((removal) => !params.skip_plan_ids.includes(removal.planId));
 
 	await upsertFeatures({ ctx, params, products: productsBeforeUpdate });
@@ -551,7 +551,7 @@ export const updateCatalog = async ({
 		? []
 		: deriveReplaceFeatureIds({
 				features: ctx.features,
-				desiredFeatures: params.features,
+				desiredFeatures: params.features ?? [],
 			}).filter((featureId) => !params.skip_feature_ids.includes(featureId));
 	await applyMissingFeatureRemovals({ ctx, featureIds: replaceFeatureIds });
 

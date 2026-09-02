@@ -4,9 +4,10 @@ import type {
 	CatalogComputeStep,
 	ProjectedCatalog,
 } from "@/internal/catalogV2/actions/updateCatalog/types/catalogComputeState";
-import type { RemoveFeaturePlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpdateCatalogContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
+import type { RemoveFeaturePlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
+import { resolveAbsenteeFeatureIds } from "./resolveAbsenteeFeatureIds";
 
 /**
  * Remove intents with willArchive stamped against the post-upsert projection
@@ -23,17 +24,26 @@ export const computeRemoveFeaturesPlan = ({
 	params: UpdateCatalogParams;
 	projected: ProjectedCatalog;
 }): CatalogComputeStep => {
-	const removeFeatures: RemoveFeaturePlan[] = params.remove_features.map(
-		(entry) => {
+	// Explicit removals, plus — under full state — the features the config
+	// never mentioned, which is how omission asks for a deletion.
+	const absenteeFeatureIds = resolveAbsenteeFeatureIds({ ctx, params });
+	const removeFeatureIds = [
+		...params.remove_features.map((entry) => entry.feature_id),
+		...absenteeFeatureIds,
+	];
+	const absentees = new Set(absenteeFeatureIds);
+
+	const removeFeatures: RemoveFeaturePlan[] = removeFeatureIds.map(
+		(featureId) => {
 			const current =
-				ctx.features.find((feature) => feature.id === entry.feature_id) ??
-				null;
-			const state = catalogContext.featureStatesContext[entry.feature_id];
+				ctx.features.find((feature) => feature.id === featureId) ?? null;
+			const state = catalogContext.featureStatesContext[featureId];
 
 			return {
-				featureId: entry.feature_id,
+				featureId,
 				current,
 				willArchive: false,
+				byOmission: absentees.has(featureId),
 				hasCustomerEntitlements: state?.has_customers ?? false,
 			};
 		},
