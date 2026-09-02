@@ -1,89 +1,37 @@
-import type {
-	CreditDimension,
-	CreditMultiplier,
-	CreditSchemaItem,
-} from "@autumn/shared";
+import type { CreditDimension, CreditSchemaItem } from "@autumn/shared";
 import { Infinite } from "@autumn/shared";
 
 /**
- * The dashboard edits dimensions as a price list keyed by ONE event property:
- * every rule matches exactly that property with one value. Rules that don't
- * fit (several keys, or keys that differ between rules) were written through
- * the API and are shown read-only.
+ * The dashboard edits dimensions as fields → rates: the fields are the
+ * property keys, every rate is one rule whose match holds a value for some of
+ * those fields (blank = any), named from its match.
  */
 
-export type CreditPriceListRow = { value: string; dimension: CreditDimension };
-export type CreditAdjustmentRow = {
-	value: string;
-	multiplier: CreditMultiplier;
-};
+export type CreditRateRule = { name: string; dimension: CreditDimension };
 
-export type CreditPriceList = {
-	property: string;
-	rows: CreditPriceListRow[];
-};
-
-export type CreditAdjustmentList = {
-	property: string;
-	rows: CreditAdjustmentRow[];
-};
-
-const singleKeyOf = (match: Record<string, string>): string | undefined => {
-	const keys = Object.keys(match);
-	return keys.length === 1 ? keys[0] : undefined;
-};
-
-const listByProperty = <T extends { match: Record<string, string> }>(
-	rules: Record<string, T>,
-): { property: string; rows: { value: string; rule: T }[] } | undefined => {
-	const entries = Object.entries(rules);
-	if (entries.length === 0) return { property: "", rows: [] };
-
-	const property = singleKeyOf(entries[0][1].match);
-	if (property === undefined) return undefined;
-	const fitsOneProperty = entries.every(
-		([, rule]) => singleKeyOf(rule.match) === property,
+export const dimensionFields = (item: CreditSchemaItem): string[] =>
+	Array.from(
+		new Set(
+			Object.values(item.dimensions ?? {}).flatMap((dimension) =>
+				Object.keys(dimension.match),
+			),
+		),
 	);
-	if (!fitsOneProperty) return undefined;
 
-	return {
-		property,
-		rows: entries.map(([, rule]) => ({ value: rule.match[property], rule })),
-	};
-};
+export const rateRules = (item: CreditSchemaItem): CreditRateRule[] =>
+	Object.entries(item.dimensions ?? {}).map(([name, dimension]) => ({
+		name,
+		dimension,
+	}));
 
-export const toPriceList = (
-	item: CreditSchemaItem,
-): CreditPriceList | undefined => {
-	const list = listByProperty(item.dimensions ?? {});
-	return (
-		list && {
-			property: list.property,
-			rows: list.rows.map(({ value, rule }) => ({ value, dimension: rule })),
-		}
-	);
-};
+const ruleName = (match: Record<string, string>) =>
+	Object.entries(match)
+		.map(([key, value]) => `${key}_${value}`)
+		.join("_")
+		.replace(/[^a-zA-Z0-9_]+/g, "_")
+		.slice(0, 64) || "rule";
 
-export const toAdjustmentList = (
-	item: CreditSchemaItem,
-): CreditAdjustmentList | undefined => {
-	const list = listByProperty(item.multipliers ?? {});
-	return (
-		list && {
-			property: list.property,
-			rows: list.rows.map(({ value, rule }) => ({ value, multiplier: rule })),
-		}
-	);
-};
-
-export const isApiAuthored = (item: CreditSchemaItem): boolean =>
-	toPriceList(item) === undefined || toAdjustmentList(item) === undefined;
-
-const ruleName = ({ property, value }: { property: string; value: string }) =>
-	`${property}_${value}`.replace(/[^a-zA-Z0-9_]+/g, "_").slice(0, 64) ||
-	"value";
-
-/** Duplicate values collapse to one rule, so names are made unique by suffix. */
+/** Duplicate matches collapse to one name, so names are made unique by suffix. */
 const uniqueName = (name: string, taken: Set<string>) => {
 	let candidate = name;
 	let index = 2;
@@ -92,54 +40,48 @@ const uniqueName = (name: string, taken: Set<string>) => {
 	return candidate;
 };
 
-const fromPriceList = (
-	list: CreditPriceList,
-): CreditSchemaItem["dimensions"] => {
-	if (list.rows.length === 0) return undefined;
-	const taken = new Set<string>();
-	return Object.fromEntries(
-		list.rows.map(({ value, dimension }) => [
-			uniqueName(ruleName({ property: list.property, value }), taken),
-			{ ...dimension, match: { [list.property]: value } },
-		]),
-	);
-};
-
-const fromAdjustmentList = (
-	list: CreditAdjustmentList,
-): CreditSchemaItem["multipliers"] => {
-	if (list.rows.length === 0) return undefined;
-	const taken = new Set<string>();
-	return Object.fromEntries(
-		list.rows.map(({ value, multiplier }) => [
-			uniqueName(ruleName({ property: list.property, value }), taken),
-			{ ...multiplier, match: { [list.property]: value } },
-		]),
-	);
-};
-
-export const withPriceList = ({
+export const withRateRules = ({
 	item,
-	list,
+	rules,
 }: {
 	item: CreditSchemaItem;
-	list: CreditPriceList;
+	rules: CreditRateRule[];
 }): CreditSchemaItem => {
 	const { dimensions: _dimensions, ...rest } = item;
-	const dimensions = fromPriceList(list);
-	return dimensions ? { ...rest, dimensions } : rest;
+	if (rules.length === 0) return rest;
+	const taken = new Set<string>();
+	return {
+		...rest,
+		dimensions: Object.fromEntries(
+			rules.map(({ dimension }) => [
+				uniqueName(ruleName(dimension.match), taken),
+				dimension,
+			]),
+		),
+	};
 };
 
-export const withAdjustmentList = ({
+/** Dropping a field removes it from every rule's match; rules left matching nothing are removed. */
+export const withFields = ({
 	item,
-	list,
+	fields,
 }: {
 	item: CreditSchemaItem;
-	list: CreditAdjustmentList;
+	fields: string[];
 }): CreditSchemaItem => {
-	const { multipliers: _multipliers, ...rest } = item;
-	const multipliers = fromAdjustmentList(list);
-	return multipliers ? { ...rest, multipliers } : rest;
+	const keep = new Set(fields);
+	const rules = rateRules(item)
+		.map(({ name, dimension }) => ({
+			name,
+			dimension: {
+				...dimension,
+				match: Object.fromEntries(
+					Object.entries(dimension.match).filter(([key]) => keep.has(key)),
+				),
+			},
+		}))
+		.filter(({ dimension }) => Object.keys(dimension.match).length > 0);
+	return withRateRules({ item, rules });
 };
 
 export const withoutDimensions = (item: CreditSchemaItem): CreditSchemaItem => {
@@ -147,15 +89,25 @@ export const withoutDimensions = (item: CreditSchemaItem): CreditSchemaItem => {
 	return rest;
 };
 
-export const createRateRow = (value: string): CreditPriceListRow => ({
-	value,
+export const createRateRule = (): CreditRateRule => ({
+	name: "",
 	dimension: { match: {}, credit_amount: 0 },
 });
 
-export const createAdjustmentRow = (value: string): CreditAdjustmentRow => ({
+/** A blank cell means "any value" for that field. */
+export const setRuleCell = ({
+	rule,
+	field,
 	value,
-	multiplier: { match: {}, factor: 1 },
-});
+}: {
+	rule: CreditRateRule;
+	field: string;
+	value: string;
+}): CreditRateRule => {
+	const { [field]: _current, ...others } = rule.dimension.match;
+	const match = value.trim() === "" ? others : { ...others, [field]: value };
+	return { ...rule, dimension: { ...rule.dimension, match } };
+};
 
 export const rateKindOf = (dimension: CreditDimension): "flat" | "tiered" =>
 	dimension.tier_behavior === "graduated" ? "tiered" : "flat";

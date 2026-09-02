@@ -92,7 +92,7 @@ test("collapsed rows summarize the rate without exposing controls", () => {
 	expect(html).not.toContain('aria-label="Credit cost"');
 });
 
-test("the dimensions section renders a price list with the row rate as the fallback", () => {
+test("the dimensions section shows fields as pills and a cell per field on each rate", () => {
 	const html = renderToStaticMarkup(
 		<CreditDimensionsSection
 			schema={[
@@ -101,34 +101,7 @@ test("the dimensions section renders a price list with the row rate as the fallb
 					credit_amount: 1,
 					dimensions: {
 						size_large: { match: { size: "large" }, credit_amount: 16 },
-					},
-					multipliers: {
-						lifecycle_spot: { match: { lifecycle: "spot" }, factor: 0.3 },
-					},
-				},
-			]}
-			allFeatures={[feature]}
-			onItemChange={() => {}}
-		/>,
-	);
-
-	expect(html).toContain('aria-label="Dimension property"');
-	expect(html).toContain('value="size"');
-	expect(html).toContain('aria-label="size large credit cost"');
-	expect(html).toContain("anything else");
-	expect(html).toContain('aria-label="lifecycle spot factor"');
-	expect(html).not.toContain(">Feature A<");
-});
-
-test("API-authored rules are shown read-only instead of being rewritten", () => {
-	const html = renderToStaticMarkup(
-		<CreditDimensionsSection
-			schema={[
-				{
-					metered_feature_id: feature.id,
-					credit_amount: 1,
-					dimensions: {
-						large_eu: {
+						size_large_region_eu: {
 							match: { size: "large", region: "eu" },
 							credit_amount: 20,
 						},
@@ -140,30 +113,12 @@ test("API-authored rules are shown read-only instead of being rewritten", () => 
 		/>,
 	);
 
-	expect(html).toContain("configured through the API");
-	expect(html).not.toContain('aria-label="Dimension property"');
-});
-
-test("values are pills and each pill is a priced row", () => {
-	const html = renderToStaticMarkup(
-		<CreditDimensionsSection
-			schema={[
-				{
-					metered_feature_id: feature.id,
-					credit_amount: 1,
-					dimensions: {
-						size_small: { match: { size: "small" }, credit_amount: 1 },
-						size_large: { match: { size: "large" }, credit_amount: 16 },
-					},
-				},
-			]}
-			allFeatures={[feature]}
-			onItemChange={() => {}}
-		/>,
-	);
-
-	expect(html).toContain('aria-label="Dimension values"');
-	expect(html).toContain('aria-label="size small credit cost"');
-	expect(html).toContain('aria-label="size large credit cost"');
-	expect(html).not.toContain(">Add value<");
+	expect(html).toContain('aria-label="Dimension fields"');
+	expect(html).toContain(">size<");
+	expect(html).toContain(">region<");
+	expect(html).toContain('aria-label="size_large region"');
+	expect(html).toContain('aria-label="size_large_region_eu credit cost"');
+	expect(html).toContain("anything else");
+	expect(html).toContain(">Add rate<");
+	expect(html).not.toContain(">Feature A<");
 });

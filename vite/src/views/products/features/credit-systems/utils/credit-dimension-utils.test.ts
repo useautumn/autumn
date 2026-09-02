@@ -1,120 +1,80 @@
 import { expect, test } from "bun:test";
 import type { CreditSchemaItem } from "@autumn/shared";
 import {
-	isApiAuthored,
+	dimensionFields,
+	rateRules,
 	setRateKind,
-	toAdjustmentList,
-	toPriceList,
-	withAdjustmentList,
+	setRuleCell,
+	withFields,
 	withoutDimensions,
-	withPriceList,
+	withRateRules,
 } from "./creditDimensionUtils";
 
 const row: CreditSchemaItem = {
 	metered_feature_id: "cpu_minutes",
 	credit_amount: 1,
 	dimensions: {
-		size_small: { match: { size: "small" }, credit_amount: 1 },
 		size_large: { match: { size: "large" }, credit_amount: 16 },
+		size_large_region_eu: {
+			match: { size: "large", region: "eu" },
+			credit_amount: 20,
+		},
 	},
 	multipliers: {
 		lifecycle_spot: { match: { lifecycle: "spot" }, factor: 0.3 },
 	},
 };
 
-test("a single-property card reads as a price list and an adjustment list", () => {
-	expect(toPriceList(row)).toEqual({
-		property: "size",
-		rows: [
-			{
-				value: "small",
-				dimension: { match: { size: "small" }, credit_amount: 1 },
-			},
-			{
-				value: "large",
-				dimension: { match: { size: "large" }, credit_amount: 16 },
-			},
-		],
-	});
-	expect(toAdjustmentList(row)).toEqual({
-		property: "lifecycle",
-		rows: [
-			{
-				value: "spot",
-				multiplier: { match: { lifecycle: "spot" }, factor: 0.3 },
-			},
-		],
-	});
-	expect(isApiAuthored(row)).toBe(false);
+test("fields are the union of the rules' match keys", () => {
+	expect(dimensionFields(row)).toEqual(["size", "region"]);
+	expect(rateRules(row).map((rule) => rule.name)).toEqual([
+		"size_large",
+		"size_large_region_eu",
+	]);
 });
 
-test("multi-key or mixed-key rules are API-authored and never rewritten", () => {
-	const multiKey: CreditSchemaItem = {
-		...row,
-		dimensions: {
-			large_eu: {
-				match: { size: "large", region: "eu" },
-				credit_amount: 20,
-			},
-		},
-	};
-	const mixedKeys: CreditSchemaItem = {
-		...row,
-		dimensions: {
-			size_large: { match: { size: "large" }, credit_amount: 16 },
-			region_eu: { match: { region: "eu" }, credit_amount: 12 },
-		},
-	};
-
-	expect(toPriceList(multiKey)).toBeUndefined();
-	expect(isApiAuthored(multiKey)).toBe(true);
-	expect(isApiAuthored(mixedKeys)).toBe(true);
-});
-
-test("writing the price list names each rule from the property and value", () => {
-	const next = withPriceList({
-		item: { metered_feature_id: "cpu_minutes", credit_amount: 1 },
-		list: {
-			property: "size",
-			rows: [
-				{ value: "xl", dimension: { match: {}, credit_amount: 30 } },
-				{ value: "xl", dimension: { match: {}, credit_amount: 31 } },
-			],
-		},
+test("writing rules names each from its match and keeps multipliers", () => {
+	const next = withRateRules({
+		item: row,
+		rules: [
+			{ name: "", dimension: { match: { size: "xl" }, credit_amount: 30 } },
+			{ name: "", dimension: { match: { size: "xl" }, credit_amount: 31 } },
+		],
 	});
 
 	expect(next.dimensions).toEqual({
 		size_xl: { match: { size: "xl" }, credit_amount: 30 },
 		size_xl_2: { match: { size: "xl" }, credit_amount: 31 },
 	});
+	expect(next.multipliers).toEqual(row.multipliers);
 });
 
-test("renaming the property rewrites every rule's match", () => {
-	const list = toPriceList(row);
-	if (!list) throw new Error("expected a price list");
+test("removing a field strips it from every rule and drops rules left empty", () => {
+	const next = withFields({ item: row, fields: ["region"] });
 
-	const next = withPriceList({
-		item: row,
-		list: { ...list, property: "tier" },
+	expect(next.dimensions).toEqual({
+		region_eu: { match: { region: "eu" }, credit_amount: 20 },
 	});
-	expect(Object.values(next.dimensions ?? {}).map((d) => d.match)).toEqual([
-		{ tier: "small" },
-		{ tier: "large" },
-	]);
 });
 
-test("an empty list removes the key and the switch strips everything", () => {
+test("a blank cell means any value", () => {
+	const [rule] = rateRules(row);
 	expect(
-		withAdjustmentList({ item: row, list: { property: "lifecycle", rows: [] } })
-			.multipliers,
-	).toBeUndefined();
+		setRuleCell({ rule, field: "size", value: "" }).dimension.match,
+	).toEqual({});
+	expect(
+		setRuleCell({ rule, field: "region", value: "us" }).dimension.match,
+	).toEqual({ size: "large", region: "us" });
+});
+
+test("the switch strips everything", () => {
 	expect(withoutDimensions(row)).toEqual({
 		metered_feature_id: "cpu_minutes",
 		credit_amount: 1,
 	});
 });
 
-test("a value's rate switches between flat and tiered without losing its match", () => {
+test("a rate switches between flat and tiered without losing its match", () => {
 	const tiered = setRateKind({
 		dimension: { match: { size: "xl" }, credit_amount: 30 },
 		kind: "tiered",

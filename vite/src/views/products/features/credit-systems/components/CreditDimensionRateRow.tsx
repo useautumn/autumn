@@ -1,8 +1,10 @@
-import { GroupedTabButton } from "@autumn/ui";
+import { GroupedTabButton, IconButton, Input } from "@autumn/ui";
+import { TrashIcon } from "@phosphor-icons/react";
 import {
-	type CreditPriceListRow,
+	type CreditRateRule,
 	rateKindOf,
 	setRateKind,
+	setRuleCell,
 } from "../utils/creditDimensionUtils";
 import { CreditNumberInput } from "./CreditNumberInput";
 import { CreditTierRows } from "./CreditTierRows";
@@ -13,27 +15,38 @@ const RATE_KIND_OPTIONS = [
 ];
 
 interface CreditDimensionRateRowProps {
-	property: string;
-	row: CreditPriceListRow;
-	onChange: (row: CreditPriceListRow) => void;
+	fields: string[];
+	rule: CreditRateRule;
+	onChange: (rule: CreditRateRule) => void;
+	onRemove: () => void;
 }
 
-/** `value   costs [n] credits` — one line of the price list; tiered opens its ladder beneath. */
+/** One rate: a cell per field (blank = any), then its cost; tiered opens the ladder beneath. */
 export function CreditDimensionRateRow({
-	property,
-	row,
+	fields,
+	rule,
 	onChange,
+	onRemove,
 }: CreditDimensionRateRowProps) {
-	const { value, dimension } = row;
-	const label = `${property} ${value}`;
+	const { dimension } = rule;
+	const label = rule.name || "new rate";
 	const isTiered = dimension.tier_behavior === "graduated";
 
 	return (
 		<div className="flex flex-col gap-2">
 			<div className="flex items-center gap-2">
-				<span className="w-32 shrink-0 truncate text-sm" title={value}>
-					{value}
-				</span>
+				{fields.map((field) => (
+					<Input
+						key={field}
+						aria-label={`${label} ${field}`}
+						className="flex-1 min-w-20"
+						placeholder="any"
+						value={dimension.match[field] ?? ""}
+						onChange={(event) =>
+							onChange(setRuleCell({ rule, field, value: event.target.value }))
+						}
+					/>
+				))}
 				<span className="text-tertiary-foreground text-xs shrink-0">
 					{isTiered ? "tiered" : "costs"}
 				</span>
@@ -45,7 +58,10 @@ export function CreditDimensionRateRow({
 							placeholder="eg. 1"
 							value={dimension.credit_amount}
 							onValueChange={(credit_amount) =>
-								onChange({ ...row, dimension: { ...dimension, credit_amount } })
+								onChange({
+									...rule,
+									dimension: { ...dimension, credit_amount },
+								})
 							}
 						/>
 						<span className="text-tertiary-foreground text-xs">credits</span>
@@ -56,7 +72,7 @@ export function CreditDimensionRateRow({
 					value={rateKindOf(dimension)}
 					onValueChange={(kind) =>
 						onChange({
-							...row,
+							...rule,
 							dimension: setRateKind({
 								dimension,
 								kind: kind as "flat" | "tiered",
@@ -65,13 +81,21 @@ export function CreditDimensionRateRow({
 					}
 					options={RATE_KIND_OPTIONS}
 				/>
+				<IconButton
+					aria-label={`Remove ${label}`}
+					type="button"
+					variant="muted"
+					className="p-1 shrink-0 text-tertiary-foreground hover:text-red-500"
+					icon={<TrashIcon size={10} />}
+					onClick={onRemove}
+				/>
 			</div>
 
 			{dimension.tier_behavior === "graduated" && (
 				<div className="pl-4">
 					<CreditTierRows
 						item={dimension}
-						onChange={(next) => onChange({ ...row, dimension: next })}
+						onChange={(next) => onChange({ ...rule, dimension: next })}
 					/>
 				</div>
 			)}
