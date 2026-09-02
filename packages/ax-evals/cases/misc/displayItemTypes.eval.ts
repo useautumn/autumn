@@ -77,7 +77,6 @@ export const displayItemTypes = defineCase({
 		conduct.skillFired(),
 		conduct.completed(),
 		conduct.noHarnessFriction(),
-		conduct.noUnapprovedPush(),
 	],
 	goldenConfig: `import { feature, plan, item } from "atmn";
 

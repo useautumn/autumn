@@ -5,9 +5,11 @@ Use `atmn` when a project has or should have an `autumn.config.ts` source of tru
 Commands — these two, not `atmn preview` (that is an interactive UI):
 
 ```sh
-atmn --headless push          # preview: prints the plan/feature diff, writes nothing
-atmn --headless push --yes    # apply — only after the user explicitly approved pushing
+atmn --headless push          # validates, previews the diff — and applies when no decisions are needed
+atmn --headless push --yes    # apply, auto-confirming pending decisions
 ```
+
+`--headless push` without `--yes` only stops when the diff needs decisions (versioning, deletions, prod). On a clean target — a new org, a plain create — it validates and applies in one step, so treat running it as pushing, not as a dry run.
 
 ## When to use it
 

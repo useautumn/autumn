@@ -69,8 +69,12 @@ export const collectAgentEvent = ({
 							);
 				trace(label, `tool: ${block.name} ${detail}`);
 			}
+			// Accumulate: a turn can emit several text blocks (e.g. catalog then
+			// closing line); keeping only the last starves the user simulator.
 			if (block.type === "text" && block.text.trim()) {
-				result.finalText = block.text;
+				result.finalText = result.finalText
+					? `${result.finalText}\n\n${block.text}`
+					: block.text;
 			}
 		}
 		return;
@@ -80,6 +84,7 @@ export const collectAgentEvent = ({
 		result.turnTexts.push(result.finalText);
 		result.turns += 1;
 		result.costUsd = message.total_cost_usd;
+		result.finalText = "";
 		trace(
 			label,
 			`turn ${result.turns} done (${message.subtype}) — $${result.costUsd.toFixed(3)} total`,

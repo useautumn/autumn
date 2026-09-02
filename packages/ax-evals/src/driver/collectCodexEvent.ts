@@ -100,8 +100,11 @@ export const collectCodexEvent = ({
 	}
 
 	if (event.type === "item.completed" && item) {
+		// Accumulate: codex emits several agent_message items per turn.
 		if (item.type === "agent_message" && item.text?.trim()) {
-			result.finalText = item.text;
+			result.finalText = result.finalText
+				? `${result.finalText}\n\n${item.text}`
+				: item.text;
 			return {};
 		}
 		if (item.type === "file_change") {

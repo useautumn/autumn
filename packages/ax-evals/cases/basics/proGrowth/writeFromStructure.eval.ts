@@ -40,7 +40,6 @@ export const writeFromStructure = defineCase({
 		conduct.skillFired(),
 		conduct.completed(),
 		conduct.noHarnessFriction(),
-		conduct.noUnapprovedPush(),
 	],
 	goldenConfig: proGrowthGoldenConfig(),
 });

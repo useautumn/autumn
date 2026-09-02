@@ -421,7 +421,7 @@ Metered volume variant:
   ```json
   { "feature_id": "AI_CREDITS", "included": 10000, "reset": { "interval": "month" }, "pooled": true, "price": null }
   ```
-  On a plan attached per entity (deployment, workspace): each entity's 10k joins one shared customer balance that any entity — or the customer directly — can spend. Without `pooled`, each entity keeps its own separate balance.
+  On a plan attached per entity (workspace, project): each entity's 10k joins one shared customer balance that any entity — or the customer directly — can spend. Without `pooled`, each entity keeps its own separate balance.
 
 ## Advanced
 
@@ -429,7 +429,7 @@ Metered volume variant:
 - For paid consumable items, `price.interval` determines both the billing cycle and the reset cycle.
 - `proration`: mainly relevant to prepaid quantity changes, especially non-consumable or seat-like items.
 - `max_purchase`: less common cap on purchasable units; customer billing controls are often used for spend or purchase limits.
-- `pooled`: on entity-attached plans, the item's grant joins one shared customer balance instead of a per-entity one. Rollovers on the contributing item carry into the pool. Customer-level purchases (credit packs, overage — usually an add-on plan) stack beside the pool and are spendable by all entities. A per-entity cap on a pooled balance is a usage limit (billing control), not a separate balance. Not writable in `autumn.config.ts` yet — set via API or dashboard. Not allowed on license plans.
+- `pooled`: on entity-attached plans, the item's grant joins one shared customer balance instead of a per-entity one (`pooled: true` on the item, in config and API alike). Rollovers on the contributing item carry into the pool. Customer-level purchases (credit packs, overage — often an add-on plan) stack beside the pool and are spendable by all entities. A per-entity cap on a pooled balance is a usage limit (billing control), not a separate balance. Not allowed on license plans.
 - `entity_feature_id`: legacy/deprecated per-entity balance scoping; prefer entity-scoped plan attachments. Never mention it unless the user's config already has it.
 - Auto top-ups require a one-off prepaid item for the feature; customer billing controls configure threshold and quantity.
 - Balances can carry an `expires_at`; expired balances stop counting. Tracked usage can also be windowed (UTC usage windows) for time-boxed caps.

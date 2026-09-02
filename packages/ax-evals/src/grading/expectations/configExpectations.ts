@@ -78,6 +78,105 @@ export const config = {
 		},
 	}),
 
+	/** non-add-on plans form exactly `count` groups (names are the agent's
+	 * choice), each with one free auto-enabled default. Catches merging
+	 * independent product lines into one lineup. */
+	planGroups: ({ count }: { count: number }): Expectation => {
+		const name = `plans form ${count} groups, each with a free default`;
+		return {
+			name,
+			kind: "config",
+			score: (output) => {
+				const basePlans = output.config.plans.filter((plan) => !plan.add_on);
+				const groups = new Map<string, ApiPlanParams[]>();
+				for (const plan of basePlans) {
+					const key = plan.group ?? "";
+					groups.set(key, [...(groups.get(key) ?? []), plan]);
+				}
+				if (groups.size !== count) {
+					return {
+						name,
+						score: 0,
+						metadata: {
+							why: `expected ${count} plan groups among non-add-on plans, found ${groups.size}`,
+							groupsFound: [...groups.keys()],
+						},
+					};
+				}
+				const groupsMissingDefault = [...groups.entries()]
+					.filter(
+						([, plans]) =>
+							!plans.some(
+								(plan) => plan.price === undefined && plan.auto_enable === true,
+							),
+					)
+					.map(([key]) => key || "(no group)");
+				return {
+					name,
+					score: groupsMissingDefault.length === 0 ? 1 : 0,
+					metadata:
+						groupsMissingDefault.length === 0
+							? undefined
+							: {
+									why: "a group has no free auto-enabled default plan",
+									groupsMissingDefault,
+								},
+				};
+			},
+		};
+	},
+
+	/** at least `count` plans were written as `.variant()` of a base plan —
+	 * catches sibling tiers copy-pasted as standalone plan() declarations */
+	definedAsVariants: ({ count }: { count: number }): Expectation => {
+		const name = `at least ${count} plans defined as variants`;
+		return {
+			name,
+			kind: "config",
+			score: (output) => {
+				const variantIds = output.config.variantPlanIds ?? [];
+				return {
+					name,
+					score: variantIds.length >= count ? 1 : 0,
+					metadata:
+						variantIds.length >= count
+							? { variantIds }
+							: {
+									why: `expected at least ${count} .variant() plans, found ${variantIds.length}`,
+									variantIds,
+								},
+				};
+			},
+		};
+	},
+
+	/** exactly one plan is handed out as a license across the catalog —
+	 * catches minting a seat plan per tier instead of reusing one */
+	oneLicensePlan: (): Expectation => ({
+		name: "exactly one license plan, reused across plans",
+		kind: "config",
+		score: (output) => {
+			const referencedIds = new Set(
+				output.config.plans.flatMap((plan) =>
+					(plan.licenses ?? []).map((license) => license.license_plan_id),
+				),
+			);
+			const why =
+				referencedIds.size === 0
+					? "no plan hands out licenses — seats were not modeled as a license plan"
+					: referencedIds.size > 1
+						? "several different license plans exist; tiers should reuse one seat plan"
+						: undefined;
+			return {
+				name: "exactly one license plan, reused across plans",
+				score: referencedIds.size === 1 ? 1 : 0,
+				metadata: why
+					? { why, referencedIds: [...referencedIds] }
+					: { referencedIds: [...referencedIds] },
+			};
+		},
+	}),
+
 	/** prepaid purchases live only on add-on plans — a prepaid-priced item on a
 	 * base plan means packs were wrongly duplicated into the subscriptions */
 	noPrepaidOnBasePlans: (): Expectation => ({

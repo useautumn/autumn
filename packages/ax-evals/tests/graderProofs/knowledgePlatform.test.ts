@@ -23,9 +23,7 @@ test("one-shot: golden config passes every config verdict", async () => {
 		"has plan: pro monthly 5000 credits": 1,
 		"has plan: growth annual with monthly credit reset": 1,
 		"has plan: credit packs as separate prepaid add-on": 1,
-		"has plan: overage priced somewhere": 1,
 		"has feature: ai credits (credit system)": 1,
-		"modeled exactly 5 plans": 1,
 		"base plans carry no prepaid items": 1,
 	});
 });
@@ -38,9 +36,7 @@ test("one-shot: empty workspace fails every config verdict", async () => {
 		"has plan: pro monthly 5000 credits": 0,
 		"has plan: growth annual with monthly credit reset": 0,
 		"has plan: credit packs as separate prepaid add-on": 0,
-		"has plan: overage priced somewhere": 0,
 		"has feature: ai credits (credit system)": 0,
-		"modeled exactly 5 plans": 0,
 		"base plans carry no prepaid items": 0,
 	});
 });
@@ -64,6 +60,22 @@ test("ask-annual-reset: golden passes, empty fails", async () => {
 		"has plan: growth annual with monthly credit reset": 0,
 		"base plans carry no prepaid items": 0,
 	});
+});
+
+test("one-shot: golden WITHOUT pooled fails the base-plan verdicts", async () => {
+	const unpooled = knowledgePlatformGoldenConfig().replaceAll(
+		"\t\tpooled: true,\n",
+		"",
+	);
+	expect(unpooled).not.toContain("pooled");
+	const scores = await scoreConfigExpectations({
+		axCase: oneShot,
+		configFile: unpooled,
+	});
+
+	expect(scores["has plan: pro monthly 5000 credits"]).toBe(0);
+	expect(scores["has plan: growth annual with monthly credit reset"]).toBe(0);
+	expect(scores["config parses and passes validation"]).toBe(1);
 });
 
 test("ask-annual-reset: annual reset pattern-matched to yearly fails the annual plan verdict", async () => {
@@ -104,7 +116,6 @@ test("seed-packs-fork: golden config passes every config verdict", async () => {
 		"has plan: existing pro untouched": 1,
 		"has plan: existing growth annual untouched": 1,
 		"has plan: credit packs as separate prepaid add-on": 1,
-		"modeled exactly 5 plans": 1,
 		"base plans carry no prepaid items": 1,
 	});
 });
@@ -120,7 +131,6 @@ test("seed-packs-fork: the seeded base config alone fails the pack verdicts", as
 		"has plan: existing pro untouched": 1,
 		"has plan: existing growth annual untouched": 1,
 		"has plan: credit packs as separate prepaid add-on": 0,
-		"modeled exactly 5 plans": 0,
 		"base plans carry no prepaid items": 1,
 	});
 });

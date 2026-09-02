@@ -2,21 +2,22 @@
 
 ## The trap: putting shared purchases on the plan
 
-*"Pro is $200/mo per deployment and includes 10k credits. Teams can also buy credit packs — shared across all deployments."*
+*"Growth is $99/mo per project and includes 20k tokens. Teams can also buy token packs — shared across all their projects."*
 
-Tempting (wrong): put the prepaid pack and overage items on the pro plan. It type-checks, it pushes. It breaks the first time a team buys a pack: the credits land on ONE deployment's balance instead of being usable by all of them.
+Tempting (wrong): put the prepaid pack items on the growth plan. It type-checks, it pushes. It breaks the first time a team buys a pack: the tokens land on ONE project's balance instead of being usable by all of them.
 
 Right — split by who owns what:
 
 ```
-deployment A gets 10k ┐
-deployment B gets 10k ├──►  one shared org balance  ◄── credit-pack add-on (org level)
-deployment C gets 10k ┘          ▲
-                                 └── any deployment's usage draws from here
+project A gets 20k + overage ┐
+project B gets 20k + overage ├──►  one shared customer balance  ◄── token-pack add-on (customer level)
+project C gets 20k + overage ┘          ▲
+                                        └── any project's usage draws from here
 ```
 
-- The plan's allowance (10k per deployment): pooled — each deployment's grant joins the shared org balance.
-- The purchases (packs, overage): an org-level add-on plan. Bought once, usable everywhere.
+- The plan's allowance (20k per project): pooled — each project's grant joins the shared customer balance (`pooled: true` on the item).
+- Purchases the whole team shares (packs): here a customer-level add-on plan, because every plan is entity-attached — no customer-level plan exists to carry the item. The full plan-item-vs-add-on decision is the add-on fork's.
+- Overage ($/token past the allowance): usually an item on each project's plan even when the balance is pooled, because that breaks extra usage down per entity. Two items on the plan: the pooled grant carries no price, and a separate usage-priced item (`included: 0`) carries the overage — a pooled item can't itself be usage-priced.
 
 ## Deciding
 

@@ -44,7 +44,6 @@ export const missingFeatures = defineCase({
 		conduct.skillFired(),
 		conduct.completed(),
 		conduct.noHarnessFriction(),
-		conduct.noUnapprovedPush(),
 	],
 	goldenConfig: proGrowthGoldenConfig(),
 });

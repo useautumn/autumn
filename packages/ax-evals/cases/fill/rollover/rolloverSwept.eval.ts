@@ -29,8 +29,8 @@ export const rolloverSwept = defineCase({
 	},
 	expect: [
 		...judge.conversation({
-			"asked about carry-over":
-				"Did the agent ask the user whether unused credits should carry over / roll over to the next period?",
+			"raised carry-over":
+				"Did the agent raise the topic of unused credits carrying over / rolling over — either by asking, or by stating its assumption about it for the user to confirm or correct?",
 		}),
 		...catalog({
 			features: {

@@ -52,4 +52,6 @@ export const PLUGIN_NAME = "autumn";
  * AX_EVALS_KEEP    "1" keeps a case workspace on disk for debugging
  * AX_EVALS_USE_API_KEY  "1" bills the API key instead of subscription auth
  * AX_EVALS_AGENT   overrides the pinned AGENT for one run (see above)
- * AX_EVALS_ARM     comma-separated arms to run; unset = all (local run.sh sets with) */
+ * AX_EVALS_ARM     comma-separated arms to run; unset = all (local run.sh sets with)
+ * AX_EVALS_COMPACT "1" = one line per turn + failures-only scorecard, for
+ *                  parallel multi-file runs (bun e sets it automatically) */

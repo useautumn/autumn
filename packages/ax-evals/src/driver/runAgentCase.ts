@@ -9,6 +9,7 @@ import type { TurnSource } from "../simulator/types/turnSource.ts";
 import { buildCaseEnv } from "./caseEnv.ts";
 import { collectAgentEvent } from "./collectAgentEvent.ts";
 import { isOpenRouterModel, openRouterAgentEnv } from "./openRouterRouting.ts";
+import { renderCompactTurn } from "./renderCompact.ts";
 import { createLiveChat, type LiveChat } from "./renderLiveChat.ts";
 import { renderRunFooter, renderTurnBlock } from "./renderTurnBlock.ts";
 import { shortText, trace } from "./trace.ts";
@@ -61,7 +62,7 @@ export const runAgentCase = async ({
 	skillIds?: string[];
 	maxTurns?: number;
 	timeoutMs?: number;
-	renderMode?: "chat" | "blocks";
+	renderMode?: "chat" | "blocks" | "compact";
 	/** extra system-prompt context, e.g. a scenario primer */
 	systemPromptAppend?: string;
 	/** run-scoped env for the agent, e.g. ATMN_BACKEND_URL */
@@ -95,6 +96,7 @@ export const runAgentCase = async ({
 			? createLiveChat({ arm: label, workspaceDir: cwd })
 			: undefined;
 	const renderBlocks = rendering === "blocks";
+	const renderCompact = rendering === "compact";
 
 	// The generator drains this queue; the message loop decides when to
 	// enqueue the next turn (on each result) and breaks when the source is dry.
@@ -192,6 +194,18 @@ export const runAgentCase = async ({
 					workspaceDir: cwd,
 				}),
 			);
+		} else if (renderCompact) {
+			process.stderr.write(
+				renderCompactTurn({
+					arm: label,
+					turnIndex,
+					subtype,
+					turnMs: Date.now() - turnStartedAt,
+					toolUses: turn.toolUses,
+					agentText: turn.agentText,
+					workspaceDir: cwd,
+				}),
+			);
 		}
 		onTurn?.(turn);
 		turnStartedAt = Date.now();
@@ -229,7 +243,10 @@ export const runAgentCase = async ({
 			}
 		}
 		if (message.type === "result") {
-			chat?.agentText(result.finalText);
+			// collectAgentEvent already pushed the turn's text and cleared the
+			// accumulator, so read the completed turn from turnTexts.
+			const turnText = result.turnTexts[result.turns - 1] ?? "";
+			chat?.agentText(turnText);
 			chat?.turnDone({
 				turnIndex: result.turns - 1,
 				subtype: message.subtype,
@@ -237,14 +254,14 @@ export const runAgentCase = async ({
 				turnCostUsd: result.costUsd - turnStartCostUsd,
 			});
 			finishTurn(message.subtype);
-			if (AUTH_FAILURE_REPLY.test(result.finalText)) {
+			if (AUTH_FAILURE_REPLY.test(turnText)) {
 				throw new Error(
-					`Claude Code auth failed — run \`claude /login\` to refresh subscription auth, or set AX_EVALS_USE_API_KEY=1. Agent said: ${result.finalText}`,
+					`Claude Code auth failed — run \`claude /login\` to refresh subscription auth, or set AX_EVALS_USE_API_KEY=1. Agent said: ${turnText}`,
 				);
 			}
 			const nextText =
 				sentTexts.length < turnSource.maxUserTurns
-					? await turnSource.next(result.finalText)
+					? await turnSource.next(turnText)
 					: null;
 			if (nextText === null) break;
 			enqueueTurn(nextText);
@@ -253,6 +270,7 @@ export const runAgentCase = async ({
 
 	result.wallMs = Date.now() - started;
 	result.userTexts = sentTexts;
+	result.finalText = result.turnTexts[result.turns - 1] ?? "";
 	if (chat) {
 		chat.footer({
 			turns: result.turns,
