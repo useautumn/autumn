@@ -1,10 +1,16 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { type ClientOperation, emitClientModule } from "./emit/emitClient";
 import { emitFeaturesModule } from "./emit/emitFeatures";
 import { emitWireModule } from "./emit/emitWire";
 import { wirePathHints } from "./emit/freeFormPaths";
-import { OVERLAY } from "./overlay/overlay";
-import { collectionItemSchema, loadSpec } from "./spec/loadSpec";
+import { OVERLAY, OVERLAY as OVERLAY_FOR_CLIENT } from "./overlay/overlay";
+import {
+	collectionItemSchema,
+	loadSpec,
+	responseSchema,
+	serverBaseUrl,
+} from "./spec/loadSpec";
 
 const OUTPUT_DIR = join(import.meta.dir, "../../atmn-nightly/src/generated");
 const REPO_ROOT = join(import.meta.dir, "../../..");
@@ -63,6 +69,39 @@ export const generate = async (): Promise<string[]> => {
 		"utf8",
 	);
 	written.push(wirePath);
+
+	const operations: ClientOperation[] = (
+		[
+			[
+				"previewUpdate",
+				"/v1/catalogV2.preview_update",
+				"PreviewUpdateCatalogResponse",
+			],
+			["update", "/v1/catalogV2.update", "UpdateCatalogResponse"],
+			["get", "/v1/catalogV2.get", "GetCatalogResponse"],
+		] as const
+	).map(([name, path, responseTypeName]) => {
+		const schema = responseSchema({ spec, path });
+		return {
+			name,
+			path,
+			responseTypeName,
+			responseSchema: schema,
+			responseHints: wirePathHints({ schema, root: spec as never }),
+		};
+	});
+
+	const clientPath = join(OUTPUT_DIR, "client.ts");
+	writeFileSync(
+		clientPath,
+		emitClientModule({
+			baseUrl: serverBaseUrl({ spec }),
+			operations,
+			overlay: OVERLAY_FOR_CLIENT,
+		}),
+		"utf8",
+	);
+	written.push(clientPath);
 
 	await formatWithBiome({ paths: written });
 	return written;

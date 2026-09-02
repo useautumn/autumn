@@ -17,14 +17,21 @@ const isOperatorKey = (key: string): boolean => key.startsWith("$");
 const toSnakeCase = (key: string): string =>
 	isOperatorKey(key) ? key : key.replace(/[A-Z]/g, (c) => \`_\${c.toLowerCase()}\`);
 
-type PathHints = { recordPaths: Set<string>; frozenPaths: Set<string> };
+const toCamelCase = (key: string): string =>
+	isOperatorKey(key)
+		? key
+		: key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+
+export type PathHints = { recordPaths: Set<string>; frozenPaths: Set<string> };
+
+export type WireDocument = Record<string, unknown>;
 
 /**
  * Fixture (camelCase) -> wire (snake_case), stopping where the spec says the
  * data stops being ours. Array indices are elided from the path, so one hint
  * covers every element.
  */
-const toWire = ({
+export const toWire = ({
 	value,
 	path,
 	hints,
@@ -60,7 +67,53 @@ const toWire = ({
 	);
 };
 
-const hintsOf = (hints: {
+/**
+ * Wire (snake_case) -> fixture (camelCase), for responses. Hints are recorded
+ * in FIXTURE terms, so the path is built from the recased key.
+ */
+export const toFixture = ({
+	value,
+	path,
+	hints,
+}: {
+	value: unknown;
+	path: string;
+	hints: PathHints;
+}): unknown => {
+	if (hints.frozenPaths.has(path)) return value;
+
+	if (Array.isArray(value)) {
+		return value.map((entry) => toFixture({ value: entry, path, hints }));
+	}
+	if (value === null || typeof value !== "object") return value;
+
+	const source = value as Record<string, unknown>;
+
+	if (hints.recordPaths.has(path)) {
+		return Object.fromEntries(
+			Object.entries(source).map(([key, entry]) => [
+				key,
+				toFixture({ value: entry, path: \`\${path}.*\`, hints }),
+			]),
+		);
+	}
+
+	return Object.fromEntries(
+		Object.entries(source).map(([key, entry]) => {
+			const name = toCamelCase(key);
+			return [
+				name,
+				toFixture({
+					value: entry,
+					path: path ? \`\${path}.\${name}\` : name,
+					hints,
+				}),
+			];
+		}),
+	);
+};
+
+export const hintsOf = (hints: {
 	recordPaths: readonly string[];
 	frozenPaths: readonly string[];
 }): PathHints => ({
@@ -102,8 +155,6 @@ export type AtmnConfig = {
 	 * "I manage features and there are none", omitted would mean "not mine". */
 	features: Feature[];
 };
-
-export type WireDocument = Record<string, unknown>;
 
 export const atmn = (config: AtmnConfig): WireDocument => ({
 	features: config.features.map(
