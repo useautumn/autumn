@@ -40,6 +40,8 @@ export const handleUpdateSubscriptionErrors = async ({
 	handleExternalPSPErrors({
 		customerProduct,
 		action: "update",
+		cancelAction: params.cancel_action,
+		noBillingChanges: params.no_billing_changes,
 	});
 
 	// 1. Current customer product errors

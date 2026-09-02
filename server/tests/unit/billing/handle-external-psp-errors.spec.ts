@@ -2,7 +2,9 @@
  * Unit tests for handleExternalPSPErrors (V2 attach + update gate).
  *
  * Key invariants:
- *   - On `update`, fail when the targeted cusProduct is RC-managed.
+ *   - On `update`, fail when the targeted cusProduct is RC-managed — except
+ *     an autumn-only cancel (cancel_action + no_billing_changes), which never
+ *     touches Stripe and so cannot conflict with the external subscription.
  *   - On `attach`, scan ALL customer_products for non-Stripe processors.
  *   - On `attach`, bypass ONLY when attaching a true one-off (every price has
  *     interval === OneOff). Recurring add-ons take the strict path.
@@ -146,6 +148,44 @@ describe(
 
 		test("does not throw when no cusProduct is provided", () => {
 			expect(() => handleExternalPSPErrors({ action: "update" })).not.toThrow();
+		});
+
+		test("BYPASS: autumn-only cancel (cancel_action + no_billing_changes) on an RC-managed cusProduct", () => {
+			const cp = buildRcCusProduct();
+			expect(() =>
+				handleExternalPSPErrors({
+					customerProduct: cp,
+					action: "update",
+					cancelAction: "cancel_end_of_cycle",
+					noBillingChanges: true,
+				}),
+			).not.toThrow();
+		});
+
+		test("THROWS: cancel_action without no_billing_changes on an RC-managed cusProduct", () => {
+			const cp = buildRcCusProduct();
+			expectThrows(
+				() =>
+					handleExternalPSPErrors({
+						customerProduct: cp,
+						action: "update",
+						cancelAction: "cancel_immediately",
+					}),
+				"managed by RevenueCat",
+			);
+		});
+
+		test("THROWS: no_billing_changes without cancel_action on an RC-managed cusProduct", () => {
+			const cp = buildRcCusProduct();
+			expectThrows(
+				() =>
+					handleExternalPSPErrors({
+						customerProduct: cp,
+						action: "update",
+						noBillingChanges: true,
+					}),
+				"managed by RevenueCat",
+			);
 		});
 	},
 );

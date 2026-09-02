@@ -1,4 +1,5 @@
 import {
+	type CancelAction,
 	cusProductToProcessorType,
 	type FullCusProduct,
 	type FullProduct,
@@ -33,6 +34,8 @@ export const handleExternalPSPErrors = ({
 	customerProducts,
 	attachProduct,
 	action,
+	cancelAction,
+	noBillingChanges,
 }: {
 	/** For `update`: the specific customer product being modified. */
 	customerProduct?: FullCusProduct;
@@ -41,9 +44,17 @@ export const handleExternalPSPErrors = ({
 	/** For `attach`: the product being attached. */
 	attachProduct?: FullProduct;
 	action: "attach" | "update";
+	/** For `update`: the request's cancel_action, if any. */
+	cancelAction?: CancelAction;
+	/** For `update`: the request's no_billing_changes flag. */
+	noBillingChanges?: boolean;
 }) => {
 	if (action === "update") {
 		if (!customerProduct) return;
+
+		// Autumn-only cancel: no Stripe write happens, so it cannot conflict
+		// with the external subscription.
+		if (cancelAction && noBillingChanges === true) return;
 
 		const processorType = cusProductToProcessorType(customerProduct);
 		if (processorType === ProcessorType.RevenueCat) {
