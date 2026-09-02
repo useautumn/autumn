@@ -1,28 +1,81 @@
 import { z } from "zod/v4";
 import { FeatureUsageType } from "../featureEnums.js";
 
-const CreditSchemaItemBaseSchema = z.object({
-	metered_feature_id: z.string(),
-	feature_amount: z.number().optional(),
-});
-
 export const CreditTierSchema = z.object({
 	to: z.union([z.number(), z.literal("inf")]),
 	credit_amount: z.number(),
 });
 
-export const FlatCreditSchemaItemSchema = CreditSchemaItemBaseSchema.extend({
+const flatCreditRateShape = {
 	credit_amount: z.number(),
 	tier_behavior: z.never().optional(),
 	tiers: z.never().optional(),
+};
+
+const graduatedCreditRateShape = {
+	credit_amount: z.never().optional(),
+	tier_behavior: z.literal("graduated"),
+	tiers: z.array(CreditTierSchema),
+};
+
+// Event property values are compared as strings at track time.
+const CreditMatchSchema = z.record(
+	z.string(),
+	z.union([z.string(), z.number(), z.boolean()]).transform(String),
+);
+
+const CreditDimensionBaseSchema = z.object({
+	match: CreditMatchSchema,
+	priority: z.number().int().optional(),
 });
 
-export const GraduatedCreditSchemaItemSchema =
-	CreditSchemaItemBaseSchema.extend({
-		credit_amount: z.never().optional(),
-		tier_behavior: z.literal("graduated"),
-		tiers: z.array(CreditTierSchema),
+export const CreditDimensionSchema = z.union([
+	CreditDimensionBaseSchema.extend(flatCreditRateShape),
+	CreditDimensionBaseSchema.extend(graduatedCreditRateShape),
+]);
+
+export const CreditMultiplierSchema = z
+	.object({
+		match: CreditMatchSchema,
+		factor: z.number().positive().optional(),
+		add: z.number().optional(),
+	})
+	.refine(
+		(multiplier) =>
+			multiplier.factor !== undefined || multiplier.add !== undefined,
+		{
+			message: "A multiplier needs a factor or an add",
+		},
+	);
+
+export const USAGE_ATTRIBUTION_DIMENSION_SEPARATOR = "::";
+export const CREDIT_DIMENSION_NAME_MAX_LENGTH = 64;
+
+// Dimension names become usage-attribution keys, so they must stay parseable.
+const CreditDimensionNameSchema = z
+	.string()
+	.min(1)
+	.max(CREDIT_DIMENSION_NAME_MAX_LENGTH)
+	.refine((name) => !name.includes(USAGE_ATTRIBUTION_DIMENSION_SEPARATOR), {
+		message: `Dimension names cannot contain "${USAGE_ATTRIBUTION_DIMENSION_SEPARATOR}"`,
 	});
+
+const CreditSchemaItemBaseSchema = z.object({
+	metered_feature_id: z.string(),
+	feature_amount: z.number().optional(),
+	dimensions: z
+		.record(CreditDimensionNameSchema, CreditDimensionSchema)
+		.optional(),
+	multipliers: z
+		.record(CreditDimensionNameSchema, CreditMultiplierSchema)
+		.optional(),
+});
+
+export const FlatCreditSchemaItemSchema =
+	CreditSchemaItemBaseSchema.extend(flatCreditRateShape);
+
+export const GraduatedCreditSchemaItemSchema =
+	CreditSchemaItemBaseSchema.extend(graduatedCreditRateShape);
 
 export const CreditSchemaItemSchema = z.union([
 	FlatCreditSchemaItemSchema,
@@ -73,6 +126,8 @@ export const ModelMarkupsSchema = z
 export type CreditSystemConfig = z.infer<typeof CreditSystemConfigSchema>;
 export type FeatureConfigOverride = z.infer<typeof FeatureConfigOverrideSchema>;
 export type CreditSchemaItem = z.infer<typeof CreditSchemaItemSchema>;
+export type CreditDimension = z.infer<typeof CreditDimensionSchema>;
+export type CreditMultiplier = z.infer<typeof CreditMultiplierSchema>;
 export type CreditTier = z.infer<typeof CreditTierSchema>;
 export type ModelMarkups = z.infer<typeof ModelMarkupsSchema>;
 export type ProviderMarkups = z.infer<typeof ProviderMarkupsSchema>;

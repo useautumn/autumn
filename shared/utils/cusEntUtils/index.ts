@@ -62,3 +62,5 @@ export * from "./overageUtils/cusEntToInvoiceOverage";
 export * from "./overageUtils/cusEntToInvoiceUsage";
 export * from "./overageUtils/cusEntToOptions";
 export * from "./sortCusEntsForDeduction";
+export * from "./usageAttribution/buildUsageAttributionKey";
+export * from "./usageAttribution/parseUsageAttributionKey";
