@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import { query, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import {
 	AGENT_ALLOWED_TOOLS,
@@ -7,12 +6,22 @@ import {
 	DEFAULT_TIMEOUT_MS,
 } from "../axConstants.ts";
 import type { TurnSource } from "../simulator/types/turnSource.ts";
+import { buildCaseEnv } from "./caseEnv.ts";
 import { collectAgentEvent } from "./collectAgentEvent.ts";
+import {
+	isOpenRouterModel,
+	openRouterAgentEnv,
+} from "./openRouterRouting.ts";
 import { createLiveChat, type LiveChat } from "./renderLiveChat.ts";
 import { renderRunFooter, renderTurnBlock } from "./renderTurnBlock.ts";
 import { shortText, trace } from "./trace.ts";
 import type { AgentRunResult } from "./types/agentRunResult.ts";
 import type { ToolUse } from "./types/toolUse.ts";
+
+// SDK auth failures arrive as instant agent "replies"; without this the
+// simulator chats with a dead session for the whole run.
+const AUTH_FAILURE_REPLY =
+	/failed to authenticate|oauth.+(expired|revoked)|could not be refreshed/i;
 
 export type CompletedTurn = {
 	index: number;
@@ -62,20 +71,12 @@ export const runAgentCase = async ({
 	extraEnv?: Record<string, string>;
 	onTurn?: (turn: CompletedTurn) => void;
 }): Promise<AgentRunResult> => {
-	const env: Record<string, string | undefined> = {
-		...process.env,
-		...extraEnv,
-		CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
-		// Bare `atmn` resolves like it would after npm install: through the
-		// workspace's own .bin, exactly as after a real npm install.
-		PATH: `${join(cwd, "node_modules/.bin")}:${process.env.PATH ?? ""}`,
-	};
-	if (process.env.AX_EVALS_USE_API_KEY !== "1") delete env.ANTHROPIC_API_KEY;
-	// Infisical injects a host AUTUMN_SECRET_KEY that is not in this
-	// worktree's DB. atmn prefers process.env over the workspace .env, so
-	// drop it — the per-run key in cwd/.env is the one that authenticates.
-	delete env.AUTUMN_SECRET_KEY;
-	delete env.AUTUMN_PROD_SECRET_KEY;
+	const routed = isOpenRouterModel(AGENT_MODEL);
+	const env = buildCaseEnv({ cwd, extraEnv });
+	env.CLAUDE_CODE_DISABLE_AUTO_MEMORY = "1";
+	if (routed) Object.assign(env, openRouterAgentEnv());
+	else if (process.env.AX_EVALS_USE_API_KEY !== "1")
+		delete env.ANTHROPIC_API_KEY;
 
 	const result: AgentRunResult = {
 		toolUses: [],
@@ -239,6 +240,11 @@ export const runAgentCase = async ({
 				turnCostUsd: result.costUsd - turnStartCostUsd,
 			});
 			finishTurn(message.subtype);
+			if (AUTH_FAILURE_REPLY.test(result.finalText)) {
+				throw new Error(
+					`Claude Code auth failed — run \`claude /login\` to refresh subscription auth, or set AX_EVALS_USE_API_KEY=1. Agent said: ${result.finalText}`,
+				);
+			}
 			const nextText =
 				sentTexts.length < turnSource.maxUserTurns
 					? await turnSource.next(result.finalText)

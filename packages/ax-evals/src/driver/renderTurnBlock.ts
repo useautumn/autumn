@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import { describeToolUse, isKeyToolUse } from "./describeToolUse.ts";
+import { describeAuthSource } from "./openRouterRouting.ts";
 import type { ToolUse } from "./types/toolUse.ts";
 
 const SHOWN_TOOL_LINES = 4;
@@ -77,10 +78,10 @@ export const renderTurnBlock = ({
 				: skillLoaded
 					? chalk.green("skills loaded ✓")
 					: chalk.red("⚠ SKILLS NOT LOADED");
-		const auth =
-			authSource === "none"
-				? chalk.dim("subscription auth")
-				: chalk.red(`⚠ API KEY (${authSource ?? "unknown"})`);
+		const authLabel = describeAuthSource({ authSource, model });
+		const auth = authLabel.unexpected
+			? chalk.red(authLabel.text)
+			: chalk.dim(authLabel.text);
 		const modelNote = model ? ` · ${chalk.dim(model)}` : "";
 		block += `\n┌─ ${color.bold(arm)} · ${skillNote} · ${auth}${modelNote} ${chalk.dim("─".repeat(6))}\n`;
 	}

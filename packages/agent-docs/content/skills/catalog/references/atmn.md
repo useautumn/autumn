@@ -2,6 +2,13 @@
 
 Use `atmn` when a project has or should have an `autumn.config.ts` source of truth.
 
+Commands — these two, not `atmn preview` (that is an interactive UI):
+
+```sh
+atmn --headless push          # preview: prints the plan/feature diff, writes nothing
+atmn --headless push --yes    # apply — only after the user explicitly approved pushing
+```
+
 ## When to use it
 
 - New project: ask whether to use `atmn` to build and push the catalog. Recommend it for code-managed catalogs.

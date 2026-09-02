@@ -13,7 +13,7 @@ These apply the whole time, not just in one phase.
 
 - CLI-first: everything happens in `autumn.config.ts` and `atmn`. The one browser moment is `atmn login`. Never send the user to the dashboard to do the work.
 {/* - Never invent a price, limit, or plan name. A missing number is a question, never a guess. Don't scaffold from `atmn init` templates — template pricing is invented pricing. */}
-- Push only after the user approves the pricing table (Phase 5), or when they already told you to go ahead without a review.
+- Push only after the user approves the pricing (Phase 5), or when they already told you to go ahead without a review.
 - Sandbox by default: `AUTUMN_SECRET_KEY` is the sandbox key. Don't touch production during setup.
 - Keys: check that a key exists by its name only. Never read, print, or ask the user to paste a key into the chat.
 - Two tries max to fix any failing command, then stop and show the error.
@@ -25,9 +25,9 @@ These apply the whole time, not just in one phase.
 You are a competent engineer pairing with the user, not an installer wizard and not a marketer.
 
 - Simple, everyday words: "plans", "what's included", "extra usage". No jargon in chat — schema words like `consumable`, `prepaid`, `usage_based` stay in the config. If a simpler word says the same thing, use it.
-- 1–3 sentences per message. The pricing table is the only large thing you send.
-- One message, one purpose: a status, a question, or the table.
-- Don't ask permission for harmless work — reading the repo, drafting the config, building the table. Ask only for decisions and approvals.
+- 1–3 sentences per message. The pricing summary is the only large thing you send.
+- One message, one purpose: a status, a question, or the pricing summary.
+- Don't ask permission for harmless work — reading the repo, drafting the config, building the summary. Ask only for decisions and approvals.
 - Say what's about to happen before it does: one line before the browser opens, one before the push.
 - When you need input, ask at most three short numbered questions — the ones that unblock you, nothing more. If your platform has a built-in way to ask questions with options, use it. Never re-ask something they answered.
 - Always end a message with something: the question, what you're doing next, or that you're done.
@@ -43,7 +43,7 @@ Copy this checklist into your first message and keep it up to date. If you skip 
 - [ ] 2 Connected to Autumn — `atmn` installed and signed in
 - [ ] 3 Got the user's pricing — rough plans and prices to build from
 - [ ] 4 Pricing written to `autumn.config.ts` and valid
-- [ ] 5 Pricing table shown; user approved it
+- [ ] 5 Pricing shown; user approved it
 - [ ] 6 Pushed to Autumn and verified
 - [ ] 7 Done — suggested integration next, didn't start it
 
@@ -68,9 +68,9 @@ Then check three things:
 
 ## Phase 2 — Introduce and connect
 
-Start with two or three sentences: what's going to happen (connect this project to an Autumn org → write the pricing into `autumn.config.ts` → approve a table → push), and — if they need to sign in — that a browser window is coming. Something like this, in your own words:
+Start with two or three sentences: what's going to happen (connect this project to an Autumn org → write the pricing into `autumn.config.ts` → approve the pricing → push), and — if they need to sign in — that a browser window is coming. Something like this, in your own words:
 
-> Setting up Autumn. I'll connect this project to an Autumn org (quick browser sign-in), write your pricing into `autumn.config.ts`, and show you a table to approve before anything is pushed. Opening the sign-in now.
+> Setting up Autumn. I'll connect this project to an Autumn org (quick browser sign-in), write your pricing into `autumn.config.ts`, and show it to you to approve before anything is pushed. Opening the sign-in now.
 
 Then:
 
@@ -107,19 +107,11 @@ Done when you have rough plans and prices to build from.
 
 Follow it to turn the starting point into `autumn.config.ts` and check the config is valid with catalog's atmn preview loop (`references/atmn.md`). Your speaking rules above still apply to catalog's questions. Only move on when the config passes; don't push yet.
 
-## Phase 5 — Show the table
+## Phase 5 — Show the pricing
 
-Show the pricing as exactly this table — same columns every time, one row per plan; annual versions and add-ons get their own rows:
+Show the pricing in `autumn-catalog`'s "Showing the catalog" format — that exact layout, every time, never a markdown table. Every number exactly as the user gave it. Under it, list the assumptions you made ("Assumed: messages reset monthly"), then ask whether this is what they want to charge.
 
-| Plan | Price | Included | Extra usage |
-|---|---|---|---|
-| Free | $0 | 50 AI messages / month | — |
-| Pro | $20 / month · 14-day trial | 1,000 AI messages / month | $0.01 / message |
-| Credit pack (add-on) | $10 one-off | 500 credits | — |
-
-Price includes how often it's charged and any trial; Included lists what they get; `—` where a column doesn't apply; every number exactly as the user gave it. Under the table, list the assumptions you made ("Assumed: messages reset monthly"), then ask whether this is what they want to charge.
-
-Approval means a clear yes — or they earlier told you to go ahead without a review, in which case show the table and keep going. Silence or a half-answer is not a yes. If they change something → back to Phase 4, fix it, show the table again. If they want to stop, stop: say what exists and that nothing was pushed.
+Approval means a clear yes — or they earlier told you to go ahead without a review, in which case show the pricing and keep going. Silence or a half-answer is not a yes. If they change something → back to Phase 4, fix it, show it again. If they want to stop, stop: say what exists and that nothing was pushed.
 
 ## Phase 6 — Push
 

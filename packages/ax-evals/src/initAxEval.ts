@@ -8,7 +8,8 @@ import {
 } from "./axConstants.ts";
 import type { AxCase } from "./cases/types/axCase.ts";
 import { describeToolUse } from "./driver/describeToolUse.ts";
-import { type CompletedTurn, runAgentCase } from "./driver/runAgentCase.ts";
+import { runCase } from "./driver/runCase.ts";
+import type { CompletedTurn } from "./driver/runAgentCase.ts";
 import { inspectWorkspaceConfig } from "./grading/inspectConfig.ts";
 import { renderScorecard } from "./grading/renderScorecard.ts";
 import {
@@ -154,7 +155,7 @@ export const initAxEval = ({
 			});
 			const configTextAfterTurn: (string | null)[] = [];
 			const turnSource = turnSourceFor(axCase);
-			const run = await runAgentCase({
+			const run = await runCase({
 				label: `${axCase.name}/${arm}`,
 				cwd: workspace.dir,
 				turnSource,
