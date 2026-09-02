@@ -21,17 +21,66 @@ export type JsonSchema = {
 	[key: string]: unknown;
 };
 
+/** `z.any()` emits `{}` — the schema describes nothing, so neither do we. */
+export const isFreeFormSchema = (schema: JsonSchema | undefined): boolean =>
+	schema !== undefined && Object.keys(schema).length === 0;
+
 /** Keys are user data here, not schema fields. */
 export const isRecordSchema = (schema: JsonSchema): boolean =>
 	typeof schema.additionalProperties === "object" &&
 	schema.additionalProperties !== null &&
 	schema.properties === undefined;
 
+/**
+ * Operators in the migration filter DSL (`$startsWith`, `$some`, …) are literal
+ * API keys, not snake_case fields — recasing one produces an operator the
+ * server does not have.
+ */
+const isOperatorKey = (key: string): boolean => key.startsWith("$");
+
+/**
+ * Only `_` followed by a LETTER folds. `_1` has no uppercase form, so folding it
+ * would consume the underscore with nothing left to restore it: `region_1` would
+ * become `region1` and never come back.
+ */
 export const toCamelCase = (key: string): string =>
-	key.replace(/_([a-z0-9])/g, (_, char: string) => char.toUpperCase());
+	isOperatorKey(key)
+		? key
+		: key.replace(/_([a-z])/g, (_, char: string) => char.toUpperCase());
 
 export const toSnakeCase = (key: string): string =>
-	key.replace(/[A-Z]/g, (char) => `_${char.toLowerCase()}`);
+	isOperatorKey(key)
+		? key
+		: key.replace(/[A-Z]/g, (char) => `_${char.toLowerCase()}`);
+
+/**
+ * Follows `#/components/schemas/X`. Without this a `$ref` node has no
+ * `properties` and no branches, so every key beneath it is recased blind —
+ * including records like `CustomerData.metadata`.
+ */
+const resolveRef = ({
+	schema,
+	root,
+}: {
+	schema: JsonSchema | undefined;
+	root: JsonSchema | undefined;
+}): JsonSchema | undefined => {
+	let current = schema;
+	const seen = new Set<string>();
+	while (typeof current?.$ref === "string" && root) {
+		const ref = current.$ref;
+		if (seen.has(ref)) return current;
+		seen.add(ref);
+		const segments = ref.replace(/^#\//, "").split("/");
+		let target: unknown = root;
+		for (const segment of segments) {
+			target = (target as Record<string, unknown> | undefined)?.[segment];
+		}
+		if (target === undefined) return current;
+		current = target as JsonSchema;
+	}
+	return current;
+};
 
 const branchesOf = (schema: JsonSchema): JsonSchema[] => [
 	...(schema.anyOf ?? []),
@@ -47,19 +96,29 @@ const branchesOf = (schema: JsonSchema): JsonSchema[] => [
  */
 const recase = ({
 	value,
-	schema,
+	schema: rawSchema,
 	rename,
 	schemaKeyOf,
+	root,
 }: {
 	value: unknown;
 	schema: JsonSchema | undefined;
 	rename: (key: string) => string;
 	/** `properties` is always keyed by wire name, so camelCase input must map back. */
 	schemaKeyOf: (key: string) => string;
+	/** Document root, so `$ref` can be followed. */
+	root?: JsonSchema;
 }): unknown => {
+	const schema = resolveRef({ schema: rawSchema, root });
 	if (Array.isArray(value)) {
 		return value.map((entry) =>
-			recase({ value: entry, schema: schema?.items, rename, schemaKeyOf }),
+			recase({
+				value: entry,
+				schema: schema?.items,
+				rename,
+				schemaKeyOf,
+				root,
+			}),
 		);
 	}
 
@@ -71,17 +130,27 @@ const recase = ({
 	// would need the value to pick a branch, which is out of scope.
 	const effective =
 		schema && !schema.properties && !isRecordSchema(schema)
-			? (branchesOf(schema).find(
-					(branch) => branch.properties ?? isRecordSchema(branch),
-				) ?? schema)
+			? (branchesOf(schema)
+					.map((branch) => resolveRef({ schema: branch, root }) ?? branch)
+					.find((branch) => branch.properties ?? isRecordSchema(branch)) ??
+				schema)
 			: schema;
 
 	if (effective && isRecordSchema(effective)) {
 		const valueSchema = effective.additionalProperties as JsonSchema;
+		// A free-form value means the whole subtree is the user's, not just the
+		// key it hangs off — `metadata: { crm_sync: { external_id } }`.
+		if (isFreeFormSchema(valueSchema)) return source;
 		return Object.fromEntries(
 			Object.entries(source).map(([key, entry]) => [
 				key,
-				recase({ value: entry, schema: valueSchema, rename, schemaKeyOf }),
+				recase({
+					value: entry,
+					schema: valueSchema,
+					rename,
+					schemaKeyOf,
+					root,
+				}),
 			]),
 		);
 	}
@@ -91,7 +160,13 @@ const recase = ({
 			const propertySchema = effective?.properties?.[schemaKeyOf(key)];
 			return [
 				rename(key),
-				recase({ value: entry, schema: propertySchema, rename, schemaKeyOf }),
+				recase({
+					value: entry,
+					schema: propertySchema,
+					rename,
+					schemaKeyOf,
+					root,
+				}),
 			];
 		}),
 	);
@@ -101,18 +176,34 @@ const recase = ({
 export const wireToFixture = ({
 	value,
 	schema,
+	root,
 }: {
 	value: unknown;
 	schema: JsonSchema;
+	root?: JsonSchema;
 }): unknown =>
-	recase({ value, schema, rename: toCamelCase, schemaKeyOf: (key) => key });
+	recase({
+		value,
+		schema,
+		rename: toCamelCase,
+		schemaKeyOf: (key) => key,
+		root,
+	});
 
 /** Fixture (camelCase) → wire (snake_case). */
 export const fixtureToWire = ({
 	value,
 	schema,
+	root,
 }: {
 	value: unknown;
 	schema: JsonSchema;
+	root?: JsonSchema;
 }): unknown =>
-	recase({ value, schema, rename: toSnakeCase, schemaKeyOf: toSnakeCase });
+	recase({
+		value,
+		schema,
+		rename: toSnakeCase,
+		schemaKeyOf: toSnakeCase,
+		root,
+	});
