@@ -26,7 +26,10 @@ export function useCreditDimensionEditor({
 	onChange: (item: CreditSchemaItem) => void;
 }) {
 	const [draft, setDraft] = useState<DimensionValues>({});
-	const values = mergeDimensionValues(dimensionValues(item), draft);
+	const values = useMemo(
+		() => mergeDimensionValues(dimensionValues(item), draft),
+		[item.dimensions, item.multipliers, draft],
+	);
 	const fields = Object.keys(values);
 	const rules = useMemo(() => rateRules(item), [item.dimensions]);
 

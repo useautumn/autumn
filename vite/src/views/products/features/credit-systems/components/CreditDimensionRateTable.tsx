@@ -6,7 +6,6 @@ import type {
 } from "@tanstack/react-table";
 import { PlusIcon, X } from "lucide-react";
 import { useMemo } from "react";
-import { Table } from "@/components/general/table";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import {
 	type CreditRateRule,
@@ -14,6 +13,7 @@ import {
 	setRuleCell,
 } from "../utils/creditDimensionUtils";
 import { CreditDimensionValueSelect } from "./CreditDimensionValueSelect";
+import { CreditEditableTable } from "./CreditEditableTable";
 import { CreditNumberInput } from "./CreditNumberInput";
 
 interface RateTableRow {
@@ -153,34 +153,20 @@ export function CreditDimensionRateTable({
 	});
 
 	return (
-		<div className="rounded-lg border shadow-card overflow-hidden">
-			<Table.Provider
-				config={{
-					table,
-					numberOfColumns: columns.length,
-					isLoading: false,
-					enableSorting: false,
-					rowClassName: "h-10",
-					flexibleTableColumns: true,
-				}}
-			>
-				<Table.Container>
-					<Table.Content className="!rounded-none !border-0 !shadow-none">
-						<Table.Header />
-						<Table.Body />
-					</Table.Content>
-				</Table.Container>
-			</Table.Provider>
-
-			<button
-				type="button"
-				onClick={onRuleAdd}
-				className="flex items-center gap-1 w-full px-4 py-1.5 text-xs text-muted-foreground hover:text-foreground bg-interactive-secondary border-t border-border transition-colors"
-			>
-				<PlusIcon className="h-3 w-3" />
-				New rate
-			</button>
-		</div>
+		<CreditEditableTable
+			table={table}
+			columnCount={columns.length}
+			footer={
+				<button
+					type="button"
+					onClick={onRuleAdd}
+					className="flex items-center gap-1 w-full hover:text-foreground transition-colors"
+				>
+					<PlusIcon className="h-3 w-3" />
+					New rate
+				</button>
+			}
+		/>
 	);
 }
 

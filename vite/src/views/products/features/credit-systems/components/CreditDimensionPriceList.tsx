@@ -1,6 +1,6 @@
 import type { CreditSchemaItem } from "@autumn/shared";
 import { useCreditDimensionEditor } from "../hooks/useCreditDimensionEditor";
-import { CreditDimensionFields } from "./CreditDimensionFields";
+import { CreditDimensionFieldTable } from "./CreditDimensionFieldTable";
 import { CreditDimensionRateTable } from "./CreditDimensionRateTable";
 
 interface CreditDimensionPriceListProps {
@@ -8,7 +8,7 @@ interface CreditDimensionPriceListProps {
 	onChange: (item: CreditSchemaItem) => void;
 }
 
-/** Fields and their values are defined at the top; the rate table beneath has a column per field. */
+/** Two tables: the dimensions and their values, then the rates with a column per dimension. */
 export function CreditDimensionPriceList({
 	item,
 	onChange,
@@ -21,7 +21,7 @@ export function CreditDimensionPriceList({
 
 	return (
 		<div className="flex flex-col gap-3">
-			<CreditDimensionFields
+			<CreditDimensionFieldTable
 				values={editor.values}
 				onAddField={editor.addField}
 				onRemoveField={editor.removeField}
