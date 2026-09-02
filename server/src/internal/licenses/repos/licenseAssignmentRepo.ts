@@ -137,7 +137,16 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 			),
 		);
 
-/** Released seats waiting for reuse, longest-released first. */
+const unusedAssignmentConditions = ({
+	customerLicenseLinkIds,
+}: {
+	customerLicenseLinkIds: string[];
+}) => [
+	inArray(customerProducts.customer_license_link_id, customerLicenseLinkIds),
+	isNull(customerProducts.internal_entity_id),
+	inArray(customerProducts.status, ACTIVE_STATUSES),
+];
+
 const listUnusedAssignmentsByLinkId = async ({
 	db,
 	customerLicenseLinkId,
@@ -149,13 +158,34 @@ const listUnusedAssignmentsByLinkId = async ({
 }): Promise<DbLicenseAssignment[]> =>
 	await db.query.customerProducts.findMany({
 		where: and(
-			eq(customerProducts.customer_license_link_id, customerLicenseLinkId),
-			isNull(customerProducts.internal_entity_id),
-			inArray(customerProducts.status, ACTIVE_STATUSES),
+			...unusedAssignmentConditions({
+				customerLicenseLinkIds: [customerLicenseLinkId],
+			}),
 		),
 		orderBy: asc(customerProducts.released_at),
 		limit,
 	});
+
+const listUnusedAssignmentsByLinkIds = async ({
+	db,
+	customerLicenseLinkIds,
+}: {
+	db: DrizzleCli;
+	customerLicenseLinkIds: string[];
+}): Promise<
+	Pick<DbCustomerProduct, "id" | "customer_license_link_id" | "released_at">[]
+> => {
+	if (customerLicenseLinkIds.length === 0) return [];
+	return db
+		.select({
+			id: customerProducts.id,
+			customer_license_link_id: customerProducts.customer_license_link_id,
+			released_at: customerProducts.released_at,
+		})
+		.from(customerProducts)
+		.where(and(...unusedAssignmentConditions({ customerLicenseLinkIds })))
+		.orderBy(asc(customerProducts.released_at));
+};
 
 const listActiveAssignmentsByInternalEntityId = async ({
 	db,
@@ -310,6 +340,7 @@ export const licenseAssignmentRepo = {
 	listAssignmentsWithEntityAndProductByCustomer,
 	listActiveAssignmentsByInternalEntityId,
 	listUnusedAssignmentsByLinkId,
+	listUnusedAssignmentsByLinkIds,
 	expireOrphanAssignments,
 	expireUnusedAssignmentsByLinkIds,
 	maxActiveCountByCatalogLink,
