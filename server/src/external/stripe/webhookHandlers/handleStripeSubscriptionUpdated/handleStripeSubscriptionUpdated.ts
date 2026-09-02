@@ -10,6 +10,7 @@ import { handleCancelOnPastDue } from "./tasks/handleCancelOnPastDue.js";
 import { handleIgnorePastDue } from "./tasks/handleIgnorePastDue.js";
 import { handleSchedulePhaseChanges } from "./tasks/handleSchedulePhaseChanges/handleSchedulePhaseChanges.js";
 import { handleStripeSubscriptionRenewed } from "./tasks/handleStripeSubscriptionRenewed/handleStripeSubscriptionRenewed.js";
+import { handleStripeSubscriptionResumed } from "./tasks/handleStripeSubscriptionResumed.js";
 import { handleStripeSubscriptionTrialEnded } from "./tasks/handleStripeSubscriptionTrialEnded/handleStripeSubscriptionTrialEnded.js";
 import { syncCustomerProductStatus } from "./tasks/syncCustomerProductStatus/syncCustomerProductStatus.js";
 
@@ -52,6 +53,12 @@ export const handleStripeSubscriptionUpdated = async ({
 	});
 
 	await handleStripeSubscriptionRenewed({
+		ctx,
+		subscriptionUpdatedContext,
+	});
+
+	// 3b. Return paused products to active once Stripe resumes collection
+	await handleStripeSubscriptionResumed({
 		ctx,
 		subscriptionUpdatedContext,
 	});

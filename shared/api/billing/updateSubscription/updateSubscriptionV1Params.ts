@@ -6,6 +6,7 @@ import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingPa
 import { CancelActionSchema } from "../common/cancelAction";
 import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
+import { PauseActionSchema } from "../common/pauseAction";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 import { SubscriptionParamsSchema } from "../common/subscriptionParams";
@@ -27,6 +28,16 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 		billing_cycle_anchor: BillingCycleAnchorSchema.optional().meta({
 			description:
 				"Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds.",
+		}),
+
+		pause_action: PauseActionSchema.optional().meta({
+			description:
+				"Pause or resume the subscription. 'pause' stops Stripe from collecting payment and sets the subscription's status to 'paused'; 'resume' restarts collection and sets it back to 'active'. Must be the only update on the request.",
+		}),
+
+		pause_until: z.number().int().positive().optional().meta({
+			description:
+				"Unix timestamp in milliseconds at which a paused subscription automatically resumes. Only valid alongside pause_action: 'pause'. When omitted, the subscription stays paused until it is resumed explicitly.",
 		}),
 
 		processor_subscription_id: z.string().nullable().optional().meta({
@@ -80,6 +91,7 @@ const UPDATE_FIELDS = [
 	"version",
 	"customize",
 	"cancel_action",
+	"pause_action",
 	"billing_cycle_anchor",
 	"processor_subscription_id",
 	"no_billing_changes",
@@ -116,6 +128,13 @@ export const UpdateSubscriptionV1ParamsSchema =
 			{
 				message:
 					"refund_last_payment requires cancel_action to be 'cancel_immediately'.",
+			},
+		)
+		.refine(
+			(data) =>
+				!(data.pause_until !== undefined && data.pause_action !== "pause"),
+			{
+				message: "pause_until requires pause_action to be 'pause'.",
 			},
 		);
 

@@ -9,6 +9,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { insertPendingCustomerProducts } from "@/internal/billing/v2/execute/insertPendingCustomerProducts";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
+import { billingContextToBillingChangeTags } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/billingContextToBillingChangeTags";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { workflows } from "@/queue/workflows";
@@ -100,6 +101,7 @@ export const executeBillingPlan = async ({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
 		originalFullCustomer: billingContext.fullCustomer,
+		tags: billingContextToBillingChangeTags({ billingContext }),
 	});
 
 	return { stripe: stripeBillingResult };

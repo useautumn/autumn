@@ -1,5 +1,6 @@
 import {
 	ATTACH_CONFLICT_STATUSES,
+	CusProductStatus,
 	cusProductToPrices,
 	ErrCode,
 	type FullCusProduct,
@@ -131,6 +132,16 @@ const buildNotFoundMessage = ({
 	return `No active subscription found for customer '${customerId}'`;
 };
 
+/** Only a resume can target a paused plan — every other update needs a live one. */
+const targetStatusesForParams = ({
+	params,
+}: {
+	params: UpdateSubscriptionV1Params;
+}): CusProductStatus[] =>
+	params.pause_action === "resume"
+		? [...ATTACH_CONFLICT_STATUSES, CusProductStatus.Paused]
+		: ATTACH_CONFLICT_STATUSES;
+
 /** Finds the target customer product for an updateSubscription call, or throws. */
 export const findTargetCustomerProduct = async ({
 	ctx,
@@ -142,13 +153,24 @@ export const findTargetCustomerProduct = async ({
 	fullCustomer: FullCustomer;
 }): Promise<FullCusProduct> => {
 	const internalEntityId = fullCustomer.entity?.internal_id;
+	const targetStatuses = targetStatusesForParams({ params });
 
-	const candidates = fullCustomerToPlanProducts({ fullCustomer }).filter(
-		(cp) => {
-			if (!ATTACH_CONFLICT_STATUSES.includes(cp.status)) return false;
-			return isCusProductOnEntity({ cusProduct: cp, internalEntityId });
-		},
+	let candidates = fullCustomerToPlanProducts({ fullCustomer }).filter((cp) => {
+		if (!targetStatuses.includes(cp.status)) return false;
+		return isCusProductOnEntity({ cusProduct: cp, internalEntityId });
+	});
+
+	// An unfiltered resume auto-resolves onto the paused plan, never onto a live
+	// one that sorts higher (e.g. a trial running over a paused previous plan).
+	const hasExplicitTarget = Boolean(
+		params.customer_product_id ?? params.subscription_id ?? params.plan_id,
 	);
+	if (params.pause_action === "resume" && !hasExplicitTarget) {
+		const pausedCandidates = candidates.filter(
+			(cp) => cp.status === CusProductStatus.Paused,
+		);
+		if (pausedCandidates.length > 0) candidates = pausedCandidates;
+	}
 
 	const target = resolveTargetCustomerProduct({ params, candidates });
 
@@ -160,7 +182,7 @@ export const findTargetCustomerProduct = async ({
 		const fallback = await CusProductService.getFull({
 			db: ctx.db,
 			id: params.customer_product_id,
-			inStatuses: ATTACH_CONFLICT_STATUSES,
+			inStatuses: targetStatuses,
 		});
 		const belongsToCustomer =
 			fallback?.internal_customer_id === fullCustomer.internal_id;

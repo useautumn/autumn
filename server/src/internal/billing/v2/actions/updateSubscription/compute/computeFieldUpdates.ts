@@ -2,6 +2,7 @@ import type {
 	AutumnBillingPlan,
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
+import { CusProductStatus } from "@autumn/shared";
 
 type CusProductFieldUpdates = NonNullable<
 	NonNullable<AutumnBillingPlan["updateCustomerProduct"]>["updates"]
@@ -23,6 +24,13 @@ export const computeFieldUpdates = ({
 
 	if (params.status !== undefined) {
 		updates.status = params.status;
+	}
+
+	if (params.pause_action !== undefined) {
+		updates.status =
+			params.pause_action === "pause"
+				? CusProductStatus.Paused
+				: CusProductStatus.Active;
 	}
 
 	return updates;

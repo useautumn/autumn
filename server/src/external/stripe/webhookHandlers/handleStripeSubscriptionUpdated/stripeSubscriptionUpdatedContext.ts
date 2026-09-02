@@ -16,6 +16,7 @@ export interface SubscriptionPreviousAttributes {
 	cancel_at_period_end?: boolean;
 	cancel_at?: number | null;
 	canceled_at?: number | null;
+	pause_collection?: Stripe.Subscription.PauseCollection | null;
 	items?: Stripe.ApiList<Stripe.SubscriptionItem>;
 }
 

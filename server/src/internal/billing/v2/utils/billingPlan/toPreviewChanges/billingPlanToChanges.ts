@@ -119,6 +119,10 @@ const getShouldIncludeIncoming = ({
 	isOutgoing: boolean;
 	incoming: BillingPreviewChange[];
 }) => {
+	// A resume brings the same plan back: nothing is outgoing, so it is the
+	// incoming side that carries the change.
+	if (billingContext.pauseAction === "resume") return true;
+
 	if ("intent" in billingContext) {
 		// A restructuring plan update already inserted its successor; only an
 		// in-place one has to report the updated product as incoming.

@@ -14,6 +14,7 @@ import { buildStripeRefundAction } from "@/internal/billing/v2/providers/stripe/
 import { buildStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeSubscriptionScheduleAction";
 import { validateStripeSubscriptionActionOwnership } from "@/internal/billing/v2/providers/stripe/utils/connect/validateStripeSubscriptionActionOwnership";
 import { shouldCreateManualStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/shouldCreateManualStripeInvoice";
+import { buildStripeSubscriptionPauseAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionPauseAction";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import { buildStripeCheckoutSessionAction } from "../../../providers/stripe/actionBuilders/buildStripeCheckoutSessionAction";
 import { buildStripeInvoiceAction } from "../../../providers/stripe/actionBuilders/buildStripeInvoiceAction";
@@ -34,6 +35,23 @@ export const evaluateStripeBillingPlan = async ({
 }): Promise<StripeBillingPlan> => {
 	if (billingContext.skipBillingChanges) {
 		return {};
+	}
+
+	// A pause/resume only flips Stripe's collection state. It never rebuilds
+	// items or schedule phases — a paused cusProduct drops out of the active set,
+	// which the item diff would otherwise read as "delete every item" (i.e.
+	// cancel the subscription). handlePauseErrors keeps the request to that
+	// single concern, so nothing else is skipped by returning here.
+	if (billingContext.pauseAction) {
+		const pauseAction = buildStripeSubscriptionPauseAction({ billingContext });
+
+		validateStripeSubscriptionActionOwnership({
+			ctx,
+			billingContext,
+			stripeSubscriptionAction: pauseAction,
+		});
+
+		return { subscriptionAction: pauseAction };
 	}
 
 	await initStripeResourcesForBillingPlan({

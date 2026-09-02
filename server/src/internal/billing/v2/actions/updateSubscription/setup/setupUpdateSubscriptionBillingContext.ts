@@ -38,6 +38,7 @@ const FIELDS_WITH_BILLING_CHANGES = [
 	"version",
 	"customize",
 	"cancel_action",
+	"pause_action",
 	"billing_cycle_anchor",
 	"discounts",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
@@ -261,6 +262,8 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		patchContext,
 		defaultProduct,
 		cancelAction,
+		pauseAction: params.pause_action,
+		pauseUntilMs: params.pause_until,
 		recalculateBalances: params.recalculate_balances?.enabled === true,
 		refundLastPayment: params.refund_last_payment,
 		subscriptionParams: params.subscription_params,

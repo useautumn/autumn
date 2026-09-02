@@ -8,6 +8,7 @@ import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingPa
 import { CancelActionSchema } from "../common/cancelAction";
 import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
+import { PauseActionSchema } from "../common/pauseAction";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 import { SubscriptionParamsSchema } from "../common/subscriptionParams";
@@ -27,6 +28,10 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 
 		// Cancel action: 'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'
 		cancel_action: CancelActionSchema.optional(),
+
+		// Pause action: 'pause' | 'resume'
+		pause_action: PauseActionSchema.optional(),
+		pause_until: z.number().int().positive().optional(),
 
 		// Billing behavior for subscription updates:
 		// - 'prorate_immediately' (default): Invoice line items are charged immediately

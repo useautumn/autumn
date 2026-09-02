@@ -5,6 +5,7 @@ import type {
 	Entitlement,
 	FeatureOptions,
 	FreeTrial,
+	PauseAction,
 	Price,
 	ProcessorType,
 	TrialOnEnd,
@@ -106,6 +107,13 @@ export interface BillingContext {
 
 	// Cancel action (used by update subscription for uncancel)
 	cancelAction?: CancelAction;
+
+	/** Pause action (used by update subscription to pause/resume collection).
+	 * When set, the Stripe plan is a single collection-only subscription update —
+	 * items and schedule phases are never touched. */
+	pauseAction?: PauseAction;
+	/** Epoch ms at which a paused subscription automatically resumes in Stripe. */
+	pauseUntilMs?: number;
 
 	billingVersion: BillingVersion;
 	successUrl?: string;

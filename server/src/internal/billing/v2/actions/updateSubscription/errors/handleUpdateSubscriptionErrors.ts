@@ -15,6 +15,7 @@ import {
 	checkTrialRemovalWithOneOffItems,
 	handleOneOffErrors,
 } from "./handleOneOffErrors";
+import { handlePauseErrors } from "./handlePauseErrors";
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
 import { handleUncancelErrors } from "./handleUncancelErrors";
 import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors";
@@ -44,6 +45,10 @@ export const handleUpdateSubscriptionErrors = async ({
 
 	// 1. Current customer product errors
 	handleCurrentCustomerProductErrors({ billingContext });
+
+	// 1b. Pause strict-shape gate — must run before the checks below so a pause
+	// request never reports a downstream symptom of a field it can't carry.
+	handlePauseErrors({ billingContext, params });
 
 	// 2. Product type transition errors
 	handleProductTypeTransitionErrors({ billingContext, autumnBillingPlan });
