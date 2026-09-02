@@ -1,5 +1,5 @@
 import { Input } from "@autumn/ui";
-import { PlusIcon, TagIcon } from "@phosphor-icons/react";
+import { HashIcon, PlusIcon } from "@phosphor-icons/react";
 import type {
 	ColumnDef,
 	Row,
@@ -39,7 +39,7 @@ const COLUMNS: ColumnDef<FieldTableRow, unknown>[] = [
 		size: 160,
 		cell: ({ row }: FieldCellContext) => (
 			<span className="flex items-center gap-1.5 min-w-0">
-				<TagIcon size={14} className="shrink-0 text-tertiary-foreground" />
+				<HashIcon size={14} className="shrink-0 text-tertiary-foreground" />
 				<span className="text-sm truncate">{row.original.field}</span>
 			</span>
 		),
