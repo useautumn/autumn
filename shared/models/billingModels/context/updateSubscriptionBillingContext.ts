@@ -70,9 +70,6 @@ export interface UpdateSubscriptionBillingContext extends BillingContext {
 	/** Customer-facing `carry_over_usages` param; resolved into the carry config per reader. */
 	carryOverUsages?: CarryOverUsages;
 
-	/** Released spare seats, oldest-released first, keyed by license `link_id`. */
-	unusedLicenseAssignmentsByLinkId?: Record<string, FullCusProduct[]>;
-
 	/**
 	 * Set by migrations-v2's `update_plan` operation when `op.proration === true`.
 	 * Lets `evaluateMigrateCustomerStripe` skip its no-charge guard for this

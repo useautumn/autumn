@@ -9,7 +9,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupDefaultProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupDefaultProductContext";
 import { setupUpdateLicenseQuantities } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateLicenseQuantities";
-import { setupUnusedLicenseAssignments } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUnusedLicenseAssignments";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
 import { handleEntityLicenseAssignmentErrors } from "@/internal/billing/v2/common/errors/handleEntityLicenseAssignmentErrors";
 import { fetchStripeTaxRateForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeTaxRateForBilling";
@@ -102,9 +101,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 	const customerLicenseBillingContext =
 		await setupCustomerLicenseBillingContext({ ctx, fullCustomer });
-	const unusedLicenseAssignmentsByLinkId = params.license_quantities
-		? await setupUnusedLicenseAssignments({ ctx, fullCustomer })
-		: undefined;
 	const billingRelatedFields = Object.keys(params).filter((key) =>
 		FIELDS_WITH_BILLING_CHANGES.includes(
 			key as (typeof FIELDS_WITH_BILLING_CHANGES)[number],
@@ -293,7 +289,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 		customerLicenseQuantities,
 		customerLicenseBillingContext,
-		unusedLicenseAssignmentsByLinkId,
 		insertPlanLicenses,
 
 		customPrices,
