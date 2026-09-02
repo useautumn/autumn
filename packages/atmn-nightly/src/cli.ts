@@ -1,13 +1,26 @@
 #!/usr/bin/env node
-import { join } from "node:path";
 import { Command } from "commander";
-import { loadConfig } from "./config/loadConfig";
-import { loadEnvFiles } from "./env/loadEnv";
-import { findRepoLayout } from "./repo/findRepoRoot";
+import { runPush } from "./actions/push";
+import { createClient } from "./generated/client";
 import { version } from "./version";
 
 const NOT_IMPLEMENTED = (step: string) => () => {
 	throw new Error(`Not implemented yet — lands in ${step}.`);
+};
+
+/**
+ * Sandbox unless --prod, matching the two keys people already have. Multi
+ * sandbox selection is still to be designed.
+ */
+const requireSecretKey = ({ prod }: { prod?: boolean }): string => {
+	const name = prod ? "AUTUMN_PROD_SECRET_KEY" : "AUTUMN_SECRET_KEY";
+	const key = process.env[name];
+	if (!key) {
+		throw new Error(
+			`${name} is not set. Put it in your .env, or export it before running.`,
+		);
+	}
+	return key;
 };
 
 /**
@@ -42,14 +55,11 @@ export const buildProgram = (): Command => {
 			.description("apply autumn.config.ts to your catalog")
 			.option("-y, --yes", "skip confirmation prompts")
 			.option("-d, --dry-run", "preview without applying"),
-	).action(async () => {
-		const { packageRoot, repoRoot } = findRepoLayout();
-		const dirs = [
-			...new Set([packageRoot, join(packageRoot, "atmn"), repoRoot]),
-		];
-		loadEnvFiles({ dirs });
-		const { path } = await loadConfig({ dirs });
-		throw new Error(`Loaded ${path}. Push lands in 3.2.`);
+	).action(async (options: { prod?: boolean; dryRun?: boolean }) => {
+		await runPush({
+			client: createClient({ secretKey: requireSecretKey(options) }),
+			dryRun: options.dryRun === true,
+		});
 	});
 
 	withEnvironmentFlags(
