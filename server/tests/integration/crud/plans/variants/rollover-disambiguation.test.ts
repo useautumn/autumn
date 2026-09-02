@@ -35,23 +35,23 @@ import {
 	ResetInterval,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
+import { stripeConfigValue } from "@tests/integration/utils/expectStripePriceResources.js";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
-import { stripeConfigValue } from "@tests/integration/utils/expectStripePriceResources.js";
-import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
-import {
-	expectStripeResourcesCarriedToVariant,
-	expectVariantProductCorrect,
-} from "./utils/expectVariantProductCorrect.js";
 import {
 	expectPreviewItemChangeCorrect,
 	expectPreviewVariantsCorrect,
 } from "./utils/expectVariantPreviewCorrect.js";
+import {
+	expectStripeResourcesCarriedToVariant,
+	expectVariantProductCorrect,
+} from "./utils/expectVariantProductCorrect.js";
 import { readableVariantTestId } from "./utils/readableVariantTestId.js";
 import {
 	createVariantPlan,
@@ -154,14 +154,25 @@ const rolloverBaseItemsPriced = (rolloverMax = 200) => [
 	},
 ];
 
-const createBase = async (id: string, items: ReturnType<typeof rolloverBaseItems> | ReturnType<typeof rolloverPrepaidItems> | ReturnType<typeof rolloverBaseItemsPriced>) => {
+const createBase = async (
+	id: string,
+	items:
+		| ReturnType<typeof rolloverBaseItems>
+		| ReturnType<typeof rolloverPrepaidItems>
+		| ReturnType<typeof rolloverBaseItemsPriced>,
+) => {
 	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
 		plan_id: id,
 		name: `Rollover Base ${id}`,
 		group: `rv_${id}`,
 		items,
 	});
-	return await ProductService.getFull({ db, idOrInternalId: id, orgId: org.id, env });
+	return await ProductService.getFull({
+		db,
+		idOrInternalId: id,
+		orgId: org.id,
+		env,
+	});
 };
 
 const createVariant = async (baseId: string, variantId: string) => {
@@ -178,7 +189,13 @@ const getVariantPlan = async (variantId: string) => {
 };
 
 const getAllVersions = async (planId: string) => {
-	return await ProductService.listFull({ db, orgId: org.id, env, inIds: [planId], returnAll: true });
+	return await ProductService.listFull({
+		db,
+		orgId: org.id,
+		env,
+		inIds: [planId],
+		returnAll: true,
+	});
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -187,29 +204,35 @@ const getAllVersions = async (planId: string) => {
 test.concurrent(
 	`${chalk.yellowBright("rollover create_variant: copies items including rollover config")}`,
 	async () => {
-			const rid = readableVariantTestId("rv_copy_rollover");
-			const baseId = `base_${rid}`;
-			const variantId = `${baseId}_variant`;
+		const rid = readableVariantTestId("rv_copy_rollover");
+		const baseId = `base_${rid}`;
+		const variantId = `${baseId}_variant`;
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
 		const variant = await createVariant(baseId, variantId);
 
 		const creditsMonthly = variant.items.find(
-			(i: any) => i.feature_id === TestFeature.Credits && i.reset?.interval === "month",
+			(i: any) =>
+				i.feature_id === TestFeature.Credits && i.reset?.interval === "month",
 		);
 		expect(creditsMonthly).toBeDefined();
 		expect(creditsMonthly!.rollover).toBeDefined();
 		expect(creditsMonthly!.rollover!.max).toBe(200);
-		expect(creditsMonthly!.rollover!.expiry_duration_type).toBe(RolloverExpiryDurationType.Month);
+		expect(creditsMonthly!.rollover!.expiry_duration_type).toBe(
+			RolloverExpiryDurationType.Month,
+		);
 
 		const creditsDaily = variant.items.find(
-			(i: any) => i.feature_id === TestFeature.Credits && i.reset?.interval === "day",
+			(i: any) =>
+				i.feature_id === TestFeature.Credits && i.reset?.interval === "day",
 		);
 		expect(creditsDaily).toBeDefined();
 		expect(creditsDaily!.rollover).toBeUndefined();
 
-		expect(variant.items.find((i: any) => i.feature_id === TestFeature.Messages)).toBeDefined();
+		expect(
+			variant.items.find((i: any) => i.feature_id === TestFeature.Messages),
+		).toBeDefined();
 
 		await cleanup(baseId, variantId);
 	},
@@ -227,24 +250,21 @@ test.concurrent(
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItemsPriced(200));
-		const stampCustomerId = `cus_${rid}_v1_stamp`;
-		await cleanupCustomers(stampCustomerId);
-		const { autumnV1 } = await initScenario({
-			customerId: stampCustomerId,
-			setup: [s.customer({ testClock: false, paymentMethod: "success" })],
-			actions: [],
-		});
-		await autumnV1.attach({
-			customer_id: stampCustomerId,
-			product_id: baseId,
-			options: [{ feature_id: TestFeature.Credits, quantity: 1 }],
-		});
-		const base = await ProductService.getFull({ db, idOrInternalId: baseId, orgId: org.id, env });
+		const base = await materializePlanInStripe({ ctx, planId: baseId });
 		await createVariant(baseId, variantId);
-		const variantFull = await ProductService.getFull({ db, idOrInternalId: variantId, orgId: org.id, env });
+		const variantFull = await ProductService.getFull({
+			db,
+			idOrInternalId: variantId,
+			orgId: org.id,
+			env,
+		});
 
-		const baseCreditsPrices = base.prices.filter((p: any) => p.config?.feature_id === TestFeature.Credits);
-		const variantCreditsPrices = variantFull.prices.filter((p: any) => p.config?.feature_id === TestFeature.Credits);
+		const baseCreditsPrices = base.prices.filter(
+			(p: any) => p.config?.feature_id === TestFeature.Credits,
+		);
+		const variantCreditsPrices = variantFull.prices.filter(
+			(p: any) => p.config?.feature_id === TestFeature.Credits,
+		);
 
 		expect(variantCreditsPrices.length).toBe(baseCreditsPrices.length);
 		expect(variantCreditsPrices.length).toBeGreaterThanOrEqual(2);
@@ -299,10 +319,10 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover propagate: rollover change to variant (versioning, v1 untouched)")}`,
 	async () => {
-			const rid = readableVariantTestId("rv_prop_rollover");
-			const baseId = `base_${rid}`;
-			const variantId = `${baseId}_variant`;
-			const customerId = `cus_${rid}`;
+		const rid = readableVariantTestId("rv_prop_rollover");
+		const baseId = `base_${rid}`;
+		const variantId = `${baseId}_variant`;
+		const customerId = `cus_${rid}`;
 		await cleanupCustomers(customerId);
 		await cleanup(baseId, variantId);
 
@@ -332,14 +352,25 @@ test.concurrent(
 
 		const v2Plan = await getVariantPlan(variantId);
 		const v2CreditsMonthly = v2Plan.items.find(
-			(i: any) => i.feature_id === TestFeature.Credits && i.reset?.interval === "month",
+			(i: any) =>
+				i.feature_id === TestFeature.Credits && i.reset?.interval === "month",
 		);
 		expect(v2CreditsMonthly).toBeDefined();
 		expect(v2CreditsMonthly!.rollover!.max).toBe(500);
 
-		const v1Plan = await ProductService.getFull({ db, idOrInternalId: variantId, orgId: org.id, env, version: 1 });
-		const v1CreditsPrices = v1Plan.prices.filter((p: any) => p.config?.feature_id === TestFeature.Credits);
-		const v2CreditsPrices = v2!.prices.filter((p: any) => p.config?.feature_id === TestFeature.Credits);
+		const v1Plan = await ProductService.getFull({
+			db,
+			idOrInternalId: variantId,
+			orgId: org.id,
+			env,
+			version: 1,
+		});
+		const v1CreditsPrices = v1Plan.prices.filter(
+			(p: any) => p.config?.feature_id === TestFeature.Credits,
+		);
+		const v2CreditsPrices = v2!.prices.filter(
+			(p: any) => p.config?.feature_id === TestFeature.Credits,
+		);
 		expect(v2CreditsPrices.length).toBe(v1CreditsPrices.length);
 
 		await cleanup(baseId, variantId);
@@ -352,10 +383,10 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover propagate: variant strip preserved across propagation")}`,
 	async () => {
-			const rid = readableVariantTestId("rv_strip_preserve");
-			const baseId = `base_${rid}`;
-			const variantId = `${baseId}_variant`;
-			const customerId = `cus_${rid}`;
+		const rid = readableVariantTestId("rv_strip_preserve");
+		const baseId = `base_${rid}`;
+		const variantId = `${baseId}_variant`;
+		const customerId = `cus_${rid}`;
 		await cleanupCustomers(customerId);
 		await cleanup(baseId, variantId);
 
@@ -368,7 +399,11 @@ test.concurrent(
 					feature_id: TestFeature.Credits,
 					included: 500,
 					reset: { interval: ResetInterval.Month },
-					rollover: { max: 200, expiry_duration_type: RolloverExpiryDurationType.Month, expiry_duration_length: 1 },
+					rollover: {
+						max: 200,
+						expiry_duration_type: RolloverExpiryDurationType.Month,
+						expiry_duration_length: 1,
+					},
 				},
 				{
 					feature_id: TestFeature.Messages,
@@ -379,7 +414,12 @@ test.concurrent(
 		});
 
 		const strippedVariant = await getVariantPlan(variantId);
-		expect(strippedVariant.items.find((i: any) => i.feature_id === TestFeature.Credits && i.reset?.interval === "day")).toBeUndefined();
+		expect(
+			strippedVariant.items.find(
+				(i: any) =>
+					i.feature_id === TestFeature.Credits && i.reset?.interval === "day",
+			),
+		).toBeUndefined();
 
 		const { autumnV1 } = await initScenario({
 			customerId,
@@ -390,10 +430,7 @@ test.concurrent(
 		await wait(3000);
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
-			items: [
-				...rolloverBaseItems(200),
-				{ feature_id: TestFeature.Dashboard },
-			],
+			items: [...rolloverBaseItems(200), { feature_id: TestFeature.Dashboard }],
 			update_variant_ids: [variantId],
 		});
 
@@ -403,10 +440,24 @@ test.concurrent(
 		expect(variantVersions.length).toBe(1);
 
 		const v2Plan = await getVariantPlan(variantId);
-		expect(v2Plan.items.find((i: any) => i.feature_id === TestFeature.Dashboard)).toBeDefined();
-		expect(v2Plan.items.find((i: any) => i.feature_id === TestFeature.Credits && i.reset?.interval === "month")).toBeDefined();
-		expect(v2Plan.items.find((i: any) => i.feature_id === TestFeature.Messages)).toBeDefined();
-		expect(v2Plan.items.find((i: any) => i.feature_id === TestFeature.Credits && i.reset?.interval === "day")).toBeUndefined();
+		expect(
+			v2Plan.items.find((i: any) => i.feature_id === TestFeature.Dashboard),
+		).toBeDefined();
+		expect(
+			v2Plan.items.find(
+				(i: any) =>
+					i.feature_id === TestFeature.Credits && i.reset?.interval === "month",
+			),
+		).toBeDefined();
+		expect(
+			v2Plan.items.find((i: any) => i.feature_id === TestFeature.Messages),
+		).toBeDefined();
+		expect(
+			v2Plan.items.find(
+				(i: any) =>
+					i.feature_id === TestFeature.Credits && i.reset?.interval === "day",
+			),
+		).toBeUndefined();
 
 		await cleanup(baseId, variantId);
 	},
@@ -418,10 +469,10 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover filter precision: same feature_id different interval, only targeted item changes")}`,
 	async () => {
-			const rid = readableVariantTestId("rv_filter_precision");
-			const baseId = `base_${rid}`;
-			const variantId = `${baseId}_variant`;
-			const customerId = `cus_${rid}`;
+		const rid = readableVariantTestId("rv_filter_precision");
+		const baseId = `base_${rid}`;
+		const variantId = `${baseId}_variant`;
+		const customerId = `cus_${rid}`;
 		await cleanupCustomers(customerId);
 		await cleanup(baseId, variantId);
 
@@ -441,7 +492,11 @@ test.concurrent(
 				feature_id: TestFeature.Credits,
 				included: 500,
 				reset: { interval: ResetInterval.Month },
-				rollover: { max: 200, expiry_duration_type: RolloverExpiryDurationType.Month, expiry_duration_length: 1 },
+				rollover: {
+					max: 200,
+					expiry_duration_type: RolloverExpiryDurationType.Month,
+					expiry_duration_length: 1,
+				},
 			},
 			{
 				feature_id: TestFeature.Credits,
@@ -467,13 +522,15 @@ test.concurrent(
 
 		const v2Plan = await getVariantPlan(variantId);
 		const dayCredits = v2Plan.items.find(
-			(i: any) => i.feature_id === TestFeature.Credits && i.reset?.interval === "day",
+			(i: any) =>
+				i.feature_id === TestFeature.Credits && i.reset?.interval === "day",
 		);
 		expect(dayCredits).toBeDefined();
 		expect(dayCredits!.included).toBe(100);
 
 		const monthCredits = v2Plan.items.find(
-			(i: any) => i.feature_id === TestFeature.Credits && i.reset?.interval === "month",
+			(i: any) =>
+				i.feature_id === TestFeature.Credits && i.reset?.interval === "month",
 		);
 		expect(monthCredits).toBeDefined();
 		expect(monthCredits!.included).toBe(500);
@@ -490,10 +547,10 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover base+variant version: customer on base versions the base, customer-less variant patches in place")}`,
 	async () => {
-			const rid = readableVariantTestId("rv_base_variant_version");
-			const baseId = `base_${rid}`;
-			const variantId = `${baseId}_variant`;
-			const customerId = `cus_${rid}`;
+		const rid = readableVariantTestId("rv_base_variant_version");
+		const baseId = `base_${rid}`;
+		const variantId = `${baseId}_variant`;
+		const customerId = `cus_${rid}`;
 		await cleanupCustomers(customerId);
 		await cleanup(baseId, variantId);
 
@@ -540,12 +597,17 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover preview_update: 0 writes when nothing changes")}`,
 	async () => {
-			const baseId = readableVariantTestId("rv_preview_zero_writes");
+		const baseId = readableVariantTestId("rv_preview_zero_writes");
 		await cleanup(baseId);
 
 		await createBase(baseId, rolloverBaseItems(200));
 
-		const before = await ProductService.getFull({ db, idOrInternalId: baseId, orgId: org.id, env });
+		const before = await ProductService.getFull({
+			db,
+			idOrInternalId: baseId,
+			orgId: org.id,
+			env,
+		});
 
 		const preview = await autumnRpc.rpc.call<PlanUpdatePreview>({
 			method: "/plans.preview_update",
@@ -556,7 +618,12 @@ test.concurrent(
 		expect(preview.customize?.add_items ?? []).toHaveLength(0);
 		expect(preview.customize?.remove_items ?? []).toHaveLength(0);
 
-		const after = await ProductService.getFull({ db, idOrInternalId: baseId, orgId: org.id, env });
+		const after = await ProductService.getFull({
+			db,
+			idOrInternalId: baseId,
+			orgId: org.id,
+			env,
+		});
 		expect(after.version).toBe(before.version);
 		expect(after.internal_id).toBe(before.internal_id);
 
@@ -570,29 +637,56 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover versioning: stripe_price_id carried forward to variant v2")}`,
 	async () => {
-			const rid = `${readableVariantTestId("rv_prepaid_carry")}_${Date.now().toString(36)}`;
-			const baseId = `base_${rid}`;
-			const variantId = `${baseId}_variant`;
-			const customerId = `cus_${rid}`;
+		const rid = `${readableVariantTestId("rv_prepaid_carry")}_${Date.now().toString(36)}`;
+		const baseId = `base_${rid}`;
+		const variantId = `${baseId}_variant`;
+		const customerId = `cus_${rid}`;
 		await cleanupCustomers(customerId);
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverPrepaidItems(200));
+		await materializePlanInStripe({ ctx, planId: baseId });
 		await createVariant(baseId, variantId);
+
+		const variantBeforeAttach = await ProductService.getFull({
+			db,
+			idOrInternalId: variantId,
+			orgId: org.id,
+			env,
+		});
+		const prepaidPriceBeforeAttach = variantBeforeAttach.prices.find(
+			(p: any) =>
+				p.config?.feature_id === TestFeature.Credits &&
+				p.config?.stripe_prepaid_price_v2_id,
+		);
+		expect(prepaidPriceBeforeAttach).toBeDefined();
+		expect(
+			(prepaidPriceBeforeAttach!.config as any)?.stripe_prepaid_price_v2_id,
+		).toBeTruthy();
 
 		const { autumnV1 } = await initScenario({
 			customerId,
 			setup: [s.customer({ testClock: false, paymentMethod: "success" })],
 			actions: [],
 		});
-		await autumnV1.attach({ customer_id: customerId, product_id: variantId, options: [{ feature_id: TestFeature.Credits, quantity: 500 }] });
+		await autumnV1.attach({
+			customer_id: customerId,
+			product_id: variantId,
+			options: [{ feature_id: TestFeature.Credits, quantity: 500 }],
+		});
 		await wait(4000);
 
+		// A V1 attach may stamp either prepaid slot, so accept whichever holds it.
 		const prepaidStripeId = (price: Price | undefined) =>
 			stripeConfigValue({ price, field: "stripe_prepaid_price_v2_id" }) ??
 			stripeConfigValue({ price, field: "stripe_price_id" });
 
-		const variantV1 = await ProductService.getFull({ db, idOrInternalId: variantId, orgId: org.id, env });
+		const variantV1 = await ProductService.getFull({
+			db,
+			idOrInternalId: variantId,
+			orgId: org.id,
+			env,
+		});
 		const v1PrepaidPrice = findPriceByFeatureId({
 			prices: variantV1.prices,
 			featureId: TestFeature.Credits,
@@ -604,18 +698,29 @@ test.concurrent(
 			items: rolloverPrepaidItems(500),
 			update_variant_ids: [variantId],
 		});
-		await initPlanStripeResources({ ctx, planId: variantId });
 
 		const variantVersions = await getAllVersions(variantId);
 		expect(variantVersions.length).toBe(2);
 
-		const v2 = variantVersions.find((v: { version: number }) => v.version === 2)!;
+		// A rollover edit is only a product-level reuse, so v2's price ids are
+		// minted fresh at billing time rather than carried from v1.
+		const v2 = await materializePlanInStripe({
+			ctx,
+			planId: variantId,
+			version: 2,
+		});
 		const v2PrepaidPrice = findPriceByFeatureId({
 			prices: v2.prices,
 			featureId: TestFeature.Credits,
 		});
 		expect(v2PrepaidPrice).toBeDefined();
 		expect(prepaidStripeId(v2PrepaidPrice)).toBeTruthy();
+		expect(
+			stripeConfigValue({
+				price: v2PrepaidPrice,
+				field: "stripe_prepaid_price_v2_id",
+			}),
+		).toBeTruthy();
 
 		await cleanup(baseId, variantId);
 	},
@@ -627,15 +732,20 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover create_variant: rejects archived base with cannot_fork_archived_base")}`,
 	async () => {
-			const rid = readableVariantTestId("rv_archived_err");
-			const baseId = `base_${rid}`;
-			const variantId = `${baseId}_variant`;
+		const rid = readableVariantTestId("rv_archived_err");
+		const baseId = `base_${rid}`;
+		const variantId = `${baseId}_variant`;
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, { archived: true });
-		const archived = await ProductService.getFull({ db, idOrInternalId: baseId, orgId: org.id, env });
+		const archived = await ProductService.getFull({
+			db,
+			idOrInternalId: baseId,
+			orgId: org.id,
+			env,
+		});
 		expect(archived.archived).toBe(true);
 
 		try {
@@ -656,11 +766,11 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover both customers: base+variant both version, variant pins to new base")}`,
 	async () => {
-			const rid = readableVariantTestId("rv_both_customers");
-			const baseId = `base_${rid}`;
-			const variantId = `${baseId}_variant`;
-			const baseCusId = `base_cus_${rid}`;
-			const varCusId = `variant_cus_${rid}`;
+		const rid = readableVariantTestId("rv_both_customers");
+		const baseId = `base_${rid}`;
+		const variantId = `${baseId}_variant`;
+		const baseCusId = `base_cus_${rid}`;
+		const varCusId = `variant_cus_${rid}`;
 		await cleanupCustomers(baseCusId, varCusId);
 		await cleanup(baseId, variantId);
 

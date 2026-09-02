@@ -1,9 +1,8 @@
 import { hasMissingStripeResourcesForProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
-import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
-import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
 import { hydratePlanLicenseProcessor } from "./hydratePlanLicenseProcessor";
 import { repointBasePricesToPlanProcessor } from "./repointBasePricesToPlanProcessor";
 import { validateAdoptedStripePrices } from "./validateAdoptedStripePrices";
@@ -67,19 +66,11 @@ export const initStripeResourcesForCatalog = async ({
 			catalogByInternalId,
 		});
 
-		if (upsert.createInStripe === false) {
-			await applyStripeResourceReuseForProduct({
-				ctx,
-				product,
-				candidateProducts,
-			});
-			continue;
-		}
-
 		await initStripeResourcesForProducts({
 			ctx,
 			products: [product],
 			candidateProducts,
+			allowCreate: upsert.createInStripe === true,
 			lookupVariantFamilies: false,
 		});
 	}

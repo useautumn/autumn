@@ -67,9 +67,7 @@ test(
 
 		// Create reward manually with onlyUsage: true (s.reward doesn't support this)
 		await createReward({
-			orgId: testCtx.org.id,
-			env: testCtx.env,
-			db: testCtx.db,
+			ctx: testCtx,
 			autumn,
 			reward,
 			productId: pro.id,

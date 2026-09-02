@@ -29,7 +29,7 @@ test.concurrent(
 			customerId: "license-stripe-resource-reuse",
 			setup: [
 				s.customer({ testClock: false }),
-				s.products({ list: [parent, devSeat] }),
+				s.products({ list: [parent, devSeat], createInStripe: true }),
 			],
 			actions: [],
 		});
@@ -40,7 +40,7 @@ test.concurrent(
 			env: ctx.env,
 		});
 		const basePrice = productToBasePrice({ product: baseLicense });
-		expect(basePrice?.config.stripe_price_id).toBeDefined();
+		expect(basePrice?.config.stripe_price_id).toBeTruthy();
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: parent.id,

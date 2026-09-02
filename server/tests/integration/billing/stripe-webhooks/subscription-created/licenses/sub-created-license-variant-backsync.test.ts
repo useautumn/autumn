@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
 import {
+	fetchFullProduct,
 	getBaseStripePriceId,
 	getProductStripeProductId,
 } from "@tests/integration/billing/sync/utils/syncProductHelpers";
@@ -29,7 +30,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
-import { ProductService } from "@/internal/products/ProductService";
 
 const PAID_SEATS = 3;
 
@@ -102,25 +102,26 @@ const setupVariantLicenseFamily = async ({
 		],
 	});
 
-	const quarterlySeatFull = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: quarterlySeat.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
+	// Parent license plans hold the customized price rows the tests read, so
+	// materialize them too — not just the seat plans.
+	await fetchFullProduct({ ctx, productId: annualProId });
+	await fetchFullProduct({ ctx, productId: pro.id });
+
+	const quarterlySeatFull = await fetchFullProduct({
+		ctx,
+		productId: quarterlySeat.id,
 	});
-	const annualSeatFull = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: annualSeatId,
-		orgId: ctx.org.id,
-		env: ctx.env,
+	const annualSeatFull = await fetchFullProduct({
+		ctx,
+		productId: annualSeatId,
 	});
 
 	const quarterlyStripeProductId = getProductStripeProductId({
 		fullProduct: quarterlySeatFull,
 	});
-	expect(
-		getProductStripeProductId({ fullProduct: annualSeatFull }),
-	).toBe(quarterlyStripeProductId);
+	expect(getProductStripeProductId({ fullProduct: annualSeatFull })).toBe(
+		quarterlyStripeProductId,
+	);
 	const quarterlyStripePriceId = getBaseStripePriceId({
 		fullProduct: quarterlySeatFull,
 	});
@@ -168,18 +169,16 @@ test(`${chalk.yellowBright("sub.created license variant back-sync: quarterly sea
 	expect(stripeSubscription.status).toBe("active");
 	await timeout(12_000);
 
-	const customerV3 = await family.autumnV1.customers.get<ApiCustomerV3>(
-		customerId,
-	);
+	const customerV3 =
+		await family.autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer: customerV3, productId: family.proId });
 	await expectProductNotPresent({
 		customer: customerV3,
 		productId: family.annualProId,
 	});
 
-	const customer = await family.autumnV2_3.customers.get<ApiCustomerV5>(
-		customerId,
-	);
+	const customer =
+		await family.autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 	expectCustomerLicenses({
 		customer,
 		count: 1,
@@ -211,16 +210,13 @@ test(`${chalk.yellowBright("sub.created license variant back-sync: annual seat q
 	const stripeSubscription = await createExternalStripeSubscription({
 		ctx,
 		customerId,
-		items: [
-			{ price: family.annualLicenseStripePriceId, quantity: PAID_SEATS },
-		],
+		items: [{ price: family.annualLicenseStripePriceId, quantity: PAID_SEATS }],
 	});
 	expect(stripeSubscription.status).toBe("active");
 	await timeout(12_000);
 
-	const customerV3 = await family.autumnV1.customers.get<ApiCustomerV3>(
-		customerId,
-	);
+	const customerV3 =
+		await family.autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({
 		customer: customerV3,
 		productId: family.annualProId,
@@ -230,9 +226,8 @@ test(`${chalk.yellowBright("sub.created license variant back-sync: annual seat q
 		productId: family.proId,
 	});
 
-	const customer = await family.autumnV2_3.customers.get<ApiCustomerV5>(
-		customerId,
-	);
+	const customer =
+		await family.autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 	expectCustomerLicenses({
 		customer,
 		count: 1,

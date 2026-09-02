@@ -10,9 +10,9 @@ import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import {
+	applyStripeReuseForRewardPrices,
 	constructReward,
 	getRewardCat,
-	initRewardStripePrices,
 } from "@/internal/rewards/rewardUtils.js";
 import { getRewardPrices } from "./getRewardPrices.js";
 import { validateRewardUniqueness } from "./validateRewardUniqueness.js";
@@ -47,7 +47,7 @@ export const createReward = async ({
 			ctx,
 			priceIds: reward.discount_config?.price_ids ?? [],
 		});
-		await initRewardStripePrices({ ctx, prices });
+		await applyStripeReuseForRewardPrices({ ctx, prices });
 		await createStripeCoupon({
 			reward,
 			org,

@@ -1291,9 +1291,7 @@ export async function initScenario({
 		}
 
 		await createReferralProgram({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
+			ctx,
 			autumn: cleanupAutumn,
 			reward,
 			rewardProgram: program,
@@ -1308,9 +1306,7 @@ export async function initScenario({
 		const prefixedProductId = `${productId}_${productPrefix}`;
 
 		await createReward({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
+			ctx,
 			autumn: cleanupAutumn,
 			reward,
 			productId: prefixedProductId,

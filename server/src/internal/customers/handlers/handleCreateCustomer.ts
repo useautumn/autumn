@@ -1,7 +1,6 @@
 import type { Customer, FullProduct } from "@autumn/shared";
-import type { Stripe } from "stripe";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
-import { initProductInStripe } from "@/internal/products/productUtils.js";
+import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 
 export const initStripeCusAndProducts = async ({
@@ -13,21 +12,13 @@ export const initStripeCusAndProducts = async ({
 	customer: Customer;
 	products: FullProduct[];
 }) => {
-	const batchInit: Promise<Stripe.Customer | undefined>[] = [
+	await Promise.all([
 		getOrCreateStripeCustomer({
 			ctx,
 			customer,
 		}),
-	];
-
-	for (const product of products) {
-		batchInit.push(
-			initProductInStripe({
-				ctx,
-				product,
-			}),
-		);
-	}
-
-	await Promise.all(batchInit);
+		...products.map((product) =>
+			applyStripeResourceReuseForProduct({ ctx, product }),
+		),
+	]);
 };

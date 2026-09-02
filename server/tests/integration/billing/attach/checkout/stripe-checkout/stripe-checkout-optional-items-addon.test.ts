@@ -61,19 +61,18 @@ test.concurrent(
 			setup: [
 				s.deleteCustomer({ customerId }), // clean slate across TDD re-runs
 				s.customer({ testClock: true }), // No payment method -> Stripe checkout
-				s.products({ list: [pro, unfairAdvantage] }),
+				// Checkout passes the add-on's catalog Stripe price as an
+				// `optional_items` entry, so that price must exist before attach.
+				s.products({ list: [pro, unfairAdvantage], createInStripe: true }),
 			],
 			actions: [],
 		});
 
-		// The add-on's Stripe price already exists on the org's catalog once
-		// `s.products` syncs it — this is what Magica's checkout passes as an
-		// `optional_items` entry, independent of what `plan_id` was attached.
 		const fullAddOn = await ProductService.getFull({
 			db: ctx.db,
+			idOrInternalId: unfairAdvantage.id,
 			orgId: ctx.org.id,
 			env: ctx.env,
-			idOrInternalId: unfairAdvantage.id,
 		});
 		const addOnStripePriceId = fullAddOn?.prices[0]?.config?.stripe_price_id as
 			| string

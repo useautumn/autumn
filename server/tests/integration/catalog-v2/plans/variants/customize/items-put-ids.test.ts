@@ -18,11 +18,12 @@ import {
 	isFixedPrice,
 } from "@autumn/shared";
 import {
-	expectPriceStripeReuseCorrect,
 	expectPriceStripeResourcesPresent,
+	expectPriceStripeReuseCorrect,
 	findFeaturePrice,
+	stripePriceIdentityValue,
 } from "@tests/integration/utils/expectStripePriceResources.js";
-import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -122,10 +123,11 @@ test.concurrent(
 						plan_id: baseId,
 						name: "Team",
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 					},
 				],
 			});
-			const base = await initPlanStripeResources({ ctx, planId: baseId });
+			const base = await getFull({ ctx, planId: baseId });
 
 			await autumnV2_3.catalogV2.update({
 				plans: [
@@ -215,6 +217,7 @@ test.concurrent(
 						plan_id: baseId,
 						name: "Team",
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 						variants: [
 							{
 								variant_plan_id: variantId,
@@ -227,8 +230,7 @@ test.concurrent(
 					},
 				],
 			});
-			await initPlanStripeResources({ ctx, planId: baseId });
-			const before = await initPlanStripeResources({ ctx, planId: variantId });
+			const before = await getFull({ ctx, planId: variantId });
 			const beforePrice = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
@@ -280,6 +282,7 @@ test.concurrent(
 						plan_id: baseId,
 						name: "Team",
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 						variants: [
 							{
 								variant_plan_id: variantId,
@@ -292,15 +295,14 @@ test.concurrent(
 					},
 				],
 			});
-			await initPlanStripeResources({ ctx, planId: baseId });
-			const before = await initPlanStripeResources({ ctx, planId: variantId });
+			const before = await getFull({ ctx, planId: variantId });
 			const beforePrice = findFeaturePrice({
 				product: before,
 				featureId: TestFeature.Messages,
 			})!;
-			const staleStripePriceId = (
-				beforePrice.config as { stripe_price_id?: string | null }
-			).stripe_price_id!;
+			const staleStripePriceId = stripePriceIdentityValue({
+				price: beforePrice,
+			})!;
 
 			await autumnV2_3.catalogV2.update({
 				plans: [
@@ -323,7 +325,7 @@ test.concurrent(
 				],
 			});
 
-			const edited = await getFull({ ctx, planId: variantId });
+			const edited = await materializePlanInStripe({ ctx, planId: variantId });
 			const editedPrice = findFeaturePrice({
 				product: edited,
 				featureId: TestFeature.Messages,
@@ -358,10 +360,11 @@ test.concurrent(
 						plan_id: baseId,
 						name: "Team",
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 					},
 				],
 			});
-			const base = await initPlanStripeResources({ ctx, planId: baseId });
+			const base = await getFull({ ctx, planId: baseId });
 
 			await autumnV2_3.catalogV2.update({
 				plans: [

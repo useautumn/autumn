@@ -471,7 +471,7 @@ export const ensurePricesAndEntitlements: PrepareModule<
 						await initStripeResourcesForProducts({
 							ctx,
 							products: [product],
-							allowLiveCreate: true,
+							allowCreate: true,
 						});
 						resolved.push(product);
 					}

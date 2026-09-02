@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import { getFullLicenseProduct } from "@tests/integration/licenses/catalog-update/utils/getFullLicenseProduct";
 import { expectLicenseDefinitionCorrect } from "@tests/integration/licenses/utils/expectLicenseDefinitionCorrect";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
@@ -71,12 +72,7 @@ test.concurrent(
 				orgId: scenario.ctx.org.id,
 				env: scenario.ctx.env,
 			}),
-			ProductService.getFull({
-				db: scenario.ctx.db,
-				idOrInternalId: teamSeat.id,
-				orgId: scenario.ctx.org.id,
-				env: scenario.ctx.env,
-			}),
+			materializePlanInStripe({ ctx: scenario.ctx, planId: teamSeat.id }),
 		]);
 		const licenseStripeProductId = childBefore.processor?.id;
 		if (!licenseStripeProductId) {
@@ -263,11 +259,9 @@ test.concurrent(
 				}),
 			],
 		});
-		const childBefore = await ProductService.getFull({
-			db: scenario.ctx.db,
-			idOrInternalId: teamSeat.id,
-			orgId: scenario.ctx.org.id,
-			env: scenario.ctx.env,
+		const childBefore = await materializePlanInStripe({
+			ctx: scenario.ctx,
+			planId: teamSeat.id,
 		});
 		for (const parent of [parentA, parentB]) {
 			await scenario.autumnV2_3.billing.attach<AttachParamsV1Input>({
@@ -311,7 +305,7 @@ test.concurrent(
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success", testClock: false }),
-				s.products({ list: [parent, teamSeat] }),
+				s.products({ list: [parent, teamSeat], createInStripe: true }),
 			],
 			actions: [],
 		});

@@ -4,13 +4,13 @@ import {
 	FeatureType,
 	UsagePriceConfigSchema,
 } from "@autumn/shared";
+import { materializeProductsInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { createProducts } from "@tests/utils/productUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
@@ -126,7 +126,7 @@ const initializeResourcesAndGetUsageConfig = async ({
 		idOrInternalId: productId,
 	});
 
-	await initStripeResourcesForProducts({
+	await materializeProductsInStripe({
 		ctx,
 		products: [fullProduct],
 	});

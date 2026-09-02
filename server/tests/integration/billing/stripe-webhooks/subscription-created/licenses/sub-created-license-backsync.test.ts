@@ -34,6 +34,7 @@ import {
 import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
 import {
 	createStripeFixedPriceUnderProduct,
+	fetchFullProduct,
 	getBaseStripePriceId,
 } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -45,7 +46,6 @@ import { timeout } from "@tests/utils/genUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { ProductService } from "@/internal/products/ProductService";
 
 const INCLUDED_SEATS = 1;
 const PAID_SEATS = 3;
@@ -82,12 +82,7 @@ test(`${chalk.yellowBright("sub.created license back-sync: 3x license price atta
 		],
 	});
 
-	const seatFull = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: devSeat.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
+	const seatFull = await fetchFullProduct({ ctx, productId: devSeat.id });
 
 	const stripeSubscription = await createExternalStripeSubscription({
 		ctx,
@@ -174,12 +169,7 @@ test(`${chalk.yellowBright("sub.created license back-sync: custom $120/yr licens
 		],
 	});
 
-	const seatFull = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: devSeat.id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
+	const seatFull = await fetchFullProduct({ ctx, productId: devSeat.id });
 	const seatStripeProductId = seatFull.processor?.id;
 	if (!seatStripeProductId) {
 		throw new Error("Seat product has no Stripe product id");

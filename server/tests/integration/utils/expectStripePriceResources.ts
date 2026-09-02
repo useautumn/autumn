@@ -44,6 +44,30 @@ export const stripeConfigValue = ({
 		null) ||
 	null;
 
+/** Prepaid prices hold their Stripe Price object in the V2 slot, not stripe_price_id. */
+export const stripePriceIdentitySlot = ({
+	price,
+}: {
+	price: Price;
+}): StripeResourceField =>
+	isPrepaidPrice(price) ? "stripe_prepaid_price_v2_id" : "stripe_price_id";
+
+/**
+ * The Stripe Price object id a price carries, from whichever slot holds it.
+ * Prepaid rows materialized under billing V1 use stripe_price_id, not the V2 slot.
+ */
+export const stripePriceIdentityValue = ({
+	price,
+}: {
+	price: Price | undefined;
+}): string | null => {
+	if (!price) return null;
+	return (
+		stripeConfigValue({ price, field: stripePriceIdentitySlot({ price }) }) ??
+		stripeConfigValue({ price, field: "stripe_price_id" })
+	);
+};
+
 type ExpectedStripeIds = {
 	/** Omit to skip. Pass null to assert absent. */
 	stripeProductId?: string | null;
@@ -118,9 +142,7 @@ export const expectPriceStripeResourcesPresent = ({
 	expect(price, `${prefix}price row missing`).toBeDefined();
 	if (!price) return;
 
-	const priceSlot = isPrepaidPrice(price)
-		? "stripe_prepaid_price_v2_id"
-		: "stripe_price_id";
+	const priceSlot = stripePriceIdentitySlot({ price });
 	expect(
 		stripeConfigValue({ price, field: priceSlot }),
 		`${prefix}${priceSlot} present`,
@@ -194,9 +216,7 @@ export const expectPriceStripeReuseCorrect = ({
 		price: before,
 		field: "stripe_product_id",
 	});
-	const priceSlot = isPrepaidPrice(before)
-		? "stripe_prepaid_price_v2_id"
-		: "stripe_price_id";
+	const priceSlot = stripePriceIdentitySlot({ price: before });
 	const beforePrice = stripeConfigValue({
 		price: before,
 		field: priceSlot,
@@ -220,6 +240,11 @@ export const expectPriceStripeReuseCorrect = ({
 	});
 
 	if (reuse === "full") {
+		// A reuse claim over unmaterialized ids passes vacuously (null === null).
+		expect(
+			beforePrice,
+			`${prefix}full: before ${priceSlot} must be materialized — call materializePlanInStripe first`,
+		).toBeTruthy();
 		if (beforeProduct) {
 			expect(afterProduct, `${prefix}full: stripe_product_id`).toBe(
 				beforeProduct,
@@ -233,6 +258,10 @@ export const expectPriceStripeReuseCorrect = ({
 	}
 
 	if (reuse === "stripeProductOnly") {
+		expect(
+			beforeProduct,
+			`${prefix}product-only: before stripe_product_id must be materialized — call materializePlanInStripe first`,
+		).toBeTruthy();
 		if (beforeProduct) {
 			expect(afterProduct, `${prefix}product-only: stripe_product_id`).toBe(
 				beforeProduct,

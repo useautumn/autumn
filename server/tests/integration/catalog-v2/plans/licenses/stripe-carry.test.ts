@@ -13,7 +13,7 @@ import {
 	expectPriceStripeReuseCorrect,
 	findFeaturePrice,
 } from "@tests/integration/utils/expectStripePriceResources.js";
-import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -55,7 +55,7 @@ test.concurrent(
 						},
 					],
 				});
-				const frozenChild = await initPlanStripeResources({
+				const frozenChild = await materializePlanInStripe({
 					ctx,
 					planId: childId,
 				});

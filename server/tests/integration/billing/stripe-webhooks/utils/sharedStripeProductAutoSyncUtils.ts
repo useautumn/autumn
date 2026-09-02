@@ -7,28 +7,30 @@ import {
 	BillingMethod,
 	CusProductStatus,
 	cusProductToPrices,
-	findPriceByFeatureId,
-	type FullProduct,
 	type FullCusProduct,
+	type FullProduct,
+	findPriceByFeatureId,
+	hasMissingStripeResourcesForProduct,
 	isFixedPrice,
 	type Price,
+	ProcessorType,
 	ProductItemFeatureType,
 	type ProductV2,
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
 	UsageModel,
-	ProcessorType,
 } from "@autumn/shared";
+import { createStripeFixedPriceUnderProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import {
 	expectCustomerProducts,
 	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { createStripeFixedPriceUnderProduct } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import {
 	createVariantPlan,
 	deleteVariantTestPlans,
 } from "@tests/integration/crud/plans/variants/utils/variantTestPlanUtils";
+import { materializeProductsInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -40,9 +42,9 @@ import testCtx, {
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import type Stripe from "stripe";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
+import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
-import { invalidateProductsCache } from "@/external/redis/actions/productsCache/productsCache";
 import { ProductService } from "@/internal/products/ProductService";
 
 export type RpcUpdate = Omit<UpdatePlanParamsV2Input, "plan_id">;
@@ -68,27 +70,46 @@ export const apiUsageItem = ({
 	},
 });
 
-export const getFullProduct = ({
+/** These helpers simulate subscriptions that already exist in Stripe, so materialize on fetch. */
+export const getFullProduct = async ({
 	ctx,
 	productId,
 }: {
 	ctx: TestContext;
 	productId: string;
-}) =>
-	ProductService.getFull({
+}) => {
+	const product = await ProductService.getFull({
 		db: ctx.db,
 		idOrInternalId: productId,
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
+	if (!hasMissingStripeResourcesForProduct({ product })) return product;
 
-export const requireBasePrice = ({ fullProduct }: { fullProduct: FullProduct }) => {
+	await materializeProductsInStripe({ ctx, products: [product] });
+	return ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: productId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+};
+
+export const requireBasePrice = ({
+	fullProduct,
+}: {
+	fullProduct: FullProduct;
+}) => {
 	const price = fullProduct.prices.find(isFixedPrice);
 	if (!price) throw new Error(`Product ${fullProduct.id} has no base price`);
 	return price;
 };
 
-export const requireUsagePrice = ({ fullProduct }: { fullProduct: FullProduct }) => {
+export const requireUsagePrice = ({
+	fullProduct,
+}: {
+	fullProduct: FullProduct;
+}) => {
 	const price = findPriceByFeatureId({
 		prices: fullProduct.prices,
 		featureId: TestFeature.Messages,
@@ -226,11 +247,14 @@ export const trackCustomerUsage = async ({
 	featureId: TestFeature;
 	value: number;
 }) => {
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: featureId,
-		value,
-	}, { skipCache: true });
+	await autumnV1.track(
+		{
+			customer_id: customerId,
+			feature_id: featureId,
+			value,
+		},
+		{ skipCache: true },
+	);
 
 	const deadline = Date.now() + 35_000;
 	let lastError: unknown;
@@ -394,7 +418,9 @@ export const expectActiveLinkedCustomerProducts = async ({
 		env: ctx.env,
 		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 	});
-	expect(linked.map((cp) => cp.product_id).sort()).toEqual([...productIds].sort());
+	expect(linked.map((cp) => cp.product_id).sort()).toEqual(
+		[...productIds].sort(),
+	);
 	return linked;
 };
 
@@ -582,7 +608,9 @@ export const stampStripeSlotsViaV1Attach = async ({
 
 const prepaidAttachOptions = (product: ProductV2) => {
 	const options = product.items
-		.filter((item) => item.usage_model === UsageModel.Prepaid && item.feature_id)
+		.filter(
+			(item) => item.usage_model === UsageModel.Prepaid && item.feature_id,
+		)
 		.map((item) => ({
 			feature_id: item.feature_id as string,
 			quantity: 1,

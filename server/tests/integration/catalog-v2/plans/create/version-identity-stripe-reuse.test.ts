@@ -8,9 +8,14 @@
  */
 
 import { expect, test } from "bun:test";
-import { BillingInterval, BillingMethod, type FullProduct } from "@autumn/shared";
-import { forceActiveVersion } from "@tests/integration/utils/forceActiveVersion.js";
+import {
+	BillingInterval,
+	BillingMethod,
+	type FullProduct,
+} from "@autumn/shared";
 import { expectProductProcessorCorrect } from "@tests/integration/utils/expectStripePriceResources.js";
+import { forceActiveVersion } from "@tests/integration/utils/forceActiveVersion.js";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -49,9 +54,11 @@ const getFull = async ({
 
 const seedPaidBaseAndV2 = async ({
 	autumn,
+	ctx,
 	baseId,
 }: {
 	autumn: Awaited<ReturnType<typeof initScenario>>["autumnV2_3"];
+	ctx: AutumnContext;
 	baseId: string;
 }) => {
 	await autumn.catalogV2.update({
@@ -64,6 +71,7 @@ const seedPaidBaseAndV2 = async ({
 			},
 		],
 	});
+	await materializePlanInStripe({ ctx, planId: baseId });
 	await autumn.catalogV2.update({
 		plans: [
 			{
@@ -73,6 +81,8 @@ const seedPaidBaseAndV2 = async ({
 			},
 		],
 	});
+	// v2 mints its own Stripe product identity once materialized.
+	await materializePlanInStripe({ ctx, planId: baseId });
 };
 
 test.concurrent(
@@ -83,7 +93,7 @@ test.concurrent(
 		const variantId = uniqueTestId("cv2_sru_ls_v");
 		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
 		try {
-			await seedPaidBaseAndV2({ autumn: autumnV2_3, baseId });
+			await seedPaidBaseAndV2({ autumn: autumnV2_3, ctx, baseId });
 			await autumnV2_3.catalogV2.update({
 				plans: [
 					{
@@ -113,7 +123,7 @@ test.concurrent(
 		const variantId = uniqueTestId("cv2_sru_act_v");
 		await deleteDbPlans({ ctx, planIds: [baseId, variantId] });
 		try {
-			await seedPaidBaseAndV2({ autumn: autumnV2_3, baseId });
+			await seedPaidBaseAndV2({ autumn: autumnV2_3, ctx, baseId });
 			await forceActiveVersion({ ctx, planId: baseId, version: 1 });
 			await autumnV2_3.catalogV2.update({
 				plans: [

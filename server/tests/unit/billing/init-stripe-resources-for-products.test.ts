@@ -468,6 +468,38 @@ const connectedCtx = ({ env }: { env: AppEnv }): AutumnContext =>
 		logger: { debug: () => undefined, info: () => undefined },
 	}) as unknown as AutumnContext;
 
+describe("initStripeResourcesForProducts allowCreate seam", () => {
+	beforeEach(() => {
+		mockState.priceIds = [];
+		mockState.currencies = [];
+		mockState.productCalls = 0;
+		mockState.finderCalls = 0;
+	});
+
+	test("without allowCreate stops after the reuse phase", async () => {
+		await initStripeResourcesForProducts({
+			ctx: connectedCtx({ env: AppEnv.Sandbox }),
+			products: [unInitedProduct({ env: AppEnv.Sandbox })],
+			lookupVariantFamilies: false,
+		});
+
+		expect(mockState.productCalls).toBe(0);
+		expect(mockState.priceIds).toEqual([]);
+	});
+
+	test("allowCreate: true creates the product and its prices", async () => {
+		await initStripeResourcesForProducts({
+			ctx: connectedCtx({ env: AppEnv.Sandbox }),
+			products: [unInitedProduct({ env: AppEnv.Sandbox })],
+			allowCreate: true,
+			lookupVariantFamilies: false,
+		});
+
+		expect(mockState.productCalls).toBe(1);
+		expect(mockState.priceIds).toEqual(["price_1"]);
+	});
+});
+
 describe("initStripeResourcesForProducts Live finder gate", () => {
 	beforeEach(() => {
 		mockState.priceIds = [];
@@ -476,7 +508,7 @@ describe("initStripeResourcesForProducts Live finder gate", () => {
 		mockState.finderCalls = 0;
 	});
 
-	test("Live without allowLiveCreate skips findReusableStripePrice", async () => {
+	test("Live without allowCreate skips findReusableStripePrice", async () => {
 		await initStripeResourcesForProducts({
 			ctx: connectedCtx({ env: AppEnv.Live }),
 			products: [unInitedProduct({ env: AppEnv.Live })],
@@ -487,11 +519,11 @@ describe("initStripeResourcesForProducts Live finder gate", () => {
 		expect(mockState.priceIds).toEqual([]);
 	});
 
-	test("Live + allowLiveCreate calls findReusableStripePrice", async () => {
+	test("Live + allowCreate calls findReusableStripePrice", async () => {
 		await initStripeResourcesForProducts({
 			ctx: connectedCtx({ env: AppEnv.Live }),
 			products: [unInitedProduct({ env: AppEnv.Live })],
-			allowLiveCreate: true,
+			allowCreate: true,
 			lookupVariantFamilies: false,
 		});
 

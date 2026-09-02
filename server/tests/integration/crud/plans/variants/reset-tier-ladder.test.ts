@@ -29,6 +29,7 @@ import {
 	ProductItemInterval,
 	ResetInterval,
 } from "@autumn/shared";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items";
@@ -498,6 +499,7 @@ test.concurrent(
 		const baseId = readableVariantTestId("rt_stripe_price");
 		const variantId = `${baseId}_variant`;
 		await createBaseWithItems(baseId, [prepaidCreditsItem(10)]);
+		await materializePlanInStripe({ ctx, planId: baseId });
 		await createVariantRpc(baseId, variantId, "Variant Stripe");
 
 		const v1 = await ProductService.getFull({

@@ -9,7 +9,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { initProductInStripe } from "@/internal/products/productUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies.js";
@@ -141,8 +140,6 @@ export const createVariant = async ({
 	});
 
 	await applyStripeReuseFromVariantFamilies({ ctx, products: [variant] });
-
-	await initProductInStripe({ ctx, product: variant });
 
 	return variant;
 };

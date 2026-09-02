@@ -1,22 +1,39 @@
-import { type FullProduct, isFixedPrice, isPrepaidPrice } from "@autumn/shared";
+import {
+	type FullProduct,
+	hasMissingStripeResourcesForProduct,
+	isFixedPrice,
+	isPrepaidPrice,
+} from "@autumn/shared";
+import { materializeProductsInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
 
+/** These helpers simulate subscriptions that already exist in Stripe, so materialize on fetch. */
 export const fetchFullProduct = async ({
 	ctx,
 	productId,
 }: {
 	ctx: TestContext;
 	productId: string;
-}): Promise<FullProduct> =>
-	ProductService.getFull({
+}): Promise<FullProduct> => {
+	const product = await ProductService.getFull({
 		db: ctx.db,
 		idOrInternalId: productId,
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
+	if (!hasMissingStripeResourcesForProduct({ product })) return product;
+
+	await materializeProductsInStripe({ ctx, products: [product] });
+	return ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: productId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+};
 
 export const getStripeCustomerId = async ({
 	ctx,

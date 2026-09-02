@@ -24,7 +24,7 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { generateId, getUnique, nullish } from "@/utils/genUtils.js";
 import { ProductService } from "../products/ProductService.js";
-import { initProductInStripe } from "../products/productUtils.js";
+import { applyStripeResourceReuseForProduct } from "../products/stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 
 export const constructReward = ({
 	internalId,
@@ -164,17 +164,14 @@ export const getOriginalCouponId = (couponId: string) => {
 	return couponId;
 };
 
-export const initRewardStripePrices = async ({
+/** Stitches each price's product so fixed-price coupons resolve a Stripe product id. */
+export const applyStripeReuseForRewardPrices = async ({
 	ctx,
 	prices,
 }: {
 	ctx: AutumnContext;
 	prices: (Price & { product: Product })[];
 }) => {
-	if (prices.every((price) => !nullish(price.config.stripe_price_id))) {
-		return;
-	}
-
 	const internalProductIds = getUnique(
 		prices.map((p: Price) => p.internal_product_id).filter(notNullish),
 	);
@@ -186,7 +183,7 @@ export const initRewardStripePrices = async ({
 	const batchInit: Promise<void>[] = [];
 	for (const product of products) {
 		batchInit.push(
-			initProductInStripe({
+			applyStripeResourceReuseForProduct({
 				ctx,
 				product,
 			}),

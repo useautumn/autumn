@@ -15,10 +15,10 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
+	expectStripeResourcesCarriedToVariant,
 	indexPricesByMatchKey,
 	priceMatchKey,
 	stripeConfigValue,
-	expectStripeResourcesCarriedToVariant,
 } from "./utils/expectVariantProductCorrect.js";
 import { readableVariantTestId } from "./utils/readableVariantTestId.js";
 import { createVariantPlan } from "./utils/variantTestPlanUtils.js";
@@ -56,7 +56,11 @@ const expectNoStripeResources = ({ product }: { product: FullProduct }) => {
 	}
 };
 
-const expectStripeResourceCoverage = ({ product }: { product: FullProduct }) => {
+const expectStripeResourceCoverage = ({
+	product,
+}: {
+	product: FullProduct;
+}) => {
 	expect(product.processor?.id).toBeTruthy();
 
 	const basePrice = product.prices.find((price) => !price.entitlement_id);
@@ -112,7 +116,7 @@ test.concurrent(
 
 		const { ctx } = await initScenario({
 			customerId: cid,
-			setup: [s.customer(), s.products({ list: [base] })],
+			setup: [s.customer(), s.products({ list: [base], createInStripe: true })],
 			actions: [],
 		});
 
@@ -168,7 +172,7 @@ test.concurrent(
 
 		const { ctx } = await initScenario({
 			customerId: cid,
-			setup: [s.customer(), s.products({ list: [base] })],
+			setup: [s.customer(), s.products({ list: [base], createInStripe: true })],
 			actions: [],
 		});
 
@@ -347,9 +351,7 @@ test.concurrent(
 			customerId: cid,
 			setup: [
 				s.customer({ paymentMethod: "success", testClock: false }),
-				s.otherCustomers([
-					{ id: siblingCustomerId, paymentMethod: "success" },
-				]),
+				s.otherCustomers([{ id: siblingCustomerId, paymentMethod: "success" }]),
 				s.products({ list: [base], createInStripe: false }),
 			],
 			actions: [],
@@ -486,9 +488,7 @@ test.concurrent(
 			customerId: cid,
 			setup: [
 				s.customer({ paymentMethod: "success", testClock: false }),
-				s.otherCustomers([
-					{ id: siblingCustomerId, paymentMethod: "success" },
-				]),
+				s.otherCustomers([{ id: siblingCustomerId, paymentMethod: "success" }]),
 				s.products({ list: [base], createInStripe: false }),
 			],
 			actions: [],

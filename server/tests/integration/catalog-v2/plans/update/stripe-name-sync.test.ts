@@ -8,13 +8,12 @@
 import { expect, test } from "bun:test";
 import { BillingInterval, BillingMethod } from "@autumn/shared";
 import { expectProductProcessorCorrect } from "@tests/integration/utils/expectStripePriceResources.js";
-import { initPlanStripeResources } from "@tests/integration/utils/initPlanStripeResources.js";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { ProductService } from "@/internal/products/ProductService.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
 
@@ -57,7 +56,7 @@ test.concurrent(
 					},
 				],
 			});
-			const before = await initPlanStripeResources({ ctx, planId });
+			const before = await materializePlanInStripe({ ctx, planId });
 			expectProductProcessorCorrect({ product: before, present: true });
 
 			await autumnV2_3.catalogV2.update({
@@ -95,12 +94,10 @@ test.concurrent(
 					},
 				],
 			});
-			const base = await ProductService.getFull({
-				db: ctx.db,
-				idOrInternalId: baseId,
-				orgId: ctx.org.id,
-				env: ctx.env,
-			});
+			// Base first so the variant reuses its Stripe Product rather than
+			// minting one — sharing is what the rename must not disturb.
+			const base = await materializePlanInStripe({ ctx, planId: baseId });
+			await materializePlanInStripe({ ctx, planId: variantId });
 			expectProductProcessorCorrect({ product: base, present: true });
 
 			await autumnV2_3.catalogV2.update({

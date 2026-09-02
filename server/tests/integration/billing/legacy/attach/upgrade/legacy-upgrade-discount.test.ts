@@ -42,9 +42,7 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-discount 1: reward applies
 	});
 
 	await createReward({
-		db: ctx.db,
-		orgId: ctx.org.id,
-		env: ctx.env,
+		ctx,
 		autumn: new AutumnInt(),
 		reward,
 		productId: premium.id,

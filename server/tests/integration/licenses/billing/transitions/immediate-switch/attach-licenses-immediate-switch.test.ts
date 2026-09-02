@@ -9,6 +9,7 @@ import {
 	type CheckResponseV3,
 } from "@autumn/shared";
 import {
+	fetchFullProduct,
 	getBaseStripePriceId,
 	getProductStripeProductId,
 } from "@tests/integration/billing/sync/utils/syncProductHelpers";
@@ -24,7 +25,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli";
-import { ProductService } from "@/internal/products/ProductService";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
 
 const SEAT_QUANTITY = 3;
@@ -100,17 +100,13 @@ test.concurrent(
 			],
 		});
 
-		const quarterlySeatFull = await ProductService.getFull({
-			db: ctx.db,
-			idOrInternalId: quarterlySeat.id,
-			orgId: ctx.org.id,
-			env: ctx.env,
+		const quarterlySeatFull = await fetchFullProduct({
+			ctx,
+			productId: quarterlySeat.id,
 		});
-		const annualSeatFull = await ProductService.getFull({
-			db: ctx.db,
-			idOrInternalId: annualSeatId,
-			orgId: ctx.org.id,
-			env: ctx.env,
+		const annualSeatFull = await fetchFullProduct({
+			ctx,
+			productId: annualSeatId,
 		});
 		expect(getProductStripeProductId({ fullProduct: annualSeatFull })).toBe(
 			getProductStripeProductId({ fullProduct: quarterlySeatFull }),

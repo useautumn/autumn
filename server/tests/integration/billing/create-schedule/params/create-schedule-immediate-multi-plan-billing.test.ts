@@ -52,15 +52,16 @@ test.concurrent(
 			customerId: "cs-immediate-discounts",
 			setup: [
 				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [planA, planB] }),
+				s.products({ list: [planA, planB], createInStripe: true }),
 			],
 			actions: [],
 		});
+		// The scoped coupon needs planB's Stripe product before createSchedule mints it.
 		const fullPlanB = await ProductService.getFull({
 			db: ctx.db,
+			idOrInternalId: planB.id,
 			orgId: ctx.org.id,
 			env: ctx.env,
-			idOrInternalId: planB.id,
 		});
 		const globalCoupon = await createPercentCoupon({
 			stripeCli: ctx.stripeCli,

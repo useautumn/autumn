@@ -1,6 +1,5 @@
 import { AppEnv, Scopes, type StripeConfig } from "@autumn/shared";
 import { z } from "zod/v4";
-import { ensureStripeProductsWithEnv } from "@/external/stripe/stripeEnsureUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { OrgService } from "../../OrgService.js";
 import { handleStripeSecretKey } from "../../orgUtils/handleStripeSecretKey.js";
@@ -32,7 +31,7 @@ export const handleConnectStripe = createRoute({
 	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { db, org, logger, env } = ctx;
+		const { db, org, env } = ctx;
 
 		const body = c.req.valid("json");
 		const configUpdates: StripeConfig = org.stripe_config || {};
@@ -66,7 +65,7 @@ export const handleConnectStripe = createRoute({
 			configUpdates,
 		});
 
-		const newOrg = await OrgService.update({
+		await OrgService.update({
 			db,
 			orgId: org.id,
 			updates: {
@@ -74,15 +73,6 @@ export const handleConnectStripe = createRoute({
 				stripe_config: configUpdates,
 			},
 		});
-
-		if (newOrg) {
-			await ensureStripeProductsWithEnv({
-				ctx: {
-					...ctx,
-					org: newOrg!,
-				},
-			});
-		}
 
 		return c.json({
 			message: "Connect Stripe",

@@ -1,13 +1,14 @@
 import { expect } from "bun:test";
 import {
 	type AppEnv,
+	diffPriceStripeObjects,
 	type FullCusProduct,
+	isFixedPrice,
+	isPrepaidPrice,
 	type Price,
 	type UsagePriceConfig,
-	diffPriceStripeObjects,
-	isFixedPrice,
-	priceStripeObjectsMatch,
 } from "@autumn/shared";
+import { stripePriceIdentityValue } from "@tests/integration/utils/expectStripePriceResources";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
@@ -85,19 +86,37 @@ export const loadCustomerAndCatalogPrices = async ({
 	};
 };
 
-const formatDiff = (catalog: Price, customer: Price): string => {
-	const diffs = diffPriceStripeObjects({
-		priceA: catalog,
-		priceB: customer,
-	});
-	return diffs
-		.map((diff) => `${diff.field}: catalog=${diff.a ?? "null"}, customer=${diff.b ?? "null"}`)
-		.join("\n  ");
+/**
+ * Prepaid prices hold their Stripe Price in the v2 slot, leaving
+ * stripe_price_id null — it carries no reuse signal for them.
+ */
+const reusableStripeObjectDiffs = ({
+	catalog,
+	customer,
+}: {
+	catalog: Price;
+	customer: Price;
+}) => {
+	const diffs = diffPriceStripeObjects({ priceA: catalog, priceB: customer });
+	if (!isPrepaidPrice(catalog)) return diffs;
+	return diffs.filter((diff) => diff.field !== "stripe_price_id");
 };
+
+const formatDiffs = ({
+	diffs,
+}: {
+	diffs: { field: string; a: string | null; b: string | null }[];
+}): string =>
+	diffs
+		.map(
+			(diff) =>
+				`${diff.field}: catalog=${diff.a ?? "null"}, customer=${diff.b ?? "null"}`,
+		)
+		.join("\n  ");
 
 /**
  * Assert every (catalog, customer) price pair shares all Stripe-object IDs.
- * Each catalog price must also have a non-null stripe_price_id so the
+ * Each catalog price must also carry a materialized Stripe Price id so the
  * assertion is meaningful (verifies real reuse, not "both empty").
  */
 export const expectAllStripeIdsReused = ({
@@ -107,15 +126,14 @@ export const expectAllStripeIdsReused = ({
 }) => {
 	expect(pairs.length).toBeGreaterThan(0);
 	for (const { catalog, customer } of pairs) {
-		const catalogConfig = catalog.config as Record<string, unknown>;
-		expect(catalogConfig.stripe_price_id ?? null).not.toBeNull();
-		const matches = priceStripeObjectsMatch({
-			priceA: catalog,
-			priceB: customer,
-		});
-		if (!matches) {
+		expect(
+			stripePriceIdentityValue({ price: catalog }),
+			`catalog ${priceMatchKey(catalog)} has no Stripe price id — materialize the plan first`,
+		).not.toBeNull();
+		const diffs = reusableStripeObjectDiffs({ catalog, customer });
+		if (diffs.length > 0) {
 			throw new Error(
-				`Expected stripe-object reuse for ${priceMatchKey(catalog)} but got diffs:\n  ${formatDiff(catalog, customer)}`,
+				`Expected stripe-object reuse for ${priceMatchKey(catalog)} but got diffs:\n  ${formatDiffs({ diffs })}`,
 			);
 		}
 	}
@@ -123,10 +141,10 @@ export const expectAllStripeIdsReused = ({
 
 /**
  * Assert that the customer price keyed by `featureId` (or fixed base when
- * `featureId` is null) does NOT reuse stripe_price_id from the catalog.
- * Both prices must have non-null stripe_price_id values for the assertion
- * to be meaningful. Falls back to feature-id-only matching when the strict
- * (feature + bill_when) pairing misses (e.g. prepaid → consumable swap).
+ * `featureId` is null) does NOT reuse the catalog price's Stripe Price object.
+ * Both prices must carry a materialized id for the assertion to be meaningful.
+ * Falls back to feature-id-only matching when the strict (feature + bill_when)
+ * pairing misses (e.g. prepaid → consumable swap).
  */
 export const expectStripePriceIdNotReused = ({
 	pairs,
@@ -166,13 +184,11 @@ export const expectStripePriceIdNotReused = ({
 	expect(catalogPrice).toBeDefined();
 	expect(customerPrice).toBeDefined();
 	if (!catalogPrice || !customerPrice) return;
-	const catalogConfig = catalogPrice.config as Record<string, unknown>;
-	const customerConfig = customerPrice.config as Record<string, unknown>;
-	expect(catalogConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(customerConfig.stripe_price_id ?? null).not.toBeNull();
-	expect(customerConfig.stripe_price_id).not.toBe(
-		catalogConfig.stripe_price_id,
-	);
+	const catalogId = stripePriceIdentityValue({ price: catalogPrice });
+	const customerId = stripePriceIdentityValue({ price: customerPrice });
+	expect(catalogId, "catalog price has no Stripe price id").not.toBeNull();
+	expect(customerId, "customer price has no Stripe price id").not.toBeNull();
+	expect(customerId).not.toBe(catalogId);
 };
 
 export { priceMatchKey };

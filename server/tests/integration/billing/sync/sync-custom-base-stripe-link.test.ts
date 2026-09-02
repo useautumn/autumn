@@ -21,7 +21,7 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
-import { ProductService } from "@/internal/products/ProductService";
+import { fetchFullProduct } from "./utils/syncProductHelpers";
 import { getFirstStripePriceId } from "./utils/syncTestUtils";
 
 test.concurrent(
@@ -45,12 +45,7 @@ test.concurrent(
 
 		// 1. A Stripe price on pro's Stripe product with a NON-catalog amount —
 		// detection will product-match it and propose a custom base price.
-		const fullProduct = await ProductService.getFull({
-			db: ctx.db,
-			idOrInternalId: pro.id,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		});
+		const fullProduct = await fetchFullProduct({ ctx, productId: pro.id });
 		const catalogStripePriceId = getFirstStripePriceId({ fullProduct });
 		const catalogStripePrice =
 			await ctx.stripeCli.prices.retrieve(catalogStripePriceId);

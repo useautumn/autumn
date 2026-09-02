@@ -1,9 +1,10 @@
 /**
  * catalogV2.update — execute-phase Stripe resource init.
  *
- * After DB writes, missing Stripe objects are created (sandbox) or reused
- * (variant family, license child). `create_in_stripe: false` copies ids but
- * never creates; free plans never mint a Stripe Product of their own.
+ * Stripe objects are created lazily at billing time in every env; catalog
+ * writes only reuse ids. An explicit `create_in_stripe: true` opts into
+ * immediate creation, `false` still reuses but never creates, and free /
+ * zero-amount plans never mint a Stripe Product of their own.
  */
 
 import { expect, test } from "bun:test";
@@ -14,9 +15,9 @@ import {
 } from "@autumn/shared";
 import { getFullLicenseProduct } from "@tests/integration/licenses/catalog-update/utils/getFullLicenseProduct.js";
 import {
-	expectPriceStripeReuseCorrect,
 	expectPriceStripeResourcesAbsent,
 	expectPriceStripeResourcesPresent,
+	expectPriceStripeReuseCorrect,
 	expectProductProcessorCorrect,
 	findBasePrice,
 	findFeaturePrice,
@@ -59,7 +60,44 @@ const prepaidMessagesItem = ({ amount }: { amount: number }) => ({
 });
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 stripe init: paid plan create mints stripe product and prices")}`,
+	`${chalk.yellowBright("catalogV2 stripe init: paid plan create defaults to lazy — nothing minted")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const planId = uniqueTestId("cv2_sini_lazy");
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				plans: [
+					{
+						plan_id: planId,
+						name: "Init Lazy",
+						price: { amount: 20, interval: BillingInterval.Month },
+						items: [prepaidMessagesItem({ amount: 10 })],
+					},
+				],
+			});
+
+			const plan = await getFull({ ctx, planId });
+			expectProductProcessorCorrect({ product: plan, present: false });
+			expectPriceStripeResourcesAbsent({
+				price: findBasePrice({ product: plan }),
+				label: "lazy base price",
+			});
+			expectPriceStripeResourcesAbsent({
+				price: findFeaturePrice({
+					product: plan,
+					featureId: TestFeature.Messages,
+				}),
+				label: "lazy prepaid price",
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 stripe init: create_in_stripe true mints stripe product and prices")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_sini_paid");
@@ -72,6 +110,7 @@ test.concurrent(
 						name: "Init Paid",
 						price: { amount: 20, interval: BillingInterval.Month },
 						items: [prepaidMessagesItem({ amount: 10 })],
+						create_in_stripe: true,
 					},
 				],
 			});
@@ -146,6 +185,7 @@ test.concurrent(
 						plan_id: planId,
 						name: "Init Free",
 						items: [{ feature_id: TestFeature.Dashboard }],
+						create_in_stripe: true,
 					},
 				],
 			});
@@ -174,6 +214,7 @@ test.concurrent(
 						price: { amount: 20, interval: BillingInterval.Month },
 						items: [prepaidMessagesItem({ amount: 10 })],
 						variants: [{ variant_plan_id: variantId, name: "Team EU" }],
+						create_in_stripe: true,
 					},
 				],
 			});
@@ -222,6 +263,7 @@ test.concurrent(
 							{ variant_plan_id: euId, name: "Team EU" },
 							{ variant_plan_id: ukId, name: "Team UK" },
 						],
+						create_in_stripe: true,
 					},
 				],
 			});
@@ -245,7 +287,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalogV2 stripe init: added paid item on an un-inited plan gets stripe ids")}`,
+	`${chalk.yellowBright("catalogV2 stripe init: create_in_stripe true on update inits an un-inited plan")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_sini_add");
@@ -269,6 +311,7 @@ test.concurrent(
 							{ feature_id: TestFeature.Dashboard },
 							prepaidMessagesItem({ amount: 10 }),
 						],
+						create_in_stripe: true,
 					},
 				],
 			});
@@ -302,6 +345,7 @@ test.concurrent(
 						name: "Init Zero",
 						price: { amount: 0, interval: BillingInterval.Month },
 						items: [{ feature_id: TestFeature.Dashboard }],
+						create_in_stripe: true,
 					},
 				],
 			});
@@ -343,6 +387,7 @@ test.concurrent(
 						plan_id: planId,
 						price: { amount: 30, interval: BillingInterval.Month },
 						versioning: "new_version",
+						create_in_stripe: true,
 					},
 				],
 			});
@@ -379,6 +424,7 @@ test.concurrent(
 						plan_id: childId,
 						name: "Seat",
 						price: { amount: 10, interval: BillingInterval.Month },
+						create_in_stripe: true,
 					},
 					{
 						plan_id: parentId,
@@ -392,6 +438,7 @@ test.concurrent(
 								},
 							},
 						],
+						create_in_stripe: true,
 					},
 				],
 			});

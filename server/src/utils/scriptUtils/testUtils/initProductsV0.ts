@@ -1,8 +1,10 @@
 import { ApiVersion, type ProductV2 } from "@autumn/shared";
+import { materializeProductsInStripe } from "@tests/integration/utils/materializePlanInStripe.js";
 import { createProducts } from "@tests/utils/productUtils.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { addPrefixToProducts } from "@tests/utils/testProductUtils/testProductUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 
 export const initProductsV0 = async ({
 	ctx,
@@ -59,4 +61,17 @@ export const initProductsV0 = async ({
 		products,
 		createInStripe,
 	});
+
+	if (createInStripe !== true) return;
+
+	// One batched call so siblings can share Stripe ids and the products cache
+	// is invalidated once for the whole set.
+	const fullProducts = await ProductService.listFull({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		inIds: products.map((product) => product.id),
+	});
+
+	await materializeProductsInStripe({ ctx, products: fullProducts });
 };

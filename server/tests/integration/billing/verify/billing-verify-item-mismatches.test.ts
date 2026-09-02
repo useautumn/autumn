@@ -12,6 +12,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { materializePlanInStripe } from "@tests/integration/utils/materializePlanInStripe";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
@@ -73,11 +74,9 @@ const firstStripePriceIdFor = async ({
 	ctx: TestContext;
 	productId: string;
 }) => {
-	const fullProduct = await ProductService.getFull({
-		db: ctx.db,
-		idOrInternalId: productId,
-		orgId: ctx.org.id,
-		env: ctx.env,
+	const fullProduct = await materializePlanInStripe({
+		ctx,
+		planId: productId,
 	});
 	for (const price of fullProduct.prices) {
 		const id =

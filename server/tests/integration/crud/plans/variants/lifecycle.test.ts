@@ -728,7 +728,7 @@ test.concurrent(
 
 		const { ctx } = await initScenario({
 			customerId: cid,
-			setup: [s.customer(), s.products({ list: [base] })],
+			setup: [s.customer(), s.products({ list: [base], createInStripe: true })],
 			actions: [],
 		});
 
