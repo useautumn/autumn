@@ -2,8 +2,11 @@ import type { CreditSchemaItem } from "@autumn/shared";
 import { FormLabel, IconButton, Switch } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { useCreditDimensionsToggle } from "../hooks/useCreditDimensionsToggle";
 import { useCreditSchema } from "../hooks/useCreditSchema";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
+import { CreditDimensionsSection } from "./CreditDimensionsSection";
+import { CreditDimensionsSwitch } from "./CreditDimensionsSwitch";
 import { CreditRateCardRow } from "./CreditRateCardRow";
 
 interface ClassicCreditSchemaProps {
@@ -21,10 +24,12 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 		toggleExpandedKey,
 		invoiceCredit,
 		setInvoiceCredit,
+		setSchema,
 		setSchemaItem,
 		addSchemaItem,
 		removeSchemaItem,
 	} = useCreditSchema(form);
+	const dimensions = useCreditDimensionsToggle({ schema, setSchema });
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -42,6 +47,13 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 						onCheckedChange={setInvoiceCredit}
 					/>
 				</div>
+			)}
+
+			{isAdmin && (
+				<CreditDimensionsSwitch
+					checked={dimensions.enabled}
+					onCheckedChange={dimensions.setEnabled}
+				/>
 			)}
 
 			<div className="flex flex-col gap-1">
@@ -77,6 +89,14 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 					Add feature
 				</IconButton>
 			</div>
+
+			{isAdmin && dimensions.enabled && (
+				<CreditDimensionsSection
+					schema={schema}
+					allFeatures={allSchemaCandidateFeatures}
+					onItemChange={setSchemaItem}
+				/>
+			)}
 		</div>
 	);
 }

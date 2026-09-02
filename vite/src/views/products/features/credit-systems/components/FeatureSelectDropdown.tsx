@@ -1,13 +1,13 @@
 import type { Feature } from "@autumn/shared";
-import { Button } from "@autumn/ui";
-import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
-import { useRef, useState } from "react";
 import {
+	Button,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@autumn/ui";
+import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
+import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { InlineCreateFeatureForm } from "@/views/products/features/credit-systems/components/InlineCreateFeatureForm";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";

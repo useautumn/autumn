@@ -142,3 +142,17 @@ test("graduated rates cannot contain a flat credit cost", () => {
 		"Tiered rates cannot include a flat credit cost",
 	);
 });
+
+test("dimension values must be named before saving", () => {
+	expect(
+		validateCreditSystem(
+			creditSystem([
+				{
+					metered_feature_id: "cpu_minutes",
+					credit_amount: 1,
+					dimensions: { size_: { match: { size: "" }, credit_amount: 2 } },
+				},
+			]),
+		),
+	).toBe("Each size value needs a name");
+});

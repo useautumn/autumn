@@ -6,6 +6,7 @@ import {
 	FeatureUsageType,
 } from "@autumn/shared";
 import { renderToStaticMarkup } from "react-dom/server";
+import { CreditDimensionsSection } from "../src/views/products/features/credit-systems/components/CreditDimensionsSection";
 import { CreditRateCardRow } from "../src/views/products/features/credit-systems/components/CreditRateCardRow";
 
 const feature = {
@@ -89,4 +90,56 @@ test("collapsed rows summarize the rate without exposing controls", () => {
 
 	expect(html).toContain("1 credit per 100");
 	expect(html).not.toContain('aria-label="Credit cost"');
+});
+
+test("the dimensions section renders a price list with the row rate as the fallback", () => {
+	const html = renderToStaticMarkup(
+		<CreditDimensionsSection
+			schema={[
+				{
+					metered_feature_id: feature.id,
+					credit_amount: 1,
+					dimensions: {
+						size_large: { match: { size: "large" }, credit_amount: 16 },
+					},
+					multipliers: {
+						lifecycle_spot: { match: { lifecycle: "spot" }, factor: 0.3 },
+					},
+				},
+			]}
+			allFeatures={[feature]}
+			onItemChange={() => {}}
+		/>,
+	);
+
+	expect(html).toContain('aria-label="Dimension property"');
+	expect(html).toContain('value="size"');
+	expect(html).toContain('aria-label="size large credit cost"');
+	expect(html).toContain("anything else");
+	expect(html).toContain('aria-label="lifecycle spot factor"');
+	expect(html).not.toContain(">Feature A<");
+});
+
+test("API-authored rules are shown read-only instead of being rewritten", () => {
+	const html = renderToStaticMarkup(
+		<CreditDimensionsSection
+			schema={[
+				{
+					metered_feature_id: feature.id,
+					credit_amount: 1,
+					dimensions: {
+						large_eu: {
+							match: { size: "large", region: "eu" },
+							credit_amount: 20,
+						},
+					},
+				},
+			]}
+			allFeatures={[feature]}
+			onItemChange={() => {}}
+		/>,
+	);
+
+	expect(html).toContain("configured through the API");
+	expect(html).not.toContain('aria-label="Dimension property"');
 });

@@ -162,9 +162,7 @@ function UpdateCreditSystemSheet({
 					isSaving={isSubmitting}
 					onConfirm={() =>
 						form.handleSubmit().catch((err: AxiosError) => {
-							toast.error(
-								getBackendErr(err, "Failed to update credit system"),
-							);
+							toast.error(getBackendErr(err, "Failed to update credit system"));
 						})
 					}
 					onOpenChange={setConfirmOpen}

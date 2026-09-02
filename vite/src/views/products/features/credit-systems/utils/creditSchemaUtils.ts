@@ -1,11 +1,18 @@
 import {
 	type ApiCreditSchemaItem,
 	type CreditSchemaItem,
+	type CreditTier,
 	dbCreditSchemaItemToApi,
 	Infinite,
 } from "@autumn/shared";
 
 export type CreditRateType = "flat" | "graduated";
+
+/** Any graduated rate — a rate-card row or one of its dimensions. */
+export type GraduatedCreditRate = {
+	tier_behavior: "graduated";
+	tiers: CreditTier[];
+};
 
 export type GraduatedCreditSchemaItem = Extract<
 	CreditSchemaItem,
@@ -63,9 +70,7 @@ export const setRateType = ({
 	return { ...base, credit_amount: toNumber(item.tiers?.[0]?.credit_amount) };
 };
 
-export const addTier = (item: CreditSchemaItem): CreditSchemaItem => {
-	if (!isGraduated(item)) return item;
-
+export const addTier = <T extends GraduatedCreditRate>(item: T): T => {
 	const tiers = [...item.tiers];
 	const last = tiers.at(-1);
 
@@ -81,31 +86,29 @@ export const addTier = (item: CreditSchemaItem): CreditSchemaItem => {
 	return { ...item, tiers };
 };
 
-export const removeTier = ({
+export const removeTier = <T extends GraduatedCreditRate>({
 	item,
 	index,
 }: {
-	item: CreditSchemaItem;
+	item: T;
 	index: number;
-}): CreditSchemaItem => {
-	if (!isGraduated(item) || item.tiers.length <= 1) return item;
+}): T => {
+	if (item.tiers.length <= 1) return item;
 
 	const tiers = item.tiers.filter((_, i) => i !== index);
 	tiers[tiers.length - 1] = { ...tiers[tiers.length - 1], to: Infinite };
 	return { ...item, tiers };
 };
 
-export const updateTier = ({
+export const updateTier = <T extends GraduatedCreditRate>({
 	item,
 	index,
 	patch,
 }: {
-	item: CreditSchemaItem;
+	item: T;
 	index: number;
-	patch: Partial<GraduatedCreditSchemaItem["tiers"][number]>;
-}): CreditSchemaItem => {
-	if (!isGraduated(item)) return item;
-
+	patch: Partial<CreditTier>;
+}): T => {
 	const tiers = [...item.tiers];
 	const isLast = index === tiers.length - 1;
 	tiers[index] = {

@@ -13,10 +13,27 @@ const isNonNegative = (value: unknown) => {
 	return Number.isFinite(parsed) && parsed >= 0;
 };
 
+const validateDimensionMatches = (item: CreditSchemaItem): string | null => {
+	const rules = [
+		...Object.values(item.dimensions ?? {}),
+		...Object.values(item.multipliers ?? {}),
+	];
+	for (const rule of rules) {
+		for (const [key, value] of Object.entries(rule.match)) {
+			if (!key.trim()) return "Each dimension needs a property";
+			if (!value.trim()) return `Each ${key} value needs a name`;
+		}
+	}
+	return null;
+};
+
 const validateSchemaItem = (item: CreditSchemaItem): string | null => {
 	if (!item.metered_feature_id) {
 		return "Select a feature for each row";
 	}
+
+	const dimensionError = validateDimensionMatches(item);
+	if (dimensionError) return dimensionError;
 
 	const billingUnits = Number(item.feature_amount ?? 1);
 	if (!Number.isFinite(billingUnits) || billingUnits <= 0) {
