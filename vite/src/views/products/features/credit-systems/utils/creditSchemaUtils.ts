@@ -45,10 +45,12 @@ export const setRateType = ({
 }): CreditSchemaItem => {
 	if (rateType === rateTypeOf(item)) return item;
 
-	const base = {
-		metered_feature_id: item.metered_feature_id,
-		feature_amount: item.feature_amount,
-	};
+	const {
+		credit_amount: _creditAmount,
+		tier_behavior: _tierBehavior,
+		tiers: _tiers,
+		...base
+	} = item;
 
 	if (rateType === "graduated") {
 		return {
@@ -122,6 +124,10 @@ export const creditSchemaToApi = (
 			metered_feature_id: item.metered_feature_id,
 			feature_amount:
 				item.feature_amount === undefined ? 1 : toNumber(item.feature_amount),
+			...(item.dimensions === undefined ? {} : { dimensions: item.dimensions }),
+			...(item.multipliers === undefined
+				? {}
+				: { multipliers: item.multipliers }),
 		};
 
 		if (!isGraduated(item)) {
