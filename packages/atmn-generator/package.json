@@ -6,7 +6,8 @@
 	"description": "Generates the atmn-nightly CLI from the internal OpenAPI spec.",
 	"scripts": {
 		"ts": "bunx tsgo --build --noEmit",
-		"test": "bun test test"
+		"test": "bun test test",
+		"generate": "bun run src/generate.ts"
 	},
 	"dependencies": {
 		"yaml": "2.9.0"
