@@ -92,6 +92,7 @@ export const runStripeWebhookReplay = async ({
 				customerId: routedCtx.fullCustomer.id,
 				ctx: routedCtx,
 				source: `stripeWebhookReplay: ${stripeEvent.type}`,
+				flushBalances: true,
 			}),
 		);
 	}
