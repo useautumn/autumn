@@ -1,0 +1,37 @@
+{
+	"name": "atmn-nightly",
+	"version": "3.0.0-nightly.1",
+	"license": "MIT",
+	"description": "Autumn CLI — nightly. Renamed to `atmn` at 3.0.0.",
+	"bin": {
+		"atmn-nightly": "dist/cli.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/useautumn/autumn.git",
+		"directory": "packages/atmn-nightly"
+	},
+	"homepage": "https://docs.useautumn.com/api-reference/cli/getting-started",
+	"type": "module",
+	"engines": {
+		"node": ">=20"
+	},
+	"scripts": {
+		"ts": "bunx tsgo --build --noEmit",
+		"build": "bun run bun.config.ts",
+		"test": "bun test test"
+	},
+	"files": [
+		"dist",
+		"package.json",
+		"README.md"
+	],
+	"dependencies": {
+		"chalk": "5.6.2",
+		"commander": "14.0.3",
+		"dotenv": "16.6.1"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	}
+}

@@ -13,6 +13,7 @@
 	],
 	"ignoreWorkspaces": [
 		"packages/atmn",
+		"packages/atmn-nightly",
 		"packages/autumn-js",
 		"packages/mcp",
 		"packages/openapi",
@@ -20,13 +21,8 @@
 	],
 	"workspaces": {
 		".": {
-			"entry": [
-				"apps/scope-picker/**/*",
-				"trigger.config.ts"
-			],
-			"project": [
-				"apps/scope-picker/**/*"
-			]
+			"entry": ["apps/scope-picker/**/*", "trigger.config.ts"],
+			"project": ["apps/scope-picker/**/*"]
 		},
 		"server": {
 			"entry": [
@@ -41,14 +37,8 @@
 				"src/internal/billing/v2/providers/stripe/utils/sync/**/*.ts",
 				"tests/**/*.ts"
 			],
-			"project": [
-				"src/**/*.ts",
-				"tests/**/*.ts"
-			],
-			"ignoreDependencies": [
-				"@react-email/components",
-				"@axiomhq/pino"
-			],
+			"project": ["src/**/*.ts", "tests/**/*.ts"],
+			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"],
 			"ignore": [
 				"src/external/tinybird/connections/eventsS3.ts",
 				"src/external/connect/attachSandboxStripeAccount.ts",
@@ -57,25 +47,13 @@
 			]
 		},
 		"shared": {
-			"entry": [
-				"**/*.test.ts",
-				"drizzle.config.events.ts"
-			],
-			"project": [
-				"**/*.ts",
-				"!utils/**"
-			],
+			"entry": ["**/*.test.ts", "drizzle.config.events.ts"],
+			"project": ["**/*.ts", "!utils/**"],
 			"includeEntryExports": false
 		},
 		"vite": {
-			"entry": [
-				"tests/**/*.{ts,tsx}",
-				"src/**/*.test.{ts,tsx}"
-			],
-			"project": [
-				"src/**/*.{ts,tsx}",
-				"tests/**/*.{ts,tsx}"
-			],
+			"entry": ["tests/**/*.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
+			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 			"ignoreDependencies": [
 				"tailwindcss",
 				"tailwind-scrollbar-hide",
@@ -84,30 +62,16 @@
 			]
 		},
 		"scripts": {
-			"entry": [
-				"**/*.{ts,js}"
-			],
-			"project": [
-				"**/*.{ts,js}"
-			]
+			"entry": ["**/*.{ts,js}"],
+			"project": ["**/*.{ts,js}"]
 		},
 		"apps/docs": {
-			"entry": [
-				"**/*"
-			],
-			"project": [
-				"**/*.{ts,js,jsx}"
-			]
+			"entry": ["**/*"],
+			"project": ["**/*.{ts,js,jsx}"]
 		},
 		"apps/sdk-test": {
-			"entry": [
-				"app/**/*.{ts,tsx}",
-				"lib/**/*.{ts,tsx}",
-				"*.ts"
-			],
-			"project": [
-				"**/*.{ts,tsx}"
-			]
+			"entry": ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "*.ts"],
+			"project": ["**/*.{ts,tsx}"]
 		},
 		"apps/website": {
 			"entry": [
@@ -117,73 +81,36 @@
 				"scripts/**/*.mjs",
 				"*.mjs"
 			],
-			"project": [
-				"**/*.{ts,tsx,mdx,mjs}"
-			]
+			"project": ["**/*.{ts,tsx,mdx,mjs}"]
 		},
 		"apps/checkout": {
-			"project": [
-				"src/**/*.{ts,tsx}"
-			],
-			"ignoreDependencies": [
-				"shadcn",
-				"tailwindcss",
-				"tw-animate-css"
-			]
+			"project": ["src/**/*.{ts,tsx}"],
+			"ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
 		},
 		"apps/leaf": {
-			"entry": [
-				"tests/**/*.ts",
-				"agent/**/*.ts"
-			],
-			"project": [
-				"src/**/*.ts",
-				"tests/**/*.ts",
-				"agent/**/*.ts"
-			]
+			"entry": ["tests/**/*.ts", "agent/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts", "agent/**/*.ts"]
 		},
 		"packages/agent-docs": {
-			"entry": [
-				"**/*.test.ts",
-				"scripts/**/*.ts"
-			],
-			"project": [
-				"src/**/*.ts",
-				"scripts/**/*.ts"
-			]
+			"entry": ["**/*.test.ts", "scripts/**/*.ts"],
+			"project": ["src/**/*.ts", "scripts/**/*.ts"]
 		},
 		"packages/gateway": {
-			"entry": [
-				"tests/**/*.test.ts"
-			],
-			"project": [
-				"src/**/*.ts",
-				"tests/**/*.ts"
-			]
+			"entry": ["tests/**/*.test.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
 		"packages/ksuid": {
-			"project": [
-				"src/**/*.ts"
-			]
+			"project": ["src/**/*.ts"]
 		},
 		"packages/stripe-sync": {
-			"entry": [
-				"scripts/**/*.ts"
-			],
-			"project": [
-				"src/**/*.ts",
-				"scripts/**/*.ts"
-			]
+			"entry": ["scripts/**/*.ts"],
+			"project": ["src/**/*.ts", "scripts/**/*.ts"]
 		},
 		"packages/render": {
-			"project": [
-				"src/**/*.ts"
-			]
+			"project": ["src/**/*.ts"]
 		},
 		"packages/env": {
-			"project": [
-				"src/**/*.ts"
-			],
+			"project": ["src/**/*.ts"],
 			"ignore": [
 				"src/index.test.ts",
 				"src/cloudAgent.test.ts",
@@ -191,17 +118,9 @@
 			]
 		},
 		"apps/testbench": {
-			"entry": [
-				"**/*.ts"
-			],
-			"project": [
-				"**/*.ts"
-			]
+			"entry": ["**/*.ts"],
+			"project": ["**/*.ts"]
 		}
 	},
-	"ignoreBinaries": [
-		"infisical",
-		"lsof",
-		"serve"
-	]
+	"ignoreBinaries": ["infisical", "lsof", "serve"]
 }
