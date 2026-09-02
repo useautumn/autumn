@@ -236,27 +236,23 @@ const expireOrphanAssignments = async ({
 		);
 };
 
-/** Ends released spare seats (entity-less rows awaiting reuse) on the given
- * pool links — spares can never rebind while a pool is over capacity. */
-const expireUnusedAssignmentsByLinkIds = async ({
+/** Ends specific released spare seats — caller selects surplus vs remaining. */
+const expireUnusedAssignmentsByIds = async ({
 	db,
-	customerLicenseLinkIds,
+	customerProductIds,
 	endedAt,
 }: {
 	db: DrizzleCli;
-	customerLicenseLinkIds: string[];
+	customerProductIds: string[];
 	endedAt: number;
 }) => {
-	if (customerLicenseLinkIds.length === 0) return [];
+	if (customerProductIds.length === 0) return [];
 	return db
 		.update(customerProducts)
 		.set({ status: CusProductStatus.Expired, ended_at: endedAt })
 		.where(
 			and(
-				inArray(
-					customerProducts.customer_license_link_id,
-					customerLicenseLinkIds,
-				),
+				inArray(customerProducts.id, customerProductIds),
 				isNull(customerProducts.internal_entity_id),
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 			),
@@ -342,7 +338,7 @@ export const licenseAssignmentRepo = {
 	listUnusedAssignmentsByLinkId,
 	listUnusedAssignmentsByLinkIds,
 	expireOrphanAssignments,
-	expireUnusedAssignmentsByLinkIds,
+	expireUnusedAssignmentsByIds,
 	maxActiveCountByCatalogLink,
 	repointSeatPrices,
 } as const;
