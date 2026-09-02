@@ -63,6 +63,9 @@ export const updateProductItems = async ({
 		await materializeCustomerPlanLicenseSnapshots({
 			db: tx,
 			baseProduct: currentFullProduct,
+			alsoPinPlanLicenses: preparedLicenseRebases
+				.filter((rebase) => !rebase.propagate)
+				.map((rebase) => rebase.link),
 		});
 		const shouldUseInPlaceEdit =
 			useInPlaceEdit ||

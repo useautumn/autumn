@@ -76,22 +76,35 @@ const pinCatalogRefsForCustomizedLink = async ({
 export const materializeCustomerPlanLicenseSnapshots = async ({
 	db,
 	baseProduct,
+	alsoPinPlanLicenses = [],
 }: {
 	db: DrizzleCli;
 	baseProduct: FullProduct;
+	/** Links that keep the old shape after the base rewrite (non-propagated),
+	 * pinned so the rewrite relabels their rows instead of deleting them. */
+	alsoPinPlanLicenses?: DbPlanLicense[];
 }) => {
 	const referenced =
 		await planLicenseRepo.listCustomerReferencedByLicenseInternalProductIds({
 			db,
 			licenseInternalProductIds: [baseProduct.internal_id],
 		});
+	const referencedIds = new Set(
+		referenced.map((planLicense) => planLicense.id),
+	);
+	const toPin = [
+		...referenced,
+		...alsoPinPlanLicenses.filter(
+			(planLicense) => !referencedIds.has(planLicense.id),
+		),
+	];
 	const items = derivePlanLicenseItemRefs(baseProduct);
 	const existingRows = await licenseItemRepo.listByPlanLicenseIds({
 		db,
-		planLicenseIds: referenced.map((planLicense) => planLicense.id),
+		planLicenseIds: toPin.map((planLicense) => planLicense.id),
 	});
 	let materialized = false;
-	for (const planLicense of referenced) {
+	for (const planLicense of toPin) {
 		if (planLicense.customized) {
 			await pinCatalogRefsForCustomizedLink({
 				db,
