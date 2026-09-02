@@ -1,5 +1,4 @@
-import { GroupedTabButton, IconButton, Input } from "@autumn/ui";
-import { TrashIcon } from "@phosphor-icons/react";
+import { GroupedTabButton } from "@autumn/ui";
 import {
 	type CreditPriceListRow,
 	rateKindOf,
@@ -17,30 +16,24 @@ interface CreditDimensionRateRowProps {
 	property: string;
 	row: CreditPriceListRow;
 	onChange: (row: CreditPriceListRow) => void;
-	onRemove: () => void;
 }
 
-/** `[value]  costs [n] credits` — one line of the price list; tiered opens its ladder beneath. */
+/** `value   costs [n] credits` — one line of the price list; tiered opens its ladder beneath. */
 export function CreditDimensionRateRow({
 	property,
 	row,
 	onChange,
-	onRemove,
 }: CreditDimensionRateRowProps) {
 	const { value, dimension } = row;
-	const label = `${property || "value"} ${value || "(new)"}`;
+	const label = `${property} ${value}`;
 	const isTiered = dimension.tier_behavior === "graduated";
 
 	return (
 		<div className="flex flex-col gap-2">
 			<div className="flex items-center gap-2">
-				<Input
-					aria-label={`${label} value`}
-					className="flex-1 min-w-24"
-					placeholder="eg. large"
-					value={value}
-					onChange={(event) => onChange({ ...row, value: event.target.value })}
-				/>
+				<span className="w-32 shrink-0 truncate text-sm" title={value}>
+					{value}
+				</span>
 				<span className="text-tertiary-foreground text-xs shrink-0">
 					{isTiered ? "tiered" : "costs"}
 				</span>
@@ -71,14 +64,6 @@ export function CreditDimensionRateRow({
 						})
 					}
 					options={RATE_KIND_OPTIONS}
-				/>
-				<IconButton
-					aria-label={`Remove ${label}`}
-					type="button"
-					variant="muted"
-					className="p-1 shrink-0 text-tertiary-foreground hover:text-red-500"
-					icon={<TrashIcon size={10} />}
-					onClick={onRemove}
 				/>
 			</div>
 

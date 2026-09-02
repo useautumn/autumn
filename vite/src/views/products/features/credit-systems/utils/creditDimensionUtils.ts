@@ -147,13 +147,13 @@ export const withoutDimensions = (item: CreditSchemaItem): CreditSchemaItem => {
 	return rest;
 };
 
-export const createRateRow = (): CreditPriceListRow => ({
-	value: "",
+export const createRateRow = (value: string): CreditPriceListRow => ({
+	value,
 	dimension: { match: {}, credit_amount: 0 },
 });
 
-export const createAdjustmentRow = (): CreditAdjustmentRow => ({
-	value: "",
+export const createAdjustmentRow = (value: string): CreditAdjustmentRow => ({
+	value,
 	multiplier: { match: {}, factor: 1 },
 });
 

@@ -1,6 +1,5 @@
 import type { CreditSchemaItem } from "@autumn/shared";
-import { IconButton, Input } from "@autumn/ui";
-import { PlusIcon } from "@phosphor-icons/react";
+import { Input, TagInput } from "@autumn/ui";
 import { useCreditDimensionEditor } from "../hooks/useCreditDimensionEditor";
 import { CreditAdjustmentRow } from "./CreditAdjustmentRow";
 import { CreditDimensionRateRow } from "./CreditDimensionRateRow";
@@ -10,29 +9,45 @@ interface CreditDimensionPriceListProps {
 	onChange: (item: CreditSchemaItem) => void;
 }
 
-function AddValueButton({
-	onClick,
-	disabled,
+function PropertyValuesLine({
+	property,
+	propertyPlaceholder,
+	values,
+	onPropertyChange,
+	onValuesChange,
+	ariaLabel,
 }: {
-	onClick: () => void;
-	disabled: boolean;
+	property: string;
+	propertyPlaceholder: string;
+	values: string[];
+	onPropertyChange: (property: string) => void;
+	onValuesChange: (values: string[]) => void;
+	ariaLabel: string;
 }) {
 	return (
-		<IconButton
-			type="button"
-			variant="muted"
-			size="sm"
-			className="w-full text-tertiary-foreground text-xs"
-			icon={<PlusIcon size={10} />}
-			onClick={onClick}
-			disabled={disabled}
-		>
-			Add value
-		</IconButton>
+		<div className="flex items-start gap-2">
+			<Input
+				aria-label={`${ariaLabel} property`}
+				className="w-32 shrink-0"
+				placeholder={propertyPlaceholder}
+				value={property}
+				onChange={(event) => onPropertyChange(event.target.value)}
+			/>
+			<TagInput
+				aria-label={`${ariaLabel} values`}
+				className="flex-1 min-w-0"
+				value={values}
+				onChange={onValuesChange}
+				placeholder={
+					property ? `Add a ${property}, press enter` : "Add a value"
+				}
+				disabled={property.trim() === ""}
+			/>
+		</div>
 	);
 }
 
-/** One property → a price per value, with the row's own rate as "anything else". */
+/** A property and its values as pills; a rate per value below, the row's own rate as "anything else". */
 export function CreditDimensionPriceList({
 	item,
 	onChange,
@@ -56,69 +71,51 @@ export function CreditDimensionPriceList({
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-col gap-2">
-				<div className="flex items-center gap-2">
-					<span className="text-tertiary-foreground text-xs shrink-0 w-14">
-						property
-					</span>
-					<Input
-						aria-label="Dimension property"
-						className="w-48"
-						placeholder="eg. size"
-						value={editor.property}
-						onChange={(event) => editor.setProperty(event.target.value)}
-					/>
-				</div>
+				<PropertyValuesLine
+					ariaLabel="Dimension"
+					property={editor.property}
+					propertyPlaceholder="eg. size"
+					values={editor.rates.map((row) => row.value)}
+					onPropertyChange={editor.setProperty}
+					onValuesChange={editor.setRateValues}
+				/>
 
 				{editor.rates.map((row, index) => (
 					<CreditDimensionRateRow
-						key={index}
+						key={row.value}
 						property={editor.property}
 						row={row}
 						onChange={(next) => editor.setRate(index, next)}
-						onRemove={() => editor.removeRate(index)}
 					/>
 				))}
 
-				<div className="flex items-center gap-2 text-xs text-tertiary-foreground">
-					<span className="flex-1 min-w-24">anything else</span>
-					<span className="shrink-0">costs {baseRate}</span>
-				</div>
-
-				<AddValueButton
-					onClick={editor.addRate}
-					disabled={editor.property.trim() === ""}
-				/>
+				{editor.rates.length > 0 && (
+					<div className="flex items-center gap-2 text-xs text-tertiary-foreground">
+						<span className="w-32 shrink-0">anything else</span>
+						<span>costs {baseRate}</span>
+					</div>
+				)}
 			</div>
 
 			{editor.showAdjustments ? (
 				<div className="flex flex-col gap-2">
-					<div className="flex items-center gap-2">
-						<span className="text-tertiary-foreground text-xs shrink-0 w-14">
-							adjust by
-						</span>
-						<Input
-							aria-label="Adjustment property"
-							className="w-48"
-							placeholder="eg. lifecycle"
-							value={editor.adjustProperty}
-							onChange={(event) => editor.setAdjustProperty(event.target.value)}
-						/>
-					</div>
+					<PropertyValuesLine
+						ariaLabel="Adjustment"
+						property={editor.adjustProperty}
+						propertyPlaceholder="eg. lifecycle"
+						values={editor.adjustments.map((row) => row.value)}
+						onPropertyChange={editor.setAdjustProperty}
+						onValuesChange={editor.setAdjustmentValues}
+					/>
 
 					{editor.adjustments.map((row, index) => (
 						<CreditAdjustmentRow
-							key={index}
+							key={row.value}
 							property={editor.adjustProperty}
 							row={row}
 							onChange={(next) => editor.setAdjustment(index, next)}
-							onRemove={() => editor.removeAdjustment(index)}
 						/>
 					))}
-
-					<AddValueButton
-						onClick={editor.addAdjustment}
-						disabled={editor.adjustProperty.trim() === ""}
-					/>
 				</div>
 			) : (
 				<button

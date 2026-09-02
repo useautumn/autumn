@@ -143,3 +143,27 @@ test("API-authored rules are shown read-only instead of being rewritten", () => 
 	expect(html).toContain("configured through the API");
 	expect(html).not.toContain('aria-label="Dimension property"');
 });
+
+test("values are pills and each pill is a priced row", () => {
+	const html = renderToStaticMarkup(
+		<CreditDimensionsSection
+			schema={[
+				{
+					metered_feature_id: feature.id,
+					credit_amount: 1,
+					dimensions: {
+						size_small: { match: { size: "small" }, credit_amount: 1 },
+						size_large: { match: { size: "large" }, credit_amount: 16 },
+					},
+				},
+			]}
+			allFeatures={[feature]}
+			onItemChange={() => {}}
+		/>,
+	);
+
+	expect(html).toContain('aria-label="Dimension values"');
+	expect(html).toContain('aria-label="size small credit cost"');
+	expect(html).toContain('aria-label="size large credit cost"');
+	expect(html).not.toContain(">Add value<");
+});

@@ -30,10 +30,23 @@ const draftFrom = (item: CreditSchemaItem): Draft => {
 	};
 };
 
+const rowsForValues = <T extends { value: string }>({
+	values,
+	rows,
+	create,
+}: {
+	values: string[];
+	rows: T[];
+	create: (value: string) => T;
+}): T[] =>
+	values.map(
+		(value) => rows.find((row) => row.value === value) ?? create(value),
+	);
+
 /**
  * Edits one rate-card row's dimensions as a price list keyed by a property,
  * plus an optional adjustment list. The property lives in local draft state
- * until the first row exists; after that the rules carry it.
+ * until the first value exists; after that the rules carry it.
  */
 export function useCreditDimensionEditor({
 	item,
@@ -58,11 +71,24 @@ export function useCreditDimensionEditor({
 	const adjustProperty =
 		adjustments.rows.length > 0 ? adjustments.property : draft.adjustProperty;
 
-	const commitRates = (rows: CreditPriceListRow[]) =>
-		onChange(withPriceList({ item, list: { property, rows } }));
-	const commitAdjustments = (rows: CreditAdjustmentRow[]) =>
+	const commitRates = ({
+		rows,
+		nextProperty = property,
+	}: {
+		rows: CreditPriceListRow[];
+		nextProperty?: string;
+	}) =>
+		onChange(withPriceList({ item, list: { property: nextProperty, rows } }));
+
+	const commitAdjustments = ({
+		rows,
+		nextProperty = adjustProperty,
+	}: {
+		rows: CreditAdjustmentRow[];
+		nextProperty?: string;
+	}) =>
 		onChange(
-			withAdjustmentList({ item, list: { property: adjustProperty, rows } }),
+			withAdjustmentList({ item, list: { property: nextProperty, rows } }),
 		);
 
 	return {
@@ -76,42 +102,43 @@ export function useCreditDimensionEditor({
 		setProperty: (next: string) => {
 			setDraft((current) => ({ ...current, property: next }));
 			if (rates.rows.length > 0) {
-				onChange(
-					withPriceList({ item, list: { property: next, rows: rates.rows } }),
-				);
+				commitRates({ rows: rates.rows, nextProperty: next });
 			}
 		},
-		addRate: () => commitRates([...rates.rows, createRateRow()]),
+		setRateValues: (values: string[]) =>
+			commitRates({
+				rows: rowsForValues({
+					values,
+					rows: rates.rows,
+					create: createRateRow,
+				}),
+			}),
 		setRate: (index: number, row: CreditPriceListRow) =>
-			commitRates(rates.rows.map((r, i) => (i === index ? row : r))),
-		removeRate: (index: number) =>
-			commitRates(rates.rows.filter((_, i) => i !== index)),
+			commitRates({ rows: rates.rows.map((r, i) => (i === index ? row : r)) }),
 
 		showAdjustmentList: () =>
 			setDraft((current) => ({ ...current, showAdjustments: true })),
 		setAdjustProperty: (next: string) => {
 			setDraft((current) => ({ ...current, adjustProperty: next }));
 			if (adjustments.rows.length > 0) {
-				onChange(
-					withAdjustmentList({
-						item,
-						list: { property: next, rows: adjustments.rows },
-					}),
-				);
+				commitAdjustments({ rows: adjustments.rows, nextProperty: next });
 			}
 		},
-		addAdjustment: () =>
-			commitAdjustments([...adjustments.rows, createAdjustmentRow()]),
-		setAdjustment: (index: number, row: CreditAdjustmentRow) =>
-			commitAdjustments(
-				adjustments.rows.map((r, i) => (i === index ? row : r)),
-			),
-		removeAdjustment: (index: number) => {
-			const rows = adjustments.rows.filter((_, i) => i !== index);
-			commitAdjustments(rows);
-			if (rows.length === 0) {
+		setAdjustmentValues: (values: string[]) => {
+			commitAdjustments({
+				rows: rowsForValues({
+					values,
+					rows: adjustments.rows,
+					create: createAdjustmentRow,
+				}),
+			});
+			if (values.length === 0) {
 				setDraft((current) => ({ ...current, showAdjustments: false }));
 			}
 		},
+		setAdjustment: (index: number, row: CreditAdjustmentRow) =>
+			commitAdjustments({
+				rows: adjustments.rows.map((r, i) => (i === index ? row : r)),
+			}),
 	};
 }
