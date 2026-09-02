@@ -46,6 +46,7 @@ export class OwnedPartitionRequestTracker {
 	}: {
 		customerKey: string;
 	}): Promise<TrackDecision>[] {
+		// Snapshot tracks accepted before the check; later tracks cannot extend its wait.
 		return [...(this.trackOperationsByCustomerKey.get(customerKey) ?? [])];
 	}
 

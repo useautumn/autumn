@@ -40,7 +40,10 @@ export {
 export type OwnedPartitionProducerPort = KafkaOwnedPartitionProducerPort;
 
 export type PartitionOutcomeFollowerPort = {
-	/** Resolves after catch-up; onUnavailable must fire if live following later stops. */
+	/**
+	 * Reads the high watermark when invoked, applies through it, then resolves while
+	 * live following continues. onUnavailable must fire if following later stops.
+	 */
 	startAndCatchUp({
 		topic,
 		partition,
@@ -61,13 +64,23 @@ export type MeteringPartitionResolver = {
 const validateRuntimeConfiguration = ({
 	topic,
 	partition,
+	recoveryDrainTimeoutMs,
 }: {
 	topic: string;
 	partition: number;
+	recoveryDrainTimeoutMs: number;
 }): void => {
 	if (topic.trim().length === 0) throw new Error("Kafka topic cannot be empty");
 	if (!Number.isSafeInteger(partition) || partition < 0) {
 		throw new RangeError(`Invalid Kafka partition: ${partition}`);
+	}
+	if (
+		!Number.isSafeInteger(recoveryDrainTimeoutMs) ||
+		recoveryDrainTimeoutMs <= 0
+	) {
+		throw new RangeError(
+			"recoveryDrainTimeoutMs must be a positive safe integer",
+		);
 	}
 };
 
@@ -79,6 +92,7 @@ export const createOwnedPartitionRuntime = ({
 	follower,
 	partitionResolver,
 	writerLimits,
+	recoveryDrainTimeoutMs,
 }: {
 	topic: string;
 	partition: number;
@@ -87,6 +101,7 @@ export const createOwnedPartitionRuntime = ({
 	follower: PartitionOutcomeFollowerPort;
 	partitionResolver: MeteringPartitionResolver;
 	writerLimits: PartitionTrackWriterLimits;
+	recoveryDrainTimeoutMs: number;
 }): {
 	start(): Promise<void>;
 	stop(): Promise<void>;
@@ -94,7 +109,7 @@ export const createOwnedPartitionRuntime = ({
 	submitTrack({ command }: { command: TrackCommand }): Promise<TrackDecision>;
 	check({ command }: { command: CheckCommand }): Promise<CheckDecision>;
 } => {
-	validateRuntimeConfiguration({ topic, partition });
+	validateRuntimeConfiguration({ topic, partition, recoveryDrainTimeoutMs });
 
 	const appender = createKafkaCommittedTrackOutcomeAppender({ producer });
 	const writer = createPartitionTrackWriter({
@@ -184,10 +199,26 @@ export const createOwnedPartitionRuntime = ({
 		}
 	};
 
+	const drainAcceptedWorkWithinRecoveryTimeout = async (): Promise<void> => {
+		let timeout: ReturnType<typeof setTimeout> | null = null;
+		try {
+			await Promise.race([
+				requestTracker.drain(),
+				new Promise<void>((resolve) => {
+					timeout = setTimeout(resolve, recoveryDrainTimeoutMs);
+				}),
+			]);
+		} finally {
+			if (timeout) clearTimeout(timeout);
+		}
+	};
+
 	const enterRecovery = ({
 		cause,
+		drainAcceptedWork = false,
 	}: {
 		cause: unknown;
+		drainAcceptedWork?: boolean;
 	}): Promise<OwnedPartitionRecoveryRequiredError> => {
 		if (recoveryPromise) return recoveryPromise;
 		const recoveryError = createOwnedPartitionRecoveryError({
@@ -199,6 +230,9 @@ export const createOwnedPartitionRuntime = ({
 		status = "recovery_required";
 		recoveryPromise = Promise.resolve().then(async () => {
 			try {
+				if (drainAcceptedWork) {
+					await drainAcceptedWorkWithinRecoveryTimeout();
+				}
 				await disposeResources();
 				return recoveryError;
 			} catch (cleanupCause) {
@@ -226,7 +260,7 @@ export const createOwnedPartitionRuntime = ({
 		) {
 			return;
 		}
-		void enterRecovery({ cause });
+		void enterRecovery({ cause, drainAcceptedWork: true });
 	};
 
 	const fencePreviousOwner = async (): Promise<void> => {
@@ -301,6 +335,7 @@ export const createOwnedPartitionRuntime = ({
 			const operation = writer
 				.submitTrack({ command: parsedCommand })
 				.catch(async (cause: unknown) => {
+					if (terminalError) throw terminalError;
 					if (
 						cause instanceof PartitionTrackWriterRecoveryRequiredError ||
 						isKafkaProducerFencingCause({ cause })
