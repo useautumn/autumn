@@ -659,7 +659,7 @@ function ensureNeonBranch(
 // machine secret of whoever last booted against it — undecryptable here.
 function clearInheritedJwks(directUrl: string): void {
 	const res = sh("psql", [directUrl, "-v", "ON_ERROR_STOP=1"], {
-		stdin: `DELETE FROM jwks;\n`,
+		stdin: `DO $$ BEGIN IF to_regclass('public.jwks') IS NOT NULL THEN DELETE FROM public.jwks; END IF; END $$;\n`,
 	});
 	if (res.code !== 0) {
 		fatal(`clearing inherited jwks rows failed:\n${res.stderr}`);
