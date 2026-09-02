@@ -37,8 +37,10 @@ export function useCreditSchema(form: CreditSystemFormInstance) {
 	}) => setSchema(schema.map((existing, i) => (i === index ? item : existing)));
 
 	const addSchemaItem = () => {
-		schemaKeysRef.current = [...schemaKeysRef.current, crypto.randomUUID()];
+		const key = crypto.randomUUID();
+		schemaKeysRef.current = [...schemaKeysRef.current, key];
 		setSchema([...schema, createSchemaItem()]);
+		return key;
 	};
 
 	const removeSchemaItem = (index: number) => {
