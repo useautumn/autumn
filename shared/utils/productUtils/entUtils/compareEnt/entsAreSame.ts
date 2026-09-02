@@ -2,8 +2,10 @@
 
 import {
 	AllowanceType,
+	type CreditSchemaItem,
 	EntInterval,
 	type Entitlement,
+	type FeatureConfigOverride,
 	type RolloverConfig,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
@@ -27,6 +29,47 @@ const rolloversAreSame = ({
 		rollover1?.length == rollover2?.length
 	);
 };
+
+const creditSchemasAreSame = ({
+	schema1,
+	schema2,
+}: {
+	schema1?: CreditSchemaItem[] | null;
+	schema2?: CreditSchemaItem[] | null;
+}) => {
+	if (!schema1 && !schema2) return true;
+	if (!schema1 || !schema2) return false;
+	if (schema1.length !== schema2.length) return false;
+
+	return schema1.every((item1, index) => {
+		const item2 = schema2[index];
+		return (
+			item1.metered_feature_id === item2.metered_feature_id &&
+			(item1.feature_amount ?? 1) == (item2.feature_amount ?? 1) &&
+			item1.credit_amount == item2.credit_amount &&
+			(item1.tier_behavior ?? null) === (item2.tier_behavior ?? null) &&
+			(item1.tiers ?? []).length === (item2.tiers ?? []).length &&
+			(item1.tiers ?? []).every(
+				(tier1, tierIndex) =>
+					tier1.to === item2.tiers?.[tierIndex]?.to &&
+					tier1.credit_amount == item2.tiers?.[tierIndex]?.credit_amount,
+			)
+		);
+	});
+};
+
+/** Field-by-field so new override keys must be added here deliberately. */
+const featureOverridesAreSame = ({
+	override1,
+	override2,
+}: {
+	override1?: FeatureConfigOverride | null;
+	override2?: FeatureConfigOverride | null;
+}) =>
+	creditSchemasAreSame({
+		schema1: override1?.schema,
+		schema2: override2?.schema,
+	});
 
 const normalizeOptionalId = (value?: string | null) => value || null;
 
@@ -72,6 +115,10 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 		rollover: !rolloversAreSame({
 			rollover1: ent1.rollover,
 			rollover2: ent2.rollover,
+		}),
+		featureOverride: !featureOverridesAreSame({
+			override1: ent1.feature_override,
+			override2: ent2.feature_override,
 		}),
 	};
 

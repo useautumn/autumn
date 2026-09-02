@@ -1,3 +1,4 @@
+import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride";
 import {
 	AdditionalCurrencyPriceArraySchema,
 	ApiUsageTierWithCurrenciesSchema,
@@ -143,6 +144,11 @@ export const CreatePlanItemParamsV1Schema = z
 				description:
 					"Rollover config for unused units. If set, unused included units carry over.",
 			}),
+
+		feature_override: ApiFeatureOverrideSchema.optional().meta({
+			description:
+				"Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).",
+		}),
 
 		entity_feature_id: z.string().optional().meta({
 			internal: true,

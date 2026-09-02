@@ -185,6 +185,7 @@ export const toFeature = ({
 		usage_limit: null,
 
 		rollover: item.config?.rollover,
+		feature_override: item.config?.feature_override,
 	};
 
 	if ((isCustom || newVersion) && !item.entitlement_id) {
@@ -254,6 +255,7 @@ const toFeatureAndPrice = ({
 		usage_limit: item.usage_limit || null,
 
 		rollover: item.config?.rollover,
+		feature_override: item.config?.feature_override,
 	};
 
 	// Will only create new ent id if
