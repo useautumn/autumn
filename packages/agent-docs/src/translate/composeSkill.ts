@@ -8,6 +8,9 @@ const DOCS_TAG = /<docs\s+([^>]*?)\/>/g;
 const REFERENCE_TAG = /<reference\s+([^>]*?)\/>/g;
 // Split a sibling content file into references/<slug>.md, leaving a pointer.
 const PART_TAG = /<part\s+([^>]*?)\/>/g;
+// Point at another skill's reference file WITHOUT copying it — the target is
+// resolved at generate time so deleting/moving it breaks the build.
+const POINTER_TAG = /<pointer\s+([^>]*?)\/>/g;
 // Point at a prerequisite skill the agent should load first.
 const SKILL_TAG = /<skill\s+([^>]*?)\/>/g;
 const ATTR = /(\w+)="([^"]*)"/g;
@@ -110,7 +113,31 @@ export const composeSkill = ({
 		},
 	);
 
-	const withParts = withReferences.replace(PART_TAG, (_match, raw: string) => {
+	const withPointers = withReferences.replace(
+		POINTER_TAG,
+		(_match, raw: string) => {
+			const { file, when } = parseAttrs(raw);
+			if (!file) {
+				throw new Error(`<pointer> in ${path} is missing a file`);
+			}
+			if (!when) {
+				throw new Error(`<pointer file="${file}"> in ${path} is missing "when"`);
+			}
+			// Validation only — a deleted or moved target fails the build here.
+			resolveContentFile(file);
+			const owner = /\.\.\/([\w-]+)\//.exec(file)?.[1];
+			const slug = file.split("/").pop()?.replace(/\.[^.]+$/, "");
+			if (!owner || !slug) {
+				throw new Error(
+					`<pointer file="${file}"> in ${path} must point into a sibling skill (../<skill>/…)`,
+				);
+			}
+			const ownerSkill = publishedSkillName({ name: owner });
+			return `For ${when}, read \`references/${slug}.md\` in the \`${ownerSkill}\` skill.`;
+		},
+	);
+
+	const withParts = withPointers.replace(PART_TAG, (_match, raw: string) => {
 		const { file, when, inline } = parseAttrs(raw);
 		if (!file) {
 			throw new Error(`<part> in ${path} is missing a file`);

@@ -66,9 +66,7 @@ Note top-ups ("buy more when you run out", "auto-recharge") ↦ Decide (top-up p
 This step usually means explaining Autumn to the user in plain words. Do.
 
 - **Signup**: every new customer automatically gets the default plan — usually the free one. One default per group.
-- **Trials**: ask "does the trial need a card?" (guess from their motion — PLG usually no).
-  - Card → a free trial on the paid plan; checkout happens, billing starts when the trial ends.
-  - No card → the paid plan itself gets a no-card trial and becomes the default: everyone starts on a Pro trial, and lands on the free plan when it expires. Same plan, not a separate one.
+- **Trials**: ask "does the trial need a card?" (guess from their motion — PLG usually no). Card → `free_trial` on the paid plan. No card → a **separate free trial plan** (`pro_trial`: no price, the paid plan's items, auto-enabled when everyone starts on it); the paid plan stays untouched, since a default plan can never be paid. For trial modeling details — trial-behavior on plans, read `references/plan.md` in the `autumn-concepts` skill.
 - **What is a plan attached to?** The customer, or each thing they own (deployment, workspace)? "Pro is $200 per deployment" → attached per entity. Pin this down — it changes everything downstream.
 - **Who uses each metered feature?** The customer as a whole, or each entity? If entities: one shared balance or separate ones? "Shared across…" → shared ↦ Decide (balances).
 
@@ -136,6 +134,7 @@ Shortcuts that are usually wrong — catch yourself before Show:
 | "tiers → one plan with tiers" | Does overage or anything else differ per tier? → plan per tier. |
 | "they said credits but it's one action → plain meter" | Credits are always a credit system. |
 | "packs belong on the plan" | Are they shared across entities or plans? → add-on. |
+| "everyone starts on a Pro trial → trial + auto-enable on Pro" | A default plan can never be paid. → separate free `pro_trial` plan (Pro's items, no price, auto-enabled); Pro untouched. |
 
 For checking the derived structure against known-good shapes, read `references/cases.md`.
 
@@ -184,7 +183,7 @@ The sweep exists so the user hears what's configurable without being marched thr
 
 **4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config, validate with `atmn --headless push` (a preview — it writes nothing), fix what it flags, and show the final catalog — same format, no assumptions list. **Done means the config is written and valid — a summary is not done.**
 
-Applying to Autumn (`atmn --headless push --yes`) is a separate, explicit step: only after the user has seen the final catalog and clearly said to push it. Never apply on your own — offer it ("Want me to push this to your sandbox?") and stop.
+Applying to Autumn (`atmn --headless push --yes`) is a separate, explicit step: only after the user has seen the final catalog and clearly said to push it. "Go ahead", "just build it", or "no need to ask" authorizes writing and validating — never applying; the user can't approve a push for a catalog they haven't seen. Never apply on your own — offer it ("Want me to push this to your sandbox?") and stop.
 
 ### Showing the catalog
 
@@ -195,6 +194,7 @@ Features: AI messages (usage, resets) · Seats (held, not used up) · Credits (c
 
 Pro — $20/month
   - 500 AI messages per month
+      · unused carry over, up to 500, for 1 month
   - 500 AI messages per month, then $0.01 per message
   - $10 per 1,000 credits
   - 5,000 credits for $50 per month
@@ -207,6 +207,8 @@ Credit pack (add-on) — $10 for 1,000 credits, buy anytime
 ```
 
 The Features line names every feature and its kind in plain words: `(usage, resets)` for consumable meters, `(held, not used up)` for non-consumable ones like seats, `(credit system — …)` with its action mappings, `(on/off)` for boolean. Item lines, top to bottom: plain allowance · allowance with overage · pure usage price (per billing unit) · prepaid bucket · included + prepaid per-unit · tiered rate shown first-to-last · unlimited · boolean (name only, never "enabled") · per-entity grant · one-off add-on. Numbers get commas; "then …" says what happens after the included runs out; annual variants go inline ("or $200/year — messages still reset monthly").
+
+Configured item properties — carry-over, purchase caps, top-up behavior — are never their own `-` lines: indent them under the item they belong to as `·` lines, one behavior each, so the hierarchy is visible. Only show what's configured; defaults (like usage simply stopping when no overage price is set) get no line.
 
 ### Config gotchas
 
@@ -278,6 +280,7 @@ For creating variants — what they can and cannot change, read `references/plan
 - `entityFeatureId` is deprecated. Never mention or use it unless the user's existing config already has it.
 - Per-unit pricing pairs a base fee with the per-unit item ("$X/seat" plans still have a base price, even $0).
 - Speak plainly: "plans", "what's included", "extra usage". Schema words stay in the config — say "carry over" not "rollover", "shared across workspaces" not "pooled", "paid upfront" / "billed at month end" not "prepaid" / "usage_based".
+- Never volunteer what Autumn can or can't do. Don't offer options Autumn can't model, and don't explain limitations unprompted — only address one when the user directly asks to model that specific thing, and even then lead with the closest thing that works.
 - Start simple: the most important features first, confirm before adding more.
 
 ## Catalog operations
