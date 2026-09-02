@@ -1,6 +1,5 @@
 import type { CreditSchemaItem, Feature } from "@autumn/shared";
 import { getFeatureName } from "@autumn/shared";
-import { FormLabel } from "@autumn/ui";
 import { CreditDimensionPriceList } from "./CreditDimensionPriceList";
 
 interface CreditDimensionsSectionProps {
@@ -19,7 +18,6 @@ export function CreditDimensionsSection({
 
 	return (
 		<div className="flex flex-col gap-4">
-			<FormLabel>Dimensions</FormLabel>
 			{schema.map((item, index) => (
 				<div key={index} className="flex flex-col gap-2">
 					{labelRows && (
