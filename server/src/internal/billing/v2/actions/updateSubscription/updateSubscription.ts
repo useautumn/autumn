@@ -17,7 +17,6 @@ import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/log
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
-import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
 import {
 	type CreateAutumnCheckoutResult,
 	createAutumnCheckout,
@@ -120,14 +119,6 @@ export async function updateSubscription({
 		billingContext,
 		billingPlan,
 	});
-
-	if ((autumnBillingPlan.customerLicenseUpdates?.length ?? 0) > 0) {
-		await reconcileLicenseStateForCustomer({
-			ctx,
-			idOrInternalId: params.customer_id,
-			deleteCache: true,
-		});
-	}
 
 	await voidInvoicesOnImmediateCancel({
 		ctx,

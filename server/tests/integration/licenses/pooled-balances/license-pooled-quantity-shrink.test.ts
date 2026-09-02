@@ -139,6 +139,15 @@ test.concurrent(
 			},
 			{ timeout: 2000 },
 		);
+		await expectLicensePooledGrant({
+			autumn: autumnV2_3,
+			ctx,
+			customerId,
+			customerLicenseLinkId,
+			grantPerSeat: LICENSE_POOLED_GRANT,
+			seatCount: ATTACHED_SEATS,
+			usage,
+		});
 
 		await updateLicenseQuantity({
 			autumn: autumnV2_3,
