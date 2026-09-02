@@ -8,6 +8,7 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const state = {
 	cacheDeletions: 0,
+	flushBalances: undefined as boolean | undefined,
 	handlerRuns: 0,
 	preservePublishedSubject: false,
 };
@@ -19,8 +20,9 @@ await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 await mockModuleWithRestore(
 	"@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js",
 	() => ({
-		deleteCachedFullCustomer: async () => {
+		deleteCachedFullCustomer: async (args: { flushBalances?: boolean }) => {
 			state.cacheDeletions++;
+			state.flushBalances = args.flushBalances;
 		},
 	}),
 );
@@ -67,6 +69,7 @@ const { runStripeWebhookReplay } = await import(
 
 beforeEach(() => {
 	state.cacheDeletions = 0;
+	state.flushBalances = undefined;
 	state.handlerRuns = 0;
 	state.preservePublishedSubject = false;
 });
@@ -132,4 +135,5 @@ test("keeps the normal replay cleanup when nothing published a subject", async (
 
 	expect(state.handlerRuns).toBe(1);
 	expect(state.cacheDeletions).toBe(1);
+	expect(state.flushBalances).toBe(true);
 });
