@@ -9,6 +9,7 @@
 import {
 	type ApiPlanV1,
 	applyCustomizeToPlan,
+	BillingInterval,
 	composeMatchKey,
 	type DiffablePlanV1,
 } from "@autumn/shared";
@@ -420,6 +421,39 @@ const cases: EvalCase[] = [
 		},
 		expected: {
 			customize: { price: { amount: 20, interval: "month" } },
+			version: 3,
+		},
+	},
+	{
+		name: "update: change version while preserving a free price",
+		input: {
+			context: versionedPlanContext({ currentPrice: null }),
+			prompt: "update to v3 but keep it free",
+			tool: "update_subscription",
+		},
+		expected: { customize: { price: null }, version: 3 },
+	},
+	{
+		name: "update: preserve every currency price while changing version",
+		input: {
+			context: versionedPlanContext({
+				currentPrice: {
+					additional_currencies: [{ amount: 18, currency: "eur" }],
+					amount: 20,
+					interval: BillingInterval.Month,
+				},
+			}),
+			prompt: "update to v3 but keep the price the same in every currency",
+			tool: "update_subscription",
+		},
+		expected: {
+			customize: {
+				price: {
+					additional_currencies: [{ amount: 18, currency: "eur" }],
+					amount: 20,
+					interval: "month",
+				},
+			},
 			version: 3,
 		},
 	},

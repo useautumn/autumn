@@ -1,4 +1,4 @@
-import type { ApiPlanV1 } from "@autumn/shared";
+import { type ApiPlanV1, BillingInterval } from "@autumn/shared";
 import type { GenerationContext } from "@/internal/billing/v2/actions/generateRequest/setup/setupGenerationContext";
 
 const NOW_MS = Date.UTC(2026, 7, 24, 12, 0, 0);
@@ -58,7 +58,11 @@ export const saasContext = ({
 		],
 	}) as unknown as GenerationContext;
 
-export const versionedPlanContext = (): GenerationContext =>
+export const versionedPlanContext = ({
+	currentPrice = { amount: 20, interval: BillingInterval.Month },
+}: {
+	currentPrice?: ApiPlanV1["price"];
+} = {}): GenerationContext =>
 	({
 		customer: {
 			id: "cus_versioned",
@@ -75,7 +79,7 @@ export const versionedPlanContext = (): GenerationContext =>
 							},
 						],
 						name: "Generation Version Plan",
-						price: { amount: 20, interval: "month" },
+						price: currentPrice,
 						version: 2,
 					},
 					plan_id: "generation",

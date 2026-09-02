@@ -34,19 +34,19 @@ const compactPlan = ({
 		version: productV2.version,
 		...(productV2.group ? { group: productV2.group } : {}),
 		...(productV2.is_add_on ? { is_add_on: true } : {}),
-		...(productV2.free_trial ? { free_trial: productV2.free_trial } : {}),
-		...(apiPlan.price
+		...(apiPlan.free_trial ? { free_trial: apiPlan.free_trial } : {}),
+		price: apiPlan.price
 			? {
-					price: {
-						amount: apiPlan.price.amount,
-						interval: apiPlan.price.interval,
-						...(apiPlan.price.interval_count &&
-						apiPlan.price.interval_count !== 1
-							? { interval_count: apiPlan.price.interval_count }
-							: {}),
-					},
+					amount: apiPlan.price.amount,
+					interval: apiPlan.price.interval,
+					...(apiPlan.price.interval_count && apiPlan.price.interval_count !== 1
+						? { interval_count: apiPlan.price.interval_count }
+						: {}),
+					...(apiPlan.price.additional_currencies?.length
+						? { additional_currencies: apiPlan.price.additional_currencies }
+						: {}),
 				}
-			: {}),
+			: null,
 		items: apiPlan.items.map((item) => toCreatePlanItemParams(item)),
 	};
 };
