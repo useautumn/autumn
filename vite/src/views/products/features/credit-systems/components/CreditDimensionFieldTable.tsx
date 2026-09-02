@@ -116,6 +116,8 @@ export function CreditDimensionFieldTable({
 
 	return (
 		<CreditEditableTable
+			title="Dimensions"
+			description="Request properties that change the rate, and the values they take."
 			table={table}
 			columnCount={COLUMNS.length}
 			footer={

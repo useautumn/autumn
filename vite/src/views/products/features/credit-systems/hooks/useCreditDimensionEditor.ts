@@ -17,6 +17,7 @@ const without = (values: string[], value: string) =>
 /**
  * Fields and values are whatever the rules reference; ones added before any
  * rule uses them live in local state until then, so they survive re-renders.
+ * With no saved rules the table offers one blank row, committed on first edit.
  */
 export function useCreditDimensionEditor({
 	item,
@@ -31,7 +32,11 @@ export function useCreditDimensionEditor({
 		[item.dimensions, item.multipliers, draft],
 	);
 	const fields = Object.keys(values);
-	const rules = useMemo(() => rateRules(item), [item.dimensions]);
+	const savedRules = useMemo(() => rateRules(item), [item.dimensions]);
+	const rules = useMemo(
+		() => (savedRules.length === 0 ? [createRateRule()] : savedRules),
+		[savedRules],
+	);
 
 	const commitRules = (next: CreditRateRule[]) =>
 		onChange(withRateRules({ item, rules: next }));
@@ -59,6 +64,6 @@ export function useCreditDimensionEditor({
 		setRule: (index: number, rule: CreditRateRule) =>
 			commitRules(rules.map((r, i) => (i === index ? rule : r))),
 		removeRule: (index: number) =>
-			commitRules(rules.filter((_, i) => i !== index)),
+			commitRules(savedRules.filter((_, i) => i !== index)),
 	};
 }
