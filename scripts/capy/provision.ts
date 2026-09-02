@@ -28,7 +28,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { connect } from "node:net";
-import { homedir, hostname } from "node:os";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import {
 	applyCommittedMigrations,
@@ -96,8 +96,17 @@ function shortHash(input: string): string {
 }
 
 function getMachineId(): string {
-	// The hostname is assigned at runtime and remains stable when a VM wakes.
-	return process.env.HOSTNAME?.trim() || hostname();
+	// Hostnames repeat across VMs cloned from one image, so identity is a
+	// minted id persisted for the lifetime of this machine's filesystem.
+	const idPath = join(CAPY_PREFIX, "machine-id");
+	if (existsSync(idPath)) {
+		const existing = readFileSync(idPath, "utf-8").trim();
+		if (existing) return existing;
+	}
+	const minted = `capy-${randomBytes(8).toString("hex")}`;
+	mkdirSync(CAPY_PREFIX, { recursive: true });
+	writeFileSync(idPath, `${minted}\n`, { mode: 0o600 });
+	return minted;
 }
 
 function deriveBranchName(machineId: string): string {
