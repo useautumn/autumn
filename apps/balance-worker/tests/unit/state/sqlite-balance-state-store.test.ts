@@ -7,6 +7,7 @@ import {
 	type CustomerMeteringState,
 	computeTrack,
 	createCustomerMeteringState,
+	executeTrack,
 	type MeteringIdentity,
 	OutOfOrderTrackOutcomeError,
 	parseTrackCommand,
@@ -142,6 +143,92 @@ describe("SQLite balance state store", () => {
 			closeStoreFixture(fixture);
 		}
 	});
+
+	test.concurrent("applies a durable outcome batch in one transaction", () => {
+		const fixture = createStoreFixture();
+		try {
+			const state = createState();
+			fixture.store.initializeState({ state });
+			const firstOutcome = createOutcome({ state });
+			const projectedState = executeTrack({
+				state,
+				outcome: firstOutcome,
+			}).state;
+			const secondOutcome = createOutcome({
+				state: projectedState,
+				commandId: "cmd_2",
+				requestId: "req_2",
+			});
+
+			const results = fixture.store.applyDurableTrackOutcomes({
+				records: [
+					{
+						position: { topic, partition, offset: 0n },
+						outcome: firstOutcome,
+					},
+					{
+						position: { topic, partition, offset: 1n },
+						outcome: secondOutcome,
+					},
+				],
+			});
+
+			expect(results.map(({ kind }) => kind)).toEqual(["applied", "applied"]);
+			expect(fixture.store.readState({ identity })).toMatchObject({
+				revision: 2,
+				featureStatesById: {
+					messages: {
+						customerEntitlements: [{ balance: 0, usage: 10 }],
+					},
+				},
+			});
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(2n);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test.concurrent(
+		"rolls back the entire outcome batch when a later outcome fails",
+		() => {
+			const fixture = createStoreFixture();
+			try {
+				const state = createState();
+				fixture.store.initializeState({ state });
+				const firstOutcome = createOutcome({ state });
+				const staleOutcome = createOutcome({
+					state,
+					commandId: "cmd_2",
+					requestId: "req_2",
+				});
+
+				expect(() =>
+					fixture.store.applyDurableTrackOutcomes({
+						records: [
+							{
+								position: { topic, partition, offset: 0n },
+								outcome: firstOutcome,
+							},
+							{
+								position: { topic, partition, offset: 1n },
+								outcome: staleOutcome,
+							},
+						],
+					}),
+				).toThrow(OutOfOrderTrackOutcomeError);
+				expect(fixture.store.readState({ identity })).toEqual(state);
+				expect(
+					fixture.store.readTrackReceipt({
+						identity,
+						commandId: firstOutcome.commandId,
+					}),
+				).toBeNull();
+				expect(fixture.store.readNextOffset({ topic, partition })).toBe(0n);
+			} finally {
+				closeStoreFixture(fixture);
+			}
+		},
+	);
 
 	test.concurrent(
 		"advances past a duplicate outcome without applying it twice",
