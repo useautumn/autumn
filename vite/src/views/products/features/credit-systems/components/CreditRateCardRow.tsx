@@ -91,7 +91,7 @@ export function CreditRateCardRow({
 					type="button"
 					variant="secondary"
 					iconOrientation="center"
-					className="h-input w-10 shrink-0 rounded-lg text-tertiary-foreground hover:text-red-500"
+					className="h-input w-7 shrink-0 rounded-lg text-tertiary-foreground hover:text-red-500"
 					icon={<TrashIcon size={14} />}
 					onClick={onRemove}
 				/>
