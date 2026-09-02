@@ -49,11 +49,15 @@ export function TrialOnEndSelect({
 							<span className="truncate min-w-0">{option.label}</span>
 							{option.tooltip && (
 								<Tooltip>
+									{/* The option row sets [&_svg]:pointer-events-none, so the icon
+									    itself never sees a hover — the wrapper takes the trigger. */}
 									<TooltipTrigger asChild>
-										<QuestionIcon
-											className="size-3.5 shrink-0 cursor-help text-tertiary-foreground"
+										<span
+											className="flex shrink-0 items-center cursor-help text-tertiary-foreground"
 											onClick={(event) => event.stopPropagation()}
-										/>
+										>
+											<QuestionIcon className="size-3.5" />
+										</span>
 									</TooltipTrigger>
 									<TooltipContent className="max-w-64">
 										{option.tooltip}
