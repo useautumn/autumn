@@ -29,17 +29,22 @@ export const computeUpsertProductsPlan = ({
 	catalogContext: UpdateCatalogContext;
 	params: UpdateCatalogParams;
 }): CatalogComputeStep => {
-	const { productStatesContext } = catalogContext;
+	const { productStatesContext, internalIdRefs } = catalogContext;
 
 	// A row the payload named is claimed before the fold, so the derived
 	// mapping fan-out can never reach it — fill it in up front instead.
 	const pendingIntents = mergeDeclaredProcessors({
-		intents: deriveDirectIntents({ params, productStatesContext }),
+		intents: deriveDirectIntents({
+			params,
+			productStatesContext,
+			internalIdRefs,
+		}),
 		params,
 		productStatesContext,
+		internalIdRefs,
 	});
 	const declaredVariants = indexDeclaredVariants({
-		plans: params.plans,
+		plans: params.plans ?? [],
 		productStatesContext,
 	});
 	const claimedProductKeys = claimProductKeys({ intents: pendingIntents });
@@ -60,6 +65,7 @@ export const computeUpsertProductsPlan = ({
 			productStatesContext: fold.projected,
 			claimedProductKeys,
 			declaredVariants,
+			fullState: params.skip_deletions === false,
 		});
 
 		for (const upsert of upsertProductPlans) {

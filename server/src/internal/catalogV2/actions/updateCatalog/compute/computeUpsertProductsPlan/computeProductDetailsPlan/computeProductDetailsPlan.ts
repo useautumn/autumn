@@ -27,6 +27,7 @@ export const computeProductDetailsPlan = ({
 	baseProcessor,
 	currentActive,
 	latestExistingVersion,
+	fullState = false,
 }: {
 	ctx: AutumnContext;
 	planParams: UpdateCatalogPlanParams;
@@ -41,6 +42,8 @@ export const computeProductDetailsPlan = ({
 	/** Pre-fold pointer — default follows only when this row is eligible. */
 	currentActive?: FullProduct | null;
 	latestExistingVersion?: number;
+	/** The payload is the whole desired catalog, so presence carries meaning. */
+	fullState?: boolean;
 }): ProductDetailsPlan => {
 	if (!currentFullProduct) {
 		return {
@@ -76,6 +79,16 @@ export const computeProductDetailsPlan = ({
 	) {
 		patch.is_default = true;
 	}
+	// Archived rows never live in a config, so stating one is how you ask for
+	// it back — presence is the signal, and `archived: false` is never needed.
+	if (
+		fullState &&
+		currentFullProduct.archived &&
+		patch.archived === undefined
+	) {
+		patch.archived = false;
+	}
+
 	const patched: Product = {
 		...currentFullProduct,
 		...patch,

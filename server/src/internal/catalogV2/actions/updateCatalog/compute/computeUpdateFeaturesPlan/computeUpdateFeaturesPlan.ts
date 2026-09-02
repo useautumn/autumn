@@ -36,7 +36,7 @@ export const computeUpdateFeaturesPlan = ({
 }): CatalogComputeStep => {
 	const pendingCreditSystemConfigs = new Map<string, Feature["config"]>();
 
-	const updateFeatures = params.features.flatMap((entry) => {
+	const updateFeatures = (params.features ?? []).flatMap((entry) => {
 		const resolved = resolveFeatureUpdateEntry({
 			features: ctx.features,
 			entry,

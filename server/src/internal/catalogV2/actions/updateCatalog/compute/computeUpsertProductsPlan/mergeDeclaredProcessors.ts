@@ -5,9 +5,26 @@ import {
 	RecaseError,
 	type UpdateCatalogParams,
 } from "@autumn/shared";
+import type { InternalIdRefs } from "@/internal/catalogV2/actions/updateCatalog/setup/resolveInternalIdRefs";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { ProductUpsertIntent } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { findFullProductByInternalId } from "@/internal/catalogV2/actions/updateCatalog/utils/productStateUtils/findFullProductByInternalId";
+
+/**
+ * The id the row lives under right now. An entry addressed by `internal_id`
+ * states where the plan should END UP, so a rename would index the mapping
+ * under a name no intent carries yet.
+ */
+const currentPlanId = ({
+	entry,
+	internalIdRefs,
+}: {
+	entry: NonNullable<UpdateCatalogParams["plans"]>[number];
+	internalIdRefs: InternalIdRefs;
+}): string =>
+	(entry.internal_id
+		? internalIdRefs.get(entry.internal_id)?.planId
+		: undefined) ?? entry.plan_id;
 
 /** A stated Stripe mapping: an object links, `null` unlinks. Absent = not stated. */
 type StatedStripe = ApiStripePlanProcessor | null;
@@ -80,8 +97,10 @@ type StatedStripeIndex = {
  */
 const assertRevenueCatMappingsAgree = ({
 	plans,
+	internalIdRefs,
 }: {
-	plans: UpdateCatalogParams["plans"];
+	plans: NonNullable<UpdateCatalogParams["plans"]>;
+	internalIdRefs: InternalIdRefs;
 }): void => {
 	const statedByPlanId = new Map<string, ApiRevenueCatPlanProcessor | null>();
 	for (const entry of plans) {
@@ -89,7 +108,7 @@ const assertRevenueCatMappingsAgree = ({
 		if (revenuecat === undefined) continue;
 		claimStatedMapping({
 			statedByPlanId,
-			planId: entry.plan_id,
+			planId: currentPlanId({ entry, internalIdRefs }),
 			stated: revenuecat,
 			identity: revenueCatMappingIdentity,
 			processorName: "revenuecat",
@@ -99,8 +118,10 @@ const assertRevenueCatMappingsAgree = ({
 
 const indexStatedStripe = ({
 	plans,
+	internalIdRefs,
 }: {
-	plans: UpdateCatalogParams["plans"];
+	plans: NonNullable<UpdateCatalogParams["plans"]>;
+	internalIdRefs: InternalIdRefs;
 }): StatedStripeIndex => {
 	const byPlanId = new Map<string, StatedStripe>();
 	const byVariantPlanId = new Map<string, StatedStripe>();
@@ -110,7 +131,7 @@ const indexStatedStripe = ({
 		if (stripe !== undefined) {
 			claimStatedMapping({
 				statedByPlanId: byPlanId,
-				planId: entry.plan_id,
+				planId: currentPlanId({ entry, internalIdRefs }),
 				stated: stripe,
 				identity: stripeMappingIdentity,
 				processorName: "stripe",
@@ -142,7 +163,7 @@ const indexBasePlanIds = ({
 	plans,
 	productStatesContext,
 }: {
-	plans: UpdateCatalogParams["plans"];
+	plans: NonNullable<UpdateCatalogParams["plans"]>;
 	productStatesContext: ProductStatesContext;
 }): Map<string, string> => {
 	const basePlanIdByPlanId = new Map<string, string>();
@@ -223,14 +244,19 @@ export const mergeDeclaredProcessors = ({
 	intents,
 	params,
 	productStatesContext,
+	internalIdRefs,
 }: {
 	intents: ProductUpsertIntent[];
 	params: UpdateCatalogParams;
 	productStatesContext: ProductStatesContext;
+	internalIdRefs: InternalIdRefs;
 }): ProductUpsertIntent[] => {
-	assertRevenueCatMappingsAgree({ plans: params.plans });
+	assertRevenueCatMappingsAgree({ plans: params.plans ?? [], internalIdRefs });
 
-	const statedStripe = indexStatedStripe({ plans: params.plans });
+	const statedStripe = indexStatedStripe({
+		plans: params.plans ?? [],
+		internalIdRefs,
+	});
 	if (
 		statedStripe.byPlanId.size === 0 &&
 		statedStripe.byVariantPlanId.size === 0
@@ -239,7 +265,7 @@ export const mergeDeclaredProcessors = ({
 	}
 
 	const basePlanIdByPlanId = indexBasePlanIds({
-		plans: params.plans,
+		plans: params.plans ?? [],
 		productStatesContext,
 	});
 

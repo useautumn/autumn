@@ -197,6 +197,7 @@ export async function getPlanResponse({
 	});
 	const plan = {
 		id: product.id,
+		internal_id: product.internal_id,
 		name: product.name || "",
 		description: product.description || null,
 		group: product.group || null,

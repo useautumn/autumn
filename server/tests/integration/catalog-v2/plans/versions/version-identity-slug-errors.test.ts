@@ -3,16 +3,17 @@
  *
  * Contract:
  *   version + version_slug together → 400 (even if they agree)
- *   unknown version_slug → 400 InvalidRequest
+ *   unknown version_slug → mints under that slug (reversed 2026-08-31)
  *   all_versions / new_version + slug pin → 400 (same as numeric pin)
  *   duplicate same slug twice → 400 InvalidRequest
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
 
@@ -57,23 +58,33 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("version identity slug-errors: unknown version_slug → 400")}`,
+	`${chalk.yellowBright("version identity slug-errors: unknown version_slug mints under that name")}`,
 	async () => {
 		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
 		const planId = uniqueTestId("cv2_vid_eunk");
 		await deleteDbPlans({ ctx, planIds: [planId] });
 		try {
 			await seedV1({ autumn: autumnV2_3, planId });
-			await expectAutumnError({
-				errCode: ErrCode.InvalidRequest,
-				errMessage: 'Unknown version_slug "missing"',
-				func: () =>
-					autumnV2_3.catalogV2.update({
-						plans: [
-							{ plan_id: planId, version_slug: "missing", name: "Ghost" },
-						],
-					}),
+
+			// Reversed deliberately: this was a 400. Under a config that states the
+			// whole desired history, a slug naming no row is history the catalog
+			// does not have yet, so it is minted rather than rejected. The
+			// guarantee that matters — it must never land on the active row —
+			// still holds, and preview is what surfaces an accidental mint.
+			await autumnV2_3.catalogV2.update({
+				plans: [{ plan_id: planId, version_slug: "missing", name: "Ghost" }],
 			});
+
+			const minted = await ProductService.get({
+				db: ctx.db,
+				id: planId,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				version: 2,
+			});
+			expect(minted?.version_slug, "minted under the stated slug").toBe(
+				"missing",
+			);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}

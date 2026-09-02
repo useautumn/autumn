@@ -29,22 +29,19 @@ import { buildUpdateCatalogPreview } from "@/internal/catalogV2/actions/updateCa
 import { toPlanAliasMap } from "@/internal/catalogV2/productAliases/toPlanAliasMap.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import {
-	deleteDbPlans,
-	expectDbPlansAbsent,
-} from "../utils/expectCatalogPlans.js";
-import {
 	expectPlanPreviewRowCorrect,
 	parsePlanPreview,
 } from "../preview/utils/expectPlanPreview.js";
 import {
-	cleanupRefs,
-	seedCustomerProductRef,
-} from "../utils/seedPlanRefs.js";
+	deleteDbPlans,
+	expectDbPlansAbsent,
+} from "../utils/expectCatalogPlans.js";
 import {
 	deleteAliases,
 	listAliases,
 	renamePlan,
 } from "../utils/planAliasTestUtils.js";
+import { cleanupRefs, seedCustomerProductRef } from "../utils/seedPlanRefs.js";
 
 const replacement = ({
 	aliasId,
@@ -100,6 +97,9 @@ const previewCreateClaim = async ({
 		remove_features: [],
 		plans: [{ plan_id: planId, name }],
 		remove_plans: [],
+		skip_deletions: true,
+		skip_plan_ids: [],
+		skip_feature_ids: [],
 	};
 	const { catalogContext, updateCatalogPlan } =
 		await catalogV2Actions.updateCatalog({
@@ -131,6 +131,9 @@ const executeCreateClaim = async ({
 			remove_features: [],
 			plans: [{ plan_id: planId, name }],
 			remove_plans: [],
+			skip_deletions: true,
+			skip_plan_ids: [],
+			skip_feature_ids: [],
 		},
 	});
 };
@@ -225,9 +228,7 @@ test.concurrent(
 					plans: [
 						{
 							plan_id: baseId,
-							variants: [
-								{ variant_plan_id: variantId, new_plan_id: aliasId },
-							],
+							variants: [{ variant_plan_id: variantId, new_plan_id: aliasId }],
 						},
 					],
 				}),
@@ -329,9 +330,9 @@ test.concurrent(
 				ctx,
 				planIds: [createAlias, createOwner],
 			});
-			expect(
-				afterCreate.some((row) => row.alias_id === createAlias),
-			).toBe(false);
+			expect(afterCreate.some((row) => row.alias_id === createAlias)).toBe(
+				false,
+			);
 			const created = await autumnV2_3.products.get<ApiPlanV1>(createAlias);
 			expect(created.id).toBe(createAlias);
 			expect(created.name).toBe("Claimed Create");
@@ -366,9 +367,9 @@ test.concurrent(
 				ctx,
 				planIds: [starterId, starterAlias, starterOwner],
 			});
-			expect(
-				afterRename.some((row) => row.alias_id === starterAlias),
-			).toBe(false);
+			expect(afterRename.some((row) => row.alias_id === starterAlias)).toBe(
+				false,
+			);
 			expect(
 				afterRename.some(
 					(row) =>
@@ -423,9 +424,9 @@ test.concurrent(
 				ctx,
 				planIds: [variantId, variantAlias, variantOwner],
 			});
-			expect(
-				afterVariant.some((row) => row.alias_id === variantAlias),
-			).toBe(false);
+			expect(afterVariant.some((row) => row.alias_id === variantAlias)).toBe(
+				false,
+			);
 			expect(
 				afterVariant.some(
 					(row) =>

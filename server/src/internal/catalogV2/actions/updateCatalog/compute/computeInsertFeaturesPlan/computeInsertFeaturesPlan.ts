@@ -14,7 +14,9 @@ import { validateFeature } from "@/internal/features/utils/validateFeature.js";
 import { generateId } from "@/utils/genUtils.js";
 
 /** Credit systems last so schema refs see metered/boolean rows from this batch. */
-const sortFeaturesForInsert = <T extends { type: string }>(features: T[]): T[] =>
+const sortFeaturesForInsert = <T extends { type: string }>(
+	features: T[],
+): T[] =>
 	[...features].sort((left, right) => {
 		const leftCredit = isAnyCreditSystem(left.type as FeatureType);
 		const rightCredit = isAnyCreditSystem(right.type as FeatureType);
@@ -40,7 +42,7 @@ export const computeInsertFeaturesPlan = ({
 	);
 
 	const entries = sortFeaturesForInsert(
-		params.features.filter(
+		(params.features ?? []).filter(
 			(featureParams) => !originalById.has(featureParams.feature_id),
 		),
 	);
