@@ -123,7 +123,12 @@ const main = async () => {
 			stdout: "inherit",
 			stderr: "inherit",
 			stdin: "inherit",
-			env: { AX_EVALS_ARM: "with", ...process.env },
+			env: {
+				AX_EVALS_ARM: "with",
+				// Parallel eval files interleave; collapse to one line per turn.
+				...(files.length > 1 && { AX_EVALS_COMPACT: "1" }),
+				...process.env,
+			},
 		},
 	);
 	process.exit(await proc.exited);

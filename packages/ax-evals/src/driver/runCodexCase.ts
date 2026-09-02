@@ -8,6 +8,7 @@ import {
 import type { TurnSource } from "../simulator/types/turnSource.ts";
 import { buildCaseEnv } from "./caseEnv.ts";
 import { type CodexEvent, collectCodexEvent } from "./collectCodexEvent.ts";
+import { renderCompactTurn } from "./renderCompact.ts";
 import { createLiveChat, type LiveChat } from "./renderLiveChat.ts";
 import { renderRunFooter, renderTurnBlock } from "./renderTurnBlock.ts";
 import type { CompletedTurn } from "./runAgentCase.ts";
@@ -62,7 +63,7 @@ export const runCodexCase = async ({
 	skillIds?: string[];
 	maxTurns?: number;
 	timeoutMs?: number;
-	renderMode?: "chat" | "blocks";
+	renderMode?: "chat" | "blocks" | "compact";
 	systemPromptAppend?: string;
 	extraEnv?: Record<string, string>;
 	onTurn?: (turn: CompletedTurn) => void;
@@ -91,6 +92,7 @@ export const runCodexCase = async ({
 			? createLiveChat({ arm: label, workspaceDir: cwd })
 			: undefined;
 	const renderBlocks = rendering === "blocks";
+	const renderCompact = rendering === "compact";
 
 	const started = Date.now();
 	const deadline = started + timeoutMs;
@@ -166,17 +168,19 @@ export const runCodexCase = async ({
 
 		const subtype = result.timedOut ? "timeout" : "success";
 		result.turnTexts.push(result.finalText);
+		result.finalText = "";
 		result.turns += 1;
 		const turnIndex = result.turns - 1;
+		const turnText = result.turnTexts[turnIndex] ?? "";
 		const turn: CompletedTurn = {
 			index: turnIndex,
 			userText,
-			agentText: result.turnTexts[turnIndex] ?? "",
+			agentText: turnText,
 			subtype,
 			toolUses: result.toolUses.slice(turnStartToolIndex),
 			workspaceDir: cwd,
 		};
-		chat?.agentText(result.finalText);
+		chat?.agentText(turnText);
 		chat?.turnDone({
 			turnIndex,
 			subtype,
@@ -200,9 +204,21 @@ export const runCodexCase = async ({
 					workspaceDir: cwd,
 				}),
 			);
+		} else if (renderCompact) {
+			process.stderr.write(
+				renderCompactTurn({
+					arm: label,
+					turnIndex,
+					subtype,
+					turnMs: Date.now() - turnStartedAt,
+					toolUses: turn.toolUses,
+					agentText: turn.agentText,
+					workspaceDir: cwd,
+				}),
+			);
 		}
 		onTurn?.(turn);
-		return result.finalText;
+		return turnText;
 	};
 
 	const openingTurn = await turnSource.next("");
@@ -222,6 +238,7 @@ export const runCodexCase = async ({
 
 	result.wallMs = Date.now() - started;
 	result.userTexts = sentTexts;
+	result.finalText = result.turnTexts[result.turns - 1] ?? "";
 	if (chat) {
 		chat.footer({
 			turns: result.turns,

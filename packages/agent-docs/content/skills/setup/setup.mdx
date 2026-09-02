@@ -13,7 +13,7 @@ These apply the whole time, not just in one phase.
 
 - CLI-first: everything happens in `autumn.config.ts` and `atmn`. The one browser moment is `atmn login`. Never send the user to the dashboard to do the work.
 {/* - Never invent a price, limit, or plan name. A missing number is a question, never a guess. Don't scaffold from `atmn init` templates — template pricing is invented pricing. */}
-- Push only after the user approves the pricing (Phase 5), or when they already told you to go ahead without a review.
+- Push only after the user approves the pricing (Phase 4), or when they already told you to go ahead without a review.
 - Sandbox by default: `AUTUMN_SECRET_KEY` is the sandbox key. Don't touch production during setup.
 - Keys: check that a key exists by its name only. Never read, print, or ask the user to paste a key into the chat.
 - Two tries max to fix any failing command, then stop and show the error.
@@ -42,10 +42,11 @@ Copy this checklist into your first message and keep it up to date. If you skip 
 - [ ] 1 Skills installed; checked for an existing config, key, and pricing
 - [ ] 2 Connected to Autumn — `atmn` installed and signed in
 - [ ] 3 Got the user's pricing — rough plans and prices to build from
-- [ ] 4 Pricing written to `autumn.config.ts` and valid
-- [ ] 5 Pricing shown; user approved it
-- [ ] 6 Pushed to Autumn and verified
-- [ ] 7 Done — suggested integration next, didn't start it
+- [ ] 4 Pricing modeled and approved (the `autumn-catalog` skill runs this part)
+- [ ] 5 Pushed to Autumn and verified
+- [ ] 6 Done — suggested integration next, didn't start it
+
+For item 4, `autumn-catalog` owns the conversation and its own checklist replaces this one until the config is written and approved — show its checklist, not this one, while modeling. Come back here for push and wrap-up.
 
 ## Phase 1 — Check the project (silent)
 
@@ -62,7 +63,7 @@ npx skills add useautumn/skills --skill autumn-setup --skill autumn-catalog --sk
 Then check three things:
 
 {/* Subject to change once the new atmn ships. */}
-- `autumn.config.ts` exists → Autumn is already set up here. Say so, treat the file as the truth, and use `autumn-catalog` for the changes; come back at Phase 5 when there's something to push.
+- `autumn.config.ts` exists → Autumn is already set up here. Say so, treat the file as the truth, and use `autumn-catalog` for the changes; come back at Phase 5 (push) when there's something to push.
 - An `AUTUMN_SECRET_KEY` exists (shell env, `.env`, `.env.local`) → already signed in; skip login in Phase 2.
 - They already told you the pricing (their message, a pricing page, the README) → Phase 3 is a quick confirm, not a list of questions.
 
@@ -101,22 +102,16 @@ Don't dig into details here — what to ask, what to assume, and how to handle u
 
 Done when you have rough plans and prices to build from.
 
-## Phase 4 — Write the config
+## Phase 4 — Model, write, approve
 
-<skill name="catalog" text="Load `autumn-catalog` now — from here it drives the pricing conversation: what to ask, what to assume, how to build the pricing (features, plans, items), and the exact `atmn` commands." />
+<skill name="catalog" text="Load `autumn-catalog` now — from here it owns the conversation: its Shape/Fill flow, its checklist (shown instead of this skill's), its questions, its catalog display, and the approval. Your speaking rules above still apply to its questions." />
 
-Follow it to turn the starting point into `autumn.config.ts` and check the config is valid with catalog's atmn preview loop (`references/atmn.md`). Your speaking rules above still apply to catalog's questions. Only move on when the config passes; don't push yet.
+This whole phase is the catalog skill's: structure agreed → config written and valid → pricing shown in its format → user approved. Only come back here when that's done; don't push yet.
 
-## Phase 5 — Show the pricing
-
-Show the pricing in `autumn-catalog`'s "Showing the catalog" format — that exact layout, every time, never a markdown table. Every number exactly as the user gave it. Under it, list the assumptions you made ("Assumed: messages reset monthly"), then ask whether this is what they want to charge.
-
-Approval means a clear yes — or they earlier told you to go ahead without a review, in which case show the pricing and keep going. Silence or a half-answer is not a yes. If they change something → back to Phase 4, fix it, show it again. If they want to stop, stop: say what exists and that nothing was pushed.
-
-## Phase 6 — Push
+## Phase 5 — Push
 
 Only after the yes. Push with `atmn` using `autumn-catalog`'s atmn reference — it has the exact commands, flags, and versioning choices. If the push asks for decisions (new version of a live plan, deleting things), bring them to the user; never decide alone. Check the push output shows every plan and feature made it — a push that errored is not done, and after two failed fixes you stop and show the error.
 
-## Phase 7 — Done
+## Phase 6 — Done
 
 Wrap up with: what's now live (plans and features, which org, sandbox), where the config file is, that they can see their plans at app.useautumn.com, and that the next step — whenever they're ready — is hooking Autumn into their app (SDK, customers, `check`/`track`). Then stop. Don't install the SDK, create customers, build checkout, or walk them through the dashboard.

@@ -7,6 +7,14 @@ description: Modeling a user's pricing into an Autumn catalog — deciding the s
 
 Before using this skill, first load the `autumn-concepts` skill — it defines Autumn's data model — features, plans, plan items, balances — which every modeling decision builds on.
 
+## STRICT RULES — re-read before every config write
+
+1. **Amounts are in major units (e.g. dollars), never minor units (cents).** $180/month is `amount: 180`. $0.01 per credit is `amount: 0.01`. If any amount you wrote is 100× the user's number, it is wrong.
+2. **Never invent a price, limit, or plan name** — a missing number is a question.
+3. **One definition per real thing.** One feature per resource, one child plan per license pattern (parents customize their license, never get their own copy), one add-on per offer (sizes are tiers, not plans).
+
+**Building, or iterating on a live catalog?** What matters is whether customers are on these plans — not whether a config file exists. Still setting up (even across sessions, with a half-built `autumn.config.ts`) → the workflow below; edit the draft freely. Already running Autumn with customers, now changing prices/plans → that's an update with real stakes (versioning, migrations, grandfathering) — read `references/catalog-update.md` first. Unsure → check for customers (`atmn pull` / the org) or ask.
+
 Turning pricing into a catalog is two jobs:
 
 - **Shape** — decide the structure: which plans exist, what's a variant, what's an add-on, where balances live. Decided by relationships in their pricing, not by amounts.
@@ -21,7 +29,7 @@ Copy this checklist into your first message and keep it up to date. It is the **
 - [ ] 1 Your plans and prices
 - [ ] 2 What's included in each plan
 - [ ] 3 How billing behaves (signup, trials, limits)
-- [ ] 4 Seats (if any)
+- [ ] 4 Licenses — paid seats, workspaces, projects (if any)
 - [ ] 5 Structure agreed
 - [ ] 6 Config written and checked
 
@@ -65,22 +73,22 @@ Note top-ups ("buy more when you run out", "auto-recharge") ↦ Decide (top-up p
 
 This step usually means explaining Autumn to the user in plain words. Do.
 
-- **Signup**: every new customer automatically gets the default plan — usually the free one. One default per group.
+- **Signup**: every new customer automatically gets the default plan — usually the free one. One default per group. A default can carry no prices at all — a "$0" plan with paid items (per-seat charges, prepaid packs) is a paid plan, not a default. If every plan bills something, there is no default; customers subscribe.
 - **Trials**: ask "does the trial need a card?" (guess from their motion — PLG usually no). Card → `free_trial` on the paid plan. No card → a **separate free trial plan** (`pro_trial`: no price, the paid plan's items, auto-enabled when everyone starts on it); the paid plan stays untouched, since a default plan can never be paid. For trial modeling details — trial-behavior on plans, read `references/plan.md` in the `autumn-concepts` skill.
-- **What is a plan attached to?** The customer, or each thing they own (deployment, workspace)? "Pro is $200 per deployment" → attached per entity. Pin this down — it changes everything downstream.
+- **What is a plan attached to?** The customer, or each thing they own (workspace, project, site)? "Pro is $200 per workspace" → attached per entity. Pin this down — it changes everything downstream.
 - **Who uses each metered feature?** The customer as a whole, or each entity? If entities: one shared balance or separate ones? "Shared across…" → shared ↦ Decide (balances).
 
 Done when you know what attaches where, who consumes what, and how trials and signup work.
 
-### Step 4 — Seats
+### Step 4 — Licenses
 
-Only if seats are paid. One question decides it: **does a seat grant anything?**
+Triggered whenever the customer pays per unit of some entity — seats, workspaces, projects, sites, members: "each X is $10/month", "comes with 3 X". When you see one, always ask: **what does one X come with?** Never skip this because the user didn't say "seat". For modeling a license — the concept: child plan, license link, customize, read `references/licenses.md` in the `autumn-concepts` skill.
 
-- "$10 per seat", nothing granted → a per-unit priced item on the plan. No entities. The common case.
-- "Each seat gets 100 credits" → the seat grants something → a **license**: a small plan of its own that the parent plan hands out per seat.
-- Seats must be assigned, reassigned, or sit empty → also licenses. Rare — confirm they need it.
+- Nothing of its own ("$10 per seat", just a count) → a per-unit priced item on the plan. No entities. The common case.
+- The unit gets something of its own ("each seat gets 100 credits", "every workspace has its own allowance") → a **license**: a small plan of its own that the parent plan hands out per unit.
+- Units must be assigned, reassigned, or sit empty → also licenses. Rare — confirm they need it.
 
-For deciding between a per-unit seat item, licenses, and entity-attached plans, read `references/fork-licenses.md`.
+For deciding between a per-unit item, licenses, and entity-attached plans for a countable paid unit, read `references/fork-licenses.md`.
 
 ### Before deciding: restate
 
@@ -96,22 +104,25 @@ Resolve these with all facts in hand. Each has a default — when the facts genu
 A variant can change the price, swap items in or out, and change the trial — nothing else.
 
 - "Pro monthly / Pro annual, same features" → variant. (Annual usually still resets allowances monthly — billing and reset intervals are independent. Confirm.)
-- Volume buckets ("$20 for 50k emails, $35 for 100k…") — two valid shapes, one question decides: **does anything besides price and volume differ per bucket?**
-  - Overage rate or features differ per bucket → one plan (or variant) per bucket. Each bucket's flat price is that plan's **base price** with the volume included, and each carries its own overage item.
-  - Nothing else differs → one plan whose price IS a prepaid volume-tiered item (no base price); the customer picks the bucket at purchase.
+- Volume buckets ("$20 for 50k emails, $35 for 100k…") — two valid shapes, one question decides: **is each bucket the subscription itself, or a purchase on top of one?**
+  - The bucket IS the subscription — its price is what you pay to be on the plan, the volume is the plan's allowance ("the 100K tier") → one **variant** per bucket. The flat price is that variant's base price with the volume included; overage stays an item. Tell: the prices don't follow a per-unit rate.
+  - The bucket is a quantity bought on top of whatever plan they're on (credit packs, seats, gateways) → a **prepaid item**, with volume tiers when the price-per-unit shifts by quantity. Usually on an add-on plan so it stacks.
+  - Forced to variants regardless: per-bucket overage rates or per-bucket features — one item cannot express those.
+  - Unsure → variants (a variant can express anything a tier row can, not vice versa), or ask: "do customers subscribe to a tier, or buy an amount on top of their plan?"
 - Different features per tier → separate plans. One plan per tier is normal, not a smell.
 
-**Add-on, or part of the plan?**
-- Optional, buyable alongside any plan, one definition shared across plans → its own add-on plan: `addOn: true`, and the purchase itself is a prepaid-priced item (`price: { billingMethod: "prepaid", ... }`) — not a base price. Add-ons attach next to the base plan without replacing it, and their balances stack with the plan's.
-- In every subscription of the plan, or priced differently per plan → an item on the plan.
-- Top-ups follow the same rule: opt-in and shared across plans → add-on; bundled with or priced per plan → a one-off prepaid item on that plan. Auto-recharge needs that one-off prepaid item to exist — add it in Shape, it's structural.
+For deciding whether volume buckets/tiers are variants of the plan or one prepaid volume-tiered item, read `references/fork-variants.md`.
+
+**Add-on, or part of the plan?** Two independent questions: is the purchase priced/bundled per plan (→ item on each plan) or one offer across plans (→ one add-on plan, sizes as tiers on its prepaid item)? And does a plan exist at the level its balance is shared at (→ item there) or are all plans entity-attached (→ a customer-level add-on is forced)? Auto-recharge needs the prepaid item to exist — add it in Shape, it's structural.
+
+For modeling packs, top-ups, or any purchase bought on top of a plan — add-on vs plan item, and what level it sits at, read `references/fork-addon.md`.
 
 **Where do balances and purchases live?**
 The rule: **purchases and balance at the customer; usage tracking and caps at the entity.**
-- "Each deployment gets 10k credits, packs are shared across deployments" → deployment grants are pooled into one shared customer balance; packs are a customer-level add-on. Packs on the pro plan would strand credits on one deployment.
+- "Each workspace gets 10k credits, shared across workspaces" → workspace grants are pooled into one shared customer balance (`pooled: true` on the item).
 - Each entity keeps its own separate balance and cap → no pooling; the entity's own plan carries the allowance.
 - A per-entity cap on a shared balance is a usage limit (billing control), not a separate balance.
-- Heads-up: pooled items can't be written in `autumn.config.ts` yet — model the rest in config, then set pooling via the API or dashboard, and say so to the user.
+- Think about who each charge belongs to: overage on an entity's plan breaks extra usage down per entity, even when the balance is pooled; where a shared purchase sits is the add-on fork above.
 
 For deciding where balances and purchases live — pooled grants, customer-level packs, read `references/fork-pooled.md`.
 
@@ -135,6 +146,10 @@ Shortcuts that are usually wrong — catch yourself before Show:
 | "they said credits but it's one action → plain meter" | Credits are always a credit system. |
 | "packs belong on the plan" | Are they shared across entities or plans? → add-on. |
 | "everyone starts on a Pro trial → trial + auto-enable on Pro" | A default plan can never be paid. → separate free `pro_trial` plan (Pro's items, no price, auto-enabled); Pro untouched. |
+| "several top-up sizes → one add-on plan per size" | Do the sizes differ only in quantity and price? → volume tiers on one prepaid item, one add-on plan. |
+| "the pack is priced per plan → an add-on per plan" | Per-plan pricing IS plan differentiation → a prepaid item on each base plan, no add-ons. Add-ons are for one offer shared across plans, or when no plan exists at the shared level. |
+| "the seat differs per plan → one seat plan per parent" | ONE child plan carrying the mainline take; each differing parent's license carries its own diff via `customize`. Never a `<parent>_seat` plan per parent. |
+| "the seat differs per plan → one seat plan per parent" | ONE child plan carrying the mainline take; each differing parent's license carries its own diff via `customize` (price, addItems/removeItems). Never a `<parent>_seat` plan per parent. |
 
 For checking the derived structure against known-good shapes, read `references/cases.md`.
 
@@ -153,7 +168,7 @@ Free — no price, everyone starts here
 Pro — $20/month, or annual (same features)
   - AI credits per month — amount TBD
   - SSO
-Credit pack (add-on) — price TBD, shared across all deployments
+Credit pack (add-on) — price TBD, shared across all workspaces
 ```
 
 I assumed: credits reset monthly, no rollover. Anything wrong?
@@ -179,11 +194,9 @@ Structure agreed — now finish it. Four moves, in order.
 The sweep exists so the user hears what's configurable without being marched through every item. Behind it, check every knob yourself — this list is internal, never show it:
 
 - per plan: base price · trial (length, unit, card — all explicit) · default plan · group
-- per item: billing method · included · price or tiers (tier behavior explicit) · reset · rollover · purchase caps · the one-off item auto-recharge needs
+- per item: billing method · included · price or tiers (tier behavior explicit) · reset · rollover · pooled (if Shape chose shared balances) · purchase caps · the one-off item auto-recharge needs
 
-**4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config, validate with `atmn --headless push` (a preview — it writes nothing), fix what it flags, and show the final catalog — same format, no assumptions list. **Done means the config is written and valid — a summary is not done.**
-
-Applying to Autumn (`atmn --headless push --yes`) is a separate, explicit step: only after the user has seen the final catalog and clearly said to push it. "Go ahead", "just build it", or "no need to ask" authorizes writing and validating — never applying; the user can't approve a push for a catalog they haven't seen. Never apply on your own — offer it ("Want me to push this to your sandbox?") and stop.
+**4 — Propose, then finalize.** One message: the full catalog in the format below, then "I assumed:" listing every knob you defaulted. Fold corrections in. Then write the config — and before saving, re-read every amount in it: dollars, never cents ($600 is `600`, not `60000`). Validate with `atmn --headless push`, fix what it flags, and show the final catalog — same format, no assumptions list. Note: on a clean org that command applies as it validates (see `references/atmn.md`) — that's fine, just describe it accurately. **Done means the config is written and valid — a summary is not done.**
 
 ### Showing the catalog
 
@@ -203,6 +216,11 @@ Pro — $20/month
   - Unlimited projects
   - SSO
   - 100 credits per seat per month
+Team — $500/month
+  - 5 seats included, then $40 per seat per month
+      each seat gets:
+      · 100 summaries per month
+      · SSO
 Credit pack (add-on) — $10 for 1,000 credits, buy anytime
 ```
 
@@ -212,15 +230,17 @@ Configured item properties — carry-over, purchase caps, top-up behavior — ar
 
 ### Config gotchas
 
-- Amounts are plain dollars: $20 is `20`, never `2000`.
+- Amounts are plain dollars everywhere — base prices, tier `flatAmount`s, unit prices: $20 is `20`, never `2000`, and a $100 tier is `flatAmount: 100`, never `10000`. Re-check every number before writing; cents is the most common wrong config.
 - A default/auto-enabled plan can't be paid: no base price, no paid items.
 - A prepaid quantity **includes** the included amount, and so does each tier's `to` — the first tier's `to` must exceed `included`.
 - `billingUnits` rounds usage **up** when billing.
 - Set explicitly, never lean on defaults: `billingMethod`, `tierBehavior`, all three trial fields. Explicit defaults cause no spurious diffs.
 - Volume tiers charge the flat amount of the reached tier and are prepaid-only; graduated (the default) sums across brackets.
 - Rollover needs a resetting allowance; `max` and `maxPercentage` are mutually exclusive; `expiryDurationType` is required.
+- Pooled balances are config: `pooled: true` on the entity plan's item. Concluding "shared across workspaces" in Shape and then omitting the flag is the classic miss.
+- Pooled grant + overage = two items on the plan: the pooled grant carries no price; a separate usage-priced item (`included: 0`) carries the overage. A pooled item can't itself be usage-priced.
 - Don't write `proration` — leave it out and take server defaults.
-- Not writable in config — say so and set via API or dashboard after push: pooled balances (if Shape chose them), display text, trial end behavior, license customization.
+- Not writable in config — say so and set via API or dashboard after push: display text, trial end behavior, license customization.
 
 The config uses exactly three builders — `feature`, `plan`, `item` — as plain function calls with object arguments. Never guess other functions or fields; the full shapes are in `references/atmn.md`.
 
@@ -275,6 +295,7 @@ For creating variants — what they can and cannot change, read `references/plan
 ## Conduct
 
 - Never invent a price, limit, or plan name — ask.
+- In an existing config, match its patterns: if sibling plans carry their prepaid purchases as items, the new plan does too — don't introduce a different structure for the same kind of thing.
 - Stable lowercase IDs with underscores: `pro_plan`, `chat_messages`.
 - One feature per real thing: one `tokens` feature with different items, never `monthly_tokens` + `one_time_tokens`.
 - `entityFeatureId` is deprecated. Never mention or use it unless the user's existing config already has it.

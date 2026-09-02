@@ -106,10 +106,14 @@ export const initAxEval = ({
 		);
 	}
 
-	// A single arm streams the conversation live; concurrent arms would
-	// interleave lines, so they render atomic per-turn blocks instead.
-	const renderMode =
-		Object.keys(selectedArms).length === 1 && (trialCount ?? 1) === 1
+	// A single arm streams the conversation live; concurrent arms render
+	// atomic per-turn blocks. AX_EVALS_COMPACT=1 (set by the dispatcher for
+	// multi-file runs) collapses to one tagged line per turn — a case can't
+	// know it shares the terminal with parallel sibling eval files.
+	const compact = process.env.AX_EVALS_COMPACT === "1";
+	const renderMode = compact
+		? ("compact" as const)
+		: Object.keys(selectedArms).length === 1 && (trialCount ?? 1) === 1
 			? ("chat" as const)
 			: ("blocks" as const);
 
@@ -140,6 +144,7 @@ export const initAxEval = ({
 					`import { feature, plan, item } from "atmn";
 
 // Define your features and plans, then run \`atmn --headless push\`.
+// Amounts are plain dollars: $20 is 20, never 2000.
 `,
 				);
 			}
@@ -204,6 +209,7 @@ export const initAxEval = ({
 	const scorecard = renderScorecard({
 		arms: Object.keys(selectedArms),
 		expectationCount: axCase.expect.length,
+		caseName: axCase.name,
 	});
 
 	// Named wrappers so Braintrust shows "config valid", not "scorer_0" — and

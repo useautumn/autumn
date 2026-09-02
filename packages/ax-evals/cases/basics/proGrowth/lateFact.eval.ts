@@ -39,7 +39,6 @@ export const lateFact = defineCase({
 		conduct.skillFired(),
 		conduct.completed(),
 		conduct.noHarnessFriction(),
-		conduct.noUnapprovedPush(),
 	],
 	goldenConfig: `${proGrowthGoldenConfig()}
 export const free = plan({

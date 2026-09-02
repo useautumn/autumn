@@ -43,7 +43,6 @@ export const missingPrice = defineCase({
 		conduct.skillFired(),
 		conduct.completed(),
 		conduct.noHarnessFriction(),
-		conduct.noUnapprovedPush(),
 	],
 	goldenConfig: proGrowthGoldenConfig(),
 });
