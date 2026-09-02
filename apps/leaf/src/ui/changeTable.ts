@@ -151,17 +151,23 @@ export const writeOutcomeTable = ({
 /** One operation applied to several targets — collapses the repeated sections
  * a fan-out would otherwise produce into a single scannable table. */
 export const fanOutTable = ({
+	align,
 	caption,
 	headers,
 	rows,
 }: {
+	align?: ("left" | "right")[];
 	caption: string;
-	headers: [string, string, string];
-	rows: ReadonlyArray<[string, string, string]>;
+	headers: readonly string[];
+	rows: ReadonlyArray<readonly string[]>;
 }) =>
 	Table({
-		align: ["left", "left", "right"],
+		align:
+			align ??
+			headers.map((_, index) =>
+				index === headers.length - 1 ? "right" : "left",
+			),
 		caption,
-		headers,
+		headers: [...headers],
 		rows: rows.map((row) => [...row]),
 	});
