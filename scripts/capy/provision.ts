@@ -28,7 +28,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { connect } from "node:net";
-import { homedir, hostname } from "node:os";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import {
 	applyCommittedMigrations,
@@ -42,6 +42,7 @@ import {
 	findBranchByName,
 	waitForNeonBranchOperations,
 } from "../dw/helpers/neon.ts";
+import { sh } from "../dw/helpers/shell.ts";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -95,8 +96,17 @@ function shortHash(input: string): string {
 }
 
 function getMachineId(): string {
-	// The hostname is assigned at runtime and remains stable when a VM wakes.
-	return process.env.HOSTNAME?.trim() || hostname();
+	// Hostnames repeat across VMs cloned from one image, so identity is a
+	// minted id persisted for the lifetime of this machine's filesystem.
+	const idPath = join(CAPY_PREFIX, "machine-id");
+	if (existsSync(idPath)) {
+		const existing = readFileSync(idPath, "utf-8").trim();
+		if (existing) return existing;
+	}
+	const minted = `capy-${randomBytes(8).toString("hex")}`;
+	mkdirSync(CAPY_PREFIX, { recursive: true });
+	writeFileSync(idPath, `${minted}\n`, { mode: 0o600 });
+	return minted;
 }
 
 function deriveBranchName(machineId: string): string {
@@ -645,6 +655,18 @@ function ensureNeonBranch(
 	};
 }
 
+// The template branch carries a better-auth `jwks` row encrypted with the
+// machine secret of whoever last booted against it — undecryptable here.
+function clearInheritedJwks(directUrl: string): void {
+	const res = sh("psql", [directUrl, "-v", "ON_ERROR_STOP=1"], {
+		stdin: `DELETE FROM jwks;\n`,
+	});
+	if (res.code !== 0) {
+		fatal(`clearing inherited jwks rows failed:\n${res.stderr}`);
+	}
+	log("cleared inherited jwks rows (better-auth re-mints on first boot)");
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
@@ -678,7 +700,12 @@ async function main(): Promise<void> {
 
 	// Per-machine secrets — mint on first run, then persist. Server can't
 	// boot without BETTER_AUTH_SECRET / ENCRYPTION_IV / ENCRYPTION_PASSWORD.
+	const secretsMinted = !priorState?.secrets;
 	nextState.secrets = ensureSecrets(priorState);
+
+	// A fresh branch inherits the template's jwks row; a re-minted secret
+	// (lost state file) orphans an adopted branch's row the same way.
+	if (created || secretsMinted) clearInheritedJwks(directUrl);
 
 	saveState(nextState);
 	if (!nextState.databaseUrl) fatal("provisioning produced no databaseUrl");
