@@ -1,5 +1,3 @@
-/** biome-ignore-all lint/a11y/noStaticElementInteractions: header nests a remove button */
-/** biome-ignore-all lint/a11y/useSemanticElements: header nests a remove button */
 import {
 	type CreditSchemaItem,
 	type Feature,
@@ -82,19 +80,13 @@ export function CreditRateCardRow({
 				isExpanded ? "border" : "input-base input-state-open-tiny",
 			)}
 		>
-			<div
-				role="button"
-				tabIndex={0}
-				onClick={onToggle}
-				onKeyDown={(e) => {
-					if (e.key === "Enter" || e.key === " ") {
-						e.preventDefault();
-						onToggle();
-					}
-				}}
-				className="group flex h-9 w-full cursor-pointer select-none items-center gap-2 rounded-lg px-2"
-			>
-				<div className="flex min-w-0 flex-1 items-center gap-2">
+			<div className="group flex h-9 w-full items-center gap-2 rounded-lg pr-2">
+				<button
+					type="button"
+					aria-expanded={isExpanded}
+					onClick={onToggle}
+					className="flex h-full min-w-0 flex-1 cursor-pointer select-none items-center gap-2 rounded-lg px-2 text-left"
+				>
 					{selectedFeature ? (
 						<>
 							<span className="shrink-0">
@@ -110,7 +102,7 @@ export function CreditRateCardRow({
 					) : (
 						<span className="text-subtle text-sm">Select feature</span>
 					)}
-				</div>
+				</button>
 				<IconButton
 					aria-label="Remove rate card item"
 					type="button"
@@ -122,10 +114,7 @@ export function CreditRateCardRow({
 							"opacity-0 focus-visible:opacity-100 group-hover:opacity-100",
 					)}
 					icon={<TrashIcon size={12} />}
-					onClick={(e) => {
-						e.stopPropagation();
-						onRemove();
-					}}
+					onClick={onRemove}
 				/>
 			</div>
 
