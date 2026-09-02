@@ -19,7 +19,7 @@ const graduatedCreditRateShape = {
 };
 
 // Event property values are compared as strings at track time.
-const CreditMatchSchema = z.record(
+export const CreditMatchSchema = z.record(
 	z.string(),
 	z.union([z.string(), z.number(), z.boolean()]).transform(String),
 );
@@ -52,7 +52,7 @@ export const USAGE_ATTRIBUTION_DIMENSION_SEPARATOR = "::";
 export const CREDIT_DIMENSION_NAME_MAX_LENGTH = 64;
 
 // Dimension names become usage-attribution keys, so they must stay parseable.
-const CreditDimensionNameSchema = z
+export const CreditDimensionNameSchema = z
 	.string()
 	.min(1)
 	.max(CREDIT_DIMENSION_NAME_MAX_LENGTH)
