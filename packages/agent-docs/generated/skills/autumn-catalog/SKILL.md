@@ -104,27 +104,19 @@ Resolve these with all facts in hand. Each has a default — when the facts genu
 A variant can change the price, swap items in or out, and change the trial — nothing else.
 
 - "Pro monthly / Pro annual, same features" → variant. (Annual usually still resets allowances monthly — billing and reset intervals are independent. Confirm.)
-- Volume buckets ("$20 for 50k emails, $35 for 100k…") — two valid shapes, one question decides: **is each bucket the subscription itself, or a purchase on top of one?**
-  - The bucket IS the subscription — its price is what you pay to be on the plan, the volume is the plan's allowance ("the 100K tier") → one **variant** per bucket. The flat price is that variant's base price with the volume included; overage stays an item. Tell: the prices don't follow a per-unit rate.
-  - The bucket is a quantity bought on top of whatever plan they're on (credit packs, seats, gateways) → a **prepaid item**, with volume tiers when the price-per-unit shifts by quantity. Usually on an add-on plan so it stacks.
-  - Forced to variants regardless: per-bucket overage rates or per-bucket features — one item cannot express those.
-  - Unsure → variants (a variant can express anything a tier row can, not vice versa), or ask: "do customers subscribe to a tier, or buy an amount on top of their plan?"
+- Volume buckets/tiers — one question decides: **is each bucket the subscription itself (→ a variant per bucket) or a purchase on top of one (→ a prepaid item)?**
 - Different features per tier → separate plans. One plan per tier is normal, not a smell.
 
-For deciding whether volume buckets/tiers are variants of the plan or one prepaid volume-tiered item, read `references/fork-variants.md`.
+For deciding whether volume buckets/tiers are variants of the plan or one prepaid volume-tiered item — the tells, the trap, when variants are forced, read `references/fork-variants.md`.
 
 **Add-on, or part of the plan?** Two independent questions: is the purchase priced/bundled per plan (→ item on each plan) or one offer across plans (→ one add-on plan, sizes as tiers on its prepaid item)? And does a plan exist at the level its balance is shared at (→ item there) or are all plans entity-attached (→ a customer-level add-on is forced)? Auto-recharge needs the prepaid item to exist — add it in Shape, it's structural.
 
 For modeling packs, top-ups, or any purchase bought on top of a plan — add-on vs plan item, and what level it sits at, read `references/fork-addon.md`.
 
 **Where do balances and purchases live?**
-The rule: **purchases and balance at the customer; usage tracking and caps at the entity.**
-- "Each workspace gets 10k credits, shared across workspaces" → workspace grants are pooled into one shared customer balance (`pooled: true` on the item).
-- Each entity keeps its own separate balance and cap → no pooling; the entity's own plan carries the allowance.
-- A per-entity cap on a shared balance is a usage limit (billing control), not a separate balance.
-- Think about who each charge belongs to: overage on an entity's plan breaks extra usage down per entity, even when the balance is pooled; where a shared purchase sits is the add-on fork above.
+The rule: **purchases and balance at the customer; usage tracking and caps at the entity.** Grants "shared across…" entities → pooled (`pooled: true` on the item); separate per-entity balances → no pooling; overage stays on the entity's plan either way.
 
-For deciding where balances and purchases live — pooled grants, customer-level packs, read `references/fork-pooled.md`.
+For deciding where balances and purchases live — pooled grants, per-entity balances, customer-level packs, overage placement, read `references/fork-pooled.md`.
 
 **Groups?**
 Can one customer hold two plans at once from different lines (a support plan AND a sales plan)? → one group per line. Within a group, attaching a plan replaces the current one; that's what makes upgrades work.
@@ -149,7 +141,6 @@ Shortcuts that are usually wrong — catch yourself before Show:
 | "several top-up sizes → one add-on plan per size" | Do the sizes differ only in quantity and price? → volume tiers on one prepaid item, one add-on plan. |
 | "the pack is priced per plan → an add-on per plan" | Per-plan pricing IS plan differentiation → a prepaid item on each base plan, no add-ons. Add-ons are for one offer shared across plans, or when no plan exists at the shared level. |
 | "the seat differs per plan → one seat plan per parent" | ONE child plan carrying the mainline take; each differing parent's license carries its own diff via `customize`. Never a `<parent>_seat` plan per parent. |
-| "the seat differs per plan → one seat plan per parent" | ONE child plan carrying the mainline take; each differing parent's license carries its own diff via `customize` (price, addItems/removeItems). Never a `<parent>_seat` plan per parent. |
 
 For checking the derived structure against known-good shapes, read `references/cases.md`.
 
@@ -264,45 +255,34 @@ export const pro = plan({
 });
 ```
 
-For charging for usage beyond an included allowance, read `references/usage-based-pricing.md`.
+Pattern deep-dives, split one file per pattern under `references/` — read the matching one when filling that pattern's details:
 
-For selling a quantity bought upfront (seats, credit packs, buckets), read `references/prepaid-pricing.md`.
-
-For pricing that changes by volume tier, read `references/volume-based-tiers.md`.
-
-For modeling $X per unit — always with a base fee, read `references/per-unit-pricing.md`.
-
-For recurring plans; billing interval vs reset interval, read `references/recurring.md`.
-
-For one-off purchases or top-up items, read `references/one-off-purchases.md`.
-
-For auto-recharge behavior and the one-off prepaid item it requires, read `references/auto-top-ups.md`.
-
-For unused allowance carrying over, read `references/rollovers.md`.
-
-For trial details — durations, card behavior, what happens on expiry, read `references/trials.md`.
-
-For entity-scoped plans and licenses — attach flows, provisioning, read `references/entity-plans.md`.
-
-For credit schemas, action mappings, monetary credits, read `references/credit-systems.md`.
-
-For default plans and auto-enable rules, read `references/free-plans.md`.
-
-For add-on plans and balance stacking, read `references/add-ons.md`.
-
-For creating variants — what they can and cannot change, read `references/plan-variants.md`.
+For usage overage pricing, read `references/usage-based-pricing.md`.
+For prepaid quantities (seats, packs, buckets), read `references/prepaid-pricing.md`.
+For volume-tiered prices, read `references/volume-based-tiers.md`.
+For $X per unit, read `references/per-unit-pricing.md`.
+For billing vs reset intervals, read `references/recurring.md`.
+For one-off purchases / top-ups, read `references/one-off-purchases.md`.
+For auto-recharge, read `references/auto-top-ups.md`.
+For carry-over, read `references/rollovers.md`.
+For trial details, read `references/trials.md`.
+For entity plans and license attach flows, read `references/entity-plans.md`.
+For credit schemas and mappings, read `references/credit-systems.md`.
+For default plans / auto-enable, read `references/free-plans.md`.
+For add-on balance stacking, read `references/add-ons.md`.
+For what variants can change, read `references/plan-variants.md`.
 
 ## Conduct
 
-- Never invent a price, limit, or plan name — ask.
 - In an existing config, match its patterns: if sibling plans carry their prepaid purchases as items, the new plan does too — don't introduce a different structure for the same kind of thing.
 - Stable lowercase IDs with underscores: `pro_plan`, `chat_messages`.
-- One feature per real thing: one `tokens` feature with different items, never `monthly_tokens` + `one_time_tokens`.
 - `entityFeatureId` is deprecated. Never mention or use it unless the user's existing config already has it.
 - Per-unit pricing pairs a base fee with the per-unit item ("$X/seat" plans still have a base price, even $0).
 - Speak plainly: "plans", "what's included", "extra usage". Schema words stay in the config — say "carry over" not "rollover", "shared across workspaces" not "pooled", "paid upfront" / "billed at month end" not "prepaid" / "usage_based".
 - Never volunteer what Autumn can or can't do. Don't offer options Autumn can't model, and don't explain limitations unprompted — only address one when the user directly asks to model that specific thing, and even then lead with the closest thing that works.
 - Start simple: the most important features first, confirm before adding more.
+
+Before finishing: re-check the STRICT RULES at the top against the config you wrote.
 
 ## Catalog operations
 

@@ -437,11 +437,7 @@ Resolve these with all facts in hand. Each has a default — when the facts genu
 A variant can change the price, swap items in or out, and change the trial — nothing else.
 
 - "Pro monthly / Pro annual, same features" → variant. (Annual usually still resets allowances monthly — billing and reset intervals are independent. Confirm.)
-- Volume buckets ("$20 for 50k emails, $35 for 100k…") — two valid shapes, one question decides: **is each bucket the subscription itself, or a purchase on top of one?**
-  - The bucket IS the subscription — its price is what you pay to be on the plan, the volume is the plan's allowance ("the 100K tier") → one **variant** per bucket. The flat price is that variant's base price with the volume included; overage stays an item. Tell: the prices don't follow a per-unit rate.
-  - The bucket is a quantity bought on top of whatever plan they're on (credit packs, seats, gateways) → a **prepaid item**, with volume tiers when the price-per-unit shifts by quantity. Usually on an add-on plan so it stacks.
-  - Forced to variants regardless: per-bucket overage rates or per-bucket features — one item cannot express those.
-  - Unsure → variants (a variant can express anything a tier row can, not vice versa), or ask: "do customers subscribe to a tier, or buy an amount on top of their plan?"
+- Volume buckets/tiers — one question decides: **is each bucket the subscription itself (→ a variant per bucket) or a purchase on top of one (→ a prepaid item)?**
 - Different features per tier → separate plans. One plan per tier is normal, not a smell.
 
 # Volume buckets: variants or one prepaid item?
@@ -526,11 +522,7 @@ Left: the parent plan is already customer-level, so the pack is just an item the
 Say why in the proposal: "packs go on the plan since each plan prices them differently" or "packs are a separate purchase shared by all workspaces".
 
 **Where do balances and purchases live?**
-The rule: **purchases and balance at the customer; usage tracking and caps at the entity.**
-- "Each workspace gets 10k credits, shared across workspaces" → workspace grants are pooled into one shared customer balance (`pooled: true` on the item).
-- Each entity keeps its own separate balance and cap → no pooling; the entity's own plan carries the allowance.
-- A per-entity cap on a shared balance is a usage limit (billing control), not a separate balance.
-- Think about who each charge belongs to: overage on an entity's plan breaks extra usage down per entity, even when the balance is pooled; where a shared purchase sits is the add-on fork above.
+The rule: **purchases and balance at the customer; usage tracking and caps at the entity.** Grants "shared across…" entities → pooled (`pooled: true` on the item); separate per-entity balances → no pooling; overage stays on the entity's plan either way.
 
 # Where do balances and purchases live?
 
@@ -587,7 +579,6 @@ Shortcuts that are usually wrong — catch yourself before Show:
 | "several top-up sizes → one add-on plan per size" | Do the sizes differ only in quantity and price? → volume tiers on one prepaid item, one add-on plan. |
 | "the pack is priced per plan → an add-on per plan" | Per-plan pricing IS plan differentiation → a prepaid item on each base plan, no add-ons. Add-ons are for one offer shared across plans, or when no plan exists at the shared level. |
 | "the seat differs per plan → one seat plan per parent" | ONE child plan carrying the mainline take; each differing parent's license carries its own diff via `customize`. Never a `<parent>_seat` plan per parent. |
-| "the seat differs per plan → one seat plan per parent" | ONE child plan carrying the mainline take; each differing parent's license carries its own diff via `customize` (price, addItems/removeItems). Never a `<parent>_seat` plan per parent. |
 
 # Worked cases
 
@@ -743,6 +734,8 @@ export const pro = plan({
   ],
 });
 ```
+
+Pattern deep-dives, split one file per pattern under `references/` — read the matching one when filling that pattern's details:
 
 ## Usage-Based Pricing
 
@@ -922,7 +915,6 @@ A common pattern is pairing usage-based pricing with a [free plan](/documentatio
 |------|------------|--------|
 | Free | Yes | Blocked (`allowed: false`) |
 | Pay-as-you-go | Yes | Allowed, billed at end of period |
-
 ## Prepaid Pricing
 
 Prepaid pricing lets customers pay for a fixed quantity of a feature upfront. They select how many units they want at purchase time, pay immediately, and their balance is decremented as they use it.
@@ -1201,7 +1193,6 @@ Use the [check](/documentation/customers/check) endpoint before allowing a custo
 | **Customer selects quantity** | Yes, via `feature_quantities` | No |
 | **Balance behavior** | Decremented as usage occurs | Accumulated and billed |
 | **Best for** | Credits, top-ups, seat licenses | Metered APIs, storage, bandwidth |
-
 ## Volume-Based Tiers
 
 Volume-based pricing uses tiers to determine a single flat charge based on the total usage volume. Unlike [graduated pricing](/documentation/modelling-pricing/graduated-pricing), where each tier has its own rate, volume-based pricing charges a single flat amount based on which tier the total usage falls into.
@@ -1326,7 +1317,6 @@ A customer with 5,000 records would pay: (5,000 × $0.08) + $50 = **$450**
 | **Best for** | Rewarding growth with lower marginal rates | Simpler pricing with volume discounts |
 
 See [Graduated Pricing](/documentation/modelling-pricing/graduated-pricing) for the alternative model.
-
 ## Per-Unit Pricing
 
 Per-unit pricing charges customers based on the quantity of a resource they use — seats, workspaces, environments, or any other non-consumable feature. Customers either commit to a quantity upfront (prepaid) or are billed based on actual usage at the end of each billing cycle (usage-based).
@@ -1596,7 +1586,6 @@ For **usage-based**, `allowed` is `true` as long as the customer has a usage-bas
 ## Proration on quantity changes
 
 When a customer increases or decreases their seat count mid-billing-cycle, you can configure how the price adjustment is handled. See [Proration](/documentation/modelling-pricing/proration) for details.
-
 ## Recurring Plans
 
 Recurring plans let you grant customers a fixed allowance of consumable features -- like messages, credits, or API calls -- that resets each billing period. Customers pay a base price at a regular interval (monthly, quarterly, annually), and receive a fresh grant of their included features at the start of each cycle.
@@ -1815,7 +1804,6 @@ Once a customer has an active subscription, you can manage upgrades, downgrades,
 | `past_due` | Payment failed, needs attention |
 | `scheduled` | Will activate at end of current billing period (e.g., downgrade) |
 | `expired` | Subscription has ended |
-
 ## One-Off Purchases
 
 One-off purchases are single-charge plans that don't recur. They're used for one-time top-ups, lifetime access plans, or any plan where the customer pays once.
@@ -2003,7 +1991,6 @@ One-off balances stack with existing balances from subscriptions. Autumn uses [d
 | Lifetime plan | One-off base price, features with no reset |
 | One-time fee | One-off base price, no features |
 | Setup fee + subscription | Recurring base price, one-off item price on same plan |
-
 ## Auto Top-Ups
 
 Auto top-ups automatically purchase additional balance for a customer when their usage drops below a configured threshold. This prevents service interruptions for customers who don't want to manually manage their balance.
@@ -2178,7 +2165,6 @@ Subscribe to the [`billing.auto_topup_succeeded`](/api-reference/webhooks/billin
 Subscribe to [`billing.auto_topup_failed`](/api-reference/webhooks/billingAutoTopupFailed) to monitor auto top-ups that are blocked, declined, or fail before granting balance. The payload includes a machine-readable `reason` and any available provider error details.
 
 Limit-blocked failure webhooks are suppressed per blocking window to avoid duplicate notifications while the same limit remains active.
-
 ## Rollovers
 
 Rollovers let unused feature balances carry forward to the next billing cycle instead of being lost at reset. This gives customers more flexibility and prevents wasted allocation.
@@ -2308,7 +2294,6 @@ Rollovers are only available on `consumable` features with a reset interval. Non
 ## Entity rollovers
 
 If you're using [entity plans](/documentation/modelling-pricing/entity-plans), rollovers are tracked per entity. Each entity's unused balance rolls over independently.
-
 ## Trials
 
 Free trials give customers temporary access to a paid plan before they're charged. Autumn supports two trial modes: **card required** (collect payment info upfront, bill when trial ends) and **card not required** (no payment info needed, access expires automatically).
@@ -2777,7 +2762,6 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 </CodeGroup>
 
 This sets the feature's reset cycle to begin when the trial ends rather than when the trial starts, so the customer gets a full fresh allowance once they start paying.
-
 ## Entity Plans
 
 An **entity** is a resource that lives under a parent customer — a user, a workspace, a project. Entity plans let each of those hold its own plan, with its own balances, while the parent customer pays.
@@ -3293,7 +3277,6 @@ When tracking at the customer level (without `entity_id`), usage is deducted fro
 ## Worked example
 
 [Entity-level balances](/examples/entity-balances) walks the licenses model end to end: an AI meeting-notes product on team pricing, from customer creation through buying seats, assigning them, and releasing them when someone leaves.
-
 ## Credit Systems
 
 Credit systems let you track actions with different credit costs from a single balance pool.
@@ -3677,7 +3660,6 @@ curl -X POST "https://api.useautumn.com/v1/balances.track_tokens" \
 </CodeGroup>
 
 The cost is calculated automatically based on the model's pricing plus your configured markup percentage.
-
 ## Free Plans
 
 Free plans let you give every new customer access to a limited set of features at no cost. They're the foundation of freemium models — customers start free and upgrade when they need more.
@@ -3795,7 +3777,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 </CodeGroup>
 
 When `allowed` is `false`, the customer has exhausted their free tier balance. This is a good moment to prompt them to upgrade.
-
 ## Add-Ons
 
 Add-ons are plans that can be purchased alongside a customer's existing plan, rather than replacing it. They're used for top-ups, extra feature packs, or supplementary services.
@@ -3980,7 +3961,6 @@ curl -X POST "https://api.useautumn.com/v1/cancel" \
 | Recurring add-on | `addOn: true`, recurring price (e.g., $5/month for extra storage) |
 | One-time top-up | `addOn: true`, prepaid price, no base price |
 | Feature pack | `addOn: true`, grants boolean or metered features |
-
 ## Plan Variants
 
 Plan variants let you model multiple versions of the same offer without duplicating the full plan. The base plan holds the shared definition, and each variant stores only the differences: usually a price change, an added item, or a different usage allowance.
@@ -4080,15 +4060,15 @@ Use variants when plans share most of their features. If a variant changes many 
 
 ## Conduct
 
-- Never invent a price, limit, or plan name — ask.
 - In an existing config, match its patterns: if sibling plans carry their prepaid purchases as items, the new plan does too — don't introduce a different structure for the same kind of thing.
 - Stable lowercase IDs with underscores: `pro_plan`, `chat_messages`.
-- One feature per real thing: one `tokens` feature with different items, never `monthly_tokens` + `one_time_tokens`.
 - `entityFeatureId` is deprecated. Never mention or use it unless the user's existing config already has it.
 - Per-unit pricing pairs a base fee with the per-unit item ("$X/seat" plans still have a base price, even $0).
 - Speak plainly: "plans", "what's included", "extra usage". Schema words stay in the config — say "carry over" not "rollover", "shared across workspaces" not "pooled", "paid upfront" / "billed at month end" not "prepaid" / "usage_based".
 - Never volunteer what Autumn can or can't do. Don't offer options Autumn can't model, and don't explain limitations unprompted — only address one when the user directly asks to model that specific thing, and even then lead with the closest thing that works.
 - Start simple: the most important features first, confirm before adding more.
+
+Before finishing: re-check the STRICT RULES at the top against the config you wrote.
 
 ## Catalog operations
 
