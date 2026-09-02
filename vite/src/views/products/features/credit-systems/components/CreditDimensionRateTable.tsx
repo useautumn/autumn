@@ -1,5 +1,9 @@
 import { IconButton, Input } from "@autumn/ui";
-import type { ColumnDef, Row } from "@tanstack/react-table";
+import type {
+	ColumnDef,
+	Row,
+	Table as TableInstance,
+} from "@tanstack/react-table";
 import { PlusIcon, X } from "lucide-react";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
@@ -14,7 +18,21 @@ interface RateTableRow {
 	id: string;
 	index: number;
 	rule?: CreditRateRule;
+	baseRate?: string;
 }
+
+interface RateTableMeta {
+	onRuleChange: (index: number, rule: CreditRateRule) => void;
+	onRuleRemove: (index: number) => void;
+}
+
+interface RateCellContext {
+	row: Row<RateTableRow>;
+	table: TableInstance<RateTableRow>;
+}
+
+const metaOf = (table: TableInstance<RateTableRow>): RateTableMeta =>
+	table.options.meta as RateTableMeta;
 
 interface CreditDimensionRateTableProps {
 	fields: string[];
@@ -26,7 +44,8 @@ interface CreditDimensionRateTableProps {
 }
 
 /** One column per dimension, a credits column, and a final row for the row's own rate.
- * `data` must be referentially stable or the table's auto-reset re-renders forever. */
+ * Cells are components to the table, so `data` and `columns` must stay referentially
+ * stable while typing: handlers ride on `meta`, the base rate on its row. */
 export function CreditDimensionRateTable({
 	fields,
 	rules,
@@ -38,9 +57,9 @@ export function CreditDimensionRateTable({
 	const data: RateTableRow[] = useMemo(
 		() => [
 			...rules.map((rule, index) => ({ id: String(index), index, rule })),
-			{ id: "base", index: rules.length },
+			{ id: "base", index: rules.length, baseRate },
 		],
-		[rules],
+		[rules, baseRate],
 	);
 
 	const columns: ColumnDef<RateTableRow, unknown>[] = useMemo(
@@ -49,7 +68,7 @@ export function CreditDimensionRateTable({
 				(field): ColumnDef<RateTableRow, unknown> => ({
 					header: field,
 					id: `field:${field}`,
-					cell: ({ row }: { row: Row<RateTableRow> }) => {
+					cell: ({ row, table }: RateCellContext) => {
 						const { rule, index } = row.original;
 						if (!rule) return <MutedCell>any</MutedCell>;
 						return (
@@ -59,7 +78,7 @@ export function CreditDimensionRateTable({
 								placeholder="any"
 								value={rule.dimension.match[field] ?? ""}
 								onChange={(event) =>
-									onRuleChange(
+									metaOf(table).onRuleChange(
 										index,
 										setRuleCell({ rule, field, value: event.target.value }),
 									)
@@ -74,9 +93,9 @@ export function CreditDimensionRateTable({
 				header: "Credits",
 				id: "credits",
 				size: 90,
-				cell: ({ row }: { row: Row<RateTableRow> }) => {
-					const { rule, index } = row.original;
-					if (!rule) return <MutedCell>{baseRate}</MutedCell>;
+				cell: ({ row, table }: RateCellContext) => {
+					const { rule, index, baseRate } = row.original;
+					if (!rule) return <MutedCell>{baseRate ?? ""}</MutedCell>;
 					const { dimension } = rule;
 					if (dimension.tier_behavior === "graduated") {
 						return <MutedCell>tiered</MutedCell>;
@@ -88,7 +107,7 @@ export function CreditDimensionRateTable({
 							placeholder="0"
 							value={dimension.credit_amount}
 							onValueChange={(credit_amount) =>
-								onRuleChange(index, {
+								metaOf(table).onRuleChange(index, {
 									...rule,
 									dimension: { ...dimension, credit_amount },
 								})
@@ -103,7 +122,7 @@ export function CreditDimensionRateTable({
 				id: "actions",
 				size: 40,
 				enableSorting: false,
-				cell: ({ row }: { row: Row<RateTableRow> }) => {
+				cell: ({ row, table }: RateCellContext) => {
 					const { rule, index } = row.original;
 					if (!rule) return null;
 					return (
@@ -113,7 +132,7 @@ export function CreditDimensionRateTable({
 								variant="skeleton"
 								iconOrientation="center"
 								icon={<X className="h-3.5 w-3.5" />}
-								onClick={() => onRuleRemove(index)}
+								onClick={() => metaOf(table).onRuleRemove(index)}
 								className="!text-subtle hover:!text-foreground"
 							/>
 						</div>
@@ -121,13 +140,14 @@ export function CreditDimensionRateTable({
 				},
 			},
 		],
-		[fields.join(","), baseRate, onRuleChange, onRuleRemove],
+		[fields.join(",")],
 	);
 
+	const meta: RateTableMeta = { onRuleChange, onRuleRemove };
 	const table = useProductTable({
 		data,
 		columns,
-		options: { getRowId: (row) => row.id },
+		options: { getRowId: (row) => row.id, meta },
 	});
 
 	return (
