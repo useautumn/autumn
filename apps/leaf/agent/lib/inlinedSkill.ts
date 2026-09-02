@@ -1,9 +1,8 @@
 import { leafSkills, skillToText } from "@autumn/agent-docs/agent";
 import { defineDynamic, defineInstructions } from "eve/instructions";
 
-/** A skill the agent loads on nearly every turn is cheaper inlined: eve serves
- * skill bodies as a `load_skill` tool result, which costs a round-trip and
- * lands in the uncached tail. In the prefix it is cached instead. */
+/** An every-turn skill is cheaper inlined: a `load_skill` result lands in the
+ * uncached tail, the prompt prefix is cached. */
 export const inlinedSkill = ({ name }: { name: string }) =>
 	defineDynamic({
 		events: {

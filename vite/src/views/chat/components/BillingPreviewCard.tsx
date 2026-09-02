@@ -1,4 +1,10 @@
-import { billingActionBadges, customizeWithFreeTrial } from "@autumn/render";
+import {
+	addedPlanChanges,
+	billingActionBadges,
+	currentPlanFromPreview,
+	customizeWithFreeTrial,
+	removedPlanChanges,
+} from "@autumn/render";
 import {
 	type ApiPlanV1,
 	AppEnv,
@@ -89,15 +95,15 @@ const hasPlan = (
 
 /** "Attaching X (and removing Y)" — mirrors the attach sheet's summary line. */
 function BillingChangeSummary({
-	incoming,
-	outgoing,
+	added,
+	removed,
 }: {
-	incoming: BillingPreviewChange[];
-	outgoing: BillingPreviewChange[];
+	added: BillingPreviewChange[];
+	removed: BillingPreviewChange[];
 }) {
 	return (
 		<span>
-			{incoming.length > 0 && (
+			{added.length > 0 && (
 				<>
 					Attaching{" "}
 					<PlusCircleIcon
@@ -105,19 +111,19 @@ function BillingChangeSummary({
 						className="mr-1 inline size-3.5 align-middle text-green-500"
 					/>
 					<span className="font-medium text-foreground">
-						{incoming.map(changeName).join(", ")}
+						{added.map(changeName).join(", ")}
 					</span>
 				</>
 			)}
-			{outgoing.length > 0 && (
+			{removed.length > 0 && (
 				<>
-					{incoming.length > 0 ? " and removing " : "Removing "}
+					{added.length > 0 ? " and removing " : "Removing "}
 					<MinusCircleIcon
 						weight="fill"
 						className="mr-1 inline size-3.5 align-middle text-red-500"
 					/>
 					<span className="font-medium text-foreground">
-						{outgoing.map(changeName).join(", ")}
+						{removed.map(changeName).join(", ")}
 					</span>
 				</>
 			)}
@@ -142,6 +148,9 @@ export function BillingPreviewCard({
 	);
 	const incoming = preview.incoming ?? [];
 	const outgoing = preview.outgoing ?? [];
+	// A plan on both sides is an in-place update: neither attached nor removed.
+	const added = addedPlanChanges({ incoming, outgoing });
+	const removed = removedPlanChanges({ incoming, outgoing });
 	const incomingPlans = incoming.filter(hasPlan);
 	const badges = billingActionBadges(params);
 
@@ -196,9 +205,9 @@ export function BillingPreviewCard({
 				</Link>
 			)}
 
-			{(incoming.length > 0 || outgoing.length > 0) && (
+			{(added.length > 0 || removed.length > 0) && (
 				<InfoBox variant="success">
-					<BillingChangeSummary incoming={incoming} outgoing={outgoing} />
+					<BillingChangeSummary added={added} removed={removed} />
 				</InfoBox>
 			)}
 
@@ -225,7 +234,7 @@ export function BillingPreviewCard({
 
 			{customize && (
 				<BillingCustomizeDiff
-					currentPlan={outgoing.find(hasPlan)?.plan}
+					currentPlan={currentPlanFromPreview({ outgoing })}
 					customize={customize}
 				/>
 			)}

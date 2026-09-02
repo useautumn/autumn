@@ -38,7 +38,9 @@ export const slimToolSchema = (
 	const slimmed: JsonSchemaObject = {};
 	let dropped = new Set<string>();
 	for (const [key, entry] of Object.entries(value)) {
-		if (key === "examples" || key === "title") continue;
+		// `default` is dropped so the model stops volunteering values it should
+		// leave out; the MCP wire keeps applying the real default.
+		if (key === "examples" || key === "title" || key === "default") continue;
 		if (key === "internal" || key === "x-internal") continue;
 		if (key === "description") {
 			if (depth <= DESCRIPTION_DEPTH_MAX) slimmed[key] = entry;

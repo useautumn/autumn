@@ -1,3 +1,4 @@
+import type { TrialOnEnd } from "@autumn/shared";
 import {
 	Button,
 	DropdownMenu,
@@ -20,7 +21,7 @@ export function AttachPlanOptions() {
 		formValues,
 		numVersions,
 		product,
-		hasActiveSubscription,
+		supportsTrialRevert,
 		attachCurrency,
 		additionalPlans: { isMultiPlan },
 	} = useAttachFormContext();
@@ -28,10 +29,9 @@ export function AttachPlanOptions() {
 	const [versionOpen, setVersionOpen] = useState(false);
 
 	const showVersionSelector = numVersions > 1 && !isMultiPlan;
-	const handleTrialOnEndChange =
-		hasActiveSubscription && !isMultiPlan
-			? (value: "bill" | "revert") => form.setFieldValue("trialOnEnd", value)
-			: undefined;
+	const handleTrialOnEndChange = supportsTrialRevert
+		? (value: TrialOnEnd) => form.setFieldValue("trialOnEnd", value)
+		: undefined;
 
 	return (
 		<div className="flex flex-col gap-4">

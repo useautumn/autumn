@@ -1,4 +1,5 @@
 import type { CatalogPlanPreview } from "@autumn/shared";
+import { GATED_WRITES } from "../../../../../../agent/lib/gatedWrites.js";
 import { logger } from "../../../../../lib/logger.js";
 import { WAITING_FOR_INPUT_MESSAGE } from "../../../../../ui/messages.js";
 import type { RunStopReason } from "../../../../runs/runRegistry.js";
@@ -27,7 +28,11 @@ import {
 	previewForParkedWrite,
 } from "../../../eve/parkedWritePreview.js";
 import type { EvePendingRequest } from "../../../eve/types.js";
-import { isSilentTool, toolGerund } from "../../../tools/toolPolicy.js";
+import {
+	isSilentTool,
+	normalizeToolName,
+	toolGerund,
+} from "../../../tools/toolPolicy.js";
 import { catalogPlanNeedingDecision } from "../../resolveCatalogDecision/catalogDecisionPolicy.js";
 
 export type EveTurnOutcome =
@@ -38,8 +43,17 @@ export type EveTurnOutcome =
 	| { approval: AgentApprovalRequest; kind: "suspended"; text: string }
 	| { kind: "unreachable" };
 
+export type RecordedWrite = Readonly<{
+	callId: string;
+	input: Record<string, unknown>;
+	toolName: string;
+}>;
+
 export type EveTurnProgress = Readonly<{
 	finalText: string;
+	/** Gated writes the model called this turn; the approval is assembled from
+	 * these when the turn ends. */
+	recordedWrites: ReadonlyArray<RecordedWrite>;
 	lastPreview?: CapturedPreview;
 	pendingText: string;
 	reasoningStreamId?: string;
@@ -70,6 +84,7 @@ export type EveTurnTransition = Readonly<{
 export const createEveTurnProgress = (): EveTurnProgress => ({
 	finalText: "",
 	pendingText: "",
+	recordedWrites: [],
 	subagentChildSessionIds: new Set(),
 	subagentStartedAtByCallId: new Map(),
 	toolInputs: new Map(),
@@ -90,6 +105,45 @@ const isTurnActivityEvent = (event: EveEvent) =>
 	event.type === "input.requested" ||
 	event.type === "subagent.called" ||
 	event.type === "subagent.completed";
+
+const GATED_WRITE_TOOLS: ReadonlySet<string> = new Set(
+	GATED_WRITES.map((write) => write.toolName),
+);
+
+const isGatedWriteTool = (toolName?: string) =>
+	Boolean(toolName && GATED_WRITE_TOOLS.has(normalizeToolName(toolName)));
+
+/** One approval per turn: the first recorded write is the primary and the rest
+ * ride as grouped writes, so a multi-change request stays one card. */
+const approvalForRecordedWrites = ({
+	writes,
+	progress,
+}: {
+	progress: EveTurnProgress;
+	writes: ReadonlyArray<RecordedWrite>;
+}): AgentApprovalRequest | undefined => {
+	const [primary, ...grouped] = writes;
+	if (!primary) return undefined;
+	return {
+		toolCallId: primary.callId,
+		toolName: primary.toolName,
+		toolArgs: {
+			...primary.input,
+			...withheldWritesToolArgs(
+				grouped.map((write) => ({
+					input: write.input,
+					requestId: write.callId,
+					toolName: write.toolName,
+				})),
+			),
+		},
+		preview: previewForParkedWrite({
+			captured: progress.lastPreview,
+			input: primary.input,
+			toolName: primary.toolName,
+		}),
+	};
+};
 
 const approvalForGatedWrite = ({
 	chained,
@@ -180,6 +234,16 @@ const reduceActionResult = ({
 	if (!result?.callId) {
 		return { effects: [], progress: { ...progress, lastPreview } };
 	}
+	const recordedWrites = isGatedWriteTool(result.toolName)
+		? [
+				...progress.recordedWrites,
+				{
+					callId: result.callId,
+					input: progress.toolInputs.get(result.callId) ?? {},
+					toolName: normalizeToolName(result.toolName ?? ""),
+				},
+			]
+		: progress.recordedWrites;
 	logger.info("Eve tool completed", {
 		event: "leaf.eve_tool_completed",
 		data: {
@@ -210,7 +274,7 @@ const reduceActionResult = ({
 	toolLabels.delete(result.callId);
 	return {
 		effects,
-		progress: { ...progress, lastPreview, toolLabels },
+		progress: { ...progress, lastPreview, recordedWrites, toolLabels },
 	};
 };
 
@@ -331,6 +395,17 @@ const reduceTerminalEvent = ({
 	progress: EveTurnProgress;
 }): EveTurnTransition => {
 	const text = progress.pendingText || progress.finalText;
+	const approval = approvalForRecordedWrites({
+		progress,
+		writes: progress.recordedWrites,
+	});
+	if (approval) {
+		return {
+			effects: [{ kind: "save_session" }],
+			outcome: { approval, kind: "suspended", text },
+			progress,
+		};
+	}
 	const catalogDecision = catalogPlanNeedingDecision(
 		progress.lastPreview?.preview,
 	);

@@ -1,5 +1,5 @@
 {
-  "id": "8216528e-843e-41c7-b177-69c421d6f757",
+  "id": "a1e76b4d-76ca-43dd-8395-9e0f649da25d",
   "prevId": "f2d1befa-3872-47d3-8ca8-b6f666d5effa",
   "version": "7",
   "dialect": "postgresql",
@@ -2949,6 +2949,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "metadata_id": {
+          "name": "metadata_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "previous_customer_product_id": {
           "name": "previous_customer_product_id",
           "type": "text",
@@ -3125,6 +3131,22 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_products_metadata_id": {
+          "name": "idx_customer_products_metadata_id",
+          "columns": [
+            {
+              "expression": "metadata_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"customer_products\".\"metadata_id\" IS NOT NULL",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -4245,12 +4267,6 @@
         },
         "rollover": {
           "name": "rollover",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "feature_override": {
-          "name": "feature_override",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false

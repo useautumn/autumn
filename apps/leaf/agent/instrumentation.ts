@@ -2,17 +2,10 @@ import { BraintrustExporter } from "@braintrust/otel";
 import { registerOTel } from "@vercel/otel";
 import { defineInstrumentation } from "eve/instrumentation";
 
-/** Braintrust traces the model loop — prompts, tool calls and results, token
- * usage, subagent spans. Axiom keeps session lifecycle (parks, reconnects,
- * cursors); the two join on the session id, which eve already puts on every
- * span as `eve.session.id` — the same value Axiom logs as `session_id`.
- *
- * Without BRAINTRUST_API_KEY no exporter is registered, so a missing key
- * costs traces, never turns. */
+// Braintrust traces the model loop; Axiom keeps session lifecycle. The two
+// join on `eve.session.id` = Axiom's `session_id`. No key → no traces, never no turns.
 
-/** A laptop's turns must not land in the project used to investigate
- * production incidents. Matches how the agent identifies production
- * elsewhere, so the two can never disagree. */
+// A laptop's turns must not land in the production-incident Braintrust project.
 const projectName = () => {
 	if (process.env.BRAINTRUST_PROJECT) return process.env.BRAINTRUST_PROJECT;
 	const isProduction =

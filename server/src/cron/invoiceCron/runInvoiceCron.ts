@@ -4,6 +4,8 @@ import { addDays } from "date-fns";
 import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import type { Stripe } from "stripe";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
+import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
+import { expirePendingCustomerProducts } from "@/internal/billing/v2/execute/expirePendingCustomerProducts";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { createStripeCli } from "../../external/connect/createStripeCli";
 import { stripeInvoiceToStripeSubscriptionId } from "../../external/stripe/invoices/utils/convertStripeInvoice";
@@ -69,6 +71,22 @@ export const handleVoidInvoiceCron = async ({
 
 	const subId = stripeInvoiceToStripeSubscriptionId(invoice);
 	const voidSub = metadata.type === MetadataType.InvoiceCheckout;
+	const expirePendingRows = async () => {
+		try {
+			await expirePendingCustomerProducts({
+				ctx: {
+					db,
+					logger,
+					org: { id: org.id },
+					env: customer.env,
+					redisV2: resolveRedisV2(),
+				},
+				metadataId: metadata.id,
+			});
+		} catch (error) {
+			logger.error(`Error expiring pending customer products: ${error}`);
+		}
+	};
 
 	console.log(
 		`Invoice: ${metadata.stripe_invoice_id} for customer ${customer.id} (org: ${org.slug}) - status: ${invoice.status}`,
@@ -90,6 +108,7 @@ export const handleVoidInvoiceCron = async ({
 				}
 			}
 
+			await expirePendingRows();
 			await MetadataService.delete({
 				db,
 				id: metadata.id,
@@ -123,6 +142,7 @@ export const handleVoidInvoiceCron = async ({
 			}
 		}
 	} else if (invoice.status === "void" || invoice.status === "uncollectible") {
+		await expirePendingRows();
 		await MetadataService.delete({
 			db,
 			id: metadata.id,

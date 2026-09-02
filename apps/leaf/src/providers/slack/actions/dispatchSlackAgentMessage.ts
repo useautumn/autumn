@@ -1,10 +1,8 @@
 import type { Attachment } from "chat";
 import type { AgentContextMessage } from "../../../internal/agentRuntime/domain/agentTurnContext.js";
 import { isTransientNetworkError } from "../../../internal/agentRuntime/eve/streamErrors.js";
-import { editSupersededApprovalCards } from "../../../internal/approvals/surfaces/slack/superseded.js";
 import {
 	dispatchThreadMessage,
-	hasQueuedThreadMessage,
 	stopActiveThreadRun,
 } from "../../../internal/runs/runCoordinator.js";
 import {
@@ -168,8 +166,6 @@ const runAndReply = async ({
 			installation,
 			logger,
 			onAction: logAction,
-			onApprovalsSuperseded: (approvals) =>
-				editSupersededApprovalCards({ approvals, logger, target }),
 			onReasoning: evePresenter.onReasoning,
 			onThinking: progress.thinking,
 			providerUserId,
@@ -198,17 +194,6 @@ const runAndReply = async ({
 			await progress.fail(output.text);
 			await target.post({ markdown: output.text });
 			return "close";
-		}
-
-		if (hasQueuedThreadMessage(runKey)) {
-			// A pending approval left here is withdrawn by the queued message's own
-			// turn: its denies ride that message's eve post, with no drain turn.
-			logger.info("Suppressed reply; newer message queued", {
-				event: "leaf.slack_reply_suppressed",
-				data: { had_suspension: output.kind === "approval" },
-			});
-			await progress.complete();
-			return "keep";
 		}
 
 		await presentSlackAgentTurn({

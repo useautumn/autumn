@@ -32,14 +32,12 @@ const leafInternalAuth = (): AuthFn<Request> => async (request) => {
 	if (chatInstallationId) attributes.chatInstallationId = chatInstallationId;
 	const autumnUserId = request.headers.get("x-leaf-autumn-user-id");
 	if (autumnUserId) attributes.autumnUserId = autumnUserId;
-	for (const [key, header] of [
-		["orgCatalog", "x-leaf-org-catalog"],
-		["orgInstructions", "x-leaf-org-instructions"],
-	] as const) {
-		const encoded = request.headers.get(header);
-		if (encoded) {
-			attributes[key] = Buffer.from(encoded, "base64url").toString("utf8");
-		}
+	const orgInstructions = request.headers.get("x-leaf-org-instructions");
+	if (orgInstructions) {
+		attributes.orgInstructions = Buffer.from(
+			orgInstructions,
+			"base64url",
+		).toString("utf8");
 	}
 
 	return {

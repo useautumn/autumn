@@ -293,7 +293,12 @@ export const setupImmediateMultiProductBillingContext = async ({
 			!preview && params.no_billing_changes !== true,
 	});
 
-	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
+	const invoiceMode = await setupInvoiceModeContext({
+		ctx,
+		fullCustomer,
+		params,
+		stripeCustomer,
+	});
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 	const trialContext = await setupImmediateMultiProductTrialContext({
 		ctx,

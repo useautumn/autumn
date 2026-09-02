@@ -290,9 +290,9 @@ describe("approval card", () => {
 		expect(json).toContain('"headers":["Starts","Plans"]');
 		expect(json).toContain('["now","Pro"]');
 		expect(json).toContain('["after 2 years","Enterprise"]');
-		expect(json).toContain('["🟢 Add","Pro · 100 messages","—"]');
+		expect(json).toContain('["🟢 Add","Pro · 100 messages","Included"]');
 		expect(json).toContain(
-			'["🔴 Remove","Enterprise (after 2 years) · 12 workflows","—"]',
+			'["🔴 Remove","Enterprise (after 2 years) · 12 workflows","Included"]',
 		);
 		expect(json).not.toContain("[object Object]");
 	});
@@ -340,6 +340,91 @@ describe("approval card", () => {
 		expect(json).toContain("approve_billing_action");
 		expect(json).toContain("cancel_billing_action");
 		expect(json).not.toContain("view_approval_payload");
+	});
+
+	// A customize-only update names no plan and has no incoming change: the
+	// caption and the diff both come from the outgoing plan.
+	test("names the outgoing plan when the update does not", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Sandbox,
+			toolName: "updateSubscription",
+			toolArgs: {
+				request: {
+					customer_id: "sdkjfn",
+					customize: { remove_items: [{ feature_id: "message_credits" }] },
+					entity_id: "a",
+				},
+			},
+			preview: wrapMcpResult({
+				_display: {
+					featureNames: {
+						message_credits: {
+							plural: "message credits",
+							singular: "message credit",
+						},
+					},
+				},
+				preview: {
+					currency: "usd",
+					line_items: [],
+					outgoing: [
+						{
+							plan_id: "enterprise",
+							plan: {
+								items: [{ feature_id: "message_credits", included: 1000 }],
+								name: "Enterprise",
+							},
+						},
+					],
+					total: 0,
+				},
+			}),
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain('"caption":"Enterprise customizations"');
+		expect(json).toContain('["🔴 Remove","1,000 message credits","Included"]');
+	});
+
+	// The catalog says 0 contacts; the customer's live plan says 250,000. The
+	// preview's outgoing plan carries the terms actually being removed.
+	test("diffs against the preview's outgoing plan, not the catalog", () => {
+		const card = approvalCard({
+			id: "approval_1",
+			env: AppEnv.Sandbox,
+			toolName: "attach",
+			toolArgs: {
+				request: {
+					...attachArgs.request,
+					customize: { remove_items: [{ feature_id: "contacts" }] },
+				},
+			},
+			preview: wrapMcpResult({
+				_display: {
+					basePlanItems: [{ feature_id: "contacts", included: 0 }],
+					featureNames: {
+						contacts: { plural: "contacts", singular: "contact" },
+					},
+				},
+				preview: {
+					currency: "usd",
+					line_items: [],
+					outgoing: [
+						{
+							plan_id: "enterprise",
+							plan: {
+								items: [{ feature_id: "contacts", included: 250_000 }],
+							},
+						},
+					],
+					total: 0,
+				},
+			}),
+		});
+
+		const json = JSON.stringify(card);
+		expect(json).toContain('["🔴 Remove","250,000 contacts","Included"]');
 	});
 
 	test("renders customized items in a change table", () => {
@@ -443,8 +528,8 @@ describe("approval card", () => {
 		expect(slackJson).toContain('"type":"data_table"');
 		expect(slackJson).toContain('"caption":"enterprise customizations"');
 		expect(json).toContain('"headers":["Change","Details","Pricing"]');
-		expect(json).toContain('["🟢 Add","Dashboard","—"]');
-		expect(json).toContain('["🟢 Add","Unlimited seats","—"]');
+		expect(json).toContain('["🟢 Add","Dashboard","Included"]');
+		expect(json).toContain('["🟢 Add","Unlimited seats","Included"]');
 		expect(json).toContain(
 			'["🟢 Add","400 messages","≤100: $3.00 / 50; $6.70 / 50 · graduated tiers"]',
 		);
@@ -452,8 +537,8 @@ describe("approval card", () => {
 		expect(json).toContain('["🟢 Add","API calls","$5.00 / 1,000"]');
 		expect(json).toContain('["🔴 Remove","200 messages","$6.00 / 100"]');
 		expect(json).toContain('["🔴 Remove","1,000 credits","$0.05 / unit"]');
-		expect(json).toContain('["🔴 Remove","10 audit logs","—"]');
-		expect(json).toContain('["🔴 Remove","50 annual tokens","—"]');
+		expect(json).toContain('["🔴 Remove","10 audit logs","Included"]');
+		expect(json).toContain('["🔴 Remove","50 annual tokens","Included"]');
 		// A diff reads old → new: what the customer loses before what they gain.
 		expect(json.indexOf('["🔴 Remove","10 audit logs"')).toBeLessThan(
 			json.indexOf('["🟢 Add","5,000 credits"'),
@@ -507,7 +592,7 @@ describe("approval card", () => {
 		});
 
 		const json = JSON.stringify(card);
-		expect(json).toContain('["🔴 Remove","200 Project Slots","—"]');
+		expect(json).toContain('["🔴 Remove","200 Project Slots","Included"]');
 		expect(json).toContain(
 			'["🟢 Add","100 Project Slots (prepaid)","$10.00 / unit"]',
 		);
@@ -553,9 +638,9 @@ describe("approval card", () => {
 		});
 
 		const json = JSON.stringify(card);
-		expect(json).toContain('["🟢 Add","100 gigabytes","—"]');
-		expect(json).toContain('["🟢 Add","5,000 words","—"]');
-		expect(json).toContain('["🔴 Remove","4,000 words","—"]');
+		expect(json).toContain('["🟢 Add","100 gigabytes","Included"]');
+		expect(json).toContain('["🟢 Add","5,000 words","Included"]');
+		expect(json).toContain('["🔴 Remove","4,000 words","Included"]');
 		expect(json).toContain('["🔴 Remove","800 messages","$6.00 / 100"]');
 		expect(json.indexOf('["🔴 Remove","4,000 words"')).toBeLessThan(
 			json.indexOf('["🟢 Add","100 gigabytes"'),
@@ -655,13 +740,13 @@ describe("approval card", () => {
 		);
 		expect(json).not.toContain('"content":"Update catalog?"');
 		expect(json).toContain('"headers":["Change","Details","Pricing"]');
-		expect(json).toContain('["🟢 Add","Dashboard","—"]');
+		expect(json).toContain('["🟢 Add","Dashboard","Included"]');
 		expect(json).toContain('["🟢 Add","100 Messages","$6.00 / 100"]');
-		expect(json).toContain('["🟢 Add","launch","—"]');
-		expect(json).not.toContain('["🟠 Update","Growth seed","—"]');
-		expect(json).toContain('["🟠 Update","Messages","—"]');
-		expect(json).toContain('["🔴 Remove","old-referral","—"]');
-		expect(json).toContain('["⚠️ Blocked","locked_feature","—"]');
+		expect(json).toContain('["🟢 Add","launch","Included"]');
+		expect(json).not.toContain('["🟠 Update","Growth seed","Included"]');
+		expect(json).toContain('["🟠 Update","Messages","Included"]');
+		expect(json).toContain('["🔴 Remove","old-referral","Included"]');
+		expect(json).toContain('["⚠️ Blocked","locked_feature","Included"]');
 		expect(json).not.toContain("Skip deletions");
 		expect(json).not.toContain('"plans"');
 	});
@@ -1690,9 +1775,9 @@ describe("update-subscription card, end to end from a real preview shape", () =>
 
 		expect(rows).toEqual([
 			["🔴 Remove", "Base price", "$1,500.00 per month"],
-			["🔴 Remove", "250,000 contacts", "—"],
+			["🔴 Remove", "250,000 contacts", "Included"],
 			["🟢 Add", "Base price", "$1,600.00 per month"],
-			["🟢 Add", "500,000 contacts", "—"],
+			["🟢 Add", "500,000 contacts", "Included"],
 		]);
 		expect(json).not.toContain("🟠 Update");
 	});
@@ -1717,7 +1802,7 @@ describe("free trial on the approval card", () => {
 			},
 		});
 		expect(JSON.stringify(card)).toContain(
-			'["🟢 Add","14-day free trial","—"]',
+			'["🟢 Add","14-day free trial","Included"]',
 		);
 	});
 
@@ -1743,7 +1828,7 @@ describe("free trial on the approval card", () => {
 			}),
 		});
 		expect(JSON.stringify(card)).toContain(
-			'["🔴 Remove","1-month free trial","—"]',
+			'["🔴 Remove","1-month free trial","Included"]',
 		);
 	});
 });

@@ -4,6 +4,7 @@ import type {
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
+import { CusProductStatus } from "@autumn/shared";
 
 import { useMemo } from "react";
 import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
@@ -68,6 +69,7 @@ function SendInvoiceContent() {
 function EditContent() {
 	const {
 		formContext,
+		hasChanges,
 		hasNoBillingChanges,
 		showPlanEditor,
 		productWithFormItems,
@@ -94,7 +96,7 @@ function EditContent() {
 					action={<BillingPromptToggle />}
 				/>
 
-				<div className="px-4 pt-4">
+				<div className="has-[form]:px-4 has-[form]:pt-4">
 					<UpdateSubscriptionGenerationBar />
 				</div>
 
@@ -120,6 +122,17 @@ function EditContent() {
 						</div>
 					</div>
 				</div>
+
+				{customerProduct.status === CusProductStatus.Pending &&
+					hasChanges &&
+					!hasNoBillingChanges && (
+						<div className="px-4 pt-4">
+							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+								Updating creates a new payment link. The existing one will stop
+								working.
+							</InfoBox>
+						</div>
+					)}
 
 				<EditPlanSection />
 				<UpdateSubscriptionPlanOptions />

@@ -1,4 +1,4 @@
-import type { ApiPlanV1 } from "@autumn/shared";
+import { type ApiPlanV1, BillingInterval } from "@autumn/shared";
 import type { GenerationContext } from "@/internal/billing/v2/actions/generateRequest/setup/setupGenerationContext";
 
 const NOW_MS = Date.UTC(2026, 7, 24, 12, 0, 0);
@@ -56,6 +56,52 @@ export const saasContext = ({
 				items: [{ feature_id: "sso" }],
 			},
 		],
+	}) as unknown as GenerationContext;
+
+export const versionedPlanContext = ({
+	currentPrice = { amount: 20, interval: BillingInterval.Month },
+}: {
+	currentPrice?: ApiPlanV1["price"];
+} = {}): GenerationContext =>
+	({
+		customer: {
+			id: "cus_versioned",
+			current_plans: [
+				{
+					customer_product_id: "cp_versioned",
+					effective_plan: {
+						id: "generation",
+						items: [
+							{
+								feature_id: "messages",
+								included: 200,
+								reset: { interval: "month" },
+							},
+						],
+						name: "Generation Version Plan",
+						price: currentPrice,
+						version: 2,
+					},
+					plan_id: "generation",
+					status: "active",
+				},
+			],
+		},
+		features: [{ id: "messages", name: "Messages", type: "single_use" }],
+		now,
+		plans: [10, 20, 30].map((amount, index) => ({
+			id: "generation",
+			items: [
+				{
+					feature_id: "messages",
+					included: (index + 1) * 100,
+					reset: { interval: "month" },
+				},
+			],
+			name: "Generation Version Plan",
+			price: { amount, interval: "month" },
+			version: index + 1,
+		})),
 	}) as unknown as GenerationContext;
 
 /** Enterprise org with a volume-tiered prepaid credits ladder — the shape that

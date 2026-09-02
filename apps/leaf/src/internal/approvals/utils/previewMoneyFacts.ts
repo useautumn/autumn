@@ -150,9 +150,8 @@ const totalWithinDecay = ({
 	return Math.abs(currentFacts.total - expected) <= tolerance;
 };
 
-/** Whether the approved money facts still match what would execute — derived
- * facts, not raw payloads, so benign field churn and the server-clock decay of
- * prorated amounts never block approvals. */
+/** Compares derived money facts, not raw payloads, so benign field churn and
+ * proration clock-decay never block approvals. */
 export const previewMoneyFactsDrifted = ({
 	current,
 	stored,

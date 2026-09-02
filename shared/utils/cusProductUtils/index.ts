@@ -16,6 +16,7 @@ export * from "./customerLicenses/convertCustomerLicense/customerLicenseToGrante
 export * from "./customerLicenses/convertCustomerLicense/customerLicenseToUsage";
 export * from "./customerLicenses/findCustomerLicense/findCustomerLicenseByLinkId";
 export * from "./customerLicenses/inheritParentCustomerProductProperties";
+export * from "./featureOptionUtils/compareFeatureOptions/featureOptionsAreSame";
 export * from "./featureOptionUtils/findFeatureOptions";
 export * from "./featureOptionUtils/index";
 export * from "./filterCusProductUtils";

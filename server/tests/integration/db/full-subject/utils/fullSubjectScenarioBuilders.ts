@@ -266,6 +266,7 @@ const buildCustomerProduct = ({
 }): DbCustomerProduct => ({
 	billing_cycle_anchor: null,
 	billing_cycle_anchor_resets_at: null,
+	metadata_id: null,
 	id: `cp_${key}_${suffix}`,
 	internal_customer_id: customer.internal_id,
 	internal_product_id: product.internal_id,

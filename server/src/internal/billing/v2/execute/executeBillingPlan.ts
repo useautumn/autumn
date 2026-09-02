@@ -7,6 +7,7 @@ import type {
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { insertPendingCustomerProducts } from "@/internal/billing/v2/execute/insertPendingCustomerProducts";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
@@ -44,6 +45,14 @@ export const executeBillingPlan = async ({
 				stripeInvoiceId: stripeBillingResult.stripeInvoice.id,
 				autumnInvoiceId: stripeBillingResult.autumnInvoice.id,
 				billingLineItems: billingPlan.autumn.lineItems,
+			});
+		}
+
+		if (stripeBillingResult.deferredMetadataId) {
+			await insertPendingCustomerProducts({
+				ctx,
+				autumnBillingPlan: billingPlan.autumn,
+				metadataId: stripeBillingResult.deferredMetadataId,
 			});
 		}
 

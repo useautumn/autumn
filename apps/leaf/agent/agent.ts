@@ -22,9 +22,9 @@ const workflowWorld =
 
 export default defineAgent({
 	build: { externalDependencies: ["@vercel/otel"] },
-	model: leafModel("orchestrator"),
-	modelContextWindowTokens: leafModelContextWindowTokens("orchestrator"),
-	reasoning: leafReasoning("orchestrator"),
+	model: leafModel("leaf"),
+	modelContextWindowTokens: leafModelContextWindowTokens("leaf"),
+	reasoning: leafReasoning("leaf"),
 	...(workflowWorld
 		? {
 				experimental: {

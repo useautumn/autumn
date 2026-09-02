@@ -77,7 +77,6 @@ const output = await runSlackAgentTurn({
 	installation,
 	logger,
 	onAction: (m) => presenter.onAction(m),
-	onApprovalsSuperseded: () => {},
 	onReasoning: presenter.onReasoning,
 	onThinking: ticker.thinking,
 	providerUserId,

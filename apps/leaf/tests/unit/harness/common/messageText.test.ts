@@ -23,7 +23,7 @@ describe("Harness message text", () => {
 		expect(text).toContain("Org context");
 		expect(text).toContain("treat these JSON blocks as the current org state");
 		expect(text).toContain(
-			"delegate the question to a specialist instead of guessing",
+			"look it up with the Autumn tools instead of guessing",
 		);
 		expect(text).toContain("- pro | Pro");
 		expect(extractUserMessageText(text)).toBe("attach pro");

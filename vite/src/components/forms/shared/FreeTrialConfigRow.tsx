@@ -4,6 +4,7 @@ import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttach
 import { TRIAL_DURATION_OPTIONS } from "@/components/forms/update-subscription-v2/constants/trialConstants";
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
 import { ConfigRow } from "./ConfigRow";
+import { TrialOnEndSelect } from "./TrialOnEndSelect";
 
 const DEFAULT_TRIAL_LENGTH = 7;
 
@@ -26,7 +27,7 @@ export function FreeTrialConfigRow({
 	onToggle: (enabled: boolean) => void;
 	description?: string;
 }) {
-	const showRevert = !!onTrialOnEndChange;
+	const showTrialOnEnd = !!onTrialOnEndChange;
 
 	return (
 		<ConfigRow
@@ -65,7 +66,7 @@ export function FreeTrialConfigRow({
 							/>
 						)}
 					</form.AppField>
-					{!showRevert && (
+					{!showTrialOnEnd && (
 						<div className="mx-2">
 							<TextCheckbox
 								checked={trialCardRequired}
@@ -78,19 +79,16 @@ export function FreeTrialConfigRow({
 						</div>
 					)}
 				</div>
-				{showRevert && (
-					<TextCheckbox
-						checked={trialOnEnd === "revert"}
-						onCheckedChange={(checked) => {
-							const revert = checked as boolean;
-							onTrialOnEndChange(revert ? "revert" : "bill");
-							if (revert) {
+				{showTrialOnEnd && (
+					<TrialOnEndSelect
+						value={trialOnEnd ?? "revert"}
+						onChange={(value) => {
+							onTrialOnEndChange(value);
+							if (value === "revert") {
 								form.setFieldValue("trialCardRequired", false);
 							}
 						}}
-					>
-						Revert to previous plan after trial ends
-					</TextCheckbox>
+					/>
 				)}
 			</div>
 		</ConfigRow>

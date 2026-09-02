@@ -31,7 +31,6 @@ export type EveAuthContext = {
 	autumnUserId?: string;
 	channelId: string;
 	chatInstallationId?: string;
-	orgCatalog?: string;
 	orgId: string;
 	orgInstructions?: string;
 	provider: string;

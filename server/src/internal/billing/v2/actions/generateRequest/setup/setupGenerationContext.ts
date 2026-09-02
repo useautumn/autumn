@@ -5,6 +5,7 @@ import type {
 	FullProduct,
 } from "@autumn/shared";
 import {
+	cusProductToProduct,
 	mapToProductV2,
 	productV2ToApiPlanV1,
 	toCreatePlanItemParams,
@@ -30,21 +31,22 @@ const compactPlan = ({
 	return {
 		id: productV2.id,
 		name: productV2.name,
+		version: productV2.version,
 		...(productV2.group ? { group: productV2.group } : {}),
 		...(productV2.is_add_on ? { is_add_on: true } : {}),
-		...(productV2.free_trial ? { free_trial: productV2.free_trial } : {}),
-		...(apiPlan.price
+		...(apiPlan.free_trial ? { free_trial: apiPlan.free_trial } : {}),
+		price: apiPlan.price
 			? {
-					price: {
-						amount: apiPlan.price.amount,
-						interval: apiPlan.price.interval,
-						...(apiPlan.price.interval_count &&
-						apiPlan.price.interval_count !== 1
-							? { interval_count: apiPlan.price.interval_count }
-							: {}),
-					},
+					amount: apiPlan.price.amount,
+					interval: apiPlan.price.interval,
+					...(apiPlan.price.interval_count && apiPlan.price.interval_count !== 1
+						? { interval_count: apiPlan.price.interval_count }
+						: {}),
+					...(apiPlan.price.additional_currencies?.length
+						? { additional_currencies: apiPlan.price.additional_currencies }
+						: {}),
 				}
-			: {}),
+			: null,
 		items: apiPlan.items.map((item) => toCreatePlanItemParams(item)),
 	};
 };
@@ -94,10 +96,16 @@ export const setupGenerationContext = async ({
 			customer: {
 				id: fullCustomer.id,
 				...(fullCustomer.name ? { name: fullCustomer.name } : {}),
-				current_plans: fullCustomer.customer_products.map((customerProduct) =>
-					compactCustomerProduct({
-						customerProduct,
-						entities: fullCustomer.entities ?? [],
+				current_plans: fullCustomer.customer_products.map(
+					(customerProduct) => ({
+						...compactCustomerProduct({
+							customerProduct,
+							entities: fullCustomer.entities ?? [],
+						}),
+						effective_plan: compactPlan({
+							features,
+							product: cusProductToProduct({ cusProduct: customerProduct }),
+						}),
 					}),
 				),
 				entities: (fullCustomer.entities ?? []).map((entity) => ({

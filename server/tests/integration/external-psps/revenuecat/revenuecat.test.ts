@@ -713,3 +713,128 @@ test.concurrent(
 		await clearInvoiceTestData();
 	},
 );
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 4: RENEWAL on a product that is BOTH cancelled AND past due
+//
+// handleRenewal branches on status and only one branch runs, so PastDue matches
+// before the reactivation branch and a cancelled + past-due product took
+// markActive (status only), keeping canceled/canceled_at/ended_at from the
+// earlier CANCELLATION.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("revenuecat 4: renewal on cancelled + past due product clears cancellation")}`,
+	async () => {
+		const customerId = "rc-renewal-cancelled-pastdue";
+		const RC_PRO_MONTHLY_ID = "com.app.rc4_pro_monthly";
+		const RC_ORIGINAL_TX_ID = "rc4_tx_001";
+
+		const proMonthly = rcProMonthly({ id: "rc4-pro-monthly" });
+
+		await setupRevenueCatOrg();
+
+		await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [proMonthly] }),
+			],
+			actions: [],
+		});
+
+		await RCMappingService.upsert({
+			db: ctx.db,
+			data: {
+				org_id: ctx.org.id,
+				env: AppEnv.Sandbox,
+				autumn_product_id: proMonthly.id,
+				revenuecat_product_ids: [RC_PRO_MONTHLY_ID],
+			},
+		});
+
+		const rcClient = new RevenueCatWebhookClient({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			webhookSecret: RC_WEBHOOK_SECRET,
+		});
+
+		const dbCustomer = await ctx.db.query.customers.findFirst({
+			where: eq(customers.id, customerId),
+		});
+		expect(dbCustomer).toBeDefined();
+		const internalCustomerId = dbCustomer!.internal_id;
+
+		const fetchCustomerProduct = async () => {
+			const cusProducts = await CusProductService.list({
+				db: ctx.db,
+				internalCustomerId,
+				inStatuses: [
+					CusProductStatus.Active,
+					CusProductStatus.PastDue,
+					CusProductStatus.Scheduled,
+					CusProductStatus.Expired,
+				],
+			});
+			const customerProduct = cusProducts.find(
+				(cp) => cp.product.id === proMonthly.id,
+			);
+			expect(customerProduct).toBeDefined();
+			return customerProduct!;
+		};
+
+		// ─── 1. Initial purchase establishes the cus_product ───────────────────
+		expectWebhookSuccess(
+			await rcClient.initialPurchase({
+				productId: RC_PRO_MONTHLY_ID,
+				appUserId: customerId,
+				originalTransactionId: RC_ORIGINAL_TX_ID,
+			}),
+		);
+
+		// ─── 2. Cancellation sets canceled + a future ended_at ─────────────────
+		const expirationAtMs = Date.now() + 1000 * 60 * 60 * 24 * 30;
+
+		expectWebhookSuccess(
+			await rcClient.cancellation({
+				productId: RC_PRO_MONTHLY_ID,
+				appUserId: customerId,
+				originalTransactionId: RC_ORIGINAL_TX_ID,
+				expirationAtMs,
+			}),
+		);
+
+		const afterCancellation = await fetchCustomerProduct();
+		expect(afterCancellation.canceled).toBe(true);
+		expect(afterCancellation.canceled_at).not.toBeNull();
+		expect(afterCancellation.ended_at).toBe(expirationAtMs);
+
+		// ─── 3. Billing issue flips it past due; cancellation fields survive ───
+		expectWebhookSuccess(
+			await rcClient.billingIssue({
+				productId: RC_PRO_MONTHLY_ID,
+				appUserId: customerId,
+				originalTransactionId: RC_ORIGINAL_TX_ID,
+			}),
+		);
+
+		const afterBillingIssue = await fetchCustomerProduct();
+		expect(afterBillingIssue.status).toBe(CusProductStatus.PastDue);
+		expect(afterBillingIssue.canceled).toBe(true);
+
+		// ─── 4. Renewal must recover the status AND clear the cancellation ─────
+		expectWebhookSuccess(
+			await rcClient.renewal({
+				productId: RC_PRO_MONTHLY_ID,
+				appUserId: customerId,
+				originalTransactionId: RC_ORIGINAL_TX_ID,
+			}),
+		);
+
+		const afterRenewal = await fetchCustomerProduct();
+		expect(afterRenewal.status).toBe(CusProductStatus.Active);
+		expect(afterRenewal.canceled).toBe(false);
+		expect(afterRenewal.canceled_at).toBeNull();
+		expect(afterRenewal.ended_at).toBeNull();
+	},
+);
