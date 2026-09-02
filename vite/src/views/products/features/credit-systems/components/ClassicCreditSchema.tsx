@@ -1,5 +1,5 @@
 import type { CreditSchemaItem, Feature } from "@autumn/shared";
-import { Button, FormLabel, Switch } from "@autumn/ui";
+import { FormLabel, IconButton, Switch } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
@@ -75,16 +75,17 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 					);
 				})}
 
-				<Button
-					variant="dotted"
-					aria-label="Add feature"
+				<IconButton
+					type="button"
+					variant="muted"
+					size="sm"
 					onClick={() => setExpandedKey(addSchemaItem() ?? null)}
 					disabled={schema.length >= allSchemaCandidateFeatures.length}
-					className="!h-9 !rounded-lg w-full !border-dashed !border-primary/50 !bg-transparent !text-primary hover:!border-primary [&_svg]:text-primary"
+					className="w-full text-tertiary-foreground text-xs"
+					icon={<PlusIcon size={10} />}
 				>
-					<PlusIcon className="size-3" weight="bold" />
 					Add feature
-				</Button>
+				</IconButton>
 			</div>
 		</div>
 	);
