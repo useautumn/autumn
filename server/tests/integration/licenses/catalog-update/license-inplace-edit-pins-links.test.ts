@@ -16,6 +16,7 @@ import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { ProductService } from "@/internal/products/ProductService.js";
 
 test.concurrent(
 	`${chalk.yellowBright("licenses: in-place item edit pins non-propagated catalog links")}`,
@@ -31,7 +32,7 @@ test.concurrent(
 			reset: { interval: "month" },
 		});
 
-		const { autumnV2_2 } = await initScenario({
+		const { autumnV2_2, ctx } = await initScenario({
 			customerId: `license-pin-${suffix}`,
 			setup: [s.customer({ testClock: false })],
 			actions: [],
@@ -80,5 +81,20 @@ test.concurrent(
 			included: 0,
 			prepaid_only: true,
 		});
+
+		// The non-propagated link keeps the OLD item shape (pinned, not adopted).
+		const parentFull = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: parentId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		const link = parentFull.licenses?.[0];
+		expect(link?.customized).toBe(true);
+		const linkedItem = link?.product.entitlements.find(
+			(entitlement) => entitlement.feature.id === TestFeature.Messages,
+		);
+		expect(linkedItem?.pooled).toBe(false);
+		expect(linkedItem?.allowance).toBe(25);
 	},
 );
