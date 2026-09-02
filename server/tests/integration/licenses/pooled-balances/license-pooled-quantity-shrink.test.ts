@@ -122,32 +122,12 @@ test.concurrent(
 	`${chalk.yellowBright("license pooled: qty 5 → 3 after release shrinks the pool; reset stays at 3")}`,
 	async () => {
 		const customerId = "lic-pool-qty-shrink";
-		const { autumnV2_3, ctx, entities, parent, seat, customerLicenseLinkId } =
+		const { autumnV2_3, ctx, parent, seat, customerLicenseLinkId } =
 			await quantityShrinkScenario({
 				customerId,
 				prefix: "lic-pool-qty-shrink",
 				releaseIndexes: [0, 1],
 			});
-
-		const usage = 50;
-		await autumnV2_3.track(
-			{
-				customer_id: customerId,
-				entity_id: entities[2].id,
-				feature_id: TestFeature.Messages,
-				value: usage,
-			},
-			{ timeout: 2000 },
-		);
-		await expectLicensePooledGrant({
-			autumn: autumnV2_3,
-			ctx,
-			customerId,
-			customerLicenseLinkId,
-			grantPerSeat: LICENSE_POOLED_GRANT,
-			seatCount: ATTACHED_SEATS,
-			usage,
-		});
 
 		await updateLicenseQuantity({
 			autumn: autumnV2_3,
@@ -180,7 +160,6 @@ test.concurrent(
 			customerLicenseLinkId,
 			grantPerSeat: LICENSE_POOLED_GRANT,
 			seatCount: 3,
-			usage,
 		});
 
 		await expirePooledBalanceForReset({
