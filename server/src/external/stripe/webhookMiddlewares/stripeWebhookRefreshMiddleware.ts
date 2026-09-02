@@ -104,6 +104,9 @@ export const stripeWebhookRefreshMiddleware = async (
 				customerId: customer.id!,
 				ctx,
 				source: `stripeWebhookRefreshMiddleware: ${eventType}`,
+				// Attach-echo invoices are balance-neutral. Cycle handlers bump
+				// cache_version or already invalidate, so a conflict is a no-op.
+				flushBalances: true,
 			});
 		}
 	} catch (error) {
