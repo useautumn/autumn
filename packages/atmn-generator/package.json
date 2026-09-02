@@ -7,7 +7,8 @@
 	"scripts": {
 		"ts": "bunx tsgo --build --noEmit",
 		"test": "bun test test",
-		"generate": "bun run src/generate.ts"
+		"generate": "bun run src/generate.ts",
+		"check-clean": "bun run src/checkClean.ts"
 	},
 	"dependencies": {
 		"yaml": "2.9.0"

@@ -81,3 +81,25 @@ export const collectionItemSchema = ({
 	}
 	return item;
 };
+
+/** The 200 response body schema for an operation. */
+export const responseSchema = ({
+	spec,
+	path,
+}: {
+	spec: OpenApiDocument;
+	path: string;
+}): JsonSchema => {
+	const schema = operationAt({ spec, path }).responses?.["200"]?.content?.[
+		"application/json"
+	]?.schema;
+	if (!schema) throw new Error(`${path} has no 200 JSON response`);
+	return schema;
+};
+
+/** Where the API lives, per the spec — not a constant the CLI invents. */
+export const serverBaseUrl = ({ spec }: { spec: OpenApiDocument }): string => {
+	const url = (spec as { servers?: { url?: string }[] }).servers?.[0]?.url;
+	if (!url) throw new Error("spec declares no servers[0].url");
+	return url;
+};
