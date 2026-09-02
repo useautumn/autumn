@@ -2,6 +2,8 @@ import type {
 	Entity,
 	Feature,
 	FullCusProduct,
+	FullCustomer,
+	FullCustomerSchedule,
 	FullProduct,
 } from "@autumn/shared";
 import {
@@ -79,18 +81,13 @@ export const compactCustomerProduct = ({
 	};
 };
 
-export const setupGenerationContext = async ({
+const loadGenerationScheduleContext = async ({
 	ctx,
-	customerId,
+	fullCustomer,
 }: {
 	ctx: AutumnContext;
-	customerId: string;
+	fullCustomer: FullCustomer;
 }) => {
-	const [fullProducts, features, fullCustomer] = await Promise.all([
-		ProductService.listFull({ db: ctx.db, env: ctx.env, orgId: ctx.org.id }),
-		FeatureService.list({ db: ctx.db, env: ctx.env, orgId: ctx.org.id }),
-		CusService.getFull({ ctx, idOrInternalId: customerId, withEntities: true }),
-	]);
 	const [{ customerSchedule, entitySchedules }, allCustomerProducts] =
 		await Promise.all([
 			getCustomerSchedulesByScope({
@@ -102,8 +99,12 @@ export const setupGenerationContext = async ({
 				internalCustomerId: fullCustomer.internal_id,
 			}),
 		]);
+	const schedulesByScope = [
+		customerSchedule,
+		...Object.values(entitySchedules),
+	];
 	const scheduledProductIds = new Set(
-		[customerSchedule, ...Object.values(entitySchedules)].flatMap(
+		schedulesByScope.flatMap(
 			(schedule) =>
 				schedule?.phases.flatMap((phase) => phase.customer_product_ids) ?? [],
 		),
@@ -115,7 +116,6 @@ export const setupGenerationContext = async ({
 		(product) =>
 			loadedProductIds.has(product.id) || scheduledProductIds.has(product.id),
 	);
-	const entities = fullCustomer.entities ?? [];
 	const customerProductById = new Map(
 		customerProducts.map((product) => [product.id, product]),
 	);
@@ -127,7 +127,7 @@ export const setupGenerationContext = async ({
 		),
 	);
 	const compactSchedule = (
-		schedule: NonNullable<typeof customerSchedule>,
+		schedule: FullCustomerSchedule,
 		entityId?: string,
 	) => ({
 		...(entityId ? { entity_id: entityId } : {}),
@@ -143,12 +143,35 @@ export const setupGenerationContext = async ({
 				: {}),
 		})),
 	});
-	const schedules = [
-		...(customerSchedule ? [compactSchedule(customerSchedule)] : []),
-		...Object.entries(entitySchedules).map(([internalEntityId, schedule]) =>
-			compactSchedule(schedule, entityIdByInternalId.get(internalEntityId)),
-		),
-	];
+
+	return {
+		customerProducts,
+		schedules: [
+			...(customerSchedule ? [compactSchedule(customerSchedule)] : []),
+			...Object.entries(entitySchedules).map(([internalEntityId, schedule]) =>
+				compactSchedule(schedule, entityIdByInternalId.get(internalEntityId)),
+			),
+		],
+	};
+};
+
+export const setupGenerationContext = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+}) => {
+	const [fullProducts, features, fullCustomer] = await Promise.all([
+		ProductService.listFull({ db: ctx.db, env: ctx.env, orgId: ctx.org.id }),
+		FeatureService.list({ db: ctx.db, env: ctx.env, orgId: ctx.org.id }),
+		CusService.getFull({ ctx, idOrInternalId: customerId, withEntities: true }),
+	]);
+	const { customerProducts, schedules } = await loadGenerationScheduleContext({
+		ctx,
+		fullCustomer,
+	});
+	const entities = fullCustomer.entities ?? [];
 
 	const now = Date.now();
 
