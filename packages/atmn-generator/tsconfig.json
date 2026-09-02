@@ -1,6 +1,6 @@
 {
 	"compilerOptions": {
-		"lib": ["ES2021"],
+		"lib": ["ES2022"],
 		"target": "ES2022",
 		"module": "Preserve",
 		"moduleResolution": "bundler",
