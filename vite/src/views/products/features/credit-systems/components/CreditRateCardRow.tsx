@@ -75,7 +75,7 @@ export function CreditRateCardRow({
 
 	if (!selectedFeature) {
 		return (
-			<div className="flex items-center gap-1">
+			<div className="flex items-stretch gap-1">
 				<div className="min-w-0 flex-1">
 					<FeatureSelectDropdown
 						value={item.metered_feature_id}
@@ -91,7 +91,7 @@ export function CreditRateCardRow({
 					type="button"
 					variant="secondary"
 					iconOrientation="center"
-					className="h-input w-7 shrink-0 rounded-lg border-border! shadow-(--input-shadow-default)! text-tertiary-foreground hover:text-red-500"
+					className="h-auto! w-auto aspect-square self-stretch shrink-0 rounded-lg border-border! shadow-(--input-shadow-default)! text-tertiary-foreground hover:text-red-500"
 					icon={<TrashIcon size={14} />}
 					onClick={onRemove}
 				/>
