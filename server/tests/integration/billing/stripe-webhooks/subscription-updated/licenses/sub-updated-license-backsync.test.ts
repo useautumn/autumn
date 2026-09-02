@@ -10,6 +10,8 @@
  *       granted/remaining decremented.
  *     - Decrement below seats in use: remaining goes NEGATIVE (truthful
  *       arithmetic, no clamp) and released spare seat rows are expired.
+ *     - Decrement to exactly usage after a release: remaining lands at 0
+ *       and leftover unused seats still expire.
  *     - All of the above hold for a CUSTOMIZED license base price
  *       ($120/yr is_custom definition): quantity syncs converge the pool
  *       without touching the custom definition.
@@ -381,6 +383,66 @@ test(`${chalk.yellowBright("sub.updated license back-sync: decrement below usage
 		granted: 100,
 		remaining: 80,
 		usage: 20,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CASE 3b: decrement to exactly usage after release → remaining 0, spare expired
+// ═══════════════════════════════════════════════════════════════════════════
+
+test(`${chalk.yellowBright("sub.updated license back-sync: decrement to usage expires leftover unused seats")}`, async () => {
+	const customerId = "sub-updated-license-backsync-surplus";
+	const { autumnV2_3, parent, devSeat, subscription, seatItem } =
+		await setupLicenseSubscription({
+			customerId,
+			idPrefix: "lic-backsync-surplus",
+			quantity: 3,
+		});
+
+	await autumnV2_3.licenses.attach({
+		customer_id: customerId,
+		plan_id: devSeat.id,
+		entities: [1, 2, 3, 4].map((seatNumber) => ({
+			entity_id: `surplus-seat-${seatNumber}`,
+			name: `Seat ${seatNumber}`,
+			feature_id: TestFeature.Users,
+		})),
+	});
+	await autumnV2_3.licenses.release({
+		customer_id: customerId,
+		license_plan_id: devSeat.id,
+		entity_ids: ["surplus-seat-4"],
+	});
+	const poolBefore = await expectLicenseDefinitionCorrect({
+		ctx,
+		customerId,
+		parentPlanId: parent.id,
+		isCustom: false,
+	});
+	await expectSpareSeatRowsCorrect({
+		ctx,
+		customerLicenseLinkId: poolBefore.link_id,
+		count: 1,
+		status: CusProductStatus.Active,
+	});
+
+	await updateSeatQuantity({ subscription, seatItem, quantity: 2 });
+
+	// paid 3 -> 2: granted 3 = 3 bound seats -> remaining 0, unused still 1.
+	await waitForPoolCounters({
+		autumnV2_3,
+		customerId,
+		licensePlanId: devSeat.id,
+		parentPlanId: parent.id,
+		paidQuantity: 2,
+		usage: 3,
+	});
+
+	await expectSpareSeatRowsCorrect({
+		ctx,
+		customerLicenseLinkId: poolBefore.link_id,
+		count: 1,
+		status: CusProductStatus.Expired,
 	});
 });
 

@@ -4,7 +4,6 @@ import { persistCreateSchedule } from "@/internal/billing/v2/actions/createSched
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
-import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
 import { computeSyncPlan } from "./compute/computeSyncPlan";
 import { handleSyncErrors } from "./errors/handleSyncErrors";
 import { logSyncContext } from "./logs/logSyncContext";
@@ -52,13 +51,6 @@ export const syncV2 = async ({
 
 	// 4. Execute
 	await executeAutumnBillingPlan({ ctx, autumnBillingPlan });
-	if ((autumnBillingPlan.customerLicenseUpdates?.length ?? 0) > 0) {
-		await reconcileLicenseStateForCustomer({
-			ctx,
-			idOrInternalId: syncContext.customer_id,
-			deleteCache: true,
-		});
-	}
 
 	// 5. Persist scheduled phases (only when sync produced more than one phase)
 	let scheduleId: string | null = null;

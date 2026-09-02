@@ -23,6 +23,7 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { replaceScheduledPhaseCustomerProductIds } from "@/internal/customers/schedules/repos/replaceScheduledPhaseCustomerProductIds";
 import { invoiceActions } from "@/internal/invoices/actions";
+import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
 import { SubService } from "@/internal/subscriptions/SubService";
 import { workflows } from "@/queue/workflows";
 
@@ -217,6 +218,17 @@ export const executeAutumnBillingPlan = async ({
 			env: ctx.env,
 			deferredStripeInvoiceItems: stripeInvoiceItems,
 			billingLineItems: autumnBillingPlan.lineItems,
+		});
+	}
+
+	if (
+		(autumnBillingPlan.customerLicenseUpdates?.length ?? 0) > 0 &&
+		autumnBillingPlan.customerId
+	) {
+		await reconcileLicenseStateForCustomer({
+			ctx,
+			idOrInternalId: autumnBillingPlan.customerId,
+			deleteCache: true,
 		});
 	}
 };
