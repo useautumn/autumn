@@ -317,6 +317,21 @@
         "xo": "^0.53.1",
       },
     },
+    "packages/atmn-nightly": {
+      "name": "atmn-nightly",
+      "version": "3.0.0-nightly.1",
+      "bin": {
+        "atmn-nightly": "dist/cli.js",
+      },
+      "dependencies": {
+        "chalk": "5.6.2",
+        "commander": "14.0.3",
+        "dotenv": "16.6.1",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
     "packages/atmn-tests": {
       "name": "atmn-tests",
       "devDependencies": {
@@ -3383,6 +3398,8 @@
     "asynckit": ["asynckit@0.4.0", "", {}, "sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q=="],
 
     "atmn": ["atmn@workspace:packages/atmn"],
+
+    "atmn-nightly": ["atmn-nightly@workspace:packages/atmn-nightly"],
 
     "atmn-tests": ["atmn-tests@workspace:packages/atmn-tests"],
 

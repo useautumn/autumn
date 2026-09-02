@@ -1,0 +1,26 @@
+{
+	"compilerOptions": {
+		"lib": ["ES2021"],
+		"target": "ES2022",
+		"module": "Preserve",
+		"moduleResolution": "bundler",
+		"outDir": "./dist",
+		"strict": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"types": ["bun", "node"],
+		"paths": {
+			"@autumn/shared": ["../../shared/index.ts"],
+			"@autumn/shared/*": ["../../shared/*"],
+			"@api/*": ["../../shared/api/*"],
+			"@models/*": ["../../shared/models/*"],
+			"@utils/*": ["../../shared/utils/*"]
+		}
+	},
+	"include": ["src", "test"],
+	"exclude": ["node_modules", "dist"]
+}
