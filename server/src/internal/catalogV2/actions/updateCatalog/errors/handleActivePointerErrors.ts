@@ -10,6 +10,11 @@ export const handleActivePointerErrors = ({
 }): void => {
 	const [orphaned] = detectOrphanedActivePointers({
 		products: updateCatalogPlan.projected.products,
+		removedKeys: new Set(
+			updateCatalogPlan.removePlans.map(
+				(removePlan) => `${removePlan.planId}:${removePlan.version}`,
+			),
+		),
 	});
 	if (!orphaned) return;
 
