@@ -13,8 +13,10 @@ type PreviewChange = {
 	name?: string;
 };
 
-type FeatureChange = PreviewChange & { feature_id?: string };
-type PlanChange = PreviewChange & { plan_id?: string; version?: number };
+// Fixture casing, not wire: the client recases every response on the way in,
+// so this renders `featureId`, never `feature_id`.
+type FeatureChange = PreviewChange & { featureId?: string };
+type PlanChange = PreviewChange & { planId?: string; version?: number };
 
 export type CatalogPreview = {
 	features?: FeatureChange[];
@@ -29,11 +31,13 @@ const MARKERS: Record<
 	create: { symbol: "+", paint: chalk.green },
 	update: { symbol: "~", paint: chalk.yellow },
 	delete: { symbol: "-", paint: chalk.red },
-	skip: { symbol: "=", paint: chalk.dim },
 };
 
+/** The spec's enum is create | update | delete | skip | none. */
+const APPLIED_ACTIONS = new Set(["create", "update", "delete"]);
+
 const marker = (action: ChangeAction | undefined) =>
-	MARKERS[action ?? "skip"] ?? { symbol: "?", paint: chalk.dim };
+	MARKERS[action ?? ""] ?? { symbol: "?", paint: chalk.dim };
 
 const line = ({
 	action,
@@ -49,9 +53,13 @@ const line = ({
 	return `  ${paint(`${symbol} ${id}`)}${suffix}`;
 };
 
-/** Anything that is not a no-op — what the user is actually being told. */
+/**
+ * Positive on purpose: listing what counts as a change means a no-op value
+ * added to the enum later reads as "nothing to do" rather than leaking into
+ * the output as an unknown marker.
+ */
 const isChange = (change: PreviewChange): boolean =>
-	change.action !== undefined && change.action !== "skip";
+	change.action !== undefined && APPLIED_ACTIONS.has(change.action);
 
 export const renderPreview = ({
 	preview,
@@ -78,7 +86,7 @@ export const renderPreview = ({
 				...features.map((feature) =>
 					line({
 						action: feature.action,
-						id: feature.feature_id ?? "?",
+						id: feature.featureId ?? "?",
 						label: feature.name,
 					}),
 				),
@@ -95,8 +103,8 @@ export const renderPreview = ({
 						action: plan.action,
 						id:
 							plan.version === undefined
-								? (plan.plan_id ?? "?")
-								: `${plan.plan_id}@v${plan.version}`,
+								? (plan.planId ?? "?")
+								: `${plan.planId}@v${plan.version}`,
 						label: plan.name,
 					}),
 				),
