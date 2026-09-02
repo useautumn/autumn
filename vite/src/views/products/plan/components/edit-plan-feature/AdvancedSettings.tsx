@@ -13,8 +13,10 @@ import {
 	getFeatureCreditSystem,
 	getFeatureUsageType,
 } from "@/utils/product/entitlementUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { EntityFeatureConfig } from "./advanced-settings/EntityFeatureConfig";
+import { FeatureOverrideConfig } from "./advanced-settings/FeatureOverrideConfig";
 import { PooledBalanceConfig } from "./advanced-settings/PooledBalanceConfig";
 import { ProrationConfig } from "./advanced-settings/ProrationConfig";
 import { ResetIntervalConfig } from "./advanced-settings/ResetIntervalConfig";
@@ -25,6 +27,7 @@ export function AdvancedSettings() {
 	const { features } = useFeaturesQuery();
 	const { item } = useProductItemContext();
 	const { product } = useProduct();
+	const { isAdmin } = useAdmin();
 
 	if (!item) return null;
 
@@ -34,6 +37,8 @@ export function AdvancedSettings() {
 
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
+	// Same admin gate as the feature-level rate card controls.
+	const showFeatureOverride = hasCreditSystem && isAdmin;
 	// Deprecated in favor of licenses. Surface it whenever any item in the plan
 	// uses an entity feature, so all items in such plans keep working.
 	const showEntityFeature =
@@ -69,6 +74,9 @@ export function AdvancedSettings() {
 
 					{/* Rollover */}
 					{showRollover && <RolloverConfig />}
+
+					{/* Credit rate card override */}
+					{showFeatureOverride && <FeatureOverrideConfig />}
 
 					{/* Entity Feature Config */}
 					{showEntityFeature && <EntityFeatureConfig />}

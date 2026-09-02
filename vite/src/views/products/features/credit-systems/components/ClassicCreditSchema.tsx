@@ -1,4 +1,4 @@
-import type { CreditSchemaItem, Feature } from "@autumn/shared";
+import type { CreditSchemaItem } from "@autumn/shared";
 import { FormLabel, IconButton, Switch } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
@@ -16,6 +16,7 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 		schema,
 		schemaKeys,
 		allSchemaCandidateFeatures,
+		availableFeaturesFor,
 		invoiceCredit,
 		setInvoiceCredit,
 		setSchemaItem,
@@ -44,28 +45,17 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 			<div className="flex flex-col gap-2">
 				<FormLabel>Rate card</FormLabel>
 
-				{schema.map((item: CreditSchemaItem, index: number) => {
-					const availableFeatures = allSchemaCandidateFeatures.filter(
-						(feature: Feature) =>
-							!schema.some(
-								(schemaItem: CreditSchemaItem) =>
-									feature.id !== item.metered_feature_id &&
-									schemaItem.metered_feature_id === feature.id,
-							),
-					);
-
-					return (
-						<CreditRateCardRow
-							key={schemaKeys[index]}
-							item={item}
-							availableFeatures={availableFeatures}
-							allFeatures={allSchemaCandidateFeatures}
-							onChange={(next) => setSchemaItem({ index, item: next })}
-							onRemove={() => removeSchemaItem(index)}
-							showRateCardControls={isAdmin}
-						/>
-					);
-				})}
+				{schema.map((item: CreditSchemaItem, index: number) => (
+					<CreditRateCardRow
+						key={schemaKeys[index]}
+						item={item}
+						availableFeatures={availableFeaturesFor(item)}
+						allFeatures={allSchemaCandidateFeatures}
+						onChange={(next) => setSchemaItem({ index, item: next })}
+						onRemove={() => removeSchemaItem(index)}
+						showRateCardControls={isAdmin}
+					/>
+				))}
 			</div>
 
 			<IconButton
