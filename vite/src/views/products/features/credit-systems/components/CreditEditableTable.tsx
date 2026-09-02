@@ -1,3 +1,4 @@
+import { InfoTooltip } from "@autumn/ui";
 import type { Table as TableInstance } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { Table } from "@/components/general/table";
@@ -5,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface CreditEditableTableProps<T> {
 	title: string;
-	description: string;
+	hint: string;
 	table: TableInstance<T>;
 	columnCount: number;
 	footer: ReactNode;
@@ -15,7 +16,7 @@ interface CreditEditableTableProps<T> {
  * With no rows only the strip shows, so an empty table is just its "add" line. */
 export function CreditEditableTable<T>({
 	title,
-	description,
+	hint,
 	table,
 	columnCount,
 	footer,
@@ -24,10 +25,10 @@ export function CreditEditableTable<T>({
 
 	return (
 		<div className="flex flex-col gap-2">
-			<div className="flex flex-col gap-0.5">
-				<span className="text-sm font-medium">{title}</span>
-				<span className="text-xs text-muted-foreground">{description}</span>
-			</div>
+			<span className="flex items-center gap-1.5 text-sm font-medium">
+				{title}
+				<InfoTooltip>{hint}</InfoTooltip>
+			</span>
 			<div className="rounded-lg border shadow-card overflow-hidden">
 				{hasRows && (
 					<Table.Provider

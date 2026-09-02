@@ -155,7 +155,7 @@ export function CreditDimensionRateTable({
 	return (
 		<CreditEditableTable
 			title="Rates"
-			description="Credits per combination. The most specific match wins; anything else costs the base rate."
+			hint="Credits per combination. The most specific match wins; anything else costs the base rate."
 			table={table}
 			columnCount={columns.length}
 			footer={
