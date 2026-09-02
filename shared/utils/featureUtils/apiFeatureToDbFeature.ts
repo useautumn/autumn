@@ -14,10 +14,9 @@ import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCredit
 import type { ApiFeatureOverride } from "../../api/features/apiFeatureOverride.js";
 import type { ApiFeatureV1 } from "../../api/features/apiFeatureV1.js";
 import type { ApiFeatureProcessors } from "../../api/features/components/processors.js";
-import {
-	type ApiCreditDimension,
-	type ApiCreditSchemaItem,
-	isGraduatedCreditSchemaItem,
+import type {
+	ApiCreditDimension,
+	ApiCreditSchemaItem,
 } from "../../api/features/creditRateCard.js";
 import type {
 	CreateFeatureV1Params,
@@ -32,6 +31,7 @@ import {
 import type {
 	CreditDimension,
 	CreditSchemaItem,
+	CreditTier,
 	FeatureConfigOverride,
 } from "../../models/featureModels/featureConfig/creditConfig.js";
 import type { SharedContext } from "../../types/sharedContext.js";
@@ -84,53 +84,55 @@ export const featureToApiProcessors = (
 	};
 };
 
+type ApiCreditRate =
+	| {
+			tier_behavior: "graduated";
+			tiers: { to: number | "inf"; credit_cost: number }[];
+	  }
+	| { credit_cost: number };
+
+type DbCreditRate =
+	| { tier_behavior: "graduated"; tiers: CreditTier[] }
+	| { credit_amount: number };
+
+/** The flat-or-graduated part of a rate, API → DB naming. Rows and dimensions share it. */
+const apiCreditRateToDb = (rate: ApiCreditRate): DbCreditRate =>
+	"tier_behavior" in rate
+		? {
+				tier_behavior: "graduated",
+				tiers: rate.tiers.map((tier) => ({
+					to: tier.to,
+					credit_amount: tier.credit_cost,
+				})),
+			}
+		: { credit_amount: rate.credit_cost };
+
+const dbCreditRateToApi = (rate: DbCreditRate): ApiCreditRate =>
+	"tier_behavior" in rate
+		? {
+				tier_behavior: "graduated",
+				tiers: rate.tiers.map((tier) => ({
+					to: tier.to,
+					credit_cost: tier.credit_amount,
+				})),
+			}
+		: { credit_cost: rate.credit_amount };
+
 const apiCreditDimensionToDb = (
 	dimension: ApiCreditDimension,
-): CreditDimension => {
-	const base = {
-		match: dimension.match,
-		...(dimension.priority === undefined
-			? {}
-			: { priority: dimension.priority }),
-	};
-
-	if ("tier_behavior" in dimension) {
-		return {
-			...base,
-			tier_behavior: "graduated",
-			tiers: dimension.tiers.map((tier) => ({
-				to: tier.to,
-				credit_amount: tier.credit_cost,
-			})),
-		};
-	}
-
-	return { ...base, credit_amount: dimension.credit_cost };
-};
+): CreditDimension => ({
+	match: dimension.match,
+	...(dimension.priority === undefined ? {} : { priority: dimension.priority }),
+	...apiCreditRateToDb(dimension),
+});
 
 const dbCreditDimensionToApi = (
 	dimension: CreditDimension,
-): ApiCreditDimension => {
-	const base = {
-		match: dimension.match,
-		...(dimension.priority === undefined
-			? {}
-			: { priority: dimension.priority }),
-	};
-
-	if (dimension.tier_behavior === "graduated") {
-		return {
-			...base,
-			tier_behavior: "graduated",
-			tiers: dimension.tiers.map((tier) => ({
-				to: tier.to,
-				credit_cost: tier.credit_amount,
-			})),
-		};
-	}
-
-	return { ...base, credit_cost: dimension.credit_amount };
-};
+): ApiCreditDimension => ({
+	match: dimension.match,
+	...(dimension.priority === undefined ? {} : { priority: dimension.priority }),
+	...dbCreditRateToApi(dimension),
+});
 
 const apiCreditDimensionRulesToDb = (credit: ApiCreditSchemaItem) => ({
 	...(credit.dimensions === undefined
@@ -162,28 +164,14 @@ const dbCreditDimensionRulesToApi = (credit: CreditSchemaItem) => ({
 
 export const apiCreditSchemaItemToDb = (
 	credit: ApiCreditSchemaItem,
-): CreditSchemaItem => {
-	const base = {
-		metered_feature_id: credit.metered_feature_id,
-		...(credit.billing_units === undefined
-			? {}
-			: { feature_amount: credit.billing_units }),
-		...apiCreditDimensionRulesToDb(credit),
-	};
-
-	if (isGraduatedCreditSchemaItem(credit)) {
-		return {
-			...base,
-			tier_behavior: "graduated",
-			tiers: credit.tiers.map((tier) => ({
-				to: tier.to,
-				credit_amount: tier.credit_cost,
-			})),
-		};
-	}
-
-	return { ...base, credit_amount: credit.credit_cost };
-};
+): CreditSchemaItem => ({
+	metered_feature_id: credit.metered_feature_id,
+	...(credit.billing_units === undefined
+		? {}
+		: { feature_amount: credit.billing_units }),
+	...apiCreditDimensionRulesToDb(credit),
+	...apiCreditRateToDb(credit),
+});
 
 export const apiFeatureOverrideToDb = (
 	override: ApiFeatureOverride,
@@ -203,28 +191,14 @@ export const dbFeatureOverrideToApi = (
 
 export const dbCreditSchemaItemToApi = (
 	credit: CreditSchemaItem,
-): ApiCreditSchemaItem => {
-	const base = {
-		metered_feature_id: credit.metered_feature_id,
-		...(credit.feature_amount === undefined
-			? {}
-			: { billing_units: credit.feature_amount }),
-		...dbCreditDimensionRulesToApi(credit),
-	};
-
-	if (credit.tier_behavior === "graduated") {
-		return {
-			...base,
-			tier_behavior: "graduated",
-			tiers: credit.tiers.map((tier) => ({
-				to: tier.to,
-				credit_cost: tier.credit_amount,
-			})),
-		};
-	}
-
-	return { ...base, credit_cost: credit.credit_amount };
-};
+): ApiCreditSchemaItem => ({
+	metered_feature_id: credit.metered_feature_id,
+	...(credit.feature_amount === undefined
+		? {}
+		: { billing_units: credit.feature_amount }),
+	...dbCreditDimensionRulesToApi(credit),
+	...dbCreditRateToApi(credit),
+});
 
 export const apiFeatureToDbFeature = ({
 	apiFeature,

@@ -19,24 +19,40 @@ const matchToApi = (
 		Object.entries(match).map(([key, value]) => [key, String(value)]),
 	);
 
-function creditDimensionToApi(dimension: CreditDimension): ApiCreditDimension {
-	const base = {
-		match: matchToApi(dimension.match),
-		...(dimension.priority !== undefined && { priority: dimension.priority }),
-	};
+type SdkCreditRate =
+	| {
+			tierBehavior: "graduated";
+			tiers: { to: number | "inf"; creditCost: number }[];
+	  }
+	| { tierBehavior?: undefined; creditCost: number };
 
-	if (dimension.tierBehavior === "graduated") {
+type ApiCreditRate =
+	| {
+			tier_behavior: "graduated";
+			tiers: { to: number | "inf"; credit_cost: number }[];
+	  }
+	| { credit_cost: number };
+
+/** The flat-or-graduated part of a rate, SDK → API naming. Rows and dimensions share it. */
+function creditRateToApi(rate: SdkCreditRate): ApiCreditRate {
+	if (rate.tierBehavior === "graduated") {
 		return {
-			...base,
-			tier_behavior: "graduated" as const,
-			tiers: dimension.tiers.map((tier) => ({
+			tier_behavior: "graduated",
+			tiers: rate.tiers.map((tier) => ({
 				to: tier.to,
 				credit_cost: tier.creditCost,
 			})),
 		};
 	}
+	return { credit_cost: rate.creditCost };
+}
 
-	return { ...base, credit_cost: dimension.creditCost };
+function creditDimensionToApi(dimension: CreditDimension): ApiCreditDimension {
+	return {
+		match: matchToApi(dimension.match),
+		...(dimension.priority !== undefined && { priority: dimension.priority }),
+		...creditRateToApi(dimension),
+	};
 }
 
 function creditMultiplierToApi(
@@ -104,31 +120,14 @@ export function transformFeatureToApi(feature: Feature): ApiFeatureParams {
 	}
 
 	if (feature.type === "credit_system" && feature.creditSchema) {
-		base.credit_schema = feature.creditSchema.map((creditSchemaItem) => {
-			const baseItem = {
-				metered_feature_id: creditSchemaItem.meteredFeatureId,
-				...(creditSchemaItem.billingUnits !== undefined && {
-					billing_units: creditSchemaItem.billingUnits,
-				}),
-				...creditDimensionRulesToApi(creditSchemaItem),
-			};
-
-			if (creditSchemaItem.tierBehavior === "graduated") {
-				return {
-					...baseItem,
-					tier_behavior: "graduated" as const,
-					tiers: creditSchemaItem.tiers.map((tier) => ({
-						to: tier.to,
-						credit_cost: tier.creditCost,
-					})),
-				};
-			}
-
-			return {
-				...baseItem,
-				credit_cost: creditSchemaItem.creditCost,
-			};
-		});
+		base.credit_schema = feature.creditSchema.map((creditSchemaItem) => ({
+			metered_feature_id: creditSchemaItem.meteredFeatureId,
+			...(creditSchemaItem.billingUnits !== undefined && {
+				billing_units: creditSchemaItem.billingUnits,
+			}),
+			...creditDimensionRulesToApi(creditSchemaItem),
+			...creditRateToApi(creditSchemaItem),
+		}));
 	}
 
 	if (feature.type === "ai_credit_system") {

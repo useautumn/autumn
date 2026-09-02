@@ -1,4 +1,4 @@
-import { isGraduatedCreditSchemaItem, mapRecordValues } from "@autumn/shared";
+import { mapRecordValues } from "@autumn/shared";
 import type {
 	CreditDimension,
 	CreditSchemaItem,
@@ -14,25 +14,33 @@ type ApiCreditSchemaItem = NonNullable<RawApiFeature["credit_schema"]>[number];
 type ApiCreditDimension = NonNullable<
 	ApiCreditSchemaItem["dimensions"]
 >[string];
+type ApiCreditRate =
+	| {
+			tier_behavior: "graduated";
+			tiers: { to: number | "inf"; credit_cost: number }[];
+	  }
+	| { credit_cost: number };
 
-function mapCreditDimension(dimension: ApiCreditDimension): CreditDimension {
-	const base = {
-		match: dimension.match,
-		...(dimension.priority !== undefined && { priority: dimension.priority }),
-	};
-
-	if ("tier_behavior" in dimension) {
+/** The flat-or-graduated part of a rate, API → SDK naming. Rows and dimensions share it. */
+function mapCreditRate(rate: ApiCreditRate) {
+	if ("tier_behavior" in rate) {
 		return {
-			...base,
-			tierBehavior: "graduated",
-			tiers: dimension.tiers.map((tier) => ({
+			tierBehavior: "graduated" as const,
+			tiers: rate.tiers.map((tier) => ({
 				to: tier.to,
 				creditCost: tier.credit_cost,
 			})),
 		};
 	}
+	return { creditCost: rate.credit_cost };
+}
 
-	return { ...base, creditCost: dimension.credit_cost };
+function mapCreditDimension(dimension: ApiCreditDimension): CreditDimension {
+	return {
+		match: dimension.match,
+		...(dimension.priority !== undefined && { priority: dimension.priority }),
+		...mapCreditRate(dimension),
+	};
 }
 
 function mapCreditDimensionRules(creditSchemaItem: ApiCreditSchemaItem) {
@@ -50,31 +58,14 @@ function mapCreditDimensionRules(creditSchemaItem: ApiCreditSchemaItem) {
 }
 
 function mapCreditSchema(api: RawApiFeature): CreditSchemaItem[] {
-	return (api.credit_schema ?? []).map((creditSchemaItem) => {
-		const base = {
-			meteredFeatureId: creditSchemaItem.metered_feature_id,
-			...(creditSchemaItem.billing_units !== undefined && {
-				billingUnits: creditSchemaItem.billing_units,
-			}),
-			...mapCreditDimensionRules(creditSchemaItem),
-		};
-
-		if (isGraduatedCreditSchemaItem(creditSchemaItem)) {
-			return {
-				...base,
-				tierBehavior: "graduated",
-				tiers: creditSchemaItem.tiers.map((tier) => ({
-					to: tier.to,
-					creditCost: tier.credit_cost,
-				})),
-			};
-		}
-
-		return {
-			...base,
-			creditCost: creditSchemaItem.credit_cost,
-		};
-	});
+	return (api.credit_schema ?? []).map((creditSchemaItem) => ({
+		meteredFeatureId: creditSchemaItem.metered_feature_id,
+		...(creditSchemaItem.billing_units !== undefined && {
+			billingUnits: creditSchemaItem.billing_units,
+		}),
+		...mapCreditDimensionRules(creditSchemaItem),
+		...mapCreditRate(creditSchemaItem),
+	}));
 }
 
 function mapModelMarkups(

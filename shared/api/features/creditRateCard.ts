@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 import {
-	CREDIT_DIMENSION_NAME_MAX_LENGTH,
-	USAGE_ATTRIBUTION_DIMENSION_SEPARATOR,
+	CreditDimensionNameSchema,
+	CreditMatchSchema,
 } from "../../models/featureModels/featureConfig/creditConfig.js";
 
 export const ApiCreditTierSchema = z.object({
@@ -53,15 +53,10 @@ const refineGraduatedTiers = (
 	}
 };
 
-const ApiCreditMatchSchema = z
-	.record(
-		z.string(),
-		z.union([z.string(), z.number(), z.boolean()]).transform(String),
-	)
-	.meta({
-		description:
-			"Event properties this entry applies to. Every key must equal the tracked property, compared as strings.",
-	});
+const ApiCreditMatchSchema = CreditMatchSchema.meta({
+	description:
+		"Event properties this entry applies to. Every key must equal the tracked property, compared as strings.",
+});
 
 const ApiCreditDimensionBaseSchema = z.object({
 	match: ApiCreditMatchSchema,
@@ -105,14 +100,6 @@ export const ApiCreditMultiplierSchema = z
 		{ message: "A multiplier needs a factor or an add." },
 	);
 
-const ApiCreditDimensionNameSchema = z
-	.string()
-	.min(1)
-	.max(CREDIT_DIMENSION_NAME_MAX_LENGTH)
-	.refine((name) => !name.includes(USAGE_ATTRIBUTION_DIMENSION_SEPARATOR), {
-		message: `Dimension names cannot contain "${USAGE_ATTRIBUTION_DIMENSION_SEPARATOR}".`,
-	});
-
 const ApiCreditSchemaItemBaseSchema = z.object({
 	metered_feature_id: z.string().nonempty().meta({
 		description:
@@ -123,14 +110,14 @@ const ApiCreditSchemaItemBaseSchema = z.object({
 			"Number of metered-feature units priced together. Defaults to one when omitted.",
 	}),
 	dimensions: z
-		.record(ApiCreditDimensionNameSchema, ApiCreditDimensionSchema)
+		.record(CreditDimensionNameSchema, ApiCreditDimensionSchema)
 		.optional()
 		.meta({
 			description:
 				"Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.",
 		}),
 	multipliers: z
-		.record(ApiCreditDimensionNameSchema, ApiCreditMultiplierSchema)
+		.record(CreditDimensionNameSchema, ApiCreditMultiplierSchema)
 		.optional()
 		.meta({
 			description:
