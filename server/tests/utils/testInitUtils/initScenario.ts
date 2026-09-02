@@ -145,6 +145,7 @@ type TrackAction = {
 	type: "track";
 	featureId: string;
 	value: number;
+	properties?: Record<string, unknown>;
 	entityIndex?: number;
 	timeout?: number;
 };
@@ -595,11 +596,13 @@ const removePaymentMethod = (): ConfigFn => {
 const track = ({
 	featureId,
 	value,
+	properties,
 	entityIndex,
 	timeout,
 }: {
 	featureId: string;
 	value: number;
+	properties?: Record<string, unknown>;
 	entityIndex?: number;
 	timeout?: number;
 }): ConfigFn => {
@@ -611,6 +614,7 @@ const track = ({
 				type: "track" as const,
 				featureId,
 				value,
+				properties,
 				entityIndex,
 				timeout,
 			},
@@ -1621,6 +1625,7 @@ export async function initScenario({
 				customer_id: customerId,
 				feature_id: action.featureId,
 				value: action.value,
+				properties: action.properties,
 				entity_id: entityId,
 			});
 			if (action.timeout) {
