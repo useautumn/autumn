@@ -272,11 +272,13 @@ const createRuntime = ({
 	producer,
 	follower,
 	partitionForIdentity = () => partition,
+	recoveryDrainTimeoutMs = 1_000,
 }: {
 	store: SqliteBalanceStateStore;
 	producer: OwnedPartitionProducerPort;
 	follower: PartitionOutcomeFollowerPort;
 	partitionForIdentity?: (identity: MeteringIdentity) => number;
+	recoveryDrainTimeoutMs?: number;
 }) =>
 	createOwnedPartitionRuntime({
 		topic,
@@ -289,6 +291,7 @@ const createRuntime = ({
 				partitionForIdentity(commandIdentity),
 		},
 		writerLimits,
+		recoveryDrainTimeoutMs,
 	});
 
 describe("owned partition runtime", () => {
@@ -475,6 +478,131 @@ describe("owned partition runtime", () => {
 			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
 			expect(fakeProducer.records).toHaveLength(0);
 		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("drains accepted work before disconnecting after follower loss", async () => {
+		const fixture = createStoreFixture();
+		const commit = createDeferred<void>();
+		const fakeProducer = createFakeProducer({
+			appendCommitGate: commit.promise,
+		});
+		const fakeFollower = createFollower();
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+		});
+		let trackPromise: ReturnType<typeof runtime.submitTrack> | null = null;
+
+		try {
+			await runtime.start();
+			trackPromise = runtime.submitTrack({
+				command: createTrackCommand({ commandId: "cmd_1" }),
+			});
+			await waitForTurn();
+			expect(fakeProducer.lifecycle).toContain("producer:commit");
+
+			fakeFollower.emitUnavailable({
+				cause: new Error("outcome follower stopped"),
+			});
+			await waitForTurn();
+
+			expect(runtime.getStatus()).toBe("recovery_required");
+			expect(fakeProducer.lifecycle).not.toContain("producer:disconnect");
+
+			commit.resolve(undefined);
+			await expect(trackPromise).resolves.toMatchObject({
+				kind: "new",
+				outcome: { status: "applied", balanceAfter: 5 },
+			});
+			await runtime.stop();
+
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+			expect(fixture.store.readState({ identity })?.revision).toBe(1);
+		} finally {
+			commit.resolve(undefined);
+			await trackPromise?.catch(() => undefined);
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("finishes follower-loss recovery when accepted work fails", async () => {
+		const fixture = createStoreFixture();
+		const commit = createDeferred<void>();
+		const fakeProducer = createFakeProducer({
+			appendCommitGate: commit.promise,
+			appendCommitError: new Error("commit response lost"),
+		});
+		const fakeFollower = createFollower();
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+		});
+		let trackPromise: ReturnType<typeof runtime.submitTrack> | null = null;
+
+		try {
+			await runtime.start();
+			trackPromise = runtime.submitTrack({
+				command: createTrackCommand({ commandId: "cmd_1" }),
+			});
+			await waitForTurn();
+
+			fakeFollower.emitUnavailable({
+				cause: new Error("outcome follower stopped"),
+			});
+			commit.resolve(undefined);
+
+			await expect(trackPromise).rejects.toBeInstanceOf(
+				OwnedPartitionRecoveryRequiredError,
+			);
+			await runtime.stop();
+
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+		} finally {
+			commit.resolve(undefined);
+			await trackPromise?.catch(() => undefined);
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("bounds the follower-loss drain before disconnecting", async () => {
+		const fixture = createStoreFixture();
+		const commit = createDeferred<void>();
+		const fakeProducer = createFakeProducer({
+			appendCommitGate: commit.promise,
+		});
+		const fakeFollower = createFollower();
+		const runtime = createRuntime({
+			store: fixture.store,
+			producer: fakeProducer.producer,
+			follower: fakeFollower.follower,
+			recoveryDrainTimeoutMs: 1,
+		});
+		let trackPromise: ReturnType<typeof runtime.submitTrack> | null = null;
+
+		try {
+			await runtime.start();
+			trackPromise = runtime.submitTrack({
+				command: createTrackCommand({ commandId: "cmd_1" }),
+			});
+			await waitForTurn();
+
+			fakeFollower.emitUnavailable({
+				cause: new Error("outcome follower stopped"),
+			});
+			await runtime.stop();
+
+			expect(runtime.getStatus()).toBe("recovery_required");
+			expect(fakeProducer.lifecycle.at(-1)).toBe("producer:disconnect");
+		} finally {
+			commit.resolve(undefined);
+			await trackPromise?.catch(() => undefined);
 			await runtime.stop();
 			closeStoreFixture(fixture);
 		}
