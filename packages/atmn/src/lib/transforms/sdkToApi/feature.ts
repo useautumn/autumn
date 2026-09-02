@@ -1,3 +1,4 @@
+import { mapRecordValues } from "@autumn/shared";
 import type {
 	CreditDimension,
 	CreditMultiplier,
@@ -49,19 +50,16 @@ function creditDimensionRulesToApi(
 ) {
 	return {
 		...(creditSchemaItem.dimensions !== undefined && {
-			dimensions: Object.fromEntries(
-				Object.entries(creditSchemaItem.dimensions).map(([name, dimension]) => [
-					name,
-					creditDimensionToApi(dimension),
-				]),
-			),
+			dimensions: mapRecordValues({
+				record: creditSchemaItem.dimensions,
+				mapValue: creditDimensionToApi,
+			}),
 		}),
 		...(creditSchemaItem.multipliers !== undefined && {
-			multipliers: Object.fromEntries(
-				Object.entries(creditSchemaItem.multipliers).map(
-					([name, multiplier]) => [name, creditMultiplierToApi(multiplier)],
-				),
-			),
+			multipliers: mapRecordValues({
+				record: creditSchemaItem.multipliers,
+				mapValue: creditMultiplierToApi,
+			}),
 		}),
 	};
 }

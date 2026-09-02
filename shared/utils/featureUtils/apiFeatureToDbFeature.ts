@@ -35,6 +35,7 @@ import type {
 	FeatureConfigOverride,
 } from "../../models/featureModels/featureConfig/creditConfig.js";
 import type { SharedContext } from "../../types/sharedContext.js";
+import { mapRecordValues } from "../common/objectUtils.js";
 import { notNullish, nullish } from "../utils.js";
 import { buildAiCreditSystemConfig } from "./buildAiCreditSystemConfig.js";
 import { isAnyCreditSystem } from "./classifyFeature/isAnyCreditSystem.js";
@@ -131,35 +132,33 @@ const dbCreditDimensionToApi = (
 	return { ...base, credit_cost: dimension.credit_amount };
 };
 
-const mapRecord = <T, U>(
-	record: Record<string, T> | undefined,
-	map: (value: T) => U,
-): Record<string, U> | undefined =>
-	record === undefined
-		? undefined
-		: Object.fromEntries(
-				Object.entries(record).map(([name, value]) => [name, map(value)]),
-			);
+const apiCreditDimensionRulesToDb = (credit: ApiCreditSchemaItem) => ({
+	...(credit.dimensions === undefined
+		? {}
+		: {
+				dimensions: mapRecordValues({
+					record: credit.dimensions,
+					mapValue: apiCreditDimensionToDb,
+				}),
+			}),
+	...(credit.multipliers === undefined
+		? {}
+		: { multipliers: credit.multipliers }),
+});
 
-const apiCreditDimensionRulesToDb = (credit: ApiCreditSchemaItem) => {
-	const dimensions = mapRecord(credit.dimensions, apiCreditDimensionToDb);
-	return {
-		...(dimensions === undefined ? {} : { dimensions }),
-		...(credit.multipliers === undefined
-			? {}
-			: { multipliers: credit.multipliers }),
-	};
-};
-
-const dbCreditDimensionRulesToApi = (credit: CreditSchemaItem) => {
-	const dimensions = mapRecord(credit.dimensions, dbCreditDimensionToApi);
-	return {
-		...(dimensions === undefined ? {} : { dimensions }),
-		...(credit.multipliers === undefined
-			? {}
-			: { multipliers: credit.multipliers }),
-	};
-};
+const dbCreditDimensionRulesToApi = (credit: CreditSchemaItem) => ({
+	...(credit.dimensions === undefined
+		? {}
+		: {
+				dimensions: mapRecordValues({
+					record: credit.dimensions,
+					mapValue: dbCreditDimensionToApi,
+				}),
+			}),
+	...(credit.multipliers === undefined
+		? {}
+		: { multipliers: credit.multipliers }),
+});
 
 export const apiCreditSchemaItemToDb = (
 	credit: ApiCreditSchemaItem,

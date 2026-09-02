@@ -1,4 +1,4 @@
-import { isGraduatedCreditSchemaItem } from "@autumn/shared";
+import { isGraduatedCreditSchemaItem, mapRecordValues } from "@autumn/shared";
 import type {
 	CreditDimension,
 	CreditSchemaItem,
@@ -35,20 +35,14 @@ function mapCreditDimension(dimension: ApiCreditDimension): CreditDimension {
 	return { ...base, creditCost: dimension.credit_cost };
 }
 
-function mapRecord<T, U>(
-	record: Record<string, T> | undefined,
-	map: (value: T) => U,
-): Record<string, U> | undefined {
-	if (record === undefined) return undefined;
-	return Object.fromEntries(
-		Object.entries(record).map(([name, value]) => [name, map(value)]),
-	);
-}
-
 function mapCreditDimensionRules(creditSchemaItem: ApiCreditSchemaItem) {
-	const dimensions = mapRecord(creditSchemaItem.dimensions, mapCreditDimension);
 	return {
-		...(dimensions !== undefined && { dimensions }),
+		...(creditSchemaItem.dimensions !== undefined && {
+			dimensions: mapRecordValues({
+				record: creditSchemaItem.dimensions,
+				mapValue: mapCreditDimension,
+			}),
+		}),
 		...(creditSchemaItem.multipliers !== undefined && {
 			multipliers: creditSchemaItem.multipliers,
 		}),
