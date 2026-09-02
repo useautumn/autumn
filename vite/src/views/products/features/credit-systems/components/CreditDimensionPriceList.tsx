@@ -1,5 +1,6 @@
 import type { CreditSchemaItem } from "@autumn/shared";
 import { useCreditDimensionEditor } from "../hooks/useCreditDimensionEditor";
+import { isGraduated } from "../utils/creditSchemaUtils";
 import { CreditDimensionFieldTable } from "./CreditDimensionFieldTable";
 import { CreditDimensionRateTable } from "./CreditDimensionRateTable";
 
@@ -14,10 +15,6 @@ export function CreditDimensionPriceList({
 	onChange,
 }: CreditDimensionPriceListProps) {
 	const editor = useCreditDimensionEditor({ item, onChange });
-	const baseRate =
-		item.tier_behavior === "graduated"
-			? "tiered"
-			: String(item.credit_amount ?? 0);
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -33,10 +30,13 @@ export function CreditDimensionPriceList({
 				<CreditDimensionRateTable
 					values={editor.values}
 					rules={editor.rules}
-					baseRate={baseRate}
+					base={item}
 					onRuleChange={editor.setRule}
 					onRuleRemove={editor.removeRule}
 					onRuleAdd={editor.addRule}
+					onBaseCreditsChange={(credit_amount) =>
+						onChange(isGraduated(item) ? item : { ...item, credit_amount })
+					}
 				/>
 			)}
 		</div>
