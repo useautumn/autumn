@@ -8,8 +8,8 @@ import {
 } from "./axConstants.ts";
 import type { AxCase } from "./cases/types/axCase.ts";
 import { describeToolUse } from "./driver/describeToolUse.ts";
-import { runCase } from "./driver/runCase.ts";
 import type { CompletedTurn } from "./driver/runAgentCase.ts";
+import { runCase } from "./driver/runCase.ts";
 import { inspectWorkspaceConfig } from "./grading/inspectConfig.ts";
 import { renderScorecard } from "./grading/renderScorecard.ts";
 import {

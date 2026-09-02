@@ -1,10 +1,11 @@
 import { type ChatMessage, completeChat } from "../llm/completeChat.ts";
 import type { TurnSource } from "./types/turnSource.ts";
 
-/** Pinned separately from the agent model: the user is measurement apparatus.
+/** Pinned separately from the agent model: the user is measurement apparatus,
+ * so don't skimp — tau-bench runs its user sim at the agents' own tier, and
+ * weak sims approve summaries that contradict their brief. Cost is ~$0.01/run.
  * Override per-run with AX_EVALS_USER_MODEL. */
-const USER_MODEL =
-	process.env.AX_EVALS_USER_MODEL ?? "google/gemini-2.5-flash-lite";
+const USER_MODEL = process.env.AX_EVALS_USER_MODEL ?? "openai/gpt-5.4-mini";
 
 const DONE_TOKEN = "<<DONE>>";
 
