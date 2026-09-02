@@ -9,10 +9,11 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@autumn/ui";
-import { CheckIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
+import { CheckIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ValueChip } from "./ValueChip";
 
 const MAX_VISIBLE_CHIPS = 3;
 
@@ -28,9 +29,7 @@ export function ValuePicker({
 	selectedValues,
 	onToggle,
 	onRemove,
-	onAdd,
 	placeholder = "Select...",
-	searchPlaceholder = "Search...",
 	className: triggerClassName,
 	defaultOpen = false,
 }: {
@@ -38,29 +37,13 @@ export function ValuePicker({
 	selectedValues: string[];
 	onToggle: (value: string) => void;
 	onRemove: (value: string) => void;
-	/** Lets the search text be added as a new value when it matches no suggestion. */
-	onAdd?: (value: string) => void;
 	placeholder?: string;
-	searchPlaceholder?: string;
 	className?: string;
 	defaultOpen?: boolean;
 }) {
 	const [open, setOpen] = useState(defaultOpen);
-	const [search, setSearch] = useState("");
 
 	const getOption = (val: string) => suggestions.find((s) => s.value === val);
-
-	const newValue = search.trim();
-	const canAddNewValue =
-		onAdd !== undefined &&
-		newValue.length > 0 &&
-		!suggestions.some((s) => s.value === newValue) &&
-		!selectedValues.includes(newValue);
-
-	const addNewValue = () => {
-		onAdd?.(newValue);
-		setSearch("");
-	};
 
 	return (
 		<div className={cn("min-w-0", triggerClassName)}>
@@ -77,27 +60,12 @@ export function ValuePicker({
 								{selectedValues.slice(0, MAX_VISIBLE_CHIPS).map((val) => {
 									const opt = getOption(val);
 									return (
-										<span
+										<ValueChip
 											key={val}
-											className="flex items-center gap-0.5 bg-accent border border-border text-foreground rounded px-1 h-4.5 text-[10px] shrink-0 max-w-48"
-										>
-											{opt?.icon && (
-												<span className="shrink-0 [&_svg]:size-3">
-													{opt.icon}
-												</span>
-											)}
-											<span className="truncate">{opt?.label ?? val}</span>
-											<span
-												className="cursor-pointer text-tertiary-foreground hover:text-destructive ml-0.5"
-												onClick={(e) => {
-													e.stopPropagation();
-													onRemove(val);
-												}}
-												onPointerDown={(e) => e.stopPropagation()}
-											>
-												<XIcon size={10} />
-											</span>
-										</span>
+											label={opt?.label ?? val}
+											icon={opt?.icon}
+											onRemove={() => onRemove(val)}
+										/>
 									);
 								})}
 								{selectedValues.length > MAX_VISIBLE_CHIPS && (
@@ -117,27 +85,12 @@ export function ValuePicker({
 					}}
 				>
 					<Command className="bg-interactive-secondary">
-						<CommandInput
-							value={search}
-							onValueChange={setSearch}
-							placeholder={searchPlaceholder}
-							className="text-sm"
-						/>
+						<CommandInput placeholder="Search..." className="text-sm" />
 						<CommandList>
 							<CommandEmpty className="text-tertiary-foreground text-sm p-2">
 								No results
 							</CommandEmpty>
 							<CommandGroup>
-								{canAddNewValue && (
-									<CommandItem
-										value={`add:${newValue}`}
-										onSelect={addNewValue}
-										className="text-sm"
-									>
-										<PlusIcon size={14} className="shrink-0" />
-										<span className="flex-1 truncate">Add “{newValue}”</span>
-									</CommandItem>
-								)}
 								{suggestions.map((suggestion) => {
 									const isSelected = selectedValues.includes(suggestion.value);
 									const keywords = [suggestion.label];

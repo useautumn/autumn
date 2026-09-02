@@ -32,18 +32,13 @@ export function useCreditDimensionEditor({
 		setDraftFields(next.filter((field) => !usedFields.includes(field)));
 		onChange(withFields({ item, fields: next }));
 	};
-	const removeField = (field: string) =>
-		setFields(fields.filter((current) => current !== field));
 
 	return {
 		fields,
 		rules,
 		addField: (field: string) => setFields([...fields, field]),
-		removeField,
-		toggleField: (field: string) =>
-			fields.includes(field)
-				? removeField(field)
-				: setFields([...fields, field]),
+		removeField: (field: string) =>
+			setFields(fields.filter((current) => current !== field)),
 		addRule: () => commit([...rules, createRateRule()]),
 		setRule: (index: number, rule: CreditRateRule) =>
 			commit(rules.map((r, i) => (i === index ? rule : r))),

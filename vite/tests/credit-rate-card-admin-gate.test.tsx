@@ -113,6 +113,7 @@ test("the dimensions section shows fields as chips and a rate table with a colum
 		/>,
 	);
 
+	expect(html).toContain('aria-label="Dimension fields"');
 	expect(html).toContain(">size<");
 	expect(html).toContain(">region<");
 	expect(html).toContain('aria-label="size_large region"');

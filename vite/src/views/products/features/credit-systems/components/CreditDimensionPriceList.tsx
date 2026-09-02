@@ -1,5 +1,5 @@
 import type { CreditSchemaItem } from "@autumn/shared";
-import { ValuePicker } from "@/components/v2/rule-builder/ValuePicker";
+import { ValueChipInput } from "@/components/v2/rule-builder/ValueChipInput";
 import { useCreditDimensionEditor } from "../hooks/useCreditDimensionEditor";
 import { CreditDimensionRateTable } from "./CreditDimensionRateTable";
 
@@ -8,7 +8,7 @@ interface CreditDimensionPriceListProps {
 	onChange: (item: CreditSchemaItem) => void;
 }
 
-/** Dimensions are picked at the top; the rate table beneath has a column per dimension. */
+/** Dimensions are typed in at the top; the rate table beneath has a column per dimension. */
 export function CreditDimensionPriceList({
 	item,
 	onChange,
@@ -21,17 +21,12 @@ export function CreditDimensionPriceList({
 
 	return (
 		<div className="flex flex-col gap-3">
-			<ValuePicker
-				suggestions={editor.fields.map((field) => ({
-					value: field,
-					label: field,
-				}))}
-				selectedValues={editor.fields}
-				onToggle={editor.toggleField}
-				onRemove={editor.removeField}
+			<ValueChipInput
+				aria-label="Dimension fields"
+				values={editor.fields}
 				onAdd={editor.addField}
+				onRemove={editor.removeField}
 				placeholder="Add a dimension, eg. region"
-				searchPlaceholder="Type a dimension..."
 			/>
 
 			{editor.fields.length > 0 && (
