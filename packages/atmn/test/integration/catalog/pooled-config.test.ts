@@ -91,5 +91,6 @@ test.concurrent(
 		await push();
 		entitlement = await getEntitlement();
 		expect(entitlement?.pooled).toBe(false);
+		expect(entitlement?.entity_feature_id).toBe("atmn_pool_seats");
 	},
 );

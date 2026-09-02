@@ -582,7 +582,11 @@ function normalizePlanForCompare(
 
 	if (plan.items != null && plan.items.length > 0) {
 		result.items = [...plan.items]
-			.sort((a, b) => a.featureId.localeCompare(b.featureId))
+			.sort(
+				(a, b) =>
+					a.featureId.localeCompare(b.featureId) ||
+					(a.entityFeatureId ?? "").localeCompare(b.entityFeatureId ?? ""),
+			)
 			.map(normalizePlanFeatureForCompare);
 	}
 	result.licenses = [...(plan.licenses ?? [])]

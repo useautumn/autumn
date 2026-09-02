@@ -1,5 +1,5 @@
 import type { Feature, PlanItem } from "../../../compose/models/index.js";
-import { formatValue } from "./helpers.js";
+import { escapeString, formatValue } from "./helpers.js";
 
 const isBooleanFeatureItem = ({
 	planItem,
@@ -76,7 +76,9 @@ export function buildPlanItemCode({
 
 	// Add entityFeatureId
 	if (planItem.entityFeatureId != null) {
-		lines.push(`${fieldIndent}entityFeatureId: '${planItem.entityFeatureId}',`);
+		lines.push(
+			`${fieldIndent}entityFeatureId: '${escapeString(planItem.entityFeatureId)}',`,
+		);
 	}
 
 	// Add included (granted_balance)
