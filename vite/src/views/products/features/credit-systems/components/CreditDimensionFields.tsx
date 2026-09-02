@@ -40,7 +40,7 @@ export function CreditDimensionFields({
 			<Input
 				{...newField.inputProps}
 				aria-label="New dimension"
-				className="h-10! rounded-xl px-3"
+				className="h-8! rounded-xl px-3"
 				placeholder="Add a dimension, eg. size"
 			/>
 		</div>

@@ -1,5 +1,5 @@
 import { IconButton } from "@autumn/ui";
-import { TrashIcon } from "@phosphor-icons/react";
+import { TagIcon, TrashIcon } from "@phosphor-icons/react";
 import { ValueChipInput } from "@/components/v2/rule-builder/ValueChipInput";
 
 interface CreditDimensionFieldRowProps {
@@ -10,7 +10,7 @@ interface CreditDimensionFieldRowProps {
 	onRemove: () => void;
 }
 
-/** A plan-row style card: the field name leads, its values are chips, delete shows on hover. */
+/** A plan-row style card: icon and name lead, a divider, then the values as chips; delete shows on hover. */
 export function CreditDimensionFieldRow({
 	field,
 	values,
@@ -21,11 +21,15 @@ export function CreditDimensionFieldRow({
 	return (
 		<ValueChipInput
 			aria-label={`${field} values`}
-			className="group h-10"
+			className="group"
 			leading={
-				<span className="text-sm w-16 shrink-0 truncate select-none">
-					{field}
-				</span>
+				<>
+					<span className="flex items-center gap-1.5 w-24 shrink-0 min-w-0 select-none">
+						<TagIcon size={14} className="shrink-0 text-tertiary-foreground" />
+						<span className="text-sm truncate">{field}</span>
+					</span>
+					<span className="w-px h-4 bg-border shrink-0" />
+				</>
 			}
 			trailing={
 				<IconButton
