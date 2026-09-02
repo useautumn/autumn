@@ -319,6 +319,46 @@ describe("partition track writer", () => {
 		}
 	});
 
+	test("returns its receipt when the consumer applies the outcome first", async () => {
+		const fixture = createFixture();
+		try {
+			const appender = new ControlledCommittedAppender();
+			const writer = createPartitionTrackWriter({
+				topic,
+				partition,
+				stateStore: fixture.store,
+				appender,
+				limits: defaultLimits,
+			});
+			const decisionPromise = writer.submitTrack({
+				command: createCommand({ commandId: "cmd_1" }),
+			});
+
+			await waitForBatch();
+			const outcome = appender.batches[0]?.[0];
+			if (!outcome) throw new Error("Expected an appended track outcome");
+			expect(
+				fixture.store.applyDurableTrackOutcome({
+					position: { topic, partition, offset: 0n },
+					outcome,
+				}),
+			).toMatchObject({ kind: "applied", nextOffset: 1n });
+
+			appender.resolve();
+			await expect(decisionPromise).resolves.toEqual({ kind: "new", outcome });
+			expect(
+				readBalance({ store: fixture.store, identity: firstIdentity }),
+			).toEqual({
+				balance: 5,
+				usage: 5,
+				revision: 1,
+			});
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(1n);
+		} finally {
+			closeFixture(fixture);
+		}
+	});
+
 	test("projects commands that arrive while an earlier batch is in flight", async () => {
 		const fixture = createFixture();
 		try {
