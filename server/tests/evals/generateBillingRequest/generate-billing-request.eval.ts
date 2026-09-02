@@ -30,6 +30,7 @@ import {
 	tieredScaleContext,
 	variantLadderContext,
 	versionedPlanContext,
+	versionedScheduleContext,
 } from "./fixtures";
 
 type EvalInput = {
@@ -204,6 +205,12 @@ const appliedPlan = ({
 		...(mismatches.length ? { metadata: { mismatches } } : {}),
 	};
 };
+
+const scheduledVersionStarts = [
+	Date.UTC(2026, 7, 24, 12),
+	Date.UTC(2027, 7, 24, 12),
+	Date.UTC(2028, 7, 24, 12),
+];
 
 const cases: EvalCase[] = [
 	{
@@ -644,6 +651,98 @@ const cases: EvalCase[] = [
 			],
 		},
 	},
+	{
+		name: "schedule: existing phases survive a targeted version change",
+		input: {
+			context: versionedScheduleContext(),
+			currentRequest: {
+				phases: [1, 2, 3].map((version, index) => ({
+					...(index === 1 ? { billing_cycle_anchor: "phase_start" } : {}),
+					plans: [
+						{
+							plan_id: "generation",
+							version,
+							...(index === 1
+								? {
+										customize: {
+											price: { amount: 25, interval: "month" },
+										},
+									}
+								: {}),
+						},
+					],
+					starts_at: scheduledVersionStarts[index],
+				})),
+				unscheduled_plans: [{ plan_id: "support-addon" }],
+			},
+			prompt:
+				"In the existing schedule, move only phase 2 to version 3 but keep its custom $25 monthly price. Leave every other field unchanged.",
+			tool: "create_schedule",
+		},
+		expected: {
+			phases: [
+				{
+					plans: [{ plan_id: "generation", version: 1 }],
+					starts_at: scheduledVersionStarts[0],
+				},
+				{
+					billing_cycle_anchor: "phase_start",
+					plans: [
+						{
+							customize: {
+								price: { amount: 25, interval: "month" },
+							},
+							plan_id: "generation",
+							version: 3,
+						},
+					],
+					starts_at: scheduledVersionStarts[1],
+				},
+				{
+					plans: [{ plan_id: "generation", version: 3 }],
+					starts_at: scheduledVersionStarts[2],
+				},
+			],
+			unscheduled_plans: [{ plan_id: "support-addon" }],
+		},
+	},
+	{
+		name: "schedule: append relative phase without rewriting the schedule",
+		input: {
+			context: versionedScheduleContext(),
+			currentRequest: {
+				phases: [1, 2, 3].map((version, index) => ({
+					plans: [{ plan_id: "generation", version }],
+					starts_at: scheduledVersionStarts[index],
+				})),
+				unscheduled_plans: [{ plan_id: "support-addon" }],
+			},
+			prompt:
+				"Preserve the entire existing schedule and Support Add-on, then append phase 4 two months after phase 3 on generation v1 at a custom $15 per month.",
+			tool: "create_schedule",
+		},
+		expected: {
+			phases: [
+				...scheduledVersionStarts.map((starts_at, index) => ({
+					plans: [{ plan_id: "generation", version: index + 1 }],
+					starts_at,
+				})),
+				{
+					plans: [
+						{
+							customize: {
+								price: { amount: 15, interval: "month" },
+							},
+							plan_id: "generation",
+							version: 1,
+						},
+					],
+					starting_after: { duration_count: 2, duration_type: "month" },
+				},
+			],
+			unscheduled_plans: [{ plan_id: "support-addon" }],
+		},
+	},
 ];
 
 Eval("generate-billing-request", {
@@ -651,7 +750,7 @@ Eval("generate-billing-request", {
 		cases.map(({ name, input, expected }) => ({
 			expected,
 			input,
-			metadata: { tool: input.tool },
+			metadata: { name, tool: input.tool },
 			tags: [input.tool],
 			// biome-ignore lint/suspicious/noExplicitAny: braintrust's case type is looser than ours
 		})) as any,

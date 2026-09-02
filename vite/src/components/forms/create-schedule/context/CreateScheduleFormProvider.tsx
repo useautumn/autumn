@@ -275,9 +275,9 @@ export function CreateScheduleFormProvider({
 		getAllowFirstPhaseBackdate,
 	});
 
-	const previewRequestBody = useCreateScheduleRequestBody({
+	const generationRequestBody = useCreateScheduleRequestBody({
 		customerId,
-		phases: isDirty ? formValues.phases : [],
+		phases: formValues.phases,
 		unscheduledPlans: formValues.unscheduledPlans,
 		products,
 		features,
@@ -286,6 +286,7 @@ export function CreateScheduleFormProvider({
 		resetBillingCycle: formValues.resetBillingCycle,
 		allowFirstPhaseBackdate,
 	});
+	const previewRequestBody = isDirty ? generationRequestBody : null;
 
 	// Clear stale backdates when the selected scope can no longer use them.
 	useEffect(() => {
@@ -320,7 +321,7 @@ export function CreateScheduleFormProvider({
 	}, [preview?.redirect_to_checkout, form]);
 
 	const generation = useCreateScheduleGeneration({
-		currentRequest: previewRequestBody as Record<string, unknown> | null,
+		currentRequest: generationRequestBody as Record<string, unknown> | null,
 		customerId,
 		form,
 	});
