@@ -1,7 +1,10 @@
 import { Input } from "@autumn/ui";
 import { useDraftValue } from "@/components/v2/rule-builder/useDraftValue";
 import type { DimensionValues } from "../utils/creditDimensionUtils";
-import { CreditDimensionFieldRow } from "./CreditDimensionFieldRow";
+import {
+	CreditDimensionFieldRow,
+	DIMENSION_NAME_WIDTH,
+} from "./CreditDimensionFieldRow";
 
 interface CreditDimensionFieldsProps {
 	values: DimensionValues;
@@ -11,7 +14,7 @@ interface CreditDimensionFieldsProps {
 	onRemoveValue: (field: string, value: string) => void;
 }
 
-/** A row card per field with its values as chips; typing a name beneath adds a field. */
+/** A name card and a values card per field; typing a name in the trailing card adds a field. */
 export function CreditDimensionFields({
 	values,
 	onAddField,
@@ -40,8 +43,8 @@ export function CreditDimensionFields({
 			<Input
 				{...newField.inputProps}
 				aria-label="New dimension"
-				className="h-8! rounded-xl px-3"
-				placeholder="Add a dimension, eg. size"
+				className={`h-8! rounded-xl px-3 ${DIMENSION_NAME_WIDTH}`}
+				placeholder="New dimension"
 			/>
 		</div>
 	);
