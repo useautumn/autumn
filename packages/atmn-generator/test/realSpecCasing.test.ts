@@ -15,8 +15,19 @@ import yaml from "yaml";
 import {
 	fixtureToWire,
 	type JsonSchema,
+	toCamelCase,
+	toSnakeCase,
 	wireToFixture,
 } from "../src/casing/schemaKeyCasing";
+
+// biome-ignore lint/suspicious/noExplicitAny: the raw OpenAPI document
+const specDocument = (): any =>
+	yaml.parse(
+		readFileSync(
+			`${import.meta.dir}/../../openapi/openapi-internal.yml`,
+			"utf8",
+		),
+	);
 
 const catalogUpdateSchema = (): JsonSchema => {
 	const doc = yaml.parse(
@@ -104,4 +115,63 @@ test("real spec: round trip is the identity", () => {
 	const schema = catalogUpdateSchema();
 	const fixture = wireToFixture({ value: WIRE, schema });
 	expect(fixtureToWire({ value: fixture, schema })).toEqual(WIRE);
+});
+
+/**
+ * Regressions found by sweeping the mapper against the whole spec. Each was
+ * silent: the value came back changed with no error anywhere.
+ */
+
+test("real spec: a free-form record value is untouched all the way down", () => {
+	// `metadata` is z.record(string, z.any()) -> `additionalProperties: {}`.
+	// Protecting only the record's own keys left everything below them exposed.
+	const schema = catalogUpdateSchema();
+	const root = specDocument();
+	const wire = {
+		plans: [
+			{
+				plan_id: "pro",
+				metadata: { crm_sync: { external_id: "abc", region_1: "us" } },
+			},
+		],
+	};
+	const fixture = wireToFixture({ value: wire, schema, root });
+	expect(fixtureToWire({ value: fixture, schema, root })).toEqual(wire);
+});
+
+test("real spec: $ref is followed, so records behind one keep their keys", () => {
+	// customer_data is a $ref to CustomerData, whose `metadata` is a record.
+	// Unresolved, the stub has no properties and everything under it was recased
+	// blind — 12 request bodies spec-wide.
+	const root = specDocument();
+	const schema =
+		root.paths["/v1/balances.track"].post.requestBody.content[
+			"application/json"
+		].schema;
+	const wire = {
+		customer_id: "c",
+		feature_id: "f",
+		customer_data: { metadata: { signup_source: "ads", region_1: "us" } },
+	};
+	const fixture = wireToFixture({ value: wire, schema, root });
+	expect(fixtureToWire({ value: fixture, schema, root })).toEqual(wire);
+});
+
+test("filter operators are literal API keys, not snake_case fields", () => {
+	// $starts_with is not an operator the server has.
+	expect(toSnakeCase("$startsWith")).toBe("$startsWith");
+	expect(toCamelCase("$startsWith")).toBe("$startsWith");
+});
+
+test.each([
+	["a_1_b", "a_1B"],
+	["region_1", "region_1"],
+	["tier_1", "tier_1"],
+	["stripe_v2_price_id", "stripeV2PriceId"],
+	["oauth2_token", "oauth2Token"],
+])("%s round-trips through camelCase", (wire, fixture) => {
+	// `_1` has no uppercase form, so folding it consumed the underscore and
+	// `region_1` came back as `region1`.
+	expect(toCamelCase(wire)).toBe(fixture);
+	expect(toSnakeCase(fixture)).toBe(wire);
 });
