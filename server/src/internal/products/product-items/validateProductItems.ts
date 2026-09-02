@@ -28,6 +28,7 @@ import {
 	validateInvoiceCreditPrice,
 	validateInvoiceCreditUsageBasedPricing,
 } from "@/internal/features/validateInvoiceCreditPooling.js";
+import { validateItemFeatureOverride } from "@/internal/features/validateItemFeatureOverride.js";
 import {
 	isBooleanFeatureItem,
 	isFeatureItem,
@@ -80,6 +81,7 @@ const validateProductItem = ({
 			isFeaturePriceItem(item) && item.usage_model === UsageModel.PayPerUse,
 	});
 	validateInvoiceCreditPrice({ feature, item });
+	validateItemFeatureOverride({ item, feature, features });
 
 	if (
 		item.pooled &&

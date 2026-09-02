@@ -4,7 +4,9 @@ export { fullSubjectHasUsageBasedAllocated } from "./classifyFullSubject.js";
 export { fullCustomerToFullSubject } from "./fullCustomerToFullSubject.js";
 export { fullSubjectToApiCustomerProducts } from "./fullSubjectToApiCustomerProducts.js";
 export { fullSubjectToApiUsageLimits } from "./fullSubjectToApiUsageLimits.js";
+export { fullSubjectToCreditSystems } from "./fullSubjectToCreditSystems.js";
 export { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
+export { fullSubjectToRelevantFeatures } from "./fullSubjectToRelevantFeatures.js";
 export { fullSubjectToFullCustomer } from "./fullSubjectToFullCustomer.js";
 export { fullSubjectToOverageAllowedByFeatureId } from "./fullSubjectToOverageAllowed.js";
 export {

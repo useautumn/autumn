@@ -1,6 +1,7 @@
 import {
 	AllowanceType,
 	cusEntToStartingBalance,
+	deduplicateArray,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
@@ -8,7 +9,6 @@ import {
 	fullCustomerToSpendLimitByFeatureId,
 	fullCustomerToUsageBasedCusEntsByFeatureId,
 	getMaxOverage,
-	getRelevantFeatures,
 	isAllocatedCustomerEntitlement,
 	isFreeCustomerEntitlement,
 	notNullish,
@@ -45,18 +45,14 @@ export const prepareFeatureDeduction = ({
 
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
 
-	// Get relevant features (just the feature itself if targetBalance is set)
-	const relevantFeatures = notNullish(targetBalance)
-		? [feature]
-		: getRelevantFeatures({
-				features: ctx.features,
-				featureId: feature.id,
-			});
-
-	// Get customer entitlements for these features (includes both product and loose entitlements)
+	// Membership is per cusEnt (fundsFeatureId), not per catalog feature — a
+	// plan item's feature_override can add or remove the tracked feature from
+	// its credit system's schema. set_usage still targets only the feature.
 	const cusEnts = fullCustomerToCustomerEntitlements({
 		fullCustomer,
-		featureIds: relevantFeatures.map((f) => f.id),
+		...(notNullish(targetBalance)
+			? { featureIds: [feature.id] }
+			: { fundsFeatureId: feature.id }),
 		reverseOrder: org.config?.reverse_deduction_order,
 		entity: fullCustomer.entity,
 		inStatuses: orgToInStatuses({ org }),
@@ -67,7 +63,12 @@ export const prepareFeatureDeduction = ({
 		ce.entitlement.allowance_type === AllowanceType.Unlimited ||
 		Boolean(ce.unlimited);
 
-	const effectiveFeatureIds = relevantFeatures.map((f) => f.id);
+	// From the gathered cusEnts (not the catalog) so override-added credit
+	// systems get their spend limits / overage controls respected.
+	const effectiveFeatureIds = deduplicateArray([
+		feature.id,
+		...cusEnts.map((ce) => ce.entitlement.feature.id),
+	]);
 	const spendLimitByFeatureId = fullCustomerToSpendLimitByFeatureId({
 		fullCustomer,
 		featureIds: effectiveFeatureIds,

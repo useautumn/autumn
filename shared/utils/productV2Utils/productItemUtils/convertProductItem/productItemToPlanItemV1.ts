@@ -11,6 +11,7 @@ import {
 import { InternalError } from "../../../../api/models.js";
 import type { Feature } from "../../../../models/featureModels/featureModels.js";
 import { expandIncludes } from "../../../expandUtils.js";
+import { dbFeatureOverrideToApi } from "../../../featureUtils/apiFeatureToDbFeature.js";
 import {
 	isBooleanFeature,
 	isContUseFeature,
@@ -218,6 +219,9 @@ export const productItemsToPlanItemsV1 = ({
 
 			rollover,
 			proration,
+			feature_override: item.config?.feature_override
+				? dbFeatureOverrideToApi(item.config.feature_override)
+				: undefined,
 			entity_feature_id: item.entity_feature_id ?? undefined,
 			entitlement_id: item.entitlement_id ?? undefined,
 			price_id: item.price_id ?? undefined,

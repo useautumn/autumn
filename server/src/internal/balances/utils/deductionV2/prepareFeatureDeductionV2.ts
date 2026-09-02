@@ -1,6 +1,7 @@
 import {
 	AllowanceType,
 	cusEntToStartingBalance,
+	deduplicateArray,
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
@@ -50,16 +51,14 @@ export const prepareFeatureDeductionV2 = ({
 	const { feature, lock, targetBalance } = deduction;
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
 
-	const relevantFeatures = notNullish(targetBalance)
-		? [feature]
-		: getRelevantFeatures({
-				features: ctx.features,
-				featureId: feature.id,
-			});
-
+	// Membership is per cusEnt (fundsFeatureId), not per catalog feature — a
+	// plan item's feature_override can add or remove the tracked feature from
+	// its credit system's schema. set_usage still targets only the feature.
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
-		featureIds: relevantFeatures.map((candidate) => candidate.id),
+		...(notNullish(targetBalance)
+			? { featureIds: [feature.id] }
+			: { fundsFeatureId: feature.id }),
 		reverseOrder: org.config?.reverse_deduction_order,
 		inStatuses: orgToInStatuses({ org }),
 		customerEntitlementFilters,
@@ -74,7 +73,14 @@ export const prepareFeatureDeductionV2 = ({
 	// deduction script.
 	const hasUnlimitedCusEnt = customerEntitlements.some(isUnlimitedCusEnt);
 
-	const effectiveFeatureIds = relevantFeatures.map((candidate) => candidate.id);
+	// From the gathered cusEnts (not the catalog) so override-added credit
+	// systems get their spend limits / overage controls / windows respected.
+	const effectiveFeatureIds = deduplicateArray([
+		feature.id,
+		...customerEntitlements.map(
+			(customerEntitlement) => customerEntitlement.entitlement.feature.id,
+		),
+	]);
 	const spendLimitByFeatureId = fullSubjectToSpendLimitByFeatureId({
 		fullSubject,
 		featureIds: effectiveFeatureIds,

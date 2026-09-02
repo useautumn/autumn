@@ -1,3 +1,4 @@
+import { customerEntitlementFundsFeature } from "@utils/cusEntUtils/classifyCusEnt/customerEntitlementFundsFeature.js";
 import { isEntityCusEnt } from "@utils/cusEntUtils/cusEntUtils.js";
 import { isCustomerProductLicenseAssignment } from "@utils/cusProductUtils/classifyCustomerProduct/classifyCustomerProduct.js";
 import type { Entity } from "../../../models/cusModels/entityModels/entityModels.js";
@@ -16,6 +17,7 @@ export const fullCustomerToCustomerEntitlements = ({
 	reverseOrder = false,
 	featureId,
 	featureIds,
+	fundsFeatureId,
 	entity,
 	customerEntitlementFilters,
 	isRefund = false,
@@ -25,6 +27,9 @@ export const fullCustomerToCustomerEntitlements = ({
 	reverseOrder?: boolean;
 	featureId?: string;
 	featureIds?: string[];
+	/** Membership by EFFECTIVE credit schema (plan-item feature_override,
+	 * else catalog) — per cusEnt, unlike the per-feature featureIds filter. */
+	fundsFeatureId?: string;
 	entity?: Entity;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 	isRefund?: boolean;
@@ -71,6 +76,15 @@ export const fullCustomerToCustomerEntitlements = ({
 	if (featureIds) {
 		cusEnts = cusEnts.filter((cusEnt) =>
 			featureIds.includes(cusEnt.entitlement.feature.id),
+		);
+	}
+
+	if (fundsFeatureId) {
+		cusEnts = cusEnts.filter((cusEnt) =>
+			customerEntitlementFundsFeature({
+				customerEntitlement: cusEnt,
+				featureId: fundsFeatureId,
+			}),
 		);
 	}
 

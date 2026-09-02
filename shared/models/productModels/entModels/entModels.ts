@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { FeatureConfigOverrideSchema } from "../../featureModels/featureConfig/creditConfig";
 import { FeatureSchema } from "../../featureModels/featureModels";
 import { RolloverConfigSchema } from "../../productV2Models/productItemModels/productItemModels";
 import { EntInterval } from "../intervals/entitlementInterval";
@@ -47,6 +48,7 @@ export const EntitlementSchema = z.object({
 	expiry_length: z.number().nullish(),
 
 	rollover: RolloverConfigSchema.nullish(),
+	feature_override: FeatureConfigOverrideSchema.nullish(),
 });
 
 export const CreateEntitlementSchema = z.object({
@@ -62,6 +64,7 @@ export const CreateEntitlementSchema = z.object({
 	pooled: z.boolean().default(false).optional(),
 	usage_limit: z.number().nullish().default(null),
 	rollover: RolloverConfigSchema.nullish(),
+	feature_override: FeatureConfigOverrideSchema.nullish(),
 });
 
 export type CreateEntitlement = z.infer<typeof CreateEntitlementSchema>;

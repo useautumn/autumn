@@ -1,3 +1,4 @@
+import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride.js";
 import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
 import { DisplaySchema } from "@api/products/components/display.js";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType.js";
@@ -68,6 +69,10 @@ export const ApiPlanItemV0Schema = z
 				on_decrease: z.enum(OnDecrease).optional(),
 			})
 			.optional(),
+
+		feature_override: ApiFeatureOverrideSchema.optional().meta({
+			internal: true,
+		}),
 
 		entity_feature_id: z.string().optional().meta({
 			internal: true,

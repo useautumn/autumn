@@ -3,6 +3,7 @@ import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubject
 import type { CustomerEntitlementFilters } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
+import { customerEntitlementFundsFeature } from "../cusEntUtils/classifyCusEnt/customerEntitlementFundsFeature.js";
 import { isPooledBalanceSourceCustomerEntitlement } from "../cusEntUtils/classifyCusEnt/isPooledBalanceCustomerEntitlement.js";
 import { cusEntMatchesEntity } from "../cusEntUtils/filterCusEntUtils.js";
 import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
@@ -13,12 +14,16 @@ export const fullSubjectToCustomerEntitlements = ({
 	inStatuses = [CusProductStatus.Active, CusProductStatus.PastDue],
 	reverseOrder = false,
 	featureIds,
+	fundsFeatureId,
 	customerEntitlementFilters,
 }: {
 	fullSubject: FullSubject;
 	inStatuses?: CusProductStatus[];
 	reverseOrder?: boolean;
 	featureIds?: string[];
+	/** Membership by EFFECTIVE credit schema (plan-item feature_override,
+	 * else catalog) — per cusEnt, unlike the per-feature featureIds filter. */
+	fundsFeatureId?: string;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 }) => {
 	let customerEntitlements: FullCusEntWithFullCusProduct[] = [];
@@ -59,6 +64,16 @@ export const fullSubjectToCustomerEntitlements = ({
 	if (featureIds) {
 		customerEntitlements = customerEntitlements.filter((customerEntitlement) =>
 			featureIds.includes(customerEntitlement.entitlement.feature.id),
+		);
+	}
+
+	if (fundsFeatureId) {
+		customerEntitlements = customerEntitlements.filter(
+			(customerEntitlement) =>
+				customerEntitlementFundsFeature({
+					customerEntitlement,
+					featureId: fundsFeatureId,
+				}),
 		);
 	}
 

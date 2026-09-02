@@ -11,7 +11,10 @@ import {
 	ProductItemType,
 	type RolloverConfig,
 } from "@models/productV2Models/productItemModels/productItemModels";
-import { dbToApiFeatureV1 } from "@utils/featureUtils/apiFeatureToDbFeature";
+import {
+	apiFeatureOverrideToDb,
+	dbToApiFeatureV1,
+} from "@utils/featureUtils/apiFeatureToDbFeature";
 import { featureToItemFeatureType } from "@utils/featureUtils/convertFeatureUtils";
 import { featureUtils } from "@utils/featureUtils/index";
 import { resetIntvToItemIntv } from "@utils/productV2Utils/productItemUtils/convertProductItem/planItemIntervals";
@@ -77,12 +80,16 @@ const planItemV0ToItemConfig = ({
 
 	const rollover = toItemRollover();
 	const proration = toItemProration();
+	const featureOverride = planItemV0.feature_override
+		? apiFeatureOverrideToDb(planItemV0.feature_override)
+		: undefined;
 
-	if (rollover || proration) {
+	if (rollover || proration || featureOverride) {
 		return {
 			rollover,
 			on_increase: proration?.on_increase,
 			on_decrease: proration?.on_decrease,
+			feature_override: featureOverride,
 		} satisfies ProductItemConfig;
 	}
 	return undefined;

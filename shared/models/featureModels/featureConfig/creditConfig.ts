@@ -48,6 +48,17 @@ export const CreditSystemConfigSchema = z.object({
 	provider_markups: ProviderMarkupsSchema,
 });
 
+/**
+ * A plan item's partial override of its feature's config, stored on the
+ * entitlement row under the config's own keys so resolving the effective
+ * feature is a config spread. Strict: a key is only admitted once every
+ * runtime reader of that key honors the override (schema is the only one so
+ * far — invoice_credit and markups have readers outside the schema path).
+ */
+export const FeatureConfigOverrideSchema = z.strictObject({
+	schema: z.array(CreditSchemaItemSchema).optional(),
+});
+
 export const ModelMarkupsSchema = z
 	.record(
 		z.string(), // Represents the model name in "provider/model" format, e.g. "anthropic/claude-2"
@@ -60,6 +71,7 @@ export const ModelMarkupsSchema = z
 	.nullish();
 
 export type CreditSystemConfig = z.infer<typeof CreditSystemConfigSchema>;
+export type FeatureConfigOverride = z.infer<typeof FeatureConfigOverrideSchema>;
 export type CreditSchemaItem = z.infer<typeof CreditSchemaItemSchema>;
 export type CreditTier = z.infer<typeof CreditTierSchema>;
 export type ModelMarkups = z.infer<typeof ModelMarkupsSchema>;
