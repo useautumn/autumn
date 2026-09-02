@@ -10,6 +10,7 @@ import {
 	ProductItemSchema,
 	ProductItemType,
 	type RolloverConfig,
+	UsageModel,
 } from "@models/productV2Models/productItemModels/productItemModels";
 import {
 	apiFeatureOverrideToDb,
@@ -143,6 +144,11 @@ export const planItemV0ToProductItem = ({
 
 	const resetUsageWhenEnabled = featureUtils.isConsumable(feature);
 
+	// One stated id, two slots: prepaid bills from v2, everything else from v1.
+	const statedStripePriceId = planItem.price?.processors?.stripe?.price_id;
+	const billsFromPrepaidSlot =
+		planItem.price?.usage_model === UsageModel.Prepaid;
+
 	return ProductItemSchema.parse({
 		type,
 
@@ -162,7 +168,12 @@ export const planItemV0ToProductItem = ({
 		price_interval_count: priceIntervalCount,
 
 		price: planItem.price?.amount,
-		stripe_price_id: planItem.price?.stripe_price_id,
+		stripe_price_id: billsFromPrepaidSlot
+			? planItem.price?.stripe_price_id
+			: (statedStripePriceId ?? planItem.price?.stripe_price_id),
+		stripe_prepaid_price_v2_id: billsFromPrepaidSlot
+			? statedStripePriceId
+			: undefined,
 
 		tiers: planItem.price?.tiers?.map((tier) => ({
 			amount: tier.amount,

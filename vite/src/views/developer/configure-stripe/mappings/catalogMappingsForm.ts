@@ -2,15 +2,10 @@ import type {
 	CatalogGetMappingsResponse,
 	CatalogStripeMapping,
 	CatalogStripeProduct,
-	CatalogUpdateMappingsParams,
 	ProductV2,
+	UpdateCatalogParamsInput,
 } from "@autumn/shared";
-import {
-	isFeaturePriceItem,
-	matchesPlanItemFilter,
-	productV2ToBasePrice,
-	productV2ToFeatureItems,
-} from "@autumn/shared";
+import { productV2ToBasePrice } from "@autumn/shared";
 
 export type PlanMappingGroup = {
 	base: ProductV2;
@@ -138,11 +133,10 @@ export const collectPlanStripeProductIds = (
 		...planMapping.additional_mappings.map(
 			(mapping) => mapping.stripe_product_id,
 		),
-		...planMapping.item_mappings.map((item) => item.mapping.stripe_product_id),
 	].filter((id): id is string => Boolean(id));
 };
 
-/** Rolls a plan's base + item statuses into the most severe one for the master row. */
+/** Rolls a plan's product and aliases into the most severe status. */
 export const rollupPlanStatus = ({
 	planMapping,
 	stripeConnected,
@@ -158,11 +152,8 @@ export const rollupPlanStatus = ({
 		return { status: "unmapped", stripeProduct: null, pending: false };
 	}
 
-	const resolved = [
-		planMapping.mapping,
-		...planMapping.additional_mappings,
-		...planMapping.item_mappings.map((item) => item.mapping),
-	].map((mapping) =>
+	const resolved = [planMapping.mapping, ...planMapping.additional_mappings].map(
+		(mapping) =>
 		resolveMapping({
 			stripeProductId: mapping.stripe_product_id,
 			backendStatus: mapping.status,
@@ -185,8 +176,6 @@ export const rollupPlanStatus = ({
 
 export type PlanDetailFormValues = {
 	stripe_product_id: string | null;
-	additional_stripe_product_ids: Array<{ stripe_product_id: string | null }>;
-	item_mappings: Array<{ stripe_product_id: string | null }>;
 };
 
 const normalizeFormStripeProductId = (stripeProductId: string | null) =>
@@ -196,40 +185,43 @@ export const buildPlanDetailFormValues = (
 	planMapping: CatalogPlanMapping,
 ): PlanDetailFormValues => ({
 	stripe_product_id: planMapping.mapping.stripe_product_id,
-	additional_stripe_product_ids: planMapping.additional_mappings.map(
-		(mapping) => ({ stripe_product_id: mapping.stripe_product_id }),
-	),
-	item_mappings: planMapping.item_mappings.map((item) => ({
-		stripe_product_id: item.mapping.stripe_product_id,
-	})),
 });
 
-export const buildUpdatePlanMappingParams = ({
+/**
+ * A plan's product is plan-wide, so this writes through catalogV2 and the
+ * server fans it out to every version and variant. Aliases are carried back
+ * unchanged: an omitted list would clear the ones the plan already holds.
+ */
+export const buildPlanProcessorsUpdate = ({
 	planMapping,
 	values,
 }: {
 	planMapping: CatalogPlanMapping;
 	values: PlanDetailFormValues;
-}): CatalogUpdateMappingsParams => ({
-	processor_type: "stripe",
-	plan_mappings: [
-		{
-			plan_id: planMapping.plan_id,
-			stripe_product_id: normalizeFormStripeProductId(values.stripe_product_id),
-			additional_stripe_product_ids: values.additional_stripe_product_ids
-				.map((entry) => normalizeFormStripeProductId(entry.stripe_product_id))
-				.filter((id): id is string => Boolean(id)),
-			scope: "base_price",
-			item_mappings: planMapping.item_mappings.map((item, index) => ({
-				filter: item.filter,
-				stripe_product_id:
-					normalizeFormStripeProductId(
-						values.item_mappings[index]?.stripe_product_id ?? null,
-					),
-			})),
-		},
-	],
-});
+}): UpdateCatalogParamsInput => {
+	const stripeProductId = normalizeFormStripeProductId(values.stripe_product_id);
+	const additionalProductIds = planMapping.additional_mappings
+		.map((mapping) => normalizeFormStripeProductId(mapping.stripe_product_id))
+		.filter((id): id is string => Boolean(id));
+
+	return {
+		plans: [
+			{
+				plan_id: planMapping.plan_id,
+				processors: {
+					stripe: stripeProductId
+						? {
+								product_id: stripeProductId,
+								...(additionalProductIds.length
+									? { additional_product_ids: additionalProductIds }
+									: {}),
+							}
+						: null,
+				},
+			},
+		],
+	};
+};
 
 export const getPlanFamilyProductVersions = ({
 	base,
@@ -254,6 +246,7 @@ export const getPlanFamilyProductVersions = ({
 	return [...baseVersions, ...variants];
 };
 
+/** Base prices across the family — the rows a product change re-points. */
 export const getAffectedCatalogPriceIds = ({
 	base,
 	products,
@@ -264,38 +257,17 @@ export const getAffectedCatalogPriceIds = ({
 	products: ProductV2[];
 	planMapping: CatalogPlanMapping;
 	// Aliases never touch Stripe price resources, so they can't affect prices.
-	values: Pick<PlanDetailFormValues, "stripe_product_id" | "item_mappings">;
+	values: PlanDetailFormValues;
 }) => {
-	const affectedPriceIds = new Set<string>();
-	const familyProducts = getPlanFamilyProductVersions({ base, products });
-	const baseMappingChanged =
+	const mappingChanged =
 		normalizeFormStripeProductId(planMapping.mapping.stripe_product_id) !==
 		normalizeFormStripeProductId(values.stripe_product_id);
+	if (!mappingChanged) return [];
 
-	if (baseMappingChanged) {
-		for (const product of familyProducts) {
-			const basePriceId = productV2ToBasePrice({ product })?.price_id;
-			if (basePriceId) affectedPriceIds.add(basePriceId);
-		}
-	}
-
-	for (const [index, itemMapping] of planMapping.item_mappings.entries()) {
-		const itemMappingChanged =
-			normalizeFormStripeProductId(itemMapping.mapping.stripe_product_id) !==
-			normalizeFormStripeProductId(
-				values.item_mappings[index]?.stripe_product_id ?? null,
-			);
-		if (!itemMappingChanged) continue;
-
-		for (const product of familyProducts) {
-			for (const item of productV2ToFeatureItems({ items: product.items })) {
-				if (!isFeaturePriceItem(item)) continue;
-				if (!matchesPlanItemFilter({ item, filter: itemMapping.filter })) {
-					continue;
-				}
-				if (item.price_id) affectedPriceIds.add(item.price_id);
-			}
-		}
+	const affectedPriceIds = new Set<string>();
+	for (const product of getPlanFamilyProductVersions({ base, products })) {
+		const basePriceId = productV2ToBasePrice({ product })?.price_id;
+		if (basePriceId) affectedPriceIds.add(basePriceId);
 	}
 
 	return [...affectedPriceIds];

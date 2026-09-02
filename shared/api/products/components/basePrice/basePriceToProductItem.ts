@@ -29,10 +29,17 @@ export const basePriceToProductItem = ({
 			: undefined;
 	const priceId =
 		"price_id" in basePrice ? (basePrice.price_id ?? undefined) : undefined;
-	const stripePriceId =
-		"stripe_price_id" in basePrice
-			? (basePrice.stripe_price_id ?? undefined)
+	// A base price is fixed, so an adopted id belongs in the v1 slot it bills
+	// from. The internal field stays as the sync flows' way in.
+	const statedStripePriceId =
+		"processors" in basePrice
+			? basePrice.processors?.stripe?.price_id
 			: undefined;
+	const stripePriceId =
+		statedStripePriceId ??
+		("stripe_price_id" in basePrice
+			? (basePrice.stripe_price_id ?? undefined)
+			: undefined);
 
 	const additionalCurrencies =
 		"additional_currencies" in basePrice

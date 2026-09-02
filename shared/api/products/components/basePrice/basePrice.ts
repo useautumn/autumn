@@ -2,6 +2,7 @@ import { BillingInterval } from "@models/productModels/intervals/billingInterval
 import { z } from "zod/v4";
 import { AdditionalCurrencyPriceArraySchema } from "../additionalCurrencies";
 import { DisplaySchema } from "../display";
+import { ApiPriceProcessorsSchema } from "../processors";
 
 export const BasePriceSchema = z.object({
 	amount: z.number().meta({
@@ -45,6 +46,10 @@ export const BasePriceParamsSchema = BasePriceSchema.omit({
 			description:
 				"Stripe price id this base price is billed under. Set by sync flows to capture the actual Stripe price when it differs from the catalog default.",
 			internal: true,
+		}),
+		processors: ApiPriceProcessorsSchema.optional().meta({
+			description:
+				"Adopt an existing Stripe price instead of creating one. The id must already exist in Stripe.",
 		}),
 	})
 	.meta({

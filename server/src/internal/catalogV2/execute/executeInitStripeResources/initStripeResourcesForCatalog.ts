@@ -5,6 +5,8 @@ import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatal
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
 import { hydratePlanLicenseProcessor } from "./hydratePlanLicenseProcessor";
+import { repointBasePricesToPlanProcessor } from "./repointBasePricesToPlanProcessor";
+import { validateAdoptedStripePrices } from "./validateAdoptedStripePrices";
 import {
 	catalogProductsByInternalId,
 	stripeCandidatesFromCatalog,
@@ -47,6 +49,12 @@ export const initStripeResourcesForCatalog = async ({
 		.sort(
 			(a, b) => stripeInitRank({ upsert: a }) - stripeInitRank({ upsert: b }),
 		);
+
+	// Ahead of the completeness skip and the Live guard below, so a stated id
+	// is checked in every environment even when nothing needs creating.
+	await validateAdoptedStripePrices({ ctx, upsertProducts: targets });
+	// Ahead of init so a cleared price is minted under the new product below.
+	await repointBasePricesToPlanProcessor({ ctx, upsertProducts: targets });
 
 	for (const upsert of targets) {
 		const product = upsert.row.nextFullProduct;

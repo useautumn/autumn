@@ -73,6 +73,7 @@ export const createStripeFixedPrice = async ({
 				slot: "stripe_price_id",
 				currency,
 				orgDefault,
+				stripeProductId: product.processor!.id,
 			}),
 		},
 	);

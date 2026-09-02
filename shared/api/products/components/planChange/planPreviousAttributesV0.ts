@@ -17,6 +17,7 @@ export const PlanPreviousAttributesV0Schema = ApiPlanV1Schema.pick({
 	config: true,
 	archived: true,
 	metadata: true,
+	processors: true,
 })
 	.partial()
 	.extend({

@@ -199,6 +199,9 @@ export const intentToUpsertProductPlan = ({
 		planParams.propagate !== undefined
 			? { propagate: planParams.propagate }
 			: {}),
+		...(source === "direct" && planParams.processors?.revenuecat !== undefined
+			? { revenuecatProcessor: planParams.processors.revenuecat }
+			: {}),
 		...(planParams.create_in_stripe !== undefined
 			? { createInStripe: planParams.create_in_stripe }
 			: {}),

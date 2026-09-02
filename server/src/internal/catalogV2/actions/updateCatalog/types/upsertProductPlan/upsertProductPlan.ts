@@ -1,4 +1,5 @@
 import type {
+	ApiRevenueCatPlanProcessor,
 	CatalogPlanVersioningStrategy,
 	CatalogPropagateParams,
 	CatalogVariantParams,
@@ -23,6 +24,8 @@ export type UpsertProductSource =
 	| "license_pin"
 	| "license_adopt"
 	| "repoint"
+	/** Sibling version taking the plan's Stripe mapping — every version shares it. */
+	| "processor_sync"
 	| "demoted_product";
 
 /** Which product row this plan writes, and its before/after FullProduct. */
@@ -66,6 +69,8 @@ export type UpsertProductPlan = {
 	unlink?: boolean;
 	/** Who follows this row's content change. Copied from planParams so pass 2 can read it. */
 	propagate?: CatalogPropagateParams;
+	/** Stated `processors.revenuecat`. Plan-wide, so only the addressed row carries it. */
+	revenuecatProcessor?: ApiRevenueCatPlanProcessor | null;
 	/** Absent = plan_license links untouched. Present (incl. []) = full-set replace. */
 	planLicenses?: PlanLicensePlan[];
 	/** false = execute may reuse Stripe ids but never create objects. */
