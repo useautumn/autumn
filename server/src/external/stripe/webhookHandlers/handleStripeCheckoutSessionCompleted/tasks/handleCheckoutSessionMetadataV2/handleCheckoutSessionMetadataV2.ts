@@ -166,7 +166,7 @@ const executeCheckoutSessionMetadataV2 = async ({
 		billingContext: updatedDeferredData.billingContext,
 	});
 
-	await promotePendingCustomerProducts({
+	const autumnBillingPlanToExecute = await promotePendingCustomerProducts({
 		ctx,
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
 		fullCustomer: updatedDeferredData.billingContext.fullCustomer,
@@ -176,7 +176,7 @@ const executeCheckoutSessionMetadataV2 = async ({
 	// Execute autumn billing plan (includes customer products, upsertSubscription, upsertInvoice)
 	await executeAutumnBillingPlan({
 		ctx,
-		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
+		autumnBillingPlan: autumnBillingPlanToExecute,
 		stripeInvoice: checkoutContext.stripeInvoice,
 	});
 
