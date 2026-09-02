@@ -1,5 +1,5 @@
 import type { Feature, PlanItem } from "../../../compose/models/index.js";
-import { formatValue } from "./helpers.js";
+import { escapeString, formatValue } from "./helpers.js";
 
 const isBooleanFeatureItem = ({
 	planItem,
@@ -32,6 +32,8 @@ const isSimpleItem = ({
 }) =>
 	!shouldEmitIncluded({ planItem, features }) &&
 	planItem.unlimited !== true &&
+	planItem.pooled !== true &&
+	planItem.entityFeatureId == null &&
 	!planItem.reset &&
 	!planItem.price &&
 	!planItem.proration &&
@@ -72,6 +74,13 @@ export function buildPlanItemCode({
 	lines.push(`${itemIndent}item({`);
 	lines.push(`${fieldIndent}featureId: ${featureIdCode},`);
 
+	// Add entityFeatureId
+	if (planItem.entityFeatureId != null) {
+		lines.push(
+			`${fieldIndent}entityFeatureId: '${escapeString(planItem.entityFeatureId)}',`,
+		);
+	}
+
 	// Add included (granted_balance)
 	if (shouldEmitIncluded({ planItem, features })) {
 		lines.push(`${fieldIndent}included: ${planItem.included},`);
@@ -80,6 +89,11 @@ export function buildPlanItemCode({
 	// Add unlimited
 	if (planItem.unlimited === true) {
 		lines.push(`${fieldIndent}unlimited: true,`);
+	}
+
+	// Add pooled
+	if (planItem.pooled === true) {
+		lines.push(`${fieldIndent}pooled: true,`);
 	}
 
 	// Add reset object (nested)

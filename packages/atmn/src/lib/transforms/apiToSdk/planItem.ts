@@ -3,19 +3,16 @@ import type { ApiPlanItem } from "../../api/types/index.js";
 import { createTransformer } from "./Transformer.js";
 
 /** Maps API plan items to SDK config while omitting redundant reset cycles. */
-export const planItemTransformer = createTransformer<
-	ApiPlanItem,
-	PlanItem
->({
+export const planItemTransformer = createTransformer<ApiPlanItem, PlanItem>({
 	// rename: maps api snake_case field -> sdk camelCase field (shallow copy)
 	rename: {
 		feature_id: "featureId",
 		entity_feature_id: "entityFeatureId",
 	},
 
-	// Only persist unlimited when true (false is implicit default)
-	copy: ["unlimited"],
-	swapFalse: ["unlimited"],
+	// Only persist unlimited/pooled when true (false is implicit default)
+	copy: ["unlimited", "pooled"],
+	swapFalse: ["unlimited", "pooled"],
 
 	// Computed fields
 	compute: {
@@ -26,8 +23,7 @@ export const planItemTransformer = createTransformer<
 			if (!api.reset) return undefined;
 			const matchesPrice =
 				String(api.reset.interval) === String(api.price?.interval) &&
-				(api.reset.interval_count ?? 1) ===
-					(api.price?.interval_count ?? 1);
+				(api.reset.interval_count ?? 1) === (api.price?.interval_count ?? 1);
 			if (matchesPrice) return undefined;
 			return {
 				interval: api.reset.interval,
@@ -112,8 +108,6 @@ export const planItemTransformer = createTransformer<
 	},
 });
 
-export function transformApiPlanItem(
-	apiPlanItem: ApiPlanItem,
-): PlanItem {
+export function transformApiPlanItem(apiPlanItem: ApiPlanItem): PlanItem {
 	return planItemTransformer.transform(apiPlanItem);
 }
