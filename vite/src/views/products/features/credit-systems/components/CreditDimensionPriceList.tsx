@@ -80,8 +80,8 @@ export function CreditDimensionPriceList({
 				))}
 
 				<div className="flex items-center gap-2 text-xs text-tertiary-foreground">
-					<span className="w-32 shrink-0">anything else</span>
-					<span>costs {baseRate}</span>
+					<span className="flex-1 min-w-24">anything else</span>
+					<span className="shrink-0">costs {baseRate}</span>
 				</div>
 
 				<AddValueButton

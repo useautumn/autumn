@@ -36,7 +36,7 @@ export function CreditDimensionRateRow({
 			<div className="flex items-center gap-2">
 				<Input
 					aria-label={`${label} value`}
-					className="w-32 shrink-0"
+					className="flex-1 min-w-24"
 					placeholder="eg. large"
 					value={value}
 					onChange={(event) => onChange({ ...row, value: event.target.value })}

@@ -95,7 +95,7 @@ function UpdateCreditSystemSheet({
 		<Sheet open={open} onOpenChange={setOpen}>
 			<SheetContent
 				key={selectedCreditSystem?.internal_id}
-				className="flex flex-col overflow-hidden md:max-w-xl"
+				className="flex flex-col overflow-hidden md:max-w-2xl"
 			>
 				<SheetHeader
 					title="Update Credit System"
