@@ -1,13 +1,14 @@
+import type { CatalogBasePriceParams } from "@api/catalogV2/planUpdate/params/catalogBasePriceParams";
 import { RecaseError } from "@api/errors/base/RecaseError";
 import { ProductErrorCode } from "@api/errors/codes/productErrCodes";
 import type {
-    BasePrice,
-    BasePriceParams,
+	BasePrice,
+	BasePriceParams,
 } from "@api/products/components/basePrice/basePrice";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import {
-    type ProductItem,
-    ProductItemType,
+	type ProductItem,
+	ProductItemType,
 } from "@models/productV2Models/productItemModels/productItemModels";
 import { getProductItemDisplay } from "@utils/productDisplayUtils";
 import { billingToItemInterval } from "@utils/productV2Utils/productItemUtils/itemIntervalUtils";
@@ -18,7 +19,7 @@ export const basePriceToProductItem = ({
 	basePrice,
 }: {
 	ctx: SharedContext;
-	basePrice: BasePrice | BasePriceParams;
+	basePrice: BasePrice | BasePriceParams | CatalogBasePriceParams;
 }): ProductItem => {
 	const basePriceDisplay =
 		"display" in basePrice ? basePrice.display : undefined;
@@ -30,16 +31,18 @@ export const basePriceToProductItem = ({
 	const priceId =
 		"price_id" in basePrice ? (basePrice.price_id ?? undefined) : undefined;
 	// A base price is fixed, so an adopted id belongs in the v1 slot it bills
-	// from. The internal field stays as the sync flows' way in.
-	const statedStripePriceId =
-		"processors" in basePrice
-			? basePrice.processors?.stripe?.price_id
+	// from. The internal field stays as the sync flows' way in. Presence is the
+	// signal: an omitted `stripe` states nothing, an explicit null unlinks.
+	const statedStripe =
+		"processors" in basePrice ? basePrice.processors?.stripe : undefined;
+	const internalStripePriceId =
+		"stripe_price_id" in basePrice
+			? (basePrice.stripe_price_id ?? undefined)
 			: undefined;
 	const stripePriceId =
-		statedStripePriceId ??
-		("stripe_price_id" in basePrice
-			? (basePrice.stripe_price_id ?? undefined)
-			: undefined);
+		statedStripe === undefined
+			? internalStripePriceId
+			: (statedStripe?.price_id ?? null);
 
 	const additionalCurrencies =
 		"additional_currencies" in basePrice

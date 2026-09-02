@@ -199,9 +199,19 @@ export const intentToUpsertProductPlan = ({
 		planParams.propagate !== undefined
 			? { propagate: planParams.propagate }
 			: {}),
-		...(source === "direct" && planParams.processors?.revenuecat !== undefined
+		// Mappings are keyed by public plan id, and a variant is its own plan — so
+		// every source that names a concrete plan writes its own row. The version
+		// fan-out lanes are excluded: they restate the addressed row's plan id.
+		...((source === "direct" ||
+			source === "variant_link" ||
+			source === "variant_propagation") &&
+		planParams.processors?.revenuecat !== undefined
 			? { revenuecatProcessor: planParams.processors.revenuecat }
 			: {}),
+		// Every lane that carries the null needs the flag: the Stripe fan-out and
+		// the variant settings patch both restate `{ stripe: null }` on their own
+		// rows, and a sibling left without it gets a replacement product minted.
+		...(planParams.processors?.stripe === null ? { stripeUnlinked: true } : {}),
 		...(planParams.create_in_stripe !== undefined
 			? { createInStripe: planParams.create_in_stripe }
 			: {}),

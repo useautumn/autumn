@@ -2,8 +2,8 @@ import { expect, test } from "bun:test";
 import {
 	ApiFeatureType,
 	type ApiPlanV1,
-	BillingInterval,
 	BILLING_CONTROL_KEYS,
+	BillingInterval,
 	diffPlanV1,
 	diffPlanV1PreviewFields,
 	PlanPreviousAttributesV0Schema,
@@ -277,9 +277,7 @@ const createdLanes = {
 			quantity: 100,
 		},
 	],
-	spend_limits: [
-		{ feature_id: "messages", enabled: true, overage_limit: 50 },
-	],
+	spend_limits: [{ feature_id: "messages", enabled: true, overage_limit: 50 }],
 	usage_limits: [
 		{
 			feature_id: "messages",
@@ -349,3 +347,34 @@ for (const key of BILLING_CONTROL_KEYS) {
 		).not.toThrow();
 	});
 }
+
+// Adding the first mapping to a plan that had none: the diff emits
+// `processors: null` (previous was undefined) so the key survives JSON, and the
+// picked schema has to accept that null the way free_trial already does.
+// Red (before): PlanPreviousAttributesV0Schema.parse throws invalid_type,
+// so handlePreviewUpdateCatalogV2 never returns for a first-time mapping.
+test("processors: first mapping on an unmapped plan parses", () => {
+	const diff = diffPlanV1PreviewFields({
+		from: plan({}),
+		to: plan({ processors: { stripe: { product_id: "prod_first" } } }),
+	});
+
+	expect(diff.previous_attributes).toEqual({ processors: null });
+	expect(() =>
+		PlanPreviousAttributesV0Schema.parse(diff.previous_attributes),
+	).not.toThrow();
+});
+
+test("processors: re-mapping keeps the previous mapping", () => {
+	const diff = diffPlanV1PreviewFields({
+		from: plan({ processors: { stripe: { product_id: "prod_old" } } }),
+		to: plan({ processors: { stripe: { product_id: "prod_new" } } }),
+	});
+
+	expect(diff.previous_attributes).toEqual({
+		processors: { stripe: { product_id: "prod_old" } },
+	});
+	expect(() =>
+		PlanPreviousAttributesV0Schema.parse(diff.previous_attributes),
+	).not.toThrow();
+});

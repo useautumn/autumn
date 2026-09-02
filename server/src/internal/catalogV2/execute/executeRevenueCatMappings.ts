@@ -7,7 +7,7 @@ import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
-type StatedMapping = {
+type StatedRevenueCatMapping = {
 	planId: string;
 	processor: ApiRevenueCatPlanProcessor | null;
 };
@@ -16,11 +16,11 @@ type StatedMapping = {
  * RevenueCat mappings are plan-wide — the table has no version column — so only
  * the addressed row writes and version siblings are ignored.
  */
-const statedMappings = ({
+const statedRevenueCatMappings = ({
 	updateCatalogPlan,
 }: {
 	updateCatalogPlan: UpdateCatalogPlan;
-}): StatedMapping[] =>
+}): StatedRevenueCatMapping[] =>
 	updateCatalogPlan.upsertProducts.flatMap((upsert) => {
 		const processor = upsert.revenuecatProcessor;
 		if (processor === undefined) return [];
@@ -28,16 +28,40 @@ const statedMappings = ({
 	});
 
 /**
+ * Plan ids whose existing mapping row this request owns. `executeRenamePlans`
+ * moves `autumn_product_id` along with the plan, but this check runs BEFORE it,
+ * so a plan renaming itself still finds its row under the old id — counting
+ * that as someone else's claim would 400 a plan for restating its own mapping.
+ */
+const ownedPlanIds = ({
+	stated,
+	updateCatalogPlan,
+}: {
+	stated: StatedRevenueCatMapping[];
+	updateCatalogPlan: UpdateCatalogPlan;
+}): Set<string> => {
+	const owned = new Set(stated.map((entry) => entry.planId));
+	for (const { planId, toId } of updateCatalogPlan.renamePlans) {
+		if (owned.has(toId)) owned.add(planId);
+	}
+	return owned;
+};
+
+/**
  * A purchase resolves RC id → plan by scanning every mapping, so an id claimed
  * twice would attach whichever row the query happened to return first.
+ *
+ * Callable on its own: execute runs it before the first catalog write, so a
+ * collision cannot 400 a request that has already renamed a plan.
  */
-const assertRevenueCatIdsUnclaimed = async ({
+export const assertRevenueCatIdsUnclaimed = async ({
 	ctx,
-	stated,
+	updateCatalogPlan,
 }: {
 	ctx: AutumnContext;
-	stated: StatedMapping[];
+	updateCatalogPlan: UpdateCatalogPlan;
 }) => {
+	const stated = statedRevenueCatMappings({ updateCatalogPlan });
 	const claimedHere = new Map<string, string>();
 	for (const { planId, processor } of stated) {
 		for (const { product_id } of processor?.products ?? []) {
@@ -54,7 +78,7 @@ const assertRevenueCatIdsUnclaimed = async ({
 	}
 	if (claimedHere.size === 0) return;
 
-	const statedPlanIds = new Set(stated.map((entry) => entry.planId));
+	const owned = ownedPlanIds({ stated, updateCatalogPlan });
 	const existing = await RCMappingService.getAll({
 		db: ctx.db,
 		orgId: ctx.org.id,
@@ -63,7 +87,7 @@ const assertRevenueCatIdsUnclaimed = async ({
 
 	for (const row of existing) {
 		// A plan restating its own ids is the normal case, not a collision.
-		if (statedPlanIds.has(row.autumn_product_id)) continue;
+		if (owned.has(row.autumn_product_id)) continue;
 		for (const productId of row.revenuecat_product_ids) {
 			const claimant = claimedHere.get(productId);
 			if (!claimant) continue;
@@ -76,7 +100,10 @@ const assertRevenueCatIdsUnclaimed = async ({
 	}
 };
 
-/** Stated `processors.revenuecat` → the mappings table. Omitted keeps, null clears. */
+/**
+ * Stated `processors.revenuecat` → the mappings table. Omitted keeps, null clears.
+ * Collisions were already rejected before any write landed, so this only writes.
+ */
 export const executeRevenueCatMappings = async ({
 	ctx,
 	updateCatalogPlan,
@@ -84,10 +111,8 @@ export const executeRevenueCatMappings = async ({
 	ctx: AutumnContext;
 	updateCatalogPlan: UpdateCatalogPlan;
 }) => {
-	const stated = statedMappings({ updateCatalogPlan });
+	const stated = statedRevenueCatMappings({ updateCatalogPlan });
 	if (stated.length === 0) return;
-
-	await assertRevenueCatIdsUnclaimed({ ctx, stated });
 
 	for (const { planId, processor } of stated) {
 		const products = processor?.products ?? [];

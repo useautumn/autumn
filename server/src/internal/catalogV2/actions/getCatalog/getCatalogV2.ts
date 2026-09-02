@@ -42,7 +42,9 @@ export const getCatalogV2 = async ({
 	});
 
 	// One read for the whole catalog: RC mappings live in their own table, keyed
-	// by plan id with no version dimension.
+	// by plan id with no version dimension. Variants are their own products with
+	// their own plan ids, so their rows are in here too — hand the whole map down
+	// rather than a single row, or a variant's mapping can never be read back.
 	const revenuecatMappings = await RCMappingService.getAll({
 		db: ctx.db,
 		orgId: ctx.org.id,
@@ -57,7 +59,7 @@ export const getCatalogV2 = async ({
 			getPlanResponse({
 				ctx,
 				product: pruneArchivedVariants(product),
-				revenuecatMapping: revenuecatByPlanId.get(product.id),
+				revenuecatMappings: revenuecatByPlanId,
 				features: ctx.features,
 				currency: ctx.org.default_currency || undefined,
 				expandLicensePlans: true,
