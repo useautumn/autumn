@@ -205,6 +205,12 @@ const appliedPlan = ({
 	};
 };
 
+const scheduledVersionStarts = [
+	Date.UTC(2026, 7, 24, 12),
+	Date.UTC(2027, 7, 24, 12),
+	Date.UTC(2028, 7, 24, 12),
+];
+
 const cases: EvalCase[] = [
 	{
 		name: "attach: plan with day trial",
@@ -640,6 +646,45 @@ const cases: EvalCase[] = [
 							plan_id: "scale",
 						},
 					],
+				},
+			],
+		},
+	},
+	{
+		name: "schedule: existing phases survive a targeted version change",
+		input: {
+			context: versionedPlanContext(),
+			currentRequest: {
+				phases: [1, 2, 3].map((version, index) => ({
+					plans: [{ plan_id: "generation", version }],
+					starts_at: scheduledVersionStarts[index],
+				})),
+			},
+			prompt:
+				"In the existing schedule, move only phase 2 to version 3 but keep its $20 monthly price. Leave phases 1 and 3 unchanged.",
+			tool: "create_schedule",
+		},
+		expected: {
+			phases: [
+				{
+					plans: [{ plan_id: "generation", version: 1 }],
+					starts_at: scheduledVersionStarts[0],
+				},
+				{
+					plans: [
+						{
+							customize: {
+								price: { amount: 20, interval: "month" },
+							},
+							plan_id: "generation",
+							version: 3,
+						},
+					],
+					starts_at: scheduledVersionStarts[1],
+				},
+				{
+					plans: [{ plan_id: "generation", version: 3 }],
+					starts_at: scheduledVersionStarts[2],
 				},
 			],
 		},

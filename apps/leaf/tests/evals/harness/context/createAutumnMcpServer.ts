@@ -2,6 +2,8 @@ import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { Socket } from "node:net";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { autumnMcpInstructions } from "@autumn/agent-docs/agent";
+import { withAgentDocResources } from "@autumn/agent-docs/mcp";
 import { MCPServer } from "@mastra/mcp";
 import { setAnalyticsSink } from "../../../../../../packages/mcp/src/analytics/analyticsSink.js";
 import { createAutumnMcpResources } from "../../../../../../packages/mcp/src/resources/index.js";
@@ -22,15 +24,15 @@ const closeServer = ({
 		for (const socket of sockets) socket.destroy();
 	});
 
-// Serve the SAME doc resources as the real server so the eval agent gets prod's
-// guidance (e.g. schedules.md scheduling rules) — keeps evals faithful. Built with
-// a runtime baseUrl since the bundled eval has no import.meta.url; cwd is apps/leaf
-// when evals run via run.sh / bun.
-const evalResources = createAutumnMcpResources({
-	baseUrl: pathToFileURL(
-		resolve(process.cwd(), "../../packages/mcp/src/resources/index.ts"),
-	).href,
-});
+// Serve the same generated agent-doc resources as production. Built with a
+// runtime baseUrl because the bundled eval has no import.meta.url.
+const evalResources = withAgentDocResources(
+	createAutumnMcpResources({
+		baseUrl: pathToFileURL(
+			resolve(process.cwd(), "../../packages/mcp/src/resources/index.ts"),
+		).href,
+	}),
+);
 
 const createEvalMcpServer = () =>
 	new MCPServer({
@@ -38,8 +40,7 @@ const createEvalMcpServer = () =>
 		name: "Autumn MCP Eval",
 		version: "0.0.1",
 		description: "Operate on Autumn customers, plans, and billing.",
-		instructions:
-			"Use preview tools before billing writes. Write tools are destructive; obtain approval via your client's approval mechanism before calling one.",
+		instructions: autumnMcpInstructions,
 		resources: evalResources,
 		tools: createRawAutumnOperationTools(),
 	});

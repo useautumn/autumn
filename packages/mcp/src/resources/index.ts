@@ -6,6 +6,4 @@ export * from "../resources-v2/index.js";
 // "./plans/querying-plans.md",
 // "./plans/creating-plans.md",
 // "./customers/querying-customers.md",
-// "./billing/billing-safety.md",
-// "./billing/schedules.md",
 // "./balances/standalone-balances.md",

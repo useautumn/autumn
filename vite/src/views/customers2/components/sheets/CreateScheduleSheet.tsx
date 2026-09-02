@@ -131,6 +131,7 @@ export function cusProductToPlan({
 	return {
 		...EMPTY_SCHEDULE_PLAN,
 		productId: cusProduct.product_id,
+		version: cusProduct.product.version,
 		prepaidOptions,
 		items,
 		isCustom,
