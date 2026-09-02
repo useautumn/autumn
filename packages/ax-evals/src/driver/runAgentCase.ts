@@ -8,10 +8,7 @@ import {
 import type { TurnSource } from "../simulator/types/turnSource.ts";
 import { buildCaseEnv } from "./caseEnv.ts";
 import { collectAgentEvent } from "./collectAgentEvent.ts";
-import {
-	isOpenRouterModel,
-	openRouterAgentEnv,
-} from "./openRouterRouting.ts";
+import { isOpenRouterModel, openRouterAgentEnv } from "./openRouterRouting.ts";
 import { createLiveChat, type LiveChat } from "./renderLiveChat.ts";
 import { renderRunFooter, renderTurnBlock } from "./renderTurnBlock.ts";
 import { shortText, trace } from "./trace.ts";

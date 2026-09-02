@@ -30,6 +30,9 @@ export const completeChat = async ({
 			body: JSON.stringify({
 				model,
 				messages,
+				// Measurement apparatus (user sim, judge), not the agent under
+				// test — greedy decoding removes one source of run variance.
+				temperature: 0,
 				...(jsonSchema && {
 					response_format: {
 						type: "json_schema",

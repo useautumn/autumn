@@ -33,15 +33,35 @@ const toToolUse = ({
 	if (item.type === "command_execution") {
 		const skillName = SKILL_READ.exec(item.command ?? "")?.[1];
 		if (skillName) {
-			return { name: "Skill", input: { skill: `autumn:${skillName}` }, turn, id: item.id };
+			return {
+				name: "Skill",
+				input: { skill: `autumn:${skillName}` },
+				turn,
+				id: item.id,
+			};
 		}
-		return { name: "Bash", input: { command: item.command ?? "" }, turn, id: item.id };
+		return {
+			name: "Bash",
+			input: { command: item.command ?? "" },
+			turn,
+			id: item.id,
+		};
 	}
 	if (item.type === "web_search") {
-		return { name: "WebSearch", input: { query: item.text ?? "" }, turn, id: item.id };
+		return {
+			name: "WebSearch",
+			input: { query: item.text ?? "" },
+			turn,
+			id: item.id,
+		};
 	}
 	if (item.type === "mcp_tool_call") {
-		return { name: "McpTool", input: { call: item.text ?? "" }, turn, id: item.id };
+		return {
+			name: "McpTool",
+			input: { call: item.text ?? "" },
+			turn,
+			id: item.id,
+		};
 	}
 	return undefined;
 };
@@ -56,7 +76,11 @@ export const collectCodexEvent = ({
 	event: CodexEvent;
 	result: AgentRunResult;
 	label: string;
-}): { startedTool?: ToolUse; finishedTool?: ToolUse; fileTools?: ToolUse[] } => {
+}): {
+	startedTool?: ToolUse;
+	finishedTool?: ToolUse;
+	fileTools?: ToolUse[];
+} => {
 	const item = event.item;
 
 	if (event.type === "item.started" && item) {
@@ -68,7 +92,10 @@ export const collectCodexEvent = ({
 			if (!result.loadedSkills.includes(skillId))
 				result.loadedSkills.push(skillId);
 		}
-		trace(label, `tool: ${tool.name} ${shortText(String(tool.input.command ?? tool.input.skill ?? ""), 60)}`);
+		trace(
+			label,
+			`tool: ${tool.name} ${shortText(String(tool.input.command ?? tool.input.skill ?? ""), 60)}`,
+		);
 		return { startedTool: tool };
 	}
 
@@ -88,7 +115,11 @@ export const collectCodexEvent = ({
 			result.toolUses.push(...fileTools);
 			return { fileTools };
 		}
-		if (item.type === "command_execution" || item.type === "web_search" || item.type === "mcp_tool_call") {
+		if (
+			item.type === "command_execution" ||
+			item.type === "web_search" ||
+			item.type === "mcp_tool_call"
+		) {
 			const tool = result.toolUses.find(
 				(candidate) => candidate.id !== undefined && candidate.id === item.id,
 			);

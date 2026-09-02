@@ -1,14 +1,18 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
-import { AGENT_MODEL, DEFAULT_MAX_TURNS, DEFAULT_TIMEOUT_MS } from "../axConstants.ts";
+import {
+	AGENT_MODEL,
+	DEFAULT_MAX_TURNS,
+	DEFAULT_TIMEOUT_MS,
+} from "../axConstants.ts";
 import type { TurnSource } from "../simulator/types/turnSource.ts";
 import { buildCaseEnv } from "./caseEnv.ts";
 import { type CodexEvent, collectCodexEvent } from "./collectCodexEvent.ts";
 import { createLiveChat, type LiveChat } from "./renderLiveChat.ts";
 import { renderRunFooter, renderTurnBlock } from "./renderTurnBlock.ts";
+import type { CompletedTurn } from "./runAgentCase.ts";
 import { shortText, trace } from "./trace.ts";
 import type { AgentRunResult } from "./types/agentRunResult.ts";
-import type { CompletedTurn } from "./runAgentCase.ts";
 
 /** One `codex exec` process = one user turn; the thread id from turn 1 is
  * resumed for every later turn so the conversation continues. */

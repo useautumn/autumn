@@ -78,6 +78,35 @@ export const config = {
 		},
 	}),
 
+	/** prepaid purchases live only on add-on plans — a prepaid-priced item on a
+	 * base plan means packs were wrongly duplicated into the subscriptions */
+	noPrepaidOnBasePlans: (): Expectation => ({
+		name: "base plans carry no prepaid items",
+		kind: "config",
+		score: (output) => {
+			const polluted = output.config.plans.filter(
+				(plan) =>
+					!plan.add_on &&
+					(plan.items ?? []).some(
+						(item) => item.price?.billing_method === "prepaid",
+					),
+			);
+			return {
+				name: "base plans carry no prepaid items",
+				score: output.config.plans.length > 0 && polluted.length === 0 ? 1 : 0,
+				metadata:
+					output.config.plans.length === 0
+						? { why: "the config has no plans" }
+						: polluted.length === 0
+							? undefined
+							: {
+									why: "prepaid packs were modeled onto base plans instead of a separate add-on",
+									pollutedPlanIds: polluted.map((plan) => plan.id),
+								},
+			};
+		},
+	}),
+
 	/** exactly n plans were modeled */
 	planCount: (count: number): Expectation => ({
 		name: `modeled exactly ${count} plans`,
