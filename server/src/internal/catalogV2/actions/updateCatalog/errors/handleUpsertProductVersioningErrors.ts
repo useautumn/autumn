@@ -120,7 +120,7 @@ export const handleUpsertProductVersioningErrors = ({
 	const unpinnedPlanIds = new Set<string>();
 	const mintedVersionsByPlanId = new Map<string, number>();
 
-	for (const planParams of params.plans) {
+	for (const planParams of params.plans ?? []) {
 		if (planParams.versioning === "new_version") {
 			if (
 				planParams.version !== undefined ||

@@ -189,7 +189,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 	};
 
 	const productContexts: MultiAttachProductContext[] = await Promise.all(
-		params.plans.map(async (plan) => {
+		(params.plans ?? []).map(async (plan) => {
 			const scopedFullCustomer = await getScopedFullCustomer(plan.entity_id);
 
 			const { fullProduct, customPrices, customEnts } =
@@ -369,7 +369,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		featureQuantities: productContexts.flatMap(
 			(productContext) => productContext.featureQuantities,
 		),
-		adjustableFeatureQuantities: params.plans.flatMap(
+		adjustableFeatureQuantities: (params.plans ?? []).flatMap(
 			(plan) =>
 				plan.feature_quantities
 					?.filter((featureQuantity) => featureQuantity.adjustable === true)

@@ -66,7 +66,7 @@ export const matchingDraftPlanParams = ({
 	upsertProductPlan: UpsertProductPlan;
 	params: UpdateCatalogParams;
 }): UpdateCatalogPlanParams | undefined =>
-	params.plans.find(
+	(params.plans ?? []).find(
 		(planParams) =>
 			planParams.migration?.draft &&
 			upsertMatchesDraftEntry({ upsertProductPlan, planParams }),

@@ -15,7 +15,7 @@ export const statedInternalIds = ({
 	params: UpdateCatalogParams;
 }): string[] => [
 	...new Set(
-		params.plans.flatMap((plan) => [
+		(params.plans ?? []).flatMap((plan) => [
 			...(plan.internal_id ? [plan.internal_id] : []),
 			...(plan.variants ?? []).flatMap((variant) =>
 				variant.internal_id ? [variant.internal_id] : [],

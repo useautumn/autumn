@@ -8,7 +8,7 @@ const statedFeatureIds = ({
 	params: UpdateCatalogParams;
 }): Set<string> =>
 	new Set([
-		...params.features.map((entry) => entry.feature_id),
+		...(params.features ?? []).map((entry) => entry.feature_id),
 		...params.remove_features.map((entry) => entry.feature_id),
 		...params.skip_feature_ids,
 	]);
@@ -25,7 +25,8 @@ const assertNotAWipe = ({
 	params: UpdateCatalogParams;
 	absentFeatureIds: string[];
 }): void => {
-	if (params.features.length > 0 || absentFeatureIds.length === 0) return;
+	if ((params.features ?? []).length > 0 || absentFeatureIds.length === 0)
+		return;
 	throw new RecaseError({
 		code: ErrCode.InvalidRequest,
 		message: `skip_deletions: false with no features would remove all ${absentFeatureIds.length} features. State the features you want, or pass them in skip_feature_ids.`,
@@ -46,6 +47,9 @@ export const resolveAbsenteeFeatureIds = ({
 	params: UpdateCatalogParams;
 }): string[] => {
 	if (params.skip_deletions !== false) return [];
+	// A payload that never mentioned features has no opinion about them — the
+	// rule the legacy path already follows for rewards and referral programs.
+	if (params.features === undefined) return [];
 
 	const stated = statedFeatureIds({ params });
 	const absent = ctx.features

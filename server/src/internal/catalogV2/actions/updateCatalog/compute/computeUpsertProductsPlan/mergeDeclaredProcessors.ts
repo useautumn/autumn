@@ -19,7 +19,7 @@ const currentPlanId = ({
 	entry,
 	internalIdRefs,
 }: {
-	entry: UpdateCatalogParams["plans"][number];
+	entry: NonNullable<UpdateCatalogParams["plans"]>[number];
 	internalIdRefs: InternalIdRefs;
 }): string =>
 	(entry.internal_id
@@ -99,7 +99,7 @@ const assertRevenueCatMappingsAgree = ({
 	plans,
 	internalIdRefs,
 }: {
-	plans: UpdateCatalogParams["plans"];
+	plans: NonNullable<UpdateCatalogParams["plans"]>;
 	internalIdRefs: InternalIdRefs;
 }): void => {
 	const statedByPlanId = new Map<string, ApiRevenueCatPlanProcessor | null>();
@@ -120,7 +120,7 @@ const indexStatedStripe = ({
 	plans,
 	internalIdRefs,
 }: {
-	plans: UpdateCatalogParams["plans"];
+	plans: NonNullable<UpdateCatalogParams["plans"]>;
 	internalIdRefs: InternalIdRefs;
 }): StatedStripeIndex => {
 	const byPlanId = new Map<string, StatedStripe>();
@@ -163,7 +163,7 @@ const indexBasePlanIds = ({
 	plans,
 	productStatesContext,
 }: {
-	plans: UpdateCatalogParams["plans"];
+	plans: NonNullable<UpdateCatalogParams["plans"]>;
 	productStatesContext: ProductStatesContext;
 }): Map<string, string> => {
 	const basePlanIdByPlanId = new Map<string, string>();
@@ -251,10 +251,10 @@ export const mergeDeclaredProcessors = ({
 	productStatesContext: ProductStatesContext;
 	internalIdRefs: InternalIdRefs;
 }): ProductUpsertIntent[] => {
-	assertRevenueCatMappingsAgree({ plans: params.plans, internalIdRefs });
+	assertRevenueCatMappingsAgree({ plans: params.plans ?? [], internalIdRefs });
 
 	const statedStripe = indexStatedStripe({
-		plans: params.plans,
+		plans: params.plans ?? [],
 		internalIdRefs,
 	});
 	if (
@@ -265,7 +265,7 @@ export const mergeDeclaredProcessors = ({
 	}
 
 	const basePlanIdByPlanId = indexBasePlanIds({
-		plans: params.plans,
+		plans: params.plans ?? [],
 		productStatesContext,
 	});
 

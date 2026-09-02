@@ -44,7 +44,7 @@ export const computeUpsertProductsPlan = ({
 		internalIdRefs,
 	});
 	const declaredVariants = indexDeclaredVariants({
-		plans: params.plans,
+		plans: params.plans ?? [],
 		productStatesContext,
 	});
 	const claimedProductKeys = claimProductKeys({ intents: pendingIntents });

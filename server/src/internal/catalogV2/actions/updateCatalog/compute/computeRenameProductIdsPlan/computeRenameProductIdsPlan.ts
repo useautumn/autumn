@@ -43,7 +43,7 @@ const renameFromInternalId = ({
 	productStatesContext,
 	aliases,
 }: {
-	planParams: UpdateCatalogParams["plans"][number];
+	planParams: NonNullable<UpdateCatalogParams["plans"]>[number];
 	internalIdRefs: InternalIdRefs;
 	productStatesContext: ProductStatesContext;
 	aliases?: Record<string, string>;
@@ -70,7 +70,7 @@ export const computeRenameProductIdsPlan = ({
 	internalIdRefs: InternalIdRefs;
 	aliases?: Record<string, string>;
 }): RenameProductPlan[] =>
-	params.plans.flatMap((planParams) => [
+	(params.plans ?? []).flatMap((planParams) => [
 		...renameFromInternalId({
 			planParams,
 			internalIdRefs,

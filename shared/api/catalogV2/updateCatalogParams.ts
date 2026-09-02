@@ -51,12 +51,15 @@ export type RemoveCatalogPlanParams = z.infer<
 >;
 
 export const UpdateCatalogParamsSchema = z.object({
-	features: z.array(UpdateCatalogFeatureParamsSchema).optional().default([]),
+	// No .default([]) on the desired-state collections: a default would erase the
+	// difference between "I manage features and there are none" and "I never
+	// mentioned features", which under skip_deletions:false mean opposite things.
+	features: z.array(UpdateCatalogFeatureParamsSchema).optional(),
 	remove_features: z
 		.array(RemoveCatalogFeatureParamsSchema)
 		.optional()
 		.default([]),
-	plans: z.array(UpdateCatalogPlanParamsSchema).optional().default([]),
+	plans: z.array(UpdateCatalogPlanParamsSchema).optional(),
 	remove_plans: z.array(RemoveCatalogPlanParamsSchema).optional().default([]),
 
 	// rewards: z.array(CreateRewardParamsSchema).optional().meta({

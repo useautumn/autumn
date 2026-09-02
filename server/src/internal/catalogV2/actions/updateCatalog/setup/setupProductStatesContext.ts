@@ -28,7 +28,7 @@ const payloadPlanIds = ({
 	...new Set([
 		// A renamed row's current id is only known through its internal_id.
 		...[...internalIdRefs.values()].map((ref) => ref.planId),
-		...params.plans.flatMap((entry) => [
+		...(params.plans ?? []).flatMap((entry) => [
 			entry.plan_id,
 			...(entry.new_plan_id ? [entry.new_plan_id] : []),
 			...(typeof entry.base_variant_id === "string"

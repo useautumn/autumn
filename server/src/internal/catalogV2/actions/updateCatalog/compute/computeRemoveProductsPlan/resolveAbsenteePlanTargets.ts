@@ -9,7 +9,7 @@ const statedPlanIds = ({
 	params: UpdateCatalogParams;
 }): Set<string> =>
 	new Set([
-		...params.plans.flatMap((plan) => [
+		...(params.plans ?? []).flatMap((plan) => [
 			plan.plan_id,
 			...(plan.new_plan_id ? [plan.new_plan_id] : []),
 			...(plan.variants ?? []).flatMap((variant) => [
@@ -37,7 +37,7 @@ const assertNotAWipe = ({
 	params: UpdateCatalogParams;
 	absentPlanIds: string[];
 }): void => {
-	if (params.plans.length > 0 || absentPlanIds.length === 0) return;
+	if ((params.plans ?? []).length > 0 || absentPlanIds.length === 0) return;
 	throw new RecaseError({
 		code: ErrCode.InvalidRequest,
 		message: `skip_deletions: false with no plans would remove all ${absentPlanIds.length} plans in the catalog. State the plans you want, or pass them in skip_plan_ids.`,
@@ -58,6 +58,9 @@ export const resolveAbsenteePlanTargets = ({
 	catalogContext: UpdateCatalogContext;
 }): RemovePlanTarget[] => {
 	if (params.skip_deletions !== false) return [];
+	// A payload that never mentioned plans has no opinion about them — the rule
+	// the legacy path already follows for rewards and referral programs.
+	if (params.plans === undefined) return [];
 
 	const stated = statedPlanIds({ params });
 	const absent = Object.entries(

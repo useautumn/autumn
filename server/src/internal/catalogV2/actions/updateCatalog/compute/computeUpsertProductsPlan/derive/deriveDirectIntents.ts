@@ -20,7 +20,7 @@ const groupPlanParamsByPlanId = ({
 	planParamsList,
 	internalIdRefs,
 }: {
-	planParamsList: UpdateCatalogParams["plans"];
+	planParamsList: NonNullable<UpdateCatalogParams["plans"]>;
 	internalIdRefs: InternalIdRefs;
 }): Map<string, UpdateCatalogPlanParams[]> => {
 	const byPlanId = new Map<string, UpdateCatalogPlanParams[]>();
@@ -159,7 +159,7 @@ export const deriveDirectIntents = ({
 }): ProductUpsertIntent[] =>
 	[
 		...groupPlanParamsByPlanId({
-			planParamsList: params.plans,
+			planParamsList: params.plans ?? [],
 			internalIdRefs,
 		}).entries(),
 	]

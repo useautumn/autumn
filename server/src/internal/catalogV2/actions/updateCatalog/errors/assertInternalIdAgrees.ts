@@ -18,7 +18,7 @@ export const assertInternalIdAgrees = ({
 	productStatesContext: ProductStatesContext;
 	internalIdRefs: InternalIdRefs;
 }): void => {
-	for (const planParams of params.plans) {
+	for (const planParams of params.plans ?? []) {
 		const { internal_id: internalId } = planParams;
 		if (!internalId) continue;
 
