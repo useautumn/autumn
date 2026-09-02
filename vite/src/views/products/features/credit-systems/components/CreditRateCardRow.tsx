@@ -89,10 +89,10 @@ export function CreditRateCardRow({
 				<IconButton
 					aria-label="Remove rate card item"
 					type="button"
-					variant="skeleton"
+					variant="secondary"
 					iconOrientation="center"
-					className="shrink-0 text-tertiary-foreground hover:text-red-500"
-					icon={<TrashIcon size={12} />}
+					className="h-input w-10 shrink-0 rounded-lg text-tertiary-foreground hover:text-red-500"
+					icon={<TrashIcon size={14} />}
 					onClick={onRemove}
 				/>
 			</div>
