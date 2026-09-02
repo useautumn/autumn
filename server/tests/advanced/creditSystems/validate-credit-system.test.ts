@@ -96,6 +96,18 @@ describe("validateCreditSystemSchemaReferences — cross-feature restrictions", 
 		).toThrow(/cannot reference another credit system/);
 	});
 
+	test("rejects referencing a boolean feature", () => {
+		expect(() =>
+			validateCreditSystemSchemaReferences({
+				config: {
+					schema: [{ metered_feature_id: "dashboard", credit_amount: 1 } as any],
+					usage_type: FeatureUsageType.Single,
+				},
+				allFeatures: [makeFeature("dashboard", FeatureType.Boolean)],
+			}),
+		).toThrow(/cannot reference boolean feature/);
+	});
+
 	test("self-reference (id matches selfFeatureId) is tolerated", () => {
 		expect(() =>
 			validateCreditSystemSchemaReferences({

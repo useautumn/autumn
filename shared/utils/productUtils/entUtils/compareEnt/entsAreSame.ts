@@ -30,6 +30,9 @@ const rolloversAreSame = ({
 	);
 };
 
+/** Entries are keyed by metered_feature_id (rate lookup is a find over the
+ * array), so ordering is not semantic — compare as a keyed set. Tiers ARE
+ * ordered (usage boundaries), so they stay index-compared. */
 const creditSchemasAreSame = ({
 	schema1,
 	schema2,
@@ -41,10 +44,12 @@ const creditSchemasAreSame = ({
 	if (!schema1 || !schema2) return false;
 	if (schema1.length !== schema2.length) return false;
 
-	return schema1.every((item1, index) => {
-		const item2 = schema2[index];
+	return schema1.every((item1) => {
+		const item2 = schema2.find(
+			(candidate) => candidate.metered_feature_id === item1.metered_feature_id,
+		);
+		if (!item2) return false;
 		return (
-			item1.metered_feature_id === item2.metered_feature_id &&
 			(item1.feature_amount ?? 1) == (item2.feature_amount ?? 1) &&
 			item1.credit_amount == item2.credit_amount &&
 			(item1.tier_behavior ?? null) === (item2.tier_behavior ?? null) &&
