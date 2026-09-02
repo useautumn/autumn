@@ -1,4 +1,8 @@
-import type { CreditSchemaItem, CreditSystemConfig } from "@autumn/shared";
+import {
+	type CreditSchemaItem,
+	type CreditSystemConfig,
+	creditDimensionRulesEqual,
+} from "@autumn/shared";
 
 const creditSchemaItemsEqual = ({
 	left,
@@ -9,6 +13,7 @@ const creditSchemaItemsEqual = ({
 }): boolean => {
 	if ((left.feature_amount ?? 1) !== (right.feature_amount ?? 1)) return false;
 	if (left.tier_behavior !== right.tier_behavior) return false;
+	if (!creditDimensionRulesEqual({ left, right })) return false;
 
 	if (
 		left.tier_behavior !== "graduated" ||

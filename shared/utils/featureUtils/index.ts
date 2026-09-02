@@ -4,15 +4,15 @@ import { isAnyCreditSystem } from "@utils/featureUtils/classifyFeature/isAnyCred
 import { isConsumableFeature } from "@utils/featureUtils/classifyFeature/isConsumableFeature";
 import { findFeatureById } from "@utils/featureUtils/findFeatureUtils";
 
+export { hasCreditDimensionRules } from "@utils/featureUtils/classifyFeature/hasCreditDimensionRules";
+export { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
+export { isAnyCreditSystem } from "@utils/featureUtils/classifyFeature/isAnyCreditSystem";
 export * from "./apiFeatureToDbFeature";
-
 export * from "./convertFeatureUtils";
+export * from "./creditDimensions/creditDimensionRulesEqual";
 export * from "./creditSystemUtils";
 export * from "./findFeatureUtils";
 export * from "./sortFeatures";
-
-export { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
-export { isAnyCreditSystem } from "@utils/featureUtils/classifyFeature/isAnyCreditSystem";
 
 export const featureUtils = {
 	isConsumable: isConsumableFeature,

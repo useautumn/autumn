@@ -1,5 +1,70 @@
-import type { Feature } from "../../../compose/models/index.js";
+import type {
+	CreditDimension,
+	CreditMultiplier,
+	CreditSchemaItem,
+	Feature,
+} from "../../../compose/models/index.js";
 import type { ApiFeature } from "../../api/types/feature.js";
+
+type ApiCreditSchemaItem = NonNullable<ApiFeature["credit_schema"]>[number];
+type ApiCreditDimension = NonNullable<
+	ApiCreditSchemaItem["dimensions"]
+>[string];
+
+const matchToApi = (
+	match: CreditDimension["match"],
+): ApiCreditDimension["match"] =>
+	Object.fromEntries(
+		Object.entries(match).map(([key, value]) => [key, String(value)]),
+	);
+
+function creditDimensionToApi(dimension: CreditDimension): ApiCreditDimension {
+	const base = {
+		match: matchToApi(dimension.match),
+		...(dimension.priority !== undefined && { priority: dimension.priority }),
+	};
+
+	if (dimension.tierBehavior === "graduated") {
+		return {
+			...base,
+			tier_behavior: "graduated" as const,
+			tiers: dimension.tiers.map((tier) => ({
+				to: tier.to,
+				credit_cost: tier.creditCost,
+			})),
+		};
+	}
+
+	return { ...base, credit_cost: dimension.creditCost };
+}
+
+function creditMultiplierToApi(
+	multiplier: CreditMultiplier,
+): NonNullable<ApiCreditSchemaItem["multipliers"]>[string] {
+	return { ...multiplier, match: matchToApi(multiplier.match) };
+}
+
+function creditDimensionRulesToApi(
+	creditSchemaItem: Pick<CreditSchemaItem, "dimensions" | "multipliers">,
+) {
+	return {
+		...(creditSchemaItem.dimensions !== undefined && {
+			dimensions: Object.fromEntries(
+				Object.entries(creditSchemaItem.dimensions).map(([name, dimension]) => [
+					name,
+					creditDimensionToApi(dimension),
+				]),
+			),
+		}),
+		...(creditSchemaItem.multipliers !== undefined && {
+			multipliers: Object.fromEntries(
+				Object.entries(creditSchemaItem.multipliers).map(
+					([name, multiplier]) => [name, creditMultiplierToApi(multiplier)],
+				),
+			),
+		}),
+	};
+}
 
 export interface ApiFeatureParams {
 	id: string;
@@ -9,11 +74,14 @@ export interface ApiFeatureParams {
 	archived?: boolean;
 	event_names?: string[];
 	credit_schema?: ApiFeature["credit_schema"];
-	model_markups?: Record<string, {
-		markup?: number;
-		input_cost?: number;
-		output_cost?: number;
-	}>;
+	model_markups?: Record<
+		string,
+		{
+			markup?: number;
+			input_cost?: number;
+			output_cost?: number;
+		}
+	>;
 	default_markup?: number;
 	provider_markups?: Record<string, { markup: number }>;
 }
@@ -44,6 +112,7 @@ export function transformFeatureToApi(feature: Feature): ApiFeatureParams {
 				...(creditSchemaItem.billingUnits !== undefined && {
 					billing_units: creditSchemaItem.billingUnits,
 				}),
+				...creditDimensionRulesToApi(creditSchemaItem),
 			};
 
 			if (creditSchemaItem.tierBehavior === "graduated") {
@@ -74,7 +143,7 @@ export function transformFeatureToApi(feature: Feature): ApiFeatureParams {
 						input_cost: entry.inputCost,
 						output_cost: entry.outputCost,
 					},
-				])
+				]),
 			);
 		}
 		if (feature.defaultMarkup !== undefined) {

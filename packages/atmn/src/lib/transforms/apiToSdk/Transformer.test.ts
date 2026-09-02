@@ -110,6 +110,65 @@ describe("Transformer", () => {
 			);
 		});
 
+		test("dimensioned credit system round trip", () => {
+			const apiFeature = {
+				id: "credits",
+				name: "Credits",
+				type: "credit_system",
+				consumable: true,
+				archived: false,
+				credit_schema: [
+					{
+						metered_feature_id: "cpu_minutes",
+						credit_cost: 1,
+						dimensions: {
+							large_eu: {
+								match: { size: "large", region: "eu" },
+								priority: 1,
+								credit_cost: 20,
+							},
+							xl: {
+								match: { size: "xl" },
+								tier_behavior: "graduated" as const,
+								tiers: [{ to: "inf" as const, credit_cost: 25 }],
+							},
+						},
+						multipliers: {
+							spot: { match: { lifecycle: "spot" }, factor: 0.3 },
+						},
+					},
+				],
+			};
+
+			const feature = transformApiFeature(apiFeature);
+
+			expect(feature.type).toBe("credit_system");
+			if (feature.type === "credit_system") {
+				expect(feature.creditSchema[0]).toEqual({
+					meteredFeatureId: "cpu_minutes",
+					creditCost: 1,
+					dimensions: {
+						large_eu: {
+							match: { size: "large", region: "eu" },
+							priority: 1,
+							creditCost: 20,
+						},
+						xl: {
+							match: { size: "xl" },
+							tierBehavior: "graduated",
+							tiers: [{ to: "inf", creditCost: 25 }],
+						},
+					},
+					multipliers: {
+						spot: { match: { lifecycle: "spot" }, factor: 0.3 },
+					},
+				});
+			}
+			expect(transformFeatureToApi(feature).credit_schema).toEqual(
+				apiFeature.credit_schema,
+			);
+		});
+
 		test("ai_credit_system", () => {
 			const result = transformApiFeature({
 				id: "ai_credits",
@@ -125,7 +184,9 @@ describe("Transformer", () => {
 			expect(result.type).toBe("ai_credit_system");
 			if (result.type === "ai_credit_system") {
 				expect(result.modelMarkups).toBeDefined();
-				expect(result.modelMarkups!["anthropic/claude-opus-4-5"].markup).toBe(20);
+				expect(result.modelMarkups!["anthropic/claude-opus-4-5"].markup).toBe(
+					20,
+				);
 			}
 		});
 	});
