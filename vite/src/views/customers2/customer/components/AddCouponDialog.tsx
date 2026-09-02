@@ -142,6 +142,9 @@ export const AddCouponDialog = ({
 						options={discountOptions}
 						getOptionValue={(option: DiscountOption) => option.id}
 						getOptionLabel={(option: DiscountOption) => option.label}
+						getOptionSearchTerms={(option: DiscountOption) =>
+							option.searchTerms
+						}
 						renderOption={(option: DiscountOption, isSelected: boolean) => (
 							<>
 								<span className="flex-1 truncate min-w-0">{option.label}</span>
@@ -155,7 +158,7 @@ export const AddCouponDialog = ({
 						)}
 						placeholder="Select Reward"
 						searchable
-						searchPlaceholder="Search rewards..."
+						searchPlaceholder="Search by name or code..."
 						emptyText="No coupons found"
 						isLoading={rewardsLoading || stripeCouponsLoading}
 						triggerClassName="w-full"

@@ -56,9 +56,10 @@ export function DiscountRow({
 					options={availableOptions}
 					getOptionValue={(o: DiscountOption) => o.id}
 					getOptionLabel={(o: DiscountOption) => o.label}
+					getOptionSearchTerms={(o: DiscountOption) => o.searchTerms}
 					placeholder="Select discount..."
 					searchable
-					searchPlaceholder="Search discounts..."
+					searchPlaceholder="Search by name or code..."
 					emptyText="No discounts found"
 					triggerClassName="h-7 px-2 text-xs border-0 shadow-none bg-transparent hover:bg-muted/50"
 					renderOption={(option: DiscountOption, isSelected: boolean) => (

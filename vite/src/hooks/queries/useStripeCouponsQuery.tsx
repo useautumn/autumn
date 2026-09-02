@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import type Stripe from "stripe";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import type { StripeCouponWithPromoCodes } from "@/utils/product/couponUtils";
 
 export const useStripeCouponsQuery = () => {
 	const axiosInstance = useAxiosInstance();
@@ -14,7 +14,7 @@ export const useStripeCouponsQuery = () => {
 	});
 
 	return {
-		stripeCoupons: (data?.coupons || []) as Stripe.Coupon[],
+		stripeCoupons: (data?.coupons || []) as StripeCouponWithPromoCodes[],
 		isLoading,
 		error,
 		refetch,
