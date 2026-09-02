@@ -1,6 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { emitFeaturesModule } from "./emit/emitFeatures";
+import { emitWireModule } from "./emit/emitWire";
+import { wirePathHints } from "./emit/freeFormPaths";
 import { OVERLAY } from "./overlay/overlay";
 import { collectionItemSchema, loadSpec } from "./spec/loadSpec";
 
@@ -48,6 +50,19 @@ export const generate = async (): Promise<string[]> => {
 		"utf8",
 	);
 	written.push(featuresPath);
+
+	const wirePath = join(OUTPUT_DIR, "wire.ts");
+	writeFileSync(
+		wirePath,
+		emitWireModule({
+			featureHints: wirePathHints({
+				schema: collectionItemSchema({ spec, collection: "features" }),
+				root: spec as never,
+			}),
+		}),
+		"utf8",
+	);
+	written.push(wirePath);
 
 	await formatWithBiome({ paths: written });
 	return written;
