@@ -26,7 +26,7 @@ export const promotePendingCustomerProducts = async ({
 		inStatuses: [CusProductStatus.Pending],
 	});
 
-	if (!pendingCustomerProducts.length) return;
+	if (!pendingCustomerProducts.length) return autumnBillingPlan;
 
 	const promotedIds = new Set<string>();
 
@@ -59,8 +59,11 @@ export const promotePendingCustomerProducts = async ({
 		promotedIds.add(customerProduct.id);
 	}
 
-	autumnBillingPlan.insertCustomerProducts =
-		autumnBillingPlan.insertCustomerProducts?.filter(
-			(planned) => !promotedIds.has(planned.id),
-		) ?? [];
+	return {
+		...autumnBillingPlan,
+		insertCustomerProducts:
+			autumnBillingPlan.insertCustomerProducts?.filter(
+				(planned) => !promotedIds.has(planned.id),
+			) ?? [],
+	};
 };
