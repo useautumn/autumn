@@ -19,5 +19,12 @@ export const renderMarkdown = (text: string): string => {
 	);
 	const rendered = marked.parse(text, { async: false });
 	if (typeof rendered !== "string") return text;
-	return rendered.replace(/\n{3,}/g, "\n\n").trimEnd();
+	return (
+		rendered
+			// marked-terminal turns a task-list bullet into its own "[ ]"/"[X]"
+			// while keeping the literal one from the text — drop the duplicate.
+			.replace(/^(\s*)(?:\* )?(\[[ xX]\])\s+(?=\[[ xX]\] )/gm, "$1")
+			.replace(/\n{3,}/g, "\n\n")
+			.trimEnd()
+	);
 };

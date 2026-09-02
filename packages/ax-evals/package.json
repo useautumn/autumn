@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"evals": "braintrust eval cases --external-packages @anthropic-ai/claude-agent-sdk",
+		"e": "bun scripts/evalDispatcher.ts",
 		"test": "bun test tests",
 		"ts": "bunx tsgo --noEmit"
 	},

@@ -3,3 +3,6 @@ packages/openapi/openapi-internal.yml:generic-api-key:73947
 packages/openapi/openapi-internal.yml:generic-api-key:73948
 packages/openapi/openapi-internal.yml:generic-api-key:74003
 packages/openapi/openapi-internal.yml:generic-api-key:74004
+packages/agent-docs/generated/mcp/catalog.md:curl-auth-header:3030
+packages/agent-docs/generated/mcp/catalog.md:curl-auth-header:3099
+packages/agent-docs/generated/mcp/catalog.md:curl-auth-header:3276

@@ -18,13 +18,13 @@ const writePluginManifest = async ({ pluginDir }: { pluginDir: string }) => {
 };
 
 const writeSkillFolder = async ({
-	pluginDir,
+	skillsDir,
 	skill,
 }: {
-	pluginDir: string;
+	skillsDir: string;
 	skill: Skill;
 }) => {
-	const skillDir = join(pluginDir, "skills", skill.name);
+	const skillDir = join(skillsDir, skill.name);
 	await mkdir(skillDir, { recursive: true });
 	await writeFile(join(skillDir, "SKILL.md"), skill.markdown);
 	for (const reference of skill.references) {
@@ -35,9 +35,10 @@ const writeSkillFolder = async ({
 };
 
 /**
- * Gives the agent session everything in the kit, written as a local Claude Code
- * plugin inside the case workspace (so it is deleted with it). A bare kit
- * equips nothing.
+ * Gives the agent session everything in the kit, written inside the case
+ * workspace (so it is deleted with it): a Claude Code plugin for the claude
+ * harness, and `.codex/skills/` for the codex harness. A bare kit equips
+ * nothing.
  */
 export const equipAgent = async ({
 	workspaceDir,
@@ -51,7 +52,11 @@ export const equipAgent = async ({
 	const pluginDir = join(workspaceDir, ".ax-plugin");
 	await writePluginManifest({ pluginDir });
 	for (const skill of kit.skills) {
-		await writeSkillFolder({ pluginDir, skill });
+		await writeSkillFolder({ skillsDir: join(pluginDir, "skills"), skill });
+		await writeSkillFolder({
+			skillsDir: join(workspaceDir, ".codex/skills"),
+			skill,
+		});
 	}
 
 	const underTest = kitUnderTest(kit);

@@ -3,9 +3,22 @@
 
 export const BRAINTRUST_PROJECT = "ax-evals";
 
-/** Pinned so results are comparable across machines and sessions. Override
- * per-run with AX_EVALS_MODEL. */
-export const AGENT_MODEL = process.env.AX_EVALS_MODEL ?? "claude-haiku-4-5";
+/** THE knob: type the agent you want eval cases to run on.
+ *
+ *   "codex"              Codex CLI, ChatGPT subscription ($0), its default model
+ *   "codex:gpt-5.2"      Codex CLI, a specific Codex model
+ *   "claude-haiku-4-5"   Claude Code on the Claude subscription ($0)
+ *   "x-ai/grok-4.5"      Claude Code routed through OpenRouter (any "/" model id,
+ *                        billed to OPENROUTER_API_KEY)
+ *
+ * Override per-run with AX_EVALS_AGENT. */
+export const AGENT = process.env.AX_EVALS_AGENT ?? "codex:gpt-5.6-terra";
+
+export const AGENT_HARNESS: "claude" | "codex" =
+	AGENT === "codex" || AGENT.startsWith("codex:") ? "codex" : "claude";
+
+export const AGENT_MODEL =
+	AGENT_HARNESS === "codex" ? AGENT.replace(/^codex:?/, "") : AGENT;
 
 export const AGENT_ALLOWED_TOOLS = [
 	"Read",
@@ -38,5 +51,5 @@ export const PLUGIN_NAME = "autumn";
  * AX_EVALS_TRACE   "live" = raw event stream, "0" = silent, default = blocks
  * AX_EVALS_KEEP    "1" keeps a case workspace on disk for debugging
  * AX_EVALS_USE_API_KEY  "1" bills the API key instead of subscription auth
- * AX_EVALS_MODEL   overrides the pinned agent model for one run
+ * AX_EVALS_AGENT   overrides the pinned AGENT for one run (see above)
  * AX_EVALS_ARM     comma-separated arms to run; unset = all (local run.sh sets with) */
