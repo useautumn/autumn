@@ -120,12 +120,33 @@ export const customizeNeedsCurrentPlan = (customize: unknown): boolean => {
 	);
 };
 
+/** The plan a customize is diffed against: the preview's outgoing plan holds
+ * the customer's live terms, which differ from the catalog once customized. */
+export const currentPlanFromPreview = <Plan>({
+	outgoing,
+	planId,
+}: {
+	outgoing:
+		| readonly { plan?: Plan | undefined; plan_id?: unknown }[]
+		| undefined;
+	/** The plan being customized, when the write names one. */
+	planId?: string | null;
+}): Plan | null => {
+	const changes = (outgoing ?? []).filter(
+		(change) => change.plan !== undefined,
+	);
+	const change = planId
+		? changes.find(({ plan_id }) => plan_id === planId)
+		: changes[0];
+	return change?.plan ?? null;
+};
+
 export const buildCustomizeChanges = ({
 	currentPlan,
 	customize,
 }: {
-	/** The plan being changed (`outgoing[].plan` or the live subscription),
-	 * or null for a fresh attach where nothing is current. */
+	/** The plan being changed (`currentPlanFromPreview`), or null for a fresh
+	 * attach where nothing is current. */
 	currentPlan: unknown;
 	customize: unknown;
 }): CustomizeChange[] => {

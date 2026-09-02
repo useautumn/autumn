@@ -6,7 +6,7 @@ import { getOrgInstallationToken } from "../../installations/actions/getOrgInsta
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
 import type { ApprovalRunResult, ApprovalWriteOutcome } from "../types.js";
-import { withoutApprovalSummary } from "../utils/approvalSummary.js";
+import { withoutApprovalDescription } from "../utils/approvalDescription.js";
 import {
 	classifyWriteExecution,
 	type WriteExecutionOutcome,
@@ -25,7 +25,7 @@ const runWrite = async ({
 }): Promise<WriteExecutionOutcome> => {
 	try {
 		const result = await executeAutumnMcpTool({
-			args: withoutApprovalSummary(write.tool_args),
+			args: withoutApprovalDescription(write.tool_args),
 			env,
 			token,
 			toolName: write.tool_name,
@@ -155,8 +155,11 @@ export const executeApprovalWrites = async ({
 			writes: stepOutcomes(executed),
 		};
 	}
+	// The primary write's response carries the money facts the thread links to.
+	const primaryOutcome = executed[0]?.outcome;
 	return {
-		result: {},
+		result:
+			primaryOutcome && "result" in primaryOutcome ? primaryOutcome.result : {},
 		writes: stepOutcomes(executed),
 		text: "",
 		toolName: approval.tool_name,

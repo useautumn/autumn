@@ -45,6 +45,7 @@ export * from "./entities/prevVersions/apiEntityV0.js";
 export * from "./errors/classes/featureErrClasses.js";
 export * from "./errors/codes/featureErrCodes.js";
 // Features
+export * from "./features/apiFeatureOverride.js";
 export * from "./features/apiFeatureV1.js";
 export * from "./features/components/processors.js";
 export * from "./features/creditRateCard.js";

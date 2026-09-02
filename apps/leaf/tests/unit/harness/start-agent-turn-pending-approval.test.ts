@@ -1,4 +1,6 @@
-/** A new message detaches the card before steering Eve into a normal turn. */
+/** A new message detaches the card before steering Eve into a normal turn.
+ * Cancelling the parked turn here was tried and reverted: it left the session
+ * unable to park again, so the next gated write hung silently. */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
@@ -21,9 +23,13 @@ const postedMessages: Array<{
 	message?: unknown;
 }> = [];
 const detachedRuns: string[] = [];
+const cancelledSessions: string[] = [];
 await mockLeafModule({
 	specifier: "../../../src/internal/agentRuntime/eve/client.js",
 	factory: () => ({
+		cancelEveTurn: async ({ session }: { session: { sessionId: string } }) => {
+			cancelledSessions.push(session.sessionId);
+		},
 		postEveInputResponse: async (input: {
 			optionId: string;
 			requestId: string;
@@ -85,25 +91,27 @@ const makeSession = (pending = false): EveSessionRef => ({
 
 describe("startAgentTurn with a pending approval", () => {
 	beforeEach(() => {
+		cancelledSessions.length = 0;
 		detachedRuns.length = 0;
 		postedMessages.length = 0;
 	});
 
-	test("leaves a gated approval pending while sending the new message", async () => {
+	test("leaves the park intact so the session can still park again", async () => {
+		const session = makeSession(true);
 		await startAgentTurn({
 			auth,
 			env: AppEnv.Sandbox,
-			message: "actually make it 2k credits",
+			message: "why is it $591?",
 			orgId: "org_1",
 			params: {} as never,
-			session: makeSession(true),
+			session,
 			thread,
 		});
 
+		expect(cancelledSessions).toEqual([]);
+		expect(session.state.pendingRequests).toHaveLength(1);
 		expect(postedMessages).toHaveLength(1);
-		expect(postedMessages[0]).toEqual({
-			message: "actually make it 2k credits",
-		});
+		expect(postedMessages[0]).toEqual({ message: "why is it $591?" });
 		expect(detachedRuns).toEqual(["eve_session_1"]);
 	});
 
@@ -121,6 +129,7 @@ describe("startAgentTurn with a pending approval", () => {
 		expect(postedMessages[0]).toEqual({
 			message: "hello",
 		});
+		expect(cancelledSessions).toEqual([]);
 		expect(detachedRuns).toEqual(["eve_session_1"]);
 	});
 
@@ -140,6 +149,7 @@ describe("startAgentTurn with a pending approval", () => {
 		expect(postedMessages[0]).toEqual({
 			inputResponses: [{ optionId: "opt_a", requestId: "q_1" }],
 		});
+		expect(cancelledSessions).toEqual([]);
 		expect(detachedRuns).toEqual([]);
 	});
 });

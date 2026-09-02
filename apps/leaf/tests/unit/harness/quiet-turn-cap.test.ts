@@ -1,18 +1,5 @@
-/**
- * The parent-quiet cap in consumeAgentTurn: a turn with NO live child that has
- * been silent past MAX_QUIET_MS settles on the clock, not after the
- * MAX_IDLE_RESYNCS budget is spent.
- *
- * The existing idle-stream-recovery suite cannot see this: its mock stream
- * never advances any clock, so msSinceActivity() is always ~0 and the resync
- * budget always wins. Here the mock stream advances a FAKE clock between
- * passes, so quiet time grows without real waiting, and the two paths settle
- * at different pass counts with different quiet_ms.
- *
- * Discriminating signal (per-pass advance = 80s):
- *  - with the quiet cap: settles after 2 parent passes, quiet_ms ~160_000
- *  - without it:         settles after 4 parent passes, quiet_ms ~320_000
- */
+/** A turn with no live child that is silent past MAX_QUIET_MS settles on the
+ * clock, not after the resync budget — a fake clock discriminates the paths. */
 
 import {
 	afterEach,

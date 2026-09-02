@@ -3,31 +3,28 @@ import { type LeafAgentId, leafAgentPrompt, leafSkillsFor } from "./agent.js";
 
 describe("leafSkillsFor", () => {
 	test("adds transitive requires after declared skills", () => {
-		expect(leafSkillsFor("billing").map((skill) => skill.name)).toEqual([
-			"autumn-billing",
+		expect(leafSkillsFor("leaf").map((skill) => skill.name)).toEqual([
+			"billing",
+			"autumn-investigate",
 			"autumn-concepts",
+			"trials",
+			"schedules",
+			"balances",
 		]);
 	});
 
 	test("resolves every agent's bundle without duplicates", () => {
-		expect(leafSkillsFor("investigator").map((skill) => skill.name)).toEqual([
-			"autumn-investigate",
-			"autumn-concepts",
-		]);
 		expect(leafSkillsFor("catalog").map((skill) => skill.name)).toEqual([
 			"autumn-catalog",
 			"autumn-concepts",
 		]);
-		expect(leafSkillsFor("orchestrator")).toEqual([]);
 	});
 });
 
 describe("leafAgentPrompt", () => {
 	const distinctivePhrases: Record<LeafAgentId, string> = {
-		billing: "fully-packed billing tasks",
 		catalog: "shared pricing catalog changes",
-		investigator: "getCustomer alone misses entity-scoped plans",
-		orchestrator: "the thread owner and router",
+		leaf: "operates Autumn",
 	};
 
 	for (const [id, phrase] of Object.entries(distinctivePhrases)) {
@@ -38,18 +35,18 @@ describe("leafAgentPrompt", () => {
 		});
 	}
 
-	test("routes billing objections separately from causal investigation", () => {
-		const prompt = leafAgentPrompt("orchestrator");
-		expect(prompt).toContain(
-			"ASKING or OBJECTING about current or proposed customer billing",
-		);
-		expect(prompt).toContain("how or why a customer reached its current state");
-		expect(prompt).toContain(
-			"A causal, historical, or log question → `investigator`",
-		);
-		expect(prompt).toContain("billing for a text-only answer");
-		expect(prompt).not.toContain(
-			"Questions, objections, and stop/explain requests never re-delegate billing",
-		);
+	// The agent's billing and investigation duties live in its skills now, not
+	// in the instructions — this guards the split, not the prose.
+	test("nothing is routed or handed off any more", () => {
+		const prompt = leafAgentPrompt("leaf");
+		for (const phrase of [
+			"the thread owner and router",
+			"fully-packed billing tasks",
+			"delegation",
+			"specialist",
+			"subagent",
+		]) {
+			expect(prompt).not.toContain(phrase);
+		}
 	});
 });

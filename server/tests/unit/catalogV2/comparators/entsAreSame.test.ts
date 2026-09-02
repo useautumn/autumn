@@ -440,6 +440,81 @@ describe("entsAreSame", () => {
 		});
 	});
 
+	describe("feature_override (schema keyed by metered_feature_id)", () => {
+		const flatA = { metered_feature_id: "action1", credit_amount: 0.5 };
+		const flatB = { metered_feature_id: "action2", credit_amount: 2 };
+		const graduated = {
+			metered_feature_id: "action3",
+			tier_behavior: "graduated" as const,
+			tiers: [
+				{ to: 100, credit_amount: 1 },
+				{ to: "inf" as const, credit_amount: 0.5 },
+			],
+		};
+
+		test("identical overrides are same", () => {
+			expectSame(
+				{ feature_override: { schema: [flatA, flatB] } },
+				{ feature_override: { schema: [flatA, flatB] } },
+				true,
+			);
+		});
+
+		test("entry order is not semantic — reordered schemas are same", () => {
+			expectSame(
+				{ feature_override: { schema: [flatA, flatB, graduated] } },
+				{ feature_override: { schema: [graduated, flatB, flatA] } },
+				true,
+			);
+		});
+
+		test("changed rate differs", () => {
+			expectSame(
+				{ feature_override: { schema: [flatA] } },
+				{
+					feature_override: {
+						schema: [{ ...flatA, credit_amount: 1 }],
+					},
+				},
+				false,
+			);
+		});
+
+		test("different membership differs", () => {
+			expectSame(
+				{ feature_override: { schema: [flatA] } },
+				{ feature_override: { schema: [flatB] } },
+				false,
+			);
+		});
+
+		test("tier order IS semantic — reordered tiers differ", () => {
+			expectSame(
+				{ feature_override: { schema: [graduated] } },
+				{
+					feature_override: {
+						schema: [
+							{
+								...graduated,
+								tiers: [...graduated.tiers].reverse(),
+							},
+						],
+					},
+				},
+				false,
+			);
+		});
+
+		test("override vs absent differ", () => {
+			expectSame(
+				{ feature_override: { schema: [flatA] } },
+				{ feature_override: null },
+				false,
+			);
+			expectSame({ feature_override: null }, { feature_override: null }, true);
+		});
+	});
+
 	describe("ignored fields (differ but still same)", () => {
 		test.each([
 			["id", "ent_a", "ent_b"],

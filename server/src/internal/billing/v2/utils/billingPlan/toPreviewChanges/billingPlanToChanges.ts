@@ -88,9 +88,12 @@ const getIsOutgoing = ({
 		status?: CusProductStatus | null;
 	};
 }) => {
+	// A quantity or plan update changes the subscription in place: nothing ends,
+	// but the pre-update plan is still what the change is measured against.
 	if (
 		"intent" in billingContext &&
-		billingContext.intent === UpdateSubscriptionIntent.UpdateQuantity
+		(billingContext.intent === UpdateSubscriptionIntent.UpdateQuantity ||
+			billingContext.intent === UpdateSubscriptionIntent.UpdatePlan)
 	) {
 		return true;
 	}
@@ -117,6 +120,11 @@ const getShouldIncludeIncoming = ({
 	incoming: BillingPreviewChange[];
 }) => {
 	if ("intent" in billingContext) {
+		// A restructuring plan update already inserted its successor; only an
+		// in-place one has to report the updated product as incoming.
+		if (billingContext.intent === UpdateSubscriptionIntent.UpdatePlan) {
+			return incoming.length === 0;
+		}
 		return (
 			billingContext.intent === UpdateSubscriptionIntent.UpdateQuantity ||
 			billingContext.cancelAction === "uncancel" ||

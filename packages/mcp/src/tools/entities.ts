@@ -27,7 +27,7 @@ const domain = {
 			description: `
 - Create an entity under a customer.
 - Create only after listEntities for the customer confirms the entity does not exist.
-- Follow Billing Safety entity rules for entity-scoped billing.
+- Follow the Billing resource for entity-scoped billing.
 			`.trim(),
 			idempotent: true,
 		}),

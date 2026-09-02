@@ -127,9 +127,8 @@ const streamPassEvents = async ({
 	return { progress, sawEvent };
 };
 
-/** An idle window is a gap, not an ending: eve holds the turn durably and
- * resumes on its own, so leaf reopens at the cursor. Only an exhausted budget
- * settles the turn from whatever text arrived. */
+/** An idle window is a gap, not an ending — eve holds the turn durably, so
+ * leaf reopens at the cursor; only an exhausted budget settles the turn. */
 const persistCursorAfterIdleStream = async ({
 	attempt,
 	logger,
@@ -267,9 +266,8 @@ export const consumeAgentTurn = async ({
 				});
 			}
 
-			// A child streams on its own session, so a quiet parent is not
-			// evidence the turn is done — children have completed well after the
-			// deadline. MAX_TURN_DURATION_MS still bounds a runaway turn.
+			// A quiet parent is not a done turn — children stream on their own
+			// sessions; MAX_TURN_DURATION_MS still bounds a runaway turn.
 			const childIsWorking = activity.activeChildren() > 0;
 			const quietTooLong = activity.msSinceActivity() >= MAX_QUIET_MS;
 			const deadlineReached =
@@ -301,10 +299,8 @@ export const consumeAgentTurn = async ({
 			}
 
 			if (pass.error instanceof EveStreamIdleTimeoutError) {
-				// Work delegated to a subagent runs on the child's stream, so the
-				// parent is not evidence of a dead turn while a child is live.
-				// The child relay owns when a child stops counting: it reconnects
-				// through quiet windows and ends when the session terminates.
+				// A live child means the turn is working even when the parent
+				// stream is silent; the child relay owns when a child stops counting.
 				const turnIsWorking = activity.activeChildren() > 0;
 				idleRetries = pass.sawEvent || turnIsWorking ? 0 : idleRetries + 1;
 				if (idleRetries >= MAX_IDLE_RESYNCS) {

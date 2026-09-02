@@ -55,7 +55,13 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
 		};
 	}
 
-	const itemConfig = ent.rollover ? { rollover: ent.rollover } : undefined;
+	const itemConfig =
+		ent.rollover || ent.feature_override
+			? {
+					rollover: ent.rollover ?? undefined,
+					feature_override: ent.feature_override ?? undefined,
+				}
+			: undefined;
 
 	const item = {
 		feature_id: ent.feature.id,
@@ -116,6 +122,9 @@ export const toFeaturePriceItem = ({
 	}
 	if (ent.rollover) {
 		itemConfig.rollover = ent.rollover;
+	}
+	if (ent.feature_override) {
+		itemConfig.feature_override = ent.feature_override;
 	}
 
 	const item: ProductItem = {

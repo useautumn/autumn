@@ -8,7 +8,6 @@
  */
 import { AppEnv, type ChatApproval } from "@autumn/shared";
 import { answerAgentQuestion } from "../../src/internal/agentRuntime/actions/answerAgentQuestion/answerAgentQuestion.js";
-import { createApproval } from "../../src/internal/approvals/actions/createApproval.js";
 import { resolveApproval } from "../../src/internal/approvals/actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../src/internal/approvals/repos/chatApprovalRepo.js";
 import { executeAutumnMcpTool } from "../../src/internal/autumnMcp/client.js";
@@ -83,7 +82,6 @@ const runTurn = async (text: string) => {
 		installation,
 		logger,
 		onAction: (message) => presenter.onAction(message),
-		onApprovalsSuperseded: () => {},
 		onReasoning: presenter.onReasoning,
 		onThinking: ticker.thinking,
 		providerUserId,

@@ -1,7 +1,5 @@
-/** A turn is alive while ANY of its sessions is producing events: work
- * delegated to a subagent runs on the child's stream, so the parent can be
- * legitimately quiet for minutes. Both streams report here, and the idle
- * decision reads this clock rather than one socket's silence. */
+/** A turn is alive while ANY of its sessions produces events — the idle
+ * decision reads this shared clock, never one socket's silence. */
 export type TurnActivity = {
 	activeChildren: () => number;
 	childFinished: () => void;

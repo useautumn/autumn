@@ -183,7 +183,12 @@ export const setupAttachBillingContext = async ({
 		customerProduct: currentCustomerProduct,
 	});
 
-	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
+	const invoiceMode = await setupInvoiceModeContext({
+		ctx,
+		fullCustomer,
+		params,
+		stripeCustomer,
+	});
 	const paymentBehaviorIntent = setupPaymentBehaviorIntent({
 		contextOverride,
 		paymentMethod,

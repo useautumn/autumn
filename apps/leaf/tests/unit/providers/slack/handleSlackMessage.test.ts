@@ -1,22 +1,15 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { Message, Thread } from "chat";
-import {
-	closeRun,
-	registerRun,
-} from "../../../../src/internal/runs/runRegistry.js";
 import { createSlackMessageHandlers } from "../../../../src/providers/slack/handlers/handleSlackMessage.js";
 
 let disposition: "close" | "keep" = "close";
-let routingDisposition: "ignore" | "respond" | "unsubscribe" = "respond";
 const dispatchSlackAgentMessage = mock(async (_input: unknown) => disposition);
-const classifySubscribedMessage = mock(async () => routingDisposition);
 const recentMessages = [
 	{ author: "Autumn", isBot: true, text: "How can I help?" },
 ];
 const getRecentMessages = mock(async () => recentMessages);
 
 const dependencies = {
-	classify: classifySubscribedMessage,
 	dispatch: dispatchSlackAgentMessage,
 	getRecentMessages,
 };
@@ -54,54 +47,51 @@ const createThread = () => {
 
 beforeEach(() => {
 	disposition = "close";
-	routingDisposition = "respond";
 	dispatchSlackAgentMessage.mockClear();
-	classifySubscribedMessage.mockClear();
 	getRecentMessages.mockClear();
 });
 
 describe("handleSubscribedSlackMessage", () => {
-	test("dispatches relevant messages with the fetched context", async () => {
+	test("dispatches with thread context the run can fetch on demand", async () => {
 		disposition = "keep";
 		const { thread, unsubscribe } = createThread();
 
 		await handleSubscribedSlackMessage(thread, createMessage());
 
-		expect(getRecentMessages).toHaveBeenCalledTimes(1);
 		expect(dispatchSlackAgentMessage).toHaveBeenCalledTimes(1);
-		expect(dispatchSlackAgentMessage).toHaveBeenCalledWith(
-			expect.objectContaining({ recentMessages }),
-		);
+		const [input] = dispatchSlackAgentMessage.mock.calls[0] as [
+			{ recentMessages: () => Promise<typeof recentMessages> },
+		];
+		expect(await input.recentMessages()).toEqual(recentMessages);
+		expect(getRecentMessages).toHaveBeenCalledTimes(1);
 		expect(unsubscribe).not.toHaveBeenCalled();
 	});
 
-	test("ignores unrelated messages without unsubscribing", async () => {
-		routingDisposition = "ignore";
-		const { addReaction, thread, unsubscribe } = createThread();
-
-		await handleSubscribedSlackMessage(thread, createMessage());
-
-		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
-		expect(addReaction).not.toHaveBeenCalled();
-		expect(unsubscribe).not.toHaveBeenCalled();
-	});
-
-	test("unsubscribes only for explicit opt-out", async () => {
-		routingDisposition = "unsubscribe";
+	test("answers every reply, with no relevance judgement", async () => {
+		disposition = "keep";
 		const { thread, unsubscribe } = createThread();
 
 		await handleSubscribedSlackMessage(thread, createMessage());
 
-		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
+		expect(dispatchSlackAgentMessage).toHaveBeenCalledTimes(1);
+		expect(unsubscribe).not.toHaveBeenCalled();
+	});
+
+	test("unsubscribes when dispatch closes the thread for an opt-out", async () => {
+		disposition = "close";
+		const { thread, unsubscribe } = createThread();
+
+		await handleSubscribedSlackMessage(thread, createMessage());
+
 		expect(unsubscribe).toHaveBeenCalledTimes(1);
 	});
 
-	test("ignores bot-authored messages before classification", async () => {
+	test("ignores bot-authored messages", async () => {
 		const { thread } = createThread();
 
 		await handleSubscribedSlackMessage(thread, createMessage({ isBot: true }));
 
-		expect(classifySubscribedMessage).not.toHaveBeenCalled();
+		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
 		expect(getRecentMessages).not.toHaveBeenCalled();
 	});
 });
@@ -145,24 +135,5 @@ describe("handleSlackMessage", () => {
 
 		expect(dispatchSlackAgentMessage).not.toHaveBeenCalled();
 		expect(unsubscribe).not.toHaveBeenCalled();
-	});
-});
-
-describe("opt-out stops the active run", () => {
-	test("unsubscribe disposition stops the thread's in-flight run", async () => {
-		routingDisposition = "unsubscribe";
-		const { thread, unsubscribe } = createThread();
-		const run = registerRun({
-			key: "slack:T1:C1:slack:C1:1",
-			kind: "message",
-			ownerProviderUserId: "U1",
-		});
-		run.resolveSessionId("sesn_1");
-
-		await handleSubscribedSlackMessage(thread, createMessage());
-
-		expect(run.stop).toEqual({ byUserId: "U1", reason: "user" });
-		expect(unsubscribe).toHaveBeenCalledTimes(1);
-		closeRun({ key: run.key, run });
 	});
 });

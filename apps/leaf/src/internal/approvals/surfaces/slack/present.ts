@@ -17,7 +17,7 @@ import {
 } from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../../repos/chatApprovalWritesRepo.js";
-import { approvalSummaryFromWrites } from "../../utils/approvalSummary.js";
+import { approvalDescriptionFromWrites } from "../../utils/approvalDescription.js";
 import { publicToolArgs, requestStringField } from "../../utils/toolRequest.js";
 import { editSupersededApprovalCards } from "./superseded.js";
 
@@ -69,7 +69,7 @@ const postApprovalCompanion = async ({
 	target: { post: (message: unknown) => Promise<unknown> };
 	writes: ReadonlyArray<WithheldWrite>;
 }) => {
-	const summary = approvalSummaryFromWrites({ writes });
+	const summary = approvalDescriptionFromWrites({ writes });
 	if (!summary) return;
 	try {
 		await target.post({ markdown: summary });

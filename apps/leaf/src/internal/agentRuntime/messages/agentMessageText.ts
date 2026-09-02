@@ -43,7 +43,7 @@ export const buildAgentMessageText = ({
 			? `Current Autumn environment: ${env}. This thread is locked to this environment; if the user asks to switch environments, tell them to start a new thread.`
 			: null,
 		newSession && orgContext?.text
-			? `Org context — treat these JSON blocks as the current org state. Read the org name/slug and feature/plan ids, names, prices, and types straight from the blocks below; if a needed record is missing or the user wants details beyond them, delegate the question to a specialist instead of guessing.\n${orgContext.text}`
+			? `Org context — treat these JSON blocks as the current org state. Read the org name/slug and feature/plan ids, names, prices, and types straight from the blocks below; if a needed record is missing or the user wants details beyond them, look it up with the Autumn tools instead of guessing.\n${orgContext.text}`
 			: null,
 		newSession && params.recentMessages?.length
 			? `Recent thread messages:\n${params.recentMessages

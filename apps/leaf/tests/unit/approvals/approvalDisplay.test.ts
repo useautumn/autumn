@@ -43,7 +43,6 @@ describe("resolveApprovalDisplay", () => {
 			{
 				request: {
 					customer_id: "kp-customer-1000",
-					expand: ["subscriptions.plan"],
 					with_autumn_id: false,
 				},
 				toolName: "getCustomer",
@@ -261,9 +260,8 @@ describe("resolveApprovalDisplay", () => {
 
 		expect(calls).toContain("getPlan");
 		expect(display.currentPlan).toEqual({
-			id: "transactional_pro",
 			name: "Transactional Pro",
-			price: { amount: 20, interval: "month" },
+			price: { amount: 25, interval: "month" },
 		});
 	});
 
@@ -324,55 +322,8 @@ describe("resolveApprovalDisplay", () => {
 // remove_items is a filter; the quantity being removed is what the customer
 // currently holds. A customized subscription can differ from the catalog
 // plan, so the customer's live items must take precedence when present.
-describe("base items prefer the customer's live subscription", () => {
-	test("uses the subscription's customized items over the catalog plan", async () => {
-		const display = await resolveApprovalDisplay({
-			env: AppEnv.Sandbox,
-			executeTool: async ({ toolName }) => ({
-				content: [
-					{
-						type: "text",
-						text: JSON.stringify(
-							toolName === "getPlan"
-								? {
-										items: [{ feature_id: "contacts", included: 0 }],
-										name: "Enterprise",
-									}
-								: {
-										email: "ops@atlas.example",
-										name: "Atlas Management Group",
-										subscriptions: [
-											{
-												plan: {
-													id: "enterprise",
-													items: [
-														{ feature_id: "contacts", included: 250_000 },
-													],
-													name: "Enterprise",
-												},
-												plan_id: "enterprise",
-											},
-										],
-									},
-						),
-					},
-				],
-			}),
-			getToken: async () => "token",
-			preview: undefined,
-			request: {
-				customer_id: "cus_atlas",
-				customize: { remove_items: [{ feature_id: "contacts" }] },
-				plan_id: "enterprise",
-			},
-		});
-
-		expect(display.basePlanItems).toEqual([
-			{ feature_id: "contacts", included: 250_000 },
-		]);
-	});
-
-	test("falls back to the catalog plan when the customer has no such subscription", async () => {
+describe("base items come from the catalog plan", () => {
+	test("resolves the catalog plan the customize is diffed against", async () => {
 		const display = await resolveApprovalDisplay({
 			env: AppEnv.Sandbox,
 			executeTool: async ({ toolName }) => ({

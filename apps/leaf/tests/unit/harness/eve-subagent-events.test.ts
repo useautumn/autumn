@@ -64,7 +64,7 @@ describe("subagent events on the parent stream", () => {
 			{
 				kind: "action",
 				progress: {
-					label: "Investigating",
+					label: "Investigator",
 					phase: "started",
 					toolName: "investigator",
 				},

@@ -11,8 +11,9 @@ import type { Feature } from "@models/featureModels/featureModels.js";
 import type { FeatureStripeMeter } from "@models/featureModels/featureTable.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
-import type { ApiFeatureProcessors } from "../../api/features/components/processors.js";
+import type { ApiFeatureOverride } from "../../api/features/apiFeatureOverride.js";
 import type { ApiFeatureV1 } from "../../api/features/apiFeatureV1.js";
+import type { ApiFeatureProcessors } from "../../api/features/components/processors.js";
 import {
 	type ApiCreditSchemaItem,
 	isGraduatedCreditSchemaItem,
@@ -27,7 +28,10 @@ import {
 	applyResponseVersionChanges,
 	LATEST_VERSION,
 } from "../../api/versionUtils/versionUtils.js";
-import type { CreditSchemaItem } from "../../models/featureModels/featureConfig/creditConfig.js";
+import type {
+	CreditSchemaItem,
+	FeatureConfigOverride,
+} from "../../models/featureModels/featureConfig/creditConfig.js";
 import type { SharedContext } from "../../types/sharedContext.js";
 import { notNullish, nullish } from "../utils.js";
 import { buildAiCreditSystemConfig } from "./buildAiCreditSystemConfig.js";
@@ -100,6 +104,22 @@ export const apiCreditSchemaItemToDb = (
 
 	return { ...base, credit_amount: credit.credit_cost };
 };
+
+export const apiFeatureOverrideToDb = (
+	override: ApiFeatureOverride,
+): FeatureConfigOverride => ({
+	...(override.credit_schema
+		? { schema: override.credit_schema.map(apiCreditSchemaItemToDb) }
+		: {}),
+});
+
+export const dbFeatureOverrideToApi = (
+	override: FeatureConfigOverride,
+): ApiFeatureOverride => ({
+	...(override.schema
+		? { credit_schema: override.schema.map(dbCreditSchemaItemToApi) }
+		: {}),
+});
 
 export const dbCreditSchemaItemToApi = (
 	credit: CreditSchemaItem,

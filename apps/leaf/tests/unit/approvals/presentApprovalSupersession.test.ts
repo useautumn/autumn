@@ -29,7 +29,7 @@ await mockLeafModule({
 				preview: {},
 			},
 			toolArgs: {
-				approval_summary:
+				approval_description:
 					"I treated the requested amount as Scale's monthly base price.",
 				request: { customer_id: "cus_1", plan_id: "scale" },
 			},
@@ -194,7 +194,8 @@ test("posts one companion after a chained approval card", async () => {
 		},
 		provider: "slack",
 		tool_args: {
-			approval_summary: "This updates the existing subscription immediately.",
+			approval_description:
+				"This updates the existing subscription immediately.",
 			request: { customer_id: "cus_1", plan_id: "scale" },
 		},
 		tool_name: "attach",

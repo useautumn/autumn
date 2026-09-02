@@ -3,6 +3,7 @@ import {
 	buildBillingPreviewDisplay,
 	buildCustomizeChanges,
 	buildPlanItemChangeDisplay,
+	currentPlanFromPreview,
 	customizeWithFreeTrial,
 	customPriceText,
 	formatCount,
@@ -1118,7 +1119,7 @@ const approvalPreviewBlocks = ({
 						changeTableRow({
 							change: verb,
 							details: details("Base price"),
-							pricing: customPriceText(change.price) ?? "—",
+							pricing: customPriceText(change.price) ?? undefined,
 						}),
 					];
 				}
@@ -1180,14 +1181,28 @@ const approvalPreviewBlocks = ({
 	// newer rows carry the whole plan. Accept either so stored cards still diff.
 	const currentPlanByPlan = getRecord(approvalDisplay.currentPlanByPlan);
 	const basePlanItemsByPlan = getRecord(approvalDisplay.basePlanItemsByPlan);
+	const outgoingChanges = parsePreviewPayload(preview)?.outgoing;
+	const outgoing = (Array.isArray(outgoingChanges) ? outgoingChanges : []).map(
+		getRecord,
+	);
 	const currentPlanFor = (planId: string | null) => {
+		const live = currentPlanFromPreview({ outgoing, planId });
+		if (live) return live;
 		if (!planId) return approvalDisplay.currentPlan ?? null;
 		const whole = currentPlanByPlan[planId];
 		if (whole) return whole;
 		const items = basePlanItemsByPlan[planId];
 		return Array.isArray(items) ? { items } : null;
 	};
+	// An update that only customizes names no plan in the request and produces no
+	// incoming change, so the plan being changed is the outgoing one.
+	const customizedPlanId =
+		getString(request?.plan_id) ??
+		display.changes.incoming[0]?.planId ??
+		display.changes.outgoing[0]?.planId ??
+		null;
 	const primaryCurrentPlan =
+		currentPlanFromPreview({ outgoing, planId: customizedPlanId }) ??
 		approvalDisplay.currentPlan ??
 		(Array.isArray(approvalDisplay.basePlanItems)
 			? { items: approvalDisplay.basePlanItems }
@@ -1234,10 +1249,6 @@ const approvalPreviewBlocks = ({
 	if (changeRows.length) {
 		// Name the plan being customized: "Plan changes" reads as a catalog edit.
 		// Prefer the display name; the id is only a fallback when none resolved.
-		const customizedPlanId =
-			getString(request?.plan_id) ??
-			display.changes.incoming[0]?.planId ??
-			undefined;
 		const customizedPlanName = customizedPlanId
 			? (planNames.get(customizedPlanId) ?? customizedPlanId)
 			: undefined;

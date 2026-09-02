@@ -1,21 +1,6 @@
-/**
- * Prod incidents 2026-08-25 (thread C0BCAQQK0KS, 10:30Z and 10:48Z): a message
- * superseded an open attach approval, the parent stream went quiet, and the
- * turn died with "Eve stopped responding mid-turn". The 10:48 trace shows why
- * the parent was quiet: eve had delegated to two subagents, which ran a dozen
- * MCP calls on their OWN sessions while the parent emitted nothing.
- *
- * Red-failure mode (current behaviour):
- *  - recoverFromIdleStream returns on the FIRST EveStreamIdleTimeoutError, so
- *    the retry budget above it never applies to an idle stream.
- *  - Parent liveness is inferred from the parent socket alone, so a turn doing
- *    real work on a child session reads as dead.
- *
- * Green-success criteria (after fix):
- *  - An idle parent stream is reconnected at its cursor like any other gap.
- *  - A turn whose child session is still producing events is never abandoned.
- *  - Only a turn quiet across ALL of its sessions surfaces a failure.
- */
+/** An idle parent stream reconnects at its cursor, and a turn with a live
+ * child session is never abandoned — only quiet across ALL sessions fails.
+ * Prod incident 2026-08-25 (Slack thread C0BCAQQK0KS, 10:30Z/10:48Z). */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";

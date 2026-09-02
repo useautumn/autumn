@@ -15,6 +15,7 @@ import {
 } from "@/utils/product/entitlementUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { EntityFeatureConfig } from "./advanced-settings/EntityFeatureConfig";
+import { FeatureOverrideConfig } from "./advanced-settings/FeatureOverrideConfig";
 import { PooledBalanceConfig } from "./advanced-settings/PooledBalanceConfig";
 import { ProrationConfig } from "./advanced-settings/ProrationConfig";
 import { ResetIntervalConfig } from "./advanced-settings/ResetIntervalConfig";
@@ -34,6 +35,7 @@ export function AdvancedSettings() {
 
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
+	const showFeatureOverride = hasCreditSystem;
 	// Deprecated in favor of licenses. Surface it whenever any item in the plan
 	// uses an entity feature, so all items in such plans keep working.
 	const showEntityFeature =
@@ -69,6 +71,9 @@ export function AdvancedSettings() {
 
 					{/* Rollover */}
 					{showRollover && <RolloverConfig />}
+
+					{/* Credit rate card override */}
+					{showFeatureOverride && <FeatureOverrideConfig />}
 
 					{/* Entity Feature Config */}
 					{showEntityFeature && <EntityFeatureConfig />}

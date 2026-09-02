@@ -1,6 +1,6 @@
 ---
 name: autumn-concepts
-description: Modeling Autumn pricing or reasoning about features, plans, plan items, customers/entities, trials, or billing controls.
+description: Understanding an unusual billing setup before acting on it — when a trial starts or ends billing, how entity- and seat-scoped subscriptions differ from the customer's own, what a customize diff actually changes, and how caps, overage, and top-ups behave. Load when a customer's state does not match the plain reading of their plan.
 ---
 
 # Concepts

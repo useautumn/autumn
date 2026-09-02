@@ -3,6 +3,7 @@ import {
 	type CreditTier,
 	type CusProductStatus,
 	cusEntToCurrentBalance,
+	entitlementToCreditSystem,
 	ErrCode,
 	type Feature,
 	FeatureType,
@@ -371,25 +372,30 @@ export const getCreditRateRequiredBalance = ({
 	reverseOrder?: boolean;
 	inStatuses?: CusProductStatus[];
 }): number => {
+	// Only this credit system's entitlements that actually fund the source
+	// feature under their effective schema (an override may have removed it).
+	const customerEntitlements = fullSubjectToCustomerEntitlements({
+		fullSubject,
+		featureIds: [creditSystem.id],
+		fundsFeatureId: sourceFeature.id,
+		reverseOrder,
+		inStatuses,
+	});
+
+	// A flat catalog rate converts without walking entitlements — unless one
+	// of them carries a feature_override, whose rate (possibly graduated)
+	// applies to the credits it funds.
 	const schemaItem = getCreditSchemaItem({
 		featureId: sourceFeature.id,
 		creditSystem,
 	});
-	if (schemaItem?.tier_behavior !== "graduated") {
-		return featureToCreditSystem({
-			featureId: sourceFeature.id,
-			creditSystem,
-			amount,
-		});
-	}
-
-	const customerEntitlements = fullSubjectToCustomerEntitlements({
-		fullSubject,
-		featureIds: [creditSystem.id],
-		reverseOrder,
-		inStatuses,
-	});
-	if (customerEntitlements.length === 0) {
+	const hasOverriddenEntitlement = customerEntitlements.some(
+		(customerEntitlement) => customerEntitlement.entitlement.feature_override,
+	);
+	if (
+		customerEntitlements.length === 0 ||
+		(schemaItem?.tier_behavior !== "graduated" && !hasOverriddenEntitlement)
+	) {
 		return featureToCreditSystem({
 			featureId: sourceFeature.id,
 			creditSystem,
@@ -404,7 +410,9 @@ export const getCreditRateRequiredBalance = ({
 
 	for (const customerEntitlement of customerEntitlements) {
 		if (remainingUnits.lte(0)) break;
-		const entitlementCreditSystem = customerEntitlement.entitlement.feature;
+		const entitlementCreditSystem = entitlementToCreditSystem({
+			entitlement: customerEntitlement.entitlement,
+		});
 		const currentUsage =
 			customerEntitlement.usage_attribution?.[sourceFeature.internal_id]
 				?.units ?? 0;

@@ -1,3 +1,4 @@
+import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride.js";
 import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
 import {
 	AdditionalCurrencyPriceArraySchema,
@@ -175,6 +176,11 @@ export const ApiPlanItemV1Schema = z
 			.meta({
 				internal: true,
 			}),
+
+		feature_override: ApiFeatureOverrideSchema.optional().meta({
+			description:
+				"Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).",
+		}),
 
 		entity_feature_id: z.string().optional().meta({
 			internal: true,

@@ -43,11 +43,11 @@ const findLeafSkill = (name: string): Skill => {
 };
 
 /**
- * The skill bundle for one Eve agent: its declared skills first, then their
- * transitive `requires` in first-encountered order, deduped.
+ * A skill bundle: the named skills first, then their transitive `requires`
+ * in first-encountered order, deduped.
  */
-export const leafSkillsFor = (id: LeafAgentId): Skill[] => {
-	const names = [...leafAgentSkillNames[id]];
+export const leafSkillBundle = (skillNames: readonly string[]): Skill[] => {
+	const names = [...skillNames];
 	for (const name of names) {
 		for (const required of leafSkillRequires[name] ?? []) {
 			if (!names.includes(required)) {
@@ -57,6 +57,10 @@ export const leafSkillsFor = (id: LeafAgentId): Skill[] => {
 	}
 	return names.map((name) => findLeafSkill(name));
 };
+
+/** The skill bundle for one Eve agent, resolved from its declared skills. */
+export const leafSkillsFor = (id: LeafAgentId): Skill[] =>
+	leafSkillBundle(leafAgentSkillNames[id]);
 
 /** One reference file's contents from a leaf skill — the shared source for
  * prompts that need a single doc (e.g. billing-request generation). */

@@ -65,7 +65,6 @@ const turnPromise = runSlackAgentTurn({
 		console.log(`   action: ${label}`);
 		ticker.activity(label);
 	},
-	onApprovalsSuperseded: () => {},
 	onReasoning: () => {},
 	onThinking: ticker.thinking,
 	providerUserId,

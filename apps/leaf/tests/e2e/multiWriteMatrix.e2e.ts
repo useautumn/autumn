@@ -22,7 +22,7 @@ import { createStatusTicker } from "../../src/ui/statusTicker.js";
 const WORKSPACE_ID = process.env.E2E_SLACK_WORKSPACE ?? "T07NPTDCU69";
 const filter = process.argv[2];
 const runTag = Date.now().toString(36);
-const fresh = (n: number) =>
+const _fresh = (n: number) =>
 	Array.from({ length: n }, (_, i) => `mx-${runTag}-${i + 1}`);
 
 type Customer = {
@@ -130,7 +130,6 @@ const runAndApproveAll = async ({
 		installation,
 		logger,
 		onAction: (message) => presenter.onAction(message),
-		onApprovalsSuperseded: () => {},
 		onReasoning: presenter.onReasoning,
 		onThinking: ticker.thinking,
 		providerUserId,
@@ -211,8 +210,7 @@ const runAndApproveAll = async ({
 				requests,
 			};
 		}
-		approvalId =
-			"chainedApprovalId" in result ? result.chainedApprovalId : undefined;
+		approvalId = undefined;
 	}
 	return { approvedTools, groupedCounts, kind: "approval", requests };
 };

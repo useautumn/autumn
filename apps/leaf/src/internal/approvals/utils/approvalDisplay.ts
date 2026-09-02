@@ -15,9 +15,6 @@ const text = (value: unknown) =>
 const record = (value: unknown) =>
 	value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
-const getArray = (value: unknown): unknown[] =>
-	Array.isArray(value) ? value : [];
-
 const planNameFromPreview = ({
 	planId,
 	preview,
@@ -151,7 +148,6 @@ export const resolveApprovalDisplay = async ({
 		customerId
 			? fetchRecord("getCustomer", {
 					customer_id: customerId,
-					expand: ["subscriptions.plan"],
 					with_autumn_id: false,
 				})
 			: null,
@@ -167,21 +163,9 @@ export const resolveApprovalDisplay = async ({
 	const planRecords = Object.fromEntries(
 		plans.map(([id, value]) => [id, record(value.plan ?? value)]),
 	);
-	// The plan a change is diffed against is what the customer currently holds.
-	// A customized subscription can differ from the catalog (price and items),
-	// so the live subscription's plan wins and the catalog is the fallback.
-	const subscriptionPlanByPlan = Object.fromEntries(
-		getArray(customerRecord.subscriptions).flatMap((subscription) => {
-			const entry = record(subscription);
-			const planId = text(entry.plan_id);
-			const plan = record(entry.plan);
-			return planId && Object.keys(plan).length ? [[planId, plan]] : [];
-		}),
-	);
-	const currentPlanByPlan = {
-		...planRecords,
-		...subscriptionPlanByPlan,
-	};
+	// Only the catalog plan: the customer's live terms come from the preview's
+	// outgoing plan, which is scoped to the entity the write actually targets.
+	const currentPlanByPlan = planRecords;
 	const basePlanItemsByPlan = Object.fromEntries(
 		Object.entries(currentPlanByPlan).flatMap(([id, value]) =>
 			Array.isArray(value.items) ? [[id, value.items]] : [],

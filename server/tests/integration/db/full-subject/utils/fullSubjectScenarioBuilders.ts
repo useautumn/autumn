@@ -202,6 +202,7 @@ const buildEntitlement = ({
 	expiry_length: null,
 	internal_reward_id: null,
 	rollover: null,
+	feature_override: null,
 });
 
 const buildPrice = ({
