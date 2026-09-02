@@ -1,5 +1,5 @@
 import type { CreditSchemaItem } from "@autumn/shared";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
 	type CreditRateRule,
 	createRateRule,
@@ -23,7 +23,7 @@ export function useCreditDimensionEditor({
 	const [draftFields, setDraftFields] = useState<string[]>([]);
 	const usedFields = dimensionFields(item);
 	const fields = Array.from(new Set([...usedFields, ...draftFields]));
-	const rules = rateRules(item);
+	const rules = useMemo(() => rateRules(item), [item.dimensions]);
 
 	const commit = (next: CreditRateRule[]) =>
 		onChange(withRateRules({ item, rules: next }));

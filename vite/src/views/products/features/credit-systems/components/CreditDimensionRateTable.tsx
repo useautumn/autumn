@@ -25,7 +25,8 @@ interface CreditDimensionRateTableProps {
 	onRuleAdd: () => void;
 }
 
-/** One column per dimension, a credits column, and a final row for the row's own rate. */
+/** One column per dimension, a credits column, and a final row for the row's own rate.
+ * `data` must be referentially stable or the table's auto-reset re-renders forever. */
 export function CreditDimensionRateTable({
 	fields,
 	rules,
@@ -34,10 +35,13 @@ export function CreditDimensionRateTable({
 	onRuleRemove,
 	onRuleAdd,
 }: CreditDimensionRateTableProps) {
-	const data: RateTableRow[] = [
-		...rules.map((rule, index) => ({ id: String(index), index, rule })),
-		{ id: "base", index: rules.length },
-	];
+	const data: RateTableRow[] = useMemo(
+		() => [
+			...rules.map((rule, index) => ({ id: String(index), index, rule })),
+			{ id: "base", index: rules.length },
+		],
+		[rules],
+	);
 
 	const columns: ColumnDef<RateTableRow, unknown>[] = useMemo(
 		() => [
