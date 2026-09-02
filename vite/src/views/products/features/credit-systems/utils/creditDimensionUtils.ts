@@ -1,22 +1,47 @@
 import type { CreditDimension, CreditSchemaItem } from "@autumn/shared";
-import { Infinite } from "@autumn/shared";
+import { isEmptyObject } from "@autumn/shared";
 
 /**
- * The dashboard edits dimensions as fields → rates: the fields are the
- * property keys, every rate is one rule whose match holds a value for some of
- * those fields (blank = any), named from its match.
+ * The dashboard edits dimensions as fields → values → rates: every rate is one
+ * rule whose match picks a value for some of the fields (unset = any), named
+ * from its match.
  */
 
 export type CreditRateRule = { name: string; dimension: CreditDimension };
+export type DimensionValues = Record<string, string[]>;
 
-export const dimensionFields = (item: CreditSchemaItem): string[] =>
-	Array.from(
-		new Set(
-			Object.values(item.dimensions ?? {}).flatMap((dimension) =>
-				Object.keys(dimension.match),
-			),
-		),
+type Matched = { match: Record<string, string> };
+
+const matchesOf = (item: CreditSchemaItem): Record<string, string>[] =>
+	[
+		...Object.values(item.dimensions ?? {}),
+		...Object.values(item.multipliers ?? {}),
+	].map((rule) => rule.match);
+
+const unique = (values: string[]) => Array.from(new Set(values));
+
+/** Every field and value referenced by a rate or multiplier, in first-seen order. */
+export const dimensionValues = (item: CreditSchemaItem): DimensionValues => {
+	const values: DimensionValues = {};
+	for (const match of matchesOf(item)) {
+		for (const [field, value] of Object.entries(match)) {
+			values[field] = unique([...(values[field] ?? []), value]);
+		}
+	}
+	return values;
+};
+
+export const mergeDimensionValues = (
+	...maps: DimensionValues[]
+): DimensionValues => {
+	const fields = unique(maps.flatMap((map) => Object.keys(map)));
+	return Object.fromEntries(
+		fields.map((field) => [
+			field,
+			unique(maps.flatMap((map) => map[field] ?? [])),
+		]),
 	);
+};
 
 export const rateRules = (item: CreditSchemaItem): CreditRateRule[] =>
 	Object.entries(item.dimensions ?? {}).map(([name, dimension]) => ({
@@ -61,27 +86,39 @@ export const withRateRules = ({
 	};
 };
 
-/** Dropping a field removes it from every rule's match; rules left matching nothing are removed. */
-export const withFields = ({
+const isMatchAllowed = (
+	match: Record<string, string>,
+	allowed: DimensionValues,
+) =>
+	Object.entries(match).every(([field, value]) =>
+		allowed[field]?.includes(value),
+	);
+
+const onlyAllowed = <T extends Matched>(
+	rules: Record<string, T> | undefined,
+	allowed: DimensionValues,
+): Record<string, T> =>
+	Object.fromEntries(
+		Object.entries(rules ?? {}).filter(([, rule]) =>
+			isMatchAllowed(rule.match, allowed),
+		),
+	);
+
+/** Removing a field or value drops every rate and multiplier that matched on it. */
+export const withAllowedValues = ({
 	item,
-	fields,
+	allowed,
 }: {
 	item: CreditSchemaItem;
-	fields: string[];
+	allowed: DimensionValues;
 }): CreditSchemaItem => {
-	const keep = new Set(fields);
-	const rules = rateRules(item)
-		.map(({ name, dimension }) => ({
-			name,
-			dimension: {
-				...dimension,
-				match: Object.fromEntries(
-					Object.entries(dimension.match).filter(([key]) => keep.has(key)),
-				),
-			},
-		}))
-		.filter(({ dimension }) => Object.keys(dimension.match).length > 0);
-	return withRateRules({ item, rules });
+	const dimensions = onlyAllowed(item.dimensions, allowed);
+	const multipliers = onlyAllowed(item.multipliers, allowed);
+	return {
+		...withoutDimensions(item),
+		...(isEmptyObject(dimensions) ? {} : { dimensions }),
+		...(isEmptyObject(multipliers) ? {} : { multipliers }),
+	};
 };
 
 export const withoutDimensions = (item: CreditSchemaItem): CreditSchemaItem => {
@@ -94,7 +131,7 @@ export const createRateRule = (): CreditRateRule => ({
 	dimension: { match: {}, credit_amount: 0 },
 });
 
-/** A blank cell means "any value" for that field. */
+/** An unset cell means "any value" for that field. */
 export const setRuleCell = ({
 	rule,
 	field,
@@ -102,37 +139,9 @@ export const setRuleCell = ({
 }: {
 	rule: CreditRateRule;
 	field: string;
-	value: string;
+	value: string | undefined;
 }): CreditRateRule => {
 	const { [field]: _current, ...others } = rule.dimension.match;
-	const match = value.trim() === "" ? others : { ...others, [field]: value };
+	const match = value === undefined ? others : { ...others, [field]: value };
 	return { ...rule, dimension: { ...rule.dimension, match } };
-};
-
-export const rateKindOf = (dimension: CreditDimension): "flat" | "tiered" =>
-	dimension.tier_behavior === "graduated" ? "tiered" : "flat";
-
-/** Flat and tiered forbid each other's cost fields, so the switch rebuilds the rate. */
-export const setRateKind = ({
-	dimension,
-	kind,
-}: {
-	dimension: CreditDimension;
-	kind: "flat" | "tiered";
-}): CreditDimension => {
-	if (kind === rateKindOf(dimension)) return dimension;
-	const base = {
-		match: dimension.match,
-		...(dimension.priority === undefined
-			? {}
-			: { priority: dimension.priority }),
-	};
-	if (kind === "tiered") {
-		return {
-			...base,
-			tier_behavior: "graduated",
-			tiers: [{ to: Infinite, credit_amount: dimension.credit_amount ?? 0 }],
-		};
-	}
-	return { ...base, credit_amount: dimension.tiers?.[0]?.credit_amount ?? 0 };
 };

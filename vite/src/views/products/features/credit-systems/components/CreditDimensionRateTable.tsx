@@ -1,4 +1,4 @@
-import { IconButton, Input } from "@autumn/ui";
+import { IconButton } from "@autumn/ui";
 import type {
 	ColumnDef,
 	Row,
@@ -10,8 +10,10 @@ import { Table } from "@/components/general/table";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import {
 	type CreditRateRule,
+	type DimensionValues,
 	setRuleCell,
 } from "../utils/creditDimensionUtils";
+import { CreditDimensionValueSelect } from "./CreditDimensionValueSelect";
 import { CreditNumberInput } from "./CreditNumberInput";
 
 interface RateTableRow {
@@ -22,6 +24,7 @@ interface RateTableRow {
 }
 
 interface RateTableMeta {
+	values: DimensionValues;
 	onRuleChange: (index: number, rule: CreditRateRule) => void;
 	onRuleRemove: (index: number) => void;
 }
@@ -35,7 +38,7 @@ const metaOf = (table: TableInstance<RateTableRow>): RateTableMeta =>
 	table.options.meta as RateTableMeta;
 
 interface CreditDimensionRateTableProps {
-	fields: string[];
+	values: DimensionValues;
 	rules: CreditRateRule[];
 	baseRate: string;
 	onRuleChange: (index: number, rule: CreditRateRule) => void;
@@ -45,9 +48,9 @@ interface CreditDimensionRateTableProps {
 
 /** One column per dimension, a credits column, and a final row for the row's own rate.
  * Cells are components to the table, so `data` and `columns` must stay referentially
- * stable while typing: handlers ride on `meta`, the base rate on its row. */
+ * stable while typing: values and handlers ride on `meta`, the base rate on its row. */
 export function CreditDimensionRateTable({
-	fields,
+	values,
 	rules,
 	baseRate,
 	onRuleChange,
@@ -62,6 +65,7 @@ export function CreditDimensionRateTable({
 		[rules, baseRate],
 	);
 
+	const fields = Object.keys(values);
 	const columns: ColumnDef<RateTableRow, unknown>[] = useMemo(
 		() => [
 			...fields.map(
@@ -72,18 +76,16 @@ export function CreditDimensionRateTable({
 						const { rule, index } = row.original;
 						if (!rule) return <MutedCell>any</MutedCell>;
 						return (
-							<Input
-								variant="headless"
-								aria-label={`${rule.name || "new rate"} ${field}`}
-								placeholder="any"
-								value={rule.dimension.match[field] ?? ""}
-								onChange={(event) =>
+							<CreditDimensionValueSelect
+								ariaLabel={`${rule.name || "new rate"} ${field}`}
+								values={metaOf(table).values[field] ?? []}
+								value={rule.dimension.match[field]}
+								onValueChange={(value) =>
 									metaOf(table).onRuleChange(
 										index,
-										setRuleCell({ rule, field, value: event.target.value }),
+										setRuleCell({ rule, field, value }),
 									)
 								}
-								className="text-sm"
 							/>
 						);
 					},
@@ -143,7 +145,7 @@ export function CreditDimensionRateTable({
 		[fields.join(",")],
 	);
 
-	const meta: RateTableMeta = { onRuleChange, onRuleRemove };
+	const meta: RateTableMeta = { values, onRuleChange, onRuleRemove };
 	const table = useProductTable({
 		data,
 		columns,

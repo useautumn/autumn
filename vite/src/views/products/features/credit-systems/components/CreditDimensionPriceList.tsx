@@ -1,6 +1,6 @@
 import type { CreditSchemaItem } from "@autumn/shared";
-import { ValueChipInput } from "@/components/v2/rule-builder/ValueChipInput";
 import { useCreditDimensionEditor } from "../hooks/useCreditDimensionEditor";
+import { CreditDimensionFields } from "./CreditDimensionFields";
 import { CreditDimensionRateTable } from "./CreditDimensionRateTable";
 
 interface CreditDimensionPriceListProps {
@@ -8,7 +8,7 @@ interface CreditDimensionPriceListProps {
 	onChange: (item: CreditSchemaItem) => void;
 }
 
-/** Dimensions are typed in at the top; the rate table beneath has a column per dimension. */
+/** Fields and their values are defined at the top; the rate table beneath has a column per field. */
 export function CreditDimensionPriceList({
 	item,
 	onChange,
@@ -21,17 +21,17 @@ export function CreditDimensionPriceList({
 
 	return (
 		<div className="flex flex-col gap-3">
-			<ValueChipInput
-				aria-label="Dimension fields"
-				values={editor.fields}
-				onAdd={editor.addField}
-				onRemove={editor.removeField}
-				placeholder="Add a dimension, eg. region"
+			<CreditDimensionFields
+				values={editor.values}
+				onAddField={editor.addField}
+				onRemoveField={editor.removeField}
+				onAddValue={editor.addValue}
+				onRemoveValue={editor.removeValue}
 			/>
 
 			{editor.fields.length > 0 && (
 				<CreditDimensionRateTable
-					fields={editor.fields}
+					values={editor.values}
 					rules={editor.rules}
 					baseRate={baseRate}
 					onRuleChange={editor.setRule}

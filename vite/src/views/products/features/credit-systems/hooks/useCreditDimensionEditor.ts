@@ -3,15 +3,20 @@ import { useMemo, useState } from "react";
 import {
 	type CreditRateRule,
 	createRateRule,
-	dimensionFields,
+	type DimensionValues,
+	dimensionValues,
+	mergeDimensionValues,
 	rateRules,
-	withFields,
+	withAllowedValues,
 	withRateRules,
 } from "../utils/creditDimensionUtils";
 
+const without = (values: string[], value: string) =>
+	values.filter((current) => current !== value);
+
 /**
- * Fields are the union of the rules' match keys; a field added before any rule
- * uses it lives in local state until then, so it is never lost on re-render.
+ * Fields and values are whatever the rules reference; ones added before any
+ * rule uses them live in local state until then, so they survive re-renders.
  */
 export function useCreditDimensionEditor({
 	item,
@@ -20,28 +25,37 @@ export function useCreditDimensionEditor({
 	item: CreditSchemaItem;
 	onChange: (item: CreditSchemaItem) => void;
 }) {
-	const [draftFields, setDraftFields] = useState<string[]>([]);
-	const usedFields = dimensionFields(item);
-	const fields = Array.from(new Set([...usedFields, ...draftFields]));
+	const [draft, setDraft] = useState<DimensionValues>({});
+	const values = mergeDimensionValues(dimensionValues(item), draft);
+	const fields = Object.keys(values);
 	const rules = useMemo(() => rateRules(item), [item.dimensions]);
 
-	const commit = (next: CreditRateRule[]) =>
+	const commitRules = (next: CreditRateRule[]) =>
 		onChange(withRateRules({ item, rules: next }));
 
-	const setFields = (next: string[]) => {
-		setDraftFields(next.filter((field) => !usedFields.includes(field)));
-		onChange(withFields({ item, fields: next }));
+	const restrictTo = (allowed: DimensionValues) => {
+		setDraft(allowed);
+		onChange(withAllowedValues({ item, allowed }));
 	};
 
 	return {
 		fields,
+		values,
 		rules,
-		addField: (field: string) => setFields([...fields, field]),
-		removeField: (field: string) =>
-			setFields(fields.filter((current) => current !== field)),
-		addRule: () => commit([...rules, createRateRule()]),
+		addField: (field: string) =>
+			setDraft({ ...draft, [field]: draft[field] ?? [] }),
+		removeField: (field: string) => {
+			const { [field]: _removed, ...allowed } = values;
+			restrictTo(allowed);
+		},
+		addValue: (field: string, value: string) =>
+			setDraft({ ...draft, [field]: [...(draft[field] ?? []), value] }),
+		removeValue: (field: string, value: string) =>
+			restrictTo({ ...values, [field]: without(values[field], value) }),
+		addRule: () => commitRules([...rules, createRateRule()]),
 		setRule: (index: number, rule: CreditRateRule) =>
-			commit(rules.map((r, i) => (i === index ? rule : r))),
-		removeRule: (index: number) => commit(rules.filter((_, i) => i !== index)),
+			commitRules(rules.map((r, i) => (i === index ? rule : r))),
+		removeRule: (index: number) =>
+			commitRules(rules.filter((_, i) => i !== index)),
 	};
 }

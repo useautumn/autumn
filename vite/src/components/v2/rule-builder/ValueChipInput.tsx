@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { cn } from "@/lib/utils";
+import { useDraftValue } from "./useDraftValue";
 import { ValueChip } from "./ValueChip";
 
-const SUBMIT_KEYS = new Set(["Enter", ",", " "]);
+const CHIP_SUBMIT_KEYS = ["Enter", ",", " "];
 
 interface ValueChipInputProps {
 	values: string[];
@@ -22,21 +23,18 @@ export function ValueChipInput({
 	className,
 	"aria-label": ariaLabel,
 }: ValueChipInputProps) {
-	const [draft, setDraft] = useState("");
 	const inputRef = useRef<HTMLInputElement>(null);
+	const { draft, inputProps } = useDraftValue({
+		onSubmit: (value) => {
+			if (!values.includes(value)) onAdd(value);
+		},
+		submitKeys: CHIP_SUBMIT_KEYS,
+	});
 
-	const submitDraft = () => {
-		const value = draft.trim();
-		if (value && !values.includes(value)) onAdd(value);
-		setDraft("");
-	};
-
-	const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-		if (SUBMIT_KEYS.has(event.key)) {
-			event.preventDefault();
-			submitDraft();
-			return;
-		}
+	const removeLastChipOnBackspace = (
+		event: React.KeyboardEvent<HTMLInputElement>,
+	) => {
+		inputProps.onKeyDown(event);
 		const removesLastChip =
 			event.key === "Backspace" && draft === "" && values.length > 0;
 		if (removesLastChip) onRemove(values[values.length - 1]);
@@ -54,15 +52,13 @@ export function ValueChipInput({
 				<ValueChip key={value} label={value} onRemove={() => onRemove(value)} />
 			))}
 			<input
+				{...inputProps}
 				ref={inputRef}
 				aria-label={ariaLabel}
 				type="text"
 				className="flex-1 min-w-16 bg-transparent outline-none placeholder:text-tertiary-foreground"
 				placeholder={values.length === 0 ? placeholder : ""}
-				value={draft}
-				onChange={(event) => setDraft(event.target.value)}
-				onKeyDown={handleKeyDown}
-				onBlur={submitDraft}
+				onKeyDown={removeLastChipOnBackspace}
 				autoComplete="off"
 				autoCorrect="off"
 				autoCapitalize="off"

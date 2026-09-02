@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
 import type { CreditSchemaItem } from "@autumn/shared";
 import {
-	dimensionFields,
+	dimensionValues,
+	mergeDimensionValues,
 	rateRules,
-	setRateKind,
 	setRuleCell,
-	withFields,
+	withAllowedValues,
 	withoutDimensions,
 	withRateRules,
 } from "./creditDimensionUtils";
@@ -25,12 +25,30 @@ const row: CreditSchemaItem = {
 	},
 };
 
-test("fields are the union of the rules' match keys", () => {
-	expect(dimensionFields(row)).toEqual(["size", "region"]);
+test("fields and values are whatever rates and multipliers reference", () => {
+	expect(dimensionValues(row)).toEqual({
+		size: ["large"],
+		region: ["eu"],
+		lifecycle: ["spot"],
+	});
 	expect(rateRules(row).map((rule) => rule.name)).toEqual([
 		"size_large",
 		"size_large_region_eu",
 	]);
+});
+
+test("draft fields and values merge in after the used ones, without duplicates", () => {
+	expect(
+		mergeDimensionValues(dimensionValues(row), {
+			size: ["large", "small"],
+			tier: [],
+		}),
+	).toEqual({
+		size: ["large", "small"],
+		region: ["eu"],
+		lifecycle: ["spot"],
+		tier: [],
+	});
 });
 
 test("writing rules names each from its match and keeps multipliers", () => {
@@ -49,18 +67,32 @@ test("writing rules names each from its match and keeps multipliers", () => {
 	expect(next.multipliers).toEqual(row.multipliers);
 });
 
-test("removing a field strips it from every rule and drops rules left empty", () => {
-	const next = withFields({ item: row, fields: ["region"] });
-
-	expect(next.dimensions).toEqual({
-		region_eu: { match: { region: "eu" }, credit_amount: 20 },
+test("removing a field drops every rate and multiplier that matched on it", () => {
+	const next = withAllowedValues({
+		item: row,
+		allowed: { size: ["large"], region: ["eu"] },
 	});
+
+	expect(next.dimensions).toEqual(row.dimensions);
+	expect(next.multipliers).toBeUndefined();
 });
 
-test("a blank cell means any value", () => {
+test("removing a value drops only the rates that matched it", () => {
+	const next = withAllowedValues({
+		item: row,
+		allowed: { size: ["large"], region: [], lifecycle: ["spot"] },
+	});
+
+	expect(next.dimensions).toEqual({
+		size_large: { match: { size: "large" }, credit_amount: 16 },
+	});
+	expect(next.multipliers).toEqual(row.multipliers);
+});
+
+test("an unset cell means any value", () => {
 	const [rule] = rateRules(row);
 	expect(
-		setRuleCell({ rule, field: "size", value: "" }).dimension.match,
+		setRuleCell({ rule, field: "size", value: undefined }).dimension.match,
 	).toEqual({});
 	expect(
 		setRuleCell({ rule, field: "region", value: "us" }).dimension.match,
@@ -71,21 +103,5 @@ test("the switch strips everything", () => {
 	expect(withoutDimensions(row)).toEqual({
 		metered_feature_id: "cpu_minutes",
 		credit_amount: 1,
-	});
-});
-
-test("a rate switches between flat and tiered without losing its match", () => {
-	const tiered = setRateKind({
-		dimension: { match: { size: "xl" }, credit_amount: 30 },
-		kind: "tiered",
-	});
-	expect(tiered).toEqual({
-		match: { size: "xl" },
-		tier_behavior: "graduated",
-		tiers: [{ to: "inf", credit_amount: 30 }],
-	});
-	expect(setRateKind({ dimension: tiered, kind: "flat" })).toEqual({
-		match: { size: "xl" },
-		credit_amount: 30,
 	});
 });
