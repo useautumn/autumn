@@ -1,9 +1,10 @@
 import { Input } from "@autumn/ui";
+import { PlusIcon } from "@phosphor-icons/react";
 import { useDraftValue } from "@/components/v2/rule-builder/useDraftValue";
 import type { DimensionValues } from "../utils/creditDimensionUtils";
 import {
 	CreditDimensionFieldRow,
-	DIMENSION_NAME_WIDTH,
+	DIMENSION_NAME_COLUMN,
 } from "./CreditDimensionFieldRow";
 
 interface CreditDimensionFieldsProps {
@@ -14,7 +15,7 @@ interface CreditDimensionFieldsProps {
 	onRemoveValue: (field: string, value: string) => void;
 }
 
-/** A name card and a values card per field; typing a name in the trailing card adds a field. */
+/** One row per field; the trailing row is a bare input that adds a field on enter. */
 export function CreditDimensionFields({
 	values,
 	onAddField,
@@ -40,12 +41,20 @@ export function CreditDimensionFields({
 					onRemove={() => onRemoveField(field)}
 				/>
 			))}
-			<Input
-				{...newField.inputProps}
-				aria-label="New dimension"
-				className={`h-8! rounded-xl px-3 ${DIMENSION_NAME_WIDTH}`}
-				placeholder="New dimension"
-			/>
+			<div className={`${DIMENSION_NAME_COLUMN} h-8`}>
+				<PlusIcon
+					size={14}
+					weight="bold"
+					className="shrink-0 text-tertiary-foreground"
+				/>
+				<Input
+					{...newField.inputProps}
+					variant="headless"
+					aria-label="New dimension"
+					className="h-auto! text-sm"
+					placeholder="Add dimension"
+				/>
+			</div>
 		</div>
 	);
 }

@@ -1,8 +1,8 @@
-import { IconButton } from "@autumn/ui";
-import { TagIcon, TrashIcon } from "@phosphor-icons/react";
+import { TagIcon } from "@phosphor-icons/react";
+import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { ValueChipInput } from "@/components/v2/rule-builder/ValueChipInput";
 
-export const DIMENSION_NAME_WIDTH = "w-36";
+export const DIMENSION_NAME_COLUMN = "flex items-center gap-1.5 w-32 shrink-0";
 
 interface CreditDimensionFieldRowProps {
 	field: string;
@@ -12,7 +12,7 @@ interface CreditDimensionFieldRowProps {
 	onRemove: () => void;
 }
 
-/** Two cards on one line: the field's name, then its values as chips; delete shows on hover. */
+/** Migration filter-row rhythm: bare name on the left, one chip control taking the rest, remove on hover. */
 export function CreditDimensionFieldRow({
 	field,
 	values,
@@ -21,10 +21,8 @@ export function CreditDimensionFieldRow({
 	onRemove,
 }: CreditDimensionFieldRowProps) {
 	return (
-		<div className="group flex items-center gap-2">
-			<span
-				className={`flex items-center gap-1.5 h-8 px-3 rounded-xl border bg-interactive-secondary shrink-0 min-w-0 select-none ${DIMENSION_NAME_WIDTH}`}
-			>
+		<div className="group/row flex items-center gap-2">
+			<span className={DIMENSION_NAME_COLUMN}>
 				<TagIcon size={14} className="shrink-0 text-tertiary-foreground" />
 				<span className="text-sm truncate">{field}</span>
 			</span>
@@ -36,16 +34,7 @@ export function CreditDimensionFieldRow({
 				onRemove={onRemoveValue}
 				placeholder="eg. small, press enter"
 			/>
-			<IconButton
-				aria-label={`Remove ${field}`}
-				type="button"
-				variant="skeleton"
-				iconOrientation="center"
-				icon={<TrashIcon size={16} weight="regular" />}
-				className="shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:text-red-500"
-				onClick={onRemove}
-				tabIndex={-1}
-			/>
+			<RemoveButton onClick={onRemove} />
 		</div>
 	);
 }

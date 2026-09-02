@@ -1,9 +1,9 @@
 import type { AddPlanOp, CustomerOperation } from "@autumn/shared";
 import { useMemo } from "react";
+import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { ValuePicker } from "@/components/v2/rule-builder/ValuePicker";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { buildPlanSuggestions } from "../shared/planSuggestions";
-import { RemoveButton } from "../shared/RemoveButton";
 
 export function AddPlansSection({
 	operations,

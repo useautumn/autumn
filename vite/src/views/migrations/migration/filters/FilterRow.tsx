@@ -5,10 +5,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@autumn/ui";
+import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import { cn } from "@/lib/utils";
 import { BooleanPill } from "../shared/BooleanPill";
 import { PlanVersionPicker } from "../shared/PlanVersionPicker";
-import { RemoveButton } from "../shared/RemoveButton";
 import { CustomerValuePicker } from "./CustomerValuePicker";
 import {
 	FIELD_CONFIGS,
