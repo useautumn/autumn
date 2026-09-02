@@ -141,6 +141,7 @@ export const prepareFeatureDeductionV2 = ({
 		cusEnts: customerEntitlements,
 		deduction,
 		catalogFeatures: ctx.features,
+		eventProperties: options.eventProperties ?? undefined,
 	});
 
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =

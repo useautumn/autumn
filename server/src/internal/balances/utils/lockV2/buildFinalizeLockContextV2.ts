@@ -23,7 +23,10 @@ export type FinalizeLockContextV2 = {
 	additionalValue: number;
 	properties?: Record<string, unknown>;
 	deduction: FeatureDeduction;
-	deductionOptions: { triggerAutoTopUp: boolean };
+	deductionOptions: {
+		triggerAutoTopUp: boolean;
+		eventProperties?: Record<string, unknown>;
+	};
 };
 
 export const buildFinalizeLockContextV2 = async ({
@@ -88,6 +91,6 @@ export const buildFinalizeLockContextV2 = async ({
 			unwindValue,
 			lockReceiptKey,
 		},
-		deductionOptions: { triggerAutoTopUp: true },
+		deductionOptions: { triggerAutoTopUp: true, eventProperties },
 	};
 };

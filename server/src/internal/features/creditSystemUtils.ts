@@ -1,19 +1,26 @@
 import {
+	buildUsageAttributionKey,
 	type CreditSchemaItem,
 	type CreditTier,
 	type CusProductStatus,
 	cusEntToCurrentBalance,
-	entitlementToCreditSystem,
 	ErrCode,
+	entitlementToCreditSystem,
 	type Feature,
 	FeatureType,
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
+	hasCreditDimensionRules,
 	isAiCreditSystem,
 	isAnyCreditSystem,
 	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import {
+	type EventProperties,
+	type ResolvedCreditSchemaItem,
+	resolveCreditDimensionRate,
+} from "./creditDimensions/resolveCreditDimensionRate.js";
 
 export type CreditRateCard = {
 	source_internal_feature_id: string;
@@ -49,7 +56,7 @@ export const isEnablingInvoiceCreditFeature = ({
 	!isInvoiceCreditFeature({ feature: currentFeature }) &&
 	isInvoiceCreditFeature({ feature: nextFeature });
 
-const invalidCreditRateCard = ({
+export const invalidCreditRateCard = ({
 	featureId,
 	creditSystemId,
 	message,
@@ -193,25 +200,37 @@ const getSchemaItemCreditCost = ({
 		.toNumber();
 };
 
+/** The row for a feature, with its dimension rules applied to the event — always a plain flat or graduated rate. */
 const getCreditSchemaItem = ({
 	featureId,
 	creditSystem,
+	eventProperties,
 }: {
 	featureId: string;
 	creditSystem: Feature;
-}) => {
+	eventProperties?: EventProperties;
+}): ResolvedCreditSchemaItem | undefined => {
 	const schema: CreditSchemaItem[] = creditSystem.config.schema;
-	return schema.find(
+	const schemaItem = schema.find(
 		(schemaItem) => schemaItem.metered_feature_id === featureId,
 	);
+	if (!schemaItem || !hasCreditDimensionRules(schemaItem)) return schemaItem;
+
+	return resolveCreditDimensionRate({
+		schemaItem,
+		eventProperties,
+		creditSystemId: creditSystem.id,
+	});
 };
 
 export const getCreditRateCard = ({
 	sourceFeature,
 	creditSystem,
+	eventProperties,
 }: {
 	sourceFeature: Feature;
 	creditSystem: Feature;
+	eventProperties?: EventProperties;
 }): CreditRateCard | undefined => {
 	if (creditSystem.type !== FeatureType.CreditSystem) {
 		return undefined;
@@ -230,11 +249,15 @@ export const getCreditRateCard = ({
 	const schemaItem = getCreditSchemaItem({
 		featureId: sourceFeature.id,
 		creditSystem,
+		eventProperties,
 	});
 	if (!schemaItem) return undefined;
 
 	const base = {
-		source_internal_feature_id: sourceFeature.internal_id,
+		source_internal_feature_id: buildUsageAttributionKey({
+			internalFeatureId: sourceFeature.internal_id,
+			dimensionName: schemaItem.dimension_name,
+		}),
 		feature_amount: schemaItem.feature_amount ?? 1,
 	};
 	if (schemaItem.tier_behavior === "graduated") {
@@ -317,12 +340,14 @@ const getCreditRateFundedUnits = ({
 	currentUsage,
 	requestedUnits,
 	availableCredits,
+	eventProperties,
 }: {
 	featureId: string;
 	creditSystem: Feature;
 	currentUsage: number;
 	requestedUnits: number;
 	availableCredits: number;
+	eventProperties?: EventProperties;
 }): number => {
 	if (requestedUnits <= 0) return 0;
 	const requestedCredits = featureToCreditSystem({
@@ -330,6 +355,7 @@ const getCreditRateFundedUnits = ({
 		creditSystem,
 		amount: requestedUnits,
 		currentUsage,
+		eventProperties,
 	});
 	if (requestedCredits <= availableCredits) return requestedUnits;
 	if (availableCredits <= 0) return 0;
@@ -346,6 +372,7 @@ const getCreditRateFundedUnits = ({
 			creditSystem,
 			amount: candidateUnits,
 			currentUsage,
+			eventProperties,
 		});
 		if (candidateCredits <= availableCredits) {
 			lowerBound = candidateUnits;
@@ -364,6 +391,7 @@ export const getCreditRateRequiredBalance = ({
 	amount,
 	reverseOrder = false,
 	inStatuses,
+	eventProperties,
 }: {
 	fullSubject: FullSubject;
 	sourceFeature: Feature;
@@ -371,6 +399,7 @@ export const getCreditRateRequiredBalance = ({
 	amount: number;
 	reverseOrder?: boolean;
 	inStatuses?: CusProductStatus[];
+	eventProperties?: EventProperties;
 }): number => {
 	// Only this credit system's entitlements that actually fund the source
 	// feature under their effective schema (an override may have removed it).
@@ -388,6 +417,7 @@ export const getCreditRateRequiredBalance = ({
 	const schemaItem = getCreditSchemaItem({
 		featureId: sourceFeature.id,
 		creditSystem,
+		eventProperties,
 	});
 	const hasOverriddenEntitlement = customerEntitlements.some(
 		(customerEntitlement) => customerEntitlement.entitlement.feature_override,
@@ -400,6 +430,7 @@ export const getCreditRateRequiredBalance = ({
 			featureId: sourceFeature.id,
 			creditSystem,
 			amount,
+			eventProperties,
 		});
 	}
 
@@ -413,9 +444,17 @@ export const getCreditRateRequiredBalance = ({
 		const entitlementCreditSystem = entitlementToCreditSystem({
 			entitlement: customerEntitlement.entitlement,
 		});
+		const entitlementSchemaItem = getCreditSchemaItem({
+			featureId: sourceFeature.id,
+			creditSystem: entitlementCreditSystem,
+			eventProperties,
+		});
+		const attributionKey = buildUsageAttributionKey({
+			internalFeatureId: sourceFeature.internal_id,
+			dimensionName: entitlementSchemaItem?.dimension_name,
+		});
 		const currentUsage =
-			customerEntitlement.usage_attribution?.[sourceFeature.internal_id]
-				?.units ?? 0;
+			customerEntitlement.usage_attribution?.[attributionKey]?.units ?? 0;
 		const availableCredits = cusEntToCurrentBalance({
 			cusEnt: customerEntitlement,
 			entityId: fullSubject.entity?.id ?? undefined,
@@ -427,12 +466,14 @@ export const getCreditRateRequiredBalance = ({
 			currentUsage,
 			requestedUnits: remainingUnits.toNumber(),
 			availableCredits,
+			eventProperties,
 		});
 		const fundedCredits = featureToCreditSystem({
 			featureId: sourceFeature.id,
 			creditSystem: entitlementCreditSystem,
 			amount: fundedUnits,
 			currentUsage,
+			eventProperties,
 		});
 		requiredCredits = requiredCredits.add(fundedCredits);
 		remainingUnits = remainingUnits.sub(fundedUnits);
@@ -449,6 +490,7 @@ export const getCreditRateRequiredBalance = ({
 				creditSystem: finalCreditSystem,
 				amount: remainingUnits.toNumber(),
 				currentUsage: finalUsage,
+				eventProperties,
 			}),
 		)
 		.toNumber();
@@ -459,13 +501,19 @@ export const featureToCreditSystem = ({
 	creditSystem,
 	amount,
 	currentUsage = 0,
+	eventProperties,
 }: {
 	featureId: string;
 	creditSystem: Feature;
 	amount: number;
 	currentUsage?: number;
+	eventProperties?: EventProperties;
 }) => {
-	const schemaItem = getCreditSchemaItem({ featureId, creditSystem });
+	const schemaItem = getCreditSchemaItem({
+		featureId,
+		creditSystem,
+		eventProperties,
+	});
 	if (schemaItem)
 		return getSchemaItemCreditCost({
 			featureId,
@@ -484,11 +532,13 @@ export const getCreditCost = ({
 	creditSystem,
 	amount = 1,
 	currentUsage = 0,
+	eventProperties,
 }: {
 	featureId: string;
 	creditSystem: Feature;
 	amount?: number;
 	currentUsage?: number;
+	eventProperties?: EventProperties;
 }) => {
 	if (!isAnyCreditSystem(creditSystem.type)) {
 		return amount;
@@ -505,7 +555,11 @@ export const getCreditCost = ({
 			data: { featureId, creditSystemId: creditSystem.id },
 		});
 	}
-	const schemaItem = getCreditSchemaItem({ featureId, creditSystem });
+	const schemaItem = getCreditSchemaItem({
+		featureId,
+		creditSystem,
+		eventProperties,
+	});
 	if (schemaItem)
 		return getSchemaItemCreditCost({
 			featureId,

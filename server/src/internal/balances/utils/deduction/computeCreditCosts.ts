@@ -2,11 +2,12 @@ import {
 	AllowanceType,
 	type CreditSchemaItem,
 	creditSystemContainsFeature,
-	entitlementToCreditSystem,
 	ErrCode,
+	entitlementToCreditSystem,
 	type Feature,
 	FeatureType,
 	type FullCusEntWithFullCusProduct,
+	hasCreditDimensionRules,
 	RecaseError,
 } from "@autumn/shared";
 import { logger } from "@/external/logtail/logtailUtils.js";
@@ -31,10 +32,12 @@ export const computeCreditCosts = ({
 	cusEnts,
 	deduction,
 	catalogFeatures,
+	eventProperties,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	deduction: FeatureDeduction;
 	catalogFeatures?: Feature[];
+	eventProperties?: Record<string, unknown>;
 }): CreditCostLookup => {
 	const costMap = new Map<string, ComputedCreditCost>();
 
@@ -59,6 +62,7 @@ export const computeCreditCosts = ({
 				? getCreditRateCard({
 						sourceFeature: deduction.feature,
 						creditSystem,
+						eventProperties,
 					})
 				: undefined;
 			if (
@@ -93,6 +97,7 @@ export const computeCreditCosts = ({
 					featureId: deduction.feature.id,
 					creditSystem,
 					amount: deduction.tokens?.cost,
+					eventProperties,
 				}),
 				...(rateCard ? { rateCard } : {}),
 			});
@@ -127,7 +132,8 @@ export const computeCreditCosts = ({
 				currentCreditSystem &&
 				currentSchemaItem &&
 				(currentCreditSystem.config.invoice_credit ||
-					currentSchemaItem.tier_behavior === "graduated")
+					currentSchemaItem.tier_behavior === "graduated" ||
+					hasCreditDimensionRules(currentSchemaItem))
 			) {
 				throw new RecaseError({
 					message:
