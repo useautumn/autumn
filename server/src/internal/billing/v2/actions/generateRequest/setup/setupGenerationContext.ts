@@ -12,6 +12,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
+import { getCustomerSchedulesByScope } from "@/internal/customers/cusUtils/getFullCustomerSchedule";
 import { FeatureService } from "@/internal/features/FeatureService";
 import { ProductService } from "@/internal/products/ProductService";
 
@@ -88,6 +89,20 @@ export const setupGenerationContext = async ({
 		FeatureService.list({ db: ctx.db, env: ctx.env, orgId: ctx.org.id }),
 		CusService.getFull({ ctx, idOrInternalId: customerId }),
 	]);
+	const { customerSchedule, entitySchedules } =
+		await getCustomerSchedulesByScope({
+			ctx,
+			internalCustomerId: fullCustomer.internal_id,
+		});
+	const schedules = [customerSchedule, ...Object.values(entitySchedules)]
+		.filter((schedule) => schedule !== undefined)
+		.map((schedule) => ({
+			...(schedule.entity_id ? { entity_id: schedule.entity_id } : {}),
+			phases: schedule.phases.map(({ starts_at, customer_product_ids }) => ({
+				starts_at,
+				customer_product_ids,
+			})),
+		}));
 
 	const now = Date.now();
 
@@ -113,6 +128,7 @@ export const setupGenerationContext = async ({
 					...(entity.name ? { name: entity.name } : {}),
 					...(entity.feature_id ? { feature_id: entity.feature_id } : {}),
 				})),
+				...(schedules.length ? { schedules } : {}),
 			},
 			features: features.map((feature) => ({
 				id: feature.id,

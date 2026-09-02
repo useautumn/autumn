@@ -11,6 +11,7 @@ import {
 } from "@/components/forms/shared/utils/requestBodyOverrideHelpers";
 import type {
 	CreateScheduleForm,
+	SchedulePhase,
 	SchedulePlan,
 } from "../createScheduleFormSchema";
 
@@ -69,9 +70,15 @@ const startsAtFrom = ({
  * request (per-plan customize already flattened to items) into form values. */
 export const scheduleFormFromRequestBody = (
 	request: RequestBody,
+	persistedPhases: SchedulePhase[] = [],
 ): Partial<CreateScheduleForm> | undefined => {
 	if (!Array.isArray(request.phases) || !request.phases.length)
 		return undefined;
+	const persistedStarts = new Set(
+		persistedPhases.flatMap(({ persistedStartsAt }) =>
+			persistedStartsAt == null ? [] : [persistedStartsAt],
+		),
+	);
 	let previousStartsAt: number | null = null;
 	const phases = request.phases.flatMap((value) => {
 		const phase = requestRecord(value);
@@ -80,7 +87,15 @@ export const scheduleFormFromRequestBody = (
 		if (!plans.length) return [];
 		const startsAt = startsAtFrom({ phase, previousStartsAt });
 		previousStartsAt = startsAt ?? previousStartsAt ?? Date.now();
-		return [{ plans, startsAt }];
+		return [
+			{
+				plans,
+				startsAt,
+				...(startsAt != null && persistedStarts.has(startsAt)
+					? { persistedStartsAt: startsAt }
+					: {}),
+			},
+		];
 	});
 	if (!phases.length) return undefined;
 	return {

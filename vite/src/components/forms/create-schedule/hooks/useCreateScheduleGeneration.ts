@@ -17,7 +17,10 @@ export function useCreateScheduleGeneration({
 }): BillingGenerationState {
 	const onGenerated = useCallback(
 		(request: Record<string, unknown>) => {
-			const next = scheduleFormFromRequestBody(request);
+			const next = scheduleFormFromRequestBody(
+				request,
+				form.store.state.values.phases,
+			);
 			if (!next) {
 				toast.error("Couldn't build a schedule from that prompt");
 				return;

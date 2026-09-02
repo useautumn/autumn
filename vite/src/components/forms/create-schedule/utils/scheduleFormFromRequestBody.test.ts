@@ -106,4 +106,26 @@ describe("scheduleFormFromRequestBody", () => {
 			version: 3,
 		});
 	});
+
+	test("preserves persisted phase identity after a generated edit", () => {
+		const startsAt = Date.UTC(2027, 0, 1);
+		const previousPhases = [0, 1].map((index) => ({
+			persistedStartsAt: startsAt + index,
+			plans: [],
+			startsAt: startsAt + index,
+		}));
+		const form = scheduleFormFromRequestBody(
+			{
+				phases: previousPhases.map((phase) => ({
+					plans: [{ plan_id: "generation", version: 2 }],
+					starts_at: phase.startsAt,
+				})),
+			},
+			previousPhases,
+		);
+
+		expect(
+			form?.phases?.map(({ persistedStartsAt }) => persistedStartsAt),
+		).toEqual([startsAt, startsAt + 1]);
+	});
 });
