@@ -11,6 +11,7 @@ import {
 	CreateScheduleParamsV0Schema,
 	ms,
 	type ProductItem,
+	schedules,
 } from "@autumn/shared";
 import {
 	getCustomerProductEntitlementBalances,
@@ -18,14 +19,17 @@ import {
 	getRequiredScheduleId,
 } from "@tests/integration/billing/create-schedule/utils/createScheduleTestHelpers.js";
 import { messagesItem } from "@tests/integration/catalog-v2/plans/licenses/utils/seedLicensePlans.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import { productItemsToCustomizePlanV1 } from "@utils/productV2Utils/productItemUtils/convertProductItem/productItemsToCustomizePlanV1.js";
 import chalk from "chalk";
+import { eq } from "drizzle-orm";
 import { setupGenerationContext } from "@/internal/billing/v2/actions/generateRequest/setup/setupGenerationContext.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { hydrateCustomerWithSchedules } from "@/internal/customers/cusUtils/getFullCustomerSchedule.js";
 import { resetCatalogPlans } from "../../../scenarios/catalog/utils/catalogScenario.js";
 
@@ -159,6 +163,11 @@ test(`${chalk.yellowBright("billing.generate schedule: generated edit previews, 
 			.flatMap(({ customer_product_ids }) => customer_product_ids)
 			.every((id) => knownCustomerProductIds.has(id)),
 	).toBe(true);
+	expect(
+		persistedSchedule?.phases.map(
+			({ billing_cycle_anchor }) => billing_cycle_anchor,
+		),
+	).toEqual([undefined, "phase_start", undefined, "phase_start"]);
 	const generated = await autumnV2_2.post(GENERATE_PATH, {
 		customer_id: customerId,
 		current_request: initialRequest,
@@ -177,6 +186,7 @@ test(`${chalk.yellowBright("billing.generate schedule: generated edit previews, 
 		plans: {
 			items: { included_usage?: number; price?: number }[];
 			plan_id: string;
+			version?: number;
 		}[];
 		starts_at: number;
 	}[];
@@ -184,6 +194,9 @@ test(`${chalk.yellowBright("billing.generate schedule: generated edit previews, 
 	expect(
 		generatedPhases.map(({ plans }) => plans.map(({ plan_id }) => plan_id)),
 	).toEqual(phaseTerms.map(() => [planId, analyticsId, supportId]));
+	expect(generatedPhases.map(({ plans }) => plans[0]?.version)).toEqual(
+		phaseTerms.map(({ version }) => version),
+	);
 	expect(
 		generatedPhases.map(({ billing_cycle_anchor }) => billing_cycle_anchor),
 	).toEqual([undefined, "phase_start", undefined, "phase_start"]);
@@ -233,6 +246,18 @@ test(`${chalk.yellowBright("billing.generate schedule: generated edit previews, 
 		),
 	);
 	expect(appliedPrices).toEqual(expectedPrices);
+	const appliedVersions = await Promise.all(
+		applied.phases.map(
+			async ({ customer_product_ids }) =>
+				(
+					await CusProductService.getFull({
+						db: ctx.db,
+						id: customer_product_ids[0]!,
+					})
+				)?.product.version,
+		),
+	);
+	expect(appliedVersions).toEqual(phaseTerms.map(({ version }) => version));
 	const coreEntitlements = await Promise.all(
 		applied.phases.map(
 			async ({ customer_product_ids }) =>
@@ -258,6 +283,59 @@ test(`${chalk.yellowBright("billing.generate schedule: generated edit previews, 
 	const hydrated = await hydrateCustomerWithSchedules({ ctx, fullCustomer });
 	expect(hydrated.schedule?.id).toBe(appliedScheduleId);
 	expect(hydrated.schedule?.phases).toHaveLength(4);
+}, 120_000);
+
+test(`${chalk.yellowBright("billing.generate schedule: loads complete legacy entity context")}`, async () => {
+	const customerId = "generate-schedule-entity-context-customer";
+	const plans = Array.from({ length: 6 }, (_, index) =>
+		products.base({
+			id: `generate-schedule-entity-context-plan-${index}`,
+			isAddOn: index > 0,
+			items: [items.monthlyPrice({ price: 20 + index })],
+		}),
+	);
+	const { autumnV1, ctx, entities } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", testClock: false }),
+			s.products({ list: plans, prefix: "" }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [],
+	});
+	const entityId = entities[0]!.id;
+	const response = await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		entity_id: entityId,
+		phases: [
+			{
+				plans: plans.map(({ id }) => ({ plan_id: id })),
+				starts_at: Date.now(),
+			},
+			{
+				plans: plans.map(({ id }) => ({ plan_id: id })),
+				starts_at: Date.now() + ms.days(30),
+			},
+		],
+	});
+
+	await ctx.db
+		.update(schedules)
+		.set({ entity_id: null, internal_entity_id: null })
+		.where(eq(schedules.id, getRequiredScheduleId(response.schedule_id)));
+
+	const { context } = await setupGenerationContext({ ctx, customerId });
+	expect(context.customer.schedules).toMatchObject([{ entity_id: entityId }]);
+	const currentPlanIds = new Set(
+		context.customer.current_plans.map(
+			({ customer_product_id }) => customer_product_id,
+		),
+	);
+	expect(
+		response.phases
+			.flatMap(({ customer_product_ids }) => customer_product_ids)
+			.every((id) => currentPlanIds.has(id)),
+	).toBe(true);
 }, 120_000);
 
 test(`${chalk.yellowBright("billing.generate schedule: appends a relative phase and preserves an unscheduled plan")}`, async () => {

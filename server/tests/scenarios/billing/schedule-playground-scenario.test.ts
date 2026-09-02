@@ -194,4 +194,19 @@ test("scenario: complex attached schedule playground", async () => {
 	expect(
 		persisted?.phases.map((phase) => phase.customer_product_ids.length),
 	).toEqual([3, 3, 3, 3]);
+	expect(
+		persisted?.phases.map(({ customer_product_ids, starts_at }) => ({
+			customer_product_ids,
+			starts_at,
+		})),
+	).toEqual(
+		response.phases.map(({ customer_product_ids, starts_at }) => ({
+			customer_product_ids,
+			starts_at,
+		})),
+	);
+	expect(
+		new Set(response.phases.flatMap((phase) => phase.customer_product_ids))
+			.size,
+	).toBe(12);
 });

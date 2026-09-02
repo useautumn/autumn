@@ -230,6 +230,7 @@ export const complexScheduleContext = (): GenerationContext => {
 	];
 	const schedule = complexScheduleRequest() as {
 		phases: {
+			billing_cycle_anchor?: string;
 			plans: ReturnType<typeof customizedPlan>[];
 			starts_at: number;
 		}[];
@@ -259,6 +260,9 @@ export const complexScheduleContext = (): GenerationContext => {
 			schedules: [
 				{
 					phases: schedule.phases.map((phase, phaseIndex) => ({
+						...(phase.billing_cycle_anchor
+							? { billing_cycle_anchor: phase.billing_cycle_anchor }
+							: {}),
 						customer_product_ids: phase.plans.map((plan) =>
 							customerProductId(phaseIndex, plan.plan_id),
 						),
