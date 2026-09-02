@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useDraftValue } from "./useDraftValue";
@@ -10,6 +11,8 @@ interface ValueChipInputProps {
 	onAdd: (value: string) => void;
 	onRemove: (value: string) => void;
 	placeholder?: string;
+	leading?: ReactNode;
+	trailing?: ReactNode;
 	className?: string;
 	"aria-label"?: string;
 }
@@ -20,6 +23,8 @@ export function ValueChipInput({
 	onAdd,
 	onRemove,
 	placeholder = "Type and press enter...",
+	leading,
+	trailing,
 	className,
 	"aria-label": ariaLabel,
 }: ValueChipInputProps) {
@@ -48,6 +53,7 @@ export function ValueChipInput({
 			)}
 			onClick={() => inputRef.current?.focus()}
 		>
+			{leading}
 			{values.map((value) => (
 				<ValueChip key={value} label={value} onRemove={() => onRemove(value)} />
 			))}
@@ -64,6 +70,7 @@ export function ValueChipInput({
 				autoCapitalize="off"
 				spellCheck={false}
 			/>
+			{trailing}
 		</div>
 	);
 }

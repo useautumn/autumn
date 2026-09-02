@@ -11,7 +11,7 @@ interface CreditDimensionFieldsProps {
 	onRemoveValue: (field: string, value: string) => void;
 }
 
-/** A row per field with its values as chips; typing a name beneath adds a field. */
+/** A row card per field with its values as chips; typing a name beneath adds a field. */
 export function CreditDimensionFields({
 	values,
 	onAddField,
@@ -40,6 +40,7 @@ export function CreditDimensionFields({
 			<Input
 				{...newField.inputProps}
 				aria-label="New dimension"
+				className="h-10! rounded-xl px-3"
 				placeholder="Add a dimension, eg. size"
 			/>
 		</div>

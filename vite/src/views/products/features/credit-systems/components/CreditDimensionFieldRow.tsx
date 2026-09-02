@@ -1,5 +1,5 @@
 import { IconButton } from "@autumn/ui";
-import { X } from "lucide-react";
+import { TrashIcon } from "@phosphor-icons/react";
 import { ValueChipInput } from "@/components/v2/rule-builder/ValueChipInput";
 
 interface CreditDimensionFieldRowProps {
@@ -10,6 +10,7 @@ interface CreditDimensionFieldRowProps {
 	onRemove: () => void;
 }
 
+/** A plan-row style card: the field name leads, its values are chips, delete shows on hover. */
 export function CreditDimensionFieldRow({
 	field,
 	values,
@@ -18,25 +19,33 @@ export function CreditDimensionFieldRow({
 	onRemove,
 }: CreditDimensionFieldRowProps) {
 	return (
-		<div className="flex items-center gap-2">
-			<span className="text-sm w-24 shrink-0 truncate">{field}</span>
-			<ValueChipInput
-				aria-label={`${field} values`}
-				className="flex-1"
-				values={values}
-				onAdd={onAddValue}
-				onRemove={onRemoveValue}
-				placeholder="eg. small, press enter"
-			/>
-			<IconButton
-				aria-label={`Remove ${field}`}
-				type="button"
-				variant="skeleton"
-				iconOrientation="center"
-				icon={<X className="h-3.5 w-3.5" />}
-				onClick={onRemove}
-				className="!text-subtle hover:!text-foreground"
-			/>
-		</div>
+		<ValueChipInput
+			aria-label={`${field} values`}
+			className="group h-10"
+			leading={
+				<span className="text-sm w-16 shrink-0 truncate select-none">
+					{field}
+				</span>
+			}
+			trailing={
+				<IconButton
+					aria-label={`Remove ${field}`}
+					type="button"
+					variant="skeleton"
+					iconOrientation="center"
+					icon={<TrashIcon size={16} weight="regular" />}
+					className="shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:text-red-500"
+					onClick={(event) => {
+						event.stopPropagation();
+						onRemove();
+					}}
+					tabIndex={-1}
+				/>
+			}
+			values={values}
+			onAdd={onAddValue}
+			onRemove={onRemoveValue}
+			placeholder="eg. small, press enter"
+		/>
 	);
 }
