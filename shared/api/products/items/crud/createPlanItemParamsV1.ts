@@ -1,3 +1,4 @@
+import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride";
 import {
 	AdditionalCurrencyPriceArraySchema,
 	ApiUsageTierWithCurrenciesSchema,
@@ -8,13 +9,11 @@ import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
 import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
-
 import {
 	OnDecrease,
 	OnIncrease,
 } from "@models/productV2Models/productItemModels/productItemEnums";
 import { z } from "zod/v4";
-import { ApiFeatureOverrideSchema } from "@api/features/apiFeatureOverride";
 
 export const IncludedUsageParamsSchema = z.number().max(10_000_000_000_000, {
 	error:
@@ -32,12 +31,12 @@ export const PlanItemPriceParamsSchema = z.object({
 		.string()
 		.nullish()
 		.transform((value) => value ?? undefined)
-		.optional()
 		.meta({
 			description:
 				"Stripe price id this feature price is billed under. Set by sync flows to preserve an existing Stripe price.",
 			internal: true,
-		}),
+		})
+		.optional(),
 	amount: z.number().optional().meta({
 		description:
 			"Price per billing_units after included usage. Either 'amount' or 'tiers' is required.",

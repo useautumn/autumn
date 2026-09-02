@@ -71,8 +71,6 @@ function sanitizeNode(node: unknown): void {
 		);
 	}
 
-	stripInternalMarkers(node);
-
 	// Recurse into all values
 	for (const value of Object.values(node)) {
 		sanitizeNode(value);
@@ -100,10 +98,24 @@ function sanitizeNode(node: unknown): void {
  *
  * Also removes internal markers from all nodes and filters internal parameters.
  */
+function stripMarkersEverywhere(node: unknown): void {
+	if (Array.isArray(node)) {
+		for (const item of node) stripMarkersEverywhere(item);
+		return;
+	}
+	if (!isRecord(node)) return;
+	stripInternalMarkers(node);
+	for (const value of Object.values(node)) stripMarkersEverywhere(value);
+}
+
 export function removeInternalFields({
 	openApiDocument,
 }: {
 	openApiDocument: Record<string, unknown>;
 }): void {
+	// Two passes on purpose. zod-openapi emits shared schema objects (the spec is
+	// full of YAML anchors), so stripping a marker while deleting would leave a
+	// second parent holding the same object with nothing left to match on.
 	sanitizeNode(openApiDocument);
+	stripMarkersEverywhere(openApiDocument);
 }
