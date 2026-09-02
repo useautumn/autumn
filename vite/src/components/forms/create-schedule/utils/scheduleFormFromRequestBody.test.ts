@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import type { ProductV2 } from "@autumn/shared";
+import { buildCreateScheduleRequestBody } from "../hooks/useCreateScheduleRequestBody";
 import { scheduleFormFromRequestBody } from "./scheduleFormFromRequestBody";
 
 describe("scheduleFormFromRequestBody", () => {
@@ -71,5 +73,37 @@ describe("scheduleFormFromRequestBody", () => {
 		expect(
 			scheduleFormFromRequestBody({ customer_id: "cus_1" }),
 		).toBeUndefined();
+	});
+
+	test("round trips generated custom items into schedule API customize params", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const form = scheduleFormFromRequestBody({
+			phases: [
+				{ plans: [{ plan_id: "generation", version: 2 }], starts_at: now },
+				{
+					plans: [
+						{
+							items: [{ feature_id: null, interval: "month", price: 25 }],
+							plan_id: "generation",
+							version: 3,
+						},
+					],
+					starts_at: now + 1,
+				},
+			],
+		});
+		const request = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			features: [],
+			nowMs: now,
+			phases: form?.phases ?? [],
+			products: [{ id: "generation", items: [] } as ProductV2],
+		});
+
+		expect(request?.phases[1]?.plans[0]).toMatchObject({
+			customize: { price: { amount: 25, interval: "month" } },
+			plan_id: "generation",
+			version: 3,
+		});
 	});
 });

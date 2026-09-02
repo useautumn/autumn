@@ -104,6 +104,24 @@ export const versionedPlanContext = ({
 		})),
 	}) as unknown as GenerationContext;
 
+export const versionedScheduleContext = (): GenerationContext => {
+	const context = versionedPlanContext();
+	return {
+		...context,
+		plans: [
+			...context.plans,
+			{
+				id: "support-addon",
+				is_add_on: true,
+				items: [],
+				name: "Support Add-on",
+				price: { amount: 10, interval: BillingInterval.Month },
+				version: 1,
+			},
+		],
+	};
+};
+
 /** Enterprise org with a volume-tiered prepaid credits ladder — the shape that
  * stresses same-shape customize patches. */
 export const creditLadderContext = (): GenerationContext =>
