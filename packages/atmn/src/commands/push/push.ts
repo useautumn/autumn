@@ -487,8 +487,11 @@ function normalizePlanFeatureForCompare(pf: PlanItem): Record<string, unknown> {
 		featureId: pf.featureId,
 	};
 
+	if (f.entityFeatureId != null) result.entityFeatureId = f.entityFeatureId;
+
 	if (f.included != null && f.included !== 0) result.included = f.included;
 	if (f.unlimited === true) result.unlimited = true;
+	if (f.pooled === true) result.pooled = true;
 
 	const reset = f.reset as Record<string, unknown> | undefined;
 	if (reset != null) {

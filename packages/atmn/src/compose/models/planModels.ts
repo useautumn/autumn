@@ -117,6 +117,10 @@ export const PlanItemSchema = z.object({
 	unlimited: z.boolean().optional().meta({
 		description: "If true, customer has unlimited access to this feature.",
 	}),
+	pooled: z.boolean().optional().meta({
+		description:
+			"Whether entity-level grants contribute to a shared customer balance.",
+	}),
 	reset: z
 		.object({
 			interval: z
@@ -404,6 +408,8 @@ type PlanItemBaseFields = {
 	included?: number;
 	/** Whether usage is unlimited */
 	unlimited?: boolean;
+	/** Whether entity-level grants contribute to a shared customer balance */
+	pooled?: boolean;
 	/** Proration rules for quantity changes */
 	proration?: ProrationConfig;
 	/** Rollover policy for unused usage */
