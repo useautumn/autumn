@@ -9,6 +9,8 @@ export interface OpenApiPaths {
 	openApiOutput: string;
 	/** packages/openapi/openapi-stripped.yml (JSDoc examples stripped for non-TS SDKs) */
 	openApiStrippedOutput: string;
+	/** packages/openapi/openapi-internal.yml (public surface + catalogV2, internal fields kept; atmn generator input) */
+	openApiInternalOutput: string;
 	/** packages/sdk/ directory */
 	tsSdkDir: string;
 	/** others/python-sdk/ directory */
@@ -58,6 +60,7 @@ export function resolvePaths(): OpenApiPaths {
 		openApiDir,
 		openApiOutput: path.join(openApiDir, "openapi.yml"),
 		openApiStrippedOutput: path.join(openApiDir, "openapi-stripped.yml"),
+		openApiInternalOutput: path.join(openApiDir, "openapi-internal.yml"),
 		tsSdkDir,
 		pythonSdkDir,
 		docsApiDir,
