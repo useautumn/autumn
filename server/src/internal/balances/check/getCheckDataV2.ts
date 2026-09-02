@@ -3,7 +3,9 @@ import {
 	type CheckParams,
 	type Feature,
 	FeatureNotFoundError,
+	FeatureType,
 	findFeatureById,
+	fullSubjectToCreditSystems,
 	fullSubjectToFullCustomer,
 	getFeatureToUseForCheck,
 	withTimeout,
@@ -14,7 +16,6 @@ import {
 	getOrSetCachedPartialFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
-import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import { triggerAutoTopUp } from "../autoTopUp/triggerAutoTopUp.js";
 import { buildEvaluationSubject } from "./buildEvaluationSubject.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
@@ -29,21 +30,24 @@ export const withCheckDbHydrationBudget = <T>(fn: () => Promise<T>) =>
 		fn,
 	});
 
-const getFeatureAndCreditSystems = ({
+/** Load-set for the partial subject. Overrides live on entitlement rows we
+ * haven't loaded yet, so any credit system could fund the feature — load them
+ * all and narrow to effective candidates after the subject is in hand. */
+const getCheckLoadFeatureIds = ({
 	features,
 	featureId,
 }: {
 	features: Feature[];
 	featureId: string;
-}) => {
-	const feature = features.find((candidate) => candidate.id === featureId);
-	const creditSystems = getCreditSystemsFromFeature({
-		featureId,
-		features,
-	});
-
-	return { feature, creditSystems };
-};
+}) =>
+	Array.from(
+		new Set([
+			featureId,
+			...features
+				.filter((candidate) => candidate.type === FeatureType.CreditSystem)
+				.map((candidate) => candidate.id),
+		]),
+	);
 
 export const getCheckDataV2 = async ({
 	ctx,
@@ -56,21 +60,16 @@ export const getCheckDataV2 = async ({
 }): Promise<CheckDataV2> => {
 	const { customer_id, feature_id, entity_id } = body;
 
-	const { feature, creditSystems } = getFeatureAndCreditSystems({
-		features: ctx.features,
-		featureId: feature_id,
-	});
+	const feature = ctx.features.find((candidate) => candidate.id === feature_id);
 
 	if (!feature) {
 		throw new FeatureNotFoundError({ featureId: feature_id });
 	}
 
-	const featureIds = Array.from(
-		new Set([
-			feature_id,
-			...creditSystems.map((creditSystem) => creditSystem.id),
-		]),
-	);
+	const featureIds = getCheckLoadFeatureIds({
+		features: ctx.features,
+		featureId: feature_id,
+	});
 
 	// "Query read timeout" is in TRANSIENT_DB_ERROR_MESSAGES, so isTransientDbError
 	// classifies the expiry as transient and check's withRedisFailOpen fallback engages.
@@ -102,6 +101,14 @@ export const getCheckDataV2 = async ({
 		ctx,
 		fullSubject,
 		entityId: entity_id,
+	});
+
+	// Candidates from the subject's effective schemas (feature_override aware),
+	// now that the entitlement rows are loaded.
+	const creditSystems = fullSubjectToCreditSystems({
+		fullSubject,
+		featureId: feature_id,
+		features: ctx.features,
 	});
 
 	const featureToUseMin = getFeatureToUseForCheck({

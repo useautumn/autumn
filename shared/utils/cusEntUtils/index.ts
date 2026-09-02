@@ -27,6 +27,7 @@ export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
 export * from "./classifyCusEnt/cusEntsHaveUnlimited";
 export * from "./classifyCusEnt/cusEntsHaveUsageAllowed";
+export * from "./classifyCusEnt/customerEntitlementFundsFeature";
 export * from "./classifyCusEnt/isPooledBalanceCustomerEntitlement";
 // Classify utils
 export * from "./classifyCusEntUtils";

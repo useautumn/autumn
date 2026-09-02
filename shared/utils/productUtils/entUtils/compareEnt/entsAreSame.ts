@@ -59,7 +59,7 @@ const creditSchemasAreSame = ({
 };
 
 /** Field-by-field so new override keys must be added here deliberately. */
-const featureOverridesAreSame = ({
+export const featureOverridesAreSame = ({
 	override1,
 	override2,
 }: {
