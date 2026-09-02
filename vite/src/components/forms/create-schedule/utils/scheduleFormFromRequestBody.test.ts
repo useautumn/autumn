@@ -106,4 +106,91 @@ describe("scheduleFormFromRequestBody", () => {
 			version: 3,
 		});
 	});
+
+	test("preserves persisted phase identity after a generated edit", () => {
+		const startsAt = Date.UTC(2027, 0, 1);
+		const previousPhases = [0, 1].map((index) => ({
+			persistedStartsAt: startsAt + index,
+			plans: [],
+			startsAt: startsAt + index,
+		}));
+		const form = scheduleFormFromRequestBody(
+			{
+				phases: previousPhases.map((phase) => ({
+					plans: [{ plan_id: "generation", version: 2 }],
+					starts_at: phase.startsAt,
+				})),
+			},
+			previousPhases,
+		);
+
+		expect(
+			form?.phases?.map(({ persistedStartsAt }) => persistedStartsAt),
+		).toEqual([startsAt, startsAt + 1]);
+	});
+
+	test("keeps the active phase start when generation tries to move it", () => {
+		const startsAt = Date.now() - 1_000;
+		const form = scheduleFormFromRequestBody(
+			{
+				phases: [
+					{
+						plans: [{ plan_id: "generation", version: 2 }],
+						starts_at: startsAt + 1,
+					},
+				],
+			},
+			[{ persistedStartsAt: startsAt, plans: [], startsAt }],
+		);
+
+		expect(form?.phases?.[0]).toMatchObject({
+			persistedStartsAt: startsAt,
+			startsAt,
+		});
+	});
+
+	test("keeps future phase identity without discarding its generated start", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const persistedStartsAt = now + 1_000;
+		const generatedStartsAt = now + 2_000;
+		const form = scheduleFormFromRequestBody(
+			{
+				phases: [
+					{
+						plans: [{ plan_id: "generation", version: 2 }],
+						starts_at: generatedStartsAt,
+					},
+				],
+			},
+			[{ persistedStartsAt, plans: [], startsAt: persistedStartsAt }],
+		);
+		const request = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			features: [],
+			nowMs: now,
+			phases: form?.phases ?? [],
+			products: [{ id: "generation", items: [] } as ProductV2],
+		});
+
+		expect(form?.phases?.[0]).toMatchObject({
+			persistedStartsAt,
+			startsAt: generatedStartsAt,
+		});
+		expect(request?.phases[0]?.starts_at).toBe(generatedStartsAt);
+	});
+
+	test("preserves phase-level billing cycle resets", () => {
+		const form = scheduleFormFromRequestBody({
+			phases: [
+				{ plans: [{ plan_id: "launch" }], starts_at: 1780000000000 },
+				{
+					billing_cycle_anchor: "phase_start",
+					plans: [{ plan_id: "scale" }],
+					starts_at: 1790000000000,
+				},
+			],
+		});
+
+		expect(form?.resetBillingCycle).toBe(true);
+	});
 });

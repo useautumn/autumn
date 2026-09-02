@@ -6,6 +6,7 @@
  * Run: bun eval:generation  (needs ANTHROPIC_API_KEY + BRAINTRUST_API_KEY)
  */
 
+import { isDeepStrictEqual } from "node:util";
 import {
 	type ApiPlanV1,
 	applyCustomizeToPlan,
@@ -21,6 +22,8 @@ import type {
 } from "@/internal/billing/v2/actions/generateRequest/generationSchemas";
 import type { GenerationContext } from "@/internal/billing/v2/actions/generateRequest/setup/setupGenerationContext";
 import {
+	complexScheduleContext,
+	complexScheduleRequest,
 	creditLadderContext,
 	entityScaleContext,
 	rolloverCreditsBaseItems,
@@ -30,7 +33,6 @@ import {
 	tieredScaleContext,
 	variantLadderContext,
 	versionedPlanContext,
-	versionedScheduleContext,
 } from "./fixtures";
 
 type EvalInput = {
@@ -41,6 +43,7 @@ type EvalInput = {
 	forbiddenKeys?: string[];
 	applyToItems?: ApiPlanV1["items"];
 	expectedApplied?: Record<string, unknown>[];
+	exact?: boolean;
 };
 
 type EvalOutput = {
@@ -158,6 +161,29 @@ const expectedParams = ({
 	};
 };
 
+const exactParams = ({
+	input,
+	output,
+	expected,
+}: {
+	input: EvalInput;
+	output: EvalOutput;
+	expected?: Record<string, unknown>;
+}) => {
+	if (!input.exact) return null;
+	const matches = isDeepStrictEqual(output.params, expected);
+	if (!matches) {
+		console.warn(
+			`[exact_params] ${input.tool}: "${input.prompt}"\nexpected ${JSON.stringify(expected)}\nactual   ${JSON.stringify(output.params)}`,
+		);
+	}
+	return {
+		name: "exact_params",
+		score: matches ? 1 : 0,
+		...(matches ? {} : { metadata: { actual: output.params, expected } }),
+	};
+};
+
 const appliedPlan = ({
 	input,
 	output,
@@ -205,12 +231,6 @@ const appliedPlan = ({
 		...(mismatches.length ? { metadata: { mismatches } } : {}),
 	};
 };
-
-const scheduledVersionStarts = [
-	Date.UTC(2026, 7, 24, 12),
-	Date.UTC(2027, 7, 24, 12),
-	Date.UTC(2028, 7, 24, 12),
-];
 
 const cases: EvalCase[] = [
 	{
@@ -651,98 +671,46 @@ const cases: EvalCase[] = [
 			],
 		},
 	},
-	{
-		name: "schedule: existing phases survive a targeted version change",
-		input: {
-			context: versionedScheduleContext(),
-			currentRequest: {
-				phases: [1, 2, 3].map((version, index) => ({
-					...(index === 1 ? { billing_cycle_anchor: "phase_start" } : {}),
-					plans: [
-						{
-							plan_id: "generation",
-							version,
-							...(index === 1
-								? {
-										customize: {
-											price: { amount: 25, interval: "month" },
-										},
-									}
-								: {}),
-						},
-					],
-					starts_at: scheduledVersionStarts[index],
-				})),
-				unscheduled_plans: [{ plan_id: "support-addon" }],
-			},
+	...[
+		{
+			name: "schedule: changes one version without dropping complex phases",
 			prompt:
-				"In the existing schedule, move only phase 2 to version 3 but keep its custom $25 monthly price. Leave every other field unchanged.",
-			tool: "create_schedule",
+				"Change only the Core plan in phase 2 to version 3. Keep its $1,100 monthly price, its items, and every other schedule field exactly unchanged.",
+			expected: complexScheduleRequest({ phaseTwoVersion: 3 }),
 		},
-		expected: {
-			phases: [
-				{
-					plans: [{ plan_id: "generation", version: 1 }],
-					starts_at: scheduledVersionStarts[0],
-				},
-				{
-					billing_cycle_anchor: "phase_start",
-					plans: [
-						{
-							customize: {
-								price: { amount: 25, interval: "month" },
-							},
-							plan_id: "generation",
-							version: 3,
-						},
-					],
-					starts_at: scheduledVersionStarts[1],
-				},
-				{
-					plans: [{ plan_id: "generation", version: 3 }],
-					starts_at: scheduledVersionStarts[2],
-				},
-			],
-			unscheduled_plans: [{ plan_id: "support-addon" }],
-		},
-	},
-	{
-		name: "schedule: append relative phase without rewriting the schedule",
-		input: {
-			context: versionedScheduleContext(),
-			currentRequest: {
-				phases: [1, 2, 3].map((version, index) => ({
-					plans: [{ plan_id: "generation", version }],
-					starts_at: scheduledVersionStarts[index],
-				})),
-				unscheduled_plans: [{ plan_id: "support-addon" }],
-			},
+		{
+			name: "schedule: changes one add-on price without dropping sibling plans",
 			prompt:
-				"Preserve the entire existing schedule and Support Add-on, then append phase 4 two months after phase 3 on generation v1 at a custom $15 per month.",
-			tool: "create_schedule",
+				"In phase 3 only, change the Support Add-on price from $275 to $325 per month. Preserve the rest of the schedule exactly.",
+			expected: complexScheduleRequest({ phaseThreeSupportPrice: 325 }),
 		},
-		expected: {
-			phases: [
-				...scheduledVersionStarts.map((starts_at, index) => ({
-					plans: [{ plan_id: "generation", version: index + 1 }],
-					starts_at,
-				})),
-				{
-					plans: [
-						{
-							customize: {
-								price: { amount: 15, interval: "month" },
-							},
-							plan_id: "generation",
-							version: 1,
-						},
-					],
-					starting_after: { duration_count: 2, duration_type: "month" },
-				},
-			],
-			unscheduled_plans: [{ plan_id: "support-addon" }],
+		{
+			name: "schedule: changes one entitlement without dropping nested items",
+			prompt:
+				"In phase 4 only, increase the Core plan's included Messages from 40,000 to 45,000. Keep its price, version, other plans, and all other fields exactly unchanged.",
+			expected: complexScheduleRequest({ phaseFourMessages: 45_000 }),
 		},
-	},
+		{
+			name: "schedule: a follow-up edit preserves the prior generated change",
+			currentRequest: complexScheduleRequest({ phaseThreeSupportPrice: 325 }),
+			prompt:
+				"Now increase phase 4 Core Messages to 45,000. Keep the phase 3 Support Add-on at $325 and preserve everything else.",
+			expected: complexScheduleRequest({
+				phaseFourMessages: 45_000,
+				phaseThreeSupportPrice: 325,
+			}),
+		},
+	].map(({ name, prompt, expected, currentRequest }) => ({
+		name,
+		input: {
+			context: complexScheduleContext(),
+			currentRequest: currentRequest ?? complexScheduleRequest(),
+			exact: true,
+			prompt,
+			tool: "create_schedule" as const,
+		},
+		expected,
+	})),
 ];
 
 Eval("generate-billing-request", {
@@ -754,7 +722,7 @@ Eval("generate-billing-request", {
 			tags: [input.tool],
 			// biome-ignore lint/suspicious/noExplicitAny: braintrust's case type is looser than ours
 		})) as any,
-	scores: [schemaFirstTry, expectedParams, appliedPlan],
+	scores: [schemaFirstTry, expectedParams, exactParams, appliedPlan],
 	task: async (input: EvalInput): Promise<EvalOutput> => {
 		try {
 			const { params, repaired, repairReason } = await computeGeneratedParams({
