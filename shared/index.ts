@@ -10,9 +10,9 @@ export * from "./api/billing/common/billingPreviewResponse";
 export * from "./api/billing/common/billingResponse";
 export * from "./api/billing/common/cancelAction";
 export * from "./api/billing/common/customizePlan/customizePlanV1";
-export * from "./api/billing/common/subscriptionParams";
 export * from "./api/billing/common/customLineItem";
 export * from "./api/billing/common/mappers/resolveFreeTrialParam";
+export * from "./api/billing/common/subscriptionParams";
 export * from "./api/billing/createSchedule/createScheduleParamsV0";
 export * from "./api/billing/createSchedule/createScheduleResponse";
 export * from "./api/billing/openBillingPortal/openBillingPortalParamsV1";
@@ -256,6 +256,7 @@ export * from "./utils/agentTypes";
 export * from "./utils/auth/autumnOAuthScopes";
 export * from "./utils/auth/oauthScopeUtils";
 export * from "./utils/authAccessControl";
+export * from "./utils/billingControlUtils/index";
 export * from "./utils/billingUtils/index";
 // Checkout Utils
 export * from "./utils/checkoutUtils/index";

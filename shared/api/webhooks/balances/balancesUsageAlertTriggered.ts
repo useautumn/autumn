@@ -1,7 +1,15 @@
 import { z } from "zod/v4";
-import { UsageAlertThresholdType } from "../../billingControls/usageAlert.js";
+import {
+	BALANCE_BASES,
+	UsageAlertBasisSchema,
+	UsageAlertThresholdType,
+} from "../../../models/cusModels/billingControls/usageAlert.js";
+import { UsageLimitFilterSchema } from "../../../models/cusModels/billingControls/usageLimit.js";
+import { UsageLimitWebhookBlockSchema } from "./usageLimitWebhookBlock.js";
 
-export const BalancesUsageAlertTriggeredAlertSchema = z.object({
+const BalanceBasisSchema = z.enum(BALANCE_BASES);
+
+const AlertFieldsSchema = z.object({
 	name: z.string().optional().meta({
 		description: "User-defined label for the alert, if provided.",
 	}),
@@ -14,6 +22,61 @@ export const BalancesUsageAlertTriggeredAlertSchema = z.object({
 	}),
 });
 
+const SubjectFieldsSchema = z.object({
+	customer_id: z.string().meta({
+		description: "The ID of the customer whose usage alert was triggered.",
+	}),
+	feature_id: z.string().meta({
+		description: "The feature ID the alert applies to.",
+	}),
+	entity_id: z.string().optional().meta({
+		description:
+			"The entity ID the alert applies to, if the usage was entity-scoped.",
+	}),
+});
+
+export const BalancesUsageAlertBalanceBlockSchema = z.object({
+	usage: z.number().meta({
+		description: "Units consumed on the feature, after this event.",
+	}),
+	granted: z.number().meta({
+		description: "Every grant on the feature: included, prepaid and rollover.",
+	}),
+	included: z.number().meta({
+		description: "Grants from plan allowances only.",
+	}),
+	remaining: z.number().meta({
+		description:
+			"The alert's denominator minus usage. Clamped at zero for included and recurring; balance can go negative on overage.",
+	}),
+});
+
+export const BalancesUsageAlertOnBalanceSchema = SubjectFieldsSchema.extend({
+	usage_alert: AlertFieldsSchema.extend({
+		basis: BalanceBasisSchema.meta({
+			description: "What 100% meant for this alert.",
+		}),
+	}).meta({ description: "Details of the usage alert that was triggered." }),
+	balance: BalancesUsageAlertBalanceBlockSchema.meta({
+		description: "The balance the alert measured.",
+	}),
+});
+
+export const BalancesUsageAlertOnUsageLimitSchema = SubjectFieldsSchema.extend({
+	usage_alert: AlertFieldsSchema.extend({
+		basis: z.literal("usage_limit").meta({
+			description: "What 100% meant for this alert.",
+		}),
+		filter: UsageLimitFilterSchema.optional().meta({
+			description:
+				"The usage limit filter this alert points at, when the alert targets a filtered cap.",
+		}),
+	}).meta({ description: "Details of the usage alert that was triggered." }),
+	usage_limit: UsageLimitWebhookBlockSchema.meta({
+		description: "The usage limit the alert measured.",
+	}),
+});
+
 export const BALANCES_USAGE_ALERT_TRIGGERED_EXAMPLE = {
 	customer_id: "org_123",
 	feature_id: "api_calls",
@@ -21,33 +84,54 @@ export const BALANCES_USAGE_ALERT_TRIGGERED_EXAMPLE = {
 	usage_alert: {
 		name: "80% usage warning",
 		threshold: 80,
-		threshold_type: "usage_percentage_threshold",
+		threshold_type: "usage_percentage",
+		basis: "balance",
+	},
+	balance: { usage: 1600, granted: 2000, included: 2000, remaining: 400 },
+};
+
+export const BALANCES_USAGE_ALERT_ON_USAGE_LIMIT_EXAMPLE = {
+	customer_id: "org_123",
+	feature_id: "api_calls",
+	usage_alert: {
+		name: "Daily cap warning",
+		threshold: 80,
+		threshold_type: "usage_percentage",
+		basis: "usage_limit",
+		filter: { properties: { api_key_id: "key_abc" } },
+	},
+	usage_limit: {
+		limit: 1000,
+		interval: "day",
+		anchor: "utc",
+		usage: 800,
+		remaining: 200,
+		window_start_at: 1735689600000,
+		window_end_at: 1735776000000,
 	},
 };
 
 export const BalancesUsageAlertTriggeredSchema = z
-	.object({
-		customer_id: z.string().meta({
-			description: "The ID of the customer whose usage alert was triggered.",
-		}),
-		feature_id: z.string().meta({
-			description: "The feature ID the alert applies to.",
-		}),
-		entity_id: z.string().optional().meta({
-			description:
-				"The entity ID the alert applies to, if the usage was entity-scoped.",
-		}),
-		usage_alert: BalancesUsageAlertTriggeredAlertSchema.meta({
-			description: "Details of the usage alert that was triggered.",
-		}),
-	})
+	.union([
+		BalancesUsageAlertOnBalanceSchema,
+		BalancesUsageAlertOnUsageLimitSchema,
+	])
 	.meta({
-		examples: [BALANCES_USAGE_ALERT_TRIGGERED_EXAMPLE],
+		examples: [
+			BALANCES_USAGE_ALERT_TRIGGERED_EXAMPLE,
+			BALANCES_USAGE_ALERT_ON_USAGE_LIMIT_EXAMPLE,
+		],
 	});
 
 export type BalancesUsageAlertTriggered = z.infer<
 	typeof BalancesUsageAlertTriggeredSchema
 >;
-export type BalancesUsageAlertTriggeredAlert = z.infer<
-	typeof BalancesUsageAlertTriggeredAlertSchema
+export type BalancesUsageAlertOnBalance = z.infer<
+	typeof BalancesUsageAlertOnBalanceSchema
+>;
+export type BalancesUsageAlertOnUsageLimit = z.infer<
+	typeof BalancesUsageAlertOnUsageLimitSchema
+>;
+export type BalancesUsageAlertBalanceBlock = z.infer<
+	typeof BalancesUsageAlertBalanceBlockSchema
 >;

@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { findDuplicateBillingControlIssue } from "./duplicates/findDuplicateBillingControlIssue.js";
 import {
 	type EntityBillingControls,
 	type EntityBillingControlsParams,
@@ -20,7 +21,6 @@ import {
 	type DbUsageLimit,
 	DbUsageLimitSchema,
 	pickStricterUsageLimit,
-	usageLimitFilterKey,
 } from "./usageLimit.js";
 
 export const BILLING_CONTROL_KEYS = [
@@ -248,8 +248,7 @@ export const normalizeBillingControlsForCompare = (
 
 	const normalized = Object.fromEntries(
 		BILLING_CONTROL_KEYS.flatMap((key) => {
-			const value =
-				key === "spend_limits" ? spendLimits : billingControls[key];
+			const value = key === "spend_limits" ? spendLimits : billingControls[key];
 			if (value == null || value.length === 0) return [];
 			return [[key, value]];
 		}),
@@ -276,84 +275,8 @@ export const CustomerBillingControlsParamsSchema =
 			description: "List of auto top-up configurations per feature.",
 		}),
 	}).check((ctx) => {
-		const billingControls = ctx.value;
-		const autoTopupFeatureIds = new Set<string>();
-
-		for (const [index, autoTopup] of (
-			billingControls.auto_topups ?? []
-		).entries()) {
-			if (autoTopupFeatureIds.has(autoTopup.feature_id)) {
-				ctx.issues.push({
-					code: "custom",
-					message: "Only one auto top-up entry is allowed per feature_id",
-					input: autoTopup.feature_id,
-					path: ["auto_topups", index, "feature_id"],
-				});
-				return;
-			}
-
-			autoTopupFeatureIds.add(autoTopup.feature_id);
-		}
-
-		const spendLimitFeatureIds = new Set<string>();
-
-		for (const [index, spendLimit] of (
-			billingControls.spend_limits ?? []
-		).entries()) {
-			if (!spendLimit.feature_id) {
-				continue;
-			}
-
-			if (spendLimitFeatureIds.has(spendLimit.feature_id)) {
-				ctx.issues.push({
-					code: "custom",
-					message: "Only one spend limit entry is allowed per feature_id",
-					input: spendLimit.feature_id,
-					path: ["spend_limits", index, "feature_id"],
-				});
-				return;
-			}
-
-			spendLimitFeatureIds.add(spendLimit.feature_id);
-		}
-
-		const usageLimitIdentities = new Set<string>();
-
-		for (const [index, usageLimit] of (
-			billingControls.usage_limits ?? []
-		).entries()) {
-			const identity = `${usageLimit.feature_id}|${usageLimitFilterKey(usageLimit.filter)}`;
-			if (usageLimitIdentities.has(identity)) {
-				ctx.issues.push({
-					code: "custom",
-					message:
-						"Only one usage limit entry is allowed per feature_id and filter",
-					input: usageLimit.feature_id,
-					path: ["usage_limits", index, "feature_id"],
-				});
-				return;
-			}
-
-			usageLimitIdentities.add(identity);
-		}
-
-		const overageAllowedFeatureIds = new Set<string>();
-
-		for (const [index, overageAllowed] of (
-			billingControls.overage_allowed ?? []
-		).entries()) {
-			if (overageAllowedFeatureIds.has(overageAllowed.feature_id)) {
-				ctx.issues.push({
-					code: "custom",
-					message: "Only one overage_allowed entry is allowed per feature_id",
-					input: overageAllowed.feature_id,
-					path: ["overage_allowed", index, "feature_id"],
-				});
-				return;
-			}
-
-			overageAllowedFeatureIds.add(overageAllowed.feature_id);
-		}
+		const issue = findDuplicateBillingControlIssue(ctx.value);
+		if (issue) ctx.issues.push(issue);
 	});
 
 export type CustomerBillingControlsParams = z.input<
@@ -378,11 +301,32 @@ export {
 	pickStricterSpendLimit,
 	pickStricterUsageLimit,
 };
+export { isUsageLimitBasisAlert } from "./classify/isUsageLimitBasisAlert.js";
+export { usageAlertIdentity } from "./identity/usageAlertIdentity.js";
+export { usageAlertTargetLimitIdentity } from "./identity/usageAlertTargetLimitIdentity.js";
+export { usageLimitIdentity } from "./identity/usageLimitIdentity.js";
 export {
+	BALANCE_BASES,
+	type BalanceBasis,
+	type DbUsageAlertLike,
+	type DbUsageAlertParams,
+	DEFAULT_USAGE_ALERT_BASIS,
+	USAGE_ALERT_BASES,
+	type UsageAlertBasis,
+	UsageAlertBasisSchema,
+} from "./usageAlert.js";
+export {
+	type DbUsageLimitLike,
+	type DbUsageLimitParams,
+	USAGE_LIMIT_ANCHORS,
 	USAGE_LIMIT_FILTER_MAX_KEY_LENGTH,
 	USAGE_LIMIT_FILTER_MAX_KEYS,
 	USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH,
+	USAGE_LIMIT_INTERVALS,
+	type UsageLimitAnchor,
+	UsageLimitAnchorSchema,
 	type UsageLimitFilter,
+	type UsageLimitFilterParams,
 	UsageLimitFilterSchema,
 	usageLimitFilterKey,
 	usageLimitFilterMatchesProperties,

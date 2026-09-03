@@ -17,16 +17,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-
-type BalancesLimitReachedPayload = {
-	type: string;
-	data: {
-		customer_id: string;
-		feature_id: string;
-		limit_type: string;
-		entity_id?: string;
-	};
-};
+import type { LimitReachedWebhookPayload } from "../../utils/limit-reached-utils/limitReachedWebhookUtils.js";
 
 let webhook: WebhookTestSetup;
 let playToken: string;
@@ -85,7 +76,7 @@ test.concurrent(
 			value: 60,
 		});
 
-		const result = await waitForWebhook<BalancesLimitReachedPayload>({
+		const result = await waitForWebhook<LimitReachedWebhookPayload>({
 			token: playToken,
 			predicate: (payload) =>
 				payload.type === "balances.limit_reached" &&
@@ -144,7 +135,7 @@ test.concurrent(
 			value: 120,
 		});
 
-		const result = await waitForWebhook<BalancesLimitReachedPayload>({
+		const result = await waitForWebhook<LimitReachedWebhookPayload>({
 			token: playToken,
 			predicate: (payload) =>
 				payload.type === "balances.limit_reached" &&
@@ -200,7 +191,7 @@ test.concurrent(
 			value: 6,
 		});
 
-		const result = await waitForWebhook<BalancesLimitReachedPayload>({
+		const result = await waitForWebhook<LimitReachedWebhookPayload>({
 			token: playToken,
 			predicate: (payload) =>
 				payload.type === "balances.limit_reached" &&
@@ -214,5 +205,10 @@ test.concurrent(
 		expect(data.customer_id).toBe(customerId);
 		expect(data.feature_id).toBe(TestFeature.Messages);
 		expect(data.limit_type).toBe("usage_limit");
+		expect(data.usage_limit).toMatchObject({
+			limit: 5,
+			usage: 5,
+			remaining: 0,
+		});
 	},
 );

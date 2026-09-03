@@ -1,5 +1,6 @@
 export * from "./balances/balancesLimitReached.js";
 export * from "./balances/balancesUsageAlertTriggered.js";
+export * from "./balances/usageLimitWebhookBlock.js";
 export * from "./billing/billingAutoTopupFailed.js";
 export * from "./billing/billingAutoTopupSucceeded.js";
 export * from "./billing/billingUpdated.js";

@@ -87,6 +87,7 @@ test(`${chalk.yellowBright("org config handler: array field (usage_alerts) merge
 		enabled: true,
 		threshold: 80,
 		threshold_type: "usage_percentage",
+		basis: "balance",
 	};
 
 	try {

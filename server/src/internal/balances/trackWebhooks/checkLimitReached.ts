@@ -4,12 +4,14 @@ import {
 	apiBalanceToAllowed,
 	type Feature,
 	type FullCustomer,
+	type FullSubject,
 	fullCustomerToTags,
-	usageLimitFilterMatchesProperties,
 	WebhookEventType,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { findBlockedFilterOnSubject } from "./limitReached/findBlockedFilterOnSubject.js";
+import { findBlockingUsageLimit } from "./limitReached/findBlockingUsageLimit.js";
 
 // Subjects must be built via buildEvaluationSubject, or plan-level / percentage
 // caps are invisible here and the allowed -> blocked transition never fires.
@@ -18,6 +20,7 @@ export const checkLimitReached = async ({
 	oldEvalSubject,
 	newEvalSubject,
 	newFullCus,
+	newFullSubject,
 	feature,
 	entityId,
 	eventProperties,
@@ -26,6 +29,7 @@ export const checkLimitReached = async ({
 	oldEvalSubject: ApiCustomerV5 | ApiEntityV2;
 	newEvalSubject: ApiCustomerV5 | ApiEntityV2;
 	newFullCus: FullCustomer;
+	newFullSubject?: FullSubject;
 	feature: Feature;
 	entityId?: string;
 	eventProperties?: Record<string, unknown> | null;
@@ -54,21 +58,24 @@ export const checkLimitReached = async ({
 
 		if (!oldResult.allowed || newResult.allowed) return;
 
-		// When the blocking cap is a filtered usage limit, attach its filter so
-		// the receiver knows WHICH slice (e.g. which API key) hit its cap.
-		const blockedFilter =
-			newResult.limitType === "usage_limit" && eventProperties
-				? newEvalSubject.billing_controls?.usage_limits?.find(
-						(usageLimit) =>
-							usageLimit.feature_id === feature.id &&
-							usageLimit.enabled !== false &&
-							usageLimit.filter != null &&
-							usageLimitFilterMatchesProperties({
-								filterProperties: usageLimit.filter.properties,
-								eventProperties,
-							}) &&
-							(usageLimit.usage ?? 0) >= usageLimit.limit,
-					)?.filter
+		const blockedByUsageLimit = newResult.limitType === "usage_limit";
+		const blockingUsageLimit =
+			blockedByUsageLimit && newFullSubject
+				? findBlockingUsageLimit({
+						ctx,
+						fullSubject: newFullSubject,
+						feature,
+						eventProperties,
+					})
+				: undefined;
+		const blockedFilter = blockingUsageLimit
+			? blockingUsageLimit.filter
+			: blockedByUsageLimit && eventProperties
+				? findBlockedFilterOnSubject({
+						subject: newEvalSubject,
+						feature,
+						eventProperties,
+					})
 				: undefined;
 
 		const customerId = newFullCus.id || newFullCus.internal_id;
@@ -83,6 +90,7 @@ export const checkLimitReached = async ({
 				limit_type: newResult.limitType ?? "included",
 				...(entityId && { entity_id: entityId }),
 				...(blockedFilter && { filter: blockedFilter }),
+				...(blockingUsageLimit && { usage_limit: blockingUsageLimit.block }),
 			},
 			tags,
 		});

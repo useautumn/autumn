@@ -5,6 +5,7 @@ import type { ApiOverageAllowed } from "../../api/billingControls/overageAllowed
 import type { ApiSpendLimit } from "../../api/billingControls/spendLimit.js";
 import type { ApiUsageAlert } from "../../api/billingControls/usageAlert.js";
 import type { ApiUsageLimit } from "../../api/billingControls/usageLimit.js";
+import { usageLimitIdentity } from "../../models/cusModels/billingControls/identity/usageLimitIdentity.js";
 import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
@@ -12,7 +13,6 @@ import { buildNormalizeSpendLimitForCompare } from "./buildNormalizeSpendLimitFo
 import {
 	decorateInheritedPlanUsageLimits,
 	mergeControlsByFeature,
-	usageLimitIdentity,
 } from "./mergeCustomerBillingControlsForCheck.js";
 import { getPlanBillingControlProducts } from "./planBillingControlUtils.js";
 

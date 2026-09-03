@@ -4,6 +4,7 @@ import { handleDirectBaseAndVariantPairErrors } from "@/internal/catalogV2/actio
 import { handleFreeTrialErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleFreeTrialErrors";
 import { handleLicenseParentPropagationErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleLicenseParentPropagationErrors";
 import { handlePlanLicenseErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handlePlanLicenseErrors";
+import { handleUsageLimitAlertErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleUsageLimitAlertErrors";
 import { handleVariantErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpsertProductErrors/handleVariantErrors";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
@@ -65,8 +66,12 @@ export const handleUpsertProductErrors = ({
 		});
 		const latestExistingVersion = maxVersion === 0 ? undefined : maxVersion;
 
-		// 1. Free trial errors (one-off products cannot trial)
+		// 1. Free trial errors (one-off products cannot trial); new usage_limit alerts need a cap
 		handleFreeTrialErrors({ nextFullProduct });
+		handleUsageLimitAlertErrors({
+			nextFullProduct,
+			currentFullProduct: upsert.row.currentFullProduct,
+		});
 
 		// 2. Default flag errors (historical version; paid default; never on a variant)
 		handleDefaultFlagErrors({

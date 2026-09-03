@@ -58,6 +58,7 @@ export const UsageLimitFilterSchema = z.object({
 });
 
 export type UsageLimitFilter = z.infer<typeof UsageLimitFilterSchema>;
+export type UsageLimitFilterParams = z.input<typeof UsageLimitFilterSchema>;
 
 export const DbUsageLimitSchema = z.object({
 	feature_id: z.string().meta({
@@ -84,13 +85,15 @@ export const DbUsageLimitSchema = z.object({
 });
 
 export type DbUsageLimit = z.infer<typeof DbUsageLimitSchema>;
+export type DbUsageLimitParams = z.input<typeof DbUsageLimitSchema>;
+export type DbUsageLimitLike = DbUsageLimit | DbUsageLimitParams;
 
 /**
  * Canonical identity of a filter: sorted `key=value` pairs. Counters and
  * dedup checks key off this, so config edits can never orphan a live counter.
  */
 export const usageLimitFilterKey = (
-	filter: UsageLimitFilter | null | undefined,
+	filter: UsageLimitFilter | UsageLimitFilterParams | null | undefined,
 ): string => {
 	if (!filter?.properties) return "";
 	return Object.entries(filter.properties)

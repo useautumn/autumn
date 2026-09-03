@@ -6,10 +6,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildEvaluationSubject } from "@/internal/balances/check/buildEvaluationSubject.js";
+import { checkUsageAlerts } from "@/internal/balances/usageAlerts/check/checkUsageAlerts.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getApiEntityBase } from "@/internal/entities/entityUtils/apiEntityUtils/getApiEntityBase.js";
 import { checkLimitReached } from "./checkLimitReached.js";
-import { checkUsageAlerts } from "./checkUsageAlerts.js";
 import { handleThresholdReached } from "./handleThresholdReached.js";
 
 export const fireTrackWebhooks = ({
@@ -61,6 +61,8 @@ export const fireTrackWebhooks = ({
 			ctx,
 			oldFullCus,
 			newFullCus,
+			oldFullSubject,
+			newFullSubject,
 			feature: affectedFeature,
 			entityId,
 		}).catch((error) => {
@@ -105,6 +107,7 @@ export const fireTrackWebhooks = ({
 				oldEvalSubject,
 				newEvalSubject,
 				newFullCus,
+				newFullSubject,
 				feature: affectedFeature,
 				entityId,
 				eventProperties,

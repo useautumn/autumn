@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { UsageLimitFilterSchema } from "./usageLimit.js";
 
 export const UsageAlertThresholdType = z.enum([
 	"usage",
@@ -6,6 +7,14 @@ export const UsageAlertThresholdType = z.enum([
 	"remaining",
 	"remaining_percentage",
 ]);
+
+export const BALANCE_BASES = ["balance", "included", "recurring"] as const;
+export const USAGE_ALERT_BASES = [...BALANCE_BASES, "usage_limit"] as const;
+export const DEFAULT_USAGE_ALERT_BASIS = "balance" as const;
+
+export type BalanceBasis = (typeof BALANCE_BASES)[number];
+export const UsageAlertBasisSchema = z.enum(USAGE_ALERT_BASES);
+export type UsageAlertBasis = z.infer<typeof UsageAlertBasisSchema>;
 
 export const DbUsageAlertSchema = z
 	.object({
@@ -23,17 +32,23 @@ export const DbUsageAlertSchema = z
 			description:
 				"Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.",
 		}),
+		basis: UsageAlertBasisSchema.default(DEFAULT_USAGE_ALERT_BASIS).meta({
+			description:
+				"What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.",
+		}),
+		filter: UsageLimitFilterSchema.optional().meta({
+			description:
+				"Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.",
+		}),
 		name: z.string().optional().meta({
 			description:
 				"Optional user-defined label to distinguish multiple alerts on the same feature.",
 		}),
 	})
 	.check((ctx) => {
-		const { threshold_type, threshold } = ctx.value;
+		const { feature_id, threshold_type, threshold, basis, filter } = ctx.value;
 
-		// remaining_percentage is bounded by granted, so > 100 has no sensible
-		// firing semantics. usage_percentage can legitimately exceed 100 when a
-		// customer is over their allowance (e.g. alert at 200% or 300% usage).
+		// remaining_percentage is bounded by the denominator, so > 100 can never fire.
 		if (threshold_type === "remaining_percentage" && threshold > 100) {
 			ctx.issues.push({
 				code: "custom",
@@ -42,6 +57,26 @@ export const DbUsageAlertSchema = z
 				message: "Threshold must be between 0 and 100 for remaining_percentage",
 			});
 		}
+
+		if (basis === "usage_limit" && !feature_id) {
+			ctx.issues.push({
+				code: "custom",
+				input: feature_id,
+				path: ["feature_id"],
+				message: "feature_id is required when basis is usage_limit",
+			});
+		}
+
+		if (filter && basis !== "usage_limit") {
+			ctx.issues.push({
+				code: "custom",
+				input: filter,
+				path: ["filter"],
+				message: "filter is only valid when basis is usage_limit",
+			});
+		}
 	});
 
 export type DbUsageAlert = z.infer<typeof DbUsageAlertSchema>;
+export type DbUsageAlertParams = z.input<typeof DbUsageAlertSchema>;
+export type DbUsageAlertLike = DbUsageAlert | DbUsageAlertParams;

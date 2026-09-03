@@ -17,3 +17,12 @@ export const subtractSafe = ({
 	left: number | null | undefined;
 	right: number | null | undefined;
 }) => new Decimal(left ?? 0).minus(right ?? 0).toNumber();
+
+/** Share of `whole` that `part` represents, in percent, without floating-point drift. */
+export const percentageOf = ({
+	part,
+	whole,
+}: {
+	part: number;
+	whole: number;
+}) => new Decimal(part).div(whole).mul(100).toNumber();
