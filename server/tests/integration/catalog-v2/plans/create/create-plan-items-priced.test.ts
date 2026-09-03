@@ -396,11 +396,19 @@ test.concurrent(
 		const stripeProduct = await ctx.stripeCli.products.create({
 			name: `Stripe Price Threaded ${planId}`,
 		});
+		// The item below is usage-based, and a usage-based price bills through the
+		// meter it is bound to — a plain recurring price could never report usage,
+		// so adoption rejects one. Mirrors what a sync flow would actually find.
+		const meter = await ctx.stripeCli.billing.meters.create({
+			display_name: `Threaded Meter ${planId}`,
+			event_name: `threaded_events_${planId}`,
+			default_aggregation: { formula: "sum" },
+		});
 		const stripePrice = await ctx.stripeCli.prices.create({
 			product: stripeProduct.id,
 			currency: "usd",
 			unit_amount: 50,
-			recurring: { interval: "month" },
+			recurring: { interval: "month", meter: meter.id, usage_type: "metered" },
 		});
 		const params = {
 			plans: [

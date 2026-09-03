@@ -9,7 +9,7 @@ Before using this skill, first load the `autumn-concepts` skill — it defines A
 
 ## Goal
 
-- Answer "what happened and why" using two sources: current account state (customer, plan, balance lookup tools) and the request-log interface (`searchRequestLogs`, `queryRequestLogs`).
+- Answer "what happened and why" using three sources: current account state (customer, plan, balance lookup tools), the usage-event store (`aggregateEvents` — usage totals, last usage, usage over time), and the request-log interface (`searchRequestLogs`, `queryRequestLogs`).
 - End with a conclusion the user can act on: a timeline of what happened, the cause when the logs show it, and a clear statement of what the logs cannot show when they don't.
 - Logs record API requests and Stripe webhook deliveries — each entry is one request with its payload and response. They do not expose Autumn's internal processing, so conclusions must come from observable requests, responses, and state.
 

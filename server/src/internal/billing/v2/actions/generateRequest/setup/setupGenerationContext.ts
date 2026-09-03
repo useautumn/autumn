@@ -14,6 +14,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { FeatureService } from "@/internal/features/FeatureService";
 import { ProductService } from "@/internal/products/ProductService";
+import { loadGenerationScheduleContext } from "./loadGenerationScheduleContext";
 
 const compactPlan = ({
 	product,
@@ -61,11 +62,12 @@ export const compactCustomerProduct = ({
 	const entity = entities.find(
 		(candidate) => candidate.internal_id === customerProduct.internal_entity_id,
 	);
+	const entityId = entity?.id ?? customerProduct.entity_id;
 	return {
 		customer_product_id: customerProduct.id,
 		plan_id: customerProduct.product.id,
 		status: customerProduct.status,
-		...(entity?.id ? { entity_id: entity.id } : {}),
+		...(entityId ? { entity_id: entityId } : {}),
 		...(customerProduct.canceled ? { canceled: true } : {}),
 		...(customerProduct.trial_ends_at
 			? { trial_ends_at: customerProduct.trial_ends_at }
@@ -86,8 +88,13 @@ export const setupGenerationContext = async ({
 	const [fullProducts, features, fullCustomer] = await Promise.all([
 		ProductService.listFull({ db: ctx.db, env: ctx.env, orgId: ctx.org.id }),
 		FeatureService.list({ db: ctx.db, env: ctx.env, orgId: ctx.org.id }),
-		CusService.getFull({ ctx, idOrInternalId: customerId }),
+		CusService.getFull({ ctx, idOrInternalId: customerId, withEntities: true }),
 	]);
+	const { customerProducts, schedules } = await loadGenerationScheduleContext({
+		ctx,
+		fullCustomer,
+	});
+	const entities = fullCustomer.entities ?? [];
 
 	const now = Date.now();
 
@@ -96,23 +103,22 @@ export const setupGenerationContext = async ({
 			customer: {
 				id: fullCustomer.id,
 				...(fullCustomer.name ? { name: fullCustomer.name } : {}),
-				current_plans: fullCustomer.customer_products.map(
-					(customerProduct) => ({
-						...compactCustomerProduct({
-							customerProduct,
-							entities: fullCustomer.entities ?? [],
-						}),
-						effective_plan: compactPlan({
-							features,
-							product: cusProductToProduct({ cusProduct: customerProduct }),
-						}),
+				current_plans: customerProducts.map((customerProduct) => ({
+					...compactCustomerProduct({
+						customerProduct,
+						entities,
 					}),
-				),
-				entities: (fullCustomer.entities ?? []).map((entity) => ({
+					effective_plan: compactPlan({
+						features,
+						product: cusProductToProduct({ cusProduct: customerProduct }),
+					}),
+				})),
+				entities: entities.map((entity) => ({
 					id: entity.id,
 					...(entity.name ? { name: entity.name } : {}),
 					...(entity.feature_id ? { feature_id: entity.feature_id } : {}),
 				})),
+				...(schedules.length ? { schedules } : {}),
 			},
 			features: features.map((feature) => ({
 				id: feature.id,

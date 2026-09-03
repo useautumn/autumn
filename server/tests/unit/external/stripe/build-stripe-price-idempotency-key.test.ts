@@ -31,12 +31,21 @@ const fixed = ({ amount }: { amount: number }): Price => ({
 	proration_config: null,
 });
 
-const key = ({ price, currency = "usd" }: { price: Price; currency?: string }) =>
+const key = ({
+	price,
+	currency = "usd",
+	stripeProductId = "prod_pro",
+}: {
+	price: Price;
+	currency?: string;
+	stripeProductId?: string;
+}) =>
 	buildStripePriceIdempotencyKey({
 		price,
 		slot: "stripe_price_id",
 		currency,
 		orgDefault: "usd",
+		stripeProductId,
 	});
 
 describe("buildStripePriceIdempotencyKey", () => {
@@ -47,7 +56,19 @@ describe("buildStripePriceIdempotencyKey", () => {
 
 		expect(key({ price: ten })).toBe(key({ price: tenAgain }));
 		expect(key({ price: ten })).not.toBe(key({ price: twenty }));
-		expect(key({ price: ten })).toMatch(/^autumn:price:pr_abc:stripe_price_id:usd:[a-f0-9]{16}$/);
+		expect(key({ price: ten })).toMatch(
+			/^autumn:price:pr_abc:stripe_price_id:usd:prod_pro:[a-f0-9]{16}$/,
+		);
+	});
+
+	test("same price re-minted under a new product gets a new key", () => {
+		const ten = fixed({ amount: 10 });
+
+		// Re-pointing a plan's Stripe product remints this row under a different
+		// product; Stripe rejects a reused key whose parameters changed.
+		expect(key({ price: ten, stripeProductId: "prod_old" })).not.toBe(
+			key({ price: ten, stripeProductId: "prod_new" }),
+		);
 	});
 
 	test("same id + amount, prorated → arrear, gets a new key", () => {

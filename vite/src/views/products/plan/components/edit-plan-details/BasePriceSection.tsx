@@ -155,7 +155,11 @@ export const BasePriceSection = ({
 	return (
 		<SheetSection
 			title={
-				isPaid ? (isLicenseEditor ? "Price per license" : "Base price") : undefined
+				isPaid
+					? isLicenseEditor
+						? "Price per license"
+						: "Base price"
+					: undefined
 			}
 			description={
 				isPaid

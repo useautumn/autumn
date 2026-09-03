@@ -44,9 +44,14 @@ export function buildCreateScheduleRequestBody({
 	const apiPhases = phases.map((phase, index) => {
 		let startsAt = phase.startsAt;
 		if (index === 0) {
-			startsAt = allowFirstPhaseBackdate
-				? (phase.startsAt ?? now)
-				: (phase.persistedStartsAt ?? now);
+			const hasStarted =
+				phase.persistedStartsAt != null && phase.persistedStartsAt <= now;
+			if (allowFirstPhaseBackdate) startsAt = phase.startsAt ?? now;
+			else if (phase.persistedStartsAt == null) startsAt = now;
+			else
+				startsAt = hasStarted
+					? phase.persistedStartsAt
+					: (phase.startsAt ?? phase.persistedStartsAt);
 		}
 		if (startsAt === null) return null;
 

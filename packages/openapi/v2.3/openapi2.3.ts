@@ -134,9 +134,11 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 		openApiDocument,
 		version: OPENAPI_DOC_VERSION,
 	});
+	// Webhooks first: injectWebhooks builds its own schemas, so injecting after
+	// the sanitiser left that whole subtree carrying internal fields.
+	injectWebhooks({ openApiDocument });
 	removeInternalFields({ openApiDocument });
 	applyPaginationExtensions({ openApiDocument });
-	injectWebhooks({ openApiDocument });
 
 	return openApiDocument;
 }

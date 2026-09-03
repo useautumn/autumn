@@ -28,9 +28,11 @@ const patchForLiveRow = ({
 	toEntitlement: EntitlementWithFeature;
 }): CustomerEntitlementPatch => {
 	if (entsAreSame(liveDefinition, toEntitlement)) return {};
+	// Migration edits amend the definition in place — usage always carries.
 	return computeCustomerEntitlementPatch({
 		fromEntitlement: liveDefinition,
 		toEntitlement,
+		carryOverUsages: { enabled: true },
 	});
 };
 

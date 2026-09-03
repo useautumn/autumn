@@ -34,7 +34,12 @@ export const deriveVariantMints = ({
 		: undefined;
 
 	return targets.flatMap((target): ProductUpsertIntent[] => {
-		const carriesContent = target.follow === true || target.customize != null;
+		// A mapping-only declaration is still content: without this the edit lane
+		// writes the customer-bearing row instead of minting from it.
+		const carriesContent =
+			target.follow === true ||
+			target.customize != null ||
+			target.processors !== undefined;
 		if (!carriesContent) return [];
 		if (
 			!rowHasVersionableCustomers({
@@ -71,6 +76,9 @@ export const deriveVariantMints = ({
 						? { new_version_slug: target.newVersionSlug }
 						: {}),
 					...settingsPatch,
+					...(target.processors !== undefined
+						? { processors: target.processors }
+						: {}),
 				},
 				source: "variant_propagation",
 				...(editDiff ? { editDiff } : {}),

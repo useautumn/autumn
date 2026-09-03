@@ -11,11 +11,15 @@ const updateProductEvents = [
 	"customer.subscription.updated",
 ];
 
+// checkout.session.expired included: the handler expires cusProducts that were
+// pre-inserted for enable_plan_immediately / pending checkouts, which must also
+// drop the cached subject or the API keeps serving the plan as active.
 const coreEvents = [
 	"customer.subscription.deleted",
 	"subscription_schedule.canceled",
 	"subscription_schedule.updated",
 	"checkout.session.completed",
+	"checkout.session.expired",
 ];
 
 const updateInvoiceEvents = [

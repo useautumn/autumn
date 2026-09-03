@@ -29,6 +29,8 @@ const renderRateCardRow = ({
 			allFeatures={[feature]}
 			onChange={() => {}}
 			onRemove={() => {}}
+			isExpanded={true}
+			onToggle={() => {}}
 			showRateCardControls={showRateCardControls}
 		/>,
 	);
@@ -44,22 +46,47 @@ test("non-admins retain flat credit costs without rate-card controls", () => {
 	});
 
 	expect(html).not.toContain('aria-label="Billing units"');
-	expect(html).not.toContain(">Tiered<");
+	expect(html).not.toContain("Add Tier");
 	expect(html).toContain('aria-label="Credit cost"');
 });
 
-test("admins can edit billing units and graduated tiers without a stale warning", () => {
+test("admins can edit billing units and add graduated tiers", () => {
 	const html = renderRateCardRow({
 		item: {
 			metered_feature_id: feature.id,
 			feature_amount: 100,
 			tier_behavior: "graduated",
-			tiers: [{ to: "inf", credit_amount: 1 }],
+			tiers: [
+				{ to: 10_000, credit_amount: 1 },
+				{ to: "inf", credit_amount: 0.5 },
+			],
 		},
 		showRateCardControls: true,
 	});
 
 	expect(html).toContain('aria-label="Billing units"');
-	expect(html).toContain(">Tiered<");
-	expect(html).not.toContain("Tiered rating is not live yet");
+	expect(html).toContain("Add Tier");
+	expect(html).toContain('aria-label="Tier 1 upper boundary"');
+});
+
+test("collapsed rows summarize the rate without exposing controls", () => {
+	const html = renderToStaticMarkup(
+		<CreditRateCardRow
+			item={{
+				metered_feature_id: feature.id,
+				feature_amount: 100,
+				credit_amount: 1,
+			}}
+			availableFeatures={[feature]}
+			allFeatures={[feature]}
+			onChange={() => {}}
+			onRemove={() => {}}
+			isExpanded={false}
+			onToggle={() => {}}
+			showRateCardControls={true}
+		/>,
+	);
+
+	expect(html).toContain("1 credit per 100");
+	expect(html).not.toContain('aria-label="Credit cost"');
 });

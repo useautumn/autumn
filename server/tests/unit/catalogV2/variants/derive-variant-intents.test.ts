@@ -362,4 +362,165 @@ describe("deriveVariantIntents", () => {
 		expect(mint).toBeDefined();
 		expect(mint?.planParams.active).toBe(true);
 	});
+
+	test("processor change fans out to latest variant", () => {
+		const current = {
+			...baseProduct,
+			processor: { type: "stripe", id: "prod_old" },
+		};
+		const next = {
+			...baseProduct,
+			processor: { type: "stripe", id: "prod_new" },
+		};
+		const variant = {
+			...baseProduct,
+			id: "team-eu",
+			internal_id: "internal_team-eu",
+			base_internal_product_id: baseProduct.internal_id,
+			processor: { type: "stripe", id: "prod_old" },
+		};
+
+		const intents = deriveVariantIntents({
+			intent: {
+				productKey: { planId: "team", version: 1 },
+				planParams: {
+					plan_id: "team",
+					version: 1,
+					processors: { stripe: { product_id: "prod_new" } },
+				},
+				source: "direct",
+			},
+			upsert: {
+				row: {
+					planId: "team",
+					version: 1,
+					op: "update",
+					source: "direct",
+					versioning: "existing",
+					currentFullProduct: current,
+					baseFullProduct: null,
+					nextFullProduct: next,
+				},
+				state: { hasCustomers: false, planHadLiveVersions: true },
+			} as UpsertProductPlan,
+			projectedProductStatesContext: {
+				...emptyStates({ planIds: ["team", "team-eu"] }),
+				versionsByPlanId: {
+					team: [next],
+					"team-eu": [variant],
+				},
+			},
+		});
+
+		expect(intents).toHaveLength(1);
+		expect(intents[0]?.source).toBe("variant_propagation");
+		expect(intents[0]?.planParams.processors).toEqual({
+			stripe: { product_id: "prod_new" },
+		});
+	});
+
+	test("variants[].processors overrides base fan-out", () => {
+		const current = {
+			...baseProduct,
+			processor: { type: "stripe", id: "prod_old" },
+		};
+		const next = {
+			...baseProduct,
+			processor: { type: "stripe", id: "prod_new" },
+		};
+		const variant = {
+			...baseProduct,
+			id: "team-eu",
+			internal_id: "internal_team-eu",
+			base_internal_product_id: baseProduct.internal_id,
+			processor: { type: "stripe", id: "prod_old" },
+		};
+
+		const intents = deriveVariantIntents({
+			intent: {
+				productKey: { planId: "team", version: 1 },
+				planParams: {
+					plan_id: "team",
+					version: 1,
+					processors: { stripe: { product_id: "prod_new" } },
+				},
+				source: "direct",
+			},
+			upsert: {
+				row: {
+					planId: "team",
+					version: 1,
+					op: "update",
+					source: "direct",
+					versioning: "existing",
+					currentFullProduct: current,
+					baseFullProduct: null,
+					nextFullProduct: next,
+				},
+				declaredVariants: [
+					{
+						variant_plan_id: "team-eu",
+						processors: { stripe: { product_id: "prod_eu" } },
+					},
+				],
+				state: { hasCustomers: false, planHadLiveVersions: true },
+			} as UpsertProductPlan,
+			projectedProductStatesContext: {
+				...emptyStates({ planIds: ["team", "team-eu"] }),
+				versionsByPlanId: {
+					team: [next],
+					"team-eu": [variant],
+				},
+			},
+		});
+
+		expect(intents).toHaveLength(1);
+		expect(intents[0]?.planParams.processors).toEqual({
+			stripe: { product_id: "prod_eu" },
+		});
+	});
+
+	test("variant_link create copies variants[].processors onto planParams", () => {
+		const next = {
+			...baseProduct,
+			processor: { type: "stripe", id: "prod_base" },
+		};
+		const intents = deriveVariantIntents({
+			intent: {
+				productKey: { planId: "team", version: 1 },
+				planParams: { plan_id: "team", version: 1 },
+				source: "direct",
+			},
+			upsert: {
+				row: {
+					planId: "team",
+					version: 1,
+					op: "none",
+					source: "direct",
+					versioning: "existing",
+					currentFullProduct: next,
+					baseFullProduct: null,
+					nextFullProduct: next,
+				},
+				declaredVariants: [
+					{
+						variant_plan_id: "team-eu",
+						name: "Team EU",
+						processors: { stripe: { product_id: "prod_eu" } },
+					},
+				],
+				state: { hasCustomers: false, planHadLiveVersions: true },
+			} as UpsertProductPlan,
+			projectedProductStatesContext: emptyStates({
+				planIds: ["team", "team-eu"],
+			}),
+		});
+
+		expect(intents).toHaveLength(1);
+		expect(intents[0]?.source).toBe("variant_link");
+		expect(intents[0]?.planParams.processors).toEqual({
+			stripe: { product_id: "prod_eu" },
+		});
+	});
 });
+

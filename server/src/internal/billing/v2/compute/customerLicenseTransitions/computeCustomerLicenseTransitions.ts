@@ -1,4 +1,5 @@
 import type {
+	CarryOverUsages,
 	CustomerLicenseBillingContext,
 	CustomerLicenseTransition,
 	FullCusProduct,
@@ -43,11 +44,13 @@ export const computeCustomerLicenseTransitions = ({
 	incomingCustomerProducts,
 	customerLicenseBillingContext,
 	carryCustomerLicenseState = true,
+	carryOverUsages,
 }: {
 	outgoingCustomerProducts: FullCusProduct[];
 	incomingCustomerProducts: FullCusProduct[];
 	customerLicenseBillingContext?: CustomerLicenseBillingContext;
 	carryCustomerLicenseState?: boolean;
+	carryOverUsages?: CarryOverUsages;
 }): CustomerLicenseTransition[] => {
 	const customerLicenseTransitions: CustomerLicenseTransition[] = [];
 
@@ -69,7 +72,7 @@ export const computeCustomerLicenseTransitions = ({
 			const transition = customerLicensePairToTransition(customerLicensePair);
 			if (isNoopTransition(transition)) continue;
 
-			customerLicenseTransitions.push(transition);
+			customerLicenseTransitions.push({ ...transition, carryOverUsages });
 		}
 	}
 

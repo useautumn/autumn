@@ -1,4 +1,5 @@
 import type {
+	CarryOverUsages,
 	EntitlementWithFeature,
 	InitCustomerEntitlementContext,
 	InitFullCustomerProductOptions,
@@ -20,12 +21,14 @@ export const computeBatchTransitionOperations = ({
 	productTransitions,
 	customerEntitlementInitContext,
 	customerEntitlementInitOptions,
+	carryOverUsages,
 }: {
 	candidateOutgoingEntitlements: EntitlementWithFeature[];
 	candidateOutgoingBasePrices: Price[];
 	productTransitions: ProductTransitions;
 	customerEntitlementInitContext: InitCustomerEntitlementContext;
 	customerEntitlementInitOptions: InitFullCustomerProductOptions;
+	carryOverUsages?: CarryOverUsages;
 }): Pick<
 	CustomerEntitlementBatchTransition,
 	"operations" | "unhandledTransitions"
@@ -36,6 +39,7 @@ export const computeBatchTransitionOperations = ({
 			entitlementPriceTransitions: productTransitions.entitlementPrices,
 			customerEntitlementInitContext,
 			customerEntitlementInitOptions,
+			carryOverUsages,
 		});
 	const basePriceOperation = computeBasePriceOperation({
 		basePriceTransition: productTransitions.basePrice,

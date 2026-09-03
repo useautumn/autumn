@@ -50,6 +50,7 @@ export const setupCustomerEntitlementBatchTransition = async ({
 	const entitlementPriceTransitions = productTransitions.entitlementPrices;
 	const hasEntitlementPriceTransitions =
 		entitlementPriceTransitions.transitions.length > 0 ||
+		entitlementPriceTransitions.retained.length > 0 ||
 		entitlementPriceTransitions.added.length > 0 ||
 		entitlementPriceTransitions.deleted.length > 0;
 	const shouldReanchorCustomerEntitlements =
@@ -93,6 +94,7 @@ export const setupCustomerEntitlementBatchTransition = async ({
 			customerEntitlementInitOptions: {
 				customerLicenseLinkId: transition.updates.linkId,
 			},
+			carryOverUsages: transition.carryOverUsages,
 		},
 	);
 

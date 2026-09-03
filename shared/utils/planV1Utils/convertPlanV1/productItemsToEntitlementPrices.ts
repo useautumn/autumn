@@ -1,11 +1,15 @@
 import { findFeatureById } from "@utils/featureUtils/findFeatureUtils.js";
-import { enrichEntitlementWithFeature } from "@utils/productUtils/entUtils/enrichEntitlement.js";
 import type {
 	BasePriceAndEntitlementPrices,
 	EntitlementPrice,
 } from "@utils/productUtils/entitlementPriceUtils/entitlementPriceTypes.js";
+import { enrichEntitlementWithFeature } from "@utils/productUtils/entUtils/enrichEntitlement.js";
 import { isFixedPrice } from "@utils/productUtils/priceUtils/classifyPriceUtils.js";
 import { findPriceByFeatureId } from "@utils/productUtils/priceUtils/findPrice/findPriceByFeatureId.js";
+import {
+	type UnlinkedStripeSlotsByPriceId,
+	unlinkedStripeSlotsForItem,
+} from "@utils/productUtils/priceUtils/match/stripePriceMappingSlots.js";
 import {
 	isFeatureItem,
 	isPriceItem,
@@ -28,6 +32,12 @@ const stripeReusePriceForItem = ({
 	return findPriceByFeatureId({ prices, featureId: item.feature_id });
 };
 
+export type DesiredBasePriceAndEntitlementPrices =
+	BasePriceAndEntitlementPrices & {
+		/** Slots the request stated as `null`, keyed by desired price id. */
+		unlinkedStripeSlots: UnlinkedStripeSlotsByPriceId;
+	};
+
 /**
  * Mint desired base Price + EntitlementPrice rows from ProductItems.
  * Construction only — no claim/classification against current rows.
@@ -44,9 +54,10 @@ export const productItemsToEntitlementPrices = ({
 	features: Feature[];
 	/** Current/candidate prices used only to refuse a mismatched stripe_price_id. */
 	stripeReusePrices?: Price[];
-}): BasePriceAndEntitlementPrices => {
+}): DesiredBasePriceAndEntitlementPrices => {
 	let basePrice: Price | undefined;
 	const entitlementPrices: EntitlementPrice[] = [];
+	const unlinkedStripeSlots: UnlinkedStripeSlotsByPriceId = {};
 	const reusePrices = stripeReusePrices ?? [];
 
 	for (const item of items) {
@@ -74,6 +85,11 @@ export const productItemsToEntitlementPrices = ({
 				: {}),
 		});
 
+		if (newPrice) {
+			const unlinked = unlinkedStripeSlotsForItem({ item });
+			if (unlinked.length > 0) unlinkedStripeSlots[newPrice.id] = unlinked;
+		}
+
 		if (isPriceItem(item)) {
 			if (newPrice) basePrice = newPrice;
 			continue;
@@ -90,5 +106,5 @@ export const productItemsToEntitlementPrices = ({
 		});
 	}
 
-	return { basePrice, entitlementPrices };
+	return { basePrice, entitlementPrices, unlinkedStripeSlots };
 };

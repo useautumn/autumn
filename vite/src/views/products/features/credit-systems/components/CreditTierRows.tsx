@@ -1,7 +1,6 @@
 import type { CreditSchemaItem } from "@autumn/shared";
 import { IconButton, Input } from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
-import { useState } from "react";
 import {
 	addTier,
 	type GraduatedCreditSchemaItem,
@@ -17,21 +16,6 @@ interface CreditTierRowsProps {
 
 export function CreditTierRows({ item, onChange }: CreditTierRowsProps) {
 	const { tiers } = item;
-	const [tierKeys, setTierKeys] = useState(() =>
-		tiers.map(() => crypto.randomUUID()),
-	);
-
-	const handleRemoveTier = (index: number) => {
-		setTierKeys((currentTierKeys) =>
-			currentTierKeys.filter((_, currentIndex) => currentIndex !== index),
-		);
-		onChange(removeTier({ item, index }));
-	};
-
-	const handleAddTier = () => {
-		setTierKeys((currentTierKeys) => [...currentTierKeys, crypto.randomUUID()]);
-		onChange(addTier(item));
-	};
 
 	return (
 		<div className="flex flex-col gap-2">
@@ -39,15 +23,16 @@ export function CreditTierRows({ item, onChange }: CreditTierRowsProps) {
 				const isLast = index === tiers.length - 1;
 
 				return (
-					<div key={tierKeys[index]} className="flex items-center gap-2 w-full">
-						<span className="text-tertiary-foreground text-xs shrink-0 w-14">
-							up to
+					<div key={`tier-${index}`} className="flex items-center gap-2 w-full">
+						<span className="text-tertiary-foreground text-xs shrink-0 w-18">
+							{index === 0 ? "first" : "then, up to"}
 						</span>
 
 						{isLast ? (
 							<Input
 								aria-label={`Tier ${index + 1} upper boundary`}
-								value="∞"
+								value=""
+								placeholder="∞"
 								disabled
 								className="w-full"
 							/>
@@ -73,18 +58,13 @@ export function CreditTierRows({ item, onChange }: CreditTierRowsProps) {
 							}
 						/>
 
-						<span className="text-tertiary-foreground text-xs shrink-0 w-12">
-							credits
-						</span>
-
 						<IconButton
 							aria-label={`Remove tier ${index + 1}`}
 							type="button"
 							variant="muted"
 							className="p-1 shrink-0 text-tertiary-foreground hover:text-red-500"
 							icon={<TrashIcon size={10} />}
-							disabled={tiers.length === 1}
-							onClick={() => handleRemoveTier(index)}
+							onClick={() => onChange(removeTier({ item, index }))}
 						/>
 					</div>
 				);
@@ -96,9 +76,9 @@ export function CreditTierRows({ item, onChange }: CreditTierRowsProps) {
 				size="sm"
 				className="w-full text-tertiary-foreground text-xs"
 				icon={<PlusIcon size={10} />}
-				onClick={handleAddTier}
+				onClick={() => onChange(addTier(item))}
 			>
-				Add tier
+				Add Tier
 			</IconButton>
 		</div>
 	);

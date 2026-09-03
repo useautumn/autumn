@@ -9,6 +9,7 @@ const SETTING_LABELS: Record<string, string> = {
 	free_trial: "Free trial",
 	config: "Config",
 	billing_controls: "Billing controls",
+	processors: "Stripe mapping",
 };
 
 // Derived entirely from the backend preview's previous_attributes — the

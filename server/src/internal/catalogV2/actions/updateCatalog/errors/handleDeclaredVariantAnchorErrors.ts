@@ -13,7 +13,7 @@ export const handleDeclaredVariantAnchorErrors = ({
 }): void => {
 	const parentByVariantKey = new Map<string, string>();
 
-	for (const entry of params.plans) {
+	for (const entry of params.plans ?? []) {
 		if (entry.variants === undefined) continue;
 		const parent = fullProductForPlanParams({
 			planParams: entry,
