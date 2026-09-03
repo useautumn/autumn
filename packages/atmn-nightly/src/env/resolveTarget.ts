@@ -15,9 +15,12 @@ export type Target = {
 };
 
 /**
- * Where to send, and which key to send it with. `--base-url` wins outright;
- * `--local` is the shorthand everyone actually types, with `--port` for a
- * non-default local server. Long-only for port, since `-p` belongs to prod.
+ * Where to send, and which key to send it with.
+ *
+ * Precedence is flags, then `AUTUMN_BASE_URL`, then the spec's server. The env
+ * var exists so a directory can pin itself to a local server through its own
+ * `.env` — otherwise the safe target is the one you have to remember, and the
+ * default is production.
  */
 export const resolveTarget = ({
 	prod,
@@ -41,7 +44,9 @@ export const resolveTarget = ({
 			secretKeyName,
 		};
 	}
-	return { secretKeyName };
+
+	const fromEnv = process.env.AUTUMN_BASE_URL;
+	return fromEnv ? { baseUrl: fromEnv, secretKeyName } : { secretKeyName };
 };
 
 export const requireSecretKey = ({ target }: { target: Target }): string => {

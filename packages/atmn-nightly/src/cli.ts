@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { runLogin } from "./actions/login";
-import { runPush } from "./actions/push";
+import { configSearchDirs, runPush } from "./actions/push";
+import { loadEnvFiles } from "./env/loadEnv";
 import {
 	requireSecretKey,
 	resolveTarget,
@@ -53,6 +54,11 @@ export const buildProgram = (): Command => {
 			.option("-y, --yes", "skip confirmation prompts")
 			.option("-d, --dry-run", "preview without applying"),
 	).action(async (options: TargetFlags & { dryRun?: boolean }) => {
+		// Env first: the key and AUTUMN_BASE_URL usually live in a .env beside
+		// the config, so reading them after building the client would never see
+		// them — which is what the "put it in your .env" error message promises.
+		loadEnvFiles({ dirs: configSearchDirs({ cwd: process.cwd() }) });
+
 		const target = resolveTarget(options);
 		await runPush({
 			client: createClient({
